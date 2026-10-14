@@ -14,7 +14,7 @@ from typing import Final
 TEMPLATES_DIR: Final = Path(__file__).resolve().parents[2] / "templates" / "email"
 LANGUAGES: Final = ("ru", "uz", "en")
 DEFAULT_LANGUAGE: Final = "ru"
-TEMPLATES: Final = ("invite", "password_reset", "test")
+TEMPLATES: Final = ("invite", "password_reset", "test", "service_alert")
 _SUBJECT_PREFIX: Final = "Subject:"
 
 

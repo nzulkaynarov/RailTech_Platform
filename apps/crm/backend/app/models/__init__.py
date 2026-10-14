@@ -5,6 +5,7 @@ from app.models import (  # noqa: F401
     clients,
     deals,
     email,
+    external_services,
     integrations,
     kb,
     leads,

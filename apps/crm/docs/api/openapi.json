@@ -3138,6 +3138,346 @@
         "title": "EscalationSettings",
         "type": "object"
       },
+      "ExternalServiceDetailOut": {
+        "properties": {
+          "checks": {
+            "items": {
+              "$ref": "#/components/schemas/ServiceCheckOut"
+            },
+            "title": "Checks",
+            "type": "array"
+          },
+          "days": {
+            "items": {
+              "$ref": "#/components/schemas/ServiceDayOut"
+            },
+            "title": "Days",
+            "type": "array"
+          },
+          "incidents": {
+            "items": {
+              "$ref": "#/components/schemas/IncidentOut"
+            },
+            "title": "Incidents",
+            "type": "array"
+          },
+          "service": {
+            "$ref": "#/components/schemas/ExternalServiceOut"
+          }
+        },
+        "required": [
+          "service",
+          "checks",
+          "days",
+          "incidents"
+        ],
+        "title": "ExternalServiceDetailOut",
+        "type": "object"
+      },
+      "ExternalServiceOut": {
+        "properties": {
+          "check": {
+            "description": "Как проверяется — словами",
+            "title": "Check",
+            "type": "string"
+          },
+          "checked_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Checked At"
+          },
+          "checks_24h": {
+            "title": "Checks 24H",
+            "type": "integer"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          },
+          "failures_24h": {
+            "title": "Failures 24H",
+            "type": "integer"
+          },
+          "fix_path": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Путь в CRM, где это исправляется",
+            "title": "Fix Path"
+          },
+          "frequency": {
+            "enum": [
+              "minute",
+              "quarter",
+              "erp"
+            ],
+            "title": "Frequency",
+            "type": "string"
+          },
+          "hint": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Что сделать, если не в норме",
+            "title": "Hint"
+          },
+          "incident": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/IncidentOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "key": {
+            "title": "Key",
+            "type": "string"
+          },
+          "latency_ms": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Latency Ms"
+          },
+          "metrics": {
+            "additionalProperties": {
+              "anyOf": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "title": "Metrics",
+            "type": "object"
+          },
+          "p95_ms_24h": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "P95 Ms 24H"
+          },
+          "purpose": {
+            "title": "Purpose",
+            "type": "string"
+          },
+          "source": {
+            "description": "Кто проверяет: CRM сама или передаёт ERP",
+            "enum": [
+              "crm",
+              "erp"
+            ],
+            "title": "Source",
+            "type": "string"
+          },
+          "stale": {
+            "title": "Stale",
+            "type": "boolean"
+          },
+          "status": {
+            "enum": [
+              "ok",
+              "warn",
+              "fail",
+              "unknown",
+              "off"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "summary": {
+            "title": "Summary",
+            "type": "string"
+          },
+          "switch": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ServiceSwitchOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "system": {
+            "enum": [
+              "crm",
+              "erp",
+              "ensemble"
+            ],
+            "title": "System",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          },
+          "uptime_24h": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Uptime 24H"
+          },
+          "uptime_7d": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Uptime 7D"
+          }
+        },
+        "required": [
+          "key",
+          "title",
+          "purpose",
+          "system",
+          "source",
+          "check",
+          "frequency",
+          "status",
+          "summary",
+          "error",
+          "hint",
+          "fix_path",
+          "checked_at",
+          "stale",
+          "latency_ms",
+          "metrics",
+          "uptime_24h",
+          "uptime_7d",
+          "checks_24h",
+          "failures_24h",
+          "p95_ms_24h",
+          "switch",
+          "incident"
+        ],
+        "title": "ExternalServiceOut",
+        "type": "object"
+      },
+      "ExternalServicesOut": {
+        "properties": {
+          "checked_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Checked At"
+          },
+          "services": {
+            "items": {
+              "$ref": "#/components/schemas/ExternalServiceOut"
+            },
+            "title": "Services",
+            "type": "array"
+          },
+          "summary": {
+            "$ref": "#/components/schemas/ExternalServicesSummary"
+          }
+        },
+        "required": [
+          "checked_at",
+          "summary",
+          "services"
+        ],
+        "title": "ExternalServicesOut",
+        "type": "object"
+      },
+      "ExternalServicesSummary": {
+        "properties": {
+          "disabled": {
+            "title": "Disabled",
+            "type": "integer"
+          },
+          "fail": {
+            "title": "Fail",
+            "type": "integer"
+          },
+          "off": {
+            "title": "Off",
+            "type": "integer"
+          },
+          "ok": {
+            "title": "Ok",
+            "type": "integer"
+          },
+          "unknown": {
+            "title": "Unknown",
+            "type": "integer"
+          },
+          "warn": {
+            "title": "Warn",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "ok",
+          "warn",
+          "fail",
+          "unknown",
+          "off",
+          "disabled"
+        ],
+        "title": "ExternalServicesSummary",
+        "type": "object"
+      },
       "HealthResponse": {
         "properties": {
           "status": {
@@ -3254,6 +3594,78 @@
           "unassigned"
         ],
         "title": "InboxResponse",
+        "type": "object"
+      },
+      "IncidentOut": {
+        "properties": {
+          "alerted": {
+            "title": "Alerted",
+            "type": "boolean"
+          },
+          "duration_s": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Длительность закрытого инцидента, секунд",
+            "title": "Duration S"
+          },
+          "ended_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ended At"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "last_error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Error"
+          },
+          "recovery_alerted": {
+            "title": "Recovery Alerted",
+            "type": "boolean"
+          },
+          "started_at": {
+            "format": "date-time",
+            "title": "Started At",
+            "type": "string"
+          },
+          "summary": {
+            "title": "Summary",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "started_at",
+          "ended_at",
+          "duration_s",
+          "summary",
+          "last_error",
+          "alerted",
+          "recovery_alerted"
+        ],
+        "title": "IncidentOut",
         "type": "object"
       },
       "KbChunkOut": {
@@ -5122,7 +5534,9 @@
           "form_too_fast",
           "form_token_expired",
           "rate_limited",
-          "ai_spend_period"
+          "ai_spend_period",
+          "service_not_switchable",
+          "telegram_paused"
         ],
         "title": "Reason",
         "type": "string"
@@ -5529,6 +5943,134 @@
         "title": "SearchResponse",
         "type": "object"
       },
+      "ServiceCheckOut": {
+        "properties": {
+          "checked_at": {
+            "format": "date-time",
+            "title": "Checked At",
+            "type": "string"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          },
+          "latency_ms": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Latency Ms"
+          },
+          "status": {
+            "enum": [
+              "ok",
+              "warn",
+              "fail",
+              "unknown",
+              "off"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "summary": {
+            "title": "Summary",
+            "type": "string"
+          },
+          "tier": {
+            "enum": [
+              "cheap",
+              "heavy",
+              "manual"
+            ],
+            "title": "Tier",
+            "type": "string"
+          }
+        },
+        "required": [
+          "checked_at",
+          "tier",
+          "status",
+          "latency_ms",
+          "summary",
+          "error"
+        ],
+        "title": "ServiceCheckOut",
+        "type": "object"
+      },
+      "ServiceDayOut": {
+        "properties": {
+          "day": {
+            "format": "date",
+            "title": "Day",
+            "type": "string"
+          },
+          "fail": {
+            "title": "Fail",
+            "type": "integer"
+          },
+          "ok": {
+            "title": "Ok",
+            "type": "integer"
+          },
+          "unknown": {
+            "title": "Unknown",
+            "type": "integer"
+          },
+          "uptime": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Uptime"
+          },
+          "warn": {
+            "title": "Warn",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "day",
+          "ok",
+          "warn",
+          "fail",
+          "unknown",
+          "uptime"
+        ],
+        "title": "ServiceDayOut",
+        "type": "object"
+      },
+      "ServiceEnableIn": {
+        "properties": {
+          "password": {
+            "format": "password",
+            "maxLength": 256,
+            "minLength": 1,
+            "title": "Password",
+            "type": "string",
+            "writeOnly": true
+          }
+        },
+        "required": [
+          "password"
+        ],
+        "title": "ServiceEnableIn",
+        "type": "object"
+      },
       "ServiceRequestClose": {
         "properties": {
           "resolution": {
@@ -5681,6 +6223,119 @@
           "created_at"
         ],
         "title": "ServiceRequestOut",
+        "type": "object"
+      },
+      "ServiceSwitchIn": {
+        "properties": {
+          "password": {
+            "format": "password",
+            "maxLength": 256,
+            "minLength": 1,
+            "title": "Password",
+            "type": "string",
+            "writeOnly": true
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "maxLength": 200,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          }
+        },
+        "required": [
+          "password"
+        ],
+        "title": "ServiceSwitchIn",
+        "type": "object"
+      },
+      "ServiceSwitchOut": {
+        "description": "Выключатель сервиса: доступен ли, выключен ли вручную, что произойдёт при выключении.",
+        "properties": {
+          "available": {
+            "title": "Available",
+            "type": "boolean"
+          },
+          "changed_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Changed At"
+          },
+          "changed_by": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Changed By"
+          },
+          "disabled": {
+            "title": "Disabled",
+            "type": "boolean"
+          },
+          "effect": {
+            "title": "Effect",
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "vendor",
+              "langfuse",
+              "mail",
+              "telegram"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "problem": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Problem"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          }
+        },
+        "required": [
+          "kind",
+          "available",
+          "disabled",
+          "effect",
+          "problem",
+          "reason",
+          "changed_at",
+          "changed_by"
+        ],
+        "title": "ServiceSwitchOut",
         "type": "object"
       },
       "SettingsResponse": {
@@ -6902,6 +7557,263 @@
         "summary": "Get Ai Spend",
         "tags": [
           "spend"
+        ]
+      }
+    },
+    "/api/v1/admin/external-services": {
+      "get": {
+        "description": "Все внешние сервисы ансамбля со статусом, подсказкой «что сделать», метриками и выключателем.\n\nТолько чтение: статус — из последней фоновой проверки (раз в минуту / раз в 15 мин), без\nвызовов моделей. Сервисы ERP — «нет данных», пока ERP не передаёт состояние (M3-ERP-06).",
+        "operationId": "list_external_services",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExternalServicesOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Ошибка валидации"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List External Services",
+        "tags": [
+          "external-services"
+        ]
+      }
+    },
+    "/api/v1/admin/external-services/{key}": {
+      "get": {
+        "description": "Сервис, его проверки за 24 ч, сводка по дням за 7 дней и инциденты за 30 дней.",
+        "operationId": "get_external_service",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "key",
+            "required": true,
+            "schema": {
+              "maxLength": 64,
+              "pattern": "^[a-z0-9][a-z0-9_.-]*$",
+              "title": "Key",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExternalServiceDetailOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Ошибка валидации"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get External Service",
+        "tags": [
+          "external-services"
+        ]
+      }
+    },
+    "/api/v1/admin/external-services/{key}/check": {
+      "post": {
+        "description": "Проверить сервис сейчас (включая медленные пробы); инцидент и оповещение — как у фоновой.",
+        "operationId": "check_external_service",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "key",
+            "required": true,
+            "schema": {
+              "maxLength": 64,
+              "pattern": "^[a-z0-9][a-z0-9_.-]*$",
+              "title": "Key",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExternalServiceDetailOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Ошибка валидации"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Check External Service",
+        "tags": [
+          "external-services"
+        ]
+      }
+    },
+    "/api/v1/admin/external-services/{key}/disable": {
+      "post": {
+        "description": "Выключить сервис вручную (пароль админа, аудит): вендор — вызовы на запасную модель,\nLangfuse — без трейсов, почта — пауза очереди, Telegram — пауза исходящих.\n\nНет выключателя или вендор запасной модели — `409 service_not_switchable`.",
+        "operationId": "disable_external_service",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "key",
+            "required": true,
+            "schema": {
+              "maxLength": 64,
+              "pattern": "^[a-z0-9][a-z0-9_.-]*$",
+              "title": "Key",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ServiceSwitchIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExternalServiceOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Ошибка валидации"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Disable External Service",
+        "tags": [
+          "external-services"
+        ]
+      }
+    },
+    "/api/v1/admin/external-services/{key}/enable": {
+      "post": {
+        "description": "Включить сервис обратно (пароль админа, аудит); почта отправляет накопленные письма.",
+        "operationId": "enable_external_service",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "key",
+            "required": true,
+            "schema": {
+              "maxLength": 64,
+              "pattern": "^[a-z0-9][a-z0-9_.-]*$",
+              "title": "Key",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ServiceEnableIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExternalServiceOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Ошибка валидации"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Enable External Service",
+        "tags": [
+          "external-services"
         ]
       }
     },

@@ -54,6 +54,7 @@ const FIX_PATH: Record<string, string> = {
   budget: "/spend",
   ai_budget: "/spend",
   crm_url: "/settings?section=company",
+  external_services: "/external-services",
 };
 
 export function componentPath(key: string): string | null {

@@ -4,18 +4,20 @@ from dataclasses import asdict
 from datetime import UTC, datetime
 from typing import Annotated
 
+import structlog
 from fastapi import APIRouter, Depends, Request
 
 from app.api.deps import ContainerDep, require
 from app.api.health import get_readiness
 from app.container import Container
-from app.domain.system_status import BotFacts, Component
+from app.domain.system_status import BotFacts, Component, ordered
 from app.integrations.telegram import resolve_token
 from app.schemas.system import ComponentStatusOut, SystemStatusOut
 from app.security.principal import Principal
 from app.services.readiness import ReadinessService
 from app.services.system_status import SystemStatusService
 
+logger = structlog.get_logger(__name__)
 router = APIRouter(prefix="/api/v1/system", tags=["system"])
 
 _SEVERITY = ("ok", "unknown", "warn", "fail")
@@ -42,7 +44,15 @@ async def collect_components(
     )
     erp = await container.erp_connector.health_facts()
     ai_budget = await container.ai_spend.today_facts()
-    return await service.collect(now, bot, token_configured=has_token, erp=erp, ai_budget=ai_budget)
+    components = await service.collect(
+        now, bot, token_configured=has_token, erp=erp, ai_budget=ai_budget
+    )
+    try:
+        # Сводка центра внешних сервисов (M3-CRM-12): подробности — на «Внешних сервисах».
+        components.append(await container.external_view.summary(now))
+    except Exception as exc:  # noqa: BLE001 — «Состояние системы» не падает из-за сводки
+        logger.warning("external_services_summary_failed", error=type(exc).__name__)
+    return ordered(components)
 
 
 @router.get("/status", response_model=SystemStatusOut)

@@ -200,4 +200,6 @@ def test_reason_values_are_a_stable_contract() -> None:
         "form_token_expired",
         "rate_limited",
         "ai_spend_period",
+        "service_not_switchable",
+        "telegram_paused",
     }

@@ -103,6 +103,7 @@ def build(
     transport: FakeTransport | None = None,
     cipher: SecretCipher | None = CIPHER,
     enqueue_error: Exception | None = None,
+    paused: list[bool] | None = None,
 ) -> tuple[MailService, MemoryDb, FakeTransport, list[int]]:
     db = MemoryDb()
     queued: list[int] = []
@@ -122,8 +123,16 @@ def build(
         FakeSettings(host),  # type: ignore[arg-type]
         transport,
         enqueue,
+        paused=_flag(paused if paused is not None else [False]),
     )
     return service, db, transport, queued
+
+
+def _flag(state: list[bool]) -> Any:
+    async def paused() -> bool:
+        return state[0]
+
+    return paused
 
 
 async def test_send_queues_encrypted_body_and_delivery_marks_sent() -> None:
@@ -211,3 +220,20 @@ async def test_log_lists_latest_first_without_bodies() -> None:
     views = await service.list_log()
     assert [v.id for v in views] == [second.id, first.id]
     assert all(not hasattr(v, "body_ciphertext") for v in views)
+
+
+async def test_paused_mail_holds_letters_in_journal_until_enabled() -> None:
+    """Выключатель «Почта» (ADR-0024): письмо в журнале `queued`, воркер его не отправляет."""
+    state = [True]
+    service, db, transport, queued = build(paused=state)
+    view = await service.send("invite", "aziz@railtech.uz", CONTEXT, user_id=7)
+    assert view.status == "queued"
+    assert queued == []
+    assert db.rows[view.id].body_ciphertext is not None
+    assert await service.deliver(view.id) is False
+    assert transport.sent == []
+    assert db.rows[view.id].attempts == 0
+
+    state[0] = False
+    assert await service.deliver(view.id) is True
+    assert db.rows[view.id].status == "sent"

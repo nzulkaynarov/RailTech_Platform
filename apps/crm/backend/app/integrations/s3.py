@@ -68,3 +68,14 @@ class ObjectStorage:
             async for page in paginator.paginate(Bucket=bucket):
                 keys += [item["Key"] for item in page.get("Contents", [])]
             return keys
+
+    async def bucket_usage(self, bucket: str) -> tuple[int, int]:
+        """(объектов, байт) в бакете — для центра внешних сервисов (раз в 15 мин, ADR-0024)."""
+        objects = size = 0
+        async with self._client() as client:
+            paginator = client.get_paginator("list_objects_v2")
+            async for page in paginator.paginate(Bucket=bucket):
+                for item in page.get("Contents", []):
+                    objects += 1
+                    size += int(item.get("Size", 0))
+        return objects, size

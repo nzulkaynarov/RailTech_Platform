@@ -64,6 +64,9 @@ import type {
   ExportClientsParams,
   ExportDealsParams,
   ExportLeadsParams,
+  ExternalServiceDetailOut,
+  ExternalServiceOut,
+  ExternalServicesOut,
   GetAiSpendParams,
   GetDashboardParams,
   GetSpendParams,
@@ -115,8 +118,10 @@ import type {
   SandboxTurnOut,
   SearchRequest,
   SearchResponse,
+  ServiceEnableIn,
   ServiceRequestClose,
   ServiceRequestItem,
+  ServiceSwitchIn,
   SettingsResponse,
   SetupAdminRequest,
   SetupChecklist,
@@ -297,6 +302,567 @@ export function useGetAiSpend<
 
   return withQueryKey(query, queryOptions.queryKey);
 }
+
+export const getListExternalServicesUrl = () => {
+  return `/api/v1/admin/external-services`;
+};
+
+/**
+ * Все внешние сервисы ансамбля со статусом, подсказкой «что сделать», метриками и выключателем.
+ *
+ * Только чтение: статус — из последней фоновой проверки (раз в минуту / раз в 15 мин), без
+ * вызовов моделей. Сервисы ERP — «нет данных», пока ERP не передаёт состояние (M3-ERP-06).
+ * @summary List External Services
+ */
+export const listExternalServices = async (
+  options?: Parameters<typeof http>[1],
+): Promise<ExternalServicesOut> => {
+  return http<ExternalServicesOut>(getListExternalServicesUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getListExternalServicesQueryKey = () => {
+  return [`/api/v1/admin/external-services`] as const;
+};
+
+export const getListExternalServicesQueryOptions = <
+  TData = Awaited<ReturnType<typeof listExternalServices>>,
+  TError = ErrorType<ErrorOut>,
+>(options?: {
+  query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listExternalServices>>, TError, TData>>;
+  request?: SecondParameter<typeof http>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getListExternalServicesQueryKey();
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof listExternalServices>>> = ({ signal }) =>
+    listExternalServices({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listExternalServices>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type ListExternalServicesQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listExternalServices>>
+>;
+export type ListExternalServicesQueryError = ErrorType<ErrorOut>;
+
+export function useListExternalServices<
+  TData = Awaited<ReturnType<typeof listExternalServices>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  options: {
+    query: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listExternalServices>>, TError, TData>
+    > &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listExternalServices>>,
+          TError,
+          Awaited<ReturnType<typeof listExternalServices>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListExternalServices<
+  TData = Awaited<ReturnType<typeof listExternalServices>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listExternalServices>>, TError, TData>
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listExternalServices>>,
+          TError,
+          Awaited<ReturnType<typeof listExternalServices>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListExternalServices<
+  TData = Awaited<ReturnType<typeof listExternalServices>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listExternalServices>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary List External Services
+ */
+
+export function useListExternalServices<
+  TData = Awaited<ReturnType<typeof listExternalServices>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listExternalServices>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getListExternalServicesQueryOptions(options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export const getGetExternalServiceUrl = (key: string) => {
+  return `/api/v1/admin/external-services/${key}`;
+};
+
+/**
+ * Сервис, его проверки за 24 ч, сводка по дням за 7 дней и инциденты за 30 дней.
+ * @summary Get External Service
+ */
+export const getExternalService = async (
+  key: string,
+  options?: Parameters<typeof http>[1],
+): Promise<ExternalServiceDetailOut> => {
+  return http<ExternalServiceDetailOut>(getGetExternalServiceUrl(key), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetExternalServiceQueryKey = (key: string) => {
+  return [`/api/v1/admin/external-services/${key}`] as const;
+};
+
+export const getGetExternalServiceQueryOptions = <
+  TData = Awaited<ReturnType<typeof getExternalService>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  key: string,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getExternalService>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetExternalServiceQueryKey(key);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getExternalService>>> = ({ signal }) =>
+    getExternalService(key, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: key !== null && key !== undefined,
+    ...queryOptions,
+  } as UseQueryOptions<Awaited<ReturnType<typeof getExternalService>>, TError, TData> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+};
+
+export type GetExternalServiceQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getExternalService>>
+>;
+export type GetExternalServiceQueryError = ErrorType<ErrorOut>;
+
+export function useGetExternalService<
+  TData = Awaited<ReturnType<typeof getExternalService>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  key: string,
+  options: {
+    query: Partial<UseQueryOptions<Awaited<ReturnType<typeof getExternalService>>, TError, TData>> &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getExternalService>>,
+          TError,
+          Awaited<ReturnType<typeof getExternalService>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetExternalService<
+  TData = Awaited<ReturnType<typeof getExternalService>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  key: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getExternalService>>, TError, TData>
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getExternalService>>,
+          TError,
+          Awaited<ReturnType<typeof getExternalService>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetExternalService<
+  TData = Awaited<ReturnType<typeof getExternalService>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  key: string,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getExternalService>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary Get External Service
+ */
+
+export function useGetExternalService<
+  TData = Awaited<ReturnType<typeof getExternalService>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  key: string,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getExternalService>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getGetExternalServiceQueryOptions(key, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export const getCheckExternalServiceUrl = (key: string) => {
+  return `/api/v1/admin/external-services/${key}/check`;
+};
+
+/**
+ * Проверить сервис сейчас (включая медленные пробы); инцидент и оповещение — как у фоновой.
+ * @summary Check External Service
+ */
+export const checkExternalService = async (
+  key: string,
+  options?: Parameters<typeof http>[1],
+): Promise<ExternalServiceDetailOut> => {
+  return http<ExternalServiceDetailOut>(getCheckExternalServiceUrl(key), {
+    ...options,
+    method: "POST",
+  });
+};
+
+export const getCheckExternalServiceMutationKey = () => ["checkExternalService"] as const;
+
+export const getCheckExternalServiceMutationOptions = <
+  TError = ErrorType<ErrorOut>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof checkExternalService>>,
+    TError,
+    CheckExternalServiceMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof checkExternalService>>,
+  TError,
+  CheckExternalServiceMutationVariables,
+  TContext
+> => {
+  const mutationKey = getCheckExternalServiceMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof checkExternalService>>,
+    CheckExternalServiceMutationVariables
+  > = (props) => {
+    const { key } = props ?? {};
+
+    return checkExternalService(key, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CheckExternalServiceMutationResult = NonNullable<
+  Awaited<ReturnType<typeof checkExternalService>>
+>;
+
+export type CheckExternalServiceMutationError = ErrorType<ErrorOut>;
+export type CheckExternalServiceMutationVariables = { key: string };
+
+/**
+ * @summary Check External Service
+ */
+export const useCheckExternalService = <TError = ErrorType<ErrorOut>, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof checkExternalService>>,
+      TError,
+      CheckExternalServiceMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof checkExternalService>>,
+  TError,
+  CheckExternalServiceMutationVariables,
+  TContext
+> => {
+  return useMutation(getCheckExternalServiceMutationOptions(options), queryClient);
+};
+
+export const getDisableExternalServiceUrl = (key: string) => {
+  return `/api/v1/admin/external-services/${key}/disable`;
+};
+
+/**
+ * Выключить сервис вручную (пароль админа, аудит): вендор — вызовы на запасную модель,
+ * Langfuse — без трейсов, почта — пауза очереди, Telegram — пауза исходящих.
+ *
+ * Нет выключателя или вендор запасной модели — `409 service_not_switchable`.
+ * @summary Disable External Service
+ */
+export const disableExternalService = async (
+  key: string,
+  serviceSwitchIn: ServiceSwitchIn,
+  options?: Parameters<typeof http>[1],
+): Promise<ExternalServiceOut> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<ExternalServiceOut>(getDisableExternalServiceUrl(key), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
+    body: JSON.stringify(serviceSwitchIn),
+  });
+};
+
+export const getDisableExternalServiceMutationKey = () => ["disableExternalService"] as const;
+
+export const getDisableExternalServiceMutationOptions = <
+  TError = ErrorType<ErrorOut>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof disableExternalService>>,
+    TError,
+    DisableExternalServiceMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof disableExternalService>>,
+  TError,
+  DisableExternalServiceMutationVariables,
+  TContext
+> => {
+  const mutationKey = getDisableExternalServiceMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof disableExternalService>>,
+    DisableExternalServiceMutationVariables
+  > = (props) => {
+    const { key, data } = props ?? {};
+
+    return disableExternalService(key, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type DisableExternalServiceMutationResult = NonNullable<
+  Awaited<ReturnType<typeof disableExternalService>>
+>;
+export type DisableExternalServiceMutationBody = ServiceSwitchIn;
+export type DisableExternalServiceMutationError = ErrorType<ErrorOut>;
+export type DisableExternalServiceMutationVariables = { key: string; data: ServiceSwitchIn };
+
+/**
+ * @summary Disable External Service
+ */
+export const useDisableExternalService = <TError = ErrorType<ErrorOut>, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof disableExternalService>>,
+      TError,
+      DisableExternalServiceMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof disableExternalService>>,
+  TError,
+  DisableExternalServiceMutationVariables,
+  TContext
+> => {
+  return useMutation(getDisableExternalServiceMutationOptions(options), queryClient);
+};
+
+export const getEnableExternalServiceUrl = (key: string) => {
+  return `/api/v1/admin/external-services/${key}/enable`;
+};
+
+/**
+ * Включить сервис обратно (пароль админа, аудит); почта отправляет накопленные письма.
+ * @summary Enable External Service
+ */
+export const enableExternalService = async (
+  key: string,
+  serviceEnableIn: ServiceEnableIn,
+  options?: Parameters<typeof http>[1],
+): Promise<ExternalServiceOut> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<ExternalServiceOut>(getEnableExternalServiceUrl(key), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
+    body: JSON.stringify(serviceEnableIn),
+  });
+};
+
+export const getEnableExternalServiceMutationKey = () => ["enableExternalService"] as const;
+
+export const getEnableExternalServiceMutationOptions = <
+  TError = ErrorType<ErrorOut>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof enableExternalService>>,
+    TError,
+    EnableExternalServiceMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof enableExternalService>>,
+  TError,
+  EnableExternalServiceMutationVariables,
+  TContext
+> => {
+  const mutationKey = getEnableExternalServiceMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof enableExternalService>>,
+    EnableExternalServiceMutationVariables
+  > = (props) => {
+    const { key, data } = props ?? {};
+
+    return enableExternalService(key, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type EnableExternalServiceMutationResult = NonNullable<
+  Awaited<ReturnType<typeof enableExternalService>>
+>;
+export type EnableExternalServiceMutationBody = ServiceEnableIn;
+export type EnableExternalServiceMutationError = ErrorType<ErrorOut>;
+export type EnableExternalServiceMutationVariables = { key: string; data: ServiceEnableIn };
+
+/**
+ * @summary Enable External Service
+ */
+export const useEnableExternalService = <TError = ErrorType<ErrorOut>, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof enableExternalService>>,
+      TError,
+      EnableExternalServiceMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof enableExternalService>>,
+  TError,
+  EnableExternalServiceMutationVariables,
+  TContext
+> => {
+  return useMutation(getEnableExternalServiceMutationOptions(options), queryClient);
+};
 
 export const getListAuditUrl = (params?: ListAuditParams) => {
   const normalizedParams = new URLSearchParams();

@@ -157,6 +157,7 @@ async def bot_lifespan(
                 leads=container.lead_service,
                 rbac=rbac,
                 client_bot=build_client_bot(container, on_escalation),
+                telegram_paused=lambda: container.switch_board.is_disabled("telegram"),
             )
 
         async def resolve() -> tuple[str, TokenSource]:

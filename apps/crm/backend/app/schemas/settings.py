@@ -13,6 +13,7 @@ from app.domain.business_hours import is_business_time
 from app.domain.qualification import DecisionRole, Timeline
 from app.domain.qualification_rules import Fact, QualificationCriteria
 from app.domain.triggers import TriggerCode, TriggerSettings
+from app.schemas.settings_alerts import ServiceAlertsSettings
 from app.schemas.settings_base import Language, LocalizedText, StrictModel, localized
 from app.schemas.settings_client import ClientBotTexts
 from app.schemas.settings_deals import DealsSettings
@@ -390,6 +391,7 @@ SETTINGS_MODELS: Final[dict[str, type[BaseModel]]] = {
     "bot_profile": BotProfileSettings,
     "integrations": IntegrationsSettings,
     "web_form": WebFormSettings,
+    "service_alerts": ServiceAlertsSettings,
 }
 
 
@@ -424,6 +426,7 @@ class AppSettings(StrictModel):
     bot_profile: BotProfileSettings = Field(default_factory=BotProfileSettings)
     integrations: IntegrationsSettings = Field(default_factory=IntegrationsSettings)
     web_form: WebFormSettings = Field(default_factory=WebFormSettings)
+    service_alerts: ServiceAlertsSettings = Field(default_factory=ServiceAlertsSettings)
 
     def lead_notice(
         self,

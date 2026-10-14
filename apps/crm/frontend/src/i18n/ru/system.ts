@@ -113,6 +113,7 @@ export const system = {
       crm_url: "адрес CRM",
       erp: "ERP",
       ai_budget: "бюджет ИИ",
+      external_services: "внешние сервисы",
     } as Record<string, string>,
   },
   auditUi: {

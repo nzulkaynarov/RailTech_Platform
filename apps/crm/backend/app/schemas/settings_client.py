@@ -10,6 +10,13 @@ from app.schemas.settings_base import localized as _t
 
 class ClientBotTexts(CheckedTexts):
     # Подписи команд в кнопке «Меню» Telegram (до 256 символов, без эмодзи).
+    # Выключатель Telegram в центре внешних сервисов (M3-CRM-12, ADR-0024): ответ на любое
+    # сообщение, пока исходящие на паузе; не чаще раза в 10 минут на чат.
+    maintenance: LocalizedText = _t(
+        "Идут технические работы — бот временно не отвечает. Ваше сообщение сохранено, мы ответим, как только закончим.",
+        "Texnik ishlar olib borilmoqda — bot vaqtincha javob bermaydi. Xabaringiz saqlandi, ishlarni tugatishimiz bilan javob beramiz.",
+        "We are doing maintenance — the bot is temporarily not replying. Your message is saved and we will reply as soon as we are done.",
+    )
     menu_start: LocalizedText = _t("Начать", "Boshlash", "Start")
     menu_human: LocalizedText = _t(
         "Связаться с менеджером", "Menejer bilan bogʻlanish", "Talk to a manager"

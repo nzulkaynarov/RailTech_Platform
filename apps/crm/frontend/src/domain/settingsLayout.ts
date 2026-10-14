@@ -12,7 +12,7 @@ const SECTION_GROUPS: SectionGroup[] = [
   { key: "company", sections: ["company", "business_hours"] },
   { key: "bot", sections: ["texts", "bot", "kb", "stop_words", "competitors"] },
   { key: "handoff", sections: ["escalation", "qualification", "web_form"] },
-  { key: "team", sections: ["notifications", "deals"] },
+  { key: "team", sections: ["notifications", "service_alerts", "deals"] },
   { key: "spend", sections: ["budget"] },
 ];
 
@@ -68,6 +68,7 @@ const TEXT_GROUPS: Record<string, string[]> = {
   fallback: [
     "fallback",
     "service_unavailable",
+    "maintenance",
     "rate_limited",
     "unsupported_message",
     "smalltalk_ack",

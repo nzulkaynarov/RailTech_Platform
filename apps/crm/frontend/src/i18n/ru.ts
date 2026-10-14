@@ -2,6 +2,7 @@ import { admin } from "./ru/admin";
 import { charts } from "./ru/charts";
 import { clients } from "./ru/clients";
 import { deals } from "./ru/deals";
+import { externalServices } from "./ru/externalServices";
 import { core } from "./ru/core";
 import { integrations } from "./ru/integrations";
 import { leads } from "./ru/leads";
@@ -24,6 +25,7 @@ export const ru = {
   ...sandbox,
   ...templates,
   ...charts,
+  ...externalServices,
 };
 
 export type Dictionary = typeof ru;
