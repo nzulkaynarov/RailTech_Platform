@@ -83,7 +83,8 @@ def test_buyer_only_user_has_no_seller_send_signals(lookups):
 # участника. Пока `capabilities.can_sell` копировал его, SPA показывала продавцовские
 # поверхности (мастер документов с КП/инвойсом, seller-секции настроек) члену чисто
 # покупательской компании — и клик уводил в отказ. Теперь поле считает тот же предикат,
-# что и авторизация: `is_seller` = активное членство с can_sell И компания-продавец.
+# что и авторизация: `is_seller` = сотрудник своей компании (активный участник компании-владельца,
+# `core.tenant.own_company_id`; флаг участника сторону больше не выбирает — M1-ERP-02 волна 3).
 
 
 def test_capability_can_sell_is_false_for_member_of_client_only_company(lookups):
@@ -111,8 +112,9 @@ def test_capability_can_sell_is_true_for_seller_company_member(lookups):
     assert MeSerializer(user).data["capabilities"]["can_sell"] is True
 
 
-def test_capability_can_sell_follows_revoked_member_flag(lookups):
-    """Компания продаёт, но участнику продажи запрещены — стороной продавца он не считается."""
+def test_capability_can_sell_ignores_the_member_flag_for_own_staff(lookups):
+    """Продавец один — своя компания: её сотрудник на стороне продавца, даже если флаг
+    участника `can_sell` снят. Что ему МОЖНО, решают права роли, а не сторона."""
     company = Company.objects.create(name="Seller co", inn="3001000002")
     company.types.add(CompanyType.objects.get(code="SUPPLIER"))
     user = CustomUser.objects.create_user(email="nosell@caps.test", username="nosell@caps.test", password="x")
@@ -126,7 +128,7 @@ def test_capability_can_sell_follows_revoked_member_flag(lookups):
         can_buy=True,
     )
 
-    assert MeSerializer(user).data["capabilities"]["can_sell"] is False
+    assert MeSerializer(user).data["capabilities"]["can_sell"] is True
 
 
 def test_capability_can_sell_sees_secondary_seller_membership(lookups):

@@ -1,8 +1,8 @@
-"""Deal list/detail serializers + the viewer-scoped routing helpers.
+"""Deal list/detail serializers + the viewer-side helpers.
 
-Split out of the monolithic ``crm/serializers.py`` (ARCH refactor) — behaviour
-unchanged. The routing helpers enforce per-seller ownership visibility (a seller sees
-only its own claim / itself among the routed sellers — hidden competition).
+Split out of the monolithic ``crm/serializers.py`` (ARCH refactor). The seller of every deal is the
+own company (BUSINESS §3.3), so the deal owner (`Deal.assigned_to`) is one per deal and the
+viewer's side is «staff of the own company» vs «member of the client company».
 """
 
 from datetime import datetime
@@ -14,113 +14,76 @@ from crm.models import Deal
 from .quote import QuoteSerializer
 
 
-def _viewer_routing(obj, request):
-    """The DealSellerRouting for the VIEWER's OWN seller company on this deal (per-seller ownership,
-    ADR-0006 Move 2). Each seller sees only THEIR company's claim — a competitor's routing is never
-    surfaced, so cross-seller identity leakage is structurally impossible. Buyer / platform admin
-    have no own-routing here → None (they don't claim)."""
+def _authenticated_user(request):
     user = getattr(request, "user", None)
     if user is None or not getattr(user, "is_authenticated", False):
         return None
-    company_ids = set(user.memberships.filter(is_active=True).values_list("company_id", flat=True))
-    if not company_ids:
+    return user
+
+
+def _viewer_is_staff(request) -> bool:
+    """Сотрудник компании-владельца (или администратор). Считается один раз на запрос — список
+    сделок спрашивает это для каждой строки."""
+    user = _authenticated_user(request)
+    if user is None:
+        return False
+    cached = getattr(request, "_viewer_is_staff", None)
+    if cached is None:
+        from accounts.services import sees_all_deals
+
+        cached = sees_all_deals(user)
+        try:
+            request._viewer_is_staff = cached
+        except AttributeError:
+            pass
+    return cached
+
+
+def _assigned_to_display(obj):
+    """Owner display name, falling back to email since invited members often have a blank full
+    name. None if unclaimed."""
+    if not obj.assigned_to_id:
         return None
-    return next(
-        (r for r in obj.seller_routings.all() if r.seller_company_id in company_ids),
-        None,
-    )
-
-
-def _assigned_to_id(obj, request):
-    routing = _viewer_routing(obj, request)
-    return routing.assigned_to_id if routing else None
-
-
-def _assigned_to_display(obj, request):
-    """Owner display name for the viewer's OWN company routing (their colleague), falling back to
-    email since invited members often have a blank full name. None if unclaimed / not the viewer's.
-    """
-    routing = _viewer_routing(obj, request)
-    if routing is None or not routing.assigned_to_id:
-        return None
-    assignee = routing.assigned_to
+    assignee = obj.assigned_to
     return assignee.get_full_name() or assignee.email
 
 
-def _assigned_at(obj, request):
-    routing = _viewer_routing(obj, request)
-    return routing.assigned_at if routing else None
-
-
 def _viewer_is_seller(obj, request) -> bool:
-    """Смотрит ли зритель на ЭТУ сделку со стороны продавца.
+    """Смотрит ли зритель на ЭТУ сделку со стороны продавца — то есть он сотрудник своей компании.
 
-    Сторона — свойство ЗАПИСИ, а не сессии: одна и та же компания в одной сделке продавец, в
-    другой покупатель. Фронт выводил её из `activeStatus` (= первый тип компании), и у компании
-    с типами CLIENT+SUPPLIER продавец видел ПОКУПАТЕЛЬСКУЮ карточку своей же заявки — без
-    кнопок подготовки КП (проход глазами 03-08).
-
-    Бенчмарк: GitHub отдаёт `viewerCanUpdate`/`viewerDidAuthor` на каждом объекте, Salesforce —
-    `UserRecordAccess`, Odoo Portal сверяет партнёра на сервере. Клиент роль ЧИТАЕТ, а не
-    вычисляет. Тот же канон уже записан для пути «после контракта» (`DealSideResolver`).
+    Сторону считает СЕРВЕР, клиент её ЧИТАЕТ (GitHub `viewerCanUpdate`, Salesforce
+    `UserRecordAccess`, Odoo Portal сверяет партнёра на сервере).
     """
-    return _viewer_routing(obj, request) is not None
+    return _viewer_is_staff(request)
 
 
 def _viewer_is_buyer(obj, request) -> bool:
-    """Смотрит ли зритель на эту сделку со стороны покупателя — членство в компании-заказчике.
-
-    Платформенный оператор — наблюдатель (ADR-0002): ни одна из сторон ему не принадлежит.
-    """
+    """Смотрит ли зритель на эту сделку со стороны покупателя — членство в компании-заказчике
+    (покупательские аккаунты — до M2-ERP-01)."""
     from accounts.services import is_member_of
 
-    user = getattr(request, "user", None)
-    if user is None or not getattr(user, "is_authenticated", False):
+    user = _authenticated_user(request)
+    if user is None:
         return False
     return bool(obj.company_id) and is_member_of(user, obj.company_id)
 
 
 def _viewer_can_release(obj, request):
-    """Может ли зритель вернуть эту сделку в очередь своей компании.
+    """Может ли зритель вернуть эту сделку в очередь.
 
-    Считает СЕРВЕР тем же предикатом, что и `release_deal`: владелец записи ИЛИ участник с
-    правом `team.manage` в компании-продавце, которой сделка отроутена. Иначе фронт снова
-    начал бы угадывать сторону по локальным флагам — ровно та ошибка, которую закрыла волна U1
-    (виджет показывает объект, а право на действие выводит сам).
-
-    Платформенный оператор — наблюдатель (ADR-0002): он не действует от имени компании.
+    Считает СЕРВЕР тем же предикатом, что и `release_deal`: владелец записи ИЛИ сотрудник с
+    правом `team.manage` в своей компании (или администратор).
     """
-    from accounts.services import member_has_permission
+    from accounts.services import member_has_permission, primary_seller_company_id
 
-    user = getattr(request, "user", None)
-    if user is None or not getattr(user, "is_authenticated", False):
-        return False
-    routing = _viewer_routing(obj, request)
+    user = _authenticated_user(request)
     # Возвращать нечего, пока запись никем не взята.
-    if routing is None or not routing.assigned_to_id:
+    if user is None or not obj.assigned_to_id:
         return False
-    if routing.assigned_to_id == user.id or getattr(user, "is_superuser", False):
+    if obj.assigned_to_id == user.id or getattr(user, "is_superuser", False):
         return True
-    return member_has_permission(user, routing.seller_company_id, "team.manage")
-
-
-def _target_sellers_for_viewer(obj, request):
-    """Seller companies this RFQ is routed to — VIEWER-SCOPED (audit #5). The buyer (RFQ owner)
-    and platform admin see the full routed set; a routed SELLER viewer sees only its OWN company,
-    so a competitor never learns who else is bidding on the same заявка (hidden competition,
-    ADR-0003 §5). Previously the full roster leaked to every routed seller."""
-    sellers = list(obj.target_sellers.all())
-    user = getattr(request, "user", None)
-    if user is None or not getattr(user, "is_authenticated", False):
-        return []
-    as_dicts = [{"id": s.id, "name": s.name} for s in sellers]
-    if getattr(user, "is_superuser", False):
-        return as_dicts
-    company_ids = set(user.memberships.filter(is_active=True).values_list("company_id", flat=True))
-    # Buyer owns the RFQ → sees everyone it fanned out to; a seller sees only itself.
-    if obj.company_id in company_ids:
-        return as_dicts
-    return [d for d in as_dicts if d["id"] in company_ids]
+    company_id = primary_seller_company_id(user)
+    return bool(company_id) and member_has_permission(user, company_id, "team.manage")
 
 
 class DealListSerializer(serializers.ModelSerializer):
@@ -133,9 +96,8 @@ class DealListSerializer(serializers.ModelSerializer):
     # will actually resolve (resolve_quote_recipient falls back to the contact's email).
     contact_name = serializers.CharField(source="contact.name", read_only=True, allow_null=True)
     active_quote = QuoteSerializer(read_only=True)
-    target_sellers_data = serializers.SerializerMethodField()
     execution_complete = serializers.SerializerMethodField()
-    # Per-seller ownership (ADR-0006 Move 2): these reflect the VIEWER's own company routing.
+    # Deal owner in the back office (ADR-0006 Move 2): one per deal — the seller is the own company.
     assigned_to = serializers.SerializerMethodField()
     assigned_to_name = serializers.SerializerMethodField()
     assigned_at = serializers.SerializerMethodField()
@@ -151,20 +113,16 @@ class DealListSerializer(serializers.ModelSerializer):
         return _viewer_is_buyer(obj, self.context.get("request"))
 
     def get_assigned_to(self, obj) -> int | None:
-        return _assigned_to_id(obj, self.context.get("request"))
+        return obj.assigned_to_id
 
     def get_assigned_to_name(self, obj) -> str | None:
-        return _assigned_to_display(obj, self.context.get("request"))
+        return _assigned_to_display(obj)
 
     def get_assigned_at(self, obj) -> datetime | None:
-        return _assigned_at(obj, self.context.get("request"))
+        return obj.assigned_at
 
     def get_viewer_can_release(self, obj) -> bool:
         return _viewer_can_release(obj, self.context.get("request"))
-
-    def get_target_sellers_data(self, obj) -> list:
-        """Seller companies this RFQ is routed to (multi-seller routing)."""
-        return _target_sellers_for_viewer(obj, self.context.get("request"))
 
     def get_execution_complete(self, obj) -> bool:
         """Исполнение закрыто целиком (оплата + поставка + акт) — НЕ то же, что «сделка выиграна».
@@ -196,7 +154,6 @@ class DealListSerializer(serializers.ModelSerializer):
             "viewer_is_seller",
             "viewer_is_buyer",
             "active_quote",
-            "target_sellers_data",
             "execution_complete",
             "created_at",
         ]
@@ -215,7 +172,7 @@ class DealDetailSerializer(serializers.ModelSerializer):
     contact_name = serializers.CharField(source="contact.name", read_only=True, allow_null=True)
     client_name = serializers.CharField(source="client.get_full_name", read_only=True)
     manager_name = serializers.CharField(source="manager.get_full_name", read_only=True)
-    # Per-seller ownership (ADR-0006 Move 2): these reflect the VIEWER's own company routing.
+    # Deal owner in the back office (ADR-0006 Move 2): one per deal — the seller is the own company.
     assigned_to = serializers.SerializerMethodField()
     assigned_to_name = serializers.SerializerMethodField()
     assigned_at = serializers.SerializerMethodField()
@@ -224,7 +181,6 @@ class DealDetailSerializer(serializers.ModelSerializer):
     viewer_is_seller = serializers.SerializerMethodField()
     viewer_is_buyer = serializers.SerializerMethodField()
     can_edit_request = serializers.SerializerMethodField()
-    target_sellers_data = serializers.SerializerMethodField()
     execution_complete = serializers.SerializerMethodField()
 
     def get_viewer_is_seller(self, obj) -> bool:
@@ -234,20 +190,16 @@ class DealDetailSerializer(serializers.ModelSerializer):
         return _viewer_is_buyer(obj, self.context.get("request"))
 
     def get_assigned_to(self, obj) -> int | None:
-        return _assigned_to_id(obj, self.context.get("request"))
+        return obj.assigned_to_id
 
     def get_assigned_to_name(self, obj) -> str | None:
-        return _assigned_to_display(obj, self.context.get("request"))
+        return _assigned_to_display(obj)
 
     def get_assigned_at(self, obj) -> datetime | None:
-        return _assigned_at(obj, self.context.get("request"))
+        return obj.assigned_at
 
     def get_viewer_can_release(self, obj) -> bool:
         return _viewer_can_release(obj, self.context.get("request"))
-
-    def get_target_sellers_data(self, obj) -> list:
-        """Seller companies this RFQ is routed to (multi-seller routing)."""
-        return _target_sellers_for_viewer(obj, self.context.get("request"))
 
     def get_execution_complete(self, obj) -> bool:
         """Исполнение закрыто целиком (оплата + поставка + акт) — НЕ то же, что «сделка выиграна».
@@ -294,7 +246,6 @@ class DealDetailSerializer(serializers.ModelSerializer):
             "active_quote",
             "quotes",
             "can_edit_request",
-            "target_sellers_data",
             "execution_complete",
             "created_at",
             "updated_at",

@@ -118,20 +118,16 @@ def test_submit_request_writes_deal_linked_activity_log(rfq_lookups):
     ActivityLog whose detail is grammatically pluralized. The deal FK is what the timeline
     endpoint (`crm/timeline/`, filter deal_id=…) scopes on, so its presence is the display
     layer's contract."""
-    from crm.models import ActivityLog, Deal, DealSellerRouting, DealStage
+    from crm.models import ActivityLog, Deal, DealStage
     from crm.services.rfq import buyer_add_request_item, submit_request
 
     buyer_company = _make_company("Buyer Co", "CLIENT")
-    seller_company = _make_company("Seller Co", "SUPPLIER")
     buyer = _make_buyer(buyer_company)
     deal = Deal.objects.create(title="RFQ", company=buyer_company, stage=DealStage.objects.get(code="DRAFT"))
 
     # Two distinct complete lines → len(items) == 2 → detail must read «2 позиции».
     buyer_add_request_item(buyer, deal, name="Рельс Р65", quantity=3)
     buyer_add_request_item(buyer, deal, name="Накладка 2Р65", quantity=1)
-    # Free-text заявка has no product-implied routing; give it an explicit recipient so the
-    # NO_RECIPIENTS guard passes and submit reaches RFQ_OPEN.
-    DealSellerRouting.objects.create(deal=deal, seller_company=seller_company)
 
     submitted = submit_request(buyer, deal)
 

@@ -1,6 +1,6 @@
 """Tests for AI draft-КП generation (ADR-0006 Move 3, increment 2).
 
-A routed seller turns the buyer request into a pre-filled draft КП: request lines copied, matched
+Own-company staff turn the buyer request into a pre-filled draft КП: request lines copied, matched
 products' cost prefilled from the seller's SupplierOffer (pricing-assist).
 """
 
@@ -10,7 +10,7 @@ import pytest
 
 from accounts.models import Company, CompanyMember, CompanyRole, CompanyType, CustomUser, WorkspaceRole
 from catalog.models import Product, SupplierOffer
-from crm.models import Deal, DealSellerRouting, DealStage, Quote, QuoteItem, QuoteStatus
+from crm.models import Deal, DealStage, Quote, QuoteItem, QuoteStatus
 from crm.services.draft_quote import generate_draft_quote
 from master_data.models import Currency
 
@@ -42,7 +42,6 @@ def scene(db):
     )
 
     deal = Deal.objects.create(title="RFQ", company=buyer, stage=DealStage.objects.get(code="RFQ_OPEN"))
-    DealSellerRouting.objects.create(deal=deal, seller_company=seller)
     # Buyer's request quote (prepared_by=None) with one matched + one free-text line.
     request_quote = Quote.objects.create(deal=deal, version=1, status=draft)
     QuoteItem.objects.create(quote=request_quote, product=product, quantity=5)
@@ -56,6 +55,20 @@ def scene(db):
         user=seller_user, company=seller, role=ws, company_role=role, is_active=True, is_primary=True, can_sell=True
     )
     return locals()
+
+
+def _outsider(email, inn):
+    """A member of ANOTHER (client) company holding quote.edit_pricing THERE — not own-company
+    staff, so the pricing permission gives it nothing in the back office."""
+    company = Company.objects.create(name=f"Other {inn}", inn=inn)
+    company.types.add(CompanyType.objects.get(code="CLIENT"))
+    role = CompanyRole.objects.create(company=company, name="М", permissions=["quote.edit_pricing"])
+    ws = WorkspaceRole.objects.get(code="SALES_MANAGER")
+    user = CustomUser.objects.create_user(email=email, username=email, password="pw", is_active=True)
+    CompanyMember.objects.create(
+        user=user, company=company, role=ws, company_role=role, is_active=True, is_primary=True, can_sell=True
+    )
+    return user
 
 
 def test_generate_draft_quote_copies_lines_and_prefills_matched(scene):
@@ -77,37 +90,25 @@ def test_generate_draft_quote_copies_lines_and_prefills_matched(scene):
     assert free.imported_raw_name == "Тормозная колодка" and free.frozen_base_price == Decimal("0")
 
 
-def test_non_routed_seller_denied(scene):
-    other_seller = Company.objects.create(name="Other", inn="2220000099")
-    other_seller.types.add(CompanyType.objects.get(code="SUPPLIER"))
-    role = CompanyRole.objects.create(company=other_seller, name="М", permissions=["quote.edit_pricing"])
-    ws = WorkspaceRole.objects.get(code="SALES_MANAGER")
-    outsider = CustomUser.objects.create_user(email="o@o.uz", username="o@o.uz", password="pw", is_active=True)
-    CompanyMember.objects.create(
-        user=outsider, company=other_seller, role=ws, company_role=role, is_active=True, is_primary=True, can_sell=True
-    )
-    _, err, _ = generate_draft_quote(scene["deal"].id, outsider)
-    assert err == "MEMBER_REQUIRED_FOR_ACTION"
+def test_outsider_denied(scene):
+    _, err, _ = generate_draft_quote(scene["deal"].id, _outsider("o@o.uz", "2220000099"))
+    assert err == "ONLY_SELLER_CAN_BUILD_QUOTE"
+    assert scene["deal"].quotes.count() == 1  # nothing was built
 
 
 def test_no_request_lines(scene):
     empty_deal = Deal.objects.create(title="Empty", company=scene["buyer"], stage=scene["deal"].stage)
-    DealSellerRouting.objects.create(deal=empty_deal, seller_company=scene["seller"])
     _, err, _ = generate_draft_quote(empty_deal.id, scene["seller_user"])
     assert err == "NO_REQUEST_LINES"
 
 
 def test_ai_draft_needs_no_paid_plan(scene):
-    """M1-ERP-02 wave 2: the paid ai.draft entitlement is gone — any routed seller who may build
+    """M1-ERP-02 wave 2: the paid ai.draft entitlement is gone — any staff member who may build
     КП (quote.edit_pricing) gets the draft, no subscription / entitlement / credit involved."""
-    seller2 = Company.objects.create(name="Seller2", inn="2220000077")
-    seller2.types.add(CompanyType.objects.get(code="SUPPLIER"))
-    DealSellerRouting.objects.create(deal=scene["deal"], seller_company=seller2)
-    role = CompanyRole.objects.create(company=seller2, name="М", permissions=["quote.edit_pricing"])
     ws = WorkspaceRole.objects.get(code="SALES_MANAGER")
     member = CustomUser.objects.create_user(email="s2@s.uz", username="s2@s.uz", password="pw", is_active=True)
     CompanyMember.objects.create(
-        user=member, company=seller2, role=ws, company_role=role, is_active=True, is_primary=True, can_sell=True
+        user=member, company=scene["seller"], role=ws, company_role=scene["role"], is_active=True, can_sell=True
     )
     quote, err, _ = generate_draft_quote(scene["deal"].id, member)
     assert err is None
@@ -223,7 +224,7 @@ def test_ai_fuzzy_match_below_threshold_not_bound(scene, settings, monkeypatch):
 
 
 def test_validate_gates_pass_is_read_only(scene):
-    """The pre-enqueue validation clears a routed seller WITHOUT side effects —
+    """The pre-enqueue validation clears a staff member WITHOUT side effects —
     no draft Quote is created."""
     from crm.services.draft_quote import validate_draft_quote_gates
 
@@ -235,15 +236,8 @@ def test_validate_gates_maps_same_error_codes(scene):
     """The read-only gates return the SAME stable codes as generate_draft_quote."""
     from crm.services.draft_quote import validate_draft_quote_gates
 
-    outsider_co = Company.objects.create(name="OtherV", inn="2220000098")
-    outsider_co.types.add(CompanyType.objects.get(code="SUPPLIER"))
-    role = CompanyRole.objects.create(company=outsider_co, name="М", permissions=["quote.edit_pricing"])
-    ws = WorkspaceRole.objects.get(code="SALES_MANAGER")
-    outsider = CustomUser.objects.create_user(email="ov@o.uz", username="ov@o.uz", password="pw", is_active=True)
-    CompanyMember.objects.create(
-        user=outsider, company=outsider_co, role=ws, company_role=role, is_active=True, is_primary=True, can_sell=True
-    )
-    assert validate_draft_quote_gates(scene["deal"].id, outsider) == "MEMBER_REQUIRED_FOR_ACTION"
+    outsider = _outsider("ov@o.uz", "2220000098")
+    assert validate_draft_quote_gates(scene["deal"].id, outsider) == "ONLY_SELLER_CAN_BUILD_QUOTE"
     assert validate_draft_quote_gates(999999, scene["seller_user"]) == "DEAL_NOT_FOUND"
 
 
@@ -274,18 +268,11 @@ def test_endpoint_enqueues_202_with_owned_aijob(scene, monkeypatch):
 
 
 def test_endpoint_gate_error_short_circuits_before_enqueue(scene, monkeypatch):
-    """A cheap gate failure (seller NOT routed to the deal) 4xxs synchronously and never queues a job."""
+    """A cheap gate failure (not own-company staff) 4xxs synchronously and never queues a job."""
     import pytest as _pytest
     from rest_framework.test import APIClient
 
-    seller2 = Company.objects.create(name="Seller2V", inn="2220000076")
-    seller2.types.add(CompanyType.objects.get(code="SUPPLIER"))  # not routed to scene["deal"]
-    role = CompanyRole.objects.create(company=seller2, name="М", permissions=["quote.edit_pricing"])
-    ws = WorkspaceRole.objects.get(code="SALES_MANAGER")
-    member = CustomUser.objects.create_user(email="s2v@s.uz", username="s2v@s.uz", password="pw", is_active=True)
-    CompanyMember.objects.create(
-        user=member, company=seller2, role=ws, company_role=role, is_active=True, is_primary=True, can_sell=True
-    )
+    member = _outsider("s2v@s.uz", "2220000076")
 
     monkeypatch.setattr(
         "sourcing.tasks_ai.run_ai_job.apply_async",
@@ -295,7 +282,7 @@ def test_endpoint_gate_error_short_circuits_before_enqueue(scene, monkeypatch):
     client.force_authenticate(member)
     response = client.post(f"/api/v1/crm/deals/{scene['deal'].id}/generate-draft-quote/", {}, format="json")
     assert response.status_code == 403
-    assert response.json() == {"detail": "MEMBER_REQUIRED_FOR_ACTION"}
+    assert response.json() == {"detail": "ONLY_SELLER_CAN_BUILD_QUOTE"}
 
 
 def test_draft_quote_handler_serializes_deal_with_pdf_quote(scene):

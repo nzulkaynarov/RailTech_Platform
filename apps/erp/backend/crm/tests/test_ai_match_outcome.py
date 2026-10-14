@@ -13,7 +13,7 @@ from django.core.management import CommandError, call_command
 
 from accounts.models import Company, CompanyMember, CompanyRole, CompanyType, CustomUser, WorkspaceRole
 from catalog.models import Product, ProductStatus, SupplierOffer
-from crm.models import AIMatchOutcome, Deal, DealSellerRouting, DealStage, Quote, QuoteItem, QuoteStatus
+from crm.models import AIMatchOutcome, Deal, DealStage, Quote, QuoteItem, QuoteStatus
 from crm.services.ai_telemetry import finalize_outcomes_on_send
 from crm.services.draft_quote import generate_draft_quote
 from crm.services.quotes import reassign_quote_item_product
@@ -41,7 +41,6 @@ def scene(db):
     seller.types.add(CompanyType.objects.get(code="SUPPLIER"))
 
     deal = Deal.objects.create(title="RFQ", company=buyer, stage=DealStage.objects.get(code="RFQ_OPEN"))
-    DealSellerRouting.objects.create(deal=deal, seller_company=seller)
     # Buyer request: ONE free-text line — the AI fuzzy candidate target.
     request_quote = Quote.objects.create(deal=deal, version=1, status=draft)
     QuoteItem.objects.create(quote=request_quote, quantity=2, imported_raw_name="Тормозная колодка")

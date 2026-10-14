@@ -1,9 +1,9 @@
 """Tests for the counterparty / deal activity timeline (CRM Phase A).
 
 The timeline is a read surface over ActivityLog's new relation links (company / contact / deal).
-The isolation contract mirrors the rest of CRM: deal timeline = deal-chat access boundary;
-company timeline = member sees own org fully, a routed seller only events on deals visible to
-them (multi-seller confidentiality), platform admin sees all.
+The isolation contract mirrors the rest of CRM: deal timeline = the deal's access boundary;
+company timeline = a member sees own org fully, own-company staff (the seller of every deal —
+M1-ERP-02 wave 3) and the administrator see everything, anyone else gets an empty list.
 """
 
 import pytest
@@ -11,7 +11,7 @@ from rest_framework.test import APIClient
 from rest_framework_simplejwt.tokens import RefreshToken
 
 from accounts.models import Company, CompanyMember, CompanyType, CustomUser, WorkspaceRole
-from crm.models import ActivityLog, Deal, DealSellerRouting, DealStage
+from crm.models import ActivityLog, Deal, DealStage
 
 
 @pytest.fixture
@@ -41,34 +41,30 @@ def _member(company, email, **flags):
     return user
 
 
-def _api(user, ctx=None):
+def _api(user):
     client = APIClient()
-    headers = {"HTTP_AUTHORIZATION": f"Bearer {RefreshToken.for_user(user).access_token}"}
-    if ctx:
-        headers["HTTP_X_ACTIVE_CONTEXT"] = ctx
-    client.credentials(**headers)
+    client.credentials(HTTP_AUTHORIZATION=f"Bearer {RefreshToken.for_user(user).access_token}")
     return client
 
 
 @pytest.fixture
 def scene(lookups):
     buyer_co = _company("Buyer Co", "T100", "CLIENT")
-    seller_a_co = _company("Seller A", "T200", "SUPPLIER")
-    seller_b_co = _company("Seller B", "T300", "SUPPLIER")
+    own_co = _company("Own Co", "T200", "SUPPLIER")
+    other_client_co = _company("Other Client", "T300", "CLIENT")
     buyer = _member(buyer_co, "buyer@t.test", can_buy=True)
-    seller_a = _member(seller_a_co, "sa@t.test", can_sell=True)
-    seller_b = _member(seller_b_co, "sb@t.test", can_sell=True)
+    staff = _member(own_co, "staff@t.test", can_sell=True)
+    # An outsider: a member of ANOTHER client company — not staff, not this deal's buyer.
+    outsider = _member(other_client_co, "out@t.test", can_buy=True)
 
     stage = DealStage.objects.get(code="DRAFT")
-    deal_a = Deal.objects.create(title="Deal routed to A", company=buyer_co, stage=stage)
-    DealSellerRouting.objects.create(deal=deal_a, seller_company=seller_a_co)
-    deal_b = Deal.objects.create(title="Deal routed to B", company=buyer_co, stage=stage)
-    DealSellerRouting.objects.create(deal=deal_b, seller_company=seller_b_co)
+    deal_a = Deal.objects.create(title="Deal A", company=buyer_co, stage=stage)
+    deal_b = Deal.objects.create(title="Deal B", company=buyer_co, stage=stage)
 
     ActivityLog.objects.create(action="Сделка создана", deal=deal_a, company=buyer_co)
     ActivityLog.objects.create(action="КП отправлено клиенту", deal=deal_a, company=buyer_co)
     ActivityLog.objects.create(action="Сделка создана", deal=deal_b, company=buyer_co)
-    # Company-scoped event with NO deal (e.g. archiving) — sellers must not see it.
+    # Company-scoped event with NO deal (e.g. archiving).
     ActivityLog.objects.create(action="Компания архивирована", company=buyer_co)
     return locals()
 
@@ -98,14 +94,15 @@ def test_buyer_sees_own_deal_timeline(scene):
     assert all(entry["deal_id"] == scene["deal_a"].id for entry in resp.json())
 
 
-def test_routed_seller_sees_deal_timeline(scene):
-    resp = _api(scene["seller_a"], ctx="SELLER").get(f"/api/v1/crm/timeline/?deal_id={scene['deal_a'].id}")
+def test_staff_sees_deal_timeline(scene):
+    resp = _api(scene["staff"]).get(f"/api/v1/crm/timeline/?deal_id={scene['deal_a'].id}")
     assert resp.status_code == 200
     assert len(resp.json()) == 2
+    assert all(entry["deal_id"] == scene["deal_a"].id for entry in resp.json())
 
 
-def test_unrouted_seller_gets_403_on_deal_timeline(scene):
-    resp = _api(scene["seller_b"], ctx="SELLER").get(f"/api/v1/crm/timeline/?deal_id={scene['deal_a'].id}")
+def test_outsider_gets_403_on_deal_timeline(scene):
+    resp = _api(scene["outsider"]).get(f"/api/v1/crm/timeline/?deal_id={scene['deal_a'].id}")
     assert resp.status_code == 403
     assert resp.json()["detail"] == "MEMBER_REQUIRED_FOR_ACTION"
 
@@ -119,22 +116,20 @@ def test_member_sees_own_company_full_history(scene):
     assert len(resp.json()) == 4  # both deals + the no-deal company event
 
 
-def test_routed_seller_sees_only_own_deals_slice(scene):
-    """Multi-seller confidentiality: seller A sees buyer-company events ONLY for deals routed
-    to A — not B's deal, not company-internal (no-deal) events like archiving."""
-    resp = _api(scene["seller_a"], ctx="SELLER").get(f"/api/v1/crm/timeline/?company_id={scene['buyer_co'].id}")
+def test_staff_sees_full_company_history(scene):
+    """The seller of every deal is the own company: its staff see the counterparty's whole history —
+    every deal plus company-level (no-deal) events."""
+    resp = _api(scene["staff"]).get(f"/api/v1/crm/timeline/?company_id={scene['buyer_co'].id}")
     assert resp.status_code == 200
     entries = resp.json()
-    assert len(entries) == 2
-    assert all(entry["deal_id"] == scene["deal_a"].id for entry in entries)
+    assert len(entries) == 4
+    assert {entry["deal_id"] for entry in entries} == {scene["deal_a"].id, scene["deal_b"].id, None}
 
 
 def test_outsider_gets_empty_list_not_oracle(scene):
     """A user with no relationship to the company gets [] — same shape as 'nothing yet',
     so company ids can't be probed for existence."""
-    outsider_co = _company("Outsider", "T400", "SUPPLIER")
-    outsider = _member(outsider_co, "out@t.test", can_sell=True)
-    resp = _api(outsider, ctx="SELLER").get(f"/api/v1/crm/timeline/?company_id={scene['buyer_co'].id}")
+    resp = _api(scene["outsider"]).get(f"/api/v1/crm/timeline/?company_id={scene['buyer_co'].id}")
     assert resp.status_code == 200
     assert resp.json() == []
 
@@ -155,7 +150,7 @@ def test_log_quote_links_deal_and_company(scene):
 
     status = QuoteStatus.objects.get_or_create(code="DRAFT", defaults={"name": "Draft", "sort_order": 10})[0]
     quote = Quote.objects.create(deal=scene["deal_a"], version=1, status=status)
-    _log_quote(quote, scene["seller_a"], "quote.submit_for_review")
+    _log_quote(quote, scene["staff"], "quote.submit_for_review")
     entry = ActivityLog.objects.get(action="quote.submit_for_review")
     assert entry.deal_id == scene["deal_a"].id
     assert entry.company_id == scene["buyer_co"].id

@@ -77,20 +77,6 @@ def test_company_with_a_deal_is_refused(operator, company, db):
     assert Company.objects.filter(pk=company.pk).exists()
 
 
-def test_company_routed_as_seller_is_refused(operator, company, db):
-    """Продавца держит его маршрутизация: удаление уносило бы чужую заявку из его очереди."""
-    from crm.models import Deal, DealSellerRouting, DealStage
-
-    buyer = Company.objects.create(name="Покупатель", inn="907500002")
-    deal = Deal.objects.create(title="Чужая заявка", company=buyer, stage=DealStage.objects.get(code="RFQ_OPEN"))
-    DealSellerRouting.objects.create(deal=deal, seller_company=company)
-
-    resp = _delete(operator, company)
-
-    assert resp.status_code == 409
-    assert "deals" in resp.json()["detail"]
-
-
 def test_company_with_a_quote_is_refused(operator, company, db):
     from crm.models import Deal, DealStage, Quote, QuoteStatus
 
@@ -218,30 +204,6 @@ def archived_seller(db, operator):
     seller.types.add(CompanyType.objects.get(code="SUPPLIER"))
     archive_company(seller, operator, reason="ушёл с рынка")
     return seller
-
-
-def test_archived_seller_disappears_from_the_buyer_picker(archived_seller, db):
-    """Инцидент #436 наоборот: компания не должна остаться в подборе, исчезнув из списка."""
-    buyer_user = CustomUser.objects.create_user(
-        email="picker@archive.test", username="picker_archive", password="x", is_active=True
-    )
-    buyer = Company.objects.create(
-        name="Покупатель пикера",
-        inn="907500011",
-    )
-    buyer.types.add(CompanyType.objects.get(code="CLIENT"))
-    CompanyMember.objects.create(
-        user=buyer_user,
-        company=buyer,
-        role=WorkspaceRole.objects.get(code="OWNER"),
-        is_active=True,
-        is_primary=True,
-        can_buy=True,
-    )
-
-    body = _api(buyer_user).get("/api/v1/accounts/companies/suppliers/").json()
-
-    assert all(row["id"] != archived_seller.pk for row in body)
 
 
 def test_archived_company_is_out_of_the_seller_queryset(archived_seller):

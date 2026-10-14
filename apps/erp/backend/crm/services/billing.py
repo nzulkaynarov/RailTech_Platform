@@ -159,8 +159,7 @@ def _invoice_seller_company(invoice):
     identity (Rule 1/2). A contract-based invoice resolves via contract→КП. A MANUAL invoice
     (Wave G, contract=None) loses that link, so fall back, in order, to:
       (1) a source КП carried on its items (built «из активного КП»),
-      (2) the seller company that created it, scoped to THIS deal's routing,
-      (3) the deal's sole seller routing (unambiguous single-seller / solo deal).
+      (2) the own company — the seller of every deal (core.tenant.own_company_id).
     Returns None only when no seller is derivable — the template then shows «—», not a fake ИНН.
     """
     from accounts.models import Company
@@ -173,16 +172,13 @@ def _invoice_seller_company(invoice):
         if item and item.source_quote_item and item.source_quote_item.quote_id:
             quote = item.source_quote_item.quote
     supplier = _quote_seller_company(quote) if quote else None
-    if supplier is None and invoice.created_by_id:
-        from accounts.services.permissions import routed_seller_company_id
+    if supplier is None:
+        # Pure-manual счёт without a source КП: the seller is the own company (BUSINESS §3.3).
+        from core.tenant import own_company_id
 
-        company_id = routed_seller_company_id(invoice.created_by, invoice.deal_id)
+        company_id = own_company_id()
         if company_id:
             supplier = Company.objects.filter(pk=company_id).first()
-    if supplier is None:
-        routed = list(invoice.deal.seller_routings.values_list("seller_company_id", flat=True)[:2])
-        if len(routed) == 1:
-            supplier = Company.objects.filter(pk=routed[0]).first()
     return supplier
 
 
@@ -322,7 +318,17 @@ def record_payment(
         or is_member_of(actor, invoice.deal.company_id, capability="buy")
         or has_explicit_company_role_perm(actor, invoice.deal.company_id, "payment.record")
     ):
-        return None, "MEMBER_REQUIRED_FOR_ACTION"
+        # Back office (M1-ERP-02 wave 3): the seller is the own company, so incoming payments are
+        # recorded by its staff — gated on the INTENTIONAL `payment.record` CompanyRole permission
+        # (fail-closed, no legacy can_buy auto-grant; same discipline as quote.send / contract.sign).
+        # The buyer branch above stays for the portal until M2-ERP-01.
+        from accounts.services import primary_seller_company_id
+
+        own_company_id = primary_seller_company_id(actor)
+        if own_company_id is None:
+            return None, "MEMBER_REQUIRED_FOR_ACTION"
+        if not has_explicit_company_role_perm(actor, own_company_id, "payment.record"):
+            return None, "ROLE_NOT_PERMITTED"
     if invoice.status_code in {InvoiceStatusCode.CANCELLED}:
         return None, "INVOICE_CANCELLED"
     # A DRAFT invoice was never issued — it has no issue date / legal PDF. Paying it would mint a
@@ -451,25 +457,17 @@ def generate_act(
 ) -> Tuple[Optional[object], Optional[str]]:
     from django.utils import timezone
 
-    from accounts.services import is_seller, seller_company_routed_to_deal
+    from accounts.services import is_seller
 
     from ..models import Act, Invoice
 
-    # Issuing the act (acceptance certificate) is a seller-side action.
+    # Issuing the act (acceptance certificate) is a seller-side action — own-company staff.
     if actor is not None and not (getattr(actor, "is_superuser", False) or is_seller(actor)):
         return None, "MEMBER_REQUIRED_FOR_ACTION"
     try:
         invoice = Invoice.objects.select_related("contract__quote", "deal", "status").get(pk=invoice_id)
     except Invoice.DoesNotExist:
         return None, "NOT_FOUND"
-    # Bind to THIS invoice's deal routing — a seller must not issue an act on a
-    # competitor's invoice (audit H4).
-    if (
-        actor is not None
-        and not getattr(actor, "is_superuser", False)
-        and not seller_company_routed_to_deal(actor, invoice.deal_id)
-    ):
-        return None, "MEMBER_REQUIRED_FOR_ACTION"
     if invoice.status_code not in {InvoiceStatusCode.PAID, InvoiceStatusCode.PARTIAL, InvoiceStatusCode.ISSUED}:
         return None, "ACT_INVALID_INVOICE_STATUS"
 
@@ -624,11 +622,11 @@ def act_viewer_side(actor, act) -> str:
     Акт двусторонний: выпускает исполнитель, принимает заказчик. Раньше сторона не
     различалась вовсе — кто первый нажал, тот и закрывал документ в одиночку.
     """
-    from accounts.services import is_member_of, seller_company_routed_to_deal
+    from accounts.services import is_member_of, is_seller
 
     if actor is None or getattr(actor, "is_anonymous", False):
         return ""
-    if seller_company_routed_to_deal(actor, act.deal_id):
+    if is_seller(actor):
         return "issuer"
     if act.deal.company_id and is_member_of(actor, act.deal.company_id, capability="buy"):
         return "acceptor"

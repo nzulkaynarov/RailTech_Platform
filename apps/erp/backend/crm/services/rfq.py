@@ -313,82 +313,6 @@ def buyer_update_request_meta(user: CustomUser, deal: Deal, *, title=None, notes
     return deal
 
 
-def route_deal_from_catalog(deal: Deal) -> set:
-    """Upsert DealSellerRouting rows from the deal's quote-item products — the
-    target seller(s) are the distinct `Product.owner_company` of the chosen catalog
-    items. Idempotent. Returns the set of seller company ids routed to. Product-less
-    (free-text) lines contribute nothing — those deals are routed by the buyer.
-    """
-    from crm.models import DealSellerRouting, QuoteItem
-
-    seller_ids = set(
-        QuoteItem.objects.filter(quote__deal=deal, product__owner_company__isnull=False)
-        .values_list("product__owner_company_id", flat=True)
-        .distinct()
-    )
-    for seller_id in seller_ids:
-        DealSellerRouting.objects.get_or_create(deal=deal, seller_company_id=seller_id)
-    return seller_ids
-
-
-def route_request_to_sellers(user: CustomUser, deal: Deal, seller_company_ids: list) -> Deal:
-    """Buyer routes a (typically free-text) заявка to chosen seller companies.
-
-    Multi-seller routing: a free-text RFQ has no Product.owner_company to imply the
-    supplier, so the buyer picks the target seller(s) explicitly. Idempotent upsert of
-    DealSellerRouting rows (the through model behind Deal.target_sellers). Allowed only
-    while the deal is still DRAFT — once submitted the routing is frozen.
-
-    Guards: not a platform-admin viewer, buyer (can_buy) of the deal's own company,
-    deal stage is DRAFT, and every id is an active SUPPLIER-type Company.
-    """
-    from rest_framework.exceptions import PermissionDenied, ValidationError
-
-    from accounts.models import Company
-    from accounts.services.permissions import is_member_of
-    from crm.models import DealSellerRouting
-
-    if not is_member_of(user, deal.company_id, capability="buy"):
-        raise PermissionDenied("ONLY_BUYER_CAN_ROUTE")
-    if (deal.stage.code if deal.stage_id else None) != DealStageCode.DRAFT:
-        raise ValidationError({"detail": "REQUEST_ALREADY_SUBMITTED"})
-
-    requested_ids = {int(seller_id) for seller_id in seller_company_ids}
-    if not requested_ids:
-        raise ValidationError({"detail": "NO_SELLERS_SELECTED"})
-
-    # NB: Company has no is_active flag (only CompanyMember does). A company is
-    # "active as a seller" iff it carries a SUPPLIER CompanyType — same gate the
-    # rest of the codebase uses (core.permissions, catalog offers, contracts).
-    valid_ids = set(Company.objects.sellers().filter(id__in=requested_ids).values_list("id", flat=True))
-    if valid_ids != requested_ids:
-        raise ValidationError({"detail": "NOT_A_SELLER_COMPANY"})
-
-    for seller_id in valid_ids:
-        DealSellerRouting.objects.get_or_create(deal=deal, seller_company_id=seller_id)
-
-    # Counterparty book (Phase B): first interaction of a buyer↔seller pair creates both edges
-    # (buyer gains a SUPPLIER, each routed seller gains a CLIENT); repeats just touch them.
-    from .relationships import ensure_edges_for_deal_routing
-
-    ensure_edges_for_deal_routing(deal, valid_ids)
-
-    seller_word = pluralize_ru(len(valid_ids), "продавцу", "продавцам", "продавцам")
-    ActivityLog.objects.create(
-        action="Заявка адресована продавцам (RFQ routing)",
-        detail=f"Deal #{deal.id}: {len(valid_ids)} {seller_word}",
-        event_code="deal.routed",
-        event_params={"deal_id": deal.id, "count": len(valid_ids)},
-        user=user,
-        level="INFO",
-        entity_type="deal",
-        entity_id=str(deal.id),
-        deal=deal,
-        company_id=deal.company_id,
-    )
-    return deal
-
-
 def submit_request(user: CustomUser, deal: Deal) -> Deal:
     """Buyer issues the RFQ to the seller — the explicit «Отправить заявку» step.
 
@@ -412,19 +336,6 @@ def submit_request(user: CustomUser, deal: Deal) -> Deal:
         raise ValidationError({"detail": "REQUEST_EMPTY"})
     if any(_is_request_item_incomplete(item) for item in items):
         raise ValidationError({"detail": "REQUEST_HAS_INCOMPLETE_ITEMS"})
-
-    # Route the RFQ to the seller(s) whose catalog products the buyer chose — the
-    # supplier is implied by Product.owner_company (world-standard marketplace RFQ).
-    # Free-text-only заявки stay unrouted here; the buyer routes them explicitly.
-    route_deal_from_catalog(deal)
-
-    # An RFQ MUST reach at least one seller. A free-text/manually-typed заявка produces
-    # no Product.owner_company routing, so without an explicit buyer routing this would
-    # advance to RFQ_OPEN visible to NO seller, while the buyer is told «Менеджер готовит
-    # КП» — a silent dead-end (audit F2). Mirror the NO_SELLERS_SELECTED guard the /route
-    # endpoint already enforces so both paths uphold the same ≥1-recipient invariant.
-    if not deal.seller_routings.exists():
-        raise ValidationError({"detail": "NO_RECIPIENTS"})
 
     deal, error = transition_deal_stage(deal, DealStageCode.RFQ_OPEN, actor=user)
     if error:

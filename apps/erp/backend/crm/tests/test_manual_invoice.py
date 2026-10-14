@@ -4,7 +4,7 @@ create_manual_invoice raises a DRAFT invoice on a deal WITHOUT a contract (Odoo 
 «invoice without contract»; contract=None). Lines import from an active КП (same billable
 projection as the contract path) and/or a manual list. Money follows the PRESENTATION currency
 (quote_currency), never a line's frozen COST currency (the B1 bug). The DRAFT is hidden from the
-buyer and from a co-routed competitor, visible to the owning seller; then the existing issue/cancel
+buyer and from an outsider, visible to own-company staff; then the existing issue/cancel
 lifecycle takes over and payment still rejects a DRAFT.
 
 Self-contained fixtures (tests run --nomigrations, so every lookup code is seeded here).
@@ -16,11 +16,11 @@ from decimal import Decimal
 import pytest
 
 from accounts.models import Company, CompanyMember, CompanyType, CustomUser, WorkspaceRole
-from crm.models import Deal, DealSellerRouting, DealStage, Invoice, InvoiceStatus, Quote, QuoteItem, QuoteStatus
+from crm.models import Deal, DealStage, Invoice, InvoiceStatus, Quote, QuoteItem, QuoteStatus
 from crm.services import create_manual_invoice
 from crm.services.billing import record_payment
 from crm.services.invoice_lifecycle import cancel_invoice, issue_invoice
-from crm.views.billing import _invoice_seller_side_q
+from crm.views.billing import _seller_side_q
 from master_data.models import Currency
 
 
@@ -47,7 +47,13 @@ def scenario(db):
         return co, user
 
     seller, seller_user = _seller("Seller A", "3000000001")
-    competitor, competitor_user = _seller("Seller B", "3000000002")
+    # Посторонний — участник другой (клиентской) компании: не сотрудник, документов бэк-офиса не видит.
+    outsider_co = Company.objects.create(name="Outsider LLC", inn="3000000002")
+    outsider_co.types.add(CompanyType.objects.get(code="CLIENT"))
+    outsider_user = CustomUser.objects.create_user(email="out@o.test", username="out@o.test", password="pw")
+    CompanyMember.objects.create(
+        user=outsider_user, company=outsider_co, role=WorkspaceRole.objects.get(code="OWNER"), is_active=True
+    )
 
     # O3: продавец с платёжными реквизитами — иначе `issue_invoice` не выпустит счёт (он неоплатен).
     buyer = Company.objects.create(name="Buyer LLC", inn="6600000001", bank_account="20208000900001234567", mfo="00443")
@@ -58,8 +64,6 @@ def scenario(db):
     )
 
     deal = Deal.objects.create(title="Deal", company=buyer, stage=DealStage.objects.get(code="DRAFT"))
-    DealSellerRouting.objects.create(deal=deal, seller_company=seller)
-    DealSellerRouting.objects.create(deal=deal, seller_company=competitor)
 
     # КП owned by A, PRESENTATION currency UZS, a line whose COST currency is USD (the B1 trap).
     quote = Quote.objects.create(
@@ -84,10 +88,8 @@ def scenario(db):
     )
     quote.refresh_from_db()
 
-    # A SINGLE-seller deal (only Seller A routed) — a pure-manual счёт is confidentiality-safe here
-    # (no competitor to leak to), unlike the multi-seller `deal` above.
+    # A second deal without a КП — the pure-manual счёт path.
     solo_deal = Deal.objects.create(title="Solo deal", company=buyer, stage=DealStage.objects.get(code="DRAFT"))
-    DealSellerRouting.objects.create(deal=solo_deal, seller_company=seller)
 
     return {
         "deal": deal,
@@ -95,7 +97,7 @@ def scenario(db):
         "quote": quote,
         "seller": seller,
         "seller_user": seller_user,
-        "competitor_user": competitor_user,
+        "outsider_user": outsider_user,
         "buyer_user": buyer_user,
         "uzs": uzs,
         "usd": usd,
@@ -147,7 +149,7 @@ def test_manual_invoice_lines_match_billable_projection(scenario):
 
 @pytest.mark.django_db
 def test_manual_invoice_with_manual_lines_only(scenario):
-    # Pure-manual счёт on a SINGLE-seller deal — allowed (no competitor to leak to).
+    # Pure-manual счёт (no source КП) — allowed on any deal: the seller is always the own company.
     invoice, err = create_manual_invoice(
         scenario["solo_deal"].id,
         scenario["seller_user"],
@@ -173,13 +175,13 @@ def test_invoice_supplier_resolves_via_source_quote_when_no_contract(scenario):
     assert err is None and invoice.contract_id is None
     supplier = _invoice_seller_company(invoice)
     assert supplier is not None
-    assert supplier.id == scenario["seller"].id  # Seller A, never the co-routed competitor
+    assert supplier.id == scenario["seller"].id
 
 
 @pytest.mark.django_db
-def test_invoice_supplier_resolves_via_deal_routing_for_pure_manual(scenario):
-    # D0: a pure-manual invoice (ad-hoc lines, no КП) on a solo deal still names the seller —
-    # falls back to the creator's routed company / the deal's sole routing.
+def test_invoice_supplier_resolves_to_own_company_for_pure_manual(scenario):
+    # D0: a pure-manual invoice (ad-hoc lines, no КП) still names the seller — the own company
+    # (core.tenant.own_company_id), never «—».
     from crm.services.billing import _invoice_seller_company
 
     invoice, err = create_manual_invoice(
@@ -194,26 +196,6 @@ def test_invoice_supplier_resolves_via_deal_routing_for_pure_manual(scenario):
 
 
 @pytest.mark.django_db
-def test_pure_manual_on_multiseller_deal_requires_a_quote(scenario):
-    """Confidentiality (ADR-0003): a pure-manual invoice on a MULTI-seller deal has no owner
-    anchor and would leak to a co-routed competitor — so it is refused; the seller must pull a КП
-    (which resolves ownership). The same lines WITH a source КП succeed."""
-    invoice, err = create_manual_invoice(
-        scenario["deal"].id,  # 2 routed sellers
-        scenario["seller_user"],
-        lines=[{"description": "Доставка", "quantity": 1, "unit_price_excl_vat": "150000.00"}],
-    )
-    assert invoice is None
-    assert err == "MANUAL_INVOICE_REQUIRES_QUOTE_MULTISELLER"
-    # With a source КП on the same multi-seller deal, ownership resolves → allowed.
-    invoice, err = create_manual_invoice(
-        scenario["deal"].id, scenario["seller_user"], source_quote_id=scenario["quote"].id
-    )
-    assert err is None
-    assert invoice.contract_id is None
-
-
-@pytest.mark.django_db
 def test_manual_invoice_requires_a_line_source(scenario):
     invoice, err = create_manual_invoice(scenario["deal"].id, scenario["seller_user"])
     assert invoice is None
@@ -221,24 +203,24 @@ def test_manual_invoice_requires_a_line_source(scenario):
 
 
 @pytest.mark.django_db
-def test_draft_hidden_from_buyer_visible_to_owner_not_competitor(scenario):
+def test_draft_hidden_from_buyer_and_outsider_visible_to_staff(scenario):
     invoice, err = create_manual_invoice(
         scenario["deal"].id, scenario["seller_user"], source_quote_id=scenario["quote"].id
     )
     assert err is None
 
     def _seller_visible(user):
-        q = _invoice_seller_side_q(user, None)
+        q = _seller_side_q(user)
         if q is None:
             return set()
         return set(Invoice.objects.filter(q).values_list("pk", flat=True))
 
-    # Owning seller A sees its own DRAFT.
+    # Own-company staff see the DRAFT.
     assert invoice.pk in _seller_visible(scenario["seller_user"])
-    # Co-routed competitor B must NOT see A's DRAFT manual invoice (hidden competition).
-    assert invoice.pk not in _seller_visible(scenario["competitor_user"])
+    # An outsider (not own-company staff) must NOT see the DRAFT manual invoice.
+    assert invoice.pk not in _seller_visible(scenario["outsider_user"])
     # Buyer has no seller company → the DRAFT is confined to the seller side.
-    assert _invoice_seller_side_q(scenario["buyer_user"], None) is None
+    assert _seller_side_q(scenario["buyer_user"]) is None
 
 
 @pytest.mark.django_db
@@ -259,7 +241,7 @@ def test_issue_cancel_lifecycle_and_payment_guard(scenario):
     assert issue_err is None
     assert issued.status_code == "ISSUED"
 
-    # Cancel a fresh manual DRAFT works too (pure-manual on the SINGLE-seller deal — allowed).
+    # Cancel a fresh manual DRAFT works too (pure-manual — allowed).
     fresh, fresh_err = create_manual_invoice(
         scenario["solo_deal"].id,
         scenario["seller_user"],

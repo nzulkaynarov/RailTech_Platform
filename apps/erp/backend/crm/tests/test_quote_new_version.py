@@ -10,7 +10,26 @@ POST /crm/quotes/ отвечал 400 (авто-UniqueTogetherValidator DRF по 
 import pytest
 from rest_framework.test import APIClient
 
-from crm.tests.test_ms_routing import lookups, world  # noqa: F401 — фикстуры мира с роутингом
+from accounts.models import Company, CompanyMember, CompanyType, CustomUser, WorkspaceRole
+from crm.models import Deal, DealStage, QuoteStatus
+
+
+@pytest.fixture
+def world(db):
+    WorkspaceRole.objects.get_or_create(code="OWNER", defaults={"name": "Owner", "sort_order": 10})
+    CompanyType.objects.get_or_create(code="CLIENT", defaults={"name": "Client", "sort_order": 10})
+    CompanyType.objects.get_or_create(code="SUPPLIER", defaults={"name": "Supplier", "sort_order": 20})
+    DealStage.objects.get_or_create(code="DRAFT", defaults={"name": "DRAFT", "sort_order": 10})
+    QuoteStatus.objects.get_or_create(code="DRAFT", defaults={"name": "Draft", "sort_order": 10})
+    own = Company.objects.create(name="Own Co", inn="A100")
+    own.types.add(CompanyType.objects.get(code="SUPPLIER"))
+    staff = CustomUser.objects.create_user(email="sa@t.test", username="sa@t.test", password="x")
+    CompanyMember.objects.create(
+        user=staff, company=own, role=WorkspaceRole.objects.get(code="OWNER"), is_active=True, is_primary=True
+    )
+    buyer_co = Company.objects.create(name="Buyer Co", inn="C100")
+    buyer_co.types.add(CompanyType.objects.get(code="CLIENT"))
+    return {"staff": staff, "buyer_co": buyer_co}
 
 
 def _api(user):
@@ -19,15 +38,11 @@ def _api(user):
     return client
 
 
-@pytest.mark.django_db
-def test_second_quote_on_same_deal_gets_next_version(world):  # noqa: F811
-    from crm.models import Deal, DealSellerRouting, DealStage
-
+def test_second_quote_on_same_deal_gets_next_version(world):
     deal = Deal.objects.create(
         title="Re-quote after rejection", company=world["buyer_co"], stage=DealStage.objects.get(code="DRAFT")
     )
-    DealSellerRouting.objects.create(deal=deal, seller_company=world["sa_co"])
-    api = _api(world["sa_user"])
+    api = _api(world["staff"])
 
     first = api.post("/api/v1/crm/quotes/", {"deal": deal.id}, format="json")
     assert first.status_code == 201, first.content

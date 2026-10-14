@@ -8,7 +8,7 @@ read-only assistive result that NEVER blocks the buyer.
 
 Both GET and POST are accepted (the check is idempotent / read-only): GET so the
 buyer's КП view can fetch it on open, POST for parity with the other AI endpoints.
-Scoped so only the deal's buyer or the routed seller (or a platform-admin viewer)
+Scoped so only the deal's buyer or own-company staff (or the administrator)
 may call it — a stranger gets 403, never another tenant's data.
 """
 
@@ -30,7 +30,7 @@ from crm.services import user_can_view_quote_diff
         "plain-language list of discrepancies: uncovered (unpriced) lines and — when AI is "
         "enabled — non-equivalent substitutions and notes the КП may have ignored. The "
         "deterministic coverage facts are always returned; the AI part is purely additive. "
-        "Result is ASSISTIVE and never blocks. Scoped to the deal's buyer or routed seller."
+        "Result is ASSISTIVE and never blocks. Scoped to the deal's buyer or own-company staff."
     ),
     request=None,
     responses={
@@ -40,7 +40,7 @@ from crm.services import user_can_view_quote_diff
                 "{'ai_enabled': bool, 'findings': [{issue_type, line, explanation}]})"
             )
         ),
-        403: OpenApiResponse(description="Caller is neither the deal's buyer nor a routed seller"),
+        403: OpenApiResponse(description="Caller is neither the deal's buyer nor own-company staff"),
         404: OpenApiResponse(description="Quote not found"),
     },
     tags=["CRM"],
@@ -63,7 +63,7 @@ class QuoteRequestDiffView(APIView):
 
         # ARCH-01: the visibility 403/404 stays synchronous; the (possibly paid) diff runs on
         # Celery. user_id travels too — the worker RE-RUNS user_can_view_quote_diff so a
-        # routing revoked between enqueue and execution can't still deliver the diff (TOCTOU).
+        # membership revoked between enqueue and execution can't still deliver the diff (TOCTOU).
         from sourcing.ai_jobs import enqueue_ai_job
 
         return enqueue_ai_job("quote_diff", {"quote_id": quote.id, "user_id": request.user.id}, request.user)

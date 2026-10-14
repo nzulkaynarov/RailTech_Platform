@@ -4,14 +4,11 @@
 соседние вьюхи того же файла уже были тонкими обёртками над сервисами. Теперь вьюха
 однородна с ними: разобрать параметры → ОДИН вызов → Response.
 
-**Изоляция данных B2B** — три взаимоисключающие области видимости:
+**Области видимости** (продавец один — компания-владелец, BUSINESS §3.3):
 
-* платформенный оператор → видит всё (`company_ids=None`, `deal_scope=None`);
-* продавец в своём контексте → область задают РОУТИНГОВЫЕ id сделок, а не компания-покупатель.
-  Продавец не состоит в `deal.company` покупателя, поэтому прежний фильтр `company_id__in`
-  давал чистому продавцу НУЛЕВЫЕ KPI. Роутинговые сделки и есть граница конфиденциальности
-  продавца (`DealSellerRouting`);
-* покупатель (и двойной пользователь в контексте покупателя) → область по своим компаниям.
+* администратор (`is_superuser`) → видит всё;
+* сотрудник своей компании → все сделки; KPI каталога — офферы своей компании;
+* покупательский аккаунт (до M2-ERP-01) → область по своим компаниям.
 
 Кэш живёт здесь же, а не во вьюхе: иначе следующий вызывающий сервис прошёл бы мимо него.
 """
@@ -40,39 +37,34 @@ CLOSED_STAGES = [DealStageCode.CLOSED_WON, DealStageCode.CLOSED_LOST]
 class DashboardScope:
     """Разрешённая область видимости пользователя — то, чем ограничены ВСЕ запросы ниже."""
 
-    __slots__ = ("is_staff", "deal_scope", "seller_company_ids", "user_company_ids")
+    __slots__ = ("is_staff", "seller_company_ids", "user_company_ids")
 
-    def __init__(self, is_staff, deal_scope, seller_company_ids, user_company_ids):
+    def __init__(self, is_staff, seller_company_ids, user_company_ids):
         self.is_staff = is_staff
-        self.deal_scope = deal_scope
         self.seller_company_ids = seller_company_ids
         self.user_company_ids = user_company_ids
 
 
 def resolve_scope(user, request) -> DashboardScope:
-    """Определить область видимости по действующему контексту (см. модульный докстринг)."""
-    from accounts.services.permissions import seller_acting_company_ids, seller_visible_deal_ids
+    """Определить область видимости пользователя (см. модульный докстринг)."""
+    from accounts.services.permissions import seller_company_ids as own_seller_company_ids
 
     is_staff = user.is_superuser
-    deal_scope = None if is_staff else seller_visible_deal_ids(user, request)
-    # Собственные компании действующего продавца — ими ограничивается KPI каталога
-    # (аудит E4: раньше считался Product.owner_company и показывал 0).
-    seller_company_ids = None if is_staff else seller_acting_company_ids(user, request)
-    if is_staff or deal_scope is not None:
+    # Своя компания сотрудника — ею ограничивается KPI каталога (аудит E4: раньше считался
+    # Product.owner_company и показывал 0). Пусто у покупателя.
+    seller_company_ids = None if is_staff else own_seller_company_ids(user)
+    if is_staff or seller_company_ids:
         user_company_ids = None
     else:
         user_company_ids = list(user.memberships.filter(is_active=True).values_list("company_id", flat=True))
-    return DashboardScope(is_staff, deal_scope, seller_company_ids, user_company_ids)
+    return DashboardScope(is_staff, seller_company_ids, user_company_ids)
 
 
 def scope_deals(deals, scope: DashboardScope):
     """Применить область видимости к queryset сделок.
 
-    `deal_scope` (множество роутинговых id) выигрывает у действующего продавца;
-    `user_company_ids` ограничивает покупателя своими компаниями; оба None = видно всё.
+    `user_company_ids` ограничивает покупателя своими компаниями; None = видно всё.
     """
-    if scope.deal_scope is not None:
-        return deals.filter(id__in=scope.deal_scope)
     if scope.user_company_ids is not None:
         return deals.filter(company_id__in=scope.user_company_ids)
     return deals
@@ -146,7 +138,7 @@ def _client_kpis(period_start, scope: DashboardScope) -> dict:
     """Количество клиентов с изменением период-к-периоду.
 
     Область по контексту (аудит F4): оператор видит все компании-CLIENT, продавец — только
-    различные компании-покупатели по зароутиненным на него сделкам, у покупателя «клиентов»
+    различные компании-покупатели по всем сделкам (продавец один), у покупателя «клиентов»
     нет → 0.
     """
     if scope.is_staff:
@@ -159,13 +151,13 @@ def _client_kpis(period_start, scope: DashboardScope) -> dict:
         prev_clients = (
             current_clients - Company.objects.filter(types=client_type, created_at__gte=period_start).distinct().count()
         )
-    elif scope.deal_scope is not None:
-        routed = Deal.objects.filter(id__in=scope.deal_scope)
-        current_clients = routed.values("company_id").distinct().count()
-        # База = различные компании-покупатели, у которых зароутиненная сделка была УЖЕ ДО периода
-        # (аудит M4). Прежняя арифметика «минус созданные в периоде» ошибочно выбрасывала
-        # повторных клиентов (сделки в обоих периодах) и искажала стрелку тренда.
-        prev_clients = routed.filter(created_at__lt=period_start).values("company_id").distinct().count()
+    elif scope.seller_company_ids:
+        deals = Deal.objects.filter(company__isnull=False)
+        current_clients = deals.values("company_id").distinct().count()
+        # База = различные компании-покупатели, у которых сделка была УЖЕ ДО периода (аудит M4).
+        # Прежняя арифметика «минус созданные в периоде» ошибочно выбрасывала повторных клиентов
+        # (сделки в обоих периодах) и искажала стрелку тренда.
+        prev_clients = deals.filter(created_at__lt=period_start).values("company_id").distinct().count()
     else:
         current_clients = prev_clients = 0
     return {
@@ -198,9 +190,7 @@ def _counterparties() -> dict:
 def _request_completion(scope: DashboardScope) -> float:
     """Процент закрытия заявок в пределах области видимости."""
     quotes_qs = Quote.objects.all()
-    if scope.deal_scope is not None:
-        quotes_qs = quotes_qs.filter(deal_id__in=scope.deal_scope)
-    elif scope.user_company_ids is not None:
+    if scope.user_company_ids is not None:
         quotes_qs = quotes_qs.filter(deal__company_id__in=scope.user_company_ids)
     # ARCH-04: закрытые и всего по ОДНОМУ queryset одним aggregate.
     counts = quotes_qs.aggregate(
@@ -269,9 +259,7 @@ def _activity_by_day(scope: DashboardScope) -> list:
 
     window_start = timezone.now() - timedelta(days=ACTIVITY_WINDOW_DAYS)
     qs = ActivityLog.objects.filter(timestamp__gte=window_start)
-    if scope.deal_scope is not None:
-        qs = qs.filter(entity_type="deal", entity_id__in=scope.deal_scope)
-    elif scope.user_company_ids is not None:
+    if scope.user_company_ids is not None:
         qs = qs.filter(user__memberships__company_id__in=scope.user_company_ids)
     daily = qs.annotate(day=TruncDate("timestamp")).values("day").annotate(count=Count("id")).order_by("day")
     return [
@@ -290,9 +278,7 @@ def _top_products(scope: DashboardScope, limit: int = TOP_PRODUCTS_LIMIT) -> lis
     from catalog.models import Product
 
     qs = Product.objects.select_related("category")
-    if scope.deal_scope is not None:
-        qs = qs.filter(quote_items__quote__deal_id__in=scope.deal_scope)
-    elif scope.user_company_ids is not None:
+    if scope.user_company_ids is not None:
         qs = qs.filter(quote_items__quote__deal__company_id__in=scope.user_company_ids)
     top = qs.annotate(deal_count=Count("quote_items", distinct=True)).order_by("-deal_count")[:limit]
     return [
@@ -334,16 +320,12 @@ def _compute(scope: DashboardScope, period: str) -> dict:
 def dashboard_analytics(user, request, period: str = DEFAULT_PERIOD) -> dict:
     """KPI дашборда для пользователя за период. Только чтение, результат кэшируется на минуту.
 
-    Действующий контекст ОБЯЗАН входить в ключ кэша (аудит M3): `catalog_items` /
-    `clients_count` зависят от контекста (продавец → свои товары / зароутиненные покупатели,
-    покупатель → 0), поэтому двойной покупатель+продавец, переключивший контекст внутри
-    60-секундного TTL, иначе прочитал бы цифры другого контекста.
+    Ключ кэша — период и пользователь: область видимости зависит только от того, кто он
+    (сотрудник своей компании или покупательский аккаунт); переключателя контекста больше нет.
     """
     from django.core.cache import cache
 
-    from accounts.services.permissions import acting_context
-
-    cache_key = f"dashboard_analytics_{period}_{acting_context(request) or 'NONE'}_{user.pk}"
+    cache_key = f"dashboard_analytics_{period}_{user.pk}"
     cached = cache.get(cache_key)
     if cached:
         return cached

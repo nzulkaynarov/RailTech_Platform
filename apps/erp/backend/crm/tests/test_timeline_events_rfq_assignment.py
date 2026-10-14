@@ -99,33 +99,15 @@ def test_item_removed_writes_event_code_and_item_id(rfq_lookups):
 
 
 @pytest.mark.django_db
-def test_routed_writes_event_code_and_seller_count(rfq_lookups):
-    from crm.models import ActivityLog, Deal, DealStage
-    from crm.services.rfq import route_request_to_sellers
-
-    buyer_company = _make_company("Buyer Co", "CLIENT")
-    seller_company = _make_company("Seller Co", "SUPPLIER")
-    buyer = _make_member(buyer_company, "buyer_route@t.test", can_buy=True)
-    deal = Deal.objects.create(title="RFQ", company=buyer_company, stage=DealStage.objects.get(code="DRAFT"))
-
-    route_request_to_sellers(buyer, deal, [seller_company.id])
-
-    log = ActivityLog.objects.filter(deal=deal, event_code="deal.routed").get()
-    assert log.event_params == {"deal_id": deal.id, "count": 1}
-
-
-@pytest.mark.django_db
 def test_submitted_writes_event_code_and_line_count(rfq_lookups):
-    from crm.models import ActivityLog, Deal, DealSellerRouting, DealStage
+    from crm.models import ActivityLog, Deal, DealStage
     from crm.services.rfq import buyer_add_request_item, submit_request
 
     buyer_company = _make_company("Buyer Co", "CLIENT")
-    seller_company = _make_company("Seller Co", "SUPPLIER")
     buyer = _make_member(buyer_company, "buyer_submit@t.test", can_buy=True)
     deal = Deal.objects.create(title="RFQ", company=buyer_company, stage=DealStage.objects.get(code="DRAFT"))
     buyer_add_request_item(buyer, deal, name="Рельс Р65", quantity=3)
     buyer_add_request_item(buyer, deal, name="Накладка 2Р65", quantity=1)
-    DealSellerRouting.objects.create(deal=deal, seller_company=seller_company)
 
     submit_request(buyer, deal)
 
@@ -138,13 +120,12 @@ def test_submitted_writes_event_code_and_line_count(rfq_lookups):
 
 @pytest.mark.django_db
 def test_claim_and_release_write_event_codes(rfq_lookups):
-    from crm.models import ActivityLog, Deal, DealSellerRouting, DealStage
+    from crm.models import ActivityLog, Deal, DealStage
     from crm.services.assignment import claim_deal, release_deal
 
     buyer_company = _make_company("Buyer Co", "CLIENT")
     seller_company = _make_company("Seller Co", "SUPPLIER")
     deal = Deal.objects.create(title="RFQ", company=buyer_company, stage=DealStage.objects.get(code="RFQ_OPEN"))
-    DealSellerRouting.objects.create(deal=deal, seller_company=seller_company)
     seller = _make_member(seller_company, "seller_claim@s.test", can_sell=True)
 
     _, err = claim_deal(deal.id, seller)
@@ -161,13 +142,12 @@ def test_claim_and_release_write_event_codes(rfq_lookups):
 @pytest.mark.django_db
 def test_assign_writes_event_code_and_assignee(rfq_lookups):
     from accounts.models import CompanyRole
-    from crm.models import ActivityLog, Deal, DealSellerRouting, DealStage
+    from crm.models import ActivityLog, Deal, DealStage
     from crm.services.assignment import assign_deal
 
     buyer_company = _make_company("Buyer Co", "CLIENT")
     seller_company = _make_company("Seller Co", "SUPPLIER")
     deal = Deal.objects.create(title="RFQ", company=buyer_company, stage=DealStage.objects.get(code="RFQ_OPEN"))
-    DealSellerRouting.objects.create(deal=deal, seller_company=seller_company)
 
     # Admin with team.manage on the seller company assigns to a teammate.
     admin_role = CompanyRole.objects.create(company=seller_company, name="Admin", permissions=["team.manage"])

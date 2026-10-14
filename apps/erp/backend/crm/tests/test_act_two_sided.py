@@ -26,7 +26,6 @@ from crm.models import (
     Contract,
     ContractStatus,
     Deal,
-    DealSellerRouting,
     DealStage,
     Invoice,
     InvoiceStatus,
@@ -90,7 +89,6 @@ def act_world(lookups):
     outsider = CustomUser.objects.create_user(email="outsider@g2.test", username="outsider@g2.test", password="x")
 
     deal = Deal.objects.create(title="G2 deal", company=buyer_co, stage=DealStage.objects.get(code="CLOSED_WON"))
-    DealSellerRouting.objects.create(deal=deal, seller_company=seller_co)
     quote = Quote.objects.create(
         deal=deal,
         version=1,

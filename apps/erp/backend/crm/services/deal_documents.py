@@ -12,8 +12,8 @@
 
 1. **Видимость не переизобретается.** Каждый набор сужается тем же `_billing_visibility_q`,
    что и «родной» список этого типа. Иначе хаб стал бы вторым определением видимости и
-   разошёлся бы с ним — ровно так проигравший со-роутед продавец увидел отгрузку победителя
-   (#463). Доступ к самой сделке проверяет вызывающая вьюха через `get_object()`.
+   разошёлся бы с ним (#463). Доступ к самой сделке проверяет вызывающая вьюха через
+   `get_object()`.
 
 2. **Права считает сервер, а не страница.** Клиент выводил роль из `activeStatus`
    (= первый тип компании), из-за чего компания и покупатель, и продавец одновременно не
@@ -52,16 +52,19 @@ def _money(value: Optional[Decimal]) -> str:
     return str(value if value is not None else Decimal("0"))
 
 
-def _is_admin(user) -> bool:
-    return bool(getattr(user, "is_superuser", False))
+def _sees_all(user) -> bool:
+    """Администратор и сотрудник компании-владельца (продавец один) видят все документы сделки."""
+    from accounts.services.permissions import sees_all_deals
+
+    return sees_all_deals(user)
 
 
 def viewer_deal_sides(user, deal, request=None) -> dict:
     """Отношение зрителя К ЭТОЙ сделке — источник правды для гейтов UI.
 
     Ровно то, на чём построены `viewer_can_sign_client/manager`: покупательская сторона — это
-    активное членство в компании-владельце сделки с правом покупать; продавцовская — компания
-    зрителя среди адресатов маршрутизации. У компании с обоими типами истинны обе.
+    активное членство в компании-владельце сделки с правом покупать; продавцовская — сотрудник
+    своей компании (продавец любой сделки — компания-владелец ERP).
 
     Одиночный случай выражен через тот же `DealSideResolver`, что обслуживает реестры: два
     определения стороны неизбежно разошлись бы, и карточка с реестром показывали бы одному
@@ -74,53 +77,50 @@ class DealSideResolver:
     """Стороны зрителя сразу для МНОГИХ сделок — за два запроса на весь список.
 
     Нужен реестрам (счета / акты / отгрузки): там надо показать правильную кнопку в каждой
-    строке, а `viewer_deal_sides` на строку дал бы N+1. Множества «мои покупательские
-    компании» и «сделки, куда я пророутен как продавец» считаются один раз на запрос.
+    строке, а `viewer_deal_sides` на строку дал бы N+1. «Мои покупательские компании» и
+    «я сотрудник своей компании» считаются один раз на запрос.
 
     Определение стороны здесь то же, что у `viewer_deal_sides`, — иначе реестр и карточка
     показывали бы разные кнопки одному человеку.
     """
 
     def __init__(self, user, request):
-        from accounts.services.permissions import seller_visible_deal_ids
+        from accounts.services.permissions import is_seller
 
         anonymous = user is None or getattr(user, "is_anonymous", False)
         if anonymous:
             self.buy_company_ids = set()
-            self.routed_deal_ids = set()
+            self.is_staff_member = False
             return
         self.buy_company_ids = set(
             user.memberships.filter(is_active=True, can_buy=True).values_list("company_id", flat=True)
         )
-        # force=True — сторона не зависит от заголовка активного контекста SPA (правило WP-1).
-        self.routed_deal_ids = set(seller_visible_deal_ids(user, request, force=True) or ())
+        self.is_staff_member = is_seller(user)
 
     def sides_for(self, deal_id, deal_company_id) -> dict:
         # `is_viewer` остаётся в ответе ради стабильности контракта SPA до волны 1b: плоскости
         # «оператор-наблюдатель» больше нет (M1-ERP-02), администратор = is_superuser.
         return {
             "is_buyer_side": bool(deal_company_id) and deal_company_id in self.buy_company_ids,
-            "is_seller_side": deal_id in self.routed_deal_ids,
+            "is_seller_side": self.is_staff_member,
             "is_viewer": False,
         }
 
 
-def _visible(model_qs, user, request, *, deal_path, seller_path):
+def _visible(model_qs, user, request, *, deal_path):
     """Сузить набор ровно так же, как это делает «родной» список данного типа."""
     from crm.views.billing import _billing_visibility_q
 
-    if _is_admin(user):
+    if _sees_all(user):
         return model_qs
-    return model_qs.filter(
-        _billing_visibility_q(user, request, deal_path=deal_path, seller_path=seller_path)
-    ).distinct()
+    return model_qs.filter(_billing_visibility_q(user, request, deal_path=deal_path)).distinct()
 
 
 def _contracts_for(deal, user, request) -> list:
     from crm.models import Contract
 
     qs = Contract.objects.filter(deal_id=deal.id).select_related("status", "deal")
-    return list(_visible(qs, user, request, deal_path="deal", seller_path="quote__seller_company_id"))
+    return list(_visible(qs, user, request, deal_path="deal"))
 
 
 def _invoices_for(deal, user, request) -> list:
@@ -130,7 +130,7 @@ def _invoices_for(deal, user, request) -> list:
     from crm.views.billing import invoice_visibility_q
 
     qs = Invoice.objects.filter(deal_id=deal.id).select_related("status").prefetch_related("payments")
-    if _is_admin(user):
+    if _sees_all(user):
         return list(qs)
     return list(qs.filter(invoice_visibility_q(user, request)).distinct())
 
@@ -141,7 +141,7 @@ def _acts_for(deal, user, request) -> list:
     from crm.views.billing import act_visibility_q
 
     qs = Act.objects.filter(deal_id=deal.id).select_related("status")
-    if _is_admin(user):
+    if _sees_all(user):
         return list(qs)
     return list(qs.filter(act_visibility_q(user, request)).distinct())
 
@@ -150,7 +150,7 @@ def _fulfillment_for(deal, user, request):
     from crm.models import Fulfillment
 
     qs = Fulfillment.objects.filter(deal_id=deal.id).select_related("status")
-    return _visible(qs, user, request, deal_path="deal", seller_path="contract__quote__seller_company_id").first()
+    return _visible(qs, user, request, deal_path="deal").first()
 
 
 def _payments_for(deal, user, request) -> list:
@@ -163,7 +163,6 @@ def _payments_for(deal, user, request) -> list:
             user,
             request,
             deal_path="invoice__deal",
-            seller_path="invoice__contract__quote__seller_company_id",
         )
     )
 

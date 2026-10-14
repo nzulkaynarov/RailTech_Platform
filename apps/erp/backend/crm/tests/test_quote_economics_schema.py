@@ -17,7 +17,7 @@ import pytest
 from rest_framework.test import APIRequestFactory
 
 from accounts.models import Company, CompanyMember, CompanySettings, CompanyType, CustomUser, SystemRole, WorkspaceRole
-from crm.models import Deal, DealSellerRouting, DealStage, Quote, QuoteItem, QuoteStatus
+from crm.models import Deal, DealStage, Quote, QuoteItem, QuoteStatus
 from crm.serializers.quote import QuoteEconomicsSerializer, QuoteSerializer
 from crm.services.quotes import QuoteCalculationService, compute_quote_economics
 from master_data.models import Currency
@@ -82,7 +82,6 @@ def _quote(world, *, owned=True):
     `_quote_owner_company_id()` resolve (→ real CompanySettings thresholds) and what arms the
     per-quote cost gate. `owned=False` is the unclaimed buyer request: no owner, no preparer."""
     deal = Deal.objects.create(title="КП", company=world["buyer_co"], stage=DealStage.objects.get(code="DRAFT"))
-    DealSellerRouting.objects.create(deal=deal, seller_company=world["seller_co"])
     return Quote.objects.create(
         deal=deal,
         version=1,
@@ -191,14 +190,30 @@ def test_economics_is_none_without_include_flag(world):
 
 @pytest.mark.django_db
 def test_economics_is_none_for_viewer_without_cost_visibility(world):
-    """Cost gate: a competing seller on the same routed deal sees economics=None, never a
-    partial object. This is why the schema marks the OBJECT nullable rather than its individual
-    fields. Requires an OWNED quote — `can_view_quote_costs_for` deliberately lets anyone see an
-    unclaimed (prepared_by=None) quote's economics, since it carries no real cost yet."""
-    outsider, _ = _seller("Seller B", "B200", "econ-outsider@t.test")
+    """Cost gate: a viewer without `quote.view_cost_margin` in the own company — a staff member
+    with a restricted role, or the deal's buyer — sees economics=None, never a partial object.
+    This is why the schema marks the OBJECT nullable rather than its individual fields."""
+    from accounts.models import CompanyRole
+
+    restricted_role = CompanyRole.objects.create(company=world["seller_co"], name="Наблюдатель", permissions=[])
+    restricted = CustomUser.objects.create_user(email="econ-viewer@t.test", username="econ-viewer@t.test", password="x")
+    CompanyMember.objects.create(
+        user=restricted,
+        company=world["seller_co"],
+        role=WorkspaceRole.objects.get(code="OWNER"),
+        company_role=restricted_role,
+        is_active=True,
+        can_sell=True,
+    )
+    buyer = CustomUser.objects.create_user(email="econ-buyer@t.test", username="econ-buyer@t.test", password="x")
+    CompanyMember.objects.create(
+        user=buyer, company=world["buyer_co"], role=WorkspaceRole.objects.get(code="OWNER"), is_active=True
+    )
     quote = _quote(world)
     QuoteItem.objects.create(quote=quote, imported_raw_name="A", quantity=2, frozen_base_price=Decimal("100"))
     QuoteCalculationService.recalculate_quote(quote.pk)
     quote.refresh_from_db()
 
-    assert _serialize(quote, outsider)["economics"] is None
+    assert _serialize(quote, restricted)["economics"] is None
+    assert _serialize(quote, buyer)["economics"] is None
+    assert _serialize(quote, world["seller_user"])["economics"] is not None  # control: the gate opens

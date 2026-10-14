@@ -12,7 +12,7 @@ therefore go through the REAL APIClient dispatch (routing → negotiation → vi
 get_object → action) — the only layer that reproduces the 404 — and assert that
 `?export_format=…` now reaches the view for each format, while the legacy `?format=…` is
 still 404'd by DRF (which is exactly why we stopped using it). Export scoping is also
-asserted: a seller from another company cannot pull a foreign КП.
+asserted: a member of another company (not own-company staff) cannot pull the КП.
 """
 
 from decimal import Decimal
@@ -23,7 +23,7 @@ from django.core.files.base import ContentFile
 from rest_framework.test import APIClient
 
 from accounts.models import Company, CompanyMember, CompanyRole, CompanyType, CustomUser, WorkspaceRole
-from crm.models import Deal, DealSellerRouting, DealStage, Quote, QuoteItem, QuoteStatus
+from crm.models import Deal, DealStage, Quote, QuoteItem, QuoteStatus
 
 RENDER_DELAY = "crm.tasks.render_document_pdf.delay"
 
@@ -33,6 +33,7 @@ def lookups(db):
     DealStage.objects.get_or_create(code="DRAFT", defaults={"name": "Draft", "sort_order": 10})
     QuoteStatus.objects.get_or_create(code="DRAFT", defaults={"name": "Draft", "sort_order": 10})
     CompanyType.objects.get_or_create(code="SUPPLIER", defaults={"name": "Supplier", "sort_order": 20})
+    CompanyType.objects.get_or_create(code="CLIENT", defaults={"name": "Client", "sort_order": 10})
     WorkspaceRole.objects.get_or_create(code="OWNER", defaults={"name": "Owner", "sort_order": 10})
 
 
@@ -53,17 +54,16 @@ def _seller_member(company, email):
 
 @pytest.fixture
 def seller_setup(lookups):
-    """A seller company, its owning member, and a claimed КП on a routed buyer deal.
+    """The own company, its member, and a claimed КП on a buyer deal.
 
-    A DealSellerRouting row links seller_co to the buyer's deal — that (not deal.company) is
-    what makes the заявка/КП visible to the seller through the multi-seller confidentiality
-    scope. prepared_by anchors the КП to the seller (claim guard passes → free PDF renders)."""
+    The own company is the seller of every deal, so its staff see the заявка/КП without being
+    members of deal.company. prepared_by anchors the КП to the seller (claim guard passes → free
+    PDF renders)."""
     buyer_co = Company.objects.create(name="Покупатель", inn="7700000010")
     seller_co = Company.objects.create(name="РемПуть", inn="3000000010")
     seller_co.types.add(CompanyType.objects.get(code="SUPPLIER"))
     seller_owner = _seller_member(seller_co, "owner@seller.test")
     deal = Deal.objects.create(company=buyer_co, stage=DealStage.objects.get(code="DRAFT"), title="Export HTTP")
-    DealSellerRouting.objects.create(deal=deal, seller_company=seller_co)
     quote = Quote.objects.create(
         deal=deal, version=1, status=QuoteStatus.objects.get(code="DRAFT"), prepared_by=seller_owner
     )
@@ -137,12 +137,13 @@ def test_legacy_format_param_is_still_404_by_drf(owner_client, seller_setup):
 
 
 @pytest.mark.django_db
-def test_export_is_scoped_to_owning_company(seller_setup):
-    """A seller from ANOTHER company cannot export a foreign КП — the ViewSet queryset scope
-    hides it, so get_object 404s (tenant isolation, not the format collision)."""
+def test_export_is_scoped_to_staff_and_deal_company(seller_setup):
+    """A member of ANOTHER company (neither own-company staff nor the deal's buyer) cannot export
+    the КП — the ViewSet queryset scope hides it, so get_object 404s (tenant isolation, not the
+    format collision)."""
     _, _, quote = seller_setup
-    foreign_co = Company.objects.create(name="ЧужойПоставщик", inn="3000000099")
-    foreign_co.types.add(CompanyType.objects.get(code="SUPPLIER"))
+    foreign_co = Company.objects.create(name="ЧужаяКомпания", inn="3000000099")
+    foreign_co.types.add(CompanyType.objects.get(code="CLIENT"))
     foreign_user = _seller_member(foreign_co, "foreign@seller.test")
     foreign_client = APIClient()
     foreign_client.force_authenticate(foreign_user)

@@ -14,7 +14,7 @@ from rest_framework_simplejwt.tokens import RefreshToken
 
 from accounts.models import Company, CompanyMember, CompanyType, CustomUser, SystemRole, WorkspaceRole
 from crm import services as crm_services
-from crm.models import Deal, DealSellerRouting, DealStage, DocumentTemplateKind, GeneratedDocumentStatus
+from crm.models import Deal, DealStage, DocumentTemplateKind, GeneratedDocumentStatus
 from crm.services.generated_documents import _brand_context_from_snapshot
 from notifications.models import NotificationType
 
@@ -73,7 +73,6 @@ def world(lookups):
     buyer_user = _member(buyer_co, "buyer@doc.test", can_buy=True)
 
     deal = Deal.objects.create(company=buyer_co, stage=DealStage.objects.get(code="DRAFT"), title="Поставка")
-    DealSellerRouting.objects.create(deal=deal, seller_company=seller_co)
 
     return {
         "seller_co": seller_co,

@@ -5,7 +5,7 @@ and half-commit on a mid-batch failure. POST /api/v1/crm/quote-items/bulk-create
 ALL-OR-NOTHING: any invalid row rolls the whole batch back with per-row errors; on success the
 cascade + totals recalculate ONCE and the created lines are returned (201).
 
-Guards + field validation mirror the single-item create (seller pricing capability, deal routing,
+Guards + field validation mirror the single-item create (seller pricing capability, own-company staff,
 frozen КП). Sibling of test_quote_items_bulk_update.py — the update-path counterpart.
 """
 
@@ -18,7 +18,7 @@ from rest_framework.test import APIClient
 from rest_framework_simplejwt.tokens import RefreshToken
 
 from accounts.models import Company, CompanyMember, CompanyType, CustomUser, SystemRole, WorkspaceRole
-from crm.models import Deal, DealSellerRouting, DealStage, Quote, QuoteItem, QuoteStatus
+from crm.models import Deal, DealStage, Quote, QuoteItem, QuoteStatus
 from master_data.models import Currency
 
 BULK_URL = "/api/v1/crm/quote-items/bulk-create/"
@@ -52,19 +52,31 @@ def _seller(name, inn, email):
     return user, company
 
 
-def _api(user, ctx="SELLER"):
-    client = APIClient()
-    client.credentials(
-        HTTP_AUTHORIZATION=f"Bearer {RefreshToken.for_user(user).access_token}",
-        HTTP_X_ACTIVE_CONTEXT=ctx,
+def _outsider(email):
+    """A member of ANOTHER (client) company — legacy OWNER there, but not own-company staff."""
+    company = Company.objects.create(name=f"Other {email}", inn=email[:12])
+    company.types.add(CompanyType.objects.get(code="CLIENT"))
+    user = CustomUser.objects.create_user(email=email, username=email, password="x")
+    CompanyMember.objects.create(
+        user=user,
+        company=company,
+        role=WorkspaceRole.objects.get(code="OWNER"),
+        is_active=True,
+        is_primary=True,
+        can_sell=True,
     )
+    return user
+
+
+def _api(user):
+    client = APIClient()
+    client.credentials(HTTP_AUTHORIZATION=f"Bearer {RefreshToken.for_user(user).access_token}")
     return client
 
 
 def _empty_quote(buyer_co, seller_co, *, cost_currency=None):
-    """A buyer deal routed to `seller_co` with an EMPTY DRAFT quote (bulk-create fills it)."""
+    """A buyer deal (the own company `seller_co` sells it) with an EMPTY DRAFT quote (bulk-create fills it)."""
     deal = Deal.objects.create(title="КП", company=buyer_co, stage=DealStage.objects.get(code="DRAFT"))
-    DealSellerRouting.objects.create(deal=deal, seller_company=seller_co)
     quote = Quote.objects.create(
         deal=deal,
         version=1,
@@ -190,16 +202,16 @@ def test_bulk_create_row_bounds_violation_returns_code(world):
 
 # ── guards (mirror single-item create) ───────────────────────────────────────────
 @pytest.mark.django_db
-def test_bulk_create_foreign_seller_gets_404(world):
-    """A seller NOT routed to the deal cannot reach its КП — 404 like the single POST."""
+def test_bulk_create_outsider_is_refused(world):
+    """A non-staff user (member of another company) cannot write the КП — 403 like the single POST."""
     _deal, quote = _empty_quote(world["buyer_co"], world["seller_co"])
-    other_user, _other_co = _seller("Seller B", "B200", "sb@t.test")
+    other_user = _outsider("sb@t.test")
 
     payload = {"quote": quote.id, "items": [{"imported_raw_name": "X"}]}
     resp = _api(other_user).post(BULK_URL, payload, format="json")
 
-    assert resp.status_code == 404
-    assert resp.json()["detail"] == "QUOTE_NOT_FOUND"
+    assert resp.status_code == 403
+    assert resp.json()["detail"] == "ONLY_SELLER_CAN_BUILD_QUOTE"
     assert QuoteItem.objects.filter(quote=quote).count() == 0
 
 

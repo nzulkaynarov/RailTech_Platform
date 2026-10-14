@@ -1,16 +1,10 @@
-"""Отгрузка должна быть привязана к владельцу — иначе её видит проигравший конкурент.
+"""Отгрузка привязана к договору сделки (`ensure_fulfillment(deal, contract=...)`).
 
-Видимость биллинга у продавца строится так (`crm/views/billing.py:_seller_side_q`): документ
-принадлежит продавцу, если он ПРИВЯЗАН к его компании (через `contract → quote.seller_company`),
-либо владелец не определён — тогда действует фолбэк «виден любому зароутиненному продавцу».
-
-Комментарий к фолбэку прямо утверждает: «This never re-exposes a winner's billing to a losing
-co-routed seller, because the winner's docs ARE owner-anchored».
-
-Для `Fulfillment` этот инвариант нарушался: `ensure_fulfillment` никогда не заполняла
-`contract`, поэтому владелец НЕ определялся никогда, и отгрузка выигранной сделки уходила в
-фолбэк — её видел проигравший со-роутед продавец. Это граница конфиденциальности
-(«скрытая конкуренция», ADR-0003 §5), а не косметика.
+Раньше `ensure_fulfillment` никогда не заполняла `contract`, владелец отгрузки не определялся, и
+её видел со-роутед продавец, проигравший заявку (#463). С M1-ERP-02 волна 3 продавец один —
+компания-владелец, поэтому видимость проще: отгрузку видят сотрудники своей компании и покупатель
+сделки, посторонний — нет. Привязка к договору остаётся данными сделки (накладная, цепочка
+документов), и её инварианты — привязка, дозаполнение, неперезапись — проверяются здесь.
 """
 
 from decimal import Decimal
@@ -20,17 +14,7 @@ from rest_framework.test import APIClient
 from rest_framework_simplejwt.tokens import RefreshToken
 
 from accounts.models import Company, CompanyMember, CompanyType, CustomUser, SystemRole, WorkspaceRole
-from crm.models import (
-    Contract,
-    ContractStatus,
-    Deal,
-    DealSellerRouting,
-    DealStage,
-    Fulfillment,
-    FulfillmentStatus,
-    Quote,
-    QuoteStatus,
-)
+from crm.models import Contract, ContractStatus, Deal, DealStage, Fulfillment, FulfillmentStatus, Quote, QuoteStatus
 from crm.services.fulfillment import ensure_fulfillment
 
 
@@ -62,18 +46,21 @@ def _seller(name, inn, email):
 
 
 @pytest.fixture
-def multiseller_deal(lookups):
-    """Заявка покупателя, зароутиненная на ДВУХ продавцов; выиграл первый."""
+def signed_deal(lookups):
+    """Заявка покупателя с подписанным договором своей компании; рядом — посторонний (участник
+    другой компании-клиента)."""
     buyer_co = Company.objects.create(name="Покупатель", inn="FB904")
     buyer_co.types.add(CompanyType.objects.get(code="CLIENT"))
 
-    winner, winner_co = _seller("Победитель", "FW904", "winner@fulfil.test")
-    loser, loser_co = _seller("Проигравший", "FL904", "loser@fulfil.test")
+    winner, winner_co = _seller("Своя компания", "FW904", "staff@fulfil.test")
+    loser_co = Company.objects.create(name="Посторонний", inn="FL904")
+    loser_co.types.add(CompanyType.objects.get(code="CLIENT"))
+    loser = CustomUser.objects.create_user(email="outsider@fulfil.test", username="outsider@fulfil.test", password="x")
+    CompanyMember.objects.create(
+        user=loser, company=loser_co, role=WorkspaceRole.objects.get(code="OWNER"), is_active=True, can_sell=True
+    )
 
     deal = Deal.objects.create(title="Сделка", company=buyer_co, stage=DealStage.objects.get(code="CONTRACT_SIGNED"))
-    # Оба продавца зароутинены на заявку — «скрытая конкуренция».
-    DealSellerRouting.objects.create(deal=deal, seller_company=winner_co)
-    DealSellerRouting.objects.create(deal=deal, seller_company=loser_co)
 
     quote = Quote.objects.create(
         deal=deal,
@@ -103,47 +90,47 @@ def _api(user):
 
 @pytest.mark.django_db
 class TestFulfillmentOwnerAnchoring:
-    def test_ensure_fulfillment_anchors_to_the_winning_contract(self, multiseller_deal):
-        """РЕГРЕСС. Без привязки владелец не определяется, и работает фолбэк."""
-        fulfillment = ensure_fulfillment(multiseller_deal["deal"], contract=multiseller_deal["contract"])
-        assert fulfillment.contract_id == multiseller_deal["contract"].id
+    def test_ensure_fulfillment_anchors_to_the_contract(self, signed_deal):
+        """РЕГРЕСС: отгрузка привязывается к договору сделки."""
+        fulfillment = ensure_fulfillment(signed_deal["deal"], contract=signed_deal["contract"])
+        assert fulfillment.contract_id == signed_deal["contract"].id
 
-    def test_losing_seller_does_not_see_the_winners_fulfillment(self, multiseller_deal):
-        """ГЛАВНОЕ. Проигравший со-роутед продавец не должен видеть отгрузку победителя —
-        тот же инвариант, что для инвойсов и актов («скрытая конкуренция», ADR-0003 §5)."""
-        ensure_fulfillment(multiseller_deal["deal"], contract=multiseller_deal["contract"])
+    def test_outsider_does_not_see_the_fulfillment(self, signed_deal):
+        """Посторонний (не сотрудник и не покупатель сделки) отгрузку не видит — тот же инвариант,
+        что для инвойсов и актов."""
+        ensure_fulfillment(signed_deal["deal"], contract=signed_deal["contract"])
 
-        response = _api(multiseller_deal["loser"]).get("/api/v1/crm/fulfillments/")
+        response = _api(signed_deal["loser"]).get("/api/v1/crm/fulfillments/")
 
         assert response.status_code == 200, response.content
         body = response.json()
         rows = body["results"] if isinstance(body, dict) and "results" in body else body
-        assert rows == [], "проигравший продавец видит отгрузку победителя"
+        assert rows == [], "посторонний видит отгрузку"
 
-    def test_winning_seller_still_sees_its_own_fulfillment(self, multiseller_deal):
+    def test_staff_sees_the_fulfillment(self, signed_deal):
         """Привязка не должна спрятать отгрузку от того, кто её выполняет."""
-        ensure_fulfillment(multiseller_deal["deal"], contract=multiseller_deal["contract"])
+        ensure_fulfillment(signed_deal["deal"], contract=signed_deal["contract"])
 
-        response = _api(multiseller_deal["winner"]).get("/api/v1/crm/fulfillments/")
+        response = _api(signed_deal["winner"]).get("/api/v1/crm/fulfillments/")
 
         assert response.status_code == 200, response.content
         body = response.json()
         rows = body["results"] if isinstance(body, dict) and "results" in body else body
-        assert len(rows) == 1, "победитель не видит собственную отгрузку"
+        assert len(rows) == 1, "сотрудник не видит собственную отгрузку"
 
-    def test_call_without_contract_stays_valid(self, multiseller_deal):
+    def test_call_without_contract_stays_valid(self, signed_deal):
         """Обратная совместимость: сделка без подписанного договора всё ещё получает отгрузку,
         просто без привязки — как было раньше."""
-        deal = multiseller_deal["deal"]
+        deal = signed_deal["deal"]
         fulfillment = ensure_fulfillment(deal)
         assert fulfillment.deal_id == deal.id
         assert fulfillment.contract_id is None
 
-    def test_second_call_backfills_a_missing_anchor(self, multiseller_deal):
+    def test_second_call_backfills_a_missing_anchor(self, signed_deal):
         """Идемпотентность + дозаполнение: отгрузка могла быть создана ДО появления договора
         (авто-создание идёт раньше). Повторный вызов с договором обязан привязать её, иначе
-        исторические записи навсегда останутся в фолбэке."""
-        deal, contract = multiseller_deal["deal"], multiseller_deal["contract"]
+        исторические записи навсегда останутся без договора."""
+        deal, contract = signed_deal["deal"], signed_deal["contract"]
         first = ensure_fulfillment(deal)
         assert first.contract_id is None
 
@@ -152,9 +139,9 @@ class TestFulfillmentOwnerAnchoring:
         assert second.contract_id == contract.id
         assert Fulfillment.objects.filter(deal=deal).count() == 1
 
-    def test_existing_anchor_is_not_overwritten(self, multiseller_deal):
+    def test_existing_anchor_is_not_overwritten(self, signed_deal):
         """Уже привязанную отгрузку повторный вызов не переписывает другим договором."""
-        deal, contract = multiseller_deal["deal"], multiseller_deal["contract"]
+        deal, contract = signed_deal["deal"], signed_deal["contract"]
         ensure_fulfillment(deal, contract=contract)
 
         other_quote = Quote.objects.create(

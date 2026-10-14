@@ -14,7 +14,7 @@ from core.permissions import IsCompanyMemberOrPlatformAdmin
 from crm.models import ChargeTemplate, ChargeType, QuoteCharge, QuoteStatus
 from crm.serializers import ChargeTemplateSerializer, ChargeTypeSerializer, QuoteChargeSerializer
 
-from .items import _assert_seller_owns_quote_deal
+from .items import _assert_staff_may_write_quote
 
 
 @extend_schema_view(
@@ -36,46 +36,13 @@ class QuoteChargeViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         if getattr(self, "swagger_fake_view", False):
             return QuoteCharge.objects.none()
-        user = self.request.user
-        from accounts.services.permissions import seller_visible_deal_ids
+        from accounts.services.permissions import sees_all_deals
 
         queryset = QuoteCharge.objects.select_related("charge_type", "quote").all()
-        if getattr(user, "is_superuser", False):
+        # Administrator and own-company staff (the single seller) see every КП's charges;
+        # buyers must never see the internal cost breakdown.
+        if sees_all_deals(self.request.user):
             return queryset
-        visible_deal_ids = seller_visible_deal_ids(user, self.request)
-        if visible_deal_ids is not None:
-            from accounts.models import CompanyMember
-            from accounts.services.permissions import seller_acting_company_ids
-
-            # The seller sees items/charges on deals routed to them. Audit H1 (no cross-seller
-            # leak): hide a quote ONLY when it was prepared by a COMPETING seller company. The
-            # buyer's request lines and the seller's КП are the SAME quote in this model, and
-            # that quote is created by the BUYER (or left unassigned) — so scoping by
-            # prepared_by's *seller* company alone wrongly hid the seller's own КП and made
-            # pricing un-saveable (404 on item PATCH → subtotal stuck at 0). Exclude only
-            # quotes whose prepared_by belongs to another seller company.
-            seller_ids = seller_acting_company_ids(user, self.request) or set()
-            # Dual-membership edge: a user who belongs to BOTH the viewer's own seller
-            # company AND a competing one would otherwise land in competing_preparer_ids
-            # and hide their OWN company's legitimately-prepared КП from their own viewers.
-            # Subtract members of the viewer's OWN seller companies so only PURELY-competing
-            # preparers are excluded.
-            own_member_ids = CompanyMember.objects.filter(is_active=True, company_id__in=seller_ids).values_list(
-                "user_id", flat=True
-            )
-            competing_preparer_ids = (
-                CompanyMember.objects.filter(is_active=True)
-                .in_seller_company()
-                .exclude(company_id__in=seller_ids)
-                .exclude(user_id__in=own_member_ids)
-                .values_list("user_id", flat=True)
-            )
-            return (
-                queryset.filter(quote__deal_id__in=visible_deal_ids)
-                .exclude(quote__prepared_by_id__in=competing_preparer_ids)
-                .distinct()
-            )
-        # Buyers must never see the internal cost breakdown.
         return queryset.none()
 
     def _assert_seller(self):
@@ -90,7 +57,7 @@ class QuoteChargeViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         self._assert_seller()
         quote = serializer.validated_data.get("quote")
-        _assert_seller_owns_quote_deal(self.request, quote)
+        _assert_staff_may_write_quote(self.request, quote)
         # Append a manually-added charge at the BOTTOM of the cascade (after existing rows), so
         # e.g. a partner commission added last is based on the full running total above it.
         from django.db.models import Max

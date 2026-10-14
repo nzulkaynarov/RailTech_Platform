@@ -39,13 +39,10 @@ def company_history_holders(company: Company) -> list[str]:
     Считается один раз при отказе, поэтому дешевизна выборок здесь не критична; важнее, что
     перечень полный: пропущенный держатель означает, что удаление снесёт его молча.
     """
-    from crm.models import Contract, Deal, DealSellerRouting, GeneratedDocument, Invoice, Quote
+    from crm.models import Contract, Deal, GeneratedDocument, Invoice, Quote
 
     holders: list[str] = []
-    if (
-        Deal.objects.filter(company=company).exists()
-        or DealSellerRouting.objects.filter(seller_company=company).exists()
-    ):
+    if Deal.objects.filter(company=company).exists():
         holders.append("deals")
     if Quote.objects.filter(seller_company=company).exists():
         holders.append("quotes")

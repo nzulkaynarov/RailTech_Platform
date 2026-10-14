@@ -8,7 +8,7 @@
 import pytest
 
 from accounts.models import Company, CompanyMember, CompanyRole, CompanyType, CustomUser, WorkspaceRole
-from crm.models import Deal, DealSellerRouting, DealStage, Quote, QuoteItem, QuoteStatus
+from crm.models import Deal, DealStage, Quote, QuoteItem, QuoteStatus
 from crm.services.quotes.bulk import import_extracted_lines_into_quote
 from master_data.models import Currency
 
@@ -25,8 +25,9 @@ def scene(db):
     buyer.types.add(CompanyType.objects.get(code="CLIENT"))
     seller = Company.objects.create(name="Seller", inn="3310009001")
     seller.types.add(CompanyType.objects.get(code="SUPPLIER"))
+    # Посторонний — участник ДРУГОЙ (клиентской) компании с правом цены в ней: не сотрудник своей.
     other = Company.objects.create(name="Other", inn="3310009002")
-    other.types.add(CompanyType.objects.get(code="SUPPLIER"))
+    other.types.add(CompanyType.objects.get(code="CLIENT"))
 
     role = CompanyRole.objects.create(company=seller, name="М", permissions=["quote.edit_pricing"])
     ws = WorkspaceRole.objects.get_or_create(code="SALES_MANAGER", defaults={"name": "SM", "sort_order": 10})[0]
@@ -45,7 +46,6 @@ def scene(db):
     other_user = _member(other, "o@o.uz")
 
     deal = Deal.objects.create(title="D", company=buyer, stage=DealStage.objects.get(code="CALCULATING"))
-    DealSellerRouting.objects.create(deal=deal, seller_company=seller)
     quote = Quote.objects.create(
         deal=deal, version=1, status=draft, prepared_by=seller_user, seller_company=seller, cost_currency_default=usd
     )
@@ -74,9 +74,11 @@ def test_import_appends_lines_after_existing_with_default_currency(scene):
 
 
 @pytest.mark.django_db
-def test_import_rejected_for_non_routed_seller(scene):
+def test_import_rejected_for_outsider(scene):
     added, _t, err = import_extracted_lines_into_quote(scene["quote"], scene["other_user"], _ROWS)
-    assert added == 0 and err == "QUOTE_NOT_FOUND"  # чужой КП невидим, как в scoped queryset
+    # Право цены — только в своей компании; роль в чужой компании ничего не даёт.
+    assert added == 0 and err == "ONLY_SELLER_CAN_BUILD_QUOTE"
+    assert scene["quote"].items.count() == 1
 
 
 @pytest.mark.django_db

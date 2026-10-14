@@ -29,11 +29,10 @@ def test_one_click_claims_advances_stage_and_prefills_quote(scene):
     assert err is None
     assert result["mode"] == "quote"
 
-    scene["routing"].refresh_from_db()
-    assert scene["routing"].assigned_to_id == scene["seller_user"].id  # claim записан
-    assert scene["routing"].assigned_at is not None  # SLA-якорь
-
     scene["deal"].refresh_from_db()
+    assert scene["deal"].assigned_to_id == scene["seller_user"].id  # claim записан на сделку
+    assert scene["deal"].assigned_at is not None  # SLA-якорь
+
     assert scene["deal"].stage.code == "CALCULATING"  # стадия прогнана без Kanban-drag
 
     quote = result["quote"]

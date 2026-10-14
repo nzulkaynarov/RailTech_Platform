@@ -15,21 +15,19 @@ _S = DealStageCode  # local alias to keep the FSM matrix readable
 
 
 def user_can_access_deal(user: CustomUser, deal: Deal) -> bool:
-    """Superuser, deal manager, deal client, routed seller team, or any active member of deal.company.
+    """Superuser, own-company staff, deal manager, deal client, or any active member of deal.company.
 
-    The read boundary of a deal (timeline and other per-deal surfaces). Lived in the deal-chat
-    service until M1-ERP-02 wave 1b removed the chat; the predicate itself is about the deal.
+    The read boundary of a deal (timeline and other per-deal surfaces). The seller of every deal
+    is the own company (BUSINESS §3.3), so its staff see every deal; the client side (buyer
+    accounts until M2-ERP-01) sees only its own company's deals.
     """
+    from accounts.services.permissions import sees_all_deals
+
     if not user or not user.is_authenticated:
         return False
-    if getattr(user, "is_superuser", False):
+    if sees_all_deals(user):
         return True
     if deal.manager_id == user.id or deal.client_id == user.id:
-        return True
-    seller_company_ids = list(
-        user.memberships.filter(is_active=True, can_sell=True).in_seller_company().values_list("company_id", flat=True)
-    )
-    if seller_company_ids and deal.seller_routings.filter(seller_company_id__in=seller_company_ids).exists():
         return True
     if deal.company_id:
         return user.memberships.filter(company_id=deal.company_id, is_active=True).exists()
@@ -99,59 +97,40 @@ def register_new_deal(deal: Deal, actor: CustomUser) -> Deal:
         },
     )
 
-    # Wave E F1 — SELLER-OWNED deal keystone. A deal opened by a seller for an offline
-    # contact, or a company-less calculator draft (F3), is not routed by any buyer, so
-    # without a DealSellerRouting row it is INVISIBLE to its own creator (seller visibility
-    # is routing-only). Write the creator's routing row so the seller can see / claim /
-    # build / send it. Buyer-initiated deals (client + own company) keep their existing
-    # path — they get routing rows at submit/route time.
+    # Wave E F1 — a deal opened by a staff member for an offline contact, or a company-less
+    # calculator draft (F3), is already «taken in work» by its creator: they own it from the
+    # start (a teammate can still release / reassign it). Buyer-initiated deals land unclaimed
+    # in the back-office queue.
     if deal.contact_id or deal.company_id is None:
-        from .assignment import ensure_creator_seller_routing
+        from .assignment import assign_creator_as_owner
 
-        ensure_creator_seller_routing(deal, actor)
-
-    # Counterparty book (Phase B): a deal opened FOR an offline contact is a seller acting on
-    # their own client — touch the CLIENT edge (creates it for pre-Phase-B books). Buyer-opened
-    # RFQs get their edges at routing time instead (both sides at once).
-    if deal.contact_id and deal.company_id:
-        from accounts.services.permissions import primary_seller_company_id
-
-        seller_company_id = primary_seller_company_id(actor)
-        if seller_company_id:
-            from ..models import RelationshipDirection, RelationshipSource
-            from .relationships import touch_relationship
-
-            touch_relationship(
-                owner_company_id=seller_company_id,
-                counterparty_company_id=deal.company_id,
-                direction=RelationshipDirection.CLIENT,
-                source=RelationshipSource.OFFLINE_CREATED,
-            )
+        assign_creator_as_owner(deal, actor)
     return deal
 
 
 def assert_user_may_change_stage(deal: Deal, actor: Optional[CustomUser], target_stage_code: str) -> Optional[str]:
     """SEC (audit #7): user-initiated FSM guard for the change-stage ENDPOINT only — NOT the
     shared transition_deal_stage, which internal auto-transitions (Move-0 send-КП/approve/
-    dual-sign) invoke with seller/system actors and must not be re-gated.
+    dual-sign) invoke with staff/system actors and must not be re-gated.
 
-    Closes two bypasses of submit_request's gates via the generic change-stage endpoint:
-      (a) a non-buyer moving DRAFT→RFQ_OPEN (fanning the заявка to sellers, skipping
-          submit_request's buy-capability gate);
-      (b) a co-routed seller driving the SHARED Deal.stage to a terminal state (CLOSED_LOST/
-          CLOSED_WON), griefing the buyer and the competing seller on a multi-seller RFQ.
+    (a) a non-buyer moving DRAFT→RFQ_OPEN would skip submit_request's buy-capability gate —
+        submitting the request is the client's action (Cabinet, M2-ERP-01);
+    (b) on the back-office side moving a deal through the pipeline is part of building the
+        КП, so the staff member needs the `quote.build` role permission (a view-only role —
+        e.g. Наблюдатель — sees the deal but cannot move it).
     Returns an error code or None. superuser/internal (actor=None) bypass."""
     if actor is None or getattr(actor, "is_superuser", False):
         return None
-    from accounts.services.permissions import is_member_of
+    from accounts.services.permissions import is_member_of, member_has_permission, primary_seller_company_id
 
     is_buyer_side = is_member_of(actor, deal.company_id, capability="buy")
     if target_stage_code == DealStageCode.RFQ_OPEN and not is_buyer_side:
         return "ONLY_BUYER_CAN_SUBMIT_REQUEST"
-    # A seller may decline a SINGLE-seller deal, but must not close a SHARED (multi-seller)
-    # deal out from under the buyer and the competing sellers (CLOSED_LOST griefing).
-    if target_stage_code == DealStageCode.CLOSED_LOST and not is_buyer_side and deal.seller_routings.count() > 1:
-        return "ONLY_BUYER_CAN_CLOSE_SHARED_DEAL"
+    if is_buyer_side:
+        return None
+    own_company_id = primary_seller_company_id(actor)
+    if not (own_company_id and member_has_permission(actor, own_company_id, "quote.build")):
+        return "ROLE_NOT_PERMITTED"
     return None
 
 
@@ -238,12 +217,6 @@ def transition_deal_stage(
         deal_id=deal.id,
         company_id=deal.company_id,
     )
-
-    # Counterparty book (Phase B): a stage change is an interaction — refresh the deal's
-    # relationship-edge rollups (deals_count/won_count/gmv stay honest without a nightly job).
-    from .relationships import recompute_rollups_for_deal
-
-    recompute_rollups_for_deal(deal)
 
     # Post-sale hook: on CLOSED_WON, auto-generate Invoice + Act (async).
     # Dispatched via transaction.on_commit so the financial task NEVER fires

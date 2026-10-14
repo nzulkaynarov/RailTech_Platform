@@ -300,7 +300,7 @@ class GeneratedDocumentViewSet(viewsets.ModelViewSet):
         if not getattr(user, "is_superuser", False):
             # Own-company documents (all statuses) + ISSUED documents on deals the user reaches as a
             # PARTY — «полученные письма» read-only (II-2). A counterparty never sees another
-            # company's DRAFT/CANCELLED. `.distinct()` de-dupes the seller_routings join.
+            # company's DRAFT/CANCELLED.
             qs = qs.filter(
                 Q(company_id__in=_user_company_ids(user)) | crm_services.party_visible_document_q(user)
             ).distinct()

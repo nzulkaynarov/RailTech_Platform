@@ -84,7 +84,7 @@ def update_fulfillment_status(
 ) -> Tuple[Optional[object], Optional[str]]:
     from django.utils import timezone
 
-    from accounts.services import is_member_of, seller_company_routed_to_deal
+    from accounts.services import is_member_of, is_seller
 
     from ..models import Fulfillment, FulfillmentStatus
 
@@ -106,8 +106,8 @@ def update_fulfillment_status(
             # членом СВОЕЙ компании является, это читается как поломка, а не как правило.
             return None, "FULFILLMENT_ACCEPTANCE_IS_BUYER_STEP"
     else:
-        # Seller status: bind to THIS deal's routing — not any seller (audit M1).
-        authorized = seller_company_routed_to_deal(actor, obj.deal_id)
+        # Seller status: own-company staff (the seller of every deal).
+        authorized = is_seller(actor)
     if not authorized:
         return None, "MEMBER_REQUIRED_FOR_ACTION"
     obj.status = FulfillmentStatus.objects.get(code=status_code)

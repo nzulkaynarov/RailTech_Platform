@@ -97,7 +97,7 @@ def bulk_update_quote_items(user, quote_id, items_payload, request):
     """Transactional bulk update of a КП's line items (P0-4). ALL-OR-NOTHING.
 
     Mirrors the single-item PATCH guards EXACTLY (seller pricing
-    capability / seller-routed-to-deal), validates every row with the same QuoteItemSerializer
+    capability / own-company staff), validates every row with the same QuoteItemSerializer
     (caps included), and — on full success — writes once and recalculates the cascade ONCE
     (recalculate_quote also snapshots QuoteItemHistory, so the audit trail matches the single
     PATCH). Any invalid row rolls the whole batch back with per-row errors.
@@ -107,7 +107,7 @@ def bulk_update_quote_items(user, quote_id, items_payload, request):
       • guard/global   → (None, "<CODE>", None)
       • per-row invalid→ (None, "QUOTE_ITEMS_BULK_INVALID", [ {id,index,errors}, … ])
     """
-    from accounts.services.permissions import can_edit_quote_pricing, seller_can_access_deal
+    from accounts.services.permissions import can_edit_quote_pricing, is_seller
 
     # Guards — IN THE SAME ORDER as QuoteItemViewSet._assert_seller.
     is_superuser = getattr(user, "is_superuser", False)
@@ -129,9 +129,9 @@ def bulk_update_quote_items(user, quote_id, items_payload, request):
     quote = Quote.objects.select_for_update(of=("self",)).filter(pk=quote_pk).first()
     if quote is None:
         return None, "QUOTE_NOT_FOUND", None
-    # Deal-routing binding (mirror _assert_seller_owns_quote_deal): a foreign КП is 404 like the
-    # single PATCH, whose scoped get_queryset would never surface a competitor's item.
-    if not (is_superuser or seller_can_access_deal(user, request, quote.deal_id)):
+    # Own-company binding (mirror _assert_staff_may_write_quote): only back-office staff write КП;
+    # anyone else gets 404 like the single PATCH.
+    if not (is_superuser or is_seller(user)):
         return None, "QUOTE_NOT_FOUND", None
     if quote.frozen_at:
         return None, "QUOTE_FROZEN", None
@@ -237,7 +237,7 @@ def bulk_create_quote_items(user, quote_id, items_payload, request):
     """Transactional bulk create of КП line items (Excel-paste). ALL-OR-NOTHING.
 
     Mirrors bulk_update_quote_items EXACTLY on guards (seller pricing
-    capability / seller-routed-to-deal 404 / frozen КП) and recalc discipline (write every line
+    capability / own-company staff 404 / frozen КП) and recalc discipline (write every line
     with skip_recalculate, then recalculate_quote ONCE — one cascade, one QuoteItemHistory
     snapshot pass). Every row is validated with the same QuoteItemSerializer as the single-item
     create (caps, currency-by-code); a non-empty imported_raw_name is required per row, the qty /
@@ -249,7 +249,7 @@ def bulk_create_quote_items(user, quote_id, items_payload, request):
       • guard/global   → (None, "<CODE>", None)
       • per-row invalid→ (None, "QUOTE_ITEMS_BULK_INVALID", [ {index,errors}, … ])
     """
-    from accounts.services.permissions import can_edit_quote_pricing, seller_can_access_deal
+    from accounts.services.permissions import can_edit_quote_pricing, is_seller
 
     # Guards — IN THE SAME ORDER as QuoteItemViewSet._assert_seller / bulk_update_quote_items.
     is_superuser = getattr(user, "is_superuser", False)
@@ -276,9 +276,9 @@ def bulk_create_quote_items(user, quote_id, items_payload, request):
     )
     if quote is None:
         return None, "QUOTE_NOT_FOUND", None
-    # Deal-routing binding (mirror _assert_seller_owns_quote_deal): a foreign КП is 404 like the
-    # single POST, whose scoped get_queryset would never surface a competitor's quote.
-    if not (is_superuser or seller_can_access_deal(user, request, quote.deal_id)):
+    # Own-company binding (mirror _assert_staff_may_write_quote): only back-office staff write КП;
+    # anyone else gets 404 like the single POST.
+    if not (is_superuser or is_seller(user)):
         return None, "QUOTE_NOT_FOUND", None
     if quote.frozen_at:
         return None, "QUOTE_FROZEN", None
@@ -332,7 +332,7 @@ def bulk_delete_quote_items(user, quote_id, item_ids, request):
       • гард/общая     → (None, "<CODE>", None)
       • чужие строки   → (None, "QUOTE_ITEMS_BULK_INVALID", [ {id, errors}, … ])
     """
-    from accounts.services.permissions import can_edit_quote_pricing, seller_can_access_deal
+    from accounts.services.permissions import can_edit_quote_pricing, is_seller
 
     # Гарды — В ТОМ ЖЕ ПОРЯДКЕ, что у соседних массовых операций.
     is_superuser = getattr(user, "is_superuser", False)
@@ -355,7 +355,7 @@ def bulk_delete_quote_items(user, quote_id, item_ids, request):
     quote = Quote.objects.select_for_update(of=("self",)).filter(pk=quote_pk).first()
     if quote is None:
         return None, "QUOTE_NOT_FOUND", None
-    if not (is_superuser or seller_can_access_deal(user, request, quote.deal_id)):
+    if not (is_superuser or is_seller(user)):
         return None, "QUOTE_NOT_FOUND", None
     if quote.frozen_at:
         return None, "QUOTE_FROZEN", None
@@ -439,21 +439,19 @@ def import_extracted_lines_into_quote(quote: Quote, actor: CustomUser, rows: lis
     """Q2 (импорт файла в билдер) — WORKER-SAFE вставка AI-извлечённых строк в КП продавца.
 
     Зеркалит гейты bulk_create_quote_items, но БЕЗ request (вызывается из Celery-хендлера):
-    продавцовая capability (can_edit_quote_pricing), routing к сделке (request-free
-    seller_company_routed_to_deal), НЕ frozen КП, лимит строк. Строки без имени отбрасываются;
+    продавцовая capability (can_edit_quote_pricing — право роли сотрудника своей компании),
+    НЕ frozen КП, лимит строк. Строки без имени отбрасываются;
     свыше QUOTE_ITEMS_BULK_MAX_ROWS — обрезаются с флагом truncated (тупик №8: не молча).
     Позиции добавляются В КОНЕЦ (после max position), валюта = cost_currency_default КП (как
     ручное «Добавить строку»), затем ОДИН recalc. Возврат: (added, truncated, error_code)."""
     from django.conf import settings
     from django.db.models import Max
 
-    from accounts.services.permissions import can_edit_quote_pricing, seller_company_routed_to_deal
+    from accounts.services.permissions import can_edit_quote_pricing
 
     is_superuser = getattr(actor, "is_superuser", False)
     if not (is_superuser or can_edit_quote_pricing(actor)):
         return 0, False, "ONLY_SELLER_CAN_BUILD_QUOTE"
-    if not (is_superuser or seller_company_routed_to_deal(actor, quote.deal_id)):
-        return 0, False, "QUOTE_NOT_FOUND"
     if quote.frozen_at:
         return 0, False, "QUOTE_FROZEN"
 

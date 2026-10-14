@@ -22,18 +22,7 @@ from rest_framework.test import APIClient
 from rest_framework_simplejwt.tokens import RefreshToken
 
 from accounts.models import Company, CompanyMember, CompanyType, CustomUser, WorkspaceRole
-from crm.models import (
-    Act,
-    Contract,
-    ContractStatus,
-    Deal,
-    DealSellerRouting,
-    DealStage,
-    Invoice,
-    InvoiceStatus,
-    Quote,
-    QuoteStatus,
-)
+from crm.models import Act, Contract, ContractStatus, Deal, DealStage, Invoice, InvoiceStatus, Quote, QuoteStatus
 
 
 def _api(user):
@@ -71,7 +60,6 @@ def world(db):
     seller_user = member(seller_co, "seller@one-act.test", can_sell=True, can_buy=False)
 
     deal = Deal.objects.create(title="One act deal", company=buyer_co, stage=DealStage.objects.get(code="CLOSED_WON"))
-    DealSellerRouting.objects.create(deal=deal, seller_company=seller_co)
     quote = Quote.objects.create(
         deal=deal,
         version=1,

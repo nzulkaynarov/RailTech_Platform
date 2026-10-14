@@ -38,7 +38,7 @@ def _notify_invoice_issued_to_buyer(invoice) -> None:
 
 
 def notify_seller_invoice_draft(invoice) -> None:
-    """Alert the routed seller team that an invoice DRAFT was auto-created on deal win — they must
+    """Alert the back-office team that an invoice DRAFT was auto-created on deal win — they must
     review it and explicitly issue it (владелец не теряет контроль; ERP canon). FK→deal."""
     from .deal_notifications import notify_deal_users, seller_team_user_ids
 
@@ -57,12 +57,10 @@ def notify_seller_invoice_draft(invoice) -> None:
 
 def _assert_seller_may_act_on_invoice(invoice, user) -> Optional[str]:
     """Shared seller-side gate for invoice lifecycle actions (issue / cancel): viewer-block,
-    seller-role, routing-scope. Returns an error code or None."""
-    from accounts.services import is_seller, seller_company_routed_to_deal
+    own-company staff. Returns an error code or None."""
+    from accounts.services import is_seller
 
     if not (getattr(user, "is_superuser", False) or is_seller(user)):
-        return "MEMBER_REQUIRED_FOR_ACTION"
-    if not getattr(user, "is_superuser", False) and not seller_company_routed_to_deal(user, invoice.deal_id):
         return "MEMBER_REQUIRED_FOR_ACTION"
     return None
 
@@ -198,7 +196,7 @@ def update_invoice_draft(invoice, user, *, due_date=None, notes=None) -> Tuple[O
     """Edit a DRAFT invoice's due_date / notes. Amounts are NEVER hand-edited — they mirror the
     contract/КП (Rule 1). Only DRAFT invoices are editable; ISSUED+ are immutable (trust).
 
-    Seller-side only: the same gate as issue/cancel (viewer-block + seller-role + routing-scope).
+    Seller-side only: the same gate as issue/cancel (own-company staff).
     Closes the hole where the buyer (both sides land in the invoice queryset) or a platform-admin
     viewer could rewrite another seller's draft due_date / notes."""
     if gate_err := _assert_seller_may_act_on_invoice(invoice, user):
