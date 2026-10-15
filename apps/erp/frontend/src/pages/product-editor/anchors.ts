@@ -10,6 +10,7 @@ export const SECTION_IDS = {
   specifications: 'pe-specifications',
   media: 'pe-media',
   commerce: 'pe-commerce',
+  publication: 'pe-publication',
   actions: 'pe-actions',
 } as const;
 
@@ -20,6 +21,7 @@ export const SECTION_BY_REQUIREMENT: Record<string, string> = {
   uom: SECTION_IDS.basics,
   category: SECTION_IDS.classification,
   hs_code: SECTION_IDS.classification,
+  list_price: SECTION_IDS.publication,
 };
 
 export function scrollToSection(sectionId: string) {

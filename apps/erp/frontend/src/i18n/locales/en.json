@@ -2206,7 +2206,11 @@
     "CANNOT_DELETE_SUPERUSER": "A superuser cannot be deleted from the panel — a platform engineer does that.",
     "ONLY_COMPANY_OWNER_CAN_APPLY": "Only a company administrator can file an application.",
     "PAYMENT_EXCEEDS_BALANCE_DUE": "The amount is larger than the balance due. Enter an amount within the balance — overpayment is not accepted.",
-    "REQUEST_HAS_NO_ITEMS": "The request has no line items — there is nothing for the seller to quote. Add at least one and submit again."
+    "REQUEST_HAS_NO_ITEMS": "The request has no line items — there is nothing for the seller to quote. Add at least one and submit again.",
+    "LIST_PRICE_CURRENCY_REQUIRED": "Choose the list price currency",
+    "BAD_PRICE_VISIBILITY": "Unknown price visibility policy",
+    "BAD_PUBLISH_THRESHOLD": "Publishing threshold must be between 1 and 100%",
+    "BACKOFFICE_ONLY": "Available to back-office staff only"
   },
   "fileUpload": {
     "upload": "Upload",
@@ -3209,7 +3213,8 @@
       "category": "Category",
       "identity": "Part number or GOST/drawing",
       "equipment_groups": "Equipment group",
-      "hs_code": "HS code (current)"
+      "hs_code": "HS code (current)",
+      "list_price": "List price"
     },
     "searchPlaceholder": "Search by name, GOST or SKU",
     "selectAllOnPage": "Select all rows on this page",
@@ -3373,13 +3378,15 @@
       "basics": "Basics",
       "classification": "Classification",
       "media": "Media",
-      "actions": "Actions"
+      "actions": "Actions",
+      "publication": "For the client"
     },
     "completeness": {
       "title": "Publication readiness",
       "missingTitle": "Still missing",
       "done": "All required fields are filled — the card is ready to publish",
-      "createHint": "Readiness is computed after the first save"
+      "createHint": "Readiness is computed after the first save",
+      "threshold": "Company publishing threshold — {{percent}}%"
     },
     "specs": {
       "add": "Add specification",
@@ -3394,6 +3401,51 @@
       "restore": "Restore",
       "failed": "Action failed",
       "publishBlocked": "Fill the required fields — see the list on the left"
+    },
+    "publication": {
+      "internalHidden": "The client portal and the bot see only this layer. Suppliers, purchase prices and stock quantities stay hidden.",
+      "fulfillmentPolicy": "How the service is delivered",
+      "fulfillmentHint": "Defines milestones and the invoicing rule for the service.",
+      "fulfillment": {
+        "fixed": "Fixed price",
+        "milestones": "By milestones",
+        "time": "Time and materials"
+      },
+      "priceVisibility": "Price for the client",
+      "visibility": {
+        "cabinet": "Show the price in the client portal",
+        "on_request": "Price on request",
+        "default_cabinet": "Default: shown in the portal",
+        "default_on_request": "Default: on request"
+      },
+      "visibilityHintCabinet": "The client sees the list price in the portal. Leads and the bot outside the portal never get prices.",
+      "visibilityHintOnRequest": "The client sees “Price on request” and can ask for a quote.",
+      "listPrice": "List price",
+      "listPriceCurrency": "Currency",
+      "listPriceHint": "Not the cost or a supplier price — clients never see those.",
+      "currencyRequired": "Choose the list price currency",
+      "previewTitle": "What the client sees",
+      "previewNeedsSave": "Save the card to see the client preview.",
+      "previewSavedHint": "Based on the saved card; visible to clients once published.",
+      "priceOnRequest": "Price on request",
+      "availability": {
+        "in_stock": "In stock",
+        "on_order": "On order",
+        "expected": "Expected"
+      },
+      "leadTime_one": "{{count}} day lead time",
+      "leadTime_few": "{{count}} days lead time",
+      "leadTime_many": "{{count}} days lead time",
+      "leadTime_other": "{{count}} days lead time"
     }
+  },
+  "catalogPolicy": {
+    "title": "Catalog policy",
+    "subtitle": "What clients see in the portal catalog and when a card can be published.",
+    "priceVisibility": "Default price visibility",
+    "priceVisibilityHint": "For cards without their own setting. Leads and the bot outside the portal never get prices.",
+    "publishThreshold": "Publishing threshold, %",
+    "publishThresholdHint": "Minimum card completeness to publish. 100% means every required field is filled.",
+    "saved": "Catalog policy saved"
   }
 }

@@ -1,10 +1,13 @@
 import uuid
+from decimal import Decimal
 
+from django.core.validators import MinValueValidator
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 
+from catalog.constants import FulfillmentPolicy, PriceVisibility
 from core.storage import get_public_storage, product_document_path, product_image_path
-from master_data.models import UnitOfMeasure
+from master_data.models import Currency, UnitOfMeasure
 
 # ────────────────────────────────────────────
 # Справочники модуля Catalog
@@ -151,6 +154,47 @@ class Product(models.Model):
         help_text=_("Динамические характеристики в формате ключ: значение"),
     )
 
+    # ── Опубликованный слой (M1-ERP-07, BUSINESS §10.1) ──────────────────────────
+    #
+    # Одна карточка — два слоя. Внутренний (поставщики, закупочные цены, остатки количеством,
+    # себестоимость) живёт в предложениях поставщиков и никогда не покидает бэк-офис.
+    # Опубликованный — то, что видят клиент и бот: имя, описание, характеристики, единица,
+    # фото, цена-витрина ИЛИ «по запросу», наличие как статус. Его отдаёт ТОЛЬКО
+    # `catalog.published.project()` — белым списком полей.
+    fulfillment_policy = models.CharField(
+        max_length=16,
+        choices=FulfillmentPolicy.choices,
+        blank=True,
+        default="",
+        verbose_name=_("Политика исполнения"),
+        help_text=_("Только для услуг: фикс, по этапам или по времени. У товара — пусто."),
+    )
+    price_visibility = models.CharField(
+        max_length=16,
+        choices=PriceVisibility.choices,
+        blank=True,
+        default="",
+        verbose_name=_("Видимость цены"),
+        help_text=_("Пусто — по политике каталога компании (по умолчанию «по запросу»)."),
+    )
+    list_price = models.DecimalField(
+        max_digits=14,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        validators=[MinValueValidator(Decimal("0"))],
+        verbose_name=_("Цена-витрина"),
+        help_text=_("Цена для клиента в кабинете. Не себестоимость и не цена поставщика."),
+    )
+    list_price_currency = models.ForeignKey(
+        Currency,
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="+",
+        verbose_name=_("Валюта цены-витрины"),
+    )
+
     # ── Провенанс кандидата (волна A номенклатуры) ───────────────────────────────
     #
     # Позиция, которой нет в каталоге, — норма для рынка запчастей по чертежам (SAP зовёт это
@@ -206,6 +250,30 @@ class Product(models.Model):
 
     def clean(self):
         super().clean()
+        # Цена без валюты — не цена (контракт портала: Money = amount + currency).
+        if self.list_price is not None and self.list_price_currency_id is None:
+            from django.core.exceptions import ValidationError
+
+            raise ValidationError({"list_price_currency": "LIST_PRICE_CURRENCY_REQUIRED"})
+
+    @property
+    def is_service(self) -> bool:
+        return getattr(self.domain_type, "code", None) == "SERVICES"
+
+    def _normalize_fulfillment_policy(self, update_fields) -> None:
+        """Политика исполнения следует за типом карточки, а не за формой.
+
+        Услуга без политики получает «фикс» (самый частый случай, Odoo: fixed price по
+        умолчанию), у товара политика всегда пустая — иначе смена «услуга → товар» оставляла бы
+        висящие «этапы». Частичное сохранение без `fulfillment_policy` в `update_fields` поле не
+        трогает: его значение туда не попало бы.
+        """
+        if update_fields is not None and "fulfillment_policy" not in update_fields:
+            return
+        if self.is_service:
+            self.fulfillment_policy = self.fulfillment_policy or FulfillmentPolicy.FIXED
+        else:
+            self.fulfillment_policy = ""
 
     def save(self, *args, **kwargs):
         # Статус — часть жизненного цикла, а не необязательный ярлык: у 5 из 8 карточек он был
@@ -220,6 +288,7 @@ class Product(models.Model):
         if not self.sku:
             prefix = self.domain_type.sku_prefix if self.domain_type else "RT"
             self.sku = f"{prefix}-{uuid.uuid4().hex[:8].upper()}"
+        self._normalize_fulfillment_policy(kwargs.get("update_fields"))
         self.full_clean()
         super().save(*args, **kwargs)
 

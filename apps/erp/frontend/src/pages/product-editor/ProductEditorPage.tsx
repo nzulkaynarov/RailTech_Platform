@@ -17,6 +17,7 @@ import { ClassificationSection } from './ClassificationSection';
 import { SpecificationsSection } from './SpecificationsSection';
 import { MediaSection } from './MediaSection';
 import { CommerceSection } from './CommerceSection';
+import { PublicationSection } from './PublicationSection';
 import { ActionsSection } from './ActionsSection';
 import { SECTION_IDS, scrollToSection } from './anchors';
 
@@ -139,6 +140,7 @@ export function ProductEditorPage({
           <ClassificationSection form={form} />
           <SpecificationsSection form={form} />
           <MediaSection productId={product?.id ?? createdId} />
+          <PublicationSection form={form} product={product} />
           {form.sellerMode && <CommerceSection form={form} />}
           {product && <ActionsSection product={product} />}
         </div>

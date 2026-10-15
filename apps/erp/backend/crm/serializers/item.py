@@ -226,10 +226,28 @@ class QuoteItemSerializer(serializers.ModelSerializer):
             cache[qid] = bool(user and quote is not None and can_view_quote_costs_for(user, quote))
         return cache[qid]
 
+    # Внутренний слой каталога (M1-ERP-07): какой поставщик стоит за строкой — знание бэк-офиса.
+    # Сотрудник видит его независимо от права на себестоимость; клиент (покупательский аккаунт до
+    # портала M2-ERP-01) — никогда.
+    _BACKOFFICE_ONLY_FIELDS = ("offer", "offer_supplier_name")
+
+    def _viewer_is_backoffice(self) -> bool:
+        cached = getattr(self, "_backoffice_viewer", None)
+        if cached is None:
+            user = getattr(self.context.get("request"), "user", None)
+            from accounts.services.permissions import is_seller
+
+            cached = bool(user and (getattr(user, "is_superuser", False) or is_seller(user)))
+            self._backoffice_viewer = cached
+        return cached
+
     def to_representation(self, instance):
         data = super().to_representation(instance)
         # QuoteItem → its .quote; Quote → itself.
         if not self._can_see_costs(getattr(instance, "quote", instance)):
             for field_name in self._SELLER_ONLY_FIELDS:
+                data.pop(field_name, None)
+        if not self._viewer_is_backoffice():
+            for field_name in self._BACKOFFICE_ONLY_FIELDS:
                 data.pop(field_name, None)
         return data

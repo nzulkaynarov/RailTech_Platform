@@ -12,6 +12,13 @@ REST_FRAMEWORK = {
         # Production: all endpoints require auth by default
         "rest_framework.permissions.IsAuthenticated",
     ],
+    # Только JSON (M1-ERP-07). Browsable API DRF по умолчанию включён и в проде: на
+    # `Accept: text/html` любой эндпоинт с открытым чтением рисовал HTML-форму записи, а в её
+    # выпадающих списках — справочники целиком (например, все компании-поставщики на
+    # `/catalog/offers/` анониму). Документация API — Swagger/Redoc по схеме.
+    "DEFAULT_RENDERER_CLASSES": ["rest_framework.renderers.JSONRenderer"],
+    # Неприемлемый `Accept` (браузер на публичной странице КП) — JSON, а не 406.
+    "DEFAULT_CONTENT_NEGOTIATION_CLASS": "core.negotiation.JSONFallbackContentNegotiation",
     "DEFAULT_FILTER_BACKENDS": [
         "django_filters.rest_framework.DjangoFilterBackend",
         "rest_framework.filters.SearchFilter",
@@ -120,6 +127,11 @@ SPECTACULAR_SETTINGS = {
     "SERVE_INCLUDE_SCHEMA": False,
     "COMPONENT_SPLIT_REQUEST": True,
     "SCHEMA_PATH_PREFIX": "/api/v[0-9]+/",
+    # Одни и те же словари каталога у карточки и у настроек компании (M1-ERP-07) — одно имя enum.
+    "ENUM_NAME_OVERRIDES": {
+        "PriceVisibilityEnum": "catalog.constants.PriceVisibility",
+        "FulfillmentPolicyEnum": "catalog.constants.FulfillmentPolicy",
+    },
     "TAGS": [
         {"name": "Auth", "description": "Login, password setup by invitation, JWT tokens"},
         {"name": "Accounts", "description": "Users, companies, team management"},

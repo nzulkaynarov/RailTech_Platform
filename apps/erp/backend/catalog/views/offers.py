@@ -29,7 +29,7 @@ class SupplierOfferViewSet(RoleGatedViewMixin, viewsets.ModelViewSet):
     """
     CRUD for supplier offers (pricing, stock, delivery terms).
 
-    Public read access (active only); write operations require Manager/Admin role.
+    Read access — back-office staff only (internal layer, M1-ERP-07); writes need `supply.manage`.
     """
 
     required_permissions = {
@@ -95,8 +95,11 @@ class SupplierOfferViewSet(RoleGatedViewMixin, viewsets.ModelViewSet):
         serializer.save(supplier=serializer.instance.supplier, product=serializer.instance.product)
 
     def get_permissions(self):
+        # Предложение поставщика — внутренний слой каталога (M1-ERP-07): читают только сотрудники.
         if self.action in ["list", "retrieve"]:
-            return [permissions.AllowAny()]
+            from core.permissions import IsBackOfficeStaff
+
+            return [permissions.IsAuthenticated(), IsBackOfficeStaff()]
         # Запись: право роли `supply.manage` (гейт RoleGatedViewMixin выше) И, для конкретного
         # предложения, членство в компании-поставщике этого предложения (уровень объекта).
         from core.permissions import IsOfferSupplierOrAdmin

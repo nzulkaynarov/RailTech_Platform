@@ -21,6 +21,7 @@ import { ChargeTemplatesSettings } from '@/components/Cabinet/ChargeTemplatesSet
 import { DocumentTemplatesSettings } from '@/components/Settings/DocumentTemplatesSettings';
 import { CompanyDocumentProfileSettings } from '@/components/Cabinet/CompanyDocumentProfileSettings';
 import { CompanyDefaultsSettings } from '@/components/Cabinet/CompanyDefaultsSettings';
+import { CatalogPolicySettings } from '@/components/Cabinet/CatalogPolicySettings';
 import { CompanyNumberingSettings } from '@/components/Cabinet/CompanyNumberingSettings';
 import { CompanyTab } from '@/components/Cabinet/CompanyTab';
 
@@ -77,7 +78,13 @@ function SectionContent({ sectionKey }: { sectionKey: SettingsSectionKey }): Rea
       // «Бланк и бренд» — PDF-letterhead/тема/бланк КП (группа «Документы»), только продавец.
       return <CompanyBrandingSection />;
     case 'defaults':
-      return <CompanyDefaultsSettings />;
+      // Умолчания КП и политика каталога — одни настройки компании (право settings.edit).
+      return (
+        <div className="space-y-8">
+          <CompanyDefaultsSettings />
+          <CatalogPolicySettings />
+        </div>
+      );
     case 'numbering':
       return <CompanyNumberingSettings />;
     case 'templates':

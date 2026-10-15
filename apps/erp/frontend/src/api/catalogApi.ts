@@ -94,7 +94,13 @@ export interface Product {
      * и публикация открывается сама, когда обязательное заполнено. Это заменило ручное
      * благословение платформы: до волны A опубликовать карточку мог только оператор.
      */
-    completeness?: { percent: number; missing: { code: string; label: string }[]; is_publishable: boolean };
+    completeness?: {
+        percent: number;
+        missing: { code: string; label: string }[];
+        /** Порог публикации компании, % (M1-ERP-07; по умолчанию 100 — всё обязательное). */
+        threshold?: number;
+        is_publishable: boolean;
+    };
     /** Сколько КП спрашивали эту позицию — очередь наполнения сортируется по спросу (Ariba). */
     demand_count?: number;
     last_requested_at?: string | null;
@@ -127,8 +133,44 @@ export interface Product {
     main_document_url?: string | null;
 
     offers?: SupplierOffer[];
+
+    // ── Опубликованный слой (M1-ERP-07) ─────────────────────────────────────
+    /** Политика исполнения услуги; у товара — пусто. */
+    fulfillment_policy?: FulfillmentPolicy | '';
+    /** Своя политика видимости цены; пусто — по политике каталога компании. */
+    price_visibility?: PriceVisibility | '';
+    /** Видимость с учётом политики компании — то, что реально увидит клиент. */
+    price_visibility_effective?: PriceVisibility;
+    /** Политика каталога компании — подпись варианта «как в политике каталога». */
+    price_visibility_default?: PriceVisibility;
+    /** Цена-витрина для клиента (не себестоимость и не цена поставщика). */
+    list_price?: string | null;
+    list_price_currency?: number | null;
+    list_price_currency_code?: string | null;
+    /** «Так карточку видит клиент» — та же проекция, что отдаёт портал. */
+    client_preview?: PublishedCatalogItem;
+
     created_at?: string;
     updated_at?: string;
+}
+
+export type PriceVisibility = 'cabinet' | 'on_request';
+export type FulfillmentPolicy = 'fixed' | 'milestones' | 'time';
+
+/** Карточка в опубликованном слое — `CatalogItem` контракта портала (packages/contracts). */
+export interface PublishedCatalogItem {
+    id: number;
+    kind: 'goods' | 'service';
+    name: string;
+    description: string;
+    unit: string;
+    category: string | null;
+    /** `null` — «цена по запросу». */
+    price?: { amount: string; currency: string } | null;
+    availability?: 'in_stock' | 'on_order' | 'expected';
+    lead_time_days?: number | null;
+    images: string[];
+    attributes: { name: string; value: string }[];
 }
 
 

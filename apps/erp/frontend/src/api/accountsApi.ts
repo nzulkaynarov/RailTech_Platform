@@ -113,6 +113,9 @@ export interface CompanySettings {
 	// ВНИМАНИЕ: `default_payment_terms` — ТЕКСТ для бланка («100% предоплата»), не число.
 	default_payment_terms?: string;
 	default_warranty_months?: number | null;
+	/** Политика каталога (M1-ERP-07): видимость цен по умолчанию и порог публикации, %. */
+	catalog_price_visibility?: 'cabinet' | 'on_request';
+	catalog_publish_threshold?: number;
 	doc_number_prefix?: string;
 	created_at?: string;
 	updated_at?: string;
@@ -131,6 +134,8 @@ export interface CompanySettingsUpdate {
 	payment_terms_days?: number | null;
 	default_payment_terms?: string;
 	default_warranty_months?: number | null;
+	catalog_price_visibility?: 'cabinet' | 'on_request';
+	catalog_publish_threshold?: number;
 	doc_number_prefix?: string;
 }
 

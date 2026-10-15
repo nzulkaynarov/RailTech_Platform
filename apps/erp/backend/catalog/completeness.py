@@ -71,9 +71,21 @@ REQUIREMENTS_BY_DOMAIN: dict[str, tuple] = {
 DEFAULT_REQUIREMENTS = (_NAME, _UOM, _CATEGORY, _HS)
 
 
-def requirements_for(product) -> tuple:
+#: Цена-витрина обязательна, только когда цену видно клиенту (политика `cabinet`): карточка
+#: «по запросу» без цены полна, а «цена в кабинете» без цены — нет (M1-ERP-07, BUSINESS §10.1).
+_LIST_PRICE = ("list_price", _("Цена-витрина"), lambda p, ctx: p.list_price is not None)
+
+
+def requirements_for(product, ctx: "CompletenessContext | None" = None) -> tuple:
     domain_code = getattr(getattr(product, "domain_type", None), "code", None)
-    return REQUIREMENTS_BY_DOMAIN.get(domain_code, DEFAULT_REQUIREMENTS)
+    requirements = REQUIREMENTS_BY_DOMAIN.get(domain_code, DEFAULT_REQUIREMENTS)
+    from .constants import PriceVisibility
+    from .policy import effective_price_visibility
+
+    policy = ctx.policy_for(product) if ctx is not None else None
+    if effective_price_visibility(product, policy) == PriceVisibility.CABINET:
+        requirements = (*requirements, _LIST_PRICE)
+    return requirements
 
 
 class CompletenessContext:
@@ -86,6 +98,11 @@ class CompletenessContext:
     def __init__(self, products):
         self._hs_populated = None
         self.current_hs_codes: frozenset[str] = frozenset()
+        # Политика каталога (видимость цен, порог публикации) — один запрос на пачку, по
+        # компаниям-владельцам карточек (в ERP это одна своя компания).
+        from .policy import load_policies
+
+        self._policies = load_policies(getattr(product, "owner_company_id", None) for product in products)
 
         codes = {digits for digits in (hs_digits(product) for product in products) if digits}
         if not codes:
@@ -104,6 +121,11 @@ class CompletenessContext:
             # `exists()` спрашивать не о чем.
             self._hs_populated = True
 
+    def policy_for(self, product):
+        from .policy import DEFAULT_POLICY
+
+        return self._policies.get(getattr(product, "owner_company_id", None), DEFAULT_POLICY)
+
     @property
     def hs_classifier_populated(self) -> bool:
         if self._hs_populated is None:
@@ -114,7 +136,7 @@ class CompletenessContext:
 
 
 def completeness(product, ctx: CompletenessContext | None = None) -> dict:
-    """`{percent, missing: [{code, label}], is_publishable}` для одной карточки.
+    """`{percent, missing: [{code, label}], threshold, is_publishable}` для одной карточки.
 
     `missing` — главное поле: процент мотивирует, а список говорит, ЧТО именно сделать.
 
@@ -122,11 +144,20 @@ def completeness(product, ctx: CompletenessContext | None = None) -> dict:
     Без него (одиночная карточка: детальный сериализатор, публикация) контекст строится сам.
     """
     ctx = ctx if ctx is not None else CompletenessContext([product])
-    requirements = requirements_for(product)
+    requirements = requirements_for(product, ctx)
     missing = [{"code": code, "label": str(label)} for code, label, check in requirements if not check(product, ctx)]
     filled = len(requirements) - len(missing)
     percent = round(filled * 100 / len(requirements)) if requirements else 100
-    return {"percent": percent, "missing": missing, "is_publishable": not missing}
+    # Порог публикации — политика каталога компании (M1-ERP-07): по умолчанию 100 % («всё
+    # обязательное»), ниже — осознанное решение администратора. Без имени не публикуется никогда.
+    threshold = ctx.policy_for(product).publish_threshold
+    has_name = not any(item["code"] == "name" for item in missing)
+    return {
+        "percent": percent,
+        "missing": missing,
+        "threshold": threshold,
+        "is_publishable": has_name and percent >= threshold,
+    }
 
 
 def summarize_completeness(products) -> dict:
