@@ -228,18 +228,26 @@ class Command(BaseCommand):
                 password = DEFAULT_SEED_PASSWORD
             sys_role = SystemRole.objects.filter(code=user_data["role"]).first()
 
-            user_obj, created = User.objects.get_or_create(
-                email=email,
-                defaults={
-                    "username": email.split("@")[0],
-                    "first_name": user_data.get("first_name", ""),
-                    "last_name": user_data.get("last_name", ""),
-                    "role": sys_role,
-                    "is_staff": user_data.get("is_staff", False),
-                    "is_superuser": user_data.get("is_superuser", False),
-                    "is_active": True,
-                },
-            )
+            username = email.split("@")[0]
+            user_obj = User.objects.filter(email=email).first()
+            if not user_obj:
+                user_obj = User.objects.filter(username=username).first()
+                if user_obj:
+                    user_obj.email = email
+                    user_obj.save(update_fields=["email"])
+            created = False
+            if not user_obj:
+                user_obj = User.objects.create(
+                    email=email,
+                    username=username,
+                    first_name=user_data.get("first_name", ""),
+                    last_name=user_data.get("last_name", ""),
+                    role=sys_role,
+                    is_staff=user_data.get("is_staff", False),
+                    is_superuser=user_data.get("is_superuser", False),
+                    is_active=True,
+                )
+                created = True
             # Set the password every run (idempotent) so a user created earlier without
             # one — e.g. auto-created by a deal/quote reference — becomes login-able.
             if password and not user_obj.check_password(password):

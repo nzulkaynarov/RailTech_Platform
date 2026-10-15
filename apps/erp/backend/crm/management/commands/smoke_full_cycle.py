@@ -87,6 +87,13 @@ class Command(BaseCommand):
         )
         pcs, _ = UnitOfMeasure.objects.get_or_create(code="PCS", defaults={"name": "Piece", "sort_order": 10})
         country, _ = Country.objects.get_or_create(code="UZ", defaults={"name": "Uzbekistan", "sort_order": 10})
+        from core.models import ExchangeRate
+
+        ExchangeRate.objects.update_or_create(
+            currency=usd,
+            rate_date=timezone.localdate(),
+            defaults={"rate_to_uzs": Decimal("12800.00"), "source": "CBU"},
+        )
         published = _must(ProductStatus, "PUBLISHED")
         domain_general = _must(DomainType, "GENERAL_GOODS")
         stock_in = _must(StockStatus, "IN_STOCK")
@@ -112,6 +119,25 @@ class Command(BaseCommand):
         info(f"buyer={buyer.email} company={buyer_co.name}")
 
         step(2, "Supplier user + company")
+        from core.tenant import own_company
+
+        supplier_co = own_company()
+        if supplier_co is None:
+            supplier_co, _ = Company.objects.get_or_create(
+                inn="222222222",
+                defaults={
+                    "name": "Smoke Supplier LLC",
+                    "country": country,
+                    "bank_account": "20208000000000000001",
+                    "mfo": "00440",
+                },
+            )
+            supplier_co.types.add(supplier_type)
+        if not supplier_co.bank_account or not supplier_co.mfo:
+            supplier_co.bank_account = "20208000000000000001"
+            supplier_co.mfo = "00440"
+            supplier_co.save(update_fields=["bank_account", "mfo"])
+
         supplier, _ = CustomUser.objects.get_or_create(
             email="smoke.supplier@example.test",
             defaults={
@@ -121,11 +147,6 @@ class Command(BaseCommand):
                 "last_name": "Supplier",
             },
         )
-        supplier_co, _ = Company.objects.get_or_create(
-            inn="222222222",
-            defaults={"name": "Smoke Supplier LLC", "country": country},
-        )
-        supplier_co.types.add(supplier_type)
         CompanyMember.objects.get_or_create(
             user=supplier, company=supplier_co, defaults={"role": owner_role, "is_primary": True, "is_active": True}
         )
@@ -143,10 +164,11 @@ class Command(BaseCommand):
                 "role": admin_role,
             },
         )
-        if not manager.is_staff:
+        if not manager.is_staff or not manager.is_superuser:
             manager.is_staff = True
+            manager.is_superuser = True
             manager.role = admin_role
-            manager.save(update_fields=["is_staff", "role"])
+            manager.save(update_fields=["is_staff", "is_superuser", "role"])
         info(f"manager={manager.email} role={manager.role.code if manager.role else '-'}")
 
         step(4, "Create Deal (stage DRAFT)")
@@ -194,10 +216,14 @@ class Command(BaseCommand):
             defaults={
                 "status": draft_quote,
                 "prepared_by": manager,
+                "seller_company": supplier_co,
                 "tax_country": country,
                 "vat_rate": Decimal("12.00"),
             },
         )
+        if not quote.seller_company_id:
+            quote.seller_company = supplier_co
+            quote.save(update_fields=["seller_company"])
         QuoteItem.objects.update_or_create(
             quote=quote,
             product=product,
@@ -236,6 +262,11 @@ class Command(BaseCommand):
         invoice, err = crm_services.generate_invoice_from_contract(contract.id, actor=manager)
         if err:
             raise Exception(f"generate_invoice_from_contract failed: {err}")
+        from crm.services.invoice_lifecycle import issue_invoice
+
+        invoice, err = issue_invoice(invoice, manager)
+        if err:
+            raise Exception(f"issue_invoice failed: {err}")
         info(f"invoice={invoice.number} total={invoice.total_incl_vat}")
         payment, err = crm_services.record_payment(
             invoice.id,
@@ -253,7 +284,7 @@ class Command(BaseCommand):
         act, err = crm_services.generate_act(invoice.id, actor=manager)
         if err:
             raise Exception(f"generate_act failed: {err}")
-        act, err = crm_services.sign_act(act.id, manager)
+        act, err = crm_services.sign_act(act.id, buyer)
         if err:
             raise Exception(f"sign_act failed: {err}")
         info(f"act={act.number} status={act.status_code}")
