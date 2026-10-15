@@ -57,12 +57,18 @@ CORS_ALLOWED_ORIGINS = (
     [
         "http://localhost:5173",
         "http://127.0.0.1:5173",
+        "http://cabinet.localhost",
+        "http://localhost:5175",
+        "http://127.0.0.1:5175",
         *_env_cors,
     ]
     if not DEBUG
     else [
         "http://localhost:5173",
         "http://127.0.0.1:5173",
+        "http://cabinet.localhost",
+        "http://localhost:5175",
+        "http://127.0.0.1:5175",
     ]
 )
 

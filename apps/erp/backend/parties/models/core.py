@@ -137,6 +137,17 @@ class Company(models.Model):
         verbose_name=_("МФО"),
         help_text=_("Межфилиальный оборот (код банка)"),
     )
+    bank_details = models.TextField(
+        blank=True,
+        verbose_name=_("Банковские реквизиты"),
+        help_text=_("Полные банковские реквизиты клиента (для портала и документов)"),
+    )
+    language = models.CharField(
+        max_length=10,
+        default="ru",
+        choices=[("ru", "RU"), ("uz", "UZ"), ("en", "EN")],
+        verbose_name=_("Язык документов"),
+    )
     contact_person = models.CharField(
         max_length=255,
         blank=True,
@@ -246,3 +257,15 @@ class Company(models.Model):
         if row is None:
             row = CompanySettings.objects.create(company=self)
         return row
+
+    @property
+    def formatted_bank_details(self) -> str:
+        """Formatted bank details for portal and documents."""
+        if self.bank_details:
+            return self.bank_details
+        parts = []
+        if self.bank_account:
+            parts.append(f"р/с {self.bank_account}")
+        if self.mfo:
+            parts.append(f"МФО {self.mfo}")
+        return ", ".join(parts)

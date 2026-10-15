@@ -35,7 +35,17 @@ if not SECRET_KEY:
 
         raise ImproperlyConfigured("DJANGO_SECRET_KEY environment variable is required in production.")
 
-ALLOWED_HOSTS = os.environ.get(
-    "ALLOWED_HOSTS",
-    "localhost,127.0.0.1,erp.localhost",
-).split(",")
+ALLOWED_HOSTS = [
+    h.strip()
+    for h in os.environ.get(
+        "ALLOWED_HOSTS",
+        "localhost,127.0.0.1,erp.localhost,cabinet.localhost,.localhost,cabinet.railtech.uz",
+    ).split(",")
+    if h.strip()
+]
+
+# Client Portal (Cabinet -> ERP, M2-ERP-01)
+TELEGRAM_BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN") or os.environ.get("ERP_TELEGRAM_BOT_TOKEN", "")
+CABINET_URL = os.environ.get("CABINET_URL", "http://cabinet.localhost")
+PORTAL_SESSION_COOKIE_NAME = "portal_session"
+PORTAL_SESSION_MAX_AGE_DAYS = 14

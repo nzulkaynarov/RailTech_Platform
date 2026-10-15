@@ -54,6 +54,9 @@ def _mutation_endpoints():
     for path, _regex, method, callback in EndpointEnumerator().get_api_endpoints():
         if method not in MUTATION_METHODS:
             continue
+        # Клиентский портал (M2-ERP-01) изолирован от бэк-офиса и тестируется в portal/tests/
+        if path.startswith("/api/portal/"):
+            continue
         actions = getattr(callback, "actions", None) or {}
         rows.append((path, method, callback.cls, actions.get(method.lower()) or method))
     return sorted(rows, key=lambda row: (row[0], row[1]))
