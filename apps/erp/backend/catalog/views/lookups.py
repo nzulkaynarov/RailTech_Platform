@@ -5,7 +5,7 @@ from django_filters.rest_framework import DjangoFilterBackend
 from drf_spectacular.utils import extend_schema, extend_schema_view
 from rest_framework import filters, permissions, viewsets
 
-from core.permissions import ADMIN_ONLY, RoleGatedViewMixin
+from core.permissions import RoleGatedViewMixin
 
 from ..models import Category, DomainType, ProductStatus, StockStatus
 from ..serializers import (
@@ -69,10 +69,10 @@ class CategoryViewSet(RoleGatedViewMixin, viewsets.ModelViewSet):
     """
 
     required_permissions = {
-        "create": ADMIN_ONLY,
-        "update": ADMIN_ONLY,
-        "partial_update": ADMIN_ONLY,
-        "destroy": ADMIN_ONLY,
+        "create": "settings.edit",
+        "update": "settings.edit",
+        "partial_update": "settings.edit",
+        "destroy": "settings.edit",
     }
 
     queryset = Category.objects.select_related("domain_type").all()
@@ -82,15 +82,14 @@ class CategoryViewSet(RoleGatedViewMixin, viewsets.ModelViewSet):
         "domain_type__code": ["exact"],
     }
     search_fields = ["name"]
-    # N3: дерево категорий — «справочники» из ADR-0004; пишет только оператор
-    # с `platform.settings`, а не любая суб-роль.
+    # M1-ERP-09: дерево категорий доступно для управления с правом `settings.edit` (или администратор).
 
     def get_permissions(self):
         if self.action in ["list", "retrieve"]:
             return [permissions.AllowAny()]
-        from core.permissions import IsPlatformAdmin
+        from core.permissions import HasRolePermission
 
-        return [IsPlatformAdmin()]
+        return [permissions.IsAuthenticated(), HasRolePermission()]
 
 
 @extend_schema_view(

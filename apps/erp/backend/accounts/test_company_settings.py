@@ -102,3 +102,33 @@ def test_bad_currency_code_rejected(company_a):
     resp = client.patch(url, {"default_cost_currency": "ZZZ"}, format="json")
     assert resp.status_code == 400
     assert resp.data["detail"] == "BAD_CURRENCY"
+
+
+def test_fx_rate_max_age_and_notifications_round_trip(company_a):
+    owner = _owner("owner.fx@example.com", company_a)
+    client = _client(owner)
+    url = f"/api/v1/accounts/companies/{company_a.id}/settings/"
+
+    resp = client.patch(
+        url,
+        {
+            "fx_rate_max_age_days": 14,
+            "notify_client_on_schedule_shift": False,
+        },
+        format="json",
+    )
+    assert resp.status_code == 200, resp.data
+    assert resp.data["fx_rate_max_age_days"] == 14
+    assert resp.data["notify_client_on_schedule_shift"] is False
+
+    from finance.services.fx import max_rate_age_days
+
+    assert max_rate_age_days(company_a) == 14
+
+    bad_resp = client.patch(url, {"fx_rate_max_age_days": 100}, format="json")
+    assert bad_resp.status_code == 400
+    assert bad_resp.data["detail"] == "BAD_FX_RATE_MAX_AGE_DAYS"
+
+    bad_resp_zero = client.patch(url, {"fx_rate_max_age_days": 0}, format="json")
+    assert bad_resp_zero.status_code == 400
+    assert bad_resp_zero.data["detail"] == "BAD_FX_RATE_MAX_AGE_DAYS"

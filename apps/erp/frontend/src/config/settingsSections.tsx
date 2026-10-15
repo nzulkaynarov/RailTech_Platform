@@ -25,11 +25,14 @@ export type SettingsSectionKey =
   | 'profile'
   | 'security'
   | 'company'
+  | 'master-data'
+  | 'categories'
   | 'branding'
   | 'defaults'
   | 'numbering'
   | 'templates'
   | 'doc-templates'
+  | 'email-templates'
   | 'team'
   | 'platform';
 
@@ -103,6 +106,16 @@ const SECTION_RULES: SectionRule[] = [
     def: { key: 'company', labelKey: 'settings.tabs.company', group: 'company' },
     visible: (input) => hasSettingsEdit(input),
   },
+  // Справочники (валюты, единицы, базисы, страны) — возобновлено с Admin* (M1-ERP-09).
+  {
+    def: { key: 'master-data', labelKey: 'settings.tabs.masterData', group: 'company' },
+    visible: (input) => hasSettingsEdit(input),
+  },
+  // Категории каталога — управление деревом категорий (M1-ERP-09).
+  {
+    def: { key: 'categories', labelKey: 'settings.tabs.categories', group: 'company' },
+    visible: (input) => hasSettingsEdit(input) || input.capabilities.permissions.includes('catalog.edit'),
+  },
   // ── documents ── всё «как выглядят мои документы» в одном месте (владелец 27-07).
   // Бланк и бренд — PDF-letterhead/тема/бланк КП (был подразделом company).
   {
@@ -112,6 +125,11 @@ const SECTION_RULES: SectionRule[] = [
   // Шаблоны писем и актов — гейт на settings.edit.
   {
     def: { key: 'doc-templates', labelKey: 'settings.tabs.docTemplates', group: 'documents' },
+    visible: (input) => hasSettingsEdit(input),
+  },
+  // Шаблоны транзакционных email (M1-ERP-09).
+  {
+    def: { key: 'email-templates', labelKey: 'settings.tabs.emailTemplates', group: 'documents' },
     visible: (input) => hasSettingsEdit(input),
   },
   // Нумерация документов (была в company) — номер тоже часть документа.

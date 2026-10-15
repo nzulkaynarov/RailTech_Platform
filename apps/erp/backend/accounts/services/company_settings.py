@@ -145,6 +145,22 @@ def update_company_settings(
         settings_row.catalog_publish_threshold = threshold
         changed.append("catalog_publish_threshold")
 
+    # Политика курса валют (M1-ERP-09): допустимый возраст курса ЦБ РУз (1..90 дней).
+    if "fx_rate_max_age_days" in data:
+        try:
+            max_age = int(data.get("fx_rate_max_age_days"))
+        except (TypeError, ValueError):
+            return None, "BAD_NUMBER"
+        if not 1 <= max_age <= 90:
+            return None, "BAD_FX_RATE_MAX_AGE_DAYS"
+        settings_row.fx_rate_max_age_days = max_age
+        changed.append("fx_rate_max_age_days")
+
+    if "notify_client_on_schedule_shift" in data:
+        raw_notify = data.get("notify_client_on_schedule_shift")
+        settings_row.notify_client_on_schedule_shift = bool(raw_notify)
+        changed.append("notify_client_on_schedule_shift")
+
     if changed:
         settings_row.save(update_fields=[*changed, "updated_at"])
     return settings_row, None

@@ -13,6 +13,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardFooter } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Switch } from '@/components/ui/switch';
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select';
@@ -31,6 +32,8 @@ type DefaultsForm = {
   payment_terms_days: string;
   default_payment_terms: string;
   default_warranty_months: string;
+  fx_rate_max_age_days: string;
+  notify_client_on_schedule_shift: boolean;
 };
 
 const EMPTY_FORM: DefaultsForm = {
@@ -44,6 +47,8 @@ const EMPTY_FORM: DefaultsForm = {
   payment_terms_days: '',
   default_payment_terms: '',
   default_warranty_months: '',
+  fx_rate_max_age_days: '7',
+  notify_client_on_schedule_shift: true,
 };
 
 function toForm(settings: CompanySettings): DefaultsForm {
@@ -62,6 +67,9 @@ function toForm(settings: CompanySettings): DefaultsForm {
     default_payment_terms: settings.default_payment_terms ?? '',
     default_warranty_months:
       settings.default_warranty_months != null ? String(settings.default_warranty_months) : '',
+    fx_rate_max_age_days:
+      settings.fx_rate_max_age_days != null ? String(settings.fx_rate_max_age_days) : '7',
+    notify_client_on_schedule_shift: settings.notify_client_on_schedule_shift ?? true,
   };
 }
 
@@ -174,6 +182,12 @@ export function CompanyDefaultsSettings() {
       return;
     }
 
+    const fxAge = form.fx_rate_max_age_days.trim() !== '' ? Number(form.fx_rate_max_age_days) : null;
+    if (fxAge !== null && (fxAge < 1 || fxAge > 90 || isNaN(fxAge))) {
+      toast.error(t('companyDefaults.errors.invalidFxRateMaxAge'));
+      return;
+    }
+
     saveMut.mutate({
       default_cost_currency: form.default_cost_currency === NONE ? '' : form.default_cost_currency,
       default_delivery_basis: form.default_delivery_basis === NONE ? '' : form.default_delivery_basis,
@@ -188,6 +202,8 @@ export function CompanyDefaultsSettings() {
       payment_terms_days: paymentDays,
       default_payment_terms: form.default_payment_terms.trim(),
       default_warranty_months: warrantyMonths,
+      fx_rate_max_age_days: fxAge ?? 7,
+      notify_client_on_schedule_shift: form.notify_client_on_schedule_shift,
     });
   };
 
@@ -351,6 +367,39 @@ export function CompanyDefaultsSettings() {
                 value={form.default_warranty_months}
                 onChange={(e) => setForm({ ...form, default_warranty_months: e.target.value })}
                 placeholder="12"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="cd-fx-rate-max-age">{t('companyDefaults.fxRateMaxAgeDays')}</Label>
+              <Input
+                id="cd-fx-rate-max-age"
+                type="number"
+                step="1"
+                min="1"
+                max="90"
+                value={form.fx_rate_max_age_days}
+                onChange={(e) => setForm({ ...form, fx_rate_max_age_days: e.target.value })}
+                placeholder="7"
+              />
+              <p className="text-xs text-muted-foreground">{t('companyDefaults.fxRateMaxAgeDaysHint')}</p>
+            </div>
+
+            <div className="flex items-center justify-between rounded-lg border p-3 sm:col-span-2">
+              <div className="space-y-0.5">
+                <Label htmlFor="cd-notify-schedule-shift" className="text-sm font-medium">
+                  {t('companyDefaults.notifyClientOnScheduleShift')}
+                </Label>
+                <p className="text-xs text-muted-foreground">
+                  {t('companyDefaults.notifyClientOnScheduleShiftHint')}
+                </p>
+              </div>
+              <Switch
+                id="cd-notify-schedule-shift"
+                checked={form.notify_client_on_schedule_shift}
+                onCheckedChange={(checked) =>
+                  setForm({ ...form, notify_client_on_schedule_shift: checked })
+                }
               />
             </div>
           </div>

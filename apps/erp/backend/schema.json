@@ -15120,6 +15120,386 @@
                 }
             }
         },
+        "/api/v1/settings/email-templates/": {
+            "get": {
+                "operationId": "settings_email_templates_list",
+                "description": "Platform-Operator CRUD for DB-editable email templates.\n\nAn active row here overrides the file template of the same key when\n`notifications.emails.send_templated_email` renders. Thin wrapper — preview\nand test-send delegate to `services_email_templates`.",
+                "summary": "List email templates",
+                "parameters": [
+                    {
+                        "name": "page",
+                        "required": false,
+                        "in": "query",
+                        "description": "A page number within the paginated result set.",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "page_size",
+                        "required": false,
+                        "in": "query",
+                        "description": "Number of results to return per page.",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "search",
+                        "required": false,
+                        "in": "query",
+                        "description": "A search term.",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "tags": [
+                    "Admin"
+                ],
+                "security": [
+                    {
+                        "jwtAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/PaginatedEmailTemplateList"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            },
+            "post": {
+                "operationId": "settings_email_templates_create",
+                "description": "Platform-Operator CRUD for DB-editable email templates.\n\nAn active row here overrides the file template of the same key when\n`notifications.emails.send_templated_email` renders. Thin wrapper — preview\nand test-send delegate to `services_email_templates`.",
+                "summary": "Create email template",
+                "tags": [
+                    "Admin"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/EmailTemplateRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/EmailTemplateRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/EmailTemplateRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "security": [
+                    {
+                        "jwtAuth": []
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/EmailTemplate"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/api/v1/settings/email-templates/{id}/": {
+            "get": {
+                "operationId": "settings_email_templates_retrieve",
+                "description": "Platform-Operator CRUD for DB-editable email templates.\n\nAn active row here overrides the file template of the same key when\n`notifications.emails.send_templated_email` renders. Thin wrapper — preview\nand test-send delegate to `services_email_templates`.",
+                "summary": "Get email template",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "description": "A unique integer value identifying this Шаблон email.",
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "Admin"
+                ],
+                "security": [
+                    {
+                        "jwtAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/EmailTemplate"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            },
+            "put": {
+                "operationId": "settings_email_templates_update",
+                "description": "Platform-Operator CRUD for DB-editable email templates.\n\nAn active row here overrides the file template of the same key when\n`notifications.emails.send_templated_email` renders. Thin wrapper — preview\nand test-send delegate to `services_email_templates`.",
+                "summary": "Update email template",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "description": "A unique integer value identifying this Шаблон email.",
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "Admin"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/EmailTemplateRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/EmailTemplateRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/EmailTemplateRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "security": [
+                    {
+                        "jwtAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/EmailTemplate"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            },
+            "patch": {
+                "operationId": "settings_email_templates_partial_update",
+                "description": "Platform-Operator CRUD for DB-editable email templates.\n\nAn active row here overrides the file template of the same key when\n`notifications.emails.send_templated_email` renders. Thin wrapper — preview\nand test-send delegate to `services_email_templates`.",
+                "summary": "Patch email template",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "description": "A unique integer value identifying this Шаблон email.",
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "Admin"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/PatchedEmailTemplateRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/PatchedEmailTemplateRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/PatchedEmailTemplateRequest"
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "jwtAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/EmailTemplate"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            },
+            "delete": {
+                "operationId": "settings_email_templates_destroy",
+                "description": "Platform-Operator CRUD for DB-editable email templates.\n\nAn active row here overrides the file template of the same key when\n`notifications.emails.send_templated_email` renders. Thin wrapper — preview\nand test-send delegate to `services_email_templates`.",
+                "summary": "Delete email template",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "description": "A unique integer value identifying this Шаблон email.",
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "Admin"
+                ],
+                "security": [
+                    {
+                        "jwtAuth": []
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No response body"
+                    }
+                }
+            }
+        },
+        "/api/v1/settings/email-templates/{id}/preview/": {
+            "post": {
+                "operationId": "settings_email_templates_preview_create",
+                "description": "Render the template's subject/html/text against a SAMPLE context (or a provided override context). Does NOT send. Reflects DB override vs file fallback.",
+                "summary": "Preview email template",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "description": "A unique integer value identifying this Шаблон email.",
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "Admin"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/EmailTemplatePreviewRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/EmailTemplatePreviewRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/EmailTemplatePreviewRequest"
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "jwtAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Rendered subject/text_body/html_body"
+                    }
+                }
+            }
+        },
+        "/api/v1/settings/email-templates/{id}/test-send/": {
+            "post": {
+                "operationId": "settings_email_templates_test_send_create",
+                "description": "Render the template and send it to the provided email via the real pipeline. Writes an EmailLog. Use to verify copy and transport before going live.",
+                "summary": "Send a test email",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "description": "A unique integer value identifying this Шаблон email.",
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "Admin"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/EmailTemplateTestSendRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/EmailTemplateTestSendRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/EmailTemplateTestSendRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "security": [
+                    {
+                        "jwtAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Send result with EmailLog id and status"
+                    }
+                }
+            }
+        },
         "/api/v1/sourcing/ai-status/{task_id}/": {
             "get": {
                 "operationId": "sourcing_ai_status_retrieve",
@@ -17957,6 +18337,18 @@
                         "minimum": 1,
                         "title": "Порог публикации (%)",
                         "description": "Минимальная полнота карточки, при которой её можно опубликовать."
+                    },
+                    "fx_rate_max_age_days": {
+                        "type": "integer",
+                        "maximum": 90,
+                        "minimum": 1,
+                        "title": "Максимальный возраст курса валюты (дней)",
+                        "description": "Если курс ЦБ старше N дней, КП требует обновления курса или договорного курса."
+                    },
+                    "notify_client_on_schedule_shift": {
+                        "type": "boolean",
+                        "title": "Уведомлять клиента о сдвигах сроков",
+                        "description": "Отправлять клиенту уведомление при изменении ожидаемых дат поставки или исполнения."
                     },
                     "doc_number_prefix": {
                         "type": "string",
@@ -21921,6 +22313,18 @@
                         "minimum": 1,
                         "title": "Порог публикации (%)",
                         "description": "Минимальная полнота карточки, при которой её можно опубликовать."
+                    },
+                    "fx_rate_max_age_days": {
+                        "type": "integer",
+                        "maximum": 90,
+                        "minimum": 1,
+                        "title": "Максимальный возраст курса валюты (дней)",
+                        "description": "Если курс ЦБ старше N дней, КП требует обновления курса или договорного курса."
+                    },
+                    "notify_client_on_schedule_shift": {
+                        "type": "boolean",
+                        "title": "Уведомлять клиента о сдвигах сроков",
+                        "description": "Отправлять клиенту уведомление при изменении ожидаемых дат поставки или исполнения."
                     },
                     "doc_number_prefix": {
                         "type": "string",

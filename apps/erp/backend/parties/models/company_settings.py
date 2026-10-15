@@ -118,6 +118,19 @@ class CompanySettings(models.Model):
         help_text=_("Минимальная полнота карточки, при которой её можно опубликовать."),
     )
 
+    # ── Политика курса и уведомления (M1-ERP-09, ARCHITECTURE §7) ────────────
+    fx_rate_max_age_days = models.PositiveSmallIntegerField(
+        default=7,
+        validators=[MinValueValidator(1), MaxValueValidator(90)],
+        verbose_name=_("Максимальный возраст курса валюты (дней)"),
+        help_text=_("Если курс ЦБ старше N дней, КП требует обновления курса или договорного курса."),
+    )
+    notify_client_on_schedule_shift = models.BooleanField(
+        default=True,
+        verbose_name=_("Уведомлять клиента о сдвигах сроков"),
+        help_text=_("Отправлять клиенту уведомление при изменении ожидаемых дат поставки или исполнения."),
+    )
+
     # ── Document numbering scheme ──────────────────────────────────────────────
     doc_number_prefix = models.CharField(
         max_length=16,

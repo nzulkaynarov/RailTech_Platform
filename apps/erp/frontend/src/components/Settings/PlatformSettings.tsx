@@ -5,7 +5,7 @@
 import { useDraftState } from '@/hooks/useDraftState';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
-import { ShieldCheck } from 'lucide-react';
+import { ShieldCheck, ExternalLink } from 'lucide-react';
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -32,10 +32,6 @@ export function PlatformSettings() {
   const { vatRate, exchangeRate, platformName, supportEmail, logoUrl, domain } = form;
   const setVatRate = (value: string) => setForm((prev) => ({ ...prev, vatRate: value }));
   const setExchangeRate = (value: string) => setForm((prev) => ({ ...prev, exchangeRate: value }));
-  const setPlatformName = (value: string) => setForm((prev) => ({ ...prev, platformName: value }));
-  const setSupportEmail = (value: string) => setForm((prev) => ({ ...prev, supportEmail: value }));
-  const setLogoUrl = (value: string) => setForm((prev) => ({ ...prev, logoUrl: value }));
-  const setDomain = (value: string) => setForm((prev) => ({ ...prev, domain: value }));
 
   const handleSave = async () => {
     try {
@@ -69,6 +65,19 @@ export function PlatformSettings() {
           <p className="text-sm text-muted-foreground">{t('common.loading')}</p>
         ) : (
           <>
+            <div className="flex items-center justify-between rounded-lg border border-border bg-muted/40 p-4">
+              <div className="space-y-0.5">
+                <p className="text-sm font-medium">{t('settings.platform.managedInCrm')}</p>
+                <p className="text-xs text-muted-foreground">{t('settings.platform.managedInCrmHint')}</p>
+              </div>
+              <Button variant="outline" size="sm" asChild>
+                <a href="/admin/settings" target="_blank" rel="noopener noreferrer">
+                  <ExternalLink className="mr-1.5 h-3.5 w-3.5" />
+                  {t('settings.platform.goToCrm')}
+                </a>
+              </Button>
+            </div>
+
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-2">
                 <Label>{t('settings.platform.vatRate')}</Label>
@@ -80,19 +89,19 @@ export function PlatformSettings() {
               </div>
               <div className="space-y-2">
                 <Label>{t('settings.platform.platformName')}</Label>
-                <Input value={platformName} onChange={(e) => setPlatformName(e.target.value)} />
+                <Input value={platformName} disabled />
               </div>
               <div className="space-y-2">
                 <Label>{t('settings.platform.supportEmail')}</Label>
-                <Input type="email" value={supportEmail} onChange={(e) => setSupportEmail(e.target.value)} />
+                <Input type="email" value={supportEmail} disabled />
               </div>
               <div className="space-y-2">
                 <Label>{t('settings.platform.logoUrl')}</Label>
-                <Input value={logoUrl} onChange={(e) => setLogoUrl(e.target.value)} />
+                <Input value={logoUrl} disabled />
               </div>
               <div className="space-y-2">
                 <Label>{t('settings.platform.domain')}</Label>
-                <Input value={domain} onChange={(e) => setDomain(e.target.value)} />
+                <Input value={domain} disabled />
               </div>
             </div>
 

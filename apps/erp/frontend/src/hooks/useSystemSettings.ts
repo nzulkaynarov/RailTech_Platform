@@ -1,9 +1,10 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { systemApi, SystemSettings } from '@/api/systemApi';
 
-export const useSystemSettings = () => useQuery({
+export const useSystemSettings = (options?: { enabled?: boolean }) => useQuery({
   queryKey: ['systemSettings'],
   queryFn: () => systemApi.getSettings(),
+  ...options,
 });
 
 export const useUpdateSystemSettings = () => {

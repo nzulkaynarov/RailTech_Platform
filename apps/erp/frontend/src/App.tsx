@@ -18,6 +18,7 @@ import { NAVIGABLE_PAGES } from './config/pageRegistry';
 import { parseHashToPage, pageToHash, type Page } from './routes/hashRoute';
 import { evaluatePageGuard } from './routes/pageGuard';
 import { renderPage } from './routes/pageContent';
+import { useSystemSettings } from '@/hooks/useSystemSettings';
 
 /** Parse URL path and query params for auth routes */
 type AuthRouteView = 'login' | 'setup-password' | 'forgot-password' | 'reset-password';
@@ -102,6 +103,13 @@ function App() {
       }
     }
   }, [isAuthenticated, loadFromAuth, route.view]);
+
+  const { data: systemSettings } = useSystemSettings({ enabled: isAuthenticated });
+  useEffect(() => {
+    if (systemSettings?.platform_name) {
+      document.title = systemSettings.platform_name;
+    }
+  }, [systemSettings?.platform_name]);
 
   // Radix workaround: opening a Dialog (e.g. ConfirmActionDialog) from a
   // DropdownMenu/Select can leave document.body stuck at `pointer-events: none`

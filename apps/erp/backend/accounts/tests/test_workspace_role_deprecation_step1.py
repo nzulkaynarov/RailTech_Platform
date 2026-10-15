@@ -153,3 +153,77 @@ def test_charge_template_owner_without_role_denied(lookups):
     resp = _api(user).post("/api/v1/crm/charge-templates/", _CT_PAYLOAD, format="json")
     assert resp.status_code == 403  # M1-ERP-05: без роли — без права
     assert resp.json()["detail"] == "ROLE_NOT_PERMITTED"
+
+
+# ── Gate 4: settings.edit for email templates, master data & categories (M1-ERP-09) ──
+
+
+def test_settings_hub_endpoints_allowed_with_settings_edit(lookups):
+    company = _company()
+    role = _role(company, "Настройщик", ["settings.edit"])
+    user = _member(company, "hub_admin@t.test", workspace="MEMBER", company_roles=[role])
+    api = _api(user)
+
+    # EmailTemplate CRUD & preview on /settings/email-templates/
+    et_resp = api.post(
+        "/api/v1/settings/email-templates/",
+        {"key": "test_tmpl", "subject": "Test Subject", "html_body": "<p>Hello</p>", "text_body": "Hello"},
+        format="json",
+    )
+    assert et_resp.status_code == 201, et_resp.data
+    tmpl_id = et_resp.data["id"]
+
+    prev_resp = api.post(f"/api/v1/settings/email-templates/{tmpl_id}/preview/", {}, format="json")
+    assert prev_resp.status_code == 200, prev_resp.data
+
+    # Master data CRUD
+    uom_resp = api.post(
+        "/api/v1/master-data/units/",
+        {"code": "HUB_UOM", "name": "Тестовая единица", "sort_order": 999},
+        format="json",
+    )
+    assert uom_resp.status_code == 201, uom_resp.data
+    assert "id" in uom_resp.data
+
+    # Inactive listing allowed
+    list_resp = api.get("/api/v1/master-data/units/?include_inactive=1")
+    assert list_resp.status_code == 200
+
+    # Category CRUD
+    cat_resp = api.post(
+        "/api/v1/catalog/categories/",
+        {"name": "Тестовая категория", "code": "hub_cat"},
+        format="json",
+    )
+    assert cat_resp.status_code == 201, cat_resp.data
+
+
+def test_settings_hub_endpoints_denied_without_settings_edit(lookups):
+    company = _company()
+    role = _role(company, "Наблюдатель", [])
+    user = _member(company, "hub_viewer@t.test", workspace="MEMBER", company_roles=[role])
+    api = _api(user)
+
+    et_resp = api.post(
+        "/api/v1/settings/email-templates/",
+        {"key": "test_bad", "subject": "Bad", "html_body": "<p>Bad</p>"},
+        format="json",
+    )
+    assert et_resp.status_code == 403
+    assert et_resp.json()["detail"] == "ROLE_NOT_PERMITTED"
+
+    uom_resp = api.post(
+        "/api/v1/master-data/units/",
+        {"code": "BAD_UOM", "name": "Bad", "sort_order": 999},
+        format="json",
+    )
+    assert uom_resp.status_code == 403
+    assert uom_resp.json()["detail"] == "ROLE_NOT_PERMITTED"
+
+    cat_resp = api.post(
+        "/api/v1/catalog/categories/",
+        {"name": "Bad Category", "code": "bad_cat"},
+        format="json",
+    )
+    assert cat_resp.status_code == 403
+    assert cat_resp.json()["detail"] == "ROLE_NOT_PERMITTED"

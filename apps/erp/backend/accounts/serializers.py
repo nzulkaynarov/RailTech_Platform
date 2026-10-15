@@ -50,6 +50,8 @@ class CompanySettingsSerializer(serializers.ModelSerializer):
             "target_margin_percent",
             "catalog_price_visibility",
             "catalog_publish_threshold",
+            "fx_rate_max_age_days",
+            "notify_client_on_schedule_shift",
             "doc_number_prefix",
             "created_at",
             "updated_at",

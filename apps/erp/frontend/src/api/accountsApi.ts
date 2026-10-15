@@ -116,6 +116,10 @@ export interface CompanySettings {
 	/** Политика каталога (M1-ERP-07): видимость цен по умолчанию и порог публикации, %. */
 	catalog_price_visibility?: 'cabinet' | 'on_request';
 	catalog_publish_threshold?: number;
+	/** Политика курса ЦБ (M1-ERP-09): допустимый возраст курса, дней (1..90). */
+	fx_rate_max_age_days?: number;
+	/** Уведомление клиента (M1-ERP-09): отправлять алёрт при сдвиге дат графика. */
+	notify_client_on_schedule_shift?: boolean;
 	doc_number_prefix?: string;
 	created_at?: string;
 	updated_at?: string;
@@ -136,6 +140,8 @@ export interface CompanySettingsUpdate {
 	default_warranty_months?: number | null;
 	catalog_price_visibility?: 'cabinet' | 'on_request';
 	catalog_publish_threshold?: number;
+	fx_rate_max_age_days?: number;
+	notify_client_on_schedule_shift?: boolean;
 	doc_number_prefix?: string;
 }
 

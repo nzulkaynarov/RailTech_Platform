@@ -36,11 +36,11 @@ function sectionKeys(input: SettingsGateInput): string[] {
 }
 
 describe('buildSettingsSections — S1 гейтинг = правда сохранения (spec-settings-reorg-2026-07-23)', () => {
-  it('администратор (is_superuser): все секции (группа documents: branding/doc-templates/numbering; +platform); дефолт=profile', () => {
+  it('администратор (is_superuser): все секции (группа documents: branding/doc-templates/email-templates/numbering; +platform); дефолт=profile', () => {
     // M1-ERP-05: platform-секция (НДС/курс/имя/2FA) — только администратор.
     const gate = makeGate(ADMIN);
     expect(sectionKeys(gate)).toEqual([
-      'profile', 'security', 'company', 'branding', 'doc-templates', 'numbering',
+      'profile', 'security', 'company', 'master-data', 'categories', 'branding', 'doc-templates', 'email-templates', 'numbering',
       'defaults', 'templates', 'team', 'platform',
     ]);
     expect(defaultSettingsSection()).toBe('profile');
@@ -49,7 +49,7 @@ describe('buildSettingsSections — S1 гейтинг = правда сохра�
   it('«Руководитель» (все права, не администратор): всё, кроме platform', () => {
     const gate = makeGate(HEAD);
     expect(sectionKeys(gate)).toEqual([
-      'profile', 'security', 'company', 'branding', 'doc-templates', 'numbering',
+      'profile', 'security', 'company', 'master-data', 'categories', 'branding', 'doc-templates', 'email-templates', 'numbering',
       'defaults', 'templates', 'team',
     ]);
   });
@@ -71,16 +71,23 @@ describe('buildSettingsSections — S1 гейтинг = правда сохра�
     expect(defaultSettingsSection()).toBe('profile');
   });
 
-  it('settings.edit-делегат: company/branding/doc-templates/numbering/defaults — но НЕ templates(charge) и НЕ platform', () => {
+  it('settings.edit-делегат: company/master-data/categories/branding/doc-templates/email-templates/numbering/defaults — но НЕ templates(charge) и НЕ platform', () => {
     const gate = makeGate({
       capabilities: makeCapabilities({ permissions: ['settings.edit'] }),
     });
     expect(sectionKeys(gate)).toEqual([
-      'profile', 'security', 'company', 'branding', 'doc-templates', 'numbering', 'defaults', 'team',
+      'profile', 'security', 'company', 'master-data', 'categories', 'branding', 'doc-templates', 'email-templates', 'numbering', 'defaults', 'team',
     ]);
     expect(sectionKeys(gate)).not.toContain('templates');
     expect(sectionKeys(gate)).not.toContain('platform');
     expect(defaultSettingsSection()).toBe('profile');
+  });
+
+  it('catalog.edit открывает categories в company, но не другие закрытые секции', () => {
+    const gate = makeGate({
+      capabilities: makeCapabilities({ permissions: ['catalog.edit'] }),
+    });
+    expect(sectionKeys(gate)).toEqual(['profile', 'security', 'categories', 'team']);
   });
 
   it('charge-делегат (charge_templates.manage): profile/security/templates/team — БЕЗ мёртвых company-секций (фикс тупиков)', () => {
@@ -89,7 +96,7 @@ describe('buildSettingsSections — S1 гейтинг = правда сохра�
     });
     expect(sectionKeys(gate)).toEqual(['profile', 'security', 'templates', 'team']);
     // именно эти company/documents-секции больше НЕ показываются как заглушки:
-    for (const dead of ['company', 'branding', 'numbering', 'defaults', 'doc-templates']) {
+    for (const dead of ['company', 'master-data', 'categories', 'branding', 'numbering', 'defaults', 'doc-templates', 'email-templates']) {
       expect(sectionKeys(gate)).not.toContain(dead);
     }
     expect(defaultSettingsSection()).toBe('profile');
@@ -137,9 +144,12 @@ describe('buildSettingsSections — S2 группировка', () => {
     expect(byKey.get('profile')).toBe('account');
     expect(byKey.get('security')).toBe('account');
     expect(byKey.get('company')).toBe('company');
+    expect(byKey.get('master-data')).toBe('company');
+    expect(byKey.get('categories')).toBe('company');
     // Группа «documents» (владелец 27-07): бланк/бренд + шаблоны писем + нумерация.
     expect(byKey.get('branding')).toBe('documents');
     expect(byKey.get('doc-templates')).toBe('documents');
+    expect(byKey.get('email-templates')).toBe('documents');
     expect(byKey.get('numbering')).toBe('documents');
     // sales = бизнес-дефолты КП + статьи расхода (не внешний вид).
     expect(byKey.get('defaults')).toBe('sales');

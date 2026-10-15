@@ -144,6 +144,7 @@ router.register(r"accounts/company-types", CompanyTypeViewSet, basename="company
 router.register(r"accounts/company-roles", CompanyRoleViewSet, basename="company-role")
 router.register(r"notifications", NotificationViewSet, basename="notification")
 router.register(r"admin/email-templates", EmailTemplateViewSet, basename="admin-email-template")
+router.register(r"settings/email-templates", EmailTemplateViewSet, basename="settings-email-template")
 
 # Master Data
 router.register(r"master-data/countries", CountryViewSet)

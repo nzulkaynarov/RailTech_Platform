@@ -4,7 +4,7 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 
 from core.audit import AuditedWriteMixin
-from core.permissions import ADMIN_ONLY, IsPlatformAdmin, RoleGatedViewMixin
+from core.permissions import HasRolePermission, RoleGatedViewMixin
 
 from . import services, services_email_templates
 from .models import EmailTemplate, Notification
@@ -100,28 +100,17 @@ class EmailTemplateViewSet(RoleGatedViewMixin, AuditedWriteMixin, viewsets.Model
     """
 
     required_permissions = {
-        "create": ADMIN_ONLY,
-        "update": ADMIN_ONLY,
-        "partial_update": ADMIN_ONLY,
-        "destroy": ADMIN_ONLY,
-        "preview": ADMIN_ONLY,
-        "test_send": ADMIN_ONLY,
+        "create": "settings.edit",
+        "update": "settings.edit",
+        "partial_update": "settings.edit",
+        "destroy": "settings.edit",
+        "preview": "settings.edit",
+        "test_send": "settings.edit",
     }
 
     queryset = EmailTemplate.objects.all()
     serializer_class = EmailTemplateSerializer
-    # Суб-способность оператора, а не «любой платформенный админ» (ADR-0004 G1, least privilege).
-    #
-    # Раньше стоял голый `IsPlatformAdmin`: оператор «Поддержка», заведённый как ТОЛЬКО ПРОСМОТР,
-    # создавал, правил и УДАЛЯЛ шаблоны писем. Активная строка здесь немедленно подменяет файловый
-    # шаблон ДЛЯ ВСЕХ получателей — то есть это произвольный HTML в письме клиенту от имени
-    # платформы, — а `test-send` реально отправляет письмо и пишет `EmailLog`. Пункт меню был
-    # скрыт по праву `platform.settings`, но переход по адресу правом не закрывался, и за скрытой
-    # дверью не стояло ничего (прогон 20-08). Тот же образец уже применён в `catalog/views/lookups.py`.
-    #
-    # `IsPlatformAdmin` резолвит право по `action`, поэтому кастомные `preview` и `test-send`
-    # накрываются тем же дефолтом — их открытыми оставлять нельзя.
-    permission_classes = [permissions.IsAuthenticated, IsPlatformAdmin]
+    permission_classes = [permissions.IsAuthenticated, HasRolePermission]
 
     #: Активная строка НЕМЕДЛЕННО подменяет файловый шаблон для ВСЕХ получателей платформы:
     #: текст, который увидит каждый арендатор в письме о счёте или об акте. Поле `updated_by`

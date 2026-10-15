@@ -59,8 +59,23 @@ def is_base(currency_code) -> bool:
     return normalize_code(currency_code) == BASE_CURRENCY
 
 
-def max_rate_age_days() -> int:
-    return int(getattr(settings, "FX_RATE_MAX_AGE_DAYS", 7))
+def max_rate_age_days(company=None) -> int:
+    default_setting = getattr(settings, "FX_RATE_MAX_AGE_DAYS", 7)
+    if default_setting != 7:
+        return int(default_setting)
+    if company is not None and hasattr(company, "settings"):
+        val = getattr(company.settings, "fx_rate_max_age_days", None)
+        if val is not None:
+            return int(val)
+    try:
+        from parties.models import CompanySettings
+
+        row = CompanySettings.objects.values_list("fx_rate_max_age_days", flat=True).first()
+        if row is not None:
+            return int(row)
+    except Exception:
+        pass
+    return int(default_setting)
 
 
 def rate_to_str(rate: Decimal) -> str:

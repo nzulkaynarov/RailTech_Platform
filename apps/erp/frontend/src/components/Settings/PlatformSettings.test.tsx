@@ -49,11 +49,17 @@ describe('PlatformSettings (spec PR 5, вариант Б)', () => {
     // Живые настройки на месте (значения из данных бэкенда).
     expect(screen.getByText('Системные настройки')).toBeInTheDocument();
     expect(screen.getByDisplayValue('12.00')).toBeInTheDocument();
+    expect(screen.getByDisplayValue('12.00')).not.toBeDisabled();
     expect(screen.getByDisplayValue('12650.0000')).toBeInTheDocument();
+    expect(screen.getByDisplayValue('12650.0000')).not.toBeDisabled();
     expect(screen.getByDisplayValue('ERP Platform')).toBeInTheDocument();
+    expect(screen.getByDisplayValue('ERP Platform')).toBeDisabled();
     expect(screen.getByDisplayValue('support@example.com')).toBeInTheDocument();
+    expect(screen.getByDisplayValue('support@example.com')).toBeDisabled();
     expect(screen.getByDisplayValue('https://example.com/logo.png')).toBeInTheDocument();
+    expect(screen.getByDisplayValue('https://example.com/logo.png')).toBeDisabled();
     expect(screen.getByDisplayValue('erp.example.com')).toBeInTheDocument();
+    expect(screen.getByDisplayValue('erp.example.com')).toBeDisabled();
 
     // standard_margin убран из UI (P9): поле инертно, не показываем и не редактируем.
     expect(screen.queryByDisplayValue('15.00')).not.toBeInTheDocument();

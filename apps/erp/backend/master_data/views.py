@@ -7,33 +7,17 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
 
 from core.audit import AuditedWriteMixin
-from core.permissions import ADMIN_ONLY, RoleGatedViewMixin
+from core.permissions import HasRolePermission, RoleGatedViewMixin
 
 from .models import Country, Currency, DeliveryBasis, HSCode, UnitOfMeasure
 from .serializers import CountrySerializer, CurrencySerializer, DeliveryBasisSerializer, UnitOfMeasureSerializer
 
 
 def _lookup_write_permissions(view):
-    """Чтение справочника — публичное, ЗАПИСЬ — по суб-способности `platform.settings`.
-
-    Раньше на всех четырёх вьюсетах стоял голый `IsPlatformAdminOrReadOnly`, проверяющий лишь
-    «оператор платформы вообще». Оператор «Поддержка», заведённый как ТОЛЬКО ПРОСМОТР, создавал,
-    правил и удалял валюты, страны и единицы измерения — а они печатаются в документах ВСЕХ
-    арендаторов (прогон 20-08). Пункт меню был скрыт по праву, но за скрытой дверью не стояло
-    ничего: переход по адресу правом не закрывался.
-
-    Образец не новый — ровно так уже сделано в `catalog/views/lookups.py` волной N3, с тем же
-    выводом в комментарии: «раньше писала ЛЮБАЯ суб-роль оператора, включая SUPPORT „только
-    просмотр“». Здесь тот же приём, чтобы механика была одна, а не две.
-
-    Публичное чтение сохраняем: списки справочников читают почти все экраны, включая
-    неавторизованные (публичная страница КП).
-    """
+    """Чтение справочника — публичное, ЗАПИСЬ — по праву `settings.edit` (или администратор)."""
     if getattr(view, "action", None) in ("list", "retrieve"):
         return [permissions.AllowAny()]
-    from core.permissions import IsPlatformAdmin
-
-    return [IsPlatformAdmin()]
+    return [permissions.IsAuthenticated(), HasRolePermission()]
 
 
 LOOKUP_CACHE_TTL = 60 * 10  # 10 min — справочники меняются редко
@@ -150,9 +134,14 @@ class _ActiveOnlyListMixin:
         request = getattr(self, "request", None)
         if request is None or str(request.query_params.get("include_inactive", "")) not in ("1", "true", "True"):
             return False
-        from core.permissions import IsPlatformAdmin
+        user = getattr(request, "user", None)
+        if not (user and user.is_authenticated):
+            return False
+        if user.is_superuser:
+            return True
+        from accounts.services.permissions import is_seller, staff_has_permission
 
-        return IsPlatformAdmin().has_permission(request, self)
+        return is_seller(user) and staff_has_permission(user, "settings.edit")
 
 
 @extend_schema_view(
@@ -169,10 +158,10 @@ class CountryViewSet(
     """CRUD for countries (read: public; write: admin)."""
 
     required_permissions = {
-        "create": ADMIN_ONLY,
-        "update": ADMIN_ONLY,
-        "partial_update": ADMIN_ONLY,
-        "destroy": ADMIN_ONLY,
+        "create": "settings.edit",
+        "update": "settings.edit",
+        "partial_update": "settings.edit",
+        "destroy": "settings.edit",
     }
 
     queryset = Country.objects.all().order_by("sort_order", "name")
@@ -199,10 +188,10 @@ class CurrencyViewSet(
     """CRUD for currencies (read: public; write: admin)."""
 
     required_permissions = {
-        "create": ADMIN_ONLY,
-        "update": ADMIN_ONLY,
-        "partial_update": ADMIN_ONLY,
-        "destroy": ADMIN_ONLY,
+        "create": "settings.edit",
+        "update": "settings.edit",
+        "partial_update": "settings.edit",
+        "destroy": "settings.edit",
     }
 
     queryset = Currency.objects.all().order_by("sort_order", "code")
@@ -229,10 +218,10 @@ class UnitOfMeasureViewSet(
     """CRUD for units of measure (read: public; write: admin)."""
 
     required_permissions = {
-        "create": ADMIN_ONLY,
-        "update": ADMIN_ONLY,
-        "partial_update": ADMIN_ONLY,
-        "destroy": ADMIN_ONLY,
+        "create": "settings.edit",
+        "update": "settings.edit",
+        "partial_update": "settings.edit",
+        "destroy": "settings.edit",
     }
 
     queryset = UnitOfMeasure.objects.all().order_by("sort_order", "code")
@@ -259,10 +248,10 @@ class DeliveryBasisViewSet(
     """CRUD for delivery basis terms (Incoterms). Read: public; write: admin."""
 
     required_permissions = {
-        "create": ADMIN_ONLY,
-        "update": ADMIN_ONLY,
-        "partial_update": ADMIN_ONLY,
-        "destroy": ADMIN_ONLY,
+        "create": "settings.edit",
+        "update": "settings.edit",
+        "partial_update": "settings.edit",
+        "destroy": "settings.edit",
     }
 
     queryset = DeliveryBasis.objects.all().order_by("sort_order", "code")

@@ -24,6 +24,9 @@ import { CompanyDefaultsSettings } from '@/components/Cabinet/CompanyDefaultsSet
 import { CatalogPolicySettings } from '@/components/Cabinet/CatalogPolicySettings';
 import { CompanyNumberingSettings } from '@/components/Cabinet/CompanyNumberingSettings';
 import { CompanyTab } from '@/components/Cabinet/CompanyTab';
+import { MasterDataSettings } from '@/components/Settings/MasterDataSettings';
+import { CategoriesSettings } from '@/components/Settings/CategoriesSettings';
+import { EmailTemplatesSettings } from '@/components/Settings/EmailTemplatesSettings';
 
 export function SettingsPage() {
   const { t } = useTranslation();
@@ -74,6 +77,10 @@ function SectionContent({ sectionKey }: { sectionKey: SettingsSectionKey }): Rea
     case 'company':
       // ТОЛЬКО юр.реквизиты компании (бренд переехал в `branding`).
       return <CompanyTab />;
+    case 'master-data':
+      return <MasterDataSettings />;
+    case 'categories':
+      return <CategoriesSettings />;
     case 'branding':
       // «Бланк и бренд» — PDF-letterhead/тема/бланк КП (группа «Документы»), только продавец.
       return <CompanyBrandingSection />;
@@ -91,6 +98,8 @@ function SectionContent({ sectionKey }: { sectionKey: SettingsSectionKey }): Rea
       return <ChargeTemplatesSettings />;
     case 'doc-templates':
       return <DocumentTemplatesSettings />;
+    case 'email-templates':
+      return <EmailTemplatesSettings />;
     case 'team':
       return <CompanyTeamSettings />;
     case 'platform':

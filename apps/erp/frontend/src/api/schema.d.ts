@@ -5380,6 +5380,126 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/settings/email-templates/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List email templates
+         * @description Platform-Operator CRUD for DB-editable email templates.
+         *
+         *     An active row here overrides the file template of the same key when
+         *     `notifications.emails.send_templated_email` renders. Thin wrapper — preview
+         *     and test-send delegate to `services_email_templates`.
+         */
+        get: operations["settings_email_templates_list"];
+        put?: never;
+        /**
+         * Create email template
+         * @description Platform-Operator CRUD for DB-editable email templates.
+         *
+         *     An active row here overrides the file template of the same key when
+         *     `notifications.emails.send_templated_email` renders. Thin wrapper — preview
+         *     and test-send delegate to `services_email_templates`.
+         */
+        post: operations["settings_email_templates_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/settings/email-templates/{id}/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get email template
+         * @description Platform-Operator CRUD for DB-editable email templates.
+         *
+         *     An active row here overrides the file template of the same key when
+         *     `notifications.emails.send_templated_email` renders. Thin wrapper — preview
+         *     and test-send delegate to `services_email_templates`.
+         */
+        get: operations["settings_email_templates_retrieve"];
+        /**
+         * Update email template
+         * @description Platform-Operator CRUD for DB-editable email templates.
+         *
+         *     An active row here overrides the file template of the same key when
+         *     `notifications.emails.send_templated_email` renders. Thin wrapper — preview
+         *     and test-send delegate to `services_email_templates`.
+         */
+        put: operations["settings_email_templates_update"];
+        post?: never;
+        /**
+         * Delete email template
+         * @description Platform-Operator CRUD for DB-editable email templates.
+         *
+         *     An active row here overrides the file template of the same key when
+         *     `notifications.emails.send_templated_email` renders. Thin wrapper — preview
+         *     and test-send delegate to `services_email_templates`.
+         */
+        delete: operations["settings_email_templates_destroy"];
+        options?: never;
+        head?: never;
+        /**
+         * Patch email template
+         * @description Platform-Operator CRUD for DB-editable email templates.
+         *
+         *     An active row here overrides the file template of the same key when
+         *     `notifications.emails.send_templated_email` renders. Thin wrapper — preview
+         *     and test-send delegate to `services_email_templates`.
+         */
+        patch: operations["settings_email_templates_partial_update"];
+        trace?: never;
+    };
+    "/api/v1/settings/email-templates/{id}/preview/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Preview email template
+         * @description Render the template's subject/html/text against a SAMPLE context (or a provided override context). Does NOT send. Reflects DB override vs file fallback.
+         */
+        post: operations["settings_email_templates_preview_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/settings/email-templates/{id}/test-send/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Send a test email
+         * @description Render the template and send it to the provided email via the real pipeline. Writes an EmailLog. Use to verify copy and transport before going live.
+         */
+        post: operations["settings_email_templates_test_send_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/sourcing/ai-status/{task_id}/": {
         parameters: {
             query?: never;
@@ -6895,6 +7015,16 @@ export interface components {
              * @description Минимальная полнота карточки, при которой её можно опубликовать.
              */
             catalog_publish_threshold?: number;
+            /**
+             * Максимальный возраст курса валюты (дней)
+             * @description Если курс ЦБ старше N дней, КП требует обновления курса или договорного курса.
+             */
+            fx_rate_max_age_days?: number;
+            /**
+             * Уведомлять клиента о сдвигах сроков
+             * @description Отправлять клиенту уведомление при изменении ожидаемых дат поставки или исполнения.
+             */
+            notify_client_on_schedule_shift?: boolean;
             /**
              * Префикс нумерации документов
              * @description Префикс номеров документов компании (напр. «ACME» → ACME-CT-2026-00001)
@@ -8928,6 +9058,16 @@ export interface components {
              * @description Минимальная полнота карточки, при которой её можно опубликовать.
              */
             catalog_publish_threshold?: number;
+            /**
+             * Максимальный возраст курса валюты (дней)
+             * @description Если курс ЦБ старше N дней, КП требует обновления курса или договорного курса.
+             */
+            fx_rate_max_age_days?: number;
+            /**
+             * Уведомлять клиента о сдвигах сроков
+             * @description Отправлять клиенту уведомление при изменении ожидаемых дат поставки или исполнения.
+             */
+            notify_client_on_schedule_shift?: boolean;
             /**
              * Префикс нумерации документов
              * @description Префикс номеров документов компании (напр. «ACME» → ACME-CT-2026-00001)
@@ -20652,6 +20792,210 @@ export interface operations {
         responses: {
             /** @description No response body */
             204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    settings_email_templates_list: {
+        parameters: {
+            query?: {
+                /** @description A page number within the paginated result set. */
+                page?: number;
+                /** @description Number of results to return per page. */
+                page_size?: number;
+                /** @description A search term. */
+                search?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedEmailTemplateList"];
+                };
+            };
+        };
+    };
+    settings_email_templates_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["EmailTemplateRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["EmailTemplateRequest"];
+                "multipart/form-data": components["schemas"]["EmailTemplateRequest"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EmailTemplate"];
+                };
+            };
+        };
+    };
+    settings_email_templates_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A unique integer value identifying this Шаблон email. */
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EmailTemplate"];
+                };
+            };
+        };
+    };
+    settings_email_templates_update: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A unique integer value identifying this Шаблон email. */
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["EmailTemplateRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["EmailTemplateRequest"];
+                "multipart/form-data": components["schemas"]["EmailTemplateRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EmailTemplate"];
+                };
+            };
+        };
+    };
+    settings_email_templates_destroy: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A unique integer value identifying this Шаблон email. */
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No response body */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    settings_email_templates_partial_update: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A unique integer value identifying this Шаблон email. */
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["PatchedEmailTemplateRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["PatchedEmailTemplateRequest"];
+                "multipart/form-data": components["schemas"]["PatchedEmailTemplateRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EmailTemplate"];
+                };
+            };
+        };
+    };
+    settings_email_templates_preview_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A unique integer value identifying this Шаблон email. */
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["EmailTemplatePreviewRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["EmailTemplatePreviewRequest"];
+                "multipart/form-data": components["schemas"]["EmailTemplatePreviewRequest"];
+            };
+        };
+        responses: {
+            /** @description Rendered subject/text_body/html_body */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    settings_email_templates_test_send_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A unique integer value identifying this Шаблон email. */
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["EmailTemplateTestSendRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["EmailTemplateTestSendRequest"];
+                "multipart/form-data": components["schemas"]["EmailTemplateTestSendRequest"];
+            };
+        };
+        responses: {
+            /** @description Send result with EmailLog id and status */
+            200: {
                 headers: {
                     [name: string]: unknown;
                 };
