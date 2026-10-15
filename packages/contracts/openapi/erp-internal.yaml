@@ -4,10 +4,10 @@ info:
   version: 0.1.0
   summary: Пространство `/api/v1/` — вызывает ERP SPA от имени сотрудников бэк-офиса.
   description: |
-    Версия 0 (M0-INF-02) описывает только то, что входит в контракт ансамбля: здоровье и SSO-переходы
-    сотрудников (`docs/CONTRACTS.md` §6, ADR-0003). Остальной внутренний API ERP (сделки, КП, каталог,
-    снабжение, финансы) экспортируется из кода Django/DRF на M1-ERP-10 и дописывается сюда генератором;
-    он не является частью шва CRM ↔ ERP и меняется вместе с ERP.
+    Внутренний API ERP для ERP SPA (бэк-офис). Содержит контрактные эндпоинты аутентификации/SSO,
+    здоровья, настроек (Settings Hub), мастер-данных, категорий, фиксации валютных курсов КП,
+    учёта отклонения маржи и договоров (M1-ERP-10). Полный автогенерируемый снимок всех 212 эндпоинтов
+    DRF доступен в `packages/contracts/openapi/erp-internal-full.json`.
 servers:
   - url: https://erp.railtech.uz/api/v1
     description: prod
@@ -18,6 +18,12 @@ security:
 tags:
   - name: auth
   - name: system
+  - name: settings
+  - name: master-data
+  - name: catalog
+  - name: quotes
+  - name: finance
+  - name: contracts
 
 paths:
   /auth/sso/exchange:
@@ -147,6 +153,1199 @@ paths:
               schema:
                 $ref: '#/components/schemas/Readiness'
 
+  /accounts/companies/{id}/settings:
+    get:
+      tags: [settings]
+      operationId: getCompanySettings
+      summary: Получить настройки компании (КП-умолчания, префиксы, каталог)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Настройки компании
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CompanySettings'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+    patch:
+      tags: [settings]
+      operationId: updateCompanySettings
+      summary: Обновить настройки компании (только владелец или admin)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CompanySettingsUpdate'
+      responses:
+        '200':
+          description: Настройки обновлены
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CompanySettings'
+        '400':
+          description: Ошибка валидации
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /system-settings:
+    get:
+      tags: [settings]
+      operationId: getSystemSettings
+      summary: Получить общесистемные настройки платформы
+      responses:
+        '200':
+          description: Настройки платформы
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SystemSettings'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    patch:
+      tags: [settings]
+      operationId: updateSystemSettings
+      summary: Обновить общесистемные настройки (только admin)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SystemSettings'
+      responses:
+        '200':
+          description: Настройки обновлены
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SystemSettings'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /settings/email-templates:
+    get:
+      tags: [settings]
+      operationId: listEmailTemplates
+      summary: Список шаблонов писем (БД-переопределения файловых шаблонов)
+      responses:
+        '200':
+          description: Список шаблонов
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/EmailTemplate'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+    post:
+      tags: [settings]
+      operationId: createEmailTemplate
+      summary: Создать переопределение почтового шаблона
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EmailTemplateCreate'
+      responses:
+        '201':
+          description: Шаблон создан
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EmailTemplate'
+        '400':
+          description: Ошибка валидации
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /settings/email-templates/{id}:
+    get:
+      tags: [settings]
+      operationId: retrieveEmailTemplate
+      summary: Получить почтовый шаблон
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Шаблон письма
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EmailTemplate'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    put:
+      tags: [settings]
+      operationId: updateEmailTemplate
+      summary: Полное обновление почтового шаблона
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EmailTemplateCreate'
+      responses:
+        '200':
+          description: Шаблон обновлён
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EmailTemplate'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+    patch:
+      tags: [settings]
+      operationId: partialUpdateEmailTemplate
+      summary: Частичное обновление почтового шаблона
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Шаблон обновлён
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EmailTemplate'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+    delete:
+      tags: [settings]
+      operationId: deleteEmailTemplate
+      summary: Удалить переопределение шаблона (возврат к файловому шаблону)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '204':
+          description: Удалено
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /settings/email-templates/{id}/preview:
+    post:
+      tags: [settings]
+      operationId: previewEmailTemplate
+      summary: Предпросмотр рендеринга шаблона письма без отправки
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EmailTemplatePreviewRequest'
+      responses:
+        '200':
+          description: Отрендеренный шаблон
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EmailTemplatePreviewResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /settings/email-templates/{id}/test-send:
+    post:
+      tags: [settings]
+      operationId: testSendEmailTemplate
+      summary: Тестовая отправка письма сотруднику
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EmailTemplateTestSendRequest'
+      responses:
+        '200':
+          description: Тестовое письмо отправлено
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [status]
+                properties:
+                  status:
+                    type: string
+                    example: sent
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /master-data/countries:
+    get:
+      tags: [master-data]
+      operationId: listCountries
+      summary: Список стран
+      parameters:
+        - name: is_active
+          in: query
+          required: false
+          schema:
+            type: boolean
+      responses:
+        '200':
+          description: Список стран
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Country'
+    post:
+      tags: [master-data]
+      operationId: createCountry
+      summary: Создать страну
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Country'
+      responses:
+        '201':
+          description: Создано
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Country'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /master-data/countries/{id}:
+    get:
+      tags: [master-data]
+      operationId: retrieveCountry
+      summary: Получить страну
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Страна
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Country'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    patch:
+      tags: [master-data]
+      operationId: partialUpdateCountry
+      summary: Изменить страну
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Обновлено
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Country'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+    delete:
+      tags: [master-data]
+      operationId: deleteCountry
+      summary: Удалить страну
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '204':
+          description: Удалено
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /master-data/currencies:
+    get:
+      tags: [master-data]
+      operationId: listCurrencies
+      summary: Список валют
+      parameters:
+        - name: is_active
+          in: query
+          required: false
+          schema:
+            type: boolean
+      responses:
+        '200':
+          description: Список валют
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Currency'
+    post:
+      tags: [master-data]
+      operationId: createCurrency
+      summary: Создать валюту
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Currency'
+      responses:
+        '201':
+          description: Создано
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Currency'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /master-data/currencies/{id}:
+    get:
+      tags: [master-data]
+      operationId: retrieveCurrency
+      summary: Получить валюту
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Валюта
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Currency'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    patch:
+      tags: [master-data]
+      operationId: partialUpdateCurrency
+      summary: Изменить валюту
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Обновлено
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Currency'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+    delete:
+      tags: [master-data]
+      operationId: deleteCurrency
+      summary: Удалить валюту
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '204':
+          description: Удалено
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /master-data/units:
+    get:
+      tags: [master-data]
+      operationId: listUnitsOfMeasure
+      summary: Список единиц измерения
+      parameters:
+        - name: is_active
+          in: query
+          required: false
+          schema:
+            type: boolean
+      responses:
+        '200':
+          description: Список единиц измерения
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/UnitOfMeasure'
+    post:
+      tags: [master-data]
+      operationId: createUnitOfMeasure
+      summary: Создать единицу измерения
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UnitOfMeasure'
+      responses:
+        '201':
+          description: Создано
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UnitOfMeasure'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /master-data/units/{id}:
+    get:
+      tags: [master-data]
+      operationId: retrieveUnitOfMeasure
+      summary: Получить единицу измерения
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Единица измерения
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UnitOfMeasure'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    patch:
+      tags: [master-data]
+      operationId: partialUpdateUnitOfMeasure
+      summary: Изменить единицу измерения
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Обновлено
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UnitOfMeasure'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+    delete:
+      tags: [master-data]
+      operationId: deleteUnitOfMeasure
+      summary: Удалить единицу измерения
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '204':
+          description: Удалено
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /master-data/delivery-basis:
+    get:
+      tags: [master-data]
+      operationId: listDeliveryBases
+      summary: Список базисов поставки Инкотермс
+      parameters:
+        - name: is_active
+          in: query
+          required: false
+          schema:
+            type: boolean
+      responses:
+        '200':
+          description: Список базисов
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/DeliveryBasis'
+    post:
+      tags: [master-data]
+      operationId: createDeliveryBasis
+      summary: Создать базис поставки
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DeliveryBasis'
+      responses:
+        '201':
+          description: Создано
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeliveryBasis'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /master-data/delivery-basis/{id}:
+    get:
+      tags: [master-data]
+      operationId: retrieveDeliveryBasis
+      summary: Получить базис поставки
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Базис поставки
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeliveryBasis'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    patch:
+      tags: [master-data]
+      operationId: partialUpdateDeliveryBasis
+      summary: Изменить базис поставки
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Обновлено
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeliveryBasis'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+    delete:
+      tags: [master-data]
+      operationId: deleteDeliveryBasis
+      summary: Удалить базис поставки
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '204':
+          description: Удалено
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /master-data/hs-codes/{code}/duties:
+    get:
+      tags: [master-data]
+      operationId: getHsCodeDuties
+      summary: Тарифные ставки и пошлины по коду ТН ВЭД
+      parameters:
+        - name: code
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: origin
+          in: query
+          required: false
+          schema:
+            type: string
+          description: ISO-код страны происхождения
+      responses:
+        '200':
+          description: Ставки таможенных платежей
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HsCodeDuties'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /catalog/categories:
+    get:
+      tags: [catalog]
+      operationId: listCategories
+      summary: Список категорий каталога (дерево)
+      parameters:
+        - name: domain_type__code
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: search
+          in: query
+          required: false
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Список категорий
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Category'
+    post:
+      tags: [catalog]
+      operationId: createCategory
+      summary: Создать категорию (право settings.edit)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CategoryInput'
+      responses:
+        '201':
+          description: Категория создана
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Category'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /catalog/categories/{id}:
+    get:
+      tags: [catalog]
+      operationId: retrieveCategory
+      summary: Получить категорию
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Категория
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Category'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    put:
+      tags: [catalog]
+      operationId: updateCategory
+      summary: Обновить категорию
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CategoryInput'
+      responses:
+        '200':
+          description: Категория обновлена
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Category'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+    patch:
+      tags: [catalog]
+      operationId: partialUpdateCategory
+      summary: Частично изменить категорию
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Категория обновлена
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Category'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+    delete:
+      tags: [catalog]
+      operationId: deleteCategory
+      summary: Удалить категорию
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '204':
+          description: Удалено
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /crm/quotes/{id}/fx-override:
+    post:
+      tags: [quotes]
+      operationId: quoteFxOverride
+      summary: Установить или снять договорной курс КП по валюте себестоимости
+      description: |
+        Договорной курс побеждает курс ЦБ в снимке, КП пересчитывается.
+        Требуется право `finance.rates`, указание причины обязательно (пишется в журнал КП).
+        Доступно только до отправки КП клиенту (незамороженное КП).
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/QuoteFxOverrideRequest'
+      responses:
+        '200':
+          description: Курс установлен/снят, КП пересчитано
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [id, number, status]
+                properties:
+                  id:
+                    type: integer
+                  number:
+                    type: string
+                  status:
+                    type: string
+                  total_amount:
+                    type: string
+        '400':
+          description: Некорректный курс или валюта UZS
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          description: КП заморожено (QUOTE_FROZEN)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /finance/deals/{deal_id}/margin-deviation:
+    get:
+      tags: [finance]
+      operationId: getDealMarginDeviation
+      summary: Отклонение маржи сделки (опорное КП против факта закупки)
+      parameters:
+        - name: deal_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Расчёт отклонения маржи сделки
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MarginDeviation'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /finance/deals/{deal_id}/purchase-actuals:
+    get:
+      tags: [finance]
+      operationId: listDealPurchaseActuals
+      summary: Список строк фактической закупки по сделке
+      parameters:
+        - name: deal_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Список фактических затрат по валютам
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/PurchaseActual'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+    post:
+      tags: [finance]
+      operationId: createDealPurchaseActual
+      summary: Внести или обновить фактическую сумму закупки по валюте
+      parameters:
+        - name: deal_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PurchaseActualInput'
+      responses:
+        '200':
+          description: Факт закупки сохранён
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PurchaseActual'
+        '201':
+          description: Факт закупки создан
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PurchaseActual'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /finance/deals/{deal_id}/purchase-actuals/{currency}:
+    get:
+      tags: [finance]
+      operationId: retrieveDealPurchaseActualDetail
+      summary: Получить факт закупки по конкретной валюте
+      parameters:
+        - name: deal_id
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: currency
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Факт закупки по валюте
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PurchaseActual'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    put:
+      tags: [finance]
+      operationId: updateDealPurchaseActualDetail
+      summary: Обновить факт закупки по конкретной валюте
+      parameters:
+        - name: deal_id
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: currency
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PurchaseActualInput'
+      responses:
+        '200':
+          description: Обновлено
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PurchaseActual'
+    delete:
+      tags: [finance]
+      operationId: deleteDealPurchaseActualDetail
+      summary: Удалить запись фактической закупки по валюте
+      parameters:
+        - name: deal_id
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: currency
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '204':
+          description: Запись удалена
+
+  /crm/contracts:
+    get:
+      tags: [contracts]
+      operationId: listContracts
+      summary: Список договоров
+      parameters:
+        - name: deal
+          in: query
+          required: false
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Список договоров
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Contract'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    post:
+      tags: [contracts]
+      operationId: createContract
+      summary: Создать договор
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Contract'
+      responses:
+        '201':
+          description: Договор создан
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Contract'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /crm/contracts/{id}:
+    get:
+      tags: [contracts]
+      operationId: retrieveContract
+      summary: Получить договор
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Договор
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Contract'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    patch:
+      tags: [contracts]
+      operationId: partialUpdateContract
+      summary: Изменить договор
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Договор обновлён
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Contract'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
 components:
   securitySchemes:
     staffJwt:
@@ -158,6 +1357,18 @@ components:
   responses:
     Unauthorized:
       description: Нет действительного токена сотрудника
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    Forbidden:
+      description: Недостаточно прав для выполнения действия
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    NotFound:
+      description: Ресурс не найден
       content:
         application/json:
           schema:
@@ -174,8 +1385,21 @@ components:
 
     StaffRole:
       type: string
-      description: 'Роли бэк-офиса (DECISIONS 2026-10-13); `admin` = суперпользователь'
-      enum: [admin, estimator, catalog_supply, fulfilment_logistics, finance]
+      description: |
+        Роли бэк-офиса (DECISIONS 2026-10-13, M1-ERP-05);
+        6 канонических ролей: CALCULATION, CATALOG_SUPPLY, FULFILLMENT, FINANCE, HEAD, VIEWER;
+        admin = суперпользователь; estimator, catalog_supply, fulfilment_logistics — легаси-алиасы.
+      enum:
+        - admin
+        - CALCULATION
+        - CATALOG_SUPPLY
+        - FULFILLMENT
+        - FINANCE
+        - HEAD
+        - VIEWER
+        - estimator
+        - catalog_supply
+        - fulfilment_logistics
 
     StaffUser:
       type: object
@@ -200,7 +1424,7 @@ components:
           type: array
           items:
             type: string
-            pattern: '^(quote|contract|finance|catalog|supply)\.[a-z_*]+$'
+            pattern: '^(deal|quote|contract|catalog|supply|fulfillment|finance|settings|team|data)\.[a-z_*]+$'
         platform_access:
           type: array
           description: Системы, доступные сотруднику (решает переключатель в шапке)
@@ -244,3 +1468,420 @@ components:
               type: boolean
           additionalProperties: false
       additionalProperties: false
+
+    CompanySettings:
+      type: object
+      description: Настройки компании (КП-умолчания, префиксы, каталог)
+      properties:
+        id:
+          type: integer
+        company:
+          type: integer
+        default_delivery_basis:
+          type: [integer, 'null']
+        default_delivery_basis_code:
+          type: [string, 'null']
+        default_cost_currency:
+          type: [integer, 'null']
+        default_cost_currency_code:
+          type: [string, 'null']
+        default_vat_rate:
+          type: string
+        default_target_margin:
+          type: string
+        default_validity_days:
+          type: integer
+        numbering_prefix:
+          type: string
+        auto_numbering_enabled:
+          type: boolean
+        catalog_visible_to_all:
+          type: boolean
+        catalog_allow_rfq_anonymous:
+          type: boolean
+      required:
+        - id
+        - company
+        - default_vat_rate
+        - default_target_margin
+        - default_validity_days
+        - numbering_prefix
+
+    CompanySettingsUpdate:
+      type: object
+      description: Поля обновления настроек компании
+      properties:
+        default_delivery_basis:
+          type: string
+          description: Код базиса (например 'FCA')
+        default_cost_currency:
+          type: string
+          description: Код валюты (например 'USD')
+        default_vat_rate:
+          type: string
+        default_target_margin:
+          type: string
+        default_validity_days:
+          type: integer
+        numbering_prefix:
+          type: string
+        auto_numbering_enabled:
+          type: boolean
+        catalog_visible_to_all:
+          type: boolean
+        catalog_allow_rfq_anonymous:
+          type: boolean
+
+    SystemSettings:
+      type: object
+      description: Общесистемные настройки платформы
+      properties:
+        platform_name:
+          type: string
+        support_email:
+          type: string
+          format: email
+        default_language:
+          type: string
+        maintenance_mode:
+          type: boolean
+
+    EmailTemplate:
+      type: object
+      description: Шаблон почтовых уведомлений
+      required: [id, key, subject, html_body, text_body, language, is_active]
+      properties:
+        id:
+          type: integer
+        key:
+          type: string
+        subject:
+          type: string
+        html_body:
+          type: string
+        text_body:
+          type: string
+        language:
+          type: string
+        is_active:
+          type: boolean
+        updated_by:
+          type: [integer, 'null']
+        updated_at:
+          type: string
+          format: date-time
+
+    EmailTemplateCreate:
+      type: object
+      required: [key, subject, html_body, text_body]
+      properties:
+        key:
+          type: string
+        subject:
+          type: string
+        html_body:
+          type: string
+        text_body:
+          type: string
+        language:
+          type: string
+          default: ru
+        is_active:
+          type: boolean
+          default: true
+
+    EmailTemplatePreviewRequest:
+      type: object
+      properties:
+        context:
+          type: object
+
+    EmailTemplatePreviewResponse:
+      type: object
+      required: [subject, html_body, text_body]
+      properties:
+        subject:
+          type: string
+        html_body:
+          type: string
+        text_body:
+          type: string
+
+    EmailTemplateTestSendRequest:
+      type: object
+      required: [recipient]
+      properties:
+        recipient:
+          type: string
+          format: email
+        context:
+          type: object
+
+    Country:
+      type: object
+      required: [id, code, name]
+      properties:
+        id:
+          type: integer
+        code:
+          type: string
+        name:
+          type: string
+        name_ru:
+          type: string
+        name_uz:
+          type: string
+        name_en:
+          type: string
+        is_active:
+          type: boolean
+
+    Currency:
+      type: object
+      required: [id, code, name]
+      properties:
+        id:
+          type: integer
+        code:
+          type: string
+        name:
+          type: string
+        symbol:
+          type: string
+        rate_to_base:
+          type: string
+        is_active:
+          type: boolean
+
+    UnitOfMeasure:
+      type: object
+      required: [id, code, name]
+      properties:
+        id:
+          type: integer
+        code:
+          type: string
+        name:
+          type: string
+        symbol:
+          type: string
+        is_active:
+          type: boolean
+
+    DeliveryBasis:
+      type: object
+      required: [id, code, name]
+      properties:
+        id:
+          type: integer
+        code:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+        is_active:
+          type: boolean
+
+    HsCodeDuties:
+      type: object
+      required: [code, customs_duty_rate, vat_rate]
+      properties:
+        code:
+          type: string
+        customs_duty_rate:
+          type: number
+        vat_rate:
+          type: number
+        excise_rate:
+          type: number
+        source:
+          type: string
+
+    Category:
+      type: object
+      required: [id, name]
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        code:
+          type: string
+        parent:
+          type: [integer, 'null']
+        domain_type:
+          type: [integer, 'null']
+        level:
+          type: integer
+        is_active:
+          type: boolean
+
+    CategoryInput:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+        code:
+          type: string
+        parent:
+          type: [integer, 'null']
+        domain_type:
+          type: [integer, 'null']
+        is_active:
+          type: boolean
+
+    QuoteFxOverrideRequest:
+      type: object
+      required: [currency, reason]
+      properties:
+        currency:
+          type: string
+          description: Код валюты себестоимости (не UZS)
+        rate:
+          type: [string, 'null']
+          description: Курс UZS за 1 единицу (> 0); null или пусто — снять договорной курс
+        reason:
+          type: string
+          description: Причина изменения (обязательна, пишется в журнал)
+
+    ReferenceQuote:
+      type: object
+      required: [id, number, version, status_code, frozen_at, fx_fixed_at]
+      properties:
+        id:
+          type: integer
+        number:
+          type: string
+        version:
+          type: integer
+        status_code:
+          type: string
+        frozen_at:
+          type: [string, 'null']
+        fx_fixed_at:
+          type: [string, 'null']
+
+    MarginDeviationRow:
+      type: object
+      properties:
+        currency:
+          type: string
+        lines:
+          type: integer
+        quoted_amount:
+          type: string
+        quoted_rate:
+          type: [string, 'null']
+        quoted_rate_date:
+          type: [string, 'null']
+        quoted_cost:
+          type: string
+        has_actual:
+          type: boolean
+        actual_amount:
+          type: [string, 'null']
+        actual_rate:
+          type: [string, 'null']
+        actual_cost:
+          type: string
+        cost_deviation:
+          type: string
+        purchased_on:
+          type: [string, 'null']
+
+    MarginDeviation:
+      type: object
+      required: [deal, currency, has_actuals, reference_quote, rows]
+      properties:
+        deal:
+          type: integer
+        currency:
+          type: string
+        has_actuals:
+          type: boolean
+        reference_quote:
+          $ref: '#/components/schemas/ReferenceQuote'
+        rows:
+          type: array
+          items:
+            $ref: '#/components/schemas/MarginDeviationRow'
+        revenue:
+          type: string
+        quoted_cost:
+          type: string
+        quoted_profit:
+          type: string
+        quoted_margin_percent:
+          type: string
+        actual_cost:
+          type: string
+        actual_profit:
+          type: string
+        actual_margin_percent:
+          type: string
+        deviation_amount:
+          type: string
+        deviation_percent_points:
+          type: string
+        deviation_profit_percent:
+          type: [string, 'null']
+
+    PurchaseActual:
+      type: object
+      required: [deal, currency, actual_amount, actual_rate, actual_cost, purchased_on]
+      properties:
+        id:
+          type: integer
+        deal:
+          type: integer
+        currency:
+          type: string
+        actual_amount:
+          type: string
+        actual_rate:
+          type: string
+        actual_cost:
+          type: string
+        purchased_on:
+          type: string
+          format: date
+        notes:
+          type: string
+
+    PurchaseActualInput:
+      type: object
+      required: [currency, actual_amount, actual_rate, purchased_on]
+      properties:
+        currency:
+          type: string
+        actual_amount:
+          type: string
+        actual_rate:
+          type: string
+        purchased_on:
+          type: string
+          format: date
+        notes:
+          type: string
+
+    Contract:
+      type: object
+      required: [id, number]
+      properties:
+        id:
+          type: integer
+        number:
+          type: string
+        deal:
+          type: integer
+        total_amount:
+          type: string
+        currency:
+          type: string
+        status:
+          type: string
+        created_at:
+          type: string
+          format: date-time

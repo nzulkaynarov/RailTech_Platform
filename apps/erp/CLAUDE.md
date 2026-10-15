@@ -5,10 +5,12 @@
 закупщик, логист, финансист; «Администратор» = суперпользователь). Клиент сюда не входит — ему служит
 Cabinet через портальный API этой же ERP. Продукт нейтрален к отрасли и бренду: имя и логотип — настройки.
 
-**Статус документа: заготовка (M0-DOC-01), обновлена в M1-ERP-01.** Код скопирован из `legacy/b2b` как есть
-(2026-10-13) и перестраивается задачами M1-ERP-02…09 — до них в коде ещё живут удаляемые слои из §9 и бренд B2B.
-Окончательная версия этого файла — **M1-ERP-10**.
-Всё, что помечено «появится в <ID>», пока не существует — не ищи и не выдумывай.
+**Статус документа: окончательный (M1-ERP-10, 2026-10-15).** Веха M1-ERP полностью реализована (задачи
+M1-ERP-01…10 выполнены). Код очищен от наследия B2B/маркетплейса (§9), выстроена каноническая архитектура
+приложений (§4), введены 6 системных ролей бэк-офиса и 10 пространств прав (§6), 2 слоя каталога (§5),
+Settings Hub (M1-ERP-09), фиксация курсов валют и учёт отклонения маржи (M1-ERP-08), а контракт API зафиксирован
+в `packages/contracts` с полным снимком схемы в `packages/contracts/openapi/erp-internal-full.json`.
+Комплект эксплуатационных регламентов доступен в `apps/erp/docs/runbooks/`.
 
 ## 1. Карта документов — читай в этом порядке
 
@@ -78,7 +80,7 @@ ERP сам их не описывает. Токены дизайна — из `p
 backend/<app>/{models/, services/, views/, serializers/, tasks.py, migrations/0001_initial.py, tests/}
 backend/core/settings/        prompts/*.md (ИИ, версия по хэшу — есть с M1-ERP-06)    evals/    locale/ (django.po)
 frontend/src/{api/ (типы из contracts), components/ui/ (shadcn), components/<домен>/, pages/, hooks/, store/, i18n/locales/{ru,en}.json, layouts/AppShell.tsx}
-Makefile · .env.example · docs/ (ADR и runbook ERP — M1-ERP-10)
+Makefile · .env.example · docs/ (ADR и runbooks ERP в apps/erp/docs/runbooks/ — M1-ERP-10)
 ```
 
 ## 5. Конвенции кода (из B2B; то, что остаётся верным)
@@ -217,7 +219,7 @@ Makefile · .env.example · docs/ (ADR и runbook ERP — M1-ERP-10)
 | Команда | Что делает | Появится в |
 |---|---|---|
 | `make check-erp` (из корня) | делегирует в `make -C apps/erp check`: flake8/black/isort, eslint, tsc, i18n, vitest, pytest в контейнере на одноразовых Postgres 17 + Redis | есть (M1-ERP-01) |
-| `make -C apps/erp check \| test \| lint \| migrate \| openapi` | проверки, pytest, линтеры, миграции на стенде, экспорт `backend/schema.json` + типы фронтенда | есть (M1-ERP-01); экспорт в `packages/contracts` — M1-ERP-10 |
+| `make -C apps/erp check \| test \| lint \| migrate \| openapi` | проверки, pytest, линтеры, миграции на стенде, экспорт `backend/schema.json` + типы фронтенда + экспорт `packages/contracts/openapi/erp-internal-full.json` (M1-ERP-10) | есть (M1-ERP-01); экспорт в contracts — M1-ERP-10 |
 | `make contracts` (из корня) | валидация контракта, генерация типов для ERP/Cabinet и клиента CRM | есть (M0-INF-02) |
 | `make up` (из корня) | весь ансамбль: `erp.localhost` через Caddy → `erp-backend`/`erp-web`, Postgres с базой `erp`, Redis (БД 1 Celery, 2 Channels), LiteLLM, Langfuse, RustFS (бакет `erp`) | есть (M1-ERP-01) |
 | `make logs s=<сервис>` / `make ps` | логи и статус стенда | есть (M0-INF-03) |

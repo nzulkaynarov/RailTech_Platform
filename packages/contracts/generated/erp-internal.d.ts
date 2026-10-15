@@ -96,6 +96,429 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/accounts/companies/{id}/settings": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Получить настройки компании (КП-умолчания, префиксы, каталог) */
+    get: operations["getCompanySettings"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    /** Обновить настройки компании (только владелец или admin) */
+    patch: operations["updateCompanySettings"];
+    trace?: never;
+  };
+  "/system-settings": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Получить общесистемные настройки платформы */
+    get: operations["getSystemSettings"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    /** Обновить общесистемные настройки (только admin) */
+    patch: operations["updateSystemSettings"];
+    trace?: never;
+  };
+  "/settings/email-templates": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Список шаблонов писем (БД-переопределения файловых шаблонов) */
+    get: operations["listEmailTemplates"];
+    put?: never;
+    /** Создать переопределение почтового шаблона */
+    post: operations["createEmailTemplate"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/settings/email-templates/{id}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Получить почтовый шаблон */
+    get: operations["retrieveEmailTemplate"];
+    /** Полное обновление почтового шаблона */
+    put: operations["updateEmailTemplate"];
+    post?: never;
+    /** Удалить переопределение шаблона (возврат к файловому шаблону) */
+    delete: operations["deleteEmailTemplate"];
+    options?: never;
+    head?: never;
+    /** Частичное обновление почтового шаблона */
+    patch: operations["partialUpdateEmailTemplate"];
+    trace?: never;
+  };
+  "/settings/email-templates/{id}/preview": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Предпросмотр рендеринга шаблона письма без отправки */
+    post: operations["previewEmailTemplate"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/settings/email-templates/{id}/test-send": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Тестовая отправка письма сотруднику */
+    post: operations["testSendEmailTemplate"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/master-data/countries": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Список стран */
+    get: operations["listCountries"];
+    put?: never;
+    /** Создать страну */
+    post: operations["createCountry"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/master-data/countries/{id}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Получить страну */
+    get: operations["retrieveCountry"];
+    put?: never;
+    post?: never;
+    /** Удалить страну */
+    delete: operations["deleteCountry"];
+    options?: never;
+    head?: never;
+    /** Изменить страну */
+    patch: operations["partialUpdateCountry"];
+    trace?: never;
+  };
+  "/master-data/currencies": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Список валют */
+    get: operations["listCurrencies"];
+    put?: never;
+    /** Создать валюту */
+    post: operations["createCurrency"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/master-data/currencies/{id}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Получить валюту */
+    get: operations["retrieveCurrency"];
+    put?: never;
+    post?: never;
+    /** Удалить валюту */
+    delete: operations["deleteCurrency"];
+    options?: never;
+    head?: never;
+    /** Изменить валюту */
+    patch: operations["partialUpdateCurrency"];
+    trace?: never;
+  };
+  "/master-data/units": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Список единиц измерения */
+    get: operations["listUnitsOfMeasure"];
+    put?: never;
+    /** Создать единицу измерения */
+    post: operations["createUnitOfMeasure"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/master-data/units/{id}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Получить единицу измерения */
+    get: operations["retrieveUnitOfMeasure"];
+    put?: never;
+    post?: never;
+    /** Удалить единицу измерения */
+    delete: operations["deleteUnitOfMeasure"];
+    options?: never;
+    head?: never;
+    /** Изменить единицу измерения */
+    patch: operations["partialUpdateUnitOfMeasure"];
+    trace?: never;
+  };
+  "/master-data/delivery-basis": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Список базисов поставки Инкотермс */
+    get: operations["listDeliveryBases"];
+    put?: never;
+    /** Создать базис поставки */
+    post: operations["createDeliveryBasis"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/master-data/delivery-basis/{id}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Получить базис поставки */
+    get: operations["retrieveDeliveryBasis"];
+    put?: never;
+    post?: never;
+    /** Удалить базис поставки */
+    delete: operations["deleteDeliveryBasis"];
+    options?: never;
+    head?: never;
+    /** Изменить базис поставки */
+    patch: operations["partialUpdateDeliveryBasis"];
+    trace?: never;
+  };
+  "/master-data/hs-codes/{code}/duties": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Тарифные ставки и пошлины по коду ТН ВЭД */
+    get: operations["getHsCodeDuties"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/catalog/categories": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Список категорий каталога (дерево) */
+    get: operations["listCategories"];
+    put?: never;
+    /** Создать категорию (право settings.edit) */
+    post: operations["createCategory"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/catalog/categories/{id}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Получить категорию */
+    get: operations["retrieveCategory"];
+    /** Обновить категорию */
+    put: operations["updateCategory"];
+    post?: never;
+    /** Удалить категорию */
+    delete: operations["deleteCategory"];
+    options?: never;
+    head?: never;
+    /** Частично изменить категорию */
+    patch: operations["partialUpdateCategory"];
+    trace?: never;
+  };
+  "/crm/quotes/{id}/fx-override": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Установить или снять договорной курс КП по валюте себестоимости
+     * @description Договорной курс побеждает курс ЦБ в снимке, КП пересчитывается.
+     *     Требуется право `finance.rates`, указание причины обязательно (пишется в журнал КП).
+     *     Доступно только до отправки КП клиенту (незамороженное КП).
+     */
+    post: operations["quoteFxOverride"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/finance/deals/{deal_id}/margin-deviation": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Отклонение маржи сделки (опорное КП против факта закупки) */
+    get: operations["getDealMarginDeviation"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/finance/deals/{deal_id}/purchase-actuals": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Список строк фактической закупки по сделке */
+    get: operations["listDealPurchaseActuals"];
+    put?: never;
+    /** Внести или обновить фактическую сумму закупки по валюте */
+    post: operations["createDealPurchaseActual"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/finance/deals/{deal_id}/purchase-actuals/{currency}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Получить факт закупки по конкретной валюте */
+    get: operations["retrieveDealPurchaseActualDetail"];
+    /** Обновить факт закупки по конкретной валюте */
+    put: operations["updateDealPurchaseActualDetail"];
+    post?: never;
+    /** Удалить запись фактической закупки по валюте */
+    delete: operations["deleteDealPurchaseActualDetail"];
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/crm/contracts": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Список договоров */
+    get: operations["listContracts"];
+    put?: never;
+    /** Создать договор */
+    post: operations["createContract"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/crm/contracts/{id}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Получить договор */
+    get: operations["retrieveContract"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    /** Изменить договор */
+    patch: operations["partialUpdateContract"];
+    trace?: never;
+  };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -104,10 +527,22 @@ export interface components {
       detail: string;
     };
     /**
-     * @description Роли бэк-офиса (DECISIONS 2026-10-13); `admin` = суперпользователь
+     * @description Роли бэк-офиса (DECISIONS 2026-10-13, M1-ERP-05);
+     *     6 канонических ролей: CALCULATION, CATALOG_SUPPLY, FULFILLMENT, FINANCE, HEAD, VIEWER;
+     *     admin = суперпользователь; estimator, catalog_supply, fulfilment_logistics — легаси-алиасы.
      * @enum {string}
      */
-    StaffRole: "admin" | "estimator" | "catalog_supply" | "fulfilment_logistics" | "finance";
+    StaffRole:
+      | "admin"
+      | "CALCULATION"
+      | "CATALOG_SUPPLY"
+      | "FULFILLMENT"
+      | "FINANCE"
+      | "HEAD"
+      | "VIEWER"
+      | "estimator"
+      | "catalog_supply"
+      | "fulfilment_logistics";
     StaffUser: {
       /** Format: int64 */
       erp_user_id: number;
@@ -137,10 +572,232 @@ export interface components {
         worker: boolean;
       };
     };
+    /** @description Настройки компании (КП-умолчания, префиксы, каталог) */
+    CompanySettings: {
+      id: number;
+      company: number;
+      default_delivery_basis?: number | null;
+      default_delivery_basis_code?: string | null;
+      default_cost_currency?: number | null;
+      default_cost_currency_code?: string | null;
+      default_vat_rate: string;
+      default_target_margin: string;
+      default_validity_days: number;
+      numbering_prefix: string;
+      auto_numbering_enabled?: boolean;
+      catalog_visible_to_all?: boolean;
+      catalog_allow_rfq_anonymous?: boolean;
+    };
+    /** @description Поля обновления настроек компании */
+    CompanySettingsUpdate: {
+      /** @description Код базиса (например 'FCA') */
+      default_delivery_basis?: string;
+      /** @description Код валюты (например 'USD') */
+      default_cost_currency?: string;
+      default_vat_rate?: string;
+      default_target_margin?: string;
+      default_validity_days?: number;
+      numbering_prefix?: string;
+      auto_numbering_enabled?: boolean;
+      catalog_visible_to_all?: boolean;
+      catalog_allow_rfq_anonymous?: boolean;
+    };
+    /** @description Общесистемные настройки платформы */
+    SystemSettings: {
+      platform_name?: string;
+      /** Format: email */
+      support_email?: string;
+      default_language?: string;
+      maintenance_mode?: boolean;
+    };
+    /** @description Шаблон почтовых уведомлений */
+    EmailTemplate: {
+      id: number;
+      key: string;
+      subject: string;
+      html_body: string;
+      text_body: string;
+      language: string;
+      is_active: boolean;
+      updated_by?: number | null;
+      /** Format: date-time */
+      updated_at?: string;
+    };
+    EmailTemplateCreate: {
+      key: string;
+      subject: string;
+      html_body: string;
+      text_body: string;
+      /** @default ru */
+      language: string;
+      /** @default true */
+      is_active: boolean;
+    };
+    EmailTemplatePreviewRequest: {
+      context?: Record<string, never>;
+    };
+    EmailTemplatePreviewResponse: {
+      subject: string;
+      html_body: string;
+      text_body: string;
+    };
+    EmailTemplateTestSendRequest: {
+      /** Format: email */
+      recipient: string;
+      context?: Record<string, never>;
+    };
+    Country: {
+      id: number;
+      code: string;
+      name: string;
+      name_ru?: string;
+      name_uz?: string;
+      name_en?: string;
+      is_active?: boolean;
+    };
+    Currency: {
+      id: number;
+      code: string;
+      name: string;
+      symbol?: string;
+      rate_to_base?: string;
+      is_active?: boolean;
+    };
+    UnitOfMeasure: {
+      id: number;
+      code: string;
+      name: string;
+      symbol?: string;
+      is_active?: boolean;
+    };
+    DeliveryBasis: {
+      id: number;
+      code: string;
+      name: string;
+      description?: string;
+      is_active?: boolean;
+    };
+    HsCodeDuties: {
+      code: string;
+      customs_duty_rate: number;
+      vat_rate: number;
+      excise_rate?: number;
+      source?: string;
+    };
+    Category: {
+      id: number;
+      name: string;
+      code?: string;
+      parent?: number | null;
+      domain_type?: number | null;
+      level?: number;
+      is_active?: boolean;
+    };
+    CategoryInput: {
+      name: string;
+      code?: string;
+      parent?: number | null;
+      domain_type?: number | null;
+      is_active?: boolean;
+    };
+    QuoteFxOverrideRequest: {
+      /** @description Код валюты себестоимости (не UZS) */
+      currency: string;
+      /** @description Курс UZS за 1 единицу (> 0); null или пусто — снять договорной курс */
+      rate?: string | null;
+      /** @description Причина изменения (обязательна, пишется в журнал) */
+      reason: string;
+    };
+    ReferenceQuote: {
+      id: number;
+      number: string;
+      version: number;
+      status_code: string;
+      frozen_at: string | null;
+      fx_fixed_at: string | null;
+    };
+    MarginDeviationRow: {
+      currency?: string;
+      lines?: number;
+      quoted_amount?: string;
+      quoted_rate?: string | null;
+      quoted_rate_date?: string | null;
+      quoted_cost?: string;
+      has_actual?: boolean;
+      actual_amount?: string | null;
+      actual_rate?: string | null;
+      actual_cost?: string;
+      cost_deviation?: string;
+      purchased_on?: string | null;
+    };
+    MarginDeviation: {
+      deal: number;
+      currency: string;
+      has_actuals: boolean;
+      reference_quote: components["schemas"]["ReferenceQuote"];
+      rows: components["schemas"]["MarginDeviationRow"][];
+      revenue?: string;
+      quoted_cost?: string;
+      quoted_profit?: string;
+      quoted_margin_percent?: string;
+      actual_cost?: string;
+      actual_profit?: string;
+      actual_margin_percent?: string;
+      deviation_amount?: string;
+      deviation_percent_points?: string;
+      deviation_profit_percent?: string | null;
+    };
+    PurchaseActual: {
+      id?: number;
+      deal: number;
+      currency: string;
+      actual_amount: string;
+      actual_rate: string;
+      actual_cost: string;
+      /** Format: date */
+      purchased_on: string;
+      notes?: string;
+    };
+    PurchaseActualInput: {
+      currency: string;
+      actual_amount: string;
+      actual_rate: string;
+      /** Format: date */
+      purchased_on: string;
+      notes?: string;
+    };
+    Contract: {
+      id: number;
+      number: string;
+      deal?: number;
+      total_amount?: string;
+      currency?: string;
+      status?: string;
+      /** Format: date-time */
+      created_at?: string;
+    };
   };
   responses: {
     /** @description Нет действительного токена сотрудника */
     Unauthorized: {
+      headers: {
+        [name: string]: unknown;
+      };
+      content: {
+        "application/json": components["schemas"]["Error"];
+      };
+    };
+    /** @description Недостаточно прав для выполнения действия */
+    Forbidden: {
+      headers: {
+        [name: string]: unknown;
+      };
+      content: {
+        "application/json": components["schemas"]["Error"];
+      };
+    };
+    /** @description Ресурс не найден */
+    NotFound: {
       headers: {
         [name: string]: unknown;
       };
@@ -309,6 +966,1302 @@ export interface operations {
           "application/json": components["schemas"]["Readiness"];
         };
       };
+    };
+  };
+  getCompanySettings: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: number;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Настройки компании */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["CompanySettings"];
+        };
+      };
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+    };
+  };
+  updateCompanySettings: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: number;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["CompanySettingsUpdate"];
+      };
+    };
+    responses: {
+      /** @description Настройки обновлены */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["CompanySettings"];
+        };
+      };
+      /** @description Ошибка валидации */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Error"];
+        };
+      };
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+    };
+  };
+  getSystemSettings: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Настройки платформы */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["SystemSettings"];
+        };
+      };
+      401: components["responses"]["Unauthorized"];
+    };
+  };
+  updateSystemSettings: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["SystemSettings"];
+      };
+    };
+    responses: {
+      /** @description Настройки обновлены */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["SystemSettings"];
+        };
+      };
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+    };
+  };
+  listEmailTemplates: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Список шаблонов */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["EmailTemplate"][];
+        };
+      };
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+    };
+  };
+  createEmailTemplate: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["EmailTemplateCreate"];
+      };
+    };
+    responses: {
+      /** @description Шаблон создан */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["EmailTemplate"];
+        };
+      };
+      /** @description Ошибка валидации */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Error"];
+        };
+      };
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+    };
+  };
+  retrieveEmailTemplate: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: number;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Шаблон письма */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["EmailTemplate"];
+        };
+      };
+      401: components["responses"]["Unauthorized"];
+      404: components["responses"]["NotFound"];
+    };
+  };
+  updateEmailTemplate: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: number;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["EmailTemplateCreate"];
+      };
+    };
+    responses: {
+      /** @description Шаблон обновлён */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["EmailTemplate"];
+        };
+      };
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+    };
+  };
+  deleteEmailTemplate: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: number;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Удалено */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+    };
+  };
+  partialUpdateEmailTemplate: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: number;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": Record<string, never>;
+      };
+    };
+    responses: {
+      /** @description Шаблон обновлён */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["EmailTemplate"];
+        };
+      };
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+    };
+  };
+  previewEmailTemplate: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: number;
+      };
+      cookie?: never;
+    };
+    requestBody?: {
+      content: {
+        "application/json": components["schemas"]["EmailTemplatePreviewRequest"];
+      };
+    };
+    responses: {
+      /** @description Отрендеренный шаблон */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["EmailTemplatePreviewResponse"];
+        };
+      };
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+    };
+  };
+  testSendEmailTemplate: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: number;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["EmailTemplateTestSendRequest"];
+      };
+    };
+    responses: {
+      /** @description Тестовое письмо отправлено */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": {
+            /** @example sent */
+            status: string;
+          };
+        };
+      };
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+    };
+  };
+  listCountries: {
+    parameters: {
+      query?: {
+        is_active?: boolean;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Список стран */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Country"][];
+        };
+      };
+    };
+  };
+  createCountry: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Country"];
+      };
+    };
+    responses: {
+      /** @description Создано */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Country"];
+        };
+      };
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+    };
+  };
+  retrieveCountry: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: number;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Страна */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Country"];
+        };
+      };
+      404: components["responses"]["NotFound"];
+    };
+  };
+  deleteCountry: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: number;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Удалено */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+    };
+  };
+  partialUpdateCountry: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: number;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": Record<string, never>;
+      };
+    };
+    responses: {
+      /** @description Обновлено */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Country"];
+        };
+      };
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+    };
+  };
+  listCurrencies: {
+    parameters: {
+      query?: {
+        is_active?: boolean;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Список валют */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Currency"][];
+        };
+      };
+    };
+  };
+  createCurrency: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Currency"];
+      };
+    };
+    responses: {
+      /** @description Создано */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Currency"];
+        };
+      };
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+    };
+  };
+  retrieveCurrency: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: number;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Валюта */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Currency"];
+        };
+      };
+      404: components["responses"]["NotFound"];
+    };
+  };
+  deleteCurrency: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: number;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Удалено */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+    };
+  };
+  partialUpdateCurrency: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: number;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": Record<string, never>;
+      };
+    };
+    responses: {
+      /** @description Обновлено */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Currency"];
+        };
+      };
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+    };
+  };
+  listUnitsOfMeasure: {
+    parameters: {
+      query?: {
+        is_active?: boolean;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Список единиц измерения */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["UnitOfMeasure"][];
+        };
+      };
+    };
+  };
+  createUnitOfMeasure: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["UnitOfMeasure"];
+      };
+    };
+    responses: {
+      /** @description Создано */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["UnitOfMeasure"];
+        };
+      };
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+    };
+  };
+  retrieveUnitOfMeasure: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: number;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Единица измерения */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["UnitOfMeasure"];
+        };
+      };
+      404: components["responses"]["NotFound"];
+    };
+  };
+  deleteUnitOfMeasure: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: number;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Удалено */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+    };
+  };
+  partialUpdateUnitOfMeasure: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: number;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": Record<string, never>;
+      };
+    };
+    responses: {
+      /** @description Обновлено */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["UnitOfMeasure"];
+        };
+      };
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+    };
+  };
+  listDeliveryBases: {
+    parameters: {
+      query?: {
+        is_active?: boolean;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Список базисов */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["DeliveryBasis"][];
+        };
+      };
+    };
+  };
+  createDeliveryBasis: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["DeliveryBasis"];
+      };
+    };
+    responses: {
+      /** @description Создано */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["DeliveryBasis"];
+        };
+      };
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+    };
+  };
+  retrieveDeliveryBasis: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: number;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Базис поставки */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["DeliveryBasis"];
+        };
+      };
+      404: components["responses"]["NotFound"];
+    };
+  };
+  deleteDeliveryBasis: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: number;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Удалено */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+    };
+  };
+  partialUpdateDeliveryBasis: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: number;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": Record<string, never>;
+      };
+    };
+    responses: {
+      /** @description Обновлено */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["DeliveryBasis"];
+        };
+      };
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+    };
+  };
+  getHsCodeDuties: {
+    parameters: {
+      query?: {
+        /** @description ISO-код страны происхождения */
+        origin?: string;
+      };
+      header?: never;
+      path: {
+        code: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Ставки таможенных платежей */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HsCodeDuties"];
+        };
+      };
+      401: components["responses"]["Unauthorized"];
+      404: components["responses"]["NotFound"];
+    };
+  };
+  listCategories: {
+    parameters: {
+      query?: {
+        domain_type__code?: string;
+        search?: string;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Список категорий */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Category"][];
+        };
+      };
+    };
+  };
+  createCategory: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["CategoryInput"];
+      };
+    };
+    responses: {
+      /** @description Категория создана */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Category"];
+        };
+      };
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+    };
+  };
+  retrieveCategory: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: number;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Категория */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Category"];
+        };
+      };
+      404: components["responses"]["NotFound"];
+    };
+  };
+  updateCategory: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: number;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["CategoryInput"];
+      };
+    };
+    responses: {
+      /** @description Категория обновлена */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Category"];
+        };
+      };
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+    };
+  };
+  deleteCategory: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: number;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Удалено */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+    };
+  };
+  partialUpdateCategory: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: number;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": Record<string, never>;
+      };
+    };
+    responses: {
+      /** @description Категория обновлена */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Category"];
+        };
+      };
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+    };
+  };
+  quoteFxOverride: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: number;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["QuoteFxOverrideRequest"];
+      };
+    };
+    responses: {
+      /** @description Курс установлен/снят, КП пересчитано */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": {
+            id: number;
+            number: string;
+            status: string;
+            total_amount?: string;
+          };
+        };
+      };
+      /** @description Некорректный курс или валюта UZS */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Error"];
+        };
+      };
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+      /** @description КП заморожено (QUOTE_FROZEN) */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Error"];
+        };
+      };
+    };
+  };
+  getDealMarginDeviation: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        deal_id: number;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Расчёт отклонения маржи сделки */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["MarginDeviation"];
+        };
+      };
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+    };
+  };
+  listDealPurchaseActuals: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        deal_id: number;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Список фактических затрат по валютам */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["PurchaseActual"][];
+        };
+      };
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+    };
+  };
+  createDealPurchaseActual: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        deal_id: number;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["PurchaseActualInput"];
+      };
+    };
+    responses: {
+      /** @description Факт закупки сохранён */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["PurchaseActual"];
+        };
+      };
+      /** @description Факт закупки создан */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["PurchaseActual"];
+        };
+      };
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+    };
+  };
+  retrieveDealPurchaseActualDetail: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        deal_id: number;
+        currency: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Факт закупки по валюте */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["PurchaseActual"];
+        };
+      };
+      404: components["responses"]["NotFound"];
+    };
+  };
+  updateDealPurchaseActualDetail: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        deal_id: number;
+        currency: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["PurchaseActualInput"];
+      };
+    };
+    responses: {
+      /** @description Обновлено */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["PurchaseActual"];
+        };
+      };
+    };
+  };
+  deleteDealPurchaseActualDetail: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        deal_id: number;
+        currency: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Запись удалена */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+    };
+  };
+  listContracts: {
+    parameters: {
+      query?: {
+        deal?: number;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Список договоров */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Contract"][];
+        };
+      };
+      401: components["responses"]["Unauthorized"];
+    };
+  };
+  createContract: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Contract"];
+      };
+    };
+    responses: {
+      /** @description Договор создан */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Contract"];
+        };
+      };
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+    };
+  };
+  retrieveContract: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: number;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Договор */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Contract"];
+        };
+      };
+      404: components["responses"]["NotFound"];
+    };
+  };
+  partialUpdateContract: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: number;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": Record<string, never>;
+      };
+    };
+    responses: {
+      /** @description Договор обновлён */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Contract"];
+        };
+      };
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
     };
   };
 }
