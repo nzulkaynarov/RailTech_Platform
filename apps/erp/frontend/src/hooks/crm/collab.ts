@@ -42,3 +42,15 @@ export const useCreateOfflineClient = () => {
         },
     });
 };
+
+// Пригласить контакт в личный кабинет (M2-ERP-02)
+export const useInviteContact = () => {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: ({ contactId, channel, language }: { contactId: number; channel?: 'email' | 'telegram' | 'both'; language?: string }) =>
+            crmApi.inviteContact(contactId, { channel, language }),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['contacts'] });
+        },
+    });
+};

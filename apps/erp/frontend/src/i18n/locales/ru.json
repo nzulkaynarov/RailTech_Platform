@@ -674,7 +674,19 @@
     },
     "detail": {
       "contacts": "Контакты",
-      "primary": "Основной"
+      "primary": "Основной",
+      "canAct": "Право подписи",
+      "readOnly": "Только чтение",
+      "invited": "Приглашён",
+      "invite": "Пригласить в кабинет",
+      "reinvite": "Пригласить повторно"
+    },
+    "invite": {
+      "successEmail": "Приглашение отправлено на {{email}}",
+      "success": "Приглашение успешно создано",
+      "successLink": "Ссылка для приглашения сгенерирована",
+      "copyLink": "Скопировать ссылку",
+      "linkCopied": "Ссылка скопирована в буфер обмена"
     },
     "dialog": {
       "title": "Новый клиент",
@@ -685,6 +697,12 @@
       "email": "Email",
       "phone": "Телефон",
       "position": "Должность",
+      "telegramUsername": "Telegram (username)",
+      "canAct": "Право подписи в кабинете",
+      "channel": "Предпочитаемый канал",
+      "channelEmail": "Email",
+      "channelTelegram": "Telegram",
+      "channelBoth": "Email и Telegram",
       "hint": "Укажите название, контактное лицо и email или телефон",
       "submit": "Создать",
       "created": "Клиент создан"
@@ -2851,6 +2869,10 @@
       "rejected": {
         "title": "Акт отклонён заказчиком",
         "detail": "Акт {{number}} по сделке #{{deal_id}}: {{reason}}"
+      },
+      "returned": {
+        "title": "Акт возвращён клиентом",
+        "detail": "Клиент вернул акт {{number}} с замечанием: {{reason}}"
       },
       "cancelled": {
         "title": "Акт аннулирован исполнителем",

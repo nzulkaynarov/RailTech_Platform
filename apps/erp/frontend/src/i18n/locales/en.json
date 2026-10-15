@@ -672,7 +672,19 @@
     },
     "detail": {
       "contacts": "Contacts",
-      "primary": "Primary"
+      "primary": "Primary",
+      "canAct": "Signatory",
+      "readOnly": "Read only",
+      "invited": "Invited",
+      "invite": "Invite to Portal",
+      "reinvite": "Re-invite to Portal"
+    },
+    "invite": {
+      "successEmail": "Invitation sent to {{email}}",
+      "success": "Invitation successfully generated",
+      "successLink": "Invitation link generated",
+      "copyLink": "Copy link",
+      "linkCopied": "Link copied to clipboard"
     },
     "dialog": {
       "title": "New client",
@@ -683,6 +695,12 @@
       "email": "Email",
       "phone": "Phone",
       "position": "Position",
+      "telegramUsername": "Telegram (username)",
+      "canAct": "Portal signatory rights",
+      "channel": "Preferred channel",
+      "channelEmail": "Email",
+      "channelTelegram": "Telegram",
+      "channelBoth": "Email and Telegram",
       "hint": "Provide a name, a contact person and an email or phone",
       "submit": "Create",
       "created": "Client created"
@@ -2840,6 +2858,10 @@
       "rejected": {
         "title": "Act returned by the customer",
         "detail": "Act {{number}} for deal #{{deal_id}}: {{reason}}"
+      },
+      "returned": {
+        "title": "Act returned with remarks",
+        "detail": "Client returned act {{number}} with remark: {{reason}}"
       },
       "cancelled": {
         "title": "Act cancelled by the issuer",

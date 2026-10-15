@@ -5,8 +5,10 @@ The seller team's client-base contacts: scoped strictly to companies in the team
 service (Rule 8: search-before-create de-dup, reachability guard).
 """
 
-from drf_spectacular.utils import extend_schema
+from drf_spectacular.utils import extend_schema, inline_serializer
+from portal.services.invitation import invite_contact_to_portal
 from rest_framework import serializers, status, viewsets
+from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
@@ -32,9 +34,25 @@ class ContactSerializer(serializers.ModelSerializer):
             "phone",
             "position",
             "is_primary",
+            "telegram_user_id",
+            "telegram_username",
+            "language",
+            "preferred_channel",
+            "can_act",
+            "invited_at",
+            "last_login_at",
             "created_at",
         ]
-        read_only_fields = ["id", "company", "company_name", "company_is_registered", "created_at"]
+        read_only_fields = [
+            "id",
+            "company",
+            "company_name",
+            "company_is_registered",
+            "telegram_user_id",
+            "invited_at",
+            "last_login_at",
+            "created_at",
+        ]
 
 
 class OfflineClientCreateSerializer(serializers.Serializer):
@@ -46,6 +64,10 @@ class OfflineClientCreateSerializer(serializers.Serializer):
     email = serializers.EmailField(required=False, allow_blank=True, default="")
     phone = serializers.CharField(max_length=50, required=False, allow_blank=True, default="")
     position = serializers.CharField(max_length=255, required=False, allow_blank=True, default="")
+    can_act = serializers.BooleanField(required=False, default=True)
+    language = serializers.ChoiceField(choices=["ru", "uz", "en"], required=False, default="ru")
+    preferred_channel = serializers.ChoiceField(choices=["email", "telegram", "both"], required=False, default="email")
+    telegram_username = serializers.CharField(max_length=255, required=False, allow_blank=True, default="")
 
 
 @extend_schema(tags=["Client Base"])
@@ -58,6 +80,7 @@ class ContactViewSet(RoleGatedViewMixin, viewsets.ModelViewSet):
         "update": "deal.manage",
         "partial_update": "deal.manage",
         "destroy": "deal.manage",
+        "invite": "deal.manage",
     }
 
     serializer_class = ContactSerializer
@@ -69,7 +92,7 @@ class ContactViewSet(RoleGatedViewMixin, viewsets.ModelViewSet):
             return Contact.objects.none()
         user = self.request.user
         queryset = Contact.objects.select_related("company")
-        if getattr(user, "is_superuser", False) or getattr(user, "is_superuser", False):
+        if getattr(user, "is_superuser", False):
             return queryset
         return queryset.filter(company__in=seller_clients(user))
 
@@ -81,3 +104,43 @@ class ContactViewSet(RoleGatedViewMixin, viewsets.ModelViewSet):
         if error_code:
             return Response({"detail": error_code}, status=status.HTTP_400_BAD_REQUEST)
         return Response(ContactSerializer(result["contact"]).data, status=status.HTTP_201_CREATED)
+
+    @extend_schema(
+        request=inline_serializer(
+            name="ContactInviteRequest",
+            fields={
+                "channel": serializers.ChoiceField(choices=["email", "telegram", "both"], required=False),
+                "language": serializers.ChoiceField(choices=["ru", "uz", "en"], required=False),
+            },
+        ),
+        responses={
+            200: inline_serializer(
+                name="ContactInviteResponse",
+                fields={
+                    "ok": serializers.BooleanField(),
+                    "contact_id": serializers.IntegerField(),
+                    "channel": serializers.CharField(),
+                    "email_sent": serializers.BooleanField(),
+                    "invite_url": serializers.CharField(),
+                    "telegram_url": serializers.CharField(allow_null=True),
+                    "invited_at": serializers.DateTimeField(),
+                },
+            )
+        },
+    )
+    @action(detail=True, methods=["post"], url_path="invite")
+    def invite(self, request, pk=None):
+        """Пригласить контакт клиента в личный кабинет (M2-ERP-02)."""
+        contact = self.get_object()
+        channel = request.data.get("channel")
+        language = request.data.get("language")
+
+        result, error_code = invite_contact_to_portal(
+            contact=contact,
+            actor=request.user,
+            channel=channel,
+            language=language,
+        )
+        if error_code:
+            return Response({"detail": error_code}, status=status.HTTP_400_BAD_REQUEST)
+        return Response(result, status=status.HTTP_200_OK)
