@@ -37,8 +37,55 @@ class Contact(models.Model):
         related_name="created_contacts",
         verbose_name=_("Кем создан"),
     )
+    # Поля клиентского портала (M2-ERP-01)
+    telegram_user_id = models.BigIntegerField(
+        null=True,
+        blank=True,
+        unique=True,
+        db_index=True,
+        verbose_name=_("Telegram User ID"),
+        help_text=_("Идентификатор пользователя в Telegram"),
+    )
+    telegram_username = models.CharField(
+        max_length=255,
+        blank=True,
+        verbose_name=_("Telegram Username"),
+        help_text=_("Имя пользователя Telegram без @"),
+    )
+    language = models.CharField(
+        max_length=10,
+        default="ru",
+        choices=[("ru", "RU"), ("uz", "UZ"), ("en", "EN")],
+        verbose_name=_("Язык интерфейса"),
+    )
+    preferred_channel = models.CharField(
+        max_length=20,
+        default="both",
+        choices=[("email", "Email"), ("telegram", "Telegram"), ("both", "Both")],
+        verbose_name=_("Предпочитаемый канал связи"),
+    )
+    can_act = models.BooleanField(
+        default=True,
+        verbose_name=_("Право действовать"),
+        help_text=_("Право принимать КП, подписывать договоры и принимать акты"),
+    )
+    invited_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        verbose_name=_("Дата приглашения"),
+    )
+    last_login_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        verbose_name=_("Дата последнего входа"),
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+
+    @property
+    def has_telegram(self) -> bool:
+        """Привязан ли Telegram к контакту."""
+        return bool(self.telegram_user_id or self.telegram_username)
 
     class Meta:
         verbose_name = _("Контакт")
