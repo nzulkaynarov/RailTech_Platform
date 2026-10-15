@@ -154,6 +154,24 @@ def copy_single_role_to_set(apps, schema_editor):
         member.company_roles.add(member.company_role_id)
 
 
+# M1-ERP-08 (миграция accounts/0004): новый код `finance.rates` — системным ролям «Финансы» и
+# «Руководитель» своей компании. Замороженная копия, как таблица выше: каталог прав после 0004 =
+# ALL + ADDED_0004, шаблоны = BACKOFFICE_ROLES + ROLE_GRANTS_0004 (сверяет test_backoffice_roles).
+ADDED_0004 = ["finance.rates"]
+ROLE_GRANTS_0004 = {"FINANCE": ["finance.rates"], "HEAD": ["finance.rates"]}
+
+
+def grant_finance_rates(apps, schema_editor):
+    """Догнать системные роли «Финансы» и «Руководитель» до шаблона с `finance.rates`."""
+    CompanyRole = apps.get_model("accounts", "CompanyRole")
+    for code, added in ROLE_GRANTS_0004.items():
+        for role in CompanyRole.objects.filter(code=code, is_system=True):
+            missing = [perm for perm in added if perm not in (role.permissions or [])]
+            if missing:
+                role.permissions = list(role.permissions or []) + missing
+                role.save(update_fields=["permissions"])
+
+
 def seed_backoffice_roles(apps, schema_editor):
     """Каталог прав M1-ERP-05: системные роли своей компании, переименование кодов, роли участникам."""
     for company_id in _own_company_ids(apps):

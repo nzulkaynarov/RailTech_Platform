@@ -11,6 +11,8 @@ import type { components } from '../schema';
 
 export type Product = CatalogProduct;
 
+export type QuoteFxRate = components['schemas']['QuoteFxRate'];
+
 // N2 — document-numbering scheme. Reset period mirrors the backend
 // DocumentNumberingScheme.RESET_PERIOD_CHOICES.
 export type NumberingResetPeriod = 'never' | 'yearly' | 'monthly';
@@ -211,8 +213,13 @@ export interface Quote {
 	cost_currency_default?: string | null;
 	// Frozen FX (READ-ONLY): { currencyCode: "rateToUzsString" } e.g. {"USD":"12000"}.
 	fx_snapshot?: Record<string, string>;
-	// КП-level manual FX override (read+WRITE) — wins over snapshot & market.
+	// Договорной курс КП (READ-ONLY; пишется только fx-override с правом finance.rates, M1-ERP-08).
 	fx_manual?: Record<string, string>;
+	// M1-ERP-08 «курс на дату КП»: курсы с датой и источником (только с quote.view_cost_margin),
+	// режим (live — черновик по текущему курсу, fixed — зафиксировано при отправке на согласование).
+	fx_rates?: QuoteFxRate[];
+	fx_mode?: components['schemas']['FxModeEnum'];
+	fx_fixed_at?: string | null;
 	// READ-ONLY preliminary PUBLIC market rates { currencyCode: "rateToUzs" } for currencies not
 	// yet frozen into fx_snapshot — lets the pricing mirror preview a new-currency line instead of
 	// «пересчёт после сохранения». The server freezes its own rate on save (detail context only).

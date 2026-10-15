@@ -5,7 +5,7 @@ unchanged. ``QuoteSerializer`` nests the item / charge serializers and applies t
 seller-only redaction of the КП-level cost breakdown (charges, margin, FX).
 """
 
-from decimal import Decimal, InvalidOperation
+from decimal import Decimal
 
 from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
@@ -52,6 +52,37 @@ class QuoteEconomicsSerializer(serializers.Serializer):
         child=serializers.CharField(),
         help_text="Коды валют без разрешимого курса — блокируют submit/send (KP-01).",
     )
+
+
+class QuoteFxOverrideInfoSerializer(serializers.Serializer):
+    """Договорной курс финансиста (M1-ERP-08): курс, причина, кто и когда задал."""
+
+    rate = serializers.CharField(help_text="UZS за 1 единицу валюты.")
+    reason = serializers.CharField(help_text="Причина ручного курса (обязательна).")
+    set_by_name = serializers.CharField(help_text="Кто задал курс.")
+    set_at = serializers.CharField(allow_null=True, help_text="Когда задан (ISO-8601, Ташкент).")
+
+
+class QuoteFxRateSerializer(serializers.Serializer):
+    """Курс КП по одной валюте (M1-ERP-08) — «Курс на <дата>: 1 USD = … UZS (источник)».
+
+    Только для документации схемы (тип фронтенда): строки собирает
+    `sales.services.quote_fx.quote_fx_rates`. Видно только с `quote.view_cost_margin`.
+    """
+
+    currency = serializers.CharField(help_text="Код валюты ISO-4217.")
+    rate = serializers.CharField(
+        allow_null=True, help_text="Действующий курс КП (договорной или снимок); null — курса нет."
+    )
+    rate_date = serializers.CharField(allow_null=True, help_text="Дата действующего курса (YYYY-MM-DD).")
+    source = serializers.CharField(
+        allow_null=True, help_text="CBU / MANUAL (справочник) / OVERRIDE (договорной курс КП)."
+    )
+    snapshot_rate = serializers.CharField(allow_null=True, help_text="Курс справочника в снимке КП.")
+    snapshot_rate_date = serializers.CharField(allow_null=True, help_text="Дата курса снимка.")
+    snapshot_source = serializers.CharField(allow_null=True, help_text="Источник курса снимка.")
+    override = QuoteFxOverrideInfoSerializer(allow_null=True, help_text="Договорной курс, если задан.")
+    missing = serializers.BooleanField(help_text="Курса нет — блокирует согласование, PDF и отправку.")
 
 
 class QuoteApprovalStepSerializer(serializers.ModelSerializer):
@@ -153,6 +184,25 @@ class QuoteSerializer(serializers.ModelSerializer):
     # Current market FX rates ({code: "rate"}) for the frontend pricing mirror — a preview of the
     # rate a line's cost currency WOULD get before it is frozen into fx_snapshot / fx_manual.
     fx_market = serializers.SerializerMethodField()
+    # M1-ERP-08 «курс на дату КП»: курсы с датой и источником, режим (живой черновик / зафиксировано).
+    fx_rates = serializers.SerializerMethodField()
+    fx_mode = serializers.SerializerMethodField()
+
+    @extend_schema_field(QuoteFxRateSerializer(many=True))
+    def get_fx_rates(self, obj) -> list:
+        from sales.services.quote_fx import line_currency_codes, quote_fx_rates
+
+        # Валюты строк — только в детальном КП (позиции уже предзагружены вьюхой); в списках —
+        # снимок и договорные курсы, без лишних запросов.
+        codes = line_currency_codes(obj.items.all()) if self.context.get("include_economics") else None
+        return quote_fx_rates(obj, codes)
+
+    @extend_schema_field(serializers.ChoiceField(choices=["live", "fixed"]))
+    def get_fx_mode(self, obj) -> str:
+        """live — черновик по текущему курсу; fixed — курсы зафиксированы (согласование и дальше)."""
+        from sales.services.quote_fx import rates_are_live
+
+        return "live" if rates_are_live(obj) else "fixed"
 
     def get_fx_market(self, obj) -> dict:
         """Current market rate_to_uzs for every ACTIVE currency, as a {code: "rate"} map (UZS = 1).
@@ -193,28 +243,6 @@ class QuoteSerializer(serializers.ModelSerializer):
         steps = obj.approval_steps.select_related("approver__user", "approver_role", "acted_by").all()
         return QuoteApprovalStepSerializer(steps, many=True, context=self.context).data
 
-    def validate_fx_manual(self, value):
-        """Client-writable manual FX override (договорной курс). Harden it (adversarial HOLE 1):
-        a rate of "0"/negative/non-numeric would otherwise sail past the fx_missing guard yet
-        zero or flip a line's landed cost → a free/loss КП shown as profit. Accept only POSITIVE
-        numerics; normalise keys to upper-case; drop blank entries."""
-        if value in (None, ""):
-            return {}
-        if not isinstance(value, dict):
-            raise serializers.ValidationError("FX_MANUAL_INVALID")
-        cleaned = {}
-        for code, rate in value.items():
-            if rate in (None, ""):
-                continue  # blank = not set; falls through to snapshot/market
-            try:
-                parsed = Decimal(str(rate))
-            except (InvalidOperation, ValueError, TypeError):
-                raise serializers.ValidationError({code: "FX_RATE_INVALID"})
-            if parsed <= 0:
-                raise serializers.ValidationError({code: "FX_RATE_MUST_BE_POSITIVE"})
-            cleaned[str(code).upper()] = str(parsed)
-        return cleaned
-
     @extend_schema_field(QuoteEconomicsSerializer(allow_null=True))
     def get_economics(self, obj) -> dict | None:
         if not self.context.get("include_economics"):
@@ -243,6 +271,9 @@ class QuoteSerializer(serializers.ModelSerializer):
             "fx_snapshot",
             "fx_manual",
             "fx_market",
+            "fx_rates",
+            "fx_mode",
+            "fx_fixed_at",
             "tax_country",
             "vat_rate",
             "margin_percent",
@@ -285,9 +316,11 @@ class QuoteSerializer(serializers.ModelSerializer):
             "charges_total",
             "vat_amount",
             "total_incl_vat",
-            # fx_snapshot is frozen by the engine, never set by the client; fx_manual is
-            # the client-writable override.
+            # Курсы КП (M1-ERP-08): снимок ведёт движок; договорной курс — только эндпоинт
+            # fx-override (право finance.rates, с причиной, в журнал), не PATCH КП.
             "fx_snapshot",
+            "fx_manual",
+            "fx_fixed_at",
             "effective_delivery_lead_time_days",
             "first_viewed_at",
             "public_token_revoked",
@@ -315,6 +348,7 @@ class QuoteSerializer(serializers.ModelSerializer):
         "margin_percent",
         "fx_snapshot",
         "fx_manual",
+        "fx_rates",
         # The public no-login link grants client-projection access; only the КП-owning seller
         # needs it (to copy/revoke the link on the post-send panel). Never hand it to the buyer.
         "public_access_token",

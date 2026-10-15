@@ -17,6 +17,7 @@ import { GenerateQuoteDialog } from '@/components/CRM/GenerateQuoteDialog';
 import { DealTimeline } from '@/components/CRM/DealTimeline';
 import { DealDocumentsCard } from '@/components/CRM/DealDocumentsCard';
 import { DealChainCard } from '@/components/CRM/DealChainCard';
+import { DealMarginDeviationCard } from '@/components/CRM/DealMarginDeviationCard';
 import { RequestHeader } from './RequestHeader';
 import { RequestActionBar } from './RequestActionBar';
 import { QuoteView } from './QuoteView';
@@ -203,6 +204,10 @@ export function RequestDetailPage({ dealId, onBack }: { dealId: number; onBack: 
             </CardContent>
           </Card>
         )}
+
+        {/* M1-ERP-08 — отклонение маржи: КП против факта закупки (только с правом видеть маржу;
+            появляется после отправки КП). Цена клиенту не пересчитывается. */}
+        <DealMarginDeviationCard dealId={deal.id} />
 
         {/* F1 — цепочка «после договора»: договор / счета / платежи / акты / отгрузка со
             счётчиками-ссылками и подсказкой следующего шага (smart-buttons карточки заказа

@@ -34,10 +34,21 @@ def _usd():
     return Currency.objects.get_or_create(code="USD", defaults={"name": "US Dollar", "symbol": "$"})[0]
 
 
+def _set_market_rate(value):
+    """Курс ЦБ на сегодня в справочнике (M1-ERP-08: движок КП читает справочник, без заглушек)."""
+    from django.utils import timezone
+
+    from master_data.models import ExchangeRate
+
+    ExchangeRate.objects.update_or_create(
+        currency=_usd(), rate_date=timezone.localdate(), defaults={"rate_to_uzs": Decimal(value), "source": "CBU"}
+    )
+
+
 class TestMultiCurrencyConversion:
     def test_usd_line_converts_to_uzs_via_frozen_rate(self, monkeypatch):
         # Stub the market rate: 1 USD = 12000 UZS. base 100 USD → landed 1,200,000 UZS.
-        monkeypatch.setattr("master_data.fx.get_rate_to_uzs", lambda code, on_date=None: Decimal("12000"))
+        _set_market_rate("12000")
         _, deal = _company_and_deal()
         usd = _usd()
         quote = _draft_quote(deal, margin_percent=Decimal("0"), vat_rate=Decimal("0"))
@@ -60,7 +71,7 @@ class TestMultiCurrencyConversion:
         assert quote.fx_snapshot.get("USD") == "12000"
 
     def test_margin_applied_after_conversion(self, monkeypatch):
-        monkeypatch.setattr("master_data.fx.get_rate_to_uzs", lambda code, on_date=None: Decimal("12000"))
+        _set_market_rate("12000")
         _, deal = _company_and_deal()
         usd = _usd()
         quote = _draft_quote(deal, margin_percent=Decimal("20"), vat_rate=Decimal("0"))
@@ -79,7 +90,7 @@ class TestMultiCurrencyConversion:
 
     def test_manual_override_wins_over_market_rate(self, monkeypatch):
         # Market says 12000, but the КП pins a договорной курс of 13000 → 13000 must win.
-        monkeypatch.setattr("master_data.fx.get_rate_to_uzs", lambda code, on_date=None: Decimal("12000"))
+        _set_market_rate("12000")
         _, deal = _company_and_deal()
         usd = _usd()
         quote = _draft_quote(deal, margin_percent=Decimal("0"), vat_rate=Decimal("0"), fx_manual={"USD": "13000"})
@@ -111,7 +122,7 @@ class TestMultiCurrencyConversion:
     def test_customs_duty_converted_in_same_line_currency(self, monkeypatch):
         # Design choice: customs_duty is treated in the SAME line currency and converted
         # together. base 100 + customs 10 = 110 USD × 12000 = 1,320,000 UZS.
-        monkeypatch.setattr("master_data.fx.get_rate_to_uzs", lambda code, on_date=None: Decimal("12000"))
+        _set_market_rate("12000")
         _, deal = _company_and_deal()
         usd = _usd()
         quote = _draft_quote(deal, margin_percent=Decimal("0"), vat_rate=Decimal("0"))
@@ -127,10 +138,12 @@ class TestMultiCurrencyConversion:
         item.refresh_from_db()
         assert item.landed_cost == Decimal("1320000.00")
 
-    def test_snapshot_freezes_and_survives_rate_change(self, monkeypatch):
-        # First recalc freezes 12000; a later market move to 15000 must NOT change the КП.
-        rate_box = {"value": Decimal("12000")}
-        monkeypatch.setattr("master_data.fx.get_rate_to_uzs", lambda code, on_date=None: rate_box["value"])
+    def test_snapshot_freezes_once_fixed_and_survives_rate_change(self):
+        # M1-ERP-08: черновик живёт по текущему курсу; после фиксации (выход из черновика) рост
+        # курса ЦБ КП не меняет.
+        from django.utils import timezone
+
+        _set_market_rate("12000")
         _, deal = _company_and_deal()
         usd = _usd()
         quote = _draft_quote(deal, margin_percent=Decimal("0"), vat_rate=Decimal("0"))
@@ -144,11 +157,19 @@ class TestMultiCurrencyConversion:
         item.save()
         item.refresh_from_db()
         assert item.landed_cost == Decimal("1200000.00")
-        # Market jumps, but the snapshot is frozen → recalc keeps the old rate.
-        rate_box["value"] = Decimal("15000")
+        # Черновик: новый курс подхватывается при пересчёте.
+        _set_market_rate("12500")
         QuoteCalculationService.recalculate_quote(quote.pk)
         item.refresh_from_db()
-        assert item.landed_cost == Decimal("1200000.00")
+        assert item.landed_cost == Decimal("1250000.00")
+        # Фиксация: статус уходит из черновика — дальше только снимок.
+        Quote.objects.filter(pk=quote.pk).update(
+            status=QuoteStatus.objects.get(code="PENDING_APPROVAL"), fx_fixed_at=timezone.now()
+        )
+        _set_market_rate("15000")
+        QuoteCalculationService.recalculate_quote(quote.pk)
+        item.refresh_from_db()
+        assert item.landed_cost == Decimal("1250000.00")
 
 
 class TestDeliveryLeadTime:

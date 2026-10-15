@@ -4588,6 +4588,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/crm/quotes/{id}/fx-override/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Set or clear the quote's negotiated FX rate
+         * @description Договорной курс КП по валюте себестоимости (M1-ERP-08): побеждает курс ЦБ в снимке, КП пересчитывается. Только право `finance.rates`, причина обязательна, запись в журнал КП. Незамороженное КП (до отправки клиенту), иначе 409 QUOTE_FROZEN. `If-Match` с ETag КП — 412 PRECONDITION_FAILED_STALE_WRITE, если КП изменилось после чтения.
+         */
+        post: operations["crm_quotes_fx_override_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/crm/quotes/{id}/generate-pdf/": {
         parameters: {
             query?: never;
@@ -4854,6 +4874,66 @@ export interface paths {
         head?: never;
         /** @description Библиотека согласованных формулировок компании (E4, playbook-канон). */
         patch: operations["crm_wording_variants_partial_update"];
+        trace?: never;
+    };
+    "/api/v1/finance/deals/{deal_id}/margin-deviation/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Deal margin deviation (actual purchase vs quote snapshot)
+         * @description GET — отклонение маржи сделки (опорное КП против факта закупки).
+         */
+        get: operations["finance_deals_margin_deviation_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/finance/deals/{deal_id}/purchase-actuals/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Record the actual purchase for one currency of the deal
+         * @description POST — внести/обновить факт закупки по валюте (одна строка на валюту сделки).
+         */
+        post: operations["finance_deals_purchase_actuals_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/finance/deals/{deal_id}/purchase-actuals/{currency}/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Remove the actual purchase for one currency of the deal
+         * @description DELETE — убрать факт закупки по валюте (маржа по этой валюте снова как в КП).
+         */
+        delete: operations["finance_deals_purchase_actuals_destroy"];
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/api/v1/master-data/countries/": {
@@ -7702,6 +7782,12 @@ export interface components {
             carrier?: string;
             notes?: string;
         };
+        /**
+         * @description * `live` - live
+         *     * `fixed` - fixed
+         * @enum {string}
+         */
+        FxModeEnum: "live" | "fixed";
         GenContractRequest: {
             quote_id: number;
             /** @default  */
@@ -7974,6 +8060,55 @@ export interface components {
              * @description Неактивные бренды скрыты в формах выбора
              */
             is_active?: boolean;
+        };
+        /** @description Отклонение маржи сделки: опорное КП, построчно по валютам, итог. Суммы — строки, UZS. */
+        MarginDeviation: {
+            deal: number;
+            /** @description Валюта всех сумм — UZS. */
+            currency: string;
+            reference_quote: components["schemas"]["ReferenceQuote"] | null;
+            rows: components["schemas"]["MarginDeviationRow"][];
+            has_actuals: boolean;
+            /** @description Сумма позиций КП без НДС. */
+            revenue?: string;
+            quoted_cost?: string;
+            quoted_profit?: string;
+            quoted_margin_percent?: string;
+            actual_cost?: string;
+            actual_profit?: string;
+            actual_margin_percent?: string;
+            /** @description Прибыль по факту − прибыль по КП, UZS. */
+            deviation_amount?: string;
+            /** @description Маржа по факту − маржа по КП, п. п. */
+            deviation_percent_points?: string;
+            /** @description Отклонение в % к прибыли КП; null — прибыль КП 0. */
+            deviation_profit_percent?: string | null;
+        };
+        MarginDeviationRow: {
+            currency: string;
+            /** @description Строк КП в этой валюте себестоимости. */
+            lines: number;
+            /** @description Себестоимость в валюте по КП (цена поставщика + пошлина) × кол-во. */
+            quoted_amount: string;
+            /** @description Курс КП (снимок или договорной). */
+            quoted_rate: string | null;
+            quoted_rate_date: string | null;
+            /** @description Себестоимость в UZS по КП. */
+            quoted_cost: string;
+            has_actual: boolean;
+            /** @description Фактическая сумма в валюте; null — как в КП. */
+            actual_amount: string | null;
+            actual_rate: string | null;
+            /** @description Себестоимость в UZS по факту (нет факта — как в КП). */
+            actual_cost: string;
+            /** @description actual_cost − quoted_cost, UZS. */
+            cost_deviation: string;
+            purchased_on: string | null;
+            note: string;
+            entered_by_name: string;
+            /** @description Курс справочника на сегодня — подсказка. */
+            suggested_rate: string | null;
+            suggested_rate_date: string | null;
         };
         MatchCatalogRequestRequest: {
             lines: {
@@ -9401,11 +9536,6 @@ export interface components {
              */
             cost_currency_default?: string | null;
             /**
-             * Ручные курсы КП (FX override)
-             * @description Договорные курсы валют к UZS, заданные вручную {код: курс} — побеждают снимок
-             */
-            fx_manual?: unknown;
-            /**
              * Страна налогообложения
              * @description Определяет ставку НДС для расчёта
              */
@@ -10315,6 +10445,20 @@ export interface components {
          * @enum {string}
          */
         PublishedCatalogItemKindEnum: "goods" | "service";
+        PurchaseActualRequest: {
+            /** @description Валюта себестоимости строк опорного КП (или UZS). */
+            currency: string;
+            /** @description Фактическая себестоимость в валюте; пусто — как в КП (отклонение только по курсу). */
+            amount?: string | null;
+            /** @description Фактический курс (UZS за 1 ед.); пусто — курс справочника на дату закупки. */
+            rate?: string | null;
+            /**
+             * Format: date
+             * @description Дата закупки; пусто — сегодня.
+             */
+            purchased_on?: string | null;
+            note?: string;
+        };
         Quote: {
             readonly id: number;
             /**
@@ -10369,7 +10513,7 @@ export interface components {
              * Ручные курсы КП (FX override)
              * @description Договорные курсы валют к UZS, заданные вручную {код: курс} — побеждают снимок
              */
-            fx_manual?: unknown;
+            readonly fx_manual: unknown;
             /**
              * @description Current market rate_to_uzs for every ACTIVE currency, as a {code: "rate"} map (UZS = 1).
              *
@@ -10385,6 +10529,14 @@ export interface components {
             readonly fx_market: {
                 [key: string]: unknown;
             };
+            readonly fx_rates: components["schemas"]["QuoteFxRate"][];
+            readonly fx_mode: components["schemas"]["FxModeEnum"];
+            /**
+             * Курсы зафиксированы
+             * Format: date-time
+             * @description Момент фиксации курсов КП (отправка на согласование); пусто — черновик по текущему курсу
+             */
+            readonly fx_fixed_at: string | null;
             /**
              * Страна налогообложения
              * @description Определяет ставку НДС для расчёта
@@ -10656,6 +10808,51 @@ export interface components {
             /** @description Коды валют без разрешимого курса — блокируют submit/send (KP-01). */
             fx_missing: string[];
         };
+        /** @description Договорной курс финансиста (M1-ERP-08): курс, причина, кто и когда задал. */
+        QuoteFxOverrideInfo: {
+            /** @description UZS за 1 единицу валюты. */
+            rate: string;
+            /** @description Причина ручного курса (обязательна). */
+            reason: string;
+            /** @description Кто задал курс. */
+            set_by_name: string;
+            /** @description Когда задан (ISO-8601, Ташкент). */
+            set_at: string | null;
+        };
+        QuoteFxOverrideRequest: {
+            /** @description Код валюты себестоимости (не UZS). */
+            currency: string;
+            /** @description UZS за 1 единицу валюты (> 0, до 6 знаков после запятой); null или пусто — снять договорной курс. */
+            rate?: string | null;
+            /** @description Причина (обязательна, в журнал). */
+            reason: string;
+        };
+        /**
+         * @description Курс КП по одной валюте (M1-ERP-08) — «Курс на <дата>: 1 USD = … UZS (источник)».
+         *
+         *     Только для документации схемы (тип фронтенда): строки собирает
+         *     `sales.services.quote_fx.quote_fx_rates`. Видно только с `quote.view_cost_margin`.
+         */
+        QuoteFxRate: {
+            /** @description Код валюты ISO-4217. */
+            currency: string;
+            /** @description Действующий курс КП (договорной или снимок); null — курса нет. */
+            rate: string | null;
+            /** @description Дата действующего курса (YYYY-MM-DD). */
+            rate_date: string | null;
+            /** @description CBU / MANUAL (справочник) / OVERRIDE (договорной курс КП). */
+            source: string | null;
+            /** @description Курс справочника в снимке КП. */
+            snapshot_rate: string | null;
+            /** @description Дата курса снимка. */
+            snapshot_rate_date: string | null;
+            /** @description Источник курса снимка. */
+            snapshot_source: string | null;
+            /** @description Договорной курс, если задан. */
+            override: components["schemas"]["QuoteFxOverrideInfo"] | null;
+            /** @description Курса нет — блокирует согласование, PDF и отправку. */
+            missing: boolean;
+        };
         QuoteItem: {
             readonly id: number;
             /**
@@ -10907,11 +11104,6 @@ export interface components {
              */
             cost_currency_default?: string | null;
             /**
-             * Ручные курсы КП (FX override)
-             * @description Договорные курсы валют к UZS, заданные вручную {код: курс} — побеждают снимок
-             */
-            fx_manual?: unknown;
-            /**
              * Страна налогообложения
              * @description Определяет ставку НДС для расчёта
              */
@@ -10995,6 +11187,14 @@ export interface components {
             method: string;
             /** @default  */
             reference: string;
+        };
+        ReferenceQuote: {
+            id: number;
+            version: number;
+            number: string;
+            status_code: string;
+            frozen_at: string | null;
+            fx_fixed_at: string | null;
         };
         RejectActRequest: {
             reason: string;
@@ -18895,6 +19095,61 @@ export interface operations {
             };
         };
     };
+    crm_quotes_fx_override_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A unique integer value identifying this Коммерческое предложение. */
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["QuoteFxOverrideRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["QuoteFxOverrideRequest"];
+                "multipart/form-data": components["schemas"]["QuoteFxOverrideRequest"];
+            };
+        };
+        responses: {
+            /** @description КП после пересчёта (QuoteSerializer) */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description FX_CURRENCY_REQUIRED / FX_BASE_CURRENCY / FX_CURRENCY_UNKNOWN / FX_RATE_INVALID / FX_RATE_MUST_BE_POSITIVE / FX_OVERRIDE_REASON_REQUIRED / FX_OVERRIDE_REASON_TOO_LONG */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description ROLE_NOT_PERMITTED */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description QUOTE_FROZEN */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description PRECONDITION_FAILED_STALE_WRITE */
+            412: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     crm_quotes_generate_pdf_create: {
         parameters: {
             query?: never;
@@ -19428,6 +19683,111 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["CompanyWordingVariant"];
                 };
+            };
+        };
+    };
+    finance_deals_margin_deviation_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                deal_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MarginDeviation"];
+                };
+            };
+            /** @description ROLE_NOT_PERMITTED */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    finance_deals_purchase_actuals_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                deal_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PurchaseActualRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["PurchaseActualRequest"];
+                "multipart/form-data": components["schemas"]["PurchaseActualRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MarginDeviation"];
+                };
+            };
+            /** @description MARGIN_NO_REFERENCE_QUOTE / PURCHASE_CURRENCY_NOT_IN_QUOTE / PURCHASE_DATE_IN_FUTURE / PURCHASE_AMOUNT_INVALID / PURCHASE_NOTE_TOO_LONG / FX_RATE_INVALID / FX_RATE_MISSING */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description ROLE_NOT_PERMITTED */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description MARGIN_NO_REFERENCE_QUOTE */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    finance_deals_purchase_actuals_destroy: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                currency: string;
+                deal_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MarginDeviation"];
+                };
+            };
+            /** @description ROLE_NOT_PERMITTED */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };

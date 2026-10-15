@@ -51,6 +51,21 @@ export const useUpdateQuoteSettings = () => {
     });
 };
 
+// M1-ERP-08: договорной курс КП (finance.rates) — КП пересчитывается на сервере, обновляем КП,
+// сделки (active_quote) и строки (себестоимость строк в валюте меняется вместе с курсом).
+export const useSetQuoteFxOverride = () => {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: ({ id, data }: { id: number; data: Parameters<typeof crmApi.setQuoteFxOverride>[1] }) =>
+            crmApi.setQuoteFxOverride(id, data),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['quotes'] });
+            queryClient.invalidateQueries({ queryKey: ['deals'] });
+            queryClient.invalidateQueries({ queryKey: ['quote-items'] });
+        },
+    });
+};
+
 // «Применить настройки компании» (Odoo Update Prices): re-pull current company defaults
 // into the DRAFT КП. vat/margin move the totals server-side, so refresh the same surfaces
 // as a settings save (quotes + deals + line grid).

@@ -121,6 +121,27 @@ class Quote(models.Model):
         verbose_name=_("Ручные курсы КП (FX override)"),
         help_text=_("Договорные курсы валют к UZS, заданные вручную {код: курс} — побеждают снимок"),
     )
+    # M1-ERP-08 «курс на дату КП»: дата и источник каждого курса снимка, причина и автор ручного
+    # курса, момент фиксации курсов (отправка на согласование). Пусто fx_fixed_at — черновик живёт
+    # по текущему курсу; см. sales.services.quote_fx.
+    fx_snapshot_meta = models.JSONField(
+        default=dict,
+        blank=True,
+        verbose_name=_("Дата и источник курсов снимка"),
+        help_text=_("{код: {rate_date, source}} — дата курса и источник (CBU / MANUAL) для каждого курса снимка"),
+    )
+    fx_manual_meta = models.JSONField(
+        default=dict,
+        blank=True,
+        verbose_name=_("Причина ручных курсов"),
+        help_text=_("{код: {reason, set_by, set_by_name, set_at}} — кто, когда и почему задал курс КП вручную"),
+    )
+    fx_fixed_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        verbose_name=_("Курсы зафиксированы"),
+        help_text=_("Момент фиксации курсов КП (отправка на согласование); пусто — черновик по текущему курсу"),
+    )
 
     tax_country = models.ForeignKey(
         Country,

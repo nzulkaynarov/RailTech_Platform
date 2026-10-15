@@ -12,6 +12,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { QuoteFxRates } from '@/components/CRM/QuoteFxRates';
 
 /**
  * The priced КП card on the deal record. The back office always sees cost internals (base price,
@@ -155,6 +156,9 @@ export function QuoteView({
             </TableBody>
           </Table>
           </div>
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+          {/* M1-ERP-08: «Курс на <дата>» — курсы КП (только с правом видеть себестоимость). */}
+          <QuoteFxRates quote={quote} className="w-full sm:max-w-sm" />
           {/* VAT breakdown — the canonical Subtotal → VAT → Total bridge, so nobody has to
               reconcile excl-VAT lines with an incl-VAT grand total by hand. */}
           <div className="ml-auto w-full max-w-xs space-y-1 text-sm">
@@ -179,6 +183,7 @@ export function QuoteView({
               <span>{t('requestDetailActions.totalInclVat')}</span>
               <span className="tabular-nums text-primary">{formatCurrency(Number(quote.total_incl_vat))}</span>
             </div>
+          </div>
           </div>
         </CardContent>
       </Card>

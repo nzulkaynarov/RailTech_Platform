@@ -12579,6 +12579,69 @@
                 }
             }
         },
+        "/api/v1/crm/quotes/{id}/fx-override/": {
+            "post": {
+                "operationId": "crm_quotes_fx_override_create",
+                "description": "Договорной курс КП по валюте себестоимости (M1-ERP-08): побеждает курс ЦБ в снимке, КП пересчитывается. Только право `finance.rates`, причина обязательна, запись в журнал КП. Незамороженное КП (до отправки клиенту), иначе 409 QUOTE_FROZEN. `If-Match` с ETag КП — 412 PRECONDITION_FAILED_STALE_WRITE, если КП изменилось после чтения.",
+                "summary": "Set or clear the quote's negotiated FX rate",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "description": "A unique integer value identifying this Коммерческое предложение.",
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "CRM"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/QuoteFxOverrideRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/QuoteFxOverrideRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/QuoteFxOverrideRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "security": [
+                    {
+                        "jwtAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "КП после пересчёта (QuoteSerializer)"
+                    },
+                    "400": {
+                        "description": "FX_CURRENCY_REQUIRED / FX_BASE_CURRENCY / FX_CURRENCY_UNKNOWN / FX_RATE_INVALID / FX_RATE_MUST_BE_POSITIVE / FX_OVERRIDE_REASON_REQUIRED / FX_OVERRIDE_REASON_TOO_LONG"
+                    },
+                    "403": {
+                        "description": "ROLE_NOT_PERMITTED"
+                    },
+                    "409": {
+                        "description": "QUOTE_FROZEN"
+                    },
+                    "412": {
+                        "description": "PRECONDITION_FAILED_STALE_WRITE"
+                    }
+                }
+            }
+        },
         "/api/v1/crm/quotes/{id}/generate-pdf/": {
             "post": {
                 "operationId": "crm_quotes_generate_pdf_create",
@@ -13428,6 +13491,160 @@
                 "responses": {
                     "204": {
                         "description": "No response body"
+                    }
+                }
+            }
+        },
+        "/api/v1/finance/deals/{deal_id}/margin-deviation/": {
+            "get": {
+                "operationId": "finance_deals_margin_deviation_retrieve",
+                "description": "GET — отклонение маржи сделки (опорное КП против факта закупки).",
+                "summary": "Deal margin deviation (actual purchase vs quote snapshot)",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "deal_id",
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "Finance"
+                ],
+                "security": [
+                    {
+                        "jwtAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/MarginDeviation"
+                                }
+                            }
+                        },
+                        "description": ""
+                    },
+                    "403": {
+                        "description": "ROLE_NOT_PERMITTED"
+                    }
+                }
+            }
+        },
+        "/api/v1/finance/deals/{deal_id}/purchase-actuals/": {
+            "post": {
+                "operationId": "finance_deals_purchase_actuals_create",
+                "description": "POST — внести/обновить факт закупки по валюте (одна строка на валюту сделки).",
+                "summary": "Record the actual purchase for one currency of the deal",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "deal_id",
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "Finance"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/PurchaseActualRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/PurchaseActualRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/PurchaseActualRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "security": [
+                    {
+                        "jwtAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/MarginDeviation"
+                                }
+                            }
+                        },
+                        "description": ""
+                    },
+                    "400": {
+                        "description": "MARGIN_NO_REFERENCE_QUOTE / PURCHASE_CURRENCY_NOT_IN_QUOTE / PURCHASE_DATE_IN_FUTURE / PURCHASE_AMOUNT_INVALID / PURCHASE_NOTE_TOO_LONG / FX_RATE_INVALID / FX_RATE_MISSING"
+                    },
+                    "403": {
+                        "description": "ROLE_NOT_PERMITTED"
+                    },
+                    "409": {
+                        "description": "MARGIN_NO_REFERENCE_QUOTE"
+                    }
+                }
+            }
+        },
+        "/api/v1/finance/deals/{deal_id}/purchase-actuals/{currency}/": {
+            "delete": {
+                "operationId": "finance_deals_purchase_actuals_destroy",
+                "description": "DELETE — убрать факт закупки по валюте (маржа по этой валюте снова как в КП).",
+                "summary": "Remove the actual purchase for one currency of the deal",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "currency",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "required": true
+                    },
+                    {
+                        "in": "path",
+                        "name": "deal_id",
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "Finance"
+                ],
+                "security": [
+                    {
+                        "jwtAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/MarginDeviation"
+                                }
+                            }
+                        },
+                        "description": ""
+                    },
+                    "403": {
+                        "description": "ROLE_NOT_PERMITTED"
                     }
                 }
             }
@@ -19517,6 +19734,14 @@
                     "deal"
                 ]
             },
+            "FxModeEnum": {
+                "enum": [
+                    "live",
+                    "fixed"
+                ],
+                "type": "string",
+                "description": "* `live` - live\n* `fixed` - fixed"
+            },
             "GenContractRequest": {
                 "type": "object",
                 "properties": {
@@ -20097,6 +20322,164 @@
                     "country_name",
                     "id",
                     "name"
+                ]
+            },
+            "MarginDeviation": {
+                "type": "object",
+                "description": "Отклонение маржи сделки: опорное КП, построчно по валютам, итог. Суммы — строки, UZS.",
+                "properties": {
+                    "deal": {
+                        "type": "integer"
+                    },
+                    "currency": {
+                        "type": "string",
+                        "description": "Валюта всех сумм — UZS."
+                    },
+                    "reference_quote": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/ReferenceQuote"
+                            }
+                        ],
+                        "nullable": true
+                    },
+                    "rows": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/MarginDeviationRow"
+                        }
+                    },
+                    "has_actuals": {
+                        "type": "boolean"
+                    },
+                    "revenue": {
+                        "type": "string",
+                        "description": "Сумма позиций КП без НДС."
+                    },
+                    "quoted_cost": {
+                        "type": "string"
+                    },
+                    "quoted_profit": {
+                        "type": "string"
+                    },
+                    "quoted_margin_percent": {
+                        "type": "string"
+                    },
+                    "actual_cost": {
+                        "type": "string"
+                    },
+                    "actual_profit": {
+                        "type": "string"
+                    },
+                    "actual_margin_percent": {
+                        "type": "string"
+                    },
+                    "deviation_amount": {
+                        "type": "string",
+                        "description": "Прибыль по факту − прибыль по КП, UZS."
+                    },
+                    "deviation_percent_points": {
+                        "type": "string",
+                        "description": "Маржа по факту − маржа по КП, п. п."
+                    },
+                    "deviation_profit_percent": {
+                        "type": "string",
+                        "nullable": true,
+                        "description": "Отклонение в % к прибыли КП; null — прибыль КП 0."
+                    }
+                },
+                "required": [
+                    "currency",
+                    "deal",
+                    "has_actuals",
+                    "reference_quote",
+                    "rows"
+                ]
+            },
+            "MarginDeviationRow": {
+                "type": "object",
+                "properties": {
+                    "currency": {
+                        "type": "string"
+                    },
+                    "lines": {
+                        "type": "integer",
+                        "description": "Строк КП в этой валюте себестоимости."
+                    },
+                    "quoted_amount": {
+                        "type": "string",
+                        "description": "Себестоимость в валюте по КП (цена поставщика + пошлина) × кол-во."
+                    },
+                    "quoted_rate": {
+                        "type": "string",
+                        "nullable": true,
+                        "description": "Курс КП (снимок или договорной)."
+                    },
+                    "quoted_rate_date": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "quoted_cost": {
+                        "type": "string",
+                        "description": "Себестоимость в UZS по КП."
+                    },
+                    "has_actual": {
+                        "type": "boolean"
+                    },
+                    "actual_amount": {
+                        "type": "string",
+                        "nullable": true,
+                        "description": "Фактическая сумма в валюте; null — как в КП."
+                    },
+                    "actual_rate": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "actual_cost": {
+                        "type": "string",
+                        "description": "Себестоимость в UZS по факту (нет факта — как в КП)."
+                    },
+                    "cost_deviation": {
+                        "type": "string",
+                        "description": "actual_cost − quoted_cost, UZS."
+                    },
+                    "purchased_on": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "note": {
+                        "type": "string"
+                    },
+                    "entered_by_name": {
+                        "type": "string"
+                    },
+                    "suggested_rate": {
+                        "type": "string",
+                        "nullable": true,
+                        "description": "Курс справочника на сегодня — подсказка."
+                    },
+                    "suggested_rate_date": {
+                        "type": "string",
+                        "nullable": true
+                    }
+                },
+                "required": [
+                    "actual_amount",
+                    "actual_cost",
+                    "actual_rate",
+                    "cost_deviation",
+                    "currency",
+                    "entered_by_name",
+                    "has_actual",
+                    "lines",
+                    "note",
+                    "purchased_on",
+                    "quoted_amount",
+                    "quoted_cost",
+                    "quoted_rate",
+                    "quoted_rate_date",
+                    "suggested_rate",
+                    "suggested_rate_date"
                 ]
             },
             "MatchCatalogRequestRequest": {
@@ -22384,10 +22767,6 @@
                         "description": "Уникальный системный код (напр. 'USD', 'FCA', 'IN_STOCK')",
                         "nullable": true
                     },
-                    "fx_manual": {
-                        "title": "Ручные курсы КП (FX override)",
-                        "description": "Договорные курсы валют к UZS, заданные вручную {код: курс} — побеждают снимок"
-                    },
                     "tax_country": {
                         "type": "integer",
                         "nullable": true,
@@ -23968,6 +24347,42 @@
                 "type": "string",
                 "description": "* `goods` - goods\n* `service` - service"
             },
+            "PurchaseActualRequest": {
+                "type": "object",
+                "properties": {
+                    "currency": {
+                        "type": "string",
+                        "minLength": 1,
+                        "description": "Валюта себестоимости строк опорного КП (или UZS).",
+                        "maxLength": 8
+                    },
+                    "amount": {
+                        "type": "string",
+                        "nullable": true,
+                        "description": "Фактическая себестоимость в валюте; пусто — как в КП (отклонение только по курсу).",
+                        "maxLength": 32
+                    },
+                    "rate": {
+                        "type": "string",
+                        "nullable": true,
+                        "description": "Фактический курс (UZS за 1 ед.); пусто — курс справочника на дату закупки.",
+                        "maxLength": 32
+                    },
+                    "purchased_on": {
+                        "type": "string",
+                        "format": "date",
+                        "nullable": true,
+                        "description": "Дата закупки; пусто — сегодня."
+                    },
+                    "note": {
+                        "type": "string",
+                        "maxLength": 500
+                    }
+                },
+                "required": [
+                    "currency"
+                ]
+            },
             "Quote": {
                 "type": "object",
                 "properties": {
@@ -24046,6 +24461,7 @@
                         "description": "Замороженные курсы валют себестоимости к UZS на момент расчёта {код: курс}"
                     },
                     "fx_manual": {
+                        "readOnly": true,
                         "title": "Ручные курсы КП (FX override)",
                         "description": "Договорные курсы валют к UZS, заданные вручную {код: курс} — побеждают снимок"
                     },
@@ -24054,6 +24470,29 @@
                         "additionalProperties": {},
                         "description": "Current market rate_to_uzs for every ACTIVE currency, as a {code: \"rate\"} map (UZS = 1).\n\nLets `usePricingMirror` recompute a line whose cost currency is NOT yet in the КП's\nfx_snapshot/fx_manual — instead of showing «пересчёт после сохранения». This is the PUBLIC\nreference rate, NOT the seller's chosen/frozen rate (those stay in fx_snapshot/fx_manual). A\ncurrency with no known rate is OMITTED so the mirror keeps its honest «no rate» marker.\n\nRates come from get_rate_to_uzs, which reads the LOCAL ExchangeRate table only (the CBU\nfetch is a Celery job) — no network call runs in the request path. Currencies are a small\nlookup, so the per-currency read is bounded (Performance Conventions).",
                         "readOnly": true
+                    },
+                    "fx_rates": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/QuoteFxRate"
+                        },
+                        "readOnly": true
+                    },
+                    "fx_mode": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/FxModeEnum"
+                            }
+                        ],
+                        "readOnly": true
+                    },
+                    "fx_fixed_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "readOnly": true,
+                        "nullable": true,
+                        "title": "Курсы зафиксированы",
+                        "description": "Момент фиксации курсов КП (отправка на согласование); пусто — черновик по текущему курсу"
                     },
                     "tax_country": {
                         "type": "integer",
@@ -24240,7 +24679,11 @@
                     "economics",
                     "effective_delivery_lead_time_days",
                     "first_viewed_at",
+                    "fx_fixed_at",
+                    "fx_manual",
                     "fx_market",
+                    "fx_mode",
+                    "fx_rates",
                     "fx_snapshot",
                     "id",
                     "items",
@@ -24487,6 +24930,125 @@
                     "operating_profit",
                     "target_margin_percent",
                     "total_landed_cost"
+                ]
+            },
+            "QuoteFxOverrideInfo": {
+                "type": "object",
+                "description": "Договорной курс финансиста (M1-ERP-08): курс, причина, кто и когда задал.",
+                "properties": {
+                    "rate": {
+                        "type": "string",
+                        "description": "UZS за 1 единицу валюты."
+                    },
+                    "reason": {
+                        "type": "string",
+                        "description": "Причина ручного курса (обязательна)."
+                    },
+                    "set_by_name": {
+                        "type": "string",
+                        "description": "Кто задал курс."
+                    },
+                    "set_at": {
+                        "type": "string",
+                        "nullable": true,
+                        "description": "Когда задан (ISO-8601, Ташкент)."
+                    }
+                },
+                "required": [
+                    "rate",
+                    "reason",
+                    "set_at",
+                    "set_by_name"
+                ]
+            },
+            "QuoteFxOverrideRequest": {
+                "type": "object",
+                "properties": {
+                    "currency": {
+                        "type": "string",
+                        "minLength": 1,
+                        "description": "Код валюты себестоимости (не UZS).",
+                        "maxLength": 8
+                    },
+                    "rate": {
+                        "type": "string",
+                        "nullable": true,
+                        "description": "UZS за 1 единицу валюты (> 0, до 6 знаков после запятой); null или пусто — снять договорной курс.",
+                        "maxLength": 32
+                    },
+                    "reason": {
+                        "type": "string",
+                        "description": "Причина (обязательна, в журнал).",
+                        "maxLength": 500
+                    }
+                },
+                "required": [
+                    "currency",
+                    "reason"
+                ]
+            },
+            "QuoteFxRate": {
+                "type": "object",
+                "description": "Курс КП по одной валюте (M1-ERP-08) — «Курс на <дата>: 1 USD = … UZS (источник)».\n\nТолько для документации схемы (тип фронтенда): строки собирает\n`sales.services.quote_fx.quote_fx_rates`. Видно только с `quote.view_cost_margin`.",
+                "properties": {
+                    "currency": {
+                        "type": "string",
+                        "description": "Код валюты ISO-4217."
+                    },
+                    "rate": {
+                        "type": "string",
+                        "nullable": true,
+                        "description": "Действующий курс КП (договорной или снимок); null — курса нет."
+                    },
+                    "rate_date": {
+                        "type": "string",
+                        "nullable": true,
+                        "description": "Дата действующего курса (YYYY-MM-DD)."
+                    },
+                    "source": {
+                        "type": "string",
+                        "nullable": true,
+                        "description": "CBU / MANUAL (справочник) / OVERRIDE (договорной курс КП)."
+                    },
+                    "snapshot_rate": {
+                        "type": "string",
+                        "nullable": true,
+                        "description": "Курс справочника в снимке КП."
+                    },
+                    "snapshot_rate_date": {
+                        "type": "string",
+                        "nullable": true,
+                        "description": "Дата курса снимка."
+                    },
+                    "snapshot_source": {
+                        "type": "string",
+                        "nullable": true,
+                        "description": "Источник курса снимка."
+                    },
+                    "override": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/QuoteFxOverrideInfo"
+                            }
+                        ],
+                        "nullable": true,
+                        "description": "Договорной курс, если задан."
+                    },
+                    "missing": {
+                        "type": "boolean",
+                        "description": "Курса нет — блокирует согласование, PDF и отправку."
+                    }
+                },
+                "required": [
+                    "currency",
+                    "missing",
+                    "override",
+                    "rate",
+                    "rate_date",
+                    "snapshot_rate",
+                    "snapshot_rate_date",
+                    "snapshot_source",
+                    "source"
                 ]
             },
             "QuoteItem": {
@@ -24870,10 +25432,6 @@
                         "description": "Уникальный системный код (напр. 'USD', 'FCA', 'IN_STOCK')",
                         "nullable": true
                     },
-                    "fx_manual": {
-                        "title": "Ручные курсы КП (FX override)",
-                        "description": "Договорные курсы валют к UZS, заданные вручную {код: курс} — побеждают снимок"
-                    },
                     "tax_country": {
                         "type": "integer",
                         "nullable": true,
@@ -25051,6 +25609,39 @@
                 "required": [
                     "amount",
                     "paid_at"
+                ]
+            },
+            "ReferenceQuote": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "integer"
+                    },
+                    "version": {
+                        "type": "integer"
+                    },
+                    "number": {
+                        "type": "string"
+                    },
+                    "status_code": {
+                        "type": "string"
+                    },
+                    "frozen_at": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "fx_fixed_at": {
+                        "type": "string",
+                        "nullable": true
+                    }
+                },
+                "required": [
+                    "frozen_at",
+                    "fx_fixed_at",
+                    "id",
+                    "number",
+                    "status_code",
+                    "version"
                 ]
             },
             "RejectActRequest": {

@@ -354,6 +354,16 @@ class QuoteLifecycleService:
         if err:
             return None, err
 
+        # M1-ERP-08 «курс на дату КП»: живой черновик пересчитывается по курсу на сегодня ДО гейтов —
+        # согласующий видит ровно те суммы, что уйдут клиенту (курс фиксируется ниже, после гейтов).
+        from sales.services.quote_fx import fix_quote_rates, live_rates_outdated
+
+        if live_rates_outdated(quote):
+            from .pricing import QuoteCalculationService
+
+            QuoteCalculationService.recalculate_quote(quote.pk)
+            quote.refresh_from_db()
+
         # Status + value + loss-prevention gate (see lifecycle_gates.assert_submittable).
         # compute_quote_economics is resolved via this module's global and reused for the
         # approval-chain build below.
@@ -389,6 +399,9 @@ class QuoteLifecycleService:
 
         build_approval_chain(quote, company_id, economics=economics)
         _set_quote_status(quote, QuoteStatusCode.PENDING_APPROVAL)
+        # Курсы фиксируются при выходе из черновика (после смены статуса: пересчёт черновика их бы
+        # снова сделал живыми). Дальше пересчёт берёт курс только из снимка КП.
+        fix_quote_rates(quote, actor)
 
         # Salesforce «no approval rule triggered / only approver is the submitter» pattern: when
         # every step of the freshly-built chain is assigned to the submitter themselves (a solo

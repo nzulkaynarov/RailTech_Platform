@@ -93,7 +93,8 @@ Makefile · .env.example · docs/ (ADR и runbook ERP — M1-ERP-10)
 - Списки — `select_related` / `prefetch_related`, без N+1; дашборды — `aggregate()` с условными `Count`, не `.count()` в цикле; пагинация у всех списков.
 - Запрос не блокирует ASGI: PDF, импорт, ИИ — в Celery; публичные и тяжёлые ответы — 202 + `Retry-After`. Celery-задачи — с `time_limit`/`soft_time_limit`, ретраями и backoff (исключение — ИИ-задача, одна попытка: платный вызов).
 - Загрузки — через валидаторы `core` (размер, тип, расширение, magic-bytes).
-- Деньги — `DecimalField`; каноническая валюта представления из B2B — UZS; курс фиксируется на дату КП (M1-ERP-08). Оптимистичная блокировка на мутациях КП.
+- Деньги — `DecimalField`; каноническая валюта представления — UZS; округление до копейки «0.5 вверх» (`ROUND_HALF_UP`), курс — 6 знаков. Оптимистичная блокировка на мутациях КП (`If-Match` → 412 `PRECONDITION_FAILED_STALE_WRITE`, и на `fx-override`).
+- **Курс на дату КП (M1-ERP-08, сделано).** Курсы к UZS — только `finance.services.fx` (`resolve_rate`; справочник `core.ExchangeRate`, наполняет Beat `master_data.tasks.refresh_exchange_rates` из ЦБ РУз; `master_data.fx` — переходный ре-экспорт). Курс на дату D — последняя строка `rate_date <= D` не старше `FX_RATE_MAX_AGE_DAYS` (7); иначе «курса нет» → `fx_missing` и `FX_RATE_MISSING` на согласовании, PDF и отправке. Снимок на КП (`fx_snapshot` + `fx_snapshot_meta` с датой и источником) ведёт `sales.services.quote_fx`: черновик живёт по курсу на сегодня, курс фиксируется при отправке на согласование (`fx_fixed_at`), возврат в черновик снова делает его живым, новая версия берёт свежий курс; зафиксированное и отправленное КП пересчёт не меняет (PDF, публичная страница, акцепт, счёт). Договорной курс (`fx_manual` + `fx_manual_meta`) — только `POST crm/quotes/{id}/fx-override/` с правом `finance.rates` и причиной, в журнал; через PATCH КП не пишется. Курсы КП видны только с `quote.view_cost_margin` (`fx_rates`); клиенту и в PDF не отдаются. Отклонение маржи при фактической закупке — `finance.DealPurchaseActual` (одна строка на валюту сделки, вручную до M4) и `finance.services.margin_deviation` (формула — в докстринге модуля), эндпоинты `finance/deals/{id}/margin-deviation|purchase-actuals/`; цена клиенту не пересчитывается.
 - Исключения конкретные (`ValidationError`, `OSError`, …), не голый `except Exception`. Функции ≤ 50 строк, файлы ≤ 500 строк (иначе пакет), параметров ≤ 5 (иначе dataclass). Имена описательные.
 - Сериализаторы: вложенное чтение, плоская запись; суффикс `_data` для вложенных представлений. Справочники — наследники `AbstractLookup` (code, name, sort_order, is_active).
 - Линтеры и форматирование — как в B2B (black 120, isort profile=black, flake8); смена инструментов — отдельным решением, не попутно.
@@ -147,7 +148,7 @@ Makefile · .env.example · docs/ (ADR и runbook ERP — M1-ERP-10)
 
 ## 6. Роли бэк-офиса (ARCHITECTURE §7, §9; BUSINESS §11; M1-ERP-05 — сделано)
 
-Каталог прав — `accounts.constants.Permission` (21 код, разделы `PERMISSION_GROUPS`); роль — `accounts.CompanyRole`
+Каталог прав — `accounts.constants.Permission` (22 кода, разделы `PERMISSION_GROUPS`); роль — `accounts.CompanyRole`
 (набор кодов); у сотрудника **несколько ролей** (`CompanyMember.company_roles`, M2M), действует **объединение** прав.
 Чтение открыто любому сотруднику своей компании; коды — это действия.
 
@@ -159,7 +160,7 @@ Makefile · .env.example · docs/ (ADR и runbook ERP — M1-ERP-10)
 | Каталог | `catalog.manage`, `catalog.publish` |
 | Снабжение | `supply.manage` (поставщики и их предложения; M4 добавит заказы поставщикам и приёмку) |
 | Исполнение и логистика | `fulfillment.manage` (отгрузки, накладные), `fulfillment.act` (акты: выставить из счёта, переоформить, отменить, напомнить) |
-| Финансы | `finance.invoice` (счета клиентам), `finance.payment` (фиксация оплат) |
+| Финансы | `finance.invoice` (счета клиентам), `finance.payment` (фиксация оплат), `finance.rates` (договорной курс КП с причиной — `fx-override`; факт закупки для отклонения маржи — вместе с `supply.manage`; M1-ERP-08) |
 | Настройки и команда | `settings.edit` (реквизиты, бланк, шаблоны документов, нумерация, формулировки), `settings.charge_templates` (шаблоны статей расходов КП), `team.manage` (команда и роли) |
 | Данные | `data.export` |
 
@@ -171,7 +172,7 @@ Makefile · .env.example · docs/ (ADR и runbook ERP — M1-ERP-10)
 | `CALCULATION` | Расчёт | `deal.manage`, `quote.build`, `quote.edit_pricing`, `quote.view_cost_margin`, `quote.send`, `quote.review`, `contract.manage` |
 | `CATALOG_SUPPLY` | Каталог и закупки | `catalog.manage`, `catalog.publish`, `supply.manage`, `quote.view_cost_margin` |
 | `FULFILLMENT` | Исполнение и логистика | `fulfillment.manage`, `fulfillment.act` |
-| `FINANCE` | Финансы | `finance.invoice`, `finance.payment`, `quote.view_cost_margin`, `data.export` |
+| `FINANCE` | Финансы | `finance.invoice`, `finance.payment`, `finance.rates`, `quote.view_cost_margin`, `data.export` |
 | `HEAD` | Руководитель | все коды (финальное утверждение КП, подпись договора, команда, настройки) |
 | `VIEWER` | Наблюдатель | — (только просмотр) |
 

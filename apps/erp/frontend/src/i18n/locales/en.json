@@ -518,10 +518,6 @@
       "deliveryLeadTimeHelp": "Overrides the lead time for the whole quote. Empty — use the max across lines",
       "deliveryNote": "Delivery note",
       "deliveryNotePlaceholder": "e.g. \"in stock\" / \"made to order\"",
-      "fxOverride": "Exchange rates (manual override)",
-      "fxOverrideHelp": "The CBU rate is frozen by the engine. Set your own if needed — soum per 1 unit of currency",
-      "fxCbuRate": "CBU rate: {{rate}}",
-      "fxOverrideFor": "Rate for {{code}}",
       "currencyHelp": "The quote is denominated in the national currency (UZS) — all amounts are computed in UZS. Per-line cost currency can differ (below)."
     },
     "marginApplied": "Markup",
@@ -614,7 +610,37 @@
       "matchCount": "Found: {{count}} of {{total}}",
       "noMatches": "No matches. Quote lines are hidden by the filter — clear the search to see them all."
     },
-    "hsCodePlaceholder": "e.g. 8607 19 100 0"
+    "hsCodePlaceholder": "e.g. 8607 19 100 0",
+    "fx": {
+      "title": "Rate as of the quote date",
+      "line": "Rate on {{date}}: 1 {{currency}} = {{rate}} UZS",
+      "missing": "No {{currency}} rate for the quote date (latest central bank rate is older than 7 days) — submitting for approval, PDF and sending are blocked",
+      "modeLive": "Draft: today's rate",
+      "modeFixed": "Rate fixed",
+      "liveHelp": "While the quote is a draft it uses today's rate; the rate is fixed when the quote is submitted for approval and never changes after that.",
+      "fixedHelp": "Rate fixed on {{date}} — a new central bank rate does not change this quote, its PDF or invoice.",
+      "fixedHelpNoDate": "Rate fixed — a new central bank rate does not change this quote, its PDF or invoice.",
+      "overrideInfo": "Negotiated rate: {{reason}} · {{by}} · central bank {{cbu}}",
+      "changeRate": "Change rate",
+      "setRate": "Set rate",
+      "dialogTitle": "Negotiated {{currency}} rate",
+      "dialogDescription": "The rate replaces the central bank rate in this quote and the quote is recalculated. The reason goes to the quote log.",
+      "rateLabel": "UZS per 1 {{currency}}",
+      "rateInvalid": "The rate must be a positive number with up to 6 decimals",
+      "reasonLabel": "Reason",
+      "reasonPlaceholder": "E.g. rate agreed in the client contract",
+      "reasonHelp": "Required. Visible in the quote log.",
+      "saveOverride": "Save rate",
+      "clearOverride": "Back to central bank rate",
+      "overrideSaved": "Negotiated rate saved, quote recalculated",
+      "overrideCleared": "Central bank rate restored, quote recalculated",
+      "source": {
+        "CBU": "Central Bank of Uzbekistan",
+        "MANUAL": "rate table",
+        "OVERRIDE": "negotiated rate",
+        "BASE": "base currency"
+      }
+    }
   },
   "timeline": {
     "title": "History"
@@ -2207,6 +2233,19 @@
     "ONLY_COMPANY_OWNER_CAN_APPLY": "Only a company administrator can file an application.",
     "PAYMENT_EXCEEDS_BALANCE_DUE": "The amount is larger than the balance due. Enter an amount within the balance — overpayment is not accepted.",
     "REQUEST_HAS_NO_ITEMS": "The request has no line items — there is nothing for the seller to quote. Add at least one and submit again.",
+    "QUOTE_FROZEN": "The quote has already been sent — create a new version to change it",
+    "FX_CURRENCY_REQUIRED": "Select a currency",
+    "FX_BASE_CURRENCY": "UZS is the base currency — no rate is set for it",
+    "FX_CURRENCY_UNKNOWN": "This currency is not in the currency list",
+    "FX_RATE_INVALID": "The rate must be a positive number with up to 6 decimals",
+    "FX_RATE_MUST_BE_POSITIVE": "The rate must be greater than zero",
+    "FX_OVERRIDE_REASON_REQUIRED": "Enter the reason for the negotiated rate",
+    "FX_OVERRIDE_REASON_TOO_LONG": "The reason is longer than 500 characters",
+    "MARGIN_NO_REFERENCE_QUOTE": "Actual purchases can be entered after the quote is sent",
+    "PURCHASE_CURRENCY_NOT_IN_QUOTE": "The quote has no lines in this currency",
+    "PURCHASE_DATE_IN_FUTURE": "The purchase date cannot be in the future",
+    "PURCHASE_AMOUNT_INVALID": "The amount must be zero or more with up to 2 decimals",
+    "PURCHASE_NOTE_TOO_LONG": "The comment is longer than 500 characters",
     "LIST_PRICE_CURRENCY_REQUIRED": "Choose the list price currency",
     "BAD_PRICE_VISIBILITY": "Unknown price visibility policy",
     "BAD_PUBLISH_THRESHOLD": "Publishing threshold must be between 1 and 100%",
@@ -2271,7 +2310,8 @@
     "settings_edit": "Edit company details, templates & numbering",
     "settings_charge_templates": "Maintain quote cost-line templates",
     "team_manage": "Manage team & roles",
-    "data_export": "Export data"
+    "data_export": "Export data",
+    "finance_rates": "Change quote rates and enter actual purchases"
   },
   "quoteStatuses": {
     "draft": "Draft",
@@ -2522,6 +2562,14 @@
         "title": "Request submitted to supplier (RFQ)",
         "detail_one": "Deal #{{deal_id}}: {{count}} line",
         "detail_other": "Deal #{{deal_id}}: {{count}} lines"
+      },
+      "purchase_actual_set": {
+        "title": "Actual purchase entered",
+        "detail": "{{currency}}: rate {{rate}}"
+      },
+      "purchase_actual_removed": {
+        "title": "Actual purchase removed",
+        "detail": "{{currency}}"
       }
     },
     "quote": {
@@ -2601,6 +2649,18 @@
       "link_revoked": {
         "title": "Public link revoked",
         "detail": "Quote v{{version}}"
+      },
+      "fx_fixed": {
+        "title": "Quote rates fixed",
+        "detail": "Quote v{{version}}: {{rates}}"
+      },
+      "fx_overridden": {
+        "title": "Negotiated quote rate set",
+        "detail": "Quote v{{version}}: 1 {{currency}} = {{rate}} UZS — {{reason}}"
+      },
+      "fx_override_cleared": {
+        "title": "Negotiated quote rate removed",
+        "detail": "Quote v{{version}}: {{currency}} back to the central bank rate — {{reason}}"
       }
     },
     "contract": {
@@ -3438,6 +3498,41 @@
       "leadTime_many": "{{count}} days lead time",
       "leadTime_other": "{{count}} days lead time"
     }
+  },
+  "dealMargin": {
+    "title": "Deal margin: quote vs actual purchase",
+    "description": "Compared with quote v{{version}} ({{number}}). The client price is not recalculated — only the margin changes.",
+    "quoted": "Quoted margin",
+    "actual": "Actual margin",
+    "deviation": "Deviation",
+    "profit": "profit {{amount}}",
+    "points": "{{points}} pp",
+    "noActuals": "No actual purchase entered yet — showing the quoted margin.",
+    "lines_one": "{{count}} line",
+    "lines_other": "{{count}} lines",
+    "actualEntered": "actual of {{date}}",
+    "asQuoted": "as quoted",
+    "enterActual": "Enter actual",
+    "edit": "Edit",
+    "remove": "Remove actual {{currency}} purchase",
+    "quotedCost": "Quoted cost",
+    "actualCost": "Actual cost",
+    "costDeviation": "Cost difference",
+    "footnote": "Cost is the supplier price plus duty, in UZS; revenue is the quote lines excl. VAT. Actual purchases are entered by finance or purchasing.",
+    "dialogTitle": "Actual {{currency}} purchase",
+    "dialogDescription": "Quoted: {{amount}} at rate {{rate}}.",
+    "amountLabel": "Actual cost, {{currency}}",
+    "amountHelp": "Empty — as quoted (rate deviation only).",
+    "amountInvalid": "The amount must be zero or more with up to 2 decimals",
+    "rateLabel": "Actual rate: UZS per 1 {{currency}}",
+    "rateHelp": "Central bank {{rate}} on {{date}}. Empty — the table rate on the purchase date.",
+    "rateHelpNoRate": "Empty — the table rate on the purchase date.",
+    "dateLabel": "Purchase date",
+    "dateHelp": "Empty date means today.",
+    "noteLabel": "Comment",
+    "notePlaceholder": "Supplier invoice, payment",
+    "saved": "Actual purchase saved",
+    "removed": "Actual purchase removed"
   },
   "catalogPolicy": {
     "title": "Catalog policy",

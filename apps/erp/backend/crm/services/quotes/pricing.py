@@ -6,7 +6,7 @@ unchanged. Depends only on the leaf ``_shared`` helpers, so no circular import w
 the lifecycle / bulk / access submodules.
 """
 
-from decimal import ROUND_HALF_UP, Decimal, InvalidOperation
+from decimal import ROUND_HALF_UP, Decimal
 
 from django.db import models, transaction
 
@@ -54,20 +54,6 @@ def resolve_effective_margin(item, quote_margin_percent=None) -> Decimal:
         return item.quote.margin_percent or Decimal("0")
     # Позиция ещё не привязана к КП и КП-маржа не передана — наследовать нечего.
     return Decimal("0")
-
-
-def _positive_fx_rate(value):
-    """Parse a stored FX rate; return Decimal ONLY if strictly positive, else None.
-    A stray 0 / negative / non-numeric (e.g. a hand-edited fx_manual) is ignored rather than
-    used to zero or flip a line's landed cost (adversarial HOLE 1). The serializer rejects such
-    values on write; this is the defensive read for any pre-existing bad data."""
-    if value in (None, ""):
-        return None
-    try:
-        rate = Decimal(str(value))
-    except (InvalidOperation, ValueError, TypeError):
-        return None
-    return rate if rate > 0 else None
 
 
 class QuoteCalculationService:
@@ -144,47 +130,17 @@ class QuoteCalculationService:
 
     @staticmethod
     def _resolve_fx_rate_map(quote, items) -> dict:
-        """Resolve {currency_code: Decimal rate_to_uzs} for every DISTINCT line cost
-        currency on the КП, ONCE (no per-line lookup). Priority per currency:
-          1. quote.fx_manual[code]   — КП-level manual override (договорной курс), wins.
-          2. quote.fx_snapshot[code] — already frozen on a prior recalc (no market drift).
-          3. master_data.fx.get_rate_to_uzs(code) — current market rate; WRITTEN BACK into
-             fx_snapshot so it freezes from now on.
-        UZS (and a missing currency) → rate 1. Mutates quote.fx_snapshot in place; the
-        caller persists it. Returns {code: Decimal}.
-        """
-        from master_data.fx import get_rate_to_uzs
+        """{код: курс к UZS} для всех валют себестоимости строк — один раз на пересчёт (без N+1).
 
-        snapshot = quote.fx_snapshot if isinstance(quote.fx_snapshot, dict) else {}
-        manual = quote.fx_manual if isinstance(quote.fx_manual, dict) else {}
-        rate_map: dict = {}
-        codes = {(item.frozen_currency.code if item.frozen_currency_id else "UZS").upper() for item in items}
-        for code in codes:
-            if code in ("UZS", ""):
-                rate_map[code] = Decimal("1")
-                continue
-            manual_rate = _positive_fx_rate(manual.get(code))
-            if manual_rate is not None:
-                rate_map[code] = manual_rate
-                continue
-            snapshot_rate = _positive_fx_rate(snapshot.get(code))
-            if snapshot_rate is not None:
-                rate_map[code] = snapshot_rate
-                continue
-            market = get_rate_to_uzs(code)
-            if market is None:
-                # KP-01: NO rate available. Use 1 as an in-memory placeholder so recalc doesn't
-                # crash — but DO NOT freeze it into the snapshot. Freezing a fabricated 1 would
-                # understate cost ~12000× AND permanently shadow the real rate once it lands in
-                # the DB. compute_quote_economics().fx_missing flags it; submit/send is blocked.
-                rate_map[code] = Decimal("1")
-                continue
-            resolved = Decimal(str(market))
-            rate_map[code] = resolved
-            # Freeze the REAL market rate onto the КП so the total can't drift on the next recalc.
-            snapshot[code] = str(resolved)
-        quote.fx_snapshot = snapshot
-        return rate_map
+        Правило «курс на дату КП» (M1-ERP-08) — в `sales.services.quote_fx.resolve_quote_rate_map`:
+        договорной курс (`fx_manual`) побеждает; живой черновик берёт курс на сегодня и пересобирает
+        снимок; зафиксированное КП (на согласовании и дальше) — только снимок. UZS и «курса нет» — 1
+        (заглушка; «курса нет» не попадает в снимок, `fx_missing` блокирует согласование и отправку).
+        Меняет `fx_snapshot` / `fx_snapshot_meta` / `fx_fixed_at` в памяти, сохраняет вызывающий.
+        """
+        from sales.services.quote_fx import line_currency_codes, resolve_quote_rate_map
+
+        return resolve_quote_rate_map(quote, line_currency_codes(items))
 
     @classmethod
     @transaction.atomic
@@ -195,7 +151,9 @@ class QuoteCalculationService:
         """
         # of=("self",): lock only the quote row — select_related pulls the NULLABLE
         # delivery_basis via an outer join, and Postgres can't FOR UPDATE that side.
-        quote = Quote.objects.select_for_update(of=("self",)).select_related("delivery_basis").get(pk=quote_id)
+        quote = (
+            Quote.objects.select_for_update(of=("self",)).select_related("delivery_basis", "status").get(pk=quote_id)
+        )
         items = list(quote.items.select_related("product__domain_type", "frozen_currency").all())
 
         # 0. Resolve the FX rate map ONCE for all distinct line cost currencies and freeze
@@ -291,8 +249,10 @@ class QuoteCalculationService:
             "charges_total",
             "vat_amount",
             "total_incl_vat",
-            # FX snapshot freezes any newly-resolved market rate so the total can't drift.
+            # Курс на дату КП (M1-ERP-08): снимок курсов, их даты и источники, момент фиксации.
             "fx_snapshot",
+            "fx_snapshot_meta",
+            "fx_fixed_at",
             "updated_at",
         ]
         # PDF freshness (invalidate-on-write, Odoo model): the rendered file is a CACHE of this
@@ -330,27 +290,12 @@ def compute_quote_economics(quote) -> dict:
     charges_total = quote.charges_total or Decimal("0")
     tax_exclusive = subtotal + charges_total
 
-    # FX guard (KP-01): distinct non-UZS line currencies with NO resolvable rate (neither a
-    # manual override, a frozen snapshot, nor a current market rate). Such a line was priced at
-    # the in-memory placeholder rate 1 → landed cost silently understated. This list blocks
-    # submit/send and warns the manager — we never let a fabricated rate 1 freeze into the КП.
-    from master_data.fx import get_rate_to_uzs
+    # FX guard (KP-01, M1-ERP-08): валюты строк без курса — ни договорного, ни в снимке, ни в
+    # справочнике на дату КП (не старше FX_RATE_MAX_AGE_DAYS). Такая строка посчитана по заглушке 1 →
+    # себестоимость занижена; список блокирует согласование, PDF и отправку (FX_RATE_MISSING).
+    from sales.services.quote_fx import line_currency_codes, missing_quote_currencies
 
-    manual = quote.fx_manual if isinstance(quote.fx_manual, dict) else {}
-    snapshot = quote.fx_snapshot if isinstance(quote.fx_snapshot, dict) else {}
-    fx_missing: list = []
-    _seen_ccy: set = set()
-    for line in items:
-        ccy = (line.frozen_currency.code if line.frozen_currency_id else "UZS").upper()
-        if ccy in ("UZS", "") or ccy in _seen_ccy:
-            continue
-        _seen_ccy.add(ccy)
-        # A POSITIVE manual override or frozen snapshot satisfies the rate (a stray 0/negative
-        # is ignored — HOLE 1). Otherwise fall back to the market; None there → genuinely missing.
-        if _positive_fx_rate(manual.get(ccy)) is not None or _positive_fx_rate(snapshot.get(ccy)) is not None:
-            continue
-        if get_rate_to_uzs(ccy) is None:
-            fx_missing.append(ccy)
+    fx_missing = missing_quote_currencies(quote, line_currency_codes(items))
 
     gross_profit = subtotal - total_landed_cost
     gross_margin_pct = (gross_profit / subtotal * Decimal("100")) if subtotal > 0 else Decimal("0")

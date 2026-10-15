@@ -56,12 +56,16 @@ export const quotesApi = {
 			| 'valid_until'
 			| 'quote_currency'
 			| 'cost_currency_default'
-			| 'fx_manual'
 			| 'delivery_lead_time_days'
 			| 'delivery_note'
 		>>,
 	) => {
 		const response = await apiClient.patch<Quote>(`crm/quotes/${id}/`, data);
+		return response.data;
+	},
+	// M1-ERP-08: договорной курс КП (finance.rates, причина обязательна); rate=null — вернуть курс ЦБ.
+	setQuoteFxOverride: async (id: number, data: { currency: string; rate: string | null; reason: string }) => {
+		const response = await apiClient.post<Quote>(`crm/quotes/${id}/fx-override/`, data);
 		return response.data;
 	},
 	// Re-pull the seller company's CURRENT defaults (VAT / margin / basis / validity /
