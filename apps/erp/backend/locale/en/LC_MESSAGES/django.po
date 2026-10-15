@@ -6694,3 +6694,33 @@ msgstr "If you did not sign up for the platform, simply ignore this email."
 
 #~ msgid "Ставка НДС по умолчанию для данной страны"
 #~ msgstr "Default VAT rate for this country"
+
+msgid "Приглашение в личный кабинет «%(company)s»"
+msgstr "Invitation to «%(company)s» client portal"
+
+msgid "Личный кабинет клиента"
+msgstr "Client portal"
+
+msgid "Вас пригласили в личный кабинет компании «%(company)s» на платформе %(platform)s."
+msgstr "You have been invited to the client portal of «%(company)s» on %(platform)s."
+
+msgid "Вас пригласили в личный кабинет компании <strong>«%(company)s»</strong> на платформе <strong>%(platform)s</strong>."
+msgstr "You have been invited to the client portal of <strong>«%(company)s»</strong> on <strong>%(platform)s</strong>."
+
+msgid "В личном кабинете вы можете рассматривать и принимать коммерческие предложения, согласовывать договоры, отслеживать поставки и скачивать документы онлайн."
+msgstr "In the client portal you can review and accept quotes, sign contracts, track shipments, and download documents online."
+
+msgid "Для входа в личный кабинет перейдите по ссылке:"
+msgstr "To log in to your client portal, follow the link:"
+
+msgid "Войти в личный кабинет"
+msgstr "Log in to client portal"
+
+msgid "Вы также можете войти через Telegram:"
+msgstr "You can also log in via Telegram:"
+
+msgid "Ссылка действительна в течение 24 часов."
+msgstr "The link is valid for 24 hours."
+
+msgid "Ссылка действительна в течение 24 часов. Если вы не ожидали это приглашение, просто проигнорируйте письмо."
+msgstr "The link is valid for 24 hours. If you did not expect this invitation, please ignore this email."

@@ -42,6 +42,7 @@ from portal.serializers import (
     TeamMemberSerializer,
     TelegramAuthSerializer,
 )
+from portal.services.invitation import invite_contact_to_portal
 from portal.services.magic_link import exchange_magic_link, request_magic_link
 from portal.services.telegram_auth import authenticate_telegram_user
 from rest_framework import status
@@ -1240,8 +1241,12 @@ class TeamInviteView(BasePortalView):
             invited_at=timezone.now(),
         )
 
-        # Если приглашение содержит email, высылаем magic link
-        if email:
-            request_magic_link(email)
+        # Отправляем приглашение по выбранным каналам
+        invite_contact_to_portal(
+            contact=contact,
+            actor=getattr(request, "portal_contact", None),
+            channel=pref_channel,
+            language=contact.language,
+        )
 
         return Response(TeamMemberSerializer(contact).data, status=status.HTTP_201_CREATED)

@@ -47,6 +47,12 @@ SAMPLE_CONTEXTS: dict[str, dict] = {
         "first_name": "Алиса",
         "reset_url": "https://erp.example.com/reset-password?uid=NDA&token=sample-token",
     },
+    "portal_invitation": {
+        "contact_name": "Алиса",
+        "company_name": "ООО «Покупатель»",
+        "invite_url": "https://cabinet.example.com/auth/magic/sample-token",
+        "telegram_url": "https://t.me/sample_bot?start=invite_sample-token",
+    },
 }
 
 # Fallback context for keys we don't have a curated sample for (e.g. a brand-new

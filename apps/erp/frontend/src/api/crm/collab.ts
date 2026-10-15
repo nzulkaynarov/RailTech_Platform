@@ -8,7 +8,7 @@
 
 import { apiClient } from '../client';
 import { PaginatedResponse } from '../types';
-import type { Contact, OfflineClientPayload, TimelineEntry } from './types';
+import type { Contact, ContactInviteResponse, OfflineClientPayload, TimelineEntry } from './types';
 
 export const collabApi = {
 	getTaskStatus: async (taskId: string) => {
@@ -39,6 +39,11 @@ export const collabApi = {
 	// CONTACT_NEEDS_EMAIL_OR_PHONE / ONLY_SELLER_CAN_CREATE_CLIENTS (apiErrors.* map).
 	createOfflineClient: async (payload: OfflineClientPayload) => {
 		const response = await apiClient.post<Contact>('accounts/contacts/', payload);
+		return response.data;
+	},
+	// Пригласить контакт клиента в личный кабинет (M2-ERP-02)
+	inviteContact: async (contactId: number, payload?: { channel?: 'email' | 'telegram' | 'both'; language?: string }) => {
+		const response = await apiClient.post<ContactInviteResponse>(`accounts/contacts/${contactId}/invite/`, payload || {});
 		return response.data;
 	},
 };

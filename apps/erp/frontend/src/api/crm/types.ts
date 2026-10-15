@@ -417,7 +417,24 @@ export interface Contact {
 	phone?: string;
 	position?: string;
 	is_primary?: boolean;
+	telegram_user_id?: number | null;
+	telegram_username?: string;
+	language?: 'ru' | 'uz' | 'en';
+	preferred_channel?: 'email' | 'telegram' | 'both';
+	can_act?: boolean;
+	invited_at?: string | null;
+	last_login_at?: string | null;
 	created_at: string;
+}
+
+export interface ContactInviteResponse {
+	ok: boolean;
+	contact_id: number;
+	channel: string;
+	email_sent: boolean;
+	invite_url: string;
+	telegram_url: string | null;
+	invited_at: string;
 }
 
 /** «Завести оффлайн-клиента» — company + contact in one step (flat write). */
@@ -428,4 +445,8 @@ export interface OfflineClientPayload {
 	email?: string;
 	phone?: string;
 	position?: string;
+	can_act?: boolean;
+	language?: 'ru' | 'uz' | 'en';
+	preferred_channel?: 'email' | 'telegram' | 'both';
+	telegram_username?: string;
 }

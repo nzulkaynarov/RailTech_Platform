@@ -136,6 +136,15 @@ TEMPLATE_CASES = [
             "public_link": "https://app.example.com/d/tok",
         },
     ),
+    (
+        "portal_invitation",
+        {
+            "contact_name": "Алиса",
+            "company_name": "Beta LLC",
+            "invite_url": "https://cabinet.example.com/auth/magic/tok",
+            "telegram_url": "https://t.me/test_bot?start=invite_tok",
+        },
+    ),
 ]
 
 
@@ -260,6 +269,7 @@ class EmailLinkIntegrityTests(TestCase):
         ("setup_password", "setup_url"),
         ("reset_password", "reset_url"),
         ("invite_member", "setup_url"),
+        ("portal_invitation", "invite_url"),
     ]
 
     def test_plaintext_query_links_are_not_html_escaped(self):

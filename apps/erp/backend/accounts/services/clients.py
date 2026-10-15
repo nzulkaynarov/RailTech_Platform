@@ -59,6 +59,10 @@ def create_offline_client(
     email: str = "",
     phone: str = "",
     position: str = "",
+    can_act: bool = True,
+    language: str = "ru",
+    preferred_channel: str = "email",
+    telegram_username: str = "",
 ) -> Tuple[Optional[dict], Optional[str]]:
     """Create (or reuse) an offline client company + its primary contact.
 
@@ -70,6 +74,7 @@ def create_offline_client(
     inn = (inn or "").strip()
     email = (email or "").strip()
     phone = (phone or "").strip()
+    telegram_username = (telegram_username or "").strip().lstrip("@")
     # Client books belong to seller teams; a non-seller would create an orphan company
     # invisible even to themselves (seller_clients scoping) — refuse instead.
     if not _seller_company_ids(seller):
@@ -107,6 +112,10 @@ def create_offline_client(
             position=position,
             is_primary=not company.contacts.filter(is_primary=True).exists(),
             created_by=seller,
+            can_act=can_act,
+            language=language if language in ("ru", "uz", "en") else "ru",
+            preferred_channel=preferred_channel if preferred_channel in ("email", "telegram", "both") else "email",
+            telegram_username=telegram_username,
         )
 
     return {"company": company, "contact": contact, "company_created": company_created}, None

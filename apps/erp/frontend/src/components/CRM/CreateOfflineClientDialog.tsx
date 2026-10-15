@@ -13,6 +13,8 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useCreateOfflineClient } from '@/hooks/useCRM';
 import type { Contact } from '@/api/crmApi';
 import { translateApiError } from '@/lib/apiError';
@@ -38,10 +40,13 @@ export function CreateOfflineClientDialog({ open, onOpenChange, onCreated }: Cre
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
   const [position, setPosition] = useState('');
+  const [telegramUsername, setTelegramUsername] = useState('');
+  const [canAct, setCanAct] = useState(true);
+  const [preferredChannel, setPreferredChannel] = useState<'email' | 'telegram' | 'both'>('email');
   const createMut = useCreateOfflineClient();
 
   const requiredFilled = companyName.trim().length > 0 && contactName.trim().length > 0;
-  const hasReachability = email.trim().length > 0 || phone.trim().length > 0;
+  const hasReachability = email.trim().length > 0 || phone.trim().length > 0 || telegramUsername.trim().length > 0;
   const canSubmit = requiredFilled && hasReachability && !createMut.isPending;
 
   function resetForm() {
@@ -51,6 +56,9 @@ export function CreateOfflineClientDialog({ open, onOpenChange, onCreated }: Cre
     setEmail('');
     setPhone('');
     setPosition('');
+    setTelegramUsername('');
+    setCanAct(true);
+    setPreferredChannel('email');
   }
 
   async function submit(e: FormEvent) {
@@ -64,6 +72,9 @@ export function CreateOfflineClientDialog({ open, onOpenChange, onCreated }: Cre
         email: email.trim() || undefined,
         phone: phone.trim() || undefined,
         position: position.trim() || undefined,
+        telegram_username: telegramUsername.trim().replace(/^@/, '') || undefined,
+        can_act: canAct,
+        preferred_channel: preferredChannel,
       });
       toast.success(t('counterparties.dialog.created'));
       onOpenChange(false);
@@ -145,6 +156,47 @@ export function CreateOfflineClientDialog({ open, onOpenChange, onCreated }: Cre
                 onChange={(e) => setPosition(e.target.value)}
                 maxLength={255}
               />
+            </div>
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <div className="space-y-1.5">
+                <Label htmlFor="offline-client-telegram">{t('counterparties.dialog.telegramUsername')}</Label>
+                <Input
+                  id="offline-client-telegram"
+                  placeholder="@username"
+                  value={telegramUsername}
+                  onChange={(e) => setTelegramUsername(e.target.value)}
+                  maxLength={100}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="offline-client-channel">{t('counterparties.dialog.channel')}</Label>
+                <Select
+                  value={preferredChannel}
+                  onValueChange={(v: 'email' | 'telegram' | 'both') => setPreferredChannel(v)}
+                >
+                  <SelectTrigger id="offline-client-channel" className="w-full">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="email">{t('counterparties.dialog.channelEmail')}</SelectItem>
+                    <SelectItem value="telegram">{t('counterparties.dialog.channelTelegram')}</SelectItem>
+                    <SelectItem value="both">{t('counterparties.dialog.channelBoth')}</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="flex items-center space-x-2 pt-1">
+              <Checkbox
+                id="offline-client-can-act"
+                checked={canAct}
+                onCheckedChange={(checked) => setCanAct(!!checked)}
+              />
+              <Label
+                htmlFor="offline-client-can-act"
+                className="text-sm font-normal cursor-pointer"
+              >
+                {t('counterparties.dialog.canAct')}
+              </Label>
             </div>
             {!canSubmit && !createMut.isPending && (
               <p className="text-xs text-muted-foreground">{t('counterparties.dialog.hint')}</p>

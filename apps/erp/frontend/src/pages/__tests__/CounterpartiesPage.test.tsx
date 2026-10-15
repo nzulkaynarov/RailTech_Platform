@@ -5,6 +5,7 @@ import { CounterpartiesPage } from '../CounterpartiesPage';
 import { groupContactsByCompany } from '@/lib/clientBook';
 import { crmApi, type Contact } from '@/api/crmApi';
 import { renderWithProviders } from '@/test/renderWithProviders';
+import { useUserStore } from '@/store/userStore';
 
 // Mock at the API-client layer: the real useContacts / useCompanyTimeline react-query hooks
 // run against these mocks (never the network). Книга клиентов строится по контактам
@@ -13,7 +14,12 @@ vi.mock('@/api/crmApi', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/api/crmApi')>();
   return {
     ...actual,
-    crmApi: { ...actual.crmApi, getContacts: vi.fn(), getTimeline: vi.fn() },
+    crmApi: {
+      ...actual.crmApi,
+      getContacts: vi.fn(),
+      getTimeline: vi.fn(),
+      inviteContact: vi.fn(),
+    },
   };
 });
 
@@ -26,6 +32,7 @@ function contact(overrides: Partial<Contact> & { id: number; company: number }):
     phone: '',
     position: '',
     is_primary: false,
+    can_act: true,
     created_at: '2026-07-01T10:00:00Z',
     ...overrides,
   };
@@ -33,7 +40,7 @@ function contact(overrides: Partial<Contact> & { id: number; company: number }):
 
 const CONTACTS: Contact[] = [
   contact({ id: 1, company: 10, company_name: 'ООО Магистраль', name: 'Алишер', phone: '+998901112233', is_primary: true }),
-  contact({ id: 2, company: 10, company_name: 'ООО Магистраль', name: 'Дилноза', email: 'd@example.com', created_at: '2026-07-02T10:00:00Z' }),
+  contact({ id: 2, company: 10, company_name: 'ООО Магистраль', name: 'Дилноза', email: 'd@example.com', invited_at: '2026-07-02T10:00:00Z', created_at: '2026-07-02T10:00:00Z' }),
   contact({ id: 3, company: 20, company_name: 'Оффлайн Клиент', company_is_registered: false, name: 'Бахтиёр', phone: '+998907776655' }),
 ];
 
@@ -60,6 +67,18 @@ describe('CounterpartiesPage', () => {
   beforeEach(() => {
     vi.mocked(crmApi.getContacts).mockResolvedValue(CONTACTS);
     vi.mocked(crmApi.getTimeline).mockResolvedValue([]);
+    vi.mocked(crmApi.inviteContact).mockResolvedValue({
+      ok: true,
+      contact_id: 1,
+      channel: 'email',
+      email_sent: true,
+      invite_url: 'http://localhost:5174/auth/magic/test',
+      telegram_url: null,
+      invited_at: '2026-10-15T12:00:00Z',
+    });
+    useUserStore.setState({
+      capabilities: { permissions: ['deal.manage'] },
+    });
   });
 
   // ResponsiveDataTable renders BOTH a desktop table and a mobile stacked list
@@ -84,5 +103,36 @@ describe('CounterpartiesPage', () => {
     await waitFor(() => expect(screen.getByText('Контакты')).toBeInTheDocument());
     expect(screen.getAllByText('Дилноза').length).toBeGreaterThanOrEqual(1);
     expect(screen.getByText('Основной')).toBeInTheDocument();
+  });
+
+  it('shows invite button with deal.manage permission and handles invite click', async () => {
+    renderWithProviders(<CounterpartiesPage />);
+    fireEvent.click((await screen.findAllByText('ООО Магистраль'))[0]);
+    await waitFor(() => expect(screen.getByText('Контакты')).toBeInTheDocument());
+
+    // Alisher is not invited yet -> «Пригласить в кабинет»
+    const inviteBtn = screen.getByRole('button', { name: /Пригласить в кабинет/ });
+    expect(inviteBtn).toBeInTheDocument();
+
+    // Dilnoza is already invited -> «Пригласить повторно»
+    const reinviteBtn = screen.getByRole('button', { name: /Пригласить повторно/ });
+    expect(reinviteBtn).toBeInTheDocument();
+
+    fireEvent.click(inviteBtn);
+    await waitFor(() => {
+      expect(crmApi.inviteContact).toHaveBeenCalledWith(1, { channel: undefined, language: undefined });
+    });
+  });
+
+  it('hides invite buttons when user lacks deal.manage permission', async () => {
+    useUserStore.setState({
+      capabilities: { permissions: [] },
+    });
+    renderWithProviders(<CounterpartiesPage />);
+    fireEvent.click((await screen.findAllByText('ООО Магистраль'))[0]);
+    await waitFor(() => expect(screen.getByText('Контакты')).toBeInTheDocument());
+
+    expect(screen.queryByRole('button', { name: /Пригласить в кабинет/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Пригласить повторно/ })).not.toBeInTheDocument();
   });
 });

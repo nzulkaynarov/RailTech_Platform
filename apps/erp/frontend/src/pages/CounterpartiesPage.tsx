@@ -1,15 +1,19 @@
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { formatDistanceToNow } from 'date-fns';
-import { Users, History, CheckCircle2, AlertTriangle, XCircle, Info, Mail, Phone } from 'lucide-react';
+import { Users, History, CheckCircle2, AlertTriangle, XCircle, Info, Mail, Phone, Send, Loader2 } from 'lucide-react';
+import { toast } from 'sonner';
 import { activeDateFnsLocale } from '@/lib/formatLocale';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { ResponsiveDataTable, type ResponsiveColumn } from '@/components/ResponsiveDataTable';
 import { Toolbar, Pager } from '@/components/DataTable';
 import { useListParams, applyListParams } from '@/components/DataTable/listParams';
-import { useContacts, useCompanyTimeline } from '@/hooks/useCRM';
+import { useContacts, useCompanyTimeline, useInviteContact } from '@/hooks/useCRM';
+import { useHasCompanyPermission } from '@/hooks/useCapabilities';
+import { translateApiError } from '@/lib/apiError';
 import { PageShell, LoadingRows, EmptyState, ErrorState } from './shared/PageShell';
 import { CreateOfflineClientDialog } from '@/components/CRM/CreateOfflineClientDialog';
 import type { Contact, TimelineEntry } from '@/api/crmApi';
@@ -77,22 +81,44 @@ function CompanyTimeline({ companyId }: { companyId: number }) {
 }
 
 function ContactLine({ contact }: { contact: Contact }) {
+  const { t } = useTranslation();
+  const dateLocale = activeDateFnsLocale();
+
   return (
     <div className="flex flex-col gap-0.5 text-sm">
-      <span className="font-medium">
-        {contact.name}
-        {contact.position && <span className="font-normal text-muted-foreground"> · {contact.position}</span>}
-      </span>
-      {contact.phone && (
-        <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
-          <Phone className="h-3 w-3" aria-hidden="true" />
-          {contact.phone}
+      <div className="flex flex-wrap items-center gap-1.5">
+        <span className="font-medium">
+          {contact.name}
+          {contact.position && <span className="font-normal text-muted-foreground"> · {contact.position}</span>}
         </span>
-      )}
-      {contact.email && (
-        <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
-          <Mail className="h-3 w-3" aria-hidden="true" />
-          {contact.email}
+        {contact.can_act !== undefined && (
+          <Badge variant={contact.can_act ? 'secondary' : 'outline'} className="text-xs px-1.5 py-0 h-4">
+            {contact.can_act ? t('counterparties.detail.canAct') : t('counterparties.detail.readOnly')}
+          </Badge>
+        )}
+      </div>
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs text-muted-foreground">
+        {contact.phone && (
+          <span className="inline-flex items-center gap-1">
+            <Phone className="h-3 w-3" aria-hidden="true" />
+            {contact.phone}
+          </span>
+        )}
+        {contact.email && (
+          <span className="inline-flex items-center gap-1">
+            <Mail className="h-3 w-3" aria-hidden="true" />
+            {contact.email}
+          </span>
+        )}
+        {contact.telegram_username && (
+          <span className="inline-flex items-center gap-1 text-primary font-mono">
+            @{contact.telegram_username.replace(/^@/, '')}
+          </span>
+        )}
+      </div>
+      {contact.invited_at && (
+        <span className="text-xs text-muted-foreground mt-0.5">
+          {t('counterparties.detail.invited')}: {formatDistanceToNow(new Date(contact.invited_at), { addSuffix: true, locale: dateLocale })}
         </span>
       )}
     </div>
@@ -106,6 +132,41 @@ export function CounterpartiesPage() {
   const listParams = useListParams([] as const, { urlKey: 'counterparties', defaultOrdering: 'name' });
   const [selected, setSelected] = useState<ClientRow | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
+  const canManageDeals = useHasCompanyPermission('deal.manage');
+  const inviteMut = useInviteContact();
+  const [invitingId, setInvitingId] = useState<number | null>(null);
+
+  const handleInvite = async (contact: Contact) => {
+    setInvitingId(contact.id);
+    try {
+      const res = await inviteMut.mutateAsync({ contactId: contact.id });
+      if (res.email_sent) {
+        toast.success(t('counterparties.invite.successEmail', { email: contact.email }), {
+          action: res.invite_url || res.telegram_url ? {
+            label: t('counterparties.invite.copyLink'),
+            onClick: () => {
+              void navigator.clipboard.writeText(res.telegram_url || res.invite_url);
+              toast.info(t('counterparties.invite.linkCopied'));
+            },
+          } : undefined,
+        });
+      } else {
+        toast.success(t('counterparties.invite.successLink'), {
+          action: {
+            label: t('counterparties.invite.copyLink'),
+            onClick: () => {
+              void navigator.clipboard.writeText(res.telegram_url || res.invite_url);
+              toast.info(t('counterparties.invite.linkCopied'));
+            },
+          },
+        });
+      }
+    } catch (err) {
+      toast.error(translateApiError(err));
+    } finally {
+      setInvitingId(null);
+    }
+  };
 
   const rows = useMemo(() => groupContactsByCompany(contacts ?? []), [contacts]);
 
@@ -210,9 +271,27 @@ export function CounterpartiesPage() {
                 <p className="text-sm font-medium">{t('counterparties.detail.contacts')}</p>
                 <ul className="space-y-3">
                   {selected.contacts.map((contact) => (
-                    <li key={contact.id} className="flex items-start justify-between gap-2">
+                    <li key={contact.id} className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 rounded-lg border bg-card/50">
                       <ContactLine contact={contact} />
-                      {contact.is_primary && <Badge variant="secondary">{t('counterparties.detail.primary')}</Badge>}
+                      <div className="flex items-center gap-2 self-end sm:self-center shrink-0">
+                        {contact.is_primary && <Badge variant="secondary">{t('counterparties.detail.primary')}</Badge>}
+                        {canManageDeals && (
+                          <Button
+                            size="sm"
+                            variant={contact.invited_at ? 'outline' : 'default'}
+                            onClick={() => handleInvite(contact)}
+                            disabled={invitingId === contact.id}
+                            className="gap-1.5 text-xs h-8"
+                          >
+                            {invitingId === contact.id ? (
+                              <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
+                            ) : (
+                              <Send className="h-3.5 w-3.5" aria-hidden="true" />
+                            )}
+                            {contact.invited_at ? t('counterparties.detail.reinvite') : t('counterparties.detail.invite')}
+                          </Button>
+                        )}
+                      </div>
                     </li>
                   ))}
                 </ul>
