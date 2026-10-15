@@ -1639,14 +1639,14 @@ export interface paths {
          * Get supplier offer
          * @description CRUD for supplier offers (pricing, stock, delivery terms).
          *
-         *     Public read access (active only); write operations require Manager/Admin role.
+         *     Read access — back-office staff only (internal layer, M1-ERP-07); writes need `supply.manage`.
          */
         get: operations["catalog_offers_retrieve"];
         /**
          * Update supplier offer
          * @description CRUD for supplier offers (pricing, stock, delivery terms).
          *
-         *     Public read access (active only); write operations require Manager/Admin role.
+         *     Read access — back-office staff only (internal layer, M1-ERP-07); writes need `supply.manage`.
          */
         put: operations["catalog_offers_update"];
         post?: never;
@@ -1654,7 +1654,7 @@ export interface paths {
          * Delete supplier offer
          * @description CRUD for supplier offers (pricing, stock, delivery terms).
          *
-         *     Public read access (active only); write operations require Manager/Admin role.
+         *     Read access — back-office staff only (internal layer, M1-ERP-07); writes need `supply.manage`.
          */
         delete: operations["catalog_offers_destroy"];
         options?: never;
@@ -1663,7 +1663,7 @@ export interface paths {
          * Partially update supplier offer
          * @description CRUD for supplier offers (pricing, stock, delivery terms).
          *
-         *     Public read access (active only); write operations require Manager/Admin role.
+         *     Read access — back-office staff only (internal layer, M1-ERP-07); writes need `supply.manage`.
          */
         patch: operations["catalog_offers_partial_update"];
         trace?: never;
@@ -1731,7 +1731,7 @@ export interface paths {
         };
         /**
          * List products
-         * @description Returns products from the PIM catalog. Non-admin users only see PUBLISHED products. Filterable by domain_type, category, manufacturer, stock_status. Searchable by name, GOST/drawing, SKU. Server-side ordering via `?ordering=` (name, sku, demand_count, last_requested_at, created_at, updated_at; prefix with `-` for descending). `?ordering=` overrides the legacy `?order=demand` default.
+         * @description Back-office catalog (internal layer): staff of the own company and the administrator only. Filterable by domain_type, category, manufacturer, stock_status. Searchable by name, GOST/drawing, SKU. Server-side ordering via `?ordering=` (name, sku, demand_count, last_requested_at, created_at, updated_at; prefix with `-` for descending). `?ordering=` overrides the legacy `?order=demand` default.
          */
         get: operations["catalog_products_list"];
         put?: never;
@@ -1768,8 +1768,8 @@ export interface paths {
          * Delete product
          * @description CRUD for PIM products.
          *
-         *     Public read access (PUBLISHED only for non-admin);
-         *     write operations require Admin role.
+         *     Read access — back-office staff only (M1-ERP-07: the internal layer never reaches clients;
+         *     they get the published layer via `catalog.published`); writes are gated by role permissions.
          *
          *     NOT page-cached (ARCH-02): the list serializer redacts cost/margin PER VIEWER
          *     (catalog _CostGateMixin), so a response is viewer-specific and must never be
@@ -1788,8 +1788,8 @@ export interface paths {
          * Partially update product
          * @description CRUD for PIM products.
          *
-         *     Public read access (PUBLISHED only for non-admin);
-         *     write operations require Admin role.
+         *     Read access — back-office staff only (M1-ERP-07: the internal layer never reaches clients;
+         *     they get the published layer via `catalog.published`); writes are gated by role permissions.
          *
          *     NOT page-cached (ARCH-02): the list serializer redacts cost/margin PER VIEWER
          *     (catalog _CostGateMixin), so a response is viewer-specific and must never be
@@ -1838,8 +1838,8 @@ export interface paths {
          * Delete product document
          * @description CRUD for PIM products.
          *
-         *     Public read access (PUBLISHED only for non-admin);
-         *     write operations require Admin role.
+         *     Read access — back-office staff only (M1-ERP-07: the internal layer never reaches clients;
+         *     they get the published layer via `catalog.published`); writes are gated by role permissions.
          *
          *     NOT page-cached (ARCH-02): the list serializer redacts cost/margin PER VIEWER
          *     (catalog _CostGateMixin), so a response is viewer-specific and must never be
@@ -1871,8 +1871,8 @@ export interface paths {
          * Delete product image
          * @description CRUD for PIM products.
          *
-         *     Public read access (PUBLISHED only for non-admin);
-         *     write operations require Admin role.
+         *     Read access — back-office staff only (M1-ERP-07: the internal layer never reaches clients;
+         *     they get the published layer via `catalog.published`); writes are gated by role permissions.
          *
          *     NOT page-cached (ARCH-02): the list serializer redacts cost/margin PER VIEWER
          *     (catalog _CostGateMixin), so a response is viewer-specific and must never be
@@ -5966,7 +5966,7 @@ export interface components {
              *     * `SOURCE` - Исходник заявки
              *     * `SUPPORTING` - Документ
              */
-            readonly kind: components["schemas"]["KindEnum"];
+            readonly kind: components["schemas"]["AttachmentKindEnum"];
             /**
              * Загрузил
              * @description Пользователь, загрузивший файл
@@ -5999,6 +5999,12 @@ export interface components {
              */
             company?: number | null;
         };
+        /**
+         * @description * `SOURCE` - Исходник заявки
+         *     * `SUPPORTING` - Документ
+         * @enum {string}
+         */
+        AttachmentKindEnum: "SOURCE" | "SUPPORTING";
         AttachmentRequest: {
             /**
              * Файл
@@ -6027,6 +6033,15 @@ export interface components {
              */
             company?: number | null;
         };
+        /**
+         * @description * `in_stock` - in_stock
+         *     * `on_order` - on_order
+         *     * `expected` - expected
+         * @enum {string}
+         */
+        AvailabilityEnum: "in_stock" | "on_order" | "expected";
+        /** @enum {unknown} */
+        BlankEnum: "";
         BulkCreateQuoteItemsRequestRequest: {
             quote: number;
             items: {
@@ -6867,6 +6882,19 @@ export interface components {
              * @description Желаемая валовая маржа (на цене) — зелёная зона в конструкторе КП.
              */
             target_margin_percent?: string;
+            /**
+             * Видимость цен каталога по умолчанию
+             * @description Для карточек без своей политики: цена в кабинете клиента или «по запросу».
+             *
+             *     * `cabinet` - Показывать цену в кабинете
+             *     * `on_request` - Цена по запросу
+             */
+            catalog_price_visibility?: components["schemas"]["PriceVisibilityEnum"];
+            /**
+             * Порог публикации (%)
+             * @description Минимальная полнота карточки, при которой её можно опубликовать.
+             */
+            catalog_publish_threshold?: number;
             /**
              * Префикс нумерации документов
              * @description Префикс номеров документов компании (напр. «ACME» → ACME-CT-2026-00001)
@@ -7719,6 +7747,13 @@ export interface components {
             readonly updated_at: string;
         };
         /**
+         * @description * `fixed` - Фиксированная цена
+         *     * `milestones` - По этапам
+         *     * `time` - По времени
+         * @enum {string}
+         */
+        FulfillmentPolicyEnum: "fixed" | "milestones" | "time";
+        /**
          * @description Сторона зрителя по сделке документа — считается СЕРВЕРОМ, один раз на запрос.
          *
          *     Зачем. SPA выводила роль из `activeStatus` (= первый тип компании), поэтому компания,
@@ -7965,12 +8000,6 @@ export interface components {
             currency?: number | null;
             notes?: string;
         };
-        /**
-         * @description * `SOURCE` - Исходник заявки
-         *     * `SUPPORTING` - Документ
-         * @enum {string}
-         */
-        KindEnum: "SOURCE" | "SUPPORTING";
         /**
          * @description * `light` - Светлый
          *     * `boxed` - В рамках
@@ -8887,6 +8916,19 @@ export interface components {
              */
             target_margin_percent?: string;
             /**
+             * Видимость цен каталога по умолчанию
+             * @description Для карточек без своей политики: цена в кабинете клиента или «по запросу».
+             *
+             *     * `cabinet` - Показывать цену в кабинете
+             *     * `on_request` - Цена по запросу
+             */
+            catalog_price_visibility?: components["schemas"]["PriceVisibilityEnum"];
+            /**
+             * Порог публикации (%)
+             * @description Минимальная полнота карточки, при которой её можно опубликовать.
+             */
+            catalog_publish_threshold?: number;
+            /**
              * Префикс нумерации документов
              * @description Префикс номеров документов компании (напр. «ACME» → ACME-CT-2026-00001)
              */
@@ -9301,6 +9343,31 @@ export interface components {
              * @description Динамические характеристики в формате ключ: значение
              */
             specifications?: unknown;
+            /**
+             * Политика исполнения
+             * @description Только для услуг: фикс, по этапам или по времени. У товара — пусто.
+             *
+             *     * `fixed` - Фиксированная цена
+             *     * `milestones` - По этапам
+             *     * `time` - По времени
+             */
+            fulfillment_policy?: components["schemas"]["FulfillmentPolicyEnum"] | components["schemas"]["BlankEnum"];
+            /**
+             * Видимость цены
+             * @description Пусто — по политике каталога компании (по умолчанию «по запросу»).
+             *
+             *     * `cabinet` - Показывать цену в кабинете
+             *     * `on_request` - Цена по запросу
+             */
+            price_visibility?: components["schemas"]["PriceVisibilityEnum"] | components["schemas"]["BlankEnum"];
+            /**
+             * Цена-витрина
+             * Format: decimal
+             * @description Цена для клиента в кабинете. Не себестоимость и не цена поставщика.
+             */
+            list_price?: string | null;
+            /** Валюта цены-витрины */
+            list_price_currency?: number | null;
         };
         /** @description КП-level expense item / discount (UBL document AllowanceCharge). */
         PatchedQuoteChargeRequest: {
@@ -9815,6 +9882,12 @@ export interface components {
             domain_code?: string;
         };
         /**
+         * @description * `cabinet` - Показывать цену в кабинете
+         *     * `on_request` - Цена по запросу
+         * @enum {string}
+         */
+        PriceVisibilityEnum: "cabinet" | "on_request";
+        /**
          * @description Lightweight company serializer for embedding into UserSerializer.primary_company.
          *     Avoids nested members/types — saves several SQL queries per request.
          */
@@ -9986,6 +10059,37 @@ export interface components {
              *     в списке: без него карточка либо снова врёт валютой, либо не печатает цену вовсе.
              */
             readonly base_price_currency: string | null;
+            /**
+             * Политика исполнения
+             * @description Только для услуг: фикс, по этапам или по времени. У товара — пусто.
+             *
+             *     * `fixed` - Фиксированная цена
+             *     * `milestones` - По этапам
+             *     * `time` - По времени
+             */
+            fulfillment_policy?: components["schemas"]["FulfillmentPolicyEnum"] | components["schemas"]["BlankEnum"];
+            /**
+             * Видимость цены
+             * @description Пусто — по политике каталога компании (по умолчанию «по запросу»).
+             *
+             *     * `cabinet` - Показывать цену в кабинете
+             *     * `on_request` - Цена по запросу
+             */
+            price_visibility?: components["schemas"]["PriceVisibilityEnum"] | components["schemas"]["BlankEnum"];
+            /** @description Видимость цены с учётом политики компании — то, что реально увидит клиент. */
+            readonly price_visibility_effective: string;
+            /** @description Политика каталога компании — подпись варианта «как в политике каталога» в форме. */
+            readonly price_visibility_default: string;
+            /**
+             * Цена-витрина
+             * Format: decimal
+             * @description Цена для клиента в кабинете. Не себестоимость и не цена поставщика.
+             */
+            list_price?: string | null;
+            /** Валюта цены-витрины */
+            list_price_currency?: number | null;
+            readonly list_price_currency_code: string | null;
+            readonly client_preview: components["schemas"]["PublishedCatalogItem"];
             /**
              * Дата создания
              * Format: date-time
@@ -10278,6 +10382,31 @@ export interface components {
              * @description Динамические характеристики в формате ключ: значение
              */
             specifications?: unknown;
+            /**
+             * Политика исполнения
+             * @description Только для услуг: фикс, по этапам или по времени. У товара — пусто.
+             *
+             *     * `fixed` - Фиксированная цена
+             *     * `milestones` - По этапам
+             *     * `time` - По времени
+             */
+            fulfillment_policy?: components["schemas"]["FulfillmentPolicyEnum"] | components["schemas"]["BlankEnum"];
+            /**
+             * Видимость цены
+             * @description Пусто — по политике каталога компании (по умолчанию «по запросу»).
+             *
+             *     * `cabinet` - Показывать цену в кабинете
+             *     * `on_request` - Цена по запросу
+             */
+            price_visibility?: components["schemas"]["PriceVisibilityEnum"] | components["schemas"]["BlankEnum"];
+            /**
+             * Цена-витрина
+             * Format: decimal
+             * @description Цена для клиента в кабинете. Не себестоимость и не цена поставщика.
+             */
+            list_price?: string | null;
+            /** Валюта цены-витрины */
+            list_price_currency?: number | null;
         };
         ProductStatus: {
             readonly id: number;
@@ -10292,6 +10421,30 @@ export interface components {
              */
             name: string;
         };
+        /**
+         * @description Схема OpenAPI проекции `catalog.published.project` (контракт портала `CatalogItem`).
+         *
+         *     Только для документации: данные собирает `project()` белым списком, не этот класс.
+         */
+        PublishedCatalogItem: {
+            id: number;
+            kind: components["schemas"]["PublishedCatalogItemKindEnum"];
+            name: string;
+            description: string;
+            unit: string;
+            category: string | null;
+            price?: components["schemas"]["_Money"] | null;
+            availability?: components["schemas"]["AvailabilityEnum"];
+            lead_time_days?: number | null;
+            images: string[];
+            attributes: components["schemas"]["_Attribute"][];
+        };
+        /**
+         * @description * `goods` - goods
+         *     * `service` - service
+         * @enum {string}
+         */
+        PublishedCatalogItemKindEnum: "goods" | "service";
         PurchaseActualRequest: {
             /** @description Валюта себестоимости строк опорного КП (или UZS). */
             currency: string;
@@ -11634,6 +11787,14 @@ export interface components {
         WsTicket: {
             ticket: string;
             expires_in: number;
+        };
+        _Attribute: {
+            name: string;
+            value: string;
+        };
+        _Money: {
+            amount: string;
+            currency: string;
         };
     };
     responses: never;

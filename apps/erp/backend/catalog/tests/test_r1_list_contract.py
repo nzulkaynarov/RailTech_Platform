@@ -196,13 +196,17 @@ def test_currency_comes_from_the_same_offer_as_the_price(world):
 
 
 def test_cost_gate_strips_price_and_its_currency_together(world):
-    """Валюта — часть закрытой цены: показать «USD» без цены значит рассказать о цене."""
+    """Валюта — часть закрытой цены: показать «USD» без цены значит рассказать о цене.
+
+    M1-ERP-07: не-сотрудник не получает каталог бэк-офиса вовсе (403) — ни цены, ни валюты;
+    клиенту каталог отдаёт только опубликованный слой (`catalog.published`).
+    """
     make_card(world, "Чужая карточка", published=True, offer=("1250.00", world["usd"]))
 
-    row = world["outsider_client"].get(PRODUCTS_URL).json()["results"][0]
+    response = world["outsider_client"].get(PRODUCTS_URL)
 
-    assert "base_price" not in row
-    assert "base_price_currency" not in row
+    assert response.status_code == 403
+    assert "base_price" not in response.content.decode()
     owner_row = world["client"].get(PRODUCTS_URL).json()["results"][0]
     assert owner_row["base_price_currency"] == "USD", "владельцу оба поля видны"
 

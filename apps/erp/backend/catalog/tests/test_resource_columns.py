@@ -22,8 +22,12 @@ def test_export_template_has_mpn_and_hs_code_columns(user_factory):
 
     import openpyxl
 
+    # Каталог бэк-офиса читают только сотрудники и администратор (M1-ERP-07).
+    admin = user_factory(email="tpl@example.com", username="tpl")
+    admin.is_superuser = True
+    admin.save(update_fields=["is_superuser"])
     client = APIClient()
-    client.force_authenticate(user=user_factory(email="tpl@example.com", username="tpl"))
+    client.force_authenticate(user=admin)
 
     response = client.get("/api/v1/catalog/products/export-template/", SERVER_NAME="localhost")
     assert response.status_code == 200

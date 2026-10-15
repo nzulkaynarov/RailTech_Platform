@@ -48,6 +48,8 @@ class CompanySettingsSerializer(serializers.ModelSerializer):
             "default_warranty_months",
             "min_margin_percent",
             "target_margin_percent",
+            "catalog_price_visibility",
+            "catalog_publish_threshold",
             "doc_number_prefix",
             "created_at",
             "updated_at",

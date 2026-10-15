@@ -230,7 +230,7 @@ class QuoteItemViewSet(RoleGatedViewMixin, viewsets.ModelViewSet):
         )
         if err:
             return Response({"detail": err}, status=400)
-        return Response(QuoteItemSerializer(updated).data)
+        return Response(QuoteItemSerializer(updated, context={"request": request}).data)
 
     @extend_schema(
         summary="Bulk-update КП line items in one transaction",

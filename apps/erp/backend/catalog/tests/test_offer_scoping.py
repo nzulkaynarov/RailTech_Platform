@@ -76,7 +76,10 @@ def test_seller_sees_only_own_offers(two_sellers):
 
 @pytest.mark.django_db
 def test_buyer_sees_no_offers(two_sellers):
-    assert _client(two_sellers["buyer"]).get("/api/v1/catalog/offers/").json()["count"] == 0
+    """M1-ERP-07: предложение поставщика — внутренний слой; не-сотрудник получает 403, а не список."""
+    response = _client(two_sellers["buyer"]).get("/api/v1/catalog/offers/")
+    assert response.status_code == 403
+    assert response.json() == {"detail": "BACKOFFICE_ONLY"}
 
 
 @pytest.mark.django_db

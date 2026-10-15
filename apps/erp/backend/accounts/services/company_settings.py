@@ -125,6 +125,26 @@ def update_company_settings(
             setattr(settings_row, field, value)
             changed.append(field)
 
+    # Политики каталога (M1-ERP-07): видимость цен по умолчанию и порог публикации.
+    if "catalog_price_visibility" in data:
+        from catalog.constants import PriceVisibility
+
+        visibility = data.get("catalog_price_visibility")
+        if visibility not in PriceVisibility.values:
+            return None, "BAD_PRICE_VISIBILITY"
+        settings_row.catalog_price_visibility = visibility
+        changed.append("catalog_price_visibility")
+
+    if "catalog_publish_threshold" in data:
+        try:
+            threshold = int(data.get("catalog_publish_threshold"))
+        except (TypeError, ValueError):
+            return None, "BAD_NUMBER"
+        if not 1 <= threshold <= 100:
+            return None, "BAD_PUBLISH_THRESHOLD"
+        settings_row.catalog_publish_threshold = threshold
+        changed.append("catalog_publish_threshold")
+
     if changed:
         settings_row.save(update_fields=[*changed, "updated_at"])
     return settings_row, None

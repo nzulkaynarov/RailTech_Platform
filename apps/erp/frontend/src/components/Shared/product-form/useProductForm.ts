@@ -351,6 +351,11 @@ export function useProductForm({ target, sellerCompanyId, open = true, onSaved }
       toast.error(t('adminCatalog.ownerCompanyRequired'));
       return;
     }
+    // Цена-витрина без валюты — не цена (сервер ответит LIST_PRICE_CURRENCY_REQUIRED).
+    if (String(draft.list_price ?? '').trim() !== '' && !draft.list_price_currency) {
+      toast.error(t('productEditor.publication.currencyRequired'));
+      return;
+    }
     // Перевёрнутое окно действия цены сервер отвергает (OFFER_VALIDITY_RANGE_INVALID) —
     // но называем причину ДО запроса, тем же приёмом, что и проверка владельца выше.
     if (
@@ -378,6 +383,11 @@ export function useProductForm({ target, sellerCompanyId, open = true, onSaved }
       // номенклатуры требовала то, что негде ввести.
       hs_code: (draft.hs_code || '').replace(/\D/g, ''),
       specifications: draft.specifications ?? undefined,
+      // Опубликованный слой (M1-ERP-07). Политику исполнения у товара сервер очищает сам.
+      fulfillment_policy: draft.fulfillment_policy || undefined,
+      price_visibility: draft.price_visibility ?? '',
+      list_price: String(draft.list_price ?? '').trim() === '' ? null : String(draft.list_price),
+      list_price_currency: draft.list_price_currency ? Number(draft.list_price_currency) : null,
       // N3: владелец карточки при создании оператором (у продавца его ставит сервер).
       owner_company: !sellerMode && !isEdit && draft.owner_company ? Number(draft.owner_company) : undefined,
     } as unknown as Partial<Product>;

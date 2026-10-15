@@ -35,7 +35,7 @@ def catalog_ai_gate(user):
     list=extend_schema(
         summary="List products",
         description=(
-            "Returns products from the PIM catalog. Non-admin users only see PUBLISHED products. "
+            "Back-office catalog (internal layer): staff of the own company and the administrator only. "
             "Filterable by domain_type, category, manufacturer, stock_status. "
             "Searchable by name, GOST/drawing, SKU. Server-side ordering via `?ordering=` "
             "(name, sku, demand_count, last_requested_at, created_at, updated_at; prefix with "
@@ -65,8 +65,8 @@ class ProductViewSet(RoleGatedViewMixin, viewsets.ModelViewSet):
     """
     CRUD for PIM products.
 
-    Public read access (PUBLISHED only for non-admin);
-    write operations require Admin role.
+    Read access — back-office staff only (M1-ERP-07: the internal layer never reaches clients;
+    they get the published layer via `catalog.published`); writes are gated by role permissions.
 
     NOT page-cached (ARCH-02): the list serializer redacts cost/margin PER VIEWER
     (catalog _CostGateMixin), so a response is viewer-specific and must never be
@@ -203,8 +203,13 @@ class ProductViewSet(RoleGatedViewMixin, viewsets.ModelViewSet):
     search_fields = ["name", "gost_drawing", "sku"]
 
     def get_permissions(self):
-        if self.action in ["list", "retrieve"]:
-            return [permissions.AllowAny()]
+        # Любое чтение каталога бэк-офиса (список, карточка, выгрузка, покрытие, ТН ВЭД) — только
+        # сотрудникам (M1-ERP-07): здесь внутренний слой. Клиент и бот получают опубликованный
+        # слой через `catalog.published` (портал, M2-ERP-01; интеграция и MCP, M3).
+        if self.request.method in permissions.SAFE_METHODS:
+            from core.permissions import IsBackOfficeStaff
+
+            return [permissions.IsAuthenticated(), IsBackOfficeStaff()]
         # Публикует ВЛАДЕЛЕЦ карточки (Amazon/Alibaba/Shopify), а порог качества держит
         # детерминированная полнота — см. `catalog/publishing.py`. Право платформы сохраняется.
         if self.action in (
