@@ -1,1 +1,0 @@
-{% load i18n %}{% translate "Для вас создан аккаунт на RailTech B2B" %}

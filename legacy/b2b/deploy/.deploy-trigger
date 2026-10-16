@@ -1,4 +1,0 @@
-# Touch this file (bump the number) and push to main to trigger a manual deploy
-# of b2b.railtech.uz when there are no code changes. The deploy-b2b workflow
-# ignores docs/**, Docs/** and **/*.md, so an empty commit will not fire it.
-deploy: 1

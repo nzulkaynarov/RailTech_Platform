@@ -1,7 +1,6 @@
 # pre-commit корня ансамбля: `make hooks` (= pre-commit install).
 # Полная проверка — `make check`; здесь быстрые проверки изменённых файлов и gitleaks (ORCHESTRATOR §3.6).
-# legacy/b2b не редактируется (ORCHESTRATOR §3.11) — исключён из всех хуков.
-exclude: ^legacy/
+# legacy/b2b удалена по плану M2-INF-01 (тег b2b-final).
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v6.0.0

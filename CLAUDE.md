@@ -11,7 +11,7 @@
 apps/crm/        FastAPI · SQLAlchemy · Alembic · Procrastinate · aiogram · LangGraph · Refine/AntD   → apps/crm/CLAUDE.md
 apps/erp/        Django · DRF · Celery · Channels · shadcn/Tailwind                                      → apps/erp/CLAUDE.md
 apps/cabinet/    React · shadcn · без бэкенда; ходит в apps/erp /api/portal/*                          → apps/cabinet/CLAUDE.md
-legacy/b2b/      старая B2B, только чтение; удаляется после вехи M2                                      → не редактировать
+legacy/b2b/      удалена по плану M2-INF-01; исходная история сохранена в теге b2b-final
 packages/contracts/   OpenAPI ERP (internal, portal, integration), схемы событий, схемы MCP-инструментов
 packages/ui-tokens/   общие токены дизайна для AntD и shadcn
 infra/           compose (base/dev/prod), caddy (3 домена), ai (LiteLLM, Langfuse), db (2 базы, бэкапы), ci

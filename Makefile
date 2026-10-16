@@ -1,6 +1,6 @@
 # RailTech Platform — корневой Makefile ансамбля (CLAUDE.md, ORCHESTRATOR §4, §7).
 # Цели ансамбля делегируют в Makefile приложений: конвенции и команды живут у приложений.
-# Ветка `legacy/b2b` ни одной целью не проверяется и не собирается (ORCHESTRATOR §3.11).
+# Директория legacy/b2b удалена по плану M2-INF-01; исходная история сохранена в теге b2b-final.
 
 SHELL := /bin/bash
 .DEFAULT_GOAL := help

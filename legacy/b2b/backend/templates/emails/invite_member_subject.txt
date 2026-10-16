@@ -1,1 +1,0 @@
-{% load i18n %}{% blocktranslate %}Приглашение в команду {{ company_name }} на RailTech B2B{% endblocktranslate %}
