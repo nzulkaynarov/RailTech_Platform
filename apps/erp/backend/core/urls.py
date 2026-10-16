@@ -163,6 +163,7 @@ urlpatterns = (
         path("admin/", admin.site.urls),
         path("api/v1/", include(router.urls)),
         path("api/portal/v1/", include("portal.urls")),
+        path("api/integration/v1/", include("integration.urls")),
         path("api/v1/auth/setup-password/", SetupPasswordView.as_view(), name="setup-password"),
         path("api/v1/auth/forgot-password/", ForgotPasswordView.as_view(), name="forgot-password"),
         path("api/v1/auth/reset-password/", ResetPasswordView.as_view(), name="reset-password"),

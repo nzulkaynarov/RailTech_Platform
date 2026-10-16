@@ -144,3 +144,11 @@ SPECTACULAR_SETTINGS = {
         {"name": "System", "description": "Health checks, system settings"},
     ],
 }
+
+# ─── CRM → ERP Integration (CONTRACTS §0, §2, M3-ERP-01) ──────────────────────
+# Сервисный токен направления CRM → ERP из окружения; поддерживает до двух активных
+# токенов через запятую для бесшовной ротации без простоя (OpenAPI erp-integration.yaml).
+SERVICE_TOKEN_CRM_TO_ERP = [
+    t.strip() for t in os.environ.get("SERVICE_TOKEN_CRM_TO_ERP", "test-crm-to-erp-token").split(",") if t.strip()
+]
+ERP_VERSION = os.environ.get("ERP_VERSION", "0.1.0")

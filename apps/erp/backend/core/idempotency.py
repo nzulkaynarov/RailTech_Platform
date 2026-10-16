@@ -40,6 +40,11 @@ class IdempotencyMiddleware:
         self.lock_ttl = int(getattr(settings, "IDEMPOTENCY_LOCK_SECONDS", 90))
 
     def __call__(self, request):
+        # Интеграционные эндпоинты /api/integration/v1/* имеют собственную реализацию
+        # идемпотентности в БД с валидацией UUID, проверкой хэша тела и 409 IDEMPOTENCY_CONFLICT.
+        if request.path.startswith("/api/integration/"):
+            return self.get_response(request)
+
         key = request.headers.get("Idempotency-Key")
         if not key or request.method not in _MUTATING:
             return self.get_response(request)
