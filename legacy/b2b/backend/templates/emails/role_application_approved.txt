@@ -1,8 +1,0 @@
-{% load i18n %}{% translate "Здравствуйте!" %}
-
-{% blocktranslate %}Заявка компании «{{ company_name }}» на роль «{{ requested_type_name }}» одобрена.{% endblocktranslate %}
-{% if trial_granted %}{% translate "Для поставщиков и производителей активирован пробный период на 30 дней — вы можете сразу приступить к работе." %}{% endif %}
-
-{% translate "Открыть кабинет" %}: {{ frontend_url }}
-
-{% translate "— Команда RailTech B2B" %}

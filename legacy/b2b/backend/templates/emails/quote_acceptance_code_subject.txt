@@ -1,1 +1,0 @@
-{% load i18n %}{% blocktranslate %}Код для принятия КП {{ quote_number }}: {{ code }}{% endblocktranslate %}
