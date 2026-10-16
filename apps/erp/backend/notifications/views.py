@@ -83,6 +83,22 @@ class NotificationViewSet(viewsets.ReadOnlyModelViewSet):
         )
 
 
+class HasEmailTemplatePermission(permissions.BasePermission):
+    """Доступ к шаблонам писем (чтение и запись): суперпользователь или сотрудник с settings.edit."""
+
+    message = "SETTINGS_EDIT_REQUIRED"
+
+    def has_permission(self, request, view):
+        user = request.user
+        if not (user and user.is_authenticated):
+            return False
+        if user.is_superuser:
+            return True
+        from accounts.services.permissions import is_seller, staff_has_permission
+
+        return is_seller(user) and staff_has_permission(user, "settings.edit")
+
+
 @extend_schema_view(
     list=extend_schema(summary="List email templates", tags=["Admin"]),
     retrieve=extend_schema(summary="Get email template", tags=["Admin"]),
@@ -100,6 +116,8 @@ class EmailTemplateViewSet(RoleGatedViewMixin, AuditedWriteMixin, viewsets.Model
     """
 
     required_permissions = {
+        "list": "settings.edit",
+        "retrieve": "settings.edit",
         "create": "settings.edit",
         "update": "settings.edit",
         "partial_update": "settings.edit",
@@ -110,7 +128,7 @@ class EmailTemplateViewSet(RoleGatedViewMixin, AuditedWriteMixin, viewsets.Model
 
     queryset = EmailTemplate.objects.all()
     serializer_class = EmailTemplateSerializer
-    permission_classes = [permissions.IsAuthenticated, HasRolePermission]
+    permission_classes = [permissions.IsAuthenticated, HasRolePermission, HasEmailTemplatePermission]
 
     #: Активная строка НЕМЕДЛЕННО подменяет файловый шаблон для ВСЕХ получателей платформы:
     #: текст, который увидит каждый арендатор в письме о счёте или об акте. Поле `updated_by`

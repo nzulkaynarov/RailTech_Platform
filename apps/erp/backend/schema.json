@@ -13,6 +13,1292 @@
         }
     },
     "paths": {
+        "/api/integration/v1/ai-usage": {
+            "get": {
+                "operationId": "api_integration_v1_ai_usage_retrieve",
+                "description": "GET /api/integration/v1/ai-usage",
+                "tags": [
+                    "api"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No response body"
+                    }
+                }
+            }
+        },
+        "/api/integration/v1/catalog/search": {
+            "get": {
+                "operationId": "api_integration_v1_catalog_search_retrieve",
+                "description": "GET /api/integration/v1/catalog/search",
+                "tags": [
+                    "api"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No response body"
+                    }
+                }
+            }
+        },
+        "/api/integration/v1/clients/handoff": {
+            "post": {
+                "operationId": "api_integration_v1_clients_handoff_create",
+                "description": "POST /api/integration/v1/clients/handoff",
+                "tags": [
+                    "api"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No response body"
+                    }
+                }
+            }
+        },
+        "/api/integration/v1/companies/{erp_company_id}/deals": {
+            "get": {
+                "operationId": "api_integration_v1_companies_deals_retrieve",
+                "description": "GET /api/integration/v1/companies/{erp_company_id}/deals",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "erp_company_id",
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "api"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No response body"
+                    }
+                }
+            }
+        },
+        "/api/integration/v1/companies/{erp_company_id}/summary": {
+            "get": {
+                "operationId": "api_integration_v1_companies_summary_retrieve",
+                "description": "GET /api/integration/v1/companies/{erp_company_id}/summary",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "erp_company_id",
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "api"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No response body"
+                    }
+                }
+            }
+        },
+        "/api/integration/v1/contacts/{crm_contact_id}": {
+            "put": {
+                "operationId": "api_integration_v1_contacts_update",
+                "description": "PUT /api/integration/v1/contacts/{crm_contact_id}",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "crm_contact_id",
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "api"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No response body"
+                    }
+                }
+            }
+        },
+        "/api/integration/v1/deals/{erp_deal_id}": {
+            "get": {
+                "operationId": "api_integration_v1_deals_retrieve",
+                "description": "GET /api/integration/v1/deals/{erp_deal_id}",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "erp_deal_id",
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "api"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No response body"
+                    }
+                }
+            }
+        },
+        "/api/integration/v1/deals/{erp_deal_id}/documents": {
+            "get": {
+                "operationId": "api_integration_v1_deals_documents_retrieve",
+                "description": "GET /api/integration/v1/deals/{erp_deal_id}/documents",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "erp_deal_id",
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "api"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No response body"
+                    }
+                }
+            }
+        },
+        "/api/integration/v1/documents/{erp_document_id}/link": {
+            "get": {
+                "operationId": "api_integration_v1_documents_link_retrieve",
+                "description": "GET /api/integration/v1/documents/{erp_document_id}/link",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "erp_document_id",
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "api"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No response body"
+                    }
+                }
+            }
+        },
+        "/api/integration/v1/health": {
+            "get": {
+                "operationId": "api_integration_v1_health_retrieve",
+                "description": "GET /api/integration/v1/health",
+                "tags": [
+                    "api"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No response body"
+                    }
+                }
+            }
+        },
+        "/api/integration/v1/users/{crm_user_id}/sessions": {
+            "delete": {
+                "operationId": "api_integration_v1_users_sessions_destroy",
+                "description": "DELETE /api/integration/v1/users/{crm_user_id}/sessions",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "crm_user_id",
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "api"
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No response body"
+                    }
+                }
+            }
+        },
+        "/api/integration/v1/users/provision": {
+            "post": {
+                "operationId": "api_integration_v1_users_provision_create",
+                "description": "POST /api/integration/v1/users/provision",
+                "tags": [
+                    "api"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No response body"
+                    }
+                }
+            }
+        },
+        "/api/portal/v1/acts": {
+            "get": {
+                "operationId": "api_portal_v1_acts_retrieve",
+                "description": "GET /acts — Акты выполненных работ.",
+                "tags": [
+                    "api"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No response body"
+                    }
+                }
+            }
+        },
+        "/api/portal/v1/acts/": {
+            "get": {
+                "operationId": "api_portal_v1_acts_retrieve_2",
+                "description": "GET /acts — Акты выполненных работ.",
+                "tags": [
+                    "api"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No response body"
+                    }
+                }
+            }
+        },
+        "/api/portal/v1/acts/{id}/accept": {
+            "post": {
+                "operationId": "api_portal_v1_acts_accept_create",
+                "description": "POST /acts/{id}/accept — Приёмка акта заказчиком.",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "api"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No response body"
+                    }
+                }
+            }
+        },
+        "/api/portal/v1/acts/{id}/accept/": {
+            "post": {
+                "operationId": "api_portal_v1_acts_accept_create_2",
+                "description": "POST /acts/{id}/accept — Приёмка акта заказчиком.",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "api"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No response body"
+                    }
+                }
+            }
+        },
+        "/api/portal/v1/acts/{id}/return": {
+            "post": {
+                "operationId": "api_portal_v1_acts_return_create",
+                "description": "POST /acts/{id}/return — Возврат акта с замечанием.",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "api"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No response body"
+                    }
+                }
+            }
+        },
+        "/api/portal/v1/acts/{id}/return/": {
+            "post": {
+                "operationId": "api_portal_v1_acts_return_create_2",
+                "description": "POST /acts/{id}/return — Возврат акта с замечанием.",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "api"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No response body"
+                    }
+                }
+            }
+        },
+        "/api/portal/v1/auth/logout": {
+            "post": {
+                "operationId": "api_portal_v1_auth_logout_create",
+                "description": "POST /auth/logout — Завершение сессии портала.",
+                "tags": [
+                    "api"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No response body"
+                    }
+                }
+            }
+        },
+        "/api/portal/v1/auth/logout/": {
+            "post": {
+                "operationId": "api_portal_v1_auth_logout_create_2",
+                "description": "POST /auth/logout — Завершение сессии портала.",
+                "tags": [
+                    "api"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No response body"
+                    }
+                }
+            }
+        },
+        "/api/portal/v1/auth/magic-link": {
+            "post": {
+                "operationId": "api_portal_v1_auth_magic_link_create",
+                "description": "POST /auth/magic-link — Запрос ссылки для входа по email.",
+                "tags": [
+                    "api"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No response body"
+                    }
+                }
+            }
+        },
+        "/api/portal/v1/auth/magic-link/": {
+            "post": {
+                "operationId": "api_portal_v1_auth_magic_link_create_2",
+                "description": "POST /auth/magic-link — Запрос ссылки для входа по email.",
+                "tags": [
+                    "api"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No response body"
+                    }
+                }
+            }
+        },
+        "/api/portal/v1/auth/magic/{token}": {
+            "get": {
+                "operationId": "api_portal_v1_auth_magic_retrieve",
+                "description": "GET /auth/magic/{token} — Обмен magic-link токена на сессию.",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "token",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "api"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No response body"
+                    }
+                }
+            },
+            "post": {
+                "operationId": "api_portal_v1_auth_magic_create",
+                "description": "GET /auth/magic/{token} — Обмен magic-link токена на сессию.",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "token",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "api"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No response body"
+                    }
+                }
+            }
+        },
+        "/api/portal/v1/auth/magic/{token}/": {
+            "get": {
+                "operationId": "api_portal_v1_auth_magic_retrieve_2",
+                "description": "GET /auth/magic/{token} — Обмен magic-link токена на сессию.",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "token",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "api"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No response body"
+                    }
+                }
+            },
+            "post": {
+                "operationId": "api_portal_v1_auth_magic_create_2",
+                "description": "GET /auth/magic/{token} — Обмен magic-link токена на сессию.",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "token",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "api"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No response body"
+                    }
+                }
+            }
+        },
+        "/api/portal/v1/auth/telegram": {
+            "post": {
+                "operationId": "api_portal_v1_auth_telegram_create",
+                "description": "POST /auth/telegram — Вход из Telegram Mini App.",
+                "tags": [
+                    "api"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No response body"
+                    }
+                }
+            }
+        },
+        "/api/portal/v1/auth/telegram/": {
+            "post": {
+                "operationId": "api_portal_v1_auth_telegram_create_2",
+                "description": "POST /auth/telegram — Вход из Telegram Mini App.",
+                "tags": [
+                    "api"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No response body"
+                    }
+                }
+            }
+        },
+        "/api/portal/v1/catalog": {
+            "get": {
+                "operationId": "api_portal_v1_catalog_retrieve",
+                "description": "GET /catalog — Опубликованный каталог товаров и услуг.",
+                "tags": [
+                    "api"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No response body"
+                    }
+                }
+            }
+        },
+        "/api/portal/v1/catalog/": {
+            "get": {
+                "operationId": "api_portal_v1_catalog_retrieve_2",
+                "description": "GET /catalog — Опубликованный каталог товаров и услуг.",
+                "tags": [
+                    "api"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No response body"
+                    }
+                }
+            }
+        },
+        "/api/portal/v1/catalog/{id}": {
+            "get": {
+                "operationId": "api_portal_v1_catalog_retrieve_3",
+                "description": "GET /catalog/{id} — Карточка товара/услуги в опубликованном слое.",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "api"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No response body"
+                    }
+                }
+            }
+        },
+        "/api/portal/v1/catalog/{id}/": {
+            "get": {
+                "operationId": "api_portal_v1_catalog_retrieve_4",
+                "description": "GET /catalog/{id} — Карточка товара/услуги в опубликованном слое.",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "api"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No response body"
+                    }
+                }
+            }
+        },
+        "/api/portal/v1/catalog/categories": {
+            "get": {
+                "operationId": "api_portal_v1_catalog_categories_retrieve",
+                "description": "GET /catalog/categories — Справочник категорий с количеством (Q-15).",
+                "tags": [
+                    "api"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No response body"
+                    }
+                }
+            }
+        },
+        "/api/portal/v1/catalog/categories/": {
+            "get": {
+                "operationId": "api_portal_v1_catalog_categories_retrieve_2",
+                "description": "GET /catalog/categories — Справочник категорий с количеством (Q-15).",
+                "tags": [
+                    "api"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No response body"
+                    }
+                }
+            }
+        },
+        "/api/portal/v1/company": {
+            "get": {
+                "operationId": "api_portal_v1_company_retrieve",
+                "description": "GET/PUT /company — Профиль компании клиента.",
+                "tags": [
+                    "api"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No response body"
+                    }
+                }
+            },
+            "put": {
+                "operationId": "api_portal_v1_company_update",
+                "description": "GET/PUT /company — Профиль компании клиента.",
+                "tags": [
+                    "api"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No response body"
+                    }
+                }
+            }
+        },
+        "/api/portal/v1/company/": {
+            "get": {
+                "operationId": "api_portal_v1_company_retrieve_2",
+                "description": "GET/PUT /company — Профиль компании клиента.",
+                "tags": [
+                    "api"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No response body"
+                    }
+                }
+            },
+            "put": {
+                "operationId": "api_portal_v1_company_update_2",
+                "description": "GET/PUT /company — Профиль компании клиента.",
+                "tags": [
+                    "api"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No response body"
+                    }
+                }
+            }
+        },
+        "/api/portal/v1/contracts": {
+            "get": {
+                "operationId": "api_portal_v1_contracts_retrieve",
+                "description": "GET /contracts — Договоры клиента.",
+                "tags": [
+                    "api"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No response body"
+                    }
+                }
+            }
+        },
+        "/api/portal/v1/contracts/": {
+            "get": {
+                "operationId": "api_portal_v1_contracts_retrieve_2",
+                "description": "GET /contracts — Договоры клиента.",
+                "tags": [
+                    "api"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No response body"
+                    }
+                }
+            }
+        },
+        "/api/portal/v1/contracts/{id}/sign": {
+            "post": {
+                "operationId": "api_portal_v1_contracts_sign_create",
+                "description": "POST /contracts/{id}/sign — Подписание договора клиентом.",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "api"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No response body"
+                    }
+                }
+            }
+        },
+        "/api/portal/v1/contracts/{id}/sign/": {
+            "post": {
+                "operationId": "api_portal_v1_contracts_sign_create_2",
+                "description": "POST /contracts/{id}/sign — Подписание договора клиентом.",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "api"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No response body"
+                    }
+                }
+            }
+        },
+        "/api/portal/v1/deliveries": {
+            "get": {
+                "operationId": "api_portal_v1_deliveries_retrieve",
+                "description": "GET /deliveries — Поставки по сделкам клиента.",
+                "tags": [
+                    "api"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No response body"
+                    }
+                }
+            }
+        },
+        "/api/portal/v1/deliveries/": {
+            "get": {
+                "operationId": "api_portal_v1_deliveries_retrieve_2",
+                "description": "GET /deliveries — Поставки по сделкам клиента.",
+                "tags": [
+                    "api"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No response body"
+                    }
+                }
+            }
+        },
+        "/api/portal/v1/documents": {
+            "get": {
+                "operationId": "api_portal_v1_documents_retrieve",
+                "description": "GET /documents — Документы по сделкам клиента.",
+                "tags": [
+                    "api"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No response body"
+                    }
+                }
+            }
+        },
+        "/api/portal/v1/documents/": {
+            "get": {
+                "operationId": "api_portal_v1_documents_retrieve_2",
+                "description": "GET /documents — Документы по сделкам клиента.",
+                "tags": [
+                    "api"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No response body"
+                    }
+                }
+            }
+        },
+        "/api/portal/v1/documents/{id}/file": {
+            "get": {
+                "operationId": "api_portal_v1_documents_file_retrieve",
+                "description": "GET /documents/{id}/file — Скачивание PDF документа (202 если генерируется).",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "api"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No response body"
+                    }
+                }
+            }
+        },
+        "/api/portal/v1/documents/{id}/file/": {
+            "get": {
+                "operationId": "api_portal_v1_documents_file_retrieve_2",
+                "description": "GET /documents/{id}/file — Скачивание PDF документа (202 если генерируется).",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "api"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No response body"
+                    }
+                }
+            }
+        },
+        "/api/portal/v1/invoices": {
+            "get": {
+                "operationId": "api_portal_v1_invoices_retrieve",
+                "description": "GET /invoices — Счета клиента.",
+                "tags": [
+                    "api"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No response body"
+                    }
+                }
+            }
+        },
+        "/api/portal/v1/invoices/": {
+            "get": {
+                "operationId": "api_portal_v1_invoices_retrieve_2",
+                "description": "GET /invoices — Счета клиента.",
+                "tags": [
+                    "api"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No response body"
+                    }
+                }
+            }
+        },
+        "/api/portal/v1/me": {
+            "get": {
+                "operationId": "api_portal_v1_me_retrieve",
+                "description": "GET /me — Текущий профиль сессии (контакт, компания, права).",
+                "tags": [
+                    "api"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No response body"
+                    }
+                }
+            }
+        },
+        "/api/portal/v1/me/": {
+            "get": {
+                "operationId": "api_portal_v1_me_retrieve_2",
+                "description": "GET /me — Текущий профиль сессии (контакт, компания, права).",
+                "tags": [
+                    "api"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No response body"
+                    }
+                }
+            }
+        },
+        "/api/portal/v1/quotes": {
+            "get": {
+                "operationId": "api_portal_v1_quotes_retrieve",
+                "description": "GET /quotes — Список КП для клиента.",
+                "tags": [
+                    "api"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No response body"
+                    }
+                }
+            }
+        },
+        "/api/portal/v1/quotes/": {
+            "get": {
+                "operationId": "api_portal_v1_quotes_retrieve_2",
+                "description": "GET /quotes — Список КП для клиента.",
+                "tags": [
+                    "api"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No response body"
+                    }
+                }
+            }
+        },
+        "/api/portal/v1/quotes/{id}": {
+            "get": {
+                "operationId": "api_portal_v1_quotes_retrieve_3",
+                "description": "GET /quotes/{id} — Детали КП с позициями.",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "api"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No response body"
+                    }
+                }
+            }
+        },
+        "/api/portal/v1/quotes/{id}/": {
+            "get": {
+                "operationId": "api_portal_v1_quotes_retrieve_4",
+                "description": "GET /quotes/{id} — Детали КП с позициями.",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "api"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No response body"
+                    }
+                }
+            }
+        },
+        "/api/portal/v1/quotes/{id}/accept": {
+            "post": {
+                "operationId": "api_portal_v1_quotes_accept_create",
+                "description": "POST /quotes/{id}/accept — Акцепт КП по коду.",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "api"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No response body"
+                    }
+                }
+            }
+        },
+        "/api/portal/v1/quotes/{id}/accept/": {
+            "post": {
+                "operationId": "api_portal_v1_quotes_accept_create_2",
+                "description": "POST /quotes/{id}/accept — Акцепт КП по коду.",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "api"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No response body"
+                    }
+                }
+            }
+        },
+        "/api/portal/v1/quotes/{id}/reject": {
+            "post": {
+                "operationId": "api_portal_v1_quotes_reject_create",
+                "description": "POST /quotes/{id}/reject — Отклонение КП с причиной.",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "api"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No response body"
+                    }
+                }
+            }
+        },
+        "/api/portal/v1/quotes/{id}/reject/": {
+            "post": {
+                "operationId": "api_portal_v1_quotes_reject_create_2",
+                "description": "POST /quotes/{id}/reject — Отклонение КП с причиной.",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "api"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No response body"
+                    }
+                }
+            }
+        },
+        "/api/portal/v1/requests": {
+            "get": {
+                "operationId": "api_portal_v1_requests_retrieve",
+                "description": "GET/POST /requests — Запросы клиента.",
+                "tags": [
+                    "api"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No response body"
+                    }
+                }
+            },
+            "post": {
+                "operationId": "api_portal_v1_requests_create",
+                "description": "GET/POST /requests — Запросы клиента.",
+                "tags": [
+                    "api"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No response body"
+                    }
+                }
+            }
+        },
+        "/api/portal/v1/requests/": {
+            "get": {
+                "operationId": "api_portal_v1_requests_retrieve_2",
+                "description": "GET/POST /requests — Запросы клиента.",
+                "tags": [
+                    "api"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No response body"
+                    }
+                }
+            },
+            "post": {
+                "operationId": "api_portal_v1_requests_create_2",
+                "description": "GET/POST /requests — Запросы клиента.",
+                "tags": [
+                    "api"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No response body"
+                    }
+                }
+            }
+        },
+        "/api/portal/v1/requests/{id}": {
+            "get": {
+                "operationId": "api_portal_v1_requests_retrieve_3",
+                "description": "GET /requests/{id} — Детали запроса клиента (Q-16).",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "api"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No response body"
+                    }
+                }
+            }
+        },
+        "/api/portal/v1/requests/{id}/": {
+            "get": {
+                "operationId": "api_portal_v1_requests_retrieve_4",
+                "description": "GET /requests/{id} — Детали запроса клиента (Q-16).",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "api"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No response body"
+                    }
+                }
+            }
+        },
+        "/api/portal/v1/team": {
+            "get": {
+                "operationId": "api_portal_v1_team_retrieve",
+                "description": "GET /team — Список участников команды клиента.",
+                "tags": [
+                    "api"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No response body"
+                    }
+                }
+            }
+        },
+        "/api/portal/v1/team/": {
+            "get": {
+                "operationId": "api_portal_v1_team_retrieve_2",
+                "description": "GET /team — Список участников команды клиента.",
+                "tags": [
+                    "api"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No response body"
+                    }
+                }
+            }
+        },
+        "/api/portal/v1/team/invite": {
+            "post": {
+                "operationId": "api_portal_v1_team_invite_create",
+                "description": "POST /team/invite — Приглашение коллеги в кабинет.",
+                "tags": [
+                    "api"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No response body"
+                    }
+                }
+            }
+        },
+        "/api/portal/v1/team/invite/": {
+            "post": {
+                "operationId": "api_portal_v1_team_invite_create_2",
+                "description": "POST /team/invite — Приглашение коллеги в кабинет.",
+                "tags": [
+                    "api"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No response body"
+                    }
+                }
+            }
+        },
+        "/api/portal/v1/uploads": {
+            "post": {
+                "operationId": "api_portal_v1_uploads_create",
+                "description": "POST /uploads — Загрузка файлов клиентом (Q-14, multipart, <= 10MB).",
+                "tags": [
+                    "api"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No response body"
+                    }
+                }
+            }
+        },
+        "/api/portal/v1/uploads/": {
+            "post": {
+                "operationId": "api_portal_v1_uploads_create_2",
+                "description": "POST /uploads — Загрузка файлов клиентом (Q-14, multipart, <= 10MB).",
+                "tags": [
+                    "api"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No response body"
+                    }
+                }
+            }
+        },
         "/api/v1/accounts/companies/": {
             "get": {
                 "operationId": "accounts_companies_list",
@@ -1810,6 +3096,62 @@
                             "application/json": {
                                 "schema": {
                                     "$ref": "#/components/schemas/Contact"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/api/v1/accounts/contacts/{id}/invite/": {
+            "post": {
+                "operationId": "accounts_contacts_invite_create",
+                "description": "Пригласить контакт клиента в личный кабинет (M2-ERP-02).",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "description": "A unique integer value identifying this Контакт.",
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "Client Base"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ContactInviteRequestRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ContactInviteRequestRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ContactInviteRequestRequest"
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "jwtAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ContactInviteResponse"
                                 }
                             }
                         },
@@ -14937,7 +16279,7 @@
         "/api/v1/public/documents/{token}/": {
             "get": {
                 "operationId": "public_documents_retrieve",
-                "description": "Content-negotiated public generated document: branded HTML page or PDF by token.",
+                "description": "Public content-negotiated view for an ISSUED generated document: HTML page or PDF.",
                 "summary": "Public generated-document page (HTML) or PDF by token",
                 "parameters": [
                     {
@@ -14950,7 +16292,7 @@
                     }
                 ],
                 "tags": [
-                    "CRM"
+                    "Portal"
                 ],
                 "security": [
                     {}
@@ -14974,7 +16316,7 @@
         "/api/v1/public/quotes/{token}/": {
             "get": {
                 "operationId": "public_quotes_retrieve",
-                "description": "Content-negotiated public КП: HTML page for browsers, client-projection PDF for downloads.",
+                "description": "Content-negotiated public quote view: HTML for browsers, PDF for downloads.",
                 "summary": "Public КП page (HTML) or PDF by token",
                 "parameters": [
                     {
@@ -14987,7 +16329,7 @@
                     }
                 ],
                 "tags": [
-                    "CRM"
+                    "Portal"
                 ],
                 "security": [
                     {}
@@ -15011,7 +16353,7 @@
         "/api/v1/public/quotes/{token}/accept/": {
             "post": {
                 "operationId": "public_quotes_accept_create",
-                "description": "Verify the one-time code and accept the КП as the offline contact (коммерческий акцепт).",
+                "description": "Accept quote with email verification code.",
                 "summary": "Accept КП with email code",
                 "parameters": [
                     {
@@ -15024,7 +16366,7 @@
                     }
                 ],
                 "tags": [
-                    "CRM"
+                    "Portal"
                 ],
                 "security": [
                     {}
@@ -15039,7 +16381,7 @@
         "/api/v1/public/quotes/{token}/reject/": {
             "post": {
                 "operationId": "public_quotes_reject_create",
-                "description": "Reject the КП from the public page — required reason (recoverable, link-gated only).",
+                "description": "Reject quote from public page with a reason.",
                 "summary": "Reject КП with reason",
                 "parameters": [
                     {
@@ -15052,7 +16394,7 @@
                     }
                 ],
                 "tags": [
-                    "CRM"
+                    "Portal"
                 ],
                 "security": [
                     {}
@@ -15067,7 +16409,7 @@
         "/api/v1/public/quotes/{token}/request-code/": {
             "post": {
                 "operationId": "public_quotes_request_code_create",
-                "description": "Email a one-time acceptance code to the recipient resolved from the QUOTE'S deal.",
+                "description": "Email one-time verification code for quote acceptance.",
                 "summary": "Request КП acceptance code",
                 "parameters": [
                     {
@@ -15080,7 +16422,7 @@
                     }
                 ],
                 "tags": [
-                    "CRM"
+                    "Portal"
                 ],
                 "security": [
                     {}
@@ -15095,7 +16437,7 @@
         "/api/v1/public/quotes/{token}/viewed/": {
             "post": {
                 "operationId": "public_quotes_viewed_create",
-                "description": "Browser BEACON marking a genuine open (fired by page JS, NOT the bare GET).",
+                "description": "Browser beacon marking genuine open of the quote.",
                 "summary": "Mark public КП as viewed (beacon)",
                 "parameters": [
                     {
@@ -15108,7 +16450,7 @@
                     }
                 ],
                 "tags": [
-                    "CRM"
+                    "Portal"
                 ],
                 "security": [
                     {}
@@ -17287,6 +18629,15 @@
                     "stage_code"
                 ]
             },
+            "ChannelEnum": {
+                "enum": [
+                    "email",
+                    "telegram",
+                    "both"
+                ],
+                "type": "string",
+                "description": "* `email` - email\n* `telegram` - telegram\n* `both` - both"
+            },
             "ChargeTemplate": {
                 "type": "object",
                 "description": "Company-Admin CRUD for per-Incoterm charge templates (org-admin zone).\n\n`company` is set by the viewset from the requester's seller company — never\nfrom the request body — so a Company Admin can only manage their own templates.",
@@ -18539,6 +19890,52 @@
                         "title": "Основной контакт",
                         "description": "Контакт по умолчанию для отправки КП"
                     },
+                    "telegram_user_id": {
+                        "type": "integer",
+                        "readOnly": true,
+                        "nullable": true,
+                        "description": "Идентификатор пользователя в Telegram"
+                    },
+                    "telegram_username": {
+                        "type": "string",
+                        "description": "Имя пользователя Telegram без @",
+                        "maxLength": 255
+                    },
+                    "language": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/ContactLanguageEnum"
+                            }
+                        ],
+                        "title": "Язык интерфейса"
+                    },
+                    "preferred_channel": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/ContactPreferredChannelEnum"
+                            }
+                        ],
+                        "title": "Предпочитаемый канал связи"
+                    },
+                    "can_act": {
+                        "type": "boolean",
+                        "title": "Право действовать",
+                        "description": "Право принимать КП, подписывать договоры и принимать акты"
+                    },
+                    "invited_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "readOnly": true,
+                        "nullable": true,
+                        "title": "Дата приглашения"
+                    },
+                    "last_login_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "readOnly": true,
+                        "nullable": true,
+                        "title": "Дата последнего входа"
+                    },
                     "created_at": {
                         "type": "string",
                         "format": "date-time",
@@ -18551,8 +19948,77 @@
                     "company_name",
                     "created_at",
                     "id",
-                    "name"
+                    "invited_at",
+                    "last_login_at",
+                    "name",
+                    "telegram_user_id"
                 ]
+            },
+            "ContactInviteRequestRequest": {
+                "type": "object",
+                "properties": {
+                    "channel": {
+                        "$ref": "#/components/schemas/ChannelEnum"
+                    },
+                    "language": {
+                        "$ref": "#/components/schemas/LanguageB62Enum"
+                    }
+                }
+            },
+            "ContactInviteResponse": {
+                "type": "object",
+                "properties": {
+                    "ok": {
+                        "type": "boolean"
+                    },
+                    "contact_id": {
+                        "type": "integer"
+                    },
+                    "channel": {
+                        "type": "string"
+                    },
+                    "email_sent": {
+                        "type": "boolean"
+                    },
+                    "invite_url": {
+                        "type": "string"
+                    },
+                    "telegram_url": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "invited_at": {
+                        "type": "string",
+                        "format": "date-time"
+                    }
+                },
+                "required": [
+                    "channel",
+                    "contact_id",
+                    "email_sent",
+                    "invite_url",
+                    "invited_at",
+                    "ok",
+                    "telegram_url"
+                ]
+            },
+            "ContactLanguageEnum": {
+                "enum": [
+                    "ru",
+                    "uz",
+                    "en"
+                ],
+                "type": "string",
+                "description": "* `ru` - RU\n* `uz` - UZ\n* `en` - EN"
+            },
+            "ContactPreferredChannelEnum": {
+                "enum": [
+                    "email",
+                    "telegram",
+                    "both"
+                ],
+                "type": "string",
+                "description": "* `email` - Email\n* `telegram` - Telegram\n* `both` - Both"
             },
             "Contract": {
                 "type": "object",
@@ -20605,6 +22071,15 @@
                     "deal"
                 ]
             },
+            "LanguageB62Enum": {
+                "enum": [
+                    "ru",
+                    "uz",
+                    "en"
+                ],
+                "type": "string",
+                "description": "* `ru` - ru\n* `uz` - uz\n* `en` - en"
+            },
             "LayoutPresetEnum": {
                 "enum": [
                     "light",
@@ -21166,6 +22641,31 @@
                         "maxLength": 50
                     },
                     "position": {
+                        "type": "string",
+                        "default": "",
+                        "maxLength": 255
+                    },
+                    "can_act": {
+                        "type": "boolean",
+                        "default": true
+                    },
+                    "language": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/LanguageB62Enum"
+                            }
+                        ],
+                        "default": "ru"
+                    },
+                    "preferred_channel": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/PreferredChannelEf2Enum"
+                            }
+                        ],
+                        "default": "email"
+                    },
+                    "telegram_username": {
                         "type": "string",
                         "default": "",
                         "maxLength": 255
@@ -22401,6 +23901,32 @@
                         "type": "boolean",
                         "title": "Основной контакт",
                         "description": "Контакт по умолчанию для отправки КП"
+                    },
+                    "telegram_username": {
+                        "type": "string",
+                        "description": "Имя пользователя Telegram без @",
+                        "maxLength": 255
+                    },
+                    "language": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/ContactLanguageEnum"
+                            }
+                        ],
+                        "title": "Язык интерфейса"
+                    },
+                    "preferred_channel": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/ContactPreferredChannelEnum"
+                            }
+                        ],
+                        "title": "Предпочитаемый канал связи"
+                    },
+                    "can_act": {
+                        "type": "boolean",
+                        "title": "Право действовать",
+                        "description": "Право принимать КП, подписывать договоры и принимать акты"
                     }
                 }
             },
@@ -23681,6 +25207,15 @@
                 "required": [
                     "email"
                 ]
+            },
+            "PreferredChannelEf2Enum": {
+                "enum": [
+                    "email",
+                    "telegram",
+                    "both"
+                ],
+                "type": "string",
+                "description": "* `email` - email\n* `telegram` - telegram\n* `both` - both"
             },
             "PreflightCheckRequestRequest": {
                 "type": "object",
