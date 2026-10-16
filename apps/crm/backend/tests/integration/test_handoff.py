@@ -19,6 +19,7 @@ from app.integrations.erp import HandoffPayload, HandoffResult
 from app.models.clients import Client, ClientContact
 from app.models.deals import Deal
 from app.models.leads import Lead, TelegramIdentity
+from app.security.principal import Principal
 from app.services.clients import ClientService
 from tests.integration.crm_helpers import make_user
 
@@ -84,9 +85,10 @@ async def _create_lead(
 
 
 async def test_make_customer_erp_mode_success(sessions: async_sessionmaker[AsyncSession]) -> None:
-    who = await make_user(sessions, "manager1@example.com", "manager", full_name="Менеджер 1")
+    account, _ = await make_user(sessions, "manager1@example.com", ["manager"])
+    who = Principal(account.id, "Менеджер", ("manager",))
     async with sessions() as session, session.begin():
-        lead_id = await _create_lead(session, stage="in_progress", assigned_user_id=who.user_id)
+        lead_id = await _create_lead(session, stage="in_progress", assigned_user_id=account.id)
 
     fake_erp = FakeErpClient(company_id=55, request_id=77)
 
@@ -146,9 +148,10 @@ async def test_make_customer_erp_mode_success(sessions: async_sessionmaker[Async
 async def test_make_customer_erp_mode_failure_rolls_back(
     sessions: async_sessionmaker[AsyncSession],
 ) -> None:
-    who = await make_user(sessions, "manager2@example.com", "manager", full_name="Менеджер 2")
+    account, _ = await make_user(sessions, "manager2@example.com", ["manager"])
+    who = Principal(account.id, "Менеджер", ("manager",))
     async with sessions() as session, session.begin():
-        lead_id = await _create_lead(session, stage="in_progress", assigned_user_id=who.user_id)
+        lead_id = await _create_lead(session, stage="in_progress", assigned_user_id=account.id)
 
     fake_erp = FakeErpClient(fail=True)
 
@@ -181,10 +184,11 @@ async def test_make_customer_erp_mode_failure_rolls_back(
 async def test_make_customer_local_mode_preserves_legacy_behavior(
     sessions: async_sessionmaker[AsyncSession],
 ) -> None:
-    who = await make_user(sessions, "manager3@example.com", "manager", full_name="Менеджер 3")
+    account, _ = await make_user(sessions, "manager3@example.com", ["manager"])
+    who = Principal(account.id, "Менеджер", ("manager",))
     async with sessions() as session, session.begin():
         # В local режиме передача разрешена только из won (или customer)
-        lead_id = await _create_lead(session, stage="won", assigned_user_id=who.user_id)
+        lead_id = await _create_lead(session, stage="won", assigned_user_id=account.id)
 
     fake_erp = FakeErpClient(company_id=99)
 

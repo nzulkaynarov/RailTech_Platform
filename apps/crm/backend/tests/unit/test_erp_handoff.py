@@ -71,7 +71,7 @@ def _sample_payload() -> HandoffPayload:
     )
 
 
-def test_handoff_payload_to_dict_matches_contract():
+def test_handoff_payload_to_dict_matches_contract() -> None:
     payload = _sample_payload()
     data = handoff_payload_to_dict(payload)
 
@@ -90,8 +90,8 @@ def test_handoff_payload_to_dict_matches_contract():
 
 
 @pytest.mark.asyncio
-async def test_handoff_client_success():
-    config = Settings(erp_base_url="https://erp.internal", erp_service_token="test-token")  # type: ignore[call-arg]
+async def test_handoff_client_success() -> None:
+    config = Settings(erp_base_url="https://erp.internal", erp_service_token="test-token")
     client = HttpxErpClient(_DummyStore("test-token"), config)
     payload = _sample_payload()
 
@@ -120,8 +120,8 @@ async def test_handoff_client_success():
 
 
 @pytest.mark.asyncio
-async def test_handoff_client_unconfigured():
-    config = Settings(erp_base_url="", erp_service_token="")  # type: ignore[call-arg]
+async def test_handoff_client_unconfigured() -> None:
+    config = Settings(erp_base_url="", erp_service_token="")
     client = HttpxErpClient(_DummyStore(None), config)
     payload = _sample_payload()
 
@@ -131,8 +131,8 @@ async def test_handoff_client_unconfigured():
 
 
 @pytest.mark.asyncio
-async def test_handoff_client_unauthorized():
-    config = Settings(erp_base_url="https://erp.internal", erp_service_token="bad-token")  # type: ignore[call-arg]
+async def test_handoff_client_unauthorized() -> None:
+    config = Settings(erp_base_url="https://erp.internal", erp_service_token="bad-token")
     client = HttpxErpClient(_DummyStore("bad-token"), config)
     payload = _sample_payload()
 
@@ -144,8 +144,8 @@ async def test_handoff_client_unauthorized():
 
 
 @pytest.mark.asyncio
-async def test_handoff_client_validation_error():
-    config = Settings(erp_base_url="https://erp.internal", erp_service_token="test-token")  # type: ignore[call-arg]
+async def test_handoff_client_validation_error() -> None:
+    config = Settings(erp_base_url="https://erp.internal", erp_service_token="test-token")
     client = HttpxErpClient(_DummyStore("test-token"), config)
     payload = _sample_payload()
 
@@ -159,8 +159,8 @@ async def test_handoff_client_validation_error():
 
 
 @pytest.mark.asyncio
-async def test_handoff_client_timeout():
-    config = Settings(erp_base_url="https://erp.internal", erp_service_token="test-token")  # type: ignore[call-arg]
+async def test_handoff_client_timeout() -> None:
+    config = Settings(erp_base_url="https://erp.internal", erp_service_token="test-token")
     client = HttpxErpClient(_DummyStore("test-token"), config)
     payload = _sample_payload()
 

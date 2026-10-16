@@ -23,7 +23,27 @@ export const STAGE_COLORS: Record<string, string> = {
   lost: "default",
 };
 
+export const EXTERNAL_STAGE_COLORS: Record<string, string> = {
+  request: "default",
+  quoting: "processing",
+  quote_sent: "blue",
+  accepted: "cyan",
+  contract: "purple",
+  invoiced: "warning",
+  paid: "gold",
+  fulfilment: "geekblue",
+  closing: "magenta",
+  won: "success",
+  lost: "error",
+};
+
 export const stageLabel = (stage: string): string => t.deals.stages[stage] ?? stage;
+
+export const externalStageLabel = (stage: string | null | undefined): string =>
+  stage ? (t.deals.externalStages[stage] ?? stage) : "";
+
+export const externalStageColor = (stage: string | null | undefined): string =>
+  (stage ? EXTERNAL_STAGE_COLORS[stage] : undefined) ?? "cyan";
 
 /** Стадия из адреса (`/deals?stage=won`): только известные значения. */
 export function stageFromSearch(value: string | null): "open" | "won" | "lost" | undefined {

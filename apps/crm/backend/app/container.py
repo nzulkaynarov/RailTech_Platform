@@ -36,6 +36,7 @@ if TYPE_CHECKING:
     from app.services.clients import ClientService
     from app.services.documents import DocumentService
     from app.services.erp_connector import ErpConnectorService
+    from app.services.erp_events import ErpEventsService
     from app.services.external_services.checks import ExternalChecks
     from app.services.external_services.switches import SwitchService
     from app.services.external_services.view import ExternalServicesView
@@ -325,6 +326,20 @@ class Container:
         )
 
     @cached_property
+    def erp_events_service(self) -> "ErpEventsService":
+        """Приёмник и обработчик событий ERP (M3-CRM-04)."""
+        from app.services.erp_events import ErpEventsService
+
+        return ErpEventsService(
+            self.session_factory,
+            self.settings_service,
+            self.secrets_store,
+            self.settings,
+            self.telegram_bot,
+            _enqueue_erp_event,
+        )
+
+    @cached_property
     def mail_service(self) -> "MailService":
         """Коннектор «Почта» (M3-CRM-08): рендер, журнал `email_log`, отправка задачей очереди."""
         from app.integrations.smtp import SmtplibTransport
@@ -455,6 +470,12 @@ async def _enqueue_extraction(document_id: int) -> object:
     from app.tasks.documents import extract_document_text
 
     return await extract_document_text.defer_async(document_id=document_id)
+
+
+async def _enqueue_erp_event(event_id: str) -> int:
+    from app.tasks.erp_events import enqueue_erp_event
+
+    return await enqueue_erp_event(event_id)
 
 
 async def _escalation_changed(escalation_id: int) -> None:

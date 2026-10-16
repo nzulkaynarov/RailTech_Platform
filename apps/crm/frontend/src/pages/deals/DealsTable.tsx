@@ -1,10 +1,16 @@
-import { Table, Tag } from "antd";
+import { Space, Table, Tag } from "antd";
 import type { ColumnsType } from "antd/es/table";
 
 import type { DealOut } from "../../api/generated/model";
 import { EntityLink } from "../../components/EntityLink";
 import { ActionsTitle, RowActions } from "../../components/RowActions";
-import { formatMoney, STAGE_COLORS, stageLabel } from "../../domain/deals";
+import {
+  externalStageColor,
+  externalStageLabel,
+  formatMoney,
+  STAGE_COLORS,
+  stageLabel,
+} from "../../domain/deals";
 import { t } from "../../i18n/ru";
 import { formatDate } from "../../lib/time";
 
@@ -50,7 +56,25 @@ function columns(showClient: boolean, onEdit: Props["onEdit"]): ColumnsType<Deal
     {
       title: t.deals.stage,
       dataIndex: "stage",
-      render: (s: string) => <Tag color={STAGE_COLORS[s] ?? "default"}>{stageLabel(s)}</Tag>,
+      render: (_: unknown, d: DealOut) => (
+        <Space size={4} wrap>
+          <Tag color={STAGE_COLORS[d.stage] ?? "default"}>{stageLabel(d.stage)}</Tag>
+          {d.external_stage ? (
+            <Tag
+              color={externalStageColor(d.external_stage)}
+              bordered={false}
+              title={t.deals.externalStageHint}
+            >
+              {externalStageLabel(d.external_stage)}
+            </Tag>
+          ) : null}
+          {d.erp_deal_id ? (
+            <Tag color="blue" bordered={false} title={t.deals.erpDeal}>
+              #{String(d.erp_deal_id)}
+            </Tag>
+          ) : null}
+        </Space>
+      ),
     },
     {
       title: t.deals.expected,

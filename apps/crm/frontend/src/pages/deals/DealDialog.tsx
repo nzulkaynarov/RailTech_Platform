@@ -1,4 +1,15 @@
-import { App as AntApp, DatePicker, Form, Input, InputNumber, Modal, Select } from "antd";
+import {
+  Alert,
+  App as AntApp,
+  DatePicker,
+  Form,
+  Input,
+  InputNumber,
+  Modal,
+  Select,
+  Space,
+  Tag,
+} from "antd";
 import type { Dayjs } from "dayjs";
 import dayjs from "dayjs";
 import { useEffect } from "react";
@@ -7,7 +18,14 @@ import { useClients } from "../../api/adminQueries";
 import { useDealOptions, useSaveDeal } from "../../api/dealQueries";
 import type { DealOut } from "../../api/generated/model";
 import { useTeam } from "../../api/queries";
-import { currencyOptions, groupThousands, parseAmount, stageLabel } from "../../domain/deals";
+import {
+  currencyOptions,
+  externalStageColor,
+  externalStageLabel,
+  groupThousands,
+  parseAmount,
+  stageLabel,
+} from "../../domain/deals";
 import { useApiErrorToast } from "../../hooks/useApiErrorToast";
 import { t } from "../../i18n/ru";
 
@@ -98,6 +116,24 @@ export function DealDialog({ open, deal, clientId, onClose }: Props) {
       destroyOnHidden
     >
       <Form form={form} layout="vertical" onFinish={submit}>
+        {deal?.erp_deal_id || deal?.external_stage ? (
+          <Alert
+            className="mb-4"
+            type="info"
+            showIcon
+            message={
+              <Space wrap size={8}>
+                <span>{t.clients.inBackoffice}:</span>
+                {deal.erp_deal_id ? <Tag color="blue">#{String(deal.erp_deal_id)}</Tag> : null}
+                {deal.external_stage ? (
+                  <Tag color={externalStageColor(deal.external_stage)}>
+                    {externalStageLabel(deal.external_stage)}
+                  </Tag>
+                ) : null}
+              </Space>
+            }
+          />
+        ) : null}
         <Form.Item name="title" label={t.deals.title} rules={[{ required: true, max: 255 }]}>
           <Input />
         </Form.Item>

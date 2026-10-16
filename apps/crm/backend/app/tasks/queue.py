@@ -18,6 +18,7 @@ TASK_MODULES = (
     "app.tasks.monitoring",
     "app.tasks.mail",
     "app.tasks.external_services",
+    "app.tasks.erp_events",
 )
 
 queue = procrastinate.App(

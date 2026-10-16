@@ -47,6 +47,8 @@ TABLES = (
     "telegram_chat_candidates",
     "llm_usage",
     "email_log",
+    "erp_handoff_links",
+    "erp_incoming_events",
     "external_service_checks",
     "external_service_incidents",
     "external_service_switches",
