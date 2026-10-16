@@ -25,6 +25,8 @@ class DealOut(BaseModel):
     owner_user_id: int | None
     owner_name: str | None = None
     created_at: datetime
+    erp_deal_id: int | None = None
+    external_stage: str | None = None
 
 
 class DealCreate(BaseModel):

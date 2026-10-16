@@ -10,6 +10,7 @@ import type { LeadDetailQualification } from "./leadDetailQualification";
 export interface LeadDetail {
   assigned_user_id: number | null;
   assigned_user_name?: string | null;
+  backoffice_mode?: string;
   client_id?: number | null;
   client_phone_e164?: string | null;
   company_name?: string | null;
@@ -17,6 +18,8 @@ export interface LeadDetail {
   created_at: string;
   display_name: string;
   email?: string | null;
+  erp_company_id?: number | null;
+  erp_deal_id?: number | null;
   escalation?: EscalationOut | null;
   id: number;
   language: string;

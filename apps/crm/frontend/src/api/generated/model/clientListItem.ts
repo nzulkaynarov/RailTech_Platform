@@ -10,6 +10,7 @@
  */
 export interface ClientListItem {
   created_at: string;
+  erp_company_id?: number | null;
   id: number;
   inn: string | null;
   is_active: boolean;

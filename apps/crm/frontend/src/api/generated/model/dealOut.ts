@@ -13,7 +13,9 @@ export interface DealOut {
   closed_at: string | null;
   created_at: string;
   currency: string;
+  erp_deal_id?: number | null;
   expected_close_date: string | null;
+  external_stage?: string | null;
   id: number;
   lead_id: number | null;
   lost_reason: string | null;

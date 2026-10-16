@@ -992,6 +992,17 @@
             "title": "Created At",
             "type": "string"
           },
+          "erp_company_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Erp Company Id"
+          },
           "id": {
             "title": "Id",
             "type": "integer"
@@ -1094,6 +1105,17 @@
             "format": "date-time",
             "title": "Created At",
             "type": "string"
+          },
+          "erp_company_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Erp Company Id"
           },
           "id": {
             "title": "Id",
@@ -1970,6 +1992,17 @@
             "title": "Currency",
             "type": "string"
           },
+          "erp_deal_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Erp Deal Id"
+          },
           "expected_close_date": {
             "anyOf": [
               {
@@ -1981,6 +2014,17 @@
               }
             ],
             "title": "Expected Close Date"
+          },
+          "external_stage": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "External Stage"
           },
           "id": {
             "title": "Id",
@@ -4005,6 +4049,11 @@
             ],
             "title": "Assigned User Name"
           },
+          "backoffice_mode": {
+            "default": "local",
+            "title": "Backoffice Mode",
+            "type": "string"
+          },
           "client_id": {
             "anyOf": [
               {
@@ -4069,6 +4118,28 @@
               }
             ],
             "title": "Email"
+          },
+          "erp_company_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Erp Company Id"
+          },
+          "erp_deal_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Erp Deal Id"
           },
           "escalation": {
             "anyOf": [

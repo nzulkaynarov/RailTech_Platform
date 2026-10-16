@@ -4,10 +4,13 @@ from datetime import datetime
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, Query
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import ContainerDep, require
 from app.domain.errors import NotFoundError
+from app.models.clients import Client
+from app.models.deals import Deal
 from app.models.leads import Lead, Message
 from app.models.qualification import Escalation
 from app.repositories import crm, service_requests
@@ -175,7 +178,16 @@ async def get_lead(lead_id: int, _: Reader, container: ContainerDep) -> LeadDeta
         client_phone = await crm.client_primary_phone(session, lead.client_id)
         names = await crm.user_names(session, [lead])
         request_id = await service_requests.open_request_id(session, lead)
+        client = await session.get(Client, lead.client_id) if lead.client_id is not None else None
+        erp_company_id = client.erp_company_id if client is not None else None
+        deal_row = (
+            await session.scalars(
+                select(Deal).where(Deal.lead_id == lead_id).order_by(Deal.id.desc()).limit(1)
+            )
+        ).first()
+        erp_deal_id = deal_row.erp_deal_id if deal_row is not None else None
     base = lead_out(lead, escalation, names)
+    mode = await container.backoffice_mode()
     return LeadDetail(
         **base.model_dump(),
         qualification=dict(lead.qualification or {}),
@@ -188,6 +200,9 @@ async def get_lead(lead_id: int, _: Reader, container: ContainerDep) -> LeadDeta
         notes_count=lead.notes_count,
         snoozed_until=lead.snoozed_until,
         open_service_request_id=request_id,
+        backoffice_mode=mode.value,
+        erp_company_id=erp_company_id,
+        erp_deal_id=erp_deal_id,
     )
 
 

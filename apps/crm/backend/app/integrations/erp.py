@@ -8,9 +8,10 @@
 """
 
 import time
-from dataclasses import dataclass
+import uuid
+from dataclasses import dataclass, field
 from datetime import datetime
-from typing import Literal, Protocol
+from typing import Any, Literal, Protocol
 
 import httpx
 import structlog
@@ -18,6 +19,12 @@ from pydantic import BaseModel, ConfigDict, ValidationError
 
 from app.config import Settings
 from app.domain.erp_connector import base_url_problem, health_url, normalize_base_url
+from app.domain.errors import (
+    ConflictError,
+    Reason,
+    UpstreamUnavailableError,
+    ValidationFailedError,
+)
 from app.security.secrets_store import ERP_SERVICE_TOKEN, ERP_WEBHOOK_SECRET, SecretsStore
 from app.services.settings import SettingsService
 
@@ -188,3 +195,198 @@ def _parse(response: httpx.Response, latency_ms: int) -> ErpHealth:
         checked_at=payload.checked_at,
         latency_ms=latency_ms,
     )
+
+
+@dataclass(frozen=True, slots=True)
+class HandoffCompanyPayload:
+    name: str
+    inn: str = ""
+    segment: str = ""
+    language: str = "ru"
+
+
+@dataclass(frozen=True, slots=True)
+class HandoffContactPayload:
+    crm_contact_id: int
+    name: str
+    language: str
+    is_primary: bool
+    preferred_channel: str
+    phone: str = ""
+    email: str = ""
+    telegram_user_id: int | None = None
+
+
+@dataclass(frozen=True, slots=True)
+class HandoffNeedPayload:
+    summary: str
+    product_interest: list[str] = field(default_factory=list)
+    attachments: list[dict[str, Any]] = field(default_factory=list)
+
+
+@dataclass(frozen=True, slots=True)
+class HandoffOwnerPayload:
+    crm_user_id: int
+    name: str
+
+
+@dataclass(frozen=True, slots=True)
+class HandoffConsentPayload:
+    given_at: str
+    version: str = "1.0"
+
+
+@dataclass(frozen=True, slots=True)
+class HandoffInvitePayload:
+    channels: list[str] = field(default_factory=lambda: ["telegram"])
+
+
+@dataclass(frozen=True, slots=True)
+class HandoffPayload:
+    crm_client_id: int
+    company: HandoffCompanyPayload
+    contacts: list[HandoffContactPayload]
+    need: HandoffNeedPayload
+    owner: HandoffOwnerPayload
+    consent: HandoffConsentPayload
+    create_request: bool = True
+    invite: HandoffInvitePayload = field(default_factory=HandoffInvitePayload)
+    crm_lead_id: int | None = None
+
+
+@dataclass(frozen=True, slots=True)
+class HandoffResult:
+    erp_company_id: int
+    erp_request_id: int | None
+    invite_sent_via: list[str]
+    cabinet_url: str
+
+
+def handoff_payload_to_dict(p: HandoffPayload) -> dict[str, Any]:
+    return {
+        "crm_client_id": p.crm_client_id,
+        "crm_lead_id": p.crm_lead_id,
+        "company": {
+            "name": p.company.name,
+            "inn": p.company.inn or "",
+            "segment": p.company.segment or "",
+            "language": p.company.language,
+        },
+        "contacts": [
+            {
+                "crm_contact_id": c.crm_contact_id,
+                "name": c.name,
+                "phone": c.phone or "",
+                "email": c.email or "",
+                "telegram_user_id": c.telegram_user_id,
+                "language": c.language,
+                "is_primary": c.is_primary,
+                "preferred_channel": c.preferred_channel,
+            }
+            for c in p.contacts
+        ],
+        "need": {
+            "summary": p.need.summary,
+            "product_interest": p.need.product_interest,
+            "attachments": p.need.attachments,
+        },
+        "owner": {
+            "crm_user_id": p.owner.crm_user_id,
+            "name": p.owner.name,
+        },
+        "consent": {
+            "given_at": p.consent.given_at,
+            "version": p.consent.version,
+        },
+        "create_request": p.create_request,
+        "invite": {
+            "channels": p.invite.channels,
+        },
+    }
+
+
+class ErpClient(Protocol):
+    async def handoff_client(
+        self, payload: HandoffPayload, *, idempotency_key: str | None = None
+    ) -> HandoffResult: ...
+
+
+class HttpxErpClient:
+    """HTTP-клиент к API интеграции ERP (`POST /api/integration/v1/clients/handoff` и др.)."""
+
+    def __init__(
+        self,
+        store: SecretsStore,
+        config: Settings,
+        settings: SettingsService | None = None,
+        *,
+        timeout_s: float = 10.0,
+    ) -> None:
+        self._store = store
+        self._config = config
+        self._settings = settings
+        self._timeout_s = timeout_s
+
+    async def handoff_client(
+        self, payload: HandoffPayload, *, idempotency_key: str | None = None
+    ) -> HandoffResult:
+        connection = await resolve_connection(self._store, self._config, self._settings)
+        if connection is None:
+            raise ConflictError("erp connector is not configured", reason=Reason.ERP_NOT_CONFIGURED)
+        problem = base_url_problem(connection.base_url)
+        if problem is not None:
+            raise ValidationFailedError(
+                f"erp base url is invalid: {problem}",
+                reason=Reason.ERP_INVALID_URL,
+                field="base_url",
+            )
+        idem_key = idempotency_key or str(uuid.uuid4())
+        headers = {
+            "Authorization": f"Bearer {connection.token}",
+            "Idempotency-Key": idem_key,
+            "Accept": "application/json",
+            "Content-Type": "application/json",
+        }
+        body = handoff_payload_to_dict(payload)
+        url = f"{connection.base_url.rstrip('/')}/api/integration/v1/clients/handoff"
+        try:
+            async with httpx.AsyncClient(timeout=self._timeout_s) as client:
+                response = await client.post(url, json=body, headers=headers)
+        except httpx.TimeoutException as exc:
+            raise UpstreamUnavailableError("erp timeout", reason=Reason.ERP_UNAVAILABLE) from exc
+        except httpx.InvalidURL as exc:
+            raise ValidationFailedError(
+                str(exc), reason=Reason.ERP_INVALID_URL, field="base_url"
+            ) from exc
+        except httpx.HTTPError as exc:
+            raise UpstreamUnavailableError(
+                type(exc).__name__, reason=Reason.ERP_UNAVAILABLE
+            ) from exc
+
+        if response.status_code in (401, 403):
+            raise UpstreamUnavailableError(
+                f"HTTP {response.status_code}", reason=Reason.ERP_UNAUTHORIZED
+            )
+        if response.status_code == 422:
+            raise ValidationFailedError(
+                f"erp validation error: {response.text[:300]}",
+                reason=Reason.ERP_BAD_RESPONSE,
+            )
+        if response.status_code not in (200, 201):
+            raise UpstreamUnavailableError(
+                f"erp bad response: HTTP {response.status_code}",
+                reason=Reason.ERP_BAD_RESPONSE,
+            )
+
+        try:
+            data = response.json()
+            return HandoffResult(
+                erp_company_id=data["erp_company_id"],
+                erp_request_id=data.get("erp_request_id"),
+                invite_sent_via=data.get("invite", {}).get("sent_via", []),
+                cabinet_url=data.get("invite", {}).get("cabinet_url", ""),
+            )
+        except Exception as exc:
+            raise UpstreamUnavailableError(
+                f"bad json from erp: {exc}", reason=Reason.ERP_BAD_RESPONSE
+            ) from exc

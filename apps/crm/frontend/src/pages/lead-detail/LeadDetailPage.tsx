@@ -244,6 +244,25 @@ function HandoffTags({ lead }: { lead: LeadDetail }) {
   );
 }
 
+/** Привязка к бэк-офису ERP: компания и заявка (M3-CRM-03). */
+function BackofficeTags({ lead }: { lead: LeadDetail }) {
+  if (!lead.erp_company_id && !lead.erp_deal_id) return null;
+  return (
+    <Space wrap size={4} aria-label={t.clients.inBackoffice} role="group">
+      {lead.erp_company_id ? (
+        <Tag color="blue">
+          {t.clients.inBackoffice}: {t.clients.backofficeCompany} #{String(lead.erp_company_id)}
+        </Tag>
+      ) : null}
+      {lead.erp_deal_id ? (
+        <Tag color="cyan">
+          {t.clients.inBackoffice}: {t.clients.backofficeRequest} #{String(lead.erp_deal_id)}
+        </Tag>
+      ) : null}
+    </Space>
+  );
+}
+
 /** Шапка: имя, сводка `Descriptions`, причины передачи, действия и баннер «Лида ведёт …». */
 function LeadHeader({ lead, rights }: { lead: LeadDetail; rights: ActionRights }) {
   const plan = leadActionPlan(lead, rights);
@@ -257,6 +276,7 @@ function LeadHeader({ lead, rights }: { lead: LeadDetail; rights: ActionRights }
       <div className="lead-meta">
         <LeadFacts lead={lead} />
         <HandoffTags lead={lead} />
+        <BackofficeTags lead={lead} />
       </div>
       {plan.ownerBanner ? (
         <div className="lead-banner">

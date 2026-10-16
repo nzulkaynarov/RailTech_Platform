@@ -81,9 +81,16 @@ const infoPending = (lead: LeadDetail): boolean =>
   lead.escalation?.priority === "info" && pending(lead);
 
 /** Зеркало `may_make_customer` (domain/lead_access.py): ответственный или админ, без него — любой. */
-const mayMakeCustomer = (lead: LeadDetail, rights: ActionRights): boolean =>
-  (lead.stage === "won" || lead.stage === "customer") &&
-  (rights.isAdmin || lead.assigned_user_id === null || lead.assigned_user_id === rights.userId);
+const mayMakeCustomer = (lead: LeadDetail, rights: ActionRights): boolean => {
+  const allowed =
+    lead.backoffice_mode === "erp"
+      ? lead.stage === "in_progress" || lead.stage === "won" || lead.stage === "customer"
+      : lead.stage === "won" || lead.stage === "customer";
+  return (
+    allowed &&
+    (rights.isAdmin || lead.assigned_user_id === null || lead.assigned_user_id === rights.userId)
+  );
+};
 
 /** Зеркало `may_snooze` (Q-018): общая очередь; у лида есть ответственный — только он или админ. */
 const maySnooze = (lead: LeadDetail, rights: ActionRights): boolean =>
@@ -103,13 +110,15 @@ export function availableActions(
   const other = ownedByOther(lead, rights);
   const canOwn = !foreign(lead, rights);
   const responsible = lead.assigned_user_id;
+  const isErp = lead.backoffice_mode === "erp";
   return {
     // Аудит P0-1: информационную передачу лида у бота закрывают без «Забрать» → «Вернуть боту».
     acknowledge: rights.take && infoPending(lead) && lead.owner_mode !== "human",
     // «Забрать» и из «Отказа»: вернувшегося лида снова берут в работу (ADR-0015).
     take: rights.take && !mine && !other,
     takeOver: rights.take && rights.isAdmin && other && responsible !== null,
-    won: rights.work && lead.stage === "in_progress" && canOwn,
+    // В режиме ERP «Сделка заключена» решает бэк-офис (deal.won)
+    won: rights.work && lead.stage === "in_progress" && canOwn && !isErp,
     lost: rights.work && lead.stage === "in_progress" && canOwn,
     // Q-018: общая очередь; у лида есть ответственный — только он или админ.
     snooze: rights.take && pending(lead) && maySnooze(lead, rights),
@@ -118,7 +127,10 @@ export function availableActions(
     returnToBot: rights.work && lead.owner_mode !== "bot" && canOwn,
     assign: rights.work && human && canOwn,
     newDeal: rights.work && lead.stage === "customer" && !human,
-    makeCustomer: Boolean(rights.clients) && lead.stage === "won" && mayMakeCustomer(lead, rights),
+    makeCustomer:
+      Boolean(rights.clients) &&
+      mayMakeCustomer(lead, rights) &&
+      (isErp ? lead.stage === "in_progress" || lead.stage === "won" : lead.stage === "won"),
     note: rights.note,
   };
 }
