@@ -161,3 +161,7 @@ CRM_WEBHOOK_URL = os.environ.get(
     f"{CRM_BASE_URL}/api/v1/integrations/erp/events",
 )
 ERP_WEBHOOK_SECRET = os.environ.get("ERP_WEBHOOK_SECRET", "dev-erp-webhook-secret")
+
+# ─── ERP MCP Server for CRM Agent (CONTRACTS §0, §5, M3-ERP-03) ────────────────
+# Секретный ключ HMAC-SHA256 для проверки заголовка X-Agent-Context (срок 60 с).
+ERP_MCP_CONTEXT_KEY = os.environ.get("ERP_MCP_CONTEXT_KEY", "dev-erp-mcp-context-key")

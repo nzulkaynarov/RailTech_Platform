@@ -26,7 +26,7 @@ http://crm.localhost {
 
 # ─── ERP — бэк-офис (apps/erp; копия B2B с M1-ERP-01) ────────────────────────────────────
 http://erp.localhost {
-	@backend path /api/* /admin/* /admin /ws/* /static/* /media/* /health /health/
+	@backend path /api/* /admin/* /admin /ws/* /static/* /media/* /health /health/ /mcp/* /mcp
 	handle @backend {
 		reverse_proxy erp-backend:8000
 	}

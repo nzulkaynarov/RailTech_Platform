@@ -314,6 +314,7 @@ def emit_request_created(
     summary: Optional[str] = None,
     actor: Optional[Dict[str, Any]] = None,
     send_async: bool = True,
+    crm_client_id: Optional[int] = None,
 ) -> Optional[IntegrationWebhookEvent]:
     """Событие request.created."""
     company_id = deal.company_id if hasattr(deal, "company_id") else deal["company_id"]
@@ -330,6 +331,7 @@ def emit_request_created(
         deal=deal,
         actor=actor,
         send_async=send_async,
+        crm_client_id=crm_client_id,
     )
 
 
