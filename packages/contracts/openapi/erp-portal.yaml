@@ -188,6 +188,25 @@ paths:
         '422':
           $ref: '#/components/responses/ValidationError'
 
+  /requests/{id}:
+    get:
+      tags: [requests]
+      operationId: getRequest
+      summary: Запрос клиента со строками (Q-16)
+      parameters:
+        - $ref: '#/components/parameters/Id'
+      responses:
+        '200':
+          description: Запрос клиента
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ClientRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
   /quotes:
     get:
       tags: [quotes]
@@ -514,6 +533,54 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
 
+  /uploads:
+    post:
+      tags: [documents]
+      operationId: uploadFile
+      summary: Загрузка файлов клиентом (Q-14, multipart, <= 10MB)
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: Файл до 10 МБ
+      responses:
+        '201':
+          description: Файл успешно загружен
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PortalUploadResponse'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /catalog/categories:
+    get:
+      tags: [catalog]
+      operationId: listCatalogCategories
+      summary: Категории каталога с количеством опубликованных позиций (Q-15)
+      responses:
+        '200':
+          description: Список опубликованных категорий
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/CatalogCategory'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
   /catalog:
     get:
       tags: [catalog]
@@ -829,6 +896,14 @@ components:
         created_at:
           type: string
           format: date-time
+        lines:
+          type: array
+          items:
+            $ref: '#/components/schemas/RequestLineIn'
+        attachments:
+          type: array
+          items:
+            $ref: '#/components/schemas/AttachmentRef'
 
     QuoteStatus:
       type: string
@@ -1076,6 +1151,9 @@ components:
           type: string
         category:
           type: [string, 'null']
+        category_id:
+          type: [integer, 'null']
+          format: int64
         price:
           oneOf:
             - $ref: '#/components/schemas/Money'
@@ -1215,3 +1293,31 @@ components:
             type: string
             enum: [email, telegram]
       additionalProperties: false
+
+    CatalogCategory:
+      type: object
+      required: [id, name, count]
+      properties:
+        id:
+          type: integer
+          format: int64
+        name:
+          type: string
+        count:
+          type: integer
+          minimum: 0
+
+    PortalUploadResponse:
+      type: object
+      required: [upload_id, name]
+      properties:
+        upload_id:
+          type: string
+        name:
+          type: string
+        mime_type:
+          type: string
+        size_bytes:
+          type: integer
+          minimum: 0
+

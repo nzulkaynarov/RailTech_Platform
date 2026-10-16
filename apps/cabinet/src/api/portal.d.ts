@@ -116,6 +116,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/requests/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Запрос клиента со строками (Q-16) */
+        get: operations["getRequest"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/quotes": {
         parameters: {
             query?: never;
@@ -343,6 +360,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/uploads": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Загрузка файлов клиентом (Q-14, multipart, <= 10MB) */
+        post: operations["uploadFile"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/catalog/categories": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Категории каталога с количеством опубликованных позиций (Q-15) */
+        get: operations["listCatalogCategories"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/catalog": {
         parameters: {
             query?: never;
@@ -487,6 +538,8 @@ export interface components {
             deal_id?: number | null;
             /** Format: date-time */
             created_at: string;
+            lines?: components["schemas"]["RequestLineIn"][];
+            attachments?: components["schemas"]["AttachmentRef"][];
         };
         /** @enum {string} */
         QuoteStatus: "sent" | "viewed" | "accepted" | "rejected" | "expired";
@@ -615,6 +668,8 @@ export interface components {
             description?: string;
             unit: string;
             category?: string | null;
+            /** Format: int64 */
+            category_id?: number | null;
             /** @description `null` — «цена по запросу» */
             price: components["schemas"]["Money"] | null;
             availability: components["schemas"]["Availability"];
@@ -673,6 +728,18 @@ export interface components {
             /** @default false */
             can_act: boolean;
             channels: ("email" | "telegram")[];
+        };
+        CatalogCategory: {
+            /** Format: int64 */
+            id: number;
+            name: string;
+            count: number;
+        };
+        PortalUploadResponse: {
+            upload_id: string;
+            name: string;
+            mime_type?: string;
+            size_bytes?: number;
         };
     };
     responses: {
@@ -902,6 +969,30 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             422: components["responses"]["ValidationError"];
+        };
+    };
+    getRequest: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Запрос клиента */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ClientRequest"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            404: components["responses"]["NotFound"];
         };
     };
     listQuotes: {
@@ -1272,6 +1363,60 @@ export interface operations {
             };
             401: components["responses"]["Unauthorized"];
             404: components["responses"]["NotFound"];
+        };
+    };
+    uploadFile: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": {
+                    /**
+                     * Format: binary
+                     * @description Файл до 10 МБ
+                     */
+                    file: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Файл успешно загружен */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PortalUploadResponse"];
+                };
+            };
+            400: components["responses"]["ValidationError"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    listCatalogCategories: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Список опубликованных категорий */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CatalogCategory"][];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
         };
     };
     listCatalog: {
