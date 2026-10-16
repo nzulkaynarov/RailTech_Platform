@@ -7,6 +7,8 @@
 - `IntegrationIdempotencyKey`: Idempotency-Key (UUID) с TTL 7 дней (Q-15, CONTRACTS §0)
 """
 
+import uuid
+
 from django.conf import settings
 from django.db import models
 from django.utils import timezone
@@ -137,3 +139,89 @@ class IntegrationIdempotencyKey(models.Model):
 
     def __str__(self):
         return f"IdempotencyKey({self.key}, status={self.response_status})"
+
+
+class WebhookEventStatus(models.TextChoices):
+    PENDING = "PENDING", _("В очереди")
+    SENT = "SENT", _("Отправлено")
+    FAILED = "FAILED", _("Ошибка")
+
+
+class IntegrationWebhookEvent(models.Model):
+    """Журнал и очередь исходящих вебхуков событий ERP → CRM (CONTRACTS §3).
+
+    Заголовки запроса: X-Event-Id (UUID), X-Event-Type, X-Timestamp, X-Signature: sha256=<HMAC>.
+    Ретраи: 1, 5, 30 мин, 2, 6, 24 ч. При исчерпании попыток — статус FAILED для ручного разбора.
+    """
+
+    event_id = models.UUIDField(
+        default=uuid.uuid4,
+        unique=True,
+        db_index=True,
+        verbose_name=_("X-Event-Id (UUID)"),
+    )
+    event_type = models.CharField(
+        max_length=64,
+        db_index=True,
+        verbose_name=_("Тип события"),
+    )
+    target_url = models.URLField(
+        max_length=500,
+        verbose_name=_("URL назначения"),
+    )
+    payload = models.JSONField(
+        verbose_name=_("Тело события (JSON)"),
+    )
+    headers = models.JSONField(
+        default=dict,
+        blank=True,
+        verbose_name=_("Заголовки запроса"),
+    )
+    status = models.CharField(
+        max_length=20,
+        choices=WebhookEventStatus.choices,
+        default=WebhookEventStatus.PENDING,
+        db_index=True,
+        verbose_name=_("Статус отправки"),
+    )
+    attempts = models.PositiveIntegerField(
+        default=0,
+        verbose_name=_("Число попыток отправки"),
+    )
+    last_attempt_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        verbose_name=_("Время последней попытки"),
+    )
+    last_error = models.TextField(
+        blank=True,
+        default="",
+        verbose_name=_("Текст последней ошибки"),
+    )
+    response_status = models.PositiveIntegerField(
+        null=True,
+        blank=True,
+        verbose_name=_("HTTP-код ответа CRM"),
+    )
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+        db_index=True,
+        verbose_name=_("Дата создания"),
+    )
+    sent_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        verbose_name=_("Дата успешной отправки"),
+    )
+
+    class Meta:
+        verbose_name = _("Исходящее событие интеграции")
+        verbose_name_plural = _("Исходящие события интеграции")
+        ordering = ["-created_at"]
+        indexes = [
+            models.Index(fields=["status", "created_at"], name="int_event_status_created_idx"),
+            models.Index(fields=["event_type", "-created_at"], name="int_event_type_created_idx"),
+        ]
+
+    def __str__(self):
+        return f"WebhookEvent({self.event_id}, {self.event_type}, {self.status})"

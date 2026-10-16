@@ -116,6 +116,18 @@ def invite_contact_to_portal(
         actor or "system",
     )
 
+    try:
+        from integration.services.webhooks import build_actor, emit_invite_sent
+
+        actor_dict = build_actor(
+            user=actor if hasattr(actor, "id") else None,
+            name=str(actor) if isinstance(actor, str) else None,
+        )
+        channels_list = ["telegram", "email"] if effective_channel == "both" else [effective_channel]
+        emit_invite_sent(contact=contact, channels=channels_list, actor=actor_dict)
+    except Exception as exc:
+        logger.warning("Failed to emit invite.sent webhook for contact %s: %s", contact.id, exc)
+
     return {
         "ok": True,
         "contact_id": contact.id,

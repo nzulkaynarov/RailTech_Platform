@@ -152,3 +152,12 @@ SERVICE_TOKEN_CRM_TO_ERP = [
     t.strip() for t in os.environ.get("SERVICE_TOKEN_CRM_TO_ERP", "test-crm-to-erp-token").split(",") if t.strip()
 ]
 ERP_VERSION = os.environ.get("ERP_VERSION", "0.1.0")
+
+# ─── ERP → CRM Webhooks (CONTRACTS §0, §3, M3-ERP-02) ──────────────────────
+# Базовый адрес CRM (или полный URL вебхуков) и секрет для подписи HMAC-SHA256 (X-Signature).
+CRM_BASE_URL = os.environ.get("CRM_BASE_URL", "http://crm.localhost:8000").rstrip("/")
+CRM_WEBHOOK_URL = os.environ.get(
+    "CRM_WEBHOOK_URL",
+    f"{CRM_BASE_URL}/api/v1/integrations/erp/events",
+)
+ERP_WEBHOOK_SECRET = os.environ.get("ERP_WEBHOOK_SECRET", "dev-erp-webhook-secret")

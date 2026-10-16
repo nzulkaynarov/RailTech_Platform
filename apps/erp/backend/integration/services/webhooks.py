@@ -1,0 +1,698 @@
+"""Webhook dispatch service for ERP -> CRM events (CONTRACTS §3, M3-ERP-02).
+
+Спецификация вебхуков: POST {CRM}/api/v1/integrations/erp/events.
+Заголовки:
+- X-Event-Id (UUIDv4)
+- X-Event-Type
+- X-Timestamp (ISO-8601 with tz)
+- X-Signature: sha256=<HMAC(body, ERP_WEBHOOK_SECRET)>
+
+Тело и валидация соответствуют JSON-схеме `packages/contracts/events.schema.json`.
+"""
+
+from __future__ import annotations
+
+import hashlib
+import hmac
+import json
+import logging
+import uuid
+from decimal import Decimal
+from typing import Any, Dict, List, Optional, Union
+
+from django.conf import settings
+from django.db import transaction
+from django.utils import timezone
+
+from ..models import CrmClientMapping, CrmContactMapping, IntegrationWebhookEvent, WebhookEventStatus
+
+logger = logging.getLogger(__name__)
+
+VALID_EVENT_TYPES = {
+    "request.created",
+    "deal.stage_changed",
+    "quote.sent",
+    "quote.viewed",
+    "quote.accepted",
+    "quote.rejected",
+    "contract.signed",
+    "invoice.issued",
+    "invoice.paid",
+    "invoice.overdue",
+    "delivery.status_changed",
+    "delivery.eta_changed",
+    "act.issued",
+    "act.accepted",
+    "act.returned",
+    "deal.won",
+    "deal.lost",
+    "document.created",
+    "invite.sent",
+}
+
+VALID_DEAL_STAGES = {
+    "request",
+    "quoting",
+    "quote_sent",
+    "accepted",
+    "contract",
+    "invoiced",
+    "paid",
+    "fulfilment",
+    "closing",
+    "won",
+    "lost",
+}
+
+
+def sign_payload(secret: str, body_bytes: bytes) -> str:
+    """Вычисляет HMAC-SHA256 подпись тела запроса в формате sha256=<hex>."""
+    signature = hmac.new(secret.encode("utf-8"), body_bytes, hashlib.sha256).hexdigest()
+    return f"sha256={signature}"
+
+
+def verify_signature(secret: str, body_bytes: bytes, signature_header: str) -> bool:
+    """Проверяет заголовок X-Signature."""
+    expected = sign_payload(secret, body_bytes)
+    return hmac.compare_digest(expected, signature_header.strip())
+
+
+def map_deal_stage(stage_code: Optional[str]) -> str:
+    """Нормализует внутренний код этапа сделки ERP в канонический DealStage контракта."""
+    raw = (stage_code or "").lower().strip()
+    mapping = {
+        "draft": "request",
+        "rfq_open": "request",
+        "request": "request",
+        "sourcing": "quoting",
+        "calculating": "quoting",
+        "quoting": "quoting",
+        "quote_sent": "quote_sent",
+        "accepted": "accepted",
+        "contract": "contract",
+        "contract_signed": "contract",
+        "invoiced": "invoiced",
+        "paid": "paid",
+        "fulfilment": "fulfilment",
+        "fulfillment": "fulfilment",
+        "closing": "closing",
+        "closed_won": "won",
+        "won": "won",
+        "closed_lost": "lost",
+        "lost": "lost",
+    }
+    stage = mapping.get(raw, "request")
+    return stage if stage in VALID_DEAL_STAGES else "request"
+
+
+def build_deal_ref(deal: Any) -> Dict[str, Any]:
+    """Формирует объект DealRef для тела события по events.schema.json."""
+    if isinstance(deal, dict):
+        erp_deal_id = int(deal["erp_deal_id"])
+        number = str(deal.get("number") or f"D-{erp_deal_id}")
+        title = str(deal.get("title") or f"Сделка #{erp_deal_id}")
+        stage = map_deal_stage(deal.get("stage"))
+        amount = f"{Decimal(str(deal.get('amount', 0))):.2f}"
+        currency = str(deal.get("currency", "UZS")).upper()
+        return {
+            "erp_deal_id": erp_deal_id,
+            "number": number,
+            "title": title,
+            "stage": stage,
+            "amount": amount,
+            "currency": currency,
+        }
+
+    # Django Deal Model
+    erp_deal_id = deal.id
+    number = f"D-{erp_deal_id}"
+    title = deal.title or f"Сделка #{erp_deal_id}"
+    stage_code = deal.stage.code if getattr(deal, "stage", None) else "request"
+    stage = map_deal_stage(stage_code)
+
+    amount_val = Decimal("0")
+    if hasattr(deal, "total_value"):
+        amount_val = deal.total_value
+    amount = f"{amount_val:.2f}"
+
+    currency = "UZS"
+    quote = getattr(deal, "active_quote", None)
+    if quote and getattr(quote, "currency", None):
+        curr_obj = quote.currency
+        currency = curr_obj.code if hasattr(curr_obj, "code") else str(curr_obj)
+        currency = currency.upper()
+
+    return {
+        "erp_deal_id": erp_deal_id,
+        "number": number,
+        "title": title,
+        "stage": stage,
+        "amount": amount,
+        "currency": currency,
+    }
+
+
+def build_actor(
+    user: Optional[Any] = None,
+    actor_type: Optional[str] = None,
+    name: Optional[str] = None,
+) -> Dict[str, Any]:
+    """Формирует объект Actor по events.schema.json."""
+    if actor_type is None:
+        if user is None:
+            actor_type = "system"
+        elif getattr(user, "is_portal_user", False):
+            actor_type = "client"
+        else:
+            actor_type = "staff"
+
+    if actor_type not in ("system", "staff", "client"):
+        actor_type = "system"
+
+    actor: Dict[str, Any] = {"type": actor_type}
+    if name:
+        actor["name"] = name
+    elif user:
+        user_name = ""
+        if hasattr(user, "get_full_name"):
+            user_name = user.get_full_name()
+        if not user_name:
+            user_name = getattr(user, "name", "") or getattr(user, "username", "")
+        if user_name:
+            actor["name"] = user_name
+
+    return actor
+
+
+def build_event_envelope(
+    event_type: str,
+    erp_company_id: int,
+    payload: Dict[str, Any],
+    deal: Optional[Any] = None,
+    actor: Optional[Dict[str, Any]] = None,
+    occurred_at: Optional[Any] = None,
+    crm_client_id: Optional[int] = None,
+) -> Optional[Dict[str, Any]]:
+    """Собирает полный JSON-объект события по schema.
+
+    Если компания не связана с CRM (нет CrmClientMapping) и crm_client_id не передан явно,
+    отправка вебхука пропускается (возвращает None), т.к. CRM принимает только привязанные события.
+    """
+    if crm_client_id is None:
+        mapping = CrmClientMapping.objects.filter(company_id=erp_company_id).first()
+        if not mapping:
+            logger.info(
+                "Skipping webhook event %s for unmapped company #%s",
+                event_type,
+                erp_company_id,
+            )
+            return None
+        crm_client_id = mapping.crm_client_id
+
+    if occurred_at is None:
+        occurred_at = timezone.now()
+    if hasattr(occurred_at, "isoformat"):
+        if timezone.is_naive(occurred_at):
+            occurred_at = timezone.make_aware(occurred_at)
+        occurred_at_str = occurred_at.isoformat()
+    else:
+        occurred_at_str = str(occurred_at)
+
+    envelope: Dict[str, Any] = {
+        "version": 1,
+        "event": event_type,
+        "occurred_at": occurred_at_str,
+        "erp_company_id": int(erp_company_id),
+        "crm_client_id": int(crm_client_id),
+        "actor": actor or {"type": "system"},
+        "payload": payload,
+    }
+
+    if deal is not None:
+        envelope["deal"] = build_deal_ref(deal)
+
+    return envelope
+
+
+def emit_event(
+    event_type: str,
+    erp_company_id: int,
+    payload: Dict[str, Any],
+    deal: Optional[Any] = None,
+    actor: Optional[Dict[str, Any]] = None,
+    occurred_at: Optional[Any] = None,
+    crm_client_id: Optional[int] = None,
+    send_async: bool = True,
+) -> Optional[IntegrationWebhookEvent]:
+    """Создает запись исходящего вебхука и ставит задачу доставки в Celery.
+
+    Если компания не сопоставлена клиенту CRM, событие не создается и возвращается None.
+    """
+    if event_type not in VALID_EVENT_TYPES:
+        logger.warning("Attempted to emit unsupported event type: %s", event_type)
+
+    envelope = build_event_envelope(
+        event_type=event_type,
+        erp_company_id=erp_company_id,
+        payload=payload,
+        deal=deal,
+        actor=actor,
+        occurred_at=occurred_at,
+        crm_client_id=crm_client_id,
+    )
+    if not envelope:
+        return None
+
+    event_id = uuid.uuid4()
+    webhook_url = getattr(
+        settings,
+        "CRM_WEBHOOK_URL",
+        "http://crm.localhost:8000/api/v1/integrations/erp/events",
+    )
+    secret = getattr(settings, "ERP_WEBHOOK_SECRET", "dev-erp-webhook-secret")
+
+    body_bytes = json.dumps(envelope, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
+    signature = sign_payload(secret, body_bytes)
+
+    headers = {
+        "Content-Type": "application/json",
+        "X-Event-Id": str(event_id),
+        "X-Event-Type": event_type,
+        "X-Timestamp": envelope["occurred_at"],
+        "X-Signature": signature,
+    }
+
+    event_obj = IntegrationWebhookEvent.objects.create(
+        event_id=event_id,
+        event_type=event_type,
+        target_url=webhook_url,
+        payload=envelope,
+        headers=headers,
+        status=WebhookEventStatus.PENDING,
+    )
+
+    def _queue_task():
+        from ..tasks import deliver_webhook_event
+
+        deliver_webhook_event.delay(event_obj.id)
+
+    if send_async:
+        transaction.on_commit(_queue_task)
+
+    return event_obj
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Специфические генераторы событий (CONTRACTS §3)
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+def emit_request_created(
+    deal: Any,
+    source: str = "erp",
+    erp_request_id: Optional[int] = None,
+    summary: Optional[str] = None,
+    actor: Optional[Dict[str, Any]] = None,
+    send_async: bool = True,
+) -> Optional[IntegrationWebhookEvent]:
+    """Событие request.created."""
+    company_id = deal.company_id if hasattr(deal, "company_id") else deal["company_id"]
+    payload: Dict[str, Any] = {"source": source}
+    if erp_request_id is not None:
+        payload["erp_request_id"] = erp_request_id
+    if summary:
+        payload["summary"] = summary
+
+    return emit_event(
+        event_type="request.created",
+        erp_company_id=company_id,
+        payload=payload,
+        deal=deal,
+        actor=actor,
+        send_async=send_async,
+    )
+
+
+def emit_deal_stage_changed(
+    deal: Any,
+    from_stage: str,
+    to_stage: str,
+    reason: Optional[str] = None,
+    actor: Optional[Dict[str, Any]] = None,
+    send_async: bool = True,
+) -> Optional[IntegrationWebhookEvent]:
+    """Событие deal.stage_changed."""
+    company_id = deal.company_id if hasattr(deal, "company_id") else deal["company_id"]
+    payload: Dict[str, Any] = {
+        "from": map_deal_stage(from_stage),
+        "to": map_deal_stage(to_stage),
+    }
+    if reason:
+        payload["reason"] = reason
+
+    return emit_event(
+        event_type="deal.stage_changed",
+        erp_company_id=company_id,
+        payload=payload,
+        deal=deal,
+        actor=actor,
+        send_async=send_async,
+    )
+
+
+def emit_deal_outcome(
+    deal: Any,
+    won: bool,
+    amount: Optional[Union[str, Decimal]] = None,
+    currency: Optional[str] = None,
+    lost_reason: Optional[str] = None,
+    actor: Optional[Dict[str, Any]] = None,
+    send_async: bool = True,
+) -> Optional[IntegrationWebhookEvent]:
+    """События deal.won / deal.lost."""
+    company_id = deal.company_id if hasattr(deal, "company_id") else deal["company_id"]
+    if amount is None:
+        amount_val = deal.total_value if hasattr(deal, "total_value") else Decimal("0")
+        amount = f"{amount_val:.2f}"
+    else:
+        amount = f"{Decimal(str(amount)):.2f}"
+
+    currency = (currency or "UZS").upper()
+
+    payload: Dict[str, Any] = {"amount": amount, "currency": currency}
+    if not won and lost_reason:
+        payload["lost_reason"] = lost_reason
+
+    event_type = "deal.won" if won else "deal.lost"
+    return emit_event(
+        event_type=event_type,
+        erp_company_id=company_id,
+        payload=payload,
+        deal=deal,
+        actor=actor,
+        send_async=send_async,
+    )
+
+
+def emit_quote_sent(
+    quote: Any,
+    public_url: Optional[str] = None,
+    actor: Optional[Dict[str, Any]] = None,
+    send_async: bool = True,
+) -> Optional[IntegrationWebhookEvent]:
+    """Событие quote.sent."""
+    deal = quote.deal
+    company_id = deal.company_id
+
+    if not public_url:
+        token = getattr(quote, "public_token", None) or f"q-{quote.id}"
+        public_url = f"https://cabinet.railtech.uz/q/{token}"
+
+    total_amount = f"{quote.total_incl_vat:.2f}"
+    currency = "UZS"
+    if getattr(quote, "currency", None):
+        c = quote.currency
+        currency = c.code if hasattr(c, "code") else str(c)
+
+    valid_until_str = None
+    if getattr(quote, "valid_until", None):
+        valid_until_str = quote.valid_until.isoformat()
+
+    payload: Dict[str, Any] = {
+        "erp_quote_id": quote.id,
+        "version": quote.version,
+        "public_url": public_url,
+        "valid_until": valid_until_str,
+        "total": total_amount,
+        "currency": currency.upper(),
+    }
+
+    return emit_event(
+        event_type="quote.sent",
+        erp_company_id=company_id,
+        payload=payload,
+        deal=deal,
+        actor=actor,
+        send_async=send_async,
+    )
+
+
+def emit_quote_outcome(
+    event_type: str,
+    quote: Any,
+    reason: Optional[str] = None,
+    actor: Optional[Dict[str, Any]] = None,
+    send_async: bool = True,
+) -> Optional[IntegrationWebhookEvent]:
+    """События quote.viewed, quote.accepted, quote.rejected."""
+    deal = quote.deal
+    company_id = deal.company_id
+    payload: Dict[str, Any] = {
+        "erp_quote_id": quote.id,
+        "version": quote.version,
+    }
+    if reason:
+        payload["reason"] = reason
+
+    return emit_event(
+        event_type=event_type,
+        erp_company_id=company_id,
+        payload=payload,
+        deal=deal,
+        actor=actor,
+        send_async=send_async,
+    )
+
+
+def emit_contract_signed(
+    contract: Any,
+    by: str = "both",
+    actor: Optional[Dict[str, Any]] = None,
+    send_async: bool = True,
+) -> Optional[IntegrationWebhookEvent]:
+    """Событие contract.signed."""
+    deal = contract.deal
+    company_id = deal.company_id
+    payload: Dict[str, Any] = {
+        "erp_contract_id": contract.id,
+        "number": contract.number or f"CT-{contract.id}",
+        "by": by,
+    }
+
+    return emit_event(
+        event_type="contract.signed",
+        erp_company_id=company_id,
+        payload=payload,
+        deal=deal,
+        actor=actor,
+        send_async=send_async,
+    )
+
+
+def emit_invoice_event(
+    event_type: str,
+    invoice: Any,
+    link: Optional[str] = None,
+    erp_document_id: Optional[int] = None,
+    actor: Optional[Dict[str, Any]] = None,
+    send_async: bool = True,
+) -> Optional[IntegrationWebhookEvent]:
+    """События invoice.issued, invoice.paid, invoice.overdue."""
+    deal = invoice.deal
+    company_id = deal.company_id
+
+    currency = "UZS"
+    if getattr(invoice, "currency", None):
+        c = invoice.currency
+        currency = c.code if hasattr(c, "code") else str(c)
+
+    due_date_str = invoice.due_date.isoformat() if invoice.due_date else timezone.now().date().isoformat()
+    if not link:
+        link = f"https://cabinet.railtech.uz/invoices/{invoice.id}"
+
+    payload: Dict[str, Any] = {
+        "erp_invoice_id": invoice.id,
+        "number": invoice.number or f"INV-{invoice.id}",
+        "amount": f"{invoice.total_incl_vat:.2f}",
+        "currency": currency.upper(),
+        "due_date": due_date_str,
+        "link": link,
+    }
+    if erp_document_id:
+        payload["erp_document_id"] = erp_document_id
+
+    return emit_event(
+        event_type=event_type,
+        erp_company_id=company_id,
+        payload=payload,
+        deal=deal,
+        actor=actor,
+        send_async=send_async,
+    )
+
+
+def emit_delivery_event(
+    event_type: str,
+    fulfillment: Any,
+    line_summary: str = "Строки поставки",
+    line_nos: Optional[List[int]] = None,
+    previous_eta: Optional[Any] = None,
+    actor: Optional[Dict[str, Any]] = None,
+    send_async: bool = True,
+) -> Optional[IntegrationWebhookEvent]:
+    """События delivery.status_changed, delivery.eta_changed."""
+    deal = fulfillment.deal
+    company_id = deal.company_id
+
+    status_str = "assembling"
+    if getattr(fulfillment, "status", None):
+        status_val = fulfillment.status.code if hasattr(fulfillment.status, "code") else str(fulfillment.status)
+        status_str = status_val.lower()
+
+    if status_str not in ("assembling", "in_transit", "ready_to_ship", "shipped", "delivered"):
+        status_str = "assembling"
+
+    eta_str = None
+    if getattr(fulfillment, "expected_delivery_date", None):
+        eta_str = fulfillment.expected_delivery_date.isoformat()
+
+    prev_eta_str = None
+    if previous_eta:
+        prev_eta_str = previous_eta.isoformat() if hasattr(previous_eta, "isoformat") else str(previous_eta)
+
+    payload: Dict[str, Any] = {
+        "line_summary": line_summary,
+        "status": status_str,
+        "eta": eta_str,
+        "tracking": getattr(fulfillment, "tracking_number", "") or None,
+    }
+    if line_nos:
+        payload["line_nos"] = line_nos
+    if prev_eta_str:
+        payload["previous_eta"] = prev_eta_str
+
+    return emit_event(
+        event_type=event_type,
+        erp_company_id=company_id,
+        payload=payload,
+        deal=deal,
+        actor=actor,
+        send_async=send_async,
+    )
+
+
+def emit_act_event(
+    event_type: str,
+    act: Any,
+    reason: Optional[str] = None,
+    erp_document_id: Optional[int] = None,
+    actor: Optional[Dict[str, Any]] = None,
+    send_async: bool = True,
+) -> Optional[IntegrationWebhookEvent]:
+    """События act.issued, act.accepted, act.returned."""
+    deal = act.deal
+    company_id = deal.company_id
+
+    payload: Dict[str, Any] = {
+        "erp_act_id": act.id,
+        "number": act.number or f"ACT-{act.id}",
+    }
+    if reason:
+        payload["reason"] = reason
+    if erp_document_id:
+        payload["erp_document_id"] = erp_document_id
+
+    return emit_event(
+        event_type=event_type,
+        erp_company_id=company_id,
+        payload=payload,
+        deal=deal,
+        actor=actor,
+        send_async=send_async,
+    )
+
+
+def emit_document_created(
+    document: Any,
+    deal: Optional[Any] = None,
+    actor: Optional[Dict[str, Any]] = None,
+    send_async: bool = True,
+) -> Optional[IntegrationWebhookEvent]:
+    """Событие document.created."""
+    if deal is None and hasattr(document, "deal"):
+        deal = document.deal
+    company_id = deal.company_id if deal else getattr(document, "company_id", None)
+    if not company_id:
+        logger.warning("Document #%s has no associated company, skipping webhook", getattr(document, "id", None))
+        return None
+
+    raw_kind = ""
+    if hasattr(document, "template") and document.template and hasattr(document.template, "kind"):
+        raw_kind = document.template.kind.code
+    elif hasattr(document, "kind"):
+        raw_kind = str(document.kind)
+
+    kind_map = {
+        "quote": "quote",
+        "kp": "quote",
+        "contract": "contract",
+        "dogovor": "contract",
+        "invoice": "invoice",
+        "schet": "invoice",
+        "act": "act",
+        "waybill": "waybill",
+        "receipt": "receipt",
+    }
+    kind = kind_map.get(raw_kind.lower(), "other")
+
+    payload: Dict[str, Any] = {
+        "erp_document_id": document.id,
+        "kind": kind,
+        "number": getattr(document, "number", "") or f"DOC-{document.id}",
+    }
+    title = getattr(document, "title", None)
+    if title:
+        payload["title"] = title
+
+    return emit_event(
+        event_type="document.created",
+        erp_company_id=company_id,
+        payload=payload,
+        deal=deal,
+        actor=actor,
+        send_async=send_async,
+    )
+
+
+def emit_invite_sent(
+    contact: Any,
+    channels: List[str],
+    actor: Optional[Dict[str, Any]] = None,
+    send_async: bool = True,
+) -> Optional[IntegrationWebhookEvent]:
+    """Событие invite.sent."""
+    company_id = contact.company_id
+    if not company_id:
+        return None
+
+    crm_contact_id = CrmContactMapping.objects.filter(contact=contact).values_list("crm_contact_id", flat=True).first()
+
+    clean_channels = [c for c in channels if c in ("telegram", "email")]
+    if not clean_channels:
+        clean_channels = ["email"]
+
+    payload: Dict[str, Any] = {
+        "channels": clean_channels,
+        "erp_contact_id": contact.id,
+    }
+    if crm_contact_id:
+        payload["crm_contact_id"] = crm_contact_id
+
+    return emit_event(
+        event_type="invite.sent",
+        erp_company_id=company_id,
+        payload=payload,
+        deal=None,
+        actor=actor,
+        send_async=send_async,
+    )

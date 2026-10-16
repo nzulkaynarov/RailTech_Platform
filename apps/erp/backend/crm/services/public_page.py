@@ -78,6 +78,12 @@ def record_quote_view(quote, request_ip: str = "") -> bool:
             event_code="quote.viewed_by_client",
             event_params={"client": _quote_client_display_name(locked), "version": locked.version},
         )
+        try:
+            from integration.services.webhooks import emit_quote_outcome
+
+            emit_quote_outcome(event_type="quote.viewed", quote=locked, actor={"type": "client"})
+        except Exception as exc:
+            logger.warning("Failed to emit quote.viewed webhook for quote %s: %s", locked.pk, exc)
     return True
 
 
