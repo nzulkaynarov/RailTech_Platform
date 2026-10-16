@@ -1,10 +1,12 @@
-import { MenuOutlined } from "@ant-design/icons";
+import { ExportOutlined, MenuOutlined } from "@ant-design/icons";
 import { useThemedLayoutContext } from "@refinedev/antd";
 import { useCan, useGetIdentity } from "@refinedev/core";
-import { Alert, Badge, Button, Grid, Layout, Space, theme } from "antd";
+import { Alert, Badge, Button, Grid, Layout, Space, message, theme } from "antd";
+import { useState } from "react";
 import { Link } from "react-router";
 
 import { useSystemStatus } from "../api/adminQueries";
+import { issueSsoToken } from "../api/sso";
 
 import { ModeSwitch } from "../components/ModeSwitch";
 import { useEventStream } from "../hooks/useEventStream";
@@ -83,6 +85,21 @@ export function Header() {
   const phone = screens.sm === false;
   const { data: canSystem } = useCan({ resource: "system", action: "list" });
   const admin = Boolean(canSystem?.can);
+
+  const [ssoLoading, setSsoLoading] = useState(false);
+
+  const handleGoToErp = async () => {
+    setSsoLoading(true);
+    try {
+      const data = await issueSsoToken();
+      window.location.href = `${data.redirect_url}#token=${data.token}`;
+    } catch (err) {
+      void message.error(err instanceof Error ? err.message : t.sso.goToErpFailed);
+    } finally {
+      setSsoLoading(false);
+    }
+  };
+
   return (
     <>
       <Layout.Header
@@ -113,6 +130,15 @@ export function Header() {
           ) : (
             <ConnectionStatus live={live} compact={phone} />
           )}
+          <Button
+            icon={<ExportOutlined aria-hidden />}
+            loading={ssoLoading}
+            onClick={() => void handleGoToErp()}
+            title={t.sso.goToErpHint}
+            aria-label={t.sso.goToErp}
+          >
+            {phone ? t.sso.goToErpShort : t.sso.goToErp}
+          </Button>
           <ModeSwitch />
           <UserMenu />
         </Space>

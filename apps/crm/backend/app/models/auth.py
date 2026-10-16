@@ -114,3 +114,13 @@ class CasbinRule(Base):
     v3: Mapped[str | None] = mapped_column(String(255))
     v4: Mapped[str | None] = mapped_column(String(255))
     v5: Mapped[str | None] = mapped_column(String(255))
+
+
+class SsoReplayToken(Base):
+    """Использованные одноразовые jti SSO-токенов (M3-CRM-06, CONTRACTS §6)."""
+
+    __tablename__ = "sso_replay_tokens"
+    __table_args__ = (Index("ix_sso_replay_tokens_created_at", "created_at"),)
+
+    jti: Mapped[str] = mapped_column(String(64), primary_key=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

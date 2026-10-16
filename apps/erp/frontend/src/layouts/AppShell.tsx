@@ -9,9 +9,13 @@ import {
   Search,
   Coins,
   Compass,
+  ExternalLink,
 } from 'lucide-react';
+import { toast } from 'sonner';
+import { issueSsoToken } from '@/api/ssoApi';
 
 import { cn } from '@/lib/utils';
+
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
@@ -251,6 +255,19 @@ function AppShellInner({ children, activePage, onNavigate, onStartTour, fullBlee
   const [searchOpen, setSearchOpen] = useCommandPaletteState();
   useCommandPaletteShortcut(() => setSearchOpen(true));
 
+  const [ssoLoading, setSsoLoading] = useState(false);
+
+  const handleGoToCrm = async () => {
+    setSsoLoading(true);
+    try {
+      const data = await issueSsoToken();
+      window.location.href = `${data.redirect_url}#token=${data.token}`;
+    } catch {
+      toast.error(t('sso.goToCrmFailed', 'Не удалось перейти в CRM'));
+    } finally {
+      setSsoLoading(false);
+    }
+  };
 
   return (
       <TooltipProvider>
@@ -467,7 +484,27 @@ function AppShellInner({ children, activePage, onNavigate, onStartTour, fullBlee
                 </TooltipTrigger>
                 <TooltipContent>{t('search.trigger')}</TooltipContent>
               </Tooltip>
+
+              {/* Переход в CRM через SSO (CONTRACTS §6, M3-CRM-06) */}
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-8 gap-1.5 text-xs font-medium"
+                    disabled={ssoLoading}
+                    onClick={handleGoToCrm}
+                    aria-label={t('sso.goToCrm', 'В CRM')}
+                  >
+                    <ExternalLink className="h-3.5 w-3.5" />
+                    <span className="hidden sm:inline">{t('sso.goToCrm', 'В CRM')}</span>
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>{t('sso.goToCrmTooltip', 'Перейти в платформу CRM под текущей сессией')}</TooltipContent>
+              </Tooltip>
+
               <NotificationCenter onNavigate={onNavigate} />
+
             </div>
           </header>
           <DocumentSearchDialog

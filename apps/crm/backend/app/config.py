@@ -100,6 +100,10 @@ class Settings(BaseSettings):
     # запятую. Пусто — CORS для формы не включён (только same-origin).
     cabinet_origin: str = ""
 
+    # Платформенный SSO-секрет (CRM ↔ ERP, CONTRACTS §6, M3-CRM-06): HS256, поддержка ротации.
+    platform_sso_secret: SecretStr = SecretStr("")
+    erp_frontend_url: str = "http://erp.localhost"
+
     jwt_secret: SecretStr = SecretStr("")
     access_token_ttl_s: int = Field(default=900, ge=60)
     refresh_token_ttl_days: int = Field(default=30, ge=1)
@@ -116,6 +120,15 @@ class Settings(BaseSettings):
             f"{scheme}://{user}:{password}@{self.postgres_host}:"
             f"{self.postgres_port}/{self.postgres_db}"
         )
+
+    @property
+    def platform_sso_secrets(self) -> list[str]:
+        """Список активных ключей SSO для ротации (первый — для подписи новых)."""
+        raw = self.platform_sso_secret.get_secret_value().strip()
+        if not raw:
+            return ["dev-platform-sso-secret"]
+        keys = [k.strip() for k in raw.split(",") if k.strip()]
+        return keys if keys else ["dev-platform-sso-secret"]
 
     @property
     def cabinet_origins(self) -> list[str]:

@@ -34,6 +34,7 @@ import { LeadDetailPage } from "../pages/lead-detail/LeadDetailPage";
 import { LeadsPage } from "../pages/leads/LeadsPage";
 import { ChangePasswordPage } from "../pages/login/ChangePasswordPage";
 import { LoginPage } from "../pages/login/LoginPage";
+import { SsoExchangePage } from "../pages/sso/SsoExchangePage";
 import { ProfilePage } from "../pages/profile/ProfilePage";
 import { SetupPage } from "../pages/setup/SetupPage";
 import { UsersPage } from "../pages/users/UsersPage";
@@ -265,6 +266,7 @@ export function App() {
                 <Route path="*" element={<NotFound />} />
               </Route>
               <Route path="/login" element={<LoginPage />} />
+              <Route path="/sso/exchange" element={<SsoExchangePage />} />
               <Route path="/setup" element={<SetupPage />} />
               <Route path="/change-password" element={<ChangePasswordPage />} />
             </Routes>

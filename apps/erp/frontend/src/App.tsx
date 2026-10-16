@@ -12,6 +12,7 @@ import { LoginPage } from './components/Auth/LoginPage';
 import { PasswordSetupPage } from './components/Auth/PasswordSetupPage';
 import { ForgotPasswordPage } from './components/Auth/ForgotPasswordPage';
 import { ResetPasswordPage } from './components/Auth/ResetPasswordPage';
+import { SsoExchangePage } from './components/Auth/SsoExchangePage';
 import { NoCompanyScreen } from './components/Auth/NoCompanyScreen';
 import { LoadingSkeleton } from './components/LoadingSkeleton';
 import { NAVIGABLE_PAGES } from './config/pageRegistry';
@@ -21,11 +22,14 @@ import { renderPage } from './routes/pageContent';
 import { useSystemSettings } from '@/hooks/useSystemSettings';
 
 /** Parse URL path and query params for auth routes */
-type AuthRouteView = 'login' | 'setup-password' | 'forgot-password' | 'reset-password';
+type AuthRouteView = 'login' | 'setup-password' | 'forgot-password' | 'reset-password' | 'sso-exchange';
 
 function parseAuthRoute(): { view: AuthRouteView; uid: string | null; token: string | null } {
   const url = new URL(window.location.href);
   const path = url.pathname;
+  if (path === '/sso/exchange') {
+    return { view: 'sso-exchange', uid: null, token: null };
+  }
   if (path === '/setup-password') {
     return {
       view: 'setup-password',
@@ -33,6 +37,7 @@ function parseAuthRoute(): { view: AuthRouteView; uid: string | null; token: str
       token: url.searchParams.get('token'),
     };
   }
+
   if (path === '/reset-password') {
     return {
       view: 'reset-password',
@@ -95,9 +100,12 @@ function App() {
     if (isAuthenticated) {
       loadFromAuth();
       // Don't rewrite the URL out from under a token-bearing public flow
-      // (password setup/reset): a stale persisted session (isAuthenticated:true
+      // (password setup/reset/sso): a stale persisted session (isAuthenticated:true
       // in localStorage) must not hijack it. Mirrors the guard in api/client.ts.
-      const onTokenFlow = route.view === 'setup-password' || route.view === 'reset-password';
+      const onTokenFlow =
+        route.view === 'setup-password' ||
+        route.view === 'reset-password' ||
+        route.view === 'sso-exchange';
       if (!onTokenFlow && window.location.pathname !== '/') {
         window.history.replaceState(null, '', '/');
       }
@@ -129,6 +137,11 @@ function App() {
     return () => observer.disconnect();
   }, []);
 
+  // SSO exchange page — always handle SSO callback regardless of current auth state
+  if (route.view === 'sso-exchange') {
+    return <SsoExchangePage />;
+  }
+
   if (initializing) return <LoadingSkeleton />;
 
   // Password setup page — accessible without auth (from email link)
@@ -156,6 +169,7 @@ function App() {
       />
     );
   }
+
 
   // Not authenticated — login only: self-registration is gone (M1-ERP-02). Employees are
   // provisioned by CRM (ADR-0003) or invited by a teammate (setup-password link above).

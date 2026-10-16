@@ -90,6 +90,7 @@ export const labelsRu = {
   auditAction: {
     "auth.login": "Вход",
     "auth.login_failed": "Неудачный вход",
+    "sso.exchange": "Вход через SSO (из ERP)",
     "lead.take": "Забрал лида",
     "lead.reply": "Ответил лиду",
     "lead.note": "Заметка",

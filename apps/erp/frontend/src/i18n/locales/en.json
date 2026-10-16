@@ -2657,6 +2657,12 @@
     "preset_compact": "Compact"
   },
   "activity": {
+    "sso": {
+      "exchange": {
+        "title": "SSO login",
+        "detail": "Employee SSO login"
+      }
+    },
     "deal": {
       "created": {
         "title": "Deal created",

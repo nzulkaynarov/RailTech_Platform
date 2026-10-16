@@ -26,6 +26,7 @@ from accounts.views.clients import ContactViewSet  # noqa: F401
 from accounts.views.company import CompanyViewSet  # noqa: F401
 from accounts.views.lookups import CompanyTypeViewSet, SystemRoleViewSet, WorkspaceRoleViewSet  # noqa: F401
 from accounts.views.roles import CompanyRoleViewSet, PermissionCatalogView  # noqa: F401
+from accounts.views.sso import SsoExchangeView, SsoIssueTokenView  # noqa: F401
 from accounts.views.users import UserViewSet  # noqa: F401
 
 __all__ = [

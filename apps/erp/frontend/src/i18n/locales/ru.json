@@ -2666,6 +2666,12 @@
     "preset_compact": "Компактный"
   },
   "activity": {
+    "sso": {
+      "exchange": {
+        "title": "Вход через SSO",
+        "detail": "Вход через SSO сотрудника"
+      }
+    },
     "deal": {
       "created": {
         "title": "Сделка создана",

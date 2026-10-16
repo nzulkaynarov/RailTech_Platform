@@ -165,3 +165,10 @@ ERP_WEBHOOK_SECRET = os.environ.get("ERP_WEBHOOK_SECRET", "dev-erp-webhook-secre
 # ─── ERP MCP Server for CRM Agent (CONTRACTS §0, §5, M3-ERP-03) ────────────────
 # Секретный ключ HMAC-SHA256 для проверки заголовка X-Agent-Context (срок 60 с).
 ERP_MCP_CONTEXT_KEY = os.environ.get("ERP_MCP_CONTEXT_KEY", "dev-erp-mcp-context-key")
+
+# ─── Employee SSO CRM ↔ ERP (CONTRACTS §0, §6, sso-token.md, M3-CRM-06) ──────
+# Общий секрет JWT HS256; поддерживает до двух активных значений через запятую для ротации.
+PLATFORM_SSO_SECRET = [
+    s.strip() for s in os.environ.get("PLATFORM_SSO_SECRET", "dev-platform-sso-secret").split(",") if s.strip()
+]
+CRM_FRONTEND_URL = os.environ.get("CRM_FRONTEND_URL", "http://crm.localhost").rstrip("/")

@@ -77,3 +77,12 @@ class UserUpdate(BaseModel):
 
 class PasswordReset(BaseModel):
     temporary_password: str
+
+
+class SsoTokenResponse(BaseModel):
+    token: str
+    redirect_url: str
+
+
+class SsoExchangeRequest(BaseModel):
+    token: str

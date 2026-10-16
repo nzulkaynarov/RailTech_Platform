@@ -51,6 +51,7 @@ if TYPE_CHECKING:
     from app.services.sandbox import SandboxService
     from app.services.setup import SetupService
     from app.services.smtp_connector import SmtpConnectorService
+    from app.services.sso import SsoService
     from app.services.user_invites import UserInviteService
     from app.services.users import UserService
 
@@ -169,6 +170,12 @@ class Container:
         from app.services.auth import AuthService
 
         return AuthService(self.session_factory, self.settings)
+
+    @cached_property
+    def sso_service(self) -> "SsoService":
+        from app.services.sso import SsoService
+
+        return SsoService(self.session_factory, self.settings, self.auth_service)
 
     @cached_property
     def user_service(self) -> "UserService":

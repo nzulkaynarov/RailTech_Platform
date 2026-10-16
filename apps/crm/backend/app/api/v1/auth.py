@@ -7,7 +7,13 @@ from fastapi import APIRouter, Cookie, Request, Response, status
 from app.api.deps import ContainerDep, PrincipalDep, client_ip
 from app.config import Settings
 from app.domain.errors import AuthError
-from app.schemas.auth import ChangePasswordRequest, LoginRequest, TokenResponse
+from app.schemas.auth import (
+    ChangePasswordRequest,
+    LoginRequest,
+    SsoExchangeRequest,
+    SsoTokenResponse,
+    TokenResponse,
+)
 from app.services.auth import ClientInfo, Session
 
 router = APIRouter(prefix="/api/v1/auth", tags=["auth"])
@@ -79,3 +85,19 @@ async def change_password(
         principal.actor, principal.user_id, body.current_password, body.new_password
     )
     return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+@router.post("/sso/token", response_model=SsoTokenResponse)
+async def sso_token(principal: PrincipalDep, container: ContainerDep) -> SsoTokenResponse:
+    """Выдать SSO-токен для перехода текущего сотрудника в ERP (CONTRACTS §6)."""
+    token, redirect_url = await container.sso_service.issue_token(principal.user_id)
+    return SsoTokenResponse(token=token, redirect_url=redirect_url)
+
+
+@router.post("/sso/exchange", response_model=TokenResponse)
+async def sso_exchange(
+    body: SsoExchangeRequest, request: Request, response: Response, container: ContainerDep
+) -> TokenResponse:
+    """Обменять SSO-токен из ERP на сессию CRM (CONTRACTS §6)."""
+    session = await container.sso_service.exchange_token(body.token, _client(request))
+    return respond_with_session(response, session, container.settings)
