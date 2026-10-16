@@ -6,6 +6,15 @@ from django.views.static import serve as _serve_media
 from drf_spectacular.utils import extend_schema
 from drf_spectacular.views import SpectacularAPIView, SpectacularRedocView, SpectacularSwaggerView
 from finance.views import DealMarginDeviationView, DealPurchaseActualDetailView, DealPurchaseActualsView
+from portal.public_views import (
+    PublicDocumentView,
+    PublicQuoteAcceptView,
+    PublicQuotePageScriptView,
+    PublicQuoteRejectView,
+    PublicQuoteRequestCodeView,
+    PublicQuoteView,
+    PublicQuoteViewedView,
+)
 from rest_framework.permissions import IsAdminUser
 from rest_framework.routers import DefaultRouter
 
@@ -63,13 +72,6 @@ from crm.views import (
     NumberingSchemePreviewView,
     NumberingSchemeView,
     PaymentViewSet,
-    PublicDocumentView,
-    PublicQuoteAcceptView,
-    PublicQuotePageScriptView,
-    PublicQuoteRejectView,
-    PublicQuoteRequestCodeView,
-    PublicQuoteView,
-    PublicQuoteViewedView,
     QuoteChargeViewSet,
     QuoteItemViewSet,
     QuoteRequestDiffView,
