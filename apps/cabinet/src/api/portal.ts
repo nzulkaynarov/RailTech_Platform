@@ -145,6 +145,9 @@ export type Act = Schemas['Act'];
 export type DeliveryLine = Schemas['DeliveryLine'];
 export type PortalDocument = Schemas['Document'];
 export type DocumentKind = Schemas['DocumentKind'];
+export type AttachmentRef = Schemas['AttachmentRef'];
+export type CatalogCategory = Schemas['CatalogCategory'];
+export type PortalUploadResponse = Schemas['PortalUploadResponse'];
 export type CatalogItem = Schemas['CatalogItem'];
 export type CatalogPage = Schemas['CatalogPage'];
 export type CatalogQuery = QueryOf<paths['/catalog']['get']>;
@@ -155,6 +158,7 @@ export type TeamMember = Schemas['TeamMember'];
 export type TeamInvite = Schemas['TeamInvite'];
 
 export const listRequests = () => portalRequest<ClientRequest[]>('/requests');
+export const getRequest = (id: number) => portalRequest<ClientRequest>(`/requests/${id}`);
 export function createRequest(body: JsonBody<paths['/requests']['post']>): Promise<ClientRequest> {
   return portalRequest<ClientRequest>('/requests', { method: 'POST', body });
 }
@@ -224,10 +228,36 @@ function fileNameFrom(disposition: string | null): string | null {
 }
 
 export const listCatalog = (params: CatalogQuery = {}) => portalRequest<CatalogPage>(`/catalog${toQuery(params)}`);
+export const listCatalogCategories = () => portalRequest<CatalogCategory[]>('/catalog/categories');
 export const getCatalogItem = (id: number) => portalRequest<CatalogItem>(`/catalog/${id}`);
+
+export async function uploadFile(file: File): Promise<PortalUploadResponse> {
+  const formData = new FormData();
+  formData.append('file', file);
+  const base = (import.meta.env.VITE_API_URL ?? '').replace(/\/$/, '');
+  const url = new URL(`${base}${PORTAL_BASE_PATH}/uploads`, window.location.origin).toString();
+  const headers: Record<string, string> = {
+    Accept: 'application/json',
+    'Idempotency-Key': newIdempotencyKey(),
+  };
+  let response: Response;
+  try {
+    response = await fetch(url, {
+      method: 'POST',
+      headers,
+      credentials: 'include',
+      body: formData,
+    });
+  } catch {
+    throw new PortalApiError(0, 'NETWORK');
+  }
+  if (!response.ok) throw new PortalApiError(response.status, await readErrorCode(response));
+  return (await response.json()) as PortalUploadResponse;
+}
 
 export const getCompany = () => portalRequest<Company>('/company');
 export const updateCompany = (body: CompanyUpdate) => portalRequest<Company>('/company', { method: 'PUT', body });
 export const listTeam = () => portalRequest<TeamMember[]>('/team');
 export const inviteTeamMember = (body: TeamInvite) =>
   portalRequest<TeamMember>('/team/invite', { method: 'POST', body });
+

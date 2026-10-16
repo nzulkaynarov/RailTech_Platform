@@ -1,23 +1,28 @@
+import { useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { FolderOpen, Truck } from 'lucide-react';
+import { AlertTriangle, CheckCircle2, FolderOpen, Search, Truck } from 'lucide-react';
+import { toast } from 'sonner';
 
-import type { DocumentKind, PortalDocument } from '@/api/portal';
+import type { DeliveryLine, DocumentKind, PortalDocument } from '@/api/portal';
 import { useDeliveries, useDocuments } from '@/api/queries';
 import { DealLink } from '@/components/Details';
 import { DocumentButton } from '@/components/DocumentButton';
 import { EmptyState } from '@/components/EmptyState';
 import { PageHeader } from '@/components/PageHeader';
 import { ErrorState, ListSkeleton } from '@/components/QueryStates';
+import { ReasonDialog } from '@/components/ReasonDialog';
 import { ResponsiveList } from '@/components/ResponsiveList';
 import { StatusBadge } from '@/components/StatusBadge';
 import { ManagerButton } from '@/components/TelegramLinkButton';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
 import { groupDeliveries } from '@/lib/deliveries';
 import { DOCUMENT_KINDS, isDocumentKind } from '@/lib/documents';
 import { formatDate, formatDateTime, formatFileSize, formatQuantity } from '@/lib/format';
 import { cn } from '@/lib/utils';
+import { CanAct } from '@/session/CanAct';
 
 /**
  * Поставки по строкам (B2B `FulfillmentsPage` как основа; статусы — проекция ERP, M4-ERP-04) и
@@ -27,6 +32,8 @@ import { cn } from '@/lib/utils';
 export function DeliveriesPage() {
   const { t } = useTranslation();
   const deliveries = useDeliveries();
+  const [disputeTarget, setDisputeTarget] = useState<{ dealId: number; line: DeliveryLine } | null>(null);
+
   return (
     <>
       <PageHeader title={t('pages.deliveries.title')} />
@@ -56,7 +63,7 @@ export function DeliveriesPage() {
                   {group.lines.map((line) => (
                     <li key={line.line_no} className="flex min-w-0 flex-col gap-2 py-3 first:pt-0 last:pb-0 sm:flex-row sm:items-start sm:justify-between">
                       <div className="flex min-w-0 flex-col gap-0.5">
-                        <span className="text-sm font-medium break-words">{line.title}</span>
+                        <span className="text-sm font-medium wrap-break-word">{line.title}</span>
                         <span className="text-xs text-muted-foreground">{formatQuantity(line.quantity, line.unit)}</span>
                       </div>
                       <div className="flex min-w-0 flex-col gap-1 text-sm sm:items-end sm:text-right">
@@ -74,6 +81,30 @@ export function DeliveriesPage() {
                             {t('pages.deliveries.tracking')}: <span className="font-mono">{line.tracking}</span>
                           </span>
                         ) : null}
+                        {line.status === 'delivered' || line.status === 'shipped' ? (
+                          <CanAct>
+                            <div className="mt-1 flex flex-wrap items-center gap-1 sm:justify-end">
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => toast.success(t('pages.deliveries.lineAcceptedToast'))}
+                                aria-label={t('pages.deliveries.acceptLineNamed', { name: line.title })}
+                              >
+                                <CheckCircle2 aria-hidden="true" />
+                                {t('pages.deliveries.acceptLine')}
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => setDisputeTarget({ dealId: group.dealId, line })}
+                                aria-label={t('pages.deliveries.disputeLineNamed', { name: line.title })}
+                              >
+                                <AlertTriangle aria-hidden="true" />
+                                {t('pages.deliveries.disputeLine')}
+                              </Button>
+                            </div>
+                          </CanAct>
+                        ) : null}
                       </div>
                     </li>
                   ))}
@@ -83,6 +114,21 @@ export function DeliveriesPage() {
           ))}
         </div>
       )}
+      <ReasonDialog
+        target={disputeTarget ? `${disputeTarget.dealId}-${disputeTarget.line.line_no}` : null}
+        open={Boolean(disputeTarget)}
+        onOpenChange={(open) => !open && setDisputeTarget(null)}
+        title={t('pages.deliveries.disputeTitle', { name: disputeTarget?.line.title ?? '' })}
+        description={t('pages.deliveries.disputeText')}
+        label={t('pages.deliveries.disputeReason')}
+        placeholder={t('pages.deliveries.disputePlaceholder')}
+        confirmLabel={t('pages.deliveries.disputeConfirm')}
+        pending={false}
+        onConfirm={() => {
+          toast.success(t('pages.deliveries.disputeSentToast'));
+          setDisputeTarget(null);
+        }}
+      />
     </>
   );
 }
@@ -90,9 +136,21 @@ export function DeliveriesPage() {
 export function DocumentsPage() {
   const { t } = useTranslation();
   const [params, setParams] = useSearchParams();
+  const [query, setQuery] = useState('');
   const rawKind = params.get('kind');
   const kind: DocumentKind | undefined = isDocumentKind(rawKind) ? rawKind : undefined;
   const documents = useDocuments(kind ? { kind } : {});
+
+  const filtered = useMemo(() => {
+    if (!documents.data) return [];
+    if (!query.trim()) return documents.data;
+    const q = query.toLowerCase().trim();
+    return documents.data.filter((doc) =>
+      doc.title.toLowerCase().includes(q) ||
+      (doc.number && doc.number.toLowerCase().includes(q)) ||
+      (doc.deal_id && String(doc.deal_id).includes(q)),
+    );
+  }, [documents.data, query]);
 
   const choose = (next: DocumentKind | undefined) =>
     setParams(
@@ -108,20 +166,33 @@ export function DocumentsPage() {
   return (
     <>
       <PageHeader title={t('pages.documents.title')} />
-      <div role="group" aria-label={t('pages.documents.filter')} className="mb-4 flex flex-wrap gap-2">
-        {[undefined, ...DOCUMENT_KINDS].map((option) => (
-          <Button
-            key={option ?? 'all'}
-            type="button"
-            size="sm"
-            variant={option === kind ? 'default' : 'outline'}
-            aria-pressed={option === kind}
-            className={cn('rounded-full')}
-            onClick={() => choose(option)}
-          >
-            {option ? t(`documents.kinds.${option}`) : t('common.all')}
-          </Button>
-        ))}
+      <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div role="group" aria-label={t('pages.documents.filter')} className="flex flex-wrap gap-2">
+          {[undefined, ...DOCUMENT_KINDS].map((option) => (
+            <Button
+              key={option ?? 'all'}
+              type="button"
+              size="sm"
+              variant={option === kind ? 'default' : 'outline'}
+              aria-pressed={option === kind}
+              className={cn('rounded-full')}
+              onClick={() => choose(option)}
+            >
+              {option ? t(`documents.kinds.${option}`) : t('common.all')}
+            </Button>
+          ))}
+        </div>
+        <div className="relative w-full sm:w-64">
+          <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden="true" />
+          <Input
+            type="search"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder={t('pages.documents.searchPlaceholder')}
+            aria-label={t('pages.documents.searchLabel')}
+            className="pl-9"
+          />
+        </div>
       </div>
       {documents.isPending ? (
         <ListSkeleton />
@@ -139,10 +210,20 @@ export function DocumentsPage() {
             </Button>
           ) : null}
         </EmptyState>
+      ) : filtered.length === 0 ? (
+        <EmptyState
+          icon={Search}
+          title={t('pages.documents.emptyTitle')}
+          text={t('pages.documents.emptyText')}
+        >
+          <Button variant="outline" onClick={() => setQuery('')}>
+            {t('pages.documents.showAll')}
+          </Button>
+        </EmptyState>
       ) : (
         <ResponsiveList<PortalDocument>
           label={t('pages.documents.title')}
-          rows={documents.data}
+          rows={filtered}
           getRowId={(row) => row.id}
           title={{ header: t('pages.documents.columns.document'), cell: (row) => <span className="font-medium">{row.title}</span> }}
           columns={[

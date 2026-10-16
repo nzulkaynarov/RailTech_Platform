@@ -1,10 +1,10 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { AlertTriangle, CheckCircle2, ClipboardCheck, FileSignature, PenLine, Receipt, Undo2, Wallet } from 'lucide-react';
+import { AlertTriangle, CheckCircle2, ClipboardCheck, FileSignature, PenLine, Receipt, Undo2, Upload, Wallet } from 'lucide-react';
 import { toast } from 'sonner';
 
 import type { Act, Contract, Invoice } from '@/api/portal';
-import { useAcceptAct, useActs, useContracts, useInvoices, useReturnAct, useSignContract } from '@/api/queries';
+import { useAcceptAct, useActs, useContracts, useInvoices, useReturnAct, useSignContract, useUploadFile } from '@/api/queries';
 import { ActionDialog } from '@/components/ActionDialog';
 import { DealLink, SummaryNote } from '@/components/Details';
 import { DocumentButton } from '@/components/DocumentButton';
@@ -159,7 +159,7 @@ export function InvoicesPage() {
                   <p className="text-sm text-muted-foreground">{t('pages.invoices.toPay')}</p>
                   {toPay.length ? (
                     toPay.map((money) => (
-                      <p key={money.currency} className="text-lg font-semibold break-words">
+                      <p key={money.currency} className="text-lg font-semibold wrap-break-word">
                         {formatMoney(money)}
                       </p>
                     ))
@@ -242,6 +242,7 @@ export function ActsPage() {
   const acts = useActs();
   const accept = useAcceptAct();
   const giveBack = useReturnAct();
+  const uploadFile = useUploadFile();
   const [target, setTarget] = useState<{ act: Act; action: 'accept' | 'return' } | null>(null);
   const awaiting = (acts.data ?? []).filter((act) => act.status === 'issued').length;
 
@@ -291,6 +292,34 @@ export function ActsPage() {
                 <>
                   <RowDocument documentId={row.document_id} number={row.number} />
                   <ManagerButton compact dealId={row.deal_id} label={t('manager.aboutAct', { number: row.number })} />
+                  <CanAct>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      disabled={uploadFile.isPending}
+                      aria-label={t('pages.acts.uploadScanNamed', { number: row.number })}
+                      onClick={() => {
+                        const input = document.createElement('input');
+                        input.type = 'file';
+                        input.accept = '.pdf,image/*';
+                        input.onchange = async () => {
+                          const file = input.files?.[0];
+                          if (file) {
+                            try {
+                              await uploadFile.mutateAsync(file);
+                              toast.success(t('pages.acts.scanUploadedToast', { number: row.number }));
+                            } catch {
+                              toast.error(t('apiErrors.UNKNOWN'));
+                            }
+                          }
+                        };
+                        input.click();
+                      }}
+                    >
+                      <Upload aria-hidden="true" />
+                      {t('pages.acts.uploadScan')}
+                    </Button>
+                  </CanAct>
                   {row.status === 'issued' ? (
                     <CanAct>
                       <Button size="sm" onClick={() => setTarget({ act: row, action: 'accept' })} aria-label={t('pages.acts.acceptNamed', { number: row.number })}>

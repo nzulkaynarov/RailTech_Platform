@@ -243,6 +243,12 @@
       "addLine": "Добавить строку",
       "removeLine": "Удалить строку {{n}}",
       "attachmentsLater": "Спецификации и чертежи пока передайте менеджеру — загрузка файлов в кабинет появится позже.",
+      "attachmentsTitle": "Прикрепить файлы (спецификация, опросные листы, чертежи)",
+      "attachmentsHint": "PDF, DOCX, XLSX или изображения до 20 МБ",
+      "uploadButton": "Загрузить файл",
+      "uploading": "Загрузка…",
+      "removeFile": "Удалить файл {{name}}",
+      "pickFromCatalog": "Выбрать из каталога",
       "submit": "Отправить запрос",
       "sent": "Запрос {{number}} отправлен",
       "viewOnlyTitle": "Создавать запросы может контакт с правом подтверждать",
@@ -254,6 +260,13 @@
       "source": "Откуда",
       "deal": "Сделка",
       "quotes": "КП по запросу",
+      "linesTitle": "Позиции запроса",
+      "attachmentsTitle": "Прикреплённые файлы",
+      "noAttachments": "Файлы не прикреплены",
+      "columns": {
+        "title": "Позиция / этап",
+        "quantity": "Кол-во"
+      },
       "backToList": "К списку запросов",
       "sources": {
         "cabinet": "Вы — в кабинете",
@@ -405,7 +418,10 @@
       "returnReason": "Причина возврата",
       "returnPlaceholder": "Например: не указан серийный номер",
       "returnConfirm": "Вернуть акт",
-      "returnedToast": "Акт {{number}} возвращён исполнителю"
+      "returnedToast": "Акт {{number}} возвращён исполнителю",
+      "uploadScan": "Загрузить скан",
+      "uploadScanNamed": "Загрузить скан акта {{number}}",
+      "scanUploadedToast": "Скан акта {{number}} загружен"
     },
     "deliveries": {
       "title": "Поставки",
@@ -415,7 +431,18 @@
       "eta": "Ожидается {{date}}",
       "etaUnknown": "Дата уточняется",
       "shippedAt": "Отгружено {{date}}",
-      "tracking": "Трек"
+      "tracking": "Трек",
+      "acceptLine": "Принять",
+      "acceptLineNamed": "Принять позицию {{name}}",
+      "lineAcceptedToast": "Позиция принята",
+      "disputeLine": "Замечание",
+      "disputeLineNamed": "Оставить замечание к позиции {{name}}",
+      "disputeTitle": "Замечание по позиции «{{name}}»",
+      "disputeText": "Опишите суть замечания (брак, некомплект, повреждение упаковки). Менеджер свяжется с вами для решения.",
+      "disputeReason": "Причина замечания",
+      "disputePlaceholder": "Например: обнаружен дефект маркировки или повреждение при транспортировке",
+      "disputeConfirm": "Отправить замечание",
+      "disputeSentToast": "Замечание отправлено менеджеру"
     },
     "documents": {
       "title": "Документы",
@@ -425,6 +452,8 @@
       "emptyKindText": "Выберите другой вид или покажите все документы.",
       "showAll": "Показать все",
       "filter": "Вид документа",
+      "searchPlaceholder": "Поиск по номеру, названию или сделке…",
+      "searchLabel": "Поиск документов",
       "columns": {
         "document": "Документ",
         "kind": "Вид",
@@ -443,6 +472,11 @@
       "clear": "Очистить поиск",
       "categories": "Категории",
       "results": "Позиции каталога",
+      "selectedCount": "Выбрано: {{count}}",
+      "addToRequest": "В запрос",
+      "removeFromRequest": "Убрать из запроса",
+      "createRequestWithSelected": "Оформить запрос ({{count}})",
+      "clearSelection": "Сбросить выбор",
       "found_one": "Найдена {{count}} позиция",
       "found_few": "Найдено {{count}} позиции",
       "found_many": "Найдено {{count}} позиций",
@@ -563,5 +597,19 @@
     "REASON_REQUIRED": "Укажите причину.",
     "INN_INVALID": "ИНН — от 9 до 14 цифр.",
     "TEAM_MEMBER_EXISTS": "Коллега с таким e-mail уже есть в команде."
+  },
+  "widgets": {
+    "actionRequired": {
+      "title": "Требует вашего решения",
+      "allClear": "Все документы обработаны — сейчас от вас ничего не требуется.",
+      "quoteBadge": "КП",
+      "reviewQuote": "Посмотреть КП",
+      "contractBadge": "Договор",
+      "signContract": "Подписать договор",
+      "invoiceBadge": "Счёт",
+      "payInvoice": "Оплатить",
+      "actBadge": "Акт",
+      "acceptAct": "Принять акт"
+    }
   }
 }

@@ -28,3 +28,11 @@ export function invoiceView(invoice: Invoice, now: number): InvoiceView {
     displayStatus: overdue ? 'overdue' : invoice.status,
   };
 }
+
+export function invoiceViews(invoices: Invoice[], now: number = Date.now()): Map<number, InvoiceView> {
+  const map = new Map<number, InvoiceView>();
+  for (const inv of invoices) {
+    map.set(inv.id, invoiceView(inv, now));
+  }
+  return map;
+}
