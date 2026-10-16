@@ -1,12 +1,13 @@
 import { useId, useState, type FormEvent } from 'react';
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { FilePlus2, Inbox, Loader2, Lock, Plus, SearchX, Trash2 } from 'lucide-react';
+import { BookOpen, FilePlus2, Inbox, Loader2, Lock, Paperclip, Plus, SearchX, Trash2, Upload } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { apiErrorKey } from '@/api/errors';
-import type { ClientRequest, RequestLineIn } from '@/api/portal';
-import { useCreateRequest, useQuotes, useRequests } from '@/api/queries';
+import type { AttachmentRef, ClientRequest, RequestLineIn } from '@/api/portal';
+import { useCatalog, useCreateRequest, useQuotes, useRequest, useRequests, useUploadFile } from '@/api/queries';
+import { ActionRequiredWidget } from '@/components/ActionRequiredWidget';
 import { DealLink, DetailList, SectionTitle } from '@/components/Details';
 import { EmptyState } from '@/components/EmptyState';
 import { PageHeader } from '@/components/PageHeader';
@@ -16,17 +17,17 @@ import { StatusBadge } from '@/components/StatusBadge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { formatDate, formatDateTime, formatMoney } from '@/lib/format';
+import { formatDate, formatDateTime, formatFileSize, formatMoney, formatQuantity } from '@/lib/format';
 import { normalizeQuantity, requestSourceKey, type NewRequestPrefill } from '@/lib/requests';
 import { CanAct } from '@/session/CanAct';
 
 /**
  * Запросы клиента (B2B `MyRequestsPage` / `RequestDetailPage`, покупательская часть): список, карточка
- * и «Новый запрос» — краткое описание и строки свободным текстом (BUSINESS §7: позиции с количеством или
- * этапы услуги). Вложений нет, пока в контракте нет загрузки файлов (QUESTIONS Q-14).
+ * и «Новый запрос» — краткое описание, спецификация строк и загрузка вложений (Q-14..Q-16).
  */
 function NewRequestButton() {
   const { t } = useTranslation();
@@ -49,6 +50,7 @@ export function RequestsPage() {
   return (
     <>
       <PageHeader title={t('pages.requests.title')} actions={<NewRequestButton />} />
+      <ActionRequiredWidget />
       {requests.isPending ? (
         <ListSkeleton />
       ) : requests.isError ? (
@@ -85,11 +87,12 @@ export function RequestDetailPage() {
   const { t } = useTranslation();
   const id = Number(useParams().id);
   const requests = useRequests();
+  const detailQuery = useRequest(id);
   const quotes = useQuotes();
-  const request = requests.data?.find((item) => item.id === id);
+  const request = detailQuery.data ?? requests.data?.find((item) => item.id === id);
 
-  if (requests.isPending) return <ListSkeleton rows={2} />;
-  if (requests.isError) return <ErrorState error={requests.error} onRetry={() => void requests.refetch()} />;
+  if (requests.isPending && detailQuery.isPending) return <ListSkeleton rows={2} />;
+  if (requests.isError && detailQuery.isError) return <ErrorState error={requests.error} onRetry={() => void requests.refetch()} />;
   if (!request) {
     return (
       <>
@@ -117,7 +120,7 @@ export function RequestDetailPage() {
               <StatusBadge entity="request" code={request.status} />
               <span className="text-sm text-muted-foreground">{t(`pages.requestDetail.next.${request.status}`)}</span>
             </div>
-            <p className="text-sm whitespace-pre-line break-words">{request.summary}</p>
+            <p className="text-sm whitespace-pre-line wrap-break-word">{request.summary}</p>
             <DetailList
               items={[
                 { label: t('pages.requestDetail.created'), value: formatDateTime(request.created_at) },
@@ -127,6 +130,47 @@ export function RequestDetailPage() {
             />
           </CardContent>
         </Card>
+
+        {request.lines && request.lines.length > 0 ? (
+          <section aria-labelledby="request-lines">
+            <SectionTitle>
+              <span id="request-lines">{t('pages.requestDetail.linesTitle')}</span>
+            </SectionTitle>
+            <div className="rounded-lg border bg-card">
+              <ul className="flex flex-col divide-y">
+                {request.lines.map((line, idx) => (
+                  <li key={idx} className="flex flex-wrap items-center justify-between gap-2 p-3 text-sm">
+                    <span className="font-medium wrap-break-word">{line.text}</span>
+                    {line.quantity ? (
+                      <span className="text-muted-foreground">{formatQuantity(line.quantity, line.unit)}</span>
+                    ) : null}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </section>
+        ) : null}
+
+        {request.attachments && request.attachments.length > 0 ? (
+          <section aria-labelledby="request-attachments">
+            <SectionTitle>
+              <span id="request-attachments">{t('pages.requestDetail.attachmentsTitle')}</span>
+            </SectionTitle>
+            <div className="rounded-lg border bg-card">
+              <ul className="flex flex-col divide-y">
+                {request.attachments.map((file) => (
+                  <li key={file.upload_id} className="flex flex-wrap items-center justify-between gap-2 p-3 text-sm">
+                    <span className="flex items-center gap-2">
+                      <Paperclip className="size-4 text-muted-foreground" aria-hidden="true" />
+                      <span className="font-medium wrap-break-word">{file.name}</span>
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </section>
+        ) : null}
+
         {dealQuotes.length > 0 ? (
           <section aria-labelledby="request-quotes">
             <SectionTitle>
@@ -191,18 +235,72 @@ export function RequestNewPage() {
   );
 }
 
+interface UploadedFileRef extends AttachmentRef {
+  size_bytes?: number;
+}
+
 function RequestForm() {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const prefill = (useLocation().state as NewRequestPrefill | null)?.line;
+  const locationState = useLocation().state as NewRequestPrefill | null;
+  const prefillLines = locationState?.lines?.length
+    ? locationState.lines
+    : locationState?.line
+      ? [locationState.line]
+      : [];
+
   const create = useCreateRequest();
+  const upload = useUploadFile();
   const summaryId = useId();
-  const [summary, setSummary] = useState(() => (prefill ? t('pages.requestNew.prefillSummary', { name: prefill.text }) : ''));
-  const [lines, setLines] = useState<LineDraft[]>(() => [blankLine(prefill ? { text: prefill.text, unit: prefill.unit ?? '' } : undefined)]);
+  const fileInputId = useId();
+
+  const [summary, setSummary] = useState(() =>
+    prefillLines.length === 1
+      ? t('pages.requestNew.prefillSummary', { name: prefillLines[0].text })
+      : prefillLines.length > 1
+        ? t('pages.requestNew.prefillSummary', { name: prefillLines.map((l) => l.text).join(', ') })
+        : '',
+  );
+  const [lines, setLines] = useState<LineDraft[]>(() =>
+    prefillLines.length
+      ? prefillLines.map((l) => blankLine({ text: l.text, unit: l.unit ?? '' }))
+      : [blankLine()],
+  );
+  const [attachments, setAttachments] = useState<UploadedFileRef[]>([]);
+  const [isUploading, setIsUploading] = useState(false);
+  const [isCatalogPickerOpen, setIsCatalogPickerOpen] = useState(false);
   const [errors, setErrors] = useState<{ summary?: boolean; quantity: number[] }>({ quantity: [] });
 
   const updateLine = (key: number, patch: Partial<LineDraft>) =>
     setLines((current) => current.map((line) => (line.key === key ? { ...line, ...patch } : line)));
+
+  const handleFiles = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(event.target.files ?? []);
+    if (!files.length) return;
+    setIsUploading(true);
+    try {
+      for (const file of files) {
+        const uploaded = await upload.mutateAsync(file);
+        setAttachments((current) => [
+          ...current,
+          {
+            upload_id: uploaded.upload_id,
+            name: uploaded.name,
+            size_bytes: uploaded.size_bytes,
+          },
+        ]);
+      }
+    } catch (err) {
+      toast.error(t(apiErrorKey(err)));
+    } finally {
+      setIsUploading(false);
+      event.target.value = '';
+    }
+  };
+
+  const removeAttachment = (uploadId: string) => {
+    setAttachments((current) => current.filter((att) => att.upload_id !== uploadId));
+  };
 
   const submit = (event: FormEvent) => {
     event.preventDefault();
@@ -211,15 +309,22 @@ function RequestForm() {
     setErrors({ summary: summaryMissing, quantity: badQuantity });
     if (summaryMissing || badQuantity.length) return;
 
-    const payload: RequestLineIn[] = lines
+    const payloadLines: RequestLineIn[] = lines
       .filter((line) => line.text.trim())
       .map((line) => ({
         text: line.text.trim(),
         quantity: line.quantity.trim() ? normalizeQuantity(line.quantity) : null,
         unit: line.unit.trim() || null,
       }));
+
+    const payload = {
+      summary: summary.trim(),
+      lines: payloadLines,
+      ...(attachments.length > 0 ? { attachments } : {}),
+    };
+
     create.mutate(
-      { summary: summary.trim(), lines: payload },
+      payload,
       {
         onSuccess: (created) => {
           toast.success(t('pages.requestNew.sent', { number: created.number }));
@@ -230,69 +335,198 @@ function RequestForm() {
   };
 
   return (
-    <form onSubmit={submit} noValidate className="flex flex-col gap-6">
-      <div className="flex flex-col gap-2">
-        <Label htmlFor={summaryId}>{t('pages.requestNew.summary')}</Label>
-        <p id={`${summaryId}-hint`} className="text-xs text-muted-foreground">
-          {t('pages.requestNew.summaryHint')}
-        </p>
-        <Textarea
-          id={summaryId}
-          rows={4}
-          maxLength={SUMMARY_MAX}
-          required
-          value={summary}
-          aria-describedby={`${summaryId}-hint${errors.summary ? ` ${summaryId}-error` : ''}`}
-          aria-invalid={errors.summary || undefined}
-          onChange={(event) => setSummary(event.target.value)}
-        />
-        {errors.summary ? (
-          <p id={`${summaryId}-error`} className="text-sm text-destructive">
-            {t('pages.requestNew.summaryRequired')}
+    <>
+      <form onSubmit={submit} noValidate className="flex flex-col gap-6">
+        <div className="flex flex-col gap-2">
+          <Label htmlFor={summaryId}>{t('pages.requestNew.summary')}</Label>
+          <p id={`${summaryId}-hint`} className="text-xs text-muted-foreground">
+            {t('pages.requestNew.summaryHint')}
           </p>
-        ) : null}
-      </div>
+          <Textarea
+            id={summaryId}
+            rows={4}
+            maxLength={SUMMARY_MAX}
+            required
+            value={summary}
+            aria-describedby={`${summaryId}-hint${errors.summary ? ` ${summaryId}-error` : ''}`}
+            aria-invalid={errors.summary || undefined}
+            onChange={(event) => setSummary(event.target.value)}
+          />
+          {errors.summary ? (
+            <p id={`${summaryId}-error`} className="text-sm text-destructive">
+              {t('pages.requestNew.summaryRequired')}
+            </p>
+          ) : null}
+        </div>
 
-      <fieldset className="flex min-w-0 flex-col gap-3">
-        <legend className="mb-1 text-sm font-medium">{t('pages.requestNew.lines')}</legend>
-        <p className="text-xs text-muted-foreground">{t('pages.requestNew.linesHint')}</p>
-        <ol className="flex flex-col gap-3">
-          {lines.map((line, index) => (
-            <LineRow
-              key={line.key}
-              index={index}
-              line={line}
-              quantityInvalid={errors.quantity.includes(line.key)}
-              canRemove={lines.length > 1}
-              onChange={(patch) => updateLine(line.key, patch)}
-              onRemove={() => setLines((current) => current.filter((item) => item.key !== line.key))}
+        <fieldset className="flex min-w-0 flex-col gap-3">
+          <legend className="mb-1 text-sm font-medium">{t('pages.requestNew.lines')}</legend>
+          <p className="text-xs text-muted-foreground">{t('pages.requestNew.linesHint')}</p>
+          <ol className="flex flex-col gap-3">
+            {lines.map((line, index) => (
+              <LineRow
+                key={line.key}
+                index={index}
+                line={line}
+                quantityInvalid={errors.quantity.includes(line.key)}
+                canRemove={lines.length > 1}
+                onChange={(patch) => updateLine(line.key, patch)}
+                onRemove={() => setLines((current) => current.filter((item) => item.key !== line.key))}
+              />
+            ))}
+          </ol>
+          <div className="flex flex-wrap items-center gap-2">
+            <Button type="button" variant="outline" onClick={() => setLines((current) => [...current, blankLine()])}>
+              <Plus aria-hidden="true" />
+              {t('pages.requestNew.addLine')}
+            </Button>
+            <Button type="button" variant="ghost" onClick={() => setIsCatalogPickerOpen(true)}>
+              <BookOpen aria-hidden="true" />
+              {t('pages.requestNew.pickFromCatalog')}
+            </Button>
+          </div>
+        </fieldset>
+
+        <div className="flex flex-col gap-2">
+          <Label htmlFor={fileInputId}>{t('pages.requestNew.attachmentsTitle')}</Label>
+          <p className="text-xs text-muted-foreground">{t('pages.requestNew.attachmentsHint')}</p>
+          <div className="flex flex-wrap items-center gap-3">
+            <input
+              id={fileInputId}
+              type="file"
+              multiple
+              className="hidden"
+              disabled={isUploading}
+              onChange={handleFiles}
             />
-          ))}
-        </ol>
-        <Button type="button" variant="outline" className="self-start" onClick={() => setLines((current) => [...current, blankLine()])}>
-          <Plus aria-hidden="true" />
-          {t('pages.requestNew.addLine')}
-        </Button>
-      </fieldset>
+            <Button
+              type="button"
+              variant="outline"
+              disabled={isUploading}
+              onClick={() => document.getElementById(fileInputId)?.click()}
+            >
+              {isUploading ? <Loader2 className="animate-spin" aria-hidden="true" /> : <Upload aria-hidden="true" />}
+              {isUploading ? t('pages.requestNew.uploading') : t('pages.requestNew.uploadButton')}
+            </Button>
+          </div>
+          {attachments.length > 0 ? (
+            <ul className="flex flex-col gap-2 pt-1" aria-label={t('pages.requestNew.attachmentsTitle')}>
+              {attachments.map((file) => (
+                <li
+                  key={file.upload_id}
+                  className="flex items-center justify-between gap-2 rounded-lg border bg-card p-2.5 text-sm"
+                >
+                  <span className="flex items-center gap-2 min-w-0">
+                    <Paperclip className="size-4 shrink-0 text-muted-foreground" aria-hidden="true" />
+                    <span className="truncate font-medium">{file.name}</span>
+                    {file.size_bytes ? (
+                      <span className="shrink-0 text-xs text-muted-foreground">({formatFileSize(file.size_bytes)})</span>
+                    ) : null}
+                  </span>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="shrink-0"
+                    aria-label={t('pages.requestNew.removeFile', { name: file.name })}
+                    onClick={() => removeAttachment(file.upload_id)}
+                  >
+                    <Trash2 aria-hidden="true" />
+                  </Button>
+                </li>
+              ))}
+            </ul>
+          ) : null}
+        </div>
 
-      <p className="text-xs text-muted-foreground">{t('pages.requestNew.attachmentsLater')}</p>
+        {create.isError ? (
+          <Alert variant="destructive">
+            <AlertDescription>{t(apiErrorKey(create.error))}</AlertDescription>
+          </Alert>
+        ) : null}
 
-      {create.isError ? (
-        <Alert variant="destructive">
-          <AlertDescription>{t(apiErrorKey(create.error))}</AlertDescription>
-        </Alert>
-      ) : null}
+        <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+          <Button asChild variant="outline">
+            <Link to="/requests">{t('common.cancel')}</Link>
+          </Button>
+          <Button type="submit" disabled={create.isPending || isUploading}>
+            {create.isPending ? <Loader2 className="animate-spin" aria-hidden="true" /> : <FilePlus2 aria-hidden="true" />}
+            {t('pages.requestNew.submit')}
+          </Button>
+        </div>
+      </form>
+      <CatalogPickerDialog
+        open={isCatalogPickerOpen}
+        onOpenChange={setIsCatalogPickerOpen}
+        onSelect={(item) => {
+          setLines((current) => [...current, blankLine({ text: item.name, unit: item.unit ?? '' })]);
+          toast.success(item.name);
+        }}
+      />
+    </>
+  );
+}
 
-      <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
-        <Button asChild variant="outline">
-          <Link to="/requests">{t('common.cancel')}</Link>
-        </Button>
-        <Button type="submit" disabled={create.isPending}>
-          {create.isPending ? <Loader2 className="animate-spin" aria-hidden="true" /> : <FilePlus2 aria-hidden="true" />}
-          {t('pages.requestNew.submit')}
-        </Button>
-      </div>
-    </form>
+function CatalogPickerDialog({
+  open,
+  onOpenChange,
+  onSelect,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onSelect: (item: { name: string; unit?: string | null }) => void;
+}) {
+  const { t } = useTranslation();
+  const [search, setSearch] = useState('');
+  const catalogQuery = useCatalog({ q: search || undefined, page: 1, page_size: 10 }, open);
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-h-[85dvh] max-w-lg overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>{t('pages.requestNew.pickFromCatalog')}</DialogTitle>
+          <DialogDescription className="sr-only">{t('pages.requestNew.pickFromCatalog')}</DialogDescription>
+        </DialogHeader>
+        <div className="flex flex-col gap-3">
+          <Input
+            type="search"
+            placeholder={t('pages.catalog.searchPlaceholder')}
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            aria-label={t('pages.catalog.search')}
+          />
+          {catalogQuery.isPending ? (
+            <div className="flex items-center justify-center p-6 text-muted-foreground">
+              <Loader2 className="size-6 animate-spin" aria-hidden="true" />
+            </div>
+          ) : (catalogQuery.data?.items ?? []).length === 0 ? (
+            <p className="p-4 text-center text-sm text-muted-foreground">{t('pages.catalog.notFoundTitle')}</p>
+          ) : (
+            <ul className="flex flex-col divide-y rounded-md border">
+              {(catalogQuery.data?.items ?? []).map((item) => (
+                <li key={item.id} className="flex items-center justify-between gap-2 p-3 text-sm">
+                  <div className="flex flex-col">
+                    <span className="font-medium wrap-break-word">{item.name}</span>
+                    {item.category ? <span className="text-xs text-muted-foreground">{item.category}</span> : null}
+                  </div>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => {
+                      onSelect({ name: item.name, unit: item.unit });
+                      onOpenChange(false);
+                    }}
+                  >
+                    <Plus aria-hidden="true" />
+                    {t('pages.catalog.addToRequest')}
+                  </Button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 }
 

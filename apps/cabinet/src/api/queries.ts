@@ -9,6 +9,7 @@ import * as portal from './portal';
  */
 export const keys = {
   requests: ['requests'] as const,
+  request: (id: number) => ['requests', id] as const,
   quotes: ['quotes'] as const,
   quote: (id: number) => ['quotes', id] as const,
   contracts: ['contracts'] as const,
@@ -17,12 +18,15 @@ export const keys = {
   deliveries: ['deliveries'] as const,
   documents: (params: portal.DocumentsQuery = {}) => ['documents', params] as const,
   catalog: (params: portal.CatalogQuery) => ['catalog', params] as const,
+  catalogCategories: ['catalog', 'categories'] as const,
   catalogItem: (id: number) => ['catalog', 'item', id] as const,
   company: ['company'] as const,
   team: ['team'] as const,
 };
 
 export const useRequests = () => useQuery({ queryKey: keys.requests, queryFn: portal.listRequests });
+export const useRequest = (id: number) =>
+  useQuery({ queryKey: keys.request(id), queryFn: () => portal.getRequest(id), enabled: Number.isFinite(id) });
 export const useQuotes = () => useQuery({ queryKey: keys.quotes, queryFn: portal.listQuotes });
 export const useQuote = (id: number) =>
   useQuery({ queryKey: keys.quote(id), queryFn: () => portal.getQuote(id), enabled: Number.isFinite(id) });
@@ -32,6 +36,8 @@ export const useActs = () => useQuery({ queryKey: keys.acts, queryFn: portal.lis
 export const useDeliveries = () => useQuery({ queryKey: keys.deliveries, queryFn: portal.listDeliveries });
 export const useDocuments = (params: portal.DocumentsQuery = {}) =>
   useQuery({ queryKey: keys.documents(params), queryFn: () => portal.listDocuments(params) });
+export const useCatalogCategories = () =>
+  useQuery({ queryKey: keys.catalogCategories, queryFn: portal.listCatalogCategories });
 export const useCatalog = (params: portal.CatalogQuery, enabled = true) =>
   useQuery({
     queryKey: keys.catalog(params),
@@ -61,6 +67,7 @@ function useInvalidatingMutation<TVars, TData>(
 }
 
 export const useCreateRequest = () => useInvalidatingMutation(portal.createRequest, [keys.requests]);
+export const useUploadFile = () => useMutation({ mutationFn: portal.uploadFile });
 
 /** После акцепта ERP сам создаёт договор (BUSINESS §4, шаг 6) — перечитываем договоры и документы. */
 export const useAcceptQuote = (id: number) =>

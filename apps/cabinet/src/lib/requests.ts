@@ -1,8 +1,9 @@
 import type { ClientRequest } from '@/api/portal';
 
-/** Предзаполнение «Нового запроса» из карточки каталога (state маршрута `/requests/new`). */
+/** Предзаполнение «Нового запроса» из карточки каталога или корзины подбора (state маршрута `/requests/new`). */
 export interface NewRequestPrefill {
-  line: { text: string; unit?: string | null };
+  line?: { text: string; unit?: string | null };
+  lines?: { text: string; unit?: string | null }[];
 }
 
 /** Откуда пришёл запрос — для клиента важно «я сам» или «через менеджера». */

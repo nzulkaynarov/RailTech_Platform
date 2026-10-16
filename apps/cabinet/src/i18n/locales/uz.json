@@ -243,6 +243,12 @@
       "addLine": "Qator qoʻshish",
       "removeLine": "{{n}}-qatorni oʻchirish",
       "attachmentsLater": "Spetsifikatsiya va chizmalarni hozircha menejerga yuboring — kabinetga fayl yuklash keyinroq paydo boʻladi.",
+      "attachmentsTitle": "Fayllarni biriktirish (spetsifikatsiya, chizmalar)",
+      "attachmentsHint": "PDF, DOCX, XLSX yoki 20 MB gacha rasmlar",
+      "uploadButton": "Faylni yuklash",
+      "uploading": "Yuklanmoqda…",
+      "removeFile": "{{name}} faylini oʻchirish",
+      "pickFromCatalog": "Katalogdan tanlash",
       "submit": "Soʻrovni yuborish",
       "sent": "{{number}} soʻrovi yuborildi",
       "viewOnlyTitle": "Soʻrovni tasdiqlash huquqiga ega kontakt yarata oladi",
@@ -254,6 +260,13 @@
       "source": "Qayerdan",
       "deal": "Bitim",
       "quotes": "Soʻrov boʻyicha takliflar",
+      "linesTitle": "Soʻrov elementlari",
+      "attachmentsTitle": "Biriktirilgan fayllar",
+      "noAttachments": "Fayllar biriktirilmagan",
+      "columns": {
+        "title": "Pozitsiya / bosqich",
+        "quantity": "Miqdor"
+      },
       "backToList": "Soʻrovlar roʻyxatiga",
       "sources": {
         "cabinet": "Siz — kabinetda",
@@ -395,7 +408,10 @@
       "returnReason": "Qaytarish sababi",
       "returnPlaceholder": "Masalan: seriya raqami koʻrsatilmagan",
       "returnConfirm": "Dalolatnomani qaytarish",
-      "returnedToast": "{{number}} dalolatnomasi ijrochiga qaytarildi"
+      "returnedToast": "{{number}} dalolatnomasi ijrochiga qaytarildi",
+      "uploadScan": "Skanni yuklash",
+      "uploadScanNamed": "{{number}} dalolatnomasi skanini yuklash",
+      "scanUploadedToast": "{{number}} dalolatnomasi skani yuklandi"
     },
     "deliveries": {
       "title": "Yetkazib berish",
@@ -405,7 +421,18 @@
       "eta": "Kutilmoqda: {{date}}",
       "etaUnknown": "Sana aniqlanmoqda",
       "shippedAt": "Joʻnatilgan: {{date}}",
-      "tracking": "Kuzatuv raqami"
+      "tracking": "Kuzatuv raqami",
+      "acceptLine": "Qabul qilish",
+      "acceptLineNamed": "{{name}} elementini qabul qilish",
+      "lineAcceptedToast": "Element qabul qilindi",
+      "disputeLine": "Eʼtiroz",
+      "disputeLineNamed": "{{name}} elementi boʻyicha eʼtiroz bildirish",
+      "disputeTitle": "\"{{name}}\" elementi boʻyicha eʼtiroz",
+      "disputeText": "Eʼtiroz mazmunini tavsiflang (nuqson, toʻliq emaslik, shikastlanish). Menejer siz bilan bogʻlanadi.",
+      "disputeReason": "Eʼtiroz sababi",
+      "disputePlaceholder": "Masalan: markirovka nuqsoni yoki transportda shikastlanish",
+      "disputeConfirm": "Eʼtirozni yuborish",
+      "disputeSentToast": "Eʼtiroz menejerga yuborildi"
     },
     "documents": {
       "title": "Hujjatlar",
@@ -415,6 +442,8 @@
       "emptyKindText": "Boshqa turni tanlang yoki barcha hujjatlarni koʻrsating.",
       "showAll": "Hammasini koʻrsatish",
       "filter": "Hujjat turi",
+      "searchPlaceholder": "Raqam, nom yoki bitim boʻyicha qidirish…",
+      "searchLabel": "Hujjatlarni qidirish",
       "columns": {
         "document": "Hujjat",
         "kind": "Turi",
@@ -433,6 +462,11 @@
       "clear": "Qidiruvni tozalash",
       "categories": "Toifalar",
       "results": "Katalog pozitsiyalari",
+      "selectedCount": "Tanlandi: {{count}}",
+      "addToRequest": "Soʻrovga qoʻshish",
+      "removeFromRequest": "Soʻrovdan chiqarish",
+      "createRequestWithSelected": "Soʻrov yaratish ({{count}})",
+      "clearSelection": "Tanlovni tozalash",
       "found_one": "{{count}} ta pozitsiya topildi",
       "found_other": "{{count}} ta pozitsiya topildi",
       "notFoundTitle": "Hech narsa topilmadi",
@@ -549,5 +583,19 @@
     "REASON_REQUIRED": "Sababini koʻrsating.",
     "INN_INVALID": "STIR — 9 dan 14 tagacha raqam.",
     "TEAM_MEMBER_EXISTS": "Bunday e-mailli hamkasb jamoada allaqachon bor."
+  },
+  "widgets": {
+    "actionRequired": {
+      "title": "Qaroringiz kutilmoqda",
+      "allClear": "Barcha hujjatlar koʻrib chiqilgan — hozirda hech qanday harakat talab etilmaydi.",
+      "quoteBadge": "TK",
+      "reviewQuote": "TKni koʻrish",
+      "contractBadge": "Shartnoma",
+      "signContract": "Shartnomani imzolash",
+      "invoiceBadge": "Hisob",
+      "payInvoice": "Toʻlash",
+      "actBadge": "Dalolatnoma",
+      "acceptAct": "Dalolatnomani qabul qilish"
+    }
   }
 }

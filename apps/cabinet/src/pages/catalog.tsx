@@ -1,10 +1,10 @@
 import { useId, useState, type FormEvent } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { ChevronLeft, ChevronRight, FilePlus2, Package, Search, SearchX, X } from 'lucide-react';
+import { Check, ChevronLeft, ChevronRight, FilePlus2, Package, Plus, Search, SearchX, X } from 'lucide-react';
 
 import { isPortalApiError, type CatalogItem } from '@/api/portal';
-import { useCatalog, useCatalogItem } from '@/api/queries';
+import { useCatalog, useCatalogCategories, useCatalogItem } from '@/api/queries';
 import { SectionTitle } from '@/components/Details';
 import { EmptyState } from '@/components/EmptyState';
 import { PageHeader } from '@/components/PageHeader';
@@ -28,10 +28,18 @@ import { CanAct } from '@/session/CanAct';
  */
 export function CatalogPage() {
   const { t, i18n } = useTranslation();
+  const navigate = useNavigate();
   const [params, setParams] = useSearchParams();
   const q = params.get('q') ?? '';
   const category = params.get('category') ?? '';
   const page = parsePage(params.get('page'));
+  const [selectedItems, setSelectedItems] = useState<CatalogItem[]>([]);
+
+  const toggleSelect = (item: CatalogItem) => {
+    setSelectedItems((current) =>
+      current.some((x) => x.id === item.id) ? current.filter((x) => x.id !== item.id) : [...current, item],
+    );
+  };
 
   const update = (patch: Record<string, string | null>) =>
     setParams(
@@ -46,11 +54,13 @@ export function CatalogPage() {
       { replace: true },
     );
 
-  // Категории — из названий первой сотни позиций (Q-15); выбранная категория — фильтр на клиенте.
+  const categoriesQuery = useCatalogCategories();
   const all = useCatalog({ page: 1, page_size: CATALOG_MAX_PAGE_SIZE });
   const byCategory = useCatalog({ q: q || undefined, page: 1, page_size: CATALOG_MAX_PAGE_SIZE }, Boolean(category));
   const paged = useCatalog({ q: q || undefined, page, page_size: CATALOG_PAGE_SIZE }, !category);
-  const categories = distinctCategories(all.data?.items ?? [], i18n.language);
+  const categories = categoriesQuery.data?.length
+    ? categoriesQuery.data.map((c) => c.name)
+    : distinctCategories(all.data?.items ?? [], i18n.language);
 
   const source = category ? byCategory : paged;
   let items: CatalogItem[] = [];
@@ -118,7 +128,11 @@ export function CatalogPage() {
           <ul className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3" aria-label={t('pages.catalog.results')}>
             {items.map((item) => (
               <li key={item.id}>
-                <CatalogCard item={item} />
+                <CatalogCard
+                  item={item}
+                  isSelected={selectedItems.some((x) => x.id === item.id)}
+                  onToggleSelect={() => toggleSelect(item)}
+                />
               </li>
             ))}
           </ul>
@@ -134,6 +148,39 @@ export function CatalogPage() {
                 <ChevronRight aria-hidden="true" />
               </Button>
             </nav>
+          ) : null}
+
+          {selectedItems.length > 0 ? (
+            <aside
+              role="region"
+              aria-label={t('pages.catalog.selectedCount', { count: selectedItems.length })}
+              className="sticky bottom-4 z-20 mt-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border bg-card/95 p-4 shadow-lg backdrop-blur"
+            >
+              <div className="flex items-center gap-2">
+                <ToneBadge tone="info">{selectedItems.length}</ToneBadge>
+                <span className="text-sm font-medium">{t('pages.catalog.selectedCount', { count: selectedItems.length })}</span>
+              </div>
+              <div className="flex flex-wrap items-center gap-2">
+                <Button variant="ghost" size="sm" onClick={() => setSelectedItems([])}>
+                  {t('pages.catalog.clearSelection')}
+                </Button>
+                <Button
+                  size="sm"
+                  onClick={() => {
+                    const state: NewRequestPrefill = {
+                      lines: selectedItems.map((item) => ({
+                        text: item.name,
+                        unit: item.unit ?? null,
+                      })),
+                    };
+                    navigate('/requests/new', { state });
+                  }}
+                >
+                  <FilePlus2 aria-hidden="true" />
+                  {t('pages.catalog.createRequestWithSelected', { count: selectedItems.length })}
+                </Button>
+              </div>
+            </aside>
           ) : null}
         </>
       )}
@@ -210,15 +257,48 @@ function AvailabilityText({ item }: { item: CatalogItem }) {
   );
 }
 
-function CatalogCard({ item }: { item: CatalogItem }) {
+function CatalogCard({
+  item,
+  isSelected = false,
+  onToggleSelect,
+}: {
+  item: CatalogItem;
+  isSelected?: boolean;
+  onToggleSelect?: () => void;
+}) {
   const { t } = useTranslation();
   return (
     <article className="relative flex h-full min-w-0 flex-col gap-2 rounded-lg border bg-card p-4">
-      <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-        {item.category ? <span>{item.category}</span> : null}
-        {item.kind === 'service' ? <ToneBadge tone="info">{t('pages.catalog.kinds.service')}</ToneBadge> : null}
+      <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground">
+        <div className="flex flex-wrap items-center gap-2">
+          {item.category ? <span>{item.category}</span> : null}
+          {item.kind === 'service' ? <ToneBadge tone="info">{t('pages.catalog.kinds.service')}</ToneBadge> : null}
+        </div>
+        {onToggleSelect ? (
+          <CanAct>
+            <Button
+              type="button"
+              size="sm"
+              variant={isSelected ? 'default' : 'outline'}
+              className="relative z-10 h-7 text-xs"
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                onToggleSelect();
+              }}
+              aria-label={
+                isSelected
+                  ? `${t('pages.catalog.removeFromRequest')}: ${item.name}`
+                  : `${t('pages.catalog.addToRequest')}: ${item.name}`
+              }
+            >
+              {isSelected ? <Check className="size-3.5" aria-hidden="true" /> : <Plus className="size-3.5" aria-hidden="true" />}
+              {isSelected ? t('pages.catalog.removeFromRequest') : t('pages.catalog.addToRequest')}
+            </Button>
+          </CanAct>
+        ) : null}
       </div>
-      <h2 className="text-sm font-medium break-words">
+      <h2 className="text-sm font-medium wrap-break-word">
         <Link
           to={`/catalog/${item.id}`}
           className="rounded-sm underline-offset-4 outline-none after:absolute after:inset-0 after:rounded-lg hover:underline focus-visible:after:ring-2 focus-visible:after:ring-ring"
@@ -287,7 +367,7 @@ export function CatalogItemPage() {
               <SectionTitle>
                 <span id="catalog-description">{t('pages.catalogItem.description')}</span>
               </SectionTitle>
-              <p className="text-sm whitespace-pre-line break-words">{item.description}</p>
+              <p className="text-sm whitespace-pre-line wrap-break-word">{item.description}</p>
             </section>
           ) : null}
           {item.attributes?.length ? (
@@ -299,7 +379,7 @@ export function CatalogItemPage() {
                 {item.attributes.map((attribute) => (
                   <div key={attribute.name} className="flex min-w-0 justify-between gap-3 px-3 py-2">
                     <dt className="text-muted-foreground">{attribute.name}</dt>
-                    <dd className="text-right font-medium break-words">{attribute.value}</dd>
+                    <dd className="text-right font-medium wrap-break-word">{attribute.value}</dd>
                   </div>
                 ))}
               </dl>

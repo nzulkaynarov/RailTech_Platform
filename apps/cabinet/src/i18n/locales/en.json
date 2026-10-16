@@ -243,6 +243,12 @@
       "addLine": "Add line",
       "removeLine": "Remove line {{n}}",
       "attachmentsLater": "For now send specifications and drawings to your manager — file upload to the cabinet is coming later.",
+      "attachmentsTitle": "Attach files (specification, drawings, inquiry sheets)",
+      "attachmentsHint": "PDF, DOCX, XLSX or images up to 20 MB",
+      "uploadButton": "Upload file",
+      "uploading": "Uploading…",
+      "removeFile": "Remove file {{name}}",
+      "pickFromCatalog": "Pick from catalog",
       "submit": "Send request",
       "sent": "Request {{number}} sent",
       "viewOnlyTitle": "Requests can be created by a contact with approval rights",
@@ -254,6 +260,13 @@
       "source": "Source",
       "deal": "Deal",
       "quotes": "Quotes for this request",
+      "linesTitle": "Requested items",
+      "attachmentsTitle": "Attachments",
+      "noAttachments": "No attachments",
+      "columns": {
+        "title": "Item / stage",
+        "quantity": "Qty"
+      },
       "backToList": "Back to requests",
       "sources": {
         "cabinet": "You, in the cabinet",
@@ -395,7 +408,10 @@
       "returnReason": "Reason for return",
       "returnPlaceholder": "For example: the serial number is missing",
       "returnConfirm": "Return act",
-      "returnedToast": "Act {{number}} returned to the provider"
+      "returnedToast": "Act {{number}} returned to the provider",
+      "uploadScan": "Upload scan",
+      "uploadScanNamed": "Upload scan for act {{number}}",
+      "scanUploadedToast": "Scan for act {{number}} uploaded"
     },
     "deliveries": {
       "title": "Deliveries",
@@ -405,7 +421,18 @@
       "eta": "Expected {{date}}",
       "etaUnknown": "Date to be confirmed",
       "shippedAt": "Shipped {{date}}",
-      "tracking": "Tracking"
+      "tracking": "Tracking",
+      "acceptLine": "Accept",
+      "acceptLineNamed": "Accept item {{name}}",
+      "lineAcceptedToast": "Item accepted",
+      "disputeLine": "Issue note",
+      "disputeLineNamed": "Leave remark for item {{name}}",
+      "disputeTitle": "Remark for item \"{{name}}\"",
+      "disputeText": "Describe the issue (defect, missing parts, damage). The manager will contact you.",
+      "disputeReason": "Remark reason",
+      "disputePlaceholder": "For example: labeling defect or transport damage",
+      "disputeConfirm": "Send remark",
+      "disputeSentToast": "Remark sent to manager"
     },
     "documents": {
       "title": "Documents",
@@ -415,6 +442,8 @@
       "emptyKindText": "Choose another kind or show all documents.",
       "showAll": "Show all",
       "filter": "Document kind",
+      "searchPlaceholder": "Search by number, title, or deal…",
+      "searchLabel": "Search documents",
       "columns": {
         "document": "Document",
         "kind": "Kind",
@@ -433,6 +462,11 @@
       "clear": "Clear search",
       "categories": "Categories",
       "results": "Catalog items",
+      "selectedCount": "Selected: {{count}}",
+      "addToRequest": "Add to request",
+      "removeFromRequest": "Remove from request",
+      "createRequestWithSelected": "Create request ({{count}})",
+      "clearSelection": "Clear selection",
       "found_one": "{{count}} item found",
       "found_other": "{{count}} items found",
       "notFoundTitle": "Nothing found",
@@ -549,5 +583,19 @@
     "REASON_REQUIRED": "Give a reason.",
     "INN_INVALID": "The tax ID has 9 to 14 digits.",
     "TEAM_MEMBER_EXISTS": "A colleague with this e-mail is already in the team."
+  },
+  "widgets": {
+    "actionRequired": {
+      "title": "Action Required",
+      "allClear": "All documents processed — no action required right now.",
+      "quoteBadge": "Quote",
+      "reviewQuote": "Review quote",
+      "contractBadge": "Contract",
+      "signContract": "Sign contract",
+      "invoiceBadge": "Invoice",
+      "payInvoice": "Pay invoice",
+      "actBadge": "Act",
+      "acceptAct": "Accept act"
+    }
   }
 }

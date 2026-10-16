@@ -189,6 +189,13 @@ export const handlers = [
 
   // --- запросы ------------------------------------------------------------------------------
   http.get(`${API}/requests`, withSession(({ db }) => json(db.requests))),
+  http.get<IdParams>(
+    `${API}/requests/:id`,
+    withSession<IdParams>(({ db, params }) => {
+      const item = byId(db.requests, params.id);
+      return item ? json(item) : error(404, 'NOT_FOUND');
+    }),
+  ),
   http.post(
     `${API}/requests`,
     withSession(
@@ -204,6 +211,8 @@ export const handlers = [
           source: 'cabinet',
           deal_id: null,
           created_at: new Date().toISOString(),
+          lines: body.lines ?? [],
+          attachments: body.attachments ?? [],
         };
         db.requests = [created, ...db.requests];
         return json(created, 201);
@@ -351,7 +360,45 @@ export const handlers = [
     }),
   ),
 
+  // --- загрузка файлов (Q-14) -----------------------------------------------------------------
+  http.post(
+    `${API}/uploads`,
+    withSession(
+      async ({ request }) => {
+        const formData = await request.formData();
+        const file = formData.get('file');
+        if (!file || typeof file === 'string') return error(400, 'FILE_REQUIRED');
+        const name = file.name || 'document.pdf';
+        const uploadId = `upl_${Date.now()}_${Math.random().toString(16).slice(2, 8)}`;
+        const res: Schemas['PortalUploadResponse'] = {
+          upload_id: uploadId,
+          name,
+          size_bytes: file.size,
+          mime_type: file.type || 'application/octet-stream',
+        };
+        return json(res, 201);
+      },
+      { action: true },
+    ),
+  ),
+
   // --- каталог ----------------------------------------------------------------------------------
+  http.get(
+    `${API}/catalog/categories`,
+    withSession(({ db }) => {
+      const counts = new Map<string, number>();
+      for (const item of db.catalog) {
+        if (item.category) counts.set(item.category, (counts.get(item.category) ?? 0) + 1);
+      }
+      let catId = 1;
+      const categories: Schemas['CatalogCategory'][] = Array.from(counts.entries()).map(([name, count]) => ({
+        id: catId++,
+        name,
+        count,
+      }));
+      return json(categories);
+    }),
+  ),
   http.get(
     `${API}/catalog`,
     withSession(({ db, request }) => {
