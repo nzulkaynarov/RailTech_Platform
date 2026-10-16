@@ -24,6 +24,33 @@ def test_may_make_customer(stage: str, assigned: int | None, is_admin: bool, all
     assert got is allowed
 
 
+def test_may_make_customer_erp_mode() -> None:
+    from app.domain.backoffice import BackofficeMode
+
+    # В ERP режиме in_progress разрешен для ответственного или админа
+    assert may_make_customer(
+        stage="in_progress",
+        assigned_user_id=ME,
+        user_id=ME,
+        is_admin=False,
+        mode=BackofficeMode.ERP,
+    )
+    assert not may_make_customer(
+        stage="in_progress",
+        assigned_user_id=OTHER,
+        user_id=ME,
+        is_admin=False,
+        mode=BackofficeMode.ERP,
+    )
+    assert may_make_customer(
+        stage="in_progress",
+        assigned_user_id=OTHER,
+        user_id=ME,
+        is_admin=True,
+        mode=BackofficeMode.ERP,
+    )
+
+
 @pytest.mark.parametrize(
     ("priority", "status", "allowed"),
     [

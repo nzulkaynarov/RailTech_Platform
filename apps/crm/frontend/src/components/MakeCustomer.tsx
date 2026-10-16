@@ -8,18 +8,26 @@ import { getGetLeadQueryKey, makeCustomer } from "../api/generated/crm";
 import { useApiErrorToast } from "../hooks/useApiErrorToast";
 import { t } from "../i18n/ru";
 
-type Props = { leadId: number; open: boolean; onClose: () => void };
+type Props = {
+  leadId: number;
+  open: boolean;
+  onClose: () => void;
+  backofficeMode?: string | undefined;
+};
 
 /**
  * «Сделать клиентом» (Фаза 6): лид после сделки → клиент, Telegram подтверждён менеджером.
+ * При backoffice_mode == "erp" — передача компании и заявки в бэк-офис ERP (M3-CRM-03).
  * Карточку лида не покидаем: уведомление со ссылкой «Открыть карточку клиента».
  */
-export function MakeCustomer({ leadId, open, onClose }: Props) {
+export function MakeCustomer({ leadId, open, onClose, backofficeMode }: Props) {
   const [clientId, setClientId] = useState<number | null>(null);
   const [name, setName] = useState("");
   const clients = useClients("");
   const query = useQueryClient();
   const { notification } = AntApp.useApp();
+  const isErp = backofficeMode === "erp";
+  const title = isErp ? t.clients.handoff : t.clients.makeCustomer;
   const mutation = useMutation({
     mutationFn: async () =>
       await makeCustomer(leadId, {
@@ -39,8 +47,8 @@ export function MakeCustomer({ leadId, open, onClose }: Props) {
   return (
     <Modal
       open={open}
-      title={t.clients.makeCustomer}
-      okText={t.clients.makeCustomer}
+      title={title}
+      okText={title}
       cancelText={t.actions.cancel}
       confirmLoading={mutation.isPending}
       okButtonProps={{ disabled: clientId === null && !name.trim() }}

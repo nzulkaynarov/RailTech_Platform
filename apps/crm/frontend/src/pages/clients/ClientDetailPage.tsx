@@ -42,6 +42,15 @@ function Details({ data }: { data: ClientDetail }) {
             <BooleanTag value={data.is_active} yes={t.clients.active} no={t.clients.inactive} />
           ),
         },
+        ...(data.erp_company_id
+          ? [
+              {
+                key: "erp",
+                label: t.clients.inBackoffice,
+                children: `${t.clients.backofficeCompany} #${String(data.erp_company_id)}`,
+              },
+            ]
+          : []),
       ]}
     />
   );

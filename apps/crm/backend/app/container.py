@@ -26,6 +26,7 @@ from app.services.settings import SettingsService
 
 if TYPE_CHECKING:
     from app.domain.backoffice import BackofficeMode
+    from app.integrations.erp import ErpClient
     from app.services.ai_spend import AiSpendService
     from app.services.assist import AssistService
     from app.services.auth import AuthService
@@ -295,7 +296,15 @@ class Container:
             self.lead_messenger,
             on_chats_changed=_chats_changed,
             backoffice_mode=self.backoffice_mode,
+            erp_client=self.erp_client,
         )
+
+    @cached_property
+    def erp_client(self) -> "ErpClient":
+        """Клиент интеграции ERP (M3-CRM-03): передача клиента (handoff)."""
+        from app.integrations.erp import HttpxErpClient
+
+        return HttpxErpClient(self.secrets_store, self.settings, self.settings_service)
 
     @cached_property
     def erp_connector(self) -> "ErpConnectorService":

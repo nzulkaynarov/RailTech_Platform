@@ -31,6 +31,11 @@ export function LeadDeals({ lead }: { lead: LeadDetail }) {
                 <Typography.Text>{d.title}</Typography.Text>
                 <Space wrap size={4}>
                   <Tag color={STAGE_COLORS[d.stage] ?? "default"}>{stageLabel(d.stage)}</Tag>
+                  {d.erp_deal_id ? (
+                    <Tag color="cyan">
+                      {t.clients.inBackoffice} #{String(d.erp_deal_id)}
+                    </Tag>
+                  ) : null}
                   <Typography.Text type="secondary">
                     {formatMoney(d.amount, d.currency)}
                     {d.closed_at ? ` · ${formatDate(d.closed_at)}` : ""}

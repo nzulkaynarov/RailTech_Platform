@@ -29,6 +29,7 @@ class Deal(TimestampMixin, Base):
         Index("ix_deals_client_id", "client_id"),
         Index("ix_deals_lead_id", "lead_id"),
         Index("ix_deals_stage_closed_at", "stage", "closed_at"),
+        Index("ix_deals_erp_deal_id", "erp_deal_id"),
     )
 
     id: Mapped[int] = mapped_column(BigInteger, Identity(), primary_key=True)
@@ -43,3 +44,5 @@ class Deal(TimestampMixin, Base):
     closed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     lost_reason: Mapped[str | None] = mapped_column(String(120))
     owner_user_id: Mapped[int | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"))
+    erp_deal_id: Mapped[int | None] = mapped_column(BigInteger)
+    external_stage: Mapped[str | None] = mapped_column(String(64))

@@ -58,6 +58,10 @@ class LeadDetail(LeadOut):
     snoozed_until: datetime | None
     # Открытый сервисный запрос лида или его клиента — ссылка из карточки (Q-017).
     open_service_request_id: int | None = None
+    # Режим бэк-офиса и привязки к ERP (ADR-0022, M3-CRM-03)
+    backoffice_mode: str = "local"
+    erp_company_id: int | None = None
+    erp_deal_id: int | None = None
 
 
 class LeadPage(BaseModel):

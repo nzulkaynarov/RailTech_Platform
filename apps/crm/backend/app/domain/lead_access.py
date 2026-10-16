@@ -3,6 +3,8 @@
 from collections.abc import Iterable
 from typing import Final
 
+from app.domain.backoffice import BackofficeMode
+
 WORK_ROLES: Final = frozenset({"manager", "admin"})
 
 
@@ -13,11 +15,20 @@ def may_snooze(*, assigned_user_id: int | None, user_id: int, is_admin: bool) ->
 
 
 def may_make_customer(
-    *, stage: str, assigned_user_id: int | None, user_id: int, is_admin: bool
+    *,
+    stage: str,
+    assigned_user_id: int | None,
+    user_id: int,
+    is_admin: bool,
+    mode: BackofficeMode = BackofficeMode.LOCAL,
 ) -> bool:
-    """«Сделать клиентом»: выигранный лид (или клиент — смена компании); без ответственного —
-    любой с правом на клиентов, иначе ответственный или админ. Зеркало — leadActionRules.ts."""
-    if stage not in ("won", "customer"):
+    """«Сделать клиентом» / «Передать в бэк-офис» (ADR-0022): в local — выигранный лид
+    (или клиент); в erp — также из работы (in_progress). Без ответственного — любой с правом
+    на клиентов, иначе ответственный или админ. Зеркало — leadActionRules.ts."""
+    allowed = (
+        ("in_progress", "won", "customer") if mode == BackofficeMode.ERP else ("won", "customer")
+    )
+    if stage not in allowed:
         return False
     return is_admin or assigned_user_id is None or assigned_user_id == user_id
 

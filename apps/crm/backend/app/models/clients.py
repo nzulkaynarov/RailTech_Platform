@@ -42,6 +42,7 @@ class Client(TimestampMixin, Base):
     owner_user_id: Mapped[int | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"))
     is_active: Mapped[bool] = mapped_column(Boolean, server_default=sql("true"))
     notes: Mapped[str | None] = mapped_column(Text)
+    erp_company_id: Mapped[int | None] = mapped_column(BigInteger, index=True)
 
 
 class Document(TimestampMixin, Base):

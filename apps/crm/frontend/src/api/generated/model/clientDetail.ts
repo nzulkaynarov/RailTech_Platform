@@ -11,6 +11,7 @@ import type { ServiceRequestOut } from "./serviceRequestOut";
 export interface ClientDetail {
   candidates: IdentityOut[];
   created_at: string;
+  erp_company_id?: number | null;
   id: number;
   identities: IdentityOut[];
   inn: string | null;

@@ -96,14 +96,22 @@ export function OwnerBanner({ banner }: { banner: ActionPlan["ownerBanner"] }) {
   );
 }
 
-type ButtonsProps = { plan: ActionPlan; busy: boolean; onAction: (key: ActionKey) => void };
+type ButtonsProps = {
+  plan: ActionPlan;
+  busy: boolean;
+  onAction: (key: ActionKey) => void;
+  backofficeMode?: string | undefined;
+};
 
 /** Одно главное действие и меню «Ещё» (одно оставшееся действие — обычной кнопкой). */
-function ActionButtons({ plan, busy, onAction }: ButtonsProps) {
+function ActionButtons({ plan, busy, onAction, backofficeMode }: ButtonsProps) {
   const screens = Grid.useBreakpoint();
   const size = screens.sm === false ? "large" : "middle";
   const { primary, more } = plan;
   const single = !primary && more.length === 1 ? more[0] : undefined;
+  const labelFor = (key: ActionKey) =>
+    key === "makeCustomer" && backofficeMode === "erp" ? t.clients.handoff : LABEL[key];
+
   return (
     <Space wrap className="lead-actions" role="group" aria-label={t.lead.actionsLabel}>
       {primary ? (
@@ -115,7 +123,7 @@ function ActionButtons({ plan, busy, onAction }: ButtonsProps) {
             onAction(primary);
           }}
         >
-          {LABEL[primary]}
+          {labelFor(primary)}
         </Button>
       ) : null}
       {single ? (
@@ -126,14 +134,18 @@ function ActionButtons({ plan, busy, onAction }: ButtonsProps) {
             onAction(single);
           }}
         >
-          {LABEL[single]}
+          {labelFor(single)}
         </Button>
       ) : null}
       {more.length && !single ? (
         <Dropdown
           trigger={["click"]}
           menu={{
-            items: more.map((key) => ({ key, label: LABEL[key], danger: DANGER_ACTIONS.has(key) })),
+            items: more.map((key) => ({
+              key,
+              label: labelFor(key),
+              danger: DANGER_ACTIONS.has(key),
+            })),
             onClick: ({ key }) => {
               onAction(key as ActionKey);
             },
@@ -169,7 +181,12 @@ export function LeadActions({ lead, rights }: { lead: LeadDetail; rights: Action
   const unanswered = lastUnanswered(useMessages(lead.id).data);
   return (
     <>
-      <ActionButtons plan={plan} busy={busy} onAction={onAction} />
+      <ActionButtons
+        plan={plan}
+        busy={busy}
+        onAction={onAction}
+        backofficeMode={lead.backoffice_mode}
+      />
       <LeadActionDialog
         key={dialog ?? "closed"}
         dialog={dialog && TEXT_DIALOGS.has(dialog) ? (dialog as Dialog) : null}
@@ -182,7 +199,12 @@ export function LeadActions({ lead, rights }: { lead: LeadDetail; rights: Action
         <AssignLead lead={lead} open={dialog === "assign"} busy={busy} onClose={close} run={run} />
       ) : null}
       {available.has("makeCustomer") ? (
-        <MakeCustomer leadId={lead.id} open={dialog === "makeCustomer"} onClose={close} />
+        <MakeCustomer
+          leadId={lead.id}
+          open={dialog === "makeCustomer"}
+          onClose={close}
+          backofficeMode={lead.backoffice_mode}
+        />
       ) : null}
     </>
   );

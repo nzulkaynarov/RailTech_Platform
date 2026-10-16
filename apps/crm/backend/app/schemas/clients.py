@@ -17,6 +17,7 @@ class ClientOut(BaseModel):
     is_active: bool
     notes: str | None
     created_at: datetime
+    erp_company_id: int | None = None
 
 
 class ClientListItem(ClientOut):

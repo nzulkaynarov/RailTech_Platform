@@ -72,6 +72,17 @@ describe("leadActionPlan — one primary action by state", () => {
     ["handoff without owner → take", handoff, manager, "take"],
     ["paused lead → take", lead({}), manager, "take"],
     ["my lead in progress → close as won", mine, manager, "won"],
+    [
+      "my lead in progress (ERP backoffice) → transfer to backoffice",
+      lead({
+        stage: "in_progress",
+        owner_mode: "human",
+        assigned_user_id: 7,
+        backoffice_mode: "erp",
+      }),
+      manager,
+      "makeCustomer",
+    ],
     ["won lead → make customer", won, manager, "makeCustomer"],
     ["customer with the bot → new deal", customer, manager, "newDeal"],
     ["bot is talking, no handoff → no primary", engaged, manager, null],
@@ -246,5 +257,18 @@ describe("LeadActions", () => {
     expect(screen.getByRole("button", { name: "Добавить заметку" })).toBeEnabled();
     expect(screen.queryByRole("button", { name: "Забрать" })).toBeNull();
     expect(screen.queryAllByRole("button").every((b) => !b.hasAttribute("disabled"))).toBe(true);
+  });
+
+  it("shows «Передать в бэк-офис» when backoffice_mode is erp", () => {
+    const mineErp = lead({
+      stage: "in_progress",
+      owner_mode: "human",
+      assigned_user_id: 7,
+      backoffice_mode: "erp",
+    });
+    renderActions(mineErp, manager);
+    expect(screen.getByRole("button", { name: "Передать в бэк-офис" })).toHaveClass(
+      "ant-btn-primary",
+    );
   });
 });

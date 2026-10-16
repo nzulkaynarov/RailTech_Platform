@@ -28,14 +28,25 @@ from app.domain.lead_access import may_make_customer
 from app.domain.stage_machine import stage_after_unlink
 from app.domain.stages import OwnerMode, Stage, TransitionSource
 from app.domain.triggers import TriggerCode
+from app.integrations.erp import (
+    ErpClient,
+    HandoffCompanyPayload,
+    HandoffConsentPayload,
+    HandoffContactPayload,
+    HandoffInvitePayload,
+    HandoffNeedPayload,
+    HandoffOwnerPayload,
+    HandoffPayload,
+)
 from app.models.auth import User
-from app.models.clients import Client, ServiceRequest
+from app.models.clients import Client, ClientContact, ServiceRequest
 from app.models.leads import Lead, TelegramIdentity
 from app.models.qualification import Escalation
 from app.repositories import events
 from app.repositories import leads as leads_repo
 from app.security import audit
 from app.security.principal import Principal
+from app.services import deals as deals_service
 from app.services import lead_parts, stages
 from app.services.escalation import OPEN_STATUSES
 from app.services.lead_messenger import LeadMessenger
@@ -63,6 +74,7 @@ class ClientService:
         messenger: LeadMessenger | None = None,
         on_chats_changed: ChatsChanged | None = None,
         backoffice_mode: BackofficeModeProvider = local_backoffice,
+        erp_client: ErpClient | None = None,
     ) -> None:
         self._sessions = sessions
         self._settings = settings
@@ -71,6 +83,7 @@ class ClientService:
         self._on_chats_changed = on_chats_changed
         # Режим передачи в бэк-офис (ADR-0022): `integrations/erp.erp_connector_configured`.
         self._backoffice_mode = backoffice_mode
+        self._erp_client = erp_client
 
     async def create(self, who: Principal, name: str, inn: str | None, segment: str | None) -> int:
         async with self._sessions() as session, session.begin():
@@ -194,6 +207,7 @@ class ClientService:
                 assigned_user_id=lead.assigned_user_id,
                 user_id=who.user_id,
                 is_admin=who.is_admin,
+                mode=mode,
             ):
                 raise ForbiddenError(
                     "only the lead owner or an admin can do this", reason=Reason.NOT_LEAD_OWNER
@@ -206,9 +220,132 @@ class ClientService:
                 await session.flush()
                 client_id = client.id
             else:
-                await _client(session, client_id)
+                client = await _client(session, client_id)
             lead.client_id = client_id
             await _bind_identities(session, lead_id, client_id, who)
+
+            erp_deal_id = None
+            if handoff.call_erp:
+                if self._erp_client is None:
+                    raise ConflictError(
+                        "erp connector is not configured", reason=Reason.ERP_NOT_CONFIGURED
+                    )
+                contacts_rows = list(
+                    await session.scalars(
+                        select(ClientContact)
+                        .where(ClientContact.client_id == client_id)
+                        .order_by(ClientContact.is_primary.desc(), ClientContact.id)
+                    )
+                )
+                identities = list(
+                    await session.scalars(
+                        select(TelegramIdentity).where(TelegramIdentity.lead_id == lead_id)
+                    )
+                )
+                primary_id = identities[0] if identities else None
+
+                if not contacts_rows:
+                    primary_contact = ClientContact(
+                        client_id=client_id,
+                        full_name=lead.display_name or client.name,
+                        phone_e164=primary_id.phone_e164
+                        if primary_id and primary_id.phone_e164
+                        else lead.phone_e164,
+                        email=lead.email,
+                        telegram_identity_id=primary_id.id if primary_id else None,
+                        is_primary=True,
+                    )
+                    session.add(primary_contact)
+                    await session.flush()
+                    contacts_rows = [primary_contact]
+
+                contacts_payload = []
+                for c in contacts_rows:
+                    tg_user_id = None
+                    if c.telegram_identity_id:
+                        for ident in identities:
+                            if ident.id == c.telegram_identity_id:
+                                tg_user_id = ident.tg_user_id
+                                break
+                    if tg_user_id is None and primary_id and c.is_primary:
+                        tg_user_id = primary_id.tg_user_id
+
+                    has_tg = bool(tg_user_id)
+                    has_email = bool(c.email)
+                    if has_tg and has_email:
+                        pref = "both"
+                    elif has_email:
+                        pref = "email"
+                    else:
+                        pref = "telegram"
+
+                    contacts_payload.append(
+                        HandoffContactPayload(
+                            crm_contact_id=c.id,
+                            name=c.full_name,
+                            phone=c.phone_e164 or "",
+                            email=c.email or "",
+                            telegram_user_id=tg_user_id,
+                            language=lead.language if lead.language in ("ru", "uz", "en") else "ru",
+                            is_primary=c.is_primary,
+                            preferred_channel=pref,
+                        )
+                    )
+
+                channels = []
+                if any(c.telegram_user_id for c in contacts_payload):
+                    channels.append("telegram")
+                if any(c.email for c in contacts_payload):
+                    channels.append("email")
+                if not channels:
+                    channels = ["telegram"]
+
+                owner_user = (
+                    await session.get(User, lead.assigned_user_id)
+                    if lead.assigned_user_id
+                    else None
+                )
+                owner_name = owner_user.full_name if owner_user else (who.full_name or "Менеджер")
+
+                payload = HandoffPayload(
+                    crm_client_id=client_id,
+                    crm_lead_id=lead_id,
+                    company=HandoffCompanyPayload(
+                        name=client.name,
+                        inn=client.inn or "",
+                        segment=client.segment or "",
+                        language=lead.language if lead.language in ("ru", "uz", "en") else "ru",
+                    ),
+                    contacts=contacts_payload,
+                    need=HandoffNeedPayload(
+                        summary=(lead.need_summary or lead.display_name or "Заявка из CRM")[:5000],
+                        product_interest=lead.product_interest or [],
+                    ),
+                    owner=HandoffOwnerPayload(
+                        crm_user_id=lead.assigned_user_id or who.user_id,
+                        name=owner_name,
+                    ),
+                    consent=HandoffConsentPayload(
+                        given_at=(lead.consent_given_at or datetime.now(UTC)).isoformat(),
+                        version="1.0",
+                    ),
+                    create_request=True,
+                    invite=HandoffInvitePayload(channels=channels),
+                )
+
+                handoff_res = await self._erp_client.handoff_client(payload)
+                client.erp_company_id = handoff_res.erp_company_id
+
+                if handoff_res.erp_request_id:
+                    deal = await deals_service.open_deal(session, lead_id)
+                    if deal is None:
+                        deal = await deals_service.ensure_open_deal(session, lead, actor=who)
+                    deal.erp_deal_id = handoff_res.erp_request_id
+                    deal.external_stage = "request"
+                    deal.client_id = client_id
+                    erp_deal_id = handoff_res.erp_request_id
+                    await session.flush()
+
             # Сервисный режим ведёт бот (BUSINESS §5): документы и вопросы клиента — без менеджера.
             lead.owner_mode = OwnerMode.BOT.value
             lead.snoozed_until = None
@@ -220,13 +357,21 @@ class ClientService:
                 reason="linked to client",
                 actor_user_id=who.user_id,
             )
+            after_data: dict[str, Any] = {
+                "client_id": client_id,
+                "backoffice": handoff.mode.value,
+            }
+            if client.erp_company_id is not None:
+                after_data["erp_company_id"] = client.erp_company_id
+            if erp_deal_id is not None:
+                after_data["erp_deal_id"] = erp_deal_id
             await audit.record(
                 session,
                 who.actor,
                 "lead.make_customer",
                 "lead",
                 lead_id,
-                after={"client_id": client_id, "backoffice": handoff.mode.value},
+                after=after_data,
             )
             await events.publish(session, "lead.updated", lead_id=lead_id)
             language = lead.language
