@@ -76,6 +76,9 @@ LOGGING = {
         "request_id": {
             "()": "core.logging.RequestIDFilter",
         },
+        "redact_portal_token": {
+            "()": "core.logging.RedactPortalTokenFilter",
+        },
     },
     "formatters": {
         "verbose": {
@@ -94,7 +97,7 @@ LOGGING = {
         "console": {
             "class": "logging.StreamHandler",
             "formatter": "json" if _LOG_FORMAT == "json" else "verbose",
-            "filters": ["request_id"],
+            "filters": ["request_id", "redact_portal_token"],
         },
     },
     "root": {

@@ -14,11 +14,11 @@ class PortalSession(models.Model):
     Связана с Contact и Company клиента.
     """
 
-    token = models.CharField(
+    token_hash = models.CharField(
         max_length=64,
         unique=True,
-        db_index=True,
-        verbose_name=_("Токен сессии"),
+        verbose_name=_("SHA-256 токена сессии"),
+        help_text=_("Сырой токен хранится только в cookie клиента"),
     )
     contact = models.ForeignKey(
         "parties.Contact",
@@ -63,13 +63,22 @@ class PortalSession(models.Model):
 
 
 class MagicLinkToken(models.Model):
-    """Одноразовый токен для входа по email (15 минут)."""
+    """Одноразовый токен для входа по email: вход по запросу клиента (15 минут) или приглашение (24 часа)."""
 
-    token = models.CharField(
+    PURPOSE_LOGIN = "login"
+    PURPOSE_INVITE = "invite"
+
+    token_hash = models.CharField(
         max_length=64,
         unique=True,
-        db_index=True,
-        verbose_name=_("Токен ссылки"),
+        verbose_name=_("SHA-256 токена ссылки"),
+        help_text=_("Сырой токен есть только в письме"),
+    )
+    purpose = models.CharField(
+        max_length=10,
+        choices=[(PURPOSE_LOGIN, _("Вход по запросу клиента")), (PURPOSE_INVITE, _("Приглашение из ERP"))],
+        default=PURPOSE_LOGIN,
+        verbose_name=_("Назначение"),
     )
     contact = models.ForeignKey(
         "parties.Contact",

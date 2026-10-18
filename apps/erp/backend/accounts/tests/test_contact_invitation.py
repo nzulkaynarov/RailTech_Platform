@@ -8,9 +8,14 @@ DoD:
 5. Защита правами роли (deal.manage).
 """
 
+import re
+from datetime import timedelta
+
 import pytest
 from django.core import mail
+from django.utils import timezone
 from portal.models import MagicLinkToken
+from portal.services.tokens import hash_token
 from rest_framework import status
 from rest_framework.test import APIClient
 
@@ -135,8 +140,9 @@ class TestContactInvitation:
         assert data["ok"] is True
         assert data["email_sent"] is True
         assert data["channel"] == "email"
-        assert "http://cabinet.localhost/auth/magic/" in data["invite_url"]
-        assert "t.me/railtech_test_bot?start=invite_" in data["telegram_url"]
+        # FIX-14: сотруднику рабочая ссылка входа клиента не отдаётся — только факт отправки и канал
+        assert set(data) == {"ok", "contact_id", "channel", "email_sent", "invited_at"}
+        assert "/auth/magic/" not in response.content.decode()
 
         # Проверяем, что дата приглашения зафиксирована
         client_contact.refresh_from_db()
@@ -147,6 +153,15 @@ class TestContactInvitation:
         sent_email = mail.outbox[0]
         assert "aziz.karimov@tashkentmetro.uz" in sent_email.to
         assert "Tashkent Metro LLC" in sent_email.subject
+
+        # Письмо клиенту содержит рабочую ссылку, база и EmailLog — нет
+        assert "http://cabinet.localhost/auth/magic/" in sent_email.body
+        raw_token = re.search(r"/auth/magic/([\w-]+)", sent_email.body).group(1)
+        stored = MagicLinkToken.objects.get(contact=client_contact)
+        assert stored.token_hash == hash_token(raw_token) != raw_token
+        assert stored.purpose == MagicLinkToken.PURPOSE_INVITE
+        assert not EmailLog.objects.filter(body_text__contains=raw_token).exists()
+        assert not EmailLog.objects.filter(body_html__contains=raw_token).exists()
 
         # Проверяем запись в EmailLog
         log = EmailLog.objects.filter(
@@ -231,7 +246,44 @@ class TestContactInvitation:
         data = response.json()
         assert data["channel"] == "telegram"
         assert data["email_sent"] is False
-        assert "t.me/railtech_test_bot?start=invite_" in data["telegram_url"]
+        assert set(data) == {"ok", "contact_id", "channel", "email_sent", "invited_at"}
+        # Telegram-вход идёт по подписанному initData, ссылка-токен не нужна и не создаётся
+        assert not MagicLinkToken.objects.filter(contact=contact).exists()
+
+    def test_invite_contact_of_archived_company_is_refused(self, client_contact, client_company, seller_user):
+        """FIX-14: архивной компании приглашение не уходит — ни письма, ни токена."""
+        client_company.is_active = False
+        client_company.save(update_fields=["is_active"])
+        mail.outbox.clear()
+        client = APIClient()
+        client.force_authenticate(user=seller_user)
+
+        response = client.post(f"/api/v1/accounts/contacts/{client_contact.id}/invite/")
+
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
+        assert response.json()["detail"] == "COMPANY_ARCHIVED"
+        assert mail.outbox == []
+        assert not MagicLinkToken.objects.filter(contact=client_contact).exists()
+
+    def test_reinvite_revokes_only_previous_invitations(self, client_contact, seller_user):
+        """FIX-14 (P-10): повторное приглашение гасит прежнее приглашение, но не ссылку входа, запрошенную клиентом."""
+        client = APIClient()
+        client.force_authenticate(user=seller_user)
+        login = MagicLinkToken.objects.create(
+            token_hash=hash_token("client-requested-login"),
+            contact=client_contact,
+            purpose=MagicLinkToken.PURPOSE_LOGIN,
+            expires_at=timezone.now() + timedelta(minutes=10),
+        )
+
+        client.post(f"/api/v1/accounts/contacts/{client_contact.id}/invite/")
+        client.post(f"/api/v1/accounts/contacts/{client_contact.id}/invite/")
+
+        login.refresh_from_db()
+        assert login.used_at is None
+        invites = MagicLinkToken.objects.filter(contact=client_contact, purpose=MagicLinkToken.PURPOSE_INVITE)
+        assert invites.count() == 2
+        assert invites.filter(used_at__isnull=True).count() == 1
 
     def test_permission_denied_without_deal_manage(self, client_contact, viewer_user):
         """Сотрудник без права deal.manage получает 403 ROLE_NOT_PERMITTED."""

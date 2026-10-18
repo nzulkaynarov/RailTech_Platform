@@ -1,20 +1,22 @@
 """Portal Invitation service (CONTRACTS §4, M2-ERP-02).
 
 Manages inviting client contacts into the Cabinet portal via Email and/or Telegram.
-Ensures delivery via `send_templated_email` (creating EmailLog in both locales)
-and generates magic links or Telegram deep-links.
+Ensures delivery via `send_templated_email` (creating EmailLog in both locales).
+Рабочая ссылка входа уходит только клиенту, в письме; сотруднику, API и журналу отдаются факт
+отправки и канал (FIX-14, P-11).
 """
 
 from __future__ import annotations
 
 import logging
-import secrets
 from typing import Optional, Tuple
 
 from django.conf import settings
 from django.utils import timezone
 from parties.models import Contact
 from portal.models import MagicLinkToken
+from portal.services.magic_link import build_login_url
+from portal.services.tokens import generate_token, hash_token
 
 from notifications.emails import send_templated_email
 
@@ -34,6 +36,8 @@ def invite_contact_to_portal(
     """
     if not contact.company:
         return None, "CONTACT_WITHOUT_COMPANY"
+    if not contact.company.is_active:
+        return None, "COMPANY_ARCHIVED"
 
     effective_channel = channel or contact.preferred_channel or "email"
     if effective_channel not in ("email", "telegram", "both"):
@@ -61,24 +65,26 @@ def invite_contact_to_portal(
         else:
             return None, "CONTACT_EMAIL_REQUIRED"
 
-    # Аннулируем предыдущие неиспользованные токены этого контакта
-    MagicLinkToken.objects.filter(contact=contact, used_at__isnull=True).update(used_at=timezone.now())
+    # Ссылка нужна только письму: по Telegram клиент входит подписанным initData (telegram_user_id).
+    login_url = None
+    if effective_channel in ("email", "both") and clean_email:
+        # Гасим только прежние приглашения: ссылка входа, запрошенная клиентом, остаётся рабочей.
+        MagicLinkToken.objects.filter(
+            contact=contact, purpose=MagicLinkToken.PURPOSE_INVITE, used_at__isnull=True
+        ).update(used_at=timezone.now())
 
-    # Токен приглашения (действителен 24 часа)
-    token = secrets.token_urlsafe(32)
-    expires_at = timezone.now() + timezone.timedelta(hours=24)
-
-    MagicLinkToken.objects.create(
-        token=token,
-        contact=contact,
-        expires_at=expires_at,
-    )
-
-    cabinet_url = getattr(settings, "CABINET_URL", "http://cabinet.localhost").rstrip("/")
-    invite_url = f"{cabinet_url}/auth/magic/{token}"
+        # Токен приглашения (действителен 24 часа); в базе — только хеш
+        raw_token = generate_token()
+        MagicLinkToken.objects.create(
+            token_hash=hash_token(raw_token),
+            contact=contact,
+            purpose=MagicLinkToken.PURPOSE_INVITE,
+            expires_at=timezone.now() + timezone.timedelta(hours=24),
+        )
+        login_url = build_login_url(raw_token)
 
     bot_username = getattr(settings, "TELEGRAM_BOT_USERNAME", "")
-    telegram_url = f"https://t.me/{bot_username}?start=invite_{token}" if bot_username else None
+    telegram_url = f"https://t.me/{bot_username}" if bot_username else None
 
     email_sent = False
     if effective_channel in ("email", "both") and clean_email:
@@ -89,7 +95,7 @@ def invite_contact_to_portal(
                 context={
                     "contact_name": contact.name,
                     "company_name": contact.company.name,
-                    "invite_url": invite_url,
+                    "invite_url": login_url,
                     "telegram_url": telegram_url,
                 },
                 to=[clean_email],
@@ -133,7 +139,5 @@ def invite_contact_to_portal(
         "contact_id": contact.id,
         "channel": effective_channel,
         "email_sent": email_sent,
-        "invite_url": invite_url,
-        "telegram_url": telegram_url,
         "invited_at": contact.invited_at.isoformat(),
     }, None

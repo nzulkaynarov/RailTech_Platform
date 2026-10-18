@@ -23,6 +23,15 @@ class PortalGone(APIException):
         super().__init__(detail=detail, code=detail)
 
 
+class PortalTooManyRequests(APIException):
+    status_code = status.HTTP_429_TOO_MANY_REQUESTS
+    default_detail = "TOO_MANY_REQUESTS"
+    default_code = "too_many_requests"
+
+    def __init__(self, detail="TOO_MANY_REQUESTS"):
+        super().__init__(detail=detail, code=detail)
+
+
 class PortalValidationError(APIException):
     status_code = status.HTTP_422_UNPROCESSABLE_ENTITY
     default_detail = "VALIDATION_ERROR"

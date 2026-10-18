@@ -140,27 +140,12 @@ export function CounterpartiesPage() {
     setInvitingId(contact.id);
     try {
       const res = await inviteMut.mutateAsync({ contactId: contact.id });
-      if (res.email_sent) {
-        toast.success(t('counterparties.invite.successEmail', { email: contact.email }), {
-          action: res.invite_url || res.telegram_url ? {
-            label: t('counterparties.invite.copyLink'),
-            onClick: () => {
-              void navigator.clipboard.writeText(res.telegram_url || res.invite_url);
-              toast.info(t('counterparties.invite.linkCopied'));
-            },
-          } : undefined,
-        });
-      } else {
-        toast.success(t('counterparties.invite.successLink'), {
-          action: {
-            label: t('counterparties.invite.copyLink'),
-            onClick: () => {
-              void navigator.clipboard.writeText(res.telegram_url || res.invite_url);
-              toast.info(t('counterparties.invite.linkCopied'));
-            },
-          },
-        });
-      }
+      // Рабочая ссылка входа уходит только клиенту, в письме; сотруднику её не показываем (FIX-14).
+      toast.success(
+        res.email_sent
+          ? t('counterparties.invite.successEmail', { email: contact.email })
+          : t('counterparties.invite.success'),
+      );
     } catch (err) {
       toast.error(translateApiError(err));
     } finally {

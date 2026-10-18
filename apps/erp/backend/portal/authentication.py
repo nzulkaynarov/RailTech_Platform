@@ -5,6 +5,7 @@ from django.contrib.auth.models import AnonymousUser
 from rest_framework import authentication, exceptions
 
 from .models import PortalSession
+from .services.tokens import hash_token
 
 
 class PortalAuthentication(authentication.BaseAuthentication):
@@ -28,7 +29,9 @@ class PortalAuthentication(authentication.BaseAuthentication):
         if not token:
             return None
 
-        session = PortalSession.objects.filter(token=token).select_related("contact", "company").first()
+        session = (
+            PortalSession.objects.filter(token_hash=hash_token(token)).select_related("contact", "company").first()
+        )
 
         if not session or not session.is_valid():
             raise exceptions.AuthenticationFailed("UNAUTHORIZED")

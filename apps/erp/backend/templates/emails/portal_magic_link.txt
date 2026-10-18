@@ -1,0 +1,9 @@
+{% load i18n %}{% translate "Здравствуйте" %}{% if contact_name %}, {{ contact_name }}{% endif %}!
+
+{% blocktranslate with company=company_name %}Для входа в личный кабинет компании «{{ company }}» перейдите по ссылке:{% endblocktranslate %}
+{{ login_url }}
+
+{% translate "Ссылка действительна в течение 15 минут и может быть использована только один раз." %}
+{% translate "Если вы не запрашивали вход, просто проигнорируйте письмо." %}
+
+— {% blocktranslate with platform=platform_name|default:'ERP' %}Команда {{ platform }}{% endblocktranslate %}
