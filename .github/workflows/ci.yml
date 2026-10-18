@@ -66,6 +66,8 @@ jobs:
               - 'apps/cabinet/**'
               - 'packages/contracts/**'
               - 'packages/ui-tokens/**'
+              # Типы формы лида Cabinet генерируются из OpenAPI CRM (src/api/crm-form.d.ts).
+              - 'apps/crm/docs/api/openapi.json'
             packages:
               - 'packages/**'
             infra:
