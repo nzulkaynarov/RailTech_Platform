@@ -154,7 +154,7 @@ class TestPortalIsolation:
     def test_cannot_mutate_other_company_quote(self, portal_client, isolation_data):
         quote_b = isolation_data["quote_b"]
         # Accept
-        resp_acc = portal_client.post(f"/api/portal/v1/quotes/{quote_b.id}/accept", {"code": "2468"}, format="json")
+        resp_acc = portal_client.post(f"/api/portal/v1/quotes/{quote_b.id}/accept", {"code": "4821"}, format="json")
         assert resp_acc.status_code == status.HTTP_404_NOT_FOUND
         assert resp_acc.data["detail"] == "NOT_FOUND"
 

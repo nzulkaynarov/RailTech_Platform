@@ -80,7 +80,7 @@ class TestCanActPermission:
 
         mutations = [
             ("POST", "/api/portal/v1/requests", {"summary": "Запрос", "lines": []}),
-            ("POST", f"/api/portal/v1/quotes/{quote.id}/accept", {"code": "2468"}),
+            ("POST", f"/api/portal/v1/quotes/{quote.id}/accept", {"code": "4821"}),
             ("POST", f"/api/portal/v1/quotes/{quote.id}/reject", {"reason": "Дорого"}),
             ("POST", f"/api/portal/v1/contracts/{contract.id}/sign", {}),
             ("POST", f"/api/portal/v1/acts/{act.id}/accept", {}),

@@ -49,6 +49,24 @@ def make_telegram_init_data(
     return urllib.parse.urlencode(params)
 
 
+def issue_test_acceptance_code(quote, email: str, code: str = "481516") -> str:
+    """Активный одноразовый код акцепта КП — как его выпускает `issue_acceptance_code`, без письма."""
+    from datetime import timedelta
+
+    from django.utils import timezone
+    from sales.models.acceptance import QuoteAcceptanceCode
+
+    from crm.services.public_page import CODE_TTL_MINUTES, _hash_code
+
+    QuoteAcceptanceCode.objects.create(
+        quote=quote,
+        email=email.strip().lower(),
+        code_hash=_hash_code(code),
+        expires_at=timezone.now() + timedelta(minutes=CODE_TTL_MINUTES),
+    )
+    return code
+
+
 @pytest.fixture
 def bot_token(settings):
     token = "TEST_BOT_TOKEN_12345"
