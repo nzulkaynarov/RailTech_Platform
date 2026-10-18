@@ -470,6 +470,13 @@ jobs:
     runs-on: ${{ vars.CI_RUNNER || 'ubuntu-latest' }}
     timeout-minutes: 5
     steps:
+      # На черновике job'ы не запускаются (экономия минут), и без этой проверки «CI ok» был бы
+      # зелёным без единого прогона — черновик честно красный, пока его не переведут в «Ready for review».
+      - name: Не черновик
+        if: github.event_name == 'pull_request' && github.event.pull_request.draft
+        run: |
+          echo "::error::Черновик PR: CI не запускался — переведите PR в «Ready for review»"
+          exit 1
       - name: Ни один job не упал
         run: |
           echo '${{ toJSON(needs) }}' > needs.json
