@@ -96,7 +96,12 @@ window.URL.createObjectURL = vi.fn(() => 'blob:cabinet-test');
 window.URL.revokeObjectURL = vi.fn();
 HTMLAnchorElement.prototype.click = vi.fn();
 
-afterAll(() => portalServer.close());
+afterAll(async () => {
+  portalServer.close();
+  // sonner убирает тост таймером (200 мс) уже после размонтирования; если файл тестов кончился
+  // раньше, таймер срабатывает без jsdom — «window is not defined» и красный прогон. Дожидаемся.
+  await new Promise((resolve) => setTimeout(resolve, 300));
+});
 
 // axe проверяет иконки-лигатуры через canvas, которого в jsdom нет: без заглушки — шум в выводе.
 HTMLCanvasElement.prototype.getContext = (() => null) as unknown as HTMLCanvasElement['getContext'];
