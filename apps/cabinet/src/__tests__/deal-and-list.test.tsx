@@ -77,14 +77,18 @@ describe('Адаптивный список на десктопе', () => {
     await router.navigate('/quotes');
     await screen.findByRole('table', { name: 'Коммерческие предложения' });
     // После возврата список может перерисоваться и снять фокус между focus() и Enter (флак на CI):
-    // фокус и Enter повторяются, пока не случится переход со списка.
+    // фокус и Enter повторяются, пока мы на списке и перехода нет. Переход на КП ждёт загрузки
+    // ленивого маршрута — адрес ещё /quotes, а ссылки уже нет: тогда повтор только ждёт.
     await vi.waitFor(
       async () => {
-        screen.getByRole('link', { name: 'KP-2026-0057 · версия 1' }).focus();
-        await user.keyboard('{Enter}');
+        const link = screen.queryByRole('link', { name: 'KP-2026-0057 · версия 1' });
+        if (link && router.state.navigation.state === 'idle' && router.state.location.pathname === '/quotes') {
+          link.focus();
+          await user.keyboard('{Enter}');
+        }
         expect(router.state.location.pathname).not.toBe('/quotes');
       },
-      { timeout: 5_000 },
+      { timeout: 12_000 },
     );
     expect(await heading('КП KP-2026-0057')).toBeInTheDocument();
   });
