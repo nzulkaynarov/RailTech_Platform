@@ -101,6 +101,20 @@
       "logout": "Sign out"
     }
   },
+  "sso": {
+    "title": "Staff sign-in",
+    "processing": "Checking the sign-in token…",
+    "complete": "Sign-in failed",
+    "authenticating": "Opening the session…",
+    "missingToken": "The link has no sign-in token. Sign in with your login and password.",
+    "userInactive": "This staff account is disabled.",
+    "tokenAlreadyUsed": "This sign-in link was already used or has expired. Open it from the CRM again.",
+    "exchangeFailed": "Could not sign in with the CRM link. Sign in with your login and password.",
+    "goToLogin": "Sign in with login and password",
+    "goToCrm": "To CRM",
+    "goToCrmTooltip": "Open the CRM with your account",
+    "goToCrmFailed": "Could not open the CRM"
+  },
   "onboarding": {
     "title": "Getting started",
     "progress": "{{done}} of {{total}} steps",

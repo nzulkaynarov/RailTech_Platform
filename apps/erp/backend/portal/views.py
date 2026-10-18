@@ -51,7 +51,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from sales.models.acceptance import QuoteAcceptanceCode
 
-from catalog.published import project, published_products
+from catalog.published import project, project_many, published_products
 from crm.constants import DealStageCode, FulfillmentStatusCode, InvoiceStatusCode, QuoteStatusCode
 from crm.models import Act, ActivityLog, Contract, Deal, DealStage, Fulfillment, GeneratedDocument, Invoice, Quote
 from crm.services.deals import transition_deal_stage
@@ -1127,15 +1127,8 @@ class CatalogListView(BasePortalView):
         start = (page - 1) * page_size
         products_page = qs[start : start + page_size]
 
-        items = []
-        for p in products_page:
-            item_data = project(p, mode="client")
-            if p.category_id:
-                item_data["category_id"] = p.category_id
-            items.append(item_data)
-
         resp_data = {
-            "items": items,
+            "items": project_many(products_page, mode="client", request=request),
             "page": page,
             "page_size": page_size,
             "total": total,
@@ -1151,9 +1144,7 @@ class CatalogDetailView(BasePortalView):
         if not product:
             raise Http404
 
-        item_data = project(product, mode="client")
-        if product.category_id:
-            item_data["category_id"] = product.category_id
+        item_data = project(product, mode="client", request=request)
         return Response(CatalogItemSerializer(item_data).data)
 
 

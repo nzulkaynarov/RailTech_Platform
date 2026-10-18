@@ -1,6 +1,10 @@
 import '@testing-library/jest-dom';
 import { afterEach, vi } from 'vitest';
-import { cleanup } from '@testing-library/react';
+import { cleanup, configure } from '@testing-library/react';
+
+// findBy*/waitFor ждут по умолчанию 1 с — на раннере CI (2 vCPU) и под параллельной нагрузкой этого мало;
+// тестовый таймаут поднят в vitest.config.ts.
+configure({ asyncUtilTimeout: 5_000 });
 
 // localStorage/sessionStorage are missing (or non-functional) in this test environment:
 // Node >= 23 exposes an experimental `localStorage` global that is undefined without

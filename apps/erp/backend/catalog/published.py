@@ -37,6 +37,7 @@ CATALOG_ITEM_KEYS = frozenset(
         "description",
         "unit",
         "category",
+        "category_id",
         "price",
         "availability",
         "lead_time_days",
@@ -156,6 +157,7 @@ def project(product, *, mode: str, policy: CatalogPolicy | None = None, request=
         "description": product.description or "",
         "unit": product.uom.name if product.uom_id else "",
         "category": product.category.name if product.category_id else None,
+        "category_id": product.category_id,
         "images": _image_urls(product, request),
         "attributes": _attributes(product),
     }

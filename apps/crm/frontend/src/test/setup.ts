@@ -1,4 +1,8 @@
 import "@testing-library/jest-dom/vitest";
+import { configure } from "@testing-library/react";
+
+// findBy*/waitFor ждут по умолчанию 1 с — на раннере CI (2 vCPU) и под параллельной нагрузкой этого мало.
+configure({ asyncUtilTimeout: 5_000 });
 
 // jsdom не реализует matchMedia/ResizeObserver (свойство есть, но не функция), а Ant Design их использует.
 {

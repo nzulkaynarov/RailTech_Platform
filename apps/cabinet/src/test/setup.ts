@@ -1,11 +1,15 @@
 import '@testing-library/jest-dom/vitest';
-import { cleanup } from '@testing-library/react';
+import { cleanup, configure } from '@testing-library/react';
 import { afterAll, afterEach, beforeAll, beforeEach, vi } from 'vitest';
 
 import i18n from '@/i18n';
 import { resetMockPortal } from '@/mocks/handlers';
 import { portalServer } from '@/mocks/server';
 import { resetSessionBootstrap } from '@/session/session';
+
+// findBy*/waitFor ждут по умолчанию 1 с — на раннере CI (2 vCPU) и под параллельной нагрузкой сценарий
+// экрана с несколькими запросами к моку не успевает; 5 с — с запасом, тестовый таймаут — 20 с (vitest.config).
+configure({ asyncUtilTimeout: 5_000 });
 
 /**
  * Тесты идут с настоящим ru.json и моком портального API на границе HTTP (msw/node, те же

@@ -3,7 +3,6 @@
 SHELL := /bin/bash
 .DEFAULT_GOAL := help
 
-TOKENS_SRC := ../../packages/ui-tokens/dist/shadcn.css
 TOKENS_DST := src/styles/tokens.generated.css
 
 .PHONY: help
@@ -27,8 +26,9 @@ i18n-check: ## Симметрия ru / uz / en, дубли ключей, кир�
 	python3 scripts/check_i18n_symmetry.py
 
 .PHONY: tokens-check
-tokens-check: ## Копия токенов совпадает с packages/ui-tokens/dist/shadcn.css (make tokens из корня)
-	@cmp -s $(TOKENS_SRC) $(TOKENS_DST) || { echo "cabinet: $(TOKENS_DST) отличается от $(TOKENS_SRC) — выполните make tokens из корня"; exit 1; }
+tokens-check: ## Копия токенов совпадает с генерацией из packages/ui-tokens/tokens.json (dist/ не коммитится — собираем)
+	@$(MAKE) --no-print-directory -C ../../packages/ui-tokens check >/dev/null \
+	  || { echo "cabinet: $(TOKENS_DST) или другие копии токенов устарели — выполните make tokens из корня"; exit 1; }
 	@echo "tokens: ok"
 
 .PHONY: api-types-check
