@@ -38,7 +38,6 @@ class AttachmentViewSet(RoleGatedViewMixin, viewsets.ModelViewSet):
         "partial_update": "deal.manage",
         "destroy": "deal.manage",
     }
-    buyer_actions = frozenset({"create", "update", "partial_update", "destroy"})  # до M2-ERP-01
 
     from .models import Attachment as _AttachmentModel
     from .serializers import AttachmentSerializer

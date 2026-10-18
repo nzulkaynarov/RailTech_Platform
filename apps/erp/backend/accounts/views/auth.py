@@ -7,6 +7,7 @@ from rest_framework.generics import RetrieveAPIView
 from rest_framework.response import Response
 from rest_framework.throttling import BaseThrottle
 from rest_framework_simplejwt.exceptions import TokenError
+from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 
 
@@ -38,6 +39,7 @@ from accounts.serializers import (  # noqa: E402
     SetupPasswordSerializer,
     UserSerializer,
 )
+from accounts.services import auth as auth_service  # noqa: E402
 from accounts.services import (  # noqa: E402
     login_guard,
     reset_password,
@@ -240,6 +242,16 @@ class WsTicketView(views.APIView):
         return Response({"ticket": ticket, "expires_in": WS_TICKET_TTL})
 
 
+# Пароль верен, но пользователь не сотрудник (участник компании-клиента) — 403 `STAFF_ONLY` ДО выпуска
+# токенов (FIX-13); неверный пароль по-прежнему 401 и считается в блокировке.
+class StaffOnlyTokenObtainPairSerializer(TokenObtainPairSerializer):
+    @classmethod
+    def get_token(cls, user):
+        auth_service.assert_staff_login(user)
+        return super().get_token(user)
+
+
+@extend_schema(request=TokenObtainPairSerializer, responses=TokenObtainPairSerializer)  # схема — как у simplejwt
 class ThrottledTokenObtainPairView(TokenObtainPairView):
     """Login (token obtain) with two brute-force layers:
 
@@ -249,6 +261,7 @@ class ThrottledTokenObtainPairView(TokenObtainPairView):
       throttle alone cannot stop.
     """
 
+    serializer_class = StaffOnlyTokenObtainPairSerializer
     throttle_classes = [ScopedRateThrottle]
     throttle_scope = "login"
 
@@ -269,6 +282,7 @@ class ThrottledTokenObtainPairView(TokenObtainPairView):
         return response
 
 
+@extend_schema(request=TokenObtainPairSerializer, responses=TokenObtainPairSerializer)  # схема — как у simplejwt
 class CookieTokenObtainPairView(ThrottledTokenObtainPairView):
     """Login that returns the access token in the body and the refresh token in an
     HttpOnly cookie (F2.1) — the refresh token is never exposed to JavaScript.

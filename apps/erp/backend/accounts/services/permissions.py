@@ -23,11 +23,14 @@ _CATALOG = frozenset(ALL_PERMISSIONS)
 def is_member_of(user: "CustomUser", company_id: int, *, capability: Optional[str] = None) -> bool:
     """True if user is an active CompanyMember of the given company.
 
-    If `capability` is 'sell' or 'buy', also checks the membership's can_sell /
-    can_buy flag. OWNER distributes these in the team; a member without the
-    flag must be refused at the service layer even if the company has the
-    matching CompanyType. (Покупательская сторона — до M2-ERP-01.)
+    If `capability` is 'sell', also checks the membership's can_sell flag. OWNER distributes it in
+    the team; a member without the flag must be refused at the service layer even if the company
+    has the matching CompanyType. Покупательской стороны в ERP нет (FIX-13): клиент — контакт
+    портала, а не участник компании.
     """
+    if capability not in (None, "sell"):
+        # Покупательской способности ("buy") больше нет — молчаливое «True» открыло бы дверь.
+        raise ValueError(f"unknown capability {capability!r}")
     if not user or not user.is_authenticated:
         return False
     qs = user.memberships.filter(company_id=company_id, is_active=True)
@@ -36,17 +39,15 @@ def is_member_of(user: "CustomUser", company_id: int, *, capability: Optional[st
         return False
     if capability == "sell":
         return bool(membership.can_sell)
-    if capability == "buy":
-        return bool(membership.can_buy)
     return True
 
 
 def staff_permissions(user: "CustomUser") -> frozenset:
     """Действующие права сотрудника бэк-офиса — объединение прав всех его ролей в своей компании.
 
-    Администратор (`is_superuser`) — весь каталог прав. Не сотрудник своей компании (покупательский
-    аккаунт, пользователь без компании) — пусто. Никаких выводов из должности OWNER или флагов
-    `can_sell`/`can_buy` (сняты в M1-ERP-05): нет роли — нет права. Коды вне каталога
+    Администратор (`is_superuser`) — весь каталог прав. Не сотрудник своей компании (пользователь без
+    компании) — пусто. Никаких выводов из должности OWNER или флагов `can_sell` (сняты в M1-ERP-05):
+    нет роли — нет права. Коды вне каталога
     (`accounts.constants.Permission`) отбрасываются.
     """
     if not user or not user.is_authenticated:
@@ -79,8 +80,8 @@ def member_has_permission(user: "CustomUser", company_id: int, perm: str) -> boo
     """Право пользователя действовать от имени компании `company_id` (M1-ERP-05).
 
     Администратор (`is_superuser`) — всегда. Своя компания — объединение прав ролей сотрудника
-    (`staff_permissions`). Компания-клиент — покупательский аккаунт, правила до M2-ERP-01
-    изолированы в `accounts.services.buyer_access`.
+    (`staff_permissions`). Любая другая компания — нет: клиентских аккаунтов в ERP нет (FIX-13),
+    клиент действует только в портале.
     """
     if not user or not user.is_authenticated or not company_id:
         return False
@@ -90,9 +91,7 @@ def member_has_permission(user: "CustomUser", company_id: int, perm: str) -> boo
 
     if company_id == own_company_id():
         return staff_has_permission(user, perm)
-    from .buyer_access import buyer_has_permission
-
-    return buyer_has_permission(user, company_id, perm)
+    return False
 
 
 def is_seller(user: "CustomUser") -> bool:
@@ -115,8 +114,7 @@ def is_seller(user: "CustomUser") -> bool:
 def sees_all_deals(user: "CustomUser") -> bool:
     """Видит ли пользователь все сделки ERP: администратор или сотрудник компании-владельца.
 
-    Продавец любой сделки — своя компания, поэтому фильтра маршрутизации нет. Остальные
-    (покупательские аккаунты — до M2-ERP-01) видят только сделки своей компании-клиента.
+    Продавец любой сделки — своя компания, поэтому фильтра маршрутизации нет.
     """
     if not user or not user.is_authenticated:
         return False

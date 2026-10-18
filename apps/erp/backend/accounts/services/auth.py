@@ -10,6 +10,23 @@ from django.utils.http import urlsafe_base64_decode, urlsafe_base64_encode
 from notifications.tasks import send_transactional_email
 
 from ..models import CustomUser
+from .permissions import is_seller
+
+STAFF_ONLY = "STAFF_ONLY"
+
+
+def assert_staff_login(user: CustomUser) -> None:
+    """Вход в ERP — только сотрудникам (FIX-13, инвариант «один главный пользователь»).
+
+    Пустить можно администратора (`is_superuser`) и активного участника своей компании
+    (`core.tenant.own_company()`). Участник компании-клиента (контакт, когда-то заведённый как
+    пользователь) в ERP не входит: клиент работает в портале. Отказ — 403 `STAFF_ONLY`.
+    """
+    from rest_framework.exceptions import PermissionDenied
+
+    if getattr(user, "is_superuser", False) or is_seller(user):
+        return
+    raise PermissionDenied(STAFF_ONLY)
 
 
 def _password_error(password: str, user: Optional[CustomUser] = None) -> Optional[str]:

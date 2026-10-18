@@ -62,9 +62,9 @@ def _sees_all(user) -> bool:
 def viewer_deal_sides(user, deal, request=None) -> dict:
     """Отношение зрителя К ЭТОЙ сделке — источник правды для гейтов UI.
 
-    Ровно то, на чём построены `viewer_can_sign_client/manager`: покупательская сторона — это
-    активное членство в компании-владельце сделки с правом покупать; продавцовская — сотрудник
-    своей компании (продавец любой сделки — компания-владелец ERP).
+    Ровно то, на чём построены `viewer_can_sign_client/manager`: продавцовская сторона — сотрудник
+    своей компании (продавец любой сделки — компания-владелец ERP). Покупательской стороны в ERP
+    нет (FIX-13): клиент действует в портале, поэтому `is_buyer_side` всегда ложь.
 
     Одиночный случай выражен через тот же `DealSideResolver`, что обслуживает реестры: два
     определения стороны неизбежно разошлись бы, и карточка с реестром показывали бы одному
@@ -77,8 +77,8 @@ class DealSideResolver:
     """Стороны зрителя сразу для МНОГИХ сделок — за два запроса на весь список.
 
     Нужен реестрам (счета / акты / отгрузки): там надо показать правильную кнопку в каждой
-    строке, а `viewer_deal_sides` на строку дал бы N+1. «Мои покупательские компании» и
-    «я сотрудник своей компании» считаются один раз на запрос.
+    строке, а `viewer_deal_sides` на строку дал бы N+1. «Я сотрудник своей компании» считается
+    один раз на запрос.
 
     Определение стороны здесь то же, что у `viewer_deal_sides`, — иначе реестр и карточка
     показывали бы разные кнопки одному человеку.
@@ -88,20 +88,13 @@ class DealSideResolver:
         from accounts.services.permissions import is_seller
 
         anonymous = user is None or getattr(user, "is_anonymous", False)
-        if anonymous:
-            self.buy_company_ids = set()
-            self.is_staff_member = False
-            return
-        self.buy_company_ids = set(
-            user.memberships.filter(is_active=True, can_buy=True).values_list("company_id", flat=True)
-        )
-        self.is_staff_member = is_seller(user)
+        self.is_staff_member = False if anonymous else is_seller(user)
 
     def sides_for(self, deal_id, deal_company_id) -> dict:
         # `is_viewer` остаётся в ответе ради стабильности контракта SPA до волны 1b: плоскости
         # «оператор-наблюдатель» больше нет (M1-ERP-02), администратор = is_superuser.
         return {
-            "is_buyer_side": bool(deal_company_id) and deal_company_id in self.buy_company_ids,
+            "is_buyer_side": False,
             "is_seller_side": self.is_staff_member,
             "is_viewer": False,
         }

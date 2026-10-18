@@ -98,7 +98,7 @@ class CategoryViewSet(RoleGatedViewMixin, viewsets.ModelViewSet):
         description=(
             "Returns OEM brands from the `catalog.Manufacturer` reference table — the "
             "canonical source for `Product.brand`. A brand is catalog metadata, not a "
-            "platform participant (sellers/buyers are the participant roles)."
+            "platform participant (sellers/clients are the participant roles)."
         ),
         tags=["Catalog"],
     ),

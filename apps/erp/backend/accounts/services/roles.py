@@ -58,7 +58,7 @@ def ensure_default_company_roles(company) -> dict:
 
 def default_roles_for(company, workspace_role_code: str) -> List[CompanyRole]:
     """Стартовые роли нового сотрудника своей компании по должности приглашения; для компании-
-    клиента — пусто (покупательский аккаунт живёт по `buyer_access` до M2-ERP-01)."""
+    клиента — пусто (клиентских аккаунтов в ERP нет, FIX-13)."""
     if not _is_own_company(company.id):
         return []
     roles = ensure_default_company_roles(company)

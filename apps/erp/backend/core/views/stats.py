@@ -89,16 +89,6 @@ class PageStatsView(APIView):
                 "pipeline": f'${int(quote_stats["pipeline_value"]):,}',
                 "win_rate": f'{analytics_stats["win_rate"]}%',
             },
-            "analytics_buyer": {
-                "spend_period": f'${int(analytics_stats["total_deal_value"]):,}',
-                "active_requests": deal_stats["active"],
-            },
-            "my_requests": {
-                "active": deal_stats["active"],
-                "quote_received": quote_stats["sent"],
-                "contract": deal_stats["closed_won"],
-                "completed": sourcing_stats["completed"],
-            },
             "admin_users": user_stats,
             "imports": import_stats,
             "notifications_unread": user_notifications,

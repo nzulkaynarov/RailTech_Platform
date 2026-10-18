@@ -25,9 +25,9 @@ class DealAiActionsMixin:
     """AI-черновик КП."""
 
     @extend_schema(
-        summary="Generate a pre-filled draft КП from the buyer request (AI moat / speed)",
+        summary="Generate a pre-filled draft КП from the client request (AI moat / speed)",
         description=(
-            "Creates a fresh DRAFT Quote for the seller, copying the buyer's request lines and "
+            "Creates a fresh DRAFT Quote for the seller, copying the client's request lines and "
             "prefilling matched products' cost / currency / lead-time from the seller's SupplierOffers "
             "(ADR-0006 Move 3). The seller reviews-and-sends instead of building from scratch. "
             "ARCH-01: the build (incl. the AI fuzzy match) runs on Celery — returns 202 + task_id; "

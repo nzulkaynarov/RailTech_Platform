@@ -23,7 +23,7 @@ from rest_framework.response import Response
 from sales.views.quote_fx import QuoteFxMixin
 
 from core.optimistic_locking import OptimisticLockingMixin
-from core.permissions import ADMIN_ONLY, BUYER_ONLY, IsCompanyMemberOrPlatformAdmin, RoleGatedViewMixin
+from core.permissions import ADMIN_ONLY, IsCompanyMemberOrPlatformAdmin, RoleGatedViewMixin
 from crm import services as crm_services
 from crm.constants import QuoteStatusCode
 from crm.models import Quote, QuoteStatus
@@ -77,11 +77,8 @@ class QuoteViewSet(RoleGatedViewMixin, QuoteApprovalMixin, QuoteFxMixin, Optimis
         "fx_override": "finance.rates",
         "send_to_client": "quote.send",
         "approval_act": ("quote.review", "quote.approve_final"),
-        "approve": BUYER_ONLY,
-        "reject": BUYER_ONLY,
         "force_approve": ADMIN_ONLY,
     }
-    buyer_actions = frozenset({"approve", "reject"})  # до M2-ERP-01
 
     serializer_class = QuoteSerializer
     permission_classes = [IsAuthenticated, IsCompanyMemberOrPlatformAdmin]

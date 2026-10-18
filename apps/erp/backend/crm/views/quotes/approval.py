@@ -1,9 +1,9 @@
 """КП approval / review chain actions for ``QuoteViewSet``, extracted as a mixin.
 
 Split out of ``crm/views/quotes/quotes.py`` (DT3 file-length refactor) — behaviour
-unchanged, purely mechanical. ``QuoteApprovalMixin`` bundles the buyer-decision
-actions (approve / reject), the platform-admin force-override, and the internal
-approval chain (submit-for-review / approval-act / recall / my-approval-queue). The
+unchanged, purely mechanical. ``QuoteApprovalMixin`` bundles the platform-admin
+force-override and the internal approval chain (submit-for-review / approval-act /
+recall / my-approval-queue). Client approve / reject live in the portal (FIX-13). The
 ``@action`` routing (url_path / url_name / permission_classes) is identical to the
 pre-split definitions, so the DRF router URLs and the OpenAPI contract are unchanged.
 """
@@ -27,7 +27,7 @@ def _chain_error_response(error):
 
 
 class QuoteApprovalMixin:
-    """КП approval-chain + buyer-decision ``@action`` methods for ``QuoteViewSet``.
+    """КП approval-chain ``@action`` methods for ``QuoteViewSet``.
 
     Mixed in ahead of ``viewsets.ModelViewSet`` — it only ADDS actions and shares the
     host ViewSet's ``get_serializer`` / ``get_object`` / pagination helpers; it never
@@ -35,79 +35,6 @@ class QuoteApprovalMixin:
     """
 
     # Operator sub-capability for the force-override action (ADR-0004 G1).
-
-    @extend_schema(
-        summary="Approve quote",
-        description="Client approves the quote. Only the client's company members or staff can approve.",
-        responses={
-            200: QuoteSerializer,
-            403: OpenApiResponse(description="Not authorized"),
-        },
-        tags=["CRM"],
-    )
-    @action(detail=True, methods=["post"], url_path="approve")
-    def approve(self, request, pk=None):
-        """Client approves the quote — buyer-side can_buy member only.
-
-        Approving moves the deal to CONTRACT_SIGNED, so it's a commitment that
-        must carry can_buy (parity with accept-bid / sign-contract). Platform
-        admins act via force-approve, never here (ADMIN_VIEWER_CANNOT_ACT)."""
-        quote = self.get_object()
-        denied = self._assert_buyer_can_buy(request.user, quote)
-        if denied:
-            return denied
-        from crm.services import QuoteLifecycleService
-
-        try:
-            quote = QuoteLifecycleService.approve_quote(quote.pk, request.user)
-        except ValueError as exc:
-            # Surface a clean 400 (incl. the P0-1 FSM error) instead of a 500.
-            code = str(exc)
-            return _chain_error_response(code if code == "FSM_TRANSITION_NOT_ALLOWED" else "INVALID_STATUS")
-        return Response(self.get_serializer(quote).data)
-
-    @staticmethod
-    def _assert_buyer_can_buy(user, quote):
-        """Return a 403 Response if `user` may not act as the deal's buyer, else None
-        (покупательский аккаунт — до M2-ERP-01, `accounts.services.buyer_access`)."""
-        from accounts.services.buyer_access import buyer_has_permission
-
-        company_id = quote.deal.company_id
-        if not (getattr(user, "is_superuser", False) or buyer_has_permission(user, company_id, "quote.approve")):
-            return Response({"detail": "MEMBER_REQUIRED_FOR_ACTION"}, status=status.HTTP_403_FORBIDDEN)
-        return None
-
-    @extend_schema(
-        summary="Reject quote",
-        description="Client rejects the quote with an optional reason.",
-        request=inline_serializer(
-            "RejectQuoteRequest",
-            fields={
-                "reason": drf_serializers.CharField(required=False, default=""),
-            },
-        ),
-        responses={
-            200: QuoteSerializer,
-            403: OpenApiResponse(description="Not authorized"),
-        },
-        tags=["CRM"],
-    )
-    @action(detail=True, methods=["post"], url_path="reject")
-    def reject(self, request, pk=None):
-        """Client rejects the quote — buyer-side can_buy member only."""
-        quote = self.get_object()
-        denied = self._assert_buyer_can_buy(request.user, quote)
-        if denied:
-            return denied
-        reason = request.data.get("reason", "")
-        from crm.services import QuoteLifecycleService
-
-        try:
-            quote = QuoteLifecycleService.reject_quote(quote.pk, request.user, reason)
-        except ValueError as exc:
-            code = str(exc)
-            return _chain_error_response(code if code == "FSM_TRANSITION_NOT_ALLOWED" else "INVALID_STATUS")
-        return Response(self.get_serializer(quote).data)
 
     @extend_schema(
         summary="Force-approve quote (Platform Admin escalation)",

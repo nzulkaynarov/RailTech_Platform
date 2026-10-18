@@ -143,20 +143,12 @@ class CompanyMember(models.Model):
         verbose_name=_("Активен"),
         help_text=_("Деактивированные участники не имеют доступа к компании"),
     )
-    # Per-member capabilities. The company's OWNER distributes selling/buying
-    # rights inside the team. Defaults are True so existing memberships keep
-    # their current access; OWNER can turn flags off explicitly.
+    # Per-member capability. The company's OWNER distributes selling rights inside the
+    # team. Default is True so existing memberships keep their current access.
     can_sell = models.BooleanField(
         default=True,
         verbose_name=_("Может продавать"),
         help_text=_("Разрешено управлять каталогом и офферами от лица компании. " "Выключается владельцем компании."),
-    )
-    can_buy = models.BooleanField(
-        default=True,
-        verbose_name=_("Может покупать"),
-        help_text=_(
-            "Разрешено создавать заявки/сделки и принимать bid'ы от лица " "компании. Выключается владельцем компании."
-        ),
     )
     joined_at = models.DateTimeField(
         auto_now_add=True,

@@ -191,7 +191,7 @@ class PublishedCatalogItemSerializer(serializers.Serializer):
 class _CostGateMixin:
     """Strip supplier-cost fields (offers / base_price) from viewers who don't own
     the product. Only the OWNING seller's team + platform admins see cost & supplier
-    identity — buyers, other sellers and anon never do (C1 cost-leak fix). React was
+    identity — clients, other sellers and anon never do (C1 cost-leak fix). React was
     only hiding these client-side; the data still travelled in the API response.
     """
 

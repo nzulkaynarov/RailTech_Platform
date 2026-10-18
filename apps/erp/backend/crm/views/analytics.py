@@ -81,7 +81,7 @@ class TimeToFirstQuoteView(APIView):
         "The viewer's newest documents ACROSS types — КП / контракты / инвойсы / акты / "
         "сгенерированные — merged and sorted by date desc, capped at `limit`. Each type is "
         "company-scoped exactly like its own list endpoint: own-company staff see every document, "
-        "a buyer account only its own company's (never another company's DRAFT)."
+        "a client account only its own company's (never another company's DRAFT)."
     ),
     parameters=[
         OpenApiParameter(
