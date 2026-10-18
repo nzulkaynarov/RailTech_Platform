@@ -15,7 +15,13 @@ from rest_framework import permissions, status, views
 from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import RefreshToken
 
-from accounts.services.sso import SsoForbiddenError, SsoValidationError, issue_sso_token, verify_and_exchange_sso_token
+from accounts.services.sso import (
+    SsoForbiddenError,
+    SsoNotConfiguredError,
+    SsoValidationError,
+    issue_sso_token,
+    verify_and_exchange_sso_token,
+)
 from accounts.views.auth import _set_refresh_cookie
 
 logger = logging.getLogger(__name__)
@@ -45,6 +51,8 @@ class SsoIssueTokenView(views.APIView):
             )
         except SsoForbiddenError as exc:
             return Response({"detail": exc.detail}, status=status.HTTP_403_FORBIDDEN)
+        except SsoNotConfiguredError as exc:
+            return Response({"detail": exc.detail}, status=status.HTTP_503_SERVICE_UNAVAILABLE)
         except Exception as exc:
             logger.exception("Failed to issue SSO token: %s", exc)
             return Response({"detail": "SSO_ISSUE_FAILED"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
@@ -67,6 +75,8 @@ class SsoExchangeView(views.APIView):
             return Response({"detail": exc.detail}, status=status.HTTP_401_UNAUTHORIZED)
         except SsoForbiddenError as exc:
             return Response({"detail": exc.detail}, status=status.HTTP_403_FORBIDDEN)
+        except SsoNotConfiguredError as exc:
+            return Response({"detail": exc.detail}, status=status.HTTP_503_SERVICE_UNAVAILABLE)
         except Exception as exc:
             logger.exception("Unexpected error during SSO exchange: %s", exc)
             return Response({"detail": "SSO_EXCHANGE_FAILED"}, status=status.HTTP_401_UNAUTHORIZED)

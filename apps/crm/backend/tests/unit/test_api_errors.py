@@ -158,6 +158,7 @@ def test_reason_values_are_a_stable_contract() -> None:
         "not_lead_owner",
         "already_with_bot",
         "no_open_handoff",
+        "sso_not_configured",
         "snooze_range",
         "service_request_closed",
         "file_too_large",

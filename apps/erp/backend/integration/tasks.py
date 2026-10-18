@@ -48,7 +48,10 @@ def deliver_webhook_event(self, event_id: int) -> bool:
     event.attempts += 1
     event.last_attempt_at = timezone.now()
 
-    secret = getattr(settings, "ERP_WEBHOOK_SECRET", "dev-erp-webhook-secret")
+    secret = settings.ERP_WEBHOOK_SECRET
+    if not secret:
+        logger.error("deliver_webhook_event: ERP_WEBHOOK_SECRET is not configured, event #%s waits", event_id)
+        return False
     body_bytes = json.dumps(event.payload, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
     signature = sign_payload(secret, body_bytes)
 

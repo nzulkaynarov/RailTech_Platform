@@ -17,7 +17,7 @@ from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.config import Settings
-from app.domain.errors import AuthError, ForbiddenError
+from app.domain.errors import AuthError, ConflictError, ForbiddenError, Reason
 from app.models.auth import SsoReplayToken, User
 from app.repositories import users as repo
 from app.security import audit
@@ -100,8 +100,11 @@ class SsoService:
         }
 
         secrets = self._settings.platform_sso_secrets
-        primary_secret = secrets[0] if secrets else "dev-platform-sso-secret"
-        token = jwt.encode(payload, primary_secret, algorithm=SSO_ALGORITHM)
+        if not secrets:
+            raise ConflictError(
+                "platform sso secret is not configured", reason=Reason.SSO_NOT_CONFIGURED
+            )
+        token = jwt.encode(payload, secrets[0], algorithm=SSO_ALGORITHM)
 
         erp_base = self._settings.erp_frontend_url.rstrip("/")
         redirect_url = f"{erp_base}/sso/exchange"

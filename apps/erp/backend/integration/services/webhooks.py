@@ -250,6 +250,10 @@ def emit_event(
     """
     if event_type not in VALID_EVENT_TYPES:
         logger.warning("Attempted to emit unsupported event type: %s", event_type)
+    secret = settings.ERP_WEBHOOK_SECRET
+    if not secret:
+        logger.error("ERP_WEBHOOK_SECRET is not configured — event %s is not emitted", event_type)
+        return None
 
     envelope = build_event_envelope(
         event_type=event_type,
@@ -264,12 +268,7 @@ def emit_event(
         return None
 
     event_id = uuid.uuid4()
-    webhook_url = getattr(
-        settings,
-        "CRM_WEBHOOK_URL",
-        "http://crm.localhost:8000/api/v1/integrations/erp/events",
-    )
-    secret = getattr(settings, "ERP_WEBHOOK_SECRET", "dev-erp-webhook-secret")
+    webhook_url = settings.CRM_WEBHOOK_URL
 
     body_bytes = json.dumps(envelope, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
     signature = sign_payload(secret, body_bytes)

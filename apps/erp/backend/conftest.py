@@ -27,6 +27,16 @@ def _clear_default_cache():
 
 
 @pytest.fixture(autouse=True)
+def _seam_secrets(settings):
+    """Секреты шва CRM ↔ ERP: в коде значений по умолчанию нет (FIX-01) — тестам свои, одноразовые.
+    Тест с другим значением или без секрета переопределяет их через ``settings``."""
+    settings.SERVICE_TOKEN_CRM_TO_ERP = ["test-service-token"]
+    settings.ERP_WEBHOOK_SECRET = "test-webhook-secret"
+    settings.ERP_MCP_CONTEXT_KEY = "test-mcp-context-key"
+    settings.PLATFORM_SSO_SECRET = ["test-sso-secret"]
+
+
+@pytest.fixture(autouse=True)
 def _block_real_model_calls(monkeypatch):
     """Ни один тест не ходит в настоящий LiteLLM (платные вызовы — только evals с согласия):
     транспорт шлюза заблокирован; нужен ответ модели — фикстура ``fake_gateway``."""

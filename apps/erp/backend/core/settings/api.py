@@ -145,32 +145,51 @@ SPECTACULAR_SETTINGS = {
     ],
 }
 
-# ─── CRM → ERP Integration (CONTRACTS §0, §2, M3-ERP-01) ──────────────────────
-# Сервисный токен направления CRM → ERP из окружения; поддерживает до двух активных
-# токенов через запятую для бесшовной ротации без простоя (OpenAPI erp-integration.yaml).
-SERVICE_TOKEN_CRM_TO_ERP = [
-    t.strip() for t in os.environ.get("SERVICE_TOKEN_CRM_TO_ERP", "test-crm-to-erp-token").split(",") if t.strip()
-]
+# ─── Секреты шва CRM ↔ ERP (CONTRACTS §0, §2, §3, §5, §6) ─────────────────────
+# Значений по умолчанию нет (FIX-01, аудит S-1/I-1): известный всем ключ = открытый шов. Пусто —
+# функция закрыта (интеграционный API отвечает 401, вебхуки не уходят, MCP — 401, SSO — 503);
+# без DEBUG пустой секрет — ошибка старта. Значения — из .env через infra/compose.
+
+
+def _secret_list(name: str) -> list[str]:
+    """До двух активных значений через запятую — ротация без простоя."""
+    return [value.strip() for value in os.environ.get(name, "").split(",") if value.strip()]
+
+
+# Сервисный токен направления CRM → ERP (OpenAPI erp-integration.yaml).
+SERVICE_TOKEN_CRM_TO_ERP = _secret_list("SERVICE_TOKEN_CRM_TO_ERP")
 ERP_VERSION = os.environ.get("ERP_VERSION", "0.1.0")
 
-# ─── ERP → CRM Webhooks (CONTRACTS §0, §3, M3-ERP-02) ──────────────────────
-# Базовый адрес CRM (или полный URL вебхуков) и секрет для подписи HMAC-SHA256 (X-Signature).
+# ERP → CRM вебхуки: адрес приёмника CRM и секрет подписи HMAC-SHA256 (X-Signature).
 CRM_BASE_URL = os.environ.get("CRM_BASE_URL", "http://crm.localhost:8000").rstrip("/")
 CRM_WEBHOOK_URL = os.environ.get(
     "CRM_WEBHOOK_URL",
     f"{CRM_BASE_URL}/api/v1/integrations/erp/events",
 )
-ERP_WEBHOOK_SECRET = os.environ.get("ERP_WEBHOOK_SECRET", "dev-erp-webhook-secret")
+ERP_WEBHOOK_SECRET = os.environ.get("ERP_WEBHOOK_SECRET", "").strip()
 
-# ─── ERP MCP Server for CRM Agent (CONTRACTS §0, §5, M3-ERP-03) ────────────────
-# Секретный ключ HMAC-SHA256 для проверки заголовка X-Agent-Context (срок 60 с).
-ERP_MCP_CONTEXT_KEY = os.environ.get("ERP_MCP_CONTEXT_KEY", "dev-erp-mcp-context-key")
+# erp-mcp: ключ HMAC-SHA256 заголовка X-Agent-Context (срок 60 с).
+ERP_MCP_CONTEXT_KEY = os.environ.get("ERP_MCP_CONTEXT_KEY", "").strip()
 
-# ─── Employee SSO CRM ↔ ERP (CONTRACTS §0, §6, sso-token.md, M3-CRM-06) ──────
-# Общий секрет JWT HS256; поддерживает до двух активных значений через запятую для ротации.
-PLATFORM_SSO_SECRET = [
-    s.strip() for s in os.environ.get("PLATFORM_SSO_SECRET", "dev-platform-sso-secret").split(",") if s.strip()
+# SSO сотрудника CRM ↔ ERP (sso-token.md): общий секрет JWT HS256, ротация — через запятую.
+PLATFORM_SSO_SECRET = _secret_list("PLATFORM_SSO_SECRET")
+
+_MISSING_SEAM_SECRETS = [
+    name
+    for name, value in (
+        ("SERVICE_TOKEN_CRM_TO_ERP", SERVICE_TOKEN_CRM_TO_ERP),
+        ("ERP_WEBHOOK_SECRET", ERP_WEBHOOK_SECRET),
+        ("ERP_MCP_CONTEXT_KEY", ERP_MCP_CONTEXT_KEY),
+        ("PLATFORM_SSO_SECRET", PLATFORM_SSO_SECRET),
+    )
+    if not value
 ]
+if _MISSING_SEAM_SECRETS and not DEBUG:
+    from django.core.exceptions import ImproperlyConfigured
+
+    raise ImproperlyConfigured(
+        "Seam secrets are required when DJANGO_DEBUG is off: " + ", ".join(_MISSING_SEAM_SECRETS)
+    )
 CRM_FRONTEND_URL = os.environ.get("CRM_FRONTEND_URL", "http://crm.localhost").rstrip("/")
 # Переход CRM ↔ ERP выключен до волны 1 исправлений (FIX-03, аудит S-2/S-3): обмен токена сейчас
 # небезопасен. Включает владелец после FIX-10/FIX-11 (PLATFORM_SSO_ENABLED=true).

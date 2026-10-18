@@ -5711,7 +5711,8 @@
           "consent_required",
           "ai_spend_period",
           "service_not_switchable",
-          "telegram_paused"
+          "telegram_paused",
+          "sso_not_configured"
         ],
         "title": "Reason",
         "type": "string"

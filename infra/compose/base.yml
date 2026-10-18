@@ -46,6 +46,10 @@ x-crm-backend: &crm-backend
     KB_MCP_URL: http://crm-mcp-kb:8101/mcp
     CRM_MCP_URL: http://crm-mcp-crm:8102/mcp
     DOCS_MCP_URL: http://crm-mcp-docs:8103/mcp
+    # Шов CRM ↔ ERP (FIX-01): значений по умолчанию в коде нет, без .env стенд не поднимается.
+    # Сервисный токен и секрет вебхуков CRM берёт из «Подключений» → ERP (ADR-0022), SSO — отсюда.
+    PLATFORM_SSO_SECRET: ${PLATFORM_SSO_SECRET:?set in .env}
+    ERP_FRONTEND_URL: ${ERP_FRONTEND_URL:-http://erp.localhost}
 
 services:
   # ─── Общая инфраструктура ──────────────────────────────────────────────────────────────────
@@ -351,6 +355,18 @@ services:
       LITELLM_API_KEY: ${ERP_LITELLM_API_KEY:-${LITELLM_MASTER_KEY}}
       AI_IMPORT_ENABLED: ${ERP_AI_ENABLED:-true}
       AI_DAILY_BUDGET_USD: ${ERP_AI_DAILY_BUDGET_USD:-1}
+      # Шов CRM ↔ ERP (CONTRACTS §0, FIX-01): значений по умолчанию в коде нет; без DEBUG ERP без них
+      # не стартует. Имена в .env — как в контракте (WEBHOOK_SECRET); ERP читает их под своими.
+      SERVICE_TOKEN_CRM_TO_ERP: ${SERVICE_TOKEN_CRM_TO_ERP:?set in .env}
+      ERP_WEBHOOK_SECRET: ${WEBHOOK_SECRET:?set in .env}
+      ERP_MCP_CONTEXT_KEY: ${ERP_MCP_CONTEXT_KEY:?set in .env}
+      PLATFORM_SSO_SECRET: ${PLATFORM_SSO_SECRET:?set in .env}
+      CRM_WEBHOOK_URL: ${CRM_WEBHOOK_URL:-http://crm-api:8000/api/v1/integrations/erp/events}
+      CRM_FRONTEND_URL: ${CRM_FRONTEND_URL:-http://crm.localhost}
+      CABINET_URL: ${CABINET_URL:-http://cabinet.localhost}
+      # Тот же бот, что у CRM: ERP проверяет им подпись initData Mini App (пусто — вход через Mini App закрыт).
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
+      TELEGRAM_BOT_USERNAME: ${TELEGRAM_BOT_USERNAME:-}
     volumes:
       - erp_static:/app/staticfiles
       - erp_media:/app/media
