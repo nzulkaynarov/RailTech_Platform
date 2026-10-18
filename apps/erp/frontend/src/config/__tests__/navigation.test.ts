@@ -31,10 +31,10 @@ describe('buildNavigation — back office of one company (M1-ERP-05 roles)', () 
     ]);
   });
 
-  it('has no buyer pages in the menu (moved to Cabinet)', () => {
+  it('has no client pages in the menu (moved to Cabinet)', () => {
     const ids = allIds(buildNavigation(TENANT_NAV, caps(), 'dashboard', t));
-    for (const buyerPage of ['my-requests', 'suppliers', 'products']) {
-      expect(ids).not.toContain(buyerPage);
+    for (const clientPage of ['my-requests', 'suppliers', 'products']) {
+      expect(ids).not.toContain(clientPage);
     }
   });
 

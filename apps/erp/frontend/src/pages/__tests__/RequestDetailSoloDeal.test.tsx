@@ -64,7 +64,7 @@ vi.mock('@/components/CRM/GenerateQuoteDialog', () => ({ GenerateQuoteDialog: ()
 const setHook = (hook: unknown, value: unknown) => { (hook as Mock).mockReturnValue(value); };
 const mkMutation = () => ({ mutate: vi.fn(), mutateAsync: vi.fn().mockResolvedValue(undefined), isPending: false });
 
-// SOLO deal: NO buyer company / client / contact — every counterparty field is null.
+// SOLO deal: NO client company / client / contact — every counterparty field is null.
 const soloDeal = {
   id: 99,
   company: null,
@@ -127,7 +127,7 @@ describe('RequestDetailPage — seller SOLO deal (company === null)', () => {
   it('renders without crashing and labels the missing counterparty explicitly', () => {
     renderWithProviders(<RequestDetailPage dealId={99} onBack={() => {}} />);
 
-    // The page rendered (title present) and the null buyer reads as an intentional label.
+    // The page rendered (title present) and the null client reads as an intentional label.
     expect(screen.getByText('Расчёт без клиента')).toBeInTheDocument();
     expect(screen.getByText('Без клиента (расчёт)')).toBeInTheDocument();
   });

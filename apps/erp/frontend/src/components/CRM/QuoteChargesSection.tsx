@@ -36,7 +36,7 @@ type Kind = 'charge' | 'discount';
 
 /**
  * КП-level expense items / discounts (UBL document AllowanceCharge). Seller-only —
- * the buyer never receives these rows. Each charge is a fixed sum OR a % of the
+ * the client never receives these rows. Each charge is a fixed sum OR a % of the
  * line subtotal, added (+) or deducted (−) before VAT. Rows are inline-editable
  * (amount/%/kind/description + the seller's real cost) — not just add+delete.
  */
@@ -344,7 +344,7 @@ export const QuoteChargesSection: React.FC<QuoteChargesSectionProps> = ({ quoteI
 				<p className="text-xs text-muted-foreground">{t('quote.charges.inCurrency', { currency: ccyLabel })}</p>
 
 				{/* Transparent price cascade: subtotal → charges (running) → tax base → +VAT → total.
-				    Mirrors recalculate_quote to the копейка; presentation prices only (buyer-safe),
+				    Mirrors recalculate_quote to the копейка; presentation prices only (client-safe),
 				    margin badge withheld unless the viewer may see cost/margin (economics present). */}
 				{quote && (
 					<ChargeCascadeTable

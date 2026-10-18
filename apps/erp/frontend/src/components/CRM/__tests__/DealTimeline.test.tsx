@@ -43,7 +43,7 @@ describe('DealTimeline', () => {
         // Backend still stores the RU prose in `action`; the client must prefer the code.
         action: 'RAW ACTION SHOULD NOT SHOW',
         event_code: 'deal.created',
-        event_params: { actor_email: 'buyer@x.uz', deal_id: 25, company_name: 'ООО Магистраль' },
+        event_params: { actor_email: 'client@x.uz', deal_id: 25, company_name: 'ООО Магистраль' },
       }),
     ]);
 
@@ -54,7 +54,7 @@ describe('DealTimeline', () => {
     // Detail interpolates event_params into activity.deal.created.detail.
     expect(
       screen.getByText(
-        'Пользователь buyer@x.uz инициировал новую сделку #25 для компании ООО Магистраль',
+        'Пользователь client@x.uz инициировал новую сделку #25 для компании ООО Магистраль',
       ),
     ).toBeInTheDocument();
     // The raw RU `action` must NOT leak through when a code+key exist.

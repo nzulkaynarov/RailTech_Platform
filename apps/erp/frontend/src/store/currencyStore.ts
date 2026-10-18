@@ -21,7 +21,7 @@ interface CurrencyState {
 // `convert` DIVIDES by the rate for a USD view; `format` renders via the shared
 // currency-aware formatMoney (same as the КП builder + PDF) so money reads consistently.
 //
-// This fixed the critical bug where a UZS КП was shown to the buyer as "$141,120,000"
+// This fixed the critical bug where a UZS КП was shown to the client as "$141,120,000"
 // (the old code assumed USD input → "$" on the raw UZS number, or ×rate in UZS mode →
 // 1.76 trillion). `convert`/`format` are rebuilt on every currency/rate change so their
 // identity changes — components that select `s.format` re-render, making the toggle live

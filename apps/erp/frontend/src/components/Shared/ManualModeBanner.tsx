@@ -8,7 +8,7 @@ interface ManualModeBannerProps {
 
 /**
  * Reminds back-office staff that payment & e-sign are on the manual pipeline (no
- * Click/Payme/E-IMZO yet). ERP has no buyer audience any more (M1-ERP-02 wave 3) — clients
+ * Click/Payme/E-IMZO yet). ERP has no client audience any more (M1-ERP-02 wave 3) — clients
  * work in Cabinet — so the banner is always shown.
  */
 export function ManualModeBanner({ kind }: ManualModeBannerProps) {

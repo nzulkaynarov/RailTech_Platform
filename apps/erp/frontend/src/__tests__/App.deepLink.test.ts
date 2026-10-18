@@ -47,7 +47,7 @@ describe('evaluatePageGuard — deep links of the back office', () => {
     expect(evaluatePageGuard('deal-quote')).toEqual({ action: 'allow' });
   });
 
-  it('has no company-verification or buyer/seller gate: documents open for every employee', () => {
+  it('has no company-verification or client/seller gate: documents open for every employee', () => {
     // Проверки клиентов в ERP нет (волна 1c), сторон нет (волна 3) — действия ограничивает право роли.
     expect(evaluatePageGuard('contracts')).toEqual({ action: 'allow' });
     expect(evaluatePageGuard('acts')).toEqual({ action: 'allow' });
@@ -57,7 +57,7 @@ describe('evaluatePageGuard — deep links of the back office', () => {
     expect(evaluatePageGuard('admin-users')).toEqual({ action: 'bounce', reason: 'unknown' });
   });
 
-  it('bounces a stale buyer hash (#my-requests) — the page moved to Cabinet (M1-ERP-02 wave 3)', () => {
+  it('bounces a stale client hash (#my-requests) — the page moved to Cabinet (M1-ERP-02 wave 3)', () => {
     expect(evaluatePageGuard('my-requests')).toEqual({ action: 'bounce', reason: 'unknown' });
   });
 

@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import { useCurrencyStore } from '../currencyStore';
 
 // Regression guard for the CRITICAL currency-display bug (F7): a UZS-priced КП was
-// shown to the buyer as "$141,120,000" because format() assumed the input was USD.
+// shown to the client as "$141,120,000" because format() assumed the input was USD.
 // All app money is canonical UZS, so format(amountUZS) must render UZS as-is and only
 // DIVIDE by the rate for a USD view — never prefix "$" on a raw UZS number, and never
 // multiply a UZS number by the rate.

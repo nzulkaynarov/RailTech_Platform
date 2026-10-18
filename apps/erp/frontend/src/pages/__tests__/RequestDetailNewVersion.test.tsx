@@ -5,7 +5,7 @@ import { renderWithProviders } from '@/test/renderWithProviders';
 import { RequestDetailPage } from '@/pages/RequestDetailPage';
 
 /**
- * WP-B2 — after the buyer rejects the КП the seller was stuck in a тупик: an
+ * WP-B2 — after the client rejects the КП the seller was stuck in a тупик: an
  * active_quote existed so the build button was hidden and no «new version»
  * action existed anywhere. These tests pin the fix: the primary «Создать новую
  * версию» button shows for a seller when active_quote is REJECTED, and stays

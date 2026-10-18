@@ -10,7 +10,7 @@ import { NAVIGABLE_PAGES, PAGE_IDS } from '../config/pageRegistry';
 //   • M1-ERP-02 (волна 1a): операторская плоскость удалена — страницы `admin-*` и флаги
 //     `admin` / `adminReachable` ушли из реестра вместе с `PlatformAdminShell`.
 //   • M1-ERP-02 (волна 1c): порог проверки компании удалён.
-//   • M1-ERP-02 (волна 3): ERP — бэк-офис одной компании. Флаги стороны `buyer` / `seller` и наборы
+//   • M1-ERP-02 (волна 3): ERP — бэк-офис одной компании. Флаги стороны `client` / `seller` и наборы
 //     BUYER_PAGES / SELLER_PAGES удалены; покупательские страницы `my-requests` («Мои заявки») и
 //     `suppliers` («Поставщики») ушли в Cabinet. `products` (бывшая витрина каталога покупателя)
 //     остался рабочим алиасом «Моих товаров» — хэш напечатан в закладках и туре.
@@ -44,8 +44,8 @@ describe('реестр страниц', () => {
   });
 
   it('покупательских страниц в реестре нет (M1-ERP-02 волна 3)', () => {
-    for (const buyerPage of ['my-requests', 'suppliers']) {
-      expect(PAGE_IDS).not.toContain(buyerPage);
+    for (const clientPage of ['my-requests', 'suppliers']) {
+      expect(PAGE_IDS).not.toContain(clientPage);
     }
   });
 

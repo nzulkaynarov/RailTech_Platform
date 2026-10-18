@@ -238,7 +238,6 @@ describe('MetricStrip', () => {
     deals_by_month: [],
     activity_by_day: [],
     top_products: [],
-    counterparties: { manufacturers: 0, buyers: 0, intermediaries: 0 },
     request_completion: 0,
     request_completion_goal: 0,
     deals_in_progress: 2,
@@ -255,7 +254,7 @@ describe('MetricStrip', () => {
     expect(within(activeRequestsMetric).getByText('4')).toBeInTheDocument();
     expect(screen.getByText('120')).toBeInTheDocument(); // catalog items
     expect(screen.getByText('7')).toBeInTheDocument(); // clients
-    // The former buyer-only metric is gone together with the buyer dashboard (M1-ERP-02 wave 3).
+    // The former client-only metric is gone together with the client dashboard (M1-ERP-02 wave 3).
     expect(screen.queryByText('КП получено')).not.toBeInTheDocument();
   });
 

@@ -1454,8 +1454,8 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Update member capabilities (sell / buy flags)
-         * @description Company OWNER distributes selling / buying rights across team members. Only OWNER of the same company (or platform ADMIN/superuser) may call this.
+         * Update member capabilities (sell flag)
+         * @description Company OWNER distributes selling rights across team members. Only OWNER of the same company (or platform ADMIN/superuser) may call this.
          */
         post: operations["accounts_companies_update_member_capabilities_create"];
         delete?: never;
@@ -2651,8 +2651,7 @@ export interface paths {
          *     `permission_classes` и до `get_object()`, даже если вьюха переопределяет `get_permissions`.
          *
          *     Объявления на вьюхе:
-         *       `required_permissions = {"create": "deal.manage", "approve": BUYER_ONLY, ...}`
-         *       `buyer_actions = {"create", "approve"}` — переходно до M2-ERP-01.
+         *       `required_permissions = {"create": "deal.manage", "force_approve": ADMIN_ONLY, ...}`
          */
         get: operations["catalog_category_requests_retrieve"];
         put?: never;
@@ -2752,7 +2751,7 @@ export interface paths {
         };
         /**
          * List manufacturers (OEM brands)
-         * @description Returns OEM brands from the `catalog.Manufacturer` reference table — the canonical source for `Product.brand`. A brand is catalog metadata, not a platform participant (sellers/buyers are the participant roles).
+         * @description Returns OEM brands from the `catalog.Manufacturer` reference table — the canonical source for `Product.brand`. A brand is catalog metadata, not a platform participant (sellers/clients are the participant roles).
          */
         get: operations["catalog_manufacturers_list"];
         put?: never;
@@ -3632,26 +3631,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/crm/acts/{id}/reject/": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Reject an issued act (buyer side)
-         * @description Заказчик возвращает акт исполнителю с причиной — второй шаг двустороннего цикла (паттерн ЭСФ «подтвердить или отклонить»). Причина обязательна: без основания отказ бесполезен обеим сторонам. Акт уходит обратно в DRAFT.
-         */
-        post: operations["crm_acts_reject_create"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/v1/crm/acts/{id}/remind/": {
         parameters: {
             query?: never;
@@ -3666,30 +3645,6 @@ export interface paths {
          * @description Исполнитель повторно приглашает заказчика ответить по выставленному акту. Уходит ТО ЖЕ письмо «акт ждёт подтверждения», а не новый его вид — число писем на отрезке не растёт (аналог Resend у DocuSign). Не чаще раза в сутки на документ: ограничение взято у PandaDoc, иначе кнопка становится инструментом спама.
          */
         post: operations["crm_acts_remind_create"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/crm/acts/{id}/sign/": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Sign act (mark as SIGNED)
-         * @description Акты — только чтение плюс сервисные экшены ниже (Rule 8).
-         *
-         *     Выпуск — через `invoices/{id}/generate-act/` (там же проверяется роутинг
-         *     продавца, аудит H4), подпись — через `acts/{id}/sign/`. Сырые create/update/
-         *     destroy обходили обе проверки и позволяли проставить номер, статус и даты руками.
-         */
-        post: operations["crm_acts_sign_create"];
         delete?: never;
         options?: never;
         head?: never;
@@ -3725,7 +3680,7 @@ export interface paths {
         };
         /**
          * Recent documents (dashboard widget)
-         * @description The viewer's newest documents ACROSS types — КП / контракты / инвойсы / акты / сгенерированные — merged and sorted by date desc, capped at `limit`. Each type is company-scoped exactly like its own list endpoint: own-company staff see every document, a buyer account only its own company's (never another company's DRAFT).
+         * @description The viewer's newest documents ACROSS types — КП / контракты / инвойсы / акты / сгенерированные — merged and sorted by date desc, capped at `limit`. Each type is company-scoped exactly like its own list endpoint: own-company staff see every document, a client account only its own company's (never another company's DRAFT).
          */
         get: operations["crm_analytics_recent_documents_retrieve"];
         put?: never;
@@ -4018,26 +3973,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/crm/contracts/{id}/sign-client/": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Sign contract by client
-         * @description Contracts -- generated from approved quotes, double-signed.
-         */
-        post: operations["crm_contracts_sign_client_create"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/v1/crm/contracts/{id}/sign-manager/": {
         parameters: {
             query?: never;
@@ -4196,46 +4131,6 @@ export interface paths {
         patch: operations["crm_deals_partial_update"];
         trace?: never;
     };
-    "/api/v1/crm/deals/{id}/add-request-item/": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Add a line item to the buyer's request
-         * @description Buyer-only. Appends a row (name + quantity) to the deal's request. Creates the underlying DRAFT quote on first add. Allowed only while the seller has not taken the deal into work.
-         */
-        post: operations["crm_deals_add_request_item_create"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/crm/deals/{id}/add-request-items/": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Bulk-add request line items (catalog cart)
-         * @description Buyer-only. Adds many lines at once; catalog items link by product_id.
-         */
-        post: operations["crm_deals_add_request_items_create"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/v1/crm/deals/{id}/assign/": {
         parameters: {
             query?: never;
@@ -4369,8 +4264,8 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Generate a pre-filled draft КП from the buyer request (AI moat / speed)
-         * @description Creates a fresh DRAFT Quote for the seller, copying the buyer's request lines and prefilling matched products' cost / currency / lead-time from the seller's SupplierOffers (ADR-0006 Move 3). The seller reviews-and-sends instead of building from scratch. ARCH-01: the build (incl. the AI fuzzy match) runs on Celery — returns 202 + task_id; poll sourcing/ai-status/<task_id>/ for {prefilled, quote_id, deal}.
+         * Generate a pre-filled draft КП from the client request (AI moat / speed)
+         * @description Creates a fresh DRAFT Quote for the seller, copying the client's request lines and prefilling matched products' cost / currency / lead-time from the seller's SupplierOffers (ADR-0006 Move 3). The seller reviews-and-sends instead of building from scratch. ARCH-01: the build (incl. the AI fuzzy match) runs on Celery — returns 202 + task_id; poll sourcing/ai-status/<task_id>/ for {prefilled, quote_id, deal}.
          */
         post: operations["crm_deals_generate_draft_quote_create"];
         delete?: never;
@@ -4402,26 +4297,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/crm/deals/{id}/submit-request/": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Submit the buyer's request (RFQ) to the seller
-         * @description Buyer-only. Issues the request to the seller: Draft → RFQ_OPEN. Requires ≥1 line and no incomplete lines. After this the request locks.
-         */
-        post: operations["crm_deals_submit_request_create"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/v1/crm/deals/{id}/take-and-prepare/": {
         parameters: {
             query?: never;
@@ -4440,26 +4315,6 @@ export interface paths {
         options?: never;
         head?: never;
         patch?: never;
-        trace?: never;
-    };
-    "/api/v1/crm/deals/{id}/update-request-meta/": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        /**
-         * Edit the request header (title + note to seller)
-         * @description Buyer-only, while the request is still DRAFT.
-         */
-        patch: operations["crm_deals_update_request_meta_partial_update"];
         trace?: never;
     };
     "/api/v1/crm/document-templates/": {
@@ -5256,7 +5111,7 @@ export interface paths {
          * @description CRUD for КП-level expense items / discounts (UBL document AllowanceCharge).
          *
          *     Building the cost breakdown is a SELLER action (mirrors QuoteItemViewSet):
-         *     only the seller team / superuser may write; the buyer never sees these rows.
+         *     only the seller team / superuser may write; the client never sees these rows.
          */
         get: operations["crm_quote_charges_list"];
         put?: never;
@@ -5265,7 +5120,7 @@ export interface paths {
          * @description CRUD for КП-level expense items / discounts (UBL document AllowanceCharge).
          *
          *     Building the cost breakdown is a SELLER action (mirrors QuoteItemViewSet):
-         *     only the seller team / superuser may write; the buyer never sees these rows.
+         *     only the seller team / superuser may write; the client never sees these rows.
          */
         post: operations["crm_quote_charges_create"];
         delete?: never;
@@ -5285,14 +5140,14 @@ export interface paths {
          * @description CRUD for КП-level expense items / discounts (UBL document AllowanceCharge).
          *
          *     Building the cost breakdown is a SELLER action (mirrors QuoteItemViewSet):
-         *     only the seller team / superuser may write; the buyer never sees these rows.
+         *     only the seller team / superuser may write; the client never sees these rows.
          */
         get: operations["crm_quote_charges_retrieve"];
         /**
          * @description CRUD for КП-level expense items / discounts (UBL document AllowanceCharge).
          *
          *     Building the cost breakdown is a SELLER action (mirrors QuoteItemViewSet):
-         *     only the seller team / superuser may write; the buyer never sees these rows.
+         *     only the seller team / superuser may write; the client never sees these rows.
          */
         put: operations["crm_quote_charges_update"];
         post?: never;
@@ -5301,7 +5156,7 @@ export interface paths {
          * @description CRUD for КП-level expense items / discounts (UBL document AllowanceCharge).
          *
          *     Building the cost breakdown is a SELLER action (mirrors QuoteItemViewSet):
-         *     only the seller team / superuser may write; the buyer never sees these rows.
+         *     only the seller team / superuser may write; the client never sees these rows.
          */
         delete: operations["crm_quote_charges_destroy"];
         options?: never;
@@ -5310,7 +5165,7 @@ export interface paths {
          * @description CRUD for КП-level expense items / discounts (UBL document AllowanceCharge).
          *
          *     Building the cost breakdown is a SELLER action (mirrors QuoteItemViewSet):
-         *     only the seller team / superuser may write; the buyer never sees these rows.
+         *     only the seller team / superuser may write; the client never sees these rows.
          */
         patch: operations["crm_quote_charges_partial_update"];
         trace?: never;
@@ -5360,7 +5215,7 @@ export interface paths {
          *     matches the DB, a colleague saved this line in between — applying our edit would silently
          *     clobber theirs, so reject with 409 QUOTE_ITEM_STALE (same code the bulk path emits per
          *     row). `version` is OPTIONAL: a PATCH without it keeps the pre-волна-3 last-write-wins
-         *     behaviour, so buyer request edits and version-less seller writes are untouched.
+         *     behaviour, so version-less seller writes are untouched.
          */
         put: operations["crm_quote_items_update"];
         post?: never;
@@ -5647,26 +5502,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/crm/quotes/{id}/approve/": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Approve quote
-         * @description Client approves the quote. Only the client's company members or staff can approve.
-         */
-        post: operations["crm_quotes_approve_create"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/v1/crm/quotes/{id}/charges-reorder/": {
         parameters: {
             query?: never;
@@ -5847,26 +5682,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/crm/quotes/{id}/reject/": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Reject quote
-         * @description Client rejects the quote with an optional reason.
-         */
-        post: operations["crm_quotes_reject_create"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/v1/crm/quotes/{id}/revoke-public-link/": {
         parameters: {
             query?: never;
@@ -5963,13 +5778,13 @@ export interface paths {
         };
         /**
          * AI КП-vs-заявка coverage / discrepancy check
-         * @description Compares a received КП against the buyer's original request lines and returns a plain-language list of discrepancies: uncovered (unpriced) lines and — when AI is enabled — non-equivalent substitutions and notes the КП may have ignored. The deterministic coverage facts are always returned; the AI part is purely additive. Result is ASSISTIVE and never blocks. Scoped to the deal's buyer or own-company staff.
+         * @description Compares a received КП against the client's original request lines and returns a plain-language list of discrepancies: uncovered (unpriced) lines and — when AI is enabled — non-equivalent substitutions and notes the КП may have ignored. The deterministic coverage facts are always returned; the AI part is purely additive. Result is ASSISTIVE and never blocks. Scoped to the deal's client or own-company staff.
          */
         get: operations["crm_quotes_request_diff_retrieve"];
         put?: never;
         /**
          * AI КП-vs-заявка coverage / discrepancy check
-         * @description Compares a received КП against the buyer's original request lines and returns a plain-language list of discrepancies: uncovered (unpriced) lines and — when AI is enabled — non-equivalent substitutions and notes the КП may have ignored. The deterministic coverage facts are always returned; the AI part is purely additive. Result is ASSISTIVE and never blocks. Scoped to the deal's buyer or own-company staff.
+         * @description Compares a received КП against the client's original request lines and returns a plain-language list of discrepancies: uncovered (unpriced) lines and — when AI is enabled — non-equivalent substitutions and notes the КП may have ignored. The deterministic coverage facts are always returned; the AI part is purely additive. Result is ASSISTIVE and never blocks. Scoped to the deal's client or own-company staff.
          */
         post: operations["crm_quotes_request_diff_create"];
         delete?: never;
@@ -6830,26 +6645,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/sourcing/compose-request/": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * AI compose: free-text need → structured заявка lines (AI #8)
-         * @description The buyer describes a need in plain text ("нужны подшипники 6205, 4 комплекта, и перчатки рабочие 40 пар") and Claude proposes structured request line items {name, quantity, unit, mpn, gost_drawing, note} plus REAL catalog product candidates per line (ids always from a DB trigram shortlist — never invented). Human-in-loop: the buyer reviews/edits/confirms in the grid; nothing is auto-submitted. Returns {items: []} contents when AI is disabled.
-         */
-        post: operations["sourcing_compose_request_create"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/v1/sourcing/extract-document/": {
         parameters: {
             query?: never;
@@ -6981,29 +6776,9 @@ export interface paths {
         put?: never;
         /**
          * AI semantic match: заявка lines → catalog products
-         * @description For each request line (name / mpn / gost_drawing) returns up to top_k catalog Product candidates ranked by Claude (product_id always from a DB trigram shortlist — the model never invents ids). The buyer/seller confirms a candidate in the grid (human-in-loop). Capped at 50 lines per call. ARCH-01: the LLM call runs on Celery — returns 202 + task_id; poll sourcing/ai-status/<task_id>/ for {matches: []}.
+         * @description For each request line (name / mpn / gost_drawing) returns up to top_k catalog Product candidates ranked by Claude (product_id always from a DB trigram shortlist — the model never invents ids). The client/seller confirms a candidate in the grid (human-in-loop). Capped at 50 lines per call. ARCH-01: the LLM call runs on Celery — returns 202 + task_id; poll sourcing/ai-status/<task_id>/ for {matches: []}.
          */
         post: operations["sourcing_match_catalog_create"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/sourcing/preflight-check/": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * AI pre-flight quality check for a заявка (advisory)
-         * @description Runs an ADVISORY quality pass over draft request lines before the buyer submits the RFQ. Claude flags vague descriptions, missing/implausible qty or units, likely-duplicate lines and missing key specs. Returns warnings only — never a hard block (line_index always references a GIVEN line; out-of-range indices are dropped). Capped at 50 lines per call. ARCH-01: the LLM call runs on Celery — returns 202 + task_id; poll sourcing/ai-status/<task_id>/ for {findings: []}.
-         */
-        post: operations["sourcing_preflight_check_create"];
         delete?: never;
         options?: never;
         head?: never;
@@ -7151,32 +6926,6 @@ export interface components {
             readonly updated_at: string;
         };
         /**
-         * @description Сторона зрителя по сделке документа — считается СЕРВЕРОМ, один раз на запрос.
-         *
-         *     Зачем. SPA выводила роль из `activeStatus` (= первый тип компании), поэтому компания,
-         *     которая одновременно покупает и продаёт, не видела продавцовских кнопок: «Сформировать
-         *     акт» пряталась за `!isBuyer`, и у dual-компании с порядком типов [CLIENT, SUPPLIER]
-         *     кнопки не было вовсе. Образец решения уже был рядом — `viewer_can_sign_client/manager`
-         *     у договора.
-         *
-         *     Поля-подсказки НЕ являются полным правом: подписку и стадию проверит сервис,
-         *     выполняющий действие, и честно откажет бизнес-кодом. Их задача — не показывать человеку
-         *     кнопок чужой стороны.
-         */
-        ActRequest: {
-            /** Сделка */
-            deal: number;
-            contract?: number | null;
-            invoice?: number | null;
-            /** Format: date */
-            issued_at?: string | null;
-            /** Format: decimal */
-            total_amount?: string;
-            /** Format: binary */
-            signed_file?: string | null;
-            notes?: string;
-        };
-        /**
          * @description One live refresh token = one session. `is_current` matches the row against
          *     the jti of THIS browser's HttpOnly refresh cookie (passed via context).
          */
@@ -7232,16 +6981,6 @@ export interface components {
             workspace_role: string;
             /** @default false */
             is_primary: boolean;
-        };
-        AddRequestItemRequestRequest: {
-            name: string;
-            /** @default 1 */
-            quantity: number;
-        };
-        AddRequestItemsRequestRequest: {
-            items: {
-                [key: string]: unknown;
-            }[];
         };
         ApprovalActRequestRequest: {
             step_id: number;
@@ -7989,11 +7728,6 @@ export interface components {
              */
             can_sell?: boolean;
             /**
-             * Может покупать
-             * @description Разрешено создавать заявки/сделки и принимать bid'ы от лица компании. Выключается владельцем компании.
-             */
-            can_buy?: boolean;
-            /**
              * Дата вступления
              * Format: date-time
              */
@@ -8030,11 +7764,6 @@ export interface components {
              * @description Разрешено управлять каталогом и офферами от лица компании. Выключается владельцем компании.
              */
             can_sell?: boolean;
-            /**
-             * Может покупать
-             * @description Разрешено создавать заявки/сделки и принимать bid'ы от лица компании. Выключается владельцем компании.
-             */
-            can_buy?: boolean;
         };
         CompanyPermissionCatalog: {
             groups: {
@@ -8615,7 +8344,6 @@ export interface components {
             readonly assigned_at: string | null;
             readonly viewer_can_release: boolean;
             readonly viewer_is_seller: boolean;
-            readonly viewer_is_buyer: boolean;
             /**
              * Этап воронки
              * @description Текущий этап сделки в воронке продаж
@@ -8635,8 +8363,6 @@ export interface components {
             notes?: string;
             readonly active_quote: components["schemas"]["Quote"];
             readonly quotes: components["schemas"]["Quote"][];
-            /** @description Whether the current user may add/edit/remove this deal's request rows. */
-            readonly can_edit_request: boolean;
             /**
              * @description Исполнение закрыто целиком (оплата + поставка + акт) — НЕ то же, что «сделка выиграна».
              *
@@ -8723,7 +8449,6 @@ export interface components {
             readonly assigned_at: string | null;
             readonly viewer_can_release: boolean;
             readonly viewer_is_seller: boolean;
-            readonly viewer_is_buyer: boolean;
             readonly active_quote: components["schemas"]["Quote"];
             /**
              * @description Исполнение закрыто целиком (оплата + поставка + акт) — НЕ то же, что «сделка выиграна».
@@ -9512,7 +9237,6 @@ export interface components {
         MemberCapabilitiesRequest: {
             member_id: number;
             can_sell?: boolean;
-            can_buy?: boolean;
         };
         /**
          * @description * `BANK_TRANSFER` - Банковский перевод
@@ -9909,21 +9633,6 @@ export interface components {
              */
             previous?: string | null;
             results: components["schemas"]["QuoteCharge"][];
-        };
-        PaginatedQuoteItemList: {
-            /** @example 123 */
-            count: number;
-            /**
-             * Format: uri
-             * @example http://api.example.org/accounts/?page=4
-             */
-            next?: string | null;
-            /**
-             * Format: uri
-             * @example http://api.example.org/accounts/?page=2
-             */
-            previous?: string | null;
-            results: components["schemas"]["QuoteItem"][];
         };
         PaginatedQuoteList: {
             /** @example 123 */
@@ -10694,7 +10403,7 @@ export interface components {
         /**
          * @description Strip supplier-cost fields (offers / base_price) from viewers who don't own
          *     the product. Only the OWNING seller's team + platform admins see cost & supplier
-         *     identity — buyers, other sellers and anon never do (C1 cost-leak fix). React was
+         *     identity — clients, other sellers and anon never do (C1 cost-leak fix). React was
          *     only hiding these client-side; the data still travelled in the API response.
          */
         PatchedProductRequest: {
@@ -11185,10 +10894,6 @@ export interface components {
              */
             is_active?: boolean;
         };
-        PatchedUpdateRequestMetaRequest: {
-            title?: string;
-            notes?: string;
-        };
         PatchedUserRequest: {
             /**
              * Имя пользователя
@@ -11303,12 +11008,6 @@ export interface components {
          * @enum {string}
          */
         PreferredChannelEf2Enum: "email" | "telegram" | "both";
-        PreflightCheckRequestRequest: {
-            lines: {
-                [key: string]: unknown;
-            }[];
-            domain_code?: string;
-        };
         /**
          * @description * `cabinet` - Показывать цену в кабинете
          *     * `on_request` - Цена по запросу
@@ -11374,7 +11073,7 @@ export interface components {
         /**
          * @description Strip supplier-cost fields (offers / base_price) from viewers who don't own
          *     the product. Only the OWNING seller's team + platform admins see cost & supplier
-         *     identity — buyers, other sellers and anon never do (C1 cost-leak fix). React was
+         *     identity — clients, other sellers and anon never do (C1 cost-leak fix). React was
          *     only hiding these client-side; the data still travelled in the API response.
          */
         Product: {
@@ -11740,7 +11439,7 @@ export interface components {
         /**
          * @description Strip supplier-cost fields (offers / base_price) from viewers who don't own
          *     the product. Only the OWNING seller's team + platform admins see cost & supplier
-         *     identity — buyers, other sellers and anon never do (C1 cost-leak fix). React was
+         *     identity — clients, other sellers and anon never do (C1 cost-leak fix). React was
          *     only hiding these client-side; the data still travelled in the API response.
          */
         ProductRequest: {
@@ -12623,13 +12322,6 @@ export interface components {
             status_code: string;
             frozen_at: string | null;
             fx_fixed_at: string | null;
-        };
-        RejectActRequest: {
-            reason: string;
-        };
-        RejectQuoteRequestRequest: {
-            /** @default  */
-            reason: string;
         };
         RemoveMemberRequest: {
             member_id: number;
@@ -18486,41 +18178,6 @@ export interface operations {
             };
         };
     };
-    crm_acts_reject_create: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description A unique integer value identifying this Акт. */
-                id: number;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["RejectActRequest"];
-                "application/x-www-form-urlencoded": components["schemas"]["RejectActRequest"];
-                "multipart/form-data": components["schemas"]["RejectActRequest"];
-            };
-        };
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Act"];
-                };
-            };
-            /** @description REASON_REQUIRED / ACT_SIGN_NOT_ALLOWED */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
     crm_acts_remind_create: {
         parameters: {
             query?: never;
@@ -18547,33 +18204,6 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
-            };
-        };
-    };
-    crm_acts_sign_create: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description A unique integer value identifying this Акт. */
-                id: number;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "multipart/form-data": components["schemas"]["ActRequest"];
-                "application/x-www-form-urlencoded": components["schemas"]["ActRequest"];
-            };
-        };
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Act"];
-                };
             };
         };
     };
@@ -19143,34 +18773,6 @@ export interface operations {
             };
         };
     };
-    crm_contracts_sign_client_create: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description A unique integer value identifying this Контракт. */
-                id: number;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["ContractRequest"];
-                "application/x-www-form-urlencoded": components["schemas"]["ContractRequest"];
-                "multipart/form-data": components["schemas"]["ContractRequest"];
-            };
-        };
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Contract"];
-                };
-            };
-        };
-    };
     crm_contracts_sign_manager_create: {
         parameters: {
             query?: never;
@@ -19441,69 +19043,6 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["DealDetail"];
-                };
-            };
-        };
-    };
-    crm_deals_add_request_item_create: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description A unique integer value identifying this Сделка. */
-                id: number;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["AddRequestItemRequestRequest"];
-                "application/x-www-form-urlencoded": components["schemas"]["AddRequestItemRequestRequest"];
-                "multipart/form-data": components["schemas"]["AddRequestItemRequestRequest"];
-            };
-        };
-        responses: {
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["QuoteItem"];
-                };
-            };
-        };
-    };
-    crm_deals_add_request_items_create: {
-        parameters: {
-            query?: {
-                /** @description A page number within the paginated result set. */
-                page?: number;
-                /** @description Number of results to return per page. */
-                page_size?: number;
-                /** @description A search term. */
-                search?: string;
-            };
-            header?: never;
-            path: {
-                /** @description A unique integer value identifying this Сделка. */
-                id: number;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["AddRequestItemsRequestRequest"];
-                "application/x-www-form-urlencoded": components["schemas"]["AddRequestItemsRequestRequest"];
-                "multipart/form-data": components["schemas"]["AddRequestItemsRequestRequest"];
-            };
-        };
-        responses: {
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["PaginatedQuoteItemList"];
                 };
             };
         };
@@ -19787,34 +19326,6 @@ export interface operations {
             };
         };
     };
-    crm_deals_submit_request_create: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description A unique integer value identifying this Сделка. */
-                id: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: {
-            content: {
-                "application/json": components["schemas"]["DealDetailRequest"];
-                "application/x-www-form-urlencoded": components["schemas"]["DealDetailRequest"];
-                "multipart/form-data": components["schemas"]["DealDetailRequest"];
-            };
-        };
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["DealDetail"];
-                };
-            };
-        };
-    };
     crm_deals_take_and_prepare_create: {
         parameters: {
             query?: never;
@@ -19874,34 +19385,6 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
-            };
-        };
-    };
-    crm_deals_update_request_meta_partial_update: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description A unique integer value identifying this Сделка. */
-                id: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: {
-            content: {
-                "application/json": components["schemas"]["PatchedUpdateRequestMetaRequest"];
-                "application/x-www-form-urlencoded": components["schemas"]["PatchedUpdateRequestMetaRequest"];
-                "multipart/form-data": components["schemas"]["PatchedUpdateRequestMetaRequest"];
-            };
-        };
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["DealDetail"];
-                };
             };
         };
     };
@@ -21727,41 +21210,6 @@ export interface operations {
             };
         };
     };
-    crm_quotes_approve_create: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description A unique integer value identifying this Коммерческое предложение. */
-                id: number;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["QuoteRequest"];
-                "application/x-www-form-urlencoded": components["schemas"]["QuoteRequest"];
-                "multipart/form-data": components["schemas"]["QuoteRequest"];
-            };
-        };
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Quote"];
-                };
-            };
-            /** @description Not authorized */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
     crm_quotes_charges_reorder_create: {
         parameters: {
             query?: never;
@@ -22100,41 +21548,6 @@ export interface operations {
             };
         };
     };
-    crm_quotes_reject_create: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description A unique integer value identifying this Коммерческое предложение. */
-                id: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: {
-            content: {
-                "application/json": components["schemas"]["RejectQuoteRequestRequest"];
-                "application/x-www-form-urlencoded": components["schemas"]["RejectQuoteRequestRequest"];
-                "multipart/form-data": components["schemas"]["RejectQuoteRequestRequest"];
-            };
-        };
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Quote"];
-                };
-            };
-            /** @description Not authorized */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
     crm_quotes_revoke_public_link_create: {
         parameters: {
             query?: never;
@@ -22293,7 +21706,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description Caller is neither the deal's buyer nor own-company staff */
+            /** @description Caller is neither the deal's client nor own-company staff */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -22327,7 +21740,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description Caller is neither the deal's buyer nor own-company staff */
+            /** @description Caller is neither the deal's client nor own-company staff */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -23920,47 +23333,6 @@ export interface operations {
             };
         };
     };
-    sourcing_compose_request_create: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: {
-            content: {
-                "application/json": {
-                    /** @description Free-text description of the need */
-                    text: string;
-                    /** @description Optional domain hint for catalog matching */
-                    domain_code?: string;
-                };
-            };
-        };
-        responses: {
-            /** @description AI job queued, task_id returned (poll sourcing/ai-status/<task_id>/ for {items: []}) */
-            202: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Missing/empty text */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description AI compose disabled */
-            503: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
     sourcing_extract_document_create: {
         parameters: {
             query?: never;
@@ -24259,44 +23631,6 @@ export interface operations {
                 content?: never;
             };
             /** @description AI matching disabled */
-            503: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    sourcing_preflight_check_create: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["PreflightCheckRequestRequest"];
-                "application/x-www-form-urlencoded": components["schemas"]["PreflightCheckRequestRequest"];
-                "multipart/form-data": components["schemas"]["PreflightCheckRequestRequest"];
-            };
-        };
-        responses: {
-            /** @description AI job queued, task_id returned */
-            202: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Missing lines */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description AI pre-flight disabled */
             503: {
                 headers: {
                     [name: string]: unknown;

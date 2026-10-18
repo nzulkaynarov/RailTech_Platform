@@ -58,6 +58,9 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onNavigate, onForgotPasswo
                 // per-IP DRF throttle's English "Request was throttled" 429) →
                 // one friendly, localized message.
                 msg = t('auth.tooManyAttempts');
+            } else if (raw === 'STAFF_ONLY') {
+                // Пароль верен, но это не сотрудник (FIX-13): клиент работает в личном кабинете.
+                msg = t('apiErrors.STAFF_ONLY');
             } else if (raw.startsWith('auth.')) {
                 // Store handed back an i18n key (no server detail) — localize it.
                 msg = t(raw);

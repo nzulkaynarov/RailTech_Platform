@@ -84,7 +84,7 @@ export function useQuoteBuilderActions(params: QuoteBuilderActionsParams) {
 		addNameRef, addRowRef, rowRefs, onSave,
 	} = params;
 
-	// AI draft-КП (Move 3): turn the buyer request into a pre-filled draft in one click.
+	// AI draft-КП (Move 3): turn the client request into a pre-filled draft in one click.
 	const handleGenerateDraft = async () => {
 		if (!dealId) return;
 		setDraftBusy(true);

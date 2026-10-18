@@ -126,7 +126,7 @@ export const invoicesApi = {
     const response = await apiClient.post<Act>(`crm/invoices/${invoiceId}/generate-act/`);
     return response.data;
   },
-  // DRAFT → ISSUED: renders the PDF and notifies the buyer.
+  // DRAFT → ISSUED: renders the PDF and notifies the client.
   issue: async (id: number) => {
     const response = await apiClient.post<Invoice>(`crm/invoices/${id}/issue/`);
     return response.data;
