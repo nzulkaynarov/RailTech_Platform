@@ -172,3 +172,6 @@ PLATFORM_SSO_SECRET = [
     s.strip() for s in os.environ.get("PLATFORM_SSO_SECRET", "dev-platform-sso-secret").split(",") if s.strip()
 ]
 CRM_FRONTEND_URL = os.environ.get("CRM_FRONTEND_URL", "http://crm.localhost").rstrip("/")
+# Переход CRM ↔ ERP выключен до волны 1 исправлений (FIX-03, аудит S-2/S-3): обмен токена сейчас
+# небезопасен. Включает владелец после FIX-10/FIX-11 (PLATFORM_SSO_ENABLED=true).
+PLATFORM_SSO_ENABLED = os.environ.get("PLATFORM_SSO_ENABLED", "false").strip().lower() == "true"

@@ -75,7 +75,7 @@ export function CriticalBanner() {
  * а не плавающая поверх заголовка страницы (дизайн-аудит 2026-10-11, отчёт 2).
  */
 export function Header() {
-  const { data: identity } = useGetIdentity<{ name: string }>();
+  const { data: identity } = useGetIdentity<{ name: string; sso_enabled?: boolean }>();
   const live = useEventStream(Boolean(identity), useLeadAlertHandler());
   const { token } = theme.useToken();
   const screens = Grid.useBreakpoint();
@@ -133,15 +133,18 @@ export function Header() {
           ) : (
             <ConnectionStatus live={live} compact={phone} />
           )}
-          <Button
-            icon={<ExportOutlined aria-hidden />}
-            loading={ssoLoading}
-            onClick={() => void handleGoToErp()}
-            title={t.sso.goToErpHint}
-            aria-label={t.sso.goToErp}
-          >
-            {phone ? t.sso.goToErpShort : t.sso.goToErp}
-          </Button>
+          {/* Переход в ERP — только когда SSO включён на сервере (FIX-03, флаг из /me). */}
+          {identity?.sso_enabled ? (
+            <Button
+              icon={<ExportOutlined aria-hidden />}
+              loading={ssoLoading}
+              onClick={() => void handleGoToErp()}
+              title={t.sso.goToErpHint}
+              aria-label={t.sso.goToErp}
+            >
+              {phone ? t.sso.goToErpShort : t.sso.goToErp}
+            </Button>
+          ) : null}
           <ModeSwitch />
           <UserMenu />
         </Space>
