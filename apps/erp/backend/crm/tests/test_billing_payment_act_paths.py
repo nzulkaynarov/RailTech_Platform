@@ -13,6 +13,7 @@ from decimal import Decimal
 import pytest
 
 from accounts.models import Company, CompanyMember, CompanyRole, CompanyType, CustomUser, SystemRole, WorkspaceRole
+from accounts.testing import make_cashier
 from crm.models import (
     Act,
     ActStatus,
@@ -26,7 +27,7 @@ from crm.models import (
     QuoteStatus,
 )
 from crm.services._params import PaymentData
-from crm.services.billing import generate_act, generate_invoice_from_contract, record_payment, sign_act
+from crm.services.billing import generate_act, generate_invoice_from_contract, record_payment
 
 
 @pytest.fixture
@@ -53,7 +54,7 @@ def _company(name, inn, type_code):
     return company
 
 
-def _member(company, email, *, can_sell=False, can_buy=False):
+def _member(company, email, *, can_sell=False):
     user = CustomUser.objects.create_user(email=email, username=email, password="x")
     CompanyMember.objects.create(
         user=user,
@@ -62,7 +63,6 @@ def _member(company, email, *, can_sell=False, can_buy=False):
         is_active=True,
         is_primary=True,
         can_sell=can_sell,
-        can_buy=can_buy,
     )
     return user
 
@@ -72,13 +72,13 @@ def world(lookups):
     """Покупатель, сотрудник своей компании (продавец), ПОСТОРОННИЙ — участник другой
     компании-клиента, и подписанный договор, готовый к выставлению счёта."""
     buyer_co = _company("Покупатель", "B902", "CLIENT")
-    buyer_user = _member(buyer_co, "buyer@billpaths.test", can_buy=True)
+    buyer_user = _member(buyer_co, "buyer@billpaths.test")
 
     seller_co = _company("Продавец", "S902", "SUPPLIER")
     seller_user = _member(seller_co, "seller@billpaths.test", can_sell=True)
 
     other_co = _company("Посторонняя компания", "O902", "CLIENT")
-    other_user = _member(other_co, "other@billpaths.test", can_sell=True, can_buy=True)
+    other_user = _member(other_co, "other@billpaths.test", can_sell=True)
 
     operator = CustomUser.objects.create_user(
         is_superuser=True,
@@ -167,7 +167,7 @@ class TestRecordPaymentGates:
         assert not Payment.objects.filter(invoice=invoice).exists()
 
     def test_missing_invoice_is_reported(self, world):
-        result, error = record_payment(10**7, actor=world["buyer_user"], amount=Decimal("10"), paid_at=date.today())
+        result, error = record_payment(10**7, actor=make_cashier(), amount=Decimal("10"), paid_at=date.today())
         assert result is None
         assert error == "NOT_FOUND"
 
@@ -175,9 +175,7 @@ class TestRecordPaymentGates:
         invoice = _issued_invoice(world)
         invoice.status = InvoiceStatus.objects.get(code="CANCELLED")
         invoice.save(update_fields=["status"])
-        result, error = record_payment(
-            invoice.id, actor=world["buyer_user"], amount=Decimal("10"), paid_at=date.today()
-        )
+        result, error = record_payment(invoice.id, actor=make_cashier(), amount=Decimal("10"), paid_at=date.today())
         assert result is None
         assert error == "INVOICE_CANCELLED"
 
@@ -185,7 +183,7 @@ class TestRecordPaymentGates:
     def test_non_positive_amount_is_rejected(self, world, amount):
         """Ноль и отрицательная сумма — не платёж; иначе в реестр попадёт мусорная строка."""
         invoice = _issued_invoice(world)
-        result, error = record_payment(invoice.id, actor=world["buyer_user"], amount=amount, paid_at=date.today())
+        result, error = record_payment(invoice.id, actor=make_cashier(), amount=amount, paid_at=date.today())
         assert result is None
         assert error == "PAYMENT_AMOUNT_MUST_BE_POSITIVE"
         invoice.refresh_from_db()
@@ -197,9 +195,7 @@ class TestRecordPaymentAccounting:
     def test_partial_payment_moves_invoice_to_partial(self, world):
         """Недоплата НЕ закрывает счёт: он становится частично оплаченным."""
         invoice = _issued_invoice(world)
-        payment, error = record_payment(
-            invoice.id, actor=world["buyer_user"], amount=Decimal("50"), paid_at=date.today()
-        )
+        payment, error = record_payment(invoice.id, actor=make_cashier(), amount=Decimal("50"), paid_at=date.today())
         assert error is None
         assert payment.amount == Decimal("50")
         invoice.refresh_from_db()
@@ -209,8 +205,8 @@ class TestRecordPaymentAccounting:
     def test_payments_accumulate_until_paid(self, world):
         """Две частичные оплаты складываются и закрывают счёт ровно на полной сумме."""
         invoice = _issued_invoice(world)
-        record_payment(invoice.id, actor=world["buyer_user"], amount=Decimal("50"), paid_at=date.today())
-        record_payment(invoice.id, actor=world["buyer_user"], amount=Decimal("62"), paid_at=date.today())
+        record_payment(invoice.id, actor=make_cashier(), amount=Decimal("50"), paid_at=date.today())
+        record_payment(invoice.id, actor=make_cashier(), amount=Decimal("62"), paid_at=date.today())
         invoice.refresh_from_db()
         assert invoice.amount_paid == Decimal("112")
         assert invoice.status_code == "PAID"
@@ -218,8 +214,8 @@ class TestRecordPaymentAccounting:
     def test_fully_paid_invoice_takes_no_more(self, world):
         """Переплаты быть не должно."""
         invoice = _issued_invoice(world)
-        record_payment(invoice.id, actor=world["buyer_user"], amount=Decimal("112"), paid_at=date.today())
-        result, error = record_payment(invoice.id, actor=world["buyer_user"], amount=Decimal("1"), paid_at=date.today())
+        record_payment(invoice.id, actor=make_cashier(), amount=Decimal("112"), paid_at=date.today())
+        result, error = record_payment(invoice.id, actor=make_cashier(), amount=Decimal("1"), paid_at=date.today())
         assert result is None
         assert error == "INVOICE_ALREADY_PAID"
 
@@ -229,12 +225,12 @@ class TestRecordPaymentAccounting:
         второй раз."""
         invoice = _issued_invoice(world)
         first, error = record_payment(
-            invoice.id, actor=world["buyer_user"], amount=Decimal("50"), paid_at=date.today(), reference="PP-77"
+            invoice.id, actor=make_cashier(), amount=Decimal("50"), paid_at=date.today(), reference="PP-77"
         )
         assert error is None
 
         second, error = record_payment(
-            invoice.id, actor=world["buyer_user"], amount=Decimal("50"), paid_at=date.today(), reference="PP-77"
+            invoice.id, actor=make_cashier(), amount=Decimal("50"), paid_at=date.today(), reference="PP-77"
         )
         assert error is None
         assert second.id == first.id, "повторная отправка создала ВТОРОЙ платёж"
@@ -246,8 +242,8 @@ class TestRecordPaymentAccounting:
     def test_empty_reference_does_not_deduplicate(self, world):
         """Без ссылки дедупликация невозможна — два платежа без неё остаются двумя."""
         invoice = _issued_invoice(world)
-        record_payment(invoice.id, actor=world["buyer_user"], amount=Decimal("30"), paid_at=date.today())
-        record_payment(invoice.id, actor=world["buyer_user"], amount=Decimal("30"), paid_at=date.today())
+        record_payment(invoice.id, actor=make_cashier(), amount=Decimal("30"), paid_at=date.today())
+        record_payment(invoice.id, actor=make_cashier(), amount=Decimal("30"), paid_at=date.today())
         invoice.refresh_from_db()
         assert Payment.objects.filter(invoice=invoice).count() == 2
         assert invoice.amount_paid == Decimal("60")
@@ -263,7 +259,7 @@ class TestRecordPaymentAccounting:
                 method="CARD",
                 reference="PD-1",
             ),
-            actor=world["buyer_user"],
+            actor=make_cashier(),
         )
         assert error is None
         assert (payment.method, payment.reference) == ("CARD", "PD-1")
@@ -314,49 +310,6 @@ class TestGenerateAct:
         assert act.total_amount == invoice.total_incl_vat
         assert (act.invoice_id, act.deal_id) == (invoice.id, world["deal"].id)
         assert act.number
-
-
-@pytest.mark.django_db
-class TestSignAct:
-    def _issued_act(self, world):
-        invoice = _issued_invoice(world)
-        act, error = generate_act(invoice.id, actor=world["seller_user"])
-        assert error is None
-        return act
-
-    def test_signing_stamps_status_and_time(self, world):
-        act = self._issued_act(world)
-        signed, error = sign_act(act.id, actor=world["buyer_user"])
-        assert error is None
-        assert signed.status_code == "SIGNED"
-        assert signed.signed_at is not None
-
-    def test_already_signed_act_cannot_be_signed_again(self, world):
-        act = self._issued_act(world)
-        sign_act(act.id, actor=world["buyer_user"])
-        result, error = sign_act(act.id, actor=world["buyer_user"])
-        assert result is None
-        assert error == "ACT_SIGN_NOT_ALLOWED"
-
-    def test_cancelled_act_cannot_be_signed(self, world):
-        act = self._issued_act(world)
-        act.status = ActStatus.objects.get(code="CANCELLED")
-        act.save(update_fields=["status"])
-        result, error = sign_act(act.id, actor=world["buyer_user"])
-        assert result is None
-        assert error == "ACT_SIGN_NOT_ALLOWED"
-
-    def test_signing_is_logged_as_manual(self, world):
-        """[MANUAL_MODE] — отметка, что это клик, а не квалифицированная ЭЦП; по ней потом
-        отделят такие записи от настоящих подписей E-IMZO."""
-        from crm.models import ActivityLog
-
-        act = self._issued_act(world)
-        sign_act(act.id, actor=world["buyer_user"])
-        entry = ActivityLog.objects.filter(event_code="act.signed").order_by("-id").first()
-        assert entry is not None
-        assert entry.action.startswith("[MANUAL_MODE]")
-        assert entry.event_params["manual"] is True
 
 
 @pytest.mark.django_db

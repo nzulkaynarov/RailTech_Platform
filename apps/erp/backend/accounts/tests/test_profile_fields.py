@@ -13,6 +13,7 @@ from rest_framework.test import APIClient
 from rest_framework_simplejwt.tokens import RefreshToken
 
 from accounts.models import CompanyMember
+from accounts.testing import grant_head, make_own_company
 
 pytestmark = pytest.mark.django_db
 
@@ -153,9 +154,10 @@ def test_update_me_rejects_non_object_preferences(user_factory):
 
 
 def test_owner_can_edit_company_but_not_trust_signals(user_factory, company_factory, workspace_role_factory):
-    company = company_factory()
+    company = make_own_company(company_factory())
     user = user_factory(email="owner2@example.com", username="owner2")
     _make_member(user, company, workspace_role_factory, role_code="OWNER", role_name="Owner")
+    grant_head(user, company)
 
     resp = _client_for(user).patch(
         f"/api/v1/accounts/companies/{company.id}/",

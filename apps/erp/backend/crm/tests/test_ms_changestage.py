@@ -24,7 +24,7 @@ def lookups(db):
         DealStage.objects.get_or_create(code=code, defaults={"name": code, "sort_order": 10})
 
 
-def _member(company, email, *, company_roles=(), can_sell=False, can_buy=False):
+def _member(company, email, *, company_roles=(), can_sell=False):
     user = CustomUser.objects.create_user(email=email, username=email, password="x")
     CompanyMember.objects.create(
         user=user,
@@ -34,7 +34,6 @@ def _member(company, email, *, company_roles=(), can_sell=False, can_buy=False):
         is_active=True,
         is_primary=True,
         can_sell=can_sell,
-        can_buy=can_buy,
     )
     return user
 
@@ -68,9 +67,9 @@ def _change_stage(user, deal, stage_code):
 
 
 @pytest.mark.django_db
-def test_change_stage_gates_staff_but_not_buyer(world):
-    """change-stage must not bypass submit_request's buyer-capability gate for DRAFT→RFQ_OPEN.
-    The KYC floor in front of it was removed in M1-ERP-02 wave 1c: the buyer passes."""
+def test_change_stage_never_submits_the_request_for_the_client(world):
+    """DRAFT→RFQ_OPEN — отправка заявки, шаг клиента в портале (FIX-13): change-stage его не делает ни
+    сотруднику, ни участнику компании-клиента (тот упирается в гейт ролей)."""
     draft = DealStage.objects.get(code="DRAFT")
     deal = Deal.objects.create(title="Draft RFQ", company=world["buyer_co"], stage=draft)
 
@@ -78,11 +77,12 @@ def test_change_stage_gates_staff_but_not_buyer(world):
     assert r2.status_code == 403
     assert r2.json()["detail"] == "ONLY_BUYER_CAN_SUBMIT_REQUEST"
 
-    buyer_user = _member(world["buyer_co"], "buyer7@cs.test", can_buy=True)
+    buyer_user = _member(world["buyer_co"], "buyer7@cs.test")
     r = _change_stage(buyer_user, deal, "RFQ_OPEN")
-    # The user gate passes; what answers now is the FSM's own data guard (an empty заявка).
-    assert r.status_code == 422, r.content
-    assert r.json()["detail"] == "REQUEST_HAS_NO_ITEMS"
+    assert r.status_code == 403, r.content
+    assert r.json()["detail"] == "ROLE_NOT_PERMITTED"
+    deal.refresh_from_db()
+    assert deal.stage.code == "DRAFT"
 
 
 @pytest.mark.django_db
@@ -109,6 +109,7 @@ def test_view_only_staff_cannot_move_the_deal(world):
 def test_outsider_does_not_reach_the_deal(world):
     deal = Deal.objects.create(title="RFQ", company=world["buyer_co"], stage=DealStage.objects.get(code="RFQ_OPEN"))
     r = _change_stage(world["outsider"], deal, "CLOSED_LOST")
-    assert r.status_code == 404, r.content
+    assert r.status_code == 403, r.content  # гейт ролей срабатывает раньше поиска сделки
+    assert r.json()["detail"] == "ROLE_NOT_PERMITTED"
     deal.refresh_from_db()
     assert deal.stage.code == "RFQ_OPEN"

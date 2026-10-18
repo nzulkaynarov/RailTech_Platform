@@ -7,6 +7,7 @@ import pytest
 from django.core.files.base import ContentFile
 
 from accounts.models import Company, CompanyMember, CompanyType, CustomUser, SystemRole, WorkspaceRole
+from accounts.testing import grant_head, make_own_company
 from crm import services as crm_services
 from crm.models import DealStage, DocumentTemplateKind, GeneratedDocumentStatus
 
@@ -49,8 +50,9 @@ def _template(company, user, body="<p>{{deal.title}} — {{today}}</p>"):
 
 @pytest.fixture
 def world(lookups):
-    company = _company("Seller", "S1")
+    company = make_own_company(_company("Seller", "S1"))  # своя компания ERP — документы выпускает её сотрудник
     user = _member(company, "s@t.uz")
+    grant_head(user, company)
     return company, user
 
 
@@ -142,14 +144,18 @@ def test_cancel_then_recancel_rejected(world):
 # ── Gates: IDOR ───────────────────────────────────────────────────────────
 
 
-def test_generate_rejects_foreign_deal_idor(world):
+def test_client_company_member_cannot_generate_documents(world):
+    """Документы выпускает сотрудник своей компании по праву роли; участник компании-клиента — нет
+    (покупательских аккаунтов в ERP нет — FIX-13), и чужая сделка ему не помогает."""
     company, user = world
     other = _company("Other", "O1")
-    _member(other, "o@t.uz")  # у чужой компании есть свой участник; тест проверяет доступ ИЗ company
+    outsider = _member(other, "o@t.uz")
     foreign_deal = _deal(other, "Чужая сделка")
-    document, err = crm_services.generate_document(company, user, template=_template(company, user), deal=foreign_deal)
+    document, err = crm_services.generate_document(
+        company, outsider, template=_template(company, user), deal=foreign_deal
+    )
     assert document is None
-    assert err == "DEAL_NOT_FOUND"
+    assert err == "ROLE_NOT_PERMITTED"
 
 
 # ── A4 hardening regressions ─────────────────────────────────────────────────

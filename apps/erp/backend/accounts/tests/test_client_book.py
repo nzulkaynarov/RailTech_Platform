@@ -37,7 +37,7 @@ def scene(db, grant):
     return {
         "staff": staff,
         "teammate": member(own_company, "rt@t.test", can_sell=True),
-        "buyer": member(buyer_company, "rb@t.test", can_buy=True),
+        "buyer": member(buyer_company, "rb@t.test"),
     }
 
 

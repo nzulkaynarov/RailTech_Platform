@@ -16,6 +16,7 @@ from decimal import Decimal
 import pytest
 
 from accounts.models import Company, CompanyMember, CompanyType, CustomUser, WorkspaceRole
+from accounts.testing import make_cashier
 from crm.models import Deal, DealStage, Invoice, InvoiceStatus, Quote, QuoteItem, QuoteStatus
 from crm.services import create_manual_invoice
 from crm.services.billing import record_payment
@@ -60,7 +61,7 @@ def scenario(db):
     buyer.types.add(CompanyType.objects.get(code="CLIENT"))
     buyer_user = CustomUser.objects.create_user(email="buyer@b.test", username="buyer@b.test", password="pw")
     CompanyMember.objects.create(
-        user=buyer_user, company=buyer, role=WorkspaceRole.objects.get(code="OWNER"), is_active=True, can_buy=True
+        user=buyer_user, company=buyer, role=WorkspaceRole.objects.get(code="OWNER"), is_active=True
     )
 
     deal = Deal.objects.create(title="Deal", company=buyer, stage=DealStage.objects.get(code="DRAFT"))
@@ -231,9 +232,7 @@ def test_issue_cancel_lifecycle_and_payment_guard(scenario):
     assert err is None
 
     # Payment rejects a DRAFT (F1 I-1 — no zombie PAID).
-    _, pay_err = record_payment(
-        invoice.id, actor=scenario["buyer_user"], amount=Decimal("100.00"), paid_at=date(2026, 7, 1)
-    )
+    _, pay_err = record_payment(invoice.id, actor=make_cashier(), amount=Decimal("100.00"), paid_at=date(2026, 7, 1))
     assert pay_err == "INVOICE_NOT_ISSUED"
 
     # Issue → ISSUED (existing lifecycle, unchanged).

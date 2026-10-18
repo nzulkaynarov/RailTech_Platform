@@ -11,6 +11,7 @@ import pytest
 from django.utils import timezone
 
 from accounts.models import Company, CompanyMember, CompanyType, CustomUser, SystemRole, WorkspaceRole
+from accounts.testing import make_cashier
 from crm.models import (
     Contract,
     ContractStatus,
@@ -83,7 +84,6 @@ def world(lookups):
         role=WorkspaceRole.objects.get(code="OWNER"),
         is_active=True,
         is_primary=True,
-        can_buy=True,
     )
     deal = Deal.objects.create(title="R deal", company=buyer_co, stage=DealStage.objects.get(code="CONTRACT_SIGNED"))
     quote = Quote.objects.create(
@@ -117,7 +117,7 @@ def _paid_invoice(world):
     assert err is None
     invoice, err = issue_invoice(invoice, world["seller_user"])
     assert err is None
-    payment, err = record_payment(invoice.id, world["buyer_user"], amount=Decimal("112"), paid_at=timezone.localdate())
+    payment, err = record_payment(invoice.id, make_cashier(), amount=Decimal("112"), paid_at=timezone.localdate())
     assert err is None, err
     invoice.refresh_from_db()
     return invoice, payment

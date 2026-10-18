@@ -5,8 +5,9 @@
 публичным или клиентским эндпоинтом. Проверяется двумя способами:
 
 1. проекция `catalog.published.project` собирается белым списком ключей контракта портала;
-2. обход ВСЕХ маршрутов ERP анонимом и покупательским аккаунтом: ни в одном ответе нет
-   «меток» внутреннего слоя (имя поставщика, его артикул, закупочная цена, остаток, спрос).
+2. обход ВСЕХ маршрутов ERP анонимом и клиентом с сессией портала (покупательских аккаунтов в ERP нет —
+   FIX-13): ни в одном ответе нет «меток» внутреннего слоя (имя поставщика, его артикул, закупочная
+   цена, остаток, спрос), а ответ 5xx — падение теста, а не пропуск маршрута.
 """
 
 import datetime
@@ -20,6 +21,7 @@ from django.core.files.base import ContentFile
 from django.urls import URLPattern, URLResolver, get_resolver
 from django.utils import timezone
 from parties.models import CompanySettings
+from portal.tests.conftest import client_contact, client_session, client_type, portal_client  # noqa: F401
 from rest_framework.test import APIClient
 from rest_framework.views import APIView
 
@@ -76,8 +78,6 @@ def world(db, grant):
     supplier.types.add(supplier_type)
 
     client_company = Company.objects.create(name="ООО Клиент M107", inn="9810000003")
-    buyer = CustomUser.objects.create_user(email="m107.buyer@test.uz", username="m107.buyer@test.uz", password="pw")
-    CompanyMember.objects.create(user=buyer, company=client_company, role=owner_role, is_active=True, is_primary=True)
 
     staff_client = APIClient()
     staff_client.force_authenticate(staff)
@@ -92,7 +92,6 @@ def world(db, grant):
         "staff": staff,
         "staff_client": staff_client,
         "client_company": client_company,
-        "buyer": buyer,
     }
 
 
@@ -358,12 +357,18 @@ def test_staff_sets_published_layer_and_currency_is_required(world):
     assert response.json()["client_preview"]["price"] == {"amount": "10.00", "currency": "USD"}
 
 
-@pytest.mark.parametrize("who", ["anonymous", "buyer"])
-def test_backoffice_catalog_is_closed_to_non_staff(world, who):
+@pytest.fixture
+def client_company(world):
+    """Компания клиента для фикстур сессии портала (`portal/tests/conftest.py`) — компания из `world`."""
+    return world["client_company"]
+
+
+@pytest.mark.parametrize("who", ["anonymous", "portal"])
+def test_backoffice_catalog_is_closed_to_non_staff(world, who, request):
     product = make_card(world)
     client = APIClient()
-    if who == "buyer":
-        client.force_authenticate(world["buyer"])
+    if who == "portal":
+        client = request.getfixturevalue("portal_client")
     for url in (
         "/api/v1/catalog/products/",
         f"/api/v1/catalog/products/{product.pk}/",
@@ -463,12 +468,13 @@ def client_world(world):
     return {**world, "product": product, "deal": deal, "quote": quote}
 
 
-@pytest.mark.parametrize("who", ["anonymous", "buyer"])
-def test_no_route_leaks_internal_layer_to_anonymous_or_client(client_world, who, monkeypatch):
-    """DoD M1-ERP-07: обход ВСЕХ GET-маршрутов ERP (включая будущие `/api/portal/*`).
+@pytest.mark.parametrize("who", ["anonymous", "portal"])
+def test_no_route_leaks_internal_layer_to_anonymous_or_client(client_world, who, monkeypatch, request):
+    """DoD M1-ERP-07: обход ВСЕХ GET-маршрутов ERP (включая `/api/portal/*`).
 
-    Аноним и покупательский аккаунт (клиент до портала M2-ERP-01) не получают ни одной метки
-    внутреннего слоя — ни в JSON, ни в HTML публичной страницы КП, ни в выгрузках.
+    Аноним и клиент с сессией портала (владелец сделки с КП) не получают ни одной метки внутреннего
+    слоя — ни в JSON, ни в HTML публичной страницы КП, ни в выгрузках. Ответ 5xx на любом маршруте —
+    падение теста: сторож, который молча пропускает упавший маршрут, не ловит утечку в нём (FIX-13).
     """
     world = client_world
     values = {
@@ -481,17 +487,23 @@ def test_no_route_leaks_internal_layer_to_anonymous_or_client(client_world, who,
     }
     # Троттлинг анонима (20/мин) превратил бы обход в серию 429 — и тест проходил бы впустую.
     monkeypatch.setattr(APIView, "check_throttles", lambda self, request: None)
-    client = APIClient(raise_request_exception=False)
-    if who == "buyer":
-        client.force_authenticate(world["buyer"])
+    client = request.getfixturevalue("portal_client") if who == "portal" else APIClient()
+    client.raise_request_exception = False
 
     checked = 0
+    server_errors = []
     for path in _every_get_path(values):
         for accept in ("application/json", "text/html"):
             response = client.get(path, HTTP_ACCEPT=accept, SERVER_NAME="localhost")
-            if response.status_code >= 500 or getattr(response, "streaming", False):
+            if response.status_code >= 500:
+                server_errors.append(f"{path} [{accept}] → {response.status_code}")
+                continue
+            if getattr(response, "streaming", False):
                 continue
             body = response.content.decode("utf-8", errors="ignore")
             assert_no_internal_layer(body, f"{who} GET {path} [{accept}] → {response.status_code}")
             checked += 1
+    assert not server_errors, f"{who}: маршруты ответили 5xx — обход не может судить об утечке:\n" + "\n".join(
+        server_errors
+    )
     assert checked > 100, "обход должен пройти по всему API, а не по паре маршрутов"

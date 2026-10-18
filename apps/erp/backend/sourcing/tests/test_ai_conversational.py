@@ -1,17 +1,12 @@
-"""AI #8 conversational заявка builder — disabled→empty, items returned, endpoint guards.
+"""AI #8 conversational заявка builder — disabled→empty, items returned.
 
 The LiteLLM gateway is faked (ai.testing.FakeGateway) (no paid/nondeterministic calls); we assert the deterministic
-contract: gated on AI_IMPORT_ENABLED, free-text → structured items, noise rows dropped,
-endpoint 400/503 guards. Catalog matching is stubbed off (attach_candidates=False / no DB).
+contract: gated on AI_IMPORT_ENABLED, free-text → structured items, noise rows dropped.
+The HTTP endpoints left with the buyer path (FIX-13). Catalog matching is stubbed off (attach_candidates=False / no DB).
 """
-
-from types import SimpleNamespace
 
 import pytest
 from ai.testing import install_fake_gateway
-from rest_framework.test import APIClient
-
-from accounts.models import CustomUser
 
 
 def _stub_response(items):
@@ -101,33 +96,3 @@ def test_compose_drops_noise_rows(settings, monkeypatch):
     items = build_request_from_text("нужны болты М12, 100 штук", attach_candidates=False)["items"]
     assert len(items) == 1
     assert items[0]["name"] == "Болт М12"
-
-
-@pytest.mark.django_db
-def test_compose_endpoint_guards(settings, monkeypatch):
-    # Spy: every guarded path (missing/blank text, AI disabled) MUST return BEFORE the paid
-    # Claude call — this proves the no-paid-call contract, not just the status code.
-
-    settings.AI_IMPORT_ENABLED = True
-    user = CustomUser.objects.create_user(email="cw@x.test", username="cw@x.test", password="pw", is_active=True)
-    client = APIClient()
-    client.force_authenticate(user)
-    # missing text → 400
-    assert client.post("/api/v1/sourcing/compose-request/", {}, format="json").status_code == 400
-    # blank text → 400
-    assert client.post("/api/v1/sourcing/compose-request/", {"text": "  "}, format="json").status_code == 400
-    # ARCH-01: valid input → the (double) LLM call is queued on Celery — 202 {task_id} + AIJob row.
-    monkeypatch.setattr(
-        "sourcing.tasks_ai.run_ai_job.apply_async",
-        lambda args=None, task_id=None, **kw: SimpleNamespace(id=task_id),
-    )
-    ok = client.post("/api/v1/sourcing/compose-request/", {"text": "болты М12"}, format="json")
-    assert ok.status_code == 202
-    task_id = ok.json()["task_id"]
-    from sourcing.models import AIJob
-
-    assert AIJob.objects.filter(celery_task_id=task_id, owner=user, feature="compose").exists()
-    # disabled → 503
-    settings.AI_IMPORT_ENABLED = False
-    response = client.post("/api/v1/sourcing/compose-request/", {"text": "болты"}, format="json")
-    assert response.status_code == 503

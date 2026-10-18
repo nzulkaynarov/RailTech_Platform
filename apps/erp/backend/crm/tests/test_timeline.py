@@ -52,10 +52,10 @@ def scene(lookups):
     buyer_co = _company("Buyer Co", "T100", "CLIENT")
     own_co = _company("Own Co", "T200", "SUPPLIER")
     other_client_co = _company("Other Client", "T300", "CLIENT")
-    buyer = _member(buyer_co, "buyer@t.test", can_buy=True)
+    buyer = _member(buyer_co, "buyer@t.test")
     staff = _member(own_co, "staff@t.test", can_sell=True)
     # An outsider: a member of ANOTHER client company — not staff, not this deal's buyer.
-    outsider = _member(other_client_co, "out@t.test", can_buy=True)
+    outsider = _member(other_client_co, "out@t.test")
 
     stage = DealStage.objects.get(code="DRAFT")
     deal_a = Deal.objects.create(title="Deal A", company=buyer_co, stage=stage)

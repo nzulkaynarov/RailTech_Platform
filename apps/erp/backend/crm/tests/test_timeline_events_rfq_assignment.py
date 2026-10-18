@@ -1,5 +1,5 @@
-"""E1 structured-timeline events for the buyer RFQ path (``crm/services/rfq.py``) and the
-seller work-queue (``crm/services/assignment.py``).
+"""E1 structured-timeline events for the seller work-queue (``crm/services/assignment.py``).
+The buyer RFQ events left with the buyer path (FIX-13): the client submits requests in the portal.
 
 Each producer must now write a machine ``event_code`` + interpolation ``event_params`` next to the
 legacy RU ``action``/``detail`` (kept as fallback). These tests exercise the real services and assert
@@ -32,7 +32,7 @@ def _make_company(name, type_code):
     return company
 
 
-def _make_member(company, email, *, can_buy=False, can_sell=False):
+def _make_member(company, email, *, can_sell=False):
     from accounts.models import CompanyMember, CustomUser, WorkspaceRole
 
     user = CustomUser.objects.create_user(email=email, username=email, password="pw", is_active=True)
@@ -41,78 +41,10 @@ def _make_member(company, email, *, can_buy=False, can_sell=False):
         company=company,
         role=WorkspaceRole.objects.get(code="MEMBER"),
         is_active=True,
-        can_buy=can_buy,
         can_sell=can_sell,
         is_primary=True,
     )
     return user
-
-
-# ── rfq.py ────────────────────────────────────────────────────────────────────────────────
-
-
-@pytest.mark.django_db
-def test_item_added_writes_event_code_and_params(rfq_lookups):
-    from crm.models import ActivityLog, Deal, DealStage
-    from crm.services.rfq import buyer_add_request_item
-
-    buyer_company = _make_company("Buyer Co", "CLIENT")
-    buyer = _make_member(buyer_company, "buyer_add@t.test", can_buy=True)
-    deal = Deal.objects.create(title="RFQ", company=buyer_company, stage=DealStage.objects.get(code="DRAFT"))
-
-    item = buyer_add_request_item(buyer, deal, name="Рельс Р65", quantity=3)
-
-    log = ActivityLog.objects.filter(deal=deal, event_code="deal.item_added").get()
-    assert log.event_params == {"deal_id": deal.id, "name": "Рельс Р65", "quantity": item.quantity}
-
-
-@pytest.mark.django_db
-def test_items_added_bulk_writes_event_code_and_count(rfq_lookups):
-    from crm.models import ActivityLog, Deal, DealStage
-    from crm.services.rfq import buyer_add_request_items
-
-    buyer_company = _make_company("Buyer Co", "CLIENT")
-    buyer = _make_member(buyer_company, "buyer_bulk@t.test", can_buy=True)
-    deal = Deal.objects.create(title="RFQ", company=buyer_company, stage=DealStage.objects.get(code="DRAFT"))
-
-    buyer_add_request_items(buyer, deal, [{"name": "Рельс Р65", "quantity": 2}, {"name": "Накладка", "quantity": 1}])
-
-    log = ActivityLog.objects.filter(deal=deal, event_code="deal.items_added_bulk").get()
-    assert log.event_params == {"deal_id": deal.id, "count": 2}
-
-
-@pytest.mark.django_db
-def test_item_removed_writes_event_code_and_item_id(rfq_lookups):
-    from crm.models import ActivityLog, Deal, DealStage
-    from crm.services.rfq import buyer_add_request_item, buyer_remove_request_item
-
-    buyer_company = _make_company("Buyer Co", "CLIENT")
-    buyer = _make_member(buyer_company, "buyer_rm@t.test", can_buy=True)
-    deal = Deal.objects.create(title="RFQ", company=buyer_company, stage=DealStage.objects.get(code="DRAFT"))
-    item = buyer_add_request_item(buyer, deal, name="Рельс Р65", quantity=1)
-    item_id = item.id
-
-    buyer_remove_request_item(buyer, item)
-
-    log = ActivityLog.objects.filter(deal=deal, event_code="deal.item_removed").get()
-    assert log.event_params == {"deal_id": deal.id, "item_id": item_id}
-
-
-@pytest.mark.django_db
-def test_submitted_writes_event_code_and_line_count(rfq_lookups):
-    from crm.models import ActivityLog, Deal, DealStage
-    from crm.services.rfq import buyer_add_request_item, submit_request
-
-    buyer_company = _make_company("Buyer Co", "CLIENT")
-    buyer = _make_member(buyer_company, "buyer_submit@t.test", can_buy=True)
-    deal = Deal.objects.create(title="RFQ", company=buyer_company, stage=DealStage.objects.get(code="DRAFT"))
-    buyer_add_request_item(buyer, deal, name="Рельс Р65", quantity=3)
-    buyer_add_request_item(buyer, deal, name="Накладка 2Р65", quantity=1)
-
-    submit_request(buyer, deal)
-
-    log = ActivityLog.objects.filter(deal=deal, event_code="deal.submitted").get()
-    assert log.event_params == {"deal_id": deal.id, "count": 2}
 
 
 # ── assignment.py ───────────────────────────────────────────────────────────────────────────

@@ -18,6 +18,7 @@ import pytest
 from django.utils import timezone
 
 from accounts.models import Company, CompanyMember, CustomUser, WorkspaceRole
+from accounts.testing import make_cashier
 from crm.constants import DealStageCode, InvoiceStatusCode
 from crm.models import Deal, DealStage, Invoice, Quote, QuoteItem
 from crm.services.billing import record_payment
@@ -50,7 +51,7 @@ def test_payment_larger_than_balance_is_refused(buyer):
         amount_paid=Decimal("0.00"),
     )
 
-    payment, error = record_payment(invoice.pk, buyer["user"], amount="999999999.00")
+    payment, error = record_payment(invoice.pk, make_cashier(), amount="999999999.00")
 
     assert payment is None
     assert error == "PAYMENT_EXCEEDS_BALANCE_DUE"
@@ -73,7 +74,7 @@ def test_payment_exactly_equal_to_balance_passes(buyer):
         amount_paid=Decimal("0.00"),
     )
 
-    payment, error = record_payment(invoice.pk, buyer["user"], amount="500000.00", paid_at=timezone.localdate())
+    payment, error = record_payment(invoice.pk, make_cashier(), amount="500000.00", paid_at=timezone.localdate())
 
     assert error is None and payment is not None
     invoice.refresh_from_db()
@@ -93,10 +94,10 @@ def test_second_payment_cannot_exceed_the_remainder(buyer):
         total_incl_vat=Decimal("1000000.00"),
         amount_paid=Decimal("0.00"),
     )
-    record_payment(invoice.pk, buyer["user"], amount="400000.00", paid_at=timezone.localdate(), reference="part-1")
+    record_payment(invoice.pk, make_cashier(), amount="400000.00", paid_at=timezone.localdate(), reference="part-1")
 
     _payment, error = record_payment(
-        invoice.pk, buyer["user"], amount="700000.00", paid_at=timezone.localdate(), reference="part-2"
+        invoice.pk, make_cashier(), amount="700000.00", paid_at=timezone.localdate(), reference="part-2"
     )
 
     assert error == "PAYMENT_EXCEEDS_BALANCE_DUE"

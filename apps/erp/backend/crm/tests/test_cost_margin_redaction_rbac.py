@@ -25,7 +25,7 @@ def _seller_member(company, email, *, perms):
     user = CustomUser.objects.create_user(email=email, username=email, password="pw", is_active=True)
     # can_sell defaults True everywhere; the point is the CompanyRole perm gates cost visibility.
     CompanyMember.objects.create(
-        user=user, company=company, role=ws, company_roles=[role], is_active=True, can_sell=True, can_buy=False
+        user=user, company=company, role=ws, company_roles=[role], is_active=True, can_sell=True
     )
     return user
 

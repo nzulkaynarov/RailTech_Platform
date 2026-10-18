@@ -19,6 +19,7 @@ import pytest
 from django.utils import timezone
 
 from accounts.models import Company, CompanyMember, CompanyType, CustomUser, SystemRole, WorkspaceRole
+from accounts.testing import make_cashier
 from crm.constants import DEFAULT_INVOICE_DUE_DAYS
 from crm.models import (
     Contract,
@@ -68,7 +69,7 @@ def _company(name, inn, type_code):
     return company
 
 
-def _member(company, email, *, can_sell=False, can_buy=False):
+def _member(company, email, *, can_sell=False):
     user = CustomUser.objects.create_user(email=email, username=email, password="x")
     CompanyMember.objects.create(
         user=user,
@@ -77,7 +78,6 @@ def _member(company, email, *, can_sell=False, can_buy=False):
         is_active=True,
         is_primary=True,
         can_sell=can_sell,
-        can_buy=can_buy,
     )
     return user
 
@@ -85,7 +85,7 @@ def _member(company, email, *, can_sell=False, can_buy=False):
 @pytest.fixture
 def world(lookups):
     buyer_co = _company("Buyer G3", "B100", "CLIENT")
-    buyer_user = _member(buyer_co, "buyer@g3.test", can_buy=True)
+    buyer_user = _member(buyer_co, "buyer@g3.test")
     seller_co = _company("Seller G3", "S100", "SUPPLIER")
     seller_user = _member(seller_co, "seller@g3.test", can_sell=True)
 
@@ -185,7 +185,7 @@ def test_recording_a_payment_emails_the_seller(world, django_capture_on_commit_c
     with patch("notifications.tasks.send_transactional_email") as mail:
         with django_capture_on_commit_callbacks(execute=True):
             payment, error = record_payment(
-                invoice.id, world["buyer_user"], amount=Decimal("112"), paid_at=timezone.localdate()
+                invoice.id, make_cashier(), amount=Decimal("112"), paid_at=timezone.localdate()
             )
 
     assert error is None, error

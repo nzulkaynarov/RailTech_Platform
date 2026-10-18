@@ -36,7 +36,6 @@ def _seller_user(email):
         is_active=True,
         is_primary=True,
         can_sell=True,
-        can_buy=True,
     )
     return user, company
 
@@ -67,7 +66,6 @@ def test_buyer_only_user_has_no_seller_send_signals(lookups):
         is_active=True,
         is_primary=True,
         can_sell=False,
-        can_buy=True,
     )
     caps = _caps(user)
     assert "can_send_quotes" not in caps
@@ -95,7 +93,6 @@ def test_member_of_client_only_company_has_no_permissions(lookups):
         is_active=True,
         is_primary=True,
         can_sell=True,
-        can_buy=True,
     )
 
     data = MeSerializer(user).data
@@ -132,7 +129,6 @@ def test_secondary_own_company_membership_drives_permissions(lookups, grant):
         is_active=True,
         is_primary=True,
         can_sell=False,
-        can_buy=True,
     )
     CompanyMember.objects.create(
         user=user,
@@ -141,7 +137,6 @@ def test_secondary_own_company_membership_drives_permissions(lookups, grant):
         is_active=True,
         is_primary=False,
         can_sell=True,
-        can_buy=False,
     )
     grant(user, "quote.send", company=seller_company)
 

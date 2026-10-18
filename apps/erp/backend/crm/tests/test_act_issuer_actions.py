@@ -66,9 +66,9 @@ def world(db, grant):
         return user
 
     buyer_co = company("Buyer A4", "B400", "CLIENT")
-    buyer_user = member(buyer_co, "buyer@a4.test", can_buy=True, can_sell=False)
+    buyer_user = member(buyer_co, "buyer@a4.test", can_sell=False)
     seller_co = company("Seller A4", "S400", "SUPPLIER")
-    seller_user = member(seller_co, "seller@a4.test", can_sell=True, can_buy=False)
+    seller_user = member(seller_co, "seller@a4.test", can_sell=True)
     grant(seller_user, "fulfillment.act")
 
     deal = Deal.objects.create(title="A4 deal", company=buyer_co, stage=DealStage.objects.get(code="CLOSED_WON"))
@@ -246,7 +246,7 @@ def test_hints_match_what_the_services_actually_allow(world):
     assert seller_view["viewer_can_remind"] is True and seller_view["viewer_can_cancel"] is True
     assert seller_view["viewer_can_sign"] is False, "выпустивший не принимает свой же акт"
     assert buyer_view["viewer_can_remind"] is False and buyer_view["viewer_can_cancel"] is False
-    assert buyer_view["viewer_can_sign"] is True
+    assert buyer_view["viewer_can_sign"] is False, "заказчика-пользователя в ERP нет (FIX-13)"
 
 
 def test_reminder_hint_goes_dark_during_the_cooldown(world):

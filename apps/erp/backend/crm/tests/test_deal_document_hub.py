@@ -67,7 +67,7 @@ def _company(name, inn, *type_codes):
     return company
 
 
-def _member(company, email, *, can_sell=False, can_buy=False):
+def _member(company, email, *, can_sell=False):
     user = CustomUser.objects.create_user(email=email, username=email, password="x")
     CompanyMember.objects.create(
         user=user,
@@ -76,7 +76,6 @@ def _member(company, email, *, can_sell=False, can_buy=False):
         is_active=True,
         is_primary=True,
         can_sell=can_sell,
-        can_buy=can_buy,
     )
     return user
 
@@ -90,7 +89,7 @@ def _api(user):
 @pytest.fixture
 def world(lookups):
     buyer_co = _company("Buyer Co", "B700", "CLIENT")
-    buyer_user = _member(buyer_co, "buyer@hub.test", can_buy=True)
+    buyer_user = _member(buyer_co, "buyer@hub.test")
 
     # Своя компания — продавец любой сделки; её сотрудник ведёт цепочку документов.
     own_co = _company("Own Co", "S700", "SUPPLIER")
@@ -98,7 +97,7 @@ def world(lookups):
 
     # Посторонний — участник ДРУГОЙ компании-клиента: не сотрудник и не покупатель этой сделки.
     outsider_co = _company("Other Client", "S701", "CLIENT")
-    outsider_user = _member(outsider_co, "outsider@hub.test", can_buy=True)
+    outsider_user = _member(outsider_co, "outsider@hub.test")
 
     deal = Deal.objects.create(title="Hub deal", company=buyer_co, stage=DealStage.objects.get(code="CONTRACT_SIGNED"))
 
@@ -205,18 +204,18 @@ def test_dual_company_gets_both_sides(lookups):
     и прятал продавцовские действия. Сотрудник своей компании, который ещё и участник компании-
     клиента сделки, получает обе стороны — их считает сервер."""
     dual_co = _company("Dual Co", "D700", "CLIENT", "SUPPLIER")
-    dual_user = _member(dual_co, "dual@hub.test", can_sell=True, can_buy=True)
+    dual_user = _member(dual_co, "dual@hub.test", can_sell=True)
 
     deal = Deal.objects.create(title="Dual deal", company=dual_co, stage=DealStage.objects.get(code="CONTRACT_SIGNED"))
 
     viewer = _api(dual_user).get(_hub_url(deal.id)).json()["viewer"]
-    assert viewer["is_buyer_side"] is True, "потеряна покупательская сторона"
+    assert viewer["is_buyer_side"] is False, "покупательской стороны в ERP нет (FIX-13)"
     assert viewer["is_seller_side"] is True, "потеряна продавцовская сторона"
 
 
-def test_buyer_is_not_marked_as_seller_side(world):
+def test_client_member_is_marked_with_no_side(world):
     viewer = _api(world["buyer_user"]).get(_hub_url(world["deal"].id)).json()["viewer"]
-    assert viewer["is_buyer_side"] is True
+    assert viewer["is_buyer_side"] is False
     assert viewer["is_seller_side"] is False
 
 
@@ -228,7 +227,7 @@ def test_next_step_is_sign_contract_while_unsigned_and_addressed_to_the_signer(w
 
     buyer_step = _api(world["buyer_user"]).get(_hub_url(world["deal"].id)).json()["next_step"]
     assert buyer_step["code"] == "SIGN_CONTRACT"
-    assert buyer_step["for_viewer"] is True, "покупателю, который и подписывает, шаг адресован"
+    assert buyer_step["for_viewer"] is False, "подписи клиента в ERP нет (FIX-13) — шаг не адресован участнику клиента"
     assert buyer_step["page"] == "contracts"
 
 
@@ -248,7 +247,7 @@ def test_next_step_walks_the_chain_invoice_then_act(world):
     assert step["for_viewer"] is False, "продавцу шаг «оплатить» не адресован — он ждёт оплату"
 
     buyer_step = _api(world["buyer_user"]).get(_hub_url(world["deal"].id)).json()["next_step"]
-    assert buyer_step["for_viewer"] is True, "покупателю шаг «оплатить» адресован"
+    assert buyer_step["for_viewer"] is False, "оплачивает клиент вне ERP (FIX-13) — шаг не адресован участнику клиента"
 
     draft.status = InvoiceStatus.objects.get(code="PAID")
     draft.amount_paid = Decimal("112")
@@ -262,7 +261,7 @@ def test_next_step_walks_the_chain_invoice_then_act(world):
     assert step["code"] == "SHIP"
 
 
-def test_next_step_accept_delivery_is_addressed_to_the_buyer(world):
+def test_next_step_accept_delivery_is_addressed_to_nobody_inside_erp(world):
     contract = _sign_contract(world)
     invoice = _invoice(world, contract, "PAID", paid=Decimal("112"))
     Act.objects.create(
@@ -280,7 +279,7 @@ def test_next_step_accept_delivery_is_addressed_to_the_buyer(world):
 
     buyer_step = _api(world["buyer_user"]).get(_hub_url(world["deal"].id)).json()["next_step"]
     assert buyer_step["code"] == "ACCEPT_DELIVERY"
-    assert buyer_step["for_viewer"] is True
+    assert buyer_step["for_viewer"] is False, "приёмка — шаг клиента в портале (FIX-24)"
 
     seller_step = _api(world["staff_user"]).get(_hub_url(world["deal"].id)).json()["next_step"]
     assert seller_step["code"] == "ACCEPT_DELIVERY"

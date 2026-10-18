@@ -51,7 +51,6 @@ def people(lookups):
         role=WorkspaceRole.objects.get(code="OWNER"),
         is_active=True,
         is_primary=True,
-        can_buy=True,
     )
     operator = CustomUser.objects.create_user(
         is_superuser=True,

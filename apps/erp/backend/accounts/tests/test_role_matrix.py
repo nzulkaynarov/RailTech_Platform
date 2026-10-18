@@ -8,9 +8,8 @@
   поэтому подставные id в пути годятся);
 * сотрудник с этим правом и администратор (`is_superuser`) этого отказа не получают;
 * `ADMIN_ONLY` — даже сотрудник со всеми правами получает 403 `PLATFORM_ADMIN_REQUIRED`;
-* `BUYER_ONLY` — шаг покупателя: сотрудник со всеми правами получает 403 `ROLE_NOT_PERMITTED`;
-* покупательский аккаунт (участник компании-клиента) на мутации бэк-офиса вне `buyer_actions`
-  получает 403 `ROLE_NOT_PERMITTED`.
+* участник компании-клиента (покупательских аккаунтов в ERP нет — FIX-13) на любой мутации
+  бэк-офиса получает 403: `ROLE_NOT_PERMITTED` (`PLATFORM_ADMIN_REQUIRED` на `ADMIN_ONLY`).
 """
 
 import re
@@ -21,7 +20,7 @@ from rest_framework.test import APIClient
 
 from accounts.constants import ALL_PERMISSIONS
 from accounts.models import Company, CompanyMember, CompanyRole, CompanyType, CustomUser, WorkspaceRole
-from core.permissions import ADMIN_ONLY, BUYER_ONLY, GATE_MARKERS, SELF_SERVICE, RoleGatedViewMixin
+from core.permissions import ADMIN_ONLY, GATE_MARKERS, SELF_SERVICE, RoleGatedViewMixin
 
 MUTATION_METHODS = {"POST", "PUT", "PATCH", "DELETE"}
 
@@ -104,8 +103,7 @@ def test_every_mutation_declares_a_permission_or_a_reason(row):
     if rule not in GATE_MARKERS:
         unknown = [code for code in _codes(rule) if code not in ALL_PERMISSIONS]
         assert not unknown, f"{view_cls.__name__}.{key}: коды вне каталога {unknown}"
-    for action in view_cls.buyer_actions:
-        assert action in view_cls.required_permissions, f"{view_cls.__name__}: buyer_action {action!r} без права"
+    assert not hasattr(view_cls, "buyer_actions"), f"{view_cls.__name__}: покупательских действий в ERP нет (FIX-13)"
 
 
 # ── живая матрица ─────────────────────────────────────────────────────────────
@@ -136,7 +134,7 @@ def world(db):
         "client": client,
         "member": member,
         "superuser": superuser,
-        "buyer": member(client, "buyer@client.example", workspace=owner_ws),
+        "client_member": member(client, "member@client.example", workspace=owner_ws),
     }
 
 
@@ -171,12 +169,7 @@ def test_role_matrix(world, row):
     if rule == ADMIN_ONLY:
         everything = member(world["own"], "all@own.example", ALL_PERMISSIONS)
         assert _denied(_call(everything, path, method), "PLATFORM_ADMIN_REQUIRED")
-        return
-    if rule == BUYER_ONLY:
-        everything = member(world["own"], "all@own.example", ALL_PERMISSIONS)
-        assert _denied(_call(everything, path, method))
-        assert key in view_cls.buyer_actions
-        assert not _denied(_call(world["buyer"], path, method))
+        assert _denied(_call(world["client_member"], path, method), "PLATFORM_ADMIN_REQUIRED")
         return
 
     codes = _codes(rule)
@@ -184,11 +177,7 @@ def test_role_matrix(world, row):
     assert _denied(_call(without, path, method)), f"без {codes} должен быть 403 ROLE_NOT_PERMITTED"
     holder = member(world["own"], "holder@own.example", [codes[0]])
     assert not _denied(_call(holder, path, method)), f"с {codes[0]} отказа по роли быть не должно"
-    buyer_response = _call(world["buyer"], path, method)
-    if key in view_cls.buyer_actions:
-        assert not _denied(buyer_response)
-    else:
-        assert _denied(buyer_response), "покупательский аккаунт на мутации бэк-офиса"
+    assert _denied(_call(world["client_member"], path, method)), "участник компании-клиента на мутации бэк-офиса"
 
 
 @pytest.mark.parametrize("row", GATED, ids=_id)

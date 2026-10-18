@@ -17,7 +17,6 @@ from django.utils import timezone
 
 from accounts.models import Company, CompanyMember, CompanyType, CustomUser, SystemRole, WorkspaceRole
 from crm.models import (
-    Act,
     ActStatus,
     Contract,
     ContractStatus,
@@ -63,7 +62,7 @@ def _company(name, inn, type_code):
     return company
 
 
-def _member(company, email, *, can_sell=False, can_buy=False):
+def _member(company, email, *, can_sell=False):
     user = CustomUser.objects.create_user(email=email, username=email, password="x")
     CompanyMember.objects.create(
         user=user,
@@ -72,7 +71,6 @@ def _member(company, email, *, can_sell=False, can_buy=False):
         is_active=True,
         is_primary=True,
         can_sell=can_sell,
-        can_buy=can_buy,
     )
     return user
 
@@ -80,7 +78,7 @@ def _member(company, email, *, can_sell=False, can_buy=False):
 @pytest.fixture
 def chain(lookups):
     buyer_co = _company("Buyer Notify", "B600", "CLIENT")
-    buyer_user = _member(buyer_co, "buyer@notify.test", can_buy=True)
+    buyer_user = _member(buyer_co, "buyer@notify.test")
     seller_co = _company("Seller Notify", "S600", "SUPPLIER")
     seller_user = _member(seller_co, "seller@notify.test", can_sell=True)
 
@@ -108,12 +106,15 @@ def chain(lookups):
         status=InvoiceStatus.objects.get(code="ISSUED"),
         total_incl_vat=Decimal("112"),
     )
+    # Оплату и приёмку поставки изнутри ERP делает только администратор: клиентских аккаунтов нет (FIX-13).
+    admin = CustomUser.objects.create_superuser(email="admin@notify.test", username="admin@notify", password="x")
     return {
         "deal": deal,
         "contract": contract,
         "invoice": invoice,
         "buyer_user": buyer_user,
         "seller_user": seller_user,
+        "admin": admin,
     }
 
 
@@ -128,7 +129,7 @@ def test_seller_is_notified_when_a_payment_is_recorded(chain, django_capture_on_
     with django_capture_on_commit_callbacks(execute=True):
         payment, error = record_payment(
             chain["invoice"].id,
-            chain["buyer_user"],
+            chain["admin"],
             amount=Decimal("112"),
             paid_at=timezone.localdate(),
         )
@@ -164,28 +165,6 @@ def test_buyer_is_notified_when_an_act_is_issued(chain, django_capture_on_commit
     assert act is not None
 
 
-def test_act_signature_notifies_the_other_side_but_not_the_signer(chain, django_capture_on_commit_callbacks):
-    from crm.services.billing import sign_act
-
-    act = Act.objects.create(
-        deal=chain["deal"],
-        contract=chain["contract"],
-        invoice=chain["invoice"],
-        number="ACT-NOTIFY-1",
-        status=ActStatus.objects.get(code="ISSUED"),
-        total_amount=Decimal("112"),
-    )
-    with django_capture_on_commit_callbacks(execute=True):
-        signed, error = sign_act(act.id, chain["buyer_user"])
-    assert error is None, error
-    assert signed is not None
-
-    assert [n.title for n in _notifications_for(chain["seller_user"])] == ["Акт подписан"]
-    assert not [
-        n for n in _notifications_for(chain["buyer_user"]) if n.title == "Акт подписан"
-    ], "подписавший получил уведомление о собственном действии"
-
-
 def test_shipment_notifies_the_buyer_not_the_shipping_seller(chain, django_capture_on_commit_callbacks):
     from crm.services.fulfillment import ensure_fulfillment, update_fulfillment_status
 
@@ -204,7 +183,7 @@ def test_acceptance_notifies_the_seller_not_the_accepting_buyer(chain, django_ca
 
     ensure_fulfillment(chain["deal"], contract=chain["contract"])
     with django_capture_on_commit_callbacks(execute=True):
-        _, error = update_fulfillment_status(chain["deal"].id, chain["buyer_user"], "ACCEPTED")
+        _, error = update_fulfillment_status(chain["deal"].id, chain["admin"], "ACCEPTED")
     assert error is None, error
 
     assert [n.title for n in _notifications_for(chain["seller_user"])] == ["Поставка принята"]
@@ -240,7 +219,7 @@ def test_payment_notification_is_not_created_when_the_transaction_rolls_back(cha
     # откатившейся транзакции с точки зрения наблюдателя.
     payment, error = record_payment(
         chain["invoice"].id,
-        chain["buyer_user"],
+        chain["admin"],
         amount=Decimal("50"),
         paid_at=timezone.localdate(),
     )
@@ -254,7 +233,7 @@ def test_payment_recorded_still_writes_the_ledger_row(chain, django_capture_on_c
     from crm.services.billing import record_payment
 
     with django_capture_on_commit_callbacks(execute=True):
-        record_payment(chain["invoice"].id, chain["buyer_user"], amount=Decimal("112"), paid_at=timezone.localdate())
+        record_payment(chain["invoice"].id, chain["admin"], amount=Decimal("112"), paid_at=timezone.localdate())
 
     chain["invoice"].refresh_from_db()
     assert Payment.objects.filter(invoice=chain["invoice"]).count() == 1

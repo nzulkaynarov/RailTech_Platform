@@ -26,7 +26,7 @@ def _user(email):
     return CustomUser.objects.create_user(email=email, username=email, password="pw", is_active=True)
 
 
-def _member(user, company, *, company_roles=(), can_sell=True, can_buy=False):
+def _member(user, company, *, company_roles=(), can_sell=True):
     return CompanyMember.objects.create(
         user=user,
         company=company,
@@ -34,7 +34,6 @@ def _member(user, company, *, company_roles=(), can_sell=True, can_buy=False):
         company_roles=list(company_roles),
         is_active=True,
         can_sell=can_sell,
-        can_buy=can_buy,
     )
 
 
@@ -78,7 +77,7 @@ def scenario(lookups):
     colleague = _user("colleague@own.uz")
     _member(colleague, own)
     buyer_user = _user("buyer@buyer.uz")
-    _member(buyer_user, buyer, can_sell=False, can_buy=True)
+    _member(buyer_user, buyer, can_sell=False)
     outsider = _user("outsider@other.uz")
     _member(outsider, other_client, company_roles=[_team_manager_role(other_client)])
 

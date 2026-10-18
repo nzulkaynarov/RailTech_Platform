@@ -10,6 +10,7 @@
 import pytest
 
 from accounts.models import Company, CompanyMember, CompanyType, CustomUser, WorkspaceRole
+from accounts.testing import grant_head, make_own_company
 from catalog.completeness import completeness
 from catalog.models import Category, DomainType, Product, ProductStatus
 from catalog.publishing import publish_many, publish_product
@@ -26,14 +27,17 @@ def seller_world(db):
     WorkspaceRole.objects.get_or_create(code="OWNER", defaults={"name": "Owner", "sort_order": 10})
     # Публикация требует только права `catalog.publish` и полноты карточки: верификации
     # компании (KYC) больше нет — M1-ERP-02 волна 1c.
-    company = Company.objects.create(
-        name="ООО Издатель",
-        inn="9300000001",
+    company = make_own_company(
+        Company.objects.create(
+            name="ООО Издатель",
+            inn="9300000001",
+        )
     )
     user = CustomUser.objects.create_user(email="own@pub.test", username="own@pub.test", password="pw")
     CompanyMember.objects.create(
         user=user, company=company, role=WorkspaceRole.objects.get(code="OWNER"), is_active=True, is_primary=True
     )
+    grant_head(user, company)
     uom, _ = UnitOfMeasure.objects.get_or_create(code="H87", defaults={"name": "шт.", "sort_order": 10})
     domain, _ = DomainType.objects.get_or_create(
         code="GENERAL_GOODS", defaults={"name": "Общие товары", "sku_prefix": "GG", "sort_order": 20}

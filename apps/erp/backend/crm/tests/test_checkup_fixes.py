@@ -49,7 +49,6 @@ def buyer(lookups):
         role=WorkspaceRole.objects.get(code="OWNER"),
         is_primary=True,
         is_active=True,
-        can_buy=True,
     )
     return user, company
 
@@ -76,11 +75,12 @@ def test_full_company_list_stays_admin_only(buyer):
 # ── deal destroy guard (checkup #6) ─────────────────────────────────────────
 
 
-def test_member_can_delete_draft_deal(buyer, draft_deal):
+def test_client_member_cannot_delete_even_a_draft_deal(buyer, draft_deal):
+    """Покупательских аккаунтов в ERP нет (FIX-13): удаляет сделку сотрудник с `deal.manage`."""
     user, _ = buyer
     resp = _api(user).delete(f"/api/v1/crm/deals/{draft_deal.id}/")
-    assert resp.status_code == 204
-    assert not Deal.objects.filter(pk=draft_deal.id).exists()
+    assert resp.status_code == 403
+    assert Deal.objects.filter(pk=draft_deal.id).exists()
 
 
 def test_member_cannot_delete_active_deal(buyer, draft_deal):

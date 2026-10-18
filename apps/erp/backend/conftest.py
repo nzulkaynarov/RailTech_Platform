@@ -87,7 +87,10 @@ def user_factory(db):
         last_name="User",
         is_active=True,
         is_staff=False,
+        is_superuser=False,
     ):
+        # Вход в ERP — только сотрудникам (FIX-13): тестам логина нужен `is_superuser=True`
+        # (или членство в своей компании), иначе пароль верен, а ответ — 403 STAFF_ONLY.
         user = User.objects.create_user(
             email=email,
             username=username,
@@ -96,6 +99,7 @@ def user_factory(db):
             last_name=last_name,
             is_active=is_active,
             is_staff=is_staff,
+            is_superuser=is_superuser,
         )
         return user
 

@@ -14,7 +14,7 @@ def company(db):
     return company
 
 
-def _member(company, email, *, role=None, can_sell=True, can_buy=True, wsrole_code="MEMBER"):
+def _member(company, email, *, role=None, can_sell=True, wsrole_code="MEMBER"):
     ws = WorkspaceRole.objects.get_or_create(code=wsrole_code, defaults={"name": wsrole_code, "sort_order": 10})[0]
     user = CustomUser.objects.create_user(email=email, username=email, password="pw", is_active=True)
     return CompanyMember.objects.create(
@@ -24,7 +24,6 @@ def _member(company, email, *, role=None, can_sell=True, can_buy=True, wsrole_co
         company_roles=[role],
         is_active=True,
         can_sell=can_sell,
-        can_buy=can_buy,
     )
 
 
@@ -36,7 +35,7 @@ def test_calculation_member_can_send_quote_but_not_sign_contract(company):
     calc_role = CompanyRole.objects.create(
         company=company, name="Расчёт*", permissions=list(ROLE_TEMPLATES["CALCULATION"])
     )
-    calc = _member(company, "sales@a.test", role=calc_role, can_sell=False, can_buy=False)
+    calc = _member(company, "sales@a.test", role=calc_role, can_sell=False)
     assert member_has_permission(calc.user, company.id, "quote.send") is True
     assert member_has_permission(calc.user, company.id, "contract.sign") is False
     assert member_has_permission(calc.user, company.id, "finance.payment") is False
@@ -46,7 +45,7 @@ def test_calculation_member_can_send_quote_but_not_sign_contract(company):
 def test_viewer_member_can_do_nothing_sensitive(company):
     """A «Наблюдатель» (read-only) member holds none of the sensitive permissions."""
     viewer_role = CompanyRole.objects.create(company=company, name="Наблюдатель", permissions=[])
-    viewer = _member(company, "view@a.test", role=viewer_role, can_sell=False, can_buy=False)
+    viewer = _member(company, "view@a.test", role=viewer_role, can_sell=False)
     for perm in ("quote.send", "quote.approve_final", "contract.sign", "finance.payment", "team.manage", "data.export"):
         assert member_has_permission(viewer.user, company.id, perm) is False
 
@@ -76,7 +75,7 @@ def test_member_permission_from_company_role(company):
 @pytest.mark.django_db
 def test_no_role_no_permission_despite_can_sell(company):
     """Фолбэк из флага can_sell снят (M1-ERP-05): сотрудник без роли не получает ничего."""
-    seller = _member(company, "sell@a.test", role=None, can_sell=True, can_buy=True)
+    seller = _member(company, "sell@a.test", role=None, can_sell=True)
     for perm in ("quote.send", "contract.sign", "team.manage"):
         assert member_has_permission(seller.user, company.id, perm) is False
 
@@ -119,8 +118,8 @@ def test_can_view_quote_costs_gated_by_permission(db):
     with_perm = CompanyRole.objects.create(company=seller_co, name="Sales", permissions=["quote.view_cost_margin"])
     without_perm = CompanyRole.objects.create(company=seller_co, name="Viewer", permissions=[])
 
-    privileged = _member(seller_co, "see@s.test", role=with_perm, can_sell=False, can_buy=False)
-    restricted = _member(seller_co, "nosee@s.test", role=without_perm, can_sell=False, can_buy=False)
+    privileged = _member(seller_co, "see@s.test", role=with_perm, can_sell=False)
+    restricted = _member(seller_co, "nosee@s.test", role=without_perm, can_sell=False)
 
     assert can_view_quote_costs(privileged.user) is True
     assert can_view_quote_costs(restricted.user) is False  # seller-team but no margin permission
@@ -141,8 +140,8 @@ def test_can_edit_quote_pricing_gated_by_permission(db):
     with_perm = CompanyRole.objects.create(company=seller_co, name="Sales", permissions=["quote.edit_pricing"])
     without_perm = CompanyRole.objects.create(company=seller_co, name="Viewer", permissions=[])
 
-    editor = _member(seller_co, "edit@s.test", role=with_perm, can_sell=True, can_buy=False)
-    viewer = _member(seller_co, "view@s.test", role=without_perm, can_sell=True, can_buy=False)
+    editor = _member(seller_co, "edit@s.test", role=with_perm, can_sell=True)
+    viewer = _member(seller_co, "view@s.test", role=without_perm, can_sell=True)
 
     assert can_edit_quote_pricing(editor.user) is True
     assert can_edit_quote_pricing(viewer.user) is False

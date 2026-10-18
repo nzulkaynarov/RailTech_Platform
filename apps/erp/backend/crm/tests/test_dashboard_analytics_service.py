@@ -148,7 +148,7 @@ class TestResolveScope:
     def test_buyer_is_limited_to_own_companies(self, lookups):
         self._own_company()
         buyer_co = _company("Клиент", "C903")
-        buyer = _member(buyer_co, "buyer@t.test", can_buy=True)
+        buyer = _member(buyer_co, "buyer@t.test")
         mine = _deal(buyer_co, "Моя заявка")
         _deal(_company("Другой клиент", "C904"), "Чужая заявка")
 
@@ -181,7 +181,6 @@ class TestDashboardAnalyticsCaching:
             role=WorkspaceRole.objects.get(code="OWNER"),
             is_active=True,
             is_primary=True,
-            can_buy=True,
         )
         return user, MagicMock()
 
@@ -234,7 +233,6 @@ def test_dashboard_payload_keys_are_stable(lookups):
         role=WorkspaceRole.objects.get(code="OWNER"),
         is_active=True,
         is_primary=True,
-        can_buy=True,
     )
     deal = _deal(company, "Заявка")
     Quote.objects.create(

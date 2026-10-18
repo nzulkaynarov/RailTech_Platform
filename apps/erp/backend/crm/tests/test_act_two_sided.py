@@ -60,7 +60,7 @@ def _company(name, inn, type_code):
     return company
 
 
-def _member(company, email, *, can_sell=False, can_buy=False):
+def _member(company, email, *, can_sell=False):
     user = CustomUser.objects.create_user(email=email, username=email, password="x")
     CompanyMember.objects.create(
         user=user,
@@ -69,7 +69,6 @@ def _member(company, email, *, can_sell=False, can_buy=False):
         is_active=True,
         is_primary=True,
         can_sell=can_sell,
-        can_buy=can_buy,
     )
     return user
 
@@ -83,7 +82,7 @@ def _api(user):
 @pytest.fixture
 def act_world(lookups):
     buyer_co = _company("Buyer G2", "B200", "CLIENT")
-    buyer_user = _member(buyer_co, "buyer@g2.test", can_buy=True)
+    buyer_user = _member(buyer_co, "buyer@g2.test")
     seller_co = _company("Seller G2", "S200", "SUPPLIER")
     seller_user = _member(seller_co, "seller@g2.test", can_sell=True)
     outsider = CustomUser.objects.create_user(email="outsider@g2.test", username="outsider@g2.test", password="x")
@@ -135,136 +134,57 @@ def act_world(lookups):
 
 
 # ── Кто может закрыть акт ────────────────────────────────────────────────────
-
-
-def test_buyer_accepts_the_act(act_world):
-    resp = _api(act_world["buyer_user"]).post(f"/api/v1/crm/acts/{act_world['act'].id}/sign/")
-
-    assert resp.status_code == 200, resp.content
-    act = act_world["act"]
-    act.refresh_from_db()
-    assert act.status_code == "SIGNED"
-    assert act.acceptor_signer_id == act_world["buyer_user"].id, "подписант приёмки не сохранён"
-    assert act.acceptor_signed_at is not None
-    assert act.issuer_signer_id == act_world["seller_user"].id, "титул исполнителя должен уцелеть"
-    assert act.is_fully_signed is True
+#
+# FIX-13: заказчика-пользователя в ERP нет — приёмка и отклонение акта живут в портале (FIX-22).
+# Сервисы `sign_act` / `reject_act` остаются для него, но изнутри ERP не принимает никто, а
+# эндпоинтов `acts/{id}/sign|reject` больше нет. Здесь закреплён главный инвариант двустороннего
+# цикла: выпустивший акт не закрывает его сам, и несогласие без причины не принимается.
 
 
 def test_the_issuer_cannot_accept_its_own_act(act_world):
     """ГЛАВНОЕ. Раньше выпустивший акт закрывал его сам — приёмка это подтверждение ВТОРОЙ
     стороны, иначе документ ничего не подтверждает."""
-    resp = _api(act_world["seller_user"]).post(f"/api/v1/crm/acts/{act_world['act'].id}/sign/")
+    from crm.services.billing import sign_act
 
-    # M1-ERP-05: приёмка — шаг покупателя (BUYER_ONLY), сотрудника отсекает гейт ролей.
-    assert resp.status_code == 403, resp.content
-    assert resp.json()["detail"] == "ROLE_NOT_PERMITTED"
+    _act, error = sign_act(act_world["act"].id, act_world["seller_user"])
+
+    assert error == "ACT_ACCEPTOR_SIDE_REQUIRED"
     act_world["act"].refresh_from_db()
     assert act_world["act"].status_code == "ISSUED", "акт закрыт выпустившей стороной"
 
 
-def test_an_outsider_cannot_touch_the_act(act_world):
-    """Граница арендатора держится и на новом экшене.
+def test_nobody_inside_erp_accepts_or_rejects_an_act(act_world):
+    """Участник компании-клиента и посторонний не «заказчик» в ERP: ни принять, ни вернуть акт."""
+    from crm.services.billing import reject_act, sign_act
 
-    `sign` принимает multipart (туда грузят скан), `reject` — JSON, поэтому вызовы разные.
-    """
-    outsider = _api(act_world["outsider"])
-    act_id = act_world["act"].id
-
-    signed = outsider.post(f"/api/v1/crm/acts/{act_id}/sign/")
-    assert signed.status_code in (400, 403, 404), signed.status_code
-
-    rejected = outsider.post(f"/api/v1/crm/acts/{act_id}/reject/", {"reason": "нет"}, format="json")
-    assert rejected.status_code in (400, 403, 404), rejected.status_code
+    for actor in (act_world["buyer_user"], act_world["outsider"]):
+        assert sign_act(act_world["act"].id, actor)[1] == "ACT_ACCEPTOR_SIDE_REQUIRED"
+        assert reject_act(act_world["act"].id, actor, reason="Объём не совпадает")[1] == "ACT_ACCEPTOR_SIDE_REQUIRED"
 
     act_world["act"].refresh_from_db()
     assert act_world["act"].status_code == "ISSUED"
-
-
-# ── Отклонение — второй шаг, которого не было ────────────────────────────────
-
-
-def test_buyer_rejects_the_act_with_a_reason(act_world):
-    resp = _api(act_world["buyer_user"]).post(
-        f"/api/v1/crm/acts/{act_world['act'].id}/reject/",
-        {"reason": "Объём работ не совпадает с накладной"},
-        format="json",
-    )
-
-    assert resp.status_code == 200, resp.content
-    act = act_world["act"]
-    act.refresh_from_db()
-    assert act.status_code == "DRAFT", "отклонённый акт возвращается исполнителю на доработку"
-    assert act.rejection_reason == "Объём работ не совпадает с накладной"
-    assert act.acceptor_signed_at is None, "отклонение — не приёмка"
+    assert act_world["act"].acceptor_signed_at is None
 
 
 def test_rejection_without_a_reason_is_refused(act_world):
     """Причина обязательна — как и при отклонении КП: без основания отказ бесполезен."""
-    resp = _api(act_world["buyer_user"]).post(
-        f"/api/v1/crm/acts/{act_world['act'].id}/reject/", {"reason": "   "}, format="json"
-    )
+    from crm.services.billing import reject_act
 
-    assert resp.status_code == 400
-    assert resp.json()["detail"] == "REASON_REQUIRED"
+    _act, error = reject_act(act_world["act"].id, act_world["buyer_user"], reason="   ")
+
+    assert error == "REASON_REQUIRED"
     act_world["act"].refresh_from_db()
     assert act_world["act"].status_code == "ISSUED"
 
 
-def test_seller_is_notified_about_the_rejection(act_world, django_capture_on_commit_callbacks):
-    """Отказ не должен быть тише согласия."""
-    from notifications.models import Notification
-
-    with django_capture_on_commit_callbacks(execute=True):
-        _api(act_world["buyer_user"]).post(
-            f"/api/v1/crm/acts/{act_world['act'].id}/reject/", {"reason": "Нет подписи прораба"}, format="json"
-        )
-
-    titles = list(Notification.objects.filter(user=act_world["seller_user"]).values_list("title", flat=True))
-    assert "Акт отклонён заказчиком" in titles
+# ── Подсказки в API ──────────────────────────────────────────────────────────
 
 
-def test_a_rejected_act_can_be_reissued_and_then_accepted(act_world):
-    """Цикл замыкается: исполнитель правит и выставляет заново, заказчик принимает."""
-    buyer = _api(act_world["buyer_user"])
-    buyer.post(f"/api/v1/crm/acts/{act_world['act'].id}/reject/", {"reason": "исправьте объём"}, format="json")
-
-    act = act_world["act"]
-    act.refresh_from_db()
-    act.status = ActStatus.objects.get(code="ISSUED")
-    act.issuer_signed_at = timezone.now()
-    act.save(update_fields=["status", "issuer_signed_at"])
-
-    resp = buyer.post(f"/api/v1/crm/acts/{act.id}/sign/")
-
-    assert resp.status_code == 200, resp.content
-    act.refresh_from_db()
-    assert act.status_code == "SIGNED"
-    assert act.is_fully_signed is True
-
-
-# ── Подсказки в API адресны ──────────────────────────────────────────────────
-
-
-def test_side_hints_are_addressed_to_the_acceptor_only(act_world):
-    buyer_row = _api(act_world["buyer_user"]).get("/api/v1/crm/acts/").json()
-    buyer_act = (buyer_row["results"] if isinstance(buyer_row, dict) else buyer_row)[0]
-    assert buyer_act["viewer_can_sign"] is True
-    assert buyer_act["viewer_can_reject"] is True
-
+def test_side_hints_offer_nothing_to_the_issuer(act_world):
     seller_row = _api(act_world["seller_user"]).get("/api/v1/crm/acts/").json()
     seller_act = (seller_row["results"] if isinstance(seller_row, dict) else seller_row)[0]
     assert seller_act["viewer_can_sign"] is False, "выпустившему предложили принять собственный акт"
     assert seller_act["viewer_can_reject"] is False
-
-
-def test_signed_act_offers_nothing_further(act_world):
-    _api(act_world["buyer_user"]).post(f"/api/v1/crm/acts/{act_world['act'].id}/sign/")
-
-    rows = _api(act_world["buyer_user"]).get("/api/v1/crm/acts/").json()
-    row = (rows["results"] if isinstance(rows, dict) else rows)[0]
-    assert row["viewer_can_sign"] is False
-    assert row["viewer_can_reject"] is False
-    assert row["acceptor_signer_name"] is not None, "в ответе должно быть видно, кто принял"
 
 
 def test_generated_act_records_its_issuer(act_world):

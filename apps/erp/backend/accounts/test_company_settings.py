@@ -4,6 +4,7 @@ import pytest
 from rest_framework.test import APIClient
 
 from accounts.models import Company, CompanyMember, CompanySettings, CustomUser, WorkspaceRole
+from accounts.testing import grant_head, make_own_company
 from master_data.models import Currency, DeliveryBasis
 
 pytestmark = pytest.mark.django_db
@@ -13,12 +14,15 @@ def _owner(email, company):
     owner_role = WorkspaceRole.objects.get_or_create(code="OWNER", defaults={"name": "Владелец", "sort_order": 1})[0]
     user = CustomUser.objects.create_user(email=email, username=email, password="pw", is_active=True)
     CompanyMember.objects.create(user=user, company=company, role=owner_role, is_primary=True, is_active=True)
+    # Права — только из ролей (M1-ERP-05); «владелец компании-клиента» в ERP больше нет (FIX-13).
+    grant_head(user, company)
     return user
 
 
 @pytest.fixture
 def company_a():
-    return Company.objects.create(name="ACME LLC", inn="3000000001")
+    """Своя компания ERP (единственный продавец) — настройки правит её руководитель."""
+    return make_own_company(Company.objects.create(name="ACME LLC", inn="3000000001"))
 
 
 @pytest.fixture

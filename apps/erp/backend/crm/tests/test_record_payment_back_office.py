@@ -1,13 +1,11 @@
 """Оплату фиксирует бэк-офис (M1-ERP-02 волна 3, поручение координатора).
 
 Продавец любой сделки — своя компания (BUSINESS §3.3), поэтому входящий платёж по счёту клиенту
-проводит её сотрудник с правом роли `finance.payment` (M1-ERP-05; флаг участника `can_buy` права
-сотруднику не даёт).
-Покупательская ветка (участник компании-клиента с `can_buy`) остаётся для портала до M2-ERP-01.
+проводит её сотрудник с правом роли `finance.payment` (M1-ERP-05). Покупательской ветки в ERP нет (FIX-13).
 
 Матрица на эндпоинте `POST /crm/invoices/{id}/record-payment/`:
 сотрудник с правом — 201 и платёж записан; сотрудник без права — 403 `ROLE_NOT_PERMITTED`;
-посторонний — 403 `MEMBER_REQUIRED_FOR_ACTION`; ни в одном отказе деньги не двигаются.
+посторонний (участник другой компании) — 403 `ROLE_NOT_PERMITTED` (гейт ролей); ни в одном отказе деньги не двигаются.
 """
 
 from decimal import Decimal
@@ -102,7 +100,7 @@ def test_staff_with_payment_permission_records_payment(world):
 
 @pytest.mark.parametrize(
     ("who", "code"),
-    [("sales", "ROLE_NOT_PERMITTED"), ("stranger", "MEMBER_REQUIRED_FOR_ACTION")],
+    [("sales", "ROLE_NOT_PERMITTED"), ("stranger", "ROLE_NOT_PERMITTED")],
 )
 def test_payment_without_the_right_is_refused(world, who, code):
     response = _pay(world[who], world["invoice"])
