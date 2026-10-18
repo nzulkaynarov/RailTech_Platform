@@ -59,6 +59,7 @@ import type {
   ErpCheckOut,
   ErpConnectorIn,
   ErpStatusOut,
+  ErpWebhookReceipt,
   ErrorOut,
   EscalationSettings,
   ExportClientsParams,
@@ -131,6 +132,8 @@ import type {
   SmtpStatusOut,
   Snooze,
   SpendReport,
+  SsoExchangeRequest,
+  SsoTokenResponse,
   SystemStatusOut,
   TeamMember,
   TelegramStatusOut,
@@ -1317,6 +1320,166 @@ export const useRefresh = <TError = ErrorType<ErrorOut>, TContext = unknown>(
   queryClient?: QueryClient,
 ): UseMutationResult<Awaited<ReturnType<typeof refresh>>, TError, void, TContext> => {
   return useMutation(getRefreshMutationOptions(options), queryClient);
+};
+
+export const getSsoExchangeUrl = () => {
+  return `/api/v1/auth/sso/exchange`;
+};
+
+/**
+ * Обменять SSO-токен из ERP на сессию CRM (CONTRACTS §6).
+ * @summary Sso Exchange
+ */
+export const ssoExchange = async (
+  ssoExchangeRequest: SsoExchangeRequest,
+  options?: Parameters<typeof http>[1],
+): Promise<TokenResponse> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<TokenResponse>(getSsoExchangeUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
+    body: JSON.stringify(ssoExchangeRequest),
+  });
+};
+
+export const getSsoExchangeMutationKey = () => ["ssoExchange"] as const;
+
+export const getSsoExchangeMutationOptions = <
+  TError = ErrorType<ErrorOut>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof ssoExchange>>,
+    TError,
+    SsoExchangeMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof ssoExchange>>,
+  TError,
+  SsoExchangeMutationVariables,
+  TContext
+> => {
+  const mutationKey = getSsoExchangeMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof ssoExchange>>,
+    SsoExchangeMutationVariables
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return ssoExchange(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type SsoExchangeMutationResult = NonNullable<Awaited<ReturnType<typeof ssoExchange>>>;
+export type SsoExchangeMutationBody = SsoExchangeRequest;
+export type SsoExchangeMutationError = ErrorType<ErrorOut>;
+export type SsoExchangeMutationVariables = { data: SsoExchangeRequest };
+
+/**
+ * @summary Sso Exchange
+ */
+export const useSsoExchange = <TError = ErrorType<ErrorOut>, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof ssoExchange>>,
+      TError,
+      SsoExchangeMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof ssoExchange>>,
+  TError,
+  SsoExchangeMutationVariables,
+  TContext
+> => {
+  return useMutation(getSsoExchangeMutationOptions(options), queryClient);
+};
+
+export const getSsoTokenUrl = () => {
+  return `/api/v1/auth/sso/token`;
+};
+
+/**
+ * Выдать SSO-токен для перехода текущего сотрудника в ERP (CONTRACTS §6).
+ * @summary Sso Token
+ */
+export const ssoToken = async (options?: Parameters<typeof http>[1]): Promise<SsoTokenResponse> => {
+  return http<SsoTokenResponse>(getSsoTokenUrl(), {
+    ...options,
+    method: "POST",
+  });
+};
+
+export const getSsoTokenMutationKey = () => ["ssoToken"] as const;
+
+export const getSsoTokenMutationOptions = <
+  TError = ErrorType<ErrorOut>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<Awaited<ReturnType<typeof ssoToken>>, TError, void, TContext>;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<Awaited<ReturnType<typeof ssoToken>>, TError, void, TContext> => {
+  const mutationKey = getSsoTokenMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<Awaited<ReturnType<typeof ssoToken>>, void> = () => {
+    return ssoToken(requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type SsoTokenMutationResult = NonNullable<Awaited<ReturnType<typeof ssoToken>>>;
+
+export type SsoTokenMutationError = ErrorType<ErrorOut>;
+
+/**
+ * @summary Sso Token
+ */
+export const useSsoToken = <TError = ErrorType<ErrorOut>, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<Awaited<ReturnType<typeof ssoToken>>, TError, void, TContext>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<Awaited<ReturnType<typeof ssoToken>>, TError, void, TContext> => {
+  return useMutation(getSsoTokenMutationOptions(options), queryClient);
 };
 
 export const getListClientsUrl = (params?: ListClientsParams) => {
@@ -4701,6 +4864,78 @@ export const useCheckErpConnection = <TError = ErrorType<ErrorOut>, TContext = u
   queryClient?: QueryClient,
 ): UseMutationResult<Awaited<ReturnType<typeof checkErpConnection>>, TError, void, TContext> => {
   return useMutation(getCheckErpConnectionMutationOptions(options), queryClient);
+};
+
+export const getReceiveErpEventUrl = () => {
+  return `/api/v1/integrations/erp/events`;
+};
+
+/**
+ * Приём входящих вебхуков событий ERP (M3-CRM-04, CONTRACTS §3).
+ *
+ * Проверка HMAC-SHA256 подписи заголовка X-Signature по секрету ERP_WEBHOOK_SECRET,
+ * идемпотентность по X-Event-Id (UUID), быстрый ответ 200 OK и фоновая обработка в Procrastinate.
+ * @summary Receive Erp Event
+ */
+export const receiveErpEvent = async (
+  options?: Parameters<typeof http>[1],
+): Promise<ErpWebhookReceipt> => {
+  return http<ErpWebhookReceipt>(getReceiveErpEventUrl(), {
+    ...options,
+    method: "POST",
+  });
+};
+
+export const getReceiveErpEventMutationKey = () => ["receiveErpEvent"] as const;
+
+export const getReceiveErpEventMutationOptions = <
+  TError = ErrorType<ErrorOut>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof receiveErpEvent>>,
+    TError,
+    void,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<Awaited<ReturnType<typeof receiveErpEvent>>, TError, void, TContext> => {
+  const mutationKey = getReceiveErpEventMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<Awaited<ReturnType<typeof receiveErpEvent>>, void> = () => {
+    return receiveErpEvent(requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type ReceiveErpEventMutationResult = NonNullable<
+  Awaited<ReturnType<typeof receiveErpEvent>>
+>;
+
+export type ReceiveErpEventMutationError = ErrorType<ErrorOut>;
+
+/**
+ * @summary Receive Erp Event
+ */
+export const useReceiveErpEvent = <TError = ErrorType<ErrorOut>, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof receiveErpEvent>>,
+      TError,
+      void,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<Awaited<ReturnType<typeof receiveErpEvent>>, TError, void, TContext> => {
+  return useMutation(getReceiveErpEventMutationOptions(options), queryClient);
 };
 
 export const getGetSmtpStatusUrl = () => {

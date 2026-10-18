@@ -4972,6 +4972,45 @@
                 }
             }
         },
+        "/api/v1/auth/sso/exchange/": {
+            "post": {
+                "operationId": "auth_sso_exchange_create",
+                "description": "POST /api/v1/auth/sso/exchange — обменять токен CRM на сессию ERP.",
+                "tags": [
+                    "auth"
+                ],
+                "security": [
+                    {
+                        "jwtAuth": []
+                    },
+                    {}
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No response body"
+                    }
+                }
+            }
+        },
+        "/api/v1/auth/sso/token/": {
+            "post": {
+                "operationId": "auth_sso_token_create",
+                "description": "POST /api/v1/auth/sso/token — выдать токен для перехода в CRM.",
+                "tags": [
+                    "auth"
+                ],
+                "security": [
+                    {
+                        "jwtAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No response body"
+                    }
+                }
+            }
+        },
         "/api/v1/auth/token/": {
             "post": {
                 "operationId": "auth_token_create",
@@ -17660,6 +17699,38 @@
                             }
                         },
                         "description": ""
+                    }
+                }
+            }
+        },
+        "/mcp/erp/": {
+            "get": {
+                "operationId": "mcp_erp_retrieve",
+                "description": "GET /mcp/erp — проверка доступности эндпоинта и валидности контекста.",
+                "tags": [
+                    "mcp"
+                ],
+                "security": [
+                    {}
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No response body"
+                    }
+                }
+            },
+            "post": {
+                "operationId": "mcp_erp_create",
+                "description": "POST /mcp/erp — обработка JSON-RPC 2.0 сообщений протокола MCP.",
+                "tags": [
+                    "mcp"
+                ],
+                "security": [
+                    {}
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No response body"
                     }
                 }
             }

@@ -21,6 +21,8 @@ export default defineConfig({
     globals: true,
     setupFiles: ["./src/test/setup.ts"],
     include: ["src/**/*.test.{ts,tsx}"],
+    // Сценарии экранов (Ant Design, несколько запросов) под параллельной нагрузкой дольше 5 с.
+    testTimeout: 20_000,
     // Refine импортирует react-router как CJS; инлайн убирает двойную копию контекста роутера.
     server: { deps: { inline: [/@refinedev/, /antd/, /@ant-design/] } },
   },

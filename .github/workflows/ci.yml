@@ -9,11 +9,14 @@
 
 name: CI
 
-# Экономия минут (DECISIONS 2026-10-14): только PR (черновики не гоняются, запуск — при «Ready for review»),
-# без повторного прогона на push в main (мерж-коммит = проверенная голова PR); main вручную — workflow_dispatch.
+# PR — проверки по путям (черновики не гоняются, запуск — при «Ready for review»; DECISIONS 2026-10-14).
+# push в main и ручной запуск — полный прогон всех job'ов: защита main не требует «ветка актуальна», поэтому
+# мерж-коммит проверяется отдельно (FIX-00, аудит 2026-10-18; DECISIONS 2026-10-18).
 on:
   pull_request:
     types: [opened, synchronize, reopened, ready_for_review]
+  push:
+    branches: [main]
   workflow_dispatch:
 
 concurrency:
@@ -36,20 +39,24 @@ jobs:
     if: github.event_name != 'pull_request' || !github.event.pull_request.draft
     runs-on: ${{ vars.CI_RUNNER || 'ubuntu-latest' }}
     timeout-minutes: 5
+    # Вне PR (push в main, workflow_dispatch) фильтр не применяется — гоняется всё.
     outputs:
-      crm: ${{ steps.filter.outputs.crm }}
-      erp: ${{ steps.filter.outputs.erp }}
-      cabinet: ${{ steps.filter.outputs.cabinet }}
-      packages: ${{ steps.filter.outputs.packages }}
-      infra: ${{ steps.filter.outputs.infra }}
+      crm: ${{ github.event_name != 'pull_request' || steps.filter.outputs.crm == 'true' }}
+      erp: ${{ github.event_name != 'pull_request' || steps.filter.outputs.erp == 'true' }}
+      cabinet: ${{ github.event_name != 'pull_request' || steps.filter.outputs.cabinet == 'true' }}
+      packages: ${{ github.event_name != 'pull_request' || steps.filter.outputs.packages == 'true' }}
+      infra: ${{ github.event_name != 'pull_request' || steps.filter.outputs.infra == 'true' }}
     steps:
       - uses: actions/checkout@v7
+        if: github.event_name == 'pull_request'
       - uses: dorny/paths-filter@v3
+        if: github.event_name == 'pull_request'
         id: filter
         with:
           filters: |
             crm:
               - 'apps/crm/**'
+              - 'packages/contracts/**'
               - 'packages/ui-tokens/**'
             erp:
               - 'apps/erp/**'

@@ -2929,6 +2929,23 @@
         "title": "ErpStatusOut",
         "type": "object"
       },
+      "ErpWebhookReceipt": {
+        "properties": {
+          "duplicate": {
+            "default": false,
+            "title": "Duplicate",
+            "type": "boolean"
+          },
+          "status": {
+            "const": "ok",
+            "default": "ok",
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "title": "ErpWebhookReceipt",
+        "type": "object"
+      },
       "ErrorDetails": {
         "additionalProperties": true,
         "description": "Подробности ошибки; кроме описанных полей бывают контекстные (`assigned_user_name`, …).",
@@ -6900,6 +6917,37 @@
         "title": "SpendSlice",
         "type": "object"
       },
+      "SsoExchangeRequest": {
+        "properties": {
+          "token": {
+            "title": "Token",
+            "type": "string"
+          }
+        },
+        "required": [
+          "token"
+        ],
+        "title": "SsoExchangeRequest",
+        "type": "object"
+      },
+      "SsoTokenResponse": {
+        "properties": {
+          "redirect_url": {
+            "title": "Redirect Url",
+            "type": "string"
+          },
+          "token": {
+            "title": "Token",
+            "type": "string"
+          }
+        },
+        "required": [
+          "token",
+          "redirect_url"
+        ],
+        "title": "SsoTokenResponse",
+        "type": "object"
+      },
       "SystemStatusOut": {
         "properties": {
           "checked_at": {
@@ -8245,6 +8293,85 @@
           }
         },
         "summary": "Refresh",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/v1/auth/sso/exchange": {
+      "post": {
+        "description": "Обменять SSO-токен из ERP на сессию CRM (CONTRACTS §6).",
+        "operationId": "sso_exchange",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SsoExchangeRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TokenResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Ошибка валидации"
+          }
+        },
+        "summary": "Sso Exchange",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/v1/auth/sso/token": {
+      "post": {
+        "description": "Выдать SSO-токен для перехода текущего сотрудника в ERP (CONTRACTS §6).",
+        "operationId": "sso_token",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SsoTokenResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Ошибка валидации"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Sso Token",
         "tags": [
           "auth"
         ]
@@ -10008,6 +10135,83 @@
           }
         ],
         "summary": "Check Erp Connection",
+        "tags": [
+          "integrations"
+        ]
+      }
+    },
+    "/api/v1/integrations/erp/events": {
+      "post": {
+        "description": "Приём входящих вебхуков событий ERP (M3-CRM-04, CONTRACTS §3).\n\nПроверка HMAC-SHA256 подписи заголовка X-Signature по секрету ERP_WEBHOOK_SECRET,\nидемпотентность по X-Event-Id (UUID), быстрый ответ 200 OK и фоновая обработка в Procrastinate.",
+        "operationId": "receive_erp_event",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "X-Event-Id",
+            "required": true,
+            "schema": {
+              "title": "X-Event-Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-Event-Type",
+            "required": true,
+            "schema": {
+              "title": "X-Event-Type",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-Timestamp",
+            "required": true,
+            "schema": {
+              "title": "X-Timestamp",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-Signature",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Signature"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErpWebhookReceipt"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Ошибка валидации"
+          }
+        },
+        "summary": "Receive Erp Event",
         "tags": [
           "integrations"
         ]
