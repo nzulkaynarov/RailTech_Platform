@@ -20051,13 +20051,6 @@
                     "email_sent": {
                         "type": "boolean"
                     },
-                    "invite_url": {
-                        "type": "string"
-                    },
-                    "telegram_url": {
-                        "type": "string",
-                        "nullable": true
-                    },
                     "invited_at": {
                         "type": "string",
                         "format": "date-time"
@@ -20067,10 +20060,8 @@
                     "channel",
                     "contact_id",
                     "email_sent",
-                    "invite_url",
                     "invited_at",
-                    "ok",
-                    "telegram_url"
+                    "ok"
                 ]
             },
             "ContactLanguageEnum": {

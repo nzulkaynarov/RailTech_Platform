@@ -121,8 +121,6 @@ class ContactViewSet(RoleGatedViewMixin, viewsets.ModelViewSet):
                     "contact_id": serializers.IntegerField(),
                     "channel": serializers.CharField(),
                     "email_sent": serializers.BooleanField(),
-                    "invite_url": serializers.CharField(),
-                    "telegram_url": serializers.CharField(allow_null=True),
                     "invited_at": serializers.DateTimeField(),
                 },
             )
