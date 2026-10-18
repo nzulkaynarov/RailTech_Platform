@@ -84,6 +84,7 @@ class Reason(StrEnum):
     # Центр внешних сервисов (M3-CRM-12, ADR-0024): выключатель недоступен; Telegram на паузе.
     SERVICE_NOT_SWITCHABLE = "service_not_switchable"
     TELEGRAM_PAUSED = "telegram_paused"
+    SSO_NOT_CONFIGURED = "sso_not_configured"
 
 
 class DomainError(Exception):

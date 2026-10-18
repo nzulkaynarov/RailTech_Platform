@@ -52,13 +52,19 @@ class SsoForbiddenError(SsoError):
         super().__init__(detail=detail, status_code=403)
 
 
+class SsoNotConfiguredError(SsoError):
+    def __init__(self, detail: str = "SSO_NOT_CONFIGURED"):
+        super().__init__(detail=detail, status_code=503)
+
+
 def get_sso_secrets() -> List[str]:
-    raw = getattr(settings, "PLATFORM_SSO_SECRET", ["dev-platform-sso-secret"])
+    """Активные ключи SSO (первый подписывает); пусто — SSO выключен (FIX-01: ключа по умолчанию нет)."""
+    raw = getattr(settings, "PLATFORM_SSO_SECRET", [])
     if isinstance(raw, str):
         return [s.strip() for s in raw.split(",") if s.strip()]
     if isinstance(raw, (list, tuple)):
         return [str(s).strip() for s in raw if str(s).strip()]
-    return ["dev-platform-sso-secret"]
+    return []
 
 
 def build_staff_user_payload(user: CustomUser, crm_user_id: Optional[int] = None) -> Dict[str, Any]:
@@ -102,7 +108,9 @@ def issue_sso_token(user: CustomUser) -> Tuple[str, str]:
         raise SsoForbiddenError("USER_INACTIVE")
 
     secrets = get_sso_secrets()
-    secret = secrets[0] if secrets else "dev-platform-sso-secret"
+    if not secrets:
+        raise SsoNotConfiguredError()
+    secret = secrets[0]
 
     mapping = CrmUserMapping.objects.filter(user=user).first()
     crm_user_id = mapping.crm_user_id if mapping else user.pk
@@ -135,6 +143,8 @@ def verify_and_exchange_sso_token(token: str, client_ip: Optional[str] = None) -
         raise SsoValidationError("TOKEN_REQUIRED")
 
     secrets = get_sso_secrets()
+    if not secrets:
+        raise SsoNotConfiguredError()
     payload = None
     last_err = None
 

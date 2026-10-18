@@ -10,7 +10,7 @@ from pathlib import Path
 from typing import Literal
 from urllib.parse import quote
 
-from pydantic import AnyHttpUrl, Field, SecretStr
+from pydantic import AnyHttpUrl, Field, SecretStr, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -121,14 +121,18 @@ class Settings(BaseSettings):
             f"{self.postgres_port}/{self.postgres_db}"
         )
 
+    @model_validator(mode="after")
+    def _prod_requires_seam_secrets(self) -> "Settings":
+        """Ключа SSO по умолчанию нет (FIX-01): prod без него не стартует, иначе SSO выключен."""
+        if self.app_env == "prod" and not self.platform_sso_secrets:
+            raise ValueError("PLATFORM_SSO_SECRET is required when APP_ENV=prod")
+        return self
+
     @property
     def platform_sso_secrets(self) -> list[str]:
         """Список активных ключей SSO для ротации (первый — для подписи новых)."""
-        raw = self.platform_sso_secret.get_secret_value().strip()
-        if not raw:
-            return ["dev-platform-sso-secret"]
-        keys = [k.strip() for k in raw.split(",") if k.strip()]
-        return keys if keys else ["dev-platform-sso-secret"]
+        raw = self.platform_sso_secret.get_secret_value()
+        return [k.strip() for k in raw.split(",") if k.strip()]
 
     @property
     def cabinet_origins(self) -> list[str]:

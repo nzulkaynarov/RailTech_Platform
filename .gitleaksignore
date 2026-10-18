@@ -2,3 +2,4 @@
 docs/history/2026-10-13-target-architecture-and-migration-map.md:generic-api-key:258
 apps/erp/backend/accounts/tests/test_auth.py:generic-api-key:233
 apps/erp/backend/catalog/tests/test_published_layer.py:generic-api-key:444
+apps/erp/backend/portal/tests/test_public_views.py:generic-api-key:59

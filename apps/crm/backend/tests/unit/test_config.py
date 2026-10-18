@@ -32,6 +32,7 @@ def test_dsn_quotes_credentials(password: str, expected: str) -> None:
 
 def test_reads_environment(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("APP_ENV", "prod")
+    monkeypatch.setenv("PLATFORM_SSO_SECRET", "sso-secret-from-env")
     monkeypatch.setenv("POSTGRES_DB", "crm")
     monkeypatch.setenv("LOG_LEVEL", "DEBUG")
     settings = make()
@@ -55,3 +56,19 @@ def test_rejects_invalid_values(field: str, value: object) -> None:
 def test_password_is_not_exposed_in_repr() -> None:
     settings = make(postgres_password=SecretStr("very-secret-value"))
     assert "very-secret-value" not in repr(settings)
+
+
+def test_prod_requires_platform_sso_secret() -> None:
+    """FIX-01 (аудит S-1): ключа SSO по умолчанию нет — prod без него не стартует."""
+    with pytest.raises(ValidationError, match="PLATFORM_SSO_SECRET"):
+        make(app_env="prod")
+
+
+@pytest.mark.parametrize("app_env", ["dev", "test"])
+def test_sso_is_off_without_secret_outside_prod(app_env: str) -> None:
+    assert make(app_env=app_env).platform_sso_secrets == []
+
+
+def test_sso_secrets_support_rotation() -> None:
+    settings = make(platform_sso_secret=SecretStr(" new-key , old-key ,"))
+    assert settings.platform_sso_secrets == ["new-key", "old-key"]

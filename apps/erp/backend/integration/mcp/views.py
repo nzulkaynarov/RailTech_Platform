@@ -33,7 +33,9 @@ class ErpMcpView(APIView):
 
     def _get_agent_context(self, request):
         token = request.headers.get("X-Agent-Context") or request.META.get("HTTP_X_AGENT_CONTEXT")
-        secret = getattr(settings, "ERP_MCP_CONTEXT_KEY", "dev-erp-mcp-context-key")
+        secret = settings.ERP_MCP_CONTEXT_KEY
+        if not secret:
+            raise AgentContextError("ERP_MCP_CONTEXT_KEY is not configured")
         return verify_agent_context(token, secret)
 
     def get(self, request, *args, **kwargs):

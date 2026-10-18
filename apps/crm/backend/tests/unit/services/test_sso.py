@@ -27,7 +27,7 @@ from app.api import errors
 from app.api.deps import get_container, get_principal
 from app.api.v1.auth import router as auth_router
 from app.config import Settings
-from app.domain.errors import AuthError, ForbiddenError
+from app.domain.errors import AuthError, ConflictError, ForbiddenError
 from app.models.auth import SsoReplayToken, User
 from app.security.principal import Principal
 from app.services.auth import ClientInfo, Session
@@ -204,6 +204,37 @@ async def test_issue_sso_token_inactive_user_raises_forbidden(sso_settings: Sett
 
     with pytest.raises(ForbiddenError):
         await sso_svc.issue_token(2)
+
+
+def _active_user(user_id: int) -> User:
+    return User(
+        id=user_id,
+        email=f"user{user_id}@railtech.uz",
+        full_name="Сотрудник",
+        is_active=True,
+        must_change_password=False,
+    )
+
+
+@pytest.mark.asyncio
+async def test_issue_sso_token_without_secret_is_refused(sso_settings: Settings) -> None:
+    """FIX-01: запасного ключа в коде больше нет — без секрета SSO выключен."""
+    settings = sso_settings.model_copy(update={"platform_sso_secret": SecretStr("")})
+    sso_svc = SsoService(make_session_factory({1: _active_user(1)}), settings, MagicMock())
+
+    with pytest.raises(ConflictError) as exc_info:
+        await sso_svc.issue_token(1)
+    assert exc_info.value.details["reason"] == "sso_not_configured"
+
+
+@pytest.mark.asyncio
+async def test_exchange_without_secret_rejects_any_token(sso_settings: Settings) -> None:
+    settings = sso_settings.model_copy(update={"platform_sso_secret": SecretStr("")})
+    sso_svc = SsoService(make_session_factory({42: _active_user(42)}), settings, MagicMock())
+    token = make_erp_sso_token(secret="any-key-an-attacker-could-guess-0123456789")
+
+    with pytest.raises(AuthError):
+        await sso_svc.exchange_token(token, MagicMock())
 
 
 # ─── 2. Exchange Token ────────────────────────────────────────────────────────
