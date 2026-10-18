@@ -52,6 +52,7 @@ REST_FRAMEWORK = {
         "ai_extract": "20/minute",  # AI PDF contract/invoice extraction — each call is a paid Claude request
         "ai_compose": "20/minute",  # AI conversational заявка builder — each call is a paid Claude request
         "ai_draft": "20/minute",  # AI draft-КП build — paid Claude match + a new Quote row per call
+        "mcp": "120/minute",  # erp-mcp (FIX-12): на компанию из X-Agent-Context; один tools/call ≈ 3 HTTP-запроса
     },
     # SEC-04: number of trusted reverse proxies that set X-Forwarded-For before Django.
     # Prod/staging = 1 (host Caddy OVERWRITES XFF with the client IP — see

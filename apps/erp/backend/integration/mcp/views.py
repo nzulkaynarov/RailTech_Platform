@@ -1,8 +1,11 @@
 """ERP MCP Server View (CRM Agent Integration, CONTRACTS §5, M3-ERP-03).
 
 Реализация транспорта streamable-http на эндпоинте /mcp/erp:
-- Проверка заголовка X-Agent-Context (HMAC-SHA256, 60 с)
-- При отсутствии / неверной подписи / истечении срока -> HTTP 401 {"detail": "UNAUTHORIZED"}
+- Проверка заголовка X-Agent-Context (HMAC-SHA256, строгие claims iat/exp/jti, 60 с)
+- Любая ошибка контекста (нет, подпись, типы, срок, повтор jti) -> HTTP 401 {"detail": "INVALID_AGENT_CONTEXT"}
+- jti одноразовый: гасится на tools/call; initialize/ping/tools/list шлёт тот же клиент тем же заголовком
+- Аргументы tools/call проверяются по input_schema -> HTTP 400 INVALID_ARGUMENTS
+- Лимит частоты на компанию из контекста (AgentContextRateThrottle) -> HTTP 429
 - Протокол JSON-RPC 2.0 (initialize, notifications/initialized, ping, tools/list, tools/call)
 - Поддержка официального Python SDK mcp.Client + streamable_http_client
 """
@@ -19,10 +22,15 @@ from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from .context import AgentContextError, verify_agent_context
-from .tools import TOOLS_METADATA, ToolExecutionError, ToolModeError, execute_tool
+from .context import AgentContextError, mark_used, verify_agent_context
+from .throttles import AgentContextRateThrottle
+from .tools import TOOLS_METADATA, InvalidArgumentsError, ToolExecutionError, ToolModeError, execute_tool
 
 logger = logging.getLogger(__name__)
+
+
+def _invalid_context_response() -> Response:
+    return Response({"detail": "INVALID_AGENT_CONTEXT"}, status=status.HTTP_401_UNAUTHORIZED)
 
 
 class ErpMcpView(APIView):
@@ -30,6 +38,8 @@ class ErpMcpView(APIView):
 
     authentication_classes = []
     permission_classes = [AllowAny]
+    # Общий анонимный лимит по IP (20/мин) бил бы по всему трафику CRM — свой, по компании контекста.
+    throttle_classes = [AgentContextRateThrottle]
 
     def _get_agent_context(self, request):
         token = request.headers.get("X-Agent-Context") or request.META.get("HTTP_X_AGENT_CONTEXT")
@@ -44,7 +54,7 @@ class ErpMcpView(APIView):
             context = self._get_agent_context(request)
         except AgentContextError as exc:
             logger.warning("MCP GET rejected: %s", exc)
-            return Response({"detail": "UNAUTHORIZED"}, status=status.HTTP_401_UNAUTHORIZED)
+            return _invalid_context_response()
 
         return Response(
             {
@@ -62,7 +72,7 @@ class ErpMcpView(APIView):
             context = self._get_agent_context(request)
         except AgentContextError as exc:
             logger.warning("MCP POST rejected: %s", exc)
-            return Response({"detail": "UNAUTHORIZED"}, status=status.HTTP_401_UNAUTHORIZED)
+            return _invalid_context_response()
 
         try:
             if isinstance(request.data, dict):
@@ -135,6 +145,11 @@ class ErpMcpView(APIView):
             tool_name = str(params.get("name") or "").strip()
             arguments = params.get("arguments") or {}
             try:
+                mark_used(context)
+            except AgentContextError as exc:
+                logger.warning("MCP tools/call rejected: %s", exc)
+                return _invalid_context_response()
+            try:
                 result_data = execute_tool(context, tool_name, arguments)
                 content_text = json.dumps(result_data, ensure_ascii=False, default=str)
                 return Response(
@@ -149,6 +164,16 @@ class ErpMcpView(APIView):
                     },
                     status=status.HTTP_200_OK,
                     headers={"Content-Type": "application/json"},
+                )
+            except InvalidArgumentsError as exc:
+                return Response(
+                    {
+                        "detail": "INVALID_ARGUMENTS",
+                        "jsonrpc": "2.0",
+                        "id": req_id,
+                        "error": {"code": -32602, "message": "INVALID_ARGUMENTS", "data": exc.errors},
+                    },
+                    status=status.HTTP_400_BAD_REQUEST,
                 )
             except ToolModeError as exc:
                 return Response(

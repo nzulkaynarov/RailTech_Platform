@@ -2,13 +2,15 @@
 
 Формат заголовка X-Agent-Context: base64url(json).base64url(hmac_sha256).
 Секрет: ERP_MCP_CONTEXT_KEY.
-Срок жизни: 60 секунд.
-Claims:
+Срок жизни: 60 секунд (FIX-12: строгие типы, обязательные iat/exp/jti).
+Claims (типы строгие: `bool` не принимается как int, строки не приводятся):
 - crm_client_id: int
-- erp_company_id: int | None (null в режиме prospect)
+- erp_company_id: int | None (null в режиме prospect, обязателен в customer)
 - mode: "prospect" | "customer"
 - language: "ru" | "uz" | "en"
-- exp: unix seconds (<= now + 60)
+- iat: int, unix seconds (не из будущего, допуск 5 с)
+- exp: int, unix seconds; exp − iat <= 60 и exp <= now + 60 (допуск 5 с)
+- jti: UUID v4 строкой; одноразовый, помнится 10 минут (`mark_used`)
 """
 
 from __future__ import annotations
@@ -19,11 +21,17 @@ import hashlib
 import hmac
 import json
 import time
+import uuid
 from typing import Any, Final, Optional
+
+from django.core.cache import cache
 
 HEADER_NAME: Final = "X-Agent-Context"
 DEFAULT_TTL_S: Final = 60
 CLOCK_SKEW_S: Final = 5
+JTI_CACHE_TTL_S: Final = 600
+MODES: Final = ("prospect", "customer")
+LANGUAGES: Final = ("ru", "uz", "en")
 
 
 class AgentContextError(Exception):
@@ -36,8 +44,9 @@ class AgentContext:
     erp_company_id: Optional[int]
     mode: str  # "prospect" | "customer"
     language: str  # "ru" | "uz" | "en"
+    iat: int
     exp: int
-    iat: Optional[int] = None
+    jti: str
     trace_id: Optional[str] = None
 
 
@@ -47,6 +56,21 @@ def _b64encode(data: bytes) -> str:
 
 def _b64decode(value: str) -> bytes:
     return base64.urlsafe_b64decode(value + "=" * (-len(value) % 4))
+
+
+def _is_int(value: Any) -> bool:
+    """Строго JSON-integer: `True` — это bool, а не компания 1."""
+    return type(value) is int
+
+
+def _is_uuid4(value: Any) -> bool:
+    if not isinstance(value, str):
+        return False
+    try:
+        parsed = uuid.UUID(value)
+    except ValueError:
+        return False
+    return parsed.version == 4 and str(parsed) == value.lower()
 
 
 def _sign(payload: str, key: bytes) -> str:
@@ -67,6 +91,7 @@ def issue_agent_context(
     trace_id: Optional[str] = None,
     ttl_s: int = DEFAULT_TTL_S,
     now: Optional[float] = None,
+    jti: Optional[str] = None,
 ) -> str:
     """Генерация подписанного токена X-Agent-Context."""
     if mode == "customer" and erp_company_id is None:
@@ -80,6 +105,7 @@ def issue_agent_context(
         "language": language,
         "iat": current_time,
         "exp": current_time + ttl_s,
+        "jti": jti or str(uuid.uuid4()),
     }
     if trace_id is not None:
         claims["trace_id"] = trace_id
@@ -119,45 +145,63 @@ def verify_agent_context(
     if not isinstance(data, dict):
         raise AgentContextError("context payload must be a JSON object")
 
-    crm_client_id = data.get("crm_client_id") or data.get("client_id")
-    if crm_client_id is None or not isinstance(crm_client_id, int):
+    crm_client_id = data.get("crm_client_id")
+    if not _is_int(crm_client_id):
         raise AgentContextError("invalid or missing crm_client_id")
 
-    mode = str(data.get("mode") or "").strip().lower()
-    if mode not in ("prospect", "customer"):
-        raise AgentContextError(f"invalid mode: {mode}")
+    mode = data.get("mode")
+    if mode not in MODES:
+        raise AgentContextError("invalid mode")
 
-    language = str(data.get("language") or "ru").strip().lower()
-    if language not in ("ru", "uz", "en"):
-        language = "ru"
+    language = data.get("language")
+    if language not in LANGUAGES:
+        raise AgentContextError("invalid language")
 
     erp_company_id = data.get("erp_company_id")
-    if erp_company_id is not None and not isinstance(erp_company_id, int):
+    if erp_company_id is not None and not _is_int(erp_company_id):
         raise AgentContextError("invalid erp_company_id")
 
     if mode == "customer" and not erp_company_id:
         raise AgentContextError("customer mode requires erp_company_id")
 
+    iat = data.get("iat")
+    if not _is_int(iat):
+        raise AgentContextError("missing or invalid iat")
     exp = data.get("exp")
-    if exp is None or not isinstance(exp, (int, float)):
+    if not _is_int(exp):
         raise AgentContextError("missing or invalid exp")
+
+    jti = data.get("jti")
+    if not _is_uuid4(jti):
+        raise AgentContextError("missing or invalid jti")
+
+    trace_id = data.get("trace_id")
+    if trace_id is not None and not isinstance(trace_id, str):
+        raise AgentContextError("invalid trace_id")
 
     current_time = time.time() if now is None else now
     if exp < current_time:
         raise AgentContextError("expired agent context")
-
-    iat = data.get("iat")
-    if iat is not None and isinstance(iat, (int, float)):
-        if iat > current_time + CLOCK_SKEW_S:
-            raise AgentContextError("context issued in future")
-        iat = int(iat)
+    if exp <= iat or exp - iat > DEFAULT_TTL_S:
+        raise AgentContextError("invalid agent context lifetime")
+    if exp > current_time + DEFAULT_TTL_S + CLOCK_SKEW_S:
+        raise AgentContextError("agent context expires too far in the future")
+    if iat > current_time + CLOCK_SKEW_S:
+        raise AgentContextError("context issued in future")
 
     return AgentContext(
         crm_client_id=crm_client_id,
         erp_company_id=erp_company_id,
         mode=mode,
         language=language,
-        exp=int(exp),
         iat=iat,
-        trace_id=data.get("trace_id"),
+        exp=exp,
+        jti=jti.lower(),
+        trace_id=trace_id,
     )
+
+
+def mark_used(context: AgentContext) -> None:
+    """Одноразовость: `jti` принимается один раз, помнится 10 минут. Повтор — AgentContextError."""
+    if not cache.add(f"erp_mcp_jti:{context.jti}", True, timeout=JTI_CACHE_TTL_S):
+        raise AgentContextError("agent context replay")

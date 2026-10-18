@@ -4,6 +4,10 @@
 подписывает контекст ключом из env и передаёт его MCP-серверу в заголовке
 `X-Agent-Context`. Формат: `base64url(json).base64url(hmac_sha256)`.
 Сервер проверяет подпись (constant-time) и срок жизни (по умолчанию 60 с).
+
+Формат claims согласован с `packages/contracts/mcp-tools.json` (FIX-12): целочисленные `iat` и `exp`
+(`exp − iat` = 60 с) и одноразовый `jti` (UUID v4, новый на каждый выпуск). Приёмник `erp-mcp`
+гасит `jti` на вызове инструмента, поэтому контекст для него выпускается заново на каждый вызов.
 """
 
 import base64
@@ -11,6 +15,7 @@ import hashlib
 import hmac
 import json
 import time
+import uuid
 from collections.abc import Callable
 from typing import Final, Literal
 
@@ -19,6 +24,8 @@ from pydantic import BaseModel, ConfigDict, Field, ValidationError
 HEADER_NAME: Final = "X-Agent-Context"
 DEFAULT_TTL_S: Final = 60
 CLOCK_SKEW_S: Final = 5
+
+UUID4_PATTERN: Final = r"^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
 
 AgentMode = Literal["prospect", "customer"]
 
@@ -37,6 +44,7 @@ class AgentContext(BaseModel):
     trace_id: str | None = None
     iat: int
     exp: int
+    jti: str = Field(pattern=UUID4_PATTERN)
 
 
 def _b64encode(data: bytes) -> str:
@@ -73,6 +81,7 @@ def issue(
         trace_id=trace_id,
         iat=issued,
         exp=issued + ttl_s,
+        jti=str(uuid.uuid4()),
     )
     payload = _b64encode(context.model_dump_json().encode("utf-8"))
     return f"{payload}.{_sign(payload, key)}"
