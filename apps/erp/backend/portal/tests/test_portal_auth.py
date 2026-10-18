@@ -56,6 +56,21 @@ class TestTelegramAuth:
         assert response.status_code == status.HTTP_401_UNAUTHORIZED
         assert response.data["detail"] == "INVALID_INIT_DATA"
 
+    @pytest.mark.parametrize("bot_token_setting", ["", "TEST_BOT_TOKEN_12345"])
+    def test_forged_init_data_is_rejected_even_in_debug(
+        self, settings, client_contact, anon_portal_client, bot_token_setting
+    ):
+        """FIX-02 (аудит P-2): DEBUG и пустой токен бота больше не отключают проверку подписи."""
+        settings.DEBUG = True
+        settings.TELEGRAM_BOT_TOKEN = bot_token_setting
+        forged = make_telegram_init_data(user_id=client_contact.telegram_user_id, bot_token="attacker-guess")
+
+        response = anon_portal_client.post("/api/portal/v1/auth/telegram", {"init_data": forged}, format="json")
+
+        assert response.status_code == status.HTTP_401_UNAUTHORIZED
+        assert response.data["detail"] == "INVALID_INIT_DATA"
+        assert not PortalSession.objects.filter(contact=client_contact).exists()
+
     def test_telegram_auth_expired(self, bot_token, client_contact, anon_portal_client):
         # auth_date 10 минут назад (> 300с)
         old_auth_date = int(time.time()) - 600

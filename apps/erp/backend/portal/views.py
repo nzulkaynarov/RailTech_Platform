@@ -49,13 +49,12 @@ from rest_framework import status
 from rest_framework.parsers import FormParser, MultiPartParser
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from sales.models.acceptance import QuoteAcceptanceCode
 
 from catalog.published import project, project_many, published_products
 from crm.constants import DealStageCode, FulfillmentStatusCode, InvoiceStatusCode, QuoteStatusCode
 from crm.models import Act, ActivityLog, Contract, Deal, DealStage, Fulfillment, GeneratedDocument, Invoice, Quote
 from crm.services.deals import transition_deal_stage
-from crm.services.quotes.lifecycle_accept import perform_quote_acceptance
+from crm.services.public_page import verify_code_and_accept
 from sourcing.models import Attachment
 
 logger = logging.getLogger(__name__)
@@ -545,37 +544,13 @@ class QuoteAcceptView(BasePortalView):
         if quote.valid_until and quote.valid_until < timezone.localdate():
             raise PortalConflict("QUOTE_EXPIRED")
 
-        # Проверка кода акцепта
-        import hashlib
-
-        code_hash = hashlib.sha256(code.encode()).hexdigest()
-        accept_code_obj = (
-            QuoteAcceptanceCode.objects.filter(
-                quote=quote,
-                consumed_at__isnull=True,
-                expires_at__gte=timezone.now(),
-            )
-            .order_by("-created_at")
-            .first()
-        )
-        if accept_code_obj:
-            if accept_code_obj.code_hash != code_hash and code != "2468":
-                accept_code_obj.attempts += 1
-                accept_code_obj.save(update_fields=["attempts"])
-                raise PortalConflict("QUOTE_CODE_INVALID")
-            accept_code_obj.consumed_at = timezone.now()
-            accept_code_obj.save(update_fields=["consumed_at"])
-        elif code != "2468":
+        # Код акцепта — одноразовый, с TTL и лимитом попыток; погашение и акцепт — одна транзакция
+        # (crm.services.public_page, общий путь с публичной страницей КП). Мастер-кода нет (FIX-02).
+        accepted, error = verify_code_and_accept(quote, code, request_ip=request.META.get("REMOTE_ADDR", ""))
+        if error == "QUOTE_ALREADY_DECIDED":
+            raise PortalConflict("QUOTE_FINALIZED")
+        if error:
             raise PortalConflict("QUOTE_CODE_INVALID")
-
-        # Выполняем акцепт через общий FSM
-        ip = request.META.get("REMOTE_ADDR")
-        perform_quote_acceptance(
-            quote.id,
-            approved_by_user=None,
-            contact_email=request.portal_contact.email,
-            request_ip=ip,
-        )
 
         quote.refresh_from_db()
         return QuoteDetailView().get(request, pk)

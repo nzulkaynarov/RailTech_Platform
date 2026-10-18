@@ -50,19 +50,19 @@ def validate_and_parse_init_data(init_data: str, bot_token: str = "") -> dict:
     except (ValueError, TypeError) as exc:
         raise AuthenticationFailed("INVALID_INIT_DATA") from exc
 
-    # Проверка подписи HMAC-SHA256
-    if token:
-        check_items = sorted([(k, v) for k, v in parsed_items if k != "hash"], key=lambda x: x[0])
-        data_check_string = "\n".join(f"{k}={v}" for k, v in check_items)
+    # Проверка подписи HMAC-SHA256 — всегда: без токена бота вход через Mini App закрыт и в DEBUG
+    # (иначе на стенде входит кто угодно под любым telegram_user_id; FIX-02, аудит P-2).
+    if not token:
+        logger.error("TELEGRAM_BOT_TOKEN is not configured — Mini App sign-in is disabled")
+        raise AuthenticationFailed("INVALID_INIT_DATA")
+    check_items = sorted([(k, v) for k, v in parsed_items if k != "hash"], key=lambda x: x[0])
+    data_check_string = "\n".join(f"{k}={v}" for k, v in check_items)
 
-        secret_key = hmac.new(b"WebAppData", token.encode("utf-8"), hashlib.sha256).digest()
-        calculated_hash = hmac.new(secret_key, data_check_string.encode("utf-8"), hashlib.sha256).hexdigest()
+    secret_key = hmac.new(b"WebAppData", token.encode("utf-8"), hashlib.sha256).digest()
+    calculated_hash = hmac.new(secret_key, data_check_string.encode("utf-8"), hashlib.sha256).hexdigest()
 
-        if not hmac.compare_digest(calculated_hash, received_hash):
-            logger.warning("init_data signature mismatch")
-            raise AuthenticationFailed("INVALID_INIT_DATA")
-    elif not settings.DEBUG:
-        logger.error("TELEGRAM_BOT_TOKEN is not configured in production")
+    if not hmac.compare_digest(calculated_hash, received_hash):
+        logger.warning("init_data signature mismatch")
         raise AuthenticationFailed("INVALID_INIT_DATA")
 
     # Извлечение данных пользователя

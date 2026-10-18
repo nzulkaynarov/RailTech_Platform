@@ -13,6 +13,7 @@ from decimal import Decimal
 import pytest
 from django.core.files.uploadedfile import SimpleUploadedFile
 from parties.models import Contact
+from portal.tests.conftest import issue_test_acceptance_code
 from rest_framework import status
 
 from catalog.models import Category, Product, ProductStatus
@@ -158,10 +159,11 @@ class TestPortalEndToEndLifecycle:
         )
         assert price_val == "500000.00"
 
-        # ── 6. Клиент акцептует КП ─────────────────────────────────────────
+        # ── 6. Клиент акцептует КП одноразовым кодом из письма ──────────────
+        code = issue_test_acceptance_code(quote, client_contact.email)
         accept_resp = portal_client.post(
             f"/api/portal/v1/quotes/{quote.id}/accept",
-            {"code": "2468"},
+            {"code": code},
             format="json",
         )
         assert accept_resp.status_code == status.HTTP_200_OK
