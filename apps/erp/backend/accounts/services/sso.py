@@ -103,7 +103,13 @@ def build_staff_user_payload(user: CustomUser, crm_user_id: Optional[int] = None
     }
 
 
+def _require_sso_enabled() -> None:
+    if not getattr(settings, "PLATFORM_SSO_ENABLED", False):
+        raise SsoForbiddenError("SSO_DISABLED")
+
+
 def issue_sso_token(user: CustomUser) -> Tuple[str, str]:
+    _require_sso_enabled()
     if not user.is_active:
         raise SsoForbiddenError("USER_INACTIVE")
 
@@ -139,6 +145,7 @@ def issue_sso_token(user: CustomUser) -> Tuple[str, str]:
 
 
 def verify_and_exchange_sso_token(token: str, client_ip: Optional[str] = None) -> Tuple[CustomUser, Dict[str, Any]]:
+    _require_sso_enabled()
     if not token or not isinstance(token, str):
         raise SsoValidationError("TOKEN_REQUIRED")
 

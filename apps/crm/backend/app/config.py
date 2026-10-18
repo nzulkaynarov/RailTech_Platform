@@ -102,6 +102,9 @@ class Settings(BaseSettings):
 
     # Платформенный SSO-секрет (CRM ↔ ERP, CONTRACTS §6, M3-CRM-06): HS256, поддержка ротации.
     platform_sso_secret: SecretStr = SecretStr("")
+    # Переход CRM ↔ ERP выключен до волны 1 исправлений (FIX-03, аудит S-2/S-3): сейчас обмен
+    # токена небезопасен. Включает владелец после FIX-10/FIX-11.
+    platform_sso_enabled: bool = False
     erp_frontend_url: str = "http://erp.localhost"
 
     jwt_secret: SecretStr = SecretStr("")

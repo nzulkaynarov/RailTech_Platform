@@ -45,6 +45,7 @@ def sso_settings() -> Settings:
         postgres_host="db.invalid",
         postgres_password="test-password",
         platform_sso_secret=SecretStr(f"{SECRET_1},{SECRET_2}"),
+        platform_sso_enabled=True,
         erp_frontend_url="http://erp.localhost",
         jwt_secret=SecretStr("crm-jwt-secret-at-least-32-chars-long"),
     )
@@ -235,6 +236,25 @@ async def test_exchange_without_secret_rejects_any_token(sso_settings: Settings)
 
     with pytest.raises(AuthError):
         await sso_svc.exchange_token(token, MagicMock())
+
+
+@pytest.mark.asyncio
+async def test_sso_is_refused_while_disabled(sso_settings: Settings) -> None:
+    """FIX-03: до волны 1 переход выключен флагом PLATFORM_SSO_ENABLED (по умолчанию false)."""
+    settings = sso_settings.model_copy(update={"platform_sso_enabled": False})
+    user = User(
+        id=1, email="a@railtech.uz", full_name="А", is_active=True, must_change_password=False
+    )
+    sso_svc = SsoService(make_session_factory({1: user}), settings, MagicMock())
+
+    with pytest.raises(ForbiddenError):
+        await sso_svc.issue_token(1)
+    with pytest.raises(ForbiddenError):
+        await sso_svc.exchange_token(make_erp_sso_token(sub="1"), ClientInfo(ip="127.0.0.1"))
+
+
+def test_sso_is_disabled_by_default() -> None:
+    assert Settings(_env_file=None).platform_sso_enabled is False
 
 
 # ─── 2. Exchange Token ────────────────────────────────────────────────────────

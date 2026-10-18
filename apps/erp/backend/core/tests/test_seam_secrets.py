@@ -70,7 +70,8 @@ def test_mcp_is_closed_without_context_key(no_seam_secrets):
 
 
 @pytest.mark.django_db
-def test_sso_exchange_is_unavailable_without_secret(no_seam_secrets):
+def test_sso_exchange_is_unavailable_without_secret(no_seam_secrets, settings):
+    settings.PLATFORM_SSO_ENABLED = True  # флаг FIX-03 включён — проверяем именно отсутствие секрета
     response = APIClient().post("/api/v1/auth/sso/exchange/", {"token": "anything"}, format="json")
 
     assert response.status_code == 503

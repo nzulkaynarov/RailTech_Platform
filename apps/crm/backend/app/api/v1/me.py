@@ -6,21 +6,30 @@ from fastapi import APIRouter, Depends
 
 from app.api.deps import ContainerDep, PrincipalDep, get_rbac
 from app.api.v1.users import to_out
-from app.schemas.auth import MePatch, PermissionsResponse, UserOut
+from app.container import Container
+from app.schemas.auth import MeOut, MePatch, PermissionsResponse
 from app.schemas.leads import ActionResult
 from app.security.rbac import Rbac
 from app.services.staff_notifier import StaffNotifier
+from app.services.users import UserView
 
 router = APIRouter(prefix="/api/v1/me", tags=["me"])
 
 
-@router.get("", response_model=UserOut)
-async def me(principal: PrincipalDep, container: ContainerDep) -> UserOut:
-    return to_out(await container.user_service.get(principal.user_id))
+def _me_out(view: UserView, container: Container) -> MeOut:
+    return MeOut(
+        **to_out(view).model_dump(),
+        sso_enabled=container.settings.platform_sso_enabled,
+    )
 
 
-@router.patch("", response_model=UserOut)
-async def update_me(body: MePatch, principal: PrincipalDep, container: ContainerDep) -> UserOut:
+@router.get("", response_model=MeOut)
+async def me(principal: PrincipalDep, container: ContainerDep) -> MeOut:
+    return _me_out(await container.user_service.get(principal.user_id), container)
+
+
+@router.patch("", response_model=MeOut)
+async def update_me(body: MePatch, principal: PrincipalDep, container: ContainerDep) -> MeOut:
     svc = container.user_service
     view = await svc.get(principal.user_id)
     if body.ui_mode is not None:
@@ -32,7 +41,7 @@ async def update_me(body: MePatch, principal: PrincipalDep, container: Container
             system=body.notify_system,
             leads=body.notify_leads,
         )
-    return to_out(view)
+    return _me_out(view, container)
 
 
 @router.post("/test-notification", response_model=ActionResult)

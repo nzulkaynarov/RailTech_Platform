@@ -65,6 +65,8 @@ class SsoService:
 
     async def issue_token(self, user_id: int) -> tuple[str, str]:
         """Выпустить JWT SSO-токен для перехода текущего сотрудника в ERP."""
+        if not self._settings.platform_sso_enabled:
+            raise ForbiddenError("platform sso is disabled")
         async with self._sessions() as session:
             user = await session.get(User, user_id)
             if user is None or not user.is_active:
@@ -111,6 +113,8 @@ class SsoService:
 
     async def exchange_token(self, token: str, client: ClientInfo) -> Session:
         """Проверить SSO-токен от ERP и обменять его на сессию CRM."""
+        if not self._settings.platform_sso_enabled:
+            raise ForbiddenError("platform sso is disabled")
         if not token or not isinstance(token, str):
             raise AuthError("token required")
 

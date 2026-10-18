@@ -95,6 +95,7 @@ import type {
   MakeCustomer,
   ManualDocument,
   ManualLeadIn,
+  MeOut,
   MePatch,
   MessageOut,
   ModelChangeIn,
@@ -9934,8 +9935,8 @@ export const getMeUrl = () => {
 /**
  * @summary Me
  */
-export const me = async (options?: Parameters<typeof http>[1]): Promise<UserOut> => {
-  return http<UserOut>(getMeUrl(), {
+export const me = async (options?: Parameters<typeof http>[1]): Promise<MeOut> => {
+  return http<MeOut>(getMeUrl(), {
     ...options,
     method: "GET",
   });
@@ -10036,7 +10037,7 @@ export const getUpdateMeUrl = () => {
 export const updateMe = async (
   mePatch: MePatch,
   options?: Parameters<typeof http>[1],
-): Promise<UserOut> => {
+): Promise<MeOut> => {
   const getHeaders = (
     h?: NonNullable<RequestInit["headers"]>,
   ): Record<string, string | readonly string[]> => {
@@ -10056,7 +10057,7 @@ export const updateMe = async (
     }
     return headers;
   };
-  return http<UserOut>(getUpdateMeUrl(), {
+  return http<MeOut>(getUpdateMeUrl(), {
     ...options,
     method: "PATCH",
     headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
