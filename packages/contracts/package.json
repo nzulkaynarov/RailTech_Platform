@@ -2,6 +2,7 @@
   "name": "@rt-platform/contracts",
   "version": "0.1.0",
   "private": true,
+  "packageManager": "pnpm@10.28.0",
   "description": "Контракт ансамбля RailTech Platform: OpenAPI ERP (internal, portal, integration), схема событий, erp-mcp, SSO-токен; генерация клиентов",
   "scripts": {
     "lint:openapi": "redocly lint openapi/erp-internal.yaml openapi/erp-portal.yaml openapi/erp-integration.yaml",

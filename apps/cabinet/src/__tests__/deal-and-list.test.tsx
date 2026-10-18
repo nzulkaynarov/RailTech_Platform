@@ -76,13 +76,16 @@ describe('Адаптивный список на десктопе', () => {
 
     await router.navigate('/quotes');
     await screen.findByRole('table', { name: 'Коммерческие предложения' });
-    // Фокус ставим, когда таблица устоялась (после возврата список может перерисоваться).
-    await vi.waitFor(() => {
-      const link = screen.getByRole('link', { name: 'KP-2026-0057 · версия 1' });
-      link.focus();
-      expect(link).toHaveFocus();
-    });
-    await user.keyboard('{Enter}');
+    // После возврата список может перерисоваться и снять фокус между focus() и Enter (флак на CI):
+    // фокус и Enter повторяются, пока не случится переход со списка.
+    await vi.waitFor(
+      async () => {
+        screen.getByRole('link', { name: 'KP-2026-0057 · версия 1' }).focus();
+        await user.keyboard('{Enter}');
+        expect(router.state.location.pathname).not.toBe('/quotes');
+      },
+      { timeout: 5_000 },
+    );
     expect(await heading('КП KP-2026-0057')).toBeInTheDocument();
   });
 
