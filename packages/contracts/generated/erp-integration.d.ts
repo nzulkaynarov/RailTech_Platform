@@ -420,9 +420,10 @@ export interface components {
       erp_deal_id: number;
       line_no: number;
       title: string;
-      /** @description Количество как десятичная строка */
-      quantity?: string;
-      unit?: string;
+      /** @description Количество как десятичная строка; null — ERP не хранит количество поставки (не выдумывается) */
+      quantity?: string | null;
+      /** @description Единица; null — нет данных */
+      unit?: string | null;
       status: components["schemas"]["DeliveryStatus"];
       /** Format: date */
       eta?: string | null;

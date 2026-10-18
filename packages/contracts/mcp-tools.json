@@ -6,13 +6,16 @@
   "path": "/mcp/erp",
   "context": {
     "header": "X-Agent-Context",
-    "description": "Подписанный контекст агента CRM (SPEC CRM §7.1): JSON с claims crm_client_id, erp_company_id, mode (prospect|customer), language, exp; HMAC-SHA256 ключом ERP_MCP_CONTEXT_KEY из окружения, срок 60 с. Инструменты не принимают идентификаторов клиента аргументами: компания берётся только из контекста. Без контекста — 401; чужой клиент — пустой результат.",
+    "description": "Подписанный контекст агента CRM (SPEC CRM §7.1): base64url(JSON).base64url(HMAC-SHA256) ключом ERP_MCP_CONTEXT_KEY из окружения. Типы claims строгие: целые числа — именно JSON-integer (bool, строка, float не принимаются), mode и language — только перечисленные значения, без нормализации. Обязательны iat и exp, правило exp − iat ≤ 60 (и exp > iat), exp ≤ now + 60 (допуск часов 5 с), iat не из будущего (допуск 5 с). Обязателен jti — UUID v4 строкой; приёмник принимает каждый jti один раз и хранит 10 минут; повтор — отказ. Выпускающая сторона (CRM) создаёт новый контекст с новым jti на каждый вызов инструмента. Подпись, типы и срок проверяются на каждом HTTP-запросе; одноразовость jti — на tools/call (initialize, ping и tools/list шлёт тот же клиент тем же заголовком до вызова инструмента). Инструменты не принимают идентификаторов клиента аргументами: компания берётся только из контекста. Любая ошибка контекста — 401 {\"detail\": \"INVALID_AGENT_CONTEXT\"}. Аргументы tools/call проверяются по input_schema инструмента; нарушение — 400 INVALID_ARGUMENTS. Частота — лимит на erp_company_id (в режиме prospect — на crm_client_id): превышение — 429. Чужой клиент — пустой результат.",
     "claims": {
       "crm_client_id": "integer",
-      "erp_company_id": "integer|null — null в режиме prospect",
+      "erp_company_id": "integer|null — null в режиме prospect, обязателен в customer",
       "mode": "prospect | customer",
       "language": "ru | uz | en",
-      "exp": "unix seconds, ≤ now + 60"
+      "iat": "integer, unix seconds, момент выдачи; обязателен",
+      "exp": "integer, unix seconds; обязателен; exp − iat ≤ 60, exp ≤ now + 60",
+      "jti": "string, UUID v4, одноразовый (приёмник помнит 10 минут); обязателен",
+      "trace_id": "string, необязателен"
     }
   },
   "tools": [
@@ -26,14 +29,14 @@
     {
       "name": "get_deal_status",
       "modes": ["customer"],
-      "description": "Стадия сделки, КП, счета, поставки (проекция клиента), акты.",
+      "description": "Стадия сделки, КП, счета, поставки (проекция клиента), акты. КП — только отправленные, принятые и отклонённые клиентом (черновики и КП на согласовании не отдаются).",
       "input_schema": {
         "type": "object",
         "required": ["erp_deal_id"],
         "properties": { "erp_deal_id": { "type": "integer" } },
         "additionalProperties": false
       },
-      "output": "Deal из erp-integration.yaml, отфильтрованный по компании контекста; чужая сделка — пусто"
+      "output": "Deal из erp-integration.yaml, отфильтрованный по компании контекста; quotes — только статусы sent, viewed, accepted, rejected, expired; чужая сделка — пусто"
     },
     {
       "name": "get_delivery_status",
@@ -45,7 +48,7 @@
         "properties": { "erp_deal_id": { "type": "integer" } },
         "additionalProperties": false
       },
-      "output": "массив DeliveryLine"
+      "output": "массив DeliveryLine; quantity и unit — null, если ERP не хранит количество поставки"
     },
     {
       "name": "list_client_documents",
@@ -87,7 +90,7 @@
         },
         "additionalProperties": false
       },
-      "output": "массив CatalogItem; в режиме prospect без price/availability/lead_time_days"
+      "output": "массив CatalogItem из erp-portal.yaml — только ключи опубликованного слоя (проекция catalog.published); в режиме prospect без price/availability/lead_time_days; sku, артикулы поставщиков и остатки не отдаются"
     },
     {
       "name": "create_request",
