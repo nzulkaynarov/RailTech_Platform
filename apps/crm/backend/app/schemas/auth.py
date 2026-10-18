@@ -41,6 +41,13 @@ class UserOut(BaseModel):
     tg_dm_failed_at: datetime | None = None
 
 
+class MeOut(UserOut):
+    """Свой профиль + флаги развёртывания, по которым SPA прячет кнопки (истина — на сервере)."""
+
+    # Переход в ERP по SSO включён (PLATFORM_SSO_ENABLED, FIX-03); иначе кнопки «В бэк-офис» нет.
+    sso_enabled: bool = False
+
+
 class MePatch(BaseModel):
     """Своё: режим навигации и подписки на личные уведомления от бота (Q-010)."""
 

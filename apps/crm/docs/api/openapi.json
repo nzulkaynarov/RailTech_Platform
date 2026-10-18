@@ -4767,6 +4767,92 @@
         "title": "ManualLeadIn",
         "type": "object"
       },
+      "MeOut": {
+        "description": "Свой профиль + флаги развёртывания, по которым SPA прячет кнопки (истина — на сервере).",
+        "properties": {
+          "email": {
+            "title": "Email",
+            "type": "string"
+          },
+          "full_name": {
+            "title": "Full Name",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "is_active": {
+            "title": "Is Active",
+            "type": "boolean"
+          },
+          "must_change_password": {
+            "title": "Must Change Password",
+            "type": "boolean"
+          },
+          "notify_leads": {
+            "title": "Notify Leads",
+            "type": "boolean"
+          },
+          "notify_system": {
+            "title": "Notify System",
+            "type": "boolean"
+          },
+          "roles": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Roles",
+            "type": "array"
+          },
+          "sso_enabled": {
+            "default": false,
+            "title": "Sso Enabled",
+            "type": "boolean"
+          },
+          "tg_dm_failed_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tg Dm Failed At"
+          },
+          "tg_user_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tg User Id"
+          },
+          "ui_mode": {
+            "title": "Ui Mode",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "email",
+          "full_name",
+          "roles",
+          "is_active",
+          "tg_user_id",
+          "must_change_password",
+          "ui_mode",
+          "notify_system",
+          "notify_leads"
+        ],
+        "title": "MeOut",
+        "type": "object"
+      },
       "MePatch": {
         "description": "Своё: режим навигации и подписки на личные уведомления от бота (Q-010).",
         "properties": {
@@ -12736,7 +12822,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/UserOut"
+                  "$ref": "#/components/schemas/MeOut"
                 }
               }
             },
@@ -12780,7 +12866,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/UserOut"
+                  "$ref": "#/components/schemas/MeOut"
                 }
               }
             },

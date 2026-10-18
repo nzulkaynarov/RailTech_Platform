@@ -31,6 +31,7 @@ SSO_SECRET_SECONDARY = "test-platform-sso-secret-secondary"
 @pytest.fixture(autouse=True)
 def setup_sso_settings(settings):
     settings.PLATFORM_SSO_SECRET = [SSO_SECRET_PRIMARY, SSO_SECRET_SECONDARY]
+    settings.PLATFORM_SSO_ENABLED = True
     settings.CRM_FRONTEND_URL = "http://crm.localhost"
     cache.clear()
 
@@ -228,3 +229,18 @@ def test_exchange_deactivated_user_returns_403(client):
     # Должен отказать 403 FORBIDDEN
     assert resp.status_code == status.HTTP_403_FORBIDDEN
     assert resp.json()["detail"] == "USER_INACTIVE"
+
+
+def test_sso_is_disabled_by_default_and_refused(client, staff_user, settings):
+    """FIX-03: до волны 1 переход выключен (PLATFORM_SSO_ENABLED=false) — обе стороны отказывают,
+    /me не показывает кнопку."""
+    settings.PLATFORM_SSO_ENABLED = False
+    client.force_authenticate(user=staff_user)
+
+    issue = client.post("/api/v1/auth/sso/token/")
+    exchange = client.post("/api/v1/auth/sso/exchange/", {"token": "anything"}, format="json")
+    me = client.get("/api/v1/accounts/users/me/")
+
+    assert issue.status_code == 403 and issue.data["detail"] == "SSO_DISABLED"
+    assert exchange.status_code == 403 and exchange.data["detail"] == "SSO_DISABLED"
+    assert me.status_code == 200 and me.data["capabilities"]["sso_enabled"] is False

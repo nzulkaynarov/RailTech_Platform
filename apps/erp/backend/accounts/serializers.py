@@ -510,6 +510,8 @@ class MeSerializer(serializers.ModelSerializer):
             # SPA переводит по `code`. У администратора без членства — пусто (SPA пишет «Администратор»).
             "roles": self._own_roles(obj, own_company_id),
             "is_solo_team": self._is_solo_team(own_company_id),
+            # Переход в CRM по SSO включён (PLATFORM_SSO_ENABLED, FIX-03) — иначе кнопки «В CRM» нет.
+            "sso_enabled": settings.PLATFORM_SSO_ENABLED,
             # R4 §7.4: остаток дневного лимита ИИ — информация, а не гейт; cap/remaining = null —
             # безлимит (потолок выключен, администратор).
             "ai_daily_used": ai_usage["used"],
