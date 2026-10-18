@@ -78,4 +78,5 @@ export const Reason = {
   ai_spend_period: "ai_spend_period",
   service_not_switchable: "service_not_switchable",
   telegram_paused: "telegram_paused",
+  sso_not_configured: "sso_not_configured",
 } as const;
