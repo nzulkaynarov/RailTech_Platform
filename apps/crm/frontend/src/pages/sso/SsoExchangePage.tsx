@@ -3,8 +3,9 @@ import { Alert, Button, Card, Spin, Typography } from "antd";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router";
 
-import { exchangeSsoToken } from "../../api/sso";
-import { t } from "../../i18n/ru";
+import { ssoExchange } from "../../api/generated/crm";
+import { ApiError, tokenStore } from "../../api/http";
+import { errorText, t } from "../../i18n/ru";
 import "../pages.css";
 
 /**
@@ -34,8 +35,9 @@ export function SsoExchangePage() {
       }
 
       try {
-        await exchangeSsoToken(token);
+        const data = await ssoExchange({ token });
         if (!active) return;
+        tokenStore.set(data.access_token);
 
         // Удаляем токен из URL, чтобы он не оседал в истории
         window.history.replaceState(null, "", "/");
@@ -46,8 +48,7 @@ export function SsoExchangePage() {
         void navigate("/", { replace: true });
       } catch (err) {
         if (!active) return;
-        const msg = err instanceof Error ? err.message : t.sso.exchangeFailed;
-        setError(msg);
+        setError(errorText(err instanceof ApiError ? err.code : undefined, t.sso.exchangeFailed));
         setLoading(false);
       }
     }
