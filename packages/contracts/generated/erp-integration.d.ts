@@ -229,6 +229,7 @@ export interface components {
       /**
        * @example NOT_FOUND
        * @example IDEMPOTENCY_CONFLICT
+       * @example EMAIL_CONFLICT
        * @example VALIDATION_ERROR
        */
       detail: string;
@@ -839,6 +840,15 @@ export interface operations {
         };
       };
       401: components["responses"]["Unauthorized"];
+      /** @description `EMAIL_CONFLICT` — e-mail занят пользователем ERP с другим `crm_user_id` или без сопоставления с CRM; пользователь не переписывается (sso-token.md, FIX-10). */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Error"];
+        };
+      };
       422: components["responses"]["ValidationError"];
     };
   };
