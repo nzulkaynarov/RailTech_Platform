@@ -6,13 +6,14 @@ import { useState } from "react";
 import { Link } from "react-router";
 
 import { useSystemStatus } from "../api/adminQueries";
-import { issueSsoToken } from "../api/sso";
+import { ssoToken } from "../api/generated/crm";
+import { ApiError } from "../api/http";
 
 import { ModeSwitch } from "../components/ModeSwitch";
 import { useEventStream } from "../hooks/useEventStream";
 import { useLeadAlertHandler } from "../hooks/useLeadAlerts";
 import { criticalFailures, headerHealth, type HeaderTone } from "../domain/systemHealth";
-import { t } from "../i18n/ru";
+import { errorText, t } from "../i18n/ru";
 import { UserMenu } from "./UserMenu";
 
 const BADGE: Record<HeaderTone, "success" | "warning" | "error"> = {
@@ -91,10 +92,12 @@ export function Header() {
   const handleGoToErp = async () => {
     setSsoLoading(true);
     try {
-      const data = await issueSsoToken();
+      const data = await ssoToken();
       window.location.href = `${data.redirect_url}#token=${data.token}`;
     } catch (err) {
-      void message.error(err instanceof Error ? err.message : t.sso.goToErpFailed);
+      void message.error(
+        errorText(err instanceof ApiError ? err.code : undefined, t.sso.goToErpFailed),
+      );
     } finally {
       setSsoLoading(false);
     }

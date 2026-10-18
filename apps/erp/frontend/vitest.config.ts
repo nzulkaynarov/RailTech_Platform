@@ -8,6 +8,8 @@ export default defineConfig({
     environment: 'jsdom',
     globals: true,
     setupFiles: ['./src/test/setup.ts'],
+    // Сценарии экранов (ввод, диалоги, несколько запросов к моку) под параллельной нагрузкой дольше 5 с.
+    testTimeout: 20_000,
     // Playwright browser specs live in e2e/ and run via `npm run test:e2e`,
     // not under vitest/jsdom — keep them out of the unit-test run.
     exclude: [...configDefaults.exclude, 'e2e/**'],

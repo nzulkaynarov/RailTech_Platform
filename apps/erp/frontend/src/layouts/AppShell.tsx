@@ -263,7 +263,7 @@ function AppShellInner({ children, activePage, onNavigate, onStartTour, fullBlee
       const data = await issueSsoToken();
       window.location.href = `${data.redirect_url}#token=${data.token}`;
     } catch {
-      toast.error(t('sso.goToCrmFailed', 'Не удалось перейти в CRM'));
+      toast.error(t('sso.goToCrmFailed'));
     } finally {
       setSsoLoading(false);
     }
@@ -494,13 +494,13 @@ function AppShellInner({ children, activePage, onNavigate, onStartTour, fullBlee
                     className="h-8 gap-1.5 text-xs font-medium"
                     disabled={ssoLoading}
                     onClick={handleGoToCrm}
-                    aria-label={t('sso.goToCrm', 'В CRM')}
+                    aria-label={t('sso.goToCrm')}
                   >
                     <ExternalLink className="h-3.5 w-3.5" />
-                    <span className="hidden sm:inline">{t('sso.goToCrm', 'В CRM')}</span>
+                    <span className="hidden sm:inline">{t('sso.goToCrm')}</span>
                   </Button>
                 </TooltipTrigger>
-                <TooltipContent>{t('sso.goToCrmTooltip', 'Перейти в платформу CRM под текущей сессией')}</TooltipContent>
+                <TooltipContent>{t('sso.goToCrmTooltip')}</TooltipContent>
               </Tooltip>
 
               <NotificationCenter onNavigate={onNavigate} />

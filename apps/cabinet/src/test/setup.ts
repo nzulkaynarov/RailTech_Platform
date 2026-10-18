@@ -1,11 +1,15 @@
 import '@testing-library/jest-dom/vitest';
-import { cleanup } from '@testing-library/react';
+import { cleanup, configure } from '@testing-library/react';
 import { afterAll, afterEach, beforeAll, beforeEach, vi } from 'vitest';
 
 import i18n from '@/i18n';
 import { resetMockPortal } from '@/mocks/handlers';
 import { portalServer } from '@/mocks/server';
 import { resetSessionBootstrap } from '@/session/session';
+
+// findBy*/waitFor ждут по умолчанию 1 с — на раннере CI (2 vCPU) и под параллельной нагрузкой сценарий
+// экрана с несколькими запросами к моку не успевает; 5 с — с запасом, тестовый таймаут — 20 с (vitest.config).
+configure({ asyncUtilTimeout: 5_000 });
 
 /**
  * Тесты идут с настоящим ru.json и моком портального API на границе HTTP (msw/node, те же
@@ -92,7 +96,12 @@ window.URL.createObjectURL = vi.fn(() => 'blob:cabinet-test');
 window.URL.revokeObjectURL = vi.fn();
 HTMLAnchorElement.prototype.click = vi.fn();
 
-afterAll(() => portalServer.close());
+afterAll(async () => {
+  portalServer.close();
+  // sonner убирает тост таймером (200 мс) уже после размонтирования; если файл тестов кончился
+  // раньше, таймер срабатывает без jsdom — «window is not defined» и красный прогон. Дожидаемся.
+  await new Promise((resolve) => setTimeout(resolve, 300));
+});
 
 // axe проверяет иконки-лигатуры через canvas, которого в jsdom нет: без заглушки — шум в выводе.
 HTMLCanvasElement.prototype.getContext = (() => null) as unknown as HTMLCanvasElement['getContext'];

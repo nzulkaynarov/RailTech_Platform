@@ -40,6 +40,8 @@ OPEN_ENDPOINTS = {
     ("/api/v1/auth/2fa/disable/", "POST"): "своя 2FA",
     ("/api/v1/auth/sessions/revoke-all/", "POST"): "завершить свои другие сессии",
     ("/api/v1/auth/ws-ticket/", "POST"): "билет своего WebSocket уведомлений",
+    ("/api/v1/auth/sso/exchange/", "POST"): "вход по SSO-токену из CRM — до аутентификации (CONTRACTS §6)",
+    ("/api/v1/auth/sso/token/", "POST"): "свой SSO-токен для перехода в CRM (CONTRACTS §6)",
     ("/api/v1/notifications/{pk}/mark_read/", "PATCH"): "отметить своё уведомление прочитанным",
     ("/api/v1/notifications/mark_all_read/", "PATCH"): "отметить свои уведомления прочитанными",
     ("/api/v1/public/quotes/{token}/accept/", "POST"): "публичная страница КП по токену (клиент, без входа)",
@@ -59,6 +61,9 @@ def _mutation_endpoints():
             continue
         # Интеграционный API (M3-ERP-01) аутентифицируется сервисным токеном CRM ↔ ERP и тестируется в integration/tests/
         if path.startswith("/api/integration/"):
+            continue
+        # erp-mcp (M3-ERP-03) аутентифицируется подписанным X-Agent-Context и тестируется в integration/tests/
+        if path.startswith("/mcp/"):
             continue
         actions = getattr(callback, "actions", None) or {}
         rows.append((path, method, callback.cls, actions.get(method.lower()) or method))

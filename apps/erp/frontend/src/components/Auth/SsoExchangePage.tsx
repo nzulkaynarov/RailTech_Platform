@@ -25,7 +25,7 @@ export const SsoExchangePage: React.FC = () => {
 
       if (!token) {
         if (active) {
-          setError(t('sso.missingToken', 'Токен SSO не найден в адресе перехода.'));
+          setError(t('sso.missingToken'));
           setLoading(false);
         }
         return;
@@ -50,11 +50,11 @@ export const SsoExchangePage: React.FC = () => {
         if (!active) return;
         const msg = err instanceof Error ? err.message : 'SSO_EXCHANGE_FAILED';
         if (msg === 'USER_INACTIVE') {
-          setError(t('sso.userInactive', 'Учётная запись сотрудника деактивирована.'));
+          setError(t('sso.userInactive'));
         } else if (msg === 'TOKEN_ALREADY_USED') {
-          setError(t('sso.tokenAlreadyUsed', 'Срок действия или одноразовый SSO-токен уже использован.'));
+          setError(t('sso.tokenAlreadyUsed'));
         } else {
-          setError(t('sso.exchangeFailed', 'Не удалось войти через SSO. Попробуйте войти по логину и паролю.'));
+          setError(t('sso.exchangeFailed'));
         }
         setLoading(false);
       }
@@ -75,12 +75,12 @@ export const SsoExchangePage: React.FC = () => {
             <Train className="w-6 h-6" />
           </div>
           <CardTitle className="text-xl font-bold">
-            {t('sso.title', 'Вход в RailTech ERP')}
+            {t('sso.title')}
           </CardTitle>
           <CardDescription>
             {loading
-              ? t('sso.processing', 'Проверка SSO-токена сотрудника...')
-              : t('sso.complete', 'Авторизация завершена')}
+              ? t('sso.processing')
+              : t('sso.complete')}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -88,7 +88,7 @@ export const SsoExchangePage: React.FC = () => {
             <div className="flex flex-col items-center justify-center py-6 space-y-3">
               <Loader2 className="w-8 h-8 animate-spin text-primary" />
               <p className="text-sm text-muted-foreground">
-                {t('sso.authenticating', 'Выполняется синхронизация сессии с CRM...')}
+                {t('sso.authenticating')}
               </p>
             </div>
           )}
@@ -105,7 +105,7 @@ export const SsoExchangePage: React.FC = () => {
                   window.location.replace('/');
                 }}
               >
-                {t('sso.goToLogin', 'Войти по логину и паролю')}
+                {t('sso.goToLogin')}
               </Button>
             </div>
           )}
