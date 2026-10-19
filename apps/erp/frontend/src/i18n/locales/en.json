@@ -2671,6 +2671,10 @@
       "exchange": {
         "title": "SSO login",
         "detail": "Employee SSO login"
+      },
+      "revoke": {
+        "title": "Access revoked from CRM",
+        "detail": "The employee's sessions were ended and ERP sign-in is closed"
       }
     },
     "deal": {

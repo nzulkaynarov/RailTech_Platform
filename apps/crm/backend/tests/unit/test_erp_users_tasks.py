@@ -28,8 +28,8 @@ async def test_enqueue_defers_the_right_task_under_a_per_user_lock(
 
 def test_tasks_retry_with_growing_pause() -> None:
     retry = erp_users.RETRY
-    assert retry.max_attempts >= 5
-    assert retry.linear_wait > 0
+    assert (retry.max_attempts or 0) >= 5
+    assert (retry.linear_wait or 0) > 0
     for name in ("erp_provision_user", "erp_revoke_sessions"):
         assert queue.tasks[name].retry_strategy is retry
 

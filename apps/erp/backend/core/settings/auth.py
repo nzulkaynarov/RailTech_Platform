@@ -6,8 +6,8 @@
 `CustomUser.token_version` — так отзыв доступа из CRM гасит и уже выданные access-токены.
 """
 
-from .observability import *  # noqa: F401,F403 — последовательная композиция настроек
 from .observability import REST_FRAMEWORK as _REST_FRAMEWORK
+from .observability import *  # noqa: F401,F403 — последовательная композиция настроек
 
 REST_FRAMEWORK = {
     **_REST_FRAMEWORK,

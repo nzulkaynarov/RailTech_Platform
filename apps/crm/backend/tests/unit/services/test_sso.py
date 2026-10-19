@@ -385,7 +385,8 @@ async def test_exchange_unknown_sub_is_forbidden(sso_settings: Settings) -> None
 
     with pytest.raises(ForbiddenError) as exc_info:
         await sso_svc.exchange_token(make_erp_sso_token(sub="777"), ClientInfo())
-    assert exc_info.value.details["reason"] == Reason.USER_NOT_PROVISIONED == "user_not_provisioned"
+    assert exc_info.value.details["reason"] == Reason.USER_NOT_PROVISIONED.value
+    assert Reason.USER_NOT_PROVISIONED.value == "user_not_provisioned"
     fake_auth._issue.assert_not_called()
 
 

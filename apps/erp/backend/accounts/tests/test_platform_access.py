@@ -272,9 +272,7 @@ def staff_with_refresh(own_company):
     member = CompanyMember.objects.create(user=user, company=own_company, role=member_role, is_primary=True)
     client = APIClient()
     client.raise_request_exception = False
-    response = client.post(
-        "/api/v1/auth/token/", {"email": "s@example.com", "password": HASLO}, format="json"
-    )
+    response = client.post("/api/v1/auth/token/", {"email": "s@example.com", "password": HASLO}, format="json")
     assert response.status_code == 200, response.content
     return user, member, client
 
@@ -351,3 +349,11 @@ def test_me_exposes_crm_access_only_for_mapped_user(service, own_company):
     api.force_authenticate(local)
     unmapped = api.get(USERS_ME_URL).json()["capabilities"]
     assert unmapped["crm_access"] is False
+
+
+def test_openapi_keeps_the_jwt_security_scheme():
+    """Подкласс аутентификации не должен ронять `security: jwtAuth` из схемы (drf-spectacular ищет по классу)."""
+    from drf_spectacular.generators import SchemaGenerator
+
+    schema = SchemaGenerator().get_schema(request=None, public=True)
+    assert schema["paths"]["/api/v1/accounts/me/"]["get"]["security"] == [{"jwtAuth": []}]

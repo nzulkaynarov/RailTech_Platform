@@ -1,19 +1,16 @@
-import { ExportOutlined, MenuOutlined } from "@ant-design/icons";
+import { MenuOutlined } from "@ant-design/icons";
 import { useThemedLayoutContext } from "@refinedev/antd";
 import { useCan, useGetIdentity } from "@refinedev/core";
-import { Alert, Badge, Button, Grid, Layout, Space, message, theme } from "antd";
-import { useState } from "react";
+import { Alert, Badge, Button, Grid, Layout, Space, theme } from "antd";
 import { Link } from "react-router";
 
 import { useSystemStatus } from "../api/adminQueries";
-import { ssoToken } from "../api/generated/crm";
-import { ApiError } from "../api/http";
-
 import { ModeSwitch } from "../components/ModeSwitch";
 import { useEventStream } from "../hooks/useEventStream";
 import { useLeadAlertHandler } from "../hooks/useLeadAlerts";
 import { criticalFailures, headerHealth, type HeaderTone } from "../domain/systemHealth";
-import { errorText, t } from "../i18n/ru";
+import { t } from "../i18n/ru";
+import { ErpSwitch } from "./ErpSwitch";
 import { UserMenu } from "./UserMenu";
 
 const BADGE: Record<HeaderTone, "success" | "warning" | "error"> = {
@@ -75,7 +72,11 @@ export function CriticalBanner() {
  * а не плавающая поверх заголовка страницы (дизайн-аудит 2026-10-11, отчёт 2).
  */
 export function Header() {
-  const { data: identity } = useGetIdentity<{ name: string; sso_enabled?: boolean }>();
+  const { data: identity } = useGetIdentity<{
+    name: string;
+    sso_enabled?: boolean;
+    platform_access?: string[];
+  }>();
   const live = useEventStream(Boolean(identity), useLeadAlertHandler());
   const { token } = theme.useToken();
   const screens = Grid.useBreakpoint();
@@ -86,22 +87,6 @@ export function Header() {
   const phone = screens.sm === false;
   const { data: canSystem } = useCan({ resource: "system", action: "list" });
   const admin = Boolean(canSystem?.can);
-
-  const [ssoLoading, setSsoLoading] = useState(false);
-
-  const handleGoToErp = async () => {
-    setSsoLoading(true);
-    try {
-      const data = await ssoToken();
-      window.location.href = `${data.redirect_url}#token=${data.token}`;
-    } catch (err) {
-      void message.error(
-        errorText(err instanceof ApiError ? err.code : undefined, t.sso.goToErpFailed),
-      );
-    } finally {
-      setSsoLoading(false);
-    }
-  };
 
   return (
     <>
@@ -133,18 +118,8 @@ export function Header() {
           ) : (
             <ConnectionStatus live={live} compact={phone} />
           )}
-          {/* Переход в ERP — только когда SSO включён на сервере (FIX-03, флаг из /me). */}
-          {identity?.sso_enabled ? (
-            <Button
-              icon={<ExportOutlined aria-hidden />}
-              loading={ssoLoading}
-              onClick={() => void handleGoToErp()}
-              title={t.sso.goToErpHint}
-              aria-label={t.sso.goToErp}
-            >
-              {phone ? t.sso.goToErpShort : t.sso.goToErp}
-            </Button>
-          ) : null}
+          {/* Переход в ERP — только при доступе к ERP и включённом SSO (FIX-03, FIX-11, поля /me). */}
+          <ErpSwitch identity={identity} compact={phone} />
           <ModeSwitch />
           <UserMenu />
         </Space>

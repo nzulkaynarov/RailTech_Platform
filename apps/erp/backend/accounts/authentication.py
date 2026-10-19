@@ -5,6 +5,7 @@ claim `tv` access-токена должен равняться `CustomUser.token
 версию — уже выданные access-токены (до 30 минут жизни) отвечают 401 сразу, а не доживают срок.
 """
 
+from drf_spectacular.contrib.rest_framework_simplejwt import SimpleJWTScheme
 from rest_framework.exceptions import AuthenticationFailed
 from rest_framework_simplejwt.authentication import JWTAuthentication
 
@@ -17,3 +18,10 @@ class TokenVersionJWTAuthentication(JWTAuthentication):
         if token_version_of(validated_token) != user.token_version:
             raise AuthenticationFailed("TOKEN_REVOKED", code="token_revoked")
         return user
+
+
+class TokenVersionJWTScheme(SimpleJWTScheme):
+    """Схема безопасности в OpenAPI (`jwtAuth`): без неё drf-spectacular не узнаёт подкласс и теряет `security`."""
+
+    target_class = "accounts.authentication.TokenVersionJWTAuthentication"
+    name = "jwtAuth"

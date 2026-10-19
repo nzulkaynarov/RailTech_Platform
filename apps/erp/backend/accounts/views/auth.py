@@ -41,7 +41,6 @@ from accounts.serializers import (  # noqa: E402
     UserSerializer,
 )
 from accounts.services import auth as auth_service  # noqa: E402
-from accounts.services.tokens import TOKEN_VERSION_CLAIM, refresh_for, token_version_of  # noqa: E402
 from accounts.services import (  # noqa: E402
     login_guard,
     reset_password,
@@ -51,6 +50,7 @@ from accounts.services import (  # noqa: E402
     two_factor,
     verify_and_setup_password,
 )
+from accounts.services.tokens import TOKEN_VERSION_CLAIM, refresh_for, token_version_of  # noqa: E402
 from accounts.throttles import PasswordResetEmailThrottle, ScopedRateThrottle  # noqa: E402
 
 
