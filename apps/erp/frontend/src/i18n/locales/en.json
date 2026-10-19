@@ -2896,6 +2896,16 @@
         "detail": "Act {{number}} for deal #{{deal_id}}: the customer was reminded"
       }
     },
+    "delivery": {
+      "line_accepted": {
+        "title": "Delivery accepted by the client",
+        "detail": "Line {{line_no}} on deal #{{deal_id}} accepted"
+      },
+      "line_disputed": {
+        "title": "Delivery disputed by the client",
+        "detail": "Line {{line_no}} on deal #{{deal_id}}: {{reason}}"
+      }
+    },
     "company": {
       "merged": {
         "title": "Duplicate company merged",
@@ -3249,6 +3259,10 @@
     "fulfillment.status_changed": {
       "title": "Shipment status changed",
       "message": "Deal #{{deal_id}}: shipment status is now {{status_code}}"
+    },
+    "delivery.line_disputed": {
+      "title": "Client disputed a delivery line",
+      "message": "Deal #{{deal_id}}, line {{line_no}} \"{{title}}\": {{reason}}"
     },
     "fulfillment.overdue": {
       "title": "Delivery overdue",
