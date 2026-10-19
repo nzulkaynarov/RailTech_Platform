@@ -58,7 +58,10 @@ KIND_BY_TEMPLATE_KIND = {
 DOCUMENT_KINDS = ("quote", "contract", "invoice", "act", "specification", "waybill", "receipt", "other")
 
 #: Статусы «выпущено клиенту». Один набор на фильтр запроса и на проверку одной записи.
-QUOTE_ISSUED = (QuoteStatusCode.SENT, QuoteStatusCode.APPROVED, QuoteStatusCode.REJECTED)
+#: `EXPIRED` — сохранённый статус КП (сид `core/seeds/sales.py`, его ставит beat `crm.expire_stale_quotes` отправленным КП
+#: с прошедшим `valid_until`), не член `QuoteStatusCode`: КП отправлено клиенту и остаётся его документом.
+QUOTE_EXPIRED_STATUS = "EXPIRED"
+QUOTE_ISSUED = (QuoteStatusCode.SENT, QuoteStatusCode.APPROVED, QuoteStatusCode.REJECTED, QUOTE_EXPIRED_STATUS)
 CONTRACT_ISSUED = (
     ContractStatusCode.PENDING_CLIENT,
     ContractStatusCode.PENDING_MANAGER,

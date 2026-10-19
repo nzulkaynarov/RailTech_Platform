@@ -107,6 +107,25 @@ def test_quote_is_a_document_only_after_it_was_sent(contract_world, portal_clien
         assert kinds[contract_world["documents"][f"quote_{key}"]] == "quote"
 
 
+def test_quote_expired_by_the_beat_task_is_still_a_document(contract_world, portal_client):
+    """Статус `EXPIRED` ставит ежедневная задача `crm.expire_stale_quotes`: наутро после срока PDF не пропадает."""
+    document_id = contract_world["documents"]["quote_expired_status"]
+    item = next(i for i in listed(portal_client) if i["id"] == document_id)
+    assert item["kind"] == "quote"
+    response = portal_client.get(f"{API}/documents/{document_id}/file")
+    assert response.status_code == 200 and response["Content-Type"].startswith("application/pdf")
+
+
+def test_quote_pdf_reference_survives_expiry(contract_world, portal_client):
+    from crm.models import QuoteStatus
+
+    quote = contract_world["quotes"]["sent"]
+    quote.status = QuoteStatus.objects.get(code="EXPIRED")
+    quote.save()
+    detail = portal_client.get(f"{API}/quotes/{quote.pk}").json()
+    assert detail["pdf_document_id"] == contract_world["documents"]["quote_sent"]
+
+
 def test_returned_act_is_still_a_document(contract_world, portal_client):
     """Возвращённый клиентом акт ERP хранит черновиком с причиной, но клиент его получал."""
     ids = {item["id"] for item in listed(portal_client)}

@@ -10,6 +10,8 @@
 
 from __future__ import annotations
 
+import datetime
+
 from django.core.files.base import ContentFile
 from documents.models import DocumentTemplate, DocumentTemplateKind, GeneratedDocument, GeneratedDocumentStatus
 from portal.services.documents import encode_document_id
@@ -114,6 +116,12 @@ def build_document_fixtures(world: dict) -> dict:
         quote = make_quote(internal_deal, version, code, uzs=uzs, sent=False, items=False)
         quote.pdf_file.save(f"quote-{key}.pdf", ContentFile(PDF), save=True)  # PDF есть, но КП не отправлено
         concealed(f"quote_{key}", "quote", quote)
+    # ── КП в сохранённом статусе EXPIRED (его ставит beat `crm.expire_stale_quotes`): срок вышел, документ остаётся ──
+    expired = make_quote(
+        internal_deal, 4, "EXPIRED", uzs=uzs, valid_until=TODAY - datetime.timedelta(days=5), items=False
+    )
+    issued("quote_expired_status", "quote", expired, pdf=True)
+
     invoice_draft = Invoice.objects.create(
         deal=main, number="INV-GUARD-draft", status=_status(InvoiceStatus, InvoiceStatusCode.DRAFT), issued_at=TODAY
     )
