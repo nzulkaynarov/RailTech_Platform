@@ -10,7 +10,7 @@
  * Все POST принимают `Idempotency-Key`; ERP хранит ключ 7 дней. Идентификатор клиента никогда не
  * приходит от модели.
  *
- * OpenAPI spec version: 0.1.0
+ * OpenAPI spec version: 0.2.0
  */
 import type { Amount } from "./amount";
 import type { Currency } from "./currency";
@@ -21,7 +21,8 @@ export interface DealListItem {
   number: string;
   title: string;
   stage: DealStage;
-  amount: Amount;
+  /** Сумма последней версии КП, отправленной клиенту (с НДС); `null` — КП клиенту ещё не отправлялось. Черновики и КП на согласовании в сумму не попадают (хвост FIX-12). */
+  amount: Amount | null;
   currency: Currency;
   /** @nullable */
   next_step?: string | null;

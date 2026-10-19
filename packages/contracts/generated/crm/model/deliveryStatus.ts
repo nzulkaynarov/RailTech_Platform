@@ -10,11 +10,12 @@
  * Все POST принимают `Idempotency-Key`; ERP хранит ключ 7 дней. Идентификатор клиента никогда не
  * приходит от модели.
  *
- * OpenAPI spec version: 0.1.0
+ * OpenAPI spec version: 0.2.0
  */
 
 /**
- * Проекция для клиента (BUSINESS §9): комплектуем / в пути к нам / готово к отгрузке / отгружено
+ * Проекция для клиента (BUSINESS §9): комплектуем / в пути к нам / готово к отгрузке / отгружено / доставлено;
+ * `accepted` и `disputed` ставит клиент в Cabinet по строке (FIX-22), остальное — ERP.
  */
 export type DeliveryStatus = (typeof DeliveryStatus)[keyof typeof DeliveryStatus];
 
@@ -24,4 +25,6 @@ export const DeliveryStatus = {
   ready_to_ship: "ready_to_ship",
   shipped: "shipped",
   delivered: "delivered",
+  accepted: "accepted",
+  disputed: "disputed",
 } as const;

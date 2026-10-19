@@ -7,19 +7,26 @@
 """
 
 import logging
-from decimal import Decimal
 
 from django.conf import settings
 from django.db import transaction
 from django.http import FileResponse, Http404
-from django.utils import timezone
+from django.utils import timezone, translation
 from parties.models import Contact
 from portal.authentication import PortalAuthentication
 from portal.exceptions import PortalBadRequest, PortalConflict, PortalValidationError, portal_exception_handler
-from portal.models import PortalRequestLine, PortalRequestSummary, PortalUpload
+from portal.models import PortalUpload
 from portal.permissions import CanAct, IsPortalAuthenticated
-from portal.projections import annotate_request_sources, delivery_lines
+from portal.projections import (
+    annotate_request_sources,
+    client_acts_q,
+    client_contracts_q,
+    client_invoices_q,
+    client_quotes_q,
+)
 from portal.serializers import (
+    AcceptanceCodeSentSerializer,
+    ActAcceptSerializer,
     ActSerializer,
     CatalogCategorySerializer,
     CatalogItemSerializer,
@@ -44,21 +51,30 @@ from portal.serializers import (
     TeamMemberSerializer,
     TelegramAuthSerializer,
 )
-from portal.services.invitation import invite_contact_to_portal
+from portal.services import documents as portal_documents
+from portal.services.acceptance import ContactChannelRequired, request_acceptance_code
+from portal.services.act_scan import annotate_scan_documents, attach_scan_document, load_scan
+from portal.services.invitation import invite_team_member
 from portal.services.magic_link import exchange_magic_link, request_magic_link
+from portal.services.requests import create_client_request
 from portal.services.telegram_auth import authenticate_telegram_user
 from portal.throttles import PortalAcceptRateThrottle, PortalLoginRateThrottle, PortalSessionRateThrottle
-from rest_framework import status
+from rest_framework import exceptions, status
 from rest_framework.parsers import FormParser, MultiPartParser
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from sales.models import DeliveryLine
+from sales.services.delivery_lines import accept_delivery_line, dispute_delivery_line, sync_company_delivery_lines
 
 from catalog.published import project, project_many, published_products
-from crm.constants import DealStageCode, InvoiceStatusCode, QuoteStatusCode
-from crm.models import Act, ActivityLog, Contract, Deal, DealStage, Fulfillment, GeneratedDocument, Invoice, Quote
-from crm.services.deals import transition_deal_stage
+from core.i18n import supported_languages
+from crm.constants import ActStatusCode, QuoteStatusCode
+from crm.models import Act, Contract, Deal, Invoice, Quote
+from crm.services.billing import reject_act, sign_act
+from crm.services.contracts import sign_contract_by_client
 from crm.services.public_page import verify_code_and_accept
-from sourcing.models import Attachment
+from crm.services.quotes.access import _EXPIRED_STATUS_CODE
+from crm.services.quotes.lifecycle_accept import perform_quote_rejection
 
 logger = logging.getLogger(__name__)
 
@@ -121,8 +137,6 @@ class BasePortalView(APIView):
 
     def permission_denied(self, request, message=None, code=None):
         if not getattr(request, "portal_session", None):
-            from rest_framework import exceptions
-
             raise exceptions.NotAuthenticated("UNAUTHORIZED")
         super().permission_denied(request, message=message, code=code)
 
@@ -281,13 +295,6 @@ class MeView(BasePortalView):
 # ── 3. Requests ─────────────────────────────────────────────────────────────
 
 
-def _short_title(summary: str) -> str:
-    """Название сделки из сути запроса: одна строка, не длиннее поля `Deal.title`."""
-    title = " ".join(summary.split())
-    max_length = Deal._meta.get_field("title").max_length
-    return title if len(title) <= max_length else title[: max_length - 1].rstrip() + "…"
-
-
 def _requests_queryset(company):
     """Запросы компании (сделки) с тем, что нужно сериализатору, без N+1."""
     return (
@@ -309,60 +316,14 @@ class RequestListView(BasePortalView):
         serializer = ClientRequestCreateSerializer(data=request.data)
         if not serializer.is_valid():
             raise PortalValidationError("VALIDATION_ERROR")
-
         data = serializer.validated_data
-        summary = data["summary"]
-        lines = data.get("lines", [])
-        attachments = data.get("attachments", [])
-
-        draft_stage = DealStage.objects.filter(code=DealStageCode.DRAFT).first()
-
-        with transaction.atomic():
-            deal = Deal.objects.create(
-                company=request.portal_company,
-                contact=request.portal_contact,
-                title=_short_title(summary),
-                stage=draft_stage,
-                notes="Запрос создан клиентом из Cabinet",
-            )
-            # Название сделки — 255 знаков, суть запроса по контракту — до 5000: полный текст лежит отдельно
-            PortalRequestSummary.objects.create(deal=deal, text=summary)
-            # Привязка строк
-            for idx, line in enumerate(lines, start=1):
-                PortalRequestLine.objects.create(
-                    deal=deal,
-                    text=line["text"],
-                    quantity=Decimal(line.get("quantity") or "1"),
-                    unit=line.get("unit") or "шт",
-                    sort_order=idx,
-                )
-
-            # Привязка вложений из PortalUpload (Q-14)
-            for att_ref in attachments:
-                upload_id = att_ref.get("upload_id")
-                upload = PortalUpload.objects.filter(
-                    upload_id=upload_id,
-                    company=request.portal_company,
-                ).first()
-                if upload:
-                    upload.deal = deal
-                    upload.save(update_fields=["deal"])
-                    Attachment.objects.create(
-                        deal=deal,
-                        file=upload.file,
-                        original_filename=upload.name,
-                        kind="SOURCE",
-                    )
-
-            # Логируем аудит-событие
-            ActivityLog.objects.create(
-                deal=deal,
-                action="Создан запрос",
-                event_code="deal.created",
-                detail=f"Клиент создал запрос из Cabinet: {summary}",
-                event_params={"source": "cabinet", "contact_id": request.portal_contact.id},
-            )
-
+        deal = create_client_request(
+            request.portal_company,
+            request.portal_contact,
+            summary=data["summary"],
+            lines=data["lines"],
+            attachments=data["attachments"],
+        )
         created = _requests_queryset(request.portal_company).get(pk=deal.pk)
         return Response(ClientRequestSerializer(created).data, status=status.HTTP_201_CREATED)
 
@@ -381,12 +342,36 @@ class RequestDetailView(BasePortalView):
 
 
 def _client_quotes(company):
-    """КП компании, которые видит портал. Какие именно — правило FIX-22; сейчас всё, кроме черновиков."""
-    return (
-        Quote.objects.filter(deal__company=company)
-        .exclude(status__code=QuoteStatusCode.DRAFT)
-        .select_related("status", "quote_currency", "deal")
+    """КП компании, которые видит клиент: только отправленные и решённые (`CLIENT_QUOTE_STATUSES`) с публичной ссылкой.
+
+    Всё, что до отправки (черновик, проверка ВЭД, согласование, «готово к отправке»), — 404 (FIX-22, P-3): у такого КП
+    нет `public_url`, а контракт требует его для каждого КП. Ссылка рождается вместе со статусом `SENT`
+    (`QuoteLifecycleService.send_to_client`); запись без неё — аномалия данных, клиенту её не показываем.
+    """
+    return Quote.objects.filter(client_quotes_q(), deal__company=company).select_related(
+        "status", "quote_currency", "deal"
     )
+
+
+def _quote_or_404(request, pk):
+    quote = _client_quotes(request.portal_company).filter(pk=pk).first()
+    if not quote:
+        raise Http404
+    return quote
+
+
+def _assert_quote_awaits_decision(quote) -> None:
+    """Решать можно только КП в ожидании ответа: уже принятое или отклонённое — 409 `QUOTE_FINALIZED`, срок вышел — 409 `QUOTE_EXPIRED`."""
+    if quote.status.code == _EXPIRED_STATUS_CODE:
+        raise PortalConflict("QUOTE_EXPIRED")  # статус поставила ночная задача `crm.expire_stale_quotes`
+    if quote.status.code != QuoteStatusCode.SENT:
+        raise PortalConflict("QUOTE_FINALIZED")
+    if quote.valid_until and quote.valid_until < timezone.localdate():
+        raise PortalConflict("QUOTE_EXPIRED")
+
+
+def _quote_response(request, pk) -> Response:
+    return Response(QuoteSerializer(_quote_or_404(request, pk)).data)
 
 
 class QuoteListView(BasePortalView):
@@ -401,9 +386,7 @@ class QuoteDetailView(BasePortalView):
     """GET /quotes/{id} — Детали КП с позициями."""
 
     def get(self, request, pk):
-        quote = _client_quotes(request.portal_company).filter(pk=pk).first()
-        if not quote:
-            raise Http404
+        quote = _quote_or_404(request, pk)
 
         # Отмечаем первый просмотр
         if quote.first_viewed_at is None:
@@ -413,8 +396,27 @@ class QuoteDetailView(BasePortalView):
         return Response(QuoteSerializer(quote).data)
 
 
+class QuoteRequestCodeView(BasePortalView):
+    """POST /quotes/{id}/request-code — Код акцепта контакту сессии (Telegram или e-mail)."""
+
+    permission_classes = [IsPortalAuthenticated, CanAct]
+    # Общий потолок `portal_accept` на запрос кода и на акцепт (контракт): перебор и рассылка бьют в одно ведро.
+    throttle_classes = [PortalSessionRateThrottle, PortalAcceptRateThrottle]
+
+    def post(self, request, pk):
+        quote = _quote_or_404(request, pk)
+        _assert_quote_awaits_decision(quote)
+        try:
+            sent = request_acceptance_code(
+                quote, request.portal_contact, request_ip=request.META.get("REMOTE_ADDR", "")
+            )
+        except ContactChannelRequired:
+            raise PortalValidationError("CONTACT_CHANNEL_REQUIRED")
+        return Response(AcceptanceCodeSentSerializer(sent).data, status=status.HTTP_202_ACCEPTED)
+
+
 class QuoteAcceptView(BasePortalView):
-    """POST /quotes/{id}/accept — Акцепт КП по коду."""
+    """POST /quotes/{id}/accept — Акцепт КП по коду из `request-code`."""
 
     permission_classes = [IsPortalAuthenticated, CanAct]
     # Жёсткий потолок попыток кода поверх общего лимита сессии (FIX-15).
@@ -424,38 +426,19 @@ class QuoteAcceptView(BasePortalView):
         serializer = QuoteAcceptSerializer(data=request.data)
         if not serializer.is_valid():
             raise PortalValidationError("VALIDATION_ERROR")
-
         code = serializer.validated_data["code"].strip()
 
-        quote = (
-            Quote.objects.filter(
-                pk=pk,
-                deal__company=request.portal_company,
-            )
-            .select_related("status")
-            .first()
-        )
-        if not quote:
-            raise Http404
-
-        current_code = quote.status.code if quote.status else ""
-        if current_code == QuoteStatusCode.APPROVED:
-            raise PortalConflict("QUOTE_FINALIZED")
-        if current_code == QuoteStatusCode.REJECTED:
-            raise PortalConflict("QUOTE_FINALIZED")
-        if quote.valid_until and quote.valid_until < timezone.localdate():
-            raise PortalConflict("QUOTE_EXPIRED")
+        quote = _quote_or_404(request, pk)
+        _assert_quote_awaits_decision(quote)
 
         # Код акцепта — одноразовый, с TTL и лимитом попыток; погашение и акцепт — одна транзакция
         # (crm.services.public_page, общий путь с публичной страницей КП). Мастер-кода нет (FIX-02).
         accepted, error = verify_code_and_accept(quote, code, request_ip=request.META.get("REMOTE_ADDR", ""))
         if error == "QUOTE_ALREADY_DECIDED":
-            raise PortalConflict("QUOTE_FINALIZED")
+            raise PortalConflict("QUOTE_FINALIZED")  # успели решить из другой вкладки
         if error:
             raise PortalConflict("QUOTE_CODE_INVALID")
-
-        quote.refresh_from_db()
-        return QuoteDetailView().get(request, pk)
+        return _quote_response(request, pk)
 
 
 class QuoteRejectView(BasePortalView):
@@ -465,110 +448,73 @@ class QuoteRejectView(BasePortalView):
 
     def post(self, request, pk):
         reason = _parse_reason(request.data)
+        quote = _quote_or_404(request, pk)
+        _assert_quote_awaits_decision(quote)
 
-        quote = (
-            Quote.objects.filter(
-                pk=pk,
-                deal__company=request.portal_company,
+        try:
+            perform_quote_rejection(
+                quote.id,
+                rejected_by_user=None,
+                reason=reason,
+                contact_email=request.portal_contact.email,
+                request_ip=request.META.get("REMOTE_ADDR"),
             )
-            .select_related("status")
-            .first()
-        )
-        if not quote:
-            raise Http404
-
-        current_code = quote.status.code if quote.status else ""
-        if current_code in (QuoteStatusCode.APPROVED, QuoteStatusCode.REJECTED):
-            raise PortalConflict("QUOTE_FINALIZED")
-
-        from crm.services.quotes.lifecycle_accept import perform_quote_rejection
-
-        ip = request.META.get("REMOTE_ADDR")
-        perform_quote_rejection(
-            quote.id,
-            rejected_by_user=None,
-            reason=reason,
-            contact_email=request.portal_contact.email,
-            request_ip=ip,
-        )
-
-        quote.refresh_from_db()
-        return QuoteDetailView().get(request, pk)
+        except ValueError:
+            # Жизненный цикл отказал: решили из другой вкладки между проверкой и вызовом либо сделку не удалось вернуть.
+            quote.refresh_from_db()
+            code = quote.status.code
+            raise PortalConflict(
+                "QUOTE_EXPIRED"
+                if code == _EXPIRED_STATUS_CODE
+                else "QUOTE_FINALIZED" if code != QuoteStatusCode.SENT else "CONFLICT"
+            )
+        return _quote_response(request, pk)
 
 
 # ── 5. Contracts ────────────────────────────────────────────────────────────
+
+
+def _client_contracts(company):
+    """Договоры компании, которые видит клиент: на подписи и подписанные. Черновик и отменённый — 404 (FIX-22)."""
+    return Contract.objects.filter(client_contracts_q(), deal__company=company).select_related("status", "deal")
 
 
 class ContractListView(BasePortalView):
     """GET /contracts — Договоры клиента."""
 
     def get(self, request):
-        contracts = (
-            Contract.objects.filter(deal__company=request.portal_company)
-            .select_related("status", "deal")
-            .order_by("-created_at")
-        )
+        contracts = _client_contracts(request.portal_company).order_by("-created_at")
         return Response(ContractSerializer(contracts, many=True).data)
 
 
 class ContractSignView(BasePortalView):
-    """POST /contracts/{id}/sign — Подписание договора клиентом."""
+    """POST /contracts/{id}/sign — Подписание договора клиентом (`sign_contract_by_client`)."""
 
     permission_classes = [IsPortalAuthenticated, CanAct]
 
     def post(self, request, pk):
-        contract = (
-            Contract.objects.filter(
-                pk=pk,
-                deal__company=request.portal_company,
-            )
-            .select_related("status", "deal")
-            .first()
-        )
+        contract = _client_contracts(request.portal_company).filter(pk=pk).first()
         if not contract:
             raise Http404
 
-        current_status = contract.status.code if contract.status else ""
-        if current_status in ("SIGNED", "ACTIVE", "COMPLETED"):
+        # Подпись и переход статуса — только сервис ERP: двусторонняя подпись, аудит, закрытие сделки (P-5).
+        _, error = sign_contract_by_client(contract.pk, portal_contact=request.portal_contact)
+        if error == "CONTRACT_CLIENT_SIGN_NOT_ALLOWED":
             raise PortalConflict("CONTRACT_FINALIZED")
-
-        # Подписываем договор от имени покупателя
-        from crm.models import ContractStatus
-
-        signed_status = ContractStatus.objects.filter(code="SIGNED").first()
-        contract.status = signed_status
-        now = timezone.now()
-        fields = ["status", "updated_at"]
-        if hasattr(contract, "client_signed_at"):
-            contract.client_signed_at = now
-            fields.append("client_signed_at")
-        if hasattr(contract, "signed_at"):
-            contract.signed_at = now
-            fields.append("signed_at")
-        contract.save(update_fields=fields)
-
-        # Продвигаем сделку
-        transition_deal_stage(
-            contract.deal,
-            DealStageCode.CONTRACT_SIGNED,
-            actor=None,
-            reason=f"Договор {contract.number} подписан клиентом в Cabinet",
-        )
-
-        contract.refresh_from_db()
-        return Response(ContractSerializer(contract).data, status=status.HTTP_200_OK)
+        if error:
+            raise exceptions.PermissionDenied("FORBIDDEN")
+        return Response(ContractSerializer(_client_contracts(request.portal_company).get(pk=pk)).data)
 
 
 # ── 6. Invoices ─────────────────────────────────────────────────────────────
 
 
 class InvoiceListView(BasePortalView):
-    """GET /invoices — Счета клиента."""
+    """GET /invoices — Счета клиента (выставленные и со сроком оплаты: контракт требует `due_date`)."""
 
     def get(self, request):
         invoices = (
-            Invoice.objects.filter(deal__company=request.portal_company)
-            .exclude(status__code=InvoiceStatusCode.DRAFT)
+            Invoice.objects.filter(client_invoices_q(), deal__company=request.portal_company)
             .select_related("status", "deal", "currency")
             .order_by("-created_at")
         )
@@ -578,167 +524,199 @@ class InvoiceListView(BasePortalView):
 # ── 7. Acts ─────────────────────────────────────────────────────────────────
 
 
+def _client_acts(company):
+    """Акты компании, которые видит клиент (`client_acts_q`): черновик без причины и аннулированный — 404 (FIX-22)."""
+    return Act.objects.filter(deal__company=company).filter(client_acts_q()).select_related("status", "deal", "invoice")
+
+
+def _act_response(request, pk) -> Response:
+    act = _client_acts(request.portal_company).get(pk=pk)
+    return Response(ActSerializer(act).data)
+
+
 class ActListView(BasePortalView):
     """GET /acts — Акты выполненных работ."""
 
     def get(self, request):
-        acts = (
-            Act.objects.filter(deal__company=request.portal_company)
-            .select_related("status", "deal")
-            .order_by("-created_at")
-        )
+        acts = list(_client_acts(request.portal_company).order_by("-created_at"))
+        annotate_scan_documents(acts)
         return Response(ActSerializer(acts, many=True).data)
 
 
+def _act_or_404(request, pk):
+    act = _client_acts(request.portal_company).filter(pk=pk).first()
+    if not act:
+        raise Http404
+    return act
+
+
+def _raise_act_error(error: str) -> None:
+    if error == "ACT_SIGN_NOT_ALLOWED":
+        raise PortalConflict("ACT_FINALIZED")
+    raise exceptions.PermissionDenied("FORBIDDEN")
+
+
 class ActAcceptView(BasePortalView):
-    """POST /acts/{id}/accept — Приёмка акта заказчиком."""
+    """POST /acts/{id}/accept — Приёмка акта заказчиком (`sign_act`), со сканом из `/uploads` или без."""
 
     permission_classes = [IsPortalAuthenticated, CanAct]
 
     def post(self, request, pk):
-        act = (
-            Act.objects.filter(
-                pk=pk,
-                deal__company=request.portal_company,
-            )
-            .select_related("status", "deal", "invoice")
-            .first()
-        )
-        if not act:
-            raise Http404
+        serializer = ActAcceptSerializer(data=request.data or {})
+        if not serializer.is_valid():
+            raise PortalValidationError("VALIDATION_ERROR")
+        upload_id = serializer.validated_data.get("upload_id")
 
-        if act.status and act.status.code == "SIGNED":
-            raise PortalConflict("ACT_FINALIZED")
+        act = _act_or_404(request, pk)
+        if act.status.code != ActStatusCode.ISSUED:
+            raise PortalConflict("ACT_FINALIZED")  # принят, возвращён или ждёт перевыпуска
 
-        from crm.models import ActStatus
-
-        signed_status = ActStatus.objects.filter(code="SIGNED").first()
-        act.status = signed_status
-        act.signed_at = timezone.now()
-        act.save(update_fields=["status", "signed_at", "updated_at"])
-
-        # Продвигаем сделку к закрытию
-        transition_deal_stage(
-            act.deal,
-            DealStageCode.CLOSED_WON,
-            actor=None,
-            reason=f"Акт {act.number} принят заказчиком в Cabinet",
-        )
-
-        act.refresh_from_db()
-        return Response(ActSerializer(act).data)
+        upload, scan = load_scan(request.portal_company, upload_id, act.deal) if upload_id else (None, None)
+        with transaction.atomic():
+            signed, error = sign_act(act.pk, None, scan, portal_contact=request.portal_contact)
+            if error:
+                _raise_act_error(error)
+            if upload is not None:
+                attach_scan_document(signed, upload)
+        return _act_response(request, pk)
 
 
 class ActReturnView(BasePortalView):
-    """POST /acts/{id}/return — Возврат акта с замечанием."""
+    """POST /acts/{id}/return — Возврат акта с замечанием (`reject_act`): ERP хранит возвращённый акт черновиком с причиной."""
 
     permission_classes = [IsPortalAuthenticated, CanAct]
 
     def post(self, request, pk):
         reason = _parse_reason(request.data)
-
-        act = (
-            Act.objects.filter(
-                pk=pk,
-                deal__company=request.portal_company,
-            )
-            .select_related("status", "deal", "invoice")
-            .first()
-        )
-        if not act:
-            raise Http404
-
-        if act.status and act.status.code == "SIGNED":
+        act = _act_or_404(request, pk)
+        if act.status.code != ActStatusCode.ISSUED:
             raise PortalConflict("ACT_FINALIZED")
 
-        from crm.models import ActStatus
-
-        returned_status = ActStatus.objects.filter(code__in=["RETURNED", "REJECTED"]).first()
-        act.status = returned_status
-        if hasattr(act, "rejection_reason"):
-            act.rejection_reason = reason
-            act.save(update_fields=["status", "rejection_reason", "updated_at"])
-        elif hasattr(act, "return_reason"):
-            act.return_reason = reason
-            act.save(update_fields=["status", "return_reason", "updated_at"])
-        else:
-            act.save(update_fields=["status", "updated_at"])
-
-        ActivityLog.objects.create(
-            deal=act.deal,
-            action="Акт возвращён",
-            event_code="act.returned",
-            detail=f"Клиент вернул акт {act.number} с замечанием: {reason}",
-            event_params={"act_id": act.id, "reason": reason},
-        )
-
-        act.refresh_from_db()
-        return Response(ActSerializer(act).data)
+        _, error = reject_act(act.pk, None, reason, portal_contact=request.portal_contact)
+        if error:
+            _raise_act_error(error)
+        return _act_response(request, pk)
 
 
 # ── 8. Deliveries ───────────────────────────────────────────────────────────
+
+
+def _client_delivery_lines(company):
+    return DeliveryLine.objects.filter(deal__company=company).select_related("deal")
 
 
 class DeliveryListView(BasePortalView):
     """GET /deliveries — Строки поставки по сделкам клиента (проекция клиента: без поставщика и цен)."""
 
     def get(self, request):
-        fulfillments = (
-            Fulfillment.objects.filter(deal__company=request.portal_company)
-            .select_related("status", "deal")
-            .order_by("-created_at")
-        )
-        return Response(DeliveryLineSerializer(delivery_lines(fulfillments), many=True).data)
+        sync_company_delivery_lines(request.portal_company)
+        lines = _client_delivery_lines(request.portal_company).order_by("-deal_id", "line_no")
+        return Response(DeliveryLineSerializer(lines, many=True).data)
+
+
+def _delivery_line_or_404(request, pk):
+    # Ход склада мог измениться после последнего чтения списка — строка должна быть актуальной до решения клиента.
+    sync_company_delivery_lines(request.portal_company)
+    line = _client_delivery_lines(request.portal_company).filter(pk=pk).first()
+    if not line:
+        raise Http404
+    return line
+
+
+def _delivery_response(request, pk) -> Response:
+    return Response(DeliveryLineSerializer(_client_delivery_lines(request.portal_company).get(pk=pk)).data)
+
+
+def _raise_delivery_error(error: str) -> None:
+    if error == "DELIVERY_LINE_NOT_ACCEPTABLE":
+        raise PortalConflict("DELIVERY_LINE_NOT_ACCEPTABLE")
+    if error == "REASON_REQUIRED":
+        raise PortalValidationError("REASON_REQUIRED")
+    raise exceptions.PermissionDenied("FORBIDDEN")
+
+
+class DeliveryAcceptView(BasePortalView):
+    """POST /deliveries/{id}/accept — Клиент принимает строку: `delivered` → `accepted`."""
+
+    permission_classes = [IsPortalAuthenticated, CanAct]
+
+    def post(self, request, pk):
+        line = _delivery_line_or_404(request, pk)
+        _, error = accept_delivery_line(line.pk, request.portal_contact)
+        if error:
+            _raise_delivery_error(error)
+        return _delivery_response(request, pk)
+
+
+class DeliveryDisputeView(BasePortalView):
+    """POST /deliveries/{id}/dispute — Замечание по строке: `delivered` → `disputed`, менеджеру сделки — задача."""
+
+    permission_classes = [IsPortalAuthenticated, CanAct]
+
+    def post(self, request, pk):
+        reason = _parse_reason(request.data)
+        line = _delivery_line_or_404(request, pk)
+        _, error = dispute_delivery_line(line.pk, request.portal_contact, reason)
+        if error:
+            _raise_delivery_error(error)
+        return _delivery_response(request, pk)
 
 
 # ── 9. Documents & Files ────────────────────────────────────────────────────
 
 
+def _client_ip(request) -> str:
+    return request.META.get("REMOTE_ADDR") or ""
+
+
+def _contact_language(request) -> str:
+    """Язык подписей документов — язык контакта, а не заголовок запроса: Cabinet говорит на языке клиента."""
+    language = (getattr(request.portal_contact, "language", "") or "").lower()
+    return language if language in supported_languages() else settings.LANGUAGE_CODE
+
+
 class DocumentListView(BasePortalView):
-    """GET /documents — Документы по сделкам клиента."""
+    """GET /documents — Выпущенные документы компании клиента (FIX-23); `kind` и `deal_id` — фильтры."""
 
     def get(self, request):
-        docs = (
-            GeneratedDocument.objects.filter(deal__company=request.portal_company)
-            .select_related("template__kind", "deal")
-            .order_by("-created_at")
-        )
-        return Response(PortalDocumentSerializer(docs, many=True).data)
+        kind = request.query_params.get("kind")
+        if kind is not None and kind not in portal_documents.DOCUMENT_KINDS:
+            raise PortalValidationError("VALIDATION_ERROR")
+        deal_id = request.query_params.get("deal_id")
+        if deal_id is not None:
+            try:
+                deal_id = int(deal_id)
+            except ValueError:
+                raise PortalValidationError("VALIDATION_ERROR") from None
+        with translation.override(_contact_language(request)):
+            documents = portal_documents.client_documents(request.portal_company, kind=kind, deal_id=deal_id)
+        return Response(PortalDocumentSerializer(documents, many=True).data)
 
 
 class DocumentFileView(BasePortalView):
-    """GET /documents/{id}/file — Скачивание PDF документа (202 если генерируется)."""
+    """GET /documents/{id}/file — PDF выпущенного документа: поток (и запись аудита) либо 202 + `Retry-After`."""
 
     def get(self, request, pk):
-        doc = (
-            GeneratedDocument.objects.filter(
-                pk=pk,
-                deal__company=request.portal_company,
-            )
-            .select_related("deal")
-            .first()
-        )
-        if not doc:
+        document = portal_documents.find_client_document(request.portal_company, pk)
+        if document is None:
             raise Http404
 
-        if doc.pdf_file and hasattr(doc.pdf_file, "open"):
-            try:
-                response = FileResponse(
-                    doc.pdf_file.open("rb"),
-                    content_type="application/pdf",
-                    as_attachment=True,
-                    filename=f"{doc.number}.pdf",
-                )
-                return response
-            except Exception as exc:
-                logger.warning("Could not read pdf_file for document %s: %s", doc.id, exc)
+        stream = portal_documents.open_ready_file(document)
+        if stream is None and not portal_documents.renders_on_demand(document):
+            raise Http404  # скан акта без файла: рисовать нечего, 202 был бы обещанием, которое не исполнится
+        if stream is None:
+            # PDF ещё не отрисован (или потерян в хранилище): рендер идёт в очередь, клиент приходит позже.
+            portal_documents.enqueue_render(document)
+            return Response(
+                {"detail": "DOCUMENT_PENDING"},
+                status=status.HTTP_202_ACCEPTED,
+                headers={"Retry-After": str(portal_documents.RETRY_AFTER_SECONDS)},
+            )
 
-        # Если файл еще рендерится (M2-ERP-03 / 202 retry-after)
-        return Response(
-            {"detail": "DOCUMENT_PENDING"},
-            status=status.HTTP_202_ACCEPTED,
-            headers={"Retry-After": "2"},
+        portal_documents.record_issue(
+            document, contact=request.portal_contact, session=request.portal_session, ip=_client_ip(request)
         )
+        return FileResponse(stream, content_type=document.content_type, as_attachment=True, filename=document.file_name)
 
 
 # ── 10. Uploads ─────────────────────────────────────────────────────────────
@@ -897,7 +875,7 @@ class TeamListView(BasePortalView):
 
 
 class TeamInviteView(BasePortalView):
-    """POST /team/invite — Приглашение коллеги в кабинет."""
+    """POST /team/invite — Приглашение коллеги в кабинет (доставляется письмом; `telegram` — 422 `INVALID_CHANNEL`)."""
 
     permission_classes = [IsPortalAuthenticated, CanAct]
 
@@ -905,41 +883,5 @@ class TeamInviteView(BasePortalView):
         serializer = TeamInviteSerializer(data=request.data)
         if not serializer.is_valid():
             raise PortalValidationError("VALIDATION_ERROR")
-
-        data = serializer.validated_data
-        email = data.get("email", "").strip().lower()
-        phone = data.get("phone", "").strip()
-
-        # Проверка дубликата контакта
-        existing = Contact.objects.filter(company=request.portal_company)
-        if email and existing.filter(email__iexact=email).exists():
-            raise PortalValidationError("TEAM_MEMBER_EXISTS")
-        if phone and existing.filter(phone=phone).exists():
-            raise PortalValidationError("TEAM_MEMBER_EXISTS")
-
-        channels = data.get("channels") or ["email"]
-        pref_channel = (
-            "both" if ("email" in channels and "telegram" in channels) else (channels[0] if channels else "email")
-        )
-
-        contact = Contact.objects.create(
-            company=request.portal_company,
-            name=data["name"].strip(),
-            email=email,
-            phone=phone,
-            language=data.get("language", "ru"),
-            can_act=data.get("can_act", False),
-            preferred_channel=pref_channel,
-            is_primary=False,
-            invited_at=timezone.now(),
-        )
-
-        # Отправляем приглашение по выбранным каналам
-        invite_contact_to_portal(
-            contact=contact,
-            actor=getattr(request, "portal_contact", None),
-            channel=pref_channel,
-            language=contact.language,
-        )
-
+        contact = invite_team_member(request.portal_company, request.portal_contact, serializer.validated_data)
         return Response(TeamMemberSerializer(contact).data, status=status.HTTP_201_CREATED)

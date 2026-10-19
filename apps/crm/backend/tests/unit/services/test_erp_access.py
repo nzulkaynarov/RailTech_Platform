@@ -176,6 +176,29 @@ async def test_unexpected_exception_is_recorded_and_raised_for_retry(wired: dict
 
 
 @pytest.mark.asyncio
+@pytest.mark.parametrize("method", ["provision", "revoke"])
+async def test_not_configured_connector_is_transient_recorded_and_retried(
+    wired: dict[str, Any], method: str
+) -> None:
+    """P1 (FIX-11b): «коннектор не настроен» — повтор по расписанию (админ может подключить ERP
+    через минуту), а в `erp_sync_error` — понятный текст с тем, что делать."""
+    if method == "revoke":
+        wired["user"] = _user(access=["crm"])
+    client = FakeClient(
+        error=ConflictError("erp connector is not configured", reason=Reason.ERP_NOT_CONFIGURED)
+    )
+
+    with pytest.raises(ConflictError):  # пробросили — Procrastinate повторит
+        await getattr(_service(client), method)(5)
+
+    task = "erp_provision_user" if method == "provision" else "erp_revoke_sessions"
+    error = wired["user"].erp_sync_error
+    assert error.startswith(f"{task}: erp_not_configured: ")
+    assert "«Подключения»" in error
+    assert "повтор" in error
+
+
+@pytest.mark.asyncio
 async def test_permanent_error_is_recorded_and_not_retried(wired: dict[str, Any]) -> None:
     client = FakeClient(error=ConflictError("busy", reason=Reason.ERP_EMAIL_CONFLICT))
 

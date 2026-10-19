@@ -224,8 +224,11 @@ class TestContactInvitation:
         assert response.status_code == status.HTTP_400_BAD_REQUEST
         assert response.json()["detail"] == "CONTACT_EMAIL_REQUIRED"
 
-    def test_invite_contact_via_telegram(self, db, client_company, seller_user):
-        """Приглашение по каналу telegram возвращает telegram_url и не требует email."""
+    def test_invite_contact_via_telegram_is_refused_not_pretended(self, db, client_company, seller_user):
+        """FIX-23 (P-17): ERP в Telegram не пишет (бот у CRM) — канал telegram честно отвечает 400 INVALID_CHANNEL.
+
+        Раньше отвечало 200 `channel: telegram` при том, что ни письма, ни сообщения не уходило.
+        """
         contact = Contact.objects.create(
             company=client_company,
             name="Telegram контакт",
@@ -235,6 +238,7 @@ class TestContactInvitation:
             created_by=seller_user,
             preferred_channel="telegram",
         )
+        mail.outbox.clear()
 
         client = APIClient()
         client.force_authenticate(user=seller_user)
@@ -244,13 +248,12 @@ class TestContactInvitation:
             {"channel": "telegram"},
             format="json",
         )
-        assert response.status_code == status.HTTP_200_OK
-        data = response.json()
-        assert data["channel"] == "telegram"
-        assert data["email_sent"] is False
-        assert set(data) == {"ok", "contact_id", "channel", "email_sent", "invited_at"}
-        # Telegram-вход идёт по подписанному initData, ссылка-токен не нужна и не создаётся
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
+        assert response.json()["detail"] == "INVALID_CHANNEL"
+        assert mail.outbox == []
         assert not MagicLinkToken.objects.filter(contact=contact).exists()
+        contact.refresh_from_db()
+        assert contact.invited_at is None
 
     def test_invite_contact_of_archived_company_is_refused(self, client_contact, client_company, seller_user):
         """FIX-14: архивной компании приглашение не уходит — ни письма, ни токена."""

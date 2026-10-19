@@ -6,6 +6,7 @@ from .approvals import QuoteApprovalStep, StepParticipation, StepStatus, StepTri
 from .charges import ChargeTemplate, QuoteCharge
 from .contracts import Contract
 from .deals import ActivityLog, Deal
+from .delivery import DeliveryLine, DeliveryLineStatus
 from .fulfillment import Fulfillment
 from .lookups import ChargeType, ContractStatus, DealStage, FulfillmentStatus, QuoteStatus
 from .quotes import Quote, QuoteItem, QuoteItemHistory, QuoteItemQuerySet
@@ -19,6 +20,8 @@ __all__ = [
     "ContractStatus",
     "Deal",
     "DealStage",
+    "DeliveryLine",
+    "DeliveryLineStatus",
     "Fulfillment",
     "FulfillmentStatus",
     "Quote",

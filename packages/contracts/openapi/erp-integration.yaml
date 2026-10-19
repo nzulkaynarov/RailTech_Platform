@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: RailTech Platform ERP — Integration API (CRM → ERP)
-  version: 0.1.0
+  version: 0.2.0
   summary: Пространство `/api/integration/v1/` — вызывает только CRM под сервисным токеном.
   description: |
     Контракт по `docs/CONTRACTS.md` §0 и §2. Версия 0 (M0-INF-02): форма запросов и ответов, по которой
@@ -42,6 +42,9 @@ paths:
         Создаёт (или находит по `crm_client_id`) компанию-контрагента и контакты, при `create_request: true` —
         заявку с резюме потребности, отправляет приглашение в Cabinet по указанным каналам.
         Идемпотентно по `crm_client_id`: повторный вызов возвращает те же идентификаторы и не создаёт дублей.
+        Сопоставление компании создаётся до сделки, поэтому события `request.created(source=crm)` и `invite.sent` доходят
+        до CRM. Компания ищется по `crm_client_id`, затем по ИНН; ИНН, уже связанный с другим `crm_client_id`, — 409.
+        Согласие (`consent`) ERP сохраняет на компании как есть (дата и версия), без подстановок.
       parameters:
         - $ref: '#/components/parameters/IdempotencyKey'
       requestBody:
@@ -65,6 +68,14 @@ paths:
                 $ref: '#/components/schemas/HandoffResponse'
         '401':
           $ref: '#/components/responses/Unauthorized'
+        '409':
+          description: >-
+            `INN_CONFLICT` — ИНН принадлежит компании ERP, связанной с другим `crm_client_id`; ничего не создаётся
+            и не переписывается. CRM показывает менеджеру ошибку и не повторяет передачу автоматически.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
         '422':
           $ref: '#/components/responses/ValidationError'
 
@@ -180,7 +191,11 @@ paths:
       tags: [documents]
       operationId: getDocumentLink
       summary: Подписанная ссылка на файл документа
-      description: Ссылка живёт 10 минут; факт выдачи пишется в аудит ERP с `crm_*`-контекстом из заголовков.
+      description: |
+        Ссылка живёт 10 минут и ведёт на публичный маршрут ERP с подписанным токеном (FIX-32): токен проверяется во
+        вьюхе, файл отдаётся потоком, выдача и скачивание пишутся в журнал ERP с `crm_*`-контекстом из заголовка.
+        Документ компании без сопоставления с CRM, черновик или внутренний документ — 404. `size_bytes` — настоящий
+        размер файла; не известен — поля нет.
       parameters:
         - $ref: '#/components/parameters/ErpDocumentId'
         - name: X-CRM-Context
@@ -636,7 +651,12 @@ components:
 
     DealStage:
       type: string
-      description: Стадии сделки ERP (словарь сеется миграцией, M1-ERP-03); значения — стабильные коды
+      description: |
+        Стадия сделки глазами CRM — стабильные коды контракта, не коды FSM ERP. ERP вычисляет её одной функцией
+        сопоставления (`integration/services/stages.py`, FIX-30) из стадии FSM и документов сделки:
+        `request` (запрос), `quoting` (КП готовится), `quote_sent` (КП у клиента), `accepted` (КП принято), `contract`
+        (договор), `invoiced` (счёт выставлен), `paid` (оплачен), `fulfilment` (поставка/исполнение), `closing` (акт),
+        `won` / `lost` (сделка закрыта). Одна функция во всех ответах integration, в событиях и в инструментах MCP.
       enum: [request, quoting, quote_sent, accepted, contract, invoiced, paid, fulfilment, closing, won, lost]
 
     DealListItem:
@@ -653,7 +673,12 @@ components:
         stage:
           $ref: '#/components/schemas/DealStage'
         amount:
-          $ref: '#/components/schemas/Amount'
+          description: >-
+            Сумма последней версии КП, отправленной клиенту (с НДС); `null` — КП клиенту ещё не отправлялось.
+            Черновики и КП на согласовании в сумму не попадают (хвост FIX-12).
+          oneOf:
+            - $ref: '#/components/schemas/Amount'
+            - type: 'null'
         currency:
           $ref: '#/components/schemas/Currency'
         next_step:
@@ -758,8 +783,10 @@ components:
 
     DeliveryStatus:
       type: string
-      description: 'Проекция для клиента (BUSINESS §9): комплектуем / в пути к нам / готово к отгрузке / отгружено'
-      enum: [assembling, in_transit, ready_to_ship, shipped, delivered]
+      description: |
+        Проекция для клиента (BUSINESS §9): комплектуем / в пути к нам / готово к отгрузке / отгружено / доставлено;
+        `accepted` и `disputed` ставит клиент в Cabinet по строке (FIX-22), остальное — ERP.
+      enum: [assembling, in_transit, ready_to_ship, shipped, delivered, accepted, disputed]
 
     DeliveryLine:
       type: object
@@ -787,6 +814,13 @@ components:
           format: date
         tracking:
           type: [string, 'null']
+        accepted_at:
+          type: [string, 'null']
+          format: date-time
+          description: Когда клиент принял или оспорил строку
+        remark:
+          type: [string, 'null']
+          description: Замечание клиента при `disputed`
 
     ActStatus:
       type: string

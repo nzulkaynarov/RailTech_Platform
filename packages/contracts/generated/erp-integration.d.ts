@@ -18,6 +18,9 @@ export interface paths {
      * @description Создаёт (или находит по `crm_client_id`) компанию-контрагента и контакты, при `create_request: true` —
      *     заявку с резюме потребности, отправляет приглашение в Cabinet по указанным каналам.
      *     Идемпотентно по `crm_client_id`: повторный вызов возвращает те же идентификаторы и не создаёт дублей.
+     *     Сопоставление компании создаётся до сделки, поэтому события `request.created(source=crm)` и `invite.sent` доходят
+     *     до CRM. Компания ищется по `crm_client_id`, затем по ИНН; ИНН, уже связанный с другим `crm_client_id`, — 409.
+     *     Согласие (`consent`) ERP сохраняет на компании как есть (дата и версия), без подстановок.
      */
     post: operations["handoffClient"];
     delete?: never;
@@ -120,7 +123,10 @@ export interface paths {
     };
     /**
      * Подписанная ссылка на файл документа
-     * @description Ссылка живёт 10 минут; факт выдачи пишется в аудит ERP с `crm_*`-контекстом из заголовков.
+     * @description Ссылка живёт 10 минут и ведёт на публичный маршрут ERP с подписанным токеном (FIX-32): токен проверяется во
+     *     вьюхе, файл отдаётся потоком, выдача и скачивание пишутся в журнал ERP с `crm_*`-контекстом из заголовка.
+     *     Документ компании без сопоставления с CRM, черновик или внутренний документ — 404. `size_bytes` — настоящий
+     *     размер файла; не известен — поля нет.
      */
     get: operations["getDocumentLink"];
     put?: never;
@@ -337,7 +343,11 @@ export interface components {
       };
     };
     /**
-     * @description Стадии сделки ERP (словарь сеется миграцией, M1-ERP-03); значения — стабильные коды
+     * @description Стадия сделки глазами CRM — стабильные коды контракта, не коды FSM ERP. ERP вычисляет её одной функцией
+     *     сопоставления (`integration/services/stages.py`, FIX-30) из стадии FSM и документов сделки:
+     *     `request` (запрос), `quoting` (КП готовится), `quote_sent` (КП у клиента), `accepted` (КП принято), `contract`
+     *     (договор), `invoiced` (счёт выставлен), `paid` (оплачен), `fulfilment` (поставка/исполнение), `closing` (акт),
+     *     `won` / `lost` (сделка закрыта). Одна функция во всех ответах integration, в событиях и в инструментах MCP.
      * @enum {string}
      */
     DealStage:
@@ -358,7 +368,8 @@ export interface components {
       number: string;
       title: string;
       stage: components["schemas"]["DealStage"];
-      amount: components["schemas"]["Amount"];
+      /** @description Сумма последней версии КП, отправленной клиенту (с НДС); `null` — КП клиенту ещё не отправлялось. Черновики и КП на согласовании в сумму не попадают (хвост FIX-12). */
+      amount: components["schemas"]["Amount"] | null;
       currency: components["schemas"]["Currency"];
       next_step?: string | null;
       /** Format: date-time */
@@ -417,10 +428,18 @@ export interface components {
       due_date: string;
     };
     /**
-     * @description Проекция для клиента (BUSINESS §9): комплектуем / в пути к нам / готово к отгрузке / отгружено
+     * @description Проекция для клиента (BUSINESS §9): комплектуем / в пути к нам / готово к отгрузке / отгружено / доставлено;
+     *     `accepted` и `disputed` ставит клиент в Cabinet по строке (FIX-22), остальное — ERP.
      * @enum {string}
      */
-    DeliveryStatus: "assembling" | "in_transit" | "ready_to_ship" | "shipped" | "delivered";
+    DeliveryStatus:
+      | "assembling"
+      | "in_transit"
+      | "ready_to_ship"
+      | "shipped"
+      | "delivered"
+      | "accepted"
+      | "disputed";
     /** @description Строка поставки в проекции клиента — без поставщика, цен и себестоимости */
     DeliveryLine: {
       /** Format: int64 */
@@ -435,6 +454,13 @@ export interface components {
       /** Format: date */
       eta?: string | null;
       tracking?: string | null;
+      /**
+       * Format: date-time
+       * @description Когда клиент принял или оспорил строку
+       */
+      accepted_at?: string | null;
+      /** @description Замечание клиента при `disputed` */
+      remark?: string | null;
     };
     /** @enum {string} */
     ActStatus: "issued" | "accepted" | "returned";
@@ -658,6 +684,15 @@ export interface operations {
         };
       };
       401: components["responses"]["Unauthorized"];
+      /** @description `INN_CONFLICT` — ИНН принадлежит компании ERP, связанной с другим `crm_client_id`; ничего не создаётся и не переписывается. CRM показывает менеджеру ошибку и не повторяет передачу автоматически. */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Error"];
+        };
+      };
       422: components["responses"]["ValidationError"];
     };
   };

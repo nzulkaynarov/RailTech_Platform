@@ -21,7 +21,12 @@ from rest_framework.throttling import SimpleRateThrottle
 
 
 class _PortalSessionKeyedThrottle(SimpleRateThrottle):
-    """Ключ — id сессии портала; без сессии (аутентификация не прошла) — IP, чтобы подбор не был бесплатным."""
+    """Ключ — id сессии портала; без сессии — IP, чтобы подбор не был бесплатным.
+
+    Ветка `ip:` достижима только там, где допустим запрос без сессии: `LogoutView` (`permission_classes = []`,
+    анонимный выход — 204). Остальные портальные эндпоинты (`BasePortalView`) отвечают 401 раньше throttle
+    (DRF: аутентификация и права проверяются до лимитов) — это зафиксировано в `test_portal_throttles.py`.
+    """
 
     def get_cache_key(self, request, view):
         session = getattr(request, "portal_session", None)
