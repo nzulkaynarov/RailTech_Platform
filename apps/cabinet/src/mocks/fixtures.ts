@@ -94,6 +94,7 @@ export const requests: Schemas['ClientRequest'][] = [
     summary: 'Монтаж и пусконаладка насосной станции на складе в Чирчике',
     source: 'cabinet',
     deal_id: 57,
+    deal: { id: 57, number: 'D-57', title: null },
     created_at: '2026-10-10T16:40:00+05:00',
   },
   {
@@ -103,6 +104,7 @@ export const requests: Schemas['ClientRequest'][] = [
     summary: 'Подшипники 6205-2RS — 200 шт., ремни приводные SPZ 1250 — 40 шт.',
     source: 'crm',
     deal_id: 42,
+    deal: { id: 42, number: 'D-42', title: null },
     created_at: '2026-09-28T10:15:00+05:00',
   },
   {
@@ -112,6 +114,7 @@ export const requests: Schemas['ClientRequest'][] = [
     summary: 'Электродвигатель АИР 100L4 — 2 шт., частотный преобразователь 4 кВт',
     source: 'erp',
     deal_id: 48,
+    deal: { id: 48, number: 'D-48', title: null },
     created_at: '2026-09-15T09:30:00+05:00',
   },
   {
@@ -121,6 +124,7 @@ export const requests: Schemas['ClientRequest'][] = [
     summary: 'Редукторы червячные NMRV 063 — 6 шт., муфты упругие — 12 шт.',
     source: 'crm',
     deal_id: 35,
+    deal: { id: 35, number: 'D-35', title: null },
     created_at: '2026-08-05T14:00:00+05:00',
   },
 ];
@@ -128,6 +132,7 @@ export const requests: Schemas['ClientRequest'][] = [
 const quote42: Schemas['Quote'] = {
   id: 301,
   deal_id: 42,
+  deal: { id: 42, number: 'D-42', title: null },
   number: 'KP-2026-0042',
   version: 2,
   status: 'sent',
@@ -180,6 +185,7 @@ const quote42v1: Schemas['Quote'] = {
 const quote57: Schemas['Quote'] = {
   id: 310,
   deal_id: 57,
+  deal: { id: 57, number: 'D-57', title: null },
   number: 'KP-2026-0057',
   version: 1,
   status: 'viewed',
@@ -224,6 +230,7 @@ const quote57: Schemas['Quote'] = {
 const quote48: Schemas['Quote'] = {
   id: 320,
   deal_id: 48,
+  deal: { id: 48, number: 'D-48', title: null },
   number: 'KP-2026-0048',
   version: 1,
   status: 'accepted',
@@ -260,6 +267,7 @@ const quote48: Schemas['Quote'] = {
 const quote33: Schemas['Quote'] = {
   id: 330,
   deal_id: 33,
+  deal: { id: 33, number: 'D-33', title: null },
   number: 'KP-2026-0033',
   version: 1,
   status: 'expired',
@@ -289,6 +297,7 @@ export const contracts: Schemas['Contract'][] = [
   {
     id: 402,
     deal_id: 48,
+    deal: { id: 48, number: 'D-48', title: null },
     number: 'D-2026-0048',
     status: 'sent',
     signed_by_client_at: null,
@@ -298,6 +307,7 @@ export const contracts: Schemas['Contract'][] = [
   {
     id: 403,
     deal_id: 29,
+    deal: { id: 29, number: 'D-29', title: null },
     number: 'D-2026-0029',
     status: 'signed_by_company',
     signed_by_client_at: null,
@@ -307,6 +317,7 @@ export const contracts: Schemas['Contract'][] = [
   {
     id: 401,
     deal_id: 35,
+    deal: { id: 35, number: 'D-35', title: null },
     number: 'D-2026-0035',
     status: 'signed',
     signed_by_client_at: '2026-08-20T10:00:00+05:00',
@@ -319,6 +330,7 @@ export const invoices: Schemas['Invoice'][] = [
   {
     id: 603,
     deal_id: 29,
+    deal: { id: 29, number: 'D-29', title: null },
     number: 'S-2026-0124',
     status: 'issued',
     total: { amount: '9800000.00', currency: 'UZS' },
@@ -329,6 +341,7 @@ export const invoices: Schemas['Invoice'][] = [
   {
     id: 604,
     deal_id: 48,
+    deal: { id: 48, number: 'D-48', title: null },
     number: 'S-2026-0130',
     status: 'issued',
     total: { amount: '12500.00', currency: 'USD' },
@@ -339,6 +352,7 @@ export const invoices: Schemas['Invoice'][] = [
   {
     id: 601,
     deal_id: 35,
+    deal: { id: 35, number: 'D-35', title: null },
     number: 'S-2026-0118',
     status: 'partially_paid',
     total: { amount: '27500000.00', currency: 'UZS' },
@@ -349,6 +363,7 @@ export const invoices: Schemas['Invoice'][] = [
   {
     id: 602,
     deal_id: 35,
+    deal: { id: 35, number: 'D-35', title: null },
     number: 'S-2026-0101',
     status: 'paid',
     total: { amount: '5400000.00', currency: 'UZS' },
@@ -362,6 +377,7 @@ export const acts: Schemas['Act'][] = [
   {
     id: 701,
     deal_id: 35,
+    deal: { id: 35, number: 'D-35', title: null },
     number: 'A-2026-0090',
     status: 'issued',
     issued_at: '2026-10-11T09:00:00+05:00',
@@ -371,6 +387,7 @@ export const acts: Schemas['Act'][] = [
   {
     id: 703,
     deal_id: 29,
+    deal: { id: 29, number: 'D-29', title: null },
     number: 'A-2026-0084',
     status: 'returned',
     issued_at: '2026-10-03T16:00:00+05:00',
@@ -380,6 +397,7 @@ export const acts: Schemas['Act'][] = [
   {
     id: 702,
     deal_id: 29,
+    deal: { id: 29, number: 'D-29', title: null },
     number: 'A-2026-0071',
     status: 'accepted',
     issued_at: '2026-09-18T12:00:00+05:00',
@@ -390,7 +408,9 @@ export const acts: Schemas['Act'][] = [
 
 export const deliveries: Schemas['DeliveryLine'][] = [
   {
+    id: 101,
     deal_id: 29,
+    deal: { id: 29, number: 'D-29', title: null },
     line_no: 1,
     title: 'Насос центробежный CM 50-200',
     quantity: '2',
@@ -401,7 +421,9 @@ export const deliveries: Schemas['DeliveryLine'][] = [
     shipped_at: null,
   },
   {
+    id: 102,
     deal_id: 29,
+    deal: { id: 29, number: 'D-29', title: null },
     line_no: 2,
     title: 'Задвижка 30с41нж Ду100',
     quantity: '4',
@@ -412,7 +434,9 @@ export const deliveries: Schemas['DeliveryLine'][] = [
     shipped_at: null,
   },
   {
+    id: 103,
     deal_id: 29,
+    deal: { id: 29, number: 'D-29', title: null },
     line_no: 3,
     title: 'Манометр ДМ 02-100',
     quantity: '10',
@@ -423,7 +447,9 @@ export const deliveries: Schemas['DeliveryLine'][] = [
     shipped_at: '2026-10-12T11:00:00+05:00',
   },
   {
+    id: 104,
     deal_id: 48,
+    deal: { id: 48, number: 'D-48', title: null },
     line_no: 1,
     title: 'Электродвигатель АИР 100L4',
     quantity: '2',
@@ -434,7 +460,9 @@ export const deliveries: Schemas['DeliveryLine'][] = [
     shipped_at: null,
   },
   {
+    id: 105,
     deal_id: 35,
+    deal: { id: 35, number: 'D-35', title: null },
     line_no: 1,
     title: 'Редуктор червячный NMRV 063',
     quantity: '6',
@@ -445,7 +473,9 @@ export const deliveries: Schemas['DeliveryLine'][] = [
     shipped_at: '2026-09-21T08:00:00+05:00',
   },
   {
+    id: 106,
     deal_id: 35,
+    deal: { id: 35, number: 'D-35', title: null },
     line_no: 2,
     title: 'Муфта упругая МУВП-3',
     quantity: '12',

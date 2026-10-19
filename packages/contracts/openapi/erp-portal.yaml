@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: RailTech Platform ERP — Portal API (Cabinet → ERP)
-  version: 0.1.0
+  version: 0.2.0
   summary: Пространство `/api/portal/v1/` — вызывает Cabinet SPA от имени клиента.
   description: |
     Контракт по `docs/CONTRACTS.md` §4 и ADR-0004 (Cabinet без бэкенда). Версия 0 (M0-INF-02):
@@ -14,11 +14,16 @@ info:
     Защита сессии в cookie от CSRF (FIX-15): каждый `POST` и `PATCH` обязан нести
     заголовок `Idempotency-Key` (без него — 400 `IDEMPOTENCY_KEY_REQUIRED`) и тело `application/json`
     (иное — 415 `UNSUPPORTED_MEDIA_TYPE`; единственное исключение — `multipart/form-data` на `/uploads`). Повтор с тем же
-    ключом и тем же методом/путём в пределах сессии возвращает прежний ответ (заголовок `Idempotent-Replay: true`).
+    ключом и тем же методом/путём в пределах сессии возвращает прежний ответ (заголовок `Idempotent-Replay: true`);
+    исключение — ответы с `Set-Cookie` (`/auth/*`): они не кэшируются, повтор исполняется заново.
+
+    Коды ошибок `detail` — перечень `ErrorCode` (Q-17); незнакомый код Cabinet показывает по HTTP-статусу.
+    Ссылка входа из письма ведёт на Cabinet `/auth/magic#token=<токен>`: токен во фрагменте не попадает в журналы
+    серверов и прокси, Cabinet обменивает его через `POST /auth/magic` (FIX-20; `GET /auth/magic/{token}` — устаревший).
 
     Лимиты частоты (429 `TOO_MANY_REQUESTS`, заголовок `Retry-After`): запросы сессии — 120 в минуту на сессию; вход без
-    сессии (`/auth/telegram`, `/auth/magic-link`, `/auth/magic/{token}`) — 10 в минуту на IP; акцепт КП с кодом — 10 в минуту
-    на сессию; ссылка входа на один e-mail — не чаще 5 в час. Ставки задаются настройками ERP.
+    сессии (`/auth/telegram`, `/auth/magic-link`, `/auth/magic`) — 10 в минуту на IP; акцепт КП с кодом и запрос кода —
+    10 в минуту на сессию; ссылка входа на один e-mail — не чаще 5 в час. Ставки задаются настройками ERP.
 servers:
   - url: https://erp.railtech.uz/api/portal/v1
     description: prod
@@ -75,11 +80,13 @@ paths:
               schema:
                 $ref: '#/components/schemas/Me'
         '401':
-          description: Подпись неверна, срок истёк или контакт не найден
+          description: Подпись неверна, срок истёк или контакт не найден (`INVALID_INIT_DATA`)
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
+        '403':
+          $ref: '#/components/responses/CompanyArchived'
         '400':
           $ref: '#/components/responses/IdempotencyKeyRequired'
         '415':
@@ -124,7 +131,8 @@ paths:
     get:
       tags: [auth]
       operationId: exchangeMagicLink
-      summary: Обмен magic-link на сессию
+      summary: 'Обмен magic-link на сессию (устарело: токен в пути попадает в журналы; см. `POST /auth/magic`)'
+      deprecated: true
       security: []
       parameters:
         - name: token
@@ -139,12 +147,66 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Me'
+        '403':
+          $ref: '#/components/responses/CompanyArchived'
         '410':
-          description: Ссылка просрочена или уже использована
+          description: Ссылка просрочена или уже использована (`MAGIC_LINK_EXPIRED`)
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+
+  /auth/magic:
+    post:
+      tags: [auth]
+      operationId: exchangeMagicLinkToken
+      summary: Обмен токена из ссылки входа на сессию
+      description: |
+        Cabinet берёт токен из фрагмента ссылки `/auth/magic#token=…` и шлёт его в теле: токен не появляется ни в пути,
+        ни в журналах. Токен одноразовый и живёт 15 минут (ссылка-приглашение — 24 часа). Заменяет `GET /auth/magic/{token}`.
+      security: []
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [token]
+              properties:
+                token:
+                  type: string
+                  minLength: 16
+                  maxLength: 512
+              additionalProperties: false
+      responses:
+        '200':
+          description: Сессия выдана (cookie `Set-Cookie`)
+          headers:
+            Set-Cookie:
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Me'
+        '403':
+          $ref: '#/components/responses/CompanyArchived'
+        '410':
+          description: Токен просрочен, уже использован или неизвестен (`MAGIC_LINK_EXPIRED`)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '400':
+          $ref: '#/components/responses/IdempotencyKeyRequired'
+        '415':
+          $ref: '#/components/responses/UnsupportedMediaType'
+        '422':
+          $ref: '#/components/responses/ValidationError'
         '429':
           $ref: '#/components/responses/TooManyRequests'
 
@@ -294,12 +356,54 @@ paths:
         '429':
           $ref: '#/components/responses/TooManyRequests'
 
+  /quotes/{id}/request-code:
+    post:
+      tags: [quotes]
+      operationId: requestQuoteAcceptanceCode
+      summary: Запросить код акцепта КП
+      description: |
+        Код акцепта (6 цифр, 15 минут, 5 попыток) ERP отправляет контакту сессии по его каналу — в Telegram через бота CRM
+        или на e-mail; мастер-кода нет (FIX-02). Cabinet зовёт перед вводом кода на экране КП. Повторный запрос гасит
+        прежний код. Требует права `can_act`; лимит — `portal_accept` (10 в минуту на сессию).
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+        - $ref: '#/components/parameters/Id'
+      responses:
+        '202':
+          description: Код отправлен
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AcceptanceCodeSent'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: КП не в статусе ожидания ответа (`QUOTE_FINALIZED`, `QUOTE_EXPIRED`)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '422':
+          description: У контакта нет ни одного канала для кода (`CONTACT_CHANNEL_REQUIRED`)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '400':
+          $ref: '#/components/responses/IdempotencyKeyRequired'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+
   /quotes/{id}/accept:
     post:
       tags: [quotes]
       operationId: acceptQuote
       summary: Принять КП по коду акцепта
-      description: Договор создаётся автоматически (BUSINESS §4, шаг 6). Требует права `can_act`.
+      description: Код — из `POST /quotes/{id}/request-code`. Договор создаётся автоматически (BUSINESS §4, шаг 6). Требует права `can_act`.
       parameters:
         - $ref: '#/components/parameters/IdempotencyKey'
         - $ref: '#/components/parameters/Id'
@@ -330,7 +434,7 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
         '409':
-          description: КП уже принято/отклонено или срок истёк; код неверен
+          description: КП уже принято/отклонено или срок истёк (`QUOTE_FINALIZED`, `QUOTE_EXPIRED`); код неверен или не запрошен (`QUOTE_CODE_INVALID`)
           content:
             application/json:
               schema:
@@ -476,10 +580,19 @@ paths:
     post:
       tags: [acts]
       operationId: acceptAct
-      summary: Принять акт
+      summary: Принять акт (при желании — со сканом подписанного экземпляра)
+      description: |
+        Тело необязательно. `upload_id` из `POST /uploads` привязывает скан к акту: ERP сохраняет его как подписанный
+        экземпляр (`Act.signed_file`) и отдаёт в `GET /documents` видом `act` с `scan_document_id` в акте. Требует `can_act`.
       parameters:
         - $ref: '#/components/parameters/IdempotencyKey'
         - $ref: '#/components/parameters/Id'
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ActAccept'
       responses:
         '200':
           description: Акт принят заказчиком
@@ -494,13 +607,21 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
         '409':
-          description: Акт уже в конечном статусе
+          description: Акт уже в конечном статусе (`ACT_FINALIZED`)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '422':
+          description: '`upload_id` неизвестен или файл не PDF/изображение (`UPLOAD_NOT_FOUND`, `VALIDATION_ERROR`)'
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
         '400':
           $ref: '#/components/responses/IdempotencyKeyRequired'
+        '415':
+          $ref: '#/components/responses/UnsupportedMediaType'
         '429':
           $ref: '#/components/responses/TooManyRequests'
 
@@ -560,6 +681,86 @@ paths:
                   $ref: '#/components/schemas/DeliveryLine'
         '401':
           $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+
+  /deliveries/{id}/accept:
+    post:
+      tags: [deliveries]
+      operationId: acceptDeliveryLine
+      summary: Принять строку поставки (BUSINESS §9, шаг 9)
+      description: Строка переходит в `accepted`; принять можно только `delivered`. Требует `can_act`. Событие `delivery.line_accepted` → CRM.
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+        - $ref: '#/components/parameters/Id'
+      responses:
+        '200':
+          description: Строка принята
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeliveryLine'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: Строка не доставлена или уже принята/оспорена (`DELIVERY_LINE_NOT_ACCEPTABLE`)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '400':
+          $ref: '#/components/responses/IdempotencyKeyRequired'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+
+  /deliveries/{id}/dispute:
+    post:
+      tags: [deliveries]
+      operationId: disputeDeliveryLine
+      summary: Замечание по строке поставки
+      description: Строка переходит в `disputed` с причиной; менеджер получает задачу, клиент — ответ через бота. Требует `can_act`.
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+        - $ref: '#/components/parameters/Id'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Reason'
+      responses:
+        '200':
+          description: Замечание принято
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeliveryLine'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: Строка не доставлена или уже принята/оспорена (`DELIVERY_LINE_NOT_ACCEPTABLE`)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '422':
+          description: Причина пуста (`REASON_REQUIRED`)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '400':
+          $ref: '#/components/responses/IdempotencyKeyRequired'
+        '415':
+          $ref: '#/components/responses/UnsupportedMediaType'
         '429':
           $ref: '#/components/responses/TooManyRequests'
 
@@ -886,7 +1087,13 @@ components:
           schema:
             $ref: '#/components/schemas/Error'
     Forbidden:
-      description: У контакта нет права действовать (`can_act = false`)
+      description: У контакта нет права действовать (`can_act = false`; `FORBIDDEN`)
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    CompanyArchived:
+      description: Компания контакта архивна — вход закрыт любым каналом (`FORBIDDEN`, Q-18)
       content:
         application/json:
           schema:
@@ -934,8 +1141,42 @@ components:
       required: [detail]
       properties:
         detail:
-          type: string
+          description: Код из `ErrorCode`; новые коды добавляются в перечень в том же PR, что и код ERP
+          anyOf:
+            - $ref: '#/components/schemas/ErrorCode'
+            - type: string
       additionalProperties: false
+
+    ErrorCode:
+      type: string
+      description: Коды `detail` портала (Q-17). Cabinet показывает текст по коду, незнакомый — по HTTP-статусу.
+      enum:
+        - UNAUTHORIZED
+        - INVALID_INIT_DATA
+        - FORBIDDEN
+        - NOT_FOUND
+        - MAGIC_LINK_EXPIRED
+        - IDEMPOTENCY_KEY_REQUIRED
+        - UNSUPPORTED_MEDIA_TYPE
+        - TOO_MANY_REQUESTS
+        - VALIDATION_ERROR
+        - REASON_REQUIRED
+        - INN_INVALID
+        - TEAM_MEMBER_EXISTS
+        - CONTACT_EMAIL_REQUIRED
+        - CONTACT_CHANNEL_REQUIRED
+        - INVALID_CHANNEL
+        - FILE_REQUIRED
+        - FILE_TOO_LARGE
+        - UPLOAD_NOT_FOUND
+        - QUOTE_FINALIZED
+        - QUOTE_EXPIRED
+        - QUOTE_CODE_INVALID
+        - CONTRACT_FINALIZED
+        - ACT_FINALIZED
+        - DELIVERY_LINE_NOT_ACCEPTABLE
+        - DOCUMENT_PENDING
+        - CONFLICT
 
     Reason:
       type: object
@@ -971,6 +1212,44 @@ components:
           $ref: '#/components/schemas/Amount'
         currency:
           $ref: '#/components/schemas/Currency'
+      additionalProperties: false
+
+    DealRef:
+      type: object
+      description: Сделка глазами клиента (Q-16) — номер и название вместо внутреннего id
+      required: [id, number]
+      properties:
+        id:
+          type: integer
+          format: int64
+        number:
+          type: string
+        title:
+          type: [string, 'null']
+      additionalProperties: false
+
+    AcceptanceCodeSent:
+      type: object
+      required: [channel, sent_to, expires_in]
+      properties:
+        channel:
+          type: string
+          enum: [telegram, email]
+        sent_to:
+          type: string
+          description: 'Куда ушёл код, в замаскированном виде: `i***@example.com`, `@u***` или `Telegram`'
+        expires_in:
+          type: integer
+          minimum: 1
+          description: Срок действия кода, секунд
+      additionalProperties: false
+
+    ActAccept:
+      type: object
+      properties:
+        upload_id:
+          type: string
+          description: Скан подписанного акта из `POST /uploads` (PDF или изображение, ≤ 10 МБ)
       additionalProperties: false
 
     Me:
@@ -1009,7 +1288,7 @@ components:
 
     AttachmentRef:
       type: object
-      description: Загруженный файл (заливка — `multipart` на `/documents`, появится с M2-ERP-01)
+      description: Файл, загруженный через `POST /uploads` (`upload_id` из ответа). Лишних полей нет — размер ERP знает сам
       required: [upload_id, name]
       properties:
         upload_id:
@@ -1052,9 +1331,16 @@ components:
         source:
           type: string
           enum: [crm, cabinet, erp]
+        deal:
+          description: Сделка, в которую вырос запрос (Q-16); `null`, пока запрос не стал сделкой
+          oneOf:
+            - $ref: '#/components/schemas/DealRef'
+            - type: 'null'
         deal_id:
           type: [integer, 'null']
           format: int64
+          deprecated: true
+          description: 'Устарело: см. `deal.id`. Снимается после перехода Cabinet (FIX-24)'
         created_at:
           type: string
           format: date-time
@@ -1073,14 +1359,18 @@ components:
 
     QuoteListItem:
       type: object
-      required: [id, number, version, status, total, sent_at]
+      required: [id, number, version, status, total, sent_at, deal]
       properties:
         id:
           type: integer
           format: int64
+        deal:
+          $ref: '#/components/schemas/DealRef'
         deal_id:
           type: integer
           format: int64
+          deprecated: true
+          description: 'Устарело: см. `deal.id`'
         number:
           type: string
         version:
@@ -1153,14 +1443,18 @@ components:
 
     Contract:
       type: object
-      required: [id, number, status, deal_id]
+      required: [id, number, status, deal_id, deal]
       properties:
         id:
           type: integer
           format: int64
+        deal:
+          $ref: '#/components/schemas/DealRef'
         deal_id:
           type: integer
           format: int64
+          deprecated: true
+          description: 'Устарело: см. `deal.id`'
         number:
           type: string
         status:
@@ -1181,14 +1475,18 @@ components:
 
     Invoice:
       type: object
-      required: [id, number, status, total, paid, due_date, deal_id]
+      required: [id, number, status, total, paid, due_date, deal_id, deal]
       properties:
         id:
           type: integer
           format: int64
+        deal:
+          $ref: '#/components/schemas/DealRef'
         deal_id:
           type: integer
           format: int64
+          deprecated: true
+          description: 'Устарело: см. `deal.id`'
         number:
           type: string
         status:
@@ -1215,9 +1513,13 @@ components:
         id:
           type: integer
           format: int64
+        deal:
+          $ref: '#/components/schemas/DealRef'
         deal_id:
           type: integer
           format: int64
+          deprecated: true
+          description: 'Устарело: см. `deal.id`'
         number:
           type: string
         status:
@@ -1230,18 +1532,32 @@ components:
         document_id:
           type: [integer, 'null']
           format: int64
+          description: Выпущенный акт (PDF ERP)
+        scan_document_id:
+          type: [integer, 'null']
+          format: int64
+          description: Скан подписанного клиентом экземпляра, если загружен при приёмке
 
     DeliveryStatus:
       type: string
-      enum: [assembling, in_transit, ready_to_ship, shipped, delivered]
+      description: '`accepted` и `disputed` ставит клиент (`/deliveries/{id}/accept|dispute`); остальное — ERP (M4 — со склада)'
+      enum: [assembling, in_transit, ready_to_ship, shipped, delivered, accepted, disputed]
 
     DeliveryLine:
       type: object
-      required: [deal_id, line_no, title, status]
+      description: Строка поставки = строка подтверждённого заказа клиента; `id` — её идентификатор для приёмки
+      required: [id, deal, deal_id, line_no, title, status]
       properties:
+        id:
+          type: integer
+          format: int64
+        deal:
+          $ref: '#/components/schemas/DealRef'
         deal_id:
           type: integer
           format: int64
+          deprecated: true
+          description: 'Устарело: см. `deal.id`'
         line_no:
           type: integer
           minimum: 1
@@ -1261,10 +1577,17 @@ components:
         shipped_at:
           type: [string, 'null']
           format: date-time
+        accepted_at:
+          type: [string, 'null']
+          format: date-time
+          description: Когда клиент принял или оспорил строку
+        remark:
+          type: [string, 'null']
+          description: Замечание клиента при `disputed`
 
     DocumentKind:
       type: string
-      enum: [quote, contract, invoice, act, waybill, receipt, other]
+      enum: [quote, contract, invoice, act, specification, waybill, receipt, other]
 
     Document:
       type: object
@@ -1273,9 +1596,15 @@ components:
         id:
           type: integer
           format: int64
+        deal:
+          oneOf:
+            - $ref: '#/components/schemas/DealRef'
+            - type: 'null'
         deal_id:
           type: [integer, 'null']
           format: int64
+          deprecated: true
+          description: 'Устарело: см. `deal.id`'
         kind:
           $ref: '#/components/schemas/DocumentKind'
         number:
@@ -1313,9 +1642,11 @@ components:
           type: string
         category:
           type: [string, 'null']
+          description: Название категории; справочник с id — `GET /catalog/categories` (Q-15)
         category_id:
           type: [integer, 'null']
           format: int64
+          description: Id категории для фильтра `GET /catalog?category_id=`
         price:
           oneOf:
             - $ref: '#/components/schemas/Money'

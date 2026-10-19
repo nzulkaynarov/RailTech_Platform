@@ -79,7 +79,9 @@
       "in_transit": "Yoʻlda",
       "ready_to_ship": "Joʻnatishga tayyor",
       "shipped": "Joʻnatilgan",
-      "delivered": "Yetkazilgan"
+      "delivered": "Yetkazilgan",
+      "accepted": "Qabul qilingan",
+      "disputed": "Eʼtirozlar bor"
     },
     "availability": {
       "in_stock": "Mavjud",
