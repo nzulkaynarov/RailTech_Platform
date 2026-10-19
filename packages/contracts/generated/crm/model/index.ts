@@ -36,6 +36,7 @@ export * from "./deliveryStatus";
 export * from "./document";
 export * from "./documentKind";
 export * from "./documentLink";
+export * from "./erpPermission";
 export * from "./error";
 export * from "./getAiUsageParams";
 export * from "./handoffRequest";

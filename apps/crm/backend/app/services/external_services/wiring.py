@@ -15,6 +15,9 @@ def build_checks(c: "Container") -> ExternalChecks:
     async def erp_url() -> str:
         return (await c.erp_connector.resolution()).base_url
 
+    async def erp_configured() -> bool:
+        return (await c.erp_connector.resolution()).connection is not None
+
     deps = Deps(
         config=c.settings,
         settings=c.settings_service,
@@ -28,6 +31,7 @@ def build_checks(c: "Container") -> ExternalChecks:
         catalog=c.model_catalog,
         erp_url=erp_url,
         defaults=c.settings.litellm_models_path,
+        erp_configured=erp_configured,
     )
     alerts = AlertSender(
         c.session_factory,

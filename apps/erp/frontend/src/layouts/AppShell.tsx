@@ -61,6 +61,7 @@ import { useAuthStore } from '@/store/authStore';
 import { NotificationCenter } from '@/components/Layout/NotificationCenter';
 import { DocumentSearchDialog } from '@/components/Layout/DocumentSearchDialog';
 import { useCommandPaletteShortcut, useCommandPaletteState } from '@/components/Layout/useCommandPalette';
+import { canSwitchToCrm } from './crmSwitch';
 import { sidebarDefaultOpen } from './sidebarDefaultOpen';
 import { roleDisplayName } from '@/components/Settings/team/roleErrors';
 
@@ -485,8 +486,8 @@ function AppShellInner({ children, activePage, onNavigate, onStartTour, fullBlee
                 <TooltipContent>{t('search.trigger')}</TooltipContent>
               </Tooltip>
 
-              {/* Переход в CRM через SSO (CONTRACTS §6) — только когда SSO включён на сервере (FIX-03). */}
-              {capabilities.sso_enabled && (
+              {/* Переход в CRM через SSO (CONTRACTS §6) — SSO включён (FIX-03) и сотрудник провиженен из CRM (FIX-11). */}
+              {canSwitchToCrm(capabilities) && (
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <Button

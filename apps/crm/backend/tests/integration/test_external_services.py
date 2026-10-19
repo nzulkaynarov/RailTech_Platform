@@ -17,7 +17,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 from app.config import Settings
 from app.domain.external_incidents import AlertText
 from app.main import create_app
-from app.models.auth import AuditLog
+from app.models.auth import AuditLog, User
 from app.models.email import EmailLog
 from app.models.external_services import ExternalServiceIncident, ExternalServiceSwitch
 from app.security.secrets_store import SecretCipher
@@ -345,3 +345,37 @@ async def test_mail_pause_holds_and_enable_resumes_queue(
     on = client.post(f"{URL}/mail/enable", json={"password": PASSWORD}, headers=auth)
     assert on.status_code == 200, on.text
     assert len(queued) == 1
+
+
+async def test_erp_sync_failures_land_in_the_feed_not_in_the_users_answer(
+    sessions: async_sessionmaker[AsyncSession], client: TestClient, alerts: FakeAlerts
+) -> None:
+    """FIX-11: ошибка провижининга — сбой строки «Синхронизация с ERP» и оповещение админу."""
+    auth = await headers(sessions, client, "admin")
+    manager, _ = await make_user(sessions, "dilshod@railtech.uz", ["manager"])
+    async with sessions() as session, session.begin():
+        row = await session.get(User, manager.id)
+        assert row is not None
+        row.platform_access = ["crm", "erp"]
+
+    ok = client.post(f"{URL}/erp_sync/check", headers=auth).json()["service"]
+    assert (ok["status"], ok["key"]) == ("ok", "erp_sync")
+
+    async with sessions() as session, session.begin():
+        row = await session.get(User, manager.id)
+        assert row is not None
+        row.erp_sync_error = "erp_provision_user: erp_unavailable: timeout"
+
+    failed = client.post(f"{URL}/erp_sync/check", headers=auth).json()["service"]
+    assert failed["status"] == "fail"
+    assert failed["error"] == "erp_provision_user: erp_unavailable: timeout"
+    assert failed["hint"]
+    assert failed["fix_path"] == "/integrations?tab=erp"
+    assert [k for k, _ in alerts.sent] == ["erp_sync"]
+
+    async with sessions() as session, session.begin():
+        row = await session.get(User, manager.id)
+        assert row is not None
+        row.erp_sync_error = None
+    healed = client.post(f"{URL}/erp_sync/check", headers=auth).json()["service"]
+    assert healed["status"] == "ok"

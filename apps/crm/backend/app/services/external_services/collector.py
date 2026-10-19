@@ -18,6 +18,7 @@ import httpx
 import structlog
 
 from app.config import Settings
+from app.domain import external_erp_sync as erp_sync_rules
 from app.domain import external_status as rules
 from app.domain import external_vendor as vendor_rules
 from app.domain import system_status
@@ -72,6 +73,8 @@ class Deps:
     tls_probe: Callable[[str], Awaitable[probes.TlsProbe]] = probes.tls
     # Значения по умолчанию алиасов: строки вендоров есть и при недоступном шлюзе.
     defaults: Path | None = None
+    # Коннектор «ERP» настроен (адрес и токен из «Подключений» или `.env`); не задан — по адресу.
+    erp_configured: Callable[[], Awaitable[bool]] | None = None
 
 
 class Collector:
@@ -140,6 +143,7 @@ class _Run:
             "s3": self.s3,
             "docling": self.docling,
             "backup": self.backup,
+            "erp_sync": self.erp_sync,
         }
         return await handler[key]()
 
@@ -223,6 +227,16 @@ class _Run:
         window = vendor_rules.stats(rows, self.now - WINDOW)
         day = vendor_rules.stats(rows, self.now - DAY) if self.heavy else None
         return _VendorData(window, day, budgets)
+
+    async def erp_sync(self) -> CheckResult:
+        """Итог синхронизации сотрудников с ERP (FIX-11): ошибки задач, не пробный запрос."""
+        probe = self.d.erp_configured
+        configured = await probe() if probe is not None else bool(await self.d.erp_url())
+        async with self.d.sessions() as session:
+            with_access, failed, last_error = await repo.erp_sync_stats(session)
+        return erp_sync_rules.erp_sync(
+            erp_sync_rules.ErpSyncFacts(configured, with_access, failed, last_error)
+        )
 
     async def langfuse(self) -> CheckResult:
         cfg = self.d.config

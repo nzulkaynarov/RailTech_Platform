@@ -3,10 +3,15 @@
 from datetime import datetime
 from typing import Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 Role = Literal["admin", "manager", "viewer"]
+PlatformSystem = Literal["crm", "erp"]
 UiMode = Literal["admin", "manager"]
+
+
+def _crm_only() -> list[PlatformSystem]:
+    return ["crm"]
 
 
 class LoginRequest(BaseModel):
@@ -39,6 +44,9 @@ class UserOut(BaseModel):
     notify_leads: bool
     # Когда Telegram последний раз отказал в личном сообщении; None — доставка работает.
     tg_dm_failed_at: datetime | None = None
+    # Куда пользователю можно (FIX-11): `["crm"]` по умолчанию, `["crm", "erp"]` — доступ к ERP
+    # выдан. Переход в ERP в шапке — только при "erp" (истина на сервере: без него токен — 403).
+    platform_access: list[PlatformSystem] = Field(default_factory=_crm_only)
 
 
 class MeOut(UserOut):
@@ -80,6 +88,20 @@ class UserUpdate(BaseModel):
     clear_tg_user_id: bool = False
     # При деактивации: кому передать лидов, которых ведёт пользователь (ADR-0015).
     transfer_to_user_id: int | None = Field(default=None, gt=0)
+    # Доступ к системам (FIX-11): `["crm"]` — только CRM, `["crm", "erp"]` — выдан доступ к ERP.
+    # Выдача ставит в очередь провижининг в ERP, снятие — отзыв сессий ERP.
+    platform_access: list[PlatformSystem] | None = None
+
+    @field_validator("platform_access")
+    @classmethod
+    def _crm_is_always_there(
+        cls, value: list[PlatformSystem] | None
+    ) -> list[PlatformSystem] | None:
+        if value is None:
+            return None
+        if "crm" not in value:
+            raise ValueError("platform_access must include 'crm'")
+        return sorted(set(value))
 
 
 class PasswordReset(BaseModel):

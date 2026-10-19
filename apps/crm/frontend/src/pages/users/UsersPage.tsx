@@ -10,6 +10,7 @@ import {
   updateUser,
 } from "../../api/generated/crm";
 import type { UserCreate, UserOut, UserUpdate } from "../../api/generated/model";
+import { withErpAccess } from "../../domain/platformAccess";
 import { emailLogKey } from "../../api/integrationQueries";
 import { keys, useUsers } from "../../api/queries";
 import { PageBody } from "../../components/PageBody";
@@ -70,6 +71,19 @@ function useUserMutations(on: {
       onSuccess: (result, user) => {
         on.password({ password: result.temporary_password, user });
         void message.success(named(t.userAdmin.passwordReset, user.full_name));
+      },
+      onError,
+    }),
+    // Доступ к ERP (FIX-11): ответ — «принято»; создание учётной записи и ошибки ERP идут в фоне
+    // (центр внешних сервисов), пользователю админа они не показываются.
+    erp: useMutation({
+      mutationFn: async ({ user, enabled }: { user: UserOut; enabled: boolean }) =>
+        await updateUser(user.id, { platform_access: withErpAccess(enabled) }),
+      onSuccess: (_, { user, enabled }) => {
+        void message.success(
+          named(enabled ? t.userAdmin.erpGranted : t.userAdmin.erpRevoked, user.full_name),
+        );
+        void refresh();
       },
       onError,
     }),
@@ -189,6 +203,18 @@ export function UsersPage() {
       onOk: () => m.resetByEmail.mutateAsync(u),
     });
   };
+  const toggleErp = (u: UserOut, enabled: boolean) => {
+    if (enabled) {
+      m.erp.mutate({ user: u, enabled });
+      return;
+    }
+    confirmDanger({
+      title: named(t.userAdmin.erpRevokeTitle, u.full_name),
+      content: t.userAdmin.erpRevokeHint,
+      okText: t.userAdmin.erpRevoke,
+      onOk: () => m.erp.mutateAsync({ user: u, enabled }),
+    });
+  };
   const create = (
     <Button
       type="primary"
@@ -211,6 +237,8 @@ export function UsersPage() {
           onReset={reset}
           onInvite={invite}
           onResetByEmail={resetByEmail}
+          onToggleErp={toggleErp}
+          erpPendingId={m.erp.isPending ? m.erp.variables.user.id : null}
         />
       </PageState>
       <Dialogs

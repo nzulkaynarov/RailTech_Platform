@@ -15,7 +15,7 @@ JWT **HS256**, общий секрет `PLATFORM_SSO_SECRET` (секрет ок�
 | `email` | string | e-mail сотрудника |
 | `name` | string | отображаемое имя |
 | `role` | string | `admin` \| `manager` \| `viewer` (роль CRM); `admin` = суперпользователь ERP |
-| `permissions` | string[] | права бэк-офиса `quote.*`, `contract.*`, `finance.*`, `catalog.*`, `supply.*` (для `aud=erp`) |
+| `permissions` | string[] | коды из каталога прав ERP (`ErpPermission` в `erp-integration.yaml`: `deal.*`, `quote.*`, `contract.*`, `catalog.*`, `supply.*`, `fulfillment.*`, `finance.*`, `settings.*`, `team.*`, `data.*`) по карте ниже; для `aud=erp`, при обмене не применяются (права приходят провижинингом) |
 | `iat` | number | момент выдачи, unix seconds |
 | `exp` | number | `iat + 60` |
 | `jti` | string | UUID v4, одноразовый |
@@ -30,7 +30,7 @@ JWT **HS256**, общий секрет `PLATFORM_SSO_SECRET` (секрет ок�
   "email": "estimator@example.com",
   "name": "Расчётчик",
   "role": "manager",
-  "permissions": ["quote.view", "quote.edit", "quote.view_cost_margin"],
+  "permissions": ["deal.manage", "quote.build", "quote.edit_pricing", "quote.send"],
   "iat": 1792000000,
   "exp": 1792000060,
   "jti": "5c4b6f2e-3b0e-4d4e-9f5a-9c2a6a1f0a11"
@@ -39,8 +39,9 @@ JWT **HS256**, общий секрет `PLATFORM_SSO_SECRET` (секрет ок�
 
 ## Передача
 
-1. Пользователь нажимает переключатель в шапке (показывается, если `platform_access` в CRM содержит обе
-   системы; ERP узнаёт об этом при провижининге `POST /api/integration/v1/users/provision`).
+1. Пользователь нажимает переключатель в шапке. CRM показывает его, только если `platform_access` пользователя
+   содержит `erp` (см. «Доступ»); ERP — только у пользователя с сопоставлением `CrmUserMapping`, то есть
+   провижиненного из CRM. Флаг `PLATFORM_SSO_ENABLED` должен быть включён на стороне, где нажата кнопка.
 2. Исходная система выдаёт токен (`POST /api/v1/auth/sso/token` в ERP; аналог в CRM) и перенаправляет
    браузер на точку приёма: `https://erp.railtech.uz/sso/exchange#token=<jwt>` (фрагмент, не query:
    токен не попадает в логи прокси).
@@ -64,6 +65,38 @@ JWT **HS256**, общий секрет `PLATFORM_SSO_SECRET` (секрет ок�
 
 Выдача токена (`POST /api/v1/auth/sso/token`): `sub` — только сопоставление сотрудника с `crm_user_id`
 (ERP: `CrmUserMapping`); нет сопоставления → 403 `USER_NOT_PROVISIONED`, запасного значения (`user.pk`) нет.
+CRM выдаёт токен только при `erp` в `platform_access` (иначе 403, `details.reason = platform_access_denied`).
+
+Формат ошибки 403 по п. 5 у CRM — `details.reason = user_not_provisioned` (подкод `Reason.USER_NOT_PROVISIONED`,
+ADR-0017), у ERP — `{"detail": "USER_NOT_PROVISIONED"}`; неактивный — `user_inactive` / `USER_INACTIVE`.
+
+## Доступ (`platform_access`)
+
+Источник истины — CRM: `users.platform_access` — список систем, куда пользователю можно (`["crm"]` по умолчанию,
+`["crm","erp"]` — доступ к ERP выдан админом в консоли «Пользователи»). ERP о доступе узнаёт только провижинингом
+и отзывом (очередь Procrastinate на стороне CRM, ошибки ERP — в центре внешних сервисов, ADR-0024):
+
+| Событие в CRM | Задача | Вызов ERP |
+|---|---|---|
+| выдан доступ к ERP; у пользователя с доступом изменились роли, имя или почта | `erp_provision_user` | `POST /api/integration/v1/users/provision` (идемпотентно по `crm_user_id`, повторы) |
+| доступ снят; пользователь с доступом деактивирован | `erp_revoke_sessions` | `DELETE /api/integration/v1/users/{crm_user_id}/sessions` |
+
+Аудит: CRM — `platform_access.granted` / `platform_access.revoked`; ERP — `sso.exchange`, `sso.revoke`.
+
+## Карта прав CRM → ERP
+
+Роль CRM определяет `role` и `permissions` провижининга и claim `permissions`; коды — только из каталога ERP
+(`ErpPermission`, 22 кода). Карта живёт в CRM (`app/domain/erp_permissions.py`), тест проверяет, что каждый код есть в каталоге.
+
+| Роль CRM | `role` в ERP | `permissions` |
+|---|---|---|
+| `admin` | `admin` (суперпользователь ERP) | весь каталог (ERP игнорирует) |
+| `manager` | `backoffice` | `deal.manage`, `quote.build`, `quote.edit_pricing`, `quote.send` |
+| `viewer` | `backoffice` | — (только просмотр) |
+
+Несколько ролей у одного человека — объединение; `admin` перекрывает остальные. Себестоимость и маржа
+(`quote.view_cost_margin`), финансы, договоры, настройки и команда менеджеру CRM не выдаются: расширять права
+может только админ ERP ролью в «Настройках → Команда» (но не CRM).
 
 Коллизия e-mail при провижининге: если e-mail занят пользователем ERP, у которого другой `crm_user_id` или нет
 сопоставления, `POST /api/integration/v1/users/provision` отвечает 409 `EMAIL_CONFLICT`, пользователь не
@@ -71,5 +104,8 @@ JWT **HS256**, общий секрет `PLATFORM_SSO_SECRET` (секрет ок�
 
 ## Отзыв
 
-Снятие доступа в CRM → `DELETE /api/integration/v1/users/{crm_user_id}/sessions` → ERP отзывает все
-сессии пользователя. Клиенты (Cabinet) SSO не используют: их вход — Telegram `initData` и magic-link.
+Снятие доступа в CRM → `DELETE /api/integration/v1/users/{crm_user_id}/sessions` → ERP отзывает **всё, чем
+пользователь входит**: refresh-токены (чёрный список), уже выданные access-токены (версия токенов пользователя
+растёт — прежний access отвечает 401, а не живёт до конца 30 минут) и сам вход (`is_active=false`, чтобы не
+вернуться по локальному паролю). Запись в аудит ERP — `sso.revoke`. Повторная выдача доступа — новый провижининг,
+он включает пользователя. Клиенты (Cabinet) SSO не используют: их вход — Telegram `initData` и magic-link.

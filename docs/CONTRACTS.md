@@ -37,8 +37,8 @@
 | `GET /deals/{erp_deal_id}/documents` | документы сделки | `[{erp_document_id, kind, number, date, title, status}]` |
 | `GET /documents/{erp_document_id}/link` | ссылка на файл | подписанный URL на 10 минут; факт выдачи — в аудит ERP с `crm_*` контекстом |
 | `GET /catalog/search?q=&mode=lead|client` | опубликованный каталог | в режиме `lead` без цен и остатков; в `client` — с ценой и статусом наличия |
-| `POST /users/provision` | сотрудник из CRM | `crm_user_id, email, name, role (admin|backoffice), permissions[]`; ответ `erp_user_id`; e-mail занят другим пользователем ERP (другой `crm_user_id` или нет сопоставления) → 409 `EMAIL_CONFLICT` |
-| `DELETE /users/{crm_user_id}/sessions` | отзыв сессий | при снятии доступа в CRM |
+| `POST /users/provision` | сотрудник из CRM | `crm_user_id, email, name, role (admin|backoffice), permissions[]` (коды каталога ERP, `ErpPermission`; чужой код → 422); ответ `erp_user_id`; e-mail занят другим пользователем ERP (другой `crm_user_id` или нет сопоставления) → 409 `EMAIL_CONFLICT` |
+| `DELETE /users/{crm_user_id}/sessions` | отзыв сессий и входа | при снятии доступа в CRM: refresh и access-токены гаснут (прежний access → 401), вход закрыт; аудит `sso.revoke` |
 | `GET /health` | здоровье для «Состояния системы» CRM | версия, миграции применены, очередь жива |
 
 ## 3. События (ERP → CRM)
@@ -108,9 +108,12 @@ JSON-integer, не `true`), `iat` и `exp` обязательны, `exp − iat 
 
 JWT HS256, секрет `PLATFORM_SSO_SECRET` общий. Claims: `iss` (`crm`|`erp`), `aud` (целевая система),
 `sub` (`crm_user_id`), `email`, `name`, `role`, `permissions[]`, `iat`, `exp` (= iat + 60 с), `jti`.
-Приёмник: проверяет подпись, `aud`, срок, одноразовость `jti` (хранит 10 мин), находит/обновляет
-пользователя, выдаёт свою сессию, пишет аудит. Переключатель показывается, если в CRM у пользователя
-`platform_access` содержит обе системы; ERP узнаёт об этом при провижининге.
+Приёмник: проверяет подпись, `aud`, срок, одноразовость `jti` (хранит 10 мин), находит пользователя по `sub`
+(не создаёт), выдаёт свою сессию, пишет аудит. Доступом к ERP управляет CRM: `users.platform_access`
+(`["crm"]` по умолчанию, `["crm","erp"]` — доступ выдан). Переключатель в шапке CRM и выдача токена
+(`POST /api/v1/auth/sso/token`, иначе 403) — только при `erp` в `platform_access`; в шапке ERP — только у
+пользователя с сопоставлением `CrmUserMapping`. Выдача доступа → провижининг в ERP, снятие → отзыв сессий
+(очередь CRM, ошибки ERP — в центре внешних сервисов). Роль CRM → коды прав ERP: `packages/contracts/sso-token.md`.
 
 ## 7. Версионирование
 

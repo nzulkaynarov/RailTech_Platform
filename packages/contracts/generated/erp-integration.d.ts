@@ -179,7 +179,13 @@ export interface paths {
     get?: never;
     put?: never;
     post?: never;
-    /** Отзыв всех сессий сотрудника в ERP (при снятии доступа в CRM) */
+    /**
+     * Отзыв всех сессий сотрудника в ERP (при снятии доступа в CRM)
+     * @description Гасит всё, чем сотрудник входит в ERP: refresh-токены (чёрный список), уже выданные access-токены
+     *     (версия токенов пользователя растёт, прежний access → 401) и вход (`is_active=false` — локальный
+     *     пароль и сброс пароля не возвращают доступ). Повторный `POST /users/provision` включает пользователя
+     *     заново. Операция идемпотентна; в аудит ERP пишется `sso.revoke`.
+     */
     delete: operations["revokeUserSessions"];
     options?: never;
     head?: never;
@@ -510,11 +516,38 @@ export interface components {
        * @enum {string}
        */
       role: "admin" | "backoffice";
-      /** @description Права бэк-офиса: `quote.*`, `contract.*`, `finance.*`, `catalog.*`, `supply.*` (M1-ERP-05) */
-      permissions: string[];
+      /** @description Коды из каталога прав ERP (`ErpPermission`). Для `role: backoffice` складываются в роль сотрудника; для `role: admin` игнорируются (суперпользователь ERP имеет все права). Код вне каталога — 422. Карту «роль CRM → коды» ведёт CRM (`app/domain/erp_permissions.py`), идентификаторы ролей и прав от модели не приходят. */
+      permissions: components["schemas"]["ErpPermission"][];
       /** @default true */
       is_active: boolean;
     };
+    /**
+     * @description Снимок каталога прав бэк-офиса ERP (`accounts.constants.Permission`, apps/erp/CLAUDE.md §6). Новый код появляется в каталоге ERP и здесь в одном PR; тест CRM сверяет этот список с каталогом и с картой прав CRM.
+     * @enum {string}
+     */
+    ErpPermission:
+      | "deal.manage"
+      | "deal.assign"
+      | "quote.build"
+      | "quote.edit_pricing"
+      | "quote.view_cost_margin"
+      | "quote.send"
+      | "quote.review"
+      | "quote.approve_final"
+      | "contract.manage"
+      | "contract.sign"
+      | "catalog.manage"
+      | "catalog.publish"
+      | "supply.manage"
+      | "fulfillment.manage"
+      | "fulfillment.act"
+      | "finance.invoice"
+      | "finance.payment"
+      | "finance.rates"
+      | "settings.edit"
+      | "settings.charge_templates"
+      | "team.manage"
+      | "data.export";
     ProvisionUserResponse: {
       /** Format: int64 */
       erp_user_id: number;

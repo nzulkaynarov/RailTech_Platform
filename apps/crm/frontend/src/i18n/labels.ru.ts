@@ -122,6 +122,8 @@ export const labelsRu = {
     "setup.admin_created": "Первый администратор (мастер настройки)",
     "system.backup_requested": "Запросил резервную копию",
     "user.hand_over": "Передал лидов и клиентов",
+    "platform_access.granted": "Выдал доступ к ERP",
+    "platform_access.revoked": "Снял доступ к ERP",
     "client.create": "Создал клиента",
     "client.update": "Изменил клиента",
     "client.link_telegram": "Привязал Telegram",

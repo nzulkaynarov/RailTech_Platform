@@ -3,16 +3,17 @@
 Инвариант: всегда есть хотя бы один активный admin — нарушение → `LastAdminError` (409).
 """
 
-from collections.abc import Sequence
-from dataclasses import dataclass
+from collections.abc import Awaitable, Callable, Sequence
+from dataclasses import dataclass, field
 from datetime import UTC, datetime
 
-from sqlalchemy import select, update
+import structlog
+from sqlalchemy import update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
+from app.domain.erp_sync import AccessState, SyncAction, access_audit_action, sync_action
 from app.domain.errors import (
-    ActiveLeadsError,
     ConflictError,
     LastAdminError,
     NotFoundError,
@@ -21,9 +22,6 @@ from app.domain.errors import (
 )
 from app.domain.lead_access import loses_work_role
 from app.models.auth import RefreshToken, User
-from app.models.clients import Client
-from app.models.deals import Deal
-from app.models.leads import Lead
 from app.repositories import users as repo
 from app.security import audit, reauth
 from app.security.audit import Actor
@@ -34,7 +32,12 @@ from app.security.passwords import (
     validate_new_password,
     verify_password,
 )
+from app.services.user_handover import hand_over_work
 from app.services.user_parts import check_roles, normalize_email
+
+logger = structlog.get_logger(__name__)
+# Поставить в очередь синхронизацию с ERP (`tasks.erp_users.enqueue_erp_sync`): (действие, user_id).
+ErpSyncEnqueue = Callable[[str, int], Awaitable[object]]
 
 
 @dataclass(frozen=True, slots=True)
@@ -50,6 +53,7 @@ class UserView:
     notify_system: bool = True
     notify_leads: bool = True
     tg_dm_failed_at: datetime | None = None
+    platform_access: list[str] = field(default_factory=lambda: ["crm"])
 
 
 @dataclass(frozen=True, slots=True)
@@ -60,6 +64,7 @@ class UserPatch:
     tg_user_id: int | None = None
     clear_tg_user_id: bool = False
     transfer_to_user_id: int | None = None
+    platform_access: Sequence[str] | None = None
 
 
 class UserService:
@@ -67,9 +72,11 @@ class UserService:
         self,
         sessions: async_sessionmaker[AsyncSession],
         lockout: reauth.LockoutPolicy | None = None,
+        erp_sync: ErpSyncEnqueue | None = None,
     ) -> None:
         self._sessions = sessions
         self._lockout = lockout or reauth.LockoutPolicy()
+        self._erp_sync = erp_sync
 
     async def list_all(self) -> list[UserView]:
         async with self._sessions() as session:
@@ -120,6 +127,7 @@ class UserService:
                 raise NotFoundError("user not found")
             roles = await repo.roles_of(session, user_id)
             before = _view(user, roles)
+            erp_before = _access_state(before)
             loses_admin = "admin" in roles and (
                 (patch.roles is not None and "admin" not in patch.roles) or patch.is_active is False
             )
@@ -133,7 +141,7 @@ class UserService:
                     user.ui_mode = "manager"
             stops_work = patch.roles is not None and loses_work_role(before.roles, patch.roles)
             if patch.is_active is False or stops_work:
-                await _hand_over_work(session, actor, user_id, patch.transfer_to_user_id)
+                await hand_over_work(session, actor, user_id, patch.transfer_to_user_id)
             if patch.is_active is False:
                 await revoke_tokens(session, user_id)
             try:
@@ -152,7 +160,34 @@ class UserService:
                 before=_audit(before),
                 after=_audit(after),
             )
+            erp_after = _access_state(after)
+            access_action = access_audit_action(erp_before, erp_after)
+            if access_action is not None:
+                await audit.record(
+                    session,
+                    actor,
+                    access_action,
+                    "user",
+                    user_id,
+                    before={"platform_access": list(erp_before.platform_access)},
+                    after={"platform_access": list(erp_after.platform_access)},
+                )
+            action = sync_action(erp_before, erp_after)
+        await self._sync_erp(action, user_id)
         return after
+
+    async def _sync_erp(self, action: SyncAction | None, user_id: int) -> None:
+        """Задача в очередь после коммита; сбой очереди не роняет запрос, он виден в ленте."""
+        if action is None or self._erp_sync is None:
+            return
+        try:
+            await self._erp_sync(action, user_id)
+        except Exception:
+            logger.exception("erp_sync_enqueue_failed", user_id=user_id, action=action)
+            async with self._sessions() as session, session.begin():
+                await repo.set_erp_sync_error(
+                    session, user_id, f"{action}: задача не поставлена в очередь"
+                )
 
     async def reset_password(self, actor: Actor, user_id: int) -> str:
         password = temporary_password()
@@ -299,61 +334,8 @@ def _apply(user: User, patch: UserPatch) -> None:
         user.tg_user_id = None
     elif patch.tg_user_id is not None:
         user.tg_user_id = patch.tg_user_id
-
-
-async def _hand_over_work(
-    session: AsyncSession, actor: Actor, user_id: int, to_user_id: int | None
-) -> None:
-    """Лиды в работе и клиенты уходящего менеджера — коллеге; без коллеги деактивация запрещена."""
-    leads = list(
-        await session.scalars(
-            select(Lead.id).where(
-                Lead.assigned_user_id == user_id,
-                Lead.owner_mode == "human",
-                Lead.erased_at.is_(None),
-            )
-        )
-    )
-    if to_user_id is None:
-        if leads:
-            raise ActiveLeadsError("hand over the leads first", count=len(leads))
-        await _reassign(session, user_id, None)  # лиды у бота и сделки — в общую очередь
-        return
-    target = await repo.get(session, to_user_id)
-    roles = await repo.roles_of(session, to_user_id) if target else []
-    inactive = target is None or to_user_id == user_id or not target.is_active
-    if inactive or not {"manager", "admin"} & set(roles):
-        raise ValidationFailedError(
-            "choose an active colleague",
-            reason=Reason.INACTIVE_COLLEAGUE,
-            field="transfer_to_user_id",
-        )
-    await _reassign(session, user_id, to_user_id)
-    await session.execute(
-        update(Client).where(Client.owner_user_id == user_id).values(owner_user_id=to_user_id)
-    )
-    await audit.record(
-        session,
-        actor,
-        "user.hand_over",
-        "user",
-        user_id,
-        after={"to_user_id": to_user_id, "active_leads": leads},
-    )
-
-
-async def _reassign(session: AsyncSession, user_id: int, to_user_id: int | None) -> None:
-    """Все лиды с ответственным (и у бота — клиенты после сделки) и открытые сделки."""
-    await session.execute(
-        update(Lead)
-        .where(Lead.assigned_user_id == user_id, Lead.erased_at.is_(None))
-        .values(assigned_user_id=to_user_id)
-    )
-    await session.execute(
-        update(Deal)
-        .where(Deal.owner_user_id == user_id, Deal.stage == "open")
-        .values(owner_user_id=to_user_id)
-    )
+    if patch.platform_access is not None:
+        user.platform_access = sorted(set(patch.platform_access) | {"crm"})
 
 
 async def revoke_tokens(session: AsyncSession, user_id: int) -> None:
@@ -377,6 +359,16 @@ def _view(user: User, roles: list[str]) -> UserView:
         notify_system=user.notify_system,
         notify_leads=user.notify_leads,
         tg_dm_failed_at=user.tg_dm_failed_at,
+        platform_access=list(user.platform_access or ["crm"]),
+    )
+
+
+def _access_state(view: UserView) -> AccessState:
+    return AccessState(
+        platform_access=tuple(view.platform_access),
+        is_active=view.is_active,
+        roles=tuple(view.roles),
+        full_name=view.full_name,
     )
 
 
@@ -387,4 +379,5 @@ def _audit(view: UserView) -> dict[str, object]:
         "roles": view.roles,
         "is_active": view.is_active,
         "tg_user_id": view.tg_user_id,
+        "platform_access": view.platform_access,
     }
