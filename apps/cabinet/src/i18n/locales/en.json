@@ -450,7 +450,7 @@
       "acceptLineNamed": "Accept item {{name}}",
       "lineAcceptedToast": "Item “{{name}}” accepted",
       "disputeLine": "Report an issue",
-      "disputeLineNamed": "Leave remark for item {{name}}",
+      "disputeLineNamed": "Report an issue with item {{name}}",
       "disputeTitle": "Remark for item \"{{name}}\"",
       "disputeText": "Describe the issue (defect, missing parts, damage). The manager will contact you.",
       "disputeReason": "Remark reason",

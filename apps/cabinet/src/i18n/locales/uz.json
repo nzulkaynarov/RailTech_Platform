@@ -450,7 +450,7 @@
       "acceptLineNamed": "{{name}} elementini qabul qilish",
       "lineAcceptedToast": "«{{name}}» elementi qabul qilindi",
       "disputeLine": "Eʼtirozim bor",
-      "disputeLineNamed": "{{name}} elementi boʻyicha eʼtiroz bildirish",
+      "disputeLineNamed": "Eʼtirozim bor: {{name}} elementi",
       "disputeTitle": "\"{{name}}\" elementi boʻyicha eʼtiroz",
       "disputeText": "Eʼtiroz mazmunini tavsiflang (nuqson, toʻliq emaslik, shikastlanish). Menejer siz bilan bogʻlanadi.",
       "disputeReason": "Eʼtiroz sababi",

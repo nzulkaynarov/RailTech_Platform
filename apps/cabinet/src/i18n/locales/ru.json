@@ -460,7 +460,7 @@
       "acceptLineNamed": "Принять позицию {{name}}",
       "lineAcceptedToast": "Позиция «{{name}}» принята",
       "disputeLine": "Есть замечания",
-      "disputeLineNamed": "Оставить замечание к позиции {{name}}",
+      "disputeLineNamed": "Есть замечания по позиции {{name}}",
       "disputeTitle": "Замечание по позиции «{{name}}»",
       "disputeText": "Опишите суть замечания (брак, некомплект, повреждение упаковки). Менеджер свяжется с вами для решения.",
       "disputeReason": "Причина замечания",

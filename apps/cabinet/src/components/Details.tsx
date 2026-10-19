@@ -34,7 +34,7 @@ export function DealLink({ deal, showTitle = false }: { deal: DealRef | null | u
     <>
       <Link
         to={`/deals/${deal.id}`}
-        className="relative z-10 rounded-sm text-primary underline-offset-4 outline-none hover:underline focus-visible:ring-2 focus-visible:ring-ring"
+        className="relative z-10 rounded-sm text-primary underline underline-offset-4 outline-none hover:no-underline focus-visible:ring-2 focus-visible:ring-ring"
       >
         {t('common.dealNumber', { number: deal.number })}
       </Link>

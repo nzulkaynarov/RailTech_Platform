@@ -18,7 +18,7 @@ describe('Приёмка поставки по строкам', () => {
     await openDeliveries();
 
     expect(screen.getAllByRole('button', { name: /^Принять позицию / })).toHaveLength(1);
-    expect(screen.getAllByRole('button', { name: /^Оставить замечание к позиции / })).toHaveLength(1);
+    expect(screen.getAllByRole('button', { name: /^Есть замечания по позиции / })).toHaveLength(1);
     expect(screen.getByRole('button', { name: `Принять позицию ${LINE}` })).toBeInTheDocument();
 
     const deal35 = screen.getByRole('list', { name: 'Сделка № D-35' });
@@ -45,7 +45,7 @@ describe('Приёмка поставки по строкам', () => {
     const deal35 = screen.getByRole('list', { name: 'Сделка № D-35' });
     expect(await within(deal35).findByText('Принято 14 окт. 2026 г., 12:00')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: `Принять позицию ${LINE}` })).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: `Оставить замечание к позиции ${LINE}` })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: `Есть замечания по позиции ${LINE}` })).not.toBeInTheDocument();
   });
 
   it('«Есть замечания»: причина обязательна, уходит в POST /dispute {reason}; отмена не шлёт запрос', async () => {
@@ -55,7 +55,7 @@ describe('Приёмка поставки по строкам', () => {
     const body = captureBody('/deliveries/105/dispute');
     await openDeliveries();
 
-    await user.click(screen.getByRole('button', { name: `Оставить замечание к позиции ${LINE}` }));
+    await user.click(screen.getByRole('button', { name: `Есть замечания по позиции ${LINE}` }));
     const dialog = await screen.findByRole('dialog', { name: `Замечание по позиции «${LINE}»` });
     await user.click(within(dialog).getByRole('button', { name: 'Отправить замечание' }));
     expect(within(dialog).getByText(/Укажите причину/)).toBeInTheDocument();
@@ -66,7 +66,7 @@ describe('Приёмка поставки по строкам', () => {
     expect(log).not.toContain('POST /deliveries/105/dispute');
     expect(screen.queryByText('Замечание передано менеджеру')).not.toBeInTheDocument();
 
-    await user.click(screen.getByRole('button', { name: `Оставить замечание к позиции ${LINE}` }));
+    await user.click(screen.getByRole('button', { name: `Есть замечания по позиции ${LINE}` }));
     const again = await screen.findByRole('dialog');
     await user.type(within(again).getByLabelText('Причина замечания'), 'Повреждена упаковка');
     await user.click(within(again).getByRole('button', { name: 'Отправить замечание' }));
@@ -99,7 +99,7 @@ describe('Приёмка поставки по строкам', () => {
     failWith('post', '/deliveries/105/dispute', 409, 'DELIVERY_LINE_NOT_ACCEPTABLE');
     const user = userEvent.setup();
     await openDeliveries();
-    await user.click(screen.getByRole('button', { name: `Оставить замечание к позиции ${LINE}` }));
+    await user.click(screen.getByRole('button', { name: `Есть замечания по позиции ${LINE}` }));
     const dialog = await screen.findByRole('dialog');
     await user.type(within(dialog).getByLabelText('Причина замечания'), 'Брак');
     await user.click(within(dialog).getByRole('button', { name: 'Отправить замечание' }));
@@ -113,7 +113,7 @@ describe('Приёмка поставки по строкам', () => {
     const log = requestLog();
     await openDeliveries();
     expect(screen.queryByRole('button', { name: /^Принять позицию / })).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: /^Оставить замечание/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /^Есть замечания по позиции/ })).not.toBeInTheDocument();
     expect(screen.getByText('Доставлено')).toBeInTheDocument();
     expect(log.filter((entry) => entry.startsWith('POST'))).toEqual([]);
   });
