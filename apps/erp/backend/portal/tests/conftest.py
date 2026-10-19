@@ -6,6 +6,7 @@ import json
 import secrets
 import time
 import urllib.parse
+import uuid
 from datetime import timedelta
 
 import pytest
@@ -17,6 +18,46 @@ from portal.services.tokens import hash_token
 from rest_framework.test import APIClient
 
 from core.tenant import own_company
+
+# Почта в память: письма портала видны в `mail.outbox`, а в `EmailLog` пишутся как обычно.
+LOCMEM_CHANNELS = {
+    channel: {
+        "backend": "django.core.mail.backends.locmem.EmailBackend",
+        "host": "",
+        "port": 25,
+        "username": "",
+        "password": "",
+        "use_tls": False,
+        "from_email": "test@example.com",
+    }
+    for channel in ("transactional", "marketing", "system")
+}
+
+
+@pytest.fixture
+def inline_magic_link_task(monkeypatch):
+    """Брокера в тестах нет: письмо ссылки входа (задача Celery, FIX-15) выполняется сразу, в этом же процессе."""
+    from portal.tasks import send_magic_link
+
+    monkeypatch.setattr(
+        send_magic_link, "delay", lambda *args, **kwargs: send_magic_link.apply(args=args, kwargs=kwargs)
+    )
+
+
+class PortalAPIClient(APIClient):
+    """APIClient портала: на POST/PUT/PATCH/DELETE сам ставит свежий `Idempotency-Key` (CONTRACTS §0).
+
+    Без заголовка портал отвечает 400 `IDEMPOTENCY_KEY_REQUIRED` (FIX-15). Тесты на отсутствие заголовка
+    выключают подстановку: `client.auto_idempotency_key = False`.
+    """
+
+    auto_idempotency_key = True
+    UNSAFE_METHODS = ("POST", "PUT", "PATCH", "DELETE")
+
+    def generic(self, method, path, data="", content_type="application/octet-stream", secure=False, **extra):
+        if self.auto_idempotency_key and method.upper() in self.UNSAFE_METHODS:
+            extra.setdefault("HTTP_IDEMPOTENCY_KEY", uuid.uuid4().hex)
+        return super().generic(method, path, data, content_type, secure, **extra)
 
 
 def make_telegram_init_data(
@@ -188,7 +229,7 @@ def other_session(db, other_contact, other_company):
 
 @pytest.fixture
 def portal_client(client_session):
-    client = APIClient()
+    client = PortalAPIClient()
     client.cookies[settings.PORTAL_SESSION_COOKIE_NAME] = client_session.raw_token
     client.credentials(HTTP_X_PORTAL_SESSION=client_session.raw_token)
     return client
@@ -196,7 +237,7 @@ def portal_client(client_session):
 
 @pytest.fixture
 def readonly_portal_client(readonly_session):
-    client = APIClient()
+    client = PortalAPIClient()
     client.cookies[settings.PORTAL_SESSION_COOKIE_NAME] = readonly_session.raw_token
     client.credentials(HTTP_X_PORTAL_SESSION=readonly_session.raw_token)
     return client
@@ -204,7 +245,7 @@ def readonly_portal_client(readonly_session):
 
 @pytest.fixture
 def other_portal_client(other_session):
-    client = APIClient()
+    client = PortalAPIClient()
     client.cookies[settings.PORTAL_SESSION_COOKIE_NAME] = other_session.raw_token
     client.credentials(HTTP_X_PORTAL_SESSION=other_session.raw_token)
     return client
@@ -212,4 +253,4 @@ def other_portal_client(other_session):
 
 @pytest.fixture
 def anon_portal_client():
-    return APIClient()
+    return PortalAPIClient()

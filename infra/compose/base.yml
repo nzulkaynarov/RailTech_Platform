@@ -331,7 +331,9 @@ services:
   erp-backend:
     build:
       context: ../../apps/erp/backend
-    command: ["daphne", "-b", "0.0.0.0", "-p", "8000", "core.asgi:application"]
+    # -v 0: без access-лога Daphne — он печатает путь `/auth/magic/<токен>` в stdout мимо фильтра токена (FIX-15);
+    # журнал запросов ведёт Django (core.logging.AccessLogMiddleware: console + RedactPortalTokenFilter).
+    command: ["daphne", "-v", "0", "-b", "0.0.0.0", "-p", "8000", "core.asgi:application"]
     environment: &erp-env
       PYTHONUNBUFFERED: "1"
       DJANGO_SETTINGS_MODULE: core.settings
@@ -364,6 +366,10 @@ services:
       CRM_WEBHOOK_URL: ${CRM_WEBHOOK_URL:-http://crm-api:8000/api/v1/integrations/erp/events}
       CRM_FRONTEND_URL: ${CRM_FRONTEND_URL:-http://crm.localhost}
       CABINET_URL: ${CABINET_URL:-http://cabinet.localhost}
+      # CORS портала на DEBUG=False (на стенде ERP_DEBUG=true — разрешён любой origin); список как у CRM (FIX-15).
+      CABINET_ORIGIN: ${CABINET_ORIGIN:-http://cabinet.localhost,http://cabinet.localhost:${HTTP_PORT:-80},https://${CABINET_DOMAIN:-cabinet.railtech.uz}}
+      # SameSite cookie сессии портала: Lax (веб) или None (Telegram Mini App, только за TLS) — docs/runbooks/stand.md.
+      PORTAL_COOKIE_SAMESITE: ${PORTAL_COOKIE_SAMESITE:-Lax}
       # Тот же бот, что у CRM: ERP проверяет им подпись initData Mini App (пусто — вход через Mini App закрыт).
       TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
       TELEGRAM_BOT_USERNAME: ${TELEGRAM_BOT_USERNAME:-}

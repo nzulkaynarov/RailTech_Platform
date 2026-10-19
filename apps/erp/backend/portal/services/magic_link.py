@@ -1,7 +1,8 @@
 """Magic Link authentication service (CONTRACTS §4, M2-ERP-01; FIX-14).
 
 Токен в базе — только SHA-256-хеш; в логи токен не пишется (максимум префикс из 6 символов).
-Письмо уходит через шаблон ``portal_magic_link`` и попадает в ``EmailLog``.
+Письмо уходит через шаблон ``portal_magic_link`` и попадает в ``EmailLog``; выпускает и отправляет его задача
+Celery (FIX-15), чтобы время ответа не выдавало известный адрес.
 """
 
 import hashlib
@@ -13,10 +14,12 @@ from django.conf import settings
 from django.core.cache import cache
 from django.db import transaction
 from django.utils import timezone
-from parties.models import Contact
+from parties.models import Contact, active_company_q
 from portal.exceptions import PortalGone, PortalTooManyRequests
 from portal.models import MagicLinkToken, PortalSession
+from portal.services.access import company_in_circulation
 from portal.services.tokens import generate_token, hash_token, issue_portal_session, token_prefix
+from portal.tasks import send_magic_link
 from rest_framework.exceptions import PermissionDenied
 
 from notifications.emails import send_templated_email
@@ -56,7 +59,7 @@ def find_login_contact(clean_email: str) -> Optional[Contact]:
     Архивные компании не входят. Если адрес указан у активных контактов РАЗНЫХ компаний, письмо
     не отправляется: ссылка открыла бы чужую компанию.
     """
-    contacts = Contact.objects.filter(email__iexact=clean_email, company__is_active=True).select_related("company")
+    contacts = Contact.objects.filter(active_company_q("company"), email__iexact=clean_email).select_related("company")
     company_ids = list(contacts.order_by().values_list("company_id", flat=True).distinct()[:2])
     if not company_ids:
         return None
@@ -80,6 +83,30 @@ def request_magic_link(email: str) -> bool:
         logger.info("Magic link requested for an unknown, archived or ambiguous e-mail")
         return True
 
+    # Ссылку выпускает и отправляет задача Celery (portal.tasks.send_magic_link): письмо уходит вне потока запроса,
+    # иначе по времени ответа (SMTP только у известного адреса) видно, есть ли адрес в базе. В очередь идёт лишь
+    # id контакта — токен в брокер и в журнал воркера не попадает. Сбой очереди ответ не меняет: он такой же, как
+    # для неизвестного адреса, а клиент запросит ссылку ещё раз.
+    try:
+        send_magic_link.delay(contact.pk)
+    except Exception as exc:  # noqa: BLE001 — брокер недоступен
+        logger.warning("Magic link was not queued for contact %s (%s)", contact.pk, type(exc).__name__)
+        return True
+    logger.info("Magic link queued for contact %s", contact.pk)
+    return True
+
+
+def deliver_login_link(contact_id: int) -> bool:
+    """Выпускает одноразовую ссылку входа на 15 минут и отправляет письмо; ``False`` — слать некому.
+
+    Вызывается задачей `portal.tasks.send_magic_link`. Контакт и компания проверяются заново: между запросом
+    и выполнением задачи компанию могли отправить в архив.
+    """
+    contact = Contact.objects.filter(active_company_q("company"), pk=contact_id).select_related("company").first()
+    if contact is None or not contact.email:
+        logger.info("Magic link not sent: contact %s is gone, archived or has no e-mail", contact_id)
+        return False
+
     # Гасим только прежние ссылки входа: приглашение из ERP (24 часа) остаётся рабочим.
     MagicLinkToken.objects.filter(contact=contact, purpose=MagicLinkToken.PURPOSE_LOGIN, used_at__isnull=True).update(
         used_at=timezone.now()
@@ -100,10 +127,9 @@ def request_magic_link(email: str) -> bool:
             "company_name": contact.company.name,
             "login_url": build_login_url(raw_token),
         },
-        to=[clean_email],
+        to=[contact.email.strip().lower()],
         channel="transactional",
         language=contact.language,
-        fail_silently=True,
     )
     logger.info("Magic link sent for contact %s (email log %s)", contact.pk, getattr(email_log, "pk", None))
     return True
@@ -131,7 +157,7 @@ def exchange_magic_link(
             logger.info("Magic link token invalid or expired (%s…)", token_prefix(token_hash))
             raise PortalGone("MAGIC_LINK_EXPIRED")
 
-        if not token_obj.contact.company.is_active:
+        if not company_in_circulation(token_obj.contact.company_id):
             logger.info("Magic link for archived company rejected (contact %s)", token_obj.contact_id)
             raise PermissionDenied("FORBIDDEN")
 

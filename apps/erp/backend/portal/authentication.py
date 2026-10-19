@@ -2,6 +2,8 @@
 
 from django.conf import settings
 from django.contrib.auth.models import AnonymousUser
+from django.db.models import F
+from parties.models import active_company_q
 from rest_framework import authentication, exceptions
 
 from .models import PortalSession
@@ -18,6 +20,10 @@ class PortalAuthentication(authentication.BaseAuthentication):
       - `request.portal_company`: Company
     Возвращает (AnonymousUser(), session).
     Сотрудники бэк-офиса изолированы: сессия сотрудника не дает доступа к порталу и наоборот.
+
+    Живая сессия валидна, только пока валидны её основания (FIX-15, хвост ревью FIX-14): срок не вышел,
+    компания в обороте (`active_company_q`, не в архиве) и контакт всё ещё принадлежит компании сессии
+    (контакт перевели или удалили — прежняя сессия не открывает чужие данные). Иначе 401, как без сессии.
     """
 
     def authenticate(self, request):
@@ -30,7 +36,10 @@ class PortalAuthentication(authentication.BaseAuthentication):
             return None
 
         session = (
-            PortalSession.objects.filter(token_hash=hash_token(token)).select_related("contact", "company").first()
+            PortalSession.objects.filter(token_hash=hash_token(token))
+            .filter(active_company_q("company"), company_id=F("contact__company_id"))
+            .select_related("contact", "company")
+            .first()
         )
 
         if not session or not session.is_valid():
