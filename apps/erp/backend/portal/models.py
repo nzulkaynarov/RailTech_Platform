@@ -171,7 +171,7 @@ class PortalRequestLine(models.Model):
         verbose_name=_("Сделка"),
     )
     text = models.CharField(
-        max_length=500,
+        max_length=1000,  # `RequestLineIn.text` контракта — до 1000 знаков (FIX-23)
         verbose_name=_("Наименование/описание"),
     )
     quantity = models.DecimalField(

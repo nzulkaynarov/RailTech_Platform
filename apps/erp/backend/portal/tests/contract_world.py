@@ -14,9 +14,9 @@ from decimal import Decimal
 import pytest
 from django.core.files.base import ContentFile
 from django.utils import timezone
-from documents.models import DocumentTemplate, DocumentTemplateKind, GeneratedDocument, GeneratedDocumentStatus
 from portal.models import MagicLinkToken, PortalRequestLine, PortalUpload
 from portal.services.tokens import hash_token
+from portal.tests.documents_world import build_document_fixtures
 
 from catalog.models import Category, Product, ProductStatus
 from core.models import Currency
@@ -287,34 +287,8 @@ def contract_world(db, client_company, other_company, client_contact, other_cont
     )
     Fulfillment.objects.create(deal=bare, status=_status(FulfillmentStatus, FulfillmentStatusCode.PENDING))
 
-    # ── Документы: выпущенные разных видов; сделка у одного отсутствует ───────────────────────
-    issued = _status(GeneratedDocumentStatus, "ISSUED", "Выпущен")
-    documents = {}
-    for key, kind_code, deal in (
-        ("contract", "CONTRACT", main),
-        ("invoice", "INVOICE", main),
-        ("act", "ACT", main),
-        ("letter", "LETTER", main),
-        ("pending", "LETTER", main),  # PDF ещё не отрисован
-        ("no_deal", "LETTER", None),
-    ):
-        kind = _status(DocumentTemplateKind, kind_code)
-        template, _ = DocumentTemplate.objects.get_or_create(
-            company=client_company, name=f"Шаблон {kind_code}", defaults={"kind": kind}
-        )
-        document = GeneratedDocument.objects.create(
-            company=client_company,
-            deal=deal,
-            template=template,
-            status=issued,
-            number=f"DOC-GUARD-{key}",
-            title=f"Документ {key}",
-            rendered_html="<p>fake</p>",
-        )
-        if key not in ("pending", "no_deal"):
-            document.pdf_file.save(f"{key}.pdf", ContentFile(b"%PDF-1.4 fake"), save=True)
-        documents[key] = document
-    world["documents"] = documents
+    # ── Документы: выпущенные (с PDF и без), черновики, внутренние, чужие — см. documents_world ──
+    world["bare_fulfillment"] = Fulfillment.objects.get(deal=bare)
 
     # ── Токен входа (для GET /auth/magic/{token}) ───────────────────────────────────────────────
     MagicLinkToken.objects.create(
@@ -332,4 +306,5 @@ def contract_world(db, client_company, other_company, client_contact, other_cont
         "deal": other_deal,
         "quote": make_quote(other_deal, 1, QuoteStatusCode.SENT, uzs=uzs),
     }
+    world.update(build_document_fixtures(world))
     return world

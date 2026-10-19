@@ -2896,6 +2896,12 @@
         "detail": "Act {{number}} for deal #{{deal_id}}: the customer was reminded"
       }
     },
+    "document": {
+      "downloaded_by_client": {
+        "title": "Client downloaded a document",
+        "detail": "{{contact_name}} downloaded document {{number}} ({{kind}})"
+      }
+    },
     "company": {
       "merged": {
         "title": "Duplicate company merged",

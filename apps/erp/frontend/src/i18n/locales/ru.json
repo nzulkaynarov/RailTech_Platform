@@ -2907,6 +2907,12 @@
         "detail": "Акт {{number}} по сделке #{{deal_id}}: заказчику отправлено напоминание"
       }
     },
+    "document": {
+      "downloaded_by_client": {
+        "title": "Клиент скачал документ",
+        "detail": "{{contact_name}} скачал документ {{number}} ({{kind}})"
+      }
+    },
     "company": {
       "merged": {
         "title": "Слияние дубля компании",

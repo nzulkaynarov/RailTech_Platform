@@ -104,7 +104,7 @@ class TestPortalEndToEndLifecycle:
         detail_data = detail_resp.data
         assert len(detail_data["lines"]) == 2
         assert detail_data["lines"][0]["text"] == "Труба 89х4 ст20 ГОСТ 8732"
-        assert detail_data["lines"][0]["quantity"] == "150.000"
+        assert detail_data["lines"][0]["quantity"] == "150"
         assert len(detail_data["attachments"]) == 1
         assert detail_data["attachments"][0]["upload_id"] == upload_id
 
@@ -271,7 +271,9 @@ class TestPortalEndToEndLifecycle:
                 "name": "Dilshod Teammate",
                 "email": "dilshod.team@example.uz",
                 "phone": "+998901112233",
+                "language": "ru",
                 "can_act": True,
+                "channels": ["email"],
             },
             format="json",
         )
