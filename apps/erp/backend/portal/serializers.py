@@ -1,11 +1,13 @@
 """Portal API Serializers: строго по контракту packages/contracts/openapi/erp-portal.yaml."""
 
+import re
+from decimal import Decimal
 from typing import Optional
 
-from django.utils import timezone
 from parties.models import Company, Contact
 from portal import projections
 from portal.services import act_scan
+from portal.services import documents as portal_documents
 from rest_framework import serializers
 
 #: Лимиты контракта (`erp-portal.yaml`): `ClientRequestCreate.summary` и `Reason.reason`.
@@ -109,27 +111,66 @@ class TeamInviteSerializer(serializers.Serializer):
     phone = serializers.CharField(max_length=32, required=False, allow_blank=True, default="")
     language = serializers.ChoiceField(choices=["ru", "uz", "en"], default="ru")
     can_act = serializers.BooleanField(default=False)
-    channels = serializers.ListField(
-        child=serializers.ChoiceField(choices=["email", "telegram"]),
-        required=False,
-        default=list,
-    )
+    # Контракт: `channels` обязателен, `minItems: 1`, значения `email|telegram`; доставляется только email —
+    # `telegram` отвечает 422 `INVALID_CHANNEL` (FIX-23), проверка в `portal.services.invitation.invite_team_member`.
+    channels = serializers.ListField(child=serializers.ChoiceField(choices=["email", "telegram"]), allow_empty=False)
+
+
+class StrictCharField(serializers.CharField):
+    """Строка по контракту: число, булево и список не превращаются в текст молча (DRF по умолчанию делает именно так)."""
+
+    def to_internal_value(self, data):
+        if not isinstance(data, str):
+            self.fail("invalid")
+        return super().to_internal_value(data)
+
+
+#: Количество строки запроса: ровно то, что помещается в `PortalRequestLine.quantity` (12 знаков, три после точки).
+_QUANTITY_PATTERN = re.compile(r"\d{1,9}(\.\d{1,3})?", flags=re.ASCII)
+
+
+class DecimalStringField(serializers.Field):
+    """`quantity` контракта: десятичная строка (`"150"`, `"0.5"`) или `null`.
+
+    Всё остальное — 422, а не молчаливая подстановка: пустая строка, экспонента, запятая, `NaN`, ноль и минус,
+    число вместо строки и значение, которое пришлось бы округлять или которое не влезает в поле базы.
+    """
+
+    default_error_messages = {"invalid": "NOT_A_DECIMAL_STRING"}
+
+    def to_internal_value(self, data):
+        if not isinstance(data, str) or not _QUANTITY_PATTERN.fullmatch(data):
+            self.fail("invalid")
+        value = Decimal(data)
+        if value <= 0:
+            self.fail("invalid")
+        return value
+
+    def to_representation(self, value):
+        return format_quantity(value)
+
+
+def format_quantity(value) -> Optional[str]:
+    """Десятичная строка количества без хвостовых нулей хранилища: `150.000` → `"150"`, `0.500` → `"0.5"`."""
+    if value is None:
+        return None
+    return format(Decimal(value).normalize(), "f")
 
 
 class RequestLineInSerializer(serializers.Serializer):
-    text = serializers.CharField(min_length=1, max_length=1000)
-    quantity = serializers.CharField(required=False, allow_null=True)
-    unit = serializers.CharField(required=False, allow_null=True)
+    text = StrictCharField(min_length=1, max_length=1000)
+    quantity = DecimalStringField(required=False, allow_null=True)
+    unit = StrictCharField(required=False, allow_null=True, allow_blank=True, max_length=50)
 
 
 class AttachmentRefSerializer(serializers.Serializer):
-    upload_id = serializers.CharField()
-    name = serializers.CharField()
+    upload_id = StrictCharField(max_length=64)
+    name = StrictCharField(max_length=255)
 
 
 class ClientRequestCreateSerializer(serializers.Serializer):
-    summary = serializers.CharField(min_length=1, max_length=SUMMARY_MAX_LENGTH)
-    lines = RequestLineInSerializer(many=True, required=False, default=list)
+    summary = StrictCharField(min_length=1, max_length=SUMMARY_MAX_LENGTH)
+    lines = RequestLineInSerializer(many=True, required=False, allow_empty=True, default=list)
     attachments = AttachmentRefSerializer(many=True, required=False, default=list)
 
 
@@ -153,7 +194,7 @@ class RequestLineSerializer(serializers.Serializer):
     unit = serializers.SerializerMethodField()
 
     def get_quantity(self, line) -> Optional[str]:
-        return str(line.quantity) if line.quantity is not None else None
+        return format_quantity(line.quantity)
 
     def get_unit(self, line) -> Optional[str]:
         return projections.blank_to_none(line.unit)
@@ -254,8 +295,7 @@ class QuoteSerializer(QuoteListItemSerializer):
         return projections.quote_public_url(quote)
 
     def get_pdf_document_id(self, quote) -> Optional[int]:
-        # PDF КП не лежит среди документов портала (`GeneratedDocument` с ним не связан) — FIX-23, QUESTIONS Q-FIX21-1.
-        return None
+        return portal_documents.document_id_for("quote", quote)  # null, пока КП не отправлено (QUESTIONS Q-FIX21-1)
 
     def get_rejected_reason(self, quote) -> Optional[str]:
         return projections.quote_rejected_reason(quote)
@@ -304,8 +344,7 @@ class ContractSerializer(DealLinkedSerializer):
         return projections.contract_status(contract)
 
     def get_document_id(self, contract) -> Optional[int]:
-        # PDF договора в `GET /documents` отдаёт FIX-23; выдуманный id (раньше — id договора) хуже, чем `null`.
-        return None
+        return portal_documents.document_id_for("contract", contract)  # id из `GET /documents`; null — документа нет
 
 
 class InvoiceSerializer(DealLinkedSerializer):
@@ -331,7 +370,7 @@ class InvoiceSerializer(DealLinkedSerializer):
         return projections.money(invoice.amount_paid, projections.currency_code(invoice.currency))
 
     def get_document_id(self, invoice) -> Optional[int]:
-        return None  # см. ContractSerializer.get_document_id
+        return portal_documents.document_id_for("invoice", invoice)
 
 
 class ActSerializer(DealLinkedSerializer):
@@ -353,10 +392,10 @@ class ActSerializer(DealLinkedSerializer):
         return projections.blank_to_none(act.rejection_reason) if projections.act_status(act) == "returned" else None
 
     def get_document_id(self, act) -> Optional[int]:
-        return None  # см. ContractSerializer.get_document_id
+        return portal_documents.document_id_for("act", act)
 
     def get_scan_document_id(self, act) -> Optional[int]:
-        return act_scan.scan_document_id(act)  # документ-скан, заведённый при приёмке (QUESTIONS Q-FIX22-3)
+        return act_scan.scan_document_id(act)  # документ-скан приёмки; id — из `GET /documents` (Q-FIX23-3)
 
 
 class DeliveryLineSerializer(DealLinkedSerializer):
@@ -388,32 +427,23 @@ class DeliveryLineSerializer(DealLinkedSerializer):
 
 
 class PortalDocumentSerializer(serializers.Serializer):
-    """`Document`: на входе `GeneratedDocument` (с `template__kind`, `deal`)."""
+    """`Document`: на входе `PortalDocument` (`portal/services/documents.py`) — выпущенный документ клиента."""
 
     id = serializers.IntegerField(read_only=True)
-    deal = DealRefSerializer(read_only=True, allow_null=True)
+    deal = serializers.SerializerMethodField()
     deal_id = serializers.IntegerField(read_only=True, allow_null=True)
-    kind = serializers.SerializerMethodField()
+    kind = serializers.CharField(read_only=True)
     number = serializers.CharField(read_only=True)
-    date = serializers.SerializerMethodField()
-    title = serializers.SerializerMethodField()
-    file_name = serializers.SerializerMethodField()
+    date = serializers.DateField(read_only=True)
+    title = serializers.CharField(read_only=True)
+    file_name = serializers.CharField(read_only=True)
     size_bytes = serializers.SerializerMethodField()
 
-    def get_kind(self, document) -> str:
-        return projections.document_kind(document)
-
-    def get_date(self, document):
-        return timezone.localtime(document.created_at).date()
-
-    def get_title(self, document) -> str:
-        return document.title or f"Документ {document.number}"
-
-    def get_file_name(self, document) -> str:
-        return f"{document.number}.pdf"
+    def get_deal(self, document) -> Optional[dict]:
+        return DealRefSerializer(document.deal).data if document.deal is not None else None
 
     def get_size_bytes(self, document) -> int:
-        return projections.document_size(document)
+        return portal_documents.file_size(document)
 
 
 class AttributeItemSerializer(serializers.Serializer):

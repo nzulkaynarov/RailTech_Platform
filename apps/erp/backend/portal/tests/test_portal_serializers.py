@@ -12,7 +12,6 @@ import json
 from decimal import Decimal
 
 import pytest
-from documents.models import GeneratedDocument
 from portal.models import PortalRequestLine
 from portal.projections import annotate_request_sources
 from portal.serializers import (
@@ -88,7 +87,7 @@ def test_new_request_has_no_deal_yet_and_carries_lines_and_attachments(contract_
     assert data["deal"] is None and data["deal_id"] is None
     assert data["source"] == "cabinet"
     assert data["lines"] == [
-        {"text": "Труба 89х4", "quantity": "150.000", "unit": "м"},
+        {"text": "Труба 89х4", "quantity": "150", "unit": "м"},
         {"text": "Что-нибудь без количества", "quantity": None, "unit": None},  # количество не выдумывается
     ]
     assert data["attachments"] == [{"upload_id": str(deal.portal_uploads.get().upload_id), "name": "specification.pdf"}]
@@ -215,8 +214,11 @@ def test_quote_without_recorded_reason_has_null_reason(contract_world):
     assert QuoteSerializer(contract_world["quotes"]["rejected"]).data["rejected_reason"] is None
 
 
-def test_quote_pdf_document_is_null_until_documents_expose_it(contract_world):
-    assert QuoteSerializer(contract_world["quotes"]["sent"]).data["pdf_document_id"] is None
+def test_quote_pdf_document_is_its_entry_in_documents(contract_world):
+    sent = QuoteSerializer(contract_world["quotes"]["sent"]).data
+    assert sent["pdf_document_id"] == contract_world["documents"]["quote_sent"]
+    draft = Quote.objects.get(deal=contract_world["internal_deal"], version=1)
+    assert QuoteSerializer(draft).data["pdf_document_id"] is None  # КП не отправлено — документа нет
 
 
 def test_quote_items_of_a_catalog_product_use_its_name_and_unit(contract_world):
@@ -275,9 +277,13 @@ def test_contract_fields_and_signature_dates(contract_world):
     assert pending["signed_by_client_at"] is None and pending["signed_by_company_at"] is None
 
 
-def test_contract_document_id_is_null_not_the_contract_id(contract_world):
+def test_contract_document_id_is_its_entry_in_documents_not_the_contract_id(contract_world):
     contract = contract_world["contracts"]["signed"]
-    assert ContractSerializer(contract).data["document_id"] is None
+    document_id = ContractSerializer(contract).data["document_id"]
+    assert document_id == contract_world["documents"]["contract_signed"] and document_id != contract.pk
+    from portal.services.documents import document_id_for
+
+    assert document_id_for("contract", contract_world["contracts"]["draft"]) is None
 
 
 def test_contract_status_codes_are_all_mapped():
@@ -383,10 +389,10 @@ def test_act_status_does_not_show_a_cancelled_act(contract_world, key):
 
 
 def test_act_scan_document_is_the_one_attached_on_acceptance(contract_world):
-    """Скан — документ из `GET /documents`; пока при приёмке он не заводился, `scan_document_id` пуст, не выдуман."""
+    """Скан — документ из `GET /documents` (id закодирован так же, как у остальных); без скана `scan_document_id` пуст."""
     act = Act.objects.get(pk=contract_world["acts"]["accepted"].pk)
     assert act.signed_file
-    assert ActSerializer(act).data["scan_document_id"] == contract_world["documents"]["scan"].pk
+    assert ActSerializer(act).data["scan_document_id"] == contract_world["documents"]["act_scan"]
     plain = Act.objects.get(pk=contract_world["acts"]["issued"].pk)
     assert ActSerializer(plain).data["scan_document_id"] is None
 
@@ -469,41 +475,39 @@ def test_delivery_line_has_no_price_or_supplier(contract_world):
 # ── Document ───────────────────────────────────────────────────────────────────────────────────────
 
 
+def _portal_document(world, key):
+    from django.utils import translation
+    from portal.services.documents import find_client_document
+
+    with translation.override("ru"):
+        return find_client_document(world["company"], world["documents"][key])
+
+
 @pytest.mark.parametrize(
-    ("key", "kind"), [("contract", "contract"), ("invoice", "invoice"), ("act", "act"), ("letter", "other")]
+    ("key", "kind"),
+    [
+        ("quote_sent", "quote"),
+        ("contract_signed", "contract"),
+        ("invoice_paid", "invoice"),
+        ("act_accepted", "act"),
+        ("waybill_shipped", "waybill"),
+        ("generated_contract", "contract"),
+    ],
 )
 def test_document_kind_and_form(contract_world, key, kind):
-    document = GeneratedDocument.objects.select_related("template__kind", "deal").get(
-        pk=contract_world["documents"][key].pk
-    )
+    document = _portal_document(contract_world, key)
     data = PortalDocumentSerializer(document).data
     assert data["kind"] == kind
     assert set(data) == {"id", "deal", "deal_id", "kind", "number", "date", "title", "file_name", "size_bytes"}
     assert data["deal"]["id"] == document.deal_id and data["deal_id"] == document.deal_id
-    assert data["file_name"] == f"{document.number}.pdf" and data["size_bytes"] > 0
+    assert data["file_name"].endswith(".pdf") and data["size_bytes"] > 0
     assert_matches_contract(data, "Document")
 
 
 def test_document_without_deal_has_null_deal(contract_world):
-    document = GeneratedDocument.objects.select_related("template__kind", "deal").get(
-        pk=contract_world["documents"]["no_deal"].pk
-    )
-    data = PortalDocumentSerializer(document).data
+    data = PortalDocumentSerializer(_portal_document(contract_world, "generated_no_deal")).data
     assert data["deal"] is None and data["deal_id"] is None and data["size_bytes"] == 0
     assert_matches_contract(data, "Document")
-
-
-@pytest.mark.parametrize("kind_code", ["specification", "waybill", "receipt", "quote"])
-def test_document_kinds_beyond_templates_pass_through(contract_world, kind_code):
-    """Виды из enum контракта (в том числе `specification`) не схлопываются в `other`."""
-    from documents.models import DocumentTemplateKind
-
-    document = contract_world["documents"]["letter"]
-    kind, _ = DocumentTemplateKind.objects.get_or_create(code=kind_code.upper(), defaults={"name": kind_code})
-    document.template.kind = kind
-    document.template.save(update_fields=["kind"])
-    document = GeneratedDocument.objects.select_related("template__kind", "deal").get(pk=document.pk)
-    assert PortalDocumentSerializer(document).data["kind"] == kind_code
 
 
 # ── Me / TeamMember / Company ───────────────────────────────────────────────────────────────────

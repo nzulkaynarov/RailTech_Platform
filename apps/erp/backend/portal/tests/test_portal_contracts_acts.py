@@ -14,6 +14,7 @@ import pytest
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.utils import timezone
 from documents.models import GeneratedDocument
+from portal.services.documents import encode_document_id
 from portal.tests.contract_support import check_response, component, response_schema
 
 from crm.constants import DEFAULT_INVOICE_DUE_DAYS, ActStatusCode, ContractStatusCode, DealStageCode
@@ -242,15 +243,16 @@ def test_accept_with_a_scan_stores_it_as_the_signed_copy_and_exposes_a_document(
     act.refresh_from_db()
     assert act.signed_file and act.signed_file.read() == PDF
     document = GeneratedDocument.objects.get(number=f"SCAN-{act.number}")
-    assert body["scan_document_id"] == document.pk and document.deal_id == act.deal_id
+    scan_id = encode_document_id("generated", document.pk)  # id документа из GET /documents, не сырой pk
+    assert body["scan_document_id"] == scan_id and document.deal_id == act.deal_id
     assert document.pdf_file.name == act.signed_file.name  # файл один, копии не плодим
     # скан — документ из списка документов клиента (вид `act`) и отдаётся тем же файлом
     listed = {item["id"]: item for item in portal_client.get(f"{API}/documents").json()}
-    assert listed[document.pk]["kind"] == "act"
-    assert portal_client.get(f"{API}/documents/{document.pk}/file").status_code == 200
+    assert listed[scan_id]["kind"] == "act"
+    assert portal_client.get(f"{API}/documents/{scan_id}/file").status_code == 200
     # список актов видит тот же id
     in_list = next(item for item in portal_client.get(f"{API}/acts").json() if item["id"] == act.pk)
-    assert in_list["scan_document_id"] == document.pk
+    assert in_list["scan_document_id"] == scan_id
     # исходная загрузка привязана к сделке акта
     from portal.models import PortalUpload
 

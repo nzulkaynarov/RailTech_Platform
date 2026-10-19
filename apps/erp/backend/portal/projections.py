@@ -263,6 +263,45 @@ def client_acts_q() -> Q:
     return Q(status__code__in=(ActStatusCode.ISSUED, ActStatusCode.SIGNED)) | returned
 
 
+def client_acts_visible(act) -> bool:
+    """Тот же ответ, что `client_acts_q`, для одной записи (список документов и `document_id` спрашивают его)."""
+    code = act.status.code if act.status else None
+    if code in (ActStatusCode.ISSUED, ActStatusCode.SIGNED):
+        return True
+    return code in (None, ActStatusCode.DRAFT) and bool(act.rejection_reason)
+
+
+def client_quotes_q() -> Q:
+    """КП, которые видит клиент: отправленные и решённые (`CLIENT_QUOTE_STATUSES`) с публичной ссылкой."""
+    return Q(status__code__in=CLIENT_QUOTE_STATUSES) & ~Q(public_access_token__isnull=True) & ~Q(public_access_token="")
+
+
+def client_quotes_visible(quote) -> bool:
+    """Тот же ответ, что `client_quotes_q`, для одной записи."""
+    code = quote.status.code if quote.status else None
+    return code in CLIENT_QUOTE_STATUSES and bool(quote.public_access_token)
+
+
+def client_contracts_q() -> Q:
+    """Договоры, которые видит клиент: на подписи и подписанные."""
+    return Q(status__code__in=CLIENT_CONTRACT_STATUSES)
+
+
+def client_contracts_visible(contract) -> bool:
+    code = contract.status.code if contract.status else None
+    return code in CLIENT_CONTRACT_STATUSES
+
+
+def client_invoices_q() -> Q:
+    """Счета, которые видит клиент: не черновик и с понятным сроком (срок или дата выставления — контракту нужен `due_date`)."""
+    return ~Q(status__code=InvoiceStatusCode.DRAFT) & (Q(due_date__isnull=False) | Q(issued_at__isnull=False))
+
+
+def client_invoices_visible(invoice) -> bool:
+    code = invoice.status.code if invoice.status else None
+    return code != InvoiceStatusCode.DRAFT and (invoice.due_date is not None or invoice.issued_at is not None)
+
+
 def act_status(act) -> str:
     """`SIGNED` — `accepted`; возвращённый клиентом акт ERP хранит черновиком с причиной — `returned`."""
     code = act.status.code if act.status else None

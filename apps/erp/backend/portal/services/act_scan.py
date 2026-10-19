@@ -4,7 +4,8 @@
 Здесь: проверка файла (PDF или изображение, сигнатура совпадает с расширением), копия содержимого в
 `Act.signed_file` (его пишет `crm.services.billing.sign_act`) и запись документа `GeneratedDocument`, на которую
 ссылается `Act.scan_document_id` в ответе и которую отдаёт `GET /documents` (вид `act`, номер `SCAN-<номер акта>`).
-Файл у записи общий с `Act.signed_file` (одно хранилище, копий нет). QUESTIONS Q-FIX22-3.
+Файл у записи общий с `Act.signed_file` (одно хранилище, копий нет). `scan_document_id` — id документа из
+`GET /documents` (`portal.services.documents.encode_document_id("generated", pk)`), а не сырой pk. QUESTIONS Q-FIX23-3.
 """
 
 from __future__ import annotations
@@ -20,6 +21,7 @@ from django.utils import timezone
 from documents.models import DocumentTemplate, DocumentTemplateKind, GeneratedDocument, GeneratedDocumentStatus
 from portal.exceptions import PortalValidationError
 from portal.models import PortalUpload
+from portal.services.documents import encode_document_id
 
 from core.tenant import own_company
 from core.validators import ALLOWED_IMAGE_EXTENSIONS, assert_content_matches_extension
@@ -95,10 +97,18 @@ def attach_scan_document(act, upload: PortalUpload) -> GeneratedDocument:
 def annotate_scan_documents(acts: Iterable) -> None:
     """Ставит `act.portal_scan_document_id` одним запросом (в списке актов — без N+1)."""
     acts = list(acts)
-    numbers = {scan_document_number(act): act for act in acts if act.signed_file}
-    found = dict(GeneratedDocument.objects.filter(number__in=numbers).values_list("number", "id")) if numbers else {}
+    numbers = {scan_document_number(act) for act in acts if act.signed_file}
+    found: dict = {}
+    if numbers:
+        # Только скан своей сделки и только заведённый приёмкой: номер `SCAN-…` уникален, но чужой документ с таким
+        # номером ссылкой на скан становиться не должен.
+        scans = GeneratedDocument.objects.filter(
+            number__in=numbers, deal_id__in={act.deal_id for act in acts}, values__source="portal_scan"
+        )
+        found = {(scan.number, scan.deal_id): scan.pk for scan in scans}
     for act in acts:
-        act.portal_scan_document_id = found.get(scan_document_number(act))
+        scan_pk = found.get((scan_document_number(act), act.deal_id))
+        act.portal_scan_document_id = encode_document_id("generated", scan_pk) if scan_pk else None
 
 
 def scan_document_id(act) -> Optional[int]:
