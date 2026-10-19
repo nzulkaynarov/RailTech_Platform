@@ -272,6 +272,14 @@ paths:
                 $ref: '#/components/schemas/ProvisionUserResponse'
         '401':
           $ref: '#/components/responses/Unauthorized'
+        '409':
+          description: >-
+            `EMAIL_CONFLICT` — e-mail занят пользователем ERP с другим `crm_user_id` или без сопоставления
+            с CRM; пользователь не переписывается (sso-token.md, FIX-10).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
         '422':
           $ref: '#/components/responses/ValidationError'
 
@@ -419,7 +427,7 @@ components:
       properties:
         detail:
           type: string
-          examples: [NOT_FOUND, IDEMPOTENCY_CONFLICT, VALIDATION_ERROR]
+          examples: [NOT_FOUND, IDEMPOTENCY_CONFLICT, EMAIL_CONFLICT, VALIDATION_ERROR]
       additionalProperties: false
 
     Language:

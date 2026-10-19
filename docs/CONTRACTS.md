@@ -37,7 +37,7 @@
 | `GET /deals/{erp_deal_id}/documents` | документы сделки | `[{erp_document_id, kind, number, date, title, status}]` |
 | `GET /documents/{erp_document_id}/link` | ссылка на файл | подписанный URL на 10 минут; факт выдачи — в аудит ERP с `crm_*` контекстом |
 | `GET /catalog/search?q=&mode=lead|client` | опубликованный каталог | в режиме `lead` без цен и остатков; в `client` — с ценой и статусом наличия |
-| `POST /users/provision` | сотрудник из CRM | `crm_user_id, email, name, role (admin|backoffice), permissions[]`; ответ `erp_user_id` |
+| `POST /users/provision` | сотрудник из CRM | `crm_user_id, email, name, role (admin|backoffice), permissions[]`; ответ `erp_user_id`; e-mail занят другим пользователем ERP (другой `crm_user_id` или нет сопоставления) → 409 `EMAIL_CONFLICT` |
 | `DELETE /users/{crm_user_id}/sessions` | отзыв сессий | при снятии доступа в CRM |
 | `GET /health` | здоровье для «Состояния системы» CRM | версия, миграции применены, очередь жива |
 

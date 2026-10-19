@@ -17,6 +17,7 @@ from django.utils import timezone
 from accounts.models import CompanyMember, CompanyRole, CustomUser
 from core.tenant import own_company
 
+from ..exceptions import IntegrationConflict
 from ..models import CrmUserMapping
 
 logger = logging.getLogger(__name__)
@@ -38,18 +39,23 @@ def provision_crm_user(data: Dict[str, Any]) -> Tuple[Dict[str, Any], bool]:
     mapping = CrmUserMapping.objects.filter(crm_user_id=crm_user_id).select_related("user").first()
     created = False
 
+    # Коллизия e-mail (I-17): адрес занят пользователем ERP, который не наш crm_user_id
+    # (другое сопоставление или его нет) — не присваиваем и не переписываем чужого.
+    holder = CustomUser.objects.filter(email__iexact=email).first()
+    if holder is not None and (mapping is None or holder.pk != mapping.user_id):
+        logger.warning("Provision refused: e-mail of crm_user %s is taken by ERP user %s", crm_user_id, holder.pk)
+        raise IntegrationConflict("EMAIL_CONFLICT")
+
     if mapping:
         user = mapping.user
     else:
-        user = CustomUser.objects.filter(email__iexact=email).first()
-        if not user:
-            user = CustomUser.objects.create(
-                username=email,
-                email=email,
-                first_name=name,
-                is_active=is_active,
-            )
-            created = True
+        user = CustomUser.objects.create(
+            username=email,
+            email=email,
+            first_name=name,
+            is_active=is_active,
+        )
+        created = True
         mapping = CrmUserMapping.objects.create(
             crm_user_id=crm_user_id,
             user=user,

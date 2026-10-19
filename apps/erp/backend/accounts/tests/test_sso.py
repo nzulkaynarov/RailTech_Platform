@@ -5,8 +5,9 @@
 2. Проверку и обмен токена на сессию (POST /api/v1/auth/sso/exchange/)
 3. Защиту от повторного использования jti (replay attack, 10 минут)
 4. Ротацию секретов (подпись вторым активным ключом)
-5. Провижининг/обновление пользователя и запись в аудит ActivityLog
-6. Отказ при деактивированном пользователе (403) и невалидной подписи/aud/exp (401)
+5. Обновление email/name и запись в аудит ActivityLog; обмен не создаёт пользователей и не меняет права (FIX-10)
+6. Отказ при деактивированном/непровиженном пользователе (403) и невалидной подписи/aud/exp (401)
+7. Ограничение exp − iat ≤ 60 (с допуском 5 с)
 """
 
 import time
@@ -20,7 +21,7 @@ from rest_framework import status
 from rest_framework.test import APIClient
 from sales.models import ActivityLog
 
-from accounts.models import CustomUser
+from accounts.models import CompanyMember, CustomUser
 
 pytestmark = pytest.mark.django_db
 
@@ -153,7 +154,7 @@ def test_exchange_expired_token(client):
     assert resp.json()["detail"] == "INVALID_SSO_TOKEN"
 
 
-def test_exchange_replay_protection_blocks_second_use(client):
+def test_exchange_replay_protection_blocks_second_use(client, staff_user):
     unique_jti = str(uuid.uuid4())
     token = make_sso_jwt(jti=unique_jti)
 
@@ -167,7 +168,7 @@ def test_exchange_replay_protection_blocks_second_use(client):
     assert resp2.json()["detail"] == "TOKEN_ALREADY_USED"
 
 
-def test_exchange_key_rotation_supports_secondary_secret(client):
+def test_exchange_key_rotation_supports_secondary_secret(client, staff_user):
     token = make_sso_jwt(secret=SSO_SECRET_SECONDARY)
     resp = client.post("/api/v1/auth/sso/exchange/", data={"token": token}, format="json")
     assert resp.status_code == status.HTTP_200_OK
@@ -244,3 +245,124 @@ def test_sso_is_disabled_by_default_and_refused(client, staff_user, settings):
     assert issue.status_code == 403 and issue.data["detail"] == "SSO_DISABLED"
     assert exchange.status_code == 403 and exchange.data["detail"] == "SSO_DISABLED"
     assert me.status_code == 200 and me.data["capabilities"]["sso_enabled"] is False
+
+
+# ─── 3. FIX-10: sub только из сопоставления, обмен без провижининга, exp − iat ≤ 60 ───
+
+
+def test_issue_sso_token_without_mapping_is_refused(client):
+    """S-2: запасного `sub = user.pk` нет — без CrmUserMapping токен не выдаётся."""
+    unmapped = CustomUser.objects.create(username="u@example.com", email="u@example.com", is_active=True)
+    client.force_authenticate(user=unmapped)
+
+    resp = client.post("/api/v1/auth/sso/token/")
+
+    assert resp.status_code == status.HTTP_403_FORBIDDEN
+    assert resp.json() == {"detail": "USER_NOT_PROVISIONED"}
+
+
+def test_exchange_unknown_sub_is_forbidden_and_creates_no_user(client):
+    """S-3: неизвестный sub → 403, пользователь ERP не создаётся и сопоставление не заводится."""
+    users_before = CustomUser.objects.count()
+    token = make_sso_jwt(sub="777", email="newcomer@example.com", role="admin", permissions=["quote.build"])
+
+    resp = client.post("/api/v1/auth/sso/exchange/", data={"token": token}, format="json")
+
+    assert resp.status_code == status.HTTP_403_FORBIDDEN
+    assert resp.json() == {"detail": "USER_NOT_PROVISIONED"}
+    assert CustomUser.objects.count() == users_before
+    assert not CrmUserMapping.objects.filter(crm_user_id=777).exists()
+    assert "access_token" not in resp.json()
+
+
+def test_exchange_email_match_without_sub_is_forbidden_and_user_untouched(client):
+    """S-3: e-mail совпал с пользователем ERP, а sub — нет: не привязываем и не трогаем права."""
+    victim = CustomUser.objects.create(
+        username="victim@example.com", email="victim@example.com", is_active=True, is_superuser=False, is_staff=False
+    )
+    token = make_sso_jwt(sub="888", email="victim@example.com", role="admin")
+
+    resp = client.post("/api/v1/auth/sso/exchange/", data={"token": token}, format="json")
+
+    assert resp.status_code == status.HTTP_403_FORBIDDEN
+    assert resp.json() == {"detail": "USER_NOT_PROVISIONED"}
+    victim.refresh_from_db()
+    assert victim.is_superuser is False and victim.is_staff is False
+    assert not CrmUserMapping.objects.filter(user=victim).exists()
+    assert not CompanyMember.objects.filter(user=victim).exists()
+
+
+def test_exchange_does_not_change_superuser_or_permissions(client, staff_user):
+    """S-3: role/permissions из токена при обмене не применяются (только провижинингом)."""
+    token = make_sso_jwt(sub="42", role="admin", permissions=["quote.build", "finance.manage"])
+
+    resp = client.post("/api/v1/auth/sso/exchange/", data={"token": token}, format="json")
+
+    assert resp.status_code == status.HTTP_200_OK
+    staff_user.refresh_from_db()
+    assert staff_user.is_superuser is False
+    assert staff_user.is_staff is True
+    assert not CompanyMember.objects.filter(user=staff_user).exists()
+    assert resp.json()["user"]["permissions"] == []
+
+
+def test_exchange_demotes_nobody_and_keeps_superuser(client):
+    admin = CustomUser.objects.create(
+        username="boss@example.com", email="boss@example.com", is_active=True, is_superuser=True, is_staff=True
+    )
+    CrmUserMapping.objects.create(crm_user_id=50, user=admin)
+    token = make_sso_jwt(sub="50", email="boss@example.com", role="manager", permissions=[])
+
+    resp = client.post("/api/v1/auth/sso/exchange/", data={"token": token}, format="json")
+
+    assert resp.status_code == status.HTTP_200_OK
+    admin.refresh_from_db()
+    assert admin.is_superuser is True and admin.is_staff is True
+
+
+def test_exchange_updates_email_and_name_only(client, staff_user):
+    token = make_sso_jwt(sub="42", email="Renamed@Example.com", name="Новое Имя")
+
+    resp = client.post("/api/v1/auth/sso/exchange/", data={"token": token}, format="json")
+
+    assert resp.status_code == status.HTTP_200_OK
+    staff_user.refresh_from_db()
+    assert staff_user.email == "renamed@example.com"
+    assert staff_user.first_name == "Новое Имя"
+
+
+def test_exchange_email_taken_by_other_user_is_not_overwritten(client, staff_user):
+    CustomUser.objects.create(username="other@example.com", email="other@example.com", is_active=True)
+    token = make_sso_jwt(sub="42", email="other@example.com")
+
+    resp = client.post("/api/v1/auth/sso/exchange/", data={"token": token}, format="json")
+
+    assert resp.status_code == status.HTTP_200_OK
+    staff_user.refresh_from_db()
+    assert staff_user.email == "staff@example.com"
+
+
+def test_exchange_lifetime_over_60s_is_rejected_even_with_valid_signature(client, staff_user):
+    """S-7: exp − iat = 120 с при верной подписи и неистёкшем exp → 401."""
+    token = make_sso_jwt(ttl_s=120)
+
+    resp = client.post("/api/v1/auth/sso/exchange/", data={"token": token}, format="json")
+
+    assert resp.status_code == status.HTTP_401_UNAUTHORIZED
+    assert resp.json() == {"detail": "INVALID_SSO_TOKEN"}
+
+
+def test_exchange_lifetime_within_leeway_is_accepted(client, staff_user):
+    token = make_sso_jwt(ttl_s=65)
+
+    resp = client.post("/api/v1/auth/sso/exchange/", data={"token": token}, format="json")
+
+    assert resp.status_code == status.HTTP_200_OK
+
+
+def test_exchange_lifetime_just_over_leeway_is_rejected(client, staff_user):
+    token = make_sso_jwt(ttl_s=66)
+
+    resp = client.post("/api/v1/auth/sso/exchange/", data={"token": token}, format="json")
+
+    assert resp.status_code == status.HTTP_401_UNAUTHORIZED
