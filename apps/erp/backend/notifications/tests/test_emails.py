@@ -141,7 +141,7 @@ TEMPLATE_CASES = [
         {
             "contact_name": "Алиса",
             "company_name": "Beta LLC",
-            "invite_url": "https://cabinet.example.com/auth/magic/tok",
+            "invite_url": "https://cabinet.example.com/auth/magic#token=tok",
             "telegram_url": "https://t.me/test_bot",
         },
     ),
@@ -150,7 +150,7 @@ TEMPLATE_CASES = [
         {
             "contact_name": "Алиса",
             "company_name": "Beta LLC",
-            "login_url": "https://cabinet.example.com/auth/magic/tok",
+            "login_url": "https://cabinet.example.com/auth/magic#token=tok",
         },
     ),
 ]
@@ -238,6 +238,23 @@ class TemplatedEmailRenderingTests(TestCase):
                 for body in (log.body_text, log.body_html):
                     self.assertNotIn("sEcReT-tok_1", body)
                     self.assertIn("/auth/magic/[REDACTED]", body)
+
+    def test_portal_login_token_in_fragment_is_redacted_in_email_log(self):
+        """FIX-21: ссылка `/auth/magic#token=<token>` (контракт 0.2.0) — токен во фрагменте не попадает в EmailLog."""
+        mail.outbox = []
+        url = "https://c.example.com/auth/magic#token=fake-fragment-value"
+        for template, url_key in (("portal_magic_link", "login_url"), ("portal_invitation", "invite_url")):
+            with self.subTest(template=template):
+                send_templated_email(
+                    template,
+                    {"contact_name": "Алиса", "company_name": "Beta LLC", url_key: url},
+                    to=["a@example.com"],
+                )
+                self.assertIn("/auth/magic#token=fake-fragment-value", mail.outbox[-1].body)
+                log = EmailLog.objects.filter(template=template).latest("id")
+                for body in (log.body_text, log.body_html):
+                    self.assertNotIn("fake-fragment-value", body)
+                    self.assertIn("/auth/magic#token=[REDACTED]", body)
 
     def test_unknown_channel_raises(self):
         with self.assertRaises(ValueError):

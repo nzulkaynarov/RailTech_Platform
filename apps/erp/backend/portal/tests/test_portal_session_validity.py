@@ -141,7 +141,7 @@ class TestMagicLinkMailIsQueued:
         assert len(mail.outbox) == 1
         assert mail.outbox[0].to == [client_contact.email]
         log = EmailLog.objects.get(template="portal_magic_link")
-        raw = re.search(r"/auth/magic/([\w-]+)", mail.outbox[0].body).group(1)
+        raw = re.search(r"/auth/magic#token=([\w-]+)", mail.outbox[0].body).group(1)
         assert MagicLinkToken.objects.get(contact=client_contact).token_hash == hash_token(raw) != raw
         assert raw not in log.body_text and raw not in log.body_html
 

@@ -185,6 +185,20 @@ class TestLoginThrottle:
 
         assert [c.status_code for c in codes] == [200, 200, 429]
 
+    def test_magic_token_exchange_is_limited_per_ip(self, monkeypatch, anon_portal_client):
+        """FIX-21: `POST /auth/magic` — вход без сессии, тот же лимит `portal_login`, что и у остальных входов."""
+        set_rate(monkeypatch, "portal_login", "2/minute")
+        body = {"token": "unknown-token-of-sufficient-length"}
+
+        codes = [
+            anon_portal_client.post("/api/portal/v1/auth/magic", body, format="json", REMOTE_ADDR="198.51.100.5")
+            for _ in range(3)
+        ]
+
+        assert [c.status_code for c in codes] == [410, 410, 429]
+        assert codes[2].json() == {"detail": "TOO_MANY_REQUESTS"}
+        assert "Retry-After" in codes[2]
+
     def test_authenticated_reading_is_not_counted_in_login_scope(self, monkeypatch, portal_client):
         set_rate(monkeypatch, "portal_login", "1/minute")
 

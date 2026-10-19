@@ -13,6 +13,7 @@ API = "/api/portal/v1"
 UNSAFE_ENDPOINTS = [
     ("post", "/auth/telegram", {"init_data": "x"}),
     ("post", "/auth/magic-link", {"email": "a@example.com"}),
+    ("post", "/auth/magic", {"token": "some-token-of-sufficient-length"}),
     ("post", "/auth/magic/some-token", None),
     ("post", "/auth/logout", None),
     ("post", "/requests", {"summary": "Нужны болты"}),

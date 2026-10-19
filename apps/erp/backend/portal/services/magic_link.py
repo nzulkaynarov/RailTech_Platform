@@ -32,8 +32,13 @@ RATE_WINDOW_SECONDS = 3600
 
 
 def build_login_url(raw_token: str) -> str:
+    """Ссылка из письма: токен во фрагменте (`#token=`), в пути и query его нет (контракт, FIX-20/21).
+
+    Фрагмент браузер не отправляет на сервер: Caddy, прокси и access-логи токена не видят; Cabinet читает его из
+    `location.hash` и меняет на сессию через `POST /auth/magic`.
+    """
     cabinet_url = getattr(settings, "CABINET_URL", "http://cabinet.localhost").rstrip("/")
-    return f"{cabinet_url}/auth/magic/{raw_token}"
+    return f"{cabinet_url}/auth/magic#token={raw_token}"
 
 
 def _check_address_rate_limit(clean_email: str) -> None:

@@ -142,7 +142,7 @@ class TestContactInvitation:
         assert data["channel"] == "email"
         # FIX-14: сотруднику рабочая ссылка входа клиента не отдаётся — только факт отправки и канал
         assert set(data) == {"ok", "contact_id", "channel", "email_sent", "invited_at"}
-        assert "/auth/magic/" not in response.content.decode()
+        assert "/auth/magic" not in response.content.decode()
 
         # Проверяем, что дата приглашения зафиксирована
         client_contact.refresh_from_db()
@@ -155,8 +155,10 @@ class TestContactInvitation:
         assert "Tashkent Metro LLC" in sent_email.subject
 
         # Письмо клиенту содержит рабочую ссылку, база и EmailLog — нет
-        assert "http://cabinet.localhost/auth/magic/" in sent_email.body
-        raw_token = re.search(r"/auth/magic/([\w-]+)", sent_email.body).group(1)
+        # FIX-21: токен — во фрагменте ссылки (`#token=`), в пути и query его нет
+        assert "http://cabinet.localhost/auth/magic#token=" in sent_email.body
+        raw_token = re.search(r"/auth/magic#token=([\w-]+)", sent_email.body).group(1)
+        assert f"/auth/magic/{raw_token}" not in sent_email.body and f"token={raw_token}&" not in sent_email.body
         stored = MagicLinkToken.objects.get(contact=client_contact)
         assert stored.token_hash == hash_token(raw_token) != raw_token
         assert stored.purpose == MagicLinkToken.PURPOSE_INVITE

@@ -51,6 +51,8 @@ for _ in $(seq 1 40); do
 done
 
 # Образ runtime (prod) + код смонтирован: pytest есть в образе (requirements.in, «Testing»).
+# packages/contracts смонтирован только на чтение (/packages/contracts): сторож контракта портала
+# (portal/tests/test_contract_guard.py) читает erp-portal.yaml и без него падает, а не пропускается (FIX-21).
 echo "▸ сборка образа $IMAGE"
 docker build -q -t "$IMAGE" "$ROOT/backend" >/dev/null
 
@@ -66,7 +68,9 @@ run_in() {
     -e CELERY_RESULT_BACKEND="redis://${RD}:6379/1" \
     -e EMAIL_BACKEND=django.core.mail.backends.locmem.EmailBackend \
     -e LITELLM_API_KEY= \
-    -v "$ROOT/backend:/app" -w /app "$IMAGE" "$@"
+    -v "$ROOT/backend:/app" \
+    -v "$ROOT/../../packages/contracts:/packages/contracts:ro" \
+    -w /app "$IMAGE" "$@"
 }
 
 case "${1:-}" in

@@ -137,7 +137,7 @@ docker compose -f infra/compose/base.yml -f infra/compose/dev.yml --env-file .en
 ```
 
 Остаточный риск: журналы фронтового прокси (Caddy с включённым `log`, nginx `cabinet-web`) пишут путь страницы
-`/auth/magic/<токен>` (SPA-маршрут Cabinet) — путь ссылки меняется в FIX-20.
+`/auth/magic/<токен>` (SPA-маршрут Cabinet). Ссылки из писем с FIX-21 ведут на `/auth/magic#token=<токен>`: фрагмент браузер на сервер не отправляет, в журналах прокси токена нет; Cabinet меняет его на сессию через `POST /auth/magic` (FIX-24). Устаревший `GET /auth/magic/{токен}` остаётся до FIX-24 и по-прежнему прячется фильтром.
 
 ## Если не поднимается
 

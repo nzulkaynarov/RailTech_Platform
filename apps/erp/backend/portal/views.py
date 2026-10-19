@@ -15,9 +15,10 @@ from django.http import FileResponse, Http404
 from django.utils import timezone
 from parties.models import Contact
 from portal.authentication import PortalAuthentication
-from portal.exceptions import PortalConflict, PortalValidationError, portal_exception_handler
-from portal.models import PortalRequestLine, PortalUpload
+from portal.exceptions import PortalBadRequest, PortalConflict, PortalValidationError, portal_exception_handler
+from portal.models import PortalRequestLine, PortalRequestSummary, PortalUpload
 from portal.permissions import CanAct, IsPortalAuthenticated
+from portal.projections import annotate_request_sources, delivery_lines
 from portal.serializers import (
     ActSerializer,
     CatalogCategorySerializer,
@@ -31,6 +32,7 @@ from portal.serializers import (
     DeliveryLineSerializer,
     InvoiceSerializer,
     MagicLinkRequestSerializer,
+    MagicLinkTokenSerializer,
     MeSerializer,
     PortalDocumentSerializer,
     PortalUploadResponseSerializer,
@@ -52,7 +54,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from catalog.published import project, project_many, published_products
-from crm.constants import DealStageCode, FulfillmentStatusCode, InvoiceStatusCode, QuoteStatusCode
+from crm.constants import DealStageCode, InvoiceStatusCode, QuoteStatusCode
 from crm.models import Act, ActivityLog, Contract, Deal, DealStage, Fulfillment, GeneratedDocument, Invoice, Quote
 from crm.services.deals import transition_deal_stage
 from crm.services.public_page import verify_code_and_accept
@@ -95,6 +97,15 @@ def _delete_portal_cookie(response: Response) -> Response:
         **_portal_cookie_attrs(),
     )
     return response
+
+
+def _parse_reason(data) -> str:
+    """Причина из тела `Reason`: пустая — 422 `REASON_REQUIRED`, длиннее лимита контракта — 422 `VALIDATION_ERROR`."""
+    serializer = ReasonSerializer(data=data)
+    if not serializer.is_valid():
+        too_long = any(error.code == "max_length" for error in serializer.errors.get("reason", []))
+        raise PortalValidationError("VALIDATION_ERROR" if too_long else "REASON_REQUIRED")
+    return serializer.validated_data["reason"].strip()
 
 
 class BasePortalView(APIView):
@@ -174,8 +185,46 @@ class MagicLinkRequestView(APIView):
         return Response({"status": "ok", "sent": True, "email": email}, status=status.HTTP_200_OK)
 
 
+def _exchange_magic_token(request, token: str) -> Response:
+    """Обмен токена ссылки входа на сессию — общий для `POST /auth/magic` и устаревшего `GET /auth/magic/{token}`."""
+    session, session_token = exchange_magic_link(
+        token,
+        ip_address=request.META.get("REMOTE_ADDR"),
+        user_agent=request.META.get("HTTP_USER_AGENT", ""),
+    )
+    me_data = {
+        "contact": TeamMemberSerializer(session.contact).data,
+        "company": CompanySerializer(session.company).data,
+        "can_act": session.contact.can_act,
+        "auth_method": "magic_link",
+    }
+    res = Response(MeSerializer(me_data).data, status=status.HTTP_200_OK)
+    return _set_portal_cookie(res, session_token)
+
+
+class MagicLinkTokenExchangeView(APIView):
+    """POST /auth/magic {token} — обмен токена из фрагмента ссылки входа (`/auth/magic#token=…`) на сессию.
+
+    Токен приходит в теле: ни путь, ни query не несут секрета, значит журналы серверов и прокси его не видят.
+    Архивная компания — 403 `FORBIDDEN`, просроченный, использованный или неизвестный токен — 410.
+    """
+
+    authentication_classes = []
+    permission_classes = []
+    throttle_classes = [PortalLoginRateThrottle]
+
+    def get_exception_handler(self):
+        return portal_exception_handler
+
+    def post(self, request):
+        serializer = MagicLinkTokenSerializer(data=request.data)
+        if not serializer.is_valid():
+            raise PortalValidationError("VALIDATION_ERROR")
+        return _exchange_magic_token(request, serializer.validated_data["token"])
+
+
 class MagicLinkExchangeView(APIView):
-    """GET /auth/magic/{token} — Обмен magic-link токена на сессию."""
+    """GET /auth/magic/{token} — устарело (токен в пути попадает в журналы), остаётся до FIX-24; см. `POST /auth/magic`."""
 
     authentication_classes = []
     permission_classes = []
@@ -185,23 +234,7 @@ class MagicLinkExchangeView(APIView):
         return portal_exception_handler
 
     def get(self, request, token):
-        ip = request.META.get("REMOTE_ADDR")
-        ua = request.META.get("HTTP_USER_AGENT", "")
-
-        session, session_token = exchange_magic_link(
-            token,
-            ip_address=ip,
-            user_agent=ua,
-        )
-
-        me_data = {
-            "contact": TeamMemberSerializer(session.contact).data,
-            "company": CompanySerializer(session.company).data,
-            "can_act": session.contact.can_act,
-            "auth_method": "magic_link",
-        }
-        res = Response(MeSerializer(me_data).data, status=status.HTTP_200_OK)
-        return _set_portal_cookie(res, session_token)
+        return _exchange_magic_token(request, token)
 
     def post(self, request, token):
         return self.get(request, token)
@@ -248,46 +281,29 @@ class MeView(BasePortalView):
 # ── 3. Requests ─────────────────────────────────────────────────────────────
 
 
-def _deal_request_status(deal: Deal) -> str:
-    code = deal.stage.code if deal.stage else "DRAFT"
-    if code in (DealStageCode.CLOSED_WON, DealStageCode.CLOSED_LOST):
-        return "closed"
-    if code in (
-        DealStageCode.QUOTE_SENT,
-        DealStageCode.CONTRACT_SIGNED,
-    ):
-        return "quoted"
-    if deal.quotes.exclude(status__code=QuoteStatusCode.DRAFT).exists():
-        return "quoted"
-    if code == DealStageCode.DRAFT and deal.quotes.count() == 0:
-        return "new"
-    return "in_progress"
+def _short_title(summary: str) -> str:
+    """Название сделки из сути запроса: одна строка, не длиннее поля `Deal.title`."""
+    title = " ".join(summary.split())
+    max_length = Deal._meta.get_field("title").max_length
+    return title if len(title) <= max_length else title[: max_length - 1].rstrip() + "…"
+
+
+def _requests_queryset(company):
+    """Запросы компании (сделки) с тем, что нужно сериализатору, без N+1."""
+    return (
+        Deal.objects.filter(company=company)
+        .select_related("stage", "portal_summary")
+        .prefetch_related("quotes__status", "portal_lines", "portal_uploads")
+    )
 
 
 class RequestListView(BasePortalView):
     """GET/POST /requests — Запросы клиента."""
 
     def get(self, request):
-        deals = (
-            Deal.objects.filter(company=request.portal_company)
-            .select_related("stage")
-            .prefetch_related("quotes")
-            .order_by("-created_at")
-        )
-        items = []
-        for d in deals:
-            items.append(
-                {
-                    "id": d.id,
-                    "number": f"Z-{d.id}",
-                    "status": _deal_request_status(d),
-                    "summary": d.title or f"Запрос #{d.id}",
-                    "source": "cabinet",
-                    "deal_id": d.id,
-                    "created_at": d.created_at,
-                }
-            )
-        return Response(ClientRequestSerializer(items, many=True).data)
+        deals = list(_requests_queryset(request.portal_company).order_by("-created_at"))
+        annotate_request_sources(deals)
+        return Response(ClientRequestSerializer(deals, many=True).data)
 
     def post(self, request):
         serializer = ClientRequestCreateSerializer(data=request.data)
@@ -305,10 +321,12 @@ class RequestListView(BasePortalView):
             deal = Deal.objects.create(
                 company=request.portal_company,
                 contact=request.portal_contact,
-                title=summary,
+                title=_short_title(summary),
                 stage=draft_stage,
                 notes="Запрос создан клиентом из Cabinet",
             )
+            # Название сделки — 255 знаков, суть запроса по контракту — до 5000: полный текст лежит отдельно
+            PortalRequestSummary.objects.create(deal=deal, text=summary)
             # Привязка строк
             for idx, line in enumerate(lines, start=1):
                 PortalRequestLine.objects.create(
@@ -345,127 +363,45 @@ class RequestListView(BasePortalView):
                 event_params={"source": "cabinet", "contact_id": request.portal_contact.id},
             )
 
-        resp_data = {
-            "id": deal.id,
-            "number": f"Z-{deal.id}",
-            "status": "new",
-            "summary": deal.title,
-            "source": "cabinet",
-            "deal_id": deal.id,
-            "created_at": deal.created_at,
-            "lines": lines,
-            "attachments": attachments,
-        }
-        return Response(ClientRequestSerializer(resp_data).data, status=status.HTTP_201_CREATED)
+        created = _requests_queryset(request.portal_company).get(pk=deal.pk)
+        return Response(ClientRequestSerializer(created).data, status=status.HTTP_201_CREATED)
 
 
 class RequestDetailView(BasePortalView):
     """GET /requests/{id} — Детали запроса клиента (Q-16)."""
 
     def get(self, request, pk):
-        deal = (
-            Deal.objects.filter(pk=pk, company=request.portal_company)
-            .select_related("stage")
-            .prefetch_related("portal_lines", "portal_uploads", "attachments")
-            .first()
-        )
+        deal = _requests_queryset(request.portal_company).filter(pk=pk).first()
         if not deal:
             raise Http404
-
-        lines = [
-            {
-                "text": item.text,
-                "quantity": str(item.quantity) if item.quantity is not None else "1",
-                "unit": item.unit,
-            }
-            for item in deal.portal_lines.all()
-        ]
-        attachments = [
-            {"upload_id": str(upload.upload_id), "name": upload.name} for upload in deal.portal_uploads.all()
-        ]
-
-        resp_data = {
-            "id": deal.id,
-            "number": f"Z-{deal.id}",
-            "status": _deal_request_status(deal),
-            "summary": deal.title or f"Запрос #{deal.id}",
-            "source": "cabinet",
-            "deal_id": deal.id,
-            "created_at": deal.created_at,
-            "lines": lines,
-            "attachments": attachments,
-        }
-        return Response(ClientRequestSerializer(resp_data).data)
+        return Response(ClientRequestSerializer(deal).data)
 
 
 # ── 4. Quotes ───────────────────────────────────────────────────────────────
 
 
-def _quote_portal_status(quote: Quote) -> str:
-    code = quote.status.code if quote.status else "DRAFT"
-    if code == QuoteStatusCode.APPROVED:
-        return "accepted"
-    if code == QuoteStatusCode.REJECTED:
-        return "rejected"
-    if quote.valid_until and quote.valid_until < timezone.localdate():
-        return "expired"
-    if quote.first_viewed_at:
-        return "viewed"
-    return "sent"
-
-
-def _quote_currency_code(quote: Quote) -> str:
-    if getattr(quote, "quote_currency", None):
-        return quote.quote_currency.code
-    return "UZS"
+def _client_quotes(company):
+    """КП компании, которые видит портал. Какие именно — правило FIX-22; сейчас всё, кроме черновиков."""
+    return (
+        Quote.objects.filter(deal__company=company)
+        .exclude(status__code=QuoteStatusCode.DRAFT)
+        .select_related("status", "quote_currency", "deal")
+    )
 
 
 class QuoteListView(BasePortalView):
     """GET /quotes — Список КП для клиента."""
 
     def get(self, request):
-        quotes = (
-            Quote.objects.filter(
-                deal__company=request.portal_company,
-            )
-            .exclude(status__code=QuoteStatusCode.DRAFT)
-            .select_related("status", "quote_currency")
-            .order_by("-created_at")
-        )
-        items = []
-        for q in quotes:
-            items.append(
-                {
-                    "id": q.id,
-                    "deal_id": q.deal_id,
-                    "number": q.number or f"Q-{q.id}",
-                    "version": q.version or 1,
-                    "status": _quote_portal_status(q),
-                    "total": {
-                        "amount": str(q.total_incl_vat or Decimal("0.00")),
-                        "currency": _quote_currency_code(q),
-                    },
-                    "valid_until": q.valid_until,
-                    "sent_at": q.updated_at,
-                }
-            )
-        return Response(QuoteListItemSerializer(items, many=True).data)
+        quotes = _client_quotes(request.portal_company).order_by("-created_at")
+        return Response(QuoteListItemSerializer(quotes, many=True).data)
 
 
 class QuoteDetailView(BasePortalView):
     """GET /quotes/{id} — Детали КП с позициями."""
 
     def get(self, request, pk):
-        quote = (
-            Quote.objects.filter(
-                pk=pk,
-                deal__company=request.portal_company,
-            )
-            .exclude(status__code=QuoteStatusCode.DRAFT)
-            .select_related("status", "quote_currency", "delivery_basis")
-            .prefetch_related("items__product__unit_of_measure")
-            .first()
-        )
+        quote = _client_quotes(request.portal_company).filter(pk=pk).first()
         if not quote:
             raise Http404
 
@@ -474,65 +410,7 @@ class QuoteDetailView(BasePortalView):
             quote.first_viewed_at = timezone.now()
             quote.save(update_fields=["first_viewed_at"])
 
-        curr = _quote_currency_code(quote)
-        lines = []
-        for idx, item in enumerate(quote.items.all().order_by("id"), start=1):
-            uom = getattr(item, "unit", "")
-            if not uom and item.product and getattr(item.product, "uom", None):
-                uom = item.product.uom.code
-            name = (
-                getattr(item, "product_name", None)
-                or getattr(item, "name_canonical", None)
-                or getattr(item, "imported_raw_name", None)
-                or (item.product.name if item.product else "")
-            )
-            unit_price_val = str(
-                getattr(item, "sale_price", None)
-                or getattr(item, "final_price_excl_vat", None)
-                or getattr(item, "unit_price", None)
-                or Decimal("0.00")
-            )
-            total_price_val = str(
-                getattr(item, "total_price", None) or getattr(item, "line_total_incl_vat", None) or Decimal("0.00")
-            )
-            vat_val = str(getattr(item, "vat_amount", None) or Decimal("0.00"))
-            lines.append(
-                {
-                    "id": item.id,
-                    "line_no": idx,
-                    "kind": "item",
-                    "title": name,
-                    "name": name,
-                    "quantity": str(item.quantity),
-                    "unit": uom or "шт",
-                    "price": unit_price_val,
-                    "unit_price": {"amount": unit_price_val, "currency": curr},
-                    "total": {"amount": total_price_val, "currency": curr},
-                    "total_price": {"amount": total_price_val, "currency": curr},
-                    "vat_amount": {
-                        "amount": vat_val,
-                        "currency": curr,
-                    },
-                }
-            )
-
-        resp_data = {
-            "id": quote.id,
-            "deal_id": quote.deal_id,
-            "number": quote.number or f"Q-{quote.id}",
-            "version": quote.version or 1,
-            "status": _quote_portal_status(quote),
-            "total": {"amount": str(quote.total_incl_vat or Decimal("0.00")), "currency": curr},
-            "valid_until": quote.valid_until,
-            "sent_at": quote.updated_at,
-            "vat_rate": str(quote.vat_rate or Decimal("12.00")),
-            "delivery_basis": quote.delivery_basis.code if quote.delivery_basis else None,
-            "payment_terms": quote.delivery_note or "100% предоплата",
-            "lead_time_days": quote.delivery_lead_time_days,
-            "lines": lines,
-            "items": lines,
-        }
-        return Response(QuoteSerializer(resp_data).data)
+        return Response(QuoteSerializer(quote).data)
 
 
 class QuoteAcceptView(BasePortalView):
@@ -586,13 +464,7 @@ class QuoteRejectView(BasePortalView):
     permission_classes = [IsPortalAuthenticated, CanAct]
 
     def post(self, request, pk):
-        serializer = ReasonSerializer(data=request.data)
-        if not serializer.is_valid():
-            raise PortalValidationError("REASON_REQUIRED")
-
-        reason = serializer.validated_data["reason"].strip()
-        if not reason:
-            raise PortalValidationError("REASON_REQUIRED")
+        reason = _parse_reason(request.data)
 
         quote = (
             Quote.objects.filter(
@@ -627,21 +499,6 @@ class QuoteRejectView(BasePortalView):
 # ── 5. Contracts ────────────────────────────────────────────────────────────
 
 
-def _contract_portal_status(contract: Contract) -> str:
-    code = contract.status.code if contract.status else "DRAFT"
-    if code == "DRAFT":
-        return "draft"
-    if code in ("PENDING", "PENDING_SIGNATURE"):
-        return "pending_signature"
-    if code in ("SIGNED", "ACTIVE"):
-        return "signed"
-    if code == "COMPLETED":
-        return "completed"
-    if code == "CANCELLED":
-        return "cancelled"
-    return "signed"
-
-
 class ContractListView(BasePortalView):
     """GET /contracts — Договоры клиента."""
 
@@ -651,22 +508,7 @@ class ContractListView(BasePortalView):
             .select_related("status", "deal")
             .order_by("-created_at")
         )
-        items = []
-        for c in contracts:
-            curr = c.currency.code if getattr(c, "currency", None) else "UZS"
-            items.append(
-                {
-                    "id": c.id,
-                    "deal_id": c.deal_id,
-                    "number": c.number or f"CT-{c.id}",
-                    "title": getattr(c, "title", None) or f"Договор поставки {c.number}",
-                    "status": _contract_portal_status(c),
-                    "total": {"amount": str(c.total_amount or Decimal("0.00")), "currency": curr},
-                    "signed_at": getattr(c, "client_signed_at", None) or getattr(c, "signed_at", None),
-                    "document_id": getattr(c, "document_id", None) or c.id,
-                }
-            )
-        return Response(ContractSerializer(items, many=True).data)
+        return Response(ContractSerializer(contracts, many=True).data)
 
 
 class ContractSignView(BasePortalView):
@@ -713,35 +555,11 @@ class ContractSignView(BasePortalView):
             reason=f"Договор {contract.number} подписан клиентом в Cabinet",
         )
 
-        curr = contract.currency.code if getattr(contract, "currency", None) else "UZS"
-        resp_data = {
-            "id": contract.id,
-            "deal_id": contract.deal_id,
-            "number": contract.number or f"CT-{contract.id}",
-            "title": getattr(contract, "title", None) or f"Договор поставки {contract.number}",
-            "status": "signed",
-            "total": {"amount": str(contract.total_amount or Decimal("0.00")), "currency": curr},
-            "signed_at": getattr(contract, "client_signed_at", None) or getattr(contract, "signed_at", None),
-            "document_id": getattr(contract, "document_id", None) or contract.id,
-        }
-        return Response(ContractSerializer(resp_data).data, status=status.HTTP_200_OK)
+        contract.refresh_from_db()
+        return Response(ContractSerializer(contract).data, status=status.HTTP_200_OK)
 
 
 # ── 6. Invoices ─────────────────────────────────────────────────────────────
-
-
-def _invoice_portal_status(invoice: Invoice) -> str:
-    code = invoice.status.code if invoice.status else "ISSUED"
-    if code == InvoiceStatusCode.PAID:
-        return "paid"
-    if code == InvoiceStatusCode.CANCELLED:
-        return "cancelled"
-    if invoice.due_date and invoice.due_date < timezone.localdate() and code != InvoiceStatusCode.PAID:
-        return "overdue"
-    paid = getattr(invoice, "amount_paid", None) or getattr(invoice, "paid_amount", None)
-    if paid and paid > Decimal("0.00"):
-        return "partially_paid"
-    return "issued"
 
 
 class InvoiceListView(BasePortalView):
@@ -754,36 +572,10 @@ class InvoiceListView(BasePortalView):
             .select_related("status", "deal", "currency")
             .order_by("-created_at")
         )
-        items = []
-        for inv in invoices:
-            curr = inv.currency.code if inv.currency else "UZS"
-            paid = getattr(inv, "amount_paid", None) or getattr(inv, "paid_amount", None) or Decimal("0.00")
-            items.append(
-                {
-                    "id": inv.id,
-                    "deal_id": inv.deal_id,
-                    "contract_id": inv.contract_id,
-                    "number": inv.number or f"INV-{inv.id}",
-                    "status": _invoice_portal_status(inv),
-                    "total": {"amount": str(inv.total_incl_vat or Decimal("0.00")), "currency": curr},
-                    "paid_amount": {"amount": str(paid), "currency": curr},
-                    "due_date": inv.due_date,
-                    "issued_at": inv.created_at,
-                }
-            )
-        return Response(InvoiceSerializer(items, many=True).data)
+        return Response(InvoiceSerializer(invoices, many=True).data)
 
 
 # ── 7. Acts ─────────────────────────────────────────────────────────────────
-
-
-def _act_portal_status(act: Act) -> str:
-    code = act.status.code if act.status else "ISSUED"
-    if code == "SIGNED":
-        return "signed"
-    if code in ("RETURNED", "REJECTED"):
-        return "returned"
-    return "issued"
 
 
 class ActListView(BasePortalView):
@@ -792,26 +584,10 @@ class ActListView(BasePortalView):
     def get(self, request):
         acts = (
             Act.objects.filter(deal__company=request.portal_company)
-            .select_related("status", "deal", "invoice")
+            .select_related("status", "deal")
             .order_by("-created_at")
         )
-        items = []
-        for a in acts:
-            curr = a.invoice.currency.code if (a.invoice and a.invoice.currency) else "UZS"
-            items.append(
-                {
-                    "id": a.id,
-                    "deal_id": a.deal_id,
-                    "contract_id": a.contract_id,
-                    "number": a.number or f"ACT-{a.id}",
-                    "status": _act_portal_status(a),
-                    "total": {"amount": str(a.total_amount or Decimal("0.00")), "currency": curr},
-                    "issued_at": a.created_at,
-                    "signed_at": a.signed_at,
-                    "return_reason": getattr(a, "return_reason", None) or "",
-                }
-            )
-        return Response(ActSerializer(items, many=True).data)
+        return Response(ActSerializer(acts, many=True).data)
 
 
 class ActAcceptView(BasePortalView):
@@ -849,19 +625,8 @@ class ActAcceptView(BasePortalView):
             reason=f"Акт {act.number} принят заказчиком в Cabinet",
         )
 
-        curr = act.invoice.currency.code if (act.invoice and act.invoice.currency) else "UZS"
-        resp_data = {
-            "id": act.id,
-            "deal_id": act.deal_id,
-            "contract_id": act.contract_id,
-            "number": act.number or f"ACT-{act.id}",
-            "status": "signed",
-            "total": {"amount": str(act.total_amount or Decimal("0.00")), "currency": curr},
-            "issued_at": act.created_at,
-            "signed_at": act.signed_at,
-            "return_reason": "",
-        }
-        return Response(ActSerializer(resp_data).data)
+        act.refresh_from_db()
+        return Response(ActSerializer(act).data)
 
 
 class ActReturnView(BasePortalView):
@@ -870,13 +635,7 @@ class ActReturnView(BasePortalView):
     permission_classes = [IsPortalAuthenticated, CanAct]
 
     def post(self, request, pk):
-        serializer = ReasonSerializer(data=request.data)
-        if not serializer.is_valid():
-            raise PortalValidationError("REASON_REQUIRED")
-
-        reason = serializer.validated_data["reason"].strip()
-        if not reason:
-            raise PortalValidationError("REASON_REQUIRED")
+        reason = _parse_reason(request.data)
 
         act = (
             Act.objects.filter(
@@ -913,37 +672,15 @@ class ActReturnView(BasePortalView):
             event_params={"act_id": act.id, "reason": reason},
         )
 
-        curr = act.invoice.currency.code if (act.invoice and act.invoice.currency) else "UZS"
-        resp_data = {
-            "id": act.id,
-            "deal_id": act.deal_id,
-            "contract_id": act.contract_id,
-            "number": act.number or f"ACT-{act.id}",
-            "status": "returned",
-            "total": {"amount": str(act.total_amount or Decimal("0.00")), "currency": curr},
-            "issued_at": act.created_at,
-            "signed_at": act.signed_at,
-            "return_reason": reason,
-        }
-        return Response(ActSerializer(resp_data).data)
+        act.refresh_from_db()
+        return Response(ActSerializer(act).data)
 
 
 # ── 8. Deliveries ───────────────────────────────────────────────────────────
 
 
-def _fulfillment_portal_status(f: Fulfillment) -> str:
-    code = f.status.code if f.status else "PENDING"
-    if code == FulfillmentStatusCode.ACCEPTED:
-        return "accepted"
-    if code == FulfillmentStatusCode.DELIVERED:
-        return "delivered"
-    if code in (FulfillmentStatusCode.IN_TRANSIT, FulfillmentStatusCode.SHIPPED, FulfillmentStatusCode.DISPUTED):
-        return "in_transit"
-    return "pending"
-
-
 class DeliveryListView(BasePortalView):
-    """GET /deliveries — Поставки по сделкам клиента."""
+    """GET /deliveries — Строки поставки по сделкам клиента (проекция клиента: без поставщика и цен)."""
 
     def get(self, request):
         fulfillments = (
@@ -951,24 +688,7 @@ class DeliveryListView(BasePortalView):
             .select_related("status", "deal")
             .order_by("-created_at")
         )
-        items = []
-        for f in fulfillments:
-            prod_name = f.deal.title or f"Поставка по сделке #{f.deal_id}"
-            qty = "1"
-            unit = "компл."
-            items.append(
-                {
-                    "id": f.id,
-                    "deal_id": f.deal_id,
-                    "product_name": prod_name,
-                    "quantity": qty,
-                    "unit": unit,
-                    "status": _fulfillment_portal_status(f),
-                    "expected_date": f.expected_delivery_date,
-                    "tracking_number": f.tracking_number or None,
-                }
-            )
-        return Response(DeliveryLineSerializer(items, many=True).data)
+        return Response(DeliveryLineSerializer(delivery_lines(fulfillments), many=True).data)
 
 
 # ── 9. Documents & Files ────────────────────────────────────────────────────
@@ -983,24 +703,7 @@ class DocumentListView(BasePortalView):
             .select_related("template__kind", "deal")
             .order_by("-created_at")
         )
-        items = []
-        for d in docs:
-            kind_code = d.template.kind.code.lower() if (d.template and d.template.kind) else "other"
-            if kind_code not in ("contract", "invoice", "act", "quote", "specification", "waybill"):
-                kind_code = "other"
-            items.append(
-                {
-                    "id": d.id,
-                    "deal_id": d.deal_id,
-                    "kind": kind_code,
-                    "title": d.title or f"Документ {d.number}",
-                    "number": d.number,
-                    "date": d.created_at.date(),
-                    "file_name": f"{d.number}.pdf",
-                    "size_bytes": getattr(d.pdf_file, "size", 0) if d.pdf_file else 0,
-                }
-            )
-        return Response(PortalDocumentSerializer(items, many=True).data)
+        return Response(PortalDocumentSerializer(docs, many=True).data)
 
 
 class DocumentFileView(BasePortalView):
@@ -1049,10 +752,10 @@ class UploadView(BasePortalView):
     def post(self, request):
         file_obj = request.FILES.get("file")
         if not file_obj:
-            raise PortalValidationError("VALIDATION_ERROR")
+            raise PortalBadRequest("FILE_REQUIRED")
 
-        # Лимит размера: 10 МБ
-        if file_obj.size > 10 * 1024 * 1024:
+        # Лимит размера — по контракту 10 МБ, настройка `PORTAL_UPLOAD_MAX_BYTES`.
+        if file_obj.size > settings.PORTAL_UPLOAD_MAX_BYTES:
             raise PortalValidationError("FILE_TOO_LARGE")
 
         upload = PortalUpload.objects.create(
