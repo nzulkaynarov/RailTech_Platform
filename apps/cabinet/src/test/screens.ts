@@ -4,10 +4,33 @@ import { axe } from 'vitest-axe';
 
 import { portalServer } from '@/mocks/server';
 
-/** axe без нарушений на отрисованном экране (контейнер приложения + порталы диалогов в body). */
-export async function expectNoAxeViolations(root: Element = document.body) {
-  const results = await axe(root);
-  expect(results.violations.map((violation) => `${violation.id}: ${violation.help}`)).toEqual([]);
+/**
+ * Правила axe для jsdom. `color-contrast` отключён: jsdom не считает раскладку и цвета (в `css: false` стилей Tailwind нет),
+ * правило там ничего не проверяет, а контраст токенов закрыт `packages/ui-tokens` и осмотром глазами
+ * (README axe-core, «JSDOM»: `color-contrast` в jsdom не работает, рекомендовано выключать).
+ */
+const AXE_OPTIONS = { rules: { 'color-contrast': { enabled: false } } };
+
+/**
+ * Что проверять: содержимое экрана (`<main>`) и открытые диалоги (порталы в body), а не весь документ.
+ * Оболочку (меню, шапку, тосты) проверяет один тест `shell.test.tsx` по всему приложению. Причина — цена: первый
+ * запуск axe в файле тратит ~2,5 с на компиляцию селекторов в jsdom, и эта цена растёт с числом узлов (на меню и
+ * иконках оболочки уходило две трети); на медленном раннере CI она вылезала за таймаут теста.
+ */
+function auditTargets(): Element[] {
+  const main = document.querySelector('main');
+  if (!main) return [document.body];
+  return [main, ...Array.from(document.querySelectorAll('[role="dialog"]'))];
+}
+
+/** axe без нарушений на экране: `root` — явный блок, по умолчанию — `<main>` и диалоги (см. `auditTargets`). */
+export async function expectNoAxeViolations(root?: Element) {
+  const violations: string[] = [];
+  for (const target of root ? [root] : auditTargets()) {
+    const results = await axe(target, AXE_OPTIONS);
+    violations.push(...results.violations.map((violation) => `${violation.id}: ${violation.help}`));
+  }
+  expect(violations).toEqual([]);
 }
 
 /** Дождаться заголовка экрана (h1). */
