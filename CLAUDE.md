@@ -29,3 +29,40 @@ docs/            HANDOFF (где мы и что дальше), BUSINESS, ARCHITE
 
 Команды: `make check` (все приложения), `make check-crm|erp|cabinet`, `make up` (весь ансамбль
 локально на трёх доменах `*.localhost`), `make contracts` (валидация и генерация клиентов).
+
+## Среда разработки, тесты и CI (правило владельца 2026-10-19)
+
+Локальная среда полная и воспроизводимая: всё, что проверяет CI (`.github/workflows/ci.yml`), проверяется здесь.
+Если команда не работает — почини окружение или спроси владельца. Не обходи проблему через CI.
+
+| Что | Команда |
+|---|---|
+| Worktree задачи (ORCHESTRATOR §4.1) | только `.claude/worktrees/<задача>`: `git worktree add .claude/worktrees/<задача> -b <ветка> origin/main` или `EnterWorktree`; имя задачи = `ERP_TEST_NS` |
+| Зависимости (в новом worktree — первым шагом) | `make -C apps/<crm\|erp\|cabinet> install`; контракты — `cd packages/contracts && pnpm install --frozen-lockfile` |
+| Один тест CRM | `cd apps/crm/backend && uv run pytest tests/<файл>.py -x -q`; фронтенд — `cd apps/crm/frontend && pnpm test -- <шаблон>` |
+| Один тест ERP (одноразовые Postgres + Redis в Docker) | `ERP_TEST_NS=<задача> make -C apps/erp test-backend args="<app>/tests/<файл>.py -x -q"`; фронтенд — `cd apps/erp/frontend && npm run test -- <шаблон>` |
+| Один тест Cabinet | `cd apps/cabinet && npm run test -- <шаблон>` |
+| Линтер, типы и все тесты приложения | `make check-crm`, `make check-erp`, `make check-cabinet`; контракт и OpenAPI — `make contracts` |
+| Всё, что делает CI | `make ci-local` (по умолчанию — всё, кроме e2e и audit; `args="--quick"` — без integration и build; `args="--full"` — с e2e и audit; задания по имени — `scripts/ci_local.sh crm-integration erp`) |
+| Стенд ансамбля (для проверки глазами, не для тестов) | `make env && make up`, `make smoke` |
+
+Рабочий цикл:
+
+1. Во время итераций гоняй только затронутые тесты — это секунды, не минуты.
+2. Перед коммитом — `make check-<приложение>` для каждого затронутого приложения (и `make contracts`, если менялся
+   контракт или OpenAPI). Коммить только зелёное.
+3. Задача завершена целиком: `make ci-local` по затронутым заданиям, затем push ветки и PR с кратким описанием —
+   это разрешено без вопроса.
+4. После открытия PR — **остановись и доложи**. Не запускай CI вручную, не опрашивай его (`gh run watch`,
+   `gh run list`, `gh pr checks`, чтение логов) и не жди результата. CI — финальная проверка владельца в чистой
+   среде, один прогон на PR.
+5. Если CI упал — скажет владелец. Тогда воспроизведи падение локально (`make ci-local <задание>` или один тест)
+   и чини здесь, а не методом «поправил → push → смотрю CI».
+
+Не делать: использовать CI, чтобы узнать, проходят ли тесты; push «на всякий случай» или ради промежуточной
+проверки; push в `main` (защищена — только PR); менять `.github/workflows/*`, ruleset и `scripts/ci_local.sh` без
+явного запроса.
+
+Отступить можно, только если проверка принципиально невозможна локально (матрица ОС/версий, внешний сервис
+только в CI, секреты) — скажи об этом явно и спроси, прежде чем запускать что-либо удалённо. Платные прогоны
+моделей (evals) — отдельно и только с согласия владельца на конкретный прогон.

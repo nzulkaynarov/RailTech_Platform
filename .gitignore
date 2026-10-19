@@ -28,7 +28,8 @@ coverage/
 # ОС и редакторы
 .DS_Store
 .idea/
-.vscode/
+.vscode/*
+!.vscode/settings.json
 *.log
 
 # Claude Code: локальные настройки и рабочие копии агентов

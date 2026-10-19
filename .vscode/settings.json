@@ -1,0 +1,6 @@
+{
+  "// worktrees": "рабочие копии агентов (.claude/worktrees) и логи локального CI не индексируем и не ищем",
+  "files.exclude": { ".claude/worktrees": true, ".ci-local": true },
+  "search.exclude": { ".claude/worktrees": true, ".ci-local": true, "**/node_modules": true, "**/.venv": true, "**/.venv-tools": true },
+  "files.watcherExclude": { "**/.claude/worktrees/**": true, "**/.ci-local/**": true }
+}
