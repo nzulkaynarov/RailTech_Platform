@@ -14,6 +14,7 @@ from typing import Any, Dict, List, Optional
 from django.conf import settings
 from django.utils import timezone
 from parties.models import Company
+from sales.models import Fulfillment
 
 from crm.models import Deal, GeneratedDocument, Invoice
 
@@ -44,6 +45,60 @@ def _map_doc_kind(raw_kind: str) -> str:
         "receipt": "receipt",
     }
     return mapping.get(kind, "other")
+
+
+#: Статусы КП из справочника ERP -> `QuoteStatus` контракта. Клиент видит только
+#: отправленные, принятые и отклонённые (как публичная страница КП в `portal`).
+_QUOTE_STATUS_MAP = {
+    "draft": "draft",
+    "pending_trade_review": "approval",
+    "pending_approval": "approval",
+    "ready_to_send": "approval",
+    "approval": "approval",
+    "sent": "sent",
+    "viewed": "viewed",
+    "approved": "accepted",
+    "accepted": "accepted",
+    "rejected": "rejected",
+    "expired": "expired",
+}
+CLIENT_VISIBLE_QUOTE_STATUSES = frozenset({"sent", "viewed", "accepted", "rejected", "expired"})
+
+_FULFILLMENT_STATUS_MAP = {
+    "pending": "assembling",
+    "assembling": "assembling",
+    "ready_to_ship": "ready_to_ship",
+    "shipped": "shipped",
+    "in_transit": "in_transit",
+    "disputed": "in_transit",
+    "delivered": "delivered",
+    "accepted": "delivered",
+}
+
+
+def delivery_lines(deal: Deal) -> List[Dict[str, Any]]:
+    """Поставки сделки в проекции клиента (`DeliveryLine`): без поставщика, цен и себестоимости.
+
+    У исполнения сделки (`sales.Fulfillment`, один к одному) нет количества и единицы —
+    они не выдумываются: `quantity` и `unit` равны `null`.
+    """
+    fulfillment = Fulfillment.objects.filter(deal=deal).select_related("status").first()
+    if fulfillment is None:
+        return []
+    raw_code = fulfillment.status.code.lower() if fulfillment.status_id else ""
+    eta = fulfillment.expected_delivery_date
+    return [
+        {
+            "erp_deal_id": deal.id,
+            "line_no": 1,
+            "title": deal.title or f"Поставка #{fulfillment.id}",
+            "quantity": None,
+            "unit": None,
+            "status": _FULFILLMENT_STATUS_MAP.get(raw_code, "assembling"),
+            "eta": eta.isoformat() if eta else None,
+            "tracking": fulfillment.tracking_number or None,
+        }
+    ]
 
 
 def get_company_summary_data(erp_company_id: int) -> Optional[Dict[str, Any]]:
@@ -175,8 +230,12 @@ def list_company_deals_data(erp_company_id: int) -> Optional[List[Dict[str, Any]
     return result
 
 
-def get_deal_detail_data(erp_deal_id: int) -> Optional[Dict[str, Any]]:
-    """Детальная карточка сделки в клиентской проекции."""
+def get_deal_detail_data(erp_deal_id: int, *, client_view: bool = False) -> Optional[Dict[str, Any]]:
+    """Детальная карточка сделки в клиентской проекции.
+
+    `client_view=True` (erp-mcp, режим customer) — КП только отправленные, принятые и отклонённые:
+    черновики и КП на согласовании клиенту не отдаются.
+    """
     deal = (
         Deal.objects.filter(pk=erp_deal_id)
         .select_related("company", "stage")
@@ -194,16 +253,9 @@ def get_deal_detail_data(erp_deal_id: int) -> Optional[Dict[str, Any]]:
     quotes = []
     cabinet_url = getattr(settings, "CABINET_URL", "http://cabinet.localhost").rstrip("/")
     for q in deal.quotes.order_by("-version"):
-        status_map = {
-            "draft": "draft",
-            "approval": "approval",
-            "sent": "sent",
-            "viewed": "viewed",
-            "accepted": "accepted",
-            "rejected": "rejected",
-            "expired": "expired",
-        }
-        q_status = status_map.get(q.status.code.lower() if q.status else "draft", "draft")
+        q_status = _QUOTE_STATUS_MAP.get(q.status.code.lower() if q.status else "draft", "draft")
+        if client_view and q_status not in CLIENT_VISIBLE_QUOTE_STATUSES:
+            continue
         quotes.append(
             {
                 "erp_quote_id": q.id,
@@ -211,7 +263,9 @@ def get_deal_detail_data(erp_deal_id: int) -> Optional[Dict[str, Any]]:
                 "status": q_status,
                 "public_url": f"{cabinet_url}/quotes/{q.id}",
                 "valid_until": q.valid_until.isoformat() if q.valid_until else None,
-                "total": _to_money(q.total_incl_vat or Decimal("0"), q.currency.code if q.currency else "UZS"),
+                "total": _to_money(
+                    q.total_incl_vat or Decimal("0"), q.quote_currency.code if q.quote_currency_id else "UZS"
+                ),
             }
         )
 
@@ -242,28 +296,7 @@ def get_deal_detail_data(erp_deal_id: int) -> Optional[Dict[str, Any]]:
         )
 
     # Поставки (клиентская проекция — без поставщика, цен и себестоимости)
-    deliveries = []
-    try:
-        for idx, f in enumerate(deal.fulfillments.order_by("created_at"), start=1):
-            f_status = (
-                f.status
-                if f.status in ["assembling", "in_transit", "ready_to_ship", "shipped", "delivered"]
-                else "assembling"
-            )
-            deliveries.append(
-                {
-                    "erp_deal_id": deal.id,
-                    "line_no": idx,
-                    "title": f.title,
-                    "quantity": str(f.quantity or 1),
-                    "unit": "шт",
-                    "status": f_status,
-                    "eta": f.eta.isoformat() if f.eta else None,
-                    "tracking": f.tracking_number,
-                }
-            )
-    except Exception:
-        pass
+    deliveries = delivery_lines(deal)
 
     # Акты
     acts = []

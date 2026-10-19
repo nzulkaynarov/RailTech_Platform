@@ -5,7 +5,8 @@
 2. Обмен токена из ERP (iss=erp, aud=crm) на сессию CRM
 3. Защиту от replay-атак (одноразовый jti)
 4. Поддержку ротации секретов (подпись вторым активным ключом)
-5. Отказ при деактивированном пользователе (403), невалидной подписи/iss/aud/exp (401)
+5. Отказ при деактивированном/неизвестном пользователе (403), невалидной подписи/iss/aud/exp (401)
+5а. Только поиск по sub (без e-mail), exp − iat ≤ 60 (FIX-10)
 6. REST API эндпоинты: POST /api/v1/auth/sso/token и POST /api/v1/auth/sso/exchange
 """
 
@@ -113,10 +114,8 @@ class FakeAsyncSession:
         return None
 
     async def scalar(self, stmt: Any) -> Any:
-        # Поиск по email
-        for user in self.users.values():
-            return user
-        return None
+        # FIX-10: поиска пользователя по e-mail при обмене SSO больше нет.
+        raise AssertionError("exchange_token must not look users up by e-mail")
 
     async def scalars(self, stmt: Any) -> FakeScalarsResult:
         # Роли пользователя
@@ -371,6 +370,73 @@ async def test_exchange_sso_token_deactivated_user_raises_forbidden(sso_settings
     token = make_erp_sso_token(sub="42")
     with pytest.raises(ForbiddenError):
         await sso_svc.exchange_token(token, ClientInfo())
+
+
+@pytest.mark.asyncio
+async def test_exchange_unknown_sub_is_forbidden(sso_settings: Settings) -> None:
+    """S-3: неизвестный sub → 403, сессия не выдаётся."""
+    fake_auth = MagicMock()
+    fake_auth._issue = AsyncMock()
+    sso_svc = SsoService(make_session_factory({42: _active_user(42)}), sso_settings, fake_auth)
+
+    with pytest.raises(ForbiddenError):
+        await sso_svc.exchange_token(make_erp_sso_token(sub="777"), ClientInfo())
+    fake_auth._issue.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_exchange_email_match_without_sub_is_forbidden_and_creates_nothing(
+    sso_settings: Settings,
+) -> None:
+    """S-3: e-mail совпадает, sub — нет → 403, пользователь не создан и не привязан."""
+    victim = _active_user(42)
+    users = {42: victim}
+    fake_auth = MagicMock()
+    fake_auth._issue = AsyncMock()
+    sso_svc = SsoService(make_session_factory(users), sso_settings, fake_auth)
+
+    token = make_erp_sso_token(sub="999", email=victim.email, name="Захватчик")
+    with pytest.raises(ForbiddenError):
+        await sso_svc.exchange_token(token, ClientInfo())
+
+    assert list(users) == [42]
+    assert victim.full_name == "Сотрудник"
+    fake_auth._issue.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_exchange_non_numeric_sub_is_forbidden(sso_settings: Settings) -> None:
+    sso_svc = SsoService(make_session_factory({42: _active_user(42)}), sso_settings, MagicMock())
+
+    with pytest.raises(ForbiddenError):
+        await sso_svc.exchange_token(make_erp_sso_token(sub="not-a-number"), ClientInfo())
+
+
+@pytest.mark.asyncio
+async def test_exchange_lifetime_over_60s_rejected_even_with_valid_signature(
+    sso_settings: Settings,
+) -> None:
+    """S-7: exp − iat = 120 с при верной подписи и неистёкшем exp → 401 (AuthError)."""
+    fake_auth = MagicMock()
+    fake_auth._issue = AsyncMock()
+    sso_svc = SsoService(make_session_factory({42: _active_user(42)}), sso_settings, fake_auth)
+
+    with pytest.raises(AuthError):
+        await sso_svc.exchange_token(make_erp_sso_token(sub="42", ttl_s=120), ClientInfo())
+    fake_auth._issue.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_exchange_lifetime_within_leeway_is_accepted(sso_settings: Settings) -> None:
+    fake_auth = MagicMock()
+    fake_auth._issue = AsyncMock(return_value=Session("acc", "ref", 42, ["manager"], False))
+    sso_svc = SsoService(make_session_factory({42: _active_user(42)}), sso_settings, fake_auth)
+
+    session = await sso_svc.exchange_token(make_erp_sso_token(sub="42", ttl_s=65), ClientInfo())
+    assert session.access_token == "acc"
+
+    with pytest.raises(AuthError):
+        await sso_svc.exchange_token(make_erp_sso_token(sub="42", ttl_s=66), ClientInfo())
 
 
 # ─── 3. REST API Endpoints ────────────────────────────────────────────────────

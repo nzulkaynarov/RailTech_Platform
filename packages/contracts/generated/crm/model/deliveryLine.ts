@@ -22,9 +22,16 @@ export interface DeliveryLine {
   /** @minimum 1 */
   line_no: number;
   title: string;
-  /** Количество как десятичная строка */
-  quantity?: string;
-  unit?: string;
+  /**
+   * Количество как десятичная строка; null — ERP не хранит количество поставки (не выдумывается)
+   * @nullable
+   */
+  quantity?: string | null;
+  /**
+   * Единица; null — нет данных
+   * @nullable
+   */
+  unit?: string | null;
   status: DeliveryStatus;
   /** @nullable */
   eta?: string | null;

@@ -72,8 +72,6 @@ describe('CounterpartiesPage', () => {
       contact_id: 1,
       channel: 'email',
       email_sent: true,
-      invite_url: 'http://localhost:5174/auth/magic/test',
-      telegram_url: null,
       invited_at: '2026-10-15T12:00:00Z',
     });
     useUserStore.setState({

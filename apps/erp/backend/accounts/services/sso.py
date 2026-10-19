@@ -3,8 +3,9 @@
 Реализует:
 1. Выпуск SSO-токена JWT HS256 для перехода в CRM (iss=erp, aud=crm).
 2. Проверку и обмен входящего SSO-токена (iss=crm, aud=erp).
-3. Проверку срока (60 с), допуск часов (≤ 5 с), одноразовость jti (10 мин в кэше).
-4. Провижининг/обновление пользователя и запись в аудит (ActivityLog).
+3. Проверку срока (exp − iat ≤ 60 с), допуск часов (≤ 5 с), одноразовость jti (10 мин в кэше).
+4. Поиск пользователя только по `sub` через CrmUserMapping; обмен не создаёт пользователей и не меняет права
+   (FIX-10, решение владельца 2026-10-18); запись в аудит (ActivityLog).
 """
 
 from __future__ import annotations
@@ -18,7 +19,6 @@ import jwt
 from django.conf import settings
 from django.core.cache import cache
 from integration.models import CrmUserMapping
-from integration.services.provision import provision_crm_user
 from sales.models import ActivityLog
 
 from accounts.constants import Permission
@@ -67,11 +67,7 @@ def get_sso_secrets() -> List[str]:
     return []
 
 
-def build_staff_user_payload(user: CustomUser, crm_user_id: Optional[int] = None) -> Dict[str, Any]:
-    if crm_user_id is None:
-        mapping = CrmUserMapping.objects.filter(user=user).first()
-        crm_user_id = mapping.crm_user_id if mapping else user.pk
-
+def build_staff_user_payload(user: CustomUser, crm_user_id: int) -> Dict[str, Any]:
     company = own_company()
     member = CompanyMember.objects.filter(user=user, company=company, is_active=True).first() if company else None
 
@@ -119,7 +115,10 @@ def issue_sso_token(user: CustomUser) -> Tuple[str, str]:
     secret = secrets[0]
 
     mapping = CrmUserMapping.objects.filter(user=user).first()
-    crm_user_id = mapping.crm_user_id if mapping else user.pk
+    if mapping is None:
+        # `sub` — только crm_user_id из сопоставления; запасного user.pk нет (sso-token.md, S-2).
+        raise SsoForbiddenError("USER_NOT_PROVISIONED")
+    crm_user_id = mapping.crm_user_id
 
     now = int(time.time())
     jti = str(uuid.uuid4())
@@ -178,8 +177,17 @@ def verify_and_exchange_sso_token(token: str, client_ip: Optional[str] = None) -
         logger.warning("SSO token verification failed: %s", last_err)
         raise SsoValidationError("INVALID_SSO_TOKEN")
 
+    # 3б. Срок жизни токена: exp − iat ≤ 60 с (+ допуск часов 5 с), иначе 401 даже при верной подписи
+    try:
+        lifetime = int(payload["exp"]) - int(payload["iat"])
+    except (ValueError, TypeError):
+        raise SsoValidationError("INVALID_SSO_TOKEN")
+    if lifetime <= 0 or lifetime > SSO_TOKEN_TTL_S + SSO_CLOCK_LEEWAY_S:
+        logger.warning("SSO token lifetime %s s exceeds the contract limit", lifetime)
+        raise SsoValidationError("INVALID_SSO_TOKEN")
+
     jti = payload.get("jti")
-    if not jti:
+    if not jti or not isinstance(jti, str):
         raise SsoValidationError("INVALID_JTI")
 
     # 4. Проверка одноразовости jti (хранится 10 минут)
@@ -189,41 +197,34 @@ def verify_and_exchange_sso_token(token: str, client_ip: Optional[str] = None) -
         logger.warning("SSO token replay attack detected: jti=%s", jti)
         raise SsoValidationError("TOKEN_ALREADY_USED")
 
-    # 5. Поиск и провижининг пользователя по sub (crm_user_id)
+    # 5. Пользователь — только по sub (crm_user_id) через сопоставление; по e-mail не ищем и не создаём
     try:
         crm_user_id = int(payload["sub"])
     except (ValueError, TypeError):
         raise SsoValidationError("INVALID_SUB")
 
+    mapping = CrmUserMapping.objects.filter(crm_user_id=crm_user_id).select_related("user").first()
+    if mapping is None:
+        raise SsoForbiddenError("USER_NOT_PROVISIONED")
+    user = mapping.user
+    if not user.is_active:
+        raise SsoForbiddenError("USER_INACTIVE")
+
+    # Из токена обновляются только email и name; роли, права и is_superuser — только провижинингом.
     email = str(payload.get("email") or "").strip().lower()
     name = str(payload.get("name") or "").strip()
-    role_raw = payload.get("role", "manager")
-    erp_role = "admin" if role_raw == "admin" else "backoffice"
-    permissions = payload.get("permissions") or []
-
-    # Проверяем, существует ли пользователь и не деактивирован ли он
-    mapping = CrmUserMapping.objects.filter(crm_user_id=crm_user_id).select_related("user").first()
-    if mapping and not mapping.user.is_active:
-        raise SsoForbiddenError("USER_INACTIVE")
-
-    if not mapping and email:
-        existing_by_email = CustomUser.objects.filter(email__iexact=email).first()
-        if existing_by_email and not existing_by_email.is_active:
-            raise SsoForbiddenError("USER_INACTIVE")
-
-    prov_res, _ = provision_crm_user(
-        {
-            "crm_user_id": crm_user_id,
-            "email": email,
-            "name": name,
-            "role": erp_role,
-            "permissions": permissions,
-            "is_active": True,
-        }
-    )
-    user = CustomUser.objects.filter(pk=prov_res["erp_user_id"]).first()
-    if not user or not user.is_active:
-        raise SsoForbiddenError("USER_INACTIVE")
+    update_fields: List[str] = []
+    if email and user.email != email:
+        if CustomUser.objects.filter(email__iexact=email).exclude(pk=user.pk).exists():
+            logger.warning("SSO exchange: email of crm_user %s is taken by another ERP user, kept as is", crm_user_id)
+        else:
+            user.email = email
+            update_fields.append("email")
+    if name and user.first_name != name:
+        user.first_name = name
+        update_fields.append("first_name")
+    if update_fields:
+        user.save(update_fields=update_fields)
 
     # 6. Аудит sso.exchange
     try:

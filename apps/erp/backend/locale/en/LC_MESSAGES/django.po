@@ -6724,3 +6724,21 @@ msgstr "The link is valid for 24 hours."
 
 msgid "Ссылка действительна в течение 24 часов. Если вы не ожидали это приглашение, просто проигнорируйте письмо."
 msgstr "The link is valid for 24 hours. If you did not expect this invitation, please ignore this email."
+
+msgid "Вход в личный кабинет"
+msgstr "Log in to your client portal"
+
+msgid "Для входа в личный кабинет компании «%(company)s» перейдите по ссылке:"
+msgstr "To log in to the client portal of «%(company)s», follow the link:"
+
+msgid "Для входа в личный кабинет компании <strong>«%(company)s»</strong> нажмите на кнопку."
+msgstr "To log in to the client portal of <strong>«%(company)s»</strong>, press the button."
+
+msgid "Ссылка действительна в течение 15 минут и может быть использована только один раз."
+msgstr "The link is valid for 15 minutes and can be used only once."
+
+msgid "Если вы не запрашивали вход, просто проигнорируйте письмо."
+msgstr "If you did not request this, please ignore this email."
+
+msgid "Ссылка действительна в течение 15 минут и может быть использована только один раз. Если вы не запрашивали вход, просто проигнорируйте письмо."
+msgstr "The link is valid for 15 minutes and can be used only once. If you did not request this, please ignore this email."

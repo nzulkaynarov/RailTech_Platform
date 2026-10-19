@@ -4,16 +4,15 @@ import hashlib
 import hmac
 import json
 import logging
-import secrets
 import time
 import urllib.parse
 from typing import Tuple
 
 from django.conf import settings
-from django.utils import timezone
 from parties.models import Contact
 from portal.models import PortalSession
-from rest_framework.exceptions import AuthenticationFailed
+from portal.services.tokens import issue_portal_session
+from rest_framework.exceptions import AuthenticationFailed, PermissionDenied
 
 logger = logging.getLogger(__name__)
 
@@ -91,37 +90,15 @@ def authenticate_telegram_user(
     if not telegram_user_id:
         raise AuthenticationFailed("INVALID_INIT_DATA")
 
+    # Только подписанный telegram_user_id: username меняется и переназначается, по нему не входят (FIX-14, P-11).
     contact = Contact.objects.filter(telegram_user_id=telegram_user_id).select_related("company").first()
-
-    # Fallback на telegram_username, если ID еще не привязан
-    if not contact and user_data.get("username"):
-        contact = (
-            Contact.objects.filter(telegram_username__iexact=user_data["username"]).select_related("company").first()
-        )
-        if contact and not contact.telegram_user_id:
-            contact.telegram_user_id = telegram_user_id
-            contact.save(update_fields=["telegram_user_id"])
 
     if not contact or not contact.company:
         logger.info("No contact found for telegram_user_id=%s", telegram_user_id)
         raise AuthenticationFailed("UNAUTHORIZED")
 
-    # Генерация сессии
-    token = secrets.token_hex(32)
-    max_age_days = getattr(settings, "PORTAL_SESSION_MAX_AGE_DAYS", 14)
-    expires_at = timezone.now() + timezone.timedelta(days=max_age_days)
+    if not contact.company.is_active:
+        logger.info("Telegram sign-in rejected: company of contact %s is archived", contact.pk)
+        raise PermissionDenied("FORBIDDEN")
 
-    session = PortalSession.objects.create(
-        token=token,
-        contact=contact,
-        company=contact.company,
-        auth_method="telegram",
-        ip_address=ip_address,
-        user_agent=user_agent,
-        expires_at=expires_at,
-    )
-
-    contact.last_login_at = timezone.now()
-    contact.save(update_fields=["last_login_at"])
-
-    return session, token
+    return issue_portal_session(contact, "telegram", ip_address=ip_address, user_agent=user_agent)

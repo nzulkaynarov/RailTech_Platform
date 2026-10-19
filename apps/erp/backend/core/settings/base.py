@@ -50,3 +50,5 @@ TELEGRAM_BOT_USERNAME = os.environ.get("TELEGRAM_BOT_USERNAME", "")
 CABINET_URL = os.environ.get("CABINET_URL", "http://cabinet.localhost")
 PORTAL_SESSION_COOKIE_NAME = "portal_session"
 PORTAL_SESSION_MAX_AGE_DAYS = 14
+# Не больше стольких запросов magic-link в час на один адрес (FIX-14, P-10)
+PORTAL_MAGIC_LINK_MAX_PER_HOUR = int(os.environ.get("PORTAL_MAGIC_LINK_MAX_PER_HOUR", "5"))

@@ -51,7 +51,12 @@ SAMPLE_CONTEXTS: dict[str, dict] = {
         "contact_name": "Алиса",
         "company_name": "ООО «Покупатель»",
         "invite_url": "https://cabinet.example.com/auth/magic/sample-token",
-        "telegram_url": "https://t.me/sample_bot?start=invite_sample-token",
+        "telegram_url": "https://t.me/sample_bot",
+    },
+    "portal_magic_link": {
+        "contact_name": "Алиса",
+        "company_name": "ООО «Покупатель»",
+        "login_url": "https://cabinet.example.com/auth/magic/sample-token",
     },
 }
 
