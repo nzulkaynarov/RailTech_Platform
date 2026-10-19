@@ -10,7 +10,7 @@
  * Все POST принимают `Idempotency-Key`; ERP хранит ключ 7 дней. Идентификатор клиента никогда не
  * приходит от модели.
  *
- * OpenAPI spec version: 0.1.0
+ * OpenAPI spec version: 0.2.0
  */
 import type { DeliveryStatus } from "./deliveryStatus";
 
@@ -37,4 +37,14 @@ export interface DeliveryLine {
   eta?: string | null;
   /** @nullable */
   tracking?: string | null;
+  /**
+   * Когда клиент принял или оспорил строку
+   * @nullable
+   */
+  accepted_at?: string | null;
+  /**
+   * Замечание клиента при `disputed`
+   * @nullable
+   */
+  remark?: string | null;
 }

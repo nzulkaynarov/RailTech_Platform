@@ -52,7 +52,8 @@ class DealRef(BaseModel):
     number: str
     title: str
     stage: DealStage
-    amount: AmountStr
+    # Сумма последнего КП, отправленного клиенту; None — КП ещё не отправлялось (FIX-29).
+    amount: AmountStr | None
     currency: CurrencyStr
 
 

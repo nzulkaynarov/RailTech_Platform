@@ -10,11 +10,15 @@
  * Все POST принимают `Idempotency-Key`; ERP хранит ключ 7 дней. Идентификатор клиента никогда не
  * приходит от модели.
  *
- * OpenAPI spec version: 0.1.0
+ * OpenAPI spec version: 0.2.0
  */
 
 /**
- * Стадии сделки ERP (словарь сеется миграцией, M1-ERP-03); значения — стабильные коды
+ * Стадия сделки глазами CRM — стабильные коды контракта, не коды FSM ERP. ERP вычисляет её одной функцией
+ * сопоставления (`integration/services/stages.py`, FIX-30) из стадии FSM и документов сделки:
+ * `request` (запрос), `quoting` (КП готовится), `quote_sent` (КП у клиента), `accepted` (КП принято), `contract`
+ * (договор), `invoiced` (счёт выставлен), `paid` (оплачен), `fulfilment` (поставка/исполнение), `closing` (акт),
+ * `won` / `lost` (сделка закрыта). Одна функция во всех ответах integration, в событиях и в инструментах MCP.
  */
 export type DealStage = (typeof DealStage)[keyof typeof DealStage];
 
