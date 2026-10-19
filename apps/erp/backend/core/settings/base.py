@@ -74,5 +74,7 @@ if PORTAL_COOKIE_SAMESITE is None:
     raise ImproperlyConfigured("PORTAL_COOKIE_SAMESITE must be one of: Lax, Strict, None")
 PORTAL_SESSION_COOKIE_NAME = "portal_session"
 PORTAL_SESSION_MAX_AGE_DAYS = 14
+# Загрузка клиента в `POST /portal/v1/uploads`: контракт — до 10 МБ (Q-14, FIX-21); ставка в МБ, в коде — байты.
+PORTAL_UPLOAD_MAX_BYTES = int(os.environ.get("PORTAL_UPLOAD_MAX_MB", "10")) * 1024 * 1024
 # Не больше стольких запросов magic-link в час на один адрес (FIX-14, P-10)
 PORTAL_MAGIC_LINK_MAX_PER_HOUR = int(os.environ.get("PORTAL_MAGIC_LINK_MAX_PER_HOUR", "5"))

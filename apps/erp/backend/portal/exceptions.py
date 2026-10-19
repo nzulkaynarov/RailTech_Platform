@@ -1,8 +1,18 @@
 """Portal exception handling: гарантирует формат {"detail": "<CODE>"} по CONTRACTS §4 и Q-17."""
 
+from portal.error_codes import ERROR_CODES, FALLBACK_BY_STATUS
 from rest_framework import exceptions, status
 from rest_framework.exceptions import APIException
 from rest_framework.views import exception_handler as drf_exception_handler
+
+
+class PortalBadRequest(APIException):
+    status_code = status.HTTP_400_BAD_REQUEST
+    default_detail = "VALIDATION_ERROR"
+    default_code = "bad_request"
+
+    def __init__(self, detail="VALIDATION_ERROR"):
+        super().__init__(detail=detail, code=detail)
 
 
 class PortalConflict(APIException):
@@ -16,10 +26,10 @@ class PortalConflict(APIException):
 
 class PortalGone(APIException):
     status_code = status.HTTP_410_GONE
-    default_detail = "GONE"
+    default_detail = "MAGIC_LINK_EXPIRED"
     default_code = "gone"
 
-    def __init__(self, detail="GONE"):
+    def __init__(self, detail="MAGIC_LINK_EXPIRED"):
         super().__init__(detail=detail, code=detail)
 
 
@@ -44,7 +54,8 @@ class PortalValidationError(APIException):
 def portal_exception_handler(exc, context):
     """Кастомный обработчик ошибок для портального API.
 
-    Гарантирует, что каждый ответ об ошибке содержит поле {"detail": "<CODE>"}.
+    Гарантирует, что каждый ответ об ошибке — ровно `{"detail": "<CODE>"}` с кодом из `ErrorCode` контракта
+    (схема `Error` запрещает другие ключи; текст ошибок валидации клиенту не нужен — он узнаёт код).
     """
     response = drf_exception_handler(exc, context)
 
@@ -58,45 +69,21 @@ def portal_exception_handler(exc, context):
 
     if isinstance(exc, (exceptions.AuthenticationFailed, exceptions.NotAuthenticated)):
         response.status_code = status.HTTP_401_UNAUTHORIZED
-
-    data = response.data
-    if isinstance(data, dict):
-        if "detail" in data:
-            detail_val = data["detail"]
-            if hasattr(detail_val, "code") and detail_val.code in (
-                "not_authenticated",
-                "authentication_failed",
-            ):
-                response.status_code = status.HTTP_401_UNAUTHORIZED
-                if str(detail_val) in ("INVALID_INIT_DATA", "UNAUTHORIZED"):
-                    response.data = {"detail": str(detail_val)}
-                else:
-                    response.data = {"detail": "UNAUTHORIZED"}
-            elif hasattr(detail_val, "code") and detail_val.code == "permission_denied":
-                response.status_code = status.HTTP_403_FORBIDDEN
-                response.data = {"detail": str(detail_val) if str(detail_val) != "FORBIDDEN" else "FORBIDDEN"}
-            elif response.status_code == 404:
-                response.data = {"detail": "NOT_FOUND"}
-            elif response.status_code == 403:
-                response.data = {"detail": "FORBIDDEN"}
-            elif response.status_code == 401:
-                response.data = {
-                    "detail": (
-                        str(detail_val) if str(detail_val) in ("INVALID_INIT_DATA", "UNAUTHORIZED") else "UNAUTHORIZED"
-                    )
-                }
-            else:
-                response.data = {"detail": str(detail_val)}
-        else:
-            # Словарь ошибок валидации полей
-            first_val = next(iter(data.values()), None)
-            code = "VALIDATION_ERROR"
-            if isinstance(first_val, list) and first_val and hasattr(first_val[0], "code"):
-                code = str(first_val[0])
-            response.data = {"detail": code if code.isupper() else "VALIDATION_ERROR", "errors": data}
-            response.status_code = status.HTTP_422_UNPROCESSABLE_ENTITY
-    elif isinstance(data, list):
-        response.data = {"detail": "VALIDATION_ERROR", "errors": data}
+    elif isinstance(exc, exceptions.PermissionDenied):
+        response.status_code = status.HTTP_403_FORBIDDEN
+    elif isinstance(exc, (exceptions.ParseError, exceptions.ValidationError)):
         response.status_code = status.HTTP_422_UNPROCESSABLE_ENTITY
 
+    detail = None
+    data = response.data
+    if isinstance(data, dict) and "detail" in data:
+        detail = str(data["detail"])
+    elif isinstance(data, dict) and data:
+        # Ошибки валидации полей: первый внутренний код, если он из перечня, иначе общий.
+        first = next(iter(data.values()))
+        first = first[0] if isinstance(first, list) and first else first
+        detail = str(first)
+    if detail not in ERROR_CODES:
+        detail = FALLBACK_BY_STATUS.get(response.status_code, "VALIDATION_ERROR")
+    response.data = {"detail": detail}
     return response
