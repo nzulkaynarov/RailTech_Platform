@@ -33,10 +33,12 @@ def scan_document_number(act) -> str:
     return f"SCAN-{act.number}"
 
 
-def load_scan(company, upload_id) -> tuple[PortalUpload, ContentFile]:
+def load_scan(company, upload_id, deal=None) -> tuple[PortalUpload, ContentFile]:
     """Файл из `PortalUpload` компании, проверенный и готовый к записи в `Act.signed_file`.
 
-    Чужая или неизвестная загрузка — 422 `UPLOAD_NOT_FOUND` (существование чужого файла не выдаём); не PDF и не
+    Чужая или неизвестная загрузка — 422 `UPLOAD_NOT_FOUND` (существование чужого файла не выдаём); так же — загрузка,
+    уже вложенная в заявку или другую сделку (`PortalUpload.deal` — не пусто и не сделка акта `deal`): её не
+    переиспользуем и не перепривязываем; не PDF и не
     изображение, подделанная сигнатура или размер больше лимита контракта — 422 `VALIDATION_ERROR`.
     """
     try:
@@ -44,7 +46,7 @@ def load_scan(company, upload_id) -> tuple[PortalUpload, ContentFile]:
     except ValueError:
         raise PortalValidationError("UPLOAD_NOT_FOUND")
     upload = PortalUpload.objects.filter(upload_id=key, company=company).first()
-    if upload is None:
+    if upload is None or (upload.deal_id is not None and (deal is None or upload.deal_id != deal.pk)):
         raise PortalValidationError("UPLOAD_NOT_FOUND")
 
     extension = os.path.splitext(upload.name)[1].lower()

@@ -34,8 +34,6 @@ FULFILLMENT_TO_LINE_STATUS = {
 #: Решения клиента: после них ход склада строку не меняет.
 CLIENT_FINAL_STATUSES = (DeliveryLineStatus.ACCEPTED, DeliveryLineStatus.DISPUTED)
 
-_SYNCED_FIELDS = ("status", "eta", "tracking", "shipped_at", "accepted_at")
-
 
 def _line_status(fulfillment: Fulfillment) -> str:
     code = fulfillment.status.code if fulfillment.status_id else FulfillmentStatusCode.PENDING
@@ -90,7 +88,7 @@ def sync_delivery_lines(fulfillments: Iterable[Fulfillment]) -> int:
     }
 
     to_create: list[DeliveryLine] = []
-    to_update: list[DeliveryLine] = []
+    to_update: list[tuple[list[int], dict]] = []  # (id строк, новые значения) — по сделке
     stale_ids: list[int] = []
     for fulfillment in fulfillments:
         quote = quotes.get(fulfillment.deal_id)
@@ -111,6 +109,7 @@ def sync_delivery_lines(fulfillments: Iterable[Fulfillment]) -> int:
             "shipped_at": fulfillment.shipped_at,
             "accepted_at": fulfillment.accepted_at if _line_status(fulfillment) in CLIENT_FINAL_STATUSES else None,
         }
+        changed_ids: list[int] = []
         for number, item in enumerate(quote.order_items, start=1):
             line = existing.get(item.pk)
             if line is None:
@@ -128,17 +127,21 @@ def sync_delivery_lines(fulfillments: Iterable[Fulfillment]) -> int:
             elif line.status not in CLIENT_FINAL_STATUSES and any(
                 getattr(line, field) != value for field, value in wanted.items()
             ):
-                for field, value in wanted.items():
-                    setattr(line, field, value)
-                to_update.append(line)
+                changed_ids.append(line.pk)
+        if changed_ids:
+            to_update.append((changed_ids, wanted))
 
+    # Строки прочитаны заранее, а клиент мог принять или оспорить их, пока sync считал: запись и удаление идут с
+    # условием «решения клиента нет» прямо в SQL (а не по прочитанному снимку), иначе решение пропало бы.
     if stale_ids:
-        DeliveryLine.objects.filter(pk__in=stale_ids).delete()
+        DeliveryLine.objects.filter(pk__in=stale_ids).exclude(status__in=CLIENT_FINAL_STATUSES).delete()
     if to_create:
         # Две вкладки портала открывают список одновременно: вторая вставка ничего не ломает.
         DeliveryLine.objects.bulk_create(to_create, ignore_conflicts=True)
-    if to_update:
-        DeliveryLine.objects.bulk_update(to_update, [*_SYNCED_FIELDS, "updated_at"])
+    for ids, values in to_update:
+        DeliveryLine.objects.filter(pk__in=ids).exclude(status__in=CLIENT_FINAL_STATUSES).update(
+            **values, updated_at=timezone.now()
+        )
     return len(to_create)
 
 

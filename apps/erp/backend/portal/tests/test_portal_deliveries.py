@@ -9,14 +9,15 @@
 from __future__ import annotations
 
 import pytest
+from django.utils import timezone
 from integration.models import IntegrationWebhookEvent
 from portal.tests.contract_support import check_response, component, response_schema
 from sales.models import DeliveryLine, DeliveryLineStatus
 from sales.services.delivery_lines import accept_delivery_line, dispute_delivery_line, sync_delivery_lines
 
 from accounts.models import CustomUser
-from crm.constants import FulfillmentStatusCode
-from crm.models import ActivityLog, Fulfillment, FulfillmentStatus
+from crm.constants import FulfillmentStatusCode, QuoteStatusCode
+from crm.models import ActivityLog, Fulfillment, FulfillmentStatus, Quote, QuoteItem, QuoteStatus
 from notifications.models import Notification, NotificationType
 
 pytestmark = pytest.mark.django_db
@@ -250,3 +251,56 @@ def test_line_keeps_the_order_snapshot_when_the_quote_item_changes_later(contrac
     sync_delivery_lines([Fulfillment.objects.select_related("status").get(deal=line.deal)])
     line.refresh_from_db()
     assert line.title == "Труба 89х4 ст20" and line.quantity == 150  # подтверждённый заказ не правится задним числом
+
+
+# ── Гонка: решение клиента между чтением и записью sync не теряется ────────────────────────────────
+
+
+def _client_decides_during_sync(monkeypatch, deal, status):
+    """Подмена `_line_status`: пока sync держит прочитанный заранее снимок, клиент принимает/оспаривает строки."""
+    from sales.services import delivery_lines as module
+
+    original = module._line_status
+    fired = []
+
+    def racing(fulfillment):
+        if not fired:
+            fired.append(True)
+            DeliveryLine.objects.filter(deal=deal).update(status=status, accepted_at=timezone.now())
+        return original(fulfillment)
+
+    monkeypatch.setattr(module, "_line_status", racing)
+
+
+@pytest.mark.parametrize("status", [DeliveryLineStatus.ACCEPTED, DeliveryLineStatus.DISPUTED])
+def test_sync_does_not_overwrite_a_decision_made_while_it_was_running(contract_world, listed, monkeypatch, status):
+    fulfillment = contract_world["deliveries"]["delivered"]
+    deal = fulfillment.deal
+    Fulfillment.objects.filter(pk=fulfillment.pk).update(
+        status=FulfillmentStatus.objects.get(code=FulfillmentStatusCode.IN_TRANSIT)
+    )
+    _client_decides_during_sync(monkeypatch, deal, status)
+
+    sync_delivery_lines([Fulfillment.objects.select_related("status").get(pk=fulfillment.pk)])
+
+    lines = DeliveryLine.objects.filter(deal=deal)
+    assert {line.status for line in lines} == {status} and all(line.accepted_at for line in lines)
+
+
+def test_sync_does_not_delete_a_line_the_client_decided_on_meanwhile(contract_world, listed, monkeypatch):
+    fulfillment = contract_world["deliveries"]["delivered"]
+    deal = fulfillment.deal
+    old_ids = set(DeliveryLine.objects.filter(deal=deal).values_list("pk", flat=True))
+    newer = Quote.objects.create(
+        deal=deal,
+        version=2,
+        status=QuoteStatus.objects.get(code=QuoteStatusCode.APPROVED),
+        quote_currency=contract_world["uzs"],
+    )
+    QuoteItem.objects.create(quote=newer, imported_raw_name="Новая редакция", quantity=1, unit="шт")
+    _client_decides_during_sync(monkeypatch, deal, DeliveryLineStatus.ACCEPTED)
+
+    sync_delivery_lines([Fulfillment.objects.select_related("status").get(pk=fulfillment.pk)])
+
+    kept = DeliveryLine.objects.filter(pk__in=old_ids)
+    assert kept.count() == len(old_ids) and {line.status for line in kept} == {DeliveryLineStatus.ACCEPTED}

@@ -66,6 +66,7 @@ from crm.models import Act, ActivityLog, Contract, Deal, DealStage, GeneratedDoc
 from crm.services.billing import reject_act, sign_act
 from crm.services.contracts import sign_contract_by_client
 from crm.services.public_page import verify_code_and_accept
+from crm.services.quotes.access import _EXPIRED_STATUS_CODE
 from crm.services.quotes.lifecycle_accept import perform_quote_rejection
 from sourcing.models import Attachment
 
@@ -411,6 +412,8 @@ def _quote_or_404(request, pk):
 
 def _assert_quote_awaits_decision(quote) -> None:
     """Решать можно только КП в ожидании ответа: уже принятое или отклонённое — 409 `QUOTE_FINALIZED`, срок вышел — 409 `QUOTE_EXPIRED`."""
+    if quote.status.code == _EXPIRED_STATUS_CODE:
+        raise PortalConflict("QUOTE_EXPIRED")  # статус поставила ночная задача `crm.expire_stale_quotes`
     if quote.status.code != QuoteStatusCode.SENT:
         raise PortalConflict("QUOTE_FINALIZED")
     if quote.valid_until and quote.valid_until < timezone.localdate():
@@ -509,7 +512,12 @@ class QuoteRejectView(BasePortalView):
         except ValueError:
             # Жизненный цикл отказал: решили из другой вкладки между проверкой и вызовом либо сделку не удалось вернуть.
             quote.refresh_from_db()
-            raise PortalConflict("QUOTE_FINALIZED" if quote.status.code != QuoteStatusCode.SENT else "CONFLICT")
+            code = quote.status.code
+            raise PortalConflict(
+                "QUOTE_EXPIRED"
+                if code == _EXPIRED_STATUS_CODE
+                else "QUOTE_FINALIZED" if code != QuoteStatusCode.SENT else "CONFLICT"
+            )
         return _quote_response(request, pk)
 
 
@@ -617,7 +625,7 @@ class ActAcceptView(BasePortalView):
         if act.status.code != ActStatusCode.ISSUED:
             raise PortalConflict("ACT_FINALIZED")  # принят, возвращён или ждёт перевыпуска
 
-        upload, scan = load_scan(request.portal_company, upload_id) if upload_id else (None, None)
+        upload, scan = load_scan(request.portal_company, upload_id, act.deal) if upload_id else (None, None)
         with transaction.atomic():
             signed, error = sign_act(act.pk, None, scan, portal_contact=request.portal_contact)
             if error:

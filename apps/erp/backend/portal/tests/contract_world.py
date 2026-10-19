@@ -183,6 +183,8 @@ def contract_world(db, client_company, other_company, client_contact, other_cont
         "accepted": make_quote(main, 3, QuoteStatusCode.APPROVED, uzs=uzs, product=product),
         "rejected": make_quote(main, 4, QuoteStatusCode.REJECTED, uzs=uzs, product=product),
         "expired": make_quote(main, 5, QuoteStatusCode.SENT, uzs=uzs, valid_until=past, product=product),
+        # Статус EXPIRED ставит ночная задача `crm.expire_stale_quotes`: КП не должно пропадать у клиента на следующий день.
+        "expired_status": make_quote(main, 11, "EXPIRED", uzs=uzs, valid_until=past, product=product),
     }
     # КП до отправки клиенту не видны вовсе (404): у них нет публичной ссылки, а `Quote.public_url` в контракте обязателен.
     hidden_quotes = {

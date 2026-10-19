@@ -406,3 +406,33 @@ def test_act_services_do_not_accept_a_non_issued_act_for_a_portal_contact(contra
             "ACT_SIGN_NOT_ALLOWED",
         )
     assert ActStatus.objects.filter(code=ActStatusCode.ISSUED).exists()
+
+
+def test_accept_with_an_upload_already_attached_to_a_request_is_422_and_stays_attached(contract_world, portal_client):
+    """Загрузка из заявки (или другой сделки) не переиспользуется как скан акта и не перепривязывается."""
+    from portal.models import PortalUpload
+
+    act = contract_world["acts"]["issued"]
+    upload_id = upload(portal_client)
+    request = post(
+        portal_client, "/requests", {"summary": "Заявка", "attachments": [{"upload_id": upload_id, "name": "a.pdf"}]}
+    )
+    assert request.status_code == 201
+    attached_to = PortalUpload.objects.get(upload_id=upload_id).deal_id
+    assert attached_to and attached_to != act.deal_id
+
+    response = post(portal_client, f"/acts/{act.pk}/accept", {"upload_id": upload_id})
+
+    assert response.status_code == 422 and response.json() == {"detail": "UPLOAD_NOT_FOUND"}
+    act.refresh_from_db()
+    assert act.status.code == ActStatusCode.ISSUED and not act.signed_file
+    assert PortalUpload.objects.get(upload_id=upload_id).deal_id == attached_to
+
+
+def test_accept_with_an_upload_of_the_same_deal_is_allowed(contract_world, portal_client):
+    from portal.models import PortalUpload
+
+    act = contract_world["acts"]["issued"]
+    upload_id = upload(portal_client)
+    PortalUpload.objects.filter(upload_id=upload_id).update(deal=act.deal)
+    assert post(portal_client, f"/acts/{act.pk}/accept", {"upload_id": upload_id}).status_code == 200

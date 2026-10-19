@@ -22,14 +22,16 @@ from django.utils import timezone
 from crm.constants import ActStatusCode, ContractStatusCode, DealStageCode, InvoiceStatusCode, QuoteStatusCode
 from crm.models import ActivityLog
 from crm.services.documents.projection import client_projection_items
+from crm.services.quotes.access import _EXPIRED_STATUS_CODE
 
 DEFAULT_CURRENCY = "UZS"
 _CENT = Decimal("0.01")
 
-#: КП, которые видит клиент: ушедшие к нему (`SENT`) и решённые им. Всё, что до отправки (черновик, проверка ВЭД,
+#: КП, которые видит клиент: ушедшие к нему (`SENT`), решённые им и просроченные (`EXPIRED` ставит ночная задача
+#: `crm.expire_stale_quotes` — КП не должно пропадать у клиента на следующий день после срока). Всё, что до отправки (черновик, проверка ВЭД,
 #: согласование, «готово к отправке»), в портале — 404: у такого КП нет публичной ссылки (`Quote.public_url` в
 #: контракте обязателен), а содержимое ещё не обещано клиенту.
-CLIENT_QUOTE_STATUSES = (QuoteStatusCode.SENT, QuoteStatusCode.APPROVED, QuoteStatusCode.REJECTED)
+CLIENT_QUOTE_STATUSES = (QuoteStatusCode.SENT, QuoteStatusCode.APPROVED, QuoteStatusCode.REJECTED, _EXPIRED_STATUS_CODE)
 #: Договоры, которые видит клиент: ждёт подписи кого-то из сторон или подписан. Черновик и отменённый — нет.
 CLIENT_CONTRACT_STATUSES = (
     ContractStatusCode.PENDING_CLIENT,
@@ -126,6 +128,8 @@ def quote_status(quote) -> str:
         return "accepted"
     if code == QuoteStatusCode.REJECTED:
         return "rejected"
+    if code == _EXPIRED_STATUS_CODE:
+        return "expired"
     if quote.valid_until and quote.valid_until < timezone.localdate():
         return "expired"
     if quote.first_viewed_at:

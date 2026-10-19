@@ -28,7 +28,7 @@ from notifications.models import EmailLog
 pytestmark = pytest.mark.django_db
 
 API = "/api/portal/v1"
-VISIBLE = ("sent", "viewed", "accepted", "rejected", "expired")
+VISIBLE = ("sent", "viewed", "accepted", "rejected", "expired", "expired_status")
 FAKE_BOT_TOKEN = "123456:FAKE-TOKEN-FOR-TESTS"
 
 
@@ -309,6 +309,7 @@ def test_request_code_without_session_is_401(contract_world, anon_portal_client)
         ("accepted", "QUOTE_FINALIZED"),
         ("rejected", "QUOTE_FINALIZED"),
         ("expired", "QUOTE_EXPIRED"),
+        ("expired_status", "QUOTE_EXPIRED"),
     ],
 )
 def test_request_code_for_a_quote_not_awaiting_an_answer_is_409(contract_world, portal_client, key, code):
@@ -358,7 +359,12 @@ def test_accept_with_wrong_or_not_requested_code(contract_world, portal_client, 
 
 @pytest.mark.parametrize(
     ("key", "code"),
-    [("accepted", "QUOTE_FINALIZED"), ("rejected", "QUOTE_FINALIZED"), ("expired", "QUOTE_EXPIRED")],
+    [
+        ("accepted", "QUOTE_FINALIZED"),
+        ("rejected", "QUOTE_FINALIZED"),
+        ("expired", "QUOTE_EXPIRED"),
+        ("expired_status", "QUOTE_EXPIRED"),
+    ],
 )
 def test_accept_quote_not_awaiting_an_answer_is_409_and_keeps_the_code(contract_world, portal_client, key, code):
     quote = contract_world["quotes"][key]
@@ -416,7 +422,12 @@ def test_reject_repeat_is_409(contract_world, portal_client):
 
 @pytest.mark.parametrize(
     ("key", "code"),
-    [("accepted", "QUOTE_FINALIZED"), ("rejected", "QUOTE_FINALIZED"), ("expired", "QUOTE_EXPIRED")],
+    [
+        ("accepted", "QUOTE_FINALIZED"),
+        ("rejected", "QUOTE_FINALIZED"),
+        ("expired", "QUOTE_EXPIRED"),
+        ("expired_status", "QUOTE_EXPIRED"),
+    ],
 )
 def test_reject_quote_not_awaiting_an_answer_is_409(contract_world, portal_client, key, code):
     response = post(portal_client, f"/quotes/{contract_world['quotes'][key].pk}/reject", {"reason": "поздно"})
@@ -480,3 +491,22 @@ def test_telegram_is_masked_by_username_or_by_name_of_the_channel():
     assert acceptance.mask_telegram(Contact) == "@a***"
     Contact.telegram_username = ""
     assert acceptance.mask_telegram(Contact) == "Telegram"
+
+
+def test_quote_expired_by_the_nightly_task_stays_visible_as_expired(contract_world, portal_client):
+    """Ночная задача `crm.expire_stale_quotes` ставит статус EXPIRED: КП не пропадает (404) у клиента на следующий день."""
+    quote = contract_world["quotes"]["expired_status"]
+    assert quote.status.code == "EXPIRED"
+    listed = {item["id"]: item["status"] for item in portal_client.get(f"{API}/quotes").json()}
+    assert listed[quote.pk] == "expired"
+    detail = portal_client.get(f"{API}/quotes/{quote.pk}")
+    assert detail.status_code == 200 and detail.json()["status"] == "expired"
+    assert not check_response(detail.json(), component("Quote"))
+
+
+@pytest.mark.parametrize("valid_until", [None, datetime.date(2999, 1, 1)])
+def test_expired_status_is_expired_even_without_a_past_valid_until(contract_world, portal_client, valid_until):
+    quote = contract_world["quotes"]["expired_status"]
+    type(quote).objects.filter(pk=quote.pk).update(valid_until=valid_until)
+    assert portal_client.get(f"{API}/quotes/{quote.pk}").json()["status"] == "expired"
+    assert post(portal_client, f"/quotes/{quote.pk}/reject", {"reason": "x"}).json() == {"detail": "QUOTE_EXPIRED"}
