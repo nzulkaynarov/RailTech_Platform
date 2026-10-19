@@ -7,13 +7,14 @@
 
 from __future__ import annotations
 
+import contextlib
 import time
 import uuid
 from datetime import UTC, datetime, timedelta
 
 import jwt
 import structlog
-from sqlalchemy import delete, select
+from sqlalchemy import delete
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.config import Settings
@@ -148,6 +149,15 @@ class SsoService:
             logger.warning("sso_verification_failed", error=str(last_err))
             raise AuthError("invalid sso token")
 
+        # Срок жизни: exp − iat ≤ 60 с (+ допуск часов), иначе отказ даже при верной подписи (S-7).
+        try:
+            lifetime = int(payload["exp"]) - int(payload["iat"])
+        except (ValueError, TypeError):
+            raise AuthError("invalid sso token") from None
+        if lifetime <= 0 or lifetime > SSO_TOKEN_TTL_S + SSO_CLOCK_LEEWAY_S:
+            logger.warning("sso_lifetime_exceeded", lifetime=lifetime)
+            raise AuthError("invalid sso token")
+
         jti = payload.get("jti")
         if not jti or not isinstance(jti, str):
             raise AuthError("invalid jti")
@@ -171,20 +181,14 @@ class SsoService:
             session.add(SsoReplayToken(jti=jti))
             await session.flush()
 
-            # Поиск пользователя по sub (crm_user_id) или email
+            # Пользователь — только по sub (id в CRM); по e-mail не ищем (sso-token.md, S-3).
             user: User | None = None
-            try:
-                sub_id = int(payload["sub"])
-                user = await session.get(User, sub_id)
-            except (ValueError, TypeError):
-                pass
+            with contextlib.suppress(ValueError, TypeError):
+                user = await session.get(User, int(payload["sub"]))
 
-            if user is None and payload.get("email"):
-                user = await session.scalar(
-                    select(User).where(User.email == str(payload["email"]).strip().lower())
-                )
-
-            if user is None or not user.is_active:
+            if user is None:
+                raise ForbiddenError("user not provisioned")
+            if not user.is_active:
                 raise ForbiddenError("user inactive")
 
             name = str(payload.get("name") or "").strip()

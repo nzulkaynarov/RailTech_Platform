@@ -466,6 +466,74 @@ def test_user_provisioning_admin_and_backoffice(auth_client):
     assert resp_rev_404.json() == {"detail": "NOT_FOUND"}
 
 
+def _provision(auth_client, crm_user_id, email, role="backoffice"):
+    return auth_client.post(
+        "/api/integration/v1/users/provision",
+        {
+            "crm_user_id": crm_user_id,
+            "email": email,
+            "name": "Сотрудник",
+            "role": role,
+            "permissions": ["quote.build"],
+            "is_active": True,
+        },
+        format="json",
+        HTTP_IDEMPOTENCY_KEY=str(uuid.uuid4()),
+    )
+
+
+def test_provision_email_of_unmapped_erp_user_is_conflict_and_user_untouched(auth_client):
+    """I-17: e-mail занят пользователем ERP без сопоставления → 409, пользователь не переписывается."""
+    from integration.models import CrmUserMapping
+
+    victim = CustomUser.objects.create(
+        username="victim@railtech.uz", email="victim@railtech.uz", first_name="Жертва", is_superuser=False
+    )
+
+    resp = _provision(auth_client, 9001, "Victim@railtech.uz", role="admin")
+
+    assert resp.status_code == 409
+    assert resp.json() == {"detail": "EMAIL_CONFLICT"}
+    victim.refresh_from_db()
+    assert victim.is_superuser is False and victim.is_staff is False
+    assert victim.first_name == "Жертва"
+    assert not CrmUserMapping.objects.filter(crm_user_id=9001).exists()
+
+
+def test_provision_email_of_user_with_other_crm_id_is_conflict(auth_client):
+    from integration.models import CrmUserMapping
+
+    assert _provision(auth_client, 9101, "owner@railtech.uz", role="admin").status_code == 201
+
+    resp = _provision(auth_client, 9102, "owner@railtech.uz", role="backoffice")
+
+    assert resp.status_code == 409
+    assert resp.json() == {"detail": "EMAIL_CONFLICT"}
+    owner = CustomUser.objects.get(email="owner@railtech.uz")
+    assert owner.is_superuser is True
+    assert CrmUserMapping.objects.get(user=owner).crm_user_id == 9101
+    assert not CrmUserMapping.objects.filter(crm_user_id=9102).exists()
+
+
+def test_provision_existing_mapping_with_new_email_taken_by_other_is_conflict(auth_client):
+    assert _provision(auth_client, 9201, "first@railtech.uz").status_code == 201
+    assert _provision(auth_client, 9202, "second@railtech.uz").status_code == 201
+
+    resp = _provision(auth_client, 9201, "second@railtech.uz")
+
+    assert resp.status_code == 409
+    assert CustomUser.objects.get(email="first@railtech.uz").pk != CustomUser.objects.get(email="second@railtech.uz").pk
+
+
+def test_provision_same_crm_user_is_updated_not_conflict(auth_client):
+    assert _provision(auth_client, 9301, "same@railtech.uz", role="backoffice").status_code == 201
+
+    resp = _provision(auth_client, 9301, "same@railtech.uz", role="admin")
+
+    assert resp.status_code == 200
+    assert CustomUser.objects.get(email="same@railtech.uz").is_superuser is True
+
+
 # ─── 8. AI Usage & Health ──────────────────────────────────────────────────────
 
 

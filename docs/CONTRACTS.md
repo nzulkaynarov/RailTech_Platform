@@ -37,7 +37,7 @@
 | `GET /deals/{erp_deal_id}/documents` | документы сделки | `[{erp_document_id, kind, number, date, title, status}]` |
 | `GET /documents/{erp_document_id}/link` | ссылка на файл | подписанный URL на 10 минут; факт выдачи — в аудит ERP с `crm_*` контекстом |
 | `GET /catalog/search?q=&mode=lead|client` | опубликованный каталог | в режиме `lead` без цен и остатков; в `client` — с ценой и статусом наличия |
-| `POST /users/provision` | сотрудник из CRM | `crm_user_id, email, name, role (admin|backoffice), permissions[]`; ответ `erp_user_id` |
+| `POST /users/provision` | сотрудник из CRM | `crm_user_id, email, name, role (admin|backoffice), permissions[]`; ответ `erp_user_id`; e-mail занят другим пользователем ERP (другой `crm_user_id` или нет сопоставления) → 409 `EMAIL_CONFLICT` |
 | `DELETE /users/{crm_user_id}/sessions` | отзыв сессий | при снятии доступа в CRM |
 | `GET /health` | здоровье для «Состояния системы» CRM | версия, миграции применены, очередь жива |
 
@@ -86,8 +86,13 @@
 ## 5. `erp-mcp` (для агента CRM)
 
 Контекст — заголовок `X-Agent-Context` по образцу CRM SPEC §7.1: `{crm_client_id, erp_company_id,
-mode: prospect|customer, language, exp}` с HMAC ключом из окружения, срок 60 с. Инструменты не принимают
-идентификаторов клиента аргументами.
+mode: prospect|customer, language, iat, exp, jti}` с HMAC ключом из окружения. Типы строгие (целые — только
+JSON-integer, не `true`), `iat` и `exp` обязательны, `exp − iat ≤ 60` и `exp ≤ now + 60`, `jti` — UUID v4,
+одноразовый (приёмник помнит 10 минут; CRM выпускает новый контекст на каждый вызов инструмента).
+Ошибка контекста — 401 `INVALID_AGENT_CONTEXT`, невалидные аргументы — 400 `INVALID_ARGUMENTS`, лимит
+частоты по компании — 429. Инструменты не принимают идентификаторов клиента аргументами. Проекция клиента:
+КП — только отправленные, принятые, отклонённые; количество поставки, которого ERP не хранит, — `null`;
+каталог — только ключи опубликованного слоя. Подробности — `packages/contracts/mcp-tools.json`.
 
 | Инструмент | Режим | Возвращает |
 |---|---|---|

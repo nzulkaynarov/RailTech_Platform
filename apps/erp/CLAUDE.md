@@ -208,7 +208,7 @@ Makefile · .env.example · docs/ (ADR и runbooks ERP в apps/erp/docs/runbooks
 | internal | `/api/v1/` | ERP SPA | JWT сотрудника (access 30 мин, refresh в HttpOnly-cookie, как в B2B) | M1-ERP-01 (копия B2B), экспорт в contracts — M1-ERP-10 |
 | portal | `/api/portal/v1/` | Cabinet | сессия портала: Telegram `initData` / magic-link | M2-ERP-01 |
 | integration | `/api/integration/v1/` | CRM | `Authorization: Bearer <SERVICE_TOKEN>` (по токену на направление, два активных для ротации) | M3-ERP-01 |
-| mcp | `/mcp/erp` | агент CRM | `X-Agent-Context` (HMAC, 60 с) | M3-ERP-03 |
+| mcp | `/mcp/erp` | агент CRM | `X-Agent-Context` (HMAC, строгие claims `iat`/`exp`/одноразовый `jti`, 60 с; лимит по компании) | M3-ERP-03, FIX-12 |
 | события → CRM | `POST {CRM}/api/v1/integrations/erp/events` | ERP (Celery) | `X-Signature` HMAC, `X-Event-Id`, ретраи 1 мин … 24 ч | M3-ERP-02 |
 
 Правила: эндпоинты — kebab-case, множественное число; `Idempotency-Key` на всех POST интеграции (ключ хранится 7 дней);

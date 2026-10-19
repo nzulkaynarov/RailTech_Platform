@@ -229,6 +229,7 @@ export interface components {
       /**
        * @example NOT_FOUND
        * @example IDEMPOTENCY_CONFLICT
+       * @example EMAIL_CONFLICT
        * @example VALIDATION_ERROR
        */
       detail: string;
@@ -420,9 +421,10 @@ export interface components {
       erp_deal_id: number;
       line_no: number;
       title: string;
-      /** @description Количество как десятичная строка */
-      quantity?: string;
-      unit?: string;
+      /** @description Количество как десятичная строка; null — ERP не хранит количество поставки (не выдумывается) */
+      quantity?: string | null;
+      /** @description Единица; null — нет данных */
+      unit?: string | null;
       status: components["schemas"]["DeliveryStatus"];
       /** Format: date */
       eta?: string | null;
@@ -839,6 +841,15 @@ export interface operations {
         };
       };
       401: components["responses"]["Unauthorized"];
+      /** @description `EMAIL_CONFLICT` — e-mail занят пользователем ERP с другим `crm_user_id` или без сопоставления с CRM; пользователь не переписывается (sso-token.md, FIX-10). */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Error"];
+        };
+      };
       422: components["responses"]["ValidationError"];
     };
   };
