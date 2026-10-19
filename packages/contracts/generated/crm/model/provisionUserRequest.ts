@@ -12,6 +12,7 @@
  *
  * OpenAPI spec version: 0.1.0
  */
+import type { ErpPermission } from "./erpPermission";
 import type { ProvisionUserRequestRole } from "./provisionUserRequestRole";
 
 export interface ProvisionUserRequest {
@@ -20,10 +21,7 @@ export interface ProvisionUserRequest {
   name: string;
   /** `admin` в CRM = суперпользователь ERP; `backoffice` — роли по `permissions` */
   role: ProvisionUserRequestRole;
-  /**
-   * Права бэк-офиса: `quote.*`, `contract.*`, `finance.*`, `catalog.*`, `supply.*` (M1-ERP-05)
-   * @items.pattern ^(quote|contract|finance|catalog|supply)\.[a-z_*]+$
-   */
-  permissions: string[];
+  /** Коды из каталога прав ERP (`ErpPermission`). Для `role: backoffice` складываются в роль сотрудника; для `role: admin` игнорируются (суперпользователь ERP имеет все права). Код вне каталога — 422. Карту «роль CRM → коды» ведёт CRM (`app/domain/erp_permissions.py`), идентификаторы ролей и прав от модели не приходят. */
+  permissions: ErpPermission[];
   is_active?: boolean;
 }

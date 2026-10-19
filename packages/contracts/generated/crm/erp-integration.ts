@@ -311,6 +311,10 @@ export const getRevokeUserSessionsUrl = (crmUserId: number) => {
 };
 
 /**
+ * Гасит всё, чем сотрудник входит в ERP: refresh-токены (чёрный список), уже выданные access-токены
+ * (версия токенов пользователя растёт, прежний access → 401) и вход (`is_active=false` — локальный
+ * пароль и сброс пароля не возвращают доступ). Повторный `POST /users/provision` включает пользователя
+ * заново. Операция идемпотентна; в аудит ERP пишется `sso.revoke`.
  * @summary Отзыв всех сессий сотрудника в ERP (при снятии доступа в CRM)
  */
 export const revokeUserSessions = async (

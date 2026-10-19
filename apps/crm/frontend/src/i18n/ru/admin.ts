@@ -113,5 +113,15 @@ export const admin = {
     inactive: "Неактивен",
     tgLinked: "Привязан",
     tgNotLinked: "Не привязан",
+    erpAccess: "Доступ к ERP",
+    erpAccessHint:
+      "Выдача создаёт сотруднику учётную запись в ERP и показывает ему кнопку перехода; снятие завершает его сессии в ERP",
+    erpSwitchLabel: "Доступ к ERP: {name}",
+    erpGranted: "Доступ к ERP выдан: {name}. Учётная запись в ERP появится в течение минуты",
+    erpRevoked: "Доступ к ERP снят: {name}. Сессии в ERP завершаются",
+    erpRevokeTitle: "Снять доступ к ERP у {name}?",
+    erpRevokeHint: "Сессии пользователя в ERP будут завершены, кнопка перехода исчезнет.",
+    erpRevoke: "Снять доступ",
+    erpInactive: "Неактивному пользователю доступ к ERP не выдаётся",
   },
 };

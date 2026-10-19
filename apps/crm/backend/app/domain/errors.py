@@ -85,6 +85,12 @@ class Reason(StrEnum):
     SERVICE_NOT_SWITCHABLE = "service_not_switchable"
     TELEGRAM_PAUSED = "telegram_paused"
     SSO_NOT_CONFIGURED = "sso_not_configured"
+    # SSO и доступ к ERP (FIX-11, M3-CRM-06): `platform_access` решает, кто может перейти в ERP.
+    PLATFORM_ACCESS_DENIED = "platform_access_denied"
+    USER_NOT_PROVISIONED = "user_not_provisioned"
+    USER_INACTIVE = "user_inactive"
+    # Синхронизация сотрудников с ERP: e-mail занят другим пользователем ERP (409 EMAIL_CONFLICT).
+    ERP_EMAIL_CONFLICT = "erp_email_conflict"
 
 
 class DomainError(Exception):

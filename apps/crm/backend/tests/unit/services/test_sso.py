@@ -7,6 +7,8 @@
 4. Поддержку ротации секретов (подпись вторым активным ключом)
 5. Отказ при деактивированном/неизвестном пользователе (403), невалидной подписи/iss/aud/exp (401)
 5а. Только поиск по sub (без e-mail), exp − iat ≤ 60 (FIX-10)
+5б. Подкоды 403: `user_not_provisioned`, `user_inactive`, `platform_access_denied` (FIX-11)
+5в. Токен — только при `"erp"` в `platform_access`; права в нём — коды каталога ERP (FIX-11)
 6. REST API эндпоинты: POST /api/v1/auth/sso/token и POST /api/v1/auth/sso/exchange
 """
 
@@ -28,7 +30,7 @@ from app.api import errors
 from app.api.deps import get_container, get_principal
 from app.api.v1.auth import router as auth_router
 from app.config import Settings
-from app.domain.errors import AuthError, ConflictError, ForbiddenError
+from app.domain.errors import AuthError, ConflictError, ForbiddenError, Reason
 from app.models.auth import SsoReplayToken, User
 from app.security.principal import Principal
 from app.services.auth import ClientInfo, Session
@@ -161,6 +163,7 @@ async def test_issue_sso_token_admin(sso_settings: Settings) -> None:
         full_name="Администратор",
         is_active=True,
         must_change_password=False,
+        platform_access=["crm", "erp"],
     )
     users = {1: admin_user}
 
@@ -196,6 +199,7 @@ async def test_issue_sso_token_inactive_user_raises_forbidden(sso_settings: Sett
         full_name="Неактивный",
         is_active=False,
         must_change_password=False,
+        platform_access=["crm", "erp"],
     )
     users = {2: inactive_user}
 
@@ -206,13 +210,14 @@ async def test_issue_sso_token_inactive_user_raises_forbidden(sso_settings: Sett
         await sso_svc.issue_token(2)
 
 
-def _active_user(user_id: int) -> User:
+def _active_user(user_id: int, platform_access: list[str] | None = None) -> User:
     return User(
         id=user_id,
         email=f"user{user_id}@railtech.uz",
         full_name="Сотрудник",
         is_active=True,
         must_change_password=False,
+        platform_access=platform_access or ["crm", "erp"],
     )
 
 
@@ -241,9 +246,7 @@ async def test_exchange_without_secret_rejects_any_token(sso_settings: Settings)
 async def test_sso_is_refused_while_disabled(sso_settings: Settings) -> None:
     """FIX-03: до волны 1 переход выключен флагом PLATFORM_SSO_ENABLED (по умолчанию false)."""
     settings = sso_settings.model_copy(update={"platform_sso_enabled": False})
-    user = User(
-        id=1, email="a@railtech.uz", full_name="А", is_active=True, must_change_password=False
-    )
+    user = _active_user(1)
     sso_svc = SsoService(make_session_factory({1: user}), settings, MagicMock())
 
     with pytest.raises(ForbiddenError):
@@ -368,19 +371,22 @@ async def test_exchange_sso_token_deactivated_user_raises_forbidden(sso_settings
     sso_svc = SsoService(make_session_factory({42: user}), sso_settings, MagicMock())
 
     token = make_erp_sso_token(sub="42")
-    with pytest.raises(ForbiddenError):
+    with pytest.raises(ForbiddenError) as exc_info:
         await sso_svc.exchange_token(token, ClientInfo())
+    assert exc_info.value.details["reason"] == "user_inactive"
 
 
 @pytest.mark.asyncio
 async def test_exchange_unknown_sub_is_forbidden(sso_settings: Settings) -> None:
-    """S-3: неизвестный sub → 403, сессия не выдаётся."""
+    """S-3: неизвестный sub → 403 со стабильным подкодом `user_not_provisioned`, сессии нет."""
     fake_auth = MagicMock()
     fake_auth._issue = AsyncMock()
     sso_svc = SsoService(make_session_factory({42: _active_user(42)}), sso_settings, fake_auth)
 
-    with pytest.raises(ForbiddenError):
+    with pytest.raises(ForbiddenError) as exc_info:
         await sso_svc.exchange_token(make_erp_sso_token(sub="777"), ClientInfo())
+    assert exc_info.value.details["reason"] == Reason.USER_NOT_PROVISIONED.value
+    assert Reason.USER_NOT_PROVISIONED.value == "user_not_provisioned"
     fake_auth._issue.assert_not_called()
 
 
@@ -396,8 +402,9 @@ async def test_exchange_email_match_without_sub_is_forbidden_and_creates_nothing
     sso_svc = SsoService(make_session_factory(users), sso_settings, fake_auth)
 
     token = make_erp_sso_token(sub="999", email=victim.email, name="Захватчик")
-    with pytest.raises(ForbiddenError):
+    with pytest.raises(ForbiddenError) as exc_info:
         await sso_svc.exchange_token(token, ClientInfo())
+    assert exc_info.value.details["reason"] == "user_not_provisioned"
 
     assert list(users) == [42]
     assert victim.full_name == "Сотрудник"
@@ -408,8 +415,9 @@ async def test_exchange_email_match_without_sub_is_forbidden_and_creates_nothing
 async def test_exchange_non_numeric_sub_is_forbidden(sso_settings: Settings) -> None:
     sso_svc = SsoService(make_session_factory({42: _active_user(42)}), sso_settings, MagicMock())
 
-    with pytest.raises(ForbiddenError):
+    with pytest.raises(ForbiddenError) as exc_info:
         await sso_svc.exchange_token(make_erp_sso_token(sub="not-a-number"), ClientInfo())
+    assert exc_info.value.details["reason"] == "user_not_provisioned"
 
 
 @pytest.mark.asyncio
@@ -493,3 +501,122 @@ def test_api_sso_exchange_endpoint(api_client: TestClient) -> None:
     assert data["access_token"] == "fake_access_123"
     assert data["token_type"] == "bearer"
     assert "rt_refresh" in resp.cookies
+
+
+# ─── 4. platform_access и карта прав (FIX-11, S-5, S-11) ─────────────────────────────────────
+
+
+def _decode_issued(token: str) -> dict[str, Any]:
+    return jwt.decode(token, SECRET_1, algorithms=["HS256"], audience="erp", issuer="crm")
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("platform_access", "allowed"),
+    [
+        pytest.param(["crm"], False, id="default-crm-only"),
+        pytest.param(["crm", "erp"], True, id="erp-granted"),
+        pytest.param([], False, id="empty"),
+        pytest.param(None, False, id="never-set"),
+    ],
+)
+async def test_issue_token_only_with_erp_in_platform_access(
+    sso_settings: Settings, platform_access: list[str] | None, allowed: bool
+) -> None:
+    """Матрица «без доступа переключателя нет»: токен — только при `erp` в `platform_access`."""
+    user = _active_user(1)
+    user.platform_access = platform_access  # type: ignore[assignment]
+    sso_svc = SsoService(make_session_factory({1: user}), sso_settings, MagicMock())
+
+    if allowed:
+        token, _ = await sso_svc.issue_token(1)
+        assert token
+        return
+    with pytest.raises(ForbiddenError) as exc_info:
+        await sso_svc.issue_token(1)
+    assert exc_info.value.details["reason"] == "platform_access_denied"
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("roles", "role_claim", "forbidden"),
+    [
+        (["admin"], "admin", set()),
+        (["manager"], "manager", {"quote.view_cost_margin", "finance.payment", "team.manage"}),
+        (["viewer"], "viewer", {"quote.view_cost_margin", "deal.manage"}),
+    ],
+)
+async def test_issued_token_permissions_are_erp_catalog_codes(
+    sso_settings: Settings, roles: list[str], role_claim: str, forbidden: set[str]
+) -> None:
+    from app.domain.erp_permissions import ERP_PERMISSIONS
+
+    sso_svc = SsoService(
+        make_session_factory({1: _active_user(1)}, user_roles={1: roles}), sso_settings, MagicMock()
+    )
+    token, _ = await sso_svc.issue_token(1)
+    payload = _decode_issued(token)
+
+    assert payload["role"] == role_claim
+    assert set(payload["permissions"]) <= set(ERP_PERMISSIONS)
+    assert not set(payload["permissions"]) & forbidden
+
+
+@pytest.mark.asyncio
+async def test_manager_token_has_no_cost_margin_permission(sso_settings: Settings) -> None:
+    """S-11: раньше `quote.view_cost_margin` получал каждый менеджер."""
+    sso_svc = SsoService(
+        make_session_factory({1: _active_user(1)}, user_roles={1: ["manager"]}),
+        sso_settings,
+        MagicMock(),
+    )
+    token, _ = await sso_svc.issue_token(1)
+    assert "quote.view_cost_margin" not in _decode_issued(token)["permissions"]
+
+
+def _matrix_client(settings: Settings, user: User) -> TestClient:
+    """Настоящий `SsoService` за настоящим роутером: проверяем ответ API целиком."""
+    app = FastAPI()
+    errors.install(app)
+    app.include_router(auth_router)
+    sso = SsoService(make_session_factory({user.id: user}), settings, MagicMock())
+    app.dependency_overrides[get_container] = lambda: SimpleNamespace(
+        settings=settings, sso_service=sso
+    )
+    app.dependency_overrides[get_principal] = lambda: Principal(
+        user_id=user.id,
+        full_name=user.full_name,
+        roles=("manager",),
+        must_change_password=False,
+        ip="127.0.0.1",
+    )
+    return TestClient(app)
+
+
+def test_api_token_without_platform_access_is_403_with_reason(sso_settings: Settings) -> None:
+    user = _active_user(10, platform_access=["crm"])
+    resp = _matrix_client(sso_settings, user).post("/api/v1/auth/sso/token")
+
+    assert resp.status_code == 403
+    body = resp.json()
+    assert body["code"] == "forbidden"
+    assert body["details"]["reason"] == "platform_access_denied"
+    assert "token" not in body
+
+
+def test_api_token_with_platform_access_is_issued(sso_settings: Settings) -> None:
+    user = _active_user(10, platform_access=["crm", "erp"])
+    resp = _matrix_client(sso_settings, user).post("/api/v1/auth/sso/token")
+
+    assert resp.status_code == 200
+    assert resp.json()["redirect_url"] == "http://erp.localhost/sso/exchange"
+
+
+def test_api_exchange_unknown_sub_is_403_with_stable_reason(sso_settings: Settings) -> None:
+    user = _active_user(10)
+    resp = _matrix_client(sso_settings, user).post(
+        "/api/v1/auth/sso/exchange", json={"token": make_erp_sso_token(sub="777")}
+    )
+
+    assert resp.status_code == 403
+    assert resp.json()["details"]["reason"] == "user_not_provisioned"

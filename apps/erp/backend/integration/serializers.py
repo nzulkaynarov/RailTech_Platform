@@ -7,6 +7,8 @@ from __future__ import annotations
 
 from rest_framework import serializers
 
+from accounts.constants import Permission
+
 
 class MoneySerializer(serializers.Serializer):
     """Сумма денег по стандарту OpenAPI erp-integration.yaml."""
@@ -215,7 +217,8 @@ class ProvisionUserRequestSerializer(serializers.Serializer):
     email = serializers.EmailField()
     name = serializers.CharField()
     role = serializers.ChoiceField(choices=["admin", "backoffice"])
-    permissions = serializers.ListField(child=serializers.CharField())
+    # Только коды каталога прав ERP (`ErpPermission` контракта): чужой код — 422, а не молча сохранённая «роль» (S-11).
+    permissions = serializers.ListField(child=serializers.ChoiceField(choices=Permission.values))
     is_active = serializers.BooleanField(default=True, required=False)
 
 

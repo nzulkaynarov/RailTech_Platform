@@ -18,6 +18,8 @@ from sqlalchemy import delete
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.config import Settings
+from app.domain.erp_permissions import erp_access
+from app.domain.erp_sync import ERP
 from app.domain.errors import AuthError, ConflictError, ForbiddenError, Reason
 from app.models.auth import SsoReplayToken, User
 from app.repositories import users as repo
@@ -31,26 +33,6 @@ logger = structlog.get_logger(__name__)
 SSO_ALGORITHM = "HS256"
 SSO_TOKEN_TTL_S = 60
 SSO_CLOCK_LEEWAY_S = 5
-
-DEFAULT_ADMIN_PERMISSIONS = [
-    "quote.view",
-    "quote.edit",
-    "quote.view_cost_margin",
-    "quote.build",
-    "deal.manage",
-    "catalog.manage",
-    "supply.manage",
-    "contract.manage",
-    "finance.manage",
-]
-
-DEFAULT_MANAGER_PERMISSIONS = [
-    "quote.view",
-    "quote.edit",
-    "quote.view_cost_margin",
-    "quote.build",
-    "deal.manage",
-]
 
 
 class SsoService:
@@ -71,18 +53,19 @@ class SsoService:
         async with self._sessions() as session:
             user = await session.get(User, user_id)
             if user is None or not user.is_active:
-                raise ForbiddenError("user inactive")
-
+                raise ForbiddenError("user inactive", reason=Reason.USER_INACTIVE)
+            # Переход в ERP — только тем, кому админ выдал доступ (FIX-11, S-5); истина здесь,
+            # а не в скрытой кнопке шапки.
+            if ERP not in (user.platform_access or []):
+                raise ForbiddenError(
+                    "platform access to erp is not granted", reason=Reason.PLATFORM_ACCESS_DENIED
+                )
             roles = await repo.roles_of(session, user.id)
 
-        primary_role = "viewer"
-        permissions: list[str] = ["quote.view"]
-        if "admin" in roles:
-            primary_role = "admin"
-            permissions = list(DEFAULT_ADMIN_PERMISSIONS)
-        elif "manager" in roles:
-            primary_role = "manager"
-            permissions = list(DEFAULT_MANAGER_PERMISSIONS)
+        # Права — по карте «роль CRM → каталог ERP» (S-11): ни одного кода вне каталога ERP.
+        access = erp_access(roles)
+        primary_role = _primary_role(roles)
+        permissions = list(access.permissions)
 
         now = int(time.time())
         jti = str(uuid.uuid4())
@@ -187,9 +170,9 @@ class SsoService:
                 user = await session.get(User, int(payload["sub"]))
 
             if user is None:
-                raise ForbiddenError("user not provisioned")
+                raise ForbiddenError("user not provisioned", reason=Reason.USER_NOT_PROVISIONED)
             if not user.is_active:
-                raise ForbiddenError("user inactive")
+                raise ForbiddenError("user inactive", reason=Reason.USER_INACTIVE)
 
             name = str(payload.get("name") or "").strip()
             if name and user.full_name != name:
@@ -214,3 +197,11 @@ class SsoService:
             )
 
         return session_data
+
+
+def _primary_role(roles: list[str]) -> str:
+    """Старшая роль CRM для claim `role` (admin > manager > viewer); без ролей — viewer."""
+    for role in ("admin", "manager"):
+        if role in roles:
+            return role
+    return "viewer"

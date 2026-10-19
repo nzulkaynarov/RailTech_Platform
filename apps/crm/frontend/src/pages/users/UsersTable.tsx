@@ -1,10 +1,11 @@
-import { Button, Space, Table, Tag, Tooltip, Typography } from "antd";
+import { Button, Space, Switch, Table, Tag, Tooltip, Typography } from "antd";
 import type { ColumnsType } from "antd/es/table";
 
 import type { UserOut } from "../../api/generated/model";
 import { BooleanTag } from "../../components/BooleanTag";
 import { ActionsTitle, RowActions } from "../../components/RowActions";
 import { roleLabel } from "../../domain/labels";
+import { hasErpAccess } from "../../domain/platformAccess";
 import { t } from "../../i18n/ru";
 
 type Handlers = {
@@ -12,6 +13,10 @@ type Handlers = {
   onReset: (u: UserOut) => void;
   onInvite: (u: UserOut) => void;
   onResetByEmail: (u: UserOut) => void;
+  /** Выдать (`true`) или снять (`false`) доступ к ERP. */
+  onToggleErp: (u: UserOut, enabled: boolean) => void;
+  /** Пользователь, чей переключатель сейчас сохраняется. */
+  erpPendingId?: number | null;
 };
 
 const named = (text: string, u: UserOut) => text.replace("{name}", u.full_name);
@@ -25,7 +30,14 @@ function TelegramTag({ id }: { id: number | null }) {
   );
 }
 
-function columns({ onEdit, onReset, onInvite, onResetByEmail }: Handlers): ColumnsType<UserOut> {
+function columns({
+  onEdit,
+  onReset,
+  onInvite,
+  onResetByEmail,
+  onToggleErp,
+  erpPendingId,
+}: Handlers): ColumnsType<UserOut> {
   return [
     {
       title: t.users.fullName,
@@ -52,6 +64,26 @@ function columns({ onEdit, onReset, onInvite, onResetByEmail }: Handlers): Colum
       title: t.userAdmin.status,
       render: (_, u) => (
         <BooleanTag value={u.is_active} yes={t.userAdmin.active} no={t.userAdmin.inactive} />
+      ),
+    },
+    {
+      title: (
+        <Tooltip title={t.userAdmin.erpAccessHint}>
+          <span>{t.userAdmin.erpAccess}</span>
+        </Tooltip>
+      ),
+      render: (_, u) => (
+        <Tooltip title={u.is_active || hasErpAccess(u) ? null : t.userAdmin.erpInactive}>
+          <Switch
+            checked={hasErpAccess(u)}
+            disabled={(!u.is_active && !hasErpAccess(u)) || erpPendingId === u.id}
+            loading={erpPendingId === u.id}
+            aria-label={named(t.userAdmin.erpSwitchLabel, u)}
+            onChange={(checked) => {
+              onToggleErp(u, checked);
+            }}
+          />
+        </Tooltip>
       ),
     },
     { title: t.users.telegram, render: (_, u) => <TelegramTag id={u.tg_user_id} /> },

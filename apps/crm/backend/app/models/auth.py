@@ -14,6 +14,7 @@ from sqlalchemy import (
     Integer,
     SmallInteger,
     String,
+    Text,
     func,
 )
 from sqlalchemy import text as sql
@@ -23,11 +24,22 @@ from sqlalchemy.orm import Mapped, mapped_column
 from app.models.base import Base, TimestampMixin
 
 ROLES = ("admin", "manager", "viewer")
+# Системы, куда сотруднику можно (FIX-11): CRM есть у всех, ERP выдаёт админ (`platform_access`).
+PLATFORM_SYSTEMS = ("crm", "erp")
 
 
 class User(TimestampMixin, Base):
     __tablename__ = "users"
-    __table_args__ = (CheckConstraint("ui_mode IN ('admin', 'manager')", name="ui_mode"),)
+    __table_args__ = (
+        CheckConstraint("ui_mode IN ('admin', 'manager')", name="ui_mode"),
+        # JSON-список систем: всегда с "crm", других значений кроме "erp" нет (FIX-11).
+        CheckConstraint(
+            "jsonb_typeof(platform_access) = 'array' "
+            "AND platform_access @> CAST('[\"crm\"]' AS jsonb) "
+            'AND platform_access <@ CAST(\'["crm", "erp"]\' AS jsonb)',
+            name="platform_access",
+        ),
+    )
 
     id: Mapped[int] = mapped_column(BigInteger, Identity(), primary_key=True)
     email: Mapped[str] = mapped_column(String(255), unique=True)
@@ -45,6 +57,14 @@ class User(TimestampMixin, Base):
     notify_leads: Mapped[bool] = mapped_column(Boolean, server_default=sql("true"))
     # Telegram отказал в личном сообщении (не нажат «Старт»/бот заблокирован); снимается успехом.
     tg_dm_failed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    # Куда пользователю можно (FIX-11, ADR-0003): `["crm"]` по умолчанию, `["crm", "erp"]` — доступ
+    # к ERP выдан. Выдача → провижининг в ERP, снятие → отзыв сессий (`services/erp_access.py`).
+    platform_access: Mapped[list[str]] = mapped_column(
+        JSONB, server_default=sql("""'["crm"]'::jsonb""")
+    )
+    # Последняя ошибка синхронизации с ERP (провижининг или отзыв); NULL — ERP в курсе. Читает
+    # проверка «Синхронизация с ERP» центра внешних сервисов (ADR-0024); пользователю не видна.
+    erp_sync_error: Mapped[str | None] = mapped_column(Text)
 
 
 class Role(Base):

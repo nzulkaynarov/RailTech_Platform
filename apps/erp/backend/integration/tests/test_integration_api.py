@@ -421,7 +421,7 @@ def test_user_provisioning_admin_and_backoffice(auth_client):
         "email": "crm_admin@railtech.uz",
         "name": "Главный Администратор",
         "role": "admin",
-        "permissions": ["quote.*", "contract.*", "finance.*"],
+        "permissions": ["quote.build", "contract.manage", "finance.invoice"],
         "is_active": True,
     }
     resp_admin = auth_client.post(
