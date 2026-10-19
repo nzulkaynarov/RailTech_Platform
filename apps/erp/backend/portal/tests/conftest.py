@@ -15,6 +15,9 @@ from django.utils import timezone
 from parties.models import Company, CompanyType, Contact
 from portal.models import PortalSession
 from portal.services.tokens import hash_token
+
+# Мир сущностей клиента во всех статусах — для сторожа контракта и тестов сериализаторов (FIX-21)
+from portal.tests.contract_world import contract_world  # noqa: E402,F401
 from rest_framework.test import APIClient
 
 from core.tenant import own_company

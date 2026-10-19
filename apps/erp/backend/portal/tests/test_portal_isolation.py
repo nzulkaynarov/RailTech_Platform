@@ -22,6 +22,7 @@ from crm.models import (
     Invoice,
     InvoiceStatus,
     Quote,
+    QuoteItem,
     QuoteStatus,
 )
 
@@ -121,7 +122,16 @@ def isolation_data(db, client_company, other_company, client_contact, other_cont
         status=fulfillment_status,
     )
 
+    # Строки поставки = позиции подтверждённого КП сделки (FIX-21): у каждого клиента своя
+    approved_status, _ = QuoteStatus.objects.get_or_create(code=QuoteStatusCode.APPROVED, defaults={"name": "Одобрено"})
+    approved_a = Quote.objects.create(deal=deal_a, version=2, status=approved_status)
+    approved_b = Quote.objects.create(deal=deal_b, version=2, status=approved_status)
+    line_a = QuoteItem.objects.create(quote=approved_a, imported_raw_name="Труба А", quantity=3, unit="м")
+    line_b = QuoteItem.objects.create(quote=approved_b, imported_raw_name="Труба Б", quantity=5, unit="м")
+
     return {
+        "line_a": line_a,
+        "line_b": line_b,
         "deal_a": deal_a,
         "quote_a": quote_a,
         "contract_a": contract_a,
@@ -225,5 +235,6 @@ class TestPortalIsolation:
         d_resp = portal_client.get("/api/portal/v1/deliveries")
         assert d_resp.status_code == status.HTTP_200_OK
         d_ids = [x["id"] for x in d_resp.data]
-        assert isolation_data["fulfillment_a"].id in d_ids
-        assert isolation_data["fulfillment_b"].id not in d_ids
+        assert d_ids == [isolation_data["line_a"].id]
+        assert isolation_data["line_b"].id not in d_ids
+        assert d_resp.data[0]["deal"]["id"] == isolation_data["deal_a"].id

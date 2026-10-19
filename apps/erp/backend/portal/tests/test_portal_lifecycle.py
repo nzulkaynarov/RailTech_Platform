@@ -93,8 +93,9 @@ class TestPortalEndToEndLifecycle:
         )
         assert req_resp.status_code == status.HTTP_201_CREATED
         req_data = req_resp.data
-        deal_id = req_data["deal_id"]
-        assert deal_id is not None
+        deal_id = req_data["id"]  # запрос и сделка — одна запись; `deal` пуст, пока по запросу ничего не произошло
+        assert req_data["status"] == "new" and req_data["deal"] is None and req_data["deal_id"] is None
+        assert req_data["source"] == "cabinet"
         assert req_data["summary"] == "Поставка стальных труб 89х4"
 
         # ── 3. Просмотр карточки запроса (Q-16) ────────────────────────────
@@ -128,7 +129,7 @@ class TestPortalEndToEndLifecycle:
         )
         QuoteItem.objects.create(
             quote=quote,
-            name_canonical="Труба 89х4 ст20 ГОСТ 8732",
+            imported_raw_name="Труба 89х4 ст20 ГОСТ 8732",
             quantity=150,
             frozen_base_price=Decimal("500000"),
             margin_percent=Decimal("0"),
@@ -143,21 +144,26 @@ class TestPortalEndToEndLifecycle:
         assert q_detail_resp.status_code == status.HTTP_200_OK
         q_data = q_detail_resp.data
         assert q_data["id"] == quote.id
-        total_val = q_data["total"]["amount"] if isinstance(q_data["total"], dict) else q_data["total"]
-        assert total_val == "84000000.00"
-        items = q_data.get("lines") or q_data.get("items")
+        assert q_data["total"] == {"amount": "84000000.00", "currency": "UZS"}
+        assert "items" not in q_data and "vat_rate" not in q_data  # внутренний слой клиенту не отдаётся
+        items = q_data["lines"]
         assert len(items) == 1
-        # Проверяем санитацию: поля cost_price и markup_percent НЕ должны попадать в ответ клиенту!
+        # Проверяем санитацию: себестоимость, наценка и НДС строки НЕ попадают в ответ клиенту
         item_data = items[0]
-        assert "cost_price" not in item_data and "frozen_base_price" not in item_data
-        assert "markup_percent" not in item_data
-        assert (item_data.get("name") or item_data.get("title")) == "Труба 89х4 ст20 ГОСТ 8732"
-        price_val = item_data.get("price") or (
-            item_data.get("unit_price", {}).get("amount")
-            if isinstance(item_data.get("unit_price"), dict)
-            else item_data.get("unit_price")
-        )
-        assert price_val == "500000.00"
+        assert set(item_data) == {
+            "line_no",
+            "kind",
+            "title",
+            "description",
+            "quantity",
+            "unit",
+            "unit_price",
+            "total",
+            "promised_date",
+        }
+        assert item_data["kind"] == "item" and item_data["title"] == "Труба 89х4 ст20 ГОСТ 8732"
+        assert item_data["unit_price"] == {"amount": "500000.00", "currency": "UZS"}
+        assert item_data["total"] == {"amount": "75000000.00", "currency": "UZS"}
 
         # ── 6. Клиент акцептует КП одноразовым кодом из письма ──────────────
         code = issue_test_acceptance_code(quote, client_contact.email)
@@ -227,7 +233,7 @@ class TestPortalEndToEndLifecycle:
         # Клиент принимает акт
         act_accept_resp = portal_client.post(f"/api/portal/v1/acts/{act.id}/accept", format="json")
         assert act_accept_resp.status_code == status.HTTP_200_OK
-        assert act_accept_resp.data["status"] == "signed"
+        assert act_accept_resp.data["status"] == "accepted"  # контракт 0.2.0: issued|accepted|returned
         act.refresh_from_db()
         assert act.status.code == ActStatusCode.SIGNED
 
