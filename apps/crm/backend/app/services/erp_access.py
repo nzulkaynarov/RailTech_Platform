@@ -7,9 +7,9 @@
 
 Задача читает **текущее** состояние пользователя, а не снимок на момент постановки: устаревшая
 задача (доступ уже сняли или выдали снова) ничего не делает, итоговое состояние ERP всегда равно
-состоянию CRM. Постоянные ошибки (коннектор не настроен, e-mail занят, ERP отклонил данные)
-фиксируются и не повторяются; временные (ERP недоступен, 5xx) фиксируются и пробрасываются —
-Procrastinate повторит.
+состоянию CRM. Постоянные ошибки (e-mail занят, ERP отклонил данные) фиксируются и не
+повторяются; временные (ERP недоступен, 5xx, коннектор ещё не настроен — админ может подключить
+ERP позже) фиксируются и пробрасываются — Procrastinate повторит по расписанию.
 """
 
 from collections.abc import Awaitable, Callable
@@ -20,13 +20,17 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.domain.erp_permissions import erp_access
 from app.domain.erp_sync import ERP
-from app.domain.errors import ConflictError, DomainError, ValidationFailedError
+from app.domain.errors import ConflictError, DomainError, Reason, ValidationFailedError
 from app.integrations.erp_users import ErpUsersClient, ProvisionPayload
 from app.repositories import users as repo
 
 logger = structlog.get_logger(__name__)
 MAX_ERROR_LEN = 500
 Outcome = Literal["done", "skipped"]
+NOT_CONFIGURED_HINT = (
+    "{task}: erp_not_configured: ERP не подключена — укажите адрес и сервисный токен в "
+    "«Подключения» → «ERP»; задача повторится сама по расписанию"
+)
 
 
 class ErpAccessService:
@@ -73,10 +77,16 @@ class ErpAccessService:
     async def _call(self, task: str, user_id: int, call: Callable[[], Awaitable[object]]) -> None:
         try:
             await call()
-        except (ConflictError, ValidationFailedError) as exc:
-            # Постоянная ошибка: повтор ничего не изменит — запись в ленту, задача завершена.
-            await self._set_error(user_id, _describe(task, exc))
-            logger.warning("erp_sync_rejected", task=task, user_id=user_id, error=exc.message)
+        except ConflictError as exc:
+            if exc.details.get("reason") != Reason.ERP_NOT_CONFIGURED:
+                await self._rejected(task, user_id, exc)
+                return
+            # Коннектор не настроен: не постоянная ошибка — подключат, и повтор пройдёт.
+            await self._set_error(user_id, NOT_CONFIGURED_HINT.format(task=task))
+            logger.warning("erp_sync_not_configured", task=task, user_id=user_id)
+            raise
+        except ValidationFailedError as exc:
+            await self._rejected(task, user_id, exc)
         except Exception as exc:
             # Временная (ERP недоступен, 5xx): записать и пробросить — Procrastinate повторит.
             await self._set_error(user_id, _describe(task, exc))
@@ -84,6 +94,11 @@ class ErpAccessService:
             raise
         else:
             await self._set_error(user_id, None)
+
+    async def _rejected(self, task: str, user_id: int, exc: DomainError) -> None:
+        # Постоянная ошибка: повтор ничего не изменит — запись в ленту, задача завершена.
+        await self._set_error(user_id, _describe(task, exc))
+        logger.warning("erp_sync_rejected", task=task, user_id=user_id, error=exc.message)
 
     async def _set_error(self, user_id: int, message: str | None) -> None:
         async with self._sessions() as session, session.begin():

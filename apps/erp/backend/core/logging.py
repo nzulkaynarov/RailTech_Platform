@@ -124,8 +124,18 @@ class AccessLogMiddleware:
 
     def __call__(self, request):
         started = time.monotonic()
-        response = self.get_response(request)
-        access_logger.info(
-            "%s %s %s %dms", request.method, request.path, response.status_code, (time.monotonic() - started) * 1000
-        )
+        try:
+            response = self.get_response(request)
+        except Exception:
+            # Django превращает исключения вида/внутренних middleware в ответы (404, 410, 500) до этого слоя;
+            # сюда исключение попадает, только если что-то пробросило его наружу. Строка пишется и в этом случае.
+            self._log(request, 500, started)
+            raise
+        self._log(request, response.status_code, started)
         return response
+
+    @staticmethod
+    def _log(request, status_code, started):
+        access_logger.info(
+            "%s %s %s %dms", request.method, request.path, status_code, (time.monotonic() - started) * 1000
+        )

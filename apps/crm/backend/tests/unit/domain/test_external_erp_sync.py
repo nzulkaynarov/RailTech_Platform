@@ -40,6 +40,18 @@ def test_not_connected_hint_tells_to_connect_erp() -> None:
     assert "не подключена" in result.hint
 
 
+@pytest.mark.parametrize("configured", [True, False])
+def test_hint_matches_task_behavior_retry_by_schedule_then_regrant(configured: bool) -> None:
+    """FIX-11b: подсказка обещает повтор, который есть (`RETRY` задач), и что делать после него."""
+    from app.tasks.erp_users import RETRY
+
+    assert (RETRY.max_attempts or 0) > 1
+    hint = erp_sync(ErpSyncFacts(configured, 1, 1, "x")).hint
+    assert hint is not None
+    assert "повторя" in hint
+    assert "снова выдайте доступ" in hint
+
+
 def test_registry_row_points_to_the_erp_connector_and_is_checked_every_minute() -> None:
     spec = find(registry({}), "erp_sync")
     assert spec is not None
