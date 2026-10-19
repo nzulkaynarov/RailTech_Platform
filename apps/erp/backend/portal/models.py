@@ -199,3 +199,28 @@ class PortalRequestLine(models.Model):
 
     def __str__(self):
         return f"PortalRequestLine(deal={self.deal_id}, {self.text})"
+
+
+class PortalRequestSummary(models.Model):
+    """Суть запроса клиента как он её написал (до 5000 знаков по контракту, FIX-21).
+
+    `Deal.title` — 255 знаков и живёт в списках сотрудников, поэтому в нём — сжатая первая строка, а полный текст
+    клиента хранится здесь и отдаётся как `ClientRequest.summary`. У сделок без такой записи (передача из CRM,
+    сотрудник ERP) суть — название сделки.
+    """
+
+    deal = models.OneToOneField(
+        "sales.Deal",
+        on_delete=models.CASCADE,
+        related_name="portal_summary",
+        verbose_name=_("Сделка"),
+    )
+    text = models.TextField(verbose_name=_("Суть запроса"))
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = _("Суть запроса портала")
+        verbose_name_plural = _("Сути запросов портала")
+
+    def __str__(self):
+        return f"PortalRequestSummary(deal={self.deal_id})"

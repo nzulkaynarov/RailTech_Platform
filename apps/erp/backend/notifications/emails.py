@@ -287,10 +287,14 @@ def send_templated_email(
 _SECRET_QS_RE = re.compile(r"((?:\?|&amp;|&)(?:token|uid|code)=)[^&\s\"'<>]+", re.IGNORECASE)
 # FIX-14 (P-9): ссылка входа в портал несёт токен в пути (`/auth/magic/<token>`), не в query.
 _SECRET_PATH_RE = re.compile(r"(/auth/magic/)[^/?#&\s\"'<>]+")
+# FIX-21: ссылка входа из писем — `/auth/magic#token=<token>` (токен во фрагменте, контракт 0.2.0); прежний вид
+# с токеном в пути остаётся для устаревшего `GET /auth/magic/{token}`, поэтому прячем оба.
+_SECRET_FRAGMENT_RE = re.compile(r"(/auth/magic#token=)[^&\s\"'<>]+")
 
 
 def _redact_secrets(body: Optional[str]) -> str:
-    return _SECRET_PATH_RE.sub(r"\1[REDACTED]", _SECRET_QS_RE.sub(r"\1[REDACTED]", body or ""))
+    redacted = _SECRET_QS_RE.sub(r"\1[REDACTED]", body or "")
+    return _SECRET_FRAGMENT_RE.sub(r"\1[REDACTED]", _SECRET_PATH_RE.sub(r"\1[REDACTED]", redacted))
 
 
 def _record_log(
