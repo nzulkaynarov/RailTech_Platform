@@ -101,6 +101,44 @@ CRM `CRM_LANGFUSE_*`, общий проект). После смены ключе
 временная mock-модель LiteLLM (`litellm_params.mock_response`), поле `mock_response` в теле запроса прокси игнорирует
 и идёт к провайдеру.
 
+## Telegram Mini App на стенде: ограничение и проверка через туннель (FIX-15)
+
+**Ограничение.** Стенд `make up` — обычный `http://*.localhost`, без TLS. Mini App требует HTTPS-адрес, а cookie сессии
+портала в Mini App — `SameSite=None; Secure` (Cabinet открыт во фрейме Telegram, это другой сайт; настройка ERP
+`PORTAL_COOKIE_SAMESITE=None`): по `http` браузер её не сохранит. Поэтому на стенде вход из Mini App не проверить,
+а веб-вход по magic-link работает на умолчании (`PORTAL_COOKIE_SAMESITE=Lax`). Не меняйте умолчание на `None` на стенде
+без туннеля: вход в браузер по `http` перестанет работать.
+
+**Проверка через туннель** (тестовый бот; раз в вехе, перед гейтом M2 — OWNER-CHECKLIST «До M2»):
+
+1. Поднимите туннель на Caddy стенда с подменой `Host`, чтобы Caddy отдал Cabinet:
+   `cloudflared tunnel --url http://localhost:8088 --http-host-header cabinet.localhost` (порт — `HTTP_PORT` из `.env`;
+   у ngrok: `ngrok http 8088 --host-header=cabinet.localhost`). Туннель даст адрес вида `https://<имя>.trycloudflare.com`.
+2. В `.env`: `PORTAL_COOKIE_SAMESITE=None`, `CABINET_URL=https://<имя>.trycloudflare.com`, `TELEGRAM_BOT_TOKEN` тестового бота
+   и `TELEGRAM_BOT_USERNAME`; затем `make up` (перезапуск `erp-backend`). Django видит `Host: cabinet.localhost` — ALLOWED_HOSTS менять не нужно.
+3. BotFather → тестовый бот → Menu Button / Mini App → `https://<имя>.trycloudflare.com`.
+4. Откройте бота на телефоне (приложение Telegram), нажмите кнопку: в ответе `POST /api/portal/v1/auth/telegram` — `Set-Cookie:
+   portal_session=…; HttpOnly; Secure; SameSite=None; Path=/api/portal`, экран «Запросы» открывается. Веб Telegram и настольные
+   браузеры с блокировкой сторонних cookie (Safari, Chrome Incognito) cookie фрейма могут не принять — проверка идёт на телефоне.
+5. Верните `PORTAL_COOKIE_SAMESITE=Lax` и `CABINET_URL=http://cabinet.localhost`, `make up`.
+
+На проде (M5) `PORTAL_COOKIE_SAMESITE=None` задаётся в окружении `production` вместе с `CABINET_ORIGIN=https://cabinet.railtech.uz`:
+у ERP на `DEBUG=False` в CORS только этот origin.
+
+## Проверка: токена ссылки входа нет в журнале ERP (FIX-15)
+
+Daphne запущен с `-v 0` (`infra/compose/base.yml`), журнал запросов ведёт Django (`core.access`) и прячет токен фильтром:
+
+```
+make up                                    # перезапуск erp-backend с новой командой
+curl -s -o /dev/null --resolve cabinet.localhost:8088:127.0.0.1 http://cabinet.localhost:8088/api/portal/v1/auth/magic/PROBE-TOKEN-4242
+docker compose -f infra/compose/base.yml -f infra/compose/dev.yml --env-file .env logs erp-backend | grep -c PROBE-TOKEN-4242   # 0
+docker compose -f infra/compose/base.yml -f infra/compose/dev.yml --env-file .env logs erp-backend | grep 'auth/magic'          # …/auth/magic/[REDACTED] 410 …
+```
+
+Остаточный риск: журналы фронтового прокси (Caddy с включённым `log`, nginx `cabinet-web`) пишут путь страницы
+`/auth/magic/<токен>` (SPA-маршрут Cabinet) — путь ссылки меняется в FIX-20.
+
 ## Если не поднимается
 
 - Поменяли `infra/caddy/Caddyfile.dev` (или подтянули его `git pull`), а домены ведут себя по-старому: Caddyfile смонтирован одиночным файлом, и после замены файла git'ом контейнер видит старую копию или пустоту («open /etc/caddy/Caddyfile: no such file»). Лечение — `make caddy-reload` (пересоздаёт контейнер Caddy).
