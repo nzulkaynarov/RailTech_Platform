@@ -78,7 +78,7 @@ ADR-0017), у ERP — `{"detail": "USER_NOT_PROVISIONED"}`; неактивный
 
 | Событие в CRM | Задача | Вызов ERP |
 |---|---|---|
-| выдан доступ к ERP; у пользователя с доступом изменились роли, имя или почта | `erp_provision_user` | `POST /api/integration/v1/users/provision` (идемпотентно по `crm_user_id`, повторы) |
+| выдан доступ к ERP; у пользователя с доступом изменились роли или имя (смена почты провижининг не запускает) | `erp_provision_user` | `POST /api/integration/v1/users/provision` (идемпотентно по `crm_user_id`, повторы) |
 | доступ снят; пользователь с доступом деактивирован | `erp_revoke_sessions` | `DELETE /api/integration/v1/users/{crm_user_id}/sessions` |
 
 Аудит: CRM — `platform_access.granted` / `platform_access.revoked`; ERP — `sso.exchange`, `sso.revoke`.
