@@ -73,6 +73,29 @@ class TestSessionThrottle:
 
         assert codes == [401, 401, 401]
 
+    def test_unauthenticated_accept_is_401_before_any_throttle(self, monkeypatch, anon_portal_client):
+        """Ветка `ip:` ключа не достижима на `BasePortalView`: DRF проверяет аутентификацию раньше лимитов (FIX-11b)."""
+        set_rate(monkeypatch, "portal_session", "1/minute")
+        set_rate(monkeypatch, "portal_accept", "1/minute")
+
+        codes = [anon_portal_client.post(ACCEPT, {"code": "000000"}, format="json").status_code for _ in range(3)]
+
+        assert codes == [401, 401, 401]
+
+    def test_anonymous_logout_is_the_only_ip_keyed_path(self, monkeypatch, anon_portal_client):
+        """Выход без сессии (204) — единственное место, где ключ лимита сессии падает на IP."""
+        set_rate(monkeypatch, "portal_session", "2/minute")
+        logout = "/api/portal/v1/auth/logout"
+
+        codes = [
+            anon_portal_client.post(logout, {}, format="json", REMOTE_ADDR="198.51.100.20").status_code
+            for _ in range(3)
+        ]
+        other_ip = anon_portal_client.post(logout, {}, format="json", REMOTE_ADDR="198.51.100.21")
+
+        assert codes == [204, 204, 429]
+        assert other_ip.status_code == 204
+
 
 @pytest.mark.django_db
 class TestAcceptThrottle:

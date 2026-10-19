@@ -6,6 +6,7 @@ from unittest import mock
 
 import pytest
 from django.core import mail
+from kombu.exceptions import OperationalError
 from portal.models import MagicLinkToken
 from portal.services.magic_link import request_magic_link
 from portal.services.tokens import hash_token
@@ -119,6 +120,19 @@ class TestMagicLinkMailIsQueued:
         delay.side_effect = ConnectionError("broker down")
 
         assert request_magic_link(client_contact.email) is True
+
+    @pytest.mark.parametrize("error", [OperationalError("redis down"), TimeoutError("broker timeout")])
+    def test_broker_errors_are_swallowed_with_the_same_answer(self, client_contact, delay, error):
+        delay.side_effect = error
+
+        assert request_magic_link(client_contact.email) is True
+
+    def test_unexpected_errors_are_not_masked_as_broker_outage(self, client_contact, delay):
+        """Голый `except Exception` прятал и ошибки кода; теперь проглатываются только ошибки брокера (FIX-11b)."""
+        delay.side_effect = TypeError("bug in the task signature")
+
+        with pytest.raises(TypeError):
+            request_magic_link(client_contact.email)
 
     def test_task_issues_the_link_and_sends_the_mail(self, client_contact):
         result = send_magic_link.apply(args=[client_contact.pk]).get()

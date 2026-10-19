@@ -3,9 +3,10 @@
 `POST /api/integration/v1/users/provision` (идемпотентно по `crm_user_id`) и
 `DELETE /api/integration/v1/users/{crm_user_id}/sessions` — CONTRACTS §2, `erp-integration.yaml`.
 Адрес и сервисный токен — те же, что у передачи клиента (коннектор «ERP» в «Подключениях»).
-Ошибки — доменные исключения: временные (`UpstreamUnavailableError`) задача повторяет, постоянные
-(`ConflictError`, `ValidationFailedError`) — нет; пользователю они не показываются, их видит админ в
-центре внешних сервисов (ADR-0024). Значения секретов не логируются.
+Ошибки — доменные исключения: временные (`UpstreamUnavailableError`) и «коннектор не настроен»
+(`ConflictError` с `ERP_NOT_CONFIGURED`) задача повторяет, постоянные (e-mail занят,
+`ValidationFailedError`) — нет (решает `ErpAccessService`); пользователю они не показываются,
+их видит админ в центре внешних сервисов (ADR-0024). Значения секретов не логируются.
 """
 
 import uuid
@@ -104,6 +105,11 @@ class HttpxErpUsersClient:
         return True
 
     async def _connection(self) -> ErpConnection:
+        # Клиент работает в воркере, а коннектор сохраняют в API (другой процесс): TTL-кэш настроек
+        # воркера не знает о сохранении. Сбрасываем перед чтением — задача видит текущий адрес ERP
+        # (FIX-11b); секреты `SecretsStore` не кэширует.
+        if self._settings is not None:
+            self._settings.invalidate()
         connection = await resolve_connection(self._store, self._config, self._settings)
         if connection is None:
             raise ConflictError("erp connector is not configured", reason=Reason.ERP_NOT_CONFIGURED)

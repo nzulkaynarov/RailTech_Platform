@@ -485,6 +485,45 @@ class TestAccessLog:
         assert "sEcReT-tok_1" not in journal
         assert "next=" not in journal  # строка запроса в журнал не пишется
 
+    def test_error_responses_built_from_exceptions_are_logged(self, anon_portal_client):
+        """FIX-11b: ответы, рождённые исключением (410 `PortalGone` по magic-link, 404 Django), тоже пишут строку;
+        токен в строке — [REDACTED]."""
+        stream, handler = self._console_stream()
+        access = logging.getLogger("core.access")
+        access.addHandler(handler)
+        access.setLevel(logging.INFO)
+        try:
+            gone = anon_portal_client.get("/api/portal/v1/auth/magic/Fix11b-tok_2")
+            missing = anon_portal_client.get("/api/portal/v1/no-such-endpoint/Fix11b-tok_2")
+        finally:
+            access.removeHandler(handler)
+
+        assert (gone.status_code, missing.status_code) == (410, 404)
+        lines = stream.getvalue().splitlines()
+        assert any(line.startswith("GET /api/portal/v1/auth/magic/[REDACTED] 410 ") for line in lines), lines
+        assert any(line.startswith("GET /api/portal/v1/no-such-endpoint/Fix11b-tok_2 404 ") for line in lines), lines
+        assert "Fix11b-tok_2" not in "".join(line for line in lines if "/auth/magic/" in line)
+
+    def test_exception_escaping_the_chain_is_logged_as_500_and_reraised(self, rf):
+        from core.logging import AccessLogMiddleware
+
+        def boom(request):
+            raise RuntimeError("boom")
+
+        stream, handler = self._console_stream()
+        access = logging.getLogger("core.access")
+        access.addHandler(handler)
+        access.setLevel(logging.INFO)
+        try:
+            with pytest.raises(RuntimeError):
+                AccessLogMiddleware(boom)(rf.get("/api/portal/v1/auth/magic/Fix11b-tok_3"))
+        finally:
+            access.removeHandler(handler)
+
+        journal = stream.getvalue()
+        assert journal.startswith("GET /api/portal/v1/auth/magic/[REDACTED] 500 ")
+        assert "Fix11b-tok_3" not in journal
+
     def test_access_log_middleware_is_enabled(self):
         assert "core.logging.AccessLogMiddleware" in settings.MIDDLEWARE
 
