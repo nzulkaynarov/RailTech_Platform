@@ -55,7 +55,7 @@ GET_CASES = {
     "/acts": lambda w: ["/acts"],
     "/deliveries": lambda w: ["/deliveries"],
     "/documents": lambda w: ["/documents"],
-    "/documents/{id}/file": lambda w: [f"/documents/{d.pk}/file" for d in w["documents"].values()],
+    "/documents/{id}/file": lambda w: [f"/documents/{pk}/file" for pk in w["documents"].values()],
     "/catalog/categories": lambda w: ["/catalog/categories"],
     "/catalog": lambda w: ["/catalog"],
     "/catalog/{id}": lambda w: [f"/catalog/{w['product'].pk}"],
@@ -67,12 +67,12 @@ GET_CASES = {
 #: Достижимые из модели значения статусов, которых сторож не ждёт, — с причиной. Всё остальное из enum контракта
 #: обязано встретиться в ответах.
 UNREACHABLE = {
+    "/contracts": {"cancelled": "отменённый договор клиенту не показывается (FIX-22); значение enum — на будущее"},
     "/deliveries": {"ready_to_ship": "у Fulfillment нет такого состояния; строки поставки по складу — M4"},
     "/documents": {
-        "quote": "КП в /documents отдаёт FIX-23 (сейчас их нет среди GeneratedDocument)",
-        "specification": "вида «спецификация» среди шаблонов документов нет",
-        "waybill": "вида «накладная» среди шаблонов документов нет",
-        "receipt": "вида «квитанция» среди шаблонов документов нет",
+        "specification": "отдельного документа «спецификация» в ERP нет — она часть договора (QUESTIONS Q-FIX23-3)",
+        "receipt": "квитанция об оплате в портал не выдаётся — решение владельца (QUESTIONS Q-FIX23-3)",
+        "other": "прочих клиентских документов в ERP нет: письма и рапорты внутренние",
     },
 }
 
@@ -185,16 +185,49 @@ def test_every_reachable_enum_value_is_exercised(contract_path, contract_world, 
     )
 
 
-def test_documents_file_endpoint(contract_world, portal_client):
-    ready = contract_world["documents"]["contract"]
-    response = portal_client.get(api(f"/documents/{ready.pk}/file"))
+def test_entities_not_shown_to_the_client_are_not_found(contract_world, portal_client):
+    """Скрытое от клиента — 404 и в списке, и по id (FIX-22): КП до отправки, черновик и отменённый договор, акты без
+    выставления, черновик счёта. Регрессия здесь — клиент снова видит (и подписывает) недооформленное."""
+    world = contract_world
+    hidden = {
+        "/quotes": [q.pk for q in world["hidden_quotes"].values()],
+        "/contracts": [world["contracts"]["draft"].pk, world["contracts"]["cancelled"].pk],
+        "/acts": [world["acts"]["draft"].pk, world["acts"]["cancelled"].pk],
+        "/invoices": [world["invoices"]["draft"].pk, world["invoices"]["not_issued"].pk],
+    }
+    for path, ids in hidden.items():
+        listed = {item["id"] for item in portal_client.get(api(path)).json()}
+        assert not listed & set(ids), f"{path}: клиент видит скрытое {sorted(listed & set(ids))}"
+    for quote_id in hidden["/quotes"]:
+        assert portal_client.get(api(f"/quotes/{quote_id}")).status_code == 404
+        assert portal_client.get(api(f"/quotes/{quote_id}")).json() == {"detail": "NOT_FOUND"}
+    assert world["hidden_quotes"], "фикстуры должны содержать КП всех статусов до отправки"
+    assert {q.status.code for q in world["hidden_quotes"].values()} >= {
+        "DRAFT",
+        "PENDING_TRADE_REVIEW",
+        "PENDING_APPROVAL",
+        "READY_TO_SEND",
+    }
+
+
+def test_documents_file_endpoint(contract_world, portal_client, monkeypatch):
+    monkeypatch.setattr("crm.tasks.render_document_pdf.delay", lambda *args, **kwargs: None)
+    ready = contract_world["ready_documents"]["contract_signed"]
+    response = portal_client.get(api(f"/documents/{ready}/file"))
     assert response.status_code == 200
     assert response["Content-Type"].startswith("application/pdf")
-    pending = contract_world["documents"]["pending"]  # PDF ещё не отрисован
-    response = portal_client.get(api(f"/documents/{pending.pk}/file"))
+    pending = contract_world["documents"]["contract_sent"]  # PDF ещё не отрисован
+    response = portal_client.get(api(f"/documents/{pending}/file"))
     assert response.status_code == 202
     assert response["Retry-After"].isdigit()
     assert response.json()["detail"] in error_codes()
+
+
+def test_draft_and_internal_documents_are_not_in_the_list(contract_world, portal_client):
+    """Черновики и внутренние документы (в фикстурах мира они заведены) не попадают в `GET /documents`."""
+    listed = {item["id"] for item in portal_client.get(api("/documents")).json()}
+    assert not listed & set(contract_world["hidden_documents"].values())
+    assert listed == set(contract_world["documents"].values())
 
 
 def test_ids_referenced_by_documents_exist_in_documents_list(contract_world, portal_client):

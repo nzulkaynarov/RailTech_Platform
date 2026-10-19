@@ -14,9 +14,9 @@ from decimal import Decimal
 import pytest
 from django.core.files.base import ContentFile
 from django.utils import timezone
-from documents.models import DocumentTemplate, DocumentTemplateKind, GeneratedDocument, GeneratedDocumentStatus
 from portal.models import MagicLinkToken, PortalRequestLine, PortalUpload
 from portal.services.tokens import hash_token
+from portal.tests.documents_world import build_document_fixtures
 
 from catalog.models import Category, Product, ProductStatus
 from core.models import Currency
@@ -59,7 +59,9 @@ def _stage(code):
     return _status(DealStage, code)
 
 
-def make_quote(deal, version, status_code, *, uzs, sent=True, valid_until=None, viewed=False, items=True, **fields):
+def make_quote(
+    deal, version, status_code, *, uzs, sent=True, valid_until=None, viewed=False, items=True, product=None, **fields
+):
     quote = Quote.objects.create(
         deal=deal,
         version=version,
@@ -76,7 +78,7 @@ def make_quote(deal, version, status_code, *, uzs, sent=True, valid_until=None, 
             quote.first_viewed_at = timezone.now() - datetime.timedelta(days=1)
         quote.save()
     if items:
-        add_quote_items(quote)
+        add_quote_items(quote, product)
         quote.refresh_from_db()
     return quote
 
@@ -174,13 +176,31 @@ def contract_world(db, client_company, other_company, client_contact, other_cont
     # ── КП: sent / viewed / accepted / rejected / expired ────────────────────────────────────
     past = TODAY - datetime.timedelta(days=3)
     future = TODAY + datetime.timedelta(days=10)
+    # Позиция из каталога (`product`) — путь, на котором `GET /quotes/{id}` падал 500 (P-7): единица берётся из карточки.
     quotes = {
-        "sent": make_quote(main, 1, QuoteStatusCode.SENT, uzs=uzs, valid_until=future),
-        "viewed": make_quote(main, 2, QuoteStatusCode.SENT, uzs=uzs, valid_until=future, viewed=True),
-        "accepted": make_quote(main, 3, QuoteStatusCode.APPROVED, uzs=uzs),
-        "rejected": make_quote(main, 4, QuoteStatusCode.REJECTED, uzs=uzs),
-        "expired": make_quote(main, 5, QuoteStatusCode.SENT, uzs=uzs, valid_until=past),
+        "sent": make_quote(main, 1, QuoteStatusCode.SENT, uzs=uzs, valid_until=future, product=product),
+        "viewed": make_quote(main, 2, QuoteStatusCode.SENT, uzs=uzs, valid_until=future, viewed=True, product=product),
+        "accepted": make_quote(main, 3, QuoteStatusCode.APPROVED, uzs=uzs, product=product),
+        "rejected": make_quote(main, 4, QuoteStatusCode.REJECTED, uzs=uzs, product=product),
+        "expired": make_quote(main, 5, QuoteStatusCode.SENT, uzs=uzs, valid_until=past, product=product),
+        # Статус EXPIRED ставит ночная задача `crm.expire_stale_quotes`: КП не должно пропадать у клиента на следующий день.
+        "expired_status": make_quote(main, 11, "EXPIRED", uzs=uzs, valid_until=past, product=product),
     }
+    # КП до отправки клиенту не видны вовсе (404): у них нет публичной ссылки, а `Quote.public_url` в контракте обязателен.
+    hidden_quotes = {
+        status_code.lower(): make_quote(main, 6 + number, status_code, uzs=uzs, sent=False, product=product)
+        for number, status_code in enumerate(
+            (
+                QuoteStatusCode.DRAFT,
+                QuoteStatusCode.PENDING_TRADE_REVIEW,
+                QuoteStatusCode.PENDING_APPROVAL,
+                QuoteStatusCode.READY_TO_SEND,
+            )
+        )
+    }
+    # Отправленное КП без публичной ссылки — аномалия данных (ссылка рождается вместе со статусом SENT): тоже скрыто.
+    hidden_quotes["sent_without_link"] = make_quote(main, 10, QuoteStatusCode.SENT, uzs=uzs, sent=False)
+    world["hidden_quotes"] = hidden_quotes
     ActivityLog.objects.create(
         deal=main,
         action="КП отклонено клиентом",
@@ -223,6 +243,9 @@ def contract_world(db, client_company, other_company, client_contact, other_cont
         ("paid", InvoiceStatusCode.PAID, past, "84000000"),
         ("overdue", InvoiceStatusCode.OVERDUE, past, "0"),
         ("cancelled", InvoiceStatusCode.CANCELLED, future, "0"),
+        ("no_due_date", InvoiceStatusCode.ISSUED, None, "0"),  # срок вычисляется правилом выставления (+14 дней)
+        ("draft", InvoiceStatusCode.DRAFT, future, "0"),
+        ("not_issued", InvoiceStatusCode.ISSUED, None, "0"),  # ни срока, ни даты выставления — клиенту не показывается
     ):
         invoices[key] = Invoice.objects.create(
             deal=main,
@@ -230,7 +253,7 @@ def contract_world(db, client_company, other_company, client_contact, other_cont
             number=f"INV-GUARD-{key}",
             status=_status(InvoiceStatus, status_code),
             due_date=due,
-            issued_at=TODAY,
+            issued_at=None if key == "not_issued" else TODAY,
             total_incl_vat=Decimal("84000000"),
             amount_paid=Decimal(paid),
             currency=uzs,
@@ -244,6 +267,7 @@ def contract_world(db, client_company, other_company, client_contact, other_cont
         ("accepted", ActStatusCode.SIGNED, {"signed_at": now, "acceptor_signed_at": now}),
         ("returned", ActStatusCode.DRAFT, {"rejection_reason": "Не совпадает количество"}),
         ("cancelled", ActStatusCode.CANCELLED, {}),
+        ("draft", ActStatusCode.DRAFT, {}),  # черновик без причины возврата — клиенту не показывается
     ):
         acts[key] = Act.objects.create(
             deal=main,
@@ -287,34 +311,8 @@ def contract_world(db, client_company, other_company, client_contact, other_cont
     )
     Fulfillment.objects.create(deal=bare, status=_status(FulfillmentStatus, FulfillmentStatusCode.PENDING))
 
-    # ── Документы: выпущенные разных видов; сделка у одного отсутствует ───────────────────────
-    issued = _status(GeneratedDocumentStatus, "ISSUED", "Выпущен")
-    documents = {}
-    for key, kind_code, deal in (
-        ("contract", "CONTRACT", main),
-        ("invoice", "INVOICE", main),
-        ("act", "ACT", main),
-        ("letter", "LETTER", main),
-        ("pending", "LETTER", main),  # PDF ещё не отрисован
-        ("no_deal", "LETTER", None),
-    ):
-        kind = _status(DocumentTemplateKind, kind_code)
-        template, _ = DocumentTemplate.objects.get_or_create(
-            company=client_company, name=f"Шаблон {kind_code}", defaults={"kind": kind}
-        )
-        document = GeneratedDocument.objects.create(
-            company=client_company,
-            deal=deal,
-            template=template,
-            status=issued,
-            number=f"DOC-GUARD-{key}",
-            title=f"Документ {key}",
-            rendered_html="<p>fake</p>",
-        )
-        if key not in ("pending", "no_deal"):
-            document.pdf_file.save(f"{key}.pdf", ContentFile(b"%PDF-1.4 fake"), save=True)
-        documents[key] = document
-    world["documents"] = documents
+    # ── Документы: выпущенные (с PDF и без), черновики, внутренние, чужие — см. documents_world ──
+    world["bare_fulfillment"] = Fulfillment.objects.get(deal=bare)
 
     # ── Токен входа (для GET /auth/magic/{token}) ───────────────────────────────────────────────
     MagicLinkToken.objects.create(
@@ -332,4 +330,5 @@ def contract_world(db, client_company, other_company, client_contact, other_cont
         "deal": other_deal,
         "quote": make_quote(other_deal, 1, QuoteStatusCode.SENT, uzs=uzs),
     }
+    world.update(build_document_fixtures(world))
     return world

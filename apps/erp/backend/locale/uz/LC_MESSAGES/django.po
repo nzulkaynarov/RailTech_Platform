@@ -1,0 +1,102 @@
+# Uzbek (Latin) translations of client-facing portal e-mails and portal document titles (FIX-23).
+# Source language of every msgid is Russian (the platform default); only the strings a portal client reads
+# are translated here, everything else falls back to the msgid.
+msgid ""
+msgstr ""
+"Project-Id-Version: RailTech Platform ERP\n"
+"Language: uz\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+# ── emails/base.html ─────────────────────────────────────────────────────────────────────────────
+msgid "Уведомление платформы"
+msgstr "Platforma xabarnomasi"
+
+msgid "Это автоматическое письмо от платформы %(platform)s — отвечать на него не нужно."
+msgstr "Bu %(platform)s platformasidan kelgan avtomatik xat — unga javob berish shart emas."
+
+msgid "Возникли вопросы? Напишите на"
+msgstr "Savollaringiz bormi? Quyidagi manzilga yozing:"
+
+msgid "Ташкент, Узбекистан"
+msgstr "Toshkent, Oʻzbekiston"
+
+# ── emails/portal_invitation.* ───────────────────────────────────────────────────────────────────
+msgid "Приглашение в личный кабинет «%(company)s»"
+msgstr "«%(company)s» shaxsiy kabinetiga taklifnoma"
+
+msgid "Личный кабинет клиента"
+msgstr "Mijozning shaxsiy kabineti"
+
+msgid "Здравствуйте"
+msgstr "Assalomu alaykum"
+
+msgid "Вас пригласили в личный кабинет компании <strong>«%(company)s»</strong> на платформе <strong>%(platform)s</strong>."
+msgstr "Sizni %(platform)s platformasidagi <strong>«%(company)s»</strong> kompaniyasining shaxsiy kabinetiga taklif qilishdi."
+
+msgid "Вас пригласили в личный кабинет компании «%(company)s» на платформе %(platform)s."
+msgstr "Sizni %(platform)s platformasidagi «%(company)s» kompaniyasining shaxsiy kabinetiga taklif qilishdi."
+
+msgid "В личном кабинете вы можете рассматривать и принимать коммерческие предложения, согласовывать договоры, отслеживать поставки и скачивать документы онлайн."
+msgstr "Shaxsiy kabinetda siz tijorat takliflarini koʻrib chiqishingiz va qabul qilishingiz, shartnomalarni kelishishingiz, yetkazib berishlarni kuzatishingiz va hujjatlarni onlayn yuklab olishingiz mumkin."
+
+msgid "Для входа в личный кабинет перейдите по ссылке:"
+msgstr "Shaxsiy kabinetga kirish uchun havolaga oʻting:"
+
+msgid "Войти в личный кабинет"
+msgstr "Shaxsiy kabinetga kirish"
+
+msgid "Вы также можете войти через Telegram:"
+msgstr "Shuningdek, Telegram orqali kirishingiz mumkin:"
+
+msgid "Если кнопка не работает, скопируйте ссылку в адресную строку браузера:"
+msgstr "Agar tugma ishlamasa, havolani brauzerning manzil satriga nusxalab qoʻying:"
+
+msgid "Ссылка действительна в течение 24 часов."
+msgstr "Havola 24 soat davomida amal qiladi."
+
+msgid "Если вы не ожидали это приглашение, просто проигнорируйте письмо."
+msgstr "Agar bu taklifni kutmagan boʻlsangiz, xatga eʼtibor bermang."
+
+msgid "Ссылка действительна в течение 24 часов. Если вы не ожидали это приглашение, просто проигнорируйте письмо."
+msgstr "Havola 24 soat davomida amal qiladi. Agar bu taklifni kutmagan boʻlsangiz, xatga eʼtibor bermang."
+
+msgid "Команда %(platform)s"
+msgstr "%(platform)s jamoasi"
+
+# ── emails/portal_magic_link.* ───────────────────────────────────────────────────────────────────
+msgid "Вход в личный кабинет"
+msgstr "Shaxsiy kabinetga kirish"
+
+msgid "Для входа в личный кабинет компании <strong>«%(company)s»</strong> нажмите на кнопку."
+msgstr "<strong>«%(company)s»</strong> kompaniyasining shaxsiy kabinetiga kirish uchun tugmani bosing."
+
+msgid "Для входа в личный кабинет компании «%(company)s» перейдите по ссылке:"
+msgstr "«%(company)s» kompaniyasining shaxsiy kabinetiga kirish uchun havolaga oʻting:"
+
+msgid "Ссылка действительна в течение 15 минут и может быть использована только один раз."
+msgstr "Havola 15 daqiqa davomida amal qiladi va faqat bir marta ishlatilishi mumkin."
+
+msgid "Если вы не запрашивали вход, просто проигнорируйте письмо."
+msgstr "Agar kirishni soʻramagan boʻlsangiz, xatga eʼtibor bermang."
+
+msgid "Ссылка действительна в течение 15 минут и может быть использована только один раз. Если вы не запрашивали вход, просто проигнорируйте письмо."
+msgstr "Havola 15 daqiqa davomida amal qiladi va faqat bir marta ishlatilishi mumkin. Agar kirishni soʻramagan boʻlsangiz, xatga eʼtibor bermang."
+
+# ── Названия документов портала (portal/services/documents.py) ───────────────────────────────────
+msgid "Коммерческое предложение"
+msgstr "Tijorat taklifi"
+
+msgid "Договор"
+msgstr "Shartnoma"
+
+msgid "Счёт"
+msgstr "Hisob-faktura"
+
+msgid "Акт"
+msgstr "Dalolatnoma"
+
+msgid "Накладная"
+msgstr "Yuk xati"

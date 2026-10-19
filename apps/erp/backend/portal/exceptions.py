@@ -42,6 +42,17 @@ class PortalTooManyRequests(APIException):
         super().__init__(detail=detail, code=detail)
 
 
+class PortalDeliveryFailed(APIException):
+    """Письмо не ушло (сбой транспорта): 503. Отдельного кода в `ErrorCode` нет — `CONFLICT` до решения Q-FIX23-2."""
+
+    status_code = status.HTTP_503_SERVICE_UNAVAILABLE
+    default_detail = "CONFLICT"
+    default_code = "delivery_failed"
+
+    def __init__(self, detail="CONFLICT"):
+        super().__init__(detail=detail, code=detail)
+
+
 class PortalValidationError(APIException):
     status_code = status.HTTP_422_UNPROCESSABLE_ENTITY
     default_detail = "VALIDATION_ERROR"

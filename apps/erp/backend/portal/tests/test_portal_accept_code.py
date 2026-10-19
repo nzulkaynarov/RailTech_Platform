@@ -4,6 +4,7 @@
 `verify_code_and_accept`: TTL, лимит попыток, погашение и акцепт в одной транзакции. Мастер-кода нет.
 """
 
+import uuid
 from datetime import timedelta
 from decimal import Decimal
 
@@ -23,7 +24,9 @@ def sent_quote(db, client_company, client_contact):
     stage, _ = DealStage.objects.get_or_create(code=DealStageCode.QUOTE_SENT, defaults={"name": "КП отправлено"})
     sent, _ = QuoteStatus.objects.get_or_create(code=QuoteStatusCode.SENT, defaults={"name": "Отправлено"})
     deal = Deal.objects.create(company=client_company, contact=client_contact, title="Акцепт по коду", stage=stage)
-    return Quote.objects.create(deal=deal, version=1, status=sent, total_incl_vat=Decimal("1000000"))
+    return Quote.objects.create(
+        deal=deal, version=1, status=sent, total_incl_vat=Decimal("1000000"), public_access_token=uuid.uuid4().hex
+    )
 
 
 def _accept(portal_client, quote, code):

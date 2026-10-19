@@ -87,22 +87,9 @@ def record_quote_view(quote, request_ip: str = "") -> bool:
     return True
 
 
-def issue_acceptance_code(quote, request_ip: str = "") -> None:
-    """Mint + email a one-time acceptance code to the recipient resolved from the QUOTE'S deal.
-
-    Enumeration-neutral: the caller ALWAYS returns the same neutral response; this function never
-    signals whether a recipient exists. When the deal has no email recipient it simply no-ops.
-    Any prior unconsumed code for this quote is dropped so only ONE code is ever active (keeps the
-    per-code attempt cap meaningful).
-    """
+def _mint_acceptance_code(quote, email: str, request_ip: str = "") -> str:
+    """Выпустить одноразовый код (в базе только хеш) и погасить прежние неиспользованные — активен всегда один."""
     from crm.models import QuoteAcceptanceCode
-
-    from .quotes._shared import resolve_quote_recipient
-
-    recipient = resolve_quote_recipient(quote)
-    if recipient is None:
-        return  # no address on the deal → nothing to send (response stays neutral)
-    email, _name = recipient
 
     code = _generate_code()
     with transaction.atomic():
@@ -115,11 +102,47 @@ def issue_acceptance_code(quote, request_ip: str = "") -> None:
             expires_at=timezone.now() + timezone.timedelta(minutes=CODE_TTL_MINUTES),
             request_ip=request_ip or None,
         )
+    return code
 
-    _send_code_email(quote, email, code)
+
+def issue_acceptance_code(quote, request_ip: str = "", *, contact=None, send=None) -> bool:
+    """Mint + deliver a one-time acceptance code. Returns True when a code was minted and handed to delivery.
+
+    Public page (``contact`` is None): the recipient is resolved from the QUOTE'S deal, never from request input.
+    Enumeration-neutral: the caller ALWAYS returns the same neutral response; this function never signals whether a
+    recipient exists. When the deal has no email recipient it simply no-ops.
+
+    Cabinet (``contact`` is the portal session's contact, FIX-22): the code is issued FOR THAT CONTACT. By default it
+    goes to the contact's e-mail (``EmailLog``); ``send(code)`` replaces the delivery (the portal uses it for the
+    Telegram bot) and is called once, after the code is stored. A contact without an e-mail and without ``send``
+    gets nothing (returns False).
+
+    Any prior unconsumed code for this quote is dropped so only ONE code is ever active (keeps the per-code attempt
+    cap meaningful).
+    """
+    from .quotes._shared import resolve_quote_recipient
+
+    if contact is None:
+        recipient = resolve_quote_recipient(quote)
+        if recipient is None:
+            return False  # no address on the deal → nothing to send (response stays neutral)
+        email, _name = recipient
+        language = None
+    else:
+        email = (contact.email or "").strip()
+        language = contact.language
+        if not email and send is None:
+            return False
+
+    code = _mint_acceptance_code(quote, email, request_ip)
+    if send is not None:
+        send(code)
+    else:
+        _send_code_email(quote, email, code, language=language)
+    return True
 
 
-def _send_code_email(quote, email: str, code: str) -> None:
+def _send_code_email(quote, email: str, code: str, language=None) -> None:
     """Best-effort delivery of the acceptance code. A transport failure must NOT change the
     neutral public response, so it is logged and swallowed here (fail_silently)."""
     from notifications.emails import email_brand, send_templated_email
@@ -141,6 +164,7 @@ def _send_code_email(quote, email: str, code: str) -> None:
             to=[email],
             channel="transactional",
             fail_silently=True,
+            language=language,
         )
     except Exception:  # noqa: BLE001 — public endpoint: never surface a transport fault
         logger.exception("Acceptance-code email failed for quote %s", quote.pk)
