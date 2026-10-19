@@ -32,14 +32,19 @@
 | `POST /clients/handoff` | передача клиента из CRM | вход: `crm_client_id`, `crm_lead_id?`, `company{name, inn?, segment?, language}`, `contacts[{crm_contact_id, name, phone?, email?, telegram_user_id?, language, is_primary, preferred_channel}]`, `need{summary, product_interest[], attachments[]?}`, `owner{crm_user_id, name}`, `consent{given_at, version}`, `create_request: bool`, `invite{channels: [telegram, email]}`. Ответ: `erp_company_id`, `erp_request_id?`, `invite{sent_via[], cabinet_url}`. Идемпотентно по `crm_client_id` |
 | `PUT /contacts/{crm_contact_id}` | обновление контакта / Telegram-привязки | те же поля контакта |
 | `GET /companies/{erp_company_id}/summary` | карточка клиента для CRM | открытые сделки, последний документ, дебиторка, ближайшая поставка |
-| `GET /companies/{erp_company_id}/deals` | список сделок | `[{erp_deal_id, number, title, stage, amount, currency, next_step, updated_at}]` |
+| `GET /companies/{erp_company_id}/deals` | список сделок | `[{erp_deal_id, number, title, stage, amount, currency, next_step, updated_at}]`; `amount` — сумма последнего КП, отправленного клиенту, `null` — КП ещё не отправлялось (черновик не утекает) |
 | `GET /deals/{erp_deal_id}` | сделка | стадия, КП (версия, статус, публичная ссылка), договор, счета, поставки (проекция клиента), акты |
 | `GET /deals/{erp_deal_id}/documents` | документы сделки | `[{erp_document_id, kind, number, date, title, status}]` |
-| `GET /documents/{erp_document_id}/link` | ссылка на файл | подписанный URL на 10 минут; факт выдачи — в аудит ERP с `crm_*` контекстом |
+| `GET /documents/{erp_document_id}/link` | ссылка на файл | подписанный URL на 10 минут на публичный маршрут ERP (токен проверяется во вьюхе); выдача и скачивание — в журнал ERP с `crm_*` контекстом; без сопоставления компании, черновик или внутренний документ — 404 |
 | `GET /catalog/search?q=&mode=lead|client` | опубликованный каталог | в режиме `lead` без цен и остатков; в `client` — с ценой и статусом наличия |
 | `POST /users/provision` | сотрудник из CRM | `crm_user_id, email, name, role (admin|backoffice), permissions[]` (коды каталога ERP, `ErpPermission`; чужой код → 422); ответ `erp_user_id`; e-mail занят другим пользователем ERP (другой `crm_user_id` или нет сопоставления) → 409 `EMAIL_CONFLICT` |
 | `DELETE /users/{crm_user_id}/sessions` | отзыв сессий и входа | при снятии доступа в CRM: refresh и access-токены гаснут (прежний access → 401), вход закрыт; аудит `sso.revoke` |
 | `GET /health` | здоровье для «Состояния системы» CRM | версия, миграции применены, очередь жива |
+
+Передача (`/clients/handoff`): компания ищется по `crm_client_id`, затем по ИНН; сопоставление создаётся **до** сделки, поэтому
+`request.created(source=crm)` и `invite.sent` доходят до CRM; ИНН чужого `crm_client_id` — 409 `INN_CONFLICT`; согласие хранится
+в ERP как пришло. Стадия `stage` во всех ответах, событиях и инструментах MCP — одна функция сопоставления FSM ERP → шкала
+контракта (`DealStage`, 11 кодов). Статусы строк поставки: ERP — `assembling…delivered`, клиент — `accepted`/`disputed`.
 
 ## 3. События (ERP → CRM)
 
@@ -48,7 +53,8 @@
 асинхронно; повтор с тем же `X-Event-Id` — 200 без действий. Ретраи ERP: 1, 5, 30 мин, 2, 6, 24 ч; после — журнал
 с ручным повтором.
 
-Тело: `{event, occurred_at, erp_company_id, crm_client_id, deal{erp_deal_id, number, title, stage, amount, currency}, actor{type: system|staff|client, name?}, payload{...}}`.
+Тело: `{event, occurred_at, erp_company_id, crm_client_id, deal{erp_deal_id, number, title, stage, amount, currency}, actor{type: system|staff|client, name?}, payload{...}}`;
+`deal.amount` — сумма последнего КП, отправленного клиенту, или `null`.
 
 | Событие | payload | Что делает CRM |
 |---|---|---|
@@ -59,6 +65,7 @@
 | `contract.signed` | `by: client|company|both` | лента |
 | `invoice.issued` / `invoice.paid` / `invoice.overdue` | `number, amount, due_date, link` | бот: «счёт выставлен»; напоминание — только ERP-письмо, бот дублирует по политике |
 | `delivery.status_changed` / `delivery.eta_changed` | `line_summary, status, eta, tracking?` | бот: статус/сдвиг по политике «сообщать о сдвигах» |
+| `delivery.line_accepted` / `delivery.line_disputed` | `line_no, title, status, remark?, decided_at` (`actor.type=client`; при `disputed` замечание обязательно) | лента; при `disputed` — уведомление ответственному (FIX-37) |
 | `act.issued` / `act.accepted` / `act.returned` | `number, reason?` | бот: «акт ждёт подтверждения» |
 | `deal.won` / `deal.lost` | `amount, lost_reason?` | зеркало сделки → `won/lost`; стадия лида не меняется (CRM ADR-0022) |
 | `document.created` | `erp_document_id, kind, number` | индекс документов клиента в CRM (без файла) |

@@ -121,6 +121,22 @@ def test_envelope_schema_validation() -> None:
     assert envelope.actor.type == "system"
 
 
+def test_envelope_accepts_deal_without_sent_quote() -> None:
+    """FIX-29: `deal.amount` = null, пока КП клиенту не отправлялось (черновик не утекает в CRM)."""
+    data = _sample_envelope()
+    data["deal"]["amount"] = None
+    envelope = ErpEventEnvelope.model_validate(data)
+    assert envelope.deal is not None
+    assert envelope.deal.amount is None
+
+
+def test_deal_amount_helper_keeps_none() -> None:
+    from app.services.erp_events import _deal_amount
+
+    assert _deal_amount(None) is None
+    assert _deal_amount("15000000.00") == Decimal("15000000.00")
+
+
 @pytest.mark.parametrize(
     ("event", "payload_dict"),
     [

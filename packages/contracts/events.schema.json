@@ -27,7 +27,8 @@
     { "if": { "properties": { "event": { "enum": ["act.issued", "act.accepted", "act.returned"] } } }, "then": { "required": ["deal"], "properties": { "payload": { "$ref": "#/$defs/ActEvent" } } } },
     { "if": { "properties": { "event": { "enum": ["deal.won", "deal.lost"] } } }, "then": { "required": ["deal"], "properties": { "payload": { "$ref": "#/$defs/DealOutcome" } } } },
     { "if": { "properties": { "event": { "const": "document.created" } } }, "then": { "properties": { "payload": { "$ref": "#/$defs/DocumentCreated" } } } },
-    { "if": { "properties": { "event": { "const": "invite.sent" } } }, "then": { "properties": { "payload": { "$ref": "#/$defs/InviteSent" } } } }
+    { "if": { "properties": { "event": { "const": "invite.sent" } } }, "then": { "properties": { "payload": { "$ref": "#/$defs/InviteSent" } } } },
+    { "if": { "properties": { "event": { "enum": ["delivery.line_accepted", "delivery.line_disputed"] } } }, "then": { "required": ["deal"], "properties": { "payload": { "$ref": "#/$defs/DeliveryLineDecision" }, "actor": { "properties": { "type": { "const": "client" } } } } } }
   ],
   "$defs": {
     "EventType": {
@@ -51,7 +52,9 @@
         "deal.won",
         "deal.lost",
         "document.created",
-        "invite.sent"
+        "invite.sent",
+        "delivery.line_accepted",
+        "delivery.line_disputed"
       ]
     },
     "Amount": { "type": "string", "pattern": "^-?\\d+\\.\\d{2}$" },
@@ -68,7 +71,10 @@
         "number": { "type": "string" },
         "title": { "type": "string" },
         "stage": { "$ref": "#/$defs/DealStage" },
-        "amount": { "$ref": "#/$defs/Amount" },
+        "amount": {
+          "description": "Сумма последней версии КП, отправленной клиенту; null — КП клиенту ещё не отправлялось (черновики и КП на согласовании не учитываются)",
+          "oneOf": [{ "$ref": "#/$defs/Amount" }, { "type": "null" }]
+        },
         "currency": { "$ref": "#/$defs/Currency" }
       },
       "additionalProperties": false
@@ -161,6 +167,21 @@
         "tracking": { "type": ["string", "null"] }
       },
       "additionalProperties": false
+    },
+    "DeliveryLineDecision": {
+      "type": "object",
+      "description": "Решение клиента по строке поставки в Cabinet (FIX-22): принял или оспорил с замечанием",
+      "required": ["line_no", "title", "status", "decided_at"],
+      "properties": {
+        "line_no": { "type": "integer", "minimum": 1 },
+        "title": { "type": "string" },
+        "status": { "type": "string", "enum": ["accepted", "disputed"] },
+        "remark": { "type": ["string", "null"], "maxLength": 2000, "description": "Замечание клиента; обязательно при disputed" },
+        "decided_at": { "type": "string", "format": "date-time" }
+      },
+      "additionalProperties": false,
+      "if": { "properties": { "status": { "const": "disputed" } } },
+      "then": { "required": ["remark"], "properties": { "remark": { "type": "string", "minLength": 1 } } }
     },
     "ActEvent": {
       "type": "object",

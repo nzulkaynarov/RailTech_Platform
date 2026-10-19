@@ -40,6 +40,11 @@ DOC_KIND_MAP: dict[str, str] = {
 }
 
 
+def _deal_amount(amount: str | None) -> Decimal | None:
+    """Сумма сделки из события: None — КП клиенту ещё не отправлялось (контракт событий, FIX-29)."""
+    return Decimal(amount) if amount is not None else None
+
+
 def verify_signature(secret: str, raw_body: bytes, signature_header: str | None) -> bool:
     """Проверка HMAC-SHA256 подписи вебхука: X-Signature: sha256=<hex>."""
     if not secret or not signature_header:
@@ -164,7 +169,7 @@ class ErpEventsService:
                         client_id=client.id,
                         lead_id=lead.id if lead else None,
                         title=envelope.deal.title,
-                        amount=Decimal(envelope.deal.amount),
+                        amount=_deal_amount(envelope.deal.amount),
                         currency=envelope.deal.currency,
                         stage="open",
                         external_stage=envelope.deal.stage,
@@ -175,7 +180,8 @@ class ErpEventsService:
                 else:
                     deal.external_stage = envelope.deal.stage
                     deal.title = envelope.deal.title
-                    deal.amount = Decimal(envelope.deal.amount)
+                    if envelope.deal.amount is not None:
+                        deal.amount = Decimal(envelope.deal.amount)
                     deal.currency = envelope.deal.currency
                     if deal.client_id is None:
                         deal.client_id = client.id
@@ -249,7 +255,7 @@ class ErpEventsService:
             return note, None, None, None
 
         if ev == "deal.won":
-            amt = p.get("amount", env.deal.amount if env.deal else "")
+            amt = p.get("amount", env.deal.amount if env.deal else "") or ""
             curr = p.get("currency", env.deal.currency if env.deal else "")
             if deal:
                 current_st = (
