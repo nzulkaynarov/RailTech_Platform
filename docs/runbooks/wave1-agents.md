@@ -37,23 +37,29 @@
 | venv/node_modules приложений | **нет** (`apps/crm/backend/.venv`, `apps/erp/.venv-tools`, `*/node_modules`) | каждая сессия в своём worktree: `make -C apps/<app> install` первым шагом |
 | `gh` | авторизован как `nzulkaynarov` | агенты открывают PR сами под учёткой владельца |
 
-Каждой сессии — свой git worktree (общий `.git`, свой рабочий каталог), чтобы агенты не мешали друг другу:
+Каждой задаче — свой git worktree (общий `.git`, свой рабочий каталог), чтобы агенты не мешали друг другу.
+**Worktree живут только в `.claude/worktrees/<задача>`** (ORCHESTRATOR §4.1; с 2026-10-19 — вместо `../rt-wt`,
+где шла волна 1: каталог вне репозитория требовал лишних разрешений и не был виден инструментам Claude Code):
 
 ```bash
-cd /Users/znz/Downloads/IT-projects/RailTech_Platform
+cd "$(git rev-parse --show-toplevel)"
 git fetch origin && git worktree prune
-git worktree add ../rt-wt/fix-10 -b fix/all-10-sso-contract        origin/main
-git worktree add ../rt-wt/fix-12 -b fix/all-12-mcp-context         origin/main
-git worktree add ../rt-wt/fix-13 -b fix/erp-13-no-buyer-accounts   origin/main
-git worktree add ../rt-wt/fix-14 -b fix/erp-14-portal-login        origin/main
+git worktree add .claude/worktrees/fix-10 -b fix/all-10-sso-contract        origin/main
+git worktree add .claude/worktrees/fix-12 -b fix/all-12-mcp-context         origin/main
+git worktree add .claude/worktrees/fix-13 -b fix/erp-13-no-buyer-accounts   origin/main
+git worktree add .claude/worktrees/fix-14 -b fix/erp-14-portal-login        origin/main
 # после слияния FIX-10 и FIX-14 соответственно:
-git worktree add ../rt-wt/fix-11 -b fix/all-11-platform-access     origin/main
-git worktree add ../rt-wt/fix-15 -b fix/erp-15-portal-limits       origin/main
+git worktree add .claude/worktrees/fix-11 -b fix/all-11-platform-access     origin/main
+git worktree add .claude/worktrees/fix-15 -b fix/erp-15-portal-limits       origin/main
+# в каждом: make -C apps/<app> install; cd packages/contracts && pnpm install --frozen-lockfile
 ```
 
-Запуск сессии: `cd ../rt-wt/fix-10 && claude --model sonnet`, первым сообщением — промпт из §5.
+Запуск: **одна сессия лида** (Opus) одним промптом запускает исполнителей (Sonnet) субагентами — по одному на задачу,
+каждый в своём worktree (`Agent` с рабочим каталогом worktree или `isolation: worktree`), с промптом из §5.
+Отдельные терминалы на задачу больше не открываем (ORCHESTRATOR §4.1).
 Тесты ERP в worktree: `ERP_TEST_NS=fix10 make -C apps/erp test-backend args="accounts/tests/test_sso.py"` — свой
-набор контейнеров на сессию (имя = номер FIX). Тесты CRM (`make -C apps/crm check`) Postgres не требуют.
+набор контейнеров на задачу (имя = имя worktree). Тесты CRM (`make -C apps/crm check`) Postgres не требуют.
+После слияния PR: `git worktree remove .claude/worktrees/<задача>` и `git branch -d <ветка>`.
 Стенд `make up` живёт только в основном каталоге и не нужен для юнит-тестов; он нужен для проверки глазами
 (FIX-11: переключатель в шапке; FIX-14: письмо magic-link в `EmailLog`).
 
@@ -302,7 +308,8 @@ PR: «FIX-15: лимиты по сессии портала, CSRF через JSO
 
 ## 6. Цикл оркестратора (S0)
 
-1. Создать worktrees (§2), открыть 4 терминала, вставить преамбулу + промпт. Записать в журнал PROGRESS строку
+1. Создать worktrees (§2) и поставить зависимости; одной сессией лида запустить исполнителей субагентами с
+   преамбулой + промптом (§5). Записать в журнал PROGRESS строку
    «волна 1 запущена: S1–S4».
 2. CI не опрашивать: результат прогона сообщает владелец. Красный CI — вернуть агенту одной строкой («CI job X
    красный: воспроизведи `make ci-local <задание>` и чини локально»).
