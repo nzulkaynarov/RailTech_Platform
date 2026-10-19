@@ -21,6 +21,9 @@ from .services import webhooks
 
 logger = logging.getLogger(__name__)
 
+#: Допустимые источники запроса в `request.created` (`events.schema.json`, `RequestCreated.source`).
+REQUEST_SOURCES = ("crm", "cabinet", "erp")
+
 
 # ─── Deal Signals ─────────────────────────────────────────────────────────────
 
@@ -46,12 +49,15 @@ def handle_deal_post_save(sender: Any, instance: Any, created: bool, **kwargs: A
             return
 
         if created:
-            source = "cabinet" if getattr(instance, "client_id", None) else "erp"
+            # Откуда запрос, решает тот, кто его создал: портал ставит `request_origin` (FIX-23), и только он даёт
+            # `cabinet`. Контакт у сделки ничего не доказывает — его ставит и сотрудник; без признака — `erp`.
+            origin = getattr(instance, "request_origin", None) or {}
+            source = origin.get("source") if origin.get("source") in REQUEST_SOURCES else "erp"
             webhooks.emit_request_created(
                 deal=instance,
                 source=source,
                 erp_request_id=getattr(instance, "portal_request_id", None) or instance.id,
-                summary=instance.title or f"Заявка #{instance.id}",
+                summary=origin.get("summary") or instance.title or f"Заявка #{instance.id}",
             )
             return
 

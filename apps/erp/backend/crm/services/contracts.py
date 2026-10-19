@@ -249,11 +249,22 @@ def _render_contract_pdf(contract) -> None:
 def viewer_can_sign_client(user, contract) -> bool:
     """Подпись договора стороной клиента изнутри ERP невозможна (FIX-13): клиентских аккаунтов нет.
 
-    Клиент подписывает в портале; пока портал не вызывает `sign_contract_by_client` (FIX-22), подсказка
-    `viewer_can_sign_client` для сериализатора и хаба сделки всегда ложна. Единый источник и для
-    сервиса, и для подсказки — чтобы UI не разошёлся с тем, что реально разрешено.
+    Клиент подписывает в портале: `sign_contract_by_client(…, portal_contact=…)` (FIX-22) — отдельный путь для
+    контакта с `can_act`, подсказка `viewer_can_sign_client` для сериализатора и хаба сделки (зритель — сотрудник
+    ERP) остаётся ложной. Единый источник и для сервиса, и для подсказки — чтобы UI не разошёлся с тем, что
+    реально разрешено.
     """
     return False
+
+
+def portal_contact_may_sign(portal_contact, contract) -> bool:
+    """Контакт портала подписывает договор СВОЕЙ компании и только с правом `can_act` (инвариант портала)."""
+    return bool(
+        portal_contact is not None
+        and portal_contact.can_act
+        and portal_contact.company_id is not None
+        and portal_contact.company_id == contract.deal.company_id
+    )
 
 
 def viewer_can_sign_manager(user, contract) -> bool:
@@ -286,7 +297,9 @@ def _rerender_pdf_after_signature(contract) -> None:
 @transaction.atomic
 def sign_contract_by_client(
     contract_id: int,
-    client_user: CustomUser,
+    client_user: Optional[CustomUser] = None,
+    *,
+    portal_contact=None,
 ) -> Tuple[Optional["Contract"], Optional[str]]:  # noqa: F821
     """Click-to-sign by client. MANUAL MODE — to be replaced by E-IMZO/DocuSign.
     See memory `tech_debt_payment_esign.md`.
@@ -295,16 +308,27 @@ def sign_contract_by_client(
     Django поднимает `TransactionManagementError` — покупатель получал 500 и НЕ МОГ подписать
     договор (проход глазами 03-08). Близнец `sign_contract_by_manager` декоратор имел, этот —
     нет: две функции одного двустороннего документа разошлись.
+
+    Субъект подписи — один из двух. `client_user` — администратор платформы (сервисный вызов). `portal_contact`
+    (FIX-22) — контакт клиента из портала: клиентских пользователей в ERP нет, поэтому `client_signer` остаётся
+    пустым, а кто подписал, пишется в журнал (`contact_id`). Контакт подписывает договор своей компании, с
+    `can_act`, и только из «Ожидает подписи клиента» — черновик клиенту не показывается и не подписывается.
     """
     from django.utils import timezone
 
     from ..models import Contract
 
     contract = Contract.objects.select_for_update().select_related("deal").get(pk=contract_id)
-    # Подпись клиента — только администратором (сервисный вызов); портал подключит FIX-22.
-    if not (getattr(client_user, "is_superuser", False) or viewer_can_sign_client(client_user, contract)):
-        return None, "MEMBER_REQUIRED_FOR_ACTION"
-    if contract.status_code not in {ContractStatusCode.DRAFT, ContractStatusCode.PENDING_CLIENT}:
+    if portal_contact is not None:
+        if not portal_contact_may_sign(portal_contact, contract):
+            return None, "MEMBER_REQUIRED_FOR_ACTION"
+        allowed_statuses = {ContractStatusCode.PENDING_CLIENT}
+    else:
+        # Подпись клиента без контакта портала — только администратором (сервисный вызов).
+        if not (getattr(client_user, "is_superuser", False) or viewer_can_sign_client(client_user, contract)):
+            return None, "MEMBER_REQUIRED_FOR_ACTION"
+        allowed_statuses = {ContractStatusCode.DRAFT, ContractStatusCode.PENDING_CLIENT}
+    if contract.status_code not in allowed_statuses:
         return None, "CONTRACT_CLIENT_SIGN_NOT_ALLOWED"
     contract.client_signer = client_user
     contract.client_signed_at = timezone.now()
@@ -312,11 +336,14 @@ def sign_contract_by_client(
         ContractStatusCode.SIGNED if contract.manager_signed_at else ContractStatusCode.PENDING_MANAGER
     )
     contract.save(update_fields=["client_signer", "client_signed_at", "status", "updated_at"])
+    event_params = {"number": contract.number, "deal_id": contract.deal_id, "manual": True}
+    if portal_contact is not None:
+        event_params.update({"channel": "portal", "contact_id": portal_contact.pk})
     ActivityLog.objects.create(
         action="[MANUAL_MODE] Подписан договор (сторона клиента)",
         detail=f"Договор {contract.number} / сделка #{contract.deal_id}",
         event_code="contract.signed_client",
-        event_params={"number": contract.number, "deal_id": contract.deal_id, "manual": True},
+        event_params=event_params,
         user=client_user,
         level="INFO",
         deal=contract.deal,

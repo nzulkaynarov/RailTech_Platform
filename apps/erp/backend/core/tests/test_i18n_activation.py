@@ -28,7 +28,7 @@ def test_locale_middleware_is_installed():
 
 
 def test_supported_languages_come_from_settings():
-    assert supported_languages() == {"ru", "en"}
+    assert supported_languages() == {"ru", "en", "uz"}
     assert settings.LANGUAGE_CODE == "ru"
 
 

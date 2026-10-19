@@ -2286,6 +2286,7 @@
     "OFFER_OF_ANOTHER_COMPANY": "The offer belongs to another company",
     "PLATFORM_OPERATOR_REQUIRED": "Only a platform operator can do this",
     "COMPANY_ARCHIVED": "The company is out of circulation — work cannot be assigned to it",
+    "INVALID_CHANNEL": "Invitations are delivered by e-mail only: the Telegram bot belongs to the CRM, the ERP does not write to Telegram. Choose the e-mail channel",
     "COMPANY_HAS_HISTORY": "The company has history — it cannot be deleted. Remove it from circulation instead: the picker and directories forget it while documents stay",
     "COMPANY_IN_USE": "Data still references this company — it cannot be deleted; remove it from circulation instead",
     "COMPANY_ALREADY_ARCHIVED": "The company is already out of circulation",
@@ -2896,6 +2897,22 @@
         "detail": "Act {{number}} for deal #{{deal_id}}: the customer was reminded"
       }
     },
+    "document": {
+      "downloaded_by_client": {
+        "title": "Client downloaded a document",
+        "detail": "{{contact_name}} downloaded document {{number}} ({{kind}})"
+      }
+    },
+    "delivery": {
+      "line_accepted": {
+        "title": "Delivery accepted by the client",
+        "detail": "Line {{line_no}} on deal #{{deal_id}} accepted"
+      },
+      "line_disputed": {
+        "title": "Delivery disputed by the client",
+        "detail": "Line {{line_no}} on deal #{{deal_id}}: {{reason}}"
+      }
+    },
     "company": {
       "merged": {
         "title": "Duplicate company merged",
@@ -3249,6 +3266,10 @@
     "fulfillment.status_changed": {
       "title": "Shipment status changed",
       "message": "Deal #{{deal_id}}: shipment status is now {{status_code}}"
+    },
+    "delivery.line_disputed": {
+      "title": "Client disputed a delivery line",
+      "message": "Deal #{{deal_id}}, line {{line_no}} \"{{title}}\": {{reason}}"
     },
     "fulfillment.overdue": {
       "title": "Delivery overdue",

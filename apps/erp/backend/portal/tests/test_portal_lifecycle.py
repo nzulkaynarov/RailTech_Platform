@@ -8,6 +8,8 @@ Invoice issued -> Act issued -> Client accepts Act ->
 Catalog browsing (sanitized) -> Company profile edit -> Team invitation.
 """
 
+import datetime
+import uuid
 from decimal import Decimal
 
 import pytest
@@ -104,7 +106,7 @@ class TestPortalEndToEndLifecycle:
         detail_data = detail_resp.data
         assert len(detail_data["lines"]) == 2
         assert detail_data["lines"][0]["text"] == "Труба 89х4 ст20 ГОСТ 8732"
-        assert detail_data["lines"][0]["quantity"] == "150.000"
+        assert detail_data["lines"][0]["quantity"] == "150"
         assert len(detail_data["attachments"]) == 1
         assert detail_data["attachments"][0]["upload_id"] == upload_id
 
@@ -121,6 +123,7 @@ class TestPortalEndToEndLifecycle:
 
         curr_uzs, _ = Currency.objects.get_or_create(code="UZS", defaults={"name": "Узбекский сум", "symbol": "so'm"})
         quote = Quote.objects.create(
+            public_access_token=uuid.uuid4().hex,
             deal=deal,
             version=1,
             status=sent_status,
@@ -206,6 +209,7 @@ class TestPortalEndToEndLifecycle:
             code=InvoiceStatusCode.ISSUED, defaults={"name": "Выставлен"}
         )
         invoice = Invoice.objects.create(
+            issued_at=datetime.date.today(),
             deal=deal,
             contract=contract,
             number="INV-2026-PORTAL-01",
@@ -271,7 +275,9 @@ class TestPortalEndToEndLifecycle:
                 "name": "Dilshod Teammate",
                 "email": "dilshod.team@example.uz",
                 "phone": "+998901112233",
+                "language": "ru",
                 "can_act": True,
+                "channels": ["email"],
             },
             format="json",
         )
