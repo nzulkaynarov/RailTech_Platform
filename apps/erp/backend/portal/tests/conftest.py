@@ -13,6 +13,7 @@ from django.conf import settings
 from django.utils import timezone
 from parties.models import Company, CompanyType, Contact
 from portal.models import PortalSession
+from portal.services.tokens import hash_token
 from rest_framework.test import APIClient
 
 from core.tenant import own_company
@@ -65,6 +66,20 @@ def issue_test_acceptance_code(quote, email: str, code: str = "481516") -> str:
         expires_at=timezone.now() + timedelta(minutes=CODE_TTL_MINUTES),
     )
     return code
+
+
+def make_portal_session(contact, company, auth_method: str) -> PortalSession:
+    """Сессия портала; в базе только хеш токена, сырой — в `session.raw_token` (для cookie теста)."""
+    raw_token = secrets.token_hex(32)
+    session = PortalSession.objects.create(
+        token_hash=hash_token(raw_token),
+        contact=contact,
+        company=company,
+        auth_method=auth_method,
+        expires_at=timezone.now() + timedelta(days=14),
+    )
+    session.raw_token = raw_token
+    return session
 
 
 @pytest.fixture
@@ -158,61 +173,40 @@ def other_contact(db, other_company):
 
 @pytest.fixture
 def client_session(db, client_contact, client_company):
-    token = secrets.token_hex(32)
-    return PortalSession.objects.create(
-        token=token,
-        contact=client_contact,
-        company=client_company,
-        auth_method="telegram",
-        expires_at=timezone.now() + timedelta(days=14),
-    )
+    return make_portal_session(client_contact, client_company, "telegram")
 
 
 @pytest.fixture
 def readonly_session(db, readonly_contact, client_company):
-    token = secrets.token_hex(32)
-    return PortalSession.objects.create(
-        token=token,
-        contact=readonly_contact,
-        company=client_company,
-        auth_method="magic_link",
-        expires_at=timezone.now() + timedelta(days=14),
-    )
+    return make_portal_session(readonly_contact, client_company, "magic_link")
 
 
 @pytest.fixture
 def other_session(db, other_contact, other_company):
-    token = secrets.token_hex(32)
-    return PortalSession.objects.create(
-        token=token,
-        contact=other_contact,
-        company=other_company,
-        auth_method="telegram",
-        expires_at=timezone.now() + timedelta(days=14),
-    )
+    return make_portal_session(other_contact, other_company, "telegram")
 
 
 @pytest.fixture
 def portal_client(client_session):
     client = APIClient()
-    client.cookies[settings.PORTAL_SESSION_COOKIE_NAME] = client_session.token
-    client.credentials(HTTP_X_PORTAL_SESSION=client_session.token)
+    client.cookies[settings.PORTAL_SESSION_COOKIE_NAME] = client_session.raw_token
+    client.credentials(HTTP_X_PORTAL_SESSION=client_session.raw_token)
     return client
 
 
 @pytest.fixture
 def readonly_portal_client(readonly_session):
     client = APIClient()
-    client.cookies[settings.PORTAL_SESSION_COOKIE_NAME] = readonly_session.token
-    client.credentials(HTTP_X_PORTAL_SESSION=readonly_session.token)
+    client.cookies[settings.PORTAL_SESSION_COOKIE_NAME] = readonly_session.raw_token
+    client.credentials(HTTP_X_PORTAL_SESSION=readonly_session.raw_token)
     return client
 
 
 @pytest.fixture
 def other_portal_client(other_session):
     client = APIClient()
-    client.cookies[settings.PORTAL_SESSION_COOKIE_NAME] = other_session.token
-    client.credentials(HTTP_X_PORTAL_SESSION=other_session.token)
+    client.cookies[settings.PORTAL_SESSION_COOKIE_NAME] = other_session.raw_token
+    client.credentials(HTTP_X_PORTAL_SESSION=other_session.raw_token)
     return client
 
 

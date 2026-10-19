@@ -159,7 +159,9 @@ def test_client_handoff_success_and_idempotency(auth_client):
     data = resp.json()
     assert "erp_company_id" in data
     assert data["erp_request_id"] is not None
-    assert "cabinet_url" in data["invite"]
+    # FIX-14: в CRM уходит адрес кабинета без токена — рабочая ссылка входа есть только в письме клиента
+    assert data["invite"]["cabinet_url"] == "http://cabinet.localhost"
+    assert "/auth/magic/" not in resp.content.decode()
     assert data["invite"]["sent_via"] == ["email", "telegram"]
 
     company_id = data["erp_company_id"]

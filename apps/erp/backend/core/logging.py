@@ -20,6 +20,7 @@ from __future__ import annotations
 import datetime as _dt
 import json
 import logging
+import re
 import uuid
 from contextvars import ContextVar
 
@@ -33,6 +34,21 @@ class RequestIDFilter(logging.Filter):
 
     def filter(self, record: logging.LogRecord) -> bool:
         record.request_id = request_id_var.get()
+        return True
+
+
+# Ссылка входа в портал несёт токен в пути; `django.request` и access-логи пишут путь целиком (FIX-14, P-9).
+_PORTAL_LOGIN_TOKEN_RE = re.compile(r"(/auth/magic/)[^/?#&\s\"'<>]+")
+
+
+class RedactPortalTokenFilter(logging.Filter):
+    """Заменяет токен magic-link в пути запроса на [REDACTED] в любой записи журнала."""
+
+    def filter(self, record: logging.LogRecord) -> bool:
+        message = record.getMessage()
+        if "/auth/magic/" in message:
+            record.msg = _PORTAL_LOGIN_TOKEN_RE.sub(r"\1[REDACTED]", message)
+            record.args = ()
         return True
 
 

@@ -695,10 +695,7 @@
     },
     "invite": {
       "successEmail": "Invitation sent to {{email}}",
-      "success": "Invitation successfully generated",
-      "successLink": "Invitation link generated",
-      "copyLink": "Copy link",
-      "linkCopied": "Link copied to clipboard"
+      "success": "Invitation successfully generated"
     },
     "dialog": {
       "title": "New client",

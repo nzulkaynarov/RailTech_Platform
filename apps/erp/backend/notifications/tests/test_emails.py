@@ -142,7 +142,15 @@ TEMPLATE_CASES = [
             "contact_name": "Алиса",
             "company_name": "Beta LLC",
             "invite_url": "https://cabinet.example.com/auth/magic/tok",
-            "telegram_url": "https://t.me/test_bot?start=invite_tok",
+            "telegram_url": "https://t.me/test_bot",
+        },
+    ),
+    (
+        "portal_magic_link",
+        {
+            "contact_name": "Алиса",
+            "company_name": "Beta LLC",
+            "login_url": "https://cabinet.example.com/auth/magic/tok",
         },
     ),
 ]
@@ -213,6 +221,23 @@ class TemplatedEmailRenderingTests(TestCase):
                 self.assertEqual(log.status, EmailLog.STATUS_SENT)
                 self.assertEqual(log.template, template)
                 self.assertEqual(log.to_emails, ["recipient@example.com"])
+
+    def test_portal_login_token_is_redacted_in_email_log(self):
+        """FIX-14 (P-9): токен в пути `/auth/magic/<token>` не попадает в EmailLog, а письмо несёт ссылку целиком."""
+        mail.outbox = []
+        ctx = {
+            "contact_name": "Алиса",
+            "company_name": "Beta LLC",
+            "login_url": "https://c.example.com/auth/magic/sEcReT-tok_1",
+        }
+        for template, url_key in (("portal_magic_link", "login_url"), ("portal_invitation", "invite_url")):
+            with self.subTest(template=template):
+                send_templated_email(template, {**ctx, url_key: ctx["login_url"]}, to=["a@example.com"])
+                self.assertIn("/auth/magic/sEcReT-tok_1", mail.outbox[-1].body)
+                log = EmailLog.objects.filter(template=template).latest("id")
+                for body in (log.body_text, log.body_html):
+                    self.assertNotIn("sEcReT-tok_1", body)
+                    self.assertIn("/auth/magic/[REDACTED]", body)
 
     def test_unknown_channel_raises(self):
         with self.assertRaises(ValueError):

@@ -129,15 +129,14 @@ def process_client_handoff(data: Dict[str, Any]) -> Tuple[Dict[str, Any], bool]:
     invite_channels = data.get("invite", {}).get("channels", ["email"])
     effective_channel = "both" if len(invite_channels) > 1 else (invite_channels[0] if invite_channels else "email")
 
+    # В CRM уходит адрес кабинета без токена: рабочая ссылка входа есть только в письме клиента (FIX-14).
     cabinet_url = getattr(settings, "CABINET_URL", "http://cabinet.localhost")
     if primary_contact:
-        invite_res, err = invite_contact_to_portal(
+        invite_contact_to_portal(
             contact=primary_contact,
             channel=effective_channel,
             language=primary_contact.language,
         )
-        if invite_res and invite_res.get("invite_url"):
-            cabinet_url = invite_res["invite_url"]
 
     # Сохраняем маппинг CRM клиента
     CrmClientMapping.objects.create(

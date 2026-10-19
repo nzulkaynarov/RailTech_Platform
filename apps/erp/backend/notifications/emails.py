@@ -285,10 +285,12 @@ def send_templated_email(
 # account before the legitimate click (OWASP A09).
 # Prefix handles `?`, raw `&`, AND the HTML-escaped `&amp;` (the html_body renders links escaped).
 _SECRET_QS_RE = re.compile(r"((?:\?|&amp;|&)(?:token|uid|code)=)[^&\s\"'<>]+", re.IGNORECASE)
+# FIX-14 (P-9): ссылка входа в портал несёт токен в пути (`/auth/magic/<token>`), не в query.
+_SECRET_PATH_RE = re.compile(r"(/auth/magic/)[^/?#&\s\"'<>]+")
 
 
 def _redact_secrets(body: Optional[str]) -> str:
-    return _SECRET_QS_RE.sub(r"\1[REDACTED]", body or "")
+    return _SECRET_PATH_RE.sub(r"\1[REDACTED]", _SECRET_QS_RE.sub(r"\1[REDACTED]", body or ""))
 
 
 def _record_log(

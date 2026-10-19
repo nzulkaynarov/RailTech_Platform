@@ -8347,8 +8347,6 @@ export interface components {
             contact_id: number;
             channel: string;
             email_sent: boolean;
-            invite_url: string;
-            telegram_url: string | null;
             /** Format: date-time */
             invited_at: string;
         };
