@@ -770,10 +770,11 @@ components:
         title:
           type: string
         quantity:
-          type: string
-          description: Количество как десятичная строка
+          type: [string, 'null']
+          description: Количество как десятичная строка; null — ERP не хранит количество поставки (не выдумывается)
         unit:
-          type: string
+          type: [string, 'null']
+          description: Единица; null — нет данных
         status:
           $ref: '#/components/schemas/DeliveryStatus'
         eta:
