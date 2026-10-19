@@ -7,7 +7,9 @@ import respx
 from app.config import Settings
 from app.domain.errors import ConflictError, Reason, UpstreamUnavailableError, ValidationFailedError
 from app.integrations.erp_users import HttpxErpUsersClient, ProvisionPayload
+from app.models.leads import Setting
 from app.security.secrets_store import SecretsStore
+from app.services.settings import SettingsService
 
 BASE = "https://erp.internal"
 PROVISION = f"{BASE}/api/integration/v1/users/provision"
@@ -155,7 +157,7 @@ async def test_revoke_unexpected_status_is_transient() -> None:
 
 
 @pytest.mark.asyncio
-async def test_not_configured_connector_is_a_permanent_conflict() -> None:
+async def test_not_configured_connector_raises_conflict_with_reason() -> None:
     client = HttpxErpUsersClient(_Store(), Settings(erp_base_url="", erp_service_token=""))
     for call in (client.provision_user(PAYLOAD), client.revoke_sessions(42)):
         with pytest.raises(ConflictError) as exc_info:
@@ -170,3 +172,45 @@ async def test_invalid_base_url_is_rejected_before_any_request() -> None:
         with pytest.raises(ValidationFailedError):
             await _client(base_url="ftp://erp.internal").revoke_sessions(42)
     assert not route.called
+
+
+class _Rows:
+    """Строки таблицы `settings`, которые «сохранил» админ в другом процессе (в API)."""
+
+    def __init__(self) -> None:
+        self.rows: list[Setting] = []
+
+    def __call__(self) -> "_Rows":
+        return self
+
+    async def __aenter__(self) -> "_Rows":
+        return self
+
+    async def __aexit__(self, *_: object) -> None:
+        return None
+
+    async def scalars(self, _statement: object) -> "_Rows":
+        return self
+
+    def all(self) -> list[Setting]:
+        return list(self.rows)
+
+
+@pytest.mark.asyncio
+async def test_connector_saved_just_now_is_visible_despite_warm_settings_cache() -> None:
+    """P1 (FIX-11b): воркер прогрел TTL-кэш настроек до сохранения коннектора в API; выдача доступа
+    в ту же секунду не должна упереться в устаревшее «коннектор не настроен»."""
+    db = _Rows()
+    settings = SettingsService(db, ttl_s=30.0)  # type: ignore[arg-type]
+    assert (await settings.get()).integrations.erp_base_url == ""  # кэш прогрет: адреса нет
+    db.rows = [Setting(key="integrations", value={"erp_base_url": BASE})]  # админ сохранил адрес
+
+    client = HttpxErpUsersClient(
+        _Store(), Settings(erp_base_url="", erp_service_token="test-token"), settings
+    )
+    with respx.mock(assert_all_called=True) as mock:
+        mock.post(PROVISION).respond(201, json={"erp_user_id": 7, "crm_user_id": 42})
+        assert await client.provision_user(PAYLOAD) == 7
+        db.rows = []  # адрес убрали снова: следующий вызов видит и это, а не кэш
+        with pytest.raises(ConflictError):
+            await client.revoke_sessions(42)

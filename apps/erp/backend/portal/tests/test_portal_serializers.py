@@ -13,7 +13,7 @@ from decimal import Decimal
 
 import pytest
 from portal.models import PortalRequestLine
-from portal.projections import annotate_request_sources, delivery_lines
+from portal.projections import annotate_request_sources
 from portal.serializers import (
     ActSerializer,
     ClientRequestSerializer,
@@ -31,9 +31,11 @@ from portal.serializers import (
 from portal.tests.contract_support import check_response, component
 from portal.tests.contract_world import make_quote
 from rest_framework.renderers import JSONRenderer
+from sales.models import DeliveryLine
+from sales.services.delivery_lines import FULFILLMENT_TO_LINE_STATUS, sync_delivery_lines
 
 from crm.constants import ContractStatusCode, FulfillmentStatusCode, QuoteStatusCode
-from crm.models import Act, ActivityLog, Deal, Fulfillment, FulfillmentStatus, Invoice, Quote, QuoteItem, QuoteStatus
+from crm.models import Act, ActivityLog, Deal, Fulfillment, Invoice, Quote, QuoteItem, QuoteStatus
 
 pytestmark = pytest.mark.django_db
 
@@ -240,14 +242,21 @@ def test_quote_items_of_a_catalog_product_use_its_name_and_unit(contract_world):
         ("signed_by_client", "signed_by_client"),
         ("signed_by_company", "signed_by_company"),
         ("signed", "signed"),
-        ("cancelled", "cancelled"),
-        ("draft", "sent"),  # черновик клиенту не должен показываться — правило FIX-22; форма остаётся валидной
     ],
 )
 def test_contract_status_mapping(contract_world, key, expected):
     data = ContractSerializer(contract_world["contracts"][key]).data
     assert data["status"] == expected
     assert_matches_contract(data, "Contract")
+
+
+@pytest.mark.parametrize("key", ["draft", "cancelled"])
+def test_contract_status_does_not_dress_hidden_contracts_up_as_sent(contract_world, key):
+    """Черновик и отменённый договор клиенту не показываются: карта статусов не выдаёт их ни за `sent`, ни за что-то ещё."""
+    from portal.projections import contract_status
+
+    with pytest.raises(ValueError):
+        contract_status(contract_world["contracts"][key])
 
 
 def test_contract_fields_and_signature_dates(contract_world):
@@ -272,11 +281,13 @@ def test_contract_document_id_is_its_entry_in_documents_not_the_contract_id(cont
     contract = contract_world["contracts"]["signed"]
     document_id = ContractSerializer(contract).data["document_id"]
     assert document_id == contract_world["documents"]["contract_signed"] and document_id != contract.pk
-    assert ContractSerializer(contract_world["contracts"]["draft"]).data["document_id"] is None
+    from portal.services.documents import document_id_for
+
+    assert document_id_for("contract", contract_world["contracts"]["draft"]) is None
 
 
 def test_contract_status_codes_are_all_mapped():
-    """Каждый статус ERP отображается в статус контракта (новый статус ERP не должен выпасть из enum)."""
+    """Каждый статус ERP, видимый клиенту, отображается в статус контракта; остальные — не показываются совсем."""
     contract_enum = set(component("ContractStatus")["enum"])
     from portal.projections import contract_status
 
@@ -287,7 +298,9 @@ def test_contract_status_codes_are_all_mapped():
             self.status = type("S", (), {"code": code})()
             self.manager_signed_at = manager
 
-    for code in ContractStatusCode.values:
+    from portal.projections import CLIENT_CONTRACT_STATUSES
+
+    for code in CLIENT_CONTRACT_STATUSES:
         assert contract_status(Fake(code)) in contract_enum
     assert contract_status(Fake(ContractStatusCode.PENDING_CLIENT, manager=object())) == "signed_by_company"
 
@@ -333,7 +346,7 @@ def test_overdue_is_computed_from_due_date(contract_world):
 
 @pytest.mark.parametrize(
     ("key", "expected"),
-    [("issued", "issued"), ("accepted", "accepted"), ("returned", "returned"), ("cancelled", "issued")],
+    [("issued", "issued"), ("accepted", "accepted"), ("returned", "returned")],
 )
 def test_act_status_mapping_and_form(contract_world, key, expected):
     act = contract_world["acts"][key]
@@ -360,17 +373,28 @@ def test_act_returned_reason_only_when_returned(contract_world):
 
 
 def test_act_returned_by_the_old_portal_code_path_is_still_returned(contract_world):
-    """Прежний возврат писал статус NULL и причину: такая запись остаётся `returned` (чинит FIX-22)."""
+    """Прежний возврат писал статус NULL и причину (P-6, исправлено): такая запись в базе остаётся `returned`."""
     act = contract_world["acts"]["returned"]
     Act.objects.filter(pk=act.pk).update(status=None)
     act.refresh_from_db()
     assert ActSerializer(act).data["status"] == "returned"
 
 
-def test_act_scan_is_null_until_the_lifecycle_task_exposes_it(contract_world):
-    act = contract_world["acts"]["accepted"]
+@pytest.mark.parametrize("key", ["cancelled"])
+def test_act_status_does_not_show_a_cancelled_act(contract_world, key):
+    from portal.projections import act_status
+
+    with pytest.raises(ValueError):
+        act_status(contract_world["acts"][key])
+
+
+def test_act_scan_document_is_the_one_attached_on_acceptance(contract_world):
+    """Скан — документ из `GET /documents` (id закодирован так же, как у остальных); без скана `scan_document_id` пуст."""
+    act = Act.objects.get(pk=contract_world["acts"]["accepted"].pk)
     assert act.signed_file
-    assert ActSerializer(act).data["scan_document_id"] is None
+    assert ActSerializer(act).data["scan_document_id"] == contract_world["documents"]["act_scan"]
+    plain = Act.objects.get(pk=contract_world["acts"]["issued"].pk)
+    assert ActSerializer(plain).data["scan_document_id"] is None
 
 
 # ── DeliveryLine ───────────────────────────────────────────────────────────────────────────────────
@@ -378,7 +402,8 @@ def test_act_scan_is_null_until_the_lifecycle_task_exposes_it(contract_world):
 
 def _lines(world, key):
     fulfillment = Fulfillment.objects.select_related("status", "deal").get(pk=world["deliveries"][key].pk)
-    return delivery_lines([fulfillment])
+    sync_delivery_lines([fulfillment])
+    return list(DeliveryLine.objects.filter(deal_id=fulfillment.deal_id).select_related("deal").order_by("line_no"))
 
 
 @pytest.mark.parametrize(
@@ -394,42 +419,44 @@ def _lines(world, key):
 )
 def test_delivery_status_mapping(contract_world, key, expected):
     lines = _lines(contract_world, key)
-    assert lines and {line["status"] for line in lines} == {expected}
+    assert lines and {line.status for line in lines} == {expected}
     for line in DeliveryLineSerializer(lines, many=True).data:
         assert_matches_contract(line, "DeliveryLine")
 
 
 def test_delivery_lines_are_the_billable_items_of_the_confirmed_quote(contract_world):
     lines = _lines(contract_world, "in_transit")
-    assert [line["line_no"] for line in lines] == [1, 2]
-    assert [line["title"] for line in lines] == [
-        "Труба 89х4 ст20",
-        "Отвод 89х4",
-    ]  # без раздела, заметки и опционального
-    approved = Quote.objects.get(deal=lines[0]["deal"], status__code=QuoteStatusCode.APPROVED)
+    assert [line.line_no for line in lines] == [1, 2]
+    assert [line.title for line in lines] == ["Труба 89х4 ст20", "Отвод 89х4"]  # без раздела, заметки и опционального
+    approved = Quote.objects.get(deal=lines[0].deal, status__code=QuoteStatusCode.APPROVED)
     item_ids = list(approved.items.billable().order_by("position").values_list("id", flat=True))
-    assert [line["id"] for line in lines] == item_ids
-    assert lines[0]["quantity"] == "150" and lines[0]["unit"] == "м"
-    assert lines[0]["tracking"] == "TRK-0001"
-    assert lines[0]["eta"] is not None and lines[0]["shipped_at"] is not None
+    assert [line.quote_item_id for line in lines] == item_ids
+    data = DeliveryLineSerializer(lines, many=True).data
+    assert data[0]["quantity"] == "150" and data[0]["unit"] == "м"
+    assert data[0]["tracking"] == "TRK-0001"
+    assert data[0]["eta"] is not None and data[0]["shipped_at"] is not None
 
 
 def test_delivery_line_does_not_invent_missing_data(contract_world):
     lines = _lines(contract_world, "assembling")
-    assert lines[0]["tracking"] is None and lines[0]["eta"] is None
-    assert lines[0]["shipped_at"] is None and lines[0]["accepted_at"] is None
-    assert lines[0]["remark"] is None
-    QuoteItem.objects.filter(pk=lines[0]["id"]).update(unit="")
-    assert _lines(contract_world, "assembling")[0]["unit"] is None  # нет единицы в КП и карточке — null, не «компл.»
+    data = DeliveryLineSerializer(lines[0]).data
+    assert data["tracking"] is None and data["eta"] is None
+    assert data["shipped_at"] is None and data["accepted_at"] is None
+    assert data["remark"] is None
+    DeliveryLine.objects.filter(pk=lines[0].pk).update(unit="")
+    line = DeliveryLine.objects.select_related("deal").get(pk=lines[0].pk)
+    assert DeliveryLineSerializer(line).data["unit"] is None  # нет единицы в КП и карточке — null, не «компл.»
 
 
 def test_delivery_line_has_no_fulfillment_when_there_is_no_confirmed_quote(contract_world):
     bare = Fulfillment.objects.select_related("status", "deal").get(deal__title="Без КП")
-    assert delivery_lines([bare]) == []
+    assert sync_delivery_lines([bare]) == 0
+    assert not DeliveryLine.objects.filter(deal=bare.deal).exists()
 
 
 def test_delivery_takes_the_latest_confirmed_quote_version(contract_world):
     deal = contract_world["deliveries"]["delivered"].deal
+    _lines(contract_world, "delivered")  # строки первой версии уже созданы
     newer = Quote.objects.create(
         deal=deal,
         version=2,
@@ -437,10 +464,7 @@ def test_delivery_takes_the_latest_confirmed_quote_version(contract_world):
         quote_currency=contract_world["uzs"],
     )
     QuoteItem.objects.create(quote=newer, imported_raw_name="Новая редакция", quantity=1, unit="шт")
-    fulfillment = Fulfillment.objects.select_related("status", "deal").get(
-        pk=contract_world["deliveries"]["delivered"].pk
-    )
-    assert [line["title"] for line in delivery_lines([fulfillment])] == ["Новая редакция"]
+    assert [line.title for line in _lines(contract_world, "delivered")] == ["Новая редакция"]
 
 
 def test_delivery_line_has_no_price_or_supplier(contract_world):
@@ -530,14 +554,6 @@ def test_portal_request_line_without_quantity_is_not_a_fabricated_one(contract_w
 
 
 def test_fulfillment_status_codes_are_all_mapped():
-    from portal.projections import delivery_status
-
     enum = set(component("DeliveryStatus")["enum"])
-
-    class Fake:
-        def __init__(self, code):
-            self.status = type("S", (), {"code": code})()
-
-    for code in FulfillmentStatusCode.values:
-        assert delivery_status(Fake(code)) in enum
-    assert FulfillmentStatus.objects.count() >= 0  # справочник сеется миграциями
+    assert set(FULFILLMENT_TO_LINE_STATUS) == set(FulfillmentStatusCode.values)
+    assert {str(status) for status in FULFILLMENT_TO_LINE_STATUS.values()} <= enum

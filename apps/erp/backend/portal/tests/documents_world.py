@@ -10,14 +10,12 @@
 
 from __future__ import annotations
 
-import datetime
-
 from django.core.files.base import ContentFile
 from documents.models import DocumentTemplate, DocumentTemplateKind, GeneratedDocument, GeneratedDocumentStatus
 from portal.services.documents import encode_document_id
 
-from crm.constants import ActStatusCode, DealStageCode, InvoiceStatusCode, QuoteStatusCode
-from crm.models import Act, ActStatus, Deal, DealStage, Fulfillment, Invoice, InvoiceStatus
+from crm.constants import DealStageCode, InvoiceStatusCode, QuoteStatusCode
+from crm.models import Deal, DealStage, Fulfillment, Invoice, InvoiceStatus
 
 PDF = b"%PDF-1.4 fake"
 
@@ -68,22 +66,36 @@ def build_document_fixtures(world: dict) -> dict:
 
     # ── Выпущенные: у каждого вида — с готовым PDF и без него ──────────────────────────────────
     for key, quote in world["quotes"].items():
-        issued(f"quote_{key}", "quote", quote, pdf=key in ("sent", "accepted"))
+        issued(f"quote_{key}", "quote", quote, pdf=key in ("sent", "accepted", "expired_status"))
     for key, contract in world["contracts"].items():
         if key in ("draft", "cancelled"):
             concealed(f"contract_{key}", "contract", contract)
         else:
             issued(f"contract_{key}", "contract", contract, pdf=key == "signed")
     for key, invoice in world["invoices"].items():
-        if key == "cancelled":
+        if key in ("draft", "not_issued"):  # черновик и счёт без срока и даты выставления — как в GET /invoices
             concealed(f"invoice_{key}", "invoice", invoice)
         else:
             issued(f"invoice_{key}", "invoice", invoice, pdf=key in ("paid", "issued"))
     for key, act in world["acts"].items():
-        if key == "cancelled":
+        if key in ("cancelled", "draft"):
             concealed(f"act_{key}", "act", act)
         else:
             issued(f"act_{key}", "act", act, pdf=key == "accepted")
+    # Скан подписанного акта — документ, заведённый приёмкой (`portal.services.act_scan.attach_scan_document`): файл общий
+    # с `Act.signed_file`, метка `values.source == "portal_scan"`.
+    accepted = world["acts"]["accepted"]
+    scan = _generated(company, contact, main, key="scan", kind_code="ACT", status_code="ISSUED", pdf=False)
+    GeneratedDocument.objects.filter(pk=scan.pk).update(
+        number=f"SCAN-{accepted.number}",
+        title=f"Скан подписанного акта {accepted.number}",
+        values={"act_id": accepted.pk, "source": "portal_scan"},
+        pdf_file=accepted.signed_file.name,
+    )
+    scan.refresh_from_db()
+    issued("act_scan", "generated", scan)
+    ready["act_scan"] = documents["act_scan"]
+    world["scan_document"] = scan
     for key, fulfillment in world["deliveries"].items():
         issued(f"quote_delivery_{key}", "quote", fulfillment.deal.quotes.get())  # подтверждённое КП сделки поставки
         if key == "assembling":
@@ -116,22 +128,10 @@ def build_document_fixtures(world: dict) -> dict:
         quote = make_quote(internal_deal, version, code, uzs=uzs, sent=False, items=False)
         quote.pdf_file.save(f"quote-{key}.pdf", ContentFile(PDF), save=True)  # PDF есть, но КП не отправлено
         concealed(f"quote_{key}", "quote", quote)
-    # ── КП в сохранённом статусе EXPIRED (его ставит beat `crm.expire_stale_quotes`): срок вышел, документ остаётся ──
-    expired = make_quote(
-        internal_deal, 4, "EXPIRED", uzs=uzs, valid_until=TODAY - datetime.timedelta(days=5), items=False
-    )
-    issued("quote_expired_status", "quote", expired, pdf=True)
-
-    invoice_draft = Invoice.objects.create(
-        deal=main, number="INV-GUARD-draft", status=_status(InvoiceStatus, InvoiceStatusCode.DRAFT), issued_at=TODAY
-    )
-    invoice_draft.pdf_file.save("inv-draft.pdf", ContentFile(PDF), save=True)
-    concealed("invoice_draft", "invoice", invoice_draft)
-    act_draft = Act.objects.create(
-        deal=main, number="ACT-GUARD-draft", status=_status(ActStatus, ActStatusCode.DRAFT), issued_at=TODAY
-    )
-    act_draft.pdf_file.save("act-draft.pdf", ContentFile(PDF), save=True)
-    concealed("act_draft", "act", act_draft)
+    # КП до отправки и «отправленное» без публичной ссылки (FIX-22): PDF у них может быть, документа — нет.
+    for key, quote in world["hidden_quotes"].items():
+        quote.pdf_file.save(f"quote-hidden-{key}.pdf", ContentFile(PDF), save=True)
+        concealed(f"quote_hidden_{key}", "quote", quote)
     concealed("waybill_bare", "waybill", world["bare_fulfillment"])
     concealed(
         "generated_letter",

@@ -600,20 +600,26 @@ def _render_act_pdf(act) -> None:
 
 
 @transaction.atomic
-def act_viewer_side(actor, act) -> str:
+def act_viewer_side(actor, act, portal_contact=None) -> str:
     """Сторона зрителя по ЭТОМУ акту: «issuer» (выпустил), «acceptor» (принимает) или «».
 
     Акт двусторонний: выпускает исполнитель, принимает заказчик. Раньше сторона не
     различалась вовсе — кто первый нажал, тот и закрывал документ в одиночку.
+
+    Заказчик — контакт клиента из портала (`portal_contact`, FIX-22): «acceptor» только контакту компании акта с
+    правом `can_act`. Заказчика-пользователя в ERP нет (FIX-13), сотрудник «acceptor» не бывает.
     """
     from accounts.services import is_seller
 
+    if portal_contact is not None:
+        same_company = portal_contact.company_id is not None and portal_contact.company_id == act.deal.company_id
+        return "acceptor" if (portal_contact.can_act and same_company) else ""
     if actor is None or getattr(actor, "is_anonymous", False):
         return ""
     if is_seller(actor):
         return "issuer"
-    # Заказчика-пользователя в ERP нет (FIX-13): приёмку акта вернёт портал (FIX-22), до тех пор
-    # «acceptor» не выдаётся никому, и `sign_act` / `reject_act` изнутри ERP недостижимы.
+    # Заказчика-пользователя в ERP нет (FIX-13): приёмку акта делает контакт портала (`portal_contact`),
+    # а сотруднику «acceptor» не выдаётся — `sign_act` / `reject_act` без контакта изнутри ERP недостижимы.
     return ""
 
 
@@ -634,8 +640,13 @@ def _locked_act(act_id: int):
 
 
 @transaction.atomic
-def sign_act(act_id: int, actor: CustomUser, signed_file=None) -> Tuple[Optional[object], Optional[str]]:
+def sign_act(
+    act_id: int, actor: Optional[CustomUser] = None, signed_file=None, *, portal_contact=None
+) -> Tuple[Optional[object], Optional[str]]:
     """ЗАКАЗЧИК принимает выставленный акт → SIGNED (G2).
+
+    Заказчик из портала (FIX-22) — `portal_contact` (контакт клиента с `can_act`, `actor` пуст): `acceptor_signer`
+    остаётся пустым, а кто принял, пишется в журнал (`contact_id`). `signed_file` — скан подписанного экземпляра.
 
     Акт — двусторонний документ: в узбекской практике он «подтверждён двумя сторонами», в
     российском ЭДО состоит из двух титулов. Раньше здесь стояла ОДНА подпись без подписанта, и
@@ -649,7 +660,7 @@ def sign_act(act_id: int, actor: CustomUser, signed_file=None) -> Tuple[Optional
     act = _locked_act(act_id)
     if act.status_code != ActStatusCode.ISSUED:
         return None, "ACT_SIGN_NOT_ALLOWED"
-    if act_viewer_side(actor, act) != "acceptor":
+    if act_viewer_side(actor, act, portal_contact) != "acceptor":
         # Выпустивший акт не может «принять» его сам — приёмка это подтверждение ВТОРОЙ стороны.
         return None, "ACT_ACCEPTOR_SIDE_REQUIRED"
 
@@ -677,7 +688,12 @@ def sign_act(act_id: int, actor: CustomUser, signed_file=None) -> Tuple[Optional
         action="[MANUAL_MODE] Акт принят заказчиком",
         detail=f"Акт {act.number} по сделке #{act.deal_id}",
         event_code="act.signed",
-        event_params={"number": act.number, "deal_id": act.deal_id, "manual": True},
+        event_params={
+            "number": act.number,
+            "deal_id": act.deal_id,
+            "manual": True,
+            **({"channel": "portal", "contact_id": portal_contact.pk} if portal_contact is not None else {}),
+        },
         user=actor,
         level="SUCCESS",
         deal=act.deal,
@@ -696,7 +712,9 @@ def sign_act(act_id: int, actor: CustomUser, signed_file=None) -> Tuple[Optional
 
 
 @transaction.atomic
-def reject_act(act_id: int, actor: CustomUser, reason: str = "") -> Tuple[Optional[object], Optional[str]]:
+def reject_act(
+    act_id: int, actor: Optional[CustomUser] = None, reason: str = "", *, portal_contact=None
+) -> Tuple[Optional[object], Optional[str]]:
     """ЗАКАЗЧИК отклоняет акт с указанием причины (G2).
 
     Второй шаг двустороннего цикла, которого не было вовсе: заказчик мог либо подписать, либо
@@ -704,7 +722,8 @@ def reject_act(act_id: int, actor: CustomUser, reason: str = "") -> Tuple[Option
     покупатель «подтверждает или отклоняет», и у нашего же отклонения КП, где причина
     обязательна: без основания отказ бесполезен обеим сторонам.
 
-    Акт возвращается в DRAFT — исполнитель правит и выпускает заново.
+    Акт возвращается в DRAFT — исполнитель правит и выпускает заново. Заказчик из портала (FIX-22) —
+    `portal_contact`, как у `sign_act`.
     """
 
     clean_reason = (reason or "").strip()
@@ -713,7 +732,7 @@ def reject_act(act_id: int, actor: CustomUser, reason: str = "") -> Tuple[Option
     act = _locked_act(act_id)
     if act.status_code != ActStatusCode.ISSUED:
         return None, "ACT_SIGN_NOT_ALLOWED"
-    if act_viewer_side(actor, act) != "acceptor":
+    if act_viewer_side(actor, act, portal_contact) != "acceptor":
         return None, "ACT_ACCEPTOR_SIDE_REQUIRED"
 
     act.status = _astatus(ActStatusCode.DRAFT)
@@ -724,7 +743,12 @@ def reject_act(act_id: int, actor: CustomUser, reason: str = "") -> Tuple[Option
         action="Акт отклонён заказчиком",
         detail=f"Акт {act.number} по сделке #{act.deal_id}: {clean_reason}",
         event_code="act.rejected",
-        event_params={"number": act.number, "deal_id": act.deal_id, "reason": clean_reason},
+        event_params={
+            "number": act.number,
+            "deal_id": act.deal_id,
+            "reason": clean_reason,
+            **({"channel": "portal", "contact_id": portal_contact.pk} if portal_contact is not None else {}),
+        },
         user=actor,
         level="WARNING",
         deal=act.deal,

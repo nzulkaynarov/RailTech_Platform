@@ -4,7 +4,9 @@
 запроса. Сериализаторы (`portal/serializers.py`) только раскладывают результат по полям контракта, поэтому форма
 ответа живёт в одном месте, а сторож (`portal/tests/test_contract_guard.py`) проверяет её по JSON Schema.
 
-Чего здесь нет намеренно: правил жизненного цикла (какие КП видны, кто и когда подписывает, приёмка) — FIX-22/23.
+Что клиенту видно (FIX-22): КП — только отправленные (`CLIENT_QUOTE_STATUSES`), договоры — на подписи и подписанные
+(`CLIENT_CONTRACT_STATUSES`), акты — выставленные, принятые и возвращённые (`client_acts_q`), счета — выставленные.
+Правила жизненного цикла (кто и когда подписывает, приёмка) — в сервисах ERP, а не здесь.
 Если данных для поля в модели нет, отдаётся `None`, а не выдуманное значение (вопросы — `docs/QUESTIONS.md`).
 """
 
@@ -14,22 +16,28 @@ import datetime
 from decimal import ROUND_HALF_UP, Decimal
 from typing import Iterable, Optional
 
-from django.db.models import Prefetch
+from django.db.models import Q
 from django.utils import timezone
 
-from crm.constants import (
-    ActStatusCode,
-    ContractStatusCode,
-    DealStageCode,
-    FulfillmentStatusCode,
-    InvoiceStatusCode,
-    QuoteStatusCode,
-)
-from crm.models import ActivityLog, Fulfillment, Quote, QuoteItem
+from crm.constants import ActStatusCode, ContractStatusCode, DealStageCode, InvoiceStatusCode, QuoteStatusCode
+from crm.models import ActivityLog
 from crm.services.documents.projection import client_projection_items
+from crm.services.quotes.access import _EXPIRED_STATUS_CODE
 
 DEFAULT_CURRENCY = "UZS"
 _CENT = Decimal("0.01")
+
+#: КП, которые видит клиент: ушедшие к нему (`SENT`), решённые им и просроченные (`EXPIRED` ставит ночная задача
+#: `crm.expire_stale_quotes` — КП не должно пропадать у клиента на следующий день после срока). Всё, что до отправки (черновик, проверка ВЭД,
+#: согласование, «готово к отправке»), в портале — 404: у такого КП нет публичной ссылки (`Quote.public_url` в
+#: контракте обязателен), а содержимое ещё не обещано клиенту.
+CLIENT_QUOTE_STATUSES = (QuoteStatusCode.SENT, QuoteStatusCode.APPROVED, QuoteStatusCode.REJECTED, _EXPIRED_STATUS_CODE)
+#: Договоры, которые видит клиент: ждёт подписи кого-то из сторон или подписан. Черновик и отменённый — нет.
+CLIENT_CONTRACT_STATUSES = (
+    ContractStatusCode.PENDING_CLIENT,
+    ContractStatusCode.PENDING_MANAGER,
+    ContractStatusCode.SIGNED,
+)
 
 
 # ── Деньги и сделка ───────────────────────────────────────────────────────────────────────────────
@@ -120,6 +128,8 @@ def quote_status(quote) -> str:
         return "accepted"
     if code == QuoteStatusCode.REJECTED:
         return "rejected"
+    if code == _EXPIRED_STATUS_CODE:
+        return "expired"
     if quote.valid_until and quote.valid_until < timezone.localdate():
         return "expired"
     if quote.first_viewed_at:
@@ -196,17 +206,37 @@ def quote_lines(quote) -> list[dict]:
 
 
 def contract_status(contract) -> str:
-    """`PENDING_CLIENT` с подписью компании — `signed_by_company`; `DRAFT` клиенту не показывается (FIX-22) — `sent`."""
+    """`PENDING_CLIENT` с подписью компании — `signed_by_company`.
+
+    Черновик и отменённый договор клиенту не показываются (`CLIENT_CONTRACT_STATUSES`): раньше черновик выдавался за
+    `sent`, и Cabinet рисовал у него кнопку «Подписать». Теперь это ошибка вызова, а не молчаливая подмена.
+    """
     code = contract.status.code if contract.status else ContractStatusCode.DRAFT
+    if code not in CLIENT_CONTRACT_STATUSES:
+        raise ValueError(f"договор в статусе {code} клиенту не показывается")
     if code == ContractStatusCode.SIGNED:
         return "signed"
-    if code == ContractStatusCode.CANCELLED:
-        return "cancelled"
     if code == ContractStatusCode.PENDING_MANAGER:
         return "signed_by_client"
-    if code == ContractStatusCode.PENDING_CLIENT and contract.manager_signed_at:
+    if contract.manager_signed_at:
         return "signed_by_company"
     return "sent"
+
+
+def invoice_due_date(invoice) -> Optional[datetime.date]:
+    """Срок оплаты счёта для клиента (в контракте обязателен).
+
+    Берётся из счёта. Если срока нет, он считается тем же правилом, по которому ERP ставит его при выставлении
+    (`issue_invoice`): дата выставления + срок оплаты продавца (`crm.services.billing.invoice_due_days`). Нет и даты
+    выставления — счёт не выставлен, срок выдумывать не из чего (`None`; такой счёт клиенту не показывают).
+    """
+    if invoice.due_date:
+        return invoice.due_date
+    if invoice.issued_at:
+        from crm.services.billing import invoice_due_days
+
+        return invoice.issued_at + datetime.timedelta(days=invoice_due_days(invoice))
+    return None
 
 
 def invoice_status(invoice) -> str:
@@ -217,11 +247,59 @@ def invoice_status(invoice) -> str:
         return "cancelled"
     if code == InvoiceStatusCode.OVERDUE:
         return "overdue"
-    if invoice.due_date and invoice.due_date < timezone.localdate():
+    due_date = invoice_due_date(invoice)
+    if due_date and due_date < timezone.localdate():
         return "overdue"
     if code == InvoiceStatusCode.PARTIAL or (invoice.amount_paid or 0) > 0:
         return "partially_paid"
     return "issued"
+
+
+def client_acts_q() -> Q:
+    """Акты, которые видит клиент: выставленные и принятые, а также возвращённые им с причиной (ERP хранит возврат
+    черновиком с `rejection_reason`; запись прежнего портала с пустым статусом и причиной — тоже возврат). Черновик
+    без причины и аннулированный акт — нет."""
+    returned = (Q(status__isnull=True) | Q(status__code=ActStatusCode.DRAFT)) & ~Q(rejection_reason="")
+    return Q(status__code__in=(ActStatusCode.ISSUED, ActStatusCode.SIGNED)) | returned
+
+
+def client_acts_visible(act) -> bool:
+    """Тот же ответ, что `client_acts_q`, для одной записи (список документов и `document_id` спрашивают его)."""
+    code = act.status.code if act.status else None
+    if code in (ActStatusCode.ISSUED, ActStatusCode.SIGNED):
+        return True
+    return code in (None, ActStatusCode.DRAFT) and bool(act.rejection_reason)
+
+
+def client_quotes_q() -> Q:
+    """КП, которые видит клиент: отправленные и решённые (`CLIENT_QUOTE_STATUSES`) с публичной ссылкой."""
+    return Q(status__code__in=CLIENT_QUOTE_STATUSES) & ~Q(public_access_token__isnull=True) & ~Q(public_access_token="")
+
+
+def client_quotes_visible(quote) -> bool:
+    """Тот же ответ, что `client_quotes_q`, для одной записи."""
+    code = quote.status.code if quote.status else None
+    return code in CLIENT_QUOTE_STATUSES and bool(quote.public_access_token)
+
+
+def client_contracts_q() -> Q:
+    """Договоры, которые видит клиент: на подписи и подписанные."""
+    return Q(status__code__in=CLIENT_CONTRACT_STATUSES)
+
+
+def client_contracts_visible(contract) -> bool:
+    code = contract.status.code if contract.status else None
+    return code in CLIENT_CONTRACT_STATUSES
+
+
+def client_invoices_q() -> Q:
+    """Счета, которые видит клиент: не черновик и с понятным сроком (срок или дата выставления — контракту нужен `due_date`)."""
+    return ~Q(status__code=InvoiceStatusCode.DRAFT) & (Q(due_date__isnull=False) | Q(issued_at__isnull=False))
+
+
+def client_invoices_visible(invoice) -> bool:
+    code = invoice.status.code if invoice.status else None
+    return code != InvoiceStatusCode.DRAFT and (invoice.due_date is not None or invoice.issued_at is not None)
 
 
 def act_status(act) -> str:
@@ -229,9 +307,11 @@ def act_status(act) -> str:
     code = act.status.code if act.status else None
     if code == ActStatusCode.SIGNED:
         return "accepted"
-    if act.rejection_reason and code in (None, ActStatusCode.DRAFT):
+    if code == ActStatusCode.ISSUED:
+        return "issued"
+    if code in (None, ActStatusCode.DRAFT) and act.rejection_reason:
         return "returned"
-    return "issued"
+    raise ValueError(f"акт в статусе {code} клиенту не показывается")
 
 
 def act_issued_at(act) -> datetime.datetime:
@@ -241,72 +321,6 @@ def act_issued_at(act) -> datetime.datetime:
     if act.issued_at:
         return timezone.make_aware(datetime.datetime.combine(act.issued_at, datetime.time.min))
     return act.created_at
-
-
-# ── Поставки ─────────────────────────────────────────────────────────────────────────────────────
-
-_DELIVERY_STATUS = {
-    FulfillmentStatusCode.PENDING: "assembling",
-    FulfillmentStatusCode.SHIPPED: "shipped",
-    FulfillmentStatusCode.IN_TRANSIT: "in_transit",
-    FulfillmentStatusCode.DELIVERED: "delivered",
-    FulfillmentStatusCode.ACCEPTED: "accepted",
-    FulfillmentStatusCode.DISPUTED: "disputed",
-}
-
-
-def delivery_status(fulfillment) -> str:
-    code = fulfillment.status.code if fulfillment.status else FulfillmentStatusCode.PENDING
-    return _DELIVERY_STATUS.get(code, "assembling")
-
-
-def delivery_lines(fulfillments: Iterable[Fulfillment]) -> list[dict]:
-    """Строки поставки = оплачиваемые позиции подтверждённого КП сделки со статусом исполнения сделки.
-
-    Модели строки поставки пока нет (её вводит FIX-22): `id` — id позиции КП, количество и единица — из КП
-    (нет данных — `None`), срок, трек и даты — с исполнения сделки. Замечание клиента хранить негде — `None`.
-    """
-    fulfillments = list(fulfillments)
-    approved = (
-        Quote.objects.filter(deal_id__in=[f.deal_id for f in fulfillments], status__code=QuoteStatusCode.APPROVED)
-        .order_by("deal_id", "-version")
-        .prefetch_related(
-            Prefetch(
-                "items",
-                queryset=QuoteItem.objects.billable().select_related("product__uom").order_by("position", "id"),
-            )
-        )
-    )
-    quote_by_deal: dict = {}
-    for quote in approved:
-        quote_by_deal.setdefault(quote.deal_id, quote)  # старшая версия подтверждённого КП
-
-    result = []
-    for fulfillment in fulfillments:
-        quote = quote_by_deal.get(fulfillment.deal_id)
-        if quote is None:
-            continue
-        for number, item in enumerate(quote.items.all(), start=1):
-            product = item.product
-            result.append(
-                {
-                    "id": item.pk,
-                    "deal": fulfillment.deal,
-                    "deal_id": fulfillment.deal_id,
-                    "line_no": number,
-                    "title": (product.name if product else "") or item.imported_raw_name,
-                    "quantity": str(item.quantity),
-                    "unit": blank_to_none(item.unit)
-                    or (blank_to_none(product.uom.name) if product and product.uom_id else None),
-                    "status": delivery_status(fulfillment),
-                    "eta": fulfillment.expected_delivery_date,
-                    "tracking": blank_to_none(fulfillment.tracking_number),
-                    "shipped_at": fulfillment.shipped_at,
-                    "accepted_at": fulfillment.accepted_at,
-                    "remark": None,
-                }
-            )
-    return result
 
 
 # ── Документы ────────────────────────────────────────────────────────────────────────────────────

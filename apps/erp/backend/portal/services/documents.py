@@ -14,6 +14,8 @@
 from __future__ import annotations
 
 import datetime
+import mimetypes
+import os
 import re
 from dataclasses import dataclass
 from typing import Any, Optional
@@ -25,15 +27,7 @@ from django.utils.translation import gettext
 from documents.models import GeneratedDocument
 from portal import projections
 
-from crm.constants import (
-    ActStatusCode,
-    ContractStatusCode,
-    DocumentTemplateKindCode,
-    FulfillmentStatusCode,
-    GeneratedDocumentStatusCode,
-    InvoiceStatusCode,
-    QuoteStatusCode,
-)
+from crm.constants import DocumentTemplateKindCode, FulfillmentStatusCode, GeneratedDocumentStatusCode
 from crm.models import Act, Contract, Fulfillment, Invoice, Quote
 from crm.services.documents import quote_pdf_filename
 from crm.services.fulfillment import delivery_note_number
@@ -57,23 +51,8 @@ KIND_BY_TEMPLATE_KIND = {
 #: по остальным (`specification`, `receipt`, `other`) источника нет и список пуст (QUESTIONS Q-FIX23-3).
 DOCUMENT_KINDS = ("quote", "contract", "invoice", "act", "specification", "waybill", "receipt", "other")
 
-#: Статусы «выпущено клиенту». Один набор на фильтр запроса и на проверку одной записи.
-#: `EXPIRED` — сохранённый статус КП (сид `core/seeds/sales.py`, его ставит beat `crm.expire_stale_quotes` отправленным КП
-#: с прошедшим `valid_until`), не член `QuoteStatusCode`: КП отправлено клиенту и остаётся его документом.
-QUOTE_EXPIRED_STATUS = "EXPIRED"
-QUOTE_ISSUED = (QuoteStatusCode.SENT, QuoteStatusCode.APPROVED, QuoteStatusCode.REJECTED, QUOTE_EXPIRED_STATUS)
-CONTRACT_ISSUED = (
-    ContractStatusCode.PENDING_CLIENT,
-    ContractStatusCode.PENDING_MANAGER,
-    ContractStatusCode.SIGNED,
-)
-INVOICE_ISSUED = (
-    InvoiceStatusCode.ISSUED,
-    InvoiceStatusCode.PARTIAL,
-    InvoiceStatusCode.PAID,
-    InvoiceStatusCode.OVERDUE,
-)
-ACT_ISSUED = (ActStatusCode.ISSUED, ActStatusCode.SIGNED)
+#: Накладная выпускается с отгрузки; видимость КП, договоров, счетов и актов — предикаты `portal.projections`
+#: (`client_*_q` / `client_*_visible`), те же, что у `GET /quotes|/contracts|/invoices|/acts`.
 WAYBILL_ISSUED = (
     FulfillmentStatusCode.SHIPPED,
     FulfillmentStatusCode.IN_TRANSIT,
@@ -124,6 +103,18 @@ class PortalDocument:
     def render_type(self) -> str:
         return RENDER_TYPE[self.source]
 
+    @property
+    def is_scan(self) -> bool:
+        """Скан подписанного акта, загруженный клиентом (`portal.services.act_scan`): файл чужой, рисовать нечего."""
+        return self.source == "generated" and is_portal_scan(self.obj)
+
+    @property
+    def content_type(self) -> str:
+        """PDF для всего, что рисует ERP; у скана — тип по расширению загруженного файла (PDF или изображение)."""
+        if self.is_scan:
+            return mimetypes.guess_type(self.file.name)[0] or "application/octet-stream"
+        return "application/pdf"
+
 
 # ── Идентификатор ────────────────────────────────────────────────────────────────────────────────
 
@@ -150,21 +141,23 @@ def _status(obj) -> Optional[str]:
 
 
 def is_issued(source: str, obj) -> bool:
-    """Выпущена ли запись и значит ли это документ клиента. Единственный ответ на вопрос «видит ли клиент»."""
-    code = _status(obj)
+    """Выпущена ли запись и значит ли это документ клиента. Единственный ответ на вопрос «видит ли клиент».
+
+    КП, договор, счёт и акт видны ровно тогда, когда видны в своих списках портала (один источник правды —
+    `portal.projections`); возвращённый клиентом акт ERP хранит черновиком с причиной, и он тоже виден.
+    """
     if source == "quote":
-        return code in QUOTE_ISSUED
+        return projections.client_quotes_visible(obj)
     if source == "contract":
-        return code in CONTRACT_ISSUED
+        return projections.client_contracts_visible(obj)
     if source == "invoice":
-        return code in INVOICE_ISSUED
+        return projections.client_invoices_visible(obj)
     if source == "act":
-        # Возвращённый клиентом акт ERP хранит черновиком с причиной (портал показывает его как `returned`).
-        return code in ACT_ISSUED or (code == ActStatusCode.DRAFT and bool(obj.rejection_reason))
+        return projections.client_acts_visible(obj)
     if source == "waybill":
-        return code in WAYBILL_ISSUED
+        return _status(obj) in WAYBILL_ISSUED
     if source == "generated":
-        return code == GeneratedDocumentStatusCode.ISSUED and _generated_kind(obj) is not None
+        return _status(obj) == GeneratedDocumentStatusCode.ISSUED and _generated_kind(obj) is not None
     return False
 
 
@@ -268,8 +261,20 @@ def _waybill_document(fulfillment) -> PortalDocument:
     )
 
 
+#: Метка `GeneratedDocument.values["source"]` у скана, заведённого приёмкой акта (`portal.services.act_scan`).
+PORTAL_SCAN_SOURCE = "portal_scan"
+
+
+def is_portal_scan(document) -> bool:
+    return (document.values or {}).get("source") == PORTAL_SCAN_SOURCE
+
+
 def _generated_document(document) -> PortalDocument:
     kind = _generated_kind(document)
+    file_name = _file_name(document.number, f"document-{document.pk}")
+    if is_portal_scan(document) and document.pdf_file:
+        # Имя по расширению настоящего файла: клиент загрузил PDF или картинку, `.pdf` на `.png` — ложь.
+        file_name = f"{file_name[: -len('.pdf')]}{os.path.splitext(document.pdf_file.name)[1].lower()}"
     label = {"contract": gettext("Договор"), "invoice": gettext("Счёт"), "act": gettext("Акт")}[kind]
     return PortalDocument(
         id=encode_document_id("generated", document.pk),
@@ -279,7 +284,7 @@ def _generated_document(document) -> PortalDocument:
         number=document.number,
         date=_local_date(document.issued_at or document.created_at),
         title=document.title or _title(label, document.number),
-        file_name=_file_name(document.number, f"document-{document.pk}"),
+        file_name=file_name,
         deal=document.deal,
     )
 
@@ -291,22 +296,19 @@ _MODEL_BUILDERS = {
     "act": (Act, _act_document),
     "waybill": (Fulfillment, _waybill_document),
 }
-_ISSUED_STATUSES = {
-    "quote": QUOTE_ISSUED,
-    "contract": CONTRACT_ISSUED,
-    "invoice": INVOICE_ISSUED,
-    "waybill": WAYBILL_ISSUED,
+_ISSUED_Q = {
+    "quote": projections.client_quotes_q,
+    "contract": projections.client_contracts_q,
+    "invoice": projections.client_invoices_q,
+    "act": projections.client_acts_q,
+    "waybill": lambda: Q(status__code__in=WAYBILL_ISSUED),
 }
 
 
 def _issued_queryset(source: str):
-    """Выпущенные записи источника — тот же набор статусов, что и в `is_issued`."""
+    """Выпущенные записи источника — тот же предикат, что в `is_issued` и в списках портала."""
     model, _build = _MODEL_BUILDERS[source]
-    queryset = model.objects.select_related("status", "deal")
-    if source == "act":
-        returned = Q(status__code=ActStatusCode.DRAFT) & ~Q(rejection_reason="")
-        return queryset.filter(Q(status__code__in=ACT_ISSUED) | returned)
-    return queryset.filter(status__code__in=_ISSUED_STATUSES[source])
+    return model.objects.select_related("status", "deal").filter(_ISSUED_Q[source]())
 
 
 def _generated_queryset(company, deal_id: Optional[int]):
@@ -374,6 +376,12 @@ def open_ready_file(document: PortalDocument):
         return document.file.open("rb")
     except (OSError, ValueError):
         return None
+
+
+def renders_on_demand(document: PortalDocument) -> bool:
+    """Может ли ERP нарисовать PDF сама. Скан клиента — нет: его файл общий с `Act.signed_file`, а рендер документа
+    записал бы в `pdf_file` пустой бланк и потерял ссылку на подписанный скан."""
+    return not document.is_scan
 
 
 def enqueue_render(document: PortalDocument) -> bool:

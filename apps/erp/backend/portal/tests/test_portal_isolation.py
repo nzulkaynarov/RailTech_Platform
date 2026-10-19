@@ -4,10 +4,13 @@ Strict isolation: Accessing another company's resource MUST return 404 {"detail"
 never leaking existence via 403 or other codes.
 """
 
+import datetime
+import uuid
 from decimal import Decimal
 
 import pytest
 from rest_framework import status
+from sales.models import DeliveryLine
 
 from crm.constants import ActStatusCode, ContractStatusCode, DealStageCode, InvoiceStatusCode, QuoteStatusCode
 from crm.models import (
@@ -48,6 +51,7 @@ def isolation_data(db, client_company, other_company, client_contact, other_cont
         stage=draft_stage,
     )
     quote_a = Quote.objects.create(
+        public_access_token=uuid.uuid4().hex,
         deal=deal_a,
         version=1,
         status=sent_quote_status,
@@ -61,6 +65,7 @@ def isolation_data(db, client_company, other_company, client_contact, other_cont
         total_amount=Decimal("1000000"),
     )
     invoice_a = Invoice.objects.create(
+        issued_at=datetime.date.today(),
         deal=deal_a,
         contract=contract_a,
         number="INV-TEST-A-001",
@@ -89,6 +94,7 @@ def isolation_data(db, client_company, other_company, client_contact, other_cont
         stage=draft_stage,
     )
     quote_b = Quote.objects.create(
+        public_access_token=uuid.uuid4().hex,
         deal=deal_b,
         version=1,
         status=sent_quote_status,
@@ -102,6 +108,7 @@ def isolation_data(db, client_company, other_company, client_contact, other_cont
         total_amount=Decimal("5000000"),
     )
     invoice_b = Invoice.objects.create(
+        issued_at=datetime.date.today(),
         deal=deal_b,
         contract=contract_b,
         number="INV-TEST-B-001",
@@ -124,8 +131,12 @@ def isolation_data(db, client_company, other_company, client_contact, other_cont
 
     # Строки поставки = позиции подтверждённого КП сделки (FIX-21): у каждого клиента своя
     approved_status, _ = QuoteStatus.objects.get_or_create(code=QuoteStatusCode.APPROVED, defaults={"name": "Одобрено"})
-    approved_a = Quote.objects.create(deal=deal_a, version=2, status=approved_status)
-    approved_b = Quote.objects.create(deal=deal_b, version=2, status=approved_status)
+    approved_a = Quote.objects.create(
+        deal=deal_a, version=2, status=approved_status, public_access_token=uuid.uuid4().hex
+    )
+    approved_b = Quote.objects.create(
+        deal=deal_b, version=2, status=approved_status, public_access_token=uuid.uuid4().hex
+    )
     line_a = QuoteItem.objects.create(quote=approved_a, imported_raw_name="Труба А", quantity=3, unit="м")
     line_b = QuoteItem.objects.create(quote=approved_b, imported_raw_name="Труба Б", quantity=5, unit="м")
 
@@ -235,6 +246,7 @@ class TestPortalIsolation:
         d_resp = portal_client.get("/api/portal/v1/deliveries")
         assert d_resp.status_code == status.HTTP_200_OK
         d_ids = [x["id"] for x in d_resp.data]
-        assert d_ids == [isolation_data["line_a"].id]
-        assert isolation_data["line_b"].id not in d_ids
+        # Строка поставки — своя модель (FIX-22), id не равен id позиции КП
+        assert d_ids == [DeliveryLine.objects.get(quote_item=isolation_data["line_a"]).pk]
+        assert not DeliveryLine.objects.filter(pk__in=d_ids, quote_item=isolation_data["line_b"]).exists()
         assert d_resp.data[0]["deal"]["id"] == isolation_data["deal_a"].id

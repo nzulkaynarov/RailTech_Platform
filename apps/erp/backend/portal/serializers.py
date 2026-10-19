@@ -6,6 +6,7 @@ from typing import Optional
 
 from parties.models import Company, Contact
 from portal import projections
+from portal.services import act_scan
 from portal.services import documents as portal_documents
 from rest_framework import serializers
 
@@ -301,7 +302,30 @@ class QuoteSerializer(QuoteListItemSerializer):
 
 
 class QuoteAcceptSerializer(serializers.Serializer):
-    code = serializers.CharField(max_length=32)
+    """`POST /quotes/{id}/accept`: код из `request-code` (`minLength 4`, `maxLength 12` по контракту)."""
+
+    code = serializers.CharField(min_length=4, max_length=12)
+
+
+class AcceptanceCodeSentSerializer(serializers.Serializer):
+    """`AcceptanceCodeSent`: куда ушёл код (замаскированно) и сколько он действует."""
+
+    channel = serializers.ChoiceField(choices=["telegram", "email"])
+    sent_to = serializers.CharField()
+    expires_in = serializers.IntegerField(min_value=1)
+
+
+class ActAcceptSerializer(serializers.Serializer):
+    """`ActAccept`: тело приёмки акта необязательно; `upload_id` — скан из `POST /uploads`; лишних ключей нет."""
+
+    upload_id = serializers.CharField(required=False)
+
+    def to_internal_value(self, data):
+        if isinstance(data, dict) and set(data) - set(self.fields):
+            raise serializers.ValidationError("VALIDATION_ERROR")
+        if isinstance(data, dict) and "upload_id" in data and not isinstance(data["upload_id"], str):
+            raise serializers.ValidationError({"upload_id": "NOT_A_STRING"})
+        return super().to_internal_value(data)
 
 
 class ReasonSerializer(serializers.Serializer):
@@ -329,11 +353,15 @@ class InvoiceSerializer(DealLinkedSerializer):
     status = serializers.SerializerMethodField()
     total = serializers.SerializerMethodField()
     paid = serializers.SerializerMethodField()
-    due_date = serializers.DateField(read_only=True, allow_null=True)
+    due_date = serializers.SerializerMethodField()
     document_id = serializers.SerializerMethodField()
 
     def get_status(self, invoice) -> str:
         return projections.invoice_status(invoice)
+
+    def get_due_date(self, invoice) -> str:
+        # Срок обязателен по контракту: из счёта либо по правилу выставления; счёт без срока клиенту не показывают.
+        return projections.invoice_due_date(invoice).isoformat()
 
     def get_total(self, invoice) -> dict:
         return projections.money(invoice.total_incl_vat, projections.currency_code(invoice.currency))
@@ -367,23 +395,35 @@ class ActSerializer(DealLinkedSerializer):
         return portal_documents.document_id_for("act", act)
 
     def get_scan_document_id(self, act) -> Optional[int]:
-        return None  # скан (`Act.signed_file`) — зона FIX-22; вида документа «скан акта» в списке нет (QUESTIONS Q-FIX23-3)
+        return act_scan.scan_document_id(act)  # документ-скан приёмки; id — из `GET /documents` (Q-FIX23-3)
 
 
 class DeliveryLineSerializer(DealLinkedSerializer):
-    """`DeliveryLine`: на входе словарь из `projections.delivery_lines` (модели строки поставки пока нет — FIX-22)."""
+    """`DeliveryLine`: на входе `sales.DeliveryLine` (с `select_related("deal")`)."""
 
-    id = serializers.IntegerField()
-    line_no = serializers.IntegerField()
-    title = serializers.CharField(allow_blank=True)
-    quantity = serializers.CharField(allow_null=True)
-    unit = serializers.CharField(allow_null=True)
-    status = serializers.CharField()
-    eta = serializers.DateField(allow_null=True)
-    tracking = serializers.CharField(allow_null=True)
-    shipped_at = serializers.DateTimeField(allow_null=True)
-    accepted_at = serializers.DateTimeField(allow_null=True)
-    remark = serializers.CharField(allow_null=True)
+    id = serializers.IntegerField(read_only=True)
+    line_no = serializers.IntegerField(read_only=True)
+    title = serializers.CharField(read_only=True, allow_blank=True)
+    quantity = serializers.SerializerMethodField()
+    unit = serializers.SerializerMethodField()
+    status = serializers.CharField(read_only=True)
+    eta = serializers.DateField(read_only=True, allow_null=True)
+    tracking = serializers.SerializerMethodField()
+    shipped_at = serializers.DateTimeField(read_only=True, allow_null=True)
+    accepted_at = serializers.DateTimeField(read_only=True, allow_null=True)
+    remark = serializers.SerializerMethodField()
+
+    def get_quantity(self, line) -> Optional[str]:
+        return str(line.quantity) if line.quantity is not None else None
+
+    def get_unit(self, line) -> Optional[str]:
+        return projections.blank_to_none(line.unit)
+
+    def get_tracking(self, line) -> Optional[str]:
+        return projections.blank_to_none(line.tracking)
+
+    def get_remark(self, line) -> Optional[str]:
+        return projections.blank_to_none(line.remark)
 
 
 class PortalDocumentSerializer(serializers.Serializer):

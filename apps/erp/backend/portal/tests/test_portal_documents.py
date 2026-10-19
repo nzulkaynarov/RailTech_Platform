@@ -80,7 +80,10 @@ def test_drafts_and_internal_documents_never_listed(contract_world, portal_clien
         "contract_draft",
         "contract_cancelled",
         "invoice_draft",
-        "invoice_cancelled",
+        "invoice_not_issued",
+        "quote_hidden_draft",
+        "quote_hidden_pending_trade_review",
+        "quote_hidden_sent_without_link",
         "act_draft",
         "act_cancelled",
         "waybill_assembling",
@@ -401,14 +404,40 @@ def test_entity_points_at_its_document(contract_world, portal_client, path, key,
     assert item["document_id"] == contract_world["documents"][expected_key]
 
 
+def test_cancelled_invoice_is_listed_and_has_its_document_like_the_invoice_list(contract_world, portal_client):
+    """Видимость одна: счёт в `GET /invoices` (в том числе аннулированный) — документ в `GET /documents`."""
+    invoice = contract_world["invoices"]["cancelled"]
+    item = next(i for i in portal_client.get(f"{API}/invoices").json() if i["id"] == invoice.pk)
+    assert item["status"] == "cancelled" and item["document_id"] == contract_world["documents"]["invoice_cancelled"]
+
+
 @pytest.mark.parametrize(
-    ("path", "key"), [("contracts", "cancelled"), ("invoices", "cancelled"), ("acts", "cancelled")]
+    ("path", "source", "model_path"),
+    [
+        ("quotes", "quote", "crm.models.Quote"),
+        ("contracts", "contract", "crm.models.Contract"),
+        ("invoices", "invoice", "crm.models.Invoice"),
+        ("acts", "act", "crm.models.Act"),
+    ],
 )
-def test_entity_without_a_document_has_null_reference(contract_world, portal_client, path, key):
-    obj = contract_world[path][key]
-    items = {i["id"]: i for i in portal_client.get(f"{API}/{path}").json()}
-    if obj.pk in items:  # список может показывать и аннулированный; документа у него нет
-        assert items[obj.pk]["document_id"] is None
+def test_visibility_in_documents_equals_visibility_in_the_entity_lists(
+    contract_world, portal_client, path, source, model_path
+):
+    """Для КП, договоров, счетов и актов: записи, которые клиент видит в своём списке, — ровно те, у которых есть документ."""
+    import importlib
+
+    module, name = model_path.rsplit(".", 1)
+    model = getattr(importlib.import_module(module), name)
+    visible = {item["id"] for item in portal_client.get(f"{API}/{path}").json()}
+    in_documents = {
+        service.decode_document_id(i["id"])[1]
+        for i in listed(portal_client)
+        if service.decode_document_id(i["id"])[0] == source
+    }
+    assert visible and visible == in_documents
+    # и поштучно: предикат записи совпадает с запросом списка
+    for obj in model.objects.filter(deal__company=contract_world["company"]).select_related("status", "deal"):
+        assert (service.document_id_for(source, obj) is not None) == (obj.pk in visible), f"{source} #{obj.pk}"
 
 
 def test_quote_pdf_reference(contract_world, portal_client):
@@ -417,11 +446,84 @@ def test_quote_pdf_reference(contract_world, portal_client):
     assert detail["pdf_document_id"] == contract_world["documents"]["quote_sent"]
 
 
-def test_act_scan_reference_is_left_to_the_lifecycle_task(contract_world, portal_client):
-    """`scan_document_id` — зона FIX-22; вида «скан акта» в `GET /documents` нет (QUESTIONS Q-FIX23-3)."""
+def test_act_scan_reference_is_the_documents_id_and_leads_to_the_file(contract_world, portal_client):
+    """`scan_document_id` — id из `GET /documents` (закодированный, не сырой pk `GeneratedDocument`)."""
     act = contract_world["acts"]["accepted"]
     item = next(i for i in portal_client.get(f"{API}/acts").json() if i["id"] == act.pk)
-    assert item["scan_document_id"] is None
+    scan = contract_world["scan_document"]
+    assert item["scan_document_id"] == contract_world["documents"]["act_scan"] != scan.pk
+    assert item["scan_document_id"] in {i["id"] for i in listed(portal_client)}
+    response = portal_client.get(f"{API}/documents/{item['scan_document_id']}/file")
+    assert response.status_code == 200 and b"".join(response.streaming_content) == b"%PDF-1.4 scan"
+    plain = next(i for i in portal_client.get(f"{API}/acts").json() if i["id"] == contract_world["acts"]["issued"].pk)
+    assert plain["scan_document_id"] is None
+
+
+def test_scan_is_found_only_by_its_deal_and_source(contract_world, portal_client):
+    """Документ с номером `SCAN-<акт>`, но чужой сделки или не заведённый приёмкой, ссылкой на скан не становится."""
+    from documents.models import GeneratedDocument
+    from portal.services.act_scan import annotate_scan_documents
+
+    act = contract_world["acts"]["accepted"]
+    scan = contract_world["scan_document"]
+    GeneratedDocument.objects.filter(pk=scan.pk).update(values={"source": "something_else"})
+    annotate_scan_documents([act])
+    assert act.portal_scan_document_id is None
+    GeneratedDocument.objects.filter(pk=scan.pk).update(values={"source": "portal_scan"}, deal=contract_world["closed"])
+    act = type(act).objects.get(pk=act.pk)
+    annotate_scan_documents([act])
+    assert act.portal_scan_document_id is None
+
+
+def _scan_with_file(contract_world, name, content):
+    from django.core.files.base import ContentFile
+
+    scan = contract_world["scan_document"]
+    scan.pdf_file.save(name, ContentFile(content), save=True)
+    return contract_world["documents"]["act_scan"]
+
+
+def test_image_scan_keeps_its_content_type_and_extension(contract_world, portal_client, render_calls):
+    document_id = _scan_with_file(contract_world, "photo.png", b"\x89PNG\r\n\x1a\nfake")
+    item = next(i for i in listed(portal_client) if i["id"] == document_id)
+    assert item["file_name"] == "SCAN-ACT-GUARD-accepted.png"
+    response = portal_client.get(f"{API}/documents/{document_id}/file")
+    assert response.status_code == 200 and response["Content-Type"] == "image/png"
+    assert ".png" in unquote(response["Content-Disposition"]) and ".pdf" not in unquote(response["Content-Disposition"])
+    assert render_calls == []
+
+
+def test_pdf_scan_is_a_pdf_with_pdf_name(contract_world, portal_client):
+    item = next(i for i in listed(portal_client) if i["id"] == contract_world["documents"]["act_scan"])
+    assert item["file_name"] == "SCAN-ACT-GUARD-accepted.pdf"
+    response = portal_client.get(f"{API}/documents/{item['id']}/file")
+    assert response["Content-Type"].startswith("application/pdf")
+
+
+def test_scan_without_a_file_is_404_and_never_rendered(contract_world, portal_client, render_calls):
+    """Рендер скана записал бы в `pdf_file` пустой бланк и потерял ссылку на `Act.signed_file`: 404, очереди нет."""
+    from documents.models import GeneratedDocument
+
+    scan = contract_world["scan_document"]
+    GeneratedDocument.objects.filter(pk=scan.pk).update(pdf_file="")
+    document_id = contract_world["documents"]["act_scan"]
+    response = portal_client.get(f"{API}/documents/{document_id}/file")
+    assert response.status_code == 404 and response.json() == {"detail": "NOT_FOUND"}
+    assert render_calls == []
+    assert not ActivityLog.objects.filter(event_code="document.downloaded_by_client").exists()
+
+
+def test_scan_whose_file_vanished_from_storage_is_404_and_keeps_the_reference(
+    contract_world, portal_client, render_calls
+):
+    from documents.models import GeneratedDocument
+
+    scan = contract_world["scan_document"]
+    scan.pdf_file.storage.delete(scan.pdf_file.name)
+    document_id = contract_world["documents"]["act_scan"]
+    assert portal_client.get(f"{API}/documents/{document_id}/file").status_code == 404
+    assert GeneratedDocument.objects.get(pk=scan.pk).pdf_file.name == scan.pdf_file.name
+    assert render_calls == []
 
 
 def test_quote_becomes_a_document_when_sent(contract_world, portal_client):
@@ -432,6 +534,11 @@ def test_quote_becomes_a_document_when_sent(contract_world, portal_client):
     from crm.models import QuoteStatus
 
     quote.status = QuoteStatus.objects.get(code=QuoteStatusCode.SENT)
+    quote.save()
+    assert (
+        service.document_id_for("quote", quote) is None
+    ), "отправленное без публичной ссылки — аномалия, как в /quotes"
+    quote.public_access_token = "t" * 32
     quote.save()
     assert service.document_id_for("quote", quote) == service.encode_document_id("quote", quote.pk)
     assert service.encode_document_id("quote", quote.pk) in {i["id"] for i in listed(portal_client)}

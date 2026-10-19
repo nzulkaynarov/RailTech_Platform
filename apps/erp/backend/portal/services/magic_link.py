@@ -14,6 +14,7 @@ from django.conf import settings
 from django.core.cache import cache
 from django.db import transaction
 from django.utils import timezone
+from kombu.exceptions import KombuError
 from parties.models import Contact, active_company_q
 from portal.exceptions import PortalGone, PortalTooManyRequests
 from portal.models import MagicLinkToken, PortalSession
@@ -94,7 +95,7 @@ def request_magic_link(email: str) -> bool:
     # для неизвестного адреса, а клиент запросит ссылку ещё раз.
     try:
         send_magic_link.delay(contact.pk)
-    except Exception as exc:  # noqa: BLE001 — брокер недоступен
+    except (KombuError, OSError) as exc:  # брокер недоступен: kombu оборачивает ошибки Redis, сокет даёт OSError
         logger.warning("Magic link was not queued for contact %s (%s)", contact.pk, type(exc).__name__)
         return True
     logger.info("Magic link queued for contact %s", contact.pk)

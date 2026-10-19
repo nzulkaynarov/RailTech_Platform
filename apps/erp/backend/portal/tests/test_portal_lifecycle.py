@@ -8,6 +8,8 @@ Invoice issued -> Act issued -> Client accepts Act ->
 Catalog browsing (sanitized) -> Company profile edit -> Team invitation.
 """
 
+import datetime
+import uuid
 from decimal import Decimal
 
 import pytest
@@ -121,6 +123,7 @@ class TestPortalEndToEndLifecycle:
 
         curr_uzs, _ = Currency.objects.get_or_create(code="UZS", defaults={"name": "Узбекский сум", "symbol": "so'm"})
         quote = Quote.objects.create(
+            public_access_token=uuid.uuid4().hex,
             deal=deal,
             version=1,
             status=sent_status,
@@ -206,6 +209,7 @@ class TestPortalEndToEndLifecycle:
             code=InvoiceStatusCode.ISSUED, defaults={"name": "Выставлен"}
         )
         invoice = Invoice.objects.create(
+            issued_at=datetime.date.today(),
             deal=deal,
             contract=contract,
             number="INV-2026-PORTAL-01",

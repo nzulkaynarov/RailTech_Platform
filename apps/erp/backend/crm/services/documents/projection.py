@@ -122,7 +122,8 @@ def client_projection_items(quote) -> list:
     """
     from crm.models import QuoteItem
 
-    items = list(quote.items.select_related("product", "frozen_currency").all())  # position order
+    # `product__uom`: единицу позиции без своей строки (`unit`) берёт портал из карточки каталога — без N+1.
+    items = list(quote.items.select_related("product__uom", "frozen_currency").all())  # position order
     # Priced lines the charges distribute across = non-optional ITEM rows only. Sections/notes and
     # optional lines carry no share (sections/notes have no price; optional lines are off-total).
     priced = [it for it in items if it.display_type == QuoteItem.DisplayType.ITEM and not it.is_optional]
