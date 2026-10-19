@@ -2,12 +2,13 @@ from django.conf import settings
 from django.contrib.auth import get_user_model
 from drf_spectacular.utils import OpenApiResponse, extend_schema, inline_serializer
 from rest_framework import permissions, serializers, status, views
-from rest_framework.exceptions import AuthenticationFailed
+from rest_framework.exceptions import AuthenticationFailed, PermissionDenied
 from rest_framework.generics import RetrieveAPIView
 from rest_framework.response import Response
 from rest_framework.throttling import BaseThrottle
 from rest_framework_simplejwt.exceptions import TokenError
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
+from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 
 
@@ -40,6 +41,7 @@ from accounts.serializers import (  # noqa: E402
     UserSerializer,
 )
 from accounts.services import auth as auth_service  # noqa: E402
+from accounts.services.tokens import TOKEN_VERSION_CLAIM, refresh_for, token_version_of  # noqa: E402
 from accounts.services import (  # noqa: E402
     login_guard,
     reset_password,
@@ -183,8 +185,6 @@ class LogoutView(views.APIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def post(self, request):
-        from rest_framework_simplejwt.tokens import RefreshToken
-
         if request.data.get("all"):
             revoke_user_refresh_tokens(request.user)
             resp = Response(status=status.HTTP_205_RESET_CONTENT)
@@ -248,7 +248,9 @@ class StaffOnlyTokenObtainPairSerializer(TokenObtainPairSerializer):
     @classmethod
     def get_token(cls, user):
         auth_service.assert_staff_login(user)
-        return super().get_token(user)
+        refresh = super().get_token(user)
+        refresh[TOKEN_VERSION_CLAIM] = user.token_version  # отзыв доступа из CRM гасит и access (FIX-11)
+        return refresh
 
 
 @extend_schema(request=TokenObtainPairSerializer, responses=TokenObtainPairSerializer)  # схема — как у simplejwt
@@ -310,12 +312,33 @@ class CookieTokenObtainPairView(ThrottledTokenObtainPairView):
 class CookieTokenRefreshView(TokenRefreshView):
     """Refresh using the HttpOnly cookie (F2.1). Reads the refresh token from the
     cookie (body still accepted for transition), returns a fresh access token in the
-    body, and — with rotation on — sets the rotated refresh token back as the cookie."""
+    body, and — with rotation on — sets the rotated refresh token back as the cookie.
+
+    Refresh не продлевается тому, кто больше не сотрудник (FIX-13: `assert_staff_login` → 403
+    `STAFF_ONLY`) и тому, чей доступ отозван (FIX-11: версия токена `tv` ≠ `token_version` → 401):
+    токен, выданный раньше, чем закрыли вход, иначе жил бы 7 дней."""
+
+    def _dead(self, detail: str, http_status: int) -> Response:
+        # Dead token: answer AND clear the cookie, otherwise the browser replays it on every visit.
+        response = Response({"detail": detail}, status=http_status)
+        _clear_refresh_cookie(response)
+        return response
 
     def post(self, request, *args, **kwargs):
         token = request.data.get("refresh") or request.COOKIES.get(settings.REFRESH_COOKIE_NAME)
         if not token:
             return Response({"detail": "NO_REFRESH_TOKEN"}, status=status.HTTP_401_UNAUTHORIZED)
+        try:
+            alive = RefreshToken(token)
+            user = get_user_model().objects.get(pk=alive["user_id"])
+        except (TokenError, KeyError, get_user_model().DoesNotExist):
+            return self._dead("INVALID_REFRESH_TOKEN", status.HTTP_401_UNAUTHORIZED)
+        if not user.is_active or token_version_of(alive) != user.token_version:
+            return self._dead("INVALID_REFRESH_TOKEN", status.HTTP_401_UNAUTHORIZED)
+        try:
+            auth_service.assert_staff_login(user)
+        except PermissionDenied as exc:
+            return self._dead(str(exc.detail), status.HTTP_403_FORBIDDEN)
         serializer = self.get_serializer(data={"refresh": token})
         try:
             serializer.is_valid(raise_exception=True)
@@ -324,9 +347,7 @@ class CookieTokenRefreshView(TokenRefreshView):
             # user no longer exists (rotation re-reads the user → DoesNotExist would
             # otherwise 500). Answer 401 AND clear the cookie, otherwise the browser
             # replays the dead token on every visit forever.
-            response = Response({"detail": "INVALID_REFRESH_TOKEN"}, status=status.HTTP_401_UNAUTHORIZED)
-            _clear_refresh_cookie(response)
-            return response
+            return self._dead("INVALID_REFRESH_TOKEN", status.HTTP_401_UNAUTHORIZED)
         data = dict(serializer.validated_data)
         rotated = data.pop("refresh", None)  # present when ROTATE_REFRESH_TOKENS
         response = Response(data, status=status.HTTP_200_OK)
@@ -455,8 +476,6 @@ class TOTPLoginView(views.APIView):
         tags=["Auth"],
     )
     def post(self, request):
-        from rest_framework_simplejwt.tokens import RefreshToken
-
         user, error = two_factor.redeem_login_ticket(request.data.get("temp_token"), request.data.get("code"))
         if error == "2FA_TICKET_INVALID":
             return Response({"detail": error}, status=status.HTTP_400_BAD_REQUEST)
@@ -468,7 +487,7 @@ class TOTPLoginView(views.APIView):
             login_guard.record_failure(user.email, BaseThrottle().get_ident(request))
             return Response({"detail": error}, status=status.HTTP_400_BAD_REQUEST)
         login_guard.reset(user.email)
-        refresh = RefreshToken.for_user(user)
+        refresh = refresh_for(user)
         response = Response({"access": str(refresh.access_token)})
         _set_refresh_cookie(response, str(refresh))
         return response

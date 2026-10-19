@@ -4,6 +4,7 @@
  * RailTech CRM API
  * OpenAPI spec version: 0.1.0
  */
+import type { UserOutPlatformAccessItem } from "./userOutPlatformAccessItem";
 
 export interface UserOut {
   email: string;
@@ -13,6 +14,7 @@ export interface UserOut {
   must_change_password: boolean;
   notify_leads: boolean;
   notify_system: boolean;
+  platform_access?: UserOutPlatformAccessItem[];
   roles: string[];
   tg_dm_failed_at?: string | null;
   tg_user_id: number | null;

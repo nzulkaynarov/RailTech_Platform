@@ -124,6 +124,16 @@ _AFTER_VENDORS: Final = (
         fix_path=None,
     ),
     ServiceSpec(
+        key="erp_sync",
+        title="Синхронизация сотрудников с ERP",
+        purpose="Доступ сотрудников к ERP: учётная запись при выдаче, отзыв сессий при снятии",
+        system="ensemble",
+        source="crm",
+        check="итог последних задач провижининга и отзыва сессий (без запросов в ERP)",
+        tiers=("cheap",),
+        fix_path="/integrations?tab=erp",
+    ),
+    ServiceSpec(
         key="backup",
         title="Хранилище резервных копий",
         purpose="Ежедневная копия базы и файлов; восстановление после аварии",

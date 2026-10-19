@@ -4,6 +4,7 @@
  * RailTech CRM API
  * OpenAPI spec version: 0.1.0
  */
+import type { MeOutPlatformAccessItem } from "./meOutPlatformAccessItem";
 
 /**
  * Свой профиль + флаги развёртывания, по которым SPA прячет кнопки (истина — на сервере).
@@ -16,6 +17,7 @@ export interface MeOut {
   must_change_password: boolean;
   notify_leads: boolean;
   notify_system: boolean;
+  platform_access?: MeOutPlatformAccessItem[];
   roles: string[];
   sso_enabled?: boolean;
   tg_dm_failed_at?: string | null;

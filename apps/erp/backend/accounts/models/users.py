@@ -68,6 +68,14 @@ class CustomUser(AbstractUser):
         verbose_name=_("Системная роль"),
         help_text=_("Глобальная роль: определяет права доступа на всей платформе"),
     )
+    token_version = models.PositiveIntegerField(
+        default=0,
+        verbose_name=_("Версия токенов"),
+        help_text=_(
+            "Растёт при отзыве доступа из CRM (sso.revoke): access-токен несёт версию в claim `tv`, "
+            "с другой версией — 401 (accounts.authentication)"
+        ),
+    )
 
     USERNAME_FIELD = "email"
     REQUIRED_FIELDS = ["username"]

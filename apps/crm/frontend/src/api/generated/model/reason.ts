@@ -79,4 +79,8 @@ export const Reason = {
   service_not_switchable: "service_not_switchable",
   telegram_paused: "telegram_paused",
   sso_not_configured: "sso_not_configured",
+  platform_access_denied: "platform_access_denied",
+  user_not_provisioned: "user_not_provisioned",
+  user_inactive: "user_inactive",
+  erp_email_conflict: "erp_email_conflict",
 } as const;

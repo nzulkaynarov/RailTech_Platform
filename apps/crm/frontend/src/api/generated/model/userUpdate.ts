@@ -9,6 +9,7 @@ export interface UserUpdate {
   clear_tg_user_id?: boolean;
   full_name?: string | null;
   is_active?: boolean | null;
+  platform_access?: ("crm" | "erp")[] | null;
   roles?: ("admin" | "manager" | "viewer")[] | null;
   tg_user_id?: number | null;
   transfer_to_user_id?: number | null;

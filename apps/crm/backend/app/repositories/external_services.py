@@ -7,6 +7,7 @@ from typing import Any
 from sqlalchemy import delete, func, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.models.auth import User
 from app.models.email import EmailLog
 from app.models.external_services import (
     ExternalServiceCheck,
@@ -191,3 +192,22 @@ async def mail_stats(session: AsyncSession, since: datetime) -> MailLogStats:
         last_failed_at=failed.updated_at if failed else None,
         last_sent_at=last_sent,
     )
+
+
+async def erp_sync_stats(session: AsyncSession) -> tuple[int, int, str | None]:
+    """Синхронизация сотрудников с ERP: (с доступом к ERP, с ошибкой, последняя ошибка)."""
+    with_access = await session.scalar(
+        select(func.count())
+        .select_from(User)
+        .where(User.is_active.is_(True), User.platform_access.contains(["erp"]))
+    )
+    failed = await session.scalar(
+        select(func.count()).select_from(User).where(User.erp_sync_error.is_not(None))
+    )
+    last_error = await session.scalar(
+        select(User.erp_sync_error)
+        .where(User.erp_sync_error.is_not(None))
+        .order_by(User.updated_at.desc())
+        .limit(1)
+    )
+    return int(with_access or 0), int(failed or 0), last_error

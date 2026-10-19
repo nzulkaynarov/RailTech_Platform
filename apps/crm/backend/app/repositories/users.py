@@ -2,7 +2,7 @@
 
 from collections.abc import Sequence
 
-from sqlalchemy import delete, func, select
+from sqlalchemy import delete, func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.auth import Role, User, UserRole
@@ -74,3 +74,8 @@ async def count_active_admins(session: AsyncSession, *, excluding: int | None = 
 async def lock_admin_set(session: AsyncSession) -> None:
     """Сериализует изменения ролей/активности админов (инвариант «≥ 1 админ»)."""
     await session.execute(select(Role.id).where(Role.name == "admin").with_for_update())
+
+
+async def set_erp_sync_error(session: AsyncSession, user_id: int, message: str | None) -> None:
+    """Итог синхронизации с ERP: ошибка (для ленты внешних сервисов) или `None` — всё в порядке."""
+    await session.execute(update(User).where(User.id == user_id).values(erp_sync_error=message))
