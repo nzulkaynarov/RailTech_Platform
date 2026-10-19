@@ -5,6 +5,7 @@ import { axe } from 'vitest-axe';
 
 import { portalServer } from '@/mocks/server';
 import { renderApp, signedIn } from '@/test/render';
+import { captureBody, requestLog } from '@/test/screens';
 
 describe('вход с веба', () => {
   it('без сессии кабинет ведёт на страницу входа с двумя путями', async () => {
@@ -45,16 +46,65 @@ describe('вход с веба', () => {
     expect(await screen.findByText('Проверьте заполненные поля.')).toBeInTheDocument();
   });
 
-  it('ссылка из письма: /auth/magic/:token → сессия → кабинет', async () => {
-    const { router } = renderApp('/auth/magic/demo-token');
+  it('ссылка из письма: /auth/magic#token=… → POST /auth/magic {token} → сессия → кабинет', async () => {
+    const log = requestLog();
+    const body = captureBody('/auth/magic');
+    const { router } = renderApp('/auth/magic#token=demo-token');
     expect(await screen.findByRole('heading', { level: 1, name: 'Запросы' })).toBeInTheDocument();
     expect(router.state.location.pathname).toBe('/requests');
+    expect(body.current).toEqual({ token: 'demo-token' });
+    // Токен не в пути и не в GET: старый обмен `GET /auth/magic/{token}` Cabinet не использует.
+    expect(log).toContain('POST /auth/magic');
+    expect(log.filter((entry) => entry.startsWith('GET /auth/magic'))).toEqual([]);
   });
 
-  it('просроченная ссылка (410) — «Ссылка не действует» и путь к новой', async () => {
-    renderApp('/auth/magic/expired');
+  it('старая ссылка с токеном в пути только перенаправляет на фрагмент и обменивается через POST', async () => {
+    const log = requestLog();
+    const body = captureBody('/auth/magic');
+    const { router } = renderApp('/auth/magic/legacy-token');
+    expect(await screen.findByRole('heading', { level: 1, name: 'Запросы' })).toBeInTheDocument();
+    expect(router.state.location.pathname).toBe('/requests');
+    expect(body.current).toEqual({ token: 'legacy-token' });
+    expect(log.filter((entry) => entry.includes('legacy-token'))).toEqual([]);
+  });
+
+  it('просроченная ссылка (410) — «Ссылка не действует», фрагмент убран из адреса, путь к новой', async () => {
+    const { router } = renderApp('/auth/magic#token=expired');
     expect(await screen.findByRole('heading', { level: 1, name: 'Ссылка не действует' })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Запросить новую ссылку' })).toHaveAttribute('href', '/login');
+    expect(router.state.location.hash).toBe('');
+  });
+
+  it('ссылка без токена — «Ссылка не действует», запросов нет', async () => {
+    const log = requestLog();
+    renderApp('/auth/magic');
+    expect(await screen.findByRole('heading', { level: 1, name: 'Ссылка не действует' })).toBeInTheDocument();
+    expect(log.filter((entry) => entry.startsWith('POST /auth/magic'))).toEqual([]);
+  });
+
+  it('403 FORBIDDEN (компания в архиве) — «Доступ закрыт, обратитесь к менеджеру»', async () => {
+    renderApp('/auth/magic#token=forbidden');
+    expect(await screen.findByRole('heading', { level: 1, name: 'Доступ закрыт' })).toBeInTheDocument();
+    expect(screen.getByText('Доступ закрыт, обратитесь к менеджеру.')).toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'Запросить новую ссылку' })).not.toBeInTheDocument();
+  });
+
+  it('429 на обмене токена — «Слишком много запросов, попробуйте через час»', async () => {
+    renderApp('/auth/magic#token=throttled');
+    expect(await screen.findByRole('heading', { level: 1, name: 'Не удалось войти' })).toBeInTheDocument();
+    expect(screen.getByText('Слишком много запросов, попробуйте через час.')).toBeInTheDocument();
+  });
+
+  it.each([
+    [429, 'TOO_MANY_REQUESTS', 'Слишком много запросов, попробуйте через час.'],
+    [403, 'FORBIDDEN', 'Доступ закрыт, обратитесь к менеджеру.'],
+  ])('«Войти»: %i %s — понятный текст под полем', async (status, code, text) => {
+    portalServer.use(http.post('*/api/portal/v1/auth/magic-link', () => HttpResponse.json({ detail: code }, { status })));
+    const user = userEvent.setup();
+    renderApp('/login');
+    await user.type(await screen.findByLabelText('E-mail'), 'x@y.uz');
+    await user.click(screen.getByRole('button', { name: 'Войти' }));
+    expect(await screen.findByText(text)).toBeInTheDocument();
   });
 
   it('«Я новый клиент»: форма запроса и рядом «Написать в Telegram» с меткой web (форма — new-client.test)', async () => {

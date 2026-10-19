@@ -1,6 +1,7 @@
 import '@testing-library/jest-dom/vitest';
 import { cleanup, configure } from '@testing-library/react';
 import { afterAll, afterEach, beforeAll, beforeEach, vi } from 'vitest';
+import { toast } from 'sonner';
 
 import i18n from '@/i18n';
 import { resetMockPortal } from '@/mocks/handlers';
@@ -52,6 +53,16 @@ if (!window.matchMedia) {
   });
 }
 
+// Загрузка файла в тестах: fetch (undici) собирает multipart-тело и разбирает его в обработчике MSW своим классом File,
+// а jsdom подменяет глобальный File своим — undici отвергает чужой класс (`webidl.is.File`). Возвращаем File из Node.
+// (имя модуля — в переменной: типы Node в сборку Cabinet не подключены)
+const nodeBuffer = 'node:buffer';
+const { File: NodeFile } = (await import(/* @vite-ignore */ nodeBuffer)) as { File: typeof File };
+Object.defineProperty(globalThis, 'File', { value: NodeFile, configurable: true, writable: true });
+// То же с FormData: jsdom-версия не принимает File из Node (превращает его в строку). Класс undici берём у Response.
+const NodeFormData = (await new Response(new URLSearchParams()).formData()).constructor as typeof FormData;
+Object.defineProperty(globalThis, 'FormData', { value: NodeFormData, configurable: true, writable: true });
+
 beforeAll(() => portalServer.listen({ onUnhandledRequest: 'error' }));
 
 /**
@@ -75,6 +86,8 @@ beforeEach(async () => {
 
 afterEach(() => {
   cleanup();
+  // Очередь тостов sonner — состояние модуля: без сброса тост прошлого теста всплывает в следующем.
+  toast.dismiss();
   portalServer.resetHandlers();
   portalServer.events.removeAllListeners();
   vi.useRealTimers();

@@ -50,26 +50,6 @@ describe('Путь клиента M2-CAB-04', () => {
     expect(screen.getByLabelText('Строка 1')).toHaveValue('Подшипник 6205-2RS');
   });
 
-  it('поставки: приёмка строки и замечание', async () => {
-    signedIn();
-    const user = userEvent.setup();
-    renderApp('/deliveries');
-    await heading('Поставки');
-
-    const acceptBtn = await screen.findByRole('button', { name: 'Принять позицию Редуктор червячный NMRV 063' });
-    await user.click(acceptBtn);
-    expect(await screen.findByText('Позиция принята')).toBeInTheDocument();
-
-    const disputeBtn = screen.getByRole('button', { name: 'Оставить замечание к позиции Редуктор червячный NMRV 063' });
-    await user.click(disputeBtn);
-
-    expect(await screen.findByRole('dialog', { name: 'Замечание по позиции «Редуктор червячный NMRV 063»' })).toBeInTheDocument();
-    await user.type(screen.getByLabelText('Причина замечания'), 'Повреждена упаковка при транспортировке');
-    await user.click(screen.getByRole('button', { name: 'Отправить замечание' }));
-
-    expect(await screen.findByText('Замечание отправлено менеджеру')).toBeInTheDocument();
-  });
-
   it('документы: поиск фильтрует список', async () => {
     signedIn();
     const user = userEvent.setup();

@@ -12,49 +12,58 @@ import { QuoteDetailPage, QuotesPage } from '@/pages/quotes';
 import { RequestDetailPage, RequestNewPage, RequestsPage } from '@/pages/requests';
 import { LoginPage } from '@/pages/auth/LoginPage';
 import { LoginSentPage } from '@/pages/auth/LoginSentPage';
-import { MagicLinkPage } from '@/pages/auth/MagicLinkPage';
+import { LegacyMagicLinkRedirect, MagicLinkPage } from '@/pages/auth/MagicLinkPage';
 import { NewClientPage } from '@/pages/auth/NewClientPage';
 import { HomeRedirect, RequireSession, WebOnly } from './guards';
+import { RootErrorPage } from './RootErrorPage';
 
 /**
  * Маршруты Cabinet. Публичные (`/login`, `/login/sent`, `/new-client`) — только в вебе;
- * `/auth/magic/:token` — ссылка из письма; всё остальное — за сессией портала в оболочке.
+ * `/auth/magic#token=…` — ссылка из письма (токен во фрагменте); `/auth/magic/:token` — только редирект на неё
+ * на переходный период; всё остальное — за сессией портала в оболочке. Непойманная ошибка любого маршрута —
+ * `RootErrorPage` (корневой `errorElement`), а не белый экран.
  * Экраны разделов — ARCHITECTURE §5 (M2-CAB-02), по файлу на домен в `src/pages/`.
  */
 export const routes: RouteObject[] = [
   {
-    element: <WebOnly />,
-    children: [
-      { path: '/login', element: <LoginPage /> },
-      { path: '/login/sent', element: <LoginSentPage /> },
-      { path: '/new-client', element: <NewClientPage /> },
-    ],
-  },
-  { path: '/auth/magic/:token', element: <MagicLinkPage /> },
-  {
-    element: <RequireSession />,
+    errorElement: <RootErrorPage />,
     children: [
       {
-        element: <AppShell />,
+        element: <WebOnly />,
         children: [
-          { index: true, path: '/', element: <HomeRedirect /> },
-          { path: '/requests', element: <RequestsPage /> },
-          { path: '/requests/new', element: <RequestNewPage /> },
-          { path: '/requests/:id', element: <RequestDetailPage /> },
-          { path: '/quotes', element: <QuotesPage /> },
-          { path: '/quotes/:id', element: <QuoteDetailPage /> },
-          { path: '/contracts', element: <ContractsPage /> },
-          { path: '/invoices', element: <InvoicesPage /> },
-          { path: '/acts', element: <ActsPage /> },
-          { path: '/deliveries', element: <DeliveriesPage /> },
-          { path: '/documents', element: <DocumentsPage /> },
-          { path: '/catalog', element: <CatalogPage /> },
-          { path: '/catalog/:id', element: <CatalogItemPage /> },
-          { path: '/company', element: <CompanyPage /> },
-          { path: '/team', element: <TeamPage /> },
-          { path: '/deals/:id', element: <DealPage /> },
-          { path: '/profile', element: <ProfilePage /> },
-          { path: '*', element: <NotFoundPage /> },
+          { path: '/login', element: <LoginPage /> },
+          { path: '/login/sent', element: <LoginSentPage /> },
+          { path: '/new-client', element: <NewClientPage /> },
+        ],
+      },
+      { path: '/auth/magic', element: <MagicLinkPage /> },
+      { path: '/auth/magic/:token', element: <LegacyMagicLinkRedirect /> },
+      {
+        element: <RequireSession />,
+        children: [
+          {
+            element: <AppShell />,
+            children: [
+              { index: true, path: '/', element: <HomeRedirect /> },
+              { path: '/requests', element: <RequestsPage /> },
+              { path: '/requests/new', element: <RequestNewPage /> },
+              { path: '/requests/:id', element: <RequestDetailPage /> },
+              { path: '/quotes', element: <QuotesPage /> },
+              { path: '/quotes/:id', element: <QuoteDetailPage /> },
+              { path: '/contracts', element: <ContractsPage /> },
+              { path: '/invoices', element: <InvoicesPage /> },
+              { path: '/acts', element: <ActsPage /> },
+              { path: '/deliveries', element: <DeliveriesPage /> },
+              { path: '/documents', element: <DocumentsPage /> },
+              { path: '/catalog', element: <CatalogPage /> },
+              { path: '/catalog/:id', element: <CatalogItemPage /> },
+              { path: '/company', element: <CompanyPage /> },
+              { path: '/team', element: <TeamPage /> },
+              { path: '/deals/:id', element: <DealPage /> },
+              { path: '/profile', element: <ProfilePage /> },
+              { path: '*', element: <NotFoundPage /> },
+            ],
+          },
         ],
       },
     ],

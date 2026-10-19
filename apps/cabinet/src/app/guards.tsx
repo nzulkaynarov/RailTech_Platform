@@ -1,7 +1,8 @@
 import { Navigate, Outlet, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 
-import { apiErrorKey } from '@/api/errors';
+import { apiErrorKey, loginErrorKey } from '@/api/errors';
+import { isPortalApiError } from '@/api/portal';
 import { botLink } from './links';
 import { StatusScreen } from '@/components/StatusScreen';
 import { Button } from '@/components/ui/button';
@@ -47,7 +48,7 @@ function TelegramSignInFailed({ error, onRetry }: { error: unknown; onRetry: () 
     else if (bot) window.open(bot, '_blank', 'noopener');
   };
   return (
-    <StatusScreen title={t('auth.telegram.failedTitle')} text={`${t(apiErrorKey(error))} ${t('auth.telegram.failedText')}`}>
+    <StatusScreen title={t('auth.telegram.failedTitle')} text={`${t(isPortalApiError(error, 403) ? loginErrorKey(error) : apiErrorKey(error))} ${t('auth.telegram.failedText')}`}>
       <Button onClick={onRetry}>{t('auth.telegram.retry')}</Button>
       {bot ? (
         <Button variant="outline" onClick={openBot}>

@@ -1,11 +1,12 @@
 import { useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { AlertTriangle, CheckCircle2, FolderOpen, Search, Truck } from 'lucide-react';
+import { AlertTriangle, CheckCircle2, FolderOpen, Loader2, Search, Truck } from 'lucide-react';
 import { toast } from 'sonner';
 
+import { apiErrorKey } from '@/api/errors';
 import type { DeliveryLine, DocumentKind, PortalDocument } from '@/api/portal';
-import { useDeliveries, useDocuments } from '@/api/queries';
+import { useAcceptDelivery, useDeliveries, useDisputeDelivery, useDocuments } from '@/api/queries';
 import { DealLink } from '@/components/Details';
 import { DocumentButton } from '@/components/DocumentButton';
 import { EmptyState } from '@/components/EmptyState';
@@ -28,11 +29,30 @@ import { CanAct } from '@/session/CanAct';
  * Поставки по строкам (B2B `FulfillmentsPage` как основа; статусы — проекция ERP, M4-ERP-04) и
  * документы компании (B2B `CompanyFilesPage`). Поставки сгруппированы по сделке: клиент думает
  * «мой заказ», а не «строка 2». Поставщиков, цен и складов здесь нет — их нет и в контракте.
+ * Приёмка по строкам настоящая: «Принять» → `POST /deliveries/{id}/accept`, «Замечание» →
+ * `/dispute {reason}`; кнопки есть только у строки в статусе `delivered`.
  */
 export function DeliveriesPage() {
   const { t } = useTranslation();
   const deliveries = useDeliveries();
-  const [disputeTarget, setDisputeTarget] = useState<{ dealId: number; line: DeliveryLine } | null>(null);
+  const accept = useAcceptDelivery();
+  const dispute = useDisputeDelivery();
+  const [disputeTarget, setDisputeTarget] = useState<DeliveryLine | null>(null);
+  const [acceptingId, setAcceptingId] = useState<number | null>(null);
+
+  const acceptLine = (line: DeliveryLine) => {
+    setAcceptingId(line.id);
+    accept.mutate(line.id, {
+      onSuccess: () => toast.success(t('pages.deliveries.lineAcceptedToast', { name: line.title })),
+      onError: (error) => toast.error(t(apiErrorKey(error))),
+      onSettled: () => setAcceptingId(null),
+    });
+  };
+
+  const closeDispute = () => {
+    setDisputeTarget(null);
+    dispute.reset();
+  };
 
   return (
     <>
@@ -46,29 +66,29 @@ export function DeliveriesPage() {
       ) : (
         <div className="flex flex-col gap-4">
           {groupDeliveries(deliveries.data).map((group) => (
-            <Card key={group.dealId} className="gap-3 py-4">
+            <Card key={group.deal.id} className="gap-3 py-4">
               <CardHeader className="flex flex-wrap items-center justify-between gap-2 px-4">
                 <CardTitle className="min-w-0">
                   <h2 className="flex flex-wrap items-baseline gap-x-3 gap-y-1 text-base">
-                    <DealLink dealId={group.dealId} />
+                    <DealLink deal={group.deal} showTitle />
                     <span className="text-sm font-normal text-muted-foreground">
                       {t('pages.deliveries.progress', { done: group.delivered, total: group.lines.length })}
                     </span>
                   </h2>
                 </CardTitle>
-                <ManagerButton dealId={group.dealId} label={t('manager.aboutDeal', { id: group.dealId })} />
+                <ManagerButton dealId={group.deal.id} label={t('manager.aboutDeal', { number: group.deal.number })} />
               </CardHeader>
               <CardContent className="px-4">
-                <ul className="flex flex-col divide-y" aria-label={t('common.dealNumber', { id: group.dealId })}>
+                <ul className="flex flex-col divide-y" aria-label={t('common.dealNumber', { number: group.deal.number })}>
                   {group.lines.map((line) => (
-                    <li key={line.line_no} className="flex min-w-0 flex-col gap-2 py-3 first:pt-0 last:pb-0 sm:flex-row sm:items-start sm:justify-between">
+                    <li key={line.id} className="flex min-w-0 flex-col gap-2 py-3 first:pt-0 last:pb-0 sm:flex-row sm:items-start sm:justify-between">
                       <div className="flex min-w-0 flex-col gap-0.5">
                         <span className="text-sm font-medium wrap-break-word">{line.title}</span>
                         <span className="text-xs text-muted-foreground">{formatQuantity(line.quantity, line.unit)}</span>
                       </div>
                       <div className="flex min-w-0 flex-col gap-1 text-sm sm:items-end sm:text-right">
                         <StatusBadge entity="delivery" code={line.status} />
-                        {line.status === 'delivered' || line.status === 'shipped' ? null : (
+                        {RECEIVED_STATUSES.includes(line.status) || line.status === 'shipped' ? null : (
                           <span className="text-muted-foreground">
                             {line.eta ? t('pages.deliveries.eta', { date: formatDate(line.eta) }) : t('pages.deliveries.etaUnknown')}
                           </span>
@@ -81,22 +101,33 @@ export function DeliveriesPage() {
                             {t('pages.deliveries.tracking')}: <span className="font-mono">{line.tracking}</span>
                           </span>
                         ) : null}
-                        {line.status === 'delivered' || line.status === 'shipped' ? (
+                        {line.status === 'accepted' && line.accepted_at ? (
+                          <span className="text-muted-foreground">{t('pages.deliveries.acceptedAt', { date: formatDateTime(line.accepted_at) })}</span>
+                        ) : null}
+                        {line.status === 'disputed' ? (
+                          <span className="flex flex-col gap-0.5 text-muted-foreground">
+                            {line.accepted_at ? <span>{t('pages.deliveries.disputedAt', { date: formatDateTime(line.accepted_at) })}</span> : null}
+                            {line.remark ? <span className="wrap-break-word">{t('pages.deliveries.remark', { remark: line.remark })}</span> : null}
+                          </span>
+                        ) : null}
+                        {line.status === 'delivered' ? (
                           <CanAct>
                             <div className="mt-1 flex flex-wrap items-center gap-1 sm:justify-end">
                               <Button
                                 size="sm"
                                 variant="outline"
-                                onClick={() => toast.success(t('pages.deliveries.lineAcceptedToast'))}
+                                disabled={acceptingId === line.id}
+                                onClick={() => acceptLine(line)}
                                 aria-label={t('pages.deliveries.acceptLineNamed', { name: line.title })}
                               >
-                                <CheckCircle2 aria-hidden="true" />
+                                {acceptingId === line.id ? <Loader2 className="animate-spin" aria-hidden="true" /> : <CheckCircle2 aria-hidden="true" />}
                                 {t('pages.deliveries.acceptLine')}
                               </Button>
                               <Button
                                 size="sm"
                                 variant="ghost"
-                                onClick={() => setDisputeTarget({ dealId: group.dealId, line })}
+                                disabled={acceptingId === line.id}
+                                onClick={() => setDisputeTarget(line)}
                                 aria-label={t('pages.deliveries.disputeLineNamed', { name: line.title })}
                               >
                                 <AlertTriangle aria-hidden="true" />
@@ -115,23 +146,35 @@ export function DeliveriesPage() {
         </div>
       )}
       <ReasonDialog
-        target={disputeTarget ? `${disputeTarget.dealId}-${disputeTarget.line.line_no}` : null}
+        target={disputeTarget?.id ?? null}
         open={Boolean(disputeTarget)}
-        onOpenChange={(open) => !open && setDisputeTarget(null)}
-        title={t('pages.deliveries.disputeTitle', { name: disputeTarget?.line.title ?? '' })}
+        onOpenChange={(open) => !open && closeDispute()}
+        title={t('pages.deliveries.disputeTitle', { name: disputeTarget?.title ?? '' })}
         description={t('pages.deliveries.disputeText')}
         label={t('pages.deliveries.disputeReason')}
         placeholder={t('pages.deliveries.disputePlaceholder')}
         confirmLabel={t('pages.deliveries.disputeConfirm')}
-        pending={false}
-        onConfirm={() => {
-          toast.success(t('pages.deliveries.disputeSentToast'));
-          setDisputeTarget(null);
-        }}
+        pending={dispute.isPending}
+        error={dispute.error}
+        onConfirm={(reason) =>
+          disputeTarget &&
+          dispute.mutate(
+            { id: disputeTarget.id, reason },
+            {
+              onSuccess: () => {
+                toast.success(t('pages.deliveries.disputeSentToast'));
+                closeDispute();
+              },
+            },
+          )
+        }
       />
     </>
   );
 }
+
+/** Доставлено клиенту: ожидаемая дата уже не нужна. */
+const RECEIVED_STATUSES: ReadonlyArray<DeliveryLine['status']> = ['delivered', 'accepted', 'disputed'];
 
 export function DocumentsPage() {
   const { t } = useTranslation();
@@ -148,7 +191,7 @@ export function DocumentsPage() {
     return documents.data.filter((doc) =>
       doc.title.toLowerCase().includes(q) ||
       (doc.number && doc.number.toLowerCase().includes(q)) ||
-      (doc.deal_id && String(doc.deal_id).includes(q)),
+      (doc.deal && doc.deal.number.toLowerCase().includes(q)),
     );
   }, [documents.data, query]);
 
@@ -230,7 +273,7 @@ export function DocumentsPage() {
             { id: 'kind', header: t('pages.documents.columns.kind'), cell: (row) => t(`documents.kinds.${row.kind}`) },
             { id: 'date', header: t('pages.documents.columns.date'), cell: (row) => formatDate(row.date) },
             { id: 'size', header: t('pages.documents.columns.size'), cell: (row) => formatFileSize(row.size_bytes) },
-            { id: 'deal', header: t('pages.documents.columns.deal'), cell: (row) => <DealLink dealId={row.deal_id} /> },
+            { id: 'deal', header: t('pages.documents.columns.deal'), cell: (row) => <DealLink deal={row.deal} /> },
           ]}
           actions={{
             header: t('common.actions'),

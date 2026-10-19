@@ -12,16 +12,18 @@ describe('Поставки по строкам', () => {
     signedIn();
     renderApp('/deliveries');
     await heading('Поставки');
-    const deal29 = await screen.findByRole('list', { name: 'Сделка №29' });
+    const deal29 = await screen.findByRole('list', { name: 'Сделка № D-29' });
     expect(within(deal29).getAllByRole('listitem')).toHaveLength(3);
+    expect(screen.getByRole('link', { name: 'Сделка № D-29' })).toHaveAttribute('href', '/deals/29');
+    expect(screen.getByText(/Насос, задвижки и манометры/)).toBeInTheDocument();
     expect(within(deal29).getByText('Комплектуем')).toBeInTheDocument();
     expect(within(deal29).getByText('Ожидается 24 окт. 2026 г.')).toBeInTheDocument();
     expect(within(deal29).getByText('Готово к отгрузке')).toBeInTheDocument();
     expect(within(deal29).getByText('UZP-77815230')).toBeInTheDocument();
     expect(within(deal29).getByText('Отгружено 12 окт. 2026 г., 11:00')).toBeInTheDocument();
-    expect(screen.getByText('Доставлено 1 из 2')).toBeInTheDocument();
-    expect(within(screen.getByRole('list', { name: 'Сделка №48' })).getByText('Дата уточняется')).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'Сделка №35' })).toHaveAttribute('href', '/deals/35');
+    expect(screen.getByText('Доставлено 3 из 4')).toBeInTheDocument();
+    expect(within(screen.getByRole('list', { name: 'Сделка № D-48' })).getByText('Дата уточняется')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Сделка № D-35' })).toHaveAttribute('href', '/deals/35');
     await expectNoAxeViolations();
   });
 

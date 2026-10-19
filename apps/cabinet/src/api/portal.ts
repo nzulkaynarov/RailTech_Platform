@@ -116,8 +116,10 @@ export function requestMagicLink(email: string): Promise<void> {
   return portalRequest<void>('/auth/magic-link', { method: 'POST', body });
 }
 
-export function exchangeMagicLink(token: string): Promise<Me> {
-  return portalRequest<Me>(`/auth/magic/${encodeURIComponent(token)}`);
+/** Обмен токена из ссылки входа на сессию; токен — в теле, не в пути (FIX-20: пути попадают в журналы). */
+export function exchangeMagicToken(token: string): Promise<Me> {
+  const body: JsonBody<paths['/auth/magic']['post']> = { token };
+  return portalRequest<Me>('/auth/magic', { method: 'POST', body });
 }
 
 export function logout(): Promise<void> {
@@ -142,6 +144,8 @@ export type QuoteLine = Schemas['QuoteLine'];
 export type Contract = Schemas['Contract'];
 export type Invoice = Schemas['Invoice'];
 export type Act = Schemas['Act'];
+export type DealRef = Schemas['DealRef'];
+export type AcceptanceCodeSent = Schemas['AcceptanceCodeSent'];
 export type DeliveryLine = Schemas['DeliveryLine'];
 export type PortalDocument = Schemas['Document'];
 export type DocumentKind = Schemas['DocumentKind'];
@@ -165,6 +169,10 @@ export function createRequest(body: JsonBody<paths['/requests']['post']>): Promi
 
 export const listQuotes = () => portalRequest<QuoteListItem[]>('/quotes');
 export const getQuote = (id: number) => portalRequest<Quote>(`/quotes/${id}`);
+/** Код акцепта ERP шлёт контакту сам (Telegram или e-mail) — мастер-кода нет; ответ — канал и замаскированный адрес. */
+export function requestQuoteCode(id: number): Promise<AcceptanceCodeSent> {
+  return portalRequest<AcceptanceCodeSent>(`/quotes/${id}/request-code`, { method: 'POST' });
+}
 export function acceptQuote(id: number, code: string): Promise<Quote> {
   const body: JsonBody<paths['/quotes/{id}/accept']['post']> = { code };
   return portalRequest<Quote>(`/quotes/${id}/accept`, { method: 'POST', body });
@@ -180,13 +188,22 @@ export const signContract = (id: number) => portalRequest<Contract>(`/contracts/
 export const listInvoices = () => portalRequest<Invoice[]>('/invoices');
 
 export const listActs = () => portalRequest<Act[]>('/acts');
-export const acceptAct = (id: number) => portalRequest<Act>(`/acts/${id}/accept`, { method: 'POST' });
+/** Приёмка акта; скан подписанного экземпляра (`upload_id` из `POST /uploads`) необязателен. */
+export function acceptAct(id: number, uploadId?: string): Promise<Act> {
+  const body: Schemas['ActAccept'] | undefined = uploadId ? { upload_id: uploadId } : undefined;
+  return portalRequest<Act>(`/acts/${id}/accept`, { method: 'POST', body });
+}
 export function returnAct(id: number, reason: string): Promise<Act> {
   const body: JsonBody<paths['/acts/{id}/return']['post']> = { reason };
   return portalRequest<Act>(`/acts/${id}/return`, { method: 'POST', body });
 }
 
 export const listDeliveries = () => portalRequest<DeliveryLine[]>('/deliveries');
+export const acceptDelivery = (id: number) => portalRequest<DeliveryLine>(`/deliveries/${id}/accept`, { method: 'POST' });
+export function disputeDelivery(id: number, reason: string): Promise<DeliveryLine> {
+  const body: JsonBody<paths['/deliveries/{id}/dispute']['post']> = { reason };
+  return portalRequest<DeliveryLine>(`/deliveries/${id}/dispute`, { method: 'POST', body });
+}
 
 export const listDocuments = (params: DocumentsQuery = {}) =>
   portalRequest<PortalDocument[]>(`/documents${toQuery(params)}`);
@@ -260,4 +277,3 @@ export const updateCompany = (body: CompanyUpdate) => portalRequest<Company>('/c
 export const listTeam = () => portalRequest<TeamMember[]>('/team');
 export const inviteTeamMember = (body: TeamInvite) =>
   portalRequest<TeamMember>('/team/invite', { method: 'POST', body });
-

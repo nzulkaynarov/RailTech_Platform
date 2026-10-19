@@ -32,7 +32,7 @@ describe('Mini App', () => {
   it('start_param=deal_<id> открывает сделку, на вложенном экране — «Назад» Telegram', async () => {
     const webApp = asMiniApp({ startParam: 'deal_42' });
     const { router } = renderApp('/');
-    expect(await screen.findByRole('heading', { level: 1, name: 'Сделка №42' })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { level: 1, name: 'Сделка № D-42' })).toBeInTheDocument();
     expect(router.state.location.pathname).toBe('/deals/42');
     await waitFor(() => expect(webApp.BackButton?.show).toHaveBeenCalled());
   });

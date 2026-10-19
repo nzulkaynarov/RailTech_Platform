@@ -18,12 +18,15 @@ export function DocumentButton({
   fileName,
   label,
   variant = 'outline',
+  text,
 }: {
   documentId: number;
   fileName: string;
   /** Что скачиваем — для `aria-label` («Скачать: Счёт № S-…»). */
   label: string;
   variant?: 'outline' | 'ghost' | 'default';
+  /** Подпись кнопки вместо «Скачать» (например, «Скан»). */
+  text?: string;
 }) {
   const { t } = useTranslation();
   const [state, setState] = useState<'idle' | 'loading' | 'pending'>('idle');
@@ -52,7 +55,7 @@ export function DocumentButton({
         aria-label={t('documents.downloadNamed', { name: label })}
       >
         {busy ? <Loader2 className="animate-spin" aria-hidden="true" /> : <Download aria-hidden="true" />}
-        {state === 'pending' ? t('documents.preparing') : t('documents.download')}
+        {state === 'pending' ? t('documents.preparing') : (text ?? t('documents.download'))}
       </Button>
       <span className="sr-only" role="status" aria-live="polite">
         {state === 'pending' ? t('documents.preparingLive', { name: label }) : ''}

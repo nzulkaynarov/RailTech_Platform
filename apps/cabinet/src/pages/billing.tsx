@@ -1,10 +1,10 @@
-import { useState } from 'react';
+import { useId, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { AlertTriangle, CheckCircle2, ClipboardCheck, FileSignature, PenLine, Receipt, Undo2, Upload, Wallet } from 'lucide-react';
+import { AlertTriangle, CheckCircle2, ClipboardCheck, FileSignature, PenLine, Receipt, Undo2, Wallet } from 'lucide-react';
 import { toast } from 'sonner';
 
 import type { Act, Contract, Invoice } from '@/api/portal';
-import { useAcceptAct, useActs, useContracts, useInvoices, useReturnAct, useSignContract, useUploadFile } from '@/api/queries';
+import { useAcceptAct, useActs, useContracts, useInvoices, useReturnAct, useSignContract } from '@/api/queries';
 import { ActionDialog } from '@/components/ActionDialog';
 import { DealLink, SummaryNote } from '@/components/Details';
 import { DocumentButton } from '@/components/DocumentButton';
@@ -17,10 +17,13 @@ import { StatusBadge, ToneBadge } from '@/components/StatusBadge';
 import { ManagerButton } from '@/components/TelegramLinkButton';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { useNow } from '@/hooks/useNow';
 import { formatDate, formatDateTime, formatMoney, sumByCurrency } from '@/lib/format';
 import { invoiceView } from '@/lib/invoice';
 import { contractAwaitsClient } from '@/lib/status';
+import { scanProblem, type UploadProblem } from '@/lib/upload';
 import { CanAct } from '@/session/CanAct';
 
 /**
@@ -81,14 +84,14 @@ export function ContractsPage() {
                 header: t('pages.contracts.columns.company'),
                 cell: (row) => (row.signed_by_company_at ? formatDateTime(row.signed_by_company_at) : t('pages.contracts.notSigned')),
               },
-              { id: 'deal', header: t('pages.contracts.columns.deal'), cell: (row) => <DealLink dealId={row.deal_id} /> },
+              { id: 'deal', header: t('pages.contracts.columns.deal'), cell: (row) => <DealLink deal={row.deal} /> },
             ]}
             actions={{
               header: t('common.actions'),
               cell: (row) => (
                 <>
                   <RowDocument documentId={row.document_id} number={row.number} />
-                  <ManagerButton compact dealId={row.deal_id} label={t('manager.aboutContract', { number: row.number })} />
+                  <ManagerButton compact dealId={row.deal?.id} label={t('manager.aboutContract', { number: row.number })} />
                   {contractAwaitsClient(row.status) ? (
                     <CanAct>
                       <Button size="sm" onClick={() => setTarget(row)} aria-label={t('pages.contracts.signNamed', { number: row.number })}>
@@ -217,14 +220,14 @@ export function InvoicesPage() {
                   );
                 },
               },
-              { id: 'deal', header: t('pages.invoices.columns.deal'), cell: (row) => <DealLink dealId={row.deal_id} /> },
+              { id: 'deal', header: t('pages.invoices.columns.deal'), cell: (row) => <DealLink deal={row.deal} /> },
             ]}
             actions={{
               header: t('common.actions'),
               cell: (row) => (
                 <>
                   <RowDocument documentId={row.document_id} number={row.number} />
-                  <ManagerButton compact dealId={row.deal_id} label={t('manager.aboutInvoice', { number: row.number })} />
+                  <ManagerButton compact dealId={row.deal?.id} label={t('manager.aboutInvoice', { number: row.number })} />
                 </>
               ),
             }}
@@ -240,15 +243,12 @@ export function InvoicesPage() {
 export function ActsPage() {
   const { t } = useTranslation();
   const acts = useActs();
-  const accept = useAcceptAct();
   const giveBack = useReturnAct();
-  const uploadFile = useUploadFile();
   const [target, setTarget] = useState<{ act: Act; action: 'accept' | 'return' } | null>(null);
   const awaiting = (acts.data ?? []).filter((act) => act.status === 'issued').length;
 
   const close = () => {
     setTarget(null);
-    accept.reset();
     giveBack.reset();
   };
 
@@ -284,42 +284,23 @@ export function ActsPage() {
             columns={[
               { id: 'status', header: t('pages.acts.columns.status'), cell: (row) => <StatusBadge entity="act" code={row.status} /> },
               { id: 'issued', header: t('pages.acts.columns.issued'), cell: (row) => formatDate(row.issued_at) },
-              { id: 'deal', header: t('pages.acts.columns.deal'), cell: (row) => <DealLink dealId={row.deal_id} /> },
+              { id: 'deal', header: t('pages.acts.columns.deal'), cell: (row) => <DealLink deal={row.deal} /> },
             ]}
             actions={{
               header: t('common.actions'),
               cell: (row) => (
                 <>
                   <RowDocument documentId={row.document_id} number={row.number} />
-                  <ManagerButton compact dealId={row.deal_id} label={t('manager.aboutAct', { number: row.number })} />
-                  <CanAct>
-                    <Button
-                      size="sm"
+                  {row.scan_document_id !== null && row.scan_document_id !== undefined ? (
+                    <DocumentButton
+                      documentId={row.scan_document_id}
+                      fileName={`${row.number}-scan.pdf`}
+                      label={t('pages.acts.scanNamed', { number: row.number })}
                       variant="ghost"
-                      disabled={uploadFile.isPending}
-                      aria-label={t('pages.acts.uploadScanNamed', { number: row.number })}
-                      onClick={() => {
-                        const input = document.createElement('input');
-                        input.type = 'file';
-                        input.accept = '.pdf,image/*';
-                        input.onchange = async () => {
-                          const file = input.files?.[0];
-                          if (file) {
-                            try {
-                              await uploadFile.mutateAsync(file);
-                              toast.success(t('pages.acts.scanUploadedToast', { number: row.number }));
-                            } catch {
-                              toast.error(t('apiErrors.UNKNOWN'));
-                            }
-                          }
-                        };
-                        input.click();
-                      }}
-                    >
-                      <Upload aria-hidden="true" />
-                      {t('pages.acts.uploadScan')}
-                    </Button>
-                  </CanAct>
+                      text={t('pages.acts.scan')}
+                    />
+                  ) : null}
+                  <ManagerButton compact dealId={row.deal?.id} label={t('manager.aboutAct', { number: row.number })} />
                   {row.status === 'issued' ? (
                     <CanAct>
                       <Button size="sm" onClick={() => setTarget({ act: row, action: 'accept' })} aria-label={t('pages.acts.acceptNamed', { number: row.number })}>
@@ -343,24 +324,7 @@ export function ActsPage() {
           />
         </>
       )}
-      <ActionDialog
-        open={target?.action === 'accept'}
-        onOpenChange={(open) => !open && close()}
-        title={t('pages.acts.acceptTitle', { number: target?.act.number ?? '' })}
-        description={t('pages.acts.acceptText')}
-        confirmLabel={t('pages.acts.acceptConfirm')}
-        pending={accept.isPending}
-        error={accept.error}
-        onSubmit={() =>
-          target &&
-          accept.mutate(target.act.id, {
-            onSuccess: (act) => {
-              toast.success(t('pages.acts.acceptedToast', { number: act.number }));
-              close();
-            },
-          })
-        }
-      />
+      <AcceptActDialog act={target?.action === 'accept' ? target.act : null} onClose={close} />
       <ReasonDialog
         target={target?.act.id ?? null}
         open={target?.action === 'return'}
@@ -386,5 +350,77 @@ export function ActsPage() {
         }
       />
     </>
+  );
+}
+
+/**
+ * Приёмка акта. Скан подписанного экземпляра необязателен: с ним — `POST /uploads`, затем
+ * `POST /acts/{id}/accept {upload_id}` (ERP кладёт скан в `scan_document_id`), без него — приёмка без тела.
+ */
+function AcceptActDialog({ act, onClose }: { act: Act | null; onClose: () => void }) {
+  const { t } = useTranslation();
+  const id = useId();
+  const accept = useAcceptAct();
+  const [scan, setScan] = useState<File | null>(null);
+  const [problem, setProblem] = useState<UploadProblem | null>(null);
+
+  const close = () => {
+    setScan(null);
+    setProblem(null);
+    accept.reset();
+    onClose();
+  };
+
+  const choose = (file: File | undefined) => {
+    accept.reset();
+    if (!file) {
+      setScan(null);
+      setProblem(null);
+      return;
+    }
+    const found = scanProblem(file);
+    setProblem(found);
+    setScan(found ? null : file);
+  };
+
+  return (
+    <ActionDialog
+      open={act !== null}
+      onOpenChange={(open) => !open && close()}
+      title={t('pages.acts.acceptTitle', { number: act?.number ?? '' })}
+      description={t('pages.acts.acceptText')}
+      confirmLabel={t('pages.acts.acceptConfirm')}
+      pending={accept.isPending}
+      error={accept.error}
+      message={problem ? t(`pages.acts.scanProblem.${problem}`) : null}
+      onSubmit={() =>
+        act &&
+        !problem &&
+        accept.mutate(
+          { id: act.id, scan },
+          {
+            onSuccess: (accepted) => {
+              toast.success(t('pages.acts.acceptedToast', { number: accepted.number }));
+              close();
+            },
+          },
+        )
+      }
+    >
+      <div className="flex flex-col gap-2">
+        <Label htmlFor={id}>{t('pages.acts.scanLabel')}</Label>
+        <Input
+          id={id}
+          type="file"
+          accept=".pdf,image/*"
+          aria-describedby={`${id}-hint`}
+          aria-invalid={problem ? true : undefined}
+          onChange={(event) => choose(event.target.files?.[0])}
+        />
+        <p id={`${id}-hint`} className="text-xs text-muted-foreground">
+          {t('pages.acts.scanHint')}
+        </p>
+      </div>
+    </ActionDialog>
   );
 }

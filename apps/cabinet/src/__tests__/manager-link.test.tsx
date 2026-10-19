@@ -74,10 +74,10 @@ describe('«Написать менеджеру» на экранах', () => {
     signedIn();
     renderApp('/deliveries');
     await heading('Поставки');
-    const links = await screen.findAllByRole('link', { name: /^Написать менеджеру о сделке №\d+$/ });
+    const links = await screen.findAllByRole('link', { name: /^Написать менеджеру о сделке № D-\d+$/ });
     expect(links.length).toBeGreaterThan(1);
     for (const link of links) {
-      const id = link.getAttribute('aria-label')!.match(/№(\d+)/)![1];
+      const id = link.getAttribute('aria-label')!.match(/D-(\d+)/)![1];
       expect(link).toHaveAttribute('href', `${BOT}?start=deal_${id}`);
     }
     await expectNoAxeViolations();
@@ -96,7 +96,7 @@ describe('«Написать менеджеру» на экранах', () => {
     const webApp = asMiniApp({ startParam: 'deal_35' });
     const user = userEvent.setup();
     renderApp('/');
-    await heading('Сделка №35');
+    await heading('Сделка № D-35');
     await user.click(await screen.findByRole('link', { name: 'Написать менеджеру' }, LOADED));
     expect(webApp.openTelegramLink).toHaveBeenCalledWith(`${BOT}?start=deal_35`);
   });

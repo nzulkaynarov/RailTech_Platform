@@ -1,11 +1,11 @@
 import { useId, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { CheckCircle2, Clock, FileSignature, FileText, SearchX, XCircle } from 'lucide-react';
+import { CheckCircle2, Clock, FileSignature, FileText, Mail, MessageCircle, RotateCw, SearchX, XCircle } from 'lucide-react';
 import { toast } from 'sonner';
 
-import { isPortalApiError, type Quote, type QuoteLine, type QuoteListItem } from '@/api/portal';
-import { useAcceptQuote, useContracts, useQuote, useQuotes, useRejectQuote } from '@/api/queries';
+import { isPortalApiError, type AcceptanceCodeSent, type Quote, type QuoteLine, type QuoteListItem } from '@/api/portal';
+import { useAcceptQuote, useContracts, useQuote, useQuotes, useRejectQuote, useRequestQuoteCode } from '@/api/queries';
 import { ActionDialog } from '@/components/ActionDialog';
 import { DealLink, DetailList, SectionTitle, SummaryNote } from '@/components/Details';
 import { DocumentButton } from '@/components/DocumentButton';
@@ -31,7 +31,7 @@ import { CanAct } from '@/session/CanAct';
 /**
  * КП (B2B `QuotesPage`, `BuyerAcceptedPanel`, `RejectQuoteDialog`): список всех версий, карточка со
  * строками (позиции, разделы, заметки, этапы), итог, срок действия и обещанные даты по строкам.
- * «Принять» — по коду акцепта из сообщения бота/письма (`POST /quotes/{id}/accept {code}`), «Отклонить» —
+ * «Принять» — по коду акцепта, который ERP шлёт по запросу (`request-code` → `POST /quotes/{id}/accept {code}`), «Отклонить» —
  * с обязательной причиной. После акцепта — «что дальше»: договор формируется ERP и появится в «Договорах».
  */
 export function QuotesPage() {
@@ -66,7 +66,7 @@ export function QuotesPage() {
               { id: 'total', header: t('pages.quotes.columns.total'), cell: (row) => formatMoney(row.total), className: 'text-right' },
               { id: 'valid', header: t('pages.quotes.columns.validUntil'), cell: (row) => formatDate(row.valid_until) },
               { id: 'sent', header: t('pages.quotes.columns.sent'), cell: (row) => formatDate(row.sent_at) },
-              { id: 'deal', header: t('pages.quotes.columns.deal'), cell: (row) => <DealLink dealId={row.deal_id} /> },
+              { id: 'deal', header: t('pages.quotes.columns.deal'), cell: (row) => <DealLink deal={row.deal} /> },
             ]}
           />
         </>
@@ -120,12 +120,12 @@ function QuoteCard({ quote }: { quote: Quote }) {
             {quote.pdf_document_id ? (
               <DocumentButton documentId={quote.pdf_document_id} fileName={`${quote.number}.pdf`} label={quote.number} />
             ) : null}
-            <ManagerButton dealId={quote.deal_id} label={t('manager.aboutQuote', { number: quote.number })} />
+            <ManagerButton dealId={quote.deal.id} label={t('manager.aboutQuote', { number: quote.number })} />
           </>
         }
       />
       <div className="flex flex-col gap-4">
-        {quote.status === 'accepted' ? <AcceptedPanel dealId={quote.deal_id} /> : null}
+        {quote.status === 'accepted' ? <AcceptedPanel dealId={quote.deal.id} /> : null}
         {quote.status === 'rejected' ? (
           <Alert>
             <XCircle aria-hidden="true" />
@@ -154,7 +154,7 @@ function QuoteCard({ quote }: { quote: Quote }) {
                 { label: t('pages.quoteDetail.total'), value: <span className="text-base">{formatMoney(quote.total)}</span> },
                 { label: t('pages.quoteDetail.validUntil'), value: formatDate(quote.valid_until) },
                 { label: t('pages.quoteDetail.sent'), value: formatDateTime(quote.sent_at) },
-                { label: t('pages.quoteDetail.deal'), value: <DealLink dealId={quote.deal_id} /> },
+                { label: t('pages.quoteDetail.deal'), value: <DealLink deal={quote.deal} showTitle /> },
               ]}
             />
             {awaiting ? (
@@ -311,10 +311,10 @@ function LineTitle({ line }: { line: QuoteLine }) {
 }
 
 /** После акцепта (B2B `BuyerAcceptedPanel`): договор ERP создаёт сам — ведём к нему, номер берём из API. */
-function AcceptedPanel({ dealId }: { dealId: number | undefined }) {
+function AcceptedPanel({ dealId }: { dealId: number }) {
   const { t } = useTranslation();
   const contracts = useContracts();
-  const contract = (contracts.data ?? []).find((item) => item.deal_id === dealId && item.status !== 'cancelled');
+  const contract = (contracts.data ?? []).find((item) => item.deal.id === dealId && item.status !== 'cancelled');
   const text = contract
     ? contract.status === 'sent' || contract.status === 'signed_by_company'
       ? t('pages.quoteDetail.acceptedReadyToSign', { number: contract.number })
@@ -341,23 +341,47 @@ function AcceptedPanel({ dealId }: { dealId: number | undefined }) {
   );
 }
 
+/** Текст про отправленный код: у Telegram адрес бывает просто «Telegram» — не повторяем его дважды. */
+function codeSentKey(sent: AcceptanceCodeSent): string {
+  if (sent.channel === 'email') return 'pages.quoteDetail.codeSent.email';
+  return sent.sent_to === 'Telegram' ? 'pages.quoteDetail.codeSent.telegram' : 'pages.quoteDetail.codeSent.telegramTo';
+}
+
+/**
+ * Акцепт КП в два шага (контракт 0.2.0, мастер-кода нет): «Получить код» → `POST /quotes/{id}/request-code`,
+ * ERP шлёт код контакту в Telegram или на e-mail и отвечает каналом и замаскированным адресом; затем клиент
+ * вводит код → `POST /quotes/{id}/accept {code}`. Ошибки остаются в диалоге текстом по `ErrorCode`.
+ */
 function AcceptDialog({ quote, open, onOpenChange }: { quote: Quote; open: boolean; onOpenChange: (open: boolean) => void }) {
   const { t } = useTranslation();
   const id = useId();
   const accept = useAcceptQuote(quote.id);
+  const requestCode = useRequestQuoteCode(quote.id);
   const [code, setCode] = useState('');
   const [tooShort, setTooShort] = useState(false);
+  const sent = requestCode.data ?? null;
 
   const close = (next: boolean) => {
     if (!next) {
       setCode('');
       setTooShort(false);
       accept.reset();
+      requestCode.reset();
     }
     onOpenChange(next);
   };
 
+  const getCode = () => {
+    accept.reset();
+    setCode('');
+    requestCode.mutate();
+  };
+
   const submit = () => {
+    if (!sent) {
+      getCode();
+      return;
+    }
     const value = normalizeAcceptCode(code);
     if (value.length < ACCEPT_CODE_MIN) {
       setTooShort(true);
@@ -376,33 +400,58 @@ function AcceptDialog({ quote, open, onOpenChange }: { quote: Quote; open: boole
       open={open}
       onOpenChange={close}
       title={t('pages.quoteDetail.acceptTitle', { number: quote.number })}
-      description={t('pages.quoteDetail.acceptText', { total: formatMoney(quote.total) })}
-      confirmLabel={t('pages.quoteDetail.acceptConfirm')}
-      pending={accept.isPending}
-      error={accept.error}
+      description={t(sent ? 'pages.quoteDetail.acceptText' : 'pages.quoteDetail.requestCodeText', { total: formatMoney(quote.total) })}
+      confirmLabel={sent ? t('pages.quoteDetail.acceptConfirm') : t('pages.quoteDetail.requestCode')}
+      pending={sent ? accept.isPending : requestCode.isPending}
+      error={accept.error ?? requestCode.error}
       message={tooShort ? t('pages.quoteDetail.codeTooShort', { min: ACCEPT_CODE_MIN }) : null}
       onSubmit={submit}
     >
-      <div className="flex flex-col gap-2">
-        <Label htmlFor={id}>{t('pages.quoteDetail.code')}</Label>
-        <Input
-          id={id}
-          value={code}
-          autoComplete="one-time-code"
-          inputMode="text"
-          maxLength={ACCEPT_CODE_MAX + 4}
-          aria-describedby={`${id}-hint`}
-          aria-invalid={tooShort || isPortalApiError(accept.error, 409) || undefined}
-          className={cn('font-mono tracking-widest')}
-          onChange={(event) => {
-            setCode(event.target.value);
-            setTooShort(false);
-          }}
-        />
-        <p id={`${id}-hint`} className="text-xs text-muted-foreground">
-          {t('pages.quoteDetail.codeHint')}
-        </p>
-      </div>
+      {sent ? (
+        <div className="flex flex-col gap-3">
+          <p role="status" className="flex items-start gap-2 rounded-lg border bg-muted px-3 py-2 text-sm">
+            {sent.channel === 'telegram' ? (
+              <MessageCircle className="mt-0.5 size-4 shrink-0 text-muted-foreground" aria-hidden="true" />
+            ) : (
+              <Mail className="mt-0.5 size-4 shrink-0 text-muted-foreground" aria-hidden="true" />
+            )}
+            <span className="min-w-0 break-words">
+              {t(codeSentKey(sent), { to: sent.sent_to, minutes: Math.max(1, Math.round(sent.expires_in / 60)) })}
+            </span>
+          </p>
+          <div className="flex flex-col gap-2">
+            <Label htmlFor={id}>{t('pages.quoteDetail.code')}</Label>
+            <Input
+              id={id}
+              value={code}
+              autoComplete="one-time-code"
+              inputMode="numeric"
+              maxLength={ACCEPT_CODE_MAX + 4}
+              aria-describedby={`${id}-hint`}
+              aria-invalid={tooShort || isPortalApiError(accept.error, 409) || undefined}
+              className={cn('font-mono tracking-widest')}
+              onChange={(event) => {
+                setCode(event.target.value);
+                setTooShort(false);
+              }}
+            />
+            <p id={`${id}-hint`} className="text-xs text-muted-foreground">
+              {t('pages.quoteDetail.codeHint')}
+            </p>
+          </div>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="self-start"
+            disabled={requestCode.isPending || accept.isPending}
+            onClick={getCode}
+          >
+            <RotateCw aria-hidden="true" />
+            {t('pages.quoteDetail.resendCode')}
+          </Button>
+        </div>
+      ) : null}
     </ActionDialog>
   );
 }

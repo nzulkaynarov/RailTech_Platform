@@ -76,6 +76,8 @@ export const useAcceptQuote = (id: number) =>
     [keys.quotes, keys.contracts, keys.requests, ['documents']],
     (quote, client) => client.setQueryData(keys.quote(id), quote),
   );
+/** Запрос кода акцепта: ERP отправляет код контакту; кэш не меняется. */
+export const useRequestQuoteCode = (id: number) => useMutation({ mutationFn: () => portal.requestQuoteCode(id) });
 export const useRejectQuote = (id: number) =>
   useInvalidatingMutation(
     (reason: string) => portal.rejectQuote(id, reason),
@@ -84,9 +86,34 @@ export const useRejectQuote = (id: number) =>
   );
 
 export const useSignContract = () => useInvalidatingMutation(portal.signContract, [keys.contracts, ['documents']]);
-export const useAcceptAct = () => useInvalidatingMutation(portal.acceptAct, [keys.acts]);
+/**
+ * Приёмка акта: если приложен скан — сначала `POST /uploads`, затем `POST /acts/{id}/accept {upload_id}`;
+ * без скана — приёмка без тела. Ошибка любого шага — ошибка мутации (диалог показывает её текстом).
+ */
+export const useAcceptAct = () =>
+  useInvalidatingMutation(
+    async ({ id, scan }: { id: number; scan?: File | null }) => {
+      const uploadId = scan ? (await portal.uploadFile(scan)).upload_id : undefined;
+      return portal.acceptAct(id, uploadId);
+    },
+    [keys.acts, ['documents']],
+  );
 export const useReturnAct = () =>
   useInvalidatingMutation(({ id, reason }: { id: number; reason: string }) => portal.returnAct(id, reason), [keys.acts]);
+
+/** Поставка принята или оспорена клиентом — строка заменяется ответом ERP, список перечитывается. */
+function replaceDeliveryLine(line: portal.DeliveryLine, client: ReturnType<typeof useQueryClient>) {
+  client.setQueryData<portal.DeliveryLine[]>(keys.deliveries, (lines) =>
+    lines?.map((item) => (item.id === line.id ? line : item)),
+  );
+}
+export const useAcceptDelivery = () => useInvalidatingMutation(portal.acceptDelivery, [keys.deliveries], replaceDeliveryLine);
+export const useDisputeDelivery = () =>
+  useInvalidatingMutation(
+    ({ id, reason }: { id: number; reason: string }) => portal.disputeDelivery(id, reason),
+    [keys.deliveries],
+    replaceDeliveryLine,
+  );
 
 export const useUpdateCompany = () =>
   useInvalidatingMutation(portal.updateCompany, [['me']], (company, client) => client.setQueryData(keys.company, company));

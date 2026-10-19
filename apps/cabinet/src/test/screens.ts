@@ -30,3 +30,27 @@ export function captureBody(path: string): { current: unknown } {
   });
   return captured;
 }
+
+/**
+ * Журнал запросов к порталу: `METHOD /path` в порядке отправки — проверка, что действие ушло в ERP
+ * (и что кнопка без запроса ничего не сделала). Тела не читает: у `request-code`, приёмки строки их нет.
+ */
+export function requestLog(): string[] {
+  const log: string[] = [];
+  portalServer.events.on('request:start', ({ request }) => {
+    const url = new URL(request.url);
+    if (url.pathname.startsWith('/api/portal/v1/')) log.push(`${request.method} ${url.pathname.replace('/api/portal/v1', '')}`);
+  });
+  return log;
+}
+
+/** Тело последнего запроса на путь как текст: `''` — тела нет (приёмка акта без скана). `null` — запроса не было. */
+export function captureText(path: string): { current: string | null } {
+  const captured: { current: string | null } = { current: null };
+  portalServer.events.on('request:start', async ({ request }) => {
+    if (new URL(request.url).pathname.endsWith(path) && request.method !== 'GET') {
+      captured.current = await request.clone().text();
+    }
+  });
+  return captured;
+}

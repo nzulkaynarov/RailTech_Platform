@@ -23,6 +23,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { formatDate, formatDateTime, formatFileSize, formatMoney, formatQuantity } from '@/lib/format';
 import { normalizeQuantity, requestSourceKey, type NewRequestPrefill } from '@/lib/requests';
+import { MAX_UPLOAD_BYTES } from '@/lib/upload';
 import { CanAct } from '@/session/CanAct';
 
 /**
@@ -75,7 +76,7 @@ export function RequestsPage() {
           columns={[
             { id: 'status', header: t('pages.requests.columns.status'), cell: (row) => <StatusBadge entity="request" code={row.status} /> },
             { id: 'created', header: t('pages.requests.columns.created'), cell: (row) => formatDate(row.created_at) },
-            { id: 'deal', header: t('pages.requests.columns.deal'), cell: (row) => <DealLink dealId={row.deal_id} /> },
+            { id: 'deal', header: t('pages.requests.columns.deal'), cell: (row) => <DealLink deal={row.deal} /> },
           ]}
         />
       )}
@@ -106,9 +107,8 @@ export function RequestDetailPage() {
     );
   }
 
-  const dealQuotes = request.deal_id === null || request.deal_id === undefined
-    ? []
-    : (quotes.data ?? []).filter((quote) => quote.deal_id === request.deal_id);
+  const dealId = request.deal?.id;
+  const dealQuotes = dealId === undefined ? [] : (quotes.data ?? []).filter((quote) => quote.deal.id === dealId);
 
   return (
     <>
@@ -125,7 +125,7 @@ export function RequestDetailPage() {
               items={[
                 { label: t('pages.requestDetail.created'), value: formatDateTime(request.created_at) },
                 request.source ? { label: t('pages.requestDetail.source'), value: t(requestSourceKey(request.source)) } : null,
-                { label: t('pages.requestDetail.deal'), value: <DealLink dealId={request.deal_id} /> },
+                { label: t('pages.requestDetail.deal'), value: <DealLink deal={request.deal} showTitle /> },
               ]}
             />
           </CardContent>
@@ -235,6 +235,7 @@ export function RequestNewPage() {
   );
 }
 
+/** Загруженный файл: размер нужен только для показа, в запрос уходит `AttachmentRef` без него (контракт 0.2.0). */
 interface UploadedFileRef extends AttachmentRef {
   size_bytes?: number;
 }
@@ -280,6 +281,10 @@ function RequestForm() {
     setIsUploading(true);
     try {
       for (const file of files) {
+        if (file.size > MAX_UPLOAD_BYTES) {
+          toast.error(t('apiErrors.FILE_TOO_LARGE'));
+          continue;
+        }
         const uploaded = await upload.mutateAsync(file);
         setAttachments((current) => [
           ...current,
@@ -320,7 +325,9 @@ function RequestForm() {
     const payload = {
       summary: summary.trim(),
       lines: payloadLines,
-      ...(attachments.length > 0 ? { attachments } : {}),
+      ...(attachments.length > 0
+        ? { attachments: attachments.map(({ upload_id, name }): AttachmentRef => ({ upload_id, name })) }
+        : {}),
     };
 
     create.mutate(

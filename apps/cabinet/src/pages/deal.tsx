@@ -3,6 +3,7 @@ import { Link, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Briefcase } from 'lucide-react';
 
+import type { DealRef } from '@/api/portal';
 import { useActs, useContracts, useDeliveries, useDocuments, useInvoices, useQuotes, useRequests } from '@/api/queries';
 import { SectionTitle } from '@/components/Details';
 import { DocumentButton } from '@/components/DocumentButton';
@@ -18,7 +19,8 @@ import { invoiceView } from '@/lib/invoice';
 
 /**
  * Сделка — цель deep-link бота (`start_param=deal_<id>`): всё по сделке на одном экране, собрано из
- * списков портала по `deal_id` (отдельного `GET /deals/{id}` в контракте нет). «Написать менеджеру»
+ * списков портала по `deal.id` (отдельного `GET /deals/{id}` в контракте нет); клиенту сделка — её номер
+ * и название (`deal.number`, `deal.title`), внутренний id только в адресе. «Написать менеджеру»
  * — бот CRM с контекстом сделки `start=deal_<id>` (M2-CAB-03).
  */
 export function DealPage() {
@@ -34,7 +36,13 @@ export function DealPage() {
   const documents = useDocuments({ deal_id: dealId });
   const all = [requests, quotes, contracts, invoices, acts, deliveries, documents];
 
-  const title = t('pages.deal.title', { id: Number.isFinite(dealId) ? dealId : '' });
+  // Номер и название сделки берём из любого её объекта: отдельного справочника сделок у клиента нет.
+  const of = <T extends { deal?: DealRef | null }>(items: T[] | undefined) => (items ?? []).filter((item) => item.deal?.id === dealId);
+  const dealRef = [requests, quotes, contracts, invoices, acts, deliveries, documents]
+    .flatMap((query) => of(query.data as Array<{ deal?: DealRef | null }> | undefined))
+    .find((item) => item.deal)?.deal;
+  const title = dealRef ? t('common.dealNumber', { number: dealRef.number }) : t('pages.deal.titleFallback');
+  const subtitle = dealRef?.title ?? null;
   if (all.some((query) => query.isPending)) {
     return (
       <>
@@ -53,7 +61,6 @@ export function DealPage() {
     );
   }
 
-  const of = <T extends { deal_id?: number | null }>(items: T[] | undefined) => (items ?? []).filter((item) => item.deal_id === dealId);
   const dealRequests = of(requests.data);
   const dealQuotes = of(quotes.data);
   const dealContracts = of(contracts.data);
@@ -78,7 +85,7 @@ export function DealPage() {
 
   return (
     <>
-      <PageHeader title={title} actions={<ManagerButton dealId={dealId} />} />
+      <PageHeader title={title} subtitle={subtitle} actions={<ManagerButton dealId={dealId} />} />
       <div className="flex flex-col gap-6">
         <DealSection title={t('pages.deal.requests')} count={dealRequests.length}>
           {dealRequests.map((item) => (
@@ -122,7 +129,7 @@ export function DealPage() {
         </DealSection>
         <DealSection title={t('pages.deal.deliveries')} count={dealLines.length}>
           {dealLines.map((line) => (
-            <DealRow key={line.line_no} to="/deliveries" title={line.title} meta={formatQuantity(line.quantity, line.unit)}>
+            <DealRow key={line.id} to="/deliveries" title={line.title} meta={formatQuantity(line.quantity, line.unit)}>
               <StatusBadge entity="delivery" code={line.status} />
             </DealRow>
           ))}
