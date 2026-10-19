@@ -21,6 +21,7 @@ import datetime as _dt
 import json
 import logging
 import re
+import time
 import uuid
 from contextvars import ContextVar
 
@@ -103,4 +104,28 @@ class RequestIDMiddleware:
         finally:
             request_id_var.reset(token)
         response[self.HEADER] = request_id
+        return response
+
+
+access_logger = logging.getLogger("core.access")
+
+
+class AccessLogMiddleware:
+    """Журнал запросов средствами Django вместо access-лога Daphne (FIX-15, хвост ревью FIX-14).
+
+    Daphne печатает путь запроса в stdout мимо фильтров журнала, а путь ссылки входа в портал несёт токен
+    (`/auth/magic/<токен>`). Поэтому access-лог Daphne выключен (`daphne -v 0`, infra/compose/base.yml), а строка
+    «метод путь статус время» пишется здесь — через обработчик `console` с `RedactPortalTokenFilter`. Только путь,
+    без строки запроса: в ней тоже бывают токены.
+    """
+
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def __call__(self, request):
+        started = time.monotonic()
+        response = self.get_response(request)
+        access_logger.info(
+            "%s %s %s %dms", request.method, request.path, response.status_code, (time.monotonic() - started) * 1000
+        )
         return response

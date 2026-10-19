@@ -4,6 +4,7 @@ BASE_DIR поднят на уровень выше — модуль теперь
 
 import os
 from pathlib import Path
+from urllib.parse import urlsplit as _urlsplit
 
 from dotenv import load_dotenv
 
@@ -48,6 +49,29 @@ ALLOWED_HOSTS = [
 TELEGRAM_BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN") or os.environ.get("ERP_TELEGRAM_BOT_TOKEN", "")
 TELEGRAM_BOT_USERNAME = os.environ.get("TELEGRAM_BOT_USERNAME", "")
 CABINET_URL = os.environ.get("CABINET_URL", "http://cabinet.localhost")
+
+
+def _origin_of(url: str) -> str:
+    parts = _urlsplit(url)
+    return f"{parts.scheme}://{parts.netloc}" if parts.scheme and parts.netloc else url.rstrip("/")
+
+
+# Единственный источник CORS на DEBUG=False (FIX-15, P-18): origin'ы Cabinet — `CABINET_ORIGIN` (через запятую, как у
+# CRM: origin сравнивается со схемой и портом), по умолчанию — origin из CABINET_URL.
+CABINET_ORIGINS = [
+    origin.strip().rstrip("/")
+    for origin in (os.environ.get("CABINET_ORIGIN") or _origin_of(CABINET_URL)).split(",")
+    if origin.strip()
+]
+
+# SameSite cookie сессии портала. `Lax` — веб; Telegram Mini App открывает Cabinet во фрейме чужого сайта,
+# там нужен `None` (cookie уйдёт только с `Secure`, то есть по TLS) — задаётся при выкладке за TLS (FIX-15, C-12).
+_SAMESITE_VALUES = {"lax": "Lax", "strict": "Strict", "none": "None"}
+PORTAL_COOKIE_SAMESITE = _SAMESITE_VALUES.get(os.environ.get("PORTAL_COOKIE_SAMESITE", "Lax").strip().lower())
+if PORTAL_COOKIE_SAMESITE is None:
+    from django.core.exceptions import ImproperlyConfigured
+
+    raise ImproperlyConfigured("PORTAL_COOKIE_SAMESITE must be one of: Lax, Strict, None")
 PORTAL_SESSION_COOKIE_NAME = "portal_session"
 PORTAL_SESSION_MAX_AGE_DAYS = 14
 # Не больше стольких запросов magic-link в час на один адрес (FIX-14, P-10)

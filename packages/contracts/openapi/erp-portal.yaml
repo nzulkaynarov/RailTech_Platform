@@ -10,6 +10,15 @@ info:
     Все ответы отфильтрованы по компании сессии: чужая компания → 404 (негативный тест на каждый эндпоинт).
     Сессия портала — cookie `HttpOnly`, отдельная от сессий сотрудников. Сотрудники сюда не входят
     (инвариант ORCHESTRATOR §3.1). Ошибки — `{"detail": "<CODE>"}`.
+
+    Защита сессии в cookie от CSRF (FIX-15): каждый `POST` и `PATCH` обязан нести
+    заголовок `Idempotency-Key` (без него — 400 `IDEMPOTENCY_KEY_REQUIRED`) и тело `application/json`
+    (иное — 415 `UNSUPPORTED_MEDIA_TYPE`; единственное исключение — `multipart/form-data` на `/uploads`). Повтор с тем же
+    ключом и тем же методом/путём в пределах сессии возвращает прежний ответ (заголовок `Idempotent-Replay: true`).
+
+    Лимиты частоты (429 `TOO_MANY_REQUESTS`, заголовок `Retry-After`): запросы сессии — 120 в минуту на сессию; вход без
+    сессии (`/auth/telegram`, `/auth/magic-link`, `/auth/magic/{token}`) — 10 в минуту на IP; акцепт КП с кодом — 10 в минуту
+    на сессию; ссылка входа на один e-mail — не чаще 5 в час. Ставки задаются настройками ERP.
 servers:
   - url: https://erp.railtech.uz/api/portal/v1
     description: prod
@@ -40,6 +49,8 @@ paths:
       summary: Вход из Telegram Mini App
       description: ERP проверяет подпись `initData` токеном клиентского бота CRM (срок ≤ 5 мин), ищет контакт по `telegram_user_id`, выдаёт сессию портала.
       security: []
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
       requestBody:
         required: true
         content:
@@ -69,6 +80,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
+        '400':
+          $ref: '#/components/responses/IdempotencyKeyRequired'
+        '415':
+          $ref: '#/components/responses/UnsupportedMediaType'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
 
   /auth/magic-link:
     post:
@@ -77,6 +94,8 @@ paths:
       summary: Запросить ссылку для входа по e-mail
       description: Письмо со ссылкой на 15 минут, одноразовой. Ответ всегда 200, чтобы не раскрывать наличие адреса.
       security: []
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
       requestBody:
         required: true
         content:
@@ -94,6 +113,12 @@ paths:
           description: Принято
         '422':
           $ref: '#/components/responses/ValidationError'
+        '400':
+          $ref: '#/components/responses/IdempotencyKeyRequired'
+        '415':
+          $ref: '#/components/responses/UnsupportedMediaType'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
 
   /auth/magic/{token}:
     get:
@@ -120,17 +145,25 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
 
   /auth/logout:
     post:
       tags: [auth]
       operationId: logout
       summary: Завершить сессию портала
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
       responses:
         '204':
           description: Сессия завершена
         '401':
           $ref: '#/components/responses/Unauthorized'
+        '400':
+          $ref: '#/components/responses/IdempotencyKeyRequired'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
 
   /me:
     get:
@@ -146,6 +179,8 @@ paths:
                 $ref: '#/components/schemas/Me'
         '401':
           $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
 
   /requests:
     get:
@@ -163,11 +198,15 @@ paths:
                   $ref: '#/components/schemas/ClientRequest'
         '401':
           $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
     post:
       tags: [requests]
       operationId: createRequest
       summary: Новый запрос
       description: Строки свободным текстом и вложения. Создаёт заявку в ERP минуя CRM; CRM получает событие `request.created(source=cabinet)`.
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
       requestBody:
         required: true
         content:
@@ -187,6 +226,12 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '422':
           $ref: '#/components/responses/ValidationError'
+        '400':
+          $ref: '#/components/responses/IdempotencyKeyRequired'
+        '415':
+          $ref: '#/components/responses/UnsupportedMediaType'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
 
   /requests/{id}:
     get:
@@ -206,6 +251,8 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '404':
           $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
 
   /quotes:
     get:
@@ -223,6 +270,8 @@ paths:
                   $ref: '#/components/schemas/QuoteListItem'
         '401':
           $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
 
   /quotes/{id}:
     get:
@@ -242,6 +291,8 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '404':
           $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
 
   /quotes/{id}/accept:
     post:
@@ -250,6 +301,7 @@ paths:
       summary: Принять КП по коду акцепта
       description: Договор создаётся автоматически (BUSINESS §4, шаг 6). Требует права `can_act`.
       parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
         - $ref: '#/components/parameters/Id'
       requestBody:
         required: true
@@ -283,6 +335,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
+        '400':
+          $ref: '#/components/responses/IdempotencyKeyRequired'
+        '415':
+          $ref: '#/components/responses/UnsupportedMediaType'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
 
   /quotes/{id}/reject:
     post:
@@ -290,6 +348,7 @@ paths:
       operationId: rejectQuote
       summary: Отклонить КП с причиной
       parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
         - $ref: '#/components/parameters/Id'
       requestBody:
         required: true
@@ -316,6 +375,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
+        '400':
+          $ref: '#/components/responses/IdempotencyKeyRequired'
+        '415':
+          $ref: '#/components/responses/UnsupportedMediaType'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
 
   /contracts:
     get:
@@ -333,6 +398,8 @@ paths:
                   $ref: '#/components/schemas/Contract'
         '401':
           $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
 
   /contracts/{id}/sign:
     post:
@@ -341,6 +408,7 @@ paths:
       summary: Подписать договор со стороны клиента
       description: Простая подпись подтверждением (E-IMZO отложен до пилота, DECISIONS 2026-10-13).
       parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
         - $ref: '#/components/parameters/Id'
       responses:
         '200':
@@ -361,6 +429,10 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
+        '400':
+          $ref: '#/components/responses/IdempotencyKeyRequired'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
 
   /invoices:
     get:
@@ -378,6 +450,8 @@ paths:
                   $ref: '#/components/schemas/Invoice'
         '401':
           $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
 
   /acts:
     get:
@@ -395,6 +469,8 @@ paths:
                   $ref: '#/components/schemas/Act'
         '401':
           $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
 
   /acts/{id}/accept:
     post:
@@ -402,6 +478,7 @@ paths:
       operationId: acceptAct
       summary: Принять акт
       parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
         - $ref: '#/components/parameters/Id'
       responses:
         '200':
@@ -422,6 +499,10 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
+        '400':
+          $ref: '#/components/responses/IdempotencyKeyRequired'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
 
   /acts/{id}/return:
     post:
@@ -429,6 +510,7 @@ paths:
       operationId: returnAct
       summary: Вернуть акт с причиной
       parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
         - $ref: '#/components/parameters/Id'
       requestBody:
         required: true
@@ -455,6 +537,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
+        '400':
+          $ref: '#/components/responses/IdempotencyKeyRequired'
+        '415':
+          $ref: '#/components/responses/UnsupportedMediaType'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
 
   /deliveries:
     get:
@@ -472,6 +560,8 @@ paths:
                   $ref: '#/components/schemas/DeliveryLine'
         '401':
           $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
 
   /documents:
     get:
@@ -501,6 +591,8 @@ paths:
                   $ref: '#/components/schemas/Document'
         '401':
           $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
 
   /documents/{id}/file:
     get:
@@ -532,12 +624,16 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '404':
           $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
 
   /uploads:
     post:
       tags: [documents]
       operationId: uploadFile
       summary: Загрузка файлов клиентом (Q-14, multipart, <= 10MB)
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
       requestBody:
         required: true
         content:
@@ -558,11 +654,19 @@ paths:
               schema:
                 $ref: '#/components/schemas/PortalUploadResponse'
         '400':
-          $ref: '#/components/responses/ValidationError'
+          description: Нет заголовка `Idempotency-Key` (`IDEMPOTENCY_KEY_REQUIRED`) или файл не передан
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
         '401':
           $ref: '#/components/responses/Unauthorized'
         '403':
           $ref: '#/components/responses/Forbidden'
+        '415':
+          $ref: '#/components/responses/UnsupportedMediaType'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
 
   /catalog/categories:
     get:
@@ -580,6 +684,8 @@ paths:
                   $ref: '#/components/schemas/CatalogCategory'
         '401':
           $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
 
   /catalog:
     get:
@@ -623,6 +729,8 @@ paths:
                 $ref: '#/components/schemas/CatalogPage'
         '401':
           $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
 
   /catalog/{id}:
     get:
@@ -642,6 +750,8 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '404':
           $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
 
   /company:
     get:
@@ -657,6 +767,8 @@ paths:
                 $ref: '#/components/schemas/Company'
         '401':
           $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
     put:
       tags: [company]
       operationId: updateCompany
@@ -680,6 +792,8 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '422':
           $ref: '#/components/responses/ValidationError'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
 
   /team:
     get:
@@ -697,12 +811,16 @@ paths:
                   $ref: '#/components/schemas/TeamMember'
         '401':
           $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
 
   /team/invite:
     post:
       tags: [company]
       operationId: inviteTeamMember
       summary: Пригласить коллегу в кабинет
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
       requestBody:
         required: true
         content:
@@ -722,6 +840,12 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '422':
           $ref: '#/components/responses/ValidationError'
+        '400':
+          $ref: '#/components/responses/IdempotencyKeyRequired'
+        '415':
+          $ref: '#/components/responses/UnsupportedMediaType'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
 
 components:
   securitySchemes:
@@ -729,7 +853,10 @@ components:
       type: apiKey
       in: cookie
       name: portal_session
-      description: Сессия портала (HttpOnly, SameSite=Lax), выдаётся `/auth/telegram` или `/auth/magic/{token}`
+      description: >-
+        Сессия портала (HttpOnly; SameSite=Lax, а для Telegram Mini App — SameSite=None; Secure, настройка ERP
+        `PORTAL_COOKIE_SAMESITE`), выдаётся `/auth/telegram` или `/auth/magic/{token}`. Сессия архивной компании
+        или контакта, переведённого в другую компанию, — 401
 
   parameters:
     Id:
@@ -739,6 +866,17 @@ components:
       schema:
         type: integer
         format: int64
+    IdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: true
+      description: |
+        Произвольный уникальный ключ попытки (CONTRACTS §0; Cabinet шлёт UUID). Обязателен на `POST` и `PATCH` —
+        заодно это защита от CSRF: заголовок делает запрос «непростым», и междоменный запрос идёт только через
+        CORS-preflight (разрешён лишь origin Cabinet). Повтор с тем же ключом возвращает прежний ответ.
+      schema:
+        type: string
+        minLength: 1
 
   responses:
     Unauthorized:
@@ -761,6 +899,30 @@ components:
             $ref: '#/components/schemas/Error'
     ValidationError:
       description: Тело запроса не прошло проверку
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    IdempotencyKeyRequired:
+      description: 'Нет заголовка `Idempotency-Key` (`{"detail": "IDEMPOTENCY_KEY_REQUIRED"}`); запрос не выполнялся'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    UnsupportedMediaType:
+      description: 'Тело не `application/json` (`{"detail": "UNSUPPORTED_MEDIA_TYPE"}`); запрос не выполнялся'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    TooManyRequests:
+      description: 'Лимит частоты исчерпан (`{"detail": "TOO_MANY_REQUESTS"}`); повторить через `Retry-After` секунд'
+      headers:
+        Retry-After:
+          description: Через сколько секунд можно повторить
+          schema:
+            type: integer
+            minimum: 1
       content:
         application/json:
           schema:
@@ -1320,4 +1482,3 @@ components:
         size_bytes:
           type: integer
           minimum: 0
-

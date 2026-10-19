@@ -15,6 +15,7 @@ from django.conf import settings
 from django.utils import timezone
 from parties.models import Contact
 from portal.models import MagicLinkToken
+from portal.services.access import company_in_circulation
 from portal.services.magic_link import build_login_url
 from portal.services.tokens import generate_token, hash_token
 
@@ -36,7 +37,7 @@ def invite_contact_to_portal(
     """
     if not contact.company:
         return None, "CONTACT_WITHOUT_COMPANY"
-    if not contact.company.is_active:
+    if not company_in_circulation(contact.company_id):
         return None, "COMPANY_ARCHIVED"
 
     effective_channel = channel or contact.preferred_channel or "email"

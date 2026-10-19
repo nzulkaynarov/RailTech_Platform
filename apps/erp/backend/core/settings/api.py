@@ -53,6 +53,12 @@ REST_FRAMEWORK = {
         "ai_compose": "20/minute",  # AI conversational заявка builder — each call is a paid Claude request
         "ai_draft": "20/minute",  # AI draft-КП build — paid Claude match + a new Quote row per call
         "mcp": "120/minute",  # erp-mcp (FIX-12): на компанию из X-Agent-Context; один tools/call ≈ 3 HTTP-запроса
+        # Портал (FIX-15, P-14): общий анонимный 20/мин по IP на него не распространяется (portal/throttles.py).
+        "portal_session": os.environ.get("PORTAL_SESSION_RATE", "120/minute"),  # на сессию; экран Cabinet = пачка GET
+        "portal_login": os.environ.get(
+            "PORTAL_LOGIN_RATE", "10/minute"
+        ),  # вход без сессии, на IP (magic-link, initData)
+        "portal_accept": os.environ.get("PORTAL_ACCEPT_RATE", "10/minute"),  # акцепт КП с кодом, на сессию
     },
     # SEC-04: number of trusted reverse proxies that set X-Forwarded-For before Django.
     # Prod/staging = 1 (host Caddy OVERWRITES XFF with the client IP — see
