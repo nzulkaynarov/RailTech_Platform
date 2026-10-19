@@ -2907,6 +2907,16 @@
         "detail": "Акт {{number}} по сделке #{{deal_id}}: заказчику отправлено напоминание"
       }
     },
+    "delivery": {
+      "line_accepted": {
+        "title": "Поставка принята клиентом",
+        "detail": "Строка {{line_no}} по сделке #{{deal_id}} принята"
+      },
+      "line_disputed": {
+        "title": "Поставка оспорена клиентом",
+        "detail": "Строка {{line_no}} по сделке #{{deal_id}}: {{reason}}"
+      }
+    },
     "company": {
       "merged": {
         "title": "Слияние дубля компании",
@@ -3268,6 +3278,10 @@
     "fulfillment.status_changed": {
       "title": "Статус поставки изменён",
       "message": "Сделка #{{deal_id}}: статус поставки — {{status_code}}"
+    },
+    "delivery.line_disputed": {
+      "title": "Клиент оспорил поставку",
+      "message": "Сделка #{{deal_id}}, строка {{line_no}} «{{title}}»: {{reason}}"
     },
     "fulfillment.overdue": {
       "title": "Просрочка по доставке",

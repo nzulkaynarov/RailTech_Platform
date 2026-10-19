@@ -1,5 +1,6 @@
 """Tests for Portal Permissions (can_act guard and unauthenticated 401)."""
 
+import uuid
 from decimal import Decimal
 
 import pytest
@@ -25,6 +26,7 @@ def client_resources(db, client_company, client_contact):
         stage=draft_stage,
     )
     quote = Quote.objects.create(
+        public_access_token=uuid.uuid4().hex,
         deal=deal,
         version=1,
         status=sent_quote_status,

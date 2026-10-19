@@ -67,6 +67,7 @@ GET_CASES = {
 #: Достижимые из модели значения статусов, которых сторож не ждёт, — с причиной. Всё остальное из enum контракта
 #: обязано встретиться в ответах.
 UNREACHABLE = {
+    "/contracts": {"cancelled": "отменённый договор клиенту не показывается (FIX-22); значение enum — на будущее"},
     "/deliveries": {"ready_to_ship": "у Fulfillment нет такого состояния; строки поставки по складу — M4"},
     "/documents": {
         "quote": "КП в /documents отдаёт FIX-23 (сейчас их нет среди GeneratedDocument)",
@@ -183,6 +184,31 @@ def test_every_reachable_enum_value_is_exercised(contract_path, contract_world, 
         f"{contract_path}.{field}: в ответах {sorted(seen)}, контракт требует {sorted(expected)} "
         f"(недостижимые с причиной — UNREACHABLE)"
     )
+
+
+def test_entities_not_shown_to_the_client_are_not_found(contract_world, portal_client):
+    """Скрытое от клиента — 404 и в списке, и по id (FIX-22): КП до отправки, черновик и отменённый договор, акты без
+    выставления, черновик счёта. Регрессия здесь — клиент снова видит (и подписывает) недооформленное."""
+    world = contract_world
+    hidden = {
+        "/quotes": [q.pk for q in world["hidden_quotes"].values()],
+        "/contracts": [world["contracts"]["draft"].pk, world["contracts"]["cancelled"].pk],
+        "/acts": [world["acts"]["draft"].pk, world["acts"]["cancelled"].pk],
+        "/invoices": [world["invoices"]["draft"].pk, world["invoices"]["not_issued"].pk],
+    }
+    for path, ids in hidden.items():
+        listed = {item["id"] for item in portal_client.get(api(path)).json()}
+        assert not listed & set(ids), f"{path}: клиент видит скрытое {sorted(listed & set(ids))}"
+    for quote_id in hidden["/quotes"]:
+        assert portal_client.get(api(f"/quotes/{quote_id}")).status_code == 404
+        assert portal_client.get(api(f"/quotes/{quote_id}")).json() == {"detail": "NOT_FOUND"}
+    assert world["hidden_quotes"], "фикстуры должны содержать КП всех статусов до отправки"
+    assert {q.status.code for q in world["hidden_quotes"].values()} >= {
+        "DRAFT",
+        "PENDING_TRADE_REVIEW",
+        "PENDING_APPROVAL",
+        "READY_TO_SEND",
+    }
 
 
 def test_documents_file_endpoint(contract_world, portal_client):
