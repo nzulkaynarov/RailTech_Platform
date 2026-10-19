@@ -75,7 +75,6 @@ def _buyer(email, inn):
         is_active=True,
         is_primary=True,
         can_sell=False,
-        can_buy=True,
     )
     return user, company
 
@@ -208,7 +207,8 @@ def test_f3_non_seller_cannot_create_calculator_draft(lookups):
     buyer, _company = _buyer("f3-buyer@b.test", "720000009")
     resp = _api(buyer).post("/api/v1/crm/deals/", {"without_client": True, "title": "x"}, format="json")
     assert resp.status_code == 403
-    assert resp.json()["detail"] == "ONLY_SELLER_CAN_CREATE_CALCULATOR_DRAFT"
+    # Гейт ролей отсекает не-сотрудника раньше сервиса (FIX-13: покупательских аккаунтов в ERP нет).
+    assert resp.json()["detail"] == "ROLE_NOT_PERMITTED"
 
 
 # ── F3 SECURITY: fail-closed cross-tenant negatives ─────────────────────────

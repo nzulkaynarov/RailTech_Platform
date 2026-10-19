@@ -84,7 +84,7 @@ def update_fulfillment_status(
 ) -> Tuple[Optional[object], Optional[str]]:
     from django.utils import timezone
 
-    from accounts.services import is_member_of, is_seller
+    from accounts.services import is_seller
 
     from ..models import Fulfillment, FulfillmentStatus
 
@@ -98,13 +98,11 @@ def update_fulfillment_status(
     if getattr(actor, "is_superuser", False):
         authorized = True
     elif status_code in buyer_statuses:
-        authorized = is_member_of(actor, obj.deal.company_id, capability="buy")
-        if not authorized:
-            # Отдельный код, а не общий «нужно членство»: приёмку и спор подтверждает
-            # ЗАКАЗЧИК, и продавцу надо сказать именно это. Прежний общий код витрина
-            # переводила как «действие доступно только членам компании» — продавцу, который
-            # членом СВОЕЙ компании является, это читается как поломка, а не как правило.
-            return None, "FULFILLMENT_ACCEPTANCE_IS_BUYER_STEP"
+        # Приёмку и спор подтверждает ЗАКАЗЧИК, а заказчика-пользователя в ERP нет (FIX-13):
+        # шаг вернёт портал (FIX-24). Продавцу говорим именно это, а не общее «нужно членство»:
+        # прежний общий код витрина переводила как «действие доступно только членам компании» —
+        # продавцу, который членом СВОЕЙ компании является, это читается как поломка.
+        return None, "FULFILLMENT_ACCEPTANCE_IS_BUYER_STEP"
     else:
         # Seller status: own-company staff (the seller of every deal).
         authorized = is_seller(actor)

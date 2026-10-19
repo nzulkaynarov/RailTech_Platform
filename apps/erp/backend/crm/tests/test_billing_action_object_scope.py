@@ -21,6 +21,7 @@ from rest_framework.test import APIClient
 from rest_framework_simplejwt.tokens import RefreshToken
 
 from accounts.models import Company, CompanyMember, CompanyType, CustomUser, SystemRole, WorkspaceRole
+from accounts.testing import make_cashier
 from crm.models import ActStatus, Contract, ContractStatus, Deal, DealStage, InvoiceStatus, Quote, QuoteStatus
 from crm.services.billing import generate_act, generate_invoice_from_contract
 
@@ -75,14 +76,14 @@ def _api(user):
 def world(lookups):
     """Сделка покупателя с зароутиненным продавцом — и ПОСТОРОННЯЯ компания вне сделки."""
     buyer_co = _company("Покупатель", "SB903", "CLIENT")
-    buyer = _member(buyer_co, "buyer@scope.test", can_buy=True)
+    buyer = _member(buyer_co, "buyer@scope.test")
 
     seller_co = _company("Продавец", "SS903", "SUPPLIER")
     seller = _member(seller_co, "seller@scope.test", can_sell=True)
 
     # Компания, не имеющая к сделке НИКАКОГО отношения: ни покупатель, ни зароутиненный продавец.
     outsider_co = _company("Посторонние", "SX903", "CLIENT")
-    outsider = _member(outsider_co, "outsider@scope.test", can_buy=True)
+    outsider = _member(outsider_co, "outsider@scope.test")
 
     deal = Deal.objects.create(title="Сделка", company=buyer_co, stage=DealStage.objects.get(code="CONTRACT_SIGNED"))
     quote = Quote.objects.create(
@@ -124,30 +125,11 @@ def _signed_act(world):
 
 @pytest.mark.django_db
 class TestOutsiderCannotTouchForeignAct:
-    def test_outsider_cannot_sign_a_foreign_act(self, world):
-        """РЕГРЕСС. Экшен брал `int(pk)` вместо `self.get_object()`, а `sign_act` проверял
-        только оператора-наблюдателя — посторонний получал HTTP 200 и акт становился SIGNED."""
-        _invoice, act = _signed_act(world)
-
-        response = _api(world["outsider"]).post(f"/api/v1/crm/acts/{act.id}/sign/")
-
-        assert response.status_code in DENIED, f"посторонний подписал чужой акт: {response.status_code}"
-        act.refresh_from_db()
-        assert act.status_code == "ISSUED", "статус чужого акта изменён посторонним"
-
     def test_outsider_cannot_read_a_foreign_act(self, world):
         """Контроль: чтение уже было закрыто сужением queryset — граница та же."""
         _invoice, act = _signed_act(world)
         response = _api(world["outsider"]).get(f"/api/v1/crm/acts/{act.id}/")
         assert response.status_code in DENIED
-
-    def test_buyer_of_the_deal_still_signs(self, world):
-        """Починка не должна закрыть доступ участнику сделки."""
-        _invoice, act = _signed_act(world)
-        response = _api(world["buyer"]).post(f"/api/v1/crm/acts/{act.id}/sign/")
-        assert response.status_code == 200, response.content
-        act.refresh_from_db()
-        assert act.status_code == "SIGNED"
 
 
 @pytest.mark.django_db
@@ -174,15 +156,6 @@ class TestOutsiderCannotTouchForeignContract:
         assert response.status_code == 403
         contract.refresh_from_db()
         assert contract.status_code != "CANCELLED"
-
-    def test_outsider_cannot_sign_a_foreign_contract(self, world):
-        """Подпись договора проверялась сервисом (`viewer_can_sign_client`) и до починки.
-        Сервисный отказ приходит как 400 с кодом — важен ЭФФЕКТ: подписи не появилось."""
-        contract = world["contract"]
-        response = _api(world["outsider"]).post(f"/api/v1/crm/contracts/{contract.id}/sign-client/")
-        assert response.status_code != 200
-        contract.refresh_from_db()
-        assert contract.client_signed_at is None
 
 
 @pytest.mark.django_db
@@ -247,7 +220,7 @@ class TestRawCrudIsClosed:
     def test_service_path_for_payments_still_works(self, world):
         """Закрытие сырого маршрута не должно ломать штатную фиксацию платежа."""
         invoice, _act = _signed_act(world)
-        response = _api(world["buyer"]).post(
+        response = _api(make_cashier()).post(
             f"/api/v1/crm/invoices/{invoice.id}/record-payment/",
             {"amount": "50", "paid_at": "2026-07-29"},
             format="json",
@@ -274,7 +247,6 @@ class TestRawCrudIsClosed:
         """Чтение и сервисные экшены акта не должны пострадать от закрытия CRUD."""
         _invoice, act = _signed_act(world)
         assert _api(world["buyer"]).get(f"/api/v1/crm/acts/{act.id}/").status_code == 200
-        assert _api(world["buyer"]).post(f"/api/v1/crm/acts/{act.id}/sign/").status_code == 200
 
     def test_raw_invoice_create_and_delete_are_closed(self, world):
         """Счёт выставляется через create-manual / generate-from-contract, отменяется через
@@ -370,7 +342,7 @@ class TestBillingListFilters:
     def test_payments_can_be_filtered_by_deal(self, world):
         """У платежа нет своей связи со сделкой — фильтр идёт через счёт."""
         invoice, _act = _signed_act(world)
-        _api(world["buyer"]).post(
+        _api(make_cashier()).post(
             f"/api/v1/crm/invoices/{invoice.id}/record-payment/",
             {"amount": "10", "paid_at": "2026-07-29"},
             format="json",

@@ -98,7 +98,7 @@ def world(lookups):
         "manager": _member(own, "manager@own.test", permissions=MANAGER_PERMISSIONS),
         "observer": _member(own, "observer@own.test", permissions=[]),
         "former": _member(own, "former@own.test", permissions=MANAGER_PERMISSIONS, is_active=False),
-        "buyer_a": _member(client_a, "buyer@a.test", can_buy=True),
+        "buyer_a": _member(client_a, "buyer@a.test"),
         "outsider": CustomUser.objects.create_user(email="out@x.test", username="out@x.test", password="x"),
         "deal_a": Deal.objects.create(title="A", company=client_a, stage=rfq_open),
         "deal_b": Deal.objects.create(title="B", company=client_b, stage=rfq_open),

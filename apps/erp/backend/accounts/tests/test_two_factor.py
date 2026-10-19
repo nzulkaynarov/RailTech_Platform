@@ -60,7 +60,7 @@ def _login(client, email, password=PASSWORD, **extra):
 @pytest.mark.django_db
 class TestTotpSetup:
     def test_setup_then_verify_enables_2fa(self, user_factory):
-        user = user_factory()
+        user = user_factory(is_superuser=True)
         client = _auth_client(user)
 
         setup = client.post("/api/v1/auth/2fa/setup/")
@@ -84,7 +84,7 @@ class TestTotpSetup:
         assert decrypt_totp_secret(user.totp_secret) == secret
 
     def test_verify_rejects_wrong_code(self, user_factory):
-        user = user_factory()
+        user = user_factory(is_superuser=True)
         client = _auth_client(user)
         secret = pyotp.random_base32()
 
@@ -99,14 +99,14 @@ class TestTotpSetup:
         assert not user.is_2fa_enabled
 
     def test_verify_requires_secret_and_code(self, user_factory):
-        client = _auth_client(user_factory())
+        client = _auth_client(user_factory(is_superuser=True))
         resp = client.post("/api/v1/auth/2fa/verify/", {"current_password": PASSWORD}, format="json")
         assert resp.status_code == 400
         assert resp.data["detail"] == "2FA_CODE_REQUIRED"
 
     def test_verify_requires_current_password(self, user_factory):
         """Step-up: enabling 2FA needs the current password IN ADDITION to the code."""
-        client = _auth_client(user_factory())
+        client = _auth_client(user_factory(is_superuser=True))
         secret = pyotp.random_base32()
         resp = client.post(
             "/api/v1/auth/2fa/verify/",
@@ -117,7 +117,7 @@ class TestTotpSetup:
         assert resp.data["detail"] == "PASSWORD_REQUIRED"
 
     def test_verify_rejects_wrong_password(self, user_factory):
-        user = user_factory()
+        user = user_factory(is_superuser=True)
         client = _auth_client(user)
         secret = pyotp.random_base32()
         resp = client.post(
@@ -131,14 +131,14 @@ class TestTotpSetup:
         assert not user.is_2fa_enabled
 
     def test_setup_blocked_when_already_enabled(self, user_factory):
-        user = user_factory()
+        user = user_factory(is_superuser=True)
         _enable_2fa(user)
         resp = _auth_client(user).post("/api/v1/auth/2fa/setup/")
         assert resp.status_code == 400
         assert resp.data["detail"] == "2FA_ALREADY_ENABLED"
 
     def test_disable_requires_valid_code(self, user_factory):
-        user = user_factory()
+        user = user_factory(is_superuser=True)
         secret = _enable_2fa(user)
         client = _auth_client(user)
 
@@ -161,7 +161,7 @@ class TestTotpSetup:
 
     def test_disable_requires_current_password(self, user_factory):
         """Step-up: turning 2FA off needs the current password IN ADDITION to the code."""
-        user = user_factory()
+        user = user_factory(is_superuser=True)
         secret = _enable_2fa(user)
         client = _auth_client(user)
 
@@ -176,7 +176,7 @@ class TestTotpSetup:
         assert user.is_2fa_enabled  # still on — step-up blocked it
 
     def test_disable_rejects_wrong_password(self, user_factory):
-        user = user_factory()
+        user = user_factory(is_superuser=True)
         secret = _enable_2fa(user)
         client = _auth_client(user)
 
@@ -194,7 +194,7 @@ class TestTotpSetup:
 @pytest.mark.django_db
 class TestTwoStepLogin:
     def test_password_step_returns_ticket_and_voids_the_minted_pair(self, user_factory):
-        user = user_factory()
+        user = user_factory(is_superuser=True)
         _enable_2fa(user)
 
         resp = _login(APIClient(), user.email)
@@ -207,7 +207,7 @@ class TestTwoStepLogin:
         assert BlacklistedToken.objects.filter(token__user=user).count() == 1
 
     def test_code_step_sets_cookie_and_never_returns_refresh_in_body(self, user_factory):
-        user = user_factory()
+        user = user_factory(is_superuser=True)
         secret = _enable_2fa(user)
         client = APIClient()
         ticket = _login(client, user.email).data["temp_token"]
@@ -223,7 +223,7 @@ class TestTwoStepLogin:
         assert resp.cookies[django_settings.REFRESH_COOKIE_NAME]["httponly"]
 
     def test_wrong_code_is_rejected_with_a_code(self, user_factory):
-        user = user_factory()
+        user = user_factory(is_superuser=True)
         _enable_2fa(user)
         client = APIClient()
         ticket = _login(client, user.email).data["temp_token"]
@@ -246,7 +246,7 @@ class TestTwoStepLogin:
         assert resp.data["detail"] == "2FA_TICKET_INVALID"
 
     def test_wrong_password_behaves_like_any_failed_login(self, user_factory):
-        user = user_factory()
+        user = user_factory(is_superuser=True)
         _enable_2fa(user)
         resp = _login(APIClient(), user.email, password="wrong-password")
         assert resp.status_code == 401
@@ -254,7 +254,7 @@ class TestTwoStepLogin:
 
     def test_distributed_code_bruteforce_trips_the_account_lockout(self, user_factory, settings):
         settings.LOGIN_LOCKOUT_DISTINCT_IPS = 2
-        user = user_factory()
+        user = user_factory(is_superuser=True)
         _enable_2fa(user)
         client = APIClient()
         ticket = _login(client, user.email).data["temp_token"]
@@ -280,7 +280,7 @@ class TestTwoStepLogin:
     def test_ticket_is_single_use(self, user_factory):
         """A redeemed ticket cannot be replayed — a leaked ticket (proxy logs) is
         useless once its one login has happened (SEC-06 replay hardening)."""
-        user = user_factory()
+        user = user_factory(is_superuser=True)
         secret = _enable_2fa(user)
         client = APIClient()
         ticket = _login(client, user.email).data["temp_token"]
@@ -303,7 +303,7 @@ class TestTwoStepLogin:
     def test_used_code_cannot_be_replayed_with_a_fresh_ticket(self, user_factory):
         """The same TOTP code is rejected the second time even via a different
         ticket — pyotp.verify has no memory, so we track accepted codes."""
-        user = user_factory()
+        user = user_factory(is_superuser=True)
         secret = _enable_2fa(user)
         code = pyotp.TOTP(secret).now()
 
@@ -325,7 +325,7 @@ class TestTwoStepLogin:
         assert replay.data["detail"] == "2FA_INVALID_CODE"
 
     def test_me_exposes_the_2fa_flag(self, user_factory):
-        user = user_factory()
+        user = user_factory(is_superuser=True)
         _enable_2fa(user)
         resp = _auth_client(user).get("/api/v1/accounts/users/me/")
         assert resp.status_code == 200
@@ -337,7 +337,7 @@ class TestSecretEncryption:
     def test_legacy_plaintext_secret_still_logs_in(self, user_factory):
         """A row written before migration 0039 (raw base32) keeps working mid-deploy:
         decrypt_totp_secret passes an undecryptable value through unchanged."""
-        user = user_factory()
+        user = user_factory(is_superuser=True)
         plain_secret = pyotp.random_base32()
         user.totp_secret = plain_secret
         user.is_2fa_enabled = True
@@ -354,7 +354,7 @@ class TestSecretEncryption:
         assert resp.data.get("access")
 
     def test_disable_works_with_encrypted_secret(self, user_factory):
-        user = user_factory()
+        user = user_factory(is_superuser=True)
         plain_secret = _enable_2fa(user)
         resp = _auth_client(user).post(
             "/api/v1/auth/2fa/disable/",

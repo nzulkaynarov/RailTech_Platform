@@ -40,7 +40,7 @@ def _company(name, inn, type_code):
     return company
 
 
-def _member(company, email, *, can_sell=False, can_buy=False):
+def _member(company, email, *, can_sell=False):
     user = CustomUser.objects.create_user(email=email, username=email, password="x")
     CompanyMember.objects.create(
         user=user,
@@ -49,7 +49,6 @@ def _member(company, email, *, can_sell=False, can_buy=False):
         is_active=True,
         is_primary=True,
         can_sell=can_sell,
-        can_buy=can_buy,
     )
     if can_sell:
         _grant_head(user, company)
@@ -81,7 +80,7 @@ def world(lookups):
     seller_user = _member(seller_co, "seller@doc.test", can_sell=True)
 
     buyer_co = _company("Buyer Co", "B1", "CLIENT")
-    buyer_user = _member(buyer_co, "buyer@doc.test", can_buy=True)
+    buyer_user = _member(buyer_co, "buyer@doc.test")
 
     deal = Deal.objects.create(company=buyer_co, stage=DealStage.objects.get(code="DRAFT"), title="Поставка")
 

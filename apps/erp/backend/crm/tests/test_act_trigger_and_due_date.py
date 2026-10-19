@@ -75,7 +75,7 @@ def _company(name, inn, type_code):
     return company
 
 
-def _member(company, email, *, can_sell=False, can_buy=False):
+def _member(company, email, *, can_sell=False):
     user = CustomUser.objects.create_user(email=email, username=email, password="x")
     CompanyMember.objects.create(
         user=user,
@@ -84,7 +84,6 @@ def _member(company, email, *, can_sell=False, can_buy=False):
         is_active=True,
         is_primary=True,
         can_sell=can_sell,
-        can_buy=can_buy,
     )
     return user
 
@@ -93,7 +92,7 @@ def _member(company, email, *, can_sell=False, can_buy=False):
 def won_deal(lookups):
     """Выигранная сделка с подписанным договором — вход в auto_invoice_on_closed_won."""
     buyer_co = _company("Buyer G1", "B300", "CLIENT")
-    buyer_user = _member(buyer_co, "buyer@g1.test", can_buy=True)
+    buyer_user = _member(buyer_co, "buyer@g1.test")
     seller_co = _company("Seller G1", "S300", "SUPPLIER")
     seller_user = _member(seller_co, "seller@g1.test", can_sell=True)
 

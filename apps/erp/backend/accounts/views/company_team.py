@@ -58,9 +58,9 @@ class CompanyTeamMixin:
         return Response(UserSerializer(users, many=True, context={"request": request}).data)
 
     @extend_schema(
-        summary="Update member capabilities (sell / buy flags)",
+        summary="Update member capabilities (sell flag)",
         description=(
-            "Company OWNER distributes selling / buying rights across team members. "
+            "Company OWNER distributes selling rights across team members. "
             "Only OWNER of the same company (or platform ADMIN/superuser) may call this."
         ),
         request=inline_serializer(
@@ -68,7 +68,6 @@ class CompanyTeamMixin:
             fields={
                 "member_id": drf_serializers.IntegerField(),
                 "can_sell": drf_serializers.BooleanField(required=False),
-                "can_buy": drf_serializers.BooleanField(required=False),
             },
         ),
         responses={
@@ -99,9 +98,6 @@ class CompanyTeamMixin:
         if "can_sell" in request.data:
             member.can_sell = bool(request.data["can_sell"])
             changed.append("can_sell")
-        if "can_buy" in request.data:
-            member.can_buy = bool(request.data["can_buy"])
-            changed.append("can_buy")
         if changed:
             member.save(update_fields=[*changed, "joined_at"][: len(changed)])
         return Response(
@@ -109,7 +105,6 @@ class CompanyTeamMixin:
                 "id": member.id,
                 "user_id": member.user_id,
                 "can_sell": member.can_sell,
-                "can_buy": member.can_buy,
             }
         )
 

@@ -34,7 +34,6 @@ def _seller_user(email="seller@gate.test", *, company_type="SUPPLIER"):
         is_active=True,
         is_primary=True,
         can_sell=True,
-        can_buy=True,
     )
     return user, company
 

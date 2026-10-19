@@ -246,7 +246,7 @@ def test_golden_path_rfq_to_closed_won(deal, buyer, manager):
     # 7. Contract generated from the approved quote, then double-signed.
     contract, err = crm_services.generate_contract_from_quote(quote.id, actor=manager)
     assert err is None, f"generate_contract_from_quote failed: {err}"
-    contract, err = crm_services.sign_contract_by_client(contract.id, buyer_user)
+    contract, err = crm_services.sign_contract_by_client(contract.id, manager)
     assert err is None, f"sign_contract_by_client failed: {err}"
     assert contract.status_code == "PENDING_MANAGER"
     contract, err = crm_services.sign_contract_by_manager(contract.id, manager)
@@ -306,7 +306,7 @@ def test_contract_and_billing_events_are_structured(deal, buyer, manager):
     created = ActivityLog.objects.filter(event_code="contract.created", deal=deal).order_by("-id").first()
     assert created.event_params == {"number": contract.number, "deal_id": deal.id}
 
-    contract, err = crm_services.sign_contract_by_client(contract.id, buyer_user)
+    contract, err = crm_services.sign_contract_by_client(contract.id, manager)
     assert err is None
     signed_client = ActivityLog.objects.filter(event_code="contract.signed_client", deal=deal).order_by("-id").first()
     assert signed_client.event_params == {"number": contract.number, "deal_id": deal.id, "manual": True}

@@ -246,20 +246,14 @@ def _render_contract_pdf(contract) -> None:
     contract.pdf_file.save(filename, ContentFile(buf.getvalue()), save=True)
 
 
-@transaction.atomic
 def viewer_can_sign_client(user, contract) -> bool:
-    """Buyer-side signing capability for THIS contract, independent of the SPA page context.
+    """Подпись договора стороной клиента изнутри ERP невозможна (FIX-13): клиентских аккаунтов нет.
 
-    The single source of truth for BOTH the sign_contract_by_client authorization and the
-    ContractSerializer's `viewer_can_sign_client` hint — so the UI shows the right button to a
-    dual buy+sell company regardless of which context it landed in (review fix), and never drifts
-    from what the backend actually permits.
+    Клиент подписывает в портале; пока портал не вызывает `sign_contract_by_client` (FIX-22), подсказка
+    `viewer_can_sign_client` для сериализатора и хаба сделки всегда ложна. Единый источник и для
+    сервиса, и для подсказки — чтобы UI не разошёлся с тем, что реально разрешено.
     """
-    from accounts.services.buyer_access import buyer_has_permission
-
-    if user is None or getattr(user, "is_anonymous", False):
-        return False
-    return buyer_has_permission(user, contract.deal.company_id, "contract.sign")
+    return False
 
 
 def viewer_can_sign_manager(user, contract) -> bool:
@@ -307,8 +301,7 @@ def sign_contract_by_client(
     from ..models import Contract
 
     contract = Contract.objects.select_for_update().select_related("deal").get(pk=contract_id)
-    # Buyer-side capability via the shared predicate (legacy can_buy OR explicit contract.sign
-    # CompanyRole) — same source of truth as the serializer's sign hint.
+    # Подпись клиента — только администратором (сервисный вызов); портал подключит FIX-22.
     if not (getattr(client_user, "is_superuser", False) or viewer_can_sign_client(client_user, contract)):
         return None, "MEMBER_REQUIRED_FOR_ACTION"
     if contract.status_code not in {ContractStatusCode.DRAFT, ContractStatusCode.PENDING_CLIENT}:

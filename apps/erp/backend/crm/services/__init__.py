@@ -65,15 +65,6 @@ from .quotes import (
     reapply_company_defaults,
     reassign_quote_item_product,
 )
-from .rfq import (
-    buyer_add_request_item,
-    buyer_add_request_items,
-    buyer_can_edit_request,
-    buyer_remove_request_item,
-    buyer_update_request_item,
-    buyer_update_request_meta,
-    submit_request,
-)
 
 __all__ = [
     "ALLOWED_STAGE_TRANSITIONS",
@@ -86,12 +77,6 @@ __all__ = [
     "apply_company_quote_defaults",
     "reapply_company_defaults",
     "auto_split_quote_by_availability",
-    "buyer_add_request_item",
-    "buyer_add_request_items",
-    "buyer_can_edit_request",
-    "buyer_remove_request_item",
-    "buyer_update_request_item",
-    "buyer_update_request_meta",
     "bulk_close_deals_lost",
     "can_duplicate_quote",
     "cancel_contract",
@@ -137,7 +122,6 @@ __all__ = [
     "act_viewer_side",
     "sign_contract_by_client",
     "sign_contract_by_manager",
-    "submit_request",
     "quote_vs_request_diff",
     "user_can_view_quote_diff",
     "transition_deal_stage",

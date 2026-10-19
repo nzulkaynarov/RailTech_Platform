@@ -12,7 +12,6 @@ export interface DashboardStats {
   deals_by_month: { month: string; value: number }[];
   activity_by_day: { day: string; count: number }[];
   top_products: { id: string; name: string; quantity: number; category: string }[];
-  counterparties: { manufacturers: number; buyers: number; intermediaries: number };
   request_completion: number;
   request_completion_goal: number;
   deals_in_progress: number;
@@ -27,8 +26,6 @@ export interface PageStats {
   clients: { total: number };
   products: { total: number; published: number; categories: number; equipment_groups: number; offers: number };
   analytics: { conversion: string; avg_deal: string; pipeline: string; win_rate: string };
-  analytics_buyer: { spend_period: string; active_requests: number };
-  my_requests: { active: number; quote_received: number; contract: number; completed: number };
   admin_users: { total: number; admins: number; managers: number; employees: number };
   imports: { total: number; attachments: number };
   notifications_unread: number;
@@ -36,7 +33,7 @@ export interface PageStats {
 
 // Wave I-2 — виджет «Недавние документы» (та же форма строки у поиска документов ⌘K).
 // Маршрута здесь НЕТ намеренно: раньше сервер отдавал готовый `hash`, но про гейты SPA он не
-// знает — ссылка на акт и КП была продавцовской и уводила покупателя в отказ (аудит UI, U1).
+// знает — ссылка на акт и КП была продавцовской и уводила клиента в отказ (аудит UI, U1).
 // `type` + `id` + `deal` — всё, что нужно `lib/documentRoute`, чтобы посчитать маршрут по
 // стороне зрителя.
 export interface RecentDocument {

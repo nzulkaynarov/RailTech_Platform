@@ -9,6 +9,7 @@ from rest_framework.test import APIClient
 
 from accounts.models import Company, CompanyMember, CustomUser, WorkspaceRole
 from accounts.services.document_profile import update_document_profile
+from accounts.testing import grant_head, make_own_company
 from crm.services.documents import PREVIEW_DOC_TYPES, render_document_profile_preview_html
 
 
@@ -27,8 +28,9 @@ def _client(user):
 
 @pytest.fixture
 def seller(db):
-    company = Company.objects.create(name="РемПуть-Тема", inn="6300000001")
+    company = make_own_company(Company.objects.create(name="РемПуть-Тема", inn="6300000001"))
     owner = _owner(company, "theme-owner@a.test")
+    grant_head(owner, company)
     return company, owner
 
 

@@ -43,7 +43,7 @@ def _company(name, inn, type_code):
     return company
 
 
-def _member(company, email, *, can_sell=False, can_buy=False):
+def _member(company, email, *, can_sell=False):
     user = CustomUser.objects.create_user(email=email, username=email, password="x")
     CompanyMember.objects.create(
         user=user,
@@ -52,7 +52,6 @@ def _member(company, email, *, can_sell=False, can_buy=False):
         is_active=True,
         is_primary=True,
         can_sell=can_sell,
-        can_buy=can_buy,
     )
     return user
 
@@ -68,13 +67,13 @@ def act_on_manual_invoice(lookups):
     """Сотрудник своей компании выставляет РУЧНОЙ счёт (без договора) по КП и выпускает акт.
     Посторонний — участник другой компании-клиента."""
     buyer_co = _company("Buyer Co", "B800", "CLIENT")
-    _member(buyer_co, "buyer@act.test", can_buy=True)
+    _member(buyer_co, "buyer@act.test")
 
     winner_co = _company("Own Co", "S800", "SUPPLIER")
     winner_user = _member(winner_co, "winner@act.test", can_sell=True)
 
     loser_co = _company("Other Client", "S801", "CLIENT")
-    loser_user = _member(loser_co, "outsider@act.test", can_sell=True, can_buy=True)
+    loser_user = _member(loser_co, "outsider@act.test", can_sell=True)
 
     deal = Deal.objects.create(
         title="Manual act deal", company=buyer_co, stage=DealStage.objects.get(code="CLOSED_WON")

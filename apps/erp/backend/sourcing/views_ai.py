@@ -8,7 +8,7 @@ from rest_framework.response import Response
 from rest_framework.throttling import ScopedRateThrottle
 from rest_framework.views import APIView
 
-from core.permissions import BUYER_ONLY, RoleGatedViewMixin
+from core.permissions import RoleGatedViewMixin
 
 
 @extend_schema(
@@ -16,7 +16,7 @@ from core.permissions import BUYER_ONLY, RoleGatedViewMixin
     description=(
         "For each request line (name / mpn / gost_drawing) returns up to top_k catalog "
         "Product candidates ranked by Claude (product_id always from a DB trigram shortlist — "
-        "the model never invents ids). The buyer/seller confirms a candidate in the grid "
+        "the model never invents ids). The client/seller confirms a candidate in the grid "
         "(human-in-loop). Capped at 50 lines per call. ARCH-01: the LLM call runs on Celery — "
         "returns 202 + task_id; poll sourcing/ai-status/<task_id>/ for {matches: []}."
     ),
@@ -64,58 +64,6 @@ class MatchCatalogView(RoleGatedViewMixin, APIView):
 
         payload = {"lines": lines[:50], "domain_code": domain_code, "top_k": top_k}
         return enqueue_ai_job("match", payload, request.user)
-
-
-@extend_schema(
-    summary="AI pre-flight quality check for a заявка (advisory)",
-    description=(
-        "Runs an ADVISORY quality pass over draft request lines before the buyer "
-        "submits the RFQ. Claude flags vague descriptions, missing/implausible qty or "
-        "units, likely-duplicate lines and missing key specs. Returns warnings only — "
-        "never a hard block (line_index always references a GIVEN line; out-of-range "
-        "indices are dropped). Capped at 50 lines per call. ARCH-01: the LLM call runs on "
-        "Celery — returns 202 + task_id; poll sourcing/ai-status/<task_id>/ for {findings: []}."
-    ),
-    request=inline_serializer(
-        "PreflightCheckRequest",
-        fields={
-            "lines": serializers.ListField(child=serializers.DictField()),
-            "domain_code": serializers.CharField(required=False),
-        },
-    ),
-    responses={
-        202: OpenApiResponse(description="AI job queued, task_id returned"),
-        400: OpenApiResponse(description="Missing lines"),
-        503: OpenApiResponse(description="AI pre-flight disabled"),
-    },
-    tags=["Sourcing"],
-)
-class PreflightCheckView(RoleGatedViewMixin, APIView):
-    """AI advisory pre-submit quality check of buyer заявка lines (AI #7)."""
-
-    required_permissions = {
-        "POST": BUYER_ONLY,
-    }
-    buyer_actions = frozenset({"POST"})  # до M2-ERP-01
-
-    permission_classes = [IsAuthenticated]
-    throttle_classes = [ScopedRateThrottle]
-    throttle_scope = "ai_preflight"
-
-    def post(self, request):
-        from django.conf import settings
-
-        if not getattr(settings, "AI_IMPORT_ENABLED", False):
-            return Response({"detail": "AI_DISABLED"}, status=status.HTTP_503_SERVICE_UNAVAILABLE)
-        lines = request.data.get("lines")
-        if not isinstance(lines, list) or not lines:
-            return Response({"detail": "LINES_REQUIRED"}, status=status.HTTP_400_BAD_REQUEST)
-        domain_code = request.data.get("domain_code") or None
-
-        from .ai_jobs import enqueue_ai_job
-
-        payload = {"lines": lines[:50], "domain_code": domain_code}
-        return enqueue_ai_job("preflight", payload, request.user)
 
 
 # Max size for an uploaded contract/invoice document (one base64 vision call). Aligned at

@@ -66,7 +66,7 @@ def _company(name, inn, type_code):
     return company
 
 
-def _member(company, email, *, can_sell=False, can_buy=False):
+def _member(company, email, *, can_sell=False):
     user = CustomUser.objects.create_user(email=email, username=email, password="x")
     CompanyMember.objects.create(
         user=user,
@@ -75,7 +75,6 @@ def _member(company, email, *, can_sell=False, can_buy=False):
         is_active=True,
         is_primary=True,
         can_sell=can_sell,
-        can_buy=can_buy,
     )
     return user
 
@@ -101,14 +100,14 @@ def world(lookups):
     """Buyer, own-company staff (the seller of every deal), an outsider from another client
     company, a platform admin, and a non-member."""
     buyer_co = _company("Buyer Co", "B100", "CLIENT")
-    buyer_user = _member(buyer_co, "buyer@ds.test", can_buy=True)
+    buyer_user = _member(buyer_co, "buyer@ds.test")
 
     seller_co = _company("Own Co", "S100", "SUPPLIER")
     seller_user = _member(seller_co, "seller@ds.test", can_sell=True)
 
     # An outsider — a member of ANOTHER client company: neither staff nor this deal's buyer.
     other_co = _company("Other Client Co", "O100", "CLIENT")
-    other_user = _member(other_co, "other@ds.test", can_buy=True)
+    other_user = _member(other_co, "other@ds.test")
 
     admin_user = CustomUser.objects.create_user(
         is_superuser=True,

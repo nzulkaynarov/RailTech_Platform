@@ -123,7 +123,7 @@ export interface DeliveryBasis {
 }
 
 // КП-level expense item / discount (UBL document AllowanceCharge). Seller-only —
-// the buyer never receives these rows (server gates them).
+// the client never receives these rows (server gates them).
 export interface QuoteCharge {
 	id: number;
 	quote: number;
@@ -234,7 +234,7 @@ export interface Quote {
 	vat_rate?: string;
 	margin_percent?: string;          // КП-level markup applied to every line (F3.8)
 	items: QuoteItem[];
-	charges?: QuoteCharge[];       // seller-only; absent for buyers
+	charges?: QuoteCharge[];       // seller-only; absent for clients
 	subtotal_excl_vat: string;
 	charges_total?: string;        // seller-only
 	vat_amount: string;

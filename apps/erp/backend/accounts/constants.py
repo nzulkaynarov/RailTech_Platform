@@ -149,16 +149,6 @@ LEGACY_PERMISSION_RENAMES = {
 }
 
 
-class BuyerPermission(models.TextChoices):
-    """Права ПОКУПАТЕЛЬСКОГО аккаунта (участник компании-клиента) — переходно до M2-ERP-01:
-    после него клиент действует только в Cabinet через портальный API, и этот класс удаляется.
-    В каталог прав бэк-офиса не входят; проверяются `accounts.services.buyer_access`."""
-
-    REQUEST_CREATE = "request.create", "Создавать заявки"
-    QUOTE_APPROVE = "quote.approve", "Принимать / отклонять КП"
-    CONTRACT_SIGN = "contract.sign", "Подписывать договоры"
-
-
 class SystemRoleCode(models.TextChoices):
     """Коды SystemRole. Операторская плоскость («ADMIN без компании = оператор») удалена в
     M1-ERP-02: администратор ERP = `is_superuser`. Судьба самой модели — M1-ERP-03/05."""

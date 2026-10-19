@@ -11,6 +11,7 @@ import pytest
 from rest_framework.test import APIClient
 
 from accounts.models import Company, CompanyMember, CompanyRole, CustomUser, WorkspaceRole
+from accounts.testing import make_own_company
 
 
 def _owner_role():
@@ -47,7 +48,7 @@ def _plain_member(company, email):
 
 @pytest.fixture
 def company(db):
-    return Company.objects.create(name="Acme LLC", inn="9911223344")
+    return make_own_company(Company.objects.create(name="Acme LLC", inn="9911223344"))
 
 
 def _client(user):
@@ -72,20 +73,6 @@ def test_admin_removes_member(company):
     assert resp.status_code == 200, resp.content
     assert resp.json()["removed"] is True
     assert not CompanyMember.objects.filter(pk=plain.id).exists()
-
-
-@pytest.mark.django_db
-def test_remove_last_admin_blocked(company):
-    admin_user, admin = _admin_member(company, "admin@acme.test")
-
-    resp = _client(admin_user).post(
-        f"/api/v1/accounts/companies/{company.id}/remove-member/",
-        {"member_id": admin.id},
-        format="json",
-    )
-    assert resp.status_code == 409
-    assert resp.json()["detail"] == "CANNOT_REMOVE_LAST_COMPANY_ADMIN"
-    assert CompanyMember.objects.filter(pk=admin.id).exists()  # still there
 
 
 @pytest.mark.django_db

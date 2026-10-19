@@ -22,7 +22,18 @@ from rest_framework.test import APIClient
 from rest_framework_simplejwt.tokens import RefreshToken
 
 from accounts.models import Company, CompanyMember, CompanyType, CustomUser, WorkspaceRole
-from crm.models import Act, Contract, ContractStatus, Deal, DealStage, Invoice, InvoiceStatus, Quote, QuoteStatus
+from crm.models import (
+    Act,
+    ActStatus,
+    Contract,
+    ContractStatus,
+    Deal,
+    DealStage,
+    Invoice,
+    InvoiceStatus,
+    Quote,
+    QuoteStatus,
+)
 
 
 def _api(user):
@@ -55,9 +66,9 @@ def world(db, grant):
         return user
 
     buyer_co = company("Buyer ONE", "B900", "CLIENT")
-    buyer_user = member(buyer_co, "buyer@one-act.test", can_buy=True, can_sell=False)
+    buyer_user = member(buyer_co, "buyer@one-act.test", can_sell=False)
     seller_co = company("Seller ONE", "S900", "SUPPLIER")
-    seller_user = member(seller_co, "seller@one-act.test", can_sell=True, can_buy=False)
+    seller_user = member(seller_co, "seller@one-act.test", can_sell=True)
     grant(seller_user, "HEAD")
 
     deal = Deal.objects.create(title="One act deal", company=buyer_co, stage=DealStage.objects.get(code="CLOSED_WON"))
@@ -150,10 +161,14 @@ def test_a_cancelled_act_frees_the_invoice(world):
 
 
 def _rejected_act(world):
+    """Акт, который заказчик вернул с причиной. Возврат делает портал (FIX-22), поэтому состояние
+    «возвращён» выставляется напрямую — проверяется выпуск заново исполнителем, а не сам возврат."""
     _generate(world)
     act = Act.objects.get(invoice=world["invoice"])
-    resp = _api(world["buyer_user"]).post(f"/api/v1/crm/acts/{act.id}/reject/", {"reason": "объём не совпал"})
-    assert resp.status_code == 200, resp.content
+    act.status = ActStatus.objects.get(code="DRAFT")
+    act.rejection_reason = "объём не совпал"
+    act.issuer_signed_at = None
+    act.save(update_fields=["status", "rejection_reason", "issuer_signed_at", "updated_at"])
     act.refresh_from_db()
     assert act.status_code == "DRAFT"
     return act

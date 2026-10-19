@@ -5,6 +5,7 @@ from unittest.mock import patch
 
 import pytest
 
+from accounts.models import CustomUser
 from crm.tests.test_permission_guards import (  # noqa: F401 — фикстуры мира
     _make_member,
     _make_user,
@@ -26,8 +27,10 @@ def test_contract_client_sign_enqueues_pdf_rerender(
     seller = _make_user("rerender_seller@s.test")
     _make_member(seller, seller_company, is_primary=True)
     quote = _sent_quote(deal, prepared_by=seller)
-    buyer = _make_user("rerender_buyer@b.test")
-    _make_member(buyer, buyer_company, can_buy=True, is_primary=True)
+    # Клиентской подписи изнутри ERP нет (FIX-13): сервис вызывает администратор, портал подключит FIX-22.
+    buyer = CustomUser.objects.create_superuser(
+        email="rerender_admin@erp.test", username="rerender_admin", password="x"
+    )
     contract = _pending_client_contract(deal, quote)
 
     with patch("crm.tasks.render_document_pdf.delay") as delay:

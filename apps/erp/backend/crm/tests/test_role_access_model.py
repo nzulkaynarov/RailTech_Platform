@@ -1,10 +1,10 @@
-"""Role/access model: the SELLER builds & owns the КП, the BUYER receives & approves it.
+"""Role/access model: the SELLER builds & owns the КП; a client-company member cannot touch it.
 
 Locks down the inverted-ownership "каша" the audit found (2026-06-10):
   * building a Quote/КП is a back-office action (role permission quote.build, M1-ERP-05) — was open to any authed user
     and effectively allowed the buyer (deal.company) while excluding the seller;
-  * the seller sees buyer заявки/quotes to build them;
-  * approve/reject require buyer can_buy (a КП approval = CONTRACT_SIGNED commitment).
+  * the seller sees client заявки/quotes to build them.
+Client accept / reject of a КП left ERP for the portal (FIX-13).
 """
 
 from decimal import Decimal
@@ -40,7 +40,7 @@ def _api(user):
     return client
 
 
-def _member(company, email, *, can_sell=False, can_buy=False, role="OWNER"):
+def _member(company, email, *, can_sell=False, role="OWNER"):
     user = CustomUser.objects.create_user(email=email, username=email.split("@")[0], password="pw", is_active=True)
     CompanyMember.objects.create(
         user=user,
@@ -49,7 +49,6 @@ def _member(company, email, *, can_sell=False, can_buy=False, role="OWNER"):
         is_primary=True,
         is_active=True,
         can_sell=can_sell,
-        can_buy=can_buy,
     )
     return user
 
@@ -68,7 +67,7 @@ def seller(lookups):
 def buyer(lookups):
     company = Company.objects.create(name="Buyer LLC", inn="3300000001")
     company.types.add(CompanyType.objects.get(code="CLIENT"))
-    return _member(company, "buyer@cl.test", can_buy=True), company
+    return _member(company, "buyer@cl.test"), company
 
 
 @pytest.fixture
@@ -121,7 +120,7 @@ def test_quote_create_is_not_open_to_any_authed_user(buyer, deal, lookups):
     POST a quote onto someone else's deal. Now blocked."""
     other_co = Company.objects.create(name="Random LLC", inn="9900000009")
     other_co.types.add(CompanyType.objects.get(code="CLIENT"))
-    stranger = _member(other_co, "stranger@x.test", can_buy=True)
+    stranger = _member(other_co, "stranger@x.test")
     resp = _api(stranger).post("/api/v1/crm/quotes/", {"deal": deal.id}, format="json")
     assert resp.status_code == 403
 
@@ -135,37 +134,6 @@ def test_seller_sees_buyer_quote(seller, deal):
     resp = _api(seller_user).get("/api/v1/crm/quotes/")
     ids = [q["id"] for q in (resp.data["results"] if isinstance(resp.data, dict) else resp.data)]
     assert quote.id in ids
-
-
-# ── approve / reject = buyer can_buy ────────────────────────────────────────
-
-
-def test_buyer_can_buy_approves_sent_quote(seller, buyer, deal):
-    buyer_user, _ = buyer
-    deal.stage = DealStage.objects.get(code="QUOTE_SENT")
-    deal.save(update_fields=["stage"])
-    quote = _quote(deal, status_code="SENT", prepared_by=seller[0])
-    resp = _api(buyer_user).post(f"/api/v1/crm/quotes/{quote.id}/approve/")
-    assert resp.status_code == 200, resp.data
-    quote.refresh_from_db()
-    assert quote.status.code == "APPROVED"
-
-
-def test_seller_cannot_approve_quote(seller, deal):
-    seller_user, _ = seller
-    quote = _quote(deal, status_code="SENT", prepared_by=seller_user)
-    resp = _api(seller_user).post(f"/api/v1/crm/quotes/{quote.id}/approve/")
-    assert resp.status_code == 403
-    # Акцепт КП — шаг покупателя (BUYER_ONLY): сотруднику отказывает гейт ролей.
-    assert resp.data["detail"] == "ROLE_NOT_PERMITTED"
-
-
-def test_buyer_without_can_buy_cannot_approve(buyer, deal):
-    buyer_co = buyer[1]
-    no_buy = _member(buyer_co, "nobuy@cl.test", can_buy=False)
-    quote = _quote(deal, status_code="SENT")
-    resp = _api(no_buy).post(f"/api/v1/crm/quotes/{quote.id}/approve/")
-    assert resp.status_code == 403
 
 
 # ── КП line items = seller action ───────────────────────────────────────────
@@ -203,7 +171,7 @@ def test_client_with_default_can_sell_is_not_a_seller(buyer):
 
     buyer_co = buyer[1]
     # Mimic the real default: a CLIENT member with can_sell=True.
-    client_user = _member(buyer_co, "client-cansell@cl.test", can_sell=True, can_buy=True)
+    client_user = _member(buyer_co, "client-cansell@cl.test", can_sell=True)
     assert is_seller(client_user) is False
 
 
@@ -211,7 +179,7 @@ def test_client_cannot_see_other_companies_deals(buyer, deal):
     """The reported leak: a new client saw foreign заявки."""
     other_co = Company.objects.create(name="Other Buyer LLC", inn="3300000099")
     other_co.types.add(CompanyType.objects.get(code="CLIENT"))
-    other_client = _member(other_co, "other-buyer@cl.test", can_sell=True, can_buy=True)
+    other_client = _member(other_co, "other-buyer@cl.test", can_sell=True)
 
     resp = _api(other_client).get("/api/v1/crm/deals/")
     ids = [d["id"] for d in (resp.data["results"] if isinstance(resp.data, dict) else resp.data)]

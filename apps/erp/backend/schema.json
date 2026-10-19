@@ -2382,8 +2382,8 @@
         "/api/v1/accounts/companies/{id}/update-member-capabilities/": {
             "post": {
                 "operationId": "accounts_companies_update_member_capabilities_create",
-                "description": "Company OWNER distributes selling / buying rights across team members. Only OWNER of the same company (or platform ADMIN/superuser) may call this.",
-                "summary": "Update member capabilities (sell / buy flags)",
+                "description": "Company OWNER distributes selling rights across team members. Only OWNER of the same company (or platform ADMIN/superuser) may call this.",
+                "summary": "Update member capabilities (sell flag)",
                 "parameters": [
                     {
                         "in": "path",
@@ -5514,7 +5514,7 @@
         "/api/v1/catalog/category-requests/{id}/": {
             "get": {
                 "operationId": "catalog_category_requests_retrieve",
-                "description": "Подмешивается ПЕРВЫМ во вьюху с мутациями: гейт прав срабатывает до остальных\n`permission_classes` и до `get_object()`, даже если вьюха переопределяет `get_permissions`.\n\nОбъявления на вьюхе:\n  `required_permissions = {\"create\": \"deal.manage\", \"approve\": BUYER_ONLY, ...}`\n  `buyer_actions = {\"create\", \"approve\"}` — переходно до M2-ERP-01.",
+                "description": "Подмешивается ПЕРВЫМ во вьюху с мутациями: гейт прав срабатывает до остальных\n`permission_classes` и до `get_object()`, даже если вьюха переопределяет `get_permissions`.\n\nОбъявления на вьюхе:\n  `required_permissions = {\"create\": \"deal.manage\", \"force_approve\": ADMIN_ONLY, ...}`",
                 "summary": "Get category request",
                 "parameters": [
                     {
@@ -5744,7 +5744,7 @@
         "/api/v1/catalog/manufacturers/": {
             "get": {
                 "operationId": "catalog_manufacturers_list",
-                "description": "Returns OEM brands from the `catalog.Manufacturer` reference table — the canonical source for `Product.brand`. A brand is catalog metadata, not a platform participant (sellers/buyers are the participant roles).",
+                "description": "Returns OEM brands from the `catalog.Manufacturer` reference table — the canonical source for `Product.brand`. A brand is catalog metadata, not a platform participant (sellers/clients are the participant roles).",
                 "summary": "List manufacturers (OEM brands)",
                 "parameters": [
                     {
@@ -7881,67 +7881,6 @@
                 }
             }
         },
-        "/api/v1/crm/acts/{id}/reject/": {
-            "post": {
-                "operationId": "crm_acts_reject_create",
-                "description": "Заказчик возвращает акт исполнителю с причиной — второй шаг двустороннего цикла (паттерн ЭСФ «подтвердить или отклонить»). Причина обязательна: без основания отказ бесполезен обеим сторонам. Акт уходит обратно в DRAFT.",
-                "summary": "Reject an issued act (buyer side)",
-                "parameters": [
-                    {
-                        "in": "path",
-                        "name": "id",
-                        "schema": {
-                            "type": "integer"
-                        },
-                        "description": "A unique integer value identifying this Акт.",
-                        "required": true
-                    }
-                ],
-                "tags": [
-                    "CRM"
-                ],
-                "requestBody": {
-                    "content": {
-                        "application/json": {
-                            "schema": {
-                                "$ref": "#/components/schemas/RejectActRequest"
-                            }
-                        },
-                        "application/x-www-form-urlencoded": {
-                            "schema": {
-                                "$ref": "#/components/schemas/RejectActRequest"
-                            }
-                        },
-                        "multipart/form-data": {
-                            "schema": {
-                                "$ref": "#/components/schemas/RejectActRequest"
-                            }
-                        }
-                    },
-                    "required": true
-                },
-                "security": [
-                    {
-                        "jwtAuth": []
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/Act"
-                                }
-                            }
-                        },
-                        "description": ""
-                    },
-                    "400": {
-                        "description": "REASON_REQUIRED / ACT_SIGN_NOT_ALLOWED"
-                    }
-                }
-            }
-        },
         "/api/v1/crm/acts/{id}/remind/": {
             "post": {
                 "operationId": "crm_acts_remind_create",
@@ -7979,59 +7918,6 @@
                     },
                     "400": {
                         "description": "ACT_REMINDER_TOO_SOON / ACT_ISSUER_SIDE_REQUIRED"
-                    }
-                }
-            }
-        },
-        "/api/v1/crm/acts/{id}/sign/": {
-            "post": {
-                "operationId": "crm_acts_sign_create",
-                "description": "Акты — только чтение плюс сервисные экшены ниже (Rule 8).\n\nВыпуск — через `invoices/{id}/generate-act/` (там же проверяется роутинг\nпродавца, аудит H4), подпись — через `acts/{id}/sign/`. Сырые create/update/\ndestroy обходили обе проверки и позволяли проставить номер, статус и даты руками.",
-                "summary": "Sign act (mark as SIGNED)",
-                "parameters": [
-                    {
-                        "in": "path",
-                        "name": "id",
-                        "schema": {
-                            "type": "integer"
-                        },
-                        "description": "A unique integer value identifying this Акт.",
-                        "required": true
-                    }
-                ],
-                "tags": [
-                    "CRM"
-                ],
-                "requestBody": {
-                    "content": {
-                        "multipart/form-data": {
-                            "schema": {
-                                "$ref": "#/components/schemas/ActRequest"
-                            }
-                        },
-                        "application/x-www-form-urlencoded": {
-                            "schema": {
-                                "$ref": "#/components/schemas/ActRequest"
-                            }
-                        }
-                    },
-                    "required": true
-                },
-                "security": [
-                    {
-                        "jwtAuth": []
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/Act"
-                                }
-                            }
-                        },
-                        "description": ""
                     }
                 }
             }
@@ -8074,7 +7960,7 @@
         "/api/v1/crm/analytics/recent-documents/": {
             "get": {
                 "operationId": "crm_analytics_recent_documents_retrieve",
-                "description": "The viewer's newest documents ACROSS types — КП / контракты / инвойсы / акты / сгенерированные — merged and sorted by date desc, capped at `limit`. Each type is company-scoped exactly like its own list endpoint: own-company staff see every document, a buyer account only its own company's (never another company's DRAFT).",
+                "description": "The viewer's newest documents ACROSS types — КП / контракты / инвойсы / акты / сгенерированные — merged and sorted by date desc, capped at `limit`. Each type is company-scoped exactly like its own list endpoint: own-company staff see every document, a client account only its own company's (never another company's DRAFT).",
                 "summary": "Recent documents (dashboard widget)",
                 "parameters": [
                     {
@@ -9071,64 +8957,6 @@
                 }
             }
         },
-        "/api/v1/crm/contracts/{id}/sign-client/": {
-            "post": {
-                "operationId": "crm_contracts_sign_client_create",
-                "description": "Contracts -- generated from approved quotes, double-signed.",
-                "summary": "Sign contract by client",
-                "parameters": [
-                    {
-                        "in": "path",
-                        "name": "id",
-                        "schema": {
-                            "type": "integer"
-                        },
-                        "description": "A unique integer value identifying this Контракт.",
-                        "required": true
-                    }
-                ],
-                "tags": [
-                    "CRM"
-                ],
-                "requestBody": {
-                    "content": {
-                        "application/json": {
-                            "schema": {
-                                "$ref": "#/components/schemas/ContractRequest"
-                            }
-                        },
-                        "application/x-www-form-urlencoded": {
-                            "schema": {
-                                "$ref": "#/components/schemas/ContractRequest"
-                            }
-                        },
-                        "multipart/form-data": {
-                            "schema": {
-                                "$ref": "#/components/schemas/ContractRequest"
-                            }
-                        }
-                    },
-                    "required": true
-                },
-                "security": [
-                    {
-                        "jwtAuth": []
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/Contract"
-                                }
-                            }
-                        },
-                        "description": ""
-                    }
-                }
-            }
-        },
         "/api/v1/crm/contracts/{id}/sign-manager/": {
             "post": {
                 "operationId": "crm_contracts_sign_manager_create",
@@ -9640,149 +9468,6 @@
                 }
             }
         },
-        "/api/v1/crm/deals/{id}/add-request-item/": {
-            "post": {
-                "operationId": "crm_deals_add_request_item_create",
-                "description": "Buyer-only. Appends a row (name + quantity) to the deal's request. Creates the underlying DRAFT quote on first add. Allowed only while the seller has not taken the deal into work.",
-                "summary": "Add a line item to the buyer's request",
-                "parameters": [
-                    {
-                        "in": "path",
-                        "name": "id",
-                        "schema": {
-                            "type": "integer"
-                        },
-                        "description": "A unique integer value identifying this Сделка.",
-                        "required": true
-                    }
-                ],
-                "tags": [
-                    "CRM"
-                ],
-                "requestBody": {
-                    "content": {
-                        "application/json": {
-                            "schema": {
-                                "$ref": "#/components/schemas/AddRequestItemRequestRequest"
-                            }
-                        },
-                        "application/x-www-form-urlencoded": {
-                            "schema": {
-                                "$ref": "#/components/schemas/AddRequestItemRequestRequest"
-                            }
-                        },
-                        "multipart/form-data": {
-                            "schema": {
-                                "$ref": "#/components/schemas/AddRequestItemRequestRequest"
-                            }
-                        }
-                    },
-                    "required": true
-                },
-                "security": [
-                    {
-                        "jwtAuth": []
-                    }
-                ],
-                "responses": {
-                    "201": {
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/QuoteItem"
-                                }
-                            }
-                        },
-                        "description": ""
-                    }
-                }
-            }
-        },
-        "/api/v1/crm/deals/{id}/add-request-items/": {
-            "post": {
-                "operationId": "crm_deals_add_request_items_create",
-                "description": "Buyer-only. Adds many lines at once; catalog items link by product_id.",
-                "summary": "Bulk-add request line items (catalog cart)",
-                "parameters": [
-                    {
-                        "in": "path",
-                        "name": "id",
-                        "schema": {
-                            "type": "integer"
-                        },
-                        "description": "A unique integer value identifying this Сделка.",
-                        "required": true
-                    },
-                    {
-                        "name": "page",
-                        "required": false,
-                        "in": "query",
-                        "description": "A page number within the paginated result set.",
-                        "schema": {
-                            "type": "integer"
-                        }
-                    },
-                    {
-                        "name": "page_size",
-                        "required": false,
-                        "in": "query",
-                        "description": "Number of results to return per page.",
-                        "schema": {
-                            "type": "integer"
-                        }
-                    },
-                    {
-                        "name": "search",
-                        "required": false,
-                        "in": "query",
-                        "description": "A search term.",
-                        "schema": {
-                            "type": "string"
-                        }
-                    }
-                ],
-                "tags": [
-                    "CRM"
-                ],
-                "requestBody": {
-                    "content": {
-                        "application/json": {
-                            "schema": {
-                                "$ref": "#/components/schemas/AddRequestItemsRequestRequest"
-                            }
-                        },
-                        "application/x-www-form-urlencoded": {
-                            "schema": {
-                                "$ref": "#/components/schemas/AddRequestItemsRequestRequest"
-                            }
-                        },
-                        "multipart/form-data": {
-                            "schema": {
-                                "$ref": "#/components/schemas/AddRequestItemsRequestRequest"
-                            }
-                        }
-                    },
-                    "required": true
-                },
-                "security": [
-                    {
-                        "jwtAuth": []
-                    }
-                ],
-                "responses": {
-                    "201": {
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/PaginatedQuoteItemList"
-                                }
-                            }
-                        },
-                        "description": ""
-                    }
-                }
-            }
-        },
         "/api/v1/crm/deals/{id}/assign/": {
             "post": {
                 "operationId": "crm_deals_assign_create",
@@ -10100,8 +9785,8 @@
         "/api/v1/crm/deals/{id}/generate-draft-quote/": {
             "post": {
                 "operationId": "crm_deals_generate_draft_quote_create",
-                "description": "Creates a fresh DRAFT Quote for the seller, copying the buyer's request lines and prefilling matched products' cost / currency / lead-time from the seller's SupplierOffers (ADR-0006 Move 3). The seller reviews-and-sends instead of building from scratch. ARCH-01: the build (incl. the AI fuzzy match) runs on Celery — returns 202 + task_id; poll sourcing/ai-status/<task_id>/ for {prefilled, quote_id, deal}.",
-                "summary": "Generate a pre-filled draft КП from the buyer request (AI moat / speed)",
+                "description": "Creates a fresh DRAFT Quote for the seller, copying the client's request lines and prefilling matched products' cost / currency / lead-time from the seller's SupplierOffers (ADR-0006 Move 3). The seller reviews-and-sends instead of building from scratch. ARCH-01: the build (incl. the AI fuzzy match) runs on Celery — returns 202 + task_id; poll sourcing/ai-status/<task_id>/ for {prefilled, quote_id, deal}.",
+                "summary": "Generate a pre-filled draft КП from the client request (AI moat / speed)",
                 "parameters": [
                     {
                         "in": "path",
@@ -10161,63 +9846,6 @@
                 "operationId": "crm_deals_release_create",
                 "description": "CRUD for deals (the core CRM entity).\n\nDeal lifecycle: DRAFT -> KYC_PENDING -> SOURCING -> CALCULATING ->\nQUOTE_SENT -> CONTRACT_SIGNED -> CLOSED_WON / CLOSED_LOST.",
                 "summary": "Release a deal back to the queue",
-                "parameters": [
-                    {
-                        "in": "path",
-                        "name": "id",
-                        "schema": {
-                            "type": "integer"
-                        },
-                        "description": "A unique integer value identifying this Сделка.",
-                        "required": true
-                    }
-                ],
-                "tags": [
-                    "CRM"
-                ],
-                "requestBody": {
-                    "content": {
-                        "application/json": {
-                            "schema": {
-                                "$ref": "#/components/schemas/DealDetailRequest"
-                            }
-                        },
-                        "application/x-www-form-urlencoded": {
-                            "schema": {
-                                "$ref": "#/components/schemas/DealDetailRequest"
-                            }
-                        },
-                        "multipart/form-data": {
-                            "schema": {
-                                "$ref": "#/components/schemas/DealDetailRequest"
-                            }
-                        }
-                    }
-                },
-                "security": [
-                    {
-                        "jwtAuth": []
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/DealDetail"
-                                }
-                            }
-                        },
-                        "description": ""
-                    }
-                }
-            }
-        },
-        "/api/v1/crm/deals/{id}/submit-request/": {
-            "post": {
-                "operationId": "crm_deals_submit_request_create",
-                "description": "Buyer-only. Issues the request to the seller: Draft → RFQ_OPEN. Requires ≥1 line and no incomplete lines. After this the request locks.",
-                "summary": "Submit the buyer's request (RFQ) to the seller",
                 "parameters": [
                     {
                         "in": "path",
@@ -10331,63 +9959,6 @@
                     },
                     "409": {
                         "description": "Заявку уже взял коллега (DEAL_ALREADY_CLAIMED)"
-                    }
-                }
-            }
-        },
-        "/api/v1/crm/deals/{id}/update-request-meta/": {
-            "patch": {
-                "operationId": "crm_deals_update_request_meta_partial_update",
-                "description": "Buyer-only, while the request is still DRAFT.",
-                "summary": "Edit the request header (title + note to seller)",
-                "parameters": [
-                    {
-                        "in": "path",
-                        "name": "id",
-                        "schema": {
-                            "type": "integer"
-                        },
-                        "description": "A unique integer value identifying this Сделка.",
-                        "required": true
-                    }
-                ],
-                "tags": [
-                    "CRM"
-                ],
-                "requestBody": {
-                    "content": {
-                        "application/json": {
-                            "schema": {
-                                "$ref": "#/components/schemas/PatchedUpdateRequestMetaRequest"
-                            }
-                        },
-                        "application/x-www-form-urlencoded": {
-                            "schema": {
-                                "$ref": "#/components/schemas/PatchedUpdateRequestMetaRequest"
-                            }
-                        },
-                        "multipart/form-data": {
-                            "schema": {
-                                "$ref": "#/components/schemas/PatchedUpdateRequestMetaRequest"
-                            }
-                        }
-                    }
-                },
-                "security": [
-                    {
-                        "jwtAuth": []
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/DealDetail"
-                                }
-                            }
-                        },
-                        "description": ""
                     }
                 }
             }
@@ -12236,7 +11807,7 @@
         "/api/v1/crm/quote-charges/": {
             "get": {
                 "operationId": "crm_quote_charges_list",
-                "description": "CRUD for КП-level expense items / discounts (UBL document AllowanceCharge).\n\nBuilding the cost breakdown is a SELLER action (mirrors QuoteItemViewSet):\nonly the seller team / superuser may write; the buyer never sees these rows.",
+                "description": "CRUD for КП-level expense items / discounts (UBL document AllowanceCharge).\n\nBuilding the cost breakdown is a SELLER action (mirrors QuoteItemViewSet):\nonly the seller team / superuser may write; the client never sees these rows.",
                 "summary": "List КП-level expense items / discounts",
                 "parameters": [
                     {
@@ -12304,7 +11875,7 @@
             },
             "post": {
                 "operationId": "crm_quote_charges_create",
-                "description": "CRUD for КП-level expense items / discounts (UBL document AllowanceCharge).\n\nBuilding the cost breakdown is a SELLER action (mirrors QuoteItemViewSet):\nonly the seller team / superuser may write; the buyer never sees these rows.",
+                "description": "CRUD for КП-level expense items / discounts (UBL document AllowanceCharge).\n\nBuilding the cost breakdown is a SELLER action (mirrors QuoteItemViewSet):\nonly the seller team / superuser may write; the client never sees these rows.",
                 "summary": "Add КП-level expense item / discount",
                 "tags": [
                     "CRM"
@@ -12351,7 +11922,7 @@
         "/api/v1/crm/quote-charges/{id}/": {
             "get": {
                 "operationId": "crm_quote_charges_retrieve",
-                "description": "CRUD for КП-level expense items / discounts (UBL document AllowanceCharge).\n\nBuilding the cost breakdown is a SELLER action (mirrors QuoteItemViewSet):\nonly the seller team / superuser may write; the buyer never sees these rows.",
+                "description": "CRUD for КП-level expense items / discounts (UBL document AllowanceCharge).\n\nBuilding the cost breakdown is a SELLER action (mirrors QuoteItemViewSet):\nonly the seller team / superuser may write; the client never sees these rows.",
                 "parameters": [
                     {
                         "in": "path",
@@ -12386,7 +11957,7 @@
             },
             "put": {
                 "operationId": "crm_quote_charges_update",
-                "description": "CRUD for КП-level expense items / discounts (UBL document AllowanceCharge).\n\nBuilding the cost breakdown is a SELLER action (mirrors QuoteItemViewSet):\nonly the seller team / superuser may write; the buyer never sees these rows.",
+                "description": "CRUD for КП-level expense items / discounts (UBL document AllowanceCharge).\n\nBuilding the cost breakdown is a SELLER action (mirrors QuoteItemViewSet):\nonly the seller team / superuser may write; the client never sees these rows.",
                 "parameters": [
                     {
                         "in": "path",
@@ -12441,7 +12012,7 @@
             },
             "patch": {
                 "operationId": "crm_quote_charges_partial_update",
-                "description": "CRUD for КП-level expense items / discounts (UBL document AllowanceCharge).\n\nBuilding the cost breakdown is a SELLER action (mirrors QuoteItemViewSet):\nonly the seller team / superuser may write; the buyer never sees these rows.",
+                "description": "CRUD for КП-level expense items / discounts (UBL document AllowanceCharge).\n\nBuilding the cost breakdown is a SELLER action (mirrors QuoteItemViewSet):\nonly the seller team / superuser may write; the client never sees these rows.",
                 "parameters": [
                     {
                         "in": "path",
@@ -12495,7 +12066,7 @@
             },
             "delete": {
                 "operationId": "crm_quote_charges_destroy",
-                "description": "CRUD for КП-level expense items / discounts (UBL document AllowanceCharge).\n\nBuilding the cost breakdown is a SELLER action (mirrors QuoteItemViewSet):\nonly the seller team / superuser may write; the buyer never sees these rows.",
+                "description": "CRUD for КП-level expense items / discounts (UBL document AllowanceCharge).\n\nBuilding the cost breakdown is a SELLER action (mirrors QuoteItemViewSet):\nonly the seller team / superuser may write; the client never sees these rows.",
                 "summary": "Remove КП-level expense item / discount",
                 "parameters": [
                     {
@@ -12676,7 +12247,7 @@
             },
             "put": {
                 "operationId": "crm_quote_items_update",
-                "description": "Optimistic-concurrency gate for a single-line PATCH (волна 3).\n\nDRF routes partial_update → update(partial=True), so this covers PATCH. When a SELLER\nwrite carries a `version` (the row revision the frontend last read) and it no longer\nmatches the DB, a colleague saved this line in between — applying our edit would silently\nclobber theirs, so reject with 409 QUOTE_ITEM_STALE (same code the bulk path emits per\nrow). `version` is OPTIONAL: a PATCH without it keeps the pre-волна-3 last-write-wins\nbehaviour, so buyer request edits and version-less seller writes are untouched.",
+                "description": "Optimistic-concurrency gate for a single-line PATCH (волна 3).\n\nDRF routes partial_update → update(partial=True), so this covers PATCH. When a SELLER\nwrite carries a `version` (the row revision the frontend last read) and it no longer\nmatches the DB, a colleague saved this line in between — applying our edit would silently\nclobber theirs, so reject with 409 QUOTE_ITEM_STALE (same code the bulk path emits per\nrow). `version` is OPTIONAL: a PATCH without it keeps the pre-волна-3 last-write-wins\nbehaviour, so version-less seller writes are untouched.",
                 "summary": "Update quote item",
                 "parameters": [
                     {
@@ -13646,67 +13217,6 @@
                 }
             }
         },
-        "/api/v1/crm/quotes/{id}/approve/": {
-            "post": {
-                "operationId": "crm_quotes_approve_create",
-                "description": "Client approves the quote. Only the client's company members or staff can approve.",
-                "summary": "Approve quote",
-                "parameters": [
-                    {
-                        "in": "path",
-                        "name": "id",
-                        "schema": {
-                            "type": "integer"
-                        },
-                        "description": "A unique integer value identifying this Коммерческое предложение.",
-                        "required": true
-                    }
-                ],
-                "tags": [
-                    "CRM"
-                ],
-                "requestBody": {
-                    "content": {
-                        "application/json": {
-                            "schema": {
-                                "$ref": "#/components/schemas/QuoteRequest"
-                            }
-                        },
-                        "application/x-www-form-urlencoded": {
-                            "schema": {
-                                "$ref": "#/components/schemas/QuoteRequest"
-                            }
-                        },
-                        "multipart/form-data": {
-                            "schema": {
-                                "$ref": "#/components/schemas/QuoteRequest"
-                            }
-                        }
-                    },
-                    "required": true
-                },
-                "security": [
-                    {
-                        "jwtAuth": []
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/Quote"
-                                }
-                            }
-                        },
-                        "description": ""
-                    },
-                    "403": {
-                        "description": "Not authorized"
-                    }
-                }
-            }
-        },
         "/api/v1/crm/quotes/{id}/charges-reorder/": {
             "post": {
                 "operationId": "crm_quotes_charges_reorder_create",
@@ -14175,66 +13685,6 @@
                 }
             }
         },
-        "/api/v1/crm/quotes/{id}/reject/": {
-            "post": {
-                "operationId": "crm_quotes_reject_create",
-                "description": "Client rejects the quote with an optional reason.",
-                "summary": "Reject quote",
-                "parameters": [
-                    {
-                        "in": "path",
-                        "name": "id",
-                        "schema": {
-                            "type": "integer"
-                        },
-                        "description": "A unique integer value identifying this Коммерческое предложение.",
-                        "required": true
-                    }
-                ],
-                "tags": [
-                    "CRM"
-                ],
-                "requestBody": {
-                    "content": {
-                        "application/json": {
-                            "schema": {
-                                "$ref": "#/components/schemas/RejectQuoteRequestRequest"
-                            }
-                        },
-                        "application/x-www-form-urlencoded": {
-                            "schema": {
-                                "$ref": "#/components/schemas/RejectQuoteRequestRequest"
-                            }
-                        },
-                        "multipart/form-data": {
-                            "schema": {
-                                "$ref": "#/components/schemas/RejectQuoteRequestRequest"
-                            }
-                        }
-                    }
-                },
-                "security": [
-                    {
-                        "jwtAuth": []
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/Quote"
-                                }
-                            }
-                        },
-                        "description": ""
-                    },
-                    "403": {
-                        "description": "Not authorized"
-                    }
-                }
-            }
-        },
         "/api/v1/crm/quotes/{id}/revoke-public-link/": {
             "post": {
                 "operationId": "crm_quotes_revoke_public_link_create",
@@ -14481,7 +13931,7 @@
         "/api/v1/crm/quotes/{quote_id}/request-diff/": {
             "get": {
                 "operationId": "crm_quotes_request_diff_retrieve",
-                "description": "Compares a received КП against the buyer's original request lines and returns a plain-language list of discrepancies: uncovered (unpriced) lines and — when AI is enabled — non-equivalent substitutions and notes the КП may have ignored. The deterministic coverage facts are always returned; the AI part is purely additive. Result is ASSISTIVE and never blocks. Scoped to the deal's buyer or own-company staff.",
+                "description": "Compares a received КП against the client's original request lines and returns a plain-language list of discrepancies: uncovered (unpriced) lines and — when AI is enabled — non-equivalent substitutions and notes the КП may have ignored. The deterministic coverage facts are always returned; the AI part is purely additive. Result is ASSISTIVE and never blocks. Scoped to the deal's client or own-company staff.",
                 "summary": "AI КП-vs-заявка coverage / discrepancy check",
                 "parameters": [
                     {
@@ -14506,7 +13956,7 @@
                         "description": "AI job queued, task_id returned (poll sourcing/ai-status/<task_id>/ for {'ai_enabled': bool, 'findings': [{issue_type, line, explanation}]})"
                     },
                     "403": {
-                        "description": "Caller is neither the deal's buyer nor own-company staff"
+                        "description": "Caller is neither the deal's client nor own-company staff"
                     },
                     "404": {
                         "description": "Quote not found"
@@ -14515,7 +13965,7 @@
             },
             "post": {
                 "operationId": "crm_quotes_request_diff_create",
-                "description": "Compares a received КП against the buyer's original request lines and returns a plain-language list of discrepancies: uncovered (unpriced) lines and — when AI is enabled — non-equivalent substitutions and notes the КП may have ignored. The deterministic coverage facts are always returned; the AI part is purely additive. Result is ASSISTIVE and never blocks. Scoped to the deal's buyer or own-company staff.",
+                "description": "Compares a received КП against the client's original request lines and returns a plain-language list of discrepancies: uncovered (unpriced) lines and — when AI is enabled — non-equivalent substitutions and notes the КП may have ignored. The deterministic coverage facts are always returned; the AI part is purely additive. Result is ASSISTIVE and never blocks. Scoped to the deal's client or own-company staff.",
                 "summary": "AI КП-vs-заявка coverage / discrepancy check",
                 "parameters": [
                     {
@@ -14540,7 +13990,7 @@
                         "description": "AI job queued, task_id returned (poll sourcing/ai-status/<task_id>/ for {'ai_enabled': bool, 'findings': [{issue_type, line, explanation}]})"
                     },
                     "403": {
-                        "description": "Caller is neither the deal's buyer nor own-company staff"
+                        "description": "Caller is neither the deal's client nor own-company staff"
                     },
                     "404": {
                         "description": "Quote not found"
@@ -17216,54 +16666,6 @@
                 }
             }
         },
-        "/api/v1/sourcing/compose-request/": {
-            "post": {
-                "operationId": "sourcing_compose_request_create",
-                "description": "The buyer describes a need in plain text (\"нужны подшипники 6205, 4 комплекта, и перчатки рабочие 40 пар\") and Claude proposes structured request line items {name, quantity, unit, mpn, gost_drawing, note} plus REAL catalog product candidates per line (ids always from a DB trigram shortlist — never invented). Human-in-loop: the buyer reviews/edits/confirms in the grid; nothing is auto-submitted. Returns {items: []} contents when AI is disabled.",
-                "summary": "AI compose: free-text need → structured заявка lines (AI #8)",
-                "tags": [
-                    "Sourcing"
-                ],
-                "requestBody": {
-                    "content": {
-                        "application/json": {
-                            "schema": {
-                                "type": "object",
-                                "properties": {
-                                    "text": {
-                                        "type": "string",
-                                        "description": "Free-text description of the need"
-                                    },
-                                    "domain_code": {
-                                        "type": "string",
-                                        "description": "Optional domain hint for catalog matching"
-                                    }
-                                },
-                                "required": [
-                                    "text"
-                                ]
-                            }
-                        }
-                    }
-                },
-                "security": [
-                    {
-                        "jwtAuth": []
-                    }
-                ],
-                "responses": {
-                    "202": {
-                        "description": "AI job queued, task_id returned (poll sourcing/ai-status/<task_id>/ for {items: []})"
-                    },
-                    "400": {
-                        "description": "Missing/empty text"
-                    },
-                    "503": {
-                        "description": "AI compose disabled"
-                    }
-                }
-            }
-        },
         "/api/v1/sourcing/extract-document/": {
             "post": {
                 "operationId": "sourcing_extract_document_create",
@@ -17543,7 +16945,7 @@
         "/api/v1/sourcing/match-catalog/": {
             "post": {
                 "operationId": "sourcing_match_catalog_create",
-                "description": "For each request line (name / mpn / gost_drawing) returns up to top_k catalog Product candidates ranked by Claude (product_id always from a DB trigram shortlist — the model never invents ids). The buyer/seller confirms a candidate in the grid (human-in-loop). Capped at 50 lines per call. ARCH-01: the LLM call runs on Celery — returns 202 + task_id; poll sourcing/ai-status/<task_id>/ for {matches: []}.",
+                "description": "For each request line (name / mpn / gost_drawing) returns up to top_k catalog Product candidates ranked by Claude (product_id always from a DB trigram shortlist — the model never invents ids). The client/seller confirms a candidate in the grid (human-in-loop). Capped at 50 lines per call. ARCH-01: the LLM call runs on Celery — returns 202 + task_id; poll sourcing/ai-status/<task_id>/ for {matches: []}.",
                 "summary": "AI semantic match: заявка lines → catalog products",
                 "tags": [
                     "Sourcing"
@@ -17582,52 +16984,6 @@
                     },
                     "503": {
                         "description": "AI matching disabled"
-                    }
-                }
-            }
-        },
-        "/api/v1/sourcing/preflight-check/": {
-            "post": {
-                "operationId": "sourcing_preflight_check_create",
-                "description": "Runs an ADVISORY quality pass over draft request lines before the buyer submits the RFQ. Claude flags vague descriptions, missing/implausible qty or units, likely-duplicate lines and missing key specs. Returns warnings only — never a hard block (line_index always references a GIVEN line; out-of-range indices are dropped). Capped at 50 lines per call. ARCH-01: the LLM call runs on Celery — returns 202 + task_id; poll sourcing/ai-status/<task_id>/ for {findings: []}.",
-                "summary": "AI pre-flight quality check for a заявка (advisory)",
-                "tags": [
-                    "Sourcing"
-                ],
-                "requestBody": {
-                    "content": {
-                        "application/json": {
-                            "schema": {
-                                "$ref": "#/components/schemas/PreflightCheckRequestRequest"
-                            }
-                        },
-                        "application/x-www-form-urlencoded": {
-                            "schema": {
-                                "$ref": "#/components/schemas/PreflightCheckRequestRequest"
-                            }
-                        },
-                        "multipart/form-data": {
-                            "schema": {
-                                "$ref": "#/components/schemas/PreflightCheckRequestRequest"
-                            }
-                        }
-                    },
-                    "required": true
-                },
-                "security": [
-                    {
-                        "jwtAuth": []
-                    }
-                ],
-                "responses": {
-                    "202": {
-                        "description": "AI job queued, task_id returned"
-                    },
-                    "400": {
-                        "description": "Missing lines"
-                    },
-                    "503": {
-                        "description": "AI pre-flight disabled"
                     }
                 }
             }
@@ -17926,45 +17282,6 @@
                     "viewer_can_sign"
                 ]
             },
-            "ActRequest": {
-                "type": "object",
-                "description": "Сторона зрителя по сделке документа — считается СЕРВЕРОМ, один раз на запрос.\n\nЗачем. SPA выводила роль из `activeStatus` (= первый тип компании), поэтому компания,\nкоторая одновременно покупает и продаёт, не видела продавцовских кнопок: «Сформировать\nакт» пряталась за `!isBuyer`, и у dual-компании с порядком типов [CLIENT, SUPPLIER]\nкнопки не было вовсе. Образец решения уже был рядом — `viewer_can_sign_client/manager`\nу договора.\n\nПоля-подсказки НЕ являются полным правом: подписку и стадию проверит сервис,\nвыполняющий действие, и честно откажет бизнес-кодом. Их задача — не показывать человеку\nкнопок чужой стороны.",
-                "properties": {
-                    "deal": {
-                        "type": "integer",
-                        "title": "Сделка"
-                    },
-                    "contract": {
-                        "type": "integer",
-                        "nullable": true
-                    },
-                    "invoice": {
-                        "type": "integer",
-                        "nullable": true
-                    },
-                    "issued_at": {
-                        "type": "string",
-                        "format": "date",
-                        "nullable": true
-                    },
-                    "total_amount": {
-                        "type": "string",
-                        "format": "decimal",
-                        "pattern": "^-?\\d{0,12}(?:\\.\\d{0,2})?$"
-                    },
-                    "signed_file": {
-                        "type": "string",
-                        "format": "binary",
-                        "nullable": true
-                    },
-                    "notes": {
-                        "type": "string"
-                    }
-                },
-                "required": [
-                    "deal"
-                ]
-            },
             "ActiveSession": {
                 "type": "object",
                 "description": "One live refresh token = one session. `is_current` matches the row against\nthe jti of THIS browser's HttpOnly refresh cookie (passed via context).",
@@ -18066,37 +17383,6 @@
                 "required": [
                     "company",
                     "workspace_role"
-                ]
-            },
-            "AddRequestItemRequestRequest": {
-                "type": "object",
-                "properties": {
-                    "name": {
-                        "type": "string",
-                        "minLength": 1
-                    },
-                    "quantity": {
-                        "type": "integer",
-                        "default": 1
-                    }
-                },
-                "required": [
-                    "name"
-                ]
-            },
-            "AddRequestItemsRequestRequest": {
-                "type": "object",
-                "properties": {
-                    "items": {
-                        "type": "array",
-                        "items": {
-                            "type": "object",
-                            "additionalProperties": {}
-                        }
-                    }
-                },
-                "required": [
-                    "items"
                 ]
             },
             "ApprovalActRequestRequest": {
@@ -19374,11 +18660,6 @@
                         "title": "Может продавать",
                         "description": "Разрешено управлять каталогом и офферами от лица компании. Выключается владельцем компании."
                     },
-                    "can_buy": {
-                        "type": "boolean",
-                        "title": "Может покупать",
-                        "description": "Разрешено создавать заявки/сделки и принимать bid'ы от лица компании. Выключается владельцем компании."
-                    },
                     "joined_at": {
                         "type": "string",
                         "format": "date-time",
@@ -19432,11 +18713,6 @@
                         "type": "boolean",
                         "title": "Может продавать",
                         "description": "Разрешено управлять каталогом и офферами от лица компании. Выключается владельцем компании."
-                    },
-                    "can_buy": {
-                        "type": "boolean",
-                        "title": "Может покупать",
-                        "description": "Разрешено создавать заявки/сделки и принимать bid'ы от лица компании. Выключается владельцем компании."
                     }
                 },
                 "required": [
@@ -20586,10 +19862,6 @@
                         "type": "boolean",
                         "readOnly": true
                     },
-                    "viewer_is_buyer": {
-                        "type": "boolean",
-                        "readOnly": true
-                    },
                     "stage": {
                         "type": "integer",
                         "nullable": true,
@@ -20630,11 +19902,6 @@
                         },
                         "readOnly": true
                     },
-                    "can_edit_request": {
-                        "type": "boolean",
-                        "description": "Whether the current user may add/edit/remove this deal's request rows.",
-                        "readOnly": true
-                    },
                     "execution_complete": {
                         "type": "boolean",
                         "description": "Исполнение закрыто целиком (оплата + поставка + акт) — НЕ то же, что «сделка выиграна».\n\nO4: `CLOSED_WON` наступает при подписании договора, когда покупателю ещё платить и\nпринимать. Слово «Завершено» в интерфейсе опирается на этот флаг, а не на стадию.",
@@ -20658,7 +19925,6 @@
                     "assigned_at",
                     "assigned_to",
                     "assigned_to_name",
-                    "can_edit_request",
                     "client_name",
                     "company_name",
                     "contact_name",
@@ -20671,7 +19937,6 @@
                     "stage_name",
                     "updated_at",
                     "viewer_can_release",
-                    "viewer_is_buyer",
                     "viewer_is_seller"
                 ]
             },
@@ -20795,10 +20060,6 @@
                         "type": "boolean",
                         "readOnly": true
                     },
-                    "viewer_is_buyer": {
-                        "type": "boolean",
-                        "readOnly": true
-                    },
                     "active_quote": {
                         "allOf": [
                             {
@@ -20833,7 +20094,6 @@
                     "stage_name",
                     "total_value",
                     "viewer_can_release",
-                    "viewer_is_buyer",
                     "viewer_is_seller"
                 ]
             },
@@ -22441,9 +21701,6 @@
                     },
                     "can_sell": {
                         "type": "boolean"
-                    },
-                    "can_buy": {
-                        "type": "boolean"
                     }
                 },
                 "required": [
@@ -23292,37 +22549,6 @@
                         "type": "array",
                         "items": {
                             "$ref": "#/components/schemas/QuoteCharge"
-                        }
-                    }
-                }
-            },
-            "PaginatedQuoteItemList": {
-                "type": "object",
-                "required": [
-                    "count",
-                    "results"
-                ],
-                "properties": {
-                    "count": {
-                        "type": "integer",
-                        "example": 123
-                    },
-                    "next": {
-                        "type": "string",
-                        "nullable": true,
-                        "format": "uri",
-                        "example": "http://api.example.org/accounts/?page=4"
-                    },
-                    "previous": {
-                        "type": "string",
-                        "nullable": true,
-                        "format": "uri",
-                        "example": "http://api.example.org/accounts/?page=2"
-                    },
-                    "results": {
-                        "type": "array",
-                        "items": {
-                            "$ref": "#/components/schemas/QuoteItem"
                         }
                     }
                 }
@@ -24419,7 +23645,7 @@
             },
             "PatchedProductRequest": {
                 "type": "object",
-                "description": "Strip supplier-cost fields (offers / base_price) from viewers who don't own\nthe product. Only the OWNING seller's team + platform admins see cost & supplier\nidentity — buyers, other sellers and anon never do (C1 cost-leak fix). React was\nonly hiding these client-side; the data still travelled in the API response.",
+                "description": "Strip supplier-cost fields (offers / base_price) from viewers who don't own\nthe product. Only the OWNING seller's team + platform admins see cost & supplier\nidentity — clients, other sellers and anon never do (C1 cost-leak fix). React was\nonly hiding these client-side; the data still travelled in the API response.",
                 "properties": {
                     "name": {
                         "type": "string",
@@ -25054,18 +24280,6 @@
                     }
                 }
             },
-            "PatchedUpdateRequestMetaRequest": {
-                "type": "object",
-                "properties": {
-                    "title": {
-                        "type": "string",
-                        "minLength": 1
-                    },
-                    "notes": {
-                        "type": "string"
-                    }
-                }
-            },
             "PatchedUserRequest": {
                 "type": "object",
                 "properties": {
@@ -25279,25 +24493,6 @@
                 "type": "string",
                 "description": "* `email` - email\n* `telegram` - telegram\n* `both` - both"
             },
-            "PreflightCheckRequestRequest": {
-                "type": "object",
-                "properties": {
-                    "lines": {
-                        "type": "array",
-                        "items": {
-                            "type": "object",
-                            "additionalProperties": {}
-                        }
-                    },
-                    "domain_code": {
-                        "type": "string",
-                        "minLength": 1
-                    }
-                },
-                "required": [
-                    "lines"
-                ]
-            },
             "PriceVisibilityEnum": {
                 "enum": [
                     "cabinet",
@@ -25408,7 +24603,7 @@
             },
             "Product": {
                 "type": "object",
-                "description": "Strip supplier-cost fields (offers / base_price) from viewers who don't own\nthe product. Only the OWNING seller's team + platform admins see cost & supplier\nidentity — buyers, other sellers and anon never do (C1 cost-leak fix). React was\nonly hiding these client-side; the data still travelled in the API response.",
+                "description": "Strip supplier-cost fields (offers / base_price) from viewers who don't own\nthe product. Only the OWNING seller's team + platform admins see cost & supplier\nidentity — clients, other sellers and anon never do (C1 cost-leak fix). React was\nonly hiding these client-side; the data still travelled in the API response.",
                 "properties": {
                     "id": {
                         "type": "integer",
@@ -26130,7 +25325,7 @@
             },
             "ProductRequest": {
                 "type": "object",
-                "description": "Strip supplier-cost fields (offers / base_price) from viewers who don't own\nthe product. Only the OWNING seller's team + platform admins see cost & supplier\nidentity — buyers, other sellers and anon never do (C1 cost-leak fix). React was\nonly hiding these client-side; the data still travelled in the API response.",
+                "description": "Strip supplier-cost fields (offers / base_price) from viewers who don't own\nthe product. Only the OWNING seller's team + platform admins see cost & supplier\nidentity — clients, other sellers and anon never do (C1 cost-leak fix). React was\nonly hiding these client-side; the data still travelled in the API response.",
                 "properties": {
                     "name": {
                         "type": "string",
@@ -27644,28 +26839,6 @@
                     "status_code",
                     "version"
                 ]
-            },
-            "RejectActRequest": {
-                "type": "object",
-                "properties": {
-                    "reason": {
-                        "type": "string",
-                        "minLength": 1
-                    }
-                },
-                "required": [
-                    "reason"
-                ]
-            },
-            "RejectQuoteRequestRequest": {
-                "type": "object",
-                "properties": {
-                    "reason": {
-                        "type": "string",
-                        "minLength": 1,
-                        "default": ""
-                    }
-                }
             },
             "RemoveMemberRequest": {
                 "type": "object",

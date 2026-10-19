@@ -113,21 +113,18 @@ def assert_user_may_change_stage(deal: Deal, actor: Optional[CustomUser], target
     shared transition_deal_stage, which internal auto-transitions (Move-0 send-КП/approve/
     dual-sign) invoke with staff/system actors and must not be re-gated.
 
-    (a) a non-buyer moving DRAFT→RFQ_OPEN would skip submit_request's buy-capability gate —
-        submitting the request is the client's action (Cabinet, M2-ERP-01);
+    (a) moving DRAFT→RFQ_OPEN is submitting the request — the client's action in the portal
+        (FIX-13: ERP has no buyer accounts), so the change-stage endpoint never does it;
     (b) on the back-office side moving a deal through the pipeline is part of building the
         сделки, so the staff member needs the `deal.manage` role permission (a view-only role —
         e.g. Наблюдатель — sees the deal but cannot move it).
     Returns an error code or None. superuser/internal (actor=None) bypass."""
     if actor is None or getattr(actor, "is_superuser", False):
         return None
-    from accounts.services.permissions import is_member_of, member_has_permission, primary_seller_company_id
+    from accounts.services.permissions import member_has_permission, primary_seller_company_id
 
-    is_buyer_side = is_member_of(actor, deal.company_id, capability="buy")
-    if target_stage_code == DealStageCode.RFQ_OPEN and not is_buyer_side:
+    if target_stage_code == DealStageCode.RFQ_OPEN:
         return "ONLY_BUYER_CAN_SUBMIT_REQUEST"
-    if is_buyer_side:
-        return None
     own_company_id = primary_seller_company_id(actor)
     if not (own_company_id and member_has_permission(actor, own_company_id, "deal.manage")):
         return "ROLE_NOT_PERMITTED"

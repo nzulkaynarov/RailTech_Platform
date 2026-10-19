@@ -37,7 +37,7 @@ def _company(name, inn):
     return company
 
 
-def _member(company, email, *, role_code="OWNER", can_sell=True, can_buy=False):
+def _member(company, email, *, role_code="OWNER", can_sell=True):
     user = CustomUser.objects.create_user(email=email, username=email, password="x")
     CompanyMember.objects.create(
         user=user,
@@ -46,7 +46,6 @@ def _member(company, email, *, role_code="OWNER", can_sell=True, can_buy=False):
         is_active=True,
         is_primary=True,
         can_sell=can_sell,
-        can_buy=can_buy,
     )
     if role_code == "OWNER":
         _grant_head(user, company)
@@ -123,7 +122,7 @@ def test_preview_action_has_dedicated_throttle():
 
 def test_buy_only_member_cannot_generate(world):
     company, _owner = world
-    junior = _member(company, "junior@t.uz", role_code="LOGIST", can_sell=False, can_buy=True)
+    junior = _member(company, "junior@t.uz", role_code="LOGIST", can_sell=False)
     document, err = crm_services.generate_document(company, junior, template=_template(company, junior))
     assert document is None
     assert err == "ROLE_NOT_PERMITTED"
@@ -133,7 +132,7 @@ def test_buy_only_member_cannot_issue(world):
     company, owner = world
     document, err = crm_services.generate_document(company, owner, template=_template(company, owner))
     assert err is None
-    junior = _member(company, "junior@t.uz", role_code="LOGIST", can_sell=False, can_buy=True)
+    junior = _member(company, "junior@t.uz", role_code="LOGIST", can_sell=False)
     _, issue_err = crm_services.issue_document(document, junior)
     assert issue_err == "ROLE_NOT_PERMITTED"
 

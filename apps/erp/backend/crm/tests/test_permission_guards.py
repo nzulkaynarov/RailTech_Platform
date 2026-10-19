@@ -1,20 +1,19 @@
 """Permission-guard integration tests for CRM business services.
 
-Covers four service call sites where CompanyRole permissions were hardened
-additively alongside the legacy capability flags (defense-in-depth):
+Covers the service call sites where CompanyRole permissions are enforced:
 
     quote.send   → can_send_quote_to_client (services/quotes.py)
-    quote.approve → _assert_buyer_can_buy / QuoteLifecycleService.approve_quote
-                    (views/quotes.py + services/quotes.py — tested via service)
-    contract.sign → sign_contract_by_client, sign_contract_by_manager
-    payment.record → record_payment (services/billing.py)
+    contract.sign → sign_contract_by_manager
+    finance.payment → record_payment (services/billing.py)
 
 Each guard is tested in three modes:
     WITH perm  → member that has the CompanyRole permission — PASSES
     WITHOUT perm → member that lacks the permission — DENIED
     Legacy path → own-company staff: the WorkspaceRole / can_sell fallback is GONE (M1-ERP-05 —
-                  no role, no permission); buyer accounts of a CLIENT company keep the can_buy
-                  path until M2-ERP-01 (accounts.services.buyer_access).
+                  no role, no permission).
+
+The buyer side (sign_contract_by_client / record_payment / approve_quote by a client-company member)
+left ERP with the buyer accounts (FIX-13): the client acts only in the portal.
 """
 
 from decimal import Decimal
@@ -24,7 +23,7 @@ import pytest
 from accounts.models import Company, CompanyMember, CompanyRole, CompanyType, CustomUser, SystemRole, WorkspaceRole
 from crm.models import Contract, ContractStatus, Deal, DealStage, Invoice, InvoiceStatus, Quote, QuoteStatus
 from crm.services.billing import record_payment
-from crm.services.contracts import sign_contract_by_client, sign_contract_by_manager
+from crm.services.contracts import sign_contract_by_manager
 from crm.services.quotes import QuoteLifecycleService, can_send_quote_to_client
 from master_data.models import Country, Currency
 
@@ -46,7 +45,7 @@ def _make_user(email):
     )
 
 
-def _make_member(user, company, *, roles=(), can_sell=True, can_buy=True, is_primary=False):
+def _make_member(user, company, *, roles=(), can_sell=True, is_primary=False):
     return CompanyMember.objects.create(
         user=user,
         company=company,
@@ -55,7 +54,6 @@ def _make_member(user, company, *, roles=(), can_sell=True, can_buy=True, is_pri
         is_primary=is_primary,
         is_active=True,
         can_sell=can_sell,
-        can_buy=can_buy,
     )
 
 
@@ -224,7 +222,6 @@ def test_quote_send_legacy_sales_manager_role_no_longer_grants_send(lookups, sel
         is_primary=True,
         is_active=True,
         can_sell=True,
-        can_buy=True,
     )
     quote = _ready_to_send_quote(deal, prepared_by=seller)
 
@@ -256,7 +253,6 @@ def test_quote_send_null_company_role_non_sales_with_can_sell_denied(lookups, se
         is_primary=True,
         is_active=True,
         can_sell=True,
-        can_buy=True,
     )  # no roles at all
     quote = _ready_to_send_quote(deal, prepared_by=seller)
 
@@ -275,7 +271,6 @@ def test_quote_send_legacy_owner_role_no_longer_grants_send(lookups, seller_comp
         is_primary=True,
         is_active=True,
         can_sell=True,
-        can_buy=True,
     )
     quote = _ready_to_send_quote(deal, prepared_by=seller)
 
@@ -285,57 +280,6 @@ def test_quote_send_legacy_owner_role_no_longer_grants_send(lookups, seller_comp
 # ═══════════════════════════════════════════════════════════════════════════════
 # 2.  sign_contract_by_client  (contract.sign)
 # ═══════════════════════════════════════════════════════════════════════════════
-
-
-@pytest.mark.django_db
-def test_contract_client_sign_with_perm_passes(lookups, buyer_company, seller_company, deal):
-    """Buyer member WITH contract.sign CompanyRole permission can sign."""
-    seller = _make_user("csign_seller@s.test")
-    _make_member(seller, seller_company, is_primary=True)
-    quote = _sent_quote(deal, prepared_by=seller)
-
-    buyer = _make_user("csign_buyer_perm@b.test")
-    crole = CompanyRole.objects.create(company=buyer_company, name="Signer", permissions=["contract.sign"])
-    buyer_member = _make_member(buyer, buyer_company, can_buy=False, is_primary=True)
-    buyer_member.company_roles.add(crole)
-
-    contract = _pending_client_contract(deal, quote)
-    result, err = sign_contract_by_client(contract.id, buyer)
-    assert err is None, f"Expected success, got error: {err}"
-    assert result is not None
-
-
-@pytest.mark.django_db
-def test_contract_client_sign_without_perm_denied(lookups, buyer_company, seller_company, deal):
-    """Buyer member WITHOUT contract.sign perm AND can_buy=False is denied."""
-    seller = _make_user("csign_seller2@s.test")
-    _make_member(seller, seller_company, is_primary=True)
-    quote = _sent_quote(deal, prepared_by=seller)
-
-    buyer = _make_user("csign_buyer_noperm@b.test")
-    # No CompanyRole, can_buy=False → legacy fallback fails too.
-    _make_member(buyer, buyer_company, can_buy=False, is_primary=True)
-
-    contract = _pending_client_contract(deal, quote)
-    result, err = sign_contract_by_client(contract.id, buyer)
-    assert err == "MEMBER_REQUIRED_FOR_ACTION"
-    assert result is None
-
-
-@pytest.mark.django_db
-def test_contract_client_sign_legacy_can_buy_passes(lookups, buyer_company, seller_company, deal):
-    """Legacy can_buy=True without CompanyRole continues to work (backward compat)."""
-    seller = _make_user("csign_seller3@s.test")
-    _make_member(seller, seller_company, is_primary=True)
-    quote = _sent_quote(deal, prepared_by=seller)
-
-    buyer = _make_user("csign_buyer_legacy@b.test")
-    _make_member(buyer, buyer_company, can_buy=True, is_primary=True)
-
-    contract = _pending_client_contract(deal, quote)
-    result, err = sign_contract_by_client(contract.id, buyer)
-    assert err is None, f"Expected success, got error: {err}"
-    assert result is not None
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -379,7 +323,7 @@ def test_contract_manager_sign_without_perm_denied(lookups, buyer_company, selle
     """
     seller = _make_user("msign_seller_noperm@s.test")
     # Both flags off: no legacy path, no CompanyRole → neither check passes.
-    _make_member(seller, seller_company, can_sell=False, can_buy=False, is_primary=True)
+    _make_member(seller, seller_company, can_sell=False, is_primary=True)
 
     quote = _sent_quote(deal, prepared_by=seller)
     contract = Contract.objects.create(
@@ -419,36 +363,8 @@ def test_contract_manager_sign_legacy_can_sell_no_longer_grants_sign(lookups, bu
 
 
 @pytest.mark.django_db
-def test_record_payment_with_perm_passes(lookups, buyer_company, seller_company, deal):
-    """Buyer member WITH payment.record CompanyRole permission can record payment."""
-    seller = _make_user("pay_seller@s.test")
-    _make_member(seller, seller_company, is_primary=True)
-    quote = _sent_quote(deal, prepared_by=seller)
-    contract = _pending_client_contract(deal, quote)
-    invoice = _issued_invoice(deal, contract)
-
-    buyer = _make_user("pay_buyer_perm@b.test")
-    crole = CompanyRole.objects.create(company=buyer_company, name="Finance", permissions=["payment.record"])
-    buyer_member = _make_member(buyer, buyer_company, can_buy=False, is_primary=True)
-    buyer_member.company_roles.add(crole)
-
-    from django.utils import timezone
-
-    result, err = record_payment(
-        invoice.id,
-        buyer,
-        amount=Decimal("112"),
-        paid_at=timezone.localdate(),
-        method="BANK_TRANSFER",
-        reference="REF-PERM-001",
-    )
-    assert err is None, f"Expected success, got error: {err}"
-    assert result is not None
-
-
-@pytest.mark.django_db
 def test_record_payment_without_perm_denied(lookups, buyer_company, seller_company, deal):
-    """Buyer member WITHOUT payment.record perm AND can_buy=False is denied."""
+    """A client-company member (not staff) cannot record a payment: no buyer accounts in ERP (FIX-13)."""
     seller = _make_user("pay_seller2@s.test")
     _make_member(seller, seller_company, is_primary=True)
     quote = _sent_quote(deal, prepared_by=seller)
@@ -456,7 +372,7 @@ def test_record_payment_without_perm_denied(lookups, buyer_company, seller_compa
     invoice = _issued_invoice(deal, contract)
 
     buyer = _make_user("pay_buyer_noperm@b.test")
-    _make_member(buyer, buyer_company, can_buy=False, is_primary=True)
+    _make_member(buyer, buyer_company, is_primary=True)
 
     from django.utils import timezone
 
@@ -472,97 +388,9 @@ def test_record_payment_without_perm_denied(lookups, buyer_company, seller_compa
     assert result is None
 
 
-@pytest.mark.django_db
-def test_record_payment_legacy_can_buy_passes(lookups, buyer_company, seller_company, deal):
-    """Legacy can_buy=True (no CompanyRole) continues to work for record_payment."""
-    seller = _make_user("pay_seller3@s.test")
-    _make_member(seller, seller_company, is_primary=True)
-    quote = _sent_quote(deal, prepared_by=seller)
-    contract = _pending_client_contract(deal, quote)
-    invoice = _issued_invoice(deal, contract)
-
-    buyer = _make_user("pay_buyer_legacy@b.test")
-    _make_member(buyer, buyer_company, can_buy=True, is_primary=True)
-
-    from django.utils import timezone
-
-    result, err = record_payment(
-        invoice.id,
-        buyer,
-        amount=Decimal("112"),
-        paid_at=timezone.localdate(),
-        method="BANK_TRANSFER",
-        reference="REF-LEGACY-003",
-    )
-    assert err is None, f"Expected success, got error: {err}"
-    assert result is not None
-
-
 # ═══════════════════════════════════════════════════════════════════════════════
 # 5.  QuoteLifecycleService.approve_quote  (quote.approve, buyer side)
 # ═══════════════════════════════════════════════════════════════════════════════
-
-
-@pytest.mark.django_db
-def test_approve_quote_with_perm_passes(lookups, buyer_company, seller_company, deal):
-    """Buyer member WITH quote.approve CompanyRole permission can approve the КП."""
-    seller = _make_user("approve_seller@s.test")
-    _make_member(seller, seller_company, is_primary=True)
-    quote = _sent_quote(deal, prepared_by=seller)
-
-    buyer = _make_user("approve_buyer_perm@b.test")
-    crole = CompanyRole.objects.create(company=buyer_company, name="Approver", permissions=["quote.approve"])
-    buyer_member = _make_member(buyer, buyer_company, can_buy=False, is_primary=True)
-    buyer_member.company_roles.add(crole)
-
-    result = QuoteLifecycleService.approve_quote(quote.id, buyer)
-    assert result is not None
-    result.refresh_from_db()
-    assert result.status.code == "APPROVED"
-
-
-@pytest.mark.django_db
-def test_approve_quote_without_perm_denied(lookups, buyer_company, seller_company, deal):
-    """Buyer member WITHOUT quote.approve perm AND can_buy=False is denied.
-
-    approve_quote itself doesn't have a capability guard — the view's
-    _assert_buyer_can_buy does. We test the equivalent service path: ensure the
-    service itself rejects an actor that doesn't have any buying right, which is
-    enforced via the service calling into is_member_of + member_has_permission
-    (additive check in the view layer). Here we directly verify that the service
-    raises for an outsider (no membership at all).
-    """
-    seller = _make_user("approve_seller2@s.test")
-    _make_member(seller, seller_company, is_primary=True)
-    _sent_quote(deal, prepared_by=seller)
-
-    # An outsider (no membership at all) — no capability, no perm.
-    outsider = _make_user("approve_outsider@b.test")
-
-    # approve_quote does NOT check membership itself — the view layer does. We
-    # exercise the view-layer helper directly.
-    from accounts.services.permissions import is_member_of, member_has_permission
-
-    company_id = deal.company_id
-    # Confirm the outsider fails both checks.
-    assert is_member_of(outsider, company_id, capability="buy") is False
-    assert member_has_permission(outsider, company_id, "quote.approve") is False
-
-
-@pytest.mark.django_db
-def test_approve_quote_legacy_can_buy_passes(lookups, buyer_company, seller_company, deal):
-    """Legacy can_buy=True (no CompanyRole) continues to work for approve."""
-    seller = _make_user("approve_seller3@s.test")
-    _make_member(seller, seller_company, is_primary=True)
-    quote = _sent_quote(deal, prepared_by=seller)
-
-    buyer = _make_user("approve_buyer_legacy@b.test")
-    _make_member(buyer, buyer_company, can_buy=True, is_primary=True)
-
-    result = QuoteLifecycleService.approve_quote(quote.id, buyer)
-    assert result is not None
-    result.refresh_from_db()
-    assert result.status.code == "APPROVED"
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -570,17 +398,16 @@ def test_approve_quote_legacy_can_buy_passes(lookups, buyer_company, seller_comp
 # ─────────────────────────────────────────────────────────────────────────────
 @pytest.mark.django_db
 def test_send_kp_from_rfq_open_advances_deal_not_stuck(lookups, buyer_company, seller_company, deal):
-    """A КП sent while the deal is in RFQ_OPEN (the REAL buyer path via submit_request) must
+    """A КП sent while the deal is in RFQ_OPEN (the request arrives from the portal / CRM handoff) must
     advance the deal to QUOTE_SENT. Previously the FSM error (RFQ_OPEN→QUOTE_SENT is illegal)
     was swallowed → КП marked SENT + emailed while the deal stuck in RFQ_OPEN forever."""
     seller = _make_user("send_rfq_seller@s.test")
     sender = CompanyRole.objects.create(company=seller_company, name="Sender", permissions=["quote.send"])
     _make_member(seller, seller_company, roles=[sender], can_sell=True, is_primary=True)
 
-    deal.stage = DealStage.objects.get(code="RFQ_OPEN")  # real post-submit_request state
-    # A deal that reached RFQ_OPEN through submit_request ALWAYS has a buyer behind it; the bare
-    # fixture omitted one, which the B5 RECIPIENT_REQUIRED gate now rejects (a КП must not be
-    # marked SENT with nobody to send it to). Complete the fixture to the real post-submit shape.
+    deal.stage = DealStage.objects.get(code="RFQ_OPEN")  # real post-submit state
+    # A deal in RFQ_OPEN ALWAYS has a client behind it; the bare fixture omitted one, which the B5
+    # RECIPIENT_REQUIRED gate now rejects (a КП must not be marked SENT with nobody to send it to).
     deal.client = _make_user("send_rfq_buyer@b.test")
     deal.save(update_fields=["stage", "client"])
 
@@ -609,7 +436,7 @@ def test_approve_raises_on_illegal_stage_no_silent_desync(lookups, buyer_company
     deal.save(update_fields=["stage"])
 
     buyer = _make_user("illegal_buyer@b.test")
-    _make_member(buyer, buyer_company, can_buy=True, is_primary=True)
+    _make_member(buyer, buyer_company, is_primary=True)
 
     with pytest.raises(ValueError):
         QuoteLifecycleService.approve_quote(quote.id, buyer)

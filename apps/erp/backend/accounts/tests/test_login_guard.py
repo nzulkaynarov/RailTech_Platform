@@ -102,6 +102,7 @@ class TestLoginLockoutEndpoint:
             email="lockme@example.test",
             username="lockme@example.test",
             password="Right-pw-123!",
+            is_superuser=True,  # вход только сотрудникам (FIX-13); здесь проверяется блокировка, не роль
         )
 
     def test_distinct_ip_failures_lock_then_block_even_correct_password(self):

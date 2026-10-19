@@ -165,22 +165,18 @@ class IsCompanyMemberOrPlatformAdmin(BasePermission):
 # по имени действия (`create`, `partial_update`, `send_to_client`…), для APIView — по методу
 # (`POST`, `PATCH`…). Значение — код права, кортеж кодов («хотя бы одно»), или маркер:
 #   ADMIN_ONLY     — только администратор (`is_superuser`); остальным 403 PLATFORM_ADMIN_REQUIRED;
-#   SELF_SERVICE   — любой вошедший действует над СВОИМ (профиль, аватар); владение проверяет вьюха;
-#   BUYER_ONLY     — шаг покупателя (акцепт КП, подпись за клиента…): сотруднику 403
-#                    ROLE_NOT_PERMITTED, покупательскому аккаунту — дальше, решает сервис.
+#   SELF_SERVICE   — любой вошедший действует над СВОИМ (профиль, аватар); владение проверяет вьюха.
 # Гейт работает в `check_permissions` — ДО поиска объекта, поэтому отказ не зависит от того,
 # существует ли объект (и не раскрывает этого). Сервисы проверяют те же коды тем же
 # `member_has_permission` — гейт единообразный порог, а не вторая логика.
 #
-# Покупательский аккаунт (участник компании-клиента, до M2-ERP-01) проходит гейт только на
-# действиях из `buyer_actions` вьюхи — дальше его права решает сервис (`buyer_access`). На всех
-# остальных мутациях бэк-офиса он получает 403 ROLE_NOT_PERMITTED.
+# Покупательских аккаунтов в ERP нет (FIX-13): не сотрудник своей компании и не администратор
+# получает на любой мутации 403 ROLE_NOT_PERMITTED. Клиент действует только в портале.
 # ──────────────────────────────────────────────────────────────────────────
 
 ADMIN_ONLY = "@admin"
 SELF_SERVICE = "@self"
-BUYER_ONLY = "@buyer"
-GATE_MARKERS = frozenset({ADMIN_ONLY, SELF_SERVICE, BUYER_ONLY})
+GATE_MARKERS = frozenset({ADMIN_ONLY, SELF_SERVICE})
 ROLE_NOT_PERMITTED = "ROLE_NOT_PERMITTED"
 
 
@@ -230,8 +226,8 @@ class HasRolePermission(BasePermission):
         from accounts.services.permissions import is_seller, staff_has_permission
 
         if is_seller(user):
-            return rule not in (BUYER_ONLY, ROLE_NOT_PERMITTED) and staff_has_permission(user, rule)
-        return required_permission_key(view, request) in getattr(view, "buyer_actions", ())
+            return rule != ROLE_NOT_PERMITTED and staff_has_permission(user, rule)
+        return False
 
 
 class RoleGatedViewMixin:
@@ -239,12 +235,10 @@ class RoleGatedViewMixin:
     `permission_classes` и до `get_object()`, даже если вьюха переопределяет `get_permissions`.
 
     Объявления на вьюхе:
-      `required_permissions = {"create": "deal.manage", "approve": BUYER_ONLY, ...}`
-      `buyer_actions = {"create", "approve"}` — переходно до M2-ERP-01.
+      `required_permissions = {"create": "deal.manage", "force_approve": ADMIN_ONLY, ...}`
     """
 
     required_permissions: dict = {}
-    buyer_actions: frozenset = frozenset()
 
     def check_permissions(self, request):
         gate = HasRolePermission()

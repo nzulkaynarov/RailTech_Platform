@@ -235,7 +235,7 @@ def test_contract_double_sign_becomes_signed(master_data, deal, manager, buyer):
     quote.save()
     contract, err = crm_services.generate_contract_from_quote(quote.id, actor=manager)
     assert err is None
-    contract, err = crm_services.sign_contract_by_client(contract.id, buyer_user)
+    contract, err = crm_services.sign_contract_by_client(contract.id, manager)
     assert err is None
     assert contract.status_code == "PENDING_MANAGER"
     contract, err = crm_services.sign_contract_by_manager(contract.id, manager)
@@ -250,7 +250,7 @@ def test_cancel_signed_contract_fails(master_data, deal, manager, buyer):
     quote.status = QuoteStatus.objects.get(code="APPROVED")
     quote.save()
     contract, _ = crm_services.generate_contract_from_quote(quote.id, actor=manager)
-    crm_services.sign_contract_by_client(contract.id, buyer_user)
+    crm_services.sign_contract_by_client(contract.id, manager)
     crm_services.sign_contract_by_manager(contract.id, manager)
     _, err = crm_services.cancel_contract(contract.id, manager, "test")
     assert err is not None
@@ -275,7 +275,7 @@ def test_record_payment_marks_invoice_paid(master_data, deal, manager, buyer):
     quote.status = QuoteStatus.objects.get(code="APPROVED")
     quote.save()
     contract, _ = crm_services.generate_contract_from_quote(quote.id, actor=manager)
-    crm_services.sign_contract_by_client(contract.id, buyer_user)
+    crm_services.sign_contract_by_client(contract.id, manager)
     crm_services.sign_contract_by_manager(contract.id, manager)
     invoice, err = crm_services.generate_invoice_from_contract(contract.id, actor=manager)
     assert err is None
@@ -314,7 +314,7 @@ def test_record_payment_rejects_negative(master_data, deal, manager, buyer):
     quote.status = QuoteStatus.objects.get(code="APPROVED")
     quote.save()
     contract, _ = crm_services.generate_contract_from_quote(quote.id, actor=manager)
-    crm_services.sign_contract_by_client(contract.id, buyer_user)
+    crm_services.sign_contract_by_client(contract.id, manager)
     crm_services.sign_contract_by_manager(contract.id, manager)
     invoice, _ = crm_services.generate_invoice_from_contract(contract.id, actor=manager)
     _, err = crm_services.record_payment(invoice.id, manager, amount="-1", paid_at=timezone.localdate())
@@ -331,7 +331,7 @@ def test_fulfillment_accepted_auto_closes_deal(master_data, deal, manager, buyer
     quote.status = QuoteStatus.objects.get(code="APPROVED")
     quote.save()
     contract, _ = crm_services.generate_contract_from_quote(quote.id, actor=manager)
-    crm_services.sign_contract_by_client(contract.id, buyer_user)
+    crm_services.sign_contract_by_client(contract.id, manager)
     crm_services.sign_contract_by_manager(contract.id, manager)
     crm_services.ensure_fulfillment(deal)
     # Move deal to CONTRACT_SIGNED legally (via FSM hop DRAFT→SOURCING→CALCULATING→QUOTE_SENT→CONTRACT_SIGNED)

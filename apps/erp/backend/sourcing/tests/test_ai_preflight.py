@@ -4,13 +4,8 @@ The LiteLLM gateway is faked (ai.testing.FakeGateway) (no paid/nondeterministic 
 contract: gated on AI_IMPORT_ENABLED, out-of-range line_index dropped, a flagged line surfaces.
 """
 
-from types import SimpleNamespace
-
 import pytest
 from ai.testing import install_fake_gateway
-from rest_framework.test import APIClient
-
-from accounts.models import CustomUser
 
 
 def _stub_response(findings):
@@ -65,28 +60,3 @@ def test_preflight_flagged_line_surfaces(settings, monkeypatch):
     assert findings[0]["line_index"] == 1
     assert findings[0]["severity"] == "info"
     assert findings[0]["suggestion"] == "Добавьте ед. изм."
-
-
-@pytest.mark.django_db
-def test_preflight_endpoint_guards(settings, monkeypatch):
-    settings.AI_IMPORT_ENABLED = True
-    user = CustomUser.objects.create_user(email="pf@x.test", username="pf@x.test", password="pw", is_active=True)
-    client = APIClient()
-    client.force_authenticate(user)
-    # missing lines → 400
-    assert client.post("/api/v1/sourcing/preflight-check/", {}, format="json").status_code == 400
-    # ARCH-01: valid input → the LLM call is queued on Celery — 202 {task_id} + an owned AIJob row.
-    monkeypatch.setattr(
-        "sourcing.tasks_ai.run_ai_job.apply_async",
-        lambda args=None, task_id=None, **kw: SimpleNamespace(id=task_id),
-    )
-    ok = client.post("/api/v1/sourcing/preflight-check/", {"lines": [{"name": "x"}]}, format="json")
-    assert ok.status_code == 202
-    task_id = ok.json()["task_id"]
-    from sourcing.models import AIJob
-
-    assert AIJob.objects.filter(celery_task_id=task_id, owner=user, feature="preflight").exists()
-    # disabled → 503
-    settings.AI_IMPORT_ENABLED = False
-    response = client.post("/api/v1/sourcing/preflight-check/", {"lines": [{"name": "x"}]}, format="json")
-    assert response.status_code == 503

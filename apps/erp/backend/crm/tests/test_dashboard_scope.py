@@ -109,7 +109,7 @@ def test_buyer_dashboard_counts_only_own_company(lookups):
     other_buyer = _buyer_company("Other Buyer", "C200")
     buyer = CustomUser.objects.create_user(email="b@t.test", username="b@t.test", password="x")
     CompanyMember.objects.create(
-        user=buyer, company=buyer_co, role=WorkspaceRole.objects.get(code="OWNER"), is_active=True, can_buy=True
+        user=buyer, company=buyer_co, role=WorkspaceRole.objects.get(code="OWNER"), is_active=True
     )
     _deal_with_quote(buyer_co, "Mine", Decimal("1000"))
     _deal_with_quote(other_buyer, "Not mine", Decimal("5000"))

@@ -38,7 +38,6 @@ def _member(user, company):
         role=WorkspaceRole.objects.get(code="OWNER"),
         is_active=True,
         is_primary=True,
-        can_buy=True,
         can_sell=True,
     )
 
@@ -87,13 +86,13 @@ def test_staff_is_seller_side_on_every_deal(world):
     for key in ("buyer_deal", "other_deal"):
         body = _detail(world["staff"], world[key].pk)
         assert body["viewer_is_seller"] is True
-        assert body["viewer_is_buyer"] is False
+        assert "viewer_is_buyer" not in body, "покупательской стороны в ERP нет (FIX-13)"
 
 
-def test_buyer_is_buyer_side_on_own_deal(world):
+def test_client_member_is_not_seller_side(world):
     body = _detail(world["buyer"], world["buyer_deal"].pk)
-    assert body["viewer_is_buyer"] is True
     assert body["viewer_is_seller"] is False
+    assert "viewer_is_buyer" not in body
 
 
 def test_stranger_is_neither_side(lookups, world):
@@ -109,7 +108,6 @@ def test_stranger_is_neither_side(lookups, world):
     if response.status_code == 200:
         body = response.json()
         assert body["viewer_is_seller"] is False
-        assert body["viewer_is_buyer"] is False
     else:
         assert response.status_code in (403, 404)
 
@@ -118,14 +116,14 @@ def _sides_in_list(client):
     response = client.get("/api/v1/crm/deals/")
     assert response.status_code == 200, response.content
     rows = response.json().get("results", response.json())
-    return {row["id"]: (row["viewer_is_seller"], row["viewer_is_buyer"]) for row in rows}
+    return {row["id"]: row["viewer_is_seller"] for row in rows}
 
 
 def test_list_carries_the_side_too(world):
     """Список тоже несёт сторону: канбан и реестр рисуют действия по ней, каждая строка — своя."""
     staff_rows = _sides_in_list(world["staff"])
-    assert staff_rows[world["buyer_deal"].pk] == (True, False)
-    assert staff_rows[world["other_deal"].pk] == (True, False)
+    assert staff_rows[world["buyer_deal"].pk] is True
+    assert staff_rows[world["other_deal"].pk] is True
 
     buyer_rows = _sides_in_list(world["buyer"])
-    assert buyer_rows == {world["buyer_deal"].pk: (False, True)}
+    assert buyer_rows == {world["buyer_deal"].pk: False}

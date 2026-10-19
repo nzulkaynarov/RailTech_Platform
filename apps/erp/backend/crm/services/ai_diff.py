@@ -18,7 +18,7 @@ from ..models import Quote
 
 
 def user_can_view_quote_diff(user: CustomUser, quote: Quote) -> bool:
-    """Scope guard (Rule: only the deal's buyer or the own company's staff). The diff is
+    """Scope guard (Rule: only the deal's client or the own company's staff). The diff is
     assistive read-only, so a platform admin viewer may also inspect it. Buyer =
     the deal's client OR an active member of the deal's company; seller = staff of the
     own company (the single seller). Reuses the accounts permission helpers — no bespoke

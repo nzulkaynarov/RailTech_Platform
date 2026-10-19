@@ -105,7 +105,6 @@ class ExcelImportView(RoleGatedViewMixin, APIView):
     required_permissions = {
         "POST": "deal.manage",
     }
-    buyer_actions = frozenset({"POST"})  # до M2-ERP-01
 
     parser_classes = [MultiPartParser]
     permission_classes = [IsAuthenticated]

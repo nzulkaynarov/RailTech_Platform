@@ -20,6 +20,7 @@ from rest_framework.test import APIClient
 from rest_framework_simplejwt.tokens import RefreshToken
 
 from accounts.models import Company, CompanyMember, CompanyType, CustomUser, SystemRole, WorkspaceRole
+from accounts.testing import make_cashier
 from crm.models import (
     ActStatus,
     Contract,
@@ -69,7 +70,7 @@ def _company(name, inn, type_code):
     return company
 
 
-def _member(company, email, *, can_sell=False, can_buy=False):
+def _member(company, email, *, can_sell=False):
     user = CustomUser.objects.create_user(email=email, username=email, password="x")
     CompanyMember.objects.create(
         user=user,
@@ -78,7 +79,6 @@ def _member(company, email, *, can_sell=False, can_buy=False):
         is_active=True,
         is_primary=True,
         can_sell=can_sell,
-        can_buy=can_buy,
     )
     return user
 
@@ -100,7 +100,7 @@ def world(lookups):
     """A buyer, own-company staff (the seller), an OUTSIDER (member of another client company),
     and a signed-contract deal ready to be invoiced."""
     buyer_co = _company("Buyer Co", "B901", "CLIENT")
-    buyer_user = _member(buyer_co, "buyer@invfix.test", can_buy=True)
+    buyer_user = _member(buyer_co, "buyer@invfix.test")
 
     seller_co = _company("Seller Co", "S901", "SUPPLIER")
     seller_user = _member(seller_co, "seller@invfix.test", can_sell=True)
@@ -110,7 +110,7 @@ def world(lookups):
     seller_user.memberships.get(company=seller_co).company_roles.add(ensure_default_company_roles(seller_co)["HEAD"])
 
     other_co = _company("Other Client Co", "O901", "CLIENT")
-    other_user = _member(other_co, "other@invfix.test", can_sell=True, can_buy=True)
+    other_user = _member(other_co, "other@invfix.test", can_sell=True)
 
     deal = Deal.objects.create(title="Inv deal", company=buyer_co, stage=DealStage.objects.get(code="CONTRACT_SIGNED"))
     quote = Quote.objects.create(
@@ -155,7 +155,7 @@ def _make_draft(world):
 def test_record_payment_on_draft_is_rejected(world):
     invoice = _make_draft(world)
     assert invoice.status_code == "DRAFT"
-    result, err = record_payment(invoice.id, actor=world["buyer_user"], amount=Decimal("112"), paid_at=date.today())
+    result, err = record_payment(invoice.id, actor=make_cashier(), amount=Decimal("112"), paid_at=date.today())
     assert result is None
     assert err == "INVOICE_NOT_ISSUED"
     invoice.refresh_from_db()
@@ -169,7 +169,7 @@ def test_record_payment_on_issued_is_allowed(world):
     invoice = _make_draft(world)
     issue_invoice(invoice, world["seller_user"])
     invoice.refresh_from_db()
-    payment, err = record_payment(invoice.id, actor=world["buyer_user"], amount=Decimal("112"), paid_at=date.today())
+    payment, err = record_payment(invoice.id, actor=make_cashier(), amount=Decimal("112"), paid_at=date.today())
     assert err is None, err
     assert payment is not None
     invoice.refresh_from_db()
@@ -182,9 +182,9 @@ def test_record_payment_on_paid_is_rejected(world):
     invoice = _make_draft(world)
     issue_invoice(invoice, world["seller_user"])
     invoice.refresh_from_db()
-    record_payment(invoice.id, actor=world["buyer_user"], amount=Decimal("112"), paid_at=date.today())
+    record_payment(invoice.id, actor=make_cashier(), amount=Decimal("112"), paid_at=date.today())
     result, err = record_payment(
-        invoice.id, actor=world["buyer_user"], amount=Decimal("50"), paid_at=date.today(), reference="second"
+        invoice.id, actor=make_cashier(), amount=Decimal("50"), paid_at=date.today(), reference="second"
     )
     assert result is None
     assert err == "INVOICE_ALREADY_PAID"
@@ -316,6 +316,6 @@ def test_generate_from_contract_endpoint_bad_id_is_404(world):
 
 @pytest.mark.django_db
 def test_record_payment_bad_invoice_id_returns_not_found(world):
-    result, err = record_payment(999999, actor=world["buyer_user"], amount=Decimal("10"), paid_at=date.today())
+    result, err = record_payment(999999, actor=make_cashier(), amount=Decimal("10"), paid_at=date.today())
     assert result is None
     assert err == "NOT_FOUND"

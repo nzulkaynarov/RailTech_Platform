@@ -17,7 +17,7 @@ class TestAuthenticationEndpoints:
 
     @pytest.fixture
     def test_user(self, user_factory):
-        return user_factory(email="test@example.com", username="testuser", password="testpass123")
+        return user_factory(email="test@example.com", username="testuser", password="testpass123", is_superuser=True)
 
     def test_user_login_success(self, client, test_user):
         """Test successful user login with valid credentials."""
@@ -119,7 +119,7 @@ class TestUserProfile:
 
     @pytest.fixture
     def test_user(self, user_factory):
-        return user_factory(email="test@example.com", username="testuser", password="testpass123")
+        return user_factory(email="test@example.com", username="testuser", password="testpass123", is_superuser=True)
 
 
 @pytest.mark.django_db

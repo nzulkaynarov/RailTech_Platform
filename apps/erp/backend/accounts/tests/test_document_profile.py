@@ -10,12 +10,15 @@ from rest_framework.test import APIClient
 
 from accounts.models import Company, CompanyDocumentProfile, CompanyMember, CustomUser, WorkspaceRole
 from accounts.services import update_document_profile
+from accounts.testing import grant_head, make_own_company
 
 
 def _owner(company, email):
     ws = WorkspaceRole.objects.get_or_create(code="OWNER", defaults={"name": "Owner", "sort_order": 10})[0]
     user = CustomUser.objects.create_user(email=email, username=email, password="pw", is_active=True)
     CompanyMember.objects.create(user=user, company=company, role=ws, is_primary=True, is_active=True)
+    # Права — только из ролей (M1-ERP-05); «владелец компании-клиента» в ERP больше нет (FIX-13).
+    grant_head(user, company)
     return user
 
 
@@ -34,7 +37,8 @@ def _client(user):
 
 @pytest.fixture
 def two_companies(db):
-    seller_a = Company.objects.create(name="РемПуть")
+    seller_a = Company.objects.create(name="РемПуть")  # своя компания ERP — единственный продавец
+    make_own_company(seller_a)
     seller_b = Company.objects.create(name="Конкурент")
     owner_a = _owner(seller_a, "owner-a@a.test")
     owner_b = _owner(seller_b, "owner-b@b.test")

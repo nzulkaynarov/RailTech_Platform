@@ -6,14 +6,13 @@ file limit); this module re-exports them so existing importers
 
 - views_imports.py   — Excel/catalog imports, import status, catalog template
 - views_attachments.py — AttachmentViewSet
-- views_ai.py        — AI match / preflight / document-extract endpoints
+- views_ai.py        — AI match / document-extract endpoints
 """
 
 from .views_ai import (  # noqa: F401
     MAX_DOC_FILE_SIZE,
     DocumentExtractView,
     MatchCatalogView,
-    PreflightCheckView,
     QuoteImportFileView,
     _resolve_expected,
 )
@@ -42,7 +41,6 @@ __all__ = [
     "ExcelImportView",
     "ImportStatusView",
     "MatchCatalogView",
-    "PreflightCheckView",
     "MAX_DOC_FILE_SIZE",
     "MAX_EXCEL_FILE_SIZE",
     "XLSX_MAGIC",

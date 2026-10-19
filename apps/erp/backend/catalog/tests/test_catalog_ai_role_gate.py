@@ -3,8 +3,7 @@
 M1-ERP-02 wave 2 removed the paid ai.enrich entitlement (subscription / per-company grant): the
 enrich endpoint is now open to whoever runs the catalog — a staff member holding catalog.manage
 (M1-ERP-05: only from roles, no OWNER fallback) — and refused with ROLE_NOT_PERMITTED otherwise,
-with nothing enqueued. extract is gated by the КП/contract roles, not the catalog role; compose is a
-buyer step (до M2-ERP-01).
+with nothing enqueued. extract is gated by the КП/contract roles, not the catalog role.
 
 The Celery publish is stubbed; these assert the synchronous gate only.
 """
@@ -115,29 +114,7 @@ def test_enrich_for_buyer_side_member_is_forbidden(settings, stub_apply_async):
     assert stub_apply_async == []
 
 
-# ── extract / compose: not gated by the catalog role ────────────────────────────
-
-
-@pytest.mark.django_db
-def test_compose_is_a_buyer_step(settings, stub_apply_async):
-    """compose (сборка заявки покупателем) — шаг покупателя (BUYER_ONLY, до M2-ERP-01): покупательский
-    аккаунт доходит до постановки в очередь, сотрудник бэк-офиса — 403 ROLE_NOT_PERMITTED."""
-    settings.AI_IMPORT_ENABLED = True
-    buyer_company = _seller_company("7200000005", type_code="CLIENT")
-    buyer = _seller_user("compose@x.test", buyer_company)
-    client = APIClient()
-    client.force_authenticate(buyer)
-
-    response = client.post("/api/v1/sourcing/compose-request/", {"text": "нужны тормозные колодки"}, format="json")
-
-    assert response.status_code == 202
-    assert len(stub_apply_async) == 1
-
-    staff = _seller_user("staff@x.test", _seller_company("7200000007"), permissions=["catalog.manage"])
-    client.force_authenticate(staff)
-    response = client.post("/api/v1/sourcing/compose-request/", {"text": "x"}, format="json")
-    assert response.status_code == 403
-    assert response.json() == {"detail": "ROLE_NOT_PERMITTED"}
+# ── extract: not gated by the catalog role ────────────────────────────
 
 
 @pytest.mark.django_db

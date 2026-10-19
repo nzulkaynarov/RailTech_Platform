@@ -52,7 +52,7 @@ export const aiApi = {
 	},
 
 	// ─── AI draft-КП generation (Move 3) ─────────────────────
-	// Build a pre-filled draft КП from the buyer request (copied lines + pricing-assist on matches).
+	// Build a pre-filled draft КП from the client request (copied lines + pricing-assist on matches).
 	// ARCH-01: 202 + task_id, resolved via the ai-status poll. Service gate errors arrive in
 	// the result as {error: CODE} and are re-thrown as Error(CODE) for the apiErrors.* map.
 	generateDraftQuote: async (dealId: number) => {

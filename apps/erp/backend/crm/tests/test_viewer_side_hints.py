@@ -5,14 +5,10 @@ SPA выводила роль из `activeStatus` — это ПЕРВЫЙ тип
 `!isBuyer` и не показывалась никогда, хотя бэкенд действие разрешал. Образец правильного
 решения уже был рядом — `viewer_can_sign_client/manager` у договора.
 
-С M1-ERP-02 волна 3 сторона продавца — это сотрудник своей компании (продавец один), сторона
-покупателя — участник компании-клиента сделки; заголовка контекста SPA больше нет.
+С M1-ERP-02 волна 3 сторона продавца — это сотрудник своей компании (продавец один), заголовка
+контекста SPA больше нет. Покупательской стороны в ERP нет (FIX-13), её подсказки и тесты ушли.
 
-Здесь проверяется, что подсказки:
-  * приходят по КАЖДОЙ стороне независимо (сотрудник, который одновременно участник
-    компании-клиента сделки, получает обе);
-  * учитывают статус документа (по оплаченному счёту платить не предлагают);
-  * не стоят по запросу на строку (N+1 на реестре).
+Здесь проверяется, что подсказки не стоят по запросу на строку (N+1 на реестре).
 """
 
 from decimal import Decimal
@@ -29,7 +25,6 @@ from crm.models import (
     ContractStatus,
     Deal,
     DealStage,
-    Fulfillment,
     FulfillmentStatus,
     Invoice,
     InvoiceStatus,
@@ -38,7 +33,6 @@ from crm.models import (
 )
 
 INVOICES_URL = "/api/v1/crm/invoices/"
-FULFILLMENTS_URL = "/api/v1/crm/fulfillments/"
 
 
 @pytest.fixture
@@ -70,7 +64,7 @@ def _company(name, inn, *type_codes):
     return company
 
 
-def _member(company, email, *, can_sell=False, can_buy=False):
+def _member(company, email, *, can_sell=False):
     user = CustomUser.objects.create_user(email=email, username=email, password="x")
     CompanyMember.objects.create(
         user=user,
@@ -79,7 +73,6 @@ def _member(company, email, *, can_sell=False, can_buy=False):
         is_active=True,
         is_primary=True,
         can_sell=can_sell,
-        can_buy=can_buy,
     )
     return user
 
@@ -125,78 +118,11 @@ def _make_chain(buyer_co, seller_co, *, invoice_status="ISSUED", title="Deal"):
     return {"deal": deal, "contract": contract, "invoice": invoice}
 
 
-@pytest.fixture
-def dual_company_world(lookups):
-    """Компания-посредник: САМА закупает у поставщика и САМА продаёт клиенту.
-
-    Типы идут в порядке [CLIENT, SUPPLIER] — именно тот случай, когда `activeStatus`
-    (первый тип) прятал продавцовскую половину интерфейса.
-    """
-    dual_co = _company("Dual Trading", "D900", "CLIENT", "SUPPLIER")
-    dual_user = _member(dual_co, "dual@sides.test", can_sell=True, can_buy=True)
-
-    # Сделка, где dual-компания — и клиент (владелец сделки), и продавец (своя компания ERP).
-    chain = _make_chain(dual_co, dual_co, title="Dual own deal")
-    return {"user": dual_user, "company": dual_co, **chain}
-
-
-def test_dual_company_gets_both_sides_on_an_invoice(dual_company_world):
-    """Главный случай ловушки: обе половины интерфейса должны быть доступны одновременно."""
-    resp = _api(dual_company_world["user"]).get(INVOICES_URL)
-    assert resp.status_code == 200
-    row = next(r for r in _rows(resp) if r["id"] == dual_company_world["invoice"].id)
-
-    assert row["viewer_can_manage"] is True, "продавцовская половина потеряна — это и был баг"
-    assert row["viewer_can_pay"] is True, "покупательская половина потеряна"
-
-
-def test_pure_buyer_is_not_offered_seller_actions(lookups):
-    buyer_co = _company("Pure Buyer", "B901", "CLIENT")
-    buyer_user = _member(buyer_co, "purebuyer@sides.test", can_buy=True)
-    seller_co = _company("Seller", "S901", "SUPPLIER")
-    chain = _make_chain(buyer_co, seller_co)
-
-    row = next(r for r in _rows(_api(buyer_user).get(INVOICES_URL)) if r["id"] == chain["invoice"].id)
-    assert row["viewer_can_pay"] is True
-    assert row["viewer_can_manage"] is False, "покупателю предложили продавцовское действие"
-
-
-def test_paid_invoice_is_not_offered_for_payment(lookups):
-    """Статус документа тоже учитывается — иначе кнопка ведёт в гарантированный отказ."""
-    buyer_co = _company("Buyer Paid", "B902", "CLIENT")
-    buyer_user = _member(buyer_co, "paid@sides.test", can_buy=True)
-    seller_co = _company("Seller Paid", "S902", "SUPPLIER")
-    chain = _make_chain(buyer_co, seller_co, invoice_status="PAID")
-
-    row = next(r for r in _rows(_api(buyer_user).get(INVOICES_URL)) if r["id"] == chain["invoice"].id)
-    assert row["viewer_can_pay"] is False
-
-
-def test_fulfillment_sides_split_ship_and_accept(lookups):
-    """Отгружает продавец, принимает покупатель — ровно как делит стороны сервис."""
-    buyer_co = _company("Buyer Ship", "B903", "CLIENT")
-    buyer_user = _member(buyer_co, "buyership@sides.test", can_buy=True)
-    seller_co = _company("Seller Ship", "S903", "SUPPLIER")
-    seller_user = _member(seller_co, "sellership@sides.test", can_sell=True)
-    chain = _make_chain(buyer_co, seller_co)
-    Fulfillment.objects.create(
-        deal=chain["deal"], contract=chain["contract"], status=FulfillmentStatus.objects.get(code="DELIVERED")
-    )
-
-    seller_row = _rows(_api(seller_user).get(FULFILLMENTS_URL))[0]
-    assert seller_row["viewer_can_ship"] is True
-    assert seller_row["viewer_can_accept"] is False
-
-    buyer_row = _rows(_api(buyer_user).get(FULFILLMENTS_URL))[0]
-    assert buyer_row["viewer_can_accept"] is True
-    assert buyer_row["viewer_can_ship"] is False
-
-
 def test_side_hints_do_not_add_a_query_per_row(lookups):
     """Подсказки считаются один раз на запрос: реестр из пяти счетов не должен стоить
     дороже реестра из одного (иначе это N+1, Performance Conventions)."""
     buyer_co = _company("Buyer NPlus", "B904", "CLIENT")
-    buyer_user = _member(buyer_co, "nplus@sides.test", can_buy=True)
+    buyer_user = _member(buyer_co, "nplus@sides.test")
     seller_co = _company("Seller NPlus", "S904", "SUPPLIER")
 
     _make_chain(buyer_co, seller_co, title="Only deal")

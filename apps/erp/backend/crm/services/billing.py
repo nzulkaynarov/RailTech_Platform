@@ -304,12 +304,8 @@ def record_payment(
     except Invoice.DoesNotExist:
         return None, "NOT_FOUND"
     # Оплату фиксирует бэк-офис: сотрудник своей компании с правом роли `finance.payment`
-    # (M1-ERP-05). Покупательская ветка (участник компании-клиента) — до M2-ERP-01.
-    from accounts.services.buyer_access import buyer_has_permission
-
-    if not (
-        getattr(actor, "is_superuser", False) or buyer_has_permission(actor, invoice.deal.company_id, "payment.record")
-    ):
+    # (M1-ERP-05); администратор — всегда. Участников компаний-клиентов в ERP нет (FIX-13).
+    if not getattr(actor, "is_superuser", False):
         from accounts.services import member_has_permission, primary_seller_company_id
 
         own_company_id = primary_seller_company_id(actor)
@@ -610,14 +606,14 @@ def act_viewer_side(actor, act) -> str:
     Акт двусторонний: выпускает исполнитель, принимает заказчик. Раньше сторона не
     различалась вовсе — кто первый нажал, тот и закрывал документ в одиночку.
     """
-    from accounts.services import is_member_of, is_seller
+    from accounts.services import is_seller
 
     if actor is None or getattr(actor, "is_anonymous", False):
         return ""
     if is_seller(actor):
         return "issuer"
-    if act.deal.company_id and is_member_of(actor, act.deal.company_id, capability="buy"):
-        return "acceptor"
+    # Заказчика-пользователя в ERP нет (FIX-13): приёмку акта вернёт портал (FIX-22), до тех пор
+    # «acceptor» не выдаётся никому, и `sign_act` / `reject_act` изнутри ERP недостижимы.
     return ""
 
 

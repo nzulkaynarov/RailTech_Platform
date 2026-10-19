@@ -57,17 +57,6 @@ def _viewer_is_seller(obj, request) -> bool:
     return _viewer_is_staff(request)
 
 
-def _viewer_is_buyer(obj, request) -> bool:
-    """Смотрит ли зритель на эту сделку со стороны покупателя — членство в компании-заказчике
-    (покупательские аккаунты — до M2-ERP-01)."""
-    from accounts.services import is_member_of
-
-    user = _authenticated_user(request)
-    if user is None:
-        return False
-    return bool(obj.company_id) and is_member_of(user, obj.company_id)
-
-
 def _viewer_can_release(obj, request):
     """Может ли зритель вернуть эту сделку в очередь.
 
@@ -104,13 +93,9 @@ class DealListSerializer(serializers.ModelSerializer):
     viewer_can_release = serializers.SerializerMethodField()
     # Сторона зрителя относительно ЭТОЙ сделки — считает сервер (см. `_viewer_is_seller`).
     viewer_is_seller = serializers.SerializerMethodField()
-    viewer_is_buyer = serializers.SerializerMethodField()
 
     def get_viewer_is_seller(self, obj) -> bool:
         return _viewer_is_seller(obj, self.context.get("request"))
-
-    def get_viewer_is_buyer(self, obj) -> bool:
-        return _viewer_is_buyer(obj, self.context.get("request"))
 
     def get_assigned_to(self, obj) -> int | None:
         return obj.assigned_to_id
@@ -152,7 +137,6 @@ class DealListSerializer(serializers.ModelSerializer):
             "assigned_at",
             "viewer_can_release",
             "viewer_is_seller",
-            "viewer_is_buyer",
             "active_quote",
             "execution_complete",
             "created_at",
@@ -179,15 +163,10 @@ class DealDetailSerializer(serializers.ModelSerializer):
     viewer_can_release = serializers.SerializerMethodField()
     # Сторона зрителя относительно ЭТОЙ сделки — считает сервер (см. `_viewer_is_seller`).
     viewer_is_seller = serializers.SerializerMethodField()
-    viewer_is_buyer = serializers.SerializerMethodField()
-    can_edit_request = serializers.SerializerMethodField()
     execution_complete = serializers.SerializerMethodField()
 
     def get_viewer_is_seller(self, obj) -> bool:
         return _viewer_is_seller(obj, self.context.get("request"))
-
-    def get_viewer_is_buyer(self, obj) -> bool:
-        return _viewer_is_buyer(obj, self.context.get("request"))
 
     def get_assigned_to(self, obj) -> int | None:
         return obj.assigned_to_id
@@ -211,16 +190,6 @@ class DealDetailSerializer(serializers.ModelSerializer):
 
         return deal_execution_is_complete(obj)
 
-    def get_can_edit_request(self, obj) -> bool:
-        """Whether the current user may add/edit/remove this deal's request rows."""
-        from crm.services import buyer_can_edit_request
-
-        request = self.context.get("request")
-        user = getattr(request, "user", None)
-        if user is None or not getattr(user, "is_authenticated", False):
-            return False
-        return buyer_can_edit_request(obj, user)
-
     class Meta:
         model = Deal
         fields = [
@@ -237,7 +206,6 @@ class DealDetailSerializer(serializers.ModelSerializer):
             "assigned_at",
             "viewer_can_release",
             "viewer_is_seller",
-            "viewer_is_buyer",
             "stage",
             "stage_code",
             "stage_name",
@@ -245,7 +213,6 @@ class DealDetailSerializer(serializers.ModelSerializer):
             "notes",
             "active_quote",
             "quotes",
-            "can_edit_request",
             "execution_complete",
             "created_at",
             "updated_at",

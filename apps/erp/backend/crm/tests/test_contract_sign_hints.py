@@ -1,7 +1,7 @@
 """Contract sign-side hints (review MEDIUM fix): the viewer's signable side is derived from their
-relationship to the contract's deal — NOT the SPA page context: the buyer side signs as client,
-own-company staff (the single seller) sign as manager, and the hint never drifts from what
-sign_contract_by_* actually authorizes (shared predicates)."""
+relationship to the contract's deal — NOT the SPA page context: own-company staff (the single seller)
+sign as manager, nobody signs as client inside ERP (FIX-13: the client signs in the portal), and the
+hint never drifts from what sign_contract_by_* actually authorizes (shared predicates)."""
 
 from decimal import Decimal
 
@@ -35,7 +35,7 @@ def contract_world(db, grant):
         )
         return user
 
-    buyer_user = member(buyer, "b@t.test", can_buy=True)
+    buyer_user = member(buyer, "b@t.test")
     seller_user = member(seller, "s@t.test", can_sell=True)
     grant(seller_user, "contract.sign")  # M1-ERP-05: подпись от компании — право роли, не флаг can_sell
 
@@ -55,9 +55,10 @@ def contract_world(db, grant):
     return {"buyer_user": buyer_user, "seller_user": seller_user, "contract": contract, "seller_co": seller}
 
 
-def test_buyer_can_sign_client_not_manager(contract_world):
+def test_client_company_member_signs_neither_side(contract_world):
+    """FIX-13: клиентских аккаунтов в ERP нет — подпись клиента только в портале (FIX-22)."""
     u, c = contract_world["buyer_user"], contract_world["contract"]
-    assert viewer_can_sign_client(u, c) is True
+    assert viewer_can_sign_client(u, c) is False
     assert viewer_can_sign_manager(u, c) is False
 
 

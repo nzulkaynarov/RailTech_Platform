@@ -17,12 +17,13 @@ import pytest
 
 from accounts.models import Company, CompanyDocumentProfile, CompanyMember, CustomUser, WorkspaceRole
 from accounts.services.document_profile import _EDITABLE_FIELDS, update_document_profile
+from accounts.testing import grant_head, make_own_company
 from crm.document_wording import DOCUMENT_WORDING_DEFAULTS
 
 
 @pytest.fixture
 def company(db):
-    return Company.objects.create(name="ООО Пример", inn="300000123")
+    return make_own_company(Company.objects.create(name="ООО Пример", inn="300000123"))
 
 
 @pytest.fixture
@@ -33,6 +34,7 @@ def owner(db, company):
     )
     role, _ = WorkspaceRole.objects.get_or_create(code="OWNER", defaults={"name": "OWNER", "sort_order": 10})
     CompanyMember.objects.create(user=user, company=company, role=role, is_active=True)
+    grant_head(user, company)
     return user
 
 

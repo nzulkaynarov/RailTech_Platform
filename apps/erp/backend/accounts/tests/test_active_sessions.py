@@ -44,7 +44,7 @@ def _login_client(user):
 
 @pytest.mark.django_db
 def test_sessions_list_marks_the_current_browser(user_factory):
-    user = user_factory()
+    user = user_factory(is_superuser=True)
     client = _login_client(user)
     RefreshToken.for_user(user)  # a second, unrelated session
 
@@ -58,7 +58,7 @@ def test_sessions_list_marks_the_current_browser(user_factory):
 
 @pytest.mark.django_db
 def test_revoke_all_spares_the_current_session(user_factory):
-    user = user_factory()
+    user = user_factory(is_superuser=True)
     client = _login_client(user)
     other = RefreshToken.for_user(user)
 

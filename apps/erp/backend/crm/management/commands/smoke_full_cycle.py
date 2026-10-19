@@ -5,18 +5,20 @@ Run:
     python manage.py smoke_full_cycle
 
 What it does:
-    1. Create (or reuse) a BUYER company + user.
+    1. Create (or reuse) a client company (клиентских пользователей в ERP нет — FIX-13).
     2. Create (or reuse) a SUPPLIER company + user.
     3. Create (or reuse) a MANAGER user.
     4. Create a Deal (DRAFT).
     5. Move Deal DRAFT → SOURCING → CALCULATING via the FSM.
-    6. Create Quote + QuoteItem, send to client, approve.
+    6. Create Quote + QuoteItem, send to client, accept as the client's contact.
     7. Generate Contract → sign client → sign manager (SIGNED).
-    8. Generate Invoice → record Payment (PAID) → generate Act → sign Act.
+    8. Generate Invoice → record Payment (PAID) → generate Act (приёмка акта — шаг клиента в портале).
     9. Update Fulfillment to ACCEPTED → auto-transition Deal to CLOSED_WON.
     10. Print step-by-step report.
 
-All steps go through services.py — no raw ORM writes for business logic.
+All steps go through services.py — no raw ORM writes for business logic. Шаги клиента, которых
+в ERP больше нет (подпись договора, приёмка акта), имитирует администратор-менеджер; настоящие
+вернёт портал (FIX-22).
 """
 
 from decimal import Decimal
@@ -98,25 +100,21 @@ class Command(BaseCommand):
         domain_general = _must(DomainType, "GENERAL_GOODS")
         stock_in = _must(StockStatus, "IN_STOCK")
 
-        step(1, "Buyer user + company")
-        buyer, _ = CustomUser.objects.get_or_create(
-            email="smoke.buyer@example.test",
-            defaults={
-                "username": "smoke.buyer@example.test",
-                "is_active": True,
-                "first_name": "Smoke",
-                "last_name": "Buyer",
-            },
-        )
+        step(1, "Client company")
         buyer_co, _ = Company.objects.get_or_create(
             inn="111111111",
             defaults={"name": "Smoke Buyer LLC", "country": country},
         )
         buyer_co.types.add(client_type)
-        CompanyMember.objects.get_or_create(
-            user=buyer, company=buyer_co, defaults={"role": owner_role, "is_primary": True, "is_active": True}
+        from accounts.models import Contact
+
+        # Клиент — контакт контрагента (пользователя ERP у клиента нет — FIX-13): получатель КП.
+        client_contact, _ = Contact.objects.get_or_create(
+            company=buyer_co,
+            email="smoke.client@example.test",
+            defaults={"name": "Smoke Client", "phone": "+998900000000"},
         )
-        info(f"buyer={buyer.email} company={buyer_co.name}")
+        info(f"company={buyer_co.name} contact={client_contact.email}")
 
         step(2, "Supplier user + company")
         from core.tenant import own_company
@@ -176,7 +174,7 @@ class Command(BaseCommand):
         deal, _ = Deal.objects.get_or_create(
             title="Smoke E2E deal",
             company=buyer_co,
-            client=buyer,
+            contact=client_contact,
             manager=manager,
             defaults={"stage": draft_stage},
         )
@@ -242,7 +240,7 @@ class Command(BaseCommand):
         quote.save(update_fields=["status"])
         quote = QuoteLifecycleService.send_to_client(quote.id, manager)
         info(f"quote sent, total_incl_vat={quote.total_incl_vat}")
-        quote = QuoteLifecycleService.approve_quote(quote.id, buyer)
+        quote = QuoteLifecycleService.accept_quote_as_contact(quote.id, contact_email=client_contact.email)
         info(f"quote status={quote.status.code}")
 
         step(7, "Generate contract, sign by client and manager")
@@ -250,7 +248,7 @@ class Command(BaseCommand):
         if err:
             raise Exception(f"generate_contract_from_quote failed: {err}")
         info(f"contract={contract.number} status={contract.status_code}")
-        contract, err = crm_services.sign_contract_by_client(contract.id, buyer)
+        contract, err = crm_services.sign_contract_by_client(contract.id, manager)
         if err:
             raise Exception(f"sign_contract_by_client failed: {err}")
         contract, err = crm_services.sign_contract_by_manager(contract.id, manager)
@@ -258,7 +256,7 @@ class Command(BaseCommand):
             raise Exception(f"sign_contract_by_manager failed: {err}")
         info(f"contract status={contract.status_code} (expected SIGNED)")
 
-        step(8, "Generate invoice, record payment, generate act, sign act")
+        step(8, "Generate invoice, record payment, generate act")
         invoice, err = crm_services.generate_invoice_from_contract(contract.id, actor=manager)
         if err:
             raise Exception(f"generate_invoice_from_contract failed: {err}")
@@ -284,10 +282,7 @@ class Command(BaseCommand):
         act, err = crm_services.generate_act(invoice.id, actor=manager)
         if err:
             raise Exception(f"generate_act failed: {err}")
-        act, err = crm_services.sign_act(act.id, buyer)
-        if err:
-            raise Exception(f"sign_act failed: {err}")
-        info(f"act={act.number} status={act.status_code}")
+        info(f"act={act.number} status={act.status_code} (приёмка акта клиентом — в портале)")
 
         step(9, "Fulfillment ACCEPTED → auto CLOSED_WON")
         crm_services.ensure_fulfillment(deal)
@@ -313,6 +308,5 @@ class Command(BaseCommand):
             deal.delete()
             supplier_co.delete()
             buyer_co.delete()
-            buyer.delete()
             supplier.delete()
             manager.delete()

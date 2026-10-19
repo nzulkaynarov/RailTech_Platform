@@ -48,7 +48,6 @@ def two_deals_one_buyer(lookups):
         role=WorkspaceRole.objects.get(code="OWNER"),
         is_active=True,
         is_primary=True,
-        can_buy=True,
     )
 
     stage = DealStage.objects.get(code="CONTRACT_SIGNED")

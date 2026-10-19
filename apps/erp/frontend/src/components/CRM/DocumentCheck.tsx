@@ -16,7 +16,7 @@ import type { DocCheckResult, DocMismatchCode } from '@/api/crmApi';
  * AI #6 — extract a signed contract / counter-invoice PDF and reconcile it vs the
  * referenced КП (quote) or Contract.
  *
- * The buyer uploads the document; Claude TRANSCRIBES {total, currency, valid_until,
+ * The client uploads the document; Claude TRANSCRIBES {total, currency, valid_until,
  * bank_details, line_totals} (treated as untrusted OCR) and the backend recomputes
  * the money comparison in Decimal — this component only RENDERS the verdict. Each
  * mismatch is keyed by a stable machine `code` (compared by code, not name) and

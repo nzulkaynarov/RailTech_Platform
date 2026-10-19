@@ -38,7 +38,7 @@ export function isUnclaimedRfq(deal: { stage_code?: string | null; assigned_to?:
  * Заявка, по которой КП ещё НЕ СОБИРАЛИ.
  *
  * Признак «нет объекта КП» здесь не работает: позиции заявки покупателя ФИЗИЧЕСКИ ЛЕЖАТ в
- * DRAFT-КП (`_request_draft_quote`: «The single DRAFT quote holding the buyer's requested
+ * DRAFT-КП (`_request_draft_quote`: «The single DRAFT quote holding the client's requested
  * items»), поэтому `active_quote` есть у КАЖДОЙ отправленной заявки — плитка «Заявки без КП»
  * структурно всегда показывала 0 (проход глазами 03-08), хотя комментарий рядом обещал
  * «честный счёт».

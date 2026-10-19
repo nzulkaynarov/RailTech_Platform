@@ -76,7 +76,7 @@ def own(db):
     return company
 
 
-def _member(company, email, *, workspace="MEMBER", can_sell=True, can_buy=True):
+def _member(company, email, *, workspace="MEMBER", can_sell=True):
     user = CustomUser.objects.create_user(email=email, username=email, password=None, is_active=True)
     membership = CompanyMember.objects.create(
         user=user,
@@ -84,7 +84,6 @@ def _member(company, email, *, workspace="MEMBER", can_sell=True, can_buy=True):
         role=WorkspaceRole.objects.get(code=workspace),
         is_primary=True,
         can_sell=can_sell,
-        can_buy=can_buy,
     )
     return user, membership
 
@@ -122,7 +121,7 @@ def test_permissions_are_the_union_of_roles(own):
 @pytest.mark.django_db
 def test_no_role_no_permission_even_for_owner_with_flags(own):
     """Снятый фолбэк: должность OWNER и флаги can_sell/can_buy прав сотруднику не дают."""
-    user, _membership = _member(own, "owner@own.example", workspace="OWNER", can_sell=True, can_buy=True)
+    user, _membership = _member(own, "owner@own.example", workspace="OWNER", can_sell=True)
     assert staff_permissions(user) == frozenset()
     for code in ALL_PERMISSIONS:
         assert not member_has_permission(user, own.id, code)

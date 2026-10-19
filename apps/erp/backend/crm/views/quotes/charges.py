@@ -26,7 +26,7 @@ class QuoteChargeViewSet(RoleGatedViewMixin, viewsets.ModelViewSet):
     """CRUD for КП-level expense items / discounts (UBL document AllowanceCharge).
 
     Building the cost breakdown is a SELLER action (mirrors QuoteItemViewSet):
-    only the seller team / superuser may write; the buyer never sees these rows.
+    only the seller team / superuser may write; the client never sees these rows.
     """
 
     required_permissions = {

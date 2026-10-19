@@ -10,7 +10,7 @@ from rest_framework.response import Response
 
 from core.file_streaming import stream_file_field
 from core.optimistic_locking import OptimisticLockingMixin
-from core.permissions import ADMIN_ONLY, BUYER_ONLY, IsCompanyMemberOrPlatformAdmin, IsPlatformAdmin, RoleGatedViewMixin
+from core.permissions import ADMIN_ONLY, IsCompanyMemberOrPlatformAdmin, IsPlatformAdmin, RoleGatedViewMixin
 from crm import services as crm_services
 from crm.constants import DEFAULT_INVOICE_DUE_DAYS, InvoiceStatusCode
 from crm.models import Act, Contract, Fulfillment, Invoice, Payment
@@ -124,9 +124,7 @@ class ContractViewSet(RoleGatedViewMixin, OptimisticLockingMixin, viewsets.Model
         "cancel": ADMIN_ONLY,
         "force_cancel": ADMIN_ONLY,
         "sign_manager": "contract.sign",
-        "sign_client": BUYER_ONLY,
     }
-    buyer_actions = frozenset({"sign_client"})  # до M2-ERP-01
 
     serializer_class = ContractSerializer
     permission_classes = [IsAuthenticated, IsCompanyMemberOrPlatformAdmin]
@@ -210,14 +208,6 @@ class ContractViewSet(RoleGatedViewMixin, OptimisticLockingMixin, viewsets.Model
             field=str(request.data.get("field", "")),
             variant_id=request.data.get("variant_id"),
         )
-        if err:
-            return Response({"detail": err}, status=400)
-        return Response(ContractSerializer(contract).data)
-
-    @extend_schema(summary="Sign contract by client", tags=["CRM"])
-    @action(detail=True, methods=["post"], url_path="sign-client")
-    def sign_client(self, request, pk=None):
-        contract, err = crm_services.sign_contract_by_client(int(pk), request.user)
         if err:
             return Response({"detail": err}, status=400)
         return Response(ContractSerializer(contract).data)
@@ -315,7 +305,6 @@ class InvoiceViewSet(
         "generate_act": "fulfillment.act",
         "record_payment": "finance.payment",
     }
-    buyer_actions = frozenset({"record_payment"})  # до M2-ERP-01
 
     serializer_class = InvoiceSerializer
     permission_classes = [IsAuthenticated, IsCompanyMemberOrPlatformAdmin]
@@ -548,10 +537,7 @@ class ActViewSet(RoleGatedViewMixin, viewsets.ReadOnlyModelViewSet):
         "cancel": "fulfillment.act",
         "reissue": "fulfillment.act",
         "remind": "fulfillment.act",
-        "sign": BUYER_ONLY,
-        "reject": BUYER_ONLY,
     }
-    buyer_actions = frozenset({"sign", "reject"})  # до M2-ERP-01
 
     serializer_class = ActSerializer
     permission_classes = [IsAuthenticated, IsCompanyMemberOrPlatformAdmin]
@@ -575,48 +561,6 @@ class ActViewSet(RoleGatedViewMixin, viewsets.ReadOnlyModelViewSet):
     @action(detail=True, methods=["get"], url_path="download-signed")
     def download_signed(self, request, pk=None):
         return stream_file_field(self.get_object().signed_file)
-
-    @extend_schema(summary="Sign act (mark as SIGNED)", tags=["CRM"])
-    @action(detail=True, methods=["post"], url_path="sign", parser_classes=[MultiPartParser, FormParser])
-    def sign(self, request, pk=None):
-        signed_file = request.FILES.get("signed_file")
-        if signed_file:
-            from django.core.exceptions import ValidationError
-
-            from core.validators import validate_document_upload
-
-            try:
-                validate_document_upload(signed_file)
-            except ValidationError as e:
-                return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
-
-        # `self.get_object()` — а не `int(pk)`: только внутри него DRF применяет
-        # `check_object_permissions` и сужение `get_queryset()`. С сырым pk экшен обходил обе
-        # защиты, а `sign_act` проверял лишь оператора-наблюдателя — посторонний пользователь
-        # подписывал ЧУЖОЙ акт по прямому id и получал HTTP 200. Соседние экшены акта
-        # (download-pdf, download-signed) уже шли через get_object.
-        act, err = crm_services.sign_act(self.get_object().id, request.user, signed_file=signed_file)
-        if err:
-            return Response({"detail": err}, status=400)
-        return Response(ActSerializer(act, context=self.get_serializer_context()).data)
-
-    @extend_schema(
-        summary="Reject an issued act (buyer side)",
-        description=(
-            "Заказчик возвращает акт исполнителю с причиной — второй шаг двустороннего цикла "
-            "(паттерн ЭСФ «подтвердить или отклонить»). Причина обязательна: без основания "
-            "отказ бесполезен обеим сторонам. Акт уходит обратно в DRAFT."
-        ),
-        request=inline_serializer("RejectAct", fields={"reason": drf_serializers.CharField()}),
-        responses={200: ActSerializer, 400: OpenApiResponse(description="REASON_REQUIRED / ACT_SIGN_NOT_ALLOWED")},
-        tags=["CRM"],
-    )
-    @action(detail=True, methods=["post"], url_path="reject")
-    def reject(self, request, pk=None):
-        act, err = crm_services.reject_act(self.get_object().id, request.user, reason=request.data.get("reason", ""))
-        if err:
-            return Response({"detail": err}, status=400)
-        return Response(ActSerializer(act, context=self.get_serializer_context()).data)
 
     @extend_schema(
         summary="Remind the customer that the act awaits acceptance (issuer side)",
@@ -695,7 +639,6 @@ class FulfillmentViewSet(RoleGatedViewMixin, viewsets.ReadOnlyModelViewSet):
     required_permissions = {
         "update_status": "fulfillment.manage",
     }
-    buyer_actions = frozenset({"update_status"})  # до M2-ERP-01
 
     serializer_class = FulfillmentSerializer
     permission_classes = [IsAuthenticated, IsCompanyMemberOrPlatformAdmin]

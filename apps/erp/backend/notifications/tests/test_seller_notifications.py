@@ -26,7 +26,7 @@ def lookups(db):
     NotificationType.objects.get_or_create(code="INFO", defaults={"name": "Info"})
 
 
-def _member(company, email, *, can_sell=False, can_buy=False):
+def _member(company, email, *, can_sell=False):
     user = CustomUser.objects.create_user(email=email, username=email, password="x")
     CompanyMember.objects.create(
         user=user,
@@ -35,7 +35,6 @@ def _member(company, email, *, can_sell=False, can_buy=False):
         is_active=True,
         is_primary=True,
         can_sell=can_sell,
-        can_buy=can_buy,
     )
     return user
 
@@ -48,7 +47,7 @@ def parties(lookups):
 
     buyer_co = Company.objects.create(name="Buyer Co", inn="B1")
     buyer_co.types.add(CompanyType.objects.get(code="CLIENT"))
-    buyer = _member(buyer_co, "buyer@t.test", can_buy=True)
+    buyer = _member(buyer_co, "buyer@t.test")
 
     deal = Deal.objects.create(title="z", company=buyer_co, client=buyer, stage=DealStage.objects.get(code="DRAFT"))
     # ADR-0006 Move 2: the seller hears about the заявка — the own company sells every deal.

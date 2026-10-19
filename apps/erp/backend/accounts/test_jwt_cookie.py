@@ -12,7 +12,11 @@ COOKIE = settings.REFRESH_COOKIE_NAME
 @pytest.fixture
 def user(db):
     return CustomUser.objects.create_user(
-        email="cookie.user@example.com", username="cookie.user@example.com", password="Secret123!", is_active=True
+        email="cookie.user@example.com",
+        username="cookie.user@example.com",
+        password="Secret123!",
+        is_active=True,
+        is_superuser=True,  # вход только сотрудникам (FIX-13)
     )
 
 

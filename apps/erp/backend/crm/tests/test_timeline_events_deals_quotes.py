@@ -57,7 +57,7 @@ def test_deal_created_writes_event_code_and_params(lookups):
     from crm.services.deals import register_new_deal
 
     buyer_company = _company("Buyer Co", "CLIENT")
-    actor = _member(buyer_company, "buyer_create@t.test", can_buy=True)
+    actor = _member(buyer_company, "buyer_create@t.test")
     deal = Deal.objects.create(title="New deal", company=buyer_company, stage=DealStage.objects.get(code="DRAFT"))
 
     register_new_deal(deal, actor)

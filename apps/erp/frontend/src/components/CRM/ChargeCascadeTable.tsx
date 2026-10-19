@@ -31,7 +31,7 @@ interface ChargeCascadeTableProps {
  * Transparent step-by-step КП price cascade: how the line subtotal becomes the final
  * VAT-inclusive total through the ordered charges/discounts. Read top→bottom; every row
  * shows both the delta and the running total after it. Presentation prices only — safe for
- * buyers and cost-redacted viewers; the "below min. margin" badge shows only with economics.
+ * clients and cost-redacted viewers; the "below min. margin" badge shows only with economics.
  */
 export const ChargeCascadeTable: React.FC<ChargeCascadeTableProps> = ({
 	subtotal, charges, vatRate, currency, economics,

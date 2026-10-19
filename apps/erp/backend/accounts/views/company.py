@@ -83,23 +83,6 @@ class CompanyViewSet(RoleGatedViewMixin, CompanyDocumentsMixin, CompanyTeamMixin
         "toggle_member_active": "team.manage",
         "update_member_capabilities": "team.manage",
     }
-    buyer_actions = frozenset(
-        {
-            "update",
-            "partial_update",
-            "upload_logo",
-            "delete_logo",
-            "document_profile",
-            "document_profile_preview",
-            "upload_document_profile_logo",
-            "company_settings",
-            "invite",
-            "remove_member",
-            "set_member_role",
-            "toggle_member_active",
-            "update_member_capabilities",
-        }
-    )  # до M2-ERP-01
 
     queryset = (
         Company.objects.select_related("country")
@@ -239,8 +222,7 @@ class CompanyViewSet(RoleGatedViewMixin, CompanyDocumentsMixin, CompanyTeamMixin
         user = self.request.user
         if user.is_superuser:
             return
-        # Сотрудник своей компании — право роли `settings.edit` (M1-ERP-05); владелец компании-
-        # клиента — покупательские правила `buyer_access` (до M2-ERP-01).
+        # Сотрудник своей компании — право роли `settings.edit` (M1-ERP-05).
         if not member_has_permission(user, company.id, "settings.edit"):
             raise exceptions.PermissionDenied("ONLY_COMPANY_OWNER_OR_ADMIN")
 

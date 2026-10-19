@@ -8,7 +8,7 @@ read-only assistive result that NEVER blocks the buyer.
 
 Both GET and POST are accepted (the check is idempotent / read-only): GET so the
 buyer's КП view can fetch it on open, POST for parity with the other AI endpoints.
-Scoped so only the deal's buyer or own-company staff (or the administrator)
+Scoped so only the deal's client or own-company staff (or the administrator)
 may call it — a stranger gets 403, never another tenant's data.
 """
 
@@ -27,11 +27,11 @@ from crm.services import user_can_view_quote_diff
 @extend_schema(
     summary="AI КП-vs-заявка coverage / discrepancy check",
     description=(
-        "Compares a received КП against the buyer's original request lines and returns a "
+        "Compares a received КП against the client's original request lines and returns a "
         "plain-language list of discrepancies: uncovered (unpriced) lines and — when AI is "
         "enabled — non-equivalent substitutions and notes the КП may have ignored. The "
         "deterministic coverage facts are always returned; the AI part is purely additive. "
-        "Result is ASSISTIVE and never blocks. Scoped to the deal's buyer or own-company staff."
+        "Result is ASSISTIVE and never blocks. Scoped to the deal's client or own-company staff."
     ),
     request=None,
     responses={
@@ -41,7 +41,7 @@ from crm.services import user_can_view_quote_diff
                 "{'ai_enabled': bool, 'findings': [{issue_type, line, explanation}]})"
             )
         ),
-        403: OpenApiResponse(description="Caller is neither the deal's buyer nor own-company staff"),
+        403: OpenApiResponse(description="Caller is neither the deal's client nor own-company staff"),
         404: OpenApiResponse(description="Quote not found"),
     },
     tags=["CRM"],
@@ -52,7 +52,6 @@ class QuoteRequestDiffView(RoleGatedViewMixin, APIView):
     required_permissions = {
         "POST": "quote.build",
     }
-    buyer_actions = frozenset({"POST"})  # до M2-ERP-01
 
     permission_classes = [IsAuthenticated]
     throttle_classes = [ScopedRateThrottle]

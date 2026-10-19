@@ -4,7 +4,8 @@ Covers `ensure_fulfillment` (creation + idempotency) and every authorization /
 side-effect branch of `update_fulfillment_status`:
 
   * unknown status code     → FULFILLMENT_INVALID_STATUS
-  * buyer-side statuses (ACCEPTED / DISPUTED) gated by can_buy on deal.company
+  * buyer-side statuses (ACCEPTED / DISPUTED): nobody inside ERP but the administrator (FIX-13 — the client
+    accepts in the portal, FIX-24)
   * seller-side statuses (SHIPPED / DELIVERED) gated to own-company staff (single seller)
   * superuser bypasses both gates
   * shipped_at / delivered_at / accepted_at stamping (not overwritten on repeat)
@@ -47,7 +48,7 @@ def lookups(db):
     SystemRole.objects.get_or_create(code="ADMIN", defaults={"name": "Admin", "sort_order": 20})
 
 
-def _member(company, email, *, can_sell=False, can_buy=False):
+def _member(company, email, *, can_sell=False):
     user = CustomUser.objects.create_user(email=email, username=email, password="x", is_active=True)
     CompanyMember.objects.create(
         user=user,
@@ -56,7 +57,6 @@ def _member(company, email, *, can_sell=False, can_buy=False):
         is_active=True,
         is_primary=True,
         can_sell=can_sell,
-        can_buy=can_buy,
     )
     return user
 
@@ -67,7 +67,7 @@ def world(lookups):
     a can_sell member of ANOTHER client company."""
     buyer_co = Company.objects.create(name="Buyer Co", inn="B100")
     buyer_co.types.add(CompanyType.objects.get(code="CLIENT"))
-    buyer = _member(buyer_co, "buyer@t.test", can_buy=True)
+    buyer = _member(buyer_co, "buyer@t.test")
 
     seller_co = Company.objects.create(name="Seller Co", inn="S100")
     seller_co.types.add(CompanyType.objects.get(code="SUPPLIER"))
@@ -135,25 +135,19 @@ def test_unknown_status_rejected(world):
 
 @pytest.mark.django_db
 @pytest.mark.parametrize("status_code", [FulfillmentStatusCode.ACCEPTED, FulfillmentStatusCode.DISPUTED])
-def test_buyer_status_by_non_buyer_rejected(world, status_code):
-    """A seller (not a member of the buyer company) cannot drive a buyer-side status.
+@pytest.mark.parametrize("actor", ["seller", "buyer"])
+def test_buyer_status_inside_erp_rejected(world, status_code, actor):
+    """Neither a seller nor a client-company member can drive a buyer-side status inside ERP
+    (there are no buyer accounts — FIX-13); the client accepts in the portal.
 
     Отказ называет ПРИЧИНУ, а не общее «нужно членство»: продавец членом своей компании
     является, и общий код витрина переводила как «действие доступно только членам компании» —
     он читался как поломка, а не как правило (замер 26-08, находка 17).
     """
     crm_services.ensure_fulfillment(world["deal"])
-    obj, err = crm_services.update_fulfillment_status(world["deal"].id, world["seller"], status_code)
+    obj, err = crm_services.update_fulfillment_status(world["deal"].id, world[actor], status_code)
     assert obj is None
     assert err == "FULFILLMENT_ACCEPTANCE_IS_BUYER_STEP"
-
-
-@pytest.mark.django_db
-def test_disputed_by_buyer_member_succeeds(world):
-    crm_services.ensure_fulfillment(world["deal"])
-    obj, err = crm_services.update_fulfillment_status(world["deal"].id, world["buyer"], FulfillmentStatusCode.DISPUTED)
-    assert err is None
-    assert obj.status.code == FulfillmentStatusCode.DISPUTED
 
 
 @pytest.mark.django_db
@@ -247,7 +241,8 @@ def test_extra_fields_persisted_and_none_ignored(world):
 
 @pytest.mark.django_db
 def test_accepted_closes_deal_won(world):
-    """ACCEPTED by the buyer auto-closes the deal — requires CONTRACT_SIGNED + a signed Contract."""
+    """ACCEPTED auto-closes the deal — requires CONTRACT_SIGNED + a signed Contract (set by the administrator
+    here: the client's own acceptance comes from the portal, FIX-24)."""
     deal = world["deal"]
     deal.stage = DealStage.objects.get(code=DealStageCode.CONTRACT_SIGNED)
     deal.save(update_fields=["stage"])
@@ -255,7 +250,7 @@ def test_accepted_closes_deal_won(world):
     Contract.objects.create(deal=deal, quote=quote, number="C-1", status=ContractStatus.objects.get(code="SIGNED"))
 
     crm_services.ensure_fulfillment(deal)
-    obj, err = crm_services.update_fulfillment_status(deal.id, world["buyer"], FulfillmentStatusCode.ACCEPTED)
+    obj, err = crm_services.update_fulfillment_status(deal.id, world["superuser"], FulfillmentStatusCode.ACCEPTED)
     assert err is None
     assert obj.status.code == FulfillmentStatusCode.ACCEPTED
     assert obj.accepted_at is not None

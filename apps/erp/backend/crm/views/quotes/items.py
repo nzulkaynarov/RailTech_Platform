@@ -64,7 +64,6 @@ class QuoteItemViewSet(RoleGatedViewMixin, viewsets.ModelViewSet):
         "bulk_update": "quote.edit_pricing",
         "reassign_product": "quote.edit_pricing",
     }
-    buyer_actions = frozenset({"update", "partial_update", "destroy"})  # до M2-ERP-01
 
     serializer_class = QuoteItemSerializer
     permission_classes = [IsAuthenticated, IsCompanyMemberOrPlatformAdmin]
@@ -96,7 +95,7 @@ class QuoteItemViewSet(RoleGatedViewMixin, viewsets.ModelViewSet):
         # Administrator and own-company staff see every КП (the single seller).
         if sees_all_deals(user):
             return queryset
-        # Buyer sees line items only on their own deals (read-only — see _assert_seller).
+        # Остальные — только позиции КП сделок своих компаний (читают, не правят — см. _assert_seller).
         user_company_ids = user.memberships.filter(is_active=True).values_list("company_id", flat=True)
         return queryset.filter(quote__deal__company_id__in=user_company_ids)
 
@@ -110,16 +109,8 @@ class QuoteItemViewSet(RoleGatedViewMixin, viewsets.ModelViewSet):
         if not (getattr(user, "is_superuser", False) or can_edit_quote_pricing(user)):
             raise PermissionDenied("ONLY_SELLER_CAN_BUILD_QUOTE")
 
-    def _is_seller_write(self) -> bool:
-        from accounts.services.permissions import is_seller
-
-        user = self.request.user
-        return bool(getattr(user, "is_superuser", False) or is_seller(user))
-
     def perform_create(self, serializer):
-        # Manual item creation on a КП is a seller action. Buyers add request
-        # rows through POST /crm/deals/{id}/add-request-item/ instead (it
-        # get-or-creates the DRAFT quote and restricts fields to name + qty).
+        # Manual item creation on a КП is a seller action (клиент работает в портале, FIX-13).
         self._assert_seller()
         quote = serializer.validated_data.get("quote")
         _assert_staff_may_write_quote(self.request, quote)
@@ -140,7 +131,7 @@ class QuoteItemViewSet(RoleGatedViewMixin, viewsets.ModelViewSet):
         matches the DB, a colleague saved this line in between — applying our edit would silently
         clobber theirs, so reject with 409 QUOTE_ITEM_STALE (same code the bulk path emits per
         row). `version` is OPTIONAL: a PATCH without it keeps the pre-волна-3 last-write-wins
-        behaviour, so buyer request edits and version-less seller writes are untouched.
+        behaviour, so version-less seller writes are untouched.
         """
         # B4 (TOCTOU) — implementation note, deliberately OUT of the docstring so it stays out of
         # the public OpenAPI description: the check and the increment run inside ONE transaction
@@ -149,8 +140,6 @@ class QuoteItemViewSet(RoleGatedViewMixin, viewsets.ModelViewSet):
         # so two concurrent PATCHes both saw version N, both passed the check, and the later write
         # silently clobbered the earlier one. The lock serialises them: the loser re-reads the
         # bumped version and is rejected with the same 409 as before.
-        if not self._is_seller_write():
-            return super().update(request, *args, **kwargs)
         with transaction.atomic():
             # Lock FIRST, via a plain pk query: get_queryset() carries select_related joins that
             # Postgres refuses to lock without `of=`, and the lock must precede the version read.
@@ -169,35 +158,16 @@ class QuoteItemViewSet(RoleGatedViewMixin, viewsets.ModelViewSet):
             return super().update(request, *args, **kwargs)
 
     def perform_update(self, serializer):
-        if self._is_seller_write():
-            self._assert_seller()
-            # Bump the optimistic-concurrency counter on a successful seller save (волна 3), so the
-            # next stale-version save from a colleague is rejected. `version` is read-only on the
-            # serializer, so set it on the instance before save; the full model save persists it.
-            serializer.instance.version = (serializer.instance.version or 0) + 1
-            serializer.save()
-            return
-        # Buyer editing their own still-open request — name + quantity only,
-        # never pricing. The service re-checks can_buy + the editable window.
-        crm_services.buyer_update_request_item(
-            self.request.user,
-            serializer.instance,
-            name=serializer.validated_data.get("imported_raw_name"),
-            quantity=serializer.validated_data.get("quantity"),
-            unit=serializer.validated_data.get("unit"),
-            unit_code=serializer.validated_data.get("unit_code"),
-            note=serializer.validated_data.get("note"),
-            mpn=serializer.validated_data.get("mpn"),
-            name_canonical=serializer.validated_data.get("name_canonical"),
-        )
-        serializer.instance.refresh_from_db()
+        self._assert_seller()
+        # Bump the optimistic-concurrency counter on a successful seller save (волна 3), so the
+        # next stale-version save from a colleague is rejected. `version` is read-only on the
+        # serializer, so set it on the instance before save; the full model save persists it.
+        serializer.instance.version = (serializer.instance.version or 0) + 1
+        serializer.save()
 
     def perform_destroy(self, instance):
-        if self._is_seller_write():
-            self._assert_seller()
-            instance.delete()
-            return
-        crm_services.buyer_remove_request_item(self.request.user, instance)
+        self._assert_seller()
+        instance.delete()
 
     @extend_schema(
         summary="Manually reassign product for a quote item",

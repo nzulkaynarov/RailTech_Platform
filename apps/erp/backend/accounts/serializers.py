@@ -190,7 +190,6 @@ class CompanyMemberSerializer(serializers.ModelSerializer):
             "is_primary",
             "is_active",
             "can_sell",
-            "can_buy",
             "joined_at",
         ]
         read_only_fields = ["company_roles"]
@@ -443,7 +442,7 @@ class MeSerializer(serializers.ModelSerializer):
     is_superuser = serializers.BooleanField(read_only=True)
     # ADR-0005 (unified nav, Phase B): ONE explicit capability object the frontend's
     # buildNavigation() reads to render/gate the single nav from — instead of re-deriving it
-    # from scattered company_types/can_sell/can_buy fields. UI gating
+    # from scattered company_types/can_sell fields. UI gating
     # only; backend enforcement stays independent (member_has_permission).
     capabilities = serializers.SerializerMethodField()
 

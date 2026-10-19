@@ -178,7 +178,7 @@ def validate_draft_quote_gates(deal_id: int, actor: CustomUser) -> Optional[str]
 
 
 def generate_draft_quote(deal_id: int, actor: CustomUser) -> Tuple[Optional[Quote], Optional[str], int]:
-    """Build a pre-filled draft КП for `actor`'s seller company from the deal's buyer request.
+    """Build a pre-filled draft КП for `actor`'s seller company from the deal's client request.
     Returns (quote, error_code, prefilled_count). The quote is a fresh DRAFT owned by the actor's
     seller company — never touches the buyer request."""
     deal, request_items, seller_company_id, err = _run_draft_quote_gates(deal_id, actor)
