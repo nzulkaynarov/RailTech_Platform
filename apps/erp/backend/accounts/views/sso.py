@@ -13,7 +13,6 @@ from typing import Any
 from django.conf import settings
 from rest_framework import permissions, status, views
 from rest_framework.response import Response
-from rest_framework_simplejwt.tokens import RefreshToken
 
 from accounts.services.sso import (
     SsoForbiddenError,
@@ -22,6 +21,7 @@ from accounts.services.sso import (
     issue_sso_token,
     verify_and_exchange_sso_token,
 )
+from accounts.services.tokens import refresh_for
 from accounts.views.auth import _set_refresh_cookie
 
 logger = logging.getLogger(__name__)
@@ -81,7 +81,7 @@ class SsoExchangeView(views.APIView):
             logger.exception("Unexpected error during SSO exchange: %s", exc)
             return Response({"detail": "SSO_EXCHANGE_FAILED"}, status=status.HTTP_401_UNAUTHORIZED)
 
-        refresh = RefreshToken.for_user(user)
+        refresh = refresh_for(user)
         access_ttl = getattr(settings, "SIMPLE_JWT", {}).get("ACCESS_TOKEN_LIFETIME")
         expires_in = int(access_ttl.total_seconds()) if access_ttl else 3600
 

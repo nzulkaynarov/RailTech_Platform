@@ -11,6 +11,7 @@ from typing import Tuple
 from django.conf import settings
 from parties.models import Contact
 from portal.models import PortalSession
+from portal.services.access import company_in_circulation
 from portal.services.tokens import issue_portal_session
 from rest_framework.exceptions import AuthenticationFailed, PermissionDenied
 
@@ -97,7 +98,7 @@ def authenticate_telegram_user(
         logger.info("No contact found for telegram_user_id=%s", telegram_user_id)
         raise AuthenticationFailed("UNAUTHORIZED")
 
-    if not contact.company.is_active:
+    if not company_in_circulation(contact.company_id):
         logger.info("Telegram sign-in rejected: company of contact %s is archived", contact.pk)
         raise PermissionDenied("FORBIDDEN")
 

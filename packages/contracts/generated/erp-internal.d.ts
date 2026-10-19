@@ -15,8 +15,9 @@ export interface paths {
     put?: never;
     /**
      * Обмен SSO-токена CRM на сессию ERP
-     * @description Принимает одноразовый JWT (`iss=crm`, `aud=erp`, 60 с, `jti` хранится 10 мин), находит или обновляет
-     *     пользователя, выдаёт пару токенов сотрудника ERP и пишет аудит перехода.
+     * @description Принимает одноразовый JWT (`iss=crm`, `aud=erp`, 60 с, `jti` хранится 10 мин), находит пользователя
+     *     только по `sub` (сопоставление `CrmUserMapping`; не создаёт и не меняет права), выдаёт пару токенов
+     *     сотрудника ERP и пишет аудит перехода.
      */
     post: operations["exchangeSsoToken"];
     delete?: never;
@@ -36,7 +37,7 @@ export interface paths {
     put?: never;
     /**
      * Выдать SSO-токен для перехода в CRM
-     * @description Доступно только пользователям, у которых `platform_access` (из провижининга) содержит обе системы.
+     * @description Доступно только пользователю с сопоставлением `CrmUserMapping` (провижининг из CRM); иначе 403 `USER_NOT_PROVISIONED`.
      */
     post: operations["issueSsoToken"];
     delete?: never;
@@ -884,7 +885,7 @@ export interface operations {
         };
       };
       401: components["responses"]["Unauthorized"];
-      /** @description У пользователя нет доступа к CRM */
+      /** @description Нет сопоставления с CRM (`USER_NOT_PROVISIONED`) или пользователь неактивен (`USER_INACTIVE`) */
       403: {
         headers: {
           [name: string]: unknown;

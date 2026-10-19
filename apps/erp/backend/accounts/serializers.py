@@ -491,6 +491,12 @@ class MeSerializer(serializers.ModelSerializer):
         membership = self._primary_membership(obj)
         return membership.role.code if (membership and membership.role) else None
 
+    @staticmethod
+    def _has_crm_mapping(obj) -> bool:
+        from integration.models import CrmUserMapping
+
+        return CrmUserMapping.objects.filter(user_id=obj.pk).exists()
+
     def get_capabilities(self, obj) -> dict:
         """Что пользователю можно в бэк-офисе — для скрытия и блокировки UI (M1-ERP-05).
 
@@ -511,6 +517,9 @@ class MeSerializer(serializers.ModelSerializer):
             "is_solo_team": self._is_solo_team(own_company_id),
             # Переход в CRM по SSO включён (PLATFORM_SSO_ENABLED, FIX-03) — иначе кнопки «В CRM» нет.
             "sso_enabled": settings.PLATFORM_SSO_ENABLED,
+            # Кнопка «В CRM» — только у сотрудника, провиженного из CRM (есть CrmUserMapping, FIX-11):
+            # без сопоставления выдача токена ответила бы 403 USER_NOT_PROVISIONED.
+            "crm_access": self._has_crm_mapping(obj),
             # R4 §7.4: остаток дневного лимита ИИ — информация, а не гейт; cap/remaining = null —
             # безлимит (потолок выключен, администратор).
             "ai_daily_used": ai_usage["used"],

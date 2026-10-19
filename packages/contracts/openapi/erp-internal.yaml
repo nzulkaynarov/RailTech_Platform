@@ -32,8 +32,9 @@ paths:
       operationId: exchangeSsoToken
       summary: Обмен SSO-токена CRM на сессию ERP
       description: |
-        Принимает одноразовый JWT (`iss=crm`, `aud=erp`, 60 с, `jti` хранится 10 мин), находит или обновляет
-        пользователя, выдаёт пару токенов сотрудника ERP и пишет аудит перехода.
+        Принимает одноразовый JWT (`iss=crm`, `aud=erp`, 60 с, `jti` хранится 10 мин), находит пользователя
+        только по `sub` (сопоставление `CrmUserMapping`; не создаёт и не меняет права), выдаёт пару токенов
+        сотрудника ERP и пишет аудит перехода.
       security: []
       requestBody:
         required: true
@@ -72,7 +73,7 @@ paths:
       tags: [auth]
       operationId: issueSsoToken
       summary: Выдать SSO-токен для перехода в CRM
-      description: Доступно только пользователям, у которых `platform_access` (из провижининга) содержит обе системы.
+      description: Доступно только пользователю с сопоставлением `CrmUserMapping` (провижининг из CRM); иначе 403 `USER_NOT_PROVISIONED`.
       responses:
         '200':
           description: Токен на 60 с
@@ -92,7 +93,7 @@ paths:
         '401':
           $ref: '#/components/responses/Unauthorized'
         '403':
-          description: У пользователя нет доступа к CRM
+          description: Нет сопоставления с CRM (`USER_NOT_PROVISIONED`) или пользователь неактивен (`USER_INACTIVE`)
           content:
             application/json:
               schema:

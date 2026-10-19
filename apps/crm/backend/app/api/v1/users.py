@@ -30,6 +30,7 @@ def to_out(view: UserView) -> UserOut:
         notify_system=view.notify_system,
         notify_leads=view.notify_leads,
         tg_dm_failed_at=view.tg_dm_failed_at,
+        platform_access=view.platform_access,
     )
 
 
@@ -62,6 +63,7 @@ async def update_user(
         tg_user_id=body.tg_user_id,
         clear_tg_user_id=body.clear_tg_user_id,
         transfer_to_user_id=body.transfer_to_user_id,
+        platform_access=body.platform_access,
     )
     return to_out(await container.user_service.update(who.actor, user_id, patch))
 

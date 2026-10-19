@@ -35,6 +35,7 @@ if TYPE_CHECKING:
     from app.services.client_contacts import ClientContactService
     from app.services.clients import ClientService
     from app.services.documents import DocumentService
+    from app.services.erp_access import ErpAccessService
     from app.services.erp_connector import ErpConnectorService
     from app.services.erp_events import ErpEventsService
     from app.services.external_services.checks import ExternalChecks
@@ -185,7 +186,17 @@ class Container:
         return UserService(
             self.session_factory,
             LockoutPolicy(self.settings.login_max_failures, self.settings.login_lockout_minutes),
+            erp_sync=_enqueue_erp_sync,
         )
+
+    @cached_property
+    def erp_access_service(self) -> "ErpAccessService":
+        """Доступ сотрудников к ERP (FIX-11): провижининг и отзыв сессий в задачах очереди."""
+        from app.integrations.erp_users import HttpxErpUsersClient
+        from app.services.erp_access import ErpAccessService
+
+        client = HttpxErpUsersClient(self.secrets_store, self.settings, self.settings_service)
+        return ErpAccessService(self.session_factory, client)
 
     @cached_property
     def setup_service(self) -> "SetupService":
@@ -477,6 +488,12 @@ async def _enqueue_extraction(document_id: int) -> object:
     from app.tasks.documents import extract_document_text
 
     return await extract_document_text.defer_async(document_id=document_id)
+
+
+async def _enqueue_erp_sync(action: str, user_id: int) -> int:
+    from app.tasks.erp_users import enqueue_erp_sync
+
+    return await enqueue_erp_sync(action, user_id)
 
 
 async def _enqueue_erp_event(event_id: str) -> int:

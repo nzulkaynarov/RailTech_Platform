@@ -45,6 +45,7 @@ from portal.serializers import (
 from portal.services.invitation import invite_contact_to_portal
 from portal.services.magic_link import exchange_magic_link, request_magic_link
 from portal.services.telegram_auth import authenticate_telegram_user
+from portal.throttles import PortalAcceptRateThrottle, PortalLoginRateThrottle, PortalSessionRateThrottle
 from rest_framework import status
 from rest_framework.parsers import FormParser, MultiPartParser
 from rest_framework.response import Response
@@ -60,6 +61,12 @@ from sourcing.models import Attachment
 logger = logging.getLogger(__name__)
 
 
+def _portal_cookie_attrs() -> dict:
+    """Атрибуты cookie сессии: `PORTAL_COOKIE_SAMESITE=None` (Telegram Mini App) требует `Secure` и в DEBUG."""
+    samesite = getattr(settings, "PORTAL_COOKIE_SAMESITE", "Lax")
+    return {"samesite": samesite, "secure": samesite == "None" or not settings.DEBUG}
+
+
 def _set_portal_cookie(response: Response, token: str) -> Response:
     cookie_name = getattr(settings, "PORTAL_SESSION_COOKIE_NAME", "portal_session")
     max_age = getattr(settings, "PORTAL_SESSION_MAX_AGE_DAYS", 14) * 86400
@@ -68,16 +75,25 @@ def _set_portal_cookie(response: Response, token: str) -> Response:
         value=token,
         max_age=max_age,
         httponly=True,
-        samesite="Lax",
-        secure=not settings.DEBUG,
         path="/api/portal",
+        **_portal_cookie_attrs(),
     )
     return response
 
 
 def _delete_portal_cookie(response: Response) -> Response:
+    # Cookie с SameSite=None браузер принимает к удалению только с теми же `SameSite=None; Secure`.
     cookie_name = getattr(settings, "PORTAL_SESSION_COOKIE_NAME", "portal_session")
-    response.delete_cookie(key=cookie_name, path="/api/portal")
+    # `delete_cookie` не принимает `secure`, поэтому — тот же set_cookie с нулевым сроком.
+    response.set_cookie(
+        key=cookie_name,
+        value="",
+        max_age=0,
+        expires="Thu, 01 Jan 1970 00:00:00 GMT",
+        httponly=True,
+        path="/api/portal",
+        **_portal_cookie_attrs(),
+    )
     return response
 
 
@@ -86,6 +102,8 @@ class BasePortalView(APIView):
 
     authentication_classes = [PortalAuthentication]
     permission_classes = [IsPortalAuthenticated, CanAct]
+    # Лимит по сессии вместо общего анонимного 20/мин по IP (FIX-15, P-14).
+    throttle_classes = [PortalSessionRateThrottle]
 
     def get_exception_handler(self):
         return portal_exception_handler
@@ -106,6 +124,7 @@ class TelegramAuthView(APIView):
 
     authentication_classes = []
     permission_classes = []
+    throttle_classes = [PortalLoginRateThrottle]
 
     def get_exception_handler(self):
         return portal_exception_handler
@@ -140,6 +159,7 @@ class MagicLinkRequestView(APIView):
 
     authentication_classes = []
     permission_classes = []
+    throttle_classes = [PortalLoginRateThrottle]
 
     def get_exception_handler(self):
         return portal_exception_handler
@@ -159,6 +179,7 @@ class MagicLinkExchangeView(APIView):
 
     authentication_classes = []
     permission_classes = []
+    throttle_classes = [PortalLoginRateThrottle]
 
     def get_exception_handler(self):
         return portal_exception_handler
@@ -191,6 +212,7 @@ class LogoutView(APIView):
 
     authentication_classes = [PortalAuthentication]
     permission_classes = []
+    throttle_classes = [PortalSessionRateThrottle]
 
     def get_exception_handler(self):
         return portal_exception_handler
@@ -517,6 +539,8 @@ class QuoteAcceptView(BasePortalView):
     """POST /quotes/{id}/accept — Акцепт КП по коду."""
 
     permission_classes = [IsPortalAuthenticated, CanAct]
+    # Жёсткий потолок попыток кода поверх общего лимита сессии (FIX-15).
+    throttle_classes = [PortalSessionRateThrottle, PortalAcceptRateThrottle]
 
     def post(self, request, pk):
         serializer = QuoteAcceptSerializer(data=request.data)

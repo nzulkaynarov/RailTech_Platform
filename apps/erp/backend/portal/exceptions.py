@@ -51,6 +51,11 @@ def portal_exception_handler(exc, context):
     if response is None:
         return None
 
+    if isinstance(exc, exceptions.Throttled):
+        # Лимит частоты (portal/throttles.py): код вместо английской фразы DRF; Retry-After уже выставил DRF.
+        response.data = {"detail": "TOO_MANY_REQUESTS"}
+        return response
+
     if isinstance(exc, (exceptions.AuthenticationFailed, exceptions.NotAuthenticated)):
         response.status_code = status.HTTP_401_UNAUTHORIZED
 

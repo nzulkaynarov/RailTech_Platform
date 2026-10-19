@@ -779,9 +779,44 @@ export interface components {
         "application/json": components["schemas"]["Error"];
       };
     };
+    /** @description Нет заголовка `Idempotency-Key` (`{"detail": "IDEMPOTENCY_KEY_REQUIRED"}`); запрос не выполнялся */
+    IdempotencyKeyRequired: {
+      headers: {
+        [name: string]: unknown;
+      };
+      content: {
+        "application/json": components["schemas"]["Error"];
+      };
+    };
+    /** @description Тело не `application/json` (`{"detail": "UNSUPPORTED_MEDIA_TYPE"}`); запрос не выполнялся */
+    UnsupportedMediaType: {
+      headers: {
+        [name: string]: unknown;
+      };
+      content: {
+        "application/json": components["schemas"]["Error"];
+      };
+    };
+    /** @description Лимит частоты исчерпан (`{"detail": "TOO_MANY_REQUESTS"}`); повторить через `Retry-After` секунд */
+    TooManyRequests: {
+      headers: {
+        /** @description Через сколько секунд можно повторить */
+        "Retry-After"?: number;
+        [name: string]: unknown;
+      };
+      content: {
+        "application/json": components["schemas"]["Error"];
+      };
+    };
   };
   parameters: {
     Id: number;
+    /**
+     * @description Произвольный уникальный ключ попытки (CONTRACTS §0; Cabinet шлёт UUID). Обязателен на `POST` и `PATCH` —
+     *     заодно это защита от CSRF: заголовок делает запрос «непростым», и междоменный запрос идёт только через
+     *     CORS-preflight (разрешён лишь origin Cabinet). Повтор с тем же ключом возвращает прежний ответ.
+     */
+    IdempotencyKey: string;
   };
   requestBodies: never;
   headers: never;
@@ -792,7 +827,14 @@ export interface operations {
   authTelegram: {
     parameters: {
       query?: never;
-      header?: never;
+      header: {
+        /**
+         * @description Произвольный уникальный ключ попытки (CONTRACTS §0; Cabinet шлёт UUID). Обязателен на `POST` и `PATCH` —
+         *     заодно это защита от CSRF: заголовок делает запрос «непростым», и междоменный запрос идёт только через
+         *     CORS-preflight (разрешён лишь origin Cabinet). Повтор с тем же ключом возвращает прежний ответ.
+         */
+        "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+      };
       path?: never;
       cookie?: never;
     };
@@ -815,6 +857,7 @@ export interface operations {
           "application/json": components["schemas"]["Me"];
         };
       };
+      400: components["responses"]["IdempotencyKeyRequired"];
       /** @description Подпись неверна, срок истёк или контакт не найден */
       401: {
         headers: {
@@ -824,12 +867,21 @@ export interface operations {
           "application/json": components["schemas"]["Error"];
         };
       };
+      415: components["responses"]["UnsupportedMediaType"];
+      429: components["responses"]["TooManyRequests"];
     };
   };
   requestMagicLink: {
     parameters: {
       query?: never;
-      header?: never;
+      header: {
+        /**
+         * @description Произвольный уникальный ключ попытки (CONTRACTS §0; Cabinet шлёт UUID). Обязателен на `POST` и `PATCH` —
+         *     заодно это защита от CSRF: заголовок делает запрос «непростым», и междоменный запрос идёт только через
+         *     CORS-preflight (разрешён лишь origin Cabinet). Повтор с тем же ключом возвращает прежний ответ.
+         */
+        "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+      };
       path?: never;
       cookie?: never;
     };
@@ -849,7 +901,10 @@ export interface operations {
         };
         content?: never;
       };
+      400: components["responses"]["IdempotencyKeyRequired"];
+      415: components["responses"]["UnsupportedMediaType"];
       422: components["responses"]["ValidationError"];
+      429: components["responses"]["TooManyRequests"];
     };
   };
   exchangeMagicLink: {
@@ -881,12 +936,20 @@ export interface operations {
           "application/json": components["schemas"]["Error"];
         };
       };
+      429: components["responses"]["TooManyRequests"];
     };
   };
   logout: {
     parameters: {
       query?: never;
-      header?: never;
+      header: {
+        /**
+         * @description Произвольный уникальный ключ попытки (CONTRACTS §0; Cabinet шлёт UUID). Обязателен на `POST` и `PATCH` —
+         *     заодно это защита от CSRF: заголовок делает запрос «непростым», и междоменный запрос идёт только через
+         *     CORS-preflight (разрешён лишь origin Cabinet). Повтор с тем же ключом возвращает прежний ответ.
+         */
+        "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+      };
       path?: never;
       cookie?: never;
     };
@@ -899,7 +962,9 @@ export interface operations {
         };
         content?: never;
       };
+      400: components["responses"]["IdempotencyKeyRequired"];
       401: components["responses"]["Unauthorized"];
+      429: components["responses"]["TooManyRequests"];
     };
   };
   getMe: {
@@ -921,6 +986,7 @@ export interface operations {
         };
       };
       401: components["responses"]["Unauthorized"];
+      429: components["responses"]["TooManyRequests"];
     };
   };
   listRequests: {
@@ -942,12 +1008,20 @@ export interface operations {
         };
       };
       401: components["responses"]["Unauthorized"];
+      429: components["responses"]["TooManyRequests"];
     };
   };
   createRequest: {
     parameters: {
       query?: never;
-      header?: never;
+      header: {
+        /**
+         * @description Произвольный уникальный ключ попытки (CONTRACTS §0; Cabinet шлёт UUID). Обязателен на `POST` и `PATCH` —
+         *     заодно это защита от CSRF: заголовок делает запрос «непростым», и междоменный запрос идёт только через
+         *     CORS-preflight (разрешён лишь origin Cabinet). Повтор с тем же ключом возвращает прежний ответ.
+         */
+        "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+      };
       path?: never;
       cookie?: never;
     };
@@ -966,9 +1040,12 @@ export interface operations {
           "application/json": components["schemas"]["ClientRequest"];
         };
       };
+      400: components["responses"]["IdempotencyKeyRequired"];
       401: components["responses"]["Unauthorized"];
       403: components["responses"]["Forbidden"];
+      415: components["responses"]["UnsupportedMediaType"];
       422: components["responses"]["ValidationError"];
+      429: components["responses"]["TooManyRequests"];
     };
   };
   getRequest: {
@@ -993,6 +1070,7 @@ export interface operations {
       };
       401: components["responses"]["Unauthorized"];
       404: components["responses"]["NotFound"];
+      429: components["responses"]["TooManyRequests"];
     };
   };
   listQuotes: {
@@ -1014,6 +1092,7 @@ export interface operations {
         };
       };
       401: components["responses"]["Unauthorized"];
+      429: components["responses"]["TooManyRequests"];
     };
   };
   getQuote: {
@@ -1038,12 +1117,20 @@ export interface operations {
       };
       401: components["responses"]["Unauthorized"];
       404: components["responses"]["NotFound"];
+      429: components["responses"]["TooManyRequests"];
     };
   };
   acceptQuote: {
     parameters: {
       query?: never;
-      header?: never;
+      header: {
+        /**
+         * @description Произвольный уникальный ключ попытки (CONTRACTS §0; Cabinet шлёт UUID). Обязателен на `POST` и `PATCH` —
+         *     заодно это защита от CSRF: заголовок делает запрос «непростым», и междоменный запрос идёт только через
+         *     CORS-preflight (разрешён лишь origin Cabinet). Повтор с тем же ключом возвращает прежний ответ.
+         */
+        "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+      };
       path: {
         id: components["parameters"]["Id"];
       };
@@ -1066,6 +1153,7 @@ export interface operations {
           "application/json": components["schemas"]["Quote"];
         };
       };
+      400: components["responses"]["IdempotencyKeyRequired"];
       401: components["responses"]["Unauthorized"];
       403: components["responses"]["Forbidden"];
       404: components["responses"]["NotFound"];
@@ -1078,12 +1166,21 @@ export interface operations {
           "application/json": components["schemas"]["Error"];
         };
       };
+      415: components["responses"]["UnsupportedMediaType"];
+      429: components["responses"]["TooManyRequests"];
     };
   };
   rejectQuote: {
     parameters: {
       query?: never;
-      header?: never;
+      header: {
+        /**
+         * @description Произвольный уникальный ключ попытки (CONTRACTS §0; Cabinet шлёт UUID). Обязателен на `POST` и `PATCH` —
+         *     заодно это защита от CSRF: заголовок делает запрос «непростым», и междоменный запрос идёт только через
+         *     CORS-preflight (разрешён лишь origin Cabinet). Повтор с тем же ключом возвращает прежний ответ.
+         */
+        "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+      };
       path: {
         id: components["parameters"]["Id"];
       };
@@ -1104,6 +1201,7 @@ export interface operations {
           "application/json": components["schemas"]["Quote"];
         };
       };
+      400: components["responses"]["IdempotencyKeyRequired"];
       401: components["responses"]["Unauthorized"];
       403: components["responses"]["Forbidden"];
       404: components["responses"]["NotFound"];
@@ -1116,6 +1214,8 @@ export interface operations {
           "application/json": components["schemas"]["Error"];
         };
       };
+      415: components["responses"]["UnsupportedMediaType"];
+      429: components["responses"]["TooManyRequests"];
     };
   };
   listContracts: {
@@ -1137,12 +1237,20 @@ export interface operations {
         };
       };
       401: components["responses"]["Unauthorized"];
+      429: components["responses"]["TooManyRequests"];
     };
   };
   signContract: {
     parameters: {
       query?: never;
-      header?: never;
+      header: {
+        /**
+         * @description Произвольный уникальный ключ попытки (CONTRACTS §0; Cabinet шлёт UUID). Обязателен на `POST` и `PATCH` —
+         *     заодно это защита от CSRF: заголовок делает запрос «непростым», и междоменный запрос идёт только через
+         *     CORS-preflight (разрешён лишь origin Cabinet). Повтор с тем же ключом возвращает прежний ответ.
+         */
+        "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+      };
       path: {
         id: components["parameters"]["Id"];
       };
@@ -1159,6 +1267,7 @@ export interface operations {
           "application/json": components["schemas"]["Contract"];
         };
       };
+      400: components["responses"]["IdempotencyKeyRequired"];
       401: components["responses"]["Unauthorized"];
       403: components["responses"]["Forbidden"];
       404: components["responses"]["NotFound"];
@@ -1171,6 +1280,7 @@ export interface operations {
           "application/json": components["schemas"]["Error"];
         };
       };
+      429: components["responses"]["TooManyRequests"];
     };
   };
   listInvoices: {
@@ -1192,6 +1302,7 @@ export interface operations {
         };
       };
       401: components["responses"]["Unauthorized"];
+      429: components["responses"]["TooManyRequests"];
     };
   };
   listActs: {
@@ -1213,12 +1324,20 @@ export interface operations {
         };
       };
       401: components["responses"]["Unauthorized"];
+      429: components["responses"]["TooManyRequests"];
     };
   };
   acceptAct: {
     parameters: {
       query?: never;
-      header?: never;
+      header: {
+        /**
+         * @description Произвольный уникальный ключ попытки (CONTRACTS §0; Cabinet шлёт UUID). Обязателен на `POST` и `PATCH` —
+         *     заодно это защита от CSRF: заголовок делает запрос «непростым», и междоменный запрос идёт только через
+         *     CORS-preflight (разрешён лишь origin Cabinet). Повтор с тем же ключом возвращает прежний ответ.
+         */
+        "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+      };
       path: {
         id: components["parameters"]["Id"];
       };
@@ -1235,6 +1354,7 @@ export interface operations {
           "application/json": components["schemas"]["Act"];
         };
       };
+      400: components["responses"]["IdempotencyKeyRequired"];
       401: components["responses"]["Unauthorized"];
       403: components["responses"]["Forbidden"];
       404: components["responses"]["NotFound"];
@@ -1247,12 +1367,20 @@ export interface operations {
           "application/json": components["schemas"]["Error"];
         };
       };
+      429: components["responses"]["TooManyRequests"];
     };
   };
   returnAct: {
     parameters: {
       query?: never;
-      header?: never;
+      header: {
+        /**
+         * @description Произвольный уникальный ключ попытки (CONTRACTS §0; Cabinet шлёт UUID). Обязателен на `POST` и `PATCH` —
+         *     заодно это защита от CSRF: заголовок делает запрос «непростым», и междоменный запрос идёт только через
+         *     CORS-preflight (разрешён лишь origin Cabinet). Повтор с тем же ключом возвращает прежний ответ.
+         */
+        "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+      };
       path: {
         id: components["parameters"]["Id"];
       };
@@ -1273,6 +1401,7 @@ export interface operations {
           "application/json": components["schemas"]["Act"];
         };
       };
+      400: components["responses"]["IdempotencyKeyRequired"];
       401: components["responses"]["Unauthorized"];
       403: components["responses"]["Forbidden"];
       404: components["responses"]["NotFound"];
@@ -1285,6 +1414,8 @@ export interface operations {
           "application/json": components["schemas"]["Error"];
         };
       };
+      415: components["responses"]["UnsupportedMediaType"];
+      429: components["responses"]["TooManyRequests"];
     };
   };
   listDeliveries: {
@@ -1306,6 +1437,7 @@ export interface operations {
         };
       };
       401: components["responses"]["Unauthorized"];
+      429: components["responses"]["TooManyRequests"];
     };
   };
   listDocuments: {
@@ -1330,6 +1462,7 @@ export interface operations {
         };
       };
       401: components["responses"]["Unauthorized"];
+      429: components["responses"]["TooManyRequests"];
     };
   };
   getDocumentFile: {
@@ -1363,12 +1496,20 @@ export interface operations {
       };
       401: components["responses"]["Unauthorized"];
       404: components["responses"]["NotFound"];
+      429: components["responses"]["TooManyRequests"];
     };
   };
   uploadFile: {
     parameters: {
       query?: never;
-      header?: never;
+      header: {
+        /**
+         * @description Произвольный уникальный ключ попытки (CONTRACTS §0; Cabinet шлёт UUID). Обязателен на `POST` и `PATCH` —
+         *     заодно это защита от CSRF: заголовок делает запрос «непростым», и междоменный запрос идёт только через
+         *     CORS-preflight (разрешён лишь origin Cabinet). Повтор с тем же ключом возвращает прежний ответ.
+         */
+        "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+      };
       path?: never;
       cookie?: never;
     };
@@ -1393,9 +1534,19 @@ export interface operations {
           "application/json": components["schemas"]["PortalUploadResponse"];
         };
       };
-      400: components["responses"]["ValidationError"];
+      /** @description Нет заголовка `Idempotency-Key` (`IDEMPOTENCY_KEY_REQUIRED`) или файл не передан */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Error"];
+        };
+      };
       401: components["responses"]["Unauthorized"];
       403: components["responses"]["Forbidden"];
+      415: components["responses"]["UnsupportedMediaType"];
+      429: components["responses"]["TooManyRequests"];
     };
   };
   listCatalogCategories: {
@@ -1417,6 +1568,7 @@ export interface operations {
         };
       };
       401: components["responses"]["Unauthorized"];
+      429: components["responses"]["TooManyRequests"];
     };
   };
   listCatalog: {
@@ -1443,6 +1595,7 @@ export interface operations {
         };
       };
       401: components["responses"]["Unauthorized"];
+      429: components["responses"]["TooManyRequests"];
     };
   };
   getCatalogItem: {
@@ -1467,6 +1620,7 @@ export interface operations {
       };
       401: components["responses"]["Unauthorized"];
       404: components["responses"]["NotFound"];
+      429: components["responses"]["TooManyRequests"];
     };
   };
   getCompany: {
@@ -1488,6 +1642,7 @@ export interface operations {
         };
       };
       401: components["responses"]["Unauthorized"];
+      429: components["responses"]["TooManyRequests"];
     };
   };
   updateCompany: {
@@ -1515,6 +1670,7 @@ export interface operations {
       401: components["responses"]["Unauthorized"];
       403: components["responses"]["Forbidden"];
       422: components["responses"]["ValidationError"];
+      429: components["responses"]["TooManyRequests"];
     };
   };
   listTeam: {
@@ -1536,12 +1692,20 @@ export interface operations {
         };
       };
       401: components["responses"]["Unauthorized"];
+      429: components["responses"]["TooManyRequests"];
     };
   };
   inviteTeamMember: {
     parameters: {
       query?: never;
-      header?: never;
+      header: {
+        /**
+         * @description Произвольный уникальный ключ попытки (CONTRACTS §0; Cabinet шлёт UUID). Обязателен на `POST` и `PATCH` —
+         *     заодно это защита от CSRF: заголовок делает запрос «непростым», и междоменный запрос идёт только через
+         *     CORS-preflight (разрешён лишь origin Cabinet). Повтор с тем же ключом возвращает прежний ответ.
+         */
+        "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+      };
       path?: never;
       cookie?: never;
     };
@@ -1560,9 +1724,12 @@ export interface operations {
           "application/json": components["schemas"]["TeamMember"];
         };
       };
+      400: components["responses"]["IdempotencyKeyRequired"];
       401: components["responses"]["Unauthorized"];
       403: components["responses"]["Forbidden"];
+      415: components["responses"]["UnsupportedMediaType"];
       422: components["responses"]["ValidationError"];
+      429: components["responses"]["TooManyRequests"];
     };
   };
 }

@@ -10,11 +10,12 @@ from __future__ import annotations
 import logging
 from typing import Any, Dict, Tuple
 
-from django.contrib.sessions.models import Session
 from django.db import transaction
-from django.utils import timezone
+from django.db.models import F
+from sales.models import ActivityLog
 
-from accounts.models import CompanyMember, CompanyRole, CustomUser
+from accounts.models import CompanyMember, CompanyRole, CustomUser, WorkspaceRole
+from accounts.services.auth import revoke_user_refresh_tokens
 from core.tenant import own_company
 
 from ..exceptions import IntegrationConflict
@@ -73,7 +74,8 @@ def provision_crm_user(data: Dict[str, Any]) -> Tuple[Dict[str, Any], bool]:
         user.is_superuser = False
         user.is_staff = False
 
-    user.save()
+    # update_fields: полная запись затёрла бы `token_version`, выросший при параллельном отзыве доступа.
+    user.save(update_fields=["email", "first_name", "is_active", "is_superuser", "is_staff"])
 
     # Привязка к компании бэк-офиса (own_company)
     company = own_company()
@@ -81,7 +83,12 @@ def provision_crm_user(data: Dict[str, Any]) -> Tuple[Dict[str, Any], bool]:
         member, _ = CompanyMember.objects.get_or_create(
             user=user,
             company=company,
-            defaults={"is_primary": True, "is_active": is_active},
+            # `role` (должность) обязательна; доступ определяют роли бэк-офиса ниже, не должность.
+            defaults={
+                "is_primary": True,
+                "is_active": is_active,
+                "role": WorkspaceRole.objects.get(code="MEMBER"),
+            },
         )
         if member.is_active != is_active:
             member.is_active = is_active
@@ -107,35 +114,31 @@ def provision_crm_user(data: Dict[str, Any]) -> Tuple[Dict[str, Any], bool]:
     }, created
 
 
+@transaction.atomic
 def revoke_crm_user_sessions(crm_user_id: int) -> bool:
-    """Отзыв всех активных сессий сотрудника в ERP.
+    """Снятие доступа к ERP по запросу CRM (`DELETE /users/{crm_user_id}/sessions`, sso-token.md «Отзыв»).
 
-    Возвращает True если сотрудник найден и сессии отозваны, False если не найден.
+    Гасит всё, чем сотрудник входит: refresh-токены (чёрный список), уже выданные access-токены (версия
+    токенов растёт — `accounts.authentication` отвечает 401) и сам вход (`is_active=False`: локальный пароль и
+    его сброс доступа не возвращают). Повторный провижининг включает пользователя. Всё — запросами по
+    одному пользователю: перебора чужих сессий нет (S-6). Идемпотентно; пишет `sso.revoke` в аудит.
+
+    Возвращает True, если сотрудник найден; False — нет сопоставления с `crm_user_id`.
     """
     mapping = CrmUserMapping.objects.filter(crm_user_id=crm_user_id).select_related("user").first()
     if not mapping:
         return False
 
     user_id = mapping.user_id
+    CustomUser.objects.filter(pk=user_id).update(token_version=F("token_version") + 1, is_active=False)
+    blacklisted = revoke_user_refresh_tokens(mapping.user)
 
-    # 1. Завершение Django-сессий (Cookie)
-    try:
-        now = timezone.now()
-        for s in Session.objects.filter(expire_date__gte=now):
-            data = s.get_decoded()
-            if str(data.get("_auth_user_id")) == str(user_id):
-                s.delete()
-    except Exception as exc:
-        logger.warning("Error revoking django sessions for user %s: %s", user_id, exc)
-
-    # 2. Блэклистинг токенов SimpleJWT (Bearer)
-    try:
-        from rest_framework_simplejwt.token_blacklist.models import BlacklistedToken, OutstandingToken
-
-        for token in OutstandingToken.objects.filter(user_id=user_id):
-            BlacklistedToken.objects.get_or_create(token=token)
-    except Exception as exc:
-        logger.warning("Error blacklisting jwt tokens for user %s: %s", user_id, exc)
-
-    logger.info("Successfully revoked all sessions for CRM user %s (ERP user %s)", crm_user_id, user_id)
+    ActivityLog.objects.create(
+        user=mapping.user,
+        action="sso.revoke",
+        event_code="sso.revoke",
+        event_params={"crm_user_id": crm_user_id, "erp_user_id": user_id, "refresh_tokens": blacklisted},
+        detail=f"Access revoked by CRM for crm_user #{crm_user_id} (ERP user #{user_id})",
+    )
+    logger.info("Revoked ERP access of CRM user %s (ERP user %s)", crm_user_id, user_id)
     return True

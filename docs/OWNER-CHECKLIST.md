@@ -15,7 +15,7 @@
 - [x] Ответить на Q-6…Q-9 (2026-10-13, по рекомендации).
 
 ## До M2
-- [ ] BotFather: у клиентского бота CRM — Mini App и кнопка меню на `cabinet.railtech.uz` (на dev — тестовый бот и `cabinet.localhost` через туннель, инструкция в runbook).
+- [ ] BotFather: у клиентского бота CRM — Mini App и кнопка меню на `cabinet.railtech.uz` (на dev — тестовый бот и `cabinet.localhost` через туннель: `docs/runbooks/stand.md`, раздел «Telegram Mini App на стенде»; на `http` Mini App не работает — cookie `SameSite=None` требует TLS).
 - [ ] Подтвердить тексты бота для КП / счёта / кабинета на трёх языках (или утвердить предложенные).
 
 ## До M3

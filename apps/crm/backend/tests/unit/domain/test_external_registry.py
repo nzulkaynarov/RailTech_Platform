@@ -33,6 +33,7 @@ def test_registry_lists_every_external_service_of_the_ensemble() -> None:
         "mail",
         "s3",
         "docling",
+        "erp_sync",
         "backup",
         "tls.crm",
         "tls.erp",

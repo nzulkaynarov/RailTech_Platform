@@ -10,14 +10,17 @@ Design notes:
 - **Opt-in per request.** No header → pass straight through, unchanged behaviour.
 - **Scoped to the caller.** The cache namespace includes a hash of the Authorization
   header (the JWT isn't resolved to request.user this early in the stack), so a key
-  is private to its bearer and can't collide or be replayed across accounts.
+  is private to its bearer and can't collide or be replayed across accounts. The client
+  portal has no Authorization header — its caller is the session cookie / X-Portal-Session
+  (FIX-15), otherwise every portal client would share the "anon" namespace.
 - **Bound to method+path.** Reusing one key on a different endpoint is a client bug,
   not a replay — those get separate namespaces.
 - **Concurrency-safe.** A second request with the same key while the first is still
   in flight gets 409 (in progress) rather than double-executing.
 - **Only final responses are cached** (status < 500, not the 409). 5xx stays
-  retryable. This layer complements — does not replace — the domain-level guards
-  (e.g. record_payment dedupes by bank reference).
+  retryable. A response that sets/deletes a cookie (portal sign-in/out) is never replayed:
+  the replay would carry the body without the cookie. This layer complements — does not
+  replace — the domain-level guards (e.g. record_payment dedupes by bank reference).
 """
 
 import hashlib
@@ -73,7 +76,7 @@ class IdempotencyMiddleware:
             cache.delete(lock_key)
             raise
 
-        if response.status_code < 500 and response.status_code != 409:
+        if response.status_code < 500 and response.status_code != 409 and not response.cookies:
             stored = self._serialize(response)
             if stored is not None:
                 cache.set(result_key, stored, timeout=self.ttl)
@@ -83,6 +86,9 @@ class IdempotencyMiddleware:
     @staticmethod
     def _namespace(request, key: str) -> str:
         auth = request.headers.get("Authorization", "")
+        if not auth and request.path.startswith("/api/portal/"):
+            cookie_name = getattr(settings, "PORTAL_SESSION_COOKIE_NAME", "portal_session")
+            auth = request.COOKIES.get(cookie_name) or request.headers.get("X-Portal-Session", "")
         caller = hashlib.sha256(auth.encode("utf-8")).hexdigest()[:16] if auth else "anon"
         return f"idem:{caller}:{request.method}:{request.path}:{key}"
 

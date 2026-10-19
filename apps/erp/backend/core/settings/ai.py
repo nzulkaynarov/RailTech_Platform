@@ -109,6 +109,10 @@ LOGGING = {
     "loggers": {
         "httpx": {"level": "WARNING"},
         "httpcore": {"level": "WARNING"},
+        # Логгер `django` из DEFAULT_LOGGING имеет СВОЙ обработчик `console` (при DEBUG=True): он печатает
+        # `Gone: /api/portal/v1/auth/magic/<токен>` в stderr мимо нашего фильтра токена (FIX-15). Переопределяем:
+        # всё идёт через наш `console` с RedactPortalTokenFilter (`mail_admins` не нужен: ADMINS не заданы).
+        "django": {"handlers": ["console"], "level": "INFO", "propagate": False},
     },
 }
 

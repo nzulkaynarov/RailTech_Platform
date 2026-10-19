@@ -300,7 +300,12 @@ class TestContactInvitation:
 
         # 1. Запрос magic-link на неизвестный email не создаёт контактов
         count_before = Contact.objects.count()
-        resp = client.post("/api/portal/v1/auth/magic-link", {"email": "stranger@unknown.com"}, format="json")
+        resp = client.post(
+            "/api/portal/v1/auth/magic-link",
+            {"email": "stranger@unknown.com"},
+            format="json",
+            HTTP_IDEMPOTENCY_KEY="invite-test-magic-link",
+        )
         assert resp.status_code == status.HTTP_200_OK
         assert Contact.objects.count() == count_before
         assert MagicLinkToken.objects.filter(contact__email="stranger@unknown.com").count() == 0
@@ -315,6 +320,7 @@ class TestContactInvitation:
                 "hash": "fake",
             },
             format="json",
+            HTTP_IDEMPOTENCY_KEY="invite-test-telegram",
         )
         assert resp_tg.status_code in (
             status.HTTP_401_UNAUTHORIZED,

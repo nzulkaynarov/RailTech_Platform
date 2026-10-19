@@ -15,30 +15,17 @@ from parties.models import Contact
 from portal.models import MagicLinkToken, PortalSession
 from portal.services.magic_link import exchange_magic_link
 from portal.services.tokens import hash_token
-from portal.tests.conftest import make_telegram_init_data
+from portal.tests.conftest import LOCMEM_CHANNELS, make_telegram_init_data
 from rest_framework import status
 
 from core.logging import RedactPortalTokenFilter
 from notifications.models import EmailLog
 
-LOCMEM_CHANNELS = {
-    channel: {
-        "backend": "django.core.mail.backends.locmem.EmailBackend",
-        "host": "",
-        "port": 25,
-        "username": "",
-        "password": "",
-        "use_tls": False,
-        "from_email": "test@example.com",
-    }
-    for channel in ("transactional", "marketing", "system")
-}
-
 MAGIC_LINK_URL = "/api/portal/v1/auth/magic-link"
 
 
 @pytest.fixture(autouse=True)
-def _locmem_mail(settings):
+def _locmem_mail(settings, inline_magic_link_task):
     settings.EMAIL_CHANNELS = LOCMEM_CHANNELS
     settings.CABINET_URL = "http://cabinet.localhost"
     mail.outbox.clear()
@@ -463,3 +450,54 @@ class TestLogoutAndMe:
         me_resp = portal_client.get("/api/portal/v1/me")
         assert me_resp.status_code == status.HTTP_401_UNAUTHORIZED
         assert me_resp.data["detail"] == "UNAUTHORIZED"
+
+
+@pytest.mark.django_db
+class TestAccessLog:
+    """FIX-15 (хвост ревью FIX-14): журнал запросов идёт через Django-логирование и фильтр токена; Daphne -v 0."""
+
+    @staticmethod
+    def _console_stream():
+        import io
+
+        from django.utils.module_loading import import_string
+
+        stream = io.StringIO()
+        handler = logging.StreamHandler(stream)
+        for name in settings.LOGGING["handlers"]["console"]["filters"]:
+            handler.addFilter(import_string(settings.LOGGING["filters"][name]["()"])())
+        return stream, handler
+
+    def test_request_line_is_written_without_the_token(self, anon_portal_client):
+        stream, handler = self._console_stream()
+        access = logging.getLogger("core.access")
+        access.addHandler(handler)
+        access.setLevel(logging.INFO)
+        try:
+            anon_portal_client.get("/api/portal/v1/auth/magic/sEcReT-tok_1?next=/x")
+            anon_portal_client.get("/api/portal/v1/me")
+        finally:
+            access.removeHandler(handler)
+
+        journal = stream.getvalue()
+        assert "GET /api/portal/v1/auth/magic/[REDACTED] 410" in journal
+        assert "GET /api/portal/v1/me 401" in journal
+        assert "sEcReT-tok_1" not in journal
+        assert "next=" not in journal  # строка запроса в журнал не пишется
+
+    def test_access_log_middleware_is_enabled(self):
+        assert "core.logging.AccessLogMiddleware" in settings.MIDDLEWARE
+
+    def test_every_handler_on_the_django_logger_redacts_the_token(self):
+        """`django.request` пишет `Gone: <путь с токеном>`; у логгера `django` из DEFAULT_LOGGING свой обработчик
+        без фильтра (виден при DEBUG=True, то есть на стенде) — он заменён на наш `console` с фильтром токена."""
+        logger = logging.getLogger("django.request")
+        handlers = []
+        while logger is not None:
+            handlers += logger.handlers
+            logger = logger.parent if logger.propagate else None
+        own = [h for h in handlers if not type(h).__module__.startswith("_pytest")]
+
+        assert own, "у django.request нет обработчиков журнала"
+        for handler in own:
+            assert any(isinstance(f, RedactPortalTokenFilter) for f in handler.filters), handler

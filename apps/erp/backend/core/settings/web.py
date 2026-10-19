@@ -21,6 +21,8 @@ CHANNEL_LAYERS = {
 
 MIDDLEWARE = [
     "core.logging.RequestIDMiddleware",
+    # Журнал запросов (Daphne запущен с -v 0: его access-лог пишет токен ссылки входа мимо фильтров, FIX-15).
+    "core.logging.AccessLogMiddleware",
     "django.middleware.security.SecurityMiddleware",
     # Stamps Content-Security-Policy on responses (protects Unfold /admin/ HTML;
     # no-op on JSON). Report-Only by default — see core/csp.py. The public SPA's
@@ -42,6 +44,8 @@ MIDDLEWARE = [
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
     # Adds RFC 8594 Deprecation/Sunset headers for deprecated API versions (F2.6).
     "core.versioning.SunsetHeaderMiddleware",
+    # Портал: изменяющие запросы только JSON + обязательный Idempotency-Key (FIX-15, C-12). До IdempotencyMiddleware.
+    "portal.middleware.PortalRequestGuardMiddleware",
     # Innermost — wraps the view so it captures/replays the rendered response (F2.4).
     "core.idempotency.IdempotencyMiddleware",
 ]
@@ -53,24 +57,17 @@ IDEMPOTENCY_LOCK_SECONDS = int(os.environ.get("IDEMPOTENCY_LOCK_SECONDS", "90"))
 _env_cors = [o.strip() for o in os.environ.get("CORS_ALLOWED_ORIGINS", "").split(",") if o.strip()]
 CORS_ALLOW_ALL_ORIGINS = DEBUG
 CORS_ALLOW_CREDENTIALS = True
-CORS_ALLOWED_ORIGINS = (
-    [
-        "http://localhost:5173",
-        "http://127.0.0.1:5173",
-        "http://cabinet.localhost",
-        "http://localhost:5175",
-        "http://127.0.0.1:5175",
-        *_env_cors,
-    ]
-    if not DEBUG
-    else [
-        "http://localhost:5173",
-        "http://127.0.0.1:5173",
-        "http://cabinet.localhost",
-        "http://localhost:5175",
-        "http://127.0.0.1:5175",
-    ]
-)
+# Dev-источники (Vite, `*.localhost`) — только при DEBUG=True. На DEBUG=False список строится из настроек:
+# origin'ы Cabinet (CABINET_ORIGIN) и CORS_ALLOWED_ORIGINS из окружения; `localhost` в проде не пускаем (FIX-15, P-18).
+_DEV_CORS_ORIGINS = [
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
+    "http://cabinet.localhost",
+    "http://localhost:5175",
+    "http://127.0.0.1:5175",
+]
+_cors_origins = [*(_DEV_CORS_ORIGINS if DEBUG else []), *CABINET_ORIGINS, *_env_cors]
+CORS_ALLOWED_ORIGINS = list(dict.fromkeys(_cors_origins))  # без дублей, порядок сохраняется
 
 # Allow our custom request headers through CORS preflight (cross-origin dev). Without
 # these a credentialed request carrying them is blocked: Idempotency-Key (F2.4), If-Match
