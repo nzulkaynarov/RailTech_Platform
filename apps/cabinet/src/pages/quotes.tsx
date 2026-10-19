@@ -359,7 +359,9 @@ function AcceptDialog({ quote, open, onOpenChange }: { quote: Quote; open: boole
   const requestCode = useRequestQuoteCode(quote.id);
   const [code, setCode] = useState('');
   const [tooShort, setTooShort] = useState(false);
-  const sent = requestCode.data ?? null;
+  // Последний полученный ответ хранится отдельно: повторный `mutate` обнуляет `requestCode.data`, а упавший повтор
+  // (429 из общего лимита) не должен отнимать у клиента поле для уже пришедшего кода.
+  const [sent, setSent] = useState<AcceptanceCodeSent | null>(null);
 
   const close = (next: boolean) => {
     if (!next) {
@@ -367,14 +369,19 @@ function AcceptDialog({ quote, open, onOpenChange }: { quote: Quote; open: boole
       setTooShort(false);
       accept.reset();
       requestCode.reset();
+      setSent(null);
     }
     onOpenChange(next);
   };
 
   const getCode = () => {
     accept.reset();
-    setCode('');
-    requestCode.mutate();
+    requestCode.mutate(undefined, {
+      onSuccess: (result) => {
+        setCode('');
+        setSent(result);
+      },
+    });
   };
 
   const submit = () => {

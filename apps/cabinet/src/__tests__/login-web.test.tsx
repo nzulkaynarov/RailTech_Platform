@@ -4,9 +4,15 @@ import { http, HttpResponse } from 'msw';
 import { axe } from 'vitest-axe';
 
 import i18n from '@/i18n';
+import indexHtml from '../../index.html?raw';
 import { portalServer } from '@/mocks/server';
 import { renderApp, signedIn } from '@/test/render';
 import { captureBody, requestLog } from '@/test/screens';
+
+afterEach(() => {
+  delete (window as unknown as { Telegram?: unknown }).Telegram;
+  delete (window as unknown as { __cabinetMagicToken?: string }).__cabinetMagicToken;
+});
 
 describe('вход с веба', () => {
   it('без сессии кабинет ведёт на страницу входа с двумя путями', async () => {
@@ -81,11 +87,12 @@ describe('вход с веба', () => {
     });
   });
 
-  it('422 VALIDATION_ERROR на обмене — понятный текст, а не код', async () => {
+  it('422 VALIDATION_ERROR (обрезанная или битая ссылка) — «Ссылка не действует» и путь запросить новую, а не «проверьте поля»', async () => {
     portalServer.use(http.post('*/api/portal/v1/auth/magic', () => HttpResponse.json({ detail: 'VALIDATION_ERROR' }, { status: 422 })));
     renderApp('/auth/magic#token=bad');
-    expect(await screen.findByRole('heading', { level: 1, name: 'Не удалось войти' })).toBeInTheDocument();
-    expect(screen.getByText('Проверьте заполненные поля.')).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { level: 1, name: 'Ссылка не действует' })).toBeInTheDocument();
+    expect(screen.queryByText('Проверьте заполненные поля.')).not.toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Запросить новую ссылку' })).toHaveAttribute('href', '/login');
   });
 
   it('тексты ошибок входа есть на uz и en', async () => {
@@ -97,6 +104,59 @@ describe('вход с веба', () => {
     await i18n.changeLanguage('en');
     renderApp('/auth/magic#token=throttled');
     expect(await screen.findByText('Too many requests, try again in an hour.')).toBeInTheDocument();
+  });
+
+  describe('токен входа не остаётся в SDK Telegram', () => {
+    const STORE_KEY = '__telegram__initParams';
+    const seed = () => {
+      // Telegram SDK при загрузке разбирает весь location.hash в sessionStorage и в память WebView.initParams.
+      window.sessionStorage.setItem(STORE_KEY, JSON.stringify({ token: 'secret-token-1', tgWebAppPlatform: 'web' }));
+      (window as unknown as { Telegram: unknown }).Telegram = { WebView: { initParams: { token: 'secret-token-1', tgWebAppPlatform: 'web' } } };
+    };
+    const leaks = () => {
+      const stored = window.sessionStorage.getItem(STORE_KEY) ?? '';
+      const memory = JSON.stringify((window as unknown as { Telegram?: unknown }).Telegram ?? {});
+      return { stored, memory, found: /secret-token-1|throttled|demo-token/.test(stored + memory) };
+    };
+
+    it('после успешного входа токена нет ни в sessionStorage, ни в window.Telegram; прочие параметры SDK целы', async () => {
+      seed();
+      renderApp('/auth/magic#token=demo-token');
+      expect(await screen.findByRole('heading', { level: 1, name: 'Запросы' })).toBeInTheDocument();
+      expect(leaks().found).toBe(false);
+      expect(JSON.parse(window.sessionStorage.getItem(STORE_KEY) ?? '{}')).toEqual({ tgWebAppPlatform: 'web' });
+      expect((window as unknown as { Telegram: { WebView: { initParams: object } } }).Telegram.WebView.initParams).toEqual({ tgWebAppPlatform: 'web' });
+    });
+
+    it('токен снят ещё до первого запроса и после неудачного обмена (429)', async () => {
+      seed();
+      let atRequest: ReturnType<typeof leaks> | null = null;
+      portalServer.events.on('request:start', ({ request }) => {
+        if (new URL(request.url).pathname.endsWith('/auth/magic') && request.method === 'POST') atRequest = leaks();
+      });
+      renderApp('/auth/magic#token=throttled');
+      expect(await screen.findByRole('heading', { level: 1, name: 'Не удалось войти' })).toBeInTheDocument();
+      expect(atRequest).not.toBeNull();
+      expect(atRequest!.found).toBe(false);
+      expect(leaks().found).toBe(false);
+    });
+
+    it('токен, пойманный до запуска SPA (index.html убирает фрагмент до SDK), обменивается и не остаётся в window', async () => {
+      (window as unknown as { __cabinetMagicToken?: string }).__cabinetMagicToken = 'demo-token';
+      const body = captureBody('/auth/magic');
+      renderApp('/auth/magic');
+      expect(await screen.findByRole('heading', { level: 1, name: 'Запросы' })).toBeInTheDocument();
+      expect(body.current).toEqual({ token: 'demo-token' });
+      expect((window as unknown as { __cabinetMagicToken?: string }).__cabinetMagicToken).toBeUndefined();
+    });
+
+    it('index.html: сохраняющий токен скрипт стоит раньше Telegram SDK и сразу убирает фрагмент', () => {
+      const sdk = indexHtml.indexOf('telegram-web-app.js');
+      const guard = indexHtml.indexOf('__cabinetMagicToken');
+      expect(guard).toBeGreaterThan(-1);
+      expect(guard).toBeLessThan(sdk);
+      expect(indexHtml).toMatch(/history\.replaceState\([^)]*location\.pathname \+ location\.search/);
+    });
   });
 
   it('старая ссылка с токеном в пути только перенаправляет на фрагмент и обменивается через POST', async () => {

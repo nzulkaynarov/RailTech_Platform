@@ -131,6 +131,28 @@ describe('КП', () => {
     await waitFor(() => expect(log.filter((entry) => entry === 'POST /quotes/301/request-code')).toHaveLength(2));
   });
 
+  it('повторная отправка кода упала (429) — поле кода на месте, уже полученный код вводится и принимается', async () => {
+    signedIn();
+    const user = userEvent.setup();
+    renderApp('/quotes/301');
+    await heading('КП KP-2026-0042');
+    await user.click(screen.getByRole('button', { name: 'Принять' }));
+    const dialog = await screen.findByRole('dialog');
+    await user.click(within(dialog).getByRole('button', { name: 'Получить код' }));
+    expect(await within(dialog).findByLabelText('Код подтверждения')).toBeInTheDocument();
+
+    // Повтор упёрся в общий лимит (портал считает запрос кода и акцепт одним ведром).
+    failWith('post', '/quotes/301/request-code', 429, 'TOO_MANY_REQUESTS');
+    await user.click(within(dialog).getByRole('button', { name: 'Отправить код ещё раз' }));
+    expect(await within(dialog).findByText(/Слишком много запросов/)).toBeInTheDocument();
+    expect(within(dialog).getByLabelText('Код подтверждения')).toBeInTheDocument();
+    expect(within(dialog).getByText('Код отправлен в Telegram. Действует 15 мин.')).toBeInTheDocument();
+
+    await user.type(within(dialog).getByLabelText('Код подтверждения'), MOCK_ACCEPT_CODE);
+    await user.click(within(dialog).getByRole('button', { name: 'Принять КП' }));
+    expect(await screen.findByText('КП принято')).toBeInTheDocument();
+  });
+
   it.each([
     ['CONTACT_CHANNEL_REQUIRED', 422, /Нам некуда отправить код/],
     ['QUOTE_EXPIRED', 409, /Срок действия КП истёк/],

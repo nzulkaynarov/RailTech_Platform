@@ -7,12 +7,8 @@ import { loginErrorKey } from '@/api/errors';
 import { exchangeMagicToken, isPortalApiError, type Me } from '@/api/portal';
 import { StatusScreen } from '@/components/StatusScreen';
 import { Button } from '@/components/ui/button';
+import { clearPendingMagicToken, consumePendingMagicToken, scrubTelegramToken, tokenFromHash } from '@/session/magicToken';
 import { ME_QUERY_KEY, afterSignIn } from '@/session/session';
-
-/** Токен из фрагмента ссылки входа: `/auth/magic#token=…` — фрагмент не уходит на сервер и в журналы прокси. */
-function tokenFromHash(hash: string): string {
-  return new URLSearchParams(hash.replace(/^#/, '')).get('token')?.trim() ?? '';
-}
 
 /**
  * `/auth/magic#token=…` — ссылка из письма: токен берётся из фрагмента и уходит в теле
@@ -25,12 +21,19 @@ export function MagicLinkPage() {
   const location = useLocation();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  // Токен читается один раз: дальше фрагмент убирается из адреса, а обмен остаётся привязан к этому значению.
-  const [token] = useState(() => tokenFromHash(location.hash));
+  // Токен читается один раз и до любого запроса снимается с копий SDK Telegram; дальше фрагмент убирается
+  // из адреса, а обмен остаётся привязан к этому значению. Обычно фрагмент уже забрал скрипт index.html.
+  const [token] = useState(() => {
+    const value = tokenFromHash(location.hash) || consumePendingMagicToken();
+    scrubTelegramToken();
+    return value;
+  });
 
   useEffect(() => {
     if (location.hash) navigate({ pathname: location.pathname, search: location.search, hash: '' }, { replace: true });
   }, [location.hash, location.pathname, location.search, navigate]);
+
+  useEffect(() => clearPendingMagicToken, []);
 
   const exchange = useQuery({
     queryKey: ['magic-link', token],
@@ -49,7 +52,8 @@ export function MagicLinkPage() {
   if (exchange.isSuccess) return <Navigate to="/" replace />;
   if (token === '' || exchange.isError) {
     const error = exchange.error;
-    const expired = token === '' || isPortalApiError(error, 410);
+    // 422 — ссылка обрезана или испорчена: клиенту это «ссылка не действует», а не «проверьте поля», которых нет.
+    const expired = token === '' || isPortalApiError(error, 410) || isPortalApiError(error, 422);
     const closed = isPortalApiError(error, 403);
     return (
       <StatusScreen
