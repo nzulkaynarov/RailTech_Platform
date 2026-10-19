@@ -260,6 +260,10 @@ PR: «FIX-13: покупательских аккаунтов в ERP нет — 
    в аутентификации JWT); тест «после revoke старый access → 401». Переключатель в шапке ERP — только у
    пользователя с сопоставлением CrmUserMapping.
 6. Аудит: `platform_access.granted|revoked` в CRM, `sso.revoke` в ERP.
+6a. Хвосты ревью волны 1 (2026-10-19): CRM на неизвестный `sub` при обмене SSO отвечает 403 со стабильным подкодом
+   `USER_NOT_PROVISIONED` (сейчас `ForbiddenError("user not provisioned")` без `reason`, `app/services/sso.py`),
+   регенерировать OpenAPI CRM; ERP `CookieTokenRefreshView` не продлевает refresh-токен пользователя, который больше
+   не сотрудник (`accounts.services.auth.assert_staff_login`, FIX-13) — тест.
 7. После зелёного CI — строка в docs/PROGRESS.md: M3-CRM-06 «готово», владельцу: можно включить
    `PLATFORM_SSO_ENABLED=true` на стенде и проверить переход глазами (сценарий в описании PR).
 PR: «FIX-11: platform_access в CRM, провижининг и отзыв через очередь, кнопка только при доступе, карта прав по каталогу ERP».
@@ -283,7 +287,14 @@ PR: «FIX-11: platform_access в CRM, провижининг и отзыв че�
    способ проверки через туннель, OWNER-CHECKLIST «До M2»).
 4. CORS: dev-источники (`*.localhost`) только при `DEBUG=True`; на `DEBUG=False` список — из настроек
    (`CABINET_ORIGIN`). Тест на обе ветки.
-5. Все тесты портала зелёные, сторож каталога (уже на портальной сессии после FIX-13) зелёный.
+5. Хвосты ревью FIX-14 (2026-10-19): (а) P1 — журнал запросов Daphne (`infra/compose/base.yml`, команда `daphne`)
+   пишет в stdout путь `/auth/magic/<токен>` мимо `RedactPortalTokenFilter`: отключить access-лог Daphne
+   (`-v 0`, журнал запросов — через Django-логирование с фильтром) и тестом/проверкой на стенде показать, что токена
+   в `docker compose logs erp-backend` нет; (б) P1 — `portal/authentication.py`: сессия компании, ставшей архивной,
+   и неактивного контакта → 401 (сейчас `PortalSession.is_valid` проверяет только срок); (в) P2 — архивность везде
+   через общий предикат `active_company_q()` (`magic_link.py`, `telegram_auth.py`, `invitation.py`), не `is_active`;
+   (г) P2 — `request_magic_link` отправляет письмо в Celery, чтобы время ответа не выдавало известный адрес.
+6. Все тесты портала зелёные, сторож каталога (уже на портальной сессии после FIX-13) зелёный.
 PR: «FIX-15: лимиты по сессии портала, CSRF через JSON + Idempotency-Key, cookie Mini App, dev-CORS только в DEBUG».
 ```
 
