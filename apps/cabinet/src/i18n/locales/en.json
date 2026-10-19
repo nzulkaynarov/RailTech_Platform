@@ -79,7 +79,9 @@
       "in_transit": "In transit",
       "ready_to_ship": "Ready to ship",
       "shipped": "Shipped",
-      "delivered": "Delivered"
+      "delivered": "Delivered",
+      "accepted": "Accepted",
+      "disputed": "Disputed"
     },
     "availability": {
       "in_stock": "In stock",

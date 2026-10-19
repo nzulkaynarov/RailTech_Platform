@@ -37,6 +37,8 @@ const TONES: { [E in StatusEntity]: Record<StatusMaps[E], StatusTone> } = {
     ready_to_ship: 'info',
     shipped: 'info',
     delivered: 'success',
+    accepted: 'success',
+    disputed: 'danger',
   },
   availability: { in_stock: 'success', on_order: 'warning', expected: 'info' },
 };

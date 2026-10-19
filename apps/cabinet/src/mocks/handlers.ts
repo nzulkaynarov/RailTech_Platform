@@ -131,8 +131,8 @@ function byId<T extends { id: number }>(items: T[], id: string): T | undefined {
 }
 
 function quoteListItem(quote: Schemas['Quote']): Schemas['QuoteListItem'] {
-  const { id, deal_id, number, version, status, total, valid_until, sent_at } = quote;
-  return { id, deal_id, number, version, status, total, valid_until, sent_at };
+  const { id, deal, deal_id, number, version, status, total, valid_until, sent_at } = quote;
+  return { id, deal, deal_id, number, version, status, total, valid_until, sent_at };
 }
 
 async function readJson<T>(request: Request): Promise<Partial<T>> {
@@ -247,6 +247,7 @@ export const handlers = [
           db.contracts = [
             {
               id: 400 + quote.deal_id,
+              deal: quote.deal,
               deal_id: quote.deal_id,
               number: `D-2026-${String(quote.deal_id).padStart(4, '0')}`,
               status: 'sent',

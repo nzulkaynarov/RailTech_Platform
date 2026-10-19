@@ -79,7 +79,9 @@
       "in_transit": "В пути",
       "ready_to_ship": "Готово к отгрузке",
       "shipped": "Отгружено",
-      "delivered": "Доставлено"
+      "delivered": "Доставлено",
+      "accepted": "Принято",
+      "disputed": "Есть замечания"
     },
     "availability": {
       "in_stock": "В наличии",

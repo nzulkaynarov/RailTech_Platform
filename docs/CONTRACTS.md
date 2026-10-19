@@ -70,18 +70,23 @@
 |---|---|
 | `POST /auth/telegram` | `{init_data}` → проверка подписи токеном бота (срок ≤ 5 мин), поиск контакта по `telegram_user_id`; сессия (cookie HttpOnly) |
 | `POST /auth/magic-link` | `{email}` → письмо со ссылкой (15 мин, одноразовая); ответ всегда 200 |
-| `GET /auth/magic/{token}` | обмен на сессию |
+| `POST /auth/magic {token}` | обмен токена из ссылки входа на сессию; токен приходит во фрагменте ссылки `/auth/magic#token=…` и не попадает в журналы (FIX-20). `GET /auth/magic/{token}` — устарел, снимается после FIX-24 |
 | `POST /auth/logout`, `GET /me` | сессия и контакт, компания, права (`can_act`) |
 | `GET /requests`, `POST /requests` | мои запросы; новый запрос (строки свободным текстом + вложения) → `request.created(source=cabinet)` |
-| `GET /quotes`, `GET /quotes/{id}`, `POST /quotes/{id}/accept {code}`, `POST /quotes/{id}/reject {reason}` | КП |
+| `GET /quotes`, `GET /quotes/{id}`, `POST /quotes/{id}/request-code`, `POST /quotes/{id}/accept {code}`, `POST /quotes/{id}/reject {reason}` | КП; код акцепта (6 цифр, 15 мин) ERP шлёт контакту в Telegram или на e-mail по запросу — мастер-кода нет |
 | `GET /contracts`, `POST /contracts/{id}/sign` | договоры |
-| `GET /invoices`, `GET /acts`, `POST /acts/{id}/accept`, `POST /acts/{id}/return {reason}` | счета и акты |
-| `GET /deliveries` | поставки по строкам: проекция клиента (статус, ожидаемая дата, трек) |
+| `GET /invoices`, `GET /acts`, `POST /acts/{id}/accept {upload_id?}`, `POST /acts/{id}/return {reason}` | счета и акты; при приёмке можно приложить скан подписанного акта (`Act.scan_document_id`) |
+| `GET /deliveries`, `POST /deliveries/{id}/accept`, `POST /deliveries/{id}/dispute {reason}` | поставки по строкам заказа: проекция клиента (статус, ожидаемая дата, трек) и приёмка клиентом по строкам — `accepted` / `disputed` (BUSINESS §9, шаг 9) |
 | `GET /documents`, `GET /documents/{id}/file` | документы (поток, аудит) |
 | `GET /catalog`, `GET /catalog/{id}` | опубликованный слой с ценой и наличием (решение владельца: только здесь) |
 | `GET /company`, `PUT /company`, `GET /team`, `POST /team/invite` | профиль и команда клиента |
 
 Все ответы отфильтрованы по компании сессии; тест на каждый эндпоинт «чужая компания → 404».
+
+Сделка глазами клиента — `deal: {id, number, title}` в запросах, КП, договорах, счетах, актах, строках поставки и
+документах (Q-16); `deal_id` рядом — устаревшее поле до перехода Cabinet (FIX-24). Коды `detail` — перечень `ErrorCode`
+в контракте (Q-17); новый код добавляется в перечень в том же PR, что и код ERP. Категория каталога — название +
+`category_id`, справочник — `GET /catalog/categories` (Q-15, вариант 2 закреплён).
 
 Защита сессии в cookie (FIX-15): каждый `POST` и `PATCH` обязан нести `Idempotency-Key`
 (иначе 400 `IDEMPOTENCY_KEY_REQUIRED`) и тело `application/json` (иначе 415 `UNSUPPORTED_MEDIA_TYPE`; исключение —

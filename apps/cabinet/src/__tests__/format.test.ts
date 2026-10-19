@@ -166,6 +166,7 @@ describe('просрочка счёта вычисляется из due_date', (
   const base: Invoice = {
     id: 1,
     deal_id: 1,
+    deal: { id: 1, number: 'D-1', title: null },
     number: 'S-1',
     status: 'issued',
     total: { amount: '100.00', currency: 'UZS' },
