@@ -13,13 +13,21 @@ from decimal import Decimal
 from typing import Any, Dict, List, Optional
 
 from django.db import transaction
+from jsonschema import Draft202012Validator, FormatChecker
 from parties.models import Company
 from portal.models import PortalRequestLine
 
+from catalog.constants import MODE_CLIENT, MODE_LEAD
+from catalog.published import project_many, published_products
 from crm.models import Deal, DealStage, GeneratedDocument
 
-from ..services.catalog import search_published_catalog
-from ..services.summary import _map_doc_kind, get_deal_detail_data, get_document_link_data, list_company_deals_data
+from ..services.summary import (
+    _map_doc_kind,
+    delivery_lines,
+    get_deal_detail_data,
+    get_document_link_data,
+    list_company_deals_data,
+)
 from ..services.webhooks import build_actor, emit_request_created
 from .context import AgentContext
 
@@ -28,6 +36,14 @@ logger = logging.getLogger(__name__)
 
 class ToolExecutionError(Exception):
     """Ошибка выполнения инструмента (некорректные параметры, недоступный режим и т.п.)."""
+
+
+class InvalidArgumentsError(Exception):
+    """Аргументы вызова не соответствуют `input_schema` инструмента (HTTP 400 `INVALID_ARGUMENTS`)."""
+
+    def __init__(self, errors: List[str]):
+        super().__init__("; ".join(errors))
+        self.errors = errors
 
 
 class ToolModeError(ToolExecutionError):
@@ -65,7 +81,7 @@ def get_deal_status_tool(context: AgentContext, arguments: Dict[str, Any]) -> Op
         # Cross-tenant изоляция: чужой клиент — пустой результат
         return None
 
-    return get_deal_detail_data(erp_deal_id)
+    return get_deal_detail_data(erp_deal_id, client_view=True)
 
 
 def get_delivery_status_tool(context: AgentContext, arguments: Dict[str, Any]) -> List[Dict[str, Any]]:
@@ -84,45 +100,7 @@ def get_delivery_status_tool(context: AgentContext, arguments: Dict[str, Any]) -
     if not deal or deal.company_id != context.erp_company_id:
         return []
 
-    lines = []
-    try:
-        from sales.models import Fulfillment
-
-        fulfillments = list(Fulfillment.objects.filter(deal=deal).select_related("status").order_by("created_at"))
-        status_map = {
-            "in_transit": "in_transit",
-            "shipped": "shipped",
-            "ready_to_ship": "ready_to_ship",
-            "delivered": "delivered",
-            "accepted": "delivered",
-            "disputed": "in_transit",
-            "assembling": "assembling",
-            "pending": "assembling",
-        }
-        for idx, f in enumerate(fulfillments, start=1):
-            raw_code = f.status.code.lower() if f.status and hasattr(f.status, "code") else str(f.status or "").lower()
-            f_status = status_map.get(raw_code, "assembling")
-
-            eta_date = getattr(f, "expected_delivery_date", None) or getattr(f, "eta", None)
-            eta_str = eta_date.isoformat() if eta_date else None
-            title = getattr(f, "title", None) or deal.title or f"Поставка #{f.id}"
-
-            lines.append(
-                {
-                    "erp_deal_id": deal.id,
-                    "line_no": idx,
-                    "title": title,
-                    "quantity": str(getattr(f, "quantity", 1) or 1),
-                    "unit": "шт",
-                    "status": f_status,
-                    "eta": eta_str,
-                    "tracking": f.tracking_number or None,
-                }
-            )
-    except Exception as exc:
-        logger.warning("Error fetching fulfillments for deal %s: %s", erp_deal_id, exc)
-
-    return lines
+    return delivery_lines(deal)
 
 
 def list_client_documents_tool(context: AgentContext, arguments: Dict[str, Any]) -> List[Dict[str, Any]]:
@@ -210,27 +188,11 @@ def search_catalog_tool(context: AgentContext, arguments: Dict[str, Any]) -> Lis
     except (ValueError, TypeError):
         top_k = 5
 
-    catalog_mode = "client" if context.mode == "customer" else "lead"
-    raw_items = search_published_catalog(query=query, mode=catalog_mode, limit=top_k)
-
-    if context.mode == "prospect":
-        # Строгая защита коммерческой тайны: в режиме prospect без price, availability, lead_time_days
-        sanitized = []
-        for item in raw_items:
-            sanitized.append(
-                {
-                    "erp_product_id": item.get("erp_product_id"),
-                    "sku": item.get("sku"),
-                    "kind": item.get("kind"),
-                    "name": item.get("name"),
-                    "category": item.get("category"),
-                    "description": item.get("description"),
-                    "unit": item.get("unit"),
-                }
-            )
-        return sanitized
-
-    return raw_items
+    # Только проекция опубликованного слоя: ключи CatalogItem, без sku и остального внутреннего слоя.
+    # Режим lead (prospect) — без price, availability и lead_time_days.
+    catalog_mode = MODE_CLIENT if context.mode == "customer" else MODE_LEAD
+    products = list(published_products().filter(name__icontains=query)[:top_k])
+    return project_many(products, mode=catalog_mode)
 
 
 @transaction.atomic
@@ -428,11 +390,23 @@ TOOLS_METADATA = [
 TOOLS_BY_NAME = {t["name"]: t for t in TOOLS_METADATA}
 
 
+def validate_arguments(tool_meta: Dict[str, Any], arguments: Any) -> None:
+    """Проверка аргументов по `input_schema` из контракта (packages/contracts/mcp-tools.json)."""
+    validator = Draft202012Validator(tool_meta["inputSchema"], format_checker=FormatChecker())
+    errors = sorted(
+        f"{'/'.join(str(p) for p in error.absolute_path) or '<root>'}: {error.message}"
+        for error in validator.iter_errors(arguments)
+    )
+    if errors:
+        raise InvalidArgumentsError(errors)
+
+
 def execute_tool(context: AgentContext, tool_name: str, arguments: Dict[str, Any]) -> Any:
     """Диспетчеризация и запуск инструмента."""
     tool_meta = TOOLS_BY_NAME.get(tool_name)
     if not tool_meta:
         raise ToolExecutionError(f"Tool '{tool_name}' not found")
 
+    validate_arguments(tool_meta, arguments)
     handler = tool_meta["handler"]
     return handler(context, arguments)
