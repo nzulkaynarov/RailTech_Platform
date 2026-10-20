@@ -6,6 +6,8 @@
 
 **Первым читай `ORCHESTRATOR.md`**, затем `docs/HANDOFF.md` — там цель, инварианты, роли агентов, текущая веха и протокол.
 Затем — `CLAUDE.md` того приложения, в котором работаешь: конвенции кода живут у приложений, не здесь.
+Правила процесса (коммиты с трейлером, ветки и PR, запрет `push`/`merge` в `main`, одна сессия — одна система, скриншоты в PR,
+`docs/PROGRESS.md` ведёт лид) — `ORCHESTRATOR.md` §4 и §7.
 
 ```
 apps/crm/        FastAPI · SQLAlchemy · Alembic · Procrastinate · aiogram · LangGraph · Refine/AntD   → apps/crm/CLAUDE.md
