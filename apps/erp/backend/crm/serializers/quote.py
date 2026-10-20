@@ -220,14 +220,16 @@ class QuoteSerializer(serializers.ModelSerializer):
         # ~(1 + N_currencies) ExchangeRate queries — the exact N+1 the gate exists to prevent.
         if not self.context.get("include_economics"):
             return {}
+        from finance.services.fx import max_rate_age_days
         from master_data.fx import get_rate_to_uzs
 
+        max_age = max_rate_age_days()  # один раз на ответ, а не на каждую валюту (FIX-54, F-15)
         rates: dict = {}
         for code in Currency.objects.filter(is_active=True).values_list("code", flat=True):
             normalized = (code or "").upper()
             if not normalized:
                 continue
-            rate = get_rate_to_uzs(normalized)
+            rate = get_rate_to_uzs(normalized, max_age_days=max_age)
             if rate is not None:
                 rates[normalized] = str(rate)
         return rates

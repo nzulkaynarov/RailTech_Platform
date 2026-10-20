@@ -91,3 +91,83 @@ def test_misconfigured_two_sellers_falls_back_to_environment(settings):
     _company("Своя 2", "5000000009", own=True, max_age=25)
 
     assert max_rate_age_days() == 6
+
+
+# ── FIX-54 (F-15): лимит возраста курса читается один раз на вызов, а не на каждую валюту ─────────────
+
+
+def _companysettings_reads(ctx):
+    return [q for q in ctx.captured_queries if "parties_companysettings" in q["sql"] and q["sql"].startswith("SELECT")]
+
+
+def test_resolve_rate_costs_one_settings_read_and_no_company_row(settings, django_assert_num_queries):
+    own = _company("Своя", "5000000011", own=True, max_age=5)
+    settings.OWN_COMPANY_ID = own.pk
+    set_rate("USD", "12600", days_ago=1)
+    with django_assert_num_queries(2):  # настройка компании + курс; строка самой компании не читается
+        assert resolve_rate("USD") is not None
+
+
+def test_explicit_max_age_skips_the_settings_lookup(settings, django_assert_num_queries):
+    own = _company("Своя", "5000000012", own=True, max_age=2)
+    settings.OWN_COMPANY_ID = own.pk
+    set_rate("USD", "12600", days_ago=5)
+    with django_assert_num_queries(1):  # только курс
+        assert resolve_rate("USD", max_age_days=10) is not None
+    with django_assert_num_queries(1):
+        assert resolve_rate("USD", max_age_days=3) is None
+
+
+def test_fx_market_of_the_quote_builder_reads_the_age_limit_once(settings):
+    from decimal import Decimal
+
+    from django.db import connection
+    from django.test.utils import CaptureQueriesContext
+    from master_data.models import Currency
+    from rest_framework.test import APIRequestFactory
+
+    from crm.models import Deal, DealStage, Quote, QuoteStatus
+    from crm.serializers import QuoteSerializer
+
+    own = _company("Своя", "5000000013", own=True, max_age=5)
+    settings.OWN_COMPANY_ID = own.pk
+    for code in ("USD", "EUR", "GBP", "RUB"):
+        Currency.objects.update_or_create(code=code, defaults={"name": code, "is_active": True})
+        set_rate(code, "12600", days_ago=1)
+    stage = DealStage.objects.get_or_create(code="DRAFT", defaults={"name": "Draft", "sort_order": 10})[0]
+    status = QuoteStatus.objects.get_or_create(code="DRAFT", defaults={"name": "Draft", "sort_order": 10})[0]
+    deal = Deal.objects.create(title="КП", company=own, stage=stage)
+    quote = Quote.objects.create(deal=deal, version=1, status=status, vat_rate=Decimal("12"))
+    request = APIRequestFactory().get("/")
+    request.user = CustomUser.objects.get(email="5000000013@x.test")
+    serializer = QuoteSerializer(quote, context={"request": request, "include_economics": True})
+
+    with CaptureQueriesContext(connection) as ctx:
+        market = serializer.get_fx_market(quote)
+
+    assert {"USD", "EUR", "GBP", "RUB"} <= set(market)
+    assert len(_companysettings_reads(ctx)) == 1, [q["sql"] for q in ctx.captured_queries]
+
+
+def test_quote_rate_map_reads_the_age_limit_once_for_all_currencies(settings):
+    from decimal import Decimal
+
+    from django.db import connection
+    from django.test.utils import CaptureQueriesContext
+    from sales.services.quote_fx import resolve_quote_rate_map
+
+    from crm.models import Deal, DealStage, Quote, QuoteStatus
+
+    own = _company("Своя", "5000000014", own=True, max_age=5)
+    settings.OWN_COMPANY_ID = own.pk
+    for code in ("USD", "EUR", "GBP"):
+        set_rate(code, "12600", days_ago=1)
+    stage = DealStage.objects.get_or_create(code="DRAFT", defaults={"name": "Draft", "sort_order": 10})[0]
+    status = QuoteStatus.objects.get_or_create(code="DRAFT", defaults={"name": "Draft", "sort_order": 10})[0]
+    quote = Quote.objects.create(
+        deal=Deal.objects.create(title="КП", company=own, stage=stage), version=1, status=status, vat_rate=Decimal("12")
+    )
+    with CaptureQueriesContext(connection) as ctx:
+        rate_map = resolve_quote_rate_map(quote, ["USD", "EUR", "GBP"])
+    assert {"USD", "EUR", "GBP"} <= set(rate_map) and all(rate_map[c] == Decimal("12600") for c in ("USD", "EUR", "GBP"))
+    assert len(_companysettings_reads(ctx)) == 1

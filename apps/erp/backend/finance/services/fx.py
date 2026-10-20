@@ -73,18 +73,20 @@ def max_rate_age_days(company=None) -> int:
     if company is None:
         from django.core.exceptions import ImproperlyConfigured
 
-        from core.tenant import own_company
+        from core.tenant import own_company_id
 
         try:
-            company = own_company()
+            company_id = own_company_id()  # нужен только id: строку компании читать незачем
         except ImproperlyConfigured:
             logger.warning(
                 "FX: own company is ambiguous (set OWN_COMPANY_ID) — using FX_RATE_MAX_AGE_DAYS=%s", fallback
             )
             return fallback
-    if company is None:
+    else:
+        company_id = company.pk
+    if company_id is None:
         return fallback
-    value = CompanySettings.objects.filter(company_id=company.pk).values_list("fx_rate_max_age_days", flat=True).first()
+    value = CompanySettings.objects.filter(company_id=company_id).values_list("fx_rate_max_age_days", flat=True).first()
     return int(value) if value is not None else fallback
 
 
@@ -108,11 +110,17 @@ def parse_positive_rate(value) -> Optional[Decimal]:
     return rate
 
 
-def resolve_rate(currency_code, on_date: Optional[datetime.date] = None) -> Optional[ResolvedRate]:
+def resolve_rate(
+    currency_code, on_date: Optional[datetime.date] = None, *, max_age_days: Optional[int] = None
+) -> Optional[ResolvedRate]:
     """Курс валюты к UZS на дату `on_date` (по умолчанию — бизнес-сегодня, Ташкент).
 
-    Самая поздняя строка справочника с `rate_date <= on_date` не старше `FX_RATE_MAX_AGE_DAYS`;
-    нет такой — `None` (правило «курса нет»). UZS — 1 с источником BASE.
+    Самая поздняя строка справочника с `rate_date <= on_date` не старше лимита возраста; нет такой — `None`
+    (правило «курса нет»). UZS — 1 с источником BASE.
+
+    Лимит — `max_rate_age_days()` (настройка своей компании, FIX-41): это 1–2 запроса на вызов. Кто спрашивает курс по
+    нескольким валютам подряд, читает лимит один раз и передаёт `max_age_days` (FIX-54, F-15); глобального кэша нет —
+    правка настроек действует сразу.
     """
     from core.models import ExchangeRate
 
@@ -120,7 +128,7 @@ def resolve_rate(currency_code, on_date: Optional[datetime.date] = None) -> Opti
     on_date = on_date or timezone.localdate()
     if code == BASE_CURRENCY:
         return ResolvedRate(code, Decimal("1"), on_date, RateSource.BASE)
-    oldest = on_date - datetime.timedelta(days=max_rate_age_days())
+    oldest = on_date - datetime.timedelta(days=max_rate_age_days() if max_age_days is None else max_age_days)
     row = (
         ExchangeRate.objects.filter(currency__code=code, rate_date__lte=on_date, rate_date__gte=oldest)
         .order_by("-rate_date")
@@ -173,9 +181,9 @@ def fetch_cbu_rates(timeout: int = 15) -> int:
     return upserted
 
 
-def get_rate_to_uzs(currency_code: str, on_date=None) -> Optional[Decimal]:
+def get_rate_to_uzs(currency_code: str, on_date=None, *, max_age_days: Optional[int] = None) -> Optional[Decimal]:
     """Курс к UZS на дату (UZS = 1) по правилу `resolve_rate`; нет курса — None."""
-    resolved = resolve_rate(currency_code, on_date)
+    resolved = resolve_rate(currency_code, on_date, max_age_days=max_age_days)
     return resolved.rate if resolved else None
 
 
