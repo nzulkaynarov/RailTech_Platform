@@ -1,38 +1,26 @@
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { Alert, App as AntApp, Button } from "antd";
+import { Alert, Button } from "antd";
 
-import { adminKeys } from "../../api/adminQueries";
-import { getListClientsQueryKey, makeCustomer } from "../../api/generated/crm";
 import type { ClientDetail } from "../../api/generated/model";
-import { useApiErrorToast } from "../../hooks/useApiErrorToast";
+import { useHandoffRetry } from "../../hooks/useHandoffRetry";
 import { t } from "../../i18n/ru";
 import { handoffErrorText, retryLeadId } from "./handoffText";
 
-function useRetry(client: ClientDetail) {
-  const query = useQueryClient();
-  const { message } = AntApp.useApp();
-  return useMutation({
-    mutationFn: async () => {
-      const leadId = retryLeadId(client);
-      if (leadId === null) throw new Error(t.clients.handoffNoLead);
-      return await makeCustomer(leadId, { client_id: client.id, new_client_name: null });
-    },
-    onSuccess: () => {
-      void message.success(t.clients.handoffRetryQueued);
-      void query.invalidateQueries({ queryKey: adminKeys.client(client.id) });
-      void query.invalidateQueries({ queryKey: getListClientsQueryKey() });
-    },
-    onError: useApiErrorToast(),
-  });
-}
+type AlertProps = {
+  status: "pending" | "done" | "failed" | null | undefined;
+  error: string | null | undefined;
+  /** Куда повторять передачу: клиент и лид, из которого её запускали. */
+  clientId: number;
+  leadId: number | null;
+  canWrite: boolean;
+};
 
 /**
  * Состояние передачи клиента в бэк-офис (FIX-31): «передаётся» / ошибка с причиной и кнопкой
  * «Повторить передачу». Передан — отдельной строки не нужно: в реквизитах уже есть компания ERP.
+ * Общий для карточки клиента и карточки лида (FIX-34b).
  */
-export function HandoffState({ client, canWrite }: { client: ClientDetail; canWrite: boolean }) {
-  const retry = useRetry(client);
-  const status = client.erp_handoff_status;
+export function HandoffAlert({ status, error, clientId, leadId, canWrite }: AlertProps) {
+  const retry = useHandoffRetry(clientId, leadId);
   if (status === "pending") {
     return (
       <Alert
@@ -40,8 +28,8 @@ export function HandoffState({ client, canWrite }: { client: ClientDetail; canWr
         showIcon
         message={t.clients.handoffPending}
         description={
-          client.erp_handoff_error
-            ? `${t.clients.handoffPendingHint} ${t.clients.handoffPendingError.replace("{error}", handoffErrorText(client.erp_handoff_error))}`
+          error
+            ? `${t.clients.handoffPendingHint} ${t.clients.handoffPendingError.replace("{error}", handoffErrorText(error))}`
             : t.clients.handoffPendingHint
         }
       />
@@ -53,7 +41,7 @@ export function HandoffState({ client, canWrite }: { client: ClientDetail; canWr
       type="error"
       showIcon
       message={t.clients.handoffFailed}
-      description={handoffErrorText(client.erp_handoff_error)}
+      description={handoffErrorText(error)}
       action={
         canWrite ? (
           <Button
@@ -67,6 +55,19 @@ export function HandoffState({ client, canWrite }: { client: ClientDetail; canWr
           </Button>
         ) : null
       }
+    />
+  );
+}
+
+/** Состояние передачи в карточке клиента: повтор идёт из его последнего лида в стадии «клиент». */
+export function HandoffState({ client, canWrite }: { client: ClientDetail; canWrite: boolean }) {
+  return (
+    <HandoffAlert
+      status={client.erp_handoff_status}
+      error={client.erp_handoff_error}
+      clientId={client.id}
+      leadId={retryLeadId(client)}
+      canWrite={canWrite}
     />
   );
 }

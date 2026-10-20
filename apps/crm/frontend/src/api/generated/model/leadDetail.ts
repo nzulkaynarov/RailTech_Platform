@@ -5,13 +5,17 @@
  * OpenAPI spec version: 0.1.0
  */
 import type { EscalationOut } from "./escalationOut";
+import type { LeadDetailClientHandoffStatus } from "./leadDetailClientHandoffStatus";
 import type { LeadDetailQualification } from "./leadDetailQualification";
 
 export interface LeadDetail {
   assigned_user_id: number | null;
   assigned_user_name?: string | null;
   backoffice_mode?: string;
+  client_handoff_error?: string | null;
+  client_handoff_status?: LeadDetailClientHandoffStatus;
   client_id?: number | null;
+  client_in_erp?: boolean;
   client_phone_e164?: string | null;
   company_name?: string | null;
   consent_given_at: string | null;

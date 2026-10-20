@@ -92,6 +92,30 @@ const mayMakeCustomer = (lead: LeadDetail, rights: ActionRights): boolean => {
   );
 };
 
+/**
+ * Передача клиента лида в бэк-офис (FIX-34b, Q-FIX34-1). Только режим `erp`, лид в стадии
+ * `customer` с клиентом, которого ещё нет в ERP (стал клиентом в режиме `local`):
+ * `available` — передачи нет, можно передать; `pending` — идёт; `failed` — не удалась (повтор
+ * в карточке состояния); `none` — показывать нечего.
+ */
+export type ClientHandoff = "none" | "available" | "pending" | "failed";
+
+export function clientHandoff(lead: LeadDetail): ClientHandoff {
+  const applies =
+    lead.backoffice_mode === "erp" &&
+    lead.stage === "customer" &&
+    lead.client_id != null &&
+    !lead.client_in_erp;
+  if (!applies) return "none";
+  if (lead.client_handoff_status === "pending") return "pending";
+  if (lead.client_handoff_status === "failed") return "failed";
+  return "available";
+}
+
+/** Может ли пользователь передавать клиента лида (те же права, что у «Сделать клиентом»). */
+export const mayHandoffClient = (lead: LeadDetail, rights: ActionRights): boolean =>
+  Boolean(rights.clients) && mayMakeCustomer(lead, rights);
+
 /** Зеркало `may_snooze` (Q-018): общая очередь; у лида есть ответственный — только он или админ. */
 const maySnooze = (lead: LeadDetail, rights: ActionRights): boolean =>
   lead.assigned_user_id === null || lead.assigned_user_id === rights.userId || rights.isAdmin;
@@ -128,9 +152,9 @@ export function availableActions(
     assign: rights.work && human && canOwn,
     newDeal: rights.work && lead.stage === "customer" && !human,
     makeCustomer:
-      Boolean(rights.clients) &&
-      mayMakeCustomer(lead, rights) &&
-      (isErp ? lead.stage === "in_progress" || lead.stage === "won" : lead.stage === "won"),
+      mayHandoffClient(lead, rights) &&
+      (clientHandoff(lead) === "available" ||
+        (isErp ? lead.stage === "in_progress" || lead.stage === "won" : lead.stage === "won")),
     note: rights.note,
   };
 }

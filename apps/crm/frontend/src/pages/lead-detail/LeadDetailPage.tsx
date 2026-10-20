@@ -16,7 +16,13 @@ import { allowed } from "../../app/providers/access";
 import { ChatThread } from "../../components/ChatThread";
 import { DecisionsPanel } from "../../components/DecisionsPanel";
 import { LeadActions, OwnerBanner } from "../../components/LeadActions";
-import { type ActionRights, leadActionPlan, replyState } from "../../components/leadActionRules";
+import {
+  type ActionRights,
+  clientHandoff,
+  leadActionPlan,
+  mayHandoffClient,
+  replyState,
+} from "../../components/leadActionRules";
 import { Owner } from "../../components/Owner";
 import { PageBody } from "../../components/PageBody";
 import { PageHeader } from "../../components/PageHeader";
@@ -32,6 +38,7 @@ import { readSplit, saveSplit } from "../../lib/splitSize";
 import "../../styles/workspace.css";
 import { LeadDeals } from "./LeadDeals";
 import { LeadNotes, LeadSummary } from "./LeadSummary";
+import { HandoffAlert } from "../clients/HandoffState";
 import "../pages.css";
 
 const useRightsMatrix = () => usePermissionsQuery().data;
@@ -263,6 +270,23 @@ function BackofficeTags({ lead }: { lead: LeadDetail }) {
   );
 }
 
+/** Передача клиента в бэк-офис: «передаётся» и ошибка с повтором (FIX-31, FIX-34b). */
+function ClientHandoffBanner({ lead, rights }: { lead: LeadDetail; rights: ActionRights }) {
+  const state = clientHandoff(lead);
+  if ((state !== "pending" && state !== "failed") || lead.client_id == null) return null;
+  return (
+    <div className="lead-banner">
+      <HandoffAlert
+        status={lead.client_handoff_status}
+        error={lead.client_handoff_error}
+        clientId={lead.client_id}
+        leadId={lead.id}
+        canWrite={mayHandoffClient(lead, rights)}
+      />
+    </div>
+  );
+}
+
 /** Шапка: имя, сводка `Descriptions`, причины передачи, действия и баннер «Лида ведёт …». */
 function LeadHeader({ lead, rights }: { lead: LeadDetail; rights: ActionRights }) {
   const plan = leadActionPlan(lead, rights);
@@ -283,6 +307,7 @@ function LeadHeader({ lead, rights }: { lead: LeadDetail; rights: ActionRights }
           <OwnerBanner banner={plan.ownerBanner} />
         </div>
       ) : null}
+      <ClientHandoffBanner lead={lead} rights={rights} />
       {lead.open_service_request_id && lead.client_id ? (
         <div className="lead-banner">
           <Alert
