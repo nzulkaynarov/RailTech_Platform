@@ -4,6 +4,7 @@
 прежней (ADR-0015), сделка лишь фиксирует продукт, сумму и причину итога.
 """
 
+from collections.abc import Mapping
 from dataclasses import dataclass
 from enum import StrEnum
 from typing import Final
@@ -98,3 +99,18 @@ def plan_erp_outcome(event: str, current: DealStage, lost_reason_text: str | Non
         return ErpOutcome(stage=DealStage.WON, changed=current != DealStage.WON, lost_reason=None)
     reason = (lost_reason_text or "").strip() or OTHER_REASON
     return ErpOutcome(stage=DealStage.LOST, changed=current != DealStage.LOST, lost_reason=reason)
+
+
+# Поля зеркальной сделки (`erp_deal_id IS NOT NULL`), которыми владеет ERP: приёмник событий
+# перезаписывает название, сумму, валюту и стадию (`erp_events`, `erp_event_handlers._outcome`),
+# причину отказа пишет событие `deal.lost`. Поля CRM — ответственный, срок, продукт — свободны.
+ERP_OWNED_FIELDS: Final = frozenset({"title", "amount", "currency", "stage", "lost_reason"})
+
+
+def erp_owned_changes(current: Mapping[str, object], requested: Mapping[str, object]) -> list[str]:
+    """Поля ERP, которые запрос действительно меняет (те же значения — не изменение)."""
+    return sorted(
+        field
+        for field in ERP_OWNED_FIELDS
+        if field in requested and requested[field] != current.get(field)
+    )

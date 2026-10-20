@@ -52,6 +52,7 @@ export const Reason = {
   assist_empty: "assist_empty",
   assist_no_history: "assist_no_history",
   deal_won_final: "deal_won_final",
+  deal_owned_by_erp: "deal_owned_by_erp",
   no_consent: "no_consent",
   litellm_unavailable: "litellm_unavailable",
   model_key_required: "model_key_required",
@@ -86,4 +87,5 @@ export const Reason = {
   erp_email_conflict: "erp_email_conflict",
   won_decided_by_erp: "won_decided_by_erp",
   handoff_no_consent: "handoff_no_consent",
+  consent_via_bot: "consent_via_bot",
 } as const;

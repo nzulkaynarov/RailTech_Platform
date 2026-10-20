@@ -41,6 +41,9 @@ export const deals = {
     } as Record<string, string>,
     externalStageHint: "Стадия в бэк-офисе (ERP)",
     erpDeal: "Сделка бэк-офиса",
+    erpOwned: "Ведётся в бэк-офисе (ERP)",
+    erpOwnedHint:
+      "Название, сумму, валюту и стадию ведёт бэк-офис — они обновляются событиями ERP. Здесь можно менять ответственного и срок закрытия.",
     noAmount: "—",
     amountMissing: "Сумма не указана",
     summaryTitle: "Сделки за период",

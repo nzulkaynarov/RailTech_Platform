@@ -4,6 +4,7 @@ import {
   currencyOptions,
   formatMoney,
   groupThousands,
+  isErpMirror,
   parseAmount,
   stageFromSearch,
   stageLabel,
@@ -47,5 +48,11 @@ describe("deal form helpers", () => {
   it("currency options start from the settings currency without duplicates", () => {
     expect(currencyOptions("USD")).toEqual(["USD", "UZS"]);
     expect(currencyOptions("EUR")).toEqual(["EUR", "UZS", "USD"]);
+  });
+
+  it("isErpMirror: зеркало заявки ERP — по erp_deal_id", () => {
+    expect(isErpMirror({ erp_deal_id: 22 })).toBe(true);
+    expect(isErpMirror({ erp_deal_id: null })).toBe(false);
+    expect(isErpMirror({})).toBe(false);
   });
 });
