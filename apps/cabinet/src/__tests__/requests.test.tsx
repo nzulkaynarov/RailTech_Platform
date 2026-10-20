@@ -2,7 +2,7 @@ import { screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 import { renderApp, signedIn } from '@/test/render';
-import { captureBody, expectNoAxeViolations, failWith, heading } from '@/test/screens';
+import { captureBody, expectNoAxeViolations, failWith, heading, requestLog } from '@/test/screens';
 
 describe('Запросы', () => {
   it('список: номер, суть, статус, сделка; строка открывается с клавиатуры', async () => {
@@ -78,6 +78,53 @@ describe('Запросы', () => {
       ],
     });
     expect(await screen.findByText('Запрос Z-2026-0106 отправлен')).toBeInTheDocument();
+  });
+
+  it('подсказки по контракту: суть до 5000 символов, файл до 10 МБ', async () => {
+    signedIn();
+    renderApp('/requests/new');
+    await heading('Новый запрос');
+    expect(screen.getByText(/До 5000 символов/)).toBeInTheDocument();
+    expect(screen.getByLabelText('Что нужно')).toHaveAttribute('maxlength', '5000');
+    expect(screen.getByText('PDF, DOCX, XLSX или изображения до 10 МБ')).toBeInTheDocument();
+    expect(screen.queryByText(/20 МБ/)).not.toBeInTheDocument();
+  });
+
+  it('вложение: загрузка → в запрос уходят только upload_id и name, без size_bytes; размер виден в форме', async () => {
+    signedIn();
+    const user = userEvent.setup();
+    const body = captureBody('/requests');
+    renderApp('/requests/new');
+    await heading('Новый запрос');
+    await user.type(screen.getByLabelText('Что нужно'), 'Нужны подшипники по спецификации');
+    await user.upload(
+      screen.getByLabelText('Прикрепить файлы (спецификация, опросные листы, чертежи)'),
+      new File([new Uint8Array(2048)], 'spec.pdf', { type: 'application/pdf' }),
+    );
+    expect(await screen.findByText('spec.pdf')).toBeInTheDocument();
+    expect(screen.getByText(/^\(2 (КБ|кБ|KB)\)$/)).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Отправить запрос' }));
+    await heading(/^Запрос Z-/);
+    expect(body.current).toEqual({
+      summary: 'Нужны подшипники по спецификации',
+      lines: [],
+      attachments: [{ upload_id: expect.stringMatching(/^upl_/), name: 'spec.pdf' }],
+    });
+  });
+
+  it('файл больше 10 МБ не загружается: сообщение, запроса /uploads нет', async () => {
+    signedIn();
+    const user = userEvent.setup();
+    const log = requestLog();
+    renderApp('/requests/new');
+    await heading('Новый запрос');
+    await user.upload(
+      screen.getByLabelText('Прикрепить файлы (спецификация, опросные листы, чертежи)'),
+      new File([new Uint8Array(10 * 1024 * 1024 + 1)], 'huge.pdf', { type: 'application/pdf' }),
+    );
+    expect(await screen.findByText('Файл больше 10 МБ.')).toBeInTheDocument();
+    expect(screen.queryByText('huge.pdf')).not.toBeInTheDocument();
+    expect(log).not.toContain('POST /uploads');
   });
 
   it('ошибка ERP при отправке — текст по коду, форма не теряется', async () => {

@@ -5,6 +5,19 @@
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <title>RailTech Cabinet</title>
+    <!-- Ссылка входа `/auth/magic#token=…`: SDK ниже разбирает весь location.hash и сохраняет его в sessionStorage и в
+         память страницы, поэтому токен забираем и стираем фрагмент ДО загрузки SDK (src/session/magicToken.ts). -->
+    <script>
+      (function () {
+        try {
+          if (location.pathname !== '/auth/magic' || !location.hash) return;
+          var token = new URLSearchParams(location.hash.slice(1)).get('token');
+          if (!token) return;
+          window.__cabinetMagicToken = token;
+          history.replaceState(null, '', location.pathname + location.search);
+        } catch (e) {}
+      })();
+    </script>
     <!-- Telegram Web App SDK: в Mini App даёт window.Telegram.WebApp (initData, themeParams, start_param).
          В обычном браузере объект тоже создаётся, но initData пустой — так SPA отличает режимы (src/telegram). -->
     <script src="https://telegram.org/js/telegram-web-app.js?59"></script>

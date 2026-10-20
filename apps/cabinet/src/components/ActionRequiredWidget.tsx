@@ -3,21 +3,26 @@ import { useTranslation } from 'react-i18next';
 import { AlertCircle, CheckCircle2, ClipboardCheck, FileSignature, FileText, Receipt } from 'lucide-react';
 
 import { useActs, useContracts, useInvoices, useQuotes } from '@/api/queries';
+import { ErrorState } from '@/components/QueryStates';
 import { ToneBadge } from '@/components/StatusBadge';
 import { Card, CardContent } from '@/components/ui/card';
+import { useNow } from '@/hooks/useNow';
 import { formatMoney } from '@/lib/format';
 import { invoiceViews } from '@/lib/invoice';
+import { quoteAwaitsDecision } from '@/lib/quotes';
 
 /**
  * Виджет «Требует вашего решения» (M2-CAB-04, бенчмарк Odoo/ERPNext: клиент видит «что от меня ждут»).
  * Агрегирует:
- *   - КП со статусом sent (ждут рассмотрения клиентом);
- *   - Договоры sent/issued без подписи клиента;
- *   - Счета с неоплаченным остатком;
+ *   - КП, которые ждут решения: `sent` и `viewed` (просмотренное КП — всё ещё без ответа), срок не истёк;
+ *   - Договоры, ждущие подписи клиента;
+ *   - Счета — только просроченные (`overdue` или срок оплаты прошёл при неоплате): остальные счёта — не решение;
  *   - Акты issued, требующие приёмки или возврата.
+ * Ошибка загрузки любого из четырёх списков — видимое состояние с повтором: тихое «ничего не требуется» было бы ложью.
  */
 export function ActionRequiredWidget() {
   const { t } = useTranslation();
+  const now = useNow();
   const quotesQuery = useQuotes();
   const contractsQuery = useContracts();
   const invoicesQuery = useInvoices();
@@ -28,19 +33,22 @@ export function ActionRequiredWidget() {
   const isError =
     quotesQuery.isError || contractsQuery.isError || invoicesQuery.isError || actsQuery.isError;
 
-  if (isPending || isError) return null;
+  if (isError) {
+    const failed = [quotesQuery, contractsQuery, invoicesQuery, actsQuery].filter((query) => query.isError);
+    return (
+      <div className="mb-6" data-testid="action-required-error">
+        <ErrorState error={failed[0].error} onRetry={() => failed.forEach((query) => void query.refetch())} />
+      </div>
+    );
+  }
+  if (isPending) return null;
 
-  const pendingQuotes = (quotesQuery.data ?? []).filter((q) => q.status === 'sent');
+  const pendingQuotes = (quotesQuery.data ?? []).filter((q) => quoteAwaitsDecision(q, now));
   const pendingContracts = (contractsQuery.data ?? []).filter(
     (c) => (c.status === 'sent' || c.status === 'signed_by_company') && !c.signed_by_client_at,
   );
-  const views = invoiceViews(invoicesQuery.data ?? []);
-  const pendingInvoices = (invoicesQuery.data ?? []).filter((inv) => {
-    const view = views.get(inv.id);
-    if (!view || inv.status === 'paid') return false;
-    const amount = Number(view.remaining?.amount ?? 0);
-    return amount > 0;
-  });
+  const views = invoiceViews(invoicesQuery.data ?? [], now);
+  const pendingInvoices = (invoicesQuery.data ?? []).filter((inv) => Boolean(views.get(inv.id)?.overdueDays));
   const pendingActs = (actsQuery.data ?? []).filter((a) => a.status === 'issued');
 
   const totalActions =
@@ -140,7 +148,10 @@ export function ActionRequiredWidget() {
                     {inv.number}
                   </Link>
                 </p>
-                <span className="text-xs text-muted-foreground">{t('widgets.actionRequired.payInvoice')}</span>
+                <span className="flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
+                  {t('widgets.actionRequired.payInvoice')}
+                  <ToneBadge tone="danger">{t('pages.invoices.overdueDays', { count: view?.overdueDays ?? 1 })}</ToneBadge>
+                </span>
               </CardContent>
             </Card>
           );

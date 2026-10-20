@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { useMutation } from '@tanstack/react-query';
 import { Mail, Send, UserPlus } from 'lucide-react';
 
-import { apiErrorKey } from '@/api/errors';
+import { loginErrorKey } from '@/api/errors';
 import { requestMagicLink } from '@/api/portal';
 import { botLink } from '@/app/links';
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -68,7 +68,7 @@ export function LoginPage() {
             </div>
             {magicLink.isError ? (
               <Alert variant="destructive" id={errorId}>
-                <AlertDescription>{t(apiErrorKey(magicLink.error))}</AlertDescription>
+                <AlertDescription>{t(loginErrorKey(magicLink.error))}</AlertDescription>
               </Alert>
             ) : null}
             <Button type="submit" disabled={magicLink.isPending}>

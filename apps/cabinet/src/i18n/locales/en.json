@@ -38,8 +38,11 @@
     "actions": "Actions",
     "loadFailed": "Could not load",
     "reasonRequired": "Give a reason — without it the provider will not know what to fix.",
-    "dealNumber": "Deal #{{id}}",
-    "noDeal": "No deal yet"
+    "dealNumber": "Deal № {{number}}",
+    "noDeal": "No deal yet",
+    "crashTitle": "Something went wrong",
+    "crashText": "The page failed to open because of an error. Reload it; if that does not help, contact your manager.",
+    "reload": "Reload"
   },
   "status": {
     "request": {
@@ -136,7 +139,9 @@
       "exchanging": "Signing in with the link…",
       "expiredTitle": "The link no longer works",
       "expiredText": "The link has expired or was already opened. Request a new one.",
-      "requestAgain": "Request a new link"
+      "requestAgain": "Request a new link",
+      "closedTitle": "Access closed",
+      "failedTitle": "Could not sign in"
     },
     "telegram": {
       "signingIn": "Signing in with Telegram…",
@@ -144,6 +149,10 @@
       "failedText": "If you are not our client yet, message the bot and a manager will invite you to the cabinet.",
       "openBot": "Open the bot",
       "retry": "Try again"
+    },
+    "errors": {
+      "TOO_MANY_REQUESTS": "Too many requests, try again in an hour.",
+      "FORBIDDEN": "Access is closed, please contact your manager."
     }
   },
   "newClient": {
@@ -191,7 +200,7 @@
   },
   "manager": {
     "write": "Message the manager",
-    "aboutDeal": "Message the manager about deal #{{id}}",
+    "aboutDeal": "Message the manager about deal № {{number}}",
     "aboutQuote": "Message the manager about quote {{number}}",
     "aboutContract": "Message the manager about contract {{number}}",
     "aboutInvoice": "Message the manager about invoice {{number}}",
@@ -231,7 +240,7 @@
     "requestNew": {
       "title": "New request",
       "summary": "What you need",
-      "summaryHint": "Describe the task in your own words: what, how much and by when.",
+      "summaryHint": "Describe the task in your own words: what, how much and by when. Up to 5000 characters.",
       "summaryRequired": "Describe what you need — at least one sentence.",
       "prefillSummary": "I need a catalog item: {{name}}",
       "lines": "Items or stages",
@@ -246,7 +255,7 @@
       "removeLine": "Remove line {{n}}",
       "attachmentsLater": "For now send specifications and drawings to your manager — file upload to the cabinet is coming later.",
       "attachmentsTitle": "Attach files (specification, drawings, inquiry sheets)",
-      "attachmentsHint": "PDF, DOCX, XLSX or images up to 20 MB",
+      "attachmentsHint": "PDF, DOCX, XLSX or images up to 10 MB",
       "uploadButton": "Upload file",
       "uploading": "Uploading…",
       "removeFile": "Remove file {{name}}",
@@ -317,9 +326,9 @@
       "accept": "Accept",
       "reject": "Reject",
       "acceptTitle": "Accept quote {{number}}",
-      "acceptText": "Total {{total}}. Enter the confirmation code from the message that came with the quote. Once accepted, the contract is drawn up automatically.",
+      "acceptText": "Total {{total}}. Enter the confirmation code from the message. The contract is created automatically after acceptance.",
       "code": "Confirmation code",
-      "codeHint": "The code came in the bot message or e-mail together with the quote.",
+      "codeHint": "The code is 6 digits from the message. If it did not arrive, send it again.",
       "codeTooShort": "The code is at least {{min}} characters long.",
       "acceptConfirm": "Accept quote",
       "acceptedToast": "Quote {{number}} accepted",
@@ -338,7 +347,15 @@
       "rejectedReason": "Reason: {{reason}}",
       "expiredTitle": "The quote has expired",
       "expiredText": "It can no longer be accepted. Ask your manager to update the offer.",
-      "backToList": "Back to quotes"
+      "backToList": "Back to quotes",
+      "requestCodeText": "Total {{total}}. Press “Get code” — we will send a confirmation code to your Telegram or e-mail. The contract is created automatically after acceptance.",
+      "requestCode": "Get code",
+      "codeSent": {
+        "telegram": "The code was sent to Telegram. Valid for {{minutes}} min.",
+        "telegramTo": "The code was sent to Telegram ({{to}}). Valid for {{minutes}} min.",
+        "email": "The code was sent to {{to}}. Valid for {{minutes}} min."
+      },
+      "resendCode": "Send the code again"
     },
     "contracts": {
       "title": "Contracts",
@@ -411,9 +428,14 @@
       "returnPlaceholder": "For example: the serial number is missing",
       "returnConfirm": "Return act",
       "returnedToast": "Act {{number}} returned to the provider",
-      "uploadScan": "Upload scan",
-      "uploadScanNamed": "Upload scan for act {{number}}",
-      "scanUploadedToast": "Scan for act {{number}} uploaded"
+      "scan": "Scan",
+      "scanNamed": "Signed scan of act {{number}}",
+      "scanLabel": "Scan of the signed act (optional)",
+      "scanHint": "PDF or image up to 10 MB. You can also accept the act without a scan.",
+      "scanProblem": {
+        "tooLarge": "The file is larger than 10 MB — choose a smaller one.",
+        "badType": "A PDF or an image is required."
+      }
     },
     "deliveries": {
       "title": "Deliveries",
@@ -426,15 +448,18 @@
       "tracking": "Tracking",
       "acceptLine": "Accept",
       "acceptLineNamed": "Accept item {{name}}",
-      "lineAcceptedToast": "Item accepted",
-      "disputeLine": "Issue note",
-      "disputeLineNamed": "Leave remark for item {{name}}",
+      "lineAcceptedToast": "Item “{{name}}” accepted",
+      "disputeLine": "Report an issue",
+      "disputeLineNamed": "Report an issue with item {{name}}",
       "disputeTitle": "Remark for item \"{{name}}\"",
       "disputeText": "Describe the issue (defect, missing parts, damage). The manager will contact you.",
       "disputeReason": "Remark reason",
       "disputePlaceholder": "For example: labeling defect or transport damage",
       "disputeConfirm": "Send remark",
-      "disputeSentToast": "Remark sent to manager"
+      "disputeSentToast": "Remark sent to the manager",
+      "acceptedAt": "Accepted {{date}}",
+      "disputedAt": "Remark left {{date}}",
+      "remark": "Remark: {{remark}}"
     },
     "documents": {
       "title": "Documents",
@@ -556,7 +581,6 @@
       }
     },
     "deal": {
-      "title": "Deal #{{id}}",
       "requests": "Request",
       "quotes": "Quotes",
       "contracts": "Contract",
@@ -564,7 +588,8 @@
       "acts": "Acts",
       "deliveries": "Delivery",
       "documents": "Documents",
-      "toRequests": "Go to requests"
+      "toRequests": "Go to requests",
+      "titleFallback": "Deal"
     }
   },
   "apiErrors": {
@@ -580,11 +605,23 @@
     "QUOTE_FINALIZED": "The quote was already accepted or rejected — refresh the page.",
     "ACT_FINALIZED": "The act was already accepted or returned — refresh the page.",
     "CONTRACT_FINALIZED": "The contract was already signed or cancelled — refresh the page.",
-    "QUOTE_CODE_INVALID": "The confirmation code is incorrect. Check the code in the message with the quote.",
+    "QUOTE_CODE_INVALID": "The code is wrong or was not requested. Check the code in the message or request a new one.",
     "QUOTE_EXPIRED": "The quote has expired and can no longer be accepted. Ask your manager to update the offer.",
     "REASON_REQUIRED": "Give a reason.",
     "INN_INVALID": "The tax ID has 9 to 14 digits.",
-    "TEAM_MEMBER_EXISTS": "A colleague with this e-mail is already in the team."
+    "TEAM_MEMBER_EXISTS": "A colleague with this e-mail is already in the team.",
+    "TOO_MANY_REQUESTS": "Too many requests. Wait a little and try again.",
+    "CONTACT_CHANNEL_REQUIRED": "We have nowhere to send the code: no e-mail is set and Telegram is not connected. Ask your manager to add a contact channel.",
+    "CONTACT_EMAIL_REQUIRED": "A contact e-mail is required for this.",
+    "INVALID_CHANNEL": "This contact channel is not available.",
+    "FILE_REQUIRED": "Choose a file.",
+    "FILE_TOO_LARGE": "The file is larger than 10 MB.",
+    "UPLOAD_NOT_FOUND": "The uploaded file was not found — upload it again.",
+    "DELIVERY_LINE_NOT_ACCEPTABLE": "This item can no longer be accepted or disputed: it is not delivered yet or a decision was already made. Reload the page.",
+    "DOCUMENT_PENDING": "The document is still being prepared. Try again in a minute.",
+    "CONFLICT": "The data has changed — reload the page and try again.",
+    "IDEMPOTENCY_KEY_REQUIRED": "The server rejected the request. Reload the page and try again.",
+    "UNSUPPORTED_MEDIA_TYPE": "The server rejected the request. Reload the page and try again."
   },
   "widgets": {
     "actionRequired": {

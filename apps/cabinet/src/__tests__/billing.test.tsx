@@ -2,7 +2,7 @@ import { screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 import { renderApp, signedIn } from '@/test/render';
-import { captureBody, expectNoAxeViolations, failWith, heading } from '@/test/screens';
+import { captureBody, captureText, expectNoAxeViolations, failWith, heading, requestLog } from '@/test/screens';
 
 function card(listName: string, title: string) {
   const list = screen.getByRole('list', { name: listName });
@@ -115,6 +115,86 @@ describe('Акты', () => {
     expect(await screen.findByText('Акт A-2026-0090 принят')).toBeInTheDocument();
     expect(within(card('Акты', 'A-2026-0090')).getByText('Принят')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /Вернуть акт/ })).not.toBeInTheDocument();
+  });
+
+  it('принять без скана: POST /acts/{id}/accept без тела, без загрузки файла', async () => {
+    signedIn();
+    const user = userEvent.setup();
+    const log = requestLog();
+    const raw = captureText('/acts/701/accept');
+    renderApp('/acts');
+    await user.click(await screen.findByRole('button', { name: 'Принять акт A-2026-0090' }));
+    const dialog = await screen.findByRole('dialog', { name: 'Принять акт A-2026-0090' });
+    expect(within(dialog).getByLabelText('Скан подписанного акта (необязательно)')).toBeInTheDocument();
+    await user.click(within(dialog).getByRole('button', { name: 'Принять акт' }));
+    expect(await screen.findByText('Акт A-2026-0090 принят')).toBeInTheDocument();
+    expect(raw.current).toBe('');
+    expect(log).not.toContain('POST /uploads');
+    expect(log).toContain('POST /acts/701/accept');
+    expect(within(card('Акты', 'A-2026-0090')).queryByRole('button', { name: /Скан/ })).not.toBeInTheDocument();
+  });
+
+  it('принять со сканом: POST /uploads → POST /acts/{id}/accept {upload_id} → ссылка на скан', async () => {
+    signedIn();
+    const user = userEvent.setup();
+    const log = requestLog();
+    const body = captureBody('/acts/701/accept');
+    renderApp('/acts');
+    await user.click(await screen.findByRole('button', { name: 'Принять акт A-2026-0090' }));
+    const dialog = await screen.findByRole('dialog', { name: 'Принять акт A-2026-0090' });
+    await user.upload(
+      within(dialog).getByLabelText('Скан подписанного акта (необязательно)'),
+      new File(['%PDF-1.4'], 'act-signed.pdf', { type: 'application/pdf' }),
+    );
+    await user.click(within(dialog).getByRole('button', { name: 'Принять акт' }));
+
+    expect(await screen.findByText('Акт A-2026-0090 принят')).toBeInTheDocument();
+    expect(log.filter((entry) => entry === 'POST /uploads' || entry === 'POST /acts/701/accept')).toEqual([
+      'POST /uploads',
+      'POST /acts/701/accept',
+    ]);
+    expect(body.current).toEqual({ upload_id: expect.stringMatching(/^upl_/) });
+    const row = card('Акты', 'A-2026-0090');
+    expect(within(row).getByText('Принят')).toBeInTheDocument();
+    expect(await within(row).findByRole('button', { name: 'Скачать: Скан подписанного акта A-2026-0090' })).toBeInTheDocument();
+  });
+
+  it.each([
+    ['слишком большой файл', new File([new Uint8Array(10 * 1024 * 1024 + 1)], 'big.pdf', { type: 'application/pdf' }), 'Файл больше 10 МБ — выберите файл поменьше.'],
+    ['не PDF и не изображение', new File(['x'], 'act.docx', { type: 'application/msword' }), 'Нужен PDF или изображение.'],
+  ])('скан: %s — сообщение, запросов нет', async (_name, file, message) => {
+    signedIn();
+    const user = userEvent.setup({ applyAccept: false });
+    const log = requestLog();
+    renderApp('/acts');
+    await user.click(await screen.findByRole('button', { name: 'Принять акт A-2026-0090' }));
+    const dialog = await screen.findByRole('dialog');
+    await user.upload(within(dialog).getByLabelText('Скан подписанного акта (необязательно)'), file);
+    await user.click(within(dialog).getByRole('button', { name: 'Принять акт' }));
+    expect(await within(dialog).findByText(message)).toBeInTheDocument();
+    expect(log).not.toContain('POST /uploads');
+    expect(log).not.toContain('POST /acts/701/accept');
+  });
+
+  it.each([
+    ['post', '/uploads', 422, 'FILE_TOO_LARGE', 'Файл больше 10 МБ.'],
+    ['post', '/acts/701/accept', 422, 'UPLOAD_NOT_FOUND', /Загруженный файл не найден/],
+    ['post', '/acts/701/accept', 403, 'FORBIDDEN', /нет права на это действие/],
+    ['post', '/acts/701/accept', 404, 'NOT_FOUND', /Не найдено/],
+  ] as const)('скан: ошибка ERP %s %s %i — текст в диалоге', async (method, path, status, code, text) => {
+    signedIn();
+    failWith(method, path, status, code);
+    const user = userEvent.setup();
+    renderApp('/acts');
+    await user.click(await screen.findByRole('button', { name: 'Принять акт A-2026-0090' }));
+    const dialog = await screen.findByRole('dialog');
+    await user.upload(
+      within(dialog).getByLabelText('Скан подписанного акта (необязательно)'),
+      new File(['%PDF-1.4'], 'act-signed.pdf', { type: 'application/pdf' }),
+    );
+    await user.click(within(dialog).getByRole('button', { name: 'Принять акт' }));
+    expect(await within(dialog).findByText(text)).toBeInTheDocument();
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
   });
 
   it('вернуть акт: причина обязательна и уходит в ERP', async () => {

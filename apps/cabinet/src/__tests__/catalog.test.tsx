@@ -26,7 +26,7 @@ describe('Каталог', () => {
     await expectNoAxeViolations();
   });
 
-  it('пагинация, поиск и категории — в адресе страницы', async () => {
+  it('пагинация — в адресе страницы', async () => {
     signedIn();
     const user = userEvent.setup();
     const { router } = renderApp('/catalog');
@@ -34,10 +34,19 @@ describe('Каталог', () => {
     expect(screen.getByText('Страница 1 из 2')).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Вперёд' }));
     expect(await screen.findByText('Страница 2 из 2')).toBeInTheDocument();
-    expect(await screen.findByRole('link', { name: 'Задвижка 30с41нж Ду100' })).toBeInTheDocument();
+    // Поиск роли по списку, а не по всему документу: по документу jsdom тратит на это больше секунды
+    expect(await within(await results()).findByRole('link', { name: 'Задвижка 30с41нж Ду100' })).toBeInTheDocument();
     expect(router.state.location.search).toBe('?page=2');
+  });
 
-    await user.type(screen.getByRole('searchbox', { name: 'Поиск по каталогу' }), 'ремень');
+  it('поиск и категории — в адресе страницы', async () => {
+    signedIn();
+    const user = userEvent.setup();
+    const { router } = renderApp('/catalog');
+    await results();
+    // Вставка, а не посимвольный ввод: каждое нажатие перерисовывает 12 карточек, на раннере CI это десятки секунд
+    await user.click(screen.getByRole('searchbox', { name: 'Поиск по каталогу' }));
+    await user.paste('ремень');
     await user.click(screen.getByRole('button', { name: 'Найти' }));
     expect(await screen.findByText('Найдено 3 позиции')).toBeInTheDocument();
     expect(router.state.location.search).toBe('?q=%D1%80%D0%B5%D0%BC%D0%B5%D0%BD%D1%8C');

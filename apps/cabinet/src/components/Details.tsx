@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import type { LucideIcon } from 'lucide-react';
 
+import type { DealRef } from '@/api/portal';
 import { cn } from '@/lib/utils';
 
 /** Пары «подпись — значение» карточки объекта; на телефоне — столбиком, от `sm` — в две колонки. */
@@ -22,17 +23,23 @@ export function DetailList({ items, className }: { items: Array<{ label: string;
   );
 }
 
-/** Ссылка на сделку — цель deep-link бота (`deal_<id>`), собирает всё по сделке. */
-export function DealLink({ dealId }: { dealId: number | null | undefined }) {
+/**
+ * Ссылка на сделку — цель deep-link бота (`deal_<id>`), собирает всё по сделке. Клиент видит номер
+ * (`deal.number`), а не внутренний id; название (`deal.title`) — по запросу, рядом с номером.
+ */
+export function DealLink({ deal, showTitle = false }: { deal: DealRef | null | undefined; showTitle?: boolean }) {
   const { t } = useTranslation();
-  if (dealId === null || dealId === undefined) return <>{t('common.noDeal')}</>;
+  if (!deal) return <>{t('common.noDeal')}</>;
   return (
-    <Link
-      to={`/deals/${dealId}`}
-      className="relative z-10 rounded-sm text-primary underline-offset-4 outline-none hover:underline focus-visible:ring-2 focus-visible:ring-ring"
-    >
-      {t('common.dealNumber', { id: dealId })}
-    </Link>
+    <>
+      <Link
+        to={`/deals/${deal.id}`}
+        className="relative z-10 rounded-sm text-primary underline underline-offset-4 outline-none hover:no-underline focus-visible:ring-2 focus-visible:ring-ring"
+      >
+        {t('common.dealNumber', { number: deal.number })}
+      </Link>
+      {showTitle && deal.title ? <span className="font-normal text-muted-foreground"> · {deal.title}</span> : null}
+    </>
   );
 }
 

@@ -5,22 +5,41 @@ import type { Schemas } from '@/api/portal';
  * Каждая запись типизирована схемой `erp-portal.yaml`: поле, которого нет в контракте, не скомпилируется.
  *
  * Одна компания-клиент и её сделки на «сегодня» 2026-10-14 (Asia/Tashkent):
- * - 42 — товары: запрос → КП v1 отклонено, КП v2 ждёт решения (код акцепта `MOCK_ACCEPT_CODE`);
+ * - 42 — товары: запрос → КП v1 отклонено, КП v2 ждёт решения (код акцепта запрашивается, мок выдаёт `MOCK_ACCEPT_CODE`);
  * - 57 — услуга по этапам: КП просмотрено, ждёт решения;
  * - 48 — КП принято, договор ждёт подписи клиента, счёт в долларах, позиция комплектуется;
  * - 29 — договор подписан исполнителем (ждёт клиента), счёт просрочен, поставка в пути, акт возвращён;
- * - 35 — закрытая сделка: договор подписан, счёт частично оплачен, акт ждёт приёмки, поставка доставлена;
+ * - 35 — закрытая сделка: договор подписан, счёт частично оплачен, акт ждёт приёмки, одна поставка доставлена
+ *   (её можно принять или оспорить), одна принята, одна оспорена;
  * - 33 — КП истекло.
- * Сценарии ошибок: неверный код акцепта → 409, документ 905 сначала отвечает 202 (PDF готовится),
+ * Сценарии ошибок: неверный или не запрошенный код акцепта → 409, документ 905 сначала отвечает 202 (PDF готовится),
  * документ 909 всегда 202; сессия `empty` — компания без единого объекта (пустые состояния).
  */
 
-/** Код акцепта КП в моке (в ERP код приходит клиенту в боте или письме вместе с КП). */
-export const MOCK_ACCEPT_CODE = '2468';
+/** Код акцепта КП в моке: его выдаёт мок `POST /quotes/{id}/request-code` (в ERP код уходит контакту в Telegram или на e-mail). */
+export const MOCK_ACCEPT_CODE = '246810';
 /** Документ, PDF которого «готовится» на первом запросе (202 + Retry-After), потом отдаётся. */
 export const DOC_PREPARING_ONCE = 905;
 /** Документ, PDF которого «готовится» всегда — исчерпание попыток. */
 export const DOC_ALWAYS_PREPARING = 909;
+
+/** Сделки глазами клиента: номер и название вместо внутреннего id (Q-16). */
+export const deals: Record<number, Schemas['DealRef']> = {
+  29: { id: 29, number: 'D-29', title: 'Насос, задвижки и манометры' },
+  33: { id: 33, number: 'D-33', title: 'Кабель ВВГнг для цеха' },
+  35: { id: 35, number: 'D-35', title: 'Редукторы и муфты' },
+  42: { id: 42, number: 'D-42', title: 'Подшипники и ремни' },
+  48: { id: 48, number: 'D-48', title: 'Электродвигатели и преобразователь' },
+  57: { id: 57, number: 'D-57', title: 'Насосная станция в Чирчике' },
+};
+
+/**
+ * Сделка записи: `deal` по контракту 0.2.0 и устаревшее `deal_id`, которое ERP отдаёт до снятия поля из
+ * контракта (оно обязательно в схемах договора, счёта, акта и поставки). Cabinet его не читает.
+ */
+export function dealOf(id: number): { deal: Schemas['DealRef']; deal_id: number } {
+  return { deal: deals[id], deal_id: id };
+}
 
 export const company: Schemas['Company'] = {
   id: 7,
@@ -84,7 +103,7 @@ export const requests: Schemas['ClientRequest'][] = [
     status: 'new',
     summary: 'Перчатки нитриловые, размер L — 50 упаковок',
     source: 'cabinet',
-    deal_id: null,
+    deal: null,
     created_at: '2026-10-13T12:05:00+05:00',
   },
   {
@@ -93,8 +112,7 @@ export const requests: Schemas['ClientRequest'][] = [
     status: 'in_progress',
     summary: 'Монтаж и пусконаладка насосной станции на складе в Чирчике',
     source: 'cabinet',
-    deal_id: 57,
-    deal: { id: 57, number: 'D-57', title: null },
+    ...dealOf(57),
     created_at: '2026-10-10T16:40:00+05:00',
   },
   {
@@ -103,8 +121,7 @@ export const requests: Schemas['ClientRequest'][] = [
     status: 'quoted',
     summary: 'Подшипники 6205-2RS — 200 шт., ремни приводные SPZ 1250 — 40 шт.',
     source: 'crm',
-    deal_id: 42,
-    deal: { id: 42, number: 'D-42', title: null },
+    ...dealOf(42),
     created_at: '2026-09-28T10:15:00+05:00',
   },
   {
@@ -113,8 +130,7 @@ export const requests: Schemas['ClientRequest'][] = [
     status: 'quoted',
     summary: 'Электродвигатель АИР 100L4 — 2 шт., частотный преобразователь 4 кВт',
     source: 'erp',
-    deal_id: 48,
-    deal: { id: 48, number: 'D-48', title: null },
+    ...dealOf(48),
     created_at: '2026-09-15T09:30:00+05:00',
   },
   {
@@ -123,16 +139,14 @@ export const requests: Schemas['ClientRequest'][] = [
     status: 'closed',
     summary: 'Редукторы червячные NMRV 063 — 6 шт., муфты упругие — 12 шт.',
     source: 'crm',
-    deal_id: 35,
-    deal: { id: 35, number: 'D-35', title: null },
+    ...dealOf(35),
     created_at: '2026-08-05T14:00:00+05:00',
   },
 ];
 
 const quote42: Schemas['Quote'] = {
   id: 301,
-  deal_id: 42,
-  deal: { id: 42, number: 'D-42', title: null },
+  ...dealOf(42),
   number: 'KP-2026-0042',
   version: 2,
   status: 'sent',
@@ -184,8 +198,7 @@ const quote42v1: Schemas['Quote'] = {
 
 const quote57: Schemas['Quote'] = {
   id: 310,
-  deal_id: 57,
-  deal: { id: 57, number: 'D-57', title: null },
+  ...dealOf(57),
   number: 'KP-2026-0057',
   version: 1,
   status: 'viewed',
@@ -229,8 +242,7 @@ const quote57: Schemas['Quote'] = {
 
 const quote48: Schemas['Quote'] = {
   id: 320,
-  deal_id: 48,
-  deal: { id: 48, number: 'D-48', title: null },
+  ...dealOf(48),
   number: 'KP-2026-0048',
   version: 1,
   status: 'accepted',
@@ -266,8 +278,7 @@ const quote48: Schemas['Quote'] = {
 
 const quote33: Schemas['Quote'] = {
   id: 330,
-  deal_id: 33,
-  deal: { id: 33, number: 'D-33', title: null },
+  ...dealOf(33),
   number: 'KP-2026-0033',
   version: 1,
   status: 'expired',
@@ -296,8 +307,7 @@ export const quotes: Schemas['Quote'][] = [quote42, quote57, quote42v1, quote48,
 export const contracts: Schemas['Contract'][] = [
   {
     id: 402,
-    deal_id: 48,
-    deal: { id: 48, number: 'D-48', title: null },
+    ...dealOf(48),
     number: 'D-2026-0048',
     status: 'sent',
     signed_by_client_at: null,
@@ -306,8 +316,7 @@ export const contracts: Schemas['Contract'][] = [
   },
   {
     id: 403,
-    deal_id: 29,
-    deal: { id: 29, number: 'D-29', title: null },
+    ...dealOf(29),
     number: 'D-2026-0029',
     status: 'signed_by_company',
     signed_by_client_at: null,
@@ -316,8 +325,7 @@ export const contracts: Schemas['Contract'][] = [
   },
   {
     id: 401,
-    deal_id: 35,
-    deal: { id: 35, number: 'D-35', title: null },
+    ...dealOf(35),
     number: 'D-2026-0035',
     status: 'signed',
     signed_by_client_at: '2026-08-20T10:00:00+05:00',
@@ -329,8 +337,7 @@ export const contracts: Schemas['Contract'][] = [
 export const invoices: Schemas['Invoice'][] = [
   {
     id: 603,
-    deal_id: 29,
-    deal: { id: 29, number: 'D-29', title: null },
+    ...dealOf(29),
     number: 'S-2026-0124',
     status: 'issued',
     total: { amount: '9800000.00', currency: 'UZS' },
@@ -340,8 +347,7 @@ export const invoices: Schemas['Invoice'][] = [
   },
   {
     id: 604,
-    deal_id: 48,
-    deal: { id: 48, number: 'D-48', title: null },
+    ...dealOf(48),
     number: 'S-2026-0130',
     status: 'issued',
     total: { amount: '12500.00', currency: 'USD' },
@@ -351,8 +357,7 @@ export const invoices: Schemas['Invoice'][] = [
   },
   {
     id: 601,
-    deal_id: 35,
-    deal: { id: 35, number: 'D-35', title: null },
+    ...dealOf(35),
     number: 'S-2026-0118',
     status: 'partially_paid',
     total: { amount: '27500000.00', currency: 'UZS' },
@@ -362,8 +367,7 @@ export const invoices: Schemas['Invoice'][] = [
   },
   {
     id: 602,
-    deal_id: 35,
-    deal: { id: 35, number: 'D-35', title: null },
+    ...dealOf(35),
     number: 'S-2026-0101',
     status: 'paid',
     total: { amount: '5400000.00', currency: 'UZS' },
@@ -376,8 +380,7 @@ export const invoices: Schemas['Invoice'][] = [
 export const acts: Schemas['Act'][] = [
   {
     id: 701,
-    deal_id: 35,
-    deal: { id: 35, number: 'D-35', title: null },
+    ...dealOf(35),
     number: 'A-2026-0090',
     status: 'issued',
     issued_at: '2026-10-11T09:00:00+05:00',
@@ -386,8 +389,7 @@ export const acts: Schemas['Act'][] = [
   },
   {
     id: 703,
-    deal_id: 29,
-    deal: { id: 29, number: 'D-29', title: null },
+    ...dealOf(29),
     number: 'A-2026-0084',
     status: 'returned',
     issued_at: '2026-10-03T16:00:00+05:00',
@@ -396,8 +398,7 @@ export const acts: Schemas['Act'][] = [
   },
   {
     id: 702,
-    deal_id: 29,
-    deal: { id: 29, number: 'D-29', title: null },
+    ...dealOf(29),
     number: 'A-2026-0071',
     status: 'accepted',
     issued_at: '2026-09-18T12:00:00+05:00',
@@ -409,8 +410,7 @@ export const acts: Schemas['Act'][] = [
 export const deliveries: Schemas['DeliveryLine'][] = [
   {
     id: 101,
-    deal_id: 29,
-    deal: { id: 29, number: 'D-29', title: null },
+    ...dealOf(29),
     line_no: 1,
     title: 'Насос центробежный CM 50-200',
     quantity: '2',
@@ -422,8 +422,7 @@ export const deliveries: Schemas['DeliveryLine'][] = [
   },
   {
     id: 102,
-    deal_id: 29,
-    deal: { id: 29, number: 'D-29', title: null },
+    ...dealOf(29),
     line_no: 2,
     title: 'Задвижка 30с41нж Ду100',
     quantity: '4',
@@ -435,8 +434,7 @@ export const deliveries: Schemas['DeliveryLine'][] = [
   },
   {
     id: 103,
-    deal_id: 29,
-    deal: { id: 29, number: 'D-29', title: null },
+    ...dealOf(29),
     line_no: 3,
     title: 'Манометр ДМ 02-100',
     quantity: '10',
@@ -448,8 +446,7 @@ export const deliveries: Schemas['DeliveryLine'][] = [
   },
   {
     id: 104,
-    deal_id: 48,
-    deal: { id: 48, number: 'D-48', title: null },
+    ...dealOf(48),
     line_no: 1,
     title: 'Электродвигатель АИР 100L4',
     quantity: '2',
@@ -461,8 +458,7 @@ export const deliveries: Schemas['DeliveryLine'][] = [
   },
   {
     id: 105,
-    deal_id: 35,
-    deal: { id: 35, number: 'D-35', title: null },
+    ...dealOf(35),
     line_no: 1,
     title: 'Редуктор червячный NMRV 063',
     quantity: '6',
@@ -474,8 +470,7 @@ export const deliveries: Schemas['DeliveryLine'][] = [
   },
   {
     id: 106,
-    deal_id: 35,
-    deal: { id: 35, number: 'D-35', title: null },
+    ...dealOf(35),
     line_no: 2,
     title: 'Муфта упругая МУВП-3',
     quantity: '12',
@@ -485,18 +480,46 @@ export const deliveries: Schemas['DeliveryLine'][] = [
     tracking: null,
     shipped_at: null,
   },
+  {
+    id: 107,
+    ...dealOf(35),
+    line_no: 3,
+    title: 'Втулка резиновая для МУВП-3',
+    quantity: '24',
+    unit: 'шт',
+    status: 'accepted',
+    eta: '2026-09-25',
+    tracking: 'UZP-77812044',
+    shipped_at: '2026-09-21T08:00:00+05:00',
+    accepted_at: '2026-09-27T10:15:00+05:00',
+    remark: null,
+  },
+  {
+    id: 108,
+    ...dealOf(35),
+    line_no: 4,
+    title: 'Масло редукторное ТАД-17и, 20 л',
+    quantity: '3',
+    unit: 'шт',
+    status: 'disputed',
+    eta: '2026-09-25',
+    tracking: 'UZP-77812044',
+    shipped_at: '2026-09-21T08:00:00+05:00',
+    accepted_at: '2026-09-27T10:20:00+05:00',
+    remark: 'У двух канистр нарушена пломба',
+  },
 ];
 
 export const documents: Schemas['Document'][] = [
-  { id: 905, deal_id: 48, kind: 'contract', number: 'D-2026-0048', date: '2026-10-02', title: 'Договор поставки № D-2026-0048', file_name: 'D-2026-0048.pdf', size_bytes: 398336 },
-  { id: 904, deal_id: 35, kind: 'act', number: 'A-2026-0090', date: '2026-10-11', title: 'Акт № A-2026-0090', file_name: 'A-2026-0090.pdf', size_bytes: 88064 },
-  { id: 901, deal_id: 42, kind: 'quote', number: 'KP-2026-0042', date: '2026-10-08', title: 'КП № KP-2026-0042, версия 2', file_name: 'KP-2026-0042-v2.pdf', size_bytes: 184320 },
-  { id: 903, deal_id: 35, kind: 'invoice', number: 'S-2026-0118', date: '2026-10-01', title: 'Счёт № S-2026-0118', file_name: 'S-2026-0118.pdf', size_bytes: 96256 },
-  { id: 906, deal_id: 35, kind: 'waybill', number: 'TN-2026-0412', date: '2026-09-21', title: 'Товарная накладная № TN-2026-0412', file_name: 'TN-2026-0412.pdf', size_bytes: 120832 },
-  { id: 907, deal_id: 35, kind: 'receipt', number: 'PP-2026-1187', date: '2026-09-12', title: 'Платёжное поручение № PP-2026-1187', file_name: 'PP-2026-1187.pdf', size_bytes: 51200 },
-  { id: 902, deal_id: 35, kind: 'contract', number: 'D-2026-0035', date: '2026-08-20', title: 'Договор поставки № D-2026-0035', file_name: 'D-2026-0035.pdf', size_bytes: 412672 },
-  { id: 909, deal_id: null, kind: 'other', number: 'AS-2026-09', date: '2026-10-01', title: 'Акт сверки за сентябрь 2026', file_name: 'AS-2026-09.pdf', size_bytes: 64512 },
-  { id: 908, deal_id: null, kind: 'other', number: 'SR-2026-031', date: '2026-07-14', title: 'Сертификат соответствия на подшипники', file_name: 'SR-2026-031.pdf', size_bytes: 1572864 },
+  { id: 905, ...dealOf(48), kind: 'contract', number: 'D-2026-0048', date: '2026-10-02', title: 'Договор поставки № D-2026-0048', file_name: 'D-2026-0048.pdf', size_bytes: 398336 },
+  { id: 904, ...dealOf(35), kind: 'act', number: 'A-2026-0090', date: '2026-10-11', title: 'Акт № A-2026-0090', file_name: 'A-2026-0090.pdf', size_bytes: 88064 },
+  { id: 901, ...dealOf(42), kind: 'quote', number: 'KP-2026-0042', date: '2026-10-08', title: 'КП № KP-2026-0042, версия 2', file_name: 'KP-2026-0042-v2.pdf', size_bytes: 184320 },
+  { id: 903, ...dealOf(35), kind: 'invoice', number: 'S-2026-0118', date: '2026-10-01', title: 'Счёт № S-2026-0118', file_name: 'S-2026-0118.pdf', size_bytes: 96256 },
+  { id: 906, ...dealOf(35), kind: 'waybill', number: 'TN-2026-0412', date: '2026-09-21', title: 'Товарная накладная № TN-2026-0412', file_name: 'TN-2026-0412.pdf', size_bytes: 120832 },
+  { id: 907, ...dealOf(35), kind: 'receipt', number: 'PP-2026-1187', date: '2026-09-12', title: 'Платёжное поручение № PP-2026-1187', file_name: 'PP-2026-1187.pdf', size_bytes: 51200 },
+  { id: 902, ...dealOf(35), kind: 'contract', number: 'D-2026-0035', date: '2026-08-20', title: 'Договор поставки № D-2026-0035', file_name: 'D-2026-0035.pdf', size_bytes: 412672 },
+  { id: 909, deal: null, kind: 'other', number: 'AS-2026-09', date: '2026-10-01', title: 'Акт сверки за сентябрь 2026', file_name: 'AS-2026-09.pdf', size_bytes: 64512 },
+  { id: 908, deal: null, kind: 'other', number: 'SR-2026-031', date: '2026-07-14', title: 'Сертификат соответствия на подшипники', file_name: 'SR-2026-031.pdf', size_bytes: 1572864 },
 ];
 
 const goods = (

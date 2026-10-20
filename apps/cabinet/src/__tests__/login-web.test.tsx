@@ -3,8 +3,16 @@ import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import { axe } from 'vitest-axe';
 
+import i18n from '@/i18n';
+import indexHtml from '../../index.html?raw';
 import { portalServer } from '@/mocks/server';
 import { renderApp, signedIn } from '@/test/render';
+import { captureBody, requestLog } from '@/test/screens';
+
+afterEach(() => {
+  delete (window as unknown as { Telegram?: unknown }).Telegram;
+  delete (window as unknown as { __cabinetMagicToken?: string }).__cabinetMagicToken;
+});
 
 describe('вход с веба', () => {
   it('без сессии кабинет ведёт на страницу входа с двумя путями', async () => {
@@ -45,16 +53,159 @@ describe('вход с веба', () => {
     expect(await screen.findByText('Проверьте заполненные поля.')).toBeInTheDocument();
   });
 
-  it('ссылка из письма: /auth/magic/:token → сессия → кабинет', async () => {
-    const { router } = renderApp('/auth/magic/demo-token');
+  it('ссылка из письма: /auth/magic#token=… → POST /auth/magic {token} → сессия → кабинет', async () => {
+    const log = requestLog();
+    const body = captureBody('/auth/magic');
+    const { router } = renderApp('/auth/magic#token=demo-token');
     expect(await screen.findByRole('heading', { level: 1, name: 'Запросы' })).toBeInTheDocument();
     expect(router.state.location.pathname).toBe('/requests');
+    expect(body.current).toEqual({ token: 'demo-token' });
+    // Токен не в пути и не в GET: старый обмен `GET /auth/magic/{token}` Cabinet не использует.
+    expect(log).toContain('POST /auth/magic');
+    expect(log.filter((entry) => entry.startsWith('GET /auth/magic'))).toEqual([]);
   });
 
-  it('просроченная ссылка (410) — «Ссылка не действует» и путь к новой', async () => {
-    renderApp('/auth/magic/expired');
+  it('POST /auth/magic по контракту FIX-15: Idempotency-Key, JSON, cookie сессии, в теле ровно {token}', async () => {
+    let seen: { key: string | null; type: string | null; credentials: string; body: unknown } | null = null;
+    portalServer.events.on('request:start', async ({ request }) => {
+      if (new URL(request.url).pathname.endsWith('/auth/magic') && request.method === 'POST') {
+        seen = {
+          key: request.headers.get('Idempotency-Key'),
+          type: request.headers.get('Content-Type'),
+          credentials: request.credentials,
+          body: await request.clone().json(),
+        };
+      }
+    });
+    renderApp('/auth/magic#token=demo-token');
+    expect(await screen.findByRole('heading', { level: 1, name: 'Запросы' })).toBeInTheDocument();
+    expect(seen).toEqual({
+      key: expect.stringMatching(/^[\w-]{8,}$/),
+      type: 'application/json',
+      credentials: 'include',
+      body: { token: 'demo-token' },
+    });
+  });
+
+  it('422 VALIDATION_ERROR (обрезанная или битая ссылка) — «Ссылка не действует» и путь запросить новую, а не «проверьте поля»', async () => {
+    portalServer.use(http.post('*/api/portal/v1/auth/magic', () => HttpResponse.json({ detail: 'VALIDATION_ERROR' }, { status: 422 })));
+    renderApp('/auth/magic#token=bad');
+    expect(await screen.findByRole('heading', { level: 1, name: 'Ссылка не действует' })).toBeInTheDocument();
+    expect(screen.queryByText('Проверьте заполненные поля.')).not.toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Запросить новую ссылку' })).toHaveAttribute('href', '/login');
+  });
+
+  it('тексты ошибок входа есть на uz и en', async () => {
+    window.localStorage.setItem('cabinet.language', 'uz');
+    await i18n.changeLanguage('uz');
+    const uz = renderApp('/auth/magic#token=forbidden');
+    expect(await screen.findByText('Kirish yopilgan, menejerga murojaat qiling.')).toBeInTheDocument();
+    uz.unmount();
+    await i18n.changeLanguage('en');
+    renderApp('/auth/magic#token=throttled');
+    expect(await screen.findByText('Too many requests, try again in an hour.')).toBeInTheDocument();
+  });
+
+  describe('токен входа не остаётся в SDK Telegram', () => {
+    const STORE_KEY = '__telegram__initParams';
+    const seed = () => {
+      // Telegram SDK при загрузке разбирает весь location.hash в sessionStorage и в память WebView.initParams.
+      window.sessionStorage.setItem(STORE_KEY, JSON.stringify({ token: 'secret-token-1', tgWebAppPlatform: 'web' }));
+      (window as unknown as { Telegram: unknown }).Telegram = { WebView: { initParams: { token: 'secret-token-1', tgWebAppPlatform: 'web' } } };
+    };
+    const leaks = () => {
+      const stored = window.sessionStorage.getItem(STORE_KEY) ?? '';
+      const memory = JSON.stringify((window as unknown as { Telegram?: unknown }).Telegram ?? {});
+      return { stored, memory, found: /secret-token-1|throttled|demo-token/.test(stored + memory) };
+    };
+
+    it('после успешного входа токена нет ни в sessionStorage, ни в window.Telegram; прочие параметры SDK целы', async () => {
+      seed();
+      renderApp('/auth/magic#token=demo-token');
+      expect(await screen.findByRole('heading', { level: 1, name: 'Запросы' })).toBeInTheDocument();
+      expect(leaks().found).toBe(false);
+      expect(JSON.parse(window.sessionStorage.getItem(STORE_KEY) ?? '{}')).toEqual({ tgWebAppPlatform: 'web' });
+      expect((window as unknown as { Telegram: { WebView: { initParams: object } } }).Telegram.WebView.initParams).toEqual({ tgWebAppPlatform: 'web' });
+    });
+
+    it('токен снят ещё до первого запроса и после неудачного обмена (429)', async () => {
+      seed();
+      let atRequest: ReturnType<typeof leaks> | null = null;
+      portalServer.events.on('request:start', ({ request }) => {
+        if (new URL(request.url).pathname.endsWith('/auth/magic') && request.method === 'POST') atRequest = leaks();
+      });
+      renderApp('/auth/magic#token=throttled');
+      expect(await screen.findByRole('heading', { level: 1, name: 'Не удалось войти' })).toBeInTheDocument();
+      expect(atRequest).not.toBeNull();
+      expect(atRequest!.found).toBe(false);
+      expect(leaks().found).toBe(false);
+    });
+
+    it('токен, пойманный до запуска SPA (index.html убирает фрагмент до SDK), обменивается и не остаётся в window', async () => {
+      (window as unknown as { __cabinetMagicToken?: string }).__cabinetMagicToken = 'demo-token';
+      const body = captureBody('/auth/magic');
+      renderApp('/auth/magic');
+      expect(await screen.findByRole('heading', { level: 1, name: 'Запросы' })).toBeInTheDocument();
+      expect(body.current).toEqual({ token: 'demo-token' });
+      expect((window as unknown as { __cabinetMagicToken?: string }).__cabinetMagicToken).toBeUndefined();
+    });
+
+    it('index.html: сохраняющий токен скрипт стоит раньше Telegram SDK и сразу убирает фрагмент', () => {
+      const sdk = indexHtml.indexOf('telegram-web-app.js');
+      const guard = indexHtml.indexOf('__cabinetMagicToken');
+      expect(guard).toBeGreaterThan(-1);
+      expect(guard).toBeLessThan(sdk);
+      expect(indexHtml).toMatch(/history\.replaceState\([^)]*location\.pathname \+ location\.search/);
+    });
+  });
+
+  it('старая ссылка с токеном в пути только перенаправляет на фрагмент и обменивается через POST', async () => {
+    const log = requestLog();
+    const body = captureBody('/auth/magic');
+    const { router } = renderApp('/auth/magic/legacy-token');
+    expect(await screen.findByRole('heading', { level: 1, name: 'Запросы' })).toBeInTheDocument();
+    expect(router.state.location.pathname).toBe('/requests');
+    expect(body.current).toEqual({ token: 'legacy-token' });
+    expect(log.filter((entry) => entry.includes('legacy-token'))).toEqual([]);
+  });
+
+  it('просроченная ссылка (410) — «Ссылка не действует», фрагмент убран из адреса, путь к новой', async () => {
+    const { router } = renderApp('/auth/magic#token=expired');
     expect(await screen.findByRole('heading', { level: 1, name: 'Ссылка не действует' })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Запросить новую ссылку' })).toHaveAttribute('href', '/login');
+    expect(router.state.location.hash).toBe('');
+  });
+
+  it('ссылка без токена — «Ссылка не действует», запросов нет', async () => {
+    const log = requestLog();
+    renderApp('/auth/magic');
+    expect(await screen.findByRole('heading', { level: 1, name: 'Ссылка не действует' })).toBeInTheDocument();
+    expect(log.filter((entry) => entry.startsWith('POST /auth/magic'))).toEqual([]);
+  });
+
+  it('403 FORBIDDEN (компания в архиве) — «Доступ закрыт, обратитесь к менеджеру»', async () => {
+    renderApp('/auth/magic#token=forbidden');
+    expect(await screen.findByRole('heading', { level: 1, name: 'Доступ закрыт' })).toBeInTheDocument();
+    expect(screen.getByText('Доступ закрыт, обратитесь к менеджеру.')).toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'Запросить новую ссылку' })).not.toBeInTheDocument();
+  });
+
+  it('429 на обмене токена — «Слишком много запросов, попробуйте через час»', async () => {
+    renderApp('/auth/magic#token=throttled');
+    expect(await screen.findByRole('heading', { level: 1, name: 'Не удалось войти' })).toBeInTheDocument();
+    expect(screen.getByText('Слишком много запросов, попробуйте через час.')).toBeInTheDocument();
+  });
+
+  it.each([
+    [429, 'TOO_MANY_REQUESTS', 'Слишком много запросов, попробуйте через час.'],
+    [403, 'FORBIDDEN', 'Доступ закрыт, обратитесь к менеджеру.'],
+  ])('«Войти»: %i %s — понятный текст под полем', async (status, code, text) => {
+    portalServer.use(http.post('*/api/portal/v1/auth/magic-link', () => HttpResponse.json({ detail: code }, { status })));
+    const user = userEvent.setup();
+    renderApp('/login');
+    await user.type(await screen.findByLabelText('E-mail'), 'x@y.uz');
+    await user.click(screen.getByRole('button', { name: 'Войти' }));
+    expect(await screen.findByText(text)).toBeInTheDocument();
   });
 
   it('«Я новый клиент»: форма запроса и рядом «Написать в Telegram» с меткой web (форма — new-client.test)', async () => {

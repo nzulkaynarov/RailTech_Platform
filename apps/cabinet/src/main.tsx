@@ -4,11 +4,14 @@ import { createRoot } from 'react-dom/client';
 import './i18n';
 import './index.css';
 import { App } from './app/App';
+import { scrubTelegramToken } from './session/magicToken';
 import { initialPath } from './telegram/start-param';
 import { initMiniApp } from './telegram/theme';
 import { getStartParam, getTelegramWebApp, isMiniApp } from './telegram/webapp';
 
 async function bootstrap(): Promise<void> {
+  // Токен входа не должен пережить загрузку в копиях Telegram SDK (до роутера и любых запросов).
+  scrubTelegramToken();
   // Мок портального API — только dev-сборка с VITE_PORTAL_MOCK=1; в прод-сборку ветка не попадает.
   if (import.meta.env.DEV && import.meta.env.VITE_PORTAL_MOCK === '1') {
     const { startPortalMock } = await import('./mocks/browser');

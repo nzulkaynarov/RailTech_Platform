@@ -38,8 +38,11 @@
     "actions": "Amallar",
     "loadFailed": "Yuklab boʻlmadi",
     "reasonRequired": "Sababini koʻrsating — usiz ijrochi nimani tuzatishni tushunmaydi.",
-    "dealNumber": "Bitim №{{id}}",
-    "noDeal": "Hali bitimsiz"
+    "dealNumber": "Bitim № {{number}}",
+    "noDeal": "Hali bitimsiz",
+    "crashTitle": "Nimadir xato ketdi",
+    "crashText": "Sahifa xato tufayli ochilmadi. Uni yangilang; yordam bermasa, menejerga yozing.",
+    "reload": "Yangilash"
   },
   "status": {
     "request": {
@@ -136,7 +139,9 @@
       "exchanging": "Havola orqali kirilmoqda…",
       "expiredTitle": "Havola amal qilmaydi",
       "expiredText": "Havola muddati tugagan yoki u allaqachon ochilgan. Yangisini soʻrang.",
-      "requestAgain": "Yangi havola soʻrash"
+      "requestAgain": "Yangi havola soʻrash",
+      "closedTitle": "Kirish yopilgan",
+      "failedTitle": "Kirib boʻlmadi"
     },
     "telegram": {
       "signingIn": "Telegram orqali kirilmoqda…",
@@ -144,6 +149,10 @@
       "failedText": "Agar siz hali biz bilan ishlamasangiz, botga yozing — menejer sizni kabinetga taklif qiladi.",
       "openBot": "Botni ochish",
       "retry": "Qayta urinish"
+    },
+    "errors": {
+      "TOO_MANY_REQUESTS": "Soʻrovlar juda koʻp, bir soatdan soʻng urinib koʻring.",
+      "FORBIDDEN": "Kirish yopilgan, menejerga murojaat qiling."
     }
   },
   "newClient": {
@@ -191,7 +200,7 @@
   },
   "manager": {
     "write": "Menejerga yozish",
-    "aboutDeal": "Menejerga yozish: bitim №{{id}}",
+    "aboutDeal": "Menejerga yozish: bitim № {{number}}",
     "aboutQuote": "Menejerga yozish: {{number}} taklifi",
     "aboutContract": "Menejerga yozish: {{number}} shartnomasi",
     "aboutInvoice": "Menejerga yozish: {{number}} hisob-fakturasi",
@@ -231,7 +240,7 @@
     "requestNew": {
       "title": "Yangi soʻrov",
       "summary": "Nima kerak",
-      "summaryHint": "Vazifani oʻz soʻzlaringiz bilan yozing: nima, qancha va qaysi muddatga.",
+      "summaryHint": "Vazifani oʻz soʻzlaringiz bilan yozing: nima, qancha va qaysi muddatga. 5000 belgigacha.",
       "summaryRequired": "Nima kerakligini hech boʻlmaganda bir jumla bilan yozing.",
       "prefillSummary": "Katalogdagi pozitsiya kerak: {{name}}",
       "lines": "Pozitsiyalar yoki bosqichlar",
@@ -246,7 +255,7 @@
       "removeLine": "{{n}}-qatorni oʻchirish",
       "attachmentsLater": "Spetsifikatsiya va chizmalarni hozircha menejerga yuboring — kabinetga fayl yuklash keyinroq paydo boʻladi.",
       "attachmentsTitle": "Fayllarni biriktirish (spetsifikatsiya, chizmalar)",
-      "attachmentsHint": "PDF, DOCX, XLSX yoki 20 MB gacha rasmlar",
+      "attachmentsHint": "PDF, DOCX, XLSX yoki 10 MB gacha rasmlar",
       "uploadButton": "Faylni yuklash",
       "uploading": "Yuklanmoqda…",
       "removeFile": "{{name}} faylini oʻchirish",
@@ -317,9 +326,9 @@
       "accept": "Qabul qilish",
       "reject": "Rad etish",
       "acceptTitle": "{{number}} taklifini qabul qilish",
-      "acceptText": "Summa {{total}}. Taklif bilan kelgan xabardagi tasdiqlash kodini kiriting. Qabul qilingach shartnoma avtomatik tuziladi.",
+      "acceptText": "Summa {{total}}. Xabardagi tasdiqlash kodini kiriting. Qabul qilingach shartnoma avtomatik tuziladi.",
       "code": "Tasdiqlash kodi",
-      "codeHint": "Kod taklif bilan birga bot xabarida yoki xatda kelgan.",
+      "codeHint": "Kod — xabardagi 6 ta raqam. Kelmasa, kodni qayta yuboring.",
       "codeTooShort": "Kod kamida {{min}} belgidan iborat.",
       "acceptConfirm": "Taklifni qabul qilish",
       "acceptedToast": "{{number}} taklifi qabul qilindi",
@@ -338,7 +347,15 @@
       "rejectedReason": "Sabab: {{reason}}",
       "expiredTitle": "Taklifning amal qilish muddati tugagan",
       "expiredText": "Uni endi qabul qilib boʻlmaydi. Menejerdan taklifni yangilashni soʻrang.",
-      "backToList": "Takliflar roʻyxatiga"
+      "backToList": "Takliflar roʻyxatiga",
+      "requestCodeText": "Summa {{total}}. «Kod olish» tugmasini bosing — tasdiqlash kodini Telegram yoki e-mail orqali yuboramiz. Qabul qilingach shartnoma avtomatik tuziladi.",
+      "requestCode": "Kod olish",
+      "codeSent": {
+        "telegram": "Kod Telegramga yuborildi. {{minutes}} daqiqa amal qiladi.",
+        "telegramTo": "Kod Telegramga ({{to}}) yuborildi. {{minutes}} daqiqa amal qiladi.",
+        "email": "Kod {{to}} manziliga yuborildi. {{minutes}} daqiqa amal qiladi."
+      },
+      "resendCode": "Kodni qayta yuborish"
     },
     "contracts": {
       "title": "Shartnomalar",
@@ -411,9 +428,14 @@
       "returnPlaceholder": "Masalan: seriya raqami koʻrsatilmagan",
       "returnConfirm": "Dalolatnomani qaytarish",
       "returnedToast": "{{number}} dalolatnomasi ijrochiga qaytarildi",
-      "uploadScan": "Skanni yuklash",
-      "uploadScanNamed": "{{number}} dalolatnomasi skanini yuklash",
-      "scanUploadedToast": "{{number}} dalolatnomasi skani yuklandi"
+      "scan": "Skan",
+      "scanNamed": "{{number}} dalolatnomasining imzolangan skani",
+      "scanLabel": "Imzolangan dalolatnoma skani (majburiy emas)",
+      "scanHint": "PDF yoki rasm, 10 MB gacha. Dalolatnomani skansiz ham qabul qilish mumkin.",
+      "scanProblem": {
+        "tooLarge": "Fayl 10 MB dan katta — kichikroq fayl tanlang.",
+        "badType": "PDF yoki rasm kerak."
+      }
     },
     "deliveries": {
       "title": "Yetkazib berish",
@@ -426,15 +448,18 @@
       "tracking": "Kuzatuv raqami",
       "acceptLine": "Qabul qilish",
       "acceptLineNamed": "{{name}} elementini qabul qilish",
-      "lineAcceptedToast": "Element qabul qilindi",
-      "disputeLine": "Eʼtiroz",
-      "disputeLineNamed": "{{name}} elementi boʻyicha eʼtiroz bildirish",
+      "lineAcceptedToast": "«{{name}}» elementi qabul qilindi",
+      "disputeLine": "Eʼtirozim bor",
+      "disputeLineNamed": "Eʼtirozim bor: {{name}} elementi",
       "disputeTitle": "\"{{name}}\" elementi boʻyicha eʼtiroz",
       "disputeText": "Eʼtiroz mazmunini tavsiflang (nuqson, toʻliq emaslik, shikastlanish). Menejer siz bilan bogʻlanadi.",
       "disputeReason": "Eʼtiroz sababi",
       "disputePlaceholder": "Masalan: markirovka nuqsoni yoki transportda shikastlanish",
       "disputeConfirm": "Eʼtirozni yuborish",
-      "disputeSentToast": "Eʼtiroz menejerga yuborildi"
+      "disputeSentToast": "Eʼtiroz menejerga yuborildi",
+      "acceptedAt": "Qabul qilingan: {{date}}",
+      "disputedAt": "Eʼtiroz bildirilgan: {{date}}",
+      "remark": "Eʼtiroz: {{remark}}"
     },
     "documents": {
       "title": "Hujjatlar",
@@ -556,7 +581,6 @@
       }
     },
     "deal": {
-      "title": "Bitim №{{id}}",
       "requests": "Soʻrov",
       "quotes": "Takliflar",
       "contracts": "Shartnoma",
@@ -564,7 +588,8 @@
       "acts": "Dalolatnomalar",
       "deliveries": "Yetkazib berish",
       "documents": "Hujjatlar",
-      "toRequests": "Soʻrovlarga"
+      "toRequests": "Soʻrovlarga",
+      "titleFallback": "Bitim"
     }
   },
   "apiErrors": {
@@ -580,11 +605,23 @@
     "QUOTE_FINALIZED": "Taklif allaqachon qabul qilingan yoki rad etilgan — sahifani yangilang.",
     "ACT_FINALIZED": "Dalolatnoma allaqachon qabul qilingan yoki qaytarilgan — sahifani yangilang.",
     "CONTRACT_FINALIZED": "Shartnoma allaqachon imzolangan yoki bekor qilingan — sahifani yangilang.",
-    "QUOTE_CODE_INVALID": "Tasdiqlash kodi notoʻgʻri. Taklif bilan kelgan xabardagi kodni tekshiring.",
+    "QUOTE_CODE_INVALID": "Kod notoʻgʻri yoki soʻralmagan. Xabardagi kodni tekshiring yoki yangisini soʻrang.",
     "QUOTE_EXPIRED": "Taklifning amal qilish muddati tugagan — uni endi qabul qilib boʻlmaydi. Menejerdan taklifni yangilashni soʻrang.",
     "REASON_REQUIRED": "Sababini koʻrsating.",
     "INN_INVALID": "STIR — 9 dan 14 tagacha raqam.",
-    "TEAM_MEMBER_EXISTS": "Bunday e-mailli hamkasb jamoada allaqachon bor."
+    "TEAM_MEMBER_EXISTS": "Bunday e-mailli hamkasb jamoada allaqachon bor.",
+    "TOO_MANY_REQUESTS": "Soʻrovlar juda koʻp. Biroz kutib, qayta urinib koʻring.",
+    "CONTACT_CHANNEL_REQUIRED": "Kodni yuboradigan joy yoʻq: e-mail koʻrsatilmagan va Telegram ulanmagan. Menejerdan aloqa kanalini qoʻshishni soʻrang.",
+    "CONTACT_EMAIL_REQUIRED": "Buning uchun kontaktning e-maili kerak.",
+    "INVALID_CHANNEL": "Bu aloqa kanali mavjud emas.",
+    "FILE_REQUIRED": "Faylni tanlang.",
+    "FILE_TOO_LARGE": "Fayl 10 MB dan katta.",
+    "UPLOAD_NOT_FOUND": "Yuklangan fayl topilmadi — uni qayta yuklang.",
+    "DELIVERY_LINE_NOT_ACCEPTABLE": "Bu elementni endi qabul qilib yoki eʼtiroz bildirib boʻlmaydi: u hali yetkazilmagan yoki qaror allaqachon qabul qilingan. Sahifani yangilang.",
+    "DOCUMENT_PENDING": "Hujjat hali tayyorlanmoqda. Bir daqiqadan soʻng urinib koʻring.",
+    "CONFLICT": "Maʼlumotlar allaqachon oʻzgargan — sahifani yangilab, qayta urinib koʻring.",
+    "IDEMPOTENCY_KEY_REQUIRED": "Soʻrov server tomonidan rad etildi. Sahifani yangilab, qayta urinib koʻring.",
+    "UNSUPPORTED_MEDIA_TYPE": "Soʻrov server tomonidan rad etildi. Sahifani yangilab, qayta urinib koʻring."
   },
   "widgets": {
     "actionRequired": {

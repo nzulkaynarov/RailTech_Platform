@@ -65,7 +65,7 @@ describe('оболочка кабинета', () => {
       '/requests/new': 'Новый запрос',
       '/quotes/301': 'КП KP-2026-0042',
       '/catalog/1001': 'Подшипник 6205-2RS',
-      '/deals/42': 'Сделка №42',
+      '/deals/42': 'Сделка № D-42',
     };
     for (const [path, title] of Object.entries(titles)) {
       await router.navigate(path);

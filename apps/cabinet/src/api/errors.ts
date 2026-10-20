@@ -23,3 +23,13 @@ export function apiErrorKey(error: unknown): string {
   const byStatus = BY_STATUS[error.status];
   return byStatus ? `apiErrors.${byStatus}` : 'apiErrors.UNKNOWN';
 }
+
+/**
+ * Ошибка входа (magic-link, Telegram): 429 — лимит попыток входа (5 в час на адрес), 403 — доступ закрыт
+ * (компания в архиве, Q-18); остальное — как везде.
+ */
+export function loginErrorKey(error: unknown): string {
+  if (isPortalApiError(error, 429)) return 'auth.errors.TOO_MANY_REQUESTS';
+  if (isPortalApiError(error, 403)) return 'auth.errors.FORBIDDEN';
+  return apiErrorKey(error);
+}

@@ -8,16 +8,18 @@ import * as fixtures from './fixtures';
 /**
  * Мок портального API на MSW — граница HTTP для dev (`VITE_PORTAL_MOCK=1`) и тестов.
  * Поведение — по `erp-portal.yaml`: без сессии 401, `can_act=false` → 403 на действиях,
- * чужое/несуществующее → 404, ошибки `{"detail": CODE}`. До M2-ERP-01 коды ошибок — предположение
- * Cabinet (UNAUTHORIZED, INVALID_INIT_DATA, MAGIC_LINK_EXPIRED, QUOTE_CODE_INVALID…), ERP их подтвердит в контракте.
+ * чужое/несуществующее → 404, ошибки `{"detail": CODE}` (перечень `ErrorCode` контракта 0.2.0).
  *
  * Сценарии входа:
  * - `POST /auth/telegram` — любой `init_data`; содержит `bad` → 401, `viewer` → контакт без права действовать,
  *   `empty` → компания без объектов;
- * - `GET /auth/magic/{token}` — `expired` → 410, `viewer` → без права действовать, `empty` → пустая компания,
- *   иное → основной контакт.
+ * - `POST /auth/magic {token}` — `expired` → 410, `forbidden` → 403 `FORBIDDEN` (компания в архиве), `throttled` → 429
+ *   `TOO_MANY_REQUESTS`, `viewer` → без права действовать, `empty` → пустая компания, иное → основной контакт.
  *
- * Сценарии разделов (M2-CAB-02): код акцепта КП — `MOCK_ACCEPT_CODE`, иной → 409 `QUOTE_CODE_INVALID`;
+ * Сценарии разделов: `POST /quotes/{id}/request-code` выдаёт код `MOCK_ACCEPT_CODE` (Telegram, если у контакта он есть,
+ * иначе e-mail), без запроса или с другим кодом `accept` → 409 `QUOTE_CODE_INVALID`;
+ * приёмка поставки — только из `delivered` (иначе 409 `DELIVERY_LINE_NOT_ACCEPTABLE`), замечание требует причину;
+ * приёмка акта со сканом (`upload_id` из `/uploads`) кладёт скан в документы и в `scan_document_id`;
  * КП с истёкшим сроком → 409 `QUOTE_EXPIRED`; повторное действие над закрытым объектом → 409 `*_FINALIZED`;
  * PDF документа `DOC_PREPARING_ONCE` первый раз отвечает 202 + `Retry-After`, `DOC_ALWAYS_PREPARING` — всегда 202.
  */
@@ -70,6 +72,10 @@ function createDb(dataset: Dataset = 'demo') {
     team: empty ? [structuredClone(fixtures.contactActor)] : structuredClone(fixtures.team),
     /** Сколько раз запрошен файл документа — для сценария «PDF готовится» (202 → 200). */
     fileRequests: new Map<number, number>(),
+    /** КП, по которым клиент запросил код акцепта: id КП → выданный код. */
+    quoteCodes: new Map<number, string>(),
+    /** Загруженные файлы (`/uploads`): upload_id → имя; приёмка акта проверяет, что скан загружен. */
+    uploads: new Map<string, string>(),
   };
 }
 
@@ -85,6 +91,12 @@ export function resetMockPortal(): void {
 
 function contactFor(role: Role): Schemas['TeamMember'] {
   return role === 'viewer' ? fixtures.contactViewer : fixtures.contactActor;
+}
+
+/** `i***@example.com` — так ERP показывает, куда ушёл код. */
+function maskEmail(email: string): string {
+  const [name = '', domain = ''] = email.split('@');
+  return `${name.slice(0, 1)}***@${domain}`;
 }
 
 function dbOf(session: MockSession): Db {
@@ -130,9 +142,11 @@ function byId<T extends { id: number }>(items: T[], id: string): T | undefined {
   return items.find((item) => String(item.id) === id);
 }
 
+/** Элемент списка КП — карточка без строк и служебных полей (`deal` и устаревшее `deal_id` остаются как есть). */
 function quoteListItem(quote: Schemas['Quote']): Schemas['QuoteListItem'] {
-  const { id, deal, deal_id, number, version, status, total, valid_until, sent_at } = quote;
-  return { id, deal, deal_id, number, version, status, total, valid_until, sent_at };
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const { lines, public_url, pdf_document_id, rejected_reason, ...item } = quote;
+  return item;
 }
 
 async function readJson<T>(request: Request): Promise<Partial<T>> {
@@ -143,6 +157,7 @@ async function readJson<T>(request: Request): Promise<Partial<T>> {
   }
 }
 
+const MAX_UPLOAD_BYTES = 10 * 1024 * 1024;
 const QUANTITY_RE = /^\d+(\.\d+)?$/;
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -172,9 +187,15 @@ export const handlers = [
     if (!body.email || !body.email.includes('@')) return error(422, 'VALIDATION_ERROR');
     return new HttpResponse(null, { status: 200 });
   }),
-  http.get<IdParams & { token: string }>(`${API}/auth/magic/:token`, ({ params }) => {
-    if (params.token === 'expired') return error(410, 'MAGIC_LINK_EXPIRED');
-    const session = sessionFromToken(params.token, 'magic_link');
+  http.post(`${API}/auth/magic`, async ({ request }) => {
+    const { token } = await readJson<{ token: string }>(request);
+    if (!token) return error(422, 'VALIDATION_ERROR');
+    if (token === 'expired') return error(410, 'MAGIC_LINK_EXPIRED');
+    if (token === 'forbidden') return error(403, 'FORBIDDEN');
+    if (token === 'throttled') {
+      return HttpResponse.json({ detail: 'TOO_MANY_REQUESTS' }, { status: 429, headers: { 'Retry-After': '3600' } });
+    }
+    const session = sessionFromToken(token, 'magic_link');
     setMockSession(session);
     return json(me(session));
   }),
@@ -209,7 +230,7 @@ export const handlers = [
           status: 'new',
           summary: body.summary,
           source: 'cabinet',
-          deal_id: null,
+          deal: null,
           created_at: new Date().toISOString(),
           lines: body.lines ?? [],
           attachments: body.attachments ?? [],
@@ -231,6 +252,26 @@ export const handlers = [
     }),
   ),
   http.post<IdParams>(
+    `${API}/quotes/:id/request-code`,
+    withSession<IdParams>(
+      ({ session, db, params }) => {
+        const quote = byId(db.quotes, params.id);
+        if (!quote) return error(404, 'NOT_FOUND');
+        if (quote.status !== 'sent' && quote.status !== 'viewed') return error(409, 'QUOTE_FINALIZED');
+        if (quote.valid_until && quote.valid_until < businessToday()) return error(409, 'QUOTE_EXPIRED');
+        const contact = contactFor(session.role);
+        const viaTelegram = contact.has_telegram && contact.preferred_channel !== 'email';
+        if (!viaTelegram && !contact.email) return error(422, 'CONTACT_CHANNEL_REQUIRED');
+        db.quoteCodes.set(quote.id, fixtures.MOCK_ACCEPT_CODE);
+        const sent: Schemas['AcceptanceCodeSent'] = viaTelegram
+          ? { channel: 'telegram', sent_to: 'Telegram', expires_in: 900 }
+          : { channel: 'email', sent_to: maskEmail(contact.email ?? ''), expires_in: 900 };
+        return json(sent, 202);
+      },
+      { action: true },
+    ),
+  ),
+  http.post<IdParams>(
     `${API}/quotes/:id/accept`,
     withSession<IdParams>(
       async ({ db, params, request }) => {
@@ -240,16 +281,16 @@ export const handlers = [
         if (quote.status !== 'sent' && quote.status !== 'viewed') return error(409, 'QUOTE_FINALIZED');
         if (quote.valid_until && quote.valid_until < businessToday()) return error(409, 'QUOTE_EXPIRED');
         if (!code || code.length < 4 || code.length > 12) return error(422, 'VALIDATION_ERROR');
-        if (code !== fixtures.MOCK_ACCEPT_CODE) return error(409, 'QUOTE_CODE_INVALID');
+        if (code !== db.quoteCodes.get(quote.id)) return error(409, 'QUOTE_CODE_INVALID');
+        db.quoteCodes.delete(quote.id);
         quote.status = 'accepted';
         // ERP создаёт договор сам (BUSINESS §4, шаг 6) — без файла, пока PDF не отрендерен.
-        if (quote.deal_id !== undefined && !db.contracts.some((item) => item.deal_id === quote.deal_id)) {
+        if (!db.contracts.some((item) => item.deal.id === quote.deal.id)) {
           db.contracts = [
             {
-              id: 400 + quote.deal_id,
-              deal: quote.deal,
-              deal_id: quote.deal_id,
-              number: `D-2026-${String(quote.deal_id).padStart(4, '0')}`,
+              id: 400 + quote.deal.id,
+              ...fixtures.dealOf(quote.deal.id),
+              number: `D-2026-${String(quote.deal.id).padStart(4, '0')}`,
               status: 'sent',
               signed_by_client_at: null,
               signed_by_company_at: null,
@@ -301,10 +342,27 @@ export const handlers = [
   http.post<IdParams>(
     `${API}/acts/:id/accept`,
     withSession<IdParams>(
-      ({ db, params }) => {
+      async ({ db, params, request }) => {
         const act = byId(db.acts, params.id);
         if (!act) return error(404, 'NOT_FOUND');
         if (act.status !== 'issued') return error(409, 'ACT_FINALIZED');
+        const { upload_id } = await readJson<Schemas['ActAccept']>(request);
+        if (upload_id !== undefined) {
+          const name = db.uploads.get(upload_id);
+          if (name === undefined) return error(422, 'UPLOAD_NOT_FOUND');
+          // Скан подписанного экземпляра ERP сохраняет документом сделки и привязывает к акту.
+          const scan: Schemas['Document'] = {
+            id: 800 + act.id,
+            deal: act.deal ?? null,
+            kind: 'act',
+            number: act.number,
+            date: businessToday(),
+            title: `Скан акта № ${act.number}`,
+            file_name: name,
+          };
+          db.documents = [scan, ...db.documents.filter((doc) => doc.id !== scan.id)];
+          act.scan_document_id = scan.id;
+        }
         act.status = 'accepted';
         return json(act);
       },
@@ -330,6 +388,38 @@ export const handlers = [
 
   // --- поставки и документы -------------------------------------------------------------------
   http.get(`${API}/deliveries`, withSession(({ db }) => json(db.deliveries))),
+  http.post<IdParams>(
+    `${API}/deliveries/:id/accept`,
+    withSession<IdParams>(
+      ({ db, params }) => {
+        const line = byId(db.deliveries, params.id);
+        if (!line) return error(404, 'NOT_FOUND');
+        if (line.status !== 'delivered') return error(409, 'DELIVERY_LINE_NOT_ACCEPTABLE');
+        line.status = 'accepted';
+        line.accepted_at = new Date().toISOString();
+        line.remark = null;
+        return json(line);
+      },
+      { action: true },
+    ),
+  ),
+  http.post<IdParams>(
+    `${API}/deliveries/:id/dispute`,
+    withSession<IdParams>(
+      async ({ db, params, request }) => {
+        const line = byId(db.deliveries, params.id);
+        if (!line) return error(404, 'NOT_FOUND');
+        if (line.status !== 'delivered') return error(409, 'DELIVERY_LINE_NOT_ACCEPTABLE');
+        const { reason } = await readJson<Schemas['Reason']>(request);
+        if (!reason?.trim()) return error(422, 'REASON_REQUIRED');
+        line.status = 'disputed';
+        line.accepted_at = new Date().toISOString();
+        line.remark = reason;
+        return json(line);
+      },
+      { action: true },
+    ),
+  ),
   http.get(
     `${API}/documents`,
     withSession(({ db, request }) => {
@@ -337,7 +427,7 @@ export const handlers = [
       const kind = url.searchParams.get('kind');
       const dealId = url.searchParams.get('deal_id');
       return json(
-        db.documents.filter((doc) => (!kind || doc.kind === kind) && (!dealId || String(doc.deal_id) === dealId)),
+        db.documents.filter((doc) => (!kind || doc.kind === kind) && (!dealId || String(doc.deal?.id) === dealId)),
       );
     }),
   ),
@@ -365,12 +455,14 @@ export const handlers = [
   http.post(
     `${API}/uploads`,
     withSession(
-      async ({ request }) => {
+      async ({ db, request }) => {
         const formData = await request.formData();
         const file = formData.get('file');
         if (!file || typeof file === 'string') return error(400, 'FILE_REQUIRED');
+        if (file.size > MAX_UPLOAD_BYTES) return error(422, 'FILE_TOO_LARGE');
         const name = file.name || 'document.pdf';
         const uploadId = `upl_${Date.now()}_${Math.random().toString(16).slice(2, 8)}`;
+        db.uploads.set(uploadId, name);
         const res: Schemas['PortalUploadResponse'] = {
           upload_id: uploadId,
           name,
