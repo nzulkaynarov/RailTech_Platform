@@ -5,6 +5,8 @@ from pathlib import Path
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.core.management.base import BaseCommand, CommandError
+from django.db import transaction
+from django.db.models import Q
 
 from accounts.models import Company, CompanyMember, CompanyType, SystemRole, WorkspaceRole
 from catalog.models import DomainType, ProductStatus, StockStatus
@@ -229,14 +231,20 @@ class Command(BaseCommand):
             sys_role = SystemRole.objects.filter(code=user_data["role"]).first()
 
             username = email.split("@")[0]
-            user_obj = User.objects.filter(email=email).first()
-            if not user_obj:
-                user_obj = User.objects.filter(username=username).first()
-                if user_obj:
-                    user_obj.email = email
-                    user_obj.save(update_fields=["email"])
-            created = False
-            if not user_obj:
+            # FIX-43 (F-9): существующий аккаунт — не наш. Раньше найденный по username получал чужой
+            # e-mail, а пароль перезаписывался при каждом запуске (в том числе у настоящих людей).
+            # Теперь: недостающих создаём, существующих пропускаем целиком — без правки e-mail,
+            # пароля, прав и членств.
+            existing = User.objects.filter(Q(email__iexact=email) | Q(username=username)).first()
+            if existing is not None:
+                self.stdout.write(
+                    self.style.WARNING(
+                        f"  Пользователь пропущен: {email} — аккаунт {existing.email} уже есть "
+                        "(e-mail, пароль и роли не тронуты)"
+                    )
+                )
+                continue
+            with transaction.atomic():
                 user_obj = User.objects.create(
                     email=email,
                     username=username,
@@ -247,40 +255,34 @@ class Command(BaseCommand):
                     is_superuser=user_data.get("is_superuser", False),
                     is_active=True,
                 )
-                created = True
-            # Set the password every run (idempotent) so a user created earlier without
-            # one — e.g. auto-created by a deal/quote reference — becomes login-able.
-            if password and not user_obj.check_password(password):
-                user_obj.set_password(password)
-                user_obj.save(update_fields=["password"])
-            if created:
+                if password:
+                    user_obj.set_password(password)
+                    user_obj.save(update_fields=["password"])
                 self.stdout.write(f"  Пользователь создан: {email}")
 
-            # Company membership
-            # Platform Admin (SystemRole=ADMIN) cannot be a CompanyMember —
-            # invariant enforced by accounts/migrations/0010_platform_admin_model.
-            company_inn = user_data.get("company_inn")
-            ws_role_code = user_data.get("workspace_role")
-            if sys_role and sys_role.code == "ADMIN":
-                continue
-            if company_inn and ws_role_code:
-                company = Company.objects.filter(inn=company_inn).first()
-                ws_role = WorkspaceRole.objects.filter(code=ws_role_code).first()
-                if company and ws_role:
-                    member, _member_created = CompanyMember.objects.get_or_create(
-                        user=user_obj,
-                        company=company,
-                        defaults={
-                            "role": ws_role,
-                            "is_primary": True,
-                            "is_active": True,
-                        },
-                    )
-                    # Роли бэк-офиса — источник прав в `capabilities.permissions` (M1-ERP-05). Тот же
-                    # сервис, что у приглашения: стартовые роли по должности, только у сотрудников
-                    # своей компании (покупательский демо-аккаунт живёт без ролей до M2-ERP-01).
-                    from accounts.services.roles import grant_default_roles
+                # Company membership
+                # Platform Admin (SystemRole=ADMIN) cannot be a CompanyMember —
+                # invariant enforced by accounts/migrations/0010_platform_admin_model.
+                company_inn = user_data.get("company_inn")
+                ws_role_code = user_data.get("workspace_role")
+                if sys_role and sys_role.code == "ADMIN":
+                    continue
+                if company_inn and ws_role_code:
+                    company = Company.objects.filter(inn=company_inn).first()
+                    ws_role = WorkspaceRole.objects.filter(code=ws_role_code).first()
+                    if company and ws_role:
+                        member = CompanyMember.objects.create(
+                            user=user_obj,
+                            company=company,
+                            role=ws_role,
+                            is_primary=True,
+                            is_active=True,
+                        )
+                        # Роли бэк-офиса — источник прав в `capabilities.permissions` (M1-ERP-05). Тот же
+                        # сервис, что у приглашения: стартовые роли по должности, только у сотрудников
+                        # своей компании (покупательский демо-аккаунт живёт без ролей до M2-ERP-01).
+                        from accounts.services.roles import grant_default_roles
 
-                    grant_default_roles(member, ws_role.code)
+                        grant_default_roles(member, ws_role.code)
 
         self.stdout.write(self.style.SUCCESS("Справочники загружены!"))

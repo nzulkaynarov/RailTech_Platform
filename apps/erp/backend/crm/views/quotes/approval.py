@@ -38,7 +38,10 @@ class QuoteApprovalMixin:
 
     @extend_schema(
         summary="Force-approve quote (Platform Admin escalation)",
-        description="Bypass status guard and mark quote as APPROVED. ADMIN role required. Audit-logged with [FORCE_ADMIN].",
+        description=(
+            "Bypass status guard and mark quote as APPROVED. Platform administrator only (is_superuser); "
+            "a non-empty reason is mandatory. Audit-logged with [FORCE_ADMIN]."
+        ),
         request=inline_serializer(
             "ForceApproveQuoteRequest",
             fields={
