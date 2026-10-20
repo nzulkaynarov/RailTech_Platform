@@ -16,12 +16,24 @@ from sales.models import ActivityLog
 
 from accounts.models import CompanyMember, CompanyRole, CustomUser, WorkspaceRole
 from accounts.services.auth import revoke_user_refresh_tokens
+from accounts.services.roles import SYNC_ROLE_PREFIX
 from core.tenant import own_company
 
 from ..exceptions import IntegrationConflict
 from ..models import CrmUserMapping
 
 logger = logging.getLogger(__name__)
+
+
+def sync_role_name(email: str) -> str:
+    """Имя управляемой роли сотрудника, провижиненного из CRM."""
+    return f"{SYNC_ROLE_PREFIX}{email}"
+
+
+def split_full_name(name: str) -> Tuple[str, str]:
+    """«Иван Петров» → («Иван», «Петров»): имя — первое слово, фамилия — остаток; одно слово — только имя."""
+    first, _, last = name.strip().partition(" ")
+    return first[:150], last.strip()[:150]
 
 
 @transaction.atomic
@@ -33,6 +45,7 @@ def provision_crm_user(data: Dict[str, Any]) -> Tuple[Dict[str, Any], bool]:
     crm_user_id = data["crm_user_id"]
     email = data["email"].strip().lower()
     name = data["name"].strip()
+    first_name, last_name = split_full_name(name)
     role = data["role"]  # 'admin' | 'backoffice'
     permissions = data.get("permissions") or []
     is_active = data.get("is_active", True)
@@ -53,7 +66,8 @@ def provision_crm_user(data: Dict[str, Any]) -> Tuple[Dict[str, Any], bool]:
         user = CustomUser.objects.create(
             username=email,
             email=email,
-            first_name=name,
+            first_name=first_name,
+            last_name=last_name,
             is_active=is_active,
         )
         created = True
@@ -63,8 +77,13 @@ def provision_crm_user(data: Dict[str, Any]) -> Tuple[Dict[str, Any], bool]:
         )
 
     # Обновление профиля пользователя
+    # Имя приходит из CRM одной строкой. Профиль в ERP принадлежит сотруднику: имя и фамилию правят там вручную,
+    # поэтому при повторной синхронизации заполняем их только если обе части пусты (FIX-55, D-12).
+    update_fields = ["email", "is_active", "is_superuser", "is_staff"]
+    if not (user.first_name or user.last_name):
+        user.first_name, user.last_name = first_name, last_name
+        update_fields += ["first_name", "last_name"]
     user.email = email
-    user.first_name = name
     user.is_active = is_active
 
     if role == "admin":
@@ -75,7 +94,7 @@ def provision_crm_user(data: Dict[str, Any]) -> Tuple[Dict[str, Any], bool]:
         user.is_staff = False
 
     # update_fields: полная запись затёрла бы `token_version`, выросший при параллельном отзыве доступа.
-    user.save(update_fields=["email", "first_name", "is_active", "is_superuser", "is_staff"])
+    user.save(update_fields=update_fields)
 
     # Привязка к компании бэк-офиса (own_company)
     company = own_company()
@@ -95,18 +114,21 @@ def provision_crm_user(data: Dict[str, Any]) -> Tuple[Dict[str, Any], bool]:
             member.save(update_fields=["is_active"])
 
         if role == "backoffice":
-            role_name = f"CRM Sync: {user.email}"
+            # Провижининг управляет только СВОЕЙ ролью «CRM Sync: <e-mail>»: создаёт, обновляет права и
+            # добавляет (add), а роли, выданные в ERP вручную, не трогает (FIX-55, D-07; Q-FIX50-1 (2)).
             crm_role, _ = CompanyRole.objects.get_or_create(
                 company=company,
-                name=role_name,
+                name=sync_role_name(user.email),
                 defaults={"permissions": permissions, "is_system": False, "created_by": user},
             )
             crm_role.permissions = permissions
-            crm_role.save(update_fields=["permissions", "updated_at"])
-            member.company_roles.set([crm_role])
-        elif role == "admin":
-            # Для админа роли бэк-офиса не требуются (is_superuser имеет все права)
-            pass
+            crm_role.managed_by_crm = True
+            crm_role.save(update_fields=["permissions", "managed_by_crm", "updated_at"])
+            member.company_roles.add(crm_role)
+        else:
+            # Админу роли бэк-офиса не нужны (is_superuser имеет все права): снимаем только свою роль,
+            # если сотрудник был backoffice; ручные роли остаются.
+            member.company_roles.remove(*member.company_roles.filter(managed_by_crm=True))
 
     return {
         "erp_user_id": user.pk,
@@ -131,6 +153,9 @@ def revoke_crm_user_sessions(crm_user_id: int) -> bool:
 
     user_id = mapping.user_id
     CustomUser.objects.filter(pk=user_id).update(token_version=F("token_version") + 1, is_active=False)
+    # Управляемая роль уходит вместе с доступом; ручные роли остаются (вернётся доступ — вернётся и роль, FIX-55, D-07).
+    for member in CompanyMember.objects.filter(user_id=user_id):
+        member.company_roles.remove(*member.company_roles.filter(managed_by_crm=True))
     blacklisted = revoke_user_refresh_tokens(mapping.user)
 
     ActivityLog.objects.create(

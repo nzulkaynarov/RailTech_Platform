@@ -1,6 +1,6 @@
 """Company roles API (Role+Permission-set) — thin wrappers over accounts.services.roles."""
 
-from drf_spectacular.utils import extend_schema, inline_serializer
+from drf_spectacular.utils import OpenApiParameter, extend_schema, extend_schema_view, inline_serializer
 from rest_framework import serializers, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
@@ -21,6 +21,7 @@ _ERROR_STATUS = {
     "ROLE_COMPANY_MISMATCH": status.HTTP_403_FORBIDDEN,
     "MEMBER_NOT_FOUND": status.HTTP_404_NOT_FOUND,
     "ROLE_NOT_FOUND": status.HTTP_404_NOT_FOUND,
+    "ROLE_MANAGED_BY_CRM": status.HTTP_403_FORBIDDEN,
 }
 
 
@@ -66,6 +67,17 @@ _PERM_LABELS_EN = {
 }
 
 
+@extend_schema_view(
+    list=extend_schema(
+        summary="List company roles (assignable ones by default)",
+        description=(
+            "Роли, которые ведёт провижининг из CRM («CRM Sync: …», `managed_by_crm`), по умолчанию не отдаются — "
+            "их нельзя назначить в «Команде». `include_managed=true` отдаёт их для чтения."
+        ),
+        parameters=[OpenApiParameter("include_managed", bool, required=False)],
+        tags=["Accounts"],
+    )
+)
 class CompanyRoleViewSet(RoleGatedViewMixin, viewsets.ModelViewSet):
     """Роли бэк-офиса своей компании (M1-ERP-05): системные шаблоны + свои; запись — `team.manage`."""
 
@@ -85,7 +97,10 @@ class CompanyRoleViewSet(RoleGatedViewMixin, viewsets.ModelViewSet):
             from accounts.models import CompanyRole
 
             return CompanyRole.objects.none()
-        return services.list_roles_for_user(self.request.user)
+        # Список по умолчанию без ролей, которые ведёт CRM (их не назначают в «Команде»); `?include_managed=true`
+        # отдаёт их для чтения. Карточка/правка/удаление достают любую роль — сервис ответит ROLE_MANAGED_BY_CRM.
+        include_managed = self.action != "list" or self.request.query_params.get("include_managed") == "true"
+        return services.list_roles_for_user(self.request.user, include_managed=include_managed)
 
     def create(self, request, *args, **kwargs):
         from core.tenant import own_company_id

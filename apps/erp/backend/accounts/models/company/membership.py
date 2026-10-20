@@ -68,6 +68,14 @@ class CompanyRole(models.Model):
         verbose_name=_("Системная"),
         help_text=_("Роль-шаблон бэк-офиса — имя и права не меняются, удалить нельзя"),
     )
+    managed_by_crm = models.BooleanField(
+        default=False,
+        verbose_name=_("Управляется CRM"),
+        help_text=_(
+            "Роль «CRM Sync: <e-mail>» ведёт провижининг из CRM (integration.services.provision): права и состав "
+            "приходят из CRM, в «Настройках → Команда» её нельзя назначить, изменить или снять"
+        ),
+    )
     created_by = models.ForeignKey(
         "accounts.CustomUser",
         on_delete=models.SET_NULL,
