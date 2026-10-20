@@ -395,6 +395,35 @@ services:
       retries: 20
       start_period: 40s
 
+  # erp-mcp (FIX-36): инструменты ERP для агента CRM на официальном SDK `mcp` — отдельный процесс, как crm-mcp-*
+  # (не в Daphne: у SDK свой lifespan/менеджер сессий, а Channels-приложение Django его не запускает). Порт 8104
+  # внутренний, наружу не публикуется; Caddy отдаёт `/mcp` на erp.localhost 404 (FIX-03). Адрес для агента CRM:
+  # http://erp-mcp:8104/mcp/erp (CRM его пока не подключает — M3-CRM-07). Схемы инструментов — не копия в коде:
+  # файл контракта монтируется только на чтение в /packages/contracts (как в тестах ERP); нет файла — сервис не стартует.
+  erp-mcp:
+    build:
+      context: ../../apps/erp/backend
+    command: ["python", "-m", "integration.mcp"]
+    environment:
+      <<: *erp-env
+      AUTO_MIGRATE: "false"
+      ERP_MCP_TOOLS_PATH: /packages/contracts/mcp-tools.json
+    volumes:
+      - ../../packages/contracts/mcp-tools.json:/packages/contracts/mcp-tools.json:ro
+    depends_on:
+      erp-backend:
+        condition: service_healthy
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - import socket; socket.create_connection(('localhost', 8104), timeout=2)
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+
   erp-worker:
     build:
       context: ../../apps/erp/backend
