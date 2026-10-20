@@ -2,7 +2,7 @@ import { useId, useState, type FormEvent } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Loader2, Pencil, Save, UserPlus, Users } from 'lucide-react';
-import { toast } from 'sonner';
+import { toast } from '@/lib/toast';
 
 import { apiErrorKey } from '@/api/errors';
 import type { Company, CompanyUpdate, Schemas, TeamInvite, TeamMember } from '@/api/portal';

@@ -12,15 +12,15 @@ import { QuoteDetailPage, QuotesPage } from '@/pages/quotes';
 import { RequestDetailPage, RequestNewPage, RequestsPage } from '@/pages/requests';
 import { LoginPage } from '@/pages/auth/LoginPage';
 import { LoginSentPage } from '@/pages/auth/LoginSentPage';
-import { LegacyMagicLinkRedirect, MagicLinkPage } from '@/pages/auth/MagicLinkPage';
+import { MagicLinkPage } from '@/pages/auth/MagicLinkPage';
 import { NewClientPage } from '@/pages/auth/NewClientPage';
 import { HomeRedirect, RequireSession, WebOnly } from './guards';
 import { RootErrorPage } from './RootErrorPage';
 
 /**
  * Маршруты Cabinet. Публичные (`/login`, `/login/sent`, `/new-client`) — только в вебе;
- * `/auth/magic#token=…` — ссылка из письма (токен во фрагменте); `/auth/magic/:token` — только редирект на неё
- * на переходный период; всё остальное — за сессией портала в оболочке. Непойманная ошибка любого маршрута —
+ * `/auth/magic#token=…` — ссылка из письма (токен во фрагменте; ссылок с токеном в пути на проде нет);
+ * всё остальное — за сессией портала в оболочке. Непойманная ошибка любого маршрута —
  * `RootErrorPage` (корневой `errorElement`), а не белый экран.
  * Экраны разделов — ARCHITECTURE §5 (M2-CAB-02), по файлу на домен в `src/pages/`.
  */
@@ -37,7 +37,6 @@ export const routes: RouteObject[] = [
         ],
       },
       { path: '/auth/magic', element: <MagicLinkPage /> },
-      { path: '/auth/magic/:token', element: <LegacyMagicLinkRedirect /> },
       {
         element: <RequireSession />,
         children: [
