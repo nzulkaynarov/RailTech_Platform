@@ -48,3 +48,37 @@ def test_complete_only_when_paid_delivered_and_act_signed(act_world):  # noqa: F
     )
     deal.refresh_from_db()
     assert deal_execution_is_complete(deal) is True
+
+
+@pytest.mark.django_db
+def test_cancelled_and_draft_invoices_do_not_block_completion(act_world):  # noqa: F811
+    """Аннулированный и черновой счёт — не долг (FIX-30): оплаченный счёт при них всё равно закрывает исполнение."""
+    from django.utils import timezone
+
+    from crm.constants import ActStatusCode, FulfillmentStatusCode, InvoiceStatusCode
+    from crm.models import ActStatus, Fulfillment, FulfillmentStatus, Invoice, InvoiceStatus
+
+    world = act_world
+    deal = world["act"].deal
+    invoice = world["invoice"]
+    invoice.status = InvoiceStatus.objects.get(code=InvoiceStatusCode.PAID)
+    invoice.amount_paid = invoice.total_incl_vat
+    invoice.save(update_fields=["status", "amount_paid"])
+    for number, code in (("INV-X-CANCELLED", InvoiceStatusCode.CANCELLED), ("INV-X-DRAFT", InvoiceStatusCode.DRAFT)):
+        Invoice.objects.create(deal=deal, number=number, status=InvoiceStatus.objects.get(code=code))
+    act = world["act"]
+    act.status = ActStatus.objects.get(code=ActStatusCode.SIGNED)
+    act.save(update_fields=["status"])
+    Fulfillment.objects.create(
+        deal=deal,
+        status=FulfillmentStatus.objects.get(code=FulfillmentStatusCode.ACCEPTED),
+        accepted_at=timezone.now(),
+    )
+    deal.refresh_from_db()
+    assert deal_execution_is_complete(deal) is True
+
+    Invoice.objects.create(
+        deal=deal, number="INV-X-ISSUED", status=InvoiceStatus.objects.get(code=InvoiceStatusCode.ISSUED)
+    )
+    deal.refresh_from_db()
+    assert deal_execution_is_complete(deal) is False, "неоплаченный выставленный счёт по-прежнему держит сделку"

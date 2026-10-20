@@ -1,7 +1,7 @@
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { LogOut } from 'lucide-react';
-import { toast } from 'sonner';
+import { toast } from '@/lib/toast';
 
 import { apiErrorKey } from '@/api/errors';
 import { LanguageSwitcher } from '@/components/LanguageSwitcher';

@@ -1,20 +1,23 @@
 import { useEffect, useState } from 'react';
-import { Link, Navigate, useLocation, useNavigate, useParams } from 'react-router-dom';
+import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 
-import { loginErrorKey } from '@/api/errors';
+import { loginErrorText } from '@/api/errors';
 import { exchangeMagicToken, isPortalApiError, type Me } from '@/api/portal';
 import { StatusScreen } from '@/components/StatusScreen';
 import { Button } from '@/components/ui/button';
 import { clearPendingMagicToken, consumePendingMagicToken, scrubTelegramToken, tokenFromHash } from '@/session/magicToken';
 import { ME_QUERY_KEY, afterSignIn } from '@/session/session';
+import { useMe } from '@/session/useMe';
 
 /**
  * `/auth/magic#token=…` — ссылка из письма: токен берётся из фрагмента и уходит в теле
  * `POST /auth/magic {token}` → сессия → кабинет. Токен одноразовый, поэтому обмен — запрос React Query
  * с бесконечным сроком (повторный рендер или StrictMode не отправят его второй раз), а фрагмент сразу
- * убирается из адресной строки. 410 — «ссылка не действует», 403 — «доступ закрыт», 429 — «слишком много запросов».
+ * убирается из адресной строки. 410 — «ссылка не действует» (если сеанс уже жив — «Вы уже вошли» с путём «В кабинет»),
+ * 403 — «доступ закрыт», 429 — «слишком много попыток» (с `Retry-After`), сбой сети или 5xx — «Повторить»
+ * с тем же токеном из памяти страницы: просить новую ссылку из-за обрыва связи не нужно.
  */
 export function MagicLinkPage() {
   const { t } = useTranslation();
@@ -49,19 +52,41 @@ export function MagicLinkPage() {
     refetchOnWindowFocus: false,
   });
 
+  // Для 410/422 (и пустого токена) смотрим, не жив ли уже сеанс: повторное открытие ссылки не должно быть тупиком.
+  const failure = exchange.isError ? exchange.error : null;
+  const spent = token === '' || isPortalApiError(failure, 410) || isPortalApiError(failure, 422);
+  const session = useMe({ enabled: spent && !exchange.isFetching });
+
   if (exchange.isSuccess) return <Navigate to="/" replace />;
-  if (token === '' || exchange.isError) {
-    const error = exchange.error;
-    // 422 — ссылка обрезана или испорчена: клиенту это «ссылка не действует», а не «проверьте поля», которых нет.
-    const expired = token === '' || isPortalApiError(error, 410) || isPortalApiError(error, 422);
-    const closed = isPortalApiError(error, 403);
-    return (
-      <StatusScreen
-        title={expired ? t('auth.magic.expiredTitle') : closed ? t('auth.magic.closedTitle') : t('auth.magic.failedTitle')}
-        text={expired ? t('auth.magic.expiredText') : t(loginErrorKey(error))}
-      >
-        {closed ? null : (
+  if (exchange.isFetching) return <StatusScreen title={t('auth.magic.exchanging')} loading />;
+  if (spent) {
+    if (session.isPending) return <StatusScreen title={t('auth.magic.exchanging')} loading />;
+    if (session.data) {
+      return (
+        <StatusScreen title={t('auth.magic.alreadyTitle')} text={t('auth.magic.alreadyText')}>
           <Button asChild>
+            <Link to="/">{t('auth.magic.toCabinet')}</Link>
+          </Button>
+        </StatusScreen>
+      );
+    }
+    // 422 — ссылка обрезана или испорчена: клиенту это «ссылка не действует», а не «проверьте поля», которых нет.
+    return (
+      <StatusScreen title={t('auth.magic.expiredTitle')} text={t('auth.magic.expiredText')}>
+        <Button asChild>
+          <Link to="/login">{t('auth.magic.requestAgain')}</Link>
+        </Button>
+      </StatusScreen>
+    );
+  }
+  if (exchange.isError) {
+    const closed = isPortalApiError(failure, 403);
+    const transient = isPortalApiError(failure) && (failure.status === 0 || failure.status >= 500);
+    return (
+      <StatusScreen title={closed ? t('auth.magic.closedTitle') : t('auth.magic.failedTitle')} text={loginErrorText(failure, t)}>
+        {transient ? <Button onClick={() => void exchange.refetch()}>{t('common.retry')}</Button> : null}
+        {closed ? null : (
+          <Button asChild variant={transient ? 'outline' : 'default'}>
             <Link to="/login">{t('auth.magic.requestAgain')}</Link>
           </Button>
         )}
@@ -69,13 +94,4 @@ export function MagicLinkPage() {
     );
   }
   return <StatusScreen title={t('auth.magic.exchanging')} loading />;
-}
-
-/**
- * Переходный период: старые письма ведут на `/auth/magic/<токен>` (токен в пути). Переносим токен во
- * фрагмент и дальше работает обычный обмен; маршрут уйдёт, когда ERP перестанет слать такие ссылки.
- */
-export function LegacyMagicLinkRedirect() {
-  const { token = '' } = useParams();
-  return <Navigate to={{ pathname: '/auth/magic', hash: `#token=${encodeURIComponent(token)}` }} replace />;
 }

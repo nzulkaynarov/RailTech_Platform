@@ -2,7 +2,7 @@
 
 Проверяет:
 1. Вычисление и верификацию HMAC-SHA256 подписи (`X-Signature: sha256=<hex>`).
-2. Нормализацию этапов сделки `map_deal_stage`.
+2. Стадию и сумму в `DealRef` (одна функция стадий — `integration/services/stages.py`, её тесты — `test_stages.py`).
 3. Сборку объектов Actor, DealRef и тела события.
 4. Пропуск вебхуков для не связанных с CRM компаний (отсутствие CrmClientMapping).
 5. Создание записей `IntegrationWebhookEvent` и валидность всех типов событий по контракту.
@@ -34,13 +34,13 @@ from integration.services.webhooks import (
     emit_quote_outcome,
     emit_quote_sent,
     emit_request_created,
-    map_deal_stage,
     sign_payload,
     verify_signature,
 )
 from integration.tasks import RETRY_DELAYS, deliver_webhook_event, redeliver_event
 from parties.models import Company, Contact
 
+from crm.constants import DealStageCode
 from crm.models import Deal, DealStage, Invoice, InvoiceStatus, Quote, QuoteStatus
 
 
@@ -54,21 +54,15 @@ def mapped_company(db):
 
 @pytest.fixture
 def deal_stages(db):
-    """Справочник этапов сделки."""
-    request_s, _ = DealStage.objects.get_or_create(code="request", defaults={"name": "Заявка", "sort_order": 1})
-    quoting_s, _ = DealStage.objects.get_or_create(code="quoting", defaults={"name": "Расчёт", "sort_order": 2})
-    quote_sent_s, _ = DealStage.objects.get_or_create(
-        code="quote_sent", defaults={"name": "КП отправлено", "sort_order": 3}
-    )
-    won_s, _ = DealStage.objects.get_or_create(code="won", defaults={"name": "Закрыта (успех)", "sort_order": 4})
-    lost_s, _ = DealStage.objects.get_or_create(code="lost", defaults={"name": "Закрыта (отказ)", "sort_order": 5})
-    return {
-        "request": request_s,
-        "quoting": quoting_s,
-        "quote_sent": quote_sent_s,
-        "won": won_s,
-        "lost": lost_s,
+    """Настоящие стадии FSM ERP (`crm/constants.py`): ключ — стадия контракта, которую они дают на сделке без документов."""
+    codes = {
+        "request": DealStageCode.DRAFT,
+        "quoting": DealStageCode.CALCULATING,
+        "quote_sent": DealStageCode.QUOTE_SENT,
+        "won": DealStageCode.CLOSED_WON,
+        "lost": DealStageCode.CLOSED_LOST,
     }
+    return {key: DealStage.objects.get_or_create(code=code, defaults={"name": code})[0] for key, code in codes.items()}
 
 
 # ─── 1. Signature & Helpers Tests ─────────────────────────────────────────────
@@ -85,20 +79,6 @@ def test_signature_computation_and_verification():
     assert verify_signature(secret, payload, signature) is True
     assert verify_signature(secret, b'{"other":"payload"}', signature) is False
     assert verify_signature("wrong-secret", payload, signature) is False
-
-
-def test_map_deal_stage():
-    assert map_deal_stage("DRAFT") == "request"
-    assert map_deal_stage("RFQ_OPEN") == "request"
-    assert map_deal_stage("SOURCING") == "quoting"
-    assert map_deal_stage("CALCULATING") == "quoting"
-    assert map_deal_stage("QUOTE_SENT") == "quote_sent"
-    assert map_deal_stage("CONTRACT_SIGNED") == "contract"
-    assert map_deal_stage("CLOSED_WON") == "won"
-    assert map_deal_stage("CLOSED_LOST") == "lost"
-    assert map_deal_stage("paid") == "paid"
-    assert map_deal_stage("fulfilment") == "fulfilment"
-    assert map_deal_stage("unknown_future_stage") == "request"
 
 
 def test_build_actor():
@@ -131,7 +111,7 @@ def test_build_deal_ref(db, mapped_company, deal_stages):
     assert deal_ref["number"] == f"D-{deal.id}"
     assert deal_ref["title"] == "Поставка рельсов"
     assert deal_ref["stage"] == "quoting"
-    assert deal_ref["amount"] == "0.00"
+    assert deal_ref["amount"] is None, "КП клиенту не отправлялось — суммы нет (events.schema.json: null)"
     assert deal_ref["currency"] == "UZS"
 
     dict_ref = build_deal_ref(
@@ -148,6 +128,33 @@ def test_build_deal_ref(db, mapped_company, deal_stages):
     assert dict_ref["stage"] == "won"
     assert dict_ref["amount"] == "1500000.50"
     assert dict_ref["currency"] == "USD"
+    assert build_deal_ref({"erp_deal_id": 5, "stage": "request", "amount": None})["amount"] is None
+
+
+def test_build_deal_ref_amount_ignores_drafts_and_takes_the_latest_sent_quote(db, mapped_company, deal_stages):
+    company, _ = mapped_company
+    deal = Deal.objects.create(company=company, stage=deal_stages["quote_sent"])
+    sent = QuoteStatus.objects.get_or_create(code="SENT", defaults={"name": "Отправлено"})[0]
+    draft = QuoteStatus.objects.get_or_create(code="DRAFT", defaults={"name": "Черновик"})[0]
+    Quote.objects.create(
+        deal=deal, version=1, status=sent, total_incl_vat=Decimal("1200000.00"), public_access_token="tok-sent-1"
+    )
+    Quote.objects.create(deal=deal, version=2, status=draft, total_incl_vat=Decimal("9900000.00"))
+
+    ref = build_deal_ref(deal)
+    assert ref["stage"] == "quote_sent"
+    assert ref["amount"] == "1200000.00"
+
+
+def test_deal_ref_stage_outside_the_contract_is_rejected(db, mapped_company):
+    """Сырой код FSM или выдуманная стадия в событие не попадают: код решает, а не молча подставляет."""
+    company, _ = mapped_company
+    deal = Deal.objects.create(company=company)
+    for bad in ("CLOSED_WON", "quoted", "", None):
+        with pytest.raises(ValueError, match="не из контракта"):
+            build_deal_ref({"erp_deal_id": 1, "stage": bad})
+        with pytest.raises(ValueError, match="не из контракта"):
+            emit_deal_stage_changed(deal=deal, from_stage="request", to_stage=bad, send_async=False)
 
 
 # ─── 2. Emission & Serialization Tests ────────────────────────────────────────
@@ -399,13 +406,51 @@ def test_deal_creation_and_stage_changed_signals(db, mapped_company, deal_stages
         assert kwargs["from_stage"] == "request"
         assert kwargs["to_stage"] == "quoting"
 
-    # 3. Deal won -> deal.won
-    with patch("integration.signals.webhooks.emit_deal_outcome") as mock_outcome:
+    # 3. Deal won -> deal.won (итог продажи — переход FSM в CLOSED_WON); стадия контракта у сделки без документов — contract
+    with (
+        patch("integration.signals.webhooks.emit_deal_outcome") as mock_outcome,
+        patch("integration.signals.webhooks.emit_deal_stage_changed") as mock_stage_change,
+    ):
         deal.stage = deal_stages["won"]
         deal.save()
         mock_outcome.assert_called_once()
-        kwargs = mock_outcome.call_args[1]
-        assert kwargs["won"] is True
+        assert mock_outcome.call_args[1]["won"] is True
+        assert mock_stage_change.call_args[1]["from_stage"] == "quoting"
+        assert mock_stage_change.call_args[1]["to_stage"] == "contract"
+
+    # 4. Deal lost -> deal.lost
+    with patch("integration.signals.webhooks.emit_deal_outcome") as mock_outcome:
+        deal.stage = deal_stages["lost"]
+        deal.save()
+        mock_outcome.assert_called_once()
+        assert mock_outcome.call_args[1]["won"] is False
+
+
+def test_stage_change_inside_one_contract_stage_emits_no_stage_changed(db, mapped_company):
+    """DRAFT → RFQ_OPEN: обе стадии FSM — `request` контракта; события о смене стадии нет."""
+    company, _ = mapped_company
+    draft = DealStage.objects.get_or_create(code=DealStageCode.DRAFT, defaults={"name": "Черновик"})[0]
+    rfq = DealStage.objects.get_or_create(code=DealStageCode.RFQ_OPEN, defaults={"name": "RFQ"})[0]
+    deal = Deal.objects.create(company=company, stage=draft)
+    with patch("integration.signals.webhooks.emit_deal_stage_changed") as mock_stage_change:
+        deal.stage = rfq
+        deal.save()
+        mock_stage_change.assert_not_called()
+
+
+def test_deal_outcome_payload_has_the_sent_amount_or_zero(db, mapped_company, deal_stages):
+    company, _ = mapped_company
+    deal = Deal.objects.create(company=company, stage=deal_stages["request"])
+    lost = emit_deal_outcome(deal=deal, won=False, lost_reason="Дорого", send_async=False)
+    assert lost.payload["payload"] == {"amount": "0.00", "currency": "UZS", "lost_reason": "Дорого"}
+
+    sent = QuoteStatus.objects.get_or_create(code="SENT", defaults={"name": "Отправлено"})[0]
+    Quote.objects.create(
+        deal=deal, version=1, status=sent, total_incl_vat=Decimal("750000.00"), public_access_token="tok-sent-2"
+    )
+    won = emit_deal_outcome(deal=Deal.objects.get(pk=deal.pk), won=True, send_async=False)
+    assert won.payload["payload"] == {"amount": "750000.00", "currency": "UZS"}
+    assert won.payload["deal"]["amount"] == "750000.00"
 
 
 def test_quote_signals(db, mapped_company, deal_stages):

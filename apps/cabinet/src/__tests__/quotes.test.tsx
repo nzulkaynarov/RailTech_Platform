@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event';
 
 import { http, HttpResponse } from 'msw';
 
+import i18n from '@/i18n';
 import { MOCK_ACCEPT_CODE } from '@/mocks/fixtures';
 import { portalServer } from '@/mocks/server';
 import { renderApp, signedIn } from '@/test/render';
@@ -18,7 +19,7 @@ describe('КП', () => {
     expect(within(list).getAllByRole('listitem')).toHaveLength(5);
     const first = within(list).getAllByRole('listitem')[0];
     expect(within(first).getByRole('link', { name: 'KP-2026-0042 · версия 2' })).toHaveAttribute('href', '/quotes/301');
-    expect(within(first).getByText('48 600 000 UZS')).toBeInTheDocument();
+    expect(within(first).getByText('54 432 000 UZS')).toBeInTheDocument();
     expect(within(first).getByText('25 окт. 2026 г.')).toBeInTheDocument();
     expect(within(list).getAllByText('Срок истёк')).toHaveLength(1);
     await expectNoAxeViolations();
@@ -35,8 +36,36 @@ describe('КП', () => {
     expect(within(lines).getByText('165 000 UZS')).toBeInTheDocument();
     expect(within(lines).getByText('5 нояб. 2026 г.')).toBeInTheDocument();
     expect(within(lines).getByText('Доставка до склада клиента в Ташкенте включена')).toBeInTheDocument();
-    expect(screen.getAllByText('48 600 000 UZS').length).toBeGreaterThanOrEqual(2);
+    expect(screen.getAllByText('54 432 000 UZS').length).toBeGreaterThanOrEqual(2);
     expect(screen.getByRole('button', { name: 'Скачать: KP-2026-0042' })).toBeInTheDocument();
+  });
+
+  it('итоги КП 0.3.0: «Итого без НДС», «НДС», «Итого» (subtotal + vat = total)', async () => {
+    signedIn();
+    renderApp('/quotes/301');
+    await heading('КП KP-2026-0042');
+    const totals = screen.getByRole('group', { name: 'Состав итога' });
+    expect(within(totals).getByText('Итого без НДС')).toBeInTheDocument();
+    expect(within(totals).getByText('48 600 000 UZS')).toBeInTheDocument();
+    expect(within(totals).getByText('НДС')).toBeInTheDocument();
+    expect(within(totals).getByText('5 832 000 UZS')).toBeInTheDocument();
+    expect(within(totals).getByText('Итого')).toBeInTheDocument();
+    expect(within(totals).getByText('54 432 000 UZS')).toBeInTheDocument();
+    await expectNoAxeViolations();
+  });
+
+  it.each([
+    ['uz', 'QQSsiz jami', 'QQS', 'Jami'],
+    ['en', 'Subtotal excl. VAT', 'VAT', 'Total'],
+  ])('итоги КП на %s', async (lang, subtotal, vat, total) => {
+    signedIn();
+    window.localStorage.setItem('cabinet.language', lang);
+    await i18n.changeLanguage(lang);
+    renderApp('/quotes/301');
+    const totals = await screen.findByRole('group', { name: lang === 'uz' ? 'Jami tarkibi' : 'Totals' });
+    expect(within(totals).getByText(subtotal)).toBeInTheDocument();
+    expect(within(totals).getByText(vat)).toBeInTheDocument();
+    expect(within(totals).getByText(total)).toBeInTheDocument();
   });
 
   it('этапы услуги: КП по этапам с копейками', async () => {
@@ -45,7 +74,7 @@ describe('КП', () => {
     await heading('КП KP-2026-0057');
     expect(screen.getByText('Этап 1. Обследование площадки и проект')).toBeInTheDocument();
     expect(screen.getAllByText('Этап')).toHaveLength(3);
-    expect(screen.getAllByText('18 750 000,50 UZS').length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText('21 000 000,56 UZS').length).toBeGreaterThanOrEqual(1);
   });
 
   it('принять: «Получить код» → канал → неверный код → верный → «договор формируется»', async () => {

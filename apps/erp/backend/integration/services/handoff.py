@@ -17,9 +17,10 @@ from parties.models import Company, CompanyType, Contact
 from portal.models import PortalRequestLine
 from portal.services.invitation import invite_contact_to_portal
 
-from crm.models import Deal, DealStage
+from crm.models import Deal
 
 from ..models import CrmClientMapping, CrmContactMapping
+from . import stages
 
 logger = logging.getLogger(__name__)
 
@@ -106,11 +107,10 @@ def process_client_handoff(data: Dict[str, Any]) -> Tuple[Dict[str, Any], bool]:
     # Создание заявки, если запрошено
     erp_request_id = None
     if data.get("create_request"):
-        request_stage = DealStage.objects.filter(code="request").first()
         deal = Deal.objects.create(
             company=company,
             contact=primary_contact,
-            stage=request_stage,
+            stage=stages.initial_fsm_stage(),  # DRAFT, как у заявки из портала; стадия контракта — `request`
             title=f"Заявка: {company.name}",
             notes=data["need"]["summary"],
         )

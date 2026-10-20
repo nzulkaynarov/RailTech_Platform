@@ -200,7 +200,7 @@ class MagicLinkRequestView(APIView):
 
 
 def _exchange_magic_token(request, token: str) -> Response:
-    """Обмен токена ссылки входа на сессию — общий для `POST /auth/magic` и устаревшего `GET /auth/magic/{token}`."""
+    """Обмен токена ссылки входа на сессию (`POST /auth/magic`)."""
     session, session_token = exchange_magic_link(
         token,
         ip_address=request.META.get("REMOTE_ADDR"),
@@ -235,23 +235,6 @@ class MagicLinkTokenExchangeView(APIView):
         if not serializer.is_valid():
             raise PortalValidationError("VALIDATION_ERROR")
         return _exchange_magic_token(request, serializer.validated_data["token"])
-
-
-class MagicLinkExchangeView(APIView):
-    """GET /auth/magic/{token} — устарело (токен в пути попадает в журналы), остаётся до FIX-24; см. `POST /auth/magic`."""
-
-    authentication_classes = []
-    permission_classes = []
-    throttle_classes = [PortalLoginRateThrottle]
-
-    def get_exception_handler(self):
-        return portal_exception_handler
-
-    def get(self, request, token):
-        return _exchange_magic_token(request, token)
-
-    def post(self, request, token):
-        return self.get(request, token)
 
 
 class LogoutView(APIView):
@@ -515,7 +498,7 @@ class InvoiceListView(BasePortalView):
     def get(self, request):
         invoices = (
             Invoice.objects.filter(client_invoices_q(), deal__company=request.portal_company)
-            .select_related("status", "deal", "currency")
+            .select_related("status", "deal", "currency", "contract__quote")
             .order_by("-created_at")
         )
         return Response(InvoiceSerializer(invoices, many=True).data)

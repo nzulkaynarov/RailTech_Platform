@@ -25,6 +25,7 @@ from django.db import transaction
 from django.utils import timezone
 
 from ..models import CrmClientMapping, CrmContactMapping, IntegrationWebhookEvent, WebhookEventStatus
+from . import stages
 
 logger = logging.getLogger(__name__)
 
@@ -50,20 +51,6 @@ VALID_EVENT_TYPES = {
     "invite.sent",
 }
 
-VALID_DEAL_STAGES = {
-    "request",
-    "quoting",
-    "quote_sent",
-    "accepted",
-    "contract",
-    "invoiced",
-    "paid",
-    "fulfilment",
-    "closing",
-    "won",
-    "lost",
-}
-
 
 def sign_payload(secret: str, body_bytes: bytes) -> str:
     """Вычисляет HMAC-SHA256 подпись тела запроса в формате sha256=<hex>."""
@@ -77,78 +64,45 @@ def verify_signature(secret: str, body_bytes: bytes, signature_header: str) -> b
     return hmac.compare_digest(expected, signature_header.strip())
 
 
-def map_deal_stage(stage_code: Optional[str]) -> str:
-    """Нормализует внутренний код этапа сделки ERP в канонический DealStage контракта."""
-    raw = (stage_code or "").lower().strip()
-    mapping = {
-        "draft": "request",
-        "rfq_open": "request",
-        "request": "request",
-        "sourcing": "quoting",
-        "calculating": "quoting",
-        "quoting": "quoting",
-        "quote_sent": "quote_sent",
-        "accepted": "accepted",
-        "contract": "contract",
-        "contract_signed": "contract",
-        "invoiced": "invoiced",
-        "paid": "paid",
-        "fulfilment": "fulfilment",
-        "fulfillment": "fulfilment",
-        "closing": "closing",
-        "closed_won": "won",
-        "won": "won",
-        "closed_lost": "lost",
-        "lost": "lost",
-    }
-    stage = mapping.get(raw, "request")
-    return stage if stage in VALID_DEAL_STAGES else "request"
+def _format_amount(value: Optional[Union[str, Decimal]]) -> Optional[str]:
+    """Контракт `Amount`: строка с двумя знаками; `None` — суммы нет."""
+    return None if value is None else f"{Decimal(str(value)):.2f}"
+
+
+def _check_stage(stage: Any) -> str:
+    """Стадия в событии — только код `DealStage` контракта; всё остальное — ошибка вызывающего кода."""
+    if not stages.is_deal_stage(stage):
+        raise ValueError(f"Стадия {stage!r} не из контракта шва (DealStage): {', '.join(stages.DEAL_STAGES)}")
+    return stage
 
 
 def build_deal_ref(deal: Any) -> Dict[str, Any]:
-    """Формирует объект DealRef для тела события по events.schema.json."""
+    """Формирует объект DealRef для тела события по events.schema.json.
+
+    Стадия и сумма — из `stages.py`, как в ответах integration: сумма — последняя версия КП, видимая клиенту,
+    иначе `null` (черновики в сумму сделки не входят). Словарь на входе — уже готовая проекция (`stage` — код
+    `DealStage`, `amount` — строка либо `None`).
+    """
     if isinstance(deal, dict):
         erp_deal_id = int(deal["erp_deal_id"])
-        number = str(deal.get("number") or f"D-{erp_deal_id}")
-        title = str(deal.get("title") or f"Сделка #{erp_deal_id}")
-        stage = map_deal_stage(deal.get("stage"))
-        amount = f"{Decimal(str(deal.get('amount', 0))):.2f}"
-        currency = str(deal.get("currency", "UZS")).upper()
         return {
             "erp_deal_id": erp_deal_id,
-            "number": number,
-            "title": title,
-            "stage": stage,
-            "amount": amount,
-            "currency": currency,
+            "number": str(deal.get("number") or f"D-{erp_deal_id}"),
+            "title": str(deal.get("title") or f"Сделка #{erp_deal_id}"),
+            "stage": _check_stage(deal.get("stage")),
+            "amount": _format_amount(deal.get("amount")),
+            "currency": str(deal.get("currency", "UZS")).upper(),
         }
 
     # Django Deal Model
     erp_deal_id = deal.id
-    number = f"D-{erp_deal_id}"
-    title = deal.title or f"Сделка #{erp_deal_id}"
-    stage_code = deal.stage.code if getattr(deal, "stage", None) else "request"
-    stage = map_deal_stage(stage_code)
-
-    amount_val = Decimal("0")
-    if hasattr(deal, "total_value"):
-        amount_val = deal.total_value
-    amount = f"{amount_val:.2f}"
-
-    currency = "UZS"
-    quote = getattr(deal, "active_quote", None)
-    if quote and getattr(quote, "currency", None):
-        curr_obj = quote.currency
-        currency = curr_obj.code if hasattr(curr_obj, "code") else str(curr_obj)
-        currency = currency.upper()
-
     return {
         "erp_deal_id": erp_deal_id,
-        "number": number,
-        "title": title,
-        "stage": stage,
-        "amount": amount,
-        "currency": currency,
+        "number": f"D-{erp_deal_id}",
+        "title": deal.title or f"Сделка #{erp_deal_id}",
+        "stage": stages.deal_stage(deal),
+        "amount": _format_amount(stages.deal_amount(deal)),
+        "currency": stages.deal_currency(deal),
     }
 
 
@@ -345,8 +299,8 @@ def emit_deal_stage_changed(
     """Событие deal.stage_changed."""
     company_id = deal.company_id if hasattr(deal, "company_id") else deal["company_id"]
     payload: Dict[str, Any] = {
-        "from": map_deal_stage(from_stage),
-        "to": map_deal_stage(to_stage),
+        "from": _check_stage(from_stage),
+        "to": _check_stage(to_stage),
     }
     if reason:
         payload["reason"] = reason
@@ -372,13 +326,13 @@ def emit_deal_outcome(
 ) -> Optional[IntegrationWebhookEvent]:
     """События deal.won / deal.lost."""
     company_id = deal.company_id if hasattr(deal, "company_id") else deal["company_id"]
+    ref = build_deal_ref(deal)
     if amount is None:
-        amount_val = deal.total_value if hasattr(deal, "total_value") else Decimal("0")
-        amount = f"{amount_val:.2f}"
-    else:
-        amount = f"{Decimal(str(amount)):.2f}"
+        # Итог сделки несёт сумму всегда (`DealOutcome.amount` обязателен): отправленное клиенту КП, иначе ноль.
+        amount = ref["amount"] or "0.00"
+    amount = f"{Decimal(str(amount)):.2f}"
 
-    currency = (currency or "UZS").upper()
+    currency = (currency or ref["currency"]).upper()
 
     payload: Dict[str, Any] = {"amount": amount, "currency": currency}
     if not won and lost_reason:

@@ -52,7 +52,7 @@ class TestPortalCookie:
             token_hash=hash_token(raw), contact=client_contact, expires_at=timezone.now() + timedelta(minutes=15)
         )
 
-        morsel = anon_portal_client.post(f"/api/portal/v1/auth/magic/{raw}", format="json").cookies[COOKIE]
+        morsel = anon_portal_client.post("/api/portal/v1/auth/magic", {"token": raw}, format="json").cookies[COOKIE]
 
         assert morsel["samesite"] == "None" and morsel["secure"] is True
 

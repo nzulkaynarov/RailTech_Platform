@@ -77,7 +77,7 @@
 |---|---|
 | `POST /auth/telegram` | `{init_data}` → проверка подписи токеном бота (срок ≤ 5 мин), поиск контакта по `telegram_user_id`; сессия (cookie HttpOnly) |
 | `POST /auth/magic-link` | `{email}` → письмо со ссылкой (15 мин, одноразовая); ответ всегда 200 |
-| `POST /auth/magic {token}` | обмен токена из ссылки входа на сессию; токен приходит во фрагменте ссылки `/auth/magic#token=…` и не попадает в журналы (FIX-20). `GET /auth/magic/{token}` — устарел, снимается после FIX-24 |
+| `POST /auth/magic {token}` | обмен токена из ссылки входа на сессию; токен приходит во фрагменте ссылки `/auth/magic#token=…` и не попадает в журналы (FIX-20). `GET /auth/magic/{token}` снят в контракте 0.3.0 (FIX-25), маршрут отвечает 404 |
 | `POST /auth/logout`, `GET /me` | сессия и контакт, компания, права (`can_act`) |
 | `GET /requests`, `POST /requests` | мои запросы; новый запрос (строки свободным текстом + вложения) → `request.created(source=cabinet)` |
 | `GET /quotes`, `GET /quotes/{id}`, `POST /quotes/{id}/request-code`, `POST /quotes/{id}/accept {code}`, `POST /quotes/{id}/reject {reason}` | КП; код акцепта (6 цифр, 15 мин) ERP шлёт контакту в Telegram или на e-mail по запросу — мастер-кода нет |

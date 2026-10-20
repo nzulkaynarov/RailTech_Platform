@@ -19,9 +19,9 @@ from portal.models import PortalRequestLine
 
 from catalog.constants import MODE_CLIENT, MODE_LEAD
 from catalog.published import project_many, published_products
-from crm.constants import DealStageCode
-from crm.models import Deal, DealStage, GeneratedDocument
+from crm.models import Deal, GeneratedDocument
 
+from ..services.stages import deal_stage, initial_fsm_stage
 from ..services.summary import (
     _map_doc_kind,
     delivery_lines,
@@ -29,7 +29,7 @@ from ..services.summary import (
     get_document_link_data,
     list_company_deals_data,
 )
-from ..services.webhooks import build_actor, map_deal_stage
+from ..services.webhooks import build_actor
 from .context import AgentContext
 from .contract import ToolSpec
 
@@ -212,7 +212,7 @@ def create_request_tool(context: AgentContext, arguments: Dict[str, Any]) -> Dic
         raise ToolExecutionError(f"Company #{context.erp_company_id} not found")
 
     primary_contact = company.contacts.filter(is_primary=True).first() or company.contacts.first()
-    request_stage = DealStage.objects.filter(code=DealStageCode.DRAFT).first()
+    request_stage = initial_fsm_stage()
 
     deal = Deal(
         company=company,
@@ -253,7 +253,7 @@ def create_request_tool(context: AgentContext, arguments: Dict[str, Any]) -> Dic
     return {
         "erp_request_id": deal.id,
         "number": f"D-{deal.id}",
-        "status": map_deal_stage(deal.stage.code if deal.stage else None),
+        "status": deal_stage(deal),
     }
 
 

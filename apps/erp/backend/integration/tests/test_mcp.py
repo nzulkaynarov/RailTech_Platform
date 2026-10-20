@@ -44,11 +44,11 @@ from integration.tests.mcp_support import (
 from parties.models import Company, CompanyType, Contact
 from portal.models import PortalRequestLine
 from rest_framework.throttling import SimpleRateThrottle
-from sales.models import Fulfillment, FulfillmentStatus, Quote, QuoteStatus
+from sales.models import Fulfillment, FulfillmentStatus, Quote, QuoteItem, QuoteStatus
 
 from catalog.models import Category, Product, ProductStatus
 from catalog.published import CATALOG_ITEM_KEYS
-from crm.constants import DealStageCode
+from crm.constants import DealStageCode, FulfillmentStatusCode, QuoteStatusCode
 from crm.models import Deal, DealStage, GeneratedDocument
 from master_data.models import Currency, UnitOfMeasure
 
@@ -111,13 +111,9 @@ def test_data():
         is_primary=True,
     )
 
-    stage_req = DealStage.objects.filter(code="request").first()
-    if not stage_req:
-        stage_req = DealStage.objects.create(code="request", name="Запрос")
-
-    stage_won = DealStage.objects.filter(code="won").first()
-    if not stage_won:
-        stage_won = DealStage.objects.create(code="won", name="Выиграна")
+    # Настоящие стадии FSM (FIX-30): прежние коды `request` и `won` в ERP не существуют
+    stage_req = DealStage.objects.get(code=DealStageCode.DRAFT)
+    stage_won = DealStage.objects.get(code=DealStageCode.CLOSED_WON)
 
     # Сделка А
     deal_a = Deal.objects.create(
@@ -128,7 +124,7 @@ def test_data():
     )
 
     # Поставка для сделки А
-    status_in_transit, _ = FulfillmentStatus.objects.get_or_create(code="in_transit", defaults={"name": "В пути"})
+    status_in_transit = FulfillmentStatus.objects.get(code=FulfillmentStatusCode.IN_TRANSIT)
     fulf_a = Fulfillment.objects.create(
         deal=deal_a,
         status=status_in_transit,
@@ -594,10 +590,31 @@ def test_get_deal_status_cross_tenant_isolation(test_data):
 # ─────────────────────────────────────────────────────────────────────────────
 
 
-def test_get_delivery_status(test_data):
+@pytest.fixture
+def order_a(test_data):
+    """Заказ клиента А: одно подтверждённое КП с одной позицией — из него строятся строки поставки (FIX-22)."""
+    order = Quote.objects.create(
+        deal=test_data["deal_a"],
+        version=90,
+        status=QuoteStatus.objects.get(code=QuoteStatusCode.APPROVED),
+        total_incl_vat=Decimal("100"),
+    )
+    QuoteItem.objects.create(
+        quote=order,
+        display_type="ITEM",
+        imported_raw_name="Рельс Р65",
+        quantity=3,
+        unit="т",
+        frozen_base_price=Decimal("100"),
+        position=1,
+    )
+    return order
+
+
+def test_get_delivery_status(test_data, order_a):
     lines = payload(sdk_call(customer(test_data), "get_delivery_status", {"erp_deal_id": test_data["deal_a"].id}))
     assert len(lines) == 1
-    assert lines[0]["title"] == test_data["deal_a"].title
+    assert lines[0]["title"] == "Рельс Р65"  # строка заказа клиента, а не название сделки
     assert lines[0]["tracking"] == "TRK-12345"
     assert lines[0]["status"] == "in_transit"
     assert lines[0]["eta"] == test_data["fulf_a"].expected_delivery_date.isoformat()
@@ -778,19 +795,44 @@ def test_client_does_not_see_draft_and_approval_quotes(test_data):
     assert not {q["erp_quote_id"] for q in quotes} & {d.id for d in drafts}
 
 
-def test_deal_status_has_delivery_without_invented_quantity(test_data):
+def test_amount_ignores_draft_quotes_and_follows_the_last_sent_one(test_data):
+    """Хвост FIX-12: `amount` — сумма последнего КП, видимого клиенту; черновик и КП на согласовании в неё не попадают."""
+    deal = test_data["deal_a"]
+
+    def amounts():
+        listed = payload(sdk_call(customer(test_data), "list_client_deals"))
+        detail = payload(sdk_call(customer(test_data), "get_deal_status", {"erp_deal_id": deal.id}))
+        return [d["amount"] for d in listed if d["erp_deal_id"] == deal.id], detail["amount"]
+
+    draft = _quote(deal, 1, "DRAFT")
+    draft.total_incl_vat = Decimal("999999")
+    draft.save()
+    assert amounts() == ([None], None)  # клиенту КП не отправлялось — суммы нет, а не сумма черновика
+
+    sent = _quote(deal, 2, "SENT")
+    sent.total_incl_vat = Decimal("1200")
+    sent.public_access_token = "tok-sent-fake"  # клиент видит КП только с публичной ссылкой
+    sent.save()
+    newer_draft = _quote(deal, 3, "PENDING_APPROVAL")
+    newer_draft.total_incl_vat = Decimal("5")
+    newer_draft.save()
+    listed, detail = amounts()
+    assert listed == ["1200.00"] and detail == "1200.00"
+
+
+def test_deal_status_has_delivery_from_the_order_line(test_data, order_a):
     data = payload(sdk_call(customer(test_data), "get_deal_status", {"erp_deal_id": test_data["deal_a"].id}))
     deliveries = data["deliveries"]
     assert len(deliveries) == 1  # раньше deal.fulfillments не существовало — список был пуст
-    assert deliveries[0]["quantity"] is None
-    assert deliveries[0]["unit"] is None
+    assert deliveries[0]["quantity"] == "3"  # из строки подтверждённого заказа, не выдумано
+    assert deliveries[0]["unit"] == "т"
     assert deliveries[0]["tracking"] == "TRK-12345"
 
 
-def test_delivery_status_does_not_invent_quantity(test_data):
+def test_delivery_status_takes_quantity_from_the_order_line_only(test_data, order_a):
     line = payload(sdk_call(customer(test_data), "get_delivery_status", {"erp_deal_id": test_data["deal_a"].id}))[0]
-    assert line["quantity"] is None
-    assert line["unit"] is None
+    assert line["quantity"] == "3"
+    assert line["unit"] == "т"
 
 
 # ─────────────────────────────────────────────────────────────────────────────

@@ -17,7 +17,7 @@ from typing import Any
 
 from django.db.models.signals import post_save, pre_save
 
-from .services import webhooks
+from .services import stages, webhooks
 
 logger = logging.getLogger(__name__)
 
@@ -34,10 +34,7 @@ def handle_deal_pre_save(sender: Any, instance: Any, **kwargs: Any) -> None:
         from sales.models import Deal
 
         prev = Deal.objects.filter(pk=instance.pk).select_related("stage").first()
-        if prev and prev.stage:
-            instance._prev_stage_code = prev.stage.code
-        else:
-            instance._prev_stage_code = None
+        instance._prev_stage_code = stages.fsm_code(prev) if prev else None
     else:
         instance._prev_stage_code = None
 
@@ -63,13 +60,14 @@ def handle_deal_post_save(sender: Any, instance: Any, created: bool, **kwargs: A
             )
             return
 
-        # Смена стадии
+        # Смена стадии FSM. Стадия контракта — из `stages.deal_stage` (с прежним кодом FSM и нынешними документами);
+        # итог продажи (`deal.won` / `deal.lost`) определяет сам переход FSM в CLOSED_WON / CLOSED_LOST.
         prev_code = getattr(instance, "_prev_stage_code", None)
-        curr_code = instance.stage.code if getattr(instance, "stage", None) else None
+        curr_code = stages.fsm_code(instance)
 
         if curr_code and prev_code != curr_code:
-            prev_stage = webhooks.map_deal_stage(prev_code)
-            curr_stage = webhooks.map_deal_stage(curr_code)
+            prev_stage = stages.deal_stage(instance, with_fsm_code=prev_code)
+            curr_stage = stages.deal_stage(instance)
 
             if prev_stage != curr_stage:
                 webhooks.emit_deal_stage_changed(
@@ -78,9 +76,10 @@ def handle_deal_post_save(sender: Any, instance: Any, created: bool, **kwargs: A
                     to_stage=curr_stage,
                 )
 
-            if curr_stage == "won":
+            outcome = stages.fsm_outcome(curr_code)
+            if outcome == "won":
                 webhooks.emit_deal_outcome(deal=instance, won=True)
-            elif curr_stage == "lost":
+            elif outcome == "lost":
                 webhooks.emit_deal_outcome(
                     deal=instance,
                     won=False,

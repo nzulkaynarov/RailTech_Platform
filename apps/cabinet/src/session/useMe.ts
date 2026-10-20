@@ -4,8 +4,9 @@ import { logout, type Me } from '@/api/portal';
 import { ME_QUERY_KEY, loadSession } from './session';
 
 /** Сессия, контакт, компания и право действовать (`GET /me`). `data === null` — не вошёл. */
-export function useMe() {
+export function useMe({ enabled = true }: { enabled?: boolean } = {}) {
   return useQuery<Me | null>({
+    enabled,
     queryKey: ME_QUERY_KEY,
     queryFn: loadSession,
     staleTime: 5 * 60 * 1000,
@@ -19,7 +20,7 @@ export function useCanAct(): boolean {
   return useMe().data?.can_act ?? false;
 }
 
-/** Записать сессию, полученную входом (`/auth/telegram`, `/auth/magic/{token}`). */
+/** Записать сессию, полученную входом (`/auth/telegram`, `POST /auth/magic`). */
 export function useSetSession() {
   const queryClient = useQueryClient();
   return (me: Me | null) => queryClient.setQueryData<Me | null>(ME_QUERY_KEY, me);
