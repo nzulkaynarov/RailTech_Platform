@@ -3,6 +3,7 @@ from typing import Optional, Tuple
 from django.db import transaction
 
 from accounts.models import CustomUser
+from crm.services.pdf_storage import save_rendered_pdf
 
 from ..constants import DealStageCode, FulfillmentStatusCode
 from ..models import Deal
@@ -174,4 +175,4 @@ def _render_delivery_note_pdf(fulfillment) -> None:
     )
     buf = BytesIO()
     HTML(string=html_string).write_pdf(buf)
-    fulfillment.pdf_file.save(f"DeliveryNote_{number}.pdf", ContentFile(buf.getvalue()), save=True)
+    save_rendered_pdf(fulfillment, f"DeliveryNote_{number}.pdf", ContentFile(buf.getvalue()))
