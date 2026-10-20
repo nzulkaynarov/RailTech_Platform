@@ -9,7 +9,7 @@ Cabinet через портальный API этой же ERP. Продукт н
 M1-ERP-01…10 выполнены). Код очищен от наследия B2B/маркетплейса (§9), выстроена каноническая архитектура
 приложений (§4), введены 6 системных ролей бэк-офиса и 10 пространств прав (§6), 2 слоя каталога (§5),
 Settings Hub (M1-ERP-09), фиксация курсов валют и учёт отклонения маржи (M1-ERP-08), а контракт API зафиксирован
-в `packages/contracts` с полным снимком схемы в `packages/contracts/openapi/erp-internal-full.json`.
+в `packages/contracts`: `portal`/`integration`/события/MCP — ручные файлы, `internal` — `erp-internal.yaml`, генерируемый из схемы бэкенда (FIX-40).
 Комплект эксплуатационных регламентов доступен в `apps/erp/docs/runbooks/`.
 
 ## 1. Карта документов — читай в этом порядке
@@ -126,7 +126,7 @@ Makefile · .env.example · docs/ (ADR и runbooks ERP в apps/erp/docs/runbooks
 **TypeScript / UI**
 - Только компоненты `@/components/ui/` (shadcn) и **семантические токены**: `bg-primary`, `text-foreground`, `bg-destructive`, `bg-success`… Никаких `bg-emerald-500`, `text-white`, hex, inline-стилей для статики, кастомного CSS. Размеры текста — только шкала Tailwind (`text-xs` минимум). Сайдбар — shadcn `<Sidebar>`. Списки — адаптивная таблица с карточками на мобильном (`ResponsiveDataTable` из B2B).
 - **Весь текст через i18n**: `t()` из `useTranslation()`, ключи в `ru.json` и `en.json` одновременно (симметрия проверяется скриптом; `uz` добавляется позже без переписывания экранов). Zustand-сторы хранят ключи, не текст. Zod-сообщения — фабрикой `createSchema(t)`.
-- **Типы API только сгенерированные** из `packages/contracts/openapi/erp-internal.yaml` через openapi-typescript (`make contracts`); ручные дубли типов запрещены. Для логики — `stage_code`, для показа — `stage_name`.
+- **Типы API только сгенерированные** из `backend/schema.json` (выгрузка drf-spectacular) через openapi-typescript в `frontend/src/api/schema.d.ts` (`make -C apps/erp openapi`); ручные дубли типов запрещены. `packages/contracts/openapi/erp-internal.yaml` — срез `/api/v1/` той же выгрузки (для чтения и линта), типов из него никто не строит. Схема и срез коммитятся: правишь сериализатор или вьюху — `make -C apps/erp openapi` и коммит трёх файлов, иначе `make -C apps/erp openapi-check` (ci-local, CI) падает с diff. Для логики — `stage_code`, для показа — `stage_name`.
 - Права на фронте — только скрытие/блокировка UI по правам из `/me`; истина на бэке. Навигация строится из прав роли (`buildNavigation` из B2B), без тиров KYC/подписки.
 - Правила React Compiler включены (`eslint-plugin-react-hooks`): форма из данных запроса — `useDraftState`, «сейчас» — `useNow`, свежее значение в колбэке — `useLatestRef`; точечные отключения только с причиной в файле.
 - Деньги на фронте — `decimal.js`. Никаких `as any` / `@ts-ignore` без комментария. Ошибки — toast, не `alert()`.
@@ -222,7 +222,7 @@ Makefile · .env.example · docs/ (ADR и runbooks ERP в apps/erp/docs/runbooks
 
 | Пространство | Префикс | Кто зовёт | Аутентификация | Появится в |
 |---|---|---|---|---|
-| internal | `/api/v1/` | ERP SPA | JWT сотрудника (access 30 мин, refresh в HttpOnly-cookie, как в B2B) | M1-ERP-01 (копия B2B), экспорт в contracts — M1-ERP-10 |
+| internal | `/api/v1/` | ERP SPA | JWT сотрудника (access 30 мин, refresh в HttpOnly-cookie, как в B2B) | M1-ERP-01 (копия B2B); контракт — генерируемый срез схемы, FIX-40 |
 | portal | `/api/portal/v1/` | Cabinet | сессия портала: Telegram `initData` / magic-link | M2-ERP-01 |
 | integration | `/api/integration/v1/` | CRM | `Authorization: Bearer <SERVICE_TOKEN>` (по токену на направление, два активных для ротации) | M3-ERP-01 |
 | mcp | `/mcp/erp` (отдельный процесс `erp-mcp:8104`, не Daphne) | агент CRM | `X-Agent-Context` (HMAC, строгие claims `iat`/`exp`/одноразовый `jti`, 60 с; `prospect` — строго без компании; лимит по компании) | M3-ERP-03, FIX-12, FIX-36 |
@@ -239,7 +239,8 @@ Makefile · .env.example · docs/ (ADR и runbooks ERP в apps/erp/docs/runbooks
 | Команда | Что делает | Появится в |
 |---|---|---|
 | `make check-erp` (из корня) | делегирует в `make -C apps/erp check`: flake8/black/isort, eslint, tsc, i18n, vitest, pytest в контейнере на одноразовых Postgres 17 + Redis | есть (M1-ERP-01) |
-| `make -C apps/erp check \| test \| lint \| migrate \| openapi` | проверки, pytest, линтеры, миграции на стенде, экспорт `backend/schema.json` + типы фронтенда + экспорт `packages/contracts/openapi/erp-internal-full.json` (M1-ERP-10) | есть (M1-ERP-01); экспорт в contracts — M1-ERP-10 |
+| `make -C apps/erp check \| test \| lint \| migrate \| openapi` | проверки, pytest, линтеры, миграции на стенде, экспорт `backend/schema.json` + `packages/contracts/openapi/erp-internal.yaml` (срез `/api/v1/`, `backend/scripts/export_internal_contract.py`) + типы фронтенда | есть (M1-ERP-01); срез в contracts — FIX-40 |
+| `make -C apps/erp openapi-check` | перегенерирует три файла выше и падает с diff, если они отличаются от рабочего дерева (дрейф схемы); входит в `make ci-local erp` и в шаг CI «ERP · check» | FIX-40 |
 | `make contracts` (из корня) | валидация контракта, генерация типов для ERP/Cabinet и клиента CRM | есть (M0-INF-02) |
 | `make up` (из корня) | весь ансамбль: `erp.localhost` через Caddy → `erp-backend`/`erp-web`, Postgres с базой `erp`, Redis (БД 1 Celery, 2 Channels), LiteLLM, Langfuse, RustFS (бакет `erp`) | есть (M1-ERP-01) |
 | `make logs s=<сервис>` / `make ps` | логи и статус стенда | есть (M0-INF-03) |

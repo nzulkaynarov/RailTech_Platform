@@ -251,7 +251,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** @description POST /acts/{id}/accept — Приёмка акта заказчиком. */
+        /** @description POST /acts/{id}/accept — Приёмка акта заказчиком (`sign_act`), со сканом из `/uploads` или без. */
         post: operations["api_portal_v1_acts_accept_create"];
         delete?: never;
         options?: never;
@@ -268,7 +268,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** @description POST /acts/{id}/accept — Приёмка акта заказчиком. */
+        /** @description POST /acts/{id}/accept — Приёмка акта заказчиком (`sign_act`), со сканом из `/uploads` или без. */
         post: operations["api_portal_v1_acts_accept_create_2"];
         delete?: never;
         options?: never;
@@ -285,7 +285,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** @description POST /acts/{id}/return — Возврат акта с замечанием. */
+        /** @description POST /acts/{id}/return — Возврат акта с замечанием (`reject_act`): ERP хранит возвращённый акт черновиком с причиной. */
         post: operations["api_portal_v1_acts_return_create"];
         delete?: never;
         options?: never;
@@ -302,7 +302,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** @description POST /acts/{id}/return — Возврат акта с замечанием. */
+        /** @description POST /acts/{id}/return — Возврат акта с замечанием (`reject_act`): ERP хранит возвращённый акт черновиком с причиной. */
         post: operations["api_portal_v1_acts_return_create_2"];
         delete?: never;
         options?: never;
@@ -344,6 +344,50 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/portal/v1/auth/magic": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * @description POST /auth/magic {token} — обмен токена из фрагмента ссылки входа (`/auth/magic#token=…`) на сессию.
+         *
+         *     Токен приходит в теле: ни путь, ни query не несут секрета, значит журналы серверов и прокси его не видят.
+         *     Архивная компания — 403 `FORBIDDEN`, просроченный, использованный или неизвестный токен — 410.
+         */
+        post: operations["api_portal_v1_auth_magic_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/portal/v1/auth/magic/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * @description POST /auth/magic {token} — обмен токена из фрагмента ссылки входа (`/auth/magic#token=…`) на сессию.
+         *
+         *     Токен приходит в теле: ни путь, ни query не несут секрета, значит журналы серверов и прокси его не видят.
+         *     Архивная компания — 403 `FORBIDDEN`, просроченный, использованный или неизвестный токен — 410.
+         */
+        post: operations["api_portal_v1_auth_magic_create_2"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/portal/v1/auth/magic-link": {
         parameters: {
             query?: never;
@@ -372,42 +416,6 @@ export interface paths {
         put?: never;
         /** @description POST /auth/magic-link — Запрос ссылки для входа по email. */
         post: operations["api_portal_v1_auth_magic_link_create_2"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/portal/v1/auth/magic/{token}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** @description GET /auth/magic/{token} — Обмен magic-link токена на сессию. */
-        get: operations["api_portal_v1_auth_magic_retrieve"];
-        put?: never;
-        /** @description GET /auth/magic/{token} — Обмен magic-link токена на сессию. */
-        post: operations["api_portal_v1_auth_magic_create"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/portal/v1/auth/magic/{token}/": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** @description GET /auth/magic/{token} — Обмен magic-link токена на сессию. */
-        get: operations["api_portal_v1_auth_magic_retrieve_2"];
-        put?: never;
-        /** @description GET /auth/magic/{token} — Обмен magic-link токена на сессию. */
-        post: operations["api_portal_v1_auth_magic_create_2"];
         delete?: never;
         options?: never;
         head?: never;
@@ -629,7 +637,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** @description POST /contracts/{id}/sign — Подписание договора клиентом. */
+        /** @description POST /contracts/{id}/sign — Подписание договора клиентом (`sign_contract_by_client`). */
         post: operations["api_portal_v1_contracts_sign_create"];
         delete?: never;
         options?: never;
@@ -646,7 +654,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** @description POST /contracts/{id}/sign — Подписание договора клиентом. */
+        /** @description POST /contracts/{id}/sign — Подписание договора клиентом (`sign_contract_by_client`). */
         post: operations["api_portal_v1_contracts_sign_create_2"];
         delete?: never;
         options?: never;
@@ -661,7 +669,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** @description GET /deliveries — Поставки по сделкам клиента. */
+        /** @description GET /deliveries — Строки поставки по сделкам клиента (проекция клиента: без поставщика и цен). */
         get: operations["api_portal_v1_deliveries_retrieve"];
         put?: never;
         post?: never;
@@ -678,10 +686,78 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** @description GET /deliveries — Поставки по сделкам клиента. */
+        /** @description GET /deliveries — Строки поставки по сделкам клиента (проекция клиента: без поставщика и цен). */
         get: operations["api_portal_v1_deliveries_retrieve_2"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/portal/v1/deliveries/{id}/accept": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description POST /deliveries/{id}/accept — Клиент принимает строку: `delivered` → `accepted`. */
+        post: operations["api_portal_v1_deliveries_accept_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/portal/v1/deliveries/{id}/accept/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description POST /deliveries/{id}/accept — Клиент принимает строку: `delivered` → `accepted`. */
+        post: operations["api_portal_v1_deliveries_accept_create_2"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/portal/v1/deliveries/{id}/dispute": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description POST /deliveries/{id}/dispute — Замечание по строке: `delivered` → `disputed`, менеджеру сделки — задача. */
+        post: operations["api_portal_v1_deliveries_dispute_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/portal/v1/deliveries/{id}/dispute/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description POST /deliveries/{id}/dispute — Замечание по строке: `delivered` → `disputed`, менеджеру сделки — задача. */
+        post: operations["api_portal_v1_deliveries_dispute_create_2"];
         delete?: never;
         options?: never;
         head?: never;
@@ -695,7 +771,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** @description GET /documents — Документы по сделкам клиента. */
+        /** @description GET /documents — Выпущенные документы компании клиента (FIX-23); `kind` и `deal_id` — фильтры. */
         get: operations["api_portal_v1_documents_retrieve"];
         put?: never;
         post?: never;
@@ -712,7 +788,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** @description GET /documents — Документы по сделкам клиента. */
+        /** @description GET /documents — Выпущенные документы компании клиента (FIX-23); `kind` и `deal_id` — фильтры. */
         get: operations["api_portal_v1_documents_retrieve_2"];
         put?: never;
         post?: never;
@@ -729,7 +805,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** @description GET /documents/{id}/file — Скачивание PDF документа (202 если генерируется). */
+        /** @description GET /documents/{id}/file — PDF выпущенного документа: поток (и запись аудита) либо 202 + `Retry-After`. */
         get: operations["api_portal_v1_documents_file_retrieve"];
         put?: never;
         post?: never;
@@ -746,7 +822,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** @description GET /documents/{id}/file — Скачивание PDF документа (202 если генерируется). */
+        /** @description GET /documents/{id}/file — PDF выпущенного документа: поток (и запись аудита) либо 202 + `Retry-After`. */
         get: operations["api_portal_v1_documents_file_retrieve_2"];
         put?: never;
         post?: never;
@@ -763,7 +839,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** @description GET /invoices — Счета клиента. */
+        /** @description GET /invoices — Счета клиента (выставленные и со сроком оплаты: контракт требует `due_date`). */
         get: operations["api_portal_v1_invoices_retrieve"];
         put?: never;
         post?: never;
@@ -780,7 +856,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** @description GET /invoices — Счета клиента. */
+        /** @description GET /invoices — Счета клиента (выставленные и со сроком оплаты: контракт требует `due_date`). */
         get: operations["api_portal_v1_invoices_retrieve_2"];
         put?: never;
         post?: never;
@@ -901,7 +977,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** @description POST /quotes/{id}/accept — Акцепт КП по коду. */
+        /** @description POST /quotes/{id}/accept — Акцепт КП по коду из `request-code`. */
         post: operations["api_portal_v1_quotes_accept_create"];
         delete?: never;
         options?: never;
@@ -918,7 +994,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** @description POST /quotes/{id}/accept — Акцепт КП по коду. */
+        /** @description POST /quotes/{id}/accept — Акцепт КП по коду из `request-code`. */
         post: operations["api_portal_v1_quotes_accept_create_2"];
         delete?: never;
         options?: never;
@@ -954,6 +1030,40 @@ export interface paths {
         put?: never;
         /** @description POST /quotes/{id}/reject — Отклонение КП с причиной. */
         post: operations["api_portal_v1_quotes_reject_create_2"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/portal/v1/quotes/{id}/request-code": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description POST /quotes/{id}/request-code — Код акцепта контакту сессии (Telegram или e-mail). */
+        post: operations["api_portal_v1_quotes_request_code_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/portal/v1/quotes/{id}/request-code/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description POST /quotes/{id}/request-code — Код акцепта контакту сессии (Telegram или e-mail). */
+        post: operations["api_portal_v1_quotes_request_code_create_2"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1073,7 +1183,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** @description POST /team/invite — Приглашение коллеги в кабинет. */
+        /** @description POST /team/invite — Приглашение коллеги в кабинет (доставляется письмом; `telegram` — 422 `INVALID_CHANNEL`). */
         post: operations["api_portal_v1_team_invite_create"];
         delete?: never;
         options?: never;
@@ -1090,7 +1200,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** @description POST /team/invite — Приглашение коллеги в кабинет. */
+        /** @description POST /team/invite — Приглашение коллеги в кабинет (доставляется письмом; `telegram` — 422 `INVALID_CHANNEL`). */
         post: operations["api_portal_v1_team_invite_create_2"];
         delete?: never;
         options?: never;
@@ -5617,7 +5727,7 @@ export interface paths {
         put?: never;
         /**
          * Set or clear the quote's negotiated FX rate
-         * @description Договорной курс КП по валюте себестоимости (M1-ERP-08): побеждает курс ЦБ в снимке, КП пересчитывается. Только право `finance.rates`, причина обязательна, запись в журнал КП. Незамороженное КП (до отправки клиенту), иначе 409 QUOTE_FROZEN. `If-Match` с ETag КП — 412 PRECONDITION_FAILED_STALE_WRITE, если КП изменилось после чтения.
+         * @description Договорной курс КП по валюте себестоимости (M1-ERP-08): побеждает курс ЦБ в снимке, КП пересчитывается. Только право `finance.rates`, причина обязательна, запись в журнал КП. Только в черновике КП: отправленное клиенту — 409 QUOTE_FROZEN, на согласовании и позже — 409 QUOTE_NOT_DRAFT (верните КП в черновик). `If-Match` с ETag КП — 412 PRECONDITION_FAILED_STALE_WRITE, если КП изменилось после чтения.
          */
         post: operations["crm_quotes_fx_override_create"];
         delete?: never;
@@ -13279,6 +13389,42 @@ export interface operations {
             };
         };
     };
+    api_portal_v1_auth_magic_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No response body */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    api_portal_v1_auth_magic_create_2: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No response body */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     api_portal_v1_auth_magic_link_create: {
         parameters: {
             query?: never;
@@ -13302,86 +13448,6 @@ export interface operations {
             query?: never;
             header?: never;
             path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description No response body */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    api_portal_v1_auth_magic_retrieve: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                token: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description No response body */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    api_portal_v1_auth_magic_create: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                token: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description No response body */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    api_portal_v1_auth_magic_retrieve_2: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                token: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description No response body */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    api_portal_v1_auth_magic_create_2: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                token: string;
-            };
             cookie?: never;
         };
         requestBody?: never;
@@ -13727,6 +13793,86 @@ export interface operations {
             };
         };
     };
+    api_portal_v1_deliveries_accept_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No response body */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    api_portal_v1_deliveries_accept_create_2: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No response body */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    api_portal_v1_deliveries_dispute_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No response body */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    api_portal_v1_deliveries_dispute_create_2: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No response body */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     api_portal_v1_documents_retrieve: {
         parameters: {
             query?: never;
@@ -14012,6 +14158,46 @@ export interface operations {
         };
     };
     api_portal_v1_quotes_reject_create_2: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No response body */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    api_portal_v1_quotes_request_code_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No response body */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    api_portal_v1_quotes_request_code_create_2: {
         parameters: {
             query?: never;
             header?: never;
@@ -21407,7 +21593,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description QUOTE_FROZEN */
+            /** @description QUOTE_FROZEN / QUOTE_NOT_DRAFT */
             409: {
                 headers: {
                     [name: string]: unknown;

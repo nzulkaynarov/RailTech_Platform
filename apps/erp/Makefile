@@ -75,10 +75,13 @@ test: test-frontend test-backend ## Все тесты
 check: lint test ## Всё — обязательно перед PR (make check-erp из корня)
 
 .PHONY: openapi
-openapi: ## Экспорт OpenAPI internal (schema.json), типы фронтенда и экспорт в packages/contracts (M1-ERP-10)
+openapi: ## Экспорт OpenAPI: backend/schema.json, packages/contracts/openapi/erp-internal.yaml (срез /api/v1) и типы фронтенда (FIX-40)
 	./scripts/test_backend_local.sh --openapi
 	cd $(FRONTEND) && npm run gen:api-types
-	cp $(BACKEND)/schema.json ../../packages/contracts/openapi/erp-internal-full.json
+
+.PHONY: openapi-check
+openapi-check: ## Дрейф схемы: перегенерирует выгрузку и падает, если она отличается от закоммитченной (CI, ci-local)
+	./scripts/check_openapi_drift.sh
 
 # --- Стенд ансамбля ---------------------------------------------------------------------
 # ERP поднимается только через корневой make up (infra/compose): erp.localhost. Здесь — обёртки.

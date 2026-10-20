@@ -7,7 +7,7 @@
 |---|---|---|
 | `openapi/erp-integration.yaml` | Integration API `/api/integration/v1/*` (CRM → ERP): handoff, контакты, сделки, документы, каталог, провижининг, здоровье, расходы ИИ | ERP `integration` (M3-ERP-01); CRM коннектор и `services/handoff` (M3-CRM-02/03) |
 | `openapi/erp-portal.yaml` | Portal API `/api/portal/v1/*` (Cabinet → ERP): вход Telegram/magic-link, запросы, КП, договоры, счета, акты, поставки, документы, каталог, компания | ERP `portal` (M2-ERP-01…03); Cabinet (M2-CAB-01) |
-| `openapi/erp-internal.yaml` | Internal API `/api/v1/*` — только часть, входящая в контракт: SSO-обмен, `/me`, `/health`, `/ready`. Остальное экспортируется из ERP на M1-ERP-10 | ERP `accounts` (M3-ERP-04) |
+| `openapi/erp-internal.yaml` | Internal API `/api/v1/*` — **генерируется** из drf-spectacular (срез `/api/v1/` схемы бэкенда, `make -C apps/erp openapi`), руками не правится; дрейф ловит `make -C apps/erp openapi-check` (FIX-40) | ERP SPA (типы строит из `apps/erp/backend/schema.json`, не отсюда); CRM — SSO-обмен (`/auth/sso/*`) |
 | `events.schema.json` | События ERP → CRM (вебхук, HMAC, идемпотентность по `X-Event-Id`) + `examples/events/*.json` | ERP (M3-ERP-02); CRM приёмник (M3-CRM-04) |
 | `mcp-tools.json` | Инструменты `erp-mcp` для агента CRM с контекстом `X-Agent-Context`; схема — `mcp-tools.schema.json` (запрещает идентификаторы клиента в аргументах) | ERP (M3-ERP-03); бот CRM (M3-CRM-07) |
 | `sso-token.md` | SSO-токен сотрудника: claims, передача, проверка, отзыв | ERP (M3-ERP-04); CRM (M3-CRM-06) |
@@ -21,7 +21,7 @@ make -C packages/contracts generate   # openapi-typescript → generated/*.d.ts;
 make -C packages/contracts typecheck  # tsc по сгенерированному
 ```
 
-`generated/` коммитится. CI (M0-INF-04) запускает `make contracts` и падает, если `git diff` в `generated/` не пуст:
+`generated/` коммитится (типов `erp-internal` там нет: ERP SPA строит свои из `backend/schema.json`; `erp-portal.d.ts` и `erp-integration.d.ts` — для Cabinet и CRM). CI (M0-INF-04) запускает `make contracts` и падает, если `git diff` в `generated/` не пуст:
 контракт и сгенерированное расходятся → PR не принимается.
 
 ## Правила изменения

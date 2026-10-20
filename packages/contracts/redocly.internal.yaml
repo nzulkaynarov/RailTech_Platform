@@ -1,0 +1,15 @@
+# Линт erp-internal.yaml (make contracts). Файл генерируется из drf-spectacular (FIX-40), а не пишется руками, поэтому
+# правила, которые нельзя выполнить, не меняя то, что описывает бэкенд, выключены ТОЛЬКО для него. Ручные portal/integration
+# проверяются целиком по redocly.yaml. (Отдельный файл, а не раздел `apis` в redocly.yaml: openapi-typescript читает `apis`
+# оттуда как список схем и требует для каждой `x-openapi-ts.output`.)
+extends:
+  - ./redocly.yaml
+rules:
+  # Django-маршруты заканчиваются «/» (APPEND_SLASH): это буквальные URL, SPA вызывает их именно так.
+  no-path-trailing-slash: off
+  # Описание операции берётся spectacular из docstring вьюхи; у части CRUD-вьюх docstring нет — правится в коде, не в контракте.
+  operation-summary: off
+  # Так spectacular описывает `nullable` у oneOf/allOf (OpenAPI 3.0): тип лежит внутри вариантов; openapi-typescript понимает.
+  nullable-type-sibling: off
+  # Лицензия — «Proprietary» без url (SPECTACULAR_SETTINGS.LICENSE).
+  info-license-strict: off
