@@ -135,3 +135,18 @@ def test_resync_fills_empty_profile(client):
 
     user = CustomUser.objects.get(email="staff@own.test")
     assert (user.first_name, user.last_name) == ("Пётр", "Сидоров")
+
+
+def test_email_change_replaces_the_managed_role_and_keeps_manual_ones(client, own_company):
+    """Сменился e-mail сотрудника в CRM: прежняя «CRM Sync: <старый e-mail>» с её правами с участника снимается."""
+    _provision(client, permissions=("quote.build", "finance.invoice"))
+    manual = CompanyRole.objects.create(company=own_company, name="Склад (вручную)", permissions=["supply.manage"])
+    _member().company_roles.add(manual)
+
+    _provision(client, email="renamed@own.test", permissions=("quote.build",))
+
+    member = _member("renamed@own.test")
+    assert set(member.company_roles.values_list("name", flat=True)) == {
+        "CRM Sync: renamed@own.test",
+        "Склад (вручную)",
+    }

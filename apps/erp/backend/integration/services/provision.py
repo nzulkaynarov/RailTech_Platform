@@ -125,6 +125,9 @@ def provision_crm_user(data: Dict[str, Any]) -> Tuple[Dict[str, Any], bool]:
             crm_role.managed_by_crm = True
             crm_role.save(update_fields=["permissions", "managed_by_crm", "updated_at"])
             member.company_roles.add(crm_role)
+            # Сменился e-mail сотрудника — прежняя «CRM Sync: <старый e-mail>» больше не его: снимаем остальные
+            # управляемые роли, ручные не трогаем.
+            member.company_roles.remove(*member.company_roles.filter(managed_by_crm=True).exclude(pk=crm_role.pk))
         else:
             # Админу роли бэк-офиса не нужны (is_superuser имеет все права): снимаем только свою роль,
             # если сотрудник был backoffice; ручные роли остаются.
