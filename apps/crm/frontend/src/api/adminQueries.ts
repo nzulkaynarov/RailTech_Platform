@@ -66,7 +66,14 @@ export const useAudit = (params: ListAuditParams) =>
 export const useClients = (q: string) =>
   useListClients(compact({ q }), { query: { placeholderData: keepPreviousData } });
 
-export const useClient = (id: number) => useGetClient(id);
+/** Пока клиент «передаётся в бэк-офис» (FIX-31) — перечитываем, чтобы менеджер увидел итог. */
+export const useClient = (id: number) =>
+  useGetClient(id, {
+    query: {
+      refetchInterval: (query) =>
+        query.state.data?.erp_handoff_status === "pending" ? 4000 : false,
+    },
+  });
 
 export const useClientContacts = (id: number) => useListClientContacts(id);
 

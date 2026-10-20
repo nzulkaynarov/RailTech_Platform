@@ -379,3 +379,38 @@ async def test_erp_sync_failures_land_in_the_feed_not_in_the_users_answer(
         row.erp_sync_error = None
     healed = client.post(f"{URL}/erp_sync/check", headers=auth).json()["service"]
     assert healed["status"] == "ok"
+
+
+async def test_erp_handoff_failures_land_in_the_feed_with_the_client_and_the_code(
+    sessions: async_sessionmaker[AsyncSession], client: TestClient, alerts: FakeAlerts
+) -> None:
+    """FIX-31: ошибка передачи клиента (409 ИНН) — сбой строки «Передача клиентов в ERP»."""
+    from app.models.clients import Client
+
+    auth = await headers(sessions, client, "admin")
+    idle = client.post(f"{URL}/erp_handoff/check", headers=auth).json()["service"]
+    assert (idle["status"], idle["key"]) == ("off", "erp_handoff")  # ERP не подключена, передач нет
+
+    async with sessions() as session, session.begin():
+        row = Client(
+            name="ООО Дубль",
+            erp_handoff_status="failed",
+            erp_handoff_error="erp_inn_conflict",
+        )
+        session.add(row)
+        await session.flush()
+        client_id = row.id
+
+    failed = client.post(f"{URL}/erp_handoff/check", headers=auth).json()["service"]
+    assert failed["status"] == "fail"
+    assert failed["error"] == "ООО Дубль: erp_inn_conflict"
+    assert failed["hint"]
+    assert failed["fix_path"] == "/clients"
+    assert [k for k, _ in alerts.sent] == ["erp_handoff"]
+
+    async with sessions() as session, session.begin():
+        saved = await session.get(Client, client_id)
+        assert saved is not None
+        saved.erp_handoff_status, saved.erp_handoff_error = "done", None
+    healed = client.post(f"{URL}/erp_handoff/check", headers=auth).json()["service"]
+    assert healed["status"] == "off"

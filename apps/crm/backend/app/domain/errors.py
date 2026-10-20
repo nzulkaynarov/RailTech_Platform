@@ -62,6 +62,8 @@ class Reason(StrEnum):
     ERP_UNAUTHORIZED = "erp_unauthorized"
     ERP_UNAVAILABLE = "erp_unavailable"
     ERP_BAD_RESPONSE = "erp_bad_response"
+    # Передача клиента (FIX-31): ИНН уже принадлежит другому клиенту CRM в ERP (409 INN_CONFLICT).
+    ERP_INN_CONFLICT = "erp_inn_conflict"
     # Коннектор «Почта» (M3-CRM-08, ADR-0018): SMTP-релей для писем сотрудникам.
     SMTP_NOT_CONFIGURED = "smtp_not_configured"
     SMTP_INVALID_HOST = "smtp_invalid_host"

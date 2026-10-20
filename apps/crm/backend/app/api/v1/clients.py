@@ -140,7 +140,12 @@ async def make_customer(
 
     Ошибки (ADR-0017, `details.reason`): `deal_not_closed` (409), `not_lead_owner` (403),
     `handoff_no_consent` (422 — в режиме `erp` лид не давал согласие, ERP его не выдумывает),
-    `telegram_linked_elsewhere` (409), `erp_not_configured` (409), `erp_unavailable` (502).
+    `telegram_linked_elsewhere` (409), `erp_not_configured` (409).
+
+    В режиме `erp` клиент и стадия лида коммитятся сразу, передача в ERP идёт задачей после коммита
+    (FIX-31): её состояние — `erp_handoff_status` / `erp_handoff_error` клиента
+    (`GET /clients/{id}`);
+    повторить после ошибки — тот же вызов с тем же `client_id`.
     """
     client_id = await container.client_service.make_customer(
         who, lead_id, body.client_id, body.new_client_name

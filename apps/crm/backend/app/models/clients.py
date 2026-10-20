@@ -34,6 +34,12 @@ DOC_TSV: Final = (
 
 class Client(TimestampMixin, Base):
     __tablename__ = "clients"
+    __table_args__ = (
+        CheckConstraint(
+            "erp_handoff_status IS NULL OR erp_handoff_status IN ('pending', 'done', 'failed')",
+            name="erp_handoff_status",
+        ),
+    )
 
     id: Mapped[int] = mapped_column(BigInteger, Identity(), primary_key=True)
     name: Mapped[str] = mapped_column(String(255))
@@ -43,6 +49,12 @@ class Client(TimestampMixin, Base):
     is_active: Mapped[bool] = mapped_column(Boolean, server_default=sql("true"))
     notes: Mapped[str | None] = mapped_column(Text)
     erp_company_id: Mapped[int | None] = mapped_column(BigInteger, index=True)
+    # Передача в бэк-офис идёт задачей после коммита клиента (FIX-31): состояние для карточки.
+    # `NULL` — передачи не было (режим local или клиент создан вручную).
+    erp_handoff_status: Mapped[str | None] = mapped_column(String(16))
+    erp_handoff_error: Mapped[str | None] = mapped_column(String(500))
+    # Заявку в ERP ещё предстоит завести: не теряется при повторе после сбоя.
+    erp_handoff_request: Mapped[bool] = mapped_column(Boolean, server_default=sql("false"))
 
 
 class Document(TimestampMixin, Base):

@@ -134,6 +134,16 @@ _AFTER_VENDORS: Final = (
         fix_path="/integrations?tab=erp",
     ),
     ServiceSpec(
+        key="erp_handoff",
+        title="Передача клиентов в ERP",
+        purpose="«Передать в бэк-офис»: компания, контакты и заявка клиента появляются в ERP",
+        system="ensemble",
+        source="crm",
+        check="итог последних передач клиентов и зависшие в очереди (без запросов в ERP)",
+        tiers=("cheap",),
+        fix_path="/clients",
+    ),
+    ServiceSpec(
         key="backup",
         title="Хранилище резервных копий",
         purpose="Ежедневная копия базы и файлов; восстановление после аварии",

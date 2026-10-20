@@ -162,7 +162,8 @@ def test_client_handoff_success_and_idempotency(auth_client):
     # FIX-14: в CRM уходит адрес кабинета без токена — рабочая ссылка входа есть только в письме клиента
     assert data["invite"]["cabinet_url"] == "http://cabinet.localhost"
     assert "/auth/magic/" not in resp.content.decode()
-    assert data["invite"]["sent_via"] == ["email", "telegram"]
+    # FIX-31: в ответе только реально ушедшее — ERP шлёт письмо, в Telegram не пишет (бот принадлежит CRM)
+    assert data["invite"]["sent_via"] == ["email"]
 
     company_id = data["erp_company_id"]
     company = Company.objects.get(id=company_id)

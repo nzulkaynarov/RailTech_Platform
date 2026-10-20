@@ -61,6 +61,7 @@ export const Reason = {
   erp_unauthorized: "erp_unauthorized",
   erp_unavailable: "erp_unavailable",
   erp_bad_response: "erp_bad_response",
+  erp_inn_conflict: "erp_inn_conflict",
   smtp_not_configured: "smtp_not_configured",
   smtp_invalid_host: "smtp_invalid_host",
   smtp_unavailable: "smtp_unavailable",

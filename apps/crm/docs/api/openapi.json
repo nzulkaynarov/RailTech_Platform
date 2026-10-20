@@ -1003,6 +1003,33 @@
             ],
             "title": "Erp Company Id"
           },
+          "erp_handoff_error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Erp Handoff Error"
+          },
+          "erp_handoff_status": {
+            "anyOf": [
+              {
+                "enum": [
+                  "pending",
+                  "done",
+                  "failed"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Erp Handoff Status"
+          },
           "id": {
             "title": "Id",
             "type": "integer"
@@ -1116,6 +1143,33 @@
               }
             ],
             "title": "Erp Company Id"
+          },
+          "erp_handoff_error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Erp Handoff Error"
+          },
+          "erp_handoff_status": {
+            "anyOf": [
+              {
+                "enum": [
+                  "pending",
+                  "done",
+                  "failed"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Erp Handoff Status"
           },
           "id": {
             "title": "Id",
@@ -5706,6 +5760,7 @@
           "erp_unauthorized",
           "erp_unavailable",
           "erp_bad_response",
+          "erp_inn_conflict",
           "smtp_not_configured",
           "smtp_invalid_host",
           "smtp_unavailable",
@@ -12192,7 +12247,7 @@
     },
     "/api/v1/leads/{lead_id}/actions/make_customer": {
       "post": {
-        "description": "«Сделать клиентом» / «Передать в бэк-офис» (ADR-0022).\n\nОшибки (ADR-0017, `details.reason`): `deal_not_closed` (409), `not_lead_owner` (403),\n`handoff_no_consent` (422 — в режиме `erp` лид не давал согласие, ERP его не выдумывает),\n`telegram_linked_elsewhere` (409), `erp_not_configured` (409), `erp_unavailable` (502).",
+        "description": "«Сделать клиентом» / «Передать в бэк-офис» (ADR-0022).\n\nОшибки (ADR-0017, `details.reason`): `deal_not_closed` (409), `not_lead_owner` (403),\n`handoff_no_consent` (422 — в режиме `erp` лид не давал согласие, ERP его не выдумывает),\n`telegram_linked_elsewhere` (409), `erp_not_configured` (409).\n\nВ режиме `erp` клиент и стадия лида коммитятся сразу, передача в ERP идёт задачей после коммита\n(FIX-31): её состояние — `erp_handoff_status` / `erp_handoff_error` клиента\n(`GET /clients/{id}`);\nповторить после ошибки — тот же вызов с тем же `client_id`.",
         "operationId": "make_customer",
         "parameters": [
           {
