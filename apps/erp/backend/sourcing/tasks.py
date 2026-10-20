@@ -219,6 +219,16 @@ def _build_quote_item(
     )
 
 
+def _import_locked(deal_id, lock_code: str) -> dict:
+    """Итог импорта в КП, которое уже нельзя менять: ничего не записано, код — как у API правки КП."""
+    logger.info("Import skipped: deal=%s quote is locked (%s)", deal_id, lock_code)
+    return {
+        "status": "error",
+        "code": lock_code,
+        "message": "КП уже не черновик — состав менять нельзя. Верните КП в черновик или создайте новую версию.",
+    }
+
+
 @shared_task(
     bind=True,
     # Higher than the 600s default — enterprise imports can be 50k rows.
@@ -243,6 +253,7 @@ def process_excel_import(
     writes a final заявка unattended. file_content_b64 is the base64 file (JSON-safe).
     """
     from crm.models import Deal, Quote, QuoteStatus
+    from crm.services.quotes.editable import quote_edit_lock_code
 
     try:
         file_content = base64.b64decode(file_content_b64)
@@ -250,6 +261,12 @@ def process_excel_import(
 
         # Ensure there's an active quote to add items to
         quote = deal.active_quote
+        if quote is not None:
+            # КП не в черновике (согласование, отправка, акцепт) состав не меняют: статус мог смениться между
+            # постановкой задачи и её выполнением (FIX-55, D-04).
+            lock_code = quote_edit_lock_code(quote)
+            if lock_code:
+                return _import_locked(deal_id, lock_code)
         if not quote:
             draft_status = QuoteStatus.objects.filter(code="DRAFT").first()
             if not draft_status:
@@ -344,6 +361,11 @@ def process_excel_import(
         from crm.services.rfq import merge_request_lines
 
         with transaction.atomic():
+            # Разбор файла (особенно ИИ) долгий: перечитываем КП под блокировкой прямо перед записью.
+            locked = Quote.objects.select_for_update(of=("self",)).select_related("status").get(pk=quote.pk)
+            lock_code = quote_edit_lock_code(locked)
+            if lock_code:
+                return _import_locked(deal_id, lock_code)
             created, merged = merge_request_lines(quote, items_to_create)
 
         quote.recalculate_totals()

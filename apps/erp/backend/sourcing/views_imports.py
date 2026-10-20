@@ -93,6 +93,7 @@ def _check_deal_access(user, deal) -> bool:
         400: OpenApiResponse(description="No file, invalid format, or file too large"),
         403: OpenApiResponse(description="No access to this deal"),
         404: OpenApiResponse(description="Deal not found"),
+        409: OpenApiResponse(description="QUOTE_NOT_DRAFT / QUOTE_FROZEN: активное КП сделки уже не черновик"),
     },
     tags=["Sourcing"],
 )
@@ -125,6 +126,14 @@ class ExcelImportView(RoleGatedViewMixin, APIView):
         # IDOR protection: verify deal access
         if not _check_deal_access(request.user, deal):
             return Response({"detail": "DEAL_ACCESS_DENIED"}, status=status.HTTP_403_FORBIDDEN)
+
+        # Импорт дописывает строки в активное КП сделки — только пока оно в черновике (FIX-55, D-04).
+        from crm.services.quotes.editable import quote_edit_lock_code
+
+        active_quote = deal.active_quote
+        lock_code = quote_edit_lock_code(active_quote) if active_quote is not None else None
+        if lock_code:
+            return Response({"detail": lock_code}, status=status.HTTP_409_CONFLICT)
 
         file_obj = request.FILES.get("file")
         if not file_obj:
