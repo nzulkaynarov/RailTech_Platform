@@ -27,7 +27,7 @@ export function LoginSentPage() {
         <CardContent className="flex flex-col gap-2">
           {isPortalMock() ? (
             <Button asChild variant="secondary">
-              <Link to={{ pathname: '/auth/magic', hash: '#token=demo' }}>{t('auth.sent.mockLink')}</Link>
+              <Link to={{ pathname: '/auth/magic', hash: '#token=demo-token-mock-link' }}>{t('auth.sent.mockLink')}</Link>
             </Button>
           ) : null}
           <Button asChild variant="outline">

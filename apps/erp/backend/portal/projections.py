@@ -22,6 +22,7 @@ from django.utils import timezone
 from crm.constants import ActStatusCode, ContractStatusCode, DealStageCode, InvoiceStatusCode, QuoteStatusCode
 from crm.models import ActivityLog
 from crm.services.documents.projection import client_projection_items
+from crm.services.documents.totals import quote_document_totals
 from crm.services.quotes.access import _EXPIRED_STATUS_CODE
 
 DEFAULT_CURRENCY = "UZS"
@@ -164,6 +165,18 @@ def quote_rejected_reason(quote) -> Optional[str]:
     return None
 
 
+def quote_subtotal(quote) -> dict:
+    """«Итого без НДС» — как в итогах PDF КП (`quote_document_totals`): сумма строк `total`, расходы уже внутри."""
+    totals = quote_document_totals(quote)
+    return money(totals["subtotal"] or 0, currency_code(quote.quote_currency))
+
+
+def quote_vat(quote) -> dict:
+    """НДС КП: `subtotal + vat = total`, как в PDF (контракт 0.3.0, Q-FIX21-2); 0 — КП без НДС."""
+    totals = quote_document_totals(quote)
+    return money(totals["vat_amount"] or 0, currency_code(quote.quote_currency))
+
+
 def quote_lines(quote) -> list[dict]:
     """Строки КП для клиента — та же клиентская проекция, что у PDF и публичной страницы (`client_projection_items`).
 
@@ -223,7 +236,25 @@ def contract_status(contract) -> str:
     return "sent"
 
 
-def invoice_due_date(invoice) -> Optional[datetime.date]:
+def _seller_key(invoice) -> Optional[tuple]:
+    """Ключ продавца счёта, если его видно без запросов: счёт по договору с КП (`select_related("contract__quote")`).
+
+    Счета с одним ключом выставляет один продавец (`crm.services.billing._invoice_seller_company`: явный
+    `Quote.seller_company`, иначе основная компания составителя, иначе собственная компания) — срок оплаты у них
+    общий. Счёт без договора или КП (ручной) ключа не имеет: продавца ищут по его позициям.
+    """
+    contract = invoice.contract if invoice.contract_id else None
+    quote = contract.quote if contract is not None and contract.quote_id else None
+    if quote is None:
+        return None
+    if quote.seller_company_id:
+        return ("seller", quote.seller_company_id)
+    if quote.prepared_by_id:
+        return ("preparer", quote.prepared_by_id)
+    return ("own",)
+
+
+def invoice_due_date(invoice, days_by_seller: Optional[dict] = None) -> Optional[datetime.date]:
     """Срок оплаты счёта для клиента (в контракте обязателен).
 
     Берётся из счёта. Если срока нет, он считается тем же правилом, по которому ERP ставит его при выставлении
@@ -233,13 +264,23 @@ def invoice_due_date(invoice) -> Optional[datetime.date]:
     if invoice.due_date:
         return invoice.due_date
     if invoice.issued_at:
-        from crm.services.billing import invoice_due_days
-
-        return invoice.issued_at + datetime.timedelta(days=invoice_due_days(invoice))
+        return invoice.issued_at + datetime.timedelta(days=_invoice_due_days(invoice, days_by_seller))
     return None
 
 
-def invoice_status(invoice) -> str:
+def _invoice_due_days(invoice, days_by_seller: Optional[dict]) -> int:
+    """Срок оплаты в днях; в списке `days_by_seller` общий на запрос — продавца и его настройки ищем раз на продавца."""
+    from crm.services.billing import invoice_due_days
+
+    key = _seller_key(invoice) if days_by_seller is not None else None
+    if key is None:
+        return invoice_due_days(invoice)
+    if key not in days_by_seller:
+        days_by_seller[key] = invoice_due_days(invoice)
+    return days_by_seller[key]
+
+
+def invoice_status(invoice, days_by_seller: Optional[dict] = None) -> str:
     code = invoice.status.code if invoice.status else InvoiceStatusCode.ISSUED
     if code == InvoiceStatusCode.PAID:
         return "paid"
@@ -247,7 +288,7 @@ def invoice_status(invoice) -> str:
         return "cancelled"
     if code == InvoiceStatusCode.OVERDUE:
         return "overdue"
-    due_date = invoice_due_date(invoice)
+    due_date = invoice_due_date(invoice, days_by_seller)
     if due_date and due_date < timezone.localdate():
         return "overdue"
     if code == InvoiceStatusCode.PARTIAL or (invoice.amount_paid or 0) > 0:

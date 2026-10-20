@@ -141,6 +141,9 @@
       "expiredText": "Havola muddati tugagan yoki u allaqachon ochilgan. Yangisini soʻrang.",
       "requestAgain": "Yangi havola soʻrash",
       "closedTitle": "Kirish yopilgan",
+      "alreadyTitle": "Siz allaqachon kirgansiz",
+      "alreadyText": "Bu havola avval ishlatilgan, lekin seansingiz faol — kabinetda ishlashda davom eting.",
+      "toCabinet": "Kabinetga",
       "failedTitle": "Kirib boʻlmadi"
     },
     "telegram": {
@@ -151,7 +154,10 @@
       "retry": "Qayta urinish"
     },
     "errors": {
-      "TOO_MANY_REQUESTS": "Soʻrovlar juda koʻp, bir soatdan soʻng urinib koʻring.",
+      "TOO_MANY_REQUESTS": "Kirishga urinishlar juda ko‘p, keyinroq urinib ko‘ring.",
+      "TOO_MANY_REQUESTS_WAIT": "Kirishga urinishlar juda ko‘p. {{wait}}dan keyin qayta urinib ko‘ring.",
+      "waitSeconds": "{{n}} soniya",
+      "waitMinutes": "{{n}} daqiqa",
       "FORBIDDEN": "Kirish yopilgan, menejerga murojaat qiling."
     }
   },
@@ -316,6 +322,9 @@
       "lines": "Taklif tarkibi",
       "stage": "Bosqich",
       "grandTotal": "Jami",
+      "subtotal": "QQSsiz jami",
+      "vat": "QQS",
+      "totals": "Jami tarkibi",
       "columns": {
         "title": "Pozitsiya / bosqich",
         "quantity": "Miqdor",
@@ -328,7 +337,7 @@
       "acceptTitle": "{{number}} taklifini qabul qilish",
       "acceptText": "Summa {{total}}. Xabardagi tasdiqlash kodini kiriting. Qabul qilingach shartnoma avtomatik tuziladi.",
       "code": "Tasdiqlash kodi",
-      "codeHint": "Kod — xabardagi 6 ta raqam. Kelmasa, kodni qayta yuboring.",
+      "codeHint": "Xabardagi kodni kiriting. Kelmasa, kodni qayta yuboring.",
       "codeTooShort": "Kod kamida {{min}} belgidan iborat.",
       "acceptConfirm": "Taklifni qabul qilish",
       "acceptedToast": "{{number}} taklifi qabul qilindi",
@@ -610,6 +619,7 @@
     "REASON_REQUIRED": "Sababini koʻrsating.",
     "INN_INVALID": "STIR — 9 dan 14 tagacha raqam.",
     "TEAM_MEMBER_EXISTS": "Bunday e-mailli hamkasb jamoada allaqachon bor.",
+    "DELIVERY_FAILED": "Taklif xati yuborilmadi, hamkasb qo‘shilmadi. Qayta urinib ko‘ring — darhol mumkin.",
     "TOO_MANY_REQUESTS": "Soʻrovlar juda koʻp. Biroz kutib, qayta urinib koʻring.",
     "CONTACT_CHANNEL_REQUIRED": "Kodni yuboradigan joy yoʻq: e-mail koʻrsatilmagan va Telegram ulanmagan. Menejerdan aloqa kanalini qoʻshishni soʻrang.",
     "CONTACT_EMAIL_REQUIRED": "Buning uchun kontaktning e-maili kerak.",

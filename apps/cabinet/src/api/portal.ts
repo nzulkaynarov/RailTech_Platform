@@ -19,12 +19,15 @@ export class PortalApiError extends Error {
   readonly status: number;
   /** Код из `{"detail": CODE}`; `NETWORK` — сервер недоступен, `HTTP_<status>` — тело без кода. */
   readonly code: string;
+  /** Заголовок `Retry-After` (429), секунды; `null` — заголовка нет или он не разобран. */
+  readonly retryAfter: number | null;
 
-  constructor(status: number, code: string) {
+  constructor(status: number, code: string, retryAfter: number | null = null) {
     super(`portal ${status} ${code}`);
     this.name = 'PortalApiError';
     this.status = status;
     this.code = code;
+    this.retryAfter = retryAfter;
   }
 }
 
@@ -56,6 +59,15 @@ async function readErrorCode(response: Response): Promise<string> {
   return `HTTP_${response.status}`;
 }
 
+/** `Retry-After`: целые секунды или HTTP-дата (RFC 9110 §10.2.3); непонятное значение — `null`. */
+export function parseRetryAfter(value: string | null, now: number = Date.now()): number | null {
+  const text = value?.trim();
+  if (!text) return null;
+  if (/^\d+$/.test(text)) return Number(text);
+  const at = Date.parse(text);
+  return Number.isNaN(at) ? null : Math.max(0, Math.ceil((at - now) / 1000));
+}
+
 type Method = 'GET' | 'POST' | 'PUT';
 
 async function send(
@@ -78,7 +90,9 @@ async function send(
     throw new PortalApiError(0, 'NETWORK');
   }
 
-  if (!response.ok) throw new PortalApiError(response.status, await readErrorCode(response));
+  if (!response.ok) {
+    throw new PortalApiError(response.status, await readErrorCode(response), parseRetryAfter(response.headers.get('Retry-After')));
+  }
   return response;
 }
 
@@ -268,7 +282,9 @@ export async function uploadFile(file: File): Promise<PortalUploadResponse> {
   } catch {
     throw new PortalApiError(0, 'NETWORK');
   }
-  if (!response.ok) throw new PortalApiError(response.status, await readErrorCode(response));
+  if (!response.ok) {
+    throw new PortalApiError(response.status, await readErrorCode(response), parseRetryAfter(response.headers.get('Retry-After')));
+  }
   return (await response.json()) as PortalUploadResponse;
 }
 

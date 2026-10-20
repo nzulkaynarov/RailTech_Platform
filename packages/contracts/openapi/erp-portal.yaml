@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: RailTech Platform ERP — Portal API (Cabinet → ERP)
-  version: 0.2.0
+  version: 0.3.0
   summary: Пространство `/api/portal/v1/` — вызывает Cabinet SPA от имени клиента.
   description: |
     Контракт по `docs/CONTRACTS.md` §4 и ADR-0004 (Cabinet без бэкенда). Версия 0 (M0-INF-02):
@@ -19,7 +19,10 @@ info:
 
     Коды ошибок `detail` — перечень `ErrorCode` (Q-17); незнакомый код Cabinet показывает по HTTP-статусу.
     Ссылка входа из письма ведёт на Cabinet `/auth/magic#token=<токен>`: токен во фрагменте не попадает в журналы
-    серверов и прокси, Cabinet обменивает его через `POST /auth/magic` (FIX-20; `GET /auth/magic/{token}` — устаревший).
+    серверов и прокси, Cabinet обменивает его через `POST /auth/magic` (FIX-20).
+
+    0.3.0 (FIX-25): сняты устаревшие `deal_id` (везде `deal.id`) и `GET /auth/magic/{token}`; у КП `subtotal` и `vat`;
+    `FILE_TOO_LARGE` — 422 на `/uploads`; `DELIVERY_FAILED` — 503 на `/team/invite`; `lines` в `POST /requests` необязателен.
 
     Лимиты частоты (429 `TOO_MANY_REQUESTS`, заголовок `Retry-After`): запросы сессии — 120 в минуту на сессию; вход без
     сессии (`/auth/telegram`, `/auth/magic-link`, `/auth/magic`) — 10 в минуту на IP; акцепт КП с кодом и запрос кода —
@@ -124,37 +127,6 @@ paths:
           $ref: '#/components/responses/IdempotencyKeyRequired'
         '415':
           $ref: '#/components/responses/UnsupportedMediaType'
-        '429':
-          $ref: '#/components/responses/TooManyRequests'
-
-  /auth/magic/{token}:
-    get:
-      tags: [auth]
-      operationId: exchangeMagicLink
-      summary: 'Обмен magic-link на сессию (устарело: токен в пути попадает в журналы; см. `POST /auth/magic`)'
-      deprecated: true
-      security: []
-      parameters:
-        - name: token
-          in: path
-          required: true
-          schema:
-            type: string
-      responses:
-        '200':
-          description: Сессия выдана
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Me'
-        '403':
-          $ref: '#/components/responses/CompanyArchived'
-        '410':
-          description: Ссылка просрочена или уже использована (`MAGIC_LINK_EXPIRED`)
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
         '429':
           $ref: '#/components/responses/TooManyRequests'
 
@@ -866,6 +838,12 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '415':
           $ref: '#/components/responses/UnsupportedMediaType'
+        '422':
+          description: Файл больше 10 МБ (`FILE_TOO_LARGE`)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
         '429':
           $ref: '#/components/responses/TooManyRequests'
 
@@ -1047,6 +1025,13 @@ paths:
           $ref: '#/components/responses/UnsupportedMediaType'
         '429':
           $ref: '#/components/responses/TooManyRequests'
+        '503':
+          description: >-
+            Письмо не ушло (`DELIVERY_FAILED`): коллега в команду не добавлен, повторить можно сразу
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
 
 components:
   securitySchemes:
@@ -1056,7 +1041,7 @@ components:
       name: portal_session
       description: >-
         Сессия портала (HttpOnly; SameSite=Lax, а для Telegram Mini App — SameSite=None; Secure, настройка ERP
-        `PORTAL_COOKIE_SAMESITE`), выдаётся `/auth/telegram` или `/auth/magic/{token}`. Сессия архивной компании
+        `PORTAL_COOKIE_SAMESITE`), выдаётся `/auth/telegram` или `POST /auth/magic`. Сессия архивной компании
         или контакта, переведённого в другую компанию, — 401
 
   parameters:
@@ -1176,6 +1161,7 @@ components:
         - ACT_FINALIZED
         - DELIVERY_LINE_NOT_ACCEPTABLE
         - DOCUMENT_PENDING
+        - DELIVERY_FAILED
         - CONFLICT
 
     Reason:
@@ -1299,7 +1285,7 @@ components:
 
     ClientRequestCreate:
       type: object
-      required: [summary, lines]
+      required: [summary]
       properties:
         summary:
           type: string
@@ -1307,6 +1293,7 @@ components:
           maxLength: 5000
         lines:
           type: array
+          description: Нет поля или пустой список — запрос словами, без строк (Q-FIX23-4)
           items:
             $ref: '#/components/schemas/RequestLineIn'
         attachments:
@@ -1336,11 +1323,6 @@ components:
           oneOf:
             - $ref: '#/components/schemas/DealRef'
             - type: 'null'
-        deal_id:
-          type: [integer, 'null']
-          format: int64
-          deprecated: true
-          description: 'Устарело: см. `deal.id`. Снимается после перехода Cabinet (FIX-24)'
         created_at:
           type: string
           format: date-time
@@ -1366,11 +1348,6 @@ components:
           format: int64
         deal:
           $ref: '#/components/schemas/DealRef'
-        deal_id:
-          type: integer
-          format: int64
-          deprecated: true
-          description: 'Устарело: см. `deal.id`'
         number:
           type: string
         version:
@@ -1389,7 +1366,7 @@ components:
 
     QuoteLine:
       type: object
-      description: Строка КП для клиента — цена продажи без себестоимости и наценки
+      description: Строка КП для клиента — цена продажи без себестоимости и наценки; `unit_price` и `total` без НДС (Q-FIX21-2)
       required: [line_no, kind, title]
       properties:
         line_no:
@@ -1422,8 +1399,14 @@ components:
       allOf:
         - $ref: '#/components/schemas/QuoteListItem'
         - type: object
-          required: [lines, public_url]
+          required: [lines, public_url, subtotal, vat]
           properties:
+            subtotal:
+              description: Итого без НДС — сумма `total` строк (Q-FIX21-2)
+              $ref: '#/components/schemas/Money'
+            vat:
+              description: НДС; `subtotal + vat = total`, как в PDF КП
+              $ref: '#/components/schemas/Money'
             lines:
               type: array
               items:
@@ -1443,18 +1426,13 @@ components:
 
     Contract:
       type: object
-      required: [id, number, status, deal_id, deal]
+      required: [id, number, status, deal]
       properties:
         id:
           type: integer
           format: int64
         deal:
           $ref: '#/components/schemas/DealRef'
-        deal_id:
-          type: integer
-          format: int64
-          deprecated: true
-          description: 'Устарело: см. `deal.id`'
         number:
           type: string
         status:
@@ -1475,18 +1453,13 @@ components:
 
     Invoice:
       type: object
-      required: [id, number, status, total, paid, due_date, deal_id, deal]
+      required: [id, number, status, total, paid, due_date, deal]
       properties:
         id:
           type: integer
           format: int64
         deal:
           $ref: '#/components/schemas/DealRef'
-        deal_id:
-          type: integer
-          format: int64
-          deprecated: true
-          description: 'Устарело: см. `deal.id`'
         number:
           type: string
         status:
@@ -1508,18 +1481,13 @@ components:
 
     Act:
       type: object
-      required: [id, number, status, deal_id, issued_at]
+      required: [id, number, status, deal, issued_at]
       properties:
         id:
           type: integer
           format: int64
         deal:
           $ref: '#/components/schemas/DealRef'
-        deal_id:
-          type: integer
-          format: int64
-          deprecated: true
-          description: 'Устарело: см. `deal.id`'
         number:
           type: string
         status:
@@ -1546,18 +1514,13 @@ components:
     DeliveryLine:
       type: object
       description: Строка поставки = строка подтверждённого заказа клиента; `id` — её идентификатор для приёмки
-      required: [id, deal, deal_id, line_no, title, status]
+      required: [id, deal, line_no, title, status]
       properties:
         id:
           type: integer
           format: int64
         deal:
           $ref: '#/components/schemas/DealRef'
-        deal_id:
-          type: integer
-          format: int64
-          deprecated: true
-          description: 'Устарело: см. `deal.id`'
         line_no:
           type: integer
           minimum: 1
@@ -1600,11 +1563,6 @@ components:
           oneOf:
             - $ref: '#/components/schemas/DealRef'
             - type: 'null'
-        deal_id:
-          type: [integer, 'null']
-          format: int64
-          deprecated: true
-          description: 'Устарело: см. `deal.id`'
         kind:
           $ref: '#/components/schemas/DocumentKind'
         number:

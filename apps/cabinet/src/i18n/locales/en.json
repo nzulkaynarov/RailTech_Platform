@@ -141,6 +141,9 @@
       "expiredText": "The link has expired or was already opened. Request a new one.",
       "requestAgain": "Request a new link",
       "closedTitle": "Access closed",
+      "alreadyTitle": "You are already signed in",
+      "alreadyText": "This link has already been used, but your session is active — carry on in the cabinet.",
+      "toCabinet": "Go to the cabinet",
       "failedTitle": "Could not sign in"
     },
     "telegram": {
@@ -151,7 +154,10 @@
       "retry": "Try again"
     },
     "errors": {
-      "TOO_MANY_REQUESTS": "Too many requests, try again in an hour.",
+      "TOO_MANY_REQUESTS": "Too many sign-in attempts, try again later.",
+      "TOO_MANY_REQUESTS_WAIT": "Too many sign-in attempts. Try again in {{wait}}.",
+      "waitSeconds": "{{n}} sec",
+      "waitMinutes": "{{n}} min",
       "FORBIDDEN": "Access is closed, please contact your manager."
     }
   },
@@ -316,6 +322,9 @@
       "lines": "Quote contents",
       "stage": "Stage",
       "grandTotal": "Total",
+      "subtotal": "Subtotal excl. VAT",
+      "vat": "VAT",
+      "totals": "Totals",
       "columns": {
         "title": "Item / stage",
         "quantity": "Qty",
@@ -328,7 +337,7 @@
       "acceptTitle": "Accept quote {{number}}",
       "acceptText": "Total {{total}}. Enter the confirmation code from the message. The contract is created automatically after acceptance.",
       "code": "Confirmation code",
-      "codeHint": "The code is 6 digits from the message. If it did not arrive, send it again.",
+      "codeHint": "Enter the code from the message. If it did not arrive, send it again.",
       "codeTooShort": "The code is at least {{min}} characters long.",
       "acceptConfirm": "Accept quote",
       "acceptedToast": "Quote {{number}} accepted",
@@ -610,6 +619,7 @@
     "REASON_REQUIRED": "Give a reason.",
     "INN_INVALID": "The tax ID has 9 to 14 digits.",
     "TEAM_MEMBER_EXISTS": "A colleague with this e-mail is already in the team.",
+    "DELIVERY_FAILED": "The invitation email could not be sent, so your colleague was not added. Please try again right away.",
     "TOO_MANY_REQUESTS": "Too many requests. Wait a little and try again.",
     "CONTACT_CHANNEL_REQUIRED": "We have nowhere to send the code: no e-mail is set and Telegram is not connected. Ask your manager to add a contact channel.",
     "CONTACT_EMAIL_REQUIRED": "A contact e-mail is required for this.",

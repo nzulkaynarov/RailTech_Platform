@@ -314,7 +314,7 @@ def contract_world(db, client_company, other_company, client_contact, other_cont
     # ── Документы: выпущенные (с PDF и без), черновики, внутренние, чужие — см. documents_world ──
     world["bare_fulfillment"] = Fulfillment.objects.get(deal=bare)
 
-    # ── Токен входа (для GET /auth/magic/{token}) ───────────────────────────────────────────────
+    # ── Токен входа (для POST /auth/magic) ───────────────────────────────────────────────
     MagicLinkToken.objects.create(
         token_hash=hash_token(MAGIC_TOKEN),
         contact=client_contact,

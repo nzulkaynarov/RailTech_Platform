@@ -310,7 +310,7 @@ def test_request_source_is_cabinet_in_the_response_and_in_the_journal(portal_cli
 
 def test_request_is_not_a_deal_yet(portal_client):
     created = post(portal_client).json()
-    assert created["status"] == "new" and created["deal"] is None and created["deal_id"] is None
+    assert created["status"] == "new" and created["deal"] is None and "deal_id" not in created
     assert created["number"] == f"Z-{created['id']}"
 
 
