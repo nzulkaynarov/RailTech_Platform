@@ -3,7 +3,8 @@
 Что держат тесты:
 
 1. ссылка настоящая: URL на `FRONTEND_URL`, подписанный токен, срок 10 минут, ответ по контракту, файл скачивается;
-2. id из `GET /deals/{id}/documents` и из `last_document` сводки всегда открывается ссылкой (сквозной тест);
+2. id из `GET /deals/{id}/documents` и из `last_document` сводки всегда открывается ссылкой (сквозной тест); id — портальный
+   (FIX-38), для КП, договора, счёта, акта и накладной — в `test_documents_portal_ids.py`;
 3. отказы одинаковы (404): без сопоставления с клиентом CRM, черновик, отменённый и внутренний документ, чужой клиент;
 4. токен: подделка и чужая соль — 404, срок вышел — 410, документ отозван за десять минут — 404, голый id не принимается;
 5. журнал ERP: выдача и каждое скачивание — `ActivityLog` с `crm_*`-контекстом; отказы и 202 в журнал не попадают;
@@ -91,9 +92,16 @@ def world():
     return {"company": company, "deal": deal, "document": make_document(company, deal)}
 
 
+def erp_id(document) -> int:
+    """`erp_document_id` документа: id портала (`encode_document_id`), не `pk` записи (FIX-38)."""
+    return encode_document_id("generated", document.pk)
+
+
 def link_for(crm, document, context=CONTEXT):
+    """Ссылка на документ: `document` — `GeneratedDocument` или уже готовый `erp_document_id`."""
+    document_id = document if isinstance(document, int) else erp_id(document)
     extra = {"HTTP_X_CRM_CONTEXT": context} if context is not None else {}
-    return crm.get(f"{PREFIX}/documents/{document.pk}/link", **extra)
+    return crm.get(f"{PREFIX}/documents/{document_id}/link", **extra)
 
 
 def token_of(url: str) -> str:
@@ -162,10 +170,12 @@ def test_every_id_from_the_documents_list_opens(crm, public, world):
     deal = world["deal"]
     ids = {make_document(world["company"], deal, kind=kind).pk for kind in ("CONTRACT", "INVOICE", "ACT")}
     listed = crm.get(f"{PREFIX}/deals/{deal.pk}/documents").json()
-    assert {item["erp_document_id"] for item in listed} == ids | {world["document"].pk}
+    assert {item["erp_document_id"] for item in listed} == {
+        encode_document_id("generated", pk) for pk in ids | {world["document"].pk}
+    }
     assert {item["kind"] for item in listed} == {"contract", "invoice", "act"}
     for item in listed:
-        response = link_for(crm, GeneratedDocument(pk=item["erp_document_id"]))
+        response = link_for(crm, item["erp_document_id"])
         assert response.status_code == 200, item
         assert open_link(public, response).status_code == 200, item
 
@@ -173,8 +183,8 @@ def test_every_id_from_the_documents_list_opens(crm, public, world):
 def test_last_document_of_the_summary_opens(crm, public, world):
     summary = crm.get(f"{PREFIX}/companies/{world['company'].pk}/summary").json()
     document_id = summary["last_document"]["erp_document_id"]
-    assert document_id == world["document"].pk
-    assert open_link(public, link_for(crm, GeneratedDocument(pk=document_id))).status_code == 200
+    assert document_id == erp_id(world["document"])
+    assert open_link(public, link_for(crm, document_id)).status_code == 200
 
 
 def test_list_and_summary_do_not_show_what_the_link_refuses(crm, world):
@@ -187,30 +197,35 @@ def test_list_and_summary_do_not_show_what_the_link_refuses(crm, world):
         make_document(company, deal, kind="CUSTOM"),
     ]
     listed = {item["erp_document_id"] for item in crm.get(f"{PREFIX}/deals/{deal.pk}/documents").json()}
-    assert listed == {world["document"].pk}
+    assert listed == {erp_id(world["document"])}
     summary = crm.get(f"{PREFIX}/companies/{company.pk}/summary").json()
-    assert summary["last_document"]["erp_document_id"] == world["document"].pk
-    assert not any(d.pk in listed for d in hidden)
+    assert summary["last_document"]["erp_document_id"] == erp_id(world["document"])
+    assert not any(erp_id(d) in listed for d in hidden)
 
 
-def test_listing_rule_is_the_portal_visibility_rule(world):
-    """Список и ссылка считают «можно отдать клиенту» одинаково с порталом: расхождение — утечка или дыра."""
+def test_listing_rule_is_the_portal_visibility_rule(crm, world):
+    """Список, ссылка и портал считают «можно отдать клиенту» одинаково: расхождение — утечка или дыра."""
     company, deal = world["company"], world["deal"]
     for kind in ("CONTRACT", "INVOICE", "ACT", "LETTER", "REPORT", "CUSTOM"):
         for status in ("DRAFT", "ISSUED", "CANCELLED"):
             make_document(company, deal, kind=kind, status=status)
-    linkable = set(documents_link.linkable_documents().values_list("pk", flat=True))
+    listed = {item["erp_document_id"] for item in crm.get(f"{PREFIX}/deals/{deal.pk}/documents").json()}
     for document in GeneratedDocument.objects.all():
-        visible = find_client_document(company, encode_document_id("generated", document.pk)) is not None
-        assert visible == (document.pk in linkable), (document.template.kind.code, document.status.code)
+        visible = find_client_document(company, erp_id(document)) is not None
+        assert visible == (erp_id(document) in listed), (document.template.kind.code, document.status.code)
+        assert (link_for(crm, document).status_code == 200) == visible, (
+            document.template.kind.code,
+            document.status.code,
+        )
 
 
 # ── 3. Отказы: все 404 ──────────────────────────────────────────────────────────────────────────────
 
 
 def test_unknown_document_is_404(crm):
-    response = crm.get(f"{PREFIX}/documents/999999/link")
-    assert response.status_code == 404 and response.json() == {"detail": "NOT_FOUND"}
+    for unknown in (999999, 0, 6, 7, 8 * 999999 + 1):  # нет записи, нулевой pk, слоты 6–7 без источника, нет КП #999999
+        response = crm.get(f"{PREFIX}/documents/{unknown}/link")
+        assert response.status_code == 404 and response.json() == {"detail": "NOT_FOUND"}, unknown
 
 
 def test_company_without_crm_mapping_is_404(crm, world):
@@ -345,7 +360,8 @@ def test_issue_and_every_download_are_written_to_the_erp_journal(crm, public, wo
         world["company"].pk,
     )
     assert log.event_params == {
-        "document_id": document.pk,
+        "document_id": erp_id(document),
+        "source": "generated",
         "kind": "contract",
         "number": document.number,
         "crm_client_id": 7001,
@@ -363,7 +379,7 @@ def test_issue_and_every_download_are_written_to_the_erp_journal(crm, public, wo
         assert download.event_params["crm_client_id"] == 7001
         assert download.event_params["crm_user_id"] == 55
         assert download.event_params["channel"] == "bot"
-        assert download.event_params["document_id"] == document.pk
+        assert download.event_params["document_id"] == erp_id(document)
         assert (download.entity_id, download.deal_id, download.company_id) == (
             document.pk,
             world["deal"].pk,

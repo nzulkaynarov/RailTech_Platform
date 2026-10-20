@@ -9,6 +9,8 @@
 
 from __future__ import annotations
 
+import datetime
+import json
 import logging
 from decimal import Decimal
 from typing import Any, Dict, Iterable, List, Optional
@@ -16,16 +18,16 @@ from typing import Any, Dict, Iterable, List, Optional
 from django.db import transaction
 from parties.models import Company
 from portal.models import PortalRequestLine
+from portal.services import documents as portal_documents
 
 from catalog.constants import MODE_CLIENT, MODE_LEAD
 from catalog.published import project_many, published_products
-from crm.models import Deal, GeneratedDocument
+from crm.models import Deal
 
-from ..services import documents_link
 from ..services.stages import deal_stage, initial_fsm_stage
 from ..services.summary import (
-    _map_doc_kind,
     delivery_lines,
+    document_item,
     get_deal_detail_data,
     get_document_link_data,
     list_company_deals_data,
@@ -98,60 +100,44 @@ def get_delivery_status_tool(context: AgentContext, arguments: Dict[str, Any]) -
     return delivery_lines(deal)
 
 
+def _iso_date(value: Any) -> Optional[datetime.date]:
+    """Дата фильтра `YYYY-MM-DD`; не дата — фильтр не применяется (как и раньше, без ошибки инструмента)."""
+    try:
+        return datetime.date.fromisoformat(str(value))
+    except ValueError:
+        return None
+
+
 def list_client_documents_tool(context: AgentContext, arguments: Dict[str, Any]) -> List[Dict[str, Any]]:
-    """Документы клиента с фильтром по виду и датам: только те, на которые `get_document_link` выдаёт ссылку (FIX-32)."""
+    """Документы клиента с фильтром по виду и датам: ровно те, что видит клиент в портале (FIX-38).
+
+    Выпущенные КП, договоры, счета, акты, накладные и `GeneratedDocument` с теми же id, что у `GET /documents` портала и
+    у `get_document_link`; черновики, отменённые и внутренние документы не показываются.
+    """
     if context.mode != "customer" or not context.erp_company_id:
         raise ToolModeError("list_client_documents is only available in customer mode")
 
-    qs = (
-        documents_link.linkable_documents()
-        .filter(deal__company_id=context.erp_company_id)
-        .select_related("template__kind", "deal")
-        .order_by("-created_at")
-    )
+    company = Company.objects.filter(pk=context.erp_company_id).first()
+    if company is None:
+        return []
 
-    date_from = arguments.get("date_from")
-    if date_from:
-        try:
-            qs = qs.filter(created_at__date__gte=date_from)
-        except Exception:
-            pass
-
-    date_to = arguments.get("date_to")
-    if date_to:
-        try:
-            qs = qs.filter(created_at__date__lte=date_to)
-        except Exception:
-            pass
-
-    kind_filter = arguments.get("kind")
-    if kind_filter:
-        kind_filter = str(kind_filter).lower().strip()
+    kind_filter = str(arguments.get("kind") or "").lower().strip()
+    date_from = _iso_date(arguments["date_from"]) if arguments.get("date_from") else None
+    date_to = _iso_date(arguments["date_to"]) if arguments.get("date_to") else None
 
     result = []
-    for d in qs:
-        kind = _map_doc_kind(d.template.kind.code if d.template else "")
-        if kind_filter and kind != kind_filter:
+    for document in portal_documents.client_documents(company, kind=kind_filter or None):
+        if (date_from and document.date < date_from) or (date_to and document.date > date_to):
             continue
-        status_code = d.status.code.lower() if hasattr(d.status, "code") else str(d.status or "issued").lower()
-        result.append(
-            {
-                "erp_document_id": d.id,
-                "erp_deal_id": d.deal_id,
-                "kind": kind,
-                "number": d.number or f"DOC-{d.id}",
-                "date": d.created_at.date().isoformat(),
-                "title": d.title or f"Документ {d.number}",
-                "status": status_code,
-            }
-        )
+        result.append(document_item(document))
     return result
 
 
 def get_document_link_tool(context: AgentContext, arguments: Dict[str, Any]) -> Optional[Dict[str, Any]]:
     """Подписанный URL файла на 10 минут; бот отправляет файл клиенту.
 
-    Выдача пишется в аудит ERP. Чужой документ возвращает None.
+    Выдача пишется в аудит ERP с контекстом `{"crm_client_id", "channel": "bot"}` (журнал скачиваний знает канал).
+    Чужой, невыпущенный и внутренний документ возвращает None.
     """
     if context.mode != "customer" or not context.erp_company_id:
         raise ToolModeError("get_document_link is only available in customer mode")
@@ -160,11 +146,11 @@ def get_document_link_tool(context: AgentContext, arguments: Dict[str, Any]) -> 
     if erp_document_id is None or not isinstance(erp_document_id, int):
         raise ToolExecutionError("erp_document_id integer required")
 
-    doc = GeneratedDocument.objects.filter(pk=erp_document_id).select_related("deal__company").first()
-    if not doc or not doc.deal or doc.deal.company_id != context.erp_company_id:
+    company = Company.objects.filter(pk=context.erp_company_id).first()
+    if company is None or portal_documents.find_client_document(company, erp_document_id) is None:
         return None
 
-    crm_context = f"erp-mcp:client={context.crm_client_id}:company={context.erp_company_id}"
+    crm_context = json.dumps({"crm_client_id": context.crm_client_id, "channel": "bot"})
     return get_document_link_data(erp_document_id, crm_context=crm_context)
 
 
