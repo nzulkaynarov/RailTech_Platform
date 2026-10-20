@@ -4,6 +4,7 @@
 .env
 .env.*
 !.env.example
+!infra/.env.prod.example
 *.pem
 *.key
 

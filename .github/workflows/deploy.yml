@@ -159,7 +159,7 @@ jobs:
           TAG: ${{ steps.ver.outputs.tag }}
         run: |
           # TAG — полный git sha из шага ver; подстановка на клиенте намеренная
-          tar -czf release.tgz infra apps/crm/infra/casbin
+          tar -czf release.tgz infra apps/crm/infra/casbin packages/contracts/mcp-tools.json
           # shellcheck disable=SC2029
           ssh app "mkdir -p /opt/rt/releases/$TAG"
           # shellcheck disable=SC2029
