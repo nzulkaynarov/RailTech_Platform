@@ -190,6 +190,8 @@ def test_reason_values_are_a_stable_contract() -> None:
         "erp_unauthorized",
         "erp_unavailable",
         "erp_bad_response",
+        # Передача клиента (FIX-31).
+        "erp_inn_conflict",
         # Коннектор «Почта» (M3-CRM-08).
         "smtp_not_configured",
         "smtp_invalid_host",

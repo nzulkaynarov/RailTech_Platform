@@ -171,3 +171,34 @@ async def test_handoff_client_timeout() -> None:
         with pytest.raises(UpstreamUnavailableError) as exc_info:
             await client.handoff_client(payload)
         assert exc_info.value.details["reason"] == Reason.ERP_UNAVAILABLE.value
+
+
+@pytest.mark.asyncio
+async def test_handoff_client_inn_conflict_is_a_permanent_conflict_error() -> None:
+    """FIX-31: 409 `INN_CONFLICT` — свой код причины, а не «ERP недоступна»; повтор не поможет."""
+    config = Settings(erp_base_url="https://erp.internal", erp_service_token="test-token")
+    client = HttpxErpClient(_DummyStore("test-token"), config)
+
+    with respx.mock:
+        respx.post("https://erp.internal/api/integration/v1/clients/handoff").respond(
+            409, json={"detail": "INN_CONFLICT"}
+        )
+        with pytest.raises(ConflictError) as exc_info:
+            await client.handoff_client(_sample_payload())
+    assert exc_info.value.details["reason"] == Reason.ERP_INN_CONFLICT.value
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("body", [{"detail": "IDEMPOTENCY_CONFLICT"}, {"detail": "OTHER"}, None])
+async def test_handoff_client_other_409_is_not_reported_as_inn_conflict(
+    body: dict[str, str] | None,
+) -> None:
+    config = Settings(erp_base_url="https://erp.internal", erp_service_token="test-token")
+    client = HttpxErpClient(_DummyStore("test-token"), config)
+
+    with respx.mock:
+        route = respx.post("https://erp.internal/api/integration/v1/clients/handoff")
+        route.respond(409, json=body) if body else route.respond(409, text="conflict")
+        with pytest.raises(ConflictError) as exc_info:
+            await client.handoff_client(_sample_payload())
+    assert exc_info.value.details["reason"] == Reason.ERP_BAD_RESPONSE.value

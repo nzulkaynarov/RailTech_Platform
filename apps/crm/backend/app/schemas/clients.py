@@ -18,6 +18,9 @@ class ClientOut(BaseModel):
     notes: str | None
     created_at: datetime
     erp_company_id: int | None = None
+    # Передача в бэк-офис идёт задачей после коммита (FIX-31): состояние и код причины ошибки.
+    erp_handoff_status: Literal["pending", "done", "failed"] | None = None
+    erp_handoff_error: str | None = None
 
 
 class ClientListItem(ClientOut):

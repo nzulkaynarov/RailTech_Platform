@@ -38,6 +38,7 @@ if TYPE_CHECKING:
     from app.services.erp_access import ErpAccessService
     from app.services.erp_connector import ErpConnectorService
     from app.services.erp_events import ErpEventsService
+    from app.services.erp_handoff import ErpHandoffService
     from app.services.external_services.checks import ExternalChecks
     from app.services.external_services.switches import SwitchService
     from app.services.external_services.view import ExternalServicesView
@@ -316,8 +317,15 @@ class Container:
             self.lead_messenger,
             on_chats_changed=_chats_changed,
             backoffice_mode=self.backoffice_mode,
-            erp_client=self.erp_client,
+            erp_handoff_enqueue=_enqueue_erp_handoff,
         )
+
+    @cached_property
+    def erp_handoff_service(self) -> "ErpHandoffService":
+        """Передача клиента в ERP задачей после коммита (FIX-31)."""
+        from app.services.erp_handoff import ErpHandoffService
+
+        return ErpHandoffService(self.session_factory, self.erp_client)
 
     @cached_property
     def erp_client(self) -> "ErpClient":
@@ -495,6 +503,12 @@ async def _enqueue_erp_sync(action: str, user_id: int) -> int:
     from app.tasks.erp_users import enqueue_erp_sync
 
     return await enqueue_erp_sync(action, user_id)
+
+
+async def _enqueue_erp_handoff(client_id: int, lead_id: int, user_id: int) -> object:
+    from app.tasks.erp_handoff import enqueue_erp_handoff
+
+    return await enqueue_erp_handoff(client_id, lead_id, user_id)
 
 
 async def _enqueue_erp_event(event_id: str) -> int:

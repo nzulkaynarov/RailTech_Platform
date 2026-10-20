@@ -37,3 +37,27 @@ def test_upgrade_downgrade_upgrade(alembic_config: Config, live_settings: Settin
 
     command.upgrade(alembic_config, "head")
     assert count_objects(live_settings)[0] == 4
+
+
+HANDOFF_COLUMNS_SQL = """
+SELECT column_name FROM information_schema.columns
+WHERE table_name = 'clients' AND column_name LIKE 'erp_handoff%%' ORDER BY column_name
+"""
+
+
+def test_client_handoff_columns_come_and_go_with_the_revision(
+    alembic_config: Config, live_settings: Settings
+) -> None:
+    """FIX-31: состояние передачи клиента в ERP — три колонки; downgrade их снимает."""
+    command.upgrade(alembic_config, "head")
+    with psycopg.connect(live_settings.libpq_dsn) as conn:
+        columns = [r[0] for r in conn.execute(HANDOFF_COLUMNS_SQL).fetchall()]
+    assert columns == ["erp_handoff_error", "erp_handoff_request", "erp_handoff_status"]
+
+    command.downgrade(alembic_config, "0026_user_platform_access")
+    with psycopg.connect(live_settings.libpq_dsn) as conn:
+        assert conn.execute(HANDOFF_COLUMNS_SQL).fetchall() == []
+
+    command.upgrade(alembic_config, "head")
+    with psycopg.connect(live_settings.libpq_dsn) as conn:
+        assert len(conn.execute(HANDOFF_COLUMNS_SQL).fetchall()) == 3

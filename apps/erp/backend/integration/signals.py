@@ -167,8 +167,10 @@ def handle_contract_post_save(sender: Any, instance: Any, created: bool, **kwarg
         prev_client = getattr(instance, "_prev_client_signed", False)
         prev_manager = getattr(instance, "_prev_manager_signed", False)
 
-        curr_status = instance.status.code if getattr(instance, "status", None) else ""
-        prev_status = getattr(instance, "_prev_status_code", "")
+        # У нового договора прежнего статуса нет (`None`): без `or ""` `.upper()` падал, а исключение глоталось ниже,
+        # и `contract.signed` по договору, созданному уже подписанным, не уходил.
+        curr_status = (instance.status.code if getattr(instance, "status", None) else "") or ""
+        prev_status = getattr(instance, "_prev_status_code", None) or ""
 
         is_new_signature = (client_signed and not prev_client) or (manager_signed and not prev_manager)
         status_became_signed = (

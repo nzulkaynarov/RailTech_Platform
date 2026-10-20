@@ -4,6 +4,7 @@
  * RailTech CRM API
  * OpenAPI spec version: 0.1.0
  */
+import type { ClientDetailErpHandoffStatus } from "./clientDetailErpHandoffStatus";
 import type { IdentityOut } from "./identityOut";
 import type { LeadBrief } from "./leadBrief";
 import type { ServiceRequestOut } from "./serviceRequestOut";
@@ -12,6 +13,8 @@ export interface ClientDetail {
   candidates: IdentityOut[];
   created_at: string;
   erp_company_id?: number | null;
+  erp_handoff_error?: string | null;
+  erp_handoff_status?: ClientDetailErpHandoffStatus;
   id: number;
   identities: IdentityOut[];
   inn: string | null;
