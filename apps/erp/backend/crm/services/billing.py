@@ -3,6 +3,7 @@ from typing import Optional, Tuple
 from django.db import IntegrityError, transaction
 
 from accounts.models import CustomUser
+from crm.services.pdf_storage import save_rendered_pdf
 
 from ..constants import DEFAULT_INVOICE_DUE_DAYS, ActStatusCode, ContractStatusCode, InvoiceStatusCode
 from ..models import ActivityLog
@@ -243,7 +244,7 @@ def _render_invoice_pdf(invoice) -> None:
         )
         buf = BytesIO()
         HTML(string=html_string).write_pdf(buf)
-        invoice.pdf_file.save(f"Invoice_{invoice.number}.pdf", ContentFile(buf.getvalue()), save=True)
+        save_rendered_pdf(invoice, f"Invoice_{invoice.number}.pdf", ContentFile(buf.getvalue()))
         return
 
     html_string = render_to_string(
@@ -258,7 +259,7 @@ def _render_invoice_pdf(invoice) -> None:
     )
     buf = BytesIO()
     HTML(string=html_string).write_pdf(buf)
-    invoice.pdf_file.save(f"Invoice_{invoice.number}.pdf", ContentFile(buf.getvalue()), save=True)
+    save_rendered_pdf(invoice, f"Invoice_{invoice.number}.pdf", ContentFile(buf.getvalue()))
 
 
 @transaction.atomic
@@ -578,7 +579,7 @@ def _render_act_pdf(act) -> None:
         )
         buf = BytesIO()
         HTML(string=html_string).write_pdf(buf)
-        act.pdf_file.save(f"Act_{act.number}.pdf", ContentFile(buf.getvalue()), save=True)
+        save_rendered_pdf(act, f"Act_{act.number}.pdf", ContentFile(buf.getvalue()))
         return
 
     html_string = render_to_string(
@@ -596,7 +597,7 @@ def _render_act_pdf(act) -> None:
     )
     buf = BytesIO()
     HTML(string=html_string).write_pdf(buf)
-    act.pdf_file.save(f"Act_{act.number}.pdf", ContentFile(buf.getvalue()), save=True)
+    save_rendered_pdf(act, f"Act_{act.number}.pdf", ContentFile(buf.getvalue()))
 
 
 @transaction.atomic
@@ -960,4 +961,4 @@ def _render_receipt_pdf(payment) -> None:
     )
     buf = BytesIO()
     HTML(string=html_string).write_pdf(buf)
-    payment.pdf_file.save(f"Receipt_{payment.receipt_number}.pdf", ContentFile(buf.getvalue()), save=True)
+    save_rendered_pdf(payment, f"Receipt_{payment.receipt_number}.pdf", ContentFile(buf.getvalue()))
