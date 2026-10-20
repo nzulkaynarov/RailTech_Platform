@@ -6,7 +6,6 @@ from django.views.static import serve as _serve_media
 from drf_spectacular.utils import extend_schema
 from drf_spectacular.views import SpectacularAPIView, SpectacularRedocView, SpectacularSwaggerView
 from finance.views import DealMarginDeviationView, DealPurchaseActualDetailView, DealPurchaseActualsView
-from integration.mcp.views import ErpMcpView
 from portal.public_views import (
     PublicDocumentView,
     PublicQuoteAcceptView,
@@ -165,7 +164,6 @@ urlpatterns = (
         path("api/v1/", include(router.urls)),
         path("api/portal/v1/", include("portal.urls")),
         path("api/integration/v1/", include("integration.urls")),
-        re_path(r"^mcp/erp/?$", ErpMcpView.as_view(), name="erp-mcp"),
         path("api/v1/auth/sso/token/", SsoIssueTokenView.as_view(), name="sso-token"),
         path("api/v1/auth/sso/exchange/", SsoExchangeView.as_view(), name="sso-exchange"),
         path("api/v1/auth/setup-password/", SetupPasswordView.as_view(), name="setup-password"),

@@ -62,11 +62,18 @@ def test_integration_api_is_closed_without_service_token(no_seam_secrets):
 @pytest.mark.django_db
 def test_mcp_is_closed_without_context_key(no_seam_secrets):
     from integration.mcp.context import issue_agent_context
+    from integration.tests.mcp_support import raw_rpc
 
     forged = issue_agent_context("", crm_client_id=1, mode="prospect")
-    response = APIClient().get("/mcp/erp/", HTTP_X_AGENT_CONTEXT=forged)
+    response = raw_rpc(forged, "tools/list")  # erp-mcp (FIX-36) — отдельное приложение SDK, не маршрут Django
 
     assert response.status_code == 401
+    assert response.json() == {"detail": "INVALID_AGENT_CONTEXT"}
+
+
+@pytest.mark.django_db
+def test_mcp_route_is_gone_from_the_django_app():
+    assert APIClient().get("/mcp/erp/").status_code == 404
 
 
 @pytest.mark.django_db

@@ -6809,24 +6809,6 @@ export interface paths {
         patch: operations["system_settings_partial_update"];
         trace?: never;
     };
-    "/mcp/erp/": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** @description GET /mcp/erp — проверка доступности эндпоинта и валидности контекста. */
-        get: operations["mcp_erp_retrieve"];
-        put?: never;
-        /** @description POST /mcp/erp — обработка JSON-RPC 2.0 сообщений протокола MCP. */
-        post: operations["mcp_erp_create"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -23677,42 +23659,6 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["SystemSetting"];
                 };
-            };
-        };
-    };
-    mcp_erp_retrieve: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description No response body */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    mcp_erp_create: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description No response body */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
             };
         };
     };
