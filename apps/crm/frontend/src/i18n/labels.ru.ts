@@ -127,6 +127,7 @@ export const labelsRu = {
     "client.create": "Создал клиента",
     "client.update": "Изменил клиента",
     "client.link_telegram": "Привязал Telegram",
+    "client.erp_handoff": "Передал клиента в бэк-офис (ERP)",
     "client.unlink_telegram": "Отвязал Telegram",
     "client.close_request": "Закрыл сервисный запрос",
     "client.contact_create": "Добавил контакт",

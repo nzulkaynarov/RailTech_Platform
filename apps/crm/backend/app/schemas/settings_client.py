@@ -149,3 +149,58 @@ class ClientBotTexts(CheckedTexts):
         "Faqat oʻz raqamingizni «Raqamni yuborish» tugmasi orqali saqlash mumkin.",
         "Only your own number can be saved — use the “Share my number” button.",
     )
+
+    # События ERP клиенту (FIX-34, I-8): бот пишет на языке лида. {deal} — название сделки,
+    # {number} — номер документа, {amount} {currency} — сумма, {due} — срок оплаты,
+    # {summary} — состав поставки, {status} — статус поставки, {eta} — ожидаемая дата.
+    erp_quote_sent: LocalizedText = _t(
+        "Вам подготовлено коммерческое предложение по сделке «{deal}».",
+        "Sizga «{deal}» bitimi boʻyicha tijorat taklifi tayyorlandi.",
+        "A commercial proposal for the deal “{deal}” has been prepared for you.",
+    )
+    erp_invoice_issued: LocalizedText = _t(
+        "Выставлен счёт {number} на сумму {amount} {currency}. Срок оплаты: до {due}.",
+        "{number}-hisob {amount} {currency} summasida berildi. Toʻlov muddati: {due} gacha.",
+        "Invoice {number} for {amount} {currency} has been issued. Due by {due}.",
+    )
+    erp_invoice_paid: LocalizedText = _t(
+        "Поступила оплата по счёту {number} на сумму {amount} {currency}. Спасибо!",
+        "{number}-hisob boʻyicha {amount} {currency} toʻlov kelib tushdi. Rahmat!",
+        "Payment of {amount} {currency} for invoice {number} has been received. Thank you!",
+    )
+    erp_delivery_status: LocalizedText = _t(
+        "Статус доставки по заказу «{deal}» ({summary}): {status}.",
+        "«{deal}» buyurtmasi ({summary}) yetkazib berish holati: {status}.",
+        "Delivery status for the order “{deal}” ({summary}): {status}.",
+    )
+    erp_delivery_statuses: LocalizedText = _t(
+        "Собирается|В пути|Готов к отгрузке|Отгружен|Доставлен",
+        "Yigʻilmoqda|Yoʻlda|Joʻnatishga tayyor|Joʻnatildi|Yetkazildi",
+        "Being assembled|In transit|Ready to ship|Shipped|Delivered",
+    )
+    erp_delivery_eta_changed: LocalizedText = _t(
+        "Срок доставки по заказу «{deal}» ({summary}) обновлён: ожидается {eta}.",
+        "«{deal}» buyurtmasi ({summary}) yetkazib berish muddati yangilandi: kutilayotgan sana {eta}.",
+        "The delivery date for the order “{deal}” ({summary}) has been updated: expected {eta}.",
+    )
+    erp_act_issued: LocalizedText = _t(
+        "Акт {number} сформирован и ждёт вашего подтверждения в кабинете.",
+        "{number}-dalolatnoma shakllantirildi va kabinetda tasdiqlashingizni kutmoqda.",
+        "Act {number} has been issued and is waiting for your confirmation in the cabinet.",
+    )
+    erp_btn_quote: LocalizedText = _t("Открыть КП", "Taklifni ochish", "Open the quote")
+    erp_btn_invoice: LocalizedText = _t("Открыть счёт", "Hisobni ochish", "Open the invoice")
+    erp_btn_cabinet: LocalizedText = _t("Кабинет", "Kabinet", "Cabinet")
+
+    # События ERP сотруднику (личное сообщение ответственному). {client} — клиент, {quote} —
+    # номер КП, {deal} — сделка, {number} — номер акта, {reason} — замечания клиента.
+    erp_staff_quote_accepted: LocalizedText = _t(
+        "🎉 Клиент «{client}» акцептовал КП #{quote} по сделке «{deal}».",
+        "🎉 Mijoz «{client}» «{deal}» bitimi boʻyicha #{quote} tijorat taklifini qabul qildi.",
+        "🎉 The client “{client}” accepted quote #{quote} for the deal “{deal}”.",
+    )
+    erp_staff_act_returned: LocalizedText = _t(
+        "⚠️ Акт {number} по сделке «{deal}» возвращён клиентом с замечаниями: {reason}.",
+        "⚠️ «{deal}» bitimi boʻyicha {number}-dalolatnoma mijoz tomonidan izoh bilan qaytarildi: {reason}.",
+        "⚠️ Act {number} for the deal “{deal}” was returned by the client with remarks: {reason}.",
+    )

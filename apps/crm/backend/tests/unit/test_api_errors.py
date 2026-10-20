@@ -208,4 +208,6 @@ def test_reason_values_are_a_stable_contract() -> None:
         "ai_spend_period",
         "service_not_switchable",
         "telegram_paused",
+        "won_decided_by_erp",
+        "handoff_no_consent",
     }
