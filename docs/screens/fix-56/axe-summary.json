@@ -1,0 +1,124 @@
+{
+  "invoices-ru-1440": {
+    "axe": [],
+    "hscroll": false,
+    "tbl": [
+      false
+    ]
+  },
+  "invoices-uz-1440": {
+    "axe": [],
+    "hscroll": false,
+    "tbl": [
+      false
+    ]
+  },
+  "requests-uz-1440": {
+    "axe": [],
+    "hscroll": false,
+    "tbl": [
+      false
+    ]
+  },
+  "deliveries-ru-1440": {
+    "axe": [],
+    "hscroll": false,
+    "tbl": []
+  },
+  "documents-ru-1440": {
+    "axe": [],
+    "hscroll": false,
+    "tbl": [
+      false
+    ]
+  },
+  "documents-uz-1440": {
+    "axe": [],
+    "hscroll": false,
+    "tbl": [
+      false
+    ]
+  },
+  "documents-en-1440": {
+    "axe": [],
+    "hscroll": false,
+    "tbl": [
+      false
+    ]
+  },
+  "documents-search-empty-ru-1440": {
+    "axe": [],
+    "hscroll": false,
+    "tbl": []
+  },
+  "documents-search-empty-uz-1440": {
+    "axe": [],
+    "hscroll": false,
+    "tbl": []
+  },
+  "catalog-in-stock-ru-1440": {
+    "axe": [],
+    "hscroll": false,
+    "tbl": []
+  },
+  "request-new-draft-ru-1440": {
+    "axe": [],
+    "hscroll": false,
+    "tbl": []
+  },
+  "invoices-ru-390": {
+    "axe": [],
+    "hscroll": false,
+    "tbl": []
+  },
+  "invoices-uz-390": {
+    "axe": [],
+    "hscroll": false,
+    "tbl": []
+  },
+  "requests-uz-390": {
+    "axe": [],
+    "hscroll": false,
+    "tbl": []
+  },
+  "deliveries-ru-390": {
+    "axe": [],
+    "hscroll": false,
+    "tbl": []
+  },
+  "documents-ru-390": {
+    "axe": [],
+    "hscroll": false,
+    "tbl": []
+  },
+  "documents-uz-390": {
+    "axe": [],
+    "hscroll": false,
+    "tbl": []
+  },
+  "documents-en-390": {
+    "axe": [],
+    "hscroll": false,
+    "tbl": []
+  },
+  "documents-search-empty-ru-390": {
+    "axe": [],
+    "hscroll": false,
+    "tbl": []
+  },
+  "documents-search-empty-uz-390": {
+    "axe": [],
+    "hscroll": false,
+    "tbl": []
+  },
+  "catalog-in-stock-ru-390": {
+    "axe": [],
+    "hscroll": false,
+    "tbl": []
+  },
+  "request-new-draft-ru-390": {
+    "axe": [],
+    "hscroll": false,
+    "tbl": []
+  }
+}
