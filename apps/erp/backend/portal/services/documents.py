@@ -14,6 +14,7 @@
 from __future__ import annotations
 
 import datetime
+import logging
 import mimetypes
 import os
 import re
@@ -21,6 +22,7 @@ from dataclasses import dataclass
 from typing import Any, Optional
 
 from django.core.cache import cache
+from django.db import transaction
 from django.db.models import Q
 from django.utils import timezone
 from django.utils.translation import gettext
@@ -31,6 +33,8 @@ from crm.constants import FULFILLMENT_NOTE_ISSUED_STATUSES, DocumentTemplateKind
 from crm.models import Act, Contract, Fulfillment, Invoice, Quote
 from crm.services.documents import quote_pdf_filename
 from crm.services.fulfillment import delivery_note_number
+
+logger = logging.getLogger(__name__)
 
 #: Слот вида источника в идентификаторе документа (`pk * 8 + слот`). Менять нельзя: id уже у клиентов в ссылках.
 SLOT_BY_SOURCE = {"generated": 0, "quote": 1, "contract": 2, "invoice": 3, "act": 4, "waybill": 5}
@@ -307,7 +311,12 @@ def _issue_legacy_waybills(fulfillments) -> None:
 
     for fulfillment in fulfillments:
         if not fulfillment.note_number and not fulfillment.pdf_file:
-            issue_delivery_note(fulfillment)
+            try:
+                with transaction.atomic():
+                    issue_delivery_note(fulfillment)
+            except Exception:  # noqa: BLE001 — fault barrier: сбой нумерации не должен ронять список документов клиента
+                fulfillment.note_number = ""  # номер в памяти не должен пережить откат: клиенту уйдёт легаси-вид
+                logger.exception("Не удалось присвоить номер накладной отгрузки %s", fulfillment.pk)
 
 
 def _issued_queryset(source: str):

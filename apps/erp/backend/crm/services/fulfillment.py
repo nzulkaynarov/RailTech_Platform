@@ -24,6 +24,27 @@ def delivery_note_number(fulfillment) -> str:
     return fulfillment.note_number or f"DN-{fulfillment.id}"
 
 
+def _assign_delivery_note_number(fulfillment, seller_company) -> Tuple[str, bool]:
+    """(номер, присвоен ли он этим вызовом). Строка перечитывается под `select_for_update`: параллельный вызов,
+    у которого в памяти строка без номера, получает уже присвоенный номер и не тратит второй (FIX-55, m2 D-6)."""
+    from django.db import transaction
+
+    from .numbering import next_document_number
+
+    if fulfillment.note_number:
+        return fulfillment.note_number, False
+    with transaction.atomic():
+        current = type(fulfillment).objects.select_for_update().only("note_number").get(pk=fulfillment.pk)
+        if current.note_number:
+            fulfillment.note_number = current.note_number
+            return current.note_number, False
+        # Блокировка счётчика живёт до коммита — контракт `next_document_number`.
+        number = next_document_number("DN", "DN", company=seller_company)
+        fulfillment.note_number = number
+        fulfillment.save(update_fields=["note_number", "updated_at"])
+    return number, True
+
+
 def ensure_delivery_note_number(fulfillment, seller_company) -> str:
     """Присвоить номер из ОБЩЕЙ схемы при первой печати; дальше он неизменен.
 
@@ -31,18 +52,7 @@ def ensure_delivery_note_number(fulfillment, seller_company) -> str:
     собственный номерной диапазон. До этого номер собирался как `DN-{id}` в пяти местах кода,
     мимо схемы, по которой идут все прочие документы (квитанция уже по схеме).
     """
-    from django.db import transaction
-
-    from .numbering import next_document_number
-
-    if fulfillment.note_number:
-        return fulfillment.note_number
-    with transaction.atomic():
-        # Блокировка счётчика живёт до коммита — контракт `next_document_number`.
-        number = next_document_number("DN", "DN", company=seller_company)
-        fulfillment.note_number = number
-        fulfillment.save(update_fields=["note_number", "updated_at"])
-    return number
+    return _assign_delivery_note_number(fulfillment, seller_company)[0]
 
 
 def _delivery_note_supplier(fulfillment):
@@ -64,13 +74,14 @@ def issue_delivery_note(fulfillment) -> str:
     """
     if fulfillment.note_number:
         return fulfillment.note_number
-    number = ensure_delivery_note_number(fulfillment, _delivery_note_supplier(fulfillment))
-    from django.db import transaction
+    number, assigned = _assign_delivery_note_number(fulfillment, _delivery_note_supplier(fulfillment))
+    if assigned:
+        from django.db import transaction
 
-    from ..tasks import render_document_pdf
+        from ..tasks import render_document_pdf
 
-    fulfillment_id = fulfillment.pk
-    transaction.on_commit(lambda: render_document_pdf.delay("delivery_note", fulfillment_id))
+        fulfillment_id = fulfillment.pk
+        transaction.on_commit(lambda: render_document_pdf.delay("delivery_note", fulfillment_id))
     return number
 
 

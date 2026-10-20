@@ -579,3 +579,20 @@ def test_already_numbered_waybill_keeps_its_number(contract_world, portal_client
 
     assert item["number"] == "DN-GUARD-shipped"
     assert ("delivery_note", fulfillment.pk) not in render_calls
+
+
+def test_numbering_failure_does_not_break_the_documents_list(contract_world, portal_client, render_calls, monkeypatch):
+    """Сбой присвоения номера накладной (старая отгрузка) не должен давать 500 всему списку документов клиента."""
+    from crm.models import Fulfillment
+
+    fulfillment = contract_world["deliveries"]["in_transit"]
+    Fulfillment.objects.filter(pk=fulfillment.pk).update(note_number="")
+
+    def broken(_fulfillment):
+        raise RuntimeError("numbering is down")
+
+    monkeypatch.setattr("crm.services.fulfillment.issue_delivery_note", broken)
+
+    items = listed(portal_client)
+
+    assert contract_world["documents"]["quote_sent"] in {i["id"] for i in items}

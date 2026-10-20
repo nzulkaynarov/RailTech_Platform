@@ -14,7 +14,7 @@ import pytest
 
 from crm import services as crm_services
 from crm.constants import FulfillmentStatusCode
-from crm.models import Fulfillment
+from crm.models import Fulfillment, FulfillmentStatus
 from crm.services.fulfillment import delivery_note_number
 from crm.tests.test_document_language import _buyer_with_languages
 from crm.tests.test_fulfillment_service import lookups, world  # noqa: F401
@@ -110,3 +110,25 @@ def test_document_created_event_carries_the_final_number(world, render_calls, mo
     assert len(sent) == 1, "одно событие на выпуск"
     assert sent[0].kind == "waybill"
     assert sent[0].number == obj.note_number != f"DN-{obj.pk}"
+
+
+def test_two_stale_copies_issue_one_number_and_one_render(world, render_calls, django_capture_on_commit_callbacks):
+    """Гонка двух параллельных GET списка портала: у обоих в памяти строка без номера. Номер тратится один раз,
+    второй вызов возвращает уже присвоенный, рендер ставится один раз."""
+    from crm.models import DocumentSequence
+    from crm.services.fulfillment import issue_delivery_note
+
+    created = crm_services.ensure_fulfillment(world["deal"])
+    Fulfillment.objects.filter(pk=created.pk).update(status=FulfillmentStatus.objects.get(code="SHIPPED"))
+    first = Fulfillment.objects.get(pk=created.pk)
+    second = Fulfillment.objects.get(pk=created.pk)
+    assert not first.note_number and not second.note_number
+
+    with django_capture_on_commit_callbacks(execute=True):
+        number_1 = issue_delivery_note(first)
+        number_2 = issue_delivery_note(second)
+
+    assert number_1 == number_2 == Fulfillment.objects.get(pk=created.pk).note_number
+    assert second.note_number == number_1
+    assert sum(DocumentSequence.objects.filter(doc_type="DN").values_list("last_value", flat=True)) == 1
+    assert render_calls == [("delivery_note", created.pk)]
