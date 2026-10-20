@@ -117,13 +117,13 @@ def test_fx_rate_max_age_and_notifications_round_trip(company_a):
         url,
         {
             "fx_rate_max_age_days": 14,
-            "notify_client_on_schedule_shift": False,
+            "notify_client_on_schedule_shift": False,  # снятое поле (FIX-4xb): молча игнорируется
         },
         format="json",
     )
     assert resp.status_code == 200, resp.data
     assert resp.data["fx_rate_max_age_days"] == 14
-    assert resp.data["notify_client_on_schedule_shift"] is False
+    assert "notify_client_on_schedule_shift" not in resp.data
 
     from finance.services.fx import max_rate_age_days
 

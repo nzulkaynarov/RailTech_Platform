@@ -468,12 +468,31 @@ def cancel_contract(
 
     from ..models import Contract
 
-    contract = Contract.objects.select_for_update().get(pk=contract_id)
+    contract = Contract.objects.select_for_update().select_related("deal").filter(pk=contract_id).first()
+    if contract is None:
+        return None, "CONTRACT_NOT_FOUND"
     if contract.status_code == ContractStatusCode.SIGNED:
         return None, "CONTRACT_SIGNED_CANNOT_CANCEL"
+    old_status = contract.status_code
     contract.status = _cstatus(ContractStatusCode.CANCELLED)
-    contract.notes = f"{contract.notes}\nОтменён {actor}: {reason}".strip()
-    contract.save(update_fields=["status", "notes", "updated_at"])
+    # Причина и автор в `contract.notes` не пишутся: поле печатается в PDF договора («Дополнительные
+    # условия») и уходит клиенту. След — в журнале (как у force-варианта).
+    contract.save(update_fields=["status", "updated_at"])
+    reason = reason.strip() if isinstance(reason, str) else ""
+    log_admin_action(
+        entity_type="contract",
+        entity_id=contract_id,
+        action="Договор отменён",
+        detail=f"Договор #{contract_id} ({old_status} → CANCELLED).",
+        event_code="contract.cancelled",
+        event_params={"contract_id": contract_id, "from_status": old_status},
+        actor=actor,
+        reason=reason,
+        before={"status": old_status},
+        after={"status": ContractStatusCode.CANCELLED},
+        deal_id=contract.deal_id,
+        company_id=contract.deal.company_id,
+    )
     return contract, None
 
 
@@ -499,7 +518,9 @@ def force_cancel_contract(
     if not isinstance(reason, str) or not reason.strip():
         return None, "FORCE_REASON_REQUIRED"
     reason = reason.strip()
-    contract = Contract.objects.select_for_update().get(pk=contract_id)
+    contract = Contract.objects.select_for_update().select_related("deal").filter(pk=contract_id).first()
+    if contract is None:
+        return None, "CONTRACT_NOT_FOUND"
     old_status = contract.status_code
     contract.status = _cstatus(ContractStatusCode.CANCELLED)
     # Причина и e-mail администратора в `contract.notes` не пишутся: поле печатается в PDF договора

@@ -23,7 +23,10 @@ const CATEGORIES = [
 	{ id: 4, name: 'Услуги', parent: null, domain_type: 2, sort_order: 20, is_active: true },
 ];
 
-export async function mockSettingsApi(page: Page): Promise<SettingsMockHandle> {
+export async function mockSettingsApi(
+	page: Page,
+	opts: { crmFrontendUrl?: string } = {},
+): Promise<SettingsMockHandle> {
 	const handle: SettingsMockHandle = { requests: [], systemSettingsPatches: [] };
 	const user = {
 		id: 1, username: 'e2e', email: 'e2e@example.test', first_name: 'Тест', last_name: 'Тестов', phone: '',
@@ -50,7 +53,7 @@ export async function mockSettingsApi(page: Page): Promise<SettingsMockHandle> {
 			return json(route, {
 				vat_rate: '12.00', exchange_rate_usd_uzs: '12650.0000', platform_name: 'RailTech ERP',
 				support_email: 'support@example.test', logo_url: 'https://cdn.example.test/logo.png',
-				domain: 'erp.example.test', crm_frontend_url: 'https://crm.example.test',
+				domain: 'erp.example.test', crm_frontend_url: opts.crmFrontendUrl ?? 'https://crm.example.test',
 				maintenance_mode: false, is_two_factor_required: false, updated_at: '2026-10-20T10:00:00Z',
 			});
 		}

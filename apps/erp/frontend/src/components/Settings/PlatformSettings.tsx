@@ -29,8 +29,9 @@ export function PlatformSettings() {
   const supportEmail = data?.support_email ?? '';
   const logoUrl = data?.logo_url ?? '';
   const domain = data?.domain ?? '';
-  // Ссылка ведёт на настройки CRM по адресу, который отдаёт бэкенд; без адреса кнопки нет (не ведём в админку ERP).
-  const crmSettingsUrl = data?.crm_frontend_url ? `${data.crm_frontend_url.replace(/\/+$/, '')}/settings` : null;
+  // Ссылка ведёт на настройки CRM по адресу, который отдаёт бэкенд; без адреса ссылки нет (не ведём в админку ERP) — вместо неё подсказка;
+  // раздел «Компания» CRM адресуется как `?section=company`.
+  const crmSettingsUrl = data?.crm_frontend_url ? `${data.crm_frontend_url.replace(/\/+$/, '')}/settings?section=company` : null;
 
   const handleSave = async () => {
     try {
@@ -62,13 +63,17 @@ export function PlatformSettings() {
                 <p className="text-sm font-medium">{t('settings.platform.managedInCrm')}</p>
                 <p className="text-xs text-muted-foreground">{t('settings.platform.managedInCrmHint')}</p>
               </div>
-              {crmSettingsUrl && (
+              {crmSettingsUrl ? (
                 <Button variant="outline" size="sm" asChild>
                   <a href={crmSettingsUrl} target="_blank" rel="noopener noreferrer">
                     <ExternalLink className="mr-1.5 h-3.5 w-3.5" />
                     {t('settings.platform.goToCrm')}
                   </a>
                 </Button>
+              ) : (
+                <p className="text-xs text-muted-foreground" data-testid="crm-url-missing">
+                  {t('settings.platform.crmUrlMissing')}
+                </p>
               )}
             </div>
 

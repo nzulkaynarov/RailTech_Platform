@@ -77,6 +77,12 @@ describe('CategoriesSettings', () => {
     expect(screen.getByRole('button', { name: /Новая категория/i })).toBeInTheDocument();
   });
 
+  it('счётчик показывает число категорий, а не «{{count}}» (FIX-4xb)', () => {
+    renderWithProviders(<CategoriesSettings />);
+
+    expect(screen.getByRole('status')).toHaveTextContent('Показано категорий: 3');
+  });
+
   it('фильтрует категории по поисковому запросу', () => {
     renderWithProviders(<CategoriesSettings />);
 

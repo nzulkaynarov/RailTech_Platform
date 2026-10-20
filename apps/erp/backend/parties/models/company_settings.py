@@ -125,11 +125,6 @@ class CompanySettings(models.Model):
         verbose_name=_("Максимальный возраст курса валюты (дней)"),
         help_text=_("Если курс ЦБ старше N дней, КП требует обновления курса или договорного курса."),
     )
-    notify_client_on_schedule_shift = models.BooleanField(
-        default=True,
-        verbose_name=_("Уведомлять клиента о сдвигах сроков"),
-        help_text=_("Отправлять клиенту уведомление при изменении ожидаемых дат поставки или исполнения."),
-    )
 
     # ── Document numbering scheme ──────────────────────────────────────────────
     doc_number_prefix = models.CharField(

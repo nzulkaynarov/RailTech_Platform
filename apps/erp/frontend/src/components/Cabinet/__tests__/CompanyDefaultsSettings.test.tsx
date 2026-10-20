@@ -31,7 +31,7 @@ describe('CompanyDefaultsSettings: неработающего флага уве�
       company: 7,
       default_vat_rate: '12.00',
       fx_rate_max_age_days: 7,
-      notify_client_on_schedule_shift: true,
+      notify_client_on_schedule_shift: true, // приходит от старого сервера — не должно уходить обратно
     } as never);
     vi.mocked(accountsApi.updateCompanySettings).mockReset().mockResolvedValue({} as never);
   });
