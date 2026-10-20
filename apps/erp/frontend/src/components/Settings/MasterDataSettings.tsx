@@ -155,7 +155,7 @@ function LookupEditor({
 
       {!isError && !isLoading && (
         <p className="text-xs text-muted-foreground" role="status">
-          {t('settings.masterData.shownCount', { shown: visibleItems.length, total: (items ?? []).length })}
+          {t('settings.masterData.shownCount', { count: visibleItems.length })}
         </p>
       )}
 
