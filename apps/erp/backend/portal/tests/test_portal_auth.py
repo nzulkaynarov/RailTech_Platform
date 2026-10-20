@@ -213,7 +213,7 @@ class TestMagicLinkAuth:
         request_link(anon_portal_client, client_contact.email)
         stored_hash = MagicLinkToken.objects.get(contact=client_contact).token_hash
 
-        resp = anon_portal_client.post(f"/api/portal/v1/auth/magic/{stored_hash}", format="json")
+        resp = exchange(anon_portal_client, stored_hash)
 
         assert resp.status_code == status.HTTP_410_GONE
         assert not PortalSession.objects.exists()
@@ -242,25 +242,25 @@ class TestMagicLinkAuth:
 
     def test_magic_link_expired(self, client_contact, anon_portal_client):
         MagicLinkToken.objects.create(
-            token_hash=hash_token("expired_token_123"),
+            token_hash=hash_token("expired_token_123" + "x" * 8),
             contact=client_contact,
             expires_at=timezone.now() - timedelta(minutes=1),
         )
 
-        resp = anon_portal_client.post("/api/portal/v1/auth/magic/expired_token_123", format="json")
+        resp = exchange(anon_portal_client, "expired_token_123" + "x" * 8)
 
         assert resp.status_code == status.HTTP_410_GONE
         assert resp.data["detail"] == "MAGIC_LINK_EXPIRED"
 
     def test_magic_link_already_used(self, client_contact, anon_portal_client):
         MagicLinkToken.objects.create(
-            token_hash=hash_token("used_token_123"),
+            token_hash=hash_token("used_token_123" + "x" * 8),
             contact=client_contact,
             expires_at=timezone.now() + timedelta(minutes=15),
             used_at=timezone.now() - timedelta(minutes=2),
         )
 
-        resp = anon_portal_client.post("/api/portal/v1/auth/magic/used_token_123", format="json")
+        resp = exchange(anon_portal_client, "used_token_123" + "x" * 8)
 
         assert resp.status_code == status.HTTP_410_GONE
         assert resp.data["detail"] == "MAGIC_LINK_EXPIRED"
@@ -309,7 +309,7 @@ class TestMagicLinkAuth:
             assert session_cookie.value not in own
 
     def test_request_path_token_is_redacted_by_the_log_filter(self):
-        """`django.request` пишет `Gone: /api/portal/v1/auth/magic/<token>` — фильтр console-обработчика прячет токен."""
+        """Токен в пути (старые письма, чужие клиенты) не должен попасть в журнал и после снятия маршрута."""
         assert "redact_portal_token" in settings.LOGGING["handlers"]["console"]["filters"]
         record = logging.LogRecord(
             "django.request",
@@ -354,7 +354,7 @@ class TestMagicLinkAuth:
     def test_login_request_does_not_burn_invitation(self, client_contact, anon_portal_client):
         """FIX-14 (P-10): запрос ссылки входа гасит только прежние ссылки входа, не приглашение из ERP."""
         invite = MagicLinkToken.objects.create(
-            token_hash=hash_token("invite-token"),
+            token_hash=hash_token("invite-token-of-sufficient-length"),
             contact=client_contact,
             purpose=MagicLinkToken.PURPOSE_INVITE,
             expires_at=timezone.now() + timedelta(hours=24),
@@ -368,7 +368,7 @@ class TestMagicLinkAuth:
         first_login.refresh_from_db()
         assert invite.used_at is None
         assert first_login.used_at is not None  # прежняя ссылка входа погашена новой
-        assert anon_portal_client.post("/api/portal/v1/auth/magic/invite-token", format="json").status_code == 200
+        assert exchange(anon_portal_client, "invite-token-of-sufficient-length").status_code == 200
 
     def test_ambiguous_email_sends_nothing_and_logs_no_address(
         self, caplog, client_contact, other_company, anon_portal_client
@@ -426,24 +426,10 @@ class TestMagicLinkAuth:
         assert resp.data["detail"] == "FORBIDDEN"
         assert not PortalSession.objects.exists()
 
-    def test_archived_company_is_refused_on_the_deprecated_get_too(
-        self, client_contact, client_company, anon_portal_client
-    ):
-        request_link(anon_portal_client, client_contact.email)
-        raw = last_raw_token()
-        client_company.is_active = False
-        client_company.save(update_fields=["is_active"])
-
-        resp = anon_portal_client.get(f"{MAGIC_EXCHANGE_URL}/{raw}")
-
-        assert resp.status_code == status.HTTP_403_FORBIDDEN
-        assert resp.json() == {"detail": "FORBIDDEN"}
-        assert not PortalSession.objects.exists()
-
 
 @pytest.mark.django_db
 class TestMagicLinkExchange:
-    """`POST /auth/magic {token}` по контракту 0.2.0 и устаревший `GET /auth/magic/{token}` (до FIX-24): одна логика."""
+    """`POST /auth/magic {token}` по контракту 0.3.0; устаревший `GET /auth/magic/{token}` снят (FIX-25)."""
 
     def login_token(self, client, contact):
         request_link(client, contact.email)
@@ -501,31 +487,14 @@ class TestMagicLinkExchange:
 
         assert exchange(anon_portal_client, raw).status_code == status.HTTP_200_OK
 
-    def test_get_and_post_do_the_same(self, client_contact, anon_portal_client):
-        by_post = exchange(anon_portal_client, self.login_token(anon_portal_client, client_contact))
-        by_get = anon_portal_client.get(f"{MAGIC_EXCHANGE_URL}/{self.login_token(anon_portal_client, client_contact)}")
-
-        assert by_post.status_code == by_get.status_code == status.HTTP_200_OK
-        for key in ("company", "can_act", "auth_method"):
-            assert by_post.json()[key] == by_get.json()[key]
-        assert by_post.json()["contact"]["id"] == by_get.json()["contact"]["id"]
-        assert PortalSession.objects.filter(contact=client_contact).count() == 2
-
-    @pytest.mark.parametrize("how", ["post", "get"])
-    def test_unknown_token_is_410(self, anon_portal_client, how):
-        token = "unknown-token-of-sufficient-length"
-        resp = (
-            exchange(anon_portal_client, token)
-            if how == "post"
-            else anon_portal_client.get(f"{MAGIC_EXCHANGE_URL}/{token}")
-        )
+    def test_unknown_token_is_410(self, anon_portal_client):
+        resp = exchange(anon_portal_client, "unknown-token-of-sufficient-length")
 
         assert resp.status_code == status.HTTP_410_GONE
         assert resp.json() == {"detail": "MAGIC_LINK_EXPIRED"}
         assert not PortalSession.objects.exists()
 
-    @pytest.mark.parametrize("how", ["post", "get"])
-    def test_expired_and_used_tokens_are_410(self, client_contact, anon_portal_client, how):
+    def test_expired_and_used_tokens_are_410(self, client_contact, anon_portal_client):
         for raw, kwargs in (
             ("expired-token-of-sufficient-length", {"expires_at": timezone.now() - timedelta(minutes=1)}),
             (
@@ -534,25 +503,16 @@ class TestMagicLinkExchange:
             ),
         ):
             MagicLinkToken.objects.create(token_hash=hash_token(raw), contact=client_contact, **kwargs)
-            resp = (
-                exchange(anon_portal_client, raw)
-                if how == "post"
-                else anon_portal_client.get(f"{MAGIC_EXCHANGE_URL}/{raw}")
-            )
+            resp = exchange(anon_portal_client, raw)
             assert resp.status_code == status.HTTP_410_GONE
             assert resp.json() == {"detail": "MAGIC_LINK_EXPIRED"}
 
-    @pytest.mark.parametrize("how", ["post", "get"])
-    def test_archived_company_is_403_forbidden(self, client_contact, client_company, anon_portal_client, how):
+    def test_archived_company_is_403_forbidden(self, client_contact, client_company, anon_portal_client):
         raw = self.invite_token(client_contact)
         client_company.is_active = False
         client_company.save(update_fields=["is_active"])
 
-        resp = (
-            exchange(anon_portal_client, raw)
-            if how == "post"
-            else anon_portal_client.get(f"{MAGIC_EXCHANGE_URL}/{raw}")
-        )
+        resp = exchange(anon_portal_client, raw)
 
         assert resp.status_code == status.HTTP_403_FORBIDDEN
         assert resp.json() == {"detail": "FORBIDDEN"}
@@ -574,8 +534,29 @@ class TestMagicLinkExchange:
         assert exchange(anon_portal_client, "x" * 16).status_code == status.HTTP_410_GONE  # допустимая длина
         assert exchange(anon_portal_client, "x" * 512).status_code == status.HTTP_410_GONE
 
-    def test_token_in_the_path_is_not_needed_and_post_without_token_is_not_the_legacy_route(self, anon_portal_client):
-        # `/auth/magic` — обмен по телу, `/auth/magic/{token}` — устаревший маршрут: это разные представления
+    def test_extra_fields_are_refused(self, client_contact, anon_portal_client):
+        """Контракт: `additionalProperties: false` (хвост ревью FIX-20) — лишнее поле не принимается молча."""
+        raw = self.login_token(anon_portal_client, client_contact)
+
+        resp = anon_portal_client.post(MAGIC_EXCHANGE_URL, {"token": raw, "next": "/x"}, format="json")
+
+        assert resp.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+        assert resp.json() == {"detail": "VALIDATION_ERROR"}
+        assert not PortalSession.objects.exists()
+        assert exchange(anon_portal_client, raw).status_code == status.HTTP_200_OK  # токен не сожжён отказом
+
+    @pytest.mark.parametrize("method", ["get", "post"])
+    def test_legacy_path_route_is_gone(self, anon_portal_client, client_contact, method):
+        """`GET /auth/magic/{token}` снят в 0.3.0 (FIX-25): токен в пути — 404, сессия не выдаётся, токен не гасится."""
+        raw = self.login_token(anon_portal_client, client_contact)
+
+        resp = getattr(anon_portal_client, method)(f"{MAGIC_EXCHANGE_URL}/{raw}")
+
+        assert resp.status_code == status.HTTP_404_NOT_FOUND
+        assert not PortalSession.objects.exists()
+        assert exchange(anon_portal_client, raw).status_code == status.HTTP_200_OK
+
+    def test_get_on_the_exchange_url_is_not_an_endpoint(self, anon_portal_client):
         assert anon_portal_client.get(MAGIC_EXCHANGE_URL).status_code == status.HTTP_405_METHOD_NOT_ALLOWED
         assert anon_portal_client.get(MAGIC_EXCHANGE_URL).json() == {"detail": "NOT_FOUND"}
 
@@ -639,13 +620,13 @@ class TestAccessLog:
             access.removeHandler(handler)
 
         journal = stream.getvalue()
-        assert "GET /api/portal/v1/auth/magic/[REDACTED] 410" in journal
+        assert "GET /api/portal/v1/auth/magic/[REDACTED] 404" in journal
         assert "GET /api/portal/v1/me 401" in journal
         assert "sEcReT-tok_1" not in journal
         assert "next=" not in journal  # строка запроса в журнал не пишется
 
     def test_error_responses_built_from_exceptions_are_logged(self, anon_portal_client):
-        """FIX-11b: ответы, рождённые исключением (410 `PortalGone` по magic-link, 404 Django), тоже пишут строку;
+        """FIX-11b: ответы, рождённые исключением (404 Django), тоже пишут строку;
         токен в строке — [REDACTED]."""
         stream, handler = self._console_stream()
         access = logging.getLogger("core.access")
@@ -657,9 +638,9 @@ class TestAccessLog:
         finally:
             access.removeHandler(handler)
 
-        assert (gone.status_code, missing.status_code) == (410, 404)
+        assert (gone.status_code, missing.status_code) == (404, 404)
         lines = stream.getvalue().splitlines()
-        assert any(line.startswith("GET /api/portal/v1/auth/magic/[REDACTED] 410 ") for line in lines), lines
+        assert any(line.startswith("GET /api/portal/v1/auth/magic/[REDACTED] 404 ") for line in lines), lines
         assert any(line.startswith("GET /api/portal/v1/no-such-endpoint/Fix11b-tok_2 404 ") for line in lines), lines
         assert "Fix11b-tok_2" not in "".join(line for line in lines if "/auth/magic/" in line)
 

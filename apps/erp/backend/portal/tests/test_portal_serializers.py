@@ -1,4 +1,4 @@
-"""Форма каждого сериализатора портала (FIX-21): значения полей и схема контракта 0.2.0.
+"""Форма каждого сериализатора портала (FIX-21): значения полей и схема контракта 0.3.0.
 
 Сторож (`test_contract_guard.py`) проверяет ответы эндпоинтов целиком; здесь — по сериализатору: что именно
 кладётся в каждое поле, откуда оно берётся и что внутренние поля не просачиваются. Каждый ответ дополнительно
@@ -84,7 +84,7 @@ def test_new_request_has_no_deal_yet_and_carries_lines_and_attachments(contract_
     data = ClientRequestSerializer(deal).data
     assert data["number"] == f"Z-{deal.pk}"
     assert data["status"] == "new"
-    assert data["deal"] is None and data["deal_id"] is None
+    assert data["deal"] is None and "deal_id" not in data
     assert data["source"] == "cabinet"
     assert data["lines"] == [
         {"text": "Труба 89х4", "quantity": "150", "unit": "м"},
@@ -103,7 +103,7 @@ def test_request_after_work_started_refers_to_its_deal(contract_world, key, stat
     data = ClientRequestSerializer(deal).data
     assert data["status"] == status
     assert data["deal"] == {"id": deal.pk, "number": f"D-{deal.pk}", "title": deal.title or None}
-    assert data["deal_id"] == deal.pk
+    assert "deal_id" not in data
     assert data["source"] == source  # по журналу создания: сотрудник ERP → erp, нет записи (передача из CRM) → crm
     assert_matches_contract(data, "ClientRequest")
 
@@ -144,7 +144,7 @@ def test_request_list_does_not_query_per_deal(contract_world, django_assert_max_
 def test_quote_list_item_fields(contract_world):
     quote = contract_world["quotes"]["sent"]
     data = QuoteListItemSerializer(quote).data
-    assert set(data) == {"id", "deal", "deal_id", "number", "version", "status", "total", "valid_until", "sent_at"}
+    assert set(data) == {"id", "deal", "number", "version", "status", "total", "valid_until", "sent_at"}
     assert data["deal"]["number"] == f"D-{quote.deal_id}"
     assert data["total"] == {"amount": str(quote.total_incl_vat), "currency": "UZS"}
     assert_matches_contract(data, "QuoteListItem")
@@ -174,6 +174,34 @@ def test_quote_detail_lines_keep_sections_and_notes_and_skip_optional(contract_w
     assert first["unit_price"]["currency"] == "UZS" and first["total"]["currency"] == "UZS"
     assert first["promised_date"] is None  # срок обещания клиенту не выдумывается
     assert_matches_contract(data, "Quote")
+
+
+@pytest.mark.parametrize("vat_rate", [Decimal("12"), Decimal("0")])
+def test_quote_subtotal_and_vat_equal_the_pdf_projection(contract_world, vat_rate):
+    """FIX-25 (Q-FIX21-2): `subtotal` и `vat` — те же суммы, что в итогах PDF (строки без НДС, `subtotal + vat = total`)."""
+    from crm.services.documents.blank import quote_document_extras
+
+    quote = contract_world["quotes"]["sent"]
+    Quote.objects.filter(pk=quote.pk).update(vat_rate=vat_rate)
+    quote.refresh_from_db()
+    quote.recalculate_totals()
+    quote = Quote.objects.get(pk=quote.pk)
+
+    data = QuoteSerializer(quote).data
+    pdf = quote_document_extras(quote, None)["totals"]
+
+    assert Decimal(data["subtotal"]["amount"]) == pdf["subtotal"] == quote.subtotal_excl_vat + quote.charges_total
+    assert Decimal(data["vat"]["amount"]) == pdf["vat_amount"] == quote.vat_amount
+    assert Decimal(data["total"]["amount"]) == pdf["total"]
+    assert Decimal(data["subtotal"]["amount"]) + Decimal(data["vat"]["amount"]) == Decimal(data["total"]["amount"])
+    assert data["subtotal"]["currency"] == data["vat"]["currency"] == "UZS"
+    assert (Decimal(data["vat"]["amount"]) == 0) == (vat_rate == 0)
+    assert_matches_contract(data, "Quote")
+
+
+def test_quote_list_item_has_no_subtotal_and_vat(contract_world):
+    data = QuoteListItemSerializer(contract_world["quotes"]["sent"]).data
+    assert "subtotal" not in data and "vat" not in data
 
 
 def test_quote_detail_has_no_internal_fields(contract_world):
@@ -265,7 +293,6 @@ def test_contract_fields_and_signature_dates(contract_world):
     assert set(data) == {
         "id",
         "deal",
-        "deal_id",
         "number",
         "status",
         "signed_by_client_at",
@@ -322,7 +349,7 @@ def test_invoice_status_mapping_and_form(contract_world, key, expected):
     invoice = contract_world["invoices"][key]
     data = InvoiceSerializer(invoice).data
     assert data["status"] == expected
-    assert set(data) == {"id", "deal", "deal_id", "number", "status", "total", "paid", "due_date", "document_id"}
+    assert set(data) == {"id", "deal", "number", "status", "total", "paid", "due_date", "document_id"}
     assert "paid_amount" not in data
     assert data["paid"]["currency"] == "UZS"
     assert_matches_contract(data, "Invoice")
@@ -355,7 +382,6 @@ def test_act_status_mapping_and_form(contract_world, key, expected):
     assert set(data) == {
         "id",
         "deal",
-        "deal_id",
         "number",
         "status",
         "issued_at",
@@ -498,15 +524,15 @@ def test_document_kind_and_form(contract_world, key, kind):
     document = _portal_document(contract_world, key)
     data = PortalDocumentSerializer(document).data
     assert data["kind"] == kind
-    assert set(data) == {"id", "deal", "deal_id", "kind", "number", "date", "title", "file_name", "size_bytes"}
-    assert data["deal"]["id"] == document.deal_id and data["deal_id"] == document.deal_id
+    assert set(data) == {"id", "deal", "kind", "number", "date", "title", "file_name", "size_bytes"}
+    assert data["deal"]["id"] == document.deal_id
     assert data["file_name"].endswith(".pdf") and data["size_bytes"] > 0
     assert_matches_contract(data, "Document")
 
 
 def test_document_without_deal_has_null_deal(contract_world):
     data = PortalDocumentSerializer(_portal_document(contract_world, "generated_no_deal")).data
-    assert data["deal"] is None and data["deal_id"] is None and data["size_bytes"] == 0
+    assert data["deal"] is None and "deal_id" not in data and data["size_bytes"] == 0
     assert_matches_contract(data, "Document")
 
 

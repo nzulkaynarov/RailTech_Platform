@@ -44,26 +44,6 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
-  "/auth/magic/{token}": {
-    parameters: {
-      query?: never;
-      header?: never;
-      path?: never;
-      cookie?: never;
-    };
-    /**
-     * Обмен magic-link на сессию (устарело: токен в пути попадает в журналы; см. `POST /auth/magic`)
-     * @deprecated
-     */
-    get: operations["exchangeMagicLink"];
-    put?: never;
-    post?: never;
-    delete?: never;
-    options?: never;
-    head?: never;
-    patch?: never;
-    trace?: never;
-  };
   "/auth/magic": {
     parameters: {
       query?: never;
@@ -608,6 +588,7 @@ export interface components {
       | "ACT_FINALIZED"
       | "DELIVERY_LINE_NOT_ACCEPTABLE"
       | "DOCUMENT_PENDING"
+      | "DELIVERY_FAILED"
       | "CONFLICT";
     Reason: {
       reason: string;
@@ -664,7 +645,8 @@ export interface components {
     };
     ClientRequestCreate: {
       summary: string;
-      lines: components["schemas"]["RequestLineIn"][];
+      /** @description Нет поля или пустой список — запрос словами, без строк (Q-FIX23-4) */
+      lines?: components["schemas"]["RequestLineIn"][];
       attachments?: components["schemas"]["AttachmentRef"][];
     };
     ClientRequest: {
@@ -677,12 +659,6 @@ export interface components {
       source?: "crm" | "cabinet" | "erp";
       /** @description Сделка, в которую вырос запрос (Q-16); `null`, пока запрос не стал сделкой */
       deal?: components["schemas"]["DealRef"] | null;
-      /**
-       * Format: int64
-       * @deprecated
-       * @description Устарело: см. `deal.id`. Снимается после перехода Cabinet (FIX-24)
-       */
-      deal_id?: number | null;
       /** Format: date-time */
       created_at: string;
       lines?: components["schemas"]["RequestLineIn"][];
@@ -694,12 +670,6 @@ export interface components {
       /** Format: int64 */
       id: number;
       deal: components["schemas"]["DealRef"];
-      /**
-       * Format: int64
-       * @deprecated
-       * @description Устарело: см. `deal.id`
-       */
-      deal_id?: number;
       number: string;
       version: number;
       status: components["schemas"]["QuoteStatus"];
@@ -709,7 +679,7 @@ export interface components {
       /** Format: date-time */
       sent_at: string;
     };
-    /** @description Строка КП для клиента — цена продажи без себестоимости и наценки */
+    /** @description Строка КП для клиента — цена продажи без себестоимости и наценки; `unit_price` и `total` без НДС (Q-FIX21-2) */
     QuoteLine: {
       line_no: number;
       /** @enum {string} */
@@ -724,6 +694,10 @@ export interface components {
       promised_date?: string | null;
     };
     Quote: components["schemas"]["QuoteListItem"] & {
+      /** @description Итого без НДС — сумма `total` строк (Q-FIX21-2) */
+      subtotal: components["schemas"]["Money"];
+      /** @description НДС; `subtotal + vat = total`, как в PDF КП */
+      vat: components["schemas"]["Money"];
       lines: components["schemas"]["QuoteLine"][];
       /** Format: uri */
       public_url: string;
@@ -737,12 +711,6 @@ export interface components {
       /** Format: int64 */
       id: number;
       deal: components["schemas"]["DealRef"];
-      /**
-       * Format: int64
-       * @deprecated
-       * @description Устарело: см. `deal.id`
-       */
-      deal_id: number;
       number: string;
       status: components["schemas"]["ContractStatus"];
       /** Format: date-time */
@@ -758,12 +726,6 @@ export interface components {
       /** Format: int64 */
       id: number;
       deal: components["schemas"]["DealRef"];
-      /**
-       * Format: int64
-       * @deprecated
-       * @description Устарело: см. `deal.id`
-       */
-      deal_id: number;
       number: string;
       status: components["schemas"]["InvoiceStatus"];
       total: components["schemas"]["Money"];
@@ -778,13 +740,7 @@ export interface components {
     Act: {
       /** Format: int64 */
       id: number;
-      deal?: components["schemas"]["DealRef"];
-      /**
-       * Format: int64
-       * @deprecated
-       * @description Устарело: см. `deal.id`
-       */
-      deal_id: number;
+      deal: components["schemas"]["DealRef"];
       number: string;
       status: components["schemas"]["ActStatus"];
       /** Format: date-time */
@@ -818,12 +774,6 @@ export interface components {
       /** Format: int64 */
       id: number;
       deal: components["schemas"]["DealRef"];
-      /**
-       * Format: int64
-       * @deprecated
-       * @description Устарело: см. `deal.id`
-       */
-      deal_id: number;
       line_no: number;
       title: string;
       quantity?: string | null;
@@ -856,12 +806,6 @@ export interface components {
       /** Format: int64 */
       id: number;
       deal?: components["schemas"]["DealRef"] | null;
-      /**
-       * Format: int64
-       * @deprecated
-       * @description Устарело: см. `deal.id`
-       */
-      deal_id?: number | null;
       kind: components["schemas"]["DocumentKind"];
       number: string;
       /** Format: date */
@@ -1131,39 +1075,6 @@ export interface operations {
       400: components["responses"]["IdempotencyKeyRequired"];
       415: components["responses"]["UnsupportedMediaType"];
       422: components["responses"]["ValidationError"];
-      429: components["responses"]["TooManyRequests"];
-    };
-  };
-  exchangeMagicLink: {
-    parameters: {
-      query?: never;
-      header?: never;
-      path: {
-        token: string;
-      };
-      cookie?: never;
-    };
-    requestBody?: never;
-    responses: {
-      /** @description Сессия выдана */
-      200: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["Me"];
-        };
-      };
-      403: components["responses"]["CompanyArchived"];
-      /** @description Ссылка просрочена или уже использована (`MAGIC_LINK_EXPIRED`) */
-      410: {
-        headers: {
-          [name: string]: unknown;
-        };
-        content: {
-          "application/json": components["schemas"]["Error"];
-        };
-      };
       429: components["responses"]["TooManyRequests"];
     };
   };
@@ -1988,6 +1899,15 @@ export interface operations {
       401: components["responses"]["Unauthorized"];
       403: components["responses"]["Forbidden"];
       415: components["responses"]["UnsupportedMediaType"];
+      /** @description Файл больше 10 МБ (`FILE_TOO_LARGE`) */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Error"];
+        };
+      };
       429: components["responses"]["TooManyRequests"];
     };
   };
@@ -2172,6 +2092,15 @@ export interface operations {
       415: components["responses"]["UnsupportedMediaType"];
       422: components["responses"]["ValidationError"];
       429: components["responses"]["TooManyRequests"];
+      /** @description Письмо не ушло (`DELIVERY_FAILED`): коллега в команду не добавлен, повторить можно сразу */
+      503: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Error"];
+        };
+      };
     };
   };
 }

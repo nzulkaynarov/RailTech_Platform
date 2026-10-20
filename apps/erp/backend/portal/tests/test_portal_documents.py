@@ -152,7 +152,7 @@ def test_item_fields(contract_world, portal_client):
     assert item["kind"] == "contract" and item["number"] == contract.number
     assert item["title"] == f"Договор {contract.number}"
     assert item["deal"] == {"id": contract.deal_id, "number": f"D-{contract.deal_id}", "title": contract.deal.title}
-    assert item["deal_id"] == contract.deal_id
+    assert "deal_id" not in item
     assert item["file_name"] == "CT-GUARD-signed.pdf"
     assert item["size_bytes"] == len(b"%PDF-1.4 fake")
 
@@ -164,7 +164,7 @@ def test_size_is_zero_until_pdf_is_rendered(contract_world, portal_client):
 
 def test_document_without_deal_has_null_deal(contract_world, portal_client):
     item = next(i for i in listed(portal_client) if i["id"] == contract_world["documents"]["generated_no_deal"])
-    assert item["deal"] is None and item["deal_id"] is None and item["kind"] == "act"
+    assert item["deal"] is None and "deal_id" not in item and item["kind"] == "act"
 
 
 def test_titles_follow_contact_language(contract_world, portal_client, client_contact):
@@ -205,14 +205,14 @@ def test_unknown_kind_is_422(contract_world, portal_client):
 def test_deal_id_filter(contract_world, portal_client):
     main = contract_world["main"]
     items = listed(portal_client, deal_id=main.pk)
-    assert items and {item["deal_id"] for item in items} == {main.pk}
+    assert items and {item["deal"]["id"] for item in items} == {main.pk}
     assert contract_world["documents"]["contract_signed"] in {i["id"] for i in items}
     assert contract_world["documents"]["quote_delivery_shipped"] not in {i["id"] for i in items}
 
 
 def test_deal_id_and_kind_combine(contract_world, portal_client):
     items = listed(portal_client, deal_id=contract_world["main"].pk, kind="invoice")
-    assert items and {(i["kind"], i["deal_id"]) for i in items} == {("invoice", contract_world["main"].pk)}
+    assert items and {(i["kind"], i["deal"]["id"]) for i in items} == {("invoice", contract_world["main"].pk)}
 
 
 def test_deal_id_of_another_company_is_an_empty_list_not_a_leak(contract_world, portal_client):

@@ -2,7 +2,7 @@ import { useId, useState, type FormEvent } from 'react';
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { BookOpen, FilePlus2, Inbox, Loader2, Lock, Paperclip, Plus, SearchX, Trash2, Upload } from 'lucide-react';
-import { toast } from 'sonner';
+import { toast } from '@/lib/toast';
 
 import { apiErrorKey } from '@/api/errors';
 import type { AttachmentRef, ClientRequest, RequestLineIn } from '@/api/portal';

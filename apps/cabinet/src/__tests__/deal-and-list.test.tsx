@@ -79,7 +79,7 @@ describe('Адаптивный список на десктопе', () => {
     expect(rows).toHaveLength(6);
 
     // Клик по ячейке суммы — открывает КП; клик по ссылке «Сделка» — ведёт в сделку, а не в КП.
-    await user.click(within(rows[1]).getByText('48 600 000 UZS'));
+    await user.click(within(rows[1]).getByText('54 432 000 UZS'));
     expect(await heading('КП KP-2026-0042')).toBeInTheDocument();
     await router.navigate('/quotes');
     const again = await screen.findByRole('table', { name: 'Коммерческие предложения' });

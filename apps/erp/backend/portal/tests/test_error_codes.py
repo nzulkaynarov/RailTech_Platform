@@ -14,7 +14,13 @@ from pathlib import Path
 import pytest
 from django.http import Http404
 from portal.error_codes import ERROR_CODES, FALLBACK_BY_STATUS
-from portal.exceptions import PortalBadRequest, PortalConflict, PortalGone, portal_exception_handler
+from portal.exceptions import (
+    PortalBadRequest,
+    PortalConflict,
+    PortalDeliveryFailed,
+    PortalGone,
+    portal_exception_handler,
+)
 from portal.tests.contract_support import error_codes
 from rest_framework import exceptions
 
@@ -27,6 +33,7 @@ CODE_CALLS = {
     "PortalConflict",
     "PortalGone",
     "PortalTooManyRequests",
+    "PortalDeliveryFailed",
     "PortalValidationError",
     "PortalBadRequest",
     "PermissionDenied",
@@ -136,6 +143,7 @@ def test_middleware_codes_are_known():
         (PortalConflict("QUOTE_EXPIRED"), 409, "QUOTE_EXPIRED"),
         (PortalConflict(), 409, "CONFLICT"),
         (PortalGone(), 410, "MAGIC_LINK_EXPIRED"),
+        (PortalDeliveryFailed(), 503, "DELIVERY_FAILED"),
         (PortalBadRequest("FILE_REQUIRED"), 400, "FILE_REQUIRED"),
     ],
 )

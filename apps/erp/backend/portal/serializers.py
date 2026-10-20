@@ -99,6 +99,9 @@ class MagicLinkTokenSerializer(serializers.Serializer):
     token = serializers.CharField(min_length=16, max_length=512, trim_whitespace=False)
 
     def to_internal_value(self, data):
+        # Контракт: `additionalProperties: false` — лишнее поле не принимается молча.
+        if isinstance(data, dict) and set(data) - set(self.fields):
+            raise serializers.ValidationError({"non_field_errors": "VALIDATION_ERROR"})
         # DRF молча превращает число в строку; контракт требует именно строку.
         if isinstance(data, dict) and "token" in data and not isinstance(data["token"], str):
             raise serializers.ValidationError({"token": "NOT_A_STRING"})
@@ -209,7 +212,6 @@ class ClientRequestSerializer(serializers.Serializer):
     summary = serializers.SerializerMethodField()
     source = serializers.SerializerMethodField()
     deal = serializers.SerializerMethodField()
-    deal_id = serializers.SerializerMethodField()
     created_at = serializers.DateTimeField(read_only=True)
     lines = RequestLineSerializer(source="portal_lines", many=True, read_only=True)
     attachments = serializers.SerializerMethodField()
@@ -228,24 +230,20 @@ class ClientRequestSerializer(serializers.Serializer):
         return projections.request_source(deal)
 
     def _became_deal(self, deal) -> bool:
-        # Запрос, по которому ещё ничего не произошло, — не сделка (Q-16): `deal` и `deal_id` пусты.
+        # Запрос, по которому ещё ничего не произошло, — не сделка (Q-16): `deal` пуст.
         return projections.request_status(deal) != "new"
 
     def get_deal(self, deal) -> Optional[dict]:
         return DealRefSerializer(deal).data if self._became_deal(deal) else None
-
-    def get_deal_id(self, deal) -> Optional[int]:
-        return deal.pk if self._became_deal(deal) else None
 
     def get_attachments(self, deal) -> list:
         return [{"upload_id": str(upload.upload_id), "name": upload.name} for upload in deal.portal_uploads.all()]
 
 
 class DealLinkedSerializer(serializers.Serializer):
-    """Общее: `deal: DealRef` + устаревший `deal_id` рядом (снимается в FIX-24)."""
+    """Общее: `deal: DealRef` (устаревший `deal_id` снят в контракте 0.3.0, FIX-25)."""
 
     deal = DealRefSerializer(read_only=True)
-    deal_id = serializers.IntegerField(read_only=True)
 
 
 class QuoteListItemSerializer(DealLinkedSerializer):
@@ -287,6 +285,14 @@ class QuoteSerializer(QuoteListItemSerializer):
     public_url = serializers.SerializerMethodField()
     pdf_document_id = serializers.SerializerMethodField()
     rejected_reason = serializers.SerializerMethodField()
+    subtotal = serializers.SerializerMethodField()
+    vat = serializers.SerializerMethodField()
+
+    def get_subtotal(self, quote) -> dict:
+        return projections.quote_subtotal(quote)
+
+    def get_vat(self, quote) -> dict:
+        return projections.quote_vat(quote)
 
     def get_lines(self, quote) -> list:
         return QuoteLineSerializer(projections.quote_lines(quote), many=True).data
@@ -356,12 +362,16 @@ class InvoiceSerializer(DealLinkedSerializer):
     due_date = serializers.SerializerMethodField()
     document_id = serializers.SerializerMethodField()
 
+    def _days_by_seller(self) -> dict:
+        # Общий на запрос кэш срока оплаты по продавцу: список счетов не ходит за настройками на каждый счёт.
+        return self.context.setdefault("invoice_due_days_by_seller", {})
+
     def get_status(self, invoice) -> str:
-        return projections.invoice_status(invoice)
+        return projections.invoice_status(invoice, self._days_by_seller())
 
     def get_due_date(self, invoice) -> str:
         # Срок обязателен по контракту: из счёта либо по правилу выставления; счёт без срока клиенту не показывают.
-        return projections.invoice_due_date(invoice).isoformat()
+        return projections.invoice_due_date(invoice, self._days_by_seller()).isoformat()
 
     def get_total(self, invoice) -> dict:
         return projections.money(invoice.total_incl_vat, projections.currency_code(invoice.currency))
@@ -431,7 +441,6 @@ class PortalDocumentSerializer(serializers.Serializer):
 
     id = serializers.IntegerField(read_only=True)
     deal = serializers.SerializerMethodField()
-    deal_id = serializers.IntegerField(read_only=True, allow_null=True)
     kind = serializers.CharField(read_only=True)
     number = serializers.CharField(read_only=True)
     date = serializers.DateField(read_only=True)

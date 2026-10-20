@@ -385,7 +385,13 @@ def deal_execution_is_complete(deal) -> bool:
     """
     from crm.constants import ActStatusCode, FulfillmentStatusCode, InvoiceStatusCode
 
-    invoices = list(deal.invoices.all())
+    # Аннулированный и черновой счёт — не неоплаченный долг: как и аннулированный акт ниже, он не держит сделку «не завершённой»
+    # (то же правило у стадии `paid` в integration/services/stages.py). Но хотя бы один оплаченный счёт обязан быть.
+    invoices = [
+        inv
+        for inv in deal.invoices.all()
+        if inv.status_code not in (InvoiceStatusCode.CANCELLED, InvoiceStatusCode.DRAFT)
+    ]
     if not invoices or any(inv.status_code != InvoiceStatusCode.PAID for inv in invoices):
         return False
     # Аннулированный акт — не незакрытый документ, а отменённый: он не должен вечно держать

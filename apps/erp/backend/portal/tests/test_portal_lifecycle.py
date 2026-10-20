@@ -96,7 +96,7 @@ class TestPortalEndToEndLifecycle:
         assert req_resp.status_code == status.HTTP_201_CREATED
         req_data = req_resp.data
         deal_id = req_data["id"]  # запрос и сделка — одна запись; `deal` пуст, пока по запросу ничего не произошло
-        assert req_data["status"] == "new" and req_data["deal"] is None and req_data["deal_id"] is None
+        assert req_data["status"] == "new" and req_data["deal"] is None and "deal_id" not in req_data
         assert req_data["source"] == "cabinet"
         assert req_data["summary"] == "Поставка стальных труб 89х4"
 

@@ -6,7 +6,7 @@ preview — that is what keeps the three surfaces from drifting.
 
 import re
 
-from .totals import document_totals
+from .totals import quote_document_totals
 
 
 def _tidy_empty_substitutions(text: str) -> str:
@@ -147,11 +147,5 @@ def quote_document_extras(quote, seller_company) -> dict:
         valid_until=quote.valid_until.strftime("%d.%m.%Y") if quote.valid_until else "",
         other=quote.notes or "",
     )
-    totals = document_totals(
-        ccy=quote.quote_currency.code if quote.quote_currency else "UZS",
-        vat_rate=quote.vat_rate,
-        subtotal=quote.total_excl_vat,
-        vat_amount=quote.vat_amount,
-        total=quote.total_incl_vat,
-    )
+    totals = quote_document_totals(quote)
     return {"cover_text": cover_text, "quote_terms": quote_terms, "totals": totals}
