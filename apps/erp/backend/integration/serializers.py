@@ -6,8 +6,11 @@
 from __future__ import annotations
 
 from rest_framework import serializers
+from sales.models import DeliveryLineStatus
 
 from accounts.constants import Permission
+
+from .services import stages
 
 
 class MoneySerializer(serializers.Serializer):
@@ -95,22 +98,8 @@ class DealListItemSerializer(serializers.Serializer):
     erp_deal_id = serializers.IntegerField()
     number = serializers.CharField()
     title = serializers.CharField()
-    stage = serializers.ChoiceField(
-        choices=[
-            "request",
-            "quoting",
-            "quote_sent",
-            "accepted",
-            "contract",
-            "invoiced",
-            "paid",
-            "fulfilment",
-            "closing",
-            "won",
-            "lost",
-        ]
-    )
-    amount = serializers.CharField()
+    stage = serializers.ChoiceField(choices=list(stages.DEAL_STAGES))
+    amount = serializers.CharField(allow_null=True)
     currency = serializers.CharField()
     next_step = serializers.CharField(allow_null=True, required=False)
     updated_at = serializers.DateTimeField()
@@ -147,11 +136,13 @@ class DeliveryLineSerializer(serializers.Serializer):
     erp_deal_id = serializers.IntegerField()
     line_no = serializers.IntegerField(min_value=1)
     title = serializers.CharField()
-    quantity = serializers.CharField(required=False, default="")
-    unit = serializers.CharField(required=False, default="")
-    status = serializers.ChoiceField(choices=["assembling", "in_transit", "ready_to_ship", "shipped", "delivered"])
+    quantity = serializers.CharField(allow_null=True, required=False)
+    unit = serializers.CharField(allow_null=True, required=False)
+    status = serializers.ChoiceField(choices=[choice.value for choice in DeliveryLineStatus])
     eta = serializers.DateField(allow_null=True, required=False)
     tracking = serializers.CharField(allow_null=True, required=False)
+    accepted_at = serializers.DateTimeField(allow_null=True, required=False)
+    remark = serializers.CharField(allow_null=True, required=False)
 
 
 class ActSummarySerializer(serializers.Serializer):

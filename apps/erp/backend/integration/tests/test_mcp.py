@@ -37,10 +37,11 @@ from parties.models import Company, CompanyType, Contact
 from portal.models import PortalRequestLine
 from rest_framework import status
 from rest_framework.test import APIClient
-from sales.models import Fulfillment, FulfillmentStatus, Quote, QuoteStatus
+from sales.models import Fulfillment, FulfillmentStatus, Quote, QuoteItem, QuoteStatus
 
 from catalog.models import Category, Product, ProductStatus
 from catalog.published import CATALOG_ITEM_KEYS
+from crm.constants import DealStageCode, FulfillmentStatusCode, QuoteStatusCode
 from crm.models import Deal, DealStage, GeneratedDocument
 from master_data.models import Currency, UnitOfMeasure
 
@@ -91,13 +92,9 @@ def test_data():
         is_primary=True,
     )
 
-    stage_req = DealStage.objects.filter(code="request").first()
-    if not stage_req:
-        stage_req = DealStage.objects.create(code="request", name="Запрос")
-
-    stage_won = DealStage.objects.filter(code="won").first()
-    if not stage_won:
-        stage_won = DealStage.objects.create(code="won", name="Выиграна")
+    # Настоящие стадии FSM (FIX-30): прежние коды `request` и `won` в ERP не существуют
+    stage_req = DealStage.objects.get(code=DealStageCode.DRAFT)
+    stage_won = DealStage.objects.get(code=DealStageCode.CLOSED_WON)
 
     # Сделка А
     deal_a = Deal.objects.create(
@@ -108,7 +105,7 @@ def test_data():
     )
 
     # Поставка для сделки А
-    status_in_transit, _ = FulfillmentStatus.objects.get_or_create(code="in_transit", defaults={"name": "В пути"})
+    status_in_transit = FulfillmentStatus.objects.get(code=FulfillmentStatusCode.IN_TRANSIT)
     fulf_a = Fulfillment.objects.create(
         deal=deal_a,
         status=status_in_transit,
@@ -448,7 +445,28 @@ def test_get_deal_status_cross_tenant_isolation(client, test_data):
 # ─────────────────────────────────────────────────────────────────────────────
 
 
-def test_get_delivery_status(client, test_data):
+@pytest.fixture
+def order_a(test_data):
+    """Заказ клиента А: одно подтверждённое КП с одной позицией — из него строятся строки поставки (FIX-22)."""
+    order = Quote.objects.create(
+        deal=test_data["deal_a"],
+        version=90,
+        status=QuoteStatus.objects.get(code=QuoteStatusCode.APPROVED),
+        total_incl_vat=Decimal("100"),
+    )
+    QuoteItem.objects.create(
+        quote=order,
+        display_type="ITEM",
+        imported_raw_name="Рельс Р65",
+        quantity=3,
+        unit="т",
+        frozen_base_price=Decimal("100"),
+        position=1,
+    )
+    return order
+
+
+def test_get_delivery_status(client, test_data, order_a):
     ctx_a = dict(erp_company_id=test_data["comp_a"].id, mode="customer")
 
     # Своя сделка с поставкой
@@ -466,7 +484,7 @@ def test_get_delivery_status(client, test_data):
     assert resp.status_code == status.HTTP_200_OK
     lines = resp.data["result"]["structuredContent"]["result"]
     assert len(lines) == 1
-    assert lines[0]["title"] == test_data["deal_a"].title
+    assert lines[0]["title"] == "Рельс Р65"  # строка заказа клиента, а не название сделки
     assert lines[0]["tracking"] == "TRK-12345"
     assert lines[0]["status"] == "in_transit"
     assert lines[0]["eta"] == test_data["fulf_a"].expected_delivery_date.isoformat()
@@ -861,7 +879,7 @@ def test_client_does_not_see_draft_and_approval_quotes(client, test_data):
     assert not {q["erp_quote_id"] for q in quotes} & {d.id for d in drafts}
 
 
-def test_deal_status_has_delivery_without_invented_quantity(client, test_data):
+def test_deal_status_has_delivery_from_the_order_line(client, test_data, order_a):
     resp = rpc(
         client,
         make_context_token(erp_company_id=test_data["comp_a"].id),
@@ -870,12 +888,12 @@ def test_deal_status_has_delivery_without_invented_quantity(client, test_data):
     )
     deliveries = tool_result(resp)["deliveries"]
     assert len(deliveries) == 1  # раньше deal.fulfillments не существовало — список был пуст
-    assert deliveries[0]["quantity"] is None
-    assert deliveries[0]["unit"] is None
+    assert deliveries[0]["quantity"] == "3"  # из строки подтверждённого заказа, не выдумано
+    assert deliveries[0]["unit"] == "т"
     assert deliveries[0]["tracking"] == "TRK-12345"
 
 
-def test_delivery_status_does_not_invent_quantity(client, test_data):
+def test_delivery_status_takes_quantity_from_the_order_line_only(client, test_data, order_a):
     resp = rpc(
         client,
         make_context_token(erp_company_id=test_data["comp_a"].id),
@@ -883,8 +901,8 @@ def test_delivery_status_does_not_invent_quantity(client, test_data):
         arguments={"erp_deal_id": test_data["deal_a"].id},
     )
     line = tool_result(resp)[0]
-    assert line["quantity"] is None
-    assert line["unit"] is None
+    assert line["quantity"] == "3"
+    assert line["unit"] == "т"
 
 
 def test_search_catalog_returns_only_published_projection_keys(client, test_data):
