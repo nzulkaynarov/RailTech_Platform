@@ -125,6 +125,31 @@ def _link(quote: Quote) -> str:
     return f"#deal-quote/{quote.deal_id}"
 
 
+def _chain_members(company_id: int, author_user_id: Optional[int]):
+    """Кто согласует КП: (держатель финального согласования, проверяющие). Автор КП в проверяющие не
+    попадает, а руководителем назначается не автор, если есть другой (FIX-55, D-02). Единственный
+    руководитель-автор остаётся на своём шаге — это автосогласование (`auto_approve_solo_chain`)."""
+    head_candidates = _members_with_permission(company_id, Permission.QUOTE_APPROVE_FINAL.value)
+    non_author_heads = [m for m in head_candidates if m.user_id != author_user_id]
+    pool = non_author_heads or head_candidates
+    head_member = pool[0] if pool else _fallback_head(company_id)
+    head_ids = {m.id for m in head_candidates}
+    reviewers = [
+        m
+        for m in _members_with_permission(company_id, Permission.QUOTE_REVIEW.value)
+        if m.id not in head_ids and m.user_id != author_user_id
+    ]
+    return head_member, reviewers
+
+
+def _on_behalf_params(step: QuoteApprovalStep, actor) -> dict:
+    """Суперпользователь закрыл шаг за другого согласующего (D-11): в журнале — «от имени» (кто и за кого)."""
+    approver = step.approver
+    if approver is None or not getattr(actor, "is_superuser", False) or approver.user_id == getattr(actor, "id", None):
+        return {}
+    return {"on_behalf_of": _member_display(approver), "on_behalf_of_user_id": approver.user_id}
+
+
 # ── build ──────────────────────────────────────────────────────────────────
 @transaction.atomic
 def build_approval_chain(quote: Quote, company_id: int, economics: Optional[dict] = None) -> None:
@@ -135,16 +160,13 @@ def build_approval_chain(quote: Quote, company_id: int, economics: Optional[dict
     """
     quote.approval_steps.filter(is_auto=True).exclude(status=StepStatus.APPROVED).delete()
 
-    head_candidates = _members_with_permission(company_id, Permission.QUOTE_APPROVE_FINAL.value)
-    head_member = head_candidates[0] if head_candidates else _fallback_head(company_id)
+    head_member, reviewers = _chain_members(company_id, quote.prepared_by_id)
     if head_member is None:
         logger.warning(
             "build_approval_chain: company %s has no quote.approve_final holder and no is_system "
             "admin — the head approval step will have no approver (company is orphaned)",
             company_id,
         )
-    head_ids = {m.id for m in head_candidates}
-    reviewers = [m for m in _members_with_permission(company_id, Permission.QUOTE_REVIEW.value) if m.id not in head_ids]
 
     sequential = getattr(quote, "approval_routing_mode", "PARALLEL") == "SEQUENTIAL"
     new_steps = []
@@ -228,15 +250,21 @@ def _notify_informed(quote: Quote, message: str, *, event_code: str, event_param
 
 # ── act / recall ─────────────────────────────────────────────────────────────
 @transaction.atomic
-def act_on_step(step_id: int, actor, decision: str, comment: str = "") -> Tuple[Optional[Quote], Optional[str]]:
+def act_on_step(
+    step_id: int, actor, decision: str, comment: str = "", *, allow_self: bool = False
+) -> Tuple[Optional[Quote], Optional[str]]:
     """An approver approves or rejects their step. decision ∈ {APPROVE, REJECT}.
     APPROVE advances the chain (→ READY_TO_SEND once the head approves); REJECT returns the
-    КП to DRAFT, recalls open steps, and notifies the submitter with the reason."""
+    КП to DRAFT, recalls open steps, and notifies the submitter with the reason.
+
+    Автор КП не закрывает шаг проверяющего своего КП (`SELF_APPROVAL_NOT_ALLOWED`, FIX-55, D-02); исключение —
+    автосогласование единственного согласующего (`allow_self=True`). Суперпользователь закрывает шаг за
+    другого, но в журнале это помечено «от имени» (D-11)."""
     from .quotes import _quote_owner_company_id
 
     step = (
         QuoteApprovalStep.objects.select_for_update(of=("self",))
-        .select_related("quote", "quote__status", "quote__deal")
+        .select_related("quote", "quote__status", "quote__deal", "approver__user")
         .filter(pk=step_id)
         .first()
     )
@@ -248,6 +276,13 @@ def act_on_step(step_id: int, actor, decision: str, comment: str = "") -> Tuple[
         return None, "NO_QUOTE_COMPANY"
     if not (getattr(actor, "is_superuser", False) or member_has_permission(actor, company_id, _step_permission(step))):
         return None, "ROLE_NOT_PERMITTED"
+    if (
+        not allow_self
+        and step.participation == StepParticipation.APPROVER
+        and quote.prepared_by_id is not None
+        and quote.prepared_by_id == getattr(actor, "id", None)
+    ):
+        return None, "SELF_APPROVAL_NOT_ALLOWED"
     if not quote.status or quote.status.code != QuoteStatusCode.PENDING_APPROVAL:
         return None, "INVALID_STATUS"
     if step.status != StepStatus.PENDING:
@@ -256,6 +291,8 @@ def act_on_step(step_id: int, actor, decision: str, comment: str = "") -> Tuple[
     if step.order != active_order:
         return None, "STEP_NOT_ACTIVE"  # earlier steps must resolve first (head can't jump the queue)
 
+    on_behalf = _on_behalf_params(step, actor)
+    on_behalf_text = f" (от имени {on_behalf['on_behalf_of']})" if on_behalf else ""
     if decision == "REJECT":
         step.status = StepStatus.REJECTED
         step.acted_by = actor
@@ -270,9 +307,9 @@ def act_on_step(step_id: int, actor, decision: str, comment: str = "") -> Tuple[
             quote,
             actor,
             "Согласование отклонено",
-            f"Шаг отклонён: {comment}".strip(),
+            f"Шаг отклонён: {comment}{on_behalf_text}".strip(),
             event_code="quote.approval_step_rejected",
-            event_params={"comment": comment},
+            event_params={"comment": comment, **on_behalf},
         )
         _notify_user(
             quote.prepared_by_id,
@@ -295,7 +332,7 @@ def act_on_step(step_id: int, actor, decision: str, comment: str = "") -> Tuple[
         quote,
         actor,
         "Шаг согласования пройден",
-        f"Шаг согласован ({step.get_participation_display()})",
+        f"Шаг согласован ({step.get_participation_display()}){on_behalf_text}",
         event_code="quote.approval_step_approved",
         # `get_participation_display()` переводится на языке ТОГО, кто согласовал, и
         # замерзает в журнале — читателю на другом языке доставалось «(Руководитель)».
@@ -303,6 +340,7 @@ def act_on_step(step_id: int, actor, decision: str, comment: str = "") -> Tuple[
         event_params={
             "participation": step.get_participation_display(),
             "participation_code": step.participation,
+            **on_behalf,
         },
     )
 
@@ -393,6 +431,7 @@ def auto_approve_solo_chain(quote: Quote, submitter) -> bool:
             submitter,
             "APPROVE",
             comment="Автосогласование (единственный согласующий — отправитель)",
+            allow_self=True,
         )
         if err:
             logger.warning("auto_approve_solo_chain: step %s not auto-approvable (%s) — routing", step.id, err)
@@ -461,10 +500,7 @@ def preview_approval_chain(quote_id: int, actor) -> Tuple[Optional[dict], Option
     economics = compute_quote_economics(quote)
     below_floor = bool(economics.get("below_floor"))
 
-    head_candidates = _members_with_permission(company_id, Permission.QUOTE_APPROVE_FINAL.value)
-    head_member = head_candidates[0] if head_candidates else _fallback_head(company_id)
-    head_ids = {m.id for m in head_candidates}
-    reviewers = [m for m in _members_with_permission(company_id, Permission.QUOTE_REVIEW.value) if m.id not in head_ids]
+    head_member, reviewers = _chain_members(company_id, quote.prepared_by_id)
 
     submitter_id = getattr(actor, "id", None)
     steps = [

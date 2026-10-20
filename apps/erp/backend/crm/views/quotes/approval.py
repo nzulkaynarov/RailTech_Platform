@@ -21,7 +21,7 @@ from crm.serializers import QuoteSerializer
 
 def _chain_error_response(error):
     """Map a КП approval-chain service error code to an HTTP response."""
-    forbidden = {"ROLE_NOT_PERMITTED"}
+    forbidden = {"ROLE_NOT_PERMITTED", "SELF_APPROVAL_NOT_ALLOWED"}
     http_status = status.HTTP_403_FORBIDDEN if error in forbidden else status.HTTP_400_BAD_REQUEST
     return Response({"detail": error}, status=http_status)
 
@@ -106,7 +106,9 @@ class QuoteApprovalMixin:
         responses={
             200: QuoteSerializer,
             400: OpenApiResponse(description="Wrong status/step"),
-            403: OpenApiResponse(description="Role not permitted"),
+            403: OpenApiResponse(
+                description="ROLE_NOT_PERMITTED / SELF_APPROVAL_NOT_ALLOWED (автор КП не согласует своё КП)"
+            ),
         },
         tags=["CRM"],
     )
