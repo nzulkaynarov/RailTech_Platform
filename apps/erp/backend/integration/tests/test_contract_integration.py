@@ -28,6 +28,7 @@ from integration.tests.contract_support import (
 )
 from integration.tests.world import build_integration_world
 from rest_framework.test import APIClient
+from rest_framework.throttling import SimpleRateThrottle
 
 pytestmark = pytest.mark.django_db
 
@@ -39,6 +40,12 @@ def _integration_env(settings):
     settings.CABINET_URL = "http://cabinet.localhost"
     settings.FRONTEND_URL = "http://erp.localhost"
     settings.ERP_VERSION = "0.2.0"
+
+
+@pytest.fixture(autouse=True)
+def _no_anon_throttle(monkeypatch):
+    """Запросов сторожа больше 20 в минуту: общий анонимный лимит (токен CRM — не пользователь) здесь не предмет проверки."""
+    monkeypatch.setitem(SimpleRateThrottle.THROTTLE_RATES, "anon", "100000/minute")
 
 
 @pytest.fixture

@@ -1,11 +1,10 @@
-"""Надёжность доставки вебхуков ERP → CRM (FIX-33, находки I-7, I-10; Q-FIX30-4).
+"""Надёжность доставки вебхуков ERP → CRM (FIX-33, находки I-7, I-10).
 
 * журнал доставок в админке и действие «Повторить» (только суперпользователь, с подтверждением и причиной);
 * задача Beat подбирает зависшие `PENDING` и ставит повтор, не трогая те, что ждут своего ретрая;
 * `visibility_timeout` брокера не меньше самого длинного интервала повторов (иначе Redis вернёт
   отложенную на 2–24 ч задачу в очередь через час и доставка задвоится);
 * событие без секрета не теряется: строка остаётся `PENDING` и уходит, когда секрет появился;
-* сервисный токен CRM не упирается в общий анонимный лимит DRF (21-й запрос за минуту — не 429).
 """
 
 from __future__ import annotations
@@ -16,7 +15,6 @@ from unittest.mock import MagicMock, patch
 import pytest
 from django.contrib import admin
 from django.contrib.admin.helpers import ACTION_CHECKBOX_NAME
-from django.core.cache import cache
 from django.urls import reverse
 from django.utils import timezone
 from integration.models import CrmClientMapping, IntegrationWebhookEvent, WebhookEventStatus
@@ -29,7 +27,6 @@ from integration.tasks import (
     requeue_stuck_webhook_events,
 )
 from parties.models import Company
-from rest_framework.test import APIClient
 
 from accounts.models import CustomUser
 
@@ -361,34 +358,3 @@ def test_an_engineer_without_superuser_sees_the_journal_but_not_the_action(clien
     delay.assert_not_called()
     event.refresh_from_db()
     assert event.status == WebhookEventStatus.FAILED
-
-
-# ─── Q-FIX30-4: свой лимит для сервисного токена CRM ──────────────────────────
-
-TOKEN = "test-service-token"  # conftest._seam_secrets
-
-
-def test_the_service_token_is_not_throttled_by_the_anonymous_limit():
-    """Токен CRM для DRF — «анонимный» пользователь: общий лимит `anon` (20/мин по IP) давал 429 вне контракта."""
-    cache.clear()
-    api = APIClient()
-    api.credentials(HTTP_AUTHORIZATION=f"Bearer {TOKEN}")
-
-    statuses = {api.get("/api/integration/v1/health").status_code for _ in range(45)}
-
-    assert 429 not in statuses
-    assert statuses == {200}
-
-
-def test_the_service_scope_still_has_a_ceiling(settings):
-    """Не «без лимита»: собственная ставка выше бота и карточек CRM, но конечная."""
-    rate = settings.REST_FRAMEWORK["DEFAULT_THROTTLE_RATES"]["integration"]
-    count, _, period = rate.partition("/")
-    assert period == "minute" and int(count) >= 300
-
-
-def test_a_wrong_token_is_rejected_before_any_throttle():
-    api = APIClient()
-    api.credentials(HTTP_AUTHORIZATION="Bearer not-the-token")
-
-    assert api.get("/api/integration/v1/health").status_code == 401

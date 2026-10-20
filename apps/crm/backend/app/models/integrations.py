@@ -9,6 +9,7 @@ from sqlalchemy import (
     DateTime,
     ForeignKey,
     Index,
+    Integer,
     LargeBinary,
     String,
     Text,
@@ -59,15 +60,16 @@ class ErpIncomingEvent(Base):
 
     __tablename__ = "erp_incoming_events"
     __table_args__ = (
-        CheckConstraint("status IN ('received', 'processed', 'failed')", name="status"),
+        CheckConstraint("status IN ('received', 'processed', 'failed', 'rejected')", name="status"),
         Index("ix_erp_incoming_events_crm_client_id", "crm_client_id"),
         Index("ix_erp_incoming_events_status", "status"),
     )
 
     event_id: Mapped[str] = mapped_column(String(36), primary_key=True)
     event_type: Mapped[str] = mapped_column(String(64), nullable=False)
-    erp_company_id: Mapped[int] = mapped_column(BigInteger, nullable=False)
-    crm_client_id: Mapped[int] = mapped_column(BigInteger, nullable=False)
+    # Пусто у отклонённого события, чьё тело не разобралось (оно записано, чтобы его было видно).
+    erp_company_id: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
+    crm_client_id: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
     deal_id: Mapped[int | None] = mapped_column(
         BigInteger, ForeignKey("deals.id", ondelete="SET NULL"), nullable=True
     )
@@ -80,3 +82,11 @@ class ErpIncomingEvent(Base):
     )
     processed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     error: Mapped[str | None] = mapped_column(Text, nullable=True)
+    # Неудачные обработки; на потолке событие становится `failed` (видно в центре внешних сервисов).
+    attempts: Mapped[int] = mapped_column(Integer, server_default=sql("0"), nullable=False)
+    # Сообщения в Telegram, посчитанные в транзакции обработки; уходят ПОСЛЕ коммита один раз:
+    # `notified_at` ставится при захвате строки, повтор события второго сообщения не шлёт.
+    outbox: Mapped[list[dict[str, Any]] | None] = mapped_column(
+        JSONB(none_as_null=True), nullable=True
+    )
+    notified_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)

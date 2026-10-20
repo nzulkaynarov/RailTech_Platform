@@ -7,6 +7,8 @@ from typing import Any
 from sqlalchemy import delete, func, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.domain.external_erp_events import STUCK_AFTER_MINUTES as EVENTS_STUCK_AFTER_MINUTES
+from app.domain.external_erp_events import WINDOW_DAYS as EVENTS_WINDOW_DAYS
 from app.domain.external_erp_handoff import STUCK_AFTER_MINUTES
 from app.models.auth import User
 from app.models.clients import Client
@@ -16,6 +18,7 @@ from app.models.external_services import (
     ExternalServiceIncident,
     ExternalServiceSwitch,
 )
+from app.models.integrations import ErpIncomingEvent
 
 LOCK_SQL = text("SELECT pg_advisory_xact_lock(hashtext('external_service_checks'))")
 LATEST_SQL = text(
@@ -250,4 +253,46 @@ async def erp_handoff_stats(session: AsyncSession, now: datetime) -> ErpHandoffS
         stuck=int(stuck or 0),
         pending=int(pending or 0),
         last_error=f"{last[0]}: {last[1]}" if last else None,
+    )
+
+
+@dataclass(frozen=True, slots=True)
+class ErpEventsStats:
+    rejected: int
+    failed: int
+    stuck: int
+    last_error: str | None
+
+
+async def erp_events_stats(session: AsyncSession, now: datetime) -> ErpEventsStats:
+    """События ERP за неделю: отклонённые, упавшие и зависшие `received`; последняя ошибка."""
+    since = now - timedelta(days=EVENTS_WINDOW_DAYS)
+    stuck_before = now - timedelta(minutes=EVENTS_STUCK_AFTER_MINUTES)
+    recent = ErpIncomingEvent.received_at >= since
+
+    async def count(*conditions: Any) -> int:
+        total = await session.scalar(
+            select(func.count()).select_from(ErpIncomingEvent).where(recent, *conditions)
+        )
+        return int(total or 0)
+
+    last = (
+        await session.execute(
+            select(ErpIncomingEvent.event_type, ErpIncomingEvent.error)
+            .where(
+                recent,
+                ErpIncomingEvent.status.in_(("rejected", "failed")),
+                ErpIncomingEvent.error.is_not(None),
+            )
+            .order_by(ErpIncomingEvent.received_at.desc())
+            .limit(1)
+        )
+    ).first()
+    return ErpEventsStats(
+        rejected=await count(ErpIncomingEvent.status == "rejected"),
+        failed=await count(ErpIncomingEvent.status == "failed"),
+        stuck=await count(
+            ErpIncomingEvent.status == "received", ErpIncomingEvent.received_at < stuck_before
+        ),
+        last_error=f"{last[0]}: {last[1]}"[:500] if last else None,
     )

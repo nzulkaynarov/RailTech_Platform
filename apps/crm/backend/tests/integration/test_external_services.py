@@ -414,3 +414,39 @@ async def test_erp_handoff_failures_land_in_the_feed_with_the_client_and_the_cod
         saved.erp_handoff_status, saved.erp_handoff_error = "done", None
     healed = client.post(f"{URL}/erp_handoff/check", headers=auth).json()["service"]
     assert healed["status"] == "off"
+
+
+async def test_erp_events_rejections_land_in_the_feed_and_heal_when_old(
+    sessions: async_sessionmaker[AsyncSession], client: TestClient, alerts: FakeAlerts
+) -> None:
+    """FIX-33: отклонённое событие (чужая компания, неизвестный тип) — сбой строки «События ERP»."""
+    from app.models.integrations import ErpIncomingEvent
+
+    auth = await headers(sessions, client, "admin")
+    quiet = client.post(f"{URL}/erp_events/check", headers=auth).json()["service"]
+    assert (quiet["status"], quiet["key"]) == ("ok", "erp_events")
+
+    async with sessions() as session, session.begin():
+        session.add(
+            ErpIncomingEvent(
+                event_id="00000000-0000-4000-8000-000000000001",
+                event_type="quote.sent",
+                erp_company_id=7,
+                crm_client_id=1,
+                payload={},
+                status="rejected",
+                error="company mismatch: client #1 is erp company #5, event carries #7",
+            )
+        )
+    failed = client.post(f"{URL}/erp_events/check", headers=auth).json()["service"]
+    assert failed["status"] == "fail"
+    assert "company mismatch" in failed["error"]
+    assert failed["hint"]
+    assert [k for k, _ in alerts.sent] == ["erp_events"]
+
+    async with sessions() as session, session.begin():  # разобрано давно: в окно недели не входит
+        row = await session.get(ErpIncomingEvent, "00000000-0000-4000-8000-000000000001")
+        assert row is not None
+        row.received_at = datetime.now(UTC) - timedelta(days=30)
+    healed = client.post(f"{URL}/erp_events/check", headers=auth).json()["service"]
+    assert healed["status"] == "ok"

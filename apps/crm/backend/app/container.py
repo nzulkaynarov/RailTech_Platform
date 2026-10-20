@@ -511,7 +511,7 @@ async def _enqueue_erp_handoff(client_id: int, lead_id: int, user_id: int) -> ob
     return await enqueue_erp_handoff(client_id, lead_id, user_id)
 
 
-async def _enqueue_erp_event(event_id: str) -> int:
+async def _enqueue_erp_event(event_id: str) -> int | None:
     from app.tasks.erp_events import enqueue_erp_event
 
     return await enqueue_erp_event(event_id)

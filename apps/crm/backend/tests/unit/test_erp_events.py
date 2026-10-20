@@ -24,7 +24,7 @@ from app.api import errors
 from app.api.deps import get_container
 from app.api.v1.integrations import router as integrations_router
 from app.config import Settings
-from app.domain.errors import AuthError, ConflictError, Reason
+from app.domain.errors import AuthError, ConflictError, Reason, ValidationFailedError
 from app.models.auth import User
 from app.models.clients import Client, Document
 from app.models.deals import Deal
@@ -280,209 +280,235 @@ async def _no_bot() -> None:
     return None
 
 
-@pytest.mark.asyncio
-async def test_receive_event_secret_missing() -> None:
-    store = _DummyStore(None)
-    config = Settings(erp_webhook_secret="")
-    session = _MockSession()
-    service = ErpEventsService(
-        _mock_session_factory(session),
-        _DummySettingsService(),  # type: ignore[arg-type]
-        store,
-        config,
-        _no_bot,
-    )
+def _receiver(
+    secret: str | None = SECRET,
+    session: _MockSession | None = None,
+    enqueued: list[str] | None = None,
+    enqueue_error: Exception | None = None,
+) -> tuple[ErpEventsService, _MockSession]:
+    session = session if session is not None else _MockSession()
 
-    envelope = ErpEventEnvelope.model_validate(_sample_envelope())
-    with pytest.raises(ConflictError) as exc_info:
-        await service.receive_event("e-1", envelope.event, None, b"{}", envelope)
-    assert exc_info.value.details["reason"] == Reason.ERP_NOT_CONFIGURED.value
-
-
-@pytest.mark.asyncio
-async def test_receive_event_invalid_signature() -> None:
-    store = _DummyStore(SECRET)
-    config = Settings(erp_webhook_secret=SECRET)
-    session = _MockSession()
-    service = ErpEventsService(
-        _mock_session_factory(session),
-        _DummySettingsService(),  # type: ignore[arg-type]
-        store,
-        config,
-        _no_bot,
-    )
-
-    envelope = ErpEventEnvelope.model_validate(_sample_envelope())
-    with pytest.raises(AuthError):
-        await service.receive_event("e-1", envelope.event, "sha256=bad", b"{}", envelope)
-
-
-@pytest.mark.asyncio
-async def test_receive_event_new_and_duplicate() -> None:
-    store = _DummyStore(SECRET)
-    config = Settings(erp_webhook_secret=SECRET)
-    session = _MockSession()
-    enqueued: list[str] = []
-
-    async def fake_enqueue(eid: str) -> int:
-        enqueued.append(eid)
+    async def enqueue(event_id: str) -> int:
+        if enqueue_error is not None:
+            raise enqueue_error
+        if enqueued is not None:
+            enqueued.append(event_id)
         return 1
 
     service = ErpEventsService(
         _mock_session_factory(session),
         _DummySettingsService(),  # type: ignore[arg-type]
-        store,
-        config,
+        _DummyStore(secret),
+        Settings(erp_webhook_secret=secret or ""),
         _no_bot,
-        enqueue_task=fake_enqueue,
+        enqueue_task=enqueue,
     )
+    return service, session
 
-    raw_body = json.dumps(_sample_envelope()).encode("utf-8")
-    sig = _sign(SECRET, raw_body)
-    envelope = ErpEventEnvelope.model_validate(json.loads(raw_body))
+
+def _signed(body: dict[str, Any] | bytes) -> tuple[bytes, str]:
+    raw = body if isinstance(body, bytes) else json.dumps(body).encode("utf-8")
+    return raw, _sign(SECRET, raw)
+
+
+@pytest.mark.asyncio
+async def test_receive_event_secret_missing() -> None:
+    service, _ = _receiver(secret=None)
+    with pytest.raises(ConflictError) as exc_info:
+        await service.receive_event(str(uuid.uuid4()), "deal.stage_changed", None, b"{}")
+    assert exc_info.value.details["reason"] == Reason.ERP_NOT_CONFIGURED.value
+
+
+@pytest.mark.asyncio
+async def test_signature_is_checked_before_the_body_is_parsed(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """FIX-33: неподписанный запрос не заставляет CRM разбирать тело и ничего не записывает."""
+
+    def boom(*_: Any, **__: Any) -> Any:
+        raise AssertionError("body parsed before the signature was verified")
+
+    monkeypatch.setattr("app.services.erp_events._parse_body", boom)
+    service, session = _receiver()
+
+    for body in (b"{}", b"not json at all", json.dumps(_sample_envelope()).encode()):
+        with pytest.raises(AuthError):
+            await service.receive_event(str(uuid.uuid4()), "deal.stage_changed", "sha256=bad", body)
+        with pytest.raises(AuthError):
+            await service.receive_event(str(uuid.uuid4()), "deal.stage_changed", None, body)
+    assert session.events == {}
+
+
+@pytest.mark.asyncio
+async def test_receive_event_new_and_duplicate() -> None:
+    enqueued: list[str] = []
+    service, session = _receiver(enqueued=enqueued)
+    event_id = str(uuid.uuid4())
+    raw, sig = _signed(_sample_envelope())
 
     # Первый вызов — создание и постановка в очередь
-    dup, status = await service.receive_event("evt-100", envelope.event, sig, raw_body, envelope)
-    assert dup is False
-    assert status == "enqueued"
-    assert enqueued == ["evt-100"]
-    assert "evt-100" in session.events
-    assert session.events["evt-100"].status == "received"
+    assert await service.receive_event(event_id, "deal.stage_changed", sig, raw) == (
+        False,
+        "enqueued",
+    )
+    assert enqueued == [event_id]
+    assert session.events[event_id].status == "received"
 
-    # Второй вызов с тем же event_id — возврат duplicate без повторной очереди
-    dup2, status2 = await service.receive_event("evt-100", envelope.event, sig, raw_body, envelope)
-    assert dup2 is True
-    assert status2 == "duplicate"
+    # Второй вызов с тем же event_id — duplicate без повторной очереди
+    assert await service.receive_event(event_id, "deal.stage_changed", sig, raw) == (
+        True,
+        "duplicate",
+    )
     assert len(enqueued) == 1
+
+
+@pytest.mark.asyncio
+async def test_a_failed_enqueue_keeps_the_row_and_still_answers_200() -> None:
+    """FIX-33 (I-10): сбой очереди не теряет событие; строка `received` ждёт сборщика."""
+    service, session = _receiver(enqueue_error=OSError("queue down"))
+    event_id = str(uuid.uuid4())
+    raw, sig = _signed(_sample_envelope())
+
+    assert await service.receive_event(event_id, "deal.stage_changed", sig, raw) == (
+        False,
+        "stored",
+    )
+    assert session.events[event_id].status == "received"
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("body", "reason"),
+    [
+        (b"this is not json", "invalid JSON"),
+        (json.dumps([1, 2]).encode(), "not an object"),
+        (json.dumps({**_sample_envelope(), "event": "warehouse.exploded"}).encode(), "envelope"),
+        (json.dumps({**_sample_envelope(), "brand_new_field": 1}).encode(), "envelope"),
+    ],
+)
+async def test_a_body_we_cannot_accept_is_recorded_as_rejected_and_answered_200(
+    body: bytes, reason: str
+) -> None:
+    """Подпись верна, тело — нет: ретраи ERP не помогут, поэтому 200 и запись для центра."""
+    enqueued: list[str] = []
+    service, session = _receiver(enqueued=enqueued)
+    event_id = str(uuid.uuid4())
+    raw, sig = _signed(body)
+
+    assert await service.receive_event(event_id, "warehouse.exploded", sig, raw) == (
+        False,
+        "rejected",
+    )
+    row = session.events[event_id]
+    assert row.status == "rejected"
+    assert reason in (row.error or "")
+    assert row.processed_at is not None
+    assert enqueued == []
+
+
+@pytest.mark.asyncio
+async def test_a_header_that_disagrees_with_the_body_is_rejected_not_422() -> None:
+    service, session = _receiver()
+    event_id = str(uuid.uuid4())
+    raw, sig = _signed(_sample_envelope(event="deal.stage_changed"))
+
+    assert await service.receive_event(event_id, "quote.sent", sig, raw) == (False, "rejected")
+    assert "header mismatch" in (session.events[event_id].error or "")
+
+
+@pytest.mark.asyncio
+async def test_headers_are_validated_only_after_the_signature() -> None:
+    service, _ = _receiver()
+    raw, sig = _signed(_sample_envelope())
+
+    with pytest.raises(ValidationFailedError) as bad_id:
+        await service.receive_event("not-a-uuid", "deal.stage_changed", sig, raw)
+    assert bad_id.value.details["field"] == "X-Event-Id"
+    with pytest.raises(ValidationFailedError) as no_type:
+        await service.receive_event(str(uuid.uuid4()), None, sig, raw)
+    assert no_type.value.details["field"] == "X-Event-Type"
 
 
 # ---------------------------------------------------------------------------
 # 4. API Эндпоинт POST /api/v1/integrations/erp/events
 # ---------------------------------------------------------------------------
 
-
-class _FakeEventsService:
-    def __init__(self, secret: str | None = SECRET) -> None:
-        self.secret = secret
-        self.received: dict[str, dict[str, Any]] = {}
-
-    async def get_webhook_secret(self) -> str:
-        return self.secret or ""
-
-    async def receive_event(
-        self,
-        event_id: str,
-        event_type: str,
-        signature: str | None,
-        raw_body: bytes,
-        envelope: ErpEventEnvelope,
-    ) -> tuple[bool, str]:
-        if not self.secret:
-            raise ConflictError(
-                "erp webhook secret is not configured", reason=Reason.ERP_NOT_CONFIGURED
-            )
-        if not verify_signature(self.secret, raw_body, signature):
-            raise AuthError("invalid webhook signature")
-        if event_id in self.received:
-            return True, "duplicate"
-        self.received[event_id] = envelope.model_dump()
-        return False, "enqueued"
+URL = "/api/v1/integrations/erp/events"
 
 
 @pytest.fixture
-def api_client() -> Iterator[tuple[TestClient, _FakeEventsService]]:
+def api_client() -> Iterator[tuple[TestClient, _MockSession]]:
     app = FastAPI()
     errors.install(app)
     app.include_router(integrations_router)
-    fake_svc = _FakeEventsService(SECRET)
-    app.dependency_overrides[get_container] = lambda: SimpleNamespace(erp_events_service=fake_svc)
+    service, session = _receiver()
+    app.dependency_overrides[get_container] = lambda: SimpleNamespace(erp_events_service=service)
     with TestClient(app) as test_client:
-        yield test_client, fake_svc
+        yield test_client, session
 
 
-def test_api_missing_headers(api_client: tuple[TestClient, _FakeEventsService]) -> None:
+def _headers(event_id: str, event_type: str, signature: str | None) -> dict[str, str]:
+    headers = {
+        "X-Event-Id": event_id,
+        "X-Event-Type": event_type,
+        "X-Timestamp": "2026-10-16T12:00:00Z",
+    }
+    if signature is not None:
+        headers["X-Signature"] = signature
+    return headers
+
+
+@pytest.mark.parametrize("body", [b"{}", b"garbage", b""])
+def test_api_unsigned_request_is_401_whatever_the_body_and_headers(
+    api_client: tuple[TestClient, _MockSession], body: bytes
+) -> None:
+    client, session = api_client
+    assert client.post(URL, content=body).status_code == 401  # даже без заголовков
+    res = client.post(URL, headers=_headers("not-a-uuid", "x", None), content=body)
+    assert res.status_code == 401
+    assert session.events == {}
+
+
+def test_api_invalid_event_id_not_uuid(api_client: tuple[TestClient, _MockSession]) -> None:
     client, _ = api_client
-    res = client.post("/api/v1/integrations/erp/events", content=b"{}")
-    assert res.status_code == 422
-
-
-def test_api_invalid_event_id_not_uuid(api_client: tuple[TestClient, _FakeEventsService]) -> None:
-    client, _ = api_client
-    res = client.post(
-        "/api/v1/integrations/erp/events",
-        headers={
-            "X-Event-Id": "not-a-uuid",
-            "X-Event-Type": "deal.stage_changed",
-            "X-Timestamp": "2026-10-16T12:00:00Z",
-        },
-        content=b"{}",
-    )
+    raw, sig = _signed(_sample_envelope())
+    res = client.post(URL, headers=_headers("not-a-uuid", "deal.stage_changed", sig), content=raw)
     assert res.status_code == 422
     assert res.json()["details"]["field"] == "X-Event-Id"
 
 
-def test_api_mismatched_event_type(api_client: tuple[TestClient, _FakeEventsService]) -> None:
-    client, _ = api_client
-    envelope_data = _sample_envelope(event="deal.stage_changed")
-    raw = json.dumps(envelope_data).encode("utf-8")
+def test_api_mismatched_event_type_is_200_and_recorded_as_rejected(
+    api_client: tuple[TestClient, _MockSession],
+) -> None:
+    client, session = api_client
+    raw, sig = _signed(_sample_envelope(event="deal.stage_changed"))
     eid = str(uuid.uuid4())
-    sig = _sign(SECRET, raw)
-    res = client.post(
-        "/api/v1/integrations/erp/events",
-        headers={
-            "X-Event-Id": eid,
-            "X-Event-Type": "quote.sent",  # не совпадает с deal.stage_changed
-            "X-Timestamp": "2026-10-16T12:00:00Z",
-            "X-Signature": sig,
-        },
-        content=raw,
-    )
-    assert res.status_code == 422
-    assert res.json()["details"]["field"] == "X-Event-Type"
+    res = client.post(URL, headers=_headers(eid, "quote.sent", sig), content=raw)
+    assert res.status_code == 200
+    assert session.events[eid].status == "rejected"
 
 
-def test_api_invalid_signature(api_client: tuple[TestClient, _FakeEventsService]) -> None:
+def test_api_invalid_signature(api_client: tuple[TestClient, _MockSession]) -> None:
     client, _ = api_client
-    envelope_data = _sample_envelope(event="deal.stage_changed")
-    raw = json.dumps(envelope_data).encode("utf-8")
-    eid = str(uuid.uuid4())
+    raw, _ = _signed(_sample_envelope())
     res = client.post(
-        "/api/v1/integrations/erp/events",
-        headers={
-            "X-Event-Id": eid,
-            "X-Event-Type": "deal.stage_changed",
-            "X-Timestamp": "2026-10-16T12:00:00Z",
-            "X-Signature": "sha256=wrong",
-        },
-        content=raw,
+        URL, headers=_headers(str(uuid.uuid4()), "deal.stage_changed", "sha256=wrong"), content=raw
     )
     assert res.status_code == 401
 
 
-def test_api_success_and_idempotency(api_client: tuple[TestClient, _FakeEventsService]) -> None:
-    client, fake_svc = api_client
-    envelope_data = _sample_envelope(event="deal.stage_changed")
-    raw = json.dumps(envelope_data).encode("utf-8")
+def test_api_success_and_idempotency(api_client: tuple[TestClient, _MockSession]) -> None:
+    client, session = api_client
+    raw, sig = _signed(_sample_envelope(event="deal.stage_changed"))
     eid = str(uuid.uuid4())
-    sig = _sign(SECRET, raw)
+    headers = _headers(eid, "deal.stage_changed", sig)
 
-    headers = {
-        "X-Event-Id": eid,
-        "X-Event-Type": "deal.stage_changed",
-        "X-Timestamp": "2026-10-16T12:00:00Z",
-        "X-Signature": sig,
-    }
+    res = client.post(URL, headers=headers, content=raw)
+    assert (res.status_code, res.json()) == (200, {"status": "ok", "duplicate": False})
+    assert eid in session.events
 
-    # Первый запрос -> duplicate: false
-    res = client.post("/api/v1/integrations/erp/events", headers=headers, content=raw)
-    assert res.status_code == 200
-    assert res.json() == {"status": "ok", "duplicate": False}
-    assert eid in fake_svc.received
-
-    # Повторный запрос -> duplicate: true
-    res2 = client.post("/api/v1/integrations/erp/events", headers=headers, content=raw)
-    assert res2.status_code == 200
-    assert res2.json() == {"status": "ok", "duplicate": True}
+    res2 = client.post(URL, headers=headers, content=raw)
+    assert (res2.status_code, res2.json()) == (200, {"status": "ok", "duplicate": True})
 
 
 # ---------------------------------------------------------------------------

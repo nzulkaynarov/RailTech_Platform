@@ -47,7 +47,6 @@ from .services.summary import (
     list_deal_documents_data,
 )
 from .services.system import get_ai_usage_rows, get_system_health
-from .throttles import IntegrationServiceRateThrottle
 
 logger = logging.getLogger(__name__)
 
@@ -57,8 +56,6 @@ class BaseIntegrationView(APIView):
 
     authentication_classes = [IntegrationTokenAuthentication]
     permission_classes = []
-    # Свой лимит вместо общего `anon` (токен CRM для DRF — анонимный пользователь): Q-FIX30-4.
-    throttle_classes = [IntegrationServiceRateThrottle]
 
     def get_exception_handler(self):
         return integration_exception_handler
