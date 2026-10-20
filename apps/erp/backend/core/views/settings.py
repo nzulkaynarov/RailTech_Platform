@@ -1,4 +1,4 @@
-from drf_spectacular.utils import extend_schema
+from drf_spectacular.utils import extend_schema, extend_schema_field
 from rest_framework import serializers as drf_serializers
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -13,6 +13,19 @@ from core.permissions import ADMIN_ONLY, RoleGatedViewMixin
 
 
 class SystemSettingSerializer(drf_serializers.ModelSerializer):
+    # Курс USD→UZS — только чтение и только из единого источника `finance.services.fx` (FIX-41, F-12):
+    # ручного второго курса нет. Нет свежего курса ЦБ — null, SPA тогда не пересчитывает суммы в USD.
+    exchange_rate_usd_uzs = drf_serializers.SerializerMethodField(
+        help_text="Курс USD→UZS из справочника курсов (ЦБ РУз), только чтение; null — свежего курса нет."
+    )
+
+    @extend_schema_field({"type": "string", "format": "decimal", "nullable": True})
+    def get_exchange_rate_usd_uzs(self, obj):
+        from finance.services.fx import rate_to_str, resolve_rate
+
+        resolved = resolve_rate("USD")
+        return rate_to_str(resolved.rate) if resolved else None
+
     class Meta:
         model = SystemSetting
         # standard_margin removed from the API surface (P9): the pricing engine reads

@@ -235,7 +235,7 @@ function AppShellInner({ children, activePage, onNavigate, onStartTour, fullBlee
   const roleLabel = roleNames.length > 0
     ? roleNames.join(', ')
     : isSuperuser ? t('team.rolesSection.administrator') : null;
-  const { currency, setCurrency, rateIsFallback } = useCurrencyStore();
+  const { currency, setCurrency, rateUnavailable } = useCurrencyStore();
   const { state } = useSidebar();
   const sidebarCollapsed = state === 'collapsed';
   // E2: Header flex shrinking — left container (min-w-0) allows company name truncation,
@@ -373,6 +373,7 @@ function AppShellInner({ children, activePage, onNavigate, onStartTour, fullBlee
                 <DropdownMenuSeparator className="sm:hidden" />
                 <DropdownMenuItem
                   className="sm:hidden"
+                  disabled={rateUnavailable && currency === 'UZS'}
                   onSelect={(event) => {
                     event.preventDefault();
                     setCurrency(currency === 'UZS' ? 'USD' : 'UZS');
@@ -433,12 +434,12 @@ function AppShellInner({ children, activePage, onNavigate, onStartTour, fullBlee
                   onClick={() => setCurrency('USD')}
                   role="radio"
                   aria-checked={currency === 'USD'}
-                  // Курс с сервера не приехал: пересчёт идёт по резервному, и суммы в USD
-                  // приблизительны. Молча выдавать их за настоящие нельзя (аудит UI, U2).
-                  title={rateIsFallback ? t('shell.fxRateFallback') : undefined}
+                  // Курса нет (не приехал или в справочнике нет свежего): USD недоступен, суммы в
+                  // сумах. Резервного курса нет — выдуманный курс дал бы выдуманные суммы (FIX-41).
+                  disabled={rateUnavailable}
+                  title={rateUnavailable ? t('shell.fxRateUnavailable') : undefined}
                 >
                   USD
-                  {rateIsFallback ? <span aria-hidden="true">*</span> : null}
                 </Button>
                 <Button
                   variant={currency === 'UZS' ? 'default' : 'ghost'}
