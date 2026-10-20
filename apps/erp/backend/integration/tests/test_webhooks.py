@@ -39,6 +39,7 @@ from integration.services.webhooks import (
 )
 from integration.tasks import RETRY_DELAYS, deliver_webhook_event, redeliver_event
 from parties.models import Company, Contact
+from portal.services.documents import PortalDocument, encode_document_id
 
 from crm.constants import DealStageCode
 from crm.models import Deal, DealStage, Invoice, InvoiceStatus, Quote, QuoteStatus
@@ -283,17 +284,26 @@ def test_all_19_event_types_payload_builders(db, mapped_company, deal_stages):
     assert e13.payload["payload"]["channels"] == ["telegram", "email"]
     assert e13.payload["payload"]["crm_contact_id"] == 101
 
-    # 12. document.created
-    doc_mock = MagicMock()
-    doc_mock.id = 999
-    doc_mock.deal = deal
-    doc_mock.number = "DOC-999"
-    doc_mock.template = MagicMock()
-    doc_mock.template.kind = MagicMock(code="act")
-    doc_mock.title = "Акт сверки"
-    e14 = emit_document_created(document=doc_mock, send_async=False)
+    # 12. document.created: на входе документ портала (FIX-38), id — портальный, вид — вид документа
+    document = PortalDocument(
+        id=encode_document_id("act", 999),
+        kind="act",
+        source="act",
+        obj=MagicMock(),
+        number="DOC-999",
+        date=timezone.localdate(),
+        title="Акт сверки",
+        file_name="DOC-999.pdf",
+        deal=deal,
+    )
+    e14 = emit_document_created(document=document, send_async=False)
     assert e14.payload["event"] == "document.created"
-    assert e14.payload["payload"]["kind"] == "act"
+    assert e14.payload["payload"] == {
+        "erp_document_id": 999 * 8 + 4,
+        "kind": "act",
+        "number": "DOC-999",
+        "title": "Акт сверки",
+    }
 
 
 # ─── 3. Celery Task & Delivery Tests ──────────────────────────────────────────

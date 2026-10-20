@@ -18,6 +18,8 @@ from typing import Any, Dict, List, Optional
 from django.utils import timezone
 from parties.models import Company
 from portal import projections
+from portal.services import documents as portal_documents
+from portal.services.documents import PortalDocument
 from sales.models import DeliveryLine, DeliveryLineStatus, Fulfillment
 from sales.services.delivery_lines import sync_delivery_lines
 
@@ -30,20 +32,33 @@ from . import documents_link, stages
 logger = logging.getLogger(__name__)
 
 
-def _map_doc_kind(raw_kind: str) -> str:
-    kind = str(raw_kind or "").lower()
-    mapping = {
-        "quote": "quote",
-        "kp": "quote",
-        "contract": "contract",
-        "dogovor": "contract",
-        "invoice": "invoice",
-        "schet": "invoice",
-        "act": "act",
-        "waybill": "waybill",
-        "receipt": "receipt",
+#: Статус документа в ответах integration (`Document.status`, «из словаря соответствующего вида»): для КП, договора, счёта
+#: и акта — проекция портала (те же функции, что у Cabinet), для накладной и `GeneratedDocument` — код статуса.
+_DOCUMENT_STATUS = {
+    "quote": projections.quote_status,
+    "contract": projections.contract_status,
+    "invoice": projections.invoice_status,
+    "act": projections.act_status,
+}
+
+
+def document_item(document: PortalDocument) -> Dict[str, Any]:
+    """`Document` контракта из документа портала (FIX-38): id — портальный (`encode_document_id`), как в `GET /documents`."""
+    status = _DOCUMENT_STATUS.get(document.source)
+    return {
+        "erp_document_id": document.id,
+        "erp_deal_id": document.deal_id,
+        "kind": document.kind,
+        "number": document.number or f"DOC-{document.id}",
+        "date": document.date.isoformat(),
+        "title": document.title or f"Документ {document.number}",
+        "status": status(document.obj) if status else document.obj.status.code.lower(),
     }
-    return mapping.get(kind, "other")
+
+
+def company_documents(company: Company, *, deal_id: Optional[int] = None) -> List[Dict[str, Any]]:
+    """Документы компании, выпущенные клиенту, новые первыми — ровно то, что отдаёт портал (`GET /documents`)."""
+    return [document_item(d) for d in portal_documents.client_documents(company, deal_id=deal_id)]
 
 
 def _quote_status(quote) -> str:
@@ -158,30 +173,9 @@ def get_company_summary_data(erp_company_id: int) -> Optional[Dict[str, Any]]:
     deals = [(deal, stages.deal_stage(deal)) for deal in _company_deals(company)]
     open_deals = [(deal, stage) for deal, stage in deals if stages.is_open_stage(stage)]
 
-    # Последний документ
-    last_doc_obj = (
-        documents_link.linkable_documents()
-        .filter(deal__company=company)
-        .select_related("template__kind", "status")
-        .order_by("-created_at")
-        .first()
-    )
-    last_document = None
-    if last_doc_obj:
-        kind = _map_doc_kind(last_doc_obj.template.kind.code if last_doc_obj.template else "")
-        last_document = {
-            "erp_document_id": last_doc_obj.id,
-            "erp_deal_id": last_doc_obj.deal_id,
-            "kind": kind,
-            "number": last_doc_obj.number or f"DOC-{last_doc_obj.id}",
-            "date": last_doc_obj.created_at.date().isoformat(),
-            "title": last_doc_obj.title or f"Документ {last_doc_obj.number}",
-            "status": (
-                last_doc_obj.status.code.lower()
-                if hasattr(last_doc_obj.status, "code")
-                else str(last_doc_obj.status or "issued")
-            ),
-        }
+    # Последний выпущенный клиенту документ: список портала отсортирован от новых к старым
+    documents = company_documents(company)
+    last_document = documents[0] if documents else None
 
     return {
         "erp_company_id": company.id,
@@ -301,27 +295,9 @@ def list_deal_documents_data(erp_deal_id: int) -> Optional[List[Dict[str, Any]]]
     if not deal:
         return None
 
-    docs = (
-        documents_link.linkable_documents()
-        .filter(deal=deal)
-        .select_related("template__kind", "status")
-        .order_by("-created_at")
-    )
-    result = []
-    for d in docs:
-        kind = _map_doc_kind(d.template.kind.code if d.template else "")
-        result.append(
-            {
-                "erp_document_id": d.id,
-                "erp_deal_id": deal.id,
-                "kind": kind,
-                "number": d.number or f"DOC-{d.id}",
-                "date": d.created_at.date().isoformat(),
-                "title": d.title or f"Документ {d.number}",
-                "status": (d.status.code.lower() if hasattr(d.status, "code") else str(d.status or "issued")),
-            }
-        )
-    return result
+    if deal.company_id is None:
+        return []
+    return company_documents(deal.company, deal_id=deal.id)
 
 
 def get_document_link_data(erp_document_id: int, crm_context: Optional[str] = None) -> Optional[Dict[str, Any]]:

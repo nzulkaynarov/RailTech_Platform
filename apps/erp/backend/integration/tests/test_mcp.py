@@ -46,6 +46,7 @@ from integration.tests.mcp_support import (
 )
 from parties.models import Company, CompanyType, Contact
 from portal.models import PortalRequestLine
+from portal.services.documents import encode_document_id
 from rest_framework.test import APIClient
 from rest_framework.throttling import SimpleRateThrottle
 from sales.models import Fulfillment, FulfillmentStatus, Quote, QuoteItem, QuoteStatus
@@ -59,6 +60,13 @@ from master_data.models import Currency, UnitOfMeasure
 pytestmark = pytest.mark.django_db
 
 INVALID_CONTEXT = {"detail": "INVALID_AGENT_CONTEXT"}
+
+
+def erp_id(document) -> int:
+    """`erp_document_id` документа: id портала, не `pk` записи (FIX-38)."""
+    return encode_document_id("generated", document.pk)
+
+
 MCP_DIR = Path(mcp_tools.__file__).parent
 
 
@@ -629,7 +637,7 @@ def test_customer_tools_are_not_available_to_prospect(test_data):
         ("get_deal_status", {"erp_deal_id": test_data["deal_a"].id}),
         ("get_delivery_status", {"erp_deal_id": test_data["deal_a"].id}),
         ("list_client_documents", {}),
-        ("get_document_link", {"erp_document_id": test_data["doc_a"].id}),
+        ("get_document_link", {"erp_document_id": erp_id(test_data["doc_a"])}),
         ("create_request", {"summary": "x", "lines": [{"text": "рельс"}]}),
     ):
         result = sdk_call(prospect(), tool, arguments)
@@ -695,7 +703,7 @@ def test_list_client_documents_and_link(test_data):
     # Пока документ не выпущен как клиентский (статус не ISSUED, вид не из справочника), его нет в списке
     # и ссылка на него не выдаётся — список инструмента и ссылка считают одним правилом (FIX-32)
     assert payload(sdk_call(customer(test_data), "list_client_documents", {"kind": "contract"})) == []
-    hidden = sdk_call(customer(test_data), "get_document_link", {"erp_document_id": test_data["doc_a"].id})
+    hidden = sdk_call(customer(test_data), "get_document_link", {"erp_document_id": erp_id(test_data["doc_a"])})
     assert payload(hidden) is None
 
     doc_a = test_data["doc_a"]
@@ -707,11 +715,11 @@ def test_list_client_documents_and_link(test_data):
 
     docs = payload(sdk_call(customer(test_data), "list_client_documents", {"kind": "contract"}))
     assert len(docs) == 1
-    assert docs[0]["erp_document_id"] == doc_a.id
+    assert docs[0]["erp_document_id"] == erp_id(doc_a), "id документа портала (FIX-38)"
     assert docs[0]["number"] == "CTR-ALFA-01"
 
     # Настоящая подписанная ссылка на публичный маршрут ERP (FIX-32), а не заглушка
-    link = payload(sdk_call(customer(test_data), "get_document_link", {"erp_document_id": doc_a.id}))
+    link = payload(sdk_call(customer(test_data), "get_document_link", {"erp_document_id": erp_id(doc_a)}))
     assert link is not None
     assert "token=link_" not in link["url"]
     assert "/api/v1/public/doc-links/" in link["url"]
@@ -721,10 +729,12 @@ def test_list_client_documents_and_link(test_data):
     assert opened.status_code == 200 and b"".join(opened.streaming_content) == b"%PDF-1.4 mcp"
     issued = ActivityLog.objects.get(event_code="document.link_issued")
     assert issued.company_id == test_data["comp_a"].id
-    assert issued.event_params["crm_context_raw"].startswith("erp-mcp:")
+    # контекст журнала — JSON, а не строка: клиент CRM из подписанного контекста агента и канал «бот» (FIX-38)
+    assert issued.event_params["crm_client_id"] == 10 and issued.event_params["channel"] == "bot"
+    assert "crm_context_raw" not in issued.event_params
 
     # Чужой документ компании Б -> пустой результат (None)
-    foreign = sdk_call(customer(test_data), "get_document_link", {"erp_document_id": test_data["doc_b"].id})
+    foreign = sdk_call(customer(test_data), "get_document_link", {"erp_document_id": erp_id(test_data["doc_b"])})
     assert payload(foreign) is None
 
 
