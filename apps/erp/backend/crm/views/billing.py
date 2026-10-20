@@ -251,7 +251,10 @@ class ContractViewSet(RoleGatedViewMixin, OptimisticLockingMixin, viewsets.Model
 
     @extend_schema(
         summary="Force-cancel contract (Platform Admin escalation)",
-        description="Bypass SIGNED guard and mark contract CANCELLED. ADMIN role required. Audit-logged with [FORCE_ADMIN].",
+        description=(
+            "Bypass SIGNED guard and mark contract CANCELLED. Platform administrator only (is_superuser); "
+            "a non-empty reason is mandatory. Audit-logged with [FORCE_ADMIN]."
+        ),
         request=inline_serializer(
             "ForceCancelContractRequest",
             fields={

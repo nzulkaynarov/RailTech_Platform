@@ -251,6 +251,12 @@ Q-1…Q-9 решены — см. `DECISIONS.md`.
 
 **Рекомендация.** (1) — уточнить контракт на 422, по решению Q-FIX21-5. (2) — оставить фиксированный текст, как решил лид; вернуться, если владельцу покажутся неточными сообщения при обмене токена.
 
+## Q-FIX43-1 · Дрейф internal-контракта: описания трёх force-эндпоинтов и обязательный `reason` (FIX-43)
+
+**Контекст.** FIX-43 изменил описания `force-approve`, `force-cancel`, `force-change-stage` («только администратор ERP, причина обязательна») и сделал `reason` обязательным в схеме `ForceChangeStageRequest`. Эти правки внесены в `apps/erp/backend/schema.json` и `frontend/src/api/schema.d.ts`; `packages/contracts/openapi/erp-internal-full.json` в этом PR не трогается (контракт меняется отдельно, дрейф портала волны 2 в нём тоже накоплен).
+
+**Рекомендация.** Подтянуть `erp-internal-full.json` вместе с остальным дрейфом internal — в FIX-40 (`make -C apps/erp openapi`).
+
 ## Q-FIX34-1 · Передача в ERP клиента, ставшего клиентом в режиме `local`, недоступна из интерфейса (FIX-34)
 
 **Контекст.** Бэкенд (`decide_handoff(erp_synced=False)`) теперь передаёт в ERP клиента, у которого нет `erp_company_id`, если режим стал `erp`: повторный `POST /leads/{id}/actions/make_customer` с `client_id` этого клиента. Но кнопка «Передать в бэк-офис» на фронтенде показывается только для стадий `in_progress` и `won` (`leadActionRules.ts`), а лид такого клиента уже в стадии `customer`; признака «клиент не в ERP» в карточке лида нет.
