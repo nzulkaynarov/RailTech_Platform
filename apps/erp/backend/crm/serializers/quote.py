@@ -312,6 +312,10 @@ class QuoteSerializer(serializers.ModelSerializer):
         read_only_fields = [
             "version",
             "number",
+            # Статус ведут только сервисы жизненного цикла (согласование, отправка, отзыв): запись через PATCH
+            # позволяла продавцу одним запросом перевести КП в READY_TO_SEND мимо цепочки или вернуть в DRAFT
+            # и снять блокировку правок (FIX-55, D-04).
+            "status",
             "subtotal_excl_vat",
             "charges_total",
             "vat_amount",

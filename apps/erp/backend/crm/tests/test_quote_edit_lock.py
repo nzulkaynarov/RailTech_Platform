@@ -170,3 +170,22 @@ def test_rejected_quote_new_version_and_withdraw_still_work(world):  # noqa: F81
     new_item = QuoteItem.objects.filter(quote=new_quote).first()
     resp = client.patch(f"{ITEMS}{new_item.id}/", {"quantity": 3}, format="json")
     assert resp.status_code == 200, resp.content
+
+
+@pytest.mark.django_db
+def test_status_cannot_be_written_through_quote_patch(world):  # noqa: F811
+    """PATCH КП с `status` раньше переводил КП в любой статус мимо цепочки согласования и снимал блокировку правок."""
+    _deal, quote, _items = _quote_with_items(world["buyer_co"], world["seller_co"], [100])
+    ready, _ = QuoteStatus.objects.get_or_create(code="READY_TO_SEND", defaults={"name": "r", "sort_order": 5})
+
+    response = _api(world["seller_user"]).patch(f"{QUOTES}{quote.id}/", {"status": ready.id}, format="json")
+
+    assert response.status_code == 200, response.content
+    quote.refresh_from_db()
+    assert quote.status.code == "DRAFT"
+
+    _set_status(quote, QuoteStatusCode.PENDING_APPROVAL)
+    draft = QuoteStatus.objects.get(code="DRAFT")
+    _api(world["seller_user"]).patch(f"{QUOTES}{quote.id}/", {"status": draft.id}, format="json")
+    quote.refresh_from_db()
+    assert quote.status.code == "PENDING_APPROVAL", "возврат в черновик — только отзывом или отклонением шага"
