@@ -337,9 +337,7 @@ def test_catalog_service_returns_only_contract_fields():
 
 INTEGRATION = Path(__file__).resolve().parents[1]
 #: Файлы вне `stages.py`, где пока читается код стадии FSM. Запись убирает та задача, что переводит файл на `stages.py`.
-STAGE_CODE_ALLOWLIST = {
-    "mcp/tools.py": "FIX-36 (erp-mcp на официальном SDK): `create_request` отдаёт `stages.deal_stage`"
-}
+STAGE_CODE_ALLOWLIST: dict[str, str] = {}
 STAGE_CODE_MARKERS = ("stage.code", "stage__code")
 
 

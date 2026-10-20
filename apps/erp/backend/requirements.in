@@ -87,6 +87,10 @@ tzdata>=2026.1
 # thin synchronous HTTP client for Celery workers (metadata tags, cost header, timeouts).
 httpx>=0.28,<1
 
+# erp-mcp (FIX-36): официальный MCP SDK, та же версия, что у CRM (apps/crm/backend/pyproject.toml).
+# Отдельный процесс `python -m integration.mcp` (Starlette + uvicorn), не в Daphne/ASGI-приложении Django.
+mcp>=2.3.0
+
 # Testing — pytest lives in the base image because the dev container (= prod image
 # + mounted code) runs `make test` / `make test-backend` (pytest --cov) directly.
 pytest>=9.0
