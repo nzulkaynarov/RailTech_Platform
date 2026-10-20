@@ -2581,16 +2581,18 @@ export interface paths {
          * Get category
          * @description CRUD for product categories.
          *
-         *     Public read access; write operations require Admin role.
-         *     Filterable by domain_type__code.
+         *     Public read access; write operations require `settings.edit` or `catalog.manage` (FIX-42: раздел
+         *     «Категории» в Settings Hub открывается по праву каталога, поэтому и запись разрешена его держателям).
+         *     Filterable by domain_type__code. A category with subcategories cannot be deleted (400 CATEGORY_HAS_CHILDREN).
          */
         get: operations["catalog_categories_retrieve"];
         /**
          * Update category
          * @description CRUD for product categories.
          *
-         *     Public read access; write operations require Admin role.
-         *     Filterable by domain_type__code.
+         *     Public read access; write operations require `settings.edit` or `catalog.manage` (FIX-42: раздел
+         *     «Категории» в Settings Hub открывается по праву каталога, поэтому и запись разрешена его держателям).
+         *     Filterable by domain_type__code. A category with subcategories cannot be deleted (400 CATEGORY_HAS_CHILDREN).
          */
         put: operations["catalog_categories_update"];
         post?: never;
@@ -2598,8 +2600,9 @@ export interface paths {
          * Delete category
          * @description CRUD for product categories.
          *
-         *     Public read access; write operations require Admin role.
-         *     Filterable by domain_type__code.
+         *     Public read access; write operations require `settings.edit` or `catalog.manage` (FIX-42: раздел
+         *     «Категории» в Settings Hub открывается по праву каталога, поэтому и запись разрешена его держателям).
+         *     Filterable by domain_type__code. A category with subcategories cannot be deleted (400 CATEGORY_HAS_CHILDREN).
          */
         delete: operations["catalog_categories_destroy"];
         options?: never;
@@ -2608,8 +2611,9 @@ export interface paths {
          * Partially update category
          * @description CRUD for product categories.
          *
-         *     Public read access; write operations require Admin role.
-         *     Filterable by domain_type__code.
+         *     Public read access; write operations require `settings.edit` or `catalog.manage` (FIX-42: раздел
+         *     «Категории» в Settings Hub открывается по праву каталога, поэтому и запись разрешена его держателям).
+         *     Filterable by domain_type__code. A category with subcategories cannot be deleted (400 CATEGORY_HAS_CHILDREN).
          */
         patch: operations["catalog_categories_partial_update"];
         trace?: never;
@@ -6824,7 +6828,7 @@ export interface paths {
         head?: never;
         /**
          * Update system settings
-         * @description Partially update platform settings. Administrator (superuser) only.
+         * @description Partially update platform settings. Administrator (superuser) only. `platform_name`, `support_email`, `logo_url` and `domain` are shared by the whole ensemble and managed in CRM: a request that contains any of them is rejected with 400 `SHARED_SETTING_READ_ONLY`.
          */
         patch: operations["system_settings_partial_update"];
         trace?: never;
@@ -10837,23 +10841,6 @@ export interface components {
              * @description Процент НДС, применяемый к котировкам
              */
             vat_rate?: string;
-            /** Название платформы */
-            platform_name?: string;
-            /**
-             * Email поддержки
-             * Format: email
-             */
-            support_email?: string;
-            /**
-             * URL логотипа
-             * @description Ссылка на изображение логотипа платформы
-             */
-            logo_url?: string;
-            /**
-             * Основной домен
-             * @description Доменное имя платформы для ссылок и уведомлений
-             */
-            domain?: string;
             /**
              * Режим обслуживания
              * @description Когда включён — пользователи видят заглушку
@@ -12599,22 +12586,25 @@ export interface components {
              */
             readonly exchange_rate_usd_uzs: string | null;
             /** Название платформы */
-            platform_name?: string;
+            readonly platform_name: string;
             /**
              * Email поддержки
              * Format: email
              */
-            support_email?: string;
+            readonly support_email: string;
             /**
              * URL логотипа
+             * Format: uri
              * @description Ссылка на изображение логотипа платформы
              */
-            logo_url?: string;
+            readonly logo_url: string;
             /**
              * Основной домен
              * @description Доменное имя платформы для ссылок и уведомлений
              */
-            domain?: string;
+            readonly domain: string;
+            /** @description Адрес CRM: туда ведёт «Изменить в CRM» для общих полей, только чтение. */
+            readonly crm_frontend_url: string;
             /**
              * Режим обслуживания
              * @description Когда включён — пользователи видят заглушку
@@ -16169,6 +16159,13 @@ export interface operations {
         responses: {
             /** @description Send result with EmailLog id and status */
             200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Rate limit of test emails per user exceeded */
+            429: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -23153,6 +23150,13 @@ export interface operations {
                 };
                 content?: never;
             };
+            /** @description Rate limit of test emails per user exceeded */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
         };
     };
     sourcing_ai_status_retrieve: {
@@ -23713,6 +23717,13 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["SystemSetting"];
                 };
+            };
+            /** @description SHARED_SETTING_READ_ONLY */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };

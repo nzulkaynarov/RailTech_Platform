@@ -227,6 +227,12 @@ export function CategoriesSettings() {
     return map;
   }, [categories]);
 
+  // Подкатегории выбранной категории: с ними удалить нельзя (бэкенд — 400 CATEGORY_HAS_CHILDREN, FIX-42).
+  const deleteTargetChildren = useMemo(
+    () => (deleteTarget ? (categories ?? []).filter((c) => Number(c.parent) === deleteTarget.id) : []),
+    [categories, deleteTarget],
+  );
+
   const onEdit = (c: Category) => {
     setEditTarget(c);
     setDialogOpen(true);
@@ -374,12 +380,19 @@ export function CategoriesSettings() {
           <AlertDialogHeader>
             <AlertDialogTitle>{t('settings.categories.confirmDeleteTitle')}</AlertDialogTitle>
             <AlertDialogDescription>
-              {t('settings.categories.confirmDeleteDesc', { name: deleteTarget?.name })}
+              {deleteTargetChildren.length > 0
+                ? t('settings.categories.confirmDeleteHasChildren', {
+                    names: deleteTargetChildren.map((c) => c.name).join(', '),
+                  })
+                : t('settings.categories.confirmDeleteDesc', { name: deleteTarget?.name })}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>{t('common.cancel')}</AlertDialogCancel>
-            <AlertDialogAction onClick={onDelete} disabled={deleteMut.isPending}>
+            <AlertDialogAction
+              onClick={onDelete}
+              disabled={deleteMut.isPending || deleteTargetChildren.length > 0}
+            >
               {t('common.delete')}
             </AlertDialogAction>
           </AlertDialogFooter>

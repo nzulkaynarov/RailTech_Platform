@@ -156,6 +156,8 @@ def update_company_settings(
         settings_row.fx_rate_max_age_days = max_age
         changed.append("fx_rate_max_age_days")
 
+    # FIX-42 (F-6): флаг никто не читает и в UI он скрыт — сдвиг срока клиенту шлёт CRM по `delivery.eta_changed`.
+    # Запись оставлена для совместимости со старыми клиентами API; смысла у неё нет (DECISIONS 2026-10-20).
     if "notify_client_on_schedule_shift" in data:
         raw_notify = data.get("notify_client_on_schedule_shift")
         settings_row.notify_client_on_schedule_shift = bool(raw_notify)

@@ -4,6 +4,7 @@ import userEvent from '@testing-library/user-event';
 
 import { EmailTemplatesSettings } from '@/components/Settings/EmailTemplatesSettings';
 import { renderWithProviders } from '@/test/renderWithProviders';
+import { toast } from 'sonner';
 
 const {
   mockTemplates,
@@ -79,5 +80,21 @@ describe('EmailTemplatesSettings', () => {
     await waitFor(() => {
       expect(screen.getByText('Например, quote_sent')).toBeInTheDocument();
     });
+  });
+
+  it('лимит тестовых писем (429) — понятное сообщение, а не «неизвестная ошибка» (FIX-42)', async () => {
+    const user = userEvent.setup();
+    testSendMutMock.mockRejectedValueOnce({ response: { status: 429, data: { detail: 'Request was throttled.' } } });
+    renderWithProviders(<EmailTemplatesSettings />);
+
+    await user.click(screen.getByRole('button', { name: /quote_sent/i }));
+    await user.click(await screen.findByRole('button', { name: /Тестовая отправка/i }));
+    await user.type(await screen.findByLabelText(/Email|Кому|получател/i), 'qa@example.com');
+    await user.click(screen.getByRole('button', { name: /^Отправить/ }));
+
+    await waitFor(() => expect(testSendMutMock).toHaveBeenCalled());
+    await waitFor(() =>
+      expect(toast.error).toHaveBeenCalledWith('Слишком много тестовых писем. Подождите и повторите позже.'),
+    );
   });
 });
