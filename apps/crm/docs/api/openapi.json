@@ -5727,7 +5727,9 @@
           "platform_access_denied",
           "user_not_provisioned",
           "user_inactive",
-          "erp_email_conflict"
+          "erp_email_conflict",
+          "won_decided_by_erp",
+          "handoff_no_consent"
         ],
         "title": "Reason",
         "type": "string"
@@ -12132,6 +12134,7 @@
     },
     "/api/v1/leads/{lead_id}/actions/close_won": {
       "post": {
+        "description": "«Сделка заключена». С коннектором ERP — 409 `won_decided_by_erp` (ADR-0022): итог придёт\nсобытием `deal.won`, закрыть лид можно только отказом.",
         "operationId": "close_won",
         "parameters": [
           {
@@ -12189,6 +12192,7 @@
     },
     "/api/v1/leads/{lead_id}/actions/make_customer": {
       "post": {
+        "description": "«Сделать клиентом» / «Передать в бэк-офис» (ADR-0022).\n\nОшибки (ADR-0017, `details.reason`): `deal_not_closed` (409), `not_lead_owner` (403),\n`handoff_no_consent` (422 — в режиме `erp` лид не давал согласие, ERP его не выдумывает),\n`telegram_linked_elsewhere` (409), `erp_not_configured` (409), `erp_unavailable` (502).",
         "operationId": "make_customer",
         "parameters": [
           {

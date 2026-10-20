@@ -235,6 +235,7 @@ class Container:
             on_assigned=_lead_assigned,
             on_escalation_reopened=_escalation_reopened,
             on_chats_changed=_chats_changed,
+            backoffice_mode=self.backoffice_mode,
         )
 
     @cached_property

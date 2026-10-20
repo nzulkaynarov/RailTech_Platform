@@ -14,6 +14,7 @@ from typing import Any, Final, Literal
 import structlog
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
+from app.domain.backoffice import BackofficeMode, may_close_locally
 from app.domain.errors import (
     ConflictError,
     DomainError,
@@ -46,6 +47,7 @@ EscalationChanged = Callable[[int], Awaitable[None]]
 LeadAssigned = Callable[[int, int], Awaitable[None]]  # (lead_id, user_id) → канал и личка
 # Telegram-чаты, чьё меню бота надо обновить сразу (после коммита, через очередь).
 ChatsChanged = Callable[[list[int]], Awaitable[None]]
+BackofficeModeProvider = Callable[[], Awaitable[BackofficeMode]]
 Outcome = Literal["won", "lost"]
 _active_escalation = lead_parts.active_escalation
 LANGUAGES: Final[dict[str, Language]] = {"ru": "ru", "uz": "uz", "en": "en"}
@@ -71,8 +73,11 @@ class LeadService:
         on_assigned: LeadAssigned | None = None,
         on_escalation_reopened: EscalationChanged | None = None,
         on_chats_changed: ChatsChanged | None = None,
+        backoffice_mode: BackofficeModeProvider | None = None,
     ) -> None:
         self._sessions = sessions
+        # Режим жизненного цикла (ADR-0022): без провайдера — `local`, как до ансамбля.
+        self._backoffice_mode = backoffice_mode
         self._settings = settings
         self._messenger = messenger
         self._on_escalation_changed = on_escalation_changed
@@ -252,9 +257,15 @@ class LeadService:
         lost_reason: str | None = None,
     ) -> None:
         cfg = await self._settings.get()
+        mode = await self._backoffice_mode() if self._backoffice_mode else BackofficeMode.LOCAL
         async with self._sessions() as session, session.begin():
             lead = await _lead(session, lead_id)
             _require_owner(lead, who)
+            if not may_close_locally(mode, outcome):
+                # ADR-0022: с коннектором ERP выигрыш решает бэк-офис (`deal.won`), не кнопка CRM.
+                raise ConflictError(
+                    "won is decided by the back office", reason=Reason.WON_DECIDED_BY_ERP
+                )
             if lead.stage != Stage.IN_PROGRESS:
                 raise InvalidTransitionError(
                     "take the lead before closing it", reason=Reason.TAKE_FIRST

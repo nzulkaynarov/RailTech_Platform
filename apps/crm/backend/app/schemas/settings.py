@@ -7,12 +7,13 @@
 from datetime import UTC, datetime
 from typing import Final, Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 from app.domain.business_hours import is_business_time
 from app.domain.qualification import DecisionRole, Timeline
 from app.domain.qualification_rules import Fact, QualificationCriteria
 from app.domain.triggers import TriggerCode, TriggerSettings
+from app.domain.urls import is_http_url
 from app.schemas.settings_alerts import ServiceAlertsSettings
 from app.schemas.settings_base import Language, LocalizedText, StrictModel, localized
 from app.schemas.settings_client import ClientBotTexts
@@ -32,6 +33,21 @@ class CompanySettings(StrictModel):
     phone: str = Field(default="", max_length=100)
     site: str = Field(default="", max_length=200)
     address: str = Field(default="", max_length=300)
+    # FIX-34: адрес кабинета клиента (Cabinet) — кнопка «Кабинет» под сообщениями бота о событиях
+    # ERP. Пусто — кнопки нет. Правится в «Настройках» → «Компания», без .env и перезапуска.
+    cabinet_url: str = Field(
+        default="",
+        max_length=500,
+        description="Адрес кабинета клиента (https://…): кнопка «Кабинет» под сообщениями бота о событиях ERP; пусто — кнопки нет",
+    )
+
+    @field_validator("cabinet_url")
+    @classmethod
+    def _cabinet_url_is_http(cls, value: str) -> str:
+        value = value.strip()
+        if value and not is_http_url(value):
+            raise ValueError("нужен адрес вида https://cabinet.example.com")
+        return value
 
 
 class TextsSettings(ClientBotTexts):
