@@ -33,9 +33,11 @@
 | `crm-mcp-kb`, `crm-mcp-crm`, `crm-mcp-docs` | 3 × 256 МБ | |
 | `crm-web` | 64 МБ | статика за Caddy |
 | `erp-backend` | 768 МБ | Daphne |
+| `erp-mcp` | 256 МБ (лимит; факт ≈ 200 МБ) | инструменты ERP для агента CRM, SDK `mcp`, образ `erp-backend` (FIX-36); порт 8104 только внутри сети; файл `packages/contracts/mcp-tools.json` монтируется в контейнер |
 | `erp-worker`, `erp-worker-ai`, `erp-beat` | 512 + 384 + 192 МБ | |
 | `erp-web` | 64 МБ | nginx со сборкой |
-| **Итого постоянно** | **≈ 5,2 ГБ** | + ОС ≈ 0,5 ГБ |
+| `s3-init`, `crm-migrate`, `litellm-seed`, `erp-ai-gateway` и одноразовые `run` миграций | 256–384 МБ | одноразовые, живут секунды при деплое; в «Итого постоянно» не входят; pg_dump-гейт идёт в отдельном контейнере с `pg_dump` (без лимита, до `up`) |
+| **Итого постоянно** | **≈ 5,4 ГБ** (5,2 + `erp-mcp` ≈ 0,2) | + ОС ≈ 0,5 ГБ |
 | `docling` (профиль `kb-ingest`) | 1,5 ГБ | только на время загрузки документов в базу знаний CRM |
 | `clickhouse`, `langfuse-web`, `langfuse-worker` (профиль `observability`) | 768 + 768 + 512 МБ | включать, когда `docling` выключен; дашборд затрат ИИ (M3-CRM-09) не зависит от Langfuse — он читает БД LiteLLM |
 
@@ -57,7 +59,7 @@
 - Файрвол VPS 1: `80`, `443` отовсюду; SSH только по ключу; `9000`/`9001` RustFS и `4000` LiteLLM — не публикуются (внутри compose-сети).
 - DNS: `crm.railtech.uz`, `erp.railtech.uz`, `cabinet.railtech.uz` → `176.101.56.141` (A-записи, TTL 300 на время пилота).
 - Деплой: GitHub Actions (после разблокировки, Q-10) собирает образы в GHCR, по SSH на VPS 1 выполняет `pull` + `up`
-  с pg_dump-гейтом перед миграциями (как в B2B/CRM). До разблокировки — `scripts/deploy.sh` вручную с машины владельца.
+  с pg_dump-гейтом перед миграциями (как в B2B/CRM). Реализовано в M5-INF-01: `.github/workflows/deploy.yml` (только вручную) и `infra/deploy/deploy.sh` на сервере — `docs/runbooks/deploy.md`.
 
 ## Диск
 
