@@ -63,7 +63,7 @@ describe('курс из справочника ERP, без резервного 
 
     expect(useCurrencyStore.getState().rate).toBeNull();
     expect(useCurrencyStore.getState().rateUnavailable).toBe(true);
-    expect(useCurrencyStore.getState().rateLoaded).toBe(true);
+    expect(useCurrencyStore.getState().rateLoaded).toBe(false); // не защёлкнуто — следующий вызов повторит
   });
 
   it('курс пропал, пока был включён USD: возвращаемся в суммы', async () => {
@@ -83,5 +83,41 @@ describe('курс из справочника ERP, без резервного 
       await useCurrencyStore.getState().loadRate();
       expect(useCurrencyStore.getState().rate).toBeNull();
     }
+  });
+
+  it('401 до входа → вход → курс загружен, USD доступен', async () => {
+    // До входа system-settings отвечает 401 — курса нет.
+    vi.mocked(systemApi.getSettings).mockRejectedValueOnce(new Error('401'));
+    await useCurrencyStore.getState().loadRate();
+    expect(useCurrencyStore.getState().rateUnavailable).toBe(true);
+    useCurrencyStore.getState().setCurrency('USD');
+    expect(useCurrencyStore.getState().currency).toBe('UZS');
+
+    // После входа App зовёт loadRate снова — курс подхватывается без перезагрузки.
+    vi.mocked(systemApi.getSettings).mockResolvedValueOnce({ exchange_rate_usd_uzs: '12700' } as never);
+    await useCurrencyStore.getState().loadRate();
+    useCurrencyStore.getState().setCurrency('USD');
+
+    const state = useCurrencyStore.getState();
+    expect(state.rate).toBe(12700);
+    expect(state.rateUnavailable).toBe(false);
+    expect(state.rateLoaded).toBe(true);
+    expect(state.currency).toBe('USD');
+  });
+
+  it('курс уже загружен — повторный вызов не ходит в сеть', async () => {
+    vi.mocked(systemApi.getSettings).mockResolvedValue({ exchange_rate_usd_uzs: '12600' } as never);
+    await useCurrencyStore.getState().loadRate();
+    await useCurrencyStore.getState().loadRate();
+    expect(systemApi.getSettings).toHaveBeenCalledTimes(1);
+  });
+
+  it('сервер ответил null → позже курс появился: следующий вызов подхватывает', async () => {
+    vi.mocked(systemApi.getSettings).mockResolvedValueOnce({ exchange_rate_usd_uzs: null } as never);
+    await useCurrencyStore.getState().loadRate();
+    vi.mocked(systemApi.getSettings).mockResolvedValueOnce({ exchange_rate_usd_uzs: '12650' } as never);
+    await useCurrencyStore.getState().loadRate();
+    expect(useCurrencyStore.getState().rate).toBe(12650);
+    expect(useCurrencyStore.getState().rateUnavailable).toBe(false);
   });
 });

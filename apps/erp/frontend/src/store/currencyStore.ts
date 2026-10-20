@@ -73,7 +73,8 @@ export const useCurrencyStore = create<CurrencyState>((set, get) => ({
       const currency: Currency = usable === null ? 'UZS' : get().currency;
       set({
         rate: usable,
-        rateLoaded: true,
+        // Курса нет — не «защёлкиваем» загрузку: следующий вызов (новый вход, обновившийся справочник) повторит.
+        rateLoaded: usable !== null,
         rateUnavailable: usable === null,
         currency,
         convert: buildConvert(currency, usable),
