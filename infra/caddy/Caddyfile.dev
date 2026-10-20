@@ -26,7 +26,7 @@ http://crm.localhost {
 
 # ─── ERP — бэк-офис (apps/erp; копия B2B с M1-ERP-01) ────────────────────────────────────
 http://erp.localhost {
-	# erp-mcp — только для агента CRM внутри сети (crm-* → http://erp-backend:8000/mcp/erp/), наружу не
+	# erp-mcp — отдельный процесс, только для агента CRM внутри сети (crm-* → http://erp-mcp:8104/mcp/erp), наружу не
 	# публикуется: иначе контекст агента подбирают снаружи (FIX-03, аудит S-9). 404, а не SPA.
 	@mcp path /mcp /mcp/*
 	handle @mcp {
