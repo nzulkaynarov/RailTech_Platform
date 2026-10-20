@@ -2,7 +2,7 @@
 
 Строго изолирует внутренний слой бэк-офиса:
 - Только клиентская проекция (никаких поставщиков, закупочных цен, себестоимости и маржи).
-- Подписанные временные ссылки на файлы документов (10 минут) с аудитом вызовов.
+- Подписанные временные ссылки на файлы документов (10 минут, журнал ERP) — `documents_link.py` (FIX-32).
 
 Форма ответов — `packages/contracts/openapi/erp-integration.yaml` (сторож: `integration/tests/test_contract_integration.py`).
 Стадия и сумма сделки — только из `stages.py`; статусы договора, счёта и акта, видимость документов, деньги и сроки —
@@ -15,7 +15,6 @@ import logging
 from decimal import Decimal
 from typing import Any, Dict, List, Optional
 
-from django.conf import settings
 from django.utils import timezone
 from parties.models import Company
 from portal import projections
@@ -23,10 +22,10 @@ from sales.models import DeliveryLine, DeliveryLineStatus, Fulfillment
 from sales.services.delivery_lines import sync_delivery_lines
 
 from crm.constants import InvoiceStatusCode, QuoteStatusCode
-from crm.models import Deal, GeneratedDocument, Invoice
+from crm.models import Deal, Invoice
 
 from ..models import CrmClientMapping
-from . import stages
+from . import documents_link, stages
 
 logger = logging.getLogger(__name__)
 
@@ -161,7 +160,8 @@ def get_company_summary_data(erp_company_id: int) -> Optional[Dict[str, Any]]:
 
     # Последний документ
     last_doc_obj = (
-        GeneratedDocument.objects.filter(deal__company=company)
+        documents_link.linkable_documents()
+        .filter(deal__company=company)
         .select_related("template__kind", "status")
         .order_by("-created_at")
         .first()
@@ -301,7 +301,12 @@ def list_deal_documents_data(erp_deal_id: int) -> Optional[List[Dict[str, Any]]]
     if not deal:
         return None
 
-    docs = GeneratedDocument.objects.filter(deal=deal).select_related("template__kind").order_by("-created_at")
+    docs = (
+        documents_link.linkable_documents()
+        .filter(deal=deal)
+        .select_related("template__kind", "status")
+        .order_by("-created_at")
+    )
     result = []
     for d in docs:
         kind = _map_doc_kind(d.template.kind.code if d.template else "")
@@ -320,28 +325,5 @@ def list_deal_documents_data(erp_deal_id: int) -> Optional[List[Dict[str, Any]]]
 
 
 def get_document_link_data(erp_document_id: int, crm_context: Optional[str] = None) -> Optional[Dict[str, Any]]:
-    """Выдача временной подписанной ссылки на файл документа (10 минут).
-
-    Факт выдачи логируется с CRM-контекстом.
-    """
-    doc = GeneratedDocument.objects.filter(pk=erp_document_id).first()
-    if not doc:
-        return None
-
-    logger.info("Generated document %s link requested with CRM context: %s", erp_document_id, crm_context)
-
-    expires_at = timezone.now() + timezone.timedelta(minutes=10)
-    erp_url = getattr(settings, "ERP_BASE_URL", "http://erp.localhost").rstrip("/")
-    download_url = f"{erp_url}/api/v1/documents/{doc.id}/download/?token=link_{doc.id}"
-
-    file_name = doc.number or f"document_{doc.id}.pdf"
-    if not file_name.lower().endswith(".pdf"):
-        file_name += ".pdf"
-
-    return {
-        "url": download_url,
-        "expires_at": expires_at.isoformat(),
-        "file_name": file_name,
-        "content_type": "application/pdf",
-        "size_bytes": getattr(doc, "file_size", 0) or 1024,
-    }
+    """Подписанная ссылка на файл документа (10 минут): вся логика — `documents_link.issue_document_link` (FIX-32)."""
+    return documents_link.issue_document_link(erp_document_id, crm_context)
