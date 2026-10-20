@@ -63,7 +63,9 @@ def make_company(name="ООО Клиент", crm_client_id=7001, inn=None) -> Co
     company = Company.objects.create(name=name, inn=inn or f"{next(_counter):09d}")
     if crm_client_id is not None:
         CrmClientMapping.objects.create(crm_client_id=crm_client_id, company=company)
-    Contact.objects.create(company=company, name="Иван", email=f"i{company.pk}@client.uz", is_primary=True, can_act=True)
+    Contact.objects.create(
+        company=company, name="Иван", email=f"i{company.pk}@client.uz", is_primary=True, can_act=True
+    )
     return company
 
 
