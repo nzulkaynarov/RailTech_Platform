@@ -42,8 +42,8 @@
 Стадия — «самая дальняя достигнутая веха»: поставка пошла до полной оплаты — всё равно `fulfilment`. Видимость
 документов клиенту — те же предикаты, что в портале (`portal/projections.py`), без копий.
 
-Сумма. `deal_amount` — `total_incl_vat` последней версии КП в статусах, видимых клиенту
-(`projections.CLIENT_QUOTE_STATUSES`: отправлено, принято, отклонено, истёк срок), иначе `None`: черновик и КП
+Сумма. `deal_amount` — `total_incl_vat` последней версии КП, видимой клиенту (`projections.client_quotes_visible`:
+статус отправлено/принято/отклонено/истёк срок и есть публичная ссылка — КП без токена клиент не видит), иначе `None`: черновик и КП
 на согласовании клиенту не обещаны и в сумму сделки не входят (хвост FIX-12). Отклонённое и просроченное КП было
 отправлено, поэтому его сумма остаётся, пока нет более новой отправленной версии (Q-FIX30-3).
 """
@@ -131,7 +131,7 @@ def with_stage_facts(queryset: QuerySet) -> QuerySet:
 
 def sent_quote(deal) -> Optional[Quote]:
     """Последняя версия КП в статусах, видимых клиенту; `None` — клиенту КП ещё не отправлялось."""
-    visible = [q for q in deal.quotes.all() if q.status_id and q.status.code in projections.CLIENT_QUOTE_STATUSES]
+    visible = [q for q in deal.quotes.all() if projections.client_quotes_visible(q)]
     return max(visible, key=lambda quote: quote.version) if visible else None
 
 
@@ -142,11 +142,8 @@ def deal_amount(deal) -> Optional[Decimal]:
 
 
 def deal_currency(deal) -> str:
-    """Валюта суммы: валюта отправленной версии КП, иначе последней версии, иначе валюта по умолчанию."""
+    """Валюта суммы: валюта отправленной клиенту версии КП, иначе валюта по умолчанию (валюта черновика не берётся)."""
     quote = sent_quote(deal)
-    if quote is None:
-        quotes = list(deal.quotes.all())
-        quote = max(quotes, key=lambda q: q.version) if quotes else None
     return projections.currency_code(quote.quote_currency if quote is not None else None)
 
 

@@ -276,3 +276,48 @@ def test_amount_currency_follows_the_sent_quote():
 def test_currency_of_a_deal_without_quotes_is_the_default():
     fresh = stages.with_stage_facts(Deal.objects.filter(pk=make_deal(make_company()).pk)).get()
     assert stages.deal_currency(fresh) == "UZS"
+
+
+def test_cancelled_and_draft_invoices_do_not_make_won_unreachable():
+    """Аннулированный или черновой счёт — не долг: исполнение закрыто, как и при правиле `paid`."""
+    deal, contract = build_signed_contract_deal(make_company())
+    invoice = add_invoice(deal, InvoiceStatusCode.PAID, total="5000000", paid="5000000", contract=contract)
+    add_invoice(deal, InvoiceStatusCode.CANCELLED, contract=contract)
+    add_invoice(deal, InvoiceStatusCode.DRAFT, contract=contract)
+    add_fulfillment(deal, FulfillmentStatusCode.ACCEPTED)
+    add_act(deal, ActStatusCode.SIGNED, contract=contract, invoice=invoice)
+    assert stage_of(deal) == "won"
+
+
+def test_won_needs_at_least_one_paid_invoice_even_if_others_are_cancelled():
+    deal, contract = build_signed_contract_deal(make_company())
+    add_invoice(deal, InvoiceStatusCode.CANCELLED, contract=contract)
+    add_fulfillment(deal, FulfillmentStatusCode.ACCEPTED)
+    add_act(deal, ActStatusCode.SIGNED, contract=contract)
+    assert stage_of(deal) != "won"
+
+
+def test_unpaid_invoice_still_blocks_won():
+    deal, contract = build_signed_contract_deal(make_company())
+    add_invoice(deal, InvoiceStatusCode.PAID, total="1000000", paid="1000000", contract=contract)
+    add_invoice(deal, InvoiceStatusCode.ISSUED, contract=contract)
+    add_fulfillment(deal, FulfillmentStatusCode.ACCEPTED)
+    add_act(deal, ActStatusCode.SIGNED, contract=contract)
+    assert stage_of(deal) == "closing"
+
+
+def test_sent_quote_without_public_link_is_not_visible_to_the_client():
+    """Предикат видимости — `portal/projections.client_quotes_visible`: отправленное КП без токена клиенту не видно."""
+    deal = make_deal(make_company(), FSM.QUOTE_SENT)
+    add_quote(deal, 1, Q.SENT, "4000000", sent=False)
+    assert amount_of(deal) is None
+    add_quote(deal, 2, Q.SENT, "5000000", sent=True)
+    assert amount_of(deal) == Decimal("5000000")
+
+
+def test_currency_of_a_draft_is_not_used_without_a_sent_quote():
+    deal = make_deal(make_company(), FSM.CALCULATING)
+    add_quote(deal, 1, Q.DRAFT, "1500.00", currency=usd())
+    fresh = stages.with_stage_facts(Deal.objects.filter(pk=deal.pk)).get()
+    assert stages.deal_amount(fresh) is None
+    assert stages.deal_currency(fresh) == "UZS"

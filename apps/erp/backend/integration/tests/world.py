@@ -253,21 +253,6 @@ STAGE_CASES = [
 ]
 
 
-STAGE_CASES = [
-    ("request", build_request),
-    ("quoting", build_quoting),
-    ("quote_sent", build_quote_sent),
-    ("accepted", build_accepted),
-    ("contract", build_contract),
-    ("invoiced", build_invoiced),
-    ("paid", build_paid),
-    ("fulfilment", build_fulfilment),
-    ("closing", build_closing),
-    ("won", build_won),
-    ("lost", build_lost),
-]
-
-
 # ── Мир сторожа контракта: сделки со всем, что умеет отдавать integration ─────────────────────────────
 
 

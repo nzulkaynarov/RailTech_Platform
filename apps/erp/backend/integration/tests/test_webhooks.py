@@ -136,7 +136,9 @@ def test_build_deal_ref_amount_ignores_drafts_and_takes_the_latest_sent_quote(db
     deal = Deal.objects.create(company=company, stage=deal_stages["quote_sent"])
     sent = QuoteStatus.objects.get_or_create(code="SENT", defaults={"name": "Отправлено"})[0]
     draft = QuoteStatus.objects.get_or_create(code="DRAFT", defaults={"name": "Черновик"})[0]
-    Quote.objects.create(deal=deal, version=1, status=sent, total_incl_vat=Decimal("1200000.00"))
+    Quote.objects.create(
+        deal=deal, version=1, status=sent, total_incl_vat=Decimal("1200000.00"), public_access_token="tok-sent-1"
+    )
     Quote.objects.create(deal=deal, version=2, status=draft, total_incl_vat=Decimal("9900000.00"))
 
     ref = build_deal_ref(deal)
@@ -443,7 +445,9 @@ def test_deal_outcome_payload_has_the_sent_amount_or_zero(db, mapped_company, de
     assert lost.payload["payload"] == {"amount": "0.00", "currency": "UZS", "lost_reason": "Дорого"}
 
     sent = QuoteStatus.objects.get_or_create(code="SENT", defaults={"name": "Отправлено"})[0]
-    Quote.objects.create(deal=deal, version=1, status=sent, total_incl_vat=Decimal("750000.00"))
+    Quote.objects.create(
+        deal=deal, version=1, status=sent, total_incl_vat=Decimal("750000.00"), public_access_token="tok-sent-2"
+    )
     won = emit_deal_outcome(deal=Deal.objects.get(pk=deal.pk), won=True, send_async=False)
     assert won.payload["payload"] == {"amount": "750000.00", "currency": "UZS"}
     assert won.payload["deal"]["amount"] == "750000.00"
