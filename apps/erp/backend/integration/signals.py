@@ -58,6 +58,8 @@ def handle_deal_post_save(sender: Any, instance: Any, created: bool, **kwargs: A
                 source=source,
                 erp_request_id=getattr(instance, "portal_request_id", None) or instance.id,
                 summary=origin.get("summary") or instance.title or f"Заявка #{instance.id}",
+                actor=origin.get("actor"),  # erp-mcp (FIX-36): агент CRM — actor `client`, клиент CRM из контекста
+                crm_client_id=origin.get("crm_client_id"),
             )
             return
 

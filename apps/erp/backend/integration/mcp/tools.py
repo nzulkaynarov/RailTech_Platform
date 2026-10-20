@@ -1,6 +1,7 @@
-"""ERP MCP Tools implementation (CONTRACTS §5, packages/contracts/mcp-tools.json).
+"""Реализации инструментов erp-mcp (CONTRACTS §5, packages/contracts/mcp-tools.json).
 
-Каждый инструмент:
+Имена, описания, режимы и схемы аргументов здесь НЕ объявляются: их задаёт контракт (`contract.py`), а модуль
+отдаёт только функции-обработчики по имени инструмента (`HANDLERS`). Каждый инструмент:
 - Не принимает идентификаторов клиента/компании в аргументах (строго из context)
 - Проверяет режим context.mode ("prospect" vs "customer")
 - Изолирует данные чужих компаний ("чужой клиент — пустой результат")
@@ -10,15 +11,15 @@ from __future__ import annotations
 
 import logging
 from decimal import Decimal
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, Iterable, List, Optional
 
 from django.db import transaction
-from jsonschema import Draft202012Validator, FormatChecker
 from parties.models import Company
 from portal.models import PortalRequestLine
 
 from catalog.constants import MODE_CLIENT, MODE_LEAD
 from catalog.published import project_many, published_products
+from crm.constants import DealStageCode
 from crm.models import Deal, DealStage, GeneratedDocument
 
 from ..services.summary import (
@@ -28,22 +29,15 @@ from ..services.summary import (
     get_document_link_data,
     list_company_deals_data,
 )
-from ..services.webhooks import build_actor, emit_request_created
+from ..services.webhooks import build_actor, map_deal_stage
 from .context import AgentContext
+from .contract import ToolSpec
 
 logger = logging.getLogger(__name__)
 
 
 class ToolExecutionError(Exception):
     """Ошибка выполнения инструмента (некорректные параметры, недоступный режим и т.п.)."""
-
-
-class InvalidArgumentsError(Exception):
-    """Аргументы вызова не соответствуют `input_schema` инструмента (HTTP 400 `INVALID_ARGUMENTS`)."""
-
-    def __init__(self, errors: List[str]):
-        super().__init__("; ".join(errors))
-        self.errors = errors
 
 
 class ToolModeError(ToolExecutionError):
@@ -199,7 +193,8 @@ def search_catalog_tool(context: AgentContext, arguments: Dict[str, Any]) -> Lis
 def create_request_tool(context: AgentContext, arguments: Dict[str, Any]) -> Dict[str, Any]:
     """Заявка в ERP от имени клиента: модель предлагает текст, код решает, что это «запрос».
 
-    ERP шлёт CRM событие request.created(source=crm).
+    Событие request.created(source=crm) рождает сигнал `integration.signals` при сохранении сделки — ровно одно:
+    источник, актора и клиента CRM сигнал берёт из `deal.request_origin` (как для портала, FIX-23).
     """
     if context.mode != "customer" or not context.erp_company_id:
         raise ToolModeError("create_request is only available in customer mode")
@@ -217,15 +212,22 @@ def create_request_tool(context: AgentContext, arguments: Dict[str, Any]) -> Dic
         raise ToolExecutionError(f"Company #{context.erp_company_id} not found")
 
     primary_contact = company.contacts.filter(is_primary=True).first() or company.contacts.first()
-    request_stage = DealStage.objects.filter(code="request").first()
+    request_stage = DealStage.objects.filter(code=DealStageCode.DRAFT).first()
 
-    deal = Deal.objects.create(
+    deal = Deal(
         company=company,
         contact=primary_contact,
         stage=request_stage,
         title=f"Заявка: {company.name}",
         notes=summary,
     )
+    deal.request_origin = {  # читает integration.signals: единственный request.created для этой сделки
+        "source": "crm",
+        "summary": summary,
+        "actor": build_actor(actor_type="client", name="CRM Agent"),
+        "crm_client_id": context.crm_client_id,
+    }
+    deal.save()
 
     for idx, item in enumerate(lines_raw):
         if not isinstance(item, dict):
@@ -244,169 +246,44 @@ def create_request_tool(context: AgentContext, arguments: Dict[str, Any]) -> Dic
             deal=deal,
             text=text,
             quantity=qty_val,
-            unit=item.get("unit") or None,
+            unit=str(item.get("unit") or "").strip(),  # колонка NOT NULL; контракт разрешает `unit` null или без поля
             sort_order=idx + 1,
         )
 
-    # Событие request.created в CRM
-    emit_request_created(
-        deal=deal,
-        source="crm",
-        actor=build_actor(actor_type="client", name="CRM Agent"),
-        send_async=True,
-        crm_client_id=context.crm_client_id,
-    )
-
-    stage_code = deal.stage.code if deal.stage else "request"
     return {
         "erp_request_id": deal.id,
         "number": f"D-{deal.id}",
-        "status": stage_code,
+        "status": map_deal_stage(deal.stage.code if deal.stage else None),
     }
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Реестр инструментов (соответствие packages/contracts/mcp-tools.json)
+# Обработчики по имени инструмента. Состав имён сверяется с packages/contracts/mcp-tools.json
+# (`assert_handlers_match_contract`) и тестом; схемы, режимы и описания живут только в контракте.
 # ─────────────────────────────────────────────────────────────────────────────
 
-TOOLS_METADATA = [
-    {
-        "name": "list_client_deals",
-        "modes": ["customer"],
-        "description": "Сделки клиента со стадией и следующим шагом.",
-        "inputSchema": {
-            "type": "object",
-            "properties": {},
-            "additionalProperties": False,
-        },
-        "handler": list_client_deals_tool,
-    },
-    {
-        "name": "get_deal_status",
-        "modes": ["customer"],
-        "description": "Стадия сделки, КП, счета, поставки (проекция клиента), акты.",
-        "inputSchema": {
-            "type": "object",
-            "required": ["erp_deal_id"],
-            "properties": {"erp_deal_id": {"type": "integer"}},
-            "additionalProperties": False,
-        },
-        "handler": get_deal_status_tool,
-    },
-    {
-        "name": "get_delivery_status",
-        "modes": ["customer"],
-        "description": "Строки поставки: статус, ожидаемая дата, трек. Без поставщика и цен.",
-        "inputSchema": {
-            "type": "object",
-            "required": ["erp_deal_id"],
-            "properties": {"erp_deal_id": {"type": "integer"}},
-            "additionalProperties": False,
-        },
-        "handler": get_delivery_status_tool,
-    },
-    {
-        "name": "list_client_documents",
-        "modes": ["customer"],
-        "description": "Документы клиента с фильтром по виду и датам.",
-        "inputSchema": {
-            "type": "object",
-            "properties": {
-                "kind": {
-                    "type": "string",
-                    "enum": ["quote", "contract", "invoice", "act", "waybill", "receipt", "other"],
-                },
-                "date_from": {"type": "string", "format": "date"},
-                "date_to": {"type": "string", "format": "date"},
-            },
-            "additionalProperties": False,
-        },
-        "handler": list_client_documents_tool,
-    },
-    {
-        "name": "get_document_link",
-        "modes": ["customer"],
-        "description": "Подписанный URL файла на 10 минут; бот отправляет файл клиенту. Выдача пишется в аудит ERP.",
-        "inputSchema": {
-            "type": "object",
-            "required": ["erp_document_id"],
-            "properties": {"erp_document_id": {"type": "integer"}},
-            "additionalProperties": False,
-        },
-        "handler": get_document_link_tool,
-    },
-    {
-        "name": "search_catalog",
-        "modes": ["prospect", "customer"],
-        "description": (
-            "Поиск по опубликованному слою каталога. "
-            "prospect: название, описание, единица. "
-            "customer: + цена (или «по запросу»), наличие, срок. "
-            "Цены лиду не называются (DECISIONS 2026-10-13)."
-        ),
-        "inputSchema": {
-            "type": "object",
-            "required": ["query"],
-            "properties": {
-                "query": {"type": "string", "minLength": 1, "maxLength": 200},
-                "top_k": {"type": "integer", "minimum": 1, "maximum": 20, "default": 5},
-            },
-            "additionalProperties": False,
-        },
-        "handler": search_catalog_tool,
-    },
-    {
-        "name": "create_request",
-        "modes": ["customer"],
-        "description": (
-            "Заявка в ERP от имени клиента: модель предлагает текст, код решает, что это «запрос» "
-            "(ORCHESTRATOR §3.4). ERP шлёт CRM событие request.created(source=crm)."
-        ),
-        "inputSchema": {
-            "type": "object",
-            "required": ["summary", "lines"],
-            "properties": {
-                "summary": {"type": "string", "minLength": 1, "maxLength": 5000},
-                "lines": {
-                    "type": "array",
-                    "items": {
-                        "type": "object",
-                        "required": ["text"],
-                        "properties": {
-                            "text": {"type": "string", "minLength": 1, "maxLength": 1000},
-                            "quantity": {"type": ["string", "null"]},
-                            "unit": {"type": ["string", "null"]},
-                        },
-                        "additionalProperties": False,
-                    },
-                },
-            },
-            "additionalProperties": False,
-        },
-        "handler": create_request_tool,
-    },
-]
-
-TOOLS_BY_NAME = {t["name"]: t for t in TOOLS_METADATA}
+HANDLERS = {
+    "list_client_deals": list_client_deals_tool,
+    "get_deal_status": get_deal_status_tool,
+    "get_delivery_status": get_delivery_status_tool,
+    "list_client_documents": list_client_documents_tool,
+    "get_document_link": get_document_link_tool,
+    "search_catalog": search_catalog_tool,
+    "create_request": create_request_tool,
+}
 
 
-def validate_arguments(tool_meta: Dict[str, Any], arguments: Any) -> None:
-    """Проверка аргументов по `input_schema` из контракта (packages/contracts/mcp-tools.json)."""
-    validator = Draft202012Validator(tool_meta["inputSchema"], format_checker=FormatChecker())
-    errors = sorted(
-        f"{'/'.join(str(p) for p in error.absolute_path) or '<root>'}: {error.message}"
-        for error in validator.iter_errors(arguments)
-    )
-    if errors:
-        raise InvalidArgumentsError(errors)
+def assert_handlers_match_contract(tools: Iterable[str]) -> None:
+    """Инструмент без обработчика или обработчик без инструмента в контракте — процесс не стартует."""
+    declared = set(tools)
+    missing = sorted(declared - set(HANDLERS))
+    extra = sorted(set(HANDLERS) - declared)
+    if missing or extra:
+        raise RuntimeError(f"erp-mcp: контракт и обработчики расходятся (нет обработчика: {missing}, лишние: {extra})")
 
 
-def execute_tool(context: AgentContext, tool_name: str, arguments: Dict[str, Any]) -> Any:
-    """Диспетчеризация и запуск инструмента."""
-    tool_meta = TOOLS_BY_NAME.get(tool_name)
-    if not tool_meta:
-        raise ToolExecutionError(f"Tool '{tool_name}' not found")
-
-    validate_arguments(tool_meta, arguments)
-    handler = tool_meta["handler"]
-    return handler(context, arguments)
+def execute_tool(context: AgentContext, spec: ToolSpec, arguments: Dict[str, Any]) -> Any:
+    """Запуск обработчика инструмента из контракта; режим проверяется по `modes` контракта."""
+    if context.mode not in spec.modes:
+        raise ToolModeError(f"{spec.name} is not available in {context.mode} mode")
+    return HANDLERS[spec.name](context, arguments)
