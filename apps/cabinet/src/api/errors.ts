@@ -1,4 +1,6 @@
 import i18n from '@/i18n';
+import type { TFunction } from 'i18next';
+
 import { isPortalApiError } from './portal';
 
 /**
@@ -25,11 +27,27 @@ export function apiErrorKey(error: unknown): string {
 }
 
 /**
- * Ошибка входа (magic-link, Telegram): 429 — лимит попыток входа (5 в час на адрес), 403 — доступ закрыт
+ * Ошибка входа (magic-link, Telegram): 429 — лимит попыток входа, 403 — доступ закрыт
  * (компания в архиве, Q-18); остальное — как везде.
  */
 export function loginErrorKey(error: unknown): string {
   if (isPortalApiError(error, 429)) return 'auth.errors.TOO_MANY_REQUESTS';
   if (isPortalApiError(error, 403)) return 'auth.errors.FORBIDDEN';
   return apiErrorKey(error);
+}
+
+/** «N сек» / «N мин» для ожидания по `Retry-After`: до минуты — секунды, дальше — минуты с округлением вверх. */
+export function waitText(seconds: number, t: TFunction): string {
+  return seconds < 60 ? t('auth.errors.waitSeconds', { n: Math.max(1, seconds) }) : t('auth.errors.waitMinutes', { n: Math.ceil(seconds / 60) });
+}
+
+/**
+ * Текст ошибки входа. 429 с `Retry-After` — «повторите через N мин/сек»; без заголовка — «попробуйте позже»;
+ * остальное — по `loginErrorKey`.
+ */
+export function loginErrorText(error: unknown, t: TFunction): string {
+  if (isPortalApiError(error, 429) && error.retryAfter !== null && error.retryAfter > 0) {
+    return t('auth.errors.TOO_MANY_REQUESTS_WAIT', { wait: waitText(error.retryAfter, t) });
+  }
+  return t(loginErrorKey(error));
 }

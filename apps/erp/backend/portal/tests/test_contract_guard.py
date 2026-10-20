@@ -18,7 +18,7 @@ import re
 
 import pytest
 from django.urls import URLPattern, URLResolver, get_resolver
-from portal.tests.conftest import PortalAPIClient
+from portal.tests.conftest import LOCMEM_CHANNELS, PortalAPIClient
 from portal.tests.contract_support import (
     check_response,
     component,
@@ -61,17 +61,20 @@ GET_CASES = {
     "/catalog/{id}": lambda w: [f"/catalog/{w['product'].pk}"],
     "/company": lambda w: ["/company"],
     "/team": lambda w: ["/team"],
-    "/auth/magic/{token}": lambda w: [f"/auth/magic/{w['magic_token']}"],
 }
 
 #: Достижимые из модели значения статусов, которых сторож не ждёт, — с причиной. Всё остальное из enum контракта
 #: обязано встретиться в ответах.
+#: Пересмотрено в FIX-25 по решениям архитектора 2026-10-20: каждое значение либо закрыто решением (ссылка на
+#: вопрос), либо ждёт вехи. `test_unreachable_values_are_still_in_the_contract` не даёт записи пережить enum.
 UNREACHABLE = {
-    "/contracts": {"cancelled": "отменённый договор клиенту не показывается (FIX-22); значение enum — на будущее"},
-    "/deliveries": {"ready_to_ship": "у Fulfillment нет такого состояния; строки поставки по складу — M4"},
+    "/contracts": {
+        "cancelled": "отменённый договор клиенту не показывается; значение enum оставлено до пилота (Q-FIX22-2, вариант 1)"
+    },
+    "/deliveries": {"ready_to_ship": "у Fulfillment нет такого состояния; склад — M4 (Q-FIX21-5, п. 4)"},
     "/documents": {
-        "specification": "отдельного документа «спецификация» в ERP нет — она часть договора (QUESTIONS Q-FIX23-3)",
-        "receipt": "квитанция об оплате в портал не выдаётся — решение владельца (QUESTIONS Q-FIX23-3)",
+        "specification": "отдельного документа «спецификация» в ERP нет — она часть договора (Q-FIX23-3)",
+        "receipt": "квитанция об оплате в портал не выдаётся — решение владельца (Q-FIX23-3)",
         "other": "прочих клиентских документов в ERP нет: письма и рапорты внутренние",
     },
 }
@@ -114,7 +117,7 @@ def fetch(client, anon_client, contract_path: str, url: str):
 def test_contract_is_mounted_and_readable():
     path = find_contract_path()
     assert path.name == "erp-portal.yaml"
-    assert load_contract()["info"]["version"] == "0.2.0"
+    assert load_contract()["info"]["version"] == "0.3.0"
 
 
 def test_every_contract_get_is_covered_by_the_guard():
@@ -183,6 +186,45 @@ def test_every_reachable_enum_value_is_exercised(contract_path, contract_world, 
         f"{contract_path}.{field}: в ответах {sorted(seen)}, контракт требует {sorted(expected)} "
         f"(недостижимые с причиной — UNREACHABLE)"
     )
+
+
+def test_unreachable_values_are_still_in_the_contract():
+    """Запись `UNREACHABLE` без значения в enum контракта — мусор: значение убрали, а исключение осталось."""
+    stale = {
+        (path, value)
+        for path, values in UNREACHABLE.items()
+        for value in values
+        if value not in component(STATUS_FIELDS[path][1])["enum"]
+    }
+    assert not stale, f"UNREACHABLE ссылается на значения, которых нет в контракте: {sorted(stale)}"
+
+
+def test_contract_has_no_deal_id_property_but_the_documents_filter():
+    """0.3.0: `deal_id` снят со всех схем ответов; остался только фильтр `?deal_id=` у `GET /documents`."""
+    schemas = load_contract()["components"]["schemas"]
+    assert [name for name, schema in schemas.items() if "deal_id" in str(schema)] == []
+    parameters = {p["name"] for p in load_contract()["paths"]["/documents"]["get"]["parameters"] if "name" in p}
+    assert "deal_id" in parameters
+
+
+def test_responses_carry_deal_ref_and_never_deal_id(contract_world, portal_client):
+    """Везде, где есть сделка, — только `deal: {id, number, title}`; `deal_id` рядом не отдаётся."""
+    for path in ("/requests", "/quotes", "/contracts", "/invoices", "/acts", "/deliveries", "/documents"):
+        items = portal_client.get(api(path)).json()
+        assert items, path
+        assert all("deal_id" not in item for item in items), f"{path}: в ответе остался deal_id"
+        assert all("deal" in item for item in items), path
+    quote = portal_client.get(api(f"/quotes/{contract_world['quotes']['sent'].pk}")).json()
+    assert "deal_id" not in quote and {"subtotal", "vat"} <= set(quote)
+
+
+def test_quote_detail_subtotal_plus_vat_is_total(contract_world, portal_client):
+    from decimal import Decimal
+
+    for quote in contract_world["quotes"].values():
+        body = portal_client.get(api(f"/quotes/{quote.pk}")).json()
+        parts = Decimal(body["subtotal"]["amount"]) + Decimal(body["vat"]["amount"])
+        assert parts == Decimal(body["total"]["amount"]), f"КП {quote.pk}: subtotal + vat != total"
 
 
 def test_entities_not_shown_to_the_client_are_not_found(contract_world, portal_client):
@@ -314,11 +356,11 @@ def _error_cases(world):
             "MAGIC_LINK_EXPIRED",
         ),
         (
-            "ссылка просрочена (GET)",
+            "лишнее поле в обмене токена",
             "anon",
-            lambda c: c.get(api("/auth/magic/unknown-token")),
-            410,
-            "MAGIC_LINK_EXPIRED",
+            lambda c: c.post(api("/auth/magic"), {"token": "x" * 32, "next": "/"}, format="json"),
+            422,
+            "VALIDATION_ERROR",
         ),
         (
             "плохое тело запроса",
@@ -368,6 +410,51 @@ def test_error_bodies_are_error_schema_with_known_codes(
         if body["detail"] not in codes:
             problems.append(f"{title}: detail {body['detail']!r} нет в ErrorCode")
     assert not problems, "\n".join(problems)
+
+
+def _assert_documented_error(response, path, method, status_code, code):
+    body = response.json()
+    assert (response.status_code, body) == (status_code, {"detail": code})
+    assert schema_errors(body, component("Error")) == []
+    assert code in error_codes()
+    documented = load_contract()["paths"][path][method]["responses"]
+    assert str(status_code) in documented, f"{method.upper()} {path}: статус {status_code} не описан в контракте"
+
+
+def test_failed_invitation_is_503_delivery_failed_as_in_the_contract(portal_client, settings):
+    settings.EMAIL_CHANNELS = {
+        name: {**cfg, "backend": "django.core.mail.backends.smtp.EmailBackend", "host": "127.0.0.1", "port": 1}
+        for name, cfg in LOCMEM_CHANNELS.items()
+    }
+    response = portal_client.post(
+        api("/team/invite"),
+        {"name": "Коллега", "email": "colleague.guard@example.com", "language": "ru", "channels": ["email"]},
+        format="json",
+    )
+    _assert_documented_error(response, "/team/invite", "post", 503, "DELIVERY_FAILED")
+
+
+def test_too_large_upload_is_422_file_too_large_as_in_the_contract(portal_client, settings):
+    from django.core.files.uploadedfile import SimpleUploadedFile
+
+    settings.PORTAL_UPLOAD_MAX_BYTES = 10
+    response = portal_client.post(
+        api("/uploads"), {"file": SimpleUploadedFile("big.pdf", b"%PDF-1.4 " + b"x" * 64)}, format="multipart"
+    )
+    _assert_documented_error(response, "/uploads", "post", 422, "FILE_TOO_LARGE")
+
+
+def test_request_without_lines_is_accepted_as_in_the_contract(portal_client):
+    assert "lines" not in component("ClientRequestCreate")["required"]
+    response = portal_client.post(api("/requests"), {"summary": "Нужны трубы, без списка"}, format="json")
+    assert response.status_code == 201
+    assert check_response(response.json(), component("ClientRequest")) == []
+
+
+def test_token_in_the_path_route_is_gone(anon_portal_client):
+    """`GET /auth/magic/{token}` снят в 0.3.0: маршрута нет (404), в контракте его тоже нет."""
+    assert "/auth/magic/{token}" not in load_contract()["paths"]
+    assert anon_portal_client.get(api("/auth/magic/unknown-token")).status_code == 404
 
 
 def test_missing_idempotency_key_is_400_with_known_code(contract_world, portal_client):

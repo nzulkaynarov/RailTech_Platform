@@ -2,7 +2,7 @@ import { useId, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { CheckCircle2, Clock, FileSignature, FileText, Mail, MessageCircle, RotateCw, SearchX, XCircle } from 'lucide-react';
-import { toast } from 'sonner';
+import { toast } from '@/lib/toast';
 
 import { isPortalApiError, type AcceptanceCodeSent, type Quote, type QuoteLine, type QuoteListItem } from '@/api/portal';
 import { useAcceptQuote, useContracts, useQuote, useQuotes, useRejectQuote, useRequestQuoteCode } from '@/api/queries';
@@ -178,7 +178,7 @@ function QuoteCard({ quote }: { quote: Quote }) {
           <SectionTitle>
             <span id="quote-lines">{t('pages.quoteDetail.lines')}</span>
           </SectionTitle>
-          <QuoteLines lines={quote.lines} total={quote.total} />
+          <QuoteLines lines={quote.lines} subtotal={quote.subtotal} vat={quote.vat} total={quote.total} />
         </section>
       </div>
 
@@ -189,7 +189,17 @@ function QuoteCard({ quote }: { quote: Quote }) {
 }
 
 /** Строки КП: разделы — подзаголовки, заметки — пояснения, позиции и этапы — с количеством, ценой и сроком. */
-function QuoteLines({ lines, total }: { lines: QuoteLine[]; total: Quote['total'] }) {
+function QuoteLines({
+  lines,
+  subtotal,
+  vat,
+  total,
+}: {
+  lines: QuoteLine[];
+  subtotal: Quote['subtotal'];
+  vat: Quote['vat'];
+  total: Quote['total'];
+}) {
   const { t } = useTranslation();
   const desktop = useMediaQuery(DESKTOP_QUERY);
   const sorted = [...lines].sort((a, b) => a.line_no - b.line_no);
@@ -235,11 +245,25 @@ function QuoteLines({ lines, total }: { lines: QuoteLine[]; total: Quote['total'
             )}
           </tbody>
           <tfoot>
+            <tr className="border-t">
+              <th scope="row" colSpan={3} className="px-3 pt-3 pb-1 text-right font-normal text-muted-foreground">
+                {t('pages.quoteDetail.subtotal')}
+              </th>
+              <td className="px-3 pt-3 pb-1 text-right">{formatMoney(subtotal)}</td>
+              <td />
+            </tr>
             <tr>
-              <th scope="row" colSpan={3} className="px-3 py-3 text-right font-semibold">
+              <th scope="row" colSpan={3} className="px-3 py-1 text-right font-normal text-muted-foreground">
+                {t('pages.quoteDetail.vat')}
+              </th>
+              <td className="px-3 py-1 text-right">{formatMoney(vat)}</td>
+              <td />
+            </tr>
+            <tr>
+              <th scope="row" colSpan={3} className="px-3 pt-1 pb-3 text-right font-semibold">
                 {t('pages.quoteDetail.grandTotal')}
               </th>
-              <td className="px-3 py-3 text-right text-base font-semibold">{formatMoney(total)}</td>
+              <td className="px-3 pt-1 pb-3 text-right text-base font-semibold">{formatMoney(total)}</td>
               <td />
             </tr>
           </tfoot>
@@ -289,10 +313,16 @@ function QuoteLines({ lines, total }: { lines: QuoteLine[]; total: Quote['total'
           ),
         )}
       </ul>
-      <p className="flex items-baseline justify-between gap-3 rounded-lg border bg-card p-3 text-sm font-semibold">
-        <span>{t('pages.quoteDetail.grandTotal')}</span>
-        <span className="text-base">{formatMoney(total)}</span>
-      </p>
+      <div role="group" aria-label={t('pages.quoteDetail.totals')}>
+        <dl className="grid grid-cols-[1fr_auto] gap-x-3 gap-y-1 rounded-lg border bg-card p-3 text-sm">
+          <dt className="text-muted-foreground">{t('pages.quoteDetail.subtotal')}</dt>
+          <dd className="text-right">{formatMoney(subtotal)}</dd>
+          <dt className="text-muted-foreground">{t('pages.quoteDetail.vat')}</dt>
+          <dd className="text-right">{formatMoney(vat)}</dd>
+          <dt className="font-semibold">{t('pages.quoteDetail.grandTotal')}</dt>
+          <dd className="text-right text-base font-semibold">{formatMoney(total)}</dd>
+        </dl>
+      </div>
     </div>
   );
 }

@@ -1,8 +1,12 @@
-"""Company, Deal, and Document query service for CRM (CONTRACTS §2, M3-ERP-01).
+"""Company, Deal, and Document query service for CRM (CONTRACTS §2, M3-ERP-01; проекции по контракту 0.2.0 — FIX-30).
 
 Строго изолирует внутренний слой бэк-офиса:
 - Только клиентская проекция (никаких поставщиков, закупочных цен, себестоимости и маржи).
 - Подписанные временные ссылки на файлы документов (10 минут) с аудитом вызовов.
+
+Форма ответов — `packages/contracts/openapi/erp-integration.yaml` (сторож: `integration/tests/test_contract_integration.py`).
+Стадия и сумма сделки — только из `stages.py`; статусы договора, счёта и акта, видимость документов, деньги и сроки —
+из `portal/projections.py` (те же функции, что у Cabinet, без копий). Нет данных — `None`, а не выдумка.
 """
 
 from __future__ import annotations
@@ -14,21 +18,17 @@ from typing import Any, Dict, List, Optional
 from django.conf import settings
 from django.utils import timezone
 from parties.models import Company
-from sales.models import Fulfillment
+from portal import projections
+from sales.models import DeliveryLine, DeliveryLineStatus, Fulfillment
+from sales.services.delivery_lines import sync_delivery_lines
 
+from crm.constants import InvoiceStatusCode, QuoteStatusCode
 from crm.models import Deal, GeneratedDocument, Invoice
 
 from ..models import CrmClientMapping
+from . import stages
 
 logger = logging.getLogger(__name__)
-
-
-def _to_money(amount: Decimal | float | int | str, currency: str = "UZS") -> Dict[str, str]:
-    try:
-        val = Decimal(str(amount))
-    except Exception:
-        val = Decimal("0")
-    return {"amount": f"{val:.2f}", "currency": currency}
 
 
 def _map_doc_kind(raw_kind: str) -> str:
@@ -47,58 +47,103 @@ def _map_doc_kind(raw_kind: str) -> str:
     return mapping.get(kind, "other")
 
 
-#: Статусы КП из справочника ERP -> `QuoteStatus` контракта. Клиент видит только
-#: отправленные, принятые и отклонённые (как публичная страница КП в `portal`).
-_QUOTE_STATUS_MAP = {
-    "draft": "draft",
-    "pending_trade_review": "approval",
-    "pending_approval": "approval",
-    "ready_to_send": "approval",
-    "approval": "approval",
-    "sent": "sent",
-    "viewed": "viewed",
-    "approved": "accepted",
-    "accepted": "accepted",
-    "rejected": "rejected",
-    "expired": "expired",
-}
-CLIENT_VISIBLE_QUOTE_STATUSES = frozenset({"sent", "viewed", "accepted", "rejected", "expired"})
+def _quote_status(quote) -> str:
+    """`QuoteStatus` контракта. Отправленные и решённые — проекция портала; до отправки CRM видит `draft`/`approval`."""
+    code = quote.status.code if quote.status_id else QuoteStatusCode.DRAFT
+    if code in projections.CLIENT_QUOTE_STATUSES:
+        return projections.quote_status(quote)
+    return "draft" if code == QuoteStatusCode.DRAFT else "approval"
 
-_FULFILLMENT_STATUS_MAP = {
-    "pending": "assembling",
-    "assembling": "assembling",
-    "ready_to_ship": "ready_to_ship",
-    "shipped": "shipped",
-    "in_transit": "in_transit",
-    "disputed": "in_transit",
-    "delivered": "delivered",
-    "accepted": "delivered",
-}
+
+# ── Поставки ────────────────────────────────────────────────────────────────────────────────────────
+
+#: Строки, по которым поставка ещё впереди (`next_delivery`): доставленное и решённое клиентом не «ближайшее».
+_PENDING_DELIVERY = (
+    DeliveryLineStatus.ASSEMBLING,
+    DeliveryLineStatus.IN_TRANSIT,
+    DeliveryLineStatus.READY_TO_SHIP,
+    DeliveryLineStatus.SHIPPED,
+)
+
+
+def _delivery_line_item(line: DeliveryLine) -> Dict[str, Any]:
+    """`DeliveryLine` контракта: без поставщика, цен и себестоимости; нет количества или единицы — `None`."""
+    return {
+        "erp_deal_id": line.deal_id,
+        "line_no": line.line_no,
+        "title": line.title,
+        "quantity": str(line.quantity) if line.quantity is not None else None,
+        "unit": projections.blank_to_none(line.unit),
+        "status": line.status,
+        "eta": line.eta.isoformat() if line.eta else None,
+        "tracking": projections.blank_to_none(line.tracking),
+        "accepted_at": line.accepted_at.isoformat() if line.accepted_at else None,
+        "remark": projections.blank_to_none(line.remark),
+    }
 
 
 def delivery_lines(deal: Deal) -> List[Dict[str, Any]]:
-    """Поставки сделки в проекции клиента (`DeliveryLine`): без поставщика, цен и себестоимости.
+    """Строки поставки сделки в проекции клиента (`DeliveryLine`) — те же `sales.DeliveryLine`, что видит Cabinet.
 
-    У исполнения сделки (`sales.Fulfillment`, один к одному) нет количества и единицы —
-    они не выдумываются: `quantity` и `unit` равны `null`.
+    Перед чтением строки доводятся до хода исполнения (`sync_delivery_lines`, идемпотентно, как при чтении из портала):
+    иначе статус и срок были бы свежими, только если клиент недавно открывал Cabinet.
     """
-    fulfillment = Fulfillment.objects.filter(deal=deal).select_related("status").first()
-    if fulfillment is None:
-        return []
-    raw_code = fulfillment.status.code.lower() if fulfillment.status_id else ""
-    eta = fulfillment.expected_delivery_date
-    return [
-        {
-            "erp_deal_id": deal.id,
-            "line_no": 1,
-            "title": deal.title or f"Поставка #{fulfillment.id}",
-            "quantity": None,
-            "unit": None,
-            "status": _FULFILLMENT_STATUS_MAP.get(raw_code, "assembling"),
-            "eta": eta.isoformat() if eta else None,
-            "tracking": fulfillment.tracking_number or None,
-        }
-    ]
+    sync_delivery_lines(Fulfillment.objects.filter(deal=deal).select_related("status"))
+    return [_delivery_line_item(line) for line in DeliveryLine.objects.filter(deal=deal).order_by("line_no")]
+
+
+# ── Сделка ──────────────────────────────────────────────────────────────────────────────────────────
+
+
+def _deal_item(deal: Deal, stage: str) -> Dict[str, Any]:
+    """`DealListItem`: стадия и сумма — из `stages.py` (сумма `None`, пока клиенту не отправлено ни одно КП)."""
+    amount = stages.deal_amount(deal)
+    return {
+        "erp_deal_id": deal.id,
+        "number": projections.deal_number(deal),
+        "title": deal.title or f"Сделка #{deal.id}",
+        "stage": stage,
+        "amount": projections.format_amount(amount) if amount is not None else None,
+        "currency": stages.deal_currency(deal),
+        "next_step": None,
+        "updated_at": deal.updated_at.isoformat(),
+    }
+
+
+def _company_deals(company: Company) -> List[Deal]:
+    """Сделки компании со всем, что читает `deal_stage`; строки поставки перед этим доводятся до хода исполнения."""
+    sync_delivery_lines(Fulfillment.objects.filter(deal__company=company).select_related("status"))
+    return list(stages.with_stage_facts(company.deals.all()).order_by("-updated_at"))
+
+
+def _receivables(company: Company) -> Dict[str, str]:
+    """Дебиторка: непогашенный остаток по выставленным счетам (выставлен, частично оплачен, просрочен).
+
+    Контракт отдаёт одну сумму (`Money`). Счета в разных валютах не складываются: берётся валюта по умолчанию, если она
+    есть среди долгов, иначе первая по алфавиту (Q-FIX30-2).
+    """
+    unpaid = Invoice.objects.filter(
+        deal__company=company,
+        status__code__in=[InvoiceStatusCode.ISSUED, InvoiceStatusCode.PARTIAL, InvoiceStatusCode.OVERDUE],
+    ).select_related("currency")
+    totals: Dict[str, Decimal] = {}
+    for invoice in unpaid:
+        code = projections.currency_code(invoice.currency)
+        totals[code] = totals.get(code, Decimal("0")) + max(invoice.balance_due, Decimal("0"))
+    if not totals:
+        return projections.money(Decimal("0"), projections.DEFAULT_CURRENCY)
+    code = projections.DEFAULT_CURRENCY if projections.DEFAULT_CURRENCY in totals else sorted(totals)[0]
+    return projections.money(totals[code], code)
+
+
+def _next_delivery(open_deals: List[Deal]) -> Optional[Dict[str, Any]]:
+    """Ближайшая поставка по открытым сделкам: из строк поставки, с самой ранней датой (без даты — в конце)."""
+    lines = [line for deal in open_deals for line in deal.delivery_lines.all() if line.status in _PENDING_DELIVERY]
+    if not lines:
+        return None
+    today = timezone.localdate()
+    nearest = min(lines, key=lambda line: (line.eta is None, line.eta or today, line.deal_id, line.line_no))
+    return _delivery_line_item(nearest)
 
 
 def get_company_summary_data(erp_company_id: int) -> Optional[Dict[str, Any]]:
@@ -110,32 +155,14 @@ def get_company_summary_data(erp_company_id: int) -> Optional[Dict[str, Any]]:
     mapping = CrmClientMapping.objects.filter(company=company).first()
     crm_client_id = mapping.crm_client_id if mapping else company.id
 
-    # Открытые сделки
-    open_deals_qs = (
-        company.deals.exclude(stage__code__in=["won", "lost"])
-        .select_related("stage")
-        .prefetch_related("quotes")
-        .order_by("-updated_at")
-    )
-    open_deals = []
-    for d in open_deals_qs:
-        open_deals.append(
-            {
-                "erp_deal_id": d.id,
-                "number": f"D-{d.id}",
-                "title": d.title or f"Сделка #{d.id}",
-                "stage": d.stage.code if d.stage else "request",
-                "amount": f"{d.total_value:.2f}",
-                "currency": "UZS",
-                "next_step": None,
-                "updated_at": d.updated_at.isoformat(),
-            }
-        )
+    # Открытые сделки: закрытыми считаются `won`/`lost` по стадии контракта, а не по коду FSM
+    deals = [(deal, stages.deal_stage(deal)) for deal in _company_deals(company)]
+    open_deals = [(deal, stage) for deal, stage in deals if stages.is_open_stage(stage)]
 
     # Последний документ
     last_doc_obj = (
         GeneratedDocument.objects.filter(deal__company=company)
-        .select_related("template__kind")
+        .select_related("template__kind", "status")
         .order_by("-created_at")
         .first()
     )
@@ -156,53 +183,14 @@ def get_company_summary_data(erp_company_id: int) -> Optional[Dict[str, Any]]:
             ),
         }
 
-    # Дебиторка (неоплаченные счета)
-    invoices = Invoice.objects.filter(
-        deal__company=company,
-        status__code__in=["issued", "partially_paid", "ISSUED", "PARTIALLY_PAID"],
-    )
-    total_receivable = sum((inv.total_amount - (inv.paid_amount or Decimal("0"))) for inv in invoices)
-    receivables = _to_money(max(total_receivable, Decimal("0")), "UZS")
-
-    # Ближайшая поставка (проекция клиента)
-    next_delivery = None
-    active_deal_ids = company.deals.values_list("id", flat=True)
-    try:
-        from sales.models import Fulfillment
-
-        f_obj = (
-            Fulfillment.objects.filter(
-                deal_id__in=active_deal_ids, status__in=["assembling", "in_transit", "ready_to_ship"]
-            )
-            .order_by("eta")
-            .first()
-        )
-        if f_obj:
-            next_delivery = {
-                "erp_deal_id": f_obj.deal_id,
-                "line_no": 1,
-                "title": f_obj.title,
-                "quantity": str(f_obj.quantity or 1),
-                "unit": "шт",
-                "status": (
-                    f_obj.status
-                    if f_obj.status in ["assembling", "in_transit", "ready_to_ship", "shipped", "delivered"]
-                    else "assembling"
-                ),
-                "eta": f_obj.eta.isoformat() if f_obj.eta else None,
-                "tracking": f_obj.tracking_number,
-            }
-    except Exception:
-        pass
-
     return {
         "erp_company_id": company.id,
         "crm_client_id": crm_client_id,
         "name": company.name,
-        "open_deals": open_deals,
+        "open_deals": [_deal_item(deal, stage) for deal, stage in open_deals],
         "last_document": last_document,
-        "receivables": receivables,
-        "next_delivery": next_delivery,
+        "receivables": _receivables(company),
+        "next_delivery": _next_delivery([deal for deal, _ in open_deals]),
     }
 
 
@@ -212,22 +200,15 @@ def list_company_deals_data(erp_company_id: int) -> Optional[List[Dict[str, Any]
     if not company:
         return None
 
-    deals_qs = company.deals.select_related("stage").prefetch_related("quotes").order_by("-updated_at")
-    result = []
-    for d in deals_qs:
-        result.append(
-            {
-                "erp_deal_id": d.id,
-                "number": f"D-{d.id}",
-                "title": d.title or f"Сделка #{d.id}",
-                "stage": d.stage.code if d.stage else "request",
-                "amount": f"{d.total_value:.2f}",
-                "currency": "UZS",
-                "next_step": None,
-                "updated_at": d.updated_at.isoformat(),
-            }
-        )
-    return result
+    return [_deal_item(deal, stages.deal_stage(deal)) for deal in _company_deals(company)]
+
+
+def _signed_at(contract) -> Optional[str]:
+    """Когда договор подписан: момент последней подписи у подписанного договора, иначе `None`."""
+    if projections.contract_status(contract) != "signed":
+        return None
+    moments = [m for m in (contract.client_signed_at, contract.manager_signed_at) if m]
+    return max(moments).isoformat() if moments else None
 
 
 def get_deal_detail_data(erp_deal_id: int, *, client_view: bool = False) -> Optional[Dict[str, Any]]:
@@ -236,12 +217,8 @@ def get_deal_detail_data(erp_deal_id: int, *, client_view: bool = False) -> Opti
     `client_view=True` (erp-mcp, режим customer) — КП только отправленные, принятые и отклонённые:
     черновики и КП на согласовании клиенту не отдаются.
     """
-    deal = (
-        Deal.objects.filter(pk=erp_deal_id)
-        .select_related("company", "stage")
-        .prefetch_related("quotes", "contracts", "invoices", "acts")
-        .first()
-    )
+    sync_delivery_lines(Fulfillment.objects.filter(deal_id=erp_deal_id).select_related("status"))
+    deal = stages.with_stage_facts(Deal.objects.filter(pk=erp_deal_id)).first()
     if not deal:
         return None
 
@@ -249,76 +226,65 @@ def get_deal_detail_data(erp_deal_id: int, *, client_view: bool = False) -> Opti
     mapping = CrmClientMapping.objects.filter(company=company).first() if company else None
     crm_client_id = mapping.crm_client_id if mapping else (company.id if company else 0)
 
-    # КП
+    # КП (новые версии — выше)
     quotes = []
-    cabinet_url = getattr(settings, "CABINET_URL", "http://cabinet.localhost").rstrip("/")
-    for q in deal.quotes.order_by("-version"):
-        q_status = _QUOTE_STATUS_MAP.get(q.status.code.lower() if q.status else "draft", "draft")
-        if client_view and q_status not in CLIENT_VISIBLE_QUOTE_STATUSES:
+    for q in sorted(deal.quotes.all(), key=lambda quote: quote.version, reverse=True):
+        if client_view and (not q.status_id or q.status.code not in projections.CLIENT_QUOTE_STATUSES):
             continue
         quotes.append(
             {
                 "erp_quote_id": q.id,
                 "version": q.version,
-                "status": q_status,
-                "public_url": f"{cabinet_url}/quotes/{q.id}",
+                "status": _quote_status(q),
+                "public_url": projections.quote_public_url(q),
                 "valid_until": q.valid_until.isoformat() if q.valid_until else None,
-                "total": _to_money(
-                    q.total_incl_vat or Decimal("0"), q.quote_currency.code if q.quote_currency_id else "UZS"
-                ),
+                "total": projections.money(q.total_incl_vat, projections.currency_code(q.quote_currency)),
             }
         )
 
-    # Договоры
-    contracts = []
-    for c in deal.contracts.order_by("-created_at"):
-        contracts.append(
-            {
-                "erp_contract_id": c.id,
-                "number": c.number or f"CTR-{c.id}",
-                "status": c.status.code.lower() if c.status else "draft",
-                "signed_at": c.signed_at.isoformat() if c.signed_at else None,
-            }
-        )
+    # Договоры: только те, что видит клиент (на подписи и подписанные)
+    contracts = [
+        {
+            "erp_contract_id": c.id,
+            "number": c.number or f"CTR-{c.id}",
+            "status": projections.contract_status(c),
+            "signed_at": _signed_at(c),
+        }
+        for c in sorted(deal.contracts.all(), key=lambda contract: contract.created_at, reverse=True)
+        if projections.client_contracts_visible(c)
+    ]
 
-    # Счета
-    invoices = []
-    for inv in deal.invoices.order_by("-created_at"):
-        invoices.append(
-            {
-                "erp_invoice_id": inv.id,
-                "number": inv.number or f"INV-{inv.id}",
-                "status": inv.status.code.lower() if inv.status else "issued",
-                "total": _to_money(inv.total_amount or Decimal("0"), "UZS"),
-                "paid": _to_money(inv.paid_amount or Decimal("0"), "UZS"),
-                "due_date": (inv.due_date or inv.created_at.date()).isoformat(),
-            }
-        )
+    # Счета: не черновики и со сроком оплаты
+    invoices = [
+        {
+            "erp_invoice_id": inv.id,
+            "number": inv.number or f"INV-{inv.id}",
+            "status": projections.invoice_status(inv),
+            "total": projections.money(inv.total_incl_vat, projections.currency_code(inv.currency)),
+            "paid": projections.money(inv.amount_paid, projections.currency_code(inv.currency)),
+            "due_date": projections.invoice_due_date(inv).isoformat(),
+        }
+        for inv in sorted(deal.invoices.all(), key=lambda invoice: invoice.created_at, reverse=True)
+        if projections.client_invoices_visible(inv)
+    ]
 
     # Поставки (клиентская проекция — без поставщика, цен и себестоимости)
-    deliveries = delivery_lines(deal)
+    deliveries = [_delivery_line_item(line) for line in sorted(deal.delivery_lines.all(), key=lambda x: x.line_no)]
 
-    # Акты
-    acts = []
-    for a in deal.acts.order_by("-created_at"):
-        acts.append(
-            {
-                "erp_act_id": a.id,
-                "number": a.number or f"ACT-{a.id}",
-                "status": a.status.code.lower() if a.status else "issued",
-                "issued_at": a.created_at.isoformat(),
-            }
-        )
+    # Акты: выставленные, принятые и возвращённые
+    acts = [
+        {
+            "erp_act_id": a.id,
+            "number": a.number or f"ACT-{a.id}",
+            "status": projections.act_status(a),
+            "issued_at": projections.act_issued_at(a).isoformat(),
+        }
+        for a in sorted(deal.acts.all(), key=lambda act: act.created_at, reverse=True)
+        if projections.client_acts_visible(a)
+    ]
 
     return {
-        "erp_deal_id": deal.id,
-        "number": f"D-{deal.id}",
-        "title": deal.title or f"Сделка #{deal.id}",
-        "stage": deal.stage.code if deal.stage else "request",
-        "amount": f"{deal.total_value:.2f}",
-        "currency": "UZS",
-        "next_step": None,
-        "updated_at": deal.updated_at.isoformat(),
+        **_deal_item(deal, stages.deal_stage(deal)),
         "erp_company_id": company.id if company else 0,
         "crm_client_id": crm_client_id,
         "quotes": quotes,

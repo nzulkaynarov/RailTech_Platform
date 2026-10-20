@@ -1,13 +1,12 @@
 /**
- * C-1/Q-16: клиент видит сделку как `deal {id, number, title}`, внутренний `deal_id` — устаревшее поле контракта 0.2.0.
+ * C-1/Q-16: клиент видит сделку как `deal {id, number, title}`, внутренний `deal_id` — поле, снятое контрактом 0.3.0.
  * Читать его Cabinet не должен нигде. Исключения: сгенерированные типы, фильтр `GET /documents?deal_id=`
- * (параметр запроса, не поле ответа) и мок, который до снятия поля отдаёт его по схеме.
+ * (параметр запроса, не поле ответа) и фильтр в моке.
  */
 const ALLOWED = new Set([
   'api/portal.d.ts',
   'api/crm-form.d.ts',
   'pages/deal.tsx', // useDocuments({ deal_id }) — фильтр запроса
-  'mocks/fixtures.ts', // dealOf(): устаревшее поле, обязательное в схемах ответа
   'mocks/handlers.ts', // фильтр ?deal_id= в моке GET /documents
 ]);
 
@@ -25,7 +24,7 @@ describe('устаревший deal_id', () => {
     expect(files.some(([file]) => file === 'pages/deal.tsx')).toBe(true);
   });
 
-  it('не читается нигде в src, кроме типов, фильтра запроса и мока', () => {
+  it('не встречается нигде в src, кроме типов и фильтра запроса', () => {
     const offenders = files.filter(([file, text]) => !ALLOWED.has(file) && text.includes('deal_id')).map(([file]) => file);
     expect(offenders).toEqual([]);
   });

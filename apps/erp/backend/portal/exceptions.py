@@ -43,13 +43,13 @@ class PortalTooManyRequests(APIException):
 
 
 class PortalDeliveryFailed(APIException):
-    """Письмо не ушло (сбой транспорта): 503. Отдельного кода в `ErrorCode` нет — `CONFLICT` до решения Q-FIX23-2."""
+    """Письмо не ушло (сбой транспорта): 503 `DELIVERY_FAILED` (контракт 0.3.0, Q-FIX23-2)."""
 
     status_code = status.HTTP_503_SERVICE_UNAVAILABLE
-    default_detail = "CONFLICT"
+    default_detail = "DELIVERY_FAILED"
     default_code = "delivery_failed"
 
-    def __init__(self, detail="CONFLICT"):
+    def __init__(self, detail="DELIVERY_FAILED"):
         super().__init__(detail=detail, code=detail)
 
 
