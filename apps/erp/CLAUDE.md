@@ -276,10 +276,10 @@ Celery не перезагружается сам — после изменен�
 - [ ] Ни одного импорта SDK провайдера моделей; алиасы LiteLLM; промпты в файлах.
 - [ ] `grep -ri <brand_name> apps/erp` пусто вне `.env.example`; отраслевых слов в UI нет.
 - [ ] Весь текст через `t()`, ключи в `ru.json` и `en.json`; только shadcn и семантические токены.
-- [ ] Типы API сгенерированы, ручных нет; `stage_code` для логики.
+- [ ] Типы API сгенерированы, ручных нет; `stage_code` для логики. Менял сериализатор или вьюху — `make -C apps/erp openapi` и коммит `backend/schema.json`, `frontend/src/api/schema.d.ts`, `packages/contracts/openapi/erp-internal.yaml`; `make -C apps/erp openapi-check` без diff (FIX-40).
 - [ ] UI-задача: скриншот сценария (1440 и 390 px), axe 0, консоль без ошибок — в описании PR.
 - [ ] Секретов нет; `.env.example` актуален; `gitleaks` прошёл.
-- [ ] Документация в том же PR: OpenAPI в `packages/contracts`, ADR при отклонении, runbook, строка в `docs/PROGRESS.md`; открытые вопросы — в `docs/QUESTIONS.md`.
+- [ ] Документация в том же PR: OpenAPI в `packages/contracts`, ADR при отклонении, runbook; статус и хвосты — в описании PR (`docs/PROGRESS.md` ведёт лид, 2026-10-20); открытые вопросы — в `docs/QUESTIONS.md`.
 
 ## 11. Контекст, который нужно помнить
 
