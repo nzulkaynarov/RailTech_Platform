@@ -11,8 +11,9 @@ from functools import lru_cache
 from pathlib import Path
 
 import pytest
-from core.tests.openapi_contract import format_checker
 from jsonschema import Draft202012Validator
+
+from core.tests.openapi_contract import format_checker
 
 EVENTS_SCHEMA_RELATIVE = Path("packages") / "contracts" / "events.schema.json"
 

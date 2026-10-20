@@ -10,10 +10,11 @@ from __future__ import annotations
 from unittest.mock import MagicMock
 
 import pytest
-from core.tests.events_contract import event_errors
 from integration.models import CrmClientMapping, IntegrationWebhookEvent
 from integration.services import webhooks
 from sales.models import DeliveryLine, DeliveryLineStatus
+
+from core.tests.events_contract import event_errors
 
 pytestmark = pytest.mark.django_db
 
@@ -117,7 +118,10 @@ def test_dispute_sends_the_event_with_the_remark(
     assert envelope["payload"]["status"] == "disputed"
     assert envelope["payload"]["remark"] == "Часть труб с трещинами"  # то же, что записано в строке, без пробелов
     line.refresh_from_db()
-    assert envelope["payload"]["remark"] == line.remark and envelope["payload"]["decided_at"] == line.accepted_at.isoformat()
+    assert (
+        envelope["payload"]["remark"] == line.remark
+        and envelope["payload"]["decided_at"] == line.accepted_at.isoformat()
+    )
     delay.assert_called_once_with(event.id)
 
 
@@ -186,7 +190,14 @@ def _valid_disputed():
         "occurred_at": "2026-10-20T10:00:00+05:00",
         "erp_company_id": 1,
         "crm_client_id": 2,
-        "deal": {"erp_deal_id": 3, "number": "D-3", "title": "Сделка", "stage": "fulfilment", "amount": None, "currency": "UZS"},
+        "deal": {
+            "erp_deal_id": 3,
+            "number": "D-3",
+            "title": "Сделка",
+            "stage": "fulfilment",
+            "amount": None,
+            "currency": "UZS",
+        },
         "actor": {"type": "client", "name": "Азамат"},
         "payload": {
             "line_no": 1,
