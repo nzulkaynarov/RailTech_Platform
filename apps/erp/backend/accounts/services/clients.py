@@ -59,7 +59,7 @@ def create_offline_client(
     email: str = "",
     phone: str = "",
     position: str = "",
-    can_act: bool = True,
+    can_act: bool = True,  # сотрудник сам заводит клиента и решает, может ли контакт подписывать (как в продукте)
     language: str = "ru",
     preferred_channel: str = "email",
     telegram_username: str = "",

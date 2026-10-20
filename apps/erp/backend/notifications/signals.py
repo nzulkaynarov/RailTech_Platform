@@ -2,7 +2,7 @@ import logging
 
 from django.conf import settings
 from django.db import transaction
-from django.db.models.signals import post_save, pre_save
+from django.db.models.signals import post_save
 from django.dispatch import receiver
 
 from crm.constants import DealStageCode
@@ -127,18 +127,19 @@ def notify_deal_created(sender, instance, created, **kwargs):
         push_notification_ws(notif)
 
 
-@receiver(pre_save, sender=Deal)
-def notify_deal_stage_change(sender, instance, **kwargs):
-    """Notify client when deal stage changes."""
-    if not instance.pk:
+@receiver(post_save, sender=Deal)
+def notify_deal_stage_change(sender, instance, created, **kwargs):
+    """Notify client when deal stage changes.
+
+    Прежнюю стадию отдаёт `integration.signals.handle_deal_pre_save` (`_prev_stage_id`): одно чтение прежней записи на
+    весь save сделки, а не по SELECT на каждый обработчик (FIX-54). Нет признака (save не прошёл через pre_save,
+    `update_fields` без стадии) — стадия не менялась.
+    """
+    if created:
         return  # New deal, skip
 
-    try:
-        old_deal = Deal.objects.select_related("stage").get(pk=instance.pk)
-    except Deal.DoesNotExist:
-        return
-
-    if old_deal.stage_id == instance.stage_id:
+    prev_stage_id = getattr(instance, "_prev_stage_id", instance.stage_id)
+    if prev_stage_id == instance.stage_id:
         return
 
     info_type = NotificationType.objects.filter(code="INFO").first()

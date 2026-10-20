@@ -65,7 +65,10 @@ class Contact(models.Model):
         verbose_name=_("Предпочитаемый канал связи"),
     )
     can_act = models.BooleanField(
-        default=True,
+        # Право подписывать за компанию не выдаётся молча (FIX-54, P-18): каждый путь создания контакта называет его
+        # сам — сотрудник в ERP (`accounts.services.clients`), приглашённый коллега (`portal.services.invitation`),
+        # передача из CRM (`integration.services.handoff`).
+        default=False,
         verbose_name=_("Право действовать"),
         help_text=_("Право принимать КП, подписывать договоры и принимать акты"),
     )

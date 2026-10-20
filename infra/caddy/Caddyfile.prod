@@ -69,11 +69,16 @@
 
 # ─── Cabinet — кабинет клиента (apps/cabinet) ──────────────────────────────────────────────
 # SPA без бэкенда (ADR-0004): портальный API ERP отдаётся с того же домена — cookie same-origin, CORS не нужен.
+# /media/*: картинки каталога — абсолютные ссылки на этот же домен (`catalog/published.py`); Django ERP отдаёт только
+# публичные пути media (`core/urls.py`, allowlist), остальное — 404, как на ERP-домене (FIX-54, P-18).
 {$CABINET_DOMAIN} {
 	encode zstd gzip
 	import security_headers
 	import no_mcp
 	handle /api/portal/* {
+		reverse_proxy erp-backend:8000
+	}
+	handle /media/* {
 		reverse_proxy erp-backend:8000
 	}
 	handle {

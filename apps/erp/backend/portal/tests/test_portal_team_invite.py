@@ -61,6 +61,16 @@ def test_telegram_refusal_leaves_no_invite_event(portal_client, client_company):
     assert not IntegrationWebhookEvent.objects.filter(event_type="invite.sent").exists()
 
 
+# ── Право действовать: приглашённый коллега по умолчанию только читает (FIX-54, P-18) ────────────────
+
+
+def test_invited_colleague_cannot_act_unless_the_inviter_says_so(portal_client, client_company):
+    response = portal_client.post(URL, body(), format="json")
+    assert response.status_code == 201, response.content
+    assert response.json()["can_act"] is False
+    assert invited(client_company).get().can_act is False
+
+
 # ── Email: настоящая доставка ────────────────────────────────────────────────────────────────────
 
 

@@ -44,8 +44,13 @@ http://erp.localhost {
 # ─── Cabinet — кабинет клиента (apps/cabinet, M2-CAB-01) ───────────────────────────────────
 # SPA без бэкенда (ADR-0004): портальный API ERP отдаётся с того же домена, поэтому cookie сессии
 # портала same-origin и CORS не нужен. До M2-ERP-01 /api/portal/* отвечает 404 — ожидаемо.
+# /media/*: картинки каталога — абсолютные ссылки на этот же домен (`catalog/published.py`); Django ERP отдаёт только
+# публичные пути media (`core/urls.py`, allowlist), остальное — 404, как на erp.* (FIX-54, P-18).
 http://cabinet.localhost {
 	handle /api/portal/* {
+		reverse_proxy erp-backend:8000
+	}
+	handle /media/* {
 		reverse_proxy erp-backend:8000
 	}
 	handle {
