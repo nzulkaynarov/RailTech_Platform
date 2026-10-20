@@ -20,8 +20,10 @@ import time
 import uuid
 from decimal import Decimal
 from pathlib import Path
+from urllib.parse import urlsplit
 
 import pytest
+from django.core.files.base import ContentFile
 from django.utils import timezone
 from documents.models import DocumentTemplate, DocumentTemplateKind, GeneratedDocumentStatus
 from integration.mcp.context import (
@@ -42,7 +44,7 @@ from sales.models import Fulfillment, FulfillmentStatus, Quote, QuoteItem, Quote
 from catalog.models import Category, Product, ProductStatus
 from catalog.published import CATALOG_ITEM_KEYS
 from crm.constants import DealStageCode, FulfillmentStatusCode, QuoteStatusCode
-from crm.models import Deal, DealStage, GeneratedDocument
+from crm.models import ActivityLog, Deal, DealStage, GeneratedDocument
 from master_data.models import Currency, UnitOfMeasure
 
 pytestmark = pytest.mark.django_db
@@ -531,23 +533,44 @@ def test_list_client_documents_and_link(client, test_data):
     assert docs[0]["erp_document_id"] == test_data["doc_a"].id
     assert docs[0]["number"] == "CTR-ALFA-01"
 
-    # Получение ссылки на свой документ
-    resp_link = client.post(
-        "/mcp/erp",
-        data={
-            "jsonrpc": "2.0",
-            "id": 2,
-            "method": "tools/call",
-            "params": {"name": "get_document_link", "arguments": {"erp_document_id": test_data["doc_a"].id}},
-        },
-        format="json",
-        HTTP_X_AGENT_CONTEXT=make_context_token(**ctx_a),
-    )
+    def call_link(erp_document_id):
+        return client.post(
+            "/mcp/erp",
+            data={
+                "jsonrpc": "2.0",
+                "id": 2,
+                "method": "tools/call",
+                "params": {"name": "get_document_link", "arguments": {"erp_document_id": erp_document_id}},
+            },
+            format="json",
+            HTTP_X_AGENT_CONTEXT=make_context_token(**ctx_a),
+        )
+
+    # Документ ещё не выпущен как клиентский (статус не ISSUED, вид не из справочника): ссылки нет — как и в integration API
+    resp_hidden = call_link(test_data["doc_a"].id)
+    assert resp_hidden.status_code == status.HTTP_200_OK
+    assert resp_hidden.data["result"]["structuredContent"]["result"] is None
+
+    # Выпущенный договор: настоящая подписанная ссылка на публичный маршрут ERP (FIX-32), а не заглушка
+    doc_a = test_data["doc_a"]
+    doc_a.template.kind = DocumentTemplateKind.objects.get(code="CONTRACT")
+    doc_a.template.save(update_fields=["kind"])
+    doc_a.status = GeneratedDocumentStatus.objects.get(code="ISSUED")
+    doc_a.save(update_fields=["status"])
+    doc_a.pdf_file.save("ctr-alfa.pdf", ContentFile(b"%PDF-1.4 mcp"), save=True)
+
+    resp_link = call_link(doc_a.id)
     assert resp_link.status_code == status.HTTP_200_OK
     link_data = resp_link.data["result"]["structuredContent"]["result"]
     assert link_data is not None
-    assert "token=link_" in link_data["url"]
+    assert "token=link_" not in link_data["url"]
+    assert "/api/v1/public/doc-links/" in link_data["url"]
     assert link_data["file_name"].endswith(".pdf")
+    assert link_data["size_bytes"] == len(b"%PDF-1.4 mcp")
+    opened = APIClient().get(urlsplit(link_data["url"]).path)
+    assert opened.status_code == status.HTTP_200_OK and b"".join(opened.streaming_content) == b"%PDF-1.4 mcp"
+    issued = ActivityLog.objects.get(event_code="document.link_issued")
+    assert issued.company_id == test_data["comp_a"].id and issued.event_params["crm_context_raw"].startswith("erp-mcp:")
 
     # Чужой документ компании Б -> пустой результат (None)
     resp_foreign = client.post(
