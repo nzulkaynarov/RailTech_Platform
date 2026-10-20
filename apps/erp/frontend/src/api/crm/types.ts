@@ -202,6 +202,8 @@ export interface Quote {
 	id: number;
 	deal: number;
 	version: number;
+	// Документный номер (КП-2026-00013); у старых записей может быть пуст.
+	number?: string | null;
 	status: number;
 	status_code: string;
 	status_name: string;

@@ -15,6 +15,7 @@ import uuid
 
 import jwt
 import pytest
+from django.conf import settings
 from django.core.cache import cache
 from integration.models import CrmUserMapping
 from rest_framework import status
@@ -193,7 +194,11 @@ def test_exchange_success_issues_session_and_records_audit(client, staff_user):
     data = resp.json()
 
     assert "access_token" in data
-    assert "refresh_token" in data
+    # S-14 (FIX-58): refresh — только HttpOnly-cookie, как при обычном входе; в теле обмена его нет.
+    assert "refresh_token" not in data and "refresh" not in data
+    assert settings.REFRESH_COOKIE_NAME in resp.cookies
+    assert resp.cookies[settings.REFRESH_COOKIE_NAME]["httponly"]
+    assert resp.cookies[settings.REFRESH_COOKIE_NAME].value
     assert data["expires_in"] > 0
     assert "user" in data
 

@@ -2363,7 +2363,11 @@ paths:
   /api/v1/auth/sso/exchange/:
     post:
       operationId: auth_sso_exchange_create
-      description: POST /api/v1/auth/sso/exchange — обменять токен CRM на сессию ERP.
+      description: |-
+        POST /api/v1/auth/sso/exchange — обменять токен CRM на сессию ERP.
+
+        В теле — только access-токен (`access_token`, `expires_in`, `user`); refresh-токен уходит одной
+        HttpOnly-cookie, как при обычном входе (S-14, FIX-58): JS его не видит.
       tags:
       - auth
       security:
