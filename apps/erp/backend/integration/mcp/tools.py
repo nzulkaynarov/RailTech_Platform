@@ -21,6 +21,7 @@ from catalog.constants import MODE_CLIENT, MODE_LEAD
 from catalog.published import project_many, published_products
 from crm.models import Deal, GeneratedDocument
 
+from ..services import documents_link
 from ..services.stages import deal_stage, initial_fsm_stage
 from ..services.summary import (
     _map_doc_kind,
@@ -98,12 +99,13 @@ def get_delivery_status_tool(context: AgentContext, arguments: Dict[str, Any]) -
 
 
 def list_client_documents_tool(context: AgentContext, arguments: Dict[str, Any]) -> List[Dict[str, Any]]:
-    """Документы клиента с фильтром по виду и датам."""
+    """Документы клиента с фильтром по виду и датам: только те, на которые `get_document_link` выдаёт ссылку (FIX-32)."""
     if context.mode != "customer" or not context.erp_company_id:
         raise ToolModeError("list_client_documents is only available in customer mode")
 
     qs = (
-        GeneratedDocument.objects.filter(deal__company_id=context.erp_company_id)
+        documents_link.linkable_documents()
+        .filter(deal__company_id=context.erp_company_id)
         .select_related("template__kind", "deal")
         .order_by("-created_at")
     )

@@ -6,6 +6,7 @@ from django.views.static import serve as _serve_media
 from drf_spectacular.utils import extend_schema
 from drf_spectacular.views import SpectacularAPIView, SpectacularRedocView, SpectacularSwaggerView
 from finance.views import DealMarginDeviationView, DealPurchaseActualDetailView, DealPurchaseActualsView
+from integration.public_views import PublicDocumentLinkView
 from portal.public_views import (
     PublicDocumentView,
     PublicQuoteAcceptView,
@@ -263,6 +264,12 @@ urlpatterns = (
         # Public, unauthenticated ISSUED-document surface by secret token (II-1). Content-negotiates
         # (browser → HTML page, ?export=pdf → PDF, ARCH-03 202 pattern).
         path("api/v1/public/documents/<str:token>/", PublicDocumentView.as_view(), name="public-document"),
+        # Подписанная ссылка CRM на файл документа (FIX-32): токен выдаёт GET /api/integration/v1/documents/{id}/link.
+        path(
+            "api/v1/public/doc-links/<str:token>/",
+            PublicDocumentLinkView.as_view(),
+            name="public-document-link",
+        ),
         path("api/v1/system-settings/", SystemSettingsView.as_view(), name="system-settings"),
         path("api/v1/accounts/me/", MeView.as_view(), name="current-user"),
         path("api/v1/accounts/permissions/", PermissionCatalogView.as_view(), name="permission-catalog"),

@@ -332,21 +332,22 @@ def test_company_summary_and_deals(auth_client):
 
 def test_deal_documents_and_signed_link(auth_client):
     company = Company.objects.create(name="Doc Co", inn="444555666")
+    CrmClientMapping.objects.create(crm_client_id=7777, company=company)
     deal = Deal.objects.create(company=company, title="Doc Deal")
 
-    kind_obj, _ = DocumentTemplateKind.objects.get_or_create(code="QUOTE", defaults={"name": "КП"})
+    kind_obj, _ = DocumentTemplateKind.objects.get_or_create(code="CONTRACT", defaults={"name": "Договор"})
     template_obj, _ = DocumentTemplate.objects.get_or_create(
         company=company,
-        name="КП Шаблон",
+        name="Договор Шаблон",
         defaults={"kind": kind_obj},
     )
-    status_obj, _ = GeneratedDocumentStatus.objects.get_or_create(code="GENERATED", defaults={"name": "Сформирован"})
+    status_obj, _ = GeneratedDocumentStatus.objects.get_or_create(code="ISSUED", defaults={"name": "Выпущен"})
     doc = GeneratedDocument.objects.create(
         company=company,
         deal=deal,
         template=template_obj,
-        number="КП-00123",
-        title="Коммерческое предложение",
+        number="ДОГ-00123",
+        title="Договор поставки",
         status=status_obj,
     )
 
@@ -356,7 +357,7 @@ def test_deal_documents_and_signed_link(auth_client):
     docs = resp_docs.json()
     assert len(docs) == 1
     assert docs[0]["erp_document_id"] == doc.id
-    assert docs[0]["number"] == "КП-00123"
+    assert docs[0]["number"] == "ДОГ-00123"
 
     # 2. Signed link with X-CRM-Context header
     resp_link = auth_client.get(
@@ -368,7 +369,9 @@ def test_deal_documents_and_signed_link(auth_client):
     assert "url" in link_data
     assert "expires_at" in link_data
     assert link_data["content_type"] == "application/pdf"
-    assert "КП-00123" in link_data["file_name"]
+    assert "ДОГ-00123" in link_data["file_name"]
+    assert "/api/v1/public/doc-links/" in link_data["url"] and "token=link_" not in link_data["url"]
+    # Подробные проверки подписи, срока, журнала и отказов — test_documents_link.py (FIX-32).
 
 
 # ─── 6. Catalog Search ────────────────────────────────────────────────────────
