@@ -23,6 +23,7 @@ from django.utils import timezone
 from documents.models import DocumentTemplate, DocumentTemplateKind, GeneratedDocumentStatus
 from integration.models import CrmClientMapping, CrmContactMapping
 from parties.models import Company, CompanyType, Contact
+from portal.services.documents import encode_document_id
 from rest_framework.test import APIClient
 
 from accounts.models import CustomUser
@@ -357,12 +358,12 @@ def test_deal_documents_and_signed_link(auth_client):
     assert resp_docs.status_code == 200
     docs = resp_docs.json()
     assert len(docs) == 1
-    assert docs[0]["erp_document_id"] == doc.id
+    assert docs[0]["erp_document_id"] == encode_document_id("generated", doc.id), "id документа портала (FIX-38)"
     assert docs[0]["number"] == "ДОГ-00123"
 
     # 2. Signed link with X-CRM-Context header
     resp_link = auth_client.get(
-        f"/api/integration/v1/documents/{doc.id}/link",
+        f"/api/integration/v1/documents/{docs[0]['erp_document_id']}/link",
         HTTP_X_CRM_CONTEXT='{"crm_client_id": 7777, "channel": "bot"}',
     )
     assert resp_link.status_code == 200

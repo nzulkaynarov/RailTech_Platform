@@ -12,10 +12,12 @@
   с `crm_*`-контекстом из заголовка `X-CRM-Context`. Отказы (404) наружу одинаковы: чужой, черновой и внутренний документ
   неотличимы от несуществующего.
 
-Какие документы ссылаются: `documents.GeneratedDocument` — тот же набор и те же id, что отдают `GET /deals/{id}/documents`
-и `last_document` сводки (`linkable_documents`). Правило видимости клиенту одно с порталом
-(`portal.services.documents.find_client_document`): выпущен, вид «договор/счёт/акт»; письма, рапорты и произвольные
-документы внутренние. PDF КП, договора, счёта и акта в их собственных моделях в этот набор не входят — см. QUESTIONS Q-FIX32-1.
+Какие документы ссылаются (FIX-38, QUESTIONS Q-FIX32-1): все, что видит клиент в портале, под тем же числом — `erp_document_id`
+в integration это идентификатор документа портала (`portal.services.documents.encode_document_id`: `pk * 8 + слот`):
+выпущенные КП, договоры, счета, акты, накладные и выпущенные `GeneratedDocument`. Список (`GET /deals/{id}/documents`),
+`last_document`, событие `document.created`, MCP и эта ссылка берут один и тот же запрос портала (`client_documents` /
+`find_client_document`), поэтому id из списка всегда открывается. Черновики, отменённые и внутренние документы клиенту
+не отдаются никогда. Токен несёт источник (`k`) и pk записи (`d`).
 """
 
 from __future__ import annotations
@@ -32,8 +34,7 @@ from django.utils import timezone
 from documents.models import GeneratedDocument
 from portal.services import documents as portal_documents
 
-from crm.constants import GeneratedDocumentStatusCode
-from crm.models import ActivityLog
+from crm.models import Act, ActivityLog, Contract, Fulfillment, Invoice, Quote
 
 from ..models import CrmClientMapping
 
@@ -45,8 +46,15 @@ LINK_TTL = datetime.timedelta(minutes=10)
 LINK_SALT = "integration.document-link.v1"
 #: Путь публичного маршрута (`core/urls.py`); хост — `FRONTEND_URL`, как у публичных ссылок на КП и документы.
 LINK_PATH = "/api/v1/public/doc-links/{token}/"
-#: Вид источника в токене. Сейчас файл отдаётся только у `GeneratedDocument`; поле нужно, чтобы вид был в подписи.
-SOURCE_GENERATED = "generated"
+#: Модели источников документа портала (`SLOT_BY_SOURCE`): по ним находится владелец документа до проверки видимости.
+_SOURCE_MODELS = {
+    "generated": GeneratedDocument,
+    "quote": Quote,
+    "contract": Contract,
+    "invoice": Invoice,
+    "act": Act,
+    "waybill": Fulfillment,
+}
 
 _CHANNELS = frozenset({"bot", "crm"})
 _RAW_CONTEXT_LIMIT = 200
@@ -110,20 +118,14 @@ def parse_crm_context(raw: Optional[str]) -> CrmContext:
 # ── Какие документы отдаются ─────────────────────────────────────────────────────────────────────────
 
 
-def linkable_documents():
-    """Документы, которые CRM может увидеть в списке и открыть ссылкой: выпущенные `GeneratedDocument` клиентских видов.
-
-    Тот же предикат, что у портала (`portal.services.documents`): список и ссылка не расходятся — id из списка всегда
-    открывается (сквозной тест `test_documents_link.py` сверяет этот запрос с `find_client_document`).
-    """
-    return GeneratedDocument.objects.filter(
-        status__code=GeneratedDocumentStatusCode.ISSUED,
-        template__kind__code__in=list(portal_documents.KIND_BY_TEMPLATE_KIND),
-    )
-
-
-def _owner_company(document: GeneratedDocument):
-    """Компания клиента, которой принадлежит документ: по сделке, иначе по контакту (документ без сделки)."""
+def _owner_company(source: str, pk: int):
+    """Компания, которой принадлежит запись документа: по сделке, у `GeneratedDocument` без сделки — по контакту."""
+    if source != "generated":
+        record = _SOURCE_MODELS[source].objects.select_related("deal__company").filter(pk=pk).first()
+        return record.deal.company if record is not None and record.deal_id else None
+    document = GeneratedDocument.objects.select_related("deal__company", "contact__company").filter(pk=pk).first()
+    if document is None:
+        return None
     if document.deal_id and document.deal.company_id:
         return document.deal.company
     if document.contact_id and document.contact.company_id:
@@ -131,24 +133,24 @@ def _owner_company(document: GeneratedDocument):
     return None
 
 
-def _find_document(pk: int, *, crm_client_id: Optional[int] = None):
+def _find_document(erp_document_id: int, *, crm_client_id: Optional[int] = None):
     """`(PortalDocument, CrmClientMapping)` или `None`.
 
-    `None` — когда документа нет, он не выпущен или внутренний, у компании нет сопоставления с клиентом CRM либо
-    `crm_client_id` (если указан) — другой клиент: чужой документ не отличим от несуществующего.
+    `None` — когда числа не выдавалось ни одному документу, документа нет, он не выпущен или внутренний, у компании
+    нет сопоставления с клиентом CRM либо `crm_client_id` (если указан) — другой клиент: чужой документ не отличим
+    от несуществующего. Видимость решает портал (`find_client_document`) — то же правило, что у списка.
     """
-    document = GeneratedDocument.objects.select_related("deal__company", "contact__company").filter(pk=pk).first()
-    if document is None:
+    decoded = portal_documents.decode_document_id(erp_document_id)
+    if decoded is None:
         return None
-    company = _owner_company(document)
+    source, pk = decoded
+    company = _owner_company(source, pk)
     if company is None:
         return None
     mapping = CrmClientMapping.objects.filter(company=company).first()
     if mapping is None or (crm_client_id is not None and mapping.crm_client_id != crm_client_id):
         return None
-    portal_document = portal_documents.find_client_document(
-        company, portal_documents.encode_document_id(SOURCE_GENERATED, document.pk)
-    )
+    portal_document = portal_documents.find_client_document(company, erp_document_id)
     if portal_document is None:
         return None
     return portal_document, mapping
@@ -162,14 +164,15 @@ def _record(event_code: str, action: str, document, mapping, context: CrmContext
         action=action,
         event_code=event_code,
         event_params={
-            "document_id": document.obj.pk,
+            "document_id": document.id,
+            "source": document.source,
             "kind": document.kind,
             "number": document.number,
             **context.as_params(),
             **extra,
         },
         detail=f"{document.title}: CRM-клиент #{mapping.crm_client_id}",
-        entity_type="generated_document",
+        entity_type="generated_document" if document.source == "generated" else document.source,
         entity_id=document.obj.pk,
         company_id=mapping.company_id,
         deal=document.deal,
@@ -182,7 +185,8 @@ def _record(event_code: str, action: str, document, mapping, context: CrmContext
 def issue_document_link(erp_document_id: int, crm_context: Optional[str] = None) -> Optional[dict[str, Any]]:
     """Подписанная ссылка на файл документа (`DocumentLink` контракта) или `None` (для API — 404).
 
-    Пишет выдачу в журнал ERP. Файл ещё не отрисован — ставит рендер в очередь, чтобы к открытию ссылки он был готов;
+    `erp_document_id` — идентификатор документа портала (FIX-38). Пишет выдачу в журнал ERP. Файл ещё не отрисован
+    (PDF модели или `GeneratedDocument`) — ставит рендер в очередь, чтобы к открытию ссылки он был готов;
     `size_bytes` тогда в ответе нет (размер неизвестен), а не выдуманное число.
     """
     context = parse_crm_context(crm_context)
@@ -194,7 +198,7 @@ def issue_document_link(erp_document_id: int, crm_context: Optional[str] = None)
     expires_at = timezone.now() + LINK_TTL
     token = signing.dumps(
         {
-            "k": SOURCE_GENERATED,
+            "k": document.source,
             "d": document.obj.pk,
             "c": mapping.crm_client_id,
             "u": context.crm_user_id,
@@ -255,12 +259,14 @@ def resolve_link_token(token: str) -> ResolvedLink:
         source, pk, crm_client_id, expires = claims["k"], claims["d"], claims["c"], claims["exp"]
     except (KeyError, TypeError):
         raise LinkNotFound from None
-    if source != SOURCE_GENERATED or not all(isinstance(v, int) for v in (pk, crm_client_id, expires)):
+    if source not in portal_documents.SLOT_BY_SOURCE or not all(
+        isinstance(v, int) and not isinstance(v, bool) for v in (pk, crm_client_id, expires)
+    ):
         raise LinkNotFound
     if timezone.now().timestamp() > expires:
         raise LinkExpired
 
-    found = _find_document(pk, crm_client_id=crm_client_id)
+    found = _find_document(portal_documents.encode_document_id(source, pk), crm_client_id=crm_client_id)
     if found is None:
         raise LinkNotFound
     document, mapping = found

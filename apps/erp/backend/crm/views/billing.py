@@ -22,6 +22,7 @@ from crm.serializers import (
     PaymentSerializer,
 )
 from crm.views.billing_filters import ActFilter, ContractFilter, FulfillmentFilter, InvoiceFilter, PaymentFilter
+from crm.views.request_body import invalid_body_response, is_object_body
 
 _PDF_DOC_TYPE = {
     "Contract": "contract",
@@ -244,9 +245,11 @@ class ContractViewSet(RoleGatedViewMixin, OptimisticLockingMixin, viewsets.Model
     @extend_schema(summary="Cancel contract", tags=["CRM"])
     @action(detail=True, methods=["post"], url_path="cancel", permission_classes=[IsAuthenticated, IsPlatformAdmin])
     def cancel(self, request, pk=None):
+        if not is_object_body(request):
+            return invalid_body_response()
         contract, err = crm_services.cancel_contract(int(pk), request.user, reason=request.data.get("reason", ""))
         if err:
-            return Response({"detail": err}, status=400)
+            return Response({"detail": err}, status=404 if err == "CONTRACT_NOT_FOUND" else 400)
         return Response(ContractSerializer(contract).data)
 
     @extend_schema(
@@ -268,13 +271,15 @@ class ContractViewSet(RoleGatedViewMixin, OptimisticLockingMixin, viewsets.Model
         detail=True, methods=["post"], url_path="force-cancel", permission_classes=[IsAuthenticated, IsPlatformAdmin]
     )
     def force_cancel(self, request, pk=None):
+        if not is_object_body(request):
+            return invalid_body_response()
         contract, err = crm_services.force_cancel_contract(
             int(pk),
             request.user,
             reason=request.data.get("reason", ""),
         )
         if err:
-            return Response({"detail": err}, status=400)
+            return Response({"detail": err}, status=404 if err == "CONTRACT_NOT_FOUND" else 400)
         return Response(ContractSerializer(contract).data)
 
 

@@ -287,7 +287,7 @@ export function CategoriesSettings() {
 
       {!isError && !isLoading && (
         <p className="text-xs text-muted-foreground" role="status">
-          {t('settings.categories.shownCount', { shown: filteredCategories.length, total: (categories ?? []).length })}
+          {t('settings.categories.shownCount', { count: filteredCategories.length })}
         </p>
       )}
 

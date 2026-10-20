@@ -246,3 +246,60 @@ def test_service_level_force_approve_refuses_a_non_string_reason(scene, admin):
 
     assert quote is None
     assert err == "FORCE_REASON_REQUIRED"
+
+
+# ── FIX-4xb: обычная отмена, 404 вместо 500, тело-массив ─────────────────────
+
+
+def test_regular_cancel_keeps_the_reason_and_author_out_of_notes_and_the_client_pdf(scene, admin):
+    """`contract.notes` печатается в PDF клиента: причина и e-mail автора отмены — только в журнале."""
+    from crm.services.document_blocks import contract_block_values
+
+    contract = scene["contract"]
+    contract.status = ContractStatus.objects.get(code="DRAFT")
+    contract.notes = "Условия клиента"
+    contract.save(update_fields=["status", "notes"])
+
+    resp = _client(admin).post(
+        f"/api/v1/crm/contracts/{contract.pk}/cancel/", {"reason": "Внутренняя причина X"}, format="json"
+    )
+
+    assert resp.status_code == 200, resp.content
+    contract = Contract.objects.select_related("deal__company").get(pk=contract.pk)
+    assert contract.status.code == "CANCELLED"
+    assert contract.notes == "Условия клиента"
+    html = str(contract_block_values(contract, [], {}, "UZS")["doc.notes"])
+    for secret in ("Внутренняя причина X", admin.email):
+        assert secret not in contract.notes
+        assert secret not in html
+    assert "Условия клиента" in html
+    entry = _force_logs("contract.cancelled").get()
+    assert entry.reason == "Внутренняя причина X"
+    assert entry.user_id == admin.pk
+
+
+@pytest.mark.parametrize(
+    "url",
+    [
+        "/api/v1/crm/quotes/999999/force-approve/",
+        "/api/v1/crm/contracts/999999/force-cancel/",
+        "/api/v1/crm/contracts/999999/cancel/",
+    ],
+)
+def test_missing_object_gives_404_not_500(scene, admin, url):
+    resp = _client(admin).post(url, {"reason": "нет такого"}, format="json")
+
+    assert resp.status_code == 404, resp.content
+
+
+@pytest.mark.parametrize("kind", ENDPOINTS)
+@pytest.mark.parametrize("payload", [[], ["x"], "text", 5])
+def test_array_or_scalar_body_gives_400_not_500(scene, admin, kind, payload):
+    url, body, event, before, read = _target(scene, kind)
+
+    resp = _client(admin).post(url, payload, format="json")
+
+    assert resp.status_code == 400
+    assert resp.json()["detail"] == "INVALID_REQUEST_BODY"
+    assert read() == before
+    assert not _force_logs(event).exists()

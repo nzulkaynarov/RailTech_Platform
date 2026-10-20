@@ -22,7 +22,7 @@ for (const viewport of VIEWPORTS) {
 
 			const link = page.getByRole('link', { name: 'Изменить в CRM' });
 			await expect(link).toBeVisible({ timeout: 30_000 });
-			await expect(link).toHaveAttribute('href', 'https://crm.example.test/settings');
+			await expect(link).toHaveAttribute('href', 'https://crm.example.test/settings?section=company');
 			for (const value of ['RailTech ERP', 'support@example.test', 'https://cdn.example.test/logo.png', 'erp.example.test']) {
 				await expect(page.locator(`input[value="${value}"]`)).toBeDisabled();
 			}
@@ -31,6 +31,25 @@ for (const viewport of VIEWPORTS) {
 			await page.getByRole('button', { name: 'Сохранить' }).click();
 			await expect.poll(() => api.systemSettingsPatches.length).toBe(1);
 			expect(api.systemSettingsPatches[0]).toEqual({ vat_rate: '12.00' });
+		});
+
+		// FIX-4xb: пустой CRM_FRONTEND_URL — поля только для чтения и подсказка вместо кнопки
+		test('платформа без адреса CRM: подсказка «настраивается в CRM», ссылки нет', async ({ page }) => {
+			await mockSettingsApi(page, { crmFrontendUrl: '' });
+			await page.goto('/?section=platform#settings');
+
+			await expect(page.getByTestId('crm-url-missing')).toHaveText('Настраивается в CRM', { timeout: 30_000 });
+			await expect(page.getByRole('link', { name: 'Изменить в CRM' })).toHaveCount(0);
+			await expect(page.locator('input[value="support@example.test"]')).toBeDisabled();
+			if (SHOTS) await page.screenshot({ path: `../../../docs/screens/fix-4xb/platform-no-crm-url-${viewport.width}.png`, fullPage: true });
+		});
+
+		test('категории: счётчик с числом', async ({ page }) => {
+			await mockSettingsApi(page);
+			await page.goto('/?section=categories#settings');
+
+			await expect(page.getByText('Показано категорий: 4')).toBeVisible({ timeout: 30_000 });
+			if (SHOTS) await page.screenshot({ path: `../../../docs/screens/fix-4xb/categories-count-${viewport.width}.png`, fullPage: true });
 		});
 
 		test('категории: с подкатегориями не удаляется, диалог их называет', async ({ page }) => {

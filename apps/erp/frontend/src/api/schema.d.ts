@@ -7960,11 +7960,6 @@ export interface components {
              */
             fx_rate_max_age_days?: number;
             /**
-             * Уведомлять клиента о сдвигах сроков
-             * @description Отправлять клиенту уведомление при изменении ожидаемых дат поставки или исполнения.
-             */
-            notify_client_on_schedule_shift?: boolean;
-            /**
              * Префикс нумерации документов
              * @description Префикс номеров документов компании (напр. «ACME» → ACME-CT-2026-00001)
              */
@@ -10045,11 +10040,6 @@ export interface components {
              * @description Если курс ЦБ старше N дней, КП требует обновления курса или договорного курса.
              */
             fx_rate_max_age_days?: number;
-            /**
-             * Уведомлять клиента о сдвигах сроков
-             * @description Отправлять клиенту уведомление при изменении ожидаемых дат поставки или исполнения.
-             */
-            notify_client_on_schedule_shift?: boolean;
             /**
              * Префикс нумерации документов
              * @description Префикс номеров документов компании (напр. «ACME» → ACME-CT-2026-00001)

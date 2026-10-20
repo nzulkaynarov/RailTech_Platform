@@ -35,18 +35,6 @@ export const useRevokePublicLink = () => {
     });
 };
 
-export const useForceApproveQuote = () => {
-    const queryClient = useQueryClient();
-    return useMutation({
-        mutationFn: ({ id, reason }: { id: number; reason: string }) =>
-            crmApi.forceApproveQuote(id, reason),
-        onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ['quotes'] });
-            queryClient.invalidateQueries({ queryKey: ['deals'] });
-        },
-    });
-};
-
 /* ── КП internal approval chain (документооборот) ────────────────────────
  * Each step invalidates quotes + deals + quote-items so the КП status badge,
  * the deal card, and the builder grid all refresh after the transition. */

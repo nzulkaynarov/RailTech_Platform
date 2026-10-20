@@ -27,6 +27,7 @@ from integration.tests.contract_support import (
     schema_errors,
 )
 from integration.tests.world import build_integration_world
+from portal.services.documents import encode_document_id
 from rest_framework.test import APIClient
 from rest_framework.throttling import SimpleRateThrottle
 
@@ -84,6 +85,18 @@ def all_deals(world):
     return [world["full"], world["empty"], *world["stages"].values(), *(f.deal for f in world["deliveries"].values())]
 
 
+def link_ids(world):
+    """`erp_document_id` (id портала, FIX-38) документа каждого вида, который отдаёт integration."""
+    return [
+        encode_document_id("generated", world["document"].pk),
+        encode_document_id("quote", world["sent_quote"].pk),
+        encode_document_id("contract", world["contracts"]["signed"].pk),
+        encode_document_id("invoice", world["invoices"]["paid"].pk),
+        encode_document_id("act", world["acts"]["accepted"].pk),
+        encode_document_id("waybill", world["fulfillment"].pk),
+    ]
+
+
 #: Какие URL опрашивает сторож по каждому GET-пути контракта. Новый GET в контракте без строки здесь роняет
 #: `test_every_contract_get_is_covered`: новый эндпоинт нельзя добавить, не заведя для него фикстур.
 GET_CASES = {
@@ -97,7 +110,7 @@ GET_CASES = {
     ],
     "/deals/{erp_deal_id}": lambda w: [f"/deals/{deal.pk}" for deal in all_deals(w)],
     "/deals/{erp_deal_id}/documents": lambda w: [f"/deals/{deal.pk}/documents" for deal in all_deals(w)],
-    "/documents/{erp_document_id}/link": lambda w: [f"/documents/{w['document'].pk}/link"],
+    "/documents/{erp_document_id}/link": lambda w: [f"/documents/{i}/link" for i in link_ids(w)],
     "/catalog/search": lambda w: ["/catalog/search?q=Рельс&mode=lead", "/catalog/search?q=Рельс&mode=client"],
     "/ai-usage": lambda w: ["/ai-usage?date_from=2026-01-01&date_to=2026-12-31"],
     "/health": lambda w: ["/health"],

@@ -8,6 +8,7 @@
 - invoice.issued, invoice.paid, invoice.overdue (статусы счетов)
 - act.issued, act.accepted, act.returned (статусы актов)
 - delivery.status_changed, delivery.eta_changed (статусы и сроки исполнения)
+- document.created (документ выпущен клиенту: КП, договор, счёт, акт, накладная, `GeneratedDocument`; FIX-38)
 """
 
 from __future__ import annotations
@@ -16,6 +17,7 @@ import logging
 from typing import Any
 
 from django.db.models.signals import post_save, pre_save
+from portal.services import documents as portal_documents
 
 from .services import stages, webhooks
 
@@ -346,18 +348,76 @@ def register_signals() -> None:
     pre_save.connect(handle_fulfillment_pre_save, sender=Fulfillment, dispatch_uid="int_fulfillment_pre_save")
     post_save.connect(handle_fulfillment_post_save, sender=Fulfillment, dispatch_uid="int_fulfillment_post_save")
 
-    try:
-        from documents.models import GeneratedDocument
+    register_document_signals()
 
-        post_save.connect(handle_document_post_save, sender=GeneratedDocument, dispatch_uid="int_doc_post_save")
+
+# ─── Document Signals (FIX-38) ────────────────────────────────────────────────
+
+
+def register_document_signals() -> None:
+    """`document.created` — когда документ становится виден клиенту, у каждого источника документов портала."""
+    from documents.models import GeneratedDocument
+    from finance.models import Act, Invoice
+    from sales.models import Contract, Fulfillment, Quote
+
+    sources = {
+        GeneratedDocument: "generated",
+        Quote: "quote",
+        Contract: "contract",
+        Invoice: "invoice",
+        Act: "act",
+        Fulfillment: "waybill",
+    }
+    for model, source in sources.items():
+        _DOCUMENT_SOURCES[model] = source
+        pre_save.connect(handle_document_pre_save, sender=model, dispatch_uid=f"int_doc_pre_save_{source}")
+        post_save.connect(handle_document_post_save, sender=model, dispatch_uid=f"int_doc_post_save_{source}")
+
+
+#: Модель → источник документа портала (`portal.services.documents.SLOT_BY_SOURCE`); заполняет `register_document_signals`.
+_DOCUMENT_SOURCES: dict[type, str] = {}
+
+
+def handle_document_pre_save(sender: Any, instance: Any, **kwargs: Any) -> None:
+    """Запоминает, был ли документ выпущен до сохранения: событие шлётся на переходе, а не на каждом сохранении."""
+    try:
+        source = _DOCUMENT_SOURCES[sender]
+        related = ("status", "template__kind") if source == "generated" else ("status",)
+        previous = sender.objects.select_related(*related).filter(pk=instance.pk).first() if instance.pk else None
+        instance._document_was_issued = previous is not None and portal_documents.is_issued(source, previous)
     except Exception as exc:
-        logger.warning("Could not register GeneratedDocument signal: %s", exc)
+        instance._document_was_issued = False
+        logger.error("Error in handle_document_pre_save for %s #%s: %s", sender.__name__, instance.pk, exc)
 
 
 def handle_document_post_save(sender: Any, instance: Any, created: bool, **kwargs: Any) -> None:
-    """Генерирует document.created при создании документа."""
+    """Генерирует document.created, когда документ стал выпущенным (в том числе при создании сразу выпущенным).
+
+    Правило выпуска — единое с порталом (`portal.services.documents.is_issued`): черновики, КП до отправки, отменённые
+    документы, письма и рапорты событий не дают. Скан подписанного акта (входящий файл клиента) — не документ ERP.
+    """
     try:
-        if created:
-            webhooks.emit_document_created(document=instance)
+        source = _DOCUMENT_SOURCES[sender]
+        if getattr(instance, "_document_was_issued", False) or not portal_documents.is_issued(source, instance):
+            return
+        if source == "generated" and portal_documents.is_portal_scan(instance):
+            return
+        company = _document_company(source, instance)
+        document = (
+            portal_documents.find_client_document(company, portal_documents.encode_document_id(source, instance.pk))
+            if company is not None
+            else None
+        )
+        if document is not None:
+            webhooks.emit_document_created(document=document)
     except Exception as exc:
-        logger.error("Error in handle_document_post_save for Document #%s: %s", getattr(instance, "id", None), exc)
+        logger.error("Error in handle_document_post_save for %s #%s: %s", sender.__name__, instance.pk, exc)
+
+
+def _document_company(source: str, instance: Any):
+    """Компания клиента, которой принадлежит документ: по сделке, у `GeneratedDocument` без сделки — по контакту."""
+    if instance.deal_id and instance.deal.company_id:
+        return instance.deal.company
+    if source == "generated" and instance.contact_id and instance.contact.company_id:
+        return instance.contact.company
+    return None
