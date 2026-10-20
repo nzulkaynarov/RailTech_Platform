@@ -117,10 +117,6 @@ export const quotesApi = {
 		const response = await apiClient.post<Quote>(`crm/quotes/${id}/revoke-public-link/`);
 		return response.data;
 	},
-	forceApproveQuote: async (id: number, reason: string) => {
-		const response = await apiClient.post<Quote>(`crm/quotes/${id}/force-approve/`, { reason });
-		return response.data;
-	},
 
 	// ─── КП internal approval chain (документооборот) ─────────
 	// DRAFT → PENDING_TRADE_REVIEW → PENDING_APPROVAL → READY_TO_SEND.

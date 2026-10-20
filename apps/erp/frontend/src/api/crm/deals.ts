@@ -65,13 +65,6 @@ export const dealsApi = {
 		const response = await apiClient.post<Deal>(`crm/deals/${dealId}/change-stage/`, { stage_code: stageCode });
 		return response.data;
 	},
-	forceChangeDealStage: async (dealId: number, stageCode: string, reason: string) => {
-		const response = await apiClient.post<Deal>(
-			`crm/deals/${dealId}/force-change-stage/`,
-			{ stage_code: stageCode, reason },
-		);
-		return response.data;
-	},
 	deleteDeal: async (id: number) => {
 		await apiClient.delete(`crm/deals/${id}/`);
 	},

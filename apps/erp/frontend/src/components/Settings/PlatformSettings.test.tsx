@@ -77,7 +77,7 @@ describe('PlatformSettings (spec PR 5, вариант Б)', () => {
     renderWithProviders(<PlatformSettings />);
 
     const link = screen.getByRole('link', { name: /Изменить в CRM/ });
-    expect(link).toHaveAttribute('href', 'https://crm.example.com/settings');
+    expect(link).toHaveAttribute('href', 'https://crm.example.com/settings?section=company');
     expect(link.getAttribute('href')).not.toContain('/admin');
   });
 
@@ -87,6 +87,9 @@ describe('PlatformSettings (spec PR 5, вариант Б)', () => {
     settingsOverride.current = null;
 
     expect(screen.queryByRole('link', { name: /Изменить в CRM/ })).not.toBeInTheDocument();
+    // вместо кнопки — подсказка; поля общих настроек остаются только для чтения
+    expect(screen.getByTestId('crm-url-missing')).toHaveTextContent('Настраивается в CRM');
+    expect(screen.getByDisplayValue('support@example.com')).toHaveAttribute('readonly');
   });
 
   it('сохранение шлёт только НДС: общие поля в запрос не попадают (FIX-42)', async () => {

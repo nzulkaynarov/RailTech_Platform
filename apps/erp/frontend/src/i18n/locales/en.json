@@ -1252,7 +1252,8 @@
       "saveFailed": "Failed to save",
       "managedInCrm": "Name, support email, logo and domain are managed in CRM",
       "managedInCrmHint": "These fields are shared by the whole ensemble and are view-only here. Change them in the CRM console.",
-      "goToCrm": "Edit in CRM"
+      "goToCrm": "Edit in CRM",
+      "crmUrlMissing": "Configured in CRM"
     },
     "general": {
       "title": "General Settings",
@@ -2840,6 +2841,10 @@
       "auto_close_failed": {
         "title": "Auto-transition to CLOSED_WON failed",
         "detail": "Contract {{number}} / deal #{{deal_id}}: {{error}}"
+      },
+      "cancelled": {
+        "title": "Contract cancelled",
+        "detail": "Contract #{{contract_id}}: cancelled (was “{{from_status}}”)"
       },
       "cancelled_force": {
         "title": "[FORCE_ADMIN] Contract cancelled by platform admin",
