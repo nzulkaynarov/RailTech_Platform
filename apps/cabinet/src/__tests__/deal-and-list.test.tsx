@@ -93,7 +93,9 @@ describe('Адаптивный список на десктопе', () => {
     // ленивого маршрута — адрес ещё /quotes, а ссылки уже нет: тогда повтор только ждёт.
     await vi.waitFor(
       async () => {
-        const link = screen.queryByRole('link', { name: 'KP-2026-0057 · версия 1' });
+        // Роль ищется в таблице, а не по всему документу: каждый опрос по документу в jsdom — сотни мс
+        const table = document.querySelector<HTMLElement>('table[aria-label="Коммерческие предложения"]');
+        const link = table && within(table).queryByRole('link', { name: 'KP-2026-0057 · версия 1' });
         if (link && router.state.navigation.state === 'idle' && router.state.location.pathname === '/quotes') {
           link.focus();
           await user.keyboard('{Enter}');
