@@ -1,6 +1,7 @@
 import { screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
+import { i18nResources } from '@/i18n/locales';
 import { setDownloadWait } from '@/lib/download';
 import { renderApp, signedIn } from '@/test/render';
 import { expectNoAxeViolations, heading } from '@/test/screens';
@@ -25,6 +26,20 @@ describe('Поставки по строкам', () => {
     expect(within(screen.getByRole('list', { name: 'Сделка № D-48' })).getByText('Дата уточняется')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Сделка № D-35' })).toHaveAttribute('href', '/deals/35');
     await expectNoAxeViolations();
+  });
+
+  // D-7 (FIX-51): на 390 px название сделки уходило на новую строку, и «·» висел перед «Заявка: …».
+  it('название сделки — отдельный элемент, разделитель «·» декоративный и скрыт на узком экране', async () => {
+    signedIn();
+    renderApp('/deliveries');
+    const deal29 = await screen.findByRole('list', { name: 'Сделка № D-29' });
+    const card = deal29.closest('[data-slot=card]') as HTMLElement;
+    const title = within(card).getByText('Насос, задвижки и манометры');
+    expect(title).toHaveClass('basis-full');
+    const separator = card.querySelector('[aria-hidden="true"].hidden');
+    expect(separator).toHaveTextContent('·');
+    expect(separator).toHaveClass('sm:inline');
+    expect(title.contains(separator)).toBe(false);
   });
 
   it('пусто', async () => {
@@ -76,6 +91,30 @@ describe('Документы', () => {
     await user.click(await screen.findByRole('button', { name: 'Скачать: Акт сверки за сентябрь 2026' }));
     expect(await screen.findByText('Документ ещё готовится. Попробуйте скачать через минуту.')).toBeInTheDocument();
     expect(window.URL.createObjectURL).not.toHaveBeenCalled();
+  });
+
+  // C-9 (аудит): поиск без совпадений не должен говорить «Документов пока нет» — документы есть.
+  it('поиск без совпадений: «Ничего не найдено» и сброс поиска', async () => {
+    signedIn();
+    const user = userEvent.setup();
+    renderApp('/documents');
+    const list = await screen.findByRole('list', { name: 'Документы' });
+    expect(within(list).getAllByRole('listitem')).toHaveLength(9);
+    await user.click(screen.getByRole('searchbox', { name: 'Поиск документов' }));
+    await user.paste('луноход');
+    expect(await screen.findByText('Ничего не найдено')).toBeInTheDocument();
+    expect(screen.getByText(/луноход/)).toBeInTheDocument();
+    expect(screen.queryByText('Документов пока нет')).not.toBeInTheDocument();
+    await expectNoAxeViolations();
+    await user.click(screen.getByRole('button', { name: 'Сбросить поиск' }));
+    expect(screen.getByRole('searchbox', { name: 'Поиск документов' })).toHaveValue('');
+    expect(within(await screen.findByRole('list', { name: 'Документы' })).getAllByRole('listitem')).toHaveLength(9);
+  });
+
+  // D-7 (FIX-51): на 390 px плейсхолдер поиска обрезался («…названию или сдел»). Полная подпись — в aria-label.
+  it.each(['ru', 'uz', 'en'] as const)('плейсхолдер поиска (%s) короткий — помещается в поле на 390 px', (language) => {
+    const documents = (i18nResources[language].translation as { pages: { documents: { searchPlaceholder: string } } }).pages.documents;
+    expect(documents.searchPlaceholder.length).toBeLessThanOrEqual(28);
   });
 
   it('пусто по виду и вообще', async () => {

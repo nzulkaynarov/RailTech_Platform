@@ -478,7 +478,10 @@
       "emptyKindText": "Boshqa turni tanlang yoki barcha hujjatlarni koʻrsating.",
       "showAll": "Hammasini koʻrsatish",
       "filter": "Hujjat turi",
-      "searchPlaceholder": "Raqam, nom yoki bitim boʻyicha qidirish…",
+      "searchPlaceholder": "Raqam, nom, bitim…",
+      "noMatchTitle": "Hech narsa topilmadi",
+      "noMatchText": "«{{query}}» soʻrovi boʻyicha hujjat yoʻq. Raqam yoki nomni tekshiring yoki qidiruvni tozalang.",
+      "clearSearch": "Qidiruvni tozalash",
       "searchLabel": "Hujjatlarni qidirish",
       "columns": {
         "document": "Hujjat",
