@@ -74,7 +74,9 @@ export function ResponsiveDataTable<T>({
             {rows.map((row) => (
               <TableRow
                 key={getRowId(row)}
-                role={onRowClick ? 'button' : undefined}
+                // Нативная роль `row` — без role="button": в строке бывают свои кнопки и ссылки, а
+                // вложенные интерактивные элементы внутри button — нарушение axe nested-interactive
+                // (FIX-58, D-06). Строка по-прежнему в порядке фокуса и открывается Enter/Space.
                 tabIndex={onRowClick ? 0 : undefined}
                 className={cn(
                   onRowClick && 'cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset',
@@ -110,7 +112,8 @@ export function ResponsiveDataTable<T>({
               // обычным div с onClick — без роли, без фокуса и без Enter/Space. Правило
               // проекта «строки списка доступны с клавиатуры» распространяется на ОБЕ
               // раскладки: мобильная — не декорация, а тот же список на узком экране.
-              role={onRowClick ? 'button' : undefined}
+              // `group`, не `button`: в карточке есть свои кнопки (меню действий) — см. комментарий выше.
+              role={onRowClick ? 'group' : undefined}
               tabIndex={onRowClick ? 0 : undefined}
               className={cn(
                 'flex flex-col gap-2 p-4',

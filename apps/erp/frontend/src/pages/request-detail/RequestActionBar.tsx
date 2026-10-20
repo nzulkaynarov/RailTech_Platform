@@ -14,6 +14,8 @@ export interface RequestActionBarProps {
   isWon: boolean;
   hasQuote: boolean;
   canBuildQuote: boolean;
+  /** Право `quote.send`: «Отправить КП» без него закончилось бы 403. */
+  canSendQuote: boolean;
   canBuildNewVersion: boolean;
   canClaim: boolean;
   /** Серверная подсказка: зритель вправе вернуть сделку в очередь команды. */
@@ -46,7 +48,7 @@ export function RequestActionBar(props: RequestActionBarProps) {
   const { t } = useTranslation();
   const {
     quote, isDraft, isSourcing, isCalculating, isWon,
-    hasQuote, canBuildQuote, canBuildNewVersion, canClaim, canRelease, canTakeAndPrepare, canSubmitForReview,
+    hasQuote, canBuildQuote, canSendQuote, canBuildNewVersion, canClaim, canRelease, canTakeAndPrepare, canSubmitForReview,
     changeStagePending, claimPending, releasePending, takePending,
     submitReviewPending, sendQuotePending, onClaim, onRelease, onTakeAndPrepare,
     onStartSourcing, onStartCalculation, onOpenGenerate, onOpenQuoteBuilder, onSubmitForReview,
@@ -168,7 +170,7 @@ export function RequestActionBar(props: RequestActionBarProps) {
         )}
         {/* Only an internally-approved КП can be sent (backend requires READY_TO_SEND). Getting
             there is done via the approval chain on the Deals page; this stays disabled until then. */}
-        {quote?.status_code === QuoteStatus.READY_TO_SEND && (
+        {quote?.status_code === QuoteStatus.READY_TO_SEND && canSendQuote && (
           <Button
             variant="default"
             onClick={onSendQuote}

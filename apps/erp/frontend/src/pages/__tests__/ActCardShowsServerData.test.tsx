@@ -17,6 +17,7 @@ import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import { ActsPage } from '../ActsPage';
 import { actsApi, type Act } from '@/api/billingApi';
 import { renderWithProviders } from '@/test/renderWithProviders';
+import { useUserStore } from '@/store/userStore';
 
 vi.mock('@/api/billingApi', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/api/billingApi')>();
@@ -70,6 +71,8 @@ async function openCard() {
 
 describe('карточка акта', () => {
   beforeEach(() => {
+    // Действия исполнителя по акту — право fulfillment.act из /me (FIX-58, D-03).
+    useUserStore.setState({ capabilities: { permissions: ['fulfillment.act'] } });
     vi.mocked(actsApi.list).mockReset();
   });
 
@@ -131,6 +134,8 @@ describe('карточка акта', () => {
 
 describe('действия выпустившей стороны на карточке', () => {
   beforeEach(() => {
+    // Действия исполнителя по акту — право fulfillment.act из /me (FIX-58, D-03).
+    useUserStore.setState({ capabilities: { permissions: ['fulfillment.act'] } });
     vi.mocked(actsApi.list).mockReset();
     vi.mocked(actsApi.remind).mockReset().mockResolvedValue(makeAct({}) as never);
   });
@@ -142,6 +147,16 @@ describe('действия выпустившей стороны на карто
     const card = await openCard();
     expect(within(card).getByRole('button', { name: 'Напомнить заказчику' })).toBeInTheDocument();
     expect(within(card).getByRole('button', { name: 'Аннулировать акт' })).toBeInTheDocument();
+  });
+
+  it('Наблюдателю (нет fulfillment.act) кнопок напоминания и отзыва нет, даже если сторона — исполнитель', async () => {
+    useUserStore.setState({ capabilities: { permissions: [] } });
+    vi.mocked(actsApi.list).mockResolvedValue([makeAct({ viewer_can_remind: true, viewer_can_cancel: true })]);
+    renderWithProviders(<ActsPage />);
+
+    const card = await openCard();
+    expect(within(card).queryByRole('button', { name: 'Напомнить заказчику' })).not.toBeInTheDocument();
+    expect(within(card).queryByRole('button', { name: 'Аннулировать акт' })).not.toBeInTheDocument();
   });
 
   it('без подсказок сервера кнопок напоминания и отзыва нет', async () => {

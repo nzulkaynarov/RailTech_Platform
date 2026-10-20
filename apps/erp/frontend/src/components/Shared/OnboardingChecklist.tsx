@@ -95,7 +95,7 @@ export function OnboardingChecklist({ onNavigate }: OnboardingChecklistProps) {
         </div>
         <div className="mt-1 flex items-center gap-2 text-xs text-muted-foreground">
           <span>{t('onboarding.progress', { done: doneCount, total })}</span>
-          <Progress value={percent} className="h-1.5 flex-1" />
+          <Progress value={percent} aria-label={t('onboarding.progress', { done: doneCount, total })} className="h-1.5 flex-1" />
           <span className="tabular-nums">{percent}%</span>
         </div>
       </CardHeader>

@@ -70,7 +70,8 @@ export function QuotesPage() {
   const columns: ResponsiveColumn<Quote>[] = [
     {
       id: 'number', sortKey: 'id', header: t('pages.quotes.table.number'), mobileTitle: true,
-      cell: (q) => <span className="font-medium">#{q.id}-v{q.version}</span>,
+      // Документный номер КП (КП-2026-00013), а не технический «#13-v1»: так его видит и клиент (D-12).
+      cell: (q) => <span className="font-medium">{q.number || `#${q.id}-v${q.version}`}</span>,
     },
     {
       id: 'party', header: t('pages.quotes.table.client'),

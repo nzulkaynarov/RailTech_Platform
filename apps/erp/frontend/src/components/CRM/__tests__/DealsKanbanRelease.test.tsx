@@ -16,6 +16,7 @@ import { toast } from 'sonner';
 import { DealsKanban } from '../DealsKanban';
 import { crmApi, type Deal } from '@/api/crmApi';
 import { renderWithProviders } from '@/test/renderWithProviders';
+import { useUserStore } from '@/store/userStore';
 
 vi.mock('@/api/crmApi', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/api/crmApi')>();
@@ -43,6 +44,8 @@ async function findCard(text: string): Promise<HTMLElement> {
 
 describe('возврат сделки в очередь', () => {
   beforeEach(() => {
+    // Кнопки взять / вернуть — по праву deal.manage из /me (D-03, FIX-58).
+    useUserStore.setState({ capabilities: { permissions: ['deal.manage'] } });
     vi.mocked(crmApi.releaseDeal).mockReset().mockResolvedValue({ id: 2 } as never);
     vi.mocked(toast.success).mockReset();
     vi.mocked(toast.error).mockReset();

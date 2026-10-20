@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'; import { useTranslation } from 'react-i18next'; import { toast } from 'sonner'; import { translateApiError } from '@/lib/apiError'; import { formatDate } from '@/lib/formatLocale'; import { Receipt, DollarSign, ScrollText, Send, Ban, Save } from 'lucide-react'; import { DocumentActions } from '@/components/Shared/DocumentActions'; import { Badge } from '@/components/ui/badge'; import { Button } from '@/components/ui/button'; import { Input } from '@/components/ui/input'; import { Textarea } from '@/components/ui/textarea'; import { Label } from '@/components/ui/label'; import {   Table, TableBody, TableCell, TableHead, TableHeader, TableRow, } from '@/components/ui/table'; import {   Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle, } from '@/components/ui/sheet'; import { Separator } from '@/components/ui/separator'; import { PageShell } from './shared/PageShell'; import { DocumentRegistry } from '@/components/Documents/DocumentRegistry'; import { useDocumentCoreColumns } from '@/components/Documents/useDocumentCoreColumns'; import { ManualModeBanner } from '@/components/Shared/ManualModeBanner'; import { RecordPaymentDialog } from '@/components/Billing/RecordPaymentDialog'; import { DealLink } from '@/components/Shared/DealLink'; import { Toolbar } from '@/components/DataTable';
+import { useHasCompanyPermission } from '@/hooks/useCapabilities';
 import { useDraftState } from '@/hooks/useDraftState';
 import { useHashOpenParam } from '@/hooks/useHashOpenParam';
 import { useListParams, applyListParams } from '@/components/DataTable/listParams';
@@ -22,6 +23,11 @@ const STATUS_CODES: InvoiceStatus[] = ['DRAFT', 'ISSUED', 'PARTIAL', 'PAID', 'OV
 
 export function InvoicesPage() {
   const { t } = useTranslation();
+  // Кнопки по правам из /me (D-03, FIX-58): выпуск / правка / аннулирование — `finance.invoice`,
+  // фиксация оплаты — `finance.payment`, акт — `fulfillment.act`. Сервер всё равно проверит.
+  const canInvoice = useHasCompanyPermission('finance.invoice');
+  const canPay = useHasCompanyPermission('finance.payment');
+  const canAct = useHasCompanyPermission('fulfillment.act');
   const listParams = useListParams(['status'] as const, { urlKey: 'invoices', defaultOrdering: '-created_at' });
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [payOpen, setPayOpen] = useState(false);
@@ -270,6 +276,7 @@ export function InvoicesPage() {
                       onChange={(e) => setDraftNotes(e.target.value)}
                     />
                   </div>
+                  {canInvoice && (
                   <Button
                     variant="outline"
                     onClick={onSaveDraft}
@@ -278,11 +285,13 @@ export function InvoicesPage() {
                     <Save className="mr-2 h-4 w-4" />
                     {t('invoicesPage.saveDraft')}
                   </Button>
+                  )}
                   {/* O3: мягкий слой поверх жёсткого гейта — предупреждаем ДО нажатия, а не
                       ошибкой в момент выпуска (onboarding-баннер Odoo рядом с блокировкой). */}
                   {selected.seller_bank_details_ready === false && (
                     <p className="w-full text-sm text-warning">{t('invoicesPage.bankDetailsMissing')}</p>
                   )}
+                  {canInvoice && (
                   <Button
                     onClick={onIssue}
                     disabled={issueInvoice.isPending}
@@ -290,6 +299,7 @@ export function InvoicesPage() {
                     <Send className="mr-2 h-4 w-4" />
                     {t('invoicesPage.issue')}
                   </Button>
+                  )}
                 </div>
               ) : (
                 <div className="flex flex-col gap-2">
@@ -304,7 +314,7 @@ export function InvoicesPage() {
                       size="default"
                     />
                   )}
-                  {canRecordPayment(selected) && (
+                  {canPay && canRecordPayment(selected) && (
                     <Button
                       onClick={() => setPayOpen(true)}
                     >
@@ -312,7 +322,7 @@ export function InvoicesPage() {
                       {t('invoicesPage.recordPayment')}
                     </Button>
                   )}
-                  {selected.viewer_can_manage && selected.status !== 'CANCELLED' && !liveActForSelected && (
+                  {canAct && selected.viewer_can_manage && selected.status !== 'CANCELLED' && !liveActForSelected && (
                     <Button
                       variant="outline"
                       onClick={onGenerateAct}
@@ -325,7 +335,7 @@ export function InvoicesPage() {
                   {/* Аннулирование счёта необратимо (бэкенд отказывает по PAID/PARTIAL), а
                       кнопка стояла рядом с обычными действиями и срабатывала с первого клика
                       (аудит UI, U4). Теперь она открывает подтверждение. */}
-                  {selected.status !== 'PAID' && selected.status !== 'CANCELLED' && (
+                  {canInvoice && selected.status !== 'PAID' && selected.status !== 'CANCELLED' && (
                     <Button
                       variant="outline"
                       onClick={() => setCancelOpen(true)}

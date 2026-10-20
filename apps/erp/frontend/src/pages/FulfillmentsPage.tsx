@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { useHasCompanyPermission } from '@/hooks/useCapabilities';
 import { openableRowProps } from '@/lib/rowClick';
 import { formatDate } from '@/lib/formatLocale';
 import { useTranslation } from 'react-i18next';
@@ -43,6 +44,9 @@ const CLIENT_STATUS_CODES: FulfillmentStatus[] = [FStatusCode.ACCEPTED, FStatusC
 
 export function FulfillmentsPage() {
   const { t } = useTranslation();
+  // Менять статус отгрузки — право `fulfillment.manage` (D-03, FIX-58); серверная подсказка
+  // `viewer_can_ship` считает только сторону и статус.
+  const canShip = useHasCompanyPermission('fulfillment.manage');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [editing, setEditing] = useState<Fulfillment | null>(null);
   const [form, setForm] = useState({
@@ -108,7 +112,7 @@ export function FulfillmentsPage() {
       <Card>
         <CardContent className="flex flex-col gap-4 p-4">
           <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="w-52"><SelectValue /></SelectTrigger>
+            <SelectTrigger className="w-52" aria-label={statusFilter === 'all' ? t('fulfillmentPage.allStatuses') : `${t('fulfillmentPage.table.status')}: ${t(`fulfillmentPage.status.${statusFilter}`)}`}><SelectValue /></SelectTrigger>
             <SelectContent>
               <SelectItem value="all">{t('fulfillmentPage.allStatuses')}</SelectItem>
               {STATUS_CODES.map((s) => (
@@ -135,7 +139,7 @@ export function FulfillmentsPage() {
                 {(list ?? []).map((f) => (
                   <TableRow
                     key={f.id}
-                    {...(f.viewer_can_ship
+                    {...(canShip && f.viewer_can_ship
                       ? openableRowProps(() => startEdit(f), `${t('common.open')} #${f.deal}`)
                       : {})}
                   >
@@ -184,9 +188,9 @@ export function FulfillmentsPage() {
           </SheetHeader>
           <div className="space-y-3 p-4">
             <div>
-              <Label>{t('fulfillmentPage.form.status')}</Label>
+              <Label id="fulfillment-status-label">{t('fulfillmentPage.form.status')}</Label>
               <Select value={form.status} onValueChange={(v) => setForm({ ...form, status: v as FulfillmentStatus })}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectTrigger aria-labelledby="fulfillment-status-label"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   {/* Статусы клиента («Принято», «Спор») бэк-офису не предлагаются: их ставит
                       клиент, и сервер отбил бы выбор отказом, который читался бы как поломка. */}

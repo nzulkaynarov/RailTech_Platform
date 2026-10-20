@@ -13,6 +13,8 @@ import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { QuoteFxRates } from '@/components/CRM/QuoteFxRates';
+import { useHasCompanyPermission } from '@/hooks/useCapabilities';
+import { formatMoney } from '@/utils/decimal';
 
 /**
  * The priced КП card on the deal record. The back office always sees cost internals (base price,
@@ -27,6 +29,8 @@ export function QuoteView({
 }) {
   const { t } = useTranslation();
   const formatCurrency = useCurrencyStore((s) => s.format);
+  // Себестоимость и наценка — только с правом (сервер вырезает поля; без права колонки не рисуем).
+  const canViewCost = useHasCompanyPermission('quote.view_cost_margin');
   const [downloadingPdf, setDownloadingPdf] = useState(false);
   // КП PDF export straight from the deal record (no builder detour).
   const handleDownloadPdf = async () => {
@@ -40,7 +44,7 @@ export function QuoteView({
     }
   };
 
-  const colCount = 7;
+  const colCount = canViewCost ? 7 : 5;
   const validUntilExpired = quote.valid_until
     ? new Date(quote.valid_until) < new Date(new Date().toDateString())
     : false;
@@ -69,7 +73,8 @@ export function QuoteView({
                 </p>
               )}
             </div>
-            <div className="flex items-start gap-4">
+            {/* flex-wrap: на 390 px кнопка «Скачать КП» уезжала за правый край (D-13, FIX-58). */}
+            <div className="flex flex-wrap items-start gap-x-4 gap-y-2">
               <div className="text-right">
                 <p className="text-sm text-muted-foreground">{t('requestDetailActions.totalInclVat')}</p>
                 <p className="text-2xl font-bold text-primary">{formatCurrency(Number(quote.total_incl_vat))}</p>
@@ -98,8 +103,8 @@ export function QuoteView({
                 <TableHead>{t('requestDetailActions.supplierCol')}</TableHead>
                 <TableHead className="text-right">{t('requestDetailActions.qtyCol')}</TableHead>
                 {/* Base price + margin — cost internals of the back office (never in Cabinet). */}
-                <TableHead className="text-right">{t('requestDetailActions.basePriceCol')}</TableHead>
-                <TableHead className="text-right">{t('requestDetailActions.marginCol')}</TableHead>
+                {canViewCost && <TableHead className="text-right">{t('requestDetailActions.basePriceCol')}</TableHead>}
+                {canViewCost && <TableHead className="text-right">{t('requestDetailActions.marginCol')}</TableHead>}
                 <TableHead className="text-right">{t('requestDetailActions.finalPriceCol')}</TableHead>
               </TableRow>
             </TableHeader>
@@ -124,7 +129,16 @@ export function QuoteView({
                   </TableCell>
                   <TableCell className="text-xs text-muted-foreground">{item.offer_supplier_name || '—'}</TableCell>
                   <TableCell className="text-right tabular-nums">{item.quantity}</TableCell>
-                  <TableCell className="text-right tabular-nums">{formatCurrency(Number(item.frozen_base_price))}</TableCell>
+                  {/* Базовая цена — в валюте СТРОКИ (`frozen_currency`, пусто ⇒ сумы), а не форматтером
+                      сумов: «120,00 UZS» у позиции с себестоимостью 120 USD (D-12). */}
+                  {canViewCost && (
+                    <TableCell className="text-right tabular-nums">
+                      {item.frozen_base_price == null || item.frozen_base_price === ''
+                        ? '—'
+                        : formatMoney(item.frozen_base_price, item.frozen_currency || 'UZS')}
+                    </TableCell>
+                  )}
+                  {canViewCost && (
                   <TableCell className="text-right tabular-nums text-muted-foreground">
                       {/* Per-line margin_percent (DT1): NULL — «наследовать маржу КП» (muted «—»);
                           any non-null value is an explicit override, INCLUDING 0 = «продать по
@@ -133,6 +147,7 @@ export function QuoteView({
                         ? '—'
                         : `${Number(item.margin_percent).toFixed(1)}%`}
                   </TableCell>
+                  )}
                   <TableCell className="text-right tabular-nums font-medium text-primary">
                     {formatCurrency(Number(item.final_price_excl_vat))}
                   </TableCell>

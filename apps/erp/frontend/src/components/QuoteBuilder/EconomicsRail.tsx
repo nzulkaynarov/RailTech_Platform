@@ -23,7 +23,7 @@ import { useQuoteBuilderGrid } from './QuoteBuilderGridContext';
 export const EconomicsRail: React.FC = () => {
 	const { t, i18n } = useTranslation();
 	const {
-		activeQuote, econ, presentationCurrency, vatRate, effectiveLeadTime, mirrorTotals,
+		activeQuote, readOnly, econ, presentationCurrency, vatRate, effectiveLeadTime, mirrorTotals,
 		setShowSettings, toggleRail, railAsSheet, railOpen, railSheetOpen,
 		setRailSheetOpen,
 	} = useQuoteBuilderGrid();
@@ -60,7 +60,7 @@ export const EconomicsRail: React.FC = () => {
 					<span className="text-xs font-semibold text-muted-foreground">{t('quote.rail.params')}</span>
 					{/* Базис поставки — read-only chip; клик открывает «Настройки КП» (S2). Для замороженного
 					    КП базис менять нельзя, поэтому chip не кликабелен. */}
-					{activeQuote.frozen_at ? (
+					{activeQuote.frozen_at || readOnly ? (
 						<Badge variant="outline" className="w-fit">
 							{basisCode ?? t('quote.rail.basisNotSet')}
 						</Badge>
@@ -70,11 +70,12 @@ export const EconomicsRail: React.FC = () => {
 								<button
 									type="button"
 									onClick={() => setShowSettings(true)}
-									aria-label={t('quote.rail.editBasis')}
 									className="w-fit rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
 								>
 									<Badge variant="outline" className="cursor-pointer gap-1 hover:bg-muted">
 										{basisCode ?? t('quote.rail.basisNotSet')}
+										{/* Имя кнопки = видимый текст + пояснение (WCAG 2.5.3, FIX-58). */}
+										<span className="sr-only">, {t('quote.rail.editBasis')}</span>
 										<Settings className="size-3 opacity-60" aria-hidden="true" />
 									</Badge>
 								</button>
@@ -180,7 +181,7 @@ export const EconomicsRail: React.FC = () => {
 				<PanelRightOpen className="size-4" />
 			</Button>
 			{/* Keep «Настройки КП» reachable even when the rail is collapsed (no dead-end). */}
-			{!activeQuote.frozen_at && (
+			{!activeQuote.frozen_at && !readOnly && (
 				<Tooltip>
 					<TooltipTrigger asChild>
 						<Button variant="ghost" size="icon-xs" onClick={() => setShowSettings(true)} aria-label={t('quote.settings.title')}>

@@ -2,7 +2,7 @@ import { useState } from 'react'; import { useTranslation } from 'react-i18next'
 import { useListParams, applyListParams } from '@/components/DataTable/listParams';
 import { useCurrencyStore } from '@/store/currencyStore';
 import { useDeals, useDealStages, useClaimDeal, useReleaseDeal } from '@/hooks/useCRM';
-import { useIsSoloTeam } from '@/hooks/useCapabilities';
+import { useIsSoloTeam, useHasCompanyPermission } from '@/hooks/useCapabilities';
 import { DEAL_STAGE_LABEL_KEY } from '@/lib/codes';
 import { translateApiError } from '@/lib/apiError';
 import { PageShell, LoadingRows, EmptyState, ErrorState } from './shared/PageShell';
@@ -38,7 +38,9 @@ export function DealsPage() {
   const stageLabel = (code: string | undefined, fallback: string | undefined) =>
     code && DEAL_STAGE_LABEL_KEY[code] ? t(DEAL_STAGE_LABEL_KEY[code]) : (fallback ?? '');
 
-  const canClaim = (deal: Deal) => deal.assigned_to == null && !isSoloTeam;
+  // Взять / вернуть — право `deal.manage` (сервер: claim/release → 403 без него; D-03, FIX-58).
+  const canManageDeals = useHasCompanyPermission('deal.manage');
+  const canClaim = (deal: Deal) => deal.assigned_to == null && !isSoloTeam && canManageDeals;
   const handleClaim = (dealId: number) => {
     claimMut.mutate(dealId, {
       onSuccess: () => toast.success(t('dealsKanban.claimed')),
@@ -131,7 +133,7 @@ export function DealsPage() {
           ) : null}
           {/* Обратное действие: запись уходит обратно в очередь команды. Право считает сервер
               (`viewer_can_release`) тем же предикатом, что и сам возврат. */}
-          {deal.viewer_can_release ? (
+          {deal.viewer_can_release && canManageDeals ? (
             <Button
               variant="ghost"
               size="sm"

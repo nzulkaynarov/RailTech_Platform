@@ -66,7 +66,7 @@ interface BuilderToolbarProps {
 export const BuilderToolbar: React.FC<BuilderToolbarProps> = ({ selectionSlot }) => {
 	const { t } = useTranslation();
 	const {
-		activeTab, activeQuote, draftItems, visibleItems, showAddRow, setShowAddRow, handleAddSection, handleAddNote,
+		activeTab, activeQuote, readOnly, draftItems, visibleItems, showAddRow, setShowAddRow, handleAddSection, handleAddNote,
 		openPasteDialog, openImportDialog, setShowAiMatch, filterQuery, setFilterQuery, isFiltered,
 		handlePricingAssist, pricingBusy, setShowSettings, railAsSheet, railOpen, setRailSheetOpen,
 		toggleRail, fullscreen, setFullscreen, gridDensity, toggleGridDensity,
@@ -97,7 +97,7 @@ export const BuilderToolbar: React.FC<BuilderToolbarProps> = ({ selectionSlot })
 
 				{/* Item-level actions are meaningless on the Расходы tab (the line list is hidden there),
 				    so hide the whole group — and the bulk strip — unless the Позиции tab is active. */}
-				{activeTab === 'items' && (selectionSlot ?? (
+				{activeTab === 'items' && !readOnly && (selectionSlot ?? (
 					<div className="flex flex-wrap gap-1.5">
 						<ToolbarAction icon={Plus} label={t('common.add')} onClick={() => setShowAddRow(!showAddRow)} keepLabel />
 						{/* S1: секции/заметки — только пока КП не заморожен (как и все правки позиций). */}
@@ -165,12 +165,17 @@ export const BuilderToolbar: React.FC<BuilderToolbarProps> = ({ selectionSlot })
 						{t('quote.filter.matchCount', { count: visibleItems.length, total: draftItems.length })}
 					</span>
 				)}
+				{readOnly && (
+					<Badge variant="outline" className="whitespace-nowrap text-xs font-normal text-muted-foreground">
+						{t('quote.readOnly.badge')}
+					</Badge>
+				)}
 				{/* Single settings entry point (⚙) — editable while the КП is not frozen. */}
-				{!activeQuote.frozen_at && (
+				{!activeQuote.frozen_at && !readOnly && (
 					<Tooltip>
 						<TooltipTrigger asChild>
-							<Button variant="outline" size="sm" onClick={() => setShowSettings(true)}>
-								<Settings className="size-3" />
+							<Button variant="outline" size="sm" onClick={() => setShowSettings(true)} aria-label={t('quote.settings.title')}>
+								<Settings className="size-3" aria-hidden="true" />
 								<span className="hidden sm:inline">{t('quote.settings.title')}</span>
 							</Button>
 						</TooltipTrigger>

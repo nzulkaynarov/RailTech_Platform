@@ -1,4 +1,5 @@
 import { useState } from 'react'; import { useTranslation } from 'react-i18next'; import { Wallet } from 'lucide-react'; import { Card, CardContent } from '@/components/ui/card'; import { formatDate } from '@/lib/formatLocale'; import {   Table, TableBody, TableCell, TableHead, TableHeader, TableRow, } from '@/components/ui/table'; import { PageShell, LoadingRows, EmptyState, ErrorState } from './shared/PageShell'; import { Toolbar, SortableHead, Pager } from '@/components/DataTable';
+import { useHasCompanyPermission } from '@/hooks/useCapabilities';
 import { useListParams, applyListParams } from '@/components/DataTable/listParams';
 import { usePayments } from '@/hooks/useBilling';
 import { DocumentActions } from '@/components/Shared/DocumentActions';
@@ -10,6 +11,8 @@ export function PaymentsPage() {
   const { data: payments, isLoading, isError, refetch } = usePayments();
   const formatCurrency = useCurrencyStore((s) => s.format);
   const [recordOpen, setRecordOpen] = useState(false);
+  // Фиксация оплаты — право `finance.payment` (сервер: record_payment → 403 без него; D-03, FIX-58).
+  const canRecord = useHasCompanyPermission('finance.payment');
   // Фиксация поступившей оплаты — действие бэк-офиса (финансы); гейта стороны «покупатель»
   // больше нет (M1-ERP-02 волна 3). Право решает сервер и отвечает кодом ошибки.
   const listParams = useListParams([] as const, { urlKey: 'payments', defaultOrdering: '-paid_at' });
@@ -25,7 +28,7 @@ export function PaymentsPage() {
       icon={<Wallet className="h-5 w-5" />}
       stats={stats}
       statsError={isError}
-      actions={[{ label: t('recordPayment.cta'), onClick: () => setRecordOpen(true) }]}
+      actions={canRecord ? [{ label: t('recordPayment.cta'), onClick: () => setRecordOpen(true) }] : []}
     >
       <Toolbar
         searchValue={listParams.searchInput}
@@ -50,7 +53,7 @@ export function PaymentsPage() {
                 <EmptyState
                   icon={<Wallet className="h-5 w-5" />}
                   message={t('paymentsPage.emptyState')}
-                  action={{ label: t('recordPayment.cta'), onClick: () => setRecordOpen(true) }}
+                  action={canRecord ? { label: t('recordPayment.cta'), onClick: () => setRecordOpen(true) } : undefined}
                 />
               );
             }

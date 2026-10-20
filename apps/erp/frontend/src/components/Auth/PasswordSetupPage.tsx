@@ -108,8 +108,7 @@ export const PasswordSetupPage: React.FC<PasswordSetupPageProps> = ({ uid, token
                     <Train className="h-6 w-6 text-primary-foreground" />
                 </div>
                 <span className="text-3xl font-black tracking-tight text-foreground">
-                    Rail<span className="text-primary">Tech</span>{' '}
-                    <span className="font-medium text-muted-foreground">B2B</span>
+                    {t('auth.brandTitle')}
                 </span>
             </div>
 

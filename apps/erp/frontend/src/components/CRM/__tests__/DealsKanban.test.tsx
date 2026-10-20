@@ -5,6 +5,7 @@ import { toast } from 'sonner';
 import { DealsKanban } from '../DealsKanban';
 import { crmApi, type Deal } from '@/api/crmApi';
 import { renderWithProviders } from '@/test/renderWithProviders';
+import { useUserStore } from '@/store/userStore';
 
 // Mock at the API-client layer (never at the network): the real useClaimDeal
 // react-query mutation runs against this mocked crmApi.claimDeal.
@@ -55,6 +56,8 @@ const DEALS: Deal[] = [
 
 describe('DealsKanban', () => {
   beforeEach(() => {
+    // Кнопки взять / вернуть — по праву deal.manage из /me (D-03, FIX-58).
+    useUserStore.setState({ capabilities: { permissions: ['deal.manage'] } });
     vi.mocked(crmApi.claimDeal).mockReset();
     vi.mocked(toast.success).mockReset();
     vi.mocked(toast.error).mockReset();
@@ -115,6 +118,15 @@ describe('DealsKanban', () => {
     expect(screen.getByText('Назначено')).toBeInTheDocument();
     // Exactly one card (id=1, assigned_to=null) is claimable.
     expect(screen.getAllByRole('button', { name: 'Взять в работу' })).toHaveLength(1);
+  });
+
+  it('Наблюдателю (нет deal.manage) «Взять в работу» не предлагается (D-03, FIX-58)', () => {
+    useUserStore.setState({ capabilities: { permissions: [] } });
+    renderWithProviders(<DealsKanban deals={DEALS} stages={STAGES} />);
+
+    expect(screen.queryByRole('button', { name: 'Взять в работу' })).not.toBeInTheDocument();
+    // Карточки при этом видны.
+    expect(screen.getByText('Рельсы Р65')).toBeInTheDocument();
   });
 
   it('claims an unassigned deal from the queue without opening it', async () => {

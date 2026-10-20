@@ -21,6 +21,14 @@ export interface ActivityLike {
 }
 
 /**
+ * Служебная метка в начале сохранённого текста («[MANUAL_MODE] Подписан договор…») нужна бэкенду для
+ * сверки, но не человеку: в ленте печатается без неё (FIX-58, D-12).
+ */
+export function stripMarker(raw: string): string {
+  return raw.replace(/^\[[A-Z0-9_]+\]\s*/, '');
+}
+
+/**
  * `exists()` ОБЯЗАН получать те же params, что и `t()`.
  *
  * У событий со счётчиком (`deal.routed`, `deal.submitted`) простого ключа `detail` нет —
@@ -32,12 +40,12 @@ export interface ActivityLike {
  */
 function localizedOr(t: TFunction, i18n: I18nType, key: string, params: Record<string, unknown>, raw: string): string {
   if (i18n.exists(key, params) && renderable(i18n, key, params)) return t(key, params);
-  return raw;
+  return stripMarker(raw);
 }
 
 export function activityTitle(t: TFunction, i18n: I18nType, entry: ActivityLike): string {
   const code = entry.event_code;
-  if (!code) return entry.action;
+  if (!code) return stripMarker(entry.action);
   const params = localizeParams(t, i18n, entry.event_params ?? {});
   return localizedOr(t, i18n, `activity.${code}.title`, params, entry.action);
 }

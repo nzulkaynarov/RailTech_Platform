@@ -1,4 +1,4 @@
-import { QueryClient, MutationCache, QueryCache } from '@tanstack/react-query';
+import { QueryClient, MutationCache, QueryCache, focusManager, type Query } from '@tanstack/react-query';
 import { toast } from 'sonner';
 
 import { translateApiError } from './apiError';
@@ -9,6 +9,36 @@ import { translateApiError } from './apiError';
  * скажет об этом ОДИН раз, а не десять.
  */
 const QUERY_ERROR_TOAST_ID = 'query-load-error';
+
+/**
+ * «Живые» данные — списки и карточки, которые коллеги меняют параллельно (сделки, КП, договоры,
+ * счета, акты, поставки…). Справочники (валюты, единицы, категории, настройки) держат `staleTime`
+ * от 5 минут — их при возврате на вкладку не дёргаем. Отличаем по `staleTime` наблюдателей, а не
+ * по списку ключей: новый хук с обычным `staleTime` автоматически попадает в живые.
+ */
+const LIVE_MAX_STALE_MS = 5 * 60_000;
+
+export function isLiveQuery(query: Pick<Query, 'observers'>): boolean {
+  return query.observers.some((observer) => {
+    const staleTime = observer.options.staleTime;
+    return typeof staleTime !== 'number' || staleTime < LIVE_MAX_STALE_MS;
+  });
+}
+
+// Возврат на вкладку и фокус окна оба считаются «пользователь вернулся» (FIX-58, D-09). Штатный
+// слушатель React Query знает только `visibilitychange`: переключение между окнами при видимой
+// вкладке ничего не обновляло. Опроса по таймеру нет — только действие человека.
+if (typeof window !== 'undefined') {
+  focusManager.setEventListener((handleFocus) => {
+    const onReturn = () => handleFocus();
+    window.addEventListener('visibilitychange', onReturn, false);
+    window.addEventListener('focus', onReturn, false);
+    return () => {
+      window.removeEventListener('visibilitychange', onReturn);
+      window.removeEventListener('focus', onReturn);
+    };
+  });
+}
 
 /**
  * The single app-wide React Query client.
@@ -55,7 +85,9 @@ export const queryClient = new QueryClient({
         if (status && status >= 400 && status < 500) return false;
         return failureCount < 1;
       },
-      refetchOnWindowFocus: false,
+      // Живые данные перечитываются при возврате на вкладку ВСЕГДА (в том числе «свежие» по staleTime):
+      // иначе коллега утвердил КП, а у автора ещё две минуты нет «Отправить КП» (D-09, FIX-58).
+      refetchOnWindowFocus: (query: Query) => (isLiveQuery(query) ? 'always' : false),
       refetchOnReconnect: false,
       refetchOnMount: false,
       staleTime: 2 * 60_000,

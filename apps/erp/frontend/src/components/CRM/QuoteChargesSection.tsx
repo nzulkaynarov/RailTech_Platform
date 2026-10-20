@@ -24,6 +24,8 @@ import {
 interface QuoteChargesSectionProps {
 	quoteId: number;
 	currency?: string;
+	/** Только чтение (Наблюдатель или КП не в черновике): список и каскад видны, правок нет. */
+	readOnly?: boolean;
 }
 
 // CUSTOMS duty is the one cost computed PER LINE (rate by ТНВЭД) — offering it as a
@@ -40,7 +42,7 @@ type Kind = 'charge' | 'discount';
  * line subtotal, added (+) or deducted (−) before VAT. Rows are inline-editable
  * (amount/%/kind/description + the seller's real cost) — not just add+delete.
  */
-export const QuoteChargesSection: React.FC<QuoteChargesSectionProps> = ({ quoteId, currency }) => {
+export const QuoteChargesSection: React.FC<QuoteChargesSectionProps> = ({ quoteId, currency, readOnly = false }) => {
 	const { t } = useTranslation();
 	const { data: quote } = useQuote(quoteId);
 	const { data: charges = [] } = useQuoteCharges(quoteId);
@@ -249,6 +251,8 @@ export const QuoteChargesSection: React.FC<QuoteChargesSectionProps> = ({ quoteI
 													? `${charge.is_deduction ? '−' : '+'}${charge.rate_percent}%`
 													: `${charge.is_deduction ? '−' : '+'}${formatMoney(charge.amount, currency)}`}
 										</span>
+										{!readOnly && (
+										<>
 										<div className="flex flex-col">
 											<Button variant="ghost" size="icon-xs" className="h-3.5 text-muted-foreground hover:text-foreground"
 												onClick={() => move(index, -1)} disabled={index === 0 || reorderMutation.isPending} title={t('quote.charges.moveUp')}>
@@ -280,6 +284,8 @@ export const QuoteChargesSection: React.FC<QuoteChargesSectionProps> = ({ quoteI
 										>
 											{deletingId === charge.id ? <Loader2 className="size-3 animate-spin" /> : <Trash2 className="size-3" />}
 										</Button>
+										</>
+										)}
 									</div>
 								</div>
 							)
@@ -288,6 +294,7 @@ export const QuoteChargesSection: React.FC<QuoteChargesSectionProps> = ({ quoteI
 				)}
 
 				{/* Add charge row */}
+				{!readOnly && (
 				<div className="flex flex-wrap items-center gap-2">
 					<Select value={chargeType} onValueChange={setChargeType}>
 						<SelectTrigger className="h-8 w-full sm:w-[200px]" aria-label={t('quote.charges.type')}>
@@ -341,6 +348,7 @@ export const QuoteChargesSection: React.FC<QuoteChargesSectionProps> = ({ quoteI
 						{t('common.add')}
 					</Button>
 				</div>
+				)}
 				<p className="text-xs text-muted-foreground">{t('quote.charges.inCurrency', { currency: ccyLabel })}</p>
 
 				{/* Transparent price cascade: subtotal → charges (running) → tax base → +VAT → total.

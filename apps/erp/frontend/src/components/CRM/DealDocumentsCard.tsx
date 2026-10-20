@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { DocumentActions } from '@/components/Shared/DocumentActions';
 import { DocumentCreateWizard } from '@/components/Documents/DocumentCreateWizard';
 import { useGeneratedDocuments } from '@/hooks/useDocuments';
+import { useHasCompanyPermission } from '@/hooks/useCapabilities';
 
 /**
  * F2 II-3/II-4 — «Документы сделки» block on the deal card.
@@ -22,6 +23,8 @@ export function DealDocumentsCard({ dealId }: {
 }) {
   const { t } = useTranslation();
   const [createOpen, setCreateOpen] = useState(false);
+  // Создание документа сделки — право `deal.manage` (сервер: generate → 403 без него; D-03, FIX-58).
+  const canCreate = useHasCompanyPermission('deal.manage');
   const { data: documents, isLoading } = useGeneratedDocuments({ deal: dealId });
   const list = documents ?? [];
 
@@ -32,14 +35,16 @@ export function DealDocumentsCard({ dealId }: {
           <FileSignature className="h-4 w-4" aria-hidden="true" />
           {t('dealDocuments.title')}
         </CardTitle>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => setCreateOpen(true)}
-        >
-          <FilePlus className="mr-1.5 h-4 w-4" aria-hidden="true" />
-          {t('dealDocuments.create')}
-        </Button>
+        {canCreate && (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setCreateOpen(true)}
+          >
+            <FilePlus className="mr-1.5 h-4 w-4" aria-hidden="true" />
+            {t('dealDocuments.create')}
+          </Button>
+        )}
       </CardHeader>
       <CardContent>
         {isLoading ? (

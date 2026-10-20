@@ -15,6 +15,7 @@ import { renderWithProviders } from '@/test/renderWithProviders';
 const soloRef = { value: false };
 vi.mock('@/hooks/useCapabilities', () => ({
   useIsSoloTeam: () => soloRef.value,
+  useHasCompanyPermission: () => true,
 }));
 
 vi.mock('sonner', () => ({ toast: { success: vi.fn(), error: vi.fn() } }));

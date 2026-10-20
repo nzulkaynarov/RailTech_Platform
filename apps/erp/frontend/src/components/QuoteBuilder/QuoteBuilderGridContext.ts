@@ -20,6 +20,11 @@ import type { DraftFieldValue } from './useQuoteDraft';
 export interface QuoteBuilderGridContextValue {
 	// ── Quote-level data ──────────────────────────────────────────────────────────────────────
 	activeQuote: Quote;
+	/**
+	 * Только чтение: у сотрудника нет права править цены (`quote.edit_pricing`) или КП уже не черновик
+	 * (сервер отвечает 409). Правки, добавление, удаление и сохранение не предлагаются; просмотр остаётся.
+	 */
+	readOnly: boolean;
 	econ: QuoteEconomics | null;
 	canViewCost: boolean;
 	/** Cost columns visible = cost-viewer AND wide enough viewport (narrow drops them to the detail). */

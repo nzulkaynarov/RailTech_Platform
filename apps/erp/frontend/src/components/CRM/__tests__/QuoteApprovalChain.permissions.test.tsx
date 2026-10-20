@@ -53,7 +53,7 @@ describe('QuoteApprovalChain — предпросмотр согласовани
 
 		renderWithProviders(<QuoteApprovalChain quote={draftQuote} />, { queryClient: appQueryClient });
 		// Пилюля статуса есть: смотреть цепочку можно и без права собирать КП.
-		fireEvent.click(screen.getByRole('button', { name: 'Открыть панель согласования' }));
+		fireEvent.click(screen.getByRole('button', { name: /Открыть панель согласования/ }));
 		await screen.findByText('Согласование КП');
 		await new Promise((resolve) => setTimeout(resolve, 50));
 
@@ -80,7 +80,7 @@ describe('QuoteApprovalChain — предпросмотр согласовани
 		});
 
 		renderWithProviders(<QuoteApprovalChain quote={draftQuote} />, { queryClient: appQueryClient });
-		fireEvent.click(screen.getByRole('button', { name: 'Открыть панель согласования' }));
+		fireEvent.click(screen.getByRole('button', { name: /Открыть панель согласования/ }));
 
 		await waitFor(() => expect(getQuoteApprovalPreview).toHaveBeenCalledWith(100));
 		expect(await screen.findByText('Петров')).toBeInTheDocument();

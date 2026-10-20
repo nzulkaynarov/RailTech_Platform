@@ -4,6 +4,7 @@ import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import { ContractsPage } from '../ContractsPage';
 import { contractsApi, type Contract } from '@/api/contractsApi';
 import { renderWithProviders } from '@/test/renderWithProviders';
+import { useUserStore } from '@/store/userStore';
 
 // Mock at the API-client layer: the real useContracts / useSignContractManager
 // react-query hooks run against these mocks (never the network).
@@ -68,6 +69,8 @@ describe('ContractsPage', () => {
   let signedState = false;
 
   beforeEach(() => {
+    // Подпись от компании — право contract.sign из /me (FIX-58, D-03).
+    useUserStore.setState({ capabilities: { permissions: ['contract.sign', 'contract.manage'] } });
     signedState = false;
     vi.mocked(contractsApi.list).mockImplementation(async () => (signedState ? [SIGNED] : [PENDING]));
     vi.mocked(contractsApi.signManager).mockImplementation(async () => {
@@ -123,5 +126,38 @@ describe('ContractsPage', () => {
     fireEvent.click((await screen.findAllByText('CT-001'))[0]);
     await screen.findByRole('dialog');
     expect(screen.queryByRole('button', { name: 'Подписать (клиент)' })).not.toBeInTheDocument();
+  });
+
+  it('контроль: с правами карточка предлагает скан и подпись', async () => {
+    renderWithProviders(<ContractsPage />);
+    fireEvent.click((await screen.findAllByText('CT-001'))[0]);
+    const dialog = await screen.findByRole('dialog');
+    expect(within(dialog).getByText('Загрузить скан')).toBeInTheDocument();
+    expect(within(dialog).getByRole('button', { name: 'Подписать (продавец)' })).toBeInTheDocument();
+  });
+
+  // D-03 (FIX-58): Наблюдатель видит договор, но не кнопки действий — сервер ответил бы 403.
+  it('Наблюдателю (нет прав) карточка договора не предлагает подписать, загрузить скан, аннулировать', async () => {
+    useUserStore.setState({ capabilities: { permissions: [] } });
+    renderWithProviders(<ContractsPage />);
+    fireEvent.click((await screen.findAllByText('CT-001'))[0]);
+    const dialog = await screen.findByRole('dialog');
+    expect(within(dialog).queryByRole('button', { name: 'Подписать (продавец)' })).not.toBeInTheDocument();
+    expect(within(dialog).queryByText('Загрузить скан')).not.toBeInTheDocument();
+    expect(within(dialog).queryByRole('button', { name: 'Отменить договор' })).not.toBeInTheDocument();
+    // Просмотр остаётся: экспорт PDF.
+    expect(within(dialog).getByRole('button', { name: 'Экспорт' })).toBeInTheDocument();
+  });
+
+  // D-12 (FIX-58): подпись клиента из кабинета не несёт имени — раньше печаталось «null · дата».
+  it('подпись клиента без имени не печатает «null»', async () => {
+    vi.mocked(contractsApi.list).mockImplementation(async () => [
+      makeContract({ id: 1, status: 'PENDING_MANAGER', client_signed_at: '2026-07-08T11:00:00Z', client_signer_name: null }),
+    ]);
+    renderWithProviders(<ContractsPage />);
+    fireEvent.click((await screen.findAllByText('CT-001'))[0]);
+    const dialog = await screen.findByRole('dialog');
+    expect(dialog.textContent).not.toMatch(/null|undefined/);
+    expect(within(dialog).getByText(/из кабинета клиента/)).toBeInTheDocument();
   });
 });

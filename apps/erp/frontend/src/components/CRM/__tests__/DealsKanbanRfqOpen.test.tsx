@@ -5,6 +5,7 @@ import { toast } from 'sonner';
 import { DealsKanban } from '../DealsKanban';
 import { crmApi, type Deal } from '@/api/crmApi';
 import { renderWithProviders } from '@/test/renderWithProviders';
+import { useUserStore } from '@/store/userStore';
 
 /* WP-3 (P1-1) regression guard — «Открытый RFQ» в Канбане + достижимый claim.
  * The RFQ_OPEN column is built from the `stages` prop (backend deal-stages list,
@@ -44,6 +45,8 @@ const DEALS: Deal[] = [
 
 describe('DealsKanban — RFQ_OPEN column + reachable claim (WP-3)', () => {
   beforeEach(() => {
+    // Кнопки взять / вернуть — по праву deal.manage из /me (D-03, FIX-58).
+    useUserStore.setState({ capabilities: { permissions: ['deal.manage'] } });
     vi.mocked(crmApi.claimDeal).mockReset();
     vi.mocked(toast.success).mockReset();
     vi.mocked(toast.error).mockReset();

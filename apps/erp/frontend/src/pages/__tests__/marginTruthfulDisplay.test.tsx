@@ -60,7 +60,7 @@ vi.mock('@/hooks/useCRM', () => ({
 // Page context: seller sees the margin column; a plain currency formatter keeps assertions simple.
 vi.mock('@/store/userStore', () => ({
   useUserStore: (selector: (state: { capabilities: { permissions: string[] } }) => unknown) =>
-    selector({ capabilities: { permissions: [] } }),
+    selector({ capabilities: { permissions: ['quote.view_cost_margin'] } }),
 }));
 vi.mock('@/store/currencyStore', () => ({
   useCurrencyStore: (selector: (state: { format: (value: number) => string }) => unknown) =>
