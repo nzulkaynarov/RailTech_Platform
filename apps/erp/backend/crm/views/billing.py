@@ -677,22 +677,38 @@ class FulfillmentViewSet(RoleGatedViewMixin, viewsets.ReadOnlyModelViewSet):
             return qs
         return qs.filter(_billing_visibility_q(user, self.request, deal_path="deal")).distinct()
 
-    @extend_schema(summary="Update fulfillment status", tags=["CRM"])
+    @extend_schema(
+        summary="Update fulfillment status",
+        responses={
+            200: FulfillmentSerializer,
+            400: OpenApiResponse(
+                description="DEAL_ID_AND_STATUS_REQUIRED / DEAL_ID_INVALID / FULFILLMENT_INVALID_STATUS"
+            ),
+            404: OpenApiResponse(description="NOT_FOUND (сделки нет)"),
+            409: OpenApiResponse(description="FULFILLMENT_NOT_READY (отгрузку ещё не создала задача после договора)"),
+        },
+        tags=["CRM"],
+    )
     @action(detail=False, methods=["post"], url_path="update-status", permission_classes=[IsAuthenticated])
     def update_status(self, request):
         deal_id = request.data.get("deal_id")
         status_code = request.data.get("status")
         if not deal_id or not status_code:
             return Response({"detail": "DEAL_ID_AND_STATUS_REQUIRED"}, status=400)
+        try:
+            deal_pk = int(deal_id)
+        except (TypeError, ValueError):
+            return Response({"detail": "DEAL_ID_INVALID"}, status=400)
         extra = {k: request.data.get(k) for k in ("tracking_number", "carrier", "expected_delivery_date", "notes")}
         obj, err = crm_services.update_fulfillment_status(
-            int(deal_id),
+            deal_pk,
             request.user,
             status_code,
             **extra,
         )
         if err:
-            return Response({"detail": err}, status=400)
+            http_status = {"FULFILLMENT_NOT_READY": 409, "NOT_FOUND": 404}.get(err, 400)
+            return Response({"detail": err}, status=http_status)
         return Response(FulfillmentSerializer(obj).data)
 
     @extend_schema(summary="Download the delivery note PDF (D2b)", tags=["CRM"])

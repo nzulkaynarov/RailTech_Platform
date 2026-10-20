@@ -92,7 +92,12 @@ def update_fulfillment_status(
     valid = set(FulfillmentStatusCode.values)
     if status_code not in valid:
         return None, "FULFILLMENT_INVALID_STATUS"
-    obj = Fulfillment.objects.select_for_update().select_related("deal").get(deal_id=deal_id)
+    obj = Fulfillment.objects.select_for_update().select_related("deal").filter(deal_id=deal_id).first()
+    if obj is None:
+        # Отгрузку создаёт Celery-задача после подписания договора: до неё менять нечего (FIX-55, m2 D-2).
+        from ..models import Deal
+
+        return None, ("FULFILLMENT_NOT_READY" if Deal.objects.filter(pk=deal_id).exists() else "NOT_FOUND")
     # Seller drives shipping (PENDING→…→DELIVERED); the buyer ACCEPTS or DISPUTES on
     # receipt. Authorize the actor against the side that owns the target status.
     buyer_statuses = {FulfillmentStatusCode.ACCEPTED, FulfillmentStatusCode.DISPUTED}
