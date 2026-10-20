@@ -149,4 +149,46 @@ def staff_alert(
             deal=deal_title,
             reason=_s(p.get("reason")),
         )
+    if event == "delivery.line_disputed":
+        return _text(
+            texts,
+            "erp_staff_delivery_line_disputed",
+            "ru",
+            client=client_name,
+            line=_s(p.get("line_no")),
+            title=_s(p.get("title")),
+            deal=deal_title,
+            remark=_s(p.get("remark")),
+        )
     return None
+
+
+def feed_note(
+    event: str,
+    payload: Mapping[str, Any],
+    *,
+    contact_name: str | None,
+    deal_title: str,
+    texts: TextsSettings,
+) -> str | None:
+    """Запись в ленту лида по приёмке или замечанию к строке поставки (FIX-37); иначе `None`.
+
+    Лента — интерфейс команды, поэтому текст русский. Имя контакта — `actor.name` события;
+    без имени пишем «контакт клиента», а не пустые скобки.
+    """
+    names = {
+        "delivery.line_accepted": "erp_note_delivery_line_accepted",
+        "delivery.line_disputed": "erp_note_delivery_line_disputed",
+    }
+    if event not in names:
+        return None
+    return _text(
+        texts,
+        names[event],
+        "ru",
+        contact=(contact_name or "").strip() or "контакт клиента",
+        line=_s(payload.get("line_no")),
+        title=_s(payload.get("title")),
+        deal=deal_title,
+        remark=_s(payload.get("remark")),
+    )

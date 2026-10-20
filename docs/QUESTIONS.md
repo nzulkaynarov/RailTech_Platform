@@ -199,7 +199,7 @@ Q-1…Q-9 решены — см. `DECISIONS.md`.
 
 ## Q-FIX22-5 · Приёмка всех строк поставки не двигает исполнение сделки и не шлёт событий (FIX-22)
 
-**Контекст.** Строка `accepted`/`disputed` — решение клиента, `Fulfillment` сделки остаётся `DELIVERED`, сделку (`CLOSED_WON`) закрывает договор по двум подписям (`_finalize_if_signed`). Событий `delivery.line_accepted|disputed` в CRM нет — контракт событий не менялся (волна 3).
+**Контекст.** Строка `accepted`/`disputed` — решение клиента, `Fulfillment` сделки остаётся `DELIVERED`, сделку (`CLOSED_WON`) закрывает договор по двум подписям (`_finalize_if_signed`). События `delivery.line_accepted|disputed` в FIX-22 не слались; шлёт их FIX-37 (ERP шлёт, CRM ведёт ленту и уведомляет ответственного). «Все строки приняты → `Fulfillment` `ACCEPTED`» осталось открытым.
 
 **Варианты.** 1) Волна 3: события + «все строки приняты» → `update_fulfillment_status(ACCEPTED)` через сервис. 2) Сейчас переносить решение клиента на `Fulfillment`.
 

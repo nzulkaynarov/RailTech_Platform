@@ -3,7 +3,7 @@
 from datetime import date, datetime
 from typing import Annotated, Any, Literal
 
-from pydantic import BaseModel, ConfigDict, Field, StringConstraints
+from pydantic import BaseModel, ConfigDict, Field, StringConstraints, model_validator
 
 EventType = Literal[
     "request.created",
@@ -25,6 +25,8 @@ EventType = Literal[
     "deal.lost",
     "document.created",
     "invite.sent",
+    "delivery.line_accepted",
+    "delivery.line_disputed",
 ]
 
 DealStage = Literal[
@@ -164,6 +166,28 @@ class InviteSent(BaseModel):
     crm_contact_id: int | None = None
 
 
+#: Тип события → статус строки в его теле (`DeliveryLineDecision.status`).
+DELIVERY_LINE_EVENTS = {"delivery.line_accepted": "accepted", "delivery.line_disputed": "disputed"}
+
+
+class DeliveryLineDecision(BaseModel):
+    """Решение клиента по строке поставки (FIX-22/FIX-37): принял или оспорил с замечанием."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    line_no: int = Field(ge=1)
+    title: str
+    status: Literal["accepted", "disputed"]
+    remark: str | None = Field(default=None, max_length=2000)
+    decided_at: datetime
+
+    @model_validator(mode="after")
+    def _disputed_needs_remark(self) -> "DeliveryLineDecision":
+        if self.status == "disputed" and not (self.remark or "").strip():
+            raise ValueError("remark is required when status is disputed")
+        return self
+
+
 class ErpEventEnvelope(BaseModel):
     """Конверт входящего события ERP по events.schema.json."""
 
@@ -177,6 +201,20 @@ class ErpEventEnvelope(BaseModel):
     deal: DealRef | None = None
     actor: Actor
     payload: dict[str, Any]
+
+    @model_validator(mode="after")
+    def _delivery_line_decision(self) -> "ErpEventEnvelope":
+        """`delivery.line_*`: сделка обязательна, решает клиент, тело — DeliveryLineDecision."""
+        if self.event not in DELIVERY_LINE_EVENTS:
+            return self
+        if self.deal is None:
+            raise ValueError(f"{self.event} requires deal")
+        if self.actor.type != "client":
+            raise ValueError(f"{self.event} requires actor.type=client")
+        decision = DeliveryLineDecision.model_validate(self.payload)
+        if decision.status != DELIVERY_LINE_EVENTS[self.event]:
+            raise ValueError(f"{self.event} does not match payload status {decision.status}")
+        return self
 
 
 class ErpWebhookReceipt(BaseModel):

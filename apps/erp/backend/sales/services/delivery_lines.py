@@ -7,11 +7,12 @@
 статусе `APPROVED`. Пока склада и заказов поставщикам нет (M4), ход исполнения ведёт `Fulfillment` сделки (один на
 сделку), и `sync_delivery_lines` переносит его статус, срок, трек и дату отгрузки на все строки сделки. Строка,
 которую клиент принял или оспорил, больше не перезаписывается: это его решение, а не ход склада. События для CRM
-(`delivery.line_accepted|disputed`) — волна 3; здесь их нет.
+(`delivery.line_accepted|disputed`, FIX-37) уходят из `accept_delivery_line` / `dispute_delivery_line`.
 """
 
 from __future__ import annotations
 
+import logging
 from typing import Iterable, Optional, Tuple
 
 from django.db import transaction
@@ -20,6 +21,8 @@ from django.utils import timezone
 from sales.models import ActivityLog, DeliveryLine, DeliveryLineStatus, Fulfillment, Quote, QuoteItem
 
 from crm.constants import FulfillmentStatusCode, QuoteStatusCode
+
+logger = logging.getLogger(__name__)
 
 #: Статус исполнения сделки → статус строки поставки. `READY_TO_SHIP` у `Fulfillment` нет (склад — M4).
 FULFILLMENT_TO_LINE_STATUS = {
@@ -164,6 +167,21 @@ def _can_act(contact, line: DeliveryLine) -> bool:
     return bool(contact is not None and contact.can_act and contact.company_id == line.deal.company_id)
 
 
+def _emit_decision(line: DeliveryLine, contact) -> None:
+    """Событие для CRM о решении клиента (FIX-37). Сбой события не отменяет решение клиента: он уже принял строку.
+
+    Запись события пишется в транзакции решения (в своей точке сохранения, чтобы сбой не сорвал транзакцию), задача
+    доставки встаёт в очередь после коммита (`integration.services.webhooks.emit_event`).
+    """
+    from integration.services import webhooks
+
+    try:
+        with transaction.atomic():
+            webhooks.emit_delivery_line_decision(line, contact)
+    except Exception:
+        logger.exception("Не удалось создать событие о решении клиента по строке поставки #%s", line.pk)
+
+
 @transaction.atomic
 def accept_delivery_line(line_id: int, contact) -> Tuple[Optional[DeliveryLine], Optional[str]]:
     """Клиент принимает строку: только `delivered` → `accepted`."""
@@ -184,6 +202,7 @@ def accept_delivery_line(line_id: int, contact) -> Tuple[Optional[DeliveryLine],
         deal=line.deal,
         company_id=line.deal.company_id,
     )
+    _emit_decision(line, contact)
     return line, None
 
 
@@ -218,6 +237,7 @@ def dispute_delivery_line(line_id: int, contact, reason: str) -> Tuple[Optional[
         deal=line.deal,
         company_id=line.deal.company_id,
     )
+    _emit_decision(line, contact)
     transaction.on_commit(lambda: _notify_dispute(line, clean_reason))
     return line, None
 
