@@ -10,7 +10,11 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 
 # Коды сервиса → HTTP: конфликт состояния — 409, отказ по роли — 403, остальное — 400.
-_STATUS_BY_CODE = {"ROLE_NOT_PERMITTED": status.HTTP_403_FORBIDDEN, "QUOTE_FROZEN": status.HTTP_409_CONFLICT}
+_STATUS_BY_CODE = {
+    "ROLE_NOT_PERMITTED": status.HTTP_403_FORBIDDEN,
+    "QUOTE_FROZEN": status.HTTP_409_CONFLICT,
+    "QUOTE_NOT_DRAFT": status.HTTP_409_CONFLICT,
+}
 
 
 class QuoteFxOverrideSerializer(serializers.Serializer):
@@ -33,7 +37,8 @@ class QuoteFxMixin:
         description=(
             "Договорной курс КП по валюте себестоимости (M1-ERP-08): побеждает курс ЦБ в снимке, "
             "КП пересчитывается. Только право `finance.rates`, причина обязательна, запись в журнал КП. "
-            "Незамороженное КП (до отправки клиенту), иначе 409 QUOTE_FROZEN. `If-Match` с ETag КП — "
+            "Только в черновике КП: отправленное клиенту — 409 QUOTE_FROZEN, на согласовании и позже — 409 "
+            "QUOTE_NOT_DRAFT (верните КП в черновик). `If-Match` с ETag КП — "
             "412 PRECONDITION_FAILED_STALE_WRITE, если КП изменилось после чтения."
         ),
         request=QuoteFxOverrideSerializer,
@@ -44,7 +49,7 @@ class QuoteFxMixin:
                 "FX_RATE_MUST_BE_POSITIVE / FX_OVERRIDE_REASON_REQUIRED / FX_OVERRIDE_REASON_TOO_LONG"
             ),
             403: OpenApiResponse(description="ROLE_NOT_PERMITTED"),
-            409: OpenApiResponse(description="QUOTE_FROZEN"),
+            409: OpenApiResponse(description="QUOTE_FROZEN / QUOTE_NOT_DRAFT"),
             412: OpenApiResponse(description="PRECONDITION_FAILED_STALE_WRITE"),
         },
         tags=["CRM"],

@@ -15,7 +15,7 @@ import { QuoteFxOverrideDialog } from './QuoteFxOverrideDialog';
  *
  * Строки приходят с сервера (`fx_rates`, только с `quote.view_cost_margin` — иначе блока нет).
  * Черновик живёт по текущему курсу, при отправке на согласование курс фиксируется (`fx_mode`).
- * Финансист (`finance.rates`) задаёт договорной курс с причиной — до отправки клиенту.
+ * Финансист (`finance.rates`) задаёт договорной курс с причиной — только в черновике КП.
  */
 export function QuoteFxRates({ quote, className }: { quote: Quote; className?: string }) {
 	const { t } = useTranslation();
@@ -24,7 +24,11 @@ export function QuoteFxRates({ quote, className }: { quote: Quote; className?: s
 	const rates = quote.fx_rates ?? [];
 	if (rates.length === 0) return null;
 
-	const editable = canOverride && !quote.frozen_at;
+	// Договорной курс меняет цену КП — только в черновике (FIX-41); на согласовании и позже — через
+	// возврат в черновик и повторное согласование (сервер отвечает 409 QUOTE_NOT_DRAFT).
+	const isDraft = !quote.status_code || quote.status_code === 'DRAFT';
+	const editable = canOverride && !quote.frozen_at && isDraft;
+	const draftOnlyHint = canOverride && !quote.frozen_at && !isDraft;
 	const fixed = quote.fx_mode === 'fixed';
 	const fixedAt = quote.fx_fixed_at ?? quote.frozen_at;
 
@@ -78,6 +82,7 @@ export function QuoteFxRates({ quote, className }: { quote: Quote; className?: s
 					? (fixedAt ? t('quote.fx.fixedHelp', { date: formatDateTime(fixedAt) }) : t('quote.fx.fixedHelpNoDate'))
 					: t('quote.fx.liveHelp')}
 			</p>
+			{draftOnlyHint && <p className="text-xs text-muted-foreground">{t('quote.fx.draftOnly')}</p>}
 			{dialogCurrency && (
 				<QuoteFxOverrideDialog
 					quote={quote}

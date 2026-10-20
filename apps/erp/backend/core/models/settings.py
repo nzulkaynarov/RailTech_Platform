@@ -45,13 +45,6 @@ class SystemSetting(models.Model):
         verbose_name=_("Стандартная маржа (%)"),
         help_text=_("Маржа по умолчанию для новых позиций КП"),
     )
-    exchange_rate_usd_uzs = models.DecimalField(
-        max_digits=12,
-        decimal_places=2,
-        default=Decimal("12500.00"),
-        verbose_name=_("Курс USD/UZS"),
-        help_text=_("Справочный курс (может обновляться автоматически)"),
-    )
 
     # ─── Platform & Branding ────────────────────────────────────────────
     platform_name = models.CharField(

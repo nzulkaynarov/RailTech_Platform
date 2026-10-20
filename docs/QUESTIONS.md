@@ -329,3 +329,11 @@ Q-1…Q-9 решены — см. `DECISIONS.md`.
 **Решение (FIX-30).** Integration вызывает тот же идемпотентный `sync_delivery_lines` перед чтением сделки, компании и инструмента `get_delivery_status`. Лимит `anon` в тесте сторожа ослаблен, в коде не менялся.
 
 **Рекомендация.** Отдельный лимит для сервисного токена (scope `integration` с запасом, либо по токену, а не по адресу) — в FIX-33 или FIX-35; на 429 в контракте — строка `ErrorCode`.
+
+## Q-FIX41-1 · `erp-internal.yaml` (вручную) расходится с `system-settings` после FIX-41 (FIX-41)
+
+**Контекст.** `packages/contracts/openapi/erp-internal.yaml` (рукописный, 28 путей) описывает `SystemSettings.exchange_rate_usd_uzs` записываемым, а `PATCH /system-settings` принимает его без ограничений. После FIX-41 поле только для чтения и может быть `null` (курс берётся из справочника ЦБ, `finance.services.fx`). Контракт в волне 4 правит архитектор; `erp-internal-full.json` — побайтная копия `backend/schema.json`, которую пересоздаёт `make -C apps/erp openapi` — в этом PR не менялась (в `backend/schema.json` и `schema.d.ts` внесены только строки по этому полю, без чужого дрейфа).
+
+**Варианты.** (1) Поправить `SystemSettings` в рукописном yaml сейчас (`readOnly`, `nullable`). (2) Оставить как есть до FIX-40, который генерирует internal-контракт из схемы бэкенда и снимает расхождение само.
+
+**Рекомендация.** (2): FIX-40 всё равно заменяет рукописный файл; клиентов у этого yaml нет (фронтенд ERP использует `backend/schema.json`).

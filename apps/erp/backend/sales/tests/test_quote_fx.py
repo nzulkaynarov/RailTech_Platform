@@ -288,6 +288,83 @@ def test_override_refused_on_sent_quote(world):
     assert response.json()["detail"] == "QUOTE_FROZEN"
 
 
+@pytest.mark.parametrize(
+    "status_code",
+    ["PENDING_TRADE_REVIEW", "PENDING_APPROVAL", "READY_TO_SEND", "SENT", "APPROVED", "REJECTED"],
+)
+def test_override_only_in_draft_status(world, status_code):
+    """FIX-41 (F-2): договорной курс меняет цену КП — значит, только в черновике; дальше 409 без изменений."""
+    set_rate("USD", "12000")
+    quote = build_quote(world, [("100", "USD", 2)], margin="20", status=status_code)
+    before = (quote.subtotal_excl_vat, quote.total_incl_vat, dict(quote.fx_manual))
+
+    response = _override(world.finance, quote, {"currency": "USD", "rate": "13000", "reason": "договор"})
+
+    assert response.status_code == 409
+    assert response.json()["detail"] == "QUOTE_NOT_DRAFT"
+    quote.refresh_from_db()
+    assert (quote.subtotal_excl_vat, quote.total_incl_vat, dict(quote.fx_manual)) == before
+    assert not ActivityLog.objects.filter(entity_id=quote.pk, event_code="quote.fx_overridden").exists()
+
+
+@pytest.mark.parametrize("status_code", ["PENDING_APPROVAL", "READY_TO_SEND", "SENT", "APPROVED"])
+def test_clearing_override_is_also_draft_only(world, status_code):
+    """Снятие договорного курса тоже меняет цену — на согласовании и позже его нельзя снять."""
+    set_rate("USD", "12000")
+    quote = build_quote(world, [("100", "USD", 1)], margin="20")
+    assert _override(world.finance, quote, {"currency": "USD", "rate": "12500", "reason": "договор"}).status_code == 200
+    Quote.objects.filter(pk=quote.pk).update(status=QuoteStatus.objects.get(code=status_code))
+    quote.refresh_from_db()
+
+    response = _override(world.finance, quote, {"currency": "USD", "rate": None, "reason": "снять"})
+
+    assert response.status_code == 409
+    quote.refresh_from_db()
+    assert quote.fx_manual == {"USD": "12500"}
+
+
+def test_override_in_draft_still_allowed_and_reprices(world):
+    set_rate("USD", "12000")
+    quote = build_quote(world, [("100", "USD", 1)], margin="20")
+    assert quote.status.code == "DRAFT"
+
+    response = _override(world.finance, quote, {"currency": "USD", "rate": "13000", "reason": "договор"})
+
+    assert response.status_code == 200
+    quote.refresh_from_db()
+    assert quote.subtotal_excl_vat == Decimal("1560000.00")
+
+
+def test_override_after_submit_needs_return_to_draft_and_reapproval(world):
+    """На согласовании курс не меняется; явный путь — вернуть в черновик, поменять и отправить заново."""
+    from crm.services.approvals import recall_quote
+
+    set_rate("USD", "12000")
+    quote = build_quote(world, [("100", "USD", 1)], margin="20")
+    submitted, err = QuoteLifecycleService.submit_for_review(quote.pk, world.calc)
+    assert err is None
+    submitted.refresh_from_db()
+    assert submitted.status.code == "PENDING_APPROVAL"
+    priced = submitted.subtotal_excl_vat
+
+    refused = _override(world.finance, submitted, {"currency": "USD", "rate": "14000", "reason": "договор"})
+    assert refused.status_code == 409 and refused.json()["detail"] == "QUOTE_NOT_DRAFT"
+    submitted.refresh_from_db()
+    assert submitted.subtotal_excl_vat == priced
+
+    _quote, err = recall_quote(submitted.pk, world.calc)
+    assert err is None
+    allowed = _override(world.finance, submitted, {"currency": "USD", "rate": "14000", "reason": "договор"})
+    assert allowed.status_code == 200
+    submitted.refresh_from_db()
+    assert submitted.subtotal_excl_vat == Decimal("1680000.00") != priced
+
+    resubmitted, err = QuoteLifecycleService.submit_for_review(submitted.pk, world.calc)
+    assert err is None
+    resubmitted.refresh_from_db()
+    assert resubmitted.status.code == "PENDING_APPROVAL"  # новая цена снова идёт через согласование
+
+
 def test_override_honours_if_match(world):
     set_rate("USD", "12000")
     quote = build_quote(world, [("100", "USD", 1)])
