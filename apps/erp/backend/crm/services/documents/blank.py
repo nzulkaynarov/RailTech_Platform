@@ -123,11 +123,13 @@ def quote_document_extras(quote, seller_company) -> dict:
     doc_profile = CompanyDocumentProfile.objects.filter(company=seller_company).first() if seller_company else None
     seller_settings = CompanySettings.objects.filter(company=seller_company).first() if seller_company else None
     buyer = quote.deal.company
+    from crm.services.document_blocks import format_document_date
+
     deal_created = getattr(quote.deal, "created_at", None)
     cover_text = resolve_cover_letter(
         doc_profile,
         buyer_name=getattr(buyer, "name", "") or "",
-        deal_ref=deal_created.strftime("%d.%m.%Y") if deal_created else "",
+        deal_ref=format_document_date(deal_created),
         seller_name=getattr(seller_company, "name", "") or "",
     )
     incoterm = ""

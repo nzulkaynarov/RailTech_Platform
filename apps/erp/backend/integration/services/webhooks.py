@@ -24,6 +24,8 @@ from django.conf import settings
 from django.db import transaction
 from django.utils import timezone
 
+from portal import projections
+
 from ..models import CrmClientMapping, CrmContactMapping, IntegrationWebhookEvent, WebhookEventStatus
 from . import event_contract, stages
 
@@ -369,6 +371,11 @@ def emit_deal_outcome(
     )
 
 
+def _cabinet_url() -> str:
+    """Адрес Cabinet из настроек (`CABINET_URL`), без хвостового слэша: ссылки событий не зашивают прод-домен."""
+    return getattr(settings, "CABINET_URL", "http://cabinet.localhost").rstrip("/")
+
+
 def emit_quote_sent(
     quote: Any,
     public_url: Optional[str] = None,
@@ -380,14 +387,14 @@ def emit_quote_sent(
     company_id = deal.company_id
 
     if not public_url:
-        token = getattr(quote, "public_token", None) or f"q-{quote.id}"
-        public_url = f"https://cabinet.railtech.uz/q/{token}"
+        # Публичная страница КП — одна функция на ERP (письмо клиенту, PDF, портал); домен — из настроек.
+        from crm.services.documents.public_page import public_quote_url
+
+        # Токена ещё нет (КП в статусе «отправлено» без публичной ссылки) — карточка КП в Cabinet по сессии клиента.
+        public_url = public_quote_url(quote) or f"{_cabinet_url()}/quotes/{quote.id}"
 
     total_amount = f"{quote.total_incl_vat:.2f}"
-    currency = "UZS"
-    if getattr(quote, "currency", None):
-        c = quote.currency
-        currency = c.code if hasattr(c, "code") else str(c)
+    currency = projections.currency_code(quote.quote_currency)
 
     valid_until_str = None
     if getattr(quote, "valid_until", None):
@@ -481,9 +488,9 @@ def emit_invoice_event(
         c = invoice.currency
         currency = c.code if hasattr(c, "code") else str(c)
 
-    due_date_str = invoice.due_date.isoformat() if invoice.due_date else timezone.now().date().isoformat()
+    due_date_str = invoice.due_date.isoformat() if invoice.due_date else timezone.localdate().isoformat()
     if not link:
-        link = f"https://cabinet.railtech.uz/invoices/{invoice.id}"
+        link = f"{_cabinet_url()}/invoices/{invoice.id}"
 
     payload: Dict[str, Any] = {
         "erp_invoice_id": invoice.id,
