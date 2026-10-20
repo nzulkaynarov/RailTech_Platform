@@ -11,6 +11,7 @@ import { t } from "../i18n/ru";
 import "../styles/workspace.css";
 import { AssignLead } from "./AssignLead";
 import { lastUnanswered } from "../domain/unanswered";
+import { ConsentDialog } from "./ConsentDialog";
 import { type Dialog, LeadActionDialog } from "./LeadActionDialog";
 import {
   type ActionKey,
@@ -33,10 +34,11 @@ const LABEL: Record<ActionKey, string> = {
   assign: t.actions.assign,
   newDeal: t.actions.newDeal,
   makeCustomer: t.clients.makeCustomer,
+  recordConsent: t.actions.recordConsent,
   note: t.actions.note,
 };
 
-type Open = Dialog | "assign" | "makeCustomer";
+type Open = Dialog | "assign" | "makeCustomer" | "consent";
 const TEXT_DIALOGS: ReadonlySet<Open> = new Set(["return", "snooze", "lost", "won", "note"]);
 const DIALOG_OF: Partial<Record<ActionKey, Open>> = {
   won: "won",
@@ -46,6 +48,7 @@ const DIALOG_OF: Partial<Record<ActionKey, Open>> = {
   note: "note",
   assign: "assign",
   makeCustomer: "makeCustomer",
+  recordConsent: "consent",
 };
 
 type Run = (action: LeadAction) => Promise<boolean>;
@@ -204,6 +207,15 @@ export function LeadActions({ lead, rights }: { lead: LeadDetail; rights: Action
         onClose={close}
         unanswered={unanswered}
       />
+      {available.has("recordConsent") ? (
+        <ConsentDialog
+          key={dialog === "consent" ? "consent" : "closed"}
+          open={dialog === "consent"}
+          busy={busy}
+          onClose={close}
+          onRun={runAndClose}
+        />
+      ) : null}
       {available.has("assign") ? (
         <AssignLead lead={lead} open={dialog === "assign"} busy={busy} onClose={close} run={run} />
       ) : null}

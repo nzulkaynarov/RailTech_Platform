@@ -210,6 +210,8 @@ leads(
   id, display_name, language 'ru'|'uz'|'en', stage, score INT, owner_mode 'bot'|'human'|'paused',
   assigned_user_id NULL, client_id NULL,            -- появляется при stage=customer или ручной привязке
   consent_given_at NULL, consent_version TEXT,
+  consent_method NULL 'phone'|'email'|'paper',      -- как получено согласие, если его отметил сотрудник (FIX-57, D-8)
+  erp_request_id NULL,                              -- заявка ERP, созданная передачей этого лида (FIX-57, D-10)
   need_summary TEXT, product_interest TEXT[], qualification JSONB,
   last_lead_msg_at, last_bot_msg_at, last_human_msg_at, snoozed_until, unresponsive_since,
   manager_notified_at NULL,                         -- троттлинг личных уведомлений менеджеру (Q-010)
@@ -324,7 +326,7 @@ settings(key PK, value JSONB, schema_version INT, updated_by, updated_at)
 
 `new → engaged → qualified → handoff → in_progress → won → customer`; боковая: `lost` (выход — новое сообщение лида или «Забрать»); временная: `unresponsive`. Клиент может открыть новую сделку: `customer → in_progress → won|lost → customer` (ADR-0015).
 
-**Ансамбль CRM ↔ ERP (ADR-0022, proposed).** «Передан в бэк-офис» = стадия `customer`. Режим определяет код по факту «коннектор ERP настроен» (`integrations/erp.erp_connector_configured`, `domain/backoffice.py`): без коннектора (`local`) — поведение выше без изменений («Сделать клиентом» из `won`, итог сделки — действия CRM); с коннектором (`erp`) — «Передать в бэк-офис» (та же операция `make_customer`) из `in_progress` | `won` | `customer` с вызовом `POST /clients/handoff` (M3-CRM-03), итог сделки приходит событиями ERP `deal.won`/`deal.lost` в зеркало `deals` (`domain/deals.plan_erp_outcome`), **стадия лида событиями ERP не меняется**; в CRM из `in_progress` остаётся только «Закрыть отказом» (`may_close_locally`). Повторная передача тому же клиенту — идемпотентна (ничего не меняет, ERP не вызывается).
+**Ансамбль CRM ↔ ERP (ADR-0022, proposed).** «Передан в бэк-офис» = стадия `customer`. Режим определяет код по факту «коннектор ERP настроен» (`integrations/erp.erp_connector_configured`, `domain/backoffice.py`): без коннектора (`local`) — поведение выше без изменений («Сделать клиентом» из `won`, итог сделки — действия CRM); с коннектором (`erp`) — «Передать в бэк-офис» (та же операция `make_customer`) из `in_progress` | `won` | `customer` с вызовом `POST /clients/handoff` (M3-CRM-03), итог сделки приходит событиями ERP `deal.won`/`deal.lost` в зеркало `deals` (`domain/deals.plan_erp_outcome`), **стадия лида событиями ERP не меняется**; в CRM из `in_progress` остаётся только «Закрыть отказом» (`may_close_locally`). Повторная передача тому же клиенту — идемпотентна (ничего не меняет, ERP не вызывается). Зеркальная сделка (`deals.erp_deal_id`) — копия заявки ERP: название, сумму, валюту, стадию и причину отказа ведёт бэк-офис (приёмник событий перезаписывает их), `PATCH /deals/{id}` с изменением этих полей — 409 `deal_owned_by_erp` (`details.fields`); ответственный, срок и продукт правятся в CRM (FIX-57, I-26). Номер заявки в карточке лида — `leads.erp_request_id`, результат передачи этого лида, а не последняя сделка (поздние заявки клиента из Cabinet привязываются к тому же лиду, D-10).
 
 ### 6.2. State machine (`domain/stage_machine.py`)
 
@@ -356,6 +358,8 @@ ALLOWED = {
 Детерминированная функция от `qualification`, последнего `QualifierOutput` и флагов триггеров: потребность +25; продукт +15; таймлайн ≤3 мес +20 / ≤12 мес +10; роль ЛПР +20 / влияет +10; спросил цену/условия +15; просьба о контакте +25; негатив −10. Клиппинг 0..100. Весы — в коде с тестами, не в настройках (изменение веса = осознанное решение с ADR-заметкой).
 
 ### 6.4. Согласие (`domain/consent.py`)
+
+**Согласие за лида, заведённого вручную (FIX-57, D-8).** Лид из звонка, письма или рекомендации (`source` ∈ `phone|email|referral`) боту не пишет, а «Передать в бэк-офис» без согласия — 422 `handoff_no_consent`. Сотрудник отмечает согласие действием «Согласие получено» (`POST /leads/{id}/actions/record_consent`, способ `phone|email|paper` + комментарий ≤ 500): право `clients:write`, чужого лида — только админ (403 `not_lead_owner`); пишется `consent_given_at` = сейчас, `consent_version = "manual"`, `consent_method`; аудит `lead.consent_recorded` (кто, когда, способ, комментарий) и заметка в ленте лида. Повторная отметка идемпотентна (`recorded: false`, первое согласие не меняется); согласие, данное лидом самим (бот, форма), не перезаписывается; лид из Telegram соглашается в боте — 409 `consent_via_bot`. Как и после формы «Запрос», версия не равна версии текста бота: бот при первом сообщении лида спросит своё согласие. В ERP уходит `consent {given_at, version: "manual"}` как есть; способ остаётся в CRM. Отзыва согласия в CRM нет.
 
 До `consent_given_at` бот отвечает только приветствием + текстом согласия с кнопкой. Текст версионируется (`consent_version`); при смене версии согласие запрашивается повторно при следующем сообщении. Команда `/delete` → `LeadService.erase(lead_id)`: тексты сообщений заменяются на `[удалено по запросу]`, `telegram_identities` обезличивается, запись в `audit_log`; агрегаты для дашборда сохраняются.
 

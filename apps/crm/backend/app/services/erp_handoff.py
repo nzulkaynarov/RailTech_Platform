@@ -142,6 +142,9 @@ class ErpHandoffService:
             if create_request and result.erp_request_id and lead is not None:
                 await _mirror_request(session, client, lead, result.erp_request_id)
                 erp_deal_id = result.erp_request_id
+                # Результат передачи — отдельно от сделок лида: поздние заявки клиента из Cabinet
+                # привязываются к тому же лиду, и «последняя сделка» — уже не его заявка (D-10).
+                lead.erp_request_id = result.erp_request_id
             await audit.record(
                 session,
                 audit.Actor.system(),

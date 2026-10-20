@@ -41,6 +41,8 @@ import type {
   ClientListItem,
   ClientUpdate,
   Close,
+  ConsentRecord,
+  ConsentResult,
   ContactIn,
   Created,
   Dashboard,
@@ -8959,6 +8961,118 @@ export const useNote = <TError = ErrorType<ErrorOut>, TContext = unknown>(
   queryClient?: QueryClient,
 ): UseMutationResult<Awaited<ReturnType<typeof note>>, TError, NoteMutationVariables, TContext> => {
   return useMutation(getNoteMutationOptions(options), queryClient);
+};
+
+export const getRecordConsentUrl = (leadId: number) => {
+  return `/api/v1/leads/${leadId}/actions/record_consent`;
+};
+
+/**
+ * «Согласие получено» (FIX-57, D-8): сотрудник отмечает согласие лида, заведённого вручную
+ * (звонок, письмо, бумага) — без него «Передать в бэк-офис» даёт 422 `handoff_no_consent`.
+ *
+ * Право — как у «Передать в бэк-офис» (`clients:write`; чужого лида — только админ, 403
+ * `not_lead_owner`). В аудите `lead.consent_recorded`: кто, когда, способ, комментарий.
+ * Повторная отметка идемпотентна (`recorded: false`), согласие лида из бота или формы не
+ * перезаписывается.
+ * @summary Record Consent
+ */
+export const recordConsent = async (
+  leadId: number,
+  consentRecord: ConsentRecord,
+  options?: Parameters<typeof http>[1],
+): Promise<ConsentResult> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<ConsentResult>(getRecordConsentUrl(leadId), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
+    body: JSON.stringify(consentRecord),
+  });
+};
+
+export const getRecordConsentMutationKey = () => ["recordConsent"] as const;
+
+export const getRecordConsentMutationOptions = <
+  TError = ErrorType<ErrorOut>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof recordConsent>>,
+    TError,
+    RecordConsentMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof recordConsent>>,
+  TError,
+  RecordConsentMutationVariables,
+  TContext
+> => {
+  const mutationKey = getRecordConsentMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof recordConsent>>,
+    RecordConsentMutationVariables
+  > = (props) => {
+    const { leadId, data } = props ?? {};
+
+    return recordConsent(leadId, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type RecordConsentMutationResult = NonNullable<Awaited<ReturnType<typeof recordConsent>>>;
+export type RecordConsentMutationBody = ConsentRecord;
+export type RecordConsentMutationError = ErrorType<ErrorOut>;
+export type RecordConsentMutationVariables = { leadId: number; data: ConsentRecord };
+
+/**
+ * @summary Record Consent
+ */
+export const useRecordConsent = <TError = ErrorType<ErrorOut>, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof recordConsent>>,
+      TError,
+      RecordConsentMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof recordConsent>>,
+  TError,
+  RecordConsentMutationVariables,
+  TContext
+> => {
+  return useMutation(getRecordConsentMutationOptions(options), queryClient);
 };
 
 export const getReturnToBotUrl = (leadId: number) => {

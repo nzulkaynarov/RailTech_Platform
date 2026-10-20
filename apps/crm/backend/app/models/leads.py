@@ -53,6 +53,12 @@ class Lead(TimestampMixin, Base):
     client_id: Mapped[int | None] = mapped_column(ForeignKey("clients.id", ondelete="SET NULL"))
     consent_given_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     consent_version: Mapped[str | None] = mapped_column(String(32))
+    # Как получено согласие, если его отметил сотрудник (`domain/consent.ConsentMethod`): звонок,
+    # письмо, бумага; у согласия из бота и формы — NULL (D-8, DECISIONS «по рекомендации»).
+    consent_method: Mapped[str | None] = mapped_column(String(16))
+    # Заявка ERP, созданная передачей этого лида в бэк-офис (FIX-57, D-10): карточка показывает её,
+    # а не последнюю сделку лида — поздние заявки клиента из Cabinet привязываются к тому же лиду.
+    erp_request_id: Mapped[int | None] = mapped_column(BigInteger)
     need_summary: Mapped[str | None] = mapped_column(Text)
     product_interest: Mapped[list[str]] = mapped_column(
         ARRAY(String(64)), server_default=sql("'{}'")

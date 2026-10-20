@@ -45,6 +45,7 @@ if TYPE_CHECKING:
     from app.services.kb.admin import KbAdminService
     from app.services.kb.ingest import KbIngestService
     from app.services.kb.search import KbSearchService
+    from app.services.lead_consent import LeadConsentService
     from app.services.lead_intake import LeadIntakeService
     from app.services.lead_messenger import LeadMessenger
     from app.services.leads import LeadService
@@ -238,6 +239,13 @@ class Container:
             on_chats_changed=_chats_changed,
             backoffice_mode=self.backoffice_mode,
         )
+
+    @cached_property
+    def lead_consent_service(self) -> "LeadConsentService":
+        """«Согласие получено» сотрудником за лида, заведённого вручную (FIX-57, D-8)."""
+        from app.services.lead_consent import LeadConsentService
+
+        return LeadConsentService(self.session_factory)
 
     @cached_property
     def lead_intake(self) -> "LeadIntakeService":

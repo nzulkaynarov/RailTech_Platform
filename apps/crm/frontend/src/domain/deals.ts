@@ -17,6 +17,14 @@ export function formatMoney(amount: string | number | null | undefined, currency
   return `${text}${NBSP}${currency}`;
 }
 
+/**
+ * Зеркальная сделка ERP (`erp_deal_id`): название, сумму, валюту, стадию и причину отказа ведёт
+ * бэк-офис (события ERP перезаписывают правку, бэкенд отвечает 409 `deal_owned_by_erp`, I-26);
+ * в CRM меняют ответственного и срок.
+ */
+export const isErpMirror = (deal: { erp_deal_id?: number | null }): boolean =>
+  deal.erp_deal_id != null;
+
 export const STAGE_COLORS: Record<string, string> = {
   open: "processing",
   won: "success",
