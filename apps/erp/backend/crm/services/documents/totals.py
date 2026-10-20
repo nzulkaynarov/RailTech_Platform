@@ -51,3 +51,18 @@ def document_totals(
         "amount_paid": _dec(amount_paid),
         "balance_due": _dec(balance_due),
     }
+
+
+def quote_document_totals(quote) -> dict:
+    """Итоги КП ровно такие, как в его PDF и на публичной странице: «без НДС → НДС → итого».
+
+    Единственный источник для бланка (`blank.quote_document_extras`) и портала (`Quote.subtotal` / `Quote.vat`):
+    строки КП показываются без НДС, `subtotal + vat = total`, статьи расходов уже внутри `subtotal`.
+    """
+    return document_totals(
+        ccy=quote.quote_currency.code if quote.quote_currency else "UZS",
+        vat_rate=quote.vat_rate,
+        subtotal=quote.total_excl_vat,
+        vat_amount=quote.vat_amount,
+        total=quote.total_incl_vat,
+    )
