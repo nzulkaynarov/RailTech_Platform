@@ -23,12 +23,10 @@ def search_published_catalog(query: str, mode: str, limit: int = 10) -> List[Dic
         proj = project(p, mode=mode)
         item: Dict[str, Any] = {
             "erp_product_id": proj["id"],
-            "sku": p.sku,
             "kind": proj["kind"],
             "name": proj["name"],
             "description": proj["description"],
             "unit": proj["unit"],
-            "category": proj.get("category"),
         }
         if mode == "client":
             item["price"] = proj.get("price")
