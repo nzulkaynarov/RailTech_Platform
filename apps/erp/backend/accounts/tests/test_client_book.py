@@ -10,7 +10,7 @@ import pytest
 from rest_framework.test import APIClient
 from rest_framework_simplejwt.tokens import RefreshToken
 
-from accounts.models import Company, CompanyMember, CompanyType, CustomUser, WorkspaceRole
+from accounts.models import Company, CompanyMember, CompanyType, Contact, CustomUser, WorkspaceRole
 from accounts.services.clients import create_offline_client
 
 
@@ -84,3 +84,39 @@ def test_contact_create_maps_service_errors(scene):
 def test_offline_client_refused_for_non_staff(scene):
     result, err = create_offline_client(seller=scene["buyer"], company_name="X", contact_name="Y", email="x@y.test")
     assert result is None and err == "ONLY_SELLER_CAN_CREATE_CLIENTS"
+
+
+# ── can_act: каждый путь создания контакта называет право сам (FIX-54, P-18) ─────────────────────────
+
+
+def test_contact_model_default_grants_no_right_to_act(db):
+    company = Company.objects.create(name="Default Co", inn="700000099")
+    assert Contact.objects.create(company=company, name="Без права").can_act is False
+
+
+def test_staff_created_client_contact_can_act_by_default(scene):
+    """Сотрудник сам заводит клиента (звонок, офлайн) — контакт подписывает, как и было."""
+    resp = _api(scene["staff"]).post(
+        "/api/v1/accounts/contacts/",
+        {"company_name": "Staff LLC", "contact_name": "Пётр", "email": "p@staff.test"},
+        format="json",
+    )
+    assert resp.status_code == 201
+    assert Contact.objects.get(pk=resp.json()["id"]).can_act is True
+
+
+def test_staff_can_create_a_read_only_client_contact(scene):
+    resp = _api(scene["staff"]).post(
+        "/api/v1/accounts/contacts/",
+        {"company_name": "Staff2 LLC", "contact_name": "Анна", "email": "a@staff.test", "can_act": False},
+        format="json",
+    )
+    assert resp.status_code == 201
+    assert Contact.objects.get(pk=resp.json()["id"]).can_act is False
+
+
+def test_offline_client_service_states_the_right_explicitly(scene):
+    result, _ = create_offline_client(
+        seller=scene["staff"], company_name="Svc Co", contact_name="Иван", email="i@svc.test", can_act=False
+    )
+    assert result["contact"].can_act is False
