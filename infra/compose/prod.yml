@@ -3,7 +3,8 @@
 # Отличия от dev: образы из GHCR по тегу ${RT_IMAGE_TAG} (без сборки и bind-mount кода), без портов наружу
 # (кроме Caddy 80/443), restart: unless-stopped, лимиты памяти из servers.md, логи json-file с ротацией.
 # PostgreSQL — внешний, на VPS 2 (infra/compose/db.yml), по внутреннему IP ${DB_INTERNAL_IP} с TLS (sslmode=require)
-# и отдельной ролью на каждую базу. Локальные `postgres` и `db-init` из base.yml под профилем `local-db` — не стартуют.
+# и отдельной ролью на каждую базу. Prisma (LiteLLM, Langfuse) при самоподписанном сертификате требует sslaccept=accept_invalid_certs
+# (шифрование есть, проверки цепочки нет) — до выпуска собственного CA (verify-ca после пилота). Локальные `postgres` и `db-init` из base.yml под профилем `local-db` — не стартуют.
 # Профили: `observability` (clickhouse, langfuse-*) и `kb-ingest` (docling) — по очереди, вместе в 8 ГБ не помещаются.
 
 x-ops: &ops
@@ -42,7 +43,8 @@ x-erp-prod-env: &erp-prod-env
   DRF_NUM_PROXIES: "1"
   DATABASE_URL: postgresql://erp_app:${DB_ERP_PASSWORD:?set in .env}@${DB_INTERNAL_IP:?set in .env}:5432/erp?sslmode=require
   DB_SSLMODE: require
-  ALLOWED_HOSTS: ${ERP_DOMAIN},${CABINET_DOMAIN},erp-backend
+  # 127.0.0.1/localhost — healthcheck контейнера (curl http://127.0.0.1:8000/health/), erp-backend — обращения из сети compose.
+  ALLOWED_HOSTS: ${ERP_DOMAIN},${CABINET_DOMAIN},erp-backend,127.0.0.1,localhost
   FRONTEND_URL: https://${ERP_DOMAIN}
   CRM_FRONTEND_URL: https://${CRM_DOMAIN:?set in .env}
   CABINET_URL: https://${CABINET_DOMAIN:?set in .env}
@@ -82,7 +84,7 @@ services:
   litellm:
     <<: [*ops, *mem-768]
     environment:
-      DATABASE_URL: postgresql://litellm_app:${DB_LITELLM_PASSWORD:?set in .env}@${DB_INTERNAL_IP}:5432/litellm?sslmode=require
+      DATABASE_URL: postgresql://litellm_app:${DB_LITELLM_PASSWORD:?set in .env}@${DB_INTERNAL_IP}:5432/litellm?sslmode=require&sslaccept=accept_invalid_certs
     depends_on: !override {}
 
   litellm-seed:
@@ -268,7 +270,7 @@ services:
       clickhouse:
         condition: service_healthy
     environment:
-      DATABASE_URL: postgresql://langfuse_app:${DB_LANGFUSE_PASSWORD:?set in .env}@${DB_INTERNAL_IP}:5432/langfuse?sslmode=require
+      DATABASE_URL: postgresql://langfuse_app:${DB_LANGFUSE_PASSWORD:?set in .env}@${DB_INTERNAL_IP}:5432/langfuse?sslmode=require&sslaccept=accept_invalid_certs
 
   langfuse-web:
     <<: [*ops, *mem-768]
@@ -280,5 +282,5 @@ services:
       clickhouse:
         condition: service_healthy
     environment:
-      DATABASE_URL: postgresql://langfuse_app:${DB_LANGFUSE_PASSWORD}@${DB_INTERNAL_IP}:5432/langfuse?sslmode=require
+      DATABASE_URL: postgresql://langfuse_app:${DB_LANGFUSE_PASSWORD}@${DB_INTERNAL_IP}:5432/langfuse?sslmode=require&sslaccept=accept_invalid_certs
     ports: ["127.0.0.1:3000:3000"]

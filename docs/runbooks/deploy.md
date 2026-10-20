@@ -38,7 +38,12 @@ install -d -m 700 -o deploy -g deploy /home/deploy/.ssh
 echo "<публичный ключ>" >> /home/deploy/.ssh/authorized_keys && chown deploy:deploy /home/deploy/.ssh/authorized_keys
 sed -i 's/^#\?PasswordAuthentication.*/PasswordAuthentication no/; s/^#\?PermitRootLogin.*/PermitRootLogin prohibit-password/' /etc/ssh/sshd_config
 systemctl reload ssh
+# рабочие каталоги, владелец deploy (скрипты и deploy.yml пишут в них без sudo):
+install -d -o deploy -g deploy /opt/rt /opt/rt/releases /opt/rt/state          # VPS 1
+install -d -o deploy -g deploy /opt/rt-db /var/backups/rt                      # VPS 2
 ```
+Команды для VPS 1 и VPS 2 выполняйте на своём сервере (две последние строки — каждая на своём). У `deploy` нет `sudo`:
+всё, что требует root (`db-up.sh`), выполняется отдельным заходом `ssh root@<VPS 2>`.
 
 Файрвол (`ufw`), подставьте внутренние IP:
 
@@ -79,8 +84,8 @@ infra/deploy/make-env-prod.sh drop-db-only    # убрать с VPS 1 то, чт
 ### 1.3. VPS 2: база
 
 ```bash
-# от deploy; sudo нужен для chown сертификата; каталог infra скопирован, например, в /opt/rt-db/infra
-infra/deploy/db-up.sh
+# каталог infra скопирован от deploy в /opt/rt-db/infra, /opt/rt-db/.env.db на месте (п. 1.2)
+ssh root@<VPS 2> /opt/rt-db/infra/deploy/db-up.sh      # только от root: chown сертификата на uid 999
 ```
 
 Скрипт создаёт сертификат TLS (самоподписанный, `sslmode=require`; проверка `verify-ca` — после пилота), `pg_hba.conf` с IP VPS 1,

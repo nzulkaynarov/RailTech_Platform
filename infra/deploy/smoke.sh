@@ -17,8 +17,9 @@ while [[ $# -gt 0 ]]; do
 done
 [[ ${#domains[@]} -eq 3 ]] || { echo "usage: smoke.sh --domains <crm> <erp> <cabinet> [--resolve-ip IP] [--insecure] [--retries N]" >&2; exit 2; }
 
-code_of() { # домен, путь
+code_of() { # домен, путь, [-L: идти по редиректам] — ERP отдаёт 301 /health -> /health/ (APPEND_SLASH)
   local args=(-sS -o /dev/null -w '%{http_code}' --max-time 10)
+  [[ "${3:-}" == -L ]] && args+=(-L --max-redirs 3)
   [[ -n "$ip" ]] && args+=(--resolve "$1:443:$ip")
   [[ $insecure -eq 1 ]] && args+=(-k)
   curl "${args[@]}" "https://$1$2" 2>/dev/null || echo 000
@@ -27,7 +28,7 @@ code_of() { # домен, путь
 attempt() {
   local ok=1 d code
   for d in "${domains[@]}"; do
-    code="$(code_of "$d" /health)"
+    code="$(code_of "$d" /health -L)"
     printf '  %-32s /health → %s\n' "$d" "$code"
     [[ "$code" == 200 ]] || ok=0
   done

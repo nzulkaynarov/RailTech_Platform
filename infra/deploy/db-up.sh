@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Установка и обновление БД-сервера (VPS 2): сертификат TLS, pg_hba.conf с IP VPS 1, контейнеры rt-db,
 # идемпотентный prod-init.sh (роли, базы, расширение; повторный запуск применяет смену паролей из .env.db).
-# Нужен root или sudo (chown сертификата на uid 999 — пользователь postgres в контейнере).
+# Запускать от root (у пользователя deploy sudo нет): chown сертификата на uid 999 — пользователь postgres в контейнере.
 #   db-up.sh        Файлы: $RT_DB_DIR/.env.db (создаёт владелец, chmod 600), certs/, pg_hba.conf (создаются здесь)
 set -euo pipefail
 
@@ -9,7 +9,8 @@ here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 infra="$(cd "$here/.." && pwd)"
 RT_DB_DIR="${RT_DB_DIR:-/opt/rt-db}"
 envf="$RT_DB_DIR/.env.db"
-SUDO=""; [[ $EUID -eq 0 ]] || SUDO="sudo"
+[[ $EUID -eq 0 ]] || { echo "db-up.sh запускается от root (sudo у deploy нет): ssh root@<VPS 2> $0" >&2; exit 1; }
+SUDO=""
 
 [[ -f "$envf" ]] || { echo "нет $envf (VPS 1: infra/deploy/make-env-prod.sh extract-db)" >&2; exit 1; }
 get() { grep -E "^$1=" "$envf" | tail -1 | cut -d= -f2-; }
