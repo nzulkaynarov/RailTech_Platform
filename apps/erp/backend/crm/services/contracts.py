@@ -4,6 +4,7 @@ from django.db import transaction
 
 from accounts.models import CustomUser
 from core.audit import log_admin_action
+from crm.services.pdf_storage import save_rendered_pdf
 
 from ..constants import ContractStatusCode, QuoteStatusCode
 from ..models import ActivityLog, Quote
@@ -219,7 +220,7 @@ def _render_contract_pdf(contract) -> None:
         )
         buf = BytesIO()
         HTML(string=html_string).write_pdf(buf)
-        contract.pdf_file.save(f"Contract_{contract.number}.pdf", ContentFile(buf.getvalue()), save=True)
+        save_rendered_pdf(contract, f"Contract_{contract.number}.pdf", ContentFile(buf.getvalue()))
         return
 
     html_string = render_to_string(
@@ -243,7 +244,7 @@ def _render_contract_pdf(contract) -> None:
     buf = BytesIO()
     HTML(string=html_string).write_pdf(buf)
     filename = f"Contract_{contract.number}.pdf"
-    contract.pdf_file.save(filename, ContentFile(buf.getvalue()), save=True)
+    save_rendered_pdf(contract, filename, ContentFile(buf.getvalue()))
 
 
 def viewer_can_sign_client(user, contract) -> bool:

@@ -25,6 +25,7 @@ from core.audit import log_admin_action
 from crm.constants import DealStageCode, QuoteStatusCode
 from crm.models import Quote, QuoteStatus
 from crm.services.deals import transition_deal_stage
+from crm.services.pdf_storage import save_rendered_pdf
 
 from . import lifecycle_audit
 from ._shared import _log_quote, _set_quote_status
@@ -133,7 +134,7 @@ class QuoteLifecycleService:
         # deal-id/ИНН. Черновик без номера деградирует в старую deal-схему (уникальность цела).
         from crm.services.documents import quote_pdf_filename
 
-        quote.pdf_file.save(quote_pdf_filename(quote), ContentFile(pdf_file.getvalue()), save=True)
+        save_rendered_pdf(quote, quote_pdf_filename(quote), ContentFile(pdf_file.getvalue()))
 
         return quote
 
