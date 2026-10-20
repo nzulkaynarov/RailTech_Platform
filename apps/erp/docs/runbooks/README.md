@@ -5,7 +5,7 @@
 
 | Runbook | Описание и симптомы | Когда применять |
 |---|---|---|
-| [dev-stand.md](dev-stand.md) | Запуск и диагностика стенда ансамбля | Первый запуск, `erp.localhost` 502/503, статус unhealthy, `/ready` degraded |
+| [dev-stand.md](dev-stand.md) | Запуск и диагностика стенда ансамбля | Первый запуск, `erp.localhost` 502/503, статус unhealthy, `/health/` отвечает 503 |
 | [migrations.md](migrations.md) | Управление миграциями и начальными данными | Изменение моделей, проверка `makemigrations --check`, откат, `core_seed` |
 | [workers.md](workers.md) | Celery worker, worker-ai и Celery Beat | Зависание PDF, простой очереди `ai`, курсы ЦБ РУз не обновляются, перезапуск воркеров |
 | [backup-restore.md](backup-restore.md) | Резервное копирование и восстановление | Снятие дампа базы `erp`, восстановление после сбоя, бэкап медиафайлов (RustFS/S3) |

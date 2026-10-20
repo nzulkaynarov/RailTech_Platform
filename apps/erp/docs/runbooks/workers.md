@@ -95,7 +95,7 @@ print('Current USD rate:', usd)
 
 ## Проверка восстановления
 
-1. `curl http://erp.localhost/api/v1/ready/` подтверждает проверку `"worker": true`.
+1. `docker compose -f infra/compose/base.yml -f infra/compose/dev.yml --env-file .env exec erp-backend celery -A core inspect ping` отвечает `pong` от воркеров.
 2. Тестовое создание черновика КП или генерация PDF завершается за ожидаемое время (≤ 5 с).
 3. `make -C apps/erp ai-status` подтверждает корректный статус шлюза LiteLLM и положительный остаток бюджета.
 
