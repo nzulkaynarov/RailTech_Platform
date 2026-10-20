@@ -92,6 +92,21 @@ class Company(models.Model):
         verbose_name=_("ИНН (со слов, до проверки)"),
         help_text=_("ИНН клиента, указанный при заведении в клиентской базе"),
     )
+    # Согласие на обработку данных, как пришло из CRM при передаче клиента (FIX-31, I-13): время и версия текста.
+    # ERP их не выдумывает и не подставляет; пусто — компания заведена сотрудником, согласия в ERP нет.
+    consent_given_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        verbose_name=_("Согласие дано"),
+        help_text=_("Когда клиент дал согласие на обработку данных (из CRM при передаче клиента)"),
+    )
+    consent_version = models.CharField(
+        max_length=64,
+        blank=True,
+        default="",
+        verbose_name=_("Версия согласия"),
+        help_text=_("Версия текста согласия, которое дал клиент (из CRM при передаче клиента)"),
+    )
     types = models.ManyToManyField(
         "parties.CompanyType",
         related_name="companies",

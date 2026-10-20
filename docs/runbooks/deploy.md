@@ -10,7 +10,7 @@
 
 - **Образы** собирает `deploy.yml` (только `workflow_dispatch`) и кладёт в GHCR с тегом = полный git sha:
   `rt-crm-backend`, `rt-crm-frontend`, `rt-erp-backend`, `rt-erp-frontend`, `rt-cabinet`. Деплоится только код, уже входящий в `main`.
-- **Релиз** на VPS 1 — каталог `/opt/rt/releases/<sha>/` (`infra/` + `apps/crm/infra/casbin`), `/opt/rt/current` — ссылка на текущий.
+- **Релиз** на VPS 1 — каталог `/opt/rt/releases/<sha>/` (`infra/`, `apps/crm/infra/casbin`, `packages/contracts/mcp-tools.json`), `/opt/rt/current` — ссылка на текущий.
   Состояние — `/opt/rt/state/{current_tag,previous_tag}`; хранятся пять последних релизов.
 - **Секреты приложений** лежат только на серверах: `/opt/rt/.env.prod` (VPS 1) и `/opt/rt-db/.env.db` (VPS 2), оба `chmod 600`.
   В GitHub environment `production` — лишь доступ к серверу (SSH-ключ, known_hosts) и несекретные имена. Решение принято
@@ -120,6 +120,11 @@ Actions → **Deploy** → Run workflow: `ref` = `main` (или sha, входя�
 - Telegram-вебхук ставит CRM сама при `TELEGRAM_MODE=webhook`;
 - Langfuse (`RT_PROFILES=observability` в `.env.prod`) открывается SSH-туннелем: `ssh -L 3000:127.0.0.1:3000 deploy@<VPS 1>`;
   docling (`RT_PROFILES=kb-ingest`) — только на время загрузки документов, вместе с Langfuse не включать (8 ГБ).
+
+`erp-mcp` (инструменты ERP для агента CRM) лежит под профилем `mcp` и по умолчанию не стартует: CRM к нему пока не ходит (M3-CRM-07).
+Файл контракта уже едет в релизе: `/opt/rt/releases/<sha>/packages/contracts/mcp-tools.json` монтируется в контейнер по пути
+`../../packages/contracts/mcp-tools.json` от `prod.yml` (без файла сервис не стартует). Включает профиль M3-CRM-07: добавить `mcp`
+в `RT_PROFILES` в `.env.prod` (`RT_PROFILES=mcp`, через запятую с остальными) и выполнить обычный деплой; снаружи `/mcp` остаётся 404.
 
 Вручную с сервера (без Actions): `/opt/rt/releases/<sha>/infra/deploy/deploy.sh <sha>`; без миграций и дампа — `make up-prod RT_IMAGE_TAG=<sha>`.
 

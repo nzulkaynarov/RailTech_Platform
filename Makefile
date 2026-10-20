@@ -98,7 +98,7 @@ up-prod: ## Прод (VPS 1): up образов тега RT_IMAGE_TAG без м�
 
 .PHONY: deploy-check
 deploy-check: ## Проверка конфигурации прода без запуска: compose prod/db, Caddyfile.prod, shellcheck, actionlint (одноразовые контейнеры)
-	@set -e; envfile=$$(mktemp); trap 'rm -f $$envfile' EXIT; sed 's/CHANGE_ME/ci-only-value/' $(INFRA)/.env.prod.example >$$envfile; \
+	@set -e; export RT_IMAGE_TAG=$${RT_IMAGE_TAG:-deploy-check}; envfile=$$(mktemp); trap 'rm -f $$envfile' EXIT; sed 's/CHANGE_ME/ci-only-value/' $(INFRA)/.env.prod.example >$$envfile; \
 	docker compose -f $(INFRA)/compose/base.yml -f $(INFRA)/compose/prod.yml --env-file $$envfile --profile observability --profile kb-ingest config -q; \
 	docker compose -f $(INFRA)/compose/db.yml --env-file $$envfile config -q; echo "compose prod/db: ok"
 	@docker run --rm -e ACME_EMAIL=a@example.com -e CRM_DOMAIN=crm.example.org -e ERP_DOMAIN=erp.example.org -e CABINET_DOMAIN=cabinet.example.org 	  -v "$(CURDIR)/$(INFRA)/caddy/Caddyfile.prod:/etc/caddy/Caddyfile:ro" caddy:2.11.7-alpine caddy validate --config /etc/caddy/Caddyfile 2>&1 | grep -q "Valid configuration" && echo "caddy validate: ok"

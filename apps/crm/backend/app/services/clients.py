@@ -8,6 +8,7 @@
 """
 
 from collections.abc import Awaitable, Callable
+from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from typing import Any
 
@@ -21,6 +22,7 @@ from app.domain.backoffice import (
     decide_handoff,
     handoff_consent,
 )
+from app.domain.erp_handoff import ENQUEUE_FAILED, FAILED, PENDING
 from app.domain.errors import (
     ConflictError,
     ForbiddenError,
@@ -33,25 +35,14 @@ from app.domain.lead_access import may_make_customer
 from app.domain.stage_machine import stage_after_unlink
 from app.domain.stages import OwnerMode, Stage, TransitionSource
 from app.domain.triggers import TriggerCode
-from app.integrations.erp import (
-    ErpClient,
-    HandoffCompanyPayload,
-    HandoffConsentPayload,
-    HandoffContactPayload,
-    HandoffInvitePayload,
-    HandoffNeedPayload,
-    HandoffOwnerPayload,
-    HandoffPayload,
-)
 from app.models.auth import User
-from app.models.clients import Client, ClientContact, ServiceRequest
+from app.models.clients import Client, ServiceRequest
 from app.models.leads import Lead, TelegramIdentity
 from app.models.qualification import Escalation
 from app.repositories import events
 from app.repositories import leads as leads_repo
 from app.security import audit
 from app.security.principal import Principal
-from app.services import deals as deals_service
 from app.services import lead_parts, stages
 from app.services.escalation import OPEN_STATUSES
 from app.services.lead_messenger import LeadMessenger
@@ -64,6 +55,20 @@ CLEARABLE = frozenset({"inn", "segment", "notes", "owner_user_id"})
 EDITABLE = CLEARABLE | {"name", "is_active"}
 
 BackofficeModeProvider = Callable[[], Awaitable[BackofficeMode]]
+# Поставить передачу в очередь (`tasks.erp_handoff`): (client_id, lead_id, user_id).
+HandoffEnqueue = Callable[[int, int, int], Awaitable[object]]
+
+
+@dataclass(frozen=True, slots=True)
+class _CustomerResult:
+    """Итог транзакции «Сделать клиентом»: что сделать уже после коммита."""
+
+    client_id: int
+    enqueue: bool = False
+    notify: bool = False
+    chats: list[int] = field(default_factory=list)
+    access_notice: bool = False
+    language: str = "ru"
 
 
 async def local_backoffice() -> BackofficeMode:
@@ -79,7 +84,7 @@ class ClientService:
         messenger: LeadMessenger | None = None,
         on_chats_changed: ChatsChanged | None = None,
         backoffice_mode: BackofficeModeProvider = local_backoffice,
-        erp_client: ErpClient | None = None,
+        erp_handoff_enqueue: HandoffEnqueue | None = None,
     ) -> None:
         self._sessions = sessions
         self._settings = settings
@@ -88,7 +93,7 @@ class ClientService:
         self._on_chats_changed = on_chats_changed
         # Режим передачи в бэк-офис (ADR-0022): `integrations/erp.erp_connector_configured`.
         self._backoffice_mode = backoffice_mode
-        self._erp_client = erp_client
+        self._erp_handoff_enqueue = erp_handoff_enqueue
 
     async def create(self, who: Principal, name: str, inn: str | None, segment: str | None) -> int:
         async with self._sessions() as session, session.begin():
@@ -188,221 +193,148 @@ class ClientService:
         self, who: Principal, lead_id: int, client_id: int | None, new_name: str | None
     ) -> int:
         """Лид → клиент («Передан в бэк-офис», ADR-0022): привязка лида и его Telegram, стадия
-        `customer`. Повторная передача тому же клиенту ничего не меняет (идемпотентно)."""
+        `customer`. Повторная передача тому же клиенту ничего не меняет (идемпотентно).
+
+        В режиме `erp` клиент и стадия коммитятся ПЕРВЫМИ, передача в ERP идёт задачей после коммита
+        (`ErpHandoffService`, FIX-31): состояние «передаётся / передан / ошибка» — в карточке."""
         if client_id is None and not (new_name and new_name.strip()):
             raise ValidationFailedError(
                 "choose a client or enter a new client name", field="client_id"
             )
         mode = await self._backoffice_mode()
         async with self._sessions() as session, session.begin():
-            lead = await session.get(Lead, lead_id, with_for_update=True)
-            if lead is None or lead.erased_at is not None:
-                raise NotFoundError("lead not found")
-            handoff = decide_handoff(
-                Stage(lead.stage),
-                mode,
-                client_changed=client_id is None or lead.client_id != client_id,
-                erp_synced=await _in_erp(session, client_id),
-            )
-            if not handoff.allowed:
-                raise InvalidTransitionError(
-                    "close the deal (won) first", reason=Reason.DEAL_NOT_CLOSED
-                )
-            if not may_make_customer(
-                stage=lead.stage,
-                assigned_user_id=lead.assigned_user_id,
-                user_id=who.user_id,
-                is_admin=who.is_admin,
-                mode=mode,
-            ):
-                raise ForbiddenError(
-                    "only the lead owner or an admin can do this", reason=Reason.NOT_LEAD_OWNER
-                )
-            if handoff.call_erp:
-                _require_consent(lead)  # до создания клиента: нет согласия — ничего не меняем
-            if not handoff.call_erp and not handoff.changed and client_id is not None:
-                return client_id
-            if client_id is None:
-                client = Client(name=(new_name or "").strip(), owner_user_id=who.user_id)
-                session.add(client)
-                await session.flush()
-                client_id = client.id
-            else:
-                client = await _client(session, client_id)
-            lead.client_id = client_id
-            if handoff.changed:  # повторная передача в ERP (resync) привязки не трогает
-                await _bind_identities(session, lead_id, client_id, who)
+            done = await self._make_customer_tx(session, who, lead_id, client_id, new_name, mode)
+        if done.enqueue:
+            await self._enqueue_handoff_task(done.client_id, lead_id, who.user_id)
+        if done.notify:
+            await notify_chats(self._on_chats_changed, done.chats)
+        if done.access_notice:
+            await self._notify_access(lead_id, done.language)
+        return done.client_id
 
-            erp_deal_id = None
-            if handoff.call_erp:
-                if self._erp_client is None:
-                    raise ConflictError(
-                        "erp connector is not configured", reason=Reason.ERP_NOT_CONFIGURED
-                    )
-                contacts_rows = list(
-                    await session.scalars(
-                        select(ClientContact)
-                        .where(ClientContact.client_id == client_id)
-                        .order_by(ClientContact.is_primary.desc(), ClientContact.id)
-                    )
-                )
-                identities = list(
-                    await session.scalars(
-                        select(TelegramIdentity).where(TelegramIdentity.lead_id == lead_id)
-                    )
-                )
-                primary_id = identities[0] if identities else None
+    async def _enqueue_handoff_task(self, client_id: int, lead_id: int, user_id: int) -> None:
+        """Поставить передачу в очередь ПОСЛЕ коммита; не вышло — ошибка в карточке, не потеря."""
+        if self._erp_handoff_enqueue is None:
+            await self._mark_handoff_failed(client_id, Reason.ERP_NOT_CONFIGURED.value, "no queue")
+            return
+        try:
+            await self._erp_handoff_enqueue(client_id, lead_id, user_id)
+        except Exception as exc:
+            logger.exception("erp_handoff_enqueue_failed", client_id=client_id, lead_id=lead_id)
+            await self._mark_handoff_failed(client_id, ENQUEUE_FAILED, str(exc))
 
-                if not contacts_rows:
-                    primary_contact = ClientContact(
-                        client_id=client_id,
-                        full_name=lead.display_name or client.name,
-                        phone_e164=primary_id.phone_e164
-                        if primary_id and primary_id.phone_e164
-                        else lead.phone_e164,
-                        email=lead.email,
-                        telegram_identity_id=primary_id.id if primary_id else None,
-                        is_primary=True,
-                    )
-                    session.add(primary_contact)
-                    await session.flush()
-                    contacts_rows = [primary_contact]
-
-                contacts_payload = []
-                for c in contacts_rows:
-                    tg_user_id = None
-                    if c.telegram_identity_id:
-                        for ident in identities:
-                            if ident.id == c.telegram_identity_id:
-                                tg_user_id = ident.tg_user_id
-                                break
-                    if tg_user_id is None and primary_id and c.is_primary:
-                        tg_user_id = primary_id.tg_user_id
-
-                    has_tg = bool(tg_user_id)
-                    has_email = bool(c.email)
-                    if has_tg and has_email:
-                        pref = "both"
-                    elif has_email:
-                        pref = "email"
-                    else:
-                        pref = "telegram"
-
-                    contacts_payload.append(
-                        HandoffContactPayload(
-                            crm_contact_id=c.id,
-                            name=c.full_name,
-                            phone=c.phone_e164 or "",
-                            email=c.email or "",
-                            telegram_user_id=tg_user_id,
-                            language=lead.language if lead.language in ("ru", "uz", "en") else "ru",
-                            is_primary=c.is_primary,
-                            preferred_channel=pref,
-                        )
-                    )
-
-                channels = []
-                if any(c.telegram_user_id for c in contacts_payload):
-                    channels.append("telegram")
-                if any(c.email for c in contacts_payload):
-                    channels.append("email")
-                if not channels:
-                    channels = ["telegram"]
-
-                owner_user = (
-                    await session.get(User, lead.assigned_user_id)
-                    if lead.assigned_user_id
-                    else None
-                )
-                owner_name = owner_user.full_name if owner_user else (who.full_name or "Менеджер")
-
-                consent = _require_consent(lead)
-                payload = HandoffPayload(
-                    crm_client_id=client_id,
-                    crm_lead_id=lead_id,
-                    company=HandoffCompanyPayload(
-                        name=client.name,
-                        inn=client.inn or "",
-                        segment=client.segment or "",
-                        language=lead.language if lead.language in ("ru", "uz", "en") else "ru",
-                    ),
-                    contacts=contacts_payload,
-                    need=HandoffNeedPayload(
-                        summary=(lead.need_summary or lead.display_name or "Заявка из CRM")[:5000],
-                        product_interest=lead.product_interest or [],
-                    ),
-                    owner=HandoffOwnerPayload(
-                        crm_user_id=lead.assigned_user_id or who.user_id,
-                        name=owner_name,
-                    ),
-                    consent=HandoffConsentPayload(
-                        given_at=consent.given_at.isoformat(), version=consent.version
-                    ),
-                    # resync: заявку закрыли ещё в режиме local — новую не заводим.
-                    create_request=not handoff.resync,
-                    invite=HandoffInvitePayload(channels=channels),
-                )
-
-                handoff_res = await self._erp_client.handoff_client(payload)
-                client.erp_company_id = handoff_res.erp_company_id
-
-                if payload.create_request and handoff_res.erp_request_id:
-                    deal = await deals_service.open_deal(session, lead_id)
-                    if deal is None:
-                        deal = await deals_service.ensure_open_deal(session, lead, actor=who)
-                    deal.erp_deal_id = handoff_res.erp_request_id
-                    deal.external_stage = "request"
-                    deal.client_id = client_id
-                    erp_deal_id = handoff_res.erp_request_id
-                    await session.flush()
-
-            if handoff.resync:
-                # Только передача в ERP уже существующего клиента: владелец, стадия, сделки лида
-                # и аудит `lead.make_customer` остаются как были.
+    async def _mark_handoff_failed(self, client_id: int, code: str, detail: str) -> None:
+        async with self._sessions() as session, session.begin():
+            client = await session.get(Client, client_id)
+            if client is not None:
+                client.erp_handoff_status = FAILED
+                client.erp_handoff_error = code
                 await audit.record(
                     session,
-                    who.actor,
-                    "client.erp_handoff",
+                    audit.Actor.system(),
+                    "client.erp_handoff_failed",
                     "client",
                     client_id,
-                    after={"erp_company_id": client.erp_company_id, "lead_id": lead_id},
+                    after={"code": code, "detail": detail[:500]},
                 )
-                return client_id
 
-            # Сервисный режим ведёт бот (BUSINESS §5): документы и вопросы клиента — без менеджера.
-            lead.owner_mode = OwnerMode.BOT.value
-            lead.snoozed_until = None
-            await stages.transition(
-                session,
-                lead,
-                Stage.CUSTOMER,
-                TransitionSource.USER,
-                reason="linked to client",
-                actor_user_id=who.user_id,
+    async def _make_customer_tx(
+        self,
+        session: AsyncSession,
+        who: Principal,
+        lead_id: int,
+        client_id: int | None,
+        new_name: str | None,
+        mode: BackofficeMode,
+    ) -> "_CustomerResult":
+        lead = await session.get(Lead, lead_id, with_for_update=True)
+        if lead is None or lead.erased_at is not None:
+            raise NotFoundError("lead not found")
+        handoff = decide_handoff(
+            Stage(lead.stage),
+            mode,
+            client_changed=client_id is None or lead.client_id != client_id,
+            erp_synced=await _in_erp(session, client_id),
+        )
+        if not handoff.allowed:
+            raise InvalidTransitionError(
+                "close the deal (won) first", reason=Reason.DEAL_NOT_CLOSED
             )
-            after_data: dict[str, Any] = {
-                "client_id": client_id,
-                "backoffice": handoff.mode.value,
-            }
-            if client.erp_company_id is not None:
-                after_data["erp_company_id"] = client.erp_company_id
-            if erp_deal_id is not None:
-                after_data["erp_deal_id"] = erp_deal_id
+        if not may_make_customer(
+            stage=lead.stage,
+            assigned_user_id=lead.assigned_user_id,
+            user_id=who.user_id,
+            is_admin=who.is_admin,
+            mode=mode,
+        ):
+            raise ForbiddenError(
+                "only the lead owner or an admin can do this", reason=Reason.NOT_LEAD_OWNER
+            )
+        if handoff.call_erp:
+            _require_consent(lead)  # до создания клиента: нет согласия — ничего не меняем
+            if self._erp_handoff_enqueue is None:
+                raise ConflictError(
+                    "erp connector is not configured", reason=Reason.ERP_NOT_CONFIGURED
+                )
+        if not handoff.call_erp and not handoff.changed and client_id is not None:
+            return _CustomerResult(client_id)
+        if client_id is None:
+            client = Client(name=(new_name or "").strip(), owner_user_id=who.user_id)
+            session.add(client)
+            await session.flush()
+            client_id = client.id
+        else:
+            client = await _client(session, client_id)
+        lead.client_id = client_id
+        if handoff.changed:  # повторная передача в ERP (resync) привязки не трогает
+            await _bind_identities(session, lead_id, client_id, who)
+        if handoff.call_erp:
+            # Передачу делает задача после коммита; повтор после сбоя не теряет заявку.
+            client.erp_handoff_request = client.erp_handoff_request or not handoff.resync
+            client.erp_handoff_status, client.erp_handoff_error = PENDING, None
+            await session.flush()
+
+        if handoff.resync:
+            # Только передача в ERP уже существующего клиента: владелец, стадия, сделки лида
+            # и аудит `lead.make_customer` остаются как были.
             await audit.record(
                 session,
                 who.actor,
-                "lead.make_customer",
-                "lead",
-                lead_id,
-                after=after_data,
+                "client.erp_handoff",
+                "client",
+                client_id,
+                after={"lead_id": lead_id, "erp_handoff": PENDING},
             )
-            await events.publish(session, "lead.updated", lead_id=lead_id)
-            language = lead.language
-            chats = await leads_repo.chats_of_lead(session, lead_id)
-        await notify_chats(self._on_chats_changed, chats)
-        if handoff.changed:
-            await self._notify_access(lead_id, language)
-        return client_id
+            return _CustomerResult(client_id, enqueue=True)
+
+        # Сервисный режим ведёт бот (BUSINESS §5): документы и вопросы клиента — без менеджера.
+        lead.owner_mode = OwnerMode.BOT.value
+        lead.snoozed_until = None
+        await stages.transition(
+            session,
+            lead,
+            Stage.CUSTOMER,
+            TransitionSource.USER,
+            reason="linked to client",
+            actor_user_id=who.user_id,
+        )
+        after_data: dict[str, Any] = {"client_id": client_id, "backoffice": handoff.mode.value}
+        if handoff.call_erp:
+            after_data["erp_handoff"] = PENDING
+        if client.erp_company_id is not None:
+            after_data["erp_company_id"] = client.erp_company_id
+        await audit.record(
+            session, who.actor, "lead.make_customer", "lead", lead_id, after=after_data
+        )
+        await events.publish(session, "lead.updated", lead_id=lead_id)
+        return _CustomerResult(
+            client_id,
+            enqueue=handoff.call_erp,
+            notify=True,
+            chats=await leads_repo.chats_of_lead(session, lead_id),
+            access_notice=handoff.changed,
+            language=lead.language,
+        )
 
     async def _notify_access(self, lead_id: int, language: str) -> None:
         """Один раз при привязке: клиенту стали доступны документы и запросы (/help)."""

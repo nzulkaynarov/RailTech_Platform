@@ -10,7 +10,6 @@ infra="$(cd "$here/.." && pwd)"
 RT_DB_DIR="${RT_DB_DIR:-/opt/rt-db}"
 envf="$RT_DB_DIR/.env.db"
 [[ $EUID -eq 0 ]] || { echo "db-up.sh запускается от root (sudo у deploy нет): ssh root@<VPS 2> $0" >&2; exit 1; }
-SUDO=""
 
 [[ -f "$envf" ]] || { echo "нет $envf (VPS 1: infra/deploy/make-env-prod.sh extract-db)" >&2; exit 1; }
 get() { grep -E "^$1=" "$envf" | tail -1 | cut -d= -f2-; }
@@ -19,22 +18,22 @@ if grep -qE '^[A-Z0-9_]+=.*(CHANGE_ME|192\.0\.2\.[0-9]+$)' "$envf"; then
 fi
 app_ip="$(get APP_INTERNAL_IP)"; db_ip="$(get DB_INTERNAL_IP)"
 backup_dir="$(get RT_BACKUP_DIR || true)"
-$SUDO mkdir -p "$RT_DB_DIR/certs" "${backup_dir:-/var/backups/rt}"
+mkdir -p "$RT_DB_DIR/certs" "${backup_dir:-/var/backups/rt}"
 
 if [[ ! -f "$RT_DB_DIR/certs/server.key" ]]; then
   echo "▸ самоподписанный сертификат сервера (10 лет, SAN: $db_ip)"
-  $SUDO openssl req -x509 -newkey rsa:4096 -nodes -days 3650 -subj "/CN=rt-db" \
+  openssl req -x509 -newkey rsa:4096 -nodes -days 3650 -subj "/CN=rt-db" \
     -addext "subjectAltName=IP:$db_ip" \
     -keyout "$RT_DB_DIR/certs/server.key" -out "$RT_DB_DIR/certs/server.crt" 2>/dev/null
 fi
-$SUDO chown 999:999 "$RT_DB_DIR/certs/server.key" "$RT_DB_DIR/certs/server.crt"
-$SUDO chmod 600 "$RT_DB_DIR/certs/server.key"
+chown 999:999 "$RT_DB_DIR/certs/server.key" "$RT_DB_DIR/certs/server.crt"
+chmod 600 "$RT_DB_DIR/certs/server.key"
 
 echo "▸ pg_hba.conf: доступ только с $app_ip"
-sed "s#@APP_INTERNAL_IP@#$app_ip#g" "$infra/db/pg_hba.conf.tpl" | $SUDO tee "$RT_DB_DIR/pg_hba.conf" >/dev/null
-$SUDO chown 999:999 "$RT_DB_DIR/pg_hba.conf"
+sed "s#@APP_INTERNAL_IP@#$app_ip#g" "$infra/db/pg_hba.conf.tpl" | tee "$RT_DB_DIR/pg_hba.conf" >/dev/null
+chown 999:999 "$RT_DB_DIR/pg_hba.conf"
 
-dc() { $SUDO docker compose -f "$infra/compose/db.yml" --env-file "$envf" "$@"; }
+dc() { docker compose -f "$infra/compose/db.yml" --env-file "$envf" "$@"; }
 echo "▸ docker compose up (rt-db)"
 dc up -d --build
 echo "▸ ожидание готовности PostgreSQL"

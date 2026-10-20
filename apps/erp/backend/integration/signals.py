@@ -169,8 +169,10 @@ def handle_contract_post_save(sender: Any, instance: Any, created: bool, **kwarg
         prev_client = getattr(instance, "_prev_client_signed", False)
         prev_manager = getattr(instance, "_prev_manager_signed", False)
 
-        curr_status = instance.status.code if getattr(instance, "status", None) else ""
-        prev_status = getattr(instance, "_prev_status_code", "")
+        # У нового договора прежнего статуса нет (`None`): без `or ""` `.upper()` падал, а исключение глоталось ниже,
+        # и `contract.signed` по договору, созданному уже подписанным, не уходил.
+        curr_status = (instance.status.code if getattr(instance, "status", None) else "") or ""
+        prev_status = getattr(instance, "_prev_status_code", None) or ""
 
         is_new_signature = (client_signed and not prev_client) or (manager_signed and not prev_manager)
         status_became_signed = (
@@ -380,7 +382,8 @@ def handle_document_pre_save(sender: Any, instance: Any, **kwargs: Any) -> None:
     """Запоминает, был ли документ выпущен до сохранения: событие шлётся на переходе, а не на каждом сохранении."""
     try:
         source = _DOCUMENT_SOURCES[sender]
-        previous = sender.objects.filter(pk=instance.pk).first() if instance.pk else None
+        related = ("status", "template__kind") if source == "generated" else ("status",)
+        previous = sender.objects.select_related(*related).filter(pk=instance.pk).first() if instance.pk else None
         instance._document_was_issued = previous is not None and portal_documents.is_issued(source, previous)
     except Exception as exc:
         instance._document_was_issued = False

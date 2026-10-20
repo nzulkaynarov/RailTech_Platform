@@ -311,6 +311,22 @@ class ErpClient(Protocol):
     ) -> HandoffResult: ...
 
 
+def _handoff_conflict(response: httpx.Response) -> ConflictError:
+    """409 передачи: `INN_CONFLICT` — ИНН уже у другого клиента CRM в ERP; повтор не поможет."""
+    try:
+        detail = str(response.json().get("detail", ""))
+    except (ValueError, AttributeError):
+        detail = ""
+    if detail == "INN_CONFLICT":
+        return ConflictError(
+            "erp: inn belongs to a company linked to another crm client",
+            reason=Reason.ERP_INN_CONFLICT,
+        )
+    return ConflictError(
+        f"erp conflict: {detail or response.text[:200]}", reason=Reason.ERP_BAD_RESPONSE
+    )
+
+
 class HttpxErpClient:
     """HTTP-клиент к API интеграции ERP (`POST /api/integration/v1/clients/handoff` и др.)."""
 
@@ -367,6 +383,8 @@ class HttpxErpClient:
             raise UpstreamUnavailableError(
                 f"HTTP {response.status_code}", reason=Reason.ERP_UNAUTHORIZED
             )
+        if response.status_code == 409:
+            raise _handoff_conflict(response)
         if response.status_code == 422:
             raise ValidationFailedError(
                 f"erp validation error: {response.text[:300]}",

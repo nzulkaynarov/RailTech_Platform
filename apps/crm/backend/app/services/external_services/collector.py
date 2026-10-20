@@ -18,6 +18,7 @@ import httpx
 import structlog
 
 from app.config import Settings
+from app.domain import external_erp_handoff as erp_handoff_rules
 from app.domain import external_erp_sync as erp_sync_rules
 from app.domain import external_status as rules
 from app.domain import external_vendor as vendor_rules
@@ -144,6 +145,7 @@ class _Run:
             "docling": self.docling,
             "backup": self.backup,
             "erp_sync": self.erp_sync,
+            "erp_handoff": self.erp_handoff,
         }
         return await handler[key]()
 
@@ -236,6 +238,18 @@ class _Run:
             with_access, failed, last_error = await repo.erp_sync_stats(session)
         return erp_sync_rules.erp_sync(
             erp_sync_rules.ErpSyncFacts(configured, with_access, failed, last_error)
+        )
+
+    async def erp_handoff(self) -> CheckResult:
+        """Итог передач клиентов в ERP (FIX-31): ошибки и зависшие в очереди, не пробный запрос."""
+        probe = self.d.erp_configured
+        configured = await probe() if probe is not None else bool(await self.d.erp_url())
+        async with self.d.sessions() as session:
+            stats = await repo.erp_handoff_stats(session, self.now)
+        return erp_handoff_rules.erp_handoff(
+            erp_handoff_rules.ErpHandoffFacts(
+                configured, stats.failed, stats.stuck, stats.pending, stats.last_error
+            )
         )
 
     async def langfuse(self) -> CheckResult:
