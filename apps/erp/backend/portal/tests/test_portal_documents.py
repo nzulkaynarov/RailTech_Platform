@@ -542,3 +542,40 @@ def test_quote_becomes_a_document_when_sent(contract_world, portal_client):
     quote.save()
     assert service.document_id_for("quote", quote) == service.encode_document_id("quote", quote.pk)
     assert service.encode_document_id("quote", quote.pk) in {i["id"] for i in listed(portal_client)}
+
+
+# ── Накладная: номер при выпуске (FIX-55, m2 D-6) ───────────────────────────────────────────────
+
+
+def test_waybill_shipped_before_numbering_gets_its_final_number_in_the_list(
+    contract_world, portal_client, render_calls, django_capture_on_commit_callbacks
+):
+    """Отгрузка, выпущенная без номера и без файла, в списке получает итоговый номер (не `DN-<id>`), рендер ставится,
+    и номер не меняется после повторного запроса и рендера."""
+    from crm.models import Fulfillment
+
+    fulfillment = contract_world["deliveries"]["in_transit"]
+    Fulfillment.objects.filter(pk=fulfillment.pk).update(note_number="")
+    document_id = contract_world["documents"]["waybill_in_transit"]
+
+    with django_capture_on_commit_callbacks(execute=True):
+        first = next(i for i in listed(portal_client) if i["id"] == document_id)
+    fulfillment.refresh_from_db()
+
+    assert fulfillment.note_number, "номер присвоен при первом показе"
+    assert first["number"] == fulfillment.note_number != f"DN-{fulfillment.pk}"
+    assert ("delivery_note", fulfillment.pk) in render_calls
+
+    second = next(i for i in listed(portal_client) if i["id"] == document_id)
+    assert second["number"] == first["number"]
+    assert render_calls.count(("delivery_note", fulfillment.pk)) == 1
+
+
+def test_already_numbered_waybill_keeps_its_number(contract_world, portal_client, render_calls):
+    fulfillment = contract_world["deliveries"]["shipped"]
+    document_id = contract_world["documents"]["waybill_shipped"]
+
+    item = next(i for i in listed(portal_client) if i["id"] == document_id)
+
+    assert item["number"] == "DN-GUARD-shipped"
+    assert ("delivery_note", fulfillment.pk) not in render_calls

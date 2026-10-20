@@ -91,6 +91,17 @@ class FulfillmentStatusCode(models.TextChoices):
     DISPUTED = "DISPUTED", "Спорная ситуация"
 
 
+#: Статусы отгрузки, с которых накладная считается выпущенной: номер присваивается один раз, PDF ставится в рендер,
+#: клиент видит документ в портале (FIX-55, m2 D-6).
+FULFILLMENT_NOTE_ISSUED_STATUSES = (
+    FulfillmentStatusCode.SHIPPED,
+    FulfillmentStatusCode.IN_TRANSIT,
+    FulfillmentStatusCode.DELIVERED,
+    FulfillmentStatusCode.ACCEPTED,
+    FulfillmentStatusCode.DISPUTED,
+)
+
+
 # ── «Документы 2.0» — arbitrary template-based documents (letters, reports) ──
 # Lookup CODES mirroring the DocumentTemplateKind / GeneratedDocumentStatus rows
 # seeded by a data migration (IRON RULE 1). Referenced from services by code.

@@ -207,6 +207,17 @@ def expire_stale_quotes(self) -> dict:
 # Render functions by document type. Each takes the model instance and writes its
 # `pdf_file`. Kept as a dispatch map so the task and the lazy download fallback share
 # one source of truth. The quote uses its lifecycle service (takes an id, not an obj).
+# Вид документа → (приложение, модель, путь к сделке). Модели живут в `sales` и `finance`, а не в `crm`: раньше поиск шёл
+# по `crm` и для каждого вида молча падал в язык платформы с предупреждением (FIX-55, m2 D-6).
+_DOCUMENT_LANGUAGE_MODELS = {
+    "contract": ("sales", "Contract", lambda obj: obj.deal),
+    "invoice": ("finance", "Invoice", lambda obj: obj.deal),
+    "act": ("finance", "Act", lambda obj: obj.deal),
+    "receipt": ("finance", "Payment", lambda obj: obj.invoice.deal),
+    "delivery_note": ("sales", "Fulfillment", lambda obj: obj.deal),
+}
+
+
 def _document_language(doc_type: str, doc_id: int) -> str:
     """Язык печати документа: для закрывающих — язык покупателя, иначе язык платформы.
 
@@ -218,21 +229,14 @@ def _document_language(doc_type: str, doc_id: int) -> str:
 
     from .services.document_blocks import document_recipient_language
 
-    getters = {
-        "contract": ("Contract", lambda obj: obj.deal),
-        "invoice": ("Invoice", lambda obj: obj.deal),
-        "act": ("Act", lambda obj: obj.deal),
-        "receipt": ("Payment", lambda obj: obj.invoice.deal),
-        "delivery_note": ("Fulfillment", lambda obj: obj.deal),
-    }
-    entry = getters.get(doc_type)
+    entry = _DOCUMENT_LANGUAGE_MODELS.get(doc_type)
     if entry is None:
         return settings.LANGUAGE_CODE
-    model_name, to_deal = entry
+    app_label, model_name, to_deal = entry
     try:
         from django.apps import apps
 
-        obj = apps.get_model("crm", model_name).objects.get(pk=doc_id)
+        obj = apps.get_model(app_label, model_name).objects.get(pk=doc_id)
         return document_recipient_language(to_deal(obj))
     except Exception:  # noqa: BLE001 — fault barrier: язык не должен ронять рендер документа
         logger.warning("Could not resolve recipient language for %s id=%s", doc_type, doc_id, exc_info=True)
