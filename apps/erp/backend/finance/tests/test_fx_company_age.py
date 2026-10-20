@@ -123,11 +123,11 @@ def test_fx_market_of_the_quote_builder_reads_the_age_limit_once(settings):
 
     from django.db import connection
     from django.test.utils import CaptureQueriesContext
-    from master_data.models import Currency
     from rest_framework.test import APIRequestFactory
 
     from crm.models import Deal, DealStage, Quote, QuoteStatus
     from crm.serializers import QuoteSerializer
+    from master_data.models import Currency
 
     own = _company("Своя", "5000000013", own=True, max_age=5)
     settings.OWN_COMPANY_ID = own.pk

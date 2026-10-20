@@ -9,12 +9,12 @@ from decimal import Decimal
 from unittest.mock import patch
 
 import pytest
-from core.models import Currency
 from django.utils import timezone
 from integration.models import CrmClientMapping
 from integration.services.webhooks import emit_invoice_event, emit_quote_sent
 from parties.models import Company
 
+from core.models import Currency
 from crm.constants import DealStageCode
 from crm.models import Deal, DealStage, Invoice, InvoiceStatus, Quote, QuoteStatus
 

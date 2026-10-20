@@ -9,13 +9,13 @@ import datetime
 from unittest.mock import patch
 
 import pytest
+from django.db import connection
+from django.test.utils import CaptureQueriesContext
+from integration.tests import world
+
 from core.models import Notification
 from crm.constants import ContractStatusCode, DealStageCode, FulfillmentStatusCode, QuoteStatusCode
 from crm.models import DealStage
-from django.db import connection
-from django.test.utils import CaptureQueriesContext
-
-from integration.tests import world
 
 pytestmark = pytest.mark.django_db
 

@@ -23,7 +23,6 @@ from typing import Any, Dict, List, Optional, Union
 from django.conf import settings
 from django.db import transaction
 from django.utils import timezone
-
 from portal import projections
 
 from ..models import CrmClientMapping, CrmContactMapping, IntegrationWebhookEvent, WebhookEventStatus

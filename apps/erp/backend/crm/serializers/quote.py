@@ -221,6 +221,7 @@ class QuoteSerializer(serializers.ModelSerializer):
         if not self.context.get("include_economics"):
             return {}
         from finance.services.fx import max_rate_age_days
+
         from master_data.fx import get_rate_to_uzs
 
         max_age = max_rate_age_days()  # один раз на ответ, а не на каждую валюту (FIX-54, F-15)
