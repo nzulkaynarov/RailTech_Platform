@@ -118,7 +118,11 @@ export interface CompanySettings {
 	catalog_publish_threshold?: number;
 	/** Политика курса ЦБ (M1-ERP-09): допустимый возраст курса, дней (1..90). */
 	fx_rate_max_age_days?: number;
-	/** Уведомление клиента (M1-ERP-09): отправлять алёрт при сдвиге дат графика. */
+	/**
+	 * НЕ ИСПОЛЬЗУЕТСЯ (FIX-42, F-6): флаг никто не читает, из интерфейса убран. Уведомление клиента о сдвиге срока
+	 * поставки идёт из CRM по событию `delivery.eta_changed` (DECISIONS 2026-10-20).
+	 * @deprecated
+	 */
 	notify_client_on_schedule_shift?: boolean;
 	doc_number_prefix?: string;
 	created_at?: string;
@@ -141,7 +145,6 @@ export interface CompanySettingsUpdate {
 	catalog_price_visibility?: 'cabinet' | 'on_request';
 	catalog_publish_threshold?: number;
 	fx_rate_max_age_days?: number;
-	notify_client_on_schedule_shift?: boolean;
 	doc_number_prefix?: string;
 }
 

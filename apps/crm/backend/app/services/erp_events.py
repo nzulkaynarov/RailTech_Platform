@@ -25,7 +25,13 @@ from app.models.leads import Lead, LeadNote, TelegramIdentity
 from app.repositories import events
 from app.schemas.erp_events import ErpEventEnvelope
 from app.security.secrets_store import SecretsStore
-from app.services.erp_bot_messages import BotMessage, client_message, pick_language, staff_alert
+from app.services.erp_bot_messages import (
+    BotMessage,
+    client_message,
+    feed_note,
+    pick_language,
+    staff_alert,
+)
 from app.services.settings import SettingsService
 
 logger = structlog.get_logger(__name__)
@@ -200,6 +206,15 @@ class ErpEventsService:
                 language=pick_language(lead.language if lead else None),
                 cabinet_url=cfg.company.cabinet_url,
             )
+            if note_text is None:
+                # Приёмка и замечания по строкам поставки: текст ленты — из настроек (FIX-37).
+                note_text = feed_note(
+                    envelope.event,
+                    envelope.payload,
+                    contact_name=envelope.actor.name,
+                    deal_title=deal_title,
+                    texts=cfg.texts,
+                )
             staff_alert_text = staff_alert(
                 envelope.event,
                 envelope.payload,
@@ -436,6 +451,12 @@ class ErpEventsService:
             session.add(doc_row)
             note = f"В бэк-офисе создан документ: {title} ({num})."
             return note
+
+        if ev in ("delivery.line_accepted", "delivery.line_disputed"):
+            # Стадию сделки задаёт DealRef события (выше, как у любого события со сделкой).
+            # Запись в ленту и сообщение ответственному строятся в `process_event` из
+            # `settings.texts`, клиенту бот молчит.
+            return None
 
         if ev == "invite.sent":
             channels = ", ".join(p.get("channels", []))

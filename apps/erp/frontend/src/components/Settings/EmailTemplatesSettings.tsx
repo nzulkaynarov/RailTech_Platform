@@ -147,7 +147,9 @@ function TestSendDialog({
         toast.error(t('settings.emailTemplates.sentFailed'));
       }
     } catch (e) {
-      toast.error(translateApiError(e));
+      // Лимит частоты (FIX-42): DRF отвечает 429 текстом без кода, translateApiError его не узнал бы.
+      const throttled = (e as { response?: { status?: number } })?.response?.status === 429;
+      toast.error(throttled ? t('settings.emailTemplates.sendThrottled') : translateApiError(e));
     }
   };
 

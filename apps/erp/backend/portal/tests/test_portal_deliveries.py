@@ -2,7 +2,7 @@
 
 `GET /deliveries` собирается из `sales.DeliveryLine`; `POST /deliveries/{id}/accept` — только `delivered` → `accepted`,
 `/dispute {reason}` — `delivered` → `disputed` с замечанием и задачей менеджеру сделки. События для CRM
-(`delivery.line_accepted|disputed`) — волна 3: здесь их нет. На каждый эндпоинт — чужая компания → 404,
+(`delivery.line_accepted|disputed`, FIX-37) — в `test_portal_delivery_events.py`. На каждый эндпоинт — чужая компания → 404,
 `can_act=false` → 403, повтор действия → 409.
 """
 
@@ -10,7 +10,6 @@ from __future__ import annotations
 
 import pytest
 from django.utils import timezone
-from integration.models import IntegrationWebhookEvent
 from portal.tests.contract_support import check_response, component, response_schema
 from sales.models import DeliveryLine, DeliveryLineStatus
 from sales.services.delivery_lines import accept_delivery_line, dispute_delivery_line, sync_delivery_lines
@@ -213,14 +212,6 @@ def test_dispute_without_can_act_is_403(contract_world, readonly_portal_client, 
 
 def test_dispute_without_session_is_401(contract_world, anon_portal_client):
     assert post(anon_portal_client, "/deliveries/1/dispute", {"reason": "x"}).status_code == 401
-
-
-def test_no_crm_events_are_emitted_in_this_wave(contract_world, portal_client, listed):
-    """`delivery.line_accepted|disputed` — волна 3 (контракт событий не менялся); здесь в очередь вебхуков ничего нет."""
-    accepted, disputed = lines_of(contract_world, "delivered")
-    post(portal_client, f"/deliveries/{accepted.pk}/accept")
-    post(portal_client, f"/deliveries/{disputed.pk}/dispute", {"reason": "брак"})
-    assert not IntegrationWebhookEvent.objects.filter(event_type__startswith="delivery.line").exists()
 
 
 # ── Сервис: инварианты независимо от портала ────────────────────────────────────────────────────

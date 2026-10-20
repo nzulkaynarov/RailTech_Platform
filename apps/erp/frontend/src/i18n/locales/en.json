@@ -1250,9 +1250,9 @@
       "save": "Save",
       "saved": "Settings saved",
       "saveFailed": "Failed to save",
-      "managedInCrm": "Brand and integrations are managed in CRM",
-      "managedInCrmHint": "Platform name, support email, logo, and domain are synced from the CRM console (§3.13)",
-      "goToCrm": "Open CRM"
+      "managedInCrm": "Name, support email, logo and domain are managed in CRM",
+      "managedInCrmHint": "These fields are shared by the whole ensemble and are view-only here. Change them in the CRM console.",
+      "goToCrm": "Edit in CRM"
     },
     "general": {
       "title": "General Settings",
@@ -1354,7 +1354,8 @@
       "editTitle": "Edit Category",
       "editDesc": "Modify category parameters",
       "confirmDeleteTitle": "Delete category?",
-      "confirmDeleteDesc": "The category will be deleted. Subcategories will be moved up.",
+      "confirmDeleteDesc": "The category will be deleted. If it has subcategories it cannot be deleted: move or delete the subcategories first.",
+      "confirmDeleteHasChildren": "The category cannot be deleted while it has subcategories: {{names}}. Move or delete them first.",
       "created": "Category created",
       "updated": "Category updated",
       "deleted": "Category deleted",
@@ -1395,6 +1396,7 @@
       "send": "Send",
       "sentSuccess": "Test email sent successfully",
       "sentFailed": "Failed to send test email",
+      "sendThrottled": "Too many test emails. Wait a while and try again.",
       "create": "Create Template",
       "created": "Email template created",
       "saved": "Email template saved",
@@ -2273,6 +2275,8 @@
     "COMPANY_INN_TAKEN": "A company with this INN is already registered. Double-check the INN or ask the company owner to invite you.",
     "SALES_MANAGER_ROLE_NOT_FOUND": "Sales manager role not found",
     "LOOKUP_IN_USE": "This lookup row is already in use — it cannot be deleted. Deactivate it: it disappears from forms while documents keep their history",
+    "SHARED_SETTING_READ_ONLY": "Platform name, support email, logo and domain are shared by the ensemble — change them in CRM",
+    "CATEGORY_HAS_CHILDREN": "The category has subcategories — move or delete them first",
     "TEMPLATE_IN_USE": "Documents have already been issued from this template — it cannot be deleted. Deactivate it instead",
     "ACT_ALREADY_EXISTS": "An act for this invoice already exists — a second closing document is not created",
     "ACT_AWAITING_REISSUE": "The act for this invoice came back with a remark — re-issue it instead of creating a second one",
@@ -2622,9 +2626,7 @@
     "paymentTermsDays": "Invoice payment term (days)",
     "paymentTermsDaysHint": "How many days after issuing the invoice is due. The reminder is counted from this date. Empty — 14 days.",
     "fxRateMaxAgeDays": "Maximum FX rate age (days)",
-    "fxRateMaxAgeDaysHint": "Rates older than this will block quote dispatch until updated",
-    "notifyClientOnScheduleShift": "Notify client on schedule shifts",
-    "notifyClientOnScheduleShiftHint": "Send notifications when expected delivery or fulfillment dates change"
+    "fxRateMaxAgeDaysHint": "Rates older than this will block quote dispatch until updated"
   },
   "companyNumbering": {
     "title": "Document numbering",
@@ -2912,6 +2914,10 @@
       "line_disputed": {
         "title": "Delivery disputed by the client",
         "detail": "Line {{line_no}} on deal #{{deal_id}}: {{reason}}"
+      },
+      "line_event_failed": {
+        "title": "CRM event was not created",
+        "detail": "Event {{event_type}} for line #{{line_id}} on deal #{{deal_id}} was not created; the client's decision is saved, resend it manually"
       }
     },
     "company": {

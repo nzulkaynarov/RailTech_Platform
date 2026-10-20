@@ -13,7 +13,8 @@ import { renderWithProviders } from '@/test/renderWithProviders';
 
 // Данные и мутация хука мокаются (не сеть): фикстура НАМЕРЕННО содержит оба
 // зарезервированных поля — компонент обязан их игнорировать.
-const { settingsFixture, mutateAsyncMock } = vi.hoisted(() => ({
+const { settingsFixture, mutateAsyncMock, settingsOverride } = vi.hoisted(() => ({
+  settingsOverride: { current: null as Record<string, unknown> | null },
   settingsFixture: {
     vat_rate: '12.00',
     standard_margin: '15.00',
@@ -22,6 +23,7 @@ const { settingsFixture, mutateAsyncMock } = vi.hoisted(() => ({
     support_email: 'support@example.com',
     logo_url: 'https://example.com/logo.png',
     domain: 'erp.example.com',
+    crm_frontend_url: 'https://crm.example.com',
     maintenance_mode: true,
     is_two_factor_required: true,
     updated_at: '2026-07-10T10:00:00Z',
@@ -30,7 +32,7 @@ const { settingsFixture, mutateAsyncMock } = vi.hoisted(() => ({
 }));
 
 vi.mock('@/hooks/useSystemSettings', () => ({
-  useSystemSettings: () => ({ data: settingsFixture, isLoading: false }),
+  useSystemSettings: () => ({ data: settingsOverride.current ?? settingsFixture, isLoading: false }),
   useUpdateSystemSettings: () => ({ mutateAsync: mutateAsyncMock, isPending: false }),
 }));
 
@@ -71,7 +73,23 @@ describe('PlatformSettings (spec PR 5, вариант Б)', () => {
     expect(screen.queryByText('Обязательная 2FA')).not.toBeInTheDocument();
   });
 
-  it('сохранение шлёт payload без maintenance_mode и is_two_factor_required', async () => {
+  it('«Изменить в CRM» ведёт на настройки CRM по адресу из бэкенда, а не в админку ERP (FIX-42)', () => {
+    renderWithProviders(<PlatformSettings />);
+
+    const link = screen.getByRole('link', { name: /Изменить в CRM/ });
+    expect(link).toHaveAttribute('href', 'https://crm.example.com/settings');
+    expect(link.getAttribute('href')).not.toContain('/admin');
+  });
+
+  it('без адреса CRM ссылки нет, а не ссылка в никуда', () => {
+    settingsOverride.current = { ...settingsFixture, crm_frontend_url: '' };
+    renderWithProviders(<PlatformSettings />);
+    settingsOverride.current = null;
+
+    expect(screen.queryByRole('link', { name: /Изменить в CRM/ })).not.toBeInTheDocument();
+  });
+
+  it('сохранение шлёт только НДС: общие поля в запрос не попадают (FIX-42)', async () => {
     renderWithProviders(<PlatformSettings />);
 
     fireEvent.click(screen.getByRole('button', { name: 'Сохранить' }));
@@ -79,14 +97,11 @@ describe('PlatformSettings (spec PR 5, вариант Б)', () => {
     await waitFor(() => {
       expect(mutateAsyncMock).toHaveBeenCalledTimes(1);
     });
-    expect(mutateAsyncMock).toHaveBeenCalledWith({
-      vat_rate: '12.00',
-      platform_name: 'ERP Platform',
-      support_email: 'support@example.com',
-      logo_url: 'https://example.com/logo.png',
-      domain: 'erp.example.com',
-    });
+    expect(mutateAsyncMock).toHaveBeenCalledWith({ vat_rate: '12.00' });
     const payload = mutateAsyncMock.mock.calls[0][0];
+    for (const shared of ['platform_name', 'support_email', 'logo_url', 'domain', 'crm_frontend_url']) {
+      expect(payload).not.toHaveProperty(shared);
+    }
     expect(payload).not.toHaveProperty('maintenance_mode');
     expect(payload).not.toHaveProperty('is_two_factor_required');
     // standard_margin более не отправляется (P9).
