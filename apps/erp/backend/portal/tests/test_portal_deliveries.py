@@ -55,7 +55,8 @@ def test_list_is_built_from_the_delivery_line_model(contract_world, portal_clien
     for item in listed:
         assert not check_response(item, component("DeliveryLine"))
         line = stored[item["id"]]
-        assert item["line_no"] == line.line_no and item["title"] == line.title and item["deal_id"] == line.deal_id
+        assert item["line_no"] == line.line_no and item["title"] == line.title and item["deal"]["id"] == line.deal_id
+        assert "deal_id" not in item
 
 
 def test_list_is_only_my_company(contract_world, other_portal_client, listed):
@@ -72,7 +73,7 @@ def test_warehouse_progress_flows_into_lines_until_the_client_decides(contract_w
     Fulfillment.objects.filter(pk=shipped.pk).update(
         status=FulfillmentStatus.objects.get(code=FulfillmentStatusCode.DELIVERED), tracking_number="TRK-NEW"
     )
-    after = [i for i in portal_client.get(f"{API}/deliveries").json() if i["deal_id"] == shipped.deal_id]
+    after = [i for i in portal_client.get(f"{API}/deliveries").json() if i["deal"]["id"] == shipped.deal_id]
     assert {i["status"] for i in after} == {"delivered"} and {i["tracking"] for i in after} == {"TRK-NEW"}
 
     first = after[0]["id"]
@@ -82,7 +83,7 @@ def test_warehouse_progress_flows_into_lines_until_the_client_decides(contract_w
     )
     again = {i["id"]: i for i in portal_client.get(f"{API}/deliveries").json()}
     assert again[first]["status"] == "accepted"  # решение клиента ход склада не откатывает
-    assert {i["status"] for key, i in again.items() if key != first and i["deal_id"] == shipped.deal_id} == {
+    assert {i["status"] for key, i in again.items() if key != first and i["deal"]["id"] == shipped.deal_id} == {
         "assembling"
     }
 

@@ -41,7 +41,6 @@ describe('виджет «Требует вашего решения»', () => {
           {
             id: 700,
             deal: { id: 29, number: 'D-29', title: null },
-            deal_id: 29,
             number: 'S-OVERDUE-1',
             status: 'overdue',
             total: { amount: '100.00', currency: 'UZS' },

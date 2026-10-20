@@ -26,6 +26,7 @@ from parties.models import Company, CompanyType, Contact
 from rest_framework.test import APIClient
 
 from accounts.models import CustomUser
+from crm.constants import DealStageCode
 from crm.models import Deal, DealStage, GeneratedDocument
 
 pytestmark = pytest.mark.django_db
@@ -104,7 +105,6 @@ def test_post_with_invalid_uuid_idempotency_key_fails(auth_client):
 
 
 def test_client_handoff_success_and_idempotency(auth_client):
-    DealStage.objects.get_or_create(code="request", defaults={"name": "Заявка", "sort_order": 1})
     CompanyType.objects.get_or_create(code="CLIENT", defaults={"name": "Клиент"})
 
     idempotency_key = str(uuid.uuid4())
@@ -178,6 +178,12 @@ def test_client_handoff_success_and_idempotency(auth_client):
     assert deal.company == company
     assert deal.contact == contact
     assert deal.portal_lines.count() == 2
+    # Заявка из передачи начинается со стадии FSM DRAFT (как заявка из портала), а не без стадии (I-3)
+    assert deal.stage is not None and deal.stage.code == DealStageCode.DRAFT
+    resp_deal = auth_client.get(f"/api/integration/v1/deals/{deal.id}")
+    assert resp_deal.status_code == 200
+    assert resp_deal.json()["stage"] == "request"
+    assert resp_deal.json()["amount"] is None
 
     # 2. Повторный вызов с тем же Idempotency-Key и тем же телом — возврат закешированного ответа
     resp_cached = auth_client.post(
@@ -279,7 +285,7 @@ def test_upsert_contact_not_found(auth_client):
 def test_company_summary_and_deals(auth_client):
     company = Company.objects.create(name="Summary Test Co", inn="111222333")
     CrmClientMapping.objects.create(crm_client_id=7777, company=company)
-    stage = DealStage.objects.create(code="quoting", name="Расчёт", sort_order=2)
+    stage = DealStage.objects.get(code=DealStageCode.CALCULATING)
 
     deal = Deal.objects.create(
         company=company,

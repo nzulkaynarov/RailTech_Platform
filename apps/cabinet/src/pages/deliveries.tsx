@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { AlertTriangle, CheckCircle2, FolderOpen, Loader2, Search, Truck } from 'lucide-react';
-import { toast } from 'sonner';
+import { toast } from '@/lib/toast';
 
 import { apiErrorKey } from '@/api/errors';
 import type { DeliveryLine, DocumentKind, PortalDocument } from '@/api/portal';

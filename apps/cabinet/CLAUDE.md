@@ -130,3 +130,7 @@ Mini App локально: эмуляция через `#tgWebAppData=…` ил�
 - Скачивание в Mini App: файл сохраняется через `<a download>` (blob); поведение в webview Telegram на iOS/Android проверить на M2-QA-01 (при проблеме — `WebApp.downloadFile`, Bot API 8.0, но ему нужна ссылка без cookie).
 - Имя бота — `VITE_BOT_USERNAME` (в ансамбле `TELEGRAM_BOT_USERNAME`). URL CRM для формы лида — `VITE_CRM_URL` (в ансамбле `CABINET_CRM_URL`, по умолчанию `http://crm.localhost:${HTTP_PORT}`); CRM пускает origin из `CABINET_ORIGIN` (по умолчанию `http://cabinet.localhost`, вариант с `HTTP_PORT` и `https://${CABINET_DOMAIN}`) — **решено M2-CAB-03**.
 - Бот CRM пока не разбирает параметр `/start` (`deal_<id>`, `web`) — отвечает приветствием. Контекст сделки в диалоге (лента, сервисный режим «где мой счёт») — M3-CRM-04 / M3-CRM-07 (`deal_<id>` — `erp_deal_id`, сопоставление — `deals.erp_deal_id` из M3-CRM-03).
+
+## Правило тестов: роль ищется внутри `within(…)`
+
+Поиск по роли (`getByRole`, `findByRole`) по всему документу в jsdom занимает ~1 с, а на раннере CI даёт таймауты. В тестах сначала берём контейнер (`list`, `dialog`, `group`, `table`), потом ищем внутри него через `within(контейнер)`; `screen.getByRole` по всему документу — только для самого контейнера, `h1` и единственных кнопок страницы.

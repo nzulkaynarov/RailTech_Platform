@@ -147,7 +147,7 @@ def test_failed_delivery_is_an_error_and_leaves_no_member(portal_client, client_
     }
     response = portal_client.post(URL, body(), format="json")
     assert response.status_code == 503
-    assert response.json() == {"detail": "CONFLICT"}
+    assert response.json() == {"detail": "DELIVERY_FAILED"}
     assert not invited(client_company).exists(), "коллеги в команде нет: приглашение не дошло"
     assert EmailLog.objects.filter(status=EmailLog.STATUS_FAILED).count() == 1, "сбой виден в журнале писем"
     assert not IntegrationWebhookEvent.objects.filter(event_type="invite.sent").exists()

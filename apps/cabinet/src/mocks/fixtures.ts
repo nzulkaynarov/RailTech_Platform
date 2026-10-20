@@ -33,12 +33,30 @@ export const deals: Record<number, Schemas['DealRef']> = {
   57: { id: 57, number: 'D-57', title: 'Насосная станция в Чирчике' },
 };
 
+/** Сделка записи по контракту 0.3.0: только `deal {id, number, title}`, отдельного внутреннего id сделки в записи нет. */
+export function dealOf(id: number): { deal: Schemas['DealRef'] } {
+  return { deal: deals[id] };
+}
+
+/** Деньги суммой в копейках → строка контракта (`"123.45"`). */
+function fromCents(cents: bigint, currency: string): Schemas['Money'] {
+  const abs = cents < 0n ? -cents : cents;
+  const amount = `${cents < 0n ? '-' : ''}${abs / 100n}.${String(abs % 100n).padStart(2, '0')}`;
+  return { amount, currency };
+}
+
+/** Ставка НДС моков — 12 % (Узбекистан). */
+const VAT_PERCENT = 12n;
+
 /**
- * Сделка записи: `deal` по контракту 0.2.0 и устаревшее `deal_id`, которое ERP отдаёт до снятия поля из
- * контракта (оно обязательно в схемах договора, счёта, акта и поставки). Cabinet его не читает.
+ * Итоги КП по 0.3.0: строки без НДС, `subtotal` — их сумма, `vat` — 12 % с округлением до копейки,
+ * `total = subtotal + vat` (как в PDF КП).
  */
-export function dealOf(id: number): { deal: Schemas['DealRef']; deal_id: number } {
-  return { deal: deals[id], deal_id: id };
+export function quoteTotals(subtotal: string, currency: string): Pick<Schemas['Quote'], 'subtotal' | 'vat' | 'total'> {
+  const [whole, frac = ''] = subtotal.split('.');
+  const cents = BigInt(whole) * 100n + BigInt(frac.padEnd(2, '0').slice(0, 2));
+  const vat = (cents * VAT_PERCENT + 50n) / 100n;
+  return { subtotal: fromCents(cents, currency), vat: fromCents(vat, currency), total: fromCents(cents + vat, currency) };
 }
 
 export const company: Schemas['Company'] = {
@@ -150,7 +168,7 @@ const quote42: Schemas['Quote'] = {
   number: 'KP-2026-0042',
   version: 2,
   status: 'sent',
-  total: { amount: '48600000.00', currency: 'UZS' },
+  ...quoteTotals('48600000.00', 'UZS'),
   valid_until: '2026-10-25',
   sent_at: '2026-10-08T14:00:00+05:00',
   public_url: 'https://cabinet.example.com/q/kp-2026-0042-v2',
@@ -188,7 +206,7 @@ const quote42v1: Schemas['Quote'] = {
   id: 300,
   version: 1,
   status: 'rejected',
-  total: { amount: '51200000.00', currency: 'UZS' },
+  ...quoteTotals('45714285.71', 'UZS'),
   valid_until: '2026-10-08',
   sent_at: '2026-10-01T11:00:00+05:00',
   public_url: 'https://cabinet.example.com/q/kp-2026-0042-v1',
@@ -202,7 +220,7 @@ const quote57: Schemas['Quote'] = {
   number: 'KP-2026-0057',
   version: 1,
   status: 'viewed',
-  total: { amount: '18750000.50', currency: 'UZS' },
+  ...quoteTotals('18750000.50', 'UZS'),
   valid_until: '2026-10-31',
   sent_at: '2026-10-12T10:30:00+05:00',
   public_url: 'https://cabinet.example.com/q/kp-2026-0057-v1',
@@ -246,7 +264,7 @@ const quote48: Schemas['Quote'] = {
   number: 'KP-2026-0048',
   version: 1,
   status: 'accepted',
-  total: { amount: '12500.00', currency: 'USD' },
+  ...quoteTotals('12500.00', 'USD'),
   valid_until: '2026-10-01',
   sent_at: '2026-09-20T15:00:00+05:00',
   public_url: 'https://cabinet.example.com/q/kp-2026-0048-v1',
@@ -282,7 +300,7 @@ const quote33: Schemas['Quote'] = {
   number: 'KP-2026-0033',
   version: 1,
   status: 'expired',
-  total: { amount: '7300000.00', currency: 'UZS' },
+  ...quoteTotals('7300000.00', 'UZS'),
   valid_until: '2026-09-10',
   sent_at: '2026-08-27T12:00:00+05:00',
   public_url: 'https://cabinet.example.com/q/kp-2026-0033-v1',

@@ -1,4 +1,4 @@
-import { screen, within } from '@testing-library/react';
+import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 import { renderApp, signedIn } from '@/test/render';
@@ -118,6 +118,38 @@ describe('Команда', () => {
     await user.type(within(dialog).getByLabelText('E-mail'), 't@t.uz');
     await user.click(within(dialog).getByRole('button', { name: 'Отправить приглашение' }));
     expect(await within(dialog).findByText('У вас нет права на это действие.')).toBeInTheDocument();
+  });
+
+  it('503 DELIVERY_FAILED: текст ошибки, диалог открыт с введёнными данными, коллега не добавлен, тоста «отправлено» нет', async () => {
+    signedIn();
+    const user = userEvent.setup();
+    renderApp('/team');
+    const list = await screen.findByRole('list', { name: 'Команда' });
+    const before = list.children.length;
+    await user.click(screen.getByRole('button', { name: 'Пригласить коллегу' }));
+    const dialog = await screen.findByRole('dialog');
+    await user.type(within(dialog).getByLabelText('Имя и фамилия'), 'Дилшод Раҳимов');
+    await user.type(within(dialog).getByLabelText('E-mail'), 'delivery-fail@toshlog.uz');
+    await user.click(within(dialog).getByRole('button', { name: 'Отправить приглашение' }));
+    expect(
+      await within(dialog).findByText('Письмо с приглашением не ушло, коллега не добавлен. Повторите попытку — можно сразу.'),
+    ).toBeInTheDocument();
+    expect(within(dialog).getByLabelText('Имя и фамилия')).toHaveValue('Дилшод Раҳимов');
+    expect(screen.queryByText(/Приглашение для .* отправлено/)).not.toBeInTheDocument();
+    // Фон под модальным диалогом скрыт от дерева доступности — считаем элементы списка напрямую.
+    expect(list.children).toHaveLength(before);
+  });
+
+  it('фокус после закрытия диалога возвращается на кнопку-источник', async () => {
+    signedIn();
+    const user = userEvent.setup();
+    renderApp('/team');
+    const button = await screen.findByRole('button', { name: 'Пригласить коллегу' });
+    await user.click(button);
+    const dialog = await screen.findByRole('dialog');
+    await user.click(within(dialog).getByRole('button', { name: 'Отмена' }));
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+    expect(button).toHaveFocus();
   });
 
   it('can_act=false — без «Пригласить коллегу»', async () => {

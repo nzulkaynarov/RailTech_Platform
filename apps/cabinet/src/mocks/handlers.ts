@@ -8,13 +8,14 @@ import * as fixtures from './fixtures';
 /**
  * Мок портального API на MSW — граница HTTP для dev (`VITE_PORTAL_MOCK=1`) и тестов.
  * Поведение — по `erp-portal.yaml`: без сессии 401, `can_act=false` → 403 на действиях,
- * чужое/несуществующее → 404, ошибки `{"detail": CODE}` (перечень `ErrorCode` контракта 0.2.0).
+ * чужое/несуществующее → 404, ошибки `{"detail": CODE}` (перечень `ErrorCode` контракта 0.3.0).
  *
  * Сценарии входа:
  * - `POST /auth/telegram` — любой `init_data`; содержит `bad` → 401, `viewer` → контакт без права действовать,
  *   `empty` → компания без объектов;
- * - `POST /auth/magic {token}` — `expired` → 410, `forbidden` → 403 `FORBIDDEN` (компания в архиве), `throttled` → 429
- *   `TOO_MANY_REQUESTS`, `viewer` → без права действовать, `empty` → пустая компания, иное → основной контакт.
+ * - `POST /auth/magic {token}` — токен короче 16 или длиннее 512 символов → 422; начинается с `expired` → 410,
+ *   `forbidden` → 403 `FORBIDDEN` (компания в архиве), `throttled` → 429 `TOO_MANY_REQUESTS` с `Retry-After: 780`
+ *   (`throttled-noheader` — без заголовка); `viewer` → без права действовать, `empty` → пустая компания, иное → основной контакт.
  *
  * Сценарии разделов: `POST /quotes/{id}/request-code` выдаёт код `MOCK_ACCEPT_CODE` (Telegram, если у контакта он есть,
  * иначе e-mail), без запроса или с другим кодом `accept` → 409 `QUOTE_CODE_INVALID`;
@@ -142,7 +143,7 @@ function byId<T extends { id: number }>(items: T[], id: string): T | undefined {
   return items.find((item) => String(item.id) === id);
 }
 
-/** Элемент списка КП — карточка без строк и служебных полей (`deal` и устаревшее `deal_id` остаются как есть). */
+/** Элемент списка КП — карточка без строк и служебных полей (`deal` остаётся как есть). */
 function quoteListItem(quote: Schemas['Quote']): Schemas['QuoteListItem'] {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const { lines, public_url, pdf_document_id, rejected_reason, ...item } = quote;
@@ -157,12 +158,17 @@ async function readJson<T>(request: Request): Promise<Partial<T>> {
   }
 }
 
+const MAGIC_TOKEN_MIN = 16;
+const MAGIC_TOKEN_MAX = 512;
 const MAX_UPLOAD_BYTES = 10 * 1024 * 1024;
 const QUANTITY_RE = /^\d+(\.\d+)?$/;
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 function validRequestBody(body: Partial<Schemas['ClientRequestCreate']>): body is Schemas['ClientRequestCreate'] {
-  if (!body.summary?.trim() || body.summary.length > 5000 || !Array.isArray(body.lines)) return false;
+  if (!body.summary?.trim() || body.summary.length > 5000) return false;
+  // `lines` необязателен (контракт 0.3.0): запрос может быть одним описанием.
+  if (body.lines === undefined) return true;
+  if (!Array.isArray(body.lines)) return false;
   return body.lines.every(
     (line) =>
       typeof line.text === 'string' &&
@@ -185,15 +191,22 @@ export const handlers = [
   http.post(`${API}/auth/magic-link`, async ({ request }) => {
     const body = await readJson<{ email: string }>(request);
     if (!body.email || !body.email.includes('@')) return error(422, 'VALIDATION_ERROR');
+    if (body.email.startsWith('throttled')) {
+      return HttpResponse.json({ detail: 'TOO_MANY_REQUESTS' }, { status: 429, headers: { 'Retry-After': '45' } });
+    }
     return new HttpResponse(null, { status: 200 });
   }),
   http.post(`${API}/auth/magic`, async ({ request }) => {
     const { token } = await readJson<{ token: string }>(request);
-    if (!token) return error(422, 'VALIDATION_ERROR');
-    if (token === 'expired') return error(410, 'MAGIC_LINK_EXPIRED');
-    if (token === 'forbidden') return error(403, 'FORBIDDEN');
-    if (token === 'throttled') {
-      return HttpResponse.json({ detail: 'TOO_MANY_REQUESTS' }, { status: 429, headers: { 'Retry-After': '3600' } });
+    // Контракт 0.3.0: токен — 16…512 символов, иначе 422.
+    if (typeof token !== 'string' || token.length < MAGIC_TOKEN_MIN || token.length > MAGIC_TOKEN_MAX) {
+      return error(422, 'VALIDATION_ERROR');
+    }
+    if (token.startsWith('expired')) return error(410, 'MAGIC_LINK_EXPIRED');
+    if (token.startsWith('forbidden')) return error(403, 'FORBIDDEN');
+    if (token.startsWith('throttled-noheader')) return error(429, 'TOO_MANY_REQUESTS');
+    if (token.startsWith('throttled')) {
+      return HttpResponse.json({ detail: 'TOO_MANY_REQUESTS' }, { status: 429, headers: { 'Retry-After': '780' } });
     }
     const session = sessionFromToken(token, 'magic_link');
     setMockSession(session);
@@ -550,6 +563,8 @@ export const handlers = [
         }
         if (body.channels.includes('telegram') && !body.phone?.trim()) return error(422, 'VALIDATION_ERROR');
         if (body.email && db.team.some((member) => member.email === body.email)) return error(422, 'TEAM_MEMBER_EXISTS');
+        // Письмо не ушло (контракт 0.3.0): коллега не добавлен, повторить можно сразу.
+        if (body.email?.startsWith('delivery-fail')) return error(503, 'DELIVERY_FAILED');
         const member: Schemas['TeamMember'] = {
           id: Math.max(100, ...db.team.map((item) => item.id)) + 1,
           name: body.name,
