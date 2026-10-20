@@ -5,7 +5,7 @@
 Срок жизни: 60 секунд (FIX-12: строгие типы, обязательные iat/exp/jti).
 Claims (типы строгие: `bool` не принимается как int, строки не приводятся):
 - crm_client_id: int
-- erp_company_id: int | None (null в режиме prospect, обязателен в customer)
+- erp_company_id: int | None (в режиме prospect — строго null, в customer — обязателен; FIX-36)
 - mode: "prospect" | "customer"
 - language: "ru" | "uz" | "en"
 - iat: int, unix seconds (не из будущего, допуск 5 с)
@@ -96,6 +96,8 @@ def issue_agent_context(
     """Генерация подписанного токена X-Agent-Context."""
     if mode == "customer" and erp_company_id is None:
         raise ValueError("customer mode requires erp_company_id")
+    if mode == "prospect" and erp_company_id is not None:
+        raise ValueError("prospect mode requires erp_company_id to be null")
 
     current_time = int(time.time() if now is None else now)
     claims: dict[str, Any] = {
@@ -163,6 +165,9 @@ def verify_agent_context(
 
     if mode == "customer" and not erp_company_id:
         raise AgentContextError("customer mode requires erp_company_id")
+    if mode == "prospect" and erp_company_id is not None:
+        # Лид ещё не клиент: контекст с компанией в режиме prospect — подделка или ошибка выпускающей стороны.
+        raise AgentContextError("prospect mode requires erp_company_id to be null")
 
     iat = data.get("iat")
     if not _is_int(iat):

@@ -267,6 +267,23 @@ Q-1…Q-9 решены — см. `DECISIONS.md`.
 
 **Рекомендация.** Вариант 1 отдельной задачей CRM после M5-INF-01; до того статус смотрит владелец по `docs/runbooks/deploy.md` §4.
 
+## Q-FIX36-1 · HTTP 401/400/429 у erp-mcp и поведение клиента SDK (FIX-36, для M3-CRM-07)
+
+**Контекст.** Контракт (`mcp-tools.json`, CONTRACTS §5) требует HTTP-коды: ошибка контекста — 401 `INVALID_AGENT_CONTEXT`, невалидные аргументы — 400 `INVALID_ARGUMENTS`, лимит — 429. Сервер на SDK `mcp` отдаёт их из ASGI-вратаря (`integration/mcp/gate.py`) до SDK, как и требует контракт. Но клиент SDK (`mcp.Client` + `streamable_http_client`, как в `apps/crm/backend/app/agents/mcp_client.py`) на не-2xx ответ не возвращает `CallToolResult`, а бросает исключение транспорта (HTTP-ошибка / `MCPError`); `McpToolClient.call` оборачивает любое исключение в `ToolCallError("<server>.<tool> unavailable")`, то есть агент не отличит просроченный контекст от недоступного сервера. Ошибки самих инструментов (`TOOL_NOT_AVAILABLE_IN_MODE`, `TOOL_EXECUTION_ERROR`, `INTERNAL_ERROR`, `TOOL_NOT_FOUND`) приходят штатно — результатом с `is_error` и `structured_content.error`. Неизвестный метод на протоколе 2026-07-28 — HTTP 404 + JSON-RPC -32601, на старом — 200 с JSON-RPC-ошибкой (решает SDK).
+
+**Варианты.** 1) Оставить как в контракте (реализовано); в M3-CRM-07 различать в клиенте статус исключения: 401 — выпустить контекст заново (jti одноразовый) и не повторять тот же, 429 — подождать `Retry-After`, 400 — ошибка агента, не повторять. 2) Изменить контракт: ошибки контекста и аргументов отдавать результатом `is_error` (HTTP 200), 429 оставить. Тогда клиент SDK различает их без разбора исключений, но теряется HTTP-семантика для мониторинга и Caddy-логов.
+
+**Рекомендация.** Вариант 1: контракт сохраняется, различение — в клиенте CRM (одна функция разбора исключения с кодом статуса), тест на каждый из трёх кодов — в M3-CRM-07. Вариант 2 — только если разбор исключений в клиенте SDK окажется хрупким.
+
+## Q-FIX36-2 · Как `mcp-tools.json` попадает на прод-сервер (FIX-36)
+
+**Контекст.** `erp-mcp` читает схемы инструментов из `packages/contracts/mcp-tools.json` (копии в коде нет). В dev и тестах файл монтируется. `deploy.yml` кладёт на VPS 1 только `tar -czf release.tgz infra apps/crm/infra/casbin`, поэтому `packages/contracts/mcp-tools.json` в каталоге релиза нет; в `prod.yml` указано монтирование с `create_host_path: false`, и без файла сервис не стартует (а не получает пустой каталог); поэтому сервис под профилем `mcp`. Образ ERP собирается из `apps/erp/backend` и контракта не видит. Правка `.github/workflows/*` без запроса запрещена. (Отдельно: `infra/.env.prod.example` игнорируется `.gitignore` и в репозитории отсутствует — дефект M5-INF-01, передан архитектору.)
+
+**Варианты.** 1) Добавить `packages/contracts/mcp-tools.json` в `release.tgz` (`tar -czf release.tgz infra apps/crm/infra/casbin packages/contracts/mcp-tools.json`) — одна строка в `deploy.yml`, файл версии релиза рядом с compose. 2) Вшить файл в образ ERP (`additional_contexts`/копия в контекст сборки) — иммутабельно, но меняет сборку и дублирует файл. 3) Копия контракта внутри `apps/erp/backend` с тестом на равенство — дубль, против решения владельца.
+
+**Решение лида (2026-10-20).** `deploy.yml` не меняем (правка workflow — только по явному запросу владельца); `erp-mcp` в `prod.yml` под профилем `mcp`, по умолчанию не стартует, `up -d` не ломается.
+
+**Рекомендация.** Архитектору или владельцу: добавить `packages/contracts/mcp-tools.json` в `release.tgz` (вариант 1) и включить профиль `mcp`, когда M3-CRM-07 подключит `erp-mcp`. Файл `infra/.env.prod.example` добавить в репозиторий (`!infra/.env.prod.example` в `.gitignore`) — отдельной правкой Infra.
 ## Q-FIX30-1 · Стадия `won` и итог `deal.won`: `CLOSED_WON` ставится при подписании договора, а не по завершении сделки (FIX-30)
 
 **Контекст.** FSM ERP ставит `CLOSED_WON`, когда договор подписан обеими сторонами (`crm/services/contracts.py:_finalize_if_signed`), то есть до счёта, оплаты и поставки; `CONTRACT_SIGNED` — это акцепт КП, договор ещё не подписан. Контракт шва требует 11 стадий, пять из них (`invoiced`, `paid`, `fulfilment`, `closing`, а также `contract`) лежат ПОСЛЕ `CLOSED_WON`. Если отдавать `won` для каждого `CLOSED_WON`, эти стадии недостижимы, а сделка пропадает из «открытых» у CRM в день подписи, пока клиенту ещё платить и принимать. Предикат «исполнение закрыто целиком» в ERP уже есть (`crm/services/deal_documents.py:deal_execution_is_complete`, O4: «выиграна» и «исполнена» — разные шкалы).

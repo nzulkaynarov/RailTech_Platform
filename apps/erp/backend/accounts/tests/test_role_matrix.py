@@ -61,9 +61,6 @@ def _mutation_endpoints():
         # Интеграционный API (M3-ERP-01) аутентифицируется сервисным токеном CRM ↔ ERP и тестируется в integration/tests/
         if path.startswith("/api/integration/"):
             continue
-        # erp-mcp (M3-ERP-03) аутентифицируется подписанным X-Agent-Context и тестируется в integration/tests/
-        if path.startswith("/mcp/"):
-            continue
         actions = getattr(callback, "actions", None) or {}
         rows.append((path, method, callback.cls, actions.get(method.lower()) or method))
     return sorted(rows, key=lambda row: (row[0], row[1]))
