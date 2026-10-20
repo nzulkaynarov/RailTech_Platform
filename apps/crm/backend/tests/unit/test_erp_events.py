@@ -976,9 +976,9 @@ def test_delivery_line_event_requires_deal_client_actor_and_matching_payload() -
         ErpEventEnvelope.model_validate(mismatch)
 
     extra = _line_envelope("delivery.line_accepted")
-    extra["payload"]["supplier"] = "секрет"
-    with pytest.raises(ValidationError):
-        ErpEventEnvelope.model_validate(extra)
+    extra["payload"]["new_optional_field"] = "x"
+    # терпимый читатель: лишнее поле принимается
+    assert ErpEventEnvelope.model_validate(extra).event == "delivery.line_accepted"
 
     too_long = _line_envelope("delivery.line_disputed")
     too_long["payload"]["remark"] = "x" * 2001

@@ -12,7 +12,7 @@ from unittest.mock import MagicMock
 import pytest
 from integration.models import CrmClientMapping, IntegrationWebhookEvent
 from integration.services import webhooks
-from sales.models import DeliveryLine, DeliveryLineStatus
+from sales.models import ActivityLog, DeliveryLine, DeliveryLineStatus
 
 from core.tests.events_contract import event_errors
 
@@ -178,6 +178,30 @@ def test_a_failing_event_does_not_undo_the_clients_decision(contract_world, port
     assert post(portal_client, f"/deliveries/{line.pk}/accept").status_code == 200
     line.refresh_from_db()
     assert line.status == DeliveryLineStatus.ACCEPTED
+    assert not line_events().exists()
+    # след для ручной досылки: код события и id строки
+    trace = ActivityLog.objects.get(event_code="delivery.line_event_failed", deal=line.deal)
+    assert trace.event_params == {"line_id": line.pk, "event_type": "delivery.line_accepted", "deal_id": line.deal_id}
+    assert str(line.pk) in trace.detail and "delivery.line_accepted" in trace.detail
+
+
+def test_a_failing_dispute_event_leaves_the_trace_with_the_dispute_code(
+    contract_world, portal_client, listed, mapped, monkeypatch
+):
+    def boom(*args, **kwargs):
+        raise RuntimeError("webhook builder is broken")
+
+    monkeypatch.setattr(webhooks, "emit_event", boom)
+    line = delivered_lines(contract_world)[0]
+    assert post(portal_client, f"/deliveries/{line.pk}/dispute", {"reason": "брак"}).status_code == 200
+    trace = ActivityLog.objects.get(event_code="delivery.line_event_failed", deal=line.deal)
+    assert trace.event_params["event_type"] == "delivery.line_disputed" and trace.event_params["line_id"] == line.pk
+
+
+def test_no_failure_trace_when_the_event_is_created(contract_world, portal_client, listed, mapped):
+    line = delivered_lines(contract_world)[0]
+    assert post(portal_client, f"/deliveries/{line.pk}/accept").status_code == 200
+    assert not ActivityLog.objects.filter(event_code="delivery.line_event_failed").exists()
 
 
 # ── Сторож схемы сам ловит нарушения ─────────────────────────────────────────────────────────────

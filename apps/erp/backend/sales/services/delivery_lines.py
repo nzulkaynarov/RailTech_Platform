@@ -180,6 +180,18 @@ def _emit_decision(line: DeliveryLine, contact) -> None:
             webhooks.emit_delivery_line_decision(line, contact)
     except Exception:
         logger.exception("Не удалось создать событие о решении клиента по строке поставки #%s", line.pk)
+        # След для ручной досылки: какое событие и по какой строке не ушло (точка сохранения уже откачена).
+        event_type = webhooks.DELIVERY_LINE_EVENTS.get(str(line.status), "delivery.line_*")
+        ActivityLog.objects.create(
+            action="Событие для CRM не создано",
+            detail=f"Событие {event_type} по строке {line.line_no} (id {line.pk}) сделки #{line.deal_id} не создано, "
+            "решение клиента сохранено; досылать вручную",
+            event_code="delivery.line_event_failed",
+            event_params={"line_id": line.pk, "event_type": event_type, "deal_id": line.deal_id},
+            level="ERROR",
+            deal=line.deal,
+            company_id=line.deal.company_id,
+        )
 
 
 @transaction.atomic

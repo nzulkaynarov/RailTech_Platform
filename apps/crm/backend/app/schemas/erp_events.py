@@ -171,9 +171,12 @@ DELIVERY_LINE_EVENTS = {"delivery.line_accepted": "accepted", "delivery.line_dis
 
 
 class DeliveryLineDecision(BaseModel):
-    """Решение клиента по строке поставки (FIX-22/FIX-37): принял или оспорил с замечанием."""
+    """Решение клиента по строке поставки (FIX-22/FIX-37): принял или оспорил с замечанием.
 
-    model_config = ConfigDict(extra="forbid")
+    Читатель терпимый (FIX-29): новое необязательное поле ERP не должно давать 422 и ретраи.
+    """
+
+    model_config = ConfigDict(extra="ignore")
 
     line_no: int = Field(ge=1)
     title: str
