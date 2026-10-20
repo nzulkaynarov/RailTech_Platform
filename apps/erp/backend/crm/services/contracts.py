@@ -492,19 +492,19 @@ def force_cancel_contract(
     """
     from ..models import Contract
 
-    if not (getattr(admin_user, "is_superuser", False) or (admin_user.role and admin_user.role.code == "ADMIN")):
+    # Администратор ERP — только `is_superuser` (как `IsPlatformAdmin` и force-approve КП): устаревшая
+    # системная роль ADMIN без этого флага «администратором» не считается (FIX-43).
+    if not getattr(admin_user, "is_superuser", False):
         return None, "PLATFORM_ADMIN_REQUIRED"
-    if not reason.strip():
+    if not isinstance(reason, str) or not reason.strip():
         return None, "FORCE_REASON_REQUIRED"
+    reason = reason.strip()
     contract = Contract.objects.select_for_update().get(pk=contract_id)
     old_status = contract.status_code
     contract.status = _cstatus(ContractStatusCode.CANCELLED)
-    contract.notes = (
-        f"{contract.notes}\n[FORCE_ADMIN] {admin_user.email}: {reason}"
-        if contract.notes
-        else f"[FORCE_ADMIN] {admin_user.email}: {reason}"
-    )
-    contract.save(update_fields=["status", "notes", "updated_at"])
+    # Причина и e-mail администратора в `contract.notes` не пишутся: поле печатается в PDF договора
+    # («Дополнительные условия») и уходит клиенту — как и у force-approve КП. Весь след — в журнале ниже.
+    contract.save(update_fields=["status", "updated_at"])
     # Structured, entity-scoped audit (G2 Gap A) — route through log_admin_action so the
     # override carries reason + entity_type/id + before/after and surfaces on the contract
     # timeline and the «Журнал доступа» page (not a bare, unscoped ActivityLog).
