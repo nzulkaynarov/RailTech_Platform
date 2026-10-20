@@ -1621,7 +1621,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** @description Роли бэк-офиса своей компании (M1-ERP-05): системные шаблоны + свои; запись — `team.manage`. */
+        /**
+         * List company roles (assignable ones by default)
+         * @description Роли, которые ведёт провижининг из CRM («CRM Sync: …», `managed_by_crm`), по умолчанию не отдаются — их нельзя назначить в «Команде». `include_managed=true` отдаёт их для чтения.
+         */
         get: operations["accounts_company_roles_list"];
         put?: never;
         /** @description Роли бэк-офиса своей компании (M1-ERP-05): системные шаблоны + свои; запись — `team.manage`. */
@@ -5027,14 +5030,7 @@ export interface paths {
         put?: never;
         /**
          * Record a payment against this invoice
-         * @description Счета. Сырые `create`/`destroy` НЕ подключены намеренно (Rule 8).
-         *
-         *     Выставление счёта — только через сервисные экшены `create-manual` и
-         *     `generate-from-contract`; отмена — через `cancel` (сервис `cancel_invoice`).
-         *     Сырое удаление обходило бы отмену, а при наличии платежей падало бы в
-         *     `ProtectedError` → 500 (`Payment.invoice` объявлен с `on_delete=PROTECT`).
-         *     `update` оставлен: им правят черновик (due_date / notes), и он уже загейчен
-         *     на DRAFT ниже — фронтенд использует именно его.
+         * @description Идемпотентность по `reference`: повтор с тем же референсом, суммой и датой возвращает существующий платёж (200); тот же референс с другой суммой или датой — 409 `PAYMENT_REFERENCE_CONFLICT`.
          */
         post: operations["crm_invoices_record_payment_create"];
         delete?: never;
@@ -5567,7 +5563,7 @@ export interface paths {
         put?: never;
         /**
          * Reapply company defaults to the quote
-         * @description Re-pull the seller company's CURRENT defaults (VAT rate, margin, delivery basis, validity term, cost currency) into this DRAFT КП, OVERWRITING those five fields (Odoo «Update Prices» / Salesforce «Recalculate» pattern). Seller-only, unfrozen КП only (else QUOTE_FROZEN). Returns `changed_fields` — the fields that actually differed and were updated (empty when the КП already matched the defaults).
+         * @description Re-pull the seller company's CURRENT defaults (VAT rate, margin, delivery basis, validity term, cost currency) into this DRAFT КП, OVERWRITING those five fields (Odoo «Update Prices» / Salesforce «Recalculate» pattern). Seller-only, DRAFT КП only (else 409 QUOTE_NOT_DRAFT / QUOTE_FROZEN). Returns `changed_fields` — the fields that actually differed and were updated (empty when the КП already matched the defaults).
          */
         post: operations["crm_quotes_apply_defaults_create"];
         delete?: never;
@@ -7973,6 +7969,11 @@ export interface components {
              * @description Роль-шаблон бэк-офиса — имя и права не меняются, удалить нельзя
              */
             readonly is_system: boolean;
+            /**
+             * Управляется CRM
+             * @description Роль «CRM Sync: <e-mail>» ведёт провижининг из CRM (integration.services.provision): права и состав приходят из CRM, в «Настройках → Команда» её нельзя назначить, изменить или снять
+             */
+            readonly managed_by_crm: boolean;
             readonly member_count: number | null;
             /** Format: date-time */
             readonly created_at: string;
@@ -10749,11 +10750,6 @@ export interface components {
              */
             deal?: number;
             /**
-             * Статус
-             * @description Текущий статус КП (черновик, отправлено, одобрено)
-             */
-            status?: number | null;
-            /**
              * Базис поставки (Incoterm)
              * @description Условия поставки КП по Incoterms (FCA, CIP, DDP …)
              */
@@ -11687,7 +11683,7 @@ export interface components {
              * Статус
              * @description Текущий статус КП (черновик, отправлено, одобрено)
              */
-            status?: number | null;
+            readonly status: number | null;
             readonly status_code: string;
             readonly status_name: string;
             /**
@@ -12290,11 +12286,6 @@ export interface components {
              * @description Сделка, к которой относится КП
              */
             deal: number;
-            /**
-             * Статус
-             * @description Текущий статус КП (черновик, отправлено, одобрено)
-             */
-            status?: number | null;
             /**
              * Базис поставки (Incoterm)
              * @description Условия поставки КП по Incoterms (FCA, CIP, DDP …)
@@ -15188,6 +15179,7 @@ export interface operations {
     accounts_company_roles_list: {
         parameters: {
             query?: {
+                include_managed?: boolean;
                 /** @description A page number within the paginated result set. */
                 page?: number;
                 /** @description Number of results to return per page. */
@@ -19875,6 +19867,27 @@ export interface operations {
                     "application/json": components["schemas"]["Fulfillment"];
                 };
             };
+            /** @description DEAL_ID_AND_STATUS_REQUIRED / DEAL_ID_INVALID / FULFILLMENT_INVALID_STATUS */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description NOT_FOUND (сделки нет) */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description FULFILLMENT_NOT_READY (отгрузку ещё не создала задача после договора) */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
         };
     };
     crm_generated_documents_list: {
@@ -20330,13 +20343,27 @@ export interface operations {
             };
         };
         responses: {
+            /** @description Повтор: существующий платёж с тем же референсом, суммой и датой */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content: {
-                    "application/json": components["schemas"]["Invoice"];
+                content?: never;
+            };
+            201: {
+                headers: {
+                    [name: string]: unknown;
                 };
+                content: {
+                    "application/json": components["schemas"]["Payment"];
+                };
+            };
+            /** @description PAYMENT_REFERENCE_CONFLICT */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };
@@ -20955,7 +20982,7 @@ export interface operations {
                     "application/json": components["schemas"]["QuoteItem"][];
                 };
             };
-            /** @description QUOTE_ITEMS_BULK_INVALID (with per-row `rows`) / QUOTE_ITEMS_BULK_EMPTY / QUOTE_ITEMS_BULK_TOO_LARGE / QUOTE_FROZEN */
+            /** @description QUOTE_ITEMS_BULK_INVALID (with per-row `rows`) / QUOTE_ITEMS_BULK_EMPTY / QUOTE_ITEMS_BULK_TOO_LARGE */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -20971,6 +20998,13 @@ export interface operations {
             };
             /** @description QUOTE_NOT_FOUND */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description QUOTE_NOT_DRAFT (КП не в черновике) / QUOTE_FROZEN (отправлено клиенту) */
+            409: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -21000,7 +21034,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description QUOTE_ITEMS_BULK_INVALID (with per-row `rows`) / QUOTE_ITEMS_BULK_EMPTY / QUOTE_ITEMS_BULK_TOO_LARGE / QUOTE_FROZEN */
+            /** @description QUOTE_ITEMS_BULK_INVALID (with per-row `rows`) / QUOTE_ITEMS_BULK_EMPTY / QUOTE_ITEMS_BULK_TOO_LARGE */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -21016,6 +21050,13 @@ export interface operations {
             };
             /** @description QUOTE_NOT_FOUND */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description QUOTE_NOT_DRAFT (КП не в черновике) / QUOTE_FROZEN (отправлено клиенту) */
+            409: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -21053,7 +21094,7 @@ export interface operations {
                     "application/json": components["schemas"]["QuoteItem"][];
                 };
             };
-            /** @description QUOTE_ITEMS_BULK_INVALID (with per-row `rows`) / QUOTE_ITEMS_BULK_EMPTY / QUOTE_ITEMS_BULK_TOO_LARGE / QUOTE_FROZEN */
+            /** @description QUOTE_ITEMS_BULK_INVALID (with per-row `rows`) / QUOTE_ITEMS_BULK_EMPTY / QUOTE_ITEMS_BULK_TOO_LARGE */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -21069,6 +21110,13 @@ export interface operations {
             };
             /** @description QUOTE_NOT_FOUND */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description QUOTE_NOT_DRAFT (КП не в черновике) / QUOTE_FROZEN (отправлено клиенту) */
+            409: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -21289,8 +21337,15 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description ONLY_SELLER_CAN_BUILD_QUOTE / QUOTE_FROZEN */
+            /** @description ONLY_SELLER_CAN_BUILD_QUOTE */
             403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description QUOTE_NOT_DRAFT / QUOTE_FROZEN */
+            409: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -21331,7 +21386,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description Role not permitted */
+            /** @description ROLE_NOT_PERMITTED / SELF_APPROVAL_NOT_ALLOWED (автор КП не согласует своё КП) */
             403: {
                 headers: {
                     [name: string]: unknown;
