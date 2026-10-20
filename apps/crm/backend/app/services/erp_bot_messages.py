@@ -11,7 +11,7 @@ from typing import Any, Final
 
 from app.domain.urls import is_http_url
 from app.schemas.settings import TextsSettings
-from app.schemas.settings_base import LANGUAGES, Language
+from app.schemas.settings_base import LANGUAGES, Language, LocalizedText
 
 # Порядок статусов поставки = порядок подписей в `texts.erp_delivery_statuses` (контракт событий).
 DELIVERY_STATUSES: Final = ("assembling", "in_transit", "ready_to_ship", "shipped", "delivered")
@@ -33,12 +33,21 @@ def pick_language(raw: str | None) -> Language:
 
 
 def _delivery_status(texts: TextsSettings, language: Language, status: str) -> str:
-    labels = texts.erp_delivery_statuses.get(language).split("|")
+    labels = _text(texts, "erp_delivery_statuses", language).split("|")
     if status in DELIVERY_STATUSES:
         index = DELIVERY_STATUSES.index(status)
         if index < len(labels) and labels[index].strip():
             return labels[index].strip()
     return status
+
+
+def _text(texts: TextsSettings, name: str, language: Language, **params: str) -> str:
+    """Текст из настроек; пустой (админ стёр) — по умолчанию: пустое сообщение Telegram отклонит."""
+    value: LocalizedText = getattr(texts, name)
+    if not value.get(language).strip():
+        default = TextsSettings.model_fields[name].default
+        value = default if isinstance(default, LocalizedText) else value
+    return value.get(language, **params)
 
 
 def _s(value: object) -> str:
@@ -58,12 +67,14 @@ def client_message(
     p = payload
     doc_button: tuple[str, str] | None = None
     if event == "quote.sent":
-        text = texts.erp_quote_sent.get(language, deal=deal_title)
+        text = _text(texts, "erp_quote_sent", language, deal=deal_title)
         url = p.get("public_url")
         if is_http_url(url):
-            doc_button = (texts.erp_btn_quote.get(language), str(url))
+            doc_button = (_text(texts, "erp_btn_quote", language), str(url))
     elif event == "invoice.issued":
-        text = texts.erp_invoice_issued.get(
+        text = _text(
+            texts,
+            "erp_invoice_issued",
             language,
             number=_s(p.get("number")),
             amount=_s(p.get("amount")),
@@ -72,32 +83,41 @@ def client_message(
         )
         url = p.get("link")
         if is_http_url(url):
-            doc_button = (texts.erp_btn_invoice.get(language), str(url))
+            doc_button = (_text(texts, "erp_btn_invoice", language), str(url))
     elif event == "invoice.paid":
-        text = texts.erp_invoice_paid.get(
+        text = _text(
+            texts,
+            "erp_invoice_paid",
             language,
             number=_s(p.get("number")),
             amount=_s(p.get("amount")),
             currency=_s(p.get("currency")),
         )
     elif event == "delivery.status_changed":
-        text = texts.erp_delivery_status.get(
+        text = _text(
+            texts,
+            "erp_delivery_status",
             language,
             deal=deal_title,
             summary=_s(p.get("line_summary")),
             status=_delivery_status(texts, language, _s(p.get("status"))),
         )
     elif event == "delivery.eta_changed":
-        text = texts.erp_delivery_eta_changed.get(
-            language, deal=deal_title, summary=_s(p.get("line_summary")), eta=_s(p.get("eta"))
+        text = _text(
+            texts,
+            "erp_delivery_eta_changed",
+            language,
+            deal=deal_title,
+            summary=_s(p.get("line_summary")),
+            eta=_s(p.get("eta")),
         )
     elif event == "act.issued":
-        text = texts.erp_act_issued.get(language, number=_s(p.get("number")))
+        text = _text(texts, "erp_act_issued", language, number=_s(p.get("number")))
     else:
         return None
     buttons = [doc_button] if doc_button else []
     if is_http_url(cabinet_url):
-        buttons.append((texts.erp_btn_cabinet.get(language), cabinet_url))
+        buttons.append((_text(texts, "erp_btn_cabinet", language), cabinet_url))
     return BotMessage(text, tuple(buttons))
 
 
@@ -112,11 +132,21 @@ def staff_alert(
     """Личное сообщение ответственному сотруднику (интерфейс команды — русский)."""
     p = payload
     if event == "quote.accepted":
-        return texts.erp_staff_quote_accepted.get(
-            "ru", client=client_name, quote=_s(p.get("erp_quote_id")), deal=deal_title
+        return _text(
+            texts,
+            "erp_staff_quote_accepted",
+            "ru",
+            client=client_name,
+            quote=_s(p.get("erp_quote_id")),
+            deal=deal_title,
         )
     if event == "act.returned":
-        return texts.erp_staff_act_returned.get(
-            "ru", number=_s(p.get("number")), deal=deal_title, reason=_s(p.get("reason"))
+        return _text(
+            texts,
+            "erp_staff_act_returned",
+            "ru",
+            number=_s(p.get("number")),
+            deal=deal_title,
+            reason=_s(p.get("reason")),
         )
     return None

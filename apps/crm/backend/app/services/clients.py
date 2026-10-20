@@ -338,14 +338,15 @@ class ClientService:
                     consent=HandoffConsentPayload(
                         given_at=consent.given_at.isoformat(), version=consent.version
                     ),
-                    create_request=True,
+                    # resync: заявку закрыли ещё в режиме local — новую не заводим.
+                    create_request=not handoff.resync,
                     invite=HandoffInvitePayload(channels=channels),
                 )
 
                 handoff_res = await self._erp_client.handoff_client(payload)
                 client.erp_company_id = handoff_res.erp_company_id
 
-                if handoff_res.erp_request_id:
+                if payload.create_request and handoff_res.erp_request_id:
                     deal = await deals_service.open_deal(session, lead_id)
                     if deal is None:
                         deal = await deals_service.ensure_open_deal(session, lead, actor=who)
@@ -354,6 +355,19 @@ class ClientService:
                     deal.client_id = client_id
                     erp_deal_id = handoff_res.erp_request_id
                     await session.flush()
+
+            if handoff.resync:
+                # Только передача в ERP уже существующего клиента: владелец, стадия, сделки лида
+                # и аудит `lead.make_customer` остаются как были.
+                await audit.record(
+                    session,
+                    who.actor,
+                    "client.erp_handoff",
+                    "client",
+                    client_id,
+                    after={"erp_company_id": client.erp_company_id, "lead_id": lead_id},
+                )
+                return client_id
 
             # Сервисный режим ведёт бот (BUSINESS §5): документы и вопросы клиента — без менеджера.
             lead.owner_mode = OwnerMode.BOT.value

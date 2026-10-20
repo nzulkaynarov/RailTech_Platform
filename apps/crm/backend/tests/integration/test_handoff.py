@@ -23,6 +23,7 @@ from app.domain.errors import (
 )
 from app.domain.stages import Stage
 from app.integrations.erp import HandoffPayload, HandoffResult
+from app.models.auth import AuditLog
 from app.models.clients import Client, ClientContact
 from app.models.deals import Deal
 from app.models.leads import Lead, TelegramIdentity
@@ -325,12 +326,22 @@ async def test_client_made_in_local_mode_is_handed_to_erp_after_switch(
         assert client is not None
         assert client.erp_company_id is None
 
+    # Менеджер снова ведёт лида (повторная сделка) — повторная передача его не сбрасывает.
+    async with sessions() as session, session.begin():
+        lead = await session.get(Lead, lead_id)
+        assert lead is not None
+        lead.owner_mode, lead.assigned_user_id = "human", account.id
+        lead.snoozed_until = datetime(2030, 1, 1, tzinfo=UTC)
+    async with sessions() as session:
+        deals_before = len((await session.scalars(select(Deal))).all())
+
     after_switch = ClientService(sessions, backoffice_mode=_erp_mode, erp_client=fake_erp)
     again = await after_switch.make_customer(who, lead_id, local_client_id, None)
 
     assert again == local_client_id
     assert len(fake_erp.calls) == 1
     assert fake_erp.calls[0].crm_client_id == local_client_id
+    assert fake_erp.calls[0].create_request is False  # заявку закрыли в local, новую не заводим
     async with sessions() as session:
         client = await session.get(Client, local_client_id)
         lead = await session.get(Lead, lead_id)
@@ -338,6 +349,13 @@ async def test_client_made_in_local_mode_is_handed_to_erp_after_switch(
         assert client.erp_company_id == 61
         assert lead is not None
         assert lead.stage == "customer"
+        assert lead.owner_mode == "human"
+        assert lead.snoozed_until is not None
+        # Зеркало сделок то же: вторая сделка не заведена.
+        assert len((await session.scalars(select(Deal))).all()) == deals_before
+        actions = (await session.scalars(select(AuditLog.action))).all()
+        assert actions.count("lead.make_customer") == 1
+        assert actions.count("client.erp_handoff") == 1
 
     # Клиент уже в ERP — следующая передача ничего не делает.
     await after_switch.make_customer(who, lead_id, local_client_id, None)

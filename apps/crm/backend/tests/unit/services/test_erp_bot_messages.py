@@ -242,3 +242,41 @@ def test_cabinet_url_setting_rejects_garbage(value: str) -> None:
 
 def test_cabinet_url_default_is_empty_and_lives_in_company() -> None:
     assert AppSettings().company.cabinet_url == ""
+
+
+@pytest.mark.parametrize("language", LANGUAGES)
+def test_empty_texts_and_button_labels_fall_back_to_defaults(language: Language) -> None:
+    """Пустой текст или подпись кнопки Telegram отклонил бы — берём значение по умолчанию."""
+    blank = LocalizedText(ru="", uz=" ", en="")
+    # model_copy не валидирует: так выглядят уже сохранённые настройки с пустым значением.
+    texts = TEXTS.model_copy(
+        update={
+            "erp_quote_sent": blank,
+            "erp_btn_quote": blank,
+            "erp_btn_cabinet": blank,
+            "erp_delivery_statuses": blank,
+        }
+    )
+    quote = client_message(
+        "quote.sent",
+        PAYLOADS["quote.sent"],
+        deal_title="Оси РУ1Ш",
+        texts=texts,
+        language=language,
+        cabinet_url=CABINET,
+    )
+    assert quote is not None
+    assert quote.text.strip()
+    assert quote.text == render("quote.sent", language).text
+    assert quote.buttons == render("quote.sent", language).buttons
+    assert all(label.strip() for label, _ in quote.buttons)
+    status = client_message(
+        "delivery.status_changed",
+        PAYLOADS["delivery.status_changed"],
+        deal_title="Оси",
+        texts=texts,
+        language=language,
+        cabinet_url="",
+    )
+    assert status is not None
+    assert "shipped" not in status.text

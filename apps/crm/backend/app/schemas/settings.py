@@ -35,7 +35,11 @@ class CompanySettings(StrictModel):
     address: str = Field(default="", max_length=300)
     # FIX-34: адрес кабинета клиента (Cabinet) — кнопка «Кабинет» под сообщениями бота о событиях
     # ERP. Пусто — кнопки нет. Правится в «Настройках» → «Компания», без .env и перезапуска.
-    cabinet_url: str = Field(default="", max_length=500)
+    cabinet_url: str = Field(
+        default="",
+        max_length=500,
+        description="Адрес кабинета клиента (https://…): кнопка «Кабинет» под сообщениями бота о событиях ERP; пусто — кнопки нет",
+    )
 
     @field_validator("cabinet_url")
     @classmethod
