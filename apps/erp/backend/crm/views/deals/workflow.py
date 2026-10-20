@@ -161,6 +161,8 @@ class DealWorkflowActionsMixin:
     )
     def force_change_stage(self, request, pk=None):
         deal = self.get_object()
+        if not hasattr(request.data, "get"):
+            return Response({"detail": "INVALID_REQUEST_BODY"}, status=status.HTTP_400_BAD_REQUEST)
         stage_code = request.data.get("stage_code")
         raw_reason = request.data.get("reason")
         reason = raw_reason.strip() if isinstance(raw_reason, str) else ""

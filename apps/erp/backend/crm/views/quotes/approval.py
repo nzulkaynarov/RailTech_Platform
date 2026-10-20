@@ -60,11 +60,15 @@ class QuoteApprovalMixin:
     def force_approve(self, request, pk=None):
         """Platform admin force-overrides quote status to APPROVED."""
         from crm.services import QuoteLifecycleService
+        from crm.views.request_body import invalid_body_response, is_object_body
 
+        if not is_object_body(request):
+            return invalid_body_response()
         reason = request.data.get("reason", "")
         quote, error = QuoteLifecycleService.force_approve_quote(int(pk), request.user, reason)
         if error:
-            return Response({"detail": error}, status=status.HTTP_400_BAD_REQUEST)
+            http_status = status.HTTP_404_NOT_FOUND if error == "QUOTE_NOT_FOUND" else status.HTTP_400_BAD_REQUEST
+            return Response({"detail": error}, status=http_status)
         return Response(self.get_serializer(quote).data)
 
     # ── Internal approval chain (документооборот) ──────────────────────────
