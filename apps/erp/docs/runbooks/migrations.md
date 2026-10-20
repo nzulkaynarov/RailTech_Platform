@@ -98,7 +98,7 @@ print('Roles synced successfully')
 ## Проверка восстановления
 
 1. `python manage.py showmigrations` показывает `[X]` для всех активных миграций.
-2. Проверка здоровья `curl http://erp.localhost/api/v1/ready/` подтверждает флаг `"migrations": true`.
+2. `docker compose -f infra/compose/base.yml -f infra/compose/dev.yml --env-file .env exec erp-backend python manage.py migrate --check` завершается с кодом 0, а `curl http://erp.localhost/health/` отвечает 200 (`"database": "up"`).
 3. Тесты бэкенда проходят без ошибок:
    ```bash
    make -C apps/erp test

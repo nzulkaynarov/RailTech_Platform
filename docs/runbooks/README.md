@@ -2,7 +2,7 @@
 
 Runbook'и уровня ансамбля (деплой и откат, бэкапы двух баз, стенд с тремя доменами).
 
-- [`stand.md`](stand.md) — локальный стенд `make up`; [`servers.md`](servers.md) — серверы M5;
+- [`stand.md`](stand.md) — локальный стенд `make up`; [`servers.md`](servers.md) — серверы M5; [`deploy.md`](deploy.md) — деплой и откат прода (M5-INF-01);
   [`webhooks.md`](webhooks.md) — вебхуки ERP → CRM: журнал, ручной повтор, сбои приёма (FIX-33);
   [`wave1-agents.md`](wave1-agents.md) — волна 1 исправлений параллельными сессиями Claude Code (worktree, порядок слияния, промпты);
   [`wave2-agents.md`](wave2-agents.md), [`wave2b-m5-agents.md`](wave2b-m5-agents.md), [`wave3-4-agents.md`](wave3-4-agents.md) — волны 2–4;
