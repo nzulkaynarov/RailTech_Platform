@@ -28,7 +28,9 @@
 - [ ] SSH-доступ: публичный ключ деплоя на оба хоста, пользователь с правом `docker` (или root на время установки).
 - [ ] DNS: A-записи `crm.`, `erp.`, `cabinet.railtech.uz` → 176.101.56.141.
 - [ ] Внешнее хранилище для недельных копий бэкапов базы (S3-совместимое или второй провайдер) — какое.
-- [ ] GitHub environment `production`: секреты (базы, токены сервисов, `PLATFORM_SSO_SECRET`, `WEBHOOK_SECRET`, токен бота, ключи моделей, SMTP).
+- [ ] GitHub environment `production` (M5-INF-01, `docs/runbooks/deploy.md` §1.4; включить Required reviewers): секреты `DEPLOY_SSH_KEY` (приватный ключ деплоя) и `DEPLOY_KNOWN_HOSTS` (`ssh-keyscan` VPS 1, отпечаток сверить); переменные `DEPLOY_HOST`, `DEPLOY_USER`, `CRM_DOMAIN`, `ERP_DOMAIN`, `CABINET_DOMAIN`, `TELEGRAM_BOT_USERNAME`.
+- [ ] Секреты приложений (пароли баз, токены сервисов, `PLATFORM_SSO_SECRET`, `WEBHOOK_SECRET`, токен бота, ключи моделей, SMTP) — **не в GitHub**, а в `/opt/rt/.env.prod` на VPS 1 (`infra/deploy/make-env-prod.sh init` генерирует случайные; вписать вручную: ключи моделей, `TELEGRAM_BOT_TOKEN`, SMTP, адреса). Сохранить офлайн копию файлов, `BACKUP_ENC_PASSPHRASE` и `LITELLM_SALT_KEY`.
+- [ ] Открыть на файрволе VPS 1 порт `9000` только для внутреннего IP VPS 2 (выгрузка бэкапов в RustFS) — runbook §1.1.
 - [ ] Лимиты расходов в консолях провайдеров моделей (третий уровень защиты).
 - [ ] Решение о переносе данных со старого прода и дата заморозки `b2b.railtech.uz`.
 - [ ] **Вернуть репозиторий в приват** (публичный с 2026-10-20 ради минут Actions — DECISIONS) и проверить бюджет Actions.

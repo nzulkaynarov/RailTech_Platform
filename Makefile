@@ -84,6 +84,27 @@ ps: _compose-check ## Статус контейнеров стенда
 _compose-check:
 	@test -f .env || { echo "Нет .env: выполните make env (создаст из .env.example)"; exit 1; }
 
+# --- Прод на двух VPS (infra/compose/prod.yml + db.yml, M5-INF-01; runbook docs/runbooks/deploy.md) ---------
+# Выполняется на VPS 1 из каталога релиза: /opt/rt/releases/<тег>. Деплой обычно ведёт .github/workflows/deploy.yml.
+
+PROD_ENV ?= /opt/rt/.env.prod
+COMPOSE_PROD := docker compose -f $(INFRA)/compose/base.yml -f $(INFRA)/compose/prod.yml --env-file $(PROD_ENV)
+
+.PHONY: up-prod
+up-prod: ## Прод (VPS 1): up образов тега RT_IMAGE_TAG без миграций и дампа; штатно — infra/deploy/deploy.sh <тег>
+	@test -f $(PROD_ENV) || { echo "Нет $(PROD_ENV): infra/deploy/make-env-prod.sh init"; exit 1; }
+	@test -n "$(RT_IMAGE_TAG)" || { echo "Задайте RT_IMAGE_TAG=<git sha>"; exit 1; }
+	RT_IMAGE_TAG=$(RT_IMAGE_TAG) $(COMPOSE_PROD) up -d --remove-orphans
+
+.PHONY: deploy-check
+deploy-check: ## Проверка конфигурации прода без запуска: compose prod/db, Caddyfile.prod, shellcheck, actionlint (одноразовые контейнеры)
+	@set -e; envfile=$$(mktemp); trap 'rm -f $$envfile' EXIT; sed 's/CHANGE_ME/ci-only-value/' $(INFRA)/.env.prod.example >$$envfile; \
+	docker compose -f $(INFRA)/compose/base.yml -f $(INFRA)/compose/prod.yml --env-file $$envfile --profile observability --profile kb-ingest config -q; \
+	docker compose -f $(INFRA)/compose/db.yml --env-file $$envfile config -q; echo "compose prod/db: ok"
+	@docker run --rm -e ACME_EMAIL=a@example.com -e CRM_DOMAIN=crm.example.org -e ERP_DOMAIN=erp.example.org -e CABINET_DOMAIN=cabinet.example.org 	  -v "$(CURDIR)/$(INFRA)/caddy/Caddyfile.prod:/etc/caddy/Caddyfile:ro" caddy:2.11.7-alpine caddy validate --config /etc/caddy/Caddyfile 2>&1 | tail -1
+	@docker run --rm -e LANG=C.UTF-8 -v "$(CURDIR):/mnt" -w /mnt koalaman/shellcheck:stable -x $(INFRA)/deploy/*.sh $(INFRA)/db/*.sh && echo "shellcheck: ok"
+	@docker run --rm -v "$(CURDIR):/repo" -w /repo rhysd/actionlint:latest .github/workflows/deploy.yml && echo "actionlint: ok"
+
 # --- Локальный CI (гейт мержа, пока GitHub Actions недоступен — DECISIONS 2026-10-13) ---
 
 .PHONY: ci-local
