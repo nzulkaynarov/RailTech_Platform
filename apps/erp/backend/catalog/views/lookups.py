@@ -1,9 +1,11 @@
+from django.db.models import ProtectedError
 from django.utils.decorators import method_decorator
 from django.views.decorators.cache import cache_page
 from django.views.decorators.vary import vary_on_headers
 from django_filters.rest_framework import DjangoFilterBackend
 from drf_spectacular.utils import extend_schema, extend_schema_view
 from rest_framework import filters, permissions, viewsets
+from rest_framework.response import Response
 
 from core.permissions import RoleGatedViewMixin
 
@@ -64,15 +66,16 @@ class CategoryViewSet(RoleGatedViewMixin, viewsets.ModelViewSet):
     """
     CRUD for product categories.
 
-    Public read access; write operations require Admin role.
-    Filterable by domain_type__code.
+    Public read access; write operations require `settings.edit` or `catalog.manage` (FIX-42: раздел
+    «Категории» в Settings Hub открывается по праву каталога, поэтому и запись разрешена его держателям).
+    Filterable by domain_type__code. A category with subcategories cannot be deleted (400 CATEGORY_HAS_CHILDREN).
     """
 
     required_permissions = {
-        "create": "settings.edit",
-        "update": "settings.edit",
-        "partial_update": "settings.edit",
-        "destroy": "settings.edit",
+        "create": ("settings.edit", "catalog.manage"),
+        "update": ("settings.edit", "catalog.manage"),
+        "partial_update": ("settings.edit", "catalog.manage"),
+        "destroy": ("settings.edit", "catalog.manage"),
     }
 
     queryset = Category.objects.select_related("domain_type").all()
@@ -83,6 +86,16 @@ class CategoryViewSet(RoleGatedViewMixin, viewsets.ModelViewSet):
     }
     search_fields = ["name"]
     # M1-ERP-09: дерево категорий доступно для управления с правом `settings.edit` (или администратор).
+
+    def destroy(self, request, *args, **kwargs):
+        # `Category.parent` — PROTECT (FIX-42, F-5): каскад стирал всё поддерево, хотя диалог обещал «подкатегории
+        # перейдут на уровень выше». Ветку не трогаем: оператор сам переносит или удаляет подкатегории.
+        instance = self.get_object()
+        try:
+            instance.delete()
+        except ProtectedError:
+            return Response({"detail": "CATEGORY_HAS_CHILDREN"}, status=400)
+        return Response(status=204)
 
     def get_permissions(self):
         if self.action in ["list", "retrieve"]:

@@ -83,11 +83,18 @@ describe('buildSettingsSections — S1 гейтинг = правда сохра�
     expect(defaultSettingsSection()).toBe('profile');
   });
 
-  it('catalog.edit открывает categories в company, но не другие закрытые секции', () => {
+  it('catalog.manage открывает categories в company, но не другие закрытые секции', () => {
+    const gate = makeGate({
+      capabilities: makeCapabilities({ permissions: ['catalog.manage'] }),
+    });
+    expect(sectionKeys(gate)).toEqual(['profile', 'security', 'categories', 'team']);
+  });
+
+  it('несуществующий код catalog.edit (FIX-42) ничего не открывает', () => {
     const gate = makeGate({
       capabilities: makeCapabilities({ permissions: ['catalog.edit'] }),
     });
-    expect(sectionKeys(gate)).toEqual(['profile', 'security', 'categories', 'team']);
+    expect(sectionKeys(gate)).toEqual(['profile', 'security', 'team']);
   });
 
   it('charge-делегат (charge_templates.manage): profile/security/templates/team — БЕЗ мёртвых company-секций (фикс тупиков)', () => {
