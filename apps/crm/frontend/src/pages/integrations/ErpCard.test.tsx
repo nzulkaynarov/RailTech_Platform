@@ -19,6 +19,10 @@ const notConfigured: ErpStatusOut = {
   webhook_secret_source: "none",
   webhook_secret_last4: null,
   webhook_secret_updated_at: null,
+  webhook_secret_previous_configured: false,
+  webhook_secret_previous_source: "none",
+  webhook_secret_previous_last4: null,
+  webhook_secret_previous_updated_at: null,
   secrets_enabled: true,
 };
 
@@ -103,8 +107,60 @@ describe("ErpCard", () => {
       base_url: "https://erp.example.com/api/integration/v1",
       service_token: null,
       webhook_secret: null,
+      webhook_secret_previous: null,
+      clear_webhook_secret_previous: false,
       password: "secret-pass",
     });
+  });
+
+  it("rotates the webhook secret: new current, old as previous, then clears the previous", async () => {
+    const { onSave } = renderCard({
+      ...configured,
+      webhook_secret_source: "db",
+      webhook_secret_last4: "0001",
+    });
+    fireEvent.change(screen.getByLabelText("Секрет вебхуков ERP → CRM"), {
+      target: { value: "new-webhook-secret-0002" },
+    });
+    fireEvent.change(screen.getAllByLabelText("Предыдущий секрет вебхуков")[0] as HTMLElement, {
+      target: { value: "old-webhook-secret-0001" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Сохранить" }));
+    const dialog = await screen.findByRole("dialog");
+    fireEvent.change(within(dialog).getByLabelText("Ваш пароль"), { target: { value: "pw" } });
+    fireEvent.click(within(dialog).getByRole("button", { name: "Сохранить" }));
+    expect(onSave.mock.calls[0]?.[0]).toMatchObject({
+      webhook_secret: "new-webhook-secret-0002",
+      webhook_secret_previous: "old-webhook-secret-0001",
+      clear_webhook_secret_previous: false,
+    });
+  });
+
+  it("shows the previous secret as «Принимается ••••last4» and can clear it", async () => {
+    const { onSave } = renderCard({
+      ...configured,
+      webhook_secret_source: "db",
+      webhook_secret_last4: "0002",
+      webhook_secret_previous_configured: true,
+      webhook_secret_previous_source: "db",
+      webhook_secret_previous_last4: "0001",
+    });
+    expect(screen.getByText(/Принимается: ••••0001/)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("checkbox", { name: /Снять предыдущий секрет/ }));
+    fireEvent.click(screen.getByRole("button", { name: "Сохранить" }));
+    const dialog = await screen.findByRole("dialog");
+    fireEvent.change(within(dialog).getByLabelText("Ваш пароль"), { target: { value: "pw" } });
+    fireEvent.click(within(dialog).getByRole("button", { name: "Сохранить" }));
+    expect(onSave.mock.calls[0]?.[0]).toMatchObject({
+      webhook_secret: null,
+      webhook_secret_previous: null,
+      clear_webhook_secret_previous: true,
+    });
+  });
+
+  it("offers no «снять» when the previous secret is not stored in CRM", () => {
+    renderCard(configured);
+    expect(screen.queryByRole("checkbox", { name: /Снять предыдущий секрет/ })).toBeNull();
   });
 
   it("renders the check result with version, migrations and queue", () => {

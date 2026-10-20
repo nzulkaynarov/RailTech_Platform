@@ -60,9 +60,12 @@ class ErpIncomingEvent(Base):
 
     __tablename__ = "erp_incoming_events"
     __table_args__ = (
-        CheckConstraint("status IN ('received', 'processed', 'failed', 'rejected')", name="status"),
+        CheckConstraint(
+            "status IN ('received', 'processed', 'failed', 'rejected', 'skipped')", name="status"
+        ),
         Index("ix_erp_incoming_events_crm_client_id", "crm_client_id"),
         Index("ix_erp_incoming_events_status", "status"),
+        Index("ix_erp_incoming_events_body_sha256", "body_sha256"),
     )
 
     event_id: Mapped[str] = mapped_column(String(36), primary_key=True)
@@ -90,3 +93,6 @@ class ErpIncomingEvent(Base):
         JSONB(none_as_null=True), nullable=True
     )
     notified_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    # sha256 сырого тела: то же тело под другим `X-Event-Id` — повтор (подпись не покрывает
+    # заголовки), см. receive_event.
+    body_sha256: Mapped[str | None] = mapped_column(String(64), nullable=True)

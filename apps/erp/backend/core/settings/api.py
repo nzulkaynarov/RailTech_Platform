@@ -30,6 +30,9 @@ REST_FRAMEWORK = {
     "DEFAULT_THROTTLE_RATES": {
         "anon": "20/minute",
         "user": "200/minute",
+        # Запросы CRM к integration с валидным сервисным токеном (Q-FIX30-4): ключ — токен, не адрес; предохранитель от
+        # зацикленного клиента, а не ограничение работы бота и карточек (integration/throttles.py).
+        "integration": os.environ.get("INTEGRATION_RATE", "300/minute"),
         "import_upload": "10/hour",
         # Anti-abuse on unauthenticated/sensitive auth endpoints (the global anon
         # 20/min is far too loose to stop e.g. password-reset email bombing).
@@ -174,7 +177,14 @@ CRM_WEBHOOK_URL = os.environ.get(
     "CRM_WEBHOOK_URL",
     f"{CRM_BASE_URL}/api/v1/integrations/erp/events",
 )
+# Секрет — строка; для ротации без простоя допускается список через запятую (FIX-35): ERP подписывает ПЕРВЫМ
+# значением, остальные CRM принимает как «предыдущие» (см. integration/services/webhooks.py:webhook_signing_secret).
 ERP_WEBHOOK_SECRET = os.environ.get("ERP_WEBHOOK_SECRET", "").strip()
+
+# Проверка тела вебхука по events.schema.json (FIX-35, integration/services/event_contract.py): strict | log | off;
+# пусто — strict при DEBUG и log в проде. Путь к схеме — если она лежит не в /packages/contracts.
+ERP_EVENTS_CONTRACT_MODE = os.environ.get("ERP_EVENTS_CONTRACT_MODE", "").strip().lower()
+ERP_EVENTS_SCHEMA_PATH = os.environ.get("ERP_EVENTS_SCHEMA_PATH", "").strip()
 
 # erp-mcp: ключ HMAC-SHA256 заголовка X-Agent-Context (срок 60 с).
 ERP_MCP_CONTEXT_KEY = os.environ.get("ERP_MCP_CONTEXT_KEY", "").strip()
@@ -189,7 +199,7 @@ _MISSING_SEAM_SECRETS = [
     name
     for name, value in (
         ("SERVICE_TOKEN_CRM_TO_ERP", SERVICE_TOKEN_CRM_TO_ERP),
-        ("ERP_WEBHOOK_SECRET", ERP_WEBHOOK_SECRET),
+        ("ERP_WEBHOOK_SECRET", _secret_list("ERP_WEBHOOK_SECRET")),
         ("ERP_MCP_CONTEXT_KEY", ERP_MCP_CONTEXT_KEY),
         ("PLATFORM_SSO_SECRET", PLATFORM_SSO_SECRET),
     )

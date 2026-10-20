@@ -69,6 +69,11 @@ class ErpStatusOut(BaseModel):
     webhook_secret_source: Literal["db", "env", "none"]
     webhook_secret_last4: str | None
     webhook_secret_updated_at: datetime | None
+    # Ротация без простоя (FIX-35): предыдущий секрет принимается, пока его не сняли.
+    webhook_secret_previous_configured: bool
+    webhook_secret_previous_source: Literal["db", "env", "none"]
+    webhook_secret_previous_last4: str | None
+    webhook_secret_previous_updated_at: datetime | None
     secrets_enabled: bool
 
 
@@ -80,6 +85,10 @@ class ErpConnectorIn(BaseModel):
     base_url: str = Field(max_length=500)
     service_token: SecretStr | None = Field(default=None, min_length=16, max_length=512)
     webhook_secret: SecretStr | None = Field(default=None, min_length=16, max_length=512)
+    # Ротация секрета вебхуков: предыдущий секрет CRM принимает наравне с текущим, пока его не
+    # сняли.
+    webhook_secret_previous: SecretStr | None = Field(default=None, min_length=16, max_length=512)
+    clear_webhook_secret_previous: bool = False
     password: SecretStr = Field(min_length=1, max_length=256)
 
 

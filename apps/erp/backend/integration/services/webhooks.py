@@ -25,7 +25,7 @@ from django.db import transaction
 from django.utils import timezone
 
 from ..models import CrmClientMapping, CrmContactMapping, IntegrationWebhookEvent, WebhookEventStatus
-from . import stages
+from . import event_contract, stages
 
 logger = logging.getLogger(__name__)
 
@@ -52,6 +52,21 @@ VALID_EVENT_TYPES = {
     "delivery.line_accepted",
     "delivery.line_disputed",
 }
+
+
+def webhook_signing_secret() -> str:
+    """Секрет, которым ERP подписывает вебхуки сейчас (FIX-35, ротация без простоя).
+
+    `ERP_WEBHOOK_SECRET` — один секрет либо список через запятую (как сервисные токены): подписывает ПЕРВЫЙ,
+    остальные остаются в списке, чтобы обе стороны хранили одну и ту же строку на время ротации. CRM принимает
+    текущий и предыдущий секрет (docs/runbooks/webhooks.md, «Ротация секрета»). Пусто — секрета нет.
+    """
+    raw = getattr(settings, "ERP_WEBHOOK_SECRET", "") or ""
+    if isinstance(raw, (list, tuple)):
+        values = [str(item).strip() for item in raw]
+    else:
+        values = [item.strip() for item in str(raw).split(",")]
+    return next((value for value in values if value), "")
 
 
 def sign_payload(secret: str, body_bytes: bytes) -> str:
@@ -208,7 +223,7 @@ def emit_event(
     """
     if event_type not in VALID_EVENT_TYPES:
         logger.warning("Attempted to emit unsupported event type: %s", event_type)
-    secret = settings.ERP_WEBHOOK_SECRET
+    secret = webhook_signing_secret()
     if not secret:
         logger.error("ERP_WEBHOOK_SECRET is not configured — event %s is kept PENDING unsigned", event_type)
 
@@ -223,6 +238,8 @@ def emit_event(
     )
     if not envelope:
         return None
+    # Форма тела — по events.schema.json: в DEBUG и в тестах несоответствие — исключение, в проде — запись в лог (FIX-35).
+    event_contract.check_envelope(envelope)
 
     event_id = uuid.uuid4()
     webhook_url = settings.CRM_WEBHOOK_URL

@@ -13,6 +13,7 @@ from typing import Final
 
 import structlog
 from cryptography.fernet import Fernet, InvalidToken
+from sqlalchemy import delete as sa_delete
 from sqlalchemy import select
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
@@ -25,6 +26,9 @@ MIN_KEY_LENGTH: Final = 32
 TELEGRAM_BOT_TOKEN: Final = "telegram_bot_token"  # noqa: S105 — имя ключа, не секрет
 ERP_SERVICE_TOKEN: Final = "erp_service_token"  # noqa: S105 — имя ключа, не секрет (ADR-0022)
 ERP_WEBHOOK_SECRET: Final = "erp_webhook_secret"  # noqa: S105 — имя ключа, не секрет (M3-CRM-02)
+# Предыдущий секрет вебхуков: принимается наравне с текущим, пока админ не снимет его (ротация без
+# простоя, FIX-35).
+ERP_WEBHOOK_SECRET_PREVIOUS: Final = "erp_webhook_secret_previous"  # noqa: S105 — имя ключа, не секрет
 SMTP_USERNAME: Final = "smtp_username"
 SMTP_PASSWORD: Final = "smtp_password"  # noqa: S105 — имя ключа, не секрет (M3-CRM-08)
 
@@ -104,6 +108,10 @@ class SecretsStore:
                 await session.execute(select(IntegrationSecret).where(IntegrationSecret.key == key))
             ).scalar_one_or_none()
         return None if row is None else SecretStatus(row.last4, row.updated_at)
+
+    async def delete(self, session: AsyncSession, key: str) -> None:
+        """Снять секрет в транзакции вызывающего (вместе с аудитом); нет строки — ничего."""
+        await session.execute(sa_delete(IntegrationSecret).where(IntegrationSecret.key == key))
 
     async def put(self, session: AsyncSession, key: str, value: str, user_id: int | None) -> None:
         """Записать в транзакции вызывающего (вместе с аудитом)."""

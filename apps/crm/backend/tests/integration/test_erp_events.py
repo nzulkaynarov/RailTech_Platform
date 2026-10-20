@@ -31,7 +31,7 @@ from app.models.deals import Deal
 from app.models.integrations import ErpIncomingEvent
 from app.models.leads import Lead, LeadNote, TelegramIdentity
 from app.repositories import events as events_repo
-from app.schemas.erp_events import ErpEventEnvelope
+from app.schemas.erp_events import parse_event
 from app.security.secrets_store import SecretsStore
 from app.services.erp_events import MAX_ATTEMPTS, ErpEventsService
 from app.services.erp_handoff import ErpHandoffService
@@ -155,7 +155,13 @@ class Harness:
 STAGE_PAYLOADS: dict[str, dict[str, Any]] = {
     "request.created": {"source": "crm", "erp_request_id": ERP_DEAL},
     "quote.sent": {"erp_quote_id": 4, "version": 1, "public_url": "https://erp.example.com/q/4"},
-    "invoice.paid": {"erp_invoice_id": 5, "number": "INV-1", "amount": "100.00", "currency": "UZS"},
+    "invoice.paid": {
+        "erp_invoice_id": 5,
+        "number": "INV-1",
+        "amount": "100.00",
+        "currency": "UZS",
+        "due_date": "2026-10-30",
+    },
     "delivery.eta_changed": {"line_summary": "Оси", "eta": "2026-11-01", "status": "in_transit"},
     "delivery.status_changed": {"line_summary": "Оси", "status": "shipped"},
     "deal.won": {"amount": "100.00", "currency": "UZS"},
@@ -588,7 +594,7 @@ async def test_a_late_deal_lost_closes_the_deal_with_its_reason(harness: Harness
         client_id,
         occurred_at=T0,
         stage="lost",
-        payload={"lost_reason": "Дорого"},
+        payload={"amount": "100.00", "currency": "UZS", "lost_reason": "Дорого"},
     )
 
     await harness.service.process_event(newer)
@@ -606,7 +612,7 @@ async def test_an_older_outcome_does_not_overturn_a_newer_one(harness: Harness) 
         client_id,
         occurred_at=T0 + timedelta(hours=1),
         stage="lost",
-        payload={"lost_reason": "Дорого"},
+        payload={"amount": "100.00", "currency": "UZS", "lost_reason": "Дорого"},
     )
     old_won = await harness.store("deal.won", client_id, occurred_at=T0)
 
@@ -697,4 +703,4 @@ async def test_messages_older_than_a_day_are_not_sent_late(harness: Harness) -> 
 async def test_the_envelope_schema_still_accepts_what_the_tests_send(harness: Harness) -> None:
     """Страховка тестового помощника: его конверты обязаны проходить настоящую схему."""
     for event in STAGES:
-        ErpEventEnvelope.model_validate(envelope_for(event, 1))
+        parse_event(envelope_for(event, 1))

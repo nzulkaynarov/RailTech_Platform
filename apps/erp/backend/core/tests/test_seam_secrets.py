@@ -95,7 +95,9 @@ def test_webhook_without_secret_is_kept_pending_unsigned_and_never_sent(no_seam_
     from integration.services.webhooks import emit_event
     from integration.tasks import deliver_webhook_event
 
-    event = emit_event("deal.stage_changed", erp_company_id=1, payload={}, crm_client_id=1, send_async=False)
+    event = emit_event(
+        "invite.sent", erp_company_id=1, payload={"channels": ["email"]}, crm_client_id=1, send_async=False
+    )
 
     assert event is not None and event.status == WebhookEventStatus.PENDING
     assert "X-Signature" not in event.headers

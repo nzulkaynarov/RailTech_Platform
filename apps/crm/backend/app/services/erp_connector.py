@@ -36,6 +36,7 @@ from app.security.principal import Principal
 from app.security.secrets_store import (
     ERP_SERVICE_TOKEN,
     ERP_WEBHOOK_SECRET,
+    ERP_WEBHOOK_SECRET_PREVIOUS,
     SecretsStore,
     SecretStatus,
     last4,
@@ -70,6 +71,10 @@ class ErpStatus:
     webhook_secret_source: Source
     webhook_secret_last4: str | None
     webhook_secret_updated_at: datetime | None
+    webhook_secret_previous_configured: bool
+    webhook_secret_previous_source: Source
+    webhook_secret_previous_last4: str | None
+    webhook_secret_previous_updated_at: datetime | None
     secrets_enabled: bool
 
 
@@ -114,6 +119,7 @@ class ErpConnectorService:
         resolved = await self.resolution()
         token = await self._secret_status(ERP_SERVICE_TOKEN)
         webhook = await self._secret_status(ERP_WEBHOOK_SECRET)
+        previous = await self._secret_status(ERP_WEBHOOK_SECRET_PREVIOUS)
         return ErpStatus(
             configured=resolved.connection is not None,
             mode=backoffice_mode(erp_connector_configured=resolved.connection is not None),
@@ -127,6 +133,10 @@ class ErpConnectorService:
             webhook_secret_source=resolved.webhook_secret_source,
             webhook_secret_last4=webhook.last4 if webhook else None,
             webhook_secret_updated_at=webhook.updated_at if webhook else None,
+            webhook_secret_previous_configured=bool(resolved.webhook_secret_previous),
+            webhook_secret_previous_source=resolved.webhook_secret_previous_source,
+            webhook_secret_previous_last4=previous.last4 if previous else None,
+            webhook_secret_previous_updated_at=previous.updated_at if previous else None,
             secrets_enabled=self._store.enabled,
         )
 
@@ -147,11 +157,17 @@ class ErpConnectorService:
         service_token: str | None,
         webhook_secret: str | None,
         password: str,
+        webhook_secret_previous: str | None = None,
+        clear_webhook_secret_previous: bool = False,
     ) -> ErpStatus:
         """Пароль → проверка адреса → адрес в `settings`, секреты в хранилище → аудит без значений.
 
         Пустой адрес выключает коннектор (адрес из `.env`, если задан, продолжает действовать).
         `None` вместо секрета — оставить прежний; пустую строку схема не пропускает.
+
+        Ротация секрета вебхуков без простоя (FIX-35): `webhook_secret` — текущий (им подписывает
+        ERP), `webhook_secret_previous` — предыдущий, его CRM принимает наравне с текущим, пока
+        админ не снимет (`clear_webhook_secret_previous=True`). Ни перезапуска, ни `.env`.
         """
         url = normalize_base_url(base_url)
         if url and (problem := base_url_problem(url)) is not None:
@@ -160,9 +176,17 @@ class ErpConnectorService:
                 reason=Reason.ERP_INVALID_URL,
                 field="base_url",
             )
-        secrets = {ERP_SERVICE_TOKEN: service_token, ERP_WEBHOOK_SECRET: webhook_secret}
+        secrets = {
+            ERP_SERVICE_TOKEN: service_token,
+            ERP_WEBHOOK_SECRET: webhook_secret,
+            ERP_WEBHOOK_SECRET_PREVIOUS: webhook_secret_previous,
+        }
         to_save = {key: value.strip() for key, value in secrets.items() if value is not None}
-        if to_save and not self._store.enabled:
+        clear_previous = clear_webhook_secret_previous and not to_save.get(
+            ERP_WEBHOOK_SECRET_PREVIOUS
+        )
+        to_clear = [ERP_WEBHOOK_SECRET_PREVIOUS] if clear_previous else []
+        if (to_save or to_clear) and not self._store.enabled:
             raise ConflictError("SECRETS_KEY is not set", reason=Reason.SECRETS_KEY_MISSING)
         await self._reauth(who.user_id, password)
         before = await self._audit_facts()
@@ -170,9 +194,13 @@ class ErpConnectorService:
         async with self._sessions() as session, session.begin():
             for key, value in to_save.items():
                 await self._store.put(session, key, value, who.user_id)
+            for key in to_clear:
+                await self._store.delete(session, key)
             after = {**before, "base_url": url}
             for key, value in to_save.items():
                 after[f"{key}_last4"] = last4(value)
+            for key in to_clear:
+                after[f"{key}_last4"] = None
             await audit.record(
                 session,
                 who.actor,
@@ -183,7 +211,12 @@ class ErpConnectorService:
                 after=after,
             )
         self._cached = None
-        logger.info("erp_connector_saved", user_id=who.user_id, secrets=sorted(to_save))
+        logger.info(
+            "erp_connector_saved",
+            user_id=who.user_id,
+            secrets=sorted(to_save),
+            cleared=sorted(to_clear),
+        )
         return await self.status()
 
     async def _audit_facts(self) -> dict[str, object]:
@@ -193,6 +226,7 @@ class ErpConnectorService:
             "base_url": status.base_url,
             f"{ERP_SERVICE_TOKEN}_last4": status.token_last4,
             f"{ERP_WEBHOOK_SECRET}_last4": status.webhook_secret_last4,
+            f"{ERP_WEBHOOK_SECRET_PREVIOUS}_last4": status.webhook_secret_previous_last4,
         }
 
     async def _reauth(self, user_id: int, password: str) -> None:

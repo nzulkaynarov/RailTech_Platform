@@ -3,10 +3,20 @@
 # Никогда не направляйте их на БД dev-стенда: тесты делают TRUNCATE всех таблиц.
 set -euo pipefail
 
-PG_NAME=rt-itest-pg
-S3_NAME=rt-itest-s3
-PG_PORT="${ITEST_PG_PORT:-55432}"
-S3_PORT="${ITEST_S3_PORT:-59000}"
+# ITEST_NS — пространство имён прогона (как ERP_TEST_NS у ERP): контейнеры rt-itest-<ns>-pg/-s3, порты выдаёт
+# Docker (свободные). Два прогона с разными ITEST_NS не мешают друг другу; без ITEST_NS всё как прежде.
+NS="${ITEST_NS:+-$ITEST_NS}"
+PG_NAME="rt-itest${NS}-pg"
+S3_NAME="rt-itest${NS}-s3"
+if [ -n "$NS" ]; then
+  PG_PUBLISH="127.0.0.1::5432"
+  S3_PUBLISH="127.0.0.1::9000"
+else
+  PG_PORT="${ITEST_PG_PORT:-55432}"
+  S3_PORT="${ITEST_S3_PORT:-59000}"
+  PG_PUBLISH="127.0.0.1:${PG_PORT}:5432"
+  S3_PUBLISH="127.0.0.1:${S3_PORT}:9000"
+fi
 PG_IMAGE="${ITEST_PG_IMAGE:-pgvector/pgvector:0.8.7-pg17}"
 S3_IMAGE="${ITEST_S3_IMAGE:-rustfs/rustfs:1.0.1}"
 PASS=ci-only-password
@@ -25,8 +35,9 @@ Integration-тесты на одноразовых контейнерах (ск�
   scripts/test_int_local.sh -k crm_actions         только тесты по маске
   scripts/test_int_local.sh tests/integration/test_migrations.py
 
-Переменные: ITEST_PG_PORT (55432), ITEST_S3_PORT (59000), ITEST_PG_IMAGE, ITEST_S3_IMAGE.
-Порты слушают только 127.0.0.1. После работы: scripts/test_int_local.sh --down
+Переменные: ITEST_NS (пространство имён: контейнеры rt-itest-<ns>-*, порты выдаёт Docker; для параллельных
+прогонов), ITEST_PG_PORT (55432) и ITEST_S3_PORT (59000) — только без ITEST_NS, ITEST_PG_IMAGE, ITEST_S3_IMAGE.
+Порты слушают только 127.0.0.1. После работы: [ITEST_NS=<ns>] scripts/test_int_local.sh --down
 EOF
 }
 
@@ -42,14 +53,18 @@ command -v docker >/dev/null || { echo "Нужен Docker (на этом ком�
 docker info >/dev/null 2>&1 || { echo "Docker не запущен: open -a Docker, затем повторите."; exit 1; }
 
 if ! docker inspect "$PG_NAME" >/dev/null 2>&1; then
-  docker run -d --name "$PG_NAME" -p "127.0.0.1:${PG_PORT}:5432" \
+  docker run -d --name "$PG_NAME" -p "$PG_PUBLISH" \
     -e POSTGRES_DB=railtech_test -e POSTGRES_USER=railtech -e POSTGRES_PASSWORD="$PASS" "$PG_IMAGE" >/dev/null
 fi
 if ! docker inspect "$S3_NAME" >/dev/null 2>&1; then
-  docker run -d --name "$S3_NAME" -p "127.0.0.1:${S3_PORT}:9000" \
+  docker run -d --name "$S3_NAME" -p "$S3_PUBLISH" \
     -e RUSTFS_ACCESS_KEY=railtech -e RUSTFS_SECRET_KEY="$PASS" -e RUSTFS_ADDRESS=0.0.0.0:9000 "$S3_IMAGE" >/dev/null
 fi
 docker start "$PG_NAME" "$S3_NAME" >/dev/null
+if [ -n "$NS" ]; then  # порт, выданный Docker (остаётся прежним, пока контейнер существует)
+  PG_PORT="$(docker port "$PG_NAME" 5432/tcp | head -n1 | sed 's/.*://')"
+  S3_PORT="$(docker port "$S3_NAME" 9000/tcp | head -n1 | sed 's/.*://')"
+fi
 
 for _ in $(seq 1 30); do
   if docker exec "$PG_NAME" pg_isready -U railtech -d railtech_test >/dev/null 2>&1 \

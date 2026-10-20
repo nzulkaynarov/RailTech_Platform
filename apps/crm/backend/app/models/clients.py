@@ -66,6 +66,15 @@ class Document(TimestampMixin, Base):
         ),
         Index("ix_documents_client_id_doc_date", "client_id", "doc_date"),
         Index("ix_documents_tsv", "tsv", postgresql_using="gin"),
+        # Один выпущенный документ ERP — одна строка индекса клиента (upsert по
+        # `document.created`, FIX-35, Q-FIX38-1).
+        Index(
+            "uq_documents_client_erp_document",
+            "client_id",
+            "erp_document_id",
+            unique=True,
+            postgresql_where=sql("erp_document_id IS NOT NULL"),
+        ),
     )
 
     id: Mapped[int] = mapped_column(BigInteger, Identity(), primary_key=True)
@@ -83,6 +92,9 @@ class Document(TimestampMixin, Base):
     tsv: Mapped[str] = mapped_column(TSVECTOR, Computed(DOC_TSV, persisted=True))
     uploaded_by: Mapped[int | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"))
     is_visible_to_client: Mapped[bool] = mapped_column(Boolean, server_default=sql("true"))
+    # Непрозрачный идентификатор выпущенного документа в ERP (`document.created`, id документа
+    # портала); у загруженных менеджером документов его нет.
+    erp_document_id: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
 
 
 class DocumentAccessLog(Base):

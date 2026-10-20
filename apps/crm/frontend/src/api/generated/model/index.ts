@@ -82,6 +82,7 @@ export * from "./erpStatusOut";
 export * from "./erpStatusOutBaseUrlSource";
 export * from "./erpStatusOutMode";
 export * from "./erpStatusOutTokenSource";
+export * from "./erpStatusOutWebhookSecretPreviousSource";
 export * from "./erpStatusOutWebhookSecretSource";
 export * from "./erpWebhookReceipt";
 export * from "./errorDetails";

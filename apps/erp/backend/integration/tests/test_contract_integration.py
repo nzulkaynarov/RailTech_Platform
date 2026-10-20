@@ -10,11 +10,18 @@
    иначе статус «не проверен»;
 4. тела ошибок — `{"detail": <код>}` по схеме `Error`.
 
+FIX-35: сторож покрывает ВСЕ операции контракта — не только GET, но и `POST /clients/handoff`, `PUT /contacts/{id}`,
+`POST /users/provision`, `DELETE /users/{id}/sessions`, и КАЖДЫЙ код ответа, который контракт обещает (200, 201, 204, 401,
+404, 409, 422, 503): `test_every_documented_status_is_exercised` падает, если для операции или кода нет вызова.
+
 Код проверок общий с сторожем портала (`core/tests/openapi_contract.py`). Падение сторожа — падение теста: ни `skip`,
 ни `importorskip`; нет контракта на диске — падение с подсказкой про монтирование.
 """
 
 from __future__ import annotations
+
+import json
+import uuid
 
 import pytest
 from integration.tests.contract_support import (
@@ -22,6 +29,7 @@ from integration.tests.contract_support import (
     check_response,
     component,
     contract_get_paths,
+    contract_operations,
     enum_values,
     response_schema,
     schema_errors,
@@ -264,3 +272,196 @@ def test_guard_detects_broken_responses(client, world):
     missing = dict(good)
     del missing["acts"]
     assert check_response(missing, schema)
+
+
+# ── Все операции контракта и все обещанные коды ответов (FIX-35, I-15, G-5) ────────────────────────────
+
+WRITE_PATHS = {
+    ("POST", "/clients/handoff"),
+    ("PUT", "/contacts/{crm_contact_id}"),
+    ("POST", "/users/provision"),
+    ("DELETE", "/users/{crm_user_id}/sessions"),
+}
+
+
+def handoff_body(crm_client_id, inn):
+    return {
+        "crm_client_id": crm_client_id,
+        "crm_lead_id": 501,
+        "company": {"name": "ООО Сторож Передачи", "inn": inn, "segment": "enterprise", "language": "ru"},
+        "contacts": [
+            {
+                "crm_contact_id": crm_client_id * 10 + 1,
+                "name": "Иван Иванов",
+                "phone": "+998901234567",
+                "email": f"guard{crm_client_id}@client.uz",
+                "telegram_user_id": 12345678,
+                "language": "ru",
+                "is_primary": True,
+                "preferred_channel": "both",
+            }
+        ],
+        "need": {"summary": "Поставка рельсов Р65, 500 тонн", "product_interest": ["Рельс Р65"], "attachments": []},
+        "owner": {"crm_user_id": 101, "name": "Менеджер Продаж"},
+        "consent": {"given_at": "2026-10-01T09:30:00+05:00", "version": "2026-09"},
+        "create_request": True,
+        "invite": {"channels": ["email"]},
+    }
+
+
+def provision_body(crm_user_id, email):
+    return {
+        "crm_user_id": crm_user_id,
+        "email": email,
+        "name": "Сотрудник Сторожа",
+        "role": "backoffice",
+        "permissions": ["deal.manage"],
+        "is_active": True,
+    }
+
+
+def allof_safe(schema):
+    """Схема без `additionalProperties: false` у членов `allOf`.
+
+    `Contact` в контракте — `allOf: [ContactIn, {erp_contact_id, …}]`, а `ContactIn` закрыт `additionalProperties: false`:
+    по JSON Schema ни один настоящий ответ такую схему не пройдёт (поля второго члена «лишние» для первого). Это дефект
+    записи контракта (Q-FIX35-2), правит его архитектор; сторож пока снимает запрет только с членов `allOf`, а лишние ключи
+    по-прежнему ловит `extra_keys` по объединённым `properties`.
+    """
+    if isinstance(schema, dict):
+        out = {key: allof_safe(value) for key, value in schema.items()}
+        if "allOf" in out:
+            out["allOf"] = [
+                {k: v for k, v in part.items() if k != "additionalProperties"} if isinstance(part, dict) else part
+                for part in out["allOf"]
+            ]
+        return out
+    if isinstance(schema, list):
+        return [allof_safe(item) for item in schema]
+    return schema
+
+
+def exercise_all(client, world):
+    """Вызывает каждую операцию контракта на каждый обещанный код ответа: [(МЕТОД, путь контракта, код, тело или None)]."""
+    from django.core.cache import cache  # noqa: F401  (кэш чистит conftest перед тестом)
+    from parties.models import CompanyType
+
+    CompanyType.objects.get_or_create(code="CLIENT", defaults={"name": "Клиент"})
+    anonymous = APIClient()
+    out = []
+
+    def hit(method, path, url, expected, *, api=None, body=None, key=True):
+        api = api or client
+        kwargs = {"format": "json"} if body is not None else {}
+        if key and method == "POST":
+            kwargs["HTTP_IDEMPOTENCY_KEY"] = str(uuid.uuid4())
+        response = getattr(api, method.lower())(PREFIX + url, **({"data": body} if body is not None else {}), **kwargs)
+        assert response.status_code == expected, f"{method} {url}: {response.status_code} {response.content[:300]!r}"
+        data = json.loads(response.content) if response.content else None
+        out.append((method, path, response.status_code, data))
+        return data
+
+    # GET: 200 (все фикстуры), 404 (неизвестный id), 401 (без токена), 422 (каталог без запроса), 503 (здоровье)
+    for path, url, body in collect(client, world):
+        out.append(("GET", path, 200, body))
+    unknown = {
+        "/companies/{erp_company_id}/summary": "/companies/999999/summary",
+        "/companies/{erp_company_id}/deals": "/companies/999999/deals",
+        "/deals/{erp_deal_id}": "/deals/999999",
+        "/deals/{erp_deal_id}/documents": "/deals/999999/documents",
+        "/documents/{erp_document_id}/link": "/documents/999999/link",
+    }
+    for path, url in unknown.items():
+        hit("GET", path, url, 404)
+    for path, urls in GET_CASES.items():
+        hit("GET", path, urls(world)[0], 401, api=anonymous)
+    hit("GET", "/catalog/search", "/catalog/search?q=&mode=nonsense", 422)
+
+    # POST /clients/handoff: 201 → 200 (повтор) → 409 (ИНН другого клиента) → 422 → 401
+    created = hit("POST", "/clients/handoff", "/clients/handoff", 201, body=handoff_body(8101, "810100001"))
+    hit("POST", "/clients/handoff", "/clients/handoff", 200, body=handoff_body(8101, "810100001"))
+    hit("POST", "/clients/handoff", "/clients/handoff", 409, body=handoff_body(8102, "810100001"))
+    hit("POST", "/clients/handoff", "/clients/handoff", 422, body={"crm_client_id": 1})
+    hit("POST", "/clients/handoff", "/clients/handoff", 401, api=anonymous, body=handoff_body(8103, "810300001"))
+    assert created["erp_company_id"]
+
+    # PUT /contacts/{id}: 200 (контакт из передачи) → 404 → 422 → 401
+    contact = handoff_body(8101, "810100001")["contacts"][0]
+    contact_path = "/contacts/{crm_contact_id}"
+    hit("PUT", contact_path, f"/contacts/{contact['crm_contact_id']}", 200, body={**contact, "name": "Пётр Петров"})
+    hit("PUT", contact_path, "/contacts/999999", 404, body=contact)
+    hit("PUT", contact_path, f"/contacts/{contact['crm_contact_id']}", 422, body={"name": "без обязательных полей"})
+    hit("PUT", contact_path, f"/contacts/{contact['crm_contact_id']}", 401, api=anonymous, body=contact)
+
+    # POST /users/provision: 201 → 200 → 409 (e-mail чужого crm_user_id) → 422 → 401
+    provision = "/users/provision"
+    hit("POST", provision, provision, 201, body=provision_body(8801, "guard-8801@railtech.uz"))
+    hit("POST", provision, provision, 200, body=provision_body(8801, "guard-8801@railtech.uz"))
+    hit("POST", provision, provision, 409, body=provision_body(8802, "guard-8801@railtech.uz"))
+    hit("POST", provision, provision, 422, body={"crm_user_id": 8803})
+    hit("POST", provision, provision, 401, api=anonymous, body=provision_body(8804, "guard-8804@railtech.uz"))
+
+    # DELETE /users/{id}/sessions: 204 → 404 → 401
+    sessions = "/users/{crm_user_id}/sessions"
+    hit("DELETE", sessions, "/users/8801/sessions", 204)
+    hit("DELETE", sessions, "/users/999999/sessions", 404)
+    hit("DELETE", sessions, "/users/8801/sessions", 401, api=anonymous)
+    return out
+
+
+@pytest.fixture
+def exercised(client, world, catalog_product, monkeypatch):
+    results = exercise_all(client, world)
+    # 503: ERP деградировала — миграции не применены
+    from django.db.migrations.executor import MigrationExecutor
+
+    monkeypatch.setattr(MigrationExecutor, "migration_plan", lambda self, targets, clean_start=False: [("x", False)])
+    response = client.get(f"{PREFIX}/health")
+    assert response.status_code == 503, response.content
+    results.append(("GET", "/health", 503, response.json()))
+    return results
+
+
+def test_operations_are_the_known_set():
+    operations = set(contract_operations())
+    assert (
+        operations == {("GET", path) for path in GET_CASES} | WRITE_PATHS
+    ), "в контракте появилась или пропала операция — заведи для неё вызовы в exercise_all и строку в WRITE_PATHS/GET_CASES"
+
+
+def test_every_documented_status_is_exercised(exercised):
+    documented = {
+        (method, path, int(code)) for (method, path), codes in contract_operations().items() for code in codes
+    }
+    seen = {(method, path, status) for method, path, status, _ in exercised}
+    assert documented - seen == set(), "контракт обещает коды, для которых нет вызова: " + ", ".join(
+        f"{m} {p} → {c}" for m, p, c in sorted(documented - seen)
+    )
+    assert seen - documented == set(), "в ответах встретились коды, которых контракт не обещает: " + ", ".join(
+        f"{m} {p} → {c}" for m, p, c in sorted(seen - documented)
+    )
+
+
+def test_every_response_of_every_operation_matches_the_contract(exercised):
+    """Тело ответа любой операции на любой обещанный код проходит схему: 2xx/503 — своя схема, ошибки — `Error`."""
+    problems = []
+    for method, path, status, body in exercised:
+        if status == 204:
+            assert not body, f"{method} {path}: 204 с телом {body!r}"
+            continue
+        if status in (200, 201, 503):
+            schema = response_schema(path, method.lower(), str(status))
+        else:
+            schema = component("Error")
+        problems += [f"{method} {path} → {status}: {p}" for p in check_response(body, allof_safe(schema))]
+    assert not problems, "\n".join(problems)
+
+
+def test_error_codes_are_the_documented_ones(exercised):
+    codes = {
+        (status): {body["detail"] for _, _, st, body in exercised if st == status} for status in (401, 404, 409, 422)
+    }
+    assert codes[401] == {"UNAUTHORIZED"}
+    assert codes[404] == {"NOT_FOUND"}
+    assert codes[422] == {"VALIDATION_ERROR"}
+    assert codes[409] <= {"INN_CONFLICT", "EMAIL_CONFLICT"} and codes[409]

@@ -1,5 +1,16 @@
 import { ApiOutlined } from "@ant-design/icons";
-import { Alert, Button, Descriptions, Flex, Form, Input, Modal, Tag, Typography } from "antd";
+import {
+  Alert,
+  Button,
+  Checkbox,
+  Descriptions,
+  Flex,
+  Form,
+  Input,
+  Modal,
+  Tag,
+  Typography,
+} from "antd";
 import { useState } from "react";
 
 import type { ErpCheckOut, ErpConnectorIn, ErpStatusOut } from "../../api/generated/model";
@@ -94,6 +105,8 @@ export function ErpCard({
   const [baseUrl, setBaseUrl] = useState(status.base_url);
   const [token, setToken] = useState("");
   const [webhook, setWebhook] = useState("");
+  const [previous, setPrevious] = useState("");
+  const [clearPrevious, setClearPrevious] = useState(false);
   const [password, setPassword] = useState("");
   const [confirming, setConfirming] = useState(false);
   const state = erpState(status);
@@ -102,7 +115,13 @@ export function ErpCard({
     setPassword("");
   };
   const dirty =
-    baseUrl.trim() !== status.base_url || token.trim().length > 0 || webhook.trim().length > 0;
+    baseUrl.trim() !== status.base_url ||
+    token.trim().length > 0 ||
+    webhook.trim().length > 0 ||
+    previous.trim().length > 0 ||
+    clearPrevious;
+  // «Снять предыдущий» имеет смысл, только пока он задан в CRM (из .env его не снять).
+  const canClear = status.webhook_secret_previous_source === "db";
   return (
     <Flex vertical gap="middle">
       <Typography.Paragraph type="secondary">{E.intro}</Typography.Paragraph>
@@ -136,6 +155,18 @@ export function ErpCard({
                 status.webhook_secret_last4 ? ` ••••${status.webhook_secret_last4}` : ""
               }`
             : E.notSet}
+        </Descriptions.Item>
+        <Descriptions.Item label={E.webhookPrevious}>
+          {status.webhook_secret_previous_configured
+            ? `${
+                t.tokenSource[status.webhook_secret_previous_source] ??
+                status.webhook_secret_previous_source
+              }${
+                status.webhook_secret_previous_last4
+                  ? ` ••••${status.webhook_secret_previous_last4}`
+                  : ""
+              }`
+            : E.webhookPreviousNone}
         </Descriptions.Item>
       </Descriptions>
       {status.secrets_enabled ? null : (
@@ -200,6 +231,41 @@ export function ErpCard({
             }}
           />
         </Form.Item>
+        <Form.Item
+          label={E.webhookPrevious}
+          htmlFor="erp-webhook-secret-previous"
+          extra={
+            status.webhook_secret_previous_source === "db" && status.webhook_secret_previous_last4
+              ? `${E.webhookPreviousSaved.replace("{last4}", status.webhook_secret_previous_last4)}. ${E.webhookPreviousHint}`
+              : status.webhook_secret_previous_source === "env"
+                ? E.webhookPreviousEnv
+                : E.webhookPreviousHint
+          }
+        >
+          <Input.Password
+            id="erp-webhook-secret-previous"
+            value={previous}
+            autoComplete="off"
+            disabled={!status.secrets_enabled}
+            visibilityToggle={false}
+            onChange={(e) => {
+              setPrevious(e.target.value);
+              if (e.target.value) setClearPrevious(false);
+            }}
+          />
+          {canClear ? (
+            <Checkbox
+              checked={clearPrevious}
+              disabled={previous.trim().length > 0 || !status.secrets_enabled}
+              onChange={(e) => {
+                setClearPrevious(e.target.checked);
+              }}
+            >
+              {E.webhookPreviousClear}
+              <Typography.Text type="secondary"> — {E.webhookPreviousClearHint}</Typography.Text>
+            </Checkbox>
+          ) : null}
+        </Form.Item>
         <Flex wrap gap="small">
           <Button type="primary" htmlType="submit" disabled={!dirty}>
             {E.save}
@@ -227,12 +293,16 @@ export function ErpCard({
             base_url: baseUrl.trim(),
             service_token: token.trim() || null,
             webhook_secret: webhook.trim() || null,
+            webhook_secret_previous: previous.trim() || null,
+            clear_webhook_secret_previous: clearPrevious,
             password,
           };
           onSave(body, () => {
             close();
             setToken("");
             setWebhook("");
+            setPrevious("");
+            setClearPrevious(false);
           });
         }}
         destroyOnHidden

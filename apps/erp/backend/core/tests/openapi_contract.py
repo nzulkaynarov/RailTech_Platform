@@ -94,6 +94,16 @@ class OpenApiContract:
     def post_paths(self) -> set[str]:
         return {path for path, item in self.load()["paths"].items() if "post" in item}
 
+    def operations(self) -> dict[tuple[str, str], set[str]]:
+        """Все операции контракта: (МЕТОД, путь) → коды ответов, которые контракт обещает (FIX-35: сторож на все пути)."""
+        methods = ("get", "put", "post", "patch", "delete")
+        return {
+            (method.upper(), path): {str(code) for code in operation["responses"]}
+            for path, item in self.load()["paths"].items()
+            for method, operation in item.items()
+            if method in methods
+        }
+
 
 # ── Форматы: проверяем сами, чтобы не зависеть от необязательных библиотек jsonschema ─────────────────
 

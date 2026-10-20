@@ -2814,6 +2814,11 @@
             "title": "Base Url",
             "type": "string"
           },
+          "clear_webhook_secret_previous": {
+            "default": false,
+            "title": "Clear Webhook Secret Previous",
+            "type": "boolean"
+          },
           "password": {
             "format": "password",
             "maxLength": 256,
@@ -2851,6 +2856,21 @@
               }
             ],
             "title": "Webhook Secret"
+          },
+          "webhook_secret_previous": {
+            "anyOf": [
+              {
+                "format": "password",
+                "maxLength": 512,
+                "minLength": 16,
+                "type": "string",
+                "writeOnly": true
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Webhook Secret Previous"
           }
         },
         "required": [
@@ -2943,6 +2963,42 @@
             ],
             "title": "Webhook Secret Last4"
           },
+          "webhook_secret_previous_configured": {
+            "title": "Webhook Secret Previous Configured",
+            "type": "boolean"
+          },
+          "webhook_secret_previous_last4": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Webhook Secret Previous Last4"
+          },
+          "webhook_secret_previous_source": {
+            "enum": [
+              "db",
+              "env",
+              "none"
+            ],
+            "title": "Webhook Secret Previous Source",
+            "type": "string"
+          },
+          "webhook_secret_previous_updated_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Webhook Secret Previous Updated At"
+          },
           "webhook_secret_source": {
             "enum": [
               "db",
@@ -2978,6 +3034,10 @@
           "webhook_secret_source",
           "webhook_secret_last4",
           "webhook_secret_updated_at",
+          "webhook_secret_previous_configured",
+          "webhook_secret_previous_source",
+          "webhook_secret_previous_last4",
+          "webhook_secret_previous_updated_at",
           "secrets_enabled"
         ],
         "title": "ErpStatusOut",
@@ -10278,7 +10338,7 @@
         ]
       },
       "put": {
-        "description": "Сохранить адрес ERP и секреты (после пароля админа); секрет `null` — оставить прежний.\n\nОшибки: `erp_invalid_url` (422, поле `base_url`), `wrong_password` (422),\n`secrets_key_missing` (409 — секреты нельзя сохранить без `SECRETS_KEY`).",
+        "description": "Сохранить адрес ERP и секреты (после пароля админа); секрет `null` — оставить прежний.\n\nРотация секрета вебхуков без простоя: `webhook_secret` — новый (текущий),\n`webhook_secret_previous` —\nпрежний (принимается, пока его не сняли `clear_webhook_secret_previous: true`).\n\nОшибки: `erp_invalid_url` (422, поле `base_url`), `wrong_password` (422),\n`secrets_key_missing` (409 — секреты нельзя сохранить без `SECRETS_KEY`).",
         "operationId": "put_erp_connector",
         "requestBody": {
           "content": {

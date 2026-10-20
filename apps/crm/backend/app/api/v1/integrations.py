@@ -134,16 +134,27 @@ async def get_erp_status(_: Reader, service: ErpDep) -> ErpStatusOut:
 async def put_erp_connector(body: ErpConnectorIn, who: Writer, service: ErpDep) -> ErpStatusOut:
     """Сохранить адрес ERP и секреты (после пароля админа); секрет `null` — оставить прежний.
 
+    Ротация секрета вебхуков без простоя: `webhook_secret` — новый (текущий),
+    `webhook_secret_previous` — прежний (принимается, пока его не сняли
+    `clear_webhook_secret_previous: true`).
+
     Ошибки: `erp_invalid_url` (422, поле `base_url`), `wrong_password` (422),
     `secrets_key_missing` (409 — секреты нельзя сохранить без `SECRETS_KEY`).
     """
     token = body.service_token.get_secret_value() if body.service_token is not None else None
     webhook = body.webhook_secret.get_secret_value() if body.webhook_secret is not None else None
+    previous = (
+        body.webhook_secret_previous.get_secret_value()
+        if body.webhook_secret_previous is not None
+        else None
+    )
     status = await service.save(
         who,
         base_url=body.base_url,
         service_token=token,
         webhook_secret=webhook,
+        webhook_secret_previous=previous,
+        clear_webhook_secret_previous=body.clear_webhook_secret_previous,
         password=body.password.get_secret_value(),
     )
     return _erp_out(status)

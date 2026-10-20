@@ -30,10 +30,14 @@ from app.models.clients import Client, Document
 from app.models.deals import Deal
 from app.models.integrations import ErpIncomingEvent
 from app.models.leads import Lead, LeadNote, TelegramIdentity
-from app.schemas.erp_events import ErpEventEnvelope
+from app.schemas.erp_events import parse_event
 from app.schemas.settings import AppSettings, CompanySettings, IntegrationsSettings
-from app.security.secrets_store import ERP_WEBHOOK_SECRET, SecretsStore
-from app.services.erp_events import ErpEventsService, verify_signature
+from app.security.secrets_store import (
+    ERP_WEBHOOK_SECRET,
+    ERP_WEBHOOK_SECRET_PREVIOUS,
+    SecretsStore,
+)
+from app.services.erp_events import ErpEventsService, verify_signature, verify_signature_any
 
 SECRET = "erp-webhook-secret-xyz-42"
 
@@ -115,7 +119,7 @@ def test_verify_signature_invalid_formats(sec: str, head: str | None) -> None:
 
 def test_envelope_schema_validation() -> None:
     data = _sample_envelope()
-    envelope = ErpEventEnvelope.model_validate(data)
+    envelope = parse_event(data)
     assert envelope.version == 1
     assert envelope.event == "deal.stage_changed"
     assert envelope.deal is not None
@@ -127,7 +131,7 @@ def test_envelope_accepts_deal_without_sent_quote() -> None:
     """FIX-29: `deal.amount` = null, пока КП клиенту не отправлялось (черновик не утекает в CRM)."""
     data = _sample_envelope()
     data["deal"]["amount"] = None
-    envelope = ErpEventEnvelope.model_validate(data)
+    envelope = parse_event(data)
     assert envelope.deal is not None
     assert envelope.deal.amount is None
 
@@ -213,7 +217,7 @@ def test_all_events_parse(event: str, payload_dict: dict[str, Any]) -> None:
     env_data = _sample_envelope(event=event, payload=payload_dict)
     if event.startswith("delivery.line_"):
         env_data["actor"] = {"type": "client", "name": "Азамат Каримов"}
-    envelope = ErpEventEnvelope.model_validate(env_data)
+    envelope = parse_event(env_data)
     assert envelope.event == event
 
 
@@ -223,9 +227,10 @@ def test_all_events_parse(event: str, payload_dict: dict[str, Any]) -> None:
 
 
 class _DummyStore(SecretsStore):
-    def __init__(self, webhook_secret: str | None = None) -> None:
+    def __init__(self, webhook_secret: str | None = None, previous: str | None = None) -> None:
         super().__init__(None, None)  # type: ignore[arg-type]
         self._secret = webhook_secret
+        self._previous = previous
 
     @property
     def enabled(self) -> bool:
@@ -234,6 +239,8 @@ class _DummyStore(SecretsStore):
     async def get(self, key: str) -> str | None:
         if key == ERP_WEBHOOK_SECRET:
             return self._secret
+        if key == ERP_WEBHOOK_SECRET_PREVIOUS:
+            return self._previous
         return None
 
 
@@ -260,6 +267,14 @@ class _MockSession:
     async def get(self, model: type[Any], pk: Any, **_: Any) -> Any:
         if model is ErpIncomingEvent:
             return self.events.get(str(pk))
+        return None
+
+    async def scalar(self, statement: Any) -> Any:
+        """Событие с тем же `body_sha256` (поиск повтора тела): хеш — из параметров запроса."""
+        wanted = statement.compile().params.get("body_sha256_1")
+        for event in self.events.values():
+            if event.body_sha256 is not None and event.body_sha256 == wanted:
+                return event.event_id
         return None
 
     def add(self, instance: Any) -> None:
@@ -378,16 +393,32 @@ async def test_a_failed_enqueue_keeps_the_row_and_still_answers_200() -> None:
 
 @pytest.mark.asyncio
 @pytest.mark.parametrize(
-    ("body", "reason"),
+    ("body", "header", "reason"),
     [
-        (b"this is not json", "invalid JSON"),
-        (json.dumps([1, 2]).encode(), "not an object"),
-        (json.dumps({**_sample_envelope(), "event": "warehouse.exploded"}).encode(), "envelope"),
-        (json.dumps({**_sample_envelope(), "brand_new_field": 1}).encode(), "envelope"),
+        (b"this is not json", "deal.stage_changed", "invalid JSON"),
+        (json.dumps([1, 2]).encode(), "deal.stage_changed", "not an object"),
+        (json.dumps(_sample_envelope()).encode(), "quote.sent", "header mismatch"),
+        (
+            json.dumps({**_sample_envelope(), "version": 2}).encode(),
+            "deal.stage_changed",
+            "invalid event envelope",
+        ),
+        (
+            json.dumps(
+                {**_sample_envelope(), "payload": {"from": "request", "to": "nowhere"}}
+            ).encode(),
+            "deal.stage_changed",
+            "invalid event envelope",
+        ),
+        (
+            json.dumps({**_sample_envelope(), "deal": None}).encode(),
+            "deal.stage_changed",
+            "invalid event envelope",
+        ),
     ],
 )
 async def test_a_body_we_cannot_accept_is_recorded_as_rejected_and_answered_200(
-    body: bytes, reason: str
+    body: bytes, header: str, reason: str
 ) -> None:
     """Подпись верна, тело — нет: ретраи ERP не помогут, поэтому 200 и запись для центра."""
     enqueued: list[str] = []
@@ -395,15 +426,53 @@ async def test_a_body_we_cannot_accept_is_recorded_as_rejected_and_answered_200(
     event_id = str(uuid.uuid4())
     raw, sig = _signed(body)
 
-    assert await service.receive_event(event_id, "warehouse.exploded", sig, raw) == (
-        False,
-        "rejected",
-    )
+    assert await service.receive_event(event_id, header, sig, raw) == (False, "rejected")
     row = session.events[event_id]
     assert row.status == "rejected"
     assert reason in (row.error or "")
     assert row.processed_at is not None
     assert enqueued == []
+
+
+@pytest.mark.asyncio
+async def test_an_unknown_event_type_is_skipped_with_200_not_422() -> None:
+    """FIX-35: событие более новой ERP записано как «пропущено» — не 422, не ретраи, не красное."""
+    enqueued: list[str] = []
+    service, session = _receiver(enqueued=enqueued)
+    event_id = str(uuid.uuid4())
+    raw, sig = _signed({**_sample_envelope(), "event": "warehouse.exploded"})
+
+    assert await service.receive_event(event_id, "warehouse.exploded", sig, raw) == (
+        False,
+        "skipped",
+    )
+    row = session.events[event_id]
+    assert row.status == "skipped"
+    assert row.error == "unknown event type: warehouse.exploded"
+    assert row.processed_at is not None
+    assert (row.erp_company_id, row.crm_client_id) == (202, 101)
+    assert enqueued == []
+
+
+@pytest.mark.asyncio
+async def test_the_reader_is_tolerant_to_new_fields_everywhere() -> None:
+    """FIX-35: лишнее поле в конверте, в `deal`, `actor` и в теле не даёт отказа."""
+    data = _sample_envelope()
+    data["brand_new_field"] = 1
+    data["deal"]["brand_new_field"] = 1
+    data["actor"]["brand_new_field"] = 1
+    data["payload"]["brand_new_field"] = 1
+    enqueued: list[str] = []
+    service, session = _receiver(enqueued=enqueued)
+    event_id = str(uuid.uuid4())
+    raw, sig = _signed(data)
+
+    assert await service.receive_event(event_id, "deal.stage_changed", sig, raw) == (
+        False,
+        "enqueued",
+    )
+    assert session.events[event_id].status == "received"
+    assert enqueued == [event_id]
 
 
 @pytest.mark.asyncio
@@ -545,6 +614,10 @@ class _StatefulSession:
                 self._next_id += 1
                 item.id = self._next_id
 
+    @asynccontextmanager
+    async def begin_nested(self) -> AsyncIterator[None]:
+        yield
+
     async def execute(self, stmt: Any) -> Any:
         return object()
 
@@ -572,6 +645,12 @@ class _StatefulSession:
             for lead_obj in self.leads.values():
                 return lead_obj
             return None
+        if "from documents" in sql_str:
+            wanted = stmt.compile().params.get("erp_document_id_1")
+            return next(
+                (d for d in self.added if isinstance(d, Document) and d.erp_document_id == wanted),
+                None,
+            )
         return None
 
     async def scalars(self, stmt: Any) -> Any:
@@ -821,7 +900,13 @@ async def test_no_cabinet_button_when_cabinet_url_is_empty() -> None:
     env = _sample_envelope(
         event="invoice.paid",
         deal_stage="paid",
-        payload={"erp_invoice_id": 4, "number": "INV-01", "amount": "100.00", "currency": "UZS"},
+        payload={
+            "erp_invoice_id": 4,
+            "number": "INV-01",
+            "amount": "100.00",
+            "currency": "UZS",
+            "due_date": "2026-10-30",
+        },
     )
     row = ErpIncomingEvent(
         event_id="evt-nocab",
@@ -971,45 +1056,41 @@ def _line_envelope(event: str, **overrides: Any) -> dict[str, Any]:
 
 
 def test_delivery_line_event_requires_deal_client_actor_and_matching_payload() -> None:
-    assert (
-        ErpEventEnvelope.model_validate(_line_envelope("delivery.line_disputed")).deal is not None
-    )
+    assert parse_event(_line_envelope("delivery.line_disputed")).deal is not None
 
     no_deal = _line_envelope("delivery.line_accepted")
     del no_deal["deal"]
     with pytest.raises(ValidationError):
-        ErpEventEnvelope.model_validate(no_deal)
+        parse_event(no_deal)
 
     with pytest.raises(ValidationError):  # решает клиент, не сотрудник и не система
-        ErpEventEnvelope.model_validate(
-            _line_envelope("delivery.line_accepted", actor={"type": "staff", "name": "М"})
-        )
+        parse_event(_line_envelope("delivery.line_accepted", actor={"type": "staff", "name": "М"}))
 
     no_remark = _line_envelope("delivery.line_disputed")
     del no_remark["payload"]["remark"]
     with pytest.raises(ValidationError):  # замечание при disputed обязательно
-        ErpEventEnvelope.model_validate(no_remark)
+        parse_event(no_remark)
 
     blank_remark = _line_envelope("delivery.line_disputed")
     blank_remark["payload"]["remark"] = "   "
     with pytest.raises(ValidationError):
-        ErpEventEnvelope.model_validate(blank_remark)
+        parse_event(blank_remark)
 
     mismatch = _line_envelope("delivery.line_accepted")
     mismatch["payload"]["status"] = "disputed"
     mismatch["payload"]["remark"] = "x"
     with pytest.raises(ValidationError):  # тип события и статус строки не совпадают
-        ErpEventEnvelope.model_validate(mismatch)
+        parse_event(mismatch)
 
     extra = _line_envelope("delivery.line_accepted")
     extra["payload"]["new_optional_field"] = "x"
     # терпимый читатель: лишнее поле принимается
-    assert ErpEventEnvelope.model_validate(extra).event == "delivery.line_accepted"
+    assert parse_event(extra).event == "delivery.line_accepted"
 
     too_long = _line_envelope("delivery.line_disputed")
     too_long["payload"]["remark"] = "x" * 2001
     with pytest.raises(ValidationError):
-        ErpEventEnvelope.model_validate(too_long)
+        parse_event(too_long)
 
 
 class _StaffSession(_StatefulSession):
@@ -1105,3 +1186,117 @@ async def test_line_disputed_goes_to_the_feed_and_alerts_the_deal_owner_only() -
     assert "Поставка осей РУ1Ш" in text
     assert "Часть труб с трещинами" in text
     assert "{" not in text
+
+
+# ---------------------------------------------------------------------------
+# 5. Ротация секрета вебхуков без простоя и защита от повтора тела (FIX-35)
+# ---------------------------------------------------------------------------
+
+OLD_SECRET = "old-webhook-secret-xyz-0001"
+NEW_SECRET = "new-webhook-secret-xyz-0002"
+
+
+def _rotating_receiver(
+    store: _DummyStore, env_secret: str = ""
+) -> tuple[ErpEventsService, _MockSession]:
+    session = _MockSession()
+
+    async def enqueue(event_id: str) -> int:
+        return 1
+
+    service = ErpEventsService(
+        _mock_session_factory(session),
+        _DummySettingsService(),  # type: ignore[arg-type]
+        store,
+        Settings(erp_webhook_secret=env_secret),
+        _no_bot,
+        enqueue_task=enqueue,
+    )
+    return service, session
+
+
+def _signed_with(secret: str, body: dict[str, Any]) -> tuple[bytes, str]:
+    raw = json.dumps(body).encode("utf-8")
+    return raw, _sign(secret, raw)
+
+
+def test_verify_signature_any_accepts_each_listed_secret_and_only_them() -> None:
+    body = b'{"hello": "world"}'
+    assert verify_signature_any([NEW_SECRET, OLD_SECRET], body, _sign(OLD_SECRET, body))
+    assert verify_signature_any([NEW_SECRET, OLD_SECRET], body, _sign(NEW_SECRET, body))
+    assert not verify_signature_any([NEW_SECRET, OLD_SECRET], body, _sign("third", body))
+    assert not verify_signature_any([], body, _sign(NEW_SECRET, body))
+    assert not verify_signature_any([NEW_SECRET], body, None)
+
+
+@pytest.mark.asyncio
+async def test_old_secret_is_accepted_while_it_is_the_previous_one_and_refused_once_removed() -> (
+    None
+):
+    """Ротация без простоя: ERP ещё подписывает старым — принимается; сняли предыдущий — 401."""
+    service, _ = _rotating_receiver(_DummyStore(NEW_SECRET, previous=OLD_SECRET))
+    for secret in (OLD_SECRET, NEW_SECRET):
+        raw, sig = _signed_with(
+            secret, _sample_envelope(payload={"from": "request", "to": "quoting", "n": secret})
+        )
+        assert await service.receive_event(str(uuid.uuid4()), "deal.stage_changed", sig, raw) == (
+            False,
+            "enqueued",
+        )
+
+    removed, _ = _rotating_receiver(_DummyStore(NEW_SECRET, previous=None))
+    raw, sig = _signed_with(OLD_SECRET, _sample_envelope())
+    with pytest.raises(AuthError):
+        await removed.receive_event(str(uuid.uuid4()), "deal.stage_changed", sig, raw)
+    raw, sig = _signed_with(NEW_SECRET, _sample_envelope())
+    assert (await removed.receive_event(str(uuid.uuid4()), "deal.stage_changed", sig, raw))[
+        1
+    ] == "enqueued"
+
+
+@pytest.mark.asyncio
+async def test_a_secret_list_in_env_works_without_the_connector() -> None:
+    service, _ = _rotating_receiver(_DummyStore(), env_secret=f"{NEW_SECRET},{OLD_SECRET}")
+    for secret in (OLD_SECRET, NEW_SECRET):
+        raw, sig = _signed_with(
+            secret, _sample_envelope(payload={"from": "request", "to": "quoting", "n": secret})
+        )
+        assert (await service.receive_event(str(uuid.uuid4()), "deal.stage_changed", sig, raw))[
+            1
+        ] == "enqueued"
+    raw, sig = _signed_with("a-secret-nobody-listed", _sample_envelope())
+    with pytest.raises(AuthError):
+        await service.receive_event(str(uuid.uuid4()), "deal.stage_changed", sig, raw)
+
+
+@pytest.mark.asyncio
+async def test_the_same_body_under_another_event_id_is_a_replay_and_is_rejected_with_200() -> None:
+    """X-Event-Id и X-Timestamp не подписаны: перехваченное тело под новым id — повтор (FIX-35)."""
+    enqueued: list[str] = []
+    service, session = _receiver(enqueued=enqueued)
+    raw, sig = _signed(_sample_envelope())
+    first, replay = str(uuid.uuid4()), str(uuid.uuid4())
+
+    assert await service.receive_event(first, "deal.stage_changed", sig, raw) == (False, "enqueued")
+    assert await service.receive_event(replay, "deal.stage_changed", sig, raw) == (
+        False,
+        "rejected",
+    )
+
+    row = session.events[replay]
+    assert row.status == "rejected"
+    assert row.error == f"replayed body: already received as event {first}"
+    assert row.processed_at is not None
+    assert enqueued == [first], "повтор не ставится в очередь"
+    # тот же id — по-прежнему обычный дубль, а не повтор
+    assert await service.receive_event(first, "deal.stage_changed", sig, raw) == (True, "duplicate")
+
+
+@pytest.mark.asyncio
+async def test_different_bodies_are_never_taken_for_a_replay() -> None:
+    service, _ = _receiver()
+    for stage in ("quoting", "quote_sent", "accepted"):
+        raw, sig = _signed(_sample_envelope(payload={"from": "request", "to": stage}))
+        assert (await service.receive_event(str(uuid.uuid4()), "deal.stage_changed", sig, raw))[
+            1
+        ] == "enqueued"

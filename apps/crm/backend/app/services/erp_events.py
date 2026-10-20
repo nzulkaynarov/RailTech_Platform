@@ -4,7 +4,8 @@ import hashlib
 import hmac
 import json
 import uuid
-from collections.abc import Awaitable, Callable
+from collections.abc import Awaitable, Callable, Sequence
+from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 from typing import Any
@@ -19,16 +20,20 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.config import Settings
-from app.domain.deals import DealStage, plan_erp_outcome
 from app.domain.errors import AuthError, ConflictError, Reason, ValidationFailedError
 from app.integrations.erp import resolve_erp
 from app.models.auth import User
-from app.models.clients import Client, Document
+from app.models.clients import Client
 from app.models.deals import Deal
 from app.models.integrations import ErpIncomingEvent
 from app.models.leads import Lead, LeadNote, TelegramIdentity
 from app.repositories import events
-from app.schemas.erp_events import ErpEventEnvelope
+from app.schemas.erp_events import (
+    ErpEventEnvelope,
+    RequestCreatedEvent,
+    is_known_event,
+    parse_event,
+)
 from app.security.secrets_store import SecretsStore
 from app.services import deals as deals_service
 from app.services.erp_bot_messages import (
@@ -37,19 +42,10 @@ from app.services.erp_bot_messages import (
     pick_language,
     staff_alert,
 )
+from app.services.erp_event_handlers import aware, dispatch
 from app.services.settings import SettingsService
 
 logger = structlog.get_logger(__name__)
-
-DOC_KIND_MAP: dict[str, str] = {
-    "quote": "proposal",
-    "contract": "contract",
-    "invoice": "invoice",
-    "act": "act",
-    "waybill": "other",
-    "receipt": "other",
-    "other": "other",
-}
 
 
 def _deal_amount(amount: str | None) -> Decimal | None:
@@ -69,6 +65,17 @@ def verify_signature(secret: str, raw_body: bytes, signature_header: str | None)
     return hmac.compare_digest(given_hex, expected_hex)
 
 
+def verify_signature_any(
+    secrets: Sequence[str], raw_body: bytes, signature_header: str | None
+) -> bool:
+    """Подпись верна хотя бы одним из принимаемых секретов (текущий и предыдущий, FIX-35).
+
+    Проверяются все секреты без раннего выхода: время ответа не выдаёт, какой из них подошёл.
+    """
+    results = [verify_signature(secret, raw_body, signature_header) for secret in secrets]
+    return any(results)
+
+
 #: Неудачных обработок события до статуса `failed` (его видно в центре внешних сервисов).
 MAX_ATTEMPTS = 5
 #: Строка `received` старше этого не ждёт своей задачи, а потеряна: сборщик ставит её заново.
@@ -84,67 +91,67 @@ STALE_SILENT_EVENTS = frozenset(
 RAW_PREVIEW_CHARS = 2000
 
 
-def _aware(moment: datetime) -> datetime:
-    return moment if moment.tzinfo is not None else moment.replace(tzinfo=UTC)
-
-
 def _is_fresh(deal: Deal, occurred_at: datetime) -> bool:
     """Событие применяется к зеркалу, если не старее уже применённого (порядок по `occurred_at`).
 
     Равное время применяется: у двух событий одного мгновения порядок прихода и есть порядок.
     """
-    return deal.external_stage_at is None or _aware(occurred_at) >= deal.external_stage_at
-
-
-def _outcome_is_current(deal: Deal, occurred_at: datetime) -> bool:
-    """Итог `won`/`lost` применяется, если сделка не закрыта более поздним итогом (по `closed_at`).
-
-    Опоздавший итог НЕ теряется из-за более свежих событий другого типа (счёт, оплата): их порядок
-    ведёт `external_stage_at`, а итог сделки упорядочен только относительно других итогов.
-    """
-    return deal.closed_at is None or _aware(occurred_at) >= _aware(deal.closed_at)
+    return deal.external_stage_at is None or aware(occurred_at) >= deal.external_stage_at
 
 
 def _id_or_none(value: object) -> int | None:
     return value if isinstance(value, int) and not isinstance(value, bool) else None
 
 
-def _parse_body(
-    raw_body: bytes, event_type: str
-) -> tuple[ErpEventEnvelope | None, dict[str, Any], str | None]:
-    """Тело события → (конверт, JSON для журнала, причина отказа).
+@dataclass(frozen=True, slots=True)
+class ParsedBody:
+    """Итог разбора тела: `received` (конверт разобран), `skipped` (неизвестный тип) или
+    `rejected`.
+    """
 
-    Отказ — постоянный (подпись верна, а тело нам не подходит: сломанный JSON, неизвестный тип,
-    расхождение с заголовком): событие записывается как `rejected`, ERP получает 200, потому что
-    ретраи ERP (до 24 ч) ничего не изменят.
+    status: str
+    data: dict[str, Any]
+    envelope: ErpEventEnvelope | None = None
+    error: str | None = None
+
+
+def _raw_preview(raw_body: bytes) -> dict[str, Any]:
+    return {"raw": raw_body[:RAW_PREVIEW_CHARS].decode("utf-8", "replace")}
+
+
+def _parse_body(raw_body: bytes, event_type: str) -> ParsedBody:
+    """Тело события → итог разбора для журнала.
+
+    Читатель терпимый (FIX-35): тело, которое мы принять не можем, не даёт 4xx — ретраи ERP
+    (до 24 ч) ничего бы не изменили. Сломанный JSON, не по схеме или расхождение с заголовком —
+    `rejected`; **неизвестный тип события** (новое событие более новой ERP) — `skipped`: принято,
+    записано, не обрабатывается, красным в центре внешних сервисов не горит. Известный тип
+    разбирается дискриминированной моделью по `event`.
     """
     try:
         data = json.loads(raw_body)
     except ValueError:
-        return (
-            None,
-            {"raw": raw_body[:RAW_PREVIEW_CHARS].decode("utf-8", "replace")},
-            "invalid JSON",
-        )
+        return ParsedBody("rejected", _raw_preview(raw_body), error="invalid JSON")
     if not isinstance(data, dict):
-        return (
-            None,
-            {"raw": raw_body[:RAW_PREVIEW_CHARS].decode("utf-8", "replace")},
-            "not an object",
-        )
+        return ParsedBody("rejected", _raw_preview(raw_body), error="not an object")
     if "\\u0000" in json.dumps(data):  # JSONB не хранит NUL
-        return None, {"raw": "contains NUL"}, "NUL in body"
+        return ParsedBody("rejected", {"raw": "contains NUL"}, error="NUL in body")
+    name = data.get("event")
+    if isinstance(name, str) and name != event_type:
+        return ParsedBody(
+            "rejected", data, error=f"event type header mismatch: {event_type} != {name}"
+        )
+    if isinstance(name, str) and not is_known_event(name):
+        return ParsedBody("skipped", data, error=f"unknown event type: {name}"[:500])
     try:
-        envelope = ErpEventEnvelope.model_validate(data)
+        envelope = parse_event(data)
     except ValidationError as exc:
         errors = exc.errors()
         detail = (
             f"{'.'.join(str(p) for p in errors[0]['loc'])}: {errors[0]['msg']}" if errors else ""
         )
-        return None, data, f"invalid event envelope: {detail}"[:500]
-    if envelope.event != event_type:
-        return None, data, f"event type header mismatch: {event_type} != {envelope.event}"
-    return envelope, data, None
+        return ParsedBody("rejected", data, error=f"invalid event envelope: {detail}"[:500])
+    return ParsedBody("received", data, envelope=envelope)
 
 
 class ErpEventsService:
@@ -164,10 +171,12 @@ class ErpEventsService:
         self._bot_provider = bot_provider
         self._enqueue_task = enqueue_task
 
-    async def get_webhook_secret(self) -> str:
-        """Получение секрета подписи вебхуков ERP из хранилища секретов или env."""
+    async def get_webhook_secrets(self) -> tuple[str, ...]:
+        """Секреты, которыми принимается подпись: текущий и предыдущий («Подключения» → ERP, иначе
+        env).
+        """
         resolution = await resolve_erp(self._secrets_store, self._config, self._settings_service)
-        return resolution.webhook_secret
+        return resolution.webhook_secrets
 
     async def receive_event(
         self,
@@ -186,14 +195,14 @@ class ErpEventsService:
         Возвращает: (is_duplicate, status_str). Ошибки: 409 (секрет не настроен), 401 (подпись),
         422 (заголовки при верной подписи).
         """
-        secret = await self.get_webhook_secret()
-        if not secret:
+        secrets = await self.get_webhook_secrets()
+        if not secrets:
             logger.warning("erp_webhook_secret_missing", event_id=event_id)
             raise ConflictError(
                 "erp webhook secret is not configured", reason=Reason.ERP_NOT_CONFIGURED
             )
 
-        if not verify_signature(secret, raw_body, signature):
+        if not verify_signature_any(secrets, raw_body, signature):
             logger.warning("erp_webhook_invalid_signature", event_id=event_id)
             raise AuthError("invalid webhook signature")
 
@@ -204,7 +213,10 @@ class ErpEventsService:
         if not event_type:
             raise ValidationFailedError("missing X-Event-Type", field="X-Event-Type")
 
-        envelope, data, refusal = _parse_body(raw_body, event_type)
+        parsed = _parse_body(raw_body, event_type)
+        envelope, data = parsed.envelope, parsed.data
+        body_hash = hashlib.sha256(raw_body).hexdigest()
+        status, error = parsed.status, parsed.error
         incoming = ErpIncomingEvent(
             event_id=event_id,
             event_type=event_type[:64],
@@ -214,23 +226,38 @@ class ErpEventsService:
             crm_client_id=envelope.crm_client_id
             if envelope
             else _id_or_none(data.get("crm_client_id")),
-            payload=envelope.model_dump(mode="json") if envelope else data,
-            status="received" if envelope else "rejected",
-            error=refusal,
-            processed_at=None if envelope else datetime.now(UTC),
+            payload=data,
+            status=status,
+            error=error,
+            processed_at=None if status == "received" else datetime.now(UTC),
+            body_sha256=body_hash,
         )
         try:
             async with self._sessions() as session, session.begin():
                 if await session.get(ErpIncomingEvent, event_id) is not None:
                     logger.info("erp_webhook_duplicate", event_id=event_id, event_type=event_type)
                     return True, "duplicate"
+                # Подпись не покрывает X-Event-Id и X-Timestamp: перехваченное тело можно прислать
+                # под новым id. Тело, чей sha256 уже принят под другим id, — повтор: 200 и
+                # `rejected`, без обработки.
+                original = await session.scalar(
+                    select(ErpIncomingEvent.event_id)
+                    .where(ErpIncomingEvent.body_sha256 == body_hash)
+                    .limit(1)
+                )
+                if original is not None:
+                    incoming.status, status = "rejected", "rejected"
+                    incoming.error = error = f"replayed body: already received as event {original}"
+                    incoming.processed_at = datetime.now(UTC)
                 session.add(incoming)
         except IntegrityError:  # тот же event_id вставил параллельный запрос
             return True, "duplicate"
 
-        if refusal is not None:
-            logger.warning("erp_webhook_rejected", event_id=event_id, reason=refusal)
-            return False, "rejected"
+        if status != "received":
+            logger.warning(
+                "erp_webhook_not_processed", event_id=event_id, status=status, reason=error
+            )
+            return False, status
         return False, await self._enqueue(event_id)
 
     async def _enqueue(self, event_id: str) -> str:
@@ -324,10 +351,10 @@ class ErpEventsService:
             if event_row.status == "processed":
                 logger.info("erp_event_already_processed", event_id=event_id)
                 return True
-            if event_row.status == "rejected":
+            if event_row.status in ("rejected", "skipped"):
                 return False
 
-            envelope = ErpEventEnvelope.model_validate(event_row.payload)
+            envelope = parse_event(event_row.payload)
             client = await session.get(Client, envelope.crm_client_id)
             if client is None:
                 event_row.status = "failed"
@@ -365,7 +392,7 @@ class ErpEventsService:
                 fresh = created or _is_fresh(deal, envelope.occurred_at)
                 if fresh:
                     deal.external_stage = envelope.deal.stage
-                    deal.external_stage_at = _aware(envelope.occurred_at)
+                    deal.external_stage_at = aware(envelope.occurred_at)
                     deal.title = envelope.deal.title
                     if envelope.deal.amount is not None:
                         deal.amount = Decimal(envelope.deal.amount)
@@ -384,14 +411,15 @@ class ErpEventsService:
             # Устаревшее событие стадию, название и сумму зеркала не меняет (они возвращаются после
             # обработчика), но итог сделки (`won`/`lost`) применяется, а в ленту событие пишется.
             mirror = (deal.external_stage, deal.title, deal.amount, deal.currency) if deal else None
-            note_text = await self._dispatch_event(session, envelope, client, deal)
+            note_text = await dispatch(session, envelope, client, deal)
             if deal is not None and not fresh and mirror is not None:
                 deal.external_stage, deal.title, deal.amount, deal.currency = mirror
             cfg = await self._settings_service.get()
             deal_title = envelope.deal.title if envelope.deal else (deal.title if deal else "—")
+            body = envelope.payload.model_dump(mode="json", by_alias=True)
             bot_msg = client_message(
                 envelope.event,
-                envelope.payload,
+                body,
                 deal_title=deal_title,
                 texts=cfg.texts,
                 language=pick_language(lead.language if lead else None),
@@ -401,14 +429,14 @@ class ErpEventsService:
                 # Приёмка и замечания по строкам поставки: текст ленты — из настроек (FIX-37).
                 note_text = feed_note(
                     envelope.event,
-                    envelope.payload,
+                    body,
                     contact_name=envelope.actor.name,
                     deal_title=deal_title,
                     texts=cfg.texts,
                 )
             staff_alert_text = staff_alert(
                 envelope.event,
-                envelope.payload,
+                body,
                 client_name=client.name,
                 deal_title=deal_title,
                 texts=cfg.texts,
@@ -485,8 +513,8 @@ class ErpEventsService:
         adopt: Deal | None = None
         if (
             lead is not None
-            and envelope.event == "request.created"
-            and envelope.payload.get("source") == "crm"
+            and isinstance(envelope, RequestCreatedEvent)
+            and envelope.payload.source == "crm"
         ):
             adopt = await deals_service.open_deal(session, lead.id)
             if adopt is not None and adopt.erp_deal_id is not None:
@@ -523,215 +551,6 @@ class ErpEventsService:
         return await session.scalar(
             select(Deal).where(Deal.erp_deal_id == erp_deal_id).limit(1).with_for_update()
         )
-
-    async def _dispatch_event(
-        self,
-        session: AsyncSession,
-        env: ErpEventEnvelope,
-        client: Client,
-        deal: Deal | None,
-    ) -> str | None:
-        """Меняет зеркало сделки и возвращает текст заметки в ленту лида (если она нужна).
-
-        Тексты клиенту и сотруднику строит `services/erp_bot_messages.py` из `settings.texts`.
-        """
-        ev = env.event
-        p = env.payload
-        deal_title = env.deal.title if env.deal else (deal.title if deal else "Сделка")
-
-        if ev == "request.created":
-            src = p.get("source", "erp")
-            req_id = p.get("erp_request_id")
-            note = f"В бэк-офисе создана заявка #{req_id or '—'} (источник: {src})."
-            return note
-
-        if ev == "deal.stage_changed":
-            to_st = p.get("to", env.deal.stage if env.deal else "")
-            from_st = p.get("from", "")
-            reason = p.get("reason")
-            if deal:
-                deal.external_stage = to_st
-            note = f"Стадия сделки в бэк-офисе: {from_st} → {to_st}"
-            if reason:
-                note += f" ({reason})"
-            return note
-
-        if ev == "deal.won":
-            amt = p.get("amount", env.deal.amount if env.deal else "") or ""
-            curr = p.get("currency", env.deal.currency if env.deal else "")
-            if deal and _outcome_is_current(deal, env.occurred_at):
-                current_st = (
-                    DealStage(deal.stage)
-                    if deal.stage in ("open", "won", "lost")
-                    else DealStage.OPEN
-                )
-                plan = plan_erp_outcome("deal.won", current_st, None)
-                deal.stage = plan.stage.value
-                deal.closed_at = env.occurred_at
-                deal.external_stage = "won"
-                if amt:
-                    deal.amount = Decimal(amt)
-                if curr:
-                    deal.currency = curr
-            note = f"Сделка «{deal_title}» успешно закрыта (won) на сумму {amt} {curr}."
-            return note
-
-        if ev == "deal.lost":
-            reason = p.get("lost_reason")
-            if deal and _outcome_is_current(deal, env.occurred_at):
-                current_st = (
-                    DealStage(deal.stage)
-                    if deal.stage in ("open", "won", "lost")
-                    else DealStage.OPEN
-                )
-                plan = plan_erp_outcome("deal.lost", current_st, reason)
-                deal.stage = plan.stage.value
-                deal.lost_reason = plan.lost_reason
-                deal.closed_at = env.occurred_at
-                deal.external_stage = "lost"
-            r_str = reason or "не указана"
-            note = f"Сделка «{deal_title}» закрыта отказом (lost). Причина: {r_str}."
-            return note
-
-        if ev == "quote.sent":
-            if deal:
-                deal.external_stage = "quote_sent"
-            q_id = p.get("erp_quote_id")
-            ver = p.get("version")
-            pub_url = p.get("public_url", "")
-            tot = p.get("total")
-            curr = p.get("currency")
-            note_parts = [f"Клиенту отправлено КП #{q_id} v{ver}"]
-            if tot and curr:
-                note_parts.append(f"на сумму {tot} {curr}")
-            if pub_url:
-                note_parts.append(f"Ссылка: {pub_url}")
-            note = ". ".join(note_parts) + "."
-            return note
-
-        if ev == "quote.viewed":
-            q_id = p.get("erp_quote_id")
-            ver = p.get("version")
-            note = f"Клиент открыл КП #{q_id} v{ver}."
-            return note
-
-        if ev == "quote.accepted":
-            if deal:
-                deal.external_stage = "accepted"
-            q_id = p.get("erp_quote_id")
-            ver = p.get("version")
-            note = f"Клиент акцептовал КП #{q_id} v{ver}."
-            return note
-
-        if ev == "quote.rejected":
-            q_id = p.get("erp_quote_id")
-            ver = p.get("version")
-            reason = p.get("reason")
-            r_suff = f". Причина: {reason}." if reason else "."
-            note = f"КП #{q_id} v{ver} отклонено клиентом{r_suff}"
-            return note
-
-        if ev == "contract.signed":
-            if deal:
-                deal.external_stage = "contract"
-            num = p.get("number", "")
-            by = p.get("by", "")
-            note = f"Договор {num} подписан ({by})."
-            return note
-
-        if ev == "invoice.issued":
-            if deal:
-                deal.external_stage = "invoiced"
-            num = p.get("number", "")
-            amt = p.get("amount", "")
-            curr = p.get("currency", "")
-            due = p.get("due_date", "")
-            note = f"Выставлен счёт {num} на сумму {amt} {curr} со сроком оплаты до {due}."
-            return note
-
-        if ev == "invoice.paid":
-            if deal:
-                deal.external_stage = "paid"
-            num = p.get("number", "")
-            amt = p.get("amount", "")
-            curr = p.get("currency", "")
-            note = f"Счёт {num} на сумму {amt} {curr} оплачен."
-            return note
-
-        if ev == "invoice.overdue":
-            num = p.get("number", "")
-            due = p.get("due_date", "")
-            note = f"Счёт {num} просрочен (срок оплаты был {due})."
-            return note
-
-        if ev == "delivery.status_changed":
-            if deal:
-                deal.external_stage = "fulfilment"
-            summary = p.get("line_summary", "")
-            st = p.get("status", "")
-            eta = p.get("eta")
-            note = f"Статус поставки ({summary}): {st}" + (f", ожидается {eta}" if eta else "")
-            return note
-
-        if ev == "delivery.eta_changed":
-            summary = p.get("line_summary", "")
-            eta = p.get("eta")
-            prev_eta = p.get("previous_eta")
-            note = f"Изменилась дата поставки ({summary}): {prev_eta or '—'} → {eta}."
-            return note
-
-        if ev == "act.issued":
-            if deal:
-                deal.external_stage = "closing"
-            num = p.get("number", "")
-            note = f"Сформирован акт {num}."
-            return note
-
-        if ev == "act.accepted":
-            num = p.get("number", "")
-            note = f"Акт {num} принят клиентом."
-            return note
-
-        if ev == "act.returned":
-            num = p.get("number", "")
-            reason = p.get("reason", "")
-            note = f"Акт {num} возвращён клиентом с замечаниями: {reason}."
-            return note
-
-        if ev == "document.created":
-            kind = p.get("kind", "other")
-            num = p.get("number", "")
-            title = p.get("title") or f"{kind} {num}"
-            doc_type = DOC_KIND_MAP.get(kind, "other")
-            doc_row = Document(
-                client_id=client.id,
-                type=doc_type,
-                title=title,
-                number=num or None,
-                doc_date=env.occurred_at.date(),
-                storage_key=None,
-                filename=f"{kind}_{num}.pdf",
-                mime="application/pdf",
-                size_bytes=0,
-                extract_status="skipped",
-                is_visible_to_client=True,
-            )
-            session.add(doc_row)
-            note = f"В бэк-офисе создан документ: {title} ({num})."
-            return note
-
-        if ev in ("delivery.line_accepted", "delivery.line_disputed"):
-            # Стадию сделки задаёт DealRef события (выше, как у любого события со сделкой).
-            # Запись в ленту и сообщение ответственному строятся в `process_event` из
-            # `settings.texts`, клиенту бот молчит.
-            return None
-
-        if ev == "invite.sent":
-            channels = ", ".join(p.get("channels", []))
-            note = f"Контакту отправлено приглашение в кабинет через каналы: {channels}."
-            return note
-
-        return None
 
     async def deliver_notifications(self, event_id: str) -> int:
         """Отправить сообщения события в Telegram — после коммита обработки и не больше одного раза.

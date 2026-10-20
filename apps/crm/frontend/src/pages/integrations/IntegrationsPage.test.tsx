@@ -55,6 +55,10 @@ const erp: ErpStatusOut = {
   webhook_secret_source: "none",
   webhook_secret_last4: null,
   webhook_secret_updated_at: null,
+  webhook_secret_previous_configured: false,
+  webhook_secret_previous_source: "none",
+  webhook_secret_previous_last4: null,
+  webhook_secret_previous_updated_at: null,
   secrets_enabled: true,
 };
 

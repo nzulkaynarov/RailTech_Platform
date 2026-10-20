@@ -12,6 +12,7 @@ from app.integrations.erp import erp_connector_configured, resolve_connection, r
 from app.security.secrets_store import (
     ERP_SERVICE_TOKEN,
     ERP_WEBHOOK_SECRET,
+    ERP_WEBHOOK_SECRET_PREVIOUS,
     SecretCipher,
     SecretsStore,
 )
@@ -25,10 +26,15 @@ class _Store(SecretsStore):
         enabled: bool = True,
         broken: bool = False,
         webhook: str | None = None,
+        previous: str | None = None,
     ) -> None:
         cipher = SecretCipher(secrets.token_hex(32)) if enabled else None
         super().__init__(None, cipher)  # type: ignore[arg-type]
-        self._stored = {ERP_SERVICE_TOKEN: stored, ERP_WEBHOOK_SECRET: webhook}
+        self._stored = {
+            ERP_SERVICE_TOKEN: stored,
+            ERP_WEBHOOK_SECRET: webhook,
+            ERP_WEBHOOK_SECRET_PREVIOUS: previous,
+        }
         self._broken = broken
 
     async def get(self, key: str) -> str | None:
@@ -146,3 +152,37 @@ async def test_webhook_secret_sources() -> None:
     nothing = await resolve_erp(_Store(None), Settings(_env_file=None))
     assert (nothing.webhook_secret, nothing.webhook_secret_source) == ("", "none")
     assert nothing.connection is None
+
+
+async def test_webhook_secrets_list_in_env_means_current_and_previous() -> None:
+    """FIX-35: `.env` — список через запятую (как у сервисных токенов): текущий и предыдущий."""
+    config = Settings(_env_file=None, erp_webhook_secret=" new-hook , old-hook ,third")
+    resolved = await resolve_erp(_Store(None), config)
+    assert resolved.webhook_secret == "new-hook"
+    assert (resolved.webhook_secret_previous, resolved.webhook_secret_previous_source) == (
+        "old-hook",
+        "env",
+    )
+    assert resolved.webhook_secrets == ("new-hook", "old-hook")
+
+
+async def test_previous_secret_from_the_connector_overrides_the_env_list() -> None:
+    config = Settings(_env_file=None, erp_webhook_secret="env-new,env-old")
+    store = _Store(None, previous="db-old")
+    resolved = await resolve_erp(store, config)
+    assert resolved.webhook_secrets == ("env-new", "db-old")
+    assert resolved.webhook_secret_previous_source == "db"
+
+
+async def test_current_secret_from_the_connector_ignores_the_env_list() -> None:
+    config = Settings(_env_file=None, erp_webhook_secret="env-new,env-old")
+    store = _Store(None, webhook="db-new")
+    resolved = await resolve_erp(store, config)
+    assert resolved.webhook_secrets == ("db-new",)
+    assert resolved.webhook_secret_previous_source == "none"
+
+
+async def test_no_secrets_at_all_means_nothing_is_accepted() -> None:
+    resolved = await resolve_erp(_Store(None), Settings(_env_file=None))
+    assert resolved.webhook_secrets == ()
+    assert resolved.webhook_secret_source == "none"

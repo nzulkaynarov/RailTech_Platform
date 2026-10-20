@@ -77,6 +77,15 @@ export const integrations = {
       webhookSaved: "Задан: ••••{last4}",
       webhookEnv: "Задан в .env (ERP_WEBHOOK_SECRET)",
       webhookHint: "Тот же секрет, что в настройках вебхуков ERP; им подписываются события.",
+      /** Ротация секрета без простоя (FIX-35): CRM принимает текущий и предыдущий. */
+      webhookPrevious: "Предыдущий секрет вебхуков",
+      webhookPreviousSaved: "Принимается: ••••{last4}",
+      webhookPreviousEnv: "Задан в .env вторым значением ERP_WEBHOOK_SECRET",
+      webhookPreviousHint:
+        "Ротация без простоя: введите новый секрет выше, а старый — здесь; пока он указан, CRM принимает подпись и тем, и другим. Когда ERP перейдёт на новый секрет, снимите предыдущий.",
+      webhookPreviousClear: "Снять предыдущий секрет",
+      webhookPreviousClearHint: "После снятия события, подписанные старым секретом, получат 401.",
+      webhookPreviousNone: "не задан",
       notSet: "не задан",
       save: "Сохранить",
       confirmTitle: "Подтвердите паролем",
