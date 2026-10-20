@@ -2918,6 +2918,10 @@
       "merged": {
         "title": "Duplicate company merged",
         "detail": "Duplicate #{{duplicate_id}} “{{duplicate_name}}” merged into “{{survivor_name}}”"
+      },
+      "linked_by_inn": {
+        "title": "Company linked to a CRM client by tax ID — check the contacts",
+        "detail": "CRM client #{{crm_client_id}} was handed off into an existing company by tax ID. The CRM contacts were added without the right to act and no invitation was sent: check they are the same people, then grant the right and invite them."
       }
     },
     "product": {
