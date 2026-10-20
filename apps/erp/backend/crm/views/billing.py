@@ -457,6 +457,15 @@ class InvoiceViewSet(
     @extend_schema(
         summary="Record a payment against this invoice",
         tags=["CRM"],
+        description=(
+            "Идемпотентность по `reference`: повтор с тем же референсом, суммой и датой возвращает существующий "
+            "платёж (200); тот же референс с другой суммой или датой — 409 `PAYMENT_REFERENCE_CONFLICT`."
+        ),
+        responses={
+            200: OpenApiResponse(description="Повтор: существующий платёж с тем же референсом, суммой и датой"),
+            201: PaymentSerializer,
+            409: OpenApiResponse(description="PAYMENT_REFERENCE_CONFLICT"),
+        },
         request=inline_serializer(
             "RecordPayment",
             fields={
@@ -481,8 +490,13 @@ class InvoiceViewSet(
         if err:
             if err in ("MEMBER_REQUIRED_FOR_ACTION", "ROLE_NOT_PERMITTED"):
                 return Response({"detail": err}, status=403)
+            if err == "PAYMENT_REFERENCE_CONFLICT":
+                return Response({"detail": err}, status=409)
             return Response({"detail": err}, status=(404 if err == "NOT_FOUND" else 400))
-        return Response(PaymentSerializer(payment).data, status=201)
+        # Повтор с тем же референсом, суммой и датой — тот же платёж, 200 (не новая запись).
+        return Response(
+            PaymentSerializer(payment).data, status=200 if getattr(payment, "idempotent_replay", False) else 201
+        )
 
     @extend_schema(summary="Generate Act for this invoice", tags=["CRM"])
     @action(detail=True, methods=["post"], url_path="generate-act", permission_classes=[IsAuthenticated])
