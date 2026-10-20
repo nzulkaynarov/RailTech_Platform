@@ -140,14 +140,20 @@ class Command(BaseCommand):
 
         from core.models import ExchangeRate
 
-        # Реальный курс не трогаем (F-8): действующий курс справочника годится как есть. Строку
-        # с источником SMOKE заводим, только если курса нет вовсе, — и --cleanup снимет именно её.
+        # Реальный курс не трогаем (F-8): действующий курс справочника годится как есть. Строку с
+        # источником SMOKE заводим, только если на сегодня строки нет вовсе — и --cleanup снимет именно её.
+        # Настоящая, но непригодная строка за сегодня не перезаписывается: это ошибка данных, её чинит человек.
         if resolve_rate("USD") is None:
-            ExchangeRate.objects.update_or_create(
+            ExchangeRate.objects.get_or_create(
                 currency=usd,
                 rate_date=timezone.localdate(),
                 defaults={"rate_to_uzs": Decimal("12800.00"), "source": SMOKE_RATE_SOURCE},
             )
+            if resolve_rate("USD") is None:
+                raise CommandError(
+                    "Курс USD на сегодня есть в справочнике, но непригоден (не положительный). "
+                    "smoke_full_cycle его не переписывает — исправьте строку курса и запустите снова."
+                )
         published = _must(ProductStatus, "PUBLISHED")
         domain_general = _must(DomainType, "GENERAL_GOODS")
         stock_in = _must(StockStatus, "IN_STOCK")

@@ -118,6 +118,23 @@ def test_without_any_rate_it_adds_its_own_labelled_one_and_cleanup_removes_it(db
     assert not ExchangeRate.objects.filter(currency=usd).exists()
 
 
+def test_an_unusable_real_rate_for_today_survives_the_run_and_cleanup(db):
+    """Настоящая строка за сегодня, но непригодная (курс 0): раньше она перезаписывалась в SMOKE и
+    удалялась `--cleanup`. Теперь команда отказывает и строку не трогает."""
+    usd = _usd()
+    bad = ExchangeRate.objects.create(
+        currency=usd, rate_date=timezone.localdate(), rate_to_uzs=Decimal("0"), source="CBU"
+    )
+
+    for args in ((), ("--cleanup",)):
+        with pytest.raises(CommandError, match="непригоден"):
+            _run(*args)
+
+    bad.refresh_from_db()
+    assert (bad.rate_to_uzs, bad.source) == (Decimal("0"), "CBU")
+    assert ExchangeRate.objects.filter(pk=bad.pk).exists()
+
+
 def test_cleanup_keeps_real_rates(db):
     usd = _usd()
     real = ExchangeRate.objects.create(
