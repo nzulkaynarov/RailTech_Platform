@@ -571,45 +571,30 @@ def emit_act_event(
 
 def emit_document_created(
     document: Any,
-    deal: Optional[Any] = None,
     actor: Optional[Dict[str, Any]] = None,
     send_async: bool = True,
 ) -> Optional[IntegrationWebhookEvent]:
-    """Событие document.created."""
-    if deal is None and hasattr(document, "deal"):
-        deal = document.deal
-    company_id = deal.company_id if deal else getattr(document, "company_id", None)
+    """Событие document.created: клиенту выпущен документ (FIX-38).
+
+    `document` — `portal.services.documents.PortalDocument`, то есть уже выпущенный и видимый клиенту документ;
+    `erp_document_id` — его идентификатор портала (тот же, что в `GET /deals/{id}/documents` и у ссылки на файл),
+    `kind` — вид документа (КП, договор, счёт, акт, накладная). Черновики и внутренние документы сюда не попадают:
+    их отсекает `signals.handle_document_post_save` по правилу выпуска портала.
+    """
+    deal = document.deal
+    contact = getattr(document.obj, "contact", None) if deal is None else None
+    company_id = deal.company_id if deal is not None else getattr(contact, "company_id", None)
     if not company_id:
-        logger.warning("Document #%s has no associated company, skipping webhook", getattr(document, "id", None))
+        logger.warning("Document #%s has no associated company, skipping webhook", document.id)
         return None
-
-    raw_kind = ""
-    if hasattr(document, "template") and document.template and hasattr(document.template, "kind"):
-        raw_kind = document.template.kind.code
-    elif hasattr(document, "kind"):
-        raw_kind = str(document.kind)
-
-    kind_map = {
-        "quote": "quote",
-        "kp": "quote",
-        "contract": "contract",
-        "dogovor": "contract",
-        "invoice": "invoice",
-        "schet": "invoice",
-        "act": "act",
-        "waybill": "waybill",
-        "receipt": "receipt",
-    }
-    kind = kind_map.get(raw_kind.lower(), "other")
 
     payload: Dict[str, Any] = {
         "erp_document_id": document.id,
-        "kind": kind,
-        "number": getattr(document, "number", "") or f"DOC-{document.id}",
+        "kind": document.kind,
+        "number": document.number or f"DOC-{document.id}",
     }
-    title = getattr(document, "title", None)
-    if title:
-        payload["title"] = title
+    if document.title:
+        payload["title"] = document.title
 
     return emit_event(
         event_type="document.created",
