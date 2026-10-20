@@ -330,6 +330,26 @@ def test_the_confirmed_redeliver_requeues_the_event(client, root, mapped_company
     assert (event.status, event.attempts) == (WebhookEventStatus.PENDING, 0)
 
 
+def test_redeliver_skips_sent_and_events_waiting_for_their_own_retry(client, root, mapped_company):
+    """Иначе «Повторить» по PENDING с запланированным ретраем даёт вторую параллельную цепочку попыток."""
+    sent = _event(mapped_company, status=WebhookEventStatus.SENT)
+    waiting = _event(
+        mapped_company,
+        attempts=3,
+        next_attempt_at=timezone.now() + timedelta(hours=5),
+    )
+    stuck = _event(mapped_company, attempts=1, next_attempt_at=timezone.now() - timedelta(hours=1))
+    failed = _event(mapped_company, status=WebhookEventStatus.FAILED, attempts=7)
+    client.force_login(root)
+
+    with patch("integration.tasks.deliver_webhook_event.delay") as delay:
+        _post_redeliver(client, [sent, waiting, stuck, failed], _emergency_confirmed="1", _emergency_reason="проверка")
+
+    assert sorted(call.args[0] for call in delay.call_args_list) == sorted([stuck.id, failed.id])
+    waiting.refresh_from_db()
+    assert waiting.attempts == 3, "ждущий своего ретрая не тронут"
+
+
 def test_redeliver_leaves_a_trace_in_the_access_log(client, root, mapped_company):
     from crm.models import ActivityLog
 

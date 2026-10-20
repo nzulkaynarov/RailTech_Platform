@@ -65,7 +65,7 @@ def test_client_handoff_columns_come_and_go_with_the_revision(
 
 
 def test_webhook_reliability_revision_dedupes_erp_deal_ids_and_is_reversible(
-    alembic_config: Config, live_settings: Settings
+    alembic_config: Config, live_settings: Settings, caplog: pytest.LogCaptureFixture
 ) -> None:
     """FIX-33: дубли `erp_deal_id` сворачиваются при upgrade (остаётся зеркало с лидом, затем самое
     раннее), дальше значение уникально; downgrade возвращает обычный индекс и убирает колонки."""
@@ -90,7 +90,9 @@ def test_webhook_reliability_revision_dedupes_erp_deal_ids_and_is_reversible(
             "payload) VALUES ('e-1', 'quote.sent', 1, 1, '{}')"
         )
 
-    command.upgrade(alembic_config, "head")
+    with caplog.at_level("INFO", logger="alembic.runtime.migration"):
+        command.upgrade(alembic_config, "head")
+    assert "collapsed 2 duplicate deals.erp_deal_id" in caplog.text
     with psycopg.connect(live_settings.libpq_dsn, autocommit=True) as conn:
         rows = conn.execute(
             "SELECT title, erp_deal_id, external_stage FROM deals ORDER BY id"

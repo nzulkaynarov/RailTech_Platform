@@ -10,6 +10,7 @@
 """
 
 from django.contrib import admin, messages
+from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 from unfold.admin import ModelAdmin
 
@@ -54,10 +55,18 @@ class IntegrationWebhookEventAdmin(ReadOnlyInspectionMixin, ModelAdmin):
 
     @superuser_only_action(_("Повторить доставку в CRM"))
     def redeliver_selected(self, request, queryset):
-        # Отправленное (SENT) не повторяем: CRM приняла его, повтор только плодил бы дубли в её журнале.
+        # Повторяем FAILED и «зависшие» PENDING. Пропускаем: SENT (CRM приняла, повтор плодил бы дубли в её
+        # журнале) и PENDING, который ждёт СВОЕГО ретрая (`next_attempt_at` в будущем): второй запуск
+        # завёл бы параллельную цепочку ретраев рядом с уже запланированной.
+        now = timezone.now()
         requeued = skipped = 0
         for event in queryset:
-            if event.status == WebhookEventStatus.SENT:
+            waiting = (
+                event.status == WebhookEventStatus.PENDING
+                and event.next_attempt_at is not None
+                and event.next_attempt_at > now
+            )
+            if event.status == WebhookEventStatus.SENT or waiting:
                 skipped += 1
                 continue
             if redeliver_event(event.pk) is not None:
@@ -71,6 +80,6 @@ class IntegrationWebhookEventAdmin(ReadOnlyInspectionMixin, ModelAdmin):
         if skipped:
             self.message_user(
                 request,
-                _("Пропущено уже доставленных: %(count)d.") % {"count": skipped},
+                _("Пропущено (уже доставлено или ждёт своего повтора): %(count)d.") % {"count": skipped},
                 level=messages.WARNING,
             )

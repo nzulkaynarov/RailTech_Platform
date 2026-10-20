@@ -15,6 +15,7 @@ Revises: 0027_client_erp_handoff
 Create Date: 2026-10-20 17:00:00+00:00
 """
 
+import logging
 from collections.abc import Sequence
 
 import sqlalchemy as sa
@@ -42,8 +43,15 @@ WHERE deals.id = ranked.id AND ranked.rn > 1
 """
 
 
+logger = logging.getLogger("alembic.runtime.migration")
+
+
 def upgrade() -> None:
-    op.execute(DEDUPE_SQL)
+    collapsed = op.get_bind().execute(sa.text(DEDUPE_SQL)).rowcount
+    # Сколько зеркал потеряли связь с ERP: число сверяют с запросом из Q-FIX33-5.
+    logger.info(
+        "0028: collapsed %d duplicate deals.erp_deal_id (kept the mirror with a lead)", collapsed
+    )
     op.drop_index("ix_deals_erp_deal_id", table_name="deals")
     op.create_index("uq_deals_erp_deal_id", "deals", ["erp_deal_id"], unique=True)
     op.add_column(

@@ -74,6 +74,13 @@ MAX_ATTEMPTS = 5
 #: Строка `received` старше этого не ждёт своей задачи, а потеряна: сборщик ставит её заново.
 STUCK_AFTER = timedelta(seconds=60)
 SWEEP_LIMIT = 100
+#: Неотправленное сообщение старше этого сборщик не досылает (устаревший «счёт выставлен» вредит).
+UNSENT_MAX_AGE = timedelta(hours=24)
+#: События, чьё сообщение клиенту описывает ТЕКУЩЕЕ состояние (срок, статус поставки, стадия):
+#: устаревшим они в бот не уходят — только в ленту. Разовые факты (КП, счёт, акт) доходят всегда.
+STALE_SILENT_EVENTS = frozenset(
+    {"delivery.status_changed", "delivery.eta_changed", "deal.stage_changed"}
+)
 RAW_PREVIEW_CHARS = 2000
 
 
@@ -87,6 +94,15 @@ def _is_fresh(deal: Deal, occurred_at: datetime) -> bool:
     Равное время применяется: у двух событий одного мгновения порядок прихода и есть порядок.
     """
     return deal.external_stage_at is None or _aware(occurred_at) >= deal.external_stage_at
+
+
+def _outcome_is_current(deal: Deal, occurred_at: datetime) -> bool:
+    """Итог `won`/`lost` применяется, если сделка не закрыта более поздним итогом (по `closed_at`).
+
+    Опоздавший итог НЕ теряется из-за более свежих событий другого типа (счёт, оплата): их порядок
+    ведёт `external_stage_at`, а итог сделки упорядочен только относительно других итогов.
+    """
+    return deal.closed_at is None or _aware(occurred_at) >= _aware(deal.closed_at)
 
 
 def _id_or_none(value: object) -> int | None:
@@ -234,8 +250,8 @@ class ErpEventsService:
 
         * `received` старше `STUCK_AFTER`: постановка в очередь не удалась или задача потеряна;
         * `processed`, но сообщения в Telegram так и не захвачены (воркер упал между коммитом и
-          отправкой).
-        Возвращает число поставленных/отправленных.
+          отправкой, либо бота не было). Старше `UNSENT_MAX_AGE` сообщение уже не имеет смысла.
+        Возвращает число поставленных событий и отправленных сообщений.
         """
         horizon = datetime.now(UTC) - STUCK_AFTER
         async with self._sessions() as session:
@@ -258,6 +274,7 @@ class ErpEventsService:
                         ErpIncomingEvent.outbox.is_not(None),
                         ErpIncomingEvent.notified_at.is_(None),
                         ErpIncomingEvent.processed_at < horizon,
+                        ErpIncomingEvent.processed_at > datetime.now(UTC) - UNSENT_MAX_AGE,
                     )
                     .order_by(ErpIncomingEvent.processed_at)
                     .limit(limit)
@@ -265,11 +282,12 @@ class ErpEventsService:
             )
         for event_id in stuck:
             await self._enqueue(event_id)
+        sent = 0
         for event_id in unsent:
-            await self.deliver_notifications(event_id)
-        if stuck or unsent:
-            logger.warning("erp_events_swept", requeued=len(stuck), notified=len(unsent))
-        return len(stuck) + len(unsent)
+            sent += await self.deliver_notifications(event_id)
+        if stuck or sent:
+            logger.warning("erp_events_swept", requeued=len(stuck), notified=sent)
+        return len(stuck) + sent
 
     async def process_event(self, event_id: str) -> bool:
         """Обработка события: зеркало, документы, лента — в транзакции; Telegram — после коммита."""
@@ -363,10 +381,12 @@ class ErpEventsService:
                     )
                 event_row.deal_id = deal.id
 
-            # Устаревшее событие зеркало не меняет, но в ленту и клиенту всё равно уходит.
-            note_text = await self._dispatch_event(
-                session, envelope, client, deal if fresh else None
-            )
+            # Устаревшее событие стадию, название и сумму зеркала не меняет (они возвращаются после
+            # обработчика), но итог сделки (`won`/`lost`) применяется, а в ленту событие пишется.
+            mirror = (deal.external_stage, deal.title, deal.amount, deal.currency) if deal else None
+            note_text = await self._dispatch_event(session, envelope, client, deal)
+            if deal is not None and not fresh and mirror is not None:
+                deal.external_stage, deal.title, deal.amount, deal.currency = mirror
             cfg = await self._settings_service.get()
             deal_title = envelope.deal.title if envelope.deal else (deal.title if deal else "—")
             bot_msg = client_message(
@@ -409,7 +429,7 @@ class ErpEventsService:
             # задваивать их. Они записываются в строку события и уходят после коммита
             # (`deliver_notifications`).
             outbox: list[dict[str, Any]] = []
-            if bot_msg:
+            if bot_msg and not (not fresh and envelope.event in STALE_SILENT_EVENTS):
                 outbox.append(
                     {
                         "kind": "client",
@@ -539,7 +559,7 @@ class ErpEventsService:
         if ev == "deal.won":
             amt = p.get("amount", env.deal.amount if env.deal else "") or ""
             curr = p.get("currency", env.deal.currency if env.deal else "")
-            if deal:
+            if deal and _outcome_is_current(deal, env.occurred_at):
                 current_st = (
                     DealStage(deal.stage)
                     if deal.stage in ("open", "won", "lost")
@@ -558,7 +578,7 @@ class ErpEventsService:
 
         if ev == "deal.lost":
             reason = p.get("lost_reason")
-            if deal:
+            if deal and _outcome_is_current(deal, env.occurred_at):
                 current_st = (
                     DealStage(deal.stage)
                     if deal.stage in ("open", "won", "lost")
@@ -725,10 +745,12 @@ class ErpEventsService:
             row = await session.get(ErpIncomingEvent, event_id, with_for_update=True)
             if row is None or not row.outbox or row.notified_at is not None:
                 return 0
-            row.notified_at = datetime.now(UTC)
             bot = await self._bot_provider()
             if bot is None or self._config.telegram_dry_run:
+                # Бота нет или он выключен: сообщения не захватываются и не теряются — их отправит
+                # сборщик, когда бот появится (старше суток — не досылается, см. `sweep`).
                 return 0
+            row.notified_at = datetime.now(UTC)
             sends: list[tuple[int, str, InlineKeyboardMarkup | None]] = []
             for item in row.outbox:
                 if item.get("kind") == "client":

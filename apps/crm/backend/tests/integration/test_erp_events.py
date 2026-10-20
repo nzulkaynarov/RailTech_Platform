@@ -75,6 +75,7 @@ class Harness:
         self.bot = SpyBot(sessions)
         self.enqueued: list[str] = []
         self.enqueue_error: Exception | None = None
+        self.bot_available = True
         self.service = ErpEventsService(
             sessions,
             SettingsService(sessions),
@@ -86,8 +87,8 @@ class Harness:
             self._enqueue,
         )
 
-    async def _bot(self) -> SpyBot:
-        return self.bot
+    async def _bot(self) -> SpyBot | None:
+        return self.bot if self.bot_available else None
 
     async def _enqueue(self, event_id: str) -> int:
         if self.enqueue_error is not None:
@@ -556,17 +557,141 @@ async def test_events_of_the_same_instant_apply_in_arrival_order(harness: Harnes
     assert (await _stage(harness))[0] == "paid"
 
 
-async def test_a_stale_outcome_event_does_not_close_the_deal_again(harness: Harness) -> None:
-    """`deal.won` старше уже применённого события: стадия сделки и `closed_at` не трогаются."""
+async def test_a_late_deal_won_still_closes_the_deal_and_leaves_the_stage_alone(
+    harness: Harness,
+) -> None:
+    """Q-FIX30-1: `deal.won` уходит при подписании договора, а счёт мог прийти раньше.
+
+    Итог не теряется: сделка закрывается, `closed_at` — по `occurred_at`, а `external_stage` и
+    название остаются свежими."""
     client_id, _ = await harness.seed_client()
-    newer = await harness.store("invoice.paid", client_id, occurred_at=T0 + timedelta(hours=3))
-    stale_won = await harness.store("deal.won", client_id, occurred_at=T0)
+    newer = await harness.store(
+        "invoice.paid", client_id, occurred_at=T0 + timedelta(hours=3), title="Новое название"
+    )
+    late_won = await harness.store("deal.won", client_id, occurred_at=T0, title="Старое название")
 
     await harness.service.process_event(newer)
-    await harness.service.process_event(stale_won)
+    await harness.service.process_event(late_won)
 
     (deal,) = await harness.deals()
-    assert (deal.stage, deal.closed_at, deal.external_stage) == ("open", None, "paid")
+    assert (deal.stage, deal.closed_at) == ("won", T0)
+    assert (deal.external_stage, deal.external_stage_at) == ("paid", T0 + timedelta(hours=3))
+    assert deal.title == "Новое название"
+    assert deal.amount is not None
+
+
+async def test_a_late_deal_lost_closes_the_deal_with_its_reason(harness: Harness) -> None:
+    client_id, _ = await harness.seed_client()
+    newer = await harness.store("quote.sent", client_id, occurred_at=T0 + timedelta(hours=1))
+    late_lost = await harness.store(
+        "deal.lost",
+        client_id,
+        occurred_at=T0,
+        stage="lost",
+        payload={"lost_reason": "Дорого"},
+    )
+
+    await harness.service.process_event(newer)
+    await harness.service.process_event(late_lost)
+
+    (deal,) = await harness.deals()
+    assert (deal.stage, deal.lost_reason, deal.external_stage) == ("lost", "Дорого", "quote_sent")
+
+
+async def test_an_older_outcome_does_not_overturn_a_newer_one(harness: Harness) -> None:
+    """Итоги упорядочены между собой: `won` в T0 после `lost` в T0+1ч сделку не переоткрывает."""
+    client_id, _ = await harness.seed_client()
+    lost = await harness.store(
+        "deal.lost",
+        client_id,
+        occurred_at=T0 + timedelta(hours=1),
+        stage="lost",
+        payload={"lost_reason": "Дорого"},
+    )
+    old_won = await harness.store("deal.won", client_id, occurred_at=T0)
+
+    await harness.service.process_event(lost)
+    await harness.service.process_event(old_won)
+
+    (deal,) = await harness.deals()
+    assert (deal.stage, deal.closed_at) == ("lost", T0 + timedelta(hours=1))
+
+
+@pytest.mark.parametrize("event", ["delivery.eta_changed", "delivery.status_changed"])
+async def test_a_stale_state_event_reaches_the_feed_but_not_the_client(
+    harness: Harness, event: str
+) -> None:
+    """Устаревший «срок сдвинулся» в бот не идёт (клиент увидит неактуальное), в ленту — да."""
+    client_id, _ = await harness.seed_client()
+    newer = await harness.store("invoice.paid", client_id, occurred_at=T0 + timedelta(hours=2))
+    stale = await harness.store(event, client_id, occurred_at=T0)
+    await harness.service.process_event(newer)
+    harness.bot.sent.clear()
+
+    await harness.service.process_event(stale)
+
+    assert harness.bot.sent == []
+    assert (await harness.row(stale)).outbox is None
+    async with harness.sessions() as session:
+        notes = (await session.scalars(select(LeadNote.text).order_by(LeadNote.id))).all()
+    assert len(notes) == 2, "в ленте есть обе записи"
+
+
+async def test_a_stale_one_off_fact_still_reaches_the_client(harness: Harness) -> None:
+    """КП и счёт — разовые факты: опоздавшее «КП готово» клиенту всё равно нужно."""
+    client_id, _ = await harness.seed_client()
+    newer = await harness.store("invoice.paid", client_id, occurred_at=T0 + timedelta(hours=2))
+    late_quote = await harness.store("quote.sent", client_id, occurred_at=T0)
+    await harness.service.process_event(newer)
+    harness.bot.sent.clear()
+
+    await harness.service.process_event(late_quote)
+
+    assert len(harness.bot.sent) == 1
+
+
+async def test_without_a_bot_or_in_dry_run_messages_are_kept_for_the_sweeper(
+    harness: Harness,
+) -> None:
+    """Бота нет / включён dry-run: `notified_at` не ставится, сообщение не теряется навсегда."""
+    client_id, _ = await harness.seed_client()
+    event_id = await harness.store("quote.sent", client_id)
+    harness.bot_available = False
+
+    assert await harness.service.process_event(event_id) is True
+    assert harness.bot.sent == []
+    row = await harness.row(event_id)
+    assert row.outbox
+    assert row.notified_at is None
+
+    harness.bot_available = True
+    await _age(harness, event_id, minutes=5)
+    assert await harness.service.sweep() == 1
+    assert len(harness.bot.sent) == 1
+    assert (await harness.row(event_id)).notified_at is not None
+
+
+async def test_dry_run_does_not_claim_the_messages_either(harness: Harness) -> None:
+    client_id, _ = await harness.seed_client()
+    event_id = await harness.store("quote.sent", client_id)
+    harness.service._config = harness.service._config.model_copy(update={"telegram_dry_run": True})
+
+    assert await harness.service.process_event(event_id) is True
+
+    assert harness.bot.sent == []
+    assert (await harness.row(event_id)).notified_at is None
+
+
+async def test_messages_older_than_a_day_are_not_sent_late(harness: Harness) -> None:
+    client_id, _ = await harness.seed_client()
+    event_id = await harness.store("quote.sent", client_id)
+    harness.bot_available = False
+    await harness.service.process_event(event_id)
+    harness.bot_available = True
+    await _age(harness, event_id, hours=30)
+
+    assert await harness.service.sweep() == 0
+    assert harness.bot.sent == []
 
 
 async def test_the_envelope_schema_still_accepts_what_the_tests_send(harness: Harness) -> None:
