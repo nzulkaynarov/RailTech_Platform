@@ -18,7 +18,9 @@
   валюта попадает в `fx_missing`, отправка на согласование, PDF и отправка клиенту блокируются
   кодом `FX_RATE_MISSING`; выход — обновление курсов ЦБ или договорной курс финансиста.
 * **Договорной курс** (`fx_manual`) — только с правом `finance.rates`, с причиной, в журнал; побеждает
-  снимок; задаётся на незамороженном КП (до отправки клиенту).
+  снимок; задаётся и снимается **только в черновике** (FIX-41): на согласовании и позже — 409
+  `QUOTE_NOT_DRAFT` (отправленное клиенту — `QUOTE_FROZEN`); путь — вернуть КП в черновик (отзыв),
+  поменять курс и отправить на согласование заново.
 """
 
 from decimal import Decimal
@@ -242,7 +244,7 @@ def _actor_name(actor) -> str:
 def set_quote_rate_override(quote_id: int, *, actor, currency: str, rate, reason: str):
     """Договорной курс КП (`rate`) или его снятие (`rate=None`) — с причиной, в журнал (`finance.rates`).
 
-    Ошибки — `QuoteFxError` с кодом: ROLE_NOT_PERMITTED, QUOTE_FROZEN, FX_CURRENCY_REQUIRED,
+    Ошибки — `QuoteFxError` с кодом: ROLE_NOT_PERMITTED, QUOTE_FROZEN, QUOTE_NOT_DRAFT, FX_CURRENCY_REQUIRED,
     FX_BASE_CURRENCY, FX_CURRENCY_UNKNOWN, FX_RATE_INVALID, FX_RATE_MUST_BE_POSITIVE,
     FX_OVERRIDE_REASON_REQUIRED, FX_OVERRIDE_REASON_TOO_LONG. Снятие несуществующего курса — no-op.
     """
@@ -262,6 +264,10 @@ def set_quote_rate_override(quote_id: int, *, actor, currency: str, rate, reason
         quote = Quote.objects.select_for_update(of=("self",)).select_related("deal").get(pk=quote_id)
         if quote.frozen_at is not None:
             raise QuoteFxError("QUOTE_FROZEN")
+        if not rates_are_live(quote):
+            # Договорной курс меняет цену КП: на согласовании и позже — только через возврат в черновик
+            # и повторное согласование (FIX-41, F-2).
+            raise QuoteFxError("QUOTE_NOT_DRAFT")
         manual, manual_meta = _dict(quote.fx_manual), _dict(quote.fx_manual_meta)
         previous = manual.get(code)
         if new_rate is None and previous is None:

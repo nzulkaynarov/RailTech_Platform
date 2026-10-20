@@ -6,10 +6,11 @@ export type Currency = 'USD' | 'UZS';
 
 interface CurrencyState {
   currency: Currency;
-  rate: number;
+  /** Курс USD→UZS из справочника курсов ERP (ЦБ РУз); `null` — курса нет, пересчёта в USD нет. */
+  rate: number | null;
   rateLoaded: boolean;
-  /** Курс не приехал с сервера и остаётся резервным — суммы в USD приблизительны. */
-  rateIsFallback: boolean;
+  /** Курса нет (не загрузился или в справочнике нет свежего): суммы остаются в сумах, USD недоступен. */
+  rateUnavailable: boolean;
   setCurrency: (currency: Currency) => void;
   loadRate: () => Promise<void>;
   convert: (amountUZS: number) => number;
@@ -21,57 +22,68 @@ interface CurrencyState {
 // `convert` DIVIDES by the rate for a USD view; `format` renders via the shared
 // currency-aware formatMoney (same as the КП builder + PDF) so money reads consistently.
 //
-// This fixed the critical bug where a UZS КП was shown to the client as "$141,120,000"
-// (the old code assumed USD input → "$" on the raw UZS number, or ×rate in UZS mode →
-// 1.76 trillion). `convert`/`format` are rebuilt on every currency/rate change so their
-// identity changes — components that select `s.format` re-render, making the toggle live
-// (a stable function ref never triggered a re-render, so the toggle silently did nothing).
-const buildConvert = (currency: Currency, rate: number) => (amountUZS: number): number =>
-  currency === 'USD' && rate > 0 ? toDecimal(amountUZS).div(rate).toNumber() : amountUZS;
+// Курс один — `finance.services.fx` на бэкенде, приходит в `system-settings` только на чтение
+// (FIX-41, F-12). Резервного значения в коде нет: выдумать курс значит показать выдуманные суммы
+// (раньше DEFAULT_RATE = 12650 молча пересчитывал показываемые суммы). Нет курса — суммы остаются
+// в сумах, переключатель USD недоступен.
+//
+// This fixed the critical bug where a UZS КП was shown to the client as "$141,120,000" (the old
+// code assumed USD input → "$" on the raw UZS number, or ×rate in UZS mode → 1.76 trillion).
+// `convert`/`format` are rebuilt on every currency/rate change so their identity changes —
+// components that select `s.format` re-render, making the toggle live.
+const usdRate = (currency: Currency, rate: number | null): number | null =>
+  currency === 'USD' && rate !== null && rate > 0 ? rate : null;
 
-const buildFormat = (currency: Currency, rate: number) => (amountUZS: number): string => {
-  if (currency === 'USD') {
-    const amountUSD = rate > 0 ? toDecimal(amountUZS).div(rate).toNumber() : 0;
-    return formatMoney(amountUSD, 'USD');
-  }
-  return formatMoney(amountUZS, 'UZS');
+const buildConvert = (currency: Currency, rate: number | null) => (amountUZS: number): number => {
+  const divisor = usdRate(currency, rate);
+  return divisor === null ? amountUZS : toDecimal(amountUZS).div(divisor).toNumber();
 };
 
-const DEFAULT_RATE = 12650;
+const buildFormat = (currency: Currency, rate: number | null) => (amountUZS: number): string => {
+  const divisor = usdRate(currency, rate);
+  return divisor === null
+    ? formatMoney(amountUZS, 'UZS')
+    : formatMoney(toDecimal(amountUZS).div(divisor).toNumber(), 'USD');
+};
 
 export const useCurrencyStore = create<CurrencyState>((set, get) => ({
   // National currency by default — КП / deals / contracts / invoices are denominated in UZS.
   currency: 'UZS',
-  rate: DEFAULT_RATE,
+  rate: null,
   rateLoaded: false,
-  rateIsFallback: false,
+  rateUnavailable: false,
 
-  convert: buildConvert('UZS', DEFAULT_RATE),
-  format: buildFormat('UZS', DEFAULT_RATE),
+  convert: buildConvert('UZS', null),
+  format: buildFormat('UZS', null),
 
-  setCurrency: (currency: Currency) =>
-    set({ currency, convert: buildConvert(currency, get().rate), format: buildFormat(currency, get().rate) }),
+  setCurrency: (requested: Currency) => {
+    const { rate } = get();
+    // Без курса USD включить нельзя — остаёмся в сумах.
+    const currency: Currency = requested === 'USD' && !(rate !== null && rate > 0) ? 'UZS' : requested;
+    set({ currency, convert: buildConvert(currency, rate), format: buildFormat(currency, rate) });
+  },
 
   loadRate: async () => {
     if (get().rateLoaded) return;
     try {
       const settings = await systemApi.getSettings();
-      const rate = toDecimal(settings.exchange_rate_usd_uzs).toNumber();
-      if (rate > 0) {
-        const currency = get().currency;
-        set({
-          rate,
-          rateLoaded: true,
-          rateIsFallback: false,
-          convert: buildConvert(currency, rate),
-          format: buildFormat(currency, rate),
-        });
-      }
+      const rate =
+        settings.exchange_rate_usd_uzs == null ? null : toDecimal(settings.exchange_rate_usd_uzs).toNumber();
+      const usable = rate !== null && rate > 0 ? rate : null;
+      const currency: Currency = usable === null ? 'UZS' : get().currency;
+      set({
+        rate: usable,
+        rateLoaded: true,
+        rateUnavailable: usable === null,
+        currency,
+        convert: buildConvert(currency, usable),
+        format: buildFormat(currency, usable),
+      });
     } catch {
-      // Курс остаётся резервным, и попытка повторится — но молчать об этом нельзя: по нему
-      // пересчитываются ПОКАЗЫВАЕМЫЕ суммы, и пользователь читал бы их как настоящие
-      // (аудит UI, U2). Переключатель валюты помечает такой курс приблизительным.
-      set({ rateIsFallback: true });
+      // Курс не приехал — попытка повторится, а пока суммы честно остаются в сумах и USD недоступен:
+      // пересчитывать показываемые суммы по выдуманному курсу нельзя (аудит UI, U2; аудит FIX-41).
+      const currency: Currency = 'UZS';
+      set({ rate: null, rateUnavailable: true, currency, convert: buildConvert(currency, null), format: buildFormat(currency, null) });
     }
   },
 }));

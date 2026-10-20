@@ -10836,12 +10836,6 @@ export interface components {
              * @description Процент НДС, применяемый к котировкам
              */
             vat_rate?: string;
-            /**
-             * Курс USD/UZS
-             * Format: decimal
-             * @description Справочный курс (может обновляться автоматически)
-             */
-            exchange_rate_usd_uzs?: string;
             /** Название платформы */
             platform_name?: string;
             /**
@@ -12599,11 +12593,10 @@ export interface components {
              */
             vat_rate?: string;
             /**
-             * Курс USD/UZS
              * Format: decimal
-             * @description Справочный курс (может обновляться автоматически)
+             * @description Курс USD→UZS из справочника курсов (ЦБ РУз), только чтение; null — свежего курса нет.
              */
-            exchange_rate_usd_uzs?: string;
+            readonly exchange_rate_usd_uzs: string | null;
             /** Название платформы */
             platform_name?: string;
             /**
