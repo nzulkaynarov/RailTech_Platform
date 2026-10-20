@@ -83,4 +83,6 @@ export const Reason = {
   user_not_provisioned: "user_not_provisioned",
   user_inactive: "user_inactive",
   erp_email_conflict: "erp_email_conflict",
+  won_decided_by_erp: "won_decided_by_erp",
+  handoff_no_consent: "handoff_no_consent",
 } as const;

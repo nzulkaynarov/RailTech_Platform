@@ -108,6 +108,20 @@ const TEXT_GROUPS: Record<string, string[]> = {
     "phone_before_manager",
     "phone_declined_manager",
   ],
+  erp: [
+    "erp_quote_sent",
+    "erp_invoice_issued",
+    "erp_invoice_paid",
+    "erp_delivery_status",
+    "erp_delivery_statuses",
+    "erp_delivery_eta_changed",
+    "erp_act_issued",
+    "erp_btn_quote",
+    "erp_btn_invoice",
+    "erp_btn_cabinet",
+    "erp_staff_quote_accepted",
+    "erp_staff_act_returned",
+  ],
   erase: ["erase_confirm", "erase_button", "cancel_button", "erase_cancelled", "erased"],
 };
 

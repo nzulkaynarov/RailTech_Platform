@@ -8558,6 +8558,8 @@ export const getCloseWonUrl = (leadId: number) => {
 };
 
 /**
+ * «Сделка заключена». С коннектором ERP — 409 `won_decided_by_erp` (ADR-0022): итог придёт
+ * событием `deal.won`, закрыть лид можно только отказом.
  * @summary Close Won
  */
 export const closeWon = async (
@@ -8663,6 +8665,11 @@ export const getMakeCustomerUrl = (leadId: number) => {
 };
 
 /**
+ * «Сделать клиентом» / «Передать в бэк-офис» (ADR-0022).
+ *
+ * Ошибки (ADR-0017, `details.reason`): `deal_not_closed` (409), `not_lead_owner` (403),
+ * `handoff_no_consent` (422 — в режиме `erp` лид не давал согласие, ERP его не выдумывает),
+ * `telegram_linked_elsewhere` (409), `erp_not_configured` (409), `erp_unavailable` (502).
  * @summary Make Customer
  */
 export const makeCustomer = async (

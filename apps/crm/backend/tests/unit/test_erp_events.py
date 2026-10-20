@@ -30,6 +30,7 @@ from app.models.deals import Deal
 from app.models.integrations import ErpIncomingEvent
 from app.models.leads import Lead, LeadNote, TelegramIdentity
 from app.schemas.erp_events import ErpEventEnvelope
+from app.schemas.settings import AppSettings, CompanySettings, IntegrationsSettings
 from app.security.secrets_store import ERP_WEBHOOK_SECRET, SecretsStore
 from app.services.erp_events import ErpEventsService, verify_signature
 
@@ -215,8 +216,14 @@ class _DummyStore(SecretsStore):
 
 
 class _DummySettingsService:
-    async def get(self) -> Any:
-        return SimpleNamespace(integrations=SimpleNamespace(erp_base_url="https://erp.internal"))
+    def __init__(self, cabinet_url: str = "") -> None:
+        self._cabinet_url = cabinet_url
+
+    async def get(self) -> AppSettings:
+        return AppSettings(
+            integrations=IntegrationsSettings(erp_base_url="https://erp.internal"),
+            company=CompanySettings(cabinet_url=self._cabinet_url),
+        )
 
 
 class _MockSession:
@@ -680,6 +687,121 @@ async def test_process_event_telegram_notification_on_quote_sent() -> None:
     assert bot.sent_messages[0]["chat_id"] == 777
     assert "коммерческое предложение" in bot.sent_messages[0]["text"]
     assert bot.sent_messages[0]["reply_markup"] is not None
+
+
+def _buttons(markup: Any) -> list[tuple[str, str | None]]:
+    return [(row[0].text, row[0].url) for row in markup.inline_keyboard]
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("language", "text_part", "buttons"),
+    [
+        (
+            "ru",
+            "коммерческое предложение",
+            [
+                ("Открыть КП", "https://erp.example.com/q/42"),
+                ("Кабинет", "https://cab.example.com"),
+            ],
+        ),
+        (
+            "uz",
+            "tijorat taklifi",
+            [
+                ("Taklifni ochish", "https://erp.example.com/q/42"),
+                ("Kabinet", "https://cab.example.com"),
+            ],
+        ),
+        (
+            "en",
+            "commercial proposal",
+            [
+                ("Open the quote", "https://erp.example.com/q/42"),
+                ("Cabinet", "https://cab.example.com"),
+            ],
+        ),
+    ],
+)
+async def test_client_message_follows_lead_language_with_cabinet_button(
+    language: str, text_part: str, buttons: list[tuple[str, str]]
+) -> None:
+    """I-8: текст из settings.texts на языке лида, кнопки «Открыть КП» и «Кабинет»."""
+    client = Client(id=101, name="ООО Тест", erp_company_id=202)
+    lead = Lead(id=501, client_id=101, display_name="Лид", language=language)
+    deal = Deal(id=701, client_id=101, lead_id=501, erp_deal_id=9001, title="Оси")
+    tg = TelegramIdentity(id=1, tg_user_id=777, client_id=101, lead_id=501, is_blocked=False)
+    env = _sample_envelope(
+        event="quote.sent",
+        deal_stage="quote_sent",
+        payload={"erp_quote_id": 42, "version": 1, "public_url": "https://erp.example.com/q/42"},
+    )
+    row = ErpIncomingEvent(
+        event_id="evt-lang",
+        event_type="quote.sent",
+        erp_company_id=202,
+        crm_client_id=101,
+        payload=env,
+        status="received",
+    )
+    session = _StatefulSession({"evt-lang": row}, {101: client}, {501: lead}, {701: deal}, [tg], {})
+    bot = _FakeBot()
+
+    async def get_bot() -> Any:
+        return bot
+
+    service = ErpEventsService(
+        _mock_session_factory(session),
+        _DummySettingsService("https://cab.example.com"),  # type: ignore[arg-type]
+        _DummyStore(SECRET),
+        Settings(erp_webhook_secret=SECRET),
+        get_bot,
+    )
+
+    assert await service.process_event("evt-lang") is True
+    assert len(bot.sent_messages) == 1
+    assert text_part in bot.sent_messages[0]["text"]
+    assert _buttons(bot.sent_messages[0]["reply_markup"]) == buttons
+
+
+@pytest.mark.asyncio
+async def test_no_cabinet_button_when_cabinet_url_is_empty() -> None:
+    client = Client(id=101, name="ООО Тест", erp_company_id=202)
+    lead = Lead(id=501, client_id=101, display_name="Лид", language="ru")
+    deal = Deal(id=701, client_id=101, lead_id=501, erp_deal_id=9001, title="Оси")
+    tg = TelegramIdentity(id=1, tg_user_id=777, client_id=101, lead_id=501, is_blocked=False)
+    env = _sample_envelope(
+        event="invoice.paid",
+        deal_stage="paid",
+        payload={"erp_invoice_id": 4, "number": "INV-01", "amount": "100.00", "currency": "UZS"},
+    )
+    row = ErpIncomingEvent(
+        event_id="evt-nocab",
+        event_type="invoice.paid",
+        erp_company_id=202,
+        crm_client_id=101,
+        payload=env,
+        status="received",
+    )
+    session = _StatefulSession(
+        {"evt-nocab": row}, {101: client}, {501: lead}, {701: deal}, [tg], {}
+    )
+    bot = _FakeBot()
+
+    async def get_bot() -> Any:
+        return bot
+
+    service = ErpEventsService(
+        _mock_session_factory(session),
+        _DummySettingsService(""),  # type: ignore[arg-type]
+        _DummyStore(SECRET),
+        Settings(erp_webhook_secret=SECRET),
+        get_bot,
+    )
+
+    assert await service.process_event("evt-nocab") is True
+    assert "INV-01" in bot.sent_messages[0]["text"]
+    assert bot.sent_messages[0]["reply_markup"] is None  # сообщение не ломается без адреса
 
 
 @pytest.mark.asyncio
