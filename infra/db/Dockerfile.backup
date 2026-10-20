@@ -1,0 +1,11 @@
+# Бэкап PostgreSQL 17 (VPS 2): pg_dump 17 из образа pgvector + rclone (S3) + openssl (шифрование внешней копии).
+FROM pgvector/pgvector:0.8.7-pg17
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends rclone openssl ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+COPY backup.sh /usr/local/bin/backup.sh
+RUN chmod 0755 /usr/local/bin/backup.sh
+HEALTHCHECK --interval=1h --timeout=10s --start-period=30s --retries=1 \
+    CMD ["sh", "-c", "test ! -f /backups/last_success || [ $(( $(date +%s) - $(cat /backups/last_success) )) -lt 93600 ]"]
+ENTRYPOINT []
+CMD ["/usr/local/bin/backup.sh", "--daemon"]

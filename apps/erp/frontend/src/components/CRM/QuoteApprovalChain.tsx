@@ -5,6 +5,7 @@ import { Check, ChevronDown, Clock, Loader2, Lock, SendHorizontal, Undo2, X, Mai
 import type { Quote, QuoteApprovalStep } from '@/api/crmApi';
 import { translateApiError } from '@/lib/apiError';
 import { useQuoteApprovalPreview, useSubmitQuoteForReview, useActOnApprovalStep, useRecallQuote } from '@/hooks/useCRM';
+import { useHasCompanyPermission } from '@/hooks/useCapabilities';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
@@ -51,8 +52,11 @@ export const QuoteApprovalChain: React.FC<QuoteApprovalChainProps> = ({ quote })
   // DRAFT: read-only preview of the would-be chain — the seller sees up-front who will approve
   // (or that it will auto-approve) BEFORE committing to submit. No side effects (Salesforce
   // Approval Preview). Hook order is unconditional (rules-of-hooks); the fetch itself is gated
-  // to drafts via `enabled`.
-  const { data: approvalPreview } = useQuoteApprovalPreview(quote.id, status === 'DRAFT');
+  // to drafts via `enabled`. Сервер отдаёт предпросмотр только с `quote.build` (как и отправку на
+  // согласование): без права запрос не шлём — иначе 403 и тост «Недостаточно прав» при каждом
+  // открытии КП ролью «Наблюдатель»/«Финансы» (FIX-44, F-7). Это UX-гейт, истина — на сервере.
+  const canBuildQuote = useHasCompanyPermission('quote.build');
+  const { data: approvalPreview } = useQuoteApprovalPreview(quote.id, status === 'DRAFT' && canBuildQuote);
   if (!CHAIN_STATUSES.has(status)) return null;
 
   const steps = quote.approval_steps ?? [];

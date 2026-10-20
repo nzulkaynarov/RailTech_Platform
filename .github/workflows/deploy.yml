@@ -1,0 +1,238 @@
+# Деплой прода (M5-INF-01): только вручную (workflow_dispatch), на PR и push не запускается.
+# Вход: git-ref (по умолчанию main) и действие deploy | rollback. Окружение `production` (GitHub environment) —
+# защита вручную: required reviewers задаёт владелец. ci.yml не трогает.
+#
+# deploy:   сборка пяти образов -> push в GHCR с тегом = полный git sha -> загрузка infra/ на VPS 1 по SSH ->
+#           deploy.sh на сервере (pg_dump-гейт, миграции, up) -> smoke трёх доменов с раннера.
+# rollback: rollback.sh на VPS 1 — предыдущий тег (по state на сервере). Миграции БД не откатываются.
+#
+# Секреты environment `production` (значений здесь нет): DEPLOY_SSH_KEY (приватный ключ деплоя),
+# DEPLOY_KNOWN_HOSTS (строка(и) known_hosts VPS 1: `ssh-keyscan -t ed25519 <host>`, сверенные владельцем).
+# Variables environment `production`: DEPLOY_HOST (публичный IP/имя VPS 1), DEPLOY_USER, CRM_DOMAIN, ERP_DOMAIN,
+# CABINET_DOMAIN, TELEGRAM_BOT_USERNAME (необязательно). Секреты приложений лежат на сервере (/opt/rt/.env.prod), не здесь.
+name: Deploy
+
+on:
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: Git-ref для сборки и деплоя (ветка, тег или sha; должен входить в main)
+        required: true
+        default: main
+        type: string
+      action:
+        description: Действие
+        required: true
+        default: deploy
+        type: choice
+        options: [deploy, rollback]
+
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+
+jobs:
+  deploy:
+    if: inputs.action == 'deploy'
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    environment: production
+    permissions:
+      contents: read
+      packages: write
+    env:
+      DEPLOY_HOST: ${{ vars.DEPLOY_HOST }}
+      DEPLOY_USER: ${{ vars.DEPLOY_USER }}
+      CRM_DOMAIN: ${{ vars.CRM_DOMAIN }}
+      ERP_DOMAIN: ${{ vars.ERP_DOMAIN }}
+      CABINET_DOMAIN: ${{ vars.CABINET_DOMAIN }}
+    steps:
+      - name: Проверка переменных окружения production
+        run: |
+          for v in DEPLOY_HOST DEPLOY_USER CRM_DOMAIN ERP_DOMAIN CABINET_DOMAIN; do
+            [ -n "${!v}" ] || { echo "::error::не задана переменная environment production: $v"; exit 1; }
+          done
+
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Тег = git sha; ref должен входить в main
+        id: ver
+        run: |
+          sha="$(git rev-parse HEAD)"
+          git merge-base --is-ancestor "$sha" origin/main \
+            || { echo "::error::$sha не входит в main — деплой только слитого кода"; exit 1; }
+          echo "tag=$sha" >> "$GITHUB_OUTPUT"
+          echo "owner=${GITHUB_REPOSITORY_OWNER,,}" >> "$GITHUB_OUTPUT"
+
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Образ rt-crm-backend
+        uses: docker/build-push-action@v6
+        with:
+          context: apps/crm/backend
+          target: prod
+          push: true
+          tags: ghcr.io/${{ steps.ver.outputs.owner }}/rt-crm-backend:${{ steps.ver.outputs.tag }}
+          cache-from: type=gha,scope=crm-backend
+          cache-to: type=gha,mode=max,scope=crm-backend
+
+      - name: Образ rt-crm-frontend
+        uses: docker/build-push-action@v6
+        with:
+          context: apps/crm/frontend
+          target: prod
+          push: true
+          tags: ghcr.io/${{ steps.ver.outputs.owner }}/rt-crm-frontend:${{ steps.ver.outputs.tag }}
+          cache-from: type=gha,scope=crm-frontend
+          cache-to: type=gha,mode=max,scope=crm-frontend
+
+      - name: Образ rt-erp-backend
+        uses: docker/build-push-action@v6
+        with:
+          context: apps/erp/backend
+          push: true
+          tags: ghcr.io/${{ steps.ver.outputs.owner }}/rt-erp-backend:${{ steps.ver.outputs.tag }}
+          cache-from: type=gha,scope=erp-backend
+          cache-to: type=gha,mode=max,scope=erp-backend
+
+      - name: Образ rt-erp-frontend
+        uses: docker/build-push-action@v6
+        with:
+          context: apps/erp/frontend
+          build-args: |
+            VITE_API_URL=
+            VITE_WS_URL=
+          push: true
+          tags: ghcr.io/${{ steps.ver.outputs.owner }}/rt-erp-frontend:${{ steps.ver.outputs.tag }}
+          cache-from: type=gha,scope=erp-frontend
+          cache-to: type=gha,mode=max,scope=erp-frontend
+
+      - name: Образ rt-cabinet
+        uses: docker/build-push-action@v6
+        with:
+          context: apps/cabinet
+          build-args: |
+            VITE_API_URL=
+            VITE_BOT_USERNAME=${{ vars.TELEGRAM_BOT_USERNAME }}
+            VITE_CRM_URL=https://${{ vars.CRM_DOMAIN }}
+          push: true
+          tags: ghcr.io/${{ steps.ver.outputs.owner }}/rt-cabinet:${{ steps.ver.outputs.tag }}
+          cache-from: type=gha,scope=cabinet
+          cache-to: type=gha,mode=max,scope=cabinet
+
+      - name: SSH к VPS 1
+        env:
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          DEPLOY_KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
+        run: |
+          [ -n "$DEPLOY_SSH_KEY" ] && [ -n "$DEPLOY_KNOWN_HOSTS" ] \
+            || { echo "::error::нет секретов DEPLOY_SSH_KEY / DEPLOY_KNOWN_HOSTS в environment production"; exit 1; }
+          install -d -m 700 ~/.ssh
+          printf '%s\n' "$DEPLOY_SSH_KEY" > ~/.ssh/id_deploy
+          chmod 600 ~/.ssh/id_deploy
+          printf '%s\n' "$DEPLOY_KNOWN_HOSTS" > ~/.ssh/known_hosts
+          {
+            echo "Host app"
+            echo "  HostName $DEPLOY_HOST"
+            echo "  User $DEPLOY_USER"
+            echo "  IdentityFile ~/.ssh/id_deploy"
+            echo "  IdentitiesOnly yes"
+            echo "  StrictHostKeyChecking yes"
+          } > ~/.ssh/config
+
+      - name: Загрузка релиза на VPS 1
+        env:
+          TAG: ${{ steps.ver.outputs.tag }}
+        run: |
+          # TAG — полный git sha из шага ver; подстановка на клиенте намеренная
+          tar -czf release.tgz infra apps/crm/infra/casbin
+          # shellcheck disable=SC2029
+          ssh app "mkdir -p /opt/rt/releases/$TAG"
+          # shellcheck disable=SC2029
+          ssh app "tar -xzf - -C /opt/rt/releases/$TAG" < release.tgz
+
+      - name: Деплой на VPS 1 (pg_dump-гейт, миграции, up)
+        env:
+          TAG: ${{ steps.ver.outputs.tag }}
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GHCR_USER: ${{ github.actor }}
+        run: |
+          # Токен прогона (живёт до конца job) — только для pull; передаётся через stdin, не в командной строке.
+          # TAG/GHCR_USER — sha и логин GitHub; подстановка на клиенте намеренная.
+          # shellcheck disable=SC2029
+          printf '%s' "$GHCR_TOKEN" | ssh app "docker login ghcr.io -u '$GHCR_USER' --password-stdin"
+          # shellcheck disable=SC2029
+          ssh app "bash /opt/rt/releases/$TAG/infra/deploy/deploy.sh $TAG"
+
+      - name: Smoke трёх доменов (с раннера)
+        run: |
+          bash infra/deploy/smoke.sh --domains "$CRM_DOMAIN" "$ERP_DOMAIN" "$CABINET_DOMAIN" --retries 12
+
+      - name: Выход из GHCR на сервере
+        if: always()
+        run: ssh app "docker logout ghcr.io" || true
+
+  rollback:
+    if: inputs.action == 'rollback'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment: production
+    env:
+      DEPLOY_HOST: ${{ vars.DEPLOY_HOST }}
+      DEPLOY_USER: ${{ vars.DEPLOY_USER }}
+      CRM_DOMAIN: ${{ vars.CRM_DOMAIN }}
+      ERP_DOMAIN: ${{ vars.ERP_DOMAIN }}
+      CABINET_DOMAIN: ${{ vars.CABINET_DOMAIN }}
+    steps:
+      - name: Проверка переменных окружения production
+        run: |
+          for v in DEPLOY_HOST DEPLOY_USER CRM_DOMAIN ERP_DOMAIN CABINET_DOMAIN; do
+            [ -n "${!v}" ] || { echo "::error::не задана переменная environment production: $v"; exit 1; }
+          done
+
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: SSH к VPS 1
+        env:
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          DEPLOY_KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
+        run: |
+          [ -n "$DEPLOY_SSH_KEY" ] && [ -n "$DEPLOY_KNOWN_HOSTS" ] \
+            || { echo "::error::нет секретов DEPLOY_SSH_KEY / DEPLOY_KNOWN_HOSTS в environment production"; exit 1; }
+          install -d -m 700 ~/.ssh
+          printf '%s\n' "$DEPLOY_SSH_KEY" > ~/.ssh/id_deploy
+          chmod 600 ~/.ssh/id_deploy
+          printf '%s\n' "$DEPLOY_KNOWN_HOSTS" > ~/.ssh/known_hosts
+          {
+            echo "Host app"
+            echo "  HostName $DEPLOY_HOST"
+            echo "  User $DEPLOY_USER"
+            echo "  IdentityFile ~/.ssh/id_deploy"
+            echo "  IdentitiesOnly yes"
+            echo "  StrictHostKeyChecking yes"
+          } > ~/.ssh/config
+
+      - name: Откат кода на предыдущий тег
+        # Скрипт берётся из текущего релиза на сервере (/opt/rt/current); образы предыдущего тега уже лежат на VPS 1.
+        run: ssh app "bash /opt/rt/current/infra/deploy/rollback.sh"
+
+      - name: Smoke трёх доменов (с раннера)
+        run: |
+          bash infra/deploy/smoke.sh --domains "$CRM_DOMAIN" "$ERP_DOMAIN" "$CABINET_DOMAIN" --retries 12

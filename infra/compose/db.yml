@@ -1,0 +1,115 @@
+# prod, VPS 2 `db` (docs/runbooks/servers.md): PostgreSQL 17 + pgvector и ежедневный бэкап. Проект `rt-db`.
+#   docker compose -f db.yml --env-file /opt/rt-db/.env.db up -d      (или infra/deploy/db-up.sh)
+# Базы: crm, erp, litellm, langfuse — у каждой своя роль (<имя>_app), создаёт infra/db/prod-init.sh.
+# Порт 5432 слушает только внутренний IP VPS 2 (${DB_INTERNAL_IP}); pg_hba пускает по TLS только ${APP_INTERNAL_IP}
+# (VPS 1) и только роль своей базы. Файрвол (ufw) закрывает 5432 для остальных — runbook deploy.md.
+# Бэкап: infra/db/backup.sh в контейнере `backup` (профиль не нужен — работает всегда).
+
+name: rt-db
+
+x-ops: &ops
+  restart: unless-stopped
+  logging:
+    driver: json-file
+    options: { max-size: "20m", max-file: "5" }
+
+services:
+  postgres:
+    <<: *ops
+    image: pgvector/pgvector:0.8.7-pg17
+    # Параметры памяти — servers.md: shared_buffers 512 МБ, work_mem 8 МБ, max_connections 100; лимит контейнера 1,25 ГБ.
+    command:
+      - postgres
+      - -c
+      - listen_addresses=*
+      - -c
+      - hba_file=/etc/postgresql/pg_hba.conf
+      - -c
+      - ssl=on
+      - -c
+      - ssl_cert_file=/certs/server.crt
+      - -c
+      - ssl_key_file=/certs/server.key
+      - -c
+      - ssl_min_protocol_version=TLSv1.2
+      - -c
+      - password_encryption=scram-sha-256
+      - -c
+      - shared_buffers=512MB
+      - -c
+      - work_mem=8MB
+      - -c
+      - maintenance_work_mem=64MB
+      - -c
+      - effective_cache_size=1GB
+      - -c
+      - max_connections=100
+      - -c
+      - log_min_duration_statement=1000
+      - -c
+      - log_connections=on
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_DB: postgres
+      POSTGRES_PASSWORD: ${DB_SUPERUSER_PASSWORD:?set in .env.db}
+      # Пароли ролей приложений — для prod-init.sh (выполняется при создании пустого тома и по db-up.sh).
+      DB_CRM_PASSWORD: ${DB_CRM_PASSWORD:?set in .env.db}
+      DB_ERP_PASSWORD: ${DB_ERP_PASSWORD:?set in .env.db}
+      DB_LITELLM_PASSWORD: ${DB_LITELLM_PASSWORD:?set in .env.db}
+      DB_LANGFUSE_PASSWORD: ${DB_LANGFUSE_PASSWORD:?set in .env.db}
+      DB_BACKUP_PASSWORD: ${DB_BACKUP_PASSWORD:?set in .env.db}
+      TZ: UTC
+      PGTZ: UTC
+    ports: ["${DB_INTERNAL_IP:?set in .env.db}:5432:5432"]
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ../db/prod-init.sh:/docker-entrypoint-initdb.d/10-prod-init.sh:ro
+      # Файлы ниже готовит infra/deploy/db-up.sh: сертификат TLS (владелец uid 999, 0600) и pg_hba.conf с IP VPS 1.
+      - ${RT_DB_DIR:-/opt/rt-db}/certs:/certs:ro
+      - ${RT_DB_DIR:-/opt/rt-db}/pg_hba.conf:/etc/postgresql/pg_hba.conf:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d postgres"]
+      interval: 10s
+      timeout: 3s
+      retries: 20
+      start_period: 30s
+    deploy: { resources: { limits: { memory: 1280M } } }
+
+  backup:
+    <<: *ops
+    build:
+      context: ../db
+      dockerfile: Dockerfile.backup
+    image: rt-db-backup:local
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      PGHOST: postgres
+      PGUSER: rt_backup
+      PGPASSWORD: ${DB_BACKUP_PASSWORD}
+      DB_NAMES: crm erp litellm langfuse
+      BACKUP_DIR: /backups
+      BACKUP_KEEP_DAYS: ${BACKUP_KEEP_DAYS:-14}
+      BACKUP_AT_UTC: ${BACKUP_AT_UTC:-22:00}
+      # Ежедневно — в бакет `backups` RustFS на VPS 1 (по внутреннему IP). Пусто — выгрузка выключена.
+      BACKUP_RUSTFS_ENDPOINT: ${BACKUP_RUSTFS_ENDPOINT:-}
+      BACKUP_RUSTFS_ACCESS_KEY: ${BACKUP_RUSTFS_ACCESS_KEY:-}
+      BACKUP_RUSTFS_SECRET_KEY: ${BACKUP_RUSTFS_SECRET_KEY:-}
+      BACKUP_RUSTFS_BUCKET: ${BACKUP_RUSTFS_BUCKET:-backups}
+      # Еженедельно (BACKUP_EXT_DAY, 0 = воскресенье) — во внешнее S3-совместимое хранилище, шифруется
+      # BACKUP_ENC_PASSPHRASE (AES-256). Пусто — выгрузка выключена; провайдера выбирает владелец.
+      BACKUP_EXT_ENDPOINT: ${BACKUP_EXT_ENDPOINT:-}
+      BACKUP_EXT_ACCESS_KEY: ${BACKUP_EXT_ACCESS_KEY:-}
+      BACKUP_EXT_SECRET_KEY: ${BACKUP_EXT_SECRET_KEY:-}
+      BACKUP_EXT_BUCKET: ${BACKUP_EXT_BUCKET:-}
+      BACKUP_EXT_REGION: ${BACKUP_EXT_REGION:-}
+      BACKUP_EXT_DAY: ${BACKUP_EXT_DAY:-0}
+      BACKUP_EXT_KEEP_DAYS: ${BACKUP_EXT_KEEP_DAYS:-60}
+      BACKUP_ENC_PASSPHRASE: ${BACKUP_ENC_PASSPHRASE:-}
+    volumes:
+      - ${RT_BACKUP_DIR:-/var/backups/rt}:/backups
+    deploy: { resources: { limits: { memory: 256M } } }
+
+volumes:
+  postgres_data:

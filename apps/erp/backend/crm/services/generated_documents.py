@@ -14,6 +14,7 @@ from django.db import transaction
 from django.utils import timezone
 
 from accounts.models import CustomUser
+from crm.services.pdf_storage import save_rendered_pdf
 
 from ..constants import GeneratedDocumentStatusCode
 from .document_placeholders import (
@@ -669,4 +670,4 @@ def _render_generated_pdf(document) -> None:
     )
     buffer = BytesIO()
     HTML(string=html_string).write_pdf(buffer)
-    document.pdf_file.save(f"Document_{document.number}.pdf", ContentFile(buffer.getvalue()), save=True)
+    save_rendered_pdf(document, f"Document_{document.number}.pdf", ContentFile(buffer.getvalue()))
