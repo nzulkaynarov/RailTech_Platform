@@ -1,6 +1,6 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
-import { Loader2, Redo2, Save, Undo2 } from 'lucide-react';
+import { Loader2, PanelRightOpen, Redo2, Save, Undo2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { formatMoney } from '@/utils/decimal';
 import { Button } from '@/components/ui/button';
@@ -15,6 +15,10 @@ interface StickyTotalsBarProps {
 	marginTone?: string;
 	totalInclVat?: string | number | null;
 	currency: string;
+	/** Открыть панель «Экономика и итоги» — на узком экране она в шторке, и иконка в тулбаре её не выдаёт (D-13). */
+	onOpenEconomics?: () => void;
+	/** Только чтение: ни «Сохранить», ни отмены/повтора — править нечего. */
+	readOnly?: boolean;
 	hasUnsavedChanges: boolean;
 	saving: boolean;
 	onSave: () => void;
@@ -41,6 +45,8 @@ export const StickyTotalsBar: React.FC<StickyTotalsBarProps> = ({
 	marginTone,
 	totalInclVat,
 	currency,
+	onOpenEconomics,
+	readOnly = false,
 	hasUnsavedChanges,
 	saving,
 	onSave,
@@ -65,6 +71,12 @@ export const StickyTotalsBar: React.FC<StickyTotalsBarProps> = ({
 						<span className={cn('font-semibold tabular-nums', marginTone)}>{marginPercent.toFixed(1)}%</span>
 					</span>
 				)}
+				{onOpenEconomics && (
+					<Button variant="outline" size="sm" onClick={onOpenEconomics}>
+						<PanelRightOpen className="size-4" aria-hidden="true" />
+						{t('quote.rail.title')}
+					</Button>
+				)}
 				<span className="flex items-center gap-1.5">
 					<span className="text-xs uppercase tracking-wide text-muted-foreground">{t('quote.total')}</span>
 					<span className="text-base font-bold tabular-nums text-primary">
@@ -72,7 +84,8 @@ export const StickyTotalsBar: React.FC<StickyTotalsBarProps> = ({
 					</span>
 				</span>
 			</div>
-			<div className="flex items-center gap-3">
+			{!readOnly && (
+			<div className="flex flex-wrap items-center justify-end gap-x-3 gap-y-2">
 				{hasUnsavedChanges && (
 					<span className="text-xs font-medium text-warning">{t('quote.unsavedChanges')}</span>
 				)}
@@ -93,6 +106,7 @@ export const StickyTotalsBar: React.FC<StickyTotalsBarProps> = ({
 					{t('common.save')}
 				</Button>
 			</div>
+			)}
 		</div>
 	);
 };

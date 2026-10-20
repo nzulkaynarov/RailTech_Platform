@@ -9,7 +9,7 @@ import { Handshake, UserCheck, Loader2, Clock } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { formatWaiting, isUnclaimedRfq, waitingHours } from '@/lib/waiting';
 import { useClaimDeal, useReleaseDeal } from '@/hooks/useCRM';
-import { useIsSoloTeam } from '@/hooks/useCapabilities';
+import { useIsSoloTeam, useHasCompanyPermission } from '@/hooks/useCapabilities';
 import { DEAL_STAGE_LABEL_KEY } from '@/lib/codes';
 import { translateApiError } from '@/lib/apiError';
 import type { Deal } from '@/api/crmApi';
@@ -41,6 +41,8 @@ export function DealsKanban({ deals, stages, onOpen }: DealsKanbanProps) {
   const releaseMut = useReleaseDeal();
   // Wave B2 (auto-claim): hide the per-card «Взять в работу» for a solo seller — no queue to route.
   const isSoloTeam = useIsSoloTeam();
+  // «Взять в работу» / «Вернуть» — право `deal.manage` (сервер: claim/release → 403 без него; D-03, FIX-58).
+  const canManageDeals = useHasCompanyPermission('deal.manage');
 
   const handleClaim = (e: React.MouseEvent, dealId: number) => {
     e.stopPropagation(); // don't open the deal — just take ownership from the queue
@@ -164,7 +166,7 @@ export function DealsKanban({ deals, stages, onOpen }: DealsKanbanProps) {
                             </Badge>
                             {/* Право на возврат приходит с сервера — тем же предикатом, что и само
                                 действие; фронт его не выводит (U1). */}
-                            {d.viewer_can_release ? (
+                            {d.viewer_can_release && canManageDeals ? (
                               <Button
                                 variant="ghost"
                                 size="sm"
@@ -179,7 +181,7 @@ export function DealsKanban({ deals, stages, onOpen }: DealsKanbanProps) {
                               </Button>
                             ) : null}
                           </div>
-                        ) : isSoloTeam ? null : (
+                        ) : isSoloTeam || !canManageDeals ? null : (
                           <Button
                             variant="outline"
                             size="sm"

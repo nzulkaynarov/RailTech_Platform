@@ -87,9 +87,14 @@ function App() {
   const [initializing, setInitializing] = useState(true);
 
   // Initialize auth on app startup — validates the persisted token.
+  // На /sso/exchange сессию выдаёт сам обмен (SsoExchangePage сам зовёт initAuth после него):
+  // параллельный /me → 401 → refresh 401 → logout/редирект рвал обмен (D-01, FIX-58).
+  // Сама страница обмена рисуется раньше экрана загрузки (ниже), поэтому `initializing` ей не нужен.
+  const onSsoExchange = route.view === 'sso-exchange';
   useEffect(() => {
+    if (onSsoExchange) return;
     initAuth().finally(() => setInitializing(false));
-  }, [initAuth]);
+  }, [initAuth, onSsoExchange]);
 
   // Sync userStore from authStore when authenticated
   useEffect(() => {

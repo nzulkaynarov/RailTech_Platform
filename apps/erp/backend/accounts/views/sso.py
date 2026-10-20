@@ -63,7 +63,11 @@ class SsoIssueTokenView(views.APIView):
 
 
 class SsoExchangeView(views.APIView):
-    """POST /api/v1/auth/sso/exchange — обменять токен CRM на сессию ERP."""
+    """POST /api/v1/auth/sso/exchange — обменять токен CRM на сессию ERP.
+
+    В теле — только access-токен (`access_token`, `expires_in`, `user`); refresh-токен уходит одной
+    HttpOnly-cookie, как при обычном входе (S-14, FIX-58): JS его не видит.
+    """
 
     permission_classes = [permissions.AllowAny]
 
@@ -91,7 +95,6 @@ class SsoExchangeView(views.APIView):
 
         data = {
             "access_token": str(refresh.access_token),
-            "refresh_token": str(refresh),
             "expires_in": expires_in,
             "user": staff_user,
         }

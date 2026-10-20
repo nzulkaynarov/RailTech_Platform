@@ -5,6 +5,7 @@ import userEvent from '@testing-library/user-event';
 import { ActsPage } from '../ActsPage';
 import { actsApi, type Act } from '@/api/billingApi';
 import { renderWithProviders } from '@/test/renderWithProviders';
+import { useUserStore } from '@/store/userStore';
 
 // Заказчик вернул акт с причиной — диалог отказа обещает ему, что «исполнитель выставит акт
 // заново». Пути для этого не существовало: у возвращённого акта оставалась одна кнопка
@@ -56,6 +57,8 @@ function makeAct(overrides: Partial<Act>): Act {
 
 describe('Возвращённый акт выпускается заново', () => {
   beforeEach(() => {
+    // Действия исполнителя по акту — право fulfillment.act из /me (FIX-58, D-03).
+    useUserStore.setState({ capabilities: { permissions: ['fulfillment.act'] } });
     vi.clearAllMocks();
     (actsApi.reissue as ReturnType<typeof vi.fn>).mockResolvedValue(makeAct({ status: 'ISSUED' }));
   });

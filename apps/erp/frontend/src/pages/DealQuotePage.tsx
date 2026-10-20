@@ -12,6 +12,7 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { useDeal, useTakeAndPrepareQuote } from '@/hooks/useCRM';
+import { useHasCompanyPermission } from '@/hooks/useCapabilities';
 import { translateApiError } from '@/lib/apiError';
 import { QuoteBuilderGrid } from '@/components/QuoteBuilder/QuoteBuilderGrid';
 import { GenerateQuoteDialog } from '@/components/CRM/GenerateQuoteDialog';
@@ -38,6 +39,11 @@ export function DealQuotePage({ dealId, onBack }: DealQuotePageProps) {
   const { t } = useTranslation();
   const { data: deal, isLoading, isError, refetch } = useDeal(dealId);
   const takeMut = useTakeAndPrepareQuote();
+  // Действия по правам из /me (D-03): сервер всё равно ответит 403, но кнопка, которая не сработает,
+  // — шум. Наблюдатель видит КП, не видя ни одной кнопки правки.
+  const canEditPricing = useHasCompanyPermission('quote.edit_pricing');
+  const canSendQuote = useHasCompanyPermission('quote.send');
+  const canManageContract = useHasCompanyPermission('contract.manage');
   const [contractOpen, setContractOpen] = useState(false);
   // Q1: seller lands on the builder route before a КП exists — offer the manual «Сформировать КП»
   // path (one-click «Взять и подготовить» is the primary, below), never a dead «Назад»-only screen.
@@ -106,8 +112,8 @@ export function DealQuotePage({ dealId, onBack }: DealQuotePageProps) {
   // Once the КП is internally approved (READY_TO_SEND) the seller pushes it to
   // the client — the final документооборот step. Contract generation unlocks
   // once the КП is sent/approved.
-  const canSend = quoteStatus === QuoteStatus.READY_TO_SEND;
-  const canContract = !!quote
+  const canSend = quoteStatus === QuoteStatus.READY_TO_SEND && canSendQuote;
+  const canContract = canManageContract && !!quote
     && ([QuoteStatus.APPROVED, QuoteStatus.SENT] as string[]).includes(quoteStatus);
   // Wave B2: once the КП has been pushed to the client, the silent «КП отправлено» state is
   // replaced by the post-send tracking panel (Отправлено → Просмотрено → Решение).
@@ -121,6 +127,7 @@ export function DealQuotePage({ dealId, onBack }: DealQuotePageProps) {
   // path across the pre-КП stages, with the manual «Сформировать КП» dialog as the fallback.
   const canTakeAndPrepare =
     !quote
+    && canEditPricing
     && ([DealStage.RFQ_OPEN, DealStage.SOURCING, DealStage.CALCULATING] as string[]).includes(deal.stage_code ?? '');
 
   return (
@@ -128,12 +135,14 @@ export function DealQuotePage({ dealId, onBack }: DealQuotePageProps) {
       {/* Single workspace toolbar (~48px): back + compact context + approval pill (left),
           seller lifecycle actions (right). Replaces the old two-storey page header. */}
       <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 border-b px-4 py-2">
-        <div className="flex min-w-0 flex-1 items-center gap-2">
+        {/* flex-wrap: на 390 px бейдж стадии, пилюля согласования и кнопка вложений налезали друг на
+            друга и вытесняли заголовок (D-13, FIX-58) — теперь они переносятся на вторую строку. */}
+        <div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-2 gap-y-1.5">
           <Button variant="ghost" size="icon" className="size-8 shrink-0" onClick={handleBack} aria-label={t('common.back')}>
             <ArrowLeft className="h-4 w-4" />
           </Button>
           <FileText className="h-4 w-4 shrink-0 text-primary" aria-hidden="true" />
-          <h1 className="min-w-0 truncate text-sm font-semibold" title={deal.title || undefined}>
+          <h1 className="min-w-0 flex-1 basis-40 truncate text-sm font-semibold" title={deal.title || undefined}>
             <span className="text-muted-foreground">{t('pages.dealQuote.title')}</span>
             {' · '}
             {deal.title || `${t('pages.deals.deal')} #${deal.id}`}
@@ -222,7 +231,13 @@ export function DealQuotePage({ dealId, onBack }: DealQuotePageProps) {
       {quote ? (
         // U2: `p-2` (was `p-3`) — 8px of the reclaimed chrome goes straight back to visible lines.
         <div className="min-h-0 flex-1 p-2">
-          <QuoteBuilderGrid dealId={dealId} onDirtyChange={setHasUnsavedChanges} />
+          <QuoteBuilderGrid
+            dealId={dealId}
+            onDirtyChange={setHasUnsavedChanges}
+            // Только чтение: нет права править цены ИЛИ КП уже не черновик (после согласования, отправки,
+            // акцепта сервер отвечает 409 — не предлагаем правок, которые не пройдут).
+            readOnly={!canEditPricing || quoteStatus !== QuoteStatus.DRAFT}
+          />
         </div>
       ) : (
         <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-4 p-6 text-center">
@@ -255,10 +270,12 @@ export function DealQuotePage({ dealId, onBack }: DealQuotePageProps) {
                 {t('requestDetailActions.takeAndPrepare')}
               </Button>
             )}
-            <Button variant={canTakeAndPrepare ? 'outline' : 'default'} onClick={() => setGenerateQuoteOpen(true)}>
-              <Plus className="mr-2 h-4 w-4" />
-              {t('generateQuote.submit')}
-            </Button>
+            {canEditPricing && (
+              <Button variant={canTakeAndPrepare ? 'outline' : 'default'} onClick={() => setGenerateQuoteOpen(true)}>
+                <Plus className="mr-2 h-4 w-4" />
+                {t('generateQuote.submit')}
+              </Button>
+            )}
             <Button variant="ghost" onClick={onBack}>{t('common.back')}</Button>
           </div>
         </div>

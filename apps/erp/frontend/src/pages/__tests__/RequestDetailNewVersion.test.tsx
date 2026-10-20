@@ -65,7 +65,7 @@ vi.mock('@/hooks/useCRM', () => ({
 
 vi.mock('@/store/userStore', () => ({
   useUserStore: (selector: (s: { capabilities: { permissions: string[] } }) => unknown) =>
-    selector({ capabilities: { permissions: [] } }),
+    selector({ capabilities: { permissions: ['quote.edit_pricing', 'deal.manage'] } }),
 }));
 vi.mock('@/store/currencyStore', () => ({
   useCurrencyStore: (selector: (s: { format: (v: number) => string }) => unknown) =>

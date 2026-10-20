@@ -307,9 +307,11 @@ function SidebarRail({ className, ...props }: React.ComponentProps<"button">) {
   )
 }
 
-function SidebarInset({ className, ...props }: React.ComponentProps<"main">) {
+// Не `<main>`: единственный landmark `main` — контентная область в AppShell (два вложенных `<main>` —
+// нарушение; FIX-58, D-06). Рамка сайдбара с шапкой — обычный контейнер.
+function SidebarInset({ className, ...props }: React.ComponentProps<"div">) {
   return (
-    <main
+    <div
       data-slot="sidebar-inset"
       className={cn(
         // `min-w-0` — без него flex-элемент не сжимается ниже ширины своего контента, и main

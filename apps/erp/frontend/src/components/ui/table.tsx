@@ -2,13 +2,35 @@
 
 import * as React from "react"
 
+import { useTranslation } from "react-i18next"
+
 import { cn } from "@/lib/utils"
 
 function Table({ className, ...props }: React.ComponentProps<"table">) {
+  const { t } = useTranslation()
+  const containerRef = React.useRef<HTMLDivElement>(null)
+  // Таблица шире контейнера — контейнер прокручивается, и клавиатуре нужен фокус на нём, иначе
+  // содержимое справа недоступно без мыши (axe scrollable-region-focusable; FIX-58, D-06). Лишней
+  // остановки табуляции у таблиц, которые помещаются, не создаём.
+  const [scrollable, setScrollable] = React.useState(false)
+  React.useEffect(() => {
+    const el = containerRef.current
+    if (!el || typeof ResizeObserver === "undefined") return
+    const measure = () => setScrollable(el.scrollWidth > el.clientWidth + 1)
+    const observer = new ResizeObserver(measure)
+    observer.observe(el)
+    if (el.firstElementChild) observer.observe(el.firstElementChild)
+    return () => observer.disconnect()
+  }, [])
+
   return (
     <div
+      ref={containerRef}
       data-slot="table-container"
-      className="relative w-full overflow-x-auto"
+      className="relative w-full overflow-x-auto focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
+      {...(scrollable
+        ? { role: "region", tabIndex: 0, "aria-label": props["aria-label"] ?? t("common.scrollableTable") }
+        : {})}
     >
       <table
         data-slot="table"

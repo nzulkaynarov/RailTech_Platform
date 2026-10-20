@@ -19,7 +19,9 @@ export function clickOriginatesFromControl(target: EventTarget | null): boolean 
 /** Props spread onto a raw `<TableRow>` to make it open its document on click / Enter / Space. */
 export function openableRowProps(onOpen: () => void, label: string) {
   return {
-    role: 'button' as const,
+    // Без role="button": в строке бывают свои кнопки и ссылки, а вложенные интерактивные элементы
+    // в роли button — нарушение (axe nested-interactive; FIX-58, D-06). Строка остаётся нативным
+    // `row`, с фокусом и Enter/Space, а имя действия — в aria-label.
     tabIndex: 0,
     'aria-label': label,
     className:

@@ -119,8 +119,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onNavigate, onForgotPasswo
                         <Train className="h-6 w-6 text-primary-foreground" />
                     </div>
                     <span className="text-3xl font-black tracking-tight text-foreground">
-                        Rail<span className="text-primary">Tech</span>{' '}
-                        <span className="text-muted-foreground font-medium">B2B</span>
+                        {t('auth.brandTitle')}
                     </span>
                 </div>
 

@@ -226,13 +226,15 @@ export const QuoteApprovalChain: React.FC<QuoteApprovalChainProps> = ({ quote })
     <div className="flex items-center gap-1.5">
       <Popover>
         <PopoverTrigger asChild>
-          <Button variant="outline" size="sm" className="h-8 gap-1.5" aria-label={t('quote.builder.openApproval')}>
+          <Button variant="outline" size="sm" className="h-8 gap-1.5">
             {statusBadge}
             {steps.length > 0 && (
               <span className="text-xs text-muted-foreground">
                 {t('quote.approvalChain.stepProgress', { current: decidedCount, total: steps.length })}
               </span>
             )}
+            {/* Имя кнопки = видимый текст + пояснение, что она открывает (WCAG 2.5.3). */}
+            <span className="sr-only">, {t('quote.builder.openApproval')}</span>
             <ChevronDown className="size-3.5 text-muted-foreground" aria-hidden="true" />
           </Button>
         </PopoverTrigger>

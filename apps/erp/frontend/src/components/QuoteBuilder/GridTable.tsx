@@ -43,7 +43,7 @@ export const GridTable: React.FC = () => {
 	const {
 		scrollContainerRef, gridKeyboardOnKeyDown, handleGridPaste, selection, showCostColumns,
 		visibleItems, documentIndexById, isFiltered, virtualizer, shouldVirtualize, mainColCount,
-		showAddRow, newItemName, setNewItemName, newItemQty, setNewItemQty, newItemPrice,
+		readOnly, showAddRow, newItemName, setNewItemName, newItemQty, setNewItemQty, newItemPrice,
 		setNewItemPrice, handleAddItem, setShowAddRow, addNameRef, addRowRef, createItemPending,
 	} = useQuoteBuilderGrid();
 
@@ -58,7 +58,17 @@ export const GridTable: React.FC = () => {
 		: 0;
 
 	return (
-		<div className="flex-1 overflow-auto rounded-md border" ref={scrollContainerRef} onKeyDown={gridKeyboardOnKeyDown} onPaste={handleGridPaste}>
+		// Контейнер прокручивается (на 390 px колонки шире экрана) — клавиатуре нужен фокус на нём, иначе
+		// «Сумма» справа недоступна без мыши (axe scrollable-region-focusable; D-13, FIX-58).
+		<div
+			className="flex-1 overflow-auto rounded-md border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+			ref={scrollContainerRef}
+			role="region"
+			tabIndex={0}
+			aria-label={t('quote.builder.gridRegion')}
+			onKeyDown={gridKeyboardOnKeyDown}
+			onPaste={handleGridPaste}
+		>
 			<TooltipProvider>
 				<Table className="w-full text-left text-sm">
 					<TableHeader className="sticky top-0 z-20 border-b bg-muted">
@@ -158,7 +168,7 @@ export const GridTable: React.FC = () => {
 								</TableCell>
 							</TableRow>
 						)}
-						{showAddRow && (
+						{showAddRow && !readOnly && (
 							<TableRow ref={addRowRef} className="bg-primary/5">
 								<TableCell className="px-2 py-1.5 text-center text-xs text-muted-foreground">+</TableCell>
 								<TableCell className="p-1" colSpan={mainColCount - 1}>

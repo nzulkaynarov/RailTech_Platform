@@ -43,7 +43,7 @@ vi.mock('@/hooks/useCRM', () => ({
 // A solo deal has no capabilities.is_solo_team in this fixture (undefined → false).
 vi.mock('@/store/userStore', () => ({
   useUserStore: (selector: (state: { capabilities: { permissions: string[] } }) => unknown) =>
-    selector({ capabilities: { permissions: [] } }),
+    selector({ capabilities: { permissions: ['quote.view_cost_margin'] } }),
 }));
 vi.mock('@/store/currencyStore', () => ({
   useCurrencyStore: (selector: (state: { format: (value: number) => string }) => unknown) =>

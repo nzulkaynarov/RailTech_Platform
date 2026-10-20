@@ -116,7 +116,7 @@ describe('DealChainCard', () => {
 
     renderWithProviders(<DealChainCard dealId={42} />);
 
-    const tile = await screen.findByRole('button', { name: /Договор: CT-2026-00007/ });
+    const tile = await screen.findByRole('button', { name: /Договор.*CT-2026-00007/ });
     tile.click();
 
     await waitFor(() => expect(window.location.hash).toBe('#contracts?open=7'));

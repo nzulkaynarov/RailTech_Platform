@@ -43,7 +43,7 @@ describe('QuoteApprovalChain', () => {
 		// The popover content (the step group + approvers) is not mounted until the pill is opened.
 		expect(screen.queryByText('Руководитель')).toBeNull();
 
-		fireEvent.click(screen.getByRole('button', { name: 'Открыть панель согласования' }));
+		fireEvent.click(screen.getByRole('button', { name: /Открыть панель согласования/ }));
 
 		await waitFor(() => {
 			expect(screen.getByText('Руководитель')).toBeInTheDocument();
