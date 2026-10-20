@@ -15765,6 +15765,43 @@
                 }
             }
         },
+        "/api/v1/public/doc-links/{token}/": {
+            "get": {
+                "operationId": "public_doc_links_retrieve",
+                "description": "GET по подписанному токену: файл документа потоком.",
+                "summary": "Файл документа по подписанной ссылке CRM (FIX-32)",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "token",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "Portal"
+                ],
+                "security": [
+                    {}
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Файл документа"
+                    },
+                    "202": {
+                        "description": "PDF ещё рисуется — повторить через Retry-After секунд"
+                    },
+                    "404": {
+                        "description": "Подпись не сошлась или документ недоступен"
+                    },
+                    "410": {
+                        "description": "Срок ссылки (10 минут) вышел"
+                    }
+                }
+            }
+        },
         "/api/v1/public/documents/{token}/": {
             "get": {
                 "operationId": "public_documents_retrieve",

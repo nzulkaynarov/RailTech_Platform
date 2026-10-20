@@ -6254,6 +6254,26 @@ export interface paths {
         patch: operations["notifications_mark_all_read_partial_update"];
         trace?: never;
     };
+    "/api/v1/public/doc-links/{token}/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Файл документа по подписанной ссылке CRM (FIX-32)
+         * @description GET по подписанному токену: файл документа потоком.
+         */
+        get: operations["public_doc_links_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/public/documents/{token}/": {
         parameters: {
             query?: never;
@@ -22721,6 +22741,47 @@ export interface operations {
         responses: {
             /** @description All notifications marked as read */
             200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    public_doc_links_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                token: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Файл документа */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description PDF ещё рисуется — повторить через Retry-After секунд */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Подпись не сошлась или документ недоступен */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Срок ссылки (10 минут) вышел */
+            410: {
                 headers: {
                     [name: string]: unknown;
                 };
