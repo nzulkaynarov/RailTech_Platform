@@ -4,7 +4,7 @@
 # (тот же, что в стенде). Стенд ансамбля и его база не используются.
 #
 #   scripts/test_backend_local.sh [pytest-аргументы]   запустить (контейнеры поднимаются при необходимости)
-#   scripts/test_backend_local.sh --openapi            экспорт backend/schema.json (как api-contract в CI)
+#   scripts/test_backend_local.sh --openapi            экспорт backend/schema.json и среза /api/v1 для packages/contracts (FIX-40)
 #   scripts/test_backend_local.sh --migration-check    makemigrations --check и migrate на чистой базе
 #   scripts/test_backend_local.sh --manage <args>      произвольная manage.py-команда (например, makemigrations accounts)
 #   scripts/test_backend_local.sh --down               удалить контейнеры и сеть
@@ -75,8 +75,14 @@ run_in() {
 
 case "${1:-}" in
   --openapi)
-    run_in python manage.py spectacular --format openapi-json --file schema.json
-    echo "▸ backend/schema.json обновлён" ;;
+    # Файл заканчивается переводом строки (end-of-file-fixer в pre-commit), иначе выгрузка и коммит расходятся.
+    run_in sh -c 'python manage.py spectacular --format openapi-json --file schema.json && echo >> schema.json'
+    echo "▸ backend/schema.json обновлён"
+    # erp-internal.yaml — срез /api/v1 из той же выгрузки (FIX-40); stdout → временный файл → на место.
+    CONTRACT="$ROOT/../../packages/contracts/openapi/erp-internal.yaml"
+    run_in python scripts/export_internal_contract.py schema.json >"$CONTRACT.tmp"
+    mv "$CONTRACT.tmp" "$CONTRACT"
+    echo "▸ packages/contracts/openapi/erp-internal.yaml обновлён" ;;
   --migration-check)
     run_in python manage.py makemigrations --check --dry-run
     run_in python manage.py migrate --noinput ;;

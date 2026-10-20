@@ -253,6 +253,8 @@ Q-1…Q-9 решены — см. `DECISIONS.md`.
 
 ## Q-FIX43-1 · Дрейф internal-контракта: описания трёх force-эндпоинтов и обязательный `reason` (FIX-43) — **решено архитектором 2026-10-20 (резерв Opus): FIX-40**
 
+**Закрыто FIX-40.** `packages/contracts/openapi/erp-internal.yaml` теперь срез `/api/v1/` из выгрузки drf-spectacular (`make -C apps/erp openapi`), `erp-internal-full.json` удалён; описания и поля из этого вопроса попадают в контракт из кода сами, расхождение ловит `make -C apps/erp openapi-check` (ci-local, CI).
+
 **Контекст.** FIX-43 изменил описания `force-approve`, `force-cancel`, `force-change-stage` («только администратор ERP, причина обязательна») и сделал `reason` обязательным в схеме `ForceChangeStageRequest`. Эти правки внесены в `apps/erp/backend/schema.json` и `frontend/src/api/schema.d.ts`; `packages/contracts/openapi/erp-internal-full.json` в этом PR не трогается (контракт меняется отдельно, дрейф портала волны 2 в нём тоже накоплен).
 
 **Рекомендация.** Подтянуть `erp-internal-full.json` вместе с остальным дрейфом internal — в FIX-40 (`make -C apps/erp openapi`).
@@ -396,6 +398,8 @@ Q-1…Q-9 решены — см. `DECISIONS.md`.
 
 ## Q-FIX41-1 · `erp-internal.yaml` (вручную) расходится с `system-settings` после FIX-41 (FIX-41) — **решено архитектором 2026-10-20 (резерв Opus): FIX-40**
 
+**Закрыто FIX-40.** `packages/contracts/openapi/erp-internal.yaml` теперь срез `/api/v1/` из выгрузки drf-spectacular (`make -C apps/erp openapi`), `erp-internal-full.json` удалён; описания и поля из этого вопроса попадают в контракт из кода сами, расхождение ловит `make -C apps/erp openapi-check` (ci-local, CI).
+
 **Контекст.** `packages/contracts/openapi/erp-internal.yaml` (рукописный, 28 путей) описывает `SystemSettings.exchange_rate_usd_uzs` записываемым, а `PATCH /system-settings` принимает его без ограничений. После FIX-41 поле только для чтения и может быть `null` (курс берётся из справочника ЦБ, `finance.services.fx`). Контракт в волне 4 правит архитектор; `erp-internal-full.json` — побайтная копия `backend/schema.json`, которую пересоздаёт `make -C apps/erp openapi` — в этом PR не менялась (в `backend/schema.json` и `schema.d.ts` внесены только строки по этому полю, без чужого дрейфа).
 
 **Варианты.** (1) Поправить `SystemSettings` в рукописном yaml сейчас (`readOnly`, `nullable`). (2) Оставить как есть до FIX-40, который генерирует internal-контракт из схемы бэкенда и снимает расхождение само.
@@ -445,6 +449,8 @@ Q-1…Q-9 решены — см. `DECISIONS.md`.
 **Решение.** Миграция `0028` оставляет зеркало со связью с лидом (затем с меньшим id); у остальных `erp_deal_id` и `external_stage` обнуляются, строки остаются обычными локальными сделками (ничего не удаляется). Downgrade дубли не восстанавливает. Перед выкладкой на прод: `SELECT erp_deal_id, count(*) FROM deals GROUP BY 1 HAVING count(*) > 1` покажет, что затронется.
 
 ## Q-FIX42-1 · `erp-internal.yaml` (вручную) и `schema.json` после FIX-42 (FIX-42) — **решено архитектором 2026-10-20 (резерв Opus): FIX-40**
+
+**Закрыто FIX-40.** `packages/contracts/openapi/erp-internal.yaml` теперь срез `/api/v1/` из выгрузки drf-spectacular (`make -C apps/erp openapi`), `erp-internal-full.json` удалён; описания и поля из этого вопроса попадают в контракт из кода сами, расхождение ловит `make -C apps/erp openapi-check` (ci-local, CI).
 
 **Контекст.** `packages/contracts/openapi/erp-internal.yaml` (рукописный) описывает `SystemSettings.platform_name|support_email|logo_url|domain` записываемыми и не знает `crm_frontend_url`, `400 SHARED_SETTING_READ_ONLY` у `PATCH /system-settings`, `400 CATEGORY_HAS_CHILDREN` у `DELETE /catalog/categories/{id}` и `429` у `test-send`. Контракт в этом PR не правился (волна 4, `git diff origin/main -- packages` пуст). `backend/schema.json` и `frontend/src/api/schema.d.ts` обновлены точечно, ровно по этим местам (полный `make openapi` не запускался из-за накопленного дрейфа — FIX-40, Q-FIX41-1).
 

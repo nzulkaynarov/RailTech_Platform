@@ -282,7 +282,7 @@
         "/api/portal/v1/acts/{id}/accept": {
             "post": {
                 "operationId": "api_portal_v1_acts_accept_create",
-                "description": "POST /acts/{id}/accept — Приёмка акта заказчиком.",
+                "description": "POST /acts/{id}/accept — Приёмка акта заказчиком (`sign_act`), со сканом из `/uploads` или без.",
                 "parameters": [
                     {
                         "in": "path",
@@ -306,7 +306,7 @@
         "/api/portal/v1/acts/{id}/accept/": {
             "post": {
                 "operationId": "api_portal_v1_acts_accept_create_2",
-                "description": "POST /acts/{id}/accept — Приёмка акта заказчиком.",
+                "description": "POST /acts/{id}/accept — Приёмка акта заказчиком (`sign_act`), со сканом из `/uploads` или без.",
                 "parameters": [
                     {
                         "in": "path",
@@ -330,7 +330,7 @@
         "/api/portal/v1/acts/{id}/return": {
             "post": {
                 "operationId": "api_portal_v1_acts_return_create",
-                "description": "POST /acts/{id}/return — Возврат акта с замечанием.",
+                "description": "POST /acts/{id}/return — Возврат акта с замечанием (`reject_act`): ERP хранит возвращённый акт черновиком с причиной.",
                 "parameters": [
                     {
                         "in": "path",
@@ -354,7 +354,7 @@
         "/api/portal/v1/acts/{id}/return/": {
             "post": {
                 "operationId": "api_portal_v1_acts_return_create_2",
-                "description": "POST /acts/{id}/return — Возврат акта с замечанием.",
+                "description": "POST /acts/{id}/return — Возврат акта с замечанием (`reject_act`): ERP хранит возвращённый акт черновиком с причиной.",
                 "parameters": [
                     {
                         "in": "path",
@@ -403,6 +403,34 @@
                 }
             }
         },
+        "/api/portal/v1/auth/magic": {
+            "post": {
+                "operationId": "api_portal_v1_auth_magic_create",
+                "description": "POST /auth/magic {token} — обмен токена из фрагмента ссылки входа (`/auth/magic#token=…`) на сессию.\n\nТокен приходит в теле: ни путь, ни query не несут секрета, значит журналы серверов и прокси его не видят.\nАрхивная компания — 403 `FORBIDDEN`, просроченный, использованный или неизвестный токен — 410.",
+                "tags": [
+                    "api"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No response body"
+                    }
+                }
+            }
+        },
+        "/api/portal/v1/auth/magic/": {
+            "post": {
+                "operationId": "api_portal_v1_auth_magic_create_2",
+                "description": "POST /auth/magic {token} — обмен токена из фрагмента ссылки входа (`/auth/magic#token=…`) на сессию.\n\nТокен приходит в теле: ни путь, ни query не несут секрета, значит журналы серверов и прокси его не видят.\nАрхивная компания — 403 `FORBIDDEN`, просроченный, использованный или неизвестный токен — 410.",
+                "tags": [
+                    "api"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No response body"
+                    }
+                }
+            }
+        },
         "/api/portal/v1/auth/magic-link": {
             "post": {
                 "operationId": "api_portal_v1_auth_magic_link_create",
@@ -421,98 +449,6 @@
             "post": {
                 "operationId": "api_portal_v1_auth_magic_link_create_2",
                 "description": "POST /auth/magic-link — Запрос ссылки для входа по email.",
-                "tags": [
-                    "api"
-                ],
-                "responses": {
-                    "200": {
-                        "description": "No response body"
-                    }
-                }
-            }
-        },
-        "/api/portal/v1/auth/magic/{token}": {
-            "get": {
-                "operationId": "api_portal_v1_auth_magic_retrieve",
-                "description": "GET /auth/magic/{token} — Обмен magic-link токена на сессию.",
-                "parameters": [
-                    {
-                        "in": "path",
-                        "name": "token",
-                        "schema": {
-                            "type": "string"
-                        },
-                        "required": true
-                    }
-                ],
-                "tags": [
-                    "api"
-                ],
-                "responses": {
-                    "200": {
-                        "description": "No response body"
-                    }
-                }
-            },
-            "post": {
-                "operationId": "api_portal_v1_auth_magic_create",
-                "description": "GET /auth/magic/{token} — Обмен magic-link токена на сессию.",
-                "parameters": [
-                    {
-                        "in": "path",
-                        "name": "token",
-                        "schema": {
-                            "type": "string"
-                        },
-                        "required": true
-                    }
-                ],
-                "tags": [
-                    "api"
-                ],
-                "responses": {
-                    "200": {
-                        "description": "No response body"
-                    }
-                }
-            }
-        },
-        "/api/portal/v1/auth/magic/{token}/": {
-            "get": {
-                "operationId": "api_portal_v1_auth_magic_retrieve_2",
-                "description": "GET /auth/magic/{token} — Обмен magic-link токена на сессию.",
-                "parameters": [
-                    {
-                        "in": "path",
-                        "name": "token",
-                        "schema": {
-                            "type": "string"
-                        },
-                        "required": true
-                    }
-                ],
-                "tags": [
-                    "api"
-                ],
-                "responses": {
-                    "200": {
-                        "description": "No response body"
-                    }
-                }
-            },
-            "post": {
-                "operationId": "api_portal_v1_auth_magic_create_2",
-                "description": "GET /auth/magic/{token} — Обмен magic-link токена на сессию.",
-                "parameters": [
-                    {
-                        "in": "path",
-                        "name": "token",
-                        "schema": {
-                            "type": "string"
-                        },
-                        "required": true
-                    }
-                ],
                 "tags": [
                     "api"
                 ],
@@ -738,7 +674,7 @@
         "/api/portal/v1/contracts/{id}/sign": {
             "post": {
                 "operationId": "api_portal_v1_contracts_sign_create",
-                "description": "POST /contracts/{id}/sign — Подписание договора клиентом.",
+                "description": "POST /contracts/{id}/sign — Подписание договора клиентом (`sign_contract_by_client`).",
                 "parameters": [
                     {
                         "in": "path",
@@ -762,7 +698,7 @@
         "/api/portal/v1/contracts/{id}/sign/": {
             "post": {
                 "operationId": "api_portal_v1_contracts_sign_create_2",
-                "description": "POST /contracts/{id}/sign — Подписание договора клиентом.",
+                "description": "POST /contracts/{id}/sign — Подписание договора клиентом (`sign_contract_by_client`).",
                 "parameters": [
                     {
                         "in": "path",
@@ -786,7 +722,7 @@
         "/api/portal/v1/deliveries": {
             "get": {
                 "operationId": "api_portal_v1_deliveries_retrieve",
-                "description": "GET /deliveries — Поставки по сделкам клиента.",
+                "description": "GET /deliveries — Строки поставки по сделкам клиента (проекция клиента: без поставщика и цен).",
                 "tags": [
                     "api"
                 ],
@@ -800,7 +736,103 @@
         "/api/portal/v1/deliveries/": {
             "get": {
                 "operationId": "api_portal_v1_deliveries_retrieve_2",
-                "description": "GET /deliveries — Поставки по сделкам клиента.",
+                "description": "GET /deliveries — Строки поставки по сделкам клиента (проекция клиента: без поставщика и цен).",
+                "tags": [
+                    "api"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No response body"
+                    }
+                }
+            }
+        },
+        "/api/portal/v1/deliveries/{id}/accept": {
+            "post": {
+                "operationId": "api_portal_v1_deliveries_accept_create",
+                "description": "POST /deliveries/{id}/accept — Клиент принимает строку: `delivered` → `accepted`.",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "api"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No response body"
+                    }
+                }
+            }
+        },
+        "/api/portal/v1/deliveries/{id}/accept/": {
+            "post": {
+                "operationId": "api_portal_v1_deliveries_accept_create_2",
+                "description": "POST /deliveries/{id}/accept — Клиент принимает строку: `delivered` → `accepted`.",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "api"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No response body"
+                    }
+                }
+            }
+        },
+        "/api/portal/v1/deliveries/{id}/dispute": {
+            "post": {
+                "operationId": "api_portal_v1_deliveries_dispute_create",
+                "description": "POST /deliveries/{id}/dispute — Замечание по строке: `delivered` → `disputed`, менеджеру сделки — задача.",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "api"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No response body"
+                    }
+                }
+            }
+        },
+        "/api/portal/v1/deliveries/{id}/dispute/": {
+            "post": {
+                "operationId": "api_portal_v1_deliveries_dispute_create_2",
+                "description": "POST /deliveries/{id}/dispute — Замечание по строке: `delivered` → `disputed`, менеджеру сделки — задача.",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "required": true
+                    }
+                ],
                 "tags": [
                     "api"
                 ],
@@ -814,7 +846,7 @@
         "/api/portal/v1/documents": {
             "get": {
                 "operationId": "api_portal_v1_documents_retrieve",
-                "description": "GET /documents — Документы по сделкам клиента.",
+                "description": "GET /documents — Выпущенные документы компании клиента (FIX-23); `kind` и `deal_id` — фильтры.",
                 "tags": [
                     "api"
                 ],
@@ -828,7 +860,7 @@
         "/api/portal/v1/documents/": {
             "get": {
                 "operationId": "api_portal_v1_documents_retrieve_2",
-                "description": "GET /documents — Документы по сделкам клиента.",
+                "description": "GET /documents — Выпущенные документы компании клиента (FIX-23); `kind` и `deal_id` — фильтры.",
                 "tags": [
                     "api"
                 ],
@@ -842,7 +874,7 @@
         "/api/portal/v1/documents/{id}/file": {
             "get": {
                 "operationId": "api_portal_v1_documents_file_retrieve",
-                "description": "GET /documents/{id}/file — Скачивание PDF документа (202 если генерируется).",
+                "description": "GET /documents/{id}/file — PDF выпущенного документа: поток (и запись аудита) либо 202 + `Retry-After`.",
                 "parameters": [
                     {
                         "in": "path",
@@ -866,7 +898,7 @@
         "/api/portal/v1/documents/{id}/file/": {
             "get": {
                 "operationId": "api_portal_v1_documents_file_retrieve_2",
-                "description": "GET /documents/{id}/file — Скачивание PDF документа (202 если генерируется).",
+                "description": "GET /documents/{id}/file — PDF выпущенного документа: поток (и запись аудита) либо 202 + `Retry-After`.",
                 "parameters": [
                     {
                         "in": "path",
@@ -890,7 +922,7 @@
         "/api/portal/v1/invoices": {
             "get": {
                 "operationId": "api_portal_v1_invoices_retrieve",
-                "description": "GET /invoices — Счета клиента.",
+                "description": "GET /invoices — Счета клиента (выставленные и со сроком оплаты: контракт требует `due_date`).",
                 "tags": [
                     "api"
                 ],
@@ -904,7 +936,7 @@
         "/api/portal/v1/invoices/": {
             "get": {
                 "operationId": "api_portal_v1_invoices_retrieve_2",
-                "description": "GET /invoices — Счета клиента.",
+                "description": "GET /invoices — Счета клиента (выставленные и со сроком оплаты: контракт требует `due_date`).",
                 "tags": [
                     "api"
                 ],
@@ -1022,7 +1054,7 @@
         "/api/portal/v1/quotes/{id}/accept": {
             "post": {
                 "operationId": "api_portal_v1_quotes_accept_create",
-                "description": "POST /quotes/{id}/accept — Акцепт КП по коду.",
+                "description": "POST /quotes/{id}/accept — Акцепт КП по коду из `request-code`.",
                 "parameters": [
                     {
                         "in": "path",
@@ -1046,7 +1078,7 @@
         "/api/portal/v1/quotes/{id}/accept/": {
             "post": {
                 "operationId": "api_portal_v1_quotes_accept_create_2",
-                "description": "POST /quotes/{id}/accept — Акцепт КП по коду.",
+                "description": "POST /quotes/{id}/accept — Акцепт КП по коду из `request-code`.",
                 "parameters": [
                     {
                         "in": "path",
@@ -1095,6 +1127,54 @@
             "post": {
                 "operationId": "api_portal_v1_quotes_reject_create_2",
                 "description": "POST /quotes/{id}/reject — Отклонение КП с причиной.",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "api"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No response body"
+                    }
+                }
+            }
+        },
+        "/api/portal/v1/quotes/{id}/request-code": {
+            "post": {
+                "operationId": "api_portal_v1_quotes_request_code_create",
+                "description": "POST /quotes/{id}/request-code — Код акцепта контакту сессии (Telegram или e-mail).",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "api"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No response body"
+                    }
+                }
+            }
+        },
+        "/api/portal/v1/quotes/{id}/request-code/": {
+            "post": {
+                "operationId": "api_portal_v1_quotes_request_code_create_2",
+                "description": "POST /quotes/{id}/request-code — Код акцепта контакту сессии (Telegram или e-mail).",
                 "parameters": [
                     {
                         "in": "path",
@@ -1246,7 +1326,7 @@
         "/api/portal/v1/team/invite": {
             "post": {
                 "operationId": "api_portal_v1_team_invite_create",
-                "description": "POST /team/invite — Приглашение коллеги в кабинет.",
+                "description": "POST /team/invite — Приглашение коллеги в кабинет (доставляется письмом; `telegram` — 422 `INVALID_CHANNEL`).",
                 "tags": [
                     "api"
                 ],
@@ -1260,7 +1340,7 @@
         "/api/portal/v1/team/invite/": {
             "post": {
                 "operationId": "api_portal_v1_team_invite_create_2",
-                "description": "POST /team/invite — Приглашение коллеги в кабинет.",
+                "description": "POST /team/invite — Приглашение коллеги в кабинет (доставляется письмом; `telegram` — 422 `INVALID_CHANNEL`).",
                 "tags": [
                     "api"
                 ],
@@ -5042,6 +5122,9 @@
                     },
                     "required": true
                 },
+                "security": [
+                    {}
+                ],
                 "responses": {
                     "200": {
                         "content": {
@@ -5084,6 +5167,9 @@
                     },
                     "required": true
                 },
+                "security": [
+                    {}
+                ],
                 "responses": {
                     "200": {
                         "content": {
@@ -13476,7 +13562,7 @@
         "/api/v1/crm/quotes/{id}/fx-override/": {
             "post": {
                 "operationId": "crm_quotes_fx_override_create",
-                "description": "Договорной курс КП по валюте себестоимости (M1-ERP-08): побеждает курс ЦБ в снимке, КП пересчитывается. Только право `finance.rates`, причина обязательна, запись в журнал КП. Незамороженное КП (до отправки клиенту), иначе 409 QUOTE_FROZEN. `If-Match` с ETag КП — 412 PRECONDITION_FAILED_STALE_WRITE, если КП изменилось после чтения.",
+                "description": "Договорной курс КП по валюте себестоимости (M1-ERP-08): побеждает курс ЦБ в снимке, КП пересчитывается. Только право `finance.rates`, причина обязательна, запись в журнал КП. Только в черновике КП: отправленное клиенту — 409 QUOTE_FROZEN, на согласовании и позже — 409 QUOTE_NOT_DRAFT (верните КП в черновик). `If-Match` с ETag КП — 412 PRECONDITION_FAILED_STALE_WRITE, если КП изменилось после чтения.",
                 "summary": "Set or clear the quote's negotiated FX rate",
                 "parameters": [
                     {
@@ -13528,7 +13614,7 @@
                         "description": "ROLE_NOT_PERMITTED"
                     },
                     "409": {
-                        "description": "QUOTE_FROZEN"
+                        "description": "QUOTE_FROZEN / QUOTE_NOT_DRAFT"
                     },
                     "412": {
                         "description": "PRECONDITION_FAILED_STALE_WRITE"

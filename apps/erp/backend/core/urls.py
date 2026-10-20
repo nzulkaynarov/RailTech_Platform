@@ -178,6 +178,7 @@ urlpatterns = (
                 summary="Obtain JWT token pair",
                 description="Authenticate with email and password to receive access and refresh tokens.",
                 tags=["Auth"],
+                auth=[{}],  # вход без токена: в контракте не требует security (FIX-40)
             )(CookieTokenObtainPairView).as_view(),
             name="token_obtain_pair",
         ),
@@ -187,6 +188,7 @@ urlpatterns = (
                 summary="Refresh JWT token",
                 description="Exchange a valid refresh token for a new access token.",
                 tags=["Auth"],
+                auth=[{}],  # refresh в HttpOnly-cookie, не bearer (FIX-40)
             )(CookieTokenRefreshView).as_view(),
             name="token_refresh",
         ),

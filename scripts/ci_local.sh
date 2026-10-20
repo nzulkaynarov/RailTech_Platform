@@ -85,7 +85,12 @@ stage_infra() {
     caddy validate --config /etc/caddy/Caddyfile
 }
 
-stage_erp() { (cd "$ROOT" && make check-erp); }
+stage_erp() {
+  (cd "$ROOT" && make check-erp)
+  # Дрейф схемы ERP (FIX-40): schema.json, типы фронтенда и erp-internal.yaml совпадают с выгрузкой из кода.
+  (cd "$ROOT" && make -C apps/erp openapi-check) \
+    || { echo "Схема ERP устарела — make -C apps/erp openapi и закоммитьте schema.json, schema.d.ts, erp-internal.yaml"; return 1; }
+}
 stage_cabinet() { (cd "$ROOT" && make check-cabinet); }
 
 stage_crm-integration() {
