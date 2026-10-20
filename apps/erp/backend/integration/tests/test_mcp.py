@@ -35,6 +35,7 @@ from integration.tests.mcp_support import (
     payload,
     raw_get,
     raw_modern_rpc,
+    raw_post_bytes,
     raw_rpc,
     sdk_call,
     sdk_handshake,
@@ -488,6 +489,64 @@ def test_failed_signature_does_not_burn_a_jti(test_data):
     assert raw_rpc(bad, "tools/call", {"name": "list_client_deals", "arguments": {}}).status_code == 401
     good = customer(test_data, jti=jti)
     assert payload(sdk_call(good, "list_client_deals")) is not None
+
+
+def _tool_call_body(name: str = "list_client_deals", arguments: dict | None = None) -> str:
+    return json.dumps(
+        {"jsonrpc": "2.0", "id": 1, "method": "tools/call", "params": {"name": name, "arguments": arguments or {}}}
+    )
+
+
+ENCODINGS = {
+    "utf-8-bom": lambda text: b"\xef\xbb\xbf" + text.encode("utf-8"),
+    "utf-16": lambda text: text.encode("utf-16"),
+    "utf-16-le": lambda text: text.encode("utf-16-le"),
+    "utf-16-be": lambda text: text.encode("utf-16-be"),
+    "utf-32": lambda text: text.encode("utf-32"),
+}
+
+
+@pytest.mark.parametrize("encoding", sorted(ENCODINGS))
+def test_tool_call_in_another_encoding_is_rejected_and_not_executed(test_data, monkeypatch, encoding):
+    """SDK понимает BOM и UTF-16/32; вратарь обязан не пропустить такое тело мимо погашения jti и проверки аргументов."""
+    calls = []
+    monkeypatch.setitem(mcp_tools.HANDLERS, "list_client_deals", lambda context, arguments: calls.append(1) or [])
+    body = ENCODINGS[encoding](_tool_call_body())
+
+    response = raw_post_bytes(customer(test_data), body)
+
+    assert response.status_code == 400
+    assert response.json()["detail"] == "INVALID_REQUEST"
+    assert calls == []
+
+
+@pytest.mark.parametrize("encoding", sorted(ENCODINGS))
+def test_replayed_jti_cannot_be_hidden_in_another_encoding(test_data, monkeypatch, encoding):
+    calls = []
+    monkeypatch.setitem(mcp_tools.HANDLERS, "list_client_deals", lambda context, arguments: calls.append(1) or [])
+    token = customer(test_data)
+    assert payload(sdk_call(token, "list_client_deals")) == []  # честный вызов гасит jti
+    assert calls == [1]
+
+    response = raw_post_bytes(token, ENCODINGS[encoding](_tool_call_body()))
+
+    assert response.status_code in (400, 401)
+    assert calls == [1]  # повтор не выполнен
+
+
+def test_tool_call_with_invalid_arguments_in_another_encoding_is_not_executed(test_data):
+    body = ENCODINGS["utf-16"](_tool_call_body("get_deal_status", {"erp_deal_id": "x"}))
+    assert raw_post_bytes(customer(test_data), body).status_code == 400
+
+
+def test_malformed_json_body_is_a_400_parse_error(test_data):
+    assert raw_post_bytes(customer(test_data), b"{not json").status_code == 400
+
+
+def test_sdk_client_with_forged_signature_cannot_call_a_tool(test_data):
+    """Через клиент SDK: поддельная подпись — вызов не проходит (HTTP 401 на транспорте), инструмент не вызван."""
+    with pytest.raises(Exception):  # noqa: B017 — тип исключения зависит от транспорта SDK, важен сам отказ
+        sdk_call(customer(test_data, secret="wrong-key"), "list_client_deals")
 
 
 # ─────────────────────────────────────────────────────────────────────────────

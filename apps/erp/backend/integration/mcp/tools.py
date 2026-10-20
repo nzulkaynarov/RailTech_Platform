@@ -209,7 +209,7 @@ def create_request_tool(context: AgentContext, arguments: Dict[str, Any]) -> Dic
 
     company = Company.objects.filter(pk=context.erp_company_id).first()
     if not company:
-        raise ToolExecutionError(f"Company #{context.erp_company_id} not found")
+        raise ToolExecutionError("company not found")
 
     primary_contact = company.contacts.filter(is_primary=True).first() or company.contacts.first()
     request_stage = initial_fsm_stage()

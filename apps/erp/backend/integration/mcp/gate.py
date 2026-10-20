@@ -116,11 +116,17 @@ def _replay(chunks: list[Message], receive: Receive) -> Receive:
 
 
 def _tool_calls(chunks: list[Message]) -> list[dict[str, Any]] | None:
-    """Сообщения `tools/call` в теле; `None` — тело не JSON-RPC, пусть отвечает SDK (ошибка разбора)."""
+    """Сообщения `tools/call` в теле; `None` — непустое тело не разобрано как UTF-8 JSON без BOM.
+
+    SDK читает тело байтами и принимает BOM и UTF-16/32, поэтому «не разобрали» нельзя отдавать дальше как есть:
+    иначе `tools/call` выполнился бы без погашения `jti` и без проверки аргументов (обход одноразовости).
+    """
     raw = b"".join(c.get("body", b"") for c in chunks if c["type"] == "http.request")
+    if not raw:
+        return []  # пустое тело — ответ SDK (ошибка разбора), вызова инструмента нет
     try:
-        parsed = json.loads(raw.decode("utf-8")) if raw else None
-    except (UnicodeDecodeError, ValueError):
+        parsed = json.loads(raw.decode("utf-8"))
+    except (UnicodeDecodeError, ValueError, RecursionError):
         return None
     messages = parsed if isinstance(parsed, list) else [parsed]
     return [m for m in messages if isinstance(m, dict) and m.get("method") == "tools/call"]
@@ -170,6 +176,16 @@ class AgentContextGate:
 
     async def _check_tool_calls(self, context: AgentContext, chunks: list[Message]) -> JSONResponse | None:
         calls = _tool_calls(chunks)
+        if calls is None:
+            return JSONResponse(
+                {
+                    "detail": "INVALID_REQUEST",
+                    "jsonrpc": "2.0",
+                    "id": None,
+                    "error": {"code": -32700, "message": "Parse error: body must be UTF-8 JSON without BOM"},
+                },
+                status_code=400,
+            )
         if not calls:
             return None
         try:

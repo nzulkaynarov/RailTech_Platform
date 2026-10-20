@@ -112,6 +112,16 @@ def raw_modern_rpc(token: str | None, method: str, params: dict[str, Any] | None
     return async_to_sync(run)()
 
 
+def raw_post_bytes(token: str | None, body: bytes):
+    """POST произвольных байтов (BOM, UTF-16…): так вратарь и SDK читают тело по-разному, если не закрыть разрыв."""
+
+    async def run() -> httpx2.Response:
+        async with mcp_http(token) as http:
+            return await http.post(MCP_PATH, content=body, headers=RAW_HEADERS)
+
+    return async_to_sync(run)()
+
+
 def raw_get(token: str | None):
     async def run() -> httpx2.Response:
         async with mcp_http(token) as http:
