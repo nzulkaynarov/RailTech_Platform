@@ -59,3 +59,14 @@ def test_endpoint_works_once_fulfillment_exists(world):  # noqa: F811
     crm_services.ensure_fulfillment(world["deal"])
     response = _client(world["superuser"]).post(URL, {"deal_id": world["deal"].id, "status": "SHIPPED"}, format="json")
     assert response.status_code == 200, response.content
+
+
+@pytest.mark.django_db
+def test_unauthorized_actor_learns_nothing_about_the_deal(world):  # noqa: F811
+    """Право проверяется раньше 404/409: посторонний не отличает «сделки нет» от «отгрузки ещё нет»."""
+    outsider = world["other_seller"]  # участник чужой компании-клиента, не продавец
+
+    no_fulfillment = crm_services.update_fulfillment_status(world["deal"].id, outsider, "SHIPPED")
+    no_deal = crm_services.update_fulfillment_status(10**9, outsider, "SHIPPED")
+
+    assert no_fulfillment == no_deal == (None, "MEMBER_REQUIRED_FOR_ACTION")

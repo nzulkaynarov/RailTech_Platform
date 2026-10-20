@@ -132,12 +132,6 @@ def update_fulfillment_status(
     valid = set(FulfillmentStatusCode.values)
     if status_code not in valid:
         return None, "FULFILLMENT_INVALID_STATUS"
-    obj = Fulfillment.objects.select_for_update().select_related("deal").filter(deal_id=deal_id).first()
-    if obj is None:
-        # Отгрузку создаёт Celery-задача после подписания договора: до неё менять нечего (FIX-55, m2 D-2).
-        from ..models import Deal
-
-        return None, ("FULFILLMENT_NOT_READY" if Deal.objects.filter(pk=deal_id).exists() else "NOT_FOUND")
     # Seller drives shipping (PENDING→…→DELIVERED); the buyer ACCEPTS or DISPUTES on
     # receipt. Authorize the actor against the side that owns the target status.
     buyer_statuses = {FulfillmentStatusCode.ACCEPTED, FulfillmentStatusCode.DISPUTED}
@@ -154,6 +148,13 @@ def update_fulfillment_status(
         authorized = is_seller(actor)
     if not authorized:
         return None, "MEMBER_REQUIRED_FOR_ACTION"
+    # Право проверено раньше поиска: без него существование сделки и отгрузки по id не раскрывается (FIX-55).
+    obj = Fulfillment.objects.select_for_update().select_related("deal").filter(deal_id=deal_id).first()
+    if obj is None:
+        # Отгрузку создаёт Celery-задача после подписания договора: до неё менять нечего (FIX-55, m2 D-2).
+        from ..models import Deal
+
+        return None, ("FULFILLMENT_NOT_READY" if Deal.objects.filter(pk=deal_id).exists() else "NOT_FOUND")
     if status_code in FULFILLMENT_NOTE_ISSUED_STATUSES:
         # Номер накладной — ДО смены статуса: событие `document.created` для CRM (сигнал post_save на переходе в
         # «выпущенный») должно нести итоговый номер, а не `DN-<id>` (FIX-55, m2 D-6).
