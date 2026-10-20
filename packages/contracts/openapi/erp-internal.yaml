@@ -10225,6 +10225,8 @@ paths:
           description: No access to this deal
         '404':
           description: Deal not found
+        '409':
+          description: 'QUOTE_NOT_DRAFT / QUOTE_FROZEN: активное КП сделки уже не черновик'
   /api/v1/sourcing/import-quote-lines/:
     post:
       operationId: sourcing_import_quote_lines_create

@@ -17019,6 +17019,9 @@
                     },
                     "404": {
                         "description": "Deal not found"
+                    },
+                    "409": {
+                        "description": "QUOTE_NOT_DRAFT / QUOTE_FROZEN: активное КП сделки уже не черновик"
                     }
                 }
             }

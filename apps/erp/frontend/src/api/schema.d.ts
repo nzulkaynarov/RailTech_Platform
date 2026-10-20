@@ -23791,6 +23791,13 @@ export interface operations {
                 };
                 content?: never;
             };
+            /** @description QUOTE_NOT_DRAFT / QUOTE_FROZEN: активное КП сделки уже не черновик */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
         };
     };
     sourcing_import_quote_lines_create: {
