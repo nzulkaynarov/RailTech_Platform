@@ -204,3 +204,22 @@ class ClientBotTexts(CheckedTexts):
         "⚠️ «{deal}» bitimi boʻyicha {number}-dalolatnoma mijoz tomonidan izoh bilan qaytarildi: {reason}.",
         "⚠️ Act {number} for the deal “{deal}” was returned by the client with remarks: {reason}.",
     )
+
+    # Ход приёмки строк поставки клиентом (FIX-37): запись в ленту лида и личное сообщение ответственному.
+    # Уходят на русском. {contact} — контакт клиента, {line} — номер строки, {title} — название строки,
+    # {deal} — сделка, {remark} — замечание клиента, {client} — клиент.
+    erp_note_delivery_line_accepted: LocalizedText = _t(
+        "Клиент ({contact}) принял строку {line} «{title}» по сделке «{deal}».",
+        "Mijoz ({contact}) «{deal}» bitimi boʻyicha {line}-qator «{title}»ni qabul qildi.",
+        "The client ({contact}) accepted line {line} “{title}” of the deal “{deal}”.",
+    )
+    erp_note_delivery_line_disputed: LocalizedText = _t(
+        "Клиент ({contact}) оспорил строку {line} «{title}» по сделке «{deal}». Замечание: {remark}",
+        "Mijoz ({contact}) «{deal}» bitimi boʻyicha {line}-qator «{title}»ga eʼtiroz bildirdi. Izoh: {remark}",
+        "The client ({contact}) disputed line {line} “{title}” of the deal “{deal}”. Remark: {remark}",
+    )
+    erp_staff_delivery_line_disputed: LocalizedText = _t(
+        "⚠️ Клиент «{client}» оспорил строку {line} «{title}» по сделке «{deal}»: {remark}",
+        "⚠️ Mijoz «{client}» «{deal}» bitimi boʻyicha {line}-qator «{title}»ga eʼtiroz bildirdi: {remark}",
+        "⚠️ The client “{client}” disputed line {line} “{title}” of the deal “{deal}”: {remark}",
+    )

@@ -18,6 +18,7 @@ from typing import Any
 import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
+from pydantic import ValidationError
 
 from app.api import errors
 from app.api.deps import get_container
@@ -187,10 +188,31 @@ def test_deal_amount_helper_keeps_none() -> None:
         ("deal.lost", {"amount": "15000000.00", "currency": "UZS", "lost_reason": "Конкурент"}),
         ("document.created", {"erp_document_id": 6, "kind": "invoice", "number": "INV-01"}),
         ("invite.sent", {"channels": ["telegram"]}),
+        (
+            "delivery.line_accepted",
+            {
+                "line_no": 1,
+                "title": "Колёса",
+                "status": "accepted",
+                "decided_at": "2026-10-20T10:00:00+05:00",
+            },
+        ),
+        (
+            "delivery.line_disputed",
+            {
+                "line_no": 2,
+                "title": "Оси",
+                "status": "disputed",
+                "remark": "Брак",
+                "decided_at": "2026-10-20T10:00:00+05:00",
+            },
+        ),
     ],
 )
-def test_all_19_events_parse(event: str, payload_dict: dict[str, Any]) -> None:
+def test_all_events_parse(event: str, payload_dict: dict[str, Any]) -> None:
     env_data = _sample_envelope(event=event, payload=payload_dict)
+    if event.startswith("delivery.line_"):
+        env_data["actor"] = {"type": "client", "name": "Азамат Каримов"}
     envelope = ErpEventEnvelope.model_validate(env_data)
     assert envelope.event == event
 
@@ -899,3 +921,161 @@ async def test_process_event_already_processed() -> None:
 
     res = await service.process_event("evt-done")
     assert res is True
+
+
+# ---------------------------------------------------------------------------
+# 6. Приёмка и замечания по строкам поставки (FIX-37)
+# ---------------------------------------------------------------------------
+
+
+def _line_envelope(event: str, **overrides: Any) -> dict[str, Any]:
+    status = "accepted" if event == "delivery.line_accepted" else "disputed"
+    payload: dict[str, Any] = {
+        "line_no": 2,
+        "title": "Труба 89х4 ст20",
+        "status": status,
+        "decided_at": "2026-10-20T10:00:00+05:00",
+    }
+    if status == "disputed":
+        payload["remark"] = "Часть труб с трещинами"
+    env = _sample_envelope(event=event, deal_stage="fulfilment", payload=payload)
+    env["actor"] = {"type": "client", "name": "Азамат Каримов"}
+    env.update(overrides)
+    return env
+
+
+def test_delivery_line_event_requires_deal_client_actor_and_matching_payload() -> None:
+    assert (
+        ErpEventEnvelope.model_validate(_line_envelope("delivery.line_disputed")).deal is not None
+    )
+
+    no_deal = _line_envelope("delivery.line_accepted")
+    del no_deal["deal"]
+    with pytest.raises(ValidationError):
+        ErpEventEnvelope.model_validate(no_deal)
+
+    with pytest.raises(ValidationError):  # решает клиент, не сотрудник и не система
+        ErpEventEnvelope.model_validate(
+            _line_envelope("delivery.line_accepted", actor={"type": "staff", "name": "М"})
+        )
+
+    no_remark = _line_envelope("delivery.line_disputed")
+    del no_remark["payload"]["remark"]
+    with pytest.raises(ValidationError):  # замечание при disputed обязательно
+        ErpEventEnvelope.model_validate(no_remark)
+
+    blank_remark = _line_envelope("delivery.line_disputed")
+    blank_remark["payload"]["remark"] = "   "
+    with pytest.raises(ValidationError):
+        ErpEventEnvelope.model_validate(blank_remark)
+
+    mismatch = _line_envelope("delivery.line_accepted")
+    mismatch["payload"]["status"] = "disputed"
+    mismatch["payload"]["remark"] = "x"
+    with pytest.raises(ValidationError):  # тип события и статус строки не совпадают
+        ErpEventEnvelope.model_validate(mismatch)
+
+    extra = _line_envelope("delivery.line_accepted")
+    extra["payload"]["new_optional_field"] = "x"
+    # терпимый читатель: лишнее поле принимается
+    assert ErpEventEnvelope.model_validate(extra).event == "delivery.line_accepted"
+
+    too_long = _line_envelope("delivery.line_disputed")
+    too_long["payload"]["remark"] = "x" * 2001
+    with pytest.raises(ValidationError):
+        ErpEventEnvelope.model_validate(too_long)
+
+
+class _StaffSession(_StatefulSession):
+    """Сессия, которая знает Telegram ответственного сотрудника (запрос `User.tg_user_id`)."""
+
+    def __init__(self, *args: Any, staff_tg_id: int, **kwargs: Any) -> None:
+        super().__init__(*args, **kwargs)
+        self._staff_tg_id = staff_tg_id
+
+    async def scalar(self, stmt: Any) -> Any:
+        if "users" in str(stmt).lower() and "from deals" not in str(stmt).lower():
+            return self._staff_tg_id
+        return await super().scalar(stmt)
+
+
+async def _process_line_event(event: str) -> tuple[_StaffSession, _FakeBot, ErpIncomingEvent, Deal]:
+    client = Client(id=101, name="ООО Тест", erp_company_id=202)
+    lead = Lead(id=501, client_id=101, display_name="Лид", language="uz")
+    deal = Deal(
+        id=701,
+        client_id=101,
+        lead_id=501,
+        erp_deal_id=9001,
+        title="Оси",
+        stage="open",
+        external_stage="fulfilment",
+        owner_user_id=1,
+    )
+    tg = TelegramIdentity(id=1, tg_user_id=777, client_id=101, lead_id=501, is_blocked=False)
+    user = User(id=1, email="manager@railtech.uz", full_name="Менеджер")
+    row = ErpIncomingEvent(
+        event_id=f"evt-{event}",
+        event_type=event,
+        erp_company_id=202,
+        crm_client_id=101,
+        payload=_line_envelope(event),
+        status="received",
+    )
+    session = _StaffSession(
+        {row.event_id: row},
+        {101: client},
+        {501: lead},
+        {701: deal},
+        [tg],
+        {1: user},
+        staff_tg_id=555,
+    )
+    bot = _FakeBot()
+
+    async def get_bot() -> Any:
+        return bot
+
+    service = ErpEventsService(
+        _mock_session_factory(session),
+        _DummySettingsService("https://cab.example.com"),  # type: ignore[arg-type]
+        _DummyStore(SECRET),
+        Settings(erp_webhook_secret=SECRET),
+        get_bot,
+    )
+    assert await service.process_event(row.event_id) is True
+    return session, bot, row, deal
+
+
+@pytest.mark.asyncio
+async def test_line_accepted_goes_to_the_feed_and_nobody_is_messaged() -> None:
+    session, bot, row, deal = await _process_line_event("delivery.line_accepted")
+
+    assert row.status == "processed"
+    notes = [item for item in session.added if isinstance(item, LeadNote)]
+    assert len(notes) == 1
+    assert "Азамат Каримов" in notes[0].text
+    assert "Труба 89х4 ст20" in notes[0].text
+    assert "принял" in notes[0].text
+    assert notes[0].visible_to_bot is False
+    assert deal.external_stage == "fulfilment"  # стадию задаёт DealRef события
+    # решение клиента — его же действие: ни клиенту, ни менеджеру сообщения нет
+    assert bot.sent_messages == []
+
+
+@pytest.mark.asyncio
+async def test_line_disputed_goes_to_the_feed_and_alerts_the_deal_owner_only() -> None:
+    session, bot, row, _ = await _process_line_event("delivery.line_disputed")
+
+    assert row.status == "processed"
+    notes = [item for item in session.added if isinstance(item, LeadNote)]
+    assert len(notes) == 1
+    assert "оспорил" in notes[0].text
+    assert "Часть труб с трещинами" in notes[0].text
+    # одно сообщение — ответственному (Telegram 555), с замечанием; клиент (777) ничего не получает
+    assert [m["chat_id"] for m in bot.sent_messages] == [555]
+    text = bot.sent_messages[0]["text"]
+    assert "ООО Тест" in text
+    assert "Поставка осей РУ1Ш" in text
+    assert "Часть труб с трещинами" in text
+    assert "{" not in text

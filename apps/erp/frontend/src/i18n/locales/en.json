@@ -2912,6 +2912,10 @@
       "line_disputed": {
         "title": "Delivery disputed by the client",
         "detail": "Line {{line_no}} on deal #{{deal_id}}: {{reason}}"
+      },
+      "line_event_failed": {
+        "title": "CRM event was not created",
+        "detail": "Event {{event_type}} for line #{{line_id}} on deal #{{deal_id}} was not created; the client's decision is saved, resend it manually"
       }
     },
     "company": {

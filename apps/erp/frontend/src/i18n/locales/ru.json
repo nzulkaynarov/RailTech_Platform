@@ -2923,6 +2923,10 @@
       "line_disputed": {
         "title": "Поставка оспорена клиентом",
         "detail": "Строка {{line_no}} по сделке #{{deal_id}}: {{reason}}"
+      },
+      "line_event_failed": {
+        "title": "Событие для CRM не создано",
+        "detail": "Событие {{event_type}} по строке #{{line_id}} сделки #{{deal_id}} не создано, решение клиента сохранено; досылать вручную"
       }
     },
     "company": {

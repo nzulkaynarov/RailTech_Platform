@@ -11,6 +11,7 @@ from app.services.erp_bot_messages import (
     DELIVERY_STATUSES,
     BotMessage,
     client_message,
+    feed_note,
     pick_language,
     staff_alert,
 )
@@ -163,6 +164,8 @@ def test_unknown_delivery_status_is_kept_as_is() -> None:
         "deal.lost",
         "document.created",
         "invite.sent",
+        "delivery.line_accepted",
+        "delivery.line_disputed",
     ],
 )
 def test_other_events_do_not_message_the_client(event: str) -> None:
@@ -217,8 +220,14 @@ def test_staff_alerts_are_russian_and_filled() -> None:
     assert "{" not in accepted + returned
 
 
-def test_staff_alert_only_for_two_events() -> None:
-    for event in ("quote.sent", "invoice.paid", "deal.won", "act.issued"):
+def test_staff_alert_only_for_three_events() -> None:
+    for event in (
+        "quote.sent",
+        "invoice.paid",
+        "deal.won",
+        "act.issued",
+        "delivery.line_accepted",  # приёмка — решение клиента, менеджеру личное сообщение не нужно
+    ):
         assert staff_alert(event, {}, client_name="X", deal_title="Y", texts=TEXTS) is None
 
 
@@ -280,3 +289,69 @@ def test_empty_texts_and_button_labels_fall_back_to_defaults(language: Language)
     )
     assert status is not None
     assert "shipped" not in status.text
+
+
+LINE_PAYLOAD: dict[str, Any] = {
+    "line_no": 2,
+    "title": "Труба 89х4 ст20",
+    "status": "disputed",
+    "remark": "Часть труб с трещинами",
+    "decided_at": "2026-10-20T10:00:00+05:00",
+}
+
+
+def test_staff_alert_for_a_disputed_delivery_line_has_the_remark() -> None:
+    text = staff_alert(
+        "delivery.line_disputed",
+        LINE_PAYLOAD,
+        client_name="ООО Тест",
+        deal_title="Оси",
+        texts=TEXTS,
+    )
+    assert text is not None
+    for part in ("ООО Тест", "Оси", "Труба 89х4 ст20", "Часть труб с трещинами", "2"):
+        assert part in text
+    assert "{" not in text
+
+
+@pytest.mark.parametrize(
+    ("event", "needle"),
+    [("delivery.line_accepted", "принял"), ("delivery.line_disputed", "оспорил")],
+)
+def test_feed_note_for_delivery_lines_comes_from_settings(event: str, needle: str) -> None:
+    note = feed_note(event, LINE_PAYLOAD, contact_name="Азамат", deal_title="Оси", texts=TEXTS)
+    assert note is not None
+    assert needle in note
+    assert "Азамат" in note
+    assert "Труба 89х4 ст20" in note
+    assert "{" not in note
+    if event == "delivery.line_disputed":
+        assert "Часть труб с трещинами" in note
+
+
+def test_feed_note_override_and_missing_contact_name() -> None:
+    texts = TextsSettings(
+        erp_note_delivery_line_accepted=LocalizedText(
+            ru="Принято: {title} №{line} ({contact}) — {deal}",
+            uz="Qabul: {title} №{line} ({contact}) — {deal}",
+            en="Accepted: {title} #{line} ({contact}) — {deal}",
+        )
+    )
+    note = feed_note(
+        "delivery.line_accepted", LINE_PAYLOAD, contact_name=None, deal_title="Оси", texts=texts
+    )
+    assert note == "Принято: Труба 89х4 ст20 №2 (контакт клиента) — Оси"
+
+
+def test_feed_note_is_only_for_delivery_line_events() -> None:
+    for event in ("quote.accepted", "delivery.status_changed", "act.returned"):
+        assert feed_note(event, {}, contact_name="X", deal_title="Y", texts=TEXTS) is None
+
+
+def test_delivery_line_texts_reject_wrong_placeholders() -> None:
+    with pytest.raises(ValidationError):
+        TextsSettings(
+            erp_staff_delivery_line_disputed=LocalizedText(
+                ru="Оспорено: {zamechanie}", uz="{remark}", en="Disputed: {remark}"
+            )
+        )

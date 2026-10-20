@@ -49,6 +49,8 @@ VALID_EVENT_TYPES = {
     "deal.lost",
     "document.created",
     "invite.sent",
+    "delivery.line_accepted",
+    "delivery.line_disputed",
 }
 
 
@@ -649,5 +651,49 @@ def emit_invite_sent(
         payload=payload,
         deal=None,
         actor=actor,
+        send_async=send_async,
+    )
+
+
+#: Решение клиента по строке поставки → тип события (`events.schema.json`, `DeliveryLineDecision.status`).
+DELIVERY_LINE_EVENTS = {"accepted": "delivery.line_accepted", "disputed": "delivery.line_disputed"}
+
+#: `DeliveryLineDecision.remark.maxLength`.
+DELIVERY_LINE_REMARK_MAX = 2000
+
+
+def emit_delivery_line_decision(
+    line: Any,
+    contact: Any,
+    send_async: bool = True,
+) -> Optional[IntegrationWebhookEvent]:
+    """События delivery.line_accepted / delivery.line_disputed: клиент принял или оспорил строку поставки (FIX-37).
+
+    Решение уже записано в `line` (`status` — `accepted`/`disputed`, `accepted_at` — время решения, `remark` — замечание).
+    Запись события создаётся в той же транзакции, что и решение (откат решения — нет события), а задача доставки
+    ставится в очередь только после коммита (`emit_event`). Действующее лицо — клиент с именем контакта.
+    """
+    status = str(line.status)
+    event_type = DELIVERY_LINE_EVENTS.get(status)
+    if event_type is None:
+        raise ValueError(f"Строка поставки в статусе {status!r} не даёт события приёмки/замечания")
+    deal = line.deal
+    decided_at = line.accepted_at or timezone.now()
+    payload: Dict[str, Any] = {
+        "line_no": line.line_no,
+        "title": line.title or f"Строка {line.line_no}",
+        "status": status,
+        "decided_at": decided_at.isoformat(),
+    }
+    if status == "disputed":
+        payload["remark"] = (line.remark or "").strip()[:DELIVERY_LINE_REMARK_MAX]
+
+    return emit_event(
+        event_type=event_type,
+        erp_company_id=deal.company_id,
+        payload=payload,
+        deal=deal,
+        actor=build_actor(actor_type="client", name=getattr(contact, "name", None) or None),
+        occurred_at=decided_at,
         send_async=send_async,
     )

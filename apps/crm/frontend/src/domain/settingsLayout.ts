@@ -121,6 +121,9 @@ const TEXT_GROUPS: Record<string, string[]> = {
     "erp_btn_cabinet",
     "erp_staff_quote_accepted",
     "erp_staff_act_returned",
+    "erp_note_delivery_line_accepted",
+    "erp_note_delivery_line_disputed",
+    "erp_staff_delivery_line_disputed",
   ],
   erase: ["erase_confirm", "erase_button", "cancel_button", "erase_cancelled", "erased"],
 };
