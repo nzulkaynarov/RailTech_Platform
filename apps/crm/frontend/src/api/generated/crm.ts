@@ -4693,8 +4693,8 @@ export const getPutErpConnectorUrl = () => {
  * Сохранить адрес ERP и секреты (после пароля админа); секрет `null` — оставить прежний.
  *
  * Ротация секрета вебхуков без простоя: `webhook_secret` — новый (текущий),
- * `webhook_secret_previous` —
- * прежний (принимается, пока его не сняли `clear_webhook_secret_previous: true`).
+ * `webhook_secret_previous` — прежний (принимается, пока его не сняли
+ * `clear_webhook_secret_previous: true`).
  *
  * Ошибки: `erp_invalid_url` (422, поле `base_url`), `wrong_password` (422),
  * `secrets_key_missing` (409 — секреты нельзя сохранить без `SECRETS_KEY`).
