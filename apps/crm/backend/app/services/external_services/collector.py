@@ -18,6 +18,7 @@ import httpx
 import structlog
 
 from app.config import Settings
+from app.domain import external_erp_events as erp_events_rules
 from app.domain import external_erp_handoff as erp_handoff_rules
 from app.domain import external_erp_sync as erp_sync_rules
 from app.domain import external_status as rules
@@ -146,6 +147,7 @@ class _Run:
             "backup": self.backup,
             "erp_sync": self.erp_sync,
             "erp_handoff": self.erp_handoff,
+            "erp_events": self.erp_events,
         }
         return await handler[key]()
 
@@ -249,6 +251,16 @@ class _Run:
         return erp_handoff_rules.erp_handoff(
             erp_handoff_rules.ErpHandoffFacts(
                 configured, stats.failed, stats.stuck, stats.pending, stats.last_error
+            )
+        )
+
+    async def erp_events(self) -> CheckResult:
+        """Итог приёма событий ERP (FIX-33): отклонённые, упавшие и зависшие, не пробный запрос."""
+        async with self.d.sessions() as session:
+            stats = await repo.erp_events_stats(session, self.now)
+        return erp_events_rules.erp_events(
+            erp_events_rules.ErpEventsFacts(
+                stats.rejected, stats.failed, stats.stuck, stats.last_error
             )
         )
 

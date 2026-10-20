@@ -29,7 +29,8 @@ class Deal(TimestampMixin, Base):
         Index("ix_deals_client_id", "client_id"),
         Index("ix_deals_lead_id", "lead_id"),
         Index("ix_deals_stage_closed_at", "stage", "closed_at"),
-        Index("ix_deals_erp_deal_id", "erp_deal_id"),
+        # Одна заявка ERP — одно зеркало (FIX-33); NULL (локальные сделки) уникальность не нарушают.
+        Index("uq_deals_erp_deal_id", "erp_deal_id", unique=True),
     )
 
     id: Mapped[int] = mapped_column(BigInteger, Identity(), primary_key=True)
@@ -46,3 +47,5 @@ class Deal(TimestampMixin, Base):
     owner_user_id: Mapped[int | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"))
     erp_deal_id: Mapped[int | None] = mapped_column(BigInteger)
     external_stage: Mapped[str | None] = mapped_column(String(64))
+    # `occurred_at` последнего применённого события ERP: более старое событие стадию не откатывает.
+    external_stage_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))

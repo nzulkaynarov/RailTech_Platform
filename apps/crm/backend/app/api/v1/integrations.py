@@ -1,5 +1,3 @@
-import json
-import uuid
 from dataclasses import asdict
 from typing import Annotated
 
@@ -8,9 +6,8 @@ from fastapi import APIRouter, Depends, Header, Query, Request
 from app.api.deps import ContainerDep, require
 from app.bot.profile import ProfilePublish
 from app.bot.supervisor import BotSupervisor
-from app.domain.errors import ValidationFailedError
 from app.integrations.telegram import AiogramProbe
-from app.schemas.erp_events import ErpEventEnvelope, ErpWebhookReceipt
+from app.schemas.erp_events import ErpWebhookReceipt
 from app.schemas.integrations import (
     BotProfileOut,
     ChatCandidateOut,
@@ -166,44 +163,24 @@ async def check_erp_connection(_: Writer, service: ErpDep) -> ErpCheckOut:
 async def receive_erp_event(
     request: Request,
     container: ContainerDep,
-    x_event_id: Annotated[str, Header(alias="X-Event-Id")],
-    x_event_type: Annotated[str, Header(alias="X-Event-Type")],
-    x_timestamp: Annotated[str, Header(alias="X-Timestamp")],
+    x_event_id: Annotated[str | None, Header(alias="X-Event-Id")] = None,
+    x_event_type: Annotated[str | None, Header(alias="X-Event-Type")] = None,
     x_signature: Annotated[str | None, Header(alias="X-Signature")] = None,
 ) -> ErpWebhookReceipt:
-    """Приём входящих вебхуков событий ERP (M3-CRM-04, CONTRACTS §3).
+    """Приём входящих вебхуков событий ERP (M3-CRM-04, CONTRACTS §3, FIX-33).
 
-    Проверка HMAC-SHA256 подписи заголовка X-Signature по секрету ERP_WEBHOOK_SECRET,
-    идемпотентность по X-Event-Id (UUID), быстрый ответ 200 OK и фоновая обработка в Procrastinate.
+    Порядок: подпись HMAC-SHA256 по сырому телу (X-Signature, ERP_WEBHOOK_SECRET) — ДО разбора
+    тела и проверки остальных заголовков; идемпотентность по X-Event-Id; быстрый 200 и фоновая
+    обработка в Procrastinate. 401 — только неверная подпись; тело, которое мы принять не можем
+    (чужой тип события, расхождение с заголовком), записывается как `rejected` и тоже получает 200:
+    ретраи ERP ничего бы не изменили.
     """
-    try:
-        uuid.UUID(x_event_id)
-    except ValueError:
-        raise ValidationFailedError("invalid X-Event-Id UUID", field="X-Event-Id") from None
-
     raw_body = await request.body()
-    try:
-        payload_data = json.loads(raw_body)
-    except Exception as exc:
-        raise ValidationFailedError("invalid JSON body") from exc
-
-    try:
-        envelope = ErpEventEnvelope.model_validate(payload_data)
-    except Exception as exc:
-        raise ValidationFailedError(f"invalid event envelope: {exc}") from exc
-
-    if envelope.event != x_event_type:
-        raise ValidationFailedError(
-            f"event type header mismatch: {x_event_type} != {envelope.event}",
-            field="X-Event-Type",
-        )
-
     duplicate, _ = await container.erp_events_service.receive_event(
         event_id=x_event_id,
         event_type=x_event_type,
         signature=x_signature,
         raw_body=raw_body,
-        envelope=envelope,
     )
     return ErpWebhookReceipt(status="ok", duplicate=duplicate)
 

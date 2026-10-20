@@ -4872,10 +4872,13 @@ export const getReceiveErpEventUrl = () => {
 };
 
 /**
- * Приём входящих вебхуков событий ERP (M3-CRM-04, CONTRACTS §3).
+ * Приём входящих вебхуков событий ERP (M3-CRM-04, CONTRACTS §3, FIX-33).
  *
- * Проверка HMAC-SHA256 подписи заголовка X-Signature по секрету ERP_WEBHOOK_SECRET,
- * идемпотентность по X-Event-Id (UUID), быстрый ответ 200 OK и фоновая обработка в Procrastinate.
+ * Порядок: подпись HMAC-SHA256 по сырому телу (X-Signature, ERP_WEBHOOK_SECRET) — ДО разбора
+ * тела и проверки остальных заголовков; идемпотентность по X-Event-Id; быстрый 200 и фоновая
+ * обработка в Procrastinate. 401 — только неверная подпись; тело, которое мы принять не можем
+ * (чужой тип события, расхождение с заголовком), записывается как `rejected` и тоже получает 200:
+ * ретраи ERP ничего бы не изменили.
  * @summary Receive Erp Event
  */
 export const receiveErpEvent = async (

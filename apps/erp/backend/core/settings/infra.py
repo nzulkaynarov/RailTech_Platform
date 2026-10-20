@@ -42,3 +42,18 @@ CELERY_TASK_ROUTES = {
     # HTTP waits — a bulk import can never occupy the slots an interactive job needs).
     "sourcing.run_ai_job": {"queue": "ai"},
 }
+
+# Redis возвращает неподтверждённую задачу в очередь через `visibility_timeout` (по умолчанию 1 ч). Ретраи
+# вебхуков ERP → CRM уходят в брокер с `countdown` до 24 ч (`integration.tasks.RETRY_DELAYS`): при 1 ч задача на
+# 2/6/24 ч «возвращалась» бы раньше срока и доставка дублировалась (FIX-33, I-7). Срок — 25 ч: самый длинный
+# интервал + запас. Тест `integration/tests/test_webhook_reliability.py` сверяет значение с `RETRY_DELAYS`.
+CELERY_BROKER_TRANSPORT_OPTIONS = {"visibility_timeout": 25 * 3600}
+
+# Beat (django_celery_beat.DatabaseScheduler подхватывает записи при старте): подбор зависших PENDING-вебхуков
+# каждые 5 минут (FIX-33). Остальные периодические задачи сеются миграцией `core/0002` (`core/seeds/beat.py`).
+CELERY_BEAT_SCHEDULE = {
+    "integration-requeue-stuck-webhooks": {
+        "task": "integration.requeue_stuck_webhook_events",
+        "schedule": 300.0,
+    },
+}

@@ -144,6 +144,16 @@ _AFTER_VENDORS: Final = (
         fix_path="/clients",
     ),
     ServiceSpec(
+        key="erp_events",
+        title="События из ERP",
+        purpose="Вебхуки ERP (КП, счета, поставки): лента клиента, статус сделки, сообщения бота",
+        system="ensemble",
+        source="crm",
+        check="отклонённые, необработанные и зависшие события за неделю (без запросов в ERP)",
+        tiers=("cheap",),
+        fix_path="/integrations?tab=erp",
+    ),
+    ServiceSpec(
         key="backup",
         title="Хранилище резервных копий",
         purpose="Ежедневная копия базы и файлов; восстановление после аварии",

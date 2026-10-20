@@ -25,6 +25,7 @@ from typing import Literal
 
 import structlog
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.domain.backoffice import HandoffConsent, handoff_consent
@@ -336,13 +337,21 @@ async def _mirror_request(
 ) -> None:
     """Зеркало заявки ERP. Событие `request.created` могло прийти раньше ответа — тогда зеркало
     уже есть."""
-    deal = await session.scalar(
-        select(Deal).where(Deal.erp_deal_id == erp_deal_id).limit(1).with_for_update()
-    )
+    stmt = select(Deal).where(Deal.erp_deal_id == erp_deal_id).limit(1).with_for_update()
+    deal = await session.scalar(stmt)
     if deal is None:
-        deal = await _free_open_deal(session, lead)
-        deal.erp_deal_id = erp_deal_id
-        deal.external_stage = "request"
+        try:
+            # Уникальный `deals.erp_deal_id` (FIX-33): если событие успело создать зеркало между
+            # проверкой и записью, вставка падает в savepoint, и берём созданное событием.
+            async with session.begin_nested():
+                deal = await _free_open_deal(session, lead)
+                deal.erp_deal_id = erp_deal_id
+                deal.external_stage = "request"
+                await session.flush()
+        except IntegrityError:
+            deal = await session.scalar(stmt)
+            if deal is None:
+                raise
     if deal.client_id is None:
         deal.client_id = client.id
     if deal.lead_id is None:

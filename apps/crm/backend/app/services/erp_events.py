@@ -2,20 +2,25 @@
 
 import hashlib
 import hmac
+import json
+import uuid
 from collections.abc import Awaitable, Callable
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from decimal import Decimal
+from typing import Any
 
 import structlog
 from aiogram import Bot
 from aiogram.exceptions import TelegramAPIError
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
+from pydantic import ValidationError
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.config import Settings
 from app.domain.deals import DealStage, plan_erp_outcome
-from app.domain.errors import AuthError, ConflictError, Reason
+from app.domain.errors import AuthError, ConflictError, Reason, ValidationFailedError
 from app.integrations.erp import resolve_erp
 from app.models.auth import User
 from app.models.clients import Client, Document
@@ -25,8 +30,8 @@ from app.models.leads import Lead, LeadNote, TelegramIdentity
 from app.repositories import events
 from app.schemas.erp_events import ErpEventEnvelope
 from app.security.secrets_store import SecretsStore
+from app.services import deals as deals_service
 from app.services.erp_bot_messages import (
-    BotMessage,
     client_message,
     feed_note,
     pick_language,
@@ -64,6 +69,84 @@ def verify_signature(secret: str, raw_body: bytes, signature_header: str | None)
     return hmac.compare_digest(given_hex, expected_hex)
 
 
+#: Неудачных обработок события до статуса `failed` (его видно в центре внешних сервисов).
+MAX_ATTEMPTS = 5
+#: Строка `received` старше этого не ждёт своей задачи, а потеряна: сборщик ставит её заново.
+STUCK_AFTER = timedelta(seconds=60)
+SWEEP_LIMIT = 100
+#: Неотправленное сообщение старше этого сборщик не досылает (устаревший «счёт выставлен» вредит).
+UNSENT_MAX_AGE = timedelta(hours=24)
+#: События, чьё сообщение клиенту описывает ТЕКУЩЕЕ состояние (срок, статус поставки, стадия):
+#: устаревшим они в бот не уходят — только в ленту. Разовые факты (КП, счёт, акт) доходят всегда.
+STALE_SILENT_EVENTS = frozenset(
+    {"delivery.status_changed", "delivery.eta_changed", "deal.stage_changed"}
+)
+RAW_PREVIEW_CHARS = 2000
+
+
+def _aware(moment: datetime) -> datetime:
+    return moment if moment.tzinfo is not None else moment.replace(tzinfo=UTC)
+
+
+def _is_fresh(deal: Deal, occurred_at: datetime) -> bool:
+    """Событие применяется к зеркалу, если не старее уже применённого (порядок по `occurred_at`).
+
+    Равное время применяется: у двух событий одного мгновения порядок прихода и есть порядок.
+    """
+    return deal.external_stage_at is None or _aware(occurred_at) >= deal.external_stage_at
+
+
+def _outcome_is_current(deal: Deal, occurred_at: datetime) -> bool:
+    """Итог `won`/`lost` применяется, если сделка не закрыта более поздним итогом (по `closed_at`).
+
+    Опоздавший итог НЕ теряется из-за более свежих событий другого типа (счёт, оплата): их порядок
+    ведёт `external_stage_at`, а итог сделки упорядочен только относительно других итогов.
+    """
+    return deal.closed_at is None or _aware(occurred_at) >= _aware(deal.closed_at)
+
+
+def _id_or_none(value: object) -> int | None:
+    return value if isinstance(value, int) and not isinstance(value, bool) else None
+
+
+def _parse_body(
+    raw_body: bytes, event_type: str
+) -> tuple[ErpEventEnvelope | None, dict[str, Any], str | None]:
+    """Тело события → (конверт, JSON для журнала, причина отказа).
+
+    Отказ — постоянный (подпись верна, а тело нам не подходит: сломанный JSON, неизвестный тип,
+    расхождение с заголовком): событие записывается как `rejected`, ERP получает 200, потому что
+    ретраи ERP (до 24 ч) ничего не изменят.
+    """
+    try:
+        data = json.loads(raw_body)
+    except ValueError:
+        return (
+            None,
+            {"raw": raw_body[:RAW_PREVIEW_CHARS].decode("utf-8", "replace")},
+            "invalid JSON",
+        )
+    if not isinstance(data, dict):
+        return (
+            None,
+            {"raw": raw_body[:RAW_PREVIEW_CHARS].decode("utf-8", "replace")},
+            "not an object",
+        )
+    if "\\u0000" in json.dumps(data):  # JSONB не хранит NUL
+        return None, {"raw": "contains NUL"}, "NUL in body"
+    try:
+        envelope = ErpEventEnvelope.model_validate(data)
+    except ValidationError as exc:
+        errors = exc.errors()
+        detail = (
+            f"{'.'.join(str(p) for p in errors[0]['loc'])}: {errors[0]['msg']}" if errors else ""
+        )
+        return None, data, f"invalid event envelope: {detail}"[:500]
+    if envelope.event != event_type:
+        return None, data, f"event type header mismatch: {event_type} != {envelope.event}"
+    return envelope, data, None
+
+
 class ErpEventsService:
     def __init__(
         self,
@@ -72,7 +155,7 @@ class ErpEventsService:
         secrets_store: SecretsStore,
         config: Settings,
         bot_provider: Callable[[], Awaitable[Bot | None]],
-        enqueue_task: Callable[[str], Awaitable[int]] | None = None,
+        enqueue_task: Callable[[str], Awaitable[int | None]] | None = None,
     ) -> None:
         self._sessions = sessions
         self._settings_service = settings_service
@@ -88,16 +171,20 @@ class ErpEventsService:
 
     async def receive_event(
         self,
-        event_id: str,
-        event_type: str,
+        event_id: str | None,
+        event_type: str | None,
         signature: str | None,
         raw_body: bytes,
-        envelope: ErpEventEnvelope,
     ) -> tuple[bool, str]:
-        """Приём вебхука: проверка подписи, идемпотентная фиксация и постановка в очередь.
+        """Приём вебхука: подпись → заголовки → разбор тела → идемпотентная фиксация → очередь.
 
-        Возвращает: (is_duplicate, status_str).
-        Ошибки: 409 (секрет не настроен), 401 (неверная подпись).
+        Подпись проверяется по сырому телу ДО любого разбора (FIX-33): неподписанный запрос не
+        заставляет CRM разбирать JSON и не узнаёт, что именно в теле не так. Дальше:
+        постоянный отказ по телу (неизвестный тип, чужой формат) — строка `rejected` и 200;
+        сбой постановки в очередь строку не теряет и ответ не ломает — её подберёт `sweep`.
+
+        Возвращает: (is_duplicate, status_str). Ошибки: 409 (секрет не настроен), 401 (подпись),
+        422 (заголовки при верной подписи).
         """
         secret = await self.get_webhook_secret()
         if not secret:
@@ -110,30 +197,124 @@ class ErpEventsService:
             logger.warning("erp_webhook_invalid_signature", event_id=event_id)
             raise AuthError("invalid webhook signature")
 
-        async with self._sessions() as session, session.begin():
-            existing = await session.get(ErpIncomingEvent, event_id)
-            if existing is not None:
-                logger.info("erp_webhook_duplicate", event_id=event_id, event_type=event_type)
-                return True, "duplicate"
+        try:
+            event_id = str(uuid.UUID(event_id or ""))
+        except ValueError:
+            raise ValidationFailedError("invalid X-Event-Id UUID", field="X-Event-Id") from None
+        if not event_type:
+            raise ValidationFailedError("missing X-Event-Type", field="X-Event-Type")
 
-            incoming = ErpIncomingEvent(
-                event_id=event_id,
-                event_type=event_type,
-                erp_company_id=envelope.erp_company_id,
-                crm_client_id=envelope.crm_client_id,
-                payload=envelope.model_dump(mode="json"),
-                status="received",
-            )
-            session.add(incoming)
+        envelope, data, refusal = _parse_body(raw_body, event_type)
+        incoming = ErpIncomingEvent(
+            event_id=event_id,
+            event_type=event_type[:64],
+            erp_company_id=envelope.erp_company_id
+            if envelope
+            else _id_or_none(data.get("erp_company_id")),
+            crm_client_id=envelope.crm_client_id
+            if envelope
+            else _id_or_none(data.get("crm_client_id")),
+            payload=envelope.model_dump(mode="json") if envelope else data,
+            status="received" if envelope else "rejected",
+            error=refusal,
+            processed_at=None if envelope else datetime.now(UTC),
+        )
+        try:
+            async with self._sessions() as session, session.begin():
+                if await session.get(ErpIncomingEvent, event_id) is not None:
+                    logger.info("erp_webhook_duplicate", event_id=event_id, event_type=event_type)
+                    return True, "duplicate"
+                session.add(incoming)
+        except IntegrityError:  # тот же event_id вставил параллельный запрос
+            return True, "duplicate"
 
-        if self._enqueue_task is not None:
+        if refusal is not None:
+            logger.warning("erp_webhook_rejected", event_id=event_id, reason=refusal)
+            return False, "rejected"
+        return False, await self._enqueue(event_id)
+
+    async def _enqueue(self, event_id: str) -> str:
+        """Поставить обработку; сбой очереди событие не теряет — его подберёт `sweep`."""
+        if self._enqueue_task is None:
+            return "stored"
+        try:
             await self._enqueue_task(event_id)
-            logger.info("erp_webhook_enqueued", event_id=event_id, event_type=event_type)
+        except Exception:
+            logger.exception("erp_webhook_enqueue_failed", event_id=event_id)
+            return "stored"
+        logger.info("erp_webhook_enqueued", event_id=event_id)
+        return "enqueued"
 
-        return False, "enqueued"
+    async def sweep(self, limit: int = SWEEP_LIMIT) -> int:
+        """Подобрать события, которые никто не обрабатывает (периодическая задача, раз в минуту).
+
+        * `received` старше `STUCK_AFTER`: постановка в очередь не удалась или задача потеряна;
+        * `processed`, но сообщения в Telegram так и не захвачены (воркер упал между коммитом и
+          отправкой, либо бота не было). Старше `UNSENT_MAX_AGE` сообщение уже не имеет смысла.
+        Возвращает число поставленных событий и отправленных сообщений.
+        """
+        horizon = datetime.now(UTC) - STUCK_AFTER
+        async with self._sessions() as session:
+            stuck = list(
+                await session.scalars(
+                    select(ErpIncomingEvent.event_id)
+                    .where(
+                        ErpIncomingEvent.status == "received",
+                        ErpIncomingEvent.received_at < horizon,
+                    )
+                    .order_by(ErpIncomingEvent.received_at)
+                    .limit(limit)
+                )
+            )
+            unsent = list(
+                await session.scalars(
+                    select(ErpIncomingEvent.event_id)
+                    .where(
+                        ErpIncomingEvent.status == "processed",
+                        ErpIncomingEvent.outbox.is_not(None),
+                        ErpIncomingEvent.notified_at.is_(None),
+                        ErpIncomingEvent.processed_at < horizon,
+                        ErpIncomingEvent.processed_at > datetime.now(UTC) - UNSENT_MAX_AGE,
+                    )
+                    .order_by(ErpIncomingEvent.processed_at)
+                    .limit(limit)
+                )
+            )
+        for event_id in stuck:
+            await self._enqueue(event_id)
+        sent = 0
+        for event_id in unsent:
+            sent += await self.deliver_notifications(event_id)
+        if stuck or sent:
+            logger.warning("erp_events_swept", requeued=len(stuck), notified=sent)
+        return len(stuck) + sent
 
     async def process_event(self, event_id: str) -> bool:
-        """Асинхронная обработка события ERP: зеркало сделки, документы, лента и бот."""
+        """Обработка события: зеркало, документы, лента — в транзакции; Telegram — после коммита."""
+        try:
+            applied = await self._apply(event_id)
+        except Exception as exc:
+            await self._note_failure(event_id, exc)
+            raise
+        if applied:
+            await self.deliver_notifications(event_id)
+        return applied
+
+    async def _note_failure(self, event_id: str, exc: Exception) -> None:
+        """Неудачная обработка: счётчик и ошибка; на потолке — `failed`, не крутить вечно."""
+        try:
+            async with self._sessions() as session, session.begin():
+                row = await session.get(ErpIncomingEvent, event_id, with_for_update=True)
+                if row is None or row.status == "processed":
+                    return
+                row.attempts = (row.attempts or 0) + 1
+                row.error = f"{type(exc).__name__}: {exc}"[:500]
+                if row.attempts >= MAX_ATTEMPTS:
+                    row.status = "failed"
+        except Exception:
+            logger.exception("erp_event_failure_note_failed", event_id=event_id)
+
+    async def _apply(self, event_id: str) -> bool:
         async with self._sessions() as session, session.begin():
             event_row = await session.get(ErpIncomingEvent, event_id, with_for_update=True)
             if event_row is None:
@@ -143,6 +324,8 @@ class ErpEventsService:
             if event_row.status == "processed":
                 logger.info("erp_event_already_processed", event_id=event_id)
                 return True
+            if event_row.status == "rejected":
+                return False
 
             envelope = ErpEventEnvelope.model_validate(event_row.payload)
             client = await session.get(Client, envelope.crm_client_id)
@@ -157,45 +340,53 @@ class ErpEventsService:
                 return False
 
             if client.erp_company_id is None:
+                # Передача ещё идёт (ответ ERP не записан): сопоставление берём из подписанного
+                # события — `crm_client_id` в нём ERP взяла из сопоставления, созданного нашей же
+                # передачей. Ждать нельзя: при сбое передачи событие зависло бы навсегда.
                 client.erp_company_id = envelope.erp_company_id
+            elif client.erp_company_id != envelope.erp_company_id:
+                event_row.status = "rejected"
+                event_row.processed_at = datetime.now(UTC)
+                event_row.error = (
+                    f"company mismatch: client #{client.id} is erp company "
+                    f"#{client.erp_company_id}, event carries #{envelope.erp_company_id}"
+                )
+                logger.warning("erp_event_company_mismatch", event_id=event_id, client_id=client.id)
+                return False
 
             lead = await session.scalar(
                 select(Lead).where(Lead.client_id == client.id).order_by(Lead.id.desc()).limit(1)
             )
 
             deal: Deal | None = None
+            fresh = True
             if envelope.deal is not None:
-                deal = await session.scalar(
-                    select(Deal)
-                    .where(Deal.erp_deal_id == envelope.deal.erp_deal_id)
-                    .limit(1)
-                    .with_for_update()
-                )
-                if deal is None:
-                    deal = Deal(
-                        client_id=client.id,
-                        lead_id=lead.id if lead else None,
-                        title=envelope.deal.title,
-                        amount=_deal_amount(envelope.deal.amount),
-                        currency=envelope.deal.currency,
-                        stage="open",
-                        external_stage=envelope.deal.stage,
-                        erp_deal_id=envelope.deal.erp_deal_id,
-                    )
-                    session.add(deal)
-                    await session.flush()
-                else:
+                deal, created = await self._mirror(session, client, lead, envelope)
+                fresh = created or _is_fresh(deal, envelope.occurred_at)
+                if fresh:
                     deal.external_stage = envelope.deal.stage
+                    deal.external_stage_at = _aware(envelope.occurred_at)
                     deal.title = envelope.deal.title
                     if envelope.deal.amount is not None:
                         deal.amount = Decimal(envelope.deal.amount)
                     deal.currency = envelope.deal.currency
                     if deal.client_id is None:
                         deal.client_id = client.id
-
+                else:
+                    logger.info(
+                        "erp_event_stale",
+                        event_id=event_id,
+                        event_type=envelope.event,
+                        occurred_at=envelope.occurred_at.isoformat(),
+                    )
                 event_row.deal_id = deal.id
 
+            # Устаревшее событие стадию, название и сумму зеркала не меняет (они возвращаются после
+            # обработчика), но итог сделки (`won`/`lost`) применяется, а в ленту событие пишется.
+            mirror = (deal.external_stage, deal.title, deal.amount, deal.currency) if deal else None
             note_text = await self._dispatch_event(session, envelope, client, deal)
+            if deal is not None and not fresh and mirror is not None:
+                deal.external_stage, deal.title, deal.amount, deal.currency = mirror
             cfg = await self._settings_service.get()
             deal_title = envelope.deal.title if envelope.deal else (deal.title if deal else "—")
             bot_msg = client_message(
@@ -234,9 +425,19 @@ class ErpEventsService:
                 lead.notes_count = (lead.notes_count or 0) + 1
                 await events.publish(session, "lead.updated", lead_id=lead.id)
 
-            if bot_msg:
-                await self._send_to_client_telegram(session, client.id, bot_msg)
-
+            # Сообщения не отправляются внутри транзакции: откат или повтор задачи не должен
+            # задваивать их. Они записываются в строку события и уходят после коммита
+            # (`deliver_notifications`).
+            outbox: list[dict[str, Any]] = []
+            if bot_msg and not (not fresh and envelope.event in STALE_SILENT_EVENTS):
+                outbox.append(
+                    {
+                        "kind": "client",
+                        "client_id": client.id,
+                        "text": bot_msg.text,
+                        "buttons": [list(button) for button in bot_msg.buttons],
+                    }
+                )
             if staff_alert_text:
                 target_user_id = (
                     deal.owner_user_id
@@ -248,13 +449,80 @@ class ErpEventsService:
                     else None
                 )
                 if target_user_id:
-                    await self._send_to_staff(session, target_user_id, staff_alert_text)
+                    outbox.append(
+                        {"kind": "staff", "user_id": target_user_id, "text": staff_alert_text}
+                    )
+            event_row.outbox = outbox or None
 
             event_row.status = "processed"
             event_row.processed_at = datetime.now(UTC)
             event_row.error = None
 
         return True
+
+    async def _mirror(
+        self,
+        session: AsyncSession,
+        client: Client,
+        lead: Lead | None,
+        envelope: ErpEventEnvelope,
+    ) -> tuple[Deal, bool]:
+        """Зеркало сделки ERP: найти по `erp_deal_id`, иначе занять сделку лида или создать.
+
+        Уникальный `deals.erp_deal_id` — последний рубеж: если параллельно то же зеркало создала
+        передача клиента (`erp_handoff._mirror_request`), вставка в savepoint упадёт, и мы берём
+        созданное — зеркало остаётся одно, каким бы порядком ни пришли ответ ERP и событие.
+        Возвращает (сделка, создана ли новая).
+        """
+        if envelope.deal is None:
+            raise ValueError("event has no deal")
+        erp_deal_id = envelope.deal.erp_deal_id
+        found = await self._find_mirror(session, erp_deal_id)
+        if found is not None:
+            return found, False
+
+        # Заявка передачи (`source=crm`) — уже существующая сделка лида: второй не заводим.
+        adopt: Deal | None = None
+        if (
+            lead is not None
+            and envelope.event == "request.created"
+            and envelope.payload.get("source") == "crm"
+        ):
+            adopt = await deals_service.open_deal(session, lead.id)
+            if adopt is not None and adopt.erp_deal_id is not None:
+                adopt = None
+        try:
+            async with session.begin_nested():
+                if adopt is not None:
+                    adopt.erp_deal_id = erp_deal_id
+                    deal = adopt
+                    created = False
+                else:
+                    deal = Deal(
+                        client_id=client.id,
+                        lead_id=lead.id if lead else None,
+                        title=envelope.deal.title,
+                        amount=_deal_amount(envelope.deal.amount),
+                        currency=envelope.deal.currency,
+                        stage="open",
+                        external_stage=envelope.deal.stage,
+                        erp_deal_id=erp_deal_id,
+                    )
+                    session.add(deal)
+                    created = True
+                await session.flush()
+        except IntegrityError:
+            existing = await self._find_mirror(session, erp_deal_id)
+            if existing is None:
+                raise
+            return existing, False
+        return deal, created
+
+    @staticmethod
+    async def _find_mirror(session: AsyncSession, erp_deal_id: int) -> Deal | None:
+        return await session.scalar(
+            select(Deal).where(Deal.erp_deal_id == erp_deal_id).limit(1).with_for_update()
+        )
 
     async def _dispatch_event(
         self,
@@ -291,7 +559,7 @@ class ErpEventsService:
         if ev == "deal.won":
             amt = p.get("amount", env.deal.amount if env.deal else "") or ""
             curr = p.get("currency", env.deal.currency if env.deal else "")
-            if deal:
+            if deal and _outcome_is_current(deal, env.occurred_at):
                 current_st = (
                     DealStage(deal.stage)
                     if deal.stage in ("open", "won", "lost")
@@ -310,7 +578,7 @@ class ErpEventsService:
 
         if ev == "deal.lost":
             reason = p.get("lost_reason")
-            if deal:
+            if deal and _outcome_is_current(deal, env.occurred_at):
                 current_st = (
                     DealStage(deal.stage)
                     if deal.stage in ("open", "won", "lost")
@@ -465,75 +733,66 @@ class ErpEventsService:
 
         return None
 
-    async def _send_to_client_telegram(
-        self,
-        session: AsyncSession,
-        client_id: int,
-        message: BotMessage,
-    ) -> None:
-        """Отправка сообщения в Telegram всем привязанным аккаунтам клиента."""
-        bot = await self._bot_provider()
-        if bot is None or self._config.telegram_dry_run:
-            return
+    async def deliver_notifications(self, event_id: str) -> int:
+        """Отправить сообщения события в Telegram — после коммита обработки и не больше одного раза.
 
-        tg_ids = (
-            await session.scalars(
-                select(TelegramIdentity.tg_user_id).where(
-                    TelegramIdentity.client_id == client_id,
-                    TelegramIdentity.is_blocked.is_(False),
-                )
-            )
-        ).all()
+        Строка события захватывается под блокировкой: `notified_at` ставится ДО отправки, поэтому
+        повтор события, повторная задача и сборщик второго сообщения не пошлют (ключ — событие).
+        Цена — при падении воркера между захватом и отправкой сообщение теряется (а не дублируется).
+        Возвращает число отправленных сообщений.
+        """
+        async with self._sessions() as session, session.begin():
+            row = await session.get(ErpIncomingEvent, event_id, with_for_update=True)
+            if row is None or not row.outbox or row.notified_at is not None:
+                return 0
+            bot = await self._bot_provider()
+            if bot is None or self._config.telegram_dry_run:
+                # Бота нет или он выключен: сообщения не захватываются и не теряются — их отправит
+                # сборщик, когда бот появится (старше суток — не досылается, см. `sweep`).
+                return 0
+            row.notified_at = datetime.now(UTC)
+            sends: list[tuple[int, str, InlineKeyboardMarkup | None]] = []
+            for item in row.outbox:
+                if item.get("kind") == "client":
+                    markup = _markup(item.get("buttons") or [])
+                    tg_ids = (
+                        await session.scalars(
+                            select(TelegramIdentity.tg_user_id).where(
+                                TelegramIdentity.client_id == item["client_id"],
+                                TelegramIdentity.is_blocked.is_(False),
+                            )
+                        )
+                    ).all()
+                    sends += [(tg_id, item["text"], markup) for tg_id in tg_ids]
+                elif item.get("kind") == "staff":
+                    tg_user_id = await session.scalar(
+                        select(User.tg_user_id).where(
+                            User.id == item["user_id"], User.is_active.is_(True)
+                        )
+                    )
+                    if tg_user_id:
+                        sends.append((tg_user_id, item["text"], None))
 
-        reply_markup: InlineKeyboardMarkup | None = None
-        if message.buttons:
-            reply_markup = InlineKeyboardMarkup(
-                inline_keyboard=[
-                    [InlineKeyboardButton(text=label, url=url)] for label, url in message.buttons
-                ]
-            )
-
-        for tg_id in tg_ids:
+        sent = 0
+        for chat_id, text, markup in sends:
             try:
                 await bot.send_message(
-                    chat_id=tg_id,
-                    text=message.text,
-                    reply_markup=reply_markup,
-                    request_timeout=10,
+                    chat_id=chat_id, text=text, reply_markup=markup, request_timeout=10
                 )
+                sent += 1
             except (TelegramAPIError, OSError, ValueError) as exc:
                 logger.warning(
-                    "client_telegram_notify_failed",
-                    client_id=client_id,
-                    tg_user_id=tg_id,
+                    "erp_event_telegram_failed",
+                    event_id=event_id,
+                    tg_user_id=chat_id,
                     error=str(exc),
                 )
+        return sent
 
-    async def _send_to_staff(
-        self,
-        session: AsyncSession,
-        user_id: int,
-        text: str,
-    ) -> None:
-        """Отправка уведомления сотруднику в личный Telegram."""
-        bot = await self._bot_provider()
-        if bot is None or self._config.telegram_dry_run:
-            return
 
-        tg_user_id = await session.scalar(
-            select(User.tg_user_id).where(User.id == user_id, User.is_active.is_(True))
-        )
-        if tg_user_id:
-            try:
-                await bot.send_message(
-                    chat_id=tg_user_id,
-                    text=text,
-                    request_timeout=10,
-                )
-            except (TelegramAPIError, OSError, ValueError) as exc:
-                logger.warning(
-                    "staff_notify_failed",
-                    user_id=user_id,
-                    tg_user_id=tg_user_id,
-                    error=str(exc),
-                )
+def _markup(buttons: list[list[str]]) -> InlineKeyboardMarkup | None:
+    if not buttons:
+        return None
+    return InlineKeyboardMarkup(
+        inline_keyboard=[[InlineKeyboardButton(text=label, url=url)] for label, url in buttons]
+    )

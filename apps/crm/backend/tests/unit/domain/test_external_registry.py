@@ -35,6 +35,7 @@ def test_registry_lists_every_external_service_of_the_ensemble() -> None:
         "docling",
         "erp_sync",
         "erp_handoff",
+        "erp_events",
         "backup",
         "tls.crm",
         "tls.erp",

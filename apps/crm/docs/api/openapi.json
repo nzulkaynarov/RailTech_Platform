@@ -10362,34 +10362,39 @@
     },
     "/api/v1/integrations/erp/events": {
       "post": {
-        "description": "Приём входящих вебхуков событий ERP (M3-CRM-04, CONTRACTS §3).\n\nПроверка HMAC-SHA256 подписи заголовка X-Signature по секрету ERP_WEBHOOK_SECRET,\nидемпотентность по X-Event-Id (UUID), быстрый ответ 200 OK и фоновая обработка в Procrastinate.",
+        "description": "Приём входящих вебхуков событий ERP (M3-CRM-04, CONTRACTS §3, FIX-33).\n\nПорядок: подпись HMAC-SHA256 по сырому телу (X-Signature, ERP_WEBHOOK_SECRET) — ДО разбора\nтела и проверки остальных заголовков; идемпотентность по X-Event-Id; быстрый 200 и фоновая\nобработка в Procrastinate. 401 — только неверная подпись; тело, которое мы принять не можем\n(чужой тип события, расхождение с заголовком), записывается как `rejected` и тоже получает 200:\nретраи ERP ничего бы не изменили.",
         "operationId": "receive_erp_event",
         "parameters": [
           {
             "in": "header",
             "name": "X-Event-Id",
-            "required": true,
+            "required": false,
             "schema": {
-              "title": "X-Event-Id",
-              "type": "string"
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Event-Id"
             }
           },
           {
             "in": "header",
             "name": "X-Event-Type",
-            "required": true,
+            "required": false,
             "schema": {
-              "title": "X-Event-Type",
-              "type": "string"
-            }
-          },
-          {
-            "in": "header",
-            "name": "X-Timestamp",
-            "required": true,
-            "schema": {
-              "title": "X-Timestamp",
-              "type": "string"
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Event-Type"
             }
           },
           {
