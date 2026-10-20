@@ -15,6 +15,8 @@ const BASE_URL = process.env.E2E_BASE_URL || 'http://localhost:5173';
 
 export default defineConfig({
   testDir: './e2e',
+  // Моковые спеки (FIX-44) идут через playwright.mocked.config.ts — этому конфигу нужен стенд.
+  testIgnore: /.*\.mocked\.spec\.ts/,
   timeout: 60_000,
   expect: { timeout: 10_000 },
   fullyParallel: true,

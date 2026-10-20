@@ -5,6 +5,7 @@ import {
 	useQuoteItems, useUpdateQuoteItem, useCreateQuoteItem, useDeleteQuoteItem, useDeal,
 	useBulkUpdateQuoteItems, useBulkCreateQuoteItems, useBulkDeleteQuoteItems,
 } from '@/hooks/useCRM';
+import type { QuoteItem } from '@/api/crmApi';
 import { useCurrencies } from '@/hooks/useMasterData';
 import { useMediaQuery } from '@/hooks/use-mobile';
 import { cn } from '@/lib/utils';
@@ -39,6 +40,14 @@ import { useGridEditingState } from '@/components/QuoteBuilder/useGridEditingSta
 import { useGridDialogState } from '@/components/QuoteBuilder/useGridDialogState';
 import { useGridLifecycle } from '@/components/QuoteBuilder/useGridLifecycle';
 
+/**
+ * Стабильная ссылка «позиций пока нет». Пока сделка не загружена, запрос позиций выключен и `data`
+ * пуст; подстановка литерала `= []` давала НОВЫЙ массив на каждый рендер, а `useQuoteDraft` держит
+ * эффект на `[serverItems]` и каждый раз пишет `setDraftItems(<новый массив>)` — рендер → новый `[]`
+ * → эффект… («Maximum update depth exceeded», FIX-44/F-7).
+ */
+const NO_ITEMS: QuoteItem[] = [];
+
 interface QuoteBuilderGridProps {
 	dealId?: number;
 	onSave?: () => void;
@@ -62,7 +71,7 @@ export const QuoteBuilderGrid: React.FC<QuoteBuilderGridProps> = ({ dealId: prop
 	// вперемешку — 4 строки вместо 2, половина с нулевой ценой, и такое можно было
 	// отправить клиенту. Пока активный КП не приехал, запрос не уходит.
 	const activeQuoteId = deal?.active_quote?.id;
-	const { data: quoteItems = [], isLoading: itemsLoading } = useQuoteItems(
+	const { data: quoteItems = NO_ITEMS, isLoading: itemsLoading } = useQuoteItems(
 		activeQuoteId ? { quote: activeQuoteId } : undefined,
 	);
 	const { data: currencies = [] } = useCurrencies();
