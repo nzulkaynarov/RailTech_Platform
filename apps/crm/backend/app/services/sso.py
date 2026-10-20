@@ -15,6 +15,7 @@ from datetime import UTC, datetime, timedelta
 import jwt
 import structlog
 from sqlalchemy import delete
+from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.config import Settings
@@ -155,14 +156,17 @@ class SsoService:
                 )
             )
 
-            # Проверка одноразовости jti (10 минут)
-            existing_replay = await session.get(SsoReplayToken, jti)
-            if existing_replay is not None:
+            # Одноразовость jti держит сама БД: параллельный повтор ждёт первую вставку и
+            # пустой ответ ON CONFLICT DO NOTHING — тот же отказ, а не IntegrityError и 500.
+            claimed = await session.execute(
+                insert(SsoReplayToken)
+                .values(jti=jti)
+                .on_conflict_do_nothing(index_elements=[SsoReplayToken.jti])
+                .returning(SsoReplayToken.jti)
+            )
+            if claimed.scalar_one_or_none() is None:
                 logger.warning("sso_replay_detected", jti=jti)
                 raise AuthError("token already used")
-
-            session.add(SsoReplayToken(jti=jti))
-            await session.flush()
 
             # Пользователь — только по sub (id в CRM); по e-mail не ищем (sso-token.md, S-3).
             user: User | None = None

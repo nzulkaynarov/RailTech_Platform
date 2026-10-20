@@ -106,3 +106,9 @@ ignore_missing_imports = true
 # docling-core реэкспортирует типы из __init__ без __all__.
 module = ["docling_core.*"]
 implicit_reexport = true
+
+[tool.uv]
+# pip-audit: pillow 12.x уязвим (8 CVE, фикс в 13.0.0), а docling-core (даже 2.103.1) пинит
+# pillow<13. CRM берёт из docling-core только чанкинг текста (HybridChunker) — картинки не
+# разбираются, поэтому 13.x безопасен. Снять переопределение, когда docling-core разрешит 13.
+override-dependencies = ["pillow>=13.0.0"]

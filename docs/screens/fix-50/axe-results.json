@@ -1,0 +1,1502 @@
+{
+  "generated_by": "apps/erp/frontend/e2e/gate-m1.spec.ts",
+  "tags": [
+    "wcag2a",
+    "wcag2aa",
+    "wcag21a",
+    "wcag21aa"
+  ],
+  "screens": [
+    "acts-head-1440",
+    "acts-head-390",
+    "clients-calc-1440",
+    "clients-calc-390",
+    "contract-drawer-head-1440",
+    "contract-drawer-head-390",
+    "contracts-head-1440",
+    "contracts-head-390",
+    "contracts-viewer-1440",
+    "contracts-viewer-390",
+    "crm-lead-before-handoff-admin-1440",
+    "crm-lead-before-handoff-admin-390",
+    "crm-lead-handed-off-admin-1440",
+    "crm-lead-handed-off-admin-390",
+    "crm-users-admin-1440",
+    "crm-users-admin-390",
+    "dashboard-calc-1440",
+    "dashboard-calc-390",
+    "dashboard-fin-1440",
+    "dashboard-fin-390",
+    "dashboard-head-1440",
+    "dashboard-head-390",
+    "dashboard-viewer-1440",
+    "dashboard-viewer-390",
+    "deals-list-calc-1440",
+    "deals-list-calc-390",
+    "deals-list-viewer-1440",
+    "deals-list-viewer-390",
+    "fulfillments-head-1440",
+    "fulfillments-head-390",
+    "invoice-drawer-fin-1440",
+    "invoice-drawer-fin-390",
+    "invoices-fin-1440",
+    "invoices-fin-390",
+    "invoices-viewer-1440",
+    "invoices-viewer-390",
+    "payments-fin-1440",
+    "payments-fin-390",
+    "payments-viewer-1440",
+    "payments-viewer-390",
+    "public-quote-accepted-client-1440",
+    "public-quote-accepted-client-390",
+    "public-quote-client-1440",
+    "public-quote-client-390",
+    "public-quote-code-client-1440",
+    "public-quote-code-client-390",
+    "quote-approval-chain-calc-1440",
+    "quote-approval-chain-calc-390",
+    "quote-approval-done-head-1440",
+    "quote-approval-done-head-390",
+    "quote-approval-preview-calc-1440",
+    "quote-approval-preview-calc-390",
+    "quote-builder-draft-calc-1440",
+    "quote-builder-draft-calc-390",
+    "quote-builder-fx-fin-1440",
+    "quote-builder-fx-fin-390",
+    "quote-builder-viewer-1440",
+    "quote-builder-viewer-390",
+    "quote-fx-dialog-fin-1440",
+    "quote-fx-dialog-fin-390",
+    "quote-send-dialog-calc-1440",
+    "quote-send-dialog-calc-390",
+    "quote-sent-calc-1440",
+    "quote-sent-calc-390",
+    "quotes-list-calc-1440",
+    "quotes-list-calc-390",
+    "request-detail-chain-final-calc-1440",
+    "request-detail-chain-final-calc-390",
+    "request-detail-chain-final-fin-1440",
+    "request-detail-chain-final-fin-390",
+    "request-detail-chain-final-head-1440",
+    "request-detail-chain-final-head-390",
+    "request-detail-chain-final-viewer-1440",
+    "request-detail-chain-final-viewer-390",
+    "request-detail-contract-sign-head-1440",
+    "request-detail-contract-sign-head-390",
+    "request-detail-in-work-calc-1440",
+    "request-detail-in-work-calc-390",
+    "request-detail-invoice-draft-fin-1440",
+    "request-detail-invoice-draft-fin-390",
+    "request-detail-new-calc-1440",
+    "request-detail-new-calc-390",
+    "request-detail-viewer-1440",
+    "request-detail-viewer-390",
+    "settings-team-admin-1440",
+    "settings-team-admin-390",
+    "settings-viewer-1440",
+    "settings-viewer-390"
+  ],
+  "unreachable_dialogs": [],
+  "violations": [
+    {
+      "screen": "crm-users-admin-1440",
+      "id": "label-content-name-mismatch",
+      "impact": "serious",
+      "help": "Elements must have their visible text as part of their accessible name",
+      "nodes": 1,
+      "target": ".ant-space-item:nth-child(4) > .ant-btn-text.ant-btn-variant-text.ant-dropdown-trigger"
+    },
+    {
+      "screen": "crm-users-admin-390",
+      "id": "label-content-name-mismatch",
+      "impact": "serious",
+      "help": "Elements must have their visible text as part of their accessible name",
+      "nodes": 2,
+      "target": ".ant-btn-default"
+    },
+    {
+      "screen": "settings-team-admin-1440",
+      "id": "label-content-name-mismatch",
+      "impact": "serious",
+      "help": "Elements must have their visible text as part of their accessible name",
+      "nodes": 1,
+      "target": "button[aria-label=\"Поиск\"]"
+    },
+    {
+      "screen": "crm-lead-before-handoff-admin-1440",
+      "id": "label-content-name-mismatch",
+      "impact": "serious",
+      "help": "Elements must have their visible text as part of their accessible name",
+      "nodes": 1,
+      "target": ".ant-btn-text"
+    },
+    {
+      "screen": "crm-lead-before-handoff-admin-390",
+      "id": "label-content-name-mismatch",
+      "impact": "serious",
+      "help": "Elements must have their visible text as part of their accessible name",
+      "nodes": 2,
+      "target": "button[aria-label=\"В бэк-офис (ERP)\"]"
+    },
+    {
+      "screen": "crm-lead-handed-off-admin-1440",
+      "id": "label-content-name-mismatch",
+      "impact": "serious",
+      "help": "Elements must have their visible text as part of their accessible name",
+      "nodes": 1,
+      "target": ".ant-btn-text"
+    },
+    {
+      "screen": "crm-lead-handed-off-admin-390",
+      "id": "label-content-name-mismatch",
+      "impact": "serious",
+      "help": "Elements must have their visible text as part of their accessible name",
+      "nodes": 2,
+      "target": "button[aria-label=\"В бэк-офис (ERP)\"]"
+    },
+    {
+      "screen": "deals-list-calc-1440",
+      "id": "button-name",
+      "impact": "critical",
+      "help": "Buttons must have discernible text",
+      "nodes": 1,
+      "target": ".data-\\[placeholder\\]\\:text-muted-foreground"
+    },
+    {
+      "screen": "deals-list-calc-1440",
+      "id": "label-content-name-mismatch",
+      "impact": "serious",
+      "help": "Elements must have their visible text as part of their accessible name",
+      "nodes": 2,
+      "target": "button[aria-label=\"Поиск\"]"
+    },
+    {
+      "screen": "deals-list-calc-1440",
+      "id": "nested-interactive",
+      "impact": "serious",
+      "help": "Interactive controls must not be nested",
+      "nodes": 20,
+      "target": "tbody > tr:nth-child(1)"
+    },
+    {
+      "screen": "deals-list-calc-390",
+      "id": "button-name",
+      "impact": "critical",
+      "help": "Buttons must have discernible text",
+      "nodes": 1,
+      "target": ".py-2"
+    },
+    {
+      "screen": "deals-list-calc-390",
+      "id": "label-content-name-mismatch",
+      "impact": "serious",
+      "help": "Elements must have their visible text as part of their accessible name",
+      "nodes": 1,
+      "target": ".size-9"
+    },
+    {
+      "screen": "request-detail-new-calc-1440",
+      "id": "label-content-name-mismatch",
+      "impact": "serious",
+      "help": "Elements must have their visible text as part of their accessible name",
+      "nodes": 2,
+      "target": "button[aria-label=\"Поиск\"]"
+    },
+    {
+      "screen": "request-detail-new-calc-390",
+      "id": "label-content-name-mismatch",
+      "impact": "serious",
+      "help": "Elements must have their visible text as part of their accessible name",
+      "nodes": 1,
+      "target": "button[data-slot=\"sheet-trigger\"]"
+    },
+    {
+      "screen": "request-detail-in-work-calc-1440",
+      "id": "color-contrast",
+      "impact": "serious",
+      "help": "Elements must meet minimum color contrast ratio thresholds",
+      "nodes": 1,
+      "target": "li[data-index=\"0\"] > div[data-content=\"\"] > div[data-title=\"\"]"
+    },
+    {
+      "screen": "request-detail-in-work-calc-1440",
+      "id": "label-content-name-mismatch",
+      "impact": "serious",
+      "help": "Elements must have their visible text as part of their accessible name",
+      "nodes": 2,
+      "target": "button[aria-label=\"Поиск\"]"
+    },
+    {
+      "screen": "request-detail-in-work-calc-390",
+      "id": "color-contrast",
+      "impact": "serious",
+      "help": "Elements must meet minimum color contrast ratio thresholds",
+      "nodes": 1,
+      "target": "li[data-index=\"0\"] > div[data-content=\"\"] > div[data-title=\"\"]"
+    },
+    {
+      "screen": "request-detail-in-work-calc-390",
+      "id": "label-content-name-mismatch",
+      "impact": "serious",
+      "help": "Elements must have their visible text as part of their accessible name",
+      "nodes": 1,
+      "target": "button[data-slot=\"sheet-trigger\"]"
+    },
+    {
+      "screen": "quote-builder-draft-calc-1440",
+      "id": "color-contrast",
+      "impact": "serious",
+      "help": "Elements must meet minimum color contrast ratio thresholds",
+      "nodes": 2,
+      "target": "#radix-\\:r44\\:-trigger-charges"
+    },
+    {
+      "screen": "quote-builder-draft-calc-1440",
+      "id": "label-content-name-mismatch",
+      "impact": "serious",
+      "help": "Elements must have their visible text as part of their accessible name",
+      "nodes": 4,
+      "target": "button[aria-label=\"Поиск\"]"
+    },
+    {
+      "screen": "quote-builder-draft-calc-390",
+      "id": "button-name",
+      "impact": "critical",
+      "help": "Buttons must have discernible text",
+      "nodes": 1,
+      "target": ".gap-x-2.gap-y-1\\.5.justify-between > .gap-1\\.5.flex > .dark\\:border-input.dark\\:hover\\:bg-input\\/50[data-slot=\"tooltip-trigger\"]:nth-child(2)"
+    },
+    {
+      "screen": "quote-builder-draft-calc-390",
+      "id": "color-contrast",
+      "impact": "serious",
+      "help": "Elements must meet minimum color contrast ratio thresholds",
+      "nodes": 2,
+      "target": "#radix-\\:r44\\:-trigger-charges"
+    },
+    {
+      "screen": "quote-builder-draft-calc-390",
+      "id": "label-content-name-mismatch",
+      "impact": "serious",
+      "help": "Elements must have their visible text as part of their accessible name",
+      "nodes": 2,
+      "target": ".size-9"
+    },
+    {
+      "screen": "quote-fx-dialog-fin-1440",
+      "id": "color-contrast",
+      "impact": "serious",
+      "help": "Elements must meet minimum color contrast ratio thresholds",
+      "nodes": 1,
+      "target": "#radix-\\:r1c\\:-trigger-charges"
+    },
+    {
+      "screen": "quote-fx-dialog-fin-390",
+      "id": "color-contrast",
+      "impact": "serious",
+      "help": "Elements must meet minimum color contrast ratio thresholds",
+      "nodes": 1,
+      "target": "#radix-\\:r1c\\:-trigger-charges"
+    },
+    {
+      "screen": "quote-builder-fx-fin-1440",
+      "id": "color-contrast",
+      "impact": "serious",
+      "help": "Elements must meet minimum color contrast ratio thresholds",
+      "nodes": 2,
+      "target": "#radix-\\:r1c\\:-trigger-charges"
+    },
+    {
+      "screen": "quote-builder-fx-fin-1440",
+      "id": "label-content-name-mismatch",
+      "impact": "serious",
+      "help": "Elements must have their visible text as part of their accessible name",
+      "nodes": 4,
+      "target": "button[aria-label=\"Поиск\"]"
+    },
+    {
+      "screen": "quote-builder-fx-fin-390",
+      "id": "button-name",
+      "impact": "critical",
+      "help": "Buttons must have discernible text",
+      "nodes": 1,
+      "target": ".gap-x-2.gap-y-1\\.5.justify-between > .gap-1\\.5.flex > .has-\\[\\>svg\\]\\:px-2\\.5[data-slot=\"tooltip-trigger\"][data-size=\"sm\"]"
+    },
+    {
+      "screen": "quote-builder-fx-fin-390",
+      "id": "color-contrast",
+      "impact": "serious",
+      "help": "Elements must meet minimum color contrast ratio thresholds",
+      "nodes": 2,
+      "target": "#radix-\\:r1c\\:-trigger-charges"
+    },
+    {
+      "screen": "quote-builder-fx-fin-390",
+      "id": "label-content-name-mismatch",
+      "impact": "serious",
+      "help": "Elements must have their visible text as part of their accessible name",
+      "nodes": 2,
+      "target": ".size-9"
+    },
+    {
+      "screen": "quote-approval-preview-calc-1440",
+      "id": "color-contrast",
+      "impact": "serious",
+      "help": "Elements must meet minimum color contrast ratio thresholds",
+      "nodes": 1,
+      "target": "#radix-\\:r44\\:-trigger-charges"
+    },
+    {
+      "screen": "quote-approval-preview-calc-1440",
+      "id": "label-content-name-mismatch",
+      "impact": "serious",
+      "help": "Elements must have their visible text as part of their accessible name",
+      "nodes": 4,
+      "target": "button[aria-label=\"Поиск\"]"
+    },
+    {
+      "screen": "quote-approval-preview-calc-390",
+      "id": "color-contrast",
+      "impact": "serious",
+      "help": "Elements must meet minimum color contrast ratio thresholds",
+      "nodes": 1,
+      "target": "#radix-\\:r44\\:-trigger-charges"
+    },
+    {
+      "screen": "quote-approval-chain-calc-1440",
+      "id": "color-contrast",
+      "impact": "serious",
+      "help": "Elements must meet minimum color contrast ratio thresholds",
+      "nodes": 2,
+      "target": "#radix-\\:r44\\:-trigger-charges"
+    },
+    {
+      "screen": "quote-approval-chain-calc-1440",
+      "id": "label-content-name-mismatch",
+      "impact": "serious",
+      "help": "Elements must have their visible text as part of their accessible name",
+      "nodes": 4,
+      "target": "button[aria-label=\"Поиск\"]"
+    },
+    {
+      "screen": "quote-approval-chain-calc-390",
+      "id": "color-contrast",
+      "impact": "serious",
+      "help": "Elements must meet minimum color contrast ratio thresholds",
+      "nodes": 1,
+      "target": "#radix-\\:r44\\:-trigger-charges"
+    },
+    {
+      "screen": "quote-approval-done-head-1440",
+      "id": "color-contrast",
+      "impact": "serious",
+      "help": "Elements must meet minimum color contrast ratio thresholds",
+      "nodes": 2,
+      "target": "#radix-\\:r1c\\:-trigger-charges"
+    },
+    {
+      "screen": "quote-approval-done-head-1440",
+      "id": "label-content-name-mismatch",
+      "impact": "serious",
+      "help": "Elements must have their visible text as part of their accessible name",
+      "nodes": 4,
+      "target": "button[aria-label=\"Поиск\"]"
+    },
+    {
+      "screen": "quote-approval-done-head-390",
+      "id": "color-contrast",
+      "impact": "serious",
+      "help": "Elements must meet minimum color contrast ratio thresholds",
+      "nodes": 1,
+      "target": "#radix-\\:r1c\\:-trigger-charges"
+    },
+    {
+      "screen": "dashboard-viewer-1440",
+      "id": "aria-progressbar-name",
+      "impact": "serious",
+      "help": "ARIA progressbar nodes must have an accessible name",
+      "nodes": 1,
+      "target": ".bg-primary\\/20"
+    },
+    {
+      "screen": "dashboard-viewer-1440",
+      "id": "label-content-name-mismatch",
+      "impact": "serious",
+      "help": "Elements must have their visible text as part of their accessible name",
+      "nodes": 2,
+      "target": "button[aria-label=\"Поиск\"]"
+    },
+    {
+      "screen": "dashboard-viewer-390",
+      "id": "aria-progressbar-name",
+      "impact": "serious",
+      "help": "ARIA progressbar nodes must have an accessible name",
+      "nodes": 1,
+      "target": ".bg-primary\\/20"
+    },
+    {
+      "screen": "dashboard-viewer-390",
+      "id": "label-content-name-mismatch",
+      "impact": "serious",
+      "help": "Elements must have their visible text as part of their accessible name",
+      "nodes": 1,
+      "target": ".size-9"
+    },
+    {
+      "screen": "deals-list-viewer-1440",
+      "id": "button-name",
+      "impact": "critical",
+      "help": "Buttons must have discernible text",
+      "nodes": 1,
+      "target": ".data-\\[placeholder\\]\\:text-muted-foreground"
+    },
+    {
+      "screen": "deals-list-viewer-1440",
+      "id": "label-content-name-mismatch",
+      "impact": "serious",
+      "help": "Elements must have their visible text as part of their accessible name",
+      "nodes": 2,
+      "target": "button[aria-label=\"Поиск\"]"
+    },
+    {
+      "screen": "deals-list-viewer-1440",
+      "id": "nested-interactive",
+      "impact": "serious",
+      "help": "Interactive controls must not be nested",
+      "nodes": 20,
+      "target": "tbody > tr:nth-child(1)"
+    },
+    {
+      "screen": "deals-list-viewer-390",
+      "id": "button-name",
+      "impact": "critical",
+      "help": "Buttons must have discernible text",
+      "nodes": 1,
+      "target": ".py-2"
+    },
+    {
+      "screen": "deals-list-viewer-390",
+      "id": "label-content-name-mismatch",
+      "impact": "serious",
+      "help": "Elements must have their visible text as part of their accessible name",
+      "nodes": 1,
+      "target": ".size-9"
+    },
+    {
+      "screen": "request-detail-viewer-1440",
+      "id": "color-contrast",
+      "impact": "serious",
+      "help": "Elements must meet minimum color contrast ratio thresholds",
+      "nodes": 15,
+      "target": ".ms-4:nth-child(1) > .text-muted-foreground\\/70.mt-0\\.5"
+    },
+    {
+      "screen": "request-detail-viewer-1440",
+      "id": "label-content-name-mismatch",
+      "impact": "serious",
+      "help": "Elements must have their visible text as part of their accessible name",
+      "nodes": 2,
+      "target": "button[aria-label=\"Поиск\"]"
+    },
+    {
+      "screen": "request-detail-viewer-1440",
+      "id": "scrollable-region-focusable",
+      "impact": "serious",
+      "help": "Scrollable region must have keyboard access",
+      "nodes": 1,
+      "target": "div[data-slot=\"table-container\"]"
+    },
+    {
+      "screen": "request-detail-viewer-390",
+      "id": "color-contrast",
+      "impact": "serious",
+      "help": "Elements must meet minimum color contrast ratio thresholds",
+      "nodes": 15,
+      "target": ".ms-4:nth-child(1) > .text-muted-foreground\\/70.mt-0\\.5"
+    },
+    {
+      "screen": "request-detail-viewer-390",
+      "id": "label-content-name-mismatch",
+      "impact": "serious",
+      "help": "Elements must have their visible text as part of their accessible name",
+      "nodes": 1,
+      "target": "button[data-slot=\"sheet-trigger\"]"
+    },
+    {
+      "screen": "request-detail-viewer-390",
+      "id": "scrollable-region-focusable",
+      "impact": "serious",
+      "help": "Scrollable region must have keyboard access",
+      "nodes": 1,
+      "target": "div[data-slot=\"table-container\"]"
+    },
+    {
+      "screen": "quote-builder-viewer-1440",
+      "id": "color-contrast",
+      "impact": "serious",
+      "help": "Elements must meet minimum color contrast ratio thresholds",
+      "nodes": 1,
+      "target": "#radix-\\:r40\\:-trigger-charges"
+    },
+    {
+      "screen": "quote-builder-viewer-1440",
+      "id": "label-content-name-mismatch",
+      "impact": "serious",
+      "help": "Elements must have their visible text as part of their accessible name",
+      "nodes": 4,
+      "target": "button[aria-label=\"Поиск\"]"
+    },
+    {
+      "screen": "quote-builder-viewer-390",
+      "id": "button-name",
+      "impact": "critical",
+      "help": "Buttons must have discernible text",
+      "nodes": 1,
+      "target": ".gap-x-2.gap-y-1\\.5.justify-between > .gap-1\\.5 > .dark\\:border-input.dark\\:hover\\:bg-input\\/50[data-slot=\"tooltip-trigger\"]:nth-child(2)"
+    },
+    {
+      "screen": "quote-builder-viewer-390",
+      "id": "color-contrast",
+      "impact": "serious",
+      "help": "Elements must meet minimum color contrast ratio thresholds",
+      "nodes": 1,
+      "target": "#radix-\\:r40\\:-trigger-charges"
+    },
+    {
+      "screen": "quote-builder-viewer-390",
+      "id": "label-content-name-mismatch",
+      "impact": "serious",
+      "help": "Elements must have their visible text as part of their accessible name",
+      "nodes": 2,
+      "target": ".size-9"
+    },
+    {
+      "screen": "quote-send-dialog-calc-1440",
+      "id": "color-contrast",
+      "impact": "serious",
+      "help": "Elements must meet minimum color contrast ratio thresholds",
+      "nodes": 1,
+      "target": "#radix-\\:r17\\:-trigger-charges"
+    },
+    {
+      "screen": "quote-send-dialog-calc-390",
+      "id": "color-contrast",
+      "impact": "serious",
+      "help": "Elements must meet minimum color contrast ratio thresholds",
+      "nodes": 1,
+      "target": "#radix-\\:r17\\:-trigger-charges"
+    },
+    {
+      "screen": "quote-sent-calc-1440",
+      "id": "color-contrast",
+      "impact": "serious",
+      "help": "Elements must meet minimum color contrast ratio thresholds",
+      "nodes": 2,
+      "target": "#radix-\\:r17\\:-trigger-charges"
+    },
+    {
+      "screen": "quote-sent-calc-1440",
+      "id": "label-content-name-mismatch",
+      "impact": "serious",
+      "help": "Elements must have their visible text as part of their accessible name",
+      "nodes": 2,
+      "target": "button[aria-label=\"Поиск\"]"
+    },
+    {
+      "screen": "quote-sent-calc-390",
+      "id": "color-contrast",
+      "impact": "serious",
+      "help": "Elements must meet minimum color contrast ratio thresholds",
+      "nodes": 2,
+      "target": "#radix-\\:r17\\:-trigger-charges"
+    },
+    {
+      "screen": "quote-sent-calc-390",
+      "id": "label-content-name-mismatch",
+      "impact": "serious",
+      "help": "Elements must have their visible text as part of their accessible name",
+      "nodes": 1,
+      "target": ".size-9"
+    },
+    {
+      "screen": "public-quote-client-1440",
+      "id": "color-contrast",
+      "impact": "serious",
+      "help": "Elements must meet minimum color contrast ratio thresholds",
+      "nodes": 9,
+      "target": ".brand-meta"
+    },
+    {
+      "screen": "public-quote-client-390",
+      "id": "color-contrast",
+      "impact": "serious",
+      "help": "Elements must meet minimum color contrast ratio thresholds",
+      "nodes": 9,
+      "target": ".brand-meta"
+    },
+    {
+      "screen": "public-quote-code-client-1440",
+      "id": "color-contrast",
+      "impact": "serious",
+      "help": "Elements must meet minimum color contrast ratio thresholds",
+      "nodes": 10,
+      "target": ".brand-meta"
+    },
+    {
+      "screen": "public-quote-code-client-390",
+      "id": "color-contrast",
+      "impact": "serious",
+      "help": "Elements must meet minimum color contrast ratio thresholds",
+      "nodes": 10,
+      "target": ".brand-meta"
+    },
+    {
+      "screen": "public-quote-accepted-client-1440",
+      "id": "color-contrast",
+      "impact": "serious",
+      "help": "Elements must meet minimum color contrast ratio thresholds",
+      "nodes": 9,
+      "target": ".brand-meta"
+    },
+    {
+      "screen": "public-quote-accepted-client-390",
+      "id": "color-contrast",
+      "impact": "serious",
+      "help": "Elements must meet minimum color contrast ratio thresholds",
+      "nodes": 9,
+      "target": ".brand-meta"
+    },
+    {
+      "screen": "request-detail-contract-sign-head-1440",
+      "id": "color-contrast",
+      "impact": "serious",
+      "help": "Elements must meet minimum color contrast ratio thresholds",
+      "nodes": 17,
+      "target": ".ms-4:nth-child(6) > .text-muted-foreground\\/70.mt-0\\.5"
+    },
+    {
+      "screen": "request-detail-contract-sign-head-1440",
+      "id": "label-content-name-mismatch",
+      "impact": "serious",
+      "help": "Elements must have their visible text as part of their accessible name",
+      "nodes": 7,
+      "target": "button[aria-label=\"Поиск\"]"
+    },
+    {
+      "screen": "request-detail-contract-sign-head-1440",
+      "id": "scrollable-region-focusable",
+      "impact": "serious",
+      "help": "Scrollable region must have keyboard access",
+      "nodes": 1,
+      "target": "div[data-slot=\"table-container\"]"
+    },
+    {
+      "screen": "request-detail-contract-sign-head-390",
+      "id": "color-contrast",
+      "impact": "serious",
+      "help": "Elements must meet minimum color contrast ratio thresholds",
+      "nodes": 17,
+      "target": ".ms-4:nth-child(6) > .text-muted-foreground\\/70.mt-0\\.5"
+    },
+    {
+      "screen": "request-detail-contract-sign-head-390",
+      "id": "label-content-name-mismatch",
+      "impact": "serious",
+      "help": "Elements must have their visible text as part of their accessible name",
+      "nodes": 6,
+      "target": "button[data-slot=\"sheet-trigger\"]"
+    },
+    {
+      "screen": "request-detail-contract-sign-head-390",
+      "id": "scrollable-region-focusable",
+      "impact": "serious",
+      "help": "Scrollable region must have keyboard access",
+      "nodes": 1,
+      "target": "div[data-slot=\"table-container\"]"
+    },
+    {
+      "screen": "contracts-head-1440",
+      "id": "color-contrast",
+      "impact": "serious",
+      "help": "Elements must meet minimum color contrast ratio thresholds",
+      "nodes": 1,
+      "target": "div[data-title=\"\"]"
+    },
+    {
+      "screen": "contracts-head-390",
+      "id": "color-contrast",
+      "impact": "serious",
+      "help": "Elements must meet minimum color contrast ratio thresholds",
+      "nodes": 1,
+      "target": "div[data-title=\"\"]"
+    },
+    {
+      "screen": "request-detail-invoice-draft-fin-1440",
+      "id": "color-contrast",
+      "impact": "serious",
+      "help": "Elements must meet minimum color contrast ratio thresholds",
+      "nodes": 18,
+      "target": ".ms-4:nth-child(3) > .text-muted-foreground\\/70.mt-0\\.5"
+    },
+    {
+      "screen": "request-detail-invoice-draft-fin-1440",
+      "id": "label-content-name-mismatch",
+      "impact": "serious",
+      "help": "Elements must have their visible text as part of their accessible name",
+      "nodes": 7,
+      "target": "button[aria-label=\"Поиск\"]"
+    },
+    {
+      "screen": "request-detail-invoice-draft-fin-1440",
+      "id": "scrollable-region-focusable",
+      "impact": "serious",
+      "help": "Scrollable region must have keyboard access",
+      "nodes": 1,
+      "target": "div[data-slot=\"table-container\"]"
+    },
+    {
+      "screen": "request-detail-invoice-draft-fin-390",
+      "id": "color-contrast",
+      "impact": "serious",
+      "help": "Elements must meet minimum color contrast ratio thresholds",
+      "nodes": 18,
+      "target": ".ms-4:nth-child(3) > .text-muted-foreground\\/70.mt-0\\.5"
+    },
+    {
+      "screen": "request-detail-invoice-draft-fin-390",
+      "id": "label-content-name-mismatch",
+      "impact": "serious",
+      "help": "Elements must have their visible text as part of their accessible name",
+      "nodes": 6,
+      "target": "button[data-slot=\"sheet-trigger\"]"
+    },
+    {
+      "screen": "request-detail-invoice-draft-fin-390",
+      "id": "scrollable-region-focusable",
+      "impact": "serious",
+      "help": "Scrollable region must have keyboard access",
+      "nodes": 1,
+      "target": "div[data-slot=\"table-container\"]"
+    },
+    {
+      "screen": "invoice-drawer-fin-1440",
+      "id": "scrollable-region-focusable",
+      "impact": "serious",
+      "help": "Scrollable region must have keyboard access",
+      "nodes": 1,
+      "target": "div:nth-child(4) > .overflow-x-auto.relative[data-slot=\"table-container\"]"
+    },
+    {
+      "screen": "invoice-drawer-fin-390",
+      "id": "scrollable-region-focusable",
+      "impact": "serious",
+      "help": "Scrollable region must have keyboard access",
+      "nodes": 1,
+      "target": "div:nth-child(4) > .overflow-x-auto.relative[data-slot=\"table-container\"]"
+    },
+    {
+      "screen": "invoices-fin-1440",
+      "id": "button-name",
+      "impact": "critical",
+      "help": "Buttons must have discernible text",
+      "nodes": 1,
+      "target": ".data-\\[placeholder\\]\\:text-muted-foreground"
+    },
+    {
+      "screen": "invoices-fin-1440",
+      "id": "color-contrast",
+      "impact": "serious",
+      "help": "Elements must meet minimum color contrast ratio thresholds",
+      "nodes": 1,
+      "target": "div[data-title=\"\"]"
+    },
+    {
+      "screen": "invoices-fin-1440",
+      "id": "label-content-name-mismatch",
+      "impact": "serious",
+      "help": "Elements must have their visible text as part of their accessible name",
+      "nodes": 2,
+      "target": "button[aria-label=\"Поиск\"]"
+    },
+    {
+      "screen": "invoices-fin-1440",
+      "id": "nested-interactive",
+      "impact": "serious",
+      "help": "Interactive controls must not be nested",
+      "nodes": 13,
+      "target": "tbody > tr:nth-child(1)"
+    },
+    {
+      "screen": "invoices-fin-390",
+      "id": "button-name",
+      "impact": "critical",
+      "help": "Buttons must have discernible text",
+      "nodes": 1,
+      "target": ".py-2"
+    },
+    {
+      "screen": "invoices-fin-390",
+      "id": "color-contrast",
+      "impact": "serious",
+      "help": "Elements must meet minimum color contrast ratio thresholds",
+      "nodes": 1,
+      "target": "div[data-title=\"\"]"
+    },
+    {
+      "screen": "invoices-fin-390",
+      "id": "label-content-name-mismatch",
+      "impact": "serious",
+      "help": "Elements must have their visible text as part of their accessible name",
+      "nodes": 1,
+      "target": "button[data-slot=\"sheet-trigger\"]"
+    },
+    {
+      "screen": "invoices-fin-390",
+      "id": "nested-interactive",
+      "impact": "serious",
+      "help": "Interactive controls must not be nested",
+      "nodes": 13,
+      "target": ".p-4.flex-col.focus\\:outline-none:nth-child(1)"
+    },
+    {
+      "screen": "payments-fin-1440",
+      "id": "color-contrast",
+      "impact": "serious",
+      "help": "Elements must meet minimum color contrast ratio thresholds",
+      "nodes": 1,
+      "target": "div[data-title=\"\"]"
+    },
+    {
+      "screen": "payments-fin-1440",
+      "id": "label-content-name-mismatch",
+      "impact": "serious",
+      "help": "Elements must have their visible text as part of their accessible name",
+      "nodes": 2,
+      "target": "button[aria-label=\"Поиск\"]"
+    },
+    {
+      "screen": "payments-fin-390",
+      "id": "color-contrast",
+      "impact": "serious",
+      "help": "Elements must meet minimum color contrast ratio thresholds",
+      "nodes": 1,
+      "target": "div[data-title=\"\"]"
+    },
+    {
+      "screen": "payments-fin-390",
+      "id": "label-content-name-mismatch",
+      "impact": "serious",
+      "help": "Elements must have their visible text as part of their accessible name",
+      "nodes": 1,
+      "target": ".size-9"
+    },
+    {
+      "screen": "fulfillments-head-1440",
+      "id": "button-name",
+      "impact": "critical",
+      "help": "Buttons must have discernible text",
+      "nodes": 1,
+      "target": ".border-input"
+    },
+    {
+      "screen": "fulfillments-head-1440",
+      "id": "color-contrast",
+      "impact": "serious",
+      "help": "Elements must meet minimum color contrast ratio thresholds",
+      "nodes": 1,
+      "target": "li[data-index=\"0\"] > div[data-content=\"\"] > div[data-title=\"\"]"
+    },
+    {
+      "screen": "fulfillments-head-1440",
+      "id": "label-content-name-mismatch",
+      "impact": "serious",
+      "help": "Elements must have their visible text as part of their accessible name",
+      "nodes": 14,
+      "target": "button[aria-label=\"Поиск\"]"
+    },
+    {
+      "screen": "fulfillments-head-1440",
+      "id": "nested-interactive",
+      "impact": "serious",
+      "help": "Interactive controls must not be nested",
+      "nodes": 12,
+      "target": "tr[aria-label=\"Открыть #26\"]"
+    },
+    {
+      "screen": "fulfillments-head-390",
+      "id": "button-name",
+      "impact": "critical",
+      "help": "Buttons must have discernible text",
+      "nodes": 1,
+      "target": ".border-input"
+    },
+    {
+      "screen": "fulfillments-head-390",
+      "id": "color-contrast",
+      "impact": "serious",
+      "help": "Elements must meet minimum color contrast ratio thresholds",
+      "nodes": 1,
+      "target": "li[data-index=\"0\"] > div[data-content=\"\"] > div[data-title=\"\"]"
+    },
+    {
+      "screen": "fulfillments-head-390",
+      "id": "label-content-name-mismatch",
+      "impact": "serious",
+      "help": "Elements must have their visible text as part of their accessible name",
+      "nodes": 13,
+      "target": ".size-9"
+    },
+    {
+      "screen": "fulfillments-head-390",
+      "id": "nested-interactive",
+      "impact": "serious",
+      "help": "Interactive controls must not be nested",
+      "nodes": 12,
+      "target": "tr[aria-label=\"Открыть #26\"]"
+    },
+    {
+      "screen": "acts-head-1440",
+      "id": "button-name",
+      "impact": "critical",
+      "help": "Buttons must have discernible text",
+      "nodes": 1,
+      "target": ".data-\\[placeholder\\]\\:text-muted-foreground"
+    },
+    {
+      "screen": "acts-head-1440",
+      "id": "color-contrast",
+      "impact": "serious",
+      "help": "Elements must meet minimum color contrast ratio thresholds",
+      "nodes": 1,
+      "target": "li[data-removed=\"false\"] > div[data-content=\"\"] > div[data-title=\"\"]"
+    },
+    {
+      "screen": "acts-head-1440",
+      "id": "label-content-name-mismatch",
+      "impact": "serious",
+      "help": "Elements must have their visible text as part of their accessible name",
+      "nodes": 2,
+      "target": "button[aria-label=\"Поиск\"]"
+    },
+    {
+      "screen": "acts-head-1440",
+      "id": "nested-interactive",
+      "impact": "serious",
+      "help": "Interactive controls must not be nested",
+      "nodes": 12,
+      "target": "tbody > tr:nth-child(1)"
+    },
+    {
+      "screen": "acts-head-390",
+      "id": "button-name",
+      "impact": "critical",
+      "help": "Buttons must have discernible text",
+      "nodes": 1,
+      "target": ".py-2"
+    },
+    {
+      "screen": "acts-head-390",
+      "id": "color-contrast",
+      "impact": "serious",
+      "help": "Elements must meet minimum color contrast ratio thresholds",
+      "nodes": 1,
+      "target": "div[data-title=\"\"]"
+    },
+    {
+      "screen": "acts-head-390",
+      "id": "label-content-name-mismatch",
+      "impact": "serious",
+      "help": "Elements must have their visible text as part of their accessible name",
+      "nodes": 1,
+      "target": "button[data-slot=\"sheet-trigger\"]"
+    },
+    {
+      "screen": "acts-head-390",
+      "id": "nested-interactive",
+      "impact": "serious",
+      "help": "Interactive controls must not be nested",
+      "nodes": 12,
+      "target": ".p-4.flex-col.focus\\:outline-none:nth-child(1)"
+    },
+    {
+      "screen": "request-detail-chain-final-head-1440",
+      "id": "color-contrast",
+      "impact": "serious",
+      "help": "Elements must meet minimum color contrast ratio thresholds",
+      "nodes": 21,
+      "target": ".ms-4:nth-child(4) > .text-muted-foreground\\/70.mt-0\\.5"
+    },
+    {
+      "screen": "request-detail-chain-final-head-1440",
+      "id": "label-content-name-mismatch",
+      "impact": "serious",
+      "help": "Elements must have their visible text as part of their accessible name",
+      "nodes": 7,
+      "target": "button[aria-label=\"Поиск\"]"
+    },
+    {
+      "screen": "request-detail-chain-final-head-1440",
+      "id": "scrollable-region-focusable",
+      "impact": "serious",
+      "help": "Scrollable region must have keyboard access",
+      "nodes": 1,
+      "target": "div[data-slot=\"table-container\"]"
+    },
+    {
+      "screen": "request-detail-chain-final-head-390",
+      "id": "color-contrast",
+      "impact": "serious",
+      "help": "Elements must meet minimum color contrast ratio thresholds",
+      "nodes": 21,
+      "target": ".ms-4:nth-child(4) > .text-muted-foreground\\/70.mt-0\\.5"
+    },
+    {
+      "screen": "request-detail-chain-final-head-390",
+      "id": "label-content-name-mismatch",
+      "impact": "serious",
+      "help": "Elements must have their visible text as part of their accessible name",
+      "nodes": 6,
+      "target": "button[data-slot=\"sheet-trigger\"]"
+    },
+    {
+      "screen": "request-detail-chain-final-head-390",
+      "id": "scrollable-region-focusable",
+      "impact": "serious",
+      "help": "Scrollable region must have keyboard access",
+      "nodes": 1,
+      "target": "div[data-slot=\"table-container\"]"
+    },
+    {
+      "screen": "request-detail-chain-final-calc-1440",
+      "id": "color-contrast",
+      "impact": "serious",
+      "help": "Elements must meet minimum color contrast ratio thresholds",
+      "nodes": 21,
+      "target": ".ms-4:nth-child(4) > .text-muted-foreground\\/70.mt-0\\.5"
+    },
+    {
+      "screen": "request-detail-chain-final-calc-1440",
+      "id": "label-content-name-mismatch",
+      "impact": "serious",
+      "help": "Elements must have their visible text as part of their accessible name",
+      "nodes": 7,
+      "target": "button[aria-label=\"Поиск\"]"
+    },
+    {
+      "screen": "request-detail-chain-final-calc-1440",
+      "id": "scrollable-region-focusable",
+      "impact": "serious",
+      "help": "Scrollable region must have keyboard access",
+      "nodes": 1,
+      "target": "div[data-slot=\"table-container\"]"
+    },
+    {
+      "screen": "request-detail-chain-final-calc-390",
+      "id": "color-contrast",
+      "impact": "serious",
+      "help": "Elements must meet minimum color contrast ratio thresholds",
+      "nodes": 21,
+      "target": ".ms-4:nth-child(4) > .text-muted-foreground\\/70.mt-0\\.5"
+    },
+    {
+      "screen": "request-detail-chain-final-calc-390",
+      "id": "label-content-name-mismatch",
+      "impact": "serious",
+      "help": "Elements must have their visible text as part of their accessible name",
+      "nodes": 6,
+      "target": "button[data-slot=\"sheet-trigger\"]"
+    },
+    {
+      "screen": "request-detail-chain-final-calc-390",
+      "id": "scrollable-region-focusable",
+      "impact": "serious",
+      "help": "Scrollable region must have keyboard access",
+      "nodes": 1,
+      "target": "div[data-slot=\"table-container\"]"
+    },
+    {
+      "screen": "request-detail-chain-final-fin-1440",
+      "id": "color-contrast",
+      "impact": "serious",
+      "help": "Elements must meet minimum color contrast ratio thresholds",
+      "nodes": 18,
+      "target": ".ms-4:nth-child(3) > .text-muted-foreground\\/70.mt-0\\.5"
+    },
+    {
+      "screen": "request-detail-chain-final-fin-1440",
+      "id": "label-content-name-mismatch",
+      "impact": "serious",
+      "help": "Elements must have their visible text as part of their accessible name",
+      "nodes": 7,
+      "target": "button[aria-label=\"Поиск\"]"
+    },
+    {
+      "screen": "request-detail-chain-final-fin-1440",
+      "id": "scrollable-region-focusable",
+      "impact": "serious",
+      "help": "Scrollable region must have keyboard access",
+      "nodes": 1,
+      "target": "div[data-slot=\"table-container\"]"
+    },
+    {
+      "screen": "request-detail-chain-final-fin-390",
+      "id": "color-contrast",
+      "impact": "serious",
+      "help": "Elements must meet minimum color contrast ratio thresholds",
+      "nodes": 18,
+      "target": ".ms-4:nth-child(3) > .text-muted-foreground\\/70.mt-0\\.5"
+    },
+    {
+      "screen": "request-detail-chain-final-fin-390",
+      "id": "label-content-name-mismatch",
+      "impact": "serious",
+      "help": "Elements must have their visible text as part of their accessible name",
+      "nodes": 6,
+      "target": "button[data-slot=\"sheet-trigger\"]"
+    },
+    {
+      "screen": "request-detail-chain-final-fin-390",
+      "id": "scrollable-region-focusable",
+      "impact": "serious",
+      "help": "Scrollable region must have keyboard access",
+      "nodes": 1,
+      "target": "div[data-slot=\"table-container\"]"
+    },
+    {
+      "screen": "request-detail-chain-final-viewer-1440",
+      "id": "color-contrast",
+      "impact": "serious",
+      "help": "Elements must meet minimum color contrast ratio thresholds",
+      "nodes": 15,
+      "target": ".ms-4:nth-child(1) > .text-muted-foreground\\/70.mt-0\\.5"
+    },
+    {
+      "screen": "request-detail-chain-final-viewer-1440",
+      "id": "label-content-name-mismatch",
+      "impact": "serious",
+      "help": "Elements must have their visible text as part of their accessible name",
+      "nodes": 2,
+      "target": "button[aria-label=\"Поиск\"]"
+    },
+    {
+      "screen": "request-detail-chain-final-viewer-1440",
+      "id": "scrollable-region-focusable",
+      "impact": "serious",
+      "help": "Scrollable region must have keyboard access",
+      "nodes": 1,
+      "target": "div[data-slot=\"table-container\"]"
+    },
+    {
+      "screen": "request-detail-chain-final-viewer-390",
+      "id": "color-contrast",
+      "impact": "serious",
+      "help": "Elements must meet minimum color contrast ratio thresholds",
+      "nodes": 15,
+      "target": ".ms-4:nth-child(1) > .text-muted-foreground\\/70.mt-0\\.5"
+    },
+    {
+      "screen": "request-detail-chain-final-viewer-390",
+      "id": "label-content-name-mismatch",
+      "impact": "serious",
+      "help": "Elements must have their visible text as part of their accessible name",
+      "nodes": 1,
+      "target": "button[data-slot=\"sheet-trigger\"]"
+    },
+    {
+      "screen": "request-detail-chain-final-viewer-390",
+      "id": "scrollable-region-focusable",
+      "impact": "serious",
+      "help": "Scrollable region must have keyboard access",
+      "nodes": 1,
+      "target": "div[data-slot=\"table-container\"]"
+    },
+    {
+      "screen": "dashboard-head-1440",
+      "id": "aria-progressbar-name",
+      "impact": "serious",
+      "help": "ARIA progressbar nodes must have an accessible name",
+      "nodes": 1,
+      "target": ".bg-primary\\/20"
+    },
+    {
+      "screen": "dashboard-head-1440",
+      "id": "label-content-name-mismatch",
+      "impact": "serious",
+      "help": "Elements must have their visible text as part of their accessible name",
+      "nodes": 2,
+      "target": "button[aria-label=\"Поиск\"]"
+    },
+    {
+      "screen": "dashboard-head-390",
+      "id": "aria-progressbar-name",
+      "impact": "serious",
+      "help": "ARIA progressbar nodes must have an accessible name",
+      "nodes": 1,
+      "target": ".bg-primary\\/20"
+    },
+    {
+      "screen": "dashboard-head-390",
+      "id": "label-content-name-mismatch",
+      "impact": "serious",
+      "help": "Elements must have their visible text as part of their accessible name",
+      "nodes": 1,
+      "target": ".size-9"
+    },
+    {
+      "screen": "dashboard-calc-1440",
+      "id": "aria-progressbar-name",
+      "impact": "serious",
+      "help": "ARIA progressbar nodes must have an accessible name",
+      "nodes": 1,
+      "target": ".bg-primary\\/20"
+    },
+    {
+      "screen": "dashboard-calc-1440",
+      "id": "label-content-name-mismatch",
+      "impact": "serious",
+      "help": "Elements must have their visible text as part of their accessible name",
+      "nodes": 2,
+      "target": "button[aria-label=\"Поиск\"]"
+    },
+    {
+      "screen": "dashboard-calc-390",
+      "id": "aria-progressbar-name",
+      "impact": "serious",
+      "help": "ARIA progressbar nodes must have an accessible name",
+      "nodes": 1,
+      "target": ".bg-primary\\/20"
+    },
+    {
+      "screen": "dashboard-calc-390",
+      "id": "label-content-name-mismatch",
+      "impact": "serious",
+      "help": "Elements must have their visible text as part of their accessible name",
+      "nodes": 1,
+      "target": ".size-9"
+    },
+    {
+      "screen": "dashboard-fin-1440",
+      "id": "aria-progressbar-name",
+      "impact": "serious",
+      "help": "ARIA progressbar nodes must have an accessible name",
+      "nodes": 1,
+      "target": ".bg-primary\\/20"
+    },
+    {
+      "screen": "dashboard-fin-1440",
+      "id": "label-content-name-mismatch",
+      "impact": "serious",
+      "help": "Elements must have their visible text as part of their accessible name",
+      "nodes": 2,
+      "target": "button[aria-label=\"Поиск\"]"
+    },
+    {
+      "screen": "dashboard-fin-390",
+      "id": "aria-progressbar-name",
+      "impact": "serious",
+      "help": "ARIA progressbar nodes must have an accessible name",
+      "nodes": 1,
+      "target": ".bg-primary\\/20"
+    },
+    {
+      "screen": "dashboard-fin-390",
+      "id": "label-content-name-mismatch",
+      "impact": "serious",
+      "help": "Elements must have their visible text as part of their accessible name",
+      "nodes": 1,
+      "target": ".size-9"
+    },
+    {
+      "screen": "contracts-viewer-1440",
+      "id": "button-name",
+      "impact": "critical",
+      "help": "Buttons must have discernible text",
+      "nodes": 1,
+      "target": ".data-\\[placeholder\\]\\:text-muted-foreground"
+    },
+    {
+      "screen": "contracts-viewer-1440",
+      "id": "label-content-name-mismatch",
+      "impact": "serious",
+      "help": "Elements must have their visible text as part of their accessible name",
+      "nodes": 2,
+      "target": "button[aria-label=\"Поиск\"]"
+    },
+    {
+      "screen": "contracts-viewer-1440",
+      "id": "nested-interactive",
+      "impact": "serious",
+      "help": "Interactive controls must not be nested",
+      "nodes": 16,
+      "target": "tbody > tr:nth-child(1)"
+    },
+    {
+      "screen": "contracts-viewer-390",
+      "id": "button-name",
+      "impact": "critical",
+      "help": "Buttons must have discernible text",
+      "nodes": 1,
+      "target": ".py-2"
+    },
+    {
+      "screen": "contracts-viewer-390",
+      "id": "label-content-name-mismatch",
+      "impact": "serious",
+      "help": "Elements must have their visible text as part of their accessible name",
+      "nodes": 1,
+      "target": "button[data-slot=\"sheet-trigger\"]"
+    },
+    {
+      "screen": "contracts-viewer-390",
+      "id": "nested-interactive",
+      "impact": "serious",
+      "help": "Interactive controls must not be nested",
+      "nodes": 16,
+      "target": ".p-4.flex-col.focus\\:outline-none:nth-child(1)"
+    },
+    {
+      "screen": "invoices-viewer-1440",
+      "id": "button-name",
+      "impact": "critical",
+      "help": "Buttons must have discernible text",
+      "nodes": 1,
+      "target": ".data-\\[placeholder\\]\\:text-muted-foreground"
+    },
+    {
+      "screen": "invoices-viewer-1440",
+      "id": "label-content-name-mismatch",
+      "impact": "serious",
+      "help": "Elements must have their visible text as part of their accessible name",
+      "nodes": 2,
+      "target": "button[aria-label=\"Поиск\"]"
+    },
+    {
+      "screen": "invoices-viewer-1440",
+      "id": "nested-interactive",
+      "impact": "serious",
+      "help": "Interactive controls must not be nested",
+      "nodes": 12,
+      "target": "tbody > tr:nth-child(1)"
+    },
+    {
+      "screen": "invoices-viewer-390",
+      "id": "button-name",
+      "impact": "critical",
+      "help": "Buttons must have discernible text",
+      "nodes": 1,
+      "target": ".py-2"
+    },
+    {
+      "screen": "invoices-viewer-390",
+      "id": "label-content-name-mismatch",
+      "impact": "serious",
+      "help": "Elements must have their visible text as part of their accessible name",
+      "nodes": 1,
+      "target": "button[data-slot=\"sheet-trigger\"]"
+    },
+    {
+      "screen": "invoices-viewer-390",
+      "id": "nested-interactive",
+      "impact": "serious",
+      "help": "Interactive controls must not be nested",
+      "nodes": 12,
+      "target": ".p-4.flex-col.focus\\:outline-none:nth-child(1)"
+    },
+    {
+      "screen": "payments-viewer-1440",
+      "id": "label-content-name-mismatch",
+      "impact": "serious",
+      "help": "Elements must have their visible text as part of their accessible name",
+      "nodes": 2,
+      "target": "button[aria-label=\"Поиск\"]"
+    },
+    {
+      "screen": "payments-viewer-390",
+      "id": "label-content-name-mismatch",
+      "impact": "serious",
+      "help": "Elements must have their visible text as part of their accessible name",
+      "nodes": 1,
+      "target": ".size-9"
+    },
+    {
+      "screen": "settings-viewer-1440",
+      "id": "label-content-name-mismatch",
+      "impact": "serious",
+      "help": "Elements must have their visible text as part of their accessible name",
+      "nodes": 2,
+      "target": "button[aria-label=\"Поиск\"]"
+    },
+    {
+      "screen": "settings-viewer-390",
+      "id": "label-content-name-mismatch",
+      "impact": "serious",
+      "help": "Elements must have their visible text as part of their accessible name",
+      "nodes": 1,
+      "target": ".size-9"
+    },
+    {
+      "screen": "quotes-list-calc-1440",
+      "id": "button-name",
+      "impact": "critical",
+      "help": "Buttons must have discernible text",
+      "nodes": 1,
+      "target": ".data-\\[placeholder\\]\\:text-muted-foreground"
+    },
+    {
+      "screen": "quotes-list-calc-1440",
+      "id": "label-content-name-mismatch",
+      "impact": "serious",
+      "help": "Elements must have their visible text as part of their accessible name",
+      "nodes": 2,
+      "target": "button[aria-label=\"Поиск\"]"
+    },
+    {
+      "screen": "quotes-list-calc-1440",
+      "id": "nested-interactive",
+      "impact": "serious",
+      "help": "Interactive controls must not be nested",
+      "nodes": 20,
+      "target": "tbody > tr:nth-child(1)"
+    },
+    {
+      "screen": "quotes-list-calc-390",
+      "id": "button-name",
+      "impact": "critical",
+      "help": "Buttons must have discernible text",
+      "nodes": 1,
+      "target": ".data-\\[placeholder\\]\\:text-muted-foreground"
+    },
+    {
+      "screen": "quotes-list-calc-390",
+      "id": "label-content-name-mismatch",
+      "impact": "serious",
+      "help": "Elements must have their visible text as part of their accessible name",
+      "nodes": 1,
+      "target": "button[data-slot=\"sheet-trigger\"]"
+    },
+    {
+      "screen": "quotes-list-calc-390",
+      "id": "nested-interactive",
+      "impact": "serious",
+      "help": "Interactive controls must not be nested",
+      "nodes": 20,
+      "target": ".p-4.flex-col.focus\\:outline-none:nth-child(1)"
+    },
+    {
+      "screen": "clients-calc-1440",
+      "id": "label-content-name-mismatch",
+      "impact": "serious",
+      "help": "Elements must have their visible text as part of their accessible name",
+      "nodes": 2,
+      "target": "button[aria-label=\"Поиск\"]"
+    },
+    {
+      "screen": "clients-calc-390",
+      "id": "label-content-name-mismatch",
+      "impact": "serious",
+      "help": "Elements must have their visible text as part of their accessible name",
+      "nodes": 1,
+      "target": ".size-9"
+    }
+  ]
+}

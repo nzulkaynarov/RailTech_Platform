@@ -31,6 +31,7 @@ export type ActionKey =
   | "assign"
   | "newDeal"
   | "makeCustomer"
+  | "recordConsent"
   | "note";
 
 /** Порядок пунктов в «Ещё»: сначала работа с лидом, опасное и редкое — внизу. */
@@ -38,6 +39,7 @@ export const ACTION_ORDER: readonly ActionKey[] = [
   "acknowledge",
   "take",
   "won",
+  "recordConsent",
   "makeCustomer",
   "newDeal",
   "note",
@@ -91,6 +93,19 @@ const mayMakeCustomer = (lead: LeadDetail, rights: ActionRights): boolean => {
     (rights.isAdmin || lead.assigned_user_id === null || lead.assigned_user_id === rights.userId)
   );
 };
+
+/** Источники, чьё согласие отмечает сотрудник (`MANUAL_SOURCES` бэкенда); лид из Telegram — в боте. */
+const MANUAL_SOURCES: ReadonlySet<string> = new Set(["phone", "email", "referral"]);
+
+/**
+ * Зеркало `LeadConsentService.record` (D-8): «Согласие получено» — лид, заведённый вручную, без
+ * согласия; право — как у «Передать в бэк-офис» (`clients:write`, ответственный или админ).
+ */
+export const mayRecordConsent = (lead: LeadDetail, rights: ActionRights): boolean =>
+  Boolean(rights.clients) &&
+  !lead.consent_given_at &&
+  MANUAL_SOURCES.has(lead.source ?? "") &&
+  (rights.isAdmin || lead.assigned_user_id === null || lead.assigned_user_id === rights.userId);
 
 /**
  * Передача клиента лида в бэк-офис (FIX-34b, Q-FIX34-1). Только режим `erp`, лид в стадии
@@ -155,6 +170,7 @@ export function availableActions(
       mayHandoffClient(lead, rights) &&
       (clientHandoff(lead) === "available" ||
         (isErp ? lead.stage === "in_progress" || lead.stage === "won" : lead.stage === "won")),
+    recordConsent: mayRecordConsent(lead, rights),
     note: rights.note,
   };
 }
@@ -167,6 +183,10 @@ function primaryAction(
 ): ActionKey | null {
   if (ownedByOther(lead, rights)) return null;
   if (can.acknowledge) return "acknowledge";
+  // Передача в бэк-офис без согласия лида — 422: сначала согласие (D-8).
+  if (can.recordConsent && can.makeCustomer && lead.backoffice_mode === "erp") {
+    return "recordConsent";
+  }
   if (can.makeCustomer) return "makeCustomer";
   if (can.won) return "won";
   if (can.take && waitsForManager(lead)) return "take";
