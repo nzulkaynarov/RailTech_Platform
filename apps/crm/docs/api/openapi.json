@@ -4125,6 +4125,33 @@
             "title": "Backoffice Mode",
             "type": "string"
           },
+          "client_handoff_error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Client Handoff Error"
+          },
+          "client_handoff_status": {
+            "anyOf": [
+              {
+                "enum": [
+                  "pending",
+                  "done",
+                  "failed"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Client Handoff Status"
+          },
           "client_id": {
             "anyOf": [
               {
@@ -4135,6 +4162,11 @@
               }
             ],
             "title": "Client Id"
+          },
+          "client_in_erp": {
+            "default": false,
+            "title": "Client In Erp",
+            "type": "boolean"
           },
           "client_phone_e164": {
             "anyOf": [
