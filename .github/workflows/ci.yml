@@ -395,6 +395,9 @@ jobs:
       - run: make check-erp
       - name: Миграции на чистой базе и отсутствие дрейфа моделей
         run: apps/erp/scripts/test_backend_local.sh --migration-check
+      # schema.json, типы фронтенда и packages/contracts/openapi/erp-internal.yaml перегенерируются из кода; diff = падение (FIX-40)
+      - name: Дрейф схемы ERP (schema.json, типы, erp-internal.yaml)
+        run: make -C apps/erp openapi-check
       - name: Контейнеры тестов удалены
         if: always()
         run: apps/erp/scripts/test_backend_local.sh --down
