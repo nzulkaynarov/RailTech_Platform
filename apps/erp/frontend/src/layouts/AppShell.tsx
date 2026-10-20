@@ -475,10 +475,11 @@ function AppShellInner({ children, activePage, onNavigate, onStartTour, fullBlee
                     size="sm"
                     className="h-8 gap-2 text-muted-foreground"
                     onClick={() => setSearchOpen(true)}
-                    aria-label={t('search.trigger')}
+                    aria-keyshortcuts="Meta+K Control+K"
                   >
-                    <Search className="h-4 w-4" />
-                    <span className="hidden md:inline text-xs">{t('search.trigger')}</span>
+                    <Search className="h-4 w-4" aria-hidden="true" />
+                    {/* Доступное имя — из видимого текста (WCAG 2.5.3): на узком экране он только для скринридера. */}
+                    <span className="max-md:sr-only text-xs">{t('search.trigger')}</span>
                     <kbd className="pointer-events-none hidden items-center gap-1 rounded border bg-muted px-1.5 py-0.5 font-mono text-xs font-medium md:inline-flex">
                       <span className="text-xs">⌘</span>K
                     </kbd>

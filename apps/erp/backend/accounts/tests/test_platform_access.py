@@ -102,7 +102,8 @@ def sso_login(sub="7001"):
     client = APIClient()
     response = client.post("/api/v1/auth/sso/exchange/", {"token": sso_token(sub)}, format="json")
     assert response.status_code == 200, response.content
-    return response.json()["access_token"], response.json()["refresh_token"]
+    # refresh выдаётся только HttpOnly-cookie (S-14, FIX-58), в теле его нет
+    return response.json()["access_token"], response.cookies[django_settings.REFRESH_COOKIE_NAME].value
 
 
 def bearer(access):

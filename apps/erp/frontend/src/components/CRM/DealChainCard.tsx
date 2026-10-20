@@ -70,7 +70,8 @@ function ChainTile({ tile }: { tile: Tile }) {
       type="button"
       onClick={go}
       disabled={!tile.hash}
-      aria-label={`${tile.label}: ${tile.caption}`}
+      // Доступное имя — из видимого текста (подпись, счётчик, статус): отдельный aria-label его не
+      // содержал целиком (WCAG 2.5.3, axe label-content-name-mismatch; FIX-58).
       className="flex items-center gap-3 rounded-md border border-border p-3 text-left transition-colors hover:bg-accent disabled:cursor-default disabled:opacity-60 disabled:hover:bg-transparent"
     >
       <Icon className="h-5 w-5 shrink-0 text-muted-foreground" aria-hidden="true" />

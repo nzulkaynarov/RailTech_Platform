@@ -56,24 +56,32 @@ function onRefreshFailed(err: unknown) {
 	subs.forEach((s) => s.reject(err));
 }
 
-async function failRefresh(err: unknown): Promise<void> {
+// Публичные маршруты без сессии: фоновый 401 на них ожидаем, и редирект на '/' прервал бы сам поток
+// (устаревший токен делает /me 401 в момент монтирования страницы установки пароля).
+const PUBLIC_AUTH_PATHS = new Set(['/setup-password', '/reset-password', '/forgot-password', '/sso/exchange']);
+
+export function isPublicAuthPath(path: string = window.location.pathname): boolean {
+	return PUBLIC_AUTH_PATHS.has(path);
+}
+
+async function failRefresh(err: unknown, tokenAtStart: string | null): Promise<void> {
 	// Side-effects only: reject every queued request, log out, bounce to login.
 	// The caller returns the rejection so this never throws back into the try/catch.
 	onRefreshFailed(err);
+	// Сессию могли выдать, пока шёл refresh (обмен SSO, вход по паролю): токен уже другой,
+	// и вывод «сессии нет» устарел. Свежий вход не сбрасываем (D-01, FIX-58).
+	if (getAccessToken() !== tokenAtStart) return;
+	// `/sso/exchange` САМА получает сессию обменом токена CRM. logout() здесь POST'ит auth/logout/
+	// и стирает refresh-cookie, которую обмен только что выдал, а редирект отменяет отправленный обмен.
+	if (window.location.pathname === '/sso/exchange') return;
 	try {
 		const { useAuthStore } = await import('../store/authStore');
 		useAuthStore.getState().logout();
 	} catch {
 		localStorage.removeItem('erp-auth');
 	}
-	// Don't bounce the user off public, unauthenticated routes (password setup/reset,
-	// registration). A background 401 there is expected — there's no session yet — and
-	// hard-redirecting to '/' interrupts the flow (e.g. a stale token makes initAuth's
-	// /me/ call 401 the moment the setup-password page mounts). Only force a redirect
-	// when an authenticated app page actually lost its session.
-	const PUBLIC_AUTH_PATHS = new Set(['/setup-password', '/reset-password', '/forgot-password']);
-	const path = window.location.pathname;
-	if (path !== '/' && !PUBLIC_AUTH_PATHS.has(path)) window.location.href = '/';
+	// Only force a redirect when an authenticated app page actually lost its session.
+	if (window.location.pathname !== '/' && !isPublicAuthPath()) window.location.href = '/';
 }
 
 // Response interceptor for token refresh
@@ -105,6 +113,7 @@ apiClient.interceptors.response.use(
 			}
 
 			isRefreshing = true;
+			const tokenAtStart = getAccessToken();
 
 			try {
 				// Refresh via the HttpOnly cookie (F2.1) — no token in the body, cookie
@@ -126,7 +135,7 @@ apiClient.interceptors.response.use(
 				originalRequest.headers.Authorization = `Bearer ${newToken}`;
 				return apiClient(originalRequest);
 			} catch (refreshError) {
-				await failRefresh(refreshError);
+				await failRefresh(refreshError, tokenAtStart);
 				return Promise.reject(refreshError);
 			} finally {
 				isRefreshing = false;

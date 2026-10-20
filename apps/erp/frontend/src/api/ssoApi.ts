@@ -7,7 +7,6 @@ export interface SsoTokenResponse {
 
 export interface SsoExchangeResponse {
   access_token: string;
-  refresh_token: string;
   expires_in: number;
   user: Record<string, unknown>;
 }

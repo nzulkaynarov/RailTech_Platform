@@ -14,9 +14,22 @@ export type FilterSpec = {
   value: string;
   onChange: (v: string) => void;
   allLabel: string;
+  /** Имя фильтра для скринридера («Статус»); без него — подпись «все …». */
+  label?: string;
   options: FilterOption[];
   widthClass?: string;
 };
+
+/**
+ * Имя выпадающего фильтра. Радикс рисует выбранный пункт после монтирования списка, и кнопка
+ * оставалась без имени (axe button-name, critical; FIX-58). Имя содержит видимый текст (WCAG 2.5.3).
+ */
+function filterAriaLabel(f: FilterSpec): string {
+  const name = f.label ?? f.allLabel;
+  if (f.value === 'all') return f.allLabel;
+  const selected = f.options.find((o) => o.value === f.value)?.label;
+  return selected ? `${name}: ${selected}` : name;
+}
 
 interface ToolbarProps {
   searchValue: string;
@@ -46,7 +59,7 @@ export function Toolbar({
       </div>
       {filters.map((f) => (
         <Select key={f.key} value={f.value} onValueChange={f.onChange}>
-          <SelectTrigger className={cn('w-full sm:w-52', f.widthClass)}>
+          <SelectTrigger className={cn('w-full sm:w-52', f.widthClass)} aria-label={filterAriaLabel(f)}>
             <SelectValue />
           </SelectTrigger>
           <SelectContent>

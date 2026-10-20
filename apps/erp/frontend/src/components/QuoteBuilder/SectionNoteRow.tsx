@@ -33,7 +33,7 @@ interface SectionNoteRowProps {
 export const SectionNoteRow: React.FC<SectionNoteRowProps> = ({ item, index, virtualIndex, measureElement }) => {
 	const { t } = useTranslation();
 	const {
-		selection, mainColCount, draftItems, presentationCurrency, pricingMirror,
+		readOnly, selection, mainColCount, draftItems, presentationCurrency, pricingMirror,
 		handleMoveRow, handleRenameRow, handleDeleteItem, rowRefs,
 		isSectionCollapsed, toggleSectionCollapse, itemsUnderSection, rowPaddingY,
 	} = useQuoteBuilderGrid();
@@ -112,6 +112,7 @@ export const SectionNoteRow: React.FC<SectionNoteRowProps> = ({ item, index, vir
 					)}
 					<Input
 						value={text}
+						readOnly={readOnly}
 						onChange={(event) => setText(event.target.value)}
 						onBlur={commitRename}
 						onKeyDown={(event) => {
@@ -135,6 +136,7 @@ export const SectionNoteRow: React.FC<SectionNoteRowProps> = ({ item, index, vir
 							</span>
 						</span>
 					)}
+					{!readOnly && (
 					<div className="flex shrink-0 items-center">
 						<Button
 							variant="ghost"
@@ -167,6 +169,7 @@ export const SectionNoteRow: React.FC<SectionNoteRowProps> = ({ item, index, vir
 							<Trash2 className="size-3" />
 						</Button>
 					</div>
+					)}
 				</div>
 			</TableCell>
 		</TableRow>

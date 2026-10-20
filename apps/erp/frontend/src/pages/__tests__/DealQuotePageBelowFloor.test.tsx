@@ -36,6 +36,12 @@ vi.mock('@/hooks/useCRM', () => ({
 	useTakeAndPrepareQuote: () => ({ mutate: vi.fn(), mutateAsync: vi.fn().mockResolvedValue(undefined), isPending: false }),
 }));
 
+// Кнопка «Отправить» — по праву quote.send из /me (FIX-58, D-03): продавец им обладает.
+vi.mock('@/store/userStore', () => ({
+	useUserStore: (selector: (state: { capabilities: { permissions: string[] } }) => unknown) =>
+		selector({ capabilities: { permissions: ['quote.send', 'quote.edit_pricing', 'contract.manage'] } }),
+}));
+
 // Heavy children of the workspace aren't under test — stub them so the page renders
 // in isolation and the dialog is the only interactive surface.
 vi.mock('@/components/QuoteBuilder/QuoteBuilderGrid', () => ({ QuoteBuilderGrid: () => null }));

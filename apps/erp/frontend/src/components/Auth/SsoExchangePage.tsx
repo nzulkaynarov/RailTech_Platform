@@ -9,6 +9,19 @@ import { setAccessToken } from '@/api/accessToken';
 import { useAuthStore } from '@/store/authStore';
 import { queryClient } from '@/lib/queryClient';
 
+// Токен CRM одноразовый (jti). StrictMode (dev) монтирует эффект дважды — второй обмен того же токена
+// получил бы TOKEN_ALREADY_USED, поэтому обмен один на токен, а оба монтирования ждут его результат.
+const pendingExchanges = new Map<string, ReturnType<typeof exchangeSsoToken>>();
+
+function exchangeOnce(token: string) {
+  let p = pendingExchanges.get(token);
+  if (!p) {
+    p = exchangeSsoToken(token);
+    pendingExchanges.set(token, p);
+  }
+  return p;
+}
+
 export const SsoExchangePage: React.FC = () => {
   const { t } = useTranslation();
   const [loading, setLoading] = useState(true);
@@ -32,7 +45,7 @@ export const SsoExchangePage: React.FC = () => {
       }
 
       try {
-        const data = await exchangeSsoToken(token);
+        const data = await exchangeOnce(token);
         if (!active) return;
 
         setAccessToken(data.access_token);

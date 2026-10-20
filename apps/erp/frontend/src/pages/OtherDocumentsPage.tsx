@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'; import { useTranslation } from 'react-i18next'; import { toast } from 'sonner'; import { FileSignature, Send, Ban, Mail, Loader2, Inbox, Link2Off } from 'lucide-react'; import { translateApiError } from '@/lib/apiError'; import { formatDate, formatDateTime } from '@/lib/formatLocale'; import { DocumentActions } from '@/components/Shared/DocumentActions'; import { Card, CardContent } from '@/components/ui/card'; import { Badge } from '@/components/ui/badge'; import { Button } from '@/components/ui/button'; import { Label } from '@/components/ui/label'; import { Input } from '@/components/ui/input'; import {   Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle, } from '@/components/ui/sheet'; import { ResponsiveDataTable, type ResponsiveColumn } from '@/components/ResponsiveDataTable'; import {   Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, } from '@/components/ui/dialog'; import { PageShell, LoadingRows, EmptyState, ErrorState } from './shared/PageShell'; import { ConfirmActionDialog } from '@/components/Shared/ConfirmActionDialog'; import {   Toolbar, Pager } from '@/components/DataTable';
+import { useHasCompanyPermission } from '@/hooks/useCapabilities';
 import { useListParams, applyListParams } from '@/components/DataTable/listParams';
 import {
   useGeneratedDocuments, useGeneratedDocument, useIssueDocument, useCancelDocument,
@@ -24,6 +25,8 @@ export function OtherDocumentsPage() {
   const cancelDocument = useCancelDocument();
   const updateValues = useUpdateDocumentValues();
   const [wizardOpen, setWizardOpen] = useState(false);
+  // Создать документ — право `deal.manage` (D-03, FIX-58).
+  const canCreate = useHasCompanyPermission('deal.manage');
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const selected = useMemo(
     () => (documents ?? []).find((d) => d.id === selectedId) ?? null,
@@ -114,12 +117,12 @@ export function OtherDocumentsPage() {
       icon={<FileSignature className="h-5 w-5" />}
       stats={stats}
       statsError={isError}
-      actions={[
+      actions={canCreate ? [
         {
           label: t('documentsHub.create'),
           onClick: () => setWizardOpen(true),
         },
-      ]}
+      ] : []}
     >
       <Toolbar
         searchValue={listParams.searchInput}

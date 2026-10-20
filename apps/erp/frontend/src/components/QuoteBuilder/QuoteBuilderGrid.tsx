@@ -53,6 +53,8 @@ interface QuoteBuilderGridProps {
 	onSave?: () => void;
 	/** Lifted so the host page (DealQuotePage) can guard in-app navigation away from unsaved edits. */
 	onDirtyChange?: (hasUnsavedChanges: boolean) => void;
+	/** Только чтение (нет права править цены или КП не в черновике) — см. `QuoteBuilderGridContextValue.readOnly`. */
+	readOnly?: boolean;
 }
 
 /**
@@ -61,7 +63,7 @@ interface QuoteBuilderGridProps {
  * (BuilderToolbar · GridTable/GridRow · EconomicsRail · StickyTotalsBar). The public export name +
  * path are preserved so importers and the existing test-suite are untouched.
  */
-export const QuoteBuilderGrid: React.FC<QuoteBuilderGridProps> = ({ dealId: propDealId, onSave, onDirtyChange }) => {
+export const QuoteBuilderGrid: React.FC<QuoteBuilderGridProps> = ({ dealId: propDealId, onSave, onDirtyChange, readOnly = false }) => {
 	const { t } = useTranslation();
 	const dealId = propDealId || 0;
 
@@ -268,7 +270,7 @@ export const QuoteBuilderGrid: React.FC<QuoteBuilderGridProps> = ({ dealId: prop
 	const fieldLabel = makeFieldLabel(t);
 
 	const contextValue: QuoteBuilderGridContextValue = {
-		activeQuote, econ, canViewCost, showCostColumns, presentationCurrency, vatRate, effectiveLeadTime,
+		activeQuote, readOnly, econ, canViewCost, showCostColumns, presentationCurrency, vatRate, effectiveLeadTime,
 		currencies, mainColCount, draftItems, pricingMirror, mirrorTotals, selection,
 		visibleItems, documentIndexById, filterQuery, setFilterQuery, isFiltered,
 		handleFieldChange, cellError, cellErrors, hiddenErrorFields, fieldLabel,
@@ -284,7 +286,7 @@ export const QuoteBuilderGrid: React.FC<QuoteBuilderGridProps> = ({ dealId: prop
 		openPasteDialog: actions.openPasteDialog, openImportDialog: () => setImportOpen(true), setShowAiMatch,
 		handlePricingAssist: actions.handlePricingAssist, pricingBusy, fullscreen, setFullscreen, setShowSettings,
 		railAsSheet, railOpen, railSheetOpen, setRailSheetOpen, toggleRail,
-		scrollContainerRef, gridKeyboardOnKeyDown: gridKeyboard.onKeyDown, handleGridPaste: actions.handleGridPaste,
+		scrollContainerRef, gridKeyboardOnKeyDown: gridKeyboard.onKeyDown, handleGridPaste: readOnly ? () => {} : actions.handleGridPaste,
 		virtualizer, shouldVirtualize,
 		activeTab,
 		gridDensity, toggleGridDensity, rowPaddingY,
@@ -333,7 +335,7 @@ export const QuoteBuilderGrid: React.FC<QuoteBuilderGridProps> = ({ dealId: prop
 
 								{/* КП-level expense items / discounts (seller-only) — its own tab. */}
 								<TabsContent value="charges" className="flex-1 min-h-0 overflow-auto mt-0">
-									{activeQuote && <QuoteChargesSection quoteId={activeQuote.id} currency={presentationCurrency} />}
+									{activeQuote && <QuoteChargesSection quoteId={activeQuote.id} currency={presentationCurrency} readOnly={readOnly} />}
 								</TabsContent>
 							</div>
 
@@ -355,6 +357,8 @@ export const QuoteBuilderGrid: React.FC<QuoteBuilderGridProps> = ({ dealId: prop
 							: undefined}
 						totalInclVat={mirrorTotals.totalInclVat}
 						currency={presentationCurrency}
+						readOnly={readOnly}
+						onOpenEconomics={railAsSheet ? () => setRailSheetOpen(true) : undefined}
 						hasUnsavedChanges={hasUnsavedChanges}
 						saving={bulkUpdateMutation.isPending}
 						onSave={actions.handleSave}

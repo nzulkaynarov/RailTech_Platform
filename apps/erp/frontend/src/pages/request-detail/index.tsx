@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { ArrowLeft, Calculator, AlertTriangle } from 'lucide-react';
 import { toast } from 'sonner';
 import { QuoteStatus, DealStage } from '@/lib/codes';
-import { useIsSoloTeam } from '@/hooks/useCapabilities';
+import { useIsSoloTeam, useHasCompanyPermission } from '@/hooks/useCapabilities';
 import {
   useDeal, useChangeDealStage, useSendQuoteToClient,
   useClaimDeal, useReleaseDeal, useTakeAndPrepareQuote, useSubmitQuoteForReview,
@@ -50,6 +50,12 @@ export function RequestDetailPage({ dealId, onBack }: { dealId: number; onBack: 
   const takeMut = useTakeAndPrepareQuote();
   const submitReviewMut = useSubmitQuoteForReview();
   const isSoloTeam = useIsSoloTeam();
+  // Кнопки действий — по правам из /me (D-03, FIX-58): те же коды, что проверяет сервер на эндпоинтах.
+  // Нет права — кнопки нет (Наблюдатель видит карточку, но не действия, которые закончатся 403).
+  const canManageDeal = useHasCompanyPermission('deal.manage');
+  const canEditPricing = useHasCompanyPermission('quote.edit_pricing');
+  const canBuildQuoteLifecycle = useHasCompanyPermission('quote.build');
+  const canSendQuote = useHasCompanyPermission('quote.send');
 
   if (isLoading && !deal) return <LoadingSkeleton />;
   // A failed fetch (404 / no-access / network) must read as an error with a way out — not a bare
@@ -81,21 +87,21 @@ export function RequestDetailPage({ dealId, onBack }: { dealId: number; onBack: 
   // отправленной заявки — и кнопка волны W2 не показывалась НИКОГДА (проход глазами 03-08, тот
   // же корень, что у плитки «Заявки без КП»).
   const quoteNotStarted = needsQuoteWork(deal);
-  const canTakeAndPrepare = quoteNotStarted;
+  const canTakeAndPrepare = quoteNotStarted && canEditPricing;
   // Q5 (устранение рассинхрона гейтов): «Сформировать КП» — резервный ручной путь, НЕ показываем
   // рядом с одной кнопкой W2 (иначе две кнопки создания на одной стадии сбивают с толку).
-  const canBuildQuote = (isSourcing || isCalculating) && quoteNotStarted && !canTakeAndPrepare;
+  const canBuildQuote = (isSourcing || isCalculating) && quoteNotStarted && !canTakeAndPrepare && canEditPricing;
   // «КП уже собирают» — тоже по состоянию: пустой черновик-хранилище позиций за КП не считается.
   const hasQuote = !!deal.active_quote && !quoteNotStarted;
   // Q4: send a DRAFT КП into internal review straight from the request card (no builder detour).
   // The server re-runs every gate; a sole-approver КП auto-approves → «Отправить» surfaces next.
-  const canSubmitForReview = deal.active_quote?.status_code === QuoteStatus.DRAFT;
+  const canSubmitForReview = deal.active_quote?.status_code === QuoteStatus.DRAFT && canBuildQuoteLifecycle;
   // The client rejected the КП → offer a primary "new version" action (perform_create auto-increments).
-  const canBuildNewVersion = deal.active_quote?.status_code === QuoteStatus.REJECTED;
+  const canBuildNewVersion = deal.active_quote?.status_code === QuoteStatus.REJECTED && canEditPricing;
   // Wave B2 (auto-claim): a solo team has no queue to hand out, so hide «Взять в работу» entirely.
-  const canClaim = deal.assigned_to == null && !isSoloTeam;
+  const canClaim = deal.assigned_to == null && !isSoloTeam && canManageDeal;
   // Право на возврат считает СЕРВЕР (владелец записи ИЛИ team.manage) — фронт его не выводит.
-  const canRelease = !!deal.viewer_can_release;
+  const canRelease = !!deal.viewer_can_release && canManageDeal;
   const openQuoteBuilder = () => { window.location.hash = `deal-quote/${deal.id}`; };
 
   const run = async (fn: () => Promise<unknown>) => {
@@ -131,9 +137,10 @@ export function RequestDetailPage({ dealId, onBack }: { dealId: number; onBack: 
 
         <RequestActionBar
           quote={quote}
-          isDraft={isDraft}
-          isSourcing={isSourcing}
-          isCalculating={isCalculating}
+          isDraft={isDraft && canManageDeal}
+          isSourcing={isSourcing && canManageDeal}
+          isCalculating={isCalculating && canManageDeal}
+          canSendQuote={canSendQuote}
           isWon={isWon}
           hasQuote={hasQuote}
           canBuildQuote={canBuildQuote}

@@ -71,7 +71,7 @@ function CompanyTimeline({ companyId }: { companyId: number }) {
                 </time>
               </div>
               {detail && <p className="text-xs text-muted-foreground mt-0.5">{detail}</p>}
-              {entry.user_name && <p className="text-xs text-muted-foreground/70 mt-0.5">{entry.user_name}</p>}
+              {entry.user_name && <p className="text-xs text-muted-foreground mt-0.5">{entry.user_name}</p>}
             </li>
           );
         })}

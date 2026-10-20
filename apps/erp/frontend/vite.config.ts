@@ -15,8 +15,10 @@ export default defineConfig({
 	server: {
 		port: 5174,
 		proxy: {
-			'/api': { target: 'http://localhost:8000', changeOrigin: true },
-			'/ws': { target: 'ws://localhost:8000', ws: true, changeOrigin: true },
+			// VITE_DEV_PROXY_TARGET — например http://erp.localhost:8088 (стенд ансамбля): проход глазами и axe
+			// против настоящего API без своего бэкенда. По умолчанию — локальный бэкенд.
+			'/api': { target: process.env.VITE_DEV_PROXY_TARGET || 'http://localhost:8000', changeOrigin: true },
+			'/ws': { target: (process.env.VITE_DEV_PROXY_TARGET || 'http://localhost:8000').replace(/^http/, 'ws'), ws: true, changeOrigin: true },
 		},
 	},
 	resolve: {

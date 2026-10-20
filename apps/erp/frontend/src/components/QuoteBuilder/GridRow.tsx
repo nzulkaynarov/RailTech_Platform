@@ -47,6 +47,8 @@ interface MarginCellProps {
 	signal: LineSignal | null;
 	landedCost: string | null;
 	presentationCurrency: string;
+	/** Только чтение: ячейка заблокирована, кнопки отката наценки нет. */
+	readOnly?: boolean;
 	invalid: boolean;
 	errorMessage?: string;
 	/** Write an explicit per-line override (a numeric string). */
@@ -83,7 +85,7 @@ interface MarginCellProps {
  * every visible margin cell.
  */
 const MarginCell: React.FC<MarginCellProps> = React.memo(({
-	index, rowId, line, quoteMarginPercent, signal, landedCost, presentationCurrency,
+	index, rowId, line, quoteMarginPercent, signal, landedCost, presentationCurrency, readOnly,
 	invalid, errorMessage, onCommit, onRevert,
 }) => {
 	const { t } = useTranslation();
@@ -116,6 +118,7 @@ const MarginCell: React.FC<MarginCellProps> = React.memo(({
 							)}
 							dataCellRow={rowId}
 							dataCellCol="margin_percent"
+							disabled={readOnly}
 							value={line.isMarginOverridden ? line.effectiveMarginPercent : null}
 							invalid={invalid}
 							errorMessage={errorMessage}
@@ -146,7 +149,7 @@ const MarginCell: React.FC<MarginCellProps> = React.memo(({
 			</Tooltip>
 			{/* One-click «вернуть наценку КП». Rendered ONLY on an overridden line, so its presence is
 			    itself the override marker — and its absence keeps an inheriting cell visually quiet. */}
-			{isOverridden && (
+			{isOverridden && !readOnly && (
 				<Tooltip>
 					<TooltipTrigger asChild>
 						<Button
@@ -184,7 +187,7 @@ const GridRowComponent: React.FC<GridRowProps> = ({ item, index, virtualIndex, m
 	// (пошлина зависит от происхождения, преференций и сертификата СТ-1, это его решение).
 	const [dutiesOpen, setDutiesOpen] = useState(false);
 	const {
-		activeQuote, econ, canViewCost, showCostColumns, presentationCurrency, currencies,
+		activeQuote, readOnly, econ, canViewCost, showCostColumns, presentationCurrency, currencies,
 		pricingMirror, selection, handleFieldChange, cellError, cellErrors, hiddenErrorFields,
 		fieldLabel, expandedRowId, toggleRow, setExpandedRowId, fxRateFor, lineCostInPresentation,
 		handleDeleteItem, setReassignItemId, rowRefs, mainColCount,
@@ -325,12 +328,18 @@ const GridRowComponent: React.FC<GridRowProps> = ({ item, index, virtualIndex, m
 						    `imported_raw_name` through the same single-item PATCH the SECTION/NOTE inline
 						    rename already uses — a КП must be able to carry a line that is not a catalog
 						    product. */}
-						<ProductNameCell
-							item={item}
-							index={index + 1}
-							onBrowseCandidates={setReassignItemId}
-							onCommitFreeText={handleRenameRow}
-						/>
+						{readOnly ? (
+							<span className="min-w-0 flex-1 truncate px-2 text-sm font-medium" title={item.product_name || item.imported_raw_name}>
+								{item.product_name || item.imported_raw_name}
+							</span>
+						) : (
+							<ProductNameCell
+								item={item}
+								index={index + 1}
+								onBrowseCandidates={setReassignItemId}
+								onCommitFreeText={handleRenameRow}
+							/>
+						)}
 					</div>
 				</TableCell>
 				<TableCell className="p-0">
@@ -346,6 +355,7 @@ const GridRowComponent: React.FC<GridRowProps> = ({ item, index, virtualIndex, m
 						className="h-8 min-w-[3.5rem] border-none shadow-none rounded-none text-xs font-semibold text-center focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
 						dataCellRow={item.id}
 						dataCellCol="quantity"
+						disabled={readOnly}
 						value={item.quantity}
 						invalid={!!cellError(item.id, 'quantity')}
 						errorMessage={cellError(item.id, 'quantity')}
@@ -369,6 +379,7 @@ const GridRowComponent: React.FC<GridRowProps> = ({ item, index, virtualIndex, m
 											className="h-8 w-full min-w-[7rem] border-none shadow-none rounded-none text-xs font-mono text-right pr-2 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
 											dataCellRow={item.id}
 											dataCellCol="frozen_base_price"
+											disabled={readOnly}
 											value={item.frozen_base_price}
 											invalid={!!cellError(item.id, 'frozen_base_price')}
 											errorMessage={cellError(item.id, 'frozen_base_price')}
@@ -387,7 +398,7 @@ const GridRowComponent: React.FC<GridRowProps> = ({ item, index, virtualIndex, m
 									</div>
 								</TooltipContent>
 							</Tooltip>
-							<Select value={item.frozen_currency || 'UZS'} onValueChange={(code) => handleFieldChange(item.id, 'frozen_currency', code)}>
+							<Select value={item.frozen_currency || 'UZS'} disabled={readOnly} onValueChange={(code) => handleFieldChange(item.id, 'frozen_currency', code)}>
 								<SelectTrigger
 									aria-label={t('quote.lineCurrency')}
 									aria-invalid={!!cellError(item.id, 'frozen_currency') || undefined}
@@ -413,6 +424,7 @@ const GridRowComponent: React.FC<GridRowProps> = ({ item, index, virtualIndex, m
 							signal={signal}
 							landedCost={mirrorLine.landedCost ?? item.landed_cost ?? null}
 							presentationCurrency={presentationCurrency}
+							readOnly={readOnly}
 							invalid={!!cellError(item.id, 'margin_percent')}
 							errorMessage={cellError(item.id, 'margin_percent')}
 							onCommit={(value) => handleFieldChange(item.id, 'margin_percent', value)}
@@ -467,6 +479,7 @@ const GridRowComponent: React.FC<GridRowProps> = ({ item, index, virtualIndex, m
 					{/* U1: two icon COLUMNS — «опция»/удалить on the left, reorder ↑/↓ on the right. Two
 					    columns of two keep the row exactly as tall as before (it was already a 2-row
 					    stack), so adding reorder costs no vertical space — which U2 is fighting for. */}
+					{!readOnly && (
 					<div className="flex items-center justify-center gap-0.5">
 					<div className="flex flex-col items-center gap-1">
 						<Tooltip>
@@ -524,6 +537,7 @@ const GridRowComponent: React.FC<GridRowProps> = ({ item, index, virtualIndex, m
 						</Button>
 					</div>
 					</div>
+					)}
 				</TableCell>
 			</TableRow>
 			{isExpanded && (
@@ -583,6 +597,7 @@ const GridRowComponent: React.FC<GridRowProps> = ({ item, index, virtualIndex, m
 											<TooltipContent>{t('quote.customsDutyHelp')}</TooltipContent>
 										</Tooltip>
 										<NumericCell
+											disabled={readOnly}
 											min={0}
 											max={QUOTE_ITEM_MAX_UNIT_PRICE}
 											maxToastKey="quote.validation.priceTooLarge"
@@ -603,6 +618,7 @@ const GridRowComponent: React.FC<GridRowProps> = ({ item, index, virtualIndex, m
 										<TooltipContent>{t('quote.leadTimeHelp')}</TooltipContent>
 									</Tooltip>
 									<NumericCell
+										disabled={readOnly}
 										min={0}
 										maxFractionDigits={0}
 										ariaLabel={t('quote.leadTime')}
@@ -622,6 +638,7 @@ const GridRowComponent: React.FC<GridRowProps> = ({ item, index, virtualIndex, m
 											<TooltipContent>{t('quote.discountHelp')}</TooltipContent>
 										</Tooltip>
 										<NumericCell
+											disabled={readOnly}
 											min={0}
 											max={100}
 											ariaLabel={t('quote.discountPercent')}

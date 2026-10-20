@@ -1,4 +1,6 @@
 import { useMemo, useState } from 'react'; import { useTranslation } from 'react-i18next'; import { toast } from 'sonner'; import { translateApiError } from '@/lib/apiError'; import { formatDate, formatDateTime } from '@/lib/formatLocale'; import { extractBlobErrorCode, fetchDocumentBlob, saveBlob } from '@/lib/documents'; import { PenLine, Upload, Download, Receipt, Ban, FileSignature } from 'lucide-react'; import { DocumentActions } from '@/components/Shared/DocumentActions'; import { Badge } from '@/components/ui/badge'; import { Button } from '@/components/ui/button'; import { Label } from '@/components/ui/label'; import { Textarea } from '@/components/ui/textarea'; import {   Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle, } from '@/components/ui/sheet'; import {   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, } from '@/components/ui/alert-dialog'; import { PageShell } from './shared/PageShell'; import { DocumentRegistry } from '@/components/Documents/DocumentRegistry'; import { useDocumentCoreColumns } from '@/components/Documents/useDocumentCoreColumns'; import { ManualModeBanner } from '@/components/Shared/ManualModeBanner'; import { Toolbar } from '@/components/DataTable';
+import { useHasCompanyPermission } from '@/hooks/useCapabilities';
+import { useAuthStore } from '@/store/authStore';
 import { useListParams, applyListParams } from '@/components/DataTable/listParams';
 import {
   useContracts, useSignContractManager,
@@ -24,8 +26,26 @@ const STATUS_CODES: ContractStatus[] = [
   'DRAFT', 'PENDING_CLIENT', 'PENDING_MANAGER', 'SIGNED', 'CANCELLED',
 ];
 
+/**
+ * Строка подписи в шторке договора. Подпись клиента из кабинета не несёт имени сотрудника
+ * (подписывает контакт клиента, кто именно — в журнале сделки): раньше шаблон печатал буквальное
+ * «null · дата» (FIX-58, D-12).
+ */
+function SignatureText({ name, at, fallback }: { name?: string | null; at?: string | null; fallback?: string }) {
+  if (!at) return <>—</>;
+  const when = formatDateTime(at);
+  if (name) return <>{`${name} · ${when}`}</>;
+  return <>{fallback ? `${when} · ${fallback}` : when}</>;
+}
+
 export function ContractsPage() {
   const { t } = useTranslation();
+  // Кнопки по правам из /me (D-03, FIX-58): подпись от компании — `contract.sign`, скан и счёт —
+  // `contract.manage` / `finance.invoice`; аннулирование — только администратор (ADMIN_ONLY на сервере).
+  const canSign = useHasCompanyPermission('contract.sign');
+  const canManageContract = useHasCompanyPermission('contract.manage');
+  const canInvoice = useHasCompanyPermission('finance.invoice');
+  const isSuperuser = useAuthStore((s) => s.user?.is_superuser === true);
   const listParams = useListParams(['status'] as const, { urlKey: 'contracts', defaultOrdering: '-created_at' });
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [cancelTarget, setCancelTarget] = useState<Contract | null>(null);
@@ -218,19 +238,15 @@ export function ContractsPage() {
                 <div><Label>{t('contractsPage.table.deal')}</Label><DealLink dealId={selected.deal} /></div>
                 <div><Label>{t('contractsPage.table.total')}</Label><p className="tabular-nums">{formatCurrency(Number(selected.total_amount))}</p></div>
                 <div>
-                  <Label>{t('contractsPage.signClient')}</Label>
+                  <Label>{t('contractsPage.signedByClient')}</Label>
                   <p className="text-muted-foreground">
-                    {selected.client_signed_at
-                      ? `${selected.client_signer_name} · ${formatDateTime(selected.client_signed_at)}`
-                      : '—'}
+                    <SignatureText name={selected.client_signer_name} at={selected.client_signed_at} fallback={t('contractsPage.signedViaPortal')} />
                   </p>
                 </div>
                 <div>
-                  <Label>{t('contractsPage.signManager')}</Label>
+                  <Label>{t('contractsPage.signedByManager')}</Label>
                   <p className="text-muted-foreground">
-                    {selected.manager_signed_at
-                      ? `${selected.manager_signer_name} · ${formatDateTime(selected.manager_signed_at)}`
-                      : '—'}
+                    <SignatureText name={selected.manager_signer_name} at={selected.manager_signed_at} />
                   </p>
                 </div>
               </div>
@@ -269,7 +285,7 @@ export function ContractsPage() {
                     <Receipt className="mr-2 h-4 w-4" />
                     {t('contractsPage.openInvoice')}
                   </Button>
-                ) : selected.status === 'SIGNED' && (
+                ) : selected.status === 'SIGNED' && canInvoice && (
                   <Button
                     variant="outline"
                     onClick={() => onCreateInvoice(selected)}
@@ -279,7 +295,7 @@ export function ContractsPage() {
                     {t('contractsPage.createInvoice')}
                   </Button>
                 )}
-                {selected.viewer_can_sign_manager && !selected.manager_signed_at && (selected.status === 'PENDING_MANAGER' || selected.status === 'PENDING_CLIENT' || selected.status === 'DRAFT') && (
+                {canSign && selected.viewer_can_sign_manager && !selected.manager_signed_at && (selected.status === 'PENDING_MANAGER' || selected.status === 'PENDING_CLIENT' || selected.status === 'DRAFT') && (
                   <Button
                     onClick={() => onSignManager(selected)}
                     disabled={signManager.isPending}
@@ -288,6 +304,7 @@ export function ContractsPage() {
                     {t('contractsPage.signManager')}
                   </Button>
                 )}
+                {canManageContract && (
                 <label
                   className={`flex items-center justify-center gap-2 rounded-md border border-dashed border-border px-3 py-2 text-sm cursor-pointer hover:bg-accent`}
                 >
@@ -303,8 +320,9 @@ export function ContractsPage() {
                     }}
                   />
                 </label>
+                )}
                 <DocumentCheck contractId={selected.id} />
-                {selected.status !== 'CANCELLED' && selected.status !== 'SIGNED' && (
+                {isSuperuser && selected.status !== 'CANCELLED' && selected.status !== 'SIGNED' && (
                   <Button
                     variant="destructive"
                     onClick={() => setCancelTarget(selected)}

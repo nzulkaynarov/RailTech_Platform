@@ -2574,7 +2574,12 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** @description POST /api/v1/auth/sso/exchange — обменять токен CRM на сессию ERP. */
+        /**
+         * @description POST /api/v1/auth/sso/exchange — обменять токен CRM на сессию ERP.
+         *
+         *     В теле — только access-токен (`access_token`, `expires_in`, `user`); refresh-токен уходит одной
+         *     HttpOnly-cookie, как при обычном входе (S-14, FIX-58): JS его не видит.
+         */
         post: operations["auth_sso_exchange_create"];
         delete?: never;
         options?: never;

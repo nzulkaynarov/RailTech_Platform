@@ -19,6 +19,18 @@
   --color-sidebar-ring: var(--sidebar-ring);
 }
 
+/* Тосты sonner (richColors) всегда светлые, а их штатные цвета текста — success #008a2e на #ecfdf3 — дают
+   4,25:1 (axe color-contrast, FIX-58 D-06). Текст — значения светлых токенов проекта (success, destructive,
+   warning, info): ≥ 4,5:1 на тех же светлых фонах. Литералы, а не var(): в тёмной теме токены светлеют,
+   а фон тоста остаётся светлым. */
+/* :root впереди — чтобы перебить стили самой библиотеки, которые она вставляет в <head> позже. */
+:root [data-sonner-toaster][data-sonner-theme] {
+  --success-text: #237804;
+  --error-text: #cf1322;
+  --warning-text: #874d00;
+  --info-text: #0958d9;
+}
+
 :root {
   --chart-1: #0958d9;
   --chart-2: #13c2c2;

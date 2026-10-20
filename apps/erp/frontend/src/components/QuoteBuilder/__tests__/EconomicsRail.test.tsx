@@ -91,7 +91,7 @@ describe('EconomicsRail — delivery-basis chip (S2)', () => {
       </QuoteBuilderGridProvider>,
     );
 
-    const chip = screen.getByRole('button', { name: 'Изменить базис поставки' });
+    const chip = screen.getByRole('button', { name: /Изменить базис поставки/ });
     expect(chip).toHaveTextContent('EXW');
 
     await userEvent.click(chip);
@@ -106,7 +106,7 @@ describe('EconomicsRail — delivery-basis chip (S2)', () => {
       </QuoteBuilderGridProvider>,
     );
 
-    expect(screen.getByRole('button', { name: 'Изменить базис поставки' })).toHaveTextContent(
+    expect(screen.getByRole('button', { name: /Изменить базис поставки/ })).toHaveTextContent(
       'Базис не выбран',
     );
   });
@@ -124,7 +124,7 @@ describe('EconomicsRail — delivery-basis chip (S2)', () => {
     );
 
     // Frozen: the basis is shown but not clickable, and the «Настройки КП» entry is hidden.
-    expect(screen.queryByRole('button', { name: 'Изменить базис поставки' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Изменить базис поставки/ })).not.toBeInTheDocument();
     expect(screen.getByText('EXW')).toBeInTheDocument();
   });
 });

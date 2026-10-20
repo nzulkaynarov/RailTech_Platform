@@ -228,12 +228,15 @@ export const NotificationCenter: React.FC<NotificationCenterProps> = ({ onNaviga
                 <Button
                     variant="outline"
                     size="icon"
-                    aria-label={t('notifications.title')}
+                    // Видимое число — часть доступного имени (WCAG 2.5.3); сам бейдж скрыт от скринридера.
+                    aria-label={unreadCount > 0
+                        ? t('notifications.bellLabel', { n: unreadCount > 99 ? '99+' : unreadCount })
+                        : t('notifications.title')}
                     className="relative"
                 >
                     <Bell className="size-4" aria-hidden="true" />
                     {unreadCount > 0 && (
-                        <Badge className="absolute -top-1 -right-1 size-4 p-0 text-xs font-bold">
+                        <Badge aria-hidden="true" className="absolute -top-1 -right-1 size-4 p-0 text-xs font-bold">
                             {unreadCount > 99 ? '99+' : unreadCount}
                         </Badge>
                     )}
