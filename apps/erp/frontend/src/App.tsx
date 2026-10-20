@@ -86,19 +86,20 @@ function App() {
   // the code-entry step. The login button has its own spinner (reads store.isLoading).
   const [initializing, setInitializing] = useState(true);
 
-  // Initialize auth on app startup — validates persisted token and prefetches exchange rate in parallel
+  // Initialize auth on app startup — validates the persisted token.
   useEffect(() => {
     initAuth().finally(() => setInitializing(false));
-    // Fire currency rate load in parallel — doesn't block UI
-    import('./store/currencyStore').then(({ useCurrencyStore }) => {
-      useCurrencyStore.getState().loadRate();
-    });
   }, [initAuth]);
 
   // Sync userStore from authStore when authenticated
   useEffect(() => {
     if (isAuthenticated) {
       loadFromAuth();
+      // Курс USD→UZS приходит из system-settings (нужна сессия): грузим после входа, а не при монтировании —
+      // до входа запрос даёт 401 и USD остался бы недоступным до перезагрузки (FIX-41). Не блокирует UI.
+      import('./store/currencyStore').then(({ useCurrencyStore }) => {
+        useCurrencyStore.getState().loadRate();
+      });
       // Don't rewrite the URL out from under a token-bearing public flow
       // (password setup/reset/sso): a stale persisted session (isAuthenticated:true
       // in localStorage) must not hijack it. Mirrors the guard in api/client.ts.

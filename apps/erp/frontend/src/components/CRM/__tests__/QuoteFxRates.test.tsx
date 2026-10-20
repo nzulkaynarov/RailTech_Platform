@@ -92,6 +92,16 @@ describe('QuoteFxRates — курс на дату КП (M1-ERP-08)', () => {
 		expect(screen.queryByRole('button', { name: 'Изменить курс' })).not.toBeInTheDocument();
 	});
 
+	it.each(['PENDING_APPROVAL', 'READY_TO_SEND', 'PENDING_TRADE_REVIEW'])(
+		'на статусе %s курс менять нельзя — подсказка про возврат в черновик',
+		(statusCode) => {
+			grant('finance.rates');
+			renderWithProviders(<QuoteFxRates quote={quote({ status_code: statusCode })} />);
+			expect(screen.queryByRole('button', { name: 'Изменить курс' })).not.toBeInTheDocument();
+			expect(screen.getByText(/Договорной курс меняется только в черновике/)).toBeInTheDocument();
+		},
+	);
+
 	it('финансист задаёт курс с причиной — без причины кнопка неактивна', async () => {
 		grant('finance.rates');
 		setQuoteFxOverride.mockResolvedValue(quote());

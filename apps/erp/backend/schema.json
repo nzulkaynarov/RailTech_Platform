@@ -24200,13 +24200,6 @@
                         "title": "Ставка НДС (%)",
                         "description": "Процент НДС, применяемый к котировкам"
                     },
-                    "exchange_rate_usd_uzs": {
-                        "type": "string",
-                        "format": "decimal",
-                        "pattern": "^-?\\d{0,10}(?:\\.\\d{0,2})?$",
-                        "title": "Курс USD/UZS",
-                        "description": "Справочный курс (может обновляться автоматически)"
-                    },
                     "platform_name": {
                         "type": "string",
                         "minLength": 1,
@@ -27378,9 +27371,9 @@
                     "exchange_rate_usd_uzs": {
                         "type": "string",
                         "format": "decimal",
-                        "pattern": "^-?\\d{0,10}(?:\\.\\d{0,2})?$",
-                        "title": "Курс USD/UZS",
-                        "description": "Справочный курс (может обновляться автоматически)"
+                        "nullable": true,
+                        "readOnly": true,
+                        "description": "Курс USD→UZS из справочника курсов (ЦБ РУз), только чтение; null — свежего курса нет."
                     },
                     "platform_name": {
                         "type": "string",
@@ -27432,6 +27425,7 @@
                     }
                 },
                 "required": [
+                    "exchange_rate_usd_uzs",
                     "updated_at"
                 ]
             },

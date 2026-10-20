@@ -12,8 +12,14 @@
 * По каждой валюте себестоимости `C` строк КП:
   - в КП: `Q_C` = Σ (цена поставщика + пошлина) × кол-во в валюте; себестоимость в сумах
     `QS_C` = Σ landed_cost × кол-во (ровно то, что посчитал движок КП по курсу снимка);
-  - по факту: сумма `A_C` (не задана — как в КП, `Q_C`) по курсу `r_C`: `AS_C` = округл(`A_C` × `r_C`);
+  - по факту: сумма `A_C` (не задана — как в КП, `Q_C`) по курсу `r_C`. **Одна точность с КП**
+    (FIX-41): движок КП округляет себестоимость до копейки на каждой строке, поэтому факт считается
+    по строкам так же — `AS_C` = Σ кол-во × округл((цена + пошлина) × `r_C`), а если сумма факта
+    не равна сумме КП — умноженное на `A_C / Q_C`. Сумма против суммы дала бы «отклонение» в
+    несколько копеек при закупке по тому же курсу на ту же сумму. Строк нет — округл(`A_C` × `r_C`);
     факта по валюте нет — `AS_C` = `QS_C`.
+* Итоги считаются по неокруглённым суммам по строкам и округляются один раз (как «Экономика» КП);
+  округлены только показываемые значения.
 * Валовая прибыль: в КП `P − ΣQS`, по факту `P − ΣAS`; маржа — прибыль / `P` × 100 (`P = 0` → 0).
 * Отклонение: сумма = прибыль по факту − прибыль в КП (= −Σ(AS − QS)); в п. п. = маржа по факту −
   маржа в КП; в % к прибыли КП = отклонение / прибыль КП × 100 (прибыль КП 0 → нет значения).
@@ -53,12 +59,25 @@ def _percent(value: Decimal) -> Decimal:
     return Decimal(value).quantize(PERCENT_QUANT, rounding=ROUND_HALF_UP)
 
 
-def actual_cost_in_base(quoted_amount, quoted_cost_base, actual_amount=None, actual_rate=None) -> Decimal:
-    """Фактическая себестоимость валюты в сумах: нет факта — как в КП; сумма не задана — как в КП."""
+def _actual_cost_exact(quoted_amount, quoted_cost_base, actual_amount=None, actual_rate=None, lines=None) -> Decimal:
+    """Фактическая себестоимость валюты в сумах без итогового округления (строки — как в движке КП)."""
     if actual_rate is None:
-        return _money(quoted_cost_base)
-    amount = quoted_amount if actual_amount is None else actual_amount
-    return convert_to_base(amount, actual_rate)
+        return Decimal(quoted_cost_base)
+    amount = quoted_amount if actual_amount is None else Decimal(actual_amount)
+    quoted_amount = Decimal(quoted_amount)
+    if not lines or quoted_amount <= 0:
+        return convert_to_base(amount, actual_rate)
+    at_actual_rate = sum((qty * convert_to_base(unit, actual_rate) for unit, qty in lines), Decimal("0"))
+    return at_actual_rate if amount == quoted_amount else at_actual_rate * (amount / quoted_amount)
+
+
+def actual_cost_in_base(quoted_amount, quoted_cost_base, actual_amount=None, actual_rate=None, lines=None) -> Decimal:
+    """Фактическая себестоимость валюты в сумах: нет факта — как в КП; сумма не задана — как в КП.
+
+    `lines` — [(цена + пошлина в валюте за единицу, количество)] строк КП: с ними факт считается по
+    строкам с тем же округлением, что у КП (без «фантомных» копеек), см. докстринг модуля.
+    """
+    return _money(_actual_cost_exact(quoted_amount, quoted_cost_base, actual_amount, actual_rate, lines))
 
 
 def margin_summary(revenue, quoted_cost, actual_cost) -> dict:
@@ -90,6 +109,7 @@ class _CurrencyLine:
     quoted_amount: Decimal = Decimal("0")
     quoted_cost: Decimal = Decimal("0")
     lines: int = 0
+    unit_lines: list = field(default_factory=list)  # [(цена + пошлина за единицу в валюте, количество)]
     actual: Optional[object] = field(default=None)
 
 
@@ -108,6 +128,7 @@ def _currency_lines(quote) -> dict:
         code = normalize_code(item.frozen_currency.code if item.frozen_currency_id else None)
         row = lines.setdefault(code, _CurrencyLine(code))
         row.quoted_amount += (item.frozen_base_price + item.customs_duty) * item.quantity
+        row.unit_lines.append((item.frozen_base_price + item.customs_duty, item.quantity))
         row.quoted_cost += item.landed_cost * item.quantity
         row.lines += 1
     return lines
@@ -128,7 +149,8 @@ def _row_payload(quote, line: _CurrencyLine) -> dict:
     actual = line.actual
     actual_rate = Decimal(actual.rate_to_uzs) if actual else None
     actual_amount = actual.amount if actual else None
-    actual_cost = actual_cost_in_base(line.quoted_amount, line.quoted_cost, actual_amount, actual_rate)
+    actual_exact = _line_actual_exact(line)
+    actual_cost = _money(actual_exact)
     quoted_rate, quoted_rate_date = _quoted_rate(quote, line.currency)
     suggested = resolve_rate(line.currency)
     entered_by = getattr(actual, "entered_by", None)
@@ -143,13 +165,24 @@ def _row_payload(quote, line: _CurrencyLine) -> dict:
         "actual_amount": _money(actual_amount) if actual_amount is not None else None,
         "actual_rate": rate_to_str(actual_rate) if actual_rate is not None else None,
         "actual_cost": actual_cost,
-        "cost_deviation": _money(actual_cost - line.quoted_cost),
+        "cost_deviation": _money(actual_exact - line.quoted_cost),
         "purchased_on": actual.purchased_on.isoformat() if actual else None,
         "note": actual.note if actual else "",
         "entered_by_name": (entered_by.get_full_name() or entered_by.email) if entered_by else "",
         "suggested_rate": rate_to_str(suggested.rate) if suggested else None,
         "suggested_rate_date": suggested.rate_date.isoformat() if suggested and suggested.rate_date else None,
     }
+
+
+def _line_actual_exact(line: _CurrencyLine) -> Decimal:
+    actual = line.actual
+    return _actual_cost_exact(
+        line.quoted_amount,
+        line.quoted_cost,
+        actual.amount if actual else None,
+        Decimal(actual.rate_to_uzs) if actual else None,
+        line.unit_lines,
+    )
 
 
 def compute_margin_deviation(deal) -> dict:
@@ -162,9 +195,11 @@ def compute_margin_deviation(deal) -> dict:
         code = normalize_code(actual.currency.code)
         if code in lines:
             lines[code].actual = actual
-    rows = [_row_payload(quote, lines[code]) for code in sorted(lines)]
-    quoted_cost = sum((row["quoted_cost"] for row in rows), Decimal("0"))
-    actual_cost = sum((row["actual_cost"] for row in rows), Decimal("0"))
+    ordered = [lines[code] for code in sorted(lines)]
+    rows = [_row_payload(quote, line) for line in ordered]
+    # Итоги — по неокруглённым суммам по строкам (как «Экономика» КП), а не по округлённым показываемым.
+    quoted_cost = sum((line.quoted_cost for line in ordered), Decimal("0"))
+    actual_cost = sum((_line_actual_exact(line) for line in ordered), Decimal("0"))
     summary = margin_summary(quote.subtotal_excl_vat or Decimal("0"), quoted_cost, actual_cost)
     return {
         "deal": deal.pk,

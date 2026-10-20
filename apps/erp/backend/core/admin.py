@@ -22,7 +22,7 @@ class SystemSettingAdmin(ReadOnlyInspectionMixin, ModelAdmin):
         (
             _("Финансы"),
             {
-                "fields": ("vat_rate", "standard_margin", "exchange_rate_usd_uzs"),
+                "fields": ("vat_rate", "standard_margin"),
             },
         ),
         (
