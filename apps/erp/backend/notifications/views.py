@@ -2,6 +2,7 @@ from drf_spectacular.utils import OpenApiResponse, extend_schema, extend_schema_
 from rest_framework import permissions, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
+from rest_framework.throttling import UserRateThrottle
 
 from core.audit import AuditedWriteMixin
 from core.permissions import HasRolePermission, RoleGatedViewMixin
@@ -14,6 +15,13 @@ from .serializers import (
     EmailTemplateTestSendSerializer,
     NotificationSerializer,
 )
+
+
+class EmailTemplateTestSendThrottle(UserRateThrottle):
+    """Лимит тестовых писем на сотрудника (FIX-42, F-10): адрес получателя любой, письмо уходит по настоящему
+    каналу — без лимита это ретранслятор спама с домена компании. Ставка — `email_test_send` в настройках."""
+
+    scope = "email_test_send"
 
 
 @extend_schema_view(
@@ -180,10 +188,18 @@ class EmailTemplateViewSet(RoleGatedViewMixin, AuditedWriteMixin, viewsets.Model
         description="Render the template and send it to the provided email via the real pipeline. "
         "Writes an EmailLog. Use to verify copy and transport before going live.",
         request=EmailTemplateTestSendSerializer,
-        responses={200: OpenApiResponse(description="Send result with EmailLog id and status")},
+        responses={
+            200: OpenApiResponse(description="Send result with EmailLog id and status"),
+            429: OpenApiResponse(description="Rate limit of test emails per user exceeded"),
+        },
         tags=["Admin"],
     )
-    @action(detail=True, methods=["post"], url_path="test-send")
+    @action(
+        detail=True,
+        methods=["post"],
+        url_path="test-send",
+        throttle_classes=[UserRateThrottle, EmailTemplateTestSendThrottle],
+    )
     def test_send(self, request, pk=None):
         template = self.get_object()
         serializer = EmailTemplateTestSendSerializer(data=request.data)

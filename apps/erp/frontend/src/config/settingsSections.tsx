@@ -74,6 +74,10 @@ export function hasSettingsEdit(input: SettingsGateInput): boolean {
 export function hasChargeManage(input: SettingsGateInput): boolean {
   return input.capabilities.permissions.includes('settings.charge_templates');
 }
+/** catalog.manage — ведёт каталог, в том числе дерево категорий (секция categories). */
+export function hasCatalogManage(input: SettingsGateInput): boolean {
+  return input.capabilities.permissions.includes('catalog.manage');
+}
 /** team.manage — управляет составом команды и ролями (действия внутри секции team). */
 export function hasTeamManage(input: SettingsGateInput): boolean {
   return input.capabilities.permissions.includes('team.manage');
@@ -111,10 +115,12 @@ const SECTION_RULES: SectionRule[] = [
     def: { key: 'master-data', labelKey: 'settings.tabs.masterData', group: 'company' },
     visible: (input) => hasSettingsEdit(input),
   },
-  // Категории каталога — управление деревом категорий (M1-ERP-09).
+  // Категории каталога — управление деревом категорий (M1-ERP-09). Право каталога — `catalog.manage`
+  // (accounts/constants.py; кода `catalog.edit` не существует — FIX-42, F-9); бэкенд пишет дерево по
+  // `settings.edit` ИЛИ `catalog.manage`, так что показ = правда сохранения.
   {
     def: { key: 'categories', labelKey: 'settings.tabs.categories', group: 'company' },
-    visible: (input) => hasSettingsEdit(input) || input.capabilities.permissions.includes('catalog.edit'),
+    visible: (input) => hasSettingsEdit(input) || hasCatalogManage(input),
   },
   // ── documents ── всё «как выглядят мои документы» в одном месте (владелец 27-07).
   // Бланк и бренд — PDF-letterhead/тема/бланк КП (был подразделом company).

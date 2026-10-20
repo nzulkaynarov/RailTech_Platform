@@ -264,3 +264,61 @@ def test_anonymous_gets_401(regular_user):
         401,
         403,
     )
+
+
+# --------------------------------------------------------------------------- #
+# FIX-42 (F-10): лимит частоты тестового письма                               #
+# --------------------------------------------------------------------------- #
+
+
+def test_test_send_is_rate_limited_per_user(platform_admin, monkeypatch):
+    from rest_framework.throttling import SimpleRateThrottle
+
+    monkeypatch.setitem(SimpleRateThrottle.THROTTLE_RATES, "email_test_send", "2/hour")
+    template = _make_template()
+    client = APIClient()
+    client.force_authenticate(platform_admin)
+    mail.outbox = []
+    url = reverse("admin-email-template-test-send", args=[template.pk])
+
+    codes = [client.post(url, {"to_email": "qa@example.com"}, format="json").status_code for _ in range(2)]
+    over = client.post(url, {"to_email": "qa@example.com"}, format="json")
+
+    assert codes == [200, 200]
+    assert over.status_code == 429
+    assert int(over["Retry-After"]) > 0
+    assert len(mail.outbox) == 2  # третье письмо не ушло
+
+
+def test_test_send_limit_is_not_shared_between_users(platform_admin, monkeypatch):
+    from rest_framework.throttling import SimpleRateThrottle
+
+    monkeypatch.setitem(SimpleRateThrottle.THROTTLE_RATES, "email_test_send", "1/hour")
+    other = CustomUser.objects.create_user(
+        email="ops2@example.com", username="ops2@example.com", password="x", is_superuser=True
+    )
+    template = _make_template()
+    url = reverse("admin-email-template-test-send", args=[template.pk])
+    first, second = APIClient(), APIClient()
+    first.force_authenticate(platform_admin)
+    second.force_authenticate(other)
+
+    assert first.post(url, {"to_email": "qa@example.com"}, format="json").status_code == 200
+    assert first.post(url, {"to_email": "qa@example.com"}, format="json").status_code == 429
+    assert second.post(url, {"to_email": "qa@example.com"}, format="json").status_code == 200
+
+
+def test_preview_is_not_throttled_by_the_test_send_limit(platform_admin, monkeypatch):
+    from rest_framework.throttling import SimpleRateThrottle
+
+    monkeypatch.setitem(SimpleRateThrottle.THROTTLE_RATES, "email_test_send", "1/hour")
+    template = _make_template()
+    client = APIClient()
+    client.force_authenticate(platform_admin)
+    url = reverse("admin-email-template-preview", args=[template.pk])
+
+    assert [client.post(url, {}, format="json").status_code for _ in range(3)] == [200, 200, 200]
+
+
+def test_default_test_send_rate_is_configured(settings):
+    assert settings.REST_FRAMEWORK["DEFAULT_THROTTLE_RATES"]["email_test_send"] == "10/hour"

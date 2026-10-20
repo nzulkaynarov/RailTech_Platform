@@ -4543,6 +4543,9 @@
                 "responses": {
                     "200": {
                         "description": "Send result with EmailLog id and status"
+                    },
+                    "429": {
+                        "description": "Rate limit of test emails per user exceeded"
                     }
                 }
             }
@@ -5234,7 +5237,7 @@
         "/api/v1/catalog/categories/{id}/": {
             "get": {
                 "operationId": "catalog_categories_retrieve",
-                "description": "CRUD for product categories.\n\nPublic read access; write operations require Admin role.\nFilterable by domain_type__code.",
+                "description": "CRUD for product categories.\n\nPublic read access; write operations require `settings.edit` or `catalog.manage` (FIX-42: раздел\n«Категории» в Settings Hub открывается по праву каталога, поэтому и запись разрешена его держателям).\nFilterable by domain_type__code. A category with subcategories cannot be deleted (400 CATEGORY_HAS_CHILDREN).",
                 "summary": "Get category",
                 "parameters": [
                     {
@@ -5271,7 +5274,7 @@
             },
             "put": {
                 "operationId": "catalog_categories_update",
-                "description": "CRUD for product categories.\n\nPublic read access; write operations require Admin role.\nFilterable by domain_type__code.",
+                "description": "CRUD for product categories.\n\nPublic read access; write operations require `settings.edit` or `catalog.manage` (FIX-42: раздел\n«Категории» в Settings Hub открывается по праву каталога, поэтому и запись разрешена его держателям).\nFilterable by domain_type__code. A category with subcategories cannot be deleted (400 CATEGORY_HAS_CHILDREN).",
                 "summary": "Update category",
                 "parameters": [
                     {
@@ -5327,7 +5330,7 @@
             },
             "patch": {
                 "operationId": "catalog_categories_partial_update",
-                "description": "CRUD for product categories.\n\nPublic read access; write operations require Admin role.\nFilterable by domain_type__code.",
+                "description": "CRUD for product categories.\n\nPublic read access; write operations require `settings.edit` or `catalog.manage` (FIX-42: раздел\n«Категории» в Settings Hub открывается по праву каталога, поэтому и запись разрешена его держателям).\nFilterable by domain_type__code. A category with subcategories cannot be deleted (400 CATEGORY_HAS_CHILDREN).",
                 "summary": "Partially update category",
                 "parameters": [
                     {
@@ -5382,7 +5385,7 @@
             },
             "delete": {
                 "operationId": "catalog_categories_destroy",
-                "description": "CRUD for product categories.\n\nPublic read access; write operations require Admin role.\nFilterable by domain_type__code.",
+                "description": "CRUD for product categories.\n\nPublic read access; write operations require `settings.edit` or `catalog.manage` (FIX-42: раздел\n«Категории» в Settings Hub открывается по праву каталога, поэтому и запись разрешена его держателям).\nFilterable by domain_type__code. A category with subcategories cannot be deleted (400 CATEGORY_HAS_CHILDREN).",
                 "summary": "Delete category",
                 "parameters": [
                     {
@@ -16327,6 +16330,9 @@
                 "responses": {
                     "200": {
                         "description": "Send result with EmailLog id and status"
+                    },
+                    "429": {
+                        "description": "Rate limit of test emails per user exceeded"
                     }
                 }
             }
@@ -17016,7 +17022,7 @@
             },
             "patch": {
                 "operationId": "system_settings_partial_update",
-                "description": "Partially update platform settings. Administrator (superuser) only.",
+                "description": "Partially update platform settings. Administrator (superuser) only. `platform_name`, `support_email`, `logo_url` and `domain` are shared by the whole ensemble and managed in CRM: a request that contains any of them is rejected with 400 `SHARED_SETTING_READ_ONLY`.",
                 "summary": "Update system settings",
                 "tags": [
                     "System"
@@ -17055,6 +17061,9 @@
                             }
                         },
                         "description": ""
+                    },
+                    "400": {
+                        "description": "SHARED_SETTING_READ_ONLY"
                     }
                 }
             }
@@ -24163,41 +24172,6 @@
                         "title": "Ставка НДС (%)",
                         "description": "Процент НДС, применяемый к котировкам"
                     },
-                    "platform_name": {
-                        "type": "string",
-                        "minLength": 1,
-                        "title": "Название платформы",
-                        "maxLength": 200
-                    },
-                    "support_email": {
-                        "type": "string",
-                        "format": "email",
-                        "minLength": 1,
-                        "title": "Email поддержки",
-                        "maxLength": 254
-                    },
-                    "logo_url": {
-                        "title": "URL логотипа",
-                        "description": "Ссылка на изображение логотипа платформы",
-                        "oneOf": [
-                            {
-                                "type": "string",
-                                "format": "uri",
-                                "maxLength": 200
-                            },
-                            {
-                                "type": "string",
-                                "maxLength": 0
-                            }
-                        ]
-                    },
-                    "domain": {
-                        "type": "string",
-                        "minLength": 1,
-                        "title": "Основной домен",
-                        "description": "Доменное имя платформы для ссылок и уведомлений",
-                        "maxLength": 255
-                    },
                     "maintenance_mode": {
                         "type": "boolean",
                         "title": "Режим обслуживания",
@@ -27340,35 +27314,32 @@
                     },
                     "platform_name": {
                         "type": "string",
-                        "title": "Название платформы",
-                        "maxLength": 200
+                        "readOnly": true,
+                        "title": "Название платформы"
                     },
                     "support_email": {
                         "type": "string",
                         "format": "email",
-                        "title": "Email поддержки",
-                        "maxLength": 254
+                        "readOnly": true,
+                        "title": "Email поддержки"
                     },
                     "logo_url": {
+                        "type": "string",
+                        "format": "uri",
+                        "readOnly": true,
                         "title": "URL логотипа",
-                        "description": "Ссылка на изображение логотипа платформы",
-                        "oneOf": [
-                            {
-                                "type": "string",
-                                "format": "uri",
-                                "maxLength": 200
-                            },
-                            {
-                                "type": "string",
-                                "maxLength": 0
-                            }
-                        ]
+                        "description": "Ссылка на изображение логотипа платформы"
                     },
                     "domain": {
                         "type": "string",
+                        "readOnly": true,
                         "title": "Основной домен",
-                        "description": "Доменное имя платформы для ссылок и уведомлений",
-                        "maxLength": 255
+                        "description": "Доменное имя платформы для ссылок и уведомлений"
+                    },
+                    "crm_frontend_url": {
+                        "type": "string",
+                        "readOnly": true,
+                        "description": "Адрес CRM: туда ведёт «Изменить в CRM» для общих полей, только чтение."
                     },
                     "maintenance_mode": {
                         "type": "boolean",
@@ -27388,7 +27359,12 @@
                     }
                 },
                 "required": [
+                    "crm_frontend_url",
+                    "domain",
                     "exchange_rate_usd_uzs",
+                    "logo_url",
+                    "platform_name",
+                    "support_email",
                     "updated_at"
                 ]
             },

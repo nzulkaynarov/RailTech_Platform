@@ -337,3 +337,11 @@ Q-1…Q-9 решены — см. `DECISIONS.md`.
 **Варианты.** (1) Поправить `SystemSettings` в рукописном yaml сейчас (`readOnly`, `nullable`). (2) Оставить как есть до FIX-40, который генерирует internal-контракт из схемы бэкенда и снимает расхождение само.
 
 **Рекомендация.** (2): FIX-40 всё равно заменяет рукописный файл; клиентов у этого yaml нет (фронтенд ERP использует `backend/schema.json`).
+
+## Q-FIX42-1 · `erp-internal.yaml` (вручную) и `schema.json` после FIX-42 (FIX-42)
+
+**Контекст.** `packages/contracts/openapi/erp-internal.yaml` (рукописный) описывает `SystemSettings.platform_name|support_email|logo_url|domain` записываемыми и не знает `crm_frontend_url`, `400 SHARED_SETTING_READ_ONLY` у `PATCH /system-settings`, `400 CATEGORY_HAS_CHILDREN` у `DELETE /catalog/categories/{id}` и `429` у `test-send`. Контракт в этом PR не правился (волна 4, `git diff origin/main -- packages` пуст). `backend/schema.json` и `frontend/src/api/schema.d.ts` обновлены точечно, ровно по этим местам (полный `make openapi` не запускался из-за накопленного дрейфа — FIX-40, Q-FIX41-1).
+
+**Варианты.** (1) Поправить рукописный yaml сейчас. (2) Оставить до FIX-40, который генерирует internal-контракт из схемы бэкенда.
+
+**Рекомендация.** (2), как в Q-FIX41-1: клиентов у рукописного yaml нет, FIX-40 заменит файл.

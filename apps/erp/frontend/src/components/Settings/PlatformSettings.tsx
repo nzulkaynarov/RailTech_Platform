@@ -20,28 +20,23 @@ export function PlatformSettings() {
   const updateMut = useUpdateSystemSettings();
 
   // Одна форма вместо трёх состояний: пересобирается при смене загруженных настроек в рендере,
-  // без промежуточного кадра с пустыми полями.
-  const [form, setForm] = useDraftState(data ?? null, (loaded) => ({
-    vatRate: loaded?.vat_rate ?? '',
-    platformName: loaded?.platform_name ?? '',
-    supportEmail: loaded?.support_email ?? '',
-    logoUrl: loaded?.logo_url ?? '',
-    domain: loaded?.domain ?? '',
-  }));
-  const { vatRate, platformName, supportEmail, logoUrl, domain } = form;
+  // без промежуточного кадра с пустыми полями. Редактируется только НДС: имя, почта поддержки, логотип и
+  // домен общие для ансамбля и ведутся в CRM (FIX-42) — они выводятся для просмотра и в запрос не попадают.
+  const [form, setForm] = useDraftState(data ?? null, (loaded) => ({ vatRate: loaded?.vat_rate ?? '' }));
+  const { vatRate } = form;
   const setVatRate = (value: string) => setForm((prev) => ({ ...prev, vatRate: value }));
+  const platformName = data?.platform_name ?? '';
+  const supportEmail = data?.support_email ?? '';
+  const logoUrl = data?.logo_url ?? '';
+  const domain = data?.domain ?? '';
+  // Ссылка ведёт на настройки CRM по адресу, который отдаёт бэкенд; без адреса кнопки нет (не ведём в админку ERP).
+  const crmSettingsUrl = data?.crm_frontend_url ? `${data.crm_frontend_url.replace(/\/+$/, '')}/settings` : null;
 
   const handleSave = async () => {
     try {
       // standard_margin removed (P9): it was inert — the pricing engine reads
       // CompanySettings.default_margin_percent, not this platform setting.
-      await updateMut.mutateAsync({
-        vat_rate: vatRate,
-        platform_name: platformName,
-        support_email: supportEmail,
-        logo_url: logoUrl,
-        domain,
-      });
+      await updateMut.mutateAsync({ vat_rate: vatRate });
       toast.success(t('settings.platform.saved'));
     } catch {
       toast.error(t('settings.platform.saveFailed'));
@@ -62,39 +57,41 @@ export function PlatformSettings() {
           <p className="text-sm text-muted-foreground">{t('common.loading')}</p>
         ) : (
           <>
-            <div className="flex items-center justify-between rounded-lg border border-border bg-muted/40 p-4">
+            <div className="flex flex-col gap-3 rounded-lg border border-border bg-muted/40 p-4 sm:flex-row sm:items-center sm:justify-between">
               <div className="space-y-0.5">
                 <p className="text-sm font-medium">{t('settings.platform.managedInCrm')}</p>
                 <p className="text-xs text-muted-foreground">{t('settings.platform.managedInCrmHint')}</p>
               </div>
-              <Button variant="outline" size="sm" asChild>
-                <a href="/admin/settings" target="_blank" rel="noopener noreferrer">
-                  <ExternalLink className="mr-1.5 h-3.5 w-3.5" />
-                  {t('settings.platform.goToCrm')}
-                </a>
-              </Button>
+              {crmSettingsUrl && (
+                <Button variant="outline" size="sm" asChild>
+                  <a href={crmSettingsUrl} target="_blank" rel="noopener noreferrer">
+                    <ExternalLink className="mr-1.5 h-3.5 w-3.5" />
+                    {t('settings.platform.goToCrm')}
+                  </a>
+                </Button>
+              )}
             </div>
 
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <div className="space-y-2">
                 <Label>{t('settings.platform.vatRate')}</Label>
                 <Input type="number" step="0.01" value={vatRate} onChange={(e) => setVatRate(e.target.value)} />
               </div>
               <div className="space-y-2">
                 <Label>{t('settings.platform.platformName')}</Label>
-                <Input value={platformName} disabled />
+                <Input value={platformName} readOnly disabled />
               </div>
               <div className="space-y-2">
                 <Label>{t('settings.platform.supportEmail')}</Label>
-                <Input type="email" value={supportEmail} disabled />
+                <Input type="email" value={supportEmail} readOnly disabled />
               </div>
               <div className="space-y-2">
                 <Label>{t('settings.platform.logoUrl')}</Label>
-                <Input value={logoUrl} disabled />
+                <Input value={logoUrl} readOnly disabled />
               </div>
               <div className="space-y-2">
                 <Label>{t('settings.platform.domain')}</Label>
-                <Input value={domain} disabled />
+                <Input value={domain} readOnly disabled />
               </div>
             </div>
 
