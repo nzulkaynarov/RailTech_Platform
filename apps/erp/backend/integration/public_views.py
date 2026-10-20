@@ -58,4 +58,8 @@ class PublicDocumentLinkView(APIView):
             )
 
         documents_link.record_download(link, ip=request.META.get("REMOTE_ADDR", "") or "")
-        return FileResponse(stream, content_type=document.content_type, as_attachment=True, filename=document.file_name)
+        response = FileResponse(
+            stream, content_type=document.content_type, as_attachment=True, filename=document.file_name
+        )
+        response["Cache-Control"] = "private, no-store"  # ссылка с секретом: прокси и браузер файл не хранят
+        return response

@@ -52,7 +52,7 @@ REST_FRAMEWORK = {
         "ai_extract": "20/minute",  # AI PDF contract/invoice extraction — each call is a paid Claude request
         "ai_compose": "20/minute",  # AI conversational заявка builder — each call is a paid Claude request
         "ai_draft": "20/minute",  # AI draft-КП build — paid Claude match + a new Quote row per call
-        "mcp": "120/minute",  # erp-mcp (FIX-12): на компанию из X-Agent-Context; один tools/call ≈ 3 HTTP-запроса
+        "mcp": "120/minute",  # erp-mcp (FIX-12/36): на компанию из X-Agent-Context (mcp/gate.py); tools/call ≈ 3 запроса
         # Портал (FIX-15, P-14): общий анонимный 20/мин по IP на него не распространяется (portal/throttles.py).
         "portal_session": os.environ.get("PORTAL_SESSION_RATE", "120/minute"),  # на сессию; экран Cabinet = пачка GET
         "portal_login": os.environ.get(
@@ -177,6 +177,9 @@ ERP_WEBHOOK_SECRET = os.environ.get("ERP_WEBHOOK_SECRET", "").strip()
 
 # erp-mcp: ключ HMAC-SHA256 заголовка X-Agent-Context (срок 60 с).
 ERP_MCP_CONTEXT_KEY = os.environ.get("ERP_MCP_CONTEXT_KEY", "").strip()
+# erp-mcp (FIX-36): путь к packages/contracts/mcp-tools.json; пусто — /packages/contracts/mcp-tools.json
+# (монтируется в compose и в контейнер тестов), затем поиск вверх от кода (запуск из клона репозитория).
+ERP_MCP_TOOLS_PATH = os.environ.get("ERP_MCP_TOOLS_PATH", "").strip()
 
 # SSO сотрудника CRM ↔ ERP (sso-token.md): общий секрет JWT HS256, ротация — через запятую.
 PLATFORM_SSO_SECRET = _secret_list("PLATFORM_SSO_SECRET")

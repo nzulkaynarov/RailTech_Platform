@@ -17095,38 +17095,6 @@
                     }
                 }
             }
-        },
-        "/mcp/erp/": {
-            "get": {
-                "operationId": "mcp_erp_retrieve",
-                "description": "GET /mcp/erp — проверка доступности эндпоинта и валидности контекста.",
-                "tags": [
-                    "mcp"
-                ],
-                "security": [
-                    {}
-                ],
-                "responses": {
-                    "200": {
-                        "description": "No response body"
-                    }
-                }
-            },
-            "post": {
-                "operationId": "mcp_erp_create",
-                "description": "POST /mcp/erp — обработка JSON-RPC 2.0 сообщений протокола MCP.",
-                "tags": [
-                    "mcp"
-                ],
-                "security": [
-                    {}
-                ],
-                "responses": {
-                    "200": {
-                        "description": "No response body"
-                    }
-                }
-            }
         }
     },
     "components": {

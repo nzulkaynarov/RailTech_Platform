@@ -128,6 +128,7 @@ def test_link_streams_the_file(crm, public, world):
     assert b"".join(response.streaming_content) == PDF
     assert response["Content-Type"] == "application/pdf"
     assert response["Content-Disposition"].startswith("attachment")
+    assert response["Cache-Control"] == "private, no-store"
 
 
 def test_size_is_absent_while_the_pdf_is_not_rendered_and_render_is_queued(crm, world, render_calls):

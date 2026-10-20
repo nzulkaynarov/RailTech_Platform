@@ -1,21 +1,19 @@
-"""Tests for ERP MCP Server (CRM Agent Integration, CONTRACTS §5, M3-ERP-03).
+"""Тесты erp-mcp на официальном SDK (CRM Agent Integration, CONTRACTS §5, M3-ERP-03, FIX-12, FIX-36).
 
-Тестирует эндпоинт /mcp/erp и все 7 инструментов:
-1. Валидация подписи HMAC-SHA256 заголовка X-Agent-Context
-2. Протокол JSON-RPC 2.0 (initialize, notifications/initialized, ping, tools/list)
-3. Защита режимов (prospect vs customer)
-4. Cross-tenant изоляция (чужой клиент — пустой результат)
-5. Все 7 инструментов:
-   - list_client_deals
-   - get_deal_status
-   - get_delivery_status
-   - list_client_documents
-   - get_document_link
-   - search_catalog (prospect без цен/наличия, customer с ценами)
-   - create_request (создание заявки Deal + PortalRequestLine, вебхук request.created)
+Сервер — приложение `mcp` SDK + вратарь контекста (`integration/mcp`), запускается в процессе теста без сети;
+вызовы идут клиентом SDK (`mcp.Client` + `streamable_http_client`, как в CRM) и сырым JSON-RPC там, где проверяется
+HTTP-контракт (401/400/429, ошибка протокола). Схемы инструментов сверяются с `packages/contracts/mcp-tools.json`.
+
+1. Контракт: инструменты сервера = mcp-tools.json, дубля схем в коде нет
+2. Подпись и claims X-Agent-Context, одноразовость jti, prospect без компании
+3. Протокол: initialize, list_tools, неизвестный метод — ошибка протокола
+4. Инструменты (7), режимы, cross-tenant изоляция
+5. Ошибки: общий код, без текста исключения
+6. Аргументы по input_schema (400), лимит частоты (429)
 """
 
 import json
+import re
 import time
 import uuid
 from decimal import Decimal
@@ -23,22 +21,33 @@ from pathlib import Path
 from urllib.parse import urlsplit
 
 import pytest
+from django.core.cache import cache
 from django.core.files.base import ContentFile
 from django.utils import timezone
 from documents.models import DocumentTemplate, DocumentTemplateKind, GeneratedDocumentStatus
-from integration.mcp.context import (
-    AgentContextError,
-    _b64encode,
-    _sign,
-    issue_agent_context,
-    mark_used,
-    verify_agent_context,
-)
+from integration.mcp import contract as mcp_contract
+from integration.mcp import tools as mcp_tools
+from integration.mcp.context import AgentContextError, issue_agent_context, mark_used, verify_agent_context
 from integration.models import CrmClientMapping, IntegrationWebhookEvent
+from integration.tests.mcp_support import (
+    MCP_SECRET,
+    RAW_HEADERS,
+    forge_context,
+    make_context_token,
+    payload,
+    raw_get,
+    raw_modern_rpc,
+    raw_post_bytes,
+    raw_rpc,
+    sdk_call,
+    sdk_handshake,
+    sdk_list_tools,
+    tcp_server,
+)
 from parties.models import Company, CompanyType, Contact
 from portal.models import PortalRequestLine
-from rest_framework import status
 from rest_framework.test import APIClient
+from rest_framework.throttling import SimpleRateThrottle
 from sales.models import Fulfillment, FulfillmentStatus, Quote, QuoteItem, QuoteStatus
 
 from catalog.models import Category, Product, ProductStatus
@@ -49,7 +58,8 @@ from master_data.models import Currency, UnitOfMeasure
 
 pytestmark = pytest.mark.django_db
 
-MCP_SECRET = "test-erp-mcp-secret-key"
+INVALID_CONTEXT = {"detail": "INVALID_AGENT_CONTEXT"}
+MCP_DIR = Path(mcp_tools.__file__).parent
 
 
 @pytest.fixture(autouse=True)
@@ -60,9 +70,20 @@ def setup_mcp_settings(settings):
     settings.ERP_WEBHOOK_SECRET = "test-webhook-secret"
 
 
-@pytest.fixture
-def client():
-    return APIClient()
+@pytest.fixture(autouse=True)
+def clean_throttle_and_jti_cache():
+    """Лимиты и «виденные» jti живут в Redis между тестами; каждый тест начинает с чистого листа."""
+    cache.clear()
+    yield
+    cache.clear()
+
+
+def customer(test_data, who: str = "comp_a", **kwargs) -> str:
+    return make_context_token(erp_company_id=test_data[who].id, **kwargs)
+
+
+def prospect(crm_client_id: int = 15) -> str:
+    return make_context_token(crm_client_id=crm_client_id, erp_company_id=None, mode="prospect")
 
 
 @pytest.fixture
@@ -188,30 +209,91 @@ def test_data():
     }
 
 
-def make_context_token(
-    crm_client_id: int = 10,
-    erp_company_id: int | None = 1,
-    mode: str = "customer",
-    language: str = "ru",
-    ttl_s: int = 60,
-    secret: str = MCP_SECRET,
-    now: float | None = None,
-    jti: str | None = None,
-) -> str:
-    return issue_agent_context(
-        key=secret,
-        crm_client_id=crm_client_id,
-        erp_company_id=erp_company_id,
-        mode=mode,
-        language=language,
-        ttl_s=ttl_s,
-        now=now,
-        jti=jti,
-    )
+def _quote(deal, version: int, status_code: str) -> Quote:
+    status_row, _ = QuoteStatus.objects.get_or_create(code=status_code, defaults={"name": status_code})
+    return Quote.objects.create(deal=deal, version=version, status=status_row)
+
+
+def _contract() -> dict:
+    return json.loads(mcp_contract.contract_path().read_text(encoding="utf-8"))
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# 1. Валидация подписи X-Agent-Context
+# 1. Контракт: инструменты сервера = packages/contracts/mcp-tools.json
+# ─────────────────────────────────────────────────────────────────────────────
+
+EXPECTED_TOOLS = [
+    "list_client_deals",
+    "get_deal_status",
+    "get_delivery_status",
+    "list_client_documents",
+    "get_document_link",
+    "search_catalog",
+    "create_request",
+]
+
+
+def test_server_tools_are_exactly_the_contract_tools(test_data):
+    """Имя, описание и схема аргументов каждого инструмента сервера — из mcp-tools.json, в том же порядке."""
+    contract_tools = _contract()["tools"]
+    listed = sdk_list_tools(customer(test_data)).tools
+
+    assert [t.name for t in listed] == [t["name"] for t in contract_tools] == EXPECTED_TOOLS
+    for served, declared in zip(listed, contract_tools):
+        assert served.description == declared["description"]
+        assert served.input_schema == declared["input_schema"]
+
+
+def test_every_contract_tool_has_a_handler_and_nothing_extra():
+    assert set(mcp_tools.HANDLERS) == {t["name"] for t in _contract()["tools"]}
+    mcp_tools.assert_handlers_match_contract([t["name"] for t in _contract()["tools"]])
+    with pytest.raises(RuntimeError, match="расходятся"):
+        mcp_tools.assert_handlers_match_contract([*EXPECTED_TOOLS, "ghost_tool"])
+    with pytest.raises(RuntimeError, match="расходятся"):
+        mcp_tools.assert_handlers_match_contract(EXPECTED_TOOLS[:-1])
+
+
+def test_tools_declare_no_client_identifiers(test_data):
+    for tool in sdk_list_tools(customer(test_data)).tools:
+        props = tool.input_schema.get("properties", {})
+        assert not set(props) & {"crm_client_id", "erp_company_id", "client_id", "company_id"}
+
+
+def test_code_has_no_copy_of_the_tool_schemas():
+    """Схемы живут только в контракте: в модулях erp-mcp нет ни описаний полей, ни реестра метаданных."""
+    for path in MCP_DIR.glob("*.py"):
+        source = path.read_text(encoding="utf-8")
+        assert "additionalProperties" not in source.replace("additionalProperties: false", ""), path.name
+        assert "TOOLS_METADATA" not in source, path.name
+        assert not re.search(r"""["']inputSchema["']""", source), path.name
+
+
+def test_contract_missing_is_an_error_not_an_empty_server(settings, tmp_path):
+    settings.ERP_MCP_TOOLS_PATH = str(tmp_path / "nope.json")
+    mcp_contract.load_contract.cache_clear()
+    try:
+        with pytest.raises(mcp_contract.ContractError, match="файла нет"):
+            mcp_contract.load_contract()
+    finally:
+        settings.ERP_MCP_TOOLS_PATH = ""
+        mcp_contract.load_contract.cache_clear()
+
+
+def test_broken_contract_is_rejected(settings, tmp_path):
+    broken = tmp_path / "mcp-tools.json"
+    broken.write_text(json.dumps({"version": "1", "path": "/mcp/erp", "tools": []}), encoding="utf-8")
+    settings.ERP_MCP_TOOLS_PATH = str(broken)
+    mcp_contract.load_contract.cache_clear()
+    try:
+        with pytest.raises(mcp_contract.ContractError, match="ни одного инструмента"):
+            mcp_contract.load_contract()
+    finally:
+        settings.ERP_MCP_TOOLS_PATH = ""
+        mcp_contract.load_contract.cache_clear()
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 2. Подпись и claims X-Agent-Context
 # ─────────────────────────────────────────────────────────────────────────────
 
 
@@ -230,6 +312,21 @@ def test_context_prospect_mode():
     assert ctx.crm_client_id == 10
     assert ctx.erp_company_id is None
     assert ctx.mode == "prospect"
+
+
+def test_prospect_with_company_is_rejected():
+    """Лид ещё не клиент: контекст prospect с компанией — подделка или ошибка выпускающей стороны."""
+    with pytest.raises(AgentContextError, match="prospect"):
+        verify_agent_context(forge_context(mode="prospect", erp_company_id=7), MCP_SECRET)
+    with pytest.raises(ValueError, match="prospect"):
+        issue_agent_context(MCP_SECRET, crm_client_id=1, mode="prospect", erp_company_id=7)
+
+
+def test_prospect_with_company_gets_401_over_http(test_data):
+    token = forge_context(mode="prospect", erp_company_id=test_data["comp_a"].id)
+    resp = raw_rpc(token, "tools/list")
+    assert resp.status_code == 401
+    assert resp.json() == INVALID_CONTEXT
 
 
 def test_context_invalid_signature():
@@ -252,517 +349,49 @@ def test_context_expired():
         verify_agent_context(token, MCP_SECRET)
 
 
-# ─────────────────────────────────────────────────────────────────────────────
-# 2. HTTP Аутентификация на /mcp/erp
-# ─────────────────────────────────────────────────────────────────────────────
+def test_missing_context_is_401_on_post_and_get():
+    for response in (raw_get(None), raw_rpc(None, "ping")):
+        assert response.status_code == 401
+        assert response.json() == INVALID_CONTEXT
 
 
-def test_http_endpoint_rejects_missing_context(client):
-    resp = client.get("/mcp/erp")
-    assert resp.status_code == status.HTTP_401_UNAUTHORIZED
-    assert resp.data == {"detail": "INVALID_AGENT_CONTEXT"}
+def test_invalid_signature_is_401():
+    assert raw_rpc(make_context_token(secret="wrong-key"), "tools/list").status_code == 401
+    assert raw_rpc("garbage", "tools/list").status_code == 401
 
-    resp = client.post("/mcp/erp", data={"jsonrpc": "2.0", "id": 1, "method": "ping"}, format="json")
-    assert resp.status_code == status.HTTP_401_UNAUTHORIZED
-    assert resp.data == {"detail": "INVALID_AGENT_CONTEXT"}
 
+def test_empty_server_key_closes_the_server(settings, test_data):
+    """Ключ не задан — сервер закрыт, а не принимает подпись пустым ключом (FIX-03)."""
+    settings.ERP_MCP_CONTEXT_KEY = ""
+    forged = issue_agent_context("", crm_client_id=1, mode="prospect")
+    resp = raw_rpc(forged, "tools/list")
+    assert resp.status_code == 401
+    assert resp.json() == INVALID_CONTEXT
 
-def test_http_endpoint_rejects_invalid_signature(client):
-    token = make_context_token(secret="wrong-key")
-    resp = client.get("/mcp/erp", HTTP_X_AGENT_CONTEXT=token)
-    assert resp.status_code == status.HTTP_401_UNAUTHORIZED
 
-
-def test_http_endpoint_accepts_valid_context(client, test_data):
-    token = make_context_token(erp_company_id=test_data["comp_a"].id)
-    resp = client.get("/mcp/erp", HTTP_X_AGENT_CONTEXT=token)
-    assert resp.status_code == status.HTTP_200_OK
-    assert resp.data["server"] == "erp-mcp"
-    assert resp.data["status"] == "ok"
-
-
-# ─────────────────────────────────────────────────────────────────────────────
-# 3. Протокол JSON-RPC: initialize, notifications, ping, tools/list
-# ─────────────────────────────────────────────────────────────────────────────
-
-
-def test_jsonrpc_initialize(client, test_data):
-    token = make_context_token(erp_company_id=test_data["comp_a"].id)
-    payload = {
-        "jsonrpc": "2.0",
-        "id": 1,
-        "method": "initialize",
-        "params": {
-            "protocolVersion": "2024-11-05",
-            "capabilities": {},
-            "clientInfo": {"name": "crm-agent", "version": "1.0"},
-        },
-    }
-    resp = client.post("/mcp/erp", data=payload, format="json", HTTP_X_AGENT_CONTEXT=token)
-    assert resp.status_code == status.HTTP_200_OK
-    assert resp.data["id"] == 1
-    assert resp.data["result"]["protocolVersion"] == "2024-11-05"
-    assert resp.data["result"]["serverInfo"]["name"] == "erp-mcp"
-
-
-def test_jsonrpc_notifications_and_ping(client, test_data):
-    token = make_context_token(erp_company_id=test_data["comp_a"].id)
-
-    # notification (no id)
-    resp = client.post(
-        "/mcp/erp",
-        data={"jsonrpc": "2.0", "method": "notifications/initialized"},
-        format="json",
-        HTTP_X_AGENT_CONTEXT=token,
-    )
-    assert resp.status_code == status.HTTP_200_OK
-
-    # ping
-    resp = client.post(
-        "/mcp/erp",
-        data={"jsonrpc": "2.0", "id": 2, "method": "ping"},
-        format="json",
-        HTTP_X_AGENT_CONTEXT=token,
-    )
-    assert resp.status_code == status.HTTP_200_OK
-    assert resp.data["result"] == {}
-
-
-def test_jsonrpc_tools_list_matches_contract(client, test_data):
-    token = make_context_token(erp_company_id=test_data["comp_a"].id)
-    resp = client.post(
-        "/mcp/erp",
-        data={"jsonrpc": "2.0", "id": 3, "method": "tools/list", "params": {}},
-        format="json",
-        HTTP_X_AGENT_CONTEXT=token,
-    )
-    assert resp.status_code == status.HTTP_200_OK
-    tools = resp.data["result"]["tools"]
-    tool_names = [t["name"] for t in tools]
-
-    expected = [
-        "list_client_deals",
-        "get_deal_status",
-        "get_delivery_status",
-        "list_client_documents",
-        "get_document_link",
-        "search_catalog",
-        "create_request",
-    ]
-    assert tool_names == expected
-
-    # Проверка схемы: ни один инструмент не должен содержать client_id / company_id в inputSchema
-    for t in tools:
-        props = t["inputSchema"].get("properties", {})
-        for prop in props:
-            assert prop not in ("crm_client_id", "erp_company_id", "client_id", "company_id")
-
-
-def test_jsonrpc_unknown_method(client, test_data):
-    token = make_context_token(erp_company_id=test_data["comp_a"].id)
-    resp = client.post(
-        "/mcp/erp",
-        data={"jsonrpc": "2.0", "id": 99, "method": "unknown_function"},
-        format="json",
-        HTTP_X_AGENT_CONTEXT=token,
-    )
-    assert resp.status_code == status.HTTP_200_OK
-    assert resp.data["error"]["code"] == -32601
-
-
-# ─────────────────────────────────────────────────────────────────────────────
-# 4. Инструменты: list_client_deals & get_deal_status (Cross-tenant изоляция)
-# ─────────────────────────────────────────────────────────────────────────────
-
-
-def test_list_client_deals_cross_tenant_isolation(client, test_data):
-    # Агент компании А запрашивает сделки
-    ctx_a = dict(erp_company_id=test_data["comp_a"].id, mode="customer")
-    resp_a = client.post(
-        "/mcp/erp",
-        data={"jsonrpc": "2.0", "id": 1, "method": "tools/call", "params": {"name": "list_client_deals"}},
-        format="json",
-        HTTP_X_AGENT_CONTEXT=make_context_token(**ctx_a),
-    )
-    assert resp_a.status_code == status.HTTP_200_OK
-    res_a = resp_a.data["result"]
-    assert not res_a["isError"]
-    deals_a = res_a["structuredContent"]["result"]
-    assert len(deals_a) == 1
-    assert deals_a[0]["erp_deal_id"] == test_data["deal_a"].id
-    assert deals_a[0]["number"] == f"D-{test_data['deal_a'].id}"
-
-    # В режиме prospect инструмент недоступен
-    ctx_prospect = dict(erp_company_id=None, mode="prospect")
-    resp_p = client.post(
-        "/mcp/erp",
-        data={"jsonrpc": "2.0", "id": 2, "method": "tools/call", "params": {"name": "list_client_deals"}},
-        format="json",
-        HTTP_X_AGENT_CONTEXT=make_context_token(**ctx_prospect),
-    )
-    assert resp_p.status_code == status.HTTP_200_OK
-    assert resp_p.data["result"]["isError"] is True
-
-
-def test_get_deal_status_cross_tenant_isolation(client, test_data):
-    ctx_a = dict(erp_company_id=test_data["comp_a"].id, mode="customer")
-
-    # Своя сделка -> данные есть
-    resp = client.post(
-        "/mcp/erp",
-        data={
-            "jsonrpc": "2.0",
-            "id": 1,
-            "method": "tools/call",
-            "params": {"name": "get_deal_status", "arguments": {"erp_deal_id": test_data["deal_a"].id}},
-        },
-        format="json",
-        HTTP_X_AGENT_CONTEXT=make_context_token(**ctx_a),
-    )
-    assert resp.status_code == status.HTTP_200_OK
-    res = resp.data["result"]
-    assert not res["isError"]
-    deal_data = res["structuredContent"]["result"]
-    assert deal_data["erp_deal_id"] == test_data["deal_a"].id
-    assert deal_data["title"] == "Сделка Альфа 1"
-
-    # Чужая сделка компании Б -> пустой результат (None)
-    resp_foreign = client.post(
-        "/mcp/erp",
-        data={
-            "jsonrpc": "2.0",
-            "id": 2,
-            "method": "tools/call",
-            "params": {"name": "get_deal_status", "arguments": {"erp_deal_id": test_data["deal_b"].id}},
-        },
-        format="json",
-        HTTP_X_AGENT_CONTEXT=make_context_token(**ctx_a),
-    )
-    assert resp_foreign.status_code == status.HTTP_200_OK
-    assert resp_foreign.data["result"]["structuredContent"]["result"] is None
-
-
-# ─────────────────────────────────────────────────────────────────────────────
-# 5. Инструмент: get_delivery_status
-# ─────────────────────────────────────────────────────────────────────────────
-
-
-@pytest.fixture
-def order_a(test_data):
-    """Заказ клиента А: одно подтверждённое КП с одной позицией — из него строятся строки поставки (FIX-22)."""
-    order = Quote.objects.create(
-        deal=test_data["deal_a"],
-        version=90,
-        status=QuoteStatus.objects.get(code=QuoteStatusCode.APPROVED),
-        total_incl_vat=Decimal("100"),
-    )
-    QuoteItem.objects.create(
-        quote=order,
-        display_type="ITEM",
-        imported_raw_name="Рельс Р65",
-        quantity=3,
-        unit="т",
-        frozen_base_price=Decimal("100"),
-        position=1,
-    )
-    return order
-
-
-def test_get_delivery_status(client, test_data, order_a):
-    ctx_a = dict(erp_company_id=test_data["comp_a"].id, mode="customer")
-
-    # Своя сделка с поставкой
-    resp = client.post(
-        "/mcp/erp",
-        data={
-            "jsonrpc": "2.0",
-            "id": 1,
-            "method": "tools/call",
-            "params": {"name": "get_delivery_status", "arguments": {"erp_deal_id": test_data["deal_a"].id}},
-        },
-        format="json",
-        HTTP_X_AGENT_CONTEXT=make_context_token(**ctx_a),
-    )
-    assert resp.status_code == status.HTTP_200_OK
-    lines = resp.data["result"]["structuredContent"]["result"]
-    assert len(lines) == 1
-    assert lines[0]["title"] == "Рельс Р65"  # строка заказа клиента, а не название сделки
-    assert lines[0]["tracking"] == "TRK-12345"
-    assert lines[0]["status"] == "in_transit"
-    assert lines[0]["eta"] == test_data["fulf_a"].expected_delivery_date.isoformat()
-
-    # Чужая сделка -> пустой массив []
-    resp_foreign = client.post(
-        "/mcp/erp",
-        data={
-            "jsonrpc": "2.0",
-            "id": 2,
-            "method": "tools/call",
-            "params": {"name": "get_delivery_status", "arguments": {"erp_deal_id": test_data["deal_b"].id}},
-        },
-        format="json",
-        HTTP_X_AGENT_CONTEXT=make_context_token(**ctx_a),
-    )
-    assert resp_foreign.status_code == status.HTTP_200_OK
-    assert resp_foreign.data["result"]["structuredContent"]["result"] == []
-
-
-# ─────────────────────────────────────────────────────────────────────────────
-# 6. Инструменты: list_client_documents & get_document_link
-# ─────────────────────────────────────────────────────────────────────────────
-
-
-def test_list_client_documents_and_link(client, test_data):
-    ctx_a = dict(erp_company_id=test_data["comp_a"].id, mode="customer")
-
-    # Список документов компании А
-    resp = client.post(
-        "/mcp/erp",
-        data={
-            "jsonrpc": "2.0",
-            "id": 1,
-            "method": "tools/call",
-            "params": {"name": "list_client_documents", "arguments": {"kind": "contract"}},
-        },
-        format="json",
-        HTTP_X_AGENT_CONTEXT=make_context_token(**ctx_a),
-    )
-    assert resp.status_code == status.HTTP_200_OK
-    docs = resp.data["result"]["structuredContent"]["result"]
-    assert len(docs) == 1
-    assert docs[0]["erp_document_id"] == test_data["doc_a"].id
-    assert docs[0]["number"] == "CTR-ALFA-01"
-
-    def call_link(erp_document_id):
-        return client.post(
-            "/mcp/erp",
-            data={
-                "jsonrpc": "2.0",
-                "id": 2,
-                "method": "tools/call",
-                "params": {"name": "get_document_link", "arguments": {"erp_document_id": erp_document_id}},
-            },
-            format="json",
-            HTTP_X_AGENT_CONTEXT=make_context_token(**ctx_a),
-        )
-
-    # Документ ещё не выпущен как клиентский (статус не ISSUED, вид не из справочника): ссылки нет — как и в integration API
-    resp_hidden = call_link(test_data["doc_a"].id)
-    assert resp_hidden.status_code == status.HTTP_200_OK
-    assert resp_hidden.data["result"]["structuredContent"]["result"] is None
-
-    # Выпущенный договор: настоящая подписанная ссылка на публичный маршрут ERP (FIX-32), а не заглушка
-    doc_a = test_data["doc_a"]
-    doc_a.template.kind = DocumentTemplateKind.objects.get(code="CONTRACT")
-    doc_a.template.save(update_fields=["kind"])
-    doc_a.status = GeneratedDocumentStatus.objects.get(code="ISSUED")
-    doc_a.save(update_fields=["status"])
-    doc_a.pdf_file.save("ctr-alfa.pdf", ContentFile(b"%PDF-1.4 mcp"), save=True)
-
-    resp_link = call_link(doc_a.id)
-    assert resp_link.status_code == status.HTTP_200_OK
-    link_data = resp_link.data["result"]["structuredContent"]["result"]
-    assert link_data is not None
-    assert "token=link_" not in link_data["url"]
-    assert "/api/v1/public/doc-links/" in link_data["url"]
-    assert link_data["file_name"].endswith(".pdf")
-    assert link_data["size_bytes"] == len(b"%PDF-1.4 mcp")
-    opened = APIClient().get(urlsplit(link_data["url"]).path)
-    assert opened.status_code == status.HTTP_200_OK and b"".join(opened.streaming_content) == b"%PDF-1.4 mcp"
-    issued = ActivityLog.objects.get(event_code="document.link_issued")
-    assert issued.company_id == test_data["comp_a"].id and issued.event_params["crm_context_raw"].startswith("erp-mcp:")
-
-    # Чужой документ компании Б -> пустой результат (None)
-    resp_foreign = client.post(
-        "/mcp/erp",
-        data={
-            "jsonrpc": "2.0",
-            "id": 3,
-            "method": "tools/call",
-            "params": {"name": "get_document_link", "arguments": {"erp_document_id": test_data["doc_b"].id}},
-        },
-        format="json",
-        HTTP_X_AGENT_CONTEXT=make_context_token(**ctx_a),
-    )
-    assert resp_foreign.status_code == status.HTTP_200_OK
-    assert resp_foreign.data["result"]["structuredContent"]["result"] is None
-
-
-# ─────────────────────────────────────────────────────────────────────────────
-# 7. Инструмент: search_catalog (prospect vs customer)
-# ─────────────────────────────────────────────────────────────────────────────
-
-
-def test_search_catalog_prospect_vs_customer(client, test_data):
-    # 1. Режим prospect: название, единица, описание, НО БЕЗ ЦЕН И НАЛИЧИЯ (DECISIONS 2026-10-13)
-    ctx_prospect = dict(crm_client_id=15, erp_company_id=None, mode="prospect")
-    resp_p = client.post(
-        "/mcp/erp",
-        data={
-            "jsonrpc": "2.0",
-            "id": 1,
-            "method": "tools/call",
-            "params": {"name": "search_catalog", "arguments": {"query": "Рельс", "top_k": 3}},
-        },
-        format="json",
-        HTTP_X_AGENT_CONTEXT=make_context_token(**ctx_prospect),
-    )
-    assert resp_p.status_code == status.HTTP_200_OK
-    items_p = resp_p.data["result"]["structuredContent"]["result"]
-    assert len(items_p) == 1
-    p_item = items_p[0]
-    assert p_item["id"] == test_data["prod"].id
-    assert p_item["name"] == "Рельс Р-65 ГОСТ 51685-2000"
-    # Строго: нет полей price, availability, lead_time_days!
-    assert "price" not in p_item
-    assert "availability" not in p_item
-    assert "lead_time_days" not in p_item
-
-    # 2. Режим customer: видит цену и наличие
-    ctx_cust = dict(erp_company_id=test_data["comp_a"].id, mode="customer")
-    resp_c = client.post(
-        "/mcp/erp",
-        data={
-            "jsonrpc": "2.0",
-            "id": 2,
-            "method": "tools/call",
-            "params": {"name": "search_catalog", "arguments": {"query": "Рельс"}},
-        },
-        format="json",
-        HTTP_X_AGENT_CONTEXT=make_context_token(**ctx_cust),
-    )
-    assert resp_c.status_code == status.HTTP_200_OK
-    items_c = resp_c.data["result"]["structuredContent"]["result"]
-    assert len(items_c) == 1
-    c_item = items_c[0]
-    assert c_item["id"] == test_data["prod"].id
-    assert "price" in c_item
-    assert c_item["price"]["amount"] == "12500000.00"
-
-
-# ─────────────────────────────────────────────────────────────────────────────
-# 8. Инструмент: create_request (создание заявки + вебхук)
-# ─────────────────────────────────────────────────────────────────────────────
-
-
-def test_create_request_creates_deal_and_emits_webhook(client, test_data):
-    ctx_a = dict(erp_company_id=test_data["comp_a"].id, mode="customer")
-    req_payload = {
-        "summary": "Срочная потребность в партии рельсов",
-        "lines": [
-            {"text": "Рельс Р-65 ГОСТ 51685", "quantity": "50", "unit": "т"},
-            {"text": "Накладка 1Р65", "quantity": "100", "unit": "шт"},
-        ],
-    }
-
-    resp = client.post(
-        "/mcp/erp",
-        data={
-            "jsonrpc": "2.0",
-            "id": 10,
-            "method": "tools/call",
-            "params": {"name": "create_request", "arguments": req_payload},
-        },
-        format="json",
-        HTTP_X_AGENT_CONTEXT=make_context_token(**ctx_a),
-    )
-    assert resp.status_code == status.HTTP_200_OK
-    res = resp.data["result"]
-    assert not res["isError"]
-    data = res["structuredContent"]["result"]
-    assert "erp_request_id" in data
-    deal_id = data["erp_request_id"]
-    assert data["number"] == f"D-{deal_id}"
-    assert data["status"] == "request"
-
-    # Проверка в БД
-    deal = Deal.objects.get(pk=deal_id)
-    assert deal.company == test_data["comp_a"]
-    assert deal.contact == test_data["contact_a"]
-    assert deal.notes == "Срочная потребность в партии рельсов"
-
-    req_lines = PortalRequestLine.objects.filter(deal=deal).order_by("sort_order")
-    assert req_lines.count() == 2
-    assert req_lines[0].text == "Рельс Р-65 ГОСТ 51685"
-    assert req_lines[0].quantity == Decimal("50")
-    assert req_lines[0].unit == "т"
-    assert req_lines[1].text == "Накладка 1Р65"
-
-    # Проверка создания вебхука request.created
-    webhook = IntegrationWebhookEvent.objects.filter(event_type="request.created").order_by("-created_at").first()
-    assert webhook is not None
-    assert webhook.payload["event"] == "request.created"
-    assert webhook.payload["payload"]["source"] == "crm"
-    assert webhook.payload["erp_company_id"] == test_data["comp_a"].id
-    assert webhook.payload["actor"]["type"] == "client"
-
-
-# ─────────────────────────────────────────────────────────────────────────────
-# 9. FIX-12: строгий X-Agent-Context (S-8)
-# ─────────────────────────────────────────────────────────────────────────────
-
-INVALID_CONTEXT = {"detail": "INVALID_AGENT_CONTEXT"}
-
-
-def forge_context(secret: str = MCP_SECRET, **overrides) -> str:
-    """Подписанный контекст с произвольными claims: ключ со значением `None` в overrides удаляет claim."""
-    now = int(time.time())
-    claims = {
-        "crm_client_id": 10,
-        "erp_company_id": 1,
-        "mode": "customer",
-        "language": "ru",
-        "iat": now,
-        "exp": now + 60,
-        "jti": str(uuid.uuid4()),
-    }
-    for key, value in overrides.items():
-        if value is None:
-            claims.pop(key, None)
-        else:
-            claims[key] = value
-    payload = _b64encode(json.dumps(claims).encode("utf-8"))
-    return f"{payload}.{_sign(payload, secret.encode('utf-8'))}"
-
-
-def rpc(client, token: str, method: str = "tools/call", **params):
-    return client.post(
-        "/mcp/erp",
-        data={"jsonrpc": "2.0", "id": 1, "method": method, "params": params},
-        format="json",
-        HTTP_X_AGENT_CONTEXT=token,
-    )
-
-
-def tool_result(resp):
-    assert resp.status_code == status.HTTP_200_OK, resp.data
-    assert not resp.data["result"]["isError"], resp.data
-    return resp.data["result"]["structuredContent"]["result"]
-
-
-def test_context_without_iat_is_rejected(client):
+def test_context_without_iat_is_rejected():
     token = forge_context(iat=None)
     with pytest.raises(AgentContextError, match="iat"):
         verify_agent_context(token, MCP_SECRET)
-    resp = rpc(client, token, "tools/list")
-    assert resp.status_code == status.HTTP_401_UNAUTHORIZED
-    assert resp.data == INVALID_CONTEXT
+    resp = raw_rpc(token, "tools/list")
+    assert resp.status_code == 401
+    assert resp.json() == INVALID_CONTEXT
 
 
-def test_context_without_exp_is_rejected(client):
-    resp = rpc(client, forge_context(exp=None), "tools/list")
-    assert resp.status_code == status.HTTP_401_UNAUTHORIZED
-    assert resp.data == INVALID_CONTEXT
+def test_context_without_exp_is_rejected():
+    resp = raw_rpc(forge_context(exp=None), "tools/list")
+    assert resp.status_code == 401
+    assert resp.json() == INVALID_CONTEXT
 
 
-def test_context_with_exp_115_days_ahead_is_rejected(client):
+def test_context_with_exp_115_days_ahead_is_rejected():
     now = int(time.time())
     token = forge_context(iat=now, exp=now + 115 * 86400)
     with pytest.raises(AgentContextError):
         verify_agent_context(token, MCP_SECRET)
-    resp = rpc(client, token, "tools/list")
-    assert resp.status_code == status.HTTP_401_UNAUTHORIZED
-    assert resp.data == INVALID_CONTEXT
+    resp = raw_rpc(token, "tools/list")
+    assert resp.status_code == 401
+    assert resp.json() == INVALID_CONTEXT
 
 
 def test_context_lifetime_over_60_seconds_is_rejected():
@@ -791,27 +420,27 @@ def test_context_float_timestamps_are_rejected():
 
 
 @pytest.mark.parametrize("jti", [None, "", "not-a-uuid", 12345, str(uuid.uuid1())])
-def test_context_requires_uuid4_jti(client, jti):
-    token = forge_context(jti=jti) if jti is not None else forge_context(jti=None)
+def test_context_requires_uuid4_jti(jti):
+    token = forge_context(jti=jti)
     with pytest.raises(AgentContextError, match="jti"):
         verify_agent_context(token, MCP_SECRET)
-    assert rpc(client, token, "tools/list").status_code == status.HTTP_401_UNAUTHORIZED
+    assert raw_rpc(token, "tools/list").status_code == 401
 
 
-def test_bool_is_not_an_int_for_company_id(client, test_data):
+def test_bool_is_not_an_int_for_company_id(test_data):
     """`True` проходил как компания 1 (bool — подкласс int)."""
     token = forge_context(erp_company_id=True)
     with pytest.raises(AgentContextError):
         verify_agent_context(token, MCP_SECRET)
-    resp = rpc(client, token, name="list_client_deals")
-    assert resp.status_code == status.HTTP_401_UNAUTHORIZED
-    assert resp.data == INVALID_CONTEXT
+    resp = raw_rpc(token, "tools/call", {"name": "list_client_deals", "arguments": {}})
+    assert resp.status_code == 401
+    assert resp.json() == INVALID_CONTEXT
 
 
-def test_bool_is_not_an_int_for_client_id(client):
-    resp = rpc(client, forge_context(crm_client_id=True), "tools/list")
-    assert resp.status_code == status.HTTP_401_UNAUTHORIZED
-    assert resp.data == INVALID_CONTEXT
+def test_bool_is_not_an_int_for_client_id():
+    resp = raw_rpc(forge_context(crm_client_id=True), "tools/list")
+    assert resp.status_code == 401
+    assert resp.json() == INVALID_CONTEXT
 
 
 @pytest.mark.parametrize(
@@ -821,6 +450,7 @@ def test_bool_is_not_an_int_for_client_id(client):
         {"crm_client_id": None},
         {"erp_company_id": "1"},
         {"erp_company_id": None},  # customer без компании
+        {"mode": "prospect"},  # prospect с компанией
         {"mode": "CUSTOMER"},
         {"mode": "admin"},
         {"language": "de"},
@@ -833,50 +463,402 @@ def test_context_claims_are_strictly_typed(overrides):
         verify_agent_context(forge_context(**overrides), MCP_SECRET)
 
 
-def test_replayed_jti_is_rejected_on_tool_call(client, test_data):
-    token = make_context_token(erp_company_id=test_data["comp_a"].id)
-    first = rpc(client, token, name="list_client_deals")
-    assert tool_result(first)
-    replay = rpc(client, token, name="list_client_deals")
-    assert replay.status_code == status.HTTP_401_UNAUTHORIZED
-    assert replay.data == INVALID_CONTEXT
+def test_replayed_jti_is_rejected_on_tool_call(test_data):
+    token = customer(test_data)
+    assert payload(sdk_call(token, "list_client_deals")) is not None
+    replay = raw_rpc(token, "tools/call", {"name": "list_client_deals", "arguments": {}})
+    assert replay.status_code == 401
+    assert replay.json() == INVALID_CONTEXT
 
 
-def test_same_header_serves_the_handshake_before_the_tool_call(client, test_data):
-    """MCP-клиент шлёт один заголовок на initialize, notifications/initialized и tools/call."""
-    token = make_context_token(erp_company_id=test_data["comp_a"].id)
-    assert rpc(client, token, "initialize").status_code == status.HTTP_200_OK
-    assert rpc(client, token, "notifications/initialized").status_code == status.HTTP_200_OK
-    assert rpc(client, token, "tools/list").status_code == status.HTTP_200_OK
-    assert tool_result(rpc(client, token, name="list_client_deals"))
+def test_same_header_serves_the_handshake_before_the_tool_call(test_data):
+    """Клиент SDK шлёт один заголовок на initialize, tools/list и tools/call: гасится только tools/call."""
+    token = customer(test_data)
+    assert raw_rpc(token, "ping").status_code == 200
+    assert raw_rpc(token, "tools/list").status_code == 200
+    assert payload(sdk_call(token, "list_client_deals")) is not None
 
 
 def test_mark_used_is_one_shot(test_data):
-    ctx = verify_agent_context(make_context_token(erp_company_id=test_data["comp_a"].id), MCP_SECRET)
+    ctx = verify_agent_context(customer(test_data), MCP_SECRET)
     mark_used(ctx)
     with pytest.raises(AgentContextError, match="replay"):
         mark_used(ctx)
 
 
-def test_failed_signature_does_not_burn_a_jti(client, test_data):
+def test_failed_signature_does_not_burn_a_jti(test_data):
     jti = str(uuid.uuid4())
-    bad = make_context_token(erp_company_id=test_data["comp_a"].id, secret="wrong-key", jti=jti)
-    assert rpc(client, bad, name="list_client_deals").status_code == status.HTTP_401_UNAUTHORIZED
-    good = make_context_token(erp_company_id=test_data["comp_a"].id, jti=jti)
-    assert tool_result(rpc(client, good, name="list_client_deals")) is not None
+    bad = customer(test_data, secret="wrong-key", jti=jti)
+    assert raw_rpc(bad, "tools/call", {"name": "list_client_deals", "arguments": {}}).status_code == 401
+    good = customer(test_data, jti=jti)
+    assert payload(sdk_call(good, "list_client_deals")) is not None
+
+
+def _tool_call_body(name: str = "list_client_deals", arguments: dict | None = None) -> str:
+    return json.dumps(
+        {"jsonrpc": "2.0", "id": 1, "method": "tools/call", "params": {"name": name, "arguments": arguments or {}}}
+    )
+
+
+ENCODINGS = {
+    "utf-8-bom": lambda text: b"\xef\xbb\xbf" + text.encode("utf-8"),
+    "utf-16": lambda text: text.encode("utf-16"),
+    "utf-16-le": lambda text: text.encode("utf-16-le"),
+    "utf-16-be": lambda text: text.encode("utf-16-be"),
+    "utf-32": lambda text: text.encode("utf-32"),
+}
+
+
+@pytest.mark.parametrize("encoding", sorted(ENCODINGS))
+def test_tool_call_in_another_encoding_is_rejected_and_not_executed(test_data, monkeypatch, encoding):
+    """SDK понимает BOM и UTF-16/32; вратарь обязан не пропустить такое тело мимо погашения jti и проверки аргументов."""
+    calls = []
+    monkeypatch.setitem(mcp_tools.HANDLERS, "list_client_deals", lambda context, arguments: calls.append(1) or [])
+    body = ENCODINGS[encoding](_tool_call_body())
+
+    response = raw_post_bytes(customer(test_data), body)
+
+    assert response.status_code == 400
+    assert response.json()["detail"] == "INVALID_REQUEST"
+    assert calls == []
+
+
+@pytest.mark.parametrize("encoding", sorted(ENCODINGS))
+def test_replayed_jti_cannot_be_hidden_in_another_encoding(test_data, monkeypatch, encoding):
+    calls = []
+    monkeypatch.setitem(mcp_tools.HANDLERS, "list_client_deals", lambda context, arguments: calls.append(1) or [])
+    token = customer(test_data)
+    assert payload(sdk_call(token, "list_client_deals")) == []  # честный вызов гасит jti
+    assert calls == [1]
+
+    response = raw_post_bytes(token, ENCODINGS[encoding](_tool_call_body()))
+
+    assert response.status_code in (400, 401)
+    assert calls == [1]  # повтор не выполнен
+
+
+def test_tool_call_with_invalid_arguments_in_another_encoding_is_not_executed(test_data):
+    body = ENCODINGS["utf-16"](_tool_call_body("get_deal_status", {"erp_deal_id": "x"}))
+    assert raw_post_bytes(customer(test_data), body).status_code == 400
+
+
+def test_malformed_json_body_is_a_400_parse_error(test_data):
+    assert raw_post_bytes(customer(test_data), b"{not json").status_code == 400
+
+
+def test_sdk_client_with_forged_signature_cannot_call_a_tool(test_data):
+    """Через клиент SDK: поддельная подпись — вызов не проходит (HTTP 401 на транспорте), инструмент не вызван."""
+    with pytest.raises(Exception):  # noqa: B017 — тип исключения зависит от транспорта SDK, важен сам отказ
+        sdk_call(customer(test_data, secret="wrong-key"), "list_client_deals")
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# 10. FIX-12: клиентская проекция (S-10)
+# 3. Протокол через клиент SDK: initialize, list_tools, ошибки протокола
 # ─────────────────────────────────────────────────────────────────────────────
 
 
-def _quote(deal, version: int, status_code: str) -> Quote:
-    status_row, _ = QuoteStatus.objects.get_or_create(code=status_code, defaults={"name": status_code})
-    return Quote.objects.create(deal=deal, version=version, status=status_row)
+def test_sdk_client_initialize_and_list_tools(test_data):
+    """mcp.Client + streamable_http_client: рукопожатие и список инструментов контракта."""
+    name, version, names = sdk_handshake(customer(test_data))
+    assert name == "erp-mcp"
+    assert version == _contract()["version"]
+    assert names == EXPECTED_TOOLS
 
 
-def test_client_does_not_see_draft_and_approval_quotes(client, test_data):
+def test_server_works_over_tcp_under_uvicorn(test_data):
+    """Не только в процессе теста: настоящий uvicorn, клиент SDK по TCP, вратарь и Host-проверка SDK."""
+    import httpx2
+    from asgiref.sync import async_to_sync
+    from integration.mcp.context import HEADER_NAME
+    from mcp import Client
+    from mcp.client.streamable_http import streamable_http_client
+
+    async def call(url, token, tool):
+        async with httpx2.AsyncClient(headers={HEADER_NAME: token}, timeout=15) as http:
+            async with Client(streamable_http_client(url, http_client=http)) as client:
+                return await client.call_tool(tool, {})
+
+    with tcp_server() as url:
+        # prospect не видит инструменты клиента: отказ по режиму, до базы дело не доходит
+        denied = async_to_sync(call)(url, prospect(), "list_client_deals")
+        assert denied.is_error
+        assert denied.structured_content["error"] == "TOOL_NOT_AVAILABLE_IN_MODE"
+
+        # без контекста — 401 на самом транспорте
+        anonymous = httpx2.post(url, json={"jsonrpc": "2.0", "id": 1, "method": "ping"}, headers=RAW_HEADERS)
+        assert anonymous.status_code == 401
+        assert anonymous.json() == INVALID_CONTEXT
+
+
+def test_unknown_method_is_a_protocol_error_not_200(test_data):
+    """Неизвестный метод — ошибка протокола (JSON-RPC -32601), а не результат; в протоколе 2026-07-28 — ещё и HTTP 404."""
+    modern = raw_modern_rpc(customer(test_data), "unknown_function")
+    assert modern.status_code == 404
+    assert modern.json()["error"]["code"] == -32601
+    assert "result" not in modern.json()
+
+    legacy = raw_rpc(customer(test_data), "unknown_function")  # протокол без конверта `_meta`: статус решает SDK
+    assert legacy.json()["error"]["code"] in (-32601, -32602)
+    assert "result" not in legacy.json()
+
+
+def test_unknown_tool_is_an_error_result(test_data):
+    result = sdk_call(customer(test_data), "drop_all_tables")
+    assert result.is_error
+    assert result.structured_content["error"] == "TOOL_NOT_FOUND"
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 4. Инструменты: list_client_deals & get_deal_status (Cross-tenant изоляция)
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+def test_list_client_deals_cross_tenant_isolation(test_data):
+    deals_a = payload(sdk_call(customer(test_data), "list_client_deals"))
+    assert len(deals_a) == 1
+    assert deals_a[0]["erp_deal_id"] == test_data["deal_a"].id
+    assert deals_a[0]["number"] == f"D-{test_data['deal_a'].id}"
+
+    deals_b = payload(sdk_call(customer(test_data, "comp_b"), "list_client_deals"))
+    assert [d["erp_deal_id"] for d in deals_b] == [test_data["deal_b"].id]
+
+
+def test_customer_tools_are_not_available_to_prospect(test_data):
+    for tool, arguments in (
+        ("list_client_deals", {}),
+        ("get_deal_status", {"erp_deal_id": test_data["deal_a"].id}),
+        ("get_delivery_status", {"erp_deal_id": test_data["deal_a"].id}),
+        ("list_client_documents", {}),
+        ("get_document_link", {"erp_document_id": test_data["doc_a"].id}),
+        ("create_request", {"summary": "x", "lines": [{"text": "рельс"}]}),
+    ):
+        result = sdk_call(prospect(), tool, arguments)
+        assert result.is_error, tool
+        assert result.structured_content["error"] == "TOOL_NOT_AVAILABLE_IN_MODE", tool
+
+
+def test_get_deal_status_cross_tenant_isolation(test_data):
+    deal_data = payload(sdk_call(customer(test_data), "get_deal_status", {"erp_deal_id": test_data["deal_a"].id}))
+    assert deal_data["erp_deal_id"] == test_data["deal_a"].id
+    assert deal_data["title"] == "Сделка Альфа 1"
+
+    # Чужая сделка компании Б -> пустой результат (None)
+    foreign = sdk_call(customer(test_data), "get_deal_status", {"erp_deal_id": test_data["deal_b"].id})
+    assert payload(foreign) is None
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 5. Инструмент: get_delivery_status
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+@pytest.fixture
+def order_a(test_data):
+    """Заказ клиента А: одно подтверждённое КП с одной позицией — из него строятся строки поставки (FIX-22)."""
+    order = Quote.objects.create(
+        deal=test_data["deal_a"],
+        version=90,
+        status=QuoteStatus.objects.get(code=QuoteStatusCode.APPROVED),
+        total_incl_vat=Decimal("100"),
+    )
+    QuoteItem.objects.create(
+        quote=order,
+        display_type="ITEM",
+        imported_raw_name="Рельс Р65",
+        quantity=3,
+        unit="т",
+        frozen_base_price=Decimal("100"),
+        position=1,
+    )
+    return order
+
+
+def test_get_delivery_status(test_data, order_a):
+    lines = payload(sdk_call(customer(test_data), "get_delivery_status", {"erp_deal_id": test_data["deal_a"].id}))
+    assert len(lines) == 1
+    assert lines[0]["title"] == "Рельс Р65"  # строка заказа клиента, а не название сделки
+    assert lines[0]["tracking"] == "TRK-12345"
+    assert lines[0]["status"] == "in_transit"
+    assert lines[0]["eta"] == test_data["fulf_a"].expected_delivery_date.isoformat()
+
+    # Чужая сделка -> пустой массив []
+    foreign = sdk_call(customer(test_data), "get_delivery_status", {"erp_deal_id": test_data["deal_b"].id})
+    assert payload(foreign) == []
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 6. Инструменты: list_client_documents & get_document_link
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+def test_list_client_documents_and_link(test_data):
+    # Пока документ не выпущен как клиентский (статус не ISSUED, вид не из справочника), его нет в списке
+    # и ссылка на него не выдаётся — список инструмента и ссылка считают одним правилом (FIX-32)
+    assert payload(sdk_call(customer(test_data), "list_client_documents", {"kind": "contract"})) == []
+    hidden = sdk_call(customer(test_data), "get_document_link", {"erp_document_id": test_data["doc_a"].id})
+    assert payload(hidden) is None
+
+    doc_a = test_data["doc_a"]
+    doc_a.template.kind = DocumentTemplateKind.objects.get(code="CONTRACT")
+    doc_a.template.save(update_fields=["kind"])
+    doc_a.status = GeneratedDocumentStatus.objects.get(code="ISSUED")
+    doc_a.save(update_fields=["status"])
+    doc_a.pdf_file.save("ctr-alfa.pdf", ContentFile(b"%PDF-1.4 mcp"), save=True)
+
+    docs = payload(sdk_call(customer(test_data), "list_client_documents", {"kind": "contract"}))
+    assert len(docs) == 1
+    assert docs[0]["erp_document_id"] == doc_a.id
+    assert docs[0]["number"] == "CTR-ALFA-01"
+
+    # Настоящая подписанная ссылка на публичный маршрут ERP (FIX-32), а не заглушка
+    link = payload(sdk_call(customer(test_data), "get_document_link", {"erp_document_id": doc_a.id}))
+    assert link is not None
+    assert "token=link_" not in link["url"]
+    assert "/api/v1/public/doc-links/" in link["url"]
+    assert link["file_name"].endswith(".pdf")
+    assert link["size_bytes"] == len(b"%PDF-1.4 mcp")
+    opened = APIClient().get(urlsplit(link["url"]).path)
+    assert opened.status_code == 200 and b"".join(opened.streaming_content) == b"%PDF-1.4 mcp"
+    issued = ActivityLog.objects.get(event_code="document.link_issued")
+    assert issued.company_id == test_data["comp_a"].id
+    assert issued.event_params["crm_context_raw"].startswith("erp-mcp:")
+
+    # Чужой документ компании Б -> пустой результат (None)
+    foreign = sdk_call(customer(test_data), "get_document_link", {"erp_document_id": test_data["doc_b"].id})
+    assert payload(foreign) is None
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 7. Инструмент: search_catalog (prospect vs customer)
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+def test_search_catalog_prospect_vs_customer(test_data):
+    # 1. prospect: название, единица, описание, НО БЕЗ ЦЕН И НАЛИЧИЯ (DECISIONS 2026-10-13)
+    items_p = payload(sdk_call(prospect(), "search_catalog", {"query": "Рельс", "top_k": 3}))
+    assert len(items_p) == 1
+    p_item = items_p[0]
+    assert p_item["id"] == test_data["prod"].id
+    assert p_item["name"] == "Рельс Р-65 ГОСТ 51685-2000"
+    assert "price" not in p_item
+    assert "availability" not in p_item
+    assert "lead_time_days" not in p_item
+
+    # 2. customer: видит цену и наличие
+    items_c = payload(sdk_call(customer(test_data), "search_catalog", {"query": "Рельс"}))
+    assert len(items_c) == 1
+    assert items_c[0]["id"] == test_data["prod"].id
+    assert items_c[0]["price"]["amount"] == "12500000.00"
+
+
+def test_search_catalog_returns_only_published_projection_keys(test_data):
+    for token in (prospect(), customer(test_data)):
+        items = payload(sdk_call(token, "search_catalog", {"query": "Рельс"}))
+        assert len(items) == 1
+        assert "sku" not in items[0]
+        assert "erp_product_id" not in items[0]
+        assert set(items[0]) <= CATALOG_ITEM_KEYS
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 8. Инструмент: create_request (одна заявка, одно событие request.created)
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+def test_create_request_creates_deal_and_emits_one_webhook(test_data):
+    req_payload = {
+        "summary": "Срочная потребность в партии рельсов",
+        "lines": [
+            {"text": "Рельс Р-65 ГОСТ 51685", "quantity": "50", "unit": "т"},
+            {"text": "Накладка 1Р65", "quantity": "100", "unit": "шт"},
+        ],
+    }
+    CrmClientMapping.objects.filter(company=test_data["comp_a"]).update(crm_client_id=10)
+
+    data = payload(sdk_call(customer(test_data, crm_client_id=10), "create_request", req_payload))
+    deal_id = data["erp_request_id"]
+    assert data["number"] == f"D-{deal_id}"
+    assert data["status"] == "request"
+
+    deal = Deal.objects.get(pk=deal_id)
+    assert deal.company == test_data["comp_a"]
+    assert deal.contact == test_data["contact_a"]
+    assert deal.notes == "Срочная потребность в партии рельсов"
+    assert deal.stage.code == DealStageCode.DRAFT
+
+    req_lines = PortalRequestLine.objects.filter(deal=deal).order_by("sort_order")
+    assert req_lines.count() == 2
+    assert req_lines[0].text == "Рельс Р-65 ГОСТ 51685"
+    assert req_lines[0].quantity == Decimal("50")
+    assert req_lines[0].unit == "т"
+    assert req_lines[1].text == "Накладка 1Р65"
+
+    # request.created — ровно один (раньше сигнал и явный вызов давали два)
+    created = [
+        e
+        for e in IntegrationWebhookEvent.objects.filter(event_type="request.created")
+        if e.payload.get("deal", {}).get("erp_deal_id") == deal_id
+    ]
+    assert len(created) == 1
+    envelope = created[0].payload
+    assert envelope["payload"]["source"] == "crm"
+    assert envelope["payload"]["summary"] == "Срочная потребность в партии рельсов"
+    assert envelope["erp_company_id"] == test_data["comp_a"].id
+    assert envelope["crm_client_id"] == 10
+    assert envelope["actor"]["type"] == "client"
+
+
+def test_create_request_takes_crm_client_from_the_signed_context(test_data):
+    """Идентификатор клиента CRM — из подписанного контекста, а не из сопоставления компании."""
+    data = payload(
+        sdk_call(
+            customer(test_data, crm_client_id=777),
+            "create_request",
+            {"summary": "нужен рельс", "lines": [{"text": "рельс"}]},
+        )
+    )
+    event = IntegrationWebhookEvent.objects.get(
+        event_type="request.created", payload__deal__erp_deal_id=data["erp_request_id"]
+    )
+    assert event.payload["crm_client_id"] == 777
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 9. Ошибки инструментов: общий код, текст исключения модели не уходит
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+def test_tool_crash_returns_generic_code_without_exception_text(test_data, monkeypatch):
+    def boom(context, arguments):
+        raise RuntimeError("secret-internal-detail: password=hunter2 table=crm_deal")
+
+    monkeypatch.setitem(mcp_tools.HANDLERS, "list_client_deals", boom)
+    result = sdk_call(customer(test_data), "list_client_deals")
+
+    assert result.is_error
+    assert result.structured_content == {"error": "INTERNAL_ERROR"}
+    dumped = json.dumps(result.model_dump(mode="json"), ensure_ascii=False)
+    assert "secret-internal-detail" not in dumped
+    assert "hunter2" not in dumped
+    assert "RuntimeError" not in dumped
+
+
+def test_tool_execution_error_uses_its_own_code(test_data, monkeypatch):
+    def refuse(context, arguments):
+        raise mcp_tools.ToolExecutionError("erp_deal_id integer required")
+
+    monkeypatch.setitem(mcp_tools.HANDLERS, "list_client_deals", refuse)
+    result = sdk_call(customer(test_data), "list_client_deals")
+    assert result.is_error
+    assert result.structured_content["error"] == "TOOL_EXECUTION_ERROR"
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 10. Клиентская проекция (S-10)
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+def test_client_does_not_see_draft_and_approval_quotes(test_data):
     deal = test_data["deal_a"]
     drafts = [
         _quote(deal, 1, "DRAFT"),
@@ -890,58 +872,54 @@ def test_client_does_not_see_draft_and_approval_quotes(client, test_data):
         _quote(deal, 7, "REJECTED").id: "rejected",
     }
 
-    resp = rpc(
-        client,
-        make_context_token(erp_company_id=test_data["comp_a"].id),
-        name="get_deal_status",
-        arguments={"erp_deal_id": deal.id},
-    )
-    quotes = tool_result(resp)["quotes"]
+    quotes = payload(sdk_call(customer(test_data), "get_deal_status", {"erp_deal_id": deal.id}))["quotes"]
 
     assert {q["erp_quote_id"]: q["status"] for q in quotes} == visible
     assert not {q["erp_quote_id"] for q in quotes} & {d.id for d in drafts}
 
 
-def test_deal_status_has_delivery_from_the_order_line(client, test_data, order_a):
-    resp = rpc(
-        client,
-        make_context_token(erp_company_id=test_data["comp_a"].id),
-        name="get_deal_status",
-        arguments={"erp_deal_id": test_data["deal_a"].id},
-    )
-    deliveries = tool_result(resp)["deliveries"]
+def test_amount_ignores_draft_quotes_and_follows_the_last_sent_one(test_data):
+    """Хвост FIX-12: `amount` — сумма последнего КП, видимого клиенту; черновик и КП на согласовании в неё не попадают."""
+    deal = test_data["deal_a"]
+
+    def amounts():
+        listed = payload(sdk_call(customer(test_data), "list_client_deals"))
+        detail = payload(sdk_call(customer(test_data), "get_deal_status", {"erp_deal_id": deal.id}))
+        return [d["amount"] for d in listed if d["erp_deal_id"] == deal.id], detail["amount"]
+
+    draft = _quote(deal, 1, "DRAFT")
+    draft.total_incl_vat = Decimal("999999")
+    draft.save()
+    assert amounts() == ([None], None)  # клиенту КП не отправлялось — суммы нет, а не сумма черновика
+
+    sent = _quote(deal, 2, "SENT")
+    sent.total_incl_vat = Decimal("1200")
+    sent.public_access_token = "tok-sent-fake"  # клиент видит КП только с публичной ссылкой
+    sent.save()
+    newer_draft = _quote(deal, 3, "PENDING_APPROVAL")
+    newer_draft.total_incl_vat = Decimal("5")
+    newer_draft.save()
+    listed, detail = amounts()
+    assert listed == ["1200.00"] and detail == "1200.00"
+
+
+def test_deal_status_has_delivery_from_the_order_line(test_data, order_a):
+    data = payload(sdk_call(customer(test_data), "get_deal_status", {"erp_deal_id": test_data["deal_a"].id}))
+    deliveries = data["deliveries"]
     assert len(deliveries) == 1  # раньше deal.fulfillments не существовало — список был пуст
     assert deliveries[0]["quantity"] == "3"  # из строки подтверждённого заказа, не выдумано
     assert deliveries[0]["unit"] == "т"
     assert deliveries[0]["tracking"] == "TRK-12345"
 
 
-def test_delivery_status_takes_quantity_from_the_order_line_only(client, test_data, order_a):
-    resp = rpc(
-        client,
-        make_context_token(erp_company_id=test_data["comp_a"].id),
-        name="get_delivery_status",
-        arguments={"erp_deal_id": test_data["deal_a"].id},
-    )
-    line = tool_result(resp)[0]
+def test_delivery_status_takes_quantity_from_the_order_line_only(test_data, order_a):
+    line = payload(sdk_call(customer(test_data), "get_delivery_status", {"erp_deal_id": test_data["deal_a"].id}))[0]
     assert line["quantity"] == "3"
     assert line["unit"] == "т"
 
 
-def test_search_catalog_returns_only_published_projection_keys(client, test_data):
-    for ctx in (
-        dict(crm_client_id=15, erp_company_id=None, mode="prospect"),
-        dict(erp_company_id=test_data["comp_a"].id, mode="customer"),
-    ):
-        items = tool_result(rpc(client, make_context_token(**ctx), name="search_catalog", arguments={"query": "Рельс"}))
-        assert len(items) == 1
-        assert "sku" not in items[0]
-        assert "erp_product_id" not in items[0]
-        assert set(items[0]) <= CATALOG_ITEM_KEYS
-
-
 # ─────────────────────────────────────────────────────────────────────────────
-# 11. FIX-12: аргументы по input_schema (400 INVALID_ARGUMENTS)
+# 11. Аргументы по input_schema из контракта (400 INVALID_ARGUMENTS)
 # ─────────────────────────────────────────────────────────────────────────────
 
 
@@ -965,72 +943,65 @@ def test_search_catalog_returns_only_published_projection_keys(client, test_data
         ("create_request", {"summary": "нужен рельс", "lines": [{"quantity": "1"}]}),
     ],
 )
-def test_invalid_arguments_are_rejected_with_400(client, test_data, name, arguments):
-    resp = rpc(client, make_context_token(erp_company_id=test_data["comp_a"].id), name=name, arguments=arguments)
-    assert resp.status_code == status.HTTP_400_BAD_REQUEST
-    assert resp.data["detail"] == "INVALID_ARGUMENTS"
-    assert resp.data["error"]["message"] == "INVALID_ARGUMENTS"
+def test_invalid_arguments_are_rejected_with_400(test_data, name, arguments):
+    resp = raw_rpc(customer(test_data), "tools/call", {"name": name, "arguments": arguments})
+    assert resp.status_code == 400
+    body = resp.json()
+    assert body["detail"] == "INVALID_ARGUMENTS"
+    assert body["error"]["message"] == "INVALID_ARGUMENTS"
+    assert body["id"] == 1
+    assert "x" * 50 not in json.dumps(body)  # значения аргументов в ответ не возвращаются
 
 
-def test_invalid_arguments_do_not_create_a_request(client, test_data):
+def test_invalid_arguments_do_not_create_a_request(test_data):
     before = Deal.objects.count()
-    resp = rpc(
-        client,
-        make_context_token(erp_company_id=test_data["comp_a"].id),
-        name="create_request",
-        arguments={"summary": "нужен рельс", "lines": [{"text": "рельс", "company_id": 2}]},
+    resp = raw_rpc(
+        customer(test_data),
+        "tools/call",
+        {
+            "name": "create_request",
+            "arguments": {"summary": "нужен рельс", "lines": [{"text": "рельс", "company_id": 2}]},
+        },
     )
-    assert resp.status_code == status.HTTP_400_BAD_REQUEST
+    assert resp.status_code == 400
     assert Deal.objects.count() == before
 
 
-def test_tool_input_schemas_match_the_contract():
-    """`input_schema` в реестре инструментов = `packages/contracts/mcp-tools.json`.
-
-    В контейнере тестов смонтирован только backend/ — тогда сверка пропускается.
-    """
-    from integration.mcp.tools import TOOLS_METADATA
-
-    candidates = (parent / "packages" / "contracts" / "mcp-tools.json" for parent in Path(__file__).parents)
-    contract_path = next((path for path in candidates if path.exists()), None)
-    if contract_path is None:
-        pytest.skip("packages/contracts не смонтирован")
-    contract = json.loads(contract_path.read_text(encoding="utf-8"))
-    assert {t["name"]: t["input_schema"] for t in contract["tools"]} == {
-        t["name"]: t["inputSchema"] for t in TOOLS_METADATA
-    }
-
-
 # ─────────────────────────────────────────────────────────────────────────────
-# 12. FIX-12: лимит частоты на компанию (S-9)
+# 12. Лимит частоты на компанию (S-9)
 # ─────────────────────────────────────────────────────────────────────────────
 
 
 @pytest.fixture
 def mcp_rate(monkeypatch):
-    from rest_framework.throttling import SimpleRateThrottle
-
     monkeypatch.setitem(SimpleRateThrottle.THROTTLE_RATES, "mcp", "3/minute")
 
 
-def test_rate_limit_per_company_returns_429(client, test_data, mcp_rate):
+def test_rate_limit_per_company_returns_429(test_data, mcp_rate):
     comp_a = test_data["comp_a"].id
     for _ in range(3):
-        assert rpc(client, make_context_token(erp_company_id=comp_a), "ping").status_code == status.HTTP_200_OK
-    limited = rpc(client, make_context_token(erp_company_id=comp_a), "ping")
-    assert limited.status_code == status.HTTP_429_TOO_MANY_REQUESTS
+        assert raw_rpc(make_context_token(erp_company_id=comp_a), "ping").status_code == 200
+    limited = raw_rpc(make_context_token(erp_company_id=comp_a), "ping")
+    assert limited.status_code == 429
+    assert limited.json() == {"detail": "TOO_MANY_REQUESTS"}
+    assert int(limited.headers["Retry-After"]) >= 1
 
-    # Другая компания с того же IP не страдает (раньше общий анонимный лимит бил по всему трафику CRM).
-    other = rpc(client, make_context_token(erp_company_id=test_data["comp_b"].id), "ping")
-    assert other.status_code == status.HTTP_200_OK
-
-
-def test_rate_limit_does_not_use_the_shared_anonymous_limit(client, test_data):
-    token_args = dict(erp_company_id=test_data["comp_a"].id)
-    statuses = {rpc(client, make_context_token(**token_args), "ping").status_code for _ in range(25)}
-    assert statuses == {status.HTTP_200_OK}  # анонимный лимит 20/мин здесь уже не действует
+    # Другая компания с того же адреса не страдает (общий анонимный лимит по IP на erp-mcp не действует).
+    assert raw_rpc(make_context_token(erp_company_id=test_data["comp_b"].id), "ping").status_code == 200
 
 
-def test_invalid_context_requests_are_limited_by_ip(client, mcp_rate):
-    codes = [rpc(client, "garbage", "ping").status_code for _ in range(4)]
+def test_rate_limit_does_not_use_the_shared_anonymous_limit(test_data):
+    statuses = {raw_rpc(customer(test_data), "ping").status_code for _ in range(25)}
+    assert statuses == {200}  # анонимный лимит 20/мин здесь не действует
+
+
+def test_prospects_are_limited_per_crm_client(mcp_rate):
+    for _ in range(3):
+        assert raw_rpc(prospect(15), "ping").status_code == 200
+    assert raw_rpc(prospect(15), "ping").status_code == 429
+    assert raw_rpc(prospect(16), "ping").status_code == 200
+
+
+def test_invalid_context_requests_are_limited_by_ip(mcp_rate):
+    codes = [raw_rpc("garbage", "ping").status_code for _ in range(4)]
     assert codes == [401, 401, 401, 429]

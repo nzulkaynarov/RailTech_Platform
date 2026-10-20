@@ -119,6 +119,8 @@ JSON-integer, не `true`), `iat` и `exp` обязательны, `exp − iat 
 КП — только отправленные, принятые, отклонённые; количество поставки, которого ERP не хранит, — `null`;
 каталог — только ключи опубликованного слоя. Подробности — `packages/contracts/mcp-tools.json`.
 
+Реализация (FIX-36): `erp-mcp` — отдельный процесс на официальном SDK `mcp` (compose-сервис `erp-mcp`, `http://erp-mcp:8104/mcp/erp`, только внутри сети), а не маршрут Django; состав инструментов и схемы аргументов сервер читает из `packages/contracts/mcp-tools.json` при старте. Ошибка протокола (неизвестный метод) — ответ JSON-RPC с кодом ошибки, не 200 с результатом; ошибка инструмента — результат `isError` с общим кодом (`TOOL_NOT_AVAILABLE_IN_MODE`, `TOOL_EXECUTION_ERROR`, `INTERNAL_ERROR`). Режим `prospect` требует `erp_company_id = null`.
+
 | Инструмент | Режим | Возвращает |
 |---|---|---|
 | `list_client_deals()` | customer | сделки с стадией и следующим шагом |
