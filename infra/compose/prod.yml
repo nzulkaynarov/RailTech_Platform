@@ -207,6 +207,26 @@ services:
       redis:
         condition: service_healthy
 
+  # erp-mcp (FIX-36): инструменты ERP для агента CRM (SDK mcp), тот же образ, что erp-backend. Порт 8104 только во
+  # внутренней сети compose, наружу не публикуется; Caddyfile.prod отдаёт `/mcp` на всех доменах 404 (FIX-03).
+  # Контракт инструментов — файл packages/contracts/mcp-tools.json, монтируется read-only в /packages/contracts.
+  # Файла нет — сервис не стартует (create_host_path: false — Docker не подменяет его пустым каталогом).
+  # Профиль `mcp`: release.tgz (deploy.yml) пока не несёт mcp-tools.json, а CRM к erp-mcp не ходит (M3-CRM-07), поэтому
+  # по умолчанию сервис не стартует и `up -d` не ломается; включать вместе с правкой release.tgz (Q-FIX36-2):
+  #   docker compose -f base.yml -f prod.yml --profile mcp up -d erp-mcp
+  erp-mcp:
+    <<: [*ops, *mem-256]
+    profiles: ["mcp"]
+    image: ${RT_IMAGE_REGISTRY:-ghcr.io/nzulkaynarov}/rt-erp-backend:${RT_IMAGE_TAG}
+    build: !reset null
+    environment: *erp-prod-env
+    volumes: !override
+      - type: bind
+        source: ../../packages/contracts/mcp-tools.json
+        target: /packages/contracts/mcp-tools.json
+        read_only: true
+        bind: { create_host_path: false }
+
   erp-worker:
     <<: [*ops, *mem-512]
     image: ${RT_IMAGE_REGISTRY:-ghcr.io/nzulkaynarov}/rt-erp-backend:${RT_IMAGE_TAG}
