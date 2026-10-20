@@ -1,13 +1,15 @@
 """Запросы центра внешних сервисов (M3-CRM-12, ADR-0024): проверки, агрегаты, инциденты, почта."""
 
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Any
 
 from sqlalchemy import delete, func, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.domain.external_erp_handoff import STUCK_AFTER_MINUTES
 from app.models.auth import User
+from app.models.clients import Client
 from app.models.email import EmailLog
 from app.models.external_services import (
     ExternalServiceCheck,
@@ -211,3 +213,41 @@ async def erp_sync_stats(session: AsyncSession) -> tuple[int, int, str | None]:
         .limit(1)
     )
     return int(with_access or 0), int(failed or 0), last_error
+
+
+@dataclass(frozen=True, slots=True)
+class ErpHandoffStats:
+    failed: int
+    stuck: int
+    pending: int
+    last_error: str | None
+
+
+async def erp_handoff_stats(session: AsyncSession, now: datetime) -> ErpHandoffStats:
+    """Передачи клиентов в ERP: с ошибкой, зависшие и текущие, последняя ошибка с именем клиента."""
+    stuck_before = now - timedelta(minutes=STUCK_AFTER_MINUTES)
+    failed = await session.scalar(
+        select(func.count()).select_from(Client).where(Client.erp_handoff_status == "failed")
+    )
+    pending = await session.scalar(
+        select(func.count()).select_from(Client).where(Client.erp_handoff_status == "pending")
+    )
+    stuck = await session.scalar(
+        select(func.count())
+        .select_from(Client)
+        .where(Client.erp_handoff_status == "pending", Client.updated_at < stuck_before)
+    )
+    last = (
+        await session.execute(
+            select(Client.name, Client.erp_handoff_error)
+            .where(Client.erp_handoff_status == "failed", Client.erp_handoff_error.is_not(None))
+            .order_by(Client.updated_at.desc())
+            .limit(1)
+        )
+    ).first()
+    return ErpHandoffStats(
+        failed=int(failed or 0),
+        stuck=int(stuck or 0),
+        pending=int(pending or 0),
+        last_error=f"{last[0]}: {last[1]}" if last else None,
+    )

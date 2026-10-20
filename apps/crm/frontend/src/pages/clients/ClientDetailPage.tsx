@@ -22,6 +22,7 @@ import { ClientContacts } from "./ClientContacts";
 import { ClientDocuments } from "./ClientDocuments";
 import { ClientTelegram } from "./ClientTelegram";
 import { EditClient } from "./EditClient";
+import { HandoffState } from "./HandoffState";
 import { ServiceRequests } from "./ServiceRequests";
 import "../admin.css";
 
@@ -176,6 +177,7 @@ export function ClientDetailPage() {
         extra={canWrite ? <EditClient client={data} /> : null}
       />
       <Details data={data} />
+      <HandoffState client={data} canWrite={canWrite} />
       <ClientTabs id={id} data={data} />
     </PageBody>
   );

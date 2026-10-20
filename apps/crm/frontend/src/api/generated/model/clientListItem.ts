@@ -4,6 +4,7 @@
  * RailTech CRM API
  * OpenAPI spec version: 0.1.0
  */
+import type { ClientListItemErpHandoffStatus } from "./clientListItemErpHandoffStatus";
 
 /**
  * Строка списка клиентов: открытые сделки и последнее сообщение по любому лиду клиента.
@@ -11,6 +12,8 @@
 export interface ClientListItem {
   created_at: string;
   erp_company_id?: number | null;
+  erp_handoff_error?: string | null;
+  erp_handoff_status?: ClientListItemErpHandoffStatus;
   id: number;
   inn: string | null;
   is_active: boolean;
