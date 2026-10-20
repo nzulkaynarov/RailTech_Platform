@@ -203,6 +203,9 @@ async def get_lead(lead_id: int, _: Reader, container: ContainerDep) -> LeadDeta
         backoffice_mode=mode.value,
         erp_company_id=erp_company_id,
         erp_deal_id=erp_deal_id,
+        client_in_erp=erp_company_id is not None,
+        client_handoff_status=client.erp_handoff_status if client is not None else None,
+        client_handoff_error=client.erp_handoff_error if client is not None else None,
     )
 
 

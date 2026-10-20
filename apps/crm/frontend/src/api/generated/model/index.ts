@@ -118,6 +118,7 @@ export * from "./kbGapPage";
 export * from "./leadBrief";
 export * from "./leadDecisionsParams";
 export * from "./leadDetail";
+export * from "./leadDetailClientHandoffStatus";
 export * from "./leadDetailQualification";
 export * from "./leadMessagesParams";
 export * from "./leadOut";

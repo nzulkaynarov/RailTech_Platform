@@ -62,6 +62,11 @@ class LeadDetail(LeadOut):
     backoffice_mode: str = "local"
     erp_company_id: int | None = None
     erp_deal_id: int | None = None
+    # Клиент лида уже в ERP (есть `erp_company_id`); `False` и у лида без клиента (FIX-34b).
+    client_in_erp: bool = False
+    # Состояние передачи клиента лида в бэк-офис (FIX-31, `clients.erp_handoff_*`).
+    client_handoff_status: Literal["pending", "done", "failed"] | None = None
+    client_handoff_error: str | None = None
 
 
 class LeadPage(BaseModel):

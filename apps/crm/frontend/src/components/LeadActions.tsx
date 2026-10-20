@@ -5,6 +5,7 @@ import { useState } from "react";
 import type { LeadDetail } from "../api/generated/model";
 import { type LeadAction, useMessages } from "../api/queries";
 import { useConfirmDanger } from "../hooks/useConfirmDanger";
+import { useHandoffRetry } from "../hooks/useHandoffRetry";
 import { useLeadActionRunner } from "../hooks/useLeadActionRunner";
 import { t } from "../i18n/ru";
 import "../styles/workspace.css";
@@ -53,8 +54,14 @@ type Run = (action: LeadAction) => Promise<boolean>;
 function useHandlers(lead: LeadDetail, run: Run, open: (d: Open) => void) {
   const { modal } = AntApp.useApp();
   const confirmDanger = useConfirmDanger();
+  const handoff = useHandoffRetry(lead.client_id ?? null, lead.id);
   const name = lead.assigned_user_name ?? t.owner.human ?? "";
-  return (key: ActionKey) => {
+  const onAction = (key: ActionKey) => {
+    if (key === "makeCustomer" && lead.stage === "customer") {
+      // Клиент уже привязан к лиду, но не передан в ERP (FIX-34b): диалог выбора клиента не нужен.
+      handoff.mutate();
+      return;
+    }
     const dialog = DIALOG_OF[key];
     if (dialog) {
       open(dialog);
@@ -81,6 +88,7 @@ function useHandlers(lead: LeadDetail, run: Run, open: (d: Open) => void) {
       onOk: () => run({ kind: "newDeal" }),
     });
   };
+  return { onAction, handoffBusy: handoff.isPending };
 }
 
 /** Чужой лид: одна строка «Лида ведёт {имя}» вместо ряда неактивных кнопок. */
@@ -166,7 +174,7 @@ function ActionButtons({ plan, busy, onAction, backofficeMode }: ButtonsProps) {
 /** Действия карточки лида: иерархия по состоянию (дизайн-аудит 2026-10-11, волна B). */
 export function LeadActions({ lead, rights }: { lead: LeadDetail; rights: ActionRights }) {
   const plan = leadActionPlan(lead, rights);
-  const { run, busy } = useLeadActionRunner(lead.id);
+  const { run, busy: running } = useLeadActionRunner(lead.id);
   const [dialog, setDialog] = useState<Open | null>(null);
   const close = () => {
     setDialog(null);
@@ -176,7 +184,8 @@ export function LeadActions({ lead, rights }: { lead: LeadDetail; rights: Action
     if (ok) close();
     return ok;
   };
-  const onAction = useHandlers(lead, run, setDialog);
+  const { onAction, handoffBusy } = useHandlers(lead, run, setDialog);
+  const busy = running || handoffBusy;
   const available = new Set([plan.primary, ...plan.more]);
   const unanswered = lastUnanswered(useMessages(lead.id).data);
   return (

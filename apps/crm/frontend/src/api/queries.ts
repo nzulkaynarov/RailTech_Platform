@@ -56,7 +56,14 @@ export const useOpenServiceRequests = (enabled = true) =>
 export const useLeads = (params: ListLeadsParams) =>
   useListLeads(compact(params), { query: { placeholderData: keepPreviousData } });
 
-export const useLead = (id: number) => useGetLead(id);
+/** Пока клиент лида «передаётся в бэк-офис» (FIX-31, FIX-34b) — перечитываем, как в карточке клиента. */
+export const useLead = (id: number) =>
+  useGetLead(id, {
+    query: {
+      refetchInterval: (query) =>
+        query.state.data?.client_handoff_status === "pending" ? 4000 : false,
+    },
+  });
 
 export const useMessages = (id: number) => useLeadMessages(id);
 
