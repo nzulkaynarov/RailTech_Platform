@@ -37,7 +37,9 @@ export function LeadDeals({ lead }: { lead: LeadDetail }) {
                     </Tag>
                   ) : null}
                   <Typography.Text type="secondary">
-                    {formatMoney(d.amount, d.currency)}
+                    <span style={{ whiteSpace: "nowrap" }}>
+                      {formatMoney(d.amount, d.currency)}
+                    </span>
                     {d.closed_at ? ` · ${formatDate(d.closed_at)}` : ""}
                   </Typography.Text>
                 </Space>
