@@ -91,6 +91,10 @@ class Reason(StrEnum):
     USER_INACTIVE = "user_inactive"
     # Синхронизация сотрудников с ERP: e-mail занят другим пользователем ERP (409 EMAIL_CONFLICT).
     ERP_EMAIL_CONFLICT = "erp_email_conflict"
+    # Правила ADR-0022 на бэкенде (FIX-34): «Сделка заключена» в режиме `erp` решает бэк-офис;
+    # передать в ERP лида, не давшего согласие, нельзя.
+    WON_DECIDED_BY_ERP = "won_decided_by_erp"
+    HANDOFF_NO_CONSENT = "handoff_no_consent"
 
 
 class DomainError(Exception):

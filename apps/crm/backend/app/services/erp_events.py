@@ -25,6 +25,7 @@ from app.models.leads import Lead, LeadNote, TelegramIdentity
 from app.repositories import events
 from app.schemas.erp_events import ErpEventEnvelope
 from app.security.secrets_store import SecretsStore
+from app.services.erp_bot_messages import BotMessage, client_message, pick_language, staff_alert
 from app.services.settings import SettingsService
 
 logger = structlog.get_logger(__name__)
@@ -188,8 +189,23 @@ class ErpEventsService:
 
                 event_row.deal_id = deal.id
 
-            note_text, bot_msg, bot_button, staff_alert = await self._dispatch_event(
-                session, envelope, client, deal
+            note_text = await self._dispatch_event(session, envelope, client, deal)
+            cfg = await self._settings_service.get()
+            deal_title = envelope.deal.title if envelope.deal else (deal.title if deal else "—")
+            bot_msg = client_message(
+                envelope.event,
+                envelope.payload,
+                deal_title=deal_title,
+                texts=cfg.texts,
+                language=pick_language(lead.language if lead else None),
+                cabinet_url=cfg.company.cabinet_url,
+            )
+            staff_alert_text = staff_alert(
+                envelope.event,
+                envelope.payload,
+                client_name=client.name,
+                deal_title=deal_title,
+                texts=cfg.texts,
             )
 
             if lead is not None and note_text:
@@ -204,9 +220,9 @@ class ErpEventsService:
                 await events.publish(session, "lead.updated", lead_id=lead.id)
 
             if bot_msg:
-                await self._send_to_client_telegram(session, client.id, bot_msg, bot_button)
+                await self._send_to_client_telegram(session, client.id, bot_msg)
 
-            if staff_alert:
+            if staff_alert_text:
                 target_user_id = (
                     deal.owner_user_id
                     if deal and deal.owner_user_id
@@ -217,7 +233,7 @@ class ErpEventsService:
                     else None
                 )
                 if target_user_id:
-                    await self._send_to_staff(session, target_user_id, staff_alert)
+                    await self._send_to_staff(session, target_user_id, staff_alert_text)
 
             event_row.status = "processed"
             event_row.processed_at = datetime.now(UTC)
@@ -231,8 +247,11 @@ class ErpEventsService:
         env: ErpEventEnvelope,
         client: Client,
         deal: Deal | None,
-    ) -> tuple[str | None, str | None, tuple[str, str] | None, str | None]:
-        """Возвращает (note_text, bot_msg_text, bot_button(text, url), staff_alert_text)."""
+    ) -> str | None:
+        """Меняет зеркало сделки и возвращает текст заметки в ленту лида (если она нужна).
+
+        Тексты клиенту и сотруднику строит `services/erp_bot_messages.py` из `settings.texts`.
+        """
         ev = env.event
         p = env.payload
         deal_title = env.deal.title if env.deal else (deal.title if deal else "Сделка")
@@ -241,7 +260,7 @@ class ErpEventsService:
             src = p.get("source", "erp")
             req_id = p.get("erp_request_id")
             note = f"В бэк-офисе создана заявка #{req_id or '—'} (источник: {src})."
-            return note, None, None, None
+            return note
 
         if ev == "deal.stage_changed":
             to_st = p.get("to", env.deal.stage if env.deal else "")
@@ -252,7 +271,7 @@ class ErpEventsService:
             note = f"Стадия сделки в бэк-офисе: {from_st} → {to_st}"
             if reason:
                 note += f" ({reason})"
-            return note, None, None, None
+            return note
 
         if ev == "deal.won":
             amt = p.get("amount", env.deal.amount if env.deal else "") or ""
@@ -272,7 +291,7 @@ class ErpEventsService:
                 if curr:
                     deal.currency = curr
             note = f"Сделка «{deal_title}» успешно закрыта (won) на сумму {amt} {curr}."
-            return note, None, None, None
+            return note
 
         if ev == "deal.lost":
             reason = p.get("lost_reason")
@@ -289,7 +308,7 @@ class ErpEventsService:
                 deal.external_stage = "lost"
             r_str = reason or "не указана"
             note = f"Сделка «{deal_title}» закрыта отказом (lost). Причина: {r_str}."
-            return note, None, None, None
+            return note
 
         if ev == "quote.sent":
             if deal:
@@ -305,15 +324,13 @@ class ErpEventsService:
             if pub_url:
                 note_parts.append(f"Ссылка: {pub_url}")
             note = ". ".join(note_parts) + "."
-            bot_msg = f"Вам подготовлено коммерческое предложение по сделке «{deal_title}»."
-            bot_btn = ("Ознакомиться с КП", pub_url) if pub_url else None
-            return note, bot_msg, bot_btn, None
+            return note
 
         if ev == "quote.viewed":
             q_id = p.get("erp_quote_id")
             ver = p.get("version")
             note = f"Клиент открыл КП #{q_id} v{ver}."
-            return note, None, None, None
+            return note
 
         if ev == "quote.accepted":
             if deal:
@@ -321,10 +338,7 @@ class ErpEventsService:
             q_id = p.get("erp_quote_id")
             ver = p.get("version")
             note = f"Клиент акцептовал КП #{q_id} v{ver}."
-            staff_alert = (
-                f"🎉 Клиент «{client.name}» акцептовал КП #{q_id} по сделке «{deal_title}»."
-            )
-            return note, None, None, staff_alert
+            return note
 
         if ev == "quote.rejected":
             q_id = p.get("erp_quote_id")
@@ -332,7 +346,7 @@ class ErpEventsService:
             reason = p.get("reason")
             r_suff = f". Причина: {reason}." if reason else "."
             note = f"КП #{q_id} v{ver} отклонено клиентом{r_suff}"
-            return note, None, None, None
+            return note
 
         if ev == "contract.signed":
             if deal:
@@ -340,7 +354,7 @@ class ErpEventsService:
             num = p.get("number", "")
             by = p.get("by", "")
             note = f"Договор {num} подписан ({by})."
-            return note, None, None, None
+            return note
 
         if ev == "invoice.issued":
             if deal:
@@ -349,11 +363,8 @@ class ErpEventsService:
             amt = p.get("amount", "")
             curr = p.get("currency", "")
             due = p.get("due_date", "")
-            link = p.get("link")
             note = f"Выставлен счёт {num} на сумму {amt} {curr} со сроком оплаты до {due}."
-            bot_msg = f"Выставлен счёт {num} на сумму {amt} {curr}. Срок оплаты: до {due}."
-            bot_btn = ("Открыть счёт", link) if link else None
-            return note, bot_msg, bot_btn, None
+            return note
 
         if ev == "invoice.paid":
             if deal:
@@ -362,14 +373,13 @@ class ErpEventsService:
             amt = p.get("amount", "")
             curr = p.get("currency", "")
             note = f"Счёт {num} на сумму {amt} {curr} оплачен."
-            bot_msg = f"Поступила оплата по счёту {num} на сумму {amt} {curr}. Спасибо!"
-            return note, bot_msg, None, None
+            return note
 
         if ev == "invoice.overdue":
             num = p.get("number", "")
             due = p.get("due_date", "")
             note = f"Счёт {num} просрочен (срок оплаты был {due})."
-            return note, None, None, None
+            return note
 
         if ev == "delivery.status_changed":
             if deal:
@@ -378,40 +388,32 @@ class ErpEventsService:
             st = p.get("status", "")
             eta = p.get("eta")
             note = f"Статус поставки ({summary}): {st}" + (f", ожидается {eta}" if eta else "")
-            bot_msg = f"Статус доставки по заказу «{deal_title}» ({summary}): {st}."
-            return note, bot_msg, None, None
+            return note
 
         if ev == "delivery.eta_changed":
             summary = p.get("line_summary", "")
             eta = p.get("eta")
             prev_eta = p.get("previous_eta")
             note = f"Изменилась дата поставки ({summary}): {prev_eta or '—'} → {eta}."
-            bot_msg = (
-                f"Срок доставки по заказу «{deal_title}» ({summary}) обновлён: ожидается {eta}."
-            )
-            return note, bot_msg, None, None
+            return note
 
         if ev == "act.issued":
             if deal:
                 deal.external_stage = "closing"
             num = p.get("number", "")
             note = f"Сформирован акт {num}."
-            bot_msg = f"Акт {num} сформирован и ждёт вашего подтверждения в кабинете."
-            return note, bot_msg, None, None
+            return note
 
         if ev == "act.accepted":
             num = p.get("number", "")
             note = f"Акт {num} принят клиентом."
-            return note, None, None, None
+            return note
 
         if ev == "act.returned":
             num = p.get("number", "")
             reason = p.get("reason", "")
             note = f"Акт {num} возвращён клиентом с замечаниями: {reason}."
-            staff_alert = (
-                f"⚠️ Акт {num} по сделке «{deal_title}» возвращён клиентом с замечаниями: {reason}."
-            )
-            return note, None, None, staff_alert
+            return note
 
         if ev == "document.created":
             kind = p.get("kind", "other")
@@ -433,21 +435,20 @@ class ErpEventsService:
             )
             session.add(doc_row)
             note = f"В бэк-офисе создан документ: {title} ({num})."
-            return note, None, None, None
+            return note
 
         if ev == "invite.sent":
             channels = ", ".join(p.get("channels", []))
             note = f"Контакту отправлено приглашение в кабинет через каналы: {channels}."
-            return note, None, None, None
+            return note
 
-        return None, None, None, None
+        return None
 
     async def _send_to_client_telegram(
         self,
         session: AsyncSession,
         client_id: int,
-        text: str,
-        button: tuple[str, str] | None = None,
+        message: BotMessage,
     ) -> None:
         """Отправка сообщения в Telegram всем привязанным аккаунтам клиента."""
         bot = await self._bot_provider()
@@ -464,17 +465,18 @@ class ErpEventsService:
         ).all()
 
         reply_markup: InlineKeyboardMarkup | None = None
-        if button:
-            btn_text, btn_url = button
+        if message.buttons:
             reply_markup = InlineKeyboardMarkup(
-                inline_keyboard=[[InlineKeyboardButton(text=btn_text, url=btn_url)]]
+                inline_keyboard=[
+                    [InlineKeyboardButton(text=label, url=url)] for label, url in message.buttons
+                ]
             )
 
         for tg_id in tg_ids:
             try:
                 await bot.send_message(
                     chat_id=tg_id,
-                    text=text,
+                    text=message.text,
                     reply_markup=reply_markup,
                     request_timeout=10,
                 )

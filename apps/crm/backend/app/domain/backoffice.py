@@ -9,6 +9,7 @@
 """
 
 from dataclasses import dataclass
+from datetime import datetime
 from enum import StrEnum
 from typing import Final
 
@@ -48,15 +49,29 @@ class HandoffDecision:
     call_erp: bool
     reason: str | None = None
 
+    @property
+    def resync(self) -> bool:
+        """Клиент уже привязан к лиду, но в ERP его ещё нет (стал клиентом в режиме `local`):
+        в CRM ничего не меняется, в ERP уходит передача (I-14)."""
+        return self.allowed and self.call_erp and not self.changed
+
 
 def decide_handoff(
-    current: Stage, mode: BackofficeMode, *, client_changed: bool = True
+    current: Stage,
+    mode: BackofficeMode,
+    *,
+    client_changed: bool = True,
+    erp_synced: bool = True,
 ) -> HandoffDecision:
     """Можно ли передать лида в бэк-офис и что при этом происходит.
 
     `client_changed=False` — лид уже привязан к этому же клиенту: повторная передача
     ничего не меняет (`changed=False`), в ERP повторно не ходим (идемпотентность по
     `crm_client_id` держит и ERP, CONTRACTS §2). Смена компании у клиента — обычная передача.
+
+    `erp_synced=False` — у клиента нет `erp_company_id`: он стал клиентом в режиме `local`,
+    а коннектор ERP подключили позже. В режиме `erp` такого клиента передаём в ERP, хотя в CRM
+    повторная передача ничего не меняет (`resync`); в режиме `local` ERP не вызывается никогда.
     """
     if current not in HANDOFF_FROM[mode]:
         return HandoffDecision(
@@ -73,7 +88,7 @@ def decide_handoff(
         current,
         allowed=True,
         changed=changed,
-        call_erp=mode == BackofficeMode.ERP and changed,
+        call_erp=mode == BackofficeMode.ERP and (changed or not erp_synced),
     )
 
 
@@ -86,3 +101,22 @@ def may_close_locally(mode: BackofficeMode, outcome: str) -> bool:
     if mode == BackofficeMode.LOCAL:
         return True
     return outcome == "lost"
+
+
+@dataclass(frozen=True, slots=True)
+class HandoffConsent:
+    """Согласие лида на обработку данных в виде, который уходит в ERP (`consent`)."""
+
+    given_at: datetime
+    version: str
+
+
+def handoff_consent(given_at: datetime | None, version: str | None) -> HandoffConsent | None:
+    """Согласие для передачи в ERP — только то, что лид дал на самом деле (I-13).
+
+    Время и версия берутся из лида. Нет любого из двух — `None`: согласие не выдумывается
+    (ни «сейчас», ни «1.0»), передача невозможна, менеджер получает 422 «нет согласия».
+    """
+    if given_at is None or version is None or not version.strip():
+        return None
+    return HandoffConsent(given_at=given_at, version=version.strip())

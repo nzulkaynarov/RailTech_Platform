@@ -1,5 +1,7 @@
 """Передача в бэк-офис и итог сделки из ERP (ADR-0022): таблица кейсов по обоим режимам."""
 
+from datetime import UTC, datetime
+
 import pytest
 
 from app.domain.backoffice import (
@@ -8,6 +10,7 @@ from app.domain.backoffice import (
     BackofficeMode,
     backoffice_mode,
     decide_handoff,
+    handoff_consent,
     may_close_locally,
 )
 from app.domain.stage_machine import decide
@@ -121,3 +124,51 @@ def test_erp_outcome_never_moves_the_lead(event: str, stage: S, target: S) -> No
     if stage is not target:
         assert decision.reason
         assert "erp" in decision.reason
+
+
+# I-14: клиент стал клиентом в режиме `local` (erp_company_id нет), потом подключили ERP.
+# (режим, клиент уже в ERP, клиент сменился) → (изменится в CRM, уйдёт ли в ERP, resync)
+RESYNC = [
+    (ERP, False, False, False, True, True),  # тот же клиент, в ERP его нет — передаём в ERP
+    (ERP, True, False, False, False, False),  # тот же клиент, уже в ERP — идемпотентно
+    (ERP, False, True, True, True, False),  # новая компания — обычная передача
+    (ERP, True, True, True, True, False),
+    (LOCAL, False, False, False, False, False),  # без коннектора ERP не вызывается никогда
+    (LOCAL, True, False, False, False, False),
+    (LOCAL, False, True, True, False, False),
+]
+
+
+@pytest.mark.parametrize(("mode", "synced", "moved", "changed", "call_erp", "resync"), RESYNC)
+def test_customer_from_local_mode_is_handed_to_erp_after_switch(
+    mode: BackofficeMode, synced: bool, moved: bool, changed: bool, call_erp: bool, resync: bool
+) -> None:
+    decision = decide_handoff(S.CUSTOMER, mode, client_changed=moved, erp_synced=synced)
+    assert decision.allowed
+    assert (decision.changed, decision.call_erp, decision.resync) == (changed, call_erp, resync)
+
+
+@pytest.mark.parametrize("stage", [s for s in S if s not in HANDOFF_FROM[ERP]])
+def test_resync_does_not_open_forbidden_stages(stage: S) -> None:
+    decision = decide_handoff(stage, ERP, client_changed=False, erp_synced=False)
+    assert not decision.allowed
+    assert not decision.call_erp
+    assert not decision.resync
+
+
+GIVEN = datetime(2026, 10, 8, 9, 30, tzinfo=UTC)
+
+
+def test_consent_is_taken_from_the_lead_as_is() -> None:
+    consent = handoff_consent(GIVEN, "2026-10-08")
+    assert consent is not None
+    assert (consent.given_at, consent.version) == (GIVEN, "2026-10-08")
+
+
+@pytest.mark.parametrize(
+    ("given_at", "version"),
+    [(None, None), (None, "2026-10-08"), (GIVEN, None), (GIVEN, ""), (GIVEN, "   ")],
+)
+def test_missing_consent_is_never_invented(given_at: datetime | None, version: str | None) -> None:
+    """I-13: ни «сейчас», ни «1.0» — нет времени или версии, значит, нет согласия."""
+    assert handoff_consent(given_at, version) is None
