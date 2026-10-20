@@ -52,6 +52,8 @@ class Reason(StrEnum):
     ASSIST_EMPTY = "assist_empty"
     ASSIST_NO_HISTORY = "assist_no_history"
     DEAL_WON_FINAL = "deal_won_final"
+    # Зеркальная сделка ERP: сумму, валюту, стадию, название и причину отказа ведёт бэк-офис (I-26).
+    DEAL_OWNED_BY_ERP = "deal_owned_by_erp"
     NO_CONSENT = "no_consent"
     LITELLM_UNAVAILABLE = "litellm_unavailable"
     MODEL_KEY_REQUIRED = "model_key_required"
@@ -97,6 +99,8 @@ class Reason(StrEnum):
     # передать в ERP лида, не давшего согласие, нельзя.
     WON_DECIDED_BY_ERP = "won_decided_by_erp"
     HANDOFF_NO_CONSENT = "handoff_no_consent"
+    # «Согласие получено» (FIX-57, D-8): лид из Telegram соглашается в боте, сотрудник не отмечает.
+    CONSENT_VIA_BOT = "consent_via_bot"
 
 
 class DomainError(Exception):

@@ -1,4 +1,4 @@
-import { Space, Table, Tag } from "antd";
+import { Grid, Space, Table, Tag, Typography } from "antd";
 import type { ColumnsType } from "antd/es/table";
 
 import type { DealOut } from "../../api/generated/model";
@@ -27,9 +27,51 @@ type Props = {
   onEdit: ((deal: DealOut) => void) | null;
 };
 
-function columns(showClient: boolean, onEdit: Props["onEdit"]): ColumnsType<DealOut> {
+/** Стадия сделки, стадия бэк-офиса и номер заявки ERP — метками. */
+function StageTags({ deal: d }: { deal: DealOut }) {
+  return (
+    <Space size={4} wrap>
+      <Tag color={STAGE_COLORS[d.stage] ?? "default"}>{stageLabel(d.stage)}</Tag>
+      {d.external_stage ? (
+        <Tag
+          color={externalStageColor(d.external_stage)}
+          bordered={false}
+          title={t.deals.externalStageHint}
+        >
+          {externalStageLabel(d.external_stage)}
+        </Tag>
+      ) : null}
+      {d.erp_deal_id ? (
+        <Tag color="blue" bordered={false} title={t.deals.erpDeal}>
+          #{String(d.erp_deal_id)}
+        </Tag>
+      ) : null}
+    </Space>
+  );
+}
+
+const titleCell = (compact: boolean): ColumnsType<DealOut>[number] =>
+  compact
+    ? {
+        // Телефон: метки стадии — под названием, отдельной колонки «Стадия» нет (D-9).
+        title: t.deals.title,
+        dataIndex: "title",
+        render: (title: string, d) => (
+          <Space direction="vertical" size={4} style={{ width: "100%" }}>
+            <Typography.Text>{title}</Typography.Text>
+            <StageTags deal={d} />
+          </Space>
+        ),
+      }
+    : { title: t.deals.title, dataIndex: "title", ellipsis: true };
+
+function columns(
+  showClient: boolean,
+  onEdit: Props["onEdit"],
+  compact: boolean,
+): ColumnsType<DealOut> {
   const cols: ColumnsType<DealOut> = [
-    { title: t.deals.title, dataIndex: "title", ellipsis: true },
+    titleCell(compact),
     {
       title: t.deals.client,
       dataIndex: "client_name",
@@ -46,6 +88,10 @@ function columns(showClient: boolean, onEdit: Props["onEdit"]): ColumnsType<Deal
       title: t.deals.amount,
       dataIndex: "amount",
       align: "right",
+      // Сумма не рвётся посреди числа на узком экране («28 000 00 / 0 UZS», D-9): колонка
+      // не уже самой суммы, перенос внутри ячейки запрещён.
+      width: 150,
+      onCell: () => ({ style: { whiteSpace: "nowrap" } }),
       render: (_: unknown, d) =>
         d.amount === null || d.amount === "" ? (
           <Tag bordered={false}>{t.deals.amountMissing}</Tag>
@@ -56,25 +102,8 @@ function columns(showClient: boolean, onEdit: Props["onEdit"]): ColumnsType<Deal
     {
       title: t.deals.stage,
       dataIndex: "stage",
-      render: (_: unknown, d: DealOut) => (
-        <Space size={4} wrap>
-          <Tag color={STAGE_COLORS[d.stage] ?? "default"}>{stageLabel(d.stage)}</Tag>
-          {d.external_stage ? (
-            <Tag
-              color={externalStageColor(d.external_stage)}
-              bordered={false}
-              title={t.deals.externalStageHint}
-            >
-              {externalStageLabel(d.external_stage)}
-            </Tag>
-          ) : null}
-          {d.erp_deal_id ? (
-            <Tag color="blue" bordered={false} title={t.deals.erpDeal}>
-              #{String(d.erp_deal_id)}
-            </Tag>
-          ) : null}
-        </Space>
-      ),
+      key: "stage",
+      render: (_: unknown, d: DealOut) => <StageTags deal={d} />,
     },
     {
       title: t.deals.expected,
@@ -96,6 +125,11 @@ function columns(showClient: boolean, onEdit: Props["onEdit"]): ColumnsType<Deal
     },
   ];
   if (!showClient) cols.splice(1, 1);
+  if (compact)
+    cols.splice(
+      cols.findIndex((c) => c.key === "stage"),
+      1,
+    );
   if (onEdit) {
     cols.push({
       title: <ActionsTitle />,
@@ -122,13 +156,16 @@ function columns(showClient: boolean, onEdit: Props["onEdit"]): ColumnsType<Deal
 
 /** Таблица сделок — общая для раздела «Сделки» и карточки клиента. */
 export function DealsTable({ deals, loading, embedded = false, onEdit }: Props) {
+  // Карточка клиента на телефоне: узкая таблица, стадия уходит под название.
+  const screens = Grid.useBreakpoint();
+  const compact = embedded && screens.sm === false;
   return (
     <Table<DealOut>
       sticky={!embedded}
       rowKey="id"
       loading={loading ?? false}
       dataSource={deals}
-      columns={columns(!embedded, onEdit)}
+      columns={columns(!embedded, onEdit, compact)}
       pagination={deals.length > 50 ? { pageSize: 50 } : false}
       {...(embedded ? {} : { scroll: { x: "max-content" } })}
     />

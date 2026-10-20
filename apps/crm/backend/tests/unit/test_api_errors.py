@@ -181,6 +181,7 @@ def test_reason_values_are_a_stable_contract() -> None:
         "assist_empty",
         "assist_no_history",
         "deal_won_final",
+        "deal_owned_by_erp",
         "no_consent",
         "litellm_unavailable",
         "model_key_required",
@@ -212,4 +213,5 @@ def test_reason_values_are_a_stable_contract() -> None:
         "telegram_paused",
         "won_decided_by_erp",
         "handoff_no_consent",
+        "consent_via_bot",
     }

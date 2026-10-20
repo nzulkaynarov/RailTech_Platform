@@ -45,6 +45,9 @@ class LeadOut(BaseModel):
 class LeadDetail(LeadOut):
     qualification: dict[str, Any]
     consent_given_at: datetime | None
+    # Как получено согласие, если его отметил сотрудник: phone | email | paper (D-8); у согласия
+    # из бота и формы — null.
+    consent_method: str | None = None
     tg_username: str | None
     # Номер из карточки (сайт/звонок/почта) или из кнопки «Поделиться номером» в боте (Q-020),
     # E.164; удаляется по /delete.

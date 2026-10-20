@@ -1429,6 +1429,56 @@
         "title": "ComponentStatusOut",
         "type": "object"
       },
+      "ConsentRecord": {
+        "description": "«Согласие получено» (D-8): как лид дал согласие и необязательный комментарий для аудита.",
+        "properties": {
+          "comment": {
+            "anyOf": [
+              {
+                "maxLength": 500,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Comment"
+          },
+          "method": {
+            "enum": [
+              "phone",
+              "email",
+              "paper"
+            ],
+            "title": "Method",
+            "type": "string"
+          }
+        },
+        "required": [
+          "method"
+        ],
+        "title": "ConsentRecord",
+        "type": "object"
+      },
+      "ConsentResult": {
+        "properties": {
+          "ok": {
+            "const": true,
+            "default": true,
+            "title": "Ok",
+            "type": "boolean"
+          },
+          "recorded": {
+            "title": "Recorded",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "recorded"
+        ],
+        "title": "ConsentResult",
+        "type": "object"
+      },
       "ContactIn": {
         "description": "Телефон — в любом виде с кодом страны, сервер приводит к E.164; пустая строка — нет.",
         "properties": {
@@ -4262,6 +4312,17 @@
             ],
             "title": "Consent Given At"
           },
+          "consent_method": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Consent Method"
+          },
           "created_at": {
             "format": "date-time",
             "title": "Created At",
@@ -5843,6 +5904,7 @@
           "assist_empty",
           "assist_no_history",
           "deal_won_final",
+          "deal_owned_by_erp",
           "no_consent",
           "litellm_unavailable",
           "model_key_required",
@@ -5876,7 +5938,8 @@
           "user_inactive",
           "erp_email_conflict",
           "won_decided_by_erp",
-          "handoff_no_consent"
+          "handoff_no_consent",
+          "consent_via_bot"
         ],
         "title": "Reason",
         "type": "string"
@@ -12501,6 +12564,64 @@
         "summary": "Note",
         "tags": [
           "leads"
+        ]
+      }
+    },
+    "/api/v1/leads/{lead_id}/actions/record_consent": {
+      "post": {
+        "description": "«Согласие получено» (FIX-57, D-8): сотрудник отмечает согласие лида, заведённого вручную\n(звонок, письмо, бумага) — без него «Передать в бэк-офис» даёт 422 `handoff_no_consent`.\n\nПраво — как у «Передать в бэк-офис» (`clients:write`; чужого лида — только админ, 403\n`not_lead_owner`). В аудите `lead.consent_recorded`: кто, когда, способ, комментарий.\nПовторная отметка идемпотентна (`recorded: false`), согласие лида из бота или формы не\nперезаписывается.",
+        "operationId": "record_consent",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "lead_id",
+            "required": true,
+            "schema": {
+              "title": "Lead Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConsentRecord"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConsentResult"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Ошибка валидации"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Record Consent",
+        "tags": [
+          "clients"
         ]
       }
     },

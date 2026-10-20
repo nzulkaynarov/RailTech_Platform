@@ -5,6 +5,8 @@ from typing import Literal
 
 from pydantic import BaseModel, Field
 
+from app.domain.consent import ConsentMethod
+
 DocType = Literal["contract", "proposal", "letter", "invoice", "act", "other"]
 
 
@@ -128,6 +130,19 @@ class ClientDetail(ClientOut):
 class MakeCustomer(BaseModel):
     client_id: int | None = None
     new_client_name: str | None = Field(default=None, max_length=255)
+
+
+class ConsentRecord(BaseModel):
+    """«Согласие получено» (D-8): как лид дал согласие и необязательный комментарий для аудита."""
+
+    method: ConsentMethod
+    comment: str | None = Field(default=None, max_length=500)
+
+
+class ConsentResult(BaseModel):
+    ok: Literal[True] = True
+    # False — согласие уже было отмечено или дано лидом самим: ничего не изменилось.
+    recorded: bool
 
 
 class ContactOut(BaseModel):

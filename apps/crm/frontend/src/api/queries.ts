@@ -13,6 +13,7 @@ import {
   getMeQueryKey,
   getPermissionsQueryKey,
   acknowledge,
+  recordConsent,
   newDeal,
   note,
   reply,
@@ -32,7 +33,7 @@ import {
   usePermissions,
   useTeam as useTeamQuery,
 } from "./generated/crm";
-import type { ListLeadsParams } from "./generated/model";
+import type { ConsentRecordMethod, ListLeadsParams } from "./generated/model";
 import { invalidateKeys, queryKeys } from "./queryKeys";
 
 /** Сгенерированные ключи, которые страницы и провайдеры читают/кладут в кэш сами. */
@@ -84,6 +85,7 @@ export type LeadAction =
   | { kind: "return"; note: string | null }
   | { kind: "snooze"; until: string }
   | { kind: "unsnooze" }
+  | { kind: "consent"; method: ConsentRecordMethod; comment: string | null }
   | { kind: "won"; reason: string | null; amount: number | null }
   | { kind: "lost"; reason: string | null; lostReason: string | null }
   | { kind: "note"; text: string; visibleToBot: boolean }
@@ -111,6 +113,9 @@ async function runAction(id: number, action: LeadAction): Promise<void> {
       return;
     case "unsnooze":
       await unsnooze(id);
+      return;
+    case "consent":
+      await recordConsent(id, { method: action.method, comment: action.comment });
       return;
     case "won":
       await closeWon(id, { reason: action.reason, amount: action.amount });
