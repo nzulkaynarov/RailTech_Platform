@@ -169,5 +169,7 @@ def test_quote_rate_map_reads_the_age_limit_once_for_all_currencies(settings):
     )
     with CaptureQueriesContext(connection) as ctx:
         rate_map = resolve_quote_rate_map(quote, ["USD", "EUR", "GBP"])
-    assert {"USD", "EUR", "GBP"} <= set(rate_map) and all(rate_map[c] == Decimal("12600") for c in ("USD", "EUR", "GBP"))
+    assert {"USD", "EUR", "GBP"} <= set(rate_map) and all(
+        rate_map[c] == Decimal("12600") for c in ("USD", "EUR", "GBP")
+    )
     assert len(_companysettings_reads(ctx)) == 1

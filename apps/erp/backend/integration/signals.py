@@ -52,9 +52,7 @@ def _untracked_save(
     """
     names = set(update_fields) if update_fields is not None else None
     untracked = bool(
-        instance.pk
-        and names is not None
-        and not names & (set(tracked) | {f"{name}_id" for name in tracked})
+        instance.pk and names is not None and not names & (set(tracked) | {f"{name}_id" for name in tracked})
     )
     setattr(instance, flag, untracked)
     return untracked

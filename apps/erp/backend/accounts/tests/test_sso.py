@@ -231,18 +231,14 @@ def _exchange_audit_ip(client, staff_user, **meta):
 def test_exchange_audit_ignores_forged_forwarded_for_without_trusted_proxy(client, staff_user, settings):
     """FIX-54 (S-15): без доверенного прокси (NUM_PROXIES=0) подделанный X-Forwarded-For в аудит не попадает."""
     settings.REST_FRAMEWORK = {**settings.REST_FRAMEWORK, "NUM_PROXIES": 0}
-    ip = _exchange_audit_ip(
-        client, staff_user, REMOTE_ADDR="192.168.1.100", HTTP_X_FORWARDED_FOR="6.6.6.6, 7.7.7.7"
-    )
+    ip = _exchange_audit_ip(client, staff_user, REMOTE_ADDR="192.168.1.100", HTTP_X_FORWARDED_FOR="6.6.6.6, 7.7.7.7")
     assert ip == "192.168.1.100"
 
 
 def test_exchange_audit_takes_the_address_added_by_the_trusted_proxy(client, staff_user, settings):
     """За одним доверенным прокси (Caddy) адрес клиента — последний в цепочке, а не первый, который шлёт сам клиент."""
     settings.REST_FRAMEWORK = {**settings.REST_FRAMEWORK, "NUM_PROXIES": 1}
-    ip = _exchange_audit_ip(
-        client, staff_user, REMOTE_ADDR="172.18.0.2", HTTP_X_FORWARDED_FOR="6.6.6.6, 203.0.113.7"
-    )
+    ip = _exchange_audit_ip(client, staff_user, REMOTE_ADDR="172.18.0.2", HTTP_X_FORWARDED_FOR="6.6.6.6, 203.0.113.7")
     assert ip == "203.0.113.7"
 
 

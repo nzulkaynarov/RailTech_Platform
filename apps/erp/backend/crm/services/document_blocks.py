@@ -37,6 +37,7 @@ def format_document_date(value) -> str:
         value = timezone.localtime(value) if timezone.is_aware(value) else value
     return value.strftime("%d.%m.%Y")
 
+
 #: Токен → человеческая подпись. Каталог один: и редактор показывает его пользователю, и
 #: проверка целостности (E2) сверяется с ним, поэтому разъехаться они не могут.
 DOCUMENT_BLOCKS = {

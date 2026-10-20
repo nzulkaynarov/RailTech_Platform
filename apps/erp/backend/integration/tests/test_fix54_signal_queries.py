@@ -27,7 +27,9 @@ def deal():
 
 
 def _selects(ctx, table):
-    return [q["sql"] for q in ctx.captured_queries if q["sql"].lstrip().startswith("SELECT") and f'"{table}"' in q["sql"]]
+    return [
+        q["sql"] for q in ctx.captured_queries if q["sql"].lstrip().startswith("SELECT") and f'"{table}"' in q["sql"]
+    ]
 
 
 @pytest.fixture
@@ -55,9 +57,10 @@ def test_save_of_untracked_fields_reads_nothing_before_the_update(objects, name)
 
 def test_untracked_save_emits_no_event_and_no_notification(deal):
     quote = world.add_quote(deal, 1, QuoteStatusCode.SENT, "1000")
-    with patch("integration.signals.webhooks.emit_quote_sent") as sent, patch(
-        "integration.signals.webhooks.emit_deal_stage_changed"
-    ) as stage:
+    with (
+        patch("integration.signals.webhooks.emit_quote_sent") as sent,
+        patch("integration.signals.webhooks.emit_deal_stage_changed") as stage,
+    ):
         quote.save(update_fields=["valid_until"])
         deal.save(update_fields=["title"])
     sent.assert_not_called()
@@ -98,7 +101,9 @@ def test_contract_status_change_reads_the_previous_row_with_one_query(deal):
 
 
 def test_fulfillment_tracked_field_still_triggers_eta_event(deal):
-    fulfillment = world.add_fulfillment(deal, FulfillmentStatusCode.PENDING, expected_delivery_date=datetime.date(2026, 12, 1))
+    fulfillment = world.add_fulfillment(
+        deal, FulfillmentStatusCode.PENDING, expected_delivery_date=datetime.date(2026, 12, 1)
+    )
     fulfillment.expected_delivery_date = datetime.date(2026, 12, 9)
     with patch("integration.signals.webhooks.emit_delivery_event") as emit:
         fulfillment.save(update_fields=["expected_delivery_date"])
