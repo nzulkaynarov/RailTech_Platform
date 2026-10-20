@@ -6,6 +6,8 @@
 `crm` (где их нет) и молча падал в язык платформы с предупреждением «Could not resolve recipient language».
 """
 
+# flake8: noqa: F811  (фикстуры импортируются из соседних тестов и подставляются аргументами)
+
 import logging
 
 import pytest
