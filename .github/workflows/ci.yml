@@ -21,7 +21,8 @@ on:
 
 concurrency:
   group: ci-${{ github.ref }}
-  cancel-in-progress: true
+  # Отменяем только устаревшие прогоны PR; полный прогон push в main не отменяется следующим слиянием (FIX-54, G-12).
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 permissions:
   contents: read
@@ -72,6 +73,7 @@ jobs:
               - 'packages/**'
             infra:
               - 'infra/**'
+              - 'scripts/**'
               - '.env.example'
               - 'Makefile'
               - '.github/workflows/**'
@@ -461,9 +463,24 @@ jobs:
         run: |
           docker compose -f infra/compose/base.yml -f infra/compose/dev.yml --env-file .env \
             --profile observability config -q
-      - name: caddy validate
+      - name: caddy validate (dev)
         run: |
           docker run --rm -v "$PWD/infra/caddy/Caddyfile.dev:/etc/caddy/Caddyfile:ro" \
+            caddy:2.11.7-alpine caddy validate --config /etc/caddy/Caddyfile
+      # Прод-конфиги (FIX-54, G-12): те же проверки, что make deploy-check; секретов нет — CHANGE_ME подменяется заглушкой.
+      - name: docker compose config (prod и db, профили observability и kb-ingest)
+        env:
+          RT_IMAGE_TAG: ci-only
+        run: |
+          sed 's/CHANGE_ME/ci-only-value/' infra/.env.prod.example > "$RUNNER_TEMP/env.prod"
+          docker compose -f infra/compose/base.yml -f infra/compose/prod.yml --env-file "$RUNNER_TEMP/env.prod" \
+            --profile observability --profile kb-ingest config -q
+          docker compose -f infra/compose/db.yml --env-file "$RUNNER_TEMP/env.prod" config -q
+      - name: caddy validate (prod)
+        run: |
+          docker run --rm \
+            -e ACME_EMAIL=ci@example.com -e CRM_DOMAIN=crm.example.org -e ERP_DOMAIN=erp.example.org -e CABINET_DOMAIN=cabinet.example.org \
+            -v "$PWD/infra/caddy/Caddyfile.prod:/etc/caddy/Caddyfile:ro" \
             caddy:2.11.7-alpine caddy validate --config /etc/caddy/Caddyfile
 
   # ─── Итог для защиты main ──────────────────────────────────────────────────────────────────
