@@ -1,4 +1,4 @@
-import { useId, useState, type FormEvent } from 'react';
+import { useEffect, useId, useState, type FormEvent } from 'react';
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { BookOpen, FilePlus2, Inbox, Loader2, Lock, Paperclip, Plus, SearchX, Trash2, Upload } from 'lucide-react';
@@ -23,8 +23,10 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { formatDate, formatDateTime, formatFileSize, formatMoney, formatQuantity } from '@/lib/format';
 import { normalizeQuantity, requestSourceKey, type NewRequestPrefill } from '@/lib/requests';
+import { clearRequestDraft, loadRequestDraft, requestDraftKey, saveRequestDraft } from '@/lib/requestDraft';
 import { MAX_UPLOAD_BYTES } from '@/lib/upload';
 import { CanAct } from '@/session/CanAct';
+import { useMe } from '@/session/useMe';
 
 /**
  * Запросы клиента (B2B `MyRequestsPage` / `RequestDetailPage`, покупательская часть): список, карточка
@@ -255,18 +257,35 @@ function RequestForm() {
   const summaryId = useId();
   const fileInputId = useId();
 
+  // Черновик (C-9): без предзаполнения из каталога форма поднимается из sessionStorage; предзаполнение — явное
+  // действие «Запросить», оно главнее старого черновика и затирает его при первом же сохранении.
+  const me = useMe().data;
+  const draftKey = me ? requestDraftKey({ companyId: me.company.id, contactId: me.contact.id }) : null;
+  const [restored] = useState(() => (prefillLines.length || !draftKey ? null : loadRequestDraft(draftKey)));
+
   const [summary, setSummary] = useState(() =>
-    prefillLines.length === 1
-      ? t('pages.requestNew.prefillSummary', { name: prefillLines[0].text })
-      : prefillLines.length > 1
-        ? t('pages.requestNew.prefillSummary', { name: prefillLines.map((l) => l.text).join(', ') })
-        : '',
+    restored
+      ? restored.summary
+      : prefillLines.length === 1
+        ? t('pages.requestNew.prefillSummary', { name: prefillLines[0].text })
+        : prefillLines.length > 1
+          ? t('pages.requestNew.prefillSummary', { name: prefillLines.map((l) => l.text).join(', ') })
+          : '',
   );
   const [lines, setLines] = useState<LineDraft[]>(() =>
-    prefillLines.length
-      ? prefillLines.map((l) => blankLine({ text: l.text, unit: l.unit ?? '' }))
-      : [blankLine()],
+    restored?.lines.length
+      ? restored.lines.map((l) => blankLine(l))
+      : prefillLines.length
+        ? prefillLines.map((l) => blankLine({ text: l.text, unit: l.unit ?? '' }))
+        : [blankLine()],
   );
+  const [submitted, setSubmitted] = useState(false);
+
+  useEffect(() => {
+    if (!draftKey || submitted) return;
+    saveRequestDraft(draftKey, { summary, lines: lines.map(({ text, quantity, unit }) => ({ text, quantity, unit })) });
+  }, [draftKey, submitted, summary, lines]);
+
   const [attachments, setAttachments] = useState<UploadedFileRef[]>([]);
   const [isUploading, setIsUploading] = useState(false);
   const [isCatalogPickerOpen, setIsCatalogPickerOpen] = useState(false);
@@ -334,6 +353,8 @@ function RequestForm() {
       payload,
       {
         onSuccess: (created) => {
+          setSubmitted(true);
+          if (draftKey) clearRequestDraft(draftKey);
           toast.success(t('pages.requestNew.sent', { number: created.number }));
           navigate(`/requests/${created.id}`, { replace: true });
         },
@@ -454,7 +475,16 @@ function RequestForm() {
 
         <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
           <Button asChild variant="outline">
-            <Link to="/requests">{t('common.cancel')}</Link>
+            <Link
+              to="/requests"
+              onClick={() => {
+                // «Отмена» — осознанный отказ от запроса: черновик не оставляем.
+                setSubmitted(true);
+                if (draftKey) clearRequestDraft(draftKey);
+              }}
+            >
+              {t('common.cancel')}
+            </Link>
           </Button>
           <Button type="submit" disabled={create.isPending || isUploading}>
             {create.isPending ? <Loader2 className="animate-spin" aria-hidden="true" /> : <FilePlus2 aria-hidden="true" />}
