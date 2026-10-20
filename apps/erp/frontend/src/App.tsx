@@ -95,11 +95,6 @@ function App() {
   useEffect(() => {
     if (isAuthenticated) {
       loadFromAuth();
-      // Курс USD→UZS приходит из system-settings (нужна сессия): грузим после входа, а не при монтировании —
-      // до входа запрос даёт 401 и USD остался бы недоступным до перезагрузки (FIX-41). Не блокирует UI.
-      import('./store/currencyStore').then(({ useCurrencyStore }) => {
-        useCurrencyStore.getState().loadRate();
-      });
       // Don't rewrite the URL out from under a token-bearing public flow
       // (password setup/reset/sso): a stale persisted session (isAuthenticated:true
       // in localStorage) must not hijack it. Mirrors the guard in api/client.ts.
@@ -112,6 +107,17 @@ function App() {
       }
     }
   }, [isAuthenticated, loadFromAuth, route.view]);
+
+  // Курс USD→UZS приходит из system-settings (нужна сессия): грузим после входа, а не при монтировании —
+  // до входа запрос даёт 401 и USD остался бы недоступным до перезагрузки (FIX-41). Не блокирует UI.
+  // Отдельный эффект с одной зависимостью: вход — явное действие (`force`), а смена маршрута или перерисовка
+  // запроса не повторяют, пока курса нет (FIX-54, F-15).
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    import('./store/currencyStore').then(({ useCurrencyStore }) => {
+      void useCurrencyStore.getState().loadRate({ force: true });
+    });
+  }, [isAuthenticated]);
 
   const { data: systemSettings } = useSystemSettings({ enabled: isAuthenticated });
   useEffect(() => {

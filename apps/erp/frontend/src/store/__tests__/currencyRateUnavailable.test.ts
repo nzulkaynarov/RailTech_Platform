@@ -14,7 +14,7 @@ import { systemApi } from '@/api/systemApi';
 vi.mock('@/api/systemApi', () => ({ systemApi: { getSettings: vi.fn() } }));
 
 const reset = () => {
-  useCurrencyStore.setState({ rate: null, rateLoaded: false, rateUnavailable: false });
+  useCurrencyStore.setState({ rate: null, rateLoaded: false, rateUnavailable: false, rateRetryAt: 0, rateFailures: 0 });
   useCurrencyStore.getState().setCurrency('UZS');
   vi.mocked(systemApi.getSettings).mockReset();
 };
@@ -78,7 +78,7 @@ describe('курс из справочника ERP, без резервного 
 
   it('нулевой и отрицательный курс — не курс', async () => {
     for (const bad of ['0', '-5']) {
-      useCurrencyStore.setState({ rate: null, rateLoaded: false });
+      useCurrencyStore.setState({ rate: null, rateLoaded: false, rateRetryAt: 0, rateFailures: 0 });
       vi.mocked(systemApi.getSettings).mockResolvedValue({ exchange_rate_usd_uzs: bad } as never);
       await useCurrencyStore.getState().loadRate();
       expect(useCurrencyStore.getState().rate).toBeNull();
@@ -93,9 +93,9 @@ describe('курс из справочника ERP, без резервного 
     useCurrencyStore.getState().setCurrency('USD');
     expect(useCurrencyStore.getState().currency).toBe('UZS');
 
-    // После входа App зовёт loadRate снова — курс подхватывается без перезагрузки.
+    // После входа App зовёт loadRate явно (`force`) — курс подхватывается без перезагрузки и мимо паузы.
     vi.mocked(systemApi.getSettings).mockResolvedValueOnce({ exchange_rate_usd_uzs: '12700' } as never);
-    await useCurrencyStore.getState().loadRate();
+    await useCurrencyStore.getState().loadRate({ force: true });
     useCurrencyStore.getState().setCurrency('USD');
 
     const state = useCurrencyStore.getState();
@@ -116,7 +116,7 @@ describe('курс из справочника ERP, без резервного 
     vi.mocked(systemApi.getSettings).mockResolvedValueOnce({ exchange_rate_usd_uzs: null } as never);
     await useCurrencyStore.getState().loadRate();
     vi.mocked(systemApi.getSettings).mockResolvedValueOnce({ exchange_rate_usd_uzs: '12650' } as never);
-    await useCurrencyStore.getState().loadRate();
+    await useCurrencyStore.getState().loadRate({ force: true });
     expect(useCurrencyStore.getState().rate).toBe(12650);
     expect(useCurrencyStore.getState().rateUnavailable).toBe(false);
   });
