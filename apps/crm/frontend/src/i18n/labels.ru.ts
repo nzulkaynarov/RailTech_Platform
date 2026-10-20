@@ -99,6 +99,7 @@ export const labelsRu = {
     "lead.close_won": "Сделка заключена",
     "lead.close_lost": "Закрыл отказом",
     "lead.make_customer": "Сделал клиентом",
+    "lead.consent_recorded": "Отметил согласие лида",
     "lead.new_deal": "Новая сделка",
     "lead.assign": "Передал коллеге",
     "lead.acknowledge": "Принял к сведению",

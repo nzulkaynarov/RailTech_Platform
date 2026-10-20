@@ -25,6 +25,7 @@ import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from pydantic import SecretStr
+from sqlalchemy.dialects import postgresql
 
 from app.api import errors
 from app.api.deps import get_container, get_principal
@@ -136,8 +137,25 @@ class FakeAsyncSession:
     async def flush(self) -> None:
         self.flushed = True
 
-    async def execute(self, stmt: Any) -> None:
-        pass
+    async def execute(self, stmt: Any) -> "FakeResult":
+        """`DELETE` устаревших jti — ничего; `INSERT … ON CONFLICT DO NOTHING` — занять jti."""
+        if getattr(stmt, "is_insert", False):
+            jti = stmt.compile(dialect=postgresql.dialect()).params["jti"]  # type: ignore[no-untyped-call]
+            if jti in self.replay_jtis:
+                return FakeResult(None)  # конфликт: строка не вставлена, RETURNING пуст
+            self.replay_jtis.add(jti)
+            self.added.append(SsoReplayToken(jti=jti))
+            self.flushed = True
+            return FakeResult(jti)
+        return FakeResult(None)
+
+
+class FakeResult:
+    def __init__(self, value: Any) -> None:
+        self._value = value
+
+    def scalar_one_or_none(self) -> Any:
+        return self._value
 
 
 def make_session_factory(

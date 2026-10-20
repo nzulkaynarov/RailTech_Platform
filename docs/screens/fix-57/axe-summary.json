@@ -1,0 +1,94 @@
+[
+  {
+    "shot": "crm-client-deals-1440",
+    "serious_or_critical": [],
+    "all": []
+  },
+  {
+    "shot": "crm-client-deals-1440",
+    "horizontal_overflow_px": 0
+  },
+  {
+    "shot": "crm-lead-consent-needed-1440",
+    "serious_or_critical": [],
+    "all": []
+  },
+  {
+    "shot": "crm-lead-consent-needed-1440",
+    "horizontal_overflow_px": 0
+  },
+  {
+    "shot": "crm-lead-consent-dialog-1440",
+    "serious_or_critical": [],
+    "all": []
+  },
+  {
+    "shot": "crm-lead-consent-done-1440",
+    "serious_or_critical": [],
+    "all": []
+  },
+  {
+    "shot": "crm-lead-consent-done-1440",
+    "horizontal_overflow_px": 0
+  },
+  {
+    "shot": "consent-request-1440",
+    "body": [
+      {
+        "method": "email",
+        "comment": "Письмо клиента от 20.10"
+      }
+    ]
+  },
+  {
+    "shot": "crm-deal-erp-owned-1440",
+    "serious_or_critical": [],
+    "all": []
+  },
+  {
+    "shot": "crm-client-deals-390",
+    "serious_or_critical": [],
+    "all": []
+  },
+  {
+    "shot": "crm-client-deals-390",
+    "horizontal_overflow_px": 0
+  },
+  {
+    "shot": "crm-lead-consent-needed-390",
+    "serious_or_critical": [],
+    "all": []
+  },
+  {
+    "shot": "crm-lead-consent-needed-390",
+    "horizontal_overflow_px": 0
+  },
+  {
+    "shot": "crm-lead-consent-dialog-390",
+    "serious_or_critical": [],
+    "all": []
+  },
+  {
+    "shot": "crm-lead-consent-done-390",
+    "serious_or_critical": [],
+    "all": []
+  },
+  {
+    "shot": "crm-lead-consent-done-390",
+    "horizontal_overflow_px": 0
+  },
+  {
+    "shot": "consent-request-390",
+    "body": [
+      {
+        "method": "email",
+        "comment": "Письмо клиента от 20.10"
+      }
+    ]
+  },
+  {
+    "shot": "crm-deal-erp-owned-390",
+    "serious_or_critical": [],
+    "all": []
+  }
+]

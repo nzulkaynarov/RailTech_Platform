@@ -19,6 +19,7 @@ export interface LeadDetail {
   client_phone_e164?: string | null;
   company_name?: string | null;
   consent_given_at: string | null;
+  consent_method?: string | null;
   created_at: string;
   display_name: string;
   email?: string | null;

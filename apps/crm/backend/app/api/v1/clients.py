@@ -22,6 +22,8 @@ from app.schemas.clients import (
     ClientListItem,
     ClientOut,
     ClientUpdate,
+    ConsentRecord,
+    ConsentResult,
     DocType,
     DocumentOut,
     DocumentUpdate,
@@ -151,6 +153,22 @@ async def make_customer(
         who, lead_id, body.client_id, body.new_client_name
     )
     return Created(id=client_id)
+
+
+@router.post("/leads/{lead_id}/actions/record_consent", response_model=ConsentResult)
+async def record_consent(
+    lead_id: int, body: ConsentRecord, who: ClientWriter, container: ContainerDep
+) -> ConsentResult:
+    """«Согласие получено» (FIX-57, D-8): сотрудник отмечает согласие лида, заведённого вручную
+    (звонок, письмо, бумага) — без него «Передать в бэк-офис» даёт 422 `handoff_no_consent`.
+
+    Право — как у «Передать в бэк-офис» (`clients:write`; чужого лида — только админ, 403
+    `not_lead_owner`). В аудите `lead.consent_recorded`: кто, когда, способ, комментарий.
+    Повторная отметка идемпотентна (`recorded: false`), согласие лида из бота или формы не
+    перезаписывается.
+    """
+    recorded = await container.lead_consent_service.record(who, lead_id, body.method, body.comment)
+    return ConsentResult(recorded=recorded)
 
 
 @router.get("/service-requests", response_model=list[ServiceRequestItem])

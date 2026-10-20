@@ -16,6 +16,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.domain.deals import (
     DealStage,
     deal_title,
+    erp_owned_changes,
     lost_reason,
     may_edit,
     may_transition,
@@ -196,11 +197,28 @@ async def update(
     deal = await session.get(Deal, deal_id)
     if deal is None:
         raise NotFoundError("deal not found")
+    fields = body.model_dump(exclude_unset=True)
+    if deal.erp_deal_id is not None:
+        # Зеркало заявки ERP: название, сумму, валюту, стадию и причину отказа ведёт бэк-офис
+        # (приёмник событий перезапишет правку); в CRM — ответственный, срок и продукт (I-26).
+        current = {
+            "title": deal.title,
+            "amount": deal.amount,
+            "currency": deal.currency,
+            "stage": deal.stage,
+            "lost_reason": deal.lost_reason,
+        }
+        owned = erp_owned_changes(current, fields)
+        if owned:
+            raise ConflictError(
+                "deal is managed by the back office (ERP)",
+                reason=Reason.DEAL_OWNED_BY_ERP,
+                fields=owned,
+            )
     if not may_edit(DealStage(deal.stage), is_admin=who.is_admin):
         # Выигранная сделка — финал: сумму, валюту, владельца меняет только админ (аудит P0-3).
         raise ConflictError("won deal is final", reason=Reason.DEAL_WON_FINAL)
     before = snapshot(deal)
-    fields = body.model_dump(exclude_unset=True)
     if "owner_user_id" in fields:
         await _check_owner(session, fields["owner_user_id"])
     stage = fields.pop("stage", None)

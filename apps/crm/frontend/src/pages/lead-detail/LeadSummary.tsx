@@ -15,6 +15,13 @@ import { useProductNames } from "../../hooks/useProductNames";
 import { t } from "../../i18n/ru";
 import { formatDate, formatWhen } from "../../lib/time";
 
+/** «21.10.2026, устно по телефону» — способ виден, если согласие отметил сотрудник (D-8). */
+const consentText = (lead: LeadDetail): string => {
+  const date = formatDate(lead.consent_given_at ?? "");
+  const via = lead.consent_method ? t.lead.consentVia[lead.consent_method] : undefined;
+  return via ? `${date}, ${via}` : date;
+};
+
 function Qualification({ lead }: { lead: LeadDetail }) {
   const productName = useProductNames();
   const q = lead.qualification as Record<string, unknown>;
@@ -66,7 +73,7 @@ export function LeadSummary({ lead }: { lead: LeadDetail }) {
           </Descriptions.Item>
         ) : null}
         <Descriptions.Item label={t.lead.consent}>
-          {lead.consent_given_at ? formatDate(lead.consent_given_at) : t.lead.consentNo}
+          {lead.consent_given_at ? consentText(lead) : t.lead.consentNo}
         </Descriptions.Item>
         <Descriptions.Item label={t.clients.accessTg}>
           {lead.tg_username ? (
