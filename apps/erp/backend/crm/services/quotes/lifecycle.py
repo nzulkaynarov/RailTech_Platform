@@ -452,8 +452,9 @@ class QuoteLifecycleService:
         # отказом, а не тихим допуском.
         if not getattr(admin_user, "is_superuser", False):
             return None, "PLATFORM_ADMIN_REQUIRED"
-        if not reason.strip():
+        if not isinstance(reason, str) or not reason.strip():
             return None, "FORCE_REASON_REQUIRED"
+        reason = reason.strip()
         # of=("self",): Quote.status is a nullable FK, so select_related("status")
         # emits a LEFT OUTER JOIN, and Postgres rejects "FOR UPDATE" on the nullable
         # side of an outer join. Lock only the crm_quote row, not the joined tables.

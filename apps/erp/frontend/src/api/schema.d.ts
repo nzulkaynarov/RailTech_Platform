@@ -3944,7 +3944,7 @@ export interface paths {
         put?: never;
         /**
          * Force-cancel contract (Platform Admin escalation)
-         * @description Bypass SIGNED guard and mark contract CANCELLED. ADMIN role required. Audit-logged with [FORCE_ADMIN].
+         * @description Bypass SIGNED guard and mark contract CANCELLED. Platform administrator only (is_superuser); a non-empty reason is mandatory. Audit-logged with [FORCE_ADMIN].
          */
         post: operations["crm_contracts_force_cancel_create"];
         delete?: never;
@@ -4245,7 +4245,7 @@ export interface paths {
         put?: never;
         /**
          * Force change deal stage (admin)
-         * @description Transition the deal to ANY stage, bypassing FSM validation. Admin/Manager only. Use for emergency fixes.
+         * @description Transition the deal to ANY stage, bypassing FSM validation. Platform administrator only (is_superuser); a non-empty reason is mandatory and the override is audit-logged ([FORCE_ADMIN]). Use for emergency fixes.
          */
         post: operations["crm_deals_force_change_stage_create"];
         delete?: never;
@@ -5593,7 +5593,7 @@ export interface paths {
         put?: never;
         /**
          * Force-approve quote (Platform Admin escalation)
-         * @description Bypass status guard and mark quote as APPROVED. ADMIN role required. Audit-logged with [FORCE_ADMIN].
+         * @description Bypass status guard and mark quote as APPROVED. Platform administrator only (is_superuser); a non-empty reason is mandatory. Audit-logged with [FORCE_ADMIN].
          */
         post: operations["crm_quotes_force_approve_create"];
         delete?: never;
@@ -8809,7 +8809,6 @@ export interface components {
         };
         ForceChangeStageRequestRequest: {
             stage_code: string;
-            /** @default  */
             reason: string;
         };
         ForgotPasswordRequest: {

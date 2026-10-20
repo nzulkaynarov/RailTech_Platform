@@ -8841,7 +8841,7 @@
         "/api/v1/crm/contracts/{id}/force-cancel/": {
             "post": {
                 "operationId": "crm_contracts_force_cancel_create",
-                "description": "Bypass SIGNED guard and mark contract CANCELLED. ADMIN role required. Audit-logged with [FORCE_ADMIN].",
+                "description": "Bypass SIGNED guard and mark contract CANCELLED. Platform administrator only (is_superuser); a non-empty reason is mandatory. Audit-logged with [FORCE_ADMIN].",
                 "summary": "Force-cancel contract (Platform Admin escalation)",
                 "parameters": [
                     {
@@ -9721,7 +9721,7 @@
         "/api/v1/crm/deals/{id}/force-change-stage/": {
             "post": {
                 "operationId": "crm_deals_force_change_stage_create",
-                "description": "Transition the deal to ANY stage, bypassing FSM validation. Admin/Manager only. Use for emergency fixes.",
+                "description": "Transition the deal to ANY stage, bypassing FSM validation. Platform administrator only (is_superuser); a non-empty reason is mandatory and the override is audit-logged ([FORCE_ADMIN]). Use for emergency fixes.",
                 "summary": "Force change deal stage (admin)",
                 "parameters": [
                     {
@@ -13412,7 +13412,7 @@
         "/api/v1/crm/quotes/{id}/force-approve/": {
             "post": {
                 "operationId": "crm_quotes_force_approve_create",
-                "description": "Bypass status guard and mark quote as APPROVED. ADMIN role required. Audit-logged with [FORCE_ADMIN].",
+                "description": "Bypass status guard and mark quote as APPROVED. Platform administrator only (is_superuser); a non-empty reason is mandatory. Audit-logged with [FORCE_ADMIN].",
                 "summary": "Force-approve quote (Platform Admin escalation)",
                 "parameters": [
                     {
@@ -20751,11 +20751,11 @@
                     },
                     "reason": {
                         "type": "string",
-                        "minLength": 1,
-                        "default": ""
+                        "minLength": 1
                     }
                 },
                 "required": [
+                    "reason",
                     "stage_code"
                 ]
             },
