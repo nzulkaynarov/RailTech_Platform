@@ -23,7 +23,7 @@ Settings Hub (M1-ERP-09), фиксация курсов валют и учёт �
 | `docs/CONTRACTS.md` | §1 пространства API; §2 integration; §3 события; §4 portal; §5 `erp-mcp`; §6 SSO | перед задачами с контрактом |
 | `docs/adr/0004…0007` | Cabinet без бэкенда; ИИ через LiteLLM; свежие миграции; снабжение внутри ERP | перед изменением того, что покрыто ADR |
 | `docs/BUSINESS.md` §3.3, §7, §11, §12 | ценность ERP, товары и услуги, роли бэк-офиса, чего не делать | перед продуктовой задачей |
-| `legacy/b2b/CLAUDE.md` | конвенции и грабли B2B — источник этого файла | когда переносишь код; **только чтение** |
+| тег `b2b-final` (`git show b2b-final:legacy/b2b/CLAUDE.md`) | история: конвенции и грабли B2B — откуда взят этот файл. Папки `legacy/b2b` в репозитории нет (удалена в M2-INF-01) — рабочим источником история не служит | когда нужно понять, почему так было; **только чтение** |
 
 Противоречия: `BUSINESS` > `ARCHITECTURE` > `CONTRACTS` > этот файл > код. Нашёл — не угадывай, пиши в `docs/QUESTIONS.md`.
 
@@ -35,8 +35,8 @@ Settings Hub (M1-ERP-09), фиксация курсов валют и учёт �
 4. **Код решает, модель предлагает.** Стадии, права, цены, доступ — детерминированно и с тестами. Идентификаторы компании никогда не приходят от модели: только из подписанного `X-Agent-Context`.
 5. **Клиент видит только опубликованный слой** каталога и проекцию сделки: без поставщиков, себестоимости, маржи. Каждый портальный эндпоинт — негативный тест «чужая компания → 404», «внутренний слой не отдаётся».
 6. **Секреты только в окружении.** `gitleaks` в pre-commit корня. Модели — через LiteLLM по алиасам; импорт SDK провайдера в коде ERP запрещён (M1-ERP-06).
-7. **`legacy/b2b` не редактируется.** Код копируется в `apps/erp`; `git log --follow` сохраняет историю.
-8. **Документация в том же PR:** OpenAPI в `packages/contracts`, ADR, runbook, `docs/PROGRESS.md`.
+7. **B2B — только история.** Код B2B скопирован в `apps/erp` (M1-ERP-01) и дальше живёт здесь; папки `legacy/b2b` нет (удалена в M2-INF-01), исходное состояние — тег `b2b-final`; `git log --follow` сохраняет историю файлов.
+8. **Документация в том же PR:** OpenAPI в `packages/contracts`, ADR, runbook; статус и хвосты — в описании PR (`docs/PROGRESS.md` ведёт лид, ORCHESTRATOR §4.1).
 9. **DoD с UI = сценарий глазами** (скриншот/GIF в PR, 1440 и 390 px), не «тесты зелёные».
 10. **Benchmark-first** для продуктовых задач: как у Odoo / ERPNext / SAP B1 — именованный паттерн в описании PR, потом код.
 
@@ -50,14 +50,14 @@ frontend/  React 18 · TypeScript · Vite · Tailwind CSS 4 · shadcn/ui · Reac
            openapi-typescript (типы из packages/contracts) · Vitest + Testing Library
 ```
 
-Версии — как в `legacy/b2b` на момент копирования (M1-ERP-01); обновления — отдельными PR с `make check-erp`.
+Версии зафиксированы в `backend/pyproject.toml` и `frontend/package.json` (на момент копирования M1-ERP-01 — как в B2B, тег `b2b-final`); обновления — отдельными PR с `make check-erp`.
 Общие сервисы (Postgres, Redis, LiteLLM, Langfuse, RustFS, Caddy) — из `infra/compose` (есть; сервисы `erp-*` добавлены в M1-ERP-01),
 ERP сам их не описывает. Токены дизайна — из `packages/ui-tokens` (есть: `dist/shadcn.css`); подключение в `frontend/src/index.css` — при перестройке UI (M1-ERP-04).
 Хранилище файлов — целевое RustFS через S3-бэкенд Django; после копирования пока FileSystemStorage в томе `erp_media` (перевод — отдельной задачей M1).
 
 ## 4. Структура приложений (ARCHITECTURE §4; имена и одна миграция на приложение — ADR-0006)
 
-| Приложение | Что внутри | Откуда из `legacy/b2b/backend` |
+| Приложение | Что внутри | Откуда в B2B (`b2b-final:legacy/b2b/backend/`, только история) |
 |---|---|---|
 | `core` | настройки (`PLATFORM_NAME`, `SUPPORT_EMAIL`, логотип, домен), аудит, идемпотентность, оптимистичные блокировки, валидаторы загрузок, health, пагинация, versioning | `core/` (audit, idempotency, optimistic_locking, validators, health, csp, file_streaming) |
 | `accounts` | сотрудники, роли бэк-офиса (`Role` с правами), 2FA, сессии, lockout, провижининг из CRM, приём SSO-токена | `accounts/` минус KYC, подписки, операторские роли, заявки на роли, регистрация |
@@ -74,7 +74,7 @@ ERP сам их не описывает. Токены дизайна — из `p
 
 Решено в M1-ERP-03 (DECISIONS 2026-10-14): справочники `master_data` (страны, валюты, единицы, базисы, курсы) и `notifications` (EmailLog, шаблоны писем, уведомления — ARCHITECTURE §18) — модели в `core`, ТН ВЭД — в `catalog`. Пакеты `crm`, `sourcing`, `master_data`, `notifications` — **переходные пакеты кода** (сервисы, вьюхи, задачи, ре-экспорт моделей из канонических приложений) без своих таблиц, кроме `sourcing.Attachment`; новый код пиши в каноническое приложение, а тронутый код переноси туда же; остаток — M1-ERP-10.
 
-Папки `apps/erp/` сейчас — как в B2B (`backend/<app>/`, `frontend/src/`, `Makefile`, `scripts/`, `pyproject.toml`, `.flake8`); целевая структура после M1-ERP-03:
+Папки `apps/erp/` унаследованы от B2B (`backend/<app>/`, `frontend/src/`, `Makefile`, `scripts/`, `pyproject.toml`, `.flake8`); структура приложения:
 
 ```
 backend/<app>/{models/, services/, views/, serializers/, tasks.py, migrations/0001_initial.py, tests/}

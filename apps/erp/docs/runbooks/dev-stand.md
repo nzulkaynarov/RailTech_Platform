@@ -4,7 +4,7 @@
 
 - Первичный запуск ансамбля или приложения ERP на машине разработчика.
 - Ошибки 502 Bad Gateway или 503 Service Unavailable при обращении к `http://erp.localhost`.
-- Эндпоинт готовности `http://erp.localhost/api/v1/ready` возвращает статус `degraded` или HTTP 503.
+- Проверка здоровья `http://erp.localhost/health/` возвращает HTTP 503 (`"database": "down"`) или не отвечает.
 - Контейнеры группы `erp-*` переходят в статус `unhealthy`, `restarting` или аварийно завершаются (`exited 1`).
 - Отсутствие ответа от SPA (белый экран, сбой загрузки скриптов Vite).
 
@@ -30,8 +30,7 @@ make smoke
 
 URL в браузере:
 - **ERP SPA**: `http://erp.localhost` (при нестандартном порте: `http://erp.localhost:${HTTP_PORT}`)
-- **ERP API Health**: `http://erp.localhost/api/v1/health/`
-- **ERP API Ready**: `http://erp.localhost/api/v1/ready/`
+- **ERP Health**: `http://erp.localhost/health/` (тот же ответ у `/api/v1/health/`; проверяет подключение к БД, результат кэшируется на 10 с). Отдельной проверки готовности (`ready`) у ERP нет: миграции, Redis и воркеры проверяются командами из таблицы ниже.
 
 ---
 
@@ -40,8 +39,10 @@ URL в браузере:
 | Команда | Ожидаемая норма | Признак проблемы |
 |---|---|---|
 | `make ps` | Сервисы `erp-backend`, `erp-web`, `erp-worker`, `erp-worker-ai`, `erp-beat` в статусе `Up (healthy)` | Статус `unhealthy`, `Restarting` или `Exit 1` |
-| `curl -s http://erp.localhost/api/v1/health/` | `{"status":"ok"}` | 502 Bad Gateway или Connection refused |
-| `curl -s http://erp.localhost/api/v1/ready/` | `{"status":"ok","checks":{"database":true,"migrations":true,"redis":true,"worker":true}}` | `status: degraded`, один из флагов равен `false` |
+| `curl -s http://erp.localhost/health/` | HTTP 200, `{"status":"healthy","database":"up"}` | HTTP 503 `{"status":"unhealthy","database":"down"}`, 502 Bad Gateway или Connection refused |
+| `docker compose -f infra/compose/base.yml -f infra/compose/dev.yml --env-file .env exec erp-backend python manage.py migrate --check` | код возврата 0 (все миграции применены) | ненулевой код — есть ещё не применённые миграции |
+| `docker compose -f infra/compose/base.yml -f infra/compose/dev.yml --env-file .env exec redis sh -c 'redis-cli -a "$REDIS_PASSWORD" --no-auth-warning ping'` | `PONG` | нет ответа / ошибка авторизации |
+| `docker compose -f infra/compose/base.yml -f infra/compose/dev.yml --env-file .env exec erp-backend celery -A core inspect ping` | ответ `pong` от `celery@…` | нет ответа от воркеров |
 | `make logs s=erp-backend` | Логи Daphne/ASGI, статус ответов 200/201/204 | Трейсбеки Django, `OperationalError`, `ImproperlyConfigured` |
 | `make logs s=erp-worker` | `[celery@...] ready`, приём задач из очереди `celery` | Ошибки подключения к Redis, синтаксические ошибки задач |
 | `make logs s=erp-worker-ai` | `[celery@...] ready`, ожидание очереди `ai` | Ошибки LiteLLM, сбои авторизации ключа шлюза |
@@ -51,7 +52,7 @@ URL в браузере:
 
 ## Действия по устранению неисправностей
 
-### 1. `checks.database: false` (БД недоступна)
+### 1. `/health/` отвечает 503, `database: down` (БД недоступна)
 1. Проверьте состояние Postgres: `make logs s=postgres`.
 2. Убедитесь, что параметры подключения совпадают в `.env` (`POSTGRES_DB=erp`, `POSTGRES_USER`, `POSTGRES_PASSWORD`).
 3. Если пароль в `.env` был изменён после первой инициализации базы, Postgres продолжает использовать старый том данных.
@@ -61,7 +62,7 @@ URL в браузере:
    make up
    ```
 
-### 2. `checks.migrations: false` (Не применены миграции)
+### 2. `migrate --check` завершается ненулевым кодом (не применены миграции)
 1. Выполните накат миграций через контейнер бэкенда:
    ```bash
    make -C apps/erp migrate
@@ -71,11 +72,11 @@ URL в браузере:
    docker compose -f infra/compose/base.yml -f infra/compose/dev.yml --env-file .env exec erp-backend python manage.py showmigrations
    ```
 
-### 3. `checks.redis: false` (Сбой очереди/кэша Redis)
+### 3. Redis не отвечает на `ping` (сбой очереди/кэша)
 1. Проверьте контейнер Redis: `make logs s=redis`.
 2. ERP использует отдельную БД под Celery (БД 1) и Channels (БД 2). Убедитесь, что `REDIS_URL=redis://redis:6379/1`.
 
-### 4. `checks.worker: false` (Celery worker не отвечает на ping)
+### 4. Celery worker не отвечает на `inspect ping`
 1. Проверьте активность основного воркера:
    ```bash
    docker compose -f infra/compose/base.yml -f infra/compose/dev.yml --env-file .env exec erp-backend celery -A core inspect ping
@@ -107,8 +108,8 @@ URL в браузере:
 
 ## Проверка восстановления
 
-1. `make smoke` возвращает статус `Smoke OK` по всем трём доменам (`crm.localhost`, `erp.localhost`, `cabinet.localhost`).
-2. `curl -s http://erp.localhost/api/v1/ready/` возвращает HTTP 200 и `status: "ok"`.
+1. `make smoke` печатает `smoke: ok` — `/health` отвечает 200 на всех трёх доменах (`crm.localhost`, `erp.localhost`, `cabinet.localhost`).
+2. `curl -s http://erp.localhost/health/` возвращает HTTP 200 и `"status": "healthy"`; `migrate --check` и `celery -A core inspect ping` (таблица «Диагностика») — без ошибок.
 3. В браузере открывается экран входа ERP SPA без ошибок в консоли разработчика.
 
 ---
@@ -118,5 +119,5 @@ URL в браузере:
 При невозможности устранить сбой приложите к обращению:
 1. Вывод команды `make ps`.
 2. Свежие логи бэкенда: `make logs s=erp-backend | tail -n 200`.
-3. Результат запроса готовности: `curl -v http://erp.localhost/api/v1/ready/`.
+3. Результат проверки здоровья: `curl -v http://erp.localhost/health/`.
 4. Точное локальное время сбоя (Asia/Tashkent) и значение заголовка `X-Request-ID`.

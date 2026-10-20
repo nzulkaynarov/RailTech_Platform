@@ -6,11 +6,11 @@
 SPA ходит в ERP `/api/portal/v1/*`, всё, что он показывает, сделал ERP; всё, что клиент делает, исполняет ERP.
 Тот же SPA открывается как Telegram Mini App бота CRM и как сайт `cabinet.railtech.uz`.
 
-**Статус: оболочка (M2-CAB-01), экраны разделов (M2-CAB-02), «Написать менеджеру» и форма «Я новый клиент»
-(M2-CAB-03) готовы, 2026-10-14.** Есть маршруты, вход (Mini App / magic-link), тема Telegram, i18n ru/uz/en, все
-экраны §4 с действиями клиента, кнопка бота с контекстом сделки, форма запроса → лид CRM `web`. Портального API в
-ERP ещё нет (M2-ERP-01) — разработка идёт против мока из контракта; недостающее в контракте — QUESTIONS Q-14…Q-17
-(обходы описаны там). Дальше — прогон глазами M2-QA-01. Устройство и запуск — `README.md` рядом.
+**Статус (2026-10-20): M2 — «готово к гейту», гейт владельца после прогона FIX-51.** Есть маршруты, вход (Mini App /
+magic-link), тема Telegram, i18n ru/uz/en, все экраны §4 с действиями клиента, кнопка бота с контекстом сделки, форма
+запроса → лид CRM `web`. Cabinet работает с настоящим портальным API ERP по контракту 0.3.0 (FIX-24, FIX-25); мок MSW
+остался для dev и тестов. Обходы контракта, если остались, — в QUESTIONS (вложения «Нового запроса» — Q-14).
+Устройство и запуск — `README.md` рядом.
 
 ## 1. Карта документов — читай в этом порядке
 
@@ -23,14 +23,14 @@ ERP ещё нет (M2-ERP-01) — разработка идёт против м�
 | `packages/contracts/openapi/erp-portal.yaml` | **схема портального API**; типы Cabinet — `src/api/portal.d.ts` (`make gen-api-types`, сверка в `make check`) | перед каждым экраном |
 | `docs/adr/0004-cabinet-without-backend.md`, `0005` | без бэкенда; без своего ИИ | перед любым «а давайте тут свой…» |
 | `docs/BUSINESS.md` §3.2, §4 | ценность и границы Cabinet, путь клиента | перед продуктовой задачей |
-| `legacy/b2b/CLAUDE.md`, `legacy/b2b/frontend/src/` | покупательские страницы и фронтовые конвенции B2B | когда переносишь экран; **только чтение** |
+| тег `b2b-final` (`git show b2b-final:legacy/b2b/frontend/src/<путь>`) | история: покупательские страницы и фронтовые конвенции B2B, откуда экраны Cabinet. Папки `legacy/b2b` в репозитории нет (удалена в M2-INF-01) — рабочим источником история не служит | когда нужно понять происхождение экрана; **только чтение** |
 
 Противоречия: `BUSINESS` > `ARCHITECTURE` > `CONTRACTS` > этот файл > код. Нашёл — в `docs/QUESTIONS.md`, не угадывай.
 
 ## 2. Правила (нарушение = PR не принимается)
 
 1. **Только `/api/portal/v1/*`** (CONTRACTS §4). Единственное исключение — публичная форма «Я новый клиент» на странице входа: `GET /api/v1/leads/web/token` и `POST /api/v1/leads/web` CRM (M3-CRM-05, M2-CAB-03; `src/api/crm.ts`, база — `VITE_CRM_URL`, без cookie, CORS — `CABINET_ORIGIN` в CRM). Других вызовов CRM нет; вызовов internal- или integration-API ERP из Cabinet нет и не будет.
-2. **Нет своего бэкенда, базы, серверных функций.** Нужны данные, которых нет в портальном API, — задача агенту ERP через `docs/QUESTIONS.md` / `docs/PROGRESS.md`, не обход и не «пока захардкодим».
+2. **Нет своего бэкенда, базы, серверных функций.** Нужны данные, которых нет в портальном API, — задача агенту ERP через `docs/QUESTIONS.md` и описание PR (лид переносит в `docs/PROGRESS.md`), не обход и не «пока захардкодим».
 3. **В Cabinet нет:** сотрудников, ролей компании-исполнителя, настроек бизнеса, внутреннего слоя каталога, себестоимости, маржи, поставщиков. Клиент видит только опубликованный слой и проекцию сделки — это обеспечивает ERP, но Cabinet не рисует полей, которых в контракте нет.
 4. **Своего ИИ нет** (ADR-0005). Вопросы клиента — бот CRM; «Написать менеджеру» → `t.me/<bot>?start=deal_<id>` с контекстом сделки (`ManagerButton`, `app/links.ts`; в Mini App — `WebApp.openTelegramLink`; без имени бота кнопки нет). Позже — веб-виджет того же агента CRM.
 5. **Режимы входа:** Mini App — `initData` → `POST /auth/telegram`, без страницы входа, тема Telegram; веб — magic-link по e-mail (`POST /auth/magic-link` → ссылка `/auth/magic#token=…` → `POST /auth/magic {token}`; токен во фрагменте, не в пути), необязательный пароль. Регистрации «с улицы» нет: первый вход — по приглашению.
@@ -52,9 +52,9 @@ Telegram Web App SDK (initData, themeParams, start_param, MainButton/BackButton 
 - Маршрутизатор — react-router 7 (`src/app/routes.tsx`). Deep-link Mini App: `start_param=deal_<id>` → `/deals/<id>`, `quote_<id>` → `/quotes/<id>` (`src/telegram/start-param.ts`), разрешается до создания маршрутизатора; на вложенных экранах — системная «Назад» Telegram.
 - Деплой: сервис `cabinet-web` (Vite → nginx, `/health`) за Caddy на `cabinet.localhost` / `cabinet.railtech.uz`; `/api/portal/*` Caddy ведёт с того же домена на ERP (cookie same-origin, CORS не нужен).
 
-## 4. Экраны (ARCHITECTURE §5, M2-CAB-02) и откуда они из `legacy/b2b/frontend/src`
+## 4. Экраны (ARCHITECTURE §5, M2-CAB-02) и их происхождение из B2B (тег `b2b-final`, `legacy/b2b/frontend/src`; история, не рабочий источник)
 
-| Экран | Портальный API | Источник в B2B | В Cabinet (M2-CAB-02) |
+| Экран | Портальный API | Происхождение в B2B (`b2b-final`) | В Cabinet (M2-CAB-02) |
 |---|---|---|---|
 | Запросы, «Новый запрос» (суть + строки свободным текстом с количеством/единицей; вложений нет до загрузки файлов в контракте — Q-14) | `GET/POST /requests` | `pages/MyRequestsPage.tsx`, `pages/RequestDetailPage.tsx` (покупательская часть) | `src/pages/requests.tsx`: список, карточка из списка (строк в контракте нет — Q-16), форма с проверкой количества |
 | КП: список, карточка, принять (код по запросу) / отклонить (причина) | `GET /quotes`, `GET /quotes/{id}`, `POST …/request-code`, `POST …/accept`, `POST …/reject` | `pages/QuotesPage.tsx`, `components/CRM/BuyerAcceptedPanel.tsx`, `components/CRM/RejectQuoteDialog.tsx` | `src/pages/quotes.tsx`: строки (позиции/разделы/заметки/этапы), итог, срок, обещанные даты; «срок истёк» по `valid_until`; после акцепта — панель «договор формируется / готов» |
@@ -119,12 +119,12 @@ Mini App локально: эмуляция через `#tgWebAppData=…` ил�
 - [ ] Экран на 390 px без горизонтальной прокрутки; axe 0; скриншоты в Mini App **и** в браузере в описании PR.
 - [ ] `can_act=false` скрывает действия; 401/404 обработаны без утечек.
 - [ ] Секретов и токена бота нет; `.env.example` актуален.
-- [ ] Строка в `docs/PROGRESS.md`; открытые вопросы — в `docs/QUESTIONS.md`.
+- [ ] Статус и хвосты — в описании PR (`docs/PROGRESS.md` ведёт лид, ORCHESTRATOR §4.1); открытые вопросы — в `docs/QUESTIONS.md`.
 
 ## 9. Открытые точки для M2 (не решать молча)
 
 - Сессия портала — **решено (M2-CAB-01, по рекомендации, DECISIONS):** `/api/portal/*` проксируется Caddy с домена Cabinet на ERP, cookie same-origin (`SameSite=Lax` по контракту), CORS не нужен. ERP в M2-ERP-01 должен принимать Host `cabinet.*` (`ALLOWED_HOSTS`) и не требовать CSRF-токен Django для портальной сессии (или выдать его способом, доступным SPA).
-- Коды ошибок `detail` портала — перечень `ErrorCode` контракта 0.2.0 (Q-17); у каждого кода есть текст `apiErrors.*` на ru/uz/en, при входе 403/429 — `auth.errors.*` (`loginErrorKey`). Новый код в контракте → ключ в трёх словарях в том же PR.
+- Коды ошибок `detail` портала — перечень `ErrorCode` контракта (Q-17; текущая версия портала — 0.3.0); у каждого кода есть текст `apiErrors.*` на ru/uz/en, при входе 403/429 — `auth.errors.*` (`loginErrorKey`). Новый код в контракте → ключ в трёх словарях в том же PR.
 - Недостающее в контракте после M2-CAB-02 (агенту ERP, обходы — в QUESTIONS): загрузка файлов для вложений запроса (Q-14), id и справочник категорий каталога (Q-15), строки запроса и номер сделки для клиента (Q-16). Снять обходы сразу после правки контракта.
 - Тёмная тема Mini App: статусные токены переопределены в `src/index.css` (`.dark`) до тёмных токенов в `packages/ui-tokens`; контраст `button_color` самого Telegram проверяется на M2-QA-01.
 - Скачивание в Mini App: файл сохраняется через `<a download>` (blob); поведение в webview Telegram на iOS/Android проверить на M2-QA-01 (при проблеме — `WebApp.downloadFile`, Bot API 8.0, но ему нужна ссылка без cookie).

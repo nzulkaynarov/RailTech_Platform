@@ -70,7 +70,7 @@ export function DeliveriesPage() {
               <CardHeader className="flex flex-wrap items-center justify-between gap-2 px-4">
                 <CardTitle className="min-w-0">
                   <h2 className="flex flex-wrap items-baseline gap-x-3 gap-y-1 text-base">
-                    <DealLink deal={group.deal} showTitle />
+                    <DealLink deal={group.deal} showTitle stackTitle />
                     <span className="text-sm font-normal text-muted-foreground">
                       {t('pages.deliveries.progress', { done: group.delivered, total: group.lines.length })}
                     </span>
@@ -254,13 +254,9 @@ export function DocumentsPage() {
           ) : null}
         </EmptyState>
       ) : filtered.length === 0 ? (
-        <EmptyState
-          icon={Search}
-          title={t('pages.documents.emptyTitle')}
-          text={t('pages.documents.emptyText')}
-        >
+        <EmptyState icon={Search} title={t('pages.documents.noMatchTitle')} text={t('pages.documents.noMatchText', { query: query.trim() })}>
           <Button variant="outline" onClick={() => setQuery('')}>
-            {t('pages.documents.showAll')}
+            {t('pages.documents.clearSearch')}
           </Button>
         </EmptyState>
       ) : (

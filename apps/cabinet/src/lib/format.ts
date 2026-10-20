@@ -58,17 +58,43 @@ export function formatQuantity(quantity: string | null | undefined, unit: string
   return unit ? `${number} ${unit}` : number;
 }
 
+/**
+ * Дата для показа. Русский и английский — словом («25 окт. 2026 г.», «Oct 25, 2026»). Узбекский — числом
+ * `ДД.ММ.ГГГГ[, ЧЧ:ММ]`: короткие месяцы CLDR для `uz` зависят от версии ICU (в Chrome выходило «2026 M10 21»,
+ * D-4 FIX-51), а числовая запись одинакова везде. Части берутся в `en-CA`, чтобы не зависеть от словарей `uz`.
+ */
+function formatInstant(date: Date, timeZone: string, withTime: boolean, language?: string): string {
+  const locale = formatLocaleOf(language);
+  if (localeFor(locale).code === 'uz') {
+    const parts = new Intl.DateTimeFormat('en-CA', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      ...(withTime ? { hour: '2-digit', minute: '2-digit', hourCycle: 'h23' as const } : {}),
+      timeZone,
+    }).formatToParts(date);
+    const get = (type: string) => parts.find((part) => part.type === type)?.value ?? '';
+    const day = `${get('day')}.${get('month')}.${get('year')}`;
+    return withTime ? `${day}, ${get('hour')}:${get('minute')}` : day;
+  }
+  return new Intl.DateTimeFormat(locale, {
+    ...DATE_STYLE,
+    ...(withTime ? { hour: '2-digit', minute: '2-digit', hourCycle: 'h23' as const } : {}),
+    timeZone,
+  }).format(date);
+}
+
 /** Календарная дата `YYYY-MM-DD` (поле `format: date`): «25 окт. 2026 г.», без сдвига по поясу. */
 export function formatDate(value: string | null | undefined, language?: string): string {
   if (!value) return EMPTY;
   const match = DATE_ONLY_RE.exec(value);
   if (match) {
     const date = new Date(Date.UTC(Number(match[1]), Number(match[2]) - 1, Number(match[3])));
-    return new Intl.DateTimeFormat(formatLocaleOf(language), { ...DATE_STYLE, timeZone: 'UTC' }).format(date);
+    return formatInstant(date, 'UTC', false, language);
   }
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return EMPTY;
-  return new Intl.DateTimeFormat(formatLocaleOf(language), { ...DATE_STYLE, timeZone: BUSINESS_TIME_ZONE }).format(date);
+  return formatInstant(date, BUSINESS_TIME_ZONE, false, language);
 }
 
 /** Момент `date-time` (ISO с поясом) — дата и время в Asia/Tashkent. */
@@ -76,13 +102,7 @@ export function formatDateTime(value: string | null | undefined, language?: stri
   if (!value) return EMPTY;
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return EMPTY;
-  return new Intl.DateTimeFormat(formatLocaleOf(language), {
-    ...DATE_STYLE,
-    hour: '2-digit',
-    minute: '2-digit',
-    hourCycle: 'h23',
-    timeZone: BUSINESS_TIME_ZONE,
-  }).format(date);
+  return formatInstant(date, BUSINESS_TIME_ZONE, true, language);
 }
 
 const DATE_STYLE: Intl.DateTimeFormatOptions = { day: 'numeric', month: 'short', year: 'numeric' };

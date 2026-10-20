@@ -65,8 +65,8 @@ describe('Путь клиента M2-CAB-04', () => {
 
     await user.clear(searchInput);
     await user.type(searchInput, 'несуществующий-файл');
-    expect(await screen.findByText('Документов пока нет')).toBeInTheDocument();
-    await user.click(screen.getByRole('button', { name: 'Показать все' }));
+    expect(await screen.findByText('Ничего не найдено')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Сбросить поиск' }));
     expect(within(screen.getByRole('list', { name: 'Документы' })).getAllByRole('listitem')).toHaveLength(9);
   });
 });

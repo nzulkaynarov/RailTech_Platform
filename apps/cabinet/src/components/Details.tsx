@@ -26,8 +26,18 @@ export function DetailList({ items, className }: { items: Array<{ label: string;
 /**
  * Ссылка на сделку — цель deep-link бота (`deal_<id>`), собирает всё по сделке. Клиент видит номер
  * (`deal.number`), а не внутренний id; название (`deal.title`) — по запросу, рядом с номером.
+ * `stackTitle` — для строки-заголовка с переносом (`flex-wrap`): на телефоне название уходит на свою строку
+ * без разделителя «·» (иначе точка висела в начале строки — D-7 FIX-51), от `sm` — «№ · название» в одну строку.
  */
-export function DealLink({ deal, showTitle = false }: { deal: DealRef | null | undefined; showTitle?: boolean }) {
+export function DealLink({
+  deal,
+  showTitle = false,
+  stackTitle = false,
+}: {
+  deal: DealRef | null | undefined;
+  showTitle?: boolean;
+  stackTitle?: boolean;
+}) {
   const { t } = useTranslation();
   if (!deal) return <>{t('common.noDeal')}</>;
   return (
@@ -38,7 +48,19 @@ export function DealLink({ deal, showTitle = false }: { deal: DealRef | null | u
       >
         {t('common.dealNumber', { number: deal.number })}
       </Link>
-      {showTitle && deal.title ? <span className="font-normal text-muted-foreground"> · {deal.title}</span> : null}
+      {showTitle && deal.title ? (
+        stackTitle ? (
+          <>
+            {' '}
+            <span aria-hidden="true" className="hidden font-normal text-muted-foreground sm:inline">
+              ·
+            </span>{' '}
+            <span className="basis-full font-normal text-muted-foreground sm:basis-auto">{deal.title}</span>
+          </>
+        ) : (
+          <span className="font-normal text-muted-foreground"> · {deal.title}</span>
+        )
+      ) : null}
     </>
   );
 }

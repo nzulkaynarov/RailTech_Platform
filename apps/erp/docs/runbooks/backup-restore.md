@@ -92,11 +92,11 @@ docker compose -f infra/compose/base.yml -f infra/compose/dev.yml --env-file .en
 
 ## Проверка восстановления
 
-1. Проверьте liveness и readiness API:
+1. Проверьте доступность API и базы:
    ```bash
-   curl -s http://erp.localhost/api/v1/ready/
+   curl -s http://erp.localhost/health/
    ```
-   *Ожидается статус `ok` и все флаги `true`.*
+   *Ожидается HTTP 200 и `{"status":"healthy","database":"up"}`.*
 2. Выполните проверку ключевых счётчиков сущностей:
    ```bash
    docker compose -f infra/compose/base.yml -f infra/compose/dev.yml --env-file .env exec erp-backend python manage.py shell -c "

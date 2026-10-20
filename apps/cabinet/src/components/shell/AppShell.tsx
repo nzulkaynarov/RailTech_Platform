@@ -45,7 +45,7 @@ export function AppShell() {
             </Link>
           </header>
         ) : null}
-        <main id="main" tabIndex={-1} className="mx-auto w-full max-w-5xl flex-1 px-4 pt-4 pb-24 outline-none md:px-8 md:py-6">
+        <main id="main" tabIndex={-1} className="mx-auto w-full max-w-6xl flex-1 px-4 pt-4 pb-24 outline-none md:px-8 md:py-6">
           {me && !me.can_act ? (
             <Alert role="status" className="mb-4">
               <Eye aria-hidden="true" />

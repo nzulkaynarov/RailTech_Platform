@@ -17,7 +17,7 @@ make smoke        # /health трёх доменов → 200
 |---|---|
 | `http://crm.localhost` | CRM: SPA (`crm-web`), `/api/*`, `/health`, `/ready` → `crm-api` |
 | `http://erp.localhost` | ERP (с M1-ERP-01): `/api`, `/admin`, `/ws`, `/static`, `/media`, `/health` → `erp-backend`; остальное → `erp-web` (SPA) |
-| `http://cabinet.localhost` | Cabinet (с M2-CAB-01): `/api/portal/*` → `erp-backend` (до M2-ERP-01 — 404, ожидаемо); остальное, включая `/health`, → `cabinet-web` (SPA) |
+| `http://cabinet.localhost` | Cabinet (с M2-CAB-01): `/api/portal/*` → `erp-backend` (портальный API); остальное, включая `/health`, → `cabinet-web` (SPA) |
 | `http://langfuse.localhost` | Langfuse (только `make up-obs`) |
 | `http://s3.localhost` | консоль RustFS |
 
@@ -85,7 +85,7 @@ docker volume rm rt-platform_clickhouse_data rt-platform_clickhouse_logs
 make up-obs
 ```
 
-При нехватке памяти Docker Desktop (8 ГБ на несколько стендов) на время старта можно остановить `docling`, `crm-worker`,
+При нехватке памяти Docker Desktop (текущий объём — `docker info`, HANDOFF §6) на время старта можно остановить `docling`, `crm-worker`,
 `crm-mcp-*` и вернуть их `make up`.
 
 ### ИИ ERP: ключ шлюза, бюджет, трейсы (M1-ERP-06)
@@ -133,11 +133,11 @@ Daphne запущен с `-v 0` (`infra/compose/base.yml`), журнал зап�
 make up                                    # перезапуск erp-backend с новой командой
 curl -s -o /dev/null --resolve cabinet.localhost:8088:127.0.0.1 http://cabinet.localhost:8088/api/portal/v1/auth/magic/PROBE-TOKEN-4242
 docker compose -f infra/compose/base.yml -f infra/compose/dev.yml --env-file .env logs erp-backend | grep -c PROBE-TOKEN-4242   # 0
-docker compose -f infra/compose/base.yml -f infra/compose/dev.yml --env-file .env logs erp-backend | grep 'auth/magic'          # …/auth/magic/[REDACTED] 410 …
+docker compose -f infra/compose/base.yml -f infra/compose/dev.yml --env-file .env logs erp-backend | grep 'auth/magic'          # …/auth/magic/[REDACTED] 404 …
 ```
 
 Остаточный риск: журналы фронтового прокси (Caddy с включённым `log`, nginx `cabinet-web`) пишут путь страницы
-`/auth/magic/<токен>` (SPA-маршрут Cabinet). Ссылки из писем с FIX-21 ведут на `/auth/magic#token=<токен>`: фрагмент браузер на сервер не отправляет, в журналах прокси токена нет; Cabinet меняет его на сессию через `POST /auth/magic` (FIX-24). Устаревший `GET /auth/magic/{токен}` остаётся до FIX-24 и по-прежнему прячется фильтром.
+`/auth/magic/<токен>` (SPA-маршрут Cabinet). Ссылки из писем с FIX-21 ведут на `/auth/magic#token=<токен>`: фрагмент браузер на сервер не отправляет, в журналах прокси токена нет; Cabinet меняет его на сессию через `POST /auth/magic` (FIX-24). `GET /auth/magic/{токен}` снят в контракте 0.3.0 (FIX-25) и отвечает 404; путь в журнале всё равно прячется фильтром — проверка выше показывает `…/auth/magic/[REDACTED] 404`.
 
 ## Если не поднимается
 
