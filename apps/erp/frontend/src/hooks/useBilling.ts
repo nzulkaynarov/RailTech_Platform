@@ -110,18 +110,6 @@ export const useCancelContract = () => {
   });
 };
 
-export const useForceCancelContract = () => {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: ({ id, reason }: { id: number; reason: string }) =>
-      contractsApi.forceCancel(id, reason),
-    onSuccess: (_data, { id }) => {
-      qc.invalidateQueries({ queryKey: ['contracts'] });
-      qc.invalidateQueries({ queryKey: ['contract', id] });
-    },
-  });
-};
-
 // ─── Invoices ─────────────────────────────────────────────────
 
 export const useInvoices = (params?: InvoiceFilterParams) => useQuery({
