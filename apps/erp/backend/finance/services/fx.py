@@ -60,22 +60,32 @@ def is_base(currency_code) -> bool:
 
 
 def max_rate_age_days(company=None) -> int:
-    default_setting = getattr(settings, "FX_RATE_MAX_AGE_DAYS", 7)
-    if default_setting != 7:
-        return int(default_setting)
-    if company is not None and hasattr(company, "settings"):
-        val = getattr(company.settings, "fx_rate_max_age_days", None)
-        if val is not None:
-            return int(val)
-    try:
-        from parties.models import CompanySettings
+    """Лимит возраста курса в днях: настройка СВОЕЙ компании (FIX-41, F-3).
 
-        row = CompanySettings.objects.values_list("fx_rate_max_age_days", flat=True).first()
-        if row is not None:
-            return int(row)
-    except Exception:
-        pass
-    return int(default_setting)
+    `company` не передана — компания-владелец ERP (`core.tenant.own_company`). Переменная окружения
+    `FX_RATE_MAX_AGE_DAYS` — только запасное значение: когда своей компании ещё нет, у неё нет строки
+    настроек или настройка двусмысленна (две «своих» компании без `OWN_COMPANY_ID`). Строка чужой
+    компании никогда не используется.
+    """
+    from parties.models import CompanySettings
+
+    fallback = int(getattr(settings, "FX_RATE_MAX_AGE_DAYS", 7))
+    if company is None:
+        from django.core.exceptions import ImproperlyConfigured
+
+        from core.tenant import own_company
+
+        try:
+            company = own_company()
+        except ImproperlyConfigured:
+            logger.warning(
+                "FX: own company is ambiguous (set OWN_COMPANY_ID) — using FX_RATE_MAX_AGE_DAYS=%s", fallback
+            )
+            return fallback
+    if company is None:
+        return fallback
+    value = CompanySettings.objects.filter(company_id=company.pk).values_list("fx_rate_max_age_days", flat=True).first()
+    return int(value) if value is not None else fallback
 
 
 def rate_to_str(rate: Decimal) -> str:

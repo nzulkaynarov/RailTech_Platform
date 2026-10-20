@@ -4,7 +4,8 @@ export interface SystemSettings {
 	vat_rate: string;
 	// standard_margin removed from the settings API surface (P9) — it was inert
 	// (the pricing engine reads CompanySettings.default_margin_percent).
-	exchange_rate_usd_uzs: string;
+	/** Курс USD→UZS из справочника ЦБ (`finance.services.fx`), только чтение; null — свежего курса нет (FIX-41). */
+	readonly exchange_rate_usd_uzs: string | null;
 	platform_name: string;
 	support_email?: string;
 	logo_url?: string;

@@ -23,15 +23,13 @@ export function PlatformSettings() {
   // без промежуточного кадра с пустыми полями.
   const [form, setForm] = useDraftState(data ?? null, (loaded) => ({
     vatRate: loaded?.vat_rate ?? '',
-    exchangeRate: loaded?.exchange_rate_usd_uzs ?? '',
     platformName: loaded?.platform_name ?? '',
     supportEmail: loaded?.support_email ?? '',
     logoUrl: loaded?.logo_url ?? '',
     domain: loaded?.domain ?? '',
   }));
-  const { vatRate, exchangeRate, platformName, supportEmail, logoUrl, domain } = form;
+  const { vatRate, platformName, supportEmail, logoUrl, domain } = form;
   const setVatRate = (value: string) => setForm((prev) => ({ ...prev, vatRate: value }));
-  const setExchangeRate = (value: string) => setForm((prev) => ({ ...prev, exchangeRate: value }));
 
   const handleSave = async () => {
     try {
@@ -39,7 +37,6 @@ export function PlatformSettings() {
       // CompanySettings.default_margin_percent, not this platform setting.
       await updateMut.mutateAsync({
         vat_rate: vatRate,
-        exchange_rate_usd_uzs: exchangeRate,
         platform_name: platformName,
         support_email: supportEmail,
         logo_url: logoUrl,
@@ -82,10 +79,6 @@ export function PlatformSettings() {
               <div className="space-y-2">
                 <Label>{t('settings.platform.vatRate')}</Label>
                 <Input type="number" step="0.01" value={vatRate} onChange={(e) => setVatRate(e.target.value)} />
-              </div>
-              <div className="space-y-2">
-                <Label>{t('settings.platform.exchangeRate')}</Label>
-                <Input type="number" step="0.0001" value={exchangeRate} onChange={(e) => setExchangeRate(e.target.value)} />
               </div>
               <div className="space-y-2">
                 <Label>{t('settings.platform.platformName')}</Label>

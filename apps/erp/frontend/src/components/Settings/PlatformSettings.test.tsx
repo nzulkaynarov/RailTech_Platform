@@ -50,8 +50,9 @@ describe('PlatformSettings (spec PR 5, вариант Б)', () => {
     expect(screen.getByText('Системные настройки')).toBeInTheDocument();
     expect(screen.getByDisplayValue('12.00')).toBeInTheDocument();
     expect(screen.getByDisplayValue('12.00')).not.toBeDisabled();
-    expect(screen.getByDisplayValue('12650.0000')).toBeInTheDocument();
-    expect(screen.getByDisplayValue('12650.0000')).not.toBeDisabled();
+    // Второго ручного курса нет (FIX-41): курс — только из справочника ЦБ, формы курса в настройках нет.
+    expect(screen.queryByDisplayValue('12650.0000')).not.toBeInTheDocument();
+    expect(screen.queryByText('Курс USD→UZS')).not.toBeInTheDocument();
     expect(screen.getByDisplayValue('ERP Platform')).toBeInTheDocument();
     expect(screen.getByDisplayValue('ERP Platform')).toBeDisabled();
     expect(screen.getByDisplayValue('support@example.com')).toBeInTheDocument();
@@ -80,7 +81,6 @@ describe('PlatformSettings (spec PR 5, вариант Б)', () => {
     });
     expect(mutateAsyncMock).toHaveBeenCalledWith({
       vat_rate: '12.00',
-      exchange_rate_usd_uzs: '12650.0000',
       platform_name: 'ERP Platform',
       support_email: 'support@example.com',
       logo_url: 'https://example.com/logo.png',
@@ -91,5 +91,7 @@ describe('PlatformSettings (spec PR 5, вариант Б)', () => {
     expect(payload).not.toHaveProperty('is_two_factor_required');
     // standard_margin более не отправляется (P9).
     expect(payload).not.toHaveProperty('standard_margin');
+    // Курс не отправляется: бэкенд отдаёт его только на чтение (FIX-41).
+    expect(payload).not.toHaveProperty('exchange_rate_usd_uzs');
   });
 });

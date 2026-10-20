@@ -136,6 +136,111 @@ def test_deviation_by_actual_purchase(world, sent, amount, rate, deviation, actu
     assert sent.total_incl_vat == D("19689600.00")
 
 
+# ── 2a. Одна точность: сумма по строкам против суммы по строкам (FIX-41, F-13) ─────────────
+
+
+def _line_cost(base, duty, rate):
+    """Себестоимость единицы в сумах так, как её считает движок КП: округление до копейки на строке."""
+    return ((D(base) + D(duty)) * D(rate)).quantize(D("0.01"), rounding="ROUND_HALF_UP")
+
+
+PENNY_CASES = [
+    pytest.param([("0.10", "USD", 3)], "12650.55", id="tenth-x3"),
+    pytest.param([("0.33", "USD", 7)], "12650.55", id="third-x7"),
+    pytest.param([("0.10", "USD", 3), ("0.35", "USD", 3)], "12650.55", id="two-lines"),
+    pytest.param([("1.01", "USD", 3, "0.05")], "7.777777", id="duty-six-digit-rate"),
+    pytest.param([("0.01", "USD", 1)], "50.5", id="half-penny-up"),
+    pytest.param([("19.99", "USD", 13)], "12713.123456", id="many-units"),
+    pytest.param([("0.07", "USD", 11), ("0.13", "USD", 17), ("2.49", "USD", 5)], "12345.678901", id="three-lines"),
+]
+
+
+def _quoted_amount(lines):
+    return sum(((D(line[0]) + D(line[3] if len(line) > 3 else "0")) * line[2] for line in lines), D("0"))
+
+
+@pytest.mark.parametrize("explicit_amount", [False, True], ids=["amount-as-quoted", "amount-explicit"])
+@pytest.mark.parametrize("lines, rate", PENNY_CASES)
+def test_actual_equal_to_quote_has_no_phantom_deviation(world, lines, rate, explicit_amount):
+    """Закупка по тому же курсу и на ту же сумму — отклонение ровно 0, а не «−0,01» от разного округления."""
+    from finance.services.margin_deviation import PurchaseActualInput, record_purchase_actual
+
+    set_rate("USD", rate)
+    quote = build_quote(world, lines, margin="20")
+    send_quote(world, quote)
+    amount = _quoted_amount(lines) if explicit_amount else None
+
+    record_purchase_actual(world.deal, actor=world.finance, data=PurchaseActualInput("USD", amount, rate))
+    data = compute_margin_deviation(world.deal)
+
+    assert data["has_actuals"] is True
+    assert data["actual_cost"] == data["quoted_cost"]
+    assert data["deviation_amount"] == D("0.00")
+    assert data["deviation_percent_points"] == D("0.00")
+    assert data["rows"][0]["cost_deviation"] == D("0.00")
+
+
+@pytest.mark.parametrize("lines, rate", PENNY_CASES)
+def test_rate_change_deviation_is_sum_of_line_differences(world, lines, rate):
+    """Курс закупки отличается — отклонение равно сумме разниц по строкам, каждая округлена как в КП."""
+    from finance.services.margin_deviation import PurchaseActualInput, record_purchase_actual
+
+    set_rate("USD", rate)
+    quote = build_quote(world, lines, margin="20")
+    send_quote(world, quote)
+    new_rate = str(D(rate) + D("17.123456"))
+
+    record_purchase_actual(world.deal, actor=world.finance, data=PurchaseActualInput("USD", None, new_rate))
+    data = compute_margin_deviation(world.deal)
+
+    expected = sum(
+        (
+            (
+                _line_cost(line[0], line[3] if len(line) > 3 else "0", new_rate)
+                - _line_cost(line[0], line[3] if len(line) > 3 else "0", rate)
+            )
+            * line[2]
+            for line in lines
+        ),
+        D("0"),
+    )
+    assert data["deviation_amount"] == -expected
+    assert data["actual_cost"] - data["quoted_cost"] == expected
+
+
+def test_total_cost_matches_quote_economics_to_the_penny(world):
+    """Себестоимость и прибыль в отклонении совпадают с «Экономикой сделки» КП до копейки."""
+    from crm.services.quotes import compute_quote_economics
+
+    set_rate("USD", "12650.55")
+    set_rate("EUR", "13800.45")
+    quote = build_quote(world, [("0.10", "USD", 3), ("0.35", "EUR", 3), ("1000", "UZS", 1)], margin="20")
+    send_quote(world, quote)
+    quote.refresh_from_db()
+
+    economics = compute_quote_economics(quote)
+    data = compute_margin_deviation(world.deal)
+
+    assert data["quoted_cost"] == economics["total_landed_cost"]
+    assert data["quoted_profit"] == economics["gross_profit"]
+
+
+def test_partial_actual_scales_line_cost_in_one_precision(world):
+    """Фактическая сумма вдвое меньше КП по тому же курсу — себестоимость ровно вдвое меньше без «копеек»."""
+    from finance.services.margin_deviation import PurchaseActualInput, record_purchase_actual
+
+    set_rate("USD", "12650.55")
+    lines = [("0.10", "USD", 4), ("0.30", "USD", 4)]
+    send_quote(world, build_quote(world, lines, margin="20"))
+
+    record_purchase_actual(
+        world.deal, actor=world.finance, data=PurchaseActualInput("USD", _quoted_amount(lines) / 2, "12650.55")
+    )
+    data = compute_margin_deviation(world.deal)
+
+    assert data["actual_cost"] * 2 == data["quoted_cost"]
+
+
 def test_reference_prefers_accepted_quote(world, sent):
     from crm.models import Quote
 
