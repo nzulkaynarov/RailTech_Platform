@@ -26,6 +26,21 @@ describe('Каталог', () => {
     await expectNoAxeViolations();
   });
 
+  // D-5 (FIX-51): «В наличии» и «срок 0 дней» рядом читается странно — при нулевом сроке срок не показывается.
+  it('срок 0 дней не показывается: «В наличии» без срока; положительный срок — как был', async () => {
+    signedIn();
+    const user = userEvent.setup();
+    renderApp('/catalog?q=перчатки');
+    const list = await results();
+    const gloves = within(list).getByRole('link', { name: 'Перчатки нитриловые, размер L' }).closest('article') as HTMLElement;
+    expect(within(gloves).getByText('В наличии')).toBeInTheDocument();
+    expect(within(gloves).queryByText(/срок/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/0 дн/)).not.toBeInTheDocument();
+    await user.click(within(gloves).getByRole('link', { name: 'Перчатки нитриловые, размер L' }));
+    await heading('Перчатки нитриловые, размер L');
+    expect(screen.queryByText(/срок/)).not.toBeInTheDocument();
+  });
+
   it('пагинация — в адресе страницы', async () => {
     signedIn();
     const user = userEvent.setup();
