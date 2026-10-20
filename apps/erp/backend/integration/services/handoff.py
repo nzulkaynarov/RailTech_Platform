@@ -33,7 +33,7 @@ from parties.models import Company, CompanyType, Contact
 from portal.models import PortalRequestLine
 from portal.services.invitation import invite_contact_to_portal
 
-from crm.models import Deal
+from crm.models import ActivityLog, Deal
 
 from ..exceptions import IntegrationConflict
 from ..models import CrmClientMapping, CrmContactMapping
@@ -63,14 +63,18 @@ def _cabinet_url() -> str:
 
 
 def _repeat_response(mapping: CrmClientMapping) -> Dict[str, Any]:
-    """Ответ на повторную передачу: те же id; в `sent_via` — то, что реально было отправлено контакту раньше."""
+    """Ответ на повторную передачу: те же id; в `sent_via` — то, что передача реально отправила контакту.
+
+    Заявка — та, что создала сама передача (`handoff_deal`), а не самая старая сделка компании: у компании, найденной
+    по ИНН, есть и сделки сотрудников. Приглашение считается отправленным передачей, только если оно ушло после
+    создания сопоставления (раньше контакта мог пригласить сотрудник).
+    """
     company = mapping.company
-    deal = company.deals.order_by("created_at", "id").first()
     primary = company.contacts.filter(is_primary=True).first() or company.contacts.first()
-    invited = bool(primary and primary.invited_at)
+    invited = bool(primary and primary.invited_at and primary.invited_at >= mapping.created_at)
     return {
         "erp_company_id": company.id,
-        "erp_request_id": deal.id if deal else None,
+        "erp_request_id": mapping.handoff_deal_id,
         "invite": {"sent_via": ["email"] if invited else [], "cabinet_url": _cabinet_url()},
     }
 
@@ -87,8 +91,11 @@ def _consent(company: Company, consent: Dict[str, Any]) -> None:
     company.save(update_fields=["consent_given_at", "consent_version"])
 
 
-def _get_or_create_company(data: Dict[str, Any], crm_client_id: int) -> Company:
-    """Компания по ИНН либо новая. ИНН чужого клиента CRM — 409 `INN_CONFLICT` до любых записей."""
+def _get_or_create_company(data: Dict[str, Any], crm_client_id: int) -> Tuple[Company, bool]:
+    """Компания по ИНН либо новая; второй элемент — «найдена по ИНН, а не создана».
+
+    ИНН чужого клиента CRM — 409 `INN_CONFLICT` до любых записей.
+    """
     c_data = data["company"]
     inn = _normalized_inn(c_data)
     if inn:
@@ -101,7 +108,7 @@ def _get_or_create_company(data: Dict[str, Any], crm_client_id: int) -> Company:
                     "Handoff of CRM client #%s: INN is bound to CRM client #%s", crm_client_id, mapping.crm_client_id
                 )
                 raise IntegrationConflict(INN_CONFLICT)
-            return existing
+            return existing, True
 
     language = c_data.get("language") or "ru"
     company = Company.objects.create(
@@ -114,11 +121,25 @@ def _get_or_create_company(data: Dict[str, Any], crm_client_id: int) -> Company:
     client_type = CompanyType.objects.filter(code="CLIENT").first()
     if client_type:
         company.types.add(client_type)
-    return company
+    return company, False
 
 
-def _create_contacts(company: Company, data: Dict[str, Any]) -> Tuple[List[Contact], Optional[Contact]]:
-    """Контакты с сопоставлениями; контакт компании с тем же e-mail не задваивается, а получает сопоставление."""
+def _map_contact(contact: Contact, crm_contact_id: int) -> None:
+    """Сопоставление контакта CRM: уже сопоставленный контакт или номер пропускаем (OneToOne и уникальность)."""
+    if CrmContactMapping.objects.filter(contact=contact).exists():
+        logger.warning("Handoff: contact #%s is already mapped, CRM contact #%s is skipped", contact.id, crm_contact_id)
+        return
+    CrmContactMapping.objects.get_or_create(crm_contact_id=crm_contact_id, defaults={"contact": contact})
+
+
+def _create_contacts(
+    company: Company, data: Dict[str, Any], *, can_act: bool = True
+) -> Tuple[List[Contact], Optional[Contact]]:
+    """Контакты с сопоставлениями; контакт компании с тем же e-mail не задваивается, а получает сопоставление.
+
+    `can_act=False` — компания найдена по ИНН (не создана передачей): новые контакты не получают права действовать
+    от её имени, пока сотрудник не проверит, что это те же люди.
+    """
     language = data["company"].get("language") or "ru"
     contacts: List[Contact] = []
     primary: Optional[Contact] = None
@@ -143,9 +164,9 @@ def _create_contacts(company: Company, data: Dict[str, Any]) -> Tuple[List[Conta
                 language=item.get("language") or language,
                 is_primary=is_primary,
                 preferred_channel=item.get("preferred_channel", "both"),
-                can_act=True,
+                can_act=can_act,
             )
-        CrmContactMapping.objects.get_or_create(crm_contact_id=item["crm_contact_id"], defaults={"contact": contact})
+        _map_contact(contact, item["crm_contact_id"])
         contacts.append(contact)
         if is_primary or primary is None:
             primary = contact
@@ -186,6 +207,25 @@ def _invite(contact: Optional[Contact], channels: List[str]) -> List[str]:
     return [result["channel"]]
 
 
+def _log_linked_by_inn(company: Company, deal: Optional[Deal], crm_client_id: int) -> None:
+    """Запись для сотрудника: компания связана с клиентом CRM по ИНН — проверьте контакты."""
+    ActivityLog.objects.create(
+        action="Компания связана с клиентом CRM по ИНН — проверьте контакты",
+        detail=(
+            f"Клиент CRM #{crm_client_id} передан в уже существующую компанию «{company.name}» по ИНН. Контакты из CRM "
+            "добавлены без права действовать, приглашение в Cabinet не отправлено: проверьте, что это те же люди, "
+            "затем выдайте право и пригласите их."
+        ),
+        event_code="company.linked_by_inn",
+        event_params={"crm_client_id": crm_client_id, "company_id": company.id},
+        level="WARNING",
+        entity_type="company",
+        entity_id=company.id,
+        deal=deal,
+        company_id=company.id,
+    )
+
+
 def process_client_handoff(data: Dict[str, Any]) -> Tuple[Dict[str, Any], bool]:
     """Обработка handoff клиента из CRM в ERP. Возвращает (response_data, created)."""
     crm_client_id = data["crm_client_id"]
@@ -207,15 +247,24 @@ def _handoff(data: Dict[str, Any], crm_client_id: int) -> Tuple[Dict[str, Any], 
     if mapping is not None:
         return _repeat_response(mapping), False
 
-    company = _get_or_create_company(data, crm_client_id)
+    company, linked_by_inn = _get_or_create_company(data, crm_client_id)
     # Сопоставление — ДО сделки и приглашения: события строятся по нему.
-    CrmClientMapping.objects.create(crm_client_id=crm_client_id, company=company)
+    mapping = CrmClientMapping.objects.create(crm_client_id=crm_client_id, company=company)
     _consent(company, data["consent"])
 
-    _contacts, primary = _create_contacts(company, data)
+    _contacts, primary = _create_contacts(company, data, can_act=not linked_by_inn)
 
     deal = _create_request(company, primary, data, crm_client_id) if data.get("create_request") else None
-    sent_via = _invite(primary, list(data.get("invite", {}).get("channels") or ["email"]))
+    if deal is not None:
+        mapping.handoff_deal = deal
+        mapping.save(update_fields=["handoff_deal", "updated_at"])
+    if linked_by_inn:
+        # Опечатка в ИНН отдала бы постороннему чужие КП, договоры и счета: без приглашения и без права действовать,
+        # пока сотрудник не проверит контакты (Q-FIX31-5).
+        _log_linked_by_inn(company, deal, crm_client_id)
+        sent_via: List[str] = []
+    else:
+        sent_via = _invite(primary, list(data.get("invite", {}).get("channels") or ["email"]))
 
     return {
         "erp_company_id": company.id,

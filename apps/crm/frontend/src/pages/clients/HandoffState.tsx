@@ -6,15 +6,7 @@ import { getListClientsQueryKey, makeCustomer } from "../../api/generated/crm";
 import type { ClientDetail } from "../../api/generated/model";
 import { useApiErrorToast } from "../../hooks/useApiErrorToast";
 import { t } from "../../i18n/ru";
-import { handoffErrorText } from "./handoffText";
-
-/** Последний лид клиента — из него идёт повторная передача (тот же вызов, что «Передать в бэк-офис»). */
-function retryLeadId(client: ClientDetail): number | null {
-  return client.leads.reduce<number | null>(
-    (max, lead) => (max === null || lead.id > max ? lead.id : max),
-    null,
-  );
-}
+import { handoffErrorText, retryLeadId } from "./handoffText";
 
 function useRetry(client: ClientDetail) {
   const query = useQueryClient();

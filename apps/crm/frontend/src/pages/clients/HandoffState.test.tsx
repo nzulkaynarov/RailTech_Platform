@@ -4,7 +4,7 @@ import { App as AntApp } from "antd";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { ClientDetail } from "../../api/generated/model";
-import { handoffErrorText } from "./handoffText";
+import { handoffErrorText, retryLeadId } from "./handoffText";
 import { HandoffState } from "./HandoffState";
 
 const makeCustomer = vi.fn();
@@ -30,6 +30,7 @@ const client = (patch: Partial<ClientDetail>): ClientDetail => ({
   leads: [
     { id: 3, display_name: "Старый", stage: "customer", created_at: "2026-10-01T10:00:00Z" },
     { id: 9, display_name: "Новый", stage: "customer", created_at: "2026-10-18T10:00:00Z" },
+    { id: 12, display_name: "Свежий", stage: "in_progress", created_at: "2026-10-19T10:00:00Z" },
   ] as ClientDetail["leads"],
   service_requests: [],
   ...patch,
@@ -75,7 +76,7 @@ describe("HandoffState (состояние передачи в бэк-офис)"
     expect(screen.queryByText("erp_inn_conflict")).not.toBeInTheDocument();
   });
 
-  it("retries through the same make_customer call for the latest lead of the client", async () => {
+  it("retries through the same make_customer call for the lead that was handed off (stage customer)", async () => {
     show(client({ erp_handoff_status: "failed", erp_handoff_error: "erp_unavailable" }));
     fireEvent.click(screen.getByRole("button", { name: "Повторить передачу" }));
     await waitFor(() => {
@@ -97,5 +98,25 @@ describe("handoffErrorText", () => {
     ["unknown_code_x", /unknown_code_x/],
   ])("%s", (code, expected) => {
     expect(handoffErrorText(code)).toMatch(expected);
+  });
+});
+
+describe("retryLeadId", () => {
+  const lead = (id: number, stage: string) => ({ id, stage }) as ClientDetail["leads"][number];
+
+  it("takes the customer-stage lead even when a newer lead is still in work", () => {
+    expect(retryLeadId(client({ leads: [lead(3, "customer"), lead(12, "in_progress")] }))).toBe(3);
+  });
+
+  it("takes the latest customer-stage lead when there are several", () => {
+    expect(retryLeadId(client({ leads: [lead(3, "customer"), lead(9, "customer")] }))).toBe(9);
+  });
+
+  it("falls back to the latest lead when none is in the customer stage", () => {
+    expect(retryLeadId(client({ leads: [lead(3, "won"), lead(7, "lost")] }))).toBe(7);
+  });
+
+  it("has no lead to retry from when the client has none", () => {
+    expect(retryLeadId(client({ leads: [] }))).toBeNull();
   });
 });

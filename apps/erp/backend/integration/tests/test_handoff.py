@@ -14,12 +14,13 @@ import uuid
 import pytest
 from django.core import mail
 from django.db import connections
+from django.utils import timezone
 from integration.models import CrmClientMapping, CrmContactMapping, IntegrationWebhookEvent
 from parties.models import Company, CompanyType, Contact
 from rest_framework.test import APIClient
 
 from crm.constants import DealStageCode
-from crm.models import Deal
+from crm.models import ActivityLog, Deal
 
 SERVICE_TOKEN = "test-crm-to-erp-token"
 URL = "/api/integration/v1/clients/handoff"
@@ -172,6 +173,122 @@ def test_existing_company_without_crm_link_is_found_by_inn_and_linked(api):
     assert Contact.objects.count() == contacts_before
     assert CrmContactMapping.objects.get(crm_contact_id=30031).contact.email == "ivan@client.uz"
     assert Deal.objects.filter(company=existing).count() == 1
+
+
+def _linked_by_inn(api, **kwargs):
+    """Компания заведена сотрудником (со своей старой сделкой и контактом), клиент CRM пришёл с её ИНН."""
+    existing = Company.objects.create(name="ООО Заведена в ERP", inn="555666777")
+    staff_contact = Contact.objects.create(company=existing, name="Сотрудник клиента", email="staff@client.uz")
+    old_deal = Deal.objects.create(company=existing, title="Старая сделка сотрудника")
+    resp = handoff(api, payload(crm_client_id=3003, inn="555666777", **kwargs))
+    return existing, staff_contact, old_deal, resp
+
+
+@pytest.mark.django_db
+def test_repeat_after_inn_link_returns_the_request_made_by_the_handoff_not_the_oldest_deal(api):
+    existing, _staff, old_deal, first = _linked_by_inn(api)
+    handoff_deal = Deal.objects.exclude(pk=old_deal.pk).get(company=existing)
+    assert first.json()["erp_request_id"] == handoff_deal.pk != old_deal.pk
+
+    changed = payload(crm_client_id=3003, inn="555666777", email="new@client.uz")  # другое тело, другой ключ
+    again = handoff(api, changed)
+
+    assert again.status_code == 200
+    assert again.json()["erp_request_id"] == handoff_deal.pk
+    assert again.json()["erp_company_id"] == existing.pk
+
+
+@pytest.mark.django_db
+def test_repeat_without_request_does_not_pick_up_a_staff_deal(api):
+    existing, _staff, _old, first = _linked_by_inn(api, create_request=False)
+    assert first.json()["erp_request_id"] is None
+
+    again = handoff(api, payload(crm_client_id=3003, inn="555666777", create_request=False))
+
+    assert again.json()["erp_request_id"] is None, "сделка сотрудника — не заявка передачи"
+
+
+@pytest.mark.django_db
+def test_inn_link_gives_new_contacts_no_right_to_act_and_sends_no_invite(api):
+    """Опечатка в ИНН не должна отдать постороннему чужие КП, договоры и счета (Q-FIX31-5)."""
+    existing, staff_contact, _old, resp = _linked_by_inn(api, channels=("email", "telegram"))
+
+    assert resp.status_code == 201
+    assert resp.json()["invite"]["sent_via"] == []
+    new_contact = CrmContactMapping.objects.get(crm_contact_id=30031).contact
+    assert new_contact.company_id == existing.pk
+    assert new_contact.can_act is False
+    assert new_contact.invited_at is None
+    assert len(mail.outbox) == 0
+    assert events("invite.sent").count() == 0
+    # заявка и request.created на месте — передача не теряется
+    assert events("request.created").count() == 1
+    log = ActivityLog.objects.get(event_code="company.linked_by_inn")
+    assert log.company_id == existing.pk
+    assert "проверьте контакты" in log.action
+    assert log.event_params["crm_client_id"] == 3003
+
+
+@pytest.mark.django_db
+def test_inn_link_with_matching_email_keeps_the_existing_contact_untouched(api):
+    existing = Company.objects.create(name="ООО Заведена в ERP", inn="555666777")
+    staff_contact = Contact.objects.create(company=existing, name="Старый", email="ivan@client.uz", can_act=True)
+
+    resp = handoff(api, payload(crm_client_id=3003, inn="555666777"))
+
+    staff_contact.refresh_from_db()
+    assert staff_contact.can_act is True and staff_contact.invited_at is None
+    assert resp.json()["invite"]["sent_via"] == []
+    assert len(mail.outbox) == 0
+
+
+@pytest.mark.django_db
+def test_inn_link_repeat_does_not_report_an_old_staff_invite_as_sent(api):
+    existing = Company.objects.create(name="ООО Заведена в ERP", inn="555666777")
+    Contact.objects.create(
+        company=existing, name="Старый", email="ivan@client.uz", is_primary=True, invited_at=timezone.now()
+    )
+    handoff(api, payload(crm_client_id=3003, inn="555666777"))
+
+    again = handoff(api, payload(crm_client_id=3003, inn="555666777", email="x@client.uz"))
+
+    assert again.json()["invite"]["sent_via"] == []
+
+
+@pytest.mark.django_db
+def test_new_company_path_is_unchanged_contacts_can_act_and_are_invited(api):
+    resp = handoff(api, payload())
+    contact = CrmContactMapping.objects.get(crm_contact_id=10011).contact
+    assert contact.can_act is True
+    assert contact.invited_at is not None
+    assert resp.json()["invite"]["sent_via"] == ["email"]
+    assert ActivityLog.objects.filter(event_code="company.linked_by_inn").count() == 0
+
+
+@pytest.mark.django_db
+def test_two_crm_contacts_with_one_email_do_not_break_the_handoff(api):
+    body = payload()
+    second = copy.deepcopy(body["contacts"][0])
+    second.update(crm_contact_id=99902, name="Второй с тем же e-mail", is_primary=False, telegram_user_id=None)
+    body["contacts"].append(second)
+
+    resp = handoff(api, body)
+
+    assert resp.status_code == 201
+    assert Contact.objects.filter(email="ivan@client.uz").count() == 1
+    assert CrmContactMapping.objects.count() == 1, "контакт уже сопоставлен — второй номер пропущен"
+
+
+@pytest.mark.django_db
+def test_already_mapped_crm_contact_id_is_skipped_not_a_500(api):
+    other = Company.objects.create(name="Чужая", inn="111222333")
+    foreign = Contact.objects.create(company=other, name="Чужой контакт", email="other@client.uz")
+    CrmContactMapping.objects.create(crm_contact_id=10011, contact=foreign)
+
+    resp = handoff(api, payload())
+
+    assert resp.status_code == 201
+    assert CrmContactMapping.objects.get(crm_contact_id=10011).contact_id == foreign.pk
 
 
 @pytest.mark.django_db

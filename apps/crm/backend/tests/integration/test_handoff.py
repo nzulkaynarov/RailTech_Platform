@@ -270,6 +270,34 @@ async def test_request_created_event_before_the_answer_does_not_duplicate_the_de
         assert [d.erp_deal_id for d in deals] == [77]
 
 
+async def test_open_deal_already_bound_to_another_erp_request_is_not_overwritten(
+    sessions: async_sessionmaker[AsyncSession],
+) -> None:
+    """Открытая сделка с чужим `erp_deal_id` остаётся как есть; заявка передачи — новая сделка."""
+    who, lead_id = await _manager(sessions, "manager1e@example.com")
+    client_id = await _service(sessions, Queue(sessions)).make_customer(
+        who, lead_id, None, "Занято"
+    )
+    async with sessions() as session, session.begin():
+        session.add(
+            Deal(
+                client_id=client_id, lead_id=lead_id, title="Прежняя", stage="open", erp_deal_id=11
+            )
+        )
+
+    await ErpHandoffService(sessions, FakeErpClient(request_id=77)).run(
+        client_id, lead_id, who.user_id
+    )
+
+    async with sessions() as session:
+        deals = (
+            await session.scalars(select(Deal).where(Deal.lead_id == lead_id).order_by(Deal.id))
+        ).all()
+        assert [(d.title, d.erp_deal_id) for d in deals] == [("Прежняя", 11), (deals[1].title, 77)]
+        assert deals[1].client_id == client_id
+        assert deals[1].external_stage == "request"
+
+
 async def test_erp_failure_does_not_roll_back_the_client_and_is_retried_then_failed(
     sessions: async_sessionmaker[AsyncSession],
 ) -> None:

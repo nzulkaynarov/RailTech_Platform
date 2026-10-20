@@ -30,6 +30,17 @@ class CrmClientMapping(models.Model):
         related_name="crm_client_mapping",
         verbose_name=_("Компания ERP"),
     )
+    # Заявка, созданная самой передачей (FIX-31): повтор отдаёт её же, а не «самую старую сделку компании»
+    # (у компании, найденной по ИНН, есть и сделки сотрудников).
+    handoff_deal = models.ForeignKey(
+        "sales.Deal",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="+",
+        verbose_name=_("Заявка передачи"),
+        help_text=_("Заявка, созданная при передаче клиента из CRM"),
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

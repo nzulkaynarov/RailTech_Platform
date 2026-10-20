@@ -312,6 +312,25 @@ def _telegram_of(
     return primary.tg_user_id if primary and contact.is_primary else None
 
 
+async def _free_open_deal(session: AsyncSession, lead: Lead) -> Deal:
+    """Открытая сделка лида без заявки ERP; занятую (`erp_deal_id`) не перезаписываем — новая."""
+    deal = await deals_service.open_deal(session, lead.id)
+    if deal is not None and deal.erp_deal_id is None:
+        return deal
+    deal = Deal(
+        lead_id=lead.id,
+        client_id=lead.client_id,
+        title=await deals_service.title_for(session, lead),
+        product_key=lead.product_interest[0] if lead.product_interest else None,
+        currency=await deals_service.default_currency(session),
+        owner_user_id=lead.assigned_user_id,
+        stage="open",
+    )
+    session.add(deal)
+    await session.flush()
+    return deal
+
+
 async def _mirror_request(
     session: AsyncSession, client: Client, lead: Lead, erp_deal_id: int
 ) -> None:
@@ -321,9 +340,7 @@ async def _mirror_request(
         select(Deal).where(Deal.erp_deal_id == erp_deal_id).limit(1).with_for_update()
     )
     if deal is None:
-        deal = await deals_service.open_deal(session, lead.id)
-        if deal is None:
-            deal = await deals_service.ensure_open_deal(session, lead)
+        deal = await _free_open_deal(session, lead)
         deal.erp_deal_id = erp_deal_id
         deal.external_stage = "request"
     if deal.client_id is None:

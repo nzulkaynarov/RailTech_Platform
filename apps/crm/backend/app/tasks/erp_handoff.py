@@ -24,7 +24,9 @@ def handoff_lock(client_id: int) -> str:
 async def erp_handoff_client(
     context: JobContext, client_id: int, lead_id: int, actor_user_id: int | None = None
 ) -> str:
-    final = context.job.attempts + 1 >= (RETRY.max_attempts or 1)
+    # `job.attempts` — число прошлых попыток (0 при первом запуске); Procrastinate повторяет, пока
+    # `attempts < max_attempts`, так что последний запуск — при `attempts == max_attempts`.
+    final = context.job.attempts >= (RETRY.max_attempts or 0)
     outcome: str = await get_container().erp_handoff_service.run(
         client_id, lead_id, actor_user_id, final_attempt=final
     )
