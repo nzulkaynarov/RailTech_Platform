@@ -15,7 +15,12 @@ import structlog
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
-from app.domain.backoffice import BackofficeMode, decide_handoff
+from app.domain.backoffice import (
+    BackofficeMode,
+    HandoffConsent,
+    decide_handoff,
+    handoff_consent,
+)
 from app.domain.errors import (
     ConflictError,
     ForbiddenError,
@@ -197,6 +202,7 @@ class ClientService:
                 Stage(lead.stage),
                 mode,
                 client_changed=client_id is None or lead.client_id != client_id,
+                erp_synced=await _in_erp(session, client_id),
             )
             if not handoff.allowed:
                 raise InvalidTransitionError(
@@ -212,7 +218,9 @@ class ClientService:
                 raise ForbiddenError(
                     "only the lead owner or an admin can do this", reason=Reason.NOT_LEAD_OWNER
                 )
-            if not handoff.changed and client_id is not None:
+            if handoff.call_erp:
+                _require_consent(lead)  # до создания клиента: нет согласия — ничего не меняем
+            if not handoff.call_erp and not handoff.changed and client_id is not None:
                 return client_id
             if client_id is None:
                 client = Client(name=(new_name or "").strip(), owner_user_id=who.user_id)
@@ -222,7 +230,8 @@ class ClientService:
             else:
                 client = await _client(session, client_id)
             lead.client_id = client_id
-            await _bind_identities(session, lead_id, client_id, who)
+            if handoff.changed:  # повторная передача в ERP (resync) привязки не трогает
+                await _bind_identities(session, lead_id, client_id, who)
 
             erp_deal_id = None
             if handoff.call_erp:
@@ -307,6 +316,7 @@ class ClientService:
                 )
                 owner_name = owner_user.full_name if owner_user else (who.full_name or "Менеджер")
 
+                consent = _require_consent(lead)
                 payload = HandoffPayload(
                     crm_client_id=client_id,
                     crm_lead_id=lead_id,
@@ -326,8 +336,7 @@ class ClientService:
                         name=owner_name,
                     ),
                     consent=HandoffConsentPayload(
-                        given_at=(lead.consent_given_at or datetime.now(UTC)).isoformat(),
-                        version="1.0",
+                        given_at=consent.given_at.isoformat(), version=consent.version
                     ),
                     create_request=True,
                     invite=HandoffInvitePayload(channels=channels),
@@ -377,7 +386,8 @@ class ClientService:
             language = lead.language
             chats = await leads_repo.chats_of_lead(session, lead_id)
         await notify_chats(self._on_chats_changed, chats)
-        await self._notify_access(lead_id, language)
+        if handoff.changed:
+            await self._notify_access(lead_id, language)
         return client_id
 
     async def _notify_access(self, lead_id: int, language: str) -> None:
@@ -526,6 +536,28 @@ async def _bind_identities(
     for identity in identities:
         identity.client_id = client_id
         identity.verified_by_user_id, identity.verified_at = who.user_id, datetime.now(UTC)
+
+
+def _require_consent(lead: Lead) -> HandoffConsent:
+    """Согласие лида для ERP (I-13): время и версия — из лида, иначе 422 «нет согласия»."""
+    consent = handoff_consent(lead.consent_given_at, lead.consent_version)
+    if consent is None:
+        raise ValidationFailedError(
+            "lead has not given consent to data processing",
+            reason=Reason.HANDOFF_NO_CONSENT,
+            field="consent",
+        )
+    return consent
+
+
+async def _in_erp(session: AsyncSession, client_id: int | None) -> bool:
+    """Есть ли клиент в ERP (`erp_company_id`); новый клиент — ещё нет, но и передача настоящая."""
+    if client_id is None:
+        return True
+    return (
+        await session.scalar(select(Client.erp_company_id).where(Client.id == client_id))
+        is not None
+    )
 
 
 async def _client(session: AsyncSession, client_id: int) -> Client:

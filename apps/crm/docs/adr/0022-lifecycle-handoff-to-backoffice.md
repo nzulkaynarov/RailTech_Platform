@@ -103,7 +103,7 @@ Telegram привязан к другому клиенту).
   проверен только юнит-тестами таблицы; приёмка глазами — в M3-CRM-03.
 - Отложено на M3-CRM-03/04 (записано в PROGRESS): миграция `clients.erp_company_id`, `deals.erp_deal_id`,
   `external_stage`; вызов `POST /clients/handoff`; приёмник событий; подпись кнопки «Передать в бэк-офис»;
-  запрет «Сделка заключена» в режиме `erp` на фронте (сейчас — только доменная функция `may_close_locally`).
+  запрет «Сделка заключена» в режиме `erp` на фронте. Дополнение FIX-34 (2026-10-20): запрет действует и на бэкенде — `LeadService.close` вызывает `may_close_locally`, ответ 409 `won_decided_by_erp`; клиент без `erp_company_id` в режиме `erp` передаётся в ERP повторной передачей (`HandoffDecision.resync`); согласие в ERP — только время и версия из лида (`handoff_consent`), иначе 422 `handoff_no_consent`.
 - Что меняется в коде: `domain/stages.py` (`TransitionSource.ERP`), `domain/stage_machine.py` (отказ для
   `erp`), `domain/backoffice.py` (новый), `domain/deals.py` (`plan_erp_outcome`), `integrations/erp.py`
   (новый), `security/secrets_store.py` (`ERP_SERVICE_TOKEN`), `config.py` (`erp_base_url`,

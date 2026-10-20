@@ -289,6 +289,8 @@ async def unsnooze(lead_id: int, who: Worker, container: ContainerDep) -> Action
 async def close_won(
     lead_id: int, body: Close, who: Worker, container: ContainerDep
 ) -> ActionResult:
+    """«Сделка заключена». С коннектором ERP — 409 `won_decided_by_erp` (ADR-0022): итог придёт
+    событием `deal.won`, закрыть лид можно только отказом."""
     await container.lead_service.close(
         who, lead_id, "won", body.reason, amount=body.amount, lost_reason=body.lost_reason
     )
