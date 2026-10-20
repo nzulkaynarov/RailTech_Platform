@@ -62,7 +62,8 @@ def verify_signature(secret: str, raw_body: bytes, signature_header: str | None)
         return False
     given_hex = signature_header[len(prefix) :].strip()
     expected_hex = hmac.new(secret.encode("utf-8"), raw_body, hashlib.sha256).hexdigest()
-    return hmac.compare_digest(given_hex, expected_hex)
+    # Байты, а не строки: `compare_digest` на не-ASCII строке бросает TypeError (ответ был бы 500).
+    return hmac.compare_digest(given_hex.encode("utf-8"), expected_hex.encode("utf-8"))
 
 
 def verify_signature_any(

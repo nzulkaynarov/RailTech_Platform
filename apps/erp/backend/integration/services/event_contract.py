@@ -4,7 +4,7 @@
 
 - `strict` — несоответствие поднимает `EventContractError`: событие не создаётся, ошибка видна сразу в DEBUG-стенде и в
   тестах (в тестах режим включён автоматически, conftest);
-- `log` — несоответствие пишется в лог уровня ERROR, событие уходит как есть (прод: потерять событие хуже, чем отправить
+- `log` — в лог уровня ERROR пишутся тип события, путь и правило схемы БЕЗ значений полей (ПДн), событие уходит как есть (прод: потерять событие хуже, чем отправить
   его с ошибкой формы — CRM запишет его как `rejected`, это видно в центре внешних сервисов);
 - `off` — не проверять.
 
@@ -92,16 +92,28 @@ def contract_mode() -> str:
     return "strict" if settings.DEBUG else "log"
 
 
-def envelope_errors(envelope: dict[str, Any]) -> list[str] | None:
-    """Нарушения схемы (пустой список — тело валидно); `None` — схемы на диске нет, проверить нечем."""
+def _violations(envelope: dict[str, Any]) -> list[tuple[str, str, str]] | None:
+    """(путь, правило схемы, сообщение) по каждому нарушению; `None` — схемы на диске нет."""
     path = schema_path()
     if path is None:
         return None
     validator = _validator_for(str(path))
     return [
-        f"{'/'.join(str(part) for part in error.absolute_path) or '<корень>'}: {error.message}"
+        (
+            "/".join(str(part) for part in error.absolute_path) or "<корень>",
+            str(error.validator),
+            error.message,
+        )
         for error in sorted(validator.iter_errors(envelope), key=lambda e: list(map(str, e.absolute_path)))
     ]
+
+
+def envelope_errors(envelope: dict[str, Any]) -> list[str] | None:
+    """Нарушения схемы с текстом (пустой список — тело валидно); `None` — схемы на диске нет."""
+    violations = _violations(envelope)
+    if violations is None:
+        return None
+    return [f"{where}: {message}" for where, _rule, message in violations]
 
 
 _warned_missing = False
@@ -113,15 +125,19 @@ def check_envelope(envelope: dict[str, Any]) -> None:
     mode = contract_mode()
     if mode == "off":
         return
-    errors = envelope_errors(envelope)
-    if errors is None:
+    violations = _violations(envelope)
+    if violations is None:
         if not _warned_missing:
             _warned_missing = True
             logger.warning("events.schema.json не найден: события ERP → CRM не проверяются по контракту")
         return
-    if not errors:
+    if not violations:
         return
-    message = f"Событие {envelope.get('event')!r} не соответствует events.schema.json: " + "; ".join(errors)
+    event = envelope.get("event")
     if mode == "strict":
-        raise EventContractError(message)
-    logger.error(message)
+        # Исключение видно только в DEBUG и в тестах: там текст нарушения (с значением) нужен для отладки.
+        details = "; ".join(f"{where}: {message}" for where, _rule, message in violations)
+        raise EventContractError(f"Событие {event!r} не соответствует events.schema.json: {details}")
+    # Прод: в журнал — только путь, правило схемы и тип события. Значения полей (имена, замечания клиентов) — ПДн.
+    brief = "; ".join(f"{where} ({rule})" for where, rule, _message in violations)
+    logger.error("Событие %r не соответствует events.schema.json: %s", event, brief)

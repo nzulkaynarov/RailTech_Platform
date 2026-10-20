@@ -457,3 +457,10 @@ def test_connector_form_schema_accepts_the_previous_secret_and_the_clear_flag() 
         ErpConnectorIn.model_validate(
             {"base_url": BASE, "webhook_secret_previous": "short", "password": PASSWORD}
         )
+
+
+@pytest.mark.parametrize("field", ["service_token", "webhook_secret", "webhook_secret_previous"])
+@pytest.mark.parametrize("blank", [" " * 20, "\t\n" * 10, "  short  " + " " * 12])
+def test_a_secret_of_whitespace_is_refused_before_it_is_stripped(field: str, blank: str) -> None:
+    with pytest.raises(ValueError, match="besides whitespace"):
+        ErpConnectorIn.model_validate({"base_url": BASE, field: blank, "password": PASSWORD})

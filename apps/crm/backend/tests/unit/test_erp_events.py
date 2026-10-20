@@ -1300,3 +1300,20 @@ async def test_different_bodies_are_never_taken_for_a_replay() -> None:
         assert (await service.receive_event(str(uuid.uuid4()), "deal.stage_changed", sig, raw))[
             1
         ] == "enqueued"
+
+
+@pytest.mark.parametrize("header", ["sha256=" + "я" * 64, "sha256=é", "sha256=\u0000\u00ff"])
+def test_a_non_ascii_signature_is_just_invalid_not_a_crash(header: str) -> None:
+    """`hmac.compare_digest` на не-ASCII строке бросает TypeError — ответ был бы 500, а не 401."""
+    assert verify_signature(SECRET, b"{}", header) is False
+    assert verify_signature_any([SECRET, NEW_SECRET], b"{}", header) is False
+
+
+@pytest.mark.asyncio
+async def test_a_non_ascii_signature_header_is_answered_with_auth_error() -> None:
+    service, session = _receiver()
+    with pytest.raises(AuthError):
+        await service.receive_event(
+            str(uuid.uuid4()), "deal.stage_changed", "sha256=" + "я" * 64, b"{}"
+        )
+    assert session.events == {}

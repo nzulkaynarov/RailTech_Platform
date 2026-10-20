@@ -255,6 +255,7 @@ export function ErpCard({
           />
           {canClear ? (
             <Checkbox
+              style={{ marginTop: 8 }}
               checked={clearPrevious}
               disabled={previous.trim().length > 0 || !status.secrets_enabled}
               onChange={(e) => {

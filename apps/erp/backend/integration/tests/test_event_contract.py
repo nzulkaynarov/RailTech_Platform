@@ -244,6 +244,31 @@ def test_log_mode_logs_the_violation_and_still_sends(settings, caplog):
     assert any("не соответствует events.schema.json" in record.getMessage() for record in caplog.records)
 
 
+def test_log_mode_never_writes_field_values_to_the_log(settings, caplog):
+    """В лог — тип события, путь и правило схемы; значения полей (ПДн: имена, замечания) туда не попадают."""
+    settings.ERP_EVENTS_CONTRACT_MODE = "log"
+    company = make_company(crm_client_id=42)
+    body = example_event("delivery.line_disputed")
+    body["payload"]["remark"] = "Секретное замечание Иванова И.И. " * 100  # длиннее maxLength 2000
+    body["payload"]["decided_at"] = "ПДн-не-дата-Петров"
+    with caplog.at_level(logging.ERROR, logger="integration.services.event_contract"):
+        stored = emit_event(
+            event_type="delivery.line_disputed",
+            erp_company_id=company.pk,
+            payload=body["payload"],
+            deal=body["deal"],
+            actor=body["actor"],
+            crm_client_id=42,
+            send_async=False,
+        )
+    assert stored is not None
+    text = " ".join(record.getMessage() for record in caplog.records)
+    assert "delivery.line_disputed" in text
+    assert "payload/decided_at (format)" in text and "payload/remark (maxLength)" in text
+    for leaked in ("Петров", "Иванова", "Секретное", "Иван Петров"):
+        assert leaked not in text
+
+
 def test_off_mode_does_not_check(settings):
     settings.ERP_EVENTS_CONTRACT_MODE = "off"
     assert bad_emit(make_company(crm_client_id=42)) is not None
