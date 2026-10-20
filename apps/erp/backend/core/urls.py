@@ -7,6 +7,7 @@ from drf_spectacular.utils import extend_schema
 from drf_spectacular.views import SpectacularAPIView, SpectacularRedocView, SpectacularSwaggerView
 from finance.views import DealMarginDeviationView, DealPurchaseActualDetailView, DealPurchaseActualsView
 from integration.public_views import PublicDocumentLinkView
+from portal.exceptions import portal_not_found
 from portal.public_views import (
     PublicDocumentView,
     PublicQuoteAcceptView,
@@ -164,6 +165,7 @@ urlpatterns = (
         path("admin/", admin.site.urls),
         path("api/v1/", include(router.urls)),
         path("api/portal/v1/", include("portal.urls")),
+        re_path(r"^api/portal/", portal_not_found, name="portal-not-found"),  # FIX-54: JSON 404 вместо HTML Django
         path("api/integration/v1/", include("integration.urls")),
         path("api/v1/auth/sso/token/", SsoIssueTokenView.as_view(), name="sso-token"),
         path("api/v1/auth/sso/exchange/", SsoExchangeView.as_view(), name="sso-exchange"),
