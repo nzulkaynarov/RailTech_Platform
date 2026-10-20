@@ -52,6 +52,9 @@ REST_FRAMEWORK = {
         "ai_extract": "20/minute",  # AI PDF contract/invoice extraction — each call is a paid Claude request
         "ai_compose": "20/minute",  # AI conversational заявка builder — each call is a paid Claude request
         "ai_draft": "20/minute",  # AI draft-КП build — paid Claude match + a new Quote row per call
+        # Сервисный токен CRM (FIX-33, Q-FIX30-4): для DRF это «аноним», и общий `anon` 20/мин по IP давал 429 вне
+        # контракта на карточках и в боте. Свой лимит на весь сервис (CRM одна), с запасом над бытовой нагрузкой.
+        "integration": os.environ.get("INTEGRATION_RATE", "600/minute"),
         "mcp": "120/minute",  # erp-mcp (FIX-12/36): на компанию из X-Agent-Context (mcp/gate.py); tools/call ≈ 3 запроса
         # Портал (FIX-15, P-14): общий анонимный 20/мин по IP на него не распространяется (portal/throttles.py).
         "portal_session": os.environ.get("PORTAL_SESSION_RATE", "120/minute"),  # на сессию; экран Cabinet = пачка GET

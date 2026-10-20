@@ -203,13 +203,14 @@ def emit_event(
     """Создает запись исходящего вебхука и ставит задачу доставки в Celery.
 
     Если компания не сопоставлена клиенту CRM, событие не создается и возвращается None.
+    Нет секрета подписи — событие всё равно записывается (PENDING, без `X-Signature`): подписывает задача
+    доставки в момент отправки, и пока секрета нет, событие ждёт, а не теряется (FIX-33).
     """
     if event_type not in VALID_EVENT_TYPES:
         logger.warning("Attempted to emit unsupported event type: %s", event_type)
     secret = settings.ERP_WEBHOOK_SECRET
     if not secret:
-        logger.error("ERP_WEBHOOK_SECRET is not configured — event %s is not emitted", event_type)
-        return None
+        logger.error("ERP_WEBHOOK_SECRET is not configured — event %s is kept PENDING unsigned", event_type)
 
     envelope = build_event_envelope(
         event_type=event_type,
@@ -227,15 +228,15 @@ def emit_event(
     webhook_url = settings.CRM_WEBHOOK_URL
 
     body_bytes = json.dumps(envelope, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
-    signature = sign_payload(secret, body_bytes)
 
     headers = {
         "Content-Type": "application/json",
         "X-Event-Id": str(event_id),
         "X-Event-Type": event_type,
         "X-Timestamp": envelope["occurred_at"],
-        "X-Signature": signature,
     }
+    if secret:
+        headers["X-Signature"] = sign_payload(secret, body_bytes)
 
     event_obj = IntegrationWebhookEvent.objects.create(
         event_id=event_id,

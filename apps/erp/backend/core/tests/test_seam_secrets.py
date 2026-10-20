@@ -86,9 +86,20 @@ def test_sso_exchange_is_unavailable_without_secret(no_seam_secrets, settings):
 
 
 @pytest.mark.django_db
-def test_webhook_is_not_emitted_without_secret(no_seam_secrets):
-    from integration.models import IntegrationWebhookEvent
-    from integration.services.webhooks import emit_event
+def test_webhook_without_secret_is_kept_pending_unsigned_and_never_sent(no_seam_secrets):
+    """Секрета нет: пустым ключом не подписываем (FIX-01) и не шлём, но и не теряем событие (FIX-33) —
+    оно ждёт PENDING, пока секрет не появится."""
+    from unittest.mock import patch
 
-    assert emit_event("deal.stage_changed", erp_company_id=1, payload={}, crm_client_id=1, send_async=False) is None
-    assert not IntegrationWebhookEvent.objects.exists()
+    from integration.models import IntegrationWebhookEvent, WebhookEventStatus
+    from integration.services.webhooks import emit_event
+    from integration.tasks import deliver_webhook_event
+
+    event = emit_event("deal.stage_changed", erp_company_id=1, payload={}, crm_client_id=1, send_async=False)
+
+    assert event is not None and event.status == WebhookEventStatus.PENDING
+    assert "X-Signature" not in event.headers
+    with patch("httpx.Client.post") as post:
+        assert deliver_webhook_event(event.id) is False
+    post.assert_not_called()
+    assert IntegrationWebhookEvent.objects.get(pk=event.pk).status == WebhookEventStatus.PENDING

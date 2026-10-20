@@ -12,12 +12,14 @@ from __future__ import annotations
 
 import json
 import logging
+from datetime import timedelta
 from typing import Optional
 
 import httpx
 from celery import shared_task
 from celery.exceptions import Retry
 from django.conf import settings
+from django.db.models import Q
 from django.utils import timezone
 
 from .models import IntegrationWebhookEvent, WebhookEventStatus
@@ -27,6 +29,32 @@ logger = logging.getLogger(__name__)
 
 # Сетка повторов по CONTRACTS §3 (6 шагов: 1 мин, 5 мин, 30 мин, 2 ч, 6 ч, 24 ч)
 RETRY_DELAYS = [60, 300, 1800, 7200, 21600, 86400]
+
+# Сколько PENDING-событие может просрочить плановое время попытки, прежде чем Beat сочтёт его зависшим (FIX-33):
+# задача потеряна (рестарт Redis, воркер убит между acks), а не ждёт своего ретрая.
+STUCK_GRACE = timedelta(minutes=10)
+SWEEP_BATCH = 200
+
+
+def _register_failure(event: IntegrationWebhookEvent, error_msg: str, has_retries_left: bool, current_attempt: int):
+    """Итог неудачной попытки: FAILED, если ретраи кончились, иначе PENDING с плановым временем следующей."""
+    event.last_error = error_msg
+    if has_retries_left:
+        event.next_attempt_at = timezone.now() + timedelta(seconds=RETRY_DELAYS[current_attempt])
+    else:
+        event.status = WebhookEventStatus.FAILED
+        event.next_attempt_at = None
+    event.save(
+        update_fields=[
+            "status",
+            "next_attempt_at",
+            "attempts",
+            "last_attempt_at",
+            "last_error",
+            "response_status",
+            "headers",
+        ]
+    )
 
 
 @shared_task(bind=True, max_retries=len(RETRY_DELAYS))
@@ -45,13 +73,15 @@ def deliver_webhook_event(self, event_id: int) -> bool:
         logger.info("deliver_webhook_event: event #%s already SENT", event_id)
         return True
 
-    event.attempts += 1
-    event.last_attempt_at = timezone.now()
-
     secret = settings.ERP_WEBHOOK_SECRET
     if not secret:
+        # Без секрета подписать нечем: событие остаётся PENDING (попытка не засчитана), его заберёт задача Beat,
+        # когда секрет появится (FIX-33, «неподписанная доставка не теряется»).
         logger.error("deliver_webhook_event: ERP_WEBHOOK_SECRET is not configured, event #%s waits", event_id)
         return False
+
+    event.attempts += 1
+    event.last_attempt_at = timezone.now()
     body_bytes = json.dumps(event.payload, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
     signature = sign_payload(secret, body_bytes)
 
@@ -82,9 +112,11 @@ def deliver_webhook_event(self, event_id: int) -> bool:
             event.status = WebhookEventStatus.SENT
             event.sent_at = timezone.now()
             event.last_error = ""
+            event.next_attempt_at = None
             event.save(
                 update_fields=[
                     "status",
+                    "next_attempt_at",
                     "attempts",
                     "last_attempt_at",
                     "last_error",
@@ -104,20 +136,7 @@ def deliver_webhook_event(self, event_id: int) -> bool:
 
         # Non-2xx HTTP response from CRM
         error_msg = f"HTTP {response.status_code}: {response.text[:500]}"
-        event.last_error = error_msg
-        if not has_retries_left:
-            event.status = WebhookEventStatus.FAILED
-
-        event.save(
-            update_fields=[
-                "status",
-                "attempts",
-                "last_attempt_at",
-                "last_error",
-                "response_status",
-                "headers",
-            ]
-        )
+        _register_failure(event, error_msg, has_retries_left, current_attempt)
 
         if has_retries_left:
             countdown = RETRY_DELAYS[current_attempt]
@@ -142,20 +161,7 @@ def deliver_webhook_event(self, event_id: int) -> bool:
         raise
     except Exception as exc:
         error_msg = f"{type(exc).__name__}: {str(exc)}"
-        event.last_error = error_msg
-        if not has_retries_left:
-            event.status = WebhookEventStatus.FAILED
-
-        event.save(
-            update_fields=[
-                "status",
-                "attempts",
-                "last_attempt_at",
-                "last_error",
-                "response_status",
-                "headers",
-            ]
-        )
+        _register_failure(event, error_msg, has_retries_left, current_attempt)
 
         if has_retries_left:
             countdown = RETRY_DELAYS[current_attempt]
@@ -178,12 +184,49 @@ def deliver_webhook_event(self, event_id: int) -> bool:
 
 
 def redeliver_event(event_id: int) -> Optional[IntegrationWebhookEvent]:
-    """Ручной повтор отправки события из журнала (CONTRACTS §3)."""
+    """Ручной повтор отправки события из журнала (CONTRACTS §3): полный цикл ретраев с нуля.
+
+    Счётчик попыток обнуляется — иначе «Повторить» после исчерпанной сетки делал бы одну попытку и снова FAILED.
+    """
     event = IntegrationWebhookEvent.objects.filter(pk=event_id).first()
     if not event:
         return None
 
     event.status = WebhookEventStatus.PENDING
-    event.save(update_fields=["status"])
+    event.attempts = 0
+    event.next_attempt_at = timezone.now() + STUCK_GRACE
+    event.save(update_fields=["status", "attempts", "next_attempt_at"])
     deliver_webhook_event.delay(event.id)
     return event
+
+
+@shared_task(name="integration.requeue_stuck_webhook_events")
+def requeue_stuck_webhook_events(batch: int = SWEEP_BATCH) -> int:
+    """Beat (раз в 5 мин): ставит повтор доставки для зависших PENDING (FIX-33, I-7).
+
+    Зависшее — PENDING, у которого плановое время попытки (`next_attempt_at`; у новых событий — `created_at`)
+    прошло больше `STUCK_GRACE` назад: задачу потеряли (рестарт Redis, воркер убит), либо доставка ждала секрет.
+    Событие, которое ждёт СВОЕГО ретрая (в будущем), не трогаем. Подобранному сдвигаем плановое время вперёд,
+    чтобы следующий проход не ставил вторую задачу, пока первая ждёт воркера; дубль, если он всё же случится,
+    CRM гасит по `X-Event-Id`.
+    """
+    now = timezone.now()
+    horizon = now - STUCK_GRACE
+    stuck = (
+        IntegrationWebhookEvent.objects.filter(status=WebhookEventStatus.PENDING)
+        .filter(Q(next_attempt_at__lt=horizon) | Q(next_attempt_at__isnull=True, created_at__lt=horizon))
+        .order_by("created_at")
+        .values_list("pk", "next_attempt_at")[:batch]
+    )
+    requeued = 0
+    for pk, planned in list(stuck):
+        # Захват строки: параллельный проход (или ручной «Повторить») не поставит вторую задачу.
+        claimed = IntegrationWebhookEvent.objects.filter(
+            pk=pk, status=WebhookEventStatus.PENDING, next_attempt_at=planned
+        ).update(next_attempt_at=now + STUCK_GRACE)
+        if claimed:
+            deliver_webhook_event.delay(pk)
+            requeued += 1
+    if requeued:
+        logger.warning("requeue_stuck_webhook_events: %d stuck PENDING event(s) requeued", requeued)
+    return requeued

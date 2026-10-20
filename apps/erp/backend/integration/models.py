@@ -204,6 +204,15 @@ class IntegrationWebhookEvent(models.Model):
         blank=True,
         verbose_name=_("Время последней попытки"),
     )
+    next_attempt_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        verbose_name=_("Плановое время следующей попытки"),
+        help_text=_(
+            "Когда доставка должна повториться по сетке ретраев; пусто — отправлено, исчерпано или ещё не планировалось. "
+            "Задача Beat подбирает PENDING, у которых этот срок давно прошёл (FIX-33)."
+        ),
+    )
     last_error = models.TextField(
         blank=True,
         default="",
@@ -231,6 +240,7 @@ class IntegrationWebhookEvent(models.Model):
         ordering = ["-created_at"]
         indexes = [
             models.Index(fields=["status", "created_at"], name="int_event_status_created_idx"),
+            models.Index(fields=["status", "next_attempt_at"], name="int_event_status_next_idx"),
             models.Index(fields=["event_type", "-created_at"], name="int_event_type_created_idx"),
         ]
 
