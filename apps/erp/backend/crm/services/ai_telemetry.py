@@ -58,7 +58,7 @@ def record_draft_match_outcomes(
 def resolve_outcome_on_reassign(item: QuoteItem, new_product_id: Optional[int]) -> None:
     """Record the seller's explicit re-match verdict on a draft line.
 
-    Reassign is only possible pre-freeze (QUOTE_FROZEN_CANNOT_REASSIGN guard in the caller), so
+    Reassign is only possible pre-freeze (QUOTE_NOT_DRAFT / QUOTE_FROZEN guard in the caller), so
     repeated reassigns keep updating the row; `finalize_outcomes_on_send` takes the last snapshot.
     """
     now = timezone.now()

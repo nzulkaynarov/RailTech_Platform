@@ -228,7 +228,7 @@ def test_bulk_create_frozen_quote_rejected(world):
     payload = {"quote": quote.id, "items": [{"imported_raw_name": "X"}]}
     resp = _api(world["seller_user"]).post(BULK_URL, payload, format="json")
 
-    assert resp.status_code == 400
+    assert resp.status_code == 409
     assert resp.json()["detail"] == "QUOTE_FROZEN"
     assert QuoteItem.objects.filter(quote=quote).count() == 0
 

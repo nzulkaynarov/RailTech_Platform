@@ -248,7 +248,7 @@ def test_bulk_update_frozen_quote_rejected(world):
     }
     resp = _api(world["seller_user"]).post(BULK_URL, payload, format="json")
 
-    assert resp.status_code == 400
+    assert resp.status_code == 409
     assert resp.json()["detail"] == "QUOTE_FROZEN"
 
 

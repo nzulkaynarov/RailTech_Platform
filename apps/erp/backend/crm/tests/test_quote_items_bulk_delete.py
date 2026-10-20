@@ -153,7 +153,7 @@ def test_frozen_quote_rejected(world):
 
     resp = _api(world["seller_user"]).post(BULK_URL, {"quote": quote.id, "items": [items[0].id]}, format="json")
 
-    assert resp.status_code == 400
+    assert resp.status_code == 409
     assert resp.data["detail"] == "QUOTE_FROZEN"
     assert QuoteItem.objects.filter(quote=quote).count() == 2
 

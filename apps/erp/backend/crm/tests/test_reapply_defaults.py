@@ -150,5 +150,5 @@ def test_endpoint_rejects_frozen_quote(draft_quote, seller_company, configured_s
     api = APIClient()
     api.force_authenticate(user=user)
     resp = api.post(f"/api/v1/crm/quotes/{draft_quote.id}/apply-defaults/")
-    assert resp.status_code == 403
+    assert resp.status_code == 409
     assert resp.json()["detail"] == "QUOTE_FROZEN"
