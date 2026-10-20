@@ -13,6 +13,7 @@ from typing import Any
 from django.conf import settings
 from rest_framework import permissions, status, views
 from rest_framework.response import Response
+from rest_framework.throttling import BaseThrottle
 
 from accounts.services.sso import (
     SsoForbiddenError,
@@ -28,10 +29,13 @@ logger = logging.getLogger(__name__)
 
 
 def _get_client_ip(request: Any) -> str:
-    x_forwarded_for = request.META.get("HTTP_X_FORWARDED_FOR")
-    if x_forwarded_for:
-        return x_forwarded_for.split(",")[0].strip()
-    return request.META.get("REMOTE_ADDR") or ""
+    """IP клиента для аудита обмена: как у всех лимитов ERP (`BaseThrottle.get_ident`, SEC-04).
+
+    Первый элемент `X-Forwarded-For` присылает сам клиент — его подделка попадала в журнал. `get_ident` доверяет заголовку
+    ровно настолько, насколько сказано в `REST_FRAMEWORK["NUM_PROXIES"]` (`DRF_NUM_PROXIES`: prod = 1, Caddy ставит
+    адрес клиента последним; dev = 0 — заголовок игнорируется, берётся `REMOTE_ADDR`).
+    """
+    return BaseThrottle().get_ident(request) or ""
 
 
 class SsoIssueTokenView(views.APIView):

@@ -23,6 +23,41 @@ from .services import stages, webhooks
 
 logger = logging.getLogger(__name__)
 
+
+#: Поля, от которых зависят события сигналов: save без них в `update_fields` прежнюю запись не читает.
+DEAL_TRACKED = ("stage",)
+QUOTE_TRACKED = ("status",)
+CONTRACT_TRACKED = ("status", "client_signed_at", "manager_signed_at")
+INVOICE_TRACKED = ("status",)
+ACT_TRACKED = ("status",)
+FULFILLMENT_TRACKED = ("status", "expected_delivery_date")
+#: `document.created` зависит от того, выпущена ли запись (`portal.services.documents.is_issued`): статус и поля предикатов.
+DOCUMENT_TRACKED = {
+    "quote": ("status", "public_access_token"),
+    "contract": ("status",),
+    "invoice": ("status", "due_date", "issued_at"),
+    "act": ("status", "rejection_reason"),
+    "waybill": ("status",),
+    "generated": ("status", "template"),
+}
+
+
+def _untracked_save(
+    instance: Any, update_fields: Any, tracked: tuple[str, ...], flag: str = "_int_untracked_save"
+) -> bool:
+    """`save(update_fields=[...])` без отслеживаемых полей: прежнюю запись читать незачем, событий не будет.
+
+    Помечает экземпляр (`flag`, по умолчанию `_int_untracked_save`) — post_save-обработчик такой save пропускает, не сравнивая состояния.
+    Без `update_fields` (полный save) и для новой записи читаем как раньше. FK можно назвать и `stage`, и `stage_id`.
+    """
+    names = set(update_fields) if update_fields is not None else None
+    untracked = bool(
+        instance.pk and names is not None and not names & (set(tracked) | {f"{name}_id" for name in tracked})
+    )
+    setattr(instance, flag, untracked)
+    return untracked
+
+
 #: Допустимые источники запроса в `request.created` (`events.schema.json`, `RequestCreated.source`).
 REQUEST_SOURCES = ("crm", "cabinet", "erp")
 
@@ -31,20 +66,29 @@ REQUEST_SOURCES = ("crm", "cabinet", "erp")
 
 
 def handle_deal_pre_save(sender: Any, instance: Any, **kwargs: Any) -> None:
-    """Запоминает предыдущую стадию сделки до сохранения."""
+    """Запоминает предыдущую стадию сделки до сохранения.
+
+    Единственное чтение прежней записи на оба потребителя: вебхуки (`_prev_stage_code`) и уведомление клиенту
+    (`_prev_stage_id`, `notifications.signals.notify_deal_stage_change` — post_save).
+    """
+    if _untracked_save(instance, kwargs.get("update_fields"), DEAL_TRACKED):
+        instance._prev_stage_id = instance.stage_id
+        return
     if instance.pk:
         from sales.models import Deal
 
         prev = Deal.objects.filter(pk=instance.pk).select_related("stage").first()
         instance._prev_stage_code = stages.fsm_code(prev) if prev else None
+        instance._prev_stage_id = prev.stage_id if prev else None
     else:
         instance._prev_stage_code = None
+        instance._prev_stage_id = None
 
 
 def handle_deal_post_save(sender: Any, instance: Any, created: bool, **kwargs: Any) -> None:
     """Генерирует request.created при создании сделки и deal.stage_changed/won/lost при смене стадии."""
     try:
-        if not instance.company_id:
+        if getattr(instance, "_int_untracked_save", False) or not instance.company_id:
             return
 
         if created:
@@ -96,6 +140,8 @@ def handle_deal_post_save(sender: Any, instance: Any, created: bool, **kwargs: A
 
 def handle_quote_pre_save(sender: Any, instance: Any, **kwargs: Any) -> None:
     """Запоминает предыдущий статус КП до сохранения."""
+    if _untracked_save(instance, kwargs.get("update_fields"), QUOTE_TRACKED):
+        return
     if instance.pk:
         from sales.models import Quote
 
@@ -111,7 +157,7 @@ def handle_quote_pre_save(sender: Any, instance: Any, **kwargs: Any) -> None:
 def handle_quote_post_save(sender: Any, instance: Any, created: bool, **kwargs: Any) -> None:
     """Генерирует quote.sent, quote.accepted, quote.rejected при смене статуса КП."""
     try:
-        if not getattr(instance, "deal_id", None):
+        if getattr(instance, "_int_untracked_save", False) or not getattr(instance, "deal_id", None):
             return
 
         prev_status = getattr(instance, "_prev_status_code", None)
@@ -140,10 +186,12 @@ def handle_quote_post_save(sender: Any, instance: Any, created: bool, **kwargs: 
 
 def handle_contract_pre_save(sender: Any, instance: Any, **kwargs: Any) -> None:
     """Запоминает состояние подписи договора до сохранения."""
+    if _untracked_save(instance, kwargs.get("update_fields"), CONTRACT_TRACKED):
+        return
     if instance.pk:
         from sales.models import Contract
 
-        prev = Contract.objects.filter(pk=instance.pk).first()
+        prev = Contract.objects.filter(pk=instance.pk).select_related("status").first()
         if prev:
             instance._prev_client_signed = bool(prev.client_signed_at)
             instance._prev_manager_signed = bool(prev.manager_signed_at)
@@ -161,7 +209,7 @@ def handle_contract_pre_save(sender: Any, instance: Any, **kwargs: Any) -> None:
 def handle_contract_post_save(sender: Any, instance: Any, created: bool, **kwargs: Any) -> None:
     """Генерирует contract.signed при подписании."""
     try:
-        if not getattr(instance, "deal_id", None):
+        if getattr(instance, "_int_untracked_save", False) or not getattr(instance, "deal_id", None):
             return
 
         client_signed = bool(instance.client_signed_at)
@@ -197,6 +245,8 @@ def handle_contract_post_save(sender: Any, instance: Any, created: bool, **kwarg
 
 def handle_invoice_pre_save(sender: Any, instance: Any, **kwargs: Any) -> None:
     """Запоминает статус инвойса до сохранения."""
+    if _untracked_save(instance, kwargs.get("update_fields"), INVOICE_TRACKED):
+        return
     if instance.pk:
         from finance.models import Invoice
 
@@ -212,7 +262,7 @@ def handle_invoice_pre_save(sender: Any, instance: Any, **kwargs: Any) -> None:
 def handle_invoice_post_save(sender: Any, instance: Any, created: bool, **kwargs: Any) -> None:
     """Генерирует invoice.issued, invoice.paid, invoice.overdue."""
     try:
-        if not getattr(instance, "deal_id", None):
+        if getattr(instance, "_int_untracked_save", False) or not getattr(instance, "deal_id", None):
             return
 
         curr_status = instance.status.code if getattr(instance, "status", None) else None
@@ -238,6 +288,8 @@ def handle_invoice_post_save(sender: Any, instance: Any, created: bool, **kwargs
 
 def handle_act_pre_save(sender: Any, instance: Any, **kwargs: Any) -> None:
     """Запоминает статус акта до сохранения."""
+    if _untracked_save(instance, kwargs.get("update_fields"), ACT_TRACKED):
+        return
     if instance.pk:
         from finance.models import Act
 
@@ -253,7 +305,7 @@ def handle_act_pre_save(sender: Any, instance: Any, **kwargs: Any) -> None:
 def handle_act_post_save(sender: Any, instance: Any, created: bool, **kwargs: Any) -> None:
     """Генерирует act.issued, act.accepted, act.returned."""
     try:
-        if not getattr(instance, "deal_id", None):
+        if getattr(instance, "_int_untracked_save", False) or not getattr(instance, "deal_id", None):
             return
 
         curr_status = instance.status.code if getattr(instance, "status", None) else None
@@ -279,6 +331,8 @@ def handle_act_post_save(sender: Any, instance: Any, created: bool, **kwargs: An
 
 def handle_fulfillment_pre_save(sender: Any, instance: Any, **kwargs: Any) -> None:
     """Запоминает статус и ETA до сохранения."""
+    if _untracked_save(instance, kwargs.get("update_fields"), FULFILLMENT_TRACKED):
+        return
     if instance.pk:
         from sales.models import Fulfillment
 
@@ -297,7 +351,7 @@ def handle_fulfillment_pre_save(sender: Any, instance: Any, **kwargs: Any) -> No
 def handle_fulfillment_post_save(sender: Any, instance: Any, created: bool, **kwargs: Any) -> None:
     """Генерирует delivery.status_changed и delivery.eta_changed."""
     try:
-        if not getattr(instance, "deal_id", None):
+        if getattr(instance, "_int_untracked_save", False) or not getattr(instance, "deal_id", None):
             return
 
         prev_status = getattr(instance, "_prev_status_code", None)
@@ -382,6 +436,10 @@ def handle_document_pre_save(sender: Any, instance: Any, **kwargs: Any) -> None:
     """Запоминает, был ли документ выпущен до сохранения: событие шлётся на переходе, а не на каждом сохранении."""
     try:
         source = _DOCUMENT_SOURCES[sender]
+        if _untracked_save(instance, kwargs.get("update_fields"), DOCUMENT_TRACKED[source], flag="_doc_untracked_save"):
+            # Выпуск не мог поменяться: перехода нет, и читать прежнюю запись незачем.
+            instance._document_was_issued = True
+            return
         related = ("status", "template__kind") if source == "generated" else ("status",)
         previous = sender.objects.select_related(*related).filter(pk=instance.pk).first() if instance.pk else None
         instance._document_was_issued = previous is not None and portal_documents.is_issued(source, previous)

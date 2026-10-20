@@ -152,3 +152,24 @@ def test_exception_handler_always_returns_a_known_code(exc, status, code):
     assert response.status_code == status
     assert response.data == {"detail": code}  # ровно один ключ: схема Error запрещает остальные
     assert code in error_codes()
+
+
+# ── FIX-54 (хвост FIX-25): неизвестный путь под /api/portal/ — JSON 404 портала, а не HTML Django ────────
+
+
+@pytest.mark.parametrize(
+    "path",
+    [
+        "/api/portal/v1/no-such-endpoint",
+        "/api/portal/v1/auth/magic/some-token",
+        "/api/portal/v2/quotes",
+        "/api/portal/",
+        "/api/portal/nothing/here/",
+    ],
+)
+@pytest.mark.parametrize("method", ["get", "post", "delete"])
+def test_unknown_portal_path_is_json_not_found(anon_portal_client, path, method):
+    response = getattr(anon_portal_client, method)(path)
+    assert response.status_code == 404
+    assert response["Content-Type"].startswith("application/json")
+    assert response.json() == {"detail": "NOT_FOUND"}

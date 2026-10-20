@@ -1,5 +1,7 @@
 """Portal exception handling: гарантирует формат {"detail": "<CODE>"} по CONTRACTS §4 и Q-17."""
 
+from django.http import JsonResponse
+from django.views.decorators.csrf import csrf_exempt
 from portal.error_codes import ERROR_CODES, FALLBACK_BY_STATUS
 from rest_framework import exceptions, status
 from rest_framework.exceptions import APIException
@@ -98,3 +100,13 @@ def portal_exception_handler(exc, context):
         detail = FALLBACK_BY_STATUS.get(response.status_code, "VALIDATION_ERROR")
     response.data = {"detail": detail}
     return response
+
+
+@csrf_exempt
+def portal_not_found(request, *args, **kwargs):
+    """Любой путь под `/api/portal/`, которого нет в контракте, — `404 {"detail": "NOT_FOUND"}` (FIX-54, хвост FIX-25).
+
+    Без маршрута Django отдавал HTML-страницу 404: клиенту Cabinet нечего разобрать, а ответ портала всегда JSON формата
+    `Error`. Подключён в `core/urls.py` последним из портальных маршрутов; метод не важен.
+    """
+    return JsonResponse({"detail": "NOT_FOUND"}, status=404)

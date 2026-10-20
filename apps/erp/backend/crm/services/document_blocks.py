@@ -16,10 +16,27 @@
 настройки формулировок продолжают питать документ; свой шаблон — компания пишет текст прямо.
 """
 
+import datetime
+
 from django.template.loader import render_to_string
+from django.utils import timezone
 from django.utils.safestring import mark_safe
 
 from .fulfillment import delivery_note_number
+
+
+def format_document_date(value) -> str:
+    """Дата для печатного документа: `дд.мм.гггг`; пусто — пустая строка.
+
+    `DateTimeField` хранится в UTC — на печать идёт местный день (`TIME_ZONE`), иначе документ, оформленный после
+    19:00 UTC, получает вчерашнюю дату. `DateField` (дата без времени) часового пояса не имеет — печатается как есть.
+    """
+    if not value:
+        return ""
+    if isinstance(value, datetime.datetime):
+        value = timezone.localtime(value) if timezone.is_aware(value) else value
+    return value.strftime("%d.%m.%Y")
+
 
 #: Токен → человеческая подпись. Каталог один: и редактор показывает его пользователю, и
 #: проверка целостности (E2) сверяется с ним, поэтому разъехаться они не могут.
@@ -300,7 +317,7 @@ def render_invoice_body(
         blocks=invoice_block_values(invoice, items, totals, ccy, seller=seller, seller_profile=seller_profile),
         scalars={
             "doc.number": invoice.number,
-            "doc.date": issued.strftime("%d.%m.%Y") if issued else "",
+            "doc.date": format_document_date(issued),
             "doc.total": money(invoice.total_incl_vat, ccy),
             "doc.currency": ccy,
         },
@@ -345,7 +362,7 @@ def render_contract_body(
         blocks=contract_block_values(contract, items, totals, ccy, seller=seller, seller_profile=seller_profile),
         scalars={
             "doc.number": contract.number,
-            "doc.date": contract.created_at.strftime("%d.%m.%Y") if contract.created_at else "",
+            "doc.date": format_document_date(contract.created_at),
             "doc.total": money(contract.total_amount, ccy),
             "doc.currency": ccy,
             "doc.vat_rate": f"{int(round(float(vat_rate)))}" if vat_rate is not None else "",
@@ -416,7 +433,7 @@ def render_delivery_note_body(fulfillment, items, ccy: str, template, *, seller=
         blocks=delivery_note_block_values(fulfillment, items, ccy, seller=seller, seller_profile=seller_profile),
         scalars={
             "doc.number": delivery_note_number(fulfillment),
-            "doc.date": fulfillment.shipped_at.strftime("%d.%m.%Y") if fulfillment.shipped_at else "",
+            "doc.date": format_document_date(fulfillment.shipped_at),
             "doc.carrier_phrase": carrier_phrase,
             "doc.tracking": fulfillment.tracking_number or "",
         },

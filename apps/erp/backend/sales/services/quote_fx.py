@@ -32,6 +32,7 @@ from finance.services.fx import (
     BASE_CURRENCY,
     RateSource,
     is_base,
+    max_rate_age_days,
     normalize_code,
     parse_positive_rate,
     rate_to_str,
@@ -91,10 +92,13 @@ def resolve_quote_rate_map(quote, codes: Iterable[str]) -> dict:
     snapshot, meta = ({}, {}) if live else (old_snapshot, old_meta)
     manual = _dict(quote.fx_manual)
     rate_map = {BASE_CURRENCY: Decimal("1")}
+    max_age = None
     for code in {normalize_code(c) for c in codes} - {BASE_CURRENCY}:
         frozen = None if live else parse_positive_rate(snapshot.get(code))
         if frozen is None:
-            resolved = resolve_rate(code, on_date)
+            if max_age is None:
+                max_age = max_rate_age_days()  # лимит возраста курса — один раз на пересчёт, не на каждую валюту
+            resolved = resolve_rate(code, on_date, max_age_days=max_age)
             if resolved is not None:
                 frozen = resolved.rate
                 snapshot[code] = rate_to_str(resolved.rate)
@@ -116,8 +120,11 @@ def live_rates_outdated(quote) -> bool:
         return False
     snapshot, meta = _dict(quote.fx_snapshot), _dict(quote.fx_snapshot_meta)
     today = timezone.localdate()
+    max_age = None
     for code in line_currency_codes(quote.items.select_related("frozen_currency")):
-        resolved = resolve_rate(code, today)
+        if max_age is None:
+            max_age = max_rate_age_days()
+        resolved = resolve_rate(code, today, max_age_days=max_age)
         current = (rate_to_str(resolved.rate), resolved.rate_date.isoformat()) if resolved else None
         stored = (snapshot[code], _dict(meta.get(code)).get("rate_date")) if code in snapshot else None
         if current != stored:
@@ -130,10 +137,13 @@ def missing_quote_currencies(quote, codes: Iterable[str]) -> list:
     manual, snapshot = _dict(quote.fx_manual), _dict(quote.fx_snapshot)
     on_date = quote_rate_date(quote)
     missing = []
+    max_age = None
     for code in sorted({normalize_code(c) for c in codes} - {BASE_CURRENCY}):
         if parse_positive_rate(manual.get(code)) or parse_positive_rate(snapshot.get(code)):
             continue
-        if resolve_rate(code, on_date) is None:
+        if max_age is None:
+            max_age = max_rate_age_days()  # лимит читается лениво и один раз: договорные курсы его не требуют
+        if resolve_rate(code, on_date, max_age_days=max_age) is None:
             missing.append(code)
     return missing
 

@@ -92,6 +92,7 @@ Makefile · .env.example · docs/ (ADR и runbooks ERP в apps/erp/docs/runbooks
 - **Нет хардкода:** URL, ключи, идентификаторы — из окружения; бизнес-константы — из БД или настроек; роли, стадии, статусы сравниваются по `code`, никогда по переведённому `name`.
 - Ошибки API — `{"detail": "<CODE>"}` (DRF-native, CONTRACTS §0); фронтенд сравнивает код по значению. Держит тест вида `core/tests/test_error_shape.py` B2B.
 - Бизнес-дата — `timezone.localdate()`, никогда `timezone.now().date()` (`TIME_ZONE=Asia/Tashkent`, `USE_TZ=True`).
+  `DateTimeField` на печать (документы, письма) — только через местное время (`crm.services.document_blocks.format_document_date` / `timezone.localtime`): `strftime` на UTC-значении даёт вчерашнюю дату после 19:00 UTC; `DateField` часового пояса не имеет и печатается как есть (FIX-54).
 - Списки — `select_related` / `prefetch_related`, без N+1; дашборды — `aggregate()` с условными `Count`, не `.count()` в цикле; пагинация у всех списков.
 - Запрос не блокирует ASGI: PDF, импорт, ИИ — в Celery; публичные и тяжёлые ответы — 202 + `Retry-After`. Celery-задачи — с `time_limit`/`soft_time_limit`, ретраями и backoff (исключение — ИИ-задача, одна попытка: платный вызов).
 - Загрузки — через валидаторы `core` (размер, тип, расширение, magic-bytes).
