@@ -478,7 +478,10 @@
       "emptyKindText": "Choose another kind or show all documents.",
       "showAll": "Show all",
       "filter": "Document kind",
-      "searchPlaceholder": "Search by number, title, or deal…",
+      "searchPlaceholder": "Number, title, deal…",
+      "noMatchTitle": "Nothing found",
+      "noMatchText": "No documents match “{{query}}”. Check the number or title, or clear the search.",
+      "clearSearch": "Clear search",
       "searchLabel": "Search documents",
       "columns": {
         "document": "Document",

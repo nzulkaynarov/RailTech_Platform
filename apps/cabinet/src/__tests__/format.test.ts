@@ -68,7 +68,7 @@ describe('даты — ISO → Asia/Tashkent, локаль интерфейса'
     ['ru', '2026-10-08T23:30:00Z', '9 окт. 2026 г., 04:30'],
     ['ru', '2026-10-08T14:00:00+05:00', '8 окт. 2026 г., 14:00'],
     ['en', '2026-10-08T14:00:00+05:00', 'Oct 8, 2026, 14:00'],
-    ['uz', '2026-10-08T14:00:00+05:00', '8-okt, 2026, 14:00'],
+    ['uz', '2026-10-08T14:00:00+05:00', '08.10.2026, 14:00'],
   ] as const)('formatDateTime %s %s → %s', (language, value, expected) => {
     expect(plain(formatDateTime(value, language))).toBe(expected);
   });
@@ -78,10 +78,26 @@ describe('даты — ISO → Asia/Tashkent, локаль интерфейса'
     ['ru', '2026-10-25', '25 окт. 2026 г.'],
     ['ru', '2026-01-01', '1 янв. 2026 г.'],
     ['en', '2026-10-25', 'Oct 25, 2026'],
-    ['uz', '2026-10-25', '25-okt, 2026'],
+    ['uz', '2026-10-25', '25.10.2026'],
     ['ru', '2026-10-08T23:30:00Z', '9 окт. 2026 г.'],
   ] as const)('formatDate %s %s → %s', (language, value, expected) => {
     expect(plain(formatDate(value, language))).toBe(expected);
+  });
+
+  // D-4 (FIX-51): в Chrome узбекский короткий месяц печатался «2026 M10 21» — словарь месяцев CLDR для uz
+  // зависит от версии ICU, поэтому узбекская дата числовая и собирается из частей, а не из `month: 'short'`.
+  it.each([
+    ['ru', '21 окт. 2026 г.'],
+    ['en', 'Oct 21, 2026'],
+    ['uz', '21.10.2026'],
+  ] as const)('одна дата 2026-10-21 на трёх языках: %s → %s', (language, expected) => {
+    expect(plain(formatDate('2026-10-21', language))).toBe(expected);
+    expect(plain(formatDate('2026-10-21T09:00:00+05:00', language))).toBe(expected);
+    expect(formatDate('2026-10-21', language)).not.toMatch(/M10/);
+  });
+
+  it('uz: момент переводится в Ташкент, день и время с нулями', () => {
+    expect(formatDateTime('2026-10-20T20:05:00Z', 'uz')).toBe('21.10.2026, 01:05');
   });
 
   it.each([null, undefined, '', 'не дата'])('пустое или битое %j → прочерк', (value) => {

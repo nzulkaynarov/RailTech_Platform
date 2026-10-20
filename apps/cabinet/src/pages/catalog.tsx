@@ -245,12 +245,13 @@ function PriceText({ item, large = false }: { item: CatalogItem; large?: boolean
   );
 }
 
+/** Срок — только положительный: `0` дней (в наличии) и `null` (не задан) срока не показывают. */
 function AvailabilityText({ item }: { item: CatalogItem }) {
   const { t } = useTranslation();
   return (
     <span className="flex flex-wrap items-center gap-2 text-sm">
       <StatusBadge entity="availability" code={item.availability} />
-      {item.lead_time_days !== null && item.lead_time_days !== undefined ? (
+      {item.lead_time_days ? (
         <span className="text-muted-foreground">{t('pages.catalog.leadTime', { count: item.lead_time_days })}</span>
       ) : null}
     </span>
