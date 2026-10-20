@@ -25,7 +25,12 @@ from app.domain.errors import (
     UpstreamUnavailableError,
     ValidationFailedError,
 )
-from app.security.secrets_store import ERP_SERVICE_TOKEN, ERP_WEBHOOK_SECRET, SecretsStore
+from app.security.secrets_store import (
+    ERP_SERVICE_TOKEN,
+    ERP_WEBHOOK_SECRET,
+    ERP_WEBHOOK_SECRET_PREVIOUS,
+    SecretsStore,
+)
 from app.services.settings import SettingsService
 
 logger = structlog.get_logger(__name__)
@@ -51,6 +56,19 @@ class ErpResolution:
     token_source: Source
     webhook_secret: str
     webhook_secret_source: Source
+    # Предыдущий секрет вебхуков (ротация без простоя, FIX-35): принимается наравне с текущим,
+    # пока его не сняли.
+    webhook_secret_previous: str = ""
+    webhook_secret_previous_source: Source = "none"  # noqa: S105 — источник, не секрет
+
+    @property
+    def webhook_secrets(self) -> tuple[str, ...]:
+        """Секреты для проверки подписи: текущий, затем предыдущий (без пустых и повторов)."""
+        seen: dict[str, None] = {}
+        for value in (self.webhook_secret, self.webhook_secret_previous):
+            if value:
+                seen.setdefault(value)
+        return tuple(seen)
 
     @property
     def connection(self) -> ErpConnection | None:
@@ -96,10 +114,31 @@ async def resolve_erp(
     token, token_source = _pick(
         await _stored(store, ERP_SERVICE_TOKEN), config.erp_service_token.get_secret_value()
     )
-    webhook, webhook_source = _pick(
-        await _stored(store, ERP_WEBHOOK_SECRET), config.erp_webhook_secret.get_secret_value()
+    # Секрет вебхуков: «Подключения» (БД) → `.env` (`ERP_WEBHOOK_SECRET`; допускается список через
+    # запятую, как у сервисных токенов: первый — текущий, второй — предыдущий). Предыдущий секрет
+    # из БД перекрывает второе значение `.env`.
+    env_secrets = [
+        v.strip() for v in config.erp_webhook_secret.get_secret_value().split(",") if v.strip()
+    ]
+    stored_current = await _stored(store, ERP_WEBHOOK_SECRET)
+    stored_previous = await _stored(store, ERP_WEBHOOK_SECRET_PREVIOUS)
+    webhook, webhook_source = _pick(stored_current, env_secrets[0] if env_secrets else "")
+    previous = ""
+    previous_source: Source = "none"
+    if stored_previous:
+        previous, previous_source = stored_previous, "db"
+    elif not stored_current and len(env_secrets) > 1:
+        previous, previous_source = env_secrets[1], "env"
+    return ErpResolution(
+        base_url,
+        base_source,
+        token,
+        token_source,
+        webhook,
+        webhook_source,
+        previous,
+        previous_source,
     )
-    return ErpResolution(base_url, base_source, token, token_source, webhook, webhook_source)
 
 
 async def resolve_connection(

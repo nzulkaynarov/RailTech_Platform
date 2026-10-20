@@ -26,6 +26,7 @@ from app.security.principal import Principal
 from app.security.secrets_store import (
     ERP_SERVICE_TOKEN,
     ERP_WEBHOOK_SECRET,
+    ERP_WEBHOOK_SECRET_PREVIOUS,
     SecretCipher,
     SecretsStore,
     SecretStatus,
@@ -72,6 +73,9 @@ class FakeStore(SecretsStore):
 
     async def put(self, session: Any, key: str, value: str, user_id: int | None) -> None:
         self.saved[key] = value
+
+    async def delete(self, session: Any, key: str) -> None:
+        self.saved.pop(key, None)
 
     async def status(self, key: str) -> SecretStatus | None:
         value = self.saved.get(key)
@@ -317,6 +321,7 @@ async def test_save_audits_without_values_and_switches_mode(
         "base_url": BASE,
         "erp_service_token_last4": "Q1w2",
         "erp_webhook_secret_last4": "Z9x8",
+        "erp_webhook_secret_previous_last4": None,
     }
     for secret in (TOKEN, HOOK, PASSWORD):
         assert secret not in repr(audit_log)
@@ -357,3 +362,105 @@ def test_input_is_masked_in_repr() -> None:
     for secret in (TOKEN, HOOK, PASSWORD):
         assert secret not in repr(body)
         assert secret not in body.model_dump_json()
+
+
+# --- Ротация секрета вебхуков без простоя (FIX-35) ------------------------------------------------
+
+OLD_HOOK = "erp-webhook-secret-OLD-for-unit-tests-0001"  # фиктивный
+NEW_HOOK = "erp-webhook-secret-NEW-for-unit-tests-0002"  # фиктивный
+
+
+async def test_rotation_new_current_old_previous_then_previous_is_cleared(
+    audit_log: list[dict[str, Any]],
+) -> None:
+    service, store, _ = make(FakeStore(erp_webhook_secret=OLD_HOOK))
+    assert (await service.resolution()).webhook_secrets == (OLD_HOOK,)
+
+    status = await service.save(
+        ADMIN,
+        base_url=BASE,
+        service_token=None,
+        webhook_secret=NEW_HOOK,
+        webhook_secret_previous=OLD_HOOK,
+        password=PASSWORD,
+    )
+    assert (await service.resolution()).webhook_secrets == (NEW_HOOK, OLD_HOOK)
+    assert status.webhook_secret_previous_configured
+    assert status.webhook_secret_previous_source == "db"
+    assert status.webhook_secret_previous_last4 == OLD_HOOK[-4:]
+
+    status = await service.save(
+        ADMIN,
+        base_url=BASE,
+        service_token=None,
+        webhook_secret=None,
+        clear_webhook_secret_previous=True,
+        password=PASSWORD,
+    )
+    assert ERP_WEBHOOK_SECRET_PREVIOUS not in store.saved
+    assert (await service.resolution()).webhook_secrets == (NEW_HOOK,)
+    assert not status.webhook_secret_previous_configured
+    assert status.webhook_secret_previous_source == "none"
+    audits = [entry["after"] for entry in audit_log]
+    assert audits[0]["erp_webhook_secret_previous_last4"] == OLD_HOOK[-4:]
+    assert audits[1]["erp_webhook_secret_previous_last4"] is None
+    for secret in (OLD_HOOK, NEW_HOOK):
+        assert secret not in repr(audit_log)
+        assert secret not in ErpStatusOut(**{**asdict(status), "mode": "local"}).model_dump_json()
+
+
+async def test_a_new_previous_secret_wins_over_clear_in_one_request(
+    audit_log: list[dict[str, Any]],
+) -> None:
+    service, store, _ = make()
+    await service.save(
+        ADMIN,
+        base_url=BASE,
+        service_token=None,
+        webhook_secret=NEW_HOOK,
+        webhook_secret_previous=OLD_HOOK,
+        clear_webhook_secret_previous=True,
+        password=PASSWORD,
+    )
+    assert store.saved[ERP_WEBHOOK_SECRET_PREVIOUS] == OLD_HOOK
+
+
+async def test_clearing_the_previous_secret_needs_secrets_key(
+    audit_log: list[dict[str, Any]],
+) -> None:
+    service, _, _ = make(FakeStore(enabled=False))
+    with pytest.raises(ConflictError) as caught:
+        await service.save(
+            ADMIN,
+            base_url=BASE,
+            service_token=None,
+            webhook_secret=None,
+            clear_webhook_secret_previous=True,
+            password=PASSWORD,
+        )
+    assert caught.value.details["reason"] == Reason.SECRETS_KEY_MISSING
+
+
+def test_connector_form_schema_accepts_the_previous_secret_and_the_clear_flag() -> None:
+    body = ErpConnectorIn.model_validate(
+        {
+            "base_url": BASE,
+            "webhook_secret": NEW_HOOK,
+            "webhook_secret_previous": OLD_HOOK,
+            "clear_webhook_secret_previous": False,
+            "password": PASSWORD,
+        }
+    )
+    assert body.webhook_secret_previous is not None
+    assert body.webhook_secret_previous.get_secret_value() == OLD_HOOK
+    with pytest.raises(ValueError, match="at least 16"):
+        ErpConnectorIn.model_validate(
+            {"base_url": BASE, "webhook_secret_previous": "short", "password": PASSWORD}
+        )
+
+
+@pytest.mark.parametrize("field", ["service_token", "webhook_secret", "webhook_secret_previous"])
+@pytest.mark.parametrize("blank", [" " * 20, "\t\n" * 10, "  short  " + " " * 12])
+def test_a_secret_of_whitespace_is_refused_before_it_is_stripped(field: str, blank: str) -> None:
+    with pytest.raises(ValueError, match="besides whitespace"):
+        ErpConnectorIn.model_validate({"base_url": BASE, field: blank, "password": PASSWORD})

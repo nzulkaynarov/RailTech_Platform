@@ -1,0 +1,26 @@
+{
+  "version": 1,
+  "event": "invoice.overdue",
+  "occurred_at": "2026-10-25T00:05:00+05:00",
+  "erp_company_id": 118,
+  "crm_client_id": 42,
+  "deal": {
+    "erp_deal_id": 905,
+    "number": "D-2026-0905",
+    "title": "Поставка оборудования, партия 1",
+    "stage": "invoiced",
+    "amount": "125000000.00",
+    "currency": "UZS"
+  },
+  "actor": {
+    "type": "system"
+  },
+  "payload": {
+    "erp_invoice_id": 4410,
+    "number": "СЧ-2026-0441",
+    "amount": "62500000.00",
+    "currency": "UZS",
+    "due_date": "2026-10-24",
+    "link": "https://cabinet.railtech.uz/invoices/4410"
+  }
+}

@@ -1,5 +1,9 @@
 """«Подключения»: матрица ролей, секреты шифруются и не возвращаются, канал из `my_chat_member`."""
 
+import hashlib
+import hmac
+import json
+import uuid
 from collections.abc import Iterator
 from typing import Any
 
@@ -198,3 +202,104 @@ async def test_erp_saved_encrypted_checked_and_audited(
     assert after is not None
     assert after["base_url"] == "https://erp.example"
     assert all(ERP_TOKEN not in repr((a.before, a.after)) for a in audits)
+
+
+# --- Ротация секрета вебхуков без простоя (FIX-35) --------------------------------------------
+
+EVENTS_URL = "/api/v1/integrations/erp/events"
+OLD_HOOK = "integration-erp-webhook-OLD-secret-0001"  # фиктивный
+NEW_HOOK = "integration-erp-webhook-NEW-secret-0002"  # фиктивный
+
+
+def post_event(client: TestClient, secret: str, serial: int) -> int:
+    """Подписанное событие из примеров контракта; `serial` делает тело уникальным (иначе повтор)."""
+    from tests.seam_events import example_event
+
+    body = example_event("quote.viewed")
+    body["occurred_at"] = f"2026-10-13T11:{serial:02d}:00+05:00"
+    raw = json.dumps(body).encode()
+    signature = "sha256=" + hmac.new(secret.encode(), raw, hashlib.sha256).hexdigest()
+    response = client.post(
+        EVENTS_URL,
+        content=raw,
+        headers={
+            "X-Event-Id": str(uuid.uuid4()),
+            "X-Event-Type": "quote.viewed",
+            "X-Signature": signature,
+            "Content-Type": "application/json",
+        },
+    )
+    return response.status_code
+
+
+async def test_webhook_secret_rotation_without_downtime(
+    sessions: async_sessionmaker[AsyncSession], client: TestClient
+) -> None:
+    """Старый секрет принимается, пока он «предыдущий»; снят — 401. Без `.env`, без перезапуска."""
+    auth = await headers(sessions, client, "admin")
+
+    def save(**fields: Any) -> dict[str, Any]:
+        body = {"base_url": "https://erp.example", "password": PASSWORD, **fields}
+        response = client.put(ERP_URL, json=body, headers=auth)
+        assert response.status_code == 200, response.text
+        for secret in (OLD_HOOK, NEW_HOOK):
+            assert secret not in response.text
+        status: dict[str, Any] = response.json()
+        return status
+
+    assert post_event(client, OLD_HOOK, 1) == 409  # секрет ещё не задан
+    first = save(service_token=ERP_TOKEN, webhook_secret=OLD_HOOK)
+    assert first["webhook_secret_previous_configured"] is False
+    assert post_event(client, OLD_HOOK, 2) == 200
+    assert post_event(client, NEW_HOOK, 3) == 401
+
+    # Шаг 1. В CRM — новый как текущий, старый как предыдущий: принимаются оба.
+    rotating = save(webhook_secret=NEW_HOOK, webhook_secret_previous=OLD_HOOK)
+    assert rotating["webhook_secret_previous_configured"] is True
+    assert rotating["webhook_secret_previous_source"] == "db"
+    assert rotating["webhook_secret_previous_last4"] == "0001"
+    assert rotating["webhook_secret_last4"] == "0002"
+    assert post_event(client, OLD_HOOK, 4) == 200, "ERP ещё подписывает старым"
+    assert post_event(client, NEW_HOOK, 5) == 200, "ERP уже подписывает новым"
+    assert post_event(client, "some-other-secret-value-0003", 6) == 401
+
+    # Шаг 3. Предыдущий снят: старый секрет — 401, новый — по-прежнему принимается.
+    done = save(clear_webhook_secret_previous=True)
+    assert done["webhook_secret_previous_configured"] is False
+    assert done["webhook_secret_previous_last4"] is None
+    assert post_event(client, OLD_HOOK, 7) == 401
+    assert post_event(client, NEW_HOOK, 8) == 200
+
+    async with sessions() as session:
+        keys = {r.key for r in (await session.execute(select(IntegrationSecret))).scalars()}
+        audits = [
+            a
+            for a in (await session.execute(select(AuditLog))).scalars()
+            if a.action == "integrations.erp"
+        ]
+    assert "erp_webhook_secret_previous" not in keys
+    assert len(audits) == 3
+    assert all(OLD_HOOK not in repr((a.before, a.after)) for a in audits)
+    assert all(NEW_HOOK not in repr((a.before, a.after)) for a in audits)
+    last_after = audits[-1].after
+    assert last_after is not None
+    assert last_after["erp_webhook_secret_previous_last4"] is None
+
+
+async def test_the_previous_secret_form_field_is_validated(
+    sessions: async_sessionmaker[AsyncSession], client: TestClient
+) -> None:
+    auth = await headers(sessions, client, "admin")
+    body = {
+        "base_url": "https://erp.example",
+        "webhook_secret_previous": "short",
+        "password": PASSWORD,
+    }
+    assert client.put(ERP_URL, json=body, headers=auth).status_code == 422
+    viewer = await headers(sessions, client, "viewer")
+    ok = {
+        "base_url": "https://erp.example",
+        "clear_webhook_secret_previous": True,
+        "password": PASSWORD,
+    }
+    assert client.put(ERP_URL, json=ok, headers=viewer).status_code == 403

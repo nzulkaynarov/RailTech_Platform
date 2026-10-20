@@ -11,6 +11,7 @@
 export interface ErpConnectorIn {
   /** @maxLength 500 */
   base_url: string;
+  clear_webhook_secret_previous?: boolean;
   /**
    * @minLength 1
    * @maxLength 256
@@ -18,4 +19,5 @@ export interface ErpConnectorIn {
   password: string;
   service_token?: string | null;
   webhook_secret?: string | null;
+  webhook_secret_previous?: string | null;
 }

@@ -133,3 +133,59 @@ def test_webhook_reliability_revision_dedupes_erp_deal_ids_and_is_reversible(
         )
 
     command.upgrade(alembic_config, "head")
+
+
+def test_seam_hardening_revision_is_reversible(
+    alembic_config: Config, live_settings: Settings
+) -> None:
+    """FIX-35: `documents.erp_document_id` (уникален в паре с клиентом), статус `skipped`,
+    `body_sha256`; downgrade снимает всё и не переносит пропущенные события."""
+    command.upgrade(alembic_config, "head")
+    with psycopg.connect(live_settings.libpq_dsn, autocommit=True) as conn:
+        conn.execute("TRUNCATE documents, clients, erp_incoming_events RESTART IDENTITY CASCADE")
+        for name in ("A", "B"):
+            conn.execute("INSERT INTO clients (name) VALUES (%s)", (name,))
+        insert_doc = (
+            "INSERT INTO documents (client_id, type, title, filename, mime, size_bytes, "
+            "erp_document_id) VALUES (%s, 'other', 'Док', 'd.pdf', 'application/pdf', 0, %s)"
+        )
+        conn.execute(insert_doc, (1, 77))
+        conn.execute(insert_doc, (2, 77))  # тот же документ у другого клиента — отдельная строка
+        conn.execute(insert_doc, (1, None))
+        conn.execute(insert_doc, (1, None))  # NULL не конфликтует
+        with pytest.raises(psycopg.errors.UniqueViolation):
+            conn.execute(insert_doc, (1, 77))
+        conn.execute(
+            "INSERT INTO erp_incoming_events (event_id, event_type, status, error, payload, "
+            "body_sha256) VALUES ('s-1', 'warehouse.exploded', 'skipped', 'unknown', '{}', 'ab')"
+        )
+        conn.execute(
+            "INSERT INTO erp_incoming_events (event_id, event_type, status, payload) "
+            "VALUES ('r-1', 'quote.sent', 'received', '{}')"
+        )
+
+    command.downgrade(alembic_config, "0028_erp_webhook_reliability")
+    with psycopg.connect(live_settings.libpq_dsn, autocommit=True) as conn:
+        columns = {
+            r[0]
+            for r in conn.execute(
+                "SELECT column_name FROM information_schema.columns "
+                "WHERE table_name IN ('documents', 'erp_incoming_events')"
+            ).fetchall()
+        }
+        assert not columns & {"erp_document_id", "body_sha256"}
+        assert conn.execute("SELECT event_id FROM erp_incoming_events").fetchall() == [("r-1",)]
+        with pytest.raises(psycopg.errors.CheckViolation):
+            conn.execute(
+                "INSERT INTO erp_incoming_events (event_id, event_type, status, payload) "
+                "VALUES ('s-2', 'x', 'skipped', '{}')"
+            )
+
+    command.upgrade(alembic_config, "head")
+    with psycopg.connect(live_settings.libpq_dsn, autocommit=True) as conn:
+        index = conn.execute(
+            "SELECT indexdef FROM pg_indexes WHERE indexname = 'uq_documents_client_erp_document'"
+        ).fetchone()
+        assert index is not None
+        assert "UNIQUE" in index[0]
+        assert "erp_document_id IS NOT NULL" in index[0]

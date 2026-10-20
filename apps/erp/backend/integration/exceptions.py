@@ -59,6 +59,11 @@ def integration_exception_handler(exc, context):
     if response is None:
         return None
 
+    # Лимит частоты (integration/throttles.py): код вместо английской фразы DRF; Retry-After уже выставил DRF.
+    if isinstance(exc, exceptions.Throttled):
+        response.data = {"detail": "TOO_MANY_REQUESTS"}
+        return response
+
     # Ошибки аутентификации
     if isinstance(exc, (exceptions.AuthenticationFailed, exceptions.NotAuthenticated)):
         response.status_code = status.HTTP_401_UNAUTHORIZED

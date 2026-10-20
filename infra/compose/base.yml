@@ -363,7 +363,9 @@ services:
       # Шов CRM ↔ ERP (CONTRACTS §0, FIX-01): значений по умолчанию в коде нет; без DEBUG ERP без них
       # не стартует. Имена в .env — как в контракте (WEBHOOK_SECRET); ERP читает их под своими.
       SERVICE_TOKEN_CRM_TO_ERP: ${SERVICE_TOKEN_CRM_TO_ERP:?set in .env}
-      ERP_WEBHOOK_SECRET: ${WEBHOOK_SECRET:?set in .env}
+      # Ротация секрета вебхуков без простоя (FIX-35): ERP подписывает первым значением; WEBHOOK_SECRET_PREVIOUS (необязателен)
+      # остаётся в списке, чтобы обе стороны хранили одну пару. В CRM пара вводится в «Подключениях» → ERP, без перезапуска.
+      ERP_WEBHOOK_SECRET: ${WEBHOOK_SECRET:?set in .env}${WEBHOOK_SECRET_PREVIOUS:+,${WEBHOOK_SECRET_PREVIOUS}}
       ERP_MCP_CONTEXT_KEY: ${ERP_MCP_CONTEXT_KEY:?set in .env}
       PLATFORM_SSO_SECRET: ${PLATFORM_SSO_SECRET:?set in .env}
       # Переход CRM ↔ ERP по SSO; по умолчанию выключен (FIX-03), включает владелец после FIX-10/FIX-11.

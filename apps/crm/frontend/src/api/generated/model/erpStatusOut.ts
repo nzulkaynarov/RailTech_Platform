@@ -7,6 +7,7 @@
 import type { ErpStatusOutBaseUrlSource } from "./erpStatusOutBaseUrlSource";
 import type { ErpStatusOutMode } from "./erpStatusOutMode";
 import type { ErpStatusOutTokenSource } from "./erpStatusOutTokenSource";
+import type { ErpStatusOutWebhookSecretPreviousSource } from "./erpStatusOutWebhookSecretPreviousSource";
 import type { ErpStatusOutWebhookSecretSource } from "./erpStatusOutWebhookSecretSource";
 
 /**
@@ -24,6 +25,10 @@ export interface ErpStatusOut {
   token_updated_at: string | null;
   webhook_secret_configured: boolean;
   webhook_secret_last4: string | null;
+  webhook_secret_previous_configured: boolean;
+  webhook_secret_previous_last4: string | null;
+  webhook_secret_previous_source: ErpStatusOutWebhookSecretPreviousSource;
+  webhook_secret_previous_updated_at: string | null;
   webhook_secret_source: ErpStatusOutWebhookSecretSource;
   webhook_secret_updated_at: string | null;
 }

@@ -1,9 +1,17 @@
-"""Схемы событий ERP → CRM (M3-CRM-04, CONTRACTS §3, packages/contracts/events.schema.json)."""
+"""Схемы событий ERP → CRM (M3-CRM-04, CONTRACTS §3, packages/contracts/events.schema.json; FIX-35).
+
+Конверт разбирается ДИСКРИМИНИРОВАННЫМИ моделями по `event`: у каждого из 21 типа события свой
+класс конверта с типизированным `payload` (`parse_event`). Читатель терпимый: лишние поля в
+конверте и в телах игнорируются (`extra="ignore"`) — новое необязательное поле ERP не должно
+давать отказ и ретраи; обязательные поля, типы и перечисления — как в схеме. Неизвестный тип
+события в этот разбор не попадает: приёмник записывает его как «пропущено» (`is_known_event`)
+и отвечает 200.
+"""
 
 from datetime import date, datetime
-from typing import Annotated, Any, Literal
+from typing import Annotated, Literal, Union, get_args
 
-from pydantic import BaseModel, ConfigDict, Field, StringConstraints, model_validator
+from pydantic import BaseModel, ConfigDict, Field, StringConstraints, TypeAdapter, model_validator
 
 EventType = Literal[
     "request.created",
@@ -47,9 +55,13 @@ AmountStr = Annotated[str, StringConstraints(pattern=r"^-?\d+\.\d{2}$")]
 CurrencyStr = Annotated[str, StringConstraints(pattern=r"^[A-Z]{3}$")]
 
 
-class DealRef(BaseModel):
-    model_config = ConfigDict(extra="forbid")
+class _Tolerant(BaseModel):
+    """Терпимый читатель: неизвестные поля игнорируются, обязательные — по схеме."""
 
+    model_config = ConfigDict(extra="ignore")
+
+
+class DealRef(_Tolerant):
     erp_deal_id: int
     number: str
     title: str
@@ -59,32 +71,26 @@ class DealRef(BaseModel):
     currency: CurrencyStr
 
 
-class Actor(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-
+class Actor(_Tolerant):
     type: Literal["system", "staff", "client"]
     name: str | None = None
 
 
-class RequestCreated(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-
+class RequestCreated(_Tolerant):
     source: Literal["crm", "cabinet", "erp"]
     erp_request_id: int | None = None
     summary: str | None = None
 
 
-class DealStageChanged(BaseModel):
-    model_config = ConfigDict(extra="forbid", populate_by_name=True)
+class DealStageChanged(_Tolerant):
+    model_config = ConfigDict(extra="ignore", populate_by_name=True)
 
     from_: DealStage = Field(alias="from")
     to: DealStage
     reason: str | None = None
 
 
-class QuoteSent(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-
+class QuoteSent(_Tolerant):
     erp_quote_id: int
     version: int = Field(ge=1)
     public_url: str
@@ -93,25 +99,19 @@ class QuoteSent(BaseModel):
     currency: CurrencyStr | None = None
 
 
-class QuoteOutcome(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-
+class QuoteOutcome(_Tolerant):
     erp_quote_id: int
     version: int = Field(ge=1)
     reason: str | None = None
 
 
-class ContractSigned(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-
+class ContractSigned(_Tolerant):
     erp_contract_id: int
     number: str | None = None
     by: Literal["client", "company", "both"]
 
 
-class InvoiceEvent(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-
+class InvoiceEvent(_Tolerant):
     erp_invoice_id: int
     number: str
     amount: AmountStr
@@ -121,9 +121,7 @@ class InvoiceEvent(BaseModel):
     erp_document_id: int | None = None
 
 
-class DeliveryEvent(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-
+class DeliveryEvent(_Tolerant):
     line_summary: str
     line_nos: list[int] | None = None
     status: Literal["assembling", "in_transit", "ready_to_ship", "shipped", "delivered"]
@@ -132,36 +130,28 @@ class DeliveryEvent(BaseModel):
     tracking: str | None = None
 
 
-class ActEvent(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-
+class ActEvent(_Tolerant):
     erp_act_id: int
     number: str
     reason: str | None = None
     erp_document_id: int | None = None
 
 
-class DealOutcome(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-
+class DealOutcome(_Tolerant):
     amount: AmountStr
     currency: CurrencyStr
     lost_reason: str | None = None
 
 
-class DocumentCreated(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-
+class DocumentCreated(_Tolerant):
     erp_document_id: int
     kind: Literal["quote", "contract", "invoice", "act", "waybill", "receipt", "other"]
     number: str
     title: str | None = None
 
 
-class InviteSent(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-
-    channels: list[Literal["telegram", "email"]]
+class InviteSent(_Tolerant):
+    channels: list[Literal["telegram", "email"]] = Field(min_length=1)
     erp_contact_id: int | None = None
     crm_contact_id: int | None = None
 
@@ -170,13 +160,8 @@ class InviteSent(BaseModel):
 DELIVERY_LINE_EVENTS = {"delivery.line_accepted": "accepted", "delivery.line_disputed": "disputed"}
 
 
-class DeliveryLineDecision(BaseModel):
-    """Решение клиента по строке поставки (FIX-22/FIX-37): принял или оспорил с замечанием.
-
-    Читатель терпимый (FIX-29): новое необязательное поле ERP не должно давать 422 и ретраи.
-    """
-
-    model_config = ConfigDict(extra="ignore")
+class DeliveryLineDecision(_Tolerant):
+    """Решение клиента по строке поставки (FIX-22/FIX-37): принял или оспорил с замечанием."""
 
     line_no: int = Field(ge=1)
     title: str
@@ -191,33 +176,140 @@ class DeliveryLineDecision(BaseModel):
         return self
 
 
-class ErpEventEnvelope(BaseModel):
-    """Конверт входящего события ERP по events.schema.json."""
+# ── Конверты: по классу на тип события (дискриминатор — `event`) ────────────────────────
 
-    model_config = ConfigDict(extra="forbid")
 
-    version: Literal[1] = 1
-    event: EventType
+class ErpEventEnvelope(_Tolerant):
+    """Общая часть конверта по events.schema.json; тип события — подкласс с типизированным payload.
+
+    Разбирать только через `parse_event`: он выбирает класс по `event`. `deal` обязателен у
+    подклассов, где его требует схема (`allOf` в events.schema.json), и необязателен у
+    `document.created` и `invite.sent`.
+    """
+
+    version: Literal[1]
+    event: str
     occurred_at: datetime
     erp_company_id: int
     crm_client_id: int
     deal: DealRef | None = None
     actor: Actor
-    payload: dict[str, Any]
+    payload: _Tolerant
+
+
+class RequestCreatedEvent(ErpEventEnvelope):
+    event: Literal["request.created"]
+    deal: DealRef
+    payload: RequestCreated
+
+
+class DealStageChangedEvent(ErpEventEnvelope):
+    event: Literal["deal.stage_changed"]
+    deal: DealRef
+    payload: DealStageChanged
+
+
+class QuoteSentEvent(ErpEventEnvelope):
+    event: Literal["quote.sent"]
+    deal: DealRef
+    payload: QuoteSent
+
+
+class QuoteOutcomeEvent(ErpEventEnvelope):
+    event: Literal["quote.viewed", "quote.accepted", "quote.rejected"]
+    deal: DealRef
+    payload: QuoteOutcome
+
+
+class ContractSignedEvent(ErpEventEnvelope):
+    event: Literal["contract.signed"]
+    deal: DealRef
+    payload: ContractSigned
+
+
+class InvoiceEnvelope(ErpEventEnvelope):
+    event: Literal["invoice.issued", "invoice.paid", "invoice.overdue"]
+    deal: DealRef
+    payload: InvoiceEvent
+
+
+class DeliveryEnvelope(ErpEventEnvelope):
+    event: Literal["delivery.status_changed", "delivery.eta_changed"]
+    deal: DealRef
+    payload: DeliveryEvent
+
+
+class ActEnvelope(ErpEventEnvelope):
+    event: Literal["act.issued", "act.accepted", "act.returned"]
+    deal: DealRef
+    payload: ActEvent
+
+
+class DealOutcomeEvent(ErpEventEnvelope):
+    event: Literal["deal.won", "deal.lost"]
+    deal: DealRef
+    payload: DealOutcome
+
+
+class DocumentCreatedEvent(ErpEventEnvelope):
+    event: Literal["document.created"]
+    payload: DocumentCreated
+
+
+class InviteSentEvent(ErpEventEnvelope):
+    event: Literal["invite.sent"]
+    payload: InviteSent
+
+
+class DeliveryLineEvent(ErpEventEnvelope):
+    """`delivery.line_*`: сделка обязательна, решает клиент, статус тела совпадает с типом
+    события.
+    """
+
+    event: Literal["delivery.line_accepted", "delivery.line_disputed"]
+    deal: DealRef
+    payload: DeliveryLineDecision
 
     @model_validator(mode="after")
-    def _delivery_line_decision(self) -> "ErpEventEnvelope":
-        """`delivery.line_*`: сделка обязательна, решает клиент, тело — DeliveryLineDecision."""
-        if self.event not in DELIVERY_LINE_EVENTS:
-            return self
-        if self.deal is None:
-            raise ValueError(f"{self.event} requires deal")
+    def _decision_matches_event(self) -> "DeliveryLineEvent":
         if self.actor.type != "client":
             raise ValueError(f"{self.event} requires actor.type=client")
-        decision = DeliveryLineDecision.model_validate(self.payload)
-        if decision.status != DELIVERY_LINE_EVENTS[self.event]:
-            raise ValueError(f"{self.event} does not match payload status {decision.status}")
+        if self.payload.status != DELIVERY_LINE_EVENTS[self.event]:
+            raise ValueError(f"{self.event} does not match payload status {self.payload.status}")
         return self
+
+
+ErpEvent = Annotated[
+    Union[  # noqa: UP007 — pydantic: дискриминированный Union
+        RequestCreatedEvent,
+        DealStageChangedEvent,
+        QuoteSentEvent,
+        QuoteOutcomeEvent,
+        ContractSignedEvent,
+        InvoiceEnvelope,
+        DeliveryEnvelope,
+        ActEnvelope,
+        DealOutcomeEvent,
+        DocumentCreatedEvent,
+        InviteSentEvent,
+        DeliveryLineEvent,
+    ],
+    Field(discriminator="event"),
+]
+
+_EVENT_ADAPTER: TypeAdapter[ErpEvent] = TypeAdapter(ErpEvent)
+
+#: Типы событий, которые CRM умеет разбирать (= `EventType`; тест сверяет с events.schema.json).
+KNOWN_EVENTS: frozenset[str] = frozenset(get_args(EventType))
+
+
+def is_known_event(name: object) -> bool:
+    return isinstance(name, str) and name in KNOWN_EVENTS
+
+
+def parse_event(data: object) -> ErpEvent:
+    """Тело события → конверт нужного класса; `ValidationError` — тело не по схеме."""
+    return _EVENT_ADAPTER.validate_python(data)
 
 
 class ErpWebhookReceipt(BaseModel):

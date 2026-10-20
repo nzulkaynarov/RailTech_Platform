@@ -1,0 +1,24 @@
+{
+  "version": 1,
+  "event": "act.returned",
+  "occurred_at": "2026-11-23T16:45:00+05:00",
+  "erp_company_id": 118,
+  "crm_client_id": 42,
+  "deal": {
+    "erp_deal_id": 905,
+    "number": "D-2026-0905",
+    "title": "Поставка оборудования, партия 1",
+    "stage": "closing",
+    "amount": "125000000.00",
+    "currency": "UZS"
+  },
+  "actor": {
+    "type": "client",
+    "name": "Иван Петров"
+  },
+  "payload": {
+    "erp_act_id": 520,
+    "number": "АКТ-2026-0052",
+    "reason": "Не указана партия 2"
+  }
+}

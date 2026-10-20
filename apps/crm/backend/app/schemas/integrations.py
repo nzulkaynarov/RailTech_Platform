@@ -3,7 +3,7 @@
 from datetime import datetime
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field, SecretStr
+from pydantic import BaseModel, ConfigDict, Field, SecretStr, field_validator
 
 from app.schemas.settings_profile import BotProfileSettings
 
@@ -69,6 +69,11 @@ class ErpStatusOut(BaseModel):
     webhook_secret_source: Literal["db", "env", "none"]
     webhook_secret_last4: str | None
     webhook_secret_updated_at: datetime | None
+    # Ротация без простоя (FIX-35): предыдущий секрет принимается, пока его не сняли.
+    webhook_secret_previous_configured: bool
+    webhook_secret_previous_source: Literal["db", "env", "none"]
+    webhook_secret_previous_last4: str | None
+    webhook_secret_previous_updated_at: datetime | None
     secrets_enabled: bool
 
 
@@ -80,7 +85,19 @@ class ErpConnectorIn(BaseModel):
     base_url: str = Field(max_length=500)
     service_token: SecretStr | None = Field(default=None, min_length=16, max_length=512)
     webhook_secret: SecretStr | None = Field(default=None, min_length=16, max_length=512)
+    # Ротация секрета вебхуков: предыдущий секрет CRM принимает наравне с текущим, пока его не
+    # сняли.
+    webhook_secret_previous: SecretStr | None = Field(default=None, min_length=16, max_length=512)
+    clear_webhook_secret_previous: bool = False
     password: SecretStr = Field(min_length=1, max_length=256)
+
+    @field_validator("service_token", "webhook_secret", "webhook_secret_previous")
+    @classmethod
+    def _secret_not_blank(cls, value: SecretStr | None) -> SecretStr | None:
+        """Сервис сохраняет секрет после `strip()`: из одних пробелов получился бы пустой секрет."""
+        if value is not None and len(value.get_secret_value().strip()) < 16:
+            raise ValueError("secret must have at least 16 characters besides whitespace")
+        return value
 
 
 class ErpCheckOut(BaseModel):

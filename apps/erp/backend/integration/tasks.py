@@ -18,12 +18,11 @@ from typing import Optional
 import httpx
 from celery import shared_task
 from celery.exceptions import Retry
-from django.conf import settings
 from django.db.models import Q
 from django.utils import timezone
 
 from .models import IntegrationWebhookEvent, WebhookEventStatus
-from .services.webhooks import sign_payload
+from .services.webhooks import sign_payload, webhook_signing_secret
 
 logger = logging.getLogger(__name__)
 
@@ -73,7 +72,7 @@ def deliver_webhook_event(self, event_id: int) -> bool:
         logger.info("deliver_webhook_event: event #%s already SENT", event_id)
         return True
 
-    secret = settings.ERP_WEBHOOK_SECRET
+    secret = webhook_signing_secret()
     if not secret:
         # Без секрета подписать нечем: событие остаётся PENDING (попытка не засчитана), его заберёт задача Beat,
         # когда секрет появится (FIX-33, «неподписанная доставка не теряется»).

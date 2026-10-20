@@ -37,6 +37,15 @@ def _seam_secrets(settings):
 
 
 @pytest.fixture(autouse=True)
+def _events_contract_strict(settings):
+    """Каждое событие ERP → CRM в любом тесте проверяется по events.schema.json до постановки в журнал (FIX-35).
+    Тест, который намеренно собирает кривое событие, ставит ``settings.ERP_EVENTS_CONTRACT_MODE = "off"`` или ``"log"``.
+    """
+    settings.ERP_EVENTS_CONTRACT_MODE = "strict"
+    settings.ERP_EVENTS_SCHEMA_PATH = ""
+
+
+@pytest.fixture(autouse=True)
 def _block_real_model_calls(monkeypatch):
     """Ни один тест не ходит в настоящий LiteLLM (платные вызовы — только evals с согласия):
     транспорт шлюза заблокирован; нужен ответ модели — фикстура ``fake_gateway``."""

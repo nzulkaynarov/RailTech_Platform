@@ -31,3 +31,8 @@ def contract_get_paths() -> set[str]:
 def enum_values(name: str) -> list[str]:
     """Значения enum-схемы контракта (`DealStage`, `InvoiceStatus` …) — единственный источник «что достижимо»."""
     return list(component(name)["enum"])
+
+
+def contract_operations() -> dict[tuple[str, str], set[str]]:
+    """(МЕТОД, путь) → коды ответов, объявленные контрактом, по всем операциям `erp-integration.yaml`."""
+    return integration_contract.operations()
