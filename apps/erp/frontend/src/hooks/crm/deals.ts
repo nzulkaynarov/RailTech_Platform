@@ -154,7 +154,7 @@ export const useChangeDealStage = () => {
 export const useForceChangeDealStage = () => {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, stage, reason }: { id: number; stage: string; reason?: string }) =>
+    mutationFn: ({ id, stage, reason }: { id: number; stage: string; reason: string }) =>
       crmApi.forceChangeDealStage(id, stage, reason),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['deals'] }),
   });

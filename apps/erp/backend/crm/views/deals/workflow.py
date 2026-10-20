@@ -136,13 +136,14 @@ class DealWorkflowActionsMixin:
         summary="Force change deal stage (admin)",
         description=(
             "Transition the deal to ANY stage, bypassing FSM validation. "
-            "Admin/Manager only. Use for emergency fixes."
+            "Platform administrator only (is_superuser); a non-empty reason is mandatory and the override is "
+            "audit-logged ([FORCE_ADMIN]). Use for emergency fixes."
         ),
         request=inline_serializer(
             "ForceChangeStageRequest",
             fields={
                 "stage_code": drf_serializers.CharField(),
-                "reason": drf_serializers.CharField(required=False, default=""),
+                "reason": drf_serializers.CharField(required=True),
             },
         ),
         responses={
@@ -161,8 +162,9 @@ class DealWorkflowActionsMixin:
     def force_change_stage(self, request, pk=None):
         deal = self.get_object()
         stage_code = request.data.get("stage_code")
-        reason = (request.data.get("reason") or "").strip()
-        if not stage_code:
+        raw_reason = request.data.get("reason")
+        reason = raw_reason.strip() if isinstance(raw_reason, str) else ""
+        if not isinstance(stage_code, str) or not stage_code:
             return Response({"detail": "STAGE_CODE_REQUIRED"}, status=status.HTTP_400_BAD_REQUEST)
         if not reason:
             return Response({"detail": "REASON_REQUIRED"}, status=status.HTTP_400_BAD_REQUEST)

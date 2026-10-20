@@ -248,13 +248,13 @@ def force_transition_deal_stage(
     Platform-admin override: bypasses the FSM but REQUIRES a non-empty reason.
     Must be called only from the admin force-stage endpoint.
     """
-    if not (reason or "").strip():
+    if not isinstance(reason, str) or not reason.strip():
         return None, "REASON_REQUIRED"
     return transition_deal_stage(
         deal=deal,
         target_stage_code=target_stage_code,
         actor=actor,
-        reason=reason,
+        reason=reason.strip(),
         validate_fsm=False,
         admin_override=True,
     )
