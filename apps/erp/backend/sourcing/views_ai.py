@@ -308,15 +308,27 @@ class QuoteImportFileView(RoleGatedViewMixin, APIView):
         "клиента, иначе комментарий сделки), разбирает его тем же извлечением, что и файл клиента "
         "(`ai.services.intake`), и дописывает строки В КОНЕЦ КП. ARCH-01: 202 + task_id, извлечение на Celery "
         "(поллинг sourcing/ai-status/). ИИ выключен — 503 `AI_DISABLED`, шлюз недоступен — результат задачи "
-        "`AI_EXTRACT_FAILED`; ручной набор строк работает всегда."
+        "`AI_EXTRACT_FAILED`; ручной набор строк работает всегда. FIX-67b: пока разбор КП идёт, повторный запрос не "
+        "ставит новую задачу (тот же сотрудник — 202 с прежним task_id и `already_running`; другой — 409 "
+        "`PARSE_ALREADY_RUNNING`), запись строк идемпотентна по job."
     ),
     request=inline_serializer("ParseRequestTextRequest", fields={"quote_id": serializers.IntegerField()}),
     responses={
-        202: OpenApiResponse(description="AI job queued, task_id returned (poll ai-status)"),
+        202: OpenApiResponse(
+            description=(
+                "AI job queued, task_id returned (poll ai-status). `already_running: true` — разбор этого КП этим "
+                "же сотрудником уже идёт: тот же task_id, новая задача не поставлена (FIX-67b)"
+            )
+        ),
         400: OpenApiResponse(description="QUOTE_ID_REQUIRED / REQUEST_TEXT_EMPTY"),
         403: OpenApiResponse(description="Not own-company staff with pricing permission"),
         404: OpenApiResponse(description="Quote not found"),
-        409: OpenApiResponse(description="Quote is not editable (QUOTE_NOT_DRAFT / QUOTE_FROZEN)"),
+        409: OpenApiResponse(
+            description=(
+                "Quote is not editable (QUOTE_NOT_DRAFT / QUOTE_FROZEN) or a parse of this quote started by "
+                "another user is still running (PARSE_ALREADY_RUNNING)"
+            )
+        ),
         503: OpenApiResponse(description="AI disabled (AI_DISABLED)"),
     },
     tags=["Sourcing"],
@@ -358,6 +370,34 @@ class QuoteParseRequestTextView(RoleGatedViewMixin, APIView):
         if not deal_request_text(quote.deal):
             return Response({"detail": "REQUEST_TEXT_EMPTY"}, status=status.HTTP_400_BAD_REQUEST)
 
+        from . import parse_text_guard
         from .ai_jobs import enqueue_ai_job
 
-        return enqueue_ai_job("parse_request_text", {"quote_id": quote_id, "user_id": request.user.id}, request.user)
+        # FIX-67b: in-flight-блокировка по КП. Занимаем ПОСЛЕ всех отказов (права/404/пустой текст), чтобы
+        # отказанный запрос не оставлял «зависшую» блокировку.
+        if not parse_text_guard.acquire(quote_id, request.user.id):
+            held = parse_text_guard.holder(quote_id)
+            if held is not None and held[0] and parse_text_guard.job_is_finished(held[0]):
+                # Задача упала молча (воркер убит): результат в backend есть, а блокировка не снята — не ждём TTL.
+                parse_text_guard.release(quote_id)
+                if parse_text_guard.acquire(quote_id, request.user.id):
+                    held = None
+            if held is not None:
+                task_id, owner_id = held
+                if task_id and owner_id == request.user.id:
+                    # Тот же сотрудник (двойной клик, вторая вкладка): тот же job, платная задача не ставится.
+                    return Response({"task_id": task_id, "already_running": True}, status=status.HTTP_202_ACCEPTED)
+                return Response({"detail": "PARSE_ALREADY_RUNNING"}, status=status.HTTP_409_CONFLICT)
+
+        try:
+            response = enqueue_ai_job(
+                "parse_request_text", {"quote_id": quote_id, "user_id": request.user.id}, request.user
+            )
+        except Exception:
+            parse_text_guard.release(quote_id)
+            raise
+        if response.status_code == status.HTTP_202_ACCEPTED:
+            parse_text_guard.attach_task(quote_id, request.user.id, response.data["task_id"])
+        else:
+            parse_text_guard.release(quote_id)  # 429 (суточный лимит) / 500 (очередь): ничего не запущено
+        return response
