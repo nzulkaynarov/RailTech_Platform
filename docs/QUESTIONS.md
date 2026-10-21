@@ -504,6 +504,8 @@ Q-1…Q-9 решены — см. `DECISIONS.md`. Номер вопроса ун�
 
 ## Q-FIX35-5 · `act.returned` не выпускается боевым кодом ERP; схема событий не проверяется в проде (FIX-35) — **решено архитектором 2026-10-21 (резерв Opus): событие на возврате — FIX-62; схема в проде — M5-INF-01c**
 
+**Статус п. 2.** Выполнено в M5-INF-01c: `prod.yml` монтирует схему read-only в `erp-backend`, `erp-worker`, `erp-worker-ai`, `erp-beat`, `erp-mcp`; файл в `release.tgz` (`deploy.yml`, отметка владельца); `deploy.sh` останавливается без файла в релизе.
+
 **Контекст.** (1) Сигнал акта умеет `act.returned`, но статусов `RETURNED/DISPUTED/REJECTED` в `ActStatusCode` нет, а `reject_act` ставит `DRAFT` (аудит): событие не уходит ни при каком переходе. Тест `test_act_returned_has_no_trigger_in_the_real_flow` фиксирует разрыв; пока он есть, тело события проверяется через генератор `emit_act_event`. (2) Проверка тела по `events.schema.json` (`integration/services/event_contract.py`): в тестах и при DEBUG — исключение, в проде — запись в лог ERROR; но в образе ERP схемы нет (контекст сборки — `apps/erp/backend`), и в прод-compose её никто не монтирует: без файла проверка в проде пишет одно предупреждение и пропускает.
 
 **Варианты.** (1) Завести статус возврата акта (M4) и выпускать событие на нём; либо убрать `act.returned` из схемы и CRM (решение владельца/архитектора). (2) Смонтировать `packages/contracts/events.schema.json` read-only в `/packages/contracts/` сервисов `erp-backend`, `erp-worker`, `erp-worker-ai`, `erp-beat` в `infra/compose/prod.yml` — как `mcp-tools.json` у erp-mcp (файл `prod.yml` ведёт волна 2b/M5, поэтому не правился).

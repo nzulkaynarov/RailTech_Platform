@@ -83,6 +83,18 @@ stage_infra() {
   rm -f "$envfile"
   docker run --rm -v "$ROOT/infra/caddy/Caddyfile.dev:/etc/caddy/Caddyfile:ro" "$CADDY_IMAGE" \
     caddy validate --config /etc/caddy/Caddyfile
+  # Прод-конфиги (FIX-54, G-12; M5-INF-01c) — те же шаги, что в ci.yml (job infra): CHANGE_ME → заглушка, секретов нет.
+  local prod_env
+  prod_env=$(mktemp)
+  sed 's/CHANGE_ME/ci-only-value/' "$ROOT/infra/.env.prod.example" >"$prod_env"
+  RT_IMAGE_TAG=ci-only docker compose -f "$ROOT/infra/compose/base.yml" -f "$ROOT/infra/compose/prod.yml" \
+    --env-file "$prod_env" --profile observability --profile kb-ingest config -q
+  RT_IMAGE_TAG=ci-only docker compose -f "$ROOT/infra/compose/db.yml" --env-file "$prod_env" config -q
+  rm -f "$prod_env"
+  docker run --rm \
+    -e ACME_EMAIL=ci@example.com -e CRM_DOMAIN=crm.example.org -e ERP_DOMAIN=erp.example.org -e CABINET_DOMAIN=cabinet.example.org \
+    -v "$ROOT/infra/caddy/Caddyfile.prod:/etc/caddy/Caddyfile:ro" "$CADDY_IMAGE" \
+    caddy validate --config /etc/caddy/Caddyfile
 }
 
 stage_erp() {
