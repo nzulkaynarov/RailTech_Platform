@@ -37,7 +37,7 @@ rel="$tmp/releases/tag1"; mkdir -p "$rel/infra" "$rel/packages/contracts" "$tmp/
 cp -R "$root/infra/deploy" "$rel/infra/deploy"
 cp "$root/packages/contracts/mcp-tools.json" "$rel/packages/contracts/"
 printf '#!/usr/bin/env bash\necho "docker вызван: $*" >> "%s/docker.log"\nexit 1\n' "$tmp" > "$tmp/bin/docker"; chmod +x "$tmp/bin/docker"
-cp "$tmp/env.prod" "$tmp/env"; chmod 600 "$tmp/env"
+sed -E "s/192\.0\.2\./10.0.0./g" "$tmp/env.prod" > "$tmp/env"; chmod 600 "$tmp/env"
 run() { PATH="$tmp/bin:$PATH" RT_ENV_FILE="$tmp/env" RT_STATE="$tmp/state" bash "$rel/infra/deploy/deploy.sh" tag1 >"$tmp/log" 2>&1; }
 if run; then fail "deploy.sh прошёл без events.schema.json в релизе"; fi
 grep -q 'events.schema.json' "$tmp/log" || { cat "$tmp/log"; fail "deploy.sh: в сообщении нет имени файла"; }
