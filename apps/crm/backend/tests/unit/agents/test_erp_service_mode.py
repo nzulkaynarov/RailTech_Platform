@@ -310,3 +310,14 @@ async def test_missing_document_without_erp_still_goes_to_manager() -> None:
     result = await ask("Пришлите договор", ToolsModel(), None, scope=None)
     assert result.action == Action.HANDOFF
     assert result.reason == "document_not_found"
+
+
+async def test_tool_calls_in_a_tool_less_completion_are_not_executed() -> None:
+    erp = FakeErp(list_client_deals=[DEAL])
+    model = ToolsModel(
+        reply("", call("list_client_deals")),
+        reply("Вот сделка.", call("list_client_deals")),  # итоговый ответ без инструментов
+    )
+    erp.failure = ErpMcpError("unavailable", "list_client_deals")
+    await ask("Что у меня?", model, erp)
+    assert len(erp.calls) == 1

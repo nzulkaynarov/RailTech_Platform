@@ -230,6 +230,8 @@ class DialogNodes:
                 convo, tools=tools if more else None, name="dialog.answer.final"
             )
             cost += final.cost_usd or 0.0
+            if not more:
+                break  # вызовы, которых модели не предлагали, не выполняются
         return final, outcome, cost
 
     async def _hand_over_erp_failure(self, state: DialogState, outcome: ToolOutcome) -> None:
