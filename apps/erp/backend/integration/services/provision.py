@@ -16,7 +16,7 @@ from sales.models import ActivityLog
 
 from accounts.models import CompanyMember, CompanyRole, CustomUser, WorkspaceRole
 from accounts.services.auth import revoke_user_refresh_tokens
-from accounts.services.roles import SYNC_ROLE_PREFIX
+from accounts.services.roles import SYNC_ROLE_PREFIX, ensure_default_company_roles
 from core.tenant import own_company
 
 from ..exceptions import IntegrationConflict
@@ -36,6 +36,33 @@ def split_full_name(name: str) -> Tuple[str, str]:
     return first[:150], last.strip()[:150]
 
 
+def _drop_crm_roles(member: CompanyMember) -> None:
+    """Снять с участника роли, которые ведёт CRM: «CRM Sync: <e-mail>» и системные, выданные по `role_codes`.
+    Ручные роли не трогаются."""
+    granted = list(member.crm_granted_roles.all())
+    member.company_roles.remove(*member.company_roles.filter(managed_by_crm=True), *granted)
+    member.crm_granted_roles.clear()
+
+
+def _sync_system_roles(member: CompanyMember, role_codes, company) -> None:
+    """Системные роли из CRM (`role_codes`, FIX-63, Q-FIX50-1 (1)).
+
+    Добавляет пришедшие и помечает их «выдана из CRM» (`crm_granted_roles`); снимает только помеченные, которых в
+    `role_codes` больше нет. Роль, уже назначенная в ERP вручную, не помечается — CRM её не отнимет. Пометка, чья
+    роль снята в «Команде» вручную, пропадает; если CRM всё ещё выдаёт её, роль вернётся и пометится заново."""
+    system_roles = ensure_default_company_roles(company)
+    wanted_ids = {system_roles[code].pk for code in set(role_codes)}
+    current = set(member.company_roles.values_list("pk", flat=True))
+    granted = set(member.crm_granted_roles.values_list("pk", flat=True)) & current
+    member.company_roles.remove(*(granted - wanted_ids))
+    granted &= wanted_ids
+    new_ids = wanted_ids - current
+    if new_ids:
+        member.company_roles.add(*new_ids)
+        granted |= new_ids
+    member.crm_granted_roles.set(granted)
+
+
 @transaction.atomic
 def provision_crm_user(data: Dict[str, Any]) -> Tuple[Dict[str, Any], bool]:
     """Провижининг сотрудника из CRM.
@@ -49,6 +76,8 @@ def provision_crm_user(data: Dict[str, Any]) -> Tuple[Dict[str, Any], bool]:
     role = data["role"]  # 'admin' | 'backoffice'
     permissions = data.get("permissions") or []
     is_active = data.get("is_active", True)
+    # None — поля нет (старый CRM): системные роли не трогаем; [] — снять все, выданные из CRM.
+    role_codes = data.get("role_codes")
 
     mapping = CrmUserMapping.objects.filter(crm_user_id=crm_user_id).select_related("user").first()
     created = False
@@ -128,10 +157,15 @@ def provision_crm_user(data: Dict[str, Any]) -> Tuple[Dict[str, Any], bool]:
             # Сменился e-mail сотрудника — прежняя «CRM Sync: <старый e-mail>» больше не его: снимаем остальные
             # управляемые роли, ручные не трогаем.
             member.company_roles.remove(*member.company_roles.filter(managed_by_crm=True).exclude(pk=crm_role.pk))
+            if role_codes is not None:
+                _sync_system_roles(member, role_codes, company)
         else:
-            # Админу роли бэк-офиса не нужны (is_superuser имеет все права): снимаем только свою роль,
-            # если сотрудник был backoffice; ручные роли остаются.
-            member.company_roles.remove(*member.company_roles.filter(managed_by_crm=True))
+            # Админу роли бэк-офиса не нужны (is_superuser имеет все права): снимаем только роли из CRM
+            # (свою «CRM Sync» и выданные по `role_codes`), если сотрудник был backoffice; ручные роли остаются.
+            if role_codes is not None:
+                _drop_crm_roles(member)
+            else:
+                member.company_roles.remove(*member.company_roles.filter(managed_by_crm=True))
 
     return {
         "erp_user_id": user.pk,
@@ -156,9 +190,10 @@ def revoke_crm_user_sessions(crm_user_id: int) -> bool:
 
     user_id = mapping.user_id
     CustomUser.objects.filter(pk=user_id).update(token_version=F("token_version") + 1, is_active=False)
-    # Управляемая роль уходит вместе с доступом; ручные роли остаются (вернётся доступ — вернётся и роль, FIX-55, D-07).
+    # Роли из CRM уходят вместе с доступом — «CRM Sync» и системные, выданные по `role_codes`; ручные роли остаются
+    # (вернётся доступ — вернётся и роль, FIX-55, D-07; FIX-63).
     for member in CompanyMember.objects.filter(user_id=user_id):
-        member.company_roles.remove(*member.company_roles.filter(managed_by_crm=True))
+        _drop_crm_roles(member)
     blacklisted = revoke_user_refresh_tokens(mapping.user)
 
     ActivityLog.objects.create(

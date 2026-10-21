@@ -1,9 +1,11 @@
 """DTO аутентификации, профиля и пользователей (SPEC §10.1)."""
 
 from datetime import datetime
-from typing import Literal
+from typing import Literal, cast
 
 from pydantic import BaseModel, Field, field_validator
+
+from app.domain.erp_roles import ErpRoleCode, normalize_erp_roles
 
 Role = Literal["admin", "manager", "viewer"]
 PlatformSystem = Literal["crm", "erp"]
@@ -47,6 +49,8 @@ class UserOut(BaseModel):
     # Куда пользователю можно (FIX-11): `["crm"]` по умолчанию, `["crm", "erp"]` — доступ к ERP
     # выдан. Переход в ERP в шапке — только при "erp" (истина на сервере: без него токен — 403).
     platform_access: list[PlatformSystem] = Field(default_factory=_crm_only)
+    # Системные роли бэк-офиса ERP, выданные админом (FIX-63): уходят в провижининг (`role_codes`).
+    erp_role_codes: list[ErpRoleCode] = Field(default_factory=list)
 
 
 class MeOut(UserOut):
@@ -102,6 +106,19 @@ class UserUpdate(BaseModel):
         if "crm" not in value:
             raise ValueError("platform_access must include 'crm'")
         return sorted(set(value))
+
+    # Роли ERP (FIX-63, Q-FIX50-1 (1)): полный новый набор системных ролей бэк-офиса; `[]` —
+    # снять все. Изменение у пользователя с доступом к ERP — повторный провижининг; чужой код — 422.
+    erp_role_codes: list[ErpRoleCode] | None = None
+
+    @field_validator("erp_role_codes")
+    @classmethod
+    def _erp_roles_without_duplicates(
+        cls, value: list[ErpRoleCode] | None
+    ) -> list[ErpRoleCode] | None:
+        if value is None:
+            return None
+        return cast("list[ErpRoleCode]", normalize_erp_roles(value))
 
 
 class PasswordReset(BaseModel):

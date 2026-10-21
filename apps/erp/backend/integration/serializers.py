@@ -8,7 +8,7 @@ from __future__ import annotations
 from rest_framework import serializers
 from sales.models import DeliveryLineStatus
 
-from accounts.constants import Permission
+from accounts.constants import BackofficeRoleCode, Permission
 
 from .services import stages
 
@@ -211,6 +211,10 @@ class ProvisionUserRequestSerializer(serializers.Serializer):
     role = serializers.ChoiceField(choices=["admin", "backoffice"])
     # Только коды каталога прав ERP (`ErpPermission` контракта): чужой код — 422, а не молча сохранённая «роль» (S-11).
     permissions = serializers.ListField(child=serializers.ChoiceField(choices=Permission.values))
+    # Системные роли бэк-офиса из CRM (`SystemRoleCode`, FIX-63): поля нет — роли не трогаем (старый CRM), чужой код — 422.
+    role_codes = serializers.ListField(
+        child=serializers.ChoiceField(choices=BackofficeRoleCode.values), required=False, allow_empty=True
+    )
     is_active = serializers.BooleanField(default=True, required=False)
 
 

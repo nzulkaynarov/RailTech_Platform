@@ -1,0 +1,20 @@
+{
+  "task": "FIX-63",
+  "tool": "axe-core (@axe-core/playwright), serious + critical",
+  "source": "Vite dev-сервер CRM из worktree (порт 5267) и подставной API (Playwright page.route); бэкенд не запускался",
+  "screens": {
+    "users-1440": 0,
+    "grant-empty-1440": 0,
+    "grant-selected-1440": 0,
+    "users-after-grant-1440": 0,
+    "edit-1440": 0,
+    "users-390": 0,
+    "grant-empty-390": 0,
+    "grant-selected-390": 0,
+    "users-after-grant-390": 0,
+    "edit-390": 0
+  },
+  "notes": {
+    "edit-*": "поле «Роли» CRM: вместо required-правила antd (оно ставило aria-required на корень Select — critical aria-allowed-attr) проверка {type: array, min: 1}; звёздочка у подписи пропала, проверка «выберите хотя бы одну роль» осталась. Кадры сняты после перезагрузки страницы, без тоста"
+  }
+}

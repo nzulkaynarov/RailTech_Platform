@@ -10,6 +10,7 @@ import {
   updateUser,
 } from "../../api/generated/crm";
 import type { UserCreate, UserOut, UserUpdate } from "../../api/generated/model";
+import { erpRolesOf } from "../../domain/erpRoles";
 import { withErpAccess } from "../../domain/platformAccess";
 import { emailLogKey } from "../../api/integrationQueries";
 import { keys, useUsers } from "../../api/queries";
@@ -19,10 +20,13 @@ import { PageState } from "../../components/PageState";
 import { useApiErrorToast } from "../../hooks/useApiErrorToast";
 import { useConfirmDanger } from "../../hooks/useConfirmDanger";
 import { t } from "../../i18n/ru";
+import { ErpGrantDialog } from "./ErpRoles";
 import { CreateUserDialog, EditUserDialog, TemporaryPassword } from "./UserDialogs";
 import { transferNeeded } from "./transfer";
 import { UsersTable } from "./UsersTable";
 import "../admin.css";
+
+type ErpRoleCodes = NonNullable<UserUpdate["erp_role_codes"]>;
 
 const named = (text: string, name: string) => text.replace("{name}", name);
 
@@ -34,6 +38,7 @@ function useUserMutations(on: {
   updated: () => void;
   password: (value: Shown) => void;
   transfer: (count: number | null) => void;
+  granted: () => void;
 }) {
   const client = useQueryClient();
   const { message } = AntApp.useApp();
@@ -56,7 +61,16 @@ function useUserMutations(on: {
         await updateUser(user.id, values),
       onSuccess: (_, { user, values }) => {
         on.updated();
-        void message.success(named(t.userAdmin.updated, values.full_name ?? user.full_name));
+        // Роли ERP сменились — отдельное подтверждение: до ERP они дойдут повторным провижинингом (FIX-63).
+        const erpRolesChanged =
+          values.erp_role_codes != null &&
+          [...values.erp_role_codes].sort().join() !== [...erpRolesOf(user)].sort().join();
+        void message.success(
+          named(
+            erpRolesChanged ? t.userAdmin.erpRolesSaved : t.userAdmin.updated,
+            values.full_name ?? user.full_name,
+          ),
+        );
         void refresh();
       },
       // Сотрудник ведёт лидов: вместо тоста — выбор коллеги в том же диалоге (ADR-0015).
@@ -76,10 +90,23 @@ function useUserMutations(on: {
     }),
     // Доступ к ERP (FIX-11): ответ — «принято»; создание учётной записи и ошибки ERP идут в фоне
     // (центр внешних сервисов), пользователю админа они не показываются.
+    // Выдача несёт выбранные роли ERP (FIX-63, `roleCodes`): доступ и роли — одним запросом, одним провижинингом.
     erp: useMutation({
-      mutationFn: async ({ user, enabled }: { user: UserOut; enabled: boolean }) =>
-        await updateUser(user.id, { platform_access: withErpAccess(enabled) }),
+      mutationFn: async ({
+        user,
+        enabled,
+        roleCodes,
+      }: {
+        user: UserOut;
+        enabled: boolean;
+        roleCodes?: string[];
+      }) =>
+        await updateUser(user.id, {
+          platform_access: withErpAccess(enabled),
+          ...(enabled && roleCodes ? { erp_role_codes: roleCodes as ErpRoleCodes } : {}),
+        }),
       onSuccess: (_, { user, enabled }) => {
+        on.granted();
         void message.success(
           named(enabled ? t.userAdmin.erpGranted : t.userAdmin.erpRevoked, user.full_name),
         );
@@ -165,6 +192,7 @@ export function UsersPage() {
   const [editing, setEditing] = useState<UserOut | null>(null);
   const [shown, setShown] = useState<Shown>(null);
   const [transfer, setTransfer] = useState<number | null>(null);
+  const [granting, setGranting] = useState<UserOut | null>(null);
   const edit = (u: UserOut | null) => {
     setEditing(u);
     setTransfer(null);
@@ -178,6 +206,9 @@ export function UsersPage() {
     },
     password: setShown,
     transfer: setTransfer,
+    granted: () => {
+      setGranting(null);
+    },
   });
   const reset = (u: UserOut) => {
     confirmDanger({
@@ -205,7 +236,7 @@ export function UsersPage() {
   };
   const toggleErp = (u: UserOut, enabled: boolean) => {
     if (enabled) {
-      m.erp.mutate({ user: u, enabled });
+      setGranting(u); // сначала выбор ролей ERP, потом выдача (FIX-63)
       return;
     }
     confirmDanger({
@@ -241,6 +272,16 @@ export function UsersPage() {
           erpPendingId={m.erp.isPending ? m.erp.variables.user.id : null}
         />
       </PageState>
+      <ErpGrantDialog
+        user={granting}
+        saving={m.erp.isPending}
+        onCancel={() => {
+          setGranting(null);
+        }}
+        onSubmit={(roleCodes) => {
+          if (granting) m.erp.mutate({ user: granting, enabled: true, roleCodes });
+        }}
+      />
       <Dialogs
         creating={creating}
         editing={editing}

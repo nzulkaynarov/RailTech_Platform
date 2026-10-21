@@ -574,9 +574,22 @@ export interface components {
       role: "admin" | "backoffice";
       /** @description Коды из каталога прав ERP (`ErpPermission`). Для `role: backoffice` складываются в роль сотрудника; для `role: admin` игнорируются (суперпользователь ERP имеет все права). Код вне каталога — 422. Карту «роль CRM → коды» ведёт CRM (`app/domain/erp_permissions.py`), идентификаторы ролей и прав от модели не приходят. */
       permissions: components["schemas"]["ErpPermission"][];
+      /** @description Системные роли бэк-офиса ERP, выданные из CRM (FIX-63, Q-FIX50-1 (1)). Необязательное: поля нет — ERP не трогает системные роли сотрудника (старый CRM); пустой список — снимает все системные роли, ранее выданные из CRM. ERP добавляет только пришедшие и снимает только те системные роли, что сама выдала по `role_codes` раньше (пометка «выдана из CRM»); роли, назначенные в ERP вручную («Настройки → Команда»), и роль «CRM Sync: <e-mail>» (права по `permissions`) этим не затрагиваются. Для `role: admin` игнорируется (суперпользователь имеет все права), ранее выданные роли снимаются. Код вне `SystemRoleCode` — 422. Читатель терпим: старый ERP поле игнорирует. Перечень ролей и их названия ведёт CRM; идентификаторы ролей от модели не приходят. */
+      role_codes?: components["schemas"]["SystemRoleCode"][];
       /** @default true */
       is_active: boolean;
     };
+    /**
+     * @description Код системной роли бэк-офиса ERP (`accounts.constants.BackofficeRoleCode`, apps/erp/CLAUDE.md §6): CALCULATION «Расчёт», CATALOG_SUPPLY «Каталог и закупки», FULFILLMENT «Исполнение и логистика», FINANCE «Финансы», HEAD «Руководитель», VIEWER «Наблюдатель». Новый код появляется в ERP и здесь в одном PR; тест CRM сверяет этот список с каталогом CRM, тест ERP — с `BackofficeRoleCode`.
+     * @enum {string}
+     */
+    SystemRoleCode:
+      | "CALCULATION"
+      | "CATALOG_SUPPLY"
+      | "FULFILLMENT"
+      | "FINANCE"
+      | "HEAD"
+      | "VIEWER";
     /**
      * @description Снимок каталога прав бэк-офиса ERP (`accounts.constants.Permission`, apps/erp/CLAUDE.md §6). Новый код появляется в каталоге ERP и здесь в одном PR; тест CRM сверяет этот список с каталогом и с картой прав CRM.
      * @enum {string}

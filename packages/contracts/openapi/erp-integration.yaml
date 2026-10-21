@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: RailTech Platform ERP — Integration API (CRM → ERP)
-  version: 0.4.0
+  version: 0.5.0
   summary: Пространство `/api/integration/v1/` — вызывает только CRM под сервисным токеном.
   description: |
     Контракт по `docs/CONTRACTS.md` §0 и §2. Версия 0 (M0-INF-02): форма запросов и ответов, по которой
@@ -18,6 +18,9 @@ info:
 
     0.4.0 (M3-ERP-06): `Health.externals[]` — внешние сервисы ERP (статус, последний успех и ошибка, счётчики за 24 ч);
     `PUT /externals/{code}/switch` — выключатель из CRM. Аддитивно, терпимый читатель.
+
+    0.5.0 (FIX-63): `ProvisionUserRequest.role_codes[]` (`SystemRoleCode`) — системные роли ERP, выбранные в CRM;
+    поле необязательное, аддитивно: без него ERP системные роли не трогает.
   contact:
     name: RailTech Platform — docs/CONTRACTS.md
 servers:
@@ -1089,10 +1092,33 @@ components:
             от модели не приходят.
           items:
             $ref: '#/components/schemas/ErpPermission'
+        role_codes:
+          type: array
+          description: >-
+            Системные роли бэк-офиса ERP, выданные из CRM (FIX-63, Q-FIX50-1 (1)). Необязательное: поля нет — ERP не
+            трогает системные роли сотрудника (старый CRM); пустой список — снимает все системные роли, ранее
+            выданные из CRM. ERP добавляет только пришедшие и снимает только те системные роли, что сама выдала
+            по `role_codes` раньше (пометка «выдана из CRM»); роли, назначенные в ERP вручную («Настройки →
+            Команда»), и роль «CRM Sync: <e-mail>» (права по `permissions`) этим не затрагиваются. Для
+            `role: admin` игнорируется (суперпользователь имеет все права), ранее выданные роли снимаются. Код вне
+            `SystemRoleCode` — 422. Читатель терпим: старый ERP поле игнорирует. Перечень ролей и их названия ведёт
+            CRM; идентификаторы ролей от модели не приходят.
+          uniqueItems: true
+          items:
+            $ref: '#/components/schemas/SystemRoleCode'
         is_active:
           type: boolean
           default: true
       additionalProperties: false
+
+    SystemRoleCode:
+      type: string
+      description: >-
+        Код системной роли бэк-офиса ERP (`accounts.constants.BackofficeRoleCode`, apps/erp/CLAUDE.md §6):
+        CALCULATION «Расчёт», CATALOG_SUPPLY «Каталог и закупки», FULFILLMENT «Исполнение и логистика»,
+        FINANCE «Финансы», HEAD «Руководитель», VIEWER «Наблюдатель». Новый код появляется в ERP и здесь в одном PR;
+        тест CRM сверяет этот список с каталогом CRM, тест ERP — с `BackofficeRoleCode`.
+      enum: [CALCULATION, CATALOG_SUPPLY, FULFILLMENT, FINANCE, HEAD, VIEWER]
 
     ErpPermission:
       type: string

@@ -331,6 +331,7 @@ def provision_body(crm_user_id, email):
         "name": "Сотрудник Сторожа",
         "role": "backoffice",
         "permissions": ["deal.manage"],
+        "role_codes": ["CALCULATION"],
         "is_active": True,
     }
 
@@ -429,6 +430,14 @@ def exercise_all(client, world):
     hit("POST", provision, provision, 200, body=provision_body(8801, "guard-8801@railtech.uz"))
     hit("POST", provision, provision, 409, body=provision_body(8802, "guard-8801@railtech.uz"))
     hit("POST", provision, provision, 422, body={"crm_user_id": 8803})
+    # FIX-63: чужой код системной роли — 422 (`role_codes`: SystemRoleCode)
+    hit(
+        "POST",
+        provision,
+        provision,
+        422,
+        body={**provision_body(8805, "guard-8805@railtech.uz"), "role_codes": ["ROOT"]},
+    )
     hit("POST", provision, provision, 401, api=anonymous, body=provision_body(8804, "guard-8804@railtech.uz"))
 
     # DELETE /users/{id}/sessions: 204 → 404 → 401
@@ -529,3 +538,42 @@ def test_error_codes_are_the_documented_ones(exercised):
     assert codes[404] == {"NOT_FOUND"}
     assert codes[422] == {"VALIDATION_ERROR"}
     assert codes[409] <= {"INN_CONFLICT", "EMAIL_CONFLICT", "NOT_SWITCHABLE"} and codes[409]
+
+
+# --- FIX-63: `role_codes` в провижининге (SystemRoleCode) --------------------------------------------------------
+
+
+def test_provision_request_serializer_fields_are_the_contract_properties():
+    """Сторож тела: поля `ProvisionUserRequestSerializer` = свойства `ProvisionUserRequest` контракта (ни лишних, ни забытых)."""
+    from integration.serializers import ProvisionUserRequestSerializer
+
+    assert set(ProvisionUserRequestSerializer().fields) == set(component("ProvisionUserRequest")["properties"])
+
+
+def test_role_codes_are_optional_in_the_contract_and_enum_equals_erp_catalog():
+    from accounts.constants import BackofficeRoleCode
+
+    request = component("ProvisionUserRequest")
+    assert "role_codes" not in request["required"], "аддитивно: старый CRM поле не шлёт"
+    assert request["properties"]["role_codes"]["items"] == component(
+        "SystemRoleCode"
+    ), "items — ссылка на SystemRoleCode"
+    assert enum_values("SystemRoleCode") == list(BackofficeRoleCode.values)
+
+
+def test_provision_with_every_system_role_code_of_the_contract(client, world, settings):
+    from accounts.models import Company, CompanyMember, WorkspaceRole
+
+    WorkspaceRole.objects.get_or_create(code="MEMBER", defaults={"name": "Member", "sort_order": 10})
+    settings.OWN_COMPANY_ID = Company.objects.create(name="Own Co", inn="OWN-GUARD63").pk
+
+    codes = enum_values("SystemRoleCode")
+    response = client.post(
+        f"{PREFIX}/users/provision",
+        {**provision_body(8950, "guard-8950@railtech.uz"), "role_codes": codes},
+        format="json",
+        HTTP_IDEMPOTENCY_KEY=str(uuid.uuid4()),
+    )
+    assert response.status_code == 201, response.content
+    member = CompanyMember.objects.get(user__email="guard-8950@railtech.uz")
+    assert set(member.company_roles.exclude(code="").values_list("code", flat=True)) == set(codes)

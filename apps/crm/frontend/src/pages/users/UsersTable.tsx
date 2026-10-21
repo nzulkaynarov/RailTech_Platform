@@ -7,6 +7,7 @@ import { ActionsTitle, RowActions } from "../../components/RowActions";
 import { roleLabel } from "../../domain/labels";
 import { hasErpAccess } from "../../domain/platformAccess";
 import { t } from "../../i18n/ru";
+import { ErpRoleTags } from "./ErpRoles";
 
 type Handlers = {
   onEdit: (u: UserOut) => void;
@@ -73,17 +74,20 @@ function columns({
         </Tooltip>
       ),
       render: (_, u) => (
-        <Tooltip title={u.is_active || hasErpAccess(u) ? null : t.userAdmin.erpInactive}>
-          <Switch
-            checked={hasErpAccess(u)}
-            disabled={(!u.is_active && !hasErpAccess(u)) || erpPendingId === u.id}
-            loading={erpPendingId === u.id}
-            aria-label={named(t.userAdmin.erpSwitchLabel, u)}
-            onChange={(checked) => {
-              onToggleErp(u, checked);
-            }}
-          />
-        </Tooltip>
+        <Space direction="vertical" size={4}>
+          <Tooltip title={u.is_active || hasErpAccess(u) ? null : t.userAdmin.erpInactive}>
+            <Switch
+              checked={hasErpAccess(u)}
+              disabled={(!u.is_active && !hasErpAccess(u)) || erpPendingId === u.id}
+              loading={erpPendingId === u.id}
+              aria-label={named(t.userAdmin.erpSwitchLabel, u)}
+              onChange={(checked) => {
+                onToggleErp(u, checked);
+              }}
+            />
+          </Tooltip>
+          {hasErpAccess(u) ? <ErpRoleTags user={u} /> : null}
+        </Space>
       ),
     },
     { title: t.users.telegram, render: (_, u) => <TelegramTag id={u.tg_user_id} /> },

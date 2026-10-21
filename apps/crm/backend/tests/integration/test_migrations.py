@@ -189,3 +189,28 @@ def test_seam_hardening_revision_is_reversible(
         assert index is not None
         assert "UNIQUE" in index[0]
         assert "erp_document_id IS NOT NULL" in index[0]
+
+
+def test_user_erp_role_codes_column_comes_and_goes_with_the_revision(
+    alembic_config: Config, live_settings: Settings
+) -> None:
+    """FIX-63: `users.erp_role_codes` — пустой массив по умолчанию, только коды каталога;
+    downgrade колонку снимает."""
+    command.upgrade(alembic_config, "head")
+    with psycopg.connect(live_settings.libpq_dsn, autocommit=True) as conn:
+        conn.execute("TRUNCATE users RESTART IDENTITY CASCADE")
+        conn.execute(
+            "INSERT INTO users (email, password_hash, full_name) VALUES ('a@x.uz', 'x', 'A')"
+        )
+        assert conn.execute("SELECT erp_role_codes FROM users").fetchone() == ([],)
+        with pytest.raises(psycopg.errors.CheckViolation):
+            conn.execute("UPDATE users SET erp_role_codes = '[\"ROOT\"]'::jsonb")
+
+    command.downgrade(alembic_config, "0030_lead_consent_erp_request")
+    with psycopg.connect(live_settings.libpq_dsn, autocommit=True) as conn:
+        assert conn.execute(
+            "SELECT count(*) FROM information_schema.columns "
+            "WHERE table_name = 'users' AND column_name = 'erp_role_codes'"
+        ).fetchone() == (0,)
+
+    command.upgrade(alembic_config, "head")

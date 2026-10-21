@@ -4,10 +4,12 @@
  * RailTech CRM API
  * OpenAPI spec version: 0.1.0
  */
+import type { UserOutErpRoleCodesItem } from "./userOutErpRoleCodesItem";
 import type { UserOutPlatformAccessItem } from "./userOutPlatformAccessItem";
 
 export interface UserOut {
   email: string;
+  erp_role_codes?: UserOutErpRoleCodesItem[];
   full_name: string;
   id: number;
   is_active: boolean;
