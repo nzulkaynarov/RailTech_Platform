@@ -220,3 +220,55 @@ async def test_gateway_unreachable_raises_safe_error() -> None:
         await admin().set_router_aliases({"dialog-model": "fallback-model"})
     assert caught.value.status is None
     assert caught.value.detail == "ConnectError"
+
+
+@respx.mock
+async def test_telegram_webhook_info_error_is_reported_not_swallowed() -> None:
+    """FIX-66: сбой getWebhookInfo не превращается в «вебхук не установлен»."""
+    respx.get(tg("getMe")).mock(
+        return_value=httpx.Response(200, json={"ok": True, "result": {"username": "rt_bot"}})
+    )
+    respx.get(tg("getWebhookInfo")).mock(return_value=httpx.Response(502))
+    async with httpx.AsyncClient() as client:
+        p = await probes.telegram(client, TOKEN)
+    assert p.error is None
+    assert p.webhook_error == "getWebhookInfo: HTTP 502"
+    assert p.webhook_url is None
+
+
+@respx.mock
+async def test_telegram_webhook_info_not_ok_body_is_an_error() -> None:
+    respx.get(tg("getMe")).mock(
+        return_value=httpx.Response(200, json={"ok": True, "result": {"username": "rt_bot"}})
+    )
+    respx.get(tg("getWebhookInfo")).mock(
+        return_value=httpx.Response(200, json={"ok": False, "description": "Too Many Requests"})
+    )
+    async with httpx.AsyncClient() as client:
+        p = await probes.telegram(client, TOKEN)
+    assert p.webhook_error == "getWebhookInfo: ok=false"
+
+
+@respx.mock
+async def test_telegram_probe_scrubs_token_and_url_secrets() -> None:
+    respx.get(tg("getMe")).mock(
+        return_value=httpx.Response(200, json={"ok": True, "result": {"username": "rt_bot"}})
+    )
+    respx.get(tg("getWebhookInfo")).mock(
+        return_value=httpx.Response(
+            200,
+            json={
+                "ok": True,
+                "result": {
+                    "url": "https://user:pw@crm.example/telegram/webhook?secret=abc#frag",
+                    "last_error_message": f"Wrong response from {TG}/bot{TOKEN}/x",
+                    "last_error_date": 1791955830,
+                },
+            },
+        )
+    )
+    async with httpx.AsyncClient() as client:
+        p = await probes.telegram(client, TOKEN)
+    assert p.webhook_url == "https://crm.example/telegram/webhook"
+    assert TOKEN not in (p.last_error_message or "")
+    assert "/bot" not in (p.last_error_message or "")

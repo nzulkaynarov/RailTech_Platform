@@ -11,6 +11,7 @@ from aiogram import Bot
 
 from app.config import get_settings
 from app.container import get_container
+from app.domain.telegram_webhook import PROBLEM_TEXT, webhook_url_problem
 from app.integrations.telegram import resolve_token
 
 # = dispatcher.resolve_used_update_types()
@@ -30,11 +31,12 @@ async def run(args: argparse.Namespace) -> int:
     bot = Bot(token)
     try:
         if args.action == "set":
-            if (
-                not settings.telegram_webhook_url
-                or not settings.telegram_webhook_secret.get_secret_value()
-            ):
-                print("Нужны TELEGRAM_WEBHOOK_URL и TELEGRAM_WEBHOOK_SECRET")  # noqa: T201
+            problem = webhook_url_problem(settings.telegram_webhook_url)
+            if problem is not None:
+                print(f"{PROBLEM_TEXT[problem]} (https://<CRM_DOMAIN>/telegram/webhook)")  # noqa: T201
+                return 1
+            if not settings.telegram_webhook_secret.get_secret_value():
+                print("Нужен TELEGRAM_WEBHOOK_SECRET")  # noqa: T201
                 return 1
             await bot.set_webhook(
                 str(settings.telegram_webhook_url),
