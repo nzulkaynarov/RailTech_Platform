@@ -4,6 +4,10 @@
 # Платных вызовов моделей нет. legacy/b2b не проверяется (ORCHESTRATOR §3.11).
 set -euo pipefail
 
+# `make ci-local args="--quick"` отдаёт переменную args вложенным make (MAKEFLAGS и окружение), и цели вроде
+# erp test-backend (args="<pytest-аргументы>") получают чужой --quick. Задания видят чистое окружение make.
+unset MAKEFLAGS MFLAGS MAKELEVEL args
+
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 ALL=(gitleaks crm contracts tokens infra erp cabinet platform crm-integration crm-build crm-e2e crm-audit platform-e2e)
 GITLEAKS_IMAGE=ghcr.io/gitleaks/gitleaks:v8.30.1
