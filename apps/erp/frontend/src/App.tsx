@@ -13,7 +13,7 @@ import { PasswordSetupPage } from './components/Auth/PasswordSetupPage';
 import { ForgotPasswordPage } from './components/Auth/ForgotPasswordPage';
 import { ResetPasswordPage } from './components/Auth/ResetPasswordPage';
 import { SsoExchangePage } from './components/Auth/SsoExchangePage';
-import { NoCompanyScreen } from './components/Auth/NoCompanyScreen';
+import { NoCompanyGate } from './components/Auth/NoCompanyGate';
 import { LoadingSkeleton } from './components/LoadingSkeleton';
 import { NAVIGABLE_PAGES } from './config/pageRegistry';
 import { parseHashToPage, pageToHash, type Page } from './routes/hashRoute';
@@ -198,7 +198,7 @@ function App() {
   // any more — the back office or CRM attaches the account; say so instead of a dead form.
   const hasCompany = user?.company || user?.primary_company;
   if (!hasCompany) {
-    return <NoCompanyScreen />;
+    return <NoCompanyGate />;
   }
 
   return (

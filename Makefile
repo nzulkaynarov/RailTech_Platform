@@ -8,6 +8,7 @@ SHELL := /bin/bash
 CRM     := apps/crm
 ERP     := apps/erp
 CABINET := apps/cabinet
+PLATFORM := apps/platform
 INFRA   := infra
 
 .PHONY: help
@@ -17,7 +18,7 @@ help: ## Список целей
 # --- Проверки --------------------------------------------------------------------
 
 .PHONY: check
-check: check-crm check-erp check-cabinet ## Проверки всех приложений (lint + typecheck + unit)
+check: check-crm check-erp check-cabinet check-platform ## Проверки всех приложений (lint + typecheck + unit)
 
 .PHONY: check-crm
 check-crm: ## CRM: ruff, mypy, eslint, tsc, pytest, vitest (apps/crm/Makefile)
@@ -31,9 +32,14 @@ check-erp: ## ERP: появится с M1-ERP-01; пока кода нет — �
 check-cabinet: ## Cabinet: eslint, tsc, i18n ru/uz/en, токены, типы портала, vitest + axe (apps/cabinet/Makefile)
 	@if [ -f $(CABINET)/Makefile ]; then $(MAKE) -C $(CABINET) check; else echo "check-cabinet: $(CABINET) ещё без кода (M2-CAB-01) — пропуск"; fi
 
+.PHONY: check-platform
+check-platform: ## Платформа: ruff, mypy, pytest (bff); eslint, tsc, vitest, свежесть клиента orval и токенов (web) (apps/platform/Makefile)
+	$(MAKE) -C $(PLATFORM) check
+
 .PHONY: tokens
-tokens: ## Токены дизайна: tokens.json → dist/, копии в apps/crm (tokens.generated.ts) и apps/cabinet (tokens.generated.css)
+tokens: ## Токены дизайна: tokens.json → dist/, копии в apps/crm (tokens.generated.ts), apps/cabinet (tokens.generated.css), apps/platform (tokens.generated.ts)
 	$(MAKE) -C packages/ui-tokens build
+	$(MAKE) -C $(PLATFORM) tokens
 
 .PHONY: contracts
 contracts: ## Валидация packages/contracts и генерация клиентов (M0-INF-02)
@@ -57,12 +63,17 @@ up-obs: _compose-check ## То же + Langfuse (профиль observability): l
 	$(COMPOSE) --profile observability up -d --build --renew-anon-volumes
 
 .PHONY: smoke
-smoke: ## /health трёх доменов через Caddy (порт HTTP_PORT из .env)
+smoke: ## /health доменов CRM, ERP, Cabinet и Платформы (+ / Платформы) через Caddy (порт HTTP_PORT из .env)
 	@port=$${HTTP_PORT:-$(or $(HTTP_PORT),80)}; ok=1; \
 	for host in crm erp cabinet; do \
 	  code=$$(curl -sL -o /dev/null -w '%{http_code}' --resolve $$host.localhost:$$port:127.0.0.1 http://$$host.localhost:$$port/health); \
 	  printf '  %-18s /health → %s\n' $$host.localhost $$code; [ "$$code" = 200 ] || ok=0; \
-	done; [ $$ok = 1 ] && echo "smoke: ok" || { echo "smoke: FAIL"; exit 1; }
+	done; \
+	code=$$(curl -sL -o /dev/null -w '%{http_code}' --resolve platform.localhost:$$port:127.0.0.1 http://platform.localhost:$$port/api/v1/health); \
+	printf '  %-18s /api/v1/health → %s\n' platform.localhost $$code; [ "$$code" = 200 ] || ok=0; \
+	code=$$(curl -sL -o /dev/null -w '%{http_code}' --resolve platform.localhost:$$port:127.0.0.1 http://platform.localhost:$$port/); \
+	printf '  %-18s / → %s\n' platform.localhost $$code; [ "$$code" = 200 ] || ok=0; \
+	[ $$ok = 1 ] && echo "smoke: ok" || { echo "smoke: FAIL"; exit 1; }
 
 .PHONY: caddy-reload
 caddy-reload: _compose-check ## Пересоздать Caddy после правки infra/caddy/Caddyfile.dev (bind-mount файла не видит замену файла git'ом)

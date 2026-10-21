@@ -1,0 +1,1153 @@
+openapi: 3.1.0
+info:
+  title: RailTech Platform — BFF API (Платформа → CRM и ERP)
+  version: 0.2.0
+  summary: Пространство `/api/v1/` BFF Платформы — вызывает SPA `apps/platform/web` от имени сотрудника.
+  description: |
+    Контракт по ADR-0011 и `apps/platform/docs/02-architecture.md`. Версия 0.1.0 (INF-P0-1) покрывает фазу P1:
+    сессия, профиль, счётчики меню, «Моя очередь», лента «Сегодня», уведомления, поиск. Экраны фаз P2–P4 добавляются
+    минорными версиями этого файла до кода (`apps/platform/docs/04-integration-map.md` §1).
+
+    Словарь — SPEC-v3 §2 (`apps/platform/docs/SPEC-v3.md`): старых кодов стадий и статусов CRM и ERP в ответах нет.
+    BFF не имеет своей базы: данные приходят из CRM и ERP, каждый вызов бэкенда — с токеном сотрудника.
+
+    **Сессия.** `POST /auth/login` ставит cookie `rt_pf_session` (`HttpOnly; Secure; SameSite=Lax; Path=/`) и CSRF-cookie
+    `rt_pf_csrf` (читается скриптом). Каждый `POST`, `PUT`, `PATCH`, `DELETE`, кроме `/auth/login`, несёт заголовок
+    `X-CSRF-Token` со значением CSRF-cookie; без него или с другим значением — 403 `CSRF_FAILED`. Истёкшая или
+    отозванная сессия — 401 `SESSION_EXPIRED`.
+
+    **Ошибки.** Тело любой ошибки — `Error`: стабильный `code`, текст на языке сотрудника, источник (`crm`, `erp`, `bff`)
+    и детали бэкенда для разбора.
+
+    **Частичные данные.** Агрегирующие ответы несут `sources`: если один бэкенд не ответил за 3 с, ответ 200 с данными
+    второго и `sources.<бэкенд> = unavailable`; SPA показывает плашку «данные неполные».
+
+    **Номера объектов** — бизнес-номера SPEC-v3 §2.2 (`ЗВ-2026-104`, `L-2041`); внутренних идентификаторов бэкендов в
+    ссылках нет.
+
+    0.2.0 (волна 8): смена пароля (`POST /auth/change-password`, `Session.must_change_password`); Admin · Оргструктура —
+    сотрудники, выдача ролей Платформы, приглашение по почте (`/admin/users*`, раздел матрицы `admin`).
+
+    Лимиты: вход — 10 в минуту на IP и e-mail; остальные запросы — 300 в минуту на сессию; превышение — 429
+    `TOO_MANY_REQUESTS` с `Retry-After`.
+servers:
+  - url: https://platform.railtech.uz/api/v1
+    description: prod
+  - url: https://platform.localhost/api/v1
+    description: стенд ансамбля (infra/compose)
+security:
+  - platformSession: []
+tags:
+  - name: auth
+    description: Вход логином CRM; токены CRM и ERP живут только в сессии BFF
+  - name: me
+  - name: system
+  - name: dashboard
+  - name: notifications
+  - name: search
+  - name: admin
+    description: Admin · Оргструктура — сотрудники и роли (CRM — источник истины по людям)
+
+paths:
+  /auth/login:
+    post:
+      tags: [auth]
+      operationId: login
+      summary: Вход сотрудника
+      description: |
+        BFF входит в CRM теми же логином и паролем, читает профиль и роли Платформы, при доступе к ERP получает
+        сессию ERP SSO-обменом. Ответ ставит `rt_pf_session` и `rt_pf_csrf`.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginIn'
+      responses:
+        '200':
+          description: Вошёл
+          headers:
+            Set-Cookie:
+              description: '`rt_pf_session` и `rt_pf_csrf`'
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Session'
+        '401':
+          description: '`INVALID_CREDENTIALS` или `USER_DISABLED`'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: '`NO_PLATFORM_ROLE` — у сотрудника нет ни одной роли Платформы'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+
+  /auth/logout:
+    post:
+      tags: [auth]
+      operationId: logout
+      summary: Выход — BFF закрывает сессии CRM и ERP и удаляет свою
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+      responses:
+        '204':
+          description: Вышел; cookie сброшены
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/CsrfFailed'
+
+  /auth/change-password:
+    post:
+      tags: [auth]
+      operationId: changePassword
+      summary: Смена пароля (в том числе обязательная после приглашения)
+      description: BFF меняет пароль в CRM (`POST /api/v1/auth/change-password`); сессия сохраняется, `must_change_password` снимается.
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChangePasswordIn'
+      responses:
+        '204':
+          description: Пароль изменён
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/CsrfFailed'
+        '422':
+          description: '`WRONG_PASSWORD` (текущий неверен) или `VALIDATION_FAILED` (новый не проходит правила CRM)'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /auth/session:
+    get:
+      tags: [auth]
+      operationId: getSession
+      summary: Текущая сессия (для старта SPA)
+      responses:
+        '200':
+          description: Сессия жива
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Session'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+
+  /me:
+    get:
+      tags: [me]
+      operationId: getMe
+      summary: Профиль, роли, доступные модули и разделы
+      responses:
+        '200':
+          description: Профиль
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Me'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+    patch:
+      tags: [me]
+      operationId: updateMe
+      summary: Язык интерфейса и активная роль
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MeUpdate'
+      responses:
+        '200':
+          description: Обновлённый профиль
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Me'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/CsrfFailed'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+
+  /health:
+    get:
+      tags: [system]
+      operationId: getHealth
+      summary: Состояние BFF и источников
+      security: []
+      responses:
+        '200':
+          description: BFF жив; статусы источников
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Health'
+
+  /menu-counters:
+    get:
+      tags: [dashboard]
+      operationId: getMenuCounters
+      summary: Бейджи подменю всех доступных модулей
+      responses:
+        '200':
+          description: Счётчики
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MenuCounters'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+
+  /queue:
+    get:
+      tags: [dashboard]
+      operationId: getQueue
+      summary: «Моя очередь» — что сделать сейчас
+      description: |
+        Строки по всем ролям сотрудника (или по одной, если задан `role`). Порядок: просроченные → сегодня → по сроку
+        (SPEC-v3 §7.1). Одна строка — одно действие.
+      parameters:
+        - name: role
+          in: query
+          required: false
+          schema:
+            $ref: '#/components/schemas/RoleCode'
+      responses:
+        '200':
+          description: Очередь
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Queue'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /queue/cards:
+    get:
+      tags: [dashboard]
+      operationId: getQueueCards
+      summary: Карточки-счётчики над очередью (набор задаёт роль)
+      parameters:
+        - name: role
+          in: query
+          required: false
+          schema:
+            $ref: '#/components/schemas/RoleCode'
+      responses:
+        '200':
+          description: Карточки
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/QueueCards'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /activity/today:
+    get:
+      tags: [dashboard]
+      operationId: getActivityToday
+      summary: Лента событий компании за день (вкладка «Сегодня»), только доступные сотруднику объекты
+      responses:
+        '200':
+          description: Лента
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ActivityFeed'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+
+  /notifications:
+    get:
+      tags: [notifications]
+      operationId: listNotifications
+      summary: Центр уведомлений (CRM и ERP вместе)
+      parameters:
+        - name: tab
+          in: query
+          required: false
+          schema:
+            $ref: '#/components/schemas/NotificationTab'
+        - name: cursor
+          in: query
+          required: false
+          description: Непрозрачный курсор из `next_cursor`
+          schema:
+            type: string
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 50
+            default: 20
+      responses:
+        '200':
+          description: Страница уведомлений
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotificationPage'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+
+  /notifications/{id}/read:
+    post:
+      tags: [notifications]
+      operationId: markNotificationRead
+      summary: Отметить прочитанным
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Идентификатор с префиксом источника — `erp:123`, `crm:45`
+          schema:
+            type: string
+            pattern: '^(crm|erp):[0-9]+$'
+        - $ref: '#/components/parameters/CsrfToken'
+      responses:
+        '204':
+          description: Отмечено
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/CsrfFailed'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /notifications/read-all:
+    post:
+      tags: [notifications]
+      operationId: markAllNotificationsRead
+      summary: Отметить все прочитанными
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+      responses:
+        '204':
+          description: Отмечены
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/CsrfFailed'
+
+  /search:
+    get:
+      tags: [search]
+      operationId: search
+      summary: Сквозной поиск — номера, ИНН, название клиента, артикул; результаты группами по модулям
+      parameters:
+        - name: q
+          in: query
+          required: true
+          schema:
+            type: string
+            minLength: 2
+            maxLength: 100
+      responses:
+        '200':
+          description: Результаты
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SearchResult'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+
+  /admin/users:
+    get:
+      tags: [admin]
+      operationId: listEmployees
+      summary: Сотрудники (Admin · Оргструктура)
+      description: Доступ — раздел `admin` матрицы (ADMIN — full, DIRECTOR — read).
+      parameters:
+        - name: q
+          in: query
+          required: false
+          schema:
+            type: string
+            maxLength: 100
+        - name: status
+          in: query
+          required: false
+          schema:
+            $ref: '#/components/schemas/EmployeeStatus'
+      responses:
+        '200':
+          description: Список
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EmployeeList'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /admin/users/invite:
+    post:
+      tags: [admin]
+      operationId: inviteEmployee
+      summary: Пригласить сотрудника по почте
+      description: BFF создаёт пользователя в CRM с ролями Платформы и отправляет приглашение (CRM `/users`, `/users/{id}/invite`); провижининг в ERP делает CRM. Только ADMIN.
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EmployeeInvite'
+      responses:
+        '201':
+          description: Приглашён
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Employee'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          description: '`EMAIL_EXISTS`'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+
+  /admin/users/{id}:
+    get:
+      tags: [admin]
+      operationId: getEmployee
+      summary: Карточка сотрудника
+      parameters:
+        - $ref: '#/components/parameters/EmployeeId'
+      responses:
+        '200':
+          description: Сотрудник
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Employee'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    patch:
+      tags: [admin]
+      operationId: updateEmployee
+      summary: Роли, должность, отключение — единое место выдачи ролей обеих систем
+      description: Только ADMIN. Снять у себя последнюю роль ADMIN или отключить последнего администратора нельзя — 409 `LAST_ADMIN`.
+      parameters:
+        - $ref: '#/components/parameters/EmployeeId'
+        - $ref: '#/components/parameters/CsrfToken'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EmployeeUpdate'
+      responses:
+        '200':
+          description: Обновлён
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Employee'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: '`LAST_ADMIN`'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+
+components:
+  securitySchemes:
+    platformSession:
+      type: apiKey
+      in: cookie
+      name: rt_pf_session
+
+  parameters:
+    EmployeeId:
+      name: id
+      in: path
+      required: true
+      description: '`crm_user_id`'
+      schema:
+        type: string
+        pattern: '^[0-9]+$'
+    CsrfToken:
+      name: X-CSRF-Token
+      in: header
+      required: true
+      description: Значение cookie `rt_pf_csrf`
+      schema:
+        type: string
+        minLength: 16
+
+  responses:
+    SessionExpired:
+      description: '`SESSION_EXPIRED` — сессии нет, истекла или сотрудник отключён'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    CsrfFailed:
+      description: '`CSRF_FAILED`'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    Forbidden:
+      description: '`FORBIDDEN` — раздел или действие не положены ролям сотрудника'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    NotFound:
+      description: '`NOT_FOUND`'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    ValidationFailed:
+      description: '`VALIDATION_FAILED` — `details.fields` перечисляет поля'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    TooManyRequests:
+      description: '`TOO_MANY_REQUESTS`'
+      headers:
+        Retry-After:
+          description: Секунды до повтора
+          schema:
+            type: integer
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    BackendUnavailable:
+      description: '`BACKEND_UNAVAILABLE` — CRM (вход невозможен) или ERP не ответили'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+  schemas:
+    Error:
+      type: object
+      additionalProperties: false
+      required: [code, message, source]
+      properties:
+        code:
+          type: string
+          description: Стабильный код (`INVALID_CREDENTIALS`, `SESSION_EXPIRED`, `CSRF_FAILED`, `FORBIDDEN`, `NOT_FOUND`, `VALIDATION_FAILED`, `TOO_MANY_REQUESTS`, `BACKEND_UNAVAILABLE`, `NO_PLATFORM_ROLE`, `USER_DISABLED`, `CONFLICT`)
+          examples: [SESSION_EXPIRED]
+        message:
+          type: string
+          description: Текст для сотрудника на его языке
+        source:
+          type: string
+          enum: [bff, crm, erp]
+        details:
+          type: object
+          description: Код и тело ошибки бэкенда, поля валидации — для разбора, не для показа
+          additionalProperties: true
+
+    SourceState:
+      type: string
+      enum: [ok, unavailable, not_applicable]
+      description: '`not_applicable` — у сотрудника нет доступа к этому бэкенду'
+
+    Sources:
+      type: object
+      additionalProperties: false
+      required: [crm, erp]
+      properties:
+        crm:
+          $ref: '#/components/schemas/SourceState'
+        erp:
+          $ref: '#/components/schemas/SourceState'
+
+    RoleCode:
+      type: string
+      enum: [MANAGER, DIRECTOR, SUPPLY, ENGINEER, ACCOUNTANT, ADMIN]
+      description: Роли SPEC-v3 §4.1
+
+    ModuleCode:
+      type: string
+      enum: [dashboard, crm, eds, erp, chats, admin]
+
+    AccessLevel:
+      type: string
+      enum: [full, read]
+      description: Скрытые разделы в ответах не перечисляются
+
+    Language:
+      type: string
+      enum: [ru, uz, en]
+
+    StepCode:
+      type: string
+      enum: [REQUEST, RESOLUTION, CALCULATION, QUOTE, CONTRACT, PAYMENT, DONE, LOST]
+      description: Шкала пути заявки SPEC-v3 §2.3
+
+    ObjectKind:
+      type: string
+      enum: [lead, client, request, project, letter, quote, contract, invoice, act, memo, chat, ticket, integration]
+
+    ObjectRef:
+      type: object
+      additionalProperties: false
+      required: [kind, number, path]
+      properties:
+        kind:
+          $ref: '#/components/schemas/ObjectKind'
+        number:
+          type: string
+          description: Бизнес-номер SPEC-v3 §2.2 или код (для интеграции — её ключ)
+          examples: [ЗВ-2026-104]
+        title:
+          type: string
+        path:
+          type: string
+          description: Путь в SPA с вкладкой бокового окна, например `/eds/inbox/ВХ-104%2F26?panel=open&tab=resolution`
+        step:
+          $ref: '#/components/schemas/StepCode'
+
+    PersonRef:
+      type: object
+      additionalProperties: false
+      required: [id, name, initials]
+      properties:
+        id:
+          type: string
+          description: '`crm_user_id` сотрудника'
+        name:
+          type: string
+        initials:
+          type: string
+          maxLength: 3
+
+    LoginIn:
+      type: object
+      additionalProperties: false
+      required: [email, password]
+      properties:
+        email:
+          type: string
+          format: email
+          maxLength: 254
+        password:
+          type: string
+          minLength: 1
+          maxLength: 256
+          writeOnly: true
+
+    Session:
+      type: object
+      additionalProperties: false
+      required: [me, expires_at, must_change_password]
+      properties:
+        me:
+          $ref: '#/components/schemas/Me'
+        must_change_password:
+          type: boolean
+          description: true — SPA сразу ведёт на смену пароля; остальные разделы недоступны до смены
+        expires_at:
+          type: string
+          format: date-time
+
+    Me:
+      type: object
+      additionalProperties: false
+      required: [id, email, name, initials, language, roles, modules, resources, access]
+      properties:
+        id:
+          type: string
+          description: '`crm_user_id`'
+        email:
+          type: string
+          format: email
+        name:
+          type: string
+        initials:
+          type: string
+          maxLength: 3
+        position:
+          type: string
+          description: Должность — текст (не роль)
+        language:
+          $ref: '#/components/schemas/Language'
+        roles:
+          type: array
+          minItems: 1
+          uniqueItems: true
+          items:
+            $ref: '#/components/schemas/RoleCode'
+        active_role:
+          description: Роль, выбранная в профиле для «Моей очереди»; пусто — все роли вместе
+          oneOf:
+            - $ref: '#/components/schemas/RoleCode'
+            - type: 'null'
+        modules:
+          type: array
+          description: Модули рейла в порядке показа
+          items:
+            $ref: '#/components/schemas/ModuleCode'
+        resources:
+          type: object
+          description: Разделы и действия матрицы `platform-rbac.yaml` → уровень для объединения ролей сотрудника
+          additionalProperties:
+            $ref: '#/components/schemas/AccessLevel'
+        restricted_fields:
+          type: array
+          description: Поля с ограничением, которые сотруднику видны (`cost_margin`, `supplier_prices`, `totals_only`)
+          items:
+            type: string
+        access:
+          type: object
+          additionalProperties: false
+          required: [crm, erp]
+          properties:
+            crm:
+              type: boolean
+            erp:
+              type: boolean
+
+    ChangePasswordIn:
+      type: object
+      additionalProperties: false
+      required: [current_password, new_password]
+      properties:
+        current_password:
+          type: string
+          minLength: 1
+          maxLength: 256
+          writeOnly: true
+        new_password:
+          type: string
+          minLength: 8
+          maxLength: 256
+          writeOnly: true
+
+    EmployeeStatus:
+      type: string
+      enum: [active, invited, disabled]
+
+    ErpSyncState:
+      type: string
+      enum: [ok, pending, error, not_applicable]
+      description: Итог провижининга в ERP
+
+    Employee:
+      type: object
+      additionalProperties: false
+      required: [id, name, initials, email, roles, access, status, telegram_linked, erp_sync]
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        initials:
+          type: string
+          maxLength: 3
+        email:
+          type: string
+          format: email
+        position:
+          type: string
+          maxLength: 120
+          description: Должность — текст, не роль
+        roles:
+          type: array
+          uniqueItems: true
+          items:
+            $ref: '#/components/schemas/RoleCode'
+        access:
+          type: object
+          additionalProperties: false
+          required: [crm, erp]
+          properties:
+            crm:
+              type: boolean
+            erp:
+              type: boolean
+        status:
+          $ref: '#/components/schemas/EmployeeStatus'
+        telegram_linked:
+          type: boolean
+          description: Привязан Telegram для уведомлений сотруднику
+        erp_sync:
+          $ref: '#/components/schemas/ErpSyncState'
+        erp_sync_error:
+          type: string
+
+    EmployeeList:
+      type: object
+      additionalProperties: false
+      required: [items]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/Employee'
+
+    EmployeeInvite:
+      type: object
+      additionalProperties: false
+      required: [email, name, roles]
+      properties:
+        email:
+          type: string
+          format: email
+          maxLength: 254
+        name:
+          type: string
+          minLength: 1
+          maxLength: 120
+        position:
+          type: string
+          maxLength: 120
+        roles:
+          type: array
+          minItems: 1
+          uniqueItems: true
+          items:
+            $ref: '#/components/schemas/RoleCode'
+
+    EmployeeUpdate:
+      type: object
+      additionalProperties: false
+      minProperties: 1
+      properties:
+        roles:
+          type: array
+          uniqueItems: true
+          items:
+            $ref: '#/components/schemas/RoleCode'
+        position:
+          type: string
+          maxLength: 120
+        is_active:
+          type: boolean
+
+    MeUpdate:
+      type: object
+      additionalProperties: false
+      minProperties: 1
+      properties:
+        language:
+          $ref: '#/components/schemas/Language'
+        active_role:
+          oneOf:
+            - $ref: '#/components/schemas/RoleCode'
+            - type: 'null'
+
+    Health:
+      type: object
+      additionalProperties: false
+      required: [status, checks]
+      properties:
+        status:
+          type: string
+          enum: [ok, degraded]
+        checks:
+          type: object
+          additionalProperties: false
+          required: [redis, crm, erp]
+          properties:
+            redis:
+              type: string
+              enum: [ok, fail]
+            crm:
+              type: string
+              enum: [ok, fail]
+            erp:
+              type: string
+              enum: [ok, fail]
+        version:
+          type: string
+
+    MenuCounter:
+      type: object
+      additionalProperties: false
+      required: [module, section, count, attention]
+      properties:
+        module:
+          $ref: '#/components/schemas/ModuleCode'
+        section:
+          type: string
+          description: Ключ раздела подменю (`queue`, `inbox`, `drafts`, `approvals`, `payments`, `calc`, `leads`, `messages`…)
+        count:
+          type: integer
+          minimum: 0
+        attention:
+          type: boolean
+          description: true — красный бейдж «требует действия», false — серый счётчик
+
+    MenuCounters:
+      type: object
+      additionalProperties: false
+      required: [items, sources]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/MenuCounter'
+        sources:
+          $ref: '#/components/schemas/Sources'
+
+    QueueItemKind:
+      type: string
+      description: Вид действия; набор растёт с фазами (SPEC-v3 §4.1)
+      enum:
+        - answer_lead
+        - take_lead
+        - create_request
+        - service_request
+        - resolve_letter
+        - approve_quote
+        - approve_memo
+        - problem_project
+        - calc_task
+        - supplier_overdue
+        - confirm_payment
+        - issue_invoice
+        - issue_contract
+        - attach_scan
+        - pay_memo
+        - overdue_invoice
+        - ticket
+        - integration_issue
+
+    DueLabel:
+      type: string
+      enum: [overdue, today, tomorrow, later, memo]
+      description: Бейдж срока — red «просрочено», red «срок сегодня», gold «завтра», default — дата, purple «служебка»
+
+    QueueItem:
+      type: object
+      additionalProperties: false
+      required: [id, role, kind, title, subtitle, due_label, object]
+      properties:
+        id:
+          type: string
+        role:
+          $ref: '#/components/schemas/RoleCode'
+        kind:
+          $ref: '#/components/schemas/QueueItemKind'
+        title:
+          type: string
+          description: Заголовок действия — «Наложить резолюцию на письмо ВХ-104/26»
+        subtitle:
+          type: string
+          description: Клиент · объект · от кого · когда
+        due_label:
+          $ref: '#/components/schemas/DueLabel'
+        due_at:
+          type: string
+          format: date-time
+        object:
+          $ref: '#/components/schemas/ObjectRef'
+
+    Queue:
+      type: object
+      additionalProperties: false
+      required: [items, sources]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/QueueItem'
+        sources:
+          $ref: '#/components/schemas/Sources'
+
+    QueueCard:
+      type: object
+      additionalProperties: false
+      required: [key, label, count, path]
+      properties:
+        key:
+          type: string
+          description: '`letters_without_resolution`, `quotes_to_approve`, `memos_to_approve`, `projects_in_work`, `leads_without_answer`…'
+        label:
+          type: string
+        count:
+          type: integer
+          minimum: 0
+        hint:
+          type: string
+          description: Подпись под числом — «EDS · Входящие», «1 ждёт оплаты · 1 в отгрузке»
+        path:
+          type: string
+
+    QueueCards:
+      type: object
+      additionalProperties: false
+      required: [cards, sources]
+      properties:
+        cards:
+          type: array
+          maxItems: 4
+          items:
+            $ref: '#/components/schemas/QueueCard'
+        sources:
+          $ref: '#/components/schemas/Sources'
+
+    ActivityItem:
+      type: object
+      additionalProperties: false
+      required: [id, actor, text, module, at]
+      properties:
+        id:
+          type: string
+        actor:
+          $ref: '#/components/schemas/PersonRef'
+        text:
+          type: string
+          description: Что сделал — «подтвердила оплату по ПР-2026-099»
+        module:
+          $ref: '#/components/schemas/ModuleCode'
+        at:
+          type: string
+          format: date-time
+        object:
+          $ref: '#/components/schemas/ObjectRef'
+
+    ActivityFeed:
+      type: object
+      additionalProperties: false
+      required: [items, sources]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/ActivityItem'
+        sources:
+          $ref: '#/components/schemas/Sources'
+
+    NotificationTab:
+      type: string
+      enum: [all, decisions, clients, system]
+
+    Notification:
+      type: object
+      additionalProperties: false
+      required: [id, tab, title, created_at, read]
+      properties:
+        id:
+          type: string
+          pattern: '^(crm|erp):[0-9]+$'
+        tab:
+          $ref: '#/components/schemas/NotificationTab'
+        title:
+          type: string
+        subtitle:
+          type: string
+          description: Объект и срок
+        object:
+          $ref: '#/components/schemas/ObjectRef'
+        created_at:
+          type: string
+          format: date-time
+        read:
+          type: boolean
+
+    NotificationPage:
+      type: object
+      additionalProperties: false
+      required: [items, unread_count, sources]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/Notification'
+        next_cursor:
+          type: [string, 'null']
+        unread_count:
+          type: integer
+          minimum: 0
+        sources:
+          $ref: '#/components/schemas/Sources'
+
+    SearchHit:
+      type: object
+      additionalProperties: false
+      required: [object, title]
+      properties:
+        object:
+          $ref: '#/components/schemas/ObjectRef'
+        title:
+          type: string
+        subtitle:
+          type: string
+
+    SearchGroup:
+      type: object
+      additionalProperties: false
+      required: [module, items]
+      properties:
+        module:
+          $ref: '#/components/schemas/ModuleCode'
+        items:
+          type: array
+          maxItems: 10
+          items:
+            $ref: '#/components/schemas/SearchHit'
+
+    SearchResult:
+      type: object
+      additionalProperties: false
+      required: [groups, sources]
+      properties:
+        groups:
+          type: array
+          items:
+            $ref: '#/components/schemas/SearchGroup'
+        sources:
+          $ref: '#/components/schemas/Sources'

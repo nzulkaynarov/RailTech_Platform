@@ -58,6 +58,35 @@ http://cabinet.localhost {
 	}
 }
 
+# ─── Платформа — единое рабочее место сотрудника (apps/platform, INF-P0-4) ─────────────────
+# BFF (`platform-bff`) — единственный бэкенд SPA: /api/* уходит туда, остальное — статика `platform-web`.
+# Заголовки безопасности и CSP — как у CRM в Caddyfile.prod (HSTS в dev нет: HTTP без TLS); `style-src 'unsafe-inline'`
+# нужен Ant Design (CSS-in-JS). Логика и порядок директив — одна с prod; расхождение dev/prod здесь — дефект.
+http://platform.localhost {
+	# mcp-серверы агентов — только внутри сети compose (FIX-03, аудит S-9); у Платформы их нет, 404 на всякий случай.
+	@mcp path /mcp /mcp/*
+	handle @mcp {
+		respond 404
+	}
+	header {
+		X-Content-Type-Options "nosniff"
+		X-Frame-Options "DENY"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		Permissions-Policy "camera=(), microphone=(), geolocation=()"
+		Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'"
+		-Server
+	}
+	handle /api/* {
+		reverse_proxy platform-bff:8000 {
+			# SSE: без буферизации ответа
+			flush_interval -1
+		}
+	}
+	handle {
+		reverse_proxy platform-web:8080
+	}
+}
+
 # ─── Служебные интерфейсы (только dev) ─────────────────────────────────────────────────────
 http://langfuse.localhost {
 	reverse_proxy langfuse-web:3000

@@ -1,0 +1,26 @@
+import { defineConfig } from "orval";
+
+// Клиент API Платформы генерируется из контракта BFF (ADR-0011): `pnpm gen:api`.
+// Ручные типы и `fetch` запрещены (apps/platform/docs/03-frontend.md §7). Выход коммитится:
+// образ web собирается с контекстом apps/platform/web, куда packages/contracts не попадает.
+// Хуки TanStack Query и fetch-функции — поверх общего мутатора `http`; MSW-моки — рядом (`*.msw.ts`).
+export default defineConfig({
+  platform: {
+    input: "../../../packages/contracts/openapi/platform-bff.yaml",
+    output: {
+      mode: "split",
+      target: "src/shared/api/generated/platform-bff.ts",
+      schemas: "src/shared/api/generated/model",
+      client: "react-query",
+      httpClient: "fetch",
+      baseUrl: "/api/v1",
+      mock: { generators: [{ type: "msw", delay: false }] },
+      clean: true,
+      override: {
+        mutator: { path: "src/shared/api/http.ts", name: "http" },
+        fetch: { includeHttpResponseReturnType: false },
+        query: { shouldExportKeys: true },
+      },
+    },
+  },
+});

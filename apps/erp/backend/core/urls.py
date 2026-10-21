@@ -47,6 +47,7 @@ from accounts.views import (
     WorkspaceRoleViewSet,
     WsTicketView,
 )
+from accounts.views.setup import SetupCompanyView, SetupStatusView
 from accounts.wizard import WIZARD_FORMS, CompanyWizardView
 from catalog.views import (
     CategoryRequestViewSet,
@@ -285,6 +286,8 @@ urlpatterns = (
         ),
         path("api/v1/system-settings/", SystemSettingsView.as_view(), name="system-settings"),
         path("api/v1/accounts/me/", MeView.as_view(), name="current-user"),
+        path("api/v1/setup/status/", SetupStatusView.as_view(), name="setup-status"),
+        path("api/v1/setup/company/", SetupCompanyView.as_view(), name="setup-company"),
         path("api/v1/accounts/permissions/", PermissionCatalogView.as_view(), name="permission-catalog"),
         path("api/v1/health/", health_check, name="health_check"),
         # Root-level health endpoint for Docker/K8s healthchecks
