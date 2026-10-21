@@ -553,7 +553,7 @@ jobs:
       - name: caddy validate (prod)
         run: |
           docker run --rm \
-            -e ACME_EMAIL=ci@example.com -e CRM_DOMAIN=crm.example.org -e ERP_DOMAIN=erp.example.org -e CABINET_DOMAIN=cabinet.example.org \
+            -e ACME_EMAIL=ci@example.com -e CRM_DOMAIN=crm.example.org -e ERP_DOMAIN=erp.example.org -e CABINET_DOMAIN=cabinet.example.org -e PLATFORM_DOMAIN=platform.example.org \
             -v "$PWD/infra/caddy/Caddyfile.prod:/etc/caddy/Caddyfile:ro" \
             caddy:2.11.7-alpine caddy validate --config /etc/caddy/Caddyfile
 
