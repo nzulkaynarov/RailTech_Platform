@@ -194,6 +194,56 @@ def _emit_decision(line: DeliveryLine, contact) -> None:
         )
 
 
+def close_fulfillment_if_all_accepted(deal_id: int, contact) -> Optional[Fulfillment]:
+    """Все строки поставки сделки приняты клиентом → исполнение сделки `ACCEPTED` (FIX-62, Q-FIX22-5 ч. 2).
+
+    Идёт через сервис `update_fulfillment_status` с актором «клиент» (`client_contact`): сервис по-прежнему отвергает
+    любого пользователя ERP (FIX-13), а след — запись `fulfillment.accepted_by_client` и событие `delivery.status_changed`
+    с `actor.type=client`. Условия: исполнение в `DELIVERED` (до склада строки принять нельзя), строк ≥ 1 и каждая
+    `accepted`; частичная приёмка и спор (`disputed` среди строк) исполнение не меняют. Строка исполнения блокируется
+    ДО подсчёта строк: две вкладки, принимающие последние строки одновременно, сходятся в одном месте, и закрывает
+    исполнение та транзакция, что видит решение соседней. Сбой перехода решение клиента по строке не отменяет: след
+    в журнале (`fulfillment.accept_failed`) для ручного разбора. Возвращает исполнение, если оно сменило статус.
+    """
+    fulfillment = (
+        Fulfillment.objects.select_for_update(of=("self",)).select_related("status").filter(deal_id=deal_id).first()
+    )
+    if fulfillment is None or fulfillment.status is None or fulfillment.status.code != FulfillmentStatusCode.DELIVERED:
+        return None
+    statuses = set(DeliveryLine.objects.filter(deal_id=deal_id).values_list("status", flat=True))
+    if statuses != {DeliveryLineStatus.ACCEPTED}:
+        return None
+
+    from crm.services import fulfillment as fulfillment_service
+
+    error: Optional[str] = None
+    changed = None
+    try:
+        with transaction.atomic():
+            changed, error = fulfillment_service.update_fulfillment_status(
+                deal_id, None, FulfillmentStatusCode.ACCEPTED, client_contact=contact
+            )
+            if error:
+                transaction.set_rollback(True)
+    except Exception:
+        logger.exception("Не удалось перевести исполнение сделки #%s в ACCEPTED после приёмки всех строк", deal_id)
+        error = "EXCEPTION"
+    if error:
+        deal = fulfillment.deal
+        ActivityLog.objects.create(
+            action="Исполнение не переведено в «принято»",
+            detail=f"Все строки сделки #{deal_id} приняты клиентом, но исполнение не сменило статус ({error}); "
+            "перевести вручную",
+            event_code="fulfillment.accept_failed",
+            event_params={"deal_id": deal_id, "error": error},
+            level="ERROR",
+            deal=deal,
+            company_id=deal.company_id,
+        )
+        return None
+    return changed
+
+
 @transaction.atomic
 def accept_delivery_line(line_id: int, contact) -> Tuple[Optional[DeliveryLine], Optional[str]]:
     """Клиент принимает строку: только `delivered` → `accepted`."""
@@ -215,6 +265,7 @@ def accept_delivery_line(line_id: int, contact) -> Tuple[Optional[DeliveryLine],
         company_id=line.deal.company_id,
     )
     _emit_decision(line, contact)
+    close_fulfillment_if_all_accepted(line.deal_id, contact)
     return line, None
 
 

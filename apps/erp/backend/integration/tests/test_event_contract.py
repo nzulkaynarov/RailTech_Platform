@@ -25,7 +25,6 @@ from integration.services.webhooks import (
     SECRET_PAYLOAD_FIELDS,
     VALID_EVENT_TYPES,
     delivery_payload,
-    emit_act_event,
     emit_event,
     emit_invite_sent,
     sign_payload,
@@ -50,6 +49,7 @@ from sales.services.delivery_lines import accept_delivery_line, dispute_delivery
 from core.tests.events_contract import event_errors, event_types, example_event, example_files, find_events_schema_path
 from crm.constants import ActStatusCode, ContractStatusCode, FulfillmentStatusCode, InvoiceStatusCode, QuoteStatusCode
 from crm.models import ActStatus, ContractStatus, DealStage, InvoiceStatus, QuoteStatus
+from crm.services.billing import reject_act
 
 pytestmark = pytest.mark.django_db
 
@@ -168,9 +168,12 @@ def produce_all_events():
         act = add_act(deal, ActStatusCode.DRAFT, contract=contract, invoice=invoice)
         act.status = _status(ActStatus, code)
         act.save()
-    # act.returned боевой код не выпускает ни при каком статусе акта (`reject_act` ставит DRAFT, кодов RETURNED/DISPUTED/
-    # REJECTED в ActStatusCode нет) — см. `test_act_returned_has_no_trigger_in_the_real_flow`; тело — через генератор.
-    emit_act_event("act.returned", act=act, reason="Не указана партия 2", actor={"type": "client"})
+    # act.returned — настоящий возврат акта заказчиком (FIX-62): `reject_act` переводит ISSUED → DRAFT с причиной,
+    # событие выпускает сигнал акта.
+    returned = add_act(deal, ActStatusCode.DRAFT, contract=contract, invoice=invoice)
+    returned.status = _status(ActStatus, ActStatusCode.ISSUED)
+    returned.save()
+    assert reject_act(returned.pk, None, "Не указана партия 2", portal_contact=contact)[1] is None
 
     from integration.services.webhooks import emit_delivery_event
 
@@ -342,12 +345,11 @@ def test_events_are_signed_with_the_first_secret_when_two_are_configured(setting
     assert stored.headers["X-Signature"] != sign_payload("old-secret-value", raw)
 
 
-def test_act_returned_has_no_trigger_in_the_real_flow():
-    """Известный разрыв (аудит): сигнал акта умеет `act.returned`, но ни один статус акта в ERP его не запускает.
-
-    Тест фиксирует это: когда `reject_act` начнёт выпускать событие, он упадёт — и сценарий `produce_all_events`
-    нужно перевести с прямого вызова генератора на настоящий переход."""
+def test_act_returned_is_issued_by_the_real_return_and_by_no_other_status_change():
+    """`act.returned` выпускает возврат акта заказчиком (ISSUED → DRAFT с причиной, FIX-62), а не смена кода статуса:
+    перебор всех статусов акта без возврата события не даёт."""
     company = make_company(crm_client_id=7101)
+    contact = Contact.objects.filter(company=company).first()
     deal = make_deal(company)
     contract = add_contract(deal, add_quote(deal, 1, QuoteStatusCode.APPROVED, "1000000"), ContractStatusCode.SIGNED)
     invoice = add_invoice(deal, InvoiceStatusCode.PAID, total="1000000", paid="1000000", contract=contract)
@@ -356,6 +358,13 @@ def test_act_returned_has_no_trigger_in_the_real_flow():
         act.status = _status(ActStatus, code)
         act.save()
     assert not IntegrationWebhookEvent.objects.filter(event_type="act.returned").exists()
+
+    issued = add_act(deal, ActStatusCode.ISSUED, contract=contract, invoice=invoice)
+    assert reject_act(issued.pk, None, "Не указана партия 2", portal_contact=contact)[1] is None
+    event = IntegrationWebhookEvent.objects.get(event_type="act.returned")
+    assert event_errors(event.payload) == []
+    assert event.payload["payload"]["reason"] == "Не указана партия 2"
+    assert event.payload["actor"] == {"type": "client", "name": contact.name}
 
 
 def test_delivery_signs_with_the_first_secret_and_a_rotation_takes_effect_for_pending_events(settings):

@@ -2941,6 +2941,16 @@
         "detail": "Event {{event_type}} for line #{{line_id}} on deal #{{deal_id}} was not created; the client's decision is saved, resend it manually"
       }
     },
+    "fulfillment": {
+      "accepted_by_client": {
+        "title": "Fulfillment accepted by the client",
+        "detail": "Deal #{{deal_id}}: all delivery lines accepted"
+      },
+      "accept_failed": {
+        "title": "Fulfillment was not set to accepted",
+        "detail": "All lines of deal #{{deal_id}} are accepted by the client, but the fulfillment did not change status ({{error}}); set it manually"
+      }
+    },
     "company": {
       "merged": {
         "title": "Duplicate company merged",

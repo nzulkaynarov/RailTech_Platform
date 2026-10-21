@@ -643,6 +643,10 @@ def emit_delivery_event(
         status_val = fulfillment.status.code if hasattr(fulfillment.status, "code") else str(fulfillment.status)
         status_str = status_val.lower()
 
+    # Принято и оспорено клиентом — физически это «доставлено»; в `DeliveryEvent.status` контракта значений
+    # `accepted`/`disputed` нет (решения клиента — в `delivery.line_accepted|disputed`), а прежняя подстановка
+    # `assembling` для них была неправдой (FIX-62, Q-FIX62-1).
+    status_str = {"accepted": "delivered", "disputed": "delivered"}.get(status_str, status_str)
     if status_str not in ("assembling", "in_transit", "ready_to_ship", "shipped", "delivered"):
         status_str = "assembling"
 
