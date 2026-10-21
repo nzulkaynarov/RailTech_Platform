@@ -27,8 +27,8 @@ from django.db import transaction
 from django.utils import timezone
 from rest_framework.exceptions import APIException
 
-from ..exceptions import IntegrationValidationError
-from ..models import CredentialSlot, PairingCode, ServiceCredential
+from ..exceptions import IntegrationConflict, IntegrationValidationError
+from ..models import CredentialSlot, PairingCode, PairingState, ServiceCredential
 from . import credentials
 
 logger = logging.getLogger(__name__)
@@ -124,6 +124,47 @@ def _put(
     ServiceCredential.objects.update_or_create(slot=slot, defaults=defaults)
 
 
+def close_bootstrap_window(now: Optional[datetime] = None) -> None:
+    """Первое сопряжение состоялось: «без кода» закрыто навсегда. Вызывается в транзакции записи секретов."""
+    state, _ = PairingState.objects.select_for_update().get_or_create(pk=1)
+    if state.bootstrap_used_at is None:
+        state.bootstrap_used_at = now or timezone.now()
+        state.save(update_fields=["bootstrap_used_at"])
+
+
+def bootstrap_is_open() -> bool:
+    state = PairingState.objects.filter(pk=1).first()
+    return state is None or state.bootstrap_used_at is None
+
+
+def _replace_credentials(crm_to_erp_token: str, erp_to_crm_token: str, webhook_secret: str) -> None:
+    # Повторное сопряжение заменяет всё целиком: старые токены гаснут сразу, `created_at` = время нового сопряжения.
+    ServiceCredential.objects.all().delete()
+    for slot, value in (
+        (CredentialSlot.CRM_TO_ERP, crm_to_erp_token),
+        (CredentialSlot.ERP_TO_CRM, erp_to_crm_token),
+        (CredentialSlot.WEBHOOK_SECRET, webhook_secret),
+    ):
+        _put(slot, value)
+
+
+def accept_bootstrap(*, crm_to_erp_token: str, erp_to_crm_token: str, webhook_secret: str) -> Accepted:
+    """Первое сопряжение без кода (доказательство уже проверено `services/bootstrap.verify`).
+
+    Окно закрыто (первое сопряжение уже было — даже если токены потом очищены) → 409 `BOOTSTRAP_CLOSED`.
+    """
+    _check_secrets(crm_to_erp_token, erp_to_crm_token, webhook_secret)
+    with transaction.atomic():
+        state, _ = PairingState.objects.select_for_update().get_or_create(pk=1)
+        if state.bootstrap_used_at is not None:
+            raise IntegrationConflict("BOOTSTRAP_CLOSED")
+        state.bootstrap_used_at = timezone.now()
+        state.save(update_fields=["bootstrap_used_at"])
+        _replace_credentials(crm_to_erp_token, erp_to_crm_token, webhook_secret)
+    logger.info("crm paired (bootstrap)")
+    return Accepted(paired_at=timezone.now())
+
+
 def accept(raw_code: str, *, crm_to_erp_token: str, erp_to_crm_token: str, webhook_secret: str) -> Accepted:
     """Принять секреты CRM по одноразовому коду. Любая ошибка кода — `PairingCodeError` (401)."""
     _check_secrets(crm_to_erp_token, erp_to_crm_token, webhook_secret)
@@ -143,14 +184,8 @@ def accept(raw_code: str, *, crm_to_erp_token: str, erp_to_crm_token: str, webho
             raise PairingCodeError("PAIRING_CODE_EXPIRED")
         row.used_at = now
         row.save(update_fields=["used_at"])
-        # Повторное сопряжение заменяет всё целиком: старые токены гаснут сразу, `created_at` = время нового сопряжения.
-        ServiceCredential.objects.all().delete()
-        for slot, value in (
-            (CredentialSlot.CRM_TO_ERP, crm_to_erp_token),
-            (CredentialSlot.ERP_TO_CRM, erp_to_crm_token),
-            (CredentialSlot.WEBHOOK_SECRET, webhook_secret),
-        ):
-            _put(slot, value)
+        _replace_credentials(crm_to_erp_token, erp_to_crm_token, webhook_secret)
+        close_bootstrap_window(now)
     logger.info("crm paired")
     return Accepted(paired_at=timezone.now())
 
@@ -191,6 +226,7 @@ def rotate(
         _put(CredentialSlot.CRM_TO_ERP, crm_to_erp_token, rotated_at=now)
         _put(CredentialSlot.ERP_TO_CRM, erp_to_crm_token)
         _put(CredentialSlot.WEBHOOK_SECRET, webhook_secret)
+        close_bootstrap_window(now)
     logger.info("service credentials rotated (previous token valid until %s)", valid_until.isoformat())
     return Rotated(rotated_at=now, previous_token_valid_until=valid_until)
 

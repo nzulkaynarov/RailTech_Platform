@@ -5,6 +5,7 @@
 он отбрасывается, чтобы `/health` не стал `/api/integration/v1/api/integration/v1/health`.
 """
 
+import ipaddress
 from typing import Final
 from urllib.parse import urlsplit
 
@@ -42,9 +43,22 @@ def base_url_problem(url: str) -> str | None:
     return None
 
 
-def is_insecure(url: str) -> bool:
-    """Адрес не https: в проде сервисные токены и код сопряжения по нему не передаются."""
-    return urlsplit(url).scheme.lower() != "https"
+#: Внутренний адрес ERP в сети compose (сервис `erp-backend` есть в `ALLOWED_HOSTS` ERP).
+DEFAULT_INTERNAL_ERP_URL: Final = "http://erp-backend:8000"
+
+
+def is_internal_host(url: str) -> bool:
+    """Внутренний адрес: имя сервиса Docker без точки (`erp-backend`) или IP частной сети."""
+    host = urlsplit(url).hostname or ""
+    try:
+        return ipaddress.ip_address(host).is_private
+    except ValueError:
+        return bool(host) and "." not in host
+
+
+def requires_https(url: str) -> bool:
+    """В проде http допустим только внутри сети; внешний адрес — только https."""
+    return urlsplit(url).scheme.lower() != "https" and not is_internal_host(url)
 
 
 def health_url(base_url: str) -> str:

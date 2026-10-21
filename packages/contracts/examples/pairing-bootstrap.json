@@ -1,12 +1,13 @@
 {
-  "description": "Тестовый вектор доказательства первого сопряжения (CONTRACTS §2, ADR-0009): ключ = HMAC-SHA256(PLATFORM_SSO_SECRET, label); подпись = HMAC-SHA256(ключ, \"{ts}.{jti}.{sha256(тело)}\"); заголовок X-Pairing-Proof = \"v1.{ts}.{jti}.{подпись}\". Секрет и значения фиктивные.",
-  "label": "rt-pairing-bootstrap-v1",
+  "description": "Тестовый вектор доказательства первого сопряжения (CONTRACTS §2, ADR-0009): ключ = HKDF-SHA256(ikm = PLATFORM_SSO_SECRET, salt = нет, info = \"rt-pairing-v1\", 32 байта); подпись = HMAC-SHA256(ключ, \"{ts}.{jti}.{sha256(тело)}\"); заголовок X-Pairing-Proof = \"v1.{ts}.{jti}.{подпись}\". Секрет и значения фиктивные.",
+  "label": "rt-pairing-v1",
+  "kdf": "HKDF-SHA256",
   "platform_sso_secret": "test-vector-platform-sso-secret-0001",
   "timestamp": 1790000000,
   "jti": "0123456789abcdef0123456789abcdef",
   "body": "{\"crm_to_erp_token\":\"vector-crm-to-erp-token-aaaaaaaaaaaaaaaa\",\"erp_to_crm_token\":\"vector-erp-to-crm-token-bbbbbbbbbbbbbbbb\",\"webhook_secret\":\"vector-webhook-secret-cccccccccccccccc\"}",
   "body_sha256": "0b3e29e6b942587c672daa9774008703bd75f08b784ce3e92315905c4c0bb7ff",
   "signed_message": "1790000000.0123456789abcdef0123456789abcdef.0b3e29e6b942587c672daa9774008703bd75f08b784ce3e92315905c4c0bb7ff",
-  "signature_hex": "0d9b4e04dd8b64594be0b01e15956e8748c7cc089e2d4d2b4e7e9657c6d447f8",
-  "header": "v1.1790000000.0123456789abcdef0123456789abcdef.0d9b4e04dd8b64594be0b01e15956e8748c7cc089e2d4d2b4e7e9657c6d447f8"
+  "signature_hex": "8c5805c69267141a9388bc0637b00807b0c1fef1b11e6e03fb599e31867e6d60",
+  "header": "v1.1790000000.0123456789abcdef0123456789abcdef.8c5805c69267141a9388bc0637b00807b0c1fef1b11e6e03fb599e31867e6d60"
 }

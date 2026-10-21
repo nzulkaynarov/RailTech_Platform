@@ -339,3 +339,61 @@ async def test_prod_https_is_required_at_the_address_field(
                 "reason": "erp_https_required",
                 "field": "base_url",
             }
+
+
+@respx.mock
+async def test_pair_without_code_goes_through_bootstrap_and_internal_http_is_fine_in_prod(
+    sessions: async_sessionmaker[AsyncSession], live_settings: Settings
+) -> None:
+    """Свежий прод одной кнопкой: внутренний адрес по http, без кода, доказательство вместо него."""
+    prod = live_settings.model_copy(
+        update={
+            "secrets_key": SecretStr("k" * 64),
+            "app_env": "prod",
+            "platform_sso_secret": SecretStr("prod-sso-secret-for-integration-0001"),
+        }
+    )
+    internal = "http://erp-backend:8000"
+    accept = respx.post(f"{internal}/api/integration/v1/pairing/accept").mock(
+        return_value=httpx.Response(200, json=ACCEPTED)
+    )
+    respx.get(f"{internal}/api/integration/v1/health").mock(
+        return_value=httpx.Response(200, json=HEALTHY)
+    )
+    app = create_app(prod)
+    with TestClient(app) as prod_client:
+        app.state.bot = None
+        auth = await admin(sessions, prod_client)
+        status = prod_client.get(ERP_URL, headers=auth).json()
+        assert status["suggested_base_url"] == internal
+        assert status["bootstrap_available"] is True
+        response = prod_client.post(
+            f"{ERP_URL}/pair",
+            json={"base_url": internal, "password": PASSWORD},
+            headers=auth,
+        )
+        assert response.status_code == 200, response.text
+        assert response.json()["status"]["paired"] is True
+        request = accept.calls.last.request
+        assert "authorization" not in request.headers
+        proof = request.headers["x-pairing-proof"]
+        assert proof.startswith("v1.")
+        sent = json.loads(request.content)
+        async with sessions() as session:
+            audits = (await session.execute(select(AuditLog))).scalars().all()
+        pair_audits = [a for a in audits if a.action == "integrations.erp.pair"]
+        assert pair_audits
+        assert pair_audits[-1].after is not None
+        assert pair_audits[-1].after["method"] == "bootstrap"
+        assert pair_audits[-1].actor_user_id is not None, "кто нажал — виден в аудите CRM"
+        dump = repr([(a.before, a.after) for a in audits]) + response.text
+        for secret in (proof, *sent.values(), "prod-sso-secret-for-integration-0001"):
+            assert secret not in dump
+        # Внешний адрес без TLS в проде — отказ и для пути без кода.
+        public = prod_client.post(
+            f"{ERP_URL}/pair",
+            json={"base_url": "http://erp.example.com", "password": PASSWORD},
+            headers=auth,
+        )
+        assert public.status_code == 422
+        assert public.json()["details"] == {"reason": "erp_https_required", "field": "base_url"}

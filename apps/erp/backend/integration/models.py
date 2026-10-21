@@ -285,6 +285,23 @@ class PairingCode(models.Model):
         return f"PairingCode(#{self.pk}, до {self.expires_at:%Y-%m-%d %H:%M})"
 
 
+class PairingState(models.Model):
+    """Постоянное состояние сопряжения (одна строка, pk=1).
+
+    `bootstrap_used_at` — когда состоялось первое сопряжение. С этого момента «первое сопряжение без кода» закрыто
+    НАВСЕГДА (ADR-0009): флаг переживает очистку токенов, дальше — только код из ERP.
+    """
+
+    bootstrap_used_at = models.DateTimeField(null=True, blank=True, verbose_name=_("Первое сопряжение состоялось"))
+
+    class Meta:
+        verbose_name = _("Состояние сопряжения с CRM")
+        verbose_name_plural = _("Состояние сопряжения с CRM")
+
+    def __str__(self):
+        return f"PairingState(bootstrap_used_at={self.bootstrap_used_at})"
+
+
 class CredentialSlot(models.TextChoices):
     CRM_TO_ERP = "crm_to_erp", _("Токен CRM→ERP")
     CRM_TO_ERP_PREVIOUS = "crm_to_erp_previous", _("Прежний токен CRM→ERP (переход при ротации)")

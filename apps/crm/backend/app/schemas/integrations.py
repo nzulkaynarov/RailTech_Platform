@@ -5,6 +5,7 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, SecretStr, field_validator
 
+from app.domain.erp_connector import DEFAULT_INTERNAL_ERP_URL
 from app.schemas.settings_profile import BotProfileSettings
 
 
@@ -84,6 +85,9 @@ class ErpStatusOut(BaseModel):
     previous_secret_until: datetime | None = None
     # «Обновить ключи» не доведено до ответа ERP (обрыв связи): повтор отправит ту же тройку.
     rotation_pending: bool = False
+    # «Подключить ERP» одной кнопкой: внутренний адрес ERP, доступен ли путь без кода.
+    suggested_base_url: str = DEFAULT_INTERNAL_ERP_URL
+    bootstrap_available: bool = False
 
 
 class ErpConnectorIn(BaseModel):
@@ -110,12 +114,13 @@ class ErpConnectorIn(BaseModel):
 
 
 class ErpPairIn(BaseModel):
-    """«Подключить ERP»: адрес ERP и одноразовый код из её настроек; пароль админа — как всегда."""
+    """«Подключить ERP»: адрес ERP, код из её настроек (необязателен) и пароль админа."""
 
     model_config = ConfigDict(extra="forbid")
 
     base_url: str = Field(min_length=1, max_length=500)
-    code: SecretStr = Field(min_length=1, max_length=64)
+    # Пусто — первое сопряжение без кода по общему секрету платформы (ADR-0009), по кнопке админа.
+    code: SecretStr | None = Field(default=None, max_length=64)
     password: SecretStr = Field(min_length=1, max_length=256)
 
 

@@ -409,7 +409,7 @@ def exercise_all(client, world):
     hit("DELETE", sessions, "/users/999999/sessions", 404)
     hit("DELETE", sessions, "/users/8801/sessions", 401, api=anonymous)
 
-    exercise_pairing(hit, anonymous)
+    exercise_pairing(hit, anonymous, out)
     return out
 
 
@@ -425,7 +425,7 @@ ROTATED_SECRETS = {
 }
 
 
-def exercise_pairing(hit, anonymous):
+def exercise_pairing(hit, anonymous, out):
     """Сопряжение (M3-ERP-05): `POST /pairing/accept` и `/pairing/rotate` на каждый обещанный код — в самом конце.
 
     После приёма токены лежат в БД и токен из `.env` перестаёт действовать, поэтому блок последний и в конце
@@ -443,6 +443,27 @@ def exercise_pairing(hit, anonymous):
     rates = SimpleRateThrottle.THROTTLE_RATES
     saved_rates = dict(rates)
     try:
+        # Первое сопряжение без кода (`X-Pairing-Proof`): 401 (подделка) → 200; после него — 409 (окно закрыто).
+        import time as _time
+
+        from django.conf import settings as django_settings
+        from integration.services import bootstrap as bootstrap_proof
+
+        def bootstrap_call(expected, *, secret=None):
+            body = json.dumps(PAIRING_SECRETS, separators=(",", ":")).encode()
+            header = bootstrap_proof.sign(
+                secret or django_settings.PLATFORM_SSO_SECRET[0], body, int(_time.time()), uuid.uuid4().hex
+            )
+            response = APIClient().post(
+                PREFIX + accept, data=body, content_type="application/json", HTTP_X_PAIRING_PROOF=header
+            )
+            assert response.status_code == expected, f"bootstrap: {response.status_code} {response.content[:200]!r}"
+            out.append(("POST", accept, response.status_code, json.loads(response.content)))
+
+        bootstrap_call(401, secret="not-the-shared-secret")
+        bootstrap_call(200)
+        bootstrap_call(409)
+
         code = pairing.issue_code().code
         hit("POST", accept, accept, 422, api=with_token(code), body={"crm_to_erp_token": "short"}, key=False)
         hit("POST", accept, accept, 200, api=with_token(code), body=PAIRING_SECRETS, key=False)
@@ -517,8 +538,16 @@ def test_error_codes_are_the_documented_ones(exercised):
     assert (
         {"UNAUTHORIZED"}
         <= codes[401]
-        <= {"UNAUTHORIZED", "PAIRING_CODE_INVALID", "PAIRING_CODE_EXPIRED", "PAIRING_CODE_USED"}
+        <= {
+            "UNAUTHORIZED",
+            "PAIRING_CODE_INVALID",
+            "PAIRING_CODE_EXPIRED",
+            "PAIRING_CODE_USED",
+            "PAIRING_PROOF_INVALID",
+            "PAIRING_PROOF_EXPIRED",
+            "PAIRING_PROOF_REPLAYED",
+        }
     )
     assert codes[404] == {"NOT_FOUND"}
     assert codes[422] == {"VALIDATION_ERROR"}
-    assert codes[409] <= {"INN_CONFLICT", "EMAIL_CONFLICT"} and codes[409]
+    assert codes[409] <= {"INN_CONFLICT", "EMAIL_CONFLICT", "BOOTSTRAP_CLOSED"} and codes[409]

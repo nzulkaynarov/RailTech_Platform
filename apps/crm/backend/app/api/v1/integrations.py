@@ -205,7 +205,7 @@ async def pair_erp(body: ErpPairIn, who: Writer, service: ErpPairingDep) -> ErpP
         await service.pair(
             who,
             base_url=body.base_url,
-            code=body.code.get_secret_value(),
+            code=body.code.get_secret_value() if body.code is not None else None,
             password=body.password.get_secret_value(),
         )
     )

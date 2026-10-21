@@ -6,6 +6,7 @@
 CONTRACTS §3): новые поля ответа не ломают CRM.
 """
 
+import json
 import secrets
 from dataclasses import dataclass
 from datetime import datetime
@@ -21,12 +22,16 @@ from app.domain.errors import (
     UpstreamUnavailableError,
     ValidationFailedError,
 )
+from app.security import pairing_proof
 
 logger = structlog.get_logger(__name__)
 
 PAIRING_TIMEOUT_S = 10.0
 _SECRET_BYTES = 48  # token_urlsafe(48) = 64 символа [A-Za-z0-9_-], контракт `PairingSecret`: 32…512
 
+_PROOF_DETAILS = frozenset(
+    {"PAIRING_PROOF_INVALID", "PAIRING_PROOF_EXPIRED", "PAIRING_PROOF_REPLAYED"}
+)
 _CODE_REASONS = {
     "PAIRING_CODE_INVALID": Reason.ERP_PAIRING_CODE_INVALID,
     "PAIRING_CODE_EXPIRED": Reason.ERP_PAIRING_CODE_EXPIRED,
@@ -52,6 +57,10 @@ class PairingSecrets:
             erp_to_crm_token=secrets.token_urlsafe(_SECRET_BYTES),
             webhook_secret=secrets.token_urlsafe(_SECRET_BYTES),
         )
+
+    def body_bytes(self) -> bytes:
+        """Тело запроса — ровно эти байты уходят в ERP и покрываются хешем доказательства."""
+        return json.dumps(self.body(), separators=(",", ":")).encode()
 
     def body(self) -> dict[str, str]:
         return {
@@ -101,6 +110,10 @@ class ErpPairingClient(Protocol):
         self, base_url: str, code: str, secrets_: PairingSecrets
     ) -> PairingAccepted: ...
 
+    async def accept_bootstrap(
+        self, base_url: str, platform_secret: str, secrets_: PairingSecrets
+    ) -> PairingAccepted: ...
+
     async def rotate(
         self, base_url: str, token: str, secrets_: PairingSecrets
     ) -> PairingRotated: ...
@@ -119,6 +132,27 @@ class HttpxErpPairingClient:
     def __init__(self, timeout_s: float = PAIRING_TIMEOUT_S) -> None:
         self._timeout_s = timeout_s
 
+    async def accept_bootstrap(
+        self, base_url: str, platform_secret: str, secrets_: PairingSecrets
+    ) -> PairingAccepted:
+        """Первое сопряжение без кода: вместо кода — доказательство владения секретом платформы."""
+        body = secrets_.body_bytes()
+        proof = pairing_proof.sign(platform_secret, body)
+        response = await self._send(
+            base_url, PAIRING_ACCEPT_PATH, {pairing_proof.HEADER: proof}, body
+        )
+        if response.status_code == 401 and _detail(response) in _PROOF_DETAILS:
+            raise ValidationFailedError(
+                f"erp bootstrap: {_detail(response)}",
+                reason=Reason.ERP_BOOTSTRAP_REJECTED,
+                field="code",
+            )
+        if response.status_code == 409 and _detail(response) == "BOOTSTRAP_CLOSED":
+            raise ValidationFailedError(
+                "erp bootstrap: window is closed", reason=Reason.ERP_BOOTSTRAP_CLOSED, field="code"
+            )
+        return self._parse_accepted(response)
+
     async def accept(self, base_url: str, code: str, secrets_: PairingSecrets) -> PairingAccepted:
         response = await self._post(base_url, PAIRING_ACCEPT_PATH, code, secrets_)
         if response.status_code == 401:
@@ -127,6 +161,9 @@ class HttpxErpPairingClient:
             raise ValidationFailedError(
                 f"erp pairing: {detail or 'code rejected'}", reason=reason, field="code"
             )
+        return self._parse_accepted(response)
+
+    def _parse_accepted(self, response: httpx.Response) -> PairingAccepted:
         self._ensure_ok(response)
         try:
             payload = _AcceptedPayload.model_validate_json(response.content)
@@ -154,6 +191,13 @@ class HttpxErpPairingClient:
     async def _post(
         self, base_url: str, path: str, bearer: str, secrets_: PairingSecrets
     ) -> httpx.Response:
+        return await self._send(
+            base_url, path, {"Authorization": f"Bearer {bearer}"}, secrets_.body_bytes()
+        )
+
+    async def _send(
+        self, base_url: str, path: str, auth_headers: dict[str, str], content: bytes
+    ) -> httpx.Response:
         problem = base_url_problem(base_url)
         if problem is not None:
             raise ValidationFailedError(
@@ -162,14 +206,14 @@ class HttpxErpPairingClient:
                 field="base_url",
             )
         headers = {
-            "Authorization": f"Bearer {bearer}",
+            **auth_headers,
             "Accept": "application/json",
             "Content-Type": "application/json",
         }
         try:
             async with httpx.AsyncClient(timeout=self._timeout_s) as client:
                 return await client.post(
-                    base_url.rstrip("/") + path, json=secrets_.body(), headers=headers
+                    base_url.rstrip("/") + path, content=content, headers=headers
                 )
         except (httpx.ConnectError, httpx.ConnectTimeout) as exc:
             # Соединения не было: запрос до ERP не дошёл — исход однозначный.

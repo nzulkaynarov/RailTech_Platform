@@ -18,7 +18,12 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.config import Settings
 from app.domain.backoffice import BackofficeMode, backoffice_mode
-from app.domain.erp_connector import base_url_problem, is_insecure, normalize_base_url
+from app.domain.erp_connector import (
+    DEFAULT_INTERNAL_ERP_URL,
+    base_url_problem,
+    normalize_base_url,
+    requires_https,
+)
 from app.domain.errors import ConflictError, Reason, UpstreamUnavailableError, ValidationFailedError
 from app.domain.system_status import ErpFacts
 from app.integrations.erp import (
@@ -87,6 +92,9 @@ class ErpStatus:
     previous_secret_until: datetime | None = None
     # «Обновить ключи» не доведено до ответа ERP (обрыв связи): повтор отправит ту же тройку.
     rotation_pending: bool = False
+    # «Подключить ERP» одной кнопкой: внутренний адрес; без кода — при общем секрете.
+    suggested_base_url: str = DEFAULT_INTERNAL_ERP_URL
+    bootstrap_available: bool = False
 
 
 @dataclass(frozen=True, slots=True)
@@ -161,6 +169,7 @@ class ErpConnectorService:
             inbound_token_last4=inbound.last4 if inbound else None,
             paired=paired,
             rotation_pending=pending is not None,
+            bootstrap_available=bool(self._config.platform_sso_secrets),
             previous_secret_until=until
             if resolved.webhook_secret_previous_source == "db"  # noqa: S105 — источник, не секрет
             else None,
@@ -209,7 +218,7 @@ class ErpConnectorService:
                 reason=Reason.ERP_INVALID_URL,
                 field="base_url",
             )
-        if url and self._config.app_env == "prod" and is_insecure(url):
+        if url and self._config.app_env == "prod" and requires_https(url):
             raise ValidationFailedError(
                 "erp base url must be https in production",
                 reason=Reason.ERP_HTTPS_REQUIRED,

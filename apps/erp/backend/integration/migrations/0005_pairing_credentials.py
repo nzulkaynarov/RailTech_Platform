@@ -14,6 +14,17 @@ class Migration(migrations.Migration):
 
     operations = [
         migrations.CreateModel(
+            name='PairingState',
+            fields=[
+                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
+                ('bootstrap_used_at', models.DateTimeField(blank=True, null=True, verbose_name='Первое сопряжение состоялось')),
+            ],
+            options={
+                'verbose_name': 'Состояние сопряжения с CRM',
+                'verbose_name_plural': 'Состояние сопряжения с CRM',
+            },
+        ),
+        migrations.CreateModel(
             name='ServiceCredential',
             fields=[
                 ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),

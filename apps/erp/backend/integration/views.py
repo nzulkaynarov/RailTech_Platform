@@ -40,7 +40,7 @@ from .serializers import (
     ProvisionUserRequestSerializer,
     ProvisionUserResponseSerializer,
 )
-from .services import pairing
+from .services import bootstrap, pairing
 from .services.catalog import search_published_catalog
 from .services.handoff import process_client_handoff
 from .services.provision import provision_crm_user, revoke_crm_user_sessions
@@ -271,6 +271,21 @@ def _pairing_body(request):
     return serializer.validated_data
 
 
+def _audit_paired(request, method: str) -> None:
+    """Запись в журнал ERP: сопряжено (способ, адрес CRM, версия), без кода, доказательства и ключей (ADR-0009)."""
+    from core.audit import log_admin_action
+
+    log_admin_action(
+        entity_type="crm_pairing",
+        entity_id=0,
+        action="Сопряжено по bootstrap (без кода)" if method == "bootstrap" else "Сопряжено по коду из ERP",
+        detail=f"Способ: {method}",
+        actor=None,
+        after={"method": method, "remote_addr": request.META.get("REMOTE_ADDR", "")},
+        event_code="integration.paired_bootstrap" if method == "bootstrap" else "integration.paired_code",
+    )
+
+
 class PairingAcceptView(APIView):
     """POST /api/integration/v1/pairing/accept — аутентификация кодом сопряжения, а не сервисным токеном (M3-ERP-05)."""
 
@@ -282,6 +297,10 @@ class PairingAcceptView(APIView):
         return integration_exception_handler
 
     def post(self, request, *args, **kwargs):
+        raw_body = request.body  # до разбора: доказательство bootstrap покрывает хеш сырого тела
+        proof = request.headers.get("X-Pairing-Proof")
+        if proof is not None:
+            return self._bootstrap(request, proof, raw_body)
         header = request.headers.get("Authorization", "").strip().split()
         # Код могли вставить с пробелами (`ABCD EFGH JKMN`): всё после схемы — код, нормализует сервис.
         code = "".join(header[1:]) if len(header) >= 2 and header[0].lower() == "bearer" else ""
@@ -292,6 +311,22 @@ class PairingAcceptView(APIView):
             erp_to_crm_token=data["erp_to_crm_token"],
             webhook_secret=data["webhook_secret"],
         )
+        _audit_paired(request, "code")
+        body = PairingAcceptedSerializer(
+            {"paired": True, "paired_at": result.paired_at, "erp_version": getattr(settings, "ERP_VERSION", "0.1.0")}
+        ).data
+        return Response(data=body, status=status.HTTP_200_OK, headers={"Cache-Control": "no-store"})
+
+    def _bootstrap(self, request, proof, raw_body):
+        """Первое сопряжение без кода: доказательство владения общим секретом платформы (ADR-0009)."""
+        bootstrap.verify(proof, raw_body)
+        data = _pairing_body(request)
+        result = pairing.accept_bootstrap(
+            crm_to_erp_token=data["crm_to_erp_token"],
+            erp_to_crm_token=data["erp_to_crm_token"],
+            webhook_secret=data["webhook_secret"],
+        )
+        _audit_paired(request, "bootstrap")
         body = PairingAcceptedSerializer(
             {"paired": True, "paired_at": result.paired_at, "erp_version": getattr(settings, "ERP_VERSION", "0.1.0")}
         ).data

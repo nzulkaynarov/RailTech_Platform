@@ -6,7 +6,7 @@
  */
 
 /**
- * «Подключить ERP»: адрес ERP и одноразовый код из её настроек; пароль админа — как всегда.
+ * «Подключить ERP»: адрес ERP, код из её настроек (необязателен) и пароль админа.
  */
 export interface ErpPairIn {
   /**
@@ -14,11 +14,7 @@ export interface ErpPairIn {
    * @maxLength 500
    */
   base_url: string;
-  /**
-   * @minLength 1
-   * @maxLength 64
-   */
-  code: string;
+  code?: string | null;
   /**
    * @minLength 1
    * @maxLength 256

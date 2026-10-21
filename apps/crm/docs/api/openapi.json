@@ -2932,7 +2932,7 @@
       },
       "ErpPairIn": {
         "additionalProperties": false,
-        "description": "«Подключить ERP»: адрес ERP и одноразовый код из её настроек; пароль админа — как всегда.",
+        "description": "«Подключить ERP»: адрес ERP, код из её настроек (необязателен) и пароль админа.",
         "properties": {
           "base_url": {
             "maxLength": 500,
@@ -2941,12 +2941,18 @@
             "type": "string"
           },
           "code": {
-            "format": "password",
-            "maxLength": 64,
-            "minLength": 1,
-            "title": "Code",
-            "type": "string",
-            "writeOnly": true
+            "anyOf": [
+              {
+                "format": "password",
+                "maxLength": 64,
+                "type": "string",
+                "writeOnly": true
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Code"
           },
           "password": {
             "format": "password",
@@ -2959,7 +2965,6 @@
         },
         "required": [
           "base_url",
-          "code",
           "password"
         ],
         "title": "ErpPairIn",
@@ -3036,6 +3041,11 @@
             "title": "Base Url Source",
             "type": "string"
           },
+          "bootstrap_available": {
+            "default": false,
+            "title": "Bootstrap Available",
+            "type": "boolean"
+          },
           "configured": {
             "title": "Configured",
             "type": "boolean"
@@ -3089,6 +3099,11 @@
           "secrets_enabled": {
             "title": "Secrets Enabled",
             "type": "boolean"
+          },
+          "suggested_base_url": {
+            "default": "http://erp-backend:8000",
+            "title": "Suggested Base Url",
+            "type": "string"
           },
           "token_configured": {
             "title": "Token Configured",
@@ -6048,6 +6063,9 @@
           "erp_pairing_code_used",
           "erp_pairing_unsupported",
           "erp_https_required",
+          "erp_bootstrap_rejected",
+          "erp_bootstrap_closed",
+          "erp_bootstrap_unavailable",
           "smtp_not_configured",
           "smtp_invalid_host",
           "smtp_unavailable",

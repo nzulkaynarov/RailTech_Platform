@@ -32,7 +32,8 @@ function keyHint(last4: string | null | undefined): string {
  * сводка ключей (без значений) и «Обновить ключи» без простоя. Пароль админа — в окне подтверждения.
  */
 export function ErpPairing({ status, pairing, rotating, pairError, onPair, onRotate }: Props) {
-  const [baseUrl, setBaseUrl] = useState(status.base_url);
+  // Адрес подставлен внутренним адресом сервиса (compose): на свежем проде менять его не нужно.
+  const [baseUrl, setBaseUrl] = useState(status.base_url || status.suggested_base_url || "");
   const [code, setCode] = useState("");
   const [confirm, setConfirm] = useState<Confirm>(null);
   const [password, setPassword] = useState("");
@@ -71,7 +72,12 @@ export function ErpPairing({ status, pairing, rotating, pairError, onPair, onRot
           }}
         />
       </Form.Item>
-      <Form.Item label={P.code} htmlFor="erp-pair-code" extra={P.codeHint} {...fieldError("code")}>
+      <Form.Item
+        label={P.code}
+        htmlFor="erp-pair-code"
+        extra={status.bootstrap_available ? P.codeHint : P.codeRequired}
+        {...fieldError("code")}
+      >
         <Input
           id="erp-pair-code"
           autoComplete="off"
@@ -88,7 +94,11 @@ export function ErpPairing({ status, pairing, rotating, pairError, onPair, onRot
         type="primary"
         htmlType="submit"
         icon={<LinkOutlined aria-hidden />}
-        disabled={!status.secrets_enabled || !baseUrl.trim() || !code.trim()}
+        disabled={
+          !status.secrets_enabled ||
+          !baseUrl.trim() ||
+          (!code.trim() && !status.bootstrap_available)
+        }
       >
         {P.connect}
       </Button>
@@ -189,7 +199,7 @@ export function ErpPairing({ status, pairing, rotating, pairError, onPair, onRot
           if (confirm === "rotate") {
             onRotate({ password }, close);
           } else {
-            onPair({ base_url: baseUrl.trim(), code: code.trim(), password }, () => {
+            onPair({ base_url: baseUrl.trim(), code: code.trim() || null, password }, () => {
               close();
               setCode("");
             });

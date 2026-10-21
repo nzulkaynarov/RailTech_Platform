@@ -16,6 +16,7 @@ import type { ErpStatusOutWebhookSecretSource } from "./erpStatusOutWebhookSecre
 export interface ErpStatusOut {
   base_url: string;
   base_url_source: ErpStatusOutBaseUrlSource;
+  bootstrap_available?: boolean;
   configured: boolean;
   inbound_token_configured?: boolean;
   inbound_token_last4?: string | null;
@@ -24,6 +25,7 @@ export interface ErpStatusOut {
   previous_secret_until?: string | null;
   rotation_pending?: boolean;
   secrets_enabled: boolean;
+  suggested_base_url?: string;
   token_configured: boolean;
   token_last4: string | null;
   token_source: ErpStatusOutTokenSource;

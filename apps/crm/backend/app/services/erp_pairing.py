@@ -25,7 +25,7 @@ import structlog
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.config import Settings
-from app.domain.erp_connector import base_url_problem, is_insecure, normalize_base_url
+from app.domain.erp_connector import base_url_problem, normalize_base_url, requires_https
 from app.domain.errors import (
     ConflictError,
     DomainError,
@@ -87,8 +87,13 @@ class ErpPairingService:
     # ── Подключить ERP ──────────────────────────────────────────────────────────────────────────
 
     async def pair(
-        self, who: Principal, *, base_url: str, code: str, password: str
+        self, who: Principal, *, base_url: str, code: str | None, password: str
     ) -> PairingOutcome:
+        """«Подключить ERP» — только по кнопке админа (без автопопыток при старте и проверке связи).
+
+        С кодом из ERP — по коду; без кода — первое сопряжение по общему секрету платформы
+        (bootstrap, ADR-0009): ERP принимает его один раз за жизнь, дальше — только код.
+        """
         url = normalize_base_url(base_url)
         if (problem := base_url_problem(url)) is not None:
             raise ValidationFailedError(
@@ -96,35 +101,48 @@ class ErpPairingService:
                 reason=Reason.ERP_INVALID_URL,
                 field="base_url",
             )
-        if self._config.app_env == "prod" and is_insecure(url):
+        if self._config.app_env == "prod" and requires_https(url):
             raise ValidationFailedError(
                 "erp base url must be https in production",
                 reason=Reason.ERP_HTTPS_REQUIRED,
                 field="base_url",
             )
-        code = "".join(code.split())  # код вводят руками: пробелы по краям и внутри не в счёт
-        if not code:
+        code = "".join((code or "").split())  # код вводят руками: пробелы вокруг и внутри не в счёт
+        platform_secret = next(iter(self._config.platform_sso_secrets), "")
+        if not code and not platform_secret:
             raise ValidationFailedError(
-                "pairing code is empty", reason=Reason.ERP_PAIRING_CODE_INVALID, field="code"
+                "no pairing code and no shared platform secret",
+                reason=Reason.ERP_BOOTSTRAP_UNAVAILABLE,
+                field="code",
             )
         self._require_secrets_key()
         await self._connector.confirm_password(who.user_id, password)
         before = await self._connector.audit_facts()
 
         generated = PairingSecrets.generate()
-        await self._client.accept(url, code, generated)  # ошибка кода/сети — ничего не изменилось
+        # Ошибка кода, доказательства или сети — ничего не изменилось.
+        if code:
+            await self._client.accept(url, code, generated)
+        else:
+            await self._client.accept_bootstrap(url, platform_secret, generated)
+        method = "code" if code else "bootstrap"
 
         try:
-            await self._save_paired(who, url, generated, before)
+            await self._save_paired(who, url, generated, before, method)
         except Exception:
             # ERP приняла ключи, а у нас не сохранились: нужен новый код (значения не логируются).
             logger.error("erp_pairing_local_save_failed", user_id=who.user_id, exc_info=True)
             raise
-        logger.info("erp_paired", user_id=who.user_id)
+        logger.info("erp_paired", user_id=who.user_id, method=method)
         return await self._outcome()
 
     async def _save_paired(
-        self, who: Principal, url: str, secrets_: PairingSecrets, before: dict[str, object]
+        self,
+        who: Principal,
+        url: str,
+        secrets_: PairingSecrets,
+        before: dict[str, object],
+        method: str,
     ) -> None:
         """Адрес, ключи и аудит — одной транзакцией: либо всё, либо ничего."""
         payload = await self._settings_payload(erp_base_url=url, erp_previous_secret_until=None)
@@ -142,6 +160,7 @@ class ErpPairingService:
             after = {
                 **before,
                 "base_url": url,
+                "method": method,  # кто нажал — в `actor`; способ: по коду из ERP или bootstrap
                 f"{ERP_SERVICE_TOKEN}_last4": last4(secrets_.crm_to_erp_token),
                 f"{ERP_INBOUND_TOKEN}_last4": last4(secrets_.erp_to_crm_token),
                 f"{ERP_WEBHOOK_SECRET}_last4": last4(secrets_.webhook_secret),

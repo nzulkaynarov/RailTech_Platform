@@ -225,39 +225,74 @@ describe("ErpCard", () => {
       paired: true,
     };
 
-    it("offers the three steps, address and code; connect is disabled until both are filled", () => {
-      renderCard(notConfigured);
-      expect(screen.getByText(/Настройки → Интеграция с CRM/)).toBeInTheDocument();
+    it("pre-fills the internal ERP address and connects with one button, no code needed", async () => {
+      const { onPair } = renderCard({
+        ...notConfigured,
+        suggested_base_url: "http://erp-backend:8000",
+        bootstrap_available: true,
+      });
+      expect(screen.getByText(/адрес сервиса внутри сети/)).toBeInTheDocument();
+      expect(screen.getByLabelText("Адрес ERP", { selector: "#erp-pair-base-url" })).toHaveValue(
+        "http://erp-backend:8000",
+      );
       const connect = screen.getByRole("button", { name: "Подключить ERP" });
-      expect(connect).toBeDisabled();
-      fireEvent.change(screen.getByLabelText("Адрес ERP", { selector: "#erp-pair-base-url" }), {
-        target: { value: "https://erp.example.com" },
-      });
-      expect(connect).toBeDisabled();
-      fireEvent.change(screen.getByLabelText("Код сопряжения"), {
-        target: { value: "ABCD-EFGH-JKMN" },
-      });
       expect(connect).toBeEnabled();
+      fireEvent.click(connect);
+      const dialog = await screen.findByRole("dialog");
+      fireEvent.change(within(dialog).getByLabelText("Ваш пароль"), { target: { value: "pw" } });
+      fireEvent.click(within(dialog).getByRole("button", { name: "Сохранить" }));
+      expect(onPair.mock.calls[0]?.[0]).toEqual({
+        base_url: "http://erp-backend:8000",
+        code: null,
+        password: "pw",
+      });
     });
 
-    it("asks for the password and sends address, code and password — no keys are typed", async () => {
-      const { onPair } = renderCard(notConfigured);
+    it("sends the code when it is typed (external ERP, no shared secret, or already paired once)", async () => {
+      const { onPair } = renderCard({
+        ...notConfigured,
+        suggested_base_url: "http://erp-backend:8000",
+        bootstrap_available: true,
+      });
       fireEvent.change(screen.getByLabelText("Адрес ERP", { selector: "#erp-pair-base-url" }), {
         target: { value: " https://erp.example.com " },
       });
-      fireEvent.change(screen.getByLabelText("Код сопряжения"), {
+      fireEvent.change(screen.getByLabelText("Код сопряжения (необязательно)"), {
         target: { value: " ABCD-EFGH-JKMN " },
       });
       fireEvent.click(screen.getByRole("button", { name: "Подключить ERP" }));
       const dialog = await screen.findByRole("dialog");
       fireEvent.change(within(dialog).getByLabelText("Ваш пароль"), { target: { value: "pw" } });
       fireEvent.click(within(dialog).getByRole("button", { name: "Сохранить" }));
-      expect(onPair).toHaveBeenCalledTimes(1);
       expect(onPair.mock.calls[0]?.[0]).toEqual({
         base_url: "https://erp.example.com",
         code: "ABCD-EFGH-JKMN",
         password: "pw",
       });
+    });
+
+    it("without the shared platform secret the code is required and the hint says so", () => {
+      renderCard({
+        ...notConfigured,
+        suggested_base_url: "http://erp-backend:8000",
+        bootstrap_available: false,
+      });
+      expect(screen.getByText(/нет общего секрета платформы/)).toBeInTheDocument();
+      const connect = screen.getByRole("button", { name: "Подключить ERP" });
+      expect(connect).toBeDisabled();
+      fireEvent.change(screen.getByLabelText("Код сопряжения (необязательно)"), {
+        target: { value: "ABCD-EFGH-JKMN" },
+      });
+      expect(connect).toBeEnabled();
+    });
+
+    it("explains a closed bootstrap window at the code field", () => {
+      const error = new ApiError(422, "validation_failed", "closed", {
+        reason: "erp_bootstrap_closed",
+        field: "code",
+      });
+      renderCard(notConfigured, { pairError: error });
+      expect(screen.getByText(/подключение без кода закрыто навсегда/)).toBeInTheDocument();
     });
 
     it("points the code error at the code field with a human explanation", () => {
@@ -271,11 +306,12 @@ describe("ErpCard", () => {
     });
 
     it("blocks pairing without SECRETS_KEY", () => {
-      renderCard({ ...notConfigured, secrets_enabled: false });
-      fireEvent.change(screen.getByLabelText("Адрес ERP", { selector: "#erp-pair-base-url" }), {
-        target: { value: "https://erp.example.com" },
+      renderCard({
+        ...notConfigured,
+        secrets_enabled: false,
+        suggested_base_url: "http://erp-backend:8000",
+        bootstrap_available: true,
       });
-      fireEvent.change(screen.getByLabelText("Код сопряжения"), { target: { value: "ABCD" } });
       expect(screen.getByRole("button", { name: "Подключить ERP" })).toBeDisabled();
     });
 

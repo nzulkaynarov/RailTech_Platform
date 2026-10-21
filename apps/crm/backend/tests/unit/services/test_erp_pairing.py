@@ -9,6 +9,7 @@ ERP подменена respx. Проверяется: CRM сама генери�
 
 import json
 from datetime import UTC, datetime, timedelta
+from pathlib import Path
 from typing import Any
 
 import httpx
@@ -24,6 +25,7 @@ from app.integrations.erp_pairing import (
     HttpxErpPairingClient,
     PairingSecrets,
 )
+from app.security import pairing_proof
 from app.security.secrets_store import (
     ERP_INBOUND_TOKEN,
     ERP_PENDING_INBOUND_TOKEN,
@@ -666,3 +668,201 @@ def test_generated_secrets_fit_the_contract_and_hide_in_repr() -> None:
         assert all(c.isalnum() or c in "-_" for c in value)
         assert value not in repr(secrets_)
         assert value not in str(secrets_)
+
+
+# --- Первое сопряжение без кода (bootstrap, ADR-0009) ---------------------------------
+
+SSO = "unit-test-platform-sso-secret-0001"  # фиктивный общий секрет платформы
+
+
+def with_sso(**extra: Any) -> Settings:
+    return Settings(_env_file=None, platform_sso_secret=SSO, **extra)
+
+
+def contract_vector() -> dict[str, Any]:
+    for parent in Path(__file__).resolve().parents:
+        candidate = parent / "packages" / "contracts" / "examples" / "pairing-bootstrap.json"
+        if candidate.exists():
+            vector: dict[str, Any] = json.loads(candidate.read_text(encoding="utf-8"))
+            return vector
+    raise AssertionError("pairing-bootstrap.json не найден")
+
+
+def test_proof_matches_the_contract_test_vector() -> None:
+    vector = contract_vector()
+    assert vector["label"].encode() == pairing_proof.LABEL == b"rt-pairing-v1"
+    header = pairing_proof.sign(
+        vector["platform_sso_secret"],
+        vector["body"].encode(),
+        vector["timestamp"],
+        vector["jti"],
+    )
+    assert header == vector["header"]
+    assert pairing_proof.derive_key("x") != b"x", "ключ выводится HKDF, не сам секрет"
+
+
+@respx.mock
+async def test_pair_without_code_uses_bootstrap_proof_and_no_authorization(
+    audit_log: list[dict[str, Any]],  # noqa: F811
+) -> None:
+    accept = respx.post(ACCEPT).mock(return_value=httpx.Response(200, json=ACCEPTED))
+    respx.get(HEALTH).mock(return_value=httpx.Response(200, json=HEALTHY))
+    service, _, store, _ = make(config=with_sso())
+    with capture_logs() as logs:
+        outcome = await service.pair(ADMIN, base_url=BASE, code=None, password=PASSWORD)
+    request = accept.calls.last.request
+    assert "authorization" not in request.headers, "без кода ERP получает доказательство, не токен"
+    header = request.headers["x-pairing-proof"]
+    version, ts, jti, digest = header.split(".")
+    assert version == "v1"
+    assert abs(int(ts) - datetime.now(UTC).timestamp()) < 60
+    # Доказательство покрывает ровно отправленное тело (его хеш) и считается ключом HKDF.
+    assert header == pairing_proof.sign(SSO, request.content, int(ts), jti)
+    body = json.loads(request.content)
+    assert store.saved[ERP_SERVICE_TOKEN] == body["crm_to_erp_token"]
+    assert outcome.status.paired
+    assert outcome.check is not None
+    assert [r["after"]["method"] for r in audit_log if "after" in r and "method" in r["after"]] == [
+        "bootstrap"
+    ]
+    dump = json.dumps([logs, audit_log], default=str)
+    for secret in (SSO, header, jti, digest, *body.values()):
+        assert secret not in dump
+
+
+@respx.mock
+async def test_pair_with_code_ignores_bootstrap_even_if_the_secret_exists(
+    audit_log: list[dict[str, Any]],  # noqa: F811
+) -> None:
+    accept = respx.post(ACCEPT).mock(return_value=httpx.Response(200, json=ACCEPTED))
+    respx.get(HEALTH).mock(return_value=httpx.Response(200, json=HEALTHY))
+    service, _, _, _ = make(config=with_sso())
+    await service.pair(ADMIN, base_url=BASE, code=CODE, password=PASSWORD)
+    request = accept.calls.last.request
+    assert request.headers["authorization"] == f"Bearer {CODE}"
+    assert "x-pairing-proof" not in request.headers
+    assert [r["after"]["method"] for r in audit_log if "after" in r and "method" in r["after"]] == [
+        "code"
+    ]
+
+
+@pytest.mark.parametrize(
+    "detail", ["PAIRING_PROOF_INVALID", "PAIRING_PROOF_EXPIRED", "PAIRING_PROOF_REPLAYED"]
+)
+@respx.mock
+async def test_bootstrap_rejected_proof_is_explained_and_changes_nothing(detail: str) -> None:
+    respx.post(ACCEPT).mock(return_value=httpx.Response(401, json={"detail": detail}))
+    service, _, store, settings = make(config=with_sso())
+    with pytest.raises(ValidationFailedError) as caught:
+        await service.pair(ADMIN, base_url=BASE, code=None, password=PASSWORD)
+    assert caught.value.details == {"reason": Reason.ERP_BOOTSTRAP_REJECTED.value, "field": "code"}
+    assert store.saved == {}
+    assert settings.updates == []
+
+
+@respx.mock
+async def test_bootstrap_closed_window_asks_for_a_code() -> None:
+    respx.post(ACCEPT).mock(return_value=httpx.Response(409, json={"detail": "BOOTSTRAP_CLOSED"}))
+    service, _, store, _ = make(config=with_sso())
+    with pytest.raises(ValidationFailedError) as caught:
+        await service.pair(ADMIN, base_url=BASE, code=None, password=PASSWORD)
+    assert caught.value.details == {"reason": Reason.ERP_BOOTSTRAP_CLOSED.value, "field": "code"}
+    assert store.saved == {}
+
+
+@respx.mock
+async def test_no_code_and_no_shared_secret_is_explained_without_calling_erp() -> None:
+    route = respx.post(ACCEPT).mock(return_value=httpx.Response(200, json=ACCEPTED))
+    service, _, _, _ = make()  # платформенного секрета нет
+    with pytest.raises(ValidationFailedError) as caught:
+        await service.pair(ADMIN, base_url=BASE, code="  ", password=PASSWORD)
+    assert caught.value.details == {
+        "reason": Reason.ERP_BOOTSTRAP_UNAVAILABLE.value,
+        "field": "code",
+    }
+    assert not route.called
+
+
+@respx.mock
+async def test_bootstrap_on_an_old_erp_is_unsupported_and_5xx_is_ambiguous() -> None:
+    route = respx.post(ACCEPT).mock(return_value=httpx.Response(404))
+    service, _, _, _ = make(config=with_sso())
+    with pytest.raises(UpstreamUnavailableError) as caught:
+        await service.pair(ADMIN, base_url=BASE, code=None, password=PASSWORD)
+    assert caught.value.details["reason"] == Reason.ERP_PAIRING_UNSUPPORTED.value
+    route.mock(return_value=httpx.Response(503))
+    with pytest.raises(AmbiguousOutcomeError):
+        await service.pair(ADMIN, base_url=BASE, code=None, password=PASSWORD)
+
+
+@respx.mock
+async def test_bootstrap_never_runs_by_itself() -> None:
+    """Только по кнопке: проверка связи и состояние вызовов сопряжения не делают."""
+    route = respx.post(ACCEPT).mock(return_value=httpx.Response(200, json=ACCEPTED))
+    respx.get(HEALTH).mock(return_value=httpx.Response(401))
+    _, connector, _, _ = make(paired_store(), FakeSettings(BASE), config=with_sso())
+    await connector.status()
+    await connector.health_facts()
+    with pytest.raises(UpstreamUnavailableError):
+        await connector.check()
+    assert not route.called
+
+
+async def test_status_suggests_the_internal_address_and_tells_if_bootstrap_is_available() -> None:
+    _, connector, _, _ = make(config=with_sso())
+    status = await connector.status()
+    assert status.suggested_base_url == "http://erp-backend:8000"
+    assert status.bootstrap_available
+    _, plain, _, _ = make()
+    assert not (await plain.status()).bootstrap_available
+
+
+# --- http допустим только внутри сети; внешний адрес — https ----------------------------
+
+
+@pytest.mark.parametrize(
+    ("url", "allowed"),
+    [
+        ("http://erp-backend:8000", True),
+        ("http://localhost:8000", True),
+        ("http://10.0.0.3:8000", True),
+        ("http://172.20.1.5", True),
+        ("http://192.168.1.10:8000", True),
+        ("http://127.0.0.1:8000", True),
+        ("https://erp.railtech.uz", True),
+        ("https://93.184.216.34", True),
+        ("http://erp.railtech.uz", False),
+        ("http://93.184.216.34:8000", False),
+        ("http://8.8.8.8", False),
+        ("http://erp.internal.example", False),
+    ],
+)
+def test_requires_https_only_for_public_hosts(url: str, allowed: bool) -> None:
+    from app.domain.erp_connector import requires_https
+
+    assert requires_https(url) is (not allowed)
+
+
+@pytest.mark.parametrize("url", ["http://erp.railtech.uz", "http://93.184.216.34:8000"])
+async def test_prod_rejects_http_to_a_public_address_for_code_and_bootstrap(url: str) -> None:
+    service, _connector, store, _ = make(config=with_sso(app_env="prod"))
+    for code in (CODE, None):
+        with pytest.raises(ValidationFailedError) as caught:
+            await service.pair(ADMIN, base_url=url, code=code, password=PASSWORD)
+        assert caught.value.details["reason"] == Reason.ERP_HTTPS_REQUIRED.value
+    assert store.saved == {}
+
+
+@pytest.mark.parametrize("url", ["http://erp-backend:8000", "http://10.0.0.3:8000"])
+@respx.mock
+async def test_prod_allows_http_inside_the_network(url: str) -> None:
+    respx.post(url + "/api/integration/v1/pairing/accept").mock(
+        return_value=httpx.Response(200, json=ACCEPTED)
+    )
+    respx.get(url + "/api/integration/v1/health").mock(
+        return_value=httpx.Response(200, json=HEALTHY)
+    )
+    service, _, _store, settings = make(config=with_sso(app_env="prod"))
+    outcome = await service.pair(ADMIN, base_url=url, code=None, password=PASSWORD)
+    assert outcome.status.paired
+    assert settings.base_url == url

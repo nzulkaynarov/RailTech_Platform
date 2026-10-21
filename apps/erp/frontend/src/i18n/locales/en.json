@@ -3058,6 +3058,14 @@
       "pairing_code_issued": {
         "title": "CRM pairing code issued",
         "detail": "One-time code to connect CRM; the code itself is never logged"
+      },
+      "paired_bootstrap": {
+        "title": "CRM paired without a code (bootstrap)",
+        "detail": "First pairing by proof of the shared platform secret; keys and the proof are never logged"
+      },
+      "paired_code": {
+        "title": "CRM paired with an ERP code",
+        "detail": "Pairing by a one-time code; the code itself is never logged"
       }
     }
   },

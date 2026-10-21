@@ -417,7 +417,7 @@ def test_superuser_issues_a_code_that_pairs_and_the_audit_has_no_code(admin_api)
 
     from crm.models import ActivityLog
 
-    entry = ActivityLog.objects.get(entity_type="crm_pairing")
+    entry = ActivityLog.objects.get(entity_type="crm_pairing", event_code="integration.pairing_code_issued")
     assert entry.user == user
     assert data["code"] not in f"{entry.action} {entry.detail} {entry.before_data} {entry.after_data}"
 
