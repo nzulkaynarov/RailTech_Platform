@@ -110,6 +110,7 @@ const TEXT_GROUPS: Record<string, string[]> = {
   ],
   erp: [
     "erp_quote_sent",
+    "erp_quote_acceptance_code",
     "erp_invoice_issued",
     "erp_invoice_paid",
     "erp_delivery_status",

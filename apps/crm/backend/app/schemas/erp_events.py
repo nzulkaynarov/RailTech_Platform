@@ -1,6 +1,6 @@
 """Схемы событий ERP → CRM (M3-CRM-04, CONTRACTS §3, packages/contracts/events.schema.json; FIX-35).
 
-Конверт разбирается ДИСКРИМИНИРОВАННЫМИ моделями по `event`: у каждого из 21 типа события свой
+Конверт разбирается ДИСКРИМИНИРОВАННЫМИ моделями по `event`: у каждого из 22 типов события свой
 класс конверта с типизированным `payload` (`parse_event`). Читатель терпимый: лишние поля в
 конверте и в телах игнорируются (`extra="ignore"`) — новое необязательное поле ERP не должно
 давать отказ и ретраи; обязательные поля, типы и перечисления — как в схеме. Неизвестный тип
@@ -8,10 +8,20 @@
 и отвечает 200.
 """
 
+import re
 from datetime import date, datetime
-from typing import Annotated, Literal, Union, get_args
+from typing import Annotated, Any, Literal, Union, get_args
 
-from pydantic import BaseModel, ConfigDict, Field, StringConstraints, TypeAdapter, model_validator
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    SecretStr,
+    StringConstraints,
+    TypeAdapter,
+    field_validator,
+    model_validator,
+)
 
 EventType = Literal[
     "request.created",
@@ -20,6 +30,7 @@ EventType = Literal[
     "quote.viewed",
     "quote.accepted",
     "quote.rejected",
+    "quote.acceptance_code_requested",
     "contract.signed",
     "invoice.issued",
     "invoice.paid",
@@ -103,6 +114,34 @@ class QuoteOutcome(_Tolerant):
     erp_quote_id: int
     version: int = Field(ge=1)
     reason: str | None = None
+    # Кто из контактов принял или отклонил КП (Q-FIX22-6); нет — действие не из Cabinet.
+    erp_contact_id: int | None = None
+    crm_contact_id: int | None = None
+
+
+#: Событие с одноразовым кодом в теле: код — секрет, в журнал, ленту и логи не попадает (Q-FIX22-1).
+CODE_EVENT = "quote.acceptance_code_requested"
+_CODE_PATTERN = re.compile(r"^[0-9]{4,12}$")
+REDACTED = "[redacted]"
+
+
+class QuoteAcceptanceCodeRequested(_Tolerant):
+    """Клиент запросил код акцепта в Cabinet: код доставляет бот CRM контакту в Telegram."""
+
+    erp_quote_id: int
+    version: int = Field(ge=1)
+    erp_contact_id: int
+    crm_contact_id: int
+    # `SecretStr`: ни `repr`, ни `model_dump` не покажут код; читает его только доставка.
+    code: SecretStr
+    expires_at: datetime
+
+    @field_validator("code")
+    @classmethod
+    def _code_is_digits(cls, value: SecretStr) -> SecretStr:
+        if not _CODE_PATTERN.fullmatch(value.get_secret_value()):
+            raise ValueError("code must be 4-12 digits")
+        return value
 
 
 class ContractSigned(_Tolerant):
@@ -221,6 +260,12 @@ class QuoteOutcomeEvent(ErpEventEnvelope):
     payload: QuoteOutcome
 
 
+class QuoteAcceptanceCodeRequestedEvent(ErpEventEnvelope):
+    event: Literal["quote.acceptance_code_requested"]
+    deal: DealRef
+    payload: QuoteAcceptanceCodeRequested
+
+
 class ContractSignedEvent(ErpEventEnvelope):
     event: Literal["contract.signed"]
     deal: DealRef
@@ -285,6 +330,7 @@ ErpEvent = Annotated[
         DealStageChangedEvent,
         QuoteSentEvent,
         QuoteOutcomeEvent,
+        QuoteAcceptanceCodeRequestedEvent,
         ContractSignedEvent,
         InvoiceEnvelope,
         DeliveryEnvelope,
@@ -301,6 +347,20 @@ _EVENT_ADAPTER: TypeAdapter[ErpEvent] = TypeAdapter(ErpEvent)
 
 #: Типы событий, которые CRM умеет разбирать (= `EventType`; тест сверяет с events.schema.json).
 KNOWN_EVENTS: frozenset[str] = frozenset(get_args(EventType))
+
+
+def redact_secrets(data: dict[str, Any], event_type: str | None = None) -> dict[str, Any]:
+    """Копия тела события без секретов: `payload.code` кода акцепта заменён на `[redacted]`.
+
+    Событие с кодом — по `event` в теле или по заголовку `X-Event-Type` (`event_type`): тело с
+    расхождением типа тоже не должно унести код в журнал. Только для журнала: разбор и доставка
+    работают с исходным телом. Остальные события — без изменений (то же тело).
+    """
+    payload = data.get("payload")
+    secret = CODE_EVENT in (data.get("event"), event_type)
+    if not secret or not isinstance(payload, dict) or "code" not in payload:
+        return data
+    return {**data, "payload": {**payload, "code": REDACTED}}
 
 
 def is_known_event(name: object) -> bool:

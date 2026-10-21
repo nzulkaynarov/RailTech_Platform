@@ -54,6 +54,30 @@ def _s(value: object) -> str:
     return "" if value is None else str(value)
 
 
+def acceptance_code_message(
+    *,
+    code: str,
+    minutes: int,
+    deal_title: str,
+    texts: TextsSettings,
+    language: Language,
+) -> BotMessage:
+    """Код акцепта КП контакту (шов 0.3.0, Q-FIX22-1): текст из `settings.texts`, без кнопок.
+
+    Код подставляется только здесь, в момент отправки; в `BotMessage` он живёт до `send_message`
+    и нигде не сохраняется (ни в журнале событий, ни в `outbox`).
+    """
+    text = _text(
+        texts,
+        "erp_quote_acceptance_code",
+        language,
+        deal=deal_title,
+        code=code,
+        minutes=str(minutes),
+    )
+    return BotMessage(text)
+
+
 def client_message(
     event: str,
     payload: Mapping[str, Any],

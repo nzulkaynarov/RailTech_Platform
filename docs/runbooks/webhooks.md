@@ -25,6 +25,7 @@
 * Сбой постановки в очередь не теряет событие: строка `received`, сборщик (раз в минуту) ставит её заново.
 * Сообщения в Telegram уходят после коммита и не больше одного раза на событие (`erp_incoming_events.notified_at`).
 * События применяются по `occurred_at`: более старое после нового зеркало сделки не откатывает.
+* Код акцепта КП (`quote.acceptance_code_requested`, FIX-60): `payload.code` — секрет. CRM шлёт его контакту в Telegram из памяти запроса и записывает строку журнала сразу `processed` с `"code": "[redacted]"`; через очередь и `outbox` код не идёт, в ленту и логи не попадает. Не доставлено — строка `failed`/`skipped` с причиной (`contact has no telegram`, `bot is not running`, `company mismatch`, `Contact #… not found`, `code already expired`, `telegram: <класс ошибки>`); ретраев нет, клиент запрашивает новый код в кабинете.
 
 ## Что знать эксплуатации
 
