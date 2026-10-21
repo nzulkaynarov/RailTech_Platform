@@ -4958,12 +4958,14 @@ export const getPairErpUrl = () => {
 /**
  * «Подключить ERP»: адрес ERP и одноразовый код из её настроек (M3-CRM-10, CONTRACTS §2).
  *
- * CRM сама генерирует токены обоих направлений и секрет вебхуков, передаёт их ERP по коду, сохраняет
- * зашифрованными и сразу делает «Проверить связь» (результат — в ответе). Пароль админа обязателен.
+ * CRM сама генерирует токены обоих направлений и секрет вебхуков, передаёт их ERP по коду,
+ * сохраняет зашифрованными и сразу делает «Проверить связь» (результат — в ответе). Пароль
+ * админа обязателен.
  *
- * Ошибки (`details.reason`): `erp_invalid_url` (422, поле `base_url`), `erp_pairing_code_invalid` /
- * `erp_pairing_code_expired` / `erp_pairing_code_used` (422, поле `code`), `wrong_password` (422),
- * `secrets_key_missing` (409), `erp_unavailable` / `erp_bad_response` / `erp_pairing_unsupported` (502).
+ * Ошибки (`details.reason`): `erp_invalid_url` (422, поле `base_url`),
+ * `erp_pairing_code_invalid` / `erp_pairing_code_expired` / `erp_pairing_code_used` (422, поле
+ * `code`), `wrong_password` (422), `secrets_key_missing` (409), `erp_unavailable` /
+ * `erp_bad_response` / `erp_pairing_unsupported` (502).
  * @summary Pair Erp
  */
 export const pairErp = async (
@@ -5068,10 +5070,11 @@ export const getRotateErpKeysUrl = () => {
 };
 
 /**
- * «Обновить ключи»: CRM генерирует новую тройку секретов, ERP принимает её по действующему токену.
+ * «Обновить ключи»: CRM генерирует новую тройку секретов, ERP принимает её по токену.
  *
- * Прежний токен CRM→ERP остаётся у ERP активным на переходный период (два активных), затем гаснет сам;
- * предыдущий секрет вебхуков CRM принимает наравне с новым и снимает по истечении срока перехода.
+ * Прежний токен CRM→ERP остаётся у ERP активным на переходный период (два активных), затем
+ * гаснет сам; предыдущий секрет вебхуков CRM принимает наравне с новым и снимает по истечении
+ * срока перехода.
  *
  * Ошибки: `erp_not_configured` (409), `secrets_key_missing` (409), `wrong_password` (422),
  * `erp_unauthorized` / `erp_unavailable` / `erp_bad_response` (502).

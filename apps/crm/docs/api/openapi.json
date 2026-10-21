@@ -2932,7 +2932,7 @@
       },
       "ErpPairIn": {
         "additionalProperties": false,
-        "description": "«Подключить ERP»: адрес ERP и одноразовый код сопряжения из её настроек; пароль админа — как при сохранении.",
+        "description": "«Подключить ERP»: адрес ERP и одноразовый код из её настроек; пароль админа — как всегда.",
         "properties": {
           "base_url": {
             "maxLength": 500,
@@ -2966,7 +2966,7 @@
         "type": "object"
       },
       "ErpPairingOut": {
-        "description": "Итог сопряжения или ротации: состояние коннектора и результат «Проверить связь», сделанной сразу после.\n\nСопряжение удалось, даже если проверка не прошла: тогда `check` пуст, а `check_error` — подкод причины\n(`erp_unauthorized`, `erp_unavailable`, …) для понятной подсказки.",
+        "description": "Итог сопряжения или ротации: состояние коннектора и «Проверить связь», сделанная сразу после.\n\nСопряжение удалось, даже если проверка не прошла: тогда `check` пуст, а `check_error` — подкод\nпричины (`erp_unauthorized`, `erp_unavailable`, …) для понятной подсказки.",
         "properties": {
           "check": {
             "anyOf": [
@@ -10694,7 +10694,7 @@
     },
     "/api/v1/integrations/erp/pair": {
       "post": {
-        "description": "«Подключить ERP»: адрес ERP и одноразовый код из её настроек (M3-CRM-10, CONTRACTS §2).\n\nCRM сама генерирует токены обоих направлений и секрет вебхуков, передаёт их ERP по коду, сохраняет\nзашифрованными и сразу делает «Проверить связь» (результат — в ответе). Пароль админа обязателен.\n\nОшибки (`details.reason`): `erp_invalid_url` (422, поле `base_url`), `erp_pairing_code_invalid` /\n`erp_pairing_code_expired` / `erp_pairing_code_used` (422, поле `code`), `wrong_password` (422),\n`secrets_key_missing` (409), `erp_unavailable` / `erp_bad_response` / `erp_pairing_unsupported` (502).",
+        "description": "«Подключить ERP»: адрес ERP и одноразовый код из её настроек (M3-CRM-10, CONTRACTS §2).\n\nCRM сама генерирует токены обоих направлений и секрет вебхуков, передаёт их ERP по коду,\nсохраняет зашифрованными и сразу делает «Проверить связь» (результат — в ответе). Пароль\nадмина обязателен.\n\nОшибки (`details.reason`): `erp_invalid_url` (422, поле `base_url`),\n`erp_pairing_code_invalid` / `erp_pairing_code_expired` / `erp_pairing_code_used` (422, поле\n`code`), `wrong_password` (422), `secrets_key_missing` (409), `erp_unavailable` /\n`erp_bad_response` / `erp_pairing_unsupported` (502).",
         "operationId": "pair_erp",
         "requestBody": {
           "content": {
@@ -10741,7 +10741,7 @@
     },
     "/api/v1/integrations/erp/rotate": {
       "post": {
-        "description": "«Обновить ключи»: CRM генерирует новую тройку секретов, ERP принимает её по действующему токену.\n\nПрежний токен CRM→ERP остаётся у ERP активным на переходный период (два активных), затем гаснет сам;\nпредыдущий секрет вебхуков CRM принимает наравне с новым и снимает по истечении срока перехода.\n\nОшибки: `erp_not_configured` (409), `secrets_key_missing` (409), `wrong_password` (422),\n`erp_unauthorized` / `erp_unavailable` / `erp_bad_response` (502).",
+        "description": "«Обновить ключи»: CRM генерирует новую тройку секретов, ERP принимает её по токену.\n\nПрежний токен CRM→ERP остаётся у ERP активным на переходный период (два активных), затем\nгаснет сам; предыдущий секрет вебхуков CRM принимает наравне с новым и снимает по истечении\nсрока перехода.\n\nОшибки: `erp_not_configured` (409), `secrets_key_missing` (409), `wrong_password` (422),\n`erp_unauthorized` / `erp_unavailable` / `erp_bad_response` (502).",
         "operationId": "rotate_erp_keys",
         "requestBody": {
           "content": {

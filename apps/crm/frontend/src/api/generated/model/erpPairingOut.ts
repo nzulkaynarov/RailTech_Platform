@@ -8,10 +8,10 @@ import type { ErpCheckOut } from "./erpCheckOut";
 import type { ErpStatusOut } from "./erpStatusOut";
 
 /**
- * Итог сопряжения или ротации: состояние коннектора и результат «Проверить связь», сделанной сразу после.
+ * Итог сопряжения или ротации: состояние коннектора и «Проверить связь», сделанная сразу после.
  *
- * Сопряжение удалось, даже если проверка не прошла: тогда `check` пуст, а `check_error` — подкод причины
- * (`erp_unauthorized`, `erp_unavailable`, …) для понятной подсказки.
+ * Сопряжение удалось, даже если проверка не прошла: тогда `check` пуст, а `check_error` — подкод
+ * причины (`erp_unauthorized`, `erp_unavailable`, …) для понятной подсказки.
  */
 export interface ErpPairingOut {
   check: ErpCheckOut | null;
