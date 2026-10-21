@@ -85,8 +85,16 @@ def make(
     return service, connector, store, settings
 
 
+def stored(**values: str) -> FakeStore:
+    """Хранилище с готовыми секретами (ключи — константы `secrets_store`, не имена параметров)."""
+    store = FakeStore()
+    store.saved.update(values)
+    return store
+
+
 def sent_body(route: respx.Route) -> dict[str, str]:
-    return json.loads(route.calls.last.request.content)
+    body: dict[str, str] = json.loads(route.calls.last.request.content)
+    return body
 
 
 # --- Подключить ERP -------------------------------------------------------------------
@@ -141,7 +149,7 @@ async def test_pair_generates_secrets_sends_them_under_the_code_and_checks_the_l
 async def test_pair_clears_previous_webhook_secret_and_keeps_other_settings() -> None:
     respx.post(ACCEPT).mock(return_value=httpx.Response(200, json=ACCEPTED))
     respx.get(HEALTH).mock(return_value=httpx.Response(200, json=HEALTHY))
-    store = FakeStore(**{ERP_WEBHOOK_SECRET_PREVIOUS: OLD_HOOK})
+    store = stored(**{ERP_WEBHOOK_SECRET_PREVIOUS: OLD_HOOK})
     service, _, store, settings = make(store)
     await service.pair(ADMIN, base_url=BASE, code=CODE, password=PASSWORD)
     assert ERP_WEBHOOK_SECRET_PREVIOUS not in store.saved
@@ -172,7 +180,7 @@ async def test_pair_succeeds_even_if_the_link_check_fails() -> None:
 @respx.mock
 async def test_pair_rejected_code_changes_nothing(detail: str, reason: Reason) -> None:
     respx.post(ACCEPT).mock(return_value=httpx.Response(401, json={"detail": detail}))
-    store = FakeStore(**{ERP_SERVICE_TOKEN: OLD_TOKEN})
+    store = stored(**{ERP_SERVICE_TOKEN: OLD_TOKEN})
     service, _, store, settings = make(store)
     with pytest.raises(ValidationFailedError) as caught:
         await service.pair(ADMIN, base_url=BASE, code=CODE, password=PASSWORD)
@@ -254,7 +262,7 @@ async def test_pair_normalizes_base_url_with_integration_prefix() -> None:
 
 
 def paired_store() -> FakeStore:
-    return FakeStore(
+    return stored(
         **{
             ERP_SERVICE_TOKEN: OLD_TOKEN,
             ERP_INBOUND_TOKEN: "old-erp-to-crm-token-for-unit-tests-Aa11",
@@ -343,23 +351,24 @@ async def test_rotate_failure_rolls_back_and_keeps_old_keys(
 @respx.mock
 async def test_rotate_failure_with_env_webhook_secret_removes_db_rows() -> None:
     respx.post(ROTATE).mock(return_value=httpx.Response(500))
-    config = Settings(_env_file=None, erp_webhook_secret="env-webhook-secret-unit-test-0001")  # type: ignore[arg-type]
-    store = FakeStore(**{ERP_SERVICE_TOKEN: OLD_TOKEN})
+    config = Settings(_env_file=None, erp_webhook_secret="env-webhook-secret-unit-test-0001")
+    store = stored(**{ERP_SERVICE_TOKEN: OLD_TOKEN})
     settings = FakeSettings(BASE)
+    sessions = fake_sessions()
     connector = connector_svc.ErpConnectorService(
-        fake_sessions(),
-        settings,
+        sessions,
+        settings,  # type: ignore[arg-type]
         store,
         config,
-        HttpxErpProbe(timeout_s=0.2),  # type: ignore[arg-type]
+        HttpxErpProbe(timeout_s=0.2),
     )
     service = ErpPairingService(
-        fake_sessions(),
-        settings,
+        sessions,
+        settings,  # type: ignore[arg-type]
         store,
         config,
         HttpxErpPairingClient(0.2),
-        connector,  # type: ignore[arg-type]
+        connector,
     )
     with pytest.raises(UpstreamUnavailableError):
         await service.rotate(ADMIN, password=PASSWORD)

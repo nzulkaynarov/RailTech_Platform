@@ -41,6 +41,11 @@ export function ErpPairing({ status, pairing, rotating, pairError, onPair, onRot
     setPassword("");
   };
   const errorField = apiErrorField(pairError);
+  /** Ошибка сопряжения у своего поля: подсветка и понятный текст (ADR-0017, `details.field`). */
+  const fieldError = (field: string) =>
+    errorField === field
+      ? { validateStatus: "error" as const, help: apiErrorMessage(pairError) }
+      : {};
   const pairForm = (
     <Form
       layout="vertical"
@@ -52,8 +57,7 @@ export function ErpPairing({ status, pairing, rotating, pairError, onPair, onRot
         label={E.baseUrl}
         htmlFor="erp-pair-base-url"
         extra={E.baseUrlHint}
-        validateStatus={errorField === "base_url" ? "error" : undefined}
-        help={errorField === "base_url" ? apiErrorMessage(pairError) : undefined}
+        {...fieldError("base_url")}
       >
         <Input
           id="erp-pair-base-url"
@@ -67,13 +71,7 @@ export function ErpPairing({ status, pairing, rotating, pairError, onPair, onRot
           }}
         />
       </Form.Item>
-      <Form.Item
-        label={P.code}
-        htmlFor="erp-pair-code"
-        extra={P.codeHint}
-        validateStatus={errorField === "code" ? "error" : undefined}
-        help={errorField === "code" ? apiErrorMessage(pairError) : undefined}
-      >
+      <Form.Item label={P.code} htmlFor="erp-pair-code" extra={P.codeHint} {...fieldError("code")}>
         <Input
           id="erp-pair-code"
           autoComplete="off"

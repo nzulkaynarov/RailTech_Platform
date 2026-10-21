@@ -177,7 +177,7 @@ async def test_pair_then_rotate_end_to_end(
 
     # Срок перехода вышел — прежний секрет снимает сама CRM при ближайшей проверке связи.
     async with sessions() as session:
-        from app.models.settings import Setting
+        from app.models.leads import Setting
 
         row = await session.get(Setting, "integrations")
         assert row is not None

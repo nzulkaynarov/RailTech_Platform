@@ -174,6 +174,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/integration/v1/pairing/accept": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description POST /api/integration/v1/pairing/accept — аутентификация кодом сопряжения, а не сервисным токеном (M3-ERP-05). */
+        post: operations["api_integration_v1_pairing_accept_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/integration/v1/pairing/rotate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description POST /api/integration/v1/pairing/rotate — «Обновить ключи» без простоя (два активных токена). */
+        post: operations["api_integration_v1_pairing_rotate_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/integration/v1/users/{crm_user_id}/sessions": {
         parameters: {
             query?: never;
@@ -6045,6 +6079,46 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/integration/crm-pairing/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Состояние сопряжения с CRM
+         * @description Только чтение. Значения ключей не возвращаются — состояние, источник и последние 4 символа.
+         */
+        get: operations["integration_crm_pairing_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/integration/crm-pairing/code/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Выпустить код сопряжения с CRM
+         * @description Администратор (superuser). Код одноразовый, действует `ttl_seconds`, виден только в этом ответе; в базе хранится хеш. Админ вводит его в CRM: «Подключения → ERP → Подключить ERP».
+         */
+        post: operations["integration_crm_pairing_code_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/master-data/countries/": {
         parameters: {
             query?: never;
@@ -8376,6 +8450,32 @@ export interface components {
             due_days: number;
             lines?: components["schemas"]["ManualInvoiceLineRequest"][];
         };
+        CrmPairingStatus: {
+            /**
+             * @description paired — сопряжено по коду; env — ключи из окружения (запасной путь); none — ключей нет.
+             *
+             *     * `paired` - paired
+             *     * `env` - env
+             *     * `none` - none
+             */
+            state: components["schemas"]["StateEnum"];
+            /** Format: date-time */
+            paired_at: string | null;
+            /** Format: date-time */
+            rotated_at: string | null;
+            token_source: components["schemas"]["TokenSourceEnum"];
+            crm_to_erp_last4: string;
+            /**
+             * Format: date-time
+             * @description Пока ротация не завершена: до какого срока ещё действует прежний токен CRM→ERP.
+             */
+            previous_token_valid_until: string | null;
+            erp_to_crm_configured: boolean;
+            webhook_secret_source: components["schemas"]["WebhookSecretSourceEnum"];
+            webhook_secret_last4: string;
+            code_ttl_seconds: number;
+            crm_frontend_url: string;
+        };
         Currency: {
             readonly id: number;
             /**
@@ -9792,6 +9892,13 @@ export interface components {
              */
             previous?: string | null;
             results: components["schemas"]["User"][];
+        };
+        PairingCodeIssued: {
+            /** @description Одноразовый код сопряжения; показывается один раз. */
+            code: string;
+            /** Format: date-time */
+            expires_at: string;
+            ttl_seconds: number;
         };
         PatchedAttachmentRequest: {
             /**
@@ -12487,6 +12594,13 @@ export interface components {
             token: string;
             password: string;
         };
+        /**
+         * @description * `paired` - paired
+         *     * `env` - env
+         *     * `none` - none
+         * @enum {string}
+         */
+        StateEnum: "paired" | "env" | "none";
         StockStatus: {
             readonly id: number;
             /**
@@ -12808,6 +12922,13 @@ export interface components {
             refresh: string;
         };
         /**
+         * @description * `db` - db
+         *     * `env` - env
+         *     * `none` - none
+         * @enum {string}
+         */
+        TokenSourceEnum: "db" | "env" | "none";
+        /**
          * @description * `quote` - quote
          *     * `contract` - contract
          *     * `invoice` - invoice
@@ -12976,6 +13097,13 @@ export interface components {
              */
             is_active?: boolean;
         };
+        /**
+         * @description * `db` - db
+         *     * `env` - env
+         *     * `none` - none
+         * @enum {string}
+         */
+        WebhookSecretSourceEnum: "db" | "env" | "none";
         /** @description Response shape for the WorkspaceRole lookup feed ({code, name, applicable_to_types}). */
         WorkspaceRoleLookup: {
             code: string;
@@ -13178,6 +13306,42 @@ export interface operations {
         };
     };
     api_integration_v1_health_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No response body */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    api_integration_v1_pairing_accept_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No response body */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    api_integration_v1_pairing_rotate_create: {
         parameters: {
             query?: never;
             header?: never;
@@ -22272,6 +22436,44 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+        };
+    };
+    integration_crm_pairing_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CrmPairingStatus"];
+                };
+            };
+        };
+    };
+    integration_crm_pairing_code_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PairingCodeIssued"];
+                };
             };
         };
     };
