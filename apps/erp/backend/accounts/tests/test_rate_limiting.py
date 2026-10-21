@@ -44,3 +44,29 @@ def test_login_throttled_per_ip():
     for _ in range(11):
         last = client.post("/api/v1/auth/token/", creds, format="json")
     assert last.status_code == 429
+
+
+@override_settings(CACHES=LOCMEM)
+@pytest.mark.django_db
+def test_refresh_has_own_scope_and_does_not_share_anon_limit(monkeypatch):
+    """FIX-64 / N-2: refresh — отдельный scope `token_refresh`; общий анонимный 20/мин с IP его не съедает и сам
+    им не съедается. Серия переходов с одного IP (QA, общий NAT) раньше упиралась в 429 на refresh."""
+    import time
+
+    from rest_framework.throttling import AnonRateThrottle, SimpleRateThrottle
+
+    rates = SimpleRateThrottle.THROTTLE_RATES
+    assert rates["token_refresh"] == "60/minute"
+    monkeypatch.setitem(rates, "anon", "3/minute")
+    monkeypatch.setitem(rates, "token_refresh", "5/minute")
+    client = APIClient()
+    anon_key = AnonRateThrottle.cache_format % {"scope": "anon", "ident": "127.0.0.1"}
+
+    # Исчерпанный анонимный лимит не мешает refresh (нет токена → 401, а не 429).
+    cache.set(anon_key, [time.time()] * 50, 60)
+    for _ in range(5):
+        assert client.post("/api/v1/auth/token/refresh/", {}, format="json").status_code == 401
+
+    # Refresh не пишет в анонимный счётчик: он остался прежним, а свой лимит срабатывает.
+    assert len(cache.get(anon_key)) == 50
+    assert client.post("/api/v1/auth/token/refresh/", {}, format="json").status_code == 429

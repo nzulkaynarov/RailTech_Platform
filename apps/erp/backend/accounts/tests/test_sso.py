@@ -212,7 +212,8 @@ def test_exchange_success_issues_session_and_records_audit(client, staff_user):
 
     # Проверка обновления профиля
     staff_user.refresh_from_db()
-    assert staff_user.first_name == "Алексей Иванов Обновлённый"
+    # N-03 (FIX-64): полное имя из токена делится на имя и фамилию, а не целиком в first_name.
+    assert (staff_user.first_name, staff_user.last_name) == ("Алексей", "Иванов Обновлённый")
 
     # Проверка аудита ActivityLog
     log = ActivityLog.objects.filter(action="sso.exchange", user=staff_user).order_by("-id").first()
@@ -358,7 +359,7 @@ def test_exchange_updates_email_and_name_only(client, staff_user):
     assert resp.status_code == status.HTTP_200_OK
     staff_user.refresh_from_db()
     assert staff_user.email == "renamed@example.com"
-    assert staff_user.first_name == "Новое Имя"
+    assert (staff_user.first_name, staff_user.last_name) == ("Новое", "Имя")
 
 
 def test_exchange_email_taken_by_other_user_is_not_overwritten(client, staff_user):

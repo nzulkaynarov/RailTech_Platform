@@ -18,6 +18,7 @@ from pathlib import Path
 
 import pytest
 from django.core.files.base import ContentFile
+from django.test import RequestFactory
 from django.urls import URLPattern, URLResolver, get_resolver
 from django.utils import timezone
 from parties.models import CompanySettings
@@ -28,7 +29,7 @@ from rest_framework.views import APIView
 from accounts.models import Company, CompanyMember, CompanyType, CustomUser, WorkspaceRole
 from catalog.completeness import completeness
 from catalog.constants import MODE_CLIENT, MODE_LEAD, FulfillmentPolicy, PriceVisibility
-from catalog.models import Category, DomainType, Product, ProductStatus, StockStatus, SupplierOffer
+from catalog.models import Category, DomainType, Product, ProductImage, ProductStatus, StockStatus, SupplierOffer
 from catalog.published import CATALOG_ITEM_KEYS, CLIENT_ONLY_KEYS, availability, project, project_many
 from master_data.models import Currency, UnitOfMeasure
 
@@ -507,3 +508,36 @@ def test_no_route_leaks_internal_layer_to_anonymous_or_client(client_world, who,
         server_errors
     )
     assert checked > 100, "обход должен пройти по всему API, а не по паре маршрутов"
+
+
+# ── FIX-64 / N-4: ссылки на фото — от CABINET_URL, а не от заголовка Host ────────────────────────────────────
+# В туннеле с подменой Host на `cabinet.localhost` фото получали адрес, который на телефоне не открывается.
+# База — `CABINET_URL` (как в письмах); без настройки — прежнее поведение (от адреса запроса).
+
+
+def _card_with_images(world):
+    product = make_card(world)
+    ProductImage.objects.create(product=product, image_url="/media/catalog/a.jpg", is_main=True)
+    ProductImage.objects.create(product=product, image_url="https://cdn.example.com/b.jpg")
+    return product
+
+
+def test_image_relative_image_url_uses_cabinet_url_not_request_host(world, settings):
+    settings.CABINET_URL = "https://cabinet.railtech.example/"
+    request = RequestFactory().get("/api/portal/v1/catalog/", HTTP_HOST="tunnel.localhost:9999")
+    item = project(_card_with_images(world), mode=MODE_CLIENT, request=request)
+    assert item["images"][0] == "https://cabinet.railtech.example/media/catalog/a.jpg"
+    assert item["images"][1] == "https://cdn.example.com/b.jpg"  # абсолютные ссылки не трогаем
+
+
+def test_image_without_cabinet_url_falls_back_to_request_host(world, settings):
+    settings.CABINET_URL = ""
+    request = RequestFactory().get("/api/portal/v1/catalog/", HTTP_HOST="erp.localhost")
+    item = project(_card_with_images(world), mode=MODE_CLIENT, request=request)
+    assert item["images"][0] == "http://erp.localhost/media/catalog/a.jpg"
+
+
+def test_image_without_request_keeps_relative_url(world, settings):
+    settings.CABINET_URL = "https://cabinet.railtech.example"
+    item = project(_card_with_images(world), mode=MODE_CLIENT, request=None)
+    assert item["images"][0] == "/media/catalog/a.jpg"

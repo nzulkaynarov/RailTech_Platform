@@ -16,6 +16,9 @@
 
 from __future__ import annotations
 
+from urllib.parse import urljoin
+
+from django.conf import settings
 from django.db.models import Prefetch
 from django.utils import timezone
 
@@ -109,9 +112,17 @@ def availability(product) -> tuple[str, int | None]:
 
 
 def _absolute(url: str, request) -> str:
-    if request is not None and url and not url.startswith("http"):
-        return request.build_absolute_uri(url)
-    return url
+    """Относительную ссылку на фото делает абсолютной.
+
+    База — `CABINET_URL` (как в письмах и событиях): клиент видит фото на домене Cabinet, а заголовок `Host`
+    запроса (в туннеле на телефон — подменённый) на адрес не влияет (FIX-64, N-4). Без настройки — прежнее
+    поведение: от адреса запроса; без запроса — ссылка как есть."""
+    if request is None or not url or url.startswith("http"):
+        return url
+    base = (getattr(settings, "CABINET_URL", "") or "").strip()
+    if base:
+        return urljoin(base.rstrip("/") + "/", url.lstrip("/"))
+    return request.build_absolute_uri(url)
 
 
 def _image_urls(product, request) -> list[str]:
