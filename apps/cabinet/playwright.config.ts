@@ -28,6 +28,9 @@ export default defineConfig({
     locale: 'ru-RU',
     timezoneId: 'Asia/Tashkent',
     viewport: { width: 1440, height: 900 },
+    // без таймаутов действий зависшая страница держала бы шаг до таймаута всего теста
+    actionTimeout: 30_000,
+    navigationTimeout: 45_000,
     trace: 'off',
     screenshot: 'off',
   },

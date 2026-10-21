@@ -72,3 +72,13 @@ export function latestQuoteCode(email: string, since = '30m'): string | null {
 export function mailCount(email: string, since = '30m'): number {
   return messagesTo(email, since).length;
 }
+
+/** Строки журнала контейнера ERP с подстрокой (для проверок «в логе нет ошибки»); письма сюда не попадают — токенов в результате нет. */
+export function logLines(service: string, needle: string, since = '30m'): string[] {
+  const out = execFileSync(
+    'docker',
+    ['compose', '-f', 'infra/compose/base.yml', '-f', 'infra/compose/dev.yml', '--env-file', '.env', 'logs', '--no-log-prefix', '--since', since, service],
+    { cwd: standRoot(), maxBuffer: 512 * 1024 * 1024 },
+  );
+  return out.toString('utf8').split('\n').filter((line) => line.includes(needle)).map((line) => line.slice(0, 200));
+}
