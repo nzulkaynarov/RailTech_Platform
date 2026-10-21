@@ -11,7 +11,7 @@ import { useAuthStore } from '@/store/authStore';
  * её нет (M1-ERP-02): сотрудников заводит CRM (ADR-0003) или приглашает коллега, контрагента —
  * бэк-офис. Поэтому экран не предлагает действия, которого нет, а говорит, к кому идти.
  */
-export function NoCompanyScreen() {
+export function NoCompanyScreen({ setupPending = false }: { setupPending?: boolean } = {}) {
   const { t } = useTranslation();
   const logout = useAuthStore((s) => s.logout);
 
@@ -23,7 +23,7 @@ export function NoCompanyScreen() {
             <Building2 className="h-7 w-7 text-muted-foreground" aria-hidden="true" />
           </div>
           <CardTitle className="text-xl">{t('auth.noCompany.title')}</CardTitle>
-          <CardDescription>{t('auth.noCompany.hint')}</CardDescription>
+          <CardDescription>{setupPending ? t('auth.noCompany.setupPending') : t('auth.noCompany.hint')}</CardDescription>
         </CardHeader>
         <CardContent className="flex justify-center">
           <Button

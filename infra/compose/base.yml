@@ -1,7 +1,7 @@
 # Стенд ансамбля RailTech Platform (ARCHITECTURE §10, ORCHESTRATOR §2): один PostgreSQL 17 с базами
 # `crm` (pgvector) и `erp`, один Redis, один RustFS, LiteLLM + Langfuse, Caddy на три домена.
 # Запуск только через overrides (корневой Makefile):
-#   dev:  make up        (base.yml + dev.yml) — crm.localhost, erp.localhost, cabinet.localhost
+#   dev:  make up        (base.yml + dev.yml) — crm.localhost, erp.localhost, cabinet.localhost, platform.localhost
 #   prod: make up-prod   (base.yml + prod.yml) — появится в M5-INF-01
 # Langfuse — профиль `observability` (make up-obs). Бэкапы — профиль `backup` (M5-INF-01).
 #
@@ -102,7 +102,8 @@ services:
       postgres:
         condition: service_healthy
 
-  # Один Redis на ансамбль, раздельные БД: 0 — Langfuse (BullMQ), 1 — ERP Celery (M1), 2 — ERP Channels (M1).
+  # Один Redis на ансамбль, раздельные БД: 0 — Langfuse (BullMQ), 1 — ERP Celery (M1), 2 — ERP Channels (M1),
+  # 3 — сессии BFF Платформы (INF-P0-4).
   # CRM Redis не использует (очередь — Procrastinate в Postgres).
   redis:
     image: redis:7.4.11
