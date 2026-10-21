@@ -2,7 +2,7 @@ import { theme } from "antd";
 import { describe, expect, it } from "vitest";
 
 import { TAG_TEXT, appTheme } from "./theme";
-import { RT_TOKENS } from "./tokens.generated";
+import { RT_COMPONENTS, RT_TOKENS } from "./tokens.generated";
 
 /** WCAG 2.1: относительная яркость и контраст; полупрозрачный цвет смешивается с фоном. */
 type Rgb = [number, number, number];
@@ -54,8 +54,8 @@ const pairs: [string, string, string][] = [
   ["primary on layout", tk.colorPrimary, tk.colorBgLayout],
   ["primary on primaryBg (menu)", tk.colorPrimary, tk.colorPrimaryBg],
   ["white on primary button", white, tk.colorPrimary],
-  ["white on primary hover", white, tk.colorPrimaryHover],
-  ["primary hover text", tk.colorPrimaryHover, tk.colorBgContainer],
+  ["primaryText on primaryBg (active menu item)", tk.colorPrimaryText, tk.colorPrimaryBg],
+  ["primaryText on container", tk.colorPrimaryText, tk.colorBgContainer],
   ["link", tk.colorLink, tk.colorBgContainer],
   ["link hover", tk.colorLinkHover, tk.colorBgContainer],
   ["link active", tk.colorLinkActive, tk.colorBgContainer],
@@ -63,23 +63,29 @@ const pairs: [string, string, string][] = [
   ["secondary on container", tk.colorTextSecondary, tk.colorBgContainer],
   ["secondary on layout", tk.colorTextSecondary, tk.colorBgLayout],
   ["tertiary on container", tk.colorTextTertiary, tk.colorBgContainer],
-  ["tertiary on layout", tk.colorTextTertiary, tk.colorBgLayout],
-  ["tertiary on primaryBg (bot bubble)", tk.colorTextTertiary, tk.colorPrimaryBg],
-  ["tertiary on successBg (manager bubble)", tk.colorTextTertiary, tk.colorSuccessBg],
-  ["tertiary on warningBg (system bubble)", tk.colorTextTertiary, tk.colorWarningBg],
+  // #767676 (SPEC-v3 §5.2) проходит только на белом; на фоне окна и тонированных заливках подписи AntD
+  // (Typography secondary, Empty, Form extra) выводятся цветом colorTextDescription = secondary (#595959).
+  ["secondary on primaryBg (bot bubble)", tk.colorTextSecondary, tk.colorPrimaryBg],
+  ["description on primaryBg (bot bubble)", tk.colorTextDescription, tk.colorPrimaryBg],
+  ["description on successBg (manager bubble)", tk.colorTextDescription, tk.colorSuccessBg],
+  ["description on warningBg (system bubble)", tk.colorTextDescription, tk.colorWarningBg],
   ["description on container", tk.colorTextDescription, tk.colorBgContainer],
   ["description on layout", tk.colorTextDescription, tk.colorBgLayout],
   ["placeholder", tk.colorTextPlaceholder, tk.colorBgContainer],
-  ["error text", tk.colorError, tk.colorBgContainer],
-  ["white on danger button", white, tk.colorError],
+  // Затравочные colorError/Success/Warning (#ff4d4f, #52c41a, #faad14) в текст не попадают — только *Text.
+  ["error text", tk.colorErrorText, tk.colorBgContainer],
+  ["error hover text", tk.colorErrorHover, tk.colorBgContainer],
   ["white on danger hover", white, tk.colorErrorHover],
+  ["white on danger active", white, tk.colorErrorActive],
   ["error on errorBg", tk.colorErrorText, tk.colorErrorBg],
   ["success on successBg", tk.colorSuccessText, tk.colorSuccessBg],
-  ["success on container", tk.colorSuccess, tk.colorBgContainer],
+  ["success on container", tk.colorSuccessText, tk.colorBgContainer],
   ["warning on warningBg", tk.colorWarningText, tk.colorWarningBg],
-  ["warning on container", tk.colorWarning, tk.colorBgContainer],
+  ["warning on container", tk.colorWarningText, tk.colorBgContainer],
   ["info on infoBg", tk.colorInfoText, tk.colorInfoBg],
   // Текст preset-тега — `<цвет>7` (antd genPresetColor), фон — `<цвет>1`; green/cyan/orange — из TAG_TEXT.
+  ["tag gold", TAG_TEXT["gold"] ?? "", tk.gold1],
+  ["tag purple (RT_TAG_TEXT)", TAG_TEXT["purple"] ?? "", tk.purple1],
   ["tag green", TAG_TEXT["green"] ?? "", tk.green1],
   ["tag cyan", TAG_TEXT["cyan"] ?? "", tk.cyan1],
   ["tag orange", TAG_TEXT["orange"] ?? "", tk.orange1],
@@ -88,6 +94,20 @@ const pairs: [string, string, string][] = [
   ["tag geekblue", tk.geekblue7, tk.geekblue1],
   ["tag purple", tk.purple7, tk.purple1],
   ["default tag", tk.colorText, opaque(tk.colorFillQuaternary)],
+];
+
+// Пары ниже 4.5:1, зафиксированные SPEC-v3 §5.2 (docs/QUESTIONS.md, Q-INF-P0-2-*). Тест держит их в 3:1…4.5:1 и
+// требует перенести пару в основной список, когда она начнёт проходить.
+const knownBelowAa: [string, string, string][] = [
+  ["white on primary hover #1677ff (Q-INF-P0-2-1)", white, tk.colorPrimaryHover],
+  ["white on solid danger button #ff4d4f (Q-INF-P0-2-2)", white, tk.colorError],
+  [
+    "danger text colorError #ff4d4f on container (Q-INF-P0-2-2)",
+    tk.colorError,
+    tk.colorBgContainer,
+  ],
+  ["tertiary on layout (Q-INF-P0-2-3)", tk.colorTextTertiary, tk.colorBgLayout],
+  ["tertiary on primaryBg (Q-INF-P0-2-3)", tk.colorTextTertiary, tk.colorPrimaryBg],
 ];
 
 describe("theme contrast (WCAG 2.1 AA, 1.4.3)", () => {
@@ -99,6 +119,24 @@ describe("theme contrast (WCAG 2.1 AA, 1.4.3)", () => {
 
   it.each(pairs)("%s ≥ 4.5:1", (_name, fg, bg) => {
     expect(contrast(fg, bg)).toBeGreaterThanOrEqual(4.5);
+  });
+
+  it.each(knownBelowAa)("known exception: %s stays within 3:1..4.5:1", (_name, fg, bg) => {
+    const ratio = contrast(fg, bg);
+    expect(ratio).toBeGreaterThanOrEqual(3);
+    expect(ratio).toBeLessThan(4.5);
+  });
+
+  it("keeps seed status colours out of text tokens", () => {
+    expect(tk.colorErrorText).toBe("#a8071a");
+    expect(tk.colorSuccessText).toBe("#237804");
+    expect(tk.colorWarningText).toBe("#874d00");
+    expect(RT_TOKENS.colorError).toBe("#ff4d4f");
+  });
+
+  it("ships component tokens for the Platform theme", () => {
+    expect(RT_COMPONENTS.Table.cellPaddingBlock).toBe(12);
+    expect(RT_COMPONENTS.Menu.itemSelectedColor).toBe(RT_TOKENS.colorPrimaryText);
   });
 
   it("exposes css variables for custom stylesheets", () => {

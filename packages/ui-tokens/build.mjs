@@ -2,7 +2,7 @@
 // Генератор из tokens.json (единственный источник) в потребляемые форматы:
 //   dist/tokens.css   — CSS-переменные --rt-* (любой фронтенд)
 //   dist/shadcn.css   — переменные shadcn/ui (--primary, --destructive, --radius…) + @theme для Tailwind 4 (ERP, Cabinet)
-//   dist/antd.ts      — объект token для ThemeConfig AntD (CRM); копия — apps/crm/frontend/src/app/tokens.generated.ts
+//   dist/antd.ts      — token и components для ThemeConfig AntD (CRM, Платформа); копия — apps/crm/frontend/src/app/tokens.generated.ts
 // Без зависимостей: node ≥ 20. Запуск: make tokens (корень) или make -C packages/ui-tokens build.
 // Вывод TS намеренно в формате prettier (двойные кавычки, запятые в конце), чтобы проходить prettier --check в CRM.
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
@@ -15,7 +15,9 @@ const banner = `/* Сгенерировано из packages/ui-tokens/tokens.jso
 
 const px = (n) => `${n}px`;
 const rem = (n) => `${n / 16}rem`;
-const tsValue = (v) => (typeof v === "number" ? String(v) : JSON.stringify(v));
+// Как prettier: строка с двойными кавычками внутри и без одинарных — в одинарных.
+const tsValue = (v) =>
+  typeof v === "number" ? String(v) : v.includes('"') && !v.includes("'") ? `'${v}'` : JSON.stringify(v);
 // Строка длиннее printWidth (100) — prettier переносит значение на новую строку.
 const tsEntry = (k, v) => {
   const one = `  ${k}: ${tsValue(v)},`;
@@ -52,14 +54,17 @@ const shadcnVars = {
   "--secondary": c.surface.muted,
   "--secondary-foreground": c.text.default,
   "--muted": c.surface.muted,
-  "--muted-foreground": c.text.tertiary,
+  // muted-foreground — на белом, #f5f5f5 и светлых заливках: tertiary (#767676) даёт на них < 4.5:1, поэтому secondary.
+  "--muted-foreground": c.text.secondary,
   "--accent": c.primary.bg,
-  "--accent-foreground": c.primary.active,
-  "--destructive": c.error.default,
+  "--accent-foreground": c.primary.text,
+  // shadcn-переменные статусов служат и цветом текста (text-destructive), и заливкой кнопок с белым текстом:
+  // берём цвет «text» (≥ 4.5:1 на белом и с белым поверх), а не затравочный default (#ff4d4f, #52c41a, #faad14).
+  "--destructive": c.error.text,
   "--destructive-foreground": c.error.foreground,
-  "--success": c.success.default,
+  "--success": c.success.text,
   "--success-foreground": c.success.foreground,
-  "--warning": c.warning.default,
+  "--warning": c.warning.text,
   "--warning-foreground": c.warning.foreground,
   "--info": c.info.default,
   "--info-foreground": c.info.foreground,
@@ -120,26 +125,41 @@ const antd = {
   colorPrimaryHover: c.primary.hover,
   colorPrimaryActive: c.primary.active,
   colorPrimaryBg: c.primary.bg,
+  colorPrimaryBorder: c.primary.border,
+  colorPrimaryText: c.primary.text,
   colorInfo: c.info.default,
   colorInfoBg: c.info.bg,
   colorInfoBorder: c.info.border,
+  colorInfoText: c.info.text,
   colorLink: c.primary.default,
-  colorLinkHover: c.primary.hover,
-  colorLinkActive: c.primary.active,
+  // Ссылка при наведении и нажатии — тёмный «text»: #1677ff (hover кнопки) как текст на белом даёт 4.1:1.
+  colorLinkHover: c.primary.text,
+  colorLinkActive: c.primary.text,
+  colorText: c.text.default,
+  colorTextSecondary: c.text.secondary,
   colorTextTertiary: c.text.tertiary,
-  colorTextDescription: c.text.tertiary,
+  // Описания и подсказки AntD выводит и на #f5f5f5, и на светлых заливках, где #767676 даёт < 4.5:1.
+  colorTextDescription: c.text.secondary,
   colorTextPlaceholder: c.text.placeholder,
   colorError: c.error.default,
   colorErrorHover: c.error.hover,
   colorErrorActive: c.error.active,
   colorErrorBg: c.error.bg,
   colorErrorBorder: c.error.border,
+  colorErrorText: c.error.text,
   colorSuccess: c.success.default,
   colorSuccessBg: c.success.bg,
   colorSuccessBorder: c.success.border,
+  colorSuccessText: c.success.text,
   colorWarning: c.warning.default,
   colorWarningBg: c.warning.bg,
   colorWarningBorder: c.warning.border,
+  colorWarningText: c.warning.text,
+  colorBorder: c.surface.border,
+  colorSplit: c.surface.split,
+  colorBorderSecondary: c.surface.split,
+  colorBgLayout: c.surface.layout,
+  colorBgContainer: c.surface.card,
   fontFamily: tokens.font.family,
   fontFamilyCode: tokens.font.familyMono,
   fontSize: tokens.font.size.base,
@@ -147,16 +167,25 @@ const antd = {
   borderRadiusSM: tokens.radius.sm,
   borderRadiusLG: tokens.radius.lg,
   controlHeight: tokens.density.controlHeight,
+  controlHeightSM: tokens.density.controlHeightSm,
 };
+// JSON → TS-литерал в формате prettier: ключи без кавычек, запятая после последнего элемента.
+const tsConst = (v) =>
+  JSON.stringify(v, null, 2)
+    .replace(/^(\s*)"([A-Za-z_$][\w$]*)":/gm, "$1$2:")
+    .replace(/([^\n,{[])(?=\n\s*[}\]])/g, "$1,");
 const antdTs = `// Сгенерировано из packages/ui-tokens/tokens.json (v${tokens.version}) — не править руками, запускать make tokens.
-// Общие токены ансамбля для темы AntD (CRM). Контраст WCAG 2.1 AA проверяет theme.test.ts.
+// Общие токены ансамбля для темы AntD (CRM, Платформа). Контраст WCAG 2.1 AA проверяют theme.test.ts (CRM) и contrast.test.mjs (пакет).
 export const RT_TOKENS = ${tsObject(antd)} as const;
 
-/** Текст preset-тегов Tag color="green|cyan|orange" с контрастом ≥ 4.5:1 на фоне тега. */
+/** Текст preset-тегов Tag color="blue|green|cyan|orange|gold|red|purple" с контрастом ≥ 4.5:1 на фоне тега. */
 export const RT_TAG_TEXT: Record<string, string> = ${tsObject(c.tag)};
 
-/** Плотность таблиц: отступы ячеек обычной таблицы = small (paddingXS). */
+/** Плотность таблиц CRM: отступы ячеек обычной таблицы = small (paddingXS). У Платформы — RT_COMPONENTS.Table. */
 export const RT_TABLE_CELL_PADDING = ${tokens.density.tableCellPadding};
+
+/** Компонентные токены Платформы (ConfigProvider theme.components; 03-frontend.md §3). CRM их не подключает. */
+export const RT_COMPONENTS = ${tsConst(tokens.antdComponents)} as const;
 `;
 
 const dist = join(here, "dist");
