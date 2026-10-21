@@ -8,6 +8,7 @@ SHELL := /bin/bash
 CRM     := apps/crm
 ERP     := apps/erp
 CABINET := apps/cabinet
+PLATFORM := apps/platform
 INFRA   := infra
 
 .PHONY: help
@@ -17,7 +18,7 @@ help: ## Список целей
 # --- Проверки --------------------------------------------------------------------
 
 .PHONY: check
-check: check-crm check-erp check-cabinet ## Проверки всех приложений (lint + typecheck + unit)
+check: check-crm check-erp check-cabinet check-platform ## Проверки всех приложений (lint + typecheck + unit)
 
 .PHONY: check-crm
 check-crm: ## CRM: ruff, mypy, eslint, tsc, pytest, vitest (apps/crm/Makefile)
@@ -31,9 +32,14 @@ check-erp: ## ERP: появится с M1-ERP-01; пока кода нет — �
 check-cabinet: ## Cabinet: eslint, tsc, i18n ru/uz/en, токены, типы портала, vitest + axe (apps/cabinet/Makefile)
 	@if [ -f $(CABINET)/Makefile ]; then $(MAKE) -C $(CABINET) check; else echo "check-cabinet: $(CABINET) ещё без кода (M2-CAB-01) — пропуск"; fi
 
+.PHONY: check-platform
+check-platform: ## Платформа: ruff, mypy, pytest (bff); eslint, tsc, vitest, свежесть клиента orval и токенов (web) (apps/platform/Makefile)
+	$(MAKE) -C $(PLATFORM) check
+
 .PHONY: tokens
-tokens: ## Токены дизайна: tokens.json → dist/, копии в apps/crm (tokens.generated.ts) и apps/cabinet (tokens.generated.css)
+tokens: ## Токены дизайна: tokens.json → dist/, копии в apps/crm (tokens.generated.ts), apps/cabinet (tokens.generated.css), apps/platform (tokens.generated.ts)
 	$(MAKE) -C packages/ui-tokens build
+	$(MAKE) -C $(PLATFORM) tokens
 
 .PHONY: contracts
 contracts: ## Валидация packages/contracts и генерация клиентов (M0-INF-02)

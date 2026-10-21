@@ -53,20 +53,29 @@ ERP работают до этапа T4 и с P0 заморожены (толь�
 11. **Демо-данные вымышленные.** Репозиторий временно публичный: ни реальных клиентов, ни имён сотрудников.
 12. **Старые фронты не трогаешь** (`apps/crm/frontend`, `apps/erp/frontend`): они заморожены и отключаются в T4.
 
-## 3. Стек и команды (появятся в P0, INF-P0-3)
+## 3. Стек и команды
 
 | Часть | Стек |
 |---|---|
-| `web/` | TypeScript, Vite, React 18, antd 5 + `@ant-design/pro-components`, react-router 7, TanStack Query + orval, Zustand, react-i18next (ru/uz/en), Vitest, Playwright + axe |
-| `bff/` | Python 3.12, FastAPI, httpx, pydantic v2, redis, structlog; uv, ruff, mypy strict, pytest |
+| `web/` | TypeScript ~5.9, Vite 8, React 18, antd 5 + `@ant-design/pro-components`, react-router 7, TanStack Query + orval (хуки и MSW-моки из `platform-bff.yaml`), Zustand, react-i18next (ru/uz/en), Vitest + Testing Library, MSW, Playwright + axe; pnpm 10 |
+| `bff/` | Python 3.12, FastAPI, httpx, pydantic v2, redis (asyncio), structlog; uv, ruff, mypy strict, pytest + respx |
 
 | Что | Команда |
 |---|---|
-| зависимости | `make -C apps/platform install` |
-| линтеры, типы, тесты | `make check-platform` |
+| зависимости (новый worktree — первым шагом) | `make -C apps/platform install` (bff: `uv sync --frozen`, web: `pnpm install --frozen-lockfile`) |
+| линтеры, типы, тесты, свежесть клиента orval и токенов | `make check-platform` (то же: `make -C apps/platform check`) |
 | один тест web | `cd apps/platform/web && pnpm test -- <шаблон>` |
 | один тест bff | `cd apps/platform/bff && uv run pytest tests/<файл>.py -x -q` |
-| стенд | `make up` → `https://platform.localhost:8088` |
+| клиент, типы и MSW-моки web из контракта | `make -C apps/platform gen-api` (после правки `platform-bff.yaml`; результат коммитится) |
+| токены ui-tokens → `web/src/app/tokens.generated.ts` | `make tokens` из корня (или `make -C apps/platform tokens`); после правки `packages/ui-tokens` |
+| e2e Playwright + axe на MSW (BFF и стенд не нужны) | `make -C apps/platform e2e` (браузер один раз: `cd apps/platform/web && pnpm exec playwright install chromium`); скриншот — `E2E_SCREENSHOT_DIR=<каталог>` |
+| web без бэкенда, ответы MSW | `cd apps/platform/web && pnpm dev:mock` |
+| образы bff и web (локальная проверка сборки) | `make -C apps/platform docker-build` |
+| стенд | `make up` → `https://platform.localhost:8088` (появится с INF-P0-4) |
+
+Образ `web` собирается с контекстом `apps/platform/web`: сгенерированный клиент
+(`src/shared/api/generated`) и токены (`src/app/tokens.generated.ts`) коммитятся рядом с кодом, как у CRM;
+`make check-platform` падает, если они расходятся с `platform-bff.yaml` и `packages/ui-tokens`.
 
 DoD экрана — SPEC-v3 §11.2 и чек-лист `docs/03-frontend.md` §10: скриншоты 1440/1280/390 рядом с артбордом,
 axe без нарушений, сценарий e2e действия.
