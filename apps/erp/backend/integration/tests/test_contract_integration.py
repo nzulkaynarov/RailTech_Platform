@@ -326,6 +326,18 @@ def provision_body(crm_user_id, email):
     }
 
 
+PAIRING_SECRETS = {
+    "crm_to_erp_token": "guard-crm-to-erp-" + "a" * 32,
+    "erp_to_crm_token": "guard-erp-to-crm-" + "b" * 32,
+    "webhook_secret": "guard-webhook-secret-" + "c" * 32,
+}
+ROTATED_SECRETS = {
+    "crm_to_erp_token": "guard-rotated-crm-to-erp-" + "d" * 32,
+    "erp_to_crm_token": "guard-rotated-erp-to-crm-" + "e" * 32,
+    "webhook_secret": "guard-rotated-webhook-" + "f" * 32,
+}
+
+
 #: Вызов на каждую операцию контракта для проверки лимита: первый запрос берёт единственное разрешение `1/minute`
 #: (ответ любой: 200/404/422 — не важно), второй обязан получить 429. Ключ — (МЕТОД, путь контракта).
 THROTTLE_CASES = {
@@ -341,6 +353,9 @@ THROTTLE_CASES = {
     ("PUT", "/contacts/{crm_contact_id}"): ("/contacts/999999", handoff_body(8301, "830100001")["contacts"][0]),
     ("POST", "/users/provision"): ("/users/provision", provision_body(8901, "guard-8901@railtech.uz")),
     ("DELETE", "/users/{crm_user_id}/sessions"): ("/users/999999/sessions", None),
+    # Сопряжение (M3-ERP-05): `accept` лимитирует свой scope `pairing` (по адресу), `rotate` — общий `integration`.
+    ("POST", "/pairing/accept"): ("/pairing/accept", PAIRING_SECRETS),
+    ("POST", "/pairing/rotate"): ("/pairing/rotate", ROTATED_SECRETS),
 }
 
 
@@ -350,6 +365,7 @@ def hit_twice_with_one_per_minute(client, method, url, body, monkeypatch):
 
     cache.clear()
     monkeypatch.setitem(SimpleRateThrottle.THROTTLE_RATES, "integration", "1/minute")
+    monkeypatch.setitem(SimpleRateThrottle.THROTTLE_RATES, "pairing", "1/minute")
     responses = []
     for _ in range(2):
         kwargs = {"format": "json"} if body is not None else {}
@@ -431,18 +447,6 @@ def exercise_all(client, world):
     return out
 
 
-PAIRING_SECRETS = {
-    "crm_to_erp_token": "guard-crm-to-erp-" + "a" * 32,
-    "erp_to_crm_token": "guard-erp-to-crm-" + "b" * 32,
-    "webhook_secret": "guard-webhook-secret-" + "c" * 32,
-}
-ROTATED_SECRETS = {
-    "crm_to_erp_token": "guard-rotated-crm-to-erp-" + "d" * 32,
-    "erp_to_crm_token": "guard-rotated-erp-to-crm-" + "e" * 32,
-    "webhook_secret": "guard-rotated-webhook-" + "f" * 32,
-}
-
-
 def exercise_pairing(hit, anonymous, out):
     """Сопряжение (M3-ERP-05): `POST /pairing/accept` и `/pairing/rotate` на каждый обещанный код — в самом конце.
 
@@ -522,7 +526,7 @@ def exercised(client, world, catalog_product, monkeypatch):
 
 def test_every_operation_has_a_throttle_case():
     assert set(THROTTLE_CASES) == set(contract_operations()), "каждой операции контракта нужен вызов на 429"
-    assert len(THROTTLE_CASES) == 12
+    assert len(THROTTLE_CASES) == 14
 
 
 @pytest.mark.parametrize(("method", "path"), sorted(THROTTLE_CASES), ids=lambda value: str(value))

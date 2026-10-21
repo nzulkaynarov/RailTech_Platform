@@ -124,6 +124,7 @@ def _put(
     ServiceCredential.objects.update_or_create(slot=slot, defaults=defaults)
 
 
+@transaction.atomic
 def close_bootstrap_window(now: Optional[datetime] = None) -> None:
     """Первое сопряжение состоялось: «без кода» закрыто навсегда. Вызывается в транзакции записи секретов."""
     state, _ = PairingState.objects.select_for_update().get_or_create(pk=1)
