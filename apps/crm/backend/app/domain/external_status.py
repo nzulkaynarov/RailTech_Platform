@@ -10,7 +10,7 @@ from datetime import datetime, timedelta
 from typing import Final, Literal
 from urllib.parse import urlsplit
 
-from app.domain.external_registry import ERP_REPORTED_REASON, Status
+from app.domain.external_registry import Status
 from app.domain.system_status import BackupFacts, Component, backup_hint
 from app.domain.telegram_webhook import PROBLEM_TEXT, webhook_url_problem
 
@@ -461,7 +461,3 @@ def stale_summary(checked_at: datetime, now: datetime) -> tuple[str, str]:
 def never_checked(tiers: tuple[str, ...]) -> str:
     period = "раз в минуту" if "cheap" in tiers else "раз в 15 минут"
     return f"Ещё не проверялся — фоновая проверка {period}"
-
-
-def erp_reported(key: str) -> CheckResult:
-    return CheckResult(key, "unknown", ERP_REPORTED_REASON)

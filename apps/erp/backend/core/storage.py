@@ -9,10 +9,43 @@ When MINIO_ENDPOINT is not set, falls back to Django's default FileSystemStorage
 All file names are UUID-based to prevent collisions and information leakage.
 """
 
+import functools
 import uuid
 
 from django.conf import settings
 from django.core.files.storage import default_storage
+
+
+class TrackedStorageMixin:
+    """Запись, чтение и удаление идут через `external_call("s3")` (M3-ERP-06): исход попадает в состояние сервиса S3
+    (`/health` integration), а выключатель из центра внешних сервисов CRM останавливает обращения к хранилищу."""
+
+    def _save(self, name, content):
+        from core.external_status import external_call
+
+        with external_call("s3"):
+            return super()._save(name, content)
+
+    def _open(self, name, mode="rb"):
+        from core.external_status import external_call
+
+        # Нет такого файла (404) — ответ хранилища, а не его сбой.
+        with external_call("s3", benign=(FileNotFoundError,)):
+            return super()._open(name, mode)
+
+    def delete(self, name):
+        from core.external_status import external_call
+
+        with external_call("s3"):
+            return super().delete(name)
+
+
+@functools.lru_cache(maxsize=1)
+def _tracked_s3_storage():
+    """`S3Boto3Storage` с отметками состояния сервиса (создаётся при первом обращении, как и сам импорт `storages`)."""
+    from storages.backends.s3boto3 import S3Boto3Storage
+
+    return type("TrackedS3Boto3Storage", (TrackedStorageMixin, S3Boto3Storage), {})
 
 
 def _minio_is_configured():
@@ -209,7 +242,7 @@ def temp_upload_path(instance, filename):
 def get_public_storage():
     """Return the public storage backend (for product images, logos, etc.)."""
     if _minio_is_configured():
-        from storages.backends.s3boto3 import S3Boto3Storage
+        S3Boto3Storage = _tracked_s3_storage()
 
         # Match URL scheme to environment: https in production, http in dev.
         # Heuristic: if MINIO_PUBLIC_DOMAIN targets localhost or 127.0.0.1, we
@@ -239,7 +272,7 @@ def get_private_storage():
     operations use the Docker-internal MINIO_ENDPOINT (e.g. minio:9000).
     """
     if _minio_is_configured():
-        from storages.backends.s3boto3 import S3Boto3Storage
+        S3Boto3Storage = _tracked_s3_storage()
 
         external = getattr(settings, "MINIO_EXTERNAL_ENDPOINT", "") or settings.MINIO_ENDPOINT
         internal = settings.MINIO_ENDPOINT
@@ -276,7 +309,7 @@ def get_temp_storage():
     that are later promoted to public/private or purged by lifecycle rules.
     """
     if _minio_is_configured():
-        from storages.backends.s3boto3 import S3Boto3Storage
+        S3Boto3Storage = _tracked_s3_storage()
 
         external = getattr(settings, "MINIO_EXTERNAL_ENDPOINT", "") or settings.MINIO_ENDPOINT
         internal = settings.MINIO_ENDPOINT

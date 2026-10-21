@@ -318,7 +318,7 @@ export const getListExternalServicesUrl = () => {
  * Все внешние сервисы ансамбля со статусом, подсказкой «что сделать», метриками и выключателем.
  *
  * Только чтение: статус — из последней фоновой проверки (раз в минуту / раз в 15 мин), без
- * вызовов моделей. Сервисы ERP — «нет данных», пока ERP не передаёт состояние (M3-ERP-06).
+ * вызовов моделей. Сервисы ERP — по ответу ERP на `GET /health` (`externals[]`, M3-ERP-06).
  * @summary List External Services
  */
 export const listExternalServices = async (
@@ -658,7 +658,8 @@ export const getDisableExternalServiceUrl = (key: string) => {
 
 /**
  * Выключить сервис вручную (пароль админа, аудит): вендор — вызовы на запасную модель,
- * Langfuse — без трейсов, почта — пауза очереди, Telegram — пауза исходящих.
+ * Langfuse — без трейсов, почта — пауза очереди, Telegram — пауза исходящих, сервис ERP —
+ * ERP перестаёт его вызывать (`PUT /externals/{code}/switch`).
  *
  * Нет выключателя или вендор запасной модели — `409 service_not_switchable`.
  * @summary Disable External Service

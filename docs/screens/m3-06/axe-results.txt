@@ -1,0 +1,6 @@
+external-services-erp-1440: axe violations=0, serious/critical=0, hscroll=false
+external-service-erp-mail-incident-1440: axe violations=0, serious/critical=0, hscroll=false
+external-service-erp-switch-dialog-1440: axe violations=0, serious/critical=0, hscroll=true
+external-services-erp-390: axe violations=0, serious/critical=0, hscroll=false
+external-service-erp-mail-incident-390: axe violations=0, serious/critical=0, hscroll=false
+external-service-erp-switch-dialog-390: axe violations=0, serious/critical=0, hscroll=true

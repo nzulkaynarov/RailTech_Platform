@@ -157,6 +157,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/integration/v1/externals/{code}/switch": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** @description PUT /api/integration/v1/externals/{code}/switch (M3-ERP-06): выключатель внешнего сервиса ERP из CRM. */
+        put: operations["api_integration_v1_externals_switch_update"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/integration/v1/health": {
         parameters: {
             query?: never;
@@ -13190,6 +13207,26 @@ export interface operations {
             header?: never;
             path: {
                 erp_document_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No response body */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    api_integration_v1_externals_switch_update: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                code: string;
             };
             cookie?: never;
         };

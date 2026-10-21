@@ -27,6 +27,7 @@ from app.services.settings import SettingsService
 if TYPE_CHECKING:
     from app.domain.backoffice import BackofficeMode
     from app.integrations.erp import ErpClient
+    from app.integrations.erp_externals import ErpSwitchClient
     from app.services.ai_spend import AiSpendService
     from app.services.assist import AssistService
     from app.services.auth import AuthService
@@ -110,7 +111,15 @@ class Container:
             lockout=LockoutPolicy(
                 self.settings.login_max_failures, self.settings.login_lockout_minutes
             ),
+            erp_switch=self.erp_switch_client,
         )
+
+    @cached_property
+    def erp_switch_client(self) -> "ErpSwitchClient":
+        """Выключатели сервисов ERP (M3-ERP-06): `PUT /externals/{code}/switch`."""
+        from app.integrations.erp_externals import HttpxErpSwitchClient
+
+        return HttpxErpSwitchClient(self.secrets_store, self.settings, self.settings_service)
 
     @cached_property
     def external_view(self) -> "ExternalServicesView":

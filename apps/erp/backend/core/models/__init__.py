@@ -1,3 +1,4 @@
+from .external_services import ExternalServiceSwitch
 from .lookups import AbstractLookup
 from .master_data import Country, Currency, DeliveryBasis, ExchangeRate, UnitOfMeasure
 from .notifications import EmailLog, EmailTemplate, Notification, NotificationType
@@ -9,6 +10,7 @@ __all__ = [
     "Currency",
     "DeliveryBasis",
     "ExchangeRate",
+    "ExternalServiceSwitch",
     "UnitOfMeasure",
     "EmailLog",
     "EmailTemplate",

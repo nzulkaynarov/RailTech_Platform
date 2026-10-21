@@ -12,4 +12,5 @@ export const ServiceSwitchOutKind = {
   langfuse: "langfuse",
   mail: "mail",
   telegram: "telegram",
+  erp: "erp",
 } as const;
