@@ -22,7 +22,7 @@ from django.core.management import call_command
 from django.utils import timezone
 from integration.models import CredentialSlot, IntegrationWebhookEvent, PairingCode, ServiceCredential
 from integration.services import credentials, pairing
-from integration.services.webhooks import verify_signature, webhook_signing_secret
+from integration.services.webhooks import verify_signature_v2, webhook_signing_secret
 from integration.tasks import deliver_webhook_event
 from rest_framework.test import APIClient
 from rest_framework.throttling import SimpleRateThrottle
@@ -148,8 +148,10 @@ def test_webhooks_are_signed_with_the_secret_from_db(paired):
     with patch("httpx.Client.post", return_value=MagicMock(status_code=200, text="OK")) as post:
         assert deliver_webhook_event(event.id) is True
     sent = post.call_args.kwargs
-    assert verify_signature(NEW_SECRET, sent["content"], sent["headers"]["X-Signature"])
-    assert not verify_signature("test-webhook-secret", sent["content"], sent["headers"]["X-Signature"])
+    headers = sent["headers"]
+    args = (headers["X-Event-Id"], headers["X-Timestamp"], sent["content"], headers["X-Signature"])
+    assert verify_signature_v2(NEW_SECRET, *args)  # подпись v2 (FIX-61) секретом из БД
+    assert not verify_signature_v2("test-webhook-secret", *args)
 
 
 def test_webhook_secret_falls_back_to_env_without_pairing():
