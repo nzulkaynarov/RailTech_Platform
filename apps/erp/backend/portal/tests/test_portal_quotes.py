@@ -29,7 +29,6 @@ pytestmark = pytest.mark.django_db
 
 API = "/api/portal/v1"
 VISIBLE = ("sent", "viewed", "accepted", "rejected", "expired", "expired_status")
-FAKE_BOT_TOKEN = "123456:FAKE-TOKEN-FOR-TESTS"
 
 
 @pytest.fixture(autouse=True)
@@ -179,94 +178,6 @@ def test_new_request_replaces_the_previous_code(contract_world, portal_client):
         assert stale.status_code == 409 and stale.json() == {"detail": "QUOTE_CODE_INVALID"}
 
 
-class FakeBot:
-    """Подмена `httpx.post` Telegram Bot API: запоминает вызовы, отвечает заданным статусом."""
-
-    def __init__(self, status_code=200, ok=True):
-        self.status_code, self.ok, self.calls = status_code, ok, []
-
-    def __call__(self, url, json=None, timeout=None):
-        self.calls.append({"url": url, "json": json, "timeout": timeout})
-        outer = self
-
-        class Response:
-            status_code = outer.status_code
-
-            @staticmethod
-            def json():
-                return {"ok": outer.ok}
-
-        return Response()
-
-
-@pytest.fixture
-def telegram_on(settings):
-    settings.PORTAL_ACCEPT_CODE_TELEGRAM = True
-    settings.TELEGRAM_BOT_TOKEN = FAKE_BOT_TOKEN
-
-
-def test_request_code_goes_to_telegram_when_the_contact_has_it_and_the_bot_is_configured(
-    contract_world, portal_client, telegram_on, monkeypatch, client_contact
-):
-    bot = FakeBot()
-    monkeypatch.setattr(acceptance.httpx, "post", bot)
-    quote = contract_world["quotes"]["sent"]
-
-    response = post(portal_client, f"/quotes/{quote.pk}/request-code")
-
-    assert response.status_code == 202
-    assert response.json() == {"channel": "telegram", "sent_to": "@a***", "expires_in": 900}
-    assert not mail.outbox and not EmailLog.objects.filter(template="quote_acceptance_code").exists()
-    assert len(bot.calls) == 1 and bot.calls[0]["json"]["chat_id"] == client_contact.telegram_user_id
-    code = re.search(r"\b(\d{6})\b", bot.calls[0]["json"]["text"]).group(1)
-    assert post(portal_client, f"/quotes/{quote.pk}/accept", {"code": code}).status_code == 200
-
-
-def test_telegram_is_off_unless_configured_even_for_a_contact_with_telegram(contract_world, portal_client, monkeypatch):
-    bot = FakeBot()
-    monkeypatch.setattr(acceptance.httpx, "post", bot)  # настройка выключена по умолчанию: бот принадлежит CRM
-
-    response = post(portal_client, f"/quotes/{contract_world['quotes']['sent'].pk}/request-code")
-
-    assert response.json()["channel"] == "email" and not bot.calls
-
-
-def test_telegram_failure_falls_back_to_email(contract_world, portal_client, telegram_on, monkeypatch):
-    monkeypatch.setattr(acceptance.httpx, "post", FakeBot(status_code=403, ok=False))
-
-    response = post(portal_client, f"/quotes/{contract_world['quotes']['sent'].pk}/request-code")
-
-    assert response.status_code == 202 and response.json()["channel"] == "email"
-    assert mail.outbox[-1].to
-
-
-def test_telegram_failure_without_email_is_422_channel_required(
-    contract_world, portal_client, telegram_on, monkeypatch, client_contact
-):
-    monkeypatch.setattr(acceptance.httpx, "post", FakeBot(status_code=500, ok=False))
-    type(client_contact).objects.filter(pk=client_contact.pk).update(email="")
-
-    response = post(portal_client, f"/quotes/{contract_world['quotes']['sent'].pk}/request-code")
-
-    assert response.status_code == 422 and response.json() == {"detail": "CONTACT_CHANNEL_REQUIRED"}
-
-
-def test_telegram_network_error_never_leaks_the_bot_token(
-    contract_world, portal_client, telegram_on, monkeypatch, caplog
-):
-    def broken(*args, **kwargs):
-        raise acceptance.httpx.ConnectError(
-            f"connect failed for https://api.telegram.org/bot{FAKE_BOT_TOKEN}/sendMessage"
-        )
-
-    monkeypatch.setattr(acceptance.httpx, "post", broken)
-    with caplog.at_level("WARNING"):
-        response = post(portal_client, f"/quotes/{contract_world['quotes']['sent'].pk}/request-code")
-
-    assert response.status_code == 202 and response.json()["channel"] == "email"
-    assert FAKE_BOT_TOKEN not in caplog.text and "ConnectError" in caplog.text
-
-
 def test_request_code_without_any_channel_is_422(contract_world, portal_client, client_contact):
     type(client_contact).objects.filter(pk=client_contact.pk).update(email="", telegram_user_id=None)
 
@@ -276,8 +187,11 @@ def test_request_code_without_any_channel_is_422(contract_world, portal_client, 
     assert not QuoteAcceptanceCode.objects.exists()
 
 
-def test_request_code_for_a_telegram_only_contact_needs_the_bot(contract_world, portal_client, client_contact):
-    """Контакт только с Telegram, а ERP слать через бота не настроена: канала нет — 422, а не письмо в никуда."""
+def test_request_code_for_a_telegram_only_contact_not_matched_in_crm_is_422(
+    contract_world, portal_client, client_contact
+):
+    """Контакт только с Telegram и без сопоставления в CRM: боту писать некому, письма нет — 422, а не код в никуда.
+    (С сопоставлением код уходит событием `quote.acceptance_code_requested`: `test_portal_acceptance_code_event.py`.)"""
     type(client_contact).objects.filter(pk=client_contact.pk).update(email="")
 
     response = post(portal_client, f"/quotes/{contract_world['quotes']['sent'].pk}/request-code")

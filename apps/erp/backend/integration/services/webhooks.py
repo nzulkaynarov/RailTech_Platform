@@ -37,6 +37,7 @@ VALID_EVENT_TYPES = {
     "quote.viewed",
     "quote.accepted",
     "quote.rejected",
+    "quote.acceptance_code_requested",
     "contract.signed",
     "invoice.issued",
     "invoice.paid",
@@ -80,6 +81,64 @@ def verify_signature(secret: str, body_bytes: bytes, signature_header: str) -> b
     """Проверяет заголовок X-Signature."""
     expected = sign_payload(secret, body_bytes)
     return hmac.compare_digest(expected, signature_header.strip())
+
+
+# ── Секреты в теле события (FIX-60a, Q-FIX22-1) ─────────────────────────────────────────────────────────────────────
+#
+# Одноразовый код акцепта (`quote.acceptance_code_requested`, `payload.code`) должен дойти до бота CRM, но не осесть ни в
+# журнале доставки (`IntegrationWebhookEvent.payload` видна в админке и в бэкапах), ни в логах. Поэтому в журнал пишется
+# тело с маской, а настоящее значение лежит только в кэше (Redis) под ключом события на время жизни кода — оттуда его
+# берёт задача доставки и кладёт в тело запроса. Кэша нет (код протух, Redis перезапущен) — доставка не повторяется:
+# событие переходит в `FAILED` с пометкой, а клиент запрашивает новый код.
+
+#: Поля `payload`, значения которых секретны: тип события → имена полей.
+SECRET_PAYLOAD_FIELDS: Dict[str, tuple] = {"quote.acceptance_code_requested": ("code",)}
+
+#: Что вместо значения секретного поля остаётся в журнале.
+SECRET_MASK = "***"
+
+#: Сколько секрет живёт в кэше: срок кода акцепта (15 минут) с запасом на очередь Celery.
+SECRET_PAYLOAD_TTL = 20 * 60
+
+
+def _secret_cache_key(event_id: Any) -> str:
+    return f"integration:webhook-secret:{event_id}"
+
+
+def mask_secret_payload(event_type: str, payload: Dict[str, Any]) -> tuple:
+    """(`payload` для журнала, секретные значения): поля из `SECRET_PAYLOAD_FIELDS` заменены на `SECRET_MASK`."""
+    fields = SECRET_PAYLOAD_FIELDS.get(event_type, ())
+    secrets_found = {name: payload[name] for name in fields if name in payload}
+    if not secrets_found:
+        return payload, {}
+    return {**payload, **{name: SECRET_MASK for name in secrets_found}}, secrets_found
+
+
+def stash_secret_payload(event_id: Any, secrets_found: Dict[str, Any]) -> None:
+    from django.core.cache import cache
+
+    cache.set(_secret_cache_key(event_id), secrets_found, SECRET_PAYLOAD_TTL)
+
+
+def delivery_payload(event: IntegrationWebhookEvent) -> Optional[Dict[str, Any]]:
+    """Тело события для отправки: журнал плюс секреты из кэша. `None` — секрет потерян (протух), отправлять нечего."""
+    fields = SECRET_PAYLOAD_FIELDS.get(event.event_type)
+    if not fields:
+        return event.payload
+    from django.core.cache import cache
+
+    secrets_found = cache.get(_secret_cache_key(event.event_id))
+    if not secrets_found or any(name not in secrets_found for name in fields):
+        return None
+    return {**event.payload, "payload": {**event.payload["payload"], **secrets_found}}
+
+
+def discard_secret_payload(event: IntegrationWebhookEvent) -> None:
+    """Секрет больше не нужен (событие доставлено): убрать из кэша, не дожидаясь срока."""
+    if event.event_type in SECRET_PAYLOAD_FIELDS:
+        from django.core.cache import cache
+
+        cache.delete(_secret_cache_key(event.event_id))
 
 
 def _format_amount(value: Optional[Union[str, Decimal]]) -> Optional[str]:
@@ -246,6 +305,10 @@ def emit_event(
     webhook_url = settings.CRM_WEBHOOK_URL
 
     body_bytes = json.dumps(envelope, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
+    # Секретное поле (код акцепта) в журнал не попадает: туда — тело с маской, настоящее значение — в кэш (см. выше).
+    journal_payload, secret_values = mask_secret_payload(event_type, envelope["payload"])
+    if secret_values:
+        stash_secret_payload(event_id, secret_values)
 
     headers = {
         "Content-Type": "application/json",
@@ -260,7 +323,7 @@ def emit_event(
         event_id=event_id,
         event_type=event_type,
         target_url=webhook_url,
-        payload=envelope,
+        payload={**envelope, "payload": journal_payload} if secret_values else envelope,
         headers=headers,
         status=WebhookEventStatus.PENDING,
     )
@@ -418,14 +481,26 @@ def emit_quote_sent(
     )
 
 
+def contact_refs(contact: Any) -> Dict[str, Any]:
+    """`erp_contact_id` и `crm_contact_id` контакта для тела события (CRM-идентификатор — `null`, если не сопоставлен)."""
+    crm_contact_id = CrmContactMapping.objects.filter(contact=contact).values_list("crm_contact_id", flat=True).first()
+    return {"erp_contact_id": contact.id, "crm_contact_id": crm_contact_id}
+
+
 def emit_quote_outcome(
     event_type: str,
     quote: Any,
     reason: Optional[str] = None,
     actor: Optional[Dict[str, Any]] = None,
     send_async: bool = True,
+    contact: Optional[Any] = None,
 ) -> Optional[IntegrationWebhookEvent]:
-    """События quote.viewed, quote.accepted, quote.rejected."""
+    """События quote.viewed, quote.accepted, quote.rejected.
+
+    `contact` — контакт клиента, принявший или отклонивший КП в Cabinet (Q-FIX22-6): в `payload` уходят `erp_contact_id`
+    и `crm_contact_id` (`null`, если контакт не сопоставлен), действующее лицо — клиент с именем контакта. Без контакта
+    (публичная страница КП, менеджер) полей нет.
+    """
     deal = quote.deal
     company_id = deal.company_id
     payload: Dict[str, Any] = {
@@ -434,6 +509,10 @@ def emit_quote_outcome(
     }
     if reason:
         payload["reason"] = reason
+    if contact is not None:
+        payload.update(contact_refs(contact))
+        if actor is None:
+            actor = build_actor(actor_type="client", name=getattr(contact, "name", None) or None)
 
     return emit_event(
         event_type=event_type,
@@ -441,6 +520,39 @@ def emit_quote_outcome(
         payload=payload,
         deal=deal,
         actor=actor,
+        send_async=send_async,
+    )
+
+
+def emit_quote_acceptance_code_requested(
+    quote: Any,
+    contact: Any,
+    code: str,
+    expires_at: Any,
+    send_async: bool = True,
+) -> Optional[IntegrationWebhookEvent]:
+    """Событие quote.acceptance_code_requested: клиент запросил код акцепта в Cabinet, код доставит бот CRM (Q-FIX22-1).
+
+    Шлётся только контакту, сопоставленному с контактом CRM (`crm_contact_id`): иначе боту некому писать — `None`, и
+    вызывающий код отправляет код письмом. `code` — секрет: в журнал доставки он не попадает (маска), в логи не пишется.
+    """
+    crm_contact_id = CrmContactMapping.objects.filter(contact=contact).values_list("crm_contact_id", flat=True).first()
+    if not crm_contact_id:
+        return None
+    deal = quote.deal
+    return emit_event(
+        event_type="quote.acceptance_code_requested",
+        erp_company_id=deal.company_id,
+        payload={
+            "erp_quote_id": quote.id,
+            "version": quote.version,
+            "erp_contact_id": contact.id,
+            "crm_contact_id": crm_contact_id,
+            "code": code,
+            "expires_at": expires_at.isoformat(),
+        },
+        deal=deal,
+        actor=build_actor(actor_type="client", name=getattr(contact, "name", None) or None),
         send_async=send_async,
     )
 

@@ -169,6 +169,7 @@ class CompanySummarySerializer(serializers.Serializer):
     open_deals = DealListItemSerializer(many=True)
     last_document = DocumentSerializer(allow_null=True)
     receivables = MoneySerializer()
+    receivables_by_currency = MoneySerializer(many=True)
     next_delivery = DeliveryLineSerializer(allow_null=True)
 
 
