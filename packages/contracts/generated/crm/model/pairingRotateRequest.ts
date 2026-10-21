@@ -29,7 +29,7 @@
 import type { PairingSecret } from "./pairingSecret";
 
 /**
- * Новая тройка секретов; значения различаются между собой и от действующих.
+ * Новая тройка секретов; значения различаются между собой и от действовавших до первого применения этой тройки (повтор той же тройки идемпотентен).
  */
 export interface PairingRotateRequest {
   crm_to_erp_token: PairingSecret;

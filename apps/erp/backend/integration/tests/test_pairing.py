@@ -280,6 +280,39 @@ def test_rotation_with_the_current_token_value_is_not_a_rotation(paired):
     assert health(NEW_CRM_TOKEN) == 200
 
 
+@pytest.mark.parametrize(
+    "kwargs",
+    [
+        {"erp": NEW_ERP_TOKEN},  # токен ERP→CRM не меняется
+        {"webhook": NEW_SECRET},  # секрет вебхуков не меняется
+    ],
+    ids=["same-erp-to-crm-token", "same-webhook-secret"],
+)
+def test_rotation_with_an_unchanged_secret_is_422(paired, kwargs):
+    values = {"crm": ROTATED_CRM_TOKEN, "erp": ROTATED_ERP_TOKEN, "webhook": ROTATED_SECRET, **kwargs}
+    assert rotate(NEW_CRM_TOKEN, **values).status_code == 422
+    assert health(ROTATED_CRM_TOKEN) == 401, "отказ ничего не применил"
+    assert credentials.webhook_secret() == NEW_SECRET
+
+
+def test_rotation_with_the_previous_token_value_is_422(paired):
+    assert (
+        rotate(NEW_CRM_TOKEN, crm=ROTATED_CRM_TOKEN, erp=ROTATED_ERP_TOKEN, webhook=ROTATED_SECRET).status_code == 200
+    )
+    # Новое значение токена совпало с переходным прежним: оно ещё действует, ротация другой тройкой — 422.
+    response = rotate(ROTATED_CRM_TOKEN, crm=NEW_CRM_TOKEN, erp="j" * 40, webhook="k" * 40)
+    assert response.status_code == 422
+    assert credentials.webhook_secret() == ROTATED_SECRET
+
+
+def test_rotation_from_env_with_an_env_secret_is_422(settings):
+    settings.ERP_WEBHOOK_SECRET = "env-webhook-secret-" + "z" * 40  # длинный: иначе 422 от формата, не от проверки
+    response = rotate(ENV_TOKEN, crm=ROTATED_CRM_TOKEN, erp=ROTATED_ERP_TOKEN, webhook=settings.ERP_WEBHOOK_SECRET)
+    assert response.status_code == 422
+    assert not ServiceCredential.objects.exists()
+    assert rotate(ENV_TOKEN, crm=ROTATED_CRM_TOKEN, erp=ROTATED_ERP_TOKEN, webhook=ROTATED_SECRET).status_code == 200
+
+
 def test_rotation_needs_the_current_token_not_the_previous_one(paired):
     assert (
         rotate(NEW_CRM_TOKEN, crm=ROTATED_CRM_TOKEN, erp=ROTATED_ERP_TOKEN, webhook=ROTATED_SECRET).status_code == 200

@@ -191,6 +191,17 @@ def accept(raw_code: str, *, crm_to_erp_token: str, erp_to_crm_token: str, webho
     return Accepted(paired_at=timezone.now())
 
 
+def _check_differs_from_effective(crm_to_erp: str, erp_to_crm: str, webhook: str) -> None:
+    """Новая тройка не повторяет ни одного действовавшего значения (токены CRM→ERP — и переходный прежний, и из `.env`;
+    токен ERP→CRM; секрет вебхуков): «обновить» ключ тем же значением — не ротация. Повтор УЖЕ применённой тройки
+    сюда не доходит — он распознан раньше и идемпотентен."""
+    if any(credentials.same_secret(crm_to_erp, token) for token in credentials.active_crm_tokens() if token):
+        raise IntegrationValidationError()
+    for new, effective in ((erp_to_crm, credentials.erp_to_crm_token()), (webhook, credentials.webhook_secret())):
+        if effective and credentials.same_secret(new, effective):
+            raise IntegrationValidationError()
+
+
 def rotate(
     current_token: str,
     *,
@@ -202,7 +213,8 @@ def rotate(
     """Ротация под действующим токеном: новая тройка, прежний токен CRM→ERP живёт ещё `rotation_grace_seconds`.
 
     Повтор той же тройки (CRM не получила ответ и зовёт снова — уже со старым токеном, он ещё действует) — тот же
-    результат, переходный срок не продлевается. Токен из `.env` (сопряжения не было) тоже годится как «старый».
+    результат, переходный срок не продлевается. Новая тройка, которая совпадает с любым действовавшим значением
+    (до первого применения), — 422. Токен из `.env` (сопряжения не было) тоже годится как «старый».
     """
     _check_secrets(crm_to_erp_token, erp_to_crm_token, webhook_secret)
     now = now or timezone.now()
@@ -222,6 +234,7 @@ def rotate(
             raise IntegrationValidationError()  # новый токен уже действует: менять нечего
         if stored_current is not None and not credentials.same_secret(current_token, stored_current):
             raise _unauthorized()
+        _check_differs_from_effective(crm_to_erp_token, erp_to_crm_token, webhook_secret)
         valid_until = now + timedelta(seconds=rotation_grace_seconds())
         _put(CredentialSlot.CRM_TO_ERP_PREVIOUS, current_token, expires_at=valid_until)
         _put(CredentialSlot.CRM_TO_ERP, crm_to_erp_token, rotated_at=now)

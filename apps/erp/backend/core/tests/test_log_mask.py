@@ -317,6 +317,27 @@ def test_sentry_event_after_hook_has_no_secrets():
     assert event["exception"]["values"][0]["type"] == "HTTPStatusError"
 
 
+@pytest.mark.parametrize(
+    "headers",
+    [
+        {"X-Pairing-Proof": f"v1.1760000000.jti.{FAKE_SIG}", "Accept": "json"},
+        {"x-pairing-proof": f"v1.1760000000.jti.{FAKE_SIG}", "Accept": "json"},
+        [["X-Pairing-Proof", f"v1.1760000000.jti.{FAKE_SIG}"], ["Accept", "json"]],
+    ],
+    ids=["dict-canonical-case", "dict-lowercase", "list-of-pairs"],
+)
+def test_sentry_event_pairing_proof_header_is_redacted(headers):
+    """M3-ERP-05: доказательство bootstrap (`X-Pairing-Proof`) не попадает в событие Sentry ни в каком виде заголовков."""
+    event = scrub_event({"request": {"url": "https://erp.test/api/integration/v1/pairing/accept", "headers": headers}})
+
+    assert FAKE_SIG not in repr(event)
+    request_headers = event["request"]["headers"]
+    pairs = request_headers.items() if isinstance(request_headers, dict) else request_headers
+    by_name = {str(name).lower(): value for name, value in pairs}
+    assert by_name["x-pairing-proof"] == REDACTED
+    assert by_name["accept"] == "json"  # лишнего не затёрто
+
+
 def test_sentry_event_hook_accepts_breadcrumbs_as_bare_list():
     event = {"breadcrumbs": [{"message": f"GET /bot{FAKE_BOT}/getMe", "data": {"url": f"/bot{FAKE_BOT}/x"}}]}
 

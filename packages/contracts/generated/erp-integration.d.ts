@@ -785,7 +785,7 @@ export interface components {
       /** @description Версия ERP (как в `Health.version`) */
       erp_version: string;
     };
-    /** @description Новая тройка секретов; значения различаются между собой и от действующих. */
+    /** @description Новая тройка секретов; значения различаются между собой и от действовавших до первого применения этой тройки (повтор той же тройки идемпотентен). */
     PairingRotateRequest: {
       crm_to_erp_token: components["schemas"]["PairingSecret"];
       erp_to_crm_token: components["schemas"]["PairingSecret"];
