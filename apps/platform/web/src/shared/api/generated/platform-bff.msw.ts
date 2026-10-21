@@ -23,10 +23,13 @@
  * **Номера объектов** — бизнес-номера SPEC-v3 §2.2 (`ЗВ-2026-104`, `L-2041`); внутренних идентификаторов бэкендов в
  * ссылках нет.
  *
+ * 0.2.0 (волна 8): смена пароля (`POST /auth/change-password`, `Session.must_change_password`); Admin · Оргструктура —
+ * сотрудники, выдача ролей Платформы, приглашение по почте (`/admin/users*`, раздел матрицы `admin`).
+ *
  * Лимиты: вход — 10 в минуту на IP и e-mail; остальные запросы — 300 в минуту на сессию; превышение — 429
  * `TOO_MANY_REQUESTS` с `Retry-After`.
  *
- * OpenAPI spec version: 0.1.0
+ * OpenAPI spec version: 0.2.0
  */
 import { faker } from "@faker-js/faker";
 
@@ -36,6 +39,8 @@ import type { RequestHandlerOptions } from "msw";
 import {
   AccessLevel,
   DueLabel,
+  EmployeeStatus,
+  ErpSyncState,
   Language,
   ModuleCode,
   NotificationTab,
@@ -47,6 +52,8 @@ import {
 } from "./model";
 import type {
   ActivityFeed,
+  Employee,
+  EmployeeList,
   Health,
   Me,
   MenuCounters,
@@ -87,6 +94,7 @@ export const getLoginResponseMock = (
     ]),
     access: { crm: faker.datatype.boolean(), erp: faker.datatype.boolean() },
   },
+  must_change_password: faker.datatype.boolean(),
   expires_at: faker.date.past().toISOString().slice(0, 19) + "Z",
   ...overrideResponse,
 });
@@ -121,6 +129,7 @@ export const getGetSessionResponseMock = (
     ]),
     access: { crm: faker.datatype.boolean(), erp: faker.datatype.boolean() },
   },
+  must_change_password: faker.datatype.boolean(),
   expires_at: faker.date.past().toISOString().slice(0, 19) + "Z",
   ...overrideResponse,
 });
@@ -388,6 +397,100 @@ export const getSearchResponseMock = (
   ...overrideResponse,
 });
 
+export const getListEmployeesResponseMock = (
+  overrideResponse: Partial<Extract<EmployeeList, object>> = {},
+): EmployeeList => ({
+  items: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+    id: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    initials: faker.string.alpha({ length: { min: 3, max: 3 } }),
+    email: faker.internet.email(),
+    position: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 120 } }),
+      undefined,
+    ]),
+    roles: faker.helpers.arrayElements(Object.values(RoleCode)),
+    access: { crm: faker.datatype.boolean(), erp: faker.datatype.boolean() },
+    status: faker.helpers.arrayElement(Object.values(EmployeeStatus)),
+    telegram_linked: faker.datatype.boolean(),
+    erp_sync: faker.helpers.arrayElement(Object.values(ErpSyncState)),
+    erp_sync_error: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      undefined,
+    ]),
+  })),
+  ...overrideResponse,
+});
+
+export const getInviteEmployeeResponseMock = (
+  overrideResponse: Partial<Extract<Employee, object>> = {},
+): Employee => ({
+  id: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  initials: faker.string.alpha({ length: { min: 3, max: 3 } }),
+  email: faker.internet.email(),
+  position: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 120 } }),
+    undefined,
+  ]),
+  roles: faker.helpers.arrayElements(Object.values(RoleCode)),
+  access: { crm: faker.datatype.boolean(), erp: faker.datatype.boolean() },
+  status: faker.helpers.arrayElement(Object.values(EmployeeStatus)),
+  telegram_linked: faker.datatype.boolean(),
+  erp_sync: faker.helpers.arrayElement(Object.values(ErpSyncState)),
+  erp_sync_error: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    undefined,
+  ]),
+  ...overrideResponse,
+});
+
+export const getGetEmployeeResponseMock = (
+  overrideResponse: Partial<Extract<Employee, object>> = {},
+): Employee => ({
+  id: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  initials: faker.string.alpha({ length: { min: 3, max: 3 } }),
+  email: faker.internet.email(),
+  position: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 120 } }),
+    undefined,
+  ]),
+  roles: faker.helpers.arrayElements(Object.values(RoleCode)),
+  access: { crm: faker.datatype.boolean(), erp: faker.datatype.boolean() },
+  status: faker.helpers.arrayElement(Object.values(EmployeeStatus)),
+  telegram_linked: faker.datatype.boolean(),
+  erp_sync: faker.helpers.arrayElement(Object.values(ErpSyncState)),
+  erp_sync_error: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    undefined,
+  ]),
+  ...overrideResponse,
+});
+
+export const getUpdateEmployeeResponseMock = (
+  overrideResponse: Partial<Extract<Employee, object>> = {},
+): Employee => ({
+  id: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  initials: faker.string.alpha({ length: { min: 3, max: 3 } }),
+  email: faker.internet.email(),
+  position: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 120 } }),
+    undefined,
+  ]),
+  roles: faker.helpers.arrayElements(Object.values(RoleCode)),
+  access: { crm: faker.datatype.boolean(), erp: faker.datatype.boolean() },
+  status: faker.helpers.arrayElement(Object.values(EmployeeStatus)),
+  telegram_linked: faker.datatype.boolean(),
+  erp_sync: faker.helpers.arrayElement(Object.values(ErpSyncState)),
+  erp_sync_error: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    undefined,
+  ]),
+  ...overrideResponse,
+});
+
 export const getLoginMockHandler = (
   overrideResponse?:
     | Session
@@ -417,6 +520,24 @@ export const getLogoutMockHandler = (
 ) => {
   return http.post(
     "*/auth/logout",
+    async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+      if (typeof overrideResponse === "function") {
+        await overrideResponse(info);
+      }
+
+      return new HttpResponse(null, { status: 204 });
+    },
+    options,
+  );
+};
+
+export const getChangePasswordMockHandler = (
+  overrideResponse?:
+    void | ((info: Parameters<Parameters<typeof http.post>[1]>[0]) => Promise<void> | void),
+  options?: RequestHandlerOptions,
+) => {
+  return http.post(
+    "*/auth/change-password",
     async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
       if (typeof overrideResponse === "function") {
         await overrideResponse(info);
@@ -686,9 +807,100 @@ export const getSearchMockHandler = (
     options,
   );
 };
+
+export const getListEmployeesMockHandler = (
+  overrideResponse?:
+    | EmployeeList
+    | ((
+        info: Parameters<Parameters<typeof http.get>[1]>[0],
+      ) => Promise<EmployeeList> | EmployeeList),
+  options?: RequestHandlerOptions,
+) => {
+  return http.get(
+    "*/admin/users",
+    async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getListEmployeesResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getInviteEmployeeMockHandler = (
+  overrideResponse?:
+    | Employee
+    | ((info: Parameters<Parameters<typeof http.post>[1]>[0]) => Promise<Employee> | Employee),
+  options?: RequestHandlerOptions,
+) => {
+  return http.post(
+    "*/admin/users/invite",
+    async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getInviteEmployeeResponseMock(),
+        { status: 201 },
+      );
+    },
+    options,
+  );
+};
+
+export const getGetEmployeeMockHandler = (
+  overrideResponse?:
+    | Employee
+    | ((info: Parameters<Parameters<typeof http.get>[1]>[0]) => Promise<Employee> | Employee),
+  options?: RequestHandlerOptions,
+) => {
+  return http.get(
+    "*/admin/users/:id",
+    async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getGetEmployeeResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getUpdateEmployeeMockHandler = (
+  overrideResponse?:
+    | Employee
+    | ((info: Parameters<Parameters<typeof http.patch>[1]>[0]) => Promise<Employee> | Employee),
+  options?: RequestHandlerOptions,
+) => {
+  return http.patch(
+    "*/admin/users/:id",
+    async (info: Parameters<Parameters<typeof http.patch>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getUpdateEmployeeResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
 export const getRailTechPlatformBFFAPICRMERPMock = () => [
   getLoginMockHandler(),
   getLogoutMockHandler(),
+  getChangePasswordMockHandler(),
   getGetSessionMockHandler(),
   getGetMeMockHandler(),
   getUpdateMeMockHandler(),
@@ -701,4 +913,8 @@ export const getRailTechPlatformBFFAPICRMERPMock = () => [
   getMarkNotificationReadMockHandler(),
   getMarkAllNotificationsReadMockHandler(),
   getSearchMockHandler(),
+  getListEmployeesMockHandler(),
+  getInviteEmployeeMockHandler(),
+  getGetEmployeeMockHandler(),
+  getUpdateEmployeeMockHandler(),
 ];

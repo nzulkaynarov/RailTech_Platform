@@ -23,10 +23,13 @@
  * **Номера объектов** — бизнес-номера SPEC-v3 §2.2 (`ЗВ-2026-104`, `L-2041`); внутренних идентификаторов бэкендов в
  * ссылках нет.
  *
+ * 0.2.0 (волна 8): смена пароля (`POST /auth/change-password`, `Session.must_change_password`); Admin · Оргструктура —
+ * сотрудники, выдача ролей Платформы, приглашение по почте (`/admin/users*`, раздел матрицы `admin`).
+ *
  * Лимиты: вход — 10 в минуту на IP и e-mail; остальные запросы — 300 в минуту на сессию; превышение — 429
  * `TOO_MANY_REQUESTS` с `Retry-After`.
  *
- * OpenAPI spec version: 0.1.0
+ * OpenAPI spec version: 0.2.0
  */
 
 export type HealthChecksCrm = (typeof HealthChecksCrm)[keyof typeof HealthChecksCrm];
