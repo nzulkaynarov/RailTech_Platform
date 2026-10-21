@@ -22,6 +22,7 @@ import { RequestHeader } from './RequestHeader';
 import { RequestActionBar } from './RequestActionBar';
 import { QuoteView } from './QuoteView';
 import { needsQuoteWork } from '@/lib/waiting';
+import { requestQuoteEntryActions } from '@/lib/requestQuoteActions';
 
 /**
  * Карточка сделки бэк-офиса. Reached via the `request-detail/<dealId>` hash route (Deals list,
@@ -75,6 +76,8 @@ export function RequestDetailPage({ dealId, onBack }: { dealId: number; onBack: 
   if (!deal) return <div className="p-8 text-center text-muted-foreground">{t('pages.common.noData')}</div>;
 
   const quote = deal.active_quote ?? deal.quotes?.[deal.quotes.length - 1] ?? null;
+  // Заявка словами: полный текст клиента (сервер), иначе комментарий сделки.
+  const requestText = (deal.request_text ?? deal.notes ?? '').trim();
 
   const isDraft = deal.stage_code === DealStage.DRAFT;
   const isSourcing = deal.stage_code === DealStage.SOURCING;
@@ -87,10 +90,11 @@ export function RequestDetailPage({ dealId, onBack }: { dealId: number; onBack: 
   // отправленной заявки — и кнопка волны W2 не показывалась НИКОГДА (проход глазами 03-08, тот
   // же корень, что у плитки «Заявки без КП»).
   const quoteNotStarted = needsQuoteWork(deal);
-  const canTakeAndPrepare = quoteNotStarted && canEditPricing;
-  // Q5 (устранение рассинхрона гейтов): «Сформировать КП» — резервный ручной путь, НЕ показываем
-  // рядом с одной кнопкой W2 (иначе две кнопки создания на одной стадии сбивают с толку).
-  const canBuildQuote = (isSourcing || isCalculating) && quoteNotStarted && !canTakeAndPrepare && canEditPricing;
+  const { canBuildQuote, canTakeAndPrepare } = requestQuoteEntryActions({
+    quoteNotStarted,
+    canEditPricing,
+    requestLinesCount: deal.request_lines_count ?? 0,
+  });
   // «КП уже собирают» — тоже по состоянию: пустой черновик-хранилище позиций за КП не считается.
   const hasQuote = !!deal.active_quote && !quoteNotStarted;
   // Q4: send a DRAFT КП into internal review straight from the request card (no builder detour).
@@ -190,13 +194,13 @@ export function RequestDetailPage({ dealId, onBack }: { dealId: number; onBack: 
         />
 
         {/* Комментарий клиента к заявке (подан в Cabinet или передан из CRM) — только чтение. */}
-        {(deal.notes ?? '').trim() && (
+        {requestText && (
           <Card>
             <CardHeader className="pb-2">
               <CardTitle className="text-sm">{t('requestDetailActions.clientNote')}</CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="whitespace-pre-line text-sm text-muted-foreground">{deal.notes}</p>
+              <p className="whitespace-pre-line text-sm text-muted-foreground">{requestText}</p>
             </CardContent>
           </Card>
         )}

@@ -94,6 +94,9 @@ class Settings(BaseSettings):
     erp_service_token: SecretStr = SecretStr("")
     # Секрет подписи вебхуков ERP → CRM (CONTRACTS §3, `X-Signature`); приёмник — M3-CRM-04.
     erp_webhook_secret: SecretStr = SecretStr("")
+    # Переход на подпись вебхуков v2 (FIX-61, Q-FIX35-2): пока true, CRM принимает и старую подпись
+    # (HMAC только тела); после выкладки ERP с v2 — false (docs/runbooks/webhooks.md). v2 — всегда.
+    erp_webhook_sign_legacy: bool = True
 
     # Коннектор «Почта» (M3-CRM-08, ADR-0018): SMTP-релей для писем сотрудникам (приглашение,
     # сброс пароля). Запасной источник: настройки из «Подключений» → «Почта» имеют приоритет.

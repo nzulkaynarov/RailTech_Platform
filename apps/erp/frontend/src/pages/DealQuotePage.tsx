@@ -15,13 +15,16 @@ import { useDeal, useTakeAndPrepareQuote } from '@/hooks/useCRM';
 import { useHasCompanyPermission } from '@/hooks/useCapabilities';
 import { translateApiError } from '@/lib/apiError';
 import { QuoteBuilderGrid } from '@/components/QuoteBuilder/QuoteBuilderGrid';
+import { ParseRequestTextButton } from '@/components/QuoteBuilder/ParseRequestTextButton';
+import { requestQuoteEntryActions } from '@/lib/requestQuoteActions';
+import { needsQuoteWork } from '@/lib/waiting';
 import { GenerateQuoteDialog } from '@/components/CRM/GenerateQuoteDialog';
 import { QuoteApprovalChain } from '@/components/CRM/QuoteApprovalChain';
 import { SendQuoteDialog } from '@/components/CRM/SendQuoteDialog';
 import { QuoteSentPanel } from '@/components/CRM/QuoteSentPanel';
 import { DealAttachmentsPanel } from '@/components/Sourcing/DealAttachmentsPanel';
 import { GenerateContractDialog } from '@/components/CRM/GenerateContractDialog';
-import { QuoteStatus, DealStage, DEAL_STAGE_LABEL_KEY } from '@/lib/codes';
+import { QuoteStatus, DEAL_STAGE_LABEL_KEY } from '@/lib/codes';
 import { LoadingRows, EmptyState } from './shared/PageShell';
 
 interface DealQuotePageProps {
@@ -55,7 +58,8 @@ export function DealQuotePage({ dealId, onBack }: DealQuotePageProps) {
   // screen, so the back office prices the КП without bouncing back to the deal page. The
   // ask (deal.notes) collapses to one line by default; the full thread opens in a slide-over.
   const [filesOpen, setFilesOpen] = useState(false);
-  const [noteExpanded, setNoteExpanded] = useState(false);
+  // null = пользователь не трогал: заявка словами раскрыта сама (текст перед глазами при наборе строк).
+  const [noteExpanded, setNoteExpanded] = useState<boolean | null>(null);
   // WP-D navigation guard: the builder reports unsaved line edits up here so leaving the
   // workspace (the Back button) prompts a confirm instead of silently dropping the changes.
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
@@ -120,15 +124,25 @@ export function DealQuotePage({ dealId, onBack }: DealQuotePageProps) {
   const quoteSentToClient = ([QuoteStatus.SENT, QuoteStatus.APPROVED, QuoteStatus.REJECTED] as string[])
     .includes(quoteStatus);
 
-  const hasNote = (deal.notes ?? '').trim().length > 0;
+  // Заявка словами: полный текст клиента (сервер), иначе комментарий сделки.
+  const requestText = (deal.request_text ?? deal.notes ?? '').trim();
+  const hasNote = requestText.length > 0;
+  // FIX-67: заявка без строк — продавец набирает их вручную по тексту (он раскрыт и виден над сеткой) или
+  // просит ИИ разобрать текст. Со строками текст сворачивается в одну строку, как раньше.
+  const wordsOnly = hasNote && (deal.request_lines_count ?? 0) === 0;
+  const noteOpen = noteExpanded ?? wordsOnly;
+  const canParseText = wordsOnly && !!quote && canEditPricing && quoteStatus === QuoteStatus.DRAFT;
 
   // Q1: the no-КП screen must give a seller a way FORWARD, not just «Назад». Mirror request-detail's
   // one-click «Взять в работу и подготовить КП» (claim + стадия + предзаполненный КП) as the primary
   // path across the pre-КП stages, with the manual «Сформировать КП» dialog as the fallback.
-  const canTakeAndPrepare =
-    !quote
-    && canEditPricing
-    && ([DealStage.RFQ_OPEN, DealStage.SOURCING, DealStage.CALCULATING] as string[]).includes(deal.stage_code ?? '');
+  // Строк в заявке нет (заявка словами) — кнопки «Взять и подготовить» нет: сервер отказал бы
+  // (`NO_REQUEST_LINES`), остаётся «Создать КП» вручную (FIX-67).
+  const { canTakeAndPrepare } = requestQuoteEntryActions({
+    quoteNotStarted: !quote && needsQuoteWork({ stage_code: deal.stage_code, active_quote: null }),
+    canEditPricing,
+    requestLinesCount: deal.request_lines_count ?? 0,
+  });
 
   return (
     <div className="flex h-full flex-col">
@@ -187,21 +201,36 @@ export function DealQuotePage({ dealId, onBack }: DealQuotePageProps) {
       {/* The client's ask — one-line collapsible (single Deal-workspace #3b): collapsed by default
           so it costs ~1 line, expands in place. */}
       {hasNote && (
-        <button
-          type="button"
-          onClick={() => setNoteExpanded((v) => !v)}
-          aria-expanded={noteExpanded}
-          className="flex w-full items-start gap-2 border-b bg-muted/40 px-4 py-1.5 text-left hover:bg-muted/60"
-        >
-          <MessageSquare className="mt-0.5 h-3.5 w-3.5 shrink-0 text-muted-foreground" aria-hidden="true" />
-          <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground shrink-0">
-            {t('pages.dealQuote.clientNote')}:
-          </span>
-          <span className={cn('min-w-0 flex-1 whitespace-pre-line text-xs text-foreground', noteExpanded ? '' : 'line-clamp-1')}>
-            {deal.notes}
-          </span>
-          <ChevronDown className={cn('mt-0.5 h-3.5 w-3.5 shrink-0 text-muted-foreground transition-transform', noteExpanded && 'rotate-180')} aria-hidden="true" />
-        </button>
+        <div className="flex w-full flex-wrap items-start gap-x-2 gap-y-1 border-b bg-muted/40 px-4 py-1.5">
+          <button
+            type="button"
+            onClick={() => setNoteExpanded(!noteOpen)}
+            aria-expanded={noteOpen}
+            className="flex shrink-0 items-center gap-2 rounded text-left hover:bg-muted/60"
+          >
+            <MessageSquare className="h-3.5 w-3.5 shrink-0 text-muted-foreground" aria-hidden="true" />
+            <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              {t('pages.dealQuote.clientNote')}:
+            </span>
+            <ChevronDown className={cn('h-3.5 w-3.5 shrink-0 text-muted-foreground transition-transform', noteOpen && 'rotate-180')} aria-hidden="true" />
+          </button>
+          {/* Раскрытый текст прокручивается сам (длинная заявка не выдавливает сетку), поэтому он
+              доступен с клавиатуры (tabIndex) и назван — вне кнопки: вложенный фокус в кнопке недопустим. */}
+          <div
+            data-testid="request-text"
+            {...(noteOpen ? { tabIndex: 0, role: 'region', 'aria-label': t('pages.dealQuote.clientNote') } : {})}
+            className={cn(
+              'min-w-0 flex-1 basis-48 whitespace-pre-line text-xs text-foreground',
+              noteOpen ? 'max-h-40 overflow-y-auto' : 'line-clamp-1',
+            )}
+          >
+            {requestText}
+          </div>
+          {canParseText && quote && <ParseRequestTextButton quoteId={quote.id} />}
+        </div>
+      )}
+      {canParseText && (
+        <p className="border-b px-4 py-1 text-xs text-muted-foreground">{t('requestText.hint')}</p>
       )}
 
       {/* Wave E F3: «калькулятор» draft — no client yet. One compact line so the seller knows

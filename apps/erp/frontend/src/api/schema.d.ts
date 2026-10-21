@@ -6920,6 +6920,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/sourcing/parse-request-text/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Разобрать текст заявки в строки КП (AI, FIX-67)
+         * @description Заявка словами: клиент (или передача из CRM) описал потребность текстом, строк нет. Продавец жмёт «Разобрать текст в строки (ИИ)» в конструкторе КП — сервер берёт текст заявки сам (полный текст клиента, иначе комментарий сделки), разбирает его тем же извлечением, что и файл клиента (`ai.services.intake`), и дописывает строки В КОНЕЦ КП. ARCH-01: 202 + task_id, извлечение на Celery (поллинг sourcing/ai-status/). ИИ выключен — 503 `AI_DISABLED`, шлюз недоступен — результат задачи `AI_EXTRACT_FAILED`; ручной набор строк работает всегда.
+         */
+        post: operations["sourcing_parse_request_text_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/system-settings/": {
         parameters: {
             query?: never;
@@ -8485,6 +8505,10 @@ export interface components {
              *     принимать. Слово «Завершено» в интерфейсе опирается на этот флаг, а не на стадию.
              */
             readonly execution_complete: boolean;
+            /** @description Строки заявки клиента (портал / передача CRM / прежнее «КП заявки») — не позиции КП продавца. */
+            readonly request_lines_count: number;
+            /** @description Заявка словами: полный текст клиента, иначе комментарий сделки. */
+            readonly request_text: string;
             /**
              * Дата создания
              * Format: date-time
@@ -9792,6 +9816,9 @@ export interface components {
              */
             previous?: string | null;
             results: components["schemas"]["User"][];
+        };
+        ParseRequestTextRequestRequest: {
+            quote_id: number;
         };
         PatchedAttachmentRequest: {
             /**
@@ -23911,6 +23938,65 @@ export interface operations {
                 content?: never;
             };
             /** @description AI matching disabled */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    sourcing_parse_request_text_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ParseRequestTextRequestRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["ParseRequestTextRequestRequest"];
+                "multipart/form-data": components["schemas"]["ParseRequestTextRequestRequest"];
+            };
+        };
+        responses: {
+            /** @description AI job queued, task_id returned (poll ai-status) */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description QUOTE_ID_REQUIRED / REQUEST_TEXT_EMPTY */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Not own-company staff with pricing permission */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Quote not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Quote is not editable (QUOTE_NOT_DRAFT / QUOTE_FROZEN) */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description AI disabled (AI_DISABLED) */
             503: {
                 headers: {
                     [name: string]: unknown;
