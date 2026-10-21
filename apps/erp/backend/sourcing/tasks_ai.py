@@ -110,6 +110,37 @@ def _handle_import_lines(payload: dict) -> dict:
     return {"added": added, "recognized": len(rows), "truncated": truncated, "quote_id": quote.id}
 
 
+def _handle_parse_request_text(payload: dict) -> dict:
+    """FIX-67 — заявка словами → строки КП. Текст берётся с самой сделки (полный текст клиента, иначе
+    комментарий сделки), разбирается тем же извлечением, что и файл клиента (`extract_request_items`), строки
+    дописываются в КП. Авторизация перепроверяется с записанным user (TOCTOU — как у import_lines).
+    Выключенный ИИ / недоступный шлюз — коды `AI_DISABLED` / `AI_EXTRACT_FAILED`, не исключение."""
+    from ai.services.intake import extract_request_items
+
+    from accounts.models import CustomUser
+    from crm.models import Quote
+    from crm.services.draft_quote import deal_request_text
+    from crm.services.quotes.bulk import import_extracted_lines_into_quote
+
+    user = CustomUser.objects.filter(pk=payload["user_id"]).first()
+    quote = Quote.objects.select_related("deal", "cost_currency_default").filter(pk=payload["quote_id"]).first()
+    if user is None or quote is None:
+        return {"error": "QUOTE_NOT_FOUND"}
+    text = deal_request_text(quote.deal)
+    if not text:
+        return {"error": "REQUEST_TEXT_EMPTY"}
+    try:
+        rows = extract_request_items(text.encode("utf-8"), "request.txt")
+    except (RuntimeError, ValueError) as exc:
+        logger.warning("AI parse-request-text failed: %s", exc)
+        return {"error": "AI_DISABLED" if str(exc).startswith("AI_IMPORT_DISABLED") else "AI_EXTRACT_FAILED"}
+
+    added, truncated, err = import_extracted_lines_into_quote(quote, user, rows)
+    if err:
+        return {"error": err}
+    return {"added": added, "recognized": len(rows), "truncated": truncated, "quote_id": quote.id}
+
+
 def _handle_compose(payload: dict) -> dict:
     from ai.services.compose import build_request_from_text
 
@@ -244,6 +275,7 @@ FEATURE_HANDLERS = {
     "preflight": _handle_preflight,
     "extract": _handle_extract,
     "import_lines": _handle_import_lines,
+    "parse_request_text": _handle_parse_request_text,
     "catalog_import_ai": _handle_catalog_import_ai,
     "compose": _handle_compose,
     "enrich": _handle_enrich,

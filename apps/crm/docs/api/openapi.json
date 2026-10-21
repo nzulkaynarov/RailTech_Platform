@@ -10710,7 +10710,7 @@
     },
     "/api/v1/integrations/erp/events": {
       "post": {
-        "description": "Приём входящих вебхуков событий ERP (M3-CRM-04, CONTRACTS §3, FIX-33).\n\nПорядок: подпись HMAC-SHA256 по сырому телу (X-Signature, ERP_WEBHOOK_SECRET) — ДО разбора\nтела и проверки остальных заголовков; идемпотентность по X-Event-Id; быстрый 200 и фоновая\nобработка в Procrastinate. 401 — только неверная подпись; тело, которое мы принять не можем\n(чужой тип события, расхождение с заголовком), записывается как `rejected` и тоже получает 200:\nретраи ERP ничего бы не изменили.",
+        "description": "Приём входящих вебхуков событий ERP (M3-CRM-04, CONTRACTS §3, FIX-33, FIX-61).\n\nПорядок: подпись — ДО разбора тела и проверки остальных заголовков. Схема v2:\nHMAC-SHA256(ERP_WEBHOOK_SECRET, \"{X-Event-Id}.{X-Timestamp}.{тело}\"); пока\n`ERP_WEBHOOK_SIGN_LEGACY=true`, принимается и старая (HMAC только тела). Идемпотентность по\nX-Event-Id; быстрый 200 и фоновая обработка в Procrastinate. 401 — только неверная подпись;\nтело, которое мы принять не можем (чужой тип события, расхождение с заголовком), и метка v2\nвне окна 300 с записываются как `rejected` и тоже получают 200: ретраи ERP ничего бы не\nизменили (ERP подписывает ретрай заново).",
         "operationId": "receive_erp_event",
         "parameters": [
           {
@@ -10759,6 +10759,22 @@
                 }
               ],
               "title": "X-Signature"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-Timestamp",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Timestamp"
             }
           }
         ],
