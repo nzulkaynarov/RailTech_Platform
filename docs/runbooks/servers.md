@@ -33,7 +33,7 @@
 | `crm-mcp-kb`, `crm-mcp-crm`, `crm-mcp-docs` | 3 × 256 МБ | |
 | `crm-web` | 64 МБ | статика за Caddy |
 | `erp-backend` | 768 МБ | Daphne |
-| `erp-mcp` | 256 МБ (лимит; факт ≈ 200 МБ) | инструменты ERP для агента CRM, SDK `mcp`, образ `erp-backend` (FIX-36); порт 8104 только внутри сети; файл `packages/contracts/mcp-tools.json` монтируется в контейнер; профиль `mcp` — не стартует, пока CRM не подключит (M3-CRM-07) |
+| `erp-mcp` | 256 МБ (лимит; факт ≈ 200 МБ) | инструменты ERP для агента CRM, SDK `mcp`, образ `erp-backend` (FIX-36); порт 8104 только внутри сети; файл `packages/contracts/mcp-tools.json` (и `events.schema.json`, M5-INF-01c) монтируется в контейнер; профиль `mcp` — не стартует, пока CRM не подключит (M3-CRM-07) |
 | `erp-worker`, `erp-worker-ai`, `erp-beat` | 512 + 384 + 192 МБ | |
 | `erp-web` | 64 МБ | nginx со сборкой |
 | `s3-init`, `crm-migrate`, `litellm-seed`, `erp-ai-gateway` и одноразовые `run` миграций | 256–384 МБ | одноразовые, живут секунды при деплое; в «Итого постоянно» не входят; pg_dump-гейт идёт в отдельном контейнере с `pg_dump` (без лимита, до `up`) |
