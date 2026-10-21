@@ -11,8 +11,11 @@ from typing import Any, Final
 
 import structlog
 
-from app.agents.llm import ChatResult
+from app.agents.dialog import erp_tools
+from app.agents.erp_mcp import ErpToolCaller
+from app.agents.llm import ChatResult, ToolCall
 from app.agents.mcp_client import ToolCaller
+from app.security.erp_agent_context import ErpScope
 
 logger = structlog.get_logger(__name__)
 
@@ -63,6 +66,9 @@ TOOLS: Final[list[dict[str, Any]]] = [
     },
 ]
 
+# Не больше стольких вызовов инструментов за раунд: остальные модель получает отказанными.
+MAX_CALLS_PER_ROUND: Final = 5
+TOO_MANY: Final = {"ok": False, "error": "too_many_calls", "note": "Слишком много вызовов сразу."}
 FAILED: Final = {"ok": False, "error": "failed", "note": "Действие не выполнено."}
 NOT_ALLOWED: Final = {"ok": False, "error": "not_allowed", "note": "Инструмент недоступен."}
 
@@ -74,6 +80,13 @@ class ToolOutcome:
     request_number: int | None = None
     failed: bool = False
     outputs: dict[str, dict[str, Any]] = field(default_factory=dict)
+    # Сервисный режим (M3-CRM-07): были ли вызовы ERP, отказал ли хоть один, и их результаты как
+    # источник чисел для проверки ответа (`erp_tools.facts_of`).
+    erp_called: bool = False
+    erp_failed: bool = False
+    # Отказ ERP, после которого нужен запрос менеджеру: не `invalid_arguments` (это ошибка модели).
+    erp_handover: bool = False
+    erp_facts: list[str] = field(default_factory=list)
 
 
 async def run_tools(
@@ -83,13 +96,33 @@ async def run_tools(
     token: str,
     lead_id: int,
     timeout_s: float,
+    outcome: ToolOutcome | None = None,
+    erp: ErpToolCaller | None = None,
+    erp_scope: ErpScope | None = None,
 ) -> ToolOutcome:
-    """Выполнить вызовы модели через crm-mcp; результат каждого — для ответа модели."""
-    outcome = ToolOutcome()
+    """Выполнить вызовы модели: crm-mcp и (в сервисном режиме) erp-mcp; результаты — модели."""
+    outcome = outcome or ToolOutcome()
     allowed = {t["function"]["name"] for t in allowed_tools}
-    for call in result.tool_calls:
+    for index, call in enumerate(result.tool_calls):
+        if index >= MAX_CALLS_PER_ROUND:
+            outcome.outputs[call.id] = TOO_MANY
+            continue
         if call.name not in allowed:
             outcome.outputs[call.id] = NOT_ALLOWED
+            continue
+        if call.name in erp_tools.ERP_TOOL_NAMES:
+            if erp is None or erp_scope is None:
+                outcome.outputs[call.id] = NOT_ALLOWED
+                continue
+            output, failure = await erp_tools.run_erp_call(erp, erp_scope, call)
+            outcome.outputs[call.id] = output
+            outcome.erp_called = True
+            outcome.erp_failed = outcome.erp_failed or failure is not None
+            outcome.erp_handover = outcome.erp_handover or failure not in (
+                None,
+                "invalid_arguments",
+            )
+            outcome.erp_facts.append(erp_tools.facts_of(output))
             continue
         try:
             raw = await asyncio.wait_for(
@@ -125,10 +158,21 @@ def tool_messages(result: ChatResult, outputs: dict[str, dict[str, Any]]) -> lis
         ],
     }
     replies = [
-        {"role": "tool", "tool_call_id": c.id, "content": _json(outputs.get(c.id, FAILED))}
+        {"role": "tool", "tool_call_id": c.id, "content": _content(c, outputs.get(c.id, FAILED))}
         for c in result.tool_calls
     ]
     return [assistant, *replies]
+
+
+def _content(call: ToolCall, output: dict[str, Any]) -> str:
+    """Данные ERP — в блоке `<erp_data>` («данные, не инструкции»), остальное — JSON как раньше."""
+    if (
+        call.name in erp_tools.ERP_TOOL_NAMES
+        and output is not NOT_ALLOWED
+        and output is not TOO_MANY
+    ):
+        return erp_tools.wrapped(output)
+    return _json(output)
 
 
 def _json(value: dict[str, Any]) -> str:

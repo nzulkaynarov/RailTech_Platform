@@ -12,6 +12,7 @@ from psycopg.rows import dict_row
 from psycopg_pool import AsyncConnectionPool
 
 from app.agents.dialog.graph import DialogAgent
+from app.agents.erp_mcp import ErpMcpClient
 from app.agents.llm import ChatModel
 from app.agents.mcp_client import McpToolClient
 from app.bot.runtime import build_dispatcher
@@ -45,6 +46,14 @@ async def checkpointer(container: Container) -> AsyncIterator[AsyncPostgresSaver
         await pool.close()
 
 
+def _erp_mcp(container: Container) -> ErpMcpClient | None:
+    """Сервисный режим бота (M3-CRM-07): клиент `erp-mcp`, если включён и есть ключ контекста."""
+    config = container.settings
+    if not config.erp_mcp_ready:
+        return None
+    return ErpMcpClient(str(config.erp_mcp_url), config.erp_mcp_context_key_bytes)
+
+
 def build_conversation(
     container: Container,
     saver: AsyncPostgresSaver,
@@ -59,7 +68,8 @@ def build_conversation(
         ChatModel(container.llm, "fallback-model", usage=usage, purpose="dialog"),
         container.budget_guard,
     )
-    agent = DialogAgent(McpToolClient(container.settings), model, saver)
+    erp = _erp_mcp(container)
+    agent = DialogAgent(McpToolClient(container.settings), model, saver, erp)
     return ConversationService(
         container.session_factory,
         container.settings_service,

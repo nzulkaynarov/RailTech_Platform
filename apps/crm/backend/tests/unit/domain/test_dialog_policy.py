@@ -108,3 +108,37 @@ def test_customer_without_kb_answer_is_not_a_kb_gap() -> None:
         )
     )
     assert (decision.action, decision.reason) == (Action.ANSWER, "customer_service")
+
+
+@pytest.mark.parametrize(
+    ("erp", "found", "expected", "reason"),
+    [
+        # Документа в индексе CRM нет: с erp-mcp спрашиваем ERP, без него — менеджер.
+        (True, 0, Action.ANSWER, "document_lookup_erp"),
+        (False, 0, Action.HANDOFF, "document_not_found"),
+        # Найденное в индексе CRM отдаёт код, ERP не нужен.
+        (True, 1, Action.DELIVER_DOCUMENT, "document_match"),
+        (True, 3, Action.CHOOSE_DOCUMENT, "documents_ambiguous"),
+    ],
+)
+def test_missing_document_goes_to_erp_when_available(
+    erp: bool, found: int, expected: Action, reason: str
+) -> None:
+    decision = decide(
+        DecisionInput(
+            owner_mode=OwnerMode.BOT,
+            stage=Stage.CUSTOMER,
+            text="Где мой счёт?",
+            human_requested=False,
+            stop_word_hit=False,
+            best_score=0.1,
+            min_score=0.55,
+            need_known=True,
+            customer=True,
+            document_match=found == 1,
+            document_requested=True,
+            documents_found=found,
+            erp_available=erp,
+        )
+    )
+    assert (decision.action, decision.reason) == (expected, reason)

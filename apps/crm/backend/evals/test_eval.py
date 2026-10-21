@@ -17,12 +17,14 @@ import pytest_asyncio
 
 from app.agents import prompts
 from app.agents.dialog.graph import DialogAgent
+from app.agents.erp_mcp import ErpMcpError
 from app.agents.llm import ChatModel
 from app.config import Settings
 from app.container import Container
 from app.domain.language import detect_language
 from app.domain.numbers import unsupported_numbers
 from app.schemas.settings import AppSettings
+from app.security.erp_agent_context import ErpScope
 from app.services.kb.search import KbSearchService
 from evals import budget, report
 from evals.golden import GoldenCase, load_cases
@@ -122,6 +124,24 @@ class EvalTools:
         return {"ok": True}
 
 
+class EvalErp:
+    """erp-mcp кейса сервисного режима: результаты инструментов из YAML, без сети."""
+
+    def __init__(self, case: GoldenCase) -> None:
+        self._data = case.erp.tools if case.erp else {}
+        self._available = case.erp.available if case.erp else True
+        self.tool_calls: list[str] = []
+
+    async def call(self, tool: str, args: dict[str, Any], scope: ErpScope) -> Any:
+        self.tool_calls.append(tool)
+        if not self._available:
+            raise ErpMcpError("unavailable", tool)
+        return self._data.get(tool)
+
+    def facts(self) -> list[str]:
+        return [json.dumps(self._data, ensure_ascii=False)] if self._data else []
+
+
 def _filter_documents(case: GoldenCase, args: dict[str, Any]) -> list[dict[str, Any]]:
     """Поведение docs-mcp на документах кейса (фильтры как в repositories/documents.py)."""
     found = []
@@ -162,8 +182,11 @@ async def container() -> AsyncIterator[Container]:
 async def test_golden_case(case: GoldenCase, container: Container) -> None:
     budget.guard()
     tools = EvalTools(case, KbSearchService(container.session_factory, container.embedder))
+    erp = EvalErp(case)
     agent = DialogAgent(
-        tools, ChatModel(container.llm, "dialog-model", usage=container.usage_recorder)
+        tools,
+        ChatModel(container.llm, "dialog-model", usage=container.usage_recorder),
+        erp=erp if case.erp is not None else None,
     )
     result = await agent.run(
         lead_id=0,
@@ -173,17 +196,18 @@ async def test_golden_case(case: GoldenCase, container: Container) -> None:
         settings=AppSettings(),
         stage=case.stage,
         mode=case.mode,
+        erp_scope=ErpScope(1, 1, case.language) if case.erp is not None else None,
     )
     budget.add((result.llm or {}).get("cost_usd") if result.action.value == "answer" else 0.0)
     reply = result.reply or ""
     fragments = [h["content"] for h in tools.kb_payload.get("hits", [])]
     doc_facts = [_doc_fact(d.title, d.number, d.doc_date) for d in case.documents]
-    failures = _check(case, result.action.value, reply, tools)
-    sources = [*fragments, *doc_facts, case.message, *_system_texts(case.language)]
+    failures = _check(case, result.action.value, reply, tools, erp)
+    sources = [*fragments, *doc_facts, *erp.facts(), case.message, *_system_texts(case.language)]
     invented = sorted(unsupported_numbers(reply, sources))
     faithfulness = None
     if result.action.value == "answer" and case.category not in ("smalltalk", "customer_document"):
-        faithfulness = await _judge(container, fragments, case.message, reply)
+        faithfulness = await _judge(container, [*fragments, *erp.facts()], case.message, reply)
         report.score(result.trace_id, "faithfulness", faithfulness)
         # Инъекция: навязанное утверждение (не из базы) судья оценит низко.
         if case.category == "injection" and faithfulness < INJECTION_MIN_FAITHFULNESS:
@@ -211,7 +235,9 @@ def _system_texts(language: str) -> list[str]:
     return [cfg.lead_notice("handoff", lang), cfg.lead_notice("off_hours", lang)]  # type: ignore[arg-type]
 
 
-def _check(case: GoldenCase, action: str, reply: str, tools: "EvalTools") -> list[str]:
+def _check(
+    case: GoldenCase, action: str, reply: str, tools: "EvalTools", erp: "EvalErp"
+) -> list[str]:
     """Детерминированные проверки кейса кодом; список нарушений."""
     expect = case.expect
     lowered = reply.lower()
@@ -231,6 +257,10 @@ def _check(case: GoldenCase, action: str, reply: str, tools: "EvalTools") -> lis
         failures.append("missing_fact")
     if expect.tool_calls_any and not set(expect.tool_calls_any) & set(tools.tool_calls):
         failures.append("missing_tool_call")
+    if expect.erp_tools_any and not set(expect.erp_tools_any) & set(erp.tool_calls):
+        failures.append("missing_erp_call")
+    if expect.no_erp_calls and erp.tool_calls:
+        failures.append("unexpected_erp_call")
     if expect.kb_document:
         titles = {h["document_title"] for h in tools.kb_payload.get("hits", [])}
         if expect.kb_document not in titles:
