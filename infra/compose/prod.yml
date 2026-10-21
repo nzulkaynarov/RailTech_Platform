@@ -33,6 +33,9 @@ x-crm-prod-env: &crm-prod-env
   POSTGRES_PASSWORD: ${DB_CRM_PASSWORD:?set in .env}
   PGSSLMODE: require
   ERP_FRONTEND_URL: https://${ERP_DOMAIN:?set in .env}
+  # Бэкап делает VPS 2, CRM читает бакет `backups` RustFS (M5-CRM-01). Явно: том crm_backups из base.yml
+  # смонтирован и в проде, и `auto` выбрал бы его.
+  BACKUP_SOURCE: rustfs
 
 # Окружение ERP: те же правила, что в B2B (INF-04): миграции — только явно, после pg_dump-гейта (deploy.sh).
 x-erp-prod-env: &erp-prod-env

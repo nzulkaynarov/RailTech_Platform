@@ -141,7 +141,9 @@ class Settings(BaseSettings):
     def backup_source_resolved(self) -> Literal["volume", "rustfs"]:
         if self.backup_source != "auto":
             return self.backup_source
-        return "volume" if self.backup_dir.is_dir() else "rustfs"
+        if self.backup_dir.is_dir() or self.app_env != "prod":
+            return "volume"
+        return "rustfs"
 
     @property
     def platform_sso_secrets(self) -> list[str]:

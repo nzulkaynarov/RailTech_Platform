@@ -168,3 +168,26 @@ async def test_status_is_cached_between_polls() -> None:
 def test_parse_sums_reads_names_and_ignores_garbage() -> None:
     body = f"{'a' * 64}  crm.dump\n{'b' * 64} *erp.dump\nnot a sum line\n\n"
     assert parse_sums(body) == ["crm", "erp"]
+
+
+async def test_bucket_error_is_remembered_briefly() -> None:
+    """Недоступный S3 не держит каждый запрос по 10 с: ошибка кэшируется на короткое время."""
+    bucket = FakeBucket(EndpointConnectionError(endpoint_url="http://rustfs:9000"))
+    cached = RustfsBackupService(bucket, "backups", cache_s=30, error_cache_s=30)
+    first = await cached.status()
+    second = await cached.status()
+    assert first.error == second.error == "unreachable"
+    assert bucket.listed == 1
+    again = RustfsBackupService(bucket, "backups", cache_s=30, error_cache_s=0)
+    await again.status()
+    await again.status()
+    assert bucket.listed == 3  # без кэша ошибки — каждый запрос в бакет
+
+
+async def test_recovery_after_error_is_seen_once_the_error_cache_expires() -> None:
+    bucket = FakeBucket(EndpointConnectionError(endpoint_url="http://rustfs:9000"))
+    svc = RustfsBackupService(bucket, "backups", cache_s=30, error_cache_s=0)
+    assert (await svc.status()).error == "unreachable"
+    bucket.error = None
+    bucket.add(2)
+    assert (await svc.status()).error is None

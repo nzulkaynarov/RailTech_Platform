@@ -22,6 +22,8 @@ from app.services.backups import BackupEntry, BackupStatus
 logger = structlog.get_logger(__name__)
 READ_TIMEOUT_S = 10.0
 CACHE_S = 30.0
+# Ошибка чтения бакета тоже помнится недолго: недоступный S3 не держит каждый запрос по 10 с.
+ERROR_CACHE_S = 10.0
 _DENIED = frozenset(
     {"AccessDenied", "InvalidAccessKeyId", "SignatureDoesNotMatch", "AllAccessDisabled", "403"}
 )
@@ -49,11 +51,17 @@ class RustfsBackupService:
     can_request = False
 
     def __init__(
-        self, storage: BackupBucket, bucket: str = "backups", *, cache_s: float = CACHE_S
+        self,
+        storage: BackupBucket,
+        bucket: str = "backups",
+        *,
+        cache_s: float = CACHE_S,
+        error_cache_s: float = ERROR_CACHE_S,
     ) -> None:
         self._storage = storage
         self._bucket = bucket
         self._cache_s = cache_s
+        self._error_cache_s = error_cache_s
         self._cached: tuple[float, BackupStatus] | None = None
 
     async def request_now(self, now: datetime) -> datetime:
@@ -65,16 +73,20 @@ class RustfsBackupService:
 
     async def _state(self) -> BackupStatus:
         cached = self._cached
-        if cached is not None and time.monotonic() - cached[0] < self._cache_s:
-            return cached[1]
+        if cached is not None:
+            ttl = self._cache_s if cached[1].error is None else self._error_cache_s
+            if time.monotonic() - cached[0] < ttl:
+                return cached[1]
         try:
             state = await asyncio.wait_for(self._read(), READ_TIMEOUT_S)
         except Exception as exc:  # noqa: BLE001 — любая ошибка чтения бакета = понятный код ошибки
             code, detail = classify(exc)
             logger.warning("backup_bucket_read_failed", bucket=self._bucket, error=detail)
-            return BackupStatus(
+            failed = BackupStatus(
                 False, None, None, [], source="rustfs", error=code, error_detail=detail
             )
+            self._cached = (time.monotonic(), failed)
+            return failed
         self._cached = (time.monotonic(), state)
         return state
 
