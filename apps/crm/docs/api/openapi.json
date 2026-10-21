@@ -3081,6 +3081,11 @@
             ],
             "title": "Previous Secret Until"
           },
+          "rotation_pending": {
+            "default": false,
+            "title": "Rotation Pending",
+            "type": "boolean"
+          },
           "secrets_enabled": {
             "title": "Secrets Enabled",
             "type": "boolean"
@@ -6042,6 +6047,7 @@
           "erp_pairing_code_expired",
           "erp_pairing_code_used",
           "erp_pairing_unsupported",
+          "erp_https_required",
           "smtp_not_configured",
           "smtp_invalid_host",
           "smtp_unavailable",

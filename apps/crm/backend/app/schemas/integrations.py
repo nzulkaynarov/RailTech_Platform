@@ -82,6 +82,8 @@ class ErpStatusOut(BaseModel):
     paired: bool = False
     # Переход после «Обновить ключи»: до какого момента принимается предыдущий секрет вебхуков.
     previous_secret_until: datetime | None = None
+    # «Обновить ключи» не доведено до ответа ERP (обрыв связи): повтор отправит ту же тройку.
+    rotation_pending: bool = False
 
 
 class ErpConnectorIn(BaseModel):

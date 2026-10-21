@@ -18,7 +18,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.config import Settings
 from app.domain.backoffice import BackofficeMode, backoffice_mode
-from app.domain.erp_connector import base_url_problem, normalize_base_url
+from app.domain.erp_connector import base_url_problem, is_insecure, normalize_base_url
 from app.domain.errors import ConflictError, Reason, UpstreamUnavailableError, ValidationFailedError
 from app.domain.system_status import ErpFacts
 from app.integrations.erp import (
@@ -35,6 +35,7 @@ from app.security import audit, reauth
 from app.security.principal import Principal
 from app.security.secrets_store import (
     ERP_INBOUND_TOKEN,
+    ERP_PENDING_SERVICE_TOKEN,
     ERP_SERVICE_TOKEN,
     ERP_WEBHOOK_SECRET,
     ERP_WEBHOOK_SECRET_PREVIOUS,
@@ -84,6 +85,8 @@ class ErpStatus:
     paired: bool = False
     # Идёт переход после «Обновить ключи»: до какого момента принимается предыдущий секрет.
     previous_secret_until: datetime | None = None
+    # «Обновить ключи» не доведено до ответа ERP (обрыв связи): повтор отправит ту же тройку.
+    rotation_pending: bool = False
 
 
 @dataclass(frozen=True, slots=True)
@@ -129,6 +132,7 @@ class ErpConnectorService:
         webhook = await self._secret_status(ERP_WEBHOOK_SECRET)
         previous = await self._secret_status(ERP_WEBHOOK_SECRET_PREVIOUS)
         inbound = await self._secret_status(ERP_INBOUND_TOKEN)
+        pending = await self._secret_status(ERP_PENDING_SERVICE_TOKEN)
         until = await self._previous_secret_until()
         paired = (
             inbound is not None
@@ -156,6 +160,7 @@ class ErpConnectorService:
             inbound_token_configured=inbound is not None,
             inbound_token_last4=inbound.last4 if inbound else None,
             paired=paired,
+            rotation_pending=pending is not None,
             previous_secret_until=until
             if resolved.webhook_secret_previous_source == "db"  # noqa: S105 — источник, не секрет
             else None,
@@ -202,6 +207,12 @@ class ErpConnectorService:
             raise ValidationFailedError(
                 f"erp base url is invalid: {problem}",
                 reason=Reason.ERP_INVALID_URL,
+                field="base_url",
+            )
+        if url and self._config.app_env == "prod" and is_insecure(url):
+            raise ValidationFailedError(
+                "erp base url must be https in production",
+                reason=Reason.ERP_HTTPS_REQUIRED,
                 field="base_url",
             )
         secrets = {
@@ -272,6 +283,8 @@ class ErpConnectorService:
         until = await self._previous_secret_until()
         if until is None or until > (now or datetime.now(UTC)):
             return False
+        if await self._secret_status(ERP_PENDING_SERVICE_TOKEN) is not None:
+            return False  # ротация не подтверждена ERP: прежний секрет ещё может понадобиться
         current = (await self._settings.get()).integrations
         payload = current.model_dump(mode="json")
         payload["erp_previous_secret_until"] = None

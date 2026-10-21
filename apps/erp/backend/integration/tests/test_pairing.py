@@ -63,6 +63,12 @@ def health(token):
     return bearer(token).get(f"{PREFIX}/health").status_code
 
 
+@pytest.fixture(autouse=True)
+def _fresh_undecryptable_log_window(monkeypatch):
+    """Окно ограничения лога «нечитаемый секрет» — состояние модуля; каждому тесту — чистое."""
+    monkeypatch.setattr("integration.services.credentials._undecryptable_logged_at", {})
+
+
 @pytest.fixture
 def paired():
     code = pairing.issue_code().code
@@ -312,6 +318,20 @@ def test_undecryptable_secrets_fall_back_to_env(paired, settings, caplog):
     assert health(NEW_CRM_TOKEN) == 401
     assert "undecryptable" in caplog.text
     assert NEW_CRM_TOKEN not in caplog.text
+
+
+def test_undecryptable_error_is_logged_once_per_window_not_per_request(paired, settings, caplog, monkeypatch):
+    clock = {"now": 1000.0}
+    monkeypatch.setattr("integration.services.credentials.time.monotonic", lambda: clock["now"])
+    monkeypatch.setattr("integration.services.credentials._undecryptable_logged_at", {})
+    settings.SECRET_KEY = "another-secret-key-after-rotation-of-django-secret"
+    with caplog.at_level(logging.ERROR, logger="integration.services.credentials"):
+        for _ in range(5):
+            assert health(ENV_TOKEN) == 200
+        assert caplog.text.count("undecryptable") == 1, "в одном окне — одна запись, а не по запросу"
+        clock["now"] += credentials.UNDECRYPTABLE_LOG_WINDOW_S + 1
+        assert health(ENV_TOKEN) == 200
+        assert caplog.text.count("undecryptable") == 2, "после окна — снова"
 
 
 # ── Статус (чтение) ───────────────────────────────────────────────────────────────────────────────────

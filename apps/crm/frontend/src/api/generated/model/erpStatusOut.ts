@@ -22,6 +22,7 @@ export interface ErpStatusOut {
   mode: ErpStatusOutMode;
   paired?: boolean;
   previous_secret_until?: string | null;
+  rotation_pending?: boolean;
   secrets_enabled: boolean;
   token_configured: boolean;
   token_last4: string | null;

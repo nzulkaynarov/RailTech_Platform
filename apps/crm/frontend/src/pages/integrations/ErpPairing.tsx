@@ -116,6 +116,15 @@ export function ErpPairing({ status, pairing, rotating, pairError, onPair, onRot
               </Descriptions.Item>
             ) : null}
           </Descriptions>
+          {status.rotation_pending ? (
+            <Alert
+              type="warning"
+              showIcon
+              role="status"
+              message={P.rotationPendingTitle}
+              description={P.rotationPending}
+            />
+          ) : null}
           {status.previous_secret_until ? (
             <Alert
               type="info"

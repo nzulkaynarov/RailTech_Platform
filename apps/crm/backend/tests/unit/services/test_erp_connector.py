@@ -68,11 +68,13 @@ class FakeStore(SecretsStore):
         cipher = SecretCipher(secrets.token_hex(32)) if enabled else None
         super().__init__(fake_sessions(), cipher)
         self.saved: dict[str, str] = dict(stored)
+        self.put_sessions: list[int] = []
 
     async def get(self, key: str) -> str | None:
         return self.saved.get(key) if self.enabled else None
 
     async def put(self, session: Any, key: str, value: str, user_id: int | None) -> None:
+        self.put_sessions.append(id(session))
         self.saved[key] = value
 
     async def delete(self, session: Any, key: str) -> None:
@@ -87,6 +89,8 @@ class FakeSettings:
     def __init__(self, base_url: str = "") -> None:
         self.value = IntegrationsSettings(erp_base_url=base_url)
         self.updates: list[tuple[str, dict[str, Any]]] = []
+        self.session_ids: list[int] = []
+        self.invalidations = 0
 
     @property
     def base_url(self) -> str:
@@ -99,6 +103,16 @@ class FakeSettings:
         self.updates.append((key, value))
         self.value = IntegrationsSettings.model_validate(value)
         return value
+
+    async def update_in(
+        self, session: Any, key: str, value: dict[str, Any], user_id: int | None
+    ) -> Any:
+        """Запись в транзакции вызывающего; сессия запоминается для сверки с сессией секретов."""
+        self.session_ids.append(id(session))
+        return await self.update(key, value, user_id)
+
+    def invalidate(self) -> None:
+        self.invalidations += 1
 
 
 class Clock:

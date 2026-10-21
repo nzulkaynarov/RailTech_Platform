@@ -16,6 +16,7 @@ import base64
 import hashlib
 import logging
 import secrets
+import time
 from dataclasses import dataclass
 from datetime import datetime
 from typing import Iterable, Optional
@@ -45,11 +46,30 @@ def last4(value: str) -> str:
     return value[-4:] if len(value) >= 8 else "****"
 
 
+#: Нечитаемое значение (сменили `SECRET_KEY`) видно на КАЖДОМ запросе integration; в лог — раз в окно, иначе поток ошибок.
+UNDECRYPTABLE_LOG_WINDOW_S = 300.0
+_undecryptable_logged_at: dict[str, float] = {}
+
+
+def _log_undecryptable(slot: str) -> None:
+    now = time.monotonic()
+    last = _undecryptable_logged_at.get(slot)
+    if last is not None and now - last < UNDECRYPTABLE_LOG_WINDOW_S:
+        return
+    _undecryptable_logged_at[slot] = now
+    logger.error(
+        "integration credential %s is undecryptable (SECRET_KEY changed?); using .env fallback "
+        "(repeats are not logged for %d s)",
+        slot,
+        int(UNDECRYPTABLE_LOG_WINDOW_S),
+    )
+
+
 def _decrypt(row: ServiceCredential) -> Optional[str]:
     try:
         return _fernet().decrypt(row.ciphertext.encode()).decode()
     except InvalidToken:
-        logger.error("integration credential %s is undecryptable (SECRET_KEY changed?); using .env fallback", row.slot)
+        _log_undecryptable(row.slot)
         return None
 
 

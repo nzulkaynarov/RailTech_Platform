@@ -302,6 +302,21 @@ describe("ErpCard", () => {
       expect(onRotate.mock.calls[0]?.[0]).toEqual({ password: "pw" });
     });
 
+    it("warns when the last rotation was not confirmed by ERP and tells to repeat it", () => {
+      renderCard({ ...paired, rotation_pending: true });
+      expect(screen.getByText("Обновление ключей не подтверждено")).toBeInTheDocument();
+      expect(screen.getByText(/повторит ту же замену/)).toBeInTheDocument();
+    });
+
+    it("explains the https requirement in production at the address field", () => {
+      const error = new ApiError(422, "validation_failed", "https", {
+        reason: "erp_https_required",
+        field: "base_url",
+      });
+      renderCard(notConfigured, { pairError: error });
+      expect(screen.getByText(/должен начинаться с https:\/\//)).toBeInTheDocument();
+    });
+
     it("announces the transition after rotation", () => {
       renderCard({ ...paired, previous_secret_until: "2026-10-21T06:00:00Z" });
       expect(screen.getByRole("status")).toHaveTextContent(/Идёт переход на новые ключи/);

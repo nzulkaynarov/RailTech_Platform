@@ -67,6 +67,7 @@ export const Reason = {
   erp_pairing_code_expired: "erp_pairing_code_expired",
   erp_pairing_code_used: "erp_pairing_code_used",
   erp_pairing_unsupported: "erp_pairing_unsupported",
+  erp_https_required: "erp_https_required",
   smtp_not_configured: "smtp_not_configured",
   smtp_invalid_host: "smtp_invalid_host",
   smtp_unavailable: "smtp_unavailable",

@@ -19,13 +19,13 @@
 
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
-from typing import Final
+from typing import Any, Final
 
 import structlog
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.config import Settings
-from app.domain.erp_connector import base_url_problem, normalize_base_url
+from app.domain.erp_connector import base_url_problem, is_insecure, normalize_base_url
 from app.domain.errors import (
     ConflictError,
     DomainError,
@@ -33,11 +33,14 @@ from app.domain.errors import (
     ValidationFailedError,
 )
 from app.integrations.erp import ErpHealth
-from app.integrations.erp_pairing import ErpPairingClient, PairingSecrets
+from app.integrations.erp_pairing import AmbiguousOutcomeError, ErpPairingClient, PairingSecrets
 from app.security import audit
 from app.security.principal import Principal
 from app.security.secrets_store import (
     ERP_INBOUND_TOKEN,
+    ERP_PENDING_INBOUND_TOKEN,
+    ERP_PENDING_SERVICE_TOKEN,
+    ERP_PENDING_WEBHOOK_SECRET,
     ERP_SERVICE_TOKEN,
     ERP_WEBHOOK_SECRET,
     ERP_WEBHOOK_SECRET_PREVIOUS,
@@ -93,6 +96,12 @@ class ErpPairingService:
                 reason=Reason.ERP_INVALID_URL,
                 field="base_url",
             )
+        if self._config.app_env == "prod" and is_insecure(url):
+            raise ValidationFailedError(
+                "erp base url must be https in production",
+                reason=Reason.ERP_HTTPS_REQUIRED,
+                field="base_url",
+            )
         code = "".join(code.split())  # код вводят руками: пробелы по краям и внутри не в счёт
         if not code:
             raise ValidationFailedError(
@@ -117,12 +126,10 @@ class ErpPairingService:
     async def _save_paired(
         self, who: Principal, url: str, secrets_: PairingSecrets, before: dict[str, object]
     ) -> None:
-        current = (await self._settings.get()).integrations
-        payload = current.model_dump(mode="json")
-        payload["erp_base_url"] = url
-        payload["erp_previous_secret_until"] = None
-        await self._settings.update(SETTINGS_KEY, payload, who.user_id)
+        """Адрес, ключи и аудит — одной транзакцией: либо всё, либо ничего."""
+        payload = await self._settings_payload(erp_base_url=url, erp_previous_secret_until=None)
         async with self._sessions() as session, session.begin():
+            await self._settings.update_in(session, SETTINGS_KEY, payload, who.user_id)
             await self._store.put(
                 session, ERP_SERVICE_TOKEN, secrets_.crm_to_erp_token, who.user_id
             )
@@ -131,6 +138,7 @@ class ErpPairingService:
             )
             await self._store.put(session, ERP_WEBHOOK_SECRET, secrets_.webhook_secret, who.user_id)
             await self._store.delete(session, ERP_WEBHOOK_SECRET_PREVIOUS)
+            await self._delete_pending(session)  # новое сопряжение заменяет и неоконченную ротацию
             after = {
                 **before,
                 "base_url": url,
@@ -148,10 +156,19 @@ class ErpPairingService:
                 before=before,
                 after=after,
             )
+        self._settings.invalidate()
 
     # ── Обновить ключи ──────────────────────────────────────────────────────────────────────────
 
     async def rotate(self, who: Principal, *, password: str) -> PairingOutcome:
+        """«Обновить ключи» с «ожидающей» тройкой.
+
+        Тройка сохраняется до ответа ERP и фиксируется только после явного успеха. Исход после
+        отправки мог быть любым (ReadTimeout, 5xx, обрыв) — тогда ничего не откатывается: ERP могла
+        уже перейти на новые значения, и откат сломал бы вебхуки. Повтор шлёт ТУ ЖЕ тройку (ERP
+        идемпотентна по ней). Откат — только при однозначном отказе (ConnectError, 4xx) первой же
+        попытки.
+        """
         resolution = await self._connector.resolution()
         connection = resolution.connection
         if connection is None:
@@ -160,75 +177,104 @@ class ErpPairingService:
         await self._connector.confirm_password(who.user_id, password)
         before = await self._connector.audit_facts()
 
-        old_webhook = resolution.webhook_secret
-        stored_webhook = await self._store.get(ERP_WEBHOOK_SECRET)
-        stored_previous = await self._store.get(ERP_WEBHOOK_SECRET_PREVIOUS)
         until = datetime.now(UTC) + self._grace
-        generated = PairingSecrets.generate()
-
-        # 1. CRM принимает оба секрета вебхуков ещё до того, как ERP начнёт подписывать новым.
-        await self._put_webhook_secrets(
-            who, current=generated.webhook_secret, previous=old_webhook or None, until=until
-        )
-        # 2. ERP принимает тройку под действующим токеном; прежний токен живёт переходный срок.
+        generated = await self._load_pending()
+        fresh = generated is None
+        if generated is None:
+            generated = PairingSecrets.generate()
+            stored_webhook = await self._store.get(ERP_WEBHOOK_SECRET)
+            stored_previous = await self._store.get(ERP_WEBHOOK_SECRET_PREVIOUS)
+            await self._begin_rotation(who, generated, resolution.webhook_secret or None, until)
+        else:
+            # Повтор: CRM уже принимает оба секрета; срок приёма предыдущего продлеваем.
+            await self._extend_transition(who, until)
         try:
             rotated = await self._client.rotate(connection.base_url, connection.token, generated)
+        except AmbiguousOutcomeError:
+            logger.warning("erp_rotation_outcome_unknown", user_id=who.user_id)
+            raise  # ничего не откатываем; повтор отправит ту же тройку
         except DomainError:
-            await self._restore_webhook_secrets(who, stored_webhook, stored_previous)
+            if fresh:
+                await self._abort_rotation(who, stored_webhook, stored_previous)
             raise
-        # 3. Теперь токены у нас: CRM→ERP — новый, ERP→CRM — новый.
         try:
-            async with self._sessions() as session, session.begin():
-                await self._store.put(
-                    session, ERP_SERVICE_TOKEN, generated.crm_to_erp_token, who.user_id
-                )
-                await self._store.put(
-                    session, ERP_INBOUND_TOKEN, generated.erp_to_crm_token, who.user_id
-                )
-                after = {
-                    **before,
-                    f"{ERP_SERVICE_TOKEN}_last4": last4(generated.crm_to_erp_token),
-                    f"{ERP_INBOUND_TOKEN}_last4": last4(generated.erp_to_crm_token),
-                    f"{ERP_WEBHOOK_SECRET}_last4": last4(generated.webhook_secret),
-                    "previous_token_valid_until": rotated.previous_token_valid_until.isoformat(),
-                }
-                await audit.record(
-                    session,
-                    who.actor,
-                    "integrations.erp.rotate",
-                    "integration",
-                    "erp",
-                    before=before,
-                    after=after,
-                )
+            await self._commit_rotation(who, generated, before, rotated.previous_token_valid_until)
         except Exception:
-            # Прежний токен в ERP ещё действует: админ успеет повторить (значения в лог не идут).
+            # Прежний токен в ERP ещё действует, тройка сохранена как ожидающая: повтор безопасен.
             logger.error("erp_rotation_local_save_failed", user_id=who.user_id, exc_info=True)
             raise
         logger.info("erp_keys_rotated", user_id=who.user_id)
         return await self._outcome()
 
-    async def _put_webhook_secrets(
-        self, who: Principal, *, current: str, previous: str | None, until: datetime | None
+    async def _begin_rotation(
+        self, who: Principal, triple: PairingSecrets, old_webhook: str | None, until: datetime
     ) -> None:
+        """Ожидающая тройка + оба секрета вебхуков + срок приёма предыдущего — одной транзакцией."""
+        payload = await self._settings_payload(
+            erp_previous_secret_until=until.isoformat() if old_webhook else None
+        )
         async with self._sessions() as session, session.begin():
-            await self._store.put(session, ERP_WEBHOOK_SECRET, current, who.user_id)
-            if previous:
-                await self._store.put(session, ERP_WEBHOOK_SECRET_PREVIOUS, previous, who.user_id)
+            await self._store.put(
+                session, ERP_PENDING_SERVICE_TOKEN, triple.crm_to_erp_token, who.user_id
+            )
+            await self._store.put(
+                session, ERP_PENDING_INBOUND_TOKEN, triple.erp_to_crm_token, who.user_id
+            )
+            await self._store.put(
+                session, ERP_PENDING_WEBHOOK_SECRET, triple.webhook_secret, who.user_id
+            )
+            await self._store.put(session, ERP_WEBHOOK_SECRET, triple.webhook_secret, who.user_id)
+            if old_webhook:
+                await self._store.put(
+                    session, ERP_WEBHOOK_SECRET_PREVIOUS, old_webhook, who.user_id
+                )
             else:
                 await self._store.delete(session, ERP_WEBHOOK_SECRET_PREVIOUS)
-        integrations = (await self._settings.get()).integrations
-        payload = integrations.model_dump(mode="json")
-        payload["erp_previous_secret_until"] = until.isoformat() if previous and until else None
-        await self._settings.update(SETTINGS_KEY, payload, who.user_id)
+            await self._settings.update_in(session, SETTINGS_KEY, payload, who.user_id)
+        self._settings.invalidate()
 
-    async def _restore_webhook_secrets(
+    async def _extend_transition(self, who: Principal, until: datetime) -> None:
+        payload = await self._settings_payload(erp_previous_secret_until=until.isoformat())
+        async with self._sessions() as session, session.begin():
+            await self._settings.update_in(session, SETTINGS_KEY, payload, who.user_id)
+        self._settings.invalidate()
+
+    async def _commit_rotation(
+        self,
+        who: Principal,
+        triple: PairingSecrets,
+        before: dict[str, object],
+        previous_token_valid_until: datetime,
+    ) -> None:
+        async with self._sessions() as session, session.begin():
+            await self._store.put(session, ERP_SERVICE_TOKEN, triple.crm_to_erp_token, who.user_id)
+            await self._store.put(session, ERP_INBOUND_TOKEN, triple.erp_to_crm_token, who.user_id)
+            await self._delete_pending(session)
+            after = {
+                **before,
+                f"{ERP_SERVICE_TOKEN}_last4": last4(triple.crm_to_erp_token),
+                f"{ERP_INBOUND_TOKEN}_last4": last4(triple.erp_to_crm_token),
+                f"{ERP_WEBHOOK_SECRET}_last4": last4(triple.webhook_secret),
+                "previous_token_valid_until": previous_token_valid_until.isoformat(),
+            }
+            await audit.record(
+                session,
+                who.actor,
+                "integrations.erp.rotate",
+                "integration",
+                "erp",
+                before=before,
+                after=after,
+            )
+
+    async def _abort_rotation(
         self, who: Principal, stored_current: str | None, stored_previous: str | None
     ) -> None:
-        """ERP ротацию не приняла: возвращаем секреты вебхуков как были (в БД или в `.env`, если
-        строк не было)."""
+        """ERP однозначно отказала: тройка удаляется, секреты вебхуков — как были (БД, `.env`)."""
         try:
+            payload = await self._settings_payload(erp_previous_secret_until=None)
             async with self._sessions() as session, session.begin():
+                await self._delete_pending(session)
                 if stored_current:
                     await self._store.put(session, ERP_WEBHOOK_SECRET, stored_current, who.user_id)
                 else:
@@ -239,12 +285,31 @@ class ErpPairingService:
                     )
                 else:
                     await self._store.delete(session, ERP_WEBHOOK_SECRET_PREVIOUS)
-            integrations = (await self._settings.get()).integrations
-            payload = integrations.model_dump(mode="json")
-            payload["erp_previous_secret_until"] = None
-            await self._settings.update(SETTINGS_KEY, payload, who.user_id)
+                await self._settings.update_in(session, SETTINGS_KEY, payload, who.user_id)
+            self._settings.invalidate()
         except Exception:
             logger.error("erp_rotation_restore_failed", user_id=who.user_id, exc_info=True)
+
+    async def _load_pending(self) -> PairingSecrets | None:
+        service = await self._store.get(ERP_PENDING_SERVICE_TOKEN)
+        inbound = await self._store.get(ERP_PENDING_INBOUND_TOKEN)
+        webhook = await self._store.get(ERP_PENDING_WEBHOOK_SECRET)
+        if service and inbound and webhook:
+            return PairingSecrets(service, inbound, webhook)
+        return None
+
+    async def _delete_pending(self, session: AsyncSession) -> None:
+        for key in (
+            ERP_PENDING_SERVICE_TOKEN,
+            ERP_PENDING_INBOUND_TOKEN,
+            ERP_PENDING_WEBHOOK_SECRET,
+        ):
+            await self._store.delete(session, key)
+
+    async def _settings_payload(self, **changes: object) -> dict[str, Any]:
+        payload = (await self._settings.get()).integrations.model_dump(mode="json")
+        payload.update(changes)
+        return payload
 
     # ── Общее ───────────────────────────────────────────────────────────────────────────────────
 

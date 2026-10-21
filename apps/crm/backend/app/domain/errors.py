@@ -72,6 +72,8 @@ class Reason(StrEnum):
     ERP_PAIRING_CODE_EXPIRED = "erp_pairing_code_expired"
     ERP_PAIRING_CODE_USED = "erp_pairing_code_used"
     ERP_PAIRING_UNSUPPORTED = "erp_pairing_unsupported"
+    # В проде адрес ERP — только https: ключи и код сопряжения не идут по открытому каналу.
+    ERP_HTTPS_REQUIRED = "erp_https_required"
     # Коннектор «Почта» (M3-CRM-08, ADR-0018): SMTP-релей для писем сотрудникам.
     SMTP_NOT_CONFIGURED = "smtp_not_configured"
     SMTP_INVALID_HOST = "smtp_invalid_host"

@@ -87,6 +87,15 @@ class _RotatedPayload(BaseModel):
     previous_token_valid_until: datetime
 
 
+class AmbiguousOutcomeError(UpstreamUnavailableError):
+    """Запрос мог дойти до ERP и примениться, но ответа нет или он непонятен.
+
+    Это ReadTimeout, 5xx, обрыв после отправки. Однозначный отказ (ConnectError, 4xx) — обычная
+    `UpstreamUnavailableError`: ERP точно ничего не применила. После неоднозначного исхода CRM
+    ничего не откатывает (см. `ErpPairingService.rotate`).
+    """
+
+
 class ErpPairingClient(Protocol):
     async def accept(
         self, base_url: str, code: str, secrets_: PairingSecrets
@@ -122,7 +131,7 @@ class HttpxErpPairingClient:
         try:
             payload = _AcceptedPayload.model_validate_json(response.content)
         except ValidationError as exc:
-            raise UpstreamUnavailableError(
+            raise AmbiguousOutcomeError(
                 f"erp pairing: bad response schema ({exc.error_count()} errors)",
                 reason=Reason.ERP_BAD_RESPONSE,
             ) from exc
@@ -136,7 +145,7 @@ class HttpxErpPairingClient:
         try:
             payload = _RotatedPayload.model_validate_json(response.content)
         except ValidationError as exc:
-            raise UpstreamUnavailableError(
+            raise AmbiguousOutcomeError(
                 f"erp rotate: bad response schema ({exc.error_count()} errors)",
                 reason=Reason.ERP_BAD_RESPONSE,
             ) from exc
@@ -162,16 +171,18 @@ class HttpxErpPairingClient:
                 return await client.post(
                     base_url.rstrip("/") + path, json=secrets_.body(), headers=headers
                 )
-        except httpx.TimeoutException as exc:
-            raise UpstreamUnavailableError("erp timeout", reason=Reason.ERP_UNAVAILABLE) from exc
+        except (httpx.ConnectError, httpx.ConnectTimeout) as exc:
+            # Соединения не было: запрос до ERP не дошёл — исход однозначный.
+            raise UpstreamUnavailableError(
+                type(exc).__name__, reason=Reason.ERP_UNAVAILABLE
+            ) from exc
         except httpx.InvalidURL as exc:
             raise ValidationFailedError(
                 "erp base url is invalid", reason=Reason.ERP_INVALID_URL, field="base_url"
             ) from exc
         except httpx.HTTPError as exc:
-            raise UpstreamUnavailableError(
-                type(exc).__name__, reason=Reason.ERP_UNAVAILABLE
-            ) from exc
+            # ReadTimeout, обрыв после отправки: ERP могла принять запрос.
+            raise AmbiguousOutcomeError(type(exc).__name__, reason=Reason.ERP_UNAVAILABLE) from exc
 
     @staticmethod
     def _ensure_ok(response: httpx.Response) -> None:
@@ -191,6 +202,10 @@ class HttpxErpPairingClient:
         if status == 422:
             raise UpstreamUnavailableError(
                 "erp pairing: ERP rejected the secrets (422)", reason=Reason.ERP_BAD_RESPONSE
+            )
+        if status >= 500 or status < 400:
+            raise AmbiguousOutcomeError(
+                f"erp pairing: HTTP {status}", reason=Reason.ERP_BAD_RESPONSE
             )
         raise UpstreamUnavailableError(
             f"erp pairing: HTTP {status}", reason=Reason.ERP_BAD_RESPONSE

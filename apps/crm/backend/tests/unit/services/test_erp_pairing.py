@@ -19,9 +19,16 @@ from structlog.testing import capture_logs
 from app.config import Settings
 from app.domain.errors import ConflictError, Reason, UpstreamUnavailableError, ValidationFailedError
 from app.integrations.erp import HttpxErpProbe
-from app.integrations.erp_pairing import HttpxErpPairingClient, PairingSecrets
+from app.integrations.erp_pairing import (
+    AmbiguousOutcomeError,
+    HttpxErpPairingClient,
+    PairingSecrets,
+)
 from app.security.secrets_store import (
     ERP_INBOUND_TOKEN,
+    ERP_PENDING_INBOUND_TOKEN,
+    ERP_PENDING_SERVICE_TOKEN,
+    ERP_PENDING_WEBHOOK_SECRET,
     ERP_SERVICE_TOKEN,
     ERP_WEBHOOK_SECRET,
     ERP_WEBHOOK_SECRET_PREVIOUS,
@@ -47,6 +54,7 @@ pytestmark = pytest.mark.usefixtures("audit_log")  # аудит и провер�
 CODE = "ABCD-EFGH-JKMN"  # фиктивный код сопряжения
 OLD_TOKEN = "old-crm-to-erp-token-for-unit-tests-Q1w2"  # фиктивный
 OLD_HOOK = "old-webhook-secret-for-unit-tests-Z9x8"  # фиктивный
+OLD_HOOK_CURRENT = OLD_HOOK  # в paired_store это текущий секрет вебхуков
 ACCEPTED = {
     "paired": True,
     "paired_at": "2026-10-21T10:00:00+05:00",
@@ -61,11 +69,15 @@ ROTATED = {
 
 
 def make(
-    store: FakeStore | None = None, settings: FakeSettings | None = None, *, grace_s: int = 3600
+    store: FakeStore | None = None,
+    settings: FakeSettings | None = None,
+    *,
+    grace_s: int = 3600,
+    config: Settings | None = None,
 ) -> tuple[ErpPairingService, connector_svc.ErpConnectorService, FakeStore, FakeSettings]:
     store = store or FakeStore()
     settings = settings or FakeSettings()
-    config = Settings(_env_file=None)
+    config = config or Settings(_env_file=None)
     connector = connector_svc.ErpConnectorService(
         fake_sessions(),
         settings,  # type: ignore[arg-type]
@@ -326,12 +338,15 @@ async def test_rotate_accepts_both_webhook_secrets_before_erp_switches() -> None
     "response",
     [
         httpx.Response(401, json={"detail": "UNAUTHORIZED"}),
-        httpx.Response(500),
+        httpx.Response(404),
+        httpx.Response(422, json={"detail": "VALIDATION_ERROR"}),
+        httpx.Response(429, headers={"Retry-After": "30"}),
         httpx.ConnectError("x"),
+        httpx.ConnectTimeout("x"),
     ],
 )
 @respx.mock
-async def test_rotate_failure_rolls_back_and_keeps_old_keys(
+async def test_rotate_unambiguous_refusal_rolls_back_and_keeps_old_keys(
     response: httpx.Response | Exception,
 ) -> None:
     route = respx.post(ROTATE)
@@ -350,25 +365,10 @@ async def test_rotate_failure_rolls_back_and_keeps_old_keys(
 
 @respx.mock
 async def test_rotate_failure_with_env_webhook_secret_removes_db_rows() -> None:
-    respx.post(ROTATE).mock(return_value=httpx.Response(500))
+    respx.post(ROTATE).mock(return_value=httpx.Response(401, json={"detail": "UNAUTHORIZED"}))
     config = Settings(_env_file=None, erp_webhook_secret="env-webhook-secret-unit-test-0001")
-    store = stored(**{ERP_SERVICE_TOKEN: OLD_TOKEN})
-    settings = FakeSettings(BASE)
-    sessions = fake_sessions()
-    connector = connector_svc.ErpConnectorService(
-        sessions,
-        settings,  # type: ignore[arg-type]
-        store,
-        config,
-        HttpxErpProbe(timeout_s=0.2),
-    )
-    service = ErpPairingService(
-        sessions,
-        settings,  # type: ignore[arg-type]
-        store,
-        config,
-        HttpxErpPairingClient(0.2),
-        connector,
+    service, _, store, _ = make(
+        stored(**{ERP_SERVICE_TOKEN: OLD_TOKEN}), FakeSettings(BASE), config=config
     )
     with pytest.raises(UpstreamUnavailableError):
         await service.rotate(ADMIN, password=PASSWORD)
@@ -383,6 +383,198 @@ async def test_rotate_requires_a_configured_connector_and_the_password() -> None
     service, _, _, _ = make(paired_store(), FakeSettings(BASE))
     with pytest.raises(ValidationFailedError):
         await service.rotate(ADMIN, password="wrong")
+
+
+# --- Неоднозначный исход «Обновить ключи» --------------------------------------------
+
+PENDING_KEYS = (ERP_PENDING_SERVICE_TOKEN, ERP_PENDING_INBOUND_TOKEN, ERP_PENDING_WEBHOOK_SECRET)
+
+
+def ambiguous_responses() -> list[httpx.Response | Exception]:
+    return [
+        httpx.ReadTimeout("erp did not answer"),
+        httpx.Response(500),
+        httpx.Response(502),
+        httpx.Response(503),
+        httpx.Response(
+            200, json={"rotated": True}
+        ),  # ответ непонятен — применила ли ERP, неизвестно
+        httpx.ReadError("connection reset"),
+    ]
+
+
+def mock_route(route: respx.Route, response: httpx.Response | Exception) -> None:
+    if isinstance(response, Exception):
+        route.mock(side_effect=response)
+    else:
+        route.mock(return_value=response)
+
+
+@pytest.mark.parametrize("response", ambiguous_responses())
+@respx.mock
+async def test_rotate_ambiguous_outcome_keeps_pending_triple_and_does_not_roll_back(
+    response: httpx.Response | Exception,
+) -> None:
+    route = respx.post(ROTATE)
+    mock_route(route, response)
+    service, _, store, settings = make(paired_store(), FakeSettings(BASE))
+    with pytest.raises(AmbiguousOutcomeError):
+        await service.rotate(ADMIN, password=PASSWORD)
+    sent = sent_body(route)
+    # ERP могла уже перейти на новые значения: CRM принимает оба секрета вебхуков и помнит тройку.
+    assert store.saved[ERP_WEBHOOK_SECRET] == sent["webhook_secret"]
+    assert store.saved[ERP_WEBHOOK_SECRET_PREVIOUS] == OLD_HOOK
+    assert store.saved[ERP_PENDING_SERVICE_TOKEN] == sent["crm_to_erp_token"]
+    assert store.saved[ERP_PENDING_INBOUND_TOKEN] == sent["erp_to_crm_token"]
+    assert store.saved[ERP_PENDING_WEBHOOK_SECRET] == sent["webhook_secret"]
+    assert store.saved[ERP_SERVICE_TOKEN] == OLD_TOKEN, "рабочий токен меняется только после успеха"
+    assert settings.value.erp_previous_secret_until is not None
+    status = await service._connector.status()
+    assert status.rotation_pending
+
+
+@respx.mock
+async def test_rotate_retry_after_read_timeout_sends_the_same_triple_and_commits() -> None:
+    route = respx.post(ROTATE)
+    mock_route(route, httpx.ReadTimeout("erp did not answer"))
+    respx.get(HEALTH).mock(return_value=httpx.Response(200, json=HEALTHY))
+    service, _, store, _settings = make(paired_store(), FakeSettings(BASE))
+    with pytest.raises(AmbiguousOutcomeError):
+        await service.rotate(ADMIN, password=PASSWORD)
+    first = sent_body(route)
+
+    # ERP на самом деле применила тройку и теперь отвечает идемпотентно — под прежним токеном.
+    route.mock(return_value=httpx.Response(200, json=ROTATED))
+    outcome = await service.rotate(ADMIN, password=PASSWORD)
+    second = sent_body(route)
+    assert second == first, "повтор шлёт ту же тройку, а не новую"
+    assert route.calls.last.request.headers["authorization"] == f"Bearer {OLD_TOKEN}"
+    assert store.saved[ERP_SERVICE_TOKEN] == first["crm_to_erp_token"]
+    assert store.saved[ERP_INBOUND_TOKEN] == first["erp_to_crm_token"]
+    assert store.saved[ERP_WEBHOOK_SECRET] == first["webhook_secret"]
+    assert store.saved[ERP_WEBHOOK_SECRET_PREVIOUS] == OLD_HOOK, "старый секрет не затёрт повтором"
+    assert not any(key in store.saved for key in PENDING_KEYS)
+    assert not outcome.status.rotation_pending
+
+
+@respx.mock
+async def test_rotate_retry_extends_the_webhook_transition() -> None:
+    route = respx.post(ROTATE)
+    mock_route(route, httpx.Response(503))
+    service, _, _, settings = make(paired_store(), FakeSettings(BASE))
+    with pytest.raises(AmbiguousOutcomeError):
+        await service.rotate(ADMIN, password=PASSWORD)
+    first_until = settings.value.erp_previous_secret_until
+    assert first_until is not None
+    with pytest.raises(AmbiguousOutcomeError):
+        await service.rotate(ADMIN, password=PASSWORD)
+    second_until = settings.value.erp_previous_secret_until
+    assert second_until is not None
+    assert second_until >= first_until
+
+
+@respx.mock
+async def test_rotate_retry_refused_unambiguously_keeps_the_pending_triple() -> None:
+    """Откат — только у первой попытки: у повтора прежних значений уже нет, выход — новый код."""
+    route = respx.post(ROTATE)
+    mock_route(route, httpx.ReadTimeout("x"))
+    service, _, store, _ = make(paired_store(), FakeSettings(BASE))
+    with pytest.raises(AmbiguousOutcomeError):
+        await service.rotate(ADMIN, password=PASSWORD)
+    route.mock(return_value=httpx.Response(401, json={"detail": "UNAUTHORIZED"}))
+    with pytest.raises(UpstreamUnavailableError):
+        await service.rotate(ADMIN, password=PASSWORD)
+    assert all(key in store.saved for key in PENDING_KEYS)
+
+
+@respx.mock
+async def test_pairing_again_clears_an_unfinished_rotation() -> None:
+    respx.post(ROTATE).mock(side_effect=httpx.ReadTimeout("x"))
+    respx.post(ACCEPT).mock(return_value=httpx.Response(200, json=ACCEPTED))
+    respx.get(HEALTH).mock(return_value=httpx.Response(200, json=HEALTHY))
+    service, _, store, _ = make(paired_store(), FakeSettings(BASE))
+    with pytest.raises(AmbiguousOutcomeError):
+        await service.rotate(ADMIN, password=PASSWORD)
+    outcome = await service.pair(ADMIN, base_url=BASE, code=CODE, password=PASSWORD)
+    assert not any(key in store.saved for key in PENDING_KEYS)
+    assert not outcome.status.rotation_pending
+
+
+@respx.mock
+async def test_pending_rotation_blocks_expiry_of_the_previous_secret() -> None:
+    respx.post(ROTATE).mock(side_effect=httpx.ReadTimeout("x"))
+    service, connector, store, _settings = make(paired_store(), FakeSettings(BASE))
+    with pytest.raises(AmbiguousOutcomeError):
+        await service.rotate(ADMIN, password=PASSWORD)
+    later = datetime.now(UTC) + timedelta(days=2)
+    assert not await connector.expire_previous_secret(now=later)
+    assert ERP_WEBHOOK_SECRET_PREVIOUS in store.saved
+
+
+def test_the_client_tells_clear_refusals_from_ambiguous_outcomes() -> None:
+    from app.integrations.erp_pairing import AmbiguousOutcomeError as Ambiguous
+
+    assert issubclass(Ambiguous, UpstreamUnavailableError)
+
+
+# --- Адрес в проде — только https ------------------------------------------------------
+
+
+@pytest.mark.parametrize("env", ["prod"])
+async def test_prod_requires_https_for_pairing_and_manual_save(env: str) -> None:
+    config = Settings(
+        _env_file=None,
+        app_env=env,
+        platform_sso_secret="prod-sso-secret-for-unit-tests-0001",
+    )
+    service, connector, store, settings = make(config=config)
+    with pytest.raises(ValidationFailedError) as caught:
+        await service.pair(ADMIN, base_url="http://erp.example", code=CODE, password=PASSWORD)
+    assert caught.value.details == {"reason": Reason.ERP_HTTPS_REQUIRED.value, "field": "base_url"}
+    with pytest.raises(ValidationFailedError) as caught:
+        await connector.save(
+            ADMIN,
+            base_url="http://erp.example",
+            service_token=None,
+            webhook_secret=None,
+            password=PASSWORD,
+        )
+    assert caught.value.details == {"reason": Reason.ERP_HTTPS_REQUIRED.value, "field": "base_url"}
+    assert store.saved == {}
+    assert settings.updates == []
+
+
+@respx.mock
+async def test_prod_accepts_https_and_dev_accepts_http() -> None:
+    plain = BASE.replace("https", "http")
+    respx.post(ACCEPT.replace(BASE, plain)).mock(return_value=httpx.Response(200, json=ACCEPTED))
+    respx.get(HEALTH.replace(BASE, plain)).mock(return_value=httpx.Response(200, json=HEALTHY))
+    service, _, _, settings = make()  # dev
+    await service.pair(ADMIN, base_url=plain, code=CODE, password=PASSWORD)
+    assert settings.base_url.startswith("http://")
+
+
+# --- Настройки и ключи — одной транзакцией ---------------------------------------------
+
+
+@respx.mock
+async def test_pair_saves_settings_and_secrets_in_one_transaction() -> None:
+    respx.post(ACCEPT).mock(return_value=httpx.Response(200, json=ACCEPTED))
+    respx.get(HEALTH).mock(return_value=httpx.Response(200, json=HEALTHY))
+    service, _, store, settings = make()
+    await service.pair(ADMIN, base_url=BASE, code=CODE, password=PASSWORD)
+    assert len(set(settings.session_ids)) == 1
+    assert set(store.put_sessions) == set(settings.session_ids), "адрес и ключи — одна сессия"
+    assert settings.invalidations >= 1
+
+
+@respx.mock
+async def test_rotate_begins_in_one_transaction_with_the_settings_marker() -> None:
+    respx.post(ROTATE).mock(side_effect=httpx.ReadTimeout("x"))
+    service, _, store, settings = make(paired_store(), FakeSettings(BASE))
+    with pytest.raises(AmbiguousOutcomeError):
+        await service.rotate(ADMIN, password=PASSWORD)
+    assert settings.session_ids[0] in store.put_sessions
 
 
 # --- Срок перехода --------------------------------------------------------------------
@@ -406,6 +598,28 @@ async def test_previous_secret_is_dropped_after_the_transition_but_manual_one_st
     store.saved[ERP_WEBHOOK_SECRET_PREVIOUS] = "manual-previous-secret-for-unit-tests-0001"
     assert not await connector.expire_previous_secret(now=datetime.now(UTC) + timedelta(days=30))
     assert ERP_WEBHOOK_SECRET_PREVIOUS in store.saved
+
+
+async def test_previous_secret_is_not_accepted_after_expiry_even_before_any_check() -> None:
+    """Приём событий берёт секреты из `resolution`: срок проверяется там, а не из `check()`."""
+    store = paired_store()
+    older = "older-webhook-secret-for-unit-tests-0002"
+    store.saved[ERP_WEBHOOK_SECRET_PREVIOUS] = older
+    settings = FakeSettings(BASE)
+    soon = datetime.now(UTC) + timedelta(minutes=5)
+    settings.value = settings.value.model_copy(update={"erp_previous_secret_until": soon})
+    _, connector, _, settings = make(store, settings)
+    assert (await connector.resolution()).webhook_secrets == (OLD_HOOK_CURRENT, older)
+
+    settings.value = settings.value.model_copy(
+        update={"erp_previous_secret_until": datetime.now(UTC) - timedelta(seconds=1)}
+    )
+    resolution = await connector.resolution()
+    assert resolution.webhook_secrets == (OLD_HOOK_CURRENT,)
+    assert resolution.webhook_secret_previous_source == "none"
+    assert ERP_WEBHOOK_SECRET_PREVIOUS in store.saved, (
+        "строку снимет проверка связи, приём — уже нет"
+    )
 
 
 @respx.mock

@@ -42,5 +42,10 @@ def base_url_problem(url: str) -> str | None:
     return None
 
 
+def is_insecure(url: str) -> bool:
+    """Адрес не https: в проде сервисные токены и код сопряжения по нему не передаются."""
+    return urlsplit(url).scheme.lower() != "https"
+
+
 def health_url(base_url: str) -> str:
     return f"{normalize_base_url(base_url)}{HEALTH_PATH}"

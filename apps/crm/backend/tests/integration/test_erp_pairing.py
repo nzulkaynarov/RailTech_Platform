@@ -186,10 +186,13 @@ async def test_pair_then_rotate_end_to_end(
         row.value = value
         await session.commit()
     client.app.state.container.settings_service.invalidate()  # type: ignore[attr-defined]
+    # Приём события проверяет срок сам: предыдущий секрет не принимается ещё до проверки связи.
+    assert post_event(client, first_hook, 5) == 401, "срок перехода вышел — прежний секрет отклонён"
+    assert post_event(client, new["webhook_secret"], 6) == 200
     checked = client.post(f"{ERP_URL}/check", headers=auth)
     assert checked.status_code == 200, checked.text
-    assert post_event(client, first_hook, 5) == 401, "прежний секрет снят"
-    assert post_event(client, new["webhook_secret"], 6) == 200
+    assert post_event(client, first_hook, 7) == 401, "прежний секрет снят"
+    assert post_event(client, new["webhook_secret"], 8) == 200
     assert client.get(ERP_URL, headers=auth).json()["webhook_secret_previous_configured"] is False
 
     # Нигде нет значений: ни в аудите, ни в логах.
@@ -245,3 +248,93 @@ async def test_rotate_without_connector_is_conflict_and_failed_rotation_keeps_se
     status = client.get(ERP_URL, headers=auth).json()
     assert status["webhook_secret_previous_configured"] is False
     assert status["previous_secret_until"] is None
+
+
+@respx.mock
+async def test_rotation_read_timeout_keeps_pending_triple_and_retry_sends_the_same_one(
+    sessions: async_sessionmaker[AsyncSession], client: TestClient
+) -> None:
+    """ReadTimeout после отправки: CRM не откатывает, повтор шлёт ту же тройку."""
+    auth = await admin(sessions, client)
+    accept = respx.post(ACCEPT).mock(return_value=httpx.Response(200, json=ACCEPTED))
+    respx.get(HEALTH).mock(return_value=httpx.Response(200, json=HEALTHY))
+    assert (
+        client.post(
+            f"{ERP_URL}/pair",
+            json={"base_url": BASE, "code": CODE, "password": PASSWORD},
+            headers=auth,
+        ).status_code
+        == 200
+    )
+    old_hook = json.loads(accept.calls.last.request.content)["webhook_secret"]
+
+    rotate = respx.post(ROTATE).mock(side_effect=httpx.ReadTimeout("no answer"))
+    first = client.post(f"{ERP_URL}/rotate", json={"password": PASSWORD}, headers=auth)
+    assert first.status_code == 502
+    new_hook = json.loads(rotate.calls.last.request.content)["webhook_secret"]
+    # Ничего не откатилось: принимаются оба секрета, тройка ждёт подтверждения.
+    assert post_event(client, new_hook, 1) == 200
+    assert post_event(client, old_hook, 2) == 200
+    assert client.get(ERP_URL, headers=auth).json()["rotation_pending"] is True
+
+    first_body = json.loads(rotate.calls.last.request.content)
+    rotate.mock(return_value=httpx.Response(200, json=ROTATED))
+    second = client.post(f"{ERP_URL}/rotate", json={"password": PASSWORD}, headers=auth)
+    assert second.status_code == 200, second.text
+    assert json.loads(rotate.calls.last.request.content) == first_body
+    status = second.json()["status"]
+    assert status["rotation_pending"] is False
+    async with sessions() as session:
+        keys = {r.key for r in (await session.execute(select(IntegrationSecret))).scalars()}
+    assert not {k for k in keys if k.startswith("erp_pending_")}
+
+
+@respx.mock
+async def test_rotation_5xx_after_commit_does_not_break_webhooks(
+    sessions: async_sessionmaker[AsyncSession], client: TestClient
+) -> None:
+    auth = await admin(sessions, client)
+    accept = respx.post(ACCEPT).mock(return_value=httpx.Response(200, json=ACCEPTED))
+    respx.get(HEALTH).mock(return_value=httpx.Response(200, json=HEALTHY))
+    client.post(
+        f"{ERP_URL}/pair",
+        json={"base_url": BASE, "code": CODE, "password": PASSWORD},
+        headers=auth,
+    )
+    old_hook = json.loads(accept.calls.last.request.content)["webhook_secret"]
+    rotate = respx.post(ROTATE).mock(return_value=httpx.Response(503))
+    assert (
+        client.post(f"{ERP_URL}/rotate", json={"password": PASSWORD}, headers=auth).status_code
+        == 502
+    )
+    new_hook = json.loads(rotate.calls.last.request.content)["webhook_secret"]
+    # ERP уже подписывает новым (503 после коммита): события доходят; старым — пока не вышел срок.
+    assert post_event(client, new_hook, 1) == 200
+    assert post_event(client, old_hook, 2) == 200
+
+
+async def test_prod_https_is_required_at_the_address_field(
+    sessions: async_sessionmaker[AsyncSession], live_settings: Settings
+) -> None:
+    prod = live_settings.model_copy(
+        update={
+            "secrets_key": SecretStr("k" * 64),
+            "app_env": "prod",
+            "platform_sso_secret": SecretStr("prod-sso-secret-for-integration-0001"),
+        }
+    )
+    app = create_app(prod)
+    with TestClient(app) as prod_client:
+        app.state.bot = None
+        auth = await admin(sessions, prod_client)
+        for path, body in (
+            ("pair", {"base_url": "http://erp.example", "code": CODE, "password": PASSWORD}),
+            ("", {"base_url": "http://erp.example", "password": PASSWORD}),
+        ):
+            call = prod_client.post if path else prod_client.put
+            response = call(f"{ERP_URL}/{path}".rstrip("/"), json=body, headers=auth)
+            assert response.status_code == 422, response.text
+            assert response.json()["details"] == {
+                "reason": "erp_https_required",
+                "field": "base_url",
+            }

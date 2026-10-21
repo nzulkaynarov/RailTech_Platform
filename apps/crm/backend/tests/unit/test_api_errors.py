@@ -198,6 +198,7 @@ def test_reason_values_are_a_stable_contract() -> None:
         "erp_pairing_code_expired",
         "erp_pairing_code_used",
         "erp_pairing_unsupported",
+        "erp_https_required",
         # Коннектор «Почта» (M3-CRM-08).
         "smtp_not_configured",
         "smtp_invalid_host",
