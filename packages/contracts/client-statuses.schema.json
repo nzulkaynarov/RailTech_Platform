@@ -1,0 +1,35 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://railtech.uz/contracts/client-statuses.schema.json",
+  "title": "Статусы для клиента (client-statuses.yaml)",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["version", "statuses"],
+  "properties": {
+    "version": { "const": 1 },
+    "statuses": {
+      "type": "object",
+      "minProperties": 1,
+      "propertyNames": { "pattern": "^[a-z][a-z_]*$" },
+      "additionalProperties": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["from", "text"],
+        "properties": {
+          "from": { "type": "string", "minLength": 1, "description": "Стадия или статус сотрудников (SPEC-v3 §2.5)" },
+          "suffix": { "enum": ["valid_until", "expected_date"], "description": "Дата, которую показывать рядом" },
+          "text": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["ru", "uz", "en"],
+            "properties": {
+              "ru": { "type": "string", "minLength": 1, "maxLength": 40 },
+              "uz": { "type": "string", "minLength": 1, "maxLength": 40 },
+              "en": { "type": "string", "minLength": 1, "maxLength": 40 }
+            }
+          }
+        }
+      }
+    }
+  }
+}
