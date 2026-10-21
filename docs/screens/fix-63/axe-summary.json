@@ -1,0 +1,20 @@
+{
+  "task": "FIX-63",
+  "tool": "axe-core (@axe-core/playwright), serious + critical",
+  "source": "Vite dev-сервер CRM из worktree (порт 5267) и подставной API (Playwright page.route); бэкенд не запускался",
+  "screens": {
+    "users-1440": 0,
+    "grant-empty-1440": 0,
+    "grant-selected-1440": 0,
+    "users-after-grant-1440": 0,
+    "edit-1440": 1,
+    "users-390": 0,
+    "grant-empty-390": 0,
+    "grant-selected-390": 0,
+    "users-after-grant-390": 0,
+    "edit-390": 1
+  },
+  "notes": {
+    "edit-*": "1 critical aria-allowed-attr — прежнее поле «Роли» CRM (antd Select с правилом required ставит aria-required на корневой div); поле не менялось задачей, на новых элементах (группа флажков «Роли в ERP») нарушений нет"
+  }
+}

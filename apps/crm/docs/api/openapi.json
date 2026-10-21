@@ -5135,6 +5135,21 @@
             "title": "Email",
             "type": "string"
           },
+          "erp_role_codes": {
+            "items": {
+              "enum": [
+                "CALCULATION",
+                "CATALOG_SUPPLY",
+                "FULFILLMENT",
+                "FINANCE",
+                "HEAD",
+                "VIEWER"
+              ],
+              "type": "string"
+            },
+            "title": "Erp Role Codes",
+            "type": "array"
+          },
           "full_name": {
             "title": "Full Name",
             "type": "string"
@@ -7772,6 +7787,21 @@
             "title": "Email",
             "type": "string"
           },
+          "erp_role_codes": {
+            "items": {
+              "enum": [
+                "CALCULATION",
+                "CATALOG_SUPPLY",
+                "FULFILLMENT",
+                "FINANCE",
+                "HEAD",
+                "VIEWER"
+              ],
+              "type": "string"
+            },
+            "title": "Erp Role Codes",
+            "type": "array"
+          },
           "full_name": {
             "title": "Full Name",
             "type": "string"
@@ -7863,6 +7893,28 @@
             "default": false,
             "title": "Clear Tg User Id",
             "type": "boolean"
+          },
+          "erp_role_codes": {
+            "anyOf": [
+              {
+                "items": {
+                  "enum": [
+                    "CALCULATION",
+                    "CATALOG_SUPPLY",
+                    "FULFILLMENT",
+                    "FINANCE",
+                    "HEAD",
+                    "VIEWER"
+                  ],
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Erp Role Codes"
           },
           "full_name": {
             "anyOf": [

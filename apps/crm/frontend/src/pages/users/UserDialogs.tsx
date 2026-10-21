@@ -15,7 +15,10 @@ import {
 import type { UserCreate, UserOut, UserUpdate } from "../../api/generated/model";
 import { useTeam } from "../../api/queries";
 import { t } from "../../i18n/ru";
+import { erpRolesOf, isErpSuperuser } from "../../domain/erpRoles";
 import { roleLabel } from "../../domain/labels";
+import { hasErpAccess } from "../../domain/platformAccess";
+import { ErpRolesField } from "./ErpRoles";
 
 const ROLE_OPTIONS = ["admin", "manager", "viewer"].map((value) => ({
   value,
@@ -83,6 +86,7 @@ export function EditUserDialog({
   const mustTransfer = transferRequired !== null;
   const [form] = Form.useForm<UserUpdate>();
   const active = Form.useWatch("is_active", form);
+  const rolesWatch = Form.useWatch("roles", form);
   const team = useTeam();
   const colleagues = (team.data ?? [])
     .filter((m) => m.id !== user?.id)
@@ -109,9 +113,18 @@ export function EditUserDialog({
             roles: user.roles,
             is_active: user.is_active,
             tg_user_id: user.tg_user_id,
+            erp_role_codes: erpRolesOf(user),
           }}
           onFinish={(values) => {
-            onSubmit({ ...values, clear_tg_user_id: values.tg_user_id == null });
+            // Роли ERP (FIX-63) шлём только тем, у кого есть доступ к ERP: без него поле в форме скрыто.
+            const { erp_role_codes, ...rest } = values;
+            onSubmit({
+              ...rest,
+              clear_tg_user_id: values.tg_user_id == null,
+              ...(hasErpAccess(user) && !isErpSuperuser({ roles: values.roles ?? user.roles })
+                ? { erp_role_codes }
+                : {}),
+            });
           }}
         >
           <Form.Item name="full_name" label={t.users.fullName} rules={[{ required: true }]}>
@@ -120,6 +133,9 @@ export function EditUserDialog({
           <Form.Item name="roles" label={t.users.roles} rules={[{ required: true }]}>
             <Select mode="multiple" options={ROLE_OPTIONS} />
           </Form.Item>
+          {hasErpAccess(user) ? (
+            <ErpRolesField disabled={isErpSuperuser({ roles: rolesWatch ?? user.roles })} />
+          ) : null}
           <Form.Item name="tg_user_id" label={t.users.telegram}>
             <InputNumber className="full-width" min={1} />
           </Form.Item>

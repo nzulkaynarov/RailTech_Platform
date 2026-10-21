@@ -4,6 +4,7 @@
  * RailTech CRM API
  * OpenAPI spec version: 0.1.0
  */
+import type { MeOutErpRoleCodesItem } from "./meOutErpRoleCodesItem";
 import type { MeOutPlatformAccessItem } from "./meOutPlatformAccessItem";
 
 /**
@@ -11,6 +12,7 @@ import type { MeOutPlatformAccessItem } from "./meOutPlatformAccessItem";
  */
 export interface MeOut {
   email: string;
+  erp_role_codes?: MeOutErpRoleCodesItem[];
   full_name: string;
   id: number;
   is_active: boolean;
