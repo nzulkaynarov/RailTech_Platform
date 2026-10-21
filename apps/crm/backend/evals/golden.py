@@ -1,7 +1,7 @@
 """Схема golden-кейсов (`evals/golden/*.yaml`) и загрузчик. Категории — SPEC §12."""
 
 from pathlib import Path
-from typing import Literal
+from typing import Any, Literal
 
 import yaml
 from pydantic import BaseModel, ConfigDict, Field
@@ -19,6 +19,7 @@ Category = Literal[
     "no_progress",
     "unresponsive_return",
     "customer_document",
+    "service_mode",
 ]
 Language = Literal["ru", "uz", "en"]
 ActionName = Literal["answer", "fallback", "handoff", "silent", "deliver_document"]
@@ -41,6 +42,10 @@ class Expect(_Strict):
     must_not_include: list[str] = Field(default_factory=list)
     max_words: int = 120
     tool_calls_any: list[str] = Field(default_factory=list, description="хотя бы один вызов")
+    erp_tools_any: list[str] = Field(
+        default_factory=list, description="сервисный режим: хотя бы один вызов инструмента erp-mcp"
+    )
+    no_erp_calls: bool = Field(default=False, description="ни одного вызова erp-mcp (лид, чужое)")
 
 
 class EvalDocument(_Strict):
@@ -49,6 +54,13 @@ class EvalDocument(_Strict):
     type: Literal["contract", "proposal", "letter", "invoice", "act", "other"]
     number: str | None = None
     doc_date: str | None = None
+
+
+class ErpFixture(_Strict):
+    """erp-mcp в кейсе сервисного режима: ответы инструментов (форма — `mcp-tools.json`)."""
+
+    available: bool = Field(default=True, description="False — erp-mcp не отвечает")
+    tools: dict[str, Any] = Field(default_factory=dict, description="имя инструмента → результат")
 
 
 class GoldenCase(_Strict):
@@ -61,6 +73,7 @@ class GoldenCase(_Strict):
     need_summary: str | None = None
     mode: Literal["prospect", "customer"] = "prospect"
     documents: list[EvalDocument] = Field(default_factory=list, description="документы клиента")
+    erp: ErpFixture | None = Field(default=None, description="есть — у хода есть инструменты ERP")
     expect: Expect
 
 

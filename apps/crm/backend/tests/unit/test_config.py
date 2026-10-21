@@ -72,3 +72,19 @@ def test_sso_is_off_without_secret_outside_prod(app_env: str) -> None:
 def test_sso_secrets_support_rotation() -> None:
     settings = make(platform_sso_secret=SecretStr(" new-key , old-key ,"))
     assert settings.platform_sso_secrets == ["new-key", "old-key"]
+
+
+@pytest.mark.parametrize(
+    ("enabled", "key", "ready"),
+    [(True, "k", True), (True, "", False), (False, "k", False), (False, "", False)],
+)
+def test_erp_mcp_is_used_only_when_enabled_and_keyed(enabled: bool, key: str, ready: bool) -> None:
+    settings = make(erp_mcp_enabled=enabled, erp_mcp_context_key=SecretStr(key))
+    assert settings.erp_mcp_ready is ready
+    assert settings.erp_mcp_context_key_bytes == key.encode()
+
+
+def test_erp_mcp_is_off_by_default() -> None:
+    settings = make()
+    assert settings.erp_mcp_ready is False
+    assert str(settings.erp_mcp_url) == "http://erp-mcp:8104/mcp/erp"

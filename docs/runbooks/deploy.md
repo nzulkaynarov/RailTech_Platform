@@ -129,10 +129,17 @@ Actions → **Deploy** → Run workflow: `ref` = `main` (или sha, входя�
   в базе знаний не участвует вовсе. Остался только для текста документов клиентов (при пустом `DOCLING_URL` он помечается `failed`);
   профиль `kb-ingest` — опция для этого (вернуть `DOCLING_URL=http://docling:5001` и `DOCLING_API_KEY`), вместе с Langfuse не включать (8 ГБ).
 
-`erp-mcp` (инструменты ERP для агента CRM) лежит под профилем `mcp` и по умолчанию не стартует: CRM к нему пока не ходит (M3-CRM-07).
-Файл контракта уже едет в релизе: `/opt/rt/releases/<sha>/packages/contracts/mcp-tools.json` монтируется в контейнер по пути
-`../../packages/contracts/mcp-tools.json` от `prod.yml` (без файла сервис не стартует). Включает профиль M3-CRM-07: добавить `mcp`
-в `RT_PROFILES` в `.env.prod` (`RT_PROFILES=mcp`, через запятую с остальными) и выполнить обычный деплой; снаружи `/mcp` остаётся 404.
+**Бот в сервисном режиме требует `erp-mcp` (M3-CRM-07).** `erp-mcp` (инструменты ERP для агента CRM) лежит под профилем `mcp`; бот
+берёт из него данные клиента («где мой счёт», «когда поставка», цена клиенту) и без него на такие вопросы честно отвечает «не могу
+проверить» и заводит запрос менеджеру. Поэтому на проде профиль включён: в `infra/.env.prod.example` стоит `RT_PROFILES=mcp`, а в
+уже созданном `/opt/rt/.env.prod` его добавляют вручную (`RT_PROFILES=mcp`, через запятую с остальными, например
+`mcp,observability`; вместе с `observability` и `kb-ingest` 8 ГБ хватает не на все три — `erp-mcp` занимает ≈ 200 МБ). Затем обычный
+деплой; снаружи `/mcp` остаётся 404 (smoke). Ключ `ERP_MCP_CONTEXT_KEY` один на CRM и ERP: им CRM подписывает контекст каждого
+вызова, `erp-mcp` его проверяет (значение уже в `.env.prod`). Файл контракта едет в релизе: `/opt/rt/releases/<sha>/packages/contracts/
+mcp-tools.json` монтируется в контейнер по пути `../../packages/contracts/mcp-tools.json` от `prod.yml` (без файла сервис не стартует).
+Проверить после деплоя: `docker compose ps erp-mcp` — `healthy`; в логе CRM нет `erp_mcp_call_failed` с `kind=context_rejected` (это
+расхождение ключей между CRM и ERP) и нет `kind=unavailable` (сервис не запущен — профиля нет в `RT_PROFILES`). Выключить ходы бота к ERP,
+не останавливая `erp-mcp`: `ERP_MCP_ENABLED=false` в `.env.prod`.
 
 **Схема событий ERP → CRM (M5-INF-01c).** Файл `packages/contracts/events.schema.json` едет в релизе и монтируется read-only в
 `/packages/contracts/events.schema.json` сервисов `erp-backend`, `erp-worker`, `erp-worker-ai`, `erp-beat` (и `erp-mcp` под
@@ -164,7 +171,7 @@ Actions → **Deploy** → Run workflow: `ref` = `main` (или sha, входя�
 - **Восстановление боевой базы** (остановка записи обязательна):
   ```bash
   # VPS 1: остановить приложения, ходящие в базу
-  docker compose -f … stop crm-api crm-worker crm-mcp-kb crm-mcp-crm crm-mcp-docs erp-backend erp-worker erp-worker-ai erp-beat
+  docker compose -f … stop crm-api crm-worker crm-mcp-kb crm-mcp-crm crm-mcp-docs erp-backend erp-mcp erp-worker erp-worker-ai erp-beat
   # VPS 2: пересоздать базу и залить дамп (пример для erp)
   docker exec -u postgres rt-db-postgres-1 psql -U postgres -c 'DROP DATABASE erp' -c 'CREATE DATABASE erp OWNER erp_app'
   docker exec -i -u postgres rt-db-postgres-1 pg_restore -U postgres -d erp --no-owner --role=erp_app < /var/backups/rt/<штамп>/erp.dump
