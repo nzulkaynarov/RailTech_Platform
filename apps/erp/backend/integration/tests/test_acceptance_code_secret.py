@@ -21,7 +21,7 @@ from integration.services.webhooks import (
     SECRET_MASK,
     delivery_payload,
     emit_quote_acceptance_code_requested,
-    sign_payload,
+    sign_payload_v2,
     webhook_signing_secret,
 )
 from integration.tasks import deliver_webhook_event
@@ -84,7 +84,10 @@ def test_delivery_sends_the_real_code_signs_the_real_body_and_keeps_the_journal_
     sent = post.call_args.kwargs
     body = json.loads(sent["content"])
     assert body["payload"]["code"] == CODE and event_errors(body) == []
-    assert sent["headers"]["X-Signature"] == sign_payload(webhook_signing_secret(), sent["content"])
+    h = sent["headers"]
+    assert h["X-Signature"] == sign_payload_v2(
+        webhook_signing_secret(), h["X-Event-Id"], h["X-Timestamp"], sent["content"]
+    )
     event.refresh_from_db()
     assert event.status == WebhookEventStatus.SENT
     assert event.payload["payload"]["code"] == SECRET_MASK, "после доставки журнал по-прежнему без кода"

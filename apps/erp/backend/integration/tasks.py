@@ -4,8 +4,8 @@
 Заголовки:
 - X-Event-Id (UUID)
 - X-Event-Type
-- X-Timestamp (ISO-8601 with tz)
-- X-Signature: sha256=<HMAC(body, ERP_WEBHOOK_SECRET)>
+- X-Timestamp (UTC ISO 8601) — заново при КАЖДОЙ попытке, `X-Event-Id` тот же
+- X-Signature: sha256=<HMAC(secret, "{X-Event-Id}.{X-Timestamp}.{body}")> — схема v2 (FIX-61)
 """
 
 from __future__ import annotations
@@ -24,7 +24,13 @@ from django.utils import timezone
 from core.log_mask import mask_secrets
 
 from .models import IntegrationWebhookEvent, WebhookEventStatus
-from .services.webhooks import delivery_payload, discard_secret_payload, sign_payload, webhook_signing_secret
+from .services.webhooks import (
+    delivery_payload,
+    discard_secret_payload,
+    sign_payload_v2,
+    signature_timestamp,
+    webhook_signing_secret,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -100,14 +106,16 @@ def deliver_webhook_event(self, event_id: int) -> bool:
     event.attempts += 1
     event.last_attempt_at = timezone.now()
     body_bytes = json.dumps(payload, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
-    signature = sign_payload(secret, body_bytes)
-
+    # Подпись v2 (FIX-61) покрывает X-Event-Id, X-Timestamp и реальные байты тела (с кодом акцепта из кэша). Метка — момент
+    # ЭТОЙ попытки: ретрай подписывается заново, иначе CRM отклонит его по окну 300 с; `occurred_at` остаётся в теле.
+    event_id_header = str(event.event_id)
+    timestamp = signature_timestamp()
     headers = {
         "Content-Type": "application/json",
-        "X-Event-Id": str(event.event_id),
+        "X-Event-Id": event_id_header,
         "X-Event-Type": event.event_type,
-        "X-Timestamp": event.payload.get("occurred_at", timezone.now().isoformat()),
-        "X-Signature": signature,
+        "X-Timestamp": timestamp,
+        "X-Signature": sign_payload_v2(secret, event_id_header, timestamp, body_bytes),
     }
     event.headers = headers
 

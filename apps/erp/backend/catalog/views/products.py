@@ -31,6 +31,18 @@ def catalog_ai_gate(user):
     return None
 
 
+def _own_company_or_none():
+    """Своя компания (`core.tenant.own_company`) или None: нет сотрудников / несколько без OWN_COMPANY_ID."""
+    from django.core.exceptions import ImproperlyConfigured
+
+    from core.tenant import own_company
+
+    try:
+        return own_company()
+    except ImproperlyConfigured:
+        return None
+
+
 @extend_schema_view(
     list=extend_schema(
         summary="List products",
@@ -243,14 +255,18 @@ class ProductViewSet(RoleGatedViewMixin, viewsets.ModelViewSet):
         user = self.request.user
         if user.is_superuser:
             # N3 (дыра №4 аудита): карточка БЕЗ owner_company — ничья, продавец никогда не
-            # сможет взять её в работу (can_manage вечно False). Оператор обязан назвать
-            # компанию-владельца (SAP: материал всегда в орг-области).
+            # сможет взять её в работу (can_manage вечно False). SAP: материал всегда в орг-области.
+            # FIX-67: форма владельца не спрашивает (продавец один — BUSINESS §3.3), поэтому без явного
+            # `owner_company` карточка принадлежит СВОЕЙ компании; названная явно — главнее. Свою компанию
+            # определить нельзя (сотрудников ещё нет / несколько без OWNER_COMPANY_ID) — прежний отказ.
             from rest_framework.exceptions import ValidationError
 
             from accounts.models import Company
 
             owner_id = self.request.data.get("owner_company")
             owner = Company.objects.filter(pk=owner_id).first() if owner_id else None
+            if owner is None and not owner_id:
+                owner = _own_company_or_none()
             if owner is None:
                 raise ValidationError({"detail": "OWNER_COMPANY_REQUIRED"})
             serializer.save(owner_company=owner)

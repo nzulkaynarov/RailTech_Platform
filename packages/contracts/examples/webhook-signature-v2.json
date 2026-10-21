@@ -1,0 +1,10 @@
+{
+  "description": "Общий тест-вектор подписи вебхука ERP -> CRM, схема v2 (FIX-61, Q-FIX35-2, CONTRACTS §3). Одни и те же secret/event_id/timestamp/body дают одну подпись в ERP и CRM; тесты обеих сторон читают этот файл. Секрет фиктивный.",
+  "secret": "fix61-test-secret-do-not-use",
+  "event_id": "5b1c3a44-7c1e-4b6f-9a53-2f0f6a3e8d10",
+  "timestamp": "2026-10-21T09:30:00Z",
+  "body": "{\"event\":\"quote.viewed\",\"occurred_at\":\"2026-10-21T09:29:58Z\",\"note\":\"Привет, мир\"}",
+  "signed_string": "{event_id}.{timestamp}.{body}, байты UTF-8",
+  "signature_v2": "sha256=d3f54a561e4c49b88c65697794287ab395cdd5f22c7cf02a3a183e21db2a5122",
+  "signature_legacy": "sha256=5befcf145e8d554af4a1aca1f8f82ccff04af512afd091e8ad914ec49e4ef8fb"
+}
