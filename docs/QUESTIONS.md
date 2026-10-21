@@ -651,6 +651,24 @@ ERP хранит его шифрованно. Ни один маршрут CRM �
 
 **Рекомендация.** Решить в to-be аудите ролей бэк-офиса. Если видимость сделок по ролям остаётся, то вариант 1 отдельной задачей.
 
+## Q-INF-P0-2-1 · Белый текст на hover основной кнопки (`#1677ff`) даёт 4.10:1 (INF-P0-2, ui-tokens 0.2.0) — **решено архитектором 2026-10-22: hover = `#0958d9`**
+
+**Контекст.** SPEC-v3 §5.2 задаёт `colorPrimaryHover = #1677ff`. Белый текст на нём — 4.10:1, сам `#1677ff` как текст (hover outlined/link-кнопки) на белом — 4.10:1, на `#f5f5f5` — 3.76:1 (ниже 4.5:1; на `#1668dc` в покое — 5.19:1). В Cabinet hover кнопки shadcn — `bg-primary/90`, белый на нём — 4.36:1.
+
+**Решено.** `primary.hover = #0958d9` (6.16:1) в `tokens.json`: antd (`colorPrimaryHover`, `colorLinkHover`; `colorPrimaryActive`/`colorLinkActive` = `#003eb3`) и shadcn (новая переменная `--primary-hover` и `bg-primary-hover` в Tailwind). Отступ от таблицы SPEC-v3 §5.2 по критерию §11.2 п. 6. Компоненты Cabinet/ERP используют `bg-primary/90` (4.36:1) — экраны и `ui/button` не правились: пара остаётся в списке известных исключений теста до перехода кнопок на `bg-primary-hover` (Cabinet — CAB-03).
+
+## Q-INF-P0-2-2 · AntD берёт `colorError` для текста и для заливки с белым текстом (INF-P0-2) — **решено лидом по рекомендации: в теме AntD статусные цвета = «text» SPEC-v3**
+
+**Контекст.** `colorError = #ff4d4f` / `colorWarning = #faad14` / `colorSuccess = #52c41a` (SPEC-v3 §5.2) AntD использует и как цвет текста (`Form` explain error/warning, `Tag status`, danger-ссылки/кнопки outlined/text/link, `Menu`/`Dropdown` danger), и как фон с белым текстом (`Button danger primary`, `Badge count`, `Progress success`): 3.27 / 1.90 / 2.27:1. `Typography type="danger"` читает `colorErrorText` (antd 5.29.3 `typography/style/index.js:24`), поэтому эта пара и так проходит. Переопределение `colorError` в `components.Button` / `components.Form` при `cssVar: true` **не действует** (проверено на antd 5.29, стили остаются `var(--ant-color-error)`), то есть вложенные `components` проблему не решают.
+
+**Решено.** В AntD-выходе (`dist/antd.ts`, копии) `colorError = #a8071a`, `colorWarning = #874d00`, `colorSuccess = #237804` (значения «text»), явные `colorErrorBg/Border`, `colorWarningBg/Border`, `colorSuccessBg/Border` (светлые оттенки палитры antd), `colorErrorHover/Active`, `colorErrorTextHover/Active`, `colorSuccessHover/Active`, `colorWarningHover/Active` (все ≥ 4.5:1 на белом). Затравочные `#ff4d4f`, `#faad14`, `#52c41a` остаются в `tokens.json`, в CSS-переменных `--rt-color-*-default` и в экспорте `RT_STATUS_FILL` — только для графиков и заливок без текста. Тест контраста проверяет реальные пары antd (Tag, Form explain, Button danger primary/outlined/text/link, Badge count, Menu/Dropdown danger, Progress) на итоговых токенах — все проходят 4.5:1, исключений по статусам нет. Цвет бейджа очереди в Платформе — `#a8071a` вместо `#ff4d4f` макета v3.
+
+## Q-INF-P0-2-3 · `#767676` (tertiary) проходит 4.5:1 только на белом (INF-P0-2) — **решено лидом по принципу архитектора: `#6e6e6e` во всех выходах**
+
+**Контекст.** `colorTextTertiary = #767676` (SPEC-v3 §5.2, «подписи 12 px, 4.5:1 — минимум») на белом даёт 4.54:1, на `#fafafa` (`colorFillAlter`: label bordered `Descriptions`, `DryRunPanel` CRM) — 4.35:1 (в main 5.67), на фоне окна `#f5f5f5` — 4.17:1, на `#e6f4ff` — 4.06:1; в замороженном CRM это регрессия контраста.
+
+**Решено.** Третий цвет текста и placeholder = `#6e6e6e` (tokens.json, antd, shadcn/CSS): 5.10 / 4.89 / 4.68 / 4.55:1 на `#ffffff` / `#fafafa` / `#f5f5f5` / `#e6f4ff`. Отступ от таблицы SPEC-v3 §5.2 по критерию §11.2 п. 6, как с hover (Q-INF-P0-2-1); описан в README пакета. `colorTextDescription` и shadcn `--muted-foreground` = `#595959`. Тесты (пакет и CRM) проверяют tertiary на всех этих фонах как обычные пары. Единственное оставшееся исключение по тексту — `text-success` на `bg-success/10` поверх `#f5f5f5` (4.49:1, так же как в main).
+
 ## Q-P0-3 · Каркас Платформы (INF-P0-3): что в `platform-bff.yaml` не определено, а коду пришлось выбрать — для архитектора
 
 **Контекст.** Контракт не правился (запрет задачи); при написании каркаса `bff/` и `web/` нашлись места, где выбор сделан по умолчанию.

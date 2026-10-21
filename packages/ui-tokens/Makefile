@@ -6,7 +6,11 @@ SHELL := /bin/bash
 build: ## tokens.json → dist/{tokens.css,shadcn.css,antd.ts}, apps/crm/frontend/src/app/tokens.generated.ts, apps/cabinet/src/styles/tokens.generated.css
 	node build.mjs
 
+.PHONY: test
+test: build ## Контраст WCAG 2.1 AA ≥ 4.5:1 для пар «текст / фон» (node --test, без зависимостей)
+	node --test contrast.test.mjs
+
 .PHONY: check
-check: build ## Сгенерированное совпадает с закоммиченным (CI)
+check: build test ## Контраст токенов и сгенерированное совпадает с закоммиченным (CI)
 	git diff --exit-code -- dist ../../apps/crm/frontend/src/app/tokens.generated.ts ../../apps/cabinet/src/styles/tokens.generated.css ../../apps/erp/frontend/src/styles/tokens.generated.css \
 	  || { echo "ui-tokens: dist/ или копии tokens.generated.* устарели — выполните make tokens и закоммитьте"; exit 1; }

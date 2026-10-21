@@ -4,8 +4,12 @@
 # Платных вызовов моделей нет. legacy/b2b не проверяется (ORCHESTRATOR §3.11).
 set -euo pipefail
 
+# `make ci-local args="--quick"` отдаёт переменную args вложенным make (MAKEFLAGS и окружение), и цели вроде
+# erp test-backend (args="<pytest-аргументы>") получают чужой --quick. Задания видят чистое окружение make.
+unset MAKEFLAGS MFLAGS MAKELEVEL args
+
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-ALL=(gitleaks crm contracts tokens infra erp cabinet crm-integration crm-build crm-e2e crm-audit)
+ALL=(gitleaks crm contracts tokens infra erp cabinet platform crm-integration crm-build crm-e2e crm-audit platform-e2e)
 GITLEAKS_IMAGE=ghcr.io/gitleaks/gitleaks:v8.30.1
 CADDY_IMAGE=caddy:2.11.7-alpine
 LOGS="$ROOT/.ci-local"
@@ -14,8 +18,8 @@ usage() {
   cat <<EOF
 Локальный CI ансамбля (как .github/workflows/ci.yml).
 
-  scripts/ci_local.sh                      все задания, кроме crm-e2e и crm-audit
-  scripts/ci_local.sh --full               всё, включая crm-e2e (Playwright) и crm-audit
+  scripts/ci_local.sh                      все задания, кроме crm-e2e, crm-audit и platform-e2e
+  scripts/ci_local.sh --full               всё, включая crm-e2e и platform-e2e (Playwright) и crm-audit
   scripts/ci_local.sh crm contracts        только выбранные
   scripts/ci_local.sh --quick              без crm-integration и crm-build (быстрый гейт)
 
@@ -26,10 +30,13 @@ usage() {
   tokens            make -C packages/ui-tokens check
   infra             docker compose config (dev + observability) и caddy validate
   erp, cabinet      make check-erp | make check-cabinet (до M1/M2 — пропуск внутри цели)
+  platform          make check-platform (ruff, mypy, pytest bff; eslint, tsc, vitest web; клиент orval и токены свежие)
   crm-integration   apps/crm/scripts/test_int_local.sh — одноразовые Postgres 17 и RustFS
   crm-build         образы CRM backend/frontend (prod) и backup с проверкой pg_dump 17
   crm-e2e           apps/crm/scripts/ci_local.sh e2e — одноразовый Postgres, API, preview, Playwright
   crm-audit         apps/crm/scripts/ci_local.sh audit — pip-audit и pnpm audit
+  platform-e2e      make -C apps/platform e2e — Playwright + axe на MSW (BFF и стенд не нужны); chromium
+                    ставится при первом запуске (pnpm exec playwright install chromium)
 
 Стенд ансамбля и его БД не используются. Логи — .ci-local/<задание>.log. Код выхода 1 при любом сбое.
 Нехватка памяти Docker (OOM, код 137) — запускайте при остановленном стенде (make down) или
@@ -41,12 +48,12 @@ STAGES=()
 for a in "$@"; do
   case "$a" in
     -h | --help) usage; exit 0 ;;
-    --quick) STAGES=(gitleaks crm contracts tokens infra erp cabinet) ;;
+    --quick) STAGES=(gitleaks crm contracts tokens infra erp cabinet platform) ;;
     --full) STAGES=("${ALL[@]}") ;;
     *) STAGES+=("$a") ;;
   esac
 done
-[ ${#STAGES[@]} -eq 0 ] && STAGES=(gitleaks crm contracts tokens infra erp cabinet crm-integration crm-build)
+[ ${#STAGES[@]} -eq 0 ] && STAGES=(gitleaks crm contracts tokens infra erp cabinet platform crm-integration crm-build)
 for s in "${STAGES[@]}"; do
   [[ " ${ALL[*]} " == *" $s "* ]] || { echo "Неизвестное задание: $s"; usage; exit 2; }
 done
@@ -104,6 +111,7 @@ stage_erp() {
     || { echo "Схема ERP устарела — make -C apps/erp openapi и закоммитьте schema.json, schema.d.ts, erp-internal.yaml"; return 1; }
 }
 stage_cabinet() { (cd "$ROOT" && make check-cabinet); }
+stage_platform() { (cd "$ROOT" && make check-platform); }
 
 stage_crm-integration() {
   local status=0
@@ -123,6 +131,12 @@ stage_crm-build() {
 
 stage_crm-e2e() { "$ROOT/apps/crm/scripts/ci_local.sh" e2e; }
 stage_crm-audit() { "$ROOT/apps/crm/scripts/ci_local.sh" audit; }
+
+# Как job platform-e2e в ci.yml: браузер Playwright ставится (быстро, если уже есть), vite --mode mock поднимает сам playwright.config.ts.
+stage_platform-e2e() {
+  (cd "$ROOT/apps/platform/web" && pnpm exec playwright install chromium)
+  (cd "$ROOT" && make -C apps/platform e2e)
+}
 
 declare -a RESULT=()
 failed=0
