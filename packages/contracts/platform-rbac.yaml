@@ -1,0 +1,124 @@
+# Ролевая матрица Платформы — единственный источник для BFF и SPA (ADR-0011, apps/platform/docs/02-architecture.md §6).
+# Основание: SPEC-v3 §4.1 (роли), §4.2 (матрица), §4.3 и apps/platform/docs/04-integration-map.md §4 (карта в CRM и ERP).
+# Уровни: full — полный доступ, read — только чтение, hidden — раздел скрыт (в рейле и меню не показывается, по прямому
+# URL — 403 с предложением написать администратору). У сотрудника с несколькими ролями берётся максимум: full > read > hidden.
+# Права на операции решают бэкенды (CRM casbin, ERP Permission); эта матрица — видимость и маршруты.
+# Изменение файла — PR с тестом матрицы в BFF и SPA (решение владельца 2026-10-22, вопрос 8).
+# Валидация — platform-rbac.schema.json (make contracts).
+version: 1
+
+roles:
+  MANAGER:
+    name: { ru: Менеджер, uz: Menejer, en: Manager }
+    crm_base_role: manager
+    erp_role_codes: [VIEWER]
+    erp_extra_permissions: [deal.manage]
+    queue: [answer_lead, take_lead, create_request, service_request]
+  DIRECTOR:
+    name: { ru: Директор, uz: Direktor, en: Director }
+    crm_base_role: viewer
+    erp_role_codes: [HEAD]
+    erp_extra_permissions: []
+    queue: [resolve_letter, approve_quote, approve_memo, problem_project]
+  SUPPLY:
+    name: { ru: Снабженец, uz: Ta'minotchi, en: Supply specialist }
+    crm_base_role: viewer
+    erp_role_codes: [CATALOG_SUPPLY, FULFILLMENT]
+    erp_extra_permissions: [quote.build, quote.edit_pricing]
+    queue: [calc_task, supplier_overdue]
+  ENGINEER:
+    name: { ru: Гл. инженер, uz: Bosh muhandis, en: Chief engineer }
+    crm_base_role: viewer
+    erp_role_codes: [FULFILLMENT]
+    erp_extra_permissions: [quote.build]
+    queue: [calc_task]
+  ACCOUNTANT:
+    name: { ru: Бухгалтер, uz: Buxgalter, en: Accountant }
+    # manager — чтобы отвечать клиенту во внешнем чате (Chats · Внешний = full); остальные разделы CRM скрывает матрица.
+    # CRM-01 заменяет базовые роли собственными ролями casbin по этой матрице.
+    crm_base_role: manager
+    erp_role_codes: [FINANCE]
+    erp_extra_permissions: [contract.manage, fulfillment.act]
+    queue: [confirm_payment, issue_invoice, issue_contract, attach_scan, pay_memo, overdue_invoice]
+  ADMIN:
+    name: { ru: Администратор, uz: Administrator, en: Administrator }
+    crm_base_role: admin
+    erp_role_codes: []
+    erp_extra_permissions: []
+    queue: [ticket, integration_issue]
+
+# Порядок строк и уровни — SPEC-v3 §4.2 дословно. Колонки: MANAGER, DIRECTOR, SUPPLY, ENGINEER, ACCOUNTANT, ADMIN.
+resources:
+  - key: dashboard.queue
+    module: dashboard
+    label: { ru: "Dashboard · Моя очередь", uz: "Dashboard · Mening navbatim", en: "Dashboard · My queue" }
+    access: { MANAGER: full, DIRECTOR: full, SUPPLY: full, ENGINEER: full, ACCOUNTANT: full, ADMIN: full }
+  - key: dashboard.summary
+    module: dashboard
+    label: { ru: "Dashboard · Сводка по компании", uz: "Dashboard · Kompaniya bo'yicha xulosa", en: "Dashboard · Company summary" }
+    access: { MANAGER: hidden, DIRECTOR: full, SUPPLY: hidden, ENGINEER: hidden, ACCOUNTANT: read, ADMIN: hidden }
+  - key: crm.leads
+    module: crm
+    label: { ru: "CRM · Все сообщения, Все лиды, Каналы связи, База знаний", uz: "CRM · Xabarlar, lidlar, aloqa kanallari, bilimlar bazasi", en: "CRM · Messages, leads, channels, knowledge base" }
+    access: { MANAGER: full, DIRECTOR: read, SUPPLY: hidden, ENGINEER: hidden, ACCOUNTANT: hidden, ADMIN: hidden }
+  - key: crm.clients
+    module: crm
+    label: { ru: "CRM · Все клиенты, Все заявки, Создать заявку", uz: "CRM · Mijozlar, arizalar, ariza yaratish", en: "CRM · Clients, requests, create request" }
+    access: { MANAGER: full, DIRECTOR: read, SUPPLY: read, ENGINEER: read, ACCOUNTANT: read, ADMIN: hidden }
+  - key: eds.inbox
+    module: eds
+    label: { ru: "EDS · Входящие · резолюция", uz: "EDS · Kiruvchi · rezolyutsiya", en: "EDS · Inbox · resolution" }
+    access: { MANAGER: read, DIRECTOR: full, SUPPLY: hidden, ENGINEER: hidden, ACCOUNTANT: read, ADMIN: hidden }
+  - key: eds.drafts
+    module: eds
+    label: { ru: "EDS · Черновик КП · одобрение и отправка", uz: "EDS · TT qoralamasi · tasdiqlash va yuborish", en: "EDS · Draft quote · approval and sending" }
+    access: { MANAGER: read, DIRECTOR: full, SUPPLY: hidden, ENGINEER: hidden, ACCOUNTANT: hidden, ADMIN: hidden }
+  - key: eds.projects
+    module: eds
+    label: { ru: "EDS · Все проекты · договор, счёт, акт, сканы", uz: "EDS · Loyihalar · shartnoma, hisob, dalolatnoma, skanlar", en: "EDS · Projects · contract, invoice, act, scans" }
+    access: { MANAGER: read, DIRECTOR: full, SUPPLY: read, ENGINEER: read, ACCOUNTANT: full, ADMIN: hidden }
+  - key: eds.payments
+    module: eds
+    label: { ru: "EDS · Счета и оплаты · подтвердить оплату, запросить платёжку", uz: "EDS · Hisoblar va to'lovlar", en: "EDS · Invoices and payments" }
+    access: { MANAGER: read, DIRECTOR: read, SUPPLY: hidden, ENGINEER: hidden, ACCOUNTANT: full, ADMIN: hidden }
+  - key: eds.memo.create
+    module: eds
+    label: { ru: "EDS · Служебная записка · создать", uz: "EDS · Xizmat xati · yaratish", en: "EDS · Memo · create" }
+    access: { MANAGER: full, DIRECTOR: full, SUPPLY: full, ENGINEER: full, ACCOUNTANT: full, ADMIN: full }
+  - key: eds.memo.approve
+    module: eds
+    label: { ru: "EDS · Служебная записка · согласовать", uz: "EDS · Xizmat xati · kelishish", en: "EDS · Memo · approve" }
+    access: { MANAGER: hidden, DIRECTOR: full, SUPPLY: hidden, ENGINEER: hidden, ACCOUNTANT: hidden, ADMIN: hidden }
+  - key: erp.calc
+    module: erp
+    label: { ru: "ERP · Все запросы, Расчёт", uz: "ERP · So'rovlar, hisob-kitob", en: "ERP · Requests, calculation" }
+    access: { MANAGER: hidden, DIRECTOR: full, SUPPLY: full, ENGINEER: full, ACCOUNTANT: read, ADMIN: hidden }
+  - key: erp.stock
+    module: erp
+    label: { ru: "ERP · Склад, Справочники, Документация", uz: "ERP · Ombor, ma'lumotnomalar, hujjatlar", en: "ERP · Stock, catalogs, documentation" }
+    access: { MANAGER: read, DIRECTOR: full, SUPPLY: full, ENGINEER: full, ACCOUNTANT: read, ADMIN: hidden }
+  - key: chats.internal
+    module: chats
+    label: { ru: "Chats · Внутренний (проекты, команда)", uz: "Chats · Ichki (loyihalar, jamoa)", en: "Chats · Internal (projects, team)" }
+    access: { MANAGER: full, DIRECTOR: full, SUPPLY: full, ENGINEER: full, ACCOUNTANT: full, ADMIN: full }
+  - key: chats.external
+    module: chats
+    label: { ru: "Chats · Внешний (клиент: Telegram-бот, почта)", uz: "Chats · Tashqi (mijoz: Telegram-bot, pochta)", en: "Chats · External (client: Telegram bot, email)" }
+    access: { MANAGER: full, DIRECTOR: read, SUPPLY: hidden, ENGINEER: hidden, ACCOUNTANT: full, ADMIN: hidden }
+  - key: admin
+    module: admin
+    label: { ru: "Admin · Роли, Оргструктура, Интеграции, Тикеты", uz: "Admin · Rollar, tuzilma, integratsiyalar, tiketlar", en: "Admin · Roles, org chart, integrations, tickets" }
+    access: { MANAGER: hidden, DIRECTOR: read, SUPPLY: hidden, ENGINEER: hidden, ACCOUNTANT: hidden, ADMIN: full }
+
+# Поля с ограничением внутри экранов (SPEC-v3 §4.2, последний абзац). BFF вырезает поле из ответа, если ни одна роль
+# сотрудника его не видит; SPA скрывает компонентом <Restricted>.
+restricted_fields:
+  cost_margin:
+    description: { ru: "Себестоимость и маржа", uz: "Tannarx va marja", en: "Cost and margin" }
+    visible_to: [DIRECTOR, SUPPLY]
+  totals_only:
+    description: { ru: "Только итоговые суммы расчёта (без себестоимости по строкам)", uz: "Faqat jami summalar", en: "Totals only" }
+    visible_to: [ACCOUNTANT]
+  supplier_prices:
+    description: { ru: "Цены поставщиков", uz: "Yetkazib beruvchi narxlari", en: "Supplier prices" }
+    visible_to: [DIRECTOR, SUPPLY, ACCOUNTANT]
