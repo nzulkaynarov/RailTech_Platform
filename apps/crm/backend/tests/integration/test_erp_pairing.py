@@ -241,7 +241,8 @@ async def test_rotate_without_connector_is_conflict_and_failed_rotation_keeps_se
     )
     hook = json.loads(accept.calls.last.request.content)["webhook_secret"]
     assert paired.status_code == 200
-    respx.post(ROTATE).mock(return_value=httpx.Response(500))
+    # Однозначный отказ (401): ERP ничего не применила — секрет вебхуков откатывается.
+    respx.post(ROTATE).mock(return_value=httpx.Response(401, json={"detail": "UNAUTHORIZED"}))
     failed = client.post(f"{ERP_URL}/rotate", json={"password": PASSWORD}, headers=auth)
     assert failed.status_code == 502
     assert post_event(client, hook, 1) == 200, "секрет вебхуков откатился на прежний"
