@@ -99,7 +99,8 @@
     "noCompany": {
       "title": "Your account is not linked to a company",
       "hint": "Back-office access is granted by an administrator. Ask them to add you to the company.",
-      "logout": "Sign out"
+      "logout": "Sign out",
+      "setupPending": "The administrator has not finished the initial ERP setup yet. Please contact them — you will be added to the company once it is done."
     },
     "brandTitle": "Back office"
   },
@@ -2997,6 +2998,10 @@
         }
       },
       "company": {
+        "own_created": {
+          "title": "Own company created",
+          "detail": "{{company_name}}: initial ERP setup"
+        },
         "archived": {
           "title": "Company removed from circulation",
           "detail": "{{company_name}}"
@@ -3756,5 +3761,23 @@
     "publishThreshold": "Publishing threshold, %",
     "publishThresholdHint": "Minimum card completeness to publish. 100% means every required field is filled.",
     "saved": "Catalog policy saved"
+  },
+  "setup": {
+    "company": {
+      "title": "ERP setup: your company",
+      "hint": "This is the company on whose behalf the ERP issues quotes, contracts and invoices. You will become its owner.",
+      "later": "You can fill in the remaining details (bank, signatory, logo) later: Settings → Company details.",
+      "submit": "Create company",
+      "fields": {
+        "name": "Company name",
+        "inn": "Tax ID (INN)",
+        "legal_address": "Legal address",
+        "phone": "Phone",
+        "email": "E-mail"
+      },
+      "errors": {
+        "nameRequired": "Enter the company name."
+      }
+    }
   }
 }

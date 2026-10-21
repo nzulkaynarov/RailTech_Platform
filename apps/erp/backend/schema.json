@@ -16495,6 +16495,88 @@
                 }
             }
         },
+        "/api/v1/setup/company/": {
+            "post": {
+                "operationId": "setup_company_create",
+                "description": "Только суперпользователь и только пока своей компании нет. Создаёт компанию с типом продавца, делает текущего пользователя её владельцем. Ошибки полей — 422; повтор — 409 `OWN_COMPANY_ALREADY_EXISTS`.",
+                "summary": "Создать свою компанию (мастер первого запуска)",
+                "tags": [
+                    "Setup"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/OwnCompanySetupRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/OwnCompanySetupRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/OwnCompanySetupRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "security": [
+                    {
+                        "jwtAuth": []
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/OwnCompanyCreated"
+                                }
+                            }
+                        },
+                        "description": ""
+                    },
+                    "403": {
+                        "description": "PLATFORM_ADMIN_REQUIRED"
+                    },
+                    "409": {
+                        "description": "OWN_COMPANY_ALREADY_EXISTS"
+                    },
+                    "422": {
+                        "description": "Ошибки полей формы"
+                    }
+                }
+            }
+        },
+        "/api/v1/setup/status/": {
+            "get": {
+                "operationId": "setup_status_retrieve",
+                "summary": "Статус первоначальной настройки ERP",
+                "tags": [
+                    "Setup"
+                ],
+                "security": [
+                    {
+                        "jwtAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/SetupStatus"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
         "/api/v1/sourcing/ai-status/{task_id}/": {
             "get": {
                 "operationId": "sourcing_ai_status_retrieve",
@@ -22135,6 +22217,58 @@
                     "contact_name"
                 ]
             },
+            "OwnCompanyCreated": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "integer"
+                    },
+                    "name": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "id",
+                    "name"
+                ]
+            },
+            "OwnCompanySetupRequest": {
+                "type": "object",
+                "description": "Форма мастера первого запуска (FIX-65): название обязательно, остальное — по желанию.\n\nИНН проверяется тем же валидатором, что у модели; занятый ИНН — ошибка поля, а не 500.",
+                "properties": {
+                    "name": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 255
+                    },
+                    "inn": {
+                        "type": "string",
+                        "maxLength": 20
+                    },
+                    "legal_address": {
+                        "type": "string"
+                    },
+                    "phone": {
+                        "type": "string",
+                        "maxLength": 50
+                    },
+                    "email": {
+                        "oneOf": [
+                            {
+                                "type": "string",
+                                "format": "email"
+                            },
+                            {
+                                "type": "string",
+                                "maxLength": 0
+                            }
+                        ]
+                    }
+                },
+                "required": [
+                    "name"
+                ]
+            },
             "PaginatedActList": {
                 "type": "object",
                 "required": [
@@ -27161,6 +27295,21 @@
                     "password",
                     "token",
                     "uid"
+                ]
+            },
+            "SetupStatus": {
+                "type": "object",
+                "properties": {
+                    "setup_required": {
+                        "type": "boolean"
+                    },
+                    "can_setup": {
+                        "type": "boolean"
+                    }
+                },
+                "required": [
+                    "can_setup",
+                    "setup_required"
                 ]
             },
             "StockStatus": {
