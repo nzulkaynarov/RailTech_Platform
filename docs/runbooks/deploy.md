@@ -204,6 +204,11 @@ mcp-tools.json` монтируется в контейнер по пути `../.
   (PR #123): свой образ LiteLLM на Debian, numpy < 2.4 в CRM, `cpu-baseline-check.sh` до миграций; ClickHouse/Langfuse на этих
   VPS недоступны (`docs/runbooks/servers.md`, «CPU прод-VPS»). Docling на проде не используется — база знаний принимает только
   Markdown (M5-CRM-02, PR #124).
+- **Вебхук Telegram (временный обход, FIX-66).** При `TELEGRAM_MODE=webhook` и пустом `TELEGRAM_WEBHOOK_URL` CRM передавала
+  Telegram пустой адрес — вебхук удалялся, бот молчал. С согласия владельца в `/opt/rt/.env.prod` вписано
+  `TELEGRAM_WEBHOOK_URL=https://crm.railtech.uz/telegram/webhook`; после FIX-66 (адрес из `CRM_DOMAIN`) строку можно убрать.
+- **Своя компания ERP и флаги.** Компания создана вручную, `OWN_COMPANY_ID=1` и `PLATFORM_SSO_ENABLED=true` вписаны в
+  `.env.prod` — заменяется мастером и умолчаниями FIX-65.
 - **Не фильтровать службы по подстроке.** При удалении старых служб `grep grade` зацепил `apt-daily-upgrade` и
   `unattended-upgrades` — восстановлены; список служб смотреть глазами перед `disable`.
 
