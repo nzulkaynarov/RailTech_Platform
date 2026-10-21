@@ -78,5 +78,20 @@ for (const viewport of VIEWPORTS) {
 			await expect(page.getByText('ИИ сейчас недоступен. Наберите строки вручную по тексту заявки.')).toBeVisible();
 			expect(api.posts['sourcing/parse-request-text/']).toBeUndefined(); // перехвачен вторым маршрутом
 		});
+
+		test('FIX-67b: разбор этого КП уже идёт (409) — понятное сообщение, кнопка снова доступна', async ({ page }) => {
+			await mockRequestApi(page, { permissions: SELLER, stage: 'CALCULATING', text: TEXT, withDraftQuote: true });
+			await page.route('**/api/v1/sourcing/parse-request-text/', (route) =>
+				route.fulfill({ status: 409, contentType: 'application/json', body: JSON.stringify({ detail: 'PARSE_ALREADY_RUNNING' }) }));
+			await page.goto(`/#deal-quote/${DEAL_ID}`);
+
+			const parse = page.getByRole('button', { name: 'Разобрать текст в строки (ИИ)' });
+			await parse.click();
+			const message = page.getByText('Разбор текста этого КП уже идёт — дождитесь результата, строки появятся сами.');
+			await expect(message).toBeVisible();
+			await expect(parse).toBeEnabled();
+			await page.waitForTimeout(600);
+			if (SHOTS && viewport.width === 1440) await page.screenshot({ path: '../../../docs/screens/fix-67b/parse-already-running-1440.png' });
+		});
 	});
 }
