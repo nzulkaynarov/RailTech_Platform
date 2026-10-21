@@ -16,7 +16,15 @@ def refresh_exchange_rates():
     """Daily Celery-beat job: pull CBU FX rates into ExchangeRate."""
     from finance.services.fx import fetch_cbu_rates
 
-    count = fetch_cbu_rates()
+    from core.external_status import ExternalSwitchedOff, external_call
+
+    try:
+        # M3-ERP-06: исход — в состояние сервиса «курсы ЦБ» (`/health` integration); выключатель из CRM пропускает прогон.
+        with external_call("cbu_rates"):
+            count = fetch_cbu_rates()
+    except ExternalSwitchedOff:
+        logger.info("FX: refresh skipped — service switched off from CRM")
+        return 0
     logger.info("FX: upserted %s exchange rates from CBU", count)
     return count
 
@@ -33,8 +41,16 @@ def refresh_exchange_rates():
 )
 def refresh_tnved_codes():
     """Weekly Celery-beat job: синхронизация классификатора ТН ВЭД с tarif.customs.uz."""
+    from core.external_status import ExternalSwitchedOff, external_call
+
     from .tnved import sync_tnved_codes
 
-    summary = sync_tnved_codes()
+    try:
+        # M3-ERP-06: исход — в состояние сервиса «ТН ВЭД / тариф»; выключатель из CRM пропускает прогон.
+        with external_call("customs_tariff"):
+            summary = sync_tnved_codes()
+    except ExternalSwitchedOff:
+        logger.info("ТН ВЭД: синхронизация пропущена — сервис выключен из CRM")
+        return {"skipped": "switched_off"}
     logger.info("ТН ВЭД: %s", summary)
     return summary

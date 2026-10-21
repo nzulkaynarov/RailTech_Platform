@@ -14,7 +14,10 @@
  * `Contact` закрыт через `unevaluatedProperties` (Q-FIX35-3); `CompanySummary.receivables_by_currency` (Q-FIX30-2);
  * `erp_document_id` — идентификатор документа портала (FIX-38).
  *
- * OpenAPI spec version: 0.3.0
+ * 0.4.0 (M3-ERP-06): `Health.externals[]` — внешние сервисы ERP (статус, последний успех и ошибка, счётчики за 24 ч);
+ * `PUT /externals/{code}/switch` — выключатель из CRM. Аддитивно, терпимый читатель.
+ *
+ * OpenAPI spec version: 0.4.0
  */
 
 export type Language = (typeof Language)[keyof typeof Language];

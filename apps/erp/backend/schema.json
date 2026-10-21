@@ -199,6 +199,30 @@
                 }
             }
         },
+        "/api/integration/v1/externals/{code}/switch": {
+            "put": {
+                "operationId": "api_integration_v1_externals_switch_update",
+                "description": "PUT /api/integration/v1/externals/{code}/switch (M3-ERP-06): выключатель внешнего сервиса ERP из CRM.",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "code",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "api"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No response body"
+                    }
+                }
+            }
+        },
         "/api/integration/v1/health": {
             "get": {
                 "operationId": "api_integration_v1_health_retrieve",
