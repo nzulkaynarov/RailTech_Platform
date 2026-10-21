@@ -15,7 +15,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.domain.deals import DealStage, plan_erp_outcome
-from app.models.clients import Client, Document
+from app.models.clients import Client, ClientContact, Document
 from app.models.deals import Deal
 from app.schemas.erp_events import (
     ActEnvelope,
@@ -114,16 +114,36 @@ def _quote_sent(env: QuoteSentEvent, deal: Deal | None) -> str:
     return ". ".join(parts) + "."
 
 
-def _quote_outcome(env: QuoteOutcomeEvent, deal: Deal | None) -> str:
+def _quote_outcome(env: QuoteOutcomeEvent, deal: Deal | None, contact_name: str | None) -> str:
+    """Запись ленты по КП; у принятия и отказа — кто из контактов клиента это сделал (шов 0.3.0)."""
     payload = env.payload
     label = f"#{payload.erp_quote_id} v{payload.version}"
+    who = f" ({contact_name})" if contact_name else ""
     if env.event == "quote.viewed":
         return f"Клиент открыл КП {label}."
     if env.event == "quote.accepted":
         _set_stage(deal, "accepted")
-        return f"Клиент акцептовал КП {label}."
+        return f"Клиент{who} акцептовал КП {label}."
     reason = f". Причина: {payload.reason}." if payload.reason else "."
-    return f"КП {label} отклонено клиентом{reason}"
+    return f"КП {label} отклонено клиентом{who}{reason}"
+
+
+async def _crm_contact_name(
+    session: AsyncSession, client: Client, crm_contact_id: int | None
+) -> str | None:
+    """Имя контакта CRM по `crm_contact_id` события; чужой или неизвестный контакт — `None`.
+
+    Контакт обязан принадлежать клиенту события: идентификатор приходит из ERP, и подставлять
+    в ленту имя контакта другого клиента нельзя.
+    """
+    if crm_contact_id is None:
+        return None
+    name = await session.scalar(
+        select(ClientContact.full_name).where(
+            ClientContact.id == crm_contact_id, ClientContact.client_id == client.id
+        )
+    )
+    return name.strip() or None if name else None
 
 
 def _contract_signed(env: ContractSignedEvent, deal: Deal | None) -> str:
@@ -241,7 +261,10 @@ async def dispatch(
         case QuoteSentEvent():
             return _quote_sent(env, deal)
         case QuoteOutcomeEvent():
-            return _quote_outcome(env, deal)
+            who = None
+            if env.event != "quote.viewed":
+                who = await _crm_contact_name(session, client, env.payload.crm_contact_id)
+            return _quote_outcome(env, deal, who)
         case ContractSignedEvent():
             return _contract_signed(env, deal)
         case InvoiceEnvelope():

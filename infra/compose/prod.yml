@@ -32,6 +32,9 @@ x-crm-prod-env: &crm-prod-env
   POSTGRES_USER: crm_app
   POSTGRES_PASSWORD: ${DB_CRM_PASSWORD:?set in .env}
   PGSSLMODE: require
+  # docling-serve на проде не используется (M5-CRM-02): база знаний — только Markdown
+  # по docs/kb/FORMAT.md, встроенный конвертер; docling нужен лишь тексту документов клиентов.
+  DOCLING_URL: ""
   ERP_FRONTEND_URL: https://${ERP_DOMAIN:?set in .env}
   # Бэкап делает VPS 2, CRM читает бакет `backups` RustFS (M5-CRM-01). Явно: том crm_backups из base.yml
   # смонтирован и в проде, и `auto` выбрал бы его.

@@ -8,6 +8,7 @@ import {
   getListDocumentsQueryKey,
   useDocumentAccess as useDocumentAccessQuery,
   useGetClient,
+  useGetClientReceivables,
   useGetDashboard,
   useGetSettings,
   useListAudit,
@@ -73,6 +74,15 @@ export const useClient = (id: number) =>
       refetchInterval: (query) =>
         query.state.data?.erp_handoff_status === "pending" ? 4000 : false,
     },
+  });
+
+/**
+ * Долг клиента по валютам из ERP (шов 0.3.0). Запрос только у клиента, переданного в бэк-офис;
+ * сбой не повторяем и не показываем — блок «Долг» просто не появляется (карточка как была).
+ */
+export const useClientReceivables = (id: number, linkedToErp: boolean) =>
+  useGetClientReceivables(id, {
+    query: { enabled: linkedToErp, retry: false, staleTime: 60_000 },
   });
 
 export const useClientContacts = (id: number) => useListClientContacts(id);

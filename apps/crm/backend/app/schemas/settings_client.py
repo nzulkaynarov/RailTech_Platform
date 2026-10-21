@@ -158,6 +158,14 @@ class ClientBotTexts(CheckedTexts):
         "Sizga «{deal}» bitimi boʻyicha tijorat taklifi tayyorlandi.",
         "A commercial proposal for the deal “{deal}” has been prepared for you.",
     )
+    # Код акцепта КП в кабинете (FIX-60, Q-FIX22-1): ERP просит бота прислать код контакту в Telegram.
+    # {code} — одноразовый код, {minutes} — сколько минут он действует. Код не хранится и не
+    # попадает в журнал событий, ленту и логи.
+    erp_quote_acceptance_code: LocalizedText = _t(
+        "Код подтверждения КП по сделке «{deal}»: {code}. Действует {minutes} мин. Никому его не сообщайте.",
+        "«{deal}» bitimi boʻyicha tijorat taklifini tasdiqlash kodi: {code}. {minutes} daqiqa amal qiladi. Uni hech kimga aytmang.",
+        "Confirmation code for the quote on the deal “{deal}”: {code}. Valid for {minutes} min. Do not share it with anyone.",
+    )
     erp_invoice_issued: LocalizedText = _t(
         "Выставлен счёт {number} на сумму {amount} {currency}. Срок оплаты: до {due}.",
         "{number}-hisob {amount} {currency} summasida berildi. Toʻlov muddati: {due} gacha.",

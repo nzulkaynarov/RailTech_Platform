@@ -168,6 +168,8 @@ def test_reason_values_are_a_stable_contract() -> None:
         "file_too_large",
         "file_empty",
         "file_type",
+        "kb_markdown_only",
+        "kb_format",
         "document_indexing",
         "invalid_bot_token",
         "telegram_unavailable",
@@ -191,6 +193,8 @@ def test_reason_values_are_a_stable_contract() -> None:
         "erp_unauthorized",
         "erp_unavailable",
         "erp_bad_response",
+        # Лимит сервисного токена ERP (шов 0.3.0, FIX-60).
+        "erp_rate_limited",
         # Передача клиента (FIX-31).
         "erp_inn_conflict",
         # Коннектор «Почта» (M3-CRM-08).

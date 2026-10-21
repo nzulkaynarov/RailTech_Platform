@@ -12,14 +12,25 @@ class DoclingError(Exception):
     """Конвертация не удалась (статус docling-serve не success)."""
 
 
+class DoclingDisabledError(DoclingError):
+    """docling-serve на этом сервере не используется (`DOCLING_URL` пуст, M5-CRM-02)."""
+
+
 class DoclingClient:
     def __init__(self, settings: Settings, http: httpx.AsyncClient | None = None) -> None:
-        self._url = f"{str(settings.docling_url).rstrip('/')}/v1/convert/file"
+        base = settings.docling_url
+        self._url = f"{str(base).rstrip('/')}/v1/convert/file" if base is not None else None
         self._headers = {"X-Api-Key": settings.docling_api_key.get_secret_value()}
         self._timeout = settings.docling_timeout_s
         self._http = http
 
+    @property
+    def enabled(self) -> bool:
+        return self._url is not None
+
     async def convert(self, filename: str, content: bytes, mime: str) -> DoclingDocument:
+        if self._url is None:
+            raise DoclingDisabledError("docling is not used on this server (DOCLING_URL is empty)")
         files = {"files": (filename, content, mime)}
         data = {"to_formats": "json"}
         if self._http is not None:
@@ -30,6 +41,7 @@ class DoclingClient:
         return parse_response(response.json())
 
     async def _post(self, http: httpx.AsyncClient, files: Any, data: Any) -> httpx.Response:
+        assert self._url is not None  # noqa: S101 — проверено в convert()
         response = await http.post(
             self._url, files=files, data=data, headers=self._headers, timeout=self._timeout
         )

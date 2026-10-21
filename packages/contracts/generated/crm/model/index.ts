@@ -10,7 +10,11 @@
  * Все POST принимают `Idempotency-Key`; ERP хранит ключ 7 дней. Идентификатор клиента никогда не
  * приходит от модели.
  *
- * OpenAPI spec version: 0.2.0
+ * 0.3.0 (FIX-60): 429 `TOO_MANY_REQUESTS` с `Retry-After` на каждой операции (лимит сервисного токена, Q-FIX35-1);
+ * `Contact` закрыт через `unevaluatedProperties` (Q-FIX35-3); `CompanySummary.receivables_by_currency` (Q-FIX30-2);
+ * `erp_document_id` — идентификатор документа портала (FIX-38).
+ *
+ * OpenAPI spec version: 0.3.0
  */
 
 export * from "./actStatus";
@@ -24,6 +28,7 @@ export * from "./catalogItemKind";
 export * from "./catalogMode";
 export * from "./companySummary";
 export * from "./contact";
+export * from "./contactFields";
 export * from "./contactIn";
 export * from "./contractStatus";
 export * from "./contractSummary";
@@ -64,5 +69,6 @@ export * from "./provisionUserResponse";
 export * from "./quoteStatus";
 export * from "./quoteSummary";
 export * from "./searchCatalogParams";
+export * from "./tooManyRequestsResponse";
 export * from "./unauthorizedResponse";
 export * from "./validationErrorResponse";
