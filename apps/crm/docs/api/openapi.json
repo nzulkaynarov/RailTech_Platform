@@ -577,6 +577,33 @@
         "title": "AuditPage",
         "type": "object"
       },
+      "BackupDatabase": {
+        "properties": {
+          "last_success_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Последняя копия базы; нет — None",
+            "title": "Last Success At"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "last_success_at"
+        ],
+        "title": "BackupDatabase",
+        "type": "object"
+      },
       "BackupItem": {
         "properties": {
           "at": {
@@ -604,14 +631,44 @@
       "BackupsOut": {
         "properties": {
           "available": {
-            "description": "Том бэкапов смонтирован в api",
+            "description": "Том бэкапов смонтирован в api / бакет `backups` читается",
             "title": "Available",
+            "type": "boolean"
+          },
+          "can_request": {
+            "description": "«Сделать сейчас» доступно (только для тома)",
+            "title": "Can Request",
             "type": "boolean"
           },
           "daemon_alive": {
             "description": "Сервис бэкапа отвечает: heartbeat свежее 2 мин",
             "title": "Daemon Alive",
             "type": "boolean"
+          },
+          "databases": {
+            "description": "Последняя копия по каждой базе (бакет)",
+            "items": {
+              "$ref": "#/components/schemas/BackupDatabase"
+            },
+            "title": "Databases",
+            "type": "array"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "enum": [
+                  "bucket_missing",
+                  "access_denied",
+                  "unreachable"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Почему бакет не прочитан; None — прочитан",
+            "title": "Error"
           },
           "items": {
             "items": {
@@ -650,6 +707,15 @@
             "description": "«Сделать сейчас» ждёт сервис бэкапа",
             "title": "Requested At"
           },
+          "source": {
+            "description": "Откуда статус: том backup-контейнера (dev) или бакет `backups` RustFS (прод)",
+            "enum": [
+              "volume",
+              "rustfs"
+            ],
+            "title": "Source",
+            "type": "string"
+          },
           "stale": {
             "description": "Последний успешный бэкап старше 26 ч или его нет",
             "title": "Stale",
@@ -658,6 +724,10 @@
         },
         "required": [
           "available",
+          "source",
+          "can_request",
+          "error",
+          "databases",
           "last_success_at",
           "stale",
           "requested_at",
@@ -14220,7 +14290,7 @@
     },
     "/api/v1/system/backups": {
       "get": {
-        "description": "Последние бэкапы из тома `backups` (каталоги `<UTC-штамп>`), время последнего успеха.",
+        "description": "Последние бэкапы: том `backups` (dev) или бакет `backups` RustFS (прод, M5-CRM-01).",
         "operationId": "list_backups",
         "responses": {
           "200": {
@@ -14255,7 +14325,7 @@
         ]
       },
       "post": {
-        "description": "Запросить бэкап вне расписания: сервис бэкапа начнёт его в течение ~30 с.\n\n409, если том бэкапов не смонтирован в api. Повторный запрос до начала — без изменений;\nзапрос, который сервис не забрал за 2 мин, ставится заново.",
+        "description": "Запросить бэкап вне расписания: сервис бэкапа начнёт его в течение ~30 с.\n\n409, если том бэкапов не смонтирован в api или бэкап делает VPS 2 (источник — бакет RustFS:\nзапускать на сервере базы, `infra/deploy/backup-now.sh`). Повторный запрос до начала — без\nизменений; запрос, который сервис не забрал за 2 мин, ставится заново.",
         "operationId": "request_backup",
         "responses": {
           "202": {

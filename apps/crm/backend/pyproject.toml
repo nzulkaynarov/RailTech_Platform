@@ -99,7 +99,7 @@ module = ["app.domain.*", "app.security.*", "app.schemas.*"]
 strict = true
 
 [[tool.mypy.overrides]]
-module = ["aiobotocore.*", "procrastinate.*", "casbin.*", "casbin_async_sqlalchemy_adapter.*"]
+module = ["aiobotocore.*", "botocore.*", "procrastinate.*", "casbin.*", "casbin_async_sqlalchemy_adapter.*"]
 ignore_missing_imports = true
 
 [[tool.mypy.overrides]]

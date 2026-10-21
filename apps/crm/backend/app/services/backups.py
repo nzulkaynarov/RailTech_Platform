@@ -1,5 +1,8 @@
 """Статус бэкапов и запрос «сделать сейчас» (ADR-0013, runbook backup-restore.md).
 
+Источник статуса выбирает `Settings.backup_source` (M5-CRM-01): том backup-контейнера (этот
+модуль, dev) или бакет `backups` RustFS, куда пишет VPS 2 (`services/backups_rustfs.py`, прод).
+
 Бэкапы пишет контейнер `backup` (`ops/backup.sh`) в том `backups`: каталоги
 `<UTC-штамп>/` и файл `last_success`. api смонтирован в тот же том и только читает его,
 а «сделать сейчас» — файл-флаг `request_now`, который демон бэкапа проверяет раз в 30 с.
@@ -11,9 +14,10 @@ pg_dump в образе api нет (он только в образе backup), �
 
 import asyncio
 import re
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from pathlib import Path
+from typing import Protocol
 
 from app.domain.system_status import DAEMON_SILENT_AFTER, REQUEST_UNANSWERED_AFTER, BackupFacts
 
@@ -40,9 +44,26 @@ class BackupStatus:
     heartbeat_at: datetime | None = None
     # Файл heartbeat существует (пусть и устаревший/битый): демон здесь развёрнут.
     heartbeat_seen: bool = False
+    source: str = "volume"
+    # Только для `rustfs`: код ошибки чтения бакета и база → время последней копии.
+    error: str | None = None
+    error_detail: str | None = None
+    databases: dict[str, datetime | None] = field(default_factory=dict)
+
+
+class BackupReader(Protocol):
+    """Источник статуса бэкапов: том (`BackupService`) или бакет RustFS (`RustfsBackupService`)."""
+
+    can_request: bool
+
+    async def status(self, limit: int = 30) -> BackupStatus: ...
+
+    async def request_now(self, now: datetime) -> datetime: ...
 
 
 class BackupService:
+    can_request = True
+
     def __init__(self, root: Path) -> None:
         self._root = root
 
@@ -108,6 +129,19 @@ def daemon_alive(state: BackupStatus, now: datetime) -> bool:
 
 
 def facts(state: BackupStatus, now: datetime) -> BackupFacts:
+    if state.source == "rustfs":
+        # Демона на этом сервере нет: бэкап делает VPS 2, CRM видит только его результат в бакете.
+        return BackupFacts(
+            mounted=state.available,
+            daemon_alive=True,
+            last_success=state.last_success_at,
+            requested_at=None,
+            daemon_seen=True,
+            source="rustfs",
+            error=state.error,
+            error_detail=state.error_detail,
+            databases=state.databases,
+        )
     return BackupFacts(
         mounted=state.available,
         daemon_alive=daemon_alive(state, now),

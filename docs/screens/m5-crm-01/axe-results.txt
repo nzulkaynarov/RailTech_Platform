@@ -1,0 +1,6 @@
+external-service-backup-incident-1440: axe violations=0, serious/critical=0, hscroll=false
+external-service-backup-ok-1440: axe violations=0, serious/critical=0, hscroll=false
+backups-rustfs-1440: axe violations=0, serious/critical=0, hscroll=false
+external-service-backup-incident-390: axe violations=0, serious/critical=0, hscroll=false
+external-service-backup-ok-390: axe violations=0, serious/critical=0, hscroll=false
+backups-rustfs-390: axe violations=0, serious/critical=0, hscroll=false

@@ -4,19 +4,30 @@
  * RailTech CRM API
  * OpenAPI spec version: 0.1.0
  */
+import type { BackupDatabase } from "./backupDatabase";
 import type { BackupItem } from "./backupItem";
+import type { BackupsOutError } from "./backupsOutError";
+import type { BackupsOutSource } from "./backupsOutSource";
 
 export interface BackupsOut {
-  /** Том бэкапов смонтирован в api */
+  /** Том бэкапов смонтирован в api / бакет `backups` читается */
   available: boolean;
+  /** «Сделать сейчас» доступно (только для тома) */
+  can_request: boolean;
   /** Сервис бэкапа отвечает: heartbeat свежее 2 мин */
   daemon_alive: boolean;
+  /** Последняя копия по каждой базе (бакет) */
+  databases: BackupDatabase[];
+  /** Почему бакет не прочитан; None — прочитан */
+  error: BackupsOutError;
   items: BackupItem[];
   last_success_at: string | null;
   /** Запрос «Сделать сейчас» старше 2 мин без новой копии — можно повторить */
   request_stuck: boolean;
   /** «Сделать сейчас» ждёт сервис бэкапа */
   requested_at: string | null;
+  /** Откуда статус: том backup-контейнера (dev) или бакет `backups` RustFS (прод) */
+  source: BackupsOutSource;
   /** Последний успешный бэкап старше 26 ч или его нет */
   stale: boolean;
 }
