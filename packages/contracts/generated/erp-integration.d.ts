@@ -254,6 +254,16 @@ export interface paths {
      *     (успешный приём гасит его) и ограничен по сроку. Повторное сопряжение (новый код при уже сопряжённой ERP)
      *     заменяет все три секрета целиком, прежние токены перестают действовать сразу.
      *
+     *     **Первое сопряжение без кода (bootstrap, второй способ аутентификации).** Пока окно не закрыто, вместо кода CRM
+     *     присылает заголовок `X-Pairing-Proof` — доказательство владения общим для обеих систем `PLATFORM_SSO_SECRET`
+     *     (на проде оба сервиса читают один `.env`): `v1.<unix-время>.<jti>.<hex>`, где ключ = `HMAC-SHA256(PLATFORM_SSO_SECRET,
+     *     "rt-pairing-bootstrap-v1")` (сам SSO-секрет напрямую не используется), подпись = `HMAC-SHA256(ключ,
+     *     "<unix-время>.<jti>.<sha256-hex тела>")`. Метка времени — окно 300 с, `jti` (16–64 символа `[A-Za-z0-9_-]`) одноразов
+     *     (ERP помнит 10 минут), хеш тела привязывает доказательство к конкретной тройке секретов. Окно bootstrap закрывается
+     *     НАВСЕГДА после первого успешного сопряжения любым способом (постоянный флаг в БД ERP, переживает очистку токенов):
+     *     дальше — 409 `BOOTSTRAP_CLOSED`, и сопрягаться можно только кодом из ERP; код остаётся запасным путём (ERP на другой
+     *     инфраструктуре или без общего секрета). Тест-вектор — `examples/pairing-bootstrap.json`.
+     *
      *     Операция не принимает `Idempotency-Key`: идемпотентность даёт одноразовость кода. Повтор того же кода после
      *     успеха — 401 `PAIRING_CODE_USED`; CRM в этом случае просит у админа новый код. Тело запроса и коды в журналы
      *     не пишутся.
@@ -308,6 +318,10 @@ export interface components {
        * @example PAIRING_CODE_INVALID
        * @example PAIRING_CODE_EXPIRED
        * @example PAIRING_CODE_USED
+       * @example PAIRING_PROOF_INVALID
+       * @example PAIRING_PROOF_EXPIRED
+       * @example PAIRING_PROOF_REPLAYED
+       * @example BOOTSTRAP_CLOSED
        */
       detail: string;
     };
@@ -1154,8 +1168,17 @@ export interface operations {
           "application/json": components["schemas"]["PairingAccepted"];
         };
       };
-      /** @description Код не принят: `PAIRING_CODE_INVALID` (такого кода нет), `PAIRING_CODE_EXPIRED` (срок вышел), `PAIRING_CODE_USED` (уже использован или заменён новым). Тело — `{"detail": "<CODE>"}`. */
+      /** @description Код не принят: `PAIRING_CODE_INVALID` (такого кода нет), `PAIRING_CODE_EXPIRED` (срок вышел), `PAIRING_CODE_USED` (уже использован или заменён новым). Доказательство bootstrap не принято: `PAIRING_PROOF_INVALID` (формат, подпись, хеш тела или общего секрета нет), `PAIRING_PROOF_EXPIRED` (метка времени вне окна 300 с), `PAIRING_PROOF_REPLAYED` (этот `jti` уже был). Тело — `{"detail": "<CODE>"}`. */
       401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Error"];
+        };
+      };
+      /** @description `BOOTSTRAP_CLOSED` — первое сопряжение уже состоялось, bootstrap без кода закрыт навсегда; сопрягаться — кодом из ERP, ключи обновлять — `POST /pairing/rotate`. Доказательство при этом проверено (подделка — 401, не 409). */
+      409: {
         headers: {
           [name: string]: unknown;
         };

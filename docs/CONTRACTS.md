@@ -44,7 +44,7 @@ Contract-first действует для `portal`, `integration`, событий
 | `POST /users/provision` | сотрудник из CRM | `crm_user_id, email, name, role (admin|backoffice), permissions[]` (коды каталога ERP, `ErpPermission`; чужой код → 422); ответ `erp_user_id`; e-mail занят другим пользователем ERP (другой `crm_user_id` или нет сопоставления) → 409 `EMAIL_CONFLICT` |
 | `DELETE /users/{crm_user_id}/sessions` | отзыв сессий и входа | при снятии доступа в CRM: refresh и access-токены гаснут (прежний access → 401), вход закрыт; аудит `sso.revoke` |
 | `GET /health` | здоровье для «Состояния системы» CRM | версия, миграции применены, очередь жива |
-| `POST /pairing/accept` | сопряжение по одноразовому коду (вместо ручного копирования ключей) | вход: `crm_to_erp_token`, `erp_to_crm_token`, `webhook_secret` (CRM генерирует сама); аутентификация — код сопряжения, не сервисный токен. Ответ: `paired`, `paired_at`, `erp_version`. Ошибки 401: `PAIRING_CODE_INVALID`/`_EXPIRED`/`_USED` |
+| `POST /pairing/accept` | сопряжение по одноразовому коду (вместо ручного копирования ключей) | вход: `crm_to_erp_token`, `erp_to_crm_token`, `webhook_secret` (CRM генерирует сама); аутентификация — код сопряжения, не сервисный токен. Ответ: `paired`, `paired_at`, `erp_version`. Вместо кода допустим `X-Pairing-Proof` (bootstrap, ниже). Ошибки 401: `PAIRING_CODE_INVALID`/`_EXPIRED`/`_USED`, `PAIRING_PROOF_INVALID`/`_EXPIRED`/`_REPLAYED`; 409 `BOOTSTRAP_CLOSED` |
 | `POST /pairing/rotate` | ротация ключей без простоя | вход — новая тройка секретов под действующим токеном CRM→ERP; прежний токен действует ещё `previous_token_valid_until` (два активных), затем 401 |
 
 Сопряжение (M3-ERP-05, M3-CRM-10, §3.13 ORCHESTRATOR): ERP выпускает код (суперпользователь в «Настройки → Интеграция с CRM»
@@ -55,6 +55,14 @@ Contract-first действует для `portal`, `integration`, событий
 пусто. «Обновить ключи» — `POST /pairing/rotate`: ERP принимает новую тройку по действующему токену, прежний токен CRM→ERP действует
 ещё переходный срок (по умолчанию 1 час), прежний секрет вебхуков CRM принимает наравне с новым. Читатель терпимый: новые поля
 ответов сопряжения CRM игнорирует.
+
+**Первое сопряжение без кода (bootstrap).** На свежем проде в ERP некому выпустить код, а сотрудники приходят из CRM
+провижинингом, который требует сопряжения. Поэтому пока окно открыто, CRM вместо кода присылает `X-Pairing-Proof:
+v1.<ts>.<jti>.<hex>` — доказательство владения общим `PLATFORM_SSO_SECRET` (модель доверия: «владение общим секретом платформы =
+право первого сопряжения»). Ключ = `HMAC-SHA256(PLATFORM_SSO_SECRET, "rt-pairing-bootstrap-v1")`, подпись =
+`HMAC-SHA256(ключ, "<ts>.<jti>.<sha256-hex тела>")`; окно метки 300 с, `jti` одноразов (10 минут), тело привязано хешем. Окно
+закрывается НАВСЕГДА после первого успешного сопряжения любым способом (постоянный флаг ERP): дальше 409 `BOOTSTRAP_CLOSED`, только код
+из ERP или «Обновить ключи». Тест-вектор — `packages/contracts/examples/pairing-bootstrap.json`.
 
 Передача (`/clients/handoff`): компания ищется по `crm_client_id`, затем по ИНН; сопоставление создаётся **до** сделки, поэтому
 `request.created(source=crm)` и `invite.sent` доходят до CRM; ИНН чужого `crm_client_id` — 409 `INN_CONFLICT`; согласие хранится
