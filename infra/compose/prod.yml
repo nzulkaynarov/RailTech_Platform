@@ -231,8 +231,10 @@ services:
   # внутренней сети compose, наружу не публикуется; Caddyfile.prod отдаёт `/mcp` на всех доменах 404 (FIX-03).
   # Контракт инструментов — файл packages/contracts/mcp-tools.json, монтируется read-only в /packages/contracts.
   # Файла нет — сервис не стартует (create_host_path: false — Docker не подменяет его пустым каталогом).
-  # Профиль `mcp`: CRM к erp-mcp не ходит (M3-CRM-07), поэтому по умолчанию сервис не стартует (release.tgz файл уже
-  # несёт). Схема событий (events.schema.json) нужна и ему: инструменты могут порождать события ERP → CRM. Включать так:
+  # Профиль `mcp`: бот CRM в сервисном режиме (M3-CRM-07) берёт данные клиента из erp-mcp, поэтому на проде профиль
+  # включён (`RT_PROFILES=mcp` в .env.prod, infra/.env.prod.example; release.tgz файл контракта несёт). Без профиля
+  # сервис не стартует, а бот на вопросы о счетах и поставках честно отвечает «не могу проверить» и передаёт менеджеру.
+  # Схема событий (events.schema.json) нужна и ему: инструменты могут порождать события ERP → CRM. Вручную:
   #   docker compose -f base.yml -f prod.yml --profile mcp up -d erp-mcp
   erp-mcp:
     <<: [*ops, *mem-256]

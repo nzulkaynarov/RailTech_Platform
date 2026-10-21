@@ -105,6 +105,8 @@ class DecisionInput:
     documents_found: int = 0
     customer: bool = False
     kb_unavailable: bool = False
+    # Сервисный режим (M3-CRM-07): у хода есть инструменты ERP — модель может проверить сама.
+    erp_available: bool = False
 
 
 @dataclass(frozen=True, slots=True)
@@ -138,6 +140,9 @@ def decide(inp: DecisionInput) -> Decision:
     if inp.document_match:
         return Decision(Action.DELIVER_DOCUMENT, reason="document_match")
     if inp.document_requested and inp.documents_found == 0:
+        if inp.erp_available:
+            # В индексе CRM документа нет, а «где мой счёт» знает ERP: ответ по инструментам.
+            return Decision(Action.ANSWER, reason="document_lookup_erp")
         # Клиент просит документ, а у него такого нет — честно и сразу к менеджеру (C5).
         return Decision(Action.HANDOFF, reason="document_not_found")
     if inp.document_requested:

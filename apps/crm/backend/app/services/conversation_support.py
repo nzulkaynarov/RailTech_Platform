@@ -5,7 +5,7 @@ from typing import Any
 
 import structlog
 from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.agents.dialog.state import DialogResult
 from app.domain.dialog_policy import Action, is_smalltalk
@@ -16,6 +16,7 @@ from app.models.clients import Client
 from app.models.leads import Conversation, Lead, Message
 from app.repositories import leads as repo
 from app.schemas.settings import AppSettings
+from app.security.erp_agent_context import ErpScope
 from app.services import escalation
 from app.services.conversation_types import ActivityHook, Keyboard, Outgoing, Turn
 
@@ -54,6 +55,21 @@ async def verified_client(session: AsyncSession, tg_user_id: int) -> int | None:
         return None
     client = await session.get(Client, identity.client_id)
     return client.id if client is not None and client.is_active else None
+
+
+async def erp_scope_of(sessions: async_sessionmaker[AsyncSession], turn: Turn) -> ErpScope | None:
+    """Клиент и компания ERP хода (M3-CRM-07): из БД по проверенной привязке, не от модели.
+
+    Нет клиента (лид), он деактивирован или не передан в ERP (`erp_company_id` пуст) — `None`: бот
+    не вызывает ERP и отвечает без его данных.
+    """
+    if turn.client_id is None:
+        return None
+    async with sessions() as session:
+        client = await session.get(Client, turn.client_id)
+    if client is None or not client.is_active or client.erp_company_id is None:
+        return None
+    return ErpScope(client.id, client.erp_company_id, turn.language)
 
 
 def escalated(lead_id: int, escalation_id: int | None) -> tuple[int, int] | None:

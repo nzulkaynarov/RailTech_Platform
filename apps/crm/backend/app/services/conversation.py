@@ -35,6 +35,7 @@ from app.services.conversation_support import (
     consent_offer,
     consent_prompt,
     current_lead,
+    erp_scope_of,
     escalated,
     lang_of,
     lead_of,
@@ -321,6 +322,7 @@ class ConversationService(ErasureMixin, DeliveryFailureMixin, RecordsMixin):
                     human_requested=turn.human,
                     stage=turn.stage,
                     mode=turn.mode,
+                    erp_scope=await erp_scope_of(self._sessions, turn),
                 )
         except Exception:
             logger.exception("dialog_agent_failed", lead_id=turn.lead_id)

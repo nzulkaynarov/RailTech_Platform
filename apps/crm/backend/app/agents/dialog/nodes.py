@@ -7,14 +7,16 @@ from typing import Any, Final
 import structlog
 
 from app.agents import prompts
-from app.agents.dialog import customer
+from app.agents.dialog import customer, erp_tools
 from app.agents.dialog.state import DialogState
-from app.agents.dialog.tools import TOOLS, run_tools, tool_messages
+from app.agents.dialog.tools import TOOLS, ToolOutcome, run_tools, tool_messages
+from app.agents.erp_mcp import ErpToolCaller
 from app.agents.llm import ChatCompleter, ChatResult
 from app.agents.mcp_client import ToolCaller
 from app.domain.business_hours import is_business_time
 from app.domain.dialog_policy import Action, DecisionInput, decide
 from app.domain.keywords import find_terms
+from app.domain.numbers import unsupported_numbers
 from app.domain.stages import OwnerMode, Stage
 from app.domain.text import (
     drop_trailing_question,
@@ -23,6 +25,7 @@ from app.domain.text import (
     normalize_uzbek,
 )
 from app.schemas.settings import AppSettings, Language
+from app.security.erp_agent_context import ErpScope
 
 logger = structlog.get_logger(__name__)
 
@@ -37,13 +40,25 @@ ROLE_TAGS: Final = {"lead": "client", "bot": "assistant", "manager": "manager", 
 # Встречный вопрос в конце — не чаще раза в QUESTION_EVERY ответов бота (тон, SPEC §7.1).
 QUESTION_EVERY: Final = 3
 KB_ATTEMPTS: Final = 2
+# Раундов «вызов инструмента → ответ модели» на ход сервисного режима: сделки → статус → поставка.
+MAX_TOOL_ROUNDS: Final = 3
+ERP_SUMMARY_LIMIT: Final = 500
 
 
 class DialogNodes:
-    def __init__(self, tools: ToolCaller, model: ChatCompleter, settings: AppSettings) -> None:
+    def __init__(
+        self,
+        tools: ToolCaller,
+        model: ChatCompleter,
+        settings: AppSettings,
+        erp: ErpToolCaller | None = None,
+        erp_scope: ErpScope | None = None,
+    ) -> None:
         self._tools = tools
         self._model = model
         self._settings = settings
+        self._erp = erp
+        self._erp_scope = erp_scope
 
     async def load_context(self, state: DialogState) -> dict[str, Any]:
         lead = await self._tools.call("crm", "get_lead_context", {}, state["context_token"])
@@ -103,6 +118,7 @@ class DialogNodes:
                 documents_found=len(state["docs"] or []),
                 customer=state["mode"] == "customer",
                 kb_unavailable=bool(kb.get("unavailable")),
+                erp_available=self._erp_ready(state),
             )
         )
         return {
@@ -158,30 +174,103 @@ class DialogNodes:
             # «Ок/спасибо» — короткий ответ из настроек, без модели и без встречного вопроса.
             return {"reply": self._settings.texts.smalltalk_ack.get(_lang(state))}
         messages = self._messages(state)
-        tools = TOOLS if state["mode"] == "prospect" else [TOOLS[0], *customer.CUSTOMER_TOOLS]
+        tools = self._tools_for(state)
         first = await self._model.complete(messages, tools=tools, name="dialog.answer")
-        cost = first.cost_usd or 0.0
-        outcome = None
-        final = first
-        if first.tool_calls:
-            outcome = await run_tools(
+        final, outcome, cost = await self._tool_rounds(state, messages, tools, first)
+        text: str | None = final.text
+        if outcome.erp_failed and not outcome.service:
+            await self._hand_over_erp_failure(state, outcome)
+        if outcome.erp_called:
+            text = self._grounded(state, text, outcome)
+        reply = self._shape(state, text, outcome.request_number if outcome.service else None)
+        return {
+            "reply": reply,
+            "llm": {**_llm_meta(final), "cost_usd": cost or None},
+            "callback_requested": outcome.callback,
+            "service_request": outcome.service,
+        }
+
+    def _tools_for(self, state: DialogState) -> list[dict[str, Any]]:
+        if state["mode"] == "prospect":
+            return TOOLS
+        erp = erp_tools.ERP_TOOLS if self._erp_ready(state) else []
+        return [TOOLS[0], *customer.CUSTOMER_TOOLS, *erp]
+
+    def _erp_ready(self, state: DialogState) -> bool:
+        """ERP доступен ходу только клиенту (customer) с компанией в ERP; лиду — никогда."""
+        return state["mode"] == "customer" and self._erp is not None and self._erp_scope is not None
+
+    async def _tool_rounds(
+        self,
+        state: DialogState,
+        messages: list[dict[str, Any]],
+        tools: list[dict[str, Any]],
+        first: ChatResult,
+    ) -> tuple[ChatResult, ToolOutcome, float]:
+        """Вызовы инструментов и ответы модели по кругу, пока модели нужны данные ERP."""
+        outcome, final, cost, convo = ToolOutcome(), first, first.cost_usd or 0.0, list(messages)
+        for round_no in range(1, MAX_TOOL_ROUNDS + 1):
+            if not final.tool_calls:
+                break
+            await run_tools(
                 self._tools,
-                first,
+                final,
                 tools,
                 state["context_token"],
                 state["lead_id"],
                 self._settings.kb.search_timeout_s,
+                outcome=outcome,
+                erp=self._erp if self._erp_ready(state) else None,
+                erp_scope=self._erp_scope,
             )
-            followup = [*messages, *tool_messages(first, outcome.outputs)]
-            final = await self._model.complete(followup, name="dialog.answer.final")
+            convo += tool_messages(final, outcome.outputs)
+            # Ещё круг — если ERP отвечал без отказа и раунды не исчерпаны; иначе итоговый ответ.
+            more = outcome.erp_called and not outcome.erp_failed and round_no < MAX_TOOL_ROUNDS
+            final = await self._model.complete(
+                convo, tools=tools if more else None, name="dialog.answer.final"
+            )
             cost += final.cost_usd or 0.0
-        reply = self._shape(state, final.text, outcome.request_number if outcome else None)
-        return {
-            "reply": reply,
-            "llm": {**_llm_meta(final), "cost_usd": cost or None},
-            "callback_requested": bool(outcome and outcome.callback),
-            "service_request": bool(outcome and outcome.service),
-        }
+        return final, outcome, cost
+
+    async def _hand_over_erp_failure(self, state: DialogState, outcome: ToolOutcome) -> None:
+        """ERP не ответил: «передал менеджеру» должно быть правдой, поэтому запрос заводит код."""
+        summary = (
+            "Бот не смог получить данные из ERP (сервис недоступен). "
+            f"Вопрос клиента: {state['text'].strip()[:ERP_SUMMARY_LIMIT]}"
+        )
+        try:
+            raw = await asyncio.wait_for(
+                self._tools.call(
+                    "crm", "create_service_request", {"summary": summary}, state["context_token"]
+                ),
+                self._settings.kb.search_timeout_s,
+            )
+        except Exception:  # noqa: BLE001 — не вышло: ниже ответ без обещания менеджера
+            logger.warning("erp_failure_handover_failed", lead_id=state["lead_id"])
+            return
+        number = raw.get("service_request_id") if isinstance(raw, dict) else None
+        outcome.service = True
+        outcome.request_number = number if isinstance(number, int) else None
+
+    def _grounded(self, state: DialogState, text: str | None, outcome: ToolOutcome) -> str | None:
+        """Числа, даты и номера ответа — только из данных хода, иначе fallback (SPEC §12)."""
+        if not text:
+            return text
+        lead = state["lead"] or {}
+        sources = [
+            state["text"],
+            *outcome.erp_facts,
+            *(m["text"] for m in lead.get("history", [])),
+            *(h["content"] for h in (state["kb"] or {}).get("hits", [])),
+            customer.documents_block(state["docs"]),
+        ]
+        if outcome.erp_failed and not outcome.service:
+            return self._settings.texts.fallback.get(_lang(state))
+        invented = unsupported_numbers(text, sources)
+        if not invented:
+            return text
+        logger.warning("erp_reply_ungrounded", lead_id=state["lead_id"], count=len(invented))
+        return self._settings.texts.fallback.get(_lang(state))
 
     def _shape(
         self, state: DialogState, text: str | None, request_number: int | None

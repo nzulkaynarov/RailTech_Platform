@@ -11,8 +11,11 @@ from typing import Any, Final
 
 import structlog
 
+from app.agents.dialog import erp_tools
+from app.agents.erp_mcp import ErpToolCaller
 from app.agents.llm import ChatResult
 from app.agents.mcp_client import ToolCaller
+from app.security.erp_agent_context import ErpScope
 
 logger = structlog.get_logger(__name__)
 
@@ -74,6 +77,11 @@ class ToolOutcome:
     request_number: int | None = None
     failed: bool = False
     outputs: dict[str, dict[str, Any]] = field(default_factory=dict)
+    # Сервисный режим (M3-CRM-07): были ли вызовы ERP, отказал ли хоть один, и их результаты как
+    # источник чисел для проверки ответа (`erp_tools.facts_of`).
+    erp_called: bool = False
+    erp_failed: bool = False
+    erp_facts: list[str] = field(default_factory=list)
 
 
 async def run_tools(
@@ -83,13 +91,26 @@ async def run_tools(
     token: str,
     lead_id: int,
     timeout_s: float,
+    outcome: ToolOutcome | None = None,
+    erp: ErpToolCaller | None = None,
+    erp_scope: ErpScope | None = None,
 ) -> ToolOutcome:
-    """Выполнить вызовы модели через crm-mcp; результат каждого — для ответа модели."""
-    outcome = ToolOutcome()
+    """Выполнить вызовы модели: crm-mcp и (в сервисном режиме) erp-mcp; результаты — модели."""
+    outcome = outcome or ToolOutcome()
     allowed = {t["function"]["name"] for t in allowed_tools}
     for call in result.tool_calls:
         if call.name not in allowed:
             outcome.outputs[call.id] = NOT_ALLOWED
+            continue
+        if call.name in erp_tools.ERP_TOOL_NAMES:
+            if erp is None or erp_scope is None:
+                outcome.outputs[call.id] = NOT_ALLOWED
+                continue
+            output, failed = await erp_tools.run_erp_call(erp, erp_scope, call)
+            outcome.outputs[call.id] = output
+            outcome.erp_called = True
+            outcome.erp_failed = outcome.erp_failed or failed
+            outcome.erp_facts.append(erp_tools.facts_of(output))
             continue
         try:
             raw = await asyncio.wait_for(
