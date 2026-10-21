@@ -10,7 +10,11 @@
  * Все POST принимают `Idempotency-Key`; ERP хранит ключ 7 дней. Идентификатор клиента никогда не
  * приходит от модели.
  *
- * OpenAPI spec version: 0.2.0
+ * 0.3.0 (FIX-60): 429 `TOO_MANY_REQUESTS` с `Retry-After` на каждой операции (лимит сервисного токена, Q-FIX35-1);
+ * `Contact` закрыт через `unevaluatedProperties` (Q-FIX35-3); `CompanySummary.receivables_by_currency` (Q-FIX30-2);
+ * `erp_document_id` — идентификатор документа портала (FIX-38).
+ *
+ * OpenAPI spec version: 0.3.0
  */
 import type { DealListItem } from "./dealListItem";
 import type { DeliveryLine } from "./deliveryLine";
@@ -23,6 +27,9 @@ export interface CompanySummary {
   name: string;
   open_deals: DealListItem[];
   last_document?: Document | null;
+  /** Долг клиента в одной валюте (UZS, если есть, иначе первая по коду); остальное — `receivables_by_currency` */
   receivables: Money;
+  /** Долг клиента по каждой валюте отдельно, без пересчёта по курсу (Q-FIX30-2); пусто — долга нет */
+  receivables_by_currency: Money[];
   next_delivery?: DeliveryLine | null;
 }

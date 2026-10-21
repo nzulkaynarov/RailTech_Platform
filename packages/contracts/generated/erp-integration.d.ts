@@ -243,6 +243,7 @@ export interface components {
        * @example IDEMPOTENCY_CONFLICT
        * @example EMAIL_CONFLICT
        * @example VALIDATION_ERROR
+       * @example TOO_MANY_REQUESTS
        */
       detail: string;
     };
@@ -268,7 +269,8 @@ export interface components {
       amount: components["schemas"]["Amount"];
       currency: components["schemas"]["Currency"];
     };
-    ContactIn: {
+    /** @description Поля контакта без замыкания — основа `ContactIn` и `Contact` (Q-FIX35-3) */
+    ContactFields: {
       /** Format: int64 */
       crm_contact_id: number;
       name: string;
@@ -281,7 +283,9 @@ export interface components {
       is_primary: boolean;
       preferred_channel: components["schemas"]["PreferredChannel"];
     };
-    Contact: components["schemas"]["ContactIn"] & {
+    /** @description Контакт из CRM (запрос); лишние поля — 422 */
+    ContactIn: components["schemas"]["ContactFields"];
+    Contact: components["schemas"]["ContactFields"] & {
       /** Format: int64 */
       erp_contact_id: number;
       /** Format: int64 */
@@ -383,7 +387,10 @@ export interface components {
       name: string;
       open_deals: components["schemas"]["DealListItem"][];
       last_document?: components["schemas"]["Document"] | null;
+      /** @description Долг клиента в одной валюте (UZS, если есть, иначе первая по коду); остальное — `receivables_by_currency` */
       receivables: components["schemas"]["Money"];
+      /** @description Долг клиента по каждой валюте отдельно, без пересчёта по курсу (Q-FIX30-2); пусто — долга нет */
+      receivables_by_currency: components["schemas"]["Money"][];
       next_delivery?: components["schemas"]["DeliveryLine"] | null;
     };
     /** @enum {string} */
@@ -486,7 +493,10 @@ export interface components {
     /** @enum {string} */
     DocumentKind: "quote" | "contract" | "invoice" | "act" | "waybill" | "receipt" | "other";
     Document: {
-      /** Format: int64 */
+      /**
+       * Format: int64
+       * @description Идентификатор документа портала (FIX-38) — им же открывается `GET /documents/{erp_document_id}/link`
+       */
       erp_document_id: number;
       /** Format: int64 */
       erp_deal_id?: number | null;
@@ -634,6 +644,17 @@ export interface components {
         "application/json": components["schemas"]["Error"];
       };
     };
+    /** @description Лимит запросов сервисного токена (по умолчанию 300 в минуту на токен, настройка ERP `INTEGRATION_RATE`); `{"detail": "TOO_MANY_REQUESTS"}`, повторить через `Retry-After` секунд */
+    TooManyRequests: {
+      headers: {
+        /** @description Через сколько секунд можно повторить */
+        "Retry-After"?: number;
+        [name: string]: unknown;
+      };
+      content: {
+        "application/json": components["schemas"]["Error"];
+      };
+    };
   };
   parameters: {
     /** @description UUID запроса; ERP хранит ключ 7 дней и возвращает первый ответ на повтор. */
@@ -641,6 +662,7 @@ export interface components {
     CrmContactId: number;
     ErpCompanyId: number;
     ErpDealId: number;
+    /** @description Идентификатор документа портала (тот же, что `GET /documents` Cabinet, FIX-38) — непрозрачен для CRM */
     ErpDocumentId: number;
   };
   requestBodies: never;
@@ -694,6 +716,7 @@ export interface operations {
         };
       };
       422: components["responses"]["ValidationError"];
+      429: components["responses"]["TooManyRequests"];
     };
   };
   upsertContact: {
@@ -723,6 +746,7 @@ export interface operations {
       401: components["responses"]["Unauthorized"];
       404: components["responses"]["NotFound"];
       422: components["responses"]["ValidationError"];
+      429: components["responses"]["TooManyRequests"];
     };
   };
   getCompanySummary: {
@@ -747,6 +771,7 @@ export interface operations {
       };
       401: components["responses"]["Unauthorized"];
       404: components["responses"]["NotFound"];
+      429: components["responses"]["TooManyRequests"];
     };
   };
   listCompanyDeals: {
@@ -771,6 +796,7 @@ export interface operations {
       };
       401: components["responses"]["Unauthorized"];
       404: components["responses"]["NotFound"];
+      429: components["responses"]["TooManyRequests"];
     };
   };
   getDeal: {
@@ -795,6 +821,7 @@ export interface operations {
       };
       401: components["responses"]["Unauthorized"];
       404: components["responses"]["NotFound"];
+      429: components["responses"]["TooManyRequests"];
     };
   };
   listDealDocuments: {
@@ -819,6 +846,7 @@ export interface operations {
       };
       401: components["responses"]["Unauthorized"];
       404: components["responses"]["NotFound"];
+      429: components["responses"]["TooManyRequests"];
     };
   };
   getDocumentLink: {
@@ -829,6 +857,7 @@ export interface operations {
         "X-CRM-Context"?: string;
       };
       path: {
+        /** @description Идентификатор документа портала (тот же, что `GET /documents` Cabinet, FIX-38) — непрозрачен для CRM */
         erp_document_id: components["parameters"]["ErpDocumentId"];
       };
       cookie?: never;
@@ -846,6 +875,7 @@ export interface operations {
       };
       401: components["responses"]["Unauthorized"];
       404: components["responses"]["NotFound"];
+      429: components["responses"]["TooManyRequests"];
     };
   };
   searchCatalog: {
@@ -872,6 +902,7 @@ export interface operations {
       };
       401: components["responses"]["Unauthorized"];
       422: components["responses"]["ValidationError"];
+      429: components["responses"]["TooManyRequests"];
     };
   };
   provisionUser: {
@@ -919,6 +950,7 @@ export interface operations {
         };
       };
       422: components["responses"]["ValidationError"];
+      429: components["responses"]["TooManyRequests"];
     };
   };
   revokeUserSessions: {
@@ -941,6 +973,7 @@ export interface operations {
       };
       401: components["responses"]["Unauthorized"];
       404: components["responses"]["NotFound"];
+      429: components["responses"]["TooManyRequests"];
     };
   };
   getAiUsage: {
@@ -965,6 +998,7 @@ export interface operations {
         };
       };
       401: components["responses"]["Unauthorized"];
+      429: components["responses"]["TooManyRequests"];
     };
   };
   getIntegrationHealth: {
@@ -986,6 +1020,7 @@ export interface operations {
         };
       };
       401: components["responses"]["Unauthorized"];
+      429: components["responses"]["TooManyRequests"];
       /** @description ERP деградировала (миграции не применены или очередь мертва) */
       503: {
         headers: {
