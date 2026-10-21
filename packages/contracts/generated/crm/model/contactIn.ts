@@ -10,20 +10,21 @@
  * Все POST принимают `Idempotency-Key`; ERP хранит ключ 7 дней. Идентификатор клиента никогда не
  * приходит от модели.
  *
- * OpenAPI spec version: 0.2.0
+ * 0.3.0 (FIX-60): 429 `TOO_MANY_REQUESTS` с `Retry-After` на каждой операции (лимит сервисного токена, Q-FIX35-1);
+ * `Contact` закрыт через `unevaluatedProperties` (Q-FIX35-3); `CompanySummary.receivables_by_currency` (Q-FIX30-2);
+ * `erp_document_id` — идентификатор документа портала (FIX-38).
+ *
+ * 0.4.0 (M3-ERP-06): `Health.externals[]` — внешние сервисы ERP (статус, последний успех и ошибка, счётчики за 24 ч);
+ * `PUT /externals/{code}/switch` — выключатель из CRM. Аддитивно, терпимый читатель.
+ *
+ * 0.5.0 (FIX-63): `ProvisionUserRequest.role_codes[]` (`SystemRoleCode`) — системные роли ERP, выбранные в CRM;
+ * поле необязательное, аддитивно: без него ERP системные роли не трогает.
+ *
+ * OpenAPI spec version: 0.5.0
  */
-import type { Language } from "./language";
-import type { PreferredChannel } from "./preferredChannel";
+import type { ContactFields } from "./contactFields";
 
-export interface ContactIn {
-  crm_contact_id: number;
-  /** @maxLength 200 */
-  name: string;
-  /** @maxLength 32 */
-  phone?: string;
-  email?: string;
-  telegram_user_id?: number;
-  language: Language;
-  is_primary: boolean;
-  preferred_channel: PreferredChannel;
-}
+/**
+ * Контакт из CRM (запрос); лишние поля — 422
+ */
+export type ContactIn = ContactFields;

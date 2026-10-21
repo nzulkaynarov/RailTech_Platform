@@ -28,12 +28,17 @@ logger = logging.getLogger(__name__)
 
 
 @transaction.atomic
-def perform_quote_acceptance(quote_id, *, approved_by_user=None, contact_email=None, request_ip=None) -> Quote:
+def perform_quote_acceptance(
+    quote_id, *, approved_by_user=None, contact_email=None, request_ip=None, portal_contact=None
+) -> Quote:
     """Accept a SENT КП → APPROVED, advance the FSM, materialize the contract, notify the seller.
 
     `approved_by_user` set = registered-buyer path (recorded as `approved_by`). `approved_by_user`
     None = offline-contact path: `approved_by` stays NULL and the contact email + IP are captured
     in the timeline audit. Atomic: any failure (bad status / FSM guard) rolls the whole accept back.
+
+    `portal_contact` — контакт клиента из Cabinet, давший акцепт кодом: событие `quote.accepted` несёт его
+    `erp_contact_id`/`crm_contact_id` (Q-FIX22-6); публичная страница КП контакта не передаёт.
     """
     quote = Quote.objects.select_related("deal__company", "deal__manager", "deal__stage", "status").get(pk=quote_id)
 
@@ -45,6 +50,7 @@ def perform_quote_acceptance(quote_id, *, approved_by_user=None, contact_email=N
     quote.status = approved_status
     quote.approved_at = timezone.now()
     quote.approved_by = approved_by_user
+    quote._decided_by_contact = portal_contact  # читает сигнал `integration.signals` для тела события
     quote.save(update_fields=["status", "approved_at", "approved_by", "updated_at"])
 
     # Change deal stage via FSM (P0-1: capture the error — don't swallow it).
@@ -100,13 +106,14 @@ def perform_quote_acceptance(quote_id, *, approved_by_user=None, contact_email=N
 
 @transaction.atomic
 def perform_quote_rejection(
-    quote_id, *, rejected_by_user=None, reason="", contact_email=None, request_ip=None
+    quote_id, *, rejected_by_user=None, reason="", contact_email=None, request_ip=None, portal_contact=None
 ) -> Quote:
     """Reject a SENT КП → REJECTED, move the deal back to CALCULATING, notify the seller.
 
     Mirrors :func:`perform_quote_acceptance`: `rejected_by_user` None = offline-contact path
     (`channel=offline_contact`, email + IP in event_params). The reason is kept off `quote.notes`
     (that field renders in the client КП PDF) — it lives on the stage-transition audit + timeline.
+    `portal_contact` — контакт клиента из Cabinet: `quote.rejected` несёт его идентификаторы (Q-FIX22-6).
     """
     reason = (reason or "").strip()
     quote = Quote.objects.select_related("deal__company", "deal__manager", "deal__stage", "status").get(pk=quote_id)
@@ -117,6 +124,7 @@ def perform_quote_rejection(
 
     rejected_status = QuoteStatus.objects.filter(code=QuoteStatusCode.REJECTED).first()
     quote.status = rejected_status
+    quote._decided_by_contact = portal_contact  # читает сигнал `integration.signals` для тела события
     quote.save(update_fields=["status", "updated_at"])
 
     _, stage_err = transition_deal_stage(

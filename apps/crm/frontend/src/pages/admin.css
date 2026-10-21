@@ -264,3 +264,12 @@ h3.service-title.ant-typography {
 .summary-tag {
   margin-inline-end: 0;
 }
+
+/* Роли ERP при выдаче доступа (FIX-63): флажки столбиком, под названием — что роль разрешает. */
+.erp-roles {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 8px; /* отступ до подсказки под списком */
+}

@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://railtech.uz/contracts/events.schema.json",
   "title": "События ERP → CRM",
-  "description": "Тело вебхука POST {CRM}/api/v1/integrations/erp/events (docs/CONTRACTS.md §3). Заголовки: X-Event-Id (UUID), X-Event-Type, X-Timestamp, X-Signature: sha256=<HMAC(body, WEBHOOK_SECRET)>. CRM отвечает 200 быстро и обрабатывает асинхронно; повтор с тем же X-Event-Id — 200 без действий. Ретраи ERP: 1, 5, 30 мин, 2, 6, 24 ч; после — журнал с ручным повтором. Новые поля добавляются без смены version; удаление или смена смысла — со сменой.",
+  "description": "Тело вебхука POST {CRM}/api/v1/integrations/erp/events (docs/CONTRACTS.md §3). Заголовки: X-Event-Id (UUID), X-Event-Type, X-Timestamp (UTC ISO 8601), X-Signature: sha256=<HMAC(WEBHOOK_SECRET, X-Event-Id + '.' + X-Timestamp + '.' + body)> (схема v2, FIX-61; переходный период — CRM принимает и старую подпись только тела, пока ERP_WEBHOOK_SIGN_LEGACY=true). CRM: неверная подпись — 401; |now - X-Timestamp| > 300 с, повтор тела, сломанный JSON, тело не по схеме известного события — 200 и запись rejected (ретраи не помогут); повтор X-Event-Id — 200 без действий. Читатель терпимый: неизвестные поля игнорируются, неизвестный event — 200 и skipped. Отправитель соблюдает схему строго. Новое необязательное поле или новый тип события не меняют version и не требуют одновременной выкладки CRM. payload.code события quote.acceptance_code_requested — секрет: CRM не пишет его в ленту, журнал и логи.",
   "type": "object",
   "required": ["version", "event", "occurred_at", "erp_company_id", "crm_client_id", "actor", "payload"],
   "properties": {
@@ -21,6 +21,7 @@
     { "if": { "properties": { "event": { "const": "deal.stage_changed" } } }, "then": { "required": ["deal"], "properties": { "payload": { "$ref": "#/$defs/DealStageChanged" } } } },
     { "if": { "properties": { "event": { "const": "quote.sent" } } }, "then": { "required": ["deal"], "properties": { "payload": { "$ref": "#/$defs/QuoteSent" } } } },
     { "if": { "properties": { "event": { "enum": ["quote.viewed", "quote.accepted", "quote.rejected"] } } }, "then": { "required": ["deal"], "properties": { "payload": { "$ref": "#/$defs/QuoteOutcome" } } } },
+    { "if": { "properties": { "event": { "const": "quote.acceptance_code_requested" } } }, "then": { "required": ["deal"], "properties": { "payload": { "$ref": "#/$defs/QuoteAcceptanceCodeRequested" } } } },
     { "if": { "properties": { "event": { "const": "contract.signed" } } }, "then": { "required": ["deal"], "properties": { "payload": { "$ref": "#/$defs/ContractSigned" } } } },
     { "if": { "properties": { "event": { "enum": ["invoice.issued", "invoice.paid", "invoice.overdue"] } } }, "then": { "required": ["deal"], "properties": { "payload": { "$ref": "#/$defs/InvoiceEvent" } } } },
     { "if": { "properties": { "event": { "enum": ["delivery.status_changed", "delivery.eta_changed"] } } }, "then": { "required": ["deal"], "properties": { "payload": { "$ref": "#/$defs/DeliveryEvent" } } } },
@@ -40,6 +41,7 @@
         "quote.viewed",
         "quote.accepted",
         "quote.rejected",
+        "quote.acceptance_code_requested",
         "contract.signed",
         "invoice.issued",
         "invoice.paid",
@@ -127,7 +129,23 @@
       "properties": {
         "erp_quote_id": { "type": "integer" },
         "version": { "type": "integer", "minimum": 1 },
-        "reason": { "type": "string" }
+        "reason": { "type": "string" },
+        "erp_contact_id": { "type": "integer", "description": "Контакт клиента, который принял или отклонил КП (Q-FIX22-6); нет — действие не из Cabinet" },
+        "crm_contact_id": { "type": ["integer", "null"], "description": "Тот же контакт в CRM, если сопоставлен" }
+      },
+      "additionalProperties": false
+    },
+    "QuoteAcceptanceCodeRequested": {
+      "type": "object",
+      "description": "Клиент запросил код акцепта в Cabinet, контакт в Telegram: код доставляет бот CRM (Q-FIX22-1). ERP шлёт событие только контакту с crm_contact_id и telegram; иначе код уходит письмом ERP",
+      "required": ["erp_quote_id", "version", "erp_contact_id", "crm_contact_id", "code", "expires_at"],
+      "properties": {
+        "erp_quote_id": { "type": "integer" },
+        "version": { "type": "integer", "minimum": 1 },
+        "erp_contact_id": { "type": "integer" },
+        "crm_contact_id": { "type": "integer" },
+        "code": { "type": "string", "pattern": "^[0-9]{4,12}$", "description": "Одноразовый код — секрет: не хранить и не логировать в CRM" },
+        "expires_at": { "type": "string", "format": "date-time" }
       },
       "additionalProperties": false
     },

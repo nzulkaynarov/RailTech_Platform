@@ -10,8 +10,19 @@
  * Все POST принимают `Idempotency-Key`; ERP хранит ключ 7 дней. Идентификатор клиента никогда не
  * приходит от модели.
  *
- * OpenAPI spec version: 0.2.0
+ * 0.3.0 (FIX-60): 429 `TOO_MANY_REQUESTS` с `Retry-After` на каждой операции (лимит сервисного токена, Q-FIX35-1);
+ * `Contact` закрыт через `unevaluatedProperties` (Q-FIX35-3); `CompanySummary.receivables_by_currency` (Q-FIX30-2);
+ * `erp_document_id` — идентификатор документа портала (FIX-38).
+ *
+ * 0.4.0 (M3-ERP-06): `Health.externals[]` — внешние сервисы ERP (статус, последний успех и ошибка, счётчики за 24 ч);
+ * `PUT /externals/{code}/switch` — выключатель из CRM. Аддитивно, терпимый читатель.
+ *
+ * 0.5.0 (FIX-63): `ProvisionUserRequest.role_codes[]` (`SystemRoleCode`) — системные роли ERP, выбранные в CRM;
+ * поле необязательное, аддитивно: без него ERP системные роли не трогает.
+ *
+ * OpenAPI spec version: 0.5.0
  */
+import type { ExternalService } from "./externalService";
 import type { HealthStatus } from "./healthStatus";
 
 export interface Health {
@@ -22,4 +33,6 @@ export interface Health {
   /** Celery-воркер отвечает на ping */
   queue_alive: boolean;
   checked_at: string;
+  /** Внешние сервисы ERP (M3-ERP-06): курсы ЦБ, ТН ВЭД/тариф, почта, модели (LiteLLM), S3, Sentry. Поле необязательное: нет его — ERP старше M3-ERP-06, CRM показывает «нет данных». Строится без обращений к самим сервисам (по журналам и счётчикам ERP), ответ `/health` остаётся быстрым. */
+  externals?: ExternalService[];
 }

@@ -1,4 +1,4 @@
-"""Контрактные тесты событий ERP → CRM: каждое из 21 событий проверяется по `events.schema.json` (FIX-35, I-15, G-5).
+"""Контрактные тесты событий ERP → CRM: каждое из 22 событий проверяется по `events.schema.json` (FIX-35, I-15, G-5).
 
 Источник правды — файлы контракта: схема `packages/contracts/events.schema.json` и примеры
 `packages/contracts/examples/events/<тип>.json` (по одному на тип; те же примеры — фикстуры тестов CRM). Здесь нет копий
@@ -6,7 +6,7 @@
 
 1. набор типов = схема = `VALID_EVENT_TYPES` = набор примеров; каждый пример проходит схему, а сторож её ловит (негатив);
 2. конвейер отправки (`emit_event`) принимает тело каждого примера и сохраняет его без изменений;
-3. боевой код (настоящие объекты, сигналы и сервисы, а не заглушки) выпускает все 21 тип, и каждое тело — по схеме;
+3. боевой код (настоящие объекты, сигналы и сервисы, а не заглушки) выпускает все 22 типа, и каждое тело — по схеме;
 4. режимы проверки в рантайме: `strict` — исключение и нет записи в журнале, `log` — запись и сообщение в лог, `off`;
 5. подпись: подписывает первый секрет списка (ротация без простоя).
 """
@@ -21,11 +21,13 @@ from integration.models import CrmContactMapping, IntegrationWebhookEvent
 from integration.services import event_contract
 from integration.services.event_contract import EventContractError
 from integration.services.webhooks import (
+    SECRET_MASK,
+    SECRET_PAYLOAD_FIELDS,
     VALID_EVENT_TYPES,
-    emit_act_event,
+    delivery_payload,
     emit_event,
     emit_invite_sent,
-    sign_payload,
+    sign_payload_v2,
     webhook_signing_secret,
 )
 from integration.tests.world import (
@@ -39,6 +41,7 @@ from integration.tests.world import (
     make_deal,
 )
 from parties.models import Contact
+from portal.services.acceptance import request_acceptance_code
 from portal.services.documents import encode_document_id
 from sales.models import DeliveryLine
 from sales.services.delivery_lines import accept_delivery_line, dispute_delivery_line, sync_delivery_lines
@@ -46,6 +49,7 @@ from sales.services.delivery_lines import accept_delivery_line, dispute_delivery
 from core.tests.events_contract import event_errors, event_types, example_event, example_files, find_events_schema_path
 from crm.constants import ActStatusCode, ContractStatusCode, FulfillmentStatusCode, InvoiceStatusCode, QuoteStatusCode
 from crm.models import ActStatus, ContractStatus, DealStage, InvoiceStatus, QuoteStatus
+from crm.services.billing import reject_act
 
 pytestmark = pytest.mark.django_db
 
@@ -55,9 +59,9 @@ ALL_EVENTS = event_types()
 # ── 1. Набор типов, примеры и сторож ─────────────────────────────────────────────────────────────────
 
 
-def test_schema_is_found_and_has_21_event_types():
+def test_schema_is_found_and_has_22_event_types():
     assert find_events_schema_path().is_file()
-    assert len(ALL_EVENTS) == 21
+    assert len(ALL_EVENTS) == 22
 
 
 def test_event_types_of_schema_code_and_examples_are_the_same_set():
@@ -111,12 +115,16 @@ def test_emit_event_stores_the_example_body_unchanged(event):
         send_async=False,
     )
     expected = {**body, "erp_company_id": company.pk}
+    if event in SECRET_PAYLOAD_FIELDS:  # секрет (код акцепта) в журнале замаскирован, тело доставки — как в примере
+        for name in SECRET_PAYLOAD_FIELDS[event]:
+            expected = {**expected, "payload": {**expected["payload"], name: SECRET_MASK}}
+        assert delivery_payload(stored) == {**body, "erp_company_id": company.pk}
     assert stored.payload == expected, "тело события в журнале расходится с примером контракта"
     assert stored.event_type == event and stored.headers["X-Event-Type"] == event
-    assert not event_errors(stored.payload)
+    assert not event_errors(delivery_payload(stored))
 
 
-# ── 3. Боевой код выпускает все 21 тип ───────────────────────────────────────────────────────────────
+# ── 3. Боевой код выпускает все 22 типа ───────────────────────────────────────────────────────────────
 
 
 def _status(model, code):
@@ -160,9 +168,12 @@ def produce_all_events():
         act = add_act(deal, ActStatusCode.DRAFT, contract=contract, invoice=invoice)
         act.status = _status(ActStatus, code)
         act.save()
-    # act.returned боевой код не выпускает ни при каком статусе акта (`reject_act` ставит DRAFT, кодов RETURNED/DISPUTED/
-    # REJECTED в ActStatusCode нет) — см. `test_act_returned_has_no_trigger_in_the_real_flow`; тело — через генератор.
-    emit_act_event("act.returned", act=act, reason="Не указана партия 2", actor={"type": "client"})
+    # act.returned — настоящий возврат акта заказчиком (FIX-62): `reject_act` переводит ISSUED → DRAFT с причиной,
+    # событие выпускает сигнал акта.
+    returned = add_act(deal, ActStatusCode.DRAFT, contract=contract, invoice=invoice)
+    returned.status = _status(ActStatus, ActStatusCode.ISSUED)
+    returned.save()
+    assert reject_act(returned.pk, None, "Не указана партия 2", portal_contact=contact)[1] is None
 
     from integration.services.webhooks import emit_delivery_event
 
@@ -181,6 +192,12 @@ def produce_all_events():
     assert document.pk
 
     emit_invite_sent(contact=contact, channels=["telegram", "email"])  # invite.sent
+
+    # Код акцепта контакту с Telegram и сопоставлением в CRM — настоящий сервис портала (FIX-60a).
+    contact.telegram_user_id = 424242
+    contact.save(update_fields=["telegram_user_id"])
+    sent = add_quote(deal, 3, QuoteStatusCode.SENT, "3000000")
+    assert request_acceptance_code(sent, contact)["channel"] == "telegram"  # quote.acceptance_code_requested
 
     # Приёмка и замечание клиента по строкам поставки — настоящие сервисы портала.
     fulfillments = []
@@ -210,7 +227,8 @@ def test_real_code_produces_every_event_type_and_all_bodies_match_the_schema():
     missing = set(ALL_EVENTS) - {event.event_type for event in produced}
     assert not missing, f"боевой код не выпустил события: {sorted(missing)} (проверь сценарий produce_all_events)"
     for event in produced:
-        assert event_errors(event.payload) == [], f"{event.event_type}: {event_errors(event.payload)}"
+        body = delivery_payload(event)  # секрет (код акцепта) — из кэша: в журнале он замаскирован
+        assert event_errors(body) == [], f"{event.event_type}: {event_errors(body)}"
         assert event.headers["X-Event-Type"] == event.event_type
 
 
@@ -323,16 +341,16 @@ def test_events_are_signed_with_the_first_secret_when_two_are_configured(setting
         send_async=False,
     )
     raw = json.dumps(stored.payload, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
-    assert stored.headers["X-Signature"] == sign_payload("new-secret-value", raw)
-    assert stored.headers["X-Signature"] != sign_payload("old-secret-value", raw)
+    event_id, stamp = stored.headers["X-Event-Id"], stored.headers["X-Timestamp"]
+    assert stored.headers["X-Signature"] == sign_payload_v2("new-secret-value", event_id, stamp, raw)
+    assert stored.headers["X-Signature"] != sign_payload_v2("old-secret-value", event_id, stamp, raw)
 
 
-def test_act_returned_has_no_trigger_in_the_real_flow():
-    """Известный разрыв (аудит): сигнал акта умеет `act.returned`, но ни один статус акта в ERP его не запускает.
-
-    Тест фиксирует это: когда `reject_act` начнёт выпускать событие, он упадёт — и сценарий `produce_all_events`
-    нужно перевести с прямого вызова генератора на настоящий переход."""
+def test_act_returned_is_issued_by_the_real_return_and_by_no_other_status_change():
+    """`act.returned` выпускает возврат акта заказчиком (ISSUED → DRAFT с причиной, FIX-62), а не смена кода статуса:
+    перебор всех статусов акта без возврата события не даёт."""
     company = make_company(crm_client_id=7101)
+    contact = Contact.objects.filter(company=company).first()
     deal = make_deal(company)
     contract = add_contract(deal, add_quote(deal, 1, QuoteStatusCode.APPROVED, "1000000"), ContractStatusCode.SIGNED)
     invoice = add_invoice(deal, InvoiceStatusCode.PAID, total="1000000", paid="1000000", contract=contract)
@@ -341,6 +359,13 @@ def test_act_returned_has_no_trigger_in_the_real_flow():
         act.status = _status(ActStatus, code)
         act.save()
     assert not IntegrationWebhookEvent.objects.filter(event_type="act.returned").exists()
+
+    issued = add_act(deal, ActStatusCode.ISSUED, contract=contract, invoice=invoice)
+    assert reject_act(issued.pk, None, "Не указана партия 2", portal_contact=contact)[1] is None
+    event = IntegrationWebhookEvent.objects.get(event_type="act.returned")
+    assert event_errors(event.payload) == []
+    assert event.payload["payload"]["reason"] == "Не указана партия 2"
+    assert event.payload["actor"] == {"type": "client", "name": contact.name}
 
 
 def test_delivery_signs_with_the_first_secret_and_a_rotation_takes_effect_for_pending_events(settings):
@@ -365,4 +390,5 @@ def test_delivery_signs_with_the_first_secret_and_a_rotation_takes_effect_for_pe
     with patch("httpx.Client.post", return_value=MagicMock(status_code=200, text="OK")) as post:
         assert deliver_webhook_event(stored.pk) is True
     sent = post.call_args.kwargs
-    assert sent["headers"]["X-Signature"] == sign_payload("new-secret-value", sent["content"])
+    h = sent["headers"]
+    assert h["X-Signature"] == sign_payload_v2("new-secret-value", h["X-Event-Id"], h["X-Timestamp"], sent["content"])

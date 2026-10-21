@@ -49,6 +49,11 @@ describe("groupServices", () => {
     [service({ status: "off" }), "idle"],
     [service({ status: "unknown" }), "idle"],
     [service({ status: "unknown", source: "erp" }), "erp"],
+    [service({ status: "ok", source: "erp" }), "erp"],
+    [service({ status: "off", source: "erp" }), "erp"],
+    // Сбой сервиса ERP виден сверху, а не прячется в группе «Сервисы ERP».
+    [service({ status: "fail", source: "erp" }), "attention"],
+    [service({ status: "warn", source: "erp" }), "attention"],
     [
       service({
         status: "off",
@@ -126,6 +131,44 @@ describe("metric formatting", () => {
     expect(metricRows({ backup_source: "volume" })[0]?.value).toBe(
       "Том резервных копий на этом сервере",
     );
+  });
+
+  it("labels the counters and marks of an ERP service (M3-ERP-06)", () => {
+    const rows = metricRows({
+      ok_24h: 7,
+      errors_24h: 2,
+      last_success_at: "2026-10-21T10:00:00Z",
+      last_error_at: null,
+    });
+    expect(rows.map((r) => r.label)).toEqual([
+      "Успешных операций за 24 ч",
+      "Ошибок за 24 ч",
+      "Последний успех",
+    ]);
+    expect(rows[0]?.value).toBe("7");
+    expect(rows[2]?.value).toMatch(/2026|21/);
+  });
+
+  it("shows the actual Telegram webhook address and its last error (FIX-66)", () => {
+    const rows = metricRows({
+      pending_updates: 0,
+      bot: "rt_bot",
+      webhook_url: "https://crm.railtech.uz/telegram/webhook",
+      webhook_error: "Connection timed out",
+      webhook_error_at: "2026-10-21T22:00:00Z",
+    });
+    expect(rows.map((r) => r.label)).toEqual([
+      "Сообщений ждут обработки",
+      "Бот",
+      "Адрес вебхука в Telegram",
+      "Последняя ошибка доставки",
+      "Время ошибки доставки",
+    ]);
+    expect(rows[2]?.value).toBe("https://crm.railtech.uz/telegram/webhook");
+    expect(rows[3]?.value).toBe("Connection timed out");
+    expect(rows[4]?.value).toMatch(/2026|21|22/);
+    // Нет вебхука — строки нет, а не «null».
+    expect(metricRows({ webhook_url: null, webhook_error: null }).length).toBe(0);
   });
 
   it("labels known metrics in Russian and skips unknown or empty ones", () => {

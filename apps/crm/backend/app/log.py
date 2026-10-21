@@ -7,6 +7,7 @@
 """
 
 import logging
+import re
 import sys
 
 import structlog
@@ -14,9 +15,24 @@ from asgi_correlation_id import correlation_id
 from structlog.types import EventDict, Processor, WrappedLogger
 
 from app.config import Settings
+from app.security.log_mask import quiet_noisy_loggers
+from app.security.log_mask import structlog_processor as mask_secrets
 from app.security.pii import structlog_processor as mask_pii
 
 _HANDLER_NAME = "structlog-stdout"
+# Токен бота — в пути Bot API (`/bot<id>:<секрет>/getMe`); httpx на INFO пишет URL целиком.
+_BOT_TOKEN_IN_URL = re.compile(r"bot\d+:[\w-]+")
+_QUIET_LIBRARIES = ("httpx", "httpcore")
+
+
+class MaskBotToken(logging.Filter):
+    """Маскирует `/bot<id>:<секрет>` в любой записи stdlib-логов (FIX-66): токена нет в журнале."""
+
+    def filter(self, record: logging.LogRecord) -> bool:
+        message = record.getMessage()
+        if "bot" in message and _BOT_TOKEN_IN_URL.search(message):
+            record.msg, record.args = _BOT_TOKEN_IN_URL.sub("bot***", message), None
+        return True
 
 
 def add_request_id(_: WrappedLogger, __: str, event_dict: EventDict) -> EventDict:
@@ -32,6 +48,7 @@ def _shared_processors() -> list[Processor]:
         structlog.stdlib.add_log_level,
         structlog.stdlib.add_logger_name,
         add_request_id,
+        mask_secrets,  # до pii: иначе id из токена бота станет [number], а хвост останется
         mask_pii,
         structlog.processors.TimeStamper(fmt="iso", utc=True),
         structlog.processors.StackInfoRenderer(),
@@ -39,6 +56,7 @@ def _shared_processors() -> list[Processor]:
 
 
 def configure_logging(settings: Settings) -> None:
+    quiet_noisy_loggers()  # FIX-66b: библиотеки на INFO печатают URL запроса (токены, подписи)
     renderer: Processor
     if settings.log_format == "console":
         renderer = structlog.dev.ConsoleRenderer()
@@ -60,17 +78,23 @@ def configure_logging(settings: Settings) -> None:
         processors=[
             structlog.stdlib.ProcessorFormatter.remove_processors_meta,
             structlog.processors.format_exc_info,
+            mask_secrets,  # FIX-66b: после format_exc_info — и текст трассировки
             renderer,
         ],
     )
     handler = logging.StreamHandler(sys.stdout)
     handler.set_name(_HANDLER_NAME)
+    handler.addFilter(MaskBotToken())
     handler.setFormatter(formatter)
 
     root = logging.getLogger()
     root.handlers = [h for h in root.handlers if h.get_name() != _HANDLER_NAME]
     root.addHandler(handler)
     root.setLevel(settings.log_level)
+
+    # Клиентские библиотеки на INFO пишут каждый запрос с URL — для Bot API это токен.
+    for name in _QUIET_LIBRARIES:
+        logging.getLogger(name).setLevel(max(logging.WARNING, logging.getLogger(name).level))
 
     for name in ("uvicorn", "uvicorn.error", "uvicorn.access"):
         uvicorn_logger = logging.getLogger(name)

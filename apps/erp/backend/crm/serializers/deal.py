@@ -164,6 +164,9 @@ class DealDetailSerializer(serializers.ModelSerializer):
     # Сторона зрителя относительно ЭТОЙ сделки — считает сервер (см. `_viewer_is_seller`).
     viewer_is_seller = serializers.SerializerMethodField()
     execution_complete = serializers.SerializerMethodField()
+    # FIX-67: сколько строк в заявке клиента и её текст — от них зависят кнопки карточки заявки.
+    request_lines_count = serializers.SerializerMethodField()
+    request_text = serializers.SerializerMethodField()
 
     def get_viewer_is_seller(self, obj) -> bool:
         return _viewer_is_seller(obj, self.context.get("request"))
@@ -179,6 +182,18 @@ class DealDetailSerializer(serializers.ModelSerializer):
 
     def get_viewer_can_release(self, obj) -> bool:
         return _viewer_can_release(obj, self.context.get("request"))
+
+    def get_request_lines_count(self, obj) -> int:
+        """Строки заявки клиента (портал / передача CRM / прежнее «КП заявки») — не позиции КП продавца."""
+        from crm.services.draft_quote import deal_request_lines_count
+
+        return deal_request_lines_count(obj)
+
+    def get_request_text(self, obj) -> str:
+        """Заявка словами: полный текст клиента, иначе комментарий сделки."""
+        from crm.services.draft_quote import deal_request_text
+
+        return deal_request_text(obj)
 
     def get_execution_complete(self, obj) -> bool:
         """Исполнение закрыто целиком (оплата + поставка + акт) — НЕ то же, что «сделка выиграна».
@@ -214,6 +229,8 @@ class DealDetailSerializer(serializers.ModelSerializer):
             "active_quote",
             "quotes",
             "execution_complete",
+            "request_lines_count",
+            "request_text",
             "created_at",
             "updated_at",
         ]

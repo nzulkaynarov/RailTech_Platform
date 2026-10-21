@@ -75,7 +75,9 @@ class JSONFormatter(logging.Formatter):
             "process": record.process,
         }
         if record.exc_info:
-            payload["exc_info"] = self.formatException(record.exc_info)
+            # `exc_text` уже отформатирован (и замаскирован фильтром обработчика, FIX-66b) — форматируем заново
+            # только если его нет: иначе текст исключения с токеном обходит маску.
+            payload["exc_info"] = record.exc_text or self.formatException(record.exc_info)
         # Merge any structured extras passed via logger.info(..., extra={...}).
         for key, value in record.__dict__.items():
             if key not in _RESERVED and key not in payload:

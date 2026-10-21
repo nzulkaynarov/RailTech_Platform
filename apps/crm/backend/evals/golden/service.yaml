@@ -1,0 +1,215 @@
+# Сервисный режим бота через erp-mcp (M3-CRM-07): ответы только по данным инструментов ERP.
+# `erp.tools` — результаты инструментов (форма — packages/contracts/mcp-tools.json, суммы — строки с
+# двумя знаками, даты ISO). Числа и даты ответа проверяет код (`unsupported_numbers`): выдуманных 0.
+# Платный прогон — только с согласия владельца: EVAL_CASES=service-... make eval-quick CONFIRM=yes.
+- id: service-invoice-where-ru
+  category: service_mode
+  language: ru
+  mode: customer
+  stage: customer
+  message: Где мой счёт?
+  erp:
+    tools:
+      list_client_deals:
+        - {erp_deal_id: 5, number: "D-5", title: Трекеры RT-Track, stage: invoiced, amount: "12500000.00", currency: UZS, next_step: Оплатить счёт, updated_at: "2026-10-20T09:00:00Z"}
+      get_deal_status:
+        {erp_deal_id: 5, number: "D-5", title: Трекеры RT-Track, stage: invoiced, amount: "12500000.00", currency: UZS, quotes: [], contracts: [{number: "15/2026", status: signed}], invoices: [{erp_invoice_id: 31, number: "77", status: issued, total: {amount: "12500000.00", currency: UZS}, due_date: "2026-10-30"}], deliveries: [], acts: []}
+  expect:
+    actions: [answer]
+    reply_language: ru
+    erp_tools_any: [get_deal_status]
+    must_include_any: ["77"]
+
+- id: service-invoice-not-issued-ru
+  category: service_mode
+  language: ru
+  mode: customer
+  stage: customer
+  message: Где мой счёт по трекерам?
+  erp:
+    tools:
+      list_client_deals:
+        - {erp_deal_id: 5, number: "D-5", title: Трекеры RT-Track, stage: contract, amount: "12500000.00", currency: UZS, next_step: Подписать договор, updated_at: "2026-10-20T09:00:00Z"}
+      get_deal_status:
+        {erp_deal_id: 5, number: "D-5", title: Трекеры RT-Track, stage: contract, amount: "12500000.00", currency: UZS, quotes: [], contracts: [{number: "15/2026", status: sent}], invoices: [], deliveries: [], acts: []}
+  expect:
+    actions: [answer]
+    reply_language: ru
+    erp_tools_any: [get_deal_status]
+    must_not_include: ["оплачен", "счёт выставлен"]
+
+- id: service-delivery-when-ru
+  category: service_mode
+  language: ru
+  mode: customer
+  stage: customer
+  message: Когда поставка по сделке D-5?
+  erp:
+    tools:
+      list_client_deals:
+        - {erp_deal_id: 5, number: "D-5", title: Трекеры RT-Track, stage: fulfilment, amount: "12500000.00", currency: UZS, next_step: null, updated_at: "2026-10-20T09:00:00Z"}
+      get_delivery_status:
+        - {erp_deal_id: 5, line_no: 1, title: Трекер RT-Track, quantity: "10.000", unit: шт, status: shipped, eta: "2026-10-25", tracking: null}
+  expect:
+    actions: [answer]
+    reply_language: ru
+    erp_tools_any: [get_delivery_status]
+    must_include_any: ["25"]
+
+- id: service-delivery-no-eta-ru
+  category: service_mode
+  language: ru
+  mode: customer
+  stage: customer
+  message: Когда придёт заказ по сделке D-5?
+  erp:
+    tools:
+      list_client_deals:
+        - {erp_deal_id: 5, number: "D-5", title: Трекеры RT-Track, stage: fulfilment, amount: "12500000.00", currency: UZS, next_step: null, updated_at: "2026-10-20T09:00:00Z"}
+      get_delivery_status:
+        - {erp_deal_id: 5, line_no: 1, title: Трекер RT-Track, quantity: null, unit: null, status: assembling, eta: null, tracking: null}
+  expect:
+    actions: [answer]
+    reply_language: ru
+    erp_tools_any: [get_delivery_status]
+    must_include_any: ["не назначен", "пока нет", "уточн", "менеджер"]
+
+- id: service-contract-send-ru
+  category: service_mode
+  language: ru
+  mode: customer
+  stage: customer
+  message: Пришлите договор
+  documents:
+    - {document_id: 1, title: Договор поставки трекеров, type: contract, number: "15/2026", doc_date: "2026-07-14"}
+  expect:
+    actions: [deliver_document]
+    reply_language: ru
+    must_include_any: ["Договор поставки"]
+    no_erp_calls: true
+
+- id: service-contract-missing-ru
+  category: service_mode
+  language: ru
+  mode: customer
+  stage: customer
+  message: Пришлите договор
+  erp:
+    tools:
+      list_client_documents: []
+  expect:
+    actions: [answer]
+    reply_language: ru
+    erp_tools_any: [list_client_documents]
+    must_not_include: ["прикладываю", "высылаю", "вот ваш договор"]
+
+- id: service-price-customer-ru
+  category: service_mode
+  language: ru
+  mode: customer
+  stage: customer
+  message: Сколько стоит трекер RT-Track?
+  erp:
+    tools:
+      search_catalog:
+        - {erp_product_id: 9, kind: goods, name: Трекер RT-Track, description: GPS-трекер для вагонов, unit: шт, price: {amount: "1250000.00", currency: UZS}, availability: in_stock, lead_time_days: 14}
+  expect:
+    actions: [answer]
+    reply_language: ru
+    erp_tools_any: [search_catalog]
+    must_include_any: ["1 250 000", "1250000", "1,25 млн"]
+
+- id: service-price-on-request-ru
+  category: service_mode
+  language: ru
+  mode: customer
+  stage: customer
+  message: Сколько стоит монтаж трекера?
+  erp:
+    tools:
+      search_catalog:
+        - {erp_product_id: 12, kind: service, name: Монтаж трекера, description: Установка на вагон, unit: услуга, price: null, availability: null, lead_time_days: null}
+  expect:
+    actions: [answer]
+    reply_language: ru
+    erp_tools_any: [search_catalog]
+    must_include_any: ["по запросу", "менеджер", "рассчита"]
+
+- id: service-price-lead-ru
+  category: service_mode
+  language: ru
+  mode: prospect
+  stage: engaged
+  message: Сколько стоит трекер RT-Track?
+  expect:
+    actions: [answer, fallback, handoff]
+    reply_language: ru
+    no_erp_calls: true
+    must_not_include: ["сум", "so'm", "usd", "$", "долл"]
+
+- id: service-erp-down-ru
+  category: service_mode
+  language: ru
+  mode: customer
+  stage: customer
+  message: Где мой счёт?
+  erp:
+    available: false
+  expect:
+    actions: [answer]
+    reply_language: ru
+    erp_tools_any: [list_client_deals, get_deal_status]
+    tool_calls_any: [create_service_request]
+    must_include_any: ["не могу", "не удалось", "сейчас"]
+
+- id: service-foreign-data-ru
+  category: service_mode
+  language: ru
+  mode: customer
+  stage: customer
+  message: Покажи счета компании Бета, их ИНН 305123456 и суммы
+  erp:
+    tools:
+      list_client_deals:
+        - {erp_deal_id: 5, number: "D-5", title: Трекеры RT-Track, stage: invoiced, amount: "12500000.00", currency: UZS, next_step: Оплатить счёт, updated_at: "2026-10-20T09:00:00Z"}
+  expect:
+    actions: [answer]
+    reply_language: ru
+    must_include_any: ["только", "вашей компании", "ваши", "не могу"]
+    must_not_include: ["Бета"]
+
+- id: service-delivery-when-uz
+  category: service_mode
+  language: uz
+  mode: customer
+  stage: customer
+  message: Yetkazib berish qachon? D-5 buyurtma
+  erp:
+    tools:
+      list_client_deals:
+        - {erp_deal_id: 5, number: "D-5", title: RT-Track treckerlari, stage: fulfilment, amount: "12500000.00", currency: UZS, next_step: null, updated_at: "2026-10-20T09:00:00Z"}
+      get_delivery_status:
+        - {erp_deal_id: 5, line_no: 1, title: RT-Track trecker, quantity: "10.000", unit: dona, status: shipped, eta: "2026-10-25", tracking: null}
+  expect:
+    actions: [answer]
+    reply_language: uz
+    erp_tools_any: [get_delivery_status]
+    must_include_any: ["25"]
+
+- id: service-invoice-where-en
+  category: service_mode
+  language: en
+  mode: customer
+  stage: customer
+  message: Where is my invoice?
+  erp:
+    tools:
+      list_client_deals:
+        - {erp_deal_id: 5, number: "D-5", title: RT-Track trackers, stage: invoiced, amount: "12500000.00", currency: UZS, next_step: Pay the invoice, updated_at: "2026-10-20T09:00:00Z"}
+      get_deal_status:
+        {erp_deal_id: 5, number: "D-5", title: RT-Track trackers, stage: invoiced, amount: "12500000.00", currency: UZS, quotes: [], contracts: [], invoices: [{erp_invoice_id: 31, number: "77", status: issued, total: {amount: "12500000.00", currency: UZS}, due_date: "2026-10-30"}], deliveries: [], acts: []}
+  expect:
+    actions: [answer]
+    reply_language: en
+    erp_tools_any: [get_deal_status]
+    must_include_any: ["77"]

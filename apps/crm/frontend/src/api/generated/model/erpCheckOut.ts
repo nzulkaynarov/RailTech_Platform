@@ -7,13 +7,17 @@
 import type { ErpCheckOutStatus } from "./erpCheckOutStatus";
 
 /**
- * Ответ ERP на `GET /api/integration/v1/health` (схема `Health` контракта) и время ответа.
+ * Итог «Проверить связь»: ответ ERP `GET /api/integration/v1/health` (схема `Health`) и время.
+ *
+ * `rate_limited` — ERP ответила 429 (лимит сервисного токена, шов 0.3.0): это статус, не ошибка;
+ * `retry_after_s` — через сколько секунд повторить, остальные поля пробы тогда пусты.
  */
 export interface ErpCheckOut {
   checked_at: string;
-  latency_ms: number;
-  migrations_applied: boolean;
-  queue_alive: boolean;
+  latency_ms?: number | null;
+  migrations_applied?: boolean | null;
+  queue_alive?: boolean | null;
+  retry_after_s?: number | null;
   status: ErpCheckOutStatus;
-  version: string;
+  version?: string | null;
 }

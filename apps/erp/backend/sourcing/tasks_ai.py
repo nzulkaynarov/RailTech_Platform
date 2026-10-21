@@ -110,6 +110,66 @@ def _handle_import_lines(payload: dict) -> dict:
     return {"added": added, "recognized": len(rows), "truncated": truncated, "quote_id": quote.id}
 
 
+def _current_job_id(payload: dict):
+    """Id текущей задачи Celery (= `AIJob.celery_task_id`); `payload["job_id"]` — для прямого вызова в тестах."""
+    if payload.get("job_id"):
+        return str(payload["job_id"])
+    from celery import current_task
+
+    task_id = getattr(getattr(current_task, "request", None), "id", None)
+    return str(task_id) if task_id else None
+
+
+def _handle_parse_request_text(payload: dict) -> dict:
+    """FIX-67 — заявка словами → строки КП. Текст берётся с самой сделки (полный текст клиента, иначе
+    комментарий сделки), разбирается тем же извлечением, что и файл клиента (`extract_request_items`), строки
+    дописываются в КП. Авторизация перепроверяется с записанным user (TOCTOU — как у import_lines).
+    Выключенный ИИ / недоступный шлюз — коды `AI_DISABLED` / `AI_EXTRACT_FAILED`, не исключение.
+
+    FIX-67b: (1) in-flight-блокировка КП снимается в `finally` — успех, код ошибки и исключение; (2) повторный
+    запуск того же job (ретрай, повторная доставка) не вызывает платное извлечение и не дублирует строки."""
+    from sourcing import parse_text_guard
+
+    job_id = _current_job_id(payload)
+    try:
+        return _parse_request_text(payload, job_id)
+    finally:
+        parse_text_guard.release(payload["quote_id"], job_id)
+
+
+def _parse_request_text(payload: dict, job_id) -> dict:
+    from ai.models import AIJob
+    from ai.services.intake import extract_request_items
+
+    from accounts.models import CustomUser
+    from crm.models import Quote
+    from crm.services.draft_quote import deal_request_text
+    from crm.services.quotes.bulk import import_extracted_lines_into_quote
+
+    user = CustomUser.objects.filter(pk=payload["user_id"]).first()
+    quote = Quote.objects.select_related("deal", "cost_currency_default").filter(pk=payload["quote_id"]).first()
+    if user is None or quote is None:
+        return {"error": "QUOTE_NOT_FOUND"}
+    if job_id:
+        # Уже применён этим же job: прежний итог, без платного повторного вызова модели.
+        applied = AIJob.objects.filter(celery_task_id=job_id).values_list("applied_rows", flat=True).first()
+        if applied is not None:
+            return {"added": applied, "recognized": applied, "truncated": False, "quote_id": quote.id}
+    text = deal_request_text(quote.deal)
+    if not text:
+        return {"error": "REQUEST_TEXT_EMPTY"}
+    try:
+        rows = extract_request_items(text.encode("utf-8"), "request.txt")
+    except (RuntimeError, ValueError) as exc:
+        logger.warning("AI parse-request-text failed: %s", exc)
+        return {"error": "AI_DISABLED" if str(exc).startswith("AI_IMPORT_DISABLED") else "AI_EXTRACT_FAILED"}
+
+    added, truncated, err = import_extracted_lines_into_quote(quote, user, rows, job_id=job_id)
+    if err:
+        return {"error": err}
+    return {"added": added, "recognized": len(rows), "truncated": truncated, "quote_id": quote.id}
+
+
 def _handle_compose(payload: dict) -> dict:
     from ai.services.compose import build_request_from_text
 
@@ -244,6 +304,7 @@ FEATURE_HANDLERS = {
     "preflight": _handle_preflight,
     "extract": _handle_extract,
     "import_lines": _handle_import_lines,
+    "parse_request_text": _handle_parse_request_text,
     "catalog_import_ai": _handle_catalog_import_ai,
     "compose": _handle_compose,
     "enrich": _handle_enrich,

@@ -14,6 +14,10 @@ FIX-35: сторож покрывает ВСЕ операции контракт
 `POST /users/provision`, `DELETE /users/{id}/sessions`, и КАЖДЫЙ код ответа, который контракт обещает (200, 201, 204, 401,
 404, 409, 422, 503): `test_every_documented_status_is_exercised` падает, если для операции или кода нет вызова.
 
+FIX-60a (контракт 0.3.0): `Contact` и `ContactIn` закрыты через `unevaluatedProperties`, ответы проверяются по схеме
+контракта как есть — без обхода `allOf`; на КАЖДУЮ из 13 операций (12 + выключатель внешнего сервиса, M3-ERP-06) есть вызов, дающий 429 `TOO_MANY_REQUESTS` с `Retry-After`
+(лимит сервисного токена `INTEGRATION_RATE`, Q-FIX35-1).
+
 Код проверок общий с сторожем портала (`core/tests/openapi_contract.py`). Падение сторожа — падение теста: ни `skip`,
 ни `importorskip`; нет контракта на диске — падение с подсказкой про монтирование.
 """
@@ -149,6 +153,16 @@ def test_every_get_response_matches_the_contract(client, world, catalog_product)
     assert not problems, "\n".join(problems)
 
 
+def test_health_externals_cover_every_contract_code_and_status_is_in_the_enum(client, world):
+    """M3-ERP-06: `/health` несёт все шесть кодов контракта, статусы — из enum; сторож не проходит на пустом `externals`."""
+    health = client.get(f"{PREFIX}/health").json()
+    codes = [item["code"] for item in health["externals"]]
+    assert sorted(codes) == sorted(enum_values("ExternalServiceCode")) and len(codes) == 6
+    allowed = set(component("ExternalService")["properties"]["status"]["enum"])
+    assert {item["status"] for item in health["externals"]} <= allowed
+    assert not check_response(health, response_schema("/health"))
+
+
 def test_deal_responses_are_not_empty_for_the_full_deal(client, world):
     """Сторож не должен проходить на пустых ответах: у полной сделки есть всё, что описывает контракт."""
     deal = client.get(f"{PREFIX}/deals/{world['full'].pk}").json()
@@ -281,6 +295,7 @@ WRITE_PATHS = {
     ("PUT", "/contacts/{crm_contact_id}"),
     ("POST", "/users/provision"),
     ("DELETE", "/users/{crm_user_id}/sessions"),
+    ("PUT", "/externals/{code}/switch"),
 }
 
 
@@ -316,29 +331,45 @@ def provision_body(crm_user_id, email):
         "name": "Сотрудник Сторожа",
         "role": "backoffice",
         "permissions": ["deal.manage"],
+        "role_codes": ["CALCULATION"],
         "is_active": True,
     }
 
 
-def allof_safe(schema):
-    """Схема без `additionalProperties: false` у членов `allOf`.
+#: Вызов на каждую операцию контракта для проверки лимита: первый запрос берёт единственное разрешение `1/minute`
+#: (ответ любой: 200/404/422 — не важно), второй обязан получить 429. Ключ — (МЕТОД, путь контракта).
+THROTTLE_CASES = {
+    ("GET", "/companies/{erp_company_id}/summary"): ("/companies/999999/summary", None),
+    ("GET", "/companies/{erp_company_id}/deals"): ("/companies/999999/deals", None),
+    ("GET", "/deals/{erp_deal_id}"): ("/deals/999999", None),
+    ("GET", "/deals/{erp_deal_id}/documents"): ("/deals/999999/documents", None),
+    ("GET", "/documents/{erp_document_id}/link"): ("/documents/999999/link", None),
+    ("GET", "/catalog/search"): ("/catalog/search?q=рельс&mode=lead", None),
+    ("GET", "/ai-usage"): ("/ai-usage?date_from=2026-01-01&date_to=2026-12-31", None),
+    ("GET", "/health"): ("/health", None),
+    ("POST", "/clients/handoff"): ("/clients/handoff", handoff_body(8301, "830100001")),
+    ("PUT", "/contacts/{crm_contact_id}"): ("/contacts/999999", handoff_body(8301, "830100001")["contacts"][0]),
+    ("POST", "/users/provision"): ("/users/provision", provision_body(8901, "guard-8901@railtech.uz")),
+    ("DELETE", "/users/{crm_user_id}/sessions"): ("/users/999999/sessions", None),
+    ("PUT", "/externals/{code}/switch"): ("/externals/mail/switch", {"enabled": True}),
+}
 
-    `Contact` в контракте — `allOf: [ContactIn, {erp_contact_id, …}]`, а `ContactIn` закрыт `additionalProperties: false`:
-    по JSON Schema ни один настоящий ответ такую схему не пройдёт (поля второго члена «лишние» для первого). Это дефект
-    записи контракта (Q-FIX35-2), правит его архитектор; сторож пока снимает запрет только с членов `allOf`, а лишние ключи
-    по-прежнему ловит `extra_keys` по объединённым `properties`.
-    """
-    if isinstance(schema, dict):
-        out = {key: allof_safe(value) for key, value in schema.items()}
-        if "allOf" in out:
-            out["allOf"] = [
-                {k: v for k, v in part.items() if k != "additionalProperties"} if isinstance(part, dict) else part
-                for part in out["allOf"]
-            ]
-        return out
-    if isinstance(schema, list):
-        return [allof_safe(item) for item in schema]
-    return schema
+
+def hit_twice_with_one_per_minute(client, method, url, body, monkeypatch):
+    """Два вызова операции при `INTEGRATION_RATE=1/minute`: (ответ первого, ответ второго)."""
+    from django.core.cache import cache
+
+    cache.clear()
+    monkeypatch.setitem(SimpleRateThrottle.THROTTLE_RATES, "integration", "1/minute")
+    responses = []
+    for _ in range(2):
+        kwargs = {"format": "json"} if body is not None else {}
+        if method == "POST":
+            kwargs["HTTP_IDEMPOTENCY_KEY"] = str(uuid.uuid4())  # у каждого вызова свой ключ: повтор не «тот же запрос»
+        responses.append(
+            getattr(client, method.lower())(PREFIX + url, **({"data": body} if body is not None else {}), **kwargs)
+        )
+    return responses
 
 
 def exercise_all(client, world):
@@ -399,6 +430,14 @@ def exercise_all(client, world):
     hit("POST", provision, provision, 200, body=provision_body(8801, "guard-8801@railtech.uz"))
     hit("POST", provision, provision, 409, body=provision_body(8802, "guard-8801@railtech.uz"))
     hit("POST", provision, provision, 422, body={"crm_user_id": 8803})
+    # FIX-63: чужой код системной роли — 422 (`role_codes`: SystemRoleCode)
+    hit(
+        "POST",
+        provision,
+        provision,
+        422,
+        body={**provision_body(8805, "guard-8805@railtech.uz"), "role_codes": ["ROOT"]},
+    )
     hit("POST", provision, provision, 401, api=anonymous, body=provision_body(8804, "guard-8804@railtech.uz"))
 
     # DELETE /users/{id}/sessions: 204 → 404 → 401
@@ -406,6 +445,16 @@ def exercise_all(client, world):
     hit("DELETE", sessions, "/users/8801/sessions", 204)
     hit("DELETE", sessions, "/users/999999/sessions", 404)
     hit("DELETE", sessions, "/users/8801/sessions", 401, api=anonymous)
+
+    # PUT /externals/{code}/switch (M3-ERP-06): 200 → 404 (чужой код) → 409 (Sentry) → 422 → 401
+    switch = "/externals/{code}/switch"
+    state = hit("PUT", switch, "/externals/mail/switch", 200, body={"enabled": False, "reason": "сторож контракта"})
+    assert state["enabled"] is False
+    hit("PUT", switch, "/externals/mail/switch", 200, body={"enabled": True})
+    hit("PUT", switch, "/externals/telegram/switch", 404, body={"enabled": False})
+    hit("PUT", switch, "/externals/sentry/switch", 409, body={"enabled": False})
+    hit("PUT", switch, "/externals/mail/switch", 422, body={"reason": "без enabled"})
+    hit("PUT", switch, "/externals/mail/switch", 401, api=anonymous, body={"enabled": False})
     return out
 
 
@@ -415,11 +464,35 @@ def exercised(client, world, catalog_product, monkeypatch):
     # 503: ERP деградировала — миграции не применены
     from django.db.migrations.executor import MigrationExecutor
 
-    monkeypatch.setattr(MigrationExecutor, "migration_plan", lambda self, targets, clean_start=False: [("x", False)])
-    response = client.get(f"{PREFIX}/health")
+    with monkeypatch.context() as degraded:
+        degraded.setattr(MigrationExecutor, "migration_plan", lambda self, targets, clean_start=False: [("x", False)])
+        response = client.get(f"{PREFIX}/health")
     assert response.status_code == 503, response.content
     results.append(("GET", "/health", 503, response.json()))
+    # 429: лимит сервисного токена на каждой операции (FIX-60a, Q-FIX35-1)
+    for (method, path), (url, body) in THROTTLE_CASES.items():
+        _, limited = hit_twice_with_one_per_minute(client, method, url, body, monkeypatch)
+        assert limited.status_code == 429, f"{method} {url}: {limited.status_code} {limited.content[:300]!r}"
+        results.append((method, path, 429, limited.json()))
     return results
+
+
+def test_every_operation_has_a_throttle_case():
+    assert set(THROTTLE_CASES) == set(contract_operations()), "каждой операции контракта нужен вызов на 429"
+    assert len(THROTTLE_CASES) == 13
+
+
+@pytest.mark.parametrize(("method", "path"), sorted(THROTTLE_CASES), ids=lambda value: str(value))
+def test_every_operation_answers_429_with_retry_after_over_the_limit(client, monkeypatch, method, path):
+    """Q-FIX35-1: `INTEGRATION_RATE=1/minute` — второй вызов любой операции: 429 `TOO_MANY_REQUESTS` и `Retry-After`."""
+    url, body = THROTTLE_CASES[(method, path)]
+    first, limited = hit_twice_with_one_per_minute(client, method, url, body, monkeypatch)
+    assert first.status_code != 429, f"{method} {url}: первый вызов уже ограничен"
+    assert limited.status_code == 429, f"{method} {url}: {limited.status_code} {limited.content[:300]!r}"
+    assert limited.json() == {"detail": "TOO_MANY_REQUESTS"}
+    assert not schema_errors(limited.json(), component("Error"))
+    assert int(limited["Retry-After"]) >= 1, "Retry-After — целое число секунд, не меньше 1 (контракт)"
+    assert "429" in contract_operations()[(method, path)], "контракт обещает 429 на этой операции"
 
 
 def test_operations_are_the_known_set():
@@ -453,7 +526,7 @@ def test_every_response_of_every_operation_matches_the_contract(exercised):
             schema = response_schema(path, method.lower(), str(status))
         else:
             schema = component("Error")
-        problems += [f"{method} {path} → {status}: {p}" for p in check_response(body, allof_safe(schema))]
+        problems += [f"{method} {path} → {status}: {p}" for p in check_response(body, schema)]
     assert not problems, "\n".join(problems)
 
 
@@ -464,4 +537,43 @@ def test_error_codes_are_the_documented_ones(exercised):
     assert codes[401] == {"UNAUTHORIZED"}
     assert codes[404] == {"NOT_FOUND"}
     assert codes[422] == {"VALIDATION_ERROR"}
-    assert codes[409] <= {"INN_CONFLICT", "EMAIL_CONFLICT"} and codes[409]
+    assert codes[409] <= {"INN_CONFLICT", "EMAIL_CONFLICT", "NOT_SWITCHABLE"} and codes[409]
+
+
+# --- FIX-63: `role_codes` в провижининге (SystemRoleCode) --------------------------------------------------------
+
+
+def test_provision_request_serializer_fields_are_the_contract_properties():
+    """Сторож тела: поля `ProvisionUserRequestSerializer` = свойства `ProvisionUserRequest` контракта (ни лишних, ни забытых)."""
+    from integration.serializers import ProvisionUserRequestSerializer
+
+    assert set(ProvisionUserRequestSerializer().fields) == set(component("ProvisionUserRequest")["properties"])
+
+
+def test_role_codes_are_optional_in_the_contract_and_enum_equals_erp_catalog():
+    from accounts.constants import BackofficeRoleCode
+
+    request = component("ProvisionUserRequest")
+    assert "role_codes" not in request["required"], "аддитивно: старый CRM поле не шлёт"
+    assert request["properties"]["role_codes"]["items"] == component(
+        "SystemRoleCode"
+    ), "items — ссылка на SystemRoleCode"
+    assert enum_values("SystemRoleCode") == list(BackofficeRoleCode.values)
+
+
+def test_provision_with_every_system_role_code_of_the_contract(client, world, settings):
+    from accounts.models import Company, CompanyMember, WorkspaceRole
+
+    WorkspaceRole.objects.get_or_create(code="MEMBER", defaults={"name": "Member", "sort_order": 10})
+    settings.OWN_COMPANY_ID = Company.objects.create(name="Own Co", inn="OWN-GUARD63").pk
+
+    codes = enum_values("SystemRoleCode")
+    response = client.post(
+        f"{PREFIX}/users/provision",
+        {**provision_body(8950, "guard-8950@railtech.uz"), "role_codes": codes},
+        format="json",
+        HTTP_IDEMPOTENCY_KEY=str(uuid.uuid4()),
+    )
+    assert response.status_code == 201, response.content
+    member = CompanyMember.objects.get(user__email="guard-8950@railtech.uz")
+    assert set(member.company_roles.exclude(code="").values_list("code", flat=True)) == set(codes)

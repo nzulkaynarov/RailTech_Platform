@@ -75,6 +75,7 @@ if SENTRY_DSN:
     from sentry_sdk.integrations.celery import CeleryIntegration
     from sentry_sdk.integrations.django import DjangoIntegration
 
+    from core.log_mask import mask_breadcrumb
     from core.sentry_scrub import scrub_event
 
     sentry_sdk.init(
@@ -87,4 +88,6 @@ if SENTRY_DSN:
         # send_default_pii only stops Sentry's OWN auto-PII; domain PII we put into an
         # event (ИНН/phone in request.data, extra, breadcrumbs) is masked here (SEC-tail).
         before_send=scrub_event,
+        # FIX-66b: интеграции httpx/requests/логгеров пишут URL (токен Bot API, подпись S3) в хлебные крошки.
+        before_breadcrumb=mask_breadcrumb,
     )

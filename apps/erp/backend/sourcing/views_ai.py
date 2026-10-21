@@ -298,3 +298,109 @@ class QuoteImportFileView(RoleGatedViewMixin, APIView):
             "user_id": request.user.id,
         }
         return enqueue_ai_job("import_lines", payload, request.user)
+
+
+@extend_schema(
+    summary="Разобрать текст заявки в строки КП (AI, FIX-67)",
+    description=(
+        "Заявка словами: клиент (или передача из CRM) описал потребность текстом, строк нет. Продавец жмёт "
+        "«Разобрать текст в строки (ИИ)» в конструкторе КП — сервер берёт текст заявки сам (полный текст "
+        "клиента, иначе комментарий сделки), разбирает его тем же извлечением, что и файл клиента "
+        "(`ai.services.intake`), и дописывает строки В КОНЕЦ КП. ARCH-01: 202 + task_id, извлечение на Celery "
+        "(поллинг sourcing/ai-status/). ИИ выключен — 503 `AI_DISABLED`, шлюз недоступен — результат задачи "
+        "`AI_EXTRACT_FAILED`; ручной набор строк работает всегда. FIX-67b: пока разбор КП идёт, повторный запрос не "
+        "ставит новую задачу (тот же сотрудник — 202 с прежним task_id и `already_running`; другой — 409 "
+        "`PARSE_ALREADY_RUNNING`), запись строк идемпотентна по job."
+    ),
+    request=inline_serializer("ParseRequestTextRequest", fields={"quote_id": serializers.IntegerField()}),
+    responses={
+        202: OpenApiResponse(
+            description=(
+                "AI job queued, task_id returned (poll ai-status). `already_running: true` — разбор этого КП этим "
+                "же сотрудником уже идёт: тот же task_id, новая задача не поставлена (FIX-67b)"
+            )
+        ),
+        400: OpenApiResponse(description="QUOTE_ID_REQUIRED / REQUEST_TEXT_EMPTY"),
+        403: OpenApiResponse(description="Not own-company staff with pricing permission"),
+        404: OpenApiResponse(description="Quote not found"),
+        409: OpenApiResponse(
+            description=(
+                "Quote is not editable (QUOTE_NOT_DRAFT / QUOTE_FROZEN) or a parse of this quote started by "
+                "another user is still running (PARSE_ALREADY_RUNNING)"
+            )
+        ),
+        503: OpenApiResponse(description="AI disabled (AI_DISABLED)"),
+    },
+    tags=["Sourcing"],
+)
+class QuoteParseRequestTextView(RoleGatedViewMixin, APIView):
+    """FIX-67 — текст заявки → строки КП. Текст клиент не присылает: сервер читает его с самой сделки."""
+
+    required_permissions = {
+        "POST": "quote.build",
+    }
+
+    permission_classes = [IsAuthenticated]
+    throttle_classes = [ScopedRateThrottle]
+    throttle_scope = "ai_extract"
+
+    def post(self, request):
+        from django.conf import settings
+
+        if not getattr(settings, "AI_IMPORT_ENABLED", False):
+            return Response({"detail": "AI_DISABLED"}, status=status.HTTP_503_SERVICE_UNAVAILABLE)
+        try:
+            quote_id = int(request.data.get("quote_id"))
+        except (TypeError, ValueError):
+            return Response({"detail": "QUOTE_ID_REQUIRED"}, status=status.HTTP_400_BAD_REQUEST)
+
+        from accounts.services.permissions import can_edit_quote_pricing
+        from crm.models import Quote
+        from crm.services.draft_quote import deal_request_text
+        from crm.services.quotes.editable import quote_edit_lock_code
+
+        quote = Quote.objects.select_related("deal").filter(pk=quote_id).first()
+        if quote is None:
+            return Response({"detail": "QUOTE_NOT_FOUND"}, status=status.HTTP_404_NOT_FOUND)
+        if not (getattr(request.user, "is_superuser", False) or can_edit_quote_pricing(request.user)):
+            return Response({"detail": "ONLY_SELLER_CAN_BUILD_QUOTE"}, status=status.HTTP_403_FORBIDDEN)
+        lock_code = quote_edit_lock_code(quote)
+        if lock_code:
+            return Response({"detail": lock_code}, status=status.HTTP_409_CONFLICT)
+        if not deal_request_text(quote.deal):
+            return Response({"detail": "REQUEST_TEXT_EMPTY"}, status=status.HTTP_400_BAD_REQUEST)
+
+        from . import parse_text_guard
+        from .ai_jobs import enqueue_ai_job
+
+        # FIX-67b: in-flight-блокировка по КП. Занимаем ПОСЛЕ всех отказов (права/404/пустой текст), чтобы
+        # отказанный запрос не оставлял «зависшую» блокировку.
+        if not parse_text_guard.acquire(quote_id, request.user.id):
+            held = parse_text_guard.holder(quote_id)
+            acquired = False
+            if held is not None and held[0] and parse_text_guard.job_is_finished(held[0]):
+                # Задача упала молча (воркер убит): результат в backend есть, а блокировка не снята — не ждём TTL.
+                # Снимаем лок ТОЛЬКО этого job: параллельный запрос мог уже занять новый (иначе два платных job).
+                parse_text_guard.release(quote_id, held[0])
+                acquired = parse_text_guard.acquire(quote_id, request.user.id)
+                if not acquired:
+                    held = parse_text_guard.holder(quote_id)
+            if not acquired:
+                task_id, owner_id = held or (None, None)
+                if task_id and owner_id == request.user.id:
+                    # Тот же сотрудник (двойной клик, вторая вкладка): тот же job, платная задача не ставится.
+                    return Response({"task_id": task_id, "already_running": True}, status=status.HTTP_202_ACCEPTED)
+                return Response({"detail": "PARSE_ALREADY_RUNNING"}, status=status.HTTP_409_CONFLICT)
+
+        try:
+            response = enqueue_ai_job(
+                "parse_request_text", {"quote_id": quote_id, "user_id": request.user.id}, request.user
+            )
+        except Exception:
+            parse_text_guard.release(quote_id)
+            raise
+        if response.status_code == status.HTTP_202_ACCEPTED:
+            parse_text_guard.attach_task(quote_id, request.user.id, response.data["task_id"])
+        else:
+            parse_text_guard.release(quote_id)  # 429 (суточный лимит) / 500 (очередь): ничего не запущено
+        return response

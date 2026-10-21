@@ -3,6 +3,8 @@
 import os
 from decimal import Decimal
 
+from core.log_mask import NOISY_LOGGERS
+
 from .infra import *  # noqa: F401,F403 — последовательная композиция настроек
 
 # ── ИИ через общий шлюз LiteLLM (ADR-0005, M1-ERP-06) ───────────────────────
@@ -79,6 +81,10 @@ LOGGING = {
         "redact_portal_token": {
             "()": "core.logging.RedactPortalTokenFilter",
         },
+        # FIX-66b: токены Bot API, подписи S3, Bearer, sk-ключи, userinfo и token=/code=/key= в любой записи.
+        "mask_secrets": {
+            "()": "core.log_mask.SecretMaskFilter",
+        },
     },
     "formatters": {
         "verbose": {
@@ -97,18 +103,17 @@ LOGGING = {
         "console": {
             "class": "logging.StreamHandler",
             "formatter": "json" if _LOG_FORMAT == "json" else "verbose",
-            "filters": ["request_id", "redact_portal_token"],
+            "filters": ["request_id", "redact_portal_token", "mask_secrets"],
         },
     },
     "root": {
         "handlers": ["console"],
         "level": os.environ.get("DJANGO_LOG_LEVEL", "INFO"),
     },
-    # httpx/httpcore на INFO печатают URL каждого запроса — секреты в адресе (ключ шлюза и т. п.)
-    # не должны попадать в журнал; ошибки транспорта видны на WARNING.
+    # Клиентские библиотеки на INFO/DEBUG печатают URL каждого запроса — секреты в адресе (токен Bot API, подпись S3,
+    # ключ шлюза) не должны попадать в журнал; ошибки транспорта видны на WARNING. Список — `core.log_mask.NOISY_LOGGERS`.
     "loggers": {
-        "httpx": {"level": "WARNING"},
-        "httpcore": {"level": "WARNING"},
+        **{name: {"level": "WARNING"} for name in NOISY_LOGGERS},
         # Логгер `django` из DEFAULT_LOGGING имеет СВОЙ обработчик `console` (при DEBUG=True): он печатает
         # `Gone: /api/portal/v1/auth/magic/<токен>` в stderr мимо нашего фильтра токена (FIX-15). Переопределяем:
         # всё идёт через наш `console` с RedactPortalTokenFilter (`mail_admins` не нужен: ADMINS не заданы).

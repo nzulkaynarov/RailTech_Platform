@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: RailTech Platform ERP — Integration API (CRM → ERP)
-  version: 0.2.0
+  version: 0.5.0
   summary: Пространство `/api/integration/v1/` — вызывает только CRM под сервисным токеном.
   description: |
     Контракт по `docs/CONTRACTS.md` §0 и §2. Версия 0 (M0-INF-02): форма запросов и ответов, по которой
@@ -11,6 +11,16 @@ info:
     и код валюты ISO-4217; идентификаторы — целые, непрозрачные для другой стороны. Ошибки ERP — `{"detail": "<CODE>"}`.
     Все POST принимают `Idempotency-Key`; ERP хранит ключ 7 дней. Идентификатор клиента никогда не
     приходит от модели.
+
+    0.3.0 (FIX-60): 429 `TOO_MANY_REQUESTS` с `Retry-After` на каждой операции (лимит сервисного токена, Q-FIX35-1);
+    `Contact` закрыт через `unevaluatedProperties` (Q-FIX35-3); `CompanySummary.receivables_by_currency` (Q-FIX30-2);
+    `erp_document_id` — идентификатор документа портала (FIX-38).
+
+    0.4.0 (M3-ERP-06): `Health.externals[]` — внешние сервисы ERP (статус, последний успех и ошибка, счётчики за 24 ч);
+    `PUT /externals/{code}/switch` — выключатель из CRM. Аддитивно, терпимый читатель.
+
+    0.5.0 (FIX-63): `ProvisionUserRequest.role_codes[]` (`SystemRoleCode`) — системные роли ERP, выбранные в CRM;
+    поле необязательное, аддитивно: без него ERP системные роли не трогает.
   contact:
     name: RailTech Platform — docs/CONTRACTS.md
 servers:
@@ -54,6 +64,8 @@ paths:
             schema:
               $ref: '#/components/schemas/HandoffRequest'
       responses:
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
         '200':
           description: Клиент уже передавался — возвращены существующие идентификаторы
           content:
@@ -93,6 +105,8 @@ paths:
             schema:
               $ref: '#/components/schemas/ContactIn'
       responses:
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
         '200':
           description: Контакт обновлён
           content:
@@ -114,6 +128,8 @@ paths:
       parameters:
         - $ref: '#/components/parameters/ErpCompanyId'
       responses:
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
         '200':
           description: Открытые сделки, последний документ, дебиторка, ближайшая поставка
           content:
@@ -133,6 +149,8 @@ paths:
       parameters:
         - $ref: '#/components/parameters/ErpCompanyId'
       responses:
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
         '200':
           description: Сделки компании
           content:
@@ -154,6 +172,8 @@ paths:
       parameters:
         - $ref: '#/components/parameters/ErpDealId'
       responses:
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
         '200':
           description: Стадия, КП, договор, счета, поставки (проекция клиента), акты
           content:
@@ -173,6 +193,8 @@ paths:
       parameters:
         - $ref: '#/components/parameters/ErpDealId'
       responses:
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
         '200':
           description: Документы без файлов (файл — через `/documents/{id}/link`)
           content:
@@ -205,6 +227,8 @@ paths:
           schema:
             type: string
       responses:
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
         '200':
           description: Ссылка выдана
           content:
@@ -246,6 +270,8 @@ paths:
             maximum: 50
             default: 10
       responses:
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
         '200':
           description: Найденные позиции опубликованного слоя
           content:
@@ -273,6 +299,8 @@ paths:
             schema:
               $ref: '#/components/schemas/ProvisionUserRequest'
       responses:
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
         '200':
           description: Пользователь уже существовал — обновлён
           content:
@@ -316,6 +344,8 @@ paths:
             type: integer
             format: int64
       responses:
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
         '204':
           description: Сессии отозваны (в том числе если их не было)
         '401':
@@ -342,6 +372,8 @@ paths:
             type: string
             format: date
       responses:
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
         '200':
           description: Расходы по дням, функциям и моделям
           content:
@@ -359,6 +391,8 @@ paths:
       operationId: getIntegrationHealth
       summary: Здоровье ERP для страницы «Состояние системы» CRM
       responses:
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
         '200':
           description: ERP жива
           content:
@@ -373,6 +407,50 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Health'
+
+  /externals/{code}/switch:
+    put:
+      tags: [system]
+      operationId: setExternalSwitch
+      summary: Выключатель внешнего сервиса ERP (центр внешних сервисов CRM)
+      description: >-
+        Выключенный сервис ERP перестаёт вызываться: курсы ЦБ и синхронизация ТН ВЭД пропускают прогон, письма не
+        уходят в SMTP (в журнале ERP — `FAILED` с причиной «выключено из CRM»), вызовы моделей возвращают нейтральный
+        отказ, файлы не пишутся в S3. Состояние хранится в ERP и переживает перезапуск; операция идемпотентна
+        (повтор того же состояния — 200). Sentry выключить нельзя (`switchable: false` → 409 `NOT_SWITCHABLE`).
+      parameters:
+        - name: code
+          in: path
+          required: true
+          schema:
+            $ref: '#/components/schemas/ExternalServiceCode'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ExternalSwitchIn'
+      responses:
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '200':
+          description: Состояние выключателя после операции
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExternalSwitchState'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: Сервис нельзя выключать (`NOT_SWITCHABLE`)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '422':
+          $ref: '#/components/responses/ValidationError'
 
 components:
   securitySchemes:
@@ -415,6 +493,7 @@ components:
       name: erp_document_id
       in: path
       required: true
+      description: Идентификатор документа портала (тот же, что `GET /documents` Cabinet, FIX-38) — непрозрачен для CRM
       schema:
         type: integer
         format: int64
@@ -438,6 +517,20 @@ components:
         application/json:
           schema:
             $ref: '#/components/schemas/Error'
+    TooManyRequests:
+      description: >-
+        Лимит запросов сервисного токена (по умолчанию 300 в минуту на токен, настройка ERP `INTEGRATION_RATE`);
+        `{"detail": "TOO_MANY_REQUESTS"}`, повторить через `Retry-After` секунд
+      headers:
+        Retry-After:
+          description: Через сколько секунд можно повторить
+          schema:
+            type: integer
+            minimum: 1
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
 
   schemas:
     Error:
@@ -447,7 +540,7 @@ components:
       properties:
         detail:
           type: string
-          examples: [NOT_FOUND, IDEMPOTENCY_CONFLICT, EMAIL_CONFLICT, VALIDATION_ERROR]
+          examples: [NOT_FOUND, IDEMPOTENCY_CONFLICT, EMAIL_CONFLICT, VALIDATION_ERROR, TOO_MANY_REQUESTS]
       additionalProperties: false
 
     Language:
@@ -481,8 +574,9 @@ components:
           $ref: '#/components/schemas/Currency'
       additionalProperties: false
 
-    ContactIn:
+    ContactFields:
       type: object
+      description: Поля контакта без замыкания — основа `ContactIn` и `Contact` (Q-FIX35-3)
       required: [crm_contact_id, name, language, is_primary, preferred_channel]
       properties:
         crm_contact_id:
@@ -506,11 +600,17 @@ components:
           type: boolean
         preferred_channel:
           $ref: '#/components/schemas/PreferredChannel'
-      additionalProperties: false
+
+    ContactIn:
+      description: Контакт из CRM (запрос); лишние поля — 422
+      unevaluatedProperties: false
+      allOf:
+        - $ref: '#/components/schemas/ContactFields'
 
     Contact:
+      unevaluatedProperties: false
       allOf:
-        - $ref: '#/components/schemas/ContactIn'
+        - $ref: '#/components/schemas/ContactFields'
         - type: object
           required: [erp_contact_id, erp_company_id]
           properties:
@@ -689,7 +789,7 @@ components:
 
     CompanySummary:
       type: object
-      required: [erp_company_id, crm_client_id, name, open_deals, receivables]
+      required: [erp_company_id, crm_client_id, name, open_deals, receivables, receivables_by_currency]
       properties:
         erp_company_id:
           type: integer
@@ -708,7 +808,13 @@ components:
             - $ref: '#/components/schemas/Document'
             - type: 'null'
         receivables:
+          description: Долг клиента в одной валюте (UZS, если есть, иначе первая по коду); остальное — `receivables_by_currency`
           $ref: '#/components/schemas/Money'
+        receivables_by_currency:
+          description: Долг клиента по каждой валюте отдельно, без пересчёта по курсу (Q-FIX30-2); пусто — долга нет
+          type: array
+          items:
+            $ref: '#/components/schemas/Money'
         next_delivery:
           oneOf:
             - $ref: '#/components/schemas/DeliveryLine'
@@ -883,6 +989,7 @@ components:
       required: [erp_document_id, kind, number, date, title, status]
       properties:
         erp_document_id:
+          description: Идентификатор документа портала (FIX-38) — им же открывается `GET /documents/{erp_document_id}/link`
           type: integer
           format: int64
         erp_deal_id:
@@ -985,10 +1092,33 @@ components:
             от модели не приходят.
           items:
             $ref: '#/components/schemas/ErpPermission'
+        role_codes:
+          type: array
+          description: >-
+            Системные роли бэк-офиса ERP, выданные из CRM (FIX-63, Q-FIX50-1 (1)). Необязательное: поля нет — ERP не
+            трогает системные роли сотрудника (старый CRM); пустой список — снимает все системные роли, ранее
+            выданные из CRM. ERP добавляет только пришедшие и снимает только те системные роли, что сама выдала
+            по `role_codes` раньше (пометка «выдана из CRM»); роли, назначенные в ERP вручную («Настройки →
+            Команда»), и роль «CRM Sync: <e-mail>» (права по `permissions`) этим не затрагиваются. Для
+            `role: admin` игнорируется (суперпользователь имеет все права), ранее выданные роли снимаются. Код вне
+            `SystemRoleCode` — 422. Читатель терпим: старый ERP поле игнорирует. Перечень ролей и их названия ведёт
+            CRM; идентификаторы ролей от модели не приходят.
+          uniqueItems: true
+          items:
+            $ref: '#/components/schemas/SystemRoleCode'
         is_active:
           type: boolean
           default: true
       additionalProperties: false
+
+    SystemRoleCode:
+      type: string
+      description: >-
+        Код системной роли бэк-офиса ERP (`accounts.constants.BackofficeRoleCode`, apps/erp/CLAUDE.md §6):
+        CALCULATION «Расчёт», CATALOG_SUPPLY «Каталог и закупки», FULFILLMENT «Исполнение и логистика»,
+        FINANCE «Финансы», HEAD «Руководитель», VIEWER «Наблюдатель». Новый код появляется в ERP и здесь в одном PR;
+        тест CRM сверяет этот список с каталогом CRM, тест ERP — с `BackofficeRoleCode`.
+      enum: [CALCULATION, CATALOG_SUPPLY, FULFILLMENT, FINANCE, HEAD, VIEWER]
 
     ErpPermission:
       type: string
@@ -1077,6 +1207,89 @@ components:
           type: boolean
           description: Celery-воркер отвечает на ping
         checked_at:
+          type: string
+          format: date-time
+        externals:
+          type: array
+          description: >-
+            Внешние сервисы ERP (M3-ERP-06): курсы ЦБ, ТН ВЭД/тариф, почта, модели (LiteLLM), S3, Sentry. Поле
+            необязательное: нет его — ERP старше M3-ERP-06, CRM показывает «нет данных». Строится без обращений к самим
+            сервисам (по журналам и счётчикам ERP), ответ `/health` остаётся быстрым.
+          items:
+            $ref: '#/components/schemas/ExternalService'
+      additionalProperties: false
+
+    ExternalServiceCode:
+      type: string
+      description: >-
+        `cbu_rates` — курсы ЦБ РУз; `customs_tariff` — классификатор ТН ВЭД и тариф (tarif.customs.uz); `mail` — почта
+        ERP; `litellm` — вызовы моделей через шлюз; `s3` — файловое хранилище; `sentry` — сбор ошибок. Читатель
+        пропускает неизвестный код.
+      enum: [cbu_rates, customs_tariff, mail, litellm, s3, sentry]
+
+    ExternalService:
+      type: object
+      required: [code, status, enabled, switchable, ok_24h, errors_24h, last_success_at, last_error_at, last_error]
+      properties:
+        code:
+          $ref: '#/components/schemas/ExternalServiceCode'
+        status:
+          type: string
+          description: >-
+            `ok` — работает; `degraded` — последняя операция неудачна, но в последние 24 ч были успешные, либо плановая
+            задача давно не выполнялась; `fail` — последняя операция неудачна и успешных за 24 ч нет; `unknown` — данных
+            нет (операций ещё не было); `disabled` — не настроен или выключен из CRM (`enabled` различает).
+          enum: [ok, degraded, fail, unknown, disabled]
+        enabled:
+          type: boolean
+          description: >-
+            `false` — сервис выключен из CRM (`PUT /externals/{code}/switch`). Не настроенный сервис — `enabled: true`
+            и `status: disabled`.
+        switchable:
+          type: boolean
+          description: Сервис можно выключить из CRM.
+        last_success_at:
+          type: [string, 'null']
+          format: date-time
+        last_error_at:
+          type: [string, 'null']
+          format: date-time
+        last_error:
+          type: [string, 'null']
+          maxLength: 200
+          description: >-
+            Короткий текст последней ошибки (класс ошибки или код) без адресов с учётными данными, ключей и тел ответов.
+        ok_24h:
+          type: integer
+          minimum: 0
+          description: Успешных операций за последние 24 часа.
+        errors_24h:
+          type: integer
+          minimum: 0
+          description: Неудачных операций за последние 24 часа.
+      additionalProperties: false
+
+    ExternalSwitchIn:
+      type: object
+      required: [enabled]
+      properties:
+        enabled:
+          type: boolean
+        reason:
+          type: [string, 'null']
+          maxLength: 200
+          description: Причина выключения (для журнала ERP); при включении не нужна.
+      additionalProperties: false
+
+    ExternalSwitchState:
+      type: object
+      required: [code, enabled, changed_at]
+      properties:
+        code:
+          $ref: '#/components/schemas/ExternalServiceCode'
+        enabled:
+          type: boolean
+        changed_at:
           type: string
           format: date-time
       additionalProperties: false

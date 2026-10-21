@@ -8,6 +8,7 @@ from collections.abc import Awaitable, Callable, Sequence
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from decimal import Decimal
+from enum import StrEnum
 from typing import Any
 
 import structlog
@@ -29,13 +30,17 @@ from app.models.integrations import ErpIncomingEvent
 from app.models.leads import Lead, LeadNote, TelegramIdentity
 from app.repositories import events
 from app.schemas.erp_events import (
+    CODE_EVENT,
     ErpEventEnvelope,
+    QuoteAcceptanceCodeRequestedEvent,
     RequestCreatedEvent,
     is_known_event,
     parse_event,
+    redact_secrets,
 )
 from app.security.secrets_store import SecretsStore
 from app.services import deals as deals_service
+from app.services.erp_acceptance_code import AcceptanceCodeDelivery
 from app.services.erp_bot_messages import (
     client_message,
     feed_note,
@@ -53,28 +58,108 @@ def _deal_amount(amount: str | None) -> Decimal | None:
     return Decimal(amount) if amount is not None else None
 
 
-def verify_signature(secret: str, raw_body: bytes, signature_header: str | None) -> bool:
-    """Проверка HMAC-SHA256 подписи вебхука: X-Signature: sha256=<hex>."""
+def _hmac_matches(secret: str, message: bytes, signature_header: str | None) -> bool:
+    """`X-Signature: sha256=<hex>` равна HMAC-SHA256(secret, message) (за постоянное время)."""
     if not secret or not signature_header:
         return False
     prefix = "sha256="
     if not signature_header.startswith(prefix):
         return False
     given_hex = signature_header[len(prefix) :].strip()
-    expected_hex = hmac.new(secret.encode("utf-8"), raw_body, hashlib.sha256).hexdigest()
+    expected_hex = hmac.new(secret.encode("utf-8"), message, hashlib.sha256).hexdigest()
     # Байты, а не строки: `compare_digest` на не-ASCII строке бросает TypeError (ответ был бы 500).
     return hmac.compare_digest(given_hex.encode("utf-8"), expected_hex.encode("utf-8"))
+
+
+def verify_signature(secret: str, raw_body: bytes, signature_header: str | None) -> bool:
+    """Старая подпись (схема v1): HMAC-SHA256 только по телу, `X-Signature: sha256=<hex>`."""
+    return _hmac_matches(secret, raw_body, signature_header)
+
+
+def _signed_v2(event_id: str, timestamp: str, raw_body: bytes) -> bytes:
+    return f"{event_id}.{timestamp}.".encode() + raw_body
+
+
+def sign_v2(secret: str, event_id: str, timestamp: str, raw_body: bytes) -> str:
+    """Подпись v2 (FIX-61): `sha256=HMAC(secret, "{X-Event-Id}.{X-Timestamp}.{body}")`.
+
+    `event_id` и `timestamp` — строки заголовков как пришли (не нормализованные), `raw_body` —
+    байты запроса.
+    """
+    digest = hmac.new(
+        secret.encode("utf-8"), _signed_v2(event_id, timestamp, raw_body), hashlib.sha256
+    )
+    return f"sha256={digest.hexdigest()}"
+
+
+def verify_signature_v2(
+    secret: str, event_id: str, timestamp: str, raw_body: bytes, signature_header: str | None
+) -> bool:
+    return _hmac_matches(secret, _signed_v2(event_id, timestamp, raw_body), signature_header)
 
 
 def verify_signature_any(
     secrets: Sequence[str], raw_body: bytes, signature_header: str | None
 ) -> bool:
-    """Подпись верна хотя бы одним из принимаемых секретов (текущий и предыдущий, FIX-35).
+    """Старая подпись верна хотя бы одним из принимаемых секретов (текущий и предыдущий, FIX-35).
 
     Проверяются все секреты без раннего выхода: время ответа не выдаёт, какой из них подошёл.
     """
     results = [verify_signature(secret, raw_body, signature_header) for secret in secrets]
     return any(results)
+
+
+class SignatureScheme(StrEnum):
+    V2 = "v2"
+    LEGACY = "legacy"
+
+
+def match_signature(
+    secrets: Sequence[str],
+    event_id: str | None,
+    timestamp: str | None,
+    raw_body: bytes,
+    signature_header: str | None,
+    *,
+    allow_legacy: bool,
+) -> SignatureScheme | None:
+    """Какой схемой и каким из принимаемых секретов подписан запрос; `None` — подпись неверна.
+
+    v2 покрывает `X-Event-Id` и `X-Timestamp`, поэтому перехваченное тело под новым id не
+    проходит. Старая схема (только тело) принимается лишь пока `allow_legacy`
+    (ERP_WEBHOOK_SIGN_LEGACY). Все секреты и обе схемы проверяются без раннего выхода: время
+    ответа не выдаёт, что подошло.
+    """
+    v2_ok = False
+    if event_id is not None and timestamp is not None:
+        v2_results = [
+            verify_signature_v2(s, event_id, timestamp, raw_body, signature_header) for s in secrets
+        ]
+        v2_ok = any(v2_results)
+    legacy_ok = allow_legacy and verify_signature_any(secrets, raw_body, signature_header)
+    if v2_ok:
+        return SignatureScheme.V2
+    return SignatureScheme.LEGACY if legacy_ok else None
+
+
+#: Допустимое расхождение `X-Timestamp` (v2) с часами CRM, в обе стороны (Q-FIX35-2).
+TIMESTAMP_WINDOW = timedelta(seconds=300)
+STALE_PREFIX = "stale timestamp"
+
+
+def timestamp_problem(timestamp: str | None, now: datetime) -> str | None:
+    """Почему метка v2 не годится (`None` — годится): не читается, без пояса или вне окна."""
+    try:
+        moment = datetime.fromisoformat((timestamp or "").strip())
+    except ValueError:
+        return f"{STALE_PREFIX}: X-Timestamp is not ISO 8601"
+    if moment.tzinfo is None:
+        return f"{STALE_PREFIX}: X-Timestamp has no UTC offset"
+    skew = abs((now - moment).total_seconds())
+    if skew > TIMESTAMP_WINDOW.total_seconds():
+        window = int(TIMESTAMP_WINDOW.total_seconds())
+        return f"{STALE_PREFIX}: X-Timestamp is {int(skew)} s away from now (window {window} s)"
+    return None
 
 
 #: Неудачных обработок события до статуса `failed` (его видно в центре внешних сервисов).
@@ -121,6 +206,26 @@ def _raw_preview(raw_body: bytes) -> dict[str, Any]:
 
 
 def _parse_body(raw_body: bytes, event_type: str) -> ParsedBody:
+    """Тело события → итог разбора для журнала; секреты в `data` вырезаны (код акцепта).
+
+    Конверт (`envelope`) разобран по исходному телу и несёт код в `SecretStr`; `data` — то, что
+    пишется в журнал: код заменён на `[redacted]`, а тело, которое не разобралось (сломанный
+    JSON, не по схеме), у события с кодом не сохраняется даже кусками.
+    """
+    parsed = _parse_body_raw(raw_body, event_type)
+    secret_event = event_type == CODE_EVENT or parsed.data.get("event") == CODE_EVENT
+    if not secret_event:
+        return parsed
+    unreadable = "raw" in parsed.data and "event" not in parsed.data
+    data = (
+        {"raw": "[withheld: body of a secret event]"}
+        if unreadable
+        else redact_secrets(parsed.data, event_type)
+    )
+    return ParsedBody(parsed.status, data, parsed.envelope, parsed.error)
+
+
+def _parse_body_raw(raw_body: bytes, event_type: str) -> ParsedBody:
     """Тело события → итог разбора для журнала.
 
     Читатель терпимый (FIX-35): тело, которое мы принять не можем, не даёт 4xx — ретраи ERP
@@ -155,6 +260,17 @@ def _parse_body(raw_body: bytes, event_type: str) -> ParsedBody:
     return ParsedBody("received", data, envelope=envelope)
 
 
+def _body_hash(raw_body: bytes, parsed: ParsedBody, event_type: str) -> str:
+    """sha256 тела для защиты от повтора. У события с кодом — хеш тела БЕЗ кода (то, что пишется
+    в журнал после `redact_secrets`): иначе код из 4–12 цифр подбирался бы по хешу из журнала.
+    Повтор того же тела по-прежнему ловится.
+    """
+    if CODE_EVENT in (event_type, parsed.data.get("event")):
+        canonical = json.dumps(parsed.data, sort_keys=True, ensure_ascii=False).encode()
+        return hashlib.sha256(canonical).hexdigest()
+    return hashlib.sha256(raw_body).hexdigest()
+
+
 class ErpEventsService:
     def __init__(
         self,
@@ -171,6 +287,9 @@ class ErpEventsService:
         self._config = config
         self._bot_provider = bot_provider
         self._enqueue_task = enqueue_task
+        self._acceptance_code = AcceptanceCodeDelivery(
+            sessions, settings_service, bot_provider, config
+        )
 
     async def get_webhook_secrets(self) -> tuple[str, ...]:
         """Секреты, которыми принимается подпись: текущий и предыдущий («Подключения» → ERP, иначе
@@ -185,8 +304,13 @@ class ErpEventsService:
         event_type: str | None,
         signature: str | None,
         raw_body: bytes,
+        timestamp: str | None = None,
     ) -> tuple[bool, str]:
         """Приём вебхука: подпись → заголовки → разбор тела → идемпотентная фиксация → очередь.
+
+        Подпись — схема v2 (FIX-61): `HMAC(secret, "{X-Event-Id}.{X-Timestamp}.{body}")`; пока
+        `ERP_WEBHOOK_SIGN_LEGACY=true`, принимается и старая (HMAC только тела). Метка v2 вне
+        окна 300 с — постоянный отказ: 200 и строка `rejected` (ERP подписывает ретрай заново).
 
         Подпись проверяется по сырому телу ДО любого разбора (FIX-33): неподписанный запрос не
         заставляет CRM разбирать JSON и не узнаёт, что именно в теле не так. Дальше:
@@ -203,9 +327,19 @@ class ErpEventsService:
                 "erp webhook secret is not configured", reason=Reason.ERP_NOT_CONFIGURED
             )
 
-        if not verify_signature_any(secrets, raw_body, signature):
+        scheme = match_signature(
+            secrets,
+            event_id,
+            timestamp,
+            raw_body,
+            signature,
+            allow_legacy=self._config.erp_webhook_sign_legacy,
+        )
+        if scheme is None:
             logger.warning("erp_webhook_invalid_signature", event_id=event_id)
             raise AuthError("invalid webhook signature")
+        if scheme is SignatureScheme.LEGACY:
+            logger.warning("erp_webhook_legacy_signature", event_id=event_id)
 
         try:
             event_id = str(uuid.UUID(event_id or ""))
@@ -216,8 +350,27 @@ class ErpEventsService:
 
         parsed = _parse_body(raw_body, event_type)
         envelope, data = parsed.envelope, parsed.data
-        body_hash = hashlib.sha256(raw_body).hexdigest()
+        body_hash: str | None = _body_hash(raw_body, parsed, event_type)
         status, error = parsed.status, parsed.error
+        # Метка подписи v2 вне окна: событие не обрабатывается (код акцепта не уходит), строка
+        # `rejected`. Хеш тела не пишем: такая строка не должна делать «повтором» законный ретрай.
+        stale = (
+            timestamp_problem(timestamp, datetime.now(UTC))
+            if scheme is SignatureScheme.V2
+            else None
+        )
+        if stale is not None:
+            status, error, body_hash = "rejected", stale, None
+        # Код акцепта не ждёт очереди: задача и `outbox` хранили бы его в БД. Строка журнала
+        # сразу «обработана» (код вырезан), доставка — ниже, из памяти этого запроса.
+        code_event = (
+            envelope
+            if stale is None and isinstance(envelope, QuoteAcceptanceCodeRequestedEvent)
+            else None
+        )
+        if code_event is not None:
+            status = "processed"
+        now = datetime.now(UTC)
         incoming = ErpIncomingEvent(
             event_id=event_id,
             event_type=event_type[:64],
@@ -230,30 +383,47 @@ class ErpEventsService:
             payload=data,
             status=status,
             error=error,
-            processed_at=None if status == "received" else datetime.now(UTC),
+            processed_at=None if status == "received" else now,
+            notified_at=now if code_event is not None else None,
             body_sha256=body_hash,
         )
         try:
             async with self._sessions() as session, session.begin():
-                if await session.get(ErpIncomingEvent, event_id) is not None:
+                known = await session.get(ErpIncomingEvent, event_id)
+                if known is not None and (
+                    stale is not None
+                    or known.status != "rejected"
+                    or not (known.error or "").startswith(STALE_PREFIX)
+                ):
                     logger.info("erp_webhook_duplicate", event_id=event_id, event_type=event_type)
                     return True, "duplicate"
-                # Подпись не покрывает X-Event-Id и X-Timestamp: перехваченное тело можно прислать
-                # под новым id. Тело, чей sha256 уже принят под другим id, — повтор: 200 и
-                # `rejected`, без обработки.
-                original = await session.scalar(
-                    select(ErpIncomingEvent.event_id)
-                    .where(ErpIncomingEvent.body_sha256 == body_hash)
-                    .limit(1)
+                if known is not None:
+                    # Ранее отклонено по метке (часы ERP уходили), теперь метка верна: не теряем.
+                    await session.delete(known)
+                    await session.flush()
+                # Второй рубеж (FIX-35), он же защита от старой подписи (не покрывает X-Event-Id):
+                # тело, чей sha256 уже принят под другим id, — повтор: 200 и `rejected`.
+                original = (
+                    await session.scalar(
+                        select(ErpIncomingEvent.event_id)
+                        .where(ErpIncomingEvent.body_sha256 == body_hash)
+                        .limit(1)
+                    )
+                    if body_hash is not None
+                    else None
                 )
                 if original is not None:
                     incoming.status, status = "rejected", "rejected"
                     incoming.error = error = f"replayed body: already received as event {original}"
                     incoming.processed_at = datetime.now(UTC)
+                    incoming.notified_at = None
+                    code_event = None  # повтор тела: код не отправляется
                 session.add(incoming)
         except IntegrityError:  # тот же event_id вставил параллельный запрос
             return True, "duplicate"
 
+        if code_event is not None:
+            return False, await self._acceptance_code.deliver(event_id, code_event)
         if status != "received":
             logger.warning(
                 "erp_webhook_not_processed", event_id=event_id, status=status, reason=error
@@ -354,6 +524,8 @@ class ErpEventsService:
                 return True
             if event_row.status in ("rejected", "skipped"):
                 return False
+            if event_row.event_type == CODE_EVENT:
+                return False  # код вырезан из журнала и доставляется при приёме, не из очереди
 
             envelope = parse_event(event_row.payload)
             client = await session.get(Client, envelope.crm_client_id)

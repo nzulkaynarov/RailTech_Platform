@@ -13,19 +13,13 @@ import uuid
 from dataclasses import dataclass
 from typing import Any, Protocol
 
-import httpx
-
-from app.config import Settings
-from app.domain.erp_connector import INTEGRATION_PREFIX, base_url_problem
 from app.domain.errors import (
     ConflictError,
     Reason,
     UpstreamUnavailableError,
     ValidationFailedError,
 )
-from app.integrations.erp import ErpConnection, resolve_connection
-from app.security.secrets_store import SecretsStore
-from app.services.settings import SettingsService
+from app.integrations.erp_http import ErpIntegrationHttp, bad_response
 
 
 @dataclass(frozen=True, slots=True)
@@ -36,9 +30,12 @@ class ProvisionPayload:
     role: str
     permissions: tuple[str, ...]
     is_active: bool = True
+    # Системные роли ERP из CRM (`SystemRoleCode`, FIX-63): `None` — поле не отправляется (ERP роли
+    # не трогает), `()` — снять все ранее выданные из CRM.
+    role_codes: tuple[str, ...] | None = None
 
     def as_json(self) -> dict[str, Any]:
-        return {
+        body: dict[str, Any] = {
             "crm_user_id": self.crm_user_id,
             "email": self.email,
             "name": self.name,
@@ -46,6 +43,9 @@ class ProvisionPayload:
             "permissions": list(self.permissions),
             "is_active": self.is_active,
         }
+        if self.role_codes is not None:
+            body["role_codes"] = list(self.role_codes)
+        return body
 
 
 class ErpUsersClient(Protocol):
@@ -58,20 +58,7 @@ class ErpUsersClient(Protocol):
         ...
 
 
-class HttpxErpUsersClient:
-    def __init__(
-        self,
-        store: SecretsStore,
-        config: Settings,
-        settings: SettingsService | None = None,
-        *,
-        timeout_s: float = 10.0,
-    ) -> None:
-        self._store = store
-        self._config = config
-        self._settings = settings
-        self._timeout_s = timeout_s
-
+class HttpxErpUsersClient(ErpIntegrationHttp):
     async def provision_user(self, payload: ProvisionPayload) -> int:
         response = await self._send(
             "POST",
@@ -88,7 +75,7 @@ class HttpxErpUsersClient:
                 f"erp validation error: {response.text[:300]}", reason=Reason.ERP_BAD_RESPONSE
             )
         if response.status_code not in (200, 201):
-            raise _bad_response(response)
+            raise bad_response(response)
         try:
             return int(response.json()["erp_user_id"])
         except (ValueError, KeyError, TypeError) as exc:
@@ -101,63 +88,5 @@ class HttpxErpUsersClient:
         if response.status_code == 404:
             return False
         if response.status_code != 204:
-            raise _bad_response(response)
+            raise bad_response(response)
         return True
-
-    async def _connection(self) -> ErpConnection:
-        # Клиент работает в воркере, а коннектор сохраняют в API (другой процесс): TTL-кэш настроек
-        # воркера не знает о сохранении. Сбрасываем перед чтением — задача видит текущий адрес ERP
-        # (FIX-11b); секреты `SecretsStore` не кэширует.
-        if self._settings is not None:
-            self._settings.invalidate()
-        connection = await resolve_connection(self._store, self._config, self._settings)
-        if connection is None:
-            raise ConflictError("erp connector is not configured", reason=Reason.ERP_NOT_CONFIGURED)
-        problem = base_url_problem(connection.base_url)
-        if problem is not None:
-            raise ValidationFailedError(
-                f"erp base url is invalid: {problem}",
-                reason=Reason.ERP_INVALID_URL,
-                field="base_url",
-            )
-        return connection
-
-    async def _send(
-        self,
-        method: str,
-        path: str,
-        *,
-        json: dict[str, Any] | None = None,
-        extra_headers: dict[str, str] | None = None,
-    ) -> httpx.Response:
-        connection = await self._connection()
-        headers = {
-            "Authorization": f"Bearer {connection.token}",
-            "Accept": "application/json",
-            **(extra_headers or {}),
-        }
-        url = f"{connection.base_url.rstrip('/')}{INTEGRATION_PREFIX}{path}"
-        try:
-            async with httpx.AsyncClient(timeout=self._timeout_s) as client:
-                response = await client.request(method, url, json=json, headers=headers)
-        except httpx.TimeoutException as exc:
-            raise UpstreamUnavailableError("erp timeout", reason=Reason.ERP_UNAVAILABLE) from exc
-        except httpx.InvalidURL as exc:
-            raise ValidationFailedError(
-                str(exc), reason=Reason.ERP_INVALID_URL, field="base_url"
-            ) from exc
-        except httpx.HTTPError as exc:
-            raise UpstreamUnavailableError(
-                type(exc).__name__, reason=Reason.ERP_UNAVAILABLE
-            ) from exc
-        if response.status_code in (401, 403):
-            raise UpstreamUnavailableError(
-                f"HTTP {response.status_code}", reason=Reason.ERP_UNAUTHORIZED
-            )
-        return response
-
-
-def _bad_response(response: httpx.Response) -> UpstreamUnavailableError:
-    return UpstreamUnavailableError(
-        f"erp bad response: HTTP {response.status_code}", reason=Reason.ERP_BAD_RESPONSE
-    )

@@ -1,4 +1,6 @@
-"""Все 21 событие ERP → CRM на настоящей БД; примеры контракта как фикстуры (FIX-35; I-15, G-5).
+"""События ERP → CRM на настоящей БД; примеры контракта как фикстуры (FIX-35; I-15, G-5).
+
+Код акцепта (`quote.acceptance_code_requested`) — отдельно: `test_erp_acceptance_code.py`.
 
 Вход — тела из `packages/contracts/examples/events` (те же файлы использует ERP): подписанный
 вебхук через настоящий приёмник → строка журнала → обработка → зеркало сделки, лента лида,
@@ -11,7 +13,7 @@ import hashlib
 import hmac
 import json
 import uuid
-from datetime import datetime
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
 import pytest
@@ -19,17 +21,21 @@ from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
+from app.domain.errors import AuthError
 from app.models.clients import Client, Document
 from app.models.deals import Deal
 from app.models.integrations import ErpIncomingEvent
 from app.models.leads import LeadNote
+from app.schemas.erp_events import CODE_EVENT
+from app.services.erp_events import sign_v2
 from tests.integration.test_erp_events import Harness
 from tests.seam_events import event_types, example_event
 
 pytestmark = pytest.mark.integration
 
 SECRET = "x" * 40  # секрет Harness (Settings.erp_webhook_secret)
-ALL_EVENTS = event_types()
+#: Код акцепта не проходит очередь и журнал как остальные: отдельный набор тестов.
+ALL_EVENTS = [event for event in event_types() if event != CODE_EVENT]
 COMPANY = 118  # erp_company_id в примерах контракта
 #: События, по которым бот пишет клиенту (`client_message` в erp_bot_messages); по остальным молчит.
 CLIENT_MESSAGE_EVENTS = {
@@ -76,7 +82,7 @@ async def notes(harness: Harness, lead_id: int) -> list[str]:
         return [row.text for row in rows]
 
 
-# ── 1. Каждое из 21 событий: приём → обработка → результат ────────────────────────────────────────
+# ── 1. Каждое событие контракта: приём → обработка → результат ───────────────────────────────────
 
 
 @pytest.mark.parametrize("event", ALL_EVENTS)
@@ -377,3 +383,98 @@ async def test_client_is_untouched_by_the_replayed_event(harness: Harness) -> No
     assert client.erp_company_id == COMPANY
     assert sorted(statuses) == ["received", "rejected"]
     assert deals == []  # до обработки зеркала ещё нет: повтор его не создаёт
+
+
+# ── 5. Подпись v2 и окно X-Timestamp на настоящей БД (FIX-61) ─────────────────────────────────
+
+
+def _stamp(offset_s: float = 0.0) -> str:
+    return (datetime.now(UTC) + timedelta(seconds=offset_s)).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+
+def _legacy_off(harness: Harness) -> None:
+    harness.service._config = harness.service._config.model_copy(
+        update={"erp_webhook_sign_legacy": False}
+    )
+
+
+async def test_v2_event_is_applied_and_the_forged_id_and_old_stamp_are_refused(
+    harness: Harness,
+) -> None:
+    _legacy_off(harness)
+    body, _, lead_id = await seeded(harness, "invoice.issued")
+    raw = json.dumps(body).encode()
+    event_id, stamp = str(uuid.uuid4()), _stamp()
+    signature = sign_v2(SECRET, event_id, stamp, raw)
+
+    assert await harness.service.receive_event(
+        event_id, body["event"], signature, raw, timestamp=stamp
+    ) == (False, "enqueued")
+    await harness.service.process_event(event_id)
+    assert len(await notes(harness, lead_id)) == 1
+
+    # то же тело и та же подпись под новым X-Event-Id — отказ: подпись не сходится, строки нет
+    forged = str(uuid.uuid4())
+    with pytest.raises(AuthError):
+        await harness.service.receive_event(forged, body["event"], signature, raw, timestamp=stamp)
+    async with harness.sessions() as session:
+        assert await session.get(ErpIncomingEvent, forged) is None
+    # старая схема после выключения настройки — отказ
+    with pytest.raises(AuthError):
+        await harness.service.receive_event(forged, body["event"], sign(raw), raw, timestamp=stamp)
+    # подписанное верно, но с меткой давности — `rejected`, без обработки и без хеша тела
+    old_id, old = str(uuid.uuid4()), _stamp(-1200)
+    assert await harness.service.receive_event(
+        old_id, body["event"], sign_v2(SECRET, old_id, old, raw), raw, timestamp=old
+    ) == (False, "rejected")
+    row = await harness.row(old_id)
+    assert (row.status, row.body_sha256) == ("rejected", None)
+    assert (row.error or "").startswith("stale timestamp")
+    assert len(await notes(harness, lead_id)) == 1
+
+
+async def test_a_retry_with_a_fresh_stamp_replaces_the_row_rejected_for_its_stamp(
+    harness: Harness,
+) -> None:
+    _legacy_off(harness)
+    body, _, lead_id = await seeded(harness, "invoice.issued")
+    raw = json.dumps(body).encode()
+    event_id, stale, fresh = str(uuid.uuid4()), _stamp(-1200), _stamp()
+
+    assert (
+        await harness.service.receive_event(
+            event_id, body["event"], sign_v2(SECRET, event_id, stale, raw), raw, timestamp=stale
+        )
+    )[1] == "rejected"
+    assert await harness.service.receive_event(
+        event_id, body["event"], sign_v2(SECRET, event_id, fresh, raw), raw, timestamp=fresh
+    ) == (False, "enqueued")
+    row = await harness.row(event_id)
+    assert (row.status, row.error) == ("received", None)
+    await harness.service.process_event(event_id)
+    assert len(await notes(harness, lead_id)) == 1
+    # принятое событие теперь — обычный дубль
+    assert (
+        await harness.service.receive_event(
+            event_id, body["event"], sign_v2(SECRET, event_id, fresh, raw), raw, timestamp=fresh
+        )
+    ) == (True, "duplicate")
+
+
+async def test_the_body_hash_rail_still_holds_for_v2(harness: Harness) -> None:
+    """Второй рубеж (FIX-35) остаётся: то же тело под другим id с СВОЕЙ подписью v2 — повтор."""
+    body, _, _ = await seeded(harness, "invoice.issued")
+    raw = json.dumps(body).encode()
+    first, second, stamp = str(uuid.uuid4()), str(uuid.uuid4()), _stamp()
+    assert (
+        await harness.service.receive_event(
+            first, body["event"], sign_v2(SECRET, first, stamp, raw), raw, timestamp=stamp
+        )
+    )[1] == "enqueued"
+    assert (
+        await harness.service.receive_event(
+            second, body["event"], sign_v2(SECRET, second, stamp, raw), raw, timestamp=stamp
+        )
+    )[1] == "rejected"
+    row = await harness.row(second)
+    assert (row.error or "").startswith("replayed body")

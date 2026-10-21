@@ -101,14 +101,19 @@ class ErpConnectorIn(BaseModel):
 
 
 class ErpCheckOut(BaseModel):
-    """Ответ ERP на `GET /api/integration/v1/health` (схема `Health` контракта) и время ответа."""
+    """Итог «Проверить связь»: ответ ERP `GET /api/integration/v1/health` (схема `Health`) и время.
 
-    status: Literal["ok", "degraded"]
-    version: str
-    migrations_applied: bool
-    queue_alive: bool
+    `rate_limited` — ERP ответила 429 (лимит сервисного токена, шов 0.3.0): это статус, не ошибка;
+    `retry_after_s` — через сколько секунд повторить, остальные поля пробы тогда пусты.
+    """
+
+    status: Literal["ok", "degraded", "rate_limited"]
+    version: str | None = None
+    migrations_applied: bool | None = None
+    queue_alive: bool | None = None
     checked_at: datetime
-    latency_ms: int
+    latency_ms: int | None = None
+    retry_after_s: int | None = None
 
 
 Source = Literal["db", "env", "none"]

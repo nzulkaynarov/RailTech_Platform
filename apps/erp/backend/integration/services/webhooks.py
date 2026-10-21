@@ -4,8 +4,8 @@
 Заголовки:
 - X-Event-Id (UUIDv4)
 - X-Event-Type
-- X-Timestamp (ISO-8601 with tz)
-- X-Signature: sha256=<HMAC(body, ERP_WEBHOOK_SECRET)>
+- X-Timestamp (UTC ISO 8601, момент отправки этой попытки)
+- X-Signature: sha256=<HMAC(secret, "{X-Event-Id}.{X-Timestamp}.{body}")> — схема v2 (FIX-61, Q-FIX35-2)
 
 Тело и валидация соответствуют JSON-схеме `packages/contracts/events.schema.json`.
 """
@@ -17,6 +17,7 @@ import hmac
 import json
 import logging
 import uuid
+from datetime import timezone as dt_timezone
 from decimal import Decimal
 from typing import Any, Dict, List, Optional, Union
 
@@ -37,6 +38,7 @@ VALID_EVENT_TYPES = {
     "quote.viewed",
     "quote.accepted",
     "quote.rejected",
+    "quote.acceptance_code_requested",
     "contract.signed",
     "invoice.issued",
     "invoice.paid",
@@ -71,15 +73,97 @@ def webhook_signing_secret() -> str:
 
 
 def sign_payload(secret: str, body_bytes: bytes) -> str:
-    """Вычисляет HMAC-SHA256 подпись тела запроса в формате sha256=<hex>."""
+    """Старая подпись (схема v1): HMAC-SHA256 только по телу, `sha256=<hex>`.
+
+    ERP так больше не подписывает (FIX-61); функция осталась как эталон старой схемы для тестов совместимости.
+    """
     signature = hmac.new(secret.encode("utf-8"), body_bytes, hashlib.sha256).hexdigest()
     return f"sha256={signature}"
 
 
+def signature_timestamp() -> str:
+    """`X-Timestamp` попытки доставки: сейчас, UTC, ISO 8601 с `Z` и точностью до секунды (CONTRACTS §3)."""
+    return timezone.now().astimezone(dt_timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+
+def sign_payload_v2(secret: str, event_id: Any, timestamp: str, body_bytes: bytes) -> str:
+    """Подпись v2 (FIX-61): `sha256=HMAC(secret, "{X-Event-Id}.{X-Timestamp}.{body}")`.
+
+    Подписанная строка собирается из байтов: `event_id` и `timestamp` — ровно как уходят в заголовках, `body_bytes` —
+    ровно как уходят в запросе. Тело под чужим `X-Event-Id` или со старой меткой даёт другую подпись.
+    """
+    signed = f"{event_id}.{timestamp}.".encode() + body_bytes
+    return f"sha256={hmac.new(secret.encode('utf-8'), signed, hashlib.sha256).hexdigest()}"
+
+
+def verify_signature_v2(secret: str, event_id: Any, timestamp: str, body_bytes: bytes, signature_header: str) -> bool:
+    """Проверяет `X-Signature` схемы v2."""
+    expected = sign_payload_v2(secret, event_id, timestamp, body_bytes)
+    return hmac.compare_digest(expected.encode(), signature_header.strip().encode())
+
+
 def verify_signature(secret: str, body_bytes: bytes, signature_header: str) -> bool:
-    """Проверяет заголовок X-Signature."""
+    """Проверяет заголовок `X-Signature` старой схемы (только тело)."""
     expected = sign_payload(secret, body_bytes)
     return hmac.compare_digest(expected, signature_header.strip())
+
+
+# ── Секреты в теле события (FIX-60a, Q-FIX22-1) ─────────────────────────────────────────────────────────────────────
+#
+# Одноразовый код акцепта (`quote.acceptance_code_requested`, `payload.code`) должен дойти до бота CRM, но не осесть ни в
+# журнале доставки (`IntegrationWebhookEvent.payload` видна в админке и в бэкапах), ни в логах. Поэтому в журнал пишется
+# тело с маской, а настоящее значение лежит только в кэше (Redis) под ключом события на время жизни кода — оттуда его
+# берёт задача доставки и кладёт в тело запроса. Кэша нет (код протух, Redis перезапущен) — доставка не повторяется:
+# событие переходит в `FAILED` с пометкой, а клиент запрашивает новый код.
+
+#: Поля `payload`, значения которых секретны: тип события → имена полей.
+SECRET_PAYLOAD_FIELDS: Dict[str, tuple] = {"quote.acceptance_code_requested": ("code",)}
+
+#: Что вместо значения секретного поля остаётся в журнале.
+SECRET_MASK = "***"
+
+#: Сколько секрет живёт в кэше: срок кода акцепта (15 минут) с запасом на очередь Celery.
+SECRET_PAYLOAD_TTL = 20 * 60
+
+
+def _secret_cache_key(event_id: Any) -> str:
+    return f"integration:webhook-secret:{event_id}"
+
+
+def mask_secret_payload(event_type: str, payload: Dict[str, Any]) -> tuple:
+    """(`payload` для журнала, секретные значения): поля из `SECRET_PAYLOAD_FIELDS` заменены на `SECRET_MASK`."""
+    fields = SECRET_PAYLOAD_FIELDS.get(event_type, ())
+    secrets_found = {name: payload[name] for name in fields if name in payload}
+    if not secrets_found:
+        return payload, {}
+    return {**payload, **{name: SECRET_MASK for name in secrets_found}}, secrets_found
+
+
+def stash_secret_payload(event_id: Any, secrets_found: Dict[str, Any]) -> None:
+    from django.core.cache import cache
+
+    cache.set(_secret_cache_key(event_id), secrets_found, SECRET_PAYLOAD_TTL)
+
+
+def delivery_payload(event: IntegrationWebhookEvent) -> Optional[Dict[str, Any]]:
+    """Тело события для отправки: журнал плюс секреты из кэша. `None` — секрет потерян (протух), отправлять нечего."""
+    fields = SECRET_PAYLOAD_FIELDS.get(event.event_type)
+    if not fields:
+        return event.payload
+    from django.core.cache import cache
+
+    secrets_found = cache.get(_secret_cache_key(event.event_id))
+    if not secrets_found or any(name not in secrets_found for name in fields):
+        return None
+    return {**event.payload, "payload": {**event.payload["payload"], **secrets_found}}
+
+
+def discard_secret_payload(event: IntegrationWebhookEvent) -> None:
+    """Секрет больше не нужен (событие доставлено): убрать из кэша, не дожидаясь срока."""
+    if event.event_type in SECRET_PAYLOAD_FIELDS:
+        from django.core.cache import cache
+
+        cache.delete(_secret_cache_key(event.event_id))
 
 
 def _format_amount(value: Optional[Union[str, Decimal]]) -> Optional[str]:
@@ -246,24 +330,30 @@ def emit_event(
     webhook_url = settings.CRM_WEBHOOK_URL
 
     body_bytes = json.dumps(envelope, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
+    # Секретное поле (код акцепта) в журнал не попадает: туда — тело с маской, настоящее значение — в кэш (см. выше).
+    journal_payload, secret_values = mask_secret_payload(event_type, envelope["payload"])
 
     headers = {
         "Content-Type": "application/json",
         "X-Event-Id": str(event_id),
         "X-Event-Type": event_type,
-        "X-Timestamp": envelope["occurred_at"],
+        "X-Timestamp": signature_timestamp(),
     }
     if secret:
-        headers["X-Signature"] = sign_payload(secret, body_bytes)
+        # Справочная подпись первой попытки; при каждой отправке (и ретрае) задача доставки подписывает заново (FIX-61).
+        headers["X-Signature"] = sign_payload_v2(secret, event_id, headers["X-Timestamp"], body_bytes)
 
     event_obj = IntegrationWebhookEvent.objects.create(
         event_id=event_id,
         event_type=event_type,
         target_url=webhook_url,
-        payload=envelope,
+        payload={**envelope, "payload": journal_payload} if secret_values else envelope,
         headers=headers,
         status=WebhookEventStatus.PENDING,
     )
+    if secret_values:
+        # Секрет — в кэш только после записи в журнал: упавший `create` не оставляет в кэше значение без события.
+        stash_secret_payload(event_id, secret_values)
 
     def _queue_task():
         from ..tasks import deliver_webhook_event
@@ -418,14 +508,26 @@ def emit_quote_sent(
     )
 
 
+def contact_refs(contact: Any) -> Dict[str, Any]:
+    """`erp_contact_id` и `crm_contact_id` контакта для тела события (CRM-идентификатор — `null`, если не сопоставлен)."""
+    crm_contact_id = CrmContactMapping.objects.filter(contact=contact).values_list("crm_contact_id", flat=True).first()
+    return {"erp_contact_id": contact.id, "crm_contact_id": crm_contact_id}
+
+
 def emit_quote_outcome(
     event_type: str,
     quote: Any,
     reason: Optional[str] = None,
     actor: Optional[Dict[str, Any]] = None,
     send_async: bool = True,
+    contact: Optional[Any] = None,
 ) -> Optional[IntegrationWebhookEvent]:
-    """События quote.viewed, quote.accepted, quote.rejected."""
+    """События quote.viewed, quote.accepted, quote.rejected.
+
+    `contact` — контакт клиента, принявший или отклонивший КП в Cabinet (Q-FIX22-6): в `payload` уходят `erp_contact_id`
+    и `crm_contact_id` (`null`, если контакт не сопоставлен), действующее лицо — клиент с именем контакта. Без контакта
+    (публичная страница КП, менеджер) полей нет.
+    """
     deal = quote.deal
     company_id = deal.company_id
     payload: Dict[str, Any] = {
@@ -434,6 +536,10 @@ def emit_quote_outcome(
     }
     if reason:
         payload["reason"] = reason
+    if contact is not None:
+        payload.update(contact_refs(contact))
+        if actor is None:
+            actor = build_actor(actor_type="client", name=getattr(contact, "name", None) or None)
 
     return emit_event(
         event_type=event_type,
@@ -441,6 +547,39 @@ def emit_quote_outcome(
         payload=payload,
         deal=deal,
         actor=actor,
+        send_async=send_async,
+    )
+
+
+def emit_quote_acceptance_code_requested(
+    quote: Any,
+    contact: Any,
+    code: str,
+    expires_at: Any,
+    send_async: bool = True,
+) -> Optional[IntegrationWebhookEvent]:
+    """Событие quote.acceptance_code_requested: клиент запросил код акцепта в Cabinet, код доставит бот CRM (Q-FIX22-1).
+
+    Шлётся только контакту, сопоставленному с контактом CRM (`crm_contact_id`): иначе боту некому писать — `None`, и
+    вызывающий код отправляет код письмом. `code` — секрет: в журнал доставки он не попадает (маска), в логи не пишется.
+    """
+    crm_contact_id = CrmContactMapping.objects.filter(contact=contact).values_list("crm_contact_id", flat=True).first()
+    if not crm_contact_id:
+        return None
+    deal = quote.deal
+    return emit_event(
+        event_type="quote.acceptance_code_requested",
+        erp_company_id=deal.company_id,
+        payload={
+            "erp_quote_id": quote.id,
+            "version": quote.version,
+            "erp_contact_id": contact.id,
+            "crm_contact_id": crm_contact_id,
+            "code": code,
+            "expires_at": expires_at.isoformat(),
+        },
+        deal=deal,
+        actor=build_actor(actor_type="client", name=getattr(contact, "name", None) or None),
         send_async=send_async,
     )
 
@@ -530,6 +669,10 @@ def emit_delivery_event(
         status_val = fulfillment.status.code if hasattr(fulfillment.status, "code") else str(fulfillment.status)
         status_str = status_val.lower()
 
+    # Принято и оспорено клиентом — физически это «доставлено»; в `DeliveryEvent.status` контракта значений
+    # `accepted`/`disputed` нет (решения клиента — в `delivery.line_accepted|disputed`), а прежняя подстановка
+    # `assembling` для них была неправдой (FIX-62, Q-FIX62-1).
+    status_str = {"accepted": "delivered", "disputed": "delivered"}.get(status_str, status_str)
     if status_str not in ("assembling", "in_transit", "ready_to_ship", "shipped", "delivered"):
         status_str = "assembling"
 

@@ -751,7 +751,8 @@ def reject_act(
     обязательна: без основания отказ бесполезен обеим сторонам.
 
     Акт возвращается в DRAFT — исполнитель правит и выпускает заново. Заказчик из портала (FIX-22) —
-    `portal_contact`, как у `sign_act`.
+    `portal_contact`, как у `sign_act`. CRM об этом узнаёт из события `act.returned` с причиной (FIX-62): статуса
+    «возвращён» у акта нет, событие выпускает сигнал по факту перехода (`integration.signals.handle_act_post_save`).
     """
 
     clean_reason = (reason or "").strip()
@@ -766,6 +767,12 @@ def reject_act(
     act.status = _astatus(ActStatusCode.DRAFT)
     act.rejection_reason = clean_reason
     act.issuer_signed_at = None
+    # Событие `act.returned` (FIX-62) выпускает сигнал акта по факту перехода ISSUED → DRAFT с причиной; кто вернул —
+    # сигнал знать не может, поэтому лицо клиента передаётся ему на экземпляре.
+    if portal_contact is not None:
+        act._event_actor = (
+            {"type": "client", "name": portal_contact.name} if portal_contact.name else {"type": "client"}
+        )
     act.save(update_fields=["status", "rejection_reason", "issuer_signed_at", "updated_at"])
     ActivityLog.objects.create(
         action="Акт отклонён заказчиком",

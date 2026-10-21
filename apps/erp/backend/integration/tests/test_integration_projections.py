@@ -228,6 +228,49 @@ def test_partial_invoice_is_receivable():
     assert get_company_summary_data(company.pk)["receivables"] == {"amount": "2000000.00", "currency": "UZS"}
 
 
+def test_receivables_by_currency_lists_each_currency_without_conversion():
+    """Q-FIX30-2 (контракт 0.3.0): долг по каждой валюте отдельно; курс не применяется, `receivables` — как раньше."""
+    from core.models import Currency
+
+    usd, _ = Currency.objects.get_or_create(code="USD", defaults={"name": "Доллар"})
+    eur, _ = Currency.objects.get_or_create(code="EUR", defaults={"name": "Евро"})
+    company = make_company()
+    deal = make_deal(company, DealStageCode.CLOSED_WON)
+    add_invoice(deal, InvoiceStatusCode.ISSUED, total="3000000")
+    add_invoice(deal, InvoiceStatusCode.OVERDUE, total="2000000")
+    add_invoice(deal, InvoiceStatusCode.PARTIAL, total="1500.50", paid="500.25", currency=usd)
+    add_invoice(deal, InvoiceStatusCode.ISSUED, total="700", currency=eur)
+    add_invoice(deal, InvoiceStatusCode.PAID, total="9999", paid="9999", currency=eur)  # оплачен — не долг
+    summary = get_company_summary_data(company.pk)
+    assert summary["receivables_by_currency"] == [
+        {"amount": "700.00", "currency": "EUR"},
+        {"amount": "1000.25", "currency": "USD"},
+        {"amount": "5000000.00", "currency": "UZS"},
+    ]
+    assert summary["receivables"] == {"amount": "5000000.00", "currency": "UZS"}, "одна валюта — по-прежнему UZS"
+
+
+def test_receivables_by_currency_without_uzs_and_without_debt():
+    from core.models import Currency
+
+    usd, _ = Currency.objects.get_or_create(code="USD", defaults={"name": "Доллар"})
+    company = make_company()
+    assert get_company_summary_data(company.pk)["receivables_by_currency"] == [], "долга нет — пустой список"
+    deal = make_deal(company, DealStageCode.CLOSED_WON)
+    add_invoice(deal, InvoiceStatusCode.ISSUED, total="900", currency=usd)
+    summary = get_company_summary_data(company.pk)
+    assert summary["receivables_by_currency"] == [{"amount": "900.00", "currency": "USD"}]
+    assert summary["receivables"] == {"amount": "900.00", "currency": "USD"}
+
+
+def test_receivables_by_currency_reaches_the_api_response(client):
+    company = make_company()
+    deal = make_deal(company, DealStageCode.CLOSED_WON)
+    add_invoice(deal, InvoiceStatusCode.ISSUED, total="1200000")
+    body = client.get(f"{PREFIX}/companies/{company.pk}/summary").json()
+    assert body["receivables_by_currency"] == [{"amount": "1200000.00", "currency": "UZS"}]
+
+
 def test_next_delivery_is_the_nearest_pending_line_from_delivery_lines(world):
     nearest = get_company_summary_data(world["company"].pk)["next_delivery"]
     assert nearest is not None

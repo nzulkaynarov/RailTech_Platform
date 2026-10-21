@@ -39,6 +39,7 @@ import type {
   ClientCreate,
   ClientDetail,
   ClientListItem,
+  ClientReceivablesOut,
   ClientUpdate,
   Close,
   ConsentRecord,
@@ -317,7 +318,7 @@ export const getListExternalServicesUrl = () => {
  * Все внешние сервисы ансамбля со статусом, подсказкой «что сделать», метриками и выключателем.
  *
  * Только чтение: статус — из последней фоновой проверки (раз в минуту / раз в 15 мин), без
- * вызовов моделей. Сервисы ERP — «нет данных», пока ERP не передаёт состояние (M3-ERP-06).
+ * вызовов моделей. Сервисы ERP — по ответу ERP на `GET /health` (`externals[]`, M3-ERP-06).
  * @summary List External Services
  */
 export const listExternalServices = async (
@@ -657,7 +658,8 @@ export const getDisableExternalServiceUrl = (key: string) => {
 
 /**
  * Выключить сервис вручную (пароль админа, аудит): вендор — вызовы на запасную модель,
- * Langfuse — без трейсов, почта — пауза очереди, Telegram — пауза исходящих.
+ * Langfuse — без трейсов, почта — пауза очереди, Telegram — пауза исходящих, сервис ERP —
+ * ERP перестаёт его вызывать (`PUT /externals/{code}/switch`).
  *
  * Нет выключателя или вендор запасной модели — `409 service_not_switchable`.
  * @summary Disable External Service
@@ -2382,6 +2384,146 @@ export const useUpdateClientContact = <TError = ErrorType<ErrorOut>, TContext = 
 > => {
   return useMutation(getUpdateClientContactMutationOptions(options), queryClient);
 };
+
+export const getGetClientReceivablesUrl = (clientId: number) => {
+  return `/api/v1/clients/${clientId}/erp-receivables`;
+};
+
+/**
+ * Долг клиента по валютам из ERP (`CompanySummary.receivables_by_currency`), шов 0.3.0.
+ *
+ * Сбой ERP — не ошибка: `status="unavailable"` (блок в карточке скрыт), ответ всегда 200.
+ * 404 — только если клиента нет в CRM.
+ * @summary Get Client Receivables
+ */
+export const getClientReceivables = async (
+  clientId: number,
+  options?: Parameters<typeof http>[1],
+): Promise<ClientReceivablesOut> => {
+  return http<ClientReceivablesOut>(getGetClientReceivablesUrl(clientId), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetClientReceivablesQueryKey = (clientId: number) => {
+  return [`/api/v1/clients/${clientId}/erp-receivables`] as const;
+};
+
+export const getGetClientReceivablesQueryOptions = <
+  TData = Awaited<ReturnType<typeof getClientReceivables>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  clientId: number,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getClientReceivables>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetClientReceivablesQueryKey(clientId);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getClientReceivables>>> = ({ signal }) =>
+    getClientReceivables(clientId, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: clientId !== null && clientId !== undefined,
+    ...queryOptions,
+  } as UseQueryOptions<Awaited<ReturnType<typeof getClientReceivables>>, TError, TData> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+};
+
+export type GetClientReceivablesQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getClientReceivables>>
+>;
+export type GetClientReceivablesQueryError = ErrorType<ErrorOut>;
+
+export function useGetClientReceivables<
+  TData = Awaited<ReturnType<typeof getClientReceivables>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  clientId: number,
+  options: {
+    query: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getClientReceivables>>, TError, TData>
+    > &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getClientReceivables>>,
+          TError,
+          Awaited<ReturnType<typeof getClientReceivables>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetClientReceivables<
+  TData = Awaited<ReturnType<typeof getClientReceivables>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  clientId: number,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getClientReceivables>>, TError, TData>
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getClientReceivables>>,
+          TError,
+          Awaited<ReturnType<typeof getClientReceivables>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetClientReceivables<
+  TData = Awaited<ReturnType<typeof getClientReceivables>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  clientId: number,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getClientReceivables>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary Get Client Receivables
+ */
+
+export function useGetClientReceivables<
+  TData = Awaited<ReturnType<typeof getClientReceivables>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  clientId: number,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getClientReceivables>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getGetClientReceivablesQueryOptions(clientId, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
 
 export const getLinkTelegramUrl = (clientId: number) => {
   return `/api/v1/clients/${clientId}/telegram`;
@@ -4809,7 +4951,8 @@ export const getCheckErpConnectionUrl = () => {
  * «Проверить связь»: `GET {base_url}/api/integration/v1/health` с сервисным токеном, 5 с.
  *
  * Ошибки (ADR-0017, `details.reason`): `erp_not_configured` (409), `erp_invalid_url` (422),
- * `erp_unauthorized` / `erp_unavailable` / `erp_bad_response` (502).
+ * `erp_unauthorized` / `erp_unavailable` / `erp_bad_response` (502). Лимит частоты ERP (429) — не
+ * ошибка: `status: "rate_limited"` и `retry_after_s` (пауза из `Retry-After`).
  * @summary Check Erp Connection
  */
 export const checkErpConnection = async (
@@ -4878,13 +5021,15 @@ export const getReceiveErpEventUrl = () => {
 };
 
 /**
- * Приём входящих вебхуков событий ERP (M3-CRM-04, CONTRACTS §3, FIX-33).
+ * Приём входящих вебхуков событий ERP (M3-CRM-04, CONTRACTS §3, FIX-33, FIX-61).
  *
- * Порядок: подпись HMAC-SHA256 по сырому телу (X-Signature, ERP_WEBHOOK_SECRET) — ДО разбора
- * тела и проверки остальных заголовков; идемпотентность по X-Event-Id; быстрый 200 и фоновая
- * обработка в Procrastinate. 401 — только неверная подпись; тело, которое мы принять не можем
- * (чужой тип события, расхождение с заголовком), записывается как `rejected` и тоже получает 200:
- * ретраи ERP ничего бы не изменили.
+ * Порядок: подпись — ДО разбора тела и проверки остальных заголовков. Схема v2:
+ * HMAC-SHA256(ERP_WEBHOOK_SECRET, "{X-Event-Id}.{X-Timestamp}.{тело}"); пока
+ * `ERP_WEBHOOK_SIGN_LEGACY=true`, принимается и старая (HMAC только тела). Идемпотентность по
+ * X-Event-Id; быстрый 200 и фоновая обработка в Procrastinate. 401 — только неверная подпись;
+ * тело, которое мы принять не можем (чужой тип события, расхождение с заголовком), и метка v2
+ * вне окна 300 с записываются как `rejected` и тоже получают 200: ретраи ERP ничего бы не
+ * изменили (ERP подписывает ретрай заново).
  * @summary Receive Erp Event
  */
 export const receiveErpEvent = async (

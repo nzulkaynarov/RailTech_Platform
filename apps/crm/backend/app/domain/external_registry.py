@@ -16,7 +16,7 @@ from typing import Final, Literal
 
 Status = Literal["ok", "warn", "fail", "unknown", "off"]
 Tier = Literal["cheap", "heavy"]
-SwitchKind = Literal["vendor", "langfuse", "mail", "telegram"]
+SwitchKind = Literal["vendor", "langfuse", "mail", "telegram", "erp"]
 System = Literal["crm", "erp", "ensemble"]
 Source = Literal["crm", "erp"]
 
@@ -40,8 +40,9 @@ VENDOR_TITLES: Final = {
     "openai": "OpenAI",
 }
 TLS_HOSTS: Final = ("crm", "erp", "cabinet")
+ERP_SERVICE_PREFIX: Final = "erp."
 ERP_REPORTED_REASON: Final = (
-    "Нет данных: ERP пока не передаёт состояние своих внешних сервисов (появится с M3-ERP-06)"
+    "Нет данных: эта версия ERP не передаёт состояние своих внешних сервисов"
 )
 
 
@@ -164,12 +165,42 @@ _AFTER_VENDORS: Final = (
         fix_path="/backups",
     ),
 )
+#: Сервисы ERP (M3-ERP-06): код = `Health.externals[].code` контракта; последнее поле — выключатель
+#: (Sentry выключить нельзя — перехватчик ошибок не вызывается «по требованию»).
 _ERP_SERVICES: Final = (
-    ("erp.cbu_rates", "Курсы ЦБ", "Курсы валют для цен и КП в ERP"),
-    ("erp.customs_tariff", "Тариф и ТН ВЭД", "Таможенный тариф и коды ТН ВЭД для карточек товаров"),
-    ("erp.mail", "Почта ERP", "Письма клиентам и сотрудникам бэк-офиса из ERP"),
-    ("erp.sentry", "Sentry (ошибки ERP)", "Сбор ошибок приложения ERP"),
+    ("erp.cbu_rates", "Курсы ЦБ (ERP)", "Курсы валют для цен и КП в ERP", True),
+    (
+        "erp.customs_tariff",
+        "Тариф и ТН ВЭД (ERP)",
+        "Таможенный тариф и коды ТН ВЭД для карточек",
+        True,
+    ),
+    ("erp.mail", "Почта ERP", "Письма клиентам и сотрудникам бэк-офиса из ERP", True),
+    (
+        "erp.litellm",
+        "Модели ИИ в ERP",
+        "Разбор запросов, сопоставление с каталогом, черновики КП",
+        True,
+    ),
+    ("erp.s3", "Файлы ERP (S3)", "PDF КП и договоров, вложения, изображения каталога", True),
+    ("erp.sentry", "Sentry (ошибки ERP)", "Сбор ошибок приложения ERP", False),
 )
+#: Что произойдёт при выключении сервиса ERP — подпись в окне подтверждения.
+ERP_SWITCH_EFFECTS: Final = {
+    "erp.cbu_rates": "ERP перестанет загружать курсы ЦБ; в КП действуют последние загруженные",
+    "erp.customs_tariff": "ERP перестанет синхронизировать ТН ВЭД; коды в карточках остаются",
+    "erp.mail": (
+        "ERP не будет отправлять письма: приглашения и КП клиентам не уйдут, "
+        "попытки останутся в журнале ERP"
+    ),
+    "erp.litellm": (
+        "ИИ в ERP остановится: разбор запросов и черновики КП недоступны, остальное — вручную"
+    ),
+    "erp.s3": (
+        "ERP не сможет читать и писать файлы в хранилище: PDF, вложения и изображения "
+        "станут недоступны"
+    ),
+}
 
 
 def vendor_key(provider: str) -> str:
@@ -220,16 +251,20 @@ def _tls_spec(name: str) -> ServiceSpec:
     )
 
 
-def _erp_spec(key: str, title: str, purpose: str) -> ServiceSpec:
+def _erp_spec(key: str, title: str, purpose: str, switchable: bool) -> ServiceSpec:
     return ServiceSpec(
         key=key,
         title=title,
         purpose=purpose,
         system="erp",
         source="erp",
-        check="состояние передаёт ERP (`externals[]` в integration /health, M3-ERP-06)",
-        tiers=(),
+        check=(
+            "ERP сама передаёт состояние по своим журналам и счётчикам в ответе на проверку "
+            "связи, без запросов к самому сервису"
+        ),
+        tiers=("cheap",),
         fix_path="/integrations?tab=erp",
+        switch="erp" if switchable else None,
     )
 
 
@@ -300,4 +335,5 @@ SWITCH_EFFECTS: Final[dict[SwitchKind, str]] = {
     "langfuse": "Трейсы диалогов и квалификатора перестанут записываться в Langfuse",
     "mail": "Письма сотрудникам будут копиться в очереди и уйдут после включения",
     "vendor": "",
+    "erp": "",  # по сервису — `ERP_SWITCH_EFFECTS`
 }

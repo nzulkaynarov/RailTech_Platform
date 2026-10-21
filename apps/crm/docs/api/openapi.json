@@ -1329,6 +1329,54 @@
         "title": "ClientListItem",
         "type": "object"
       },
+      "ClientReceivablesOut": {
+        "description": "Долг клиента по валютам из ERP (шов 0.3.0, Q-FIX30-2), без пересчёта по курсу.\n\n`ok` — ответ получен: пустой список — долга нет. `unavailable` — блок не показываем (ERP не\nнастроена, не отвечает, ограничила частоту или не присылает поле); `reason` — для подсказки.",
+        "properties": {
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          },
+          "receivables": {
+            "items": {
+              "$ref": "#/components/schemas/MoneyOut"
+            },
+            "title": "Receivables",
+            "type": "array"
+          },
+          "retry_after_s": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Retry After S"
+          },
+          "status": {
+            "enum": [
+              "ok",
+              "unavailable"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status",
+          "receivables"
+        ],
+        "title": "ClientReceivablesOut",
+        "type": "object"
+      },
       "ClientUpdate": {
         "properties": {
           "inn": {
@@ -2882,7 +2930,7 @@
         "type": "object"
       },
       "ErpCheckOut": {
-        "description": "Ответ ERP на `GET /api/integration/v1/health` (схема `Health` контракта) и время ответа.",
+        "description": "Итог «Проверить связь»: ответ ERP `GET /api/integration/v1/health` (схема `Health`) и время.\n\n`rate_limited` — ERP ответила 429 (лимит сервисного токена, шов 0.3.0): это статус, не ошибка;\n`retry_after_s` — через сколько секунд повторить, остальные поля пробы тогда пусты.",
         "properties": {
           "checked_at": {
             "format": "date-time",
@@ -2890,37 +2938,73 @@
             "type": "string"
           },
           "latency_ms": {
-            "title": "Latency Ms",
-            "type": "integer"
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Latency Ms"
           },
           "migrations_applied": {
-            "title": "Migrations Applied",
-            "type": "boolean"
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Migrations Applied"
           },
           "queue_alive": {
-            "title": "Queue Alive",
-            "type": "boolean"
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Queue Alive"
+          },
+          "retry_after_s": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Retry After S"
           },
           "status": {
             "enum": [
               "ok",
-              "degraded"
+              "degraded",
+              "rate_limited"
             ],
             "title": "Status",
             "type": "string"
           },
           "version": {
-            "title": "Version",
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Version"
           }
         },
         "required": [
           "status",
-          "version",
-          "migrations_applied",
-          "queue_alive",
-          "checked_at",
-          "latency_ms"
+          "checked_at"
         ],
         "title": "ErpCheckOut",
         "type": "object"
@@ -5051,6 +5135,21 @@
             "title": "Email",
             "type": "string"
           },
+          "erp_role_codes": {
+            "items": {
+              "enum": [
+                "CALCULATION",
+                "CATALOG_SUPPLY",
+                "FULFILLMENT",
+                "FINANCE",
+                "HEAD",
+                "VIEWER"
+              ],
+              "type": "string"
+            },
+            "title": "Erp Role Codes",
+            "type": "array"
+          },
           "full_name": {
             "title": "Full Name",
             "type": "string"
@@ -5486,6 +5585,25 @@
           "cost_usd"
         ],
         "title": "ModelTestResult",
+        "type": "object"
+      },
+      "MoneyOut": {
+        "description": "Сумма в одной валюте (`Money` контракта ERP): строка с двумя знаками и код ISO 4217.",
+        "properties": {
+          "amount": {
+            "title": "Amount",
+            "type": "string"
+          },
+          "currency": {
+            "title": "Currency",
+            "type": "string"
+          }
+        },
+        "required": [
+          "amount",
+          "currency"
+        ],
+        "title": "MoneyOut",
         "type": "object"
       },
       "NoteCreate": {
@@ -5986,6 +6104,7 @@
           "erp_unauthorized",
           "erp_unavailable",
           "erp_bad_response",
+          "erp_rate_limited",
           "erp_inn_conflict",
           "smtp_not_configured",
           "smtp_invalid_host",
@@ -6772,7 +6891,8 @@
               "vendor",
               "langfuse",
               "mail",
-              "telegram"
+              "telegram",
+              "erp"
             ],
             "title": "Kind",
             "type": "string"
@@ -7670,6 +7790,21 @@
             "title": "Email",
             "type": "string"
           },
+          "erp_role_codes": {
+            "items": {
+              "enum": [
+                "CALCULATION",
+                "CATALOG_SUPPLY",
+                "FULFILLMENT",
+                "FINANCE",
+                "HEAD",
+                "VIEWER"
+              ],
+              "type": "string"
+            },
+            "title": "Erp Role Codes",
+            "type": "array"
+          },
           "full_name": {
             "title": "Full Name",
             "type": "string"
@@ -7761,6 +7896,28 @@
             "default": false,
             "title": "Clear Tg User Id",
             "type": "boolean"
+          },
+          "erp_role_codes": {
+            "anyOf": [
+              {
+                "items": {
+                  "enum": [
+                    "CALCULATION",
+                    "CATALOG_SUPPLY",
+                    "FULFILLMENT",
+                    "FINANCE",
+                    "HEAD",
+                    "VIEWER"
+                  ],
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Erp Role Codes"
           },
           "full_name": {
             "anyOf": [
@@ -8103,7 +8260,7 @@
     },
     "/api/v1/admin/external-services": {
       "get": {
-        "description": "Все внешние сервисы ансамбля со статусом, подсказкой «что сделать», метриками и выключателем.\n\nТолько чтение: статус — из последней фоновой проверки (раз в минуту / раз в 15 мин), без\nвызовов моделей. Сервисы ERP — «нет данных», пока ERP не передаёт состояние (M3-ERP-06).",
+        "description": "Все внешние сервисы ансамбля со статусом, подсказкой «что сделать», метриками и выключателем.\n\nТолько чтение: статус — из последней фоновой проверки (раз в минуту / раз в 15 мин), без\nвызовов моделей. Сервисы ERP — по ответу ERP на `GET /health` (`externals[]`, M3-ERP-06).",
         "operationId": "list_external_services",
         "responses": {
           "200": {
@@ -8240,7 +8397,7 @@
     },
     "/api/v1/admin/external-services/{key}/disable": {
       "post": {
-        "description": "Выключить сервис вручную (пароль админа, аудит): вендор — вызовы на запасную модель,\nLangfuse — без трейсов, почта — пауза очереди, Telegram — пауза исходящих.\n\nНет выключателя или вендор запасной модели — `409 service_not_switchable`.",
+        "description": "Выключить сервис вручную (пароль админа, аудит): вендор — вызовы на запасную модель,\nLangfuse — без трейсов, почта — пауза очереди, Telegram — пауза исходящих, сервис ERP —\nERP перестаёт его вызывать (`PUT /externals/{code}/switch`).\n\nНет выключателя или вендор запасной модели — `409 service_not_switchable`.",
         "operationId": "disable_external_service",
         "parameters": [
           {
@@ -9215,6 +9372,54 @@
           }
         ],
         "summary": "Update Client Contact",
+        "tags": [
+          "clients"
+        ]
+      }
+    },
+    "/api/v1/clients/{client_id}/erp-receivables": {
+      "get": {
+        "description": "Долг клиента по валютам из ERP (`CompanySummary.receivables_by_currency`), шов 0.3.0.\n\nСбой ERP — не ошибка: `status=\"unavailable\"` (блок в карточке скрыт), ответ всегда 200.\n404 — только если клиента нет в CRM.",
+        "operationId": "get_client_receivables",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "client_id",
+            "required": true,
+            "schema": {
+              "title": "Client Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClientReceivablesOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Ошибка валидации"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Client Receivables",
         "tags": [
           "clients"
         ]
@@ -10520,7 +10725,7 @@
     },
     "/api/v1/integrations/erp/check": {
       "post": {
-        "description": "«Проверить связь»: `GET {base_url}/api/integration/v1/health` с сервисным токеном, 5 с.\n\nОшибки (ADR-0017, `details.reason`): `erp_not_configured` (409), `erp_invalid_url` (422),\n`erp_unauthorized` / `erp_unavailable` / `erp_bad_response` (502).",
+        "description": "«Проверить связь»: `GET {base_url}/api/integration/v1/health` с сервисным токеном, 5 с.\n\nОшибки (ADR-0017, `details.reason`): `erp_not_configured` (409), `erp_invalid_url` (422),\n`erp_unauthorized` / `erp_unavailable` / `erp_bad_response` (502). Лимит частоты ERP (429) — не\nошибка: `status: \"rate_limited\"` и `retry_after_s` (пауза из `Retry-After`).",
         "operationId": "check_erp_connection",
         "responses": {
           "200": {
@@ -10557,7 +10762,7 @@
     },
     "/api/v1/integrations/erp/events": {
       "post": {
-        "description": "Приём входящих вебхуков событий ERP (M3-CRM-04, CONTRACTS §3, FIX-33).\n\nПорядок: подпись HMAC-SHA256 по сырому телу (X-Signature, ERP_WEBHOOK_SECRET) — ДО разбора\nтела и проверки остальных заголовков; идемпотентность по X-Event-Id; быстрый 200 и фоновая\nобработка в Procrastinate. 401 — только неверная подпись; тело, которое мы принять не можем\n(чужой тип события, расхождение с заголовком), записывается как `rejected` и тоже получает 200:\nретраи ERP ничего бы не изменили.",
+        "description": "Приём входящих вебхуков событий ERP (M3-CRM-04, CONTRACTS §3, FIX-33, FIX-61).\n\nПорядок: подпись — ДО разбора тела и проверки остальных заголовков. Схема v2:\nHMAC-SHA256(ERP_WEBHOOK_SECRET, \"{X-Event-Id}.{X-Timestamp}.{тело}\"); пока\n`ERP_WEBHOOK_SIGN_LEGACY=true`, принимается и старая (HMAC только тела). Идемпотентность по\nX-Event-Id; быстрый 200 и фоновая обработка в Procrastinate. 401 — только неверная подпись;\nтело, которое мы принять не можем (чужой тип события, расхождение с заголовком), и метка v2\nвне окна 300 с записываются как `rejected` и тоже получают 200: ретраи ERP ничего бы не\nизменили (ERP подписывает ретрай заново).",
         "operationId": "receive_erp_event",
         "parameters": [
           {
@@ -10606,6 +10811,22 @@
                 }
               ],
               "title": "X-Signature"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-Timestamp",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Timestamp"
             }
           }
         ],

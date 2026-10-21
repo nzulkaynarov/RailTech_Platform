@@ -91,3 +91,27 @@ def test_hand_made_role_cannot_take_the_reserved_name(managed):
     )
     assert response.status_code == 400
     assert response.json()["detail"] == "ROLE_NAME_RESERVED"
+
+
+@pytest.mark.django_db
+def test_manual_removal_of_a_crm_granted_role_drops_its_mark(managed):
+    """FIX-63: роль, выданная из CRM (`role_codes`) и снятая в «Команде» вручную, теряет пометку «из CRM»;
+    оставшиеся роли с пометкой её сохраняют."""
+    from accounts.constants import BackofficeRoleCode
+    from accounts.services.roles import ensure_default_company_roles
+
+    system = ensure_default_company_roles(managed["co"])
+    finance, head = system[BackofficeRoleCode.FINANCE], system[BackofficeRoleCode.HEAD]
+    staff = managed["staff"]
+    staff.company_roles.add(finance, head)
+    staff.crm_granted_roles.add(finance, head)
+
+    response = _client(managed["admin"]).post(
+        ROLES + "assign/",
+        {"member_id": staff.id, "role_ids": [head.id, managed["manual"].id]},
+        format="json",
+    )
+
+    assert response.status_code == 200, response.content
+    assert set(staff.company_roles.values_list("id", flat=True)) == {head.id, managed["manual"].id, managed["own"].id}
+    assert set(staff.crm_granted_roles.values_list("id", flat=True)) == {head.id}, "пометка снятой роли ушла"

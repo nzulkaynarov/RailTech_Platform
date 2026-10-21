@@ -40,7 +40,11 @@ class FakeClient:
 
 
 def _user(
-    *, active: bool = True, access: list[str] | None = None, error: str | None = None
+    *,
+    active: bool = True,
+    access: list[str] | None = None,
+    error: str | None = None,
+    erp_roles: list[str] | None = None,
 ) -> User:
     return User(
         id=5,
@@ -49,6 +53,7 @@ def _user(
         is_active=active,
         platform_access=access if access is not None else ["crm", "erp"],
         erp_sync_error=error,
+        erp_role_codes=erp_roles if erp_roles is not None else [],
         must_change_password=False,
     )
 
@@ -98,6 +103,23 @@ async def test_provision_sends_role_and_catalog_permissions(wired: dict[str, Any
     assert payload.role == "backoffice"
     assert payload.permissions == ("deal.manage", "quote.build", "quote.edit_pricing", "quote.send")
     assert wired["user"].erp_sync_error is None
+
+
+@pytest.mark.asyncio
+async def test_provision_sends_the_chosen_erp_roles(wired: dict[str, Any]) -> None:
+    """FIX-63: роли ERP, выбранные админом, уходят `role_codes` в порядке каталога."""
+    wired["user"] = _user(erp_roles=["HEAD", "CALCULATION"])
+    client = FakeClient()
+    await _service(client).provision(5)
+    assert client.provisioned[0].role_codes == ("CALCULATION", "HEAD")
+
+
+@pytest.mark.asyncio
+async def test_provision_without_chosen_roles_sends_an_empty_list(wired: dict[str, Any]) -> None:
+    """Ничего не выбрано — `role_codes: []`: ERP снимет ранее выданные из CRM системные роли."""
+    client = FakeClient()
+    await _service(client).provision(5)
+    assert client.provisioned[0].role_codes == ()
 
 
 @pytest.mark.asyncio

@@ -1,4 +1,4 @@
-"""One-time email acceptance codes for the public КП page."""
+"""One-time acceptance codes for КП: public page (e-mail of the deal) and Cabinet (a specific contact, FIX-60a)."""
 
 from django.db import models
 from django.utils.translation import gettext_lazy as _
@@ -13,6 +13,18 @@ class QuoteAcceptanceCode(models.Model):
         related_name="acceptance_codes",
         verbose_name=_("КП"),
         help_text=_("Коммерческое предложение, к которому привязан код акцепта"),
+    )
+    contact = models.ForeignKey(
+        "parties.Contact",
+        null=True,
+        blank=True,
+        on_delete=models.CASCADE,
+        related_name="acceptance_codes",
+        verbose_name=_("Контакт"),
+        help_text=_(
+            "Контакт клиента, которому выпущен код в Cabinet (Q-FIX22-6): погасить код может только он. "
+            "Пусто — код публичной страницы КП (получатель — адрес сделки)"
+        ),
     )
     email = models.EmailField(
         verbose_name=_("Email получателя"),

@@ -214,6 +214,76 @@ async def test_wrong_bot_token_is_a_failure_with_fix() -> None:
     assert TOKEN not in (result.error or "")
 
 
+HOOK = "https://crm.railtech.uz/telegram/webhook"
+
+
+def webhook_config(url: str) -> Settings:
+    return CONFIG.model_copy(update={"telegram_mode": "webhook", "telegram_webhook_url": url})
+
+
+def tg_hook(info: dict[str, Any] | httpx.Response) -> respx.Route:
+    respx.get(f"https://api.telegram.org/bot{TOKEN}/getMe").mock(
+        return_value=httpx.Response(200, json={"ok": True, "result": {"username": "rt_bot"}})
+    )
+    response = (
+        info
+        if isinstance(info, httpx.Response)
+        else httpx.Response(200, json={"ok": True, "result": info})
+    )
+    return respx.get(f"https://api.telegram.org/bot{TOKEN}/getWebhookInfo").mock(
+        return_value=response
+    )
+
+
+@pytest.mark.parametrize("url", ["", "http://crm.railtech.uz/telegram/webhook"])
+@respx.mock
+async def test_webhook_mode_with_bad_url_is_an_incident_with_hint(url: str) -> None:
+    """FIX-66: вебхук не настроен — `fail` (открывает инцидент) с подсказкой, без токена."""
+    tg_hook({"url": ""})
+    result = (await collect(deps(config=webhook_config(url)), ["telegram"]))["telegram"]
+    assert result.status == "fail"
+    assert "Вебхук Telegram не настроен" in result.summary
+    assert "CRM_DOMAIN" in (result.hint or "")
+    assert TOKEN not in repr(result)
+
+
+@respx.mock
+async def test_webhook_mode_shows_actual_address_and_last_error_from_one_probe() -> None:
+    route = tg_hook(
+        {
+            "url": HOOK,
+            "last_error_date": int((NOW - timedelta(minutes=2)).timestamp()),
+            "last_error_message": "Connection timed out",
+        }
+    )
+    d = deps(config=webhook_config(HOOK))
+    result = (await collect(d, ["telegram"]))["telegram"]
+    assert result.status == "warn"
+    assert result.metrics["webhook_url"] == HOOK
+    assert result.metrics["webhook_error"] == "Connection timed out"
+    assert result.metrics["webhook_error_at"] == (NOW - timedelta(minutes=2)).isoformat()
+    assert route.call_count == 1  # один getWebhookInfo на проход, без лишних вызовов Bot API
+    assert TOKEN not in repr(result)
+
+
+@respx.mock
+async def test_explicit_override_url_is_accepted() -> None:
+    other = "https://crm2.example.com/hook"
+    tg_hook({"url": other})
+    result = (await collect(deps(config=webhook_config(other)), ["telegram"]))["telegram"]
+    assert result.status == "ok"
+    assert result.metrics["webhook_url"] == other
+
+
+@respx.mock
+async def test_get_webhook_info_failure_is_a_warning_not_a_missing_webhook() -> None:
+    tg_hook(httpx.Response(502))
+    result = (await collect(deps(config=webhook_config(HOOK)), ["telegram"]))["telegram"]
+    assert result.status == "warn"
+    assert "состояние вебхука" in result.summary
+    assert result.metrics["webhook_url"] is None
+
+
 async def test_mail_heavy_probe_and_cheap_carry_over() -> None:
     mail = FakeMail()
     d = deps(mail=mail)

@@ -12,6 +12,7 @@ from sqlalchemy import update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
+from app.domain.erp_roles import normalize_erp_roles
 from app.domain.erp_sync import AccessState, SyncAction, access_audit_action, sync_action
 from app.domain.errors import (
     ConflictError,
@@ -54,6 +55,7 @@ class UserView:
     notify_leads: bool = True
     tg_dm_failed_at: datetime | None = None
     platform_access: list[str] = field(default_factory=lambda: ["crm"])
+    erp_role_codes: list[str] = field(default_factory=list)
 
 
 @dataclass(frozen=True, slots=True)
@@ -65,6 +67,7 @@ class UserPatch:
     clear_tg_user_id: bool = False
     transfer_to_user_id: int | None = None
     platform_access: Sequence[str] | None = None
+    erp_role_codes: Sequence[str] | None = None
 
 
 class UserService:
@@ -336,6 +339,8 @@ def _apply(user: User, patch: UserPatch) -> None:
         user.tg_user_id = patch.tg_user_id
     if patch.platform_access is not None:
         user.platform_access = sorted(set(patch.platform_access) | {"crm"})
+    if patch.erp_role_codes is not None:
+        user.erp_role_codes = normalize_erp_roles(patch.erp_role_codes)
 
 
 async def revoke_tokens(session: AsyncSession, user_id: int) -> None:
@@ -360,6 +365,7 @@ def _view(user: User, roles: list[str]) -> UserView:
         notify_leads=user.notify_leads,
         tg_dm_failed_at=user.tg_dm_failed_at,
         platform_access=list(user.platform_access or ["crm"]),
+        erp_role_codes=list(user.erp_role_codes or []),
     )
 
 
@@ -369,6 +375,7 @@ def _access_state(view: UserView) -> AccessState:
         is_active=view.is_active,
         roles=tuple(view.roles),
         full_name=view.full_name,
+        erp_role_codes=tuple(view.erp_role_codes),
     )
 
 
@@ -380,4 +387,5 @@ def _audit(view: UserView) -> dict[str, object]:
         "is_active": view.is_active,
         "tg_user_id": view.tg_user_id,
         "platform_access": view.platform_access,
+        "erp_role_codes": view.erp_role_codes,
     }

@@ -70,6 +70,21 @@ async def test_provision_body_matches_contract_fields() -> None:
 
 
 @pytest.mark.asyncio
+async def test_provision_body_carries_role_codes_when_given() -> None:
+    """FIX-63: `role_codes` уходит в провижининг; пустой список — тоже (снять выданные из CRM)."""
+    import json
+    from dataclasses import replace
+
+    with respx.mock() as mock:
+        route = mock.post(PROVISION).respond(200, json={"erp_user_id": 7, "crm_user_id": 42})
+        await _client().provision_user(replace(PAYLOAD, role_codes=("CALCULATION", "FINANCE")))
+        await _client().provision_user(replace(PAYLOAD, role_codes=()))
+    first, second = (json.loads(call.request.content) for call in route.calls)
+    assert first["role_codes"] == ["CALCULATION", "FINANCE"]
+    assert second["role_codes"] == []
+
+
+@pytest.mark.asyncio
 async def test_provision_email_conflict_is_a_permanent_conflict() -> None:
     with respx.mock() as mock:
         mock.post(PROVISION).respond(409, json={"detail": "EMAIL_CONFLICT"})

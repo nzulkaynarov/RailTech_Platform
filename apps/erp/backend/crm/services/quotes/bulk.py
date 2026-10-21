@@ -440,7 +440,9 @@ def reassign_quote_item_product(
 _IMPORT_QTY_MIN, _IMPORT_QTY_MAX = 1, 1_000_000
 
 
-def import_extracted_lines_into_quote(quote: Quote, actor: CustomUser, rows: list) -> Tuple[int, bool, Optional[str]]:
+def import_extracted_lines_into_quote(
+    quote: Quote, actor: CustomUser, rows: list, *, job_id: Optional[str] = None
+) -> Tuple[int, bool, Optional[str]]:
     """Q2 (импорт файла в билдер) — WORKER-SAFE вставка AI-извлечённых строк в КП продавца.
 
     Зеркалит гейты bulk_create_quote_items, но БЕЗ request (вызывается из Celery-хендлера):
@@ -448,7 +450,11 @@ def import_extracted_lines_into_quote(quote: Quote, actor: CustomUser, rows: lis
     НЕ frozen КП, лимит строк. Строки без имени отбрасываются;
     свыше QUOTE_ITEMS_BULK_MAX_ROWS — обрезаются с флагом truncated (тупик №8: не молча).
     Позиции добавляются В КОНЕЦ (после max position), валюта = cost_currency_default КП (как
-    ручное «Добавить строку»), затем ОДИН recalc. Возврат: (added, truncated, error_code)."""
+    ручное «Добавить строку»), затем ОДИН recalc. Возврат: (added, truncated, error_code).
+
+    FIX-67b — идемпотентность по job: с `job_id` запись идёт под блокировкой строки `AIJob` и помечает job
+    применённым (`applied_rows`) В ТОЙ ЖЕ транзакции. Повторный запуск того же job (ретрай Celery, повторная
+    доставка) ничего не пишет и возвращает прежний итог. Без `job_id` — прежнее поведение."""
     from django.conf import settings
     from django.db.models import Max
 
@@ -475,6 +481,13 @@ def import_extracted_lines_into_quote(quote: Quote, actor: CustomUser, rows: lis
 
     default_currency = quote.cost_currency_default if quote.cost_currency_default_id else None
     with transaction.atomic():
+        job = None
+        if job_id:
+            from ai.models import AIJob
+
+            job = AIJob.objects.select_for_update().filter(celery_task_id=job_id).first()
+            if job is not None and job.applied_rows is not None:
+                return job.applied_rows, False, None
         next_position = (quote.items.aggregate(mx=Max("position"))["mx"] or 0) + 1
         for offset, row in enumerate(clean):
             QuoteItem(
@@ -491,4 +504,7 @@ def import_extracted_lines_into_quote(quote: Quote, actor: CustomUser, rows: lis
                 position=next_position + offset,
             ).save(skip_recalculate=True)
         QuoteCalculationService.recalculate_quote(quote.id)
+        if job is not None:
+            job.applied_rows = len(clean)
+            job.save(update_fields=["applied_rows"])
     return len(clean), truncated, None

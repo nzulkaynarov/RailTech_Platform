@@ -87,8 +87,12 @@ def record_quote_view(quote, request_ip: str = "") -> bool:
     return True
 
 
-def _mint_acceptance_code(quote, email: str, request_ip: str = "") -> str:
-    """Выпустить одноразовый код (в базе только хеш) и погасить прежние неиспользованные — активен всегда один."""
+def _mint_acceptance_code(quote, email: str, request_ip: str = "", contact=None) -> str:
+    """Выпустить одноразовый код (в базе только хеш) и погасить прежние неиспользованные — активен всегда один.
+
+    `contact` — контакт Cabinet, которому выпущен код (Q-FIX22-6): погасить код сможет только он; публичная страница
+    КП контакта не задаёт.
+    """
     from crm.models import QuoteAcceptanceCode
 
     code = _generate_code()
@@ -97,6 +101,7 @@ def _mint_acceptance_code(quote, email: str, request_ip: str = "") -> str:
         QuoteAcceptanceCode.objects.filter(quote=quote, consumed_at__isnull=True).delete()
         QuoteAcceptanceCode.objects.create(
             quote=quote,
+            contact=contact,
             email=email.strip().lower(),
             code_hash=_hash_code(code),
             expires_at=timezone.now() + timezone.timedelta(minutes=CODE_TTL_MINUTES),
@@ -134,7 +139,7 @@ def issue_acceptance_code(quote, request_ip: str = "", *, contact=None, send=Non
         if not email and send is None:
             return False
 
-    code = _mint_acceptance_code(quote, email, request_ip)
+    code = _mint_acceptance_code(quote, email, request_ip, contact=contact)
     if send is not None:
         send(code)
     else:
@@ -170,8 +175,12 @@ def _send_code_email(quote, email: str, code: str, language=None) -> None:
         logger.exception("Acceptance-code email failed for quote %s", quote.pk)
 
 
-def verify_code_and_accept(quote, code: str, request_ip: str = ""):
+def verify_code_and_accept(quote, code: str, request_ip: str = "", *, contact=None):
     """Verify a one-time code and, on success, accept the КП as the offline contact.
+
+    `contact` — контакт сессии Cabinet (FIX-60a, Q-FIX22-6): код привязан к контакту, которому выпущен, и другой контакт
+    той же компании его не погасит (`INVALID_CODE`, попытка кода не тратится). Публичная страница контакта не передаёт и
+    гасит только коды без контакта (адрес сделки) — код Cabinet по ссылке КП не принимается.
 
     Returns ``(quote, None)`` on success or ``(None, ERROR_CODE)``. Fully atomic: the code is
     consumed and the acceptance is applied in ONE transaction — a failed accept persists nothing
@@ -194,6 +203,8 @@ def verify_code_and_accept(quote, code: str, request_ip: str = ""):
         )
         if row is None:
             return None, "NO_ACTIVE_CODE"
+        if row.contact_id != (contact.pk if contact is not None else None):
+            return None, "INVALID_CODE"  # чужой код: не погашаем и не жжём попытки владельца
         if row.expires_at < timezone.now():
             return None, "CODE_EXPIRED"
         if row.attempts >= MAX_CODE_ATTEMPTS:
@@ -211,12 +222,13 @@ def verify_code_and_accept(quote, code: str, request_ip: str = ""):
         # (успели решить из другой вкладки). Отвечаем кодом, а не пятисоткой.
         try:
             accepted = QuoteLifecycleService.accept_quote_as_contact(
-                quote.pk, contact_email=row.email, request_ip=request_ip or ""
+                quote.pk, contact_email=row.email, request_ip=request_ip or "", portal_contact=contact
             )
         except ValueError:
             return None, "QUOTE_ALREADY_DECIDED"
 
-    _send_accepted_next_step_email(accepted, row.email)
+    if row.email:  # контакт только с Telegram письма не получает
+        _send_accepted_next_step_email(accepted, row.email)
     return accepted, None
 
 

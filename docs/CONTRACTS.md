@@ -39,9 +39,15 @@ Contract-first действует для `portal`, `integration`, событий
 | `GET /deals/{erp_deal_id}/documents` | документы сделки | `[{erp_document_id, kind, number, date, title, status}]` |
 | `GET /documents/{erp_document_id}/link` | ссылка на файл | подписанный URL на 10 минут на публичный маршрут ERP (токен проверяется во вьюхе); выдача и скачивание — в журнал ERP с `crm_*` контекстом; без сопоставления компании, черновик или внутренний документ — 404 |
 | `GET /catalog/search?q=&mode=lead|client` | опубликованный каталог | в режиме `lead` без цен и остатков; в `client` — с ценой и статусом наличия |
-| `POST /users/provision` | сотрудник из CRM | `crm_user_id, email, name, role (admin|backoffice), permissions[]` (коды каталога ERP, `ErpPermission`; чужой код → 422); ответ `erp_user_id`; e-mail занят другим пользователем ERP (другой `crm_user_id` или нет сопоставления) → 409 `EMAIL_CONFLICT` |
+| `POST /users/provision` | сотрудник из CRM | `crm_user_id, email, name, role (admin|backoffice), permissions[]` (коды каталога ERP, `ErpPermission`; чужой код → 422), необязательное `role_codes[]` (системные роли бэк-офиса, `SystemRoleCode`: `CALCULATION, CATALOG_SUPPLY, FULFILLMENT, FINANCE, HEAD, VIEWER`; чужой код → 422; поля нет — системные роли не трогаются; ERP снимает только выданные ранее из CRM; ручные роли не затираются); ответ `erp_user_id`; e-mail занят другим пользователем ERP (другой `crm_user_id` или нет сопоставления) → 409 `EMAIL_CONFLICT` |
 | `DELETE /users/{crm_user_id}/sessions` | отзыв сессий и входа | при снятии доступа в CRM: refresh и access-токены гаснут (прежний access → 401), вход закрыт; аудит `sso.revoke` |
-| `GET /health` | здоровье для «Состояния системы» CRM | версия, миграции применены, очередь жива |
+| `GET /health` | здоровье для «Состояния системы» CRM и центра внешних сервисов | версия, миграции применены, очередь жива; `externals[]` (M3-ERP-06, необязательно) — внешние сервисы ERP: `code` (`cbu_rates`, `customs_tariff`, `mail`, `litellm`, `s3`, `sentry`), `status` (`ok`/`degraded`/`fail`/`unknown`/`disabled`), `enabled`, `switchable`, `last_success_at`, `last_error_at`, `last_error` (≤ 200 знаков, без секретов), `ok_24h`, `errors_24h` |
+| `PUT /externals/{code}/switch` | выключатель внешнего сервиса ERP из центра внешних сервисов CRM (M3-ERP-06) | вход: `enabled`, `reason?`; ответ: `code`, `enabled`, `changed_at`. Идемпотентно; неизвестный `code` → 404, Sentry (`switchable: false`) → 409 `NOT_SWITCHABLE` |
+
+`externals[]` в `/health` (M3-ERP-06) строится по журналам и счётчикам ERP без обращений к самим сервисам — ответ быстрый
+(< 300 мс). Добавлено аддитивно (необязательное поле, новая операция); читатель CRM терпимый: нет поля — «нет данных»,
+неизвестные `code` и `status` пропускаются. Выключенный из CRM сервис ERP не вызывается (курсы и ТН ВЭД — прогон
+пропускается, почта — `FAILED` «выключено из CRM», модели — нейтральный отказ, S3 — запись отклоняется).
 
 Передача (`/clients/handoff`): компания ищется по `crm_client_id`, затем по ИНН; сопоставление создаётся **до** сделки, поэтому
 `request.created(source=crm)` и `invite.sent` доходят до CRM; ИНН чужого `crm_client_id` — 409 `INN_CONFLICT`; согласие хранится
@@ -51,9 +57,15 @@ Contract-first действует для `portal`, `integration`, событий
 ## 3. События (ERP → CRM)
 
 `POST {CRM}/api/v1/integrations/erp/events`. Заголовки: `X-Event-Id` (UUID), `X-Event-Type`,
-`X-Timestamp`, `X-Signature: sha256=<HMAC(body, WEBHOOK_SECRET)>`. CRM отвечает 200 быстро, обрабатывает
-асинхронно; повтор с тем же `X-Event-Id` — 200 без действий. Ретраи ERP: 1, 5, 30 мин, 2, 6, 24 ч; после — журнал
-с ручным повтором.
+`X-Timestamp` (UTC ISO 8601), `X-Signature: sha256=<HMAC(WEBHOOK_SECRET, f"{X-Event-Id}.{X-Timestamp}.{body}")>` — схема v2
+(FIX-61, Q-FIX35-2); переход: CRM принимает и старую подпись только тела, пока `ERP_WEBHOOK_SIGN_LEGACY=true`, затем
+настройка выключается. ERP при ретрае подписывает заново с актуальным `X-Timestamp`; `occurred_at` в теле — время события.
+CRM отвечает 200 быстро, обрабатывает асинхронно; повтор с тем же `X-Event-Id` — 200 без действий. Неверная подпись —
+401. **Постоянный отказ — 200 и запись `rejected` в журнале CRM** (Q-FIX33-1): `|now − X-Timestamp| > 300 с`, повтор того же
+тела под другим `X-Event-Id`, сломанный JSON, тело не по схеме известного события — ретраи не помогут. **Читатель
+терпимый** (Q-FIX35-4): неизвестные поля игнорируются, неизвестный `event` — 200 и `skipped`; отправитель соблюдает схему
+строго; новое необязательное поле или новый тип события не меняют `version` и не требуют одновременной выкладки CRM.
+Ретраи ERP: 1, 5, 30 мин, 2, 6, 24 ч; после — журнал с ручным повтором.
 
 Тело: `{event, occurred_at, erp_company_id, crm_client_id, deal{erp_deal_id, number, title, stage, amount, currency}, actor{type: system|staff|client, name?}, payload{...}}`;
 `deal.amount` — сумма последнего КП, отправленного клиенту, или `null`.
@@ -63,7 +75,8 @@ Contract-first действует для `portal`, `integration`, событий
 | `request.created` | `source: crm|cabinet|erp` | лента лида; зеркало сделки `open` |
 | `deal.stage_changed` | `from, to, reason?` | лента; `external_stage` |
 | `quote.sent` | `version, public_url, valid_until` | бот: «КП готово» с кнопками |
-| `quote.viewed` / `quote.accepted` / `quote.rejected` | `version, reason?` | лента; при accepted — уведомление ответственному |
+| `quote.viewed` / `quote.accepted` / `quote.rejected` | `version, reason?, erp_contact_id?, crm_contact_id?` | лента; при accepted — уведомление ответственному |
+| `quote.acceptance_code_requested` | `version, erp_contact_id, crm_contact_id, code, expires_at` | бот присылает код контакту в Telegram; `code` не хранится и не логируется (Q-FIX22-1) |
 | `contract.signed` | `by: client|company|both` | лента |
 | `invoice.issued` / `invoice.paid` / `invoice.overdue` | `number, amount, due_date, link` | бот: «счёт выставлен»; напоминание — только ERP-письмо, бот дублирует по политике |
 | `delivery.status_changed` / `delivery.eta_changed` | `line_summary, status, eta, tracking?` | бот: статус/сдвиг по политике «сообщать о сдвигах» |
@@ -132,6 +145,8 @@ JSON-integer, не `true`), `iat` и `exp` обязательны, `exp − iat 
 | `get_document_link(erp_document_id)` | customer | подписанный URL (бот отправляет файл) |
 | `search_catalog(query, top_k)` | prospect, customer | prospect: название, описание, единица; customer: + цена, наличие, срок |
 | `create_request(summary, lines[])` | customer | заявка в ERP от имени клиента (код решает, что это «запрос», модель лишь предлагает текст) |
+
+Клиент CRM (M3-CRM-07, Q-FIX36-1 вариант 1; `apps/crm/backend/app/agents/erp_mcp.py`): контракт не менялся. SDK `mcp` не отдаёт код HTTP-ответа (на 401/400/429 вратаря исключение транспорта одно и то же), поэтому клиент берёт статус и `Retry-After` из `event_hooks` HTTP-клиента. Политика: 401 `INVALID_AGENT_CONTEXT` — контекст выпускается заново (новый `jti`) и вызов повторяется один раз; 429 — ждать `Retry-After` (не дольше 5 с и не больше двух раз), иначе отказ; 400 `INVALID_ARGUMENTS` и сетевой сбой — без повтора. Любой отказ — «ERP недоступен» для хода: бот отвечает «сейчас не могу проверить», не называет чисел и заводит запрос менеджеру. Контекст выпускается только в режиме `customer` (`erp_company_id` — из БД CRM по проверенной привязке Telegram, не от модели); лиду `erp-mcp` не открывается. Модели отданы пять инструментов (`list_client_deals`, `get_deal_status`, `get_delivery_status`, `list_client_documents`, `search_catalog`); `get_document_link` и `create_request` не отданы: файл отправляет код через docs-mcp, запрос оформляет `create_service_request` CRM.
 
 ## 6. SSO-токен сотрудника
 

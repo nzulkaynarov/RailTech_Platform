@@ -2265,6 +2265,7 @@
     "QUOTE_HAS_UNPRICED_LINES": "Set a price on every line — a quote with zero-priced rows can't be submitted",
     "QUOTE_BELOW_COST": "Quote is below landed cost — selling at a loss. Raise the price or margin.",
     "FX_RATE_MISSING": "No FX rate for a line currency — cost not computed. Set the rate in quote settings.",
+    "REQUEST_TEXT_EMPTY": "The request has no text to parse",
     "NO_REQUEST_LINES": "The request has no lines to draft a quote from.",
     "PLATFORM_ADMIN_REQUIRED": "This action is restricted to the administrator",
     "FORCE_REASON_REQUIRED": "Force-action requires a mandatory reason (written to the audit log)",
@@ -2398,6 +2399,7 @@
     "ONLY_COMPANY_OWNER_CAN_APPLY": "Only a company administrator can file an application.",
     "PAYMENT_EXCEEDS_BALANCE_DUE": "The amount is larger than the balance due. Enter an amount within the balance — overpayment is not accepted.",
     "REQUEST_HAS_NO_ITEMS": "The request has no line items — there is nothing for the seller to quote. Add at least one and submit again.",
+    "PARSE_ALREADY_RUNNING": "Parsing of this quote is already in progress",
     "QUOTE_FROZEN": "The quote has already been sent — create a new version to change it",
     "QUOTE_NOT_DRAFT": "The quote can only be changed while it is a draft — recall it from approval or create a new version",
     "FX_CURRENCY_REQUIRED": "Select a currency",
@@ -2942,6 +2944,16 @@
         "detail": "Event {{event_type}} for line #{{line_id}} on deal #{{deal_id}} was not created; the client's decision is saved, resend it manually"
       }
     },
+    "fulfillment": {
+      "accepted_by_client": {
+        "title": "Fulfillment accepted by the client",
+        "detail": "Deal #{{deal_id}}: all delivery lines accepted"
+      },
+      "accept_failed": {
+        "title": "Fulfillment was not set to accepted",
+        "detail": "All lines of deal #{{deal_id}} are accepted by the client, but the fulfillment did not change status ({{error}}); set it manually"
+      }
+    },
     "company": {
       "merged": {
         "title": "Duplicate company merged",
@@ -3161,6 +3173,17 @@
     "none": "No lines recognized in the file",
     "truncated_one": "Added {{count}} line; the file was longer — remaining rows were truncated",
     "truncated_other": "Added {{count}} lines; the file was longer — remaining rows were truncated"
+  },
+  "requestText": {
+    "parse": "Parse the text into lines (AI)",
+    "parsing": "Parsing the text…",
+    "hint": "The request came as text, without a list of lines. Type the lines by hand — the text stays in front of you — or ask AI to parse it.",
+    "added_one": "Added {{count}} line from the request text",
+    "added_other": "Added {{count}} lines from the request text",
+    "none": "No lines found in the request text — add them by hand",
+    "truncated": "The text has more lines than the limit — the rest were not added",
+    "aiUnavailable": "AI is unavailable right now. Type the lines by hand from the request text.",
+    "alreadyRunning": "Parsing of this quote's text is already in progress — wait for the result, the lines will appear on their own."
   },
   "dealChain": {
     "title": "Deal chain",

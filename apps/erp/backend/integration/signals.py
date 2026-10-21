@@ -155,7 +155,11 @@ def handle_quote_pre_save(sender: Any, instance: Any, **kwargs: Any) -> None:
 
 
 def handle_quote_post_save(sender: Any, instance: Any, created: bool, **kwargs: Any) -> None:
-    """Генерирует quote.sent, quote.accepted, quote.rejected при смене статуса КП."""
+    """Генерирует quote.sent, quote.accepted, quote.rejected при смене статуса КП.
+
+    Кто принял или отклонил в Cabinet — контакт клиента: сервис решения кладёт его в `instance._decided_by_contact`
+    перед сохранением, и события несут `erp_contact_id`/`crm_contact_id` (Q-FIX22-6).
+    """
     try:
         if getattr(instance, "_int_untracked_save", False) or not getattr(instance, "deal_id", None):
             return
@@ -173,9 +177,13 @@ def handle_quote_post_save(sender: Any, instance: Any, created: bool, **kwargs: 
             if status_norm == "SENT":
                 webhooks.emit_quote_sent(quote=instance)
             elif status_norm in ("APPROVED", "ACCEPTED"):
-                webhooks.emit_quote_outcome(event_type="quote.accepted", quote=instance)
+                webhooks.emit_quote_outcome(
+                    event_type="quote.accepted", quote=instance, contact=getattr(instance, "_decided_by_contact", None)
+                )
             elif status_norm == "REJECTED":
-                webhooks.emit_quote_outcome(event_type="quote.rejected", quote=instance)
+                webhooks.emit_quote_outcome(
+                    event_type="quote.rejected", quote=instance, contact=getattr(instance, "_decided_by_contact", None)
+                )
 
     except Exception as exc:
         logger.error("Error in handle_quote_post_save for Quote #%s: %s", getattr(instance, "id", None), exc)
@@ -303,7 +311,7 @@ def handle_act_pre_save(sender: Any, instance: Any, **kwargs: Any) -> None:
 
 
 def handle_act_post_save(sender: Any, instance: Any, created: bool, **kwargs: Any) -> None:
-    """Генерирует act.issued, act.accepted, act.returned."""
+    """Генерирует act.issued, act.accepted, act.returned (возврат — ISSUED → DRAFT с причиной, FIX-62)."""
     try:
         if getattr(instance, "_int_untracked_save", False) or not getattr(instance, "deal_id", None):
             return
@@ -320,8 +328,15 @@ def handle_act_post_save(sender: Any, instance: Any, created: bool, **kwargs: An
             webhooks.emit_act_event("act.issued", act=instance)
         elif prev_norm != curr_norm and curr_norm in ("ACCEPTED", "SIGNED"):
             webhooks.emit_act_event("act.accepted", act=instance)
-        elif prev_norm != curr_norm and curr_norm in ("RETURNED", "DISPUTED", "REJECTED"):
-            webhooks.emit_act_event("act.returned", act=instance)
+        elif prev_norm == "ISSUED" and curr_norm == "DRAFT" and (instance.rejection_reason or "").strip():
+            # Статуса «возвращён» у акта нет (FIX-62): возврат заказчиком (`reject_act`) — это ISSUED → DRAFT с причиной.
+            # Правка черновика и перевыпуск (DRAFT → ISSUED, причина снимается) события возврата не дают.
+            webhooks.emit_act_event(
+                "act.returned",
+                act=instance,
+                reason=instance.rejection_reason.strip(),
+                actor=getattr(instance, "_event_actor", None),
+            )
     except Exception as exc:
         logger.error("Error in handle_act_post_save for Act #%s: %s", getattr(instance, "id", None), exc)
 
@@ -361,10 +376,15 @@ def handle_fulfillment_post_save(sender: Any, instance: Any, created: bool, **kw
         curr_eta = instance.expected_delivery_date
 
         if curr_status and (prev_status != curr_status or created):
+            # Приёмка клиентом (FIX-62) несёт лицо клиента; в контракте у статуса поставки нет `accepted`, поэтому
+            # CRM видит «доставлено» (`emit_delivery_event`), а то, что принято, говорит `line_summary`.
+            accepted = curr_status == "ACCEPTED"
             webhooks.emit_delivery_event(
                 event_type="delivery.status_changed",
                 fulfillment=instance,
+                line_summary="Все строки приняты клиентом" if accepted else "Строки поставки",
                 previous_eta=prev_eta,
+                actor=getattr(instance, "_event_actor", None),
             )
 
         if prev_eta and curr_eta and prev_eta != curr_eta:
