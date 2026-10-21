@@ -146,16 +146,16 @@
 | Роль Платформы | CRM | ERP `role_codes` (FIX-63) | Дополнительные права ERP | Примечание |
 |---|---|---|---|---|
 | `MANAGER` | `manager` | `VIEWER` | `deal.manage` (создание заявки через шов) | не видит себестоимость и маржу (в ERP нет `quote.view_cost_margin`) |
-| `DIRECTOR` | `viewer` (+ чтение CRM) | `HEAD` | — | одобрение КП (`quote.approve_final`), резолюции, служебки |
-| `SUPPLY` | — | `CATALOG_SUPPLY`, `FULFILLMENT` | `quote.build`, `quote.edit_pricing` | расчёт товаров, склад, отгрузки |
-| `ENGINEER` | — | `FULFILLMENT` | `quote.build` (без `quote.view_cost_margin`) | расчёт услуг, этапы, акты к подготовке |
-| `ACCOUNTANT` | — | `FINANCE` | `contract.manage`, `fulfillment.act` | договоры, счета, оплаты, акты |
+| `DIRECTOR` | `viewer` | `HEAD` | — | одобрение КП (`quote.approve_final`), резолюции, служебки |
+| `SUPPLY` | `viewer` | `CATALOG_SUPPLY`, `FULFILLMENT` | `quote.build`, `quote.edit_pricing` | расчёт товаров, склад, отгрузки |
+| `ENGINEER` | `viewer` | `FULFILLMENT` | `quote.build` (без `quote.view_cost_margin`) | расчёт услуг, этапы, акты к подготовке |
+| `ACCOUNTANT` | `manager` (ответы клиенту во внешнем чате; разделы CRM скрывает матрица) | `FINANCE` | `contract.manage`, `fulfillment.act` | договоры, счета, оплаты, акты |
 | `ADMIN` | `admin` | — (суперпользователь ERP только для настроек бизнеса) | — | не ведёт процессы |
 
-`CALCULATION` (Расчёт) для новых сотрудников не выдаётся. Кто без роли CRM (`SUPPLY`, `ENGINEER`, `ACCOUNTANT`)
-получает в CRM пользователя с `platform_access = ["crm","erp"]` и ролью `viewer` без прав на разделы CRM —
-CRM остаётся источником истины по людям (Δ CRM-01 добавляет `platform_roles`). Итоговая карта — в
-`packages/contracts/platform-rbac.yaml`; изменения карты — PR с тестом матрицы.
+`CALCULATION` (Расчёт) для новых сотрудников не выдаётся. Каждый сотрудник — пользователь CRM с
+`platform_access = ["crm","erp"]` (CRM — источник истины по людям); при нескольких ролях базовая роль CRM — старшая
+(`admin` > `manager` > `viewer`). CRM-01 добавляет `platform_roles` и заменяет базовые роли собственными ролями casbin
+по матрице. **Источник истины карты — `packages/contracts/platform-rbac.yaml`**; изменения — PR с тестом матрицы.
 
 ## 5. Номера
 
