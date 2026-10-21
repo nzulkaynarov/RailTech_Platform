@@ -51,6 +51,9 @@ const shadcnVars = {
   "--popover-foreground": c.text.default,
   "--primary": c.primary.default,
   "--primary-foreground": c.primary.foreground,
+  // Hover основной кнопки: #0958d9 (не #1677ff из SPEC-v3 §5.2 — 4.10:1 с белым текстом). Пока компоненты Cabinet/ERP
+  // используют bg-primary/90, переменная ждёт bg-primary-hover (Cabinet — CAB-03).
+  "--primary-hover": c.primary.hover,
   "--secondary": c.surface.muted,
   "--secondary-foreground": c.text.default,
   "--muted": c.surface.muted,
@@ -93,6 +96,7 @@ ${Object.entries(shadcnVars)
   --color-popover-foreground: var(--popover-foreground);
   --color-primary: var(--primary);
   --color-primary-foreground: var(--primary-foreground);
+  --color-primary-hover: var(--primary-hover);
   --color-secondary: var(--secondary);
   --color-secondary-foreground: var(--secondary-foreground);
   --color-muted: var(--muted);
@@ -132,26 +136,34 @@ const antd = {
   colorInfoBorder: c.info.border,
   colorInfoText: c.info.text,
   colorLink: c.primary.default,
-  // Ссылка при наведении и нажатии — тёмный «text»: #1677ff (hover кнопки) как текст на белом даёт 4.1:1.
-  colorLinkHover: c.primary.text,
-  colorLinkActive: c.primary.text,
+  colorLinkHover: c.primary.hover,
+  colorLinkActive: c.primary.active,
   colorText: c.text.default,
   colorTextSecondary: c.text.secondary,
   colorTextTertiary: c.text.tertiary,
   // Описания и подсказки AntD выводит и на #f5f5f5, и на светлых заливках, где #767676 даёт < 4.5:1.
   colorTextDescription: c.text.secondary,
   colorTextPlaceholder: c.text.placeholder,
-  colorError: c.error.default,
+  // Статусные цвета AntD читает и как текст (Form explain, Tag, Typography, danger-ссылки), и как заливку с белым
+  // текстом (Button danger, Badge count, Progress), поэтому здесь — цвета «text» (≥ 4.5:1 на белом и с белым поверх).
+  // Затравочные default (#ff4d4f, #faad14, #52c41a) — только для графиков и заливок без текста: RT_STATUS_FILL.
+  colorError: c.error.text,
   colorErrorHover: c.error.hover,
   colorErrorActive: c.error.active,
   colorErrorBg: c.error.bg,
   colorErrorBorder: c.error.border,
   colorErrorText: c.error.text,
-  colorSuccess: c.success.default,
+  colorErrorTextHover: c.error.hover,
+  colorErrorTextActive: c.error.active,
+  colorSuccess: c.success.text,
+  colorSuccessHover: c.success.hover,
+  colorSuccessActive: c.success.active,
   colorSuccessBg: c.success.bg,
   colorSuccessBorder: c.success.border,
   colorSuccessText: c.success.text,
-  colorWarning: c.warning.default,
+  colorWarning: c.warning.text,
+  colorWarningHover: c.warning.hover,
+  colorWarningActive: c.warning.active,
   colorWarningBg: c.warning.bg,
   colorWarningBorder: c.warning.border,
   colorWarningText: c.warning.text,
@@ -180,6 +192,9 @@ export const RT_TOKENS = ${tsObject(antd)} as const;
 
 /** Текст preset-тегов Tag color="blue|green|cyan|orange|gold|red|purple" с контрастом ≥ 4.5:1 на фоне тега. */
 export const RT_TAG_TEXT: Record<string, string> = ${tsObject(c.tag)};
+
+/** Затравочные цвета статусов (SPEC-v3 §5.2) — для графиков и заливок БЕЗ текста; в текст и под белый текст не идут. */
+export const RT_STATUS_FILL = ${tsObject({ error: c.error.default, warning: c.warning.default, success: c.success.default })};
 
 /** Плотность таблиц CRM: отступы ячеек обычной таблицы = small (paddingXS). У Платформы — RT_COMPONENTS.Table. */
 export const RT_TABLE_CELL_PADDING = ${tokens.density.tableCellPadding};

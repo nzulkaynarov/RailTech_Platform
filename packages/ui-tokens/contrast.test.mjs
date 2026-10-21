@@ -44,6 +44,10 @@ const shadcnCss = readFileSync(join(here, "dist", "shadcn.css"), "utf8");
 const rootBlock = /:root\s*\{([^}]*)\}/.exec(shadcnCss)?.[1] ?? "";
 const v = Object.fromEntries([...rootBlock.matchAll(/--([\w-]+):\s*([^;]+);/g)].map((m) => [m[1], m[2].trim()]));
 
+// ─── токены AntD из dist/antd.ts (RT_TOKENS) — то, что реально получают CRM и Платформа ─────────────────
+const antdTs = readFileSync(join(here, "dist", "antd.ts"), "utf8");
+const a = Object.fromEntries([...antdTs.matchAll(/^\s+(color\w+): "(#[0-9a-f]{6})",$/gim)].map((m) => [m[1], m[2]]));
+
 const white = c.surface.background;
 const layout = c.surface.layout;
 
@@ -68,7 +72,10 @@ const pairs = [
   ["primary.text на белом", c.primary.text, white],
   ["primary.text на primary.bg (активный пункт меню, вкладка)", c.primary.text, c.primary.bg],
   ["primary.text на фоне окна", c.primary.text, layout],
-  ["link hover / active (primary.text) на белом", c.primary.text, white],
+  ["primary.hover как текст на белом (outlined/link-кнопка при наведении)", c.primary.hover, white],
+  ["primary.hover как текст на фоне окна", c.primary.hover, layout],
+  ["white на primary.hover (hover кнопки primary)", c.primary.foreground, c.primary.hover],
+  ["primary.active как текст на белом", c.primary.active, white],
   ["white на primary.active", c.primary.foreground, c.primary.active],
   ["info.text на белом", c.info.text, white],
   ["info.text на info.bg", c.info.text, c.info.bg],
@@ -88,11 +95,40 @@ const pairs = [
   ["white на error.active", c.error.foreground, c.error.active],
   // Теги: текст — из c.tag, фон — <цвет>1 Ant Design
   ...Object.entries(antdTagBg).map(([name, bg]) => [`тег ${name}`, c.tag[name], bg]),
+  // AntD (dist/antd.ts): реальные пары компонентов. colorError/Warning/Success — цвета «text», не затравки.
+  ["antd Tag error: colorError на colorErrorBg", a.colorError, a.colorErrorBg],
+  ["antd Tag warning: colorWarning на colorWarningBg", a.colorWarning, a.colorWarningBg],
+  ["antd Tag success: colorSuccess на colorSuccessBg", a.colorSuccess, a.colorSuccessBg],
+  ["antd Form explain error: colorError на белом", a.colorError, white],
+  ["antd Form explain warning: colorWarning на белом", a.colorWarning, white],
+  ["antd Typography danger: colorErrorText на белом", a.colorErrorText, white],
+  ["antd Button danger primary: белый на colorError", white, a.colorError],
+  ["antd Button danger primary hover: белый на colorErrorHover", white, a.colorErrorHover],
+  ["antd Button danger primary active: белый на colorErrorActive", white, a.colorErrorActive],
+  ["antd Button danger outlined/text/link: colorError на белом", a.colorError, white],
+  ["antd Button danger hover (текст): colorErrorHover на белом", a.colorErrorHover, white],
+  ["antd Button danger text hover: colorErrorHover на colorErrorBg", a.colorErrorHover, a.colorErrorBg],
+  ["antd Button danger active (текст): colorErrorActive на белом", a.colorErrorActive, white],
+  ["antd colorErrorTextHover на белом", a.colorErrorTextHover, white],
+  ["antd colorErrorTextActive на белом", a.colorErrorTextActive, white],
+  ["antd Badge count: белый на colorError", white, a.colorError],
+  ["antd Menu/Dropdown danger: colorError на белом", a.colorError, white],
+  ["antd Menu danger selected: белый на colorError", white, a.colorError],
+  ["antd Progress success: colorSuccess на белом", a.colorSuccess, white],
+  ["antd colorSuccessHover на белом", a.colorSuccessHover, white],
+  ["antd colorWarningHover на белом", a.colorWarningHover, white],
+  ["antd colorLinkHover на белом", a.colorLinkHover, white],
+  ["antd colorLinkHover на фоне окна", a.colorLinkHover, layout],
+  ["antd colorLinkActive на белом", a.colorLinkActive, white],
+  ["antd белый на colorPrimaryHover", white, a.colorPrimaryHover],
+  ["antd colorPrimaryHover как текст на белом и на фоне окна", a.colorPrimaryHover, layout],
+  ["antd colorTextDescription на фоне окна", a.colorTextDescription, a.colorBgLayout],
   // shadcn-переменные (dist/shadcn.css): пары «x-foreground на x» и текстовые роли на фонах
   ["shadcn foreground на background", v["foreground"], v["background"]],
   ["shadcn card-foreground на card", v["card-foreground"], v["card"]],
   ["shadcn popover-foreground на popover", v["popover-foreground"], v["popover"]],
   ["shadcn primary-foreground на primary", v["primary-foreground"], v["primary"]],
+  ["shadcn primary-foreground на primary-hover (bg-primary-hover)", v["primary-foreground"], v["primary-hover"]],
   ["shadcn secondary-foreground на secondary", v["secondary-foreground"], v["secondary"]],
   ["shadcn accent-foreground на accent", v["accent-foreground"], v["accent"]],
   ["shadcn destructive-foreground на destructive", v["destructive-foreground"], v["destructive"]],
@@ -118,12 +154,9 @@ const pairs = [
   ]),
 ];
 
-// Пары ниже 4.5:1, которые фиксирует SPEC-v3 §5.2 (значения заданы владельцем). Вопросы — docs/QUESTIONS.md, Q-INF-P0-2-*.
+// Пары ниже 4.5:1, которые фиксирует SPEC-v3 §5.2 или действующие компоненты. Вопросы — docs/QUESTIONS.md, Q-INF-P0-2-*.
 const KNOWN_BELOW_AA = [
-  ["white на primary.hover #1677ff (hover кнопки primary, Q-INF-P0-2-1)", c.primary.foreground, c.primary.hover],
-  ["white на shadcn bg-primary/90 (hover кнопок Cabinet, Q-INF-P0-2-1)", v["primary-foreground"], over(v["primary"], 0.9, v["background"])],
-  ["white на error.default #ff4d4f (solid danger-кнопка AntD, бейдж очереди, Q-INF-P0-2-2)", c.error.foreground, c.error.default],
-  ["текст ошибки colorError #ff4d4f на белом (Typography danger, ошибки Form AntD, Q-INF-P0-2-2)", c.error.default, white],
+  ["white на shadcn bg-primary/90 (hover кнопок Cabinet/ERP до перехода на bg-primary-hover, 4.36:1, Q-INF-P0-2-1)", v["primary-foreground"], over(v["primary"], 0.9, v["background"])],
   ["tertiary на фоне окна #f5f5f5 (Q-INF-P0-2-3)", c.text.tertiary, layout],
   ["tertiary на primary.bg #e6f4ff (Q-INF-P0-2-3)", c.text.tertiary, c.primary.bg],
   ["shadcn text-success на bg-success/10 поверх muted #f5f5f5 (4.49:1, Q-INF-P0-2-3)", v["success"], over(v["success"], 0.1, v["muted"])],
@@ -142,7 +175,8 @@ test("версия пакета 0.2.0", () => {
 test("значения SPEC-v3 §5.2 / 03-frontend.md §3", () => {
   assert.deepEqual(
     [c.primary.default, c.primary.hover, c.primary.bg, c.primary.text],
-    ["#1668dc", "#1677ff", "#e6f4ff", "#0958d9"],
+    // hover: SPEC-v3 §5.2 даёт #1677ff (4.10:1 с белым), решение архитектора 2026-10-22 — #0958d9 (критерий §11.2 п. 6)
+    ["#1668dc", "#0958d9", "#e6f4ff", "#0958d9"],
   );
   assert.deepEqual([c.success.default, c.success.text], ["#52c41a", "#237804"]);
   assert.deepEqual([c.warning.default, c.warning.text], ["#faad14", "#874d00"]);
@@ -153,6 +187,14 @@ test("значения SPEC-v3 §5.2 / 03-frontend.md §3", () => {
   assert.deepEqual([c.surface.layout, c.surface.background], ["#f5f5f5", "#ffffff"]);
   assert.deepEqual([tokens.radius.md, tokens.radius.lg], [6, 8]);
   assert.equal(tokens.font.family, 'Inter, -apple-system, "Segoe UI", Roboto, Arial, sans-serif');
+});
+
+test("AntD: статусные цвета — «text», затравки только в RT_STATUS_FILL", () => {
+  assert.equal(a.colorError, c.error.text);
+  assert.equal(a.colorWarning, c.warning.text);
+  assert.equal(a.colorSuccess, c.success.text);
+  assert.equal(a.colorPrimaryHover, "#0958d9");
+  assert.match(antdTs, /RT_STATUS_FILL = \{\n  error: "#ff4d4f",\n  warning: "#faad14",\n  success: "#52c41a",/);
 });
 
 test("затравочные цвета статусов не попадают в текст shadcn", () => {

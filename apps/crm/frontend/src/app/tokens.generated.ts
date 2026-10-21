@@ -2,8 +2,8 @@
 // Общие токены ансамбля для темы AntD (CRM, Платформа). Контраст WCAG 2.1 AA проверяют theme.test.ts (CRM) и contrast.test.mjs (пакет).
 export const RT_TOKENS = {
   colorPrimary: "#1668dc",
-  colorPrimaryHover: "#1677ff",
-  colorPrimaryActive: "#0958d9",
+  colorPrimaryHover: "#0958d9",
+  colorPrimaryActive: "#003eb3",
   colorPrimaryBg: "#e6f4ff",
   colorPrimaryBorder: "#91caff",
   colorPrimaryText: "#0958d9",
@@ -13,23 +13,29 @@ export const RT_TOKENS = {
   colorInfoText: "#0958d9",
   colorLink: "#1668dc",
   colorLinkHover: "#0958d9",
-  colorLinkActive: "#0958d9",
+  colorLinkActive: "#003eb3",
   colorText: "#1f1f1f",
   colorTextSecondary: "#595959",
   colorTextTertiary: "#767676",
   colorTextDescription: "#595959",
   colorTextPlaceholder: "#767676",
-  colorError: "#ff4d4f",
+  colorError: "#a8071a",
   colorErrorHover: "#cf1322",
   colorErrorActive: "#820014",
   colorErrorBg: "#fff2f0",
   colorErrorBorder: "#ffccc7",
   colorErrorText: "#a8071a",
-  colorSuccess: "#52c41a",
+  colorErrorTextHover: "#cf1322",
+  colorErrorTextActive: "#820014",
+  colorSuccess: "#237804",
+  colorSuccessHover: "#135200",
+  colorSuccessActive: "#092b00",
   colorSuccessBg: "#f6ffed",
   colorSuccessBorder: "#b7eb8f",
   colorSuccessText: "#237804",
-  colorWarning: "#faad14",
+  colorWarning: "#874d00",
+  colorWarningHover: "#613400",
+  colorWarningActive: "#3d2100",
   colorWarningBg: "#fffbe6",
   colorWarningBorder: "#ffe58f",
   colorWarningText: "#874d00",
@@ -57,6 +63,13 @@ export const RT_TAG_TEXT: Record<string, string> = {
   gold: "#874d00",
   red: "#a8071a",
   purple: "#531dab",
+};
+
+/** Затравочные цвета статусов (SPEC-v3 §5.2) — для графиков и заливок БЕЗ текста; в текст и под белый текст не идут. */
+export const RT_STATUS_FILL = {
+  error: "#ff4d4f",
+  warning: "#faad14",
+  success: "#52c41a",
 };
 
 /** Плотность таблиц CRM: отступы ячеек обычной таблицы = small (paddingXS). У Платформы — RT_COMPONENTS.Table. */

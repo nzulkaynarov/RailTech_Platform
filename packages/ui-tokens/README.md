@@ -24,17 +24,23 @@ make -C packages/ui-tokens check   # CI: контраст + сгенериров
 
 ## Что нового в 0.2.0
 
-- `color.primary` — `#1668dc` (hover `#1677ff`, active `#0958d9`, bg `#e6f4ff`, text `#0958d9`). Белый на `#1668dc` — 5.19:1.
+- `color.primary` — `#1668dc` (hover `#0958d9`, active `#003eb3`, bg `#e6f4ff`, text `#0958d9`). Белый на `#1668dc` — 5.19:1.
+  **Отступ от таблицы SPEC-v3 §5.2** (там hover `#1677ff` — 4.10:1 с белым текстом): по критерию §11.2 п. 6, решение
+  архитектора 2026-10-22. В shadcn-выходе добавлена переменная `--primary-hover` (`bg-primary-hover`); компоненты с
+  `bg-primary/90` (4.36:1) её пока не используют — Cabinet перейдёт при CAB-03.
 - У статусов `primary`, `info`, `success`, `warning`, `error` появилось поле **`text`** — цвет текста с контрастом ≥ 4.5:1 на
   белом и на своём светлом фоне; `default` — затравочный цвет (`#52c41a`, `#faad14`, `#ff4d4f`) для заливок и границ:
   **в текст `default` не идёт**. В теме AntD это `colorSuccessText`, `colorWarningText`, `colorErrorText`, `colorPrimaryText`;
   в shadcn `--success`, `--warning`, `--destructive` = `text` (они служат и цветом текста, и заливкой кнопок с белым текстом).
-  Ограничение AntD: сам AntD читает `colorError` для текста ошибок и заливки danger-кнопки — см. Q-INF-P0-2-2.
+  **В AntD-выходе статусные `colorError`, `colorWarning`, `colorSuccess` = `text`** (AntD читает их и как текст — `Form`
+  explain, `Tag`, danger-кнопки outlined/text/link, `Menu` danger, — и как фон под белый текст — `Button danger`,
+  `Badge count`, `Progress`); затравки доступны как `RT_STATUS_FILL` и `--rt-color-*-default` для графиков и заливок
+  без текста (Q-INF-P0-2-2).
 - Текст: `#1f1f1f` / `#595959` (secondary) / `#767676` (tertiary — подписи 12 px **только на белом**, на `#f5f5f5` и
   тонированных заливках 4.06–4.17:1). `colorTextDescription` и shadcn `--muted-foreground` поэтому = `#595959`.
 - Рамки `#d9d9d9` / разделители `#f0f0f0`; фон окна `#f5f5f5`, контейнер `#ffffff`; радиусы 4 / 6 / 8 / 12 (контролы 6, карточки 8).
 - Теги: `RT_TAG_TEXT` дополнен `blue`, `gold`, `red`, `purple` (`#531dab`), `cyan` — `#006d75`.
-- Ссылка при наведении и нажатии (`colorLinkHover`, `colorLinkActive`) — `#0958d9`, а не `#1677ff` (4.10:1 как текст).
+- Ссылка при наведении и нажатии (`colorLinkHover`, `colorLinkActive`) = `primary.hover` / `primary.active` (текст ≥ 4.5:1).
 - `RT_COMPONENTS` — компонентные токены Платформы (`Menu`, `Table`, `Card`, `Tabs`, `Badge`, `Layout`) из 03-frontend §3.
   Токены, которые AntD при `cssVar: true` не принимает на уровне компонента (глобальные алиасы: `borderRadiusSM`, `boxShadow`,
   `colorBorderSecondary`), сюда не входят — они заданы глобально в `RT_TOKENS`. `Tag` (высота 22, радиус 4, шрифт 12) и серый
@@ -50,7 +56,7 @@ ERP и CRM шрифт не подключают (заморожены, ADR-0011)
 
 ## Тест контраста
 
-`contrast.test.mjs` читает `tokens.json` и собранный `dist/shadcn.css`; пары «текст / фон» перечислены в массиве `pairs`
+`contrast.test.mjs` читает `tokens.json`, собранные `dist/shadcn.css` и `dist/antd.ts` (реальные пары компонентов AntD); пары «текст / фон» перечислены в массиве `pairs`
 явно (новая пара в интерфейсе → строка в массиве). Пары ниже 4.5:1, которые фиксирует SPEC-v3 §5.2, вынесены в
-`KNOWN_BELOW_AA` со ссылкой на вопрос в `docs/QUESTIONS.md` (Q-INF-P0-2-1…3): тест держит их в 3:1…4.5:1 и просит перенести в
+`KNOWN_BELOW_AA` со ссылкой на вопрос в `docs/QUESTIONS.md` (Q-INF-P0-2-1, Q-INF-P0-2-3): тест держит их в 3:1…4.5:1 и просит перенести в
 основной список, когда пара начнёт проходить.

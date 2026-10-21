@@ -2,7 +2,7 @@ import { theme } from "antd";
 import { describe, expect, it } from "vitest";
 
 import { TAG_TEXT, appTheme } from "./theme";
-import { RT_COMPONENTS, RT_TOKENS } from "./tokens.generated";
+import { RT_COMPONENTS, RT_STATUS_FILL, RT_TOKENS } from "./tokens.generated";
 
 /** WCAG 2.1: относительная яркость и контраст; полупрозрачный цвет смешивается с фоном. */
 type Rgb = [number, number, number];
@@ -54,6 +54,18 @@ const pairs: [string, string, string][] = [
   ["primary on layout", tk.colorPrimary, tk.colorBgLayout],
   ["primary on primaryBg (menu)", tk.colorPrimary, tk.colorPrimaryBg],
   ["white on primary button", white, tk.colorPrimary],
+  [
+    "white on primary hover (#0958d9, решение архитектора вместо #1677ff)",
+    white,
+    tk.colorPrimaryHover,
+  ],
+  [
+    "primary hover text on container (outlined/link button hover)",
+    tk.colorPrimaryHover,
+    tk.colorBgContainer,
+  ],
+  ["primary hover text on layout", tk.colorPrimaryHover, tk.colorBgLayout],
+  ["white on primary active", white, tk.colorPrimaryActive],
   ["primaryText on primaryBg (active menu item)", tk.colorPrimaryText, tk.colorPrimaryBg],
   ["primaryText on container", tk.colorPrimaryText, tk.colorBgContainer],
   ["link", tk.colorLink, tk.colorBgContainer],
@@ -78,6 +90,26 @@ const pairs: [string, string, string][] = [
   ["white on danger hover", white, tk.colorErrorHover],
   ["white on danger active", white, tk.colorErrorActive],
   ["error on errorBg", tk.colorErrorText, tk.colorErrorBg],
+  // Реальные пары компонентов antd: Tag status, Form explain, Button danger, Badge count, Menu/Dropdown danger, Progress.
+  ["Tag error: colorError on colorErrorBg", tk.colorError, tk.colorErrorBg],
+  ["Tag warning: colorWarning on colorWarningBg", tk.colorWarning, tk.colorWarningBg],
+  ["Tag success: colorSuccess on colorSuccessBg", tk.colorSuccess, tk.colorSuccessBg],
+  ["Form explain error: colorError on container", tk.colorError, tk.colorBgContainer],
+  ["Form explain warning: colorWarning on container", tk.colorWarning, tk.colorBgContainer],
+  ["Typography danger: colorErrorText on container", tk.colorErrorText, tk.colorBgContainer],
+  ["Button danger primary: white on colorError", white, tk.colorError],
+  ["Button danger outlined/text/link: colorError on container", tk.colorError, tk.colorBgContainer],
+  ["Button danger text hover: colorErrorHover on errorBg", tk.colorErrorHover, tk.colorErrorBg],
+  ["colorErrorTextHover on container", tk.colorErrorTextHover, tk.colorBgContainer],
+  ["colorErrorTextActive on container", tk.colorErrorTextActive, tk.colorBgContainer],
+  ["Badge count: white on colorError", white, tk.colorError],
+  ["Menu/Dropdown danger: colorError on container", tk.colorError, tk.colorBgContainer],
+  ["Menu danger selected: white on colorError", white, tk.colorError],
+  ["Progress success: colorSuccess on container", tk.colorSuccess, tk.colorBgContainer],
+  ["colorSuccessHover on container", tk.colorSuccessHover, tk.colorBgContainer],
+  ["colorWarningHover on container", tk.colorWarningHover, tk.colorBgContainer],
+  ["link hover on container", tk.colorLinkHover, tk.colorBgContainer],
+  ["link active on container", tk.colorLinkActive, tk.colorBgContainer],
   ["success on successBg", tk.colorSuccessText, tk.colorSuccessBg],
   ["success on container", tk.colorSuccessText, tk.colorBgContainer],
   ["warning on warningBg", tk.colorWarningText, tk.colorWarningBg],
@@ -96,16 +128,9 @@ const pairs: [string, string, string][] = [
   ["default tag", tk.colorText, opaque(tk.colorFillQuaternary)],
 ];
 
-// Пары ниже 4.5:1, зафиксированные SPEC-v3 §5.2 (docs/QUESTIONS.md, Q-INF-P0-2-*). Тест держит их в 3:1…4.5:1 и
+// Пары ниже 4.5:1, зафиксированные SPEC-v3 §5.2 (docs/QUESTIONS.md, Q-INF-P0-2-3). Тест держит их в 3:1..4.5:1 и
 // требует перенести пару в основной список, когда она начнёт проходить.
 const knownBelowAa: [string, string, string][] = [
-  ["white on primary hover #1677ff (Q-INF-P0-2-1)", white, tk.colorPrimaryHover],
-  ["white on solid danger button #ff4d4f (Q-INF-P0-2-2)", white, tk.colorError],
-  [
-    "danger text colorError #ff4d4f on container (Q-INF-P0-2-2)",
-    tk.colorError,
-    tk.colorBgContainer,
-  ],
   ["tertiary on layout (Q-INF-P0-2-3)", tk.colorTextTertiary, tk.colorBgLayout],
   ["tertiary on primaryBg (Q-INF-P0-2-3)", tk.colorTextTertiary, tk.colorPrimaryBg],
 ];
@@ -127,11 +152,14 @@ describe("theme contrast (WCAG 2.1 AA, 1.4.3)", () => {
     expect(ratio).toBeLessThan(4.5);
   });
 
-  it("keeps seed status colours out of text tokens", () => {
+  it("keeps seed status colours out of antd tokens (text and white-on-fill pairs)", () => {
     expect(tk.colorErrorText).toBe("#a8071a");
     expect(tk.colorSuccessText).toBe("#237804");
     expect(tk.colorWarningText).toBe("#874d00");
-    expect(RT_TOKENS.colorError).toBe("#ff4d4f");
+    expect(RT_TOKENS.colorError).toBe("#a8071a");
+    expect(RT_TOKENS.colorWarning).toBe("#874d00");
+    expect(RT_TOKENS.colorSuccess).toBe("#237804");
+    expect(RT_STATUS_FILL).toEqual({ error: "#ff4d4f", warning: "#faad14", success: "#52c41a" });
   });
 
   it("ships component tokens for the Platform theme", () => {
