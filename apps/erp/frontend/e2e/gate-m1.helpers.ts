@@ -1,8 +1,8 @@
 /**
- * Помощники сценария гейта M1 (FIX-50, `gate-m1.spec.ts`): сессии ролей, почта стенда, портал клиента,
+ * Помощники сценария гейта M1 (FIX-50, повтор FIX-50b; `gate-m1.spec.ts`): сессии ролей, почта стенда, портал клиента,
  * axe и скриншоты. Только для прогона против стенда ансамбля — в CI не подключается.
  *
- * Секретов в файле нет: адреса и пароль админа CRM приходят из окружения, пароли сотрудников FIX-50
+ * Секретов в файле нет: адреса и пароль админа CRM приходят из окружения, пароли сотрудников FIX-50b
  * выпускает CRM (временный пароль → свой пароль, случайный на прогон) и живут только в памяти процесса.
  * Токены и коды из писем стенда читаются из логов в переменную процесса и не пишутся ни в вывод, ни в файлы.
  */
@@ -31,13 +31,15 @@ export const ENV = {
   adminEmail: process.env.E2E_CRM_ADMIN_EMAIL ?? '',
   adminPassword: process.env.E2E_CRM_ADMIN_PASSWORD ?? '',
   /**
-   * Команда, печатающая свежие логи `erp-backend` и `erp-worker` (письма стенда — консольный бэкенд), БЕЗ префикса
-   * сервиса: `cd <корень> && docker compose -f infra/compose/base.yml -f infra/compose/dev.yml --env-file .env
-   * logs --no-log-prefix --since 10m erp-backend erp-worker 2>&1`.
+   * Команда, печатающая свежие логи сервиса ERP (письма стенда — консольный бэкенд), БЕЗ префикса сервиса.
+   * Место для имени сервиса — `{svc}`: каждый контейнер (`erp-backend`, `erp-worker`) читается отдельной
+   * командой, чтобы строки двух потоков не перемешались внутри письма:
+   * `cd <корень> && docker compose -f infra/compose/base.yml -f infra/compose/dev.yml --env-file .env
+   * logs --no-log-prefix --since 15m {svc} 2>&1`. Без `{svc}` команда выполняется один раз как есть.
    */
   mailLogCmd: process.env.E2E_MAIL_LOG_CMD ?? '',
-  /** Папка скриншотов; по умолчанию `docs/screens/fix-50` относительно корня репозитория. */
-  shotsDir: process.env.E2E_SHOTS_DIR ?? path.resolve(process.cwd(), '../../../docs/screens/fix-50'),
+  /** Папка скриншотов; по умолчанию `docs/screens/fix-50b` относительно корня репозитория. */
+  shotsDir: process.env.E2E_SHOTS_DIR ?? path.resolve(process.cwd(), '../../../docs/screens/fix-50b'),
   /** Необязательный файл состояния прогона (без паролей и токенов) — чтобы возобновлять с `--grep`. */
   stateFile: process.env.E2E_STATE_FILE ?? '',
 };
@@ -53,30 +55,36 @@ export interface PersonaInfo {
   fullName: string;
   /** Роль в CRM: `admin` | `manager` | `viewer` — карта `apps/crm/backend/app/domain/erp_permissions.py`. */
   crmRole: 'Администратор' | 'Менеджер' | 'Наблюдатель';
-  /** Системная роль ERP, которую админ выдаёт в «Настройки → Команда» (CRM отдаёт только manager/viewer/admin). */
+  /** Системная роль ERP, которую админ выдаёт в «Настройки → Команда» (CRM отдаёт только manager/viewer/admin; D-10). */
   erpRole: 'Руководитель' | 'Расчёт' | 'Финансы' | 'Наблюдатель' | null;
   /** Ожидаемые права `capabilities.permissions` после выдачи роли (apps/erp/CLAUDE.md §6). */
   permissions: string[] | 'ALL';
 }
 
+/**
+ * Сотрудники повтора FIX-50b заводятся заново (`fix50b-…`): весь путь «CRM → доступ к ERP → роль в «Команде»» проходит
+ * с нуля. «Финансы» заводятся в CRM как «Наблюдатель» (0 кодов): «Менеджер» дал бы к правам роли «Финансы» ещё и четыре
+ * кода `CRM Sync` (провижининг теперь их не затирает и роль «CRM Sync» не снимается вручную, FIX-55), и «Финансы» перестали бы
+ * быть «Финансами». «Расчёт» и «Руководитель» от «Менеджера» ничего лишнего не получают (его коды входят в их права).
+ */
 export const PERSONAS: Record<Persona, PersonaInfo> = {
   admin: {
     email: ENV.adminEmail,
-    fullName: 'FIX-50 Админ',
+    fullName: 'FIX-50b Админ',
     crmRole: 'Администратор',
     erpRole: null,
     permissions: 'ALL',
   },
   head: {
-    email: 'fix50-head@example.com',
-    fullName: 'FIX-50 Руководитель',
+    email: 'fix50b-head@example.com',
+    fullName: 'FIX-50b Руководитель',
     crmRole: 'Менеджер',
     erpRole: 'Руководитель',
     permissions: 'ALL',
   },
   calc: {
-    email: 'fix50-calc@example.com',
-    fullName: 'FIX-50 Расчётчик',
+    email: 'fix50b-calc@example.com',
+    fullName: 'FIX-50b Расчётчик',
     crmRole: 'Менеджер',
     erpRole: 'Расчёт',
     permissions: [
@@ -90,15 +98,15 @@ export const PERSONAS: Record<Persona, PersonaInfo> = {
     ],
   },
   fin: {
-    email: 'fix50-fin@example.com',
-    fullName: 'FIX-50 Финансист',
-    crmRole: 'Менеджер',
+    email: 'fix50b-fin@example.com',
+    fullName: 'FIX-50b Финансист',
+    crmRole: 'Наблюдатель',
     erpRole: 'Финансы',
     permissions: ['data.export', 'finance.invoice', 'finance.payment', 'finance.rates', 'quote.view_cost_margin'],
   },
   viewer: {
-    email: 'fix50-viewer@example.com',
-    fullName: 'FIX-50 Наблюдатель',
+    email: 'fix50b-viewer@example.com',
+    fullName: 'FIX-50b Наблюдатель',
     crmRole: 'Наблюдатель',
     erpRole: 'Наблюдатель',
     permissions: [],
@@ -113,6 +121,8 @@ export interface RunState {
   contactName: string;
   contactEmail: string;
   leadId: number;
+  manualLeadId: number;
+  manualDealId: number;
   dealId: number;
   quoteId: number;
   quoteNumber: string;
@@ -128,6 +138,8 @@ export function loadState(): RunState {
     contactName: '',
     contactEmail: '',
     leadId: 0,
+    manualLeadId: 0,
+    manualDealId: 0,
     dealId: 0,
     quoteId: 0,
     quoteNumber: '',
@@ -292,31 +304,90 @@ export function writeAxeReport(): void {
 }
 
 /** Нарушения axe по всему отчёту (включая прежние процессы) — для итогового теста. */
-export function allBlockingAxe(): AxeFinding[] {
-  return readAxeReport().violations.filter((f) => f.impact === 'serious' || f.impact === 'critical');
+export function allBlockingAxe(scope: 'all' | 'erp' | 'crm' = 'all'): AxeFinding[] {
+  return readAxeReport().violations.filter(
+    (f) =>
+      (f.impact === 'serious' || f.impact === 'critical') &&
+      (scope === 'all' || (scope === 'crm') === f.screen.startsWith('crm-')),
+  );
 }
 
 // ── Почта стенда (консольный бэкенд) ───────────────────────────────────────────
 
-/** Тексты писем из логов: `text/plain` приходит base64-блоками. Свежие — в конце. */
-export function mailTexts(): string[] {
-  const raw = execSync(ENV.mailLogCmd, { encoding: 'utf8', maxBuffer: 256 * 1024 * 1024, shell: '/bin/bash' });
-  const blocks = [...raw.matchAll(/Content-Transfer-Encoding: base64\s*\n\s*\n((?:[A-Za-z0-9+/=]{4,}\s*\n)+)/g)];
-  return blocks.map((m) => Buffer.from(m[1].replace(/\s+/g, ''), 'base64').toString('utf8'));
+export interface MailMessage {
+  /** Адресат из заголовка `To:` (нижний регистр). */
+  to: string;
+  /** Время из заголовка `Date:` (мс); 0, если заголовка нет. */
+  at: number;
+  text: string;
 }
 
-/** Ждёт письмо, где есть все подстроки `needles` и совпадает `pick`; возвращает группу 1. Значение — только в память. */
-export async function waitMail(needles: string[], pick: RegExp, timeoutMs = 45_000): Promise<string> {
+function decodeMimeHeader(value: string): string {
+  return value.replace(/=\?utf-8\?b\?([^?]+)\?=/gi, (_m, b64: string) => Buffer.from(b64, 'base64').toString('utf8'));
+}
+
+/**
+ * Письма из логов стенда: каждый контейнер (`erp-backend`, `erp-worker`) читается отдельной командой, письмо разбирается
+ * по заголовкам (`To:`, `Date:`), `text/plain` приходит base64-блоком. Свежие — в конце.
+ */
+export function mailMessages(): MailMessage[] {
+  const commands = ENV.mailLogCmd.includes('{svc}')
+    ? ['erp-backend', 'erp-worker'].map((svc) => ENV.mailLogCmd.replace('{svc}', svc))
+    : [ENV.mailLogCmd];
+  const out: MailMessage[] = [];
+  for (const cmd of commands) {
+    const raw = execSync(cmd, { encoding: 'utf8', maxBuffer: 256 * 1024 * 1024, shell: '/bin/bash' });
+    // Письма двух потоков разделены по-разному (у `erp-backend` — строка из дефисов, у `erp-worker` — нет), поэтому для каждого
+    // base64-блока `text/plain` берём ближайшие СВЕРХУ заголовки `To:` и `Date:` того же письма.
+    const re = /Content-Transfer-Encoding: base64\s*\n(?:[A-Za-z-]+: .*\n)*\s*\n((?:[A-Za-z0-9+/=]{4,}\s*\n?)+)/g;
+    for (const m of raw.matchAll(re)) {
+      const before = raw.slice(Math.max(0, (m.index ?? 0) - 2_500), m.index ?? 0);
+      const tos = [...before.matchAll(/^To: (.+)$/gm)];
+      const dates = [...before.matchAll(/^Date: (.+)$/gm)];
+      const to = tos.length ? tos[tos.length - 1][1] : '';
+      const date = dates.length ? dates[dates.length - 1][1] : '';
+      out.push({
+        to: decodeMimeHeader(to).trim().toLowerCase(),
+        at: date ? new Date(date).getTime() || 0 : 0,
+        text: Buffer.from(m[1].replace(/\s+/g, ''), 'base64').toString('utf8'),
+      });
+    }
+  }
+  return out.sort((a, b) => a.at - b.at);
+}
+
+/** Начало прогона: письма старше него не читаются (чужие прогоны на том же стенде). */
+export const MAIL_SINCE = Date.now() - 2 * 60_000;
+
+/**
+ * Ждёт письмо СТРОГО этому адресату (`to`), не старше начала прогона, где есть все подстроки `needles`;
+ * возвращает группу 1 из `pick`. Значение — только в память.
+ */
+export async function waitMail(
+  to: string,
+  needles: string[],
+  pick: RegExp,
+  timeoutMs = 45_000,
+): Promise<string> {
   const until = Date.now() + timeoutMs;
+  const want = to.trim().toLowerCase();
   for (;;) {
-    for (const text of mailTexts().reverse()) {
-      if (!needles.every((n) => text.includes(n))) continue;
-      const m = pick.exec(text);
+    for (const mail of mailMessages().reverse()) {
+      if (mail.to !== want && !mail.to.includes(`<${want}>`)) continue;
+      if (mail.at && mail.at < MAIL_SINCE) continue;
+      if (!needles.every((n) => mail.text.includes(n))) continue;
+      const m = pick.exec(mail.text);
       if (m) return m[1];
     }
-    if (Date.now() > until) throw new Error(`письмо не пришло: ${needles.join(' + ')}`);
+    if (Date.now() > until) throw new Error(`письмо не пришло: ${want} + ${needles.join(' + ')}`);
     await new Promise((r) => setTimeout(r, 2_000));
   }
+}
+
+/** Сырые логи сервиса ERP (для проверок вида «токена в логах нет»); в отчёт и артефакты не попадают. */
+export function serviceLog(svc = 'erp-backend'): string {
+  const cmd = ENV.mailLogCmd.includes('{svc}') ? ENV.mailLogCmd.replace('{svc}', svc) : ENV.mailLogCmd;
+  return execSync(cmd, { encoding: 'utf8', maxBuffer: 256 * 1024 * 1024, shell: '/bin/bash' });
 }
 
 // ── CRM: вход, пользователи ────────────────────────────────────────────────────
@@ -397,30 +468,62 @@ export interface Session {
   page: Page;
 }
 
+/** Итоги штатных входов из CRM в ERP за процесс: `failed` — обрыв/ошибка обмена не из-за лимита частоты (D-01). */
+export const ssoStats = { attempts: 0, failed: 0, rateLimited: 0, refreshInBody: 0 };
+
 /**
- * Вход в ERP через «В бэк-офис (ERP)» в CRM. Штатный обмен токена ломается (дефект D-01: фоновый 401 `/me/`
- * уводит страницу `/sso/exchange` на `/` и обрывает POST обмена), поэтому обход: токен берётся из перехваченного
- * запроса SPA, обмен делает `ctx.request` (cookie общая с браузером). Токен — только в переменную процесса.
- * Обмен ограничен по частоте (429 «available in N seconds») — ждём и повторяем.
+ * Штатный вход в ERP: в CRM нажимается «В бэк-офис (ERP)», страница `/sso/exchange` меняет токен на сессию ERP и
+ * открывает рабочее место. Без обходов (в раунде 1 обмен ломался редиректом, D-01; исправлено FIX-58). Токен нигде не
+ * читается; смотрим только на ответ обмена: код и отсутствие `refresh_token` в теле (S-14). Обмен ограничен по частоте
+ * (429) — это не дефект, ждём и нажимаем снова.
+ * Возвращает true, если рабочее место ERP открылось.
  */
-export async function ssoToErp(ctx: BrowserContext, crmPage: Page): Promise<void> {
-  let token = '';
-  await crmPage.route('**/api/v1/auth/sso/exchange/', async (route) => {
-    token = (route.request().postDataJSON() as { token: string }).token;
-    await route.abort();
-  });
-  await crmPage.getByRole('button', { name: /ERP/ }).first().click();
-  await crmPage.waitForURL(/sso\/exchange/, { timeout: 30_000 });
-  await expect.poll(() => token, { timeout: 10_000 }).not.toBe('');
-  const url = `${ENV.erp}/api/v1/auth/sso/exchange/`;
-  let res = await ctx.request.post(url, { data: { token } });
-  for (let i = 0; i < 10 && res.status() === 429; i++) {
-    const m = /in (\d+) second/.exec(await res.text());
-    await crmPage.waitForTimeout(((m ? Number(m[1]) : 6) + 2) * 1000);
-    res = await ctx.request.post(url, { data: { token } });
+export async function ssoClickThrough(page: Page): Promise<boolean> {
+  for (let i = 0; i < 8; i++) {
+    ssoStats.attempts += 1;
+    let status = 0;
+    const onResponse = async (res: import('@playwright/test').Response) => {
+      if (!res.url().endsWith('/api/v1/auth/sso/exchange/')) return;
+      status = res.status();
+      if (status === 200) {
+        try {
+          const body = (await res.json()) as Record<string, unknown>;
+          if ('refresh' in body || 'refresh_token' in body) ssoStats.refreshInBody += 1;
+        } catch {
+          /* тело не JSON — refresh_token в нём не прочитать */
+        }
+      }
+    };
+    page.on('response', onResponse);
+    await page.getByRole('button', { name: /ERP/ }).first().click();
+    // «Дашборд» есть и в меню CRM, поэтому сначала ждём, что страница ушла на адрес ERP и обмен закончился.
+    const erpOrigin = new URL(ENV.erp).origin;
+    const arrived = await page
+      .waitForURL((u) => u.origin === erpOrigin && !/sso\/exchange/.test(u.pathname), { timeout: 20_000 })
+      .then(() => true)
+      .catch(() => false);
+    const ok =
+      arrived &&
+      (await page
+        .getByText('Дашборд')
+        .first()
+        .waitFor({ state: 'visible', timeout: 10_000 })
+        .then(() => true)
+        .catch(() => false));
+    page.off('response', onResponse);
+    if (ok) return true;
+    if (status === 429) {
+      ssoStats.rateLimited += 1;
+      await page.waitForTimeout(12_000);
+      await page.goto(`${ENV.crm}/`);
+      await page.waitForLoadState('domcontentloaded');
+      await page.waitForTimeout(2_500);
+      continue;
+    }
+    ssoStats.failed += 1;
+    return false;
   }
-  expect(res.status(), 'обмен SSO-токена на сессию ERP').toBe(200);
-  await crmPage.unroute('**/api/v1/auth/sso/exchange/');
+  return false;
 }
 
 export async function openErpSession(
@@ -435,20 +538,10 @@ export async function openErpSession(
   });
   const page = await ctx.newPage();
   const crmPassword = await crmLogin(page, PERSONAS[persona].email, password);
-  await ssoToErp(ctx, page);
-  // Обновление сессии по cookie тоже ограничено по частоте (429) — при форме входа ждём и перезагружаем.
-  for (let i = 0; i < 6; i++) {
-    await page.goto(`${ENV.erp}/`);
-    const ok = await page
-      .getByText('Дашборд')
-      .first()
-      .waitFor({ state: 'visible', timeout: 15_000 })
-      .then(() => true)
-      .catch(() => false);
-    if (ok) break;
-    await page.waitForTimeout(12_000);
-  }
+  await page.waitForTimeout(2_500);
+  expect(await ssoClickThrough(page), `штатный вход ${persona}: «В бэк-офис (ERP)» открывает рабочее место ERP`).toBe(true);
   await expect(page.getByText('Дашборд').first()).toBeVisible({ timeout: 5_000 });
+  await page.waitForLoadState('networkidle').catch(() => undefined);
   return { session: { persona, ctx, page }, crmPassword };
 }
 
@@ -514,7 +607,7 @@ export async function portalLogin(email: string, contactName: string): Promise<P
   const idem = () => ({ 'Idempotency-Key': randomUUID() });
   const req = await api.post('/api/portal/v1/auth/magic-link', { data: { email }, headers: idem() });
   expect(req.status(), 'запрос magic-link клиента').toBe(200);
-  const token = await waitMail([contactName], /auth\/magic#token=([A-Za-z0-9_-]+)/);
+  const token = await waitMail(email, [contactName], /auth\/magic#token=([A-Za-z0-9_-]+)/);
   const ex = await api.post('/api/portal/v1/auth/magic', { data: { token }, headers: idem() });
   expect(ex.status(), 'обмен magic-link клиента').toBe(200);
   return { api, idem };

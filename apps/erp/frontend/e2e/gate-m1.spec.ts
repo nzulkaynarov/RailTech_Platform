@@ -1,25 +1,28 @@
 /**
- * Гейт M1 (FIX-50): прогон пути бэк-офиса BUSINESS §4–§11 на СТЕНДЕ ансамбля — настоящие CRM и ERP, без моков.
+ * Гейт M1 (FIX-50; повтор после раунда 2 — FIX-50b): прогон пути бэк-офиса BUSINESS §4–§11 на СТЕНДЕ ансамбля —
+ * настоящие CRM и ERP, без моков.
  *
  *   заявка (CRM → «Передать в бэк-офис») → КП (строки, курс, маржа) → согласование (цепочка ролей) → отправка
  *   клиенту → публичная ссылка и акцепт → договор → счёт и оплата → поставка → акт
  *
  * Роли: «Руководитель» (роль HEAD), «Расчёт», «Финансы», «Наблюдатель» и Администратор CRM (= суперпользователь
  * ERP). Сотрудников заводит CRM («Пользователи» → «Доступ к ERP», FIX-11), системную роль ERP выдаёт админ в
- * «Настройки → Команда». Клиент — публичная страница КП (браузер) и портал (шаги клиента по API; UI Cabinet — FIX-51).
+ * «Настройки → Команда» (настоящий пользователь с настоящей ролью, `/me` не подменяется). Клиент — публичная
+ * страница КП (браузер) и портал (шаги клиента по API; UI Cabinet — FIX-51).
  *
  * НЕ запускается в CI и по умолчанию: без переменных окружения весь файл пропускается. Запуск (из apps/erp/frontend):
  *
  *   E2E_BASE_URL=http://erp.localhost:8088 E2E_CRM_URL=http://crm.localhost:8088 \
  *   E2E_CRM_ADMIN_EMAIL=… E2E_CRM_ADMIN_PASSWORD=… \
  *   E2E_MAIL_LOG_CMD='cd <корень> && docker compose -f infra/compose/base.yml -f infra/compose/dev.yml --env-file .env \
- *                     logs --no-log-prefix --since 10m erp-backend erp-worker 2>&1' \
+ *                     logs --no-log-prefix --since 15m {svc} 2>&1' \
  *   npx playwright test e2e/gate-m1.spec.ts --workers=1
  *
- * Скриншоты (1440 и 390 px) и `axe-results.json` пишутся в `docs/screens/fix-50/` (или `E2E_SHOTS_DIR`).
+ * Скриншоты (1440 и 390 px) и `axe-results.json` пишутся в `docs/screens/fix-50b/` (или `E2E_SHOTS_DIR`).
  *
- * Известные дефекты прогона (docs/runbooks/m1_qa_02_report.md) помечены `test.fail()`: пока дефект жив, тест «красный
- * как ожидалось» и набор зелёный; когда дефект исправлен, тест «неожиданно прошёл» — аннотацию снимают, это повтор гейта.
+ * Дефекты раунда 1 (docs/runbooks/m1_qa_02_report.md), исправленные в раунде 2, проверяются здесь строго: тест красный,
+ * если дефект вернулся. Дефекты, которые не исправлены, помечены `test.fail()` (красный «как ожидалось»; когда
+ * дефект исправят, тест «неожиданно пройдёт» — аннотацию снимают).
  */
 import { expect, request as pwRequest, test, type Browser, type BrowserContext, type Page } from '@playwright/test';
 import Decimal from 'decimal.js';
@@ -44,8 +47,11 @@ import {
   portalPost,
   probe,
   saveState,
+  serviceLog,
   shoot,
   shootDialog,
+  ssoClickThrough,
+  ssoStats,
   waitMail,
   writeAxeReport,
   type Persona,
@@ -62,11 +68,22 @@ const sessions = new Map<Persona, Session>();
 const crmPasswords = new Map<Persona, string>([['admin', ENV.adminPassword]]);
 let crmAdmin: { ctx: BrowserContext; page: Page } | null = null;
 let client: PortalClient | null = null;
-const immutabilityProbe: Record<string, number> = {};
+const dupRef = { sameStatus: 0, sameIdSame: false, otherStatus: 0, otherDetail: '', paidAfter: '' };
+/** Экраны, которые у открытой сессии не обновились по возврату на вкладку (D-09). */
 const staleViews: string[] = [];
-const dupRef = { status: 0, returnedAmount: '', paidAfter: '' };
+/** Экраны, где данные пришли только после возврата на вкладку (событие `focus`) — так и должно быть (D-09, FIX-58). */
+const refreshedOnFocus: string[] = [];
+/** Находки проверки 390 px конструктора КП (D-13): пусто = страница не шире экрана и кнопки в кадре. */
+const narrowFindings: string[] = [];
+/** Наблюдения по текстам (D-12), которые не входят в строгие проверки. */
+const textObservations: string[] = [];
+/** Показал ли экран сделки «от имени» в журнале (D-02, шаг 3.2). */
+const onBehalfOnScreen = { value: false };
+/** Имя менеджера на публичной странице КП — то, что видит клиент (шаг 5.2). */
+const publicManager = { name: '' };
 
 const STAFF: Persona[] = ['calc', 'fin', 'viewer', 'head'];
+
 
 // ── общие шаги ─────────────────────────────────────────────────────────────────
 
@@ -99,20 +116,50 @@ async function getClient(): Promise<PortalClient> {
   return client;
 }
 
-/** Ждёт элемент; если открытая сессия его не показывает (устаревший кэш SPA, D-09) — фиксирует и перезагружает страницу. */
+/**
+ * Ждёт элемент. Если открытая сессия его не показывает, имитирует «пользователь вернулся на вкладку» (событие `focus`
+ * окна — тот же сигнал, что слушает кэш запросов, FIX-58 D-09) и ждёт ещё. Если элемент так и не появился —
+ * экран устарел (D-09 жив): фиксируем, перезагружаем страницу и идём дальше.
+ */
 async function visibleOrReload(page: Page, target: ReturnType<Page['locator']>, label: string): Promise<void> {
-  const ok = await target
-    .waitFor({ state: 'visible', timeout: 6_000 })
+  const quick = await target
+    .waitFor({ state: 'visible', timeout: 4_000 })
     .then(() => true)
     .catch(() => false);
-  if (ok) return;
+  if (quick) return;
+  await returnToTab(page);
+  const afterFocus = await target
+    .waitFor({ state: 'visible', timeout: 8_000 })
+    .then(() => true)
+    .catch(() => false);
+  if (afterFocus) {
+    refreshedOnFocus.push(label);
+    return;
+  }
   staleViews.push(label);
   await page.reload();
   await expect(target).toBeVisible({ timeout: 20_000 });
 }
 
+/** «Вернулся на вкладку»: окно получает `focus`, документ — `visibilitychange` (React Query перечитывает живые списки). */
+async function returnToTab(page: Page): Promise<void> {
+  await page.evaluate(() => {
+    window.dispatchEvent(new Event('focus'));
+    document.dispatchEvent(new Event('visibilitychange'));
+  });
+}
+
 async function goErp(page: Page, hash: string): Promise<void> {
-  await page.goto(`${ENV.erp}/#${hash}`);
+  // Переход может быть прерван встречной навигацией SPA (ERR_ABORTED) — повторяем, это не дефект экрана.
+  for (let attempt = 0; ; attempt++) {
+    try {
+      await page.goto(`${ENV.erp}/#${hash}`);
+      break;
+    } catch (e) {
+      if (attempt >= 3 || !/ERR_ABORTED|interrupted by another navigation/.test(String(e))) throw e;
+      await page.waitForTimeout(1_500);
+    }
+  }
   await page.waitForLoadState('domcontentloaded');
   await page.waitForTimeout(1500);
 }
@@ -152,20 +199,51 @@ async function addQuoteLine(page: Page, name: string, qty: string, costUsd: stri
   expect((await saved).status()).toBe(201);
 }
 
-// Проба «позиции КП изменяемы?» — правка заметки позиции, на суммы не влияет.
-async function probeQuoteItemMutation(ctx: BrowserContext, label: string): Promise<number> {
+/**
+ * Проба «состав и цены КП меняются?» (D-04, FIX-55): все пути записи, которые меняют сумму КП, на текущем этапе.
+ * Вне черновика каждый обязан ответить 409 (`QUOTE_NOT_DRAFT`, после отправки `QUOTE_FROZEN`), в черновике — пройти.
+ * Пробы безвредны, если защита работает; если нет — тест 5.4 красный, а данные прогона уже не годятся.
+ */
+const lockProbes: Record<string, Record<string, { status: number; detail: string }>> = {};
+
+async function probeQuoteLock(ctx: BrowserContext, label: string): Promise<void> {
   const q = await quoteJson(ctx);
   const item = (q.items as Json[])[0];
-  const res = await probe(ctx, 'patch', `crm/quote-items/${item.id}/`, { note: `FIX-50 проба изменения (${label})` });
-  immutabilityProbe[label] = res.status;
-  return res.status;
+  const types = await erpGet<Json[] | { results: Json[] }>(ctx, 'crm/charge-types/');
+  const chargeType = String((Array.isArray(types) ? types : types.results)[0].code);
+  const id = S.quoteId;
+  const r: Record<string, { status: number; detail: string }> = {};
+  r['PATCH позиции'] = await probe(ctx, 'patch', `crm/quote-items/${item.id}/`, { note: `FIX-50b проба (${label})` });
+  r['POST позиции'] = await probe(ctx, 'post', 'crm/quote-items/', { quote: id, title: 'FIX-50b проба', quantity: 1, unit_cost: '1' });
+  r['DELETE позиции'] = await probe(ctx, 'delete', `crm/quote-items/${item.id}/`);
+  r['bulk-update'] = await probe(ctx, 'post', 'crm/quote-items/bulk-update/', { quote: id, items: [{ id: item.id, note: 'FIX-50b' }] });
+  r['bulk-create'] = await probe(ctx, 'post', 'crm/quote-items/bulk-create/', {
+    quote: id,
+    items: [{ imported_raw_name: 'FIX-50b проба', quantity: 1, unit_cost: '1' }],
+  });
+  r['bulk-delete'] = await probe(ctx, 'post', 'crm/quote-items/bulk-delete/', { quote: id, items: [item.id] });
+  r['POST расхода'] = await probe(ctx, 'post', 'crm/quote-charges/', {
+    quote: id,
+    charge_type: chargeType,
+    description: 'FIX-50b проба',
+    amount: '1.00',
+  });
+  r['PATCH КП (НДС)'] = await probe(ctx, 'patch', `crm/quotes/${id}/`, { vat_rate: '0' });
+  lockProbes[label] = r;
+  console.log(`D-04 [${label}]:`, Object.entries(r).map(([k, v]) => `${k}=${v.status}${v.detail ? ' ' + v.detail : ''}`).join('; '));
 }
+
+/** Число из строки «Итого к оплате …» публичной страницы КП — то, что видит клиент. */
+function publicTotal(body: string): string {
+  return (/Итого к оплате[^\d]*([\d\s\u00a0\u202f.,]+\d)/.exec(body)?.[1] ?? '').replace(/[\s\u00a0\u202f]/g, '');
+}
+let publicTotalBefore = '';
 
 test.beforeAll(() => {
   if (!S.companyName) {
-    S.companyName = `FIX-50 Тест ООО ${S.run}`;
-    S.contactName = `FIX-50 Клиент ${S.run}`;
-    S.contactEmail = `fix50-lead-${S.run}@example.com`;
+    S.companyName = `FIX-50b Тест ООО ${S.run}`;
+    S.contactName = `FIX-50b Клиент ${S.run}`;
+    S.contactEmail = `fix50b-lead-${S.run}@example.com`;
     saveState(S);
   }
 });
@@ -205,17 +283,19 @@ test('0.3 ERP «Настройки → Команда»: админ выдаёт
     const info = PERSONAS[p];
     const row = admin.page.locator('tr', { hasText: info.email }).first();
     await expect(row).toBeVisible();
-    const want = [info.erpRole!, `CRM Sync: ${info.email}`];
-    for (const role of want) {
-      await row.getByRole('button', { name: /Выбрать роли|Расчёт|Финансы|Руководитель|Наблюдатель|CRM Sync/ }).last().click();
-      const item = admin.page.getByRole('menuitemcheckbox', { name: role, exact: true });
-      const checked = (await item.getAttribute('aria-checked')) === 'true';
-      const shouldBeChecked = role === info.erpRole;
-      if (checked !== shouldBeChecked) await item.click();
-      await closeDialogs(admin.page);
-      await admin.page.waitForTimeout(600);
-    }
+    await row.getByRole('button', { name: /Выбрать роли/ }).click();
+    // D-15 (FIX-55): роли «CRM Sync: …» ведёт CRM — в списке выбора их нет ни чужих, ни своей.
+    const names = await admin.page.getByRole('menuitemcheckbox').allInnerTexts();
+    expect(names.filter((n) => /CRM Sync/.test(n)), `${p}: в выборе ролей «CRM Sync» быть не должно`).toEqual([]);
+    expect(names, 'выбор ролей содержит системную роль').toContain(info.erpRole);
+    const item = admin.page.getByRole('menuitemcheckbox', { name: info.erpRole!, exact: true });
+    if ((await item.getAttribute('aria-checked')) !== 'true') await item.click();
+    await expect(item).toHaveAttribute('aria-checked', 'true');
+    await closeDialogs(admin.page);
+    await admin.page.waitForTimeout(600);
   }
+  // Экран «Команда» не раскрывает служебные роли и чужие e-mail в ролях.
+  await expect(admin.page.getByText(/CRM Sync/)).toHaveCount(0);
   await shoot(admin.page, 'settings-team', 'admin');
 
   for (const p of STAFF) {
@@ -228,6 +308,9 @@ test('0.3 ERP «Настройки → Команда»: админ выдаёт
       expect(perms, `${p}: права роли «${PERSONAS[p].erpRole}»`).toEqual([...(PERSONAS[p].permissions as string[])].sort());
     }
     expect(me.capabilities.crm_access, `${p}: кнопка «В CRM» — по сопоставлению CRM`).toBe(true);
+    // D-12 (FIX-55): имя из CRM делится на имя и фамилию, а не остаётся инициалом «F.».
+    expect(String(me.first_name ?? '').length, `${p}: имя заполнено`).toBeGreaterThan(1);
+    expect(String(me.last_name ?? '').length, `${p}: фамилия заполнена`).toBeGreaterThan(1);
   }
 });
 
@@ -253,7 +336,7 @@ test('1.1 Заявка: веб-форма → лид CRM → «Передать 
         phone: `+99890${String(parseInt(S.run, 16)).padStart(7, '0').slice(-7)}`,
         language: 'ru',
         consent: true,
-        text: `FIX-50 (${S.run}): рельсовые скрепления КБ-65 — 200 комплектов; шефмонтаж — 1 услуга. КП до пятницы.`,
+        text: `FIX-50b (${S.run}): рельсовые скрепления КБ-65 — 200 комплектов; шефмонтаж — 1 услуга. КП до пятницы.`,
       },
     });
     if (sent.status() !== 429) break;
@@ -280,6 +363,48 @@ test('1.1 Заявка: веб-форма → лид CRM → «Передать 
   const calc = await getSession(browser, 'calc');
   await goErp(calc.page, dealHash());
   await expect(calc.page.getByText(`Заявка: ${S.companyName}`).first()).toBeVisible({ timeout: 30_000 });
+});
+
+test('1.2 D-11 (FIX-57): лид из звонка — «Согласие получено» в карточке → «Передать в бэк-офис» → заявка в ERP', async ({
+  browser,
+}) => {
+  test.setTimeout(240_000);
+  const admin = await getCrmAdmin(browser);
+  await admin.goto(`${ENV.crm}/inbox`);
+  await admin.getByRole('button', { name: 'Новый лид' }).click();
+  const dlg = admin.getByRole('dialog');
+  const manualCompany = `FIX-50b Ручной ООО ${S.run}`;
+  await dlg.locator('#name').fill(`FIX-50b Звонок ${S.run}`);
+  await dlg.locator('#company').fill(manualCompany);
+  await dlg.locator('#phone').fill(`+99891${String(parseInt(S.run, 16)).padStart(7, '0').slice(-7)}`);
+  await dlg.locator('#need').fill(`FIX-50b (${S.run}): звонок — болты М20, 500 штук, нужна цена.`);
+  await dlg.getByRole('button', { name: 'Создать', exact: true }).click();
+  await admin.waitForURL(/\/leads\/\d+/, { timeout: 30_000 }).catch(async () => {
+    await admin.getByRole('link', { name: /FIX-50b Звонок/ }).first().click();
+    await admin.waitForURL(/\/leads\/\d+/);
+  });
+  S.manualLeadId = Number(/\/leads\/(\d+)/.exec(admin.url())![1]);
+  saveState(S);
+
+  // Без согласия передать нельзя; «Согласие получено» — штатный путь для звонка (раньше его не было, D-11).
+  await expect(admin.getByRole('button', { name: 'Согласие получено' }).first()).toBeVisible();
+  await shoot(admin, 'crm-lead-manual-before-consent', 'admin');
+  await admin.getByRole('button', { name: 'Согласие получено' }).first().click();
+  const consent = admin.getByRole('dialog');
+  await consent.getByRole('button', { name: 'Согласие получено' }).click();
+  await expect(admin.getByRole('dialog')).toHaveCount(0, { timeout: 15_000 });
+  await expect(admin.getByRole('button', { name: 'Передать в бэк-офис' }).first()).toBeVisible();
+  await shoot(admin, 'crm-lead-manual-consent-recorded', 'admin');
+
+  await admin.getByRole('button', { name: 'Передать в бэк-офис' }).first().click();
+  const handoff = admin.getByRole('dialog');
+  await handoff.getByPlaceholder('или новый клиент').fill(manualCompany);
+  await handoff.getByRole('button', { name: 'Передать в бэк-офис' }).click();
+  const badge = admin.getByText(/В бэк-офисе: Заявка #\d+/);
+  await expect(badge).toBeVisible({ timeout: 60_000 });
+  S.manualDealId = Number(/#(\d+)/.exec(await badge.innerText())![1]);
+  saveState(S);
+  await shoot(admin, 'crm-lead-manual-handed-off', 'admin');
 });
 
 // ═══ 2. Расчёт: заявка → КП ════════════════════════════════════════════════════
@@ -321,8 +446,8 @@ test('2.2 «Расчёт»: КП — строки (товар и услуга), 
   S.quoteId = ((await res.json()) as { id: number }).id;
   saveState(S);
 
-  await addQuoteLine(calc.page, 'Скрепление рельсовое КБ-65 FIX-50', '200', '120');
-  await addQuoteLine(calc.page, 'Шефмонтаж FIX-50 (услуга)', '1', '1500');
+  await addQuoteLine(calc.page, 'Скрепление рельсовое КБ-65 FIX-50b', '200', '120');
+  await addQuoteLine(calc.page, 'Шефмонтаж FIX-50b (услуга)', '1', '1500');
   await expect(calc.page.getByText('Позиций: 2')).toBeVisible();
 
   const q = await quoteJson(calc.ctx);
@@ -330,11 +455,29 @@ test('2.2 «Расчёт»: КП — строки (товар и услуга), 
   expect(money(q.total_incl_vat).gt(0), 'итог КП посчитан').toBe(true);
   // Наценка 20 % на себестоимость → маржа 16,67 % (порог 15 %).
   expect(Math.abs(Number(q.economics?.gross_margin_percent ?? q.margin_percent) - 16.67)).toBeLessThan(0.1);
+  // D-13 (FIX-58): конструктор КП на 390 px — страница не шире экрана, «Сохранить» и кнопка панели согласования в кадре.
+  await calc.page.setViewportSize({ width: 390, height: 844 });
+  await calc.page.waitForTimeout(800);
+  const narrow = await calc.page.evaluate(() => {
+    const vw = window.innerWidth;
+    const out: string[] = [];
+    if (document.documentElement.scrollWidth > vw + 1) out.push(`страница шире экрана: ${document.documentElement.scrollWidth} > ${vw}`);
+    for (const b of Array.from(document.querySelectorAll('button'))) {
+      const label = (b.getAttribute('aria-label') || b.textContent || '').trim();
+      if (!/^(Сохранить|Открыть панель согласования|Добавить)$/.test(label)) continue;
+      const r = b.getBoundingClientRect();
+      if (r.width && (r.right > vw + 1 || r.left < -1)) out.push(`«${label}» вне экрана (${Math.round(r.left)}…${Math.round(r.right)})`);
+    }
+    return out;
+  });
+  narrowFindings.push(...narrow);
+  await calc.page.setViewportSize({ width: 1440, height: 900 });
+  await calc.page.waitForTimeout(500);
   await shoot(calc.page, 'quote-builder-draft', 'calc');
 
   // «Расчёт» договорной курс не меняет — кнопки нет, сервер отказывает.
   await expect(calc.page.getByRole('button', { name: 'Изменить курс' })).toHaveCount(0);
-  const denied = await probe(calc.ctx, 'post', `crm/quotes/${S.quoteId}/fx-override/`, { rate: '12500', reason: 'FIX-50' });
+  const denied = await probe(calc.ctx, 'post', `crm/quotes/${S.quoteId}/fx-override/`, { rate: '12500', reason: 'FIX-50b' });
   expect(denied).toMatchObject({ status: 403, detail: 'ROLE_NOT_PERMITTED' });
 });
 
@@ -351,7 +494,7 @@ test('2.3 «Финансы»: договорной курс USD с причин�
   await openFx();
   const fx = fin.page.getByRole('dialog').getByRole('textbox');
   await fx.first().fill('12500');
-  await fx.last().fill('FIX-50: курс по договору с клиентом');
+  await fx.last().fill('FIX-50b: курс по договору с клиентом');
   const saved = fin.page.waitForResponse((r) => r.url().includes('/fx-override/') && r.request().method() === 'POST');
   await (await dialogButton(fin.page, 'Сохранить курс')).click();
   expect((await saved).status()).toBe(200);
@@ -382,7 +525,15 @@ test('3.1 Согласование: «Расчёт» отправляет, це�
   await expect(calc.page.getByRole('dialog').getByText('КП находится на согласовании')).toBeVisible();
   await closeDialogs(calc.page);
   await shootDialog(calc.page, 'quote-approval-chain', 'calc', openPanel);
-  await probeQuoteItemMutation(calc.ctx, 'на согласовании');
+  await probeQuoteLock(calc.ctx, 'на согласовании');
+  // D-03/D-04 в интерфейсе: на согласовании конструктор КП — только чтение (правок, которые сервер всё равно отклонит, нет).
+  await goErp(calc.page, `deal-quote/${S.dealId}`);
+  await expect(calc.page.getByText('Только чтение').first()).toBeVisible();
+  for (const name of ['Добавить', 'Сохранить']) {
+    await expect(calc.page.getByRole('button', { name, exact: true }), `«${name}» вне черновика`).toHaveCount(0);
+  }
+  await expect(calc.page.getByRole('button', { name: /Удалить (позицию|строку)/ })).toHaveCount(0);
+  await shoot(calc.page, 'quote-builder-pending', 'calc');
 
   const q = await quoteJson(calc.ctx);
   expect(q.status_code).toBe('PENDING_APPROVAL');
@@ -401,21 +552,48 @@ test('3.1 Согласование: «Расчёт» отправляет, це�
   expect(await probe(viewer.ctx, 'post', `crm/quotes/${S.quoteId}/approval-act/`, decide)).toMatchObject({ status: 403 });
 });
 
-test('3.2 D-02: «Расчёт» согласует собственное КП (автор и согласующий — один человек)', async ({ browser }) => {
-  test.fail(true, 'D-02: в цепочке есть место автора, и «Согласовать» на нём нажимается — разделения обязанностей нет');
+test('3.2 D-02 (FIX-55): автор КП не согласует своё КП; суперпользователь за другого — «от имени» в журнале', async ({
+  browser,
+}) => {
+  test.setTimeout(240_000);
   const calc = await getSession(browser, 'calc');
+  const q = await quoteJson(calc.ctx);
+  const steps = q.approval_steps as Json[];
+  // Автор в цепочке не значится как проверяющий: его место не создаётся.
+  expect(
+    steps.filter((st) => String(st.approver_name).includes(PERSONAS.calc.fullName)),
+    'в цепочке нет места автора',
+  ).toEqual([]);
+  const reviewer = steps.find((st) => st.participation === 'APPROVER' && st.status === 'PENDING');
+  expect(reviewer, 'в цепочке есть шаг проверяющего').toBeTruthy();
+  // Автор пробует закрыть чужое место проверяющего (держатель quote.review) — отказ.
+  expect(await probe(calc.ctx, 'post', `crm/quotes/${S.quoteId}/approval-act/`, { step_id: reviewer!.id, decision: 'APPROVE' })).toMatchObject({
+    status: 403,
+    detail: 'SELF_APPROVAL_NOT_ALLOWED',
+  });
+  // Панель согласования у автора: кнопок «Согласовать» на шагах проверяющих нет в списке его собственных действий.
   await goErp(calc.page, `deal-quote/${S.dealId}`);
   await calc.page.getByRole('button', { name: 'Открыть панель согласования' }).click({ force: true });
-  const dlg = calc.page.getByRole('dialog');
-  const ownRow = dlg
-    .getByText(PERSONAS.calc.fullName, { exact: true })
-    .locator('xpath=ancestor::*[.//button[normalize-space()="Согласовать"]][1]');
-  const act = calc.page.waitForResponse((r) => r.url().includes('/approval-act/'));
-  await ownRow.getByRole('button', { name: 'Согласовать' }).click();
-  const status = (await act).status();
-  console.log('D-02: ответ approval-act на собственный шаг автора:', status);
-  // Ожидание: свой шаг автору не отдают (403/400). Факт: 200.
-  expect(status).toBeGreaterThanOrEqual(400);
+  await expect(calc.page.getByRole('dialog').getByText(PERSONAS.calc.fullName, { exact: true })).toHaveCount(0);
+  await closeDialogs(calc.page);
+
+  // Суперпользователь (админ ERP) закрывает шаг другого согласующего: запись в журнале помечена «от имени».
+  const admin = await getSession(browser, 'admin');
+  const onBehalf = await probe(admin.ctx, 'post', `crm/quotes/${S.quoteId}/approval-act/`, { step_id: reviewer!.id, decision: 'APPROVE' });
+  expect(onBehalf.status, 'суперпользователь закрывает шаг за коллегу').toBe(200);
+  // Журнал (API): запись о шаге несёт «от имени» и параметр `on_behalf_of` (кто и за кого).
+  const timeline = await erpGet<Json[] | { results: Json[] }>(admin.ctx, `crm/timeline/?deal_id=${S.dealId}&limit=100`);
+  const entries = Array.isArray(timeline) ? timeline : timeline.results;
+  const onBehalfEntry = entries.find((e) => JSON.stringify(e).includes('on_behalf_of'));
+  console.log('D-02 журнал (API):', onBehalfEntry ? JSON.stringify(onBehalfEntry).replace(/\s+/g, ' ').slice(0, 400) : 'записи с on_behalf_of нет');
+  expect(onBehalfEntry, 'в журнале есть запись «от имени» (on_behalf_of)').toBeTruthy();
+  // Журнал (экран сделки): та же запись читается человеком.
+  await goErp(admin.page, dealHash());
+  await admin.page.waitForTimeout(2_500);
+  const shownOnScreen = /от имени/.test(await admin.page.locator('body').innerText());
+  console.log('D-02 журнал (экран сделки) показывает «от имени»:', shownOnScreen);
+  onBehalfOnScreen.value = shownOnScreen;
+  await shoot(admin.page, 'request-detail-on-behalf', 'admin');
 });
 
 test('3.3 «Руководитель» проходит все шаги цепочки → «Готово к отправке»', async ({ browser }) => {
@@ -442,7 +620,7 @@ test('3.3 «Руководитель» проходит все шаги цепо
   const q = await quoteJson(head.ctx);
   expect(q.status_code).toBe('READY_TO_SEND');
   const calc = await getSession(browser, 'calc');
-  await probeQuoteItemMutation(calc.ctx, 'утверждено, до отправки');
+  await probeQuoteLock(calc.ctx, 'утверждено, до отправки');
 });
 
 // ═══ 4. Наблюдатель — только чтение ════════════════════════════════════════════
@@ -465,21 +643,29 @@ test('4.1 «Наблюдатель»: экраны открываются, фи�
   await shoot(v.page, 'quote-builder', 'viewer');
 });
 
-test('4.2 D-03: у «Наблюдателя» на экранах сделки и КП видны кнопки действий (нужно: скрыты)', async ({ browser }) => {
-  test.fail(true, 'D-03: кнопки «Взять в работу», «К подбору», «Создать документ», «Добавить», «Удалить позицию» видны роли без прав');
+test('4.2 D-03 (FIX-58): у «Наблюдателя» кнопок действий нет — ни на сделке, ни в конструкторе КП; конструктор «только чтение»', async ({
+  browser,
+}) => {
+  test.setTimeout(120_000);
   const v = await getSession(browser, 'viewer');
   await goErp(v.page, dealHash());
-  const actions = ['Взять в работу', 'К подбору', 'Создать документ', 'Вернуть в очередь'];
+  await expect(v.page.getByText(`Заявка: ${S.companyName}`).first()).toBeVisible();
+  const actions = ['Взять в работу', 'К подбору', 'Создать документ', 'Вернуть в очередь', 'На согласование', 'Отправить КП'];
   const shown: string[] = [];
   for (const name of actions) {
     if (await v.page.getByRole('button', { name, exact: true }).count()) shown.push(name);
   }
   await goErp(v.page, `deal-quote/${S.dealId}`);
-  for (const name of ['Добавить', 'Сохранить', 'Экспорт', 'Создать договор']) {
+  // «Экспорт» (просмотр, печать, PDF) — чтение документа, у Наблюдателя остаётся.
+  for (const name of ['Добавить', 'Сохранить', 'Создать договор', 'Отправить КП', 'Изменить курс']) {
     if (await v.page.getByRole('button', { name, exact: true }).count()) shown.push(name);
   }
-  console.log('D-03: кнопки действий, видимые Наблюдателю:', shown.join(', ') || 'нет');
+  if (await v.page.getByRole('button', { name: /Удалить (позицию|строку)/ }).count()) shown.push('Удалить позицию');
   expect(shown, 'кнопки действий, видимые Наблюдателю').toEqual([]);
+  await expect(v.page.getByText('Только чтение').first()).toBeVisible();
+  // Просмотр остаётся: позиции и итоги видны, колонок себестоимости и наценки нет (нет права quote.view_cost_margin).
+  await expect(v.page.getByText('Позиций: 2')).toBeVisible();
+  await expect(v.page.getByRole('columnheader', { name: /Себестоимость|Наценка/ })).toHaveCount(0);
 });
 
 // ═══ 5. Отправка клиенту, публичная ссылка ═════════════════════════════════════
@@ -496,15 +682,30 @@ test('5.1 «Расчёт» отправляет КП клиенту; ссылк�
     .then(() => true)
     .catch(() => false);
   if (!sendVisible) {
-    // D-09: у автора КП открытая сессия показывает прежний статус (согласование прошёл другой человек) — до перезагрузки.
-    staleViews.push('КП: «Отправить КП» после согласования другим сотрудником');
-    await calc.page.reload();
+    // D-09: у автора КП открытая сессия могла показать прежний статус (согласование прошёл другой человек).
+    // Возврат на вкладку (focus) обязан перечитать КП (FIX-58); иначе — перезагрузка и дефект жив.
+    await returnToTab(calc.page);
+    const afterFocus = await calc.page
+      .getByRole('button', { name: 'Отправить КП' })
+      .first()
+      .waitFor({ state: 'visible', timeout: 8_000 })
+      .then(() => true)
+      .catch(() => false);
+    if (afterFocus) {
+      refreshedOnFocus.push('КП: «Отправить КП» после согласования другим сотрудником');
+    } else {
+      staleViews.push('КП: «Отправить КП» после согласования другим сотрудником');
+      await calc.page.reload();
+    }
   }
   const openSend = async () => {
     await calc.page.getByRole('button', { name: 'Отправить КП' }).first().click();
   };
   await shootDialog(calc.page, 'quote-send-dialog', 'calc', openSend);
   await openSend();
+  if (/не требуется — согласовано автоматически/.test(await calc.page.getByRole('dialog').innerText())) {
+    textObservations.push('Диалог «Отправить КП»: «Согласование: не требуется — согласовано автоматически» при пройденной вручную цепочке');
+  }
   const sent = calc.page.waitForResponse((r) => r.url().includes('/send-to-client/'));
   await (await dialogButton(calc.page, 'Отправить КП')).click();
   expect((await sent).status()).toBe(200);
@@ -520,7 +721,15 @@ test('5.1 «Расчёт» отправляет КП клиенту; ссылк�
   const copied = await calc.page.evaluate(() => navigator.clipboard.readText());
   expect(copied.endsWith(`/api/v1/public/quotes/${q.public_access_token}/`), 'в буфер попала ссылка этого КП').toBe(true);
   await shoot(calc.page, 'quote-sent', 'calc');
-  await probeQuoteItemMutation(calc.ctx, 'отправлено клиенту');
+  await probeQuoteLock(calc.ctx, 'отправлено клиенту');
+  // D-03/D-04: отправленное КП — конструктор только для чтения, без «Добавить», «Сохранить», «Удалить позицию».
+  await goErp(calc.page, `deal-quote/${S.dealId}`);
+  await expect(calc.page.getByText('Только чтение').first()).toBeVisible();
+  for (const name of ['Добавить', 'Сохранить']) {
+    await expect(calc.page.getByRole('button', { name, exact: true }), `«${name}» в отправленном КП`).toHaveCount(0);
+  }
+  await expect(calc.page.getByRole('button', { name: /Удалить (позицию|строку)/ })).toHaveCount(0);
+  await shoot(calc.page, 'quote-builder-sent', 'calc');
 });
 
 test('5.2 Клиент по публичной ссылке: страница КП, PDF, без себестоимости и маржи; чужой токен — 404', async ({
@@ -539,6 +748,9 @@ test('5.2 Клиент по публичной ссылке: страница К
   expect(body).toContain(S.quoteNumber);
   expect(body).toContain('Итого к оплате');
   expect(body).not.toMatch(/себестоим|маржа|наценк|fx|курс цб/i);
+  publicManager.name = (/Менеджер\s*\n?\s*([^\n\t]+)/.exec(body)?.[1] ?? '').trim();
+  publicTotalBefore = publicTotal(body);
+  expect(publicTotalBefore, 'на публичной странице виден итог КП').not.toBe('');
   await expect(page.getByRole('button', { name: /Принять предложение/ })).toBeVisible();
   await shoot(page, 'public-quote', 'client');
 
@@ -547,7 +759,7 @@ test('5.2 Клиент по публичной ссылке: страница К
   expect(pdf.headers()['content-type']).toContain('application/pdf');
   expect((await pdf.body()).subarray(0, 5).toString()).toBe('%PDF-');
 
-  const stranger = await ctx.request.get(`${ENV.erp}/api/v1/public/quotes/fix50-no-such-token-0000000000/`, {
+  const stranger = await ctx.request.get(`${ENV.erp}/api/v1/public/quotes/fix50b-no-such-token-0000000000/`, {
     headers: { Accept: 'text/html' },
   });
   expect(stranger.status()).toBe(404);
@@ -572,7 +784,7 @@ test('5.3 Клиент принимает КП: код из письма, нев
   await expect(page.getByText('Неверный код')).toBeVisible();
   await expect(page.getByText('Предложение принято')).toBeHidden();
 
-  const code = await waitMail([S.quoteNumber], /Ваш код:\s*(\d{4,12})/);
+  const code = await waitMail(S.contactEmail, [S.quoteNumber], /Ваш код:\s*(\d{4,12})/);
   await page.getByLabel('Код из письма').fill(code);
   await page.getByRole('button', { name: 'Принять предложение' }).last().click();
   await expect(page.getByText('Предложение принято')).toBeVisible({ timeout: 20_000 });
@@ -586,18 +798,39 @@ test('5.3 Клиент принимает КП: код из письма, нев
   expect(mine, 'договор создан по акцепту').toBeTruthy();
   S.contractId = mine!.id as number;
   saveState(S);
-  await probeQuoteItemMutation(calc.ctx, 'принято клиентом');
+  await probeQuoteLock(calc.ctx, 'принято клиентом');
+  await goErp(calc.page, `deal-quote/${S.dealId}`);
+  await expect(calc.page.getByText('Только чтение').first()).toBeVisible();
+  await shoot(calc.page, 'quote-builder-accepted', 'calc');
 });
 
-test('5.4 D-04 (P0): после отправки и акцепта позиции КП можно менять — клиент видит другую сумму', async ({
+test('5.4 D-04 (P0, FIX-55): вне черновика состав и цены КП не меняются — 409 на всех путях записи; клиент видит прежнюю сумму', async ({
   browser,
 }) => {
-  test.fail(true, 'D-04 (P0): PATCH/POST crm/quote-items на SENT и APPROVED КП проходит (200/201), публичная страница показывает новую сумму');
-  console.log('D-04: статусы правки позиции КП по этапам:', JSON.stringify(immutabilityProbe));
+  test.setTimeout(180_000);
+  const stages = ['на согласовании', 'утверждено, до отправки', 'отправлено клиенту', 'принято клиентом'];
+  const bad: string[] = [];
+  for (const stage of stages) {
+    const r = lockProbes[stage];
+    expect(r, `пробы этапа «${stage}» выполнены`).toBeTruthy();
+    for (const [path, res] of Object.entries(r)) {
+      const want = stage === 'отправлено клиенту' || stage === 'принято клиентом' ? 'QUOTE_FROZEN' : 'QUOTE_NOT_DRAFT';
+      if (res.status !== 409 || res.detail !== want) bad.push(`${stage}: ${path} → ${res.status} ${res.detail} (ждали 409 ${want})`);
+    }
+  }
+  expect(bad, 'пути записи, не ответившие 409').toEqual([]);
+
+  // Позиции и итог на месте; публичная страница показывает ту же сумму, что до проб.
   const calc = await getSession(browser, 'calc');
-  expect(immutabilityProbe['отправлено клиенту'], 'правка позиции отправленного КП').toBeGreaterThanOrEqual(400);
-  expect(immutabilityProbe['принято клиентом'], 'правка позиции принятого КП').toBeGreaterThanOrEqual(400);
-  void calc;
+  const q = await quoteJson(calc.ctx);
+  expect(q.items).toHaveLength(2);
+  expect(money(q.total_incl_vat).toFixed(2)).toBe('428400000.00');
+  expect(q.status_code).toBe('APPROVED');
+  const ctx = await browser.newContext({ viewport: { width: 1440, height: 900 }, locale: 'ru-RU' });
+  const page = await ctx.newPage();
+  await page.goto(`${ENV.erp}/api/v1/public/quotes/${q.public_access_token}/`);
+  expect(publicTotal(await page.locator('body').innerText()), 'сумма на странице клиента не изменилась').toBe(publicTotalBefore);
+  await ctx.close();
 });
 
 // ═══ 6. Договор ════════════════════════════════════════════════════════════════
@@ -638,6 +871,9 @@ test('6.1 Договор: клиент подписывает в портале,
   };
   await shootDialog(head.page, 'contract-drawer', 'head', openContract);
   await openContract();
+  // D-12 (FIX-58): в шторке договора после подписи клиента нет «null · дата» и прочих сырых значений.
+  const drawerText = await head.page.getByRole('dialog').innerText();
+  expect(drawerText, 'шторка договора без «null»/«undefined»').not.toMatch(/\bnull\b|\bundefined\b|NaN/);
   const signManager = head.page.waitForResponse((r) => r.url().includes('/sign-manager/'));
   await (await dialogButton(head.page, 'Подписать (продавец)')).click();
   expect((await signManager).status()).toBe(200);
@@ -682,11 +918,30 @@ test('7.1 «Финансы»: счёт из договора выставляе�
       .then(() => true)
       .catch(() => false);
     if (!shown) {
-      // D-09: список счетов в кэше SPA устарел (запрошен до создания счёта) — шторка не открывается до перезагрузки.
-      staleViews.push('Счета: шторка счёта после создания счёта другим сотрудником');
-      await goErp(fin.page, dealHash());
-      await fin.page.reload();
-      await fin.page.getByRole('button', { name: 'Открыть счёт' }).click();
+      // D-09: список счетов мог быть запрошен до создания счёта. Возврат на вкладку (focus) обязан его перечитать (FIX-58).
+      await returnToTab(fin.page);
+      let afterFocus = await fin.page
+        .getByRole('dialog')
+        .waitFor({ state: 'visible', timeout: 6_000 })
+        .then(() => true)
+        .catch(() => false);
+      if (!afterFocus) {
+        const again = fin.page.getByRole('button', { name: 'Открыть счёт' });
+        if (await again.count()) await again.click();
+        afterFocus = await fin.page
+          .getByRole('dialog')
+          .waitFor({ state: 'visible', timeout: 6_000 })
+          .then(() => true)
+          .catch(() => false);
+      }
+      if (afterFocus) {
+        refreshedOnFocus.push('Счета: шторка счёта после создания счёта другим сотрудником');
+      } else {
+        staleViews.push('Счета: шторка счёта после создания счёта другим сотрудником');
+        await goErp(fin.page, dealHash());
+        await fin.page.reload();
+        await fin.page.getByRole('button', { name: 'Открыть счёт' }).click();
+      }
     }
   };
   await openInvoice();
@@ -723,7 +978,7 @@ test('7.2 Оплата: «Расчёт» платёж не фиксирует; �
     await probe(fin.ctx, 'post', `crm/invoices/${S.invoiceId}/record-payment/`, {
       amount: '999999999999.00',
       paid_at: today,
-      reference: `FIX-50 сверх остатка ${S.run}`,
+      reference: `FIX-50b сверх остатка ${S.run}`,
     }),
   ).toMatchObject({ status: 400, detail: 'PAYMENT_EXCEEDS_BALANCE_DUE' });
 
@@ -740,27 +995,46 @@ test('7.2 Оплата: «Расчёт» платёж не фиксирует; �
   };
 
   await goErp(fin.page, 'payments');
-  const advanceRef = `FIX-50 аванс ${S.run}`;
+  const advanceRef = `FIX-50b аванс ${S.run}`;
   await pay('100000000', advanceRef);
   let inv = await erpGet<Json>(fin.ctx, `crm/invoices/${S.invoiceId}/`);
   expect(money(inv.amount_paid).toFixed(2)).toBe('100000000.00');
   expect(inv.status).toBe('PARTIAL');
   await shoot(fin.page, 'payments', 'fin');
 
-  // Тот же банковский референс, другая сумма: платёж обязан либо записаться, либо быть отклонён (D-05).
-  const dup = await fin.ctx.request.post(`${ENV.erp}/api/v1/crm/invoices/${S.invoiceId}/record-payment/`, {
-    headers: await apiHeaders(fin.ctx),
-    data: { amount: '1000.00', paid_at: today, reference: advanceRef },
-  });
-  dupRef.status = dup.status();
-  dupRef.returnedAmount = dup.status() === 201 ? money(((await dup.json()) as Json).amount).toFixed(2) : '';
+  // D-05 (FIX-55): тот же банковский референс. Другая сумма — 409 PAYMENT_REFERENCE_CONFLICT (деньги не теряются молча);
+  // та же сумма и дата — повторная отправка: 200 и прежний платёж, оплачено не растёт.
+  const apiHeadersCache = await apiHeaders(fin.ctx);
+  const record = (data: Record<string, string>) =>
+    fin.ctx.request.post(`${ENV.erp}/api/v1/crm/invoices/${S.invoiceId}/record-payment/`, {
+      headers: apiHeadersCache,
+      data,
+    });
+  const conflict = await record({ amount: '1000.00', paid_at: today, reference: advanceRef });
+  dupRef.otherStatus = conflict.status();
+  dupRef.otherDetail = String(((await conflict.json().catch(() => ({}))) as Json).detail ?? '');
   inv = await erpGet<Json>(fin.ctx, `crm/invoices/${S.invoiceId}/`);
   dupRef.paidAfter = money(inv.amount_paid).toFixed(2);
-  console.log('D-05: повтор референса — ответ', dupRef.status, 'сумма в ответе', dupRef.returnedAmount, 'оплачено после', dupRef.paidAfter);
 
-  // Остаток считаем по факту счёта (если бы 1000 записались, доплата уменьшилась бы).
+  const replayRef = `FIX-50b повтор ${S.run}`;
+  const first = await record({ amount: '1000.00', paid_at: today, reference: replayRef });
+  expect(first.status(), 'новый референс — платёж записан').toBe(201);
+  const firstBody = (await first.json()) as Json;
+  const paidMid = money((await erpGet<Json>(fin.ctx, `crm/invoices/${S.invoiceId}/`)).amount_paid).toFixed(2);
+  const again = await record({ amount: '1000.00', paid_at: today, reference: replayRef });
+  dupRef.sameStatus = again.status();
+  dupRef.sameIdSame = ((await again.json()) as Json).id === firstBody.id;
+  const paidEnd = money((await erpGet<Json>(fin.ctx, `crm/invoices/${S.invoiceId}/`)).amount_paid).toFixed(2);
+  console.log(
+    'D-05: другая сумма —', dupRef.otherStatus, dupRef.otherDetail, '| повтор той же — ', dupRef.sameStatus,
+    'тот же платёж:', dupRef.sameIdSame, '| оплачено до/после повтора:', paidMid, paidEnd,
+  );
+  expect(paidEnd, 'повтор не удваивает платёж').toBe(paidMid);
+
+  // Остаток считаем по факту счёта: в нём уже есть платёж 1000 из проверки повтора.
+  inv = await erpGet<Json>(fin.ctx, `crm/invoices/${S.invoiceId}/`);
   const rest = money(inv.total_incl_vat).minus(money(inv.amount_paid)).toFixed(2);
-  await pay(rest, `FIX-50 доплата ${S.run}`);
+  await pay(rest, `FIX-50b доплата ${S.run}`);
   inv = await erpGet<Json>(fin.ctx, `crm/invoices/${S.invoiceId}/`);
   expect(money(inv.amount_paid).toFixed(2)).toBe('428400000.00');
   expect(inv.status).toBe('PAID');
@@ -769,18 +1043,18 @@ test('7.2 Оплата: «Расчёт» платёж не фиксирует; �
     await probe(fin.ctx, 'post', `crm/invoices/${S.invoiceId}/record-payment/`, {
       amount: '1.00',
       paid_at: today,
-      reference: `FIX-50 после закрытия ${S.run}`,
+      reference: `FIX-50b после закрытия ${S.run}`,
     }),
   ).toMatchObject({ status: 400, detail: 'INVOICE_ALREADY_PAID' });
 });
 
-test('7.3 D-05: повторный платёж с тем же референсом и другой суммой молча «принимается» без записи', async () => {
-  test.fail(true, 'D-05: record-payment с совпавшим референсом возвращает 201 и прежний платёж — присланная сумма теряется');
-  expect(dupRef.status, 'шаг 7.2 выполнен').toBeGreaterThan(0);
-  // Допустимо: отказ (4xx) или запись присланной суммы. Недопустимо: 201 с прежним платежом.
-  const rejected = dupRef.status >= 400;
-  const recorded = dupRef.status === 201 && dupRef.returnedAmount === '1000.00' && dupRef.paidAfter === '100001000.00';
-  expect(rejected || recorded, `ответ ${dupRef.status}, сумма в ответе ${dupRef.returnedAmount}, оплачено ${dupRef.paidAfter}`).toBe(true);
+test('7.3 D-05 (FIX-55): тот же референс — другая сумма 409 PAYMENT_REFERENCE_CONFLICT; та же сумма и дата — 200 и прежний платёж', async () => {
+  expect(dupRef.otherStatus, 'шаг 7.2 выполнен').toBeGreaterThan(0);
+  expect(dupRef.otherStatus, 'другая сумма при том же референсе').toBe(409);
+  expect(dupRef.otherDetail).toBe('PAYMENT_REFERENCE_CONFLICT');
+  expect(dupRef.paidAfter, 'конфликт не изменил оплачено').toBe('100000000.00');
+  expect(dupRef.sameStatus, 'повторная отправка той же суммы и даты').toBe(200);
+  expect(dupRef.sameIdSame, 'в ответе прежний платёж').toBe(true);
 });
 
 // ═══ 8. Поставка и акт ═════════════════════════════════════════════════════════
@@ -798,7 +1072,7 @@ test('8.1 «Руководитель»: статусы поставки; кли�
     await head.page.getByRole('option', { name: status, exact: true }).click();
     if (track) {
       await d.getByLabel('Трек-номер').fill(track);
-      await d.getByLabel('Перевозчик').fill('FIX-50 Логистика');
+      await d.getByLabel('Перевозчик').fill('FIX-50b Логистика');
     }
     const done = head.page.waitForResponse((r) => r.url().includes('/fulfillments/update-status/'));
     await d.getByRole('button', { name: 'Обновить статус' }).click();
@@ -812,7 +1086,7 @@ test('8.1 «Руководитель»: статусы поставки; кли�
 
   const cl = await getClient();
   const lines = await portalGet<Json[]>(cl, 'deliveries');
-  const mine = lines.body.filter((l) => l.status === 'delivered' && /FIX-50/.test(l.title));
+  const mine = lines.body.filter((l) => l.status === 'delivered' && /FIX-50b/.test(l.title));
   expect(mine.length, 'строки поставки видны клиенту как доставленные').toBeGreaterThanOrEqual(2);
   for (const line of mine) {
     const acc = await portalPost<Json>(cl, `deliveries/${line.id}/accept`);
@@ -865,9 +1139,9 @@ test('9.1 Матрица прав: мутации без права → 403 ROLE
   const cases: Array<[Exclude<Persona, 'admin' | 'head'>, 'post', string, unknown]> = [
     ['viewer', 'post', `crm/deals/${S.dealId}/claim/`, {}],
     ['viewer', 'post', `crm/quotes/${S.quoteId}/submit-for-review/`, {}],
-    ['viewer', 'post', 'crm/quote-items/', { quote: S.quoteId, title: 'FIX-50 проба', quantity: 1, unit_cost: '1' }],
+    ['viewer', 'post', 'crm/quote-items/', { quote: S.quoteId, title: 'FIX-50b проба', quantity: 1, unit_cost: '1' }],
     ['viewer', 'post', `crm/quotes/${S.quoteId}/send-to-client/`, {}],
-    ['viewer', 'post', `crm/quotes/${S.quoteId}/fx-override/`, { rate: '12500', reason: 'FIX-50' }],
+    ['viewer', 'post', `crm/quotes/${S.quoteId}/fx-override/`, { rate: '12500', reason: 'FIX-50b' }],
     ['viewer', 'post', `crm/contracts/${S.contractId}/sign-manager/`, {}],
     ['viewer', 'post', `crm/invoices/${S.invoiceId}/issue/`, {}],
     ['viewer', 'post', `crm/invoices/${S.invoiceId}/record-payment/`, { amount: '1', paid_at: today, reference: 'x' }],
@@ -878,7 +1152,7 @@ test('9.1 Матрица прав: мутации без права → 403 ROLE
     ['calc', 'post', 'crm/fulfillments/update-status/', { deal_id: S.dealId, status_code: 'SHIPPED' }],
     ['fin', 'post', `crm/deals/${S.dealId}/claim/`, {}],
     ['fin', 'post', `crm/quotes/${S.quoteId}/submit-for-review/`, {}],
-    ['fin', 'post', 'crm/quote-items/', { quote: S.quoteId, title: 'FIX-50 проба', quantity: 1, unit_cost: '1' }],
+    ['fin', 'post', 'crm/quote-items/', { quote: S.quoteId, title: 'FIX-50b проба', quantity: 1, unit_cost: '1' }],
     ['fin', 'post', `crm/quotes/${S.quoteId}/send-to-client/`, {}],
     ['fin', 'post', `crm/contracts/${S.contractId}/sign-manager/`, {}],
     ['fin', 'post', `crm/invoices/${S.invoiceId}/generate-act/`, {}],
@@ -910,80 +1184,165 @@ test('9.2 Экраны ролей: дашборд, договоры, счета,
   await shoot(calc.page, 'clients', 'calc');
 });
 
-// ═══ 10. Итоги ═════════════════════════════════════════════════════════════════
+// ═══ 10. Исправления раунда 2 и итоги ═════════════════════════════════════════
 
-test('10.1 axe: 0 нарушений serious/critical на ключевых экранах (D-06)', async () => {
-  writeAxeReport();
-  const blocking = allBlockingAxe();
-  const report = JSON.parse(readFileSync(path.join(ENV.shotsDir, 'axe-results.json'), 'utf8')) as { screens: string[] };
-  test.info().annotations.push({
-    type: 'axe',
-    description: `кадров: ${report.screens.length}; нарушений serious/critical: ${blocking.length}`,
-  });
-  console.log(`axe: кадров ${report.screens.length}, нарушений serious/critical ${blocking.length}`);
-  if (blocking.length) test.fail(true, `D-06: axe нашёл ${blocking.length} нарушений serious/critical — см. axe-results.json и отчёт`);
-  expect(
-    blocking.map((f) => `${f.screen}: ${f.id} (${f.impact}) ×${f.nodes} — ${f.target}`),
-    'нарушения axe serious/critical',
-  ).toEqual([]);
+const RAW_CODES = /\b(IN_TRANSIT|DELIVERED|ISSUED|SHIPPED|READY_TO_SEND|PENDING_[A-Z_]+|CLOSED_WON|CONTRACT_SIGNED|PARTIAL|PAID|SENT|DRAFT|ACCEPTED|CANCELLED)\b/;
+
+test('10.1 D-12 (FIX-58): тексты — валюта позиции, журнал без [MANUAL_MODE], без сырых кодов', async ({ browser }) => {
+  test.setTimeout(180_000);
+  const head = await getSession(browser, 'head');
+  await goErp(head.page, dealHash());
+  await expect(head.page.getByText('Цепочка сделки')).toBeVisible();
+  await head.page.waitForTimeout(1_500);
+  const deal = await head.page.locator('body').innerText();
+  // Базовая цена позиции в валюте себестоимости (USD), а не «120,00 UZS».
+  expect(deal, 'цена позиции в USD не подписана как UZS').not.toMatch(/120[,.]00\s*UZS/);
+  expect(deal, 'журнал сделки без служебной метки').not.toMatch(/\[MANUAL_MODE\]/);
+  expect(deal, 'карточка сделки без сырых кодов статусов').not.toMatch(RAW_CODES);
+  await shoot(head.page, 'request-detail-journal', 'head');
+
+  const calc = await getSession(browser, 'calc');
+  await goErp(calc.page, 'crm-quotes');
+  await calc.page.waitForTimeout(1_500);
+  const quotes = await calc.page.locator('body').innerText();
+  if (!new RegExp(`${S.quoteNumber}`).test(quotes) || /#\d+-v\d+/.test(quotes)) {
+    textObservations.push('Список КП: номера в виде «#N-vM», а не «КП-…»');
+  }
+  await goErp(calc.page, `deal-quote/${S.dealId}`);
+  if (/Quote Builder/.test(await calc.page.locator('body').innerText())) {
+    textObservations.push('Конструктор КП: англоязычный подзаголовок «Quote Builder — …» на русском экране');
+  }
+  await goErp(calc.page, 'clients');
+  if (/\bclients\b/.test(await calc.page.locator('header, nav').allInnerTexts().then((t) => t.join(' ')))) {
+    textObservations.push('Клиенты: хлебная крошка «clients» латиницей');
+  }
+  console.log('D-12, наблюдения по текстам:', textObservations.join(' | ') || 'нет');
 });
 
-test('10.2 D-07: повторный провижининг CRM сбрасывает роль ERP, выданную админом в «Команде»', async ({ browser }) => {
-  test.fail(true, 'D-07: provision_crm_user делает member.company_roles.set([crm_role]) — роли ERP затираются при любой синхронизации');
+test('10.1b D-12 (исправлено частично): дашборд — «Недавние документы» без сырых кодов статусов (DELIVERED/ISSUED печатаются кодом)', async ({
+  browser,
+}) => {
+  test.fail(true, 'D-12: в «Недавних документах» дашборда статусы накладной и квитанции печатаются кодом (DELIVERED, ISSUED)');
+  const head = await getSession(browser, 'head');
+  await goErp(head.page, 'dashboard');
+  await head.page.waitForTimeout(2_000);
+  const body = await head.page.locator('body').innerText();
+  console.log('D-12, сырые коды на дашборде:', [...new Set(body.match(new RegExp(RAW_CODES, 'g')) ?? [])].join(', ') || 'нет');
+  expect(body, 'дашборд без сырых кодов статусов').not.toMatch(RAW_CODES);
+});
+
+test('10.2 D-13 (FIX-58): конструктор КП на 390 px — страница не шире экрана, кнопки в кадре', async () => {
+  expect(narrowFindings, 'находки проверки 390 px (шаг 2.2, черновик КП)').toEqual([]);
+});
+
+test('10.3 D-14 (FIX-54/55): токен публичной ссылки КП не попадает в журнал erp-backend', async ({ browser }) => {
+  test.setTimeout(120_000);
+  const calc = await getSession(browser, 'calc');
+  const q = await quoteJson(calc.ctx);
+  const token = String(q.public_access_token);
+  expect(token.length, 'токен КП получен').toBeGreaterThan(16);
+  const log = serviceLog('erp-backend');
+  // Контроль: запросы к публичным КП в журнале есть (иначе «токена нет» ничего не доказывает).
+  expect(log, 'в журнале есть запросы к публичным ссылкам КП').toMatch(/\/public\/quotes\//);
+  expect(log.includes(token), 'полный токен публичной ссылки в журнале erp-backend').toBe(false);
+});
+
+test('10.4 D-09 (FIX-58): открытая сессия видит изменения коллег после возврата на вкладку', async () => {
+  console.log('D-09: обновились по возврату на вкладку:', refreshedOnFocus.join(' | ') || 'нет (экран не устаревал)');
+  console.log('D-09: остались устаревшими до перезагрузки:', staleViews.join(' | ') || 'нет');
+  expect(staleViews, 'экраны, потребовавшие перезагрузки страницы').toEqual([]);
+});
+
+test('10.5 D-07 (FIX-55): роль ERP, выданная в «Команде», переживает повторный провижининг из CRM', async ({ browser }) => {
   test.setTimeout(300_000);
   const admin = await getCrmAdmin(browser);
   const info = PERSONAS.viewer;
   await admin.goto(`${ENV.crm}/users`);
   await expect(admin.locator('tr', { hasText: ENV.adminEmail })).toBeVisible();
   const sw = admin.locator('tr', { hasText: info.email }).getByRole('switch');
+  // Снять доступ (с подтверждением) и выдать снова — это и есть повторный провижининг в ERP: сессии отзываются,
+  // «CRM Sync» снимается и возвращается. (В прогоне раунда 1 здесь не было подтверждения, и проверка до роли не доходила.)
   await sw.click();
-  await expect(sw).toHaveAttribute('aria-checked', 'false');
-  // Подтверждение снятия доступа.
-  const confirm = admin.getByRole('button', { name: 'Снять доступ' });
-  if (await confirm.count()) await confirm.click();
+  await admin.getByRole('dialog').getByRole('button', { name: 'Снять доступ' }).click();
+  await expect(sw).toHaveAttribute('aria-checked', 'false', { timeout: 20_000 });
+  await admin.waitForTimeout(4_000);
   await sw.click();
-  await expect(sw).toHaveAttribute('aria-checked', 'true');
+  await expect(sw).toHaveAttribute('aria-checked', 'true', { timeout: 20_000 });
   await admin.waitForTimeout(8_000);
 
   const adminErp = await getSession(browser, 'admin');
   await adminErp.page.goto(`${ENV.erp}/?section=team#settings`);
   await expect(adminErp.page.getByText('Команда компании')).toBeVisible();
   const row = adminErp.page.locator('tr', { hasText: info.email }).first();
-  // Ожидание: роль «Наблюдатель» осталась. Факт: только «CRM Sync: …».
-  await expect(row.getByText('Наблюдатель', { exact: true })).toBeVisible();
+  await expect(row.getByText('Наблюдатель', { exact: true })).toBeVisible({ timeout: 20_000 });
+  await expect(adminErp.page.getByText(/CRM Sync/)).toHaveCount(0);
+  // Роли «Расчёт», «Финансы» и «Руководитель» (выданы так же) на месте после всех синхронизаций прогона.
+  for (const p of ['calc', 'fin', 'head'] as Persona[]) {
+    await expect(adminErp.page.locator('tr', { hasText: PERSONAS[p].email }).first().getByText(PERSONAS[p].erpRole!, { exact: true })).toBeVisible();
+  }
+  await shoot(adminErp.page, 'settings-team-after-reprovision', 'admin');
 });
 
-test('10.3 SSO CRM → ERP без обхода: 10 входов подряд (D-01: гонка — обмен токена обрывается редиректом `/sso/exchange` → `/`)', async ({
+test('10.6 SSO CRM → ERP в чистом браузере: 10 входов из 10 без обхода; обмен без refresh_token в теле (D-01, S-14)', async ({
   browser,
 }) => {
-  // D-01 плавающий: при разведке вход не удавался в 5 из 5 попыток, позже в 2 из 8, в итоговом прогоне — 0 из 10. Тест строгий.
-  test.setTimeout(480_000);
+  test.setTimeout(600_000);
   const attempts = 10;
+  const before = { ...ssoStats };
   let failed = 0;
   for (let i = 0; i < attempts; i++) {
+    // Чистый контекст: ни cookie, ни localStorage — как первый вход человека.
     const ctx = await browser.newContext({ viewport: { width: 1440, height: 900 }, locale: 'ru-RU' });
     const page = await ctx.newPage();
     await crmLogin(page, ENV.adminEmail, ENV.adminPassword);
     await page.waitForTimeout(2_500);
-    await page.getByRole('button', { name: /ERP/ }).first().click();
-    // Штатный путь должен привести в рабочее место ERP; в дефекте — на форму входа «Вход в кабинет».
-    const ok = await page
-      .getByText('Дашборд')
-      .first()
-      .waitFor({ state: 'visible', timeout: 10_000 })
-      .then(() => true)
-      .catch(() => false);
+    const ok = await ssoClickThrough(page);
     if (!ok) failed += 1;
+    if (ok && i === 0) await shoot(page, 'sso-erp-opened', 'admin');
     await ctx.close();
     await new Promise((r) => setTimeout(r, 7_000)); // лимит обмена SSO по частоте
   }
-  console.log(`SSO без обхода: неудачных входов ${failed} из ${attempts}`);
+  const stats = {
+    failed: ssoStats.failed - before.failed,
+    rateLimited: ssoStats.rateLimited - before.rateLimited,
+    refreshInBody: ssoStats.refreshInBody - before.refreshInBody,
+  };
+  console.log(`SSO без обхода: неудачных входов ${failed} из ${attempts}; ждали лимит частоты: ${stats.rateLimited}; refresh в теле: ${stats.refreshInBody}`);
   test.info().annotations.push({ type: 'SSO без обхода', description: `неудачных входов ${failed} из ${attempts}` });
   expect(failed, `входов из CRM в ERP не удалось из ${attempts}`).toBe(0);
+  expect(stats.refreshInBody, 'тело ответа обмена не содержит refresh_token (S-14)').toBe(0);
 });
 
-test('10.4 D-09: открытая сессия не видит изменений, сделанных другими сотрудниками, до перезагрузки', async () => {
-  test.fail(true, 'D-09: кэш SPA не обновляется — статус КП и список счетов у открытой сессии устарели (нужна перезагрузка страницы)');
-  console.log('D-09: устаревшие представления:', staleViews.join(' | ') || 'нет');
-  expect(staleViews, 'экраны, потребовавшие перезагрузки').toEqual([]);
+test('10.8 D-02 (новое, N-01): запись «от имени» из журнала (API) читается на экране сделки', async () => {
+  test.fail(true, 'N-01: API журнала отдаёт «(от имени …)» и on_behalf_of, экран сделки печатает шаблон события без этого параметра');
+  expect(onBehalfOnScreen.value, 'экран сделки показывает «от имени»').toBe(true);
+});
+
+test('10.9 D-12 (новое, N-03): имя менеджера на публичной странице КП без повтора фамилии', async () => {
+  test.fail(true, 'N-03: SSO-вход пишет полное имя в first_name (accounts/services/sso.py), фамилия остаётся от провижининга — «Имя Фамилия Фамилия»');
+  console.log('Имя менеджера на публичной КП:', publicManager.name);
+  expect(publicManager.name.length, 'имя менеджера найдено на странице').toBeGreaterThan(0);
+  expect(publicManager.name, 'имя без повтора слова').not.toMatch(/(^|\s)(\S+)\s+\2(\s|$)/);
+});
+
+test('10.7 axe: 0 нарушений serious/critical на всех кадрах ERP и публичной страницы КП (D-06)', async () => {
+  writeAxeReport();
+  const blocking = allBlockingAxe('erp');
+  const report = JSON.parse(readFileSync(path.join(ENV.shotsDir, 'axe-results.json'), 'utf8')) as { screens: string[] };
+  test.info().annotations.push({
+    type: 'axe',
+    description: `кадров: ${report.screens.length}; нарушений serious/critical (ERP + публичная КП): ${blocking.length}; CRM: ${allBlockingAxe('crm').length}`,
+  });
+  console.log(
+    `axe: кадров ${report.screens.length}, serious/critical в ERP и публичной КП ${blocking.length}, в экранах CRM ${allBlockingAxe('crm').length}`,
+  );
+  expect(
+    blocking.map((f) => `${f.screen}: ${f.id} (${f.impact}) ×${f.nodes} — ${f.target}`),
+    'нарушения axe serious/critical (ERP и публичная страница КП)',
+  ).toEqual([]);
+});
+
+test('10.7b axe, экраны CRM (D-06, не исправлено: FIX-58 правил ERP): label-content-name-mismatch на кнопках с aria-label', async () => {
+  test.fail(true, 'D-06 (CRM): кнопки «В бэк-офис (ERP)» и иконочные кнопки с aria-label, не содержащим видимый текст — 12 кадров CRM');
+  expect(allBlockingAxe('crm').map((f) => `${f.screen}: ${f.id} ×${f.nodes}`), 'нарушения axe serious/critical (экраны CRM)').toEqual([]);
 });
