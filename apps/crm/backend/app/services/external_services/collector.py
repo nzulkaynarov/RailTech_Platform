@@ -20,12 +20,14 @@ import structlog
 from app.config import Settings
 from app.domain import external_erp_events as erp_events_rules
 from app.domain import external_erp_handoff as erp_handoff_rules
+from app.domain import external_erp_reported as erp_reported_rules
 from app.domain import external_erp_sync as erp_sync_rules
 from app.domain import external_status as rules
 from app.domain import external_vendor as vendor_rules
 from app.domain import system_status
 from app.domain.external_registry import vendor_of
 from app.domain.external_status import CheckResult, HttpFacts, Metric
+from app.domain.system_status import ErpFacts
 from app.integrations import external_probes as probes
 from app.integrations.litellm_admin import LiteLLMAdmin, ProviderBudget
 from app.integrations.litellm_catalog import ModelCatalog
@@ -77,6 +79,8 @@ class Deps:
     defaults: Path | None = None
     # Коннектор «ERP» настроен (адрес и токен из «Подключений» или `.env`); не задан — по адресу.
     erp_configured: Callable[[], Awaitable[bool]] | None = None
+    # Последний ответ ERP на `GET /health` (кэш коннектора 30 с): из него — сервисы ERP (M3-ERP-06).
+    erp_facts: Callable[[], Awaitable[ErpFacts]] | None = None
 
 
 class Collector:
@@ -136,7 +140,7 @@ class _Run:
         if key.startswith("tls."):
             return await self.tls(key.removeprefix("tls."))
         if key.startswith("erp."):
-            return rules.erp_reported(key)
+            return await self.erp_external(key)
         handler: dict[str, Callable[[], Awaitable[CheckResult]]] = {
             "telegram": self.telegram,
             "litellm": self.litellm,
@@ -231,6 +235,12 @@ class _Run:
         window = vendor_rules.stats(rows, self.now - WINDOW)
         day = vendor_rules.stats(rows, self.now - DAY) if self.heavy else None
         return _VendorData(window, day, budgets)
+
+    async def erp_external(self, key: str) -> CheckResult:
+        """Сервис ERP (M3-ERP-06): состояние передаёт ERP в `GET /health`, CRM его не пробует."""
+        if self.d.erp_facts is None:
+            return CheckResult(key, "unknown", "Связь с ERP не настроена в этом процессе")
+        return erp_reported_rules.erp_external(key, await self.d.erp_facts())
 
     async def erp_sync(self) -> CheckResult:
         """Итог синхронизации сотрудников с ERP (FIX-11): ошибки задач, не пробный запрос."""

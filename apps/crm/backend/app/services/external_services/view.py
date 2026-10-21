@@ -205,9 +205,21 @@ class _Context:
     def _result(
         self, spec: reg.ServiceSpec, now: datetime
     ) -> tuple[rules.CheckResult, datetime | None, bool]:
-        if spec.source == "erp":
-            return rules.erp_reported(spec.key), None, False
         row = self.latest.get(spec.key)
+        switch = self.switches.get(spec.key)
+        if spec.switch in ("vendor", "erp") and switch is not None and switch.disabled:
+            # Выключатель действует сразу — не ждать следующей проверки, чтобы показать «выключен».
+            summary = (
+                "Выключен вручную — вызовы этого провайдера идут на запасную модель"
+                if spec.vendor is not None
+                else "Выключен вручную — ERP не обращается к этому сервису"
+            )
+            metrics = dict(row.metrics or {}) if row is not None else {}
+            return (
+                rules.CheckResult(spec.key, "off", summary, None, None, None, metrics),
+                row.checked_at if row is not None else None,
+                False,
+            )
         if row is None:
             return (
                 rules.CheckResult(spec.key, "unknown", rules.never_checked(spec.tiers)),
@@ -223,15 +235,6 @@ class _Context:
             row.latency_ms,
             dict(row.metrics or {}),
         )
-        switch = self.switches.get(spec.key)
-        if spec.vendor is not None and switch is not None and switch.disabled:
-            # Выключатель действует сразу — не ждать следующей проверки, чтобы показать «выключен».
-            summary = "Выключен вручную — вызовы этого провайдера идут на запасную модель"
-            return (
-                rules.CheckResult(spec.key, "off", summary, None, None, None, result.metrics),
-                row.checked_at,
-                False,
-            )
         if rules.stale(row.checked_at, spec.tiers, now):
             summary, hint = rules.stale_summary(row.checked_at, now)
             return (
@@ -248,6 +251,8 @@ class _Context:
         disabled = bool(row and row.disabled)
         problem = None
         effect = reg.SWITCH_EFFECTS[spec.switch]
+        if spec.switch == "erp":
+            effect = reg.ERP_SWITCH_EFFECTS.get(spec.key, effect)
         if spec.vendor is not None:
             effect = reg.switch_effect(spec.vendor, self.providers) if self.providers else effect
             problem = None if disabled else reg.switch_problem(spec.vendor, self.providers or {})

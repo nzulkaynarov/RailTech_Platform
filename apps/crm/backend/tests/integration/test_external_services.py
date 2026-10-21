@@ -5,6 +5,7 @@
 import json
 from collections.abc import Iterator
 from datetime import UTC, datetime, timedelta
+from types import SimpleNamespace
 from typing import Any
 
 import httpx
@@ -15,7 +16,9 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.config import Settings
+from app.domain.errors import ConflictError, Reason
 from app.domain.external_incidents import AlertText
+from app.domain.system_status import ErpExternal, ErpFacts
 from app.main import create_app
 from app.models.auth import AuditLog, User
 from app.models.email import EmailLog
@@ -140,7 +143,8 @@ async def test_registry_before_first_check(
     assert services["telegram"]["status"] == "unknown"
     assert "Ещё не проверялся" in services["telegram"]["summary"]
     erp = services["erp.cbu_rates"]
-    assert (erp["status"], erp["source"], erp["switch"]) == ("unknown", "erp", None)
+    assert (erp["status"], erp["source"], erp["switch"]["kind"]) == ("unknown", "erp", "erp")
+    assert services["erp.sentry"]["switch"] is None  # Sentry выключить нельзя
     assert services["vendor.gemini"]["switch"]["available"] is False  # вендор запасной модели
     assert services["vendor.anthropic"]["switch"]["available"] is True
     assert body["checked_at"] is None
@@ -199,7 +203,8 @@ async def test_background_pass_records_all_crm_services(
     results = await container.external_checks.run("cheap", datetime.now(UTC))
     keys = {r.key for r in results}
     assert {"telegram", "litellm", "langfuse", "mail", "s3", "docling", "backup"} <= keys
-    assert not any(k.startswith(("tls.", "erp.")) for k in keys)
+    assert not any(k.startswith("tls.") for k in keys)
+    assert {f"erp.{c}" for c in ("cbu_rates", "customs_tariff", "mail", "litellm", "s3")} <= keys
     body = client.get(URL, headers=auth).json()
     assert body["checked_at"] is not None
     assert sum(body["summary"].values()) - body["summary"]["disabled"] == len(body["services"])
@@ -450,3 +455,246 @@ async def test_erp_events_rejections_land_in_the_feed_and_heal_when_old(
         row.received_at = datetime.now(UTC) - timedelta(days=30)
     healed = client.post(f"{URL}/erp_events/check", headers=auth).json()["service"]
     assert healed["status"] == "ok"
+
+
+# ── Сервисы ERP (M3-ERP-06) ──────────────────────────────────────────────────────────
+
+ERP_NOW = datetime.now(UTC)
+
+
+def erp_item(code: str, status: str = "ok", **kw: Any) -> ErpExternal:
+    base: dict[str, Any] = {
+        "code": code,
+        "status": status,
+        "enabled": True,
+        "switchable": code != "sentry",
+        "last_success_at": ERP_NOW - timedelta(hours=1),
+        "last_error_at": None,
+        "last_error": None,
+        "ok_24h": 5,
+        "errors_24h": 0,
+    }
+    return ErpExternal(**{**base, **kw})
+
+
+def erp_facts(*items: ErpExternal, **kw: Any) -> ErpFacts:
+    return ErpFacts(configured=True, status="ok", externals=items, **kw)
+
+
+class FakeErpConnector:
+    """Ответ ERP на /health подставной: проверки читают его вместо настоящего коннектора."""
+
+    def __init__(self, facts: ErpFacts) -> None:
+        self.facts = facts
+        self.refreshed = 0
+
+    async def health_facts(self) -> ErpFacts:
+        return self.facts
+
+    async def check(self) -> None:
+        self.refreshed += 1
+
+    async def resolution(self) -> Any:
+        return SimpleNamespace(base_url="https://erp.test", connection=object())
+
+
+class FakeErpSwitch:
+    def __init__(self) -> None:
+        self.calls: list[tuple[str, bool, str | None]] = []
+        self.refuse: Exception | None = None
+
+    async def set_switch(self, code: str, *, enabled: bool, reason: str | None) -> None:
+        if self.refuse is not None:
+            raise self.refuse
+        self.calls.append((code, enabled, reason))
+
+
+def attach_erp(
+    client: TestClient, alerts: FakeAlerts, facts: ErpFacts
+) -> tuple[Any, FakeErpSwitch]:
+    container = client.app.state.container  # type: ignore[attr-defined]
+    connector = FakeErpConnector(facts)
+    container.__dict__["erp_connector"] = connector
+    checks = build_checks(container)
+    checks._alerts = alerts  # type: ignore[assignment]
+    container.__dict__["external_checks"] = checks
+    switch = FakeErpSwitch()
+    container.external_switches._erp_switch = switch
+    return connector, switch
+
+
+async def test_erp_services_show_status_metrics_and_last_error(
+    sessions: async_sessionmaker[AsyncSession], client: TestClient, alerts: FakeAlerts
+) -> None:
+    auth = await headers(sessions, client, "admin")
+    connector, _ = attach_erp(
+        client,
+        alerts,
+        erp_facts(
+            erp_item("cbu_rates"),
+            erp_item(
+                "mail",
+                "degraded",
+                last_error_at=ERP_NOW,
+                last_error="SMTPServerDisconnected: connection unexpectedly closed",
+                errors_24h=2,
+            ),
+            erp_item("s3", "disabled", enabled=False),
+            erp_item("sentry", "disabled"),
+        ),
+    )
+    container = client.app.state.container  # type: ignore[attr-defined]
+    results = await container.external_checks.run("cheap", datetime.now(UTC))
+    by_key = {r.key: r for r in results}
+    assert by_key["erp.cbu_rates"].status == "ok"
+    assert by_key["erp.customs_tariff"].status == "unknown"  # ERP про него не передала
+
+    services = {s["key"]: s for s in client.get(URL, headers=auth).json()["services"]}
+    mail = services["erp.mail"]
+    assert (mail["status"], mail["source"], mail["system"]) == ("warn", "erp", "erp")
+    assert mail["error"] == "SMTPServerDisconnected: connection unexpectedly closed"
+    assert mail["hint"]
+    assert "ERP" in mail["summary"] + mail["hint"]
+    assert mail["metrics"]["ok_24h"] == 5
+    assert mail["metrics"]["errors_24h"] == 2
+    assert mail["checked_at"] is not None
+    assert mail["stale"] is False
+    assert services["erp.cbu_rates"]["status"] == "ok"
+    assert (services["erp.s3"]["status"], services["erp.sentry"]["status"]) == ("off", "off")
+    assert alerts.sent == [], "degraded — не инцидент"
+
+    # «Проверить сейчас» берёт свежий ответ ERP, а не кэш коннектора.
+    fresh = client.post(f"{URL}/erp.mail/check", headers=auth)
+    assert fresh.status_code == 200, fresh.text
+    assert connector.refreshed == 1
+    assert "manual" in [c["tier"] for c in fresh.json()["checks"]]
+
+
+async def test_erp_service_failure_opens_one_incident_and_one_alert_then_recovers(
+    sessions: async_sessionmaker[AsyncSession], client: TestClient, alerts: FakeAlerts
+) -> None:
+    auth = await headers(sessions, client, "admin")
+    failing = erp_item(
+        "litellm",
+        "fail",
+        last_success_at=None,
+        last_error_at=ERP_NOW,
+        last_error="AI_GATEWAY_UNAVAILABLE",
+        ok_24h=0,
+        errors_24h=9,
+    )
+    connector, _ = attach_erp(client, alerts, erp_facts(failing))
+
+    first = client.post(f"{URL}/erp.litellm/check", headers=auth).json()
+    assert first["service"]["status"] == "fail"
+    assert first["service"]["error"] == "AI_GATEWAY_UNAVAILABLE"
+    assert first["service"]["incident"]["ended_at"] is None
+    client.post(
+        f"{URL}/erp.litellm/check", headers=auth
+    )  # повтор — тот же инцидент, без второго оповещения
+    assert [k for k, _ in alerts.sent] == ["erp.litellm"]
+    assert "Модели ИИ в ERP" in alerts.sent[0][1].plain
+
+    connector.facts = erp_facts(erp_item("litellm"))
+    healed = client.post(f"{URL}/erp.litellm/check", headers=auth).json()
+    assert healed["service"]["status"] == "ok"
+    assert healed["service"]["incident"] is None
+    assert [a.subject.split(":")[0] for _, a in alerts.sent] == ["⚠️ Сбой", "✅ Восстановлено"]
+
+    # Новый сбой в пределах часа — инцидент записан, оповещения нет (антиспам).
+    connector.facts = erp_facts(failing)
+    client.post(f"{URL}/erp.litellm/check", headers=auth)
+    assert len(alerts.sent) == 2
+    async with sessions() as session:
+        rows = (await session.scalars(select(ExternalServiceIncident))).all()
+    assert [r.service_key for r in rows] == ["erp.litellm", "erp.litellm"]
+
+
+async def test_unreachable_or_missing_erp_does_not_open_incidents(
+    sessions: async_sessionmaker[AsyncSession], client: TestClient, alerts: FakeAlerts
+) -> None:
+    auth = await headers(sessions, client, "admin")
+    container = client.app.state.container  # type: ignore[attr-defined]
+    connector, _ = attach_erp(client, alerts, ErpFacts(configured=True, error="unavailable"))
+    await container.external_checks.run("cheap", datetime.now(UTC))
+    services = {s["key"]: s for s in client.get(URL, headers=auth).json()["services"]}
+    assert services["erp.mail"]["status"] == "unknown"
+    assert "ERP не отвечает" in services["erp.mail"]["summary"]
+
+    connector.facts = ErpFacts(configured=False)
+    await container.external_checks.run("cheap", datetime.now(UTC))
+    container.external_view.invalidate()
+    services = {s["key"]: s for s in client.get(URL, headers=auth).json()["services"]}
+    assert services["erp.mail"]["status"] == "off"
+    connector.facts = ErpFacts(configured=True, status="ok", externals=None)  # ERP до M3-ERP-06
+    await container.external_checks.run("cheap", datetime.now(UTC))
+    container.external_view.invalidate()
+    services = {s["key"]: s for s in client.get(URL, headers=auth).json()["services"]}
+    assert "не передаёт" in services["erp.mail"]["summary"]
+    assert alerts.sent == []
+    async with sessions() as session:
+        assert (await session.scalars(select(ExternalServiceIncident))).all() == []
+
+
+async def test_erp_service_switch_goes_to_erp_with_password_and_audit(
+    sessions: async_sessionmaker[AsyncSession], client: TestClient, alerts: FakeAlerts
+) -> None:
+    auth = await headers(sessions, client, "admin")
+    _, erp_switch = attach_erp(client, alerts, erp_facts(erp_item("mail")))
+
+    wrong = client.post(f"{URL}/erp.mail/disable", json={"password": "nope"}, headers=auth)
+    assert wrong.status_code == 422
+    assert erp_switch.calls == []
+
+    off = client.post(
+        f"{URL}/erp.mail/disable",
+        json={"password": PASSWORD, "reason": "SMTP-ключ скомпрометирован"},
+        headers=auth,
+    )
+    assert off.status_code == 200, off.text
+    body = off.json()
+    assert erp_switch.calls == [("mail", False, "SMTP-ключ скомпрометирован")]
+    assert body["switch"]["kind"] == "erp"
+    assert body["switch"]["disabled"] is True
+    assert "письма" in body["switch"]["effect"]
+    assert body["status"] == "off", "выключатель виден сразу, не через минуту"
+
+    on = client.post(f"{URL}/erp.mail/enable", json={"password": PASSWORD}, headers=auth)
+    assert on.status_code == 200, on.text
+    assert erp_switch.calls[-1] == ("mail", True, None)
+    assert on.json()["switch"]["disabled"] is False
+
+    async with sessions() as session:
+        actions = (
+            await session.scalars(
+                select(AuditLog.action)
+                .where(AuditLog.entity_type == "external_service")
+                .order_by(AuditLog.id)
+            )
+        ).all()
+    assert actions == ["external_service.disable", "external_service.enable"]
+
+
+async def test_erp_switch_refused_or_unreachable_is_not_recorded(
+    sessions: async_sessionmaker[AsyncSession], client: TestClient, alerts: FakeAlerts
+) -> None:
+    auth = await headers(sessions, client, "admin")
+    _, erp_switch = attach_erp(client, alerts, erp_facts(erp_item("s3")))
+    erp_switch.refuse = ConflictError(
+        "erp does not know this switch", reason=Reason.SERVICE_NOT_SWITCHABLE, detail="обновите ERP"
+    )
+    refused = client.post(f"{URL}/erp.s3/disable", json={"password": PASSWORD}, headers=auth)
+    assert refused.status_code == 409
+    assert refused.json()["details"]["reason"] == "service_not_switchable"
+    async with sessions() as session:
+        assert await session.get(ExternalServiceSwitch, "erp.s3") is None
+        audits = (
+            await session.scalars(
+                select(AuditLog).where(AuditLog.entity_type == "external_service")
+            )
+        ).all()
+    assert audits == [], "ERP не подтвердила — ни строки, ни аудита"
+
+    sentry = client.post(f"{URL}/erp.sentry/disable", json={"password": PASSWORD}, headers=auth)
+    assert sentry.status_code == 409
+    assert sentry.json()["details"]["reason"] == "service_not_switchable"
