@@ -25,7 +25,7 @@ from app.domain.system_status import (
 from app.models.system import SystemAlert
 from app.repositories import monitoring as repo
 from app.services import backups as backup_rules
-from app.services.backups import BackupService
+from app.services.backups import BackupReader
 from app.services.readiness import ReadinessService
 from app.services.settings import SettingsService
 
@@ -72,7 +72,7 @@ class SystemStatusService:
         settings: SettingsService,
         config: Settings,
         readiness: ReadinessService,
-        backups: BackupService | None = None,
+        backups: BackupReader | None = None,
     ) -> None:
         self._sessions = sessions
         self._settings = settings

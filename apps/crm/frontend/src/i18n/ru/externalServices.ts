@@ -59,6 +59,10 @@ export const externalServices = {
     howChecked: "Как проверяется",
     howOften: "Как часто",
     purpose: "Назначение",
+    backupSources: {
+      volume: "Том резервных копий на этом сервере",
+      rustfs: "Бакет «backups» в RustFS (копию делает VPS 2)",
+    } as Record<string, string>,
     metrics: {
       pending_updates: "Сообщений ждут обработки",
       bot: "Бот",
@@ -76,6 +80,9 @@ export const externalServices = {
       failed_24h: "Не отправлено за 24 ч",
       queued: "Ждут отправки",
       last_copy_hours: "Последняя копия, часов назад",
+      last_copy_at: "Последняя копия",
+      backup_source: "Источник статуса копий",
+      backupDb: "База {name}: копия, часов назад",
       days_left: "Дней до окончания",
       not_after: "Действует до",
       host: "Адрес",
