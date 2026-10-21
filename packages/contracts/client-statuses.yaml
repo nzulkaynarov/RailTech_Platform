@@ -1,0 +1,76 @@
+# Статусы для клиента — одно слово в бейдже, одинаковое в боте (CRM settings.texts), кабинете (i18n Cabinet) и письмах
+# (шаблоны ERP). Основание: SPEC-v3 §2.5. Внутренние стадии клиенту не показываются.
+# Переводы uz (латиница) и en — черновые; тексты клиенту утверждает владелец (SPEC-v3 §11.3).
+# Проверка: ключи CRM, Cabinet и ERP совпадают с этим файлом (тест в каждой системе, как у docs/kb).
+# Валидация — client-statuses.schema.json (make contracts).
+version: 1
+
+statuses:
+  in_work:
+    from: "Заявка, Резолюция, Расчёт"
+    text:
+      ru: "Принято в работу, считаем"
+      uz: "Ishga qabul qilindi, hisoblayapmiz"
+      en: "Accepted, we are calculating"
+  awaiting_decision:
+    from: "КП отправлено"
+    suffix: valid_until
+    text:
+      ru: "Ждёт вашего решения"
+      uz: "Qaroringizni kutmoqda"
+      en: "Awaiting your decision"
+  contract_review:
+    from: "Договор: проект"
+    text:
+      ru: "Согласуйте редакцию договора"
+      uz: "Shartnoma matnini kelishib oling"
+      en: "Please agree the contract wording"
+  contract_signing:
+    from: "Договор: выставлен у оператора"
+    text:
+      ru: "Договор на подписании"
+      uz: "Shartnoma imzolanmoqda"
+      en: "Contract is being signed"
+  awaiting_payment:
+    from: "Оплата: счёт выставлен"
+    text:
+      ru: "Ожидает оплаты"
+      uz: "To'lov kutilmoqda"
+      en: "Awaiting payment"
+  checking_payment:
+    from: "Оплата: платёжка получена"
+    text:
+      ru: "Проверяем оплату"
+      uz: "To'lovni tekshiryapmiz"
+      en: "Checking your payment"
+  fulfilling:
+    from: "Исполнение"
+    suffix: expected_date
+    text:
+      ru: "Выполняется"
+      uz: "Bajarilmoqda"
+      en: "In progress"
+  awaiting_acceptance:
+    from: "Акт выпущен"
+    text:
+      ru: "Ждёт вашей приёмки"
+      uz: "Qabul qilishingizni kutmoqda"
+      en: "Awaiting your acceptance"
+  done:
+    from: "Выполнено"
+    text:
+      ru: "Выполнено"
+      uz: "Bajarildi"
+      en: "Completed"
+  rejected:
+    from: "Отказ"
+    text:
+      ru: "Отклонено"
+      uz: "Rad etildi"
+      en: "Declined"
+  quote_expired:
+    from: "Отказ: срок КП истёк"
+    text:
+      ru: "Срок КП истёк"
+      uz: "Tijorat taklifi muddati tugadi"
+      en: "Quote has expired"
