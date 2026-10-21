@@ -316,7 +316,12 @@ class CookieTokenRefreshView(TokenRefreshView):
 
     Refresh не продлевается тому, кто больше не сотрудник (FIX-13: `assert_staff_login` → 403
     `STAFF_ONLY`) и тому, чей доступ отозван (FIX-11: версия токена `tv` ≠ `token_version` → 401):
-    токен, выданный раньше, чем закрыли вход, иначе жил бы 7 дней."""
+    токен, выданный раньше, чем закрыли вход, иначе жил бы 7 дней.
+
+    Лимит частоты — свой scope `token_refresh` (FIX-64, N-2), а не общий анонимный."""
+
+    throttle_classes = [ScopedRateThrottle]
+    throttle_scope = "token_refresh"
 
     def _dead(self, detail: str, http_status: int) -> Response:
         # Dead token: answer AND clear the cookie, otherwise the browser replays it on every visit.
