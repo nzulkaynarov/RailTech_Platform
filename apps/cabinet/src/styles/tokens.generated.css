@@ -1,4 +1,4 @@
-/* Сгенерировано из packages/ui-tokens/tokens.json (v0.1.0) — не править руками, запускать make tokens. */
+/* Сгенерировано из packages/ui-tokens/tokens.json (v0.2.0) — не править руками, запускать make tokens. */
 /* Подключение (ERP, Cabinet): @import "tailwindcss"; @import "../../../packages/ui-tokens/dist/shadcn.css";
    Тёмная тема (.dark) задаётся приложением поверх; здесь — токены светлой темы. */
 :root {
@@ -8,15 +8,16 @@
   --card-foreground: #1f1f1f;
   --popover: #ffffff;
   --popover-foreground: #1f1f1f;
-  --primary: #0958d9;
+  --primary: #1668dc;
   --primary-foreground: #ffffff;
+  --primary-hover: #0958d9;
   --secondary: #f5f5f5;
   --secondary-foreground: #1f1f1f;
   --muted: #f5f5f5;
-  --muted-foreground: rgba(0,0,0,0.6);
+  --muted-foreground: #595959;
   --accent: #e6f4ff;
-  --accent-foreground: #002c8c;
-  --destructive: #cf1322;
+  --accent-foreground: #0958d9;
+  --destructive: #a8071a;
   --destructive-foreground: #ffffff;
   --success: #237804;
   --success-foreground: #ffffff;
@@ -26,9 +27,9 @@
   --info-foreground: #ffffff;
   --border: #d9d9d9;
   --input: #d9d9d9;
-  --ring: #0958d9;
+  --ring: #1668dc;
   --radius: 0.375rem;
-  --font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans', sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji';
+  --font-sans: Inter, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
   --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace;
 }
 
@@ -41,6 +42,7 @@
   --color-popover-foreground: var(--popover-foreground);
   --color-primary: var(--primary);
   --color-primary-foreground: var(--primary-foreground);
+  --color-primary-hover: var(--primary-hover);
   --color-secondary: var(--secondary);
   --color-secondary-foreground: var(--secondary-foreground);
   --color-muted: var(--muted);
