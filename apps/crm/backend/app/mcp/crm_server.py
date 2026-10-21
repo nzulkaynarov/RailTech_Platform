@@ -10,8 +10,10 @@ from typing import Any, Final
 from mcp.server.mcpserver import Context, MCPServer
 from mcp.server.mcpserver.exceptions import ToolError
 from pydantic import BaseModel, Field
+from sqlalchemy import select
 
 from app.container import Container, get_container
+from app.domain import erp_handover
 from app.domain.qualification import Qualification, merge_qualification
 from app.mcp.common import build_app, require_context, serve
 from app.models.clients import ServiceRequest
@@ -66,6 +68,9 @@ def create_server(container: Container | None = None) -> MCPServer[Any]:
                 raise ToolError("lead not found")
             messages = await repo.recent_messages(session, lead.id, HISTORY_LIMIT)
             notes = await repo.bot_notes(session, lead.id)
+        if agent.mode == "prospect":
+            # Клиента деактивировали: ответы с данными ERP (счета, суммы, сроки) лиду не отдаём.
+            messages = [m for m in messages if not (m.role == "bot" and m.meta.get("erp_used"))]
         return LeadContext(
             lead_id=lead.id,
             display_name=lead.display_name,
@@ -126,11 +131,28 @@ def create_server(container: Container | None = None) -> MCPServer[Any]:
     @server.tool(
         description="Клиент сообщил о проблеме или спросил статус работ: создать сервисный запрос."
     )
-    async def create_service_request(summary: str, ctx: Context[Any, Any]) -> dict[str, Any]:
+    async def create_service_request(
+        summary: str, ctx: Context[Any, Any], source: str | None = None
+    ) -> dict[str, Any]:
         agent = require_context(ctx, c.settings)
         if agent.mode != "customer" or agent.client_id is None:
             raise ToolError("not available in this mode")
         async with c.session_factory() as session, session.begin():
+            if source == erp_handover.SOURCE:
+                # «ERP недоступен»: один запрос на клиента за сутки, повторы получают его номер.
+                since = datetime.now(UTC) - erp_handover.DEDUPE_WINDOW
+                existing = await session.scalar(
+                    select(ServiceRequest.id)
+                    .where(
+                        ServiceRequest.client_id == agent.client_id,
+                        ServiceRequest.created_at > since,
+                        ServiceRequest.summary.startswith(erp_handover.SUMMARY_PREFIX),
+                    )
+                    .order_by(ServiceRequest.id.desc())
+                    .limit(1)
+                )
+                if existing is not None:
+                    return {"ok": True, "service_request_id": existing, "deduplicated": True}
             row = ServiceRequest(
                 client_id=agent.client_id, lead_id=agent.lead_id, summary=summary.strip()[:2000]
             )

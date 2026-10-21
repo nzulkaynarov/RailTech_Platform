@@ -30,12 +30,12 @@ class FakeRuntime:
 
 
 class Harness:
-    def __init__(self, mode: str = "polling") -> None:
+    def __init__(self, mode: str = "polling", url: str = "") -> None:
         self.token: tuple[str, TokenSource] = ("111:first-token", "env")
         self.dispatchers = 0
         self.runtimes: list[FakeRuntime] = []
         self.supervisor = BotSupervisor(
-            Settings(_env_file=None, telegram_mode=mode),
+            Settings(_env_file=None, telegram_mode=mode, telegram_webhook_url=url),
             self.resolve,
             self.make_dispatcher,
             self.make_runtime,  # type: ignore[arg-type]
@@ -111,3 +111,35 @@ async def test_finished_polling_task_means_not_running() -> None:
     assert h.supervisor.running
     h.runtimes[0].running = False
     assert not h.supervisor.running
+
+
+async def test_webhook_mode_with_empty_url_does_not_start_and_logs_error() -> None:
+    """FIX-66: ошибка в журнал (без токена), бот не стартует, runtime даже не создаётся."""
+    from structlog.testing import capture_logs
+
+    h = Harness(mode="webhook")
+    with capture_logs() as logs:
+        await h.supervisor.start()
+    assert not h.supervisor.running
+    assert h.runtimes == []
+    assert h.supervisor.last_error == "webhook_not_configured"
+    failed = [e for e in logs if e["event"] == "bot_webhook_not_configured"]
+    assert failed
+    assert failed[0]["log_level"] == "error"
+    assert failed[0]["problem"] == "empty"
+    assert "111:first-token" not in repr(logs)
+    assert not any(e["event"] == "bot_started" for e in logs)
+
+
+async def test_webhook_mode_with_http_url_does_not_start() -> None:
+    h = Harness(mode="webhook", url="http://crm.example/telegram/webhook")
+    await h.supervisor.start()
+    assert h.runtimes == []
+    assert h.supervisor.last_error == "webhook_not_configured"
+
+
+async def test_webhook_mode_with_https_url_starts() -> None:
+    h = Harness(mode="webhook", url="https://crm.example/telegram/webhook")
+    await h.supervisor.start()
+    assert h.supervisor.running
+    assert h.supervisor.last_error is None
