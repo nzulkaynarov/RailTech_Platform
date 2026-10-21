@@ -40,8 +40,8 @@ from .serializers import (
     ProvisionUserRequestSerializer,
     ProvisionUserResponseSerializer,
 )
-from .services.catalog import search_published_catalog
 from .services import pairing
+from .services.catalog import search_published_catalog
 from .services.handoff import process_client_handoff
 from .services.provision import provision_crm_user, revoke_crm_user_sessions
 from .services.summary import (

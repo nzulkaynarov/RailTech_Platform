@@ -130,7 +130,11 @@ def accept(raw_code: str, *, crm_to_erp_token: str, erp_to_crm_token: str, webho
     normalized = normalize_code(raw_code)
     now = timezone.now()
     with transaction.atomic():
-        row = PairingCode.objects.select_for_update().filter(code_hash=hash_code(normalized)).first() if normalized else None
+        row = (
+            PairingCode.objects.select_for_update().filter(code_hash=hash_code(normalized)).first()
+            if normalized
+            else None
+        )
         if row is None:
             raise PairingCodeError("PAIRING_CODE_INVALID")
         if row.used_at is not None:
@@ -152,7 +156,12 @@ def accept(raw_code: str, *, crm_to_erp_token: str, erp_to_crm_token: str, webho
 
 
 def rotate(
-    current_token: str, *, crm_to_erp_token: str, erp_to_crm_token: str, webhook_secret: str, now: Optional[datetime] = None
+    current_token: str,
+    *,
+    crm_to_erp_token: str,
+    erp_to_crm_token: str,
+    webhook_secret: str,
+    now: Optional[datetime] = None,
 ) -> Rotated:
     """Ротация под действующим токеном: новая тройка, прежний токен CRM→ERP живёт ещё `rotation_grace_seconds`.
 

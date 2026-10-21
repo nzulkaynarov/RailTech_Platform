@@ -514,7 +514,11 @@ def test_error_codes_are_the_documented_ones(exercised):
     codes = {
         (status): {body["detail"] for _, _, st, body in exercised if st == status} for status in (401, 404, 409, 422)
     }
-    assert {"UNAUTHORIZED"} <= codes[401] <= {"UNAUTHORIZED", "PAIRING_CODE_INVALID", "PAIRING_CODE_EXPIRED", "PAIRING_CODE_USED"}
+    assert (
+        {"UNAUTHORIZED"}
+        <= codes[401]
+        <= {"UNAUTHORIZED", "PAIRING_CODE_INVALID", "PAIRING_CODE_EXPIRED", "PAIRING_CODE_USED"}
+    )
     assert codes[404] == {"NOT_FOUND"}
     assert codes[422] == {"VALIDATION_ERROR"}
     assert codes[409] <= {"INN_CONFLICT", "EMAIL_CONFLICT"} and codes[409]

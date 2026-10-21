@@ -22,7 +22,7 @@ from django.core.management import call_command
 from django.utils import timezone
 from integration.models import CredentialSlot, IntegrationWebhookEvent, PairingCode, ServiceCredential
 from integration.services import credentials, pairing
-from integration.services.webhooks import sign_payload, verify_signature, webhook_signing_secret
+from integration.services.webhooks import verify_signature, webhook_signing_secret
 from integration.tasks import deliver_webhook_event
 from rest_framework.test import APIClient
 from rest_framework.throttling import SimpleRateThrottle
@@ -113,7 +113,11 @@ def test_accept_stores_secrets_encrypted_and_answers_by_contract(settings):
 
     rows = {row.slot: row for row in ServiceCredential.objects.all()}
     assert set(rows) == {CredentialSlot.CRM_TO_ERP, CredentialSlot.ERP_TO_CRM, CredentialSlot.WEBHOOK_SECRET}
-    for row, value in ((rows["crm_to_erp"], NEW_CRM_TOKEN), (rows["erp_to_crm"], NEW_ERP_TOKEN), (rows["webhook_secret"], NEW_SECRET)):
+    for row, value in (
+        (rows["crm_to_erp"], NEW_CRM_TOKEN),
+        (rows["erp_to_crm"], NEW_ERP_TOKEN),
+        (rows["webhook_secret"], NEW_SECRET),
+    ):
         assert value not in row.ciphertext, "в БД шифртекст, не значение"
         assert row.last4 == value[-4:]
     assert credentials.erp_to_crm_token() == NEW_ERP_TOKEN
@@ -177,7 +181,9 @@ def test_service_token_is_not_a_pairing_code():
 
 def test_non_ascii_bearer_is_401_not_500(paired):
     assert health("t\xe9st-token") == 401
-    assert rotate("t\xe9st-token", crm=ROTATED_CRM_TOKEN, erp=ROTATED_ERP_TOKEN, webhook=ROTATED_SECRET).status_code == 401
+    assert (
+        rotate("t\xe9st-token", crm=ROTATED_CRM_TOKEN, erp=ROTATED_ERP_TOKEN, webhook=ROTATED_SECRET).status_code == 401
+    )
 
 
 def test_the_code_does_not_authenticate_other_operations():
@@ -254,7 +260,9 @@ def test_rotation_retry_with_the_same_values_is_idempotent(paired):
     first = rotate(NEW_CRM_TOKEN, crm=ROTATED_CRM_TOKEN, erp=ROTATED_ERP_TOKEN, webhook=ROTATED_SECRET)
     again = rotate(NEW_CRM_TOKEN, crm=ROTATED_CRM_TOKEN, erp=ROTATED_ERP_TOKEN, webhook=ROTATED_SECRET)
     assert first.status_code == again.status_code == 200
-    assert first.json()["previous_token_valid_until"] == again.json()["previous_token_valid_until"], "срок не продлевается"
+    assert (
+        first.json()["previous_token_valid_until"] == again.json()["previous_token_valid_until"]
+    ), "срок не продлевается"
     assert health(NEW_CRM_TOKEN) == 200 and health(ROTATED_CRM_TOKEN) == 200
 
 
@@ -265,7 +273,9 @@ def test_rotation_with_the_current_token_value_is_not_a_rotation(paired):
 
 
 def test_rotation_needs_the_current_token_not_the_previous_one(paired):
-    assert rotate(NEW_CRM_TOKEN, crm=ROTATED_CRM_TOKEN, erp=ROTATED_ERP_TOKEN, webhook=ROTATED_SECRET).status_code == 200
+    assert (
+        rotate(NEW_CRM_TOKEN, crm=ROTATED_CRM_TOKEN, erp=ROTATED_ERP_TOKEN, webhook=ROTATED_SECRET).status_code == 200
+    )
     again = rotate(NEW_CRM_TOKEN, crm="g" * 40, erp="h" * 40, webhook="i" * 40)
     assert again.status_code == 401, "прежним токеном новую ротацию не начать"
     assert health("g" * 40) == 401
@@ -285,7 +295,10 @@ def test_rotation_without_a_valid_token_is_401():
 
 
 def test_rotation_with_invalid_body_is_422(paired):
-    assert bearer(NEW_CRM_TOKEN).post(f"{PREFIX}/pairing/rotate", {"crm_to_erp_token": "x"}, format="json").status_code == 422
+    assert (
+        bearer(NEW_CRM_TOKEN).post(f"{PREFIX}/pairing/rotate", {"crm_to_erp_token": "x"}, format="json").status_code
+        == 422
+    )
 
 
 # ── Нечитаемые значения ───────────────────────────────────────────────────────────────────────────────

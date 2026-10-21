@@ -6,14 +6,15 @@
 
 from __future__ import annotations
 
-from core.audit import log_admin_action
-from core.permissions import ADMIN_ONLY, IsPlatformAdmin, RoleGatedViewMixin
 from django.conf import settings
 from drf_spectacular.utils import extend_schema
 from rest_framework import serializers
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
+
+from core.audit import log_admin_action
+from core.permissions import ADMIN_ONLY, IsPlatformAdmin, RoleGatedViewMixin
 
 from .services import credentials, pairing
 
