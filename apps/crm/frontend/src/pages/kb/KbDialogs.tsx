@@ -1,4 +1,4 @@
-import { Form, Input, Modal, Select } from "antd";
+import { Collapse, Form, Input, Modal, Select } from "antd";
 import type { SelectProps, UploadFile } from "antd";
 
 import { useProducts } from "../../api/adminQueries";
@@ -41,6 +41,47 @@ type DialogProps<T> = {
   onSubmit: (values: T) => void;
 };
 
+const DOCS_BASE = "https://github.com/nzulkaynarov/RailTech_Platform/blob/main/docs/kb";
+
+/** Краткая спецификация рядом с загрузкой; источник правды — docs/kb/FORMAT.md. */
+function FormatHelp() {
+  return (
+    <Collapse
+      size="small"
+      style={{ marginBottom: 16 }}
+      items={[
+        {
+          key: "format",
+          label: t.kb.formatTitle,
+          children: (
+            <>
+              <p>{t.kb.formatIntro}</p>
+              <ul>
+                {t.kb.formatRules.map((rule) => (
+                  <li key={rule}>{rule}</li>
+                ))}
+              </ul>
+              <p>
+                <a href={`${DOCS_BASE}/FORMAT.md`} target="_blank" rel="noreferrer">
+                  {t.kb.formatSpec}
+                </a>
+                {" · "}
+                <a href={`${DOCS_BASE}/PROMPT.md`} target="_blank" rel="noreferrer">
+                  {t.kb.formatPrompt}
+                </a>
+                {" · "}
+                <a href={`${DOCS_BASE}/example.md`} target="_blank" rel="noreferrer">
+                  {t.kb.formatExample}
+                </a>
+              </p>
+            </>
+          ),
+        },
+      ]}
+    />
+  );
+}
+
 export function UploadDialog({ open, saving, onCancel, onSubmit }: DialogProps<UploadValues>) {
   const [form] = Form.useForm<UploadValues>();
   return (
@@ -55,6 +96,7 @@ export function UploadDialog({ open, saving, onCancel, onSubmit }: DialogProps<U
       destroyOnHidden
       okText={t.common.save}
     >
+      <FormatHelp />
       <Form form={form} layout="vertical" onFinish={onSubmit} initialValues={{ language: "ru" }}>
         <Form.Item
           name="file"
@@ -63,7 +105,7 @@ export function UploadDialog({ open, saving, onCancel, onSubmit }: DialogProps<U
           getValueFromEvent={(e: { fileList: UploadFile[] }) => e.fileList.slice(-1)}
           rules={[{ required: true }]}
         >
-          <FileDragger accept=".pdf,.docx,.pptx,.xlsx,.md,.html,.htm,.txt" />
+          <FileDragger accept=".md" />
         </Form.Item>
         <Form.Item name="title" label={t.kb.title} rules={[{ required: true, max: 500 }]}>
           <Input />
