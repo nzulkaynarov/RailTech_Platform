@@ -1,0 +1,34 @@
+{
+  "crm-erp-before-1440": {
+    "serious_critical": 0,
+    "violations": []
+  },
+  "crm-erp-code-error-1440": {
+    "serious_critical": 0,
+    "violations": []
+  },
+  "crm-erp-after-1440": {
+    "serious_critical": 0,
+    "violations": []
+  },
+  "crm-erp-rotated-1440": {
+    "serious_critical": 0,
+    "violations": []
+  },
+  "crm-erp-before-390": {
+    "serious_critical": 0,
+    "violations": []
+  },
+  "crm-erp-code-error-390": {
+    "serious_critical": 0,
+    "violations": []
+  },
+  "crm-erp-after-390": {
+    "serious_critical": 0,
+    "violations": []
+  },
+  "crm-erp-rotated-390": {
+    "serious_critical": 0,
+    "violations": []
+  }
+}
