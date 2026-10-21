@@ -3,7 +3,9 @@
 from collections.abc import Sequence
 from typing import Any
 
+from app.agents.erp_mcp import ErpMcpError
 from app.agents.llm import ChatResult, ToolCall
+from app.security.erp_agent_context import ErpScope
 
 
 class FakeTools:
@@ -91,3 +93,28 @@ def kb(best: float | None = 0.8) -> dict[str, Any]:
         "confident": bool(best and best >= 0.55),
         "language": "ru",
     }
+
+
+class ToolsModel(ReplayModel):
+    """ReplayModel, который запоминает ещё и список инструментов каждого запроса."""
+
+    def __init__(self, *responses: ChatResult) -> None:
+        super().__init__(*responses)
+        self.offered: list[set[str]] = []
+
+    async def complete(self, messages: Any, *, tools: Any = None, **kwargs: Any) -> ChatResult:
+        self.offered.append({t["function"]["name"] for t in tools or []})
+        return await super().complete(messages, tools=tools, **kwargs)
+
+
+class FakeErp:
+    def __init__(self, **data: Any) -> None:
+        self.data = data
+        self.calls: list[tuple[str, dict[str, Any], ErpScope]] = []
+        self.failure: ErpMcpError | None = None
+
+    async def call(self, tool: str, args: dict[str, Any], scope: ErpScope) -> Any:
+        self.calls.append((tool, args, scope))
+        if self.failure is not None:
+            raise self.failure
+        return self.data.get(tool)
