@@ -65,6 +65,27 @@ export const system = {
     size: "Размер",
     restoreHint: "Восстановление выполняет администратор сервера по инструкции.",
     empty: "Копий пока нет",
+    sourceLabel: "Источник",
+    source: {
+      volume: "Том резервных копий на этом сервере",
+      rustfs: "Бакет «backups» в RustFS — копию делает сервер базы (VPS 2)",
+    } as Record<string, string>,
+    sourceHint:
+      "Копию делает сервер базы (VPS 2) по расписанию; CRM только читает бакет. Внеочередную копию запускают на VPS 2 (infra/deploy/backup-now.sh).",
+    databases: "Последняя копия по базам",
+    database: "База",
+    staleBucket:
+      "Нет успешной копии за сутки — на сервере базы (VPS 2) проверьте контейнер backup: docker logs rt-db-backup-1",
+    noneBucket:
+      "В бакете нет ни одной полной копии — на сервере базы (VPS 2) проверьте контейнер backup и переменные BACKUP_RUSTFS_*",
+    errors: {
+      bucket_missing:
+        "Бакет «backups» не найден в хранилище. Создайте его в RustFS (S3_BUCKETS у сервиса s3-init) и проверьте BACKUP_RUSTFS_* на сервере базы.",
+      access_denied:
+        "Нет доступа к бакету «backups»: ключ S3 у CRM не принят. Проверьте S3_ACCESS_KEY и S3_SECRET_KEY у crm-api и crm-worker.",
+      unreachable:
+        "Хранилище резервных копий недоступно, статус копий неизвестен. Проверьте RustFS (карточка «Хранилище файлов») и сеть VPS 1.",
+    } as Record<string, string>,
   },
   system: {
     refresh: "Проверить снова",

@@ -9,15 +9,15 @@
 ## Как устроено
 
 - **Образы** собирает `deploy.yml` (только `workflow_dispatch`) и кладёт в GHCR с тегом = полный git sha:
-  `rt-crm-backend`, `rt-crm-frontend`, `rt-erp-backend`, `rt-erp-frontend`, `rt-cabinet`. Деплоится только код, уже входящий в `main`.
-- **Релиз** на VPS 1 — каталог `/opt/rt/releases/<sha>/` (`infra/`, `apps/crm/infra/casbin`, `packages/contracts/mcp-tools.json`), `/opt/rt/current` — ссылка на текущий.
+  `rt-crm-backend`, `rt-crm-frontend`, `rt-erp-backend`, `rt-erp-frontend`, `rt-cabinet`, `rt-litellm` (свой образ LiteLLM на Debian, `infra/ai/litellm/`; официальный на прод-CPU не стартует). Деплоится только код, уже входящий в `main`.
+- **Релиз** на VPS 1 — каталог `/opt/rt/releases/<sha>/` (`infra/`, `apps/crm/infra/casbin`, `packages/contracts/mcp-tools.json`, `packages/contracts/events.schema.json`), `/opt/rt/current` — ссылка на текущий.
   Состояние — `/opt/rt/state/{current_tag,previous_tag}`; хранятся пять последних релизов.
 - **Секреты приложений** лежат только на серверах: `/opt/rt/.env.prod` (VPS 1) и `/opt/rt-db/.env.db` (VPS 2), оба `chmod 600`.
   В GitHub environment `production` — лишь доступ к серверу (SSH-ключ, known_hosts) и несекретные имена. Решение принято
   здесь, чтобы десятки секретов приложений не жили в GitHub; владелец вправе передумать (тогда `deploy.yml` дописывается).
 - **База** — на VPS 2: PostgreSQL 17 + pgvector, 4 базы, по роли на базу (`crm_app`, `erp_app`, `litellm_app`, `langfuse_app`),
   `pg_hba` — только TLS и только внутренний IP VPS 1.
-- **Порядок деплоя** (`infra/deploy/deploy.sh <sha>`): проверка env → `pull` → **pg_dump-гейт** `crm` и `erp`
+- **Порядок деплоя** (`infra/deploy/deploy.sh <sha>`): проверка env → `pull` → **проверка базы CPU образов** (`cpu-baseline-check.sh`: в каждом образе запускается import numpy / litellm.proxy / версия бинаря; образ, которому нужен x86-64-v2, останавливает деплой до дампа и миграций, см. servers.md «CPU прод-VPS») → **pg_dump-гейт** `crm` и `erp`
   (`predeploy-dump.sh`; нет читаемого дампа — миграций нет) → миграции CRM и ERP явно (`AUTO_MIGRATE=false` у ERP) → `up -d` → smoke.
 - Правило FIX-03: `/mcp` снаружи — 404 на всех трёх доменах (Caddy); smoke это проверяет.
 
@@ -126,6 +126,14 @@ Actions → **Deploy** → Run workflow: `ref` = `main` (или sha, входя�
 `../../packages/contracts/mcp-tools.json` от `prod.yml` (без файла сервис не стартует). Включает профиль M3-CRM-07: добавить `mcp`
 в `RT_PROFILES` в `.env.prod` (`RT_PROFILES=mcp`, через запятую с остальными) и выполнить обычный деплой; снаружи `/mcp` остаётся 404.
 
+**Схема событий ERP → CRM (M5-INF-01c).** Файл `packages/contracts/events.schema.json` едет в релизе и монтируется read-only в
+`/packages/contracts/events.schema.json` сервисов `erp-backend`, `erp-worker`, `erp-worker-ai`, `erp-beat` (и `erp-mcp` под
+профилем `mcp`): по нему ERP проверяет тело каждого события перед отправкой (`ERP_EVENTS_CONTRACT_MODE=log` в проде —
+несоответствие пишется в лог ERROR без значений полей, событие уходит). Образ прода схему не содержит. `deploy.sh` останавливается
+до pull и миграций, если файла нет в релизе (релиз собран старым `deploy.yml`) — тогда пересобрать релиз с актуального `main`.
+Проверить после деплоя: `docker compose exec erp-backend ls -l /packages/contracts/events.schema.json`, а в логе ERP нет строки
+«events.schema.json не найден».
+
 Вручную с сервера (без Actions): `/opt/rt/releases/<sha>/infra/deploy/deploy.sh <sha>`; без миграций и дампа — `make up-prod RT_IMAGE_TAG=<sha>`.
 
 ## 3. Откат
@@ -142,6 +150,7 @@ Actions → **Deploy** → Run workflow: `ref` = `main` (или sha, входя�
   на VPS 1 (ежедневно) и **зашифрованную** (AES-256, `BACKUP_ENC_PASSPHRASE`) копию во внешнее S3-хранилище (раз в неделю,
   `BACKUP_EXT_DAY`). Адрес и ключи внешнего хранилища — переменные `BACKUP_EXT_*`; провайдера выбирает владелец.
 - **Сейчас:** `infra/deploy/backup-now.sh [--ext]` на VPS 2.
+- **Статус в CRM:** «Внешние сервисы» → «Хранилище резервных копий» читает бакет `backups` RustFS (M5-CRM-01); нет копии за 26 ч — инцидент и оповещение. Подробно — `apps/crm/docs/runbooks/backup-restore.md`.
 - **Проверка восстановления** (раз в неделю и после любых изменений бэкапа): `infra/db/restore-check.sh [каталог]` на VPS 2 — разворачивает
   каждый дамп во временную базу, считает таблицы, проверяет `vector` в `crm`, удаляет базу. Боевые базы не затрагиваются.
 - **Восстановление боевой базы** (остановка записи обязательна):

@@ -104,6 +104,9 @@ deploy-check: ## Проверка конфигурации прода без з�
 	@docker run --rm -e ACME_EMAIL=a@example.com -e CRM_DOMAIN=crm.example.org -e ERP_DOMAIN=erp.example.org -e CABINET_DOMAIN=cabinet.example.org 	  -v "$(CURDIR)/$(INFRA)/caddy/Caddyfile.prod:/etc/caddy/Caddyfile:ro" caddy:2.11.7-alpine caddy validate --config /etc/caddy/Caddyfile 2>&1 | grep -q "Valid configuration" && echo "caddy validate: ok"
 	@docker run --rm -e LANG=C.UTF-8 -v "$(CURDIR):/mnt" -w /mnt koalaman/shellcheck:stable -x $(INFRA)/deploy/*.sh $(INFRA)/db/*.sh && echo "shellcheck: ok"
 	@bash $(INFRA)/deploy/tests/predeploy-dump-test.sh
+	@bash $(INFRA)/deploy/tests/events-schema-mount-test.sh
+	@bash $(INFRA)/deploy/tests/crm-backup-source-test.sh
+	@bash $(INFRA)/deploy/tests/cpu-baseline-test.sh
 	@docker run --rm -v "$(CURDIR):/repo" -w /repo rhysd/actionlint:latest .github/workflows/deploy.yml && echo "actionlint: ok"
 
 # --- Локальный CI (гейт мержа, пока GitHub Actions недоступен — DECISIONS 2026-10-13) ---

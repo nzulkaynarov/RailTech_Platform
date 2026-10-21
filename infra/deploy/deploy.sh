@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Деплой на VPS 1 (запускается на сервере из каталога релиза; deploy.yml кладёт его туда и вызывает по SSH,
 # вручную — так же: /opt/rt/releases/<тег>/infra/deploy/deploy.sh <тег>).
-# Порядок: проверка env → pull образов → pg_dump-гейт обеих баз → миграции CRM и ERP → up → state → smoke.
+# Порядок: проверка env → pull образов → проверка базы CPU образов → pg_dump-гейт обеих баз → миграции CRM и ERP → up → state → smoke.
 # Нет дампа — нет миграций: при сбое pg_dump скрипт останавливается до первой миграции, сервисы не трогаются.
 # Откат кода — rollback.sh; откат данных — восстановление из дампа (docs/runbooks/deploy.md), автоматически не делается.
 set -euo pipefail
@@ -14,6 +14,10 @@ rel="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 [[ "$(basename "$rel")" == "$tag" ]] || log "внимание: каталог релиза ($(basename "$rel")) не совпадает с тегом образов ($tag)"
 
 require_env_file
+# prod.yml монтирует схему событий в сервисы ERP (M5-INF-01c): без файла в релизе контейнеры не стартуют, а миграции
+# ERP упали бы уже после pg_dump — проверяем до pull. Релиз без файла — собран старым deploy.yml (release.tgz).
+[[ -f "$rel/packages/contracts/events.schema.json" ]] \
+  || die "в релизе нет packages/contracts/events.schema.json — release.tgz собран без него (deploy.yml); деплой остановлен до pull и миграций"
 export RT_IMAGE_TAG="$tag"
 prev="$(state_get current_tag)"
 
@@ -21,7 +25,11 @@ log "тег $tag, релиз $rel, предыдущий: ${prev:-нет}"
 compose "$rel" config -q
 
 log "pull образов"
-compose "$rel" pull crm-api crm-web erp-backend erp-web cabinet-web
+compose "$rel" pull crm-api crm-web erp-backend erp-web cabinet-web litellm
+
+# Прод-CPU — база x86-64 v1 (servers.md): образ, которому нужен v2, ловим здесь, до дампа и миграций.
+log "проверка базы CPU образов (cpu-baseline-check.sh)"
+"$rel/infra/deploy/cpu-baseline-check.sh" "$rel" "$tag"
 
 log "pg_dump-гейт (crm, erp)"
 "$rel/infra/deploy/predeploy-dump.sh" "$tag"

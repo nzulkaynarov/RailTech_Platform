@@ -5,6 +5,8 @@
 
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
+from dataclasses import dataclass
+from datetime import datetime
 from typing import Any
 
 import httpx
@@ -18,6 +20,13 @@ async def ping(client: httpx.AsyncClient, endpoint: AnyHttpUrl) -> None:
     """Liveness RustFS (`GET /health`); не требует учётных данных."""
     response = await client.get(f"{str(endpoint).rstrip('/')}/health")
     response.raise_for_status()
+
+
+@dataclass(frozen=True, slots=True)
+class StoredObject:
+    key: str
+    size: int
+    modified: datetime | None = None
 
 
 class ObjectStorage:
@@ -79,3 +88,15 @@ class ObjectStorage:
                     objects += 1
                     size += int(item.get("Size", 0))
         return objects, size
+
+    async def list_objects(self, bucket: str, prefix: str = "") -> list[StoredObject]:
+        """Ключи, размеры и время изменения; ошибки (нет бакета, доступа) — исключением клиента."""
+        async with self._client() as client:
+            found: list[StoredObject] = []
+            paginator = client.get_paginator("list_objects_v2")
+            async for page in paginator.paginate(Bucket=bucket, Prefix=prefix):
+                found += [
+                    StoredObject(i["Key"], int(i.get("Size", 0)), i.get("LastModified"))
+                    for i in page.get("Contents", [])
+                ]
+            return found

@@ -5,8 +5,9 @@ from datetime import UTC, datetime, timedelta
 import pytest
 
 from app.domain import external_status as rules
+from app.domain import system_status
 from app.domain.external_status import HttpFacts, MailFacts, TelegramFacts, TlsFacts
-from app.domain.system_status import Component
+from app.domain.system_status import BackupFacts, Component
 
 NOW = datetime(2026, 10, 14, 9, 0, tzinfo=UTC)
 OK = HttpFacts(None, None, 12)
@@ -163,6 +164,44 @@ def test_backup_maps_existing_rule() -> None:
         NOW,
     )
     assert rules.backup(stale, 30.0).hint == "Откройте «Резервные копии»"
+
+
+def test_backup_from_rustfs_shows_source_time_and_hint() -> None:
+    last = NOW - timedelta(hours=30)
+    facts = BackupFacts(
+        True,
+        True,
+        last,
+        None,
+        True,
+        "rustfs",
+        databases={"crm": last, "erp": NOW - timedelta(hours=2)},
+    )
+    component = system_status.backup(NOW, facts)
+    result = rules.backup(component, 30.0, facts)
+    assert result.status == "fail"  # «нет копии за сутки» открывает инцидент
+    assert result.metrics["backup_source"] == "rustfs"
+    assert result.metrics["last_copy_at"] == last.isoformat()
+    assert result.metrics["db.crm.hours"] == 30.0
+    assert result.metrics["db.erp.hours"] == 2.0
+    assert result.hint
+    assert "backup-now.sh" in result.hint
+
+
+def test_backup_from_rustfs_bucket_error_is_explained() -> None:
+    facts = BackupFacts(False, True, None, None, True, "rustfs", "bucket_missing", "NoSuchBucket")
+    result = rules.backup(system_status.backup(NOW, facts), None, facts)
+    assert result.status == "fail"
+    assert result.error == "NoSuchBucket"
+    assert result.hint
+    assert "backups" in result.hint
+
+
+def test_backup_from_volume_reports_its_source() -> None:
+    facts = BackupFacts(True, True, NOW - timedelta(hours=3), None)
+    result = rules.backup(system_status.backup(NOW, facts), 3.0, facts)
+    assert result.status == "ok"
+    assert result.metrics["backup_source"] == "volume"
 
 
 @pytest.mark.parametrize(

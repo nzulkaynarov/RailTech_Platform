@@ -44,6 +44,8 @@ class Settings(BaseSettings):
     s3_bucket_kb: str = "kb-sources"
     s3_bucket_documents: str = "client-documents"
     s3_bucket_attachments: str = "tg-attachments"
+    # Бакет, куда бэкап VPS 2 выгружает дампы (`infra/db/backup.sh`, BACKUP_RUSTFS_BUCKET).
+    s3_bucket_backups: str = "backups"
 
     litellm_base_url: AnyHttpUrl = AnyHttpUrl("http://litellm:4000")
     litellm_api_key: SecretStr = SecretStr("")
@@ -115,6 +117,10 @@ class Settings(BaseSettings):
     casbin_dir: Path = Field(default_factory=_default_casbin_dir)
     # Том бэкапов (ADR-0013), api смонтирован в него: список копий и запрос «сделать сейчас».
     backup_dir: Path = Path("/backups")
+    # Откуда CRM берёт статус бэкапов (M5-CRM-01): `volume` — том backup-контейнера (dev),
+    # `rustfs` — бакет `backups`, куда пишет VPS 2 (прод), `auto` — том, если он смонтирован
+    # в api, иначе бакет. Переменная BACKUP_SOURCE; на стенде и в проде менять не нужно.
+    backup_source: Literal["auto", "volume", "rustfs"] = "auto"
 
     def _postgres_dsn(self, scheme: str) -> str:
         user = quote(self.postgres_user, safe="")
@@ -130,6 +136,14 @@ class Settings(BaseSettings):
         if self.app_env == "prod" and not self.platform_sso_secrets:
             raise ValueError("PLATFORM_SSO_SECRET is required when APP_ENV=prod")
         return self
+
+    @property
+    def backup_source_resolved(self) -> Literal["volume", "rustfs"]:
+        if self.backup_source != "auto":
+            return self.backup_source
+        if self.backup_dir.is_dir() or self.app_env != "prod":
+            return "volume"
+        return "rustfs"
 
     @property
     def platform_sso_secrets(self) -> list[str]:

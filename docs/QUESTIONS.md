@@ -292,6 +292,8 @@ Q-1…Q-9 решены — см. `DECISIONS.md`. Номер вопроса ун�
 
 **Рекомендация.** Вариант 1 отдельной задачей CRM после M5-INF-01; до того статус смотрит владелец по `docs/runbooks/deploy.md` §4.
 
+**Выполнено (M5-CRM-01, 2026-10-21):** вариант 1, см. DECISIONS 2026-10-21 и `apps/crm/docs/runbooks/backup-restore.md` («Как CRM видит бэкап на проде»).
+
 ## Q-FIX36-1 · HTTP 401/400/429 у erp-mcp и поведение клиента SDK (FIX-36, для M3-CRM-07) — **решено архитектором 2026-10-20 (резерв Opus): вариант 1, M3-CRM-07**
 
 **Контекст.** Контракт (`mcp-tools.json`, CONTRACTS §5) требует HTTP-коды: ошибка контекста — 401 `INVALID_AGENT_CONTEXT`, невалидные аргументы — 400 `INVALID_ARGUMENTS`, лимит — 429. Сервер на SDK `mcp` отдаёт их из ASGI-вратаря (`integration/mcp/gate.py`) до SDK, как и требует контракт. Но клиент SDK (`mcp.Client` + `streamable_http_client`, как в `apps/crm/backend/app/agents/mcp_client.py`) на не-2xx ответ не возвращает `CallToolResult`, а бросает исключение транспорта (HTTP-ошибка / `MCPError`); `McpToolClient.call` оборачивает любое исключение в `ToolCallError("<server>.<tool> unavailable")`, то есть агент не отличит просроченный контекст от недоступного сервера. Ошибки самих инструментов (`TOOL_NOT_AVAILABLE_IN_MODE`, `TOOL_EXECUTION_ERROR`, `INTERNAL_ERROR`, `TOOL_NOT_FOUND`) приходят штатно — результатом с `is_error` и `structured_content.error`. Неизвестный метод на протоколе 2026-07-28 — HTTP 404 + JSON-RPC -32601, на старом — 200 с JSON-RPC-ошибкой (решает SDK).
@@ -507,6 +509,8 @@ Q-1…Q-9 решены — см. `DECISIONS.md`. Номер вопроса ун�
 **Рекомендация.** Принять.
 
 ## Q-FIX35-5 · `act.returned` не выпускается боевым кодом ERP; схема событий не проверяется в проде (FIX-35) — **решено архитектором 2026-10-21 (резерв Opus): событие на возврате — FIX-62; схема в проде — M5-INF-01c**
+
+**Статус п. 2.** Выполнено в M5-INF-01c: `prod.yml` монтирует схему read-only в `erp-backend`, `erp-worker`, `erp-worker-ai`, `erp-beat`, `erp-mcp`; файл в `release.tgz` (`deploy.yml`, отметка владельца); `deploy.sh` останавливается без файла в релизе.
 
 **Контекст.** (1) Сигнал акта умеет `act.returned`, но статусов `RETURNED/DISPUTED/REJECTED` в `ActStatusCode` нет, а `reject_act` ставит `DRAFT` (аудит): событие не уходит ни при каком переходе. Тест `test_act_returned_has_no_trigger_in_the_real_flow` фиксирует разрыв; пока он есть, тело события проверяется через генератор `emit_act_event`. (2) Проверка тела по `events.schema.json` (`integration/services/event_contract.py`): в тестах и при DEBUG — исключение, в проде — запись в лог ERROR; но в образе ERP схемы нет (контекст сборки — `apps/erp/backend`), и в прод-compose её никто не монтирует: без файла проверка в проде пишет одно предупреждение и пропускает.
 
