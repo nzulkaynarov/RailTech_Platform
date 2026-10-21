@@ -231,14 +231,12 @@ async def test_rotate_without_connector_is_conflict_and_failed_rotation_keeps_se
     assert not_configured.status_code == 409
     assert not_configured.json()["details"]["reason"] == "erp_not_configured"
 
-    respx.post(ACCEPT).mock(return_value=httpx.Response(200, json=ACCEPTED))
+    accept = respx.post(ACCEPT).mock(return_value=httpx.Response(200, json=ACCEPTED))
     respx.get(HEALTH).mock(return_value=httpx.Response(200, json=HEALTHY))
     paired = client.post(
         f"{ERP_URL}/pair", json={"base_url": BASE, "code": CODE, "password": PASSWORD}, headers=auth
     )
-    hook = json.loads(
-        respx.calls.last.request.content if False else respx.routes[0].calls.last.request.content
-    )["webhook_secret"]
+    hook = json.loads(accept.calls.last.request.content)["webhook_secret"]
     assert paired.status_code == 200
     respx.post(ROTATE).mock(return_value=httpx.Response(500))
     failed = client.post(f"{ERP_URL}/rotate", json={"password": PASSWORD}, headers=auth)
