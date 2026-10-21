@@ -296,6 +296,19 @@ services:
     image: ${RT_IMAGE_REGISTRY:-ghcr.io/nzulkaynarov}/rt-cabinet:${RT_IMAGE_TAG}
     build: !reset null
 
+  # ─── Платформа (apps/platform) ──────────────────────────────────────────────────────────────
+  # Объявлены в base.yml (окружение, healthcheck, зависимость от redis); здесь — образы GHCR и лимиты памяти.
+  # BFF ходит в CRM и ERP по сети compose (PLATFORM_CRM_URL / PLATFORM_ERP_URL), БД у него нет, сессии — Redis БД 3.
+  platform-bff:
+    <<: [*ops, *mem-256]
+    image: ${RT_IMAGE_REGISTRY:-ghcr.io/nzulkaynarov}/rt-platform-bff:${RT_IMAGE_TAG:?set RT_IMAGE_TAG}
+    build: !reset null
+
+  platform-web:
+    <<: [*ops, *mem-64]
+    image: ${RT_IMAGE_REGISTRY:-ghcr.io/nzulkaynarov}/rt-platform-web:${RT_IMAGE_TAG:?set RT_IMAGE_TAG}
+    build: !reset null
+
   # ─── Вход ───────────────────────────────────────────────────────────────────────────────────
   caddy:
     <<: [*ops, *mem-64]
@@ -303,6 +316,7 @@ services:
       CRM_DOMAIN: ${CRM_DOMAIN}
       ERP_DOMAIN: ${ERP_DOMAIN}
       CABINET_DOMAIN: ${CABINET_DOMAIN}
+      PLATFORM_DOMAIN: ${PLATFORM_DOMAIN:?set in .env}
       ACME_EMAIL: ${ACME_EMAIL:?set in .env}
     volumes:
       - caddy_data:/data

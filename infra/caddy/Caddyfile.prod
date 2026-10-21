@@ -1,4 +1,4 @@
-# prod (M5-INF-01): три домена ансамбля с TLS (ACME, Let's Encrypt), security headers, маршруты как в
+# prod (M5-INF-01): четыре домена ансамбля (CRM, ERP, Cabinet, Платформа) с TLS (ACME, Let's Encrypt), security headers, маршруты как в
 # Caddyfile.dev. Домены и e-mail ACME — переменные окружения контейнера Caddy (infra/compose/prod.yml).
 # Служебные интерфейсы (Langfuse, консоль RustFS) наружу не публикуются: Langfuse — SSH-туннель на 127.0.0.1:3000.
 {
@@ -83,5 +83,28 @@
 	}
 	handle {
 		reverse_proxy cabinet-web:80
+	}
+}
+
+# ─── Платформа — единое рабочее место сотрудника (apps/platform, INF-P0-5) ──────────────────
+# BFF (`platform-bff`) — единственный бэкенд SPA: /api/* уходит туда, остальное — статика `platform-web` (file-server Caddy
+# на :8080). CSP и заголовки — как у CRM; `style-src 'unsafe-inline'` нужен Ant Design (CSS-in-JS). Дев-аналог — Caddyfile.dev.
+# Значение по умолчанию (`platform.example.org`) — только чтобы `caddy validate` в ci.yml и scripts/ci_local.sh проходил, пока они не
+# передают PLATFORM_DOMAIN (хвост: передать и убрать умолчание). На проде переменная обязательна: prod.yml (`:?`) и deploy.sh
+# останавливаются без неё, до Caddy доходит всегда реальный домен.
+{$PLATFORM_DOMAIN:platform.example.org} {
+	encode zstd gzip
+	import security_headers
+	import no_mcp
+	header Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'"
+
+	handle /api/* {
+		reverse_proxy platform-bff:8000 {
+			# SSE: без буферизации ответа
+			flush_interval -1
+		}
+	}
+	handle {
+		reverse_proxy platform-web:8080
 	}
 }

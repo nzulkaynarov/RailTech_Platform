@@ -9,7 +9,7 @@
 ## Как устроено
 
 - **Образы** собирает `deploy.yml` (только `workflow_dispatch`) и кладёт в GHCR с тегом = полный git sha:
-  `rt-crm-backend`, `rt-crm-frontend`, `rt-erp-backend`, `rt-erp-frontend`, `rt-cabinet`, `rt-litellm` (свой образ LiteLLM на Debian, `infra/ai/litellm/`; официальный на прод-CPU не стартует). Деплоится только код, уже входящий в `main`.
+  `rt-crm-backend`, `rt-crm-frontend`, `rt-erp-backend`, `rt-erp-frontend`, `rt-cabinet`, `rt-platform-bff`, `rt-platform-web`, `rt-litellm` (свой образ LiteLLM на Debian, `infra/ai/litellm/`; официальный на прод-CPU не стартует). Деплоится только код, уже входящий в `main`.
 - **Релиз** на VPS 1 — каталог `/opt/rt/releases/<sha>/` (`infra/`, `apps/crm/infra/casbin`, `packages/contracts/mcp-tools.json`, `packages/contracts/events.schema.json`), `/opt/rt/current` — ссылка на текущий.
   Состояние — `/opt/rt/state/{current_tag,previous_tag}`; хранятся пять последних релизов.
 - **Секреты приложений** лежат только на серверах: `/opt/rt/.env.prod` (VPS 1) и `/opt/rt-db/.env.db` (VPS 2), оба `chmod 600`.
@@ -19,7 +19,7 @@
   `pg_hba` — только TLS и только внутренний IP VPS 1.
 - **Порядок деплоя** (`infra/deploy/deploy.sh <sha>`): проверка env → `pull` → **проверка базы CPU образов** (`cpu-baseline-check.sh`: в каждом образе запускается import numpy / litellm.proxy / версия бинаря; образ, которому нужен x86-64-v2, останавливает деплой до дампа и миграций, см. servers.md «CPU прод-VPS») → **pg_dump-гейт** `crm` и `erp`
   (`predeploy-dump.sh`; нет читаемого дампа — миграций нет) → миграции CRM и ERP явно (`AUTO_MIGRATE=false` у ERP) → `up -d` → smoke.
-- Правило FIX-03: `/mcp` снаружи — 404 на всех трёх доменах (Caddy); smoke это проверяет.
+- Правило FIX-03: `/mcp` снаружи — 404 на всех доменах, включая Платформу (Caddy); smoke это проверяет.
 
 ## 1. Первая установка
 
@@ -104,15 +104,16 @@ Settings → Environments → `production` (включить Required reviewers 
 | Variable | `DEPLOY_HOST` | публичный IP или имя VPS 1 |
 | Variable | `DEPLOY_USER` | `deploy` |
 | Variable | `CRM_DOMAIN`, `ERP_DOMAIN`, `CABINET_DOMAIN` | три домена |
+| Variable | `PLATFORM_DOMAIN` | домен Платформы для smoke с раннера; необязательна — по умолчанию `platform.railtech.uz`. Сам домен для Caddy и `deploy.sh` берётся из `/opt/rt/.env.prod` на сервере |
 | Variable | `TELEGRAM_BOT_USERNAME` | имя бота без `@` (не секрет; зашивается в образ Cabinet) |
 
 ## 2. Первый деплой и обычный деплой
 
 Actions → **Deploy** → Run workflow: `ref` = `main` (или sha, входящий в `main`), `action` = `deploy`. Порядок и сбои:
 
-1. Сборка и push пяти образов в GHCR; загрузка релиза на VPS 1.
+1. Сборка и push восьми образов в GHCR; загрузка релиза на VPS 1.
 2. `deploy.sh` на сервере. Если упал **pg_dump-гейт** — миграции не запускались, сервисы не тронуты; чините доступ к базе и запускайте снова.
-3. Smoke с сервера и с раннера: `/health` трёх доменов — 200, `erp…/mcp/erp/` — 404.
+3. Smoke с сервера и с раннера: `/health` CRM, ERP, Cabinet — 200, `/api/v1/health` Платформы — 200 и `status: ok`, `erp…/mcp/erp/` и `<платформа>/mcp/x` — 404.
 
 На первом запуске Caddy получает сертификаты Let's Encrypt — DNS должен уже указывать на VPS 1, порты 80/443 открыты. После деплоя:
 
@@ -193,6 +194,36 @@ mcp-tools.json` монтируется в контейнер по пути `../.
 | Не хватает памяти | `docker stats`; профили `observability` и `kb-ingest` не включать вместе |
 
 Эскалация: владелец; агент Infra — правки compose/Caddy/скриптов через PR.
+
+## Платформа (INF-P0-5)
+
+Единое рабочее место сотрудника (`apps/platform`): BFF `platform-bff` (FastAPI, Redis БД 3 — сессии) и статика `platform-web`
+за тем же Caddy, домен `platform.railtech.uz`. Нового секрета и базы у Платформы нет. Образы `rt-platform-bff`, `rt-platform-web`
+собирает тот же `deploy.yml` (тег = sha), на VPS 1 они занимают ≈ 256 МБ + 64 МБ (лимиты в `prod.yml`).
+
+**Перед первым деплоем Платформы (владелец):**
+
+1. **DNS.** A-запись `platform.railtech.uz` → публичный IP VPS 1 (как у `crm.`, `erp.`, `cabinet.`). Сначала запись, потом деплой: без неё
+   Caddy не пройдёт проверку Let's Encrypt, а повторы быстро упираются в лимит выпусков. Проверка: `dig +short platform.railtech.uz`.
+2. **Переменная.** В `/opt/rt/.env.prod` на VPS 1 добавить строку: `echo 'PLATFORM_DOMAIN=platform.railtech.uz' >> /opt/rt/.env.prod`
+   (повторный `make-env-prod.sh init` тоже допишет её, но вернёт и переменные VPS 2 — после него нужен `drop-db-only`, см. §1.2).
+   `deploy.sh` останавливается с понятным сообщением до pull и миграций, пока строки нет. `PLATFORM_SESSION_TTL_HOURS` (часы жизни сессии, по умолчанию 12) —
+   необязательна, закомментирована в примере.
+3. **GitHub environment `production`** — ничего обязательного; необязательная Variable `PLATFORM_DOMAIN` (§1.4) нужна, только если
+   домен отличается от `platform.railtech.uz`: по ней smoke с раннера ходит на Платформу.
+4. **Деплой** — обычный (§2): Actions → Deploy → `ref` = `main`, `action` = `deploy`. Не запускать, пока в `main` вливается PR (§6, гонка).
+
+**Проверка после деплоя:**
+
+- `curl -fsS https://platform.railtech.uz/api/v1/health` — ответ `200` и `"status":"ok"`: BFF видит Redis, CRM `/health` и ERP `/health`.
+  `"status":"degraded"` при живых CRM и ERP — смотреть в теле поле `checks` (`redis`, `crm`, `erp` — `ok`/`fail`; схема `Health` в
+  `packages/contracts/openapi/platform-bff.yaml`), затем `docker compose … logs platform-bff` и `docker compose … ps` (`platform-bff`,
+  `platform-web` — `healthy`). BFF отвечает `200` всегда, `degraded` не ошибка запуска, но smoke деплоя считает его сбоем.
+- `https://platform.railtech.uz/` открывает страницу каркаса «Платформа — каркас P0» (до фазы P1 входа нет); `/mcp/x` снаружи — 404.
+- Сертификат выпущен автоматически (Caddy); при сбое — `docker compose … logs caddy`, DNS, порты 80/443.
+
+**Откат.** `rollback.sh` берёт список сервисов из compose релиза, на который откатываемся: откат на тег до Платформы убирает её
+контейнеры (`--remove-orphans`) и не проверяет её домен; на тег с Платформой — тянет оба образа и проверяет `/api/v1/health`.
 
 ## 6. Первая установка 2026-10-21 — что пошло не так и как учтено
 

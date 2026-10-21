@@ -531,7 +531,41 @@ services:
       timeout: 5s
       retries: 10
 
-  # ─── Вход: Caddy на три домена ──────────────────────────────────────────────────────────────
+  # Платформа (apps/platform, INF-P0-4/5): BFF и статика SPA. Redis БД 3 — сессии BFF (0 — Langfuse, 1/2 — ERP).
+  # CRM и ERP для запуска не обязательны: BFF отвечает `degraded`. Нового секрета нет. На проде образы из GHCR и лимиты
+  # памяти — в prod.yml (как у CRM/ERP: здесь `build`, там `image` и `build: !reset null`).
+  platform-bff:
+    build:
+      context: ../../apps/platform/bff
+      target: prod
+    environment:
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+      PLATFORM_CRM_URL: http://crm-api:8000
+      PLATFORM_ERP_URL: http://erp-backend:8000
+      REDIS_URL: redis://:${REDIS_PASSWORD:?set in .env}@redis:6379/3
+      PLATFORM_SESSION_TTL_HOURS: ${PLATFORM_SESSION_TTL_HOURS:-12}
+    depends_on:
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/v1/health', timeout=3)"]
+      interval: 10s
+      timeout: 4s
+      retries: 10
+      start_period: 10s
+
+  # SPA Платформы: сборка Vite + file-server Caddy (:8080). На dev пересборка — `make up` (hot reload нет).
+  platform-web:
+    build:
+      context: ../../apps/platform/web
+      target: prod
+    healthcheck:
+      test: ["CMD", "wget", "-Y", "off", "-q", "--spider", "http://127.0.0.1:8080/"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+
+  # ─── Вход: Caddy на домены ансамбля ─────────────────────────────────────────────────────────
 
   caddy:
     image: caddy:2.11.7-alpine
@@ -545,6 +579,10 @@ services:
       erp-web:
         condition: service_healthy
       cabinet-web:
+        condition: service_healthy
+      platform-bff:
+        condition: service_healthy
+      platform-web:
         condition: service_healthy
     volumes:
       - caddy_data:/data

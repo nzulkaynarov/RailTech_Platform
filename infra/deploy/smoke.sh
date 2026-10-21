@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
-# Smoke трёх доменов (аналог `make smoke` для прода): /health каждого — 200, /mcp снаружи — 404 (FIX-03).
-#   smoke.sh --domains crm.example erp.example cabinet.example [--resolve-ip IP] [--insecure] [--retries N]
+# Smoke доменов (аналог `make smoke` для прода): /health каждого — 200, /mcp снаружи — 404 (FIX-03).
+#   smoke.sh --domains crm.example erp.example cabinet.example [platform.example] [--resolve-ip IP] [--insecure] [--retries N]
+# Четвёртый домен — Платформа (INF-P0-5): вместо /health её BFF отдаёт /api/v1/health — ждём 200 и "status":"ok"
+# (CRM и ERP живы — `degraded` при живых CRM и ERP означает сбой связи BFF с ними или с Redis). Три домена — релиз до Платформы (откат).
 # --resolve-ip: ходить на указанный IP вместо DNS (проверка на самом сервере, 127.0.0.1); --insecure: не проверять
 # сертификат (первый запуск, пока ACME не выпустил его). Повторяет до --retries раз с паузой 10 с.
 set -euo pipefail
@@ -15,7 +17,8 @@ while [[ $# -gt 0 ]]; do
     *) echo "unknown arg: $1" >&2; exit 2 ;;
   esac
 done
-[[ ${#domains[@]} -eq 3 ]] || { echo "usage: smoke.sh --domains <crm> <erp> <cabinet> [--resolve-ip IP] [--insecure] [--retries N]" >&2; exit 2; }
+[[ ${#domains[@]} -eq 3 || ${#domains[@]} -eq 4 ]] \
+  || { echo "usage: smoke.sh --domains <crm> <erp> <cabinet> [<platform>] [--resolve-ip IP] [--insecure] [--retries N]" >&2; exit 2; }
 
 code_of() { # домен, путь, [-L: идти по редиректам] — ERP отдаёт 301 /health -> /health/ (APPEND_SLASH)
   local args=(-sS -o /dev/null -w '%{http_code}' --max-time 10)
@@ -25,13 +28,31 @@ code_of() { # домен, путь, [-L: идти по редиректам] —
   curl "${args[@]}" "https://$1$2" 2>/dev/null || echo 000
 }
 
+# Тело ответа (для проверки status платформы); при сбое соединения — пусто.
+body_of() { # домен, путь
+  local args=(-sS --max-time 10)
+  [[ -n "$ip" ]] && args+=(--resolve "$1:443:$ip")
+  [[ $insecure -eq 1 ]] && args+=(-k)
+  curl "${args[@]}" "https://$1$2" 2>/dev/null || true
+}
+
 attempt() {
   local ok=1 d code
-  for d in "${domains[@]}"; do
+  for d in "${domains[@]:0:3}"; do
     code="$(code_of "$d" /health -L)"
     printf '  %-32s /health → %s\n' "$d" "$code"
     [[ "$code" == 200 ]] || ok=0
   done
+  if [[ ${#domains[@]} -eq 4 ]]; then
+    local pd="${domains[3]}" pbody
+    code="$(code_of "$pd" /api/v1/health)"
+    pbody="$(body_of "$pd" /api/v1/health)"
+    printf '  %-32s /api/v1/health → %s %s\n' "$pd" "$code" "$(printf '%s' "$pbody" | head -c 120)"
+    if [[ "$code" != 200 ]] || ! printf '%s' "$pbody" | grep -Eq '"status" *: *"ok"'; then ok=0; fi
+    code="$(code_of "$pd" /mcp/x)"
+    printf '  %-32s /mcp/x → %s (ожидается 404)\n' "$pd" "$code"
+    [[ "$code" == 404 ]] || ok=0
+  fi
   code="$(code_of "${domains[1]}" /mcp/erp/)"
   printf '  %-32s /mcp/erp/ → %s (ожидается 404)\n' "${domains[1]}" "$code"
   [[ "$code" == 404 ]] || ok=0

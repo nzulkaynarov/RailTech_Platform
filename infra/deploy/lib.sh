@@ -27,6 +27,14 @@ require_env_file() {
   fi
 }
 
+# Обязательная переменная env-файла: непустое значение, иначе понятная ошибка (а не «set in .env» из compose посреди pull).
+# require_env_var <ИМЯ> <подсказка-как-добавить>
+require_env_var() {
+  local name="$1" hint="$2" value
+  value="$(env_get "$name" || true)"
+  [[ -n "$value" ]] || die "в $RT_ENV_FILE нет $name (или значение пусто): $hint"
+}
+
 # compose <каталог-релиза> <аргументы...>; тег образов — из окружения (RT_IMAGE_TAG), профили — из RT_PROFILES.
 compose() {
   local rel="$1"; shift
@@ -48,7 +56,7 @@ cleanup_old() {
   while read -r img; do
     [[ "$img" == *":$keep_a" || ( -n "$keep_b" && "$img" == *":$keep_b" ) ]] && continue
     docker rmi "$img" >/dev/null 2>&1 || true
-  done < <(docker images --format '{{.Repository}}:{{.Tag}}' | grep -E '/rt-(crm-backend|crm-frontend|erp-backend|erp-frontend|cabinet|litellm):' || true)
+  done < <(docker images --format '{{.Repository}}:{{.Tag}}' | grep -E '/rt-(crm-backend|crm-frontend|erp-backend|erp-frontend|cabinet|litellm|platform-bff|platform-web):' || true)
   # shellcheck disable=SC2012
   ls -1t "$RT_RELEASES" 2>/dev/null | tail -n +6 | while read -r old; do
     [[ "$old" == "$keep_a" || "$old" == "$keep_b" ]] || rm -rf "${RT_RELEASES:?}/$old"

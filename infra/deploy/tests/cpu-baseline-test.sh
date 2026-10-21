@@ -13,7 +13,7 @@ mkdir -p "$tmp/bin"
 cat > "$tmp/bin/docker" <<'STUB'
 #!/usr/bin/env bash
 if [[ "$1" == compose ]]; then
-  printf '%s\n' ghcr.io/o/rt-litellm:T ghcr.io/o/rt-crm-backend:T ghcr.io/o/rt-erp-backend:T ghcr.io/o/rt-cabinet:T \
+  printf '%s\n' ghcr.io/o/rt-litellm:T ghcr.io/o/rt-crm-backend:T ghcr.io/o/rt-erp-backend:T ghcr.io/o/rt-cabinet:T ghcr.io/o/rt-platform-bff:T ghcr.io/o/rt-platform-web:T \
     caddy:2.11.7-alpine redis:7.4.11 rustfs/rustfs:1.0.1 langfuse/langfuse:4.56.0
   exit 0
 fi
@@ -31,12 +31,18 @@ run() { PATH="$tmp/bin:$PATH" RT_ENV_FILE="$tmp/env" RT_TEST_LOG="$tmp/run.log" 
 run > "$tmp/out" 2>&1 || { cat "$tmp/out"; fail "ожидался успех, когда все образы запускаются"; }
 grep -q 'litellm.proxy.proxy_server' "$tmp/run.log" || fail "LiteLLM не проверяется импортом litellm.proxy.proxy_server"
 grep -q 'rt-crm-backend:T -c' "$tmp/run.log" || fail "CRM не проверяется импортом numpy"
+grep -q 'rt-platform-bff:T -c' "$tmp/run.log" || fail "BFF Платформы не проверяется импортом numpy (нативные колёса)"
+grep -q 'entrypoint caddy .*rt-platform-web:T version' "$tmp/run.log" || fail "web Платформы не проверяется запуском caddy"
+grep -q 'без правила.*rt-platform' "$tmp/out" && fail "образы Платформы попали в список без правила"
 grep -q 'langfuse/langfuse' "$tmp/run.log" && fail "образ без правила не должен запускаться"
 grep -q 'без правила.*langfuse' "$tmp/out" || fail "образ без правила не попал в список непроверенных"
 
 # 2. Один образ падает — отказ, в сообщении имя образа.
 if RT_TEST_FAIL=rt-litellm run > "$tmp/out" 2>&1; then fail "ожидался отказ, когда rt-litellm падает на CPU без v2"; fi
 if ! grep -q 'rt-litellm' "$tmp/out" || ! grep -q 'x86-64' "$tmp/out"; then cat "$tmp/out"; fail "сообщение об отказе не называет образ и причину"; fi
+
+if RT_TEST_FAIL=rt-platform-bff run > "$tmp/out" 2>&1; then fail "ожидался отказ, когда rt-platform-bff падает на CPU без v2"; fi
+grep -q 'rt-platform-bff' "$tmp/out" || { cat "$tmp/out"; fail "сообщение об отказе не называет rt-platform-bff"; }
 
 # 3. deploy.sh: проверка стоит после pull и до pg_dump-гейта и миграций.
 pull="$(grep -n 'pull crm-api' "$root/infra/deploy/deploy.sh" | head -1 | cut -d: -f1)"
@@ -45,5 +51,10 @@ dump="$(grep -n 'predeploy-dump.sh' "$root/infra/deploy/deploy.sh" | grep -v '^[
 [[ -n "$pull" && -n "$chk" && -n "$dump" && "$pull" -lt "$chk" && "$chk" -lt "$dump" ]] \
   || fail "deploy.sh: cpu-baseline-check.sh должен идти между pull и pg_dump-гейтом"
 grep -q 'pull .* litellm' "$root/infra/deploy/deploy.sh" || fail "deploy.sh: rt-litellm не входит в pull"
+grep -q 'pull .* platform-bff platform-web' "$root/infra/deploy/deploy.sh" || fail "deploy.sh: образы Платформы не входят в pull"
+grep -q 'platform-bff' "$root/infra/deploy/rollback.sh" || fail "rollback.sh: образы Платформы не входят в pull"
+for img in rt-platform-bff rt-platform-web; do
+  grep -q "name: Образ $img" "$root/.github/workflows/deploy.yml" || fail "deploy.yml: нет сборки $img"
+done
 grep -q 'name: Образ rt-litellm' "$root/.github/workflows/deploy.yml" || fail "deploy.yml: нет сборки rt-litellm"
 echo "cpu-baseline-test: ok"

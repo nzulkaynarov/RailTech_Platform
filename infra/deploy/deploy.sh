@@ -14,6 +14,8 @@ rel="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 [[ "$(basename "$rel")" == "$tag" ]] || log "внимание: каталог релиза ($(basename "$rel")) не совпадает с тегом образов ($tag)"
 
 require_env_file
+# Домен Платформы (INF-P0-5): без него Caddy не получит сертификат, а compose упал бы на `:?` уже при разборе конфигурации.
+require_env_var PLATFORM_DOMAIN "добавьте строку PLATFORM_DOMAIN=platform.railtech.uz (см. infra/.env.prod.example; A-запись домена на VPS 1 должна уже быть) и запустите деплой снова"
 # prod.yml монтирует схему событий в сервисы ERP (M5-INF-01c): без файла в релизе контейнеры не стартуют, а миграции
 # ERP упали бы уже после pg_dump — проверяем до pull. Релиз без файла — собран старым deploy.yml (release.tgz).
 [[ -f "$rel/packages/contracts/events.schema.json" ]] \
@@ -25,7 +27,7 @@ log "тег $tag, релиз $rel, предыдущий: ${prev:-нет}"
 compose "$rel" config -q
 
 log "pull образов"
-compose "$rel" pull crm-api crm-web erp-backend erp-web cabinet-web litellm
+compose "$rel" pull crm-api crm-web erp-backend erp-web cabinet-web litellm platform-bff platform-web
 
 # Прод-CPU — база x86-64 v1 (servers.md): образ, которому нужен v2, ловим здесь, до дампа и миграций.
 log "проверка базы CPU образов (cpu-baseline-check.sh)"
@@ -48,7 +50,7 @@ fi
 ln -sfn "$rel" "$RT_ROOT/current"
 
 log "smoke на сервере (по IP 127.0.0.1; сертификат при первом запуске может ещё выпускаться)"
-"$rel/infra/deploy/smoke.sh" --domains "$(env_get CRM_DOMAIN)" "$(env_get ERP_DOMAIN)" "$(env_get CABINET_DOMAIN)" \
+"$rel/infra/deploy/smoke.sh" --domains "$(env_get CRM_DOMAIN)" "$(env_get ERP_DOMAIN)" "$(env_get CABINET_DOMAIN)" "$(env_get PLATFORM_DOMAIN)" \
   --resolve-ip 127.0.0.1 --insecure --retries 30 \
   || die "smoke не прошёл: смотрите 'docker compose logs', откат кода — rollback.sh"
 
