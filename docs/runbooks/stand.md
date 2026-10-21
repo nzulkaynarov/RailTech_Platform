@@ -1,6 +1,6 @@
 # Runbook: стенд ансамбля локально (`make up`)
 
-Один `docker compose` поднимает общую инфраструктуру, CRM, ERP и Cabinet.
+Один `docker compose` поднимает общую инфраструктуру, CRM, ERP, Cabinet и Платформу.
 Файлы: `infra/compose/base.yml` + `dev.yml`, `infra/caddy/Caddyfile.dev`, `infra/ai/*`, `infra/db/init-databases.sh`.
 
 ## Первый запуск
@@ -8,7 +8,7 @@
 ```
 make env          # .env из .env.example, CHANGE_ME → случайные значения (идемпотентно)
 make up           # сборка образов CRM и запуск всего стенда (5–10 мин в первый раз)
-make smoke        # /health трёх доменов → 200
+make smoke        # /health доменов CRM, ERP, Cabinet и /api/v1/health + / Платформы → 200
 ```
 
 Домены (порт `HTTP_PORT` из `.env`, по умолчанию 80):
@@ -18,6 +18,7 @@ make smoke        # /health трёх доменов → 200
 | `http://crm.localhost` | CRM: SPA (`crm-web`), `/api/*`, `/health`, `/ready` → `crm-api` |
 | `http://erp.localhost` | ERP (с M1-ERP-01): `/api`, `/admin`, `/ws`, `/static`, `/media`, `/health` → `erp-backend`; остальное → `erp-web` (SPA) |
 | `http://cabinet.localhost` | Cabinet (с M2-CAB-01): `/api/portal/*` → `erp-backend` (портальный API); остальное, включая `/health`, → `cabinet-web` (SPA) |
+| `http://platform.localhost` | Платформа (с INF-P0-4): `/api/*` (в т.ч. `/api/v1/health`) → `platform-bff` (без буферизации ответа, для SSE); остальное → `platform-web` (SPA). Заголовки безопасности и CSP — как у CRM на проде. TLS в dev нет: адрес `http://platform.localhost:<HTTP_PORT>` |
 | `http://langfuse.localhost` | Langfuse (только `make up-obs`) |
 | `http://s3.localhost` | консоль RustFS |
 
@@ -38,7 +39,8 @@ make smoke        # /health трёх доменов → 200
 | `crm-migrate`, `crm-api`, `crm-worker`, `crm-mcp-*`, `crm-web` | CRM из `apps/crm` (код монтируется, hot reload) |
 | `erp-backend`, `erp-mcp`, `erp-worker`, `erp-worker-ai`, `erp-beat`, `erp-web` | ERP из `apps/erp` (копия B2B, M1-ERP-01): Daphne мигрирует при старте (`AUTO_MIGRATE`), `erp-mcp` — инструменты ERP для агента CRM на SDK `mcp` (отдельный процесс, порт 8104 внутри сети, FIX-36; контракт `packages/contracts/mcp-tools.json` монтируется в контейнер), Celery-воркеры, Beat, nginx со сборкой Vite; код бэкенда монтируется, перезапуск руками |
 | `cabinet-web` | Cabinet из `apps/cabinet` (M2-CAB-01): nginx со сборкой Vite, своей логики нет; пересборка — `make up`. Имя бота для ссылок — `TELEGRAM_BOT_USERNAME` в `.env`. Разработка экранов — `make -C apps/cabinet dev` (мок, без стенда) |
-| `caddy` | три домена |
+| `platform-bff`, `platform-web` | Платформа из `apps/platform` (INF-P0-4): BFF на FastAPI (сессии — Redis БД 3; CRM и ERP берёт по `http://crm-api:8000`, `http://erp-backend:8000`) и статика SPA (file-server Caddy, :8080). Нужен только `redis`: без CRM/ERP `/api/v1/health` отвечает 200 со `status: degraded`. Определены в `dev.yml`; пересборка — `make up`. Срок жизни сессии — `PLATFORM_SESSION_TTL_HOURS` в `.env` |
+| `caddy` | четыре домена ансамбля |
 | `clickhouse`, `langfuse-worker`, `langfuse-web` | профиль `observability` |
 
 ## Повседневное
