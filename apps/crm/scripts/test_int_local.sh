@@ -76,17 +76,21 @@ done
 [ "${ready:-}" = 1 ] || { echo "Контейнеры не поднялись за 30 с: docker logs $PG_NAME / $S3_NAME"; exit 1; }
 
 cd "$ROOT/backend"
-# env -i и явные значения: переменные .env стенда (ключи, токен бота, LiteLLM) не попадают в тесты —
-# настройки читают ещё и ../.env, поэтому каждый секрет перекрыт пустым или одноразовым.
-env -i PATH="$PATH" HOME="$HOME" APP_ENV=test \
+# Окружение pytest — ровно то, что задаёт задание «CRM · integration» в .github/workflows/ci.yml (Q-W6-1):
+# APP_ENV, POSTGRES_*, S3_*. Больше ничего: ни TELEGRAM_*, ни ключей, ни JWT_SECRET — как у раннера CI, иначе
+# тест зелёный локально и красный в CI (так было в #129). Менять набор переменных — только вместе с ci.yml.
+# `env -i` отсекает остальное окружение оболочки (токены, ключи разработчика); от машины зависят и потому
+# остаются отличиями от CI: PATH и HOME (uv, кэш uv), адреса и порты одноразовых контейнеров
+# (127.0.0.1 вместо localhost — Docker публикует порт только на IPv4), имя БД/пользователя контейнера.
+# Настройки читают ещё и .env из backend/ и apps/crm/ — в CI этих файлов нет, поэтому наличие их здесь — ошибка.
+for f in "$ROOT/backend/.env" "$ROOT/.env"; do
+  [ ! -e "$f" ] || { echo "Найден $f: настройки CRM прочитают его, а в CI такого файла нет. Уберите файл и повторите."; exit 1; }
+done
+env -i PATH="$PATH" HOME="$HOME" \
+  APP_ENV=test \
   POSTGRES_HOST=127.0.0.1 POSTGRES_PORT="$PG_PORT" POSTGRES_DB=railtech_test \
   POSTGRES_USER=railtech POSTGRES_PASSWORD="$PASS" \
   S3_ENDPOINT="http://127.0.0.1:${S3_PORT}" S3_ACCESS_KEY=railtech S3_SECRET_KEY="$PASS" \
-  TELEGRAM_BOT_TOKEN= TELEGRAM_WEBHOOK_SECRET= TELEGRAM_MODE=disabled TELEGRAM_DRY_RUN=true \
-  LITELLM_BASE_URL=http://127.0.0.1:9 LITELLM_API_KEY= LITELLM_MASTER_KEY=sk-test \
-  ANTHROPIC_API_KEY= GEMINI_API_KEY= DOCLING_API_KEY= SECRETS_KEY= \
-  JWT_SECRET="$(openssl rand -hex 32)" AGENT_CONTEXT_KEY="$(openssl rand -hex 32)" \
-  LANGFUSE_PUBLIC_KEY= LANGFUSE_SECRET_KEY= \
   uv run pytest -m integration -q -p no:cacheprovider "$@" || status=$?
 status="${status:-0}"
 echo "Готово. Остановить контейнеры: scripts/test_int_local.sh --down"
