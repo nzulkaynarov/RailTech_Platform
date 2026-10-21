@@ -8,6 +8,7 @@ import httpx
 import pytest
 import respx
 from procrastinate.jobs import Job
+from procrastinate.retry import RetryDecision
 
 from app.config import Settings
 from app.domain.errors import ErpRateLimitedError, Reason, UpstreamUnavailableError
@@ -91,6 +92,11 @@ async def test_staff_sync_429_is_a_transient_error_with_the_pause_from_retry_aft
 # ── Очередь: повтор после паузы, ограниченное число попыток ─────────────────────────────────
 
 
+def _retry_at(decision: RetryDecision) -> datetime:
+    assert decision.retry_at is not None
+    return decision.retry_at
+
+
 def _job(attempts: int) -> Any:
     return Job(
         id=1, queue="notify", lock=None, queueing_lock=None, task_name="t", attempts=attempts
@@ -103,7 +109,7 @@ def test_queue_waits_for_retry_after_when_it_is_longer_than_the_schedule(module:
     assert isinstance(retry, ErpRetryStrategy)
     decision = retry.get_retry_decision(exception=ErpRateLimitedError(240), job=_job(0))
     assert decision is not None
-    waited = (decision.retry_at - datetime.now(UTC)).total_seconds()
+    waited = (_retry_at(decision) - datetime.now(UTC)).total_seconds()
     assert 235 <= waited <= 240
 
 
@@ -111,7 +117,7 @@ def test_queue_keeps_the_regular_schedule_when_retry_after_is_shorter() -> None:
     retry = erp_handoff.RETRY
     decision = retry.get_retry_decision(exception=ErpRateLimitedError(2), job=_job(3))
     assert decision is not None
-    waited = (decision.retry_at - datetime.now(UTC)).total_seconds()
+    waited = (_retry_at(decision) - datetime.now(UTC)).total_seconds()
     assert waited >= retry.linear_wait * 3 - 1  # расписание не короче, чем без 429
 
 
@@ -119,7 +125,7 @@ def test_queue_does_not_change_the_schedule_for_other_errors() -> None:
     retry = erp_handoff.RETRY
     decision = retry.get_retry_decision(exception=RuntimeError("boom"), job=_job(1))
     assert decision is not None
-    waited = (decision.retry_at - datetime.now(UTC)).total_seconds()
+    waited = (_retry_at(decision) - datetime.now(UTC)).total_seconds()
     assert retry.linear_wait - 2 <= waited <= retry.linear_wait + 2
 
 

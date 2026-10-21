@@ -240,4 +240,6 @@ def test_outcome_contacts_are_optional_and_unknown_ids_do_not_matter() -> None:
     assert isinstance(payload, QuoteOutcome)
     assert (payload.erp_contact_id, payload.crm_contact_id) == (None, None)
     body["payload"]["crm_contact_id"] = None
-    assert parse_event(body).payload.crm_contact_id is None  # type: ignore[attr-defined]
+    nulled = parse_event(body).payload
+    assert isinstance(nulled, QuoteOutcome)
+    assert nulled.crm_contact_id is None

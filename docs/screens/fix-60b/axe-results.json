@@ -1,0 +1,100 @@
+[
+  {
+    "screen": "client-card-debt-1440",
+    "axe_serious_critical": [],
+    "axe_all": [],
+    "h_scroll": false,
+    "unmatched": [
+      "/api/v1/stream",
+      "/api/v1/team",
+      "/api/v1/deals",
+      "/api/v1/documents"
+    ]
+  },
+  {
+    "screen": "client-card-nodebt-1440",
+    "axe_serious_critical": [],
+    "axe_all": [],
+    "h_scroll": false,
+    "unmatched": [
+      "/api/v1/stream",
+      "/api/v1/team",
+      "/api/v1/deals",
+      "/api/v1/documents"
+    ]
+  },
+  {
+    "screen": "client-card-nofield-1440",
+    "axe_serious_critical": [],
+    "axe_all": [],
+    "h_scroll": false,
+    "unmatched": [
+      "/api/v1/stream",
+      "/api/v1/team",
+      "/api/v1/deals",
+      "/api/v1/documents"
+    ]
+  },
+  {
+    "screen": "erp-check-rate-limited-1440",
+    "axe_serious_critical": [],
+    "axe_all": [],
+    "h_scroll": false,
+    "unmatched": [
+      "/api/v1/stream",
+      "/api/v1/integrations/telegram",
+      "/api/v1/integrations/smtp",
+      "/api/v1/integrations/telegram/channels",
+      "/api/v1/integrations/telegram/profile"
+    ]
+  },
+  {
+    "screen": "client-card-debt-390",
+    "axe_serious_critical": [],
+    "axe_all": [],
+    "h_scroll": false,
+    "unmatched": [
+      "/api/v1/stream",
+      "/api/v1/team",
+      "/api/v1/deals",
+      "/api/v1/documents"
+    ]
+  },
+  {
+    "screen": "client-card-nodebt-390",
+    "axe_serious_critical": [],
+    "axe_all": [],
+    "h_scroll": false,
+    "unmatched": [
+      "/api/v1/stream",
+      "/api/v1/team",
+      "/api/v1/deals",
+      "/api/v1/documents"
+    ]
+  },
+  {
+    "screen": "client-card-nofield-390",
+    "axe_serious_critical": [],
+    "axe_all": [],
+    "h_scroll": false,
+    "unmatched": [
+      "/api/v1/stream",
+      "/api/v1/team",
+      "/api/v1/deals",
+      "/api/v1/documents"
+    ]
+  },
+  {
+    "screen": "erp-check-rate-limited-390",
+    "axe_serious_critical": [],
+    "axe_all": [],
+    "h_scroll": false,
+    "unmatched": [
+      "/api/v1/stream",
+      "/api/v1/integrations/telegram",
+      "/api/v1/integrations/smtp",
+      "/api/v1/integrations/telegram/channels",
+      "/api/v1/integrations/telegram/profile"
+    ]
+  }
+]
