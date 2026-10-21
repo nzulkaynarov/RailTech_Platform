@@ -22,6 +22,7 @@ from typing import Iterator
 from django.core.cache import cache
 from django.utils import timezone
 from django.utils.dateparse import parse_datetime
+from rest_framework.exceptions import APIException
 
 logger = logging.getLogger(__name__)
 
@@ -38,12 +39,20 @@ ERROR_MAX_LEN = 200
 SWITCHED_OFF_MARK = "SWITCHED_OFF"
 
 
-class ExternalSwitchedOff(Exception):
-    """Сервис выключен из CRM — вызов не выполняется."""
+class ExternalSwitchedOff(OSError, APIException):
+    """Сервис выключен из CRM — вызов не выполняется.
 
-    def __init__(self, code: str):
-        super().__init__(f"{SWITCHED_OFF_MARK}: {code}")
-        self.code = code
+    `OSError` — код, который ждёт отказ хранилища (`except OSError`), обрабатывает его как недоступный файл;
+    `APIException` — представление DRF отвечает 503 `EXTERNAL_SERVICE_SWITCHED_OFF`, а не 500.
+    """
+
+    status_code = 503
+    default_code = "external_switched_off"
+
+    def __init__(self, service: str):
+        OSError.__init__(self, f"{SWITCHED_OFF_MARK}: {service}")
+        APIException.__init__(self, detail="EXTERNAL_SERVICE_SWITCHED_OFF")
+        self.service = service
 
 
 class NotSwitchable(Exception):
@@ -58,9 +67,14 @@ def _check(code: str) -> str:
 
 # ── Текст ошибки без секретов ───────────────────────────────────────────────────────────────────────
 
-_URL = re.compile(r"(?P<scheme>[a-z][a-z0-9+.-]*)://(?:[^/\s'\"@]*@)?(?P<host>[^/\s'\"?#]+)[^\s'\"]*", re.IGNORECASE)
+# Userinfo — до ПОСЛЕДНЕГО «@» в куске без пробелов (пароль может содержать «/» и «@»); от адреса остаются схема и хост.
+_URL = re.compile(r"(?P<scheme>[a-z][a-z0-9+.-]*)://(?:[^\s'\"]*@)?(?P<host>[^/\s'\"?#@]+)[^\s'\"]*", re.IGNORECASE)
+_AUTH = re.compile(
+    r"(?P<key>authorization|bearer)(?P<sep>\s*[=:]?\s*)(?:(?:bearer|basic|token)\s+)?(?P<value>\S+)",
+    re.IGNORECASE,
+)
 _KEY_VALUE = re.compile(
-    r"(?P<key>pass(?:word|wd)?|pwd|secret|token|api[_-]?key|access[_-]?key|authorization|bearer|credential[s]?)"
+    r"(?P<key>pass(?:word|wd)?|pwd|secret|token|api[_-]?key|access[_-]?key|credential[s]?)"
     r"(?P<sep>\s*[=:]\s*|\s+)(?P<value>\S+)",
     re.IGNORECASE,
 )
@@ -76,6 +90,7 @@ def short_error(error: object) -> str:
     else:
         text = str(error or "")
     text = _URL.sub(lambda m: f"{m.group('scheme')}://{m.group('host')}", text)
+    text = _AUTH.sub(lambda m: f"{m.group('key')}{m.group('sep')}[скрыто]", text)
     text = _KEY_VALUE.sub(lambda m: f"{m.group('key')}{m.group('sep')}[скрыто]", text)
     text = _EMAIL.sub("[e-mail]", text)
     text = _LONG_TOKEN.sub("[скрыто]", text)
@@ -212,12 +227,18 @@ def set_enabled(code: str, enabled: bool, reason: str = ""):
 
 
 @contextmanager
-def external_call(code: str) -> Iterator[None]:
-    """Вокруг настоящего вызова сервиса: выключен — `ExternalSwitchedOff`, иначе исход отмечается (успех/ошибка)."""
+def external_call(code: str, *, benign: tuple[type[BaseException], ...] = ()) -> Iterator[None]:
+    """Вокруг настоящего вызова сервиса: выключен — `ExternalSwitchedOff`, иначе исход отмечается (успех/ошибка).
+
+    `benign` — исключения, которые сервис вернул как нормальный ответ (S3: «файла нет»): считаются успехом
+    вызова и пробрасываются дальше."""
     if not is_enabled(code):
         raise ExternalSwitchedOff(code)
     try:
         yield
+    except benign:
+        record_success(code)
+        raise
     except Exception as exc:
         record_failure(code, exc)
         raise

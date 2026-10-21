@@ -107,6 +107,12 @@ def test_external_call_records_success_and_failure_and_respects_the_switch():
         ("OperationalError: password=hunter2 host=db", ["hunter2"]),
         ("SMTPAuthenticationError: (535, b'user@example.com rejected')", ["user@example.com"]),
         ("ClientError: key AKIAIOSFODNN7EXAMPLE denied", ["AKIAIOSFODNN7EXAMPLE"]),
+        ("HTTPError: Authorization: Bearer abc", ["abc"]),
+        ("HTTPError: Authorization: Bearer s3cr3t", ["s3cr3t"]),
+        ("HTTPError: Authorization: Basic dXNlcjpwYXNz", ["dXNlcjpwYXNz"]),
+        ("HTTPError: Bearer shorttok rejected", ["shorttok"]),
+        ("ConnectionError: redis://:p/ss@cache:6379/0 refused", ["p/ss", "ss@"]),
+        ("ConnectionError: https://u:p@ss@host.example/x failed", ["p@ss", "ss@", "u:p"]),
     ],
 )
 def test_short_error_hides_secrets(raw, forbidden):
@@ -121,3 +127,44 @@ def test_short_error_keeps_the_class_and_is_truncated():
     long = ext.short_error(RuntimeError("x " * 500))
     assert len(long) <= 200 and long.startswith("RuntimeError: ")
     assert ext.short_error("") == "Error"
+
+
+def test_short_error_keeps_the_host_of_credentialed_urls():
+    assert "redis://cache:6379" in ext.short_error("ConnectionError: redis://:p/ss@cache:6379/0 refused")
+    assert "https://host.example" in ext.short_error("ConnectionError: https://u:p@ss@host.example/x failed")
+
+
+def test_switched_off_is_an_oserror_and_a_503_for_api_views():
+    from rest_framework import status
+    from rest_framework.exceptions import APIException
+    from rest_framework.response import Response
+    from rest_framework.test import APIRequestFactory
+    from rest_framework.views import APIView
+
+    error = ext.ExternalSwitchedOff("s3")
+    assert isinstance(error, OSError) and isinstance(error, APIException)
+    assert str(error).startswith(ext.SWITCHED_OFF_MARK) and error.service == "s3"
+
+    class Upload(APIView):
+        authentication_classes = []
+        permission_classes = []
+
+        def get(self, request):
+            raise ext.ExternalSwitchedOff("s3")
+
+    response = APIRequestFactory().get("/x")
+    response = Upload.as_view()(response)
+    assert response.status_code == status.HTTP_503_SERVICE_UNAVAILABLE
+    assert response.data == {"detail": "EXTERNAL_SERVICE_SWITCHED_OFF"}
+    assert isinstance(response, Response)
+
+
+def test_external_call_treats_listed_exceptions_as_a_normal_answer():
+    with pytest.raises(FileNotFoundError):
+        with ext.external_call("s3", benign=(FileNotFoundError,)):
+            raise FileNotFoundError("no such key")
+    assert ext.counts("s3") == (1, 0), "ответ «нет такого файла» — сервис жив, не сбой"
+    with pytest.raises(OSError):
+        with ext.external_call("s3", benign=(FileNotFoundError,)):
+            raise OSError("endpoint down")
+    assert ext.counts("s3") == (1, 1)

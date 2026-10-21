@@ -389,11 +389,22 @@ def test_s3_storage_reports_outcomes_and_honours_the_switch():
         failing._save("b.pdf", b"x")
     assert ext.counts("s3") == (3, 1)
 
+    class MissingFake(_FakeS3):
+        def _open(self, name, mode="rb"):
+            raise FileNotFoundError(name)
+
+    class MissingStorage(TrackedStorageMixin, MissingFake):
+        pass
+
+    with pytest.raises(FileNotFoundError):
+        MissingStorage()._open("gone.pdf")
+    assert ext.counts("s3") == (4, 1), "404 на несуществующий файл — не сбой хранилища"
+
     ext.set_enabled("s3", False)
     with pytest.raises(ext.ExternalSwitchedOff):
         storage._save("c.pdf", b"x")
     assert storage.calls.count("save") == 1, "выключенное хранилище не вызывается"
-    assert ext.counts("s3") == (3, 1)
+    assert ext.counts("s3") == (4, 1)
 
 
 # ── Sentry ──────────────────────────────────────────────────────────────────────────────────────────

@@ -29,7 +29,8 @@ class TrackedStorageMixin:
     def _open(self, name, mode="rb"):
         from core.external_status import external_call
 
-        with external_call("s3"):
+        # Нет такого файла (404) — ответ хранилища, а не его сбой.
+        with external_call("s3", benign=(FileNotFoundError,)):
             return super()._open(name, mode)
 
     def delete(self, name):
