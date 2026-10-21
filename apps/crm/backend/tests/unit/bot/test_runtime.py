@@ -106,6 +106,26 @@ async def test_webhook_mode_with_bad_url_never_calls_set_webhook(url: str) -> No
     assert bot.calls == []
 
 
+async def test_webhook_url_is_stripped_before_set_webhook(monkeypatch: pytest.MonkeyPatch) -> None:
+    from app.bot import commands
+    from app.bot import runtime as module
+
+    async def nothing(*args: Any, **kwargs: Any) -> None:
+        return None
+
+    monkeypatch.setattr(commands, "publish", nothing)
+    monkeypatch.setattr(module, "publish_profile", nothing)
+    config = Settings(
+        _env_file=None,
+        telegram_mode="webhook",
+        telegram_webhook_url="  https://crm.example/telegram/webhook\n",
+        telegram_webhook_secret="s3cr3t-value",
+    )
+    bot = RecordingBot()
+    await BotRuntime(config, bot, Dispatcher()).start()  # type: ignore[arg-type]
+    assert bot.calls == ["set_webhook:https://crm.example/telegram/webhook"]
+
+
 async def test_webhook_mode_with_https_url_sets_it_as_is(monkeypatch: pytest.MonkeyPatch) -> None:
     from app.bot import commands
     from app.bot import runtime as module

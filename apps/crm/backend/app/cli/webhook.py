@@ -39,7 +39,7 @@ async def run(args: argparse.Namespace) -> int:
                 print("Нужен TELEGRAM_WEBHOOK_SECRET")  # noqa: T201
                 return 1
             await bot.set_webhook(
-                str(settings.telegram_webhook_url),
+                settings.telegram_webhook_url.strip(),
                 secret_token=settings.telegram_webhook_secret.get_secret_value(),
                 allowed_updates=ALLOWED_UPDATES,
             )

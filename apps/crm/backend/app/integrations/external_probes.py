@@ -80,12 +80,12 @@ def _public_url(raw: object) -> str | None:
         return None
     try:
         parts = urlsplit(raw)
+        host, port = parts.hostname, parts.port
     except ValueError:
         return None
-    if not parts.hostname:
-        return _str(raw)
-    port = f":{parts.port}" if parts.port else ""
-    return _str(f"{parts.scheme}://{parts.hostname}{port}{parts.path}")
+    if not host:
+        return None  # сырой текст с query наружу не отдаём
+    return _str(f"{parts.scheme}://{host}{f':{port}' if port else ''}{parts.path}")
 
 
 async def telegram(
@@ -117,7 +117,7 @@ async def telegram(
         username=username if isinstance(username, str) else None,
         pending_updates=_int(info.get("pending_update_count")),
         webhook_url=_public_url(info.get("url")),
-        last_error_message=_scrub(_str(info.get("last_error_message")), token),
+        last_error_message=_str(_scrub(_raw_str(info.get("last_error_message")), token)),
         last_error_at=datetime.fromtimestamp(error_date, UTC)
         if isinstance(error_date, int)
         else None,
@@ -197,6 +197,10 @@ def _result(response: httpx.Response) -> dict[str, Any]:
 
 def _int(raw: object) -> int | None:
     return raw if isinstance(raw, int) and not isinstance(raw, bool) else None
+
+
+def _raw_str(raw: object) -> str | None:
+    return raw if isinstance(raw, str) and raw else None
 
 
 def _str(raw: object) -> str | None:

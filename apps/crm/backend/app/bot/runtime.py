@@ -127,7 +127,7 @@ class BotRuntime:
             )
         else:
             await self.bot.set_webhook(
-                self._config.telegram_webhook_url,
+                self._config.telegram_webhook_url.strip(),
                 secret_token=self._config.telegram_webhook_secret.get_secret_value(),
                 allowed_updates=allowed,
             )

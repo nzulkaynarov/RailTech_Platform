@@ -174,6 +174,7 @@ class _Context:
         result, checked_at, is_stale = self._result(spec, now)
         day = self.day.get(spec.key, {})
         incident = self.incidents.get(spec.key)
+        no_fix = bool(result.metrics.get("_no_fix"))
         return ExternalServiceOut(
             key=spec.key,
             title=spec.title,
@@ -188,7 +189,7 @@ class _Context:
             summary=result.summary,
             error=result.error,
             hint=result.hint,
-            fix_path="/system" if is_stale else spec.fix_path,
+            fix_path="/system" if is_stale else (None if no_fix else spec.fix_path),
             checked_at=checked_at,
             stale=is_stale,
             latency_ms=result.latency_ms,

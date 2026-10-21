@@ -83,6 +83,8 @@ def telegram(f: TelegramFacts, now: datetime) -> CheckResult:
     }
     config = _webhook_config_problem(f)
     if config is not None:
+        # `_no_fix`: адрес вебхука не правится в «Подключениях» — кнопка «Исправить» не нужна.
+        metrics["_no_fix"] = 1
         return CheckResult(key, "fail", *config, latency_ms=f.latency_ms, metrics=metrics)
     if f.error is not None:
         return _telegram_error(f)

@@ -89,6 +89,12 @@ def test_telegram_webhook_not_configured_has_error_and_hint() -> None:
     assert "/telegram/webhook" in (result.hint or "")
 
 
+def test_webhook_not_configured_has_no_fix_button_target() -> None:
+    """«Исправить» вёл бы в «Подключения», а адрес вебхука там не правится (FIX-66)."""
+    result = rules.telegram(TelegramFacts(True, "webhook", config_url=""), NOW)
+    assert result.metrics["_no_fix"] == 1
+
+
 def test_telegram_shows_actual_webhook_and_last_error() -> None:
     """FIX-66: центр показывает фактический адрес и последнюю ошибку из getWebhookInfo."""
     result = rules.telegram(

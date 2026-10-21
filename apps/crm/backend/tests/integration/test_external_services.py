@@ -254,6 +254,8 @@ async def test_telegram_webhook_not_configured_is_an_incident_without_token_leak
     assert service["status"] == "fail"
     assert "Вебхук Telegram не настроен" in service["summary"]
     assert service["hint"]
+    assert service["fix_path"] is None  # «Исправить» в «Подключения» здесь не помогает
+    assert "_no_fix" not in service["metrics"]
     assert service["incident"]["ended_at"] is None
     assert info.call_count == 1
     assert [k for k, _ in alerts.sent] == ["telegram"]
