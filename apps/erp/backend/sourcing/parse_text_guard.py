@@ -30,8 +30,18 @@ def acquire(quote_id: int, user_id: int) -> bool:
 
 
 def attach_task(quote_id: int, user_id: int, task_id: str) -> None:
-    """Записать id поставленной задачи в блокировку (чтобы повтор того же пользователя получил тот же job)."""
-    cache.set(lock_key(quote_id), f"{task_id}:{user_id}", timeout=LOCK_TTL_SECONDS)
+    """Записать id поставленной задачи в блокировку (чтобы повтор того же пользователя получил тот же job).
+
+    Пишем только в СВОЙ ещё «pending» лок: снятый (TTL/перехват) не воскрешаем, чужой новый не затираем. Быстрая
+    задача (`AI_DISABLED`, `QUOTE_NOT_FOUND`) могла завершиться раньше этого вызова — её `release` не узнал лок
+    (task_id в нём ещё не было), поэтому уже завершённому job лок не ставим, а снимаем."""
+    key = lock_key(quote_id)
+    if cache.get(key) != f"{_PENDING}:{user_id}":
+        return
+    if job_is_finished(task_id):
+        cache.delete(key)
+        return
+    cache.set(key, f"{task_id}:{user_id}", timeout=LOCK_TTL_SECONDS)
 
 
 def holder(quote_id: int) -> Optional[tuple]:

@@ -183,6 +183,75 @@ def test_lock_of_a_silently_dead_job_is_taken_over(words_quote, api, published, 
 
 
 @pytest.mark.django_db
+def test_parallel_takeover_of_a_dead_lock_does_not_release_the_newer_lock(
+    words_quote, api, published, monkeypatch, scene
+):
+    """Два запроса видят «упавший» job; пока первый перехватывает, второй уже поставил новый job и лок.
+    Первый обязан снять лок только своего (старого) job — иначе выходят два платных job."""
+    from sourcing import parse_text_guard
+
+    first = api.post(URL, {"quote_id": words_quote.id}, format="json").json()["task_id"]
+    uid = scene["seller_user"].id
+
+    def finished_and_competitor_wins(task_id):
+        if task_id == first:
+            parse_text_guard.release(words_quote.id, first)  # конкурент снял устаревший лок…
+            assert parse_text_guard.acquire(words_quote.id, uid)  # …занял свой…
+            parse_text_guard.attach_task(words_quote.id, uid, "competitor-task")  # …и поставил job
+            return True
+        return False
+
+    monkeypatch.setattr("sourcing.parse_text_guard.job_is_finished", finished_and_competitor_wins)
+
+    response = api.post(URL, {"quote_id": words_quote.id}, format="json")
+
+    assert response.status_code == 202
+    assert response.json() == {"task_id": "competitor-task", "already_running": True}
+    assert len(published) == 1  # второй платный job не поставлен
+
+
+@pytest.mark.django_db
+def test_fast_job_finished_before_attach_task_leaves_no_lock(words_quote, api, settings, monkeypatch, scene):
+    """AI_DISABLED / QUOTE_NOT_FOUND отрабатывают раньше, чем вьюха записала task_id в лок: лок не должен
+    висеть до TTL."""
+    from sourcing.parse_text_guard import holder
+
+    settings.AI_IMPORT_ENABLED = True
+    finished = set()
+
+    def run_job_at_once(args=None, task_id=None, **kwargs):
+        monkeypatch.setattr("ai.services.intake.extract_request_items", lambda c, f, **k: [dict(r) for r in ROWS])
+        FEATURE_HANDLERS["parse_request_text"]({**args[1], "job_id": task_id})
+        finished.add(task_id)
+
+    monkeypatch.setattr("sourcing.ai_jobs.run_ai_job.apply_async", run_job_at_once)
+    monkeypatch.setattr("sourcing.parse_text_guard.job_is_finished", lambda task_id: task_id in finished)
+
+    first = api.post(URL, {"quote_id": words_quote.id}, format="json")
+
+    assert first.status_code == 202
+    assert holder(words_quote.id) is None
+    again = api.post(URL, {"quote_id": words_quote.id}, format="json")
+    assert "already_running" not in again.json() and again.json()["task_id"] != first.json()["task_id"]
+
+
+@pytest.mark.django_db
+def test_attach_task_never_overwrites_a_lock_it_does_not_own(words_quote, scene):
+    from sourcing.parse_text_guard import acquire, attach_task, holder, release
+
+    uid = scene["seller_user"].id
+    assert acquire(words_quote.id, uid)
+    release(words_quote.id)  # лок снят (TTL/перехват) до attach_task
+
+    attach_task(words_quote.id, uid, "late-task")
+    assert holder(words_quote.id) is None  # не воскрешаем снятый лок
+
+    assert acquire(words_quote.id, uid + 1)  # чужой новый лок
+    attach_task(words_quote.id, uid, "late-task")
+    assert holder(words_quote.id) == (None, uid + 1)
+
+
+@pytest.mark.django_db
 def test_lock_is_taken_atomically_with_a_ttl_longer_than_the_task_time_limit(words_quote, api, published, monkeypatch):
     from django.core.cache import cache
 

@@ -377,13 +377,16 @@ class QuoteParseRequestTextView(RoleGatedViewMixin, APIView):
         # отказанный запрос не оставлял «зависшую» блокировку.
         if not parse_text_guard.acquire(quote_id, request.user.id):
             held = parse_text_guard.holder(quote_id)
+            acquired = False
             if held is not None and held[0] and parse_text_guard.job_is_finished(held[0]):
                 # Задача упала молча (воркер убит): результат в backend есть, а блокировка не снята — не ждём TTL.
-                parse_text_guard.release(quote_id)
-                if parse_text_guard.acquire(quote_id, request.user.id):
-                    held = None
-            if held is not None:
-                task_id, owner_id = held
+                # Снимаем лок ТОЛЬКО этого job: параллельный запрос мог уже занять новый (иначе два платных job).
+                parse_text_guard.release(quote_id, held[0])
+                acquired = parse_text_guard.acquire(quote_id, request.user.id)
+                if not acquired:
+                    held = parse_text_guard.holder(quote_id)
+            if not acquired:
+                task_id, owner_id = held or (None, None)
                 if task_id and owner_id == request.user.id:
                     # Тот же сотрудник (двойной клик, вторая вкладка): тот же job, платная задача не ставится.
                     return Response({"task_id": task_id, "already_running": True}, status=status.HTTP_202_ACCEPTED)
