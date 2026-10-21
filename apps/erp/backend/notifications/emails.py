@@ -39,6 +39,8 @@ from django.template import Context, Template, TemplateDoesNotExist
 from django.template.loader import get_template, render_to_string
 from django.utils import translation
 
+from core.external_status import SWITCHED_OFF_MARK, is_enabled
+
 from .models import EmailLog
 
 logger = logging.getLogger(__name__)
@@ -237,6 +239,26 @@ def send_templated_email(
 
     status = EmailLog.STATUS_SENT
     error_text = ""
+    if not is_enabled("mail"):
+        # M3-ERP-06: выключатель из центра внешних сервисов CRM — в SMTP письмо не уходит. Попытка остаётся в журнале
+        # (FAILED с меткой SWITCHED_OFF — это не сбой почты) и сообщается вызывающему как неудачная доставка.
+        error_text = f"{SWITCHED_OFF_MARK}: отправка выключена из CRM"
+        logger.warning("Email not sent — mail switched off from CRM: template=%s channel=%s", template_name, channel)
+        failed_log = _record_log(
+            template_name,
+            channel,
+            subject,
+            cfg["from_email"],
+            recipients,
+            user,
+            text_body,
+            html_body,
+            EmailLog.STATUS_FAILED,
+            error_text,
+        )
+        if fail_silently:
+            return failed_log
+        raise EmailDeliveryError(error_text)
     try:
         message.send(fail_silently=False)
     except Exception as exc:  # noqa: BLE001 — transport fault barrier: ANY backend failure → EmailLog(FAILED)
