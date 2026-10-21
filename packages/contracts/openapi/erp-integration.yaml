@@ -35,6 +35,8 @@ tags:
   - name: users
     description: Провижининг сотрудников и отзыв сессий (ADR-0003)
   - name: system
+  - name: pairing
+    description: Сопряжение CRM ↔ ERP одним кодом и ротация ключей без простоя (M3-ERP-05, M3-CRM-10)
 
 paths:
   /clients/handoff:
@@ -402,12 +404,104 @@ paths:
               schema:
                 $ref: '#/components/schemas/Health'
 
+  /pairing/accept:
+    post:
+      tags: [pairing]
+      operationId: acceptPairing
+      summary: Сопряжение по одноразовому коду (CRM передаёт ERP ключи шва)
+      description: |
+        ERP выпускает одноразовый код сопряжения (суперпользователь в настройках «Интеграция с CRM» либо команда
+        `manage.py pairing_code`; срок жизни по умолчанию 15 минут, действует один выпуск — новый код гасит прежний
+        неиспользованный). Админ вводит в CRM адрес ERP и этот код; CRM САМА генерирует три секрета — токен
+        направления CRM→ERP, токен направления ERP→CRM и секрет подписи вебхуков — и передаёт их этой операцией.
+        ERP сохраняет их шифрованно в своей базе; с этого момента аутентификация integration и подпись вебхуков
+        берут секреты оттуда, а значения из `.env` остаются запасным путём только пока в базе пусто.
+
+        Аутентификация — НЕ сервисный токен, а сам код: `Authorization: Bearer <код>`. Код сверяется по хешу, одноразов
+        (успешный приём гасит его) и ограничен по сроку. Повторное сопряжение (новый код при уже сопряжённой ERP)
+        заменяет все три секрета целиком, прежние токены перестают действовать сразу.
+
+        Операция не принимает `Idempotency-Key`: идемпотентность даёт одноразовость кода. Повтор того же кода после
+        успеха — 401 `PAIRING_CODE_USED`; CRM в этом случае просит у админа новый код. Тело запроса и коды в журналы
+        не пишутся.
+      security:
+        - pairingCode: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PairingAcceptRequest'
+      responses:
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '200':
+          description: Сопряжено — секреты сохранены, код погашен
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PairingAccepted'
+        '401':
+          description: >-
+            Код не принят: `PAIRING_CODE_INVALID` (такого кода нет), `PAIRING_CODE_EXPIRED` (срок вышел),
+            `PAIRING_CODE_USED` (уже использован или заменён новым). Тело — `{"detail": "<CODE>"}`.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /pairing/rotate:
+    post:
+      tags: [pairing]
+      operationId: rotatePairing
+      summary: Ротация ключей без простоя (два активных токена)
+      description: |
+        CRM генерирует новую тройку секретов и передаёт её под ДЕЙСТВУЮЩИМ токеном CRM→ERP. ERP принимает новые
+        значения, а токен, которым вызвана операция, остаётся активным на переходный период
+        (`previous_token_valid_until`, по умолчанию 1 час) — одновременно действуют два токена CRM→ERP; затем старый
+        гаснет сам, и вызов с ним даёт 401. Секрет подписи вебхуков ERP переключает сразу (подписывает новым);
+        CRM принимает оба секрета (текущий и предыдущий, CONTRACTS §3). Повтор той же тройки под тем же токеном —
+        200 (операция идемпотентна по значениям).
+
+        Если сопряжения нет (ERP работает на токенах из `.env`), операция тоже годится: секреты уходят в базу ERP,
+        а использованный `.env`-токен получает тот же переходный срок.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PairingRotateRequest'
+      responses:
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '200':
+          description: Новые секреты приняты, прежний токен действует до `previous_token_valid_until`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PairingRotated'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
 components:
   securitySchemes:
     serviceToken:
       type: http
       scheme: bearer
-      description: Сервисный токен направления `CRM→ERP` из окружения; два активных токена для ротации без простоя.
+      description: >-
+        Сервисный токен направления `CRM→ERP`: выдан сопряжением (хранится шифрованно в базе ERP) либо, пока сопряжения
+        нет, взят из окружения; два активных токена для ротации без простоя.
+    pairingCode:
+      type: http
+      scheme: bearer
+      bearerFormat: pairing-code
+      description: >-
+        Одноразовый код сопряжения, выпущенный ERP (суперпользователь или `manage.py pairing_code`). Действует
+        только для `POST /pairing/accept`; не заменяет сервисный токен.
 
   parameters:
     IdempotencyKey:
@@ -490,7 +584,7 @@ components:
       properties:
         detail:
           type: string
-          examples: [NOT_FOUND, IDEMPOTENCY_CONFLICT, EMAIL_CONFLICT, VALIDATION_ERROR, TOO_MANY_REQUESTS]
+          examples: [NOT_FOUND, IDEMPOTENCY_CONFLICT, EMAIL_CONFLICT, VALIDATION_ERROR, TOO_MANY_REQUESTS, PAIRING_CODE_INVALID, PAIRING_CODE_EXPIRED, PAIRING_CODE_USED]
       additionalProperties: false
 
     Language:
@@ -1136,4 +1230,76 @@ components:
         checked_at:
           type: string
           format: date-time
+      additionalProperties: false
+
+    PairingSecret:
+      type: string
+      description: Секрет, сгенерированный CRM (не короче 32 символов, URL-безопасные символы)
+      minLength: 32
+      maxLength: 512
+      pattern: '^[A-Za-z0-9_\-]+$'
+      writeOnly: true
+
+    PairingAcceptRequest:
+      type: object
+      description: >-
+        Три секрета, которые CRM сгенерировала сама. Значения должны различаться между собой (иначе 422).
+      required: [crm_to_erp_token, erp_to_crm_token, webhook_secret]
+      properties:
+        crm_to_erp_token:
+          allOf:
+            - $ref: '#/components/schemas/PairingSecret'
+          description: "Токен направления CRM→ERP (заголовок Authorization: Bearer для всех операций этого API)"
+        erp_to_crm_token:
+          allOf:
+            - $ref: '#/components/schemas/PairingSecret'
+          description: Токен направления ERP→CRM (ERP предъявляет его CRM; приёмники — M3-CRM-11)
+        webhook_secret:
+          allOf:
+            - $ref: '#/components/schemas/PairingSecret'
+          description: Секрет подписи вебхуков ERP→CRM (CONTRACTS §3)
+      additionalProperties: false
+
+    PairingAccepted:
+      type: object
+      required: [paired, paired_at, erp_version]
+      properties:
+        paired:
+          type: boolean
+          const: true
+        paired_at:
+          type: string
+          format: date-time
+        erp_version:
+          type: string
+          description: Версия ERP (как в `Health.version`)
+      additionalProperties: false
+
+    PairingRotateRequest:
+      type: object
+      description: Новая тройка секретов; значения различаются между собой и от действующих.
+      required: [crm_to_erp_token, erp_to_crm_token, webhook_secret]
+      properties:
+        crm_to_erp_token:
+          $ref: '#/components/schemas/PairingSecret'
+        erp_to_crm_token:
+          $ref: '#/components/schemas/PairingSecret'
+        webhook_secret:
+          $ref: '#/components/schemas/PairingSecret'
+      additionalProperties: false
+
+    PairingRotated:
+      type: object
+      required: [rotated, rotated_at, previous_token_valid_until]
+      properties:
+        rotated:
+          type: boolean
+          const: true
+        rotated_at:
+          type: string
+          format: date-time
+        previous_token_valid_until:
+          type: string
+          format: date-time
+          description: До какого момента ещё действует токен, которым вызвана ротация
       additionalProperties: false

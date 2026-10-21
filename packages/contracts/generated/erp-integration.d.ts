@@ -232,6 +232,67 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/pairing/accept": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Сопряжение по одноразовому коду (CRM передаёт ERP ключи шва)
+     * @description ERP выпускает одноразовый код сопряжения (суперпользователь в настройках «Интеграция с CRM» либо команда
+     *     `manage.py pairing_code`; срок жизни по умолчанию 15 минут, действует один выпуск — новый код гасит прежний
+     *     неиспользованный). Админ вводит в CRM адрес ERP и этот код; CRM САМА генерирует три секрета — токен
+     *     направления CRM→ERP, токен направления ERP→CRM и секрет подписи вебхуков — и передаёт их этой операцией.
+     *     ERP сохраняет их шифрованно в своей базе; с этого момента аутентификация integration и подпись вебхуков
+     *     берут секреты оттуда, а значения из `.env` остаются запасным путём только пока в базе пусто.
+     *
+     *     Аутентификация — НЕ сервисный токен, а сам код: `Authorization: Bearer <код>`. Код сверяется по хешу, одноразов
+     *     (успешный приём гасит его) и ограничен по сроку. Повторное сопряжение (новый код при уже сопряжённой ERP)
+     *     заменяет все три секрета целиком, прежние токены перестают действовать сразу.
+     *
+     *     Операция не принимает `Idempotency-Key`: идемпотентность даёт одноразовость кода. Повтор того же кода после
+     *     успеха — 401 `PAIRING_CODE_USED`; CRM в этом случае просит у админа новый код. Тело запроса и коды в журналы
+     *     не пишутся.
+     */
+    post: operations["acceptPairing"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/pairing/rotate": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Ротация ключей без простоя (два активных токена)
+     * @description CRM генерирует новую тройку секретов и передаёт её под ДЕЙСТВУЮЩИМ токеном CRM→ERP. ERP принимает новые
+     *     значения, а токен, которым вызвана операция, остаётся активным на переходный период
+     *     (`previous_token_valid_until`, по умолчанию 1 час) — одновременно действуют два токена CRM→ERP; затем старый
+     *     гаснет сам, и вызов с ним даёт 401. Секрет подписи вебхуков ERP переключает сразу (подписывает новым);
+     *     CRM принимает оба секрета (текущий и предыдущий, CONTRACTS §3). Повтор той же тройки под тем же токеном —
+     *     200 (операция идемпотентна по значениям).
+     *
+     *     Если сопряжения нет (ERP работает на токенах из `.env`), операция тоже годится: секреты уходят в базу ERP,
+     *     а использованный `.env`-токен получает тот же переходный срок.
+     */
+    post: operations["rotatePairing"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -244,6 +305,9 @@ export interface components {
        * @example EMAIL_CONFLICT
        * @example VALIDATION_ERROR
        * @example TOO_MANY_REQUESTS
+       * @example PAIRING_CODE_INVALID
+       * @example PAIRING_CODE_EXPIRED
+       * @example PAIRING_CODE_USED
        */
       detail: string;
     };
@@ -614,6 +678,42 @@ export interface components {
       queue_alive: boolean;
       /** Format: date-time */
       checked_at: string;
+    };
+    /** @description Секрет, сгенерированный CRM (не короче 32 символов, URL-безопасные символы) */
+    PairingSecret: string;
+    /** @description Три секрета, которые CRM сгенерировала сама. Значения должны различаться между собой (иначе 422). */
+    PairingAcceptRequest: {
+      /** @description Токен направления CRM→ERP (заголовок Authorization: Bearer для всех операций этого API) */
+      crm_to_erp_token: components["schemas"]["PairingSecret"];
+      /** @description Токен направления ERP→CRM (ERP предъявляет его CRM; приёмники — M3-CRM-11) */
+      erp_to_crm_token: components["schemas"]["PairingSecret"];
+      /** @description Секрет подписи вебхуков ERP→CRM (CONTRACTS §3) */
+      webhook_secret: components["schemas"]["PairingSecret"];
+    };
+    PairingAccepted: {
+      /** @constant */
+      paired: true;
+      /** Format: date-time */
+      paired_at: string;
+      /** @description Версия ERP (как в `Health.version`) */
+      erp_version: string;
+    };
+    /** @description Новая тройка секретов; значения различаются между собой и от действующих. */
+    PairingRotateRequest: {
+      crm_to_erp_token: components["schemas"]["PairingSecret"];
+      erp_to_crm_token: components["schemas"]["PairingSecret"];
+      webhook_secret: components["schemas"]["PairingSecret"];
+    };
+    PairingRotated: {
+      /** @constant */
+      rotated: true;
+      /** Format: date-time */
+      rotated_at: string;
+      /**
+       * Format: date-time
+       * @description До какого момента ещё действует токен, которым вызвана ротация
+       */
+      previous_token_valid_until: string;
     };
   };
   responses: {
@@ -1030,6 +1130,68 @@ export interface operations {
           "application/json": components["schemas"]["Health"];
         };
       };
+    };
+  };
+  acceptPairing: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["PairingAcceptRequest"];
+      };
+    };
+    responses: {
+      /** @description Сопряжено — секреты сохранены, код погашен */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["PairingAccepted"];
+        };
+      };
+      /** @description Код не принят: `PAIRING_CODE_INVALID` (такого кода нет), `PAIRING_CODE_EXPIRED` (срок вышел), `PAIRING_CODE_USED` (уже использован или заменён новым). Тело — `{"detail": "<CODE>"}`. */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Error"];
+        };
+      };
+      422: components["responses"]["ValidationError"];
+      429: components["responses"]["TooManyRequests"];
+    };
+  };
+  rotatePairing: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["PairingRotateRequest"];
+      };
+    };
+    responses: {
+      /** @description Новые секреты приняты, прежний токен действует до `previous_token_valid_until` */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["PairingRotated"];
+        };
+      };
+      401: components["responses"]["Unauthorized"];
+      422: components["responses"]["ValidationError"];
+      429: components["responses"]["TooManyRequests"];
     };
   };
 }
