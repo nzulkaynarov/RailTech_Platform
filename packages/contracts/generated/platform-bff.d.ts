@@ -42,6 +42,26 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/auth/change-password": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Смена пароля (в том числе обязательная после приглашения)
+     * @description BFF меняет пароль в CRM (`POST /api/v1/auth/change-password`); сессия сохраняется, `must_change_password` снимается.
+     */
+    post: operations["changePassword"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/auth/session": {
     parameters: {
       query?: never;
@@ -234,6 +254,67 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/admin/users": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Сотрудники (Admin · Оргструктура)
+     * @description Доступ — раздел `admin` матрицы (ADMIN — full, DIRECTOR — read).
+     */
+    get: operations["listEmployees"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/admin/users/invite": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Пригласить сотрудника по почте
+     * @description BFF создаёт пользователя в CRM с ролями Платформы и отправляет приглашение (CRM `/users`, `/users/{id}/invite`); провижининг в ERP делает CRM. Только ADMIN.
+     */
+    post: operations["inviteEmployee"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/admin/users/{id}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Карточка сотрудника */
+    get: operations["getEmployee"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    /**
+     * Роли, должность, отключение — единое место выдачи ролей обеих систем
+     * @description Только ADMIN. Снять у себя последнюю роль ADMIN или отключить последнего администратора нельзя — 409 `LAST_ADMIN`.
+     */
+    patch: operations["updateEmployee"];
+    trace?: never;
+  };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -329,6 +410,8 @@ export interface components {
     };
     Session: {
       me: components["schemas"]["Me"];
+      /** @description true — SPA сразу ведёт на смену пароля; остальные разделы недоступны до смены */
+      must_change_password: boolean;
       /** Format: date-time */
       expires_at: string;
     };
@@ -357,6 +440,51 @@ export interface components {
         crm: boolean;
         erp: boolean;
       };
+    };
+    ChangePasswordIn: {
+      current_password: string;
+      new_password: string;
+    };
+    /** @enum {string} */
+    EmployeeStatus: "active" | "invited" | "disabled";
+    /**
+     * @description Итог провижининга в ERP
+     * @enum {string}
+     */
+    ErpSyncState: "ok" | "pending" | "error" | "not_applicable";
+    Employee: {
+      id: string;
+      name: string;
+      initials: string;
+      /** Format: email */
+      email: string;
+      /** @description Должность — текст, не роль */
+      position?: string;
+      roles: components["schemas"]["RoleCode"][];
+      access: {
+        crm: boolean;
+        erp: boolean;
+      };
+      status: components["schemas"]["EmployeeStatus"];
+      /** @description Привязан Telegram для уведомлений сотруднику */
+      telegram_linked: boolean;
+      erp_sync: components["schemas"]["ErpSyncState"];
+      erp_sync_error?: string;
+    };
+    EmployeeList: {
+      items: components["schemas"]["Employee"][];
+    };
+    EmployeeInvite: {
+      /** Format: email */
+      email: string;
+      name: string;
+      position?: string;
+      roles: components["schemas"]["RoleCode"][];
+    };
+    EmployeeUpdate: {
+      roles?: components["schemas"]["RoleCode"][];
+      position?: string;
+      is_active?: boolean;
     };
     MeUpdate: {
       language?: components["schemas"]["Language"];
@@ -560,6 +688,8 @@ export interface components {
     };
   };
   parameters: {
+    /** @description `crm_user_id` */
+    EmployeeId: string;
     /** @description Значение cookie `rt_pf_csrf` */
     CsrfToken: string;
   };
@@ -636,6 +766,42 @@ export interface operations {
       };
       401: components["responses"]["SessionExpired"];
       403: components["responses"]["CsrfFailed"];
+    };
+  };
+  changePassword: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["ChangePasswordIn"];
+      };
+    };
+    responses: {
+      /** @description Пароль изменён */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["CsrfFailed"];
+      /** @description `WRONG_PASSWORD` (текущий неверен) или `VALIDATION_FAILED` (новый не проходит правила CRM) */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Error"];
+        };
+      };
     };
   };
   getSession: {
@@ -917,6 +1083,139 @@ export interface operations {
         };
       };
       401: components["responses"]["SessionExpired"];
+      422: components["responses"]["ValidationFailed"];
+    };
+  };
+  listEmployees: {
+    parameters: {
+      query?: {
+        q?: string;
+        status?: components["schemas"]["EmployeeStatus"];
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Список */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["EmployeeList"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+    };
+  };
+  inviteEmployee: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["EmployeeInvite"];
+      };
+    };
+    responses: {
+      /** @description Приглашён */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Employee"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      /** @description `EMAIL_EXISTS` */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Error"];
+        };
+      };
+      422: components["responses"]["ValidationFailed"];
+    };
+  };
+  getEmployee: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        /** @description `crm_user_id` */
+        id: components["parameters"]["EmployeeId"];
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Сотрудник */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Employee"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+    };
+  };
+  updateEmployee: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path: {
+        /** @description `crm_user_id` */
+        id: components["parameters"]["EmployeeId"];
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["EmployeeUpdate"];
+      };
+    };
+    responses: {
+      /** @description Обновлён */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Employee"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      /** @description `LAST_ADMIN` */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Error"];
+        };
+      };
       422: components["responses"]["ValidationFailed"];
     };
   };
