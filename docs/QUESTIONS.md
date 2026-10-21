@@ -200,6 +200,8 @@ Q-1…Q-9 решены — см. `DECISIONS.md`. Номер вопроса ун�
 
 ## Q-FIX22-5 · Приёмка всех строк поставки не двигает исполнение сделки и не шлёт событий (FIX-22) — **решено архитектором 2026-10-21 (резерв Opus): ч. 2 — FIX-62**
 
+**Статус ч. 2.** Выполнено в FIX-62: все строки приняты → `update_fulfillment_status(..., client_contact=<контакт>)` переводит исполнение в `ACCEPTED` (актор «клиент», пользователя ERP нет, запись `fulfillment.accepted_by_client`), событие `delivery.status_changed` с `actor.type=client`. См. Q-FIX62-1 про значение `status` в событии.
+
 **Контекст.** Строка `accepted`/`disputed` — решение клиента, `Fulfillment` сделки остаётся `DELIVERED`, сделку (`CLOSED_WON`) закрывает договор по двум подписям (`_finalize_if_signed`). События `delivery.line_accepted|disputed` в FIX-22 не слались; шлёт их FIX-37 (ERP шлёт, CRM ведёт ленту и уведомляет ответственного). «Все строки приняты → `Fulfillment` `ACCEPTED`» осталось открытым.
 
 **Варианты.** 1) Волна 3: события + «все строки приняты» → `update_fulfillment_status(ACCEPTED)` через сервис. 2) Сейчас переносить решение клиента на `Fulfillment`.
@@ -510,6 +512,8 @@ Q-1…Q-9 решены — см. `DECISIONS.md`. Номер вопроса ун�
 
 ## Q-FIX35-5 · `act.returned` не выпускается боевым кодом ERP; схема событий не проверяется в проде (FIX-35) — **решено архитектором 2026-10-21 (резерв Opus): событие на возврате — FIX-62; схема в проде — M5-INF-01c**
 
+**Статус п. 1.** Выполнено в FIX-62: `act.returned` с `payload.reason` и `actor.type=client` выпускает сигнал акта по факту перехода ISSUED → DRAFT с причиной (`reject_act`); кода статуса не добавлено. Тест-сторож «нет триггера» заменён положительным. Возврат из ERP невозможен (FIX-13).
+
 **Статус п. 2.** Выполнено в M5-INF-01c: `prod.yml` монтирует схему read-only в `erp-backend`, `erp-worker`, `erp-worker-ai`, `erp-beat`, `erp-mcp`; файл в `release.tgz` (`deploy.yml`, отметка владельца); `deploy.sh` останавливается без файла в релизе.
 
 **Контекст.** (1) Сигнал акта умеет `act.returned`, но статусов `RETURNED/DISPUTED/REJECTED` в `ActStatusCode` нет, а `reject_act` ставит `DRAFT` (аудит): событие не уходит ни при каком переходе. Тест `test_act_returned_has_no_trigger_in_the_real_flow` фиксирует разрыв; пока он есть, тело события проверяется через генератор `emit_act_event`. (2) Проверка тела по `events.schema.json` (`integration/services/event_contract.py`): в тестах и при DEBUG — исключение, в проде — запись в лог ERROR; но в образе ERP схемы нет (контекст сборки — `apps/erp/backend`), и в прод-compose её никто не монтирует: без файла проверка в проде пишет одно предупреждение и пропускает.
@@ -588,6 +592,14 @@ Q-1…Q-9 решены — см. `DECISIONS.md`. Номер вопроса ун�
 **Варианты.** 1) Прогнать 13 новых кейсов `service-*`: `make eval-quick CONFIRM=yes EVAL_MAX_USD=0.5 QUICK_CASES=$(grep -h '^- id: service-' apps/crm/backend/evals/golden/service.yaml | sed 's/- id: //' | paste -sd, -)` (в `Makefile` список кейсов `eval-quick` — переменная `QUICK_CASES`, её можно переопределить в командной строке) — 13 кейсов, из них один без модели (`service-contract-send-ru`): ≈ 12 × 2–3 вызова диалоговой модели (раунды инструментов) + 11 вызовов judge ≈ 40–50 вызовов, оценка $0.25–0.50 (ориентир: ≈ 20 вызовов `eval-quick` укладываются в потолок $0.3 по умолчанию). 2) Прогнать только 6 ключевых (`service-invoice-where-ru`, `service-delivery-when-ru`, `service-price-customer-ru`, `service-price-lead-ru`, `service-erp-down-ru`, `service-foreign-data-ru`) ≈ 25 вызовов, $0.1–0.2. 3) Не гонять до гейта M3.
 
 **Рекомендация.** Вариант 2 перед гейтом M3, вариант 1 — на M3-QA-01 вместе со сквозным прогоном. Точные id и команда — в описании PR M3-CRM-07.
+
+## Q-FIX62-1 · В событии `delivery.status_changed` нет значения для «принято клиентом» (FIX-62) — для архитектора
+
+**Контекст.** Когда клиент принял все строки, исполнение сделки переходит в `ACCEPTED` и ERP шлёт `delivery.status_changed`. Но `DeliveryEvent.status` в `events.schema.json` (и `Literal` в CRM) знает только `assembling | in_transit | ready_to_ship | shipped | delivered`; значения `accepted` нет, а CRM читает тело строго по этому перечню (иначе `rejected`). Прежний код для любого иного статуса (`accepted`, `disputed`, `pending`) подставлял `assembling` — неправда в сообщении бота. Контракт и CRM в FIX-62 не трогаются.
+
+**Варианты.** 1) Слать `delivered` (физически поставка доставлена), а факт приёмки — в `line_summary` («Все строки приняты клиентом»); приёмку каждой строки CRM уже знает из `delivery.line_accepted`. 2) Добавить `accepted` в `DeliveryEvent.status` (контракт + CRM + текст бота `erp_delivery_statuses`, один PR с обеих сторон). 3) Не слать `delivery.status_changed` на приёмке.
+
+**Рекомендация.** Сейчас вариант 1 (реализован; подстановка `assembling` для `accepted`/`disputed` убрана); вариант 2 — отдельной задачей шва, если бот должен говорить клиенту «поставка принята»: сейчас клиенту, принявшему всё сам, бот повторит «доставлено».
 
 ## Q-FIX67-1 · «Взять в работу и подготовить КП» не берёт заявку на стадии «Черновик» (FIX-67) — для архитектора
 
