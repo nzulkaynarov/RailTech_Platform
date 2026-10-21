@@ -21,6 +21,8 @@ from celery.exceptions import Retry
 from django.db.models import Q
 from django.utils import timezone
 
+from core.log_mask import mask_secrets
+
 from .models import IntegrationWebhookEvent, WebhookEventStatus
 from .services.webhooks import (
     delivery_payload,
@@ -43,7 +45,7 @@ SWEEP_BATCH = 200
 
 def _register_failure(event: IntegrationWebhookEvent, error_msg: str, has_retries_left: bool, current_attempt: int):
     """Итог неудачной попытки: FAILED, если ретраи кончились, иначе PENDING с плановым временем следующей."""
-    event.last_error = error_msg
+    event.last_error = mask_secrets(error_msg)  # FIX-66b: эхо заголовков/ключей в ответе CRM не оседает в БД
     if has_retries_left:
         event.next_attempt_at = timezone.now() + timedelta(seconds=RETRY_DELAYS[current_attempt])
     else:
@@ -159,7 +161,8 @@ def deliver_webhook_event(self, event_id: int) -> bool:
             return True
 
         # Non-2xx HTTP response from CRM
-        error_msg = f"HTTP {response.status_code}: {response.text[:500]}"
+        # FIX-66b: маска ДО усечения — иначе секрет на границе обрезки теряет хвост и не опознаётся
+        error_msg = f"HTTP {response.status_code}: {mask_secrets(response.text)[:500]}"
         _register_failure(event, error_msg, has_retries_left, current_attempt)
 
         if has_retries_left:
