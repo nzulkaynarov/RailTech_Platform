@@ -36,8 +36,11 @@ make -C packages/ui-tokens check   # CI: контраст + сгенериров
   explain, `Tag`, danger-кнопки outlined/text/link, `Menu` danger, — и как фон под белый текст — `Button danger`,
   `Badge count`, `Progress`); затравки доступны как `RT_STATUS_FILL` и `--rt-color-*-default` для графиков и заливок
   без текста (Q-INF-P0-2-2).
-- Текст: `#1f1f1f` / `#595959` (secondary) / `#767676` (tertiary — подписи 12 px **только на белом**, на `#f5f5f5` и
-  тонированных заливках 4.06–4.17:1). `colorTextDescription` и shadcn `--muted-foreground` поэтому = `#595959`.
+- Текст: `#1f1f1f` / `#595959` (secondary) / **`#6e6e6e`** (tertiary и placeholder). **Отступ от таблицы SPEC-v3 §5.2**
+  (там tertiary `#767676`: 4.54:1 на белом, но 4.35 на `#fafafa` — label bordered `Descriptions`, 4.17 на `#f5f5f5`,
+  4.06 на `#e6f4ff`): по критерию §11.2 п. 6, решение лида по принципу архитектора, как с hover. `#6e6e6e` даёт
+  5.10 / 4.89 / 4.68 / 4.55:1 на `#ffffff` / `#fafafa` / `#f5f5f5` / `#e6f4ff`. `colorTextDescription` и shadcn
+  `--muted-foreground` = `#595959`.
 - Рамки `#d9d9d9` / разделители `#f0f0f0`; фон окна `#f5f5f5`, контейнер `#ffffff`; радиусы 4 / 6 / 8 / 12 (контролы 6, карточки 8).
 - Теги: `RT_TAG_TEXT` дополнен `blue`, `gold`, `red`, `purple` (`#531dab`), `cyan` — `#006d75`.
 - Ссылка при наведении и нажатии (`colorLinkHover`, `colorLinkActive`) = `primary.hover` / `primary.active` (текст ≥ 4.5:1).
@@ -58,5 +61,5 @@ ERP и CRM шрифт не подключают (заморожены, ADR-0011)
 
 `contrast.test.mjs` читает `tokens.json`, собранные `dist/shadcn.css` и `dist/antd.ts` (реальные пары компонентов AntD); пары «текст / фон» перечислены в массиве `pairs`
 явно (новая пара в интерфейсе → строка в массиве). Пары ниже 4.5:1, которые фиксирует SPEC-v3 §5.2, вынесены в
-`KNOWN_BELOW_AA` со ссылкой на вопрос в `docs/QUESTIONS.md` (Q-INF-P0-2-1, Q-INF-P0-2-3): тест держит их в 3:1…4.5:1 и просит перенести в
+`KNOWN_BELOW_AA` со ссылкой на вопрос в `docs/QUESTIONS.md` (Q-INF-P0-2-1): тест держит их в 3:1…4.5:1 и просит перенести в
 основной список, когда пара начнёт проходить.

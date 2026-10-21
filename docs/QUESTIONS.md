@@ -637,12 +637,8 @@ Q-1…Q-9 решены — см. `DECISIONS.md`. Номер вопроса ун�
 
 **Решено.** В AntD-выходе (`dist/antd.ts`, копии) `colorError = #a8071a`, `colorWarning = #874d00`, `colorSuccess = #237804` (значения «text»), явные `colorErrorBg/Border`, `colorWarningBg/Border`, `colorSuccessBg/Border` (светлые оттенки палитры antd), `colorErrorHover/Active`, `colorErrorTextHover/Active`, `colorSuccessHover/Active`, `colorWarningHover/Active` (все ≥ 4.5:1 на белом). Затравочные `#ff4d4f`, `#faad14`, `#52c41a` остаются в `tokens.json`, в CSS-переменных `--rt-color-*-default` и в экспорте `RT_STATUS_FILL` — только для графиков и заливок без текста. Тест контраста проверяет реальные пары antd (Tag, Form explain, Button danger primary/outlined/text/link, Badge count, Menu/Dropdown danger, Progress) на итоговых токенах — все проходят 4.5:1, исключений по статусам нет. Цвет бейджа очереди в Платформе — `#a8071a` вместо `#ff4d4f` макета v3.
 
-## Q-INF-P0-2-3 · `#767676` (tertiary) проходит 4.5:1 только на белом (INF-P0-2) — для архитектора, дизайн Платформы
+## Q-INF-P0-2-3 · `#767676` (tertiary) проходит 4.5:1 только на белом (INF-P0-2) — **решено лидом по принципу архитектора: `#6e6e6e` во всех выходах**
 
-**Контекст.** `colorTextTertiary = #767676` (SPEC-v3 §5.2, «подписи 12 px, 4.5:1 — минимум») на белом даёт 4.54:1, на фоне окна `#f5f5f5` — 4.17:1, на `#e6f4ff` — 4.06:1. В 03-frontend §4 подзаголовок страницы и крошки уже `#595959`; подписи `#767676` задуманы на белых карточках, но AntD выводит часть подписей и на `#f5f5f5`. Также `text-success` на `bg-success/10` поверх `#f5f5f5` (Cabinet StatusBadge в строке с `bg-muted`) — 4.49:1.
+**Контекст.** `colorTextTertiary = #767676` (SPEC-v3 §5.2, «подписи 12 px, 4.5:1 — минимум») на белом даёт 4.54:1, на `#fafafa` (`colorFillAlter`: label bordered `Descriptions`, `DryRunPanel` CRM) — 4.35:1 (в main 5.67), на фоне окна `#f5f5f5` — 4.17:1, на `#e6f4ff` — 4.06:1; в замороженном CRM это регрессия контраста.
 
-**Что сделано в 0.2.0.** `colorTextTertiary` = `#767676` как в спецификации; `colorTextDescription` (его берут Typography secondary, Empty, Form extra) и shadcn `--muted-foreground` = `#595959`, чтобы прочие тексты AntD и Cabinet проходили на любых светлых фонах. В `tokens.json` и тесте — правило «tertiary только на белом».
-
-**Варианты.** 1) Оставить правило «tertiary только на белом» (текущее). 2) Заменить `#767676` на `#6e6e6e`: 5.10:1 на белом, 4.68:1 на `#f5f5f5`, 4.55:1 на `#e6f4ff`.
-
-**Рекомендация.** 1 для P0; вернуться к вопросу при ревью дизайна (макеты v3 используют `#767676` на белых карточках и в рейле).
+**Решено.** Третий цвет текста и placeholder = `#6e6e6e` (tokens.json, antd, shadcn/CSS): 5.10 / 4.89 / 4.68 / 4.55:1 на `#ffffff` / `#fafafa` / `#f5f5f5` / `#e6f4ff`. Отступ от таблицы SPEC-v3 §5.2 по критерию §11.2 п. 6, как с hover (Q-INF-P0-2-1); описан в README пакета. `colorTextDescription` и shadcn `--muted-foreground` = `#595959`. Тесты (пакет и CRM) проверяют tertiary на всех этих фонах как обычные пары. Единственное оставшееся исключение по тексту — `text-success` на `bg-success/10` поверх `#f5f5f5` (4.49:1, так же как в main).

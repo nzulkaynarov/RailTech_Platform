@@ -62,7 +62,14 @@ const pairs = [
   ["secondary на белом", c.text.secondary, white],
   ["secondary на фоне окна", c.text.secondary, layout],
   ["secondary на primary.bg (выбранный пункт, пузырь бота)", c.text.secondary, c.primary.bg],
-  ["tertiary на белом (подписи 12 px — только на белых карточках)", c.text.tertiary, white],
+  ["tertiary на белом (подписи 12 px)", c.text.tertiary, white],
+  ["tertiary на фоне окна #f5f5f5", c.text.tertiary, layout],
+  ["tertiary на primary.bg #e6f4ff", c.text.tertiary, c.primary.bg],
+  ["tertiary на colorFillAlter #fafafa (label bordered Descriptions, Table header)", c.text.tertiary, "#fafafa"],
+  ["tertiary на success.bg и warning.bg (пузыри чата CRM)", c.text.tertiary, c.success.bg],
+  ["tertiary на warning.bg", c.text.tertiary, c.warning.bg],
+  ["antd colorTextTertiary на colorFillAlter #fafafa", a.colorTextTertiary, "#fafafa"],
+  ["antd colorTextPlaceholder на белом", a.colorTextPlaceholder, white],
   ["placeholder на белом (поля ввода)", c.text.placeholder, white],
   // Основной цвет
   ["white на кнопке primary", c.primary.foreground, c.primary.default],
@@ -157,14 +164,12 @@ const pairs = [
 // Пары ниже 4.5:1, которые фиксирует SPEC-v3 §5.2 или действующие компоненты. Вопросы — docs/QUESTIONS.md, Q-INF-P0-2-*.
 const KNOWN_BELOW_AA = [
   ["white на shadcn bg-primary/90 (hover кнопок Cabinet/ERP до перехода на bg-primary-hover, 4.36:1, Q-INF-P0-2-1)", v["primary-foreground"], over(v["primary"], 0.9, v["background"])],
-  ["tertiary на фоне окна #f5f5f5 (Q-INF-P0-2-3)", c.text.tertiary, layout],
-  ["tertiary на primary.bg #e6f4ff (Q-INF-P0-2-3)", c.text.tertiary, c.primary.bg],
   ["shadcn text-success на bg-success/10 поверх muted #f5f5f5 (4.49:1, Q-INF-P0-2-3)", v["success"], over(v["success"], 0.1, v["muted"])],
 ];
 
 test("эталонные значения контраста", () => {
   assert.ok(Math.abs(contrast("#000000", "#ffffff") - 21) < 0.01);
-  assert.ok(Math.abs(contrast("#767676", "#ffffff") - 4.54) < 0.01);
+  assert.ok(Math.abs(contrast("#6e6e6e", "#ffffff") - 5.10) < 0.01);
   assert.ok(Math.abs(contrast("#1677ff", "#ffffff") - 4.1) < 0.05);
 });
 
@@ -182,7 +187,7 @@ test("значения SPEC-v3 §5.2 / 03-frontend.md §3", () => {
   assert.deepEqual([c.warning.default, c.warning.text], ["#faad14", "#874d00"]);
   assert.deepEqual([c.error.default, c.error.text], ["#ff4d4f", "#a8071a"]);
   assert.deepEqual([c.tag.purple, c.tag.cyan], ["#531dab", "#006d75"]);
-  assert.deepEqual([c.text.default, c.text.secondary, c.text.tertiary], ["#1f1f1f", "#595959", "#767676"]);
+  assert.deepEqual([c.text.default, c.text.secondary, c.text.tertiary], ["#1f1f1f", "#595959", "#6e6e6e"]);
   assert.deepEqual([c.surface.border, c.surface.split], ["#d9d9d9", "#f0f0f0"]);
   assert.deepEqual([c.surface.layout, c.surface.background], ["#f5f5f5", "#ffffff"]);
   assert.deepEqual([tokens.radius.md, tokens.radius.lg], [6, 8]);

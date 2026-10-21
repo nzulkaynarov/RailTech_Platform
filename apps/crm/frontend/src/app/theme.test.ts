@@ -75,8 +75,16 @@ const pairs: [string, string, string][] = [
   ["secondary on container", tk.colorTextSecondary, tk.colorBgContainer],
   ["secondary on layout", tk.colorTextSecondary, tk.colorBgLayout],
   ["tertiary on container", tk.colorTextTertiary, tk.colorBgContainer],
-  // #767676 (SPEC-v3 §5.2) проходит только на белом; на фоне окна и тонированных заливках подписи AntD
-  // (Typography secondary, Empty, Form extra) выводятся цветом colorTextDescription = secondary (#595959).
+  // tertiary = #6e6e6e (отступ от SPEC-v3 §5.2: #767676 даёт 4.06–4.35:1 на светлых фонах), проходит на всех.
+  ["tertiary on layout", tk.colorTextTertiary, tk.colorBgLayout],
+  ["tertiary on primaryBg (bot bubble)", tk.colorTextTertiary, tk.colorPrimaryBg],
+  ["tertiary on successBg (manager bubble)", tk.colorTextTertiary, tk.colorSuccessBg],
+  ["tertiary on warningBg (system bubble)", tk.colorTextTertiary, tk.colorWarningBg],
+  [
+    "tertiary on colorFillAlter (bordered Descriptions label, DryRunPanel)",
+    tk.colorTextTertiary,
+    opaque(tk.colorFillAlter),
+  ],
   ["secondary on primaryBg (bot bubble)", tk.colorTextSecondary, tk.colorPrimaryBg],
   ["description on primaryBg (bot bubble)", tk.colorTextDescription, tk.colorPrimaryBg],
   ["description on successBg (manager bubble)", tk.colorTextDescription, tk.colorSuccessBg],
@@ -128,13 +136,6 @@ const pairs: [string, string, string][] = [
   ["default tag", tk.colorText, opaque(tk.colorFillQuaternary)],
 ];
 
-// Пары ниже 4.5:1, зафиксированные SPEC-v3 §5.2 (docs/QUESTIONS.md, Q-INF-P0-2-3). Тест держит их в 3:1..4.5:1 и
-// требует перенести пару в основной список, когда она начнёт проходить.
-const knownBelowAa: [string, string, string][] = [
-  ["tertiary on layout (Q-INF-P0-2-3)", tk.colorTextTertiary, tk.colorBgLayout],
-  ["tertiary on primaryBg (Q-INF-P0-2-3)", tk.colorTextTertiary, tk.colorPrimaryBg],
-];
-
 describe("theme contrast (WCAG 2.1 AA, 1.4.3)", () => {
   it("computes the reference ratios", () => {
     expect(contrast("#000000", "#ffffff")).toBeCloseTo(21, 1);
@@ -144,12 +145,6 @@ describe("theme contrast (WCAG 2.1 AA, 1.4.3)", () => {
 
   it.each(pairs)("%s ≥ 4.5:1", (_name, fg, bg) => {
     expect(contrast(fg, bg)).toBeGreaterThanOrEqual(4.5);
-  });
-
-  it.each(knownBelowAa)("known exception: %s stays within 3:1..4.5:1", (_name, fg, bg) => {
-    const ratio = contrast(fg, bg);
-    expect(ratio).toBeGreaterThanOrEqual(3);
-    expect(ratio).toBeLessThan(4.5);
   });
 
   it("keeps seed status colours out of antd tokens (text and white-on-fill pairs)", () => {

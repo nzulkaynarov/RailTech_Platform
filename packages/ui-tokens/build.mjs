@@ -57,7 +57,7 @@ const shadcnVars = {
   "--secondary": c.surface.muted,
   "--secondary-foreground": c.text.default,
   "--muted": c.surface.muted,
-  // muted-foreground — на белом, #f5f5f5 и светлых заливках: tertiary (#767676) даёт на них < 4.5:1, поэтому secondary.
+  // muted-foreground — на белом, #f5f5f5 и светлых заливках: tertiary (#6e6e6e) проходит и там, но основной текст второго уровня — secondary.
   "--muted-foreground": c.text.secondary,
   "--accent": c.primary.bg,
   "--accent-foreground": c.primary.text,
@@ -141,7 +141,7 @@ const antd = {
   colorText: c.text.default,
   colorTextSecondary: c.text.secondary,
   colorTextTertiary: c.text.tertiary,
-  // Описания и подсказки AntD выводит и на #f5f5f5, и на светлых заливках, где #767676 даёт < 4.5:1.
+  // Описания и подсказки AntD выводит и на #f5f5f5, и на светлых заливках, — secondary (#595959) с запасом проходит везде.
   colorTextDescription: c.text.secondary,
   colorTextPlaceholder: c.text.placeholder,
   // Статусные цвета AntD читает и как текст (Form explain, Tag, Typography, danger-ссылки), и как заливку с белым
