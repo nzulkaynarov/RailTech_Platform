@@ -41,7 +41,13 @@ Contract-first действует для `portal`, `integration`, событий
 | `GET /catalog/search?q=&mode=lead|client` | опубликованный каталог | в режиме `lead` без цен и остатков; в `client` — с ценой и статусом наличия |
 | `POST /users/provision` | сотрудник из CRM | `crm_user_id, email, name, role (admin|backoffice), permissions[]` (коды каталога ERP, `ErpPermission`; чужой код → 422), необязательное `role_codes[]` (системные роли бэк-офиса, `SystemRoleCode`: `CALCULATION, CATALOG_SUPPLY, FULFILLMENT, FINANCE, HEAD, VIEWER`; чужой код → 422; поля нет — системные роли не трогаются; ERP снимает только выданные ранее из CRM; ручные роли не затираются); ответ `erp_user_id`; e-mail занят другим пользователем ERP (другой `crm_user_id` или нет сопоставления) → 409 `EMAIL_CONFLICT` |
 | `DELETE /users/{crm_user_id}/sessions` | отзыв сессий и входа | при снятии доступа в CRM: refresh и access-токены гаснут (прежний access → 401), вход закрыт; аудит `sso.revoke` |
-| `GET /health` | здоровье для «Состояния системы» CRM | версия, миграции применены, очередь жива |
+| `GET /health` | здоровье для «Состояния системы» CRM и центра внешних сервисов | версия, миграции применены, очередь жива; `externals[]` (M3-ERP-06, необязательно) — внешние сервисы ERP: `code` (`cbu_rates`, `customs_tariff`, `mail`, `litellm`, `s3`, `sentry`), `status` (`ok`/`degraded`/`fail`/`unknown`/`disabled`), `enabled`, `switchable`, `last_success_at`, `last_error_at`, `last_error` (≤ 200 знаков, без секретов), `ok_24h`, `errors_24h` |
+| `PUT /externals/{code}/switch` | выключатель внешнего сервиса ERP из центра внешних сервисов CRM (M3-ERP-06) | вход: `enabled`, `reason?`; ответ: `code`, `enabled`, `changed_at`. Идемпотентно; неизвестный `code` → 404, Sentry (`switchable: false`) → 409 `NOT_SWITCHABLE` |
+
+`externals[]` в `/health` (M3-ERP-06) строится по журналам и счётчикам ERP без обращений к самим сервисам — ответ быстрый
+(< 300 мс). Добавлено аддитивно (необязательное поле, новая операция); читатель CRM терпимый: нет поля — «нет данных»,
+неизвестные `code` и `status` пропускаются. Выключенный из CRM сервис ERP не вызывается (курсы и ТН ВЭД — прогон
+пропускается, почта — `FAILED` «выключено из CRM», модели — нейтральный отказ, S3 — запись отклоняется).
 
 Передача (`/clients/handoff`): компания ищется по `crm_client_id`, затем по ИНН; сопоставление создаётся **до** сделки, поэтому
 `request.created(source=crm)` и `invite.sent` доходят до CRM; ИНН чужого `crm_client_id` — 409 `INN_CONFLICT`; согласие хранится
@@ -139,6 +145,8 @@ JSON-integer, не `true`), `iat` и `exp` обязательны, `exp − iat 
 | `get_document_link(erp_document_id)` | customer | подписанный URL (бот отправляет файл) |
 | `search_catalog(query, top_k)` | prospect, customer | prospect: название, описание, единица; customer: + цена, наличие, срок |
 | `create_request(summary, lines[])` | customer | заявка в ERP от имени клиента (код решает, что это «запрос», модель лишь предлагает текст) |
+
+Клиент CRM (M3-CRM-07, Q-FIX36-1 вариант 1; `apps/crm/backend/app/agents/erp_mcp.py`): контракт не менялся. SDK `mcp` не отдаёт код HTTP-ответа (на 401/400/429 вратаря исключение транспорта одно и то же), поэтому клиент берёт статус и `Retry-After` из `event_hooks` HTTP-клиента. Политика: 401 `INVALID_AGENT_CONTEXT` — контекст выпускается заново (новый `jti`) и вызов повторяется один раз; 429 — ждать `Retry-After` (не дольше 5 с и не больше двух раз), иначе отказ; 400 `INVALID_ARGUMENTS` и сетевой сбой — без повтора. Любой отказ — «ERP недоступен» для хода: бот отвечает «сейчас не могу проверить», не называет чисел и заводит запрос менеджеру. Контекст выпускается только в режиме `customer` (`erp_company_id` — из БД CRM по проверенной привязке Telegram, не от модели); лиду `erp-mcp` не открывается. Модели отданы пять инструментов (`list_client_deals`, `get_deal_status`, `get_delivery_status`, `list_client_documents`, `search_catalog`); `get_document_link` и `create_request` не отданы: файл отправляет код через docs-mcp, запрос оформляет `create_service_request` CRM.
 
 ## 6. SSO-токен сотрудника
 

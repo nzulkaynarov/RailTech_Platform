@@ -7,6 +7,8 @@ re-typing the whole КП — cutting time-to-first-КП (the wedge metric). Rule
 """
 
 import logging
+import math
+from dataclasses import dataclass
 from decimal import Decimal
 from typing import Optional, Tuple
 
@@ -37,10 +39,69 @@ _LINE_FIELDS = (
 )
 
 
+@dataclass(frozen=True)
+class RequestLine:
+    """Строка заявки клиента в виде, который копирует построитель КП (поля `_LINE_FIELDS` + `pk`).
+
+    Строки заявки из Cabinet и из передачи CRM лежат в `portal.PortalRequestLine`, а не в позициях КП —
+    сервисы ниже читают их одинаково через `_request_items`, не зная, откуда строка."""
+
+    pk: int
+    imported_raw_name: str
+    quantity: int
+    unit: str = ""
+    note: str = ""
+    product_id: Optional[int] = None
+    name_canonical: str = ""
+    unit_code: str = ""
+    mpn: str = ""
+    gost_drawing: str = ""
+    hs_code: str = ""
+
+
+def _portal_request_lines(deal: Deal) -> list:
+    """Строки заявки клиента из портала / передачи CRM. Ничего не выдумываем: количество не указано — 1
+    (в КП оно целое и не меньше единицы), дробное округляется вверх, чтобы не заказать меньше написанного."""
+    lines = []
+    for line in deal.portal_lines.all():
+        text = (line.text or "").strip()
+        max_name = QuoteItem._meta.get_field("imported_raw_name").max_length
+        quantity = max(1, math.ceil(line.quantity)) if line.quantity else 1
+        lines.append(
+            RequestLine(
+                pk=line.pk,
+                imported_raw_name=text[:max_name],
+                # Не влезло в наименование — полный текст остаётся в примечании, а не теряется.
+                note=text if len(text) > max_name else "",
+                quantity=quantity,
+                unit=(line.unit or "").strip()[: QuoteItem._meta.get_field("unit").max_length],
+            )
+        )
+    return lines
+
+
 def _request_items(deal: Deal):
-    """The buyer's request lines — items on the deal's UNCLAIMED request quote (prepared_by=None)."""
+    """Строки заявки клиента: строки портала (`PortalRequestLine`) либо, у прежних сделок, позиции
+    «КП заявки» без исполнителя (`prepared_by=None`)."""
+    portal_lines = _portal_request_lines(deal)
+    if portal_lines:
+        return portal_lines
     request_quote = deal.quotes.filter(prepared_by__isnull=True).order_by("version").first()
     return list(request_quote.items.all()) if request_quote else []
+
+
+def deal_request_lines_count(deal: Deal) -> int:
+    """Сколько строк в заявке (для кнопок карточки сделки: «Взять в работу и подготовить» — только со строками)."""
+    return len(_request_items(deal))
+
+
+def deal_request_text(deal: Deal) -> str:
+    """Заявка словами: полный текст клиента (`PortalRequestSummary`), иначе комментарий сделки `notes`
+    (передача из CRM кладёт суть потребности туда)."""
+    summary = getattr(deal, "portal_summary", None)
+    if summary is not None and (summary.text or "").strip():
+        return summary.text.strip()
+    return (deal.notes or "").strip()
 
 
 def _resolve_exact_catalog_matches(request_items) -> dict:
@@ -363,8 +424,42 @@ def take_and_prepare_quote(deal_id: int, actor: CustomUser) -> Tuple[Optional[di
          prefilled КП synchronously ({"mode": "quote", "quote": ...}). The paid ai.draft
          entitlement that used to pick the mode was removed in M1-ERP-02 wave 2.
 
+    АТОМАРНО (FIX-67): сначала — только проверки (права, строки заявки, стадия, чужой исполнитель),
+    ничего не пишущие; затем claim + стадия + КП в одной транзакции, и отказ на любом шаге откатывает
+    предыдущие. Раньше при ``NO_REQUEST_LINES`` заявка уже была назначена и переведена в CALCULATING.
+
     Returns ({"deal", "mode", "quote"|None}, None) or (None, error_code).
     """
+    error = _take_and_prepare_preflight(deal_id, actor)
+    if error:
+        return None, error
+    with transaction.atomic():
+        result, error = _take_and_prepare_steps(deal_id, actor)
+        if error:
+            transaction.set_rollback(True)  # claim и стадия — вместе с отказом, не по отдельности
+            return None, error
+    return result, None
+
+
+def _take_and_prepare_preflight(deal_id: int, actor: CustomUser) -> Optional[str]:
+    """Все отказы, которые можно знать ДО изменений (без записи): права, строки заявки, стадия, исполнитель."""
+    from accounts.services import is_seller
+
+    if not is_seller(actor):
+        return "MEMBER_REQUIRED_FOR_ACTION"
+    deal, _items, _seller_company_id, error = _run_draft_quote_gates(deal_id, actor)
+    if error:
+        return error
+    if deal.assigned_to_id and deal.assigned_to_id != actor.id:
+        return "DEAL_ALREADY_CLAIMED"
+    if (deal.stage.code if deal.stage_id else None) not in _TAKEABLE_STAGES:
+        return "DEAL_STAGE_NOT_TAKEABLE"
+    return None
+
+
+def _take_and_prepare_steps(deal_id: int, actor: CustomUser) -> Tuple[Optional[dict], Optional[str]]:
+    """Шаги с записью; вызывается внутри `transaction.atomic()` — вызывающий откатывает при ошибке."""
+    from accounts.services.permissions import primary_seller_company_id
     from crm.constants import DealStageCode
 
     from .assignment import claim_deal
@@ -383,8 +478,6 @@ def take_and_prepare_quote(deal_id: int, actor: CustomUser) -> Tuple[Optional[di
             return None, err
 
     # Idempotency: the own company's КП already exists → reuse it, never fork a duplicate.
-    from accounts.services.permissions import primary_seller_company_id
-
     seller_company_id = primary_seller_company_id(actor)
     existing = (
         deal.quotes.exclude(prepared_by__isnull=True)

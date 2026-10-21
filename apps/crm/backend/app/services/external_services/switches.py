@@ -1,5 +1,8 @@
 """Выключатели внешних сервисов (M3-CRM-12, ADR-0024): пароль админа, аудит, применение.
 
+Сервис ERP (M3-ERP-06) — операция `PUT /externals/{code}/switch` в ERP; сначала ERP, потом строка и
+аудит CRM: если ERP не ответила, выключатель не считается поставленным.
+
 Вендор модели — «снять с маршрута» в шлюзе: `model_group_alias` (алиасы-чаты → запасная модель) и
 блокировка deployment эмбеддингов; значение `model_group_alias` целиком принадлежит CRM, минутная
 проверка сверяет его с выключателями (`reconcile`). Langfuse, почта и Telegram — флаг в БД, который
@@ -23,6 +26,7 @@ from app.domain.errors import (
     UpstreamUnavailableError,
     ValidationFailedError,
 )
+from app.integrations.erp_externals import ErpSwitchClient
 from app.integrations.litellm_admin import LiteLLMAdmin, LiteLLMAdminError
 from app.integrations.litellm_catalog import ModelCatalog
 from app.models.external_services import ExternalServiceSwitch
@@ -51,12 +55,14 @@ class SwitchService:
         mail: MailService,
         board: SwitchBoard,
         lockout: reauth.LockoutPolicy | None = None,
+        erp_switch: ErpSwitchClient | None = None,
     ) -> None:
         self._sessions = sessions
         self._admin = admin
         self._catalog = catalog
         self._mail = mail
         self._board = board
+        self._erp_switch = erp_switch
         self._lockout = lockout or reauth.LockoutPolicy()
 
     async def disable(
@@ -68,6 +74,8 @@ class SwitchService:
         if spec.vendor is not None:
             vendors = await self._disabled_vendors() | {spec.vendor}
             state = await self._apply_vendor_off(spec.vendor, vendors, providers)
+        elif spec.switch == "erp":
+            await self._apply_erp(key, enabled=False, reason=reason)
         await self._save(who, key, True, reason, state)
         logger.info("external_service_disabled", service=key)
         return SwitchOutcome(key, True, state)
@@ -80,6 +88,8 @@ class SwitchService:
         if spec.vendor is not None:
             vendors = await self._disabled_vendors() - {spec.vendor}
             await self._apply_vendor_on(spec.vendor, vendors)
+        elif spec.switch == "erp":
+            await self._apply_erp(key, enabled=True, reason=None)
         await self._save(who, key, False, None, {})
         if spec.switch == "mail":
             await self._mail.resume_queued()
@@ -138,6 +148,14 @@ class SwitchService:
                 )
             )
             return {k.removeprefix(reg.VENDOR_PREFIX) for k in rows.all()}
+
+    async def _apply_erp(self, key: str, *, enabled: bool, reason: str | None) -> None:
+        """Выключатель сервиса ERP: операция integration; состояние хранит ERP, CRM — аудит."""
+        if self._erp_switch is None:
+            raise _not_switchable("Связь с ERP не настроена в этом процессе")
+        await self._erp_switch.set_switch(
+            key.removeprefix(reg.ERP_SERVICE_PREFIX), enabled=enabled, reason=reason
+        )
 
     async def _apply_vendor_off(
         self, vendor: str, vendors: set[str], providers: Mapping[str, str | None]

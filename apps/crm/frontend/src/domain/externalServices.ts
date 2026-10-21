@@ -17,9 +17,10 @@ const ORDER: Record<ServiceStatus, number> = { fail: 0, warn: 1, unknown: 2, off
 const GROUPS: GroupKey[] = ["attention", "disabled", "working", "idle", "erp"];
 
 export function groupOf(service: ExternalServiceOut): GroupKey {
-  if (service.source === "erp") return "erp";
   if (service.switch?.disabled) return "disabled";
   if (service.status === "fail" || service.status === "warn" || service.stale) return "attention";
+  // Сервисы ERP остаются в своей группе, пока в норме или нет данных; сбой виден сверху, как у остальных.
+  if (service.source === "erp") return "erp";
   if (service.status === "ok") return "working";
   return "idle";
 }
@@ -73,11 +74,19 @@ export function formatBytes(bytes: number): string {
   return `${formatNumber(value, unit === 0 ? 0 : 1)} ${units[unit] ?? ""}`;
 }
 
+const DATE_KEYS = new Set([
+  "not_after",
+  "last_copy_at",
+  "webhook_error_at",
+  "last_success_at",
+  "last_error_at",
+]);
+
 function metricValue(key: string, value: number | string): string {
   if (key === "backup_source" && typeof value === "string")
     return t.externalServices.backupSources[value] ?? value;
   if (typeof value === "string") {
-    return key === "not_after" || key === "last_copy_at" ? formatDateTime(value) : value;
+    return DATE_KEYS.has(key) ? formatDateTime(value) : value;
   }
   if (key.endsWith("_usd")) return formatUsd(value);
   if (key === "error_rate_24h") return percent(value);

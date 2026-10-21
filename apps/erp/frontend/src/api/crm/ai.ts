@@ -102,6 +102,19 @@ export const aiApi = {
 		});
 	},
 
+	// FIX-67 — заявка словами: сервер сам берёт текст заявки со сделки и разбирает его тем же ИИ-извлечением,
+	// что и файл клиента; строки дописываются в КП. 202+task_id → поллинг ai-status. ИИ выключен —
+	// 503 AI_DISABLED, шлюз недоступен — результат AI_EXTRACT_FAILED (вызывающий показывает понятный текст).
+	parseRequestText: async (quoteId: number) => {
+		return runAiJob<{ added: number; recognized: number; truncated: boolean; quote_id: number }>(async () => {
+			const response = await apiClient.post<{ task_id: string }>(
+				'sourcing/parse-request-text/',
+				{ quote_id: quoteId },
+			);
+			return response.data;
+		});
+	},
+
 	// Q2 — импорт позиций КП из файла продавцом: multipart POST → 202+task_id, извлечение на
 	// Celery (Excel/PDF/фото), результат {added, recognized, truncated} из ai-status поллинга.
 	importQuoteLinesFromFile: async (quoteId: number, file: File) => {

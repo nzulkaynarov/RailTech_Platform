@@ -25,6 +25,7 @@ class DialogState(TypedDict):
     document: dict[str, Any] | None
     document_choices: list[tuple[int, str]]
     service_request: bool
+    erp_used: bool
 
 
 @dataclass(frozen=True, slots=True)
@@ -42,5 +43,7 @@ class DialogResult:
     # BOT-07: (id, подпись) документов клиента для кнопок выбора; id — из поиска кода.
     document_choices: list[tuple[int, str]] = field(default_factory=list)
     service_request: bool = False
+    # Ответ опирался на данные ERP: лиду (клиента деактивировали) такой ответ в историю не отдаётся.
+    erp_used: bool = False
     mode: str = "prospect"
     price_quoted: bool = False

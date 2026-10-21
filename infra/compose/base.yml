@@ -46,9 +46,18 @@ x-crm-backend: &crm-backend
     KB_MCP_URL: http://crm-mcp-kb:8101/mcp
     CRM_MCP_URL: http://crm-mcp-crm:8102/mcp
     DOCS_MCP_URL: http://crm-mcp-docs:8103/mcp
+    # Сервисный режим бота (M3-CRM-07): данные клиента из ERP через erp-mcp. Ключ контекста общий с ERP
+    # (`ERP_MCP_CONTEXT_KEY` проверяет erp-mcp); пустой ключ или ERP_MCP_ENABLED=false — бот без данных ERP.
+    # На проде сервис erp-mcp под профилем `mcp` (RT_PROFILES): без него бот честно отвечает «не могу проверить».
+    ERP_MCP_ENABLED: ${ERP_MCP_ENABLED:-true}
+    ERP_MCP_URL: http://erp-mcp:8104/mcp/erp
+    ERP_MCP_CONTEXT_KEY: ${ERP_MCP_CONTEXT_KEY:-}
     # Шов CRM ↔ ERP (FIX-01): значений по умолчанию в коде нет, без .env стенд не поднимается.
     # Сервисный токен и секрет вебхуков CRM берёт из «Подключений» → ERP (ADR-0022), SSO — отсюда.
     PLATFORM_SSO_SECRET: ${PLATFORM_SSO_SECRET:?set in .env}
+    # Подпись вебхуков ERP v2 (FIX-61): true — CRM принимает и старую подпись (только тело), пока ERP не выложен с v2;
+    # после выкладки обеих сторон — false (docs/runbooks/webhooks.md).
+    ERP_WEBHOOK_SIGN_LEGACY: ${ERP_WEBHOOK_SIGN_LEGACY:-true}
     # Переход CRM ↔ ERP по SSO; по умолчанию выключен (FIX-03), включает владелец после FIX-10/FIX-11.
     PLATFORM_SSO_ENABLED: ${PLATFORM_SSO_ENABLED:-false}
     # Публичный адрес ERP для перехода по SSO; на стенде с HTTP_PORT≠80 порт обязателен (иначе переход уходит на :80).
@@ -403,7 +412,7 @@ services:
   # erp-mcp (FIX-36): инструменты ERP для агента CRM на официальном SDK `mcp` — отдельный процесс, как crm-mcp-*
   # (не в Daphne: у SDK свой lifespan/менеджер сессий, а Channels-приложение Django его не запускает). Порт 8104
   # внутренний, наружу не публикуется; Caddy отдаёт `/mcp` на erp.localhost 404 (FIX-03). Адрес для агента CRM:
-  # http://erp-mcp:8104/mcp/erp (CRM его пока не подключает — M3-CRM-07). Схемы инструментов — не копия в коде:
+  # http://erp-mcp:8104/mcp/erp (CRM ходит к нему из сервисного режима бота — M3-CRM-07). Схемы инструментов — не копия в коде:
   # файл контракта монтируется только на чтение в /packages/contracts (как в тестах ERP); нет файла — сервис не стартует.
   erp-mcp:
     build:

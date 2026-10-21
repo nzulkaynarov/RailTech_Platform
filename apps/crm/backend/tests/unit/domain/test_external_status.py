@@ -11,6 +11,7 @@ from app.domain.system_status import BackupFacts, Component
 
 NOW = datetime(2026, 10, 14, 9, 0, tzinfo=UTC)
 OK = HttpFacts(None, None, 12)
+HOOK = "https://crm.example/telegram/webhook"
 
 
 @pytest.mark.parametrize(
@@ -24,11 +25,34 @@ OK = HttpFacts(None, None, 12)
         (TelegramFacts(True, "polling", username="rt_bot", pending_updates=0), "ok", "@rt_bot"),
         (TelegramFacts(True, "polling", pending_updates=150), "warn", "150 сообщений ждут"),
         (TelegramFacts(True, "polling", webhook_url="https://x/tg"), "fail", "другого сервера"),
-        (TelegramFacts(True, "webhook", webhook_url=None), "fail", "не установлен"),
+        (
+            TelegramFacts(True, "webhook", config_url=HOOK, webhook_url=None),
+            "fail",
+            "не установлен",
+        ),
+        (TelegramFacts(True, "webhook", config_url=""), "fail", "Вебхук Telegram не настроен"),
+        (
+            TelegramFacts(True, "webhook", config_url="http://crm.example/tg"),
+            "fail",
+            "Вебхук Telegram не настроен",
+        ),
+        (
+            TelegramFacts(True, "webhook", config_url=HOOK, webhook_url=HOOK, username="rt_bot"),
+            "ok",
+            "@rt_bot",
+        ),
+        (
+            TelegramFacts(
+                True, "webhook", config_url=HOOK, webhook_error="getWebhookInfo: HTTP 502"
+            ),
+            "warn",
+            "Не удалось узнать состояние вебхука",
+        ),
         (
             TelegramFacts(
                 True,
                 "webhook",
+                config_url=HOOK,
                 webhook_url="https://crm.example/tg",
                 last_error_message="Connection timed out",
                 last_error_at=NOW - timedelta(minutes=3),
@@ -40,6 +64,7 @@ OK = HttpFacts(None, None, 12)
             TelegramFacts(
                 True,
                 "webhook",
+                config_url=HOOK,
                 webhook_url="https://crm.example/tg",
                 last_error_message="old",
                 last_error_at=NOW - timedelta(hours=2),
@@ -55,6 +80,39 @@ def test_telegram(facts: TelegramFacts, status: str, words: str) -> None:
     assert words in result.summary
     if status in ("fail", "warn"):
         assert result.hint, "у проблемы всегда есть «что сделать»"
+
+
+def test_telegram_webhook_not_configured_has_error_and_hint() -> None:
+    result = rules.telegram(TelegramFacts(True, "webhook", config_url=""), NOW)
+    assert result.error == "TELEGRAM_WEBHOOK_URL пуст"
+    assert "CRM_DOMAIN" in (result.hint or "")
+    assert "/telegram/webhook" in (result.hint or "")
+
+
+def test_webhook_not_configured_has_no_fix_button_target() -> None:
+    """«Исправить» вёл бы в «Подключения», а адрес вебхука там не правится (FIX-66)."""
+    result = rules.telegram(TelegramFacts(True, "webhook", config_url=""), NOW)
+    assert result.metrics["_no_fix"] == 1
+
+
+def test_telegram_shows_actual_webhook_and_last_error() -> None:
+    """FIX-66: центр показывает фактический адрес и последнюю ошибку из getWebhookInfo."""
+    result = rules.telegram(
+        TelegramFacts(
+            True,
+            "webhook",
+            config_url=HOOK,
+            username="rt_bot",
+            webhook_url=HOOK,
+            last_error_message="Connection timed out",
+            last_error_at=NOW - timedelta(minutes=3),
+        ),
+        NOW,
+    )
+    assert result.status == "warn"
+    assert result.metrics["webhook_url"] == HOOK
+    assert result.metrics["webhook_error"] == "Connection timed out"
+    assert result.metrics["webhook_error_at"] == (NOW - timedelta(minutes=3)).isoformat()
 
 
 def test_telegram_error_never_carries_token() -> None:
@@ -255,9 +313,3 @@ def test_tls_days_left_rounds_down() -> None:
 )
 def test_stale(age: timedelta, tiers: tuple[str, ...], stale: bool) -> None:
     assert rules.stale(NOW - age, tiers, NOW) is stale
-
-
-def test_erp_reported_has_no_data_until_m3_erp_06() -> None:
-    result = rules.erp_reported("erp.cbu_rates")
-    assert result.status == "unknown"
-    assert "M3-ERP-06" in result.summary

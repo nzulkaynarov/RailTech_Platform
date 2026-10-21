@@ -234,9 +234,35 @@ class AiUsageRowSerializer(serializers.Serializer):
     cost_usd = serializers.CharField()
 
 
+class ExternalServiceSerializer(serializers.Serializer):
+    """`ExternalService` контракта (M3-ERP-06): состояние внешнего сервиса ERP."""
+
+    code = serializers.ChoiceField(choices=["cbu_rates", "customs_tariff", "mail", "litellm", "s3", "sentry"])
+    status = serializers.ChoiceField(choices=["ok", "degraded", "fail", "unknown", "disabled"])
+    enabled = serializers.BooleanField()
+    switchable = serializers.BooleanField()
+    last_success_at = serializers.DateTimeField(allow_null=True)
+    last_error_at = serializers.DateTimeField(allow_null=True)
+    last_error = serializers.CharField(allow_null=True, max_length=200)
+    ok_24h = serializers.IntegerField(min_value=0)
+    errors_24h = serializers.IntegerField(min_value=0)
+
+
+class ExternalSwitchInSerializer(serializers.Serializer):
+    enabled = serializers.BooleanField()
+    reason = serializers.CharField(required=False, allow_null=True, allow_blank=True, max_length=200)
+
+
+class ExternalSwitchStateSerializer(serializers.Serializer):
+    code = serializers.CharField()
+    enabled = serializers.BooleanField()
+    changed_at = serializers.DateTimeField()
+
+
 class HealthSerializer(serializers.Serializer):
     status = serializers.ChoiceField(choices=["ok", "degraded"])
     version = serializers.CharField()
     migrations_applied = serializers.BooleanField()
     queue_alive = serializers.BooleanField()
     checked_at = serializers.DateTimeField()
+    externals = ExternalServiceSerializer(many=True, required=False)

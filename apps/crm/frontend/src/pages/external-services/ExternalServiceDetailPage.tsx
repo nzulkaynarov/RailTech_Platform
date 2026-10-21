@@ -97,17 +97,15 @@ export function ExternalServiceDetailPage() {
         extra={
           service ? (
             <Flex wrap gap="small">
-              {service.source === "crm" ? (
-                <Button
-                  icon={<ReloadOutlined aria-hidden />}
-                  loading={check.isPending}
-                  onClick={() => {
-                    check.mutate({ key });
-                  }}
-                >
-                  {s.checkNow}
-                </Button>
-              ) : null}
+              <Button
+                icon={<ReloadOutlined aria-hidden />}
+                loading={check.isPending}
+                onClick={() => {
+                  check.mutate({ key });
+                }}
+              >
+                {s.checkNow}
+              </Button>
               {sw && (sw.available || sw.disabled) ? (
                 <Button
                   danger={!sw.disabled}
