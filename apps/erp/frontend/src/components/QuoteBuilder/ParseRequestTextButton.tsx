@@ -35,6 +35,12 @@ export function ParseRequestTextButton({ quoteId }: { quoteId: number }) {
 			}
 		} catch (e) {
 			const code = extractApiErrorCode(e);
+			// FIX-67b: сервер не пускает второй разбор того же КП, пока первый идёт (две вкладки, коллега) —
+			// это не ошибка: строки появятся, когда закончит первый разбор.
+			if (code === 'PARSE_ALREADY_RUNNING') {
+				toast.info(t('requestText.alreadyRunning'));
+				return;
+			}
 			toast.error(code && AI_UNAVAILABLE_CODES.has(code) ? t('requestText.aiUnavailable') : translateApiError(e));
 		} finally {
 			setBusy(false);

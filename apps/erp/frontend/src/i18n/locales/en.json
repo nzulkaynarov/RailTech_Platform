@@ -2398,6 +2398,7 @@
     "ONLY_COMPANY_OWNER_CAN_APPLY": "Only a company administrator can file an application.",
     "PAYMENT_EXCEEDS_BALANCE_DUE": "The amount is larger than the balance due. Enter an amount within the balance — overpayment is not accepted.",
     "REQUEST_HAS_NO_ITEMS": "The request has no line items — there is nothing for the seller to quote. Add at least one and submit again.",
+    "PARSE_ALREADY_RUNNING": "Parsing of this quote is already in progress",
     "QUOTE_FROZEN": "The quote has already been sent — create a new version to change it",
     "QUOTE_NOT_DRAFT": "The quote can only be changed while it is a draft — recall it from approval or create a new version",
     "FX_CURRENCY_REQUIRED": "Select a currency",
@@ -3176,7 +3177,8 @@
     "added_other": "Added {{count}} lines from the request text",
     "none": "No lines found in the request text — add them by hand",
     "truncated": "The text has more lines than the limit — the rest were not added",
-    "aiUnavailable": "AI is unavailable right now. Type the lines by hand from the request text."
+    "aiUnavailable": "AI is unavailable right now. Type the lines by hand from the request text.",
+    "alreadyRunning": "Parsing of this quote's text is already in progress — wait for the result, the lines will appear on their own."
   },
   "dealChain": {
     "title": "Deal chain",

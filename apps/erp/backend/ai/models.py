@@ -88,6 +88,15 @@ class AIJob(models.Model):
         auto_now_add=True,
         verbose_name=_("Дата создания"),
     )
+    applied_rows = models.PositiveIntegerField(
+        null=True,
+        blank=True,
+        verbose_name=_("Записано строк"),
+        help_text=_(
+            "FIX-67b: сколько строк КП записал этот job. Не NULL — результат уже применён, повторный запуск "
+            "той же задачи (ретрай, повторная доставка) строки не дублирует."
+        ),
+    )
 
     class Meta:
         verbose_name = _("AI-задача")

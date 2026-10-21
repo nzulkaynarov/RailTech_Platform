@@ -6948,7 +6948,7 @@ export interface paths {
         put?: never;
         /**
          * Разобрать текст заявки в строки КП (AI, FIX-67)
-         * @description Заявка словами: клиент (или передача из CRM) описал потребность текстом, строк нет. Продавец жмёт «Разобрать текст в строки (ИИ)» в конструкторе КП — сервер берёт текст заявки сам (полный текст клиента, иначе комментарий сделки), разбирает его тем же извлечением, что и файл клиента (`ai.services.intake`), и дописывает строки В КОНЕЦ КП. ARCH-01: 202 + task_id, извлечение на Celery (поллинг sourcing/ai-status/). ИИ выключен — 503 `AI_DISABLED`, шлюз недоступен — результат задачи `AI_EXTRACT_FAILED`; ручной набор строк работает всегда.
+         * @description Заявка словами: клиент (или передача из CRM) описал потребность текстом, строк нет. Продавец жмёт «Разобрать текст в строки (ИИ)» в конструкторе КП — сервер берёт текст заявки сам (полный текст клиента, иначе комментарий сделки), разбирает его тем же извлечением, что и файл клиента (`ai.services.intake`), и дописывает строки В КОНЕЦ КП. ARCH-01: 202 + task_id, извлечение на Celery (поллинг sourcing/ai-status/). ИИ выключен — 503 `AI_DISABLED`, шлюз недоступен — результат задачи `AI_EXTRACT_FAILED`; ручной набор строк работает всегда. FIX-67b: пока разбор КП идёт, повторный запрос не ставит новую задачу (тот же сотрудник — 202 с прежним task_id и `already_running`; другой — 409 `PARSE_ALREADY_RUNNING`), запись строк идемпотентна по job.
          */
         post: operations["sourcing_parse_request_text_create"];
         delete?: never;
@@ -23998,7 +23998,7 @@ export interface operations {
             };
         };
         responses: {
-            /** @description AI job queued, task_id returned (poll ai-status) */
+            /** @description AI job queued, task_id returned (poll ai-status). `already_running: true` — разбор этого КП этим же сотрудником уже идёт: тот же task_id, новая задача не поставлена (FIX-67b) */
             202: {
                 headers: {
                     [name: string]: unknown;
@@ -24026,7 +24026,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description Quote is not editable (QUOTE_NOT_DRAFT / QUOTE_FROZEN) */
+            /** @description Quote is not editable (QUOTE_NOT_DRAFT / QUOTE_FROZEN) or a parse of this quote started by another user is still running (PARSE_ALREADY_RUNNING) */
             409: {
                 headers: {
                     [name: string]: unknown;
