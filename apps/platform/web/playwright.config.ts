@@ -2,7 +2,7 @@ import { existsSync } from "node:fs";
 
 import { defineConfig, devices } from "@playwright/test";
 
-// E2E на MSW: dev-сервер vite в режиме mock (`.env.mock`) отвечает за BFF, стенд и бэкенды не нужны.
+// E2E на MSW: dev-сервер vite в режиме mock (VITE_API_MOCKING=true) отвечает за BFF, стенд и бэкенды не нужны.
 // BASE_URL задан — тесты идут против готового адреса (стенд), сервер не поднимается; без стенда
 // сценарии, зависящие от MSW, пропускаются самим тестом.
 const PORT = 4173;
@@ -28,6 +28,8 @@ export default defineConfig({
     : {
         command: `pnpm exec vite --mode mock --port ${String(PORT)} --strictPort`,
         url: `http://localhost:${String(PORT)}`,
+        // MSW включается здесь, а не в .env.mock: не зависит от файла, который легко потерять из-за .gitignore (.env.*).
+        env: { VITE_API_MOCKING: "true" },
         reuseExistingServer: !process.env["CI"],
         timeout: 60_000,
       },

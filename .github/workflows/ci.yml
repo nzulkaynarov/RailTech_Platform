@@ -45,6 +45,7 @@ jobs:
       crm: ${{ github.event_name != 'pull_request' || steps.filter.outputs.crm == 'true' }}
       erp: ${{ github.event_name != 'pull_request' || steps.filter.outputs.erp == 'true' }}
       cabinet: ${{ github.event_name != 'pull_request' || steps.filter.outputs.cabinet == 'true' }}
+      platform: ${{ github.event_name != 'pull_request' || steps.filter.outputs.platform == 'true' }}
       packages: ${{ github.event_name != 'pull_request' || steps.filter.outputs.packages == 'true' }}
       infra: ${{ github.event_name != 'pull_request' || steps.filter.outputs.infra == 'true' }}
     steps:
@@ -69,6 +70,13 @@ jobs:
               - 'packages/ui-tokens/**'
               # Типы формы лида Cabinet генерируются из OpenAPI CRM (src/api/crm-form.d.ts).
               - 'apps/crm/docs/api/openapi.json'
+            # Платформа: BFF строится по своему OpenAPI, роли и статусы читает из общих файлов контракта, токены — из ui-tokens.
+            platform:
+              - 'apps/platform/**'
+              - 'packages/contracts/openapi/platform-bff.yaml'
+              - 'packages/contracts/platform-rbac.yaml'
+              - 'packages/contracts/client-statuses.yaml'
+              - 'packages/ui-tokens/**'
             packages:
               - 'packages/**'
             infra:
@@ -422,6 +430,72 @@ jobs:
       # eslint + tsc + i18n (ru/uz/en) + токены + типы портального API + vitest/axe
       - run: make check-cabinet
 
+  # ─── Платформа (apps/platform): bff на uv, web на pnpm ─────────────────────────────────────
+
+  platform:
+    name: Platform · check
+    needs: changes
+    if: needs.changes.outputs.platform == 'true'
+    runs-on: ${{ vars.CI_RUNNER || 'ubuntu-latest' }}
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v7
+        with:
+          version: ${{ env.UV_VERSION }}
+          python-version: ${{ env.PYTHON_VERSION }}
+          enable-cache: true
+          cache-dependency-glob: apps/platform/bff/uv.lock
+      - uses: pnpm/action-setup@v6
+        with:
+          package_json_file: apps/platform/web/package.json
+      - uses: actions/setup-node@v7
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+          cache-dependency-path: apps/platform/web/pnpm-lock.yaml
+      - name: Install
+        run: make -C apps/platform install
+      # ruff, mypy, pytest (bff); eslint, prettier, tsc, vitest (web); клиент orval и токены свежие
+      - run: make check-platform
+
+  platform-e2e:
+    name: Platform · e2e (Playwright)
+    needs: platform
+    runs-on: ${{ vars.CI_RUNNER || 'ubuntu-latest' }}
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+        with:
+          package_json_file: apps/platform/web/package.json
+      - uses: actions/setup-node@v7
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+          cache-dependency-path: apps/platform/web/pnpm-lock.yaml
+      - name: Install (pnpm)
+        working-directory: apps/platform/web
+        run: pnpm install --frozen-lockfile
+      # Браузер Playwright привязан к версии пакета, а она — к pnpm-lock.yaml.
+      - name: Кэш браузеров Playwright
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: platform-playwright-${{ runner.os }}-${{ hashFiles('apps/platform/web/pnpm-lock.yaml') }}
+      # BFF и стенд не нужны: vite --mode mock, API отвечает MSW (VITE_API_MOCKING задаёт playwright.config.ts)
+      - name: Playwright + axe
+        working-directory: apps/platform/web
+        run: |
+          pnpm exec playwright install --with-deps chromium
+          pnpm e2e
+      - uses: actions/upload-artifact@v7
+        if: failure()
+        with:
+          name: platform-playwright-report
+          path: apps/platform/web/playwright-report
+          retention-days: 7
+
   # ─── packages: контракт и токены ───────────────────────────────────────────────────────────
 
   contracts:
@@ -488,7 +562,7 @@ jobs:
   ci-ok:
     name: CI ok
     if: always()
-    needs: [changes, gitleaks, crm-lint, crm-unit, crm-integration, crm-build, crm-e2e, crm-audit, erp, cabinet, contracts, infra]
+    needs: [changes, gitleaks, crm-lint, crm-unit, crm-integration, crm-build, crm-e2e, crm-audit, erp, cabinet, platform, platform-e2e, contracts, infra]
     runs-on: ${{ vars.CI_RUNNER || 'ubuntu-latest' }}
     timeout-minutes: 5
     steps:
