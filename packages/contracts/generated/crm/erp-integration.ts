@@ -26,6 +26,9 @@ import type {
   DealListItem,
   Document,
   DocumentLink,
+  ExternalServiceCode,
+  ExternalSwitchIn,
+  ExternalSwitchState,
   GetAiUsageParams,
   HandoffRequest,
   HandoffResponse,
@@ -390,5 +393,50 @@ export const getIntegrationHealth = async (options?: RequestInit): Promise<Healt
   const body = [204, 205, 304].includes(res.status) ? null : await res.text();
 
   const data: Health = body ? JSON.parse(body) : {};
+  return data;
+};
+
+export const getSetExternalSwitchUrl = (code: ExternalServiceCode) => {
+  return `/externals/${code}/switch`;
+};
+
+/**
+ * Выключенный сервис ERP перестаёт вызываться: курсы ЦБ и синхронизация ТН ВЭД пропускают прогон, письма не уходят в SMTP (в журнале ERP — `FAILED` с причиной «выключено из CRM»), вызовы моделей возвращают нейтральный отказ, файлы не пишутся в S3. Состояние хранится в ERP и переживает перезапуск; операция идемпотентна (повтор того же состояния — 200). Sentry выключить нельзя (`switchable: false` → 409 `NOT_SWITCHABLE`).
+ * @summary Выключатель внешнего сервиса ERP (центр внешних сервисов CRM)
+ */
+export const setExternalSwitch = async (
+  code: ExternalServiceCode,
+  externalSwitchIn: ExternalSwitchIn,
+  options?: RequestInit,
+): Promise<ExternalSwitchState> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  const res = await fetch(getSetExternalSwitchUrl(code), {
+    ...options,
+    method: "PUT",
+    headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
+    body: JSON.stringify(externalSwitchIn),
+  });
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+
+  const data: ExternalSwitchState = body ? JSON.parse(body) : {};
   return data;
 };

@@ -16,6 +16,7 @@
  *
  * OpenAPI spec version: 0.3.0
  */
+import type { ExternalService } from "./externalService";
 import type { HealthStatus } from "./healthStatus";
 
 export interface Health {
@@ -26,4 +27,6 @@ export interface Health {
   /** Celery-воркер отвечает на ping */
   queue_alive: boolean;
   checked_at: string;
+  /** Внешние сервисы ERP (M3-ERP-06): курсы ЦБ, ТН ВЭД/тариф, почта, модели (LiteLLM), S3, Sentry. Поле необязательное: нет его — ERP старше M3-ERP-06, CRM показывает «нет данных». Строится без обращений к самим сервисам (по журналам и счётчикам ERP), ответ `/health` остаётся быстрым. */
+  externals?: ExternalService[];
 }
