@@ -32,7 +32,7 @@ from app.domain.errors import (
     Reason,
     ValidationFailedError,
 )
-from app.integrations.erp import ErpHealth
+from app.integrations.erp import ErpHealth, ErpRateLimited
 from app.integrations.erp_pairing import AmbiguousOutcomeError, ErpPairingClient, PairingSecrets
 from app.security import audit
 from app.security.principal import Principal
@@ -343,7 +343,13 @@ class ErpPairingService:
         check: ErpHealth | None = None
         check_error: str | None = None
         try:
-            check = await self._connector.check()
+            result = await self._connector.check()
         except DomainError as exc:
             check_error = str(exc.details.get("reason") or exc.code)
+        else:
+            if isinstance(result, ErpRateLimited):
+                # 429 — не «связи нет»: ключи сохранены, проверку можно повторить позже.
+                check_error = Reason.ERP_RATE_LIMITED.value
+            else:
+                check = result
         return PairingOutcome(await self._connector.status(), check, check_error)

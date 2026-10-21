@@ -182,6 +182,18 @@ async def test_pair_succeeds_even_if_the_link_check_fails() -> None:
     assert ERP_SERVICE_TOKEN in store.saved
 
 
+@respx.mock
+async def test_pair_succeeds_when_the_link_check_is_rate_limited() -> None:
+    respx.post(ACCEPT).mock(return_value=httpx.Response(200, json=ACCEPTED))
+    respx.get(HEALTH).mock(return_value=httpx.Response(429, headers={"Retry-After": "30"}))
+    service, _, store, _ = make()
+    outcome = await service.pair(ADMIN, base_url=BASE, code=CODE, password=PASSWORD)
+    assert outcome.check is None
+    assert outcome.check_error == "erp_rate_limited"
+    assert outcome.status.paired
+    assert ERP_SERVICE_TOKEN in store.saved
+
+
 @pytest.mark.parametrize(
     ("detail", "reason"),
     [
