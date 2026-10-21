@@ -175,6 +175,11 @@ def test_service_token_is_not_a_pairing_code():
     assert accept(ENV_TOKEN).status_code == 401
 
 
+def test_non_ascii_bearer_is_401_not_500(paired):
+    assert health("t\xe9st-token") == 401
+    assert rotate("t\xe9st-token", crm=ROTATED_CRM_TOKEN, erp=ROTATED_ERP_TOKEN, webhook=ROTATED_SECRET).status_code == 401
+
+
 def test_the_code_does_not_authenticate_other_operations():
     code = pairing.issue_code().code
     assert health(code) == 401

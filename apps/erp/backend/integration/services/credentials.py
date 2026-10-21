@@ -102,9 +102,14 @@ def active_crm_tokens() -> list[str]:
     return env_crm_tokens()
 
 
+def same_secret(left: str, right: str) -> bool:
+    """Сравнение без утечки по времени; байты, чтобы не-ASCII в заголовке был отказом, а не 500."""
+    return secrets.compare_digest(left.encode(), right.encode())
+
+
 def token_is_active(token: str) -> bool:
-    """Сравнение без утечки по времени с каждым действующим токеном."""
-    return any(secrets.compare_digest(token, expected) for expected in active_crm_tokens() if expected)
+    """Токен совпадает с одним из действующих."""
+    return any(same_secret(token, expected) for expected in active_crm_tokens() if expected)
 
 
 def webhook_secret() -> str:

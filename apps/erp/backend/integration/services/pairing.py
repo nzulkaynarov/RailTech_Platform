@@ -161,21 +161,21 @@ def rotate(
     """
     _check_secrets(crm_to_erp_token, erp_to_crm_token, webhook_secret)
     now = now or timezone.now()
-    if secrets.compare_digest(crm_to_erp_token, current_token):
+    if credentials.same_secret(crm_to_erp_token, current_token):
         raise IntegrationValidationError()  # «новый» токен равен тому, под которым вызвана ротация
     with transaction.atomic():
         rows = {row.slot: row for row in ServiceCredential.objects.select_for_update().all()}
         stored_current = credentials.stored_crm_token(rows)
-        if stored_current is not None and secrets.compare_digest(crm_to_erp_token, stored_current):
+        if stored_current is not None and credentials.same_secret(crm_to_erp_token, stored_current):
             previous_row = rows.get(CredentialSlot.CRM_TO_ERP_PREVIOUS)
             previous = credentials.stored_previous_token(rows)
-            if previous is not None and secrets.compare_digest(current_token, previous) and previous_row is not None:
+            if previous is not None and credentials.same_secret(current_token, previous) and previous_row is not None:
                 # Повтор уже применённой ротации.
                 _put(CredentialSlot.ERP_TO_CRM, erp_to_crm_token)
                 _put(CredentialSlot.WEBHOOK_SECRET, webhook_secret)
                 return Rotated(rotated_at=now, previous_token_valid_until=previous_row.expires_at)
             raise IntegrationValidationError()  # новый токен уже действует: менять нечего
-        if stored_current is not None and not secrets.compare_digest(current_token, stored_current):
+        if stored_current is not None and not credentials.same_secret(current_token, stored_current):
             raise _unauthorized()
         valid_until = now + timedelta(seconds=rotation_grace_seconds())
         _put(CredentialSlot.CRM_TO_ERP_PREVIOUS, current_token, expires_at=valid_until)

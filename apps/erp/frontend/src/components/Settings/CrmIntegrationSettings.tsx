@@ -123,11 +123,11 @@ export function CrmIntegrationSettings() {
             ) : null}
 
             <section className="space-y-3" aria-labelledby="crm-pairing-code-title">
-              <h3 id="crm-pairing-code-title" className="text-sm font-semibold">
+              <h2 id="crm-pairing-code-title" className="text-sm font-semibold">
                 {data.state === 'paired'
                   ? t('settings.crmIntegration.repairTitle')
                   : t('settings.crmIntegration.connectTitle')}
-              </h3>
+              </h2>
               <ol className="list-decimal space-y-1 pl-5 text-sm text-muted-foreground">
                 <li>{t('settings.crmIntegration.steps.issue')}</li>
                 <li>{t('settings.crmIntegration.steps.enter')}</li>
