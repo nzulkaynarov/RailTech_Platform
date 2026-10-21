@@ -14,6 +14,8 @@ from asgi_correlation_id import correlation_id
 from structlog.types import EventDict, Processor, WrappedLogger
 
 from app.config import Settings
+from app.security.log_mask import quiet_noisy_loggers
+from app.security.log_mask import structlog_processor as mask_secrets
 from app.security.pii import structlog_processor as mask_pii
 
 _HANDLER_NAME = "structlog-stdout"
@@ -32,6 +34,7 @@ def _shared_processors() -> list[Processor]:
         structlog.stdlib.add_log_level,
         structlog.stdlib.add_logger_name,
         add_request_id,
+        mask_secrets,  # до pii: иначе id из токена бота станет [number], а хвост останется
         mask_pii,
         structlog.processors.TimeStamper(fmt="iso", utc=True),
         structlog.processors.StackInfoRenderer(),
@@ -39,6 +42,7 @@ def _shared_processors() -> list[Processor]:
 
 
 def configure_logging(settings: Settings) -> None:
+    quiet_noisy_loggers()  # FIX-66b: библиотеки на INFO печатают URL запроса (токены, подписи)
     renderer: Processor
     if settings.log_format == "console":
         renderer = structlog.dev.ConsoleRenderer()
@@ -60,6 +64,7 @@ def configure_logging(settings: Settings) -> None:
         processors=[
             structlog.stdlib.ProcessorFormatter.remove_processors_meta,
             structlog.processors.format_exc_info,
+            mask_secrets,  # FIX-66b: после format_exc_info — и текст трассировки
             renderer,
         ],
     )
