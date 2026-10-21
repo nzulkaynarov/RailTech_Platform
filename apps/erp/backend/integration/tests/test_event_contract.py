@@ -1,4 +1,4 @@
-"""Контрактные тесты событий ERP → CRM: каждое из 21 событий проверяется по `events.schema.json` (FIX-35, I-15, G-5).
+"""Контрактные тесты событий ERP → CRM: каждое из 22 событий проверяется по `events.schema.json` (FIX-35, I-15, G-5).
 
 Источник правды — файлы контракта: схема `packages/contracts/events.schema.json` и примеры
 `packages/contracts/examples/events/<тип>.json` (по одному на тип; те же примеры — фикстуры тестов CRM). Здесь нет копий
@@ -6,7 +6,7 @@
 
 1. набор типов = схема = `VALID_EVENT_TYPES` = набор примеров; каждый пример проходит схему, а сторож её ловит (негатив);
 2. конвейер отправки (`emit_event`) принимает тело каждого примера и сохраняет его без изменений;
-3. боевой код (настоящие объекты, сигналы и сервисы, а не заглушки) выпускает все 21 тип, и каждое тело — по схеме;
+3. боевой код (настоящие объекты, сигналы и сервисы, а не заглушки) выпускает все 22 типа, и каждое тело — по схеме;
 4. режимы проверки в рантайме: `strict` — исключение и нет записи в журнале, `log` — запись и сообщение в лог, `off`;
 5. подпись: подписывает первый секрет списка (ротация без простоя).
 """
@@ -21,7 +21,10 @@ from integration.models import CrmContactMapping, IntegrationWebhookEvent
 from integration.services import event_contract
 from integration.services.event_contract import EventContractError
 from integration.services.webhooks import (
+    SECRET_MASK,
+    SECRET_PAYLOAD_FIELDS,
     VALID_EVENT_TYPES,
+    delivery_payload,
     emit_act_event,
     emit_event,
     emit_invite_sent,
@@ -39,6 +42,7 @@ from integration.tests.world import (
     make_deal,
 )
 from parties.models import Contact
+from portal.services.acceptance import request_acceptance_code
 from portal.services.documents import encode_document_id
 from sales.models import DeliveryLine
 from sales.services.delivery_lines import accept_delivery_line, dispute_delivery_line, sync_delivery_lines
@@ -55,9 +59,9 @@ ALL_EVENTS = event_types()
 # ── 1. Набор типов, примеры и сторож ─────────────────────────────────────────────────────────────────
 
 
-def test_schema_is_found_and_has_21_event_types():
+def test_schema_is_found_and_has_22_event_types():
     assert find_events_schema_path().is_file()
-    assert len(ALL_EVENTS) == 21
+    assert len(ALL_EVENTS) == 22
 
 
 def test_event_types_of_schema_code_and_examples_are_the_same_set():
@@ -111,12 +115,16 @@ def test_emit_event_stores_the_example_body_unchanged(event):
         send_async=False,
     )
     expected = {**body, "erp_company_id": company.pk}
+    if event in SECRET_PAYLOAD_FIELDS:  # секрет (код акцепта) в журнале замаскирован, тело доставки — как в примере
+        for name in SECRET_PAYLOAD_FIELDS[event]:
+            expected = {**expected, "payload": {**expected["payload"], name: SECRET_MASK}}
+        assert delivery_payload(stored) == {**body, "erp_company_id": company.pk}
     assert stored.payload == expected, "тело события в журнале расходится с примером контракта"
     assert stored.event_type == event and stored.headers["X-Event-Type"] == event
-    assert not event_errors(stored.payload)
+    assert not event_errors(delivery_payload(stored))
 
 
-# ── 3. Боевой код выпускает все 21 тип ───────────────────────────────────────────────────────────────
+# ── 3. Боевой код выпускает все 22 типа ───────────────────────────────────────────────────────────────
 
 
 def _status(model, code):
@@ -182,6 +190,12 @@ def produce_all_events():
 
     emit_invite_sent(contact=contact, channels=["telegram", "email"])  # invite.sent
 
+    # Код акцепта контакту с Telegram и сопоставлением в CRM — настоящий сервис портала (FIX-60a).
+    contact.telegram_user_id = 424242
+    contact.save(update_fields=["telegram_user_id"])
+    sent = add_quote(deal, 3, QuoteStatusCode.SENT, "3000000")
+    assert request_acceptance_code(sent, contact)["channel"] == "telegram"  # quote.acceptance_code_requested
+
     # Приёмка и замечание клиента по строкам поставки — настоящие сервисы портала.
     fulfillments = []
     for key in ("accepted", "disputed"):
@@ -210,7 +224,8 @@ def test_real_code_produces_every_event_type_and_all_bodies_match_the_schema():
     missing = set(ALL_EVENTS) - {event.event_type for event in produced}
     assert not missing, f"боевой код не выпустил события: {sorted(missing)} (проверь сценарий produce_all_events)"
     for event in produced:
-        assert event_errors(event.payload) == [], f"{event.event_type}: {event_errors(event.payload)}"
+        body = delivery_payload(event)  # секрет (код акцепта) — из кэша: в журнале он замаскирован
+        assert event_errors(body) == [], f"{event.event_type}: {event_errors(body)}"
         assert event.headers["X-Event-Type"] == event.event_type
 
 

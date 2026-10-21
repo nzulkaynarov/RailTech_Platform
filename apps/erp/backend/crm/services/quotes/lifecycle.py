@@ -296,7 +296,9 @@ class QuoteLifecycleService:
         return perform_quote_acceptance(quote_id, approved_by_user=approved_by_user)
 
     @staticmethod
-    def accept_quote_as_contact(quote_id: int, *, contact_email: str, request_ip: str = "") -> Quote:
+    def accept_quote_as_contact(
+        quote_id: int, *, contact_email: str, request_ip: str = "", portal_contact=None
+    ) -> Quote:
         """Offline contact accepts the КП after email-code verification (Wave A).
 
         No ``CustomUser`` exists for an offline contact, so ``approved_by`` stays NULL; the
@@ -307,7 +309,11 @@ class QuoteLifecycleService:
         from .lifecycle_accept import perform_quote_acceptance
 
         return perform_quote_acceptance(
-            quote_id, approved_by_user=None, contact_email=contact_email, request_ip=request_ip
+            quote_id,
+            approved_by_user=None,
+            contact_email=contact_email,
+            request_ip=request_ip,
+            portal_contact=portal_contact,
         )
 
     @staticmethod

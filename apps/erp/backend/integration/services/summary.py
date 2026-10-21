@@ -130,12 +130,8 @@ def _company_deals(company: Company) -> List[Deal]:
     return list(stages.with_stage_facts(company.deals.all()).order_by("-updated_at"))
 
 
-def _receivables(company: Company) -> Dict[str, str]:
-    """Дебиторка: непогашенный остаток по выставленным счетам (выставлен, частично оплачен, просрочен).
-
-    Контракт отдаёт одну сумму (`Money`). Счета в разных валютах не складываются: берётся валюта по умолчанию, если она
-    есть среди долгов, иначе первая по алфавиту (Q-FIX30-2).
-    """
+def _receivable_totals(company: Company) -> Dict[str, Decimal]:
+    """Непогашенный остаток по выставленным счетам (выставлен, частично оплачен, просрочен) по каждой валюте отдельно."""
     unpaid = Invoice.objects.filter(
         deal__company=company,
         status__code__in=[InvoiceStatusCode.ISSUED, InvoiceStatusCode.PARTIAL, InvoiceStatusCode.OVERDUE],
@@ -144,10 +140,23 @@ def _receivables(company: Company) -> Dict[str, str]:
     for invoice in unpaid:
         code = projections.currency_code(invoice.currency)
         totals[code] = totals.get(code, Decimal("0")) + max(invoice.balance_due, Decimal("0"))
+    return totals
+
+
+def _receivables(totals: Dict[str, Decimal]) -> Dict[str, str]:
+    """`receivables` контракта — долг в одной валюте: валюта по умолчанию, если она есть среди долгов, иначе первая по коду.
+
+    Валюты не складываются и не пересчитываются по курсу; полный разрез — `receivables_by_currency` (Q-FIX30-2, 0.3.0).
+    """
     if not totals:
         return projections.money(Decimal("0"), projections.DEFAULT_CURRENCY)
     code = projections.DEFAULT_CURRENCY if projections.DEFAULT_CURRENCY in totals else sorted(totals)[0]
     return projections.money(totals[code], code)
+
+
+def _receivables_by_currency(totals: Dict[str, Decimal]) -> List[Dict[str, str]]:
+    """Долг по каждой валюте отдельно, без пересчёта по курсу, по коду валюты; нулевые остатки опускаются, нет долга — `[]`."""
+    return [projections.money(totals[code], code) for code in sorted(totals) if totals[code] > 0]
 
 
 def _next_delivery(open_deals: List[Deal]) -> Optional[Dict[str, Any]]:
@@ -177,13 +186,15 @@ def get_company_summary_data(erp_company_id: int) -> Optional[Dict[str, Any]]:
     documents = company_documents(company)
     last_document = documents[0] if documents else None
 
+    receivable_totals = _receivable_totals(company)
     return {
         "erp_company_id": company.id,
         "crm_client_id": crm_client_id,
         "name": company.name,
         "open_deals": [_deal_item(deal, stage) for deal, stage in open_deals],
         "last_document": last_document,
-        "receivables": _receivables(company),
+        "receivables": _receivables(receivable_totals),
+        "receivables_by_currency": _receivables_by_currency(receivable_totals),
         "next_delivery": _next_delivery([deal for deal, _ in open_deals]),
     }
 

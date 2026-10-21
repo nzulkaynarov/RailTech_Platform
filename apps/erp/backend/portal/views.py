@@ -416,7 +416,9 @@ class QuoteAcceptView(BasePortalView):
 
         # Код акцепта — одноразовый, с TTL и лимитом попыток; погашение и акцепт — одна транзакция
         # (crm.services.public_page, общий путь с публичной страницей КП). Мастер-кода нет (FIX-02).
-        accepted, error = verify_code_and_accept(quote, code, request_ip=request.META.get("REMOTE_ADDR", ""))
+        accepted, error = verify_code_and_accept(
+            quote, code, request_ip=request.META.get("REMOTE_ADDR", ""), contact=request.portal_contact
+        )
         if error == "QUOTE_ALREADY_DECIDED":
             raise PortalConflict("QUOTE_FINALIZED")  # успели решить из другой вкладки
         if error:
@@ -441,6 +443,7 @@ class QuoteRejectView(BasePortalView):
                 reason=reason,
                 contact_email=request.portal_contact.email,
                 request_ip=request.META.get("REMOTE_ADDR"),
+                portal_contact=request.portal_contact,
             )
         except ValueError:
             # Жизненный цикл отказал: решили из другой вкладки между проверкой и вызовом либо сделку не удалось вернуть.

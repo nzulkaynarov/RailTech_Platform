@@ -169,7 +169,7 @@ class TestPortalEndToEndLifecycle:
         assert item_data["total"] == {"amount": "75000000.00", "currency": "UZS"}
 
         # ── 6. Клиент акцептует КП одноразовым кодом из письма ──────────────
-        code = issue_test_acceptance_code(quote, client_contact.email)
+        code = issue_test_acceptance_code(quote, client_contact.email, contact=client_contact)
         accept_resp = portal_client.post(
             f"/api/portal/v1/quotes/{quote.id}/accept",
             {"code": code},

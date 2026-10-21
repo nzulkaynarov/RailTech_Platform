@@ -78,6 +78,3 @@ PORTAL_SESSION_MAX_AGE_DAYS = 14
 PORTAL_UPLOAD_MAX_BYTES = int(os.environ.get("PORTAL_UPLOAD_MAX_MB", "10")) * 1024 * 1024
 # Не больше стольких запросов magic-link в час на один адрес (FIX-14, P-10)
 PORTAL_MAGIC_LINK_MAX_PER_HOUR = int(os.environ.get("PORTAL_MAGIC_LINK_MAX_PER_HOUR", "5"))
-# Код акцепта КП из Cabinet уходит в Telegram, только если это явно включено (FIX-22): по умолчанию ERP в Telegram не
-# пишет (бот принадлежит CRM), код идёт письмом через `EmailLog`. Нужен ещё `TELEGRAM_BOT_TOKEN`; QUESTIONS Q-FIX22-1.
-PORTAL_ACCEPT_CODE_TELEGRAM = os.environ.get("PORTAL_ACCEPT_CODE_TELEGRAM", "").strip().lower() in ("1", "true", "yes")
