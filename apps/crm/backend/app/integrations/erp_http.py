@@ -91,12 +91,6 @@ class ErpIntegrationHttp:
         return response
 
 
-def _bad_response(response: httpx.Response) -> UpstreamUnavailableError:
-    return UpstreamUnavailableError(
-        f"erp bad response: HTTP {response.status_code}", reason=Reason.ERP_BAD_RESPONSE
-    )
-
-
 def bad_response(response: httpx.Response) -> UpstreamUnavailableError:
     return UpstreamUnavailableError(
         f"erp bad response: HTTP {response.status_code}", reason=Reason.ERP_BAD_RESPONSE

@@ -32,7 +32,8 @@ from app.services.settings import SettingsService
 logger = structlog.get_logger(__name__)
 
 Outcome = Literal["delivered", "skipped", "failed"]
-SEND_TIMEOUT_S = 10
+# Меньше таймаута доставки вебхука у ERP (10 с): медленный Telegram не должен вызвать её повтор.
+SEND_TIMEOUT_S = 4
 
 
 class AcceptanceCodeDelivery:

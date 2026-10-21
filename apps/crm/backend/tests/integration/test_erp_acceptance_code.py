@@ -6,6 +6,7 @@
 заметках и записях логов. `quote.accepted|rejected` показывают в ленте, какой контакт CRM принял КП.
 """
 
+import hashlib
 import json
 import logging
 import uuid
@@ -277,6 +278,20 @@ async def test_a_replayed_body_under_a_new_event_id_sends_nothing(harness: Harne
     assert "replayed body" in (row.error or "")
     assert row.notified_at is None
     assert CODE not in await everything_stored(harness)
+
+
+async def test_the_journal_hash_does_not_let_the_code_be_guessed(harness: Harness) -> None:
+    """Хеш в журнале — по телу без кода: перебор 4–12 цифр по нему невозможен."""
+    body, _, _ = await code_body(harness)
+    event_id = await send_code(harness, body)
+    stored = (await harness.row(event_id)).body_sha256
+    raw = json.dumps(body).encode()
+
+    assert stored is not None
+    assert stored != hashlib.sha256(raw).hexdigest()
+    for guess in ("000000", CODE, "123456"):
+        guessed = {**body, "payload": {**body["payload"], "code": guess}}
+        assert stored != hashlib.sha256(json.dumps(guessed).encode()).hexdigest()
 
 
 async def test_the_sweeper_and_the_queue_never_touch_a_code_row(harness: Harness) -> None:

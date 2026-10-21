@@ -179,6 +179,17 @@ def _parse_body_raw(raw_body: bytes, event_type: str) -> ParsedBody:
     return ParsedBody("received", data, envelope=envelope)
 
 
+def _body_hash(raw_body: bytes, parsed: ParsedBody, event_type: str) -> str:
+    """sha256 тела для защиты от повтора. У события с кодом — хеш тела БЕЗ кода (то, что пишется
+    в журнал после `redact_secrets`): иначе код из 4–12 цифр подбирался бы по хешу из журнала.
+    Повтор того же тела по-прежнему ловится.
+    """
+    if CODE_EVENT in (event_type, parsed.data.get("event")):
+        canonical = json.dumps(parsed.data, sort_keys=True, ensure_ascii=False).encode()
+        return hashlib.sha256(canonical).hexdigest()
+    return hashlib.sha256(raw_body).hexdigest()
+
+
 class ErpEventsService:
     def __init__(
         self,
@@ -243,7 +254,7 @@ class ErpEventsService:
 
         parsed = _parse_body(raw_body, event_type)
         envelope, data = parsed.envelope, parsed.data
-        body_hash = hashlib.sha256(raw_body).hexdigest()
+        body_hash = _body_hash(raw_body, parsed, event_type)
         status, error = parsed.status, parsed.error
         # Код акцепта не ждёт очереди: задача и `outbox` хранили бы его в БД. Строка журнала
         # сразу «обработана» (код вырезан), доставка — ниже, из памяти этого запроса.
