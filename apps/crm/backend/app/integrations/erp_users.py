@@ -23,7 +23,7 @@ from app.domain.errors import (
     UpstreamUnavailableError,
     ValidationFailedError,
 )
-from app.integrations.erp import ErpConnection, resolve_connection
+from app.integrations.erp import ErpConnection, rate_limited, resolve_connection
 from app.security.secrets_store import SecretsStore
 from app.services.settings import SettingsService
 
@@ -150,6 +150,8 @@ class HttpxErpUsersClient:
             raise UpstreamUnavailableError(
                 type(exc).__name__, reason=Reason.ERP_UNAVAILABLE
             ) from exc
+        if response.status_code == 429:
+            raise rate_limited(response)
         if response.status_code in (401, 403):
             raise UpstreamUnavailableError(
                 f"HTTP {response.status_code}", reason=Reason.ERP_UNAUTHORIZED

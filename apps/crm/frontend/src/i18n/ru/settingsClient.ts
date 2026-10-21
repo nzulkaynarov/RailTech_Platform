@@ -108,6 +108,10 @@ export const clientBotTexts: Record<string, BotTextLabel> = {
     label: "КП отправлено клиенту",
     when: "Событие ERP «КП отправлено». {deal} — сделка. Под текстом кнопки «Открыть КП» и «Кабинет».",
   },
+  erp_quote_acceptance_code: {
+    label: "Код подтверждения КП",
+    when: "Клиент в кабинете нажал «Получить код» для принятия КП: бот присылает код контакту в Telegram. {deal} — сделка, {code} — код, {minutes} — сколько минут он действует. Код нигде не сохраняется.",
+  },
   erp_invoice_issued: {
     label: "Выставлен счёт",
     when: "Событие ERP «счёт выставлен». {number} — номер, {amount} {currency} — сумма, {due} — срок оплаты.",

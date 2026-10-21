@@ -1,4 +1,6 @@
-"""Все 21 событие ERP → CRM на настоящей БД; примеры контракта как фикстуры (FIX-35; I-15, G-5).
+"""События ERP → CRM на настоящей БД; примеры контракта как фикстуры (FIX-35; I-15, G-5).
+
+Код акцепта (`quote.acceptance_code_requested`) — отдельно: `test_erp_acceptance_code.py`.
 
 Вход — тела из `packages/contracts/examples/events` (те же файлы использует ERP): подписанный
 вебхук через настоящий приёмник → строка журнала → обработка → зеркало сделки, лента лида,
@@ -23,13 +25,15 @@ from app.models.clients import Client, Document
 from app.models.deals import Deal
 from app.models.integrations import ErpIncomingEvent
 from app.models.leads import LeadNote
+from app.schemas.erp_events import CODE_EVENT
 from tests.integration.test_erp_events import Harness
 from tests.seam_events import event_types, example_event
 
 pytestmark = pytest.mark.integration
 
 SECRET = "x" * 40  # секрет Harness (Settings.erp_webhook_secret)
-ALL_EVENTS = event_types()
+#: Код акцепта не проходит очередь и журнал как остальные: отдельный набор тестов.
+ALL_EVENTS = [event for event in event_types() if event != CODE_EVENT]
 COMPANY = 118  # erp_company_id в примерах контракта
 #: События, по которым бот пишет клиенту (`client_message` в erp_bot_messages); по остальным молчит.
 CLIENT_MESSAGE_EVENTS = {
@@ -76,7 +80,7 @@ async def notes(harness: Harness, lead_id: int) -> list[str]:
         return [row.text for row in rows]
 
 
-# ── 1. Каждое из 21 событий: приём → обработка → результат ────────────────────────────────────────
+# ── 1. Каждое событие контракта: приём → обработка → результат ───────────────────────────────────
 
 
 @pytest.mark.parametrize("event", ALL_EVENTS)

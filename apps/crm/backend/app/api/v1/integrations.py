@@ -6,6 +6,7 @@ from fastapi import APIRouter, Depends, Header, Query, Request
 from app.api.deps import ContainerDep, require
 from app.bot.profile import ProfilePublish
 from app.bot.supervisor import BotSupervisor
+from app.integrations.erp import ErpRateLimited
 from app.integrations.telegram import AiogramProbe
 from app.schemas.erp_events import ErpWebhookReceipt
 from app.schemas.integrations import (
@@ -165,9 +166,15 @@ async def check_erp_connection(_: Writer, service: ErpDep) -> ErpCheckOut:
     """«Проверить связь»: `GET {base_url}/api/integration/v1/health` с сервисным токеном, 5 с.
 
     Ошибки (ADR-0017, `details.reason`): `erp_not_configured` (409), `erp_invalid_url` (422),
-    `erp_unauthorized` / `erp_unavailable` / `erp_bad_response` (502).
+    `erp_unauthorized` / `erp_unavailable` / `erp_bad_response` (502). Лимит частоты ERP (429) — не
+    ошибка: `status: "rate_limited"` и `retry_after_s` (пауза из `Retry-After`).
     """
-    return ErpCheckOut(**asdict(await service.check()))
+    result = await service.check()
+    if isinstance(result, ErpRateLimited):
+        return ErpCheckOut(
+            status="rate_limited", checked_at=result.checked_at, retry_after_s=result.retry_after_s
+        )
+    return ErpCheckOut(**asdict(result))
 
 
 @router.post("/erp/events", response_model=ErpWebhookReceipt)

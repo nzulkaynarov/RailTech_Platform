@@ -1,7 +1,7 @@
 """Дискриминированные модели событий ERP → CRM против контракта (FIX-35, I-15, G-5).
 
 Источник правды — `packages/contracts/events.schema.json` и примеры `examples/events` (по одному
-на каждое из 21 событий; те же примеры — фикстуры тестов ERP). Проверяется, что CRM:
+на каждое из 22 событий; те же примеры — фикстуры тестов ERP). Проверяется, что CRM:
 
 * знает ровно те типы событий, что описаны в схеме, и разбирает каждый пример в модель нужного
   класса с типизированным `payload` (класс тела называется как `$defs`-схема контракта);
@@ -16,12 +16,17 @@ import pytest
 from pydantic import BaseModel, ValidationError
 
 from app.schemas.erp_events import (
+    CODE_EVENT,
     KNOWN_EVENTS,
+    REDACTED,
     DealRef,
     DeliveryLineDecision,
     ErpEventEnvelope,
+    QuoteAcceptanceCodeRequested,
+    QuoteOutcome,
     is_known_event,
     parse_event,
+    redact_secrets,
 )
 from tests.seam_events import (
     deal_required,
@@ -37,7 +42,7 @@ ALL_EVENTS = event_types()
 
 def test_known_events_are_exactly_the_events_of_the_contract() -> None:
     assert set(KNOWN_EVENTS) == set(ALL_EVENTS)
-    assert len(ALL_EVENTS) == 21
+    assert len(ALL_EVENTS) == 22
     assert set(example_files()) == set(ALL_EVENTS), "на каждое событие контракта — один пример"
     assert not is_known_event("warehouse.exploded")
     assert not is_known_event(None)
@@ -181,3 +186,58 @@ def test_line_decision_rules() -> None:
     without_deal = {k: v for k, v in accepted.items() if k != "deal"}
     with pytest.raises(ValidationError):
         parse_event(without_deal)
+
+
+# ── Шов 0.3.0 (FIX-60): код акцепта и контакт в исходах КП ───────────────────────────────────
+
+
+@pytest.mark.parametrize("code", ["12", "1234567890123", "12a456", "", " 123456", "١٢٣٤٥٦"])
+def test_acceptance_code_must_be_four_to_twelve_ascii_digits(code: str) -> None:
+    body = example_event(CODE_EVENT)
+    body["payload"]["code"] = code
+    with pytest.raises(ValidationError):
+        parse_event(body)
+
+
+def test_acceptance_code_is_a_secret_in_repr_and_dumps() -> None:
+    body = example_event(CODE_EVENT)
+    body["payload"]["code"] = "482913"
+    envelope = parse_event(body)
+    assert isinstance(envelope.payload, QuoteAcceptanceCodeRequested)
+    assert envelope.payload.code.get_secret_value() == "482913"
+    for rendered in (
+        repr(envelope),
+        str(envelope.payload),
+        envelope.model_dump_json(),
+        str(envelope.payload.model_dump(mode="json")),
+    ):
+        assert "482913" not in rendered
+
+
+def test_redact_secrets_hides_only_the_code_and_leaves_the_original_untouched() -> None:
+    body = example_event(CODE_EVENT)
+    body["payload"]["code"] = "482913"
+    redacted = redact_secrets(body)
+    assert redacted["payload"]["code"] == REDACTED
+    assert {k: v for k, v in redacted["payload"].items() if k != "code"} == {
+        k: v for k, v in body["payload"].items() if k != "code"
+    }
+    assert body["payload"]["code"] == "482913", "исходное тело не меняется — по нему идёт доставка"
+    # тип события по заголовку тоже считается: тело с расхождением не уносит код в журнал
+    mismatched = {**body, "event": "quote.sent"}
+    assert redact_secrets(mismatched, CODE_EVENT)["payload"]["code"] == REDACTED
+    other = example_event("quote.sent")
+    assert redact_secrets(other) is other
+
+
+def test_outcome_contacts_are_optional_and_unknown_ids_do_not_matter() -> None:
+    """`erp_contact_id`/`crm_contact_id` необязательны: действие не из Cabinet их не несёт."""
+    body = example_event("quote.accepted")
+    assert isinstance(parse_event(body).payload, QuoteOutcome)
+    for field in ("erp_contact_id", "crm_contact_id"):
+        body["payload"].pop(field, None)
+    payload = parse_event(body).payload
+    assert isinstance(payload, QuoteOutcome)
+    assert (payload.erp_contact_id, payload.crm_contact_id) == (None, None)
+    body["payload"]["crm_contact_id"] = None
+    assert parse_event(body).payload.crm_contact_id is None  # type: ignore[attr-defined]
