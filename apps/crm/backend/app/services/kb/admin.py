@@ -17,10 +17,11 @@ from app.models.kb import KbChunk, KbDocument, KbGap, Product
 from app.repositories import kb as repo
 from app.security import audit
 from app.security.audit import Actor
+from app.services.kb.format import not_markdown_error, validate_document
 from app.services.kb.ingest import KbIngestService, NewKbFile
+from app.services.kb.markdown_convert import is_markdown_file
 
 MAX_UPLOAD_BYTES = 25 * 1024 * 1024
-ALLOWED_SUFFIXES = (".pdf", ".docx", ".pptx", ".xlsx", ".md", ".html", ".htm", ".txt")
 Enqueue = Callable[[int], Awaitable[object]]
 
 
@@ -43,8 +44,15 @@ class KbAdminService:
         self._ingest = ingest
         self._enqueue = enqueue
 
-    async def upload(self, actor: Actor, file: NewKbFile, gap_id: int | None = None) -> int:
-        _check_file(file.filename, len(file.content))
+    async def upload(
+        self, actor: Actor, file: NewKbFile, gap_id: int | None = None, *, manual: bool = False
+    ) -> int:
+        """Файл `.md` по docs/kb/FORMAT.md; ручной Markdown из админки формат не проверяет."""
+        if not is_markdown_file(file.filename):
+            raise not_markdown_error()
+        check_file_size(len(file.content), MAX_UPLOAD_BYTES)
+        if not manual:
+            validate_document(file.content, language=file.language)
         await self._check_product(file.product_key)
         document_id = await self._ingest.register_file(file)
         async with self._sessions() as session, session.begin():
@@ -83,7 +91,7 @@ class KbAdminService:
             uploaded_by=actor.user_id,
             mime="text/markdown",
         )
-        document_id = await self.upload(actor, file, gap_id)
+        document_id = await self.upload(actor, file, gap_id, manual=True)
         async with self._sessions() as session, session.begin():
             await session.execute(
                 update(KbDocument).where(KbDocument.id == document_id).values(source_type="manual")
@@ -212,12 +220,6 @@ async def _gap(session: AsyncSession, gap_id: int) -> KbGap:
     if gap is None:
         raise NotFoundError("kb gap not found")
     return gap
-
-
-def _check_file(filename: str, size: int) -> None:
-    if not filename.lower().endswith(ALLOWED_SUFFIXES):
-        raise ValidationFailedError("unsupported file type", reason=Reason.FILE_TYPE, field="file")
-    check_file_size(size, MAX_UPLOAD_BYTES)
 
 
 def _doc_audit(document: KbDocument) -> dict[str, object]:

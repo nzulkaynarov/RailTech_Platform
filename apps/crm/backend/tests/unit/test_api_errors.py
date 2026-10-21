@@ -168,6 +168,8 @@ def test_reason_values_are_a_stable_contract() -> None:
         "file_too_large",
         "file_empty",
         "file_type",
+        "kb_markdown_only",
+        "kb_format",
         "document_indexing",
         "invalid_bot_token",
         "telegram_unavailable",

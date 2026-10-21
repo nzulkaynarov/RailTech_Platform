@@ -119,7 +119,10 @@ Actions → **Deploy** → Run workflow: `ref` = `main` (или sha, входя�
 - вписать `OWN_COMPANY_ID` в `/opt/rt/.env.prod` после создания компании-владельца (FIX-11) и перезапустить ERP;
 - Telegram-вебхук ставит CRM сама при `TELEGRAM_MODE=webhook`;
 - Langfuse (`RT_PROFILES=observability` в `.env.prod`) открывается SSH-туннелем: `ssh -L 3000:127.0.0.1:3000 deploy@<VPS 1>`;
-  docling (`RT_PROFILES=kb-ingest`) — только на время загрузки документов, вместе с Langfuse не включать (8 ГБ).
+  docling на проде **не используется** (M5-CRM-02): `DOCLING_URL` в `prod.yml` пуст. База знаний принимает только Markdown по
+  `docs/kb/FORMAT.md` (готовит человек или ИИ-агент по `docs/kb/PROMPT.md`) и индексирует его встроенным конвертером CRM; docling
+  в базе знаний не участвует вовсе. Остался только для текста документов клиентов (при пустом `DOCLING_URL` он помечается `failed`);
+  профиль `kb-ingest` — опция для этого (вернуть `DOCLING_URL=http://docling:5001` и `DOCLING_API_KEY`), вместе с Langfuse не включать (8 ГБ).
 
 `erp-mcp` (инструменты ERP для агента CRM) лежит под профилем `mcp` и по умолчанию не стартует: CRM к нему пока не ходит (M3-CRM-07).
 Файл контракта уже едет в релизе: `/opt/rt/releases/<sha>/packages/contracts/mcp-tools.json` монтируется в контейнер по пути
