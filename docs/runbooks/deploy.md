@@ -117,7 +117,12 @@ Actions → **Deploy** → Run workflow: `ref` = `main` (или sha, входя�
 На первом запуске Caddy получает сертификаты Let's Encrypt — DNS должен уже указывать на VPS 1, порты 80/443 открыты. После деплоя:
 
 - вписать `OWN_COMPANY_ID` в `/opt/rt/.env.prod` после создания компании-владельца (FIX-11) и перезапустить ERP;
-- Telegram-вебхук ставит CRM сама при `TELEGRAM_MODE=webhook`;
+- Telegram-вебхук ставит CRM сама при `TELEGRAM_MODE=webhook`; адрес берётся из `CRM_DOMAIN` (`https://<CRM_DOMAIN>/telegram/webhook`,
+  `prod.yml`), вписывать `TELEGRAM_WEBHOOK_URL` вручную не нужно — задавайте её, только если вебхук должен идти на другой https-адрес
+  (явное значение переопределяет). Режим `webhook` с пустым или не-https адресом бота не запускает и вебхук не трогает: в журнале CRM
+  `bot_webhook_not_configured`, в «Центре внешних сервисов» → Telegram — сбой «Вебхук Telegram не настроен» с подсказкой; там же
+  фактический адрес вебхука и последняя ошибка доставки из `getWebhookInfo`. Если на VPS адрес был вписан вручную — после выкладки
+  с этим изменением строку можно убрать из `.env.prod` (значение по умолчанию совпадёт);
 - Langfuse (`RT_PROFILES=observability` в `.env.prod`) открывается SSH-туннелем: `ssh -L 3000:127.0.0.1:3000 deploy@<VPS 1>`;
   docling на проде **не используется** (M5-CRM-02): `DOCLING_URL` в `prod.yml` пуст. База знаний принимает только Markdown по
   `docs/kb/FORMAT.md` (готовит человек или ИИ-агент по `docs/kb/PROMPT.md`) и индексирует его встроенным конвертером CRM; docling
@@ -197,6 +202,11 @@ Actions → **Deploy** → Run workflow: `ref` = `main` (или sha, входя�
   (PR #123): свой образ LiteLLM на Debian, numpy < 2.4 в CRM, `cpu-baseline-check.sh` до миграций; ClickHouse/Langfuse на этих
   VPS недоступны (`docs/runbooks/servers.md`, «CPU прод-VPS»). Docling на проде не используется — база знаний принимает только
   Markdown (M5-CRM-02, PR #124).
+- **Вебхук Telegram (временный обход, FIX-66).** При `TELEGRAM_MODE=webhook` и пустом `TELEGRAM_WEBHOOK_URL` CRM передавала
+  Telegram пустой адрес — вебхук удалялся, бот молчал. С согласия владельца в `/opt/rt/.env.prod` вписано
+  `TELEGRAM_WEBHOOK_URL=https://crm.railtech.uz/telegram/webhook`; после FIX-66 (адрес из `CRM_DOMAIN`) строку можно убрать.
+- **Своя компания ERP и флаги.** Компания создана вручную, `OWN_COMPANY_ID=1` и `PLATFORM_SSO_ENABLED=true` вписаны в
+  `.env.prod` — заменяется мастером и умолчаниями FIX-65.
 - **Не фильтровать службы по подстроке.** При удалении старых служб `grep grade` зацепил `apt-daily-upgrade` и
   `unattended-upgrades` — восстановлены; список служб смотреть глазами перед `disable`.
 
