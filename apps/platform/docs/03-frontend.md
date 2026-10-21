@@ -53,11 +53,11 @@ web/
 
 | Токен antd | Значение | Отличие от ui-tokens 0.1 |
 |---|---|---|
-| `colorPrimary` / `colorPrimaryHover` | `#1668dc` / `#1677ff` | было `#0958d9` / `#003eb3`; белый на `#1668dc` — 5.2:1 |
+| `colorPrimary` / `colorPrimaryHover` | `#1668dc` / `#0958d9` | было `#0958d9` / `#003eb3`; белый на `#1668dc` — 5.2:1; hover `#1677ff` из SPEC-v3 §5.2 даёт 4.1:1 и заменён на `#0958d9` (6.2:1) по критерию §11.2 п. 6 (Q-INF-P0-2-1) |
 | `colorPrimaryBg` / `colorPrimaryText` | `#e6f4ff` / `#0958d9` | — |
-| `colorSuccess` / текст тега | `#52c41a` / `#237804` | — |
-| `colorWarning` / текст тега | `#faad14` / `#874d00` | — |
-| `colorError` / текст тега | `#ff4d4f` / `#a8071a` | было `#cf1322` |
+| `colorSuccess` / текст | заливки `#52c41a`, в теме antd — `#237804` | antd берёт `colorSuccess`/`Warning`/`Error` в текст и под белый текст (теги, ошибки форм, danger-кнопки, Badge): в теме antd эти токены = значения «текст», светлые `*Bg`/`*Border` — явно; затравочные заливки SPEC остаются в `tokens.json` и CSS (INF-P0-2, #148) |
+| `colorWarning` / текст | заливки `#faad14`, в теме antd — `#874d00` | то же |
+| `colorError` / текст | заливки `#ff4d4f`, в теме antd — `#a8071a` | то же; было `#cf1322` |
 | текст тегов purple / cyan | `#531dab` / `#006d75` | purple — новое |
 | `colorText` / `colorTextSecondary` / `colorTextTertiary` | `#1f1f1f` / `#595959` / `#767676` | были `rgba(0,0,0,.75/.6)`; `#767676` — минимум для 12 px (4.54:1) |
 | `colorBorder` / `colorSplit` | `#d9d9d9` / `#f0f0f0` | — |
