@@ -4,6 +4,7 @@
 .env
 .env.*
 !.env.example
+!apps/platform/web/.env.mock
 !infra/.env.prod.example
 *.pem
 *.key
