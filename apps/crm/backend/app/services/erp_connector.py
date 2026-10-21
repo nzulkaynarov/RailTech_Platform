@@ -26,6 +26,7 @@ from app.integrations.erp import (
     ErpHealth,
     ErpProbe,
     ErpProbeError,
+    ErpRateLimited,
     ErpResolution,
     Source,
     resolve_erp,
@@ -52,6 +53,7 @@ _REASONS: Final[dict[ErpErrorKind, Reason]] = {
     "unauthorized": Reason.ERP_UNAUTHORIZED,
     "unavailable": Reason.ERP_UNAVAILABLE,
     "bad_response": Reason.ERP_BAD_RESPONSE,
+    "rate_limited": Reason.ERP_RATE_LIMITED,
 }
 
 
@@ -241,14 +243,20 @@ class ErpConnectorService:
         if failure is not None:
             raise failure
 
-    async def check(self) -> ErpHealth:
-        """«Проверить связь»: всегда в ERP; ошибка — доменная с подкодом ADR-0017; кэш обновлён."""
+    async def check(self) -> ErpHealth | ErpRateLimited:
+        """«Проверить связь»: всегда в ERP; ошибка — доменная с подкодом ADR-0017; кэш обновлён.
+
+        429 (лимит сервисного токена) — не ошибка: возвращается `ErpRateLimited` с паузой из
+        `Retry-After`; прежний итог проверки в кэше остаётся (лимит не значит «ERP не работает»).
+        """
         connection = (await self.resolution()).connection
         if connection is None:
             raise ConflictError("erp connector is not configured", reason=Reason.ERP_NOT_CONFIGURED)
         try:
             health = await self._probe.health(connection)
         except ErpProbeError as exc:
+            if exc.kind == "rate_limited":
+                return self._rate_limited(exc)
             self._remember(ErpFacts(configured=True, error=exc.kind, detail=exc.detail))
             logger.warning("erp_health_failed", kind=exc.kind, detail=exc.detail)
             if exc.kind == "invalid_url":
@@ -275,6 +283,16 @@ class ErpConnectorService:
         with contextlib.suppress(UpstreamUnavailableError, ValidationFailedError):
             await self.check()
         return self._cached.facts if self._cached is not None else ErpFacts(configured=True)
+
+    def _rate_limited(self, exc: ErpProbeError) -> ErpRateLimited:
+        logger.info("erp_health_rate_limited", retry_after_s=exc.retry_after_s)
+        # Прежний итог не затираем: лимит частоты — не сбой ERP. Итога ещё не было — «не отвечает».
+        previous = self._cached.facts if self._cached is not None else None
+        self._remember(
+            previous
+            or ErpFacts(configured=True, error="unavailable", detail="лимит частоты запросов ERP")
+        )
+        return ErpRateLimited(retry_after_s=exc.retry_after_s, checked_at=datetime.now(UTC))
 
     def _remember(self, facts: ErpFacts) -> None:
         self._cached = _CachedHealth(facts, self._clock())

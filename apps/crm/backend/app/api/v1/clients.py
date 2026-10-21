@@ -21,6 +21,7 @@ from app.schemas.clients import (
     ClientDetail,
     ClientListItem,
     ClientOut,
+    ClientReceivablesOut,
     ClientUpdate,
     ConsentRecord,
     ConsentResult,
@@ -31,6 +32,7 @@ from app.schemas.clients import (
     LeadBrief,
     LinkTelegram,
     MakeCustomer,
+    MoneyOut,
     ServiceRequestClose,
     ServiceRequestItem,
     ServiceRequestOut,
@@ -98,6 +100,24 @@ async def get_client(client_id: int, _: ClientReader, container: ContainerDep) -
         service_requests=[
             ServiceRequestOut.model_validate(r, from_attributes=True) for r in requests
         ],
+    )
+
+
+@router.get("/clients/{client_id}/erp-receivables", response_model=ClientReceivablesOut)
+async def get_client_receivables(
+    client_id: int, _: ClientReader, container: ContainerDep
+) -> ClientReceivablesOut:
+    """Долг клиента по валютам из ERP (`CompanySummary.receivables_by_currency`), шов 0.3.0.
+
+    Сбой ERP — не ошибка: `status="unavailable"` (блок в карточке скрыт), ответ всегда 200.
+    404 — только если клиента нет в CRM.
+    """
+    result = await container.erp_client_card.receivables(client_id)
+    return ClientReceivablesOut(
+        status=result.status,
+        receivables=[MoneyOut(amount=m.amount, currency=m.currency) for m in result.receivables],
+        reason=result.reason,
+        retry_after_s=result.retry_after_s,
     )
 
 

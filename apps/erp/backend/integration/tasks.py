@@ -22,7 +22,7 @@ from django.db.models import Q
 from django.utils import timezone
 
 from .models import IntegrationWebhookEvent, WebhookEventStatus
-from .services.webhooks import sign_payload, webhook_signing_secret
+from .services.webhooks import delivery_payload, discard_secret_payload, sign_payload, webhook_signing_secret
 
 logger = logging.getLogger(__name__)
 
@@ -79,9 +79,25 @@ def deliver_webhook_event(self, event_id: int) -> bool:
         logger.error("deliver_webhook_event: ERP_WEBHOOK_SECRET is not configured, event #%s waits", event_id)
         return False
 
+    # Тело отправки = журнал + секреты из кэша (код акцепта в журнале замаскирован, FIX-60a). Секрет протух — отправлять
+    # нечего и повторять незачем: клиент запросит новый код.
+    payload = delivery_payload(event)
+    if payload is None:
+        # Условное обновление: параллельная доставка могла уже записать SENT (и убрать секрет) — её итог не затираем.
+        cancelled = IntegrationWebhookEvent.objects.filter(pk=event.pk, status=WebhookEventStatus.PENDING).update(
+            status=WebhookEventStatus.FAILED,
+            last_error="SECRET_EXPIRED: секретное поле тела события недоступно (срок кода вышел), отправка отменена",
+            next_attempt_at=None,
+        )
+        if cancelled:
+            logger.warning(
+                "deliver_webhook_event: event #%s (%s) lost its secret payload, not sent", event_id, event.event_type
+            )
+        return False
+
     event.attempts += 1
     event.last_attempt_at = timezone.now()
-    body_bytes = json.dumps(event.payload, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
+    body_bytes = json.dumps(payload, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
     signature = sign_payload(secret, body_bytes)
 
     headers = {
@@ -124,6 +140,7 @@ def deliver_webhook_event(self, event_id: int) -> bool:
                     "headers",
                 ]
             )
+            discard_secret_payload(event)
             logger.info(
                 "Webhook event %s (%s) delivered successfully to %s: HTTP %s",
                 event.event_id,

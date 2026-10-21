@@ -1,7 +1,12 @@
 import { Descriptions, List, Space, Typography } from "antd";
 import { useParams } from "react-router";
 
-import { useClient, useClientContacts, useClientDocuments } from "../../api/adminQueries";
+import {
+  useClient,
+  useClientContacts,
+  useClientDocuments,
+  useClientReceivables,
+} from "../../api/adminQueries";
 import { useDeals } from "../../api/dealQueries";
 import type { ClientDetail } from "../../api/generated/model";
 import { usePermissionsQuery } from "../../api/queries";
@@ -16,6 +21,7 @@ import { StageBadge } from "../../components/StageBadge";
 import { type UrlTab, UrlTabs } from "../../components/UrlTabs";
 import { segmentLabel } from "../../domain/labels";
 import { t } from "../../i18n/ru";
+import { formatMoney } from "../../domain/deals";
 import { formatDate } from "../../lib/time";
 import { ClientDeals } from "../deals/ClientDeals";
 import { ClientContacts } from "./ClientContacts";
@@ -26,8 +32,23 @@ import { HandoffState } from "./HandoffState";
 import { ServiceRequests } from "./ServiceRequests";
 import "../admin.css";
 
+/** Долг клиента по валютам: каждая валюта отдельно; «Долга нет», если ERP вернула пустой список. */
+function Receivables({ items }: { items: { amount: string; currency: string }[] }) {
+  if (items.length === 0) return <Typography.Text>{t.clients.receivablesNone}</Typography.Text>;
+  return (
+    <Space size={[16, 0]} wrap title={t.clients.receivablesHint}>
+      {items.map((money) => (
+        <Typography.Text key={money.currency} strong>
+          {formatMoney(money.amount, money.currency)}
+        </Typography.Text>
+      ))}
+    </Space>
+  );
+}
+
 /** Реквизиты — одной строкой под названием клиента. */
 function Details({ data }: { data: ClientDetail }) {
+  const debt = useClientReceivables(data.id, Boolean(data.erp_company_id)).data;
   return (
     <Descriptions
       size="small"
@@ -49,6 +70,16 @@ function Details({ data }: { data: ClientDetail }) {
                 key: "erp",
                 label: t.clients.inBackoffice,
                 children: `${t.clients.backofficeCompany} #${String(data.erp_company_id)}`,
+              },
+            ]
+          : []),
+        // Нет данных (ERP не отвечает, старше шва 0.3.0, лимит частоты) — блока нет, как раньше.
+        ...(debt?.status === "ok"
+          ? [
+              {
+                key: "receivables",
+                label: t.clients.receivables,
+                children: <Receivables items={debt.receivables} />,
               },
             ]
           : []),

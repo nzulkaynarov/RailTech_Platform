@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: RailTech Platform ERP — Integration API (CRM → ERP)
-  version: 0.2.0
+  version: 0.3.0
   summary: Пространство `/api/integration/v1/` — вызывает только CRM под сервисным токеном.
   description: |
     Контракт по `docs/CONTRACTS.md` §0 и §2. Версия 0 (M0-INF-02): форма запросов и ответов, по которой
@@ -11,6 +11,10 @@ info:
     и код валюты ISO-4217; идентификаторы — целые, непрозрачные для другой стороны. Ошибки ERP — `{"detail": "<CODE>"}`.
     Все POST принимают `Idempotency-Key`; ERP хранит ключ 7 дней. Идентификатор клиента никогда не
     приходит от модели.
+
+    0.3.0 (FIX-60): 429 `TOO_MANY_REQUESTS` с `Retry-After` на каждой операции (лимит сервисного токена, Q-FIX35-1);
+    `Contact` закрыт через `unevaluatedProperties` (Q-FIX35-3); `CompanySummary.receivables_by_currency` (Q-FIX30-2);
+    `erp_document_id` — идентификатор документа портала (FIX-38).
   contact:
     name: RailTech Platform — docs/CONTRACTS.md
 servers:
@@ -54,6 +58,8 @@ paths:
             schema:
               $ref: '#/components/schemas/HandoffRequest'
       responses:
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
         '200':
           description: Клиент уже передавался — возвращены существующие идентификаторы
           content:
@@ -93,6 +99,8 @@ paths:
             schema:
               $ref: '#/components/schemas/ContactIn'
       responses:
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
         '200':
           description: Контакт обновлён
           content:
@@ -114,6 +122,8 @@ paths:
       parameters:
         - $ref: '#/components/parameters/ErpCompanyId'
       responses:
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
         '200':
           description: Открытые сделки, последний документ, дебиторка, ближайшая поставка
           content:
@@ -133,6 +143,8 @@ paths:
       parameters:
         - $ref: '#/components/parameters/ErpCompanyId'
       responses:
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
         '200':
           description: Сделки компании
           content:
@@ -154,6 +166,8 @@ paths:
       parameters:
         - $ref: '#/components/parameters/ErpDealId'
       responses:
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
         '200':
           description: Стадия, КП, договор, счета, поставки (проекция клиента), акты
           content:
@@ -173,6 +187,8 @@ paths:
       parameters:
         - $ref: '#/components/parameters/ErpDealId'
       responses:
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
         '200':
           description: Документы без файлов (файл — через `/documents/{id}/link`)
           content:
@@ -205,6 +221,8 @@ paths:
           schema:
             type: string
       responses:
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
         '200':
           description: Ссылка выдана
           content:
@@ -246,6 +264,8 @@ paths:
             maximum: 50
             default: 10
       responses:
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
         '200':
           description: Найденные позиции опубликованного слоя
           content:
@@ -273,6 +293,8 @@ paths:
             schema:
               $ref: '#/components/schemas/ProvisionUserRequest'
       responses:
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
         '200':
           description: Пользователь уже существовал — обновлён
           content:
@@ -316,6 +338,8 @@ paths:
             type: integer
             format: int64
       responses:
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
         '204':
           description: Сессии отозваны (в том числе если их не было)
         '401':
@@ -342,6 +366,8 @@ paths:
             type: string
             format: date
       responses:
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
         '200':
           description: Расходы по дням, функциям и моделям
           content:
@@ -359,6 +385,8 @@ paths:
       operationId: getIntegrationHealth
       summary: Здоровье ERP для страницы «Состояние системы» CRM
       responses:
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
         '200':
           description: ERP жива
           content:
@@ -415,6 +443,7 @@ components:
       name: erp_document_id
       in: path
       required: true
+      description: Идентификатор документа портала (тот же, что `GET /documents` Cabinet, FIX-38) — непрозрачен для CRM
       schema:
         type: integer
         format: int64
@@ -438,6 +467,20 @@ components:
         application/json:
           schema:
             $ref: '#/components/schemas/Error'
+    TooManyRequests:
+      description: >-
+        Лимит запросов сервисного токена (по умолчанию 300 в минуту на токен, настройка ERP `INTEGRATION_RATE`);
+        `{"detail": "TOO_MANY_REQUESTS"}`, повторить через `Retry-After` секунд
+      headers:
+        Retry-After:
+          description: Через сколько секунд можно повторить
+          schema:
+            type: integer
+            minimum: 1
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
 
   schemas:
     Error:
@@ -447,7 +490,7 @@ components:
       properties:
         detail:
           type: string
-          examples: [NOT_FOUND, IDEMPOTENCY_CONFLICT, EMAIL_CONFLICT, VALIDATION_ERROR]
+          examples: [NOT_FOUND, IDEMPOTENCY_CONFLICT, EMAIL_CONFLICT, VALIDATION_ERROR, TOO_MANY_REQUESTS]
       additionalProperties: false
 
     Language:
@@ -481,8 +524,9 @@ components:
           $ref: '#/components/schemas/Currency'
       additionalProperties: false
 
-    ContactIn:
+    ContactFields:
       type: object
+      description: Поля контакта без замыкания — основа `ContactIn` и `Contact` (Q-FIX35-3)
       required: [crm_contact_id, name, language, is_primary, preferred_channel]
       properties:
         crm_contact_id:
@@ -506,11 +550,17 @@ components:
           type: boolean
         preferred_channel:
           $ref: '#/components/schemas/PreferredChannel'
-      additionalProperties: false
+
+    ContactIn:
+      description: Контакт из CRM (запрос); лишние поля — 422
+      unevaluatedProperties: false
+      allOf:
+        - $ref: '#/components/schemas/ContactFields'
 
     Contact:
+      unevaluatedProperties: false
       allOf:
-        - $ref: '#/components/schemas/ContactIn'
+        - $ref: '#/components/schemas/ContactFields'
         - type: object
           required: [erp_contact_id, erp_company_id]
           properties:
@@ -689,7 +739,7 @@ components:
 
     CompanySummary:
       type: object
-      required: [erp_company_id, crm_client_id, name, open_deals, receivables]
+      required: [erp_company_id, crm_client_id, name, open_deals, receivables, receivables_by_currency]
       properties:
         erp_company_id:
           type: integer
@@ -708,7 +758,13 @@ components:
             - $ref: '#/components/schemas/Document'
             - type: 'null'
         receivables:
+          description: Долг клиента в одной валюте (UZS, если есть, иначе первая по коду); остальное — `receivables_by_currency`
           $ref: '#/components/schemas/Money'
+        receivables_by_currency:
+          description: Долг клиента по каждой валюте отдельно, без пересчёта по курсу (Q-FIX30-2); пусто — долга нет
+          type: array
+          items:
+            $ref: '#/components/schemas/Money'
         next_delivery:
           oneOf:
             - $ref: '#/components/schemas/DeliveryLine'
@@ -883,6 +939,7 @@ components:
       required: [erp_document_id, kind, number, date, title, status]
       properties:
         erp_document_id:
+          description: Идентификатор документа портала (FIX-38) — им же открывается `GET /documents/{erp_document_id}/link`
           type: integer
           format: int64
         erp_deal_id:

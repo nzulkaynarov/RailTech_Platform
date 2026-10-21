@@ -120,6 +120,26 @@ class LeadBrief(BaseModel):
     created_at: datetime
 
 
+class MoneyOut(BaseModel):
+    """Сумма в одной валюте (`Money` контракта ERP): строка с двумя знаками и код ISO 4217."""
+
+    amount: str
+    currency: str
+
+
+class ClientReceivablesOut(BaseModel):
+    """Долг клиента по валютам из ERP (шов 0.3.0, Q-FIX30-2), без пересчёта по курсу.
+
+    `ok` — ответ получен: пустой список — долга нет. `unavailable` — блок не показываем (ERP не
+    настроена, не отвечает, ограничила частоту или не присылает поле); `reason` — для подсказки.
+    """
+
+    status: Literal["ok", "unavailable"]
+    receivables: list[MoneyOut]
+    reason: str | None = None
+    retry_after_s: int | None = None
+
+
 class ClientDetail(ClientOut):
     identities: list[IdentityOut]
     candidates: list[IdentityOut]

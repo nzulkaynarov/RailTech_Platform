@@ -29,13 +29,17 @@ from app.models.integrations import ErpIncomingEvent
 from app.models.leads import Lead, LeadNote, TelegramIdentity
 from app.repositories import events
 from app.schemas.erp_events import (
+    CODE_EVENT,
     ErpEventEnvelope,
+    QuoteAcceptanceCodeRequestedEvent,
     RequestCreatedEvent,
     is_known_event,
     parse_event,
+    redact_secrets,
 )
 from app.security.secrets_store import SecretsStore
 from app.services import deals as deals_service
+from app.services.erp_acceptance_code import AcceptanceCodeDelivery
 from app.services.erp_bot_messages import (
     client_message,
     feed_note,
@@ -121,6 +125,26 @@ def _raw_preview(raw_body: bytes) -> dict[str, Any]:
 
 
 def _parse_body(raw_body: bytes, event_type: str) -> ParsedBody:
+    """Тело события → итог разбора для журнала; секреты в `data` вырезаны (код акцепта).
+
+    Конверт (`envelope`) разобран по исходному телу и несёт код в `SecretStr`; `data` — то, что
+    пишется в журнал: код заменён на `[redacted]`, а тело, которое не разобралось (сломанный
+    JSON, не по схеме), у события с кодом не сохраняется даже кусками.
+    """
+    parsed = _parse_body_raw(raw_body, event_type)
+    secret_event = event_type == CODE_EVENT or parsed.data.get("event") == CODE_EVENT
+    if not secret_event:
+        return parsed
+    unreadable = "raw" in parsed.data and "event" not in parsed.data
+    data = (
+        {"raw": "[withheld: body of a secret event]"}
+        if unreadable
+        else redact_secrets(parsed.data, event_type)
+    )
+    return ParsedBody(parsed.status, data, parsed.envelope, parsed.error)
+
+
+def _parse_body_raw(raw_body: bytes, event_type: str) -> ParsedBody:
     """Тело события → итог разбора для журнала.
 
     Читатель терпимый (FIX-35): тело, которое мы принять не можем, не даёт 4xx — ретраи ERP
@@ -155,6 +179,17 @@ def _parse_body(raw_body: bytes, event_type: str) -> ParsedBody:
     return ParsedBody("received", data, envelope=envelope)
 
 
+def _body_hash(raw_body: bytes, parsed: ParsedBody, event_type: str) -> str:
+    """sha256 тела для защиты от повтора. У события с кодом — хеш тела БЕЗ кода (то, что пишется
+    в журнал после `redact_secrets`): иначе код из 4–12 цифр подбирался бы по хешу из журнала.
+    Повтор того же тела по-прежнему ловится.
+    """
+    if CODE_EVENT in (event_type, parsed.data.get("event")):
+        canonical = json.dumps(parsed.data, sort_keys=True, ensure_ascii=False).encode()
+        return hashlib.sha256(canonical).hexdigest()
+    return hashlib.sha256(raw_body).hexdigest()
+
+
 class ErpEventsService:
     def __init__(
         self,
@@ -171,6 +206,9 @@ class ErpEventsService:
         self._config = config
         self._bot_provider = bot_provider
         self._enqueue_task = enqueue_task
+        self._acceptance_code = AcceptanceCodeDelivery(
+            sessions, settings_service, bot_provider, config
+        )
 
     async def get_webhook_secrets(self) -> tuple[str, ...]:
         """Секреты, которыми принимается подпись: текущий и предыдущий («Подключения» → ERP, иначе
@@ -216,8 +254,14 @@ class ErpEventsService:
 
         parsed = _parse_body(raw_body, event_type)
         envelope, data = parsed.envelope, parsed.data
-        body_hash = hashlib.sha256(raw_body).hexdigest()
+        body_hash = _body_hash(raw_body, parsed, event_type)
         status, error = parsed.status, parsed.error
+        # Код акцепта не ждёт очереди: задача и `outbox` хранили бы его в БД. Строка журнала
+        # сразу «обработана» (код вырезан), доставка — ниже, из памяти этого запроса.
+        code_event = envelope if isinstance(envelope, QuoteAcceptanceCodeRequestedEvent) else None
+        if code_event is not None:
+            status = "processed"
+        now = datetime.now(UTC)
         incoming = ErpIncomingEvent(
             event_id=event_id,
             event_type=event_type[:64],
@@ -230,7 +274,8 @@ class ErpEventsService:
             payload=data,
             status=status,
             error=error,
-            processed_at=None if status == "received" else datetime.now(UTC),
+            processed_at=None if status == "received" else now,
+            notified_at=now if code_event is not None else None,
             body_sha256=body_hash,
         )
         try:
@@ -250,10 +295,14 @@ class ErpEventsService:
                     incoming.status, status = "rejected", "rejected"
                     incoming.error = error = f"replayed body: already received as event {original}"
                     incoming.processed_at = datetime.now(UTC)
+                    incoming.notified_at = None
+                    code_event = None  # повтор тела: код не отправляется
                 session.add(incoming)
         except IntegrityError:  # тот же event_id вставил параллельный запрос
             return True, "duplicate"
 
+        if code_event is not None:
+            return False, await self._acceptance_code.deliver(event_id, code_event)
         if status != "received":
             logger.warning(
                 "erp_webhook_not_processed", event_id=event_id, status=status, reason=error
@@ -354,6 +403,8 @@ class ErpEventsService:
                 return True
             if event_row.status in ("rejected", "skipped"):
                 return False
+            if event_row.event_type == CODE_EVENT:
+                return False  # код вырезан из журнала и доставляется при приёме, не из очереди
 
             envelope = parse_event(event_row.payload)
             client = await session.get(Client, envelope.crm_client_id)

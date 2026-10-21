@@ -51,9 +51,15 @@ Contract-first действует для `portal`, `integration`, событий
 ## 3. События (ERP → CRM)
 
 `POST {CRM}/api/v1/integrations/erp/events`. Заголовки: `X-Event-Id` (UUID), `X-Event-Type`,
-`X-Timestamp`, `X-Signature: sha256=<HMAC(body, WEBHOOK_SECRET)>`. CRM отвечает 200 быстро, обрабатывает
-асинхронно; повтор с тем же `X-Event-Id` — 200 без действий. Ретраи ERP: 1, 5, 30 мин, 2, 6, 24 ч; после — журнал
-с ручным повтором.
+`X-Timestamp` (UTC ISO 8601), `X-Signature: sha256=<HMAC(WEBHOOK_SECRET, f"{X-Event-Id}.{X-Timestamp}.{body}")>` — схема v2
+(FIX-61, Q-FIX35-2); переход: CRM принимает и старую подпись только тела, пока `ERP_WEBHOOK_SIGN_LEGACY=true`, затем
+настройка выключается. ERP при ретрае подписывает заново с актуальным `X-Timestamp`; `occurred_at` в теле — время события.
+CRM отвечает 200 быстро, обрабатывает асинхронно; повтор с тем же `X-Event-Id` — 200 без действий. Неверная подпись —
+401. **Постоянный отказ — 200 и запись `rejected` в журнале CRM** (Q-FIX33-1): `|now − X-Timestamp| > 300 с`, повтор того же
+тела под другим `X-Event-Id`, сломанный JSON, тело не по схеме известного события — ретраи не помогут. **Читатель
+терпимый** (Q-FIX35-4): неизвестные поля игнорируются, неизвестный `event` — 200 и `skipped`; отправитель соблюдает схему
+строго; новое необязательное поле или новый тип события не меняют `version` и не требуют одновременной выкладки CRM.
+Ретраи ERP: 1, 5, 30 мин, 2, 6, 24 ч; после — журнал с ручным повтором.
 
 Тело: `{event, occurred_at, erp_company_id, crm_client_id, deal{erp_deal_id, number, title, stage, amount, currency}, actor{type: system|staff|client, name?}, payload{...}}`;
 `deal.amount` — сумма последнего КП, отправленного клиенту, или `null`.
@@ -63,7 +69,8 @@ Contract-first действует для `portal`, `integration`, событий
 | `request.created` | `source: crm|cabinet|erp` | лента лида; зеркало сделки `open` |
 | `deal.stage_changed` | `from, to, reason?` | лента; `external_stage` |
 | `quote.sent` | `version, public_url, valid_until` | бот: «КП готово» с кнопками |
-| `quote.viewed` / `quote.accepted` / `quote.rejected` | `version, reason?` | лента; при accepted — уведомление ответственному |
+| `quote.viewed` / `quote.accepted` / `quote.rejected` | `version, reason?, erp_contact_id?, crm_contact_id?` | лента; при accepted — уведомление ответственному |
+| `quote.acceptance_code_requested` | `version, erp_contact_id, crm_contact_id, code, expires_at` | бот присылает код контакту в Telegram; `code` не хранится и не логируется (Q-FIX22-1) |
 | `contract.signed` | `by: client|company|both` | лента |
 | `invoice.issued` / `invoice.paid` / `invoice.overdue` | `number, amount, due_date, link` | бот: «счёт выставлен»; напоминание — только ERP-письмо, бот дублирует по политике |
 | `delivery.status_changed` / `delivery.eta_changed` | `line_summary, status, eta, tracking?` | бот: статус/сдвиг по политике «сообщать о сдвигах» |
