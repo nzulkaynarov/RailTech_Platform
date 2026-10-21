@@ -46,8 +46,21 @@ class BackupItem(BaseModel):
     size_bytes: int
 
 
+class BackupDatabase(BaseModel):
+    name: str
+    last_success_at: datetime | None = Field(description="Последняя копия базы; нет — None")
+
+
 class BackupsOut(BaseModel):
-    available: bool = Field(description="Том бэкапов смонтирован в api")
+    available: bool = Field(description="Том бэкапов смонтирован в api / бакет `backups` читается")
+    source: Literal["volume", "rustfs"] = Field(
+        description="Откуда статус: том backup-контейнера (dev) или бакет `backups` RustFS (прод)"
+    )
+    can_request: bool = Field(description="«Сделать сейчас» доступно (только для тома)")
+    error: Literal["bucket_missing", "access_denied", "unreachable"] | None = Field(
+        description="Почему бакет не прочитан; None — прочитан"
+    )
+    databases: list[BackupDatabase] = Field(description="Последняя копия по каждой базе (бакет)")
     last_success_at: datetime | None
     stale: bool = Field(description="Последний успешный бэкап старше 26 ч или его нет")
     requested_at: datetime | None = Field(description="«Сделать сейчас» ждёт сервис бэкапа")

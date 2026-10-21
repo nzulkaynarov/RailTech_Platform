@@ -4,12 +4,11 @@
 Повторы — Procrastinate; итог и ошибки пишет `ErpAccessService` (ленту внешних сервисов, ADR-0024).
 """
 
-from procrastinate import RetryStrategy
-
 from app.container import get_container
+from app.tasks.erp_retry import ErpRetryStrategy
 from app.tasks.queue import queue
 
-RETRY = RetryStrategy(max_attempts=6, linear_wait=30)
+RETRY = ErpRetryStrategy(max_attempts=6, linear_wait=30)
 
 
 def user_lock(user_id: int) -> str:

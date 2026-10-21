@@ -94,8 +94,10 @@ def make_telegram_init_data(
     return urllib.parse.urlencode(params)
 
 
-def issue_test_acceptance_code(quote, email: str, code: str = "481516") -> str:
-    """Активный одноразовый код акцепта КП — как его выпускает `issue_acceptance_code`, без письма."""
+def issue_test_acceptance_code(quote, email: str, code: str = "481516", contact=None) -> str:
+    """Активный одноразовый код акцепта КП — как его выпускает `issue_acceptance_code`, без письма.
+
+    `contact` — контакт Cabinet, которому выпущен код (Q-FIX22-6): кроме него, код никто не погасит."""
     from datetime import timedelta
 
     from django.utils import timezone
@@ -105,6 +107,7 @@ def issue_test_acceptance_code(quote, email: str, code: str = "481516") -> str:
 
     QuoteAcceptanceCode.objects.create(
         quote=quote,
+        contact=contact,
         email=email.strip().lower(),
         code_hash=_hash_code(code),
         expires_at=timezone.now() + timedelta(minutes=CODE_TTL_MINUTES),

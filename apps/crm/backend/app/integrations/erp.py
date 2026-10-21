@@ -11,6 +11,7 @@ import time
 import uuid
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
+from email.utils import parsedate_to_datetime
 from typing import Any, Literal, Protocol
 
 import httpx
@@ -21,6 +22,7 @@ from app.config import Settings
 from app.domain.erp_connector import base_url_problem, health_url, normalize_base_url
 from app.domain.errors import (
     ConflictError,
+    ErpRateLimitedError,
     Reason,
     UpstreamUnavailableError,
     ValidationFailedError,
@@ -36,8 +38,37 @@ from app.services.settings import SettingsService
 logger = structlog.get_logger(__name__)
 
 Source = Literal["db", "env", "none"]
-ErpErrorKind = Literal["invalid_url", "unauthorized", "unavailable", "bad_response"]
+ErpErrorKind = Literal["invalid_url", "unauthorized", "unavailable", "bad_response", "rate_limited"]
 HEALTH_TIMEOUT_S = 5.0
+#: Пауза при 429 без (или с неразборчивым) `Retry-After` и потолок: ERP не усыпит задачу надолго.
+DEFAULT_RETRY_AFTER_S = 30
+MAX_RETRY_AFTER_S = 600
+
+
+def retry_after_seconds(response: httpx.Response) -> int:
+    """`Retry-After` ответа 429 в секундах: число (контракт 0.3.0) или дата HTTP.
+
+    Нет заголовка или он нечитаем — `DEFAULT_RETRY_AFTER_S`; итог в пределах 1…`MAX_RETRY_AFTER_S`.
+    """
+    raw = response.headers.get("Retry-After", "").strip()
+    seconds = DEFAULT_RETRY_AFTER_S
+    if raw:
+        try:
+            seconds = int(float(raw))
+        except ValueError:
+            try:
+                moment = parsedate_to_datetime(raw)
+                if moment.tzinfo is None:
+                    moment = moment.replace(tzinfo=UTC)
+                seconds = int((moment - datetime.now(UTC)).total_seconds())
+            except (TypeError, ValueError):
+                seconds = DEFAULT_RETRY_AFTER_S
+    return max(1, min(seconds, MAX_RETRY_AFTER_S))
+
+
+def rate_limited(response: httpx.Response) -> ErpRateLimitedError:
+    """429 `TOO_MANY_REQUESTS` → временная ошибка с паузой из `Retry-After`."""
+    return ErpRateLimitedError(retry_after_seconds(response))
 
 
 @dataclass(frozen=True, slots=True)
@@ -174,10 +205,12 @@ async def erp_connector_configured(
 class ErpProbeError(Exception):
     """Проверка связи не удалась; `kind` — стабильный класс причины, `detail` — для логов/экрана."""
 
-    def __init__(self, kind: ErpErrorKind, detail: str = "") -> None:
+    def __init__(self, kind: ErpErrorKind, detail: str = "", *, retry_after_s: int = 0) -> None:
         super().__init__(f"{kind}: {detail}" if detail else kind)
         self.kind: ErpErrorKind = kind
         self.detail = detail
+        # Только для `rate_limited`: через сколько секунд ERP просит повторить.
+        self.retry_after_s = retry_after_s
 
 
 @dataclass(frozen=True, slots=True)
@@ -192,10 +225,21 @@ class ErpHealth:
     latency_ms: int
 
 
-class _HealthPayload(BaseModel):
-    """Схема `Health` из `packages/contracts/openapi/erp-integration.yaml`."""
+@dataclass(frozen=True, slots=True)
+class ErpRateLimited:
+    """ERP ответила 429 на пробу: связь есть, но частоту ограничили — это статус, не отказ."""
 
-    model_config = ConfigDict(extra="forbid")
+    retry_after_s: int
+    checked_at: datetime
+
+
+class _HealthPayload(BaseModel):
+    """Схема `Health` из `packages/contracts/openapi/erp-integration.yaml`.
+
+    Читатель терпимый (Q-FIX35-4): новое необязательное поле ERP не должно ломать «Проверить связь».
+    """
+
+    model_config = ConfigDict(extra="ignore")
 
     status: Literal["ok", "degraded"]
     version: str
@@ -234,6 +278,11 @@ class HttpxErpProbe:
 
 
 def _parse(response: httpx.Response, latency_ms: int) -> ErpHealth:
+    if response.status_code == 429:
+        retry_after = retry_after_seconds(response)
+        raise ErpProbeError(
+            "rate_limited", f"retry after {retry_after}s", retry_after_s=retry_after
+        )
     if response.status_code in (401, 403):
         raise ErpProbeError("unauthorized", f"HTTP {response.status_code}")
     if response.status_code != 200:
@@ -434,6 +483,8 @@ class HttpxErpClient:
                 type(exc).__name__, reason=Reason.ERP_UNAVAILABLE
             ) from exc
 
+        if response.status_code == 429:
+            raise rate_limited(response)
         if response.status_code in (401, 403):
             raise UpstreamUnavailableError(
                 f"HTTP {response.status_code}", reason=Reason.ERP_UNAUTHORIZED

@@ -30,12 +30,13 @@ if TYPE_CHECKING:
     from app.services.ai_spend import AiSpendService
     from app.services.assist import AssistService
     from app.services.auth import AuthService
-    from app.services.backups import BackupService
+    from app.services.backups import BackupReader
     from app.services.budget import BudgetGuard
     from app.services.client_contacts import ClientContactService
     from app.services.clients import ClientService
     from app.services.documents import DocumentService
     from app.services.erp_access import ErpAccessService
+    from app.services.erp_client_card import ErpClientCardService
     from app.services.erp_connector import ErpConnectorService
     from app.services.erp_events import ErpEventsService
     from app.services.erp_handoff import ErpHandoffService
@@ -45,6 +46,7 @@ if TYPE_CHECKING:
     from app.services.external_services.view import ExternalServicesView
     from app.services.kb.admin import KbAdminService
     from app.services.kb.ingest import KbIngestService
+    from app.services.kb.markdown_convert import MarkdownConverter
     from app.services.kb.search import KbSearchService
     from app.services.lead_consent import LeadConsentService
     from app.services.lead_intake import LeadIntakeService
@@ -170,6 +172,12 @@ class Container:
         return DoclingClient(self.settings)
 
     @cached_property
+    def kb_converter(self) -> "MarkdownConverter":
+        from app.services.kb.markdown_convert import MarkdownConverter
+
+        return MarkdownConverter()
+
+    @cached_property
     def auth_service(self) -> "AuthService":
         from app.services.auth import AuthService
 
@@ -213,9 +221,13 @@ class Container:
         return SetupService(count_admins, self.user_service.create_first_admin)
 
     @cached_property
-    def backup_service(self) -> "BackupService":
+    def backup_service(self) -> "BackupReader":
+        """Статус бэкапов: том (dev) или бакет `backups` RustFS (прод, M5-CRM-01) — по настройке."""
         from app.services.backups import BackupService
+        from app.services.backups_rustfs import RustfsBackupService
 
+        if self.settings.backup_source_resolved == "rustfs":
+            return RustfsBackupService(self.storage, self.settings.s3_bucket_backups)
         return BackupService(self.settings.backup_dir)
 
     @cached_property
@@ -299,7 +311,7 @@ class Container:
         return KbIngestService(
             self.session_factory,
             self.storage,
-            self.docling,
+            self.kb_converter,
             self.embedder,
             self.settings.s3_bucket_kb,
         )
@@ -342,6 +354,15 @@ class Container:
         from app.integrations.erp import HttpxErpClient
 
         return HttpxErpClient(self.secrets_store, self.settings, self.settings_service)
+
+    @cached_property
+    def erp_client_card(self) -> "ErpClientCardService":
+        """Данные ERP в карточке клиента CRM (шов 0.3.0): долг по валютам."""
+        from app.integrations.erp_company import HttpxErpCompanyClient
+        from app.services.erp_client_card import ErpClientCardService
+
+        company = HttpxErpCompanyClient(self.secrets_store, self.settings, self.settings_service)
+        return ErpClientCardService(self.session_factory, company)
 
     @cached_property
     def erp_connector(self) -> "ErpConnectorService":

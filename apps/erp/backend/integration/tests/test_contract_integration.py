@@ -14,6 +14,10 @@ FIX-35: сторож покрывает ВСЕ операции контракт
 `POST /users/provision`, `DELETE /users/{id}/sessions`, и КАЖДЫЙ код ответа, который контракт обещает (200, 201, 204, 401,
 404, 409, 422, 503): `test_every_documented_status_is_exercised` падает, если для операции или кода нет вызова.
 
+FIX-60a (контракт 0.3.0): `Contact` и `ContactIn` закрыты через `unevaluatedProperties`, ответы проверяются по схеме
+контракта как есть — без обхода `allOf`; на КАЖДУЮ из 12 операций есть вызов, дающий 429 `TOO_MANY_REQUESTS` с `Retry-After`
+(лимит сервисного токена `INTEGRATION_RATE`, Q-FIX35-1).
+
 Код проверок общий с сторожем портала (`core/tests/openapi_contract.py`). Падение сторожа — падение теста: ни `skip`,
 ни `importorskip`; нет контракта на диске — падение с подсказкой про монтирование.
 """
@@ -322,25 +326,39 @@ def provision_body(crm_user_id, email):
     }
 
 
-def allof_safe(schema):
-    """Схема без `additionalProperties: false` у членов `allOf`.
+#: Вызов на каждую операцию контракта для проверки лимита: первый запрос берёт единственное разрешение `1/minute`
+#: (ответ любой: 200/404/422 — не важно), второй обязан получить 429. Ключ — (МЕТОД, путь контракта).
+THROTTLE_CASES = {
+    ("GET", "/companies/{erp_company_id}/summary"): ("/companies/999999/summary", None),
+    ("GET", "/companies/{erp_company_id}/deals"): ("/companies/999999/deals", None),
+    ("GET", "/deals/{erp_deal_id}"): ("/deals/999999", None),
+    ("GET", "/deals/{erp_deal_id}/documents"): ("/deals/999999/documents", None),
+    ("GET", "/documents/{erp_document_id}/link"): ("/documents/999999/link", None),
+    ("GET", "/catalog/search"): ("/catalog/search?q=рельс&mode=lead", None),
+    ("GET", "/ai-usage"): ("/ai-usage?date_from=2026-01-01&date_to=2026-12-31", None),
+    ("GET", "/health"): ("/health", None),
+    ("POST", "/clients/handoff"): ("/clients/handoff", handoff_body(8301, "830100001")),
+    ("PUT", "/contacts/{crm_contact_id}"): ("/contacts/999999", handoff_body(8301, "830100001")["contacts"][0]),
+    ("POST", "/users/provision"): ("/users/provision", provision_body(8901, "guard-8901@railtech.uz")),
+    ("DELETE", "/users/{crm_user_id}/sessions"): ("/users/999999/sessions", None),
+}
 
-    `Contact` в контракте — `allOf: [ContactIn, {erp_contact_id, …}]`, а `ContactIn` закрыт `additionalProperties: false`:
-    по JSON Schema ни один настоящий ответ такую схему не пройдёт (поля второго члена «лишние» для первого). Это дефект
-    записи контракта (Q-FIX35-2), правит его архитектор; сторож пока снимает запрет только с членов `allOf`, а лишние ключи
-    по-прежнему ловит `extra_keys` по объединённым `properties`.
-    """
-    if isinstance(schema, dict):
-        out = {key: allof_safe(value) for key, value in schema.items()}
-        if "allOf" in out:
-            out["allOf"] = [
-                {k: v for k, v in part.items() if k != "additionalProperties"} if isinstance(part, dict) else part
-                for part in out["allOf"]
-            ]
-        return out
-    if isinstance(schema, list):
-        return [allof_safe(item) for item in schema]
-    return schema
+
+def hit_twice_with_one_per_minute(client, method, url, body, monkeypatch):
+    """Два вызова операции при `INTEGRATION_RATE=1/minute`: (ответ первого, ответ второго)."""
+    from django.core.cache import cache
+
+    cache.clear()
+    monkeypatch.setitem(SimpleRateThrottle.THROTTLE_RATES, "integration", "1/minute")
+    responses = []
+    for _ in range(2):
+        kwargs = {"format": "json"} if body is not None else {}
+        if method == "POST":
+            kwargs["HTTP_IDEMPOTENCY_KEY"] = str(uuid.uuid4())  # у каждого вызова свой ключ: повтор не «тот же запрос»
+        responses.append(
+            getattr(client, method.lower())(PREFIX + url, **({"data": body} if body is not None else {}), **kwargs)
+        )
+    return responses
 
 
 def exercise_all(client, world):
@@ -489,11 +507,35 @@ def exercised(client, world, catalog_product, monkeypatch):
     # 503: ERP деградировала — миграции не применены
     from django.db.migrations.executor import MigrationExecutor
 
-    monkeypatch.setattr(MigrationExecutor, "migration_plan", lambda self, targets, clean_start=False: [("x", False)])
-    response = client.get(f"{PREFIX}/health")
+    with monkeypatch.context() as degraded:
+        degraded.setattr(MigrationExecutor, "migration_plan", lambda self, targets, clean_start=False: [("x", False)])
+        response = client.get(f"{PREFIX}/health")
     assert response.status_code == 503, response.content
     results.append(("GET", "/health", 503, response.json()))
+    # 429: лимит сервисного токена на каждой операции (FIX-60a, Q-FIX35-1)
+    for (method, path), (url, body) in THROTTLE_CASES.items():
+        _, limited = hit_twice_with_one_per_minute(client, method, url, body, monkeypatch)
+        assert limited.status_code == 429, f"{method} {url}: {limited.status_code} {limited.content[:300]!r}"
+        results.append((method, path, 429, limited.json()))
     return results
+
+
+def test_every_operation_has_a_throttle_case():
+    assert set(THROTTLE_CASES) == set(contract_operations()), "каждой операции контракта нужен вызов на 429"
+    assert len(THROTTLE_CASES) == 12
+
+
+@pytest.mark.parametrize(("method", "path"), sorted(THROTTLE_CASES), ids=lambda value: str(value))
+def test_every_operation_answers_429_with_retry_after_over_the_limit(client, monkeypatch, method, path):
+    """Q-FIX35-1: `INTEGRATION_RATE=1/minute` — второй вызов любой операции: 429 `TOO_MANY_REQUESTS` и `Retry-After`."""
+    url, body = THROTTLE_CASES[(method, path)]
+    first, limited = hit_twice_with_one_per_minute(client, method, url, body, monkeypatch)
+    assert first.status_code != 429, f"{method} {url}: первый вызов уже ограничен"
+    assert limited.status_code == 429, f"{method} {url}: {limited.status_code} {limited.content[:300]!r}"
+    assert limited.json() == {"detail": "TOO_MANY_REQUESTS"}
+    assert not schema_errors(limited.json(), component("Error"))
+    assert int(limited["Retry-After"]) >= 1, "Retry-After — целое число секунд, не меньше 1 (контракт)"
+    assert "429" in contract_operations()[(method, path)], "контракт обещает 429 на этой операции"
 
 
 def test_operations_are_the_known_set():
@@ -527,7 +569,7 @@ def test_every_response_of_every_operation_matches_the_contract(exercised):
             schema = response_schema(path, method.lower(), str(status))
         else:
             schema = component("Error")
-        problems += [f"{method} {path} → {status}: {p}" for p in check_response(body, allof_safe(schema))]
+        problems += [f"{method} {path} → {status}: {p}" for p in check_response(body, schema)]
     assert not problems, "\n".join(problems)
 
 

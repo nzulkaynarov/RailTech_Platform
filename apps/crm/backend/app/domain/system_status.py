@@ -5,7 +5,7 @@
 """
 
 from collections.abc import Mapping, Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from typing import Final, Literal
 from urllib.parse import urlsplit
@@ -67,6 +67,14 @@ class BackupFacts:
     requested_at: datetime | None
     # Файл heartbeat хоть раз появлялся: демон бэкапа на этом сервере развёрнут.
     daemon_seen: bool = True
+    # Откуда факты: `volume` — том backup-контейнера (dev), `rustfs` — бакет `backups`, куда
+    # пишет VPS 2 (прод, M5-CRM-01). Для `rustfs` демона и флага «сделать сейчас» нет.
+    source: str = "volume"
+    # Код ошибки чтения бакета (`bucket_missing`, `access_denied`, `unreachable`) и техдеталь.
+    error: str | None = None
+    error_detail: str | None = None
+    # База → время её последней копии (None — копии нет); только для `rustfs`.
+    databases: Mapping[str, datetime | None] = field(default_factory=dict)
 
 
 @dataclass(frozen=True, slots=True)
@@ -235,12 +243,80 @@ def queue(facts: QueueFacts, now: datetime) -> Component:
     return Component("queue", "Очередь задач", status, reason, now)
 
 
+BACKUP_TITLE: Final = "Резервные копии"
+_BACKUP_ERRORS: Final[dict[str, tuple[Status, str, str]]] = {
+    "bucket_missing": (
+        "fail",
+        "Бакет резервных копий не найден в хранилище — статус копий неизвестен",
+        "Создайте бакет «backups» в RustFS (S3_BUCKETS у сервиса s3-init) и проверьте "
+        "BACKUP_RUSTFS_* у контейнера backup на сервере базы (VPS 2)",
+    ),
+    "access_denied": (
+        "fail",
+        "Нет доступа к бакету резервных копий — ключ S3 у CRM не принят",
+        "Проверьте S3_ACCESS_KEY и S3_SECRET_KEY у crm-api и crm-worker: они должны совпадать "
+        "с ключами RustFS",
+    ),
+    "unreachable": (
+        "unknown",
+        "Хранилище резервных копий недоступно — статус копий неизвестен",
+        "Проверьте RustFS (карточка «Хранилище файлов») и сеть VPS 1; пока он недоступен, "
+        "копии с VPS 2 не выгружаются",
+    ),
+}
+_BACKUP_SERVER_HINT: Final = (
+    "На сервере базы (VPS 2): docker logs rt-db-backup-1, затем infra/deploy/backup-now.sh; "
+    "проверьте доступ VPS 2 к RustFS на VPS 1 (порт 9000) и BACKUP_RUSTFS_*"
+)
+
+
+def backup_hint(facts: BackupFacts) -> str | None:
+    """«Что сделать» для сбоя бэкапа из бакета; для тома и для здорового бэкапа подсказки нет."""
+    if facts.source != "rustfs":
+        return None
+    if facts.error is not None:
+        return _BACKUP_ERRORS.get(facts.error, _BACKUP_ERRORS["unreachable"])[2]
+    return _BACKUP_SERVER_HINT
+
+
+def _rustfs_backup(now: datetime, facts: BackupFacts) -> Component:
+    """Прод: бэкап делает VPS 2, CRM видит только бакет. Нет успешной копии за сутки — `fail`.
+
+    `fail` открывает инцидент центра внешних сервисов (оповещение — с антиспамом, ADR-0024).
+    Бакет недоступен по сети — `unknown`: инцидент не меняется, сбой RustFS виден в «Хранилище».
+    """
+    if facts.error is not None:
+        status, reason, _ = _BACKUP_ERRORS.get(facts.error, _BACKUP_ERRORS["unreachable"])
+        return Component("backup", BACKUP_TITLE, status, reason, now)
+    missing = sorted(db for db, at in facts.databases.items() if at is None)
+    if facts.last_success is None:
+        if missing and len(missing) < len(facts.databases):
+            reason = f"Нет копии баз: {', '.join(missing)} — «Резервные копии»"
+        else:
+            reason = "В бакете резервных копий нет ни одной полной копии — «Резервные копии»"
+        return Component("backup", BACKUP_TITLE, "fail", reason, now)
+    age_h = (now - facts.last_success).total_seconds() / 3600
+    if age_h > STALE_BACKUP_HOURS:
+        stale = sorted(
+            db
+            for db, at in facts.databases.items()
+            if at is not None and (now - at).total_seconds() / 3600 > STALE_BACKUP_HOURS
+        )
+        which = f" (база {', '.join(stale)})" if stale and len(stale) < len(facts.databases) else ""
+        reason = f"Нет успешной копии за сутки: последняя {int(age_h)} ч назад{which}"
+        return Component("backup", BACKUP_TITLE, "fail", reason, now)
+    return Component("backup", BACKUP_TITLE, "ok", f"Последняя копия {int(age_h)} ч назад", now)
+
+
 def backup(now: datetime, facts: BackupFacts) -> Component:
     """Бэкапы (ADR-0013): демон жив по heartbeat, последняя копия не старше 26 ч.
 
     heartbeat не появлялся ни разу — демон не развёрнут (warn); был и устарел — fail.
+    Источник `rustfs` (прод, M5-CRM-01) — отдельное правило: `_rustfs_backup`.
     """
-    name = "Резервные копии"
+    if facts.source == "rustfs":
+        return _rustfs_backup(now, facts)
+    name = BACKUP_TITLE
     if not facts.mounted:
         reason = "Хранилище резервных копий не подключено — обратитесь к администратору сервера"
         return Component("backup", name, "unknown", reason, now)

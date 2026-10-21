@@ -155,7 +155,11 @@ def handle_quote_pre_save(sender: Any, instance: Any, **kwargs: Any) -> None:
 
 
 def handle_quote_post_save(sender: Any, instance: Any, created: bool, **kwargs: Any) -> None:
-    """Генерирует quote.sent, quote.accepted, quote.rejected при смене статуса КП."""
+    """Генерирует quote.sent, quote.accepted, quote.rejected при смене статуса КП.
+
+    Кто принял или отклонил в Cabinet — контакт клиента: сервис решения кладёт его в `instance._decided_by_contact`
+    перед сохранением, и события несут `erp_contact_id`/`crm_contact_id` (Q-FIX22-6).
+    """
     try:
         if getattr(instance, "_int_untracked_save", False) or not getattr(instance, "deal_id", None):
             return
@@ -173,9 +177,13 @@ def handle_quote_post_save(sender: Any, instance: Any, created: bool, **kwargs: 
             if status_norm == "SENT":
                 webhooks.emit_quote_sent(quote=instance)
             elif status_norm in ("APPROVED", "ACCEPTED"):
-                webhooks.emit_quote_outcome(event_type="quote.accepted", quote=instance)
+                webhooks.emit_quote_outcome(
+                    event_type="quote.accepted", quote=instance, contact=getattr(instance, "_decided_by_contact", None)
+                )
             elif status_norm == "REJECTED":
-                webhooks.emit_quote_outcome(event_type="quote.rejected", quote=instance)
+                webhooks.emit_quote_outcome(
+                    event_type="quote.rejected", quote=instance, contact=getattr(instance, "_decided_by_contact", None)
+                )
 
     except Exception as exc:
         logger.error("Error in handle_quote_post_save for Quote #%s: %s", getattr(instance, "id", None), exc)

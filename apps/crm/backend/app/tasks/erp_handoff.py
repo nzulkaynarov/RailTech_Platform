@@ -7,13 +7,14 @@
 На последней попытке итог — `failed`.
 """
 
-from procrastinate import JobContext, RetryStrategy
+from procrastinate import JobContext
 from procrastinate.exceptions import AlreadyEnqueued
 
 from app.container import get_container
+from app.tasks.erp_retry import ErpRetryStrategy
 from app.tasks.queue import queue
 
-RETRY = RetryStrategy(max_attempts=6, linear_wait=30)
+RETRY = ErpRetryStrategy(max_attempts=6, linear_wait=30)
 
 
 def handoff_lock(client_id: int) -> str:

@@ -107,6 +107,27 @@ describe("manuallyDisabled", () => {
 });
 
 describe("metric formatting", () => {
+  it("shows the backup source, last copy time and age per database (M5-CRM-01)", () => {
+    const rows = metricRows({
+      backup_source: "rustfs",
+      last_copy_at: "2026-10-21T22:00:00Z",
+      last_copy_hours: 3,
+      "db.crm.hours": 3,
+      "db.langfuse.hours": null,
+    });
+    expect(rows.map((r) => r.label)).toEqual([
+      "Источник статуса копий",
+      "Последняя копия",
+      "Последняя копия, часов назад",
+      "База crm: копия, часов назад",
+    ]);
+    expect(rows[0]?.value).toBe("Бакет «backups» в RustFS (копию делает VPS 2)");
+    expect(rows[1]?.value).toMatch(/2026|21|22/);
+    expect(metricRows({ backup_source: "volume" })[0]?.value).toBe(
+      "Том резервных копий на этом сервере",
+    );
+  });
+
   it("labels known metrics in Russian and skips unknown or empty ones", () => {
     const rows = metricRows({
       calls_24h: 1200,

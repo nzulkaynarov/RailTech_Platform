@@ -17,6 +17,7 @@
     "typecheck": "tsc -b",
     "test": "vitest run",
     "e2e": "playwright test",
+    "kb:sync": "node scripts/sync-kb-docs.mjs",
     "api:generate": "orval && prettier --write src/api/generated --log-level warn"
   },
   "dependencies": {

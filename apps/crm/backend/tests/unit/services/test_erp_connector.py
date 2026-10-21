@@ -19,7 +19,7 @@ from app.config import Settings
 from app.domain.backoffice import BackofficeMode
 from app.domain.errors import ConflictError, Reason, UpstreamUnavailableError, ValidationFailedError
 from app.domain.system_status import ErpFacts
-from app.integrations.erp import HttpxErpProbe
+from app.integrations.erp import ErpHealth, HttpxErpProbe
 from app.schemas.integrations import ErpConnectorIn, ErpStatusOut
 from app.schemas.settings import IntegrationsSettings
 from app.security.passwords import hash_password
@@ -175,6 +175,7 @@ async def test_check_success_returns_health_and_sends_bearer() -> None:
     route = respx.get(HEALTH).mock(return_value=httpx.Response(200, json=HEALTHY))
     service, _, _ = configured()
     health = await service.check()
+    assert isinstance(health, ErpHealth)
     assert (health.status, health.version) == ("ok", "1.2.3")
     assert health.migrations_applied
     assert health.queue_alive

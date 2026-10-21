@@ -18,6 +18,7 @@ from app.domain.backoffice import BackofficeMode
 from app.domain.erp_handoff import ENQUEUE_FAILED
 from app.domain.errors import (
     ConflictError,
+    ErpRateLimitedError,
     Reason,
     UpstreamUnavailableError,
     ValidationFailedError,
@@ -325,6 +326,30 @@ async def test_erp_failure_does_not_roll_back_the_client_and_is_retried_then_fai
     # Все попытки — один и тот же ключ идемпотентности: ERP, уже создавший компанию, ответит тем же.
     assert len(set(fake_erp.keys)) == 1
     assert fake_erp.keys[0] is not None
+
+
+async def test_erp_rate_limit_is_transient_and_keeps_the_card_pending_until_the_last_attempt(
+    sessions: async_sessionmaker[AsyncSession],
+) -> None:
+    """429 ERP (шов 0.3.0): не отказ, задача повторится после `Retry-After`; карточка «в пути»."""
+    who, lead_id = await _manager(sessions, "manager429@example.com")
+    client_id = await _service(sessions, Queue(sessions)).make_customer(
+        who, lead_id, None, "Лимитная Компания"
+    )
+    fake_erp = FakeErpClient(error=ErpRateLimitedError(45))
+    service = ErpHandoffService(sessions, fake_erp)
+
+    with pytest.raises(ErpRateLimitedError):
+        await service.run(client_id, lead_id, who.user_id)
+    client = await _client(sessions, client_id)
+    assert (client.erp_handoff_status, client.erp_handoff_error) == ("pending", "erp_rate_limited")
+
+    fake_erp.error = None  # лимит снят: повтор доходит и передаёт клиента
+    fake_erp.company_id = 66
+    assert await service.run(client_id, lead_id, who.user_id) == "done"
+    client = await _client(sessions, client_id)
+    assert (client.erp_handoff_status, client.erp_company_id) == ("done", 66)
+    assert len(set(fake_erp.keys)) == 1, "повтор после 429 идёт с тем же ключом идемпотентности"
 
 
 async def test_inn_conflict_is_permanent_shown_to_manager_and_not_retried(

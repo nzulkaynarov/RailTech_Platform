@@ -35,6 +35,8 @@ class Reason(StrEnum):
     FILE_TOO_LARGE = "file_too_large"
     FILE_EMPTY = "file_empty"
     FILE_TYPE = "file_type"
+    KB_MARKDOWN_ONLY = "kb_markdown_only"
+    KB_FORMAT = "kb_format"
     DOCUMENT_INDEXING = "document_indexing"
     SETUP_DONE = "setup_done"
     SETUP_CODE_INVALID = "setup_code_invalid"
@@ -64,6 +66,8 @@ class Reason(StrEnum):
     ERP_UNAUTHORIZED = "erp_unauthorized"
     ERP_UNAVAILABLE = "erp_unavailable"
     ERP_BAD_RESPONSE = "erp_bad_response"
+    # Лимит сервисного токена ERP (429 `TOO_MANY_REQUESTS` + `Retry-After`, шов 0.3.0, FIX-60).
+    ERP_RATE_LIMITED = "erp_rate_limited"
     # Передача клиента (FIX-31): ИНН уже принадлежит другому клиенту CRM в ERP (409 INN_CONFLICT).
     ERP_INN_CONFLICT = "erp_inn_conflict"
     # Сопряжение с ERP по одноразовому коду (M3-CRM-10): код не принят, просрочен или уже
@@ -181,6 +185,22 @@ class UpstreamUnavailableError(DomainError):
     """Внешний сервис (Telegram) не ответил или отказал (502)."""
 
     code = "upstream_unavailable"
+
+
+class ErpRateLimitedError(UpstreamUnavailableError):
+    """ERP ограничила частоту запросов сервисного токена: повторить через `retry_after_s` секунд.
+
+    Временный сбой: очередь повторяет не по своему расписанию, а после этой паузы
+    (`tasks/erp_retry.py`); «Проверить связь» показывает статус, а не ошибку.
+    """
+
+    def __init__(self, retry_after_s: int, message: str = "") -> None:
+        super().__init__(
+            message or f"erp rate limited, retry in {retry_after_s}s",
+            reason=Reason.ERP_RATE_LIMITED,
+            retry_after_s=retry_after_s,
+        )
+        self.retry_after_s = retry_after_s
 
 
 class RateLimitedError(DomainError):

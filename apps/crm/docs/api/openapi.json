@@ -577,6 +577,33 @@
         "title": "AuditPage",
         "type": "object"
       },
+      "BackupDatabase": {
+        "properties": {
+          "last_success_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Последняя копия базы; нет — None",
+            "title": "Last Success At"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "last_success_at"
+        ],
+        "title": "BackupDatabase",
+        "type": "object"
+      },
       "BackupItem": {
         "properties": {
           "at": {
@@ -604,14 +631,44 @@
       "BackupsOut": {
         "properties": {
           "available": {
-            "description": "Том бэкапов смонтирован в api",
+            "description": "Том бэкапов смонтирован в api / бакет `backups` читается",
             "title": "Available",
+            "type": "boolean"
+          },
+          "can_request": {
+            "description": "«Сделать сейчас» доступно (только для тома)",
+            "title": "Can Request",
             "type": "boolean"
           },
           "daemon_alive": {
             "description": "Сервис бэкапа отвечает: heartbeat свежее 2 мин",
             "title": "Daemon Alive",
             "type": "boolean"
+          },
+          "databases": {
+            "description": "Последняя копия по каждой базе (бакет)",
+            "items": {
+              "$ref": "#/components/schemas/BackupDatabase"
+            },
+            "title": "Databases",
+            "type": "array"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "enum": [
+                  "bucket_missing",
+                  "access_denied",
+                  "unreachable"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Почему бакет не прочитан; None — прочитан",
+            "title": "Error"
           },
           "items": {
             "items": {
@@ -650,6 +707,15 @@
             "description": "«Сделать сейчас» ждёт сервис бэкапа",
             "title": "Requested At"
           },
+          "source": {
+            "description": "Откуда статус: том backup-контейнера (dev) или бакет `backups` RustFS (прод)",
+            "enum": [
+              "volume",
+              "rustfs"
+            ],
+            "title": "Source",
+            "type": "string"
+          },
           "stale": {
             "description": "Последний успешный бэкап старше 26 ч или его нет",
             "title": "Stale",
@@ -658,6 +724,10 @@
         },
         "required": [
           "available",
+          "source",
+          "can_request",
+          "error",
+          "databases",
           "last_success_at",
           "stale",
           "requested_at",
@@ -1257,6 +1327,54 @@
           "last_activity_at"
         ],
         "title": "ClientListItem",
+        "type": "object"
+      },
+      "ClientReceivablesOut": {
+        "description": "Долг клиента по валютам из ERP (шов 0.3.0, Q-FIX30-2), без пересчёта по курсу.\n\n`ok` — ответ получен: пустой список — долга нет. `unavailable` — блок не показываем (ERP не\nнастроена, не отвечает, ограничила частоту или не присылает поле); `reason` — для подсказки.",
+        "properties": {
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          },
+          "receivables": {
+            "items": {
+              "$ref": "#/components/schemas/MoneyOut"
+            },
+            "title": "Receivables",
+            "type": "array"
+          },
+          "retry_after_s": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Retry After S"
+          },
+          "status": {
+            "enum": [
+              "ok",
+              "unavailable"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status",
+          "receivables"
+        ],
+        "title": "ClientReceivablesOut",
         "type": "object"
       },
       "ClientUpdate": {
@@ -2812,7 +2930,7 @@
         "type": "object"
       },
       "ErpCheckOut": {
-        "description": "Ответ ERP на `GET /api/integration/v1/health` (схема `Health` контракта) и время ответа.",
+        "description": "Итог «Проверить связь»: ответ ERP `GET /api/integration/v1/health` (схема `Health`) и время.\n\n`rate_limited` — ERP ответила 429 (лимит сервисного токена, шов 0.3.0): это статус, не ошибка;\n`retry_after_s` — через сколько секунд повторить, остальные поля пробы тогда пусты.",
         "properties": {
           "checked_at": {
             "format": "date-time",
@@ -2820,37 +2938,73 @@
             "type": "string"
           },
           "latency_ms": {
-            "title": "Latency Ms",
-            "type": "integer"
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Latency Ms"
           },
           "migrations_applied": {
-            "title": "Migrations Applied",
-            "type": "boolean"
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Migrations Applied"
           },
           "queue_alive": {
-            "title": "Queue Alive",
-            "type": "boolean"
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Queue Alive"
+          },
+          "retry_after_s": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Retry After S"
           },
           "status": {
             "enum": [
               "ok",
-              "degraded"
+              "degraded",
+              "rate_limited"
             ],
             "title": "Status",
             "type": "string"
           },
           "version": {
-            "title": "Version",
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Version"
           }
         },
         "required": [
           "status",
-          "version",
-          "migrations_applied",
-          "queue_alive",
-          "checked_at",
-          "latency_ms"
+          "checked_at"
         ],
         "title": "ErpCheckOut",
         "type": "object"
@@ -5561,6 +5715,25 @@
         "title": "ModelTestResult",
         "type": "object"
       },
+      "MoneyOut": {
+        "description": "Сумма в одной валюте (`Money` контракта ERP): строка с двумя знаками и код ISO 4217.",
+        "properties": {
+          "amount": {
+            "title": "Amount",
+            "type": "string"
+          },
+          "currency": {
+            "title": "Currency",
+            "type": "string"
+          }
+        },
+        "required": [
+          "amount",
+          "currency"
+        ],
+        "title": "MoneyOut",
+        "type": "object"
+      },
       "NoteCreate": {
         "properties": {
           "text": {
@@ -6030,6 +6203,8 @@
           "file_too_large",
           "file_empty",
           "file_type",
+          "kb_markdown_only",
+          "kb_format",
           "document_indexing",
           "setup_done",
           "setup_code_invalid",
@@ -6057,6 +6232,7 @@
           "erp_unauthorized",
           "erp_unavailable",
           "erp_bad_response",
+          "erp_rate_limited",
           "erp_inn_conflict",
           "erp_pairing_code_invalid",
           "erp_pairing_code_expired",
@@ -9299,6 +9475,54 @@
         ]
       }
     },
+    "/api/v1/clients/{client_id}/erp-receivables": {
+      "get": {
+        "description": "Долг клиента по валютам из ERP (`CompanySummary.receivables_by_currency`), шов 0.3.0.\n\nСбой ERP — не ошибка: `status=\"unavailable\"` (блок в карточке скрыт), ответ всегда 200.\n404 — только если клиента нет в CRM.",
+        "operationId": "get_client_receivables",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "client_id",
+            "required": true,
+            "schema": {
+              "title": "Client Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClientReceivablesOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Ошибка валидации"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Client Receivables",
+        "tags": [
+          "clients"
+        ]
+      }
+    },
     "/api/v1/clients/{client_id}/telegram": {
       "post": {
         "operationId": "link_telegram",
@@ -10599,7 +10823,7 @@
     },
     "/api/v1/integrations/erp/check": {
       "post": {
-        "description": "«Проверить связь»: `GET {base_url}/api/integration/v1/health` с сервисным токеном, 5 с.\n\nОшибки (ADR-0017, `details.reason`): `erp_not_configured` (409), `erp_invalid_url` (422),\n`erp_unauthorized` / `erp_unavailable` / `erp_bad_response` (502).",
+        "description": "«Проверить связь»: `GET {base_url}/api/integration/v1/health` с сервисным токеном, 5 с.\n\nОшибки (ADR-0017, `details.reason`): `erp_not_configured` (409), `erp_invalid_url` (422),\n`erp_unauthorized` / `erp_unavailable` / `erp_bad_response` (502). Лимит частоты ERP (429) — не\nошибка: `status: \"rate_limited\"` и `retry_after_s` (пауза из `Retry-After`).",
         "operationId": "check_erp_connection",
         "responses": {
           "200": {
@@ -14465,7 +14689,7 @@
     },
     "/api/v1/system/backups": {
       "get": {
-        "description": "Последние бэкапы из тома `backups` (каталоги `<UTC-штамп>`), время последнего успеха.",
+        "description": "Последние бэкапы: том `backups` (dev) или бакет `backups` RustFS (прод, M5-CRM-01).",
         "operationId": "list_backups",
         "responses": {
           "200": {
@@ -14500,7 +14724,7 @@
         ]
       },
       "post": {
-        "description": "Запросить бэкап вне расписания: сервис бэкапа начнёт его в течение ~30 с.\n\n409, если том бэкапов не смонтирован в api. Повторный запрос до начала — без изменений;\nзапрос, который сервис не забрал за 2 мин, ставится заново.",
+        "description": "Запросить бэкап вне расписания: сервис бэкапа начнёт его в течение ~30 с.\n\n409, если том бэкапов не смонтирован в api или бэкап делает VPS 2 (источник — бакет RustFS:\nзапускать на сервере базы, `infra/deploy/backup-now.sh`). Повторный запрос до начала — без\nизменений; запрос, который сервис не забрал за 2 мин, ставится заново.",
         "operationId": "request_backup",
         "responses": {
           "202": {

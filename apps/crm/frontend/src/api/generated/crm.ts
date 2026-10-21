@@ -39,6 +39,7 @@ import type {
   ClientCreate,
   ClientDetail,
   ClientListItem,
+  ClientReceivablesOut,
   ClientUpdate,
   Close,
   ConsentRecord,
@@ -2385,6 +2386,146 @@ export const useUpdateClientContact = <TError = ErrorType<ErrorOut>, TContext = 
 > => {
   return useMutation(getUpdateClientContactMutationOptions(options), queryClient);
 };
+
+export const getGetClientReceivablesUrl = (clientId: number) => {
+  return `/api/v1/clients/${clientId}/erp-receivables`;
+};
+
+/**
+ * Долг клиента по валютам из ERP (`CompanySummary.receivables_by_currency`), шов 0.3.0.
+ *
+ * Сбой ERP — не ошибка: `status="unavailable"` (блок в карточке скрыт), ответ всегда 200.
+ * 404 — только если клиента нет в CRM.
+ * @summary Get Client Receivables
+ */
+export const getClientReceivables = async (
+  clientId: number,
+  options?: Parameters<typeof http>[1],
+): Promise<ClientReceivablesOut> => {
+  return http<ClientReceivablesOut>(getGetClientReceivablesUrl(clientId), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetClientReceivablesQueryKey = (clientId: number) => {
+  return [`/api/v1/clients/${clientId}/erp-receivables`] as const;
+};
+
+export const getGetClientReceivablesQueryOptions = <
+  TData = Awaited<ReturnType<typeof getClientReceivables>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  clientId: number,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getClientReceivables>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetClientReceivablesQueryKey(clientId);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getClientReceivables>>> = ({ signal }) =>
+    getClientReceivables(clientId, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: clientId !== null && clientId !== undefined,
+    ...queryOptions,
+  } as UseQueryOptions<Awaited<ReturnType<typeof getClientReceivables>>, TError, TData> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+};
+
+export type GetClientReceivablesQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getClientReceivables>>
+>;
+export type GetClientReceivablesQueryError = ErrorType<ErrorOut>;
+
+export function useGetClientReceivables<
+  TData = Awaited<ReturnType<typeof getClientReceivables>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  clientId: number,
+  options: {
+    query: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getClientReceivables>>, TError, TData>
+    > &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getClientReceivables>>,
+          TError,
+          Awaited<ReturnType<typeof getClientReceivables>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetClientReceivables<
+  TData = Awaited<ReturnType<typeof getClientReceivables>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  clientId: number,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getClientReceivables>>, TError, TData>
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getClientReceivables>>,
+          TError,
+          Awaited<ReturnType<typeof getClientReceivables>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetClientReceivables<
+  TData = Awaited<ReturnType<typeof getClientReceivables>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  clientId: number,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getClientReceivables>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary Get Client Receivables
+ */
+
+export function useGetClientReceivables<
+  TData = Awaited<ReturnType<typeof getClientReceivables>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  clientId: number,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getClientReceivables>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getGetClientReceivablesQueryOptions(clientId, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
 
 export const getLinkTelegramUrl = (clientId: number) => {
   return `/api/v1/clients/${clientId}/telegram`;
@@ -4812,7 +4953,8 @@ export const getCheckErpConnectionUrl = () => {
  * «Проверить связь»: `GET {base_url}/api/integration/v1/health` с сервисным токеном, 5 с.
  *
  * Ошибки (ADR-0017, `details.reason`): `erp_not_configured` (409), `erp_invalid_url` (422),
- * `erp_unauthorized` / `erp_unavailable` / `erp_bad_response` (502).
+ * `erp_unauthorized` / `erp_unavailable` / `erp_bad_response` (502). Лимит частоты ERP (429) — не
+ * ошибка: `status: "rate_limited"` и `retry_after_s` (пауза из `Retry-After`).
  * @summary Check Erp Connection
  */
 export const checkErpConnection = async (
@@ -12813,7 +12955,7 @@ export const getListBackupsUrl = () => {
 };
 
 /**
- * Последние бэкапы из тома `backups` (каталоги `<UTC-штамп>`), время последнего успеха.
+ * Последние бэкапы: том `backups` (dev) или бакет `backups` RustFS (прод, M5-CRM-01).
  * @summary List Backups
  */
 export const listBackups = async (options?: Parameters<typeof http>[1]): Promise<BackupsOut> => {
@@ -12927,8 +13069,9 @@ export const getRequestBackupUrl = () => {
 /**
  * Запросить бэкап вне расписания: сервис бэкапа начнёт его в течение ~30 с.
  *
- * 409, если том бэкапов не смонтирован в api. Повторный запрос до начала — без изменений;
- * запрос, который сервис не забрал за 2 мин, ставится заново.
+ * 409, если том бэкапов не смонтирован в api или бэкап делает VPS 2 (источник — бакет RustFS:
+ * запускать на сервере базы, `infra/deploy/backup-now.sh`). Повторный запрос до начала — без
+ * изменений; запрос, который сервис не забрал за 2 мин, ставится заново.
  * @summary Request Backup
  */
 export const requestBackup = async (options?: Parameters<typeof http>[1]): Promise<BackupsOut> => {

@@ -197,6 +197,18 @@ describe("ErpCard", () => {
     expect(screen.getByText("Очередь задач жива").nextElementSibling).toHaveTextContent("Нет");
   });
 
+  it("shows ERP's rate limit as a status with the pause, not as an error (шов 0.3.0)", () => {
+    renderCard(configured, {
+      checkResult: { status: "rate_limited", retry_after_s: 12, checked_at: health.checked_at },
+    });
+    const status = screen.getByRole("status");
+    expect(status).toHaveTextContent("ERP ограничила частоту запросов");
+    expect(status).toHaveTextContent("через 12 с");
+    expect(status).not.toHaveTextContent("Связь с ERP не установлена");
+    expect(status.className).toContain("ant-alert-info");
+    expect(screen.queryByText("Версия ERP")).toBeNull();
+  });
+
   it("explains a failed check by details.reason", () => {
     const error = new ApiError(502, "upstream_unavailable", "erp health check failed", {
       reason: "erp_unauthorized",

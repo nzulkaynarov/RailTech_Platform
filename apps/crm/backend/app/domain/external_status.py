@@ -11,7 +11,7 @@ from typing import Final, Literal
 from urllib.parse import urlsplit
 
 from app.domain.external_registry import ERP_REPORTED_REASON, Status
-from app.domain.system_status import Component
+from app.domain.system_status import BackupFacts, Component, backup_hint
 
 Metric = float | int | str | None
 ProbeError = Literal["unauthorized", "timeout", "unavailable", "bad_response"]
@@ -286,7 +286,15 @@ def s3(health: HttpFacts, usage: Mapping[str, Metric] | None = None) -> CheckRes
     )
 
 
-def docling(health: HttpFacts) -> CheckResult:
+def docling(health: HttpFacts | None) -> CheckResult:
+    """`None` — `DOCLING_URL` пуст: на этом сервере docling не используется (норма, не авария)."""
+    if health is None:
+        return CheckResult(
+            "docling",
+            "off",
+            "Не используется на этом сервере — база знаний принимает только Markdown, "
+            "документы клиентов не распознаются",
+        )
     if health.error is not None:
         return CheckResult(
             "docling",
@@ -299,11 +307,34 @@ def docling(health: HttpFacts) -> CheckResult:
     return CheckResult("docling", "ok", "Сервис отвечает", latency_ms=health.latency_ms)
 
 
-def backup(component: Component, last_copy_hours: float | None) -> CheckResult:
-    """Правило бэкапа уже есть (`system_status.backup`, ADR-0013) — здесь только перевод в итог."""
-    metrics: dict[str, Metric] = {"last_copy_hours": last_copy_hours}
+def backup(
+    component: Component, last_copy_hours: float | None, facts: BackupFacts | None = None
+) -> CheckResult:
+    """Правило бэкапа уже есть (`system_status.backup`, ADR-0013) — здесь только перевод в итог.
+
+    `facts` (M5-CRM-01) добавляет в показатели источник статуса (том или бакет RustFS), время
+    последней копии и возраст копии по каждой базе; для бакета — подсказку «что сделать».
+    """
+    metrics: dict[str, Metric] = {}
+    if facts is not None:
+        metrics["backup_source"] = facts.source
+        metrics["last_copy_at"] = facts.last_success.isoformat() if facts.last_success else None
+    metrics["last_copy_hours"] = last_copy_hours
+    if facts is not None:
+        for db, at in facts.databases.items():
+            hours = (
+                (component.checked_at - at).total_seconds() / 3600
+                if at and component.checked_at
+                else None
+            )
+            metrics[f"db.{db}.hours"] = round(hours, 1) if hours is not None else None
     if component.status == "ok":
         return CheckResult("backup", "ok", component.reason, metrics=metrics)
+    if facts is not None and facts.source == "rustfs":
+        hint = backup_hint(facts)
+        return CheckResult(
+            "backup", component.status, component.reason, facts.error_detail, hint, metrics=metrics
+        )
     hint = "Откройте «Резервные копии»" if "«Резервн" in component.reason else SERVER_HINT
     return CheckResult("backup", component.status, component.reason, hint=hint, metrics=metrics)
 

@@ -44,7 +44,7 @@ class TestAcceptByCode:
         assert sent_quote.status.code == QuoteStatusCode.SENT
 
     def test_former_master_code_does_not_bypass_an_issued_code(self, portal_client, sent_quote, client_contact):
-        issue_test_acceptance_code(sent_quote, client_contact.email)
+        issue_test_acceptance_code(sent_quote, client_contact.email, contact=client_contact)
 
         response = _accept(portal_client, sent_quote, "2468")
 
@@ -54,7 +54,7 @@ class TestAcceptByCode:
         assert row.attempts == 1 and row.consumed_at is None
 
     def test_issued_code_accepts_once(self, portal_client, sent_quote, client_contact):
-        code = issue_test_acceptance_code(sent_quote, client_contact.email)
+        code = issue_test_acceptance_code(sent_quote, client_contact.email, contact=client_contact)
 
         first = _accept(portal_client, sent_quote, code)
         second = _accept(portal_client, sent_quote, code)
@@ -64,7 +64,7 @@ class TestAcceptByCode:
         assert QuoteAcceptanceCode.objects.get(quote=sent_quote).consumed_at is not None
 
     def test_expired_code_is_rejected(self, portal_client, sent_quote, client_contact):
-        code = issue_test_acceptance_code(sent_quote, client_contact.email)
+        code = issue_test_acceptance_code(sent_quote, client_contact.email, contact=client_contact)
         QuoteAcceptanceCode.objects.filter(quote=sent_quote).update(expires_at=timezone.now() - timedelta(minutes=1))
 
         response = _accept(portal_client, sent_quote, code)
@@ -73,7 +73,7 @@ class TestAcceptByCode:
         assert response.data["detail"] == "QUOTE_CODE_INVALID"
 
     def test_attempt_cap_locks_even_the_right_code(self, portal_client, sent_quote, client_contact):
-        code = issue_test_acceptance_code(sent_quote, client_contact.email)
+        code = issue_test_acceptance_code(sent_quote, client_contact.email, contact=client_contact)
         for _ in range(MAX_CODE_ATTEMPTS):
             assert _accept(portal_client, sent_quote, "000000").status_code == status.HTTP_409_CONFLICT
 

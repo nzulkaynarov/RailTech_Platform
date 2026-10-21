@@ -73,6 +73,18 @@ function CheckResult({ result, error }: { result: ErpCheckOut | null; error: unk
     );
   }
   if (!result) return null;
+  if (result.status === "rate_limited") {
+    // 429 ERP (шов 0.3.0): связь есть, частоту ограничили — статус, а не ошибка.
+    return (
+      <Alert
+        type="info"
+        showIcon
+        role="status"
+        message={E.checkRateLimited}
+        description={E.checkRateLimitedHint.replace("{s}", String(result.retry_after_s ?? ""))}
+      />
+    );
+  }
   const ok = result.status === "ok";
   return (
     <Alert
@@ -94,7 +106,7 @@ function CheckResult({ result, error }: { result: ErpCheckOut | null; error: unk
             <BooleanTag value={result.queue_alive} />
           </Descriptions.Item>
           <Descriptions.Item label={E.latency}>
-            {E.latencyValue.replace("{ms}", String(result.latency_ms))}
+            {E.latencyValue.replace("{ms}", String(result.latency_ms ?? ""))}
           </Descriptions.Item>
           <Descriptions.Item label={E.checkedAt}>
             {formatDateTime(result.checked_at)}
