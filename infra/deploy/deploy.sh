@@ -14,6 +14,10 @@ rel="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 [[ "$(basename "$rel")" == "$tag" ]] || log "внимание: каталог релиза ($(basename "$rel")) не совпадает с тегом образов ($tag)"
 
 require_env_file
+# prod.yml монтирует схему событий в сервисы ERP (M5-INF-01c): без файла в релизе контейнеры не стартуют, а миграции
+# ERP упали бы уже после pg_dump — проверяем до pull. Релиз без файла — собран старым deploy.yml (release.tgz).
+[[ -f "$rel/packages/contracts/events.schema.json" ]] \
+  || die "в релизе нет packages/contracts/events.schema.json — release.tgz собран без него (deploy.yml); деплой остановлен до pull и миграций"
 export RT_IMAGE_TAG="$tag"
 prev="$(state_get current_tag)"
 
