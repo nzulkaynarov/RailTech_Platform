@@ -10,7 +10,7 @@ from pathlib import Path
 from typing import Literal
 from urllib.parse import quote
 
-from pydantic import AnyHttpUrl, Field, SecretStr, model_validator
+from pydantic import AnyHttpUrl, Field, SecretStr, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -55,7 +55,9 @@ class Settings(BaseSettings):
     # Пометка вызовов в учёте расходов (`llm_usage.kind`): `test` ставят make eval/load-test.
     llm_usage_kind: Literal["work", "test"] = "work"
 
-    docling_url: AnyHttpUrl = AnyHttpUrl("http://docling:5001")
+    # Пустой `DOCLING_URL` — «docling на этом сервере не используется» (прод, M5-CRM-02):
+    # md/txt индексируются встроенным конвертером, остальные форматы отклоняются.
+    docling_url: AnyHttpUrl | None = AnyHttpUrl("http://docling:5001")
     docling_api_key: SecretStr = SecretStr("")
     docling_timeout_s: float = Field(default=300.0, gt=0)
 
@@ -129,6 +131,11 @@ class Settings(BaseSettings):
             f"{scheme}://{user}:{password}@{self.postgres_host}:"
             f"{self.postgres_port}/{self.postgres_db}"
         )
+
+    @field_validator("docling_url", mode="before")
+    @classmethod
+    def _blank_docling_url_is_off(cls, value: object) -> object:
+        return None if isinstance(value, str) and not value.strip() else value
 
     @model_validator(mode="after")
     def _prod_requires_seam_secrets(self) -> "Settings":

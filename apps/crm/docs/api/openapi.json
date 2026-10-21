@@ -6075,6 +6075,8 @@
           "file_too_large",
           "file_empty",
           "file_type",
+          "kb_markdown_only",
+          "kb_format",
           "document_indexing",
           "setup_done",
           "setup_code_invalid",
