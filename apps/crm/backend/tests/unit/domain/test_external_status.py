@@ -313,9 +313,3 @@ def test_tls_days_left_rounds_down() -> None:
 )
 def test_stale(age: timedelta, tiers: tuple[str, ...], stale: bool) -> None:
     assert rules.stale(NOW - age, tiers, NOW) is stale
-
-
-def test_erp_reported_has_no_data_until_m3_erp_06() -> None:
-    result = rules.erp_reported("erp.cbu_rates")
-    assert result.status == "unknown"
-    assert "M3-ERP-06" in result.summary

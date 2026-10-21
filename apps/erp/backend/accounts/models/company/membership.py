@@ -141,6 +141,16 @@ class CompanyMember(models.Model):
         verbose_name=_("Роли (с правами)"),
         help_text=_("Роли бэк-офиса; права складываются"),
     )
+    # Какие из `company_roles` выданы провижинингом из CRM (`role_codes`, FIX-63, Q-FIX50-1 (1)): только их
+    # следующий провижининг и отзыв доступа снимают без участия человека; роли, назначенные вручную в «Команде»,
+    # сюда не попадают и не затираются.
+    crm_granted_roles = models.ManyToManyField(
+        "accounts.CompanyRole",
+        blank=True,
+        related_name="crm_granted_members",
+        verbose_name=_("Роли, выданные из CRM"),
+        help_text=_("Системные роли, которые CRM выдала провижинингом (`role_codes`); снимаются тоже из CRM"),
+    )
     is_primary = models.BooleanField(
         default=False,
         verbose_name=_("Основная компания"),

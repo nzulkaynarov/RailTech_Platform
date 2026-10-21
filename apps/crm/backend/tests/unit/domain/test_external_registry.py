@@ -43,6 +43,8 @@ def test_registry_lists_every_external_service_of_the_ensemble() -> None:
         "erp.cbu_rates",
         "erp.customs_tariff",
         "erp.mail",
+        "erp.litellm",
+        "erp.s3",
         "erp.sentry",
     ]
 
@@ -56,7 +58,7 @@ def test_every_entry_has_human_text_and_a_known_check_plan() -> None:
         if spec.source == "crm":
             assert spec.tiers, f"{spec.key}: CRM-сервис без проверки"
         else:
-            assert spec.tiers == (), spec.key
+            assert spec.tiers == ("cheap",), spec.key  # состояние берётся из ответа ERP на /health
             assert spec.system == "erp", spec.key
         assert spec.fix_path is None or spec.fix_path.startswith("/"), spec.key
 
@@ -83,15 +85,26 @@ def test_without_gateway_aliases_registry_still_has_the_rest() -> None:
     assert {"telegram", "litellm", "mail", "erp.sentry"} <= set(keys({}))
 
 
-def test_erp_entries_wait_for_m3_erp_06() -> None:
+def test_erp_entries_are_the_six_services_of_the_contract() -> None:
     erp = [s for s in reg.registry(DEFAULT) if s.source == "erp"]
-    assert {s.key for s in erp} == {
+    assert [s.key for s in erp] == [
         "erp.cbu_rates",
         "erp.customs_tariff",
         "erp.mail",
+        "erp.litellm",
+        "erp.s3",
         "erp.sentry",
+    ]
+    # Sentry выключить нельзя (switchable: false в контракте), остальным выключатель ставит ERP.
+    assert {s.key: s.switch for s in erp} == {
+        "erp.cbu_rates": "erp",
+        "erp.customs_tariff": "erp",
+        "erp.mail": "erp",
+        "erp.litellm": "erp",
+        "erp.s3": "erp",
+        "erp.sentry": None,
     }
-    assert all(s.switch is None for s in erp)
+    assert all(s.key in reg.ERP_SWITCH_EFFECTS for s in erp if s.switch == "erp")
 
 
 @pytest.mark.parametrize(
@@ -106,7 +119,8 @@ def test_erp_entries_wait_for_m3_erp_06() -> None:
         ("docling", None),
         ("backup", None),
         ("tls.crm", None),
-        ("erp.cbu_rates", None),
+        ("erp.cbu_rates", "erp"),
+        ("erp.sentry", None),
     ],
 )
 def test_switch_only_where_meaningful(key: str, switch: str | None) -> None:

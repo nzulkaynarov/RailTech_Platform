@@ -232,6 +232,26 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/externals/{code}/switch": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    /**
+     * Выключатель внешнего сервиса ERP (центр внешних сервисов CRM)
+     * @description Выключенный сервис ERP перестаёт вызываться: курсы ЦБ и синхронизация ТН ВЭД пропускают прогон, письма не уходят в SMTP (в журнале ERP — `FAILED` с причиной «выключено из CRM»), вызовы моделей возвращают нейтральный отказ, файлы не пишутся в S3. Состояние хранится в ERP и переживает перезапуск; операция идемпотентна (повтор того же состояния — 200). Sentry выключить нельзя (`switchable: false` → 409 `NOT_SWITCHABLE`).
+     */
+    put: operations["setExternalSwitch"];
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -554,9 +574,22 @@ export interface components {
       role: "admin" | "backoffice";
       /** @description Коды из каталога прав ERP (`ErpPermission`). Для `role: backoffice` складываются в роль сотрудника; для `role: admin` игнорируются (суперпользователь ERP имеет все права). Код вне каталога — 422. Карту «роль CRM → коды» ведёт CRM (`app/domain/erp_permissions.py`), идентификаторы ролей и прав от модели не приходят. */
       permissions: components["schemas"]["ErpPermission"][];
+      /** @description Системные роли бэк-офиса ERP, выданные из CRM (FIX-63, Q-FIX50-1 (1)). Необязательное: поля нет — ERP не трогает системные роли сотрудника (старый CRM); пустой список — снимает все системные роли, ранее выданные из CRM. ERP добавляет только пришедшие и снимает только те системные роли, что сама выдала по `role_codes` раньше (пометка «выдана из CRM»); роли, назначенные в ERP вручную («Настройки → Команда»), и роль «CRM Sync: <e-mail>» (права по `permissions`) этим не затрагиваются. Для `role: admin` игнорируется (суперпользователь имеет все права), ранее выданные роли снимаются. Код вне `SystemRoleCode` — 422. Читатель терпим: старый ERP поле игнорирует. Перечень ролей и их названия ведёт CRM; идентификаторы ролей от модели не приходят. */
+      role_codes?: components["schemas"]["SystemRoleCode"][];
       /** @default true */
       is_active: boolean;
     };
+    /**
+     * @description Код системной роли бэк-офиса ERP (`accounts.constants.BackofficeRoleCode`, apps/erp/CLAUDE.md §6): CALCULATION «Расчёт», CATALOG_SUPPLY «Каталог и закупки», FULFILLMENT «Исполнение и логистика», FINANCE «Финансы», HEAD «Руководитель», VIEWER «Наблюдатель». Новый код появляется в ERP и здесь в одном PR; тест CRM сверяет этот список с каталогом CRM, тест ERP — с `BackofficeRoleCode`.
+     * @enum {string}
+     */
+    SystemRoleCode:
+      | "CALCULATION"
+      | "CATALOG_SUPPLY"
+      | "FULFILLMENT"
+      | "FINANCE"
+      | "HEAD"
+      | "VIEWER";
     /**
      * @description Снимок каталога прав бэк-офиса ERP (`accounts.constants.Permission`, apps/erp/CLAUDE.md §6). Новый код появляется в каталоге ERP и здесь в одном PR; тест CRM сверяет этот список с каталогом и с картой прав CRM.
      * @enum {string}
@@ -614,6 +647,46 @@ export interface components {
       queue_alive: boolean;
       /** Format: date-time */
       checked_at: string;
+      /** @description Внешние сервисы ERP (M3-ERP-06): курсы ЦБ, ТН ВЭД/тариф, почта, модели (LiteLLM), S3, Sentry. Поле необязательное: нет его — ERP старше M3-ERP-06, CRM показывает «нет данных». Строится без обращений к самим сервисам (по журналам и счётчикам ERP), ответ `/health` остаётся быстрым. */
+      externals?: components["schemas"]["ExternalService"][];
+    };
+    /**
+     * @description `cbu_rates` — курсы ЦБ РУз; `customs_tariff` — классификатор ТН ВЭД и тариф (tarif.customs.uz); `mail` — почта ERP; `litellm` — вызовы моделей через шлюз; `s3` — файловое хранилище; `sentry` — сбор ошибок. Читатель пропускает неизвестный код.
+     * @enum {string}
+     */
+    ExternalServiceCode: "cbu_rates" | "customs_tariff" | "mail" | "litellm" | "s3" | "sentry";
+    ExternalService: {
+      code: components["schemas"]["ExternalServiceCode"];
+      /**
+       * @description `ok` — работает; `degraded` — последняя операция неудачна, но в последние 24 ч были успешные, либо плановая задача давно не выполнялась; `fail` — последняя операция неудачна и успешных за 24 ч нет; `unknown` — данных нет (операций ещё не было); `disabled` — не настроен или выключен из CRM (`enabled` различает).
+       * @enum {string}
+       */
+      status: "ok" | "degraded" | "fail" | "unknown" | "disabled";
+      /** @description `false` — сервис выключен из CRM (`PUT /externals/{code}/switch`). Не настроенный сервис — `enabled: true` и `status: disabled`. */
+      enabled: boolean;
+      /** @description Сервис можно выключить из CRM. */
+      switchable: boolean;
+      /** Format: date-time */
+      last_success_at: string | null;
+      /** Format: date-time */
+      last_error_at: string | null;
+      /** @description Короткий текст последней ошибки (класс ошибки или код) без адресов с учётными данными, ключей и тел ответов. */
+      last_error: string | null;
+      /** @description Успешных операций за последние 24 часа. */
+      ok_24h: number;
+      /** @description Неудачных операций за последние 24 часа. */
+      errors_24h: number;
+    };
+    ExternalSwitchIn: {
+      enabled: boolean;
+      /** @description Причина выключения (для журнала ERP); при включении не нужна. */
+      reason?: string | null;
+    };
+    ExternalSwitchState: {
+      code: components["schemas"]["ExternalServiceCode"];
+      enabled: boolean;
+      /** Format: date-time */
+      changed_at: string;
     };
   };
   responses: {
@@ -1030,6 +1103,45 @@ export interface operations {
           "application/json": components["schemas"]["Health"];
         };
       };
+    };
+  };
+  setExternalSwitch: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        code: components["schemas"]["ExternalServiceCode"];
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["ExternalSwitchIn"];
+      };
+    };
+    responses: {
+      /** @description Состояние выключателя после операции */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ExternalSwitchState"];
+        };
+      };
+      401: components["responses"]["Unauthorized"];
+      404: components["responses"]["NotFound"];
+      /** @description Сервис нельзя выключать (`NOT_SWITCHABLE`) */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Error"];
+        };
+      };
+      422: components["responses"]["ValidationError"];
+      429: components["responses"]["TooManyRequests"];
     };
   };
 }

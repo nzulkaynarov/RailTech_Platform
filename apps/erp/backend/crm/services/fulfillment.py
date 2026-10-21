@@ -119,10 +119,21 @@ def ensure_fulfillment(deal: Deal, contract=None) -> object:
 @transaction.atomic
 def update_fulfillment_status(
     deal_id: int,
-    actor: CustomUser,
+    actor: Optional[CustomUser],
     status_code: str,
+    *,
+    client_contact=None,
     **extra,
 ) -> Tuple[Optional[object], Optional[str]]:
+    """Сменить статус исполнения сделки.
+
+    Продавец ведёт отгрузку, приёмку и спор подтверждает ЗАКАЗЧИК. Заказчика-пользователя в ERP нет (FIX-13), поэтому
+    изнутри ERP приёмку не делает никто, кроме администратора. Единственный путь клиента — `client_contact`: контакт
+    портала с `can_act` компании сделки, который принял ВСЕ строки поставки (`sales.services.delivery_lines`,
+    FIX-62). Это системный актор «клиент», а не человек-исполнитель: `actor` для него `None`, кто принял — в журнале
+    (`fulfillment.accepted_by_client`) и в событии `delivery.status_changed` (`actor.type=client`). Статусы продавца
+    `client_contact` не выдаёт.
+    """
     from django.utils import timezone
 
     from accounts.services import is_seller
@@ -135,7 +146,12 @@ def update_fulfillment_status(
     # Seller drives shipping (PENDING→…→DELIVERED); the buyer ACCEPTS or DISPUTES on
     # receipt. Authorize the actor against the side that owns the target status.
     buyer_statuses = {FulfillmentStatusCode.ACCEPTED, FulfillmentStatusCode.DISPUTED}
-    if getattr(actor, "is_superuser", False):
+    if client_contact is not None:
+        # Право клиента проверяется ниже, когда сделка найдена (компания контакта = компания сделки).
+        if status_code not in buyer_statuses or not client_contact.can_act:
+            return None, "MEMBER_REQUIRED_FOR_ACTION"
+        authorized = True
+    elif getattr(actor, "is_superuser", False):
         authorized = True
     elif status_code in buyer_statuses:
         # Приёмку и спор подтверждает ЗАКАЗЧИК, а заказчика-пользователя в ERP нет (FIX-13):
@@ -155,6 +171,8 @@ def update_fulfillment_status(
         from ..models import Deal
 
         return None, ("FULFILLMENT_NOT_READY" if Deal.objects.filter(pk=deal_id).exists() else "NOT_FOUND")
+    if client_contact is not None and client_contact.company_id != obj.deal.company_id:
+        return None, "MEMBER_REQUIRED_FOR_ACTION"
     if status_code in FULFILLMENT_NOTE_ISSUED_STATUSES:
         # Номер накладной — ДО смены статуса: событие `document.created` для CRM (сигнал post_save на переходе в
         # «выпущенный») должно нести итоговый номер, а не `DN-<id>` (FIX-55, m2 D-6).
@@ -170,7 +188,27 @@ def update_fulfillment_status(
     for key in ("tracking_number", "carrier", "expected_delivery_date", "notes"):
         if key in extra and extra[key] is not None:
             setattr(obj, key, extra[key])
+    if client_contact is not None:
+        # Событие `delivery.status_changed` для CRM несёт клиента, а не «систему» (сигнал читает лицо с экземпляра).
+        obj._event_actor = (
+            {"type": "client", "name": client_contact.name} if client_contact.name else {"type": "client"}
+        )
     obj.save()
+    if client_contact is not None:
+        from core.audit import log_admin_action
+
+        log_admin_action(
+            entity_type="fulfillment",
+            entity_id=obj.pk,
+            action="Исполнение принято клиентом",
+            detail=f"Сделка #{obj.deal_id}: все строки поставки приняты, принял {client_contact.name}",
+            event_code="fulfillment.accepted_by_client",
+            event_params={"deal_id": obj.deal_id, "fulfillment_id": obj.pk, "contact_id": client_contact.pk},
+            level="SUCCESS",
+            company_id=obj.deal.company_id,
+            contact_id=client_contact.pk,
+            deal_id=obj.deal_id,
+        )
     # Auto-close deal when accepted by client
     if status_code == FulfillmentStatusCode.ACCEPTED:
         transition_deal_stage(obj.deal, DealStageCode.CLOSED_WON, actor=actor, reason="Приёмка клиентом")

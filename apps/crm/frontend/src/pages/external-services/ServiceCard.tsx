@@ -53,18 +53,16 @@ export function ServiceCard({ service, now, checking, onCheck, onSwitch }: Props
           {service.uptime_24h !== null ? ` · ${s.uptime24}: ${percent(service.uptime_24h)}` : ""}
         </Typography.Text>
         <Flex wrap gap="small">
-          {service.source === "crm" ? (
-            <Button
-              size="small"
-              icon={<ReloadOutlined aria-hidden />}
-              loading={checking}
-              onClick={() => {
-                onCheck(service);
-              }}
-            >
-              {s.checkNow}
-            </Button>
-          ) : null}
+          <Button
+            size="small"
+            icon={<ReloadOutlined aria-hidden />}
+            loading={checking}
+            onClick={() => {
+              onCheck(service);
+            }}
+          >
+            {s.checkNow}
+          </Button>
           {sw && (sw.available || sw.disabled) ? (
             <Button
               size="small"

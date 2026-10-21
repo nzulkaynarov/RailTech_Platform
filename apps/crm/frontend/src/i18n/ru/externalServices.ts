@@ -37,7 +37,7 @@ export const externalServices = {
       erp: "Сервисы ERP",
     } as Record<string, string>,
     groupHints: {
-      erp: "Состояние передаёт ERP — появится, когда ERP начнёт отдавать его по интеграции (M3-ERP-06).",
+      erp: "Состояние передаёт сама ERP по своим журналам и счётчикам; здесь же её выключатели.",
     } as Record<string, string>,
     allOk: "Все внешние сервисы работают",
     system: {
@@ -79,6 +79,10 @@ export const externalServices = {
       fallback_24h: "Ушло на запасную модель за 24 ч",
       budget_spend_usd: "Расход за сутки в шлюзе",
       budget_limit_usd: "Потолок провайдера в шлюзе",
+      ok_24h: "Успешных операций за 24 ч",
+      errors_24h: "Ошибок за 24 ч",
+      last_success_at: "Последний успех",
+      last_error_at: "Последняя ошибка",
       sent_24h: "Отправлено писем за 24 ч",
       failed_24h: "Не отправлено за 24 ч",
       queued: "Ждут отправки",

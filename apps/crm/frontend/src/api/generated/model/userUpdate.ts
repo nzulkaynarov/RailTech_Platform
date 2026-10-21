@@ -7,6 +7,8 @@
 
 export interface UserUpdate {
   clear_tg_user_id?: boolean;
+  erp_role_codes?:
+    ("CALCULATION" | "CATALOG_SUPPLY" | "FULFILLMENT" | "FINANCE" | "HEAD" | "VIEWER")[] | null;
   full_name?: string | null;
   is_active?: boolean | null;
   platform_access?: ("crm" | "erp")[] | null;

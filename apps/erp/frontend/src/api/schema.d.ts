@@ -157,6 +157,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/integration/v1/externals/{code}/switch": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** @description PUT /api/integration/v1/externals/{code}/switch (M3-ERP-06): выключатель внешнего сервиса ERP из CRM. */
+        put: operations["api_integration_v1_externals_switch_update"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/integration/v1/health": {
         parameters: {
             query?: never;
@@ -6931,7 +6948,7 @@ export interface paths {
         put?: never;
         /**
          * Разобрать текст заявки в строки КП (AI, FIX-67)
-         * @description Заявка словами: клиент (или передача из CRM) описал потребность текстом, строк нет. Продавец жмёт «Разобрать текст в строки (ИИ)» в конструкторе КП — сервер берёт текст заявки сам (полный текст клиента, иначе комментарий сделки), разбирает его тем же извлечением, что и файл клиента (`ai.services.intake`), и дописывает строки В КОНЕЦ КП. ARCH-01: 202 + task_id, извлечение на Celery (поллинг sourcing/ai-status/). ИИ выключен — 503 `AI_DISABLED`, шлюз недоступен — результат задачи `AI_EXTRACT_FAILED`; ручной набор строк работает всегда.
+         * @description Заявка словами: клиент (или передача из CRM) описал потребность текстом, строк нет. Продавец жмёт «Разобрать текст в строки (ИИ)» в конструкторе КП — сервер берёт текст заявки сам (полный текст клиента, иначе комментарий сделки), разбирает его тем же извлечением, что и файл клиента (`ai.services.intake`), и дописывает строки В КОНЕЦ КП. ARCH-01: 202 + task_id, извлечение на Celery (поллинг sourcing/ai-status/). ИИ выключен — 503 `AI_DISABLED`, шлюз недоступен — результат задачи `AI_EXTRACT_FAILED`; ручной набор строк работает всегда. FIX-67b: пока разбор КП идёт, повторный запрос не ставит новую задачу (тот же сотрудник — 202 с прежним task_id и `already_running`; другой — 409 `PARSE_ALREADY_RUNNING`), запись строк идемпотентна по job.
          */
         post: operations["sourcing_parse_request_text_create"];
         delete?: never;
@@ -13190,6 +13207,26 @@ export interface operations {
             header?: never;
             path: {
                 erp_document_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No response body */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    api_integration_v1_externals_switch_update: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                code: string;
             };
             cookie?: never;
         };
@@ -23961,7 +23998,7 @@ export interface operations {
             };
         };
         responses: {
-            /** @description AI job queued, task_id returned (poll ai-status) */
+            /** @description AI job queued, task_id returned (poll ai-status). `already_running: true` — разбор этого КП этим же сотрудником уже идёт: тот же task_id, новая задача не поставлена (FIX-67b) */
             202: {
                 headers: {
                     [name: string]: unknown;
@@ -23989,7 +24026,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description Quote is not editable (QUOTE_NOT_DRAFT / QUOTE_FROZEN) */
+            /** @description Quote is not editable (QUOTE_NOT_DRAFT / QUOTE_FROZEN) or a parse of this quote started by another user is still running (PARSE_ALREADY_RUNNING) */
             409: {
                 headers: {
                     [name: string]: unknown;

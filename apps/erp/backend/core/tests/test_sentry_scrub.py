@@ -88,3 +88,26 @@ def test_never_returns_none_and_is_total_on_bad_input():
     assert scrub_event({}) == {}
     weird = {"request": "not-a-dict", "extra": None}
     assert scrub_event(weird) is weird
+
+
+def test_secret_mask_runs_even_when_pii_scrub_fails(monkeypatch):
+    """FIX-66b: сбой маски ПДн не должен оставлять в событии токен бота/Bearer."""
+    import core.sentry_scrub as module
+
+    def boom(*_args, **_kwargs):
+        raise RuntimeError("pii scrub broke")
+
+    monkeypatch.setattr(module, "_scrub", boom)
+    event = {
+        "request": {
+            "url": "https://api.telegram.org/bot123456789:fix66b-FAKE_token_for_tests-0123456789ab/getMe",
+            "data": {"x": 1},
+        },
+        "message": "failed: Authorization: Bearer fix66bFAKEsignature0123456789abcdef",
+    }
+
+    result = scrub_event(event)
+
+    assert result is event
+    assert "fix66b-FAKE_token" not in repr(result)
+    assert "fix66bFAKEsignature" not in repr(result)

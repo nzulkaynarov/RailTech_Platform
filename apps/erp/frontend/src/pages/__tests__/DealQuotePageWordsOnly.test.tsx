@@ -15,6 +15,7 @@ const ref = vi.hoisted(() => ({
   parse: vi.fn(),
   toastError: vi.fn(),
   toastSuccess: vi.fn(),
+  toastInfo: vi.fn(),
 }));
 
 vi.mock('@/hooks/useCRM', () => ({
@@ -31,7 +32,7 @@ vi.mock('@/api/crmApi', async (importOriginal) => {
   const original = await importOriginal<typeof import('@/api/crmApi')>();
   return { ...original, crmApi: { ...original.crmApi, parseRequestText: ref.parse } };
 });
-vi.mock('sonner', () => ({ toast: { error: ref.toastError, success: ref.toastSuccess, warning: vi.fn() } }));
+vi.mock('sonner', () => ({ toast: { error: ref.toastError, success: ref.toastSuccess, warning: vi.fn(), info: ref.toastInfo } }));
 vi.mock('@/components/QuoteBuilder/QuoteBuilderGrid', () => ({ QuoteBuilderGrid: () => null }));
 vi.mock('@/components/CRM/GenerateQuoteDialog', () => ({ GenerateQuoteDialog: () => null }));
 vi.mock('@/components/CRM/QuoteApprovalChain', () => ({ QuoteApprovalChain: () => null }));
@@ -60,6 +61,7 @@ describe('конструктор КП — заявка словами', () => {
     ref.parse.mockReset();
     ref.toastError.mockReset();
     ref.toastSuccess.mockReset();
+    ref.toastInfo.mockReset();
   });
 
   it('текст заявки раскрыт целиком рядом с пустым черновиком, кнопка разбора на месте', () => {
@@ -100,5 +102,19 @@ describe('конструктор КП — заявка словами', () => {
     await waitFor(() =>
       expect(ref.toastError).toHaveBeenCalledWith('ИИ сейчас недоступен. Наберите строки вручную по тексту заявки.'),
     );
+  });
+
+  it('FIX-67b: коллега уже разбирает это КП (409) — понятное сообщение «уже идёт», а не ошибка и не сырой код', async () => {
+    const user = userEvent.setup();
+    ref.parse.mockRejectedValueOnce({ response: { status: 409, data: { detail: 'PARSE_ALREADY_RUNNING' } } });
+    renderWithProviders(<DealQuotePage dealId={42} onBack={vi.fn()} />);
+
+    await user.click(screen.getByRole('button', PARSE));
+
+    await waitFor(() =>
+      expect(ref.toastInfo).toHaveBeenCalledWith('Разбор текста этого КП уже идёт — дождитесь результата, строки появятся сами.'),
+    );
+    expect(ref.toastError).not.toHaveBeenCalled();
+    expect(screen.getByRole('button', PARSE)).toBeEnabled();
   });
 });

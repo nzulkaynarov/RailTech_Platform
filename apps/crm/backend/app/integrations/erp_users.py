@@ -30,9 +30,12 @@ class ProvisionPayload:
     role: str
     permissions: tuple[str, ...]
     is_active: bool = True
+    # Системные роли ERP из CRM (`SystemRoleCode`, FIX-63): `None` — поле не отправляется (ERP роли
+    # не трогает), `()` — снять все ранее выданные из CRM.
+    role_codes: tuple[str, ...] | None = None
 
     def as_json(self) -> dict[str, Any]:
-        return {
+        body: dict[str, Any] = {
             "crm_user_id": self.crm_user_id,
             "email": self.email,
             "name": self.name,
@@ -40,6 +43,9 @@ class ProvisionPayload:
             "permissions": list(self.permissions),
             "is_active": self.is_active,
         }
+        if self.role_codes is not None:
+            body["role_codes"] = list(self.role_codes)
+        return body
 
 
 class ErpUsersClient(Protocol):

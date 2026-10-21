@@ -1,11 +1,13 @@
 """«Внешние сервисы» (admin, M3-CRM-12, ADR-0024): реестр, проверки, инциденты, выключатели."""
 
+import contextlib
 from datetime import UTC, datetime
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, Path
 
 from app.api.deps import ContainerDep, require
+from app.domain.errors import ConflictError, UpstreamUnavailableError, ValidationFailedError
 from app.schemas.external_services import (
     ExternalServiceDetailOut,
     ExternalServiceOut,
@@ -27,7 +29,7 @@ async def list_external_services(_: Reader, container: ContainerDep) -> External
     """Все внешние сервисы ансамбля со статусом, подсказкой «что сделать», метриками и выключателем.
 
     Только чтение: статус — из последней фоновой проверки (раз в минуту / раз в 15 мин), без
-    вызовов моделей. Сервисы ERP — «нет данных», пока ERP не передаёт состояние (M3-ERP-06).
+    вызовов моделей. Сервисы ERP — по ответу ERP на `GET /health` (`externals[]`, M3-ERP-06).
     """
     return await container.external_view.list(datetime.now(UTC))
 
@@ -47,9 +49,12 @@ async def check_external_service(
     """Проверить сервис сейчас (включая медленные пробы); инцидент и оповещение — как у фоновой."""
     now = datetime.now(UTC)
     service = await container.external_view.get(key, now)
-    if service.source == "crm":
-        await container.external_checks.run("manual", now, keys=[key])
-        container.external_view.invalidate()
+    if service.source == "erp":
+        # Сервис ERP: свежий `GET /health` вместо кэша коннектора, затем обычная запись проверки.
+        with contextlib.suppress(UpstreamUnavailableError, ValidationFailedError, ConflictError):
+            await container.erp_connector.check()
+    await container.external_checks.run("manual", now, keys=[key])
+    container.external_view.invalidate()
     return await container.external_view.detail(key, datetime.now(UTC))
 
 
@@ -58,7 +63,8 @@ async def disable_external_service(
     key: Key, body: ServiceSwitchIn, who: Writer, container: ContainerDep
 ) -> ExternalServiceOut:
     """Выключить сервис вручную (пароль админа, аудит): вендор — вызовы на запасную модель,
-    Langfuse — без трейсов, почта — пауза очереди, Telegram — пауза исходящих.
+    Langfuse — без трейсов, почта — пауза очереди, Telegram — пауза исходящих, сервис ERP —
+    ERP перестаёт его вызывать (`PUT /externals/{code}/switch`).
 
     Нет выключателя или вендор запасной модели — `409 service_not_switchable`.
     """
