@@ -34,7 +34,7 @@ compose() {
   IFS=',' read -ra ps <<<"$(env_get RT_PROFILES)"
   for p in "${ps[@]:-}"; do [[ -n "$p" ]] && profiles+=(--profile "$p"); done
   docker compose -f "$rel/infra/compose/base.yml" -f "$rel/infra/compose/prod.yml" \
-    --env-file "$RT_ENV_FILE" "${profiles[@]}" "$@"
+    --env-file "$RT_ENV_FILE" ${profiles[@]+"${profiles[@]}"} "$@"
 }
 
 release_dir() { echo "$RT_RELEASES/$1"; }
@@ -48,7 +48,7 @@ cleanup_old() {
   while read -r img; do
     [[ "$img" == *":$keep_a" || ( -n "$keep_b" && "$img" == *":$keep_b" ) ]] && continue
     docker rmi "$img" >/dev/null 2>&1 || true
-  done < <(docker images --format '{{.Repository}}:{{.Tag}}' | grep -E '/rt-(crm-backend|crm-frontend|erp-backend|erp-frontend|cabinet):' || true)
+  done < <(docker images --format '{{.Repository}}:{{.Tag}}' | grep -E '/rt-(crm-backend|crm-frontend|erp-backend|erp-frontend|cabinet|litellm):' || true)
   # shellcheck disable=SC2012
   ls -1t "$RT_RELEASES" 2>/dev/null | tail -n +6 | while read -r old; do
     [[ "$old" == "$keep_a" || "$old" == "$keep_b" ]] || rm -rf "${RT_RELEASES:?}/$old"
