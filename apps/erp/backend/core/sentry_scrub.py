@@ -93,8 +93,9 @@ def scrub_event(event, hint=None):
         if "breadcrumbs" in event:
             _scrub_breadcrumbs(event.get("breadcrumbs"))
     except Exception:  # noqa: BLE001 — scrubbing must never break error reporting
-        return event
+        pass
     # FIX-66b: секреты в адресе/заголовках/тексте исключений (токен Bot API, подпись S3, Bearer, sk-ключи).
+    # Независимо от маски ПДн: её сбой не должен оставлять секреты в событии.
     try:
         return mask_event(event)
     except Exception:  # noqa: BLE001

@@ -84,6 +84,7 @@ def test_secret_is_masked(text: str, secret: str) -> None:
         "contact info@example.test wrote about the robot123:abc",
         "https://example.test/path?next=/a@b",
         "Привет, мир",
+        "Basic configuration loaded",  # «Basic» вне заголовка Authorization — обычное слово
         "",
     ],
 )
@@ -112,6 +113,16 @@ def test_mask_value_walks_nested_structures() -> None:
     assert FAKE_SIG not in repr(masked)
     assert masked["n"] == 1
     assert masked["list"][1] == 5
+
+
+def test_mask_value_keeps_the_container_type() -> None:
+    """tuple остаётся tuple: `exc_info=(type, exc, tb)` иначе перестаёт быть кортежем."""
+    masked = mask_value((ValueError, f"Bearer {FAKE_SIG}", None))
+
+    assert isinstance(masked, tuple)
+    assert masked[0] is ValueError
+    assert FAKE_SIG not in repr(masked)
+    assert isinstance(mask_value([f"Bearer {FAKE_SIG}"]), list)
 
 
 # ─── stdlib-фильтр ────────────────────────────────────────────────────────────
@@ -239,6 +250,33 @@ def test_traceback_text_is_masked(
     assert FAKE_BOT not in json.dumps(record)
     assert "fix66b-FAKE" not in json.dumps(record)
     assert "Traceback" in str(record["exception"])
+
+
+def _raise_with_secret() -> ValueError:
+    try:
+        raise ValueError(f"upstream said Authorization: Bearer {FAKE_SIG} is bad")
+    except ValueError as exc:
+        return exc
+
+
+@pytest.mark.parametrize(
+    "as_tuple", [False, True], ids=["exc_info=exc", "exc_info=(type, exc, tb)"]
+)
+def test_stdlib_exc_info_outside_except_keeps_traceback_and_masks_it(
+    json_settings: Settings, capsys: pytest.CaptureFixture[str], as_tuple: bool
+) -> None:
+    """Вне блока except `format_exc_info` берёт exc_info из записи: маска не ломает кортеж."""
+    configure_logging(json_settings)
+    exc = _raise_with_secret()
+    exc_info = (type(exc), exc, exc.__traceback__) if as_tuple else exc
+
+    logging.getLogger("t").warning("x failed", exc_info=exc_info)
+
+    record = _lines(capsys)[-1]
+    assert "Traceback" in str(record["exception"])
+    assert "_raise_with_secret" in str(record["exception"])
+    assert "ValueError" in str(record["exception"])
+    assert FAKE_SIG not in json.dumps(record)
 
 
 def test_uvicorn_access_line_with_query_secrets_is_masked(

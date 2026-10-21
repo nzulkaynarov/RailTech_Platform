@@ -89,6 +89,7 @@ def test_secret_is_masked(text, secret):
         "contact info@example.test wrote about the robot123:abc",
         "https://example.test/path?next=/a@b",
         "Привет, мир",
+        "Basic configuration loaded",  # «Basic» вне заголовка Authorization — обычное слово
         "",
     ],
 )
@@ -109,6 +110,16 @@ def test_mask_value_walks_nested_structures():
 
     assert FAKE_BOT not in repr(masked) and FAKE_SIG not in repr(masked)
     assert masked["n"] == 1 and masked["list"][1] == 5
+
+
+def test_mask_value_keeps_the_container_type():
+    """tuple остаётся tuple (единообразно с CRM; `exc_info=(type, exc, tb)` иначе ломается)."""
+    masked = mask_value((ValueError, f"Bearer {FAKE_SIG}", None))
+
+    assert isinstance(masked, tuple)
+    assert masked[0] is ValueError
+    assert FAKE_SIG not in repr(masked)
+    assert isinstance(mask_value([f"Bearer {FAKE_SIG}"]), list)
 
 
 # ─── Фильтр записей журнала ───────────────────────────────────────────────────
@@ -415,3 +426,35 @@ def test_ai_gateway_error_log_hides_the_key_echoed_by_the_gateway(monkeypatch):
 
     assert FAKE_KEY not in stream.getvalue()
     assert "AI intake error (http=401)" in stream.getvalue()
+
+
+@pytest.mark.django_db
+def test_webhook_error_masks_secret_cut_by_the_500_char_truncation(monkeypatch):
+    """Секрет на границе обрезки `[:500]`: маскировать нужно ДО усечения, иначе хвост <8 знаков уцелеет."""
+    from unittest.mock import patch
+
+    from integration.models import CrmClientMapping, IntegrationWebhookEvent
+    from integration.services.webhooks import emit_event
+    from integration.tasks import deliver_webhook_event
+    from parties.models import Company
+
+    company = Company.objects.create(name="ООО FIX66b-cut", inn="223456781")
+    CrmClientMapping.objects.create(company=company, crm_client_id=67)
+    event = emit_event("invite.sent", company.id, {"channels": ["email"]}, send_async=False)
+    assert isinstance(event, IntegrationWebhookEvent)
+    body = "a" * 485 + f" Bearer {FAKE_SIG}"  # «Bearer » + 7 знаков подписи попадают в первые 500
+    real_client = httpx.Client
+
+    def fake_client(*args, **kwargs):
+        return real_client(transport=httpx.MockTransport(lambda request: httpx.Response(502, text=body)))
+
+    with (
+        patch("integration.tasks.httpx.Client", fake_client),
+        patch.object(deliver_webhook_event, "retry", side_effect=Retry()),
+        pytest.raises(Retry),
+    ):
+        deliver_webhook_event.run(event.id)
+
+    event.refresh_from_db()
+    assert FAKE_SIG[:4] not in event.last_error
+    assert "Bearer [REDACT" in event.last_error  # маркер, а не 7 знаков подписи

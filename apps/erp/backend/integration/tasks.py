@@ -161,7 +161,8 @@ def deliver_webhook_event(self, event_id: int) -> bool:
             return True
 
         # Non-2xx HTTP response from CRM
-        error_msg = f"HTTP {response.status_code}: {response.text[:500]}"
+        # FIX-66b: маска ДО усечения — иначе секрет на границе обрезки теряет хвост и не опознаётся
+        error_msg = f"HTTP {response.status_code}: {mask_secrets(response.text)[:500]}"
         _register_failure(event, error_msg, has_retries_left, current_attempt)
 
         if has_retries_left:

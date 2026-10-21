@@ -37,7 +37,7 @@ _RULES: tuple[tuple[re.Pattern[str], str], ...] = (
         r"\1\2" + REDACTED,
     ),
     # `Bearer abc…` вне заголовка (текст ошибок клиентов).
-    (re.compile(r"(?i)\b(bearer|basic)\s+[A-Za-z0-9._~+/=-]{8,}"), r"\1 " + REDACTED),
+    (re.compile(r"(?i)\b(bearer)\s+[A-Za-z0-9._~+/=-]{8,}"), r"\1 " + REDACTED),
     # Ключи шлюза LiteLLM/OpenAI: `sk-…`, `sk-proj-…`, `sk-ant-…`.
     (re.compile(r"\bsk-[A-Za-z0-9_-]{6,}"), "sk-" + REDACTED),
     # JWT (SSO-токены, токены сессий).
@@ -63,7 +63,6 @@ _HINTS = (
     "x-signature",
     "secret-token",
     "bearer",
-    "basic ",
     "sk-",
     "eyj",
     "@",
@@ -107,8 +106,10 @@ def mask_value(value):
         return mask_secrets(value)
     if isinstance(value, dict):
         return {key: _mask_item(key, item) for key, item in value.items()}
-    if isinstance(value, (list, tuple)):
+    if isinstance(value, list):
         return [mask_value(item) for item in value]
+    if isinstance(value, tuple):
+        return tuple(mask_value(item) for item in value)  # тип сохраняем (как в CRM)
     return value
 
 

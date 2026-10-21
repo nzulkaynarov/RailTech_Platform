@@ -41,8 +41,9 @@ _RULES: Final[tuple[tuple[re.Pattern[str], str], ...]] = (
         ),
         r"\1\2" + REDACTED,
     ),
-    # `Bearer abc…` вне заголовка (текст ошибок клиентов).
-    (re.compile(r"(?i)\b(bearer|basic)\s+[A-Za-z0-9._~+/=-]{8,}"), r"\1 " + REDACTED),
+    # `Bearer abc…` вне заголовка (текст ошибок клиентов). `Basic` тут нельзя:
+    # «Basic configuration» — обычная фраза; его ловит правило заголовка Authorization.
+    (re.compile(r"(?i)\b(bearer)\s+[A-Za-z0-9._~+/=-]{8,}"), r"\1 " + REDACTED),
     # Ключи шлюза LiteLLM/OpenAI: `sk-…`, `sk-proj-…`, `sk-ant-…`.
     (re.compile(r"\bsk-[A-Za-z0-9_-]{6,}"), "sk-" + REDACTED),
     # JWT (SSO-токены, токены сессий).
@@ -70,7 +71,6 @@ _HINTS: Final = (
     "x-signature",
     "secret-token",
     "bearer",
-    "basic ",
     "sk-",
     "eyj",
     "@",
@@ -116,8 +116,11 @@ def mask_value(value: Any) -> Any:
         return mask_secrets(value)
     if isinstance(value, dict):
         return {key: _mask_item(key, item) for key, item in value.items()}
-    if isinstance(value, list | tuple):
+    if isinstance(value, list):
         return [mask_value(item) for item in value]
+    if isinstance(value, tuple):
+        # Тип сохраняем: `exc_info=(type, exc, tb)` в list `format_exc_info` не узнаёт.
+        return tuple(mask_value(item) for item in value)
     return value
 
 
@@ -166,6 +169,11 @@ class SecretMaskFilter(logging.Filter):
                 setattr(record, key, mask_secrets(value))
 
 
+# Служебные ключи structlog: не текст, а объекты (кортеж/исключение для `format_exc_info`, запись
+# stdlib). Текст исключения маскируется уже после `format_exc_info` (процессор в `app/log.py`).
+_STRUCTLOG_SERVICE_KEYS: Final = frozenset({"exc_info", "stack_info", "_record", "_from_structlog"})
+
+
 def structlog_processor(
     _logger: Any, _method: str, event_dict: MutableMapping[str, Any]
 ) -> MutableMapping[str, Any]:
@@ -175,6 +183,8 @@ def structlog_processor(
     После `format_exc_info` трассировка уже строка.
     """
     for key, value in list(event_dict.items()):
+        if key in _STRUCTLOG_SERVICE_KEYS:
+            continue
         event_dict[key] = _mask_item(key, value)
     return event_dict
 
