@@ -5,6 +5,8 @@
 - `CrmContactMapping`: crm_contact_id ↔ parties.Contact
 - `CrmUserMapping`: crm_user_id ↔ CustomUser
 - `IntegrationIdempotencyKey`: Idempotency-Key (UUID) с TTL 7 дней (Q-15, CONTRACTS §0)
+- `PairingCode`, `ServiceCredential`: сопряжение с CRM одним кодом — одноразовый код (хеш) и сервисные
+  токены/секрет вебхуков, зашифрованные в БД (M3-ERP-05)
 """
 
 import uuid
@@ -246,3 +248,80 @@ class IntegrationWebhookEvent(models.Model):
 
     def __str__(self):
         return f"WebhookEvent({self.event_id}, {self.event_type}, {self.status})"
+
+
+class PairingCode(models.Model):
+    """Одноразовый код сопряжения с CRM (M3-ERP-05, CONTRACTS §2 «Сопряжение»).
+
+    В базе — только хеш кода (SHA-256 нормализованного кода): по БД код восстановить нельзя, а у кода 59 бит
+    энтропии. Код действует до `expires_at` и один раз (`used_at`); новый выпуск гасит прежний неиспользованный.
+    """
+
+    code_hash = models.CharField(max_length=64, unique=True, verbose_name=_("Хеш кода"))
+    created_at = models.DateTimeField(auto_now_add=True)
+    expires_at = models.DateTimeField(db_index=True, verbose_name=_("Действует до"))
+    used_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        verbose_name=_("Использован или заменён"),
+        help_text=_("Заполнено, когда код принят CRM или погашен новым выпуском"),
+    )
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="+",
+        verbose_name=_("Кто выпустил"),
+        help_text=_("Пусто — выпущен командой `manage.py pairing_code`"),
+    )
+
+    class Meta:
+        verbose_name = _("Код сопряжения с CRM")
+        verbose_name_plural = _("Коды сопряжения с CRM")
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return f"PairingCode(#{self.pk}, до {self.expires_at:%Y-%m-%d %H:%M})"
+
+
+class CredentialSlot(models.TextChoices):
+    CRM_TO_ERP = "crm_to_erp", _("Токен CRM→ERP")
+    CRM_TO_ERP_PREVIOUS = "crm_to_erp_previous", _("Прежний токен CRM→ERP (переход при ротации)")
+    ERP_TO_CRM = "erp_to_crm", _("Токен ERP→CRM")
+    WEBHOOK_SECRET = "webhook_secret", _("Секрет подписи вебхуков")
+
+
+class ServiceCredential(models.Model):
+    """Секрет шва CRM ↔ ERP, выданный сопряжением (M3-ERP-05): значение шифровано, в API и логи не уходит.
+
+    Fernet, ключ выводится из `SECRET_KEY` (как секрет 2FA). Смена `SECRET_KEY` делает значения нечитаемыми —
+    тогда ERP возвращается к секретам из `.env` и пишет ошибку в лог, а CRM сопрягается заново новым кодом.
+    `created_at` строки `crm_to_erp` — время сопряжения; `rotated_at` — последняя ротация.
+    """
+
+    slot = models.CharField(max_length=32, choices=CredentialSlot.choices, unique=True)
+    ciphertext = models.TextField(verbose_name=_("Шифртекст"))
+    last4 = models.CharField(max_length=4, blank=True, default="", verbose_name=_("Последние 4 символа"))
+    expires_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        verbose_name=_("Действует до"),
+        help_text=_("Только для прежнего токена: после этого срока он не принимается"),
+    )
+    rotated_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        verbose_name=_("Время последней ротации"),
+        help_text=_("Только для строки токена CRM→ERP"),
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = _("Сервисный секрет шва CRM ↔ ERP")
+        verbose_name_plural = _("Сервисные секреты шва CRM ↔ ERP")
+        ordering = ["slot"]
+
+    def __str__(self):
+        return f"ServiceCredential({self.slot})"

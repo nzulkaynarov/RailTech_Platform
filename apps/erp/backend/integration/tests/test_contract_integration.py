@@ -281,6 +281,8 @@ WRITE_PATHS = {
     ("PUT", "/contacts/{crm_contact_id}"),
     ("POST", "/users/provision"),
     ("DELETE", "/users/{crm_user_id}/sessions"),
+    ("POST", "/pairing/accept"),
+    ("POST", "/pairing/rotate"),
 }
 
 
@@ -406,7 +408,58 @@ def exercise_all(client, world):
     hit("DELETE", sessions, "/users/8801/sessions", 204)
     hit("DELETE", sessions, "/users/999999/sessions", 404)
     hit("DELETE", sessions, "/users/8801/sessions", 401, api=anonymous)
+
+    exercise_pairing(hit, anonymous)
     return out
+
+
+PAIRING_SECRETS = {
+    "crm_to_erp_token": "guard-crm-to-erp-" + "a" * 32,
+    "erp_to_crm_token": "guard-erp-to-crm-" + "b" * 32,
+    "webhook_secret": "guard-webhook-secret-" + "c" * 32,
+}
+ROTATED_SECRETS = {
+    "crm_to_erp_token": "guard-rotated-crm-to-erp-" + "d" * 32,
+    "erp_to_crm_token": "guard-rotated-erp-to-crm-" + "e" * 32,
+    "webhook_secret": "guard-rotated-webhook-" + "f" * 32,
+}
+
+
+def exercise_pairing(hit, anonymous):
+    """Сопряжение (M3-ERP-05): `POST /pairing/accept` и `/pairing/rotate` на каждый обещанный код — в самом конце.
+
+    После приёма токены лежат в БД и токен из `.env` перестаёт действовать, поэтому блок последний и в конце
+    возвращает ERP к `.env` (иначе следующие вызовы фикстуры получили бы 401).
+    """
+    from integration.models import ServiceCredential
+    from integration.services import pairing
+
+    def with_token(token):
+        api = APIClient()
+        api.credentials(HTTP_AUTHORIZATION=f"Bearer {token}")
+        return api
+
+    accept, rotate = "/pairing/accept", "/pairing/rotate"
+    rates = SimpleRateThrottle.THROTTLE_RATES
+    saved_rates = dict(rates)
+    try:
+        code = pairing.issue_code().code
+        hit("POST", accept, accept, 422, api=with_token(code), body={"crm_to_erp_token": "short"}, key=False)
+        hit("POST", accept, accept, 200, api=with_token(code), body=PAIRING_SECRETS, key=False)
+        hit("POST", accept, accept, 401, api=with_token(code), body=PAIRING_SECRETS, key=False)
+        rates["pairing"] = "1/hour"
+        hit("POST", accept, accept, 429, api=with_token(code), body=PAIRING_SECRETS, key=False)
+        rates["pairing"] = saved_rates["pairing"]
+
+        current = with_token(PAIRING_SECRETS["crm_to_erp_token"])
+        hit("POST", rotate, rotate, 401, api=anonymous, body=ROTATED_SECRETS, key=False)
+        hit("POST", rotate, rotate, 422, api=current, body={"webhook_secret": "short"}, key=False)
+        hit("POST", rotate, rotate, 200, api=current, body=ROTATED_SECRETS, key=False)
+        rates["integration"] = "1/minute"
+        hit("POST", rotate, rotate, 429, api=current, body=ROTATED_SECRETS, key=False)  # прежний токен ещё действует
+    finally:
+        rates.update(saved_rates)
+        ServiceCredential.objects.all().delete()
 
 
 @pytest.fixture
@@ -461,7 +514,7 @@ def test_error_codes_are_the_documented_ones(exercised):
     codes = {
         (status): {body["detail"] for _, _, st, body in exercised if st == status} for status in (401, 404, 409, 422)
     }
-    assert codes[401] == {"UNAUTHORIZED"}
+    assert {"UNAUTHORIZED"} <= codes[401] <= {"UNAUTHORIZED", "PAIRING_CODE_INVALID", "PAIRING_CODE_EXPIRED", "PAIRING_CODE_USED"}
     assert codes[404] == {"NOT_FOUND"}
     assert codes[422] == {"VALIDATION_ERROR"}
     assert codes[409] <= {"INN_CONFLICT", "EMAIL_CONFLICT"} and codes[409]

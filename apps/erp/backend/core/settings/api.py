@@ -33,6 +33,8 @@ REST_FRAMEWORK = {
         # Запросы CRM к integration с валидным сервисным токеном (Q-FIX30-4): ключ — токен, не адрес; предохранитель от
         # зацикленного клиента, а не ограничение работы бота и карточек (integration/throttles.py).
         "integration": os.environ.get("INTEGRATION_RATE", "300/minute"),
+        # Попытки ввода кода сопряжения с CRM (M3-ERP-05, integration/throttles.py): код 59 бит и живёт 15 минут.
+        "pairing": os.environ.get("PAIRING_RATE", "10/hour"),
         "import_upload": "10/hour",
         # Anti-abuse on unauthenticated/sensitive auth endpoints (the global anon
         # 20/min is far too loose to stop e.g. password-reset email bombing).
@@ -170,6 +172,10 @@ def _secret_list(name: str) -> list[str]:
 # Сервисный токен направления CRM → ERP (OpenAPI erp-integration.yaml).
 SERVICE_TOKEN_CRM_TO_ERP = _secret_list("SERVICE_TOKEN_CRM_TO_ERP")
 ERP_VERSION = os.environ.get("ERP_VERSION", "0.1.0")
+# Сопряжение с CRM (M3-ERP-05): срок жизни кода (сек) и переходный период ротации — сколько ещё действует прежний
+# токен CRM→ERP после «Обновить ключи» (сек).
+PAIRING_CODE_TTL_SECONDS = int(os.environ.get("PAIRING_CODE_TTL_SECONDS", "900"))
+PAIRING_ROTATION_GRACE_SECONDS = int(os.environ.get("PAIRING_ROTATION_GRACE_SECONDS", "3600"))
 
 # ERP → CRM вебхуки: адрес приёмника CRM и секрет подписи HMAC-SHA256 (X-Signature).
 CRM_BASE_URL = os.environ.get("CRM_BASE_URL", "http://crm.localhost:8000").rstrip("/")

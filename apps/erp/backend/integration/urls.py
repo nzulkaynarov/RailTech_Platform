@@ -1,6 +1,6 @@
 """Integration URL patterns (CONTRACTS §0, §2, packages/contracts/openapi/erp-integration.yaml).
 
-Все 12 интеграционных эндпоинтов направления CRM → ERP монтируются под `/api/integration/v1/`.
+12 интеграционных эндпоинтов направления CRM → ERP монтируются под `/api/integration/v1/`; сопряжение (M3-ERP-05) — ещё два (`pairing/accept`, `pairing/rotate`).
 """
 
 from django.urls import path
@@ -16,6 +16,8 @@ from .views import (
     DocumentLinkView,
     HandoffClientView,
     IntegrationHealthView,
+    PairingAcceptView,
+    PairingRotateView,
     UserProvisionView,
     UserSessionsRevokeView,
 )
@@ -33,4 +35,6 @@ urlpatterns = [
     path("users/<int:crm_user_id>/sessions", UserSessionsRevokeView.as_view(), name="integration-user-sessions-revoke"),
     path("ai-usage", AiUsageView.as_view(), name="integration-ai-usage"),
     path("health", IntegrationHealthView.as_view(), name="integration-health"),
+    path("pairing/accept", PairingAcceptView.as_view(), name="integration-pairing-accept"),
+    path("pairing/rotate", PairingRotateView.as_view(), name="integration-pairing-rotate"),
 ]

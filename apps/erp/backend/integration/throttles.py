@@ -25,3 +25,16 @@ class IntegrationServiceRateThrottle(SimpleRateThrottle):
             return None
         digest = hashlib.sha256(token.encode("utf-8")).hexdigest()[:16]
         return self.cache_format % {"scope": self.scope, "ident": digest}
+
+
+class PairingAttemptThrottle(SimpleRateThrottle):
+    """Лимит попыток приёма кода сопряжения (M3-ERP-05): ключ — адрес, ставка `PAIRING_RATE` (по умолчанию 10/hour).
+
+    Код — 59 бит и живёт 15 минут; лимит нужен как второй рубеж против перебора, а не против админа, опечатавшегося
+    пару раз. Превышение — 429 `TOO_MANY_REQUESTS` и `Retry-After`, как у остальных операций integration.
+    """
+
+    scope = "pairing"
+
+    def get_cache_key(self, request, view):
+        return self.cache_format % {"scope": self.scope, "ident": self.get_ident(request)}
