@@ -1,10 +1,18 @@
-import { Collapse, Form, Input, Modal, Select } from "antd";
+import { App, Button, Collapse, Form, Input, Modal, Select, Space } from "antd";
+import { useState } from "react";
 import type { SelectProps, UploadFile } from "antd";
 
 import { useProducts } from "../../api/adminQueries";
 import { FileDragger } from "../../components/FileDragger";
 import { t } from "../../i18n/ru";
 import { languageOptions } from "../../domain/labels";
+import {
+  downloadText,
+  KB_EXAMPLE_FILENAME,
+  KB_EXAMPLE_MD,
+  KB_FORMAT_MD,
+  kbPromptText,
+} from "./kbDocs";
 
 export type UploadValues = {
   title: string;
@@ -41,44 +49,85 @@ type DialogProps<T> = {
   onSubmit: (values: T) => void;
 };
 
-const DOCS_BASE = "https://github.com/nzulkaynarov/RailTech_Platform/blob/main/docs/kb";
-
-/** Краткая спецификация рядом с загрузкой; источник правды — docs/kb/FORMAT.md. */
+/** Краткая спецификация рядом с загрузкой; полный текст — из сборки (docs/kb), без внешних ссылок. */
 function FormatHelp() {
+  const { message } = App.useApp();
+  const [specOpen, setSpecOpen] = useState(false);
+  const copyPrompt = () => {
+    navigator.clipboard.writeText(kbPromptText()).then(
+      () => void message.success(t.kb.promptCopied),
+      () => void message.error(t.kb.promptCopyFailed),
+    );
+  };
   return (
-    <Collapse
-      size="small"
-      style={{ marginBottom: 16 }}
-      items={[
-        {
-          key: "format",
-          label: t.kb.formatTitle,
-          children: (
-            <>
-              <p>{t.kb.formatIntro}</p>
-              <ul>
-                {t.kb.formatRules.map((rule) => (
-                  <li key={rule}>{rule}</li>
-                ))}
-              </ul>
-              <p>
-                <a href={`${DOCS_BASE}/FORMAT.md`} target="_blank" rel="noreferrer">
-                  {t.kb.formatSpec}
-                </a>
-                {" · "}
-                <a href={`${DOCS_BASE}/PROMPT.md`} target="_blank" rel="noreferrer">
-                  {t.kb.formatPrompt}
-                </a>
-                {" · "}
-                <a href={`${DOCS_BASE}/example.md`} target="_blank" rel="noreferrer">
-                  {t.kb.formatExample}
-                </a>
-              </p>
-            </>
-          ),
-        },
-      ]}
-    />
+    <>
+      <Collapse
+        size="small"
+        style={{ marginBottom: 16 }}
+        items={[
+          {
+            key: "format",
+            label: t.kb.formatTitle,
+            children: (
+              <>
+                <p>{t.kb.formatIntro}</p>
+                <ul>
+                  {t.kb.formatRules.map((rule) => (
+                    <li key={rule}>{rule}</li>
+                  ))}
+                </ul>
+                <Space wrap>
+                  <Button
+                    size="small"
+                    onClick={() => {
+                      setSpecOpen(true);
+                    }}
+                  >
+                    {t.kb.formatSpec}
+                  </Button>
+                  <Button size="small" onClick={copyPrompt}>
+                    {t.kb.formatPrompt}
+                  </Button>
+                  <Button
+                    size="small"
+                    onClick={() => {
+                      downloadText(KB_EXAMPLE_FILENAME, KB_EXAMPLE_MD);
+                    }}
+                  >
+                    {t.kb.formatExample}
+                  </Button>
+                </Space>
+              </>
+            ),
+          },
+        ]}
+      />
+      <Modal
+        open={specOpen}
+        title={t.kb.formatSpecTitle}
+        onCancel={() => {
+          setSpecOpen(false);
+        }}
+        footer={
+          <Button
+            onClick={() => {
+              setSpecOpen(false);
+            }}
+          >
+            {t.kb.formatClose}
+          </Button>
+        }
+        width={760}
+      >
+        <pre
+          tabIndex={0}
+          aria-label={t.kb.formatSpecTitle}
+          style={{ whiteSpace: "pre-wrap", maxHeight: "60vh", overflow: "auto", margin: 0 }}
+        >
+          {KB_FORMAT_MD}
+        </pre>
+      </Modal>
+    </>
   );
 }
 
