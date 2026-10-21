@@ -60,6 +60,9 @@ import type {
   EmailQueuedOut,
   ErpCheckOut,
   ErpConnectorIn,
+  ErpPairIn,
+  ErpPairingOut,
+  ErpRotateIn,
   ErpStatusOut,
   ErpWebhookReceipt,
   ErrorOut,
@@ -4946,6 +4949,229 @@ export const useReceiveErpEvent = <TError = ErrorType<ErrorOut>, TContext = unkn
   queryClient?: QueryClient,
 ): UseMutationResult<Awaited<ReturnType<typeof receiveErpEvent>>, TError, void, TContext> => {
   return useMutation(getReceiveErpEventMutationOptions(options), queryClient);
+};
+
+export const getPairErpUrl = () => {
+  return `/api/v1/integrations/erp/pair`;
+};
+
+/**
+ * «Подключить ERP»: адрес ERP и одноразовый код из её настроек (M3-CRM-10, CONTRACTS §2).
+ *
+ * CRM сама генерирует токены обоих направлений и секрет вебхуков, передаёт их ERP по коду, сохраняет
+ * зашифрованными и сразу делает «Проверить связь» (результат — в ответе). Пароль админа обязателен.
+ *
+ * Ошибки (`details.reason`): `erp_invalid_url` (422, поле `base_url`), `erp_pairing_code_invalid` /
+ * `erp_pairing_code_expired` / `erp_pairing_code_used` (422, поле `code`), `wrong_password` (422),
+ * `secrets_key_missing` (409), `erp_unavailable` / `erp_bad_response` / `erp_pairing_unsupported` (502).
+ * @summary Pair Erp
+ */
+export const pairErp = async (
+  erpPairIn: ErpPairIn,
+  options?: Parameters<typeof http>[1],
+): Promise<ErpPairingOut> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<ErpPairingOut>(getPairErpUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
+    body: JSON.stringify(erpPairIn),
+  });
+};
+
+export const getPairErpMutationKey = () => ["pairErp"] as const;
+
+export const getPairErpMutationOptions = <
+  TError = ErrorType<ErrorOut>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof pairErp>>,
+    TError,
+    PairErpMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof pairErp>>,
+  TError,
+  PairErpMutationVariables,
+  TContext
+> => {
+  const mutationKey = getPairErpMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof pairErp>>,
+    PairErpMutationVariables
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return pairErp(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type PairErpMutationResult = NonNullable<Awaited<ReturnType<typeof pairErp>>>;
+export type PairErpMutationBody = ErpPairIn;
+export type PairErpMutationError = ErrorType<ErrorOut>;
+export type PairErpMutationVariables = { data: ErpPairIn };
+
+/**
+ * @summary Pair Erp
+ */
+export const usePairErp = <TError = ErrorType<ErrorOut>, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof pairErp>>,
+      TError,
+      PairErpMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof pairErp>>,
+  TError,
+  PairErpMutationVariables,
+  TContext
+> => {
+  return useMutation(getPairErpMutationOptions(options), queryClient);
+};
+
+export const getRotateErpKeysUrl = () => {
+  return `/api/v1/integrations/erp/rotate`;
+};
+
+/**
+ * «Обновить ключи»: CRM генерирует новую тройку секретов, ERP принимает её по действующему токену.
+ *
+ * Прежний токен CRM→ERP остаётся у ERP активным на переходный период (два активных), затем гаснет сам;
+ * предыдущий секрет вебхуков CRM принимает наравне с новым и снимает по истечении срока перехода.
+ *
+ * Ошибки: `erp_not_configured` (409), `secrets_key_missing` (409), `wrong_password` (422),
+ * `erp_unauthorized` / `erp_unavailable` / `erp_bad_response` (502).
+ * @summary Rotate Erp Keys
+ */
+export const rotateErpKeys = async (
+  erpRotateIn: ErpRotateIn,
+  options?: Parameters<typeof http>[1],
+): Promise<ErpPairingOut> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<ErpPairingOut>(getRotateErpKeysUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
+    body: JSON.stringify(erpRotateIn),
+  });
+};
+
+export const getRotateErpKeysMutationKey = () => ["rotateErpKeys"] as const;
+
+export const getRotateErpKeysMutationOptions = <
+  TError = ErrorType<ErrorOut>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof rotateErpKeys>>,
+    TError,
+    RotateErpKeysMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof rotateErpKeys>>,
+  TError,
+  RotateErpKeysMutationVariables,
+  TContext
+> => {
+  const mutationKey = getRotateErpKeysMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof rotateErpKeys>>,
+    RotateErpKeysMutationVariables
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return rotateErpKeys(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type RotateErpKeysMutationResult = NonNullable<Awaited<ReturnType<typeof rotateErpKeys>>>;
+export type RotateErpKeysMutationBody = ErpRotateIn;
+export type RotateErpKeysMutationError = ErrorType<ErrorOut>;
+export type RotateErpKeysMutationVariables = { data: ErpRotateIn };
+
+/**
+ * @summary Rotate Erp Keys
+ */
+export const useRotateErpKeys = <TError = ErrorType<ErrorOut>, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof rotateErpKeys>>,
+      TError,
+      RotateErpKeysMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof rotateErpKeys>>,
+  TError,
+  RotateErpKeysMutationVariables,
+  TContext
+> => {
+  return useMutation(getRotateErpKeysMutationOptions(options), queryClient);
 };
 
 export const getGetSmtpStatusUrl = () => {

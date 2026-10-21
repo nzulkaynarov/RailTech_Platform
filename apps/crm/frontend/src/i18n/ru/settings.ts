@@ -211,6 +211,7 @@ export const settings = {
     crm_base_url: "Адрес CRM (для ссылок в канале)",
     cabinet_url: "Адрес кабинета клиента (кнопка «Кабинет» в сообщениях бота; пусто — кнопки нет)",
     erp_base_url: "Адрес ERP",
+    erp_previous_secret_until: "Предыдущий секрет вебхуков принимается до",
     smtp: "Почта (SMTP-релей)",
     host: "Сервер SMTP",
     port: "Порт",

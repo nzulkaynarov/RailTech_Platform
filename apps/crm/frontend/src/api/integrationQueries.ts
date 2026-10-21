@@ -12,7 +12,9 @@ import {
   getListEmailLogQueryKey,
   getListTelegramChannelsQueryKey,
   getSystemStatusQueryKey,
+  pairErp,
   putErpConnector,
+  rotateErpKeys,
   putSmtpConnector,
   putTelegramToken,
   sendSmtpTest,
@@ -25,6 +27,9 @@ import {
 } from "./generated/crm";
 import type {
   ErpConnectorIn,
+  ErpPairIn,
+  ErpPairingOut,
+  ErpRotateIn,
   ListEmailLogParams,
   SmtpConnectorIn,
   TelegramTokenIn,
@@ -83,6 +88,25 @@ export function useErpMutations(onError: (error: unknown) => void) {
       mutationFn: () => checkErpConnection(),
       // Итог проверки показывается в карточке (и успех, и ошибка) — тост не нужен.
       onSettled: () => void client.invalidateQueries({ queryKey: systemKey }),
+      // Проверка может снять срок перехода после «Обновить ключи» — статус перечитывается.
+      onSuccess: () => void client.invalidateQueries({ queryKey: statusKey }),
+    }),
+    // «Подключить ERP» и «Обновить ключи» (M3-CRM-10): ответ несёт и статус, и результат проверки связи.
+    pair: useMutation({
+      mutationFn: (body: ErpPairIn) => pairErp(body),
+      onSuccess: (out: ErpPairingOut) => {
+        client.setQueryData(statusKey, out.status);
+        void client.invalidateQueries({ queryKey: systemKey });
+      },
+      onError,
+    }),
+    rotate: useMutation({
+      mutationFn: (body: ErpRotateIn) => rotateErpKeys(body),
+      onSuccess: (out: ErpPairingOut) => {
+        client.setQueryData(statusKey, out.status);
+        void client.invalidateQueries({ queryKey: systemKey });
+      },
+      onError,
     }),
   };
 }

@@ -24,6 +24,10 @@ const notConfigured: ErpStatusOut = {
   webhook_secret_previous_last4: null,
   webhook_secret_previous_updated_at: null,
   secrets_enabled: true,
+  inbound_token_configured: false,
+  inbound_token_last4: null,
+  paired: false,
+  previous_secret_until: null,
 };
 
 const configured: ErpStatusOut = {
@@ -51,9 +55,16 @@ const health: ErpCheckOut = {
 function renderCard(
   status: ErpStatusOut,
   extra: Partial<React.ComponentProps<typeof ErpCard>> = {},
-): { onSave: ReturnType<typeof vi.fn>; onCheck: ReturnType<typeof vi.fn> } {
+): {
+  onSave: ReturnType<typeof vi.fn>;
+  onCheck: ReturnType<typeof vi.fn>;
+  onPair: ReturnType<typeof vi.fn>;
+  onRotate: ReturnType<typeof vi.fn>;
+} {
   const onSave = vi.fn();
   const onCheck = vi.fn();
+  const onPair = vi.fn();
+  const onRotate = vi.fn();
   render(
     <AntApp>
       <ErpCard
@@ -64,16 +75,29 @@ function renderCard(
         checkError={null}
         onSave={onSave}
         onCheck={onCheck}
+        pairing={false}
+        rotating={false}
+        pairError={null}
+        pairCheckError={null}
+        onPair={onPair}
+        onRotate={onRotate}
         {...extra}
       />
     </AntApp>,
   );
-  return { onSave, onCheck };
+  return { onSave, onCheck, onPair, onRotate };
+}
+
+/** Ручной ввод ключей — «расширенные настройки», свёрнуты, пока коннектор не настроен вручную. */
+function openManual() {
+  const toggle = screen.getByRole("button", { name: /Ввести ключи вручную/ });
+  if (toggle.getAttribute("aria-expanded") !== "true") fireEvent.click(toggle);
 }
 
 describe("ErpCard", () => {
   it("shows «не настроен» and disables the check button without a connector", () => {
     renderCard(notConfigured);
+    openManual();
     expect(screen.getByText("Не настроен")).toBeInTheDocument();
     expect(screen.getByText("автономно (без ERP)")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Проверить связь" })).toBeDisabled();
@@ -93,7 +117,7 @@ describe("ErpCard", () => {
 
   it("asks for the password and sends null for untouched secrets", async () => {
     const { onSave } = renderCard(configured);
-    fireEvent.change(screen.getByLabelText("Адрес ERP"), {
+    fireEvent.change(screen.getByLabelText("Адрес ERP", { selector: "#erp-base-url" }), {
       target: { value: "https://erp.example.com/api/integration/v1" },
     });
     fireEvent.click(screen.getByRole("button", { name: "Сохранить" }));
@@ -184,8 +208,111 @@ describe("ErpCard", () => {
 
   it("warns without SECRETS_KEY and disables secret inputs", () => {
     renderCard({ ...notConfigured, secrets_enabled: false });
+    openManual();
     expect(screen.getByText(/SECRETS_KEY/)).toBeInTheDocument();
     expect(screen.getByLabelText("Сервисный токен CRM → ERP")).toBeDisabled();
     expect(screen.getByLabelText("Секрет вебхуков ERP → CRM")).toBeDisabled();
+  });
+
+  describe("pairing «Подключить ERP» (M3-CRM-10)", () => {
+    const paired: ErpStatusOut = {
+      ...configured,
+      webhook_secret_source: "db",
+      webhook_secret_last4: "Cd34",
+      token_updated_at: "2026-10-21T05:00:00Z",
+      inbound_token_configured: true,
+      inbound_token_last4: "Ef56",
+      paired: true,
+    };
+
+    it("offers the three steps, address and code; connect is disabled until both are filled", () => {
+      renderCard(notConfigured);
+      expect(screen.getByText(/Настройки → Интеграция с CRM/)).toBeInTheDocument();
+      const connect = screen.getByRole("button", { name: "Подключить ERP" });
+      expect(connect).toBeDisabled();
+      fireEvent.change(screen.getByLabelText("Адрес ERP", { selector: "#erp-pair-base-url" }), {
+        target: { value: "https://erp.example.com" },
+      });
+      expect(connect).toBeDisabled();
+      fireEvent.change(screen.getByLabelText("Код сопряжения"), {
+        target: { value: "ABCD-EFGH-JKMN" },
+      });
+      expect(connect).toBeEnabled();
+    });
+
+    it("asks for the password and sends address, code and password — no keys are typed", async () => {
+      const { onPair } = renderCard(notConfigured);
+      fireEvent.change(screen.getByLabelText("Адрес ERP", { selector: "#erp-pair-base-url" }), {
+        target: { value: " https://erp.example.com " },
+      });
+      fireEvent.change(screen.getByLabelText("Код сопряжения"), {
+        target: { value: " ABCD-EFGH-JKMN " },
+      });
+      fireEvent.click(screen.getByRole("button", { name: "Подключить ERP" }));
+      const dialog = await screen.findByRole("dialog");
+      fireEvent.change(within(dialog).getByLabelText("Ваш пароль"), { target: { value: "pw" } });
+      fireEvent.click(within(dialog).getByRole("button", { name: "Сохранить" }));
+      expect(onPair).toHaveBeenCalledTimes(1);
+      expect(onPair.mock.calls[0]?.[0]).toEqual({
+        base_url: "https://erp.example.com",
+        code: "ABCD-EFGH-JKMN",
+        password: "pw",
+      });
+    });
+
+    it("points the code error at the code field with a human explanation", () => {
+      const error = new ApiError(422, "validation_failed", "pairing", {
+        reason: "erp_pairing_code_expired",
+        field: "code",
+      });
+      renderCard(notConfigured, { pairError: error });
+      expect(screen.getByText(/Срок кода сопряжения вышел/)).toBeInTheDocument();
+      expect(screen.queryByText(/erp_pairing_code_expired/)).toBeNull();
+    });
+
+    it("blocks pairing without SECRETS_KEY", () => {
+      renderCard({ ...notConfigured, secrets_enabled: false });
+      fireEvent.change(screen.getByLabelText("Адрес ERP", { selector: "#erp-pair-base-url" }), {
+        target: { value: "https://erp.example.com" },
+      });
+      fireEvent.change(screen.getByLabelText("Код сопряжения"), { target: { value: "ABCD" } });
+      expect(screen.getByRole("button", { name: "Подключить ERP" })).toBeDisabled();
+    });
+
+    it("shows the paired summary with last4 only, and no manual keys by default", () => {
+      renderCard(paired);
+      expect(screen.getByText("ERP сопряжена")).toBeInTheDocument();
+      expect(screen.getByText("••••Q1w2")).toBeInTheDocument();
+      expect(screen.getByText("••••Ef56")).toBeInTheDocument();
+      expect(screen.getByText("••••Cd34")).toBeInTheDocument();
+      expect(screen.queryByRole("textbox", { name: "Код сопряжения" })).toBeNull();
+      expect(screen.getByRole("button", { name: /Ввести ключи вручную/ })).toHaveAttribute(
+        "aria-expanded",
+        "false",
+      );
+    });
+
+    it("rotates keys after the password, with the no-downtime explanation", async () => {
+      const { onRotate } = renderCard(paired);
+      fireEvent.click(screen.getByRole("button", { name: "Обновить ключи" }));
+      const dialog = await screen.findByRole("dialog");
+      expect(within(dialog).getByText(/Работа не остановится/)).toBeInTheDocument();
+      fireEvent.change(within(dialog).getByLabelText("Ваш пароль"), { target: { value: "pw" } });
+      fireEvent.click(within(dialog).getByRole("button", { name: "Сохранить" }));
+      expect(onRotate.mock.calls[0]?.[0]).toEqual({ password: "pw" });
+    });
+
+    it("announces the transition after rotation", () => {
+      renderCard({ ...paired, previous_secret_until: "2026-10-21T06:00:00Z" });
+      expect(screen.getByRole("status")).toHaveTextContent(/Идёт переход на новые ключи/);
+    });
+
+    it("keeps pairing successful and explains a failed link check right after it", () => {
+      renderCard(paired, { pairCheckError: "erp_unavailable" });
+      expect(
+        screen.getByText("Ключи переданы в ERP, но проверка связи не прошла"),
+      ).toBeInTheDocument();
+      expect(screen.getByText(/ERP не отвечает/)).toBeInTheDocument();
+    });
   });
 });

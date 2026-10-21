@@ -17,7 +17,11 @@ export interface ErpStatusOut {
   base_url: string;
   base_url_source: ErpStatusOutBaseUrlSource;
   configured: boolean;
+  inbound_token_configured?: boolean;
+  inbound_token_last4?: string | null;
   mode: ErpStatusOutMode;
+  paired?: boolean;
+  previous_secret_until?: string | null;
   secrets_enabled: boolean;
   token_configured: boolean;
   token_last4: string | null;
