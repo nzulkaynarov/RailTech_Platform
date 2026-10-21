@@ -14,11 +14,18 @@ from typing import Any
 REPO = Path(__file__).resolve().parents[4]
 SCHEMA_PATH = REPO / "packages" / "contracts" / "events.schema.json"
 EXAMPLES_DIR = REPO / "packages" / "contracts" / "examples" / "events"
+SIGNATURE_VECTOR_PATH = REPO / "packages" / "contracts" / "examples" / "webhook-signature-v2.json"
 
 
 @cache
 def schema() -> dict[str, Any]:
     loaded: dict[str, Any] = json.loads(SCHEMA_PATH.read_text(encoding="utf-8"))
+    return loaded
+
+
+def signature_vector() -> dict[str, str]:
+    """Общий тест-вектор подписи v2 (FIX-61): те же secret/id/метка/тело проверяет и ERP."""
+    loaded: dict[str, str] = json.loads(SIGNATURE_VECTOR_PATH.read_text(encoding="utf-8"))
     return loaded
 
 

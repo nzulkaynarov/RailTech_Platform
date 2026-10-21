@@ -28,7 +28,7 @@ from integration.services.webhooks import (
     emit_act_event,
     emit_event,
     emit_invite_sent,
-    sign_payload,
+    sign_payload_v2,
     webhook_signing_secret,
 )
 from integration.tests.world import (
@@ -338,8 +338,9 @@ def test_events_are_signed_with_the_first_secret_when_two_are_configured(setting
         send_async=False,
     )
     raw = json.dumps(stored.payload, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
-    assert stored.headers["X-Signature"] == sign_payload("new-secret-value", raw)
-    assert stored.headers["X-Signature"] != sign_payload("old-secret-value", raw)
+    event_id, stamp = stored.headers["X-Event-Id"], stored.headers["X-Timestamp"]
+    assert stored.headers["X-Signature"] == sign_payload_v2("new-secret-value", event_id, stamp, raw)
+    assert stored.headers["X-Signature"] != sign_payload_v2("old-secret-value", event_id, stamp, raw)
 
 
 def test_act_returned_has_no_trigger_in_the_real_flow():
@@ -380,4 +381,5 @@ def test_delivery_signs_with_the_first_secret_and_a_rotation_takes_effect_for_pe
     with patch("httpx.Client.post", return_value=MagicMock(status_code=200, text="OK")) as post:
         assert deliver_webhook_event(stored.pk) is True
     sent = post.call_args.kwargs
-    assert sent["headers"]["X-Signature"] == sign_payload("new-secret-value", sent["content"])
+    h = sent["headers"]
+    assert h["X-Signature"] == sign_payload_v2("new-secret-value", h["X-Event-Id"], h["X-Timestamp"], sent["content"])
