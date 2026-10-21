@@ -146,6 +146,10 @@ def test_data_migration_leaves_healthy_and_foreign_profiles_alone_and_is_idempot
     # Не сотрудник CRM (нет сопоставления): имя с пробелом без фамилии — не наше, не трогаем.
     foreign = CustomUser.objects.create(username="e@example.com", email="e@example.com", first_name="Анна Мария")
     broken = _user(first="Ли Ли", last="Ли", crm_user_id=5, email="f@example.com")
+    # Не сотрудник CRM, имя заполнено вручную «Анна Мария / Мария» — не наше, не трогаем.
+    manual = CustomUser.objects.create(
+        username="g@example.com", email="g@example.com", first_name="Анна Мария", last_name="Мария"
+    )
     _run_migration()
     _run_migration()
     for user, expected in (
@@ -153,6 +157,7 @@ def test_data_migration_leaves_healthy_and_foreign_profiles_alone_and_is_idempot
         (single, ("Мастер", "")),
         (foreign, ("Анна Мария", "")),
         (broken, ("Ли", "Ли")),
+        (manual, ("Анна Мария", "Мария")),
     ):
         user.refresh_from_db()
         assert (user.first_name, user.last_name) == expected

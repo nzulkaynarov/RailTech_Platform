@@ -5,10 +5,11 @@
 Правило то же, что у `integration.services.provision.split_full_name`: имя — первое слово, фамилия — остаток.
 
 Меняются только испорченные записи (идемпотентно, повторный запуск ничего не меняет):
+Дефект касался только сотрудников из CRM (есть сопоставление `CrmUserMapping`, имя пришло из токена), поэтому
+оба правила применяются только к ним:
   1. `first_name` оканчивается на « <last_name>» — отрезаем повтор фамилии;
-  2. `last_name` пуст, в `first_name` есть пробел и пользователь — сотрудник из CRM (есть сопоставление
-     `CrmUserMapping`, имя пришло из токена) — делим на имя и фамилию.
-Остальные профили (в т.ч. заполненные вручную и пользователи без сопоставления) не трогаются.
+  2. `last_name` пуст, в `first_name` есть пробел — делим на имя и фамилию.
+Остальные профили (заполненные вручную и пользователи без сопоставления) не трогаются.
 """
 
 from django.db import migrations
@@ -18,7 +19,7 @@ def split_sso_full_names(apps, schema_editor):
     CustomUser = apps.get_model("accounts", "CustomUser")
 
     # 1. «Имя Фамилия» + last_name «Фамилия» → first_name «Имя».
-    for user in CustomUser.objects.exclude(last_name="").iterator():
+    for user in CustomUser.objects.exclude(last_name="").filter(crm_user_mapping__isnull=False).iterator():
         suffix = f" {user.last_name}"
         if user.first_name.endswith(suffix) and user.first_name.strip() != user.last_name:
             user.first_name = user.first_name[: -len(suffix)].strip()
