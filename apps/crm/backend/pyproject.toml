@@ -112,3 +112,7 @@ implicit_reexport = true
 # pillow<13. CRM берёт из docling-core только чанкинг текста (HybridChunker) — картинки не
 # разбираются, поэтому 13.x безопасен. Снять переопределение, когда docling-core разрешит 13.
 override-dependencies = ["pillow>=13.0.0"]
+# numpy 2.4+ собран с базой x86-64-v2 (SSE4.2/POPCNT) и падает при import на прод-VPS: у виртуальной машины Eskiz
+# процессор «QEMU Virtual CPU» только с базовым x86-64 — прод-CPU без x86-64-v2, docs/runbooks/servers.md.
+# numpy приходит транзитивно (docling-core -> pandas). Снять после смены хостера или CPU-модели ВМ.
+constraint-dependencies = ["numpy<2.4"]

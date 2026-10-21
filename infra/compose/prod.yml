@@ -97,6 +97,8 @@ services:
 
   litellm:
     <<: [*ops, *mem-768]
+    image: ${RT_IMAGE_REGISTRY:-ghcr.io/nzulkaynarov}/rt-litellm:${RT_IMAGE_TAG:?set RT_IMAGE_TAG}
+    build: !reset null
     environment:
       DATABASE_URL: postgresql://litellm_app:${DB_LITELLM_PASSWORD:?set in .env}@${DB_INTERNAL_IP}:5432/litellm?sslmode=require&sslaccept=accept_invalid_certs
     depends_on: !override {}

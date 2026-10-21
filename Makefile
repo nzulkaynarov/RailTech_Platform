@@ -106,6 +106,7 @@ deploy-check: ## Проверка конфигурации прода без з�
 	@bash $(INFRA)/deploy/tests/predeploy-dump-test.sh
 	@bash $(INFRA)/deploy/tests/events-schema-mount-test.sh
 	@bash $(INFRA)/deploy/tests/crm-backup-source-test.sh
+	@bash $(INFRA)/deploy/tests/cpu-baseline-test.sh
 	@docker run --rm -v "$(CURDIR):/repo" -w /repo rhysd/actionlint:latest .github/workflows/deploy.yml && echo "actionlint: ok"
 
 # --- Локальный CI (гейт мержа, пока GitHub Actions недоступен — DECISIONS 2026-10-13) ---

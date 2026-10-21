@@ -2,7 +2,7 @@
 # Вход: git-ref (по умолчанию main) и действие deploy | rollback. Окружение `production` (GitHub environment) —
 # защита вручную: required reviewers задаёт владелец. ci.yml не трогает.
 #
-# deploy:   сборка пяти образов -> push в GHCR с тегом = полный git sha -> загрузка infra/ на VPS 1 по SSH ->
+# deploy:   сборка шести образов -> push в GHCR с тегом = полный git sha -> загрузка infra/ на VPS 1 по SSH ->
 #           deploy.sh на сервере (pg_dump-гейт, миграции, up) -> smoke трёх доменов с раннера.
 # rollback: rollback.sh на VPS 1 — предыдущий тег (по state на сервере). Миграции БД не откатываются.
 #
@@ -133,6 +133,16 @@ jobs:
           tags: ghcr.io/${{ steps.ver.outputs.owner }}/rt-cabinet:${{ steps.ver.outputs.tag }}
           cache-from: type=gha,scope=cabinet
           cache-to: type=gha,mode=max,scope=cabinet
+
+      - name: Образ rt-litellm
+        # Свой образ на Debian: официальный (Wolfi) требует x86-64-v2, прод-CPU его не даёт (M5-INF-02, servers.md)
+        uses: docker/build-push-action@v6
+        with:
+          context: infra/ai/litellm
+          push: true
+          tags: ghcr.io/${{ steps.ver.outputs.owner }}/rt-litellm:${{ steps.ver.outputs.tag }}
+          cache-from: type=gha,scope=litellm
+          cache-to: type=gha,mode=max,scope=litellm
 
       - name: SSH к VPS 1
         env:

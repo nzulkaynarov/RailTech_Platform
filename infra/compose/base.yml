@@ -151,8 +151,11 @@ services:
 
   # ─── ИИ: общий шлюз (ADR-0005) ──────────────────────────────────────────────────────────────
 
+  # Свой образ на Debian (M5-INF-02): официальный Wolfi-образ требует x86-64-v2, прод-VPS его не даёт (servers.md «CPU прод-VPS»).
+  # В проде — готовый образ rt-litellm из GHCR (prod.yml), здесь — локальная сборка.
   litellm:
-    image: ghcr.io/berriai/litellm:v1.105.0
+    build:
+      context: ../ai/litellm
     command: ["--config", "/app/config.yaml", "--port", "4000"]
     environment:
       LITELLM_MASTER_KEY: ${LITELLM_MASTER_KEY:?set in .env}

@@ -28,7 +28,7 @@
 | `caddy` | 64 МБ | три домена, TLS (ACME), security headers |
 | `redis` | 128 МБ | БД 0 Langfuse, 1 ERP Celery, 2 ERP Channels |
 | `rustfs` | 512 МБ | бакеты CRM, `erp`, `langfuse`, `backups` |
-| `litellm` | 768 МБ | шлюз моделей; его БД `litellm` — на VPS 2 |
+| `litellm` | 768 МБ | шлюз моделей, свой образ `rt-litellm` (Debian, см. «CPU прод-VPS»); его БД `litellm` — на VPS 2 |
 | `crm-api`, `crm-worker` | 512 + 512 МБ | |
 | `crm-mcp-kb`, `crm-mcp-crm`, `crm-mcp-docs` | 3 × 256 МБ | |
 | `crm-web` | 64 МБ | статика за Caddy |
@@ -60,6 +60,26 @@
 - DNS: `crm.railtech.uz`, `erp.railtech.uz`, `cabinet.railtech.uz` → `176.101.56.141` (A-записи, TTL 300 на время пилота).
 - Деплой: GitHub Actions (после разблокировки, Q-10) собирает образы в GHCR, по SSH на VPS 1 выполняет `pull` + `up`
   с pg_dump-гейтом перед миграциями (как в B2B/CRM). Реализовано в M5-INF-01: `.github/workflows/deploy.yml` (только вручную) и `infra/deploy/deploy.sh` на сервере — `docs/runbooks/deploy.md`.
+
+## CPU прод-VPS: только базовый x86-64 (M5-INF-02)
+
+Оба прод-сервера (Eskiz, KVM) отдают гостю процессор **«QEMU Virtual CPU version 2.5+»**: нет SSE4.2, SSSE3, POPCNT, AVX —
+это базовый x86-64 (v1). Хостер модель CPU не меняет. Проверка на сервере: `grep -m1 'model name' /proc/cpuinfo`, `grep -o -w 'sse4_2\|ssse3\|popcnt\|avx' /proc/cpuinfo | sort -u` (пусто).
+
+| Что | Состояние на этом CPU |
+|---|---|
+| Официальный `ghcr.io/berriai/litellm` (Wolfi) | **не работает**: `Fatal glibc error: CPU does not support x86-64-v2`. Вместо него — свой образ `rt-litellm` на `python:3.12-slim-bookworm` (`infra/ai/litellm/Dockerfile`, та же версия `litellm[proxy]`, prisma сгенерирован при сборке) |
+| numpy 2.4+ (в CRM приходит через docling-core → pandas) | **не работает**: `NumPy was built with baseline optimizations: (X86_V2)`. В CRM ограничение `numpy<2.4` (`constraint-dependencies` в `apps/crm/backend/pyproject.toml`); 2.3.5 и 2.2.6 проверены, ERP на numpy 1.26.4 |
+| ClickHouse / Langfuse (профиль `observability`) | **недоступен**: ClickHouse требует SSE4.2. Трейсы Langfuse на этих VPS не включать; расходы ИИ (M3-CRM-09) читаются из БД LiteLLM и от Langfuse не зависят |
+| docling / torch (профиль `kb-ingest`) | **не проверено**: при первом включении запустить `import torch, numpy` в образе `docling-serve-cpu`; колёса torch под AVX на базовом CPU могут падать |
+| redis 7.4.11, rustfs 1.0.1, caddy 2.11.7, pgvector pg17, образы erp-backend, веб-образы, миграции CRM | работают |
+
+**Правило:** новые образы и нативные колёса (numpy, scipy, torch, onnx и т. п.) — только с базой x86-64 v1. Перед добавлением образа или обновлением
+пакета с нативным кодом проверить на самом проде заранее нельзя, поэтому ловим на деплое: `infra/deploy/cpu-baseline-check.sh` (вызывается из `deploy.sh`
+после `pull`, до pg_dump-гейта и миграций) запускает в каждом образе прода короткую команду, исполняющую нативный код. Для нового образа
+добавить правило в `case` скрипта (иначе он попадёт в список «не проверены»). Тест скрипта — `infra/deploy/tests/cpu-baseline-test.sh` (в `make deploy-check`).
+При падении проверки образ заменяют или фиксируют версию пакета (`constraint-dependencies` в `pyproject.toml` для Python), а не обходят проверку.
+Локально воспроизвести CPU без v2 на Mac нельзя (Rosetta/Apple Silicon); на x86-Linux — `qemu-x86_64 -cpu qemu64 <команда>` внутри контейнера.
 
 ## Диск
 
