@@ -13,7 +13,7 @@ import structlog
 from aiogram import Dispatcher
 
 from app.bot.profile import ProfilePublish
-from app.bot.runtime import BotRuntime
+from app.bot.runtime import BotRuntime, WebhookNotConfiguredError, webhook_config_problem
 from app.config import Settings
 from app.integrations.telegram import TokenSource
 
@@ -75,12 +75,21 @@ class BotSupervisor:
         if not token:
             logger.warning("bot_disabled", reason="no_token")
             return
+        problem = webhook_config_problem(self._config)
+        if problem is not None:
+            self._webhook_not_configured(problem)
+            return
         runtime: BotRuntime | None = None
         try:
             if self._dispatcher is None:
                 self._dispatcher = await self._dispatcher_factory()
             runtime = self._runtime_factory(self._config, self._dispatcher, token)
             await runtime.start()
+        except WebhookNotConfiguredError as exc:
+            self._webhook_not_configured(exc.problem)
+            if runtime is not None:
+                await runtime.bot.session.close()
+            return
         except Exception as exc:  # noqa: BLE001 — сбой бота не роняет API; причина в статусе
             self.last_error = type(exc).__name__
             logger.error("bot_start_failed", source=self.source, error=self.last_error)
@@ -94,6 +103,16 @@ class BotSupervisor:
             self.username = me.username
         except Exception:
             logger.warning("bot_get_me_failed", exc_info=True)
+
+    def _webhook_not_configured(self, problem: str) -> None:
+        """Вебхук не ставим и не снимаем; причина — в журнале и в «Центре внешних сервисов»."""
+        self.last_error = "webhook_not_configured"
+        logger.error(
+            "bot_webhook_not_configured",
+            problem=problem,
+            mode=self._config.telegram_mode,
+            hint="задайте CRM_DOMAIN или TELEGRAM_WEBHOOK_URL=https://<домен>/telegram/webhook",
+        )
 
     async def _halt(self, *, release_webhook: bool) -> None:
         runtime, self.runtime, self.username = self.runtime, None, None

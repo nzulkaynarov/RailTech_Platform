@@ -23,6 +23,7 @@ from app.bot.middlewares import IdempotencyMiddleware, RateLimitMiddleware
 from app.bot.profile import ProfilePublish, publish_profile
 from app.bot.status import ClientStatusMiddleware
 from app.config import Settings
+from app.domain.telegram_webhook import webhook_url_problem
 from app.integrations.s3 import ObjectStorage
 from app.schemas.settings_profile import BotProfileSettings
 from app.security.rbac import Rbac
@@ -75,6 +76,21 @@ def build_dispatcher(
     return dispatcher
 
 
+class WebhookNotConfiguredError(Exception):
+    """`TELEGRAM_MODE=webhook` без годного https-адреса: бот не запускается (FIX-66)."""
+
+    def __init__(self, problem: str) -> None:
+        super().__init__(problem)
+        self.problem = problem
+
+
+def webhook_config_problem(config: Settings) -> str | None:
+    """Режим webhook с пустым или не-https адресом — `empty` / `not_https`; иначе `None`."""
+    if config.telegram_mode != "webhook":
+        return None
+    return webhook_url_problem(config.telegram_webhook_url)
+
+
 class BotRuntime:
     def __init__(self, config: Settings, bot: Bot, dispatcher: Dispatcher) -> None:
         self._config = config
@@ -91,6 +107,10 @@ class BotRuntime:
         return cls(config, bot, dispatcher)
 
     async def start(self) -> None:
+        # Первым делом и до любых вызовов Bot API: `set_webhook("")` молча удалял вебхук (FIX-66).
+        problem = webhook_config_problem(self._config)
+        if problem is not None:
+            raise WebhookNotConfiguredError(problem)
         allowed = self.dispatcher.resolve_used_update_types()
         settings = self.dispatcher.workflow_data.get("settings")
         cfg = await settings.get() if settings else None
@@ -107,7 +127,7 @@ class BotRuntime:
             )
         else:
             await self.bot.set_webhook(
-                self._config.telegram_webhook_url,
+                self._config.telegram_webhook_url.strip(),
                 secret_token=self._config.telegram_webhook_secret.get_secret_value(),
                 allowed_updates=allowed,
             )
