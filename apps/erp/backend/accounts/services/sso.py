@@ -19,6 +19,7 @@ import jwt
 from django.conf import settings
 from django.core.cache import cache
 from integration.models import CrmUserMapping
+from integration.services.provision import split_full_name
 from sales.models import ActivityLog
 
 from accounts.constants import Permission
@@ -220,9 +221,13 @@ def verify_and_exchange_sso_token(token: str, client_ip: Optional[str] = None) -
         else:
             user.email = email
             update_fields.append("email")
-    if name and user.first_name != name:
-        user.first_name = name
-        update_fields.append("first_name")
+    if name:
+        # N-03 (FIX-64): имя делится на имя и фамилию тем же правилом, что при провижининге; раньше всё имя
+        # писалось в first_name и `get_full_name()` давал «Имя Фамилия Фамилия».
+        first_name, last_name = split_full_name(name)
+        if (user.first_name, user.last_name) != (first_name, last_name):
+            user.first_name, user.last_name = first_name, last_name
+            update_fields += ["first_name", "last_name"]
     if update_fields:
         user.save(update_fields=update_fields)
 
