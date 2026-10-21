@@ -12584,7 +12584,7 @@ export const getListBackupsUrl = () => {
 };
 
 /**
- * Последние бэкапы из тома `backups` (каталоги `<UTC-штамп>`), время последнего успеха.
+ * Последние бэкапы: том `backups` (dev) или бакет `backups` RustFS (прод, M5-CRM-01).
  * @summary List Backups
  */
 export const listBackups = async (options?: Parameters<typeof http>[1]): Promise<BackupsOut> => {
@@ -12698,8 +12698,9 @@ export const getRequestBackupUrl = () => {
 /**
  * Запросить бэкап вне расписания: сервис бэкапа начнёт его в течение ~30 с.
  *
- * 409, если том бэкапов не смонтирован в api. Повторный запрос до начала — без изменений;
- * запрос, который сервис не забрал за 2 мин, ставится заново.
+ * 409, если том бэкапов не смонтирован в api или бэкап делает VPS 2 (источник — бакет RustFS:
+ * запускать на сервере базы, `infra/deploy/backup-now.sh`). Повторный запрос до начала — без
+ * изменений; запрос, который сервис не забрал за 2 мин, ставится заново.
  * @summary Request Backup
  */
 export const requestBackup = async (options?: Parameters<typeof http>[1]): Promise<BackupsOut> => {

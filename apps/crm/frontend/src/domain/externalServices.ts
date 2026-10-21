@@ -74,7 +74,11 @@ export function formatBytes(bytes: number): string {
 }
 
 function metricValue(key: string, value: number | string): string {
-  if (typeof value === "string") return key === "not_after" ? formatDateTime(value) : value;
+  if (key === "backup_source" && typeof value === "string")
+    return t.externalServices.backupSources[value] ?? value;
+  if (typeof value === "string") {
+    return key === "not_after" || key === "last_copy_at" ? formatDateTime(value) : value;
+  }
   if (key.endsWith("_usd")) return formatUsd(value);
   if (key === "error_rate_24h") return percent(value);
   if (key.endsWith(".bytes")) return formatBytes(value);
@@ -91,6 +95,9 @@ function metricLabel(key: string): string | null {
         : t.externalServices.metrics["bucketObjects"];
     return template ? template.replace("{name}", bucket[1] ?? "") : null;
   }
+  const backupDb = /^db\.(.+)\.hours$/.exec(key);
+  if (backupDb)
+    return t.externalServices.metrics["backupDb"]?.replace("{name}", backupDb[1] ?? "") ?? null;
   return t.externalServices.metrics[key] ?? null;
 }
 

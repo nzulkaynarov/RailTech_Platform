@@ -36,7 +36,7 @@ from app.repositories import external_services as repo
 from app.security.secrets_store import SecretsStore
 from app.services import backups as backup_rules
 from app.services.ai_spend import SpendLogSource
-from app.services.backups import BackupService
+from app.services.backups import BackupReader
 from app.services.external_services.providers import providers as alias_providers
 from app.services.mail import MailService
 from app.services.settings import SettingsService
@@ -66,7 +66,7 @@ class Deps:
     sessions: Any
     mail: MailService
     storage: ObjectStorage
-    backups: BackupService | None
+    backups: BackupReader | None
     admin: LiteLLMAdmin
     spend_logs: SpendLogSource
     catalog: ModelCatalog
@@ -345,7 +345,7 @@ class _Run:
             if facts.last_success
             else None
         )
-        return rules.backup(system_status.backup(self.now, facts), hours)
+        return rules.backup(system_status.backup(self.now, facts), hours, facts)
 
     async def tls(self, name: str) -> CheckResult:
         url = await self._tls_url(name)
