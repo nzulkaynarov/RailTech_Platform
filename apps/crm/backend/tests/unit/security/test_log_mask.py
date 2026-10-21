@@ -182,7 +182,8 @@ def test_stdlib_record_with_bot_token_is_masked(
     out = capsys.readouterr().out
     assert FAKE_BOT not in out
     assert "123456789" not in out
-    assert "bot[REDACTED]/getMe" in out
+    # `MaskBotToken` (FIX-66) срабатывает раньше (`bot***`), общая маска — страховка.
+    assert re.search(r"bot(\*\*\*|\[REDACTED\])/getMe", out)
 
 
 def test_httpx_request_log_never_shows_the_bot_token_even_if_level_is_raised(
