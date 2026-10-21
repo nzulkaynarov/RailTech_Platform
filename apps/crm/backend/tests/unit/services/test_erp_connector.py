@@ -21,6 +21,7 @@ from app.domain.errors import ConflictError, Reason, UpstreamUnavailableError, V
 from app.domain.system_status import ErpFacts
 from app.integrations.erp import HttpxErpProbe
 from app.schemas.integrations import ErpConnectorIn, ErpStatusOut
+from app.schemas.settings import IntegrationsSettings
 from app.security.passwords import hash_password
 from app.security.principal import Principal
 from app.security.secrets_store import (
@@ -84,15 +85,19 @@ class FakeStore(SecretsStore):
 
 class FakeSettings:
     def __init__(self, base_url: str = "") -> None:
-        self.base_url = base_url
+        self.value = IntegrationsSettings(erp_base_url=base_url)
         self.updates: list[tuple[str, dict[str, Any]]] = []
 
+    @property
+    def base_url(self) -> str:
+        return self.value.erp_base_url
+
     async def get(self) -> Any:
-        return SimpleNamespace(integrations=SimpleNamespace(erp_base_url=self.base_url))
+        return SimpleNamespace(integrations=self.value)
 
     async def update(self, key: str, value: dict[str, Any], user_id: int | None) -> Any:
         self.updates.append((key, value))
-        self.base_url = value["erp_base_url"]
+        self.value = IntegrationsSettings.model_validate(value)
         return value
 
 
@@ -309,7 +314,12 @@ async def test_save_audits_without_values_and_switches_mode(
             password=PASSWORD,
         )
     assert store.saved == {ERP_SERVICE_TOKEN: TOKEN, ERP_WEBHOOK_SECRET: HOOK}
-    assert settings.updates == [("integrations", {"erp_base_url": BASE})]
+    assert [(key, value["erp_base_url"]) for key, value in settings.updates] == [
+        ("integrations", BASE)
+    ]
+    assert settings.value.smtp == IntegrationsSettings().smtp, (
+        "сохранение ERP не затирает остальные ключи «Подключений»"
+    )
     assert status.configured
     assert status.mode == BackofficeMode.ERP
     assert (status.base_url_source, status.token_source) == ("db", "db")

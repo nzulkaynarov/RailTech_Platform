@@ -193,6 +193,11 @@ def test_reason_values_are_a_stable_contract() -> None:
         "erp_bad_response",
         # Передача клиента (FIX-31).
         "erp_inn_conflict",
+        # Сопряжение с ERP (M3-CRM-10).
+        "erp_pairing_code_invalid",
+        "erp_pairing_code_expired",
+        "erp_pairing_code_used",
+        "erp_pairing_unsupported",
         # Коннектор «Почта» (M3-CRM-08).
         "smtp_not_configured",
         "smtp_invalid_host",

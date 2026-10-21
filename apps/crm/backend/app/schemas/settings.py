@@ -367,6 +367,9 @@ class IntegrationsSettings(StrictModel):
 
     # Корень ERP (`https://erp.example.com`); пусто — адрес из `ERP_BASE_URL`, иначе коннектора нет.
     erp_base_url: str = Field(default="", max_length=500)
+    # Ротация ключей кнопкой «Обновить ключи» (M3-CRM-10): до какого момента принимается предыдущий секрет вебхуков,
+    # после чего его снимает сама CRM. Пусто — предыдущий секрет задан вручную и живёт, пока админ не снимет.
+    erp_previous_secret_until: datetime | None = None
     smtp: SmtpSettings = Field(default_factory=SmtpSettings)
 
 

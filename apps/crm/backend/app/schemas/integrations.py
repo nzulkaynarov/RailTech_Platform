@@ -75,6 +75,13 @@ class ErpStatusOut(BaseModel):
     webhook_secret_previous_last4: str | None
     webhook_secret_previous_updated_at: datetime | None
     secrets_enabled: bool
+    # Сопряжение «Подключить ERP» (M3-CRM-10): токен ERP→CRM выдала CRM; `paired` — ключи выданы
+    # сопряжением.
+    inbound_token_configured: bool = False
+    inbound_token_last4: str | None = None
+    paired: bool = False
+    # Переход после «Обновить ключи»: до какого момента принимается предыдущий секрет вебхуков.
+    previous_secret_until: datetime | None = None
 
 
 class ErpConnectorIn(BaseModel):
@@ -100,6 +107,24 @@ class ErpConnectorIn(BaseModel):
         return value
 
 
+class ErpPairIn(BaseModel):
+    """«Подключить ERP»: адрес ERP и одноразовый код из её настроек; пароль админа — как всегда."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    base_url: str = Field(min_length=1, max_length=500)
+    code: SecretStr = Field(min_length=1, max_length=64)
+    password: SecretStr = Field(min_length=1, max_length=256)
+
+
+class ErpRotateIn(BaseModel):
+    """«Обновить ключи»: только пароль админа — новые секреты CRM генерирует сама."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    password: SecretStr = Field(min_length=1, max_length=256)
+
+
 class ErpCheckOut(BaseModel):
     """Ответ ERP на `GET /api/integration/v1/health` (схема `Health` контракта) и время ответа."""
 
@@ -109,6 +134,18 @@ class ErpCheckOut(BaseModel):
     queue_alive: bool
     checked_at: datetime
     latency_ms: int
+
+
+class ErpPairingOut(BaseModel):
+    """Итог сопряжения или ротации: состояние коннектора и «Проверить связь», сделанная сразу после.
+
+    Сопряжение удалось, даже если проверка не прошла: тогда `check` пуст, а `check_error` — подкод
+    причины (`erp_unauthorized`, `erp_unavailable`, …) для понятной подсказки.
+    """
+
+    status: ErpStatusOut
+    check: ErpCheckOut | None
+    check_error: str | None
 
 
 Source = Literal["db", "env", "none"]

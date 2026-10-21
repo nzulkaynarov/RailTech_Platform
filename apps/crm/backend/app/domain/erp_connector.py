@@ -10,6 +10,9 @@ from urllib.parse import urlsplit
 
 INTEGRATION_PREFIX: Final = "/api/integration/v1"
 HEALTH_PATH: Final = f"{INTEGRATION_PREFIX}/health"
+# Сопряжение по одноразовому коду и ротация ключей (M3-CRM-10, CONTRACTS §2).
+PAIRING_ACCEPT_PATH: Final = f"{INTEGRATION_PREFIX}/pairing/accept"
+PAIRING_ROTATE_PATH: Final = f"{INTEGRATION_PREFIX}/pairing/rotate"
 _SCHEMES: Final = frozenset({"http", "https"})
 
 
