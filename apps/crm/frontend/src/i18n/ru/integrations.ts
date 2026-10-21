@@ -98,6 +98,9 @@ export const integrations = {
       checkResult: "Результат проверки",
       checkOk: "ERP отвечает",
       checkDegraded: "ERP отвечает с предупреждениями",
+      checkRateLimited: "ERP ограничила частоту запросов",
+      checkRateLimitedHint:
+        "Сервисный токен упёрся в лимит ERP — это не отказ связи. Повторите проверку через {s} с.",
       version: "Версия ERP",
       migrations: "Миграции применены",
       queue: "Очередь задач жива",

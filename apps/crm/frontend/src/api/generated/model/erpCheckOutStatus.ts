@@ -10,4 +10,5 @@ export type ErpCheckOutStatus = (typeof ErpCheckOutStatus)[keyof typeof ErpCheck
 export const ErpCheckOutStatus = {
   ok: "ok",
   degraded: "degraded",
+  rate_limited: "rate_limited",
 } as const;

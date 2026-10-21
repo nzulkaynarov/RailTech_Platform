@@ -36,6 +36,7 @@ if TYPE_CHECKING:
     from app.services.clients import ClientService
     from app.services.documents import DocumentService
     from app.services.erp_access import ErpAccessService
+    from app.services.erp_client_card import ErpClientCardService
     from app.services.erp_connector import ErpConnectorService
     from app.services.erp_events import ErpEventsService
     from app.services.erp_handoff import ErpHandoffService
@@ -341,6 +342,15 @@ class Container:
         from app.integrations.erp import HttpxErpClient
 
         return HttpxErpClient(self.secrets_store, self.settings, self.settings_service)
+
+    @cached_property
+    def erp_client_card(self) -> "ErpClientCardService":
+        """Данные ERP в карточке клиента CRM (шов 0.3.0): долг по валютам."""
+        from app.integrations.erp_company import HttpxErpCompanyClient
+        from app.services.erp_client_card import ErpClientCardService
+
+        company = HttpxErpCompanyClient(self.secrets_store, self.settings, self.settings_service)
+        return ErpClientCardService(self.session_factory, company)
 
     @cached_property
     def erp_connector(self) -> "ErpConnectorService":
