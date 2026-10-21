@@ -13,6 +13,7 @@ from app.agents.dialog.tools import TOOLS, ToolOutcome, run_tools, tool_messages
 from app.agents.erp_mcp import ErpToolCaller
 from app.agents.llm import ChatCompleter, ChatResult
 from app.agents.mcp_client import ToolCaller
+from app.domain import erp_handover
 from app.domain.business_hours import is_business_time
 from app.domain.dialog_policy import Action, DecisionInput, decide
 from app.domain.keywords import find_terms
@@ -178,9 +179,9 @@ class DialogNodes:
         first = await self._model.complete(messages, tools=tools, name="dialog.answer")
         final, outcome, cost = await self._tool_rounds(state, messages, tools, first)
         text: str | None = final.text
-        if outcome.erp_failed and not outcome.service:
+        if outcome.erp_handover and not outcome.service:
             await self._hand_over_erp_failure(state, outcome)
-        if outcome.erp_called:
+        if state["mode"] == "customer":
             text = self._grounded(state, text, outcome)
         reply = self._shape(state, text, outcome.request_number if outcome.service else None)
         return {
@@ -188,6 +189,7 @@ class DialogNodes:
             "llm": {**_llm_meta(final), "cost_usd": cost or None},
             "callback_requested": outcome.callback,
             "service_request": outcome.service,
+            "erp_used": outcome.erp_called,
         }
 
     def _tools_for(self, state: DialogState) -> list[dict[str, Any]]:
@@ -236,14 +238,14 @@ class DialogNodes:
 
     async def _hand_over_erp_failure(self, state: DialogState, outcome: ToolOutcome) -> None:
         """ERP не ответил: «передал менеджеру» должно быть правдой, поэтому запрос заводит код."""
-        summary = (
-            "Бот не смог получить данные из ERP (сервис недоступен). "
-            f"Вопрос клиента: {state['text'].strip()[:ERP_SUMMARY_LIMIT]}"
-        )
+        summary = f"{erp_handover.SUMMARY_PREFIX}{state['text'].strip()[:ERP_SUMMARY_LIMIT]}"
         try:
             raw = await asyncio.wait_for(
                 self._tools.call(
-                    "crm", "create_service_request", {"summary": summary}, state["context_token"]
+                    "crm",
+                    "create_service_request",
+                    {"summary": summary, "source": erp_handover.SOURCE},
+                    state["context_token"],
                 ),
                 self._settings.kb.search_timeout_s,
             )
@@ -258,15 +260,16 @@ class DialogNodes:
         """Числа, даты и номера ответа — только из данных хода, иначе fallback (SPEC §12)."""
         if not text:
             return text
-        lead = state["lead"] or {}
+        # Источники чисел — только данные этого хода: ERP, база знаний, документы, текст клиента
+        # и номер созданного запроса. История диалога и прошлые реплики бота числа не подтверждают.
         sources = [
             state["text"],
             *outcome.erp_facts,
-            *(m["text"] for m in lead.get("history", [])),
             *(h["content"] for h in (state["kb"] or {}).get("hits", [])),
             customer.documents_block(state["docs"]),
+            str(outcome.request_number or ""),
         ]
-        if outcome.erp_failed and not outcome.service:
+        if outcome.erp_handover and not outcome.service:
             return self._settings.texts.fallback.get(_lang(state))
         invented = unsupported_numbers(text, sources)
         if not invented:

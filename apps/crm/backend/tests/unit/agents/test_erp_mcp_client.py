@@ -198,3 +198,19 @@ def test_bot_gets_a_client_only_when_erp_mcp_is_enabled_and_keyed() -> None:
     )
     assert _erp_mcp(container(erp_mcp_enabled=True)) is None
     assert _erp_mcp(container(erp_mcp_context_key=key)) is None
+
+
+@pytest.mark.parametrize("status", [401, 429, 400, 503])
+async def test_context_and_key_never_reach_the_logs(
+    status: int, caplog: pytest.LogCaptureFixture, capsys: pytest.CaptureFixture[str]
+) -> None:
+    fake = FakeErpMcp()
+    fake.reject_always(rejection(status, "x", **{"Retry-After": "1"}), on="tools/call")
+    with caplog.at_level("DEBUG"), pytest.raises(ErpMcpError):
+        await make(fake).call("list_client_deals", {}, SCOPE)
+    seen = caplog.text + "".join(capsys.readouterr())
+    assert fake.contexts  # вызовы были, а значит, было что утекать
+    assert KEY.decode() not in seen
+    for context in set(fake.contexts):
+        assert context not in seen
+        assert context.partition(".")[2] not in seen  # подпись

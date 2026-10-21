@@ -176,6 +176,7 @@
     actions: [answer]
     reply_language: ru
     must_include_any: ["только", "вашей компании", "ваши", "не могу"]
+    must_not_include: ["Бета"]
 
 - id: service-delivery-when-uz
   category: service_mode

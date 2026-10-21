@@ -16,6 +16,7 @@ from app.models.clients import Client
 from app.models.leads import Conversation, Lead, Message
 from app.repositories import leads as repo
 from app.schemas.settings import AppSettings
+from app.security.agent_context import issue
 from app.security.erp_agent_context import ErpScope
 from app.services import escalation
 from app.services.conversation_types import ActivityHook, Keyboard, Outgoing, Turn
@@ -70,6 +71,20 @@ async def erp_scope_of(sessions: async_sessionmaker[AsyncSession], turn: Turn) -
     if client is None or not client.is_active or client.erp_company_id is None:
         return None
     return ErpScope(client.id, client.erp_company_id, turn.language)
+
+
+async def agent_credentials(
+    sessions: async_sessionmaker[AsyncSession], agent_key: bytes, turn: Turn
+) -> tuple[str, ErpScope | None]:
+    """Контекст CRM-инструментов и область данных erp-mcp (клиенту с компанией в ERP)."""
+    token = issue(
+        agent_key,
+        lead_id=turn.lead_id,
+        mode=turn.mode,
+        language=turn.language,
+        client_id=turn.client_id,
+    )
+    return token, await erp_scope_of(sessions, turn)
 
 
 def escalated(lead_id: int, escalation_id: int | None) -> tuple[int, int] | None:
@@ -180,6 +195,7 @@ def turn_meta(result: DialogResult) -> dict[str, Any]:
         "prompt_version": result.prompt_version,
         "mode": result.mode,
         "price_quoted": result.price_quoted,
+        "erp_used": result.erp_used,
     }
     if result.llm:
         meta.update(result.llm)

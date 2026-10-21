@@ -109,6 +109,7 @@ class DialogAgent:
             "document": None,
             "document_choices": [],
             "service_request": False,
+            "erp_used": False,
         }
         config = {"configurable": {"thread_id": _thread_id(lead_id)}}
         with lf.trace("dialog.turn", lead_id=lead_id, mode=mode, stage=stage, input=text):
@@ -137,6 +138,7 @@ def _result(state: dict[str, Any], trace_id: str | None) -> DialogResult:
         document=state.get("document"),
         document_choices=list(state.get("document_choices") or []),
         service_request=bool(state.get("service_request")),
+        erp_used=bool(state.get("erp_used")),
         mode=state.get("mode", "prospect"),
         price_quoted=price_quoted(
             state.get("reply") or "", [h.get("content", "") for h in kb.get("hits", [])]

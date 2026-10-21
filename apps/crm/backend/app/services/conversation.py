@@ -25,17 +25,16 @@ from app.integrations.llm_usage import lead_scope
 from app.models.leads import Conversation, Lead
 from app.repositories import leads as repo
 from app.schemas.settings import AppSettings
-from app.security.agent_context import issue
 from app.services import escalation, stages
 from app.services.conversation_erasure import DeliveryFailureMixin, ErasureMixin
 from app.services.conversation_records import RecordsMixin
 from app.services.conversation_support import (
+    agent_credentials,
     agent_failure,
     apply_counters,
     consent_offer,
     consent_prompt,
     current_lead,
-    erp_scope_of,
     escalated,
     lang_of,
     lead_of,
@@ -304,14 +303,8 @@ class ConversationService(ErasureMixin, DeliveryFailureMixin, RecordsMixin):
         return lead, conversation, True
 
     async def _run_agent(self, turn: Turn, cfg: AppSettings) -> DialogResult | None:
-        token = issue(
-            self._agent_key,
-            lead_id=turn.lead_id,
-            mode=turn.mode,
-            language=turn.language,
-            client_id=turn.client_id,
-        )
         try:
+            token, erp_scope = await agent_credentials(self._sessions, self._agent_key, turn)
             with lead_scope(turn.lead_id):
                 return await self._agent.run(
                     lead_id=turn.lead_id,
@@ -322,7 +315,7 @@ class ConversationService(ErasureMixin, DeliveryFailureMixin, RecordsMixin):
                     human_requested=turn.human,
                     stage=turn.stage,
                     mode=turn.mode,
-                    erp_scope=await erp_scope_of(self._sessions, turn),
+                    erp_scope=erp_scope,
                 )
         except Exception:
             logger.exception("dialog_agent_failed", lead_id=turn.lead_id)

@@ -14,6 +14,7 @@
 import asyncio
 import json
 from typing import Any, Final
+from xml.sax.saxutils import escape
 
 import structlog
 
@@ -112,18 +113,23 @@ def _limit(data: Any) -> dict[str, Any]:
 
 async def run_erp_call(
     erp: ErpToolCaller, scope: ErpScope, call: ToolCall
-) -> tuple[dict[str, Any], bool]:
-    """Результат для модели и признак отказа. Данные ERP попадают модели только в `result`."""
+) -> tuple[dict[str, Any], str | None]:
+    """Результат для модели и вид отказа (`None` — данные получены)."""
     args = clean_args(call.name, call.arguments)
     try:
         data = await asyncio.wait_for(erp.call(call.name, args, scope), ERP_CALL_TIMEOUT_S)
     except ErpMcpError as exc:
         logger.warning("erp_tool_failed", tool=call.name, kind=exc.kind, code=exc.code)
-        return UNAVAILABLE, True
+        return UNAVAILABLE, exc.kind
     except Exception:
         logger.exception("erp_tool_crashed", tool=call.name)
-        return UNAVAILABLE, True
-    return _limit(data), False
+        return UNAVAILABLE, "unavailable"
+    return _limit(data), None
+
+
+def wrapped(output: dict[str, Any]) -> str:
+    """Результат инструмента для модели: данные в блоке, а не инструкции (как `<kb>`)."""
+    return f"<erp_data>{escape(facts_of(output))}</erp_data>"
 
 
 def facts_of(output: dict[str, Any]) -> str:

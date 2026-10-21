@@ -165,3 +165,38 @@ async def test_erp_down_creates_a_service_request_for_the_manager(
     assert "Когда поставка?" in request.summary
     assert out[-1].text.startswith("Сейчас не могу это проверить.")
     assert f"№{request.id}" in out[-1].text
+
+
+async def test_erp_down_twice_a_day_makes_one_request(
+    stand: tuple[ConversationService, ReplayModel, FakeErpMcp],
+    sessions: async_sessionmaker[AsyncSession],
+) -> None:
+    svc, model, fake = stand
+    await customer(sessions, svc, erp_company_id=4242)
+    fake.reject_always(rejection(503, "down"), on="tools/call")
+    call = ToolCall(id="d1", name="get_delivery_status", arguments={"erp_deal_id": 5})
+    for _ in range(2):
+        model.responses += [reply("", call), reply("Сейчас не могу это проверить.")]
+        out = await svc.handle_message(msg("Когда поставка?"))
+    async with sessions() as session:
+        request = (await session.scalars(select(ServiceRequest))).one()
+    assert f"№{request.id}" in out[-1].text  # повтор получил номер прежнего запроса
+
+
+async def test_erp_answers_are_not_shown_to_a_deactivated_client(
+    stand: tuple[ConversationService, ReplayModel, FakeErpMcp],
+    sessions: async_sessionmaker[AsyncSession],
+) -> None:
+    svc, model, _ = stand
+    client_id = await customer(sessions, svc, erp_company_id=4242)
+    call = ToolCall(id="d1", name="get_delivery_status", arguments={"erp_deal_id": 5})
+    model.responses += [reply("", call), reply("Поставка ожидается 25 октября 2026 года.")]
+    await svc.handle_message(msg("Когда поставка?"))
+    async with sessions() as session, session.begin():
+        client = await session.get(Client, client_id)
+        assert client is not None
+        client.is_active = False  # теперь с ним говорят как с лидом
+    model.responses.append(reply("Подскажу по продуктам."))
+    await svc.handle_message(msg("Что у вас есть?"))
+    system = model.requests[-1][0]["content"]
+    assert "25 октября" not in system
