@@ -77,3 +77,29 @@ async def test_unhandled_exception_is_internal_error(
     body = response.json()
     validate_error(contract, body)
     assert "secret" not in response.text
+
+
+async def test_method_not_allowed_is_neutral_4xx_code(
+    client: httpx.AsyncClient, contract: dict[str, Any]
+) -> None:
+    response = await client.post("/api/v1/health")
+    assert response.status_code == 405
+    body = response.json()
+    validate_error(contract, body)
+    assert body["code"] == "METHOD_NOT_ALLOWED"
+
+
+async def test_unlisted_4xx_gets_status_code(
+    app: FastAPI, client: httpx.AsyncClient, contract: dict[str, Any]
+) -> None:
+    from fastapi import HTTPException
+
+    @app.get("/api/v1/_teapot")
+    async def teapot() -> None:
+        raise HTTPException(status_code=418)
+
+    response = await client.get("/api/v1/_teapot")
+    assert response.status_code == 418
+    body = response.json()
+    validate_error(contract, body)
+    assert body["code"] == "HTTP_418"

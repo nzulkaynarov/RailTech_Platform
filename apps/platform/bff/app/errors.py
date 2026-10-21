@@ -26,6 +26,20 @@ _CODES: dict[int, tuple[str, str]] = {
 }
 
 
+_NAMED_4XX: dict[int, str] = {
+    status.HTTP_400_BAD_REQUEST: "BAD_REQUEST",
+    status.HTTP_405_METHOD_NOT_ALLOWED: "METHOD_NOT_ALLOWED",
+}
+
+
+def _fallback(status_code: int) -> tuple[str, str]:
+    """Статус вне таблицы: 4xx — нейтральный код по статусу, INTERNAL_ERROR — только 5xx."""
+    if 400 <= status_code < 500:
+        code = _NAMED_4XX.get(status_code, f"HTTP_{status_code}")
+        return code, "Запрос не может быть выполнен."
+    return "INTERNAL_ERROR", "Ошибка сервера."
+
+
 class ErrorBody(BaseModel):
     code: str
     message: str
@@ -69,7 +83,7 @@ async def _platform_error(_: Request, exc: Exception) -> JSONResponse:
 
 async def _http_error(_: Request, exc: Exception) -> JSONResponse:
     err = cast(StarletteHTTPException, exc)
-    code, message = _CODES.get(err.status_code, ("INTERNAL_ERROR", "Ошибка сервера."))
+    code, message = _CODES.get(err.status_code) or _fallback(err.status_code)
     body = ErrorBody(code=code, message=message, source="bff")
     return error_response(err.status_code, body, dict(err.headers) if err.headers else None)
 
