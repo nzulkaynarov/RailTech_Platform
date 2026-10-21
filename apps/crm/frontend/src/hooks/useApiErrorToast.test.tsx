@@ -18,6 +18,17 @@ describe("apiErrorMessage", () => {
       "Лида уже забрал Азиз — обновите страницу",
     ],
     [
+      new ApiError(422, "validation_failed", "kb format", {
+        reason: "kb_format",
+        detail: "Нет заголовка первого уровня",
+      }),
+      "Документ не подходит под формат базы знаний: Нет заголовка первого уровня",
+    ],
+    [
+      new ApiError(422, "validation_failed", "md only", { reason: "kb_markdown_only" }),
+      "Принимаются только документы Markdown (.md) по формату базы знаний — см. «Формат документа» в окне загрузки",
+    ],
+    [
       new ApiError(409, "conflict", "lead is already taken", { reason: "lead_taken" }),
       "Лида уже забрал коллега — обновите страницу",
     ],

@@ -35,6 +35,8 @@ export const Reason = {
   file_too_large: "file_too_large",
   file_empty: "file_empty",
   file_type: "file_type",
+  kb_markdown_only: "kb_markdown_only",
+  kb_format: "kb_format",
   document_indexing: "document_indexing",
   setup_done: "setup_done",
   setup_code_invalid: "setup_code_invalid",

@@ -286,7 +286,15 @@ def s3(health: HttpFacts, usage: Mapping[str, Metric] | None = None) -> CheckRes
     )
 
 
-def docling(health: HttpFacts) -> CheckResult:
+def docling(health: HttpFacts | None) -> CheckResult:
+    """`None` — `DOCLING_URL` пуст: на этом сервере docling не используется (норма, не авария)."""
+    if health is None:
+        return CheckResult(
+            "docling",
+            "off",
+            "Не используется на этом сервере — база знаний принимает только Markdown, "
+            "документы клиентов не распознаются",
+        )
     if health.error is not None:
         return CheckResult(
             "docling",

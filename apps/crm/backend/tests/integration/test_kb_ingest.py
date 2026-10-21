@@ -8,6 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.models.kb import KbChunk, KbDocument
 from app.services.kb.ingest import KbIngestService, NewKbFile
+from app.services.kb.markdown_convert import MarkdownConverter
 from tests.fakes import FakeEmbedder
 
 
@@ -82,3 +83,43 @@ async def test_failure_marks_document(sessions: async_sessionmaker[AsyncSession]
         assert document is not None
         assert document.ingest_status == "failed"
         assert "docling is down" in (document.ingest_error or "")
+
+
+async def test_markdown_is_indexed_by_builtin_converter(
+    sessions: async_sessionmaker[AsyncSession],
+) -> None:
+    service = KbIngestService(
+        sessions, MemoryStorage(), MarkdownConverter(), FakeEmbedder(), "kb-sources"
+    )
+    text = (
+        "---\ntitle: Доставка\nlanguage: ru\nsource: s\nupdated: 2026-10-21\n---\n"
+        "# Доставка\n\nСрок 3 дня.\n\n| Город | Дней |\n|---|---|\n| Ташкент | 1 |\n"
+    )
+    document_id = await service.register_file(
+        NewKbFile(title="Доставка", filename="delivery.md", content=text.encode(), language="ru")
+    )
+    assert await service.ingest(document_id) == 1
+    async with sessions() as session:
+        chunk = (
+            await session.scalars(select(KbChunk).where(KbChunk.document_id == document_id))
+        ).one()
+        assert chunk.heading_path == "Доставка"
+        assert "Ташкент" in chunk.content
+        assert "language:" not in chunk.content  # front matter в чанки не попадает
+
+
+async def test_legacy_non_markdown_document_fails_clearly(
+    sessions: async_sessionmaker[AsyncSession],
+) -> None:
+    service = KbIngestService(
+        sessions, MemoryStorage(), MarkdownConverter(), FakeEmbedder(), "kb-sources"
+    )
+    pdf_id = await service.register_file(
+        NewKbFile(title="PDF", filename="a.pdf", content=b"%PDF", language="ru")
+    )
+    with pytest.raises(ValueError, match="only Markdown"):
+        await service.ingest(pdf_id)
+    async with sessions() as session:
+        document = await session.get(KbDocument, pdf_id)
+        assert document is not None
+        assert document.ingest_status == "failed"

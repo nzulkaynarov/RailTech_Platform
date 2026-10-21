@@ -117,7 +117,7 @@ _AFTER_VENDORS: Final = (
     ServiceSpec(
         key="docling",
         title="Распознавание документов (docling)",
-        purpose="Текст из PDF и файлов Office для базы знаний и документов клиентов",
+        purpose="Текст из PDF и файлов Office в документах клиентов",
         system="crm",
         source="crm",
         check="health сервиса",

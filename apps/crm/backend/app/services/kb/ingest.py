@@ -1,6 +1,6 @@
 """Ингест документов базы знаний (PLAN Фаза 1, задача 3; ADR-0011).
 
-S3 → docling-serve → HybridChunker → embeddings → атомарная замена чанков.
+S3 → Markdown-конвертер → HybridChunker → embeddings → атомарная замена чанков.
 Идемпотентен по версии: документ с `indexed_version == version` не переиндексируется
 без `force=True`. Ошибка помечает документ `failed`; ретраи — у задачи Procrastinate.
 """

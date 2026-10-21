@@ -341,6 +341,8 @@ class _Run:
         return out
 
     async def docling(self) -> CheckResult:
+        if self.d.config.docling_url is None:
+            return rules.docling(None)
         base = str(self.d.config.docling_url).rstrip("/")
         return rules.docling(await probes.http_health(self.http, f"{base}/health"))
 

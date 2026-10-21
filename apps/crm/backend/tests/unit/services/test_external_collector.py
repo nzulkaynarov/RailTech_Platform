@@ -196,6 +196,13 @@ async def test_cheap_pass_over_http_services() -> None:
     assert found["erp.sentry"].status == "unknown"
 
 
+async def test_docling_without_url_is_off_not_a_failure() -> None:
+    d = deps(config=CONFIG.model_copy(update={"docling_url": None}))
+    found = await collect(d, ["docling"])
+    assert found["docling"].status == "off"
+    assert "не используется на этом сервере" in found["docling"].summary.lower()
+
+
 @respx.mock
 async def test_wrong_bot_token_is_a_failure_with_fix() -> None:
     respx.get(f"https://api.telegram.org/bot{TOKEN}/getMe").mock(

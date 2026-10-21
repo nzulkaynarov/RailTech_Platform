@@ -39,6 +39,10 @@ REST_FRAMEWORK = {
         "password_reset": "5/hour",  # forgot-password, per IP
         "password_reset_email": "3/hour",  # forgot-password, per TARGET email (cross-IP victim shield)
         "password_set": "20/hour",  # setup/reset-password token submission, per IP (brute-force)
+        # FIX-64 (N-2): обновление сессии (refresh, HttpOnly-cookie) — свой счётчик по IP: общий анонимный 20/мин
+        # его съедал (серия переходов с одного адреса/NAT → 429 → выход на форму входа). Подбор тут не выгоден:
+        # нужен действующий refresh-токен.
+        "token_refresh": os.environ.get("TOKEN_REFRESH_RATE", "60/minute"),
         "login": "10/minute",  # token obtain + 2FA code step, per IP (brute-force; lenient enough for typos)
         "two_factor": "10/minute",  # 2FA setup/verify/disable, per user (stolen-session code brute-force)
         "public_quote": "30/minute",  # unauthenticated КП-by-token view; blunts token brute-forcing

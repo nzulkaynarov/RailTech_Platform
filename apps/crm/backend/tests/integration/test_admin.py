@@ -2,6 +2,7 @@
 
 import json
 from collections.abc import Iterator
+from pathlib import Path
 from typing import Any
 
 import pytest
@@ -54,6 +55,10 @@ def harness(
         yield h
 
 
+def example() -> bytes:
+    return (Path(__file__).resolve().parents[5] / "docs" / "kb" / "example.md").read_bytes()
+
+
 @pytest.fixture
 async def admin(sessions: async_sessionmaker[AsyncSession], harness: Harness) -> dict[str, str]:
     account, password = await make_user(sessions, "admin@railtech.uz", ["admin"])
@@ -68,7 +73,11 @@ async def test_upload_ingest_and_test_search(harness: Harness, admin: dict[str, 
         files={
             "file": (
                 "delivery.md",
-                "Доставка оборудования по Ташкенту бесплатно.".encode(),
+                (
+                    "---\ntitle: Доставка\nlanguage: ru\nsource: Условия доставки\n"
+                    "updated: 2026-10-21\n---\n# Доставка\n\n"
+                    "Доставка оборудования по Ташкенту бесплатно.\n"
+                ).encode(),
                 "text/markdown",
             )
         },
@@ -93,6 +102,44 @@ async def test_upload_ingest_and_test_search(harness: Harness, admin: dict[str, 
         files={"file": ("virus.exe", b"MZ", "application/octet-stream")},
     )
     assert bad.status_code == 422
+
+
+async def test_only_markdown_in_the_format_is_accepted(
+    harness: Harness, admin: dict[str, str]
+) -> None:
+    def post(name: str, content: bytes, language: str = "ru") -> dict[str, Any]:
+        response = harness.client.post(
+            "/api/v1/kb/documents",
+            headers=admin,
+            data={"title": "x", "language": language},
+            files={"file": (name, content, "application/octet-stream")},
+        )
+        assert response.status_code == 422, response.text
+        details: dict[str, Any] = response.json()["details"]
+        return details
+
+    for name in ("price.pdf", "price.docx", "notes.txt", "page.html"):
+        details = post(name, b"x")
+        assert details["reason"] == "kb_markdown_only"
+        assert set(details["messages"]) == {"ru", "uz", "en"}
+    no_front_matter = post("a.md", b"# Title\n\nText")
+    assert (no_front_matter["reason"], no_front_matter["rule"]) == (
+        "kb_format",
+        "front_matter_missing",
+    )
+    assert post("a.md", example(), language="uz")["rule"] == "language_mismatch"
+    assert harness.enqueued == []
+
+    created = harness.client.post(
+        "/api/v1/kb/documents",
+        headers=admin,
+        data={"title": "Гарантия", "language": "ru"},
+        files={"file": ("example.md", example(), "text/markdown")},
+    )
+    assert created.status_code == 201, created.text
+    await harness.run_ingest()
+    doc = harness.client.get(f"/api/v1/kb/documents/{created.json()['id']}", headers=admin).json()
+    assert doc["ingest_status"] == "done"
 
 
 async def test_deactivate_hides_from_search(
