@@ -7,11 +7,13 @@ Telegram — прямым HTTP к Bot API (`getMe`, `getWebhookInfo`): токе�
 
 import asyncio
 import contextlib
+import re
 import ssl
 import time
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from typing import Any
+from urllib.parse import urlsplit
 
 import httpx
 import structlog
@@ -58,6 +60,32 @@ class TelegramProbe:
     last_error_message: str | None = None
     last_error_at: datetime | None = None
     latency_ms: int | None = None
+    # getWebhookInfo не удался (не 2xx или `ok=false`): адрес вебхука неизвестен, а не «пуст».
+    webhook_error: str | None = None
+
+
+_TOKEN_IN_TEXT = re.compile(r"bot\d+:[\w-]+")
+
+
+def _scrub(text: str | None, token: str) -> str | None:
+    """Токен бота (и вид `bot<id>:<секрет>`) не доходит ни до метрик, ни до UI, ни до логов."""
+    if text is None:
+        return None
+    return _TOKEN_IN_TEXT.sub("[скрыто]", text).replace(token, "[скрыто]")
+
+
+def _public_url(raw: object) -> str | None:
+    """Адрес вебхука без логина, query и fragment: в UI попадает только схема, хост и путь."""
+    if not isinstance(raw, str) or not raw:
+        return None
+    try:
+        parts = urlsplit(raw)
+        host, port = parts.hostname, parts.port
+    except ValueError:
+        return None
+    if not host:
+        return None  # сырой текст с query наружу не отдаём
+    return _str(f"{parts.scheme}://{host}{f':{port}' if port else ''}{parts.path}")
 
 
 async def telegram(
@@ -81,19 +109,33 @@ async def telegram(
         logger.info("telegram_probe_failed", error=type(exc).__name__)
         return TelegramProbe(_kind(exc), type(exc).__name__, latency_ms=_ms(started))
     username = _result(me).get("username")
-    info = _result(hook) if hook.status_code < 400 else {}
+    webhook_error = _webhook_info_error(hook)
+    info = _result(hook) if webhook_error is None else {}
     error_date = info.get("last_error_date")
     return TelegramProbe(
         error=None,
         username=username if isinstance(username, str) else None,
         pending_updates=_int(info.get("pending_update_count")),
-        webhook_url=_str(info.get("url")),
-        last_error_message=_str(info.get("last_error_message")),
+        webhook_url=_public_url(info.get("url")),
+        last_error_message=_str(_scrub(_raw_str(info.get("last_error_message")), token)),
         last_error_at=datetime.fromtimestamp(error_date, UTC)
         if isinstance(error_date, int)
         else None,
         latency_ms=latency,
+        webhook_error=webhook_error,
     )
+
+
+def _webhook_info_error(response: httpx.Response) -> str | None:
+    if response.status_code >= 400:
+        return f"getWebhookInfo: HTTP {response.status_code}"
+    try:
+        body = response.json()
+    except ValueError:
+        return "getWebhookInfo: ответ не разобран"
+    if not isinstance(body, dict) or body.get("ok") is not True:
+        return "getWebhookInfo: ok=false"
+    return None
 
 
 async def langfuse(
@@ -155,6 +197,10 @@ def _result(response: httpx.Response) -> dict[str, Any]:
 
 def _int(raw: object) -> int | None:
     return raw if isinstance(raw, int) and not isinstance(raw, bool) else None
+
+
+def _raw_str(raw: object) -> str | None:
+    return raw if isinstance(raw, str) and raw else None
 
 
 def _str(raw: object) -> str | None:

@@ -73,11 +73,13 @@ export function formatBytes(bytes: number): string {
   return `${formatNumber(value, unit === 0 ? 0 : 1)} ${units[unit] ?? ""}`;
 }
 
+const DATE_KEYS = new Set(["not_after", "last_copy_at", "webhook_error_at"]);
+
 function metricValue(key: string, value: number | string): string {
   if (key === "backup_source" && typeof value === "string")
     return t.externalServices.backupSources[value] ?? value;
   if (typeof value === "string") {
-    return key === "not_after" || key === "last_copy_at" ? formatDateTime(value) : value;
+    return DATE_KEYS.has(key) ? formatDateTime(value) : value;
   }
   if (key.endsWith("_usd")) return formatUsd(value);
   if (key === "error_rate_24h") return percent(value);
