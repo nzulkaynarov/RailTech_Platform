@@ -22,9 +22,9 @@ export const crmAdmin = () => ({
 /** Корень репозитория со стендом и `.env`: оттуда `docker compose logs` читает письма (почта стенда — консоль). */
 export const standRoot = () => required('E2E_STAND_ROOT');
 
-/** Куда класть скриншоты и сводку axe (в репозитории — docs/screens/fix-51). */
-export const SCREENS_DIR = path.resolve(here, process.env.E2E_SCREENS_DIR ?? '../../../../docs/screens/fix-51');
+/** Куда класть скриншоты и сводку axe (в репозитории — docs/screens/fix-51b). */
+export const SCREENS_DIR = path.resolve(here, process.env.E2E_SCREENS_DIR ?? '../../../../docs/screens/fix-51b');
 
-/** Файл состояния прогона (метка, id в ERP, сессия клиента) — для `E2E_RESUME=1`; лежит в node_modules/.cache (Playwright чистит test-results при каждом запуске), в репозиторий не попадает. */
+/** Файл состояния прогона (метка, id в ERP, сессия клиента и сотрудника CRM) — для `E2E_RESUME=1`; лежит в node_modules/.cache (Playwright чистит test-results при каждом запуске), в репозиторий не попадает. */
 export const STATE_FILE = path.resolve(here, '../../node_modules/.cache/gate-m2/state.json');
 export const RESUME = process.env.E2E_RESUME === '1';
