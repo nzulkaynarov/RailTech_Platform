@@ -12,6 +12,7 @@ import sys
 
 import httpx
 import pytest
+from celery.exceptions import Retry
 from django.conf import settings
 
 from core.log_mask import (
@@ -359,19 +360,24 @@ def test_webhook_retry_log_hides_secrets_from_the_crm_error(monkeypatch):
     stream = io.StringIO()
     monkeypatch.setattr(console, "stream", stream)
 
+    real_client = httpx.Client
+
     def fake_client(*args, **kwargs):
-        return httpx.Client(transport=httpx.MockTransport(lambda request: httpx.Response(502, text=echo)))
+        return real_client(transport=httpx.MockTransport(lambda request: httpx.Response(502, text=echo)))
 
     with (
         patch("integration.tasks.httpx.Client", fake_client),
-        patch.object(deliver_webhook_event, "retry", side_effect=RuntimeError("retry-stub")),
-        pytest.raises(RuntimeError),
+        patch.object(deliver_webhook_event, "retry", side_effect=Retry()),
+        pytest.raises(Retry),
     ):
         deliver_webhook_event.run(event.id)
 
     printed = stream.getvalue()
     assert "Retrying in" in printed  # запись о ретрае есть
     assert FAKE_SIG not in printed and FAKE_KEY not in printed
+    event.refresh_from_db()
+    assert event.last_error.startswith("HTTP 502")
+    assert FAKE_SIG not in event.last_error and FAKE_KEY not in event.last_error
 
 
 def test_telegram_init_data_validation_does_not_log_the_bot_token(caplog, settings):
