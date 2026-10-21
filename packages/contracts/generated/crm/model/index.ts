@@ -69,6 +69,7 @@ export * from "./provisionUserResponse";
 export * from "./quoteStatus";
 export * from "./quoteSummary";
 export * from "./searchCatalogParams";
+export * from "./systemRoleCode";
 export * from "./tooManyRequestsResponse";
 export * from "./unauthorizedResponse";
 export * from "./validationErrorResponse";
