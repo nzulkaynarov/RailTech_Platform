@@ -2,9 +2,9 @@
 
 Раскладка и лимиты памяти — `docs/runbooks/servers.md`. Файлы: `infra/compose/prod.yml` (VPS 1, поверх `base.yml`),
 `infra/compose/db.yml` (VPS 2), `infra/caddy/Caddyfile.prod`, `infra/deploy/*`, `infra/db/*`, `infra/.env.prod.example`,
-`.github/workflows/deploy.yml`. Статус: **конфигурация проверена `compose config`, `caddy validate`, shellcheck, actionlint;
-на самих VPS не запускалась** — ждёт внутренние IP, SSH-ключ и DNS (OWNER-CHECKLIST «До M5»). Первый деплой — вместе
-с агентом Infra; ошибки первого запуска вносить сюда.
+`.github/workflows/deploy.yml`. Статус: **установлено на VPS 2026-10-21** (архитектор, резерв Opus): первый успешный деплой
+`main @ 735256f7` (run 39565753265) — три домена по HTTPS (Let's Encrypt), `/health` 200, `/ready` CRM — база, S3, LiteLLM `ok`,
+`/mcp` снаружи 404. Ошибки первого запуска — §6.
 
 ## Как устроено
 
@@ -119,7 +119,10 @@ Actions → **Deploy** → Run workflow: `ref` = `main` (или sha, входя�
 - вписать `OWN_COMPANY_ID` в `/opt/rt/.env.prod` после создания компании-владельца (FIX-11) и перезапустить ERP;
 - Telegram-вебхук ставит CRM сама при `TELEGRAM_MODE=webhook`;
 - Langfuse (`RT_PROFILES=observability` в `.env.prod`) открывается SSH-туннелем: `ssh -L 3000:127.0.0.1:3000 deploy@<VPS 1>`;
-  docling (`RT_PROFILES=kb-ingest`) — только на время загрузки документов, вместе с Langfuse не включать (8 ГБ).
+  docling на проде **не используется** (M5-CRM-02): `DOCLING_URL` в `prod.yml` пуст. База знаний принимает только Markdown по
+  `docs/kb/FORMAT.md` (готовит человек или ИИ-агент по `docs/kb/PROMPT.md`) и индексирует его встроенным конвертером CRM; docling
+  в базе знаний не участвует вовсе. Остался только для текста документов клиентов (при пустом `DOCLING_URL` он помечается `failed`);
+  профиль `kb-ingest` — опция для этого (вернуть `DOCLING_URL=http://docling:5001` и `DOCLING_API_KEY`), вместе с Langfuse не включать (8 ГБ).
 
 `erp-mcp` (инструменты ERP для агента CRM) лежит под профилем `mcp` и по умолчанию не стартует: CRM к нему пока не ходит (M3-CRM-07).
 Файл контракта уже едет в релизе: `/opt/rt/releases/<sha>/packages/contracts/mcp-tools.json` монтируется в контейнер по пути
@@ -177,3 +180,29 @@ Actions → **Deploy** → Run workflow: `ref` = `main` (или sha, входя�
 | Не хватает памяти | `docker stats`; профили `observability` и `kb-ingest` не включать вместе |
 
 Эскалация: владелец; агент Infra — правки compose/Caddy/скриптов через PR.
+
+## 6. Первая установка 2026-10-21 — что пошло не так и как учтено
+
+- **Старое на серверах.** На VPS 1 работали старый B2B (`b2b.railtech.uz`), GradeSentinel, системный Caddy и два self-hosted
+  раннера GitHub, на VPS 2 — системный PostgreSQL 17. По решению владельца удалены без бэкапа (тестовые данные). Перенос
+  старого прода (M5-ERP-01) больше не нужен.
+- **Вход по паролю.** На VPS 1 `PasswordAuthentication yes` стоял в `/etc/ssh/sshd_config.d/50-cloud-init.conf` — он
+  подключается раньше основного файла, правка `sshd_config` из §1.1 не действовала. Проверять итог `sshd -T | grep passwordauth`.
+- **Внутренняя сеть.** Интерфейс `ens8`: VPS 1 — `10.0.0.3`, VPS 2 — `10.0.0.2` (это `APP_INTERNAL_IP` / `DB_INTERNAL_IP`).
+  WireGuard `wg0` (`10.8.0.x`, порт 51820) остался от старой схемы, платформой не используется.
+- **Гонка деплоя с мержем.** `workflow_dispatch` берёт `deploy.yml` с коммита `main` на момент запуска, а код — с `main` на момент
+  старта job: PR, влитый между ними (17 с), дал релиз без нового файла. Не запускать деплой, пока в `main` вливается PR;
+  кандидат в хвост — список файлов релиза в самом репозитории, а не в `deploy.yml`.
+- **CPU без x86-64-v2** (QEMU 2.5+, хостер не меняет) — официальный LiteLLM и numpy ≥ 2.4 не стартуют. Решено в M5-INF-02
+  (PR #123): свой образ LiteLLM на Debian, numpy < 2.4 в CRM, `cpu-baseline-check.sh` до миграций; ClickHouse/Langfuse на этих
+  VPS недоступны (`docs/runbooks/servers.md`, «CPU прод-VPS»). Docling на проде не используется — база знаний принимает только
+  Markdown (M5-CRM-02, PR #124).
+- **Не фильтровать службы по подстроке.** При удалении старых служб `grep grade` зацепил `apt-daily-upgrade` и
+  `unattended-upgrades` — восстановлены; список служб смотреть глазами перед `disable`.
+
+### Первый вход (владелец)
+
+1. Код мастера первого запуска CRM (живёт 24 ч, пишется в лог один раз):
+   `ssh deploy@176.101.56.141 'docker logs rt-platform-crm-api-1 2>&1 | grep setup_code_issued'`.
+2. `https://crm.railtech.uz/setup` → код, e-mail и пароль первого администратора (пароль задаёт владелец, в логах и чате его нет).
+3. Дальше — в консоли админа CRM: коннектор ERP, ключи моделей, бот Telegram, почта (ORCHESTRATOR §3.13).

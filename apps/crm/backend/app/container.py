@@ -45,6 +45,7 @@ if TYPE_CHECKING:
     from app.services.external_services.view import ExternalServicesView
     from app.services.kb.admin import KbAdminService
     from app.services.kb.ingest import KbIngestService
+    from app.services.kb.markdown_convert import MarkdownConverter
     from app.services.kb.search import KbSearchService
     from app.services.lead_consent import LeadConsentService
     from app.services.lead_intake import LeadIntakeService
@@ -168,6 +169,12 @@ class Container:
     @cached_property
     def docling(self) -> DoclingClient:
         return DoclingClient(self.settings)
+
+    @cached_property
+    def kb_converter(self) -> "MarkdownConverter":
+        from app.services.kb.markdown_convert import MarkdownConverter
+
+        return MarkdownConverter()
 
     @cached_property
     def auth_service(self) -> "AuthService":
@@ -303,7 +310,7 @@ class Container:
         return KbIngestService(
             self.session_factory,
             self.storage,
-            self.docling,
+            self.kb_converter,
             self.embedder,
             self.settings.s3_bucket_kb,
         )
