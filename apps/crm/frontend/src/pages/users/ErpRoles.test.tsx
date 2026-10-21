@@ -72,6 +72,24 @@ describe("EditUserDialog — роли ERP (FIX-63)", () => {
     });
   });
 
+  it("поле «Роли» CRM обязательно, но без aria-required на корне Select (axe aria-allowed-attr)", async () => {
+    const onSubmit = vi.fn();
+    wrap(<EditUserDialog user={user()} saving={false} onCancel={vi.fn()} onSubmit={onSubmit} />);
+    expect(document.querySelector(".ant-select[aria-required]")).toBeNull();
+
+    // снять единственную роль — сохранить нельзя
+    const rolesSelect = screen.getAllByRole("combobox")[0] as HTMLElement;
+    const remove = rolesSelect
+      .closest(".ant-select")
+      ?.querySelector(".ant-select-selection-item-remove");
+    fireEvent.click(remove as Element);
+    fireEvent.click(screen.getByRole("button", { name: "Сохранить" }));
+    await waitFor(() => {
+      expect(screen.getByText("Выберите хотя бы одну роль")).toBeInTheDocument();
+    });
+    expect(onSubmit).not.toHaveBeenCalled();
+  });
+
   it("у администратора CRM выбор ролей закрыт: он суперпользователь ERP", () => {
     wrap(
       <EditUserDialog

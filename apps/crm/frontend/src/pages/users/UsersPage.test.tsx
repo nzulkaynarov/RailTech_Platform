@@ -108,4 +108,29 @@ describe("UsersPage — выдача доступа к ERP с ролями (FIX-
       expect(updateUser).toHaveBeenCalledWith(4, { platform_access: ["crm"] });
     });
   });
+
+  it("сохранение ролей ERP в карточке показывает отдельное подтверждение", async () => {
+    users.current = [user({ platform_access: ["crm", "erp"], erp_role_codes: ["FINANCE"] })];
+    renderPage();
+    fireEvent.click(screen.getByRole("button", { name: "Менеджер" }));
+    fireEvent.click(await screen.findByRole("checkbox", { name: /^Расчёт/ }));
+    fireEvent.click(screen.getByRole("button", { name: "Сохранить" }));
+
+    await waitFor(() => {
+      expect(updateUser).toHaveBeenCalledWith(
+        4,
+        expect.objectContaining({ erp_role_codes: ["CALCULATION", "FINANCE"] }),
+      );
+    });
+    expect(await screen.findByText(/Роли ERP сохранены: Менеджер/)).toBeInTheDocument();
+  });
+
+  it("без изменения ролей ERP — обычное «Пользователь сохранён»", async () => {
+    users.current = [user({ platform_access: ["crm", "erp"], erp_role_codes: ["FINANCE"] })];
+    renderPage();
+    fireEvent.click(screen.getByRole("button", { name: "Менеджер" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Сохранить" }));
+    expect(await screen.findByText("Пользователь Менеджер сохранён")).toBeInTheDocument();
+    expect(screen.queryByText(/Роли ERP сохранены/)).toBeNull();
+  });
 });

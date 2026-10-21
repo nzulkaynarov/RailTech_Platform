@@ -10,6 +10,7 @@ import {
   updateUser,
 } from "../../api/generated/crm";
 import type { UserCreate, UserOut, UserUpdate } from "../../api/generated/model";
+import { erpRolesOf } from "../../domain/erpRoles";
 import { withErpAccess } from "../../domain/platformAccess";
 import { emailLogKey } from "../../api/integrationQueries";
 import { keys, useUsers } from "../../api/queries";
@@ -60,7 +61,16 @@ function useUserMutations(on: {
         await updateUser(user.id, values),
       onSuccess: (_, { user, values }) => {
         on.updated();
-        void message.success(named(t.userAdmin.updated, values.full_name ?? user.full_name));
+        // Роли ERP сменились — отдельное подтверждение: до ERP они дойдут повторным провижинингом (FIX-63).
+        const erpRolesChanged =
+          values.erp_role_codes != null &&
+          [...values.erp_role_codes].sort().join() !== [...erpRolesOf(user)].sort().join();
+        void message.success(
+          named(
+            erpRolesChanged ? t.userAdmin.erpRolesSaved : t.userAdmin.updated,
+            values.full_name ?? user.full_name,
+          ),
+        );
         void refresh();
       },
       // Сотрудник ведёт лидов: вместо тоста — выбор коллеги в том же диалоге (ADR-0015).

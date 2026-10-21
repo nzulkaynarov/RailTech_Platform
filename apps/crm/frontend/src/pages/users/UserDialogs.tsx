@@ -25,6 +25,10 @@ const ROLE_OPTIONS = ["admin", "manager", "viewer"].map((value) => ({
   label: roleLabel(value),
 }));
 
+// Не `required: true`: antd тогда ставит `aria-required` на корень Select, а axe считает это критичным
+// (aria-allowed-attr). Проверка та же — выбрана хотя бы одна роль.
+const ROLES_RULES = [{ type: "array" as const, min: 1, message: t.userAdmin.rolesRequired }];
+
 type CreateProps = {
   open: boolean;
   saving: boolean;
@@ -59,7 +63,7 @@ export function CreateUserDialog({ open, saving, onCancel, onSubmit }: CreatePro
         <Form.Item name="full_name" label={t.users.fullName} rules={[{ required: true }]}>
           <Input />
         </Form.Item>
-        <Form.Item name="roles" label={t.users.roles} rules={[{ required: true }]}>
+        <Form.Item name="roles" label={t.users.roles} rules={ROLES_RULES}>
           <Select mode="multiple" options={ROLE_OPTIONS} />
         </Form.Item>
       </Form>
@@ -130,7 +134,7 @@ export function EditUserDialog({
           <Form.Item name="full_name" label={t.users.fullName} rules={[{ required: true }]}>
             <Input />
           </Form.Item>
-          <Form.Item name="roles" label={t.users.roles} rules={[{ required: true }]}>
+          <Form.Item name="roles" label={t.users.roles} rules={ROLES_RULES}>
             <Select mode="multiple" options={ROLE_OPTIONS} />
           </Form.Item>
           {hasErpAccess(user) ? (

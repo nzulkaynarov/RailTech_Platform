@@ -216,4 +216,6 @@ def set_member_roles(user, member_id, role_ids: Iterable) -> Tuple[Optional[Comp
     if member.user_id == user.pk and not user.is_superuser and not keeps_team_manage:
         return None, "CANNOT_DROP_OWN_TEAM_MANAGE"
     member.company_roles.set(roles)
+    # Роль, снятая вручную, перестаёт быть «выдана из CRM» (FIX-63): пометка живёт, пока роль у сотрудника есть.
+    member.crm_granted_roles.remove(*member.crm_granted_roles.exclude(pk__in=[role.pk for role in roles]))
     return member, None
