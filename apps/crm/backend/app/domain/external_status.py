@@ -12,6 +12,7 @@ from urllib.parse import urlsplit
 
 from app.domain.external_registry import Status
 from app.domain.system_status import BackupFacts, Component, backup_hint
+from app.domain.telegram_webhook import PROBLEM_TEXT, webhook_url_problem
 
 Metric = float | int | str | None
 ProbeError = Literal["unauthorized", "timeout", "unavailable", "bad_response"]
@@ -56,6 +57,10 @@ class TelegramFacts:
     last_error_message: str | None = None
     last_error_at: datetime | None = None
     latency_ms: int | None = None
+    # Адрес вебхука из настроек CRM (`TELEGRAM_WEBHOOK_URL`) — то, что бот поставил бы сам (FIX-66).
+    config_url: str = ""
+    # getWebhookInfo не удался: фактический адрес неизвестен.
+    webhook_error: str | None = None
 
 
 def telegram(f: TelegramFacts, now: datetime) -> CheckResult:
@@ -69,15 +74,41 @@ def telegram(f: TelegramFacts, now: datetime) -> CheckResult:
             "Токен бота не задан — бот не отвечает клиентам",
             hint="Введите токен в «Подключениях» → «Telegram-бот»",
         )
+    metrics: dict[str, Metric] = {
+        "pending_updates": f.pending_updates,
+        "bot": f.username,
+        "webhook_url": f.webhook_url,
+        "webhook_error": f.last_error_message,
+        "webhook_error_at": f.last_error_at.isoformat() if f.last_error_at else None,
+    }
+    config = _webhook_config_problem(f)
+    if config is not None:
+        # `_no_fix`: адрес вебхука не правится в «Подключениях» — кнопка «Исправить» не нужна.
+        metrics["_no_fix"] = 1
+        return CheckResult(key, "fail", *config, latency_ms=f.latency_ms, metrics=metrics)
     if f.error is not None:
         return _telegram_error(f)
-    metrics: dict[str, Metric] = {"pending_updates": f.pending_updates, "bot": f.username}
     problem = _webhook_problem(f, now)
     if problem is not None:
         status, summary, hint = problem
         return CheckResult(key, status, summary, f.last_error_message, hint, f.latency_ms, metrics)
     summary = f"Бот @{f.username} отвечает" if f.username else "Бот отвечает"
     return CheckResult(key, "ok", summary, latency_ms=f.latency_ms, metrics=metrics)
+
+
+def _webhook_config_problem(f: TelegramFacts) -> tuple[str, str, str] | None:
+    """(summary, error, hint): режим webhook без годного https-адреса — бот не запущен (FIX-66)."""
+    if f.mode != "webhook":
+        return None
+    problem = webhook_url_problem(f.config_url)
+    if problem is None:
+        return None
+    return (
+        "Вебхук Telegram не настроен — бот не запущен и не получает сообщения",
+        PROBLEM_TEXT[problem],
+        "Задайте CRM_DOMAIN в .env сервера (адрес берётся из него: https://<CRM_DOMAIN>/telegram/"
+        "webhook) или TELEGRAM_WEBHOOK_URL с https-адресом и перезапустите CRM",
+    )
 
 
 def _telegram_error(f: TelegramFacts) -> CheckResult:
@@ -102,6 +133,13 @@ def _telegram_error(f: TelegramFacts) -> CheckResult:
 
 def _webhook_problem(f: TelegramFacts, now: datetime) -> tuple[Status, str, str] | None:
     """Бот не получает сообщения (`fail`) или получает с задержкой/ошибками (`warn`)."""
+    if f.mode == "webhook" and f.webhook_error:
+        return (
+            "warn",
+            "Не удалось узнать состояние вебхука — Telegram не отдал getWebhookInfo",
+            "Проверка повторится сама; если не проходит — откройте «Состояние системы» и "
+            "проверьте связь сервера с api.telegram.org",
+        )
     if f.mode == "webhook" and not f.webhook_url:
         return (
             "fail",

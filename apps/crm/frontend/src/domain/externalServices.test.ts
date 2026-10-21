@@ -149,6 +149,28 @@ describe("metric formatting", () => {
     expect(rows[2]?.value).toMatch(/2026|21/);
   });
 
+  it("shows the actual Telegram webhook address and its last error (FIX-66)", () => {
+    const rows = metricRows({
+      pending_updates: 0,
+      bot: "rt_bot",
+      webhook_url: "https://crm.railtech.uz/telegram/webhook",
+      webhook_error: "Connection timed out",
+      webhook_error_at: "2026-10-21T22:00:00Z",
+    });
+    expect(rows.map((r) => r.label)).toEqual([
+      "Сообщений ждут обработки",
+      "Бот",
+      "Адрес вебхука в Telegram",
+      "Последняя ошибка доставки",
+      "Время ошибки доставки",
+    ]);
+    expect(rows[2]?.value).toBe("https://crm.railtech.uz/telegram/webhook");
+    expect(rows[3]?.value).toBe("Connection timed out");
+    expect(rows[4]?.value).toMatch(/2026|21|22/);
+    // Нет вебхука — строки нет, а не «null».
+    expect(metricRows({ webhook_url: null, webhook_error: null }).length).toBe(0);
+  });
+
   it("labels known metrics in Russian and skips unknown or empty ones", () => {
     const rows = metricRows({
       calls_24h: 1200,

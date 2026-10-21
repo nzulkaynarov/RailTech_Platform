@@ -66,6 +66,9 @@ export const externalServices = {
     metrics: {
       pending_updates: "Сообщений ждут обработки",
       bot: "Бот",
+      webhook_url: "Адрес вебхука в Telegram",
+      webhook_error: "Последняя ошибка доставки",
+      webhook_error_at: "Время ошибки доставки",
       calls_15m: "Вызовов за 15 мин",
       failures_15m: "Ошибок за 15 мин",
       calls_24h: "Вызовов за 24 ч",

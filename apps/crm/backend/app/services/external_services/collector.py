@@ -174,6 +174,8 @@ class _Run:
             last_error_message=p.last_error_message,
             last_error_at=p.last_error_at,
             latency_ms=p.latency_ms,
+            config_url=self.d.config.telegram_webhook_url,
+            webhook_error=p.webhook_error,
         )
         return rules.telegram(facts, self.now)
 

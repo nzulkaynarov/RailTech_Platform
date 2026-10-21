@@ -12,6 +12,7 @@ import httpx
 import pytest
 import respx
 from fastapi.testclient import TestClient
+from pydantic import SecretStr
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
@@ -108,6 +109,34 @@ def client(
         yield test_client
 
 
+BOT_TOKEN = "123456:fake-fix66-token"  # фиктивный, в сеть не уходит
+
+
+@pytest.fixture
+def webhook_client(
+    sessions: async_sessionmaker[AsyncSession],
+    live_settings: Settings,
+    gateway: respx.MockRouter,
+    alerts: FakeAlerts,
+) -> Iterator[TestClient]:
+    """Режим webhook с пустым адресом (FIX-66): бот не стартует и в Bot API не ходит."""
+    settings = live_settings.model_copy(
+        update={
+            "telegram_mode": "webhook",
+            "telegram_webhook_url": "",
+            "telegram_webhook_secret": SecretStr("fix66-webhook-secret"),
+            "telegram_bot_token": SecretStr(BOT_TOKEN),
+        }
+    )
+    app = create_app(settings)
+    with TestClient(app) as test_client:
+        container = app.state.container
+        checks = build_checks(container)
+        checks._alerts = alerts  # type: ignore[assignment]
+        container.__dict__["external_checks"] = checks
+        yield test_client
+
+
 async def headers(
     sessions: async_sessionmaker[AsyncSession], client: TestClient, role: str
 ) -> dict[str, str]:
@@ -193,6 +222,57 @@ async def test_check_now_opens_and_closes_incident_with_one_alert_each(
         rows = (await session.scalars(select(ExternalServiceIncident))).all()
     assert len(rows) == 2
     assert sum(r.alerted_at is not None for r in rows) == 1
+
+
+async def test_telegram_webhook_not_configured_is_an_incident_without_token_leak(
+    sessions: async_sessionmaker[AsyncSession],
+    webhook_client: TestClient,
+    gateway: respx.MockRouter,
+    alerts: FakeAlerts,
+) -> None:
+    """FIX-66: пустой адрес вебхука — инцидент с подсказкой; токена нет в API и оповещении."""
+    from structlog.testing import capture_logs
+
+    auth = await headers(sessions, webhook_client, "admin")
+    api = "https://api.telegram.org"
+    gateway.get(f"{api}/bot{BOT_TOKEN}/getMe").mock(
+        return_value=httpx.Response(200, json={"ok": True, "result": {"username": "rt_bot"}})
+    )
+    info = gateway.get(f"{api}/bot{BOT_TOKEN}/getWebhookInfo").mock(
+        return_value=httpx.Response(
+            200,
+            json={
+                "ok": True,
+                "result": {
+                    "url": "",
+                    "last_error_date": int(datetime.now(UTC).timestamp()),
+                    "last_error_message": f"Bad Gateway {api}/bot{BOT_TOKEN}/x",
+                },
+            },
+        )
+    )
+    with capture_logs() as logs:
+        response = webhook_client.post(f"{URL}/telegram/check", headers=auth)
+    assert response.status_code == 200, response.text
+    service = response.json()["service"]
+    assert service["status"] == "fail"
+    assert "Вебхук Telegram не настроен" in service["summary"]
+    assert service["hint"]
+    assert service["fix_path"] is None  # «Исправить» в «Подключения» здесь не помогает
+    assert "_no_fix" not in service["metrics"]
+    assert service["incident"]["ended_at"] is None
+    assert info.call_count == 1
+    assert [k for k, _ in alerts.sent] == ["telegram"]
+
+    listing = webhook_client.get(URL, headers=auth)
+    for text in (response.text, listing.text, repr(alerts.sent), repr(logs)):
+        assert BOT_TOKEN not in text
+        assert f"/bot{BOT_TOKEN.split(':')[0]}" not in text
+    assert listing.status_code == 200
+    assert gateway.calls  # проверка прошла через подставной Bot API
+    # Бот не запускался и вебхук никто не трогал: ни setWebhook, ни deleteWebhook.
+    urls = [str(c.request.url) for c in gateway.calls]
+    assert not [u for u in urls if u.endswith(("/setWebhook", "/deleteWebhook"))]
 
 
 async def test_background_pass_records_all_crm_services(
