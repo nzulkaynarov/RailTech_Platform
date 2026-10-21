@@ -6646,6 +6646,43 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/setup/company/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Создать свою компанию (мастер первого запуска)
+         * @description Только суперпользователь и только пока своей компании нет. Создаёт компанию с типом продавца, делает текущего пользователя её владельцем. Ошибки полей — 422; повтор — 409 `OWN_COMPANY_ALREADY_EXISTS`.
+         */
+        post: operations["setup_company_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/setup/status/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Статус первоначальной настройки ERP */
+        get: operations["setup_status_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/sourcing/ai-status/{task_id}/": {
         parameters: {
             query?: never;
@@ -9518,6 +9555,22 @@ export interface components {
             preferred_channel: components["schemas"]["PreferredChannelEf2Enum"];
             /** @default  */
             telegram_username: string;
+        };
+        OwnCompanyCreated: {
+            id: number;
+            name: string;
+        };
+        /**
+         * @description Форма мастера первого запуска (FIX-65): название обязательно, остальное — по желанию.
+         *
+         *     ИНН проверяется тем же валидатором, что у модели; занятый ИНН — ошибка поля, а не 500.
+         */
+        OwnCompanySetupRequest: {
+            name: string;
+            inn?: string;
+            legal_address?: string;
+            phone?: string;
+            email?: string;
         };
         PaginatedActList: {
             /** @example 123 */
@@ -12530,6 +12583,10 @@ export interface components {
             uid: string;
             token: string;
             password: string;
+        };
+        SetupStatus: {
+            setup_required: boolean;
+            can_setup: boolean;
         };
         StockStatus: {
             readonly id: number;
@@ -23456,6 +23513,71 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+        };
+    };
+    setup_company_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["OwnCompanySetupRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["OwnCompanySetupRequest"];
+                "multipart/form-data": components["schemas"]["OwnCompanySetupRequest"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OwnCompanyCreated"];
+                };
+            };
+            /** @description PLATFORM_ADMIN_REQUIRED */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description OWN_COMPANY_ALREADY_EXISTS */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Ошибки полей формы */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    setup_status_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SetupStatus"];
+                };
             };
         };
     };
