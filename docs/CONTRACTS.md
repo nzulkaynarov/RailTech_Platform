@@ -140,6 +140,8 @@ JSON-integer, не `true`), `iat` и `exp` обязательны, `exp − iat 
 | `search_catalog(query, top_k)` | prospect, customer | prospect: название, описание, единица; customer: + цена, наличие, срок |
 | `create_request(summary, lines[])` | customer | заявка в ERP от имени клиента (код решает, что это «запрос», модель лишь предлагает текст) |
 
+Клиент CRM (M3-CRM-07, Q-FIX36-1 вариант 1; `apps/crm/backend/app/agents/erp_mcp.py`): контракт не менялся. SDK `mcp` не отдаёт код HTTP-ответа (на 401/400/429 вратаря исключение транспорта одно и то же), поэтому клиент берёт статус и `Retry-After` из `event_hooks` HTTP-клиента. Политика: 401 `INVALID_AGENT_CONTEXT` — контекст выпускается заново (новый `jti`) и вызов повторяется один раз; 429 — ждать `Retry-After` (не дольше 5 с и не больше двух раз), иначе отказ; 400 `INVALID_ARGUMENTS` и сетевой сбой — без повтора. Любой отказ — «ERP недоступен» для хода: бот отвечает «сейчас не могу проверить», не называет чисел и заводит запрос менеджеру. Контекст выпускается только в режиме `customer` (`erp_company_id` — из БД CRM по проверенной привязке Telegram, не от модели); лиду `erp-mcp` не открывается. Модели отданы пять инструментов (`list_client_deals`, `get_deal_status`, `get_delivery_status`, `list_client_documents`, `search_catalog`); `get_document_link` и `create_request` не отданы: файл отправляет код через docs-mcp, запрос оформляет `create_service_request` CRM.
+
 ## 6. SSO-токен сотрудника
 
 JWT HS256, секрет `PLATFORM_SSO_SECRET` общий. Claims: `iss` (`crm`|`erp`), `aud` (целевая система),
