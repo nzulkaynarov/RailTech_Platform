@@ -14,12 +14,14 @@ from langgraph.types import Checkpointer
 from app.agents import prompts
 from app.agents.dialog.nodes import DialogNodes, prompt_for
 from app.agents.dialog.state import DialogResult, DialogState
+from app.agents.erp_mcp import ErpToolCaller
 from app.agents.llm import ChatCompleter
 from app.agents.mcp_client import ToolCaller
 from app.domain.dialog_policy import Action
 from app.domain.pricing import price_quoted
 from app.integrations import langfuse as lf
 from app.schemas.settings import AppSettings
+from app.security.erp_agent_context import ErpScope
 
 
 def build_graph(nodes: DialogNodes, checkpointer: Checkpointer = None) -> Any:
@@ -56,11 +58,16 @@ def build_graph(nodes: DialogNodes, checkpointer: Checkpointer = None) -> Any:
 
 class DialogAgent:
     def __init__(
-        self, tools: ToolCaller, model: ChatCompleter, checkpointer: Checkpointer = None
+        self,
+        tools: ToolCaller,
+        model: ChatCompleter,
+        checkpointer: Checkpointer = None,
+        erp: ErpToolCaller | None = None,
     ) -> None:
         self._tools = tools
         self._model = model
         self._checkpointer = checkpointer
+        self._erp = erp  # erp-mcp сервисного режима; None — бот работает без инструментов ERP
 
     async def forget(self, lead_id: int) -> None:
         """Стереть состояние графа лида (чекпоинты хранят тексты сообщений) — /delete."""
@@ -78,8 +85,11 @@ class DialogAgent:
         human_requested: bool = False,
         stage: str = "new",
         mode: str = "prospect",
+        erp_scope: ErpScope | None = None,
     ) -> DialogResult:
-        graph = build_graph(DialogNodes(self._tools, self._model, settings), self._checkpointer)
+        """`erp_scope` — клиент и компания ERP, собранные кодом; без него ERP не вызывается."""
+        nodes = DialogNodes(self._tools, self._model, settings, self._erp, erp_scope)
+        graph = build_graph(nodes, self._checkpointer)
         initial: DialogState = {
             "lead_id": lead_id,
             "text": text,
@@ -99,6 +109,7 @@ class DialogAgent:
             "document": None,
             "document_choices": [],
             "service_request": False,
+            "erp_used": False,
         }
         config = {"configurable": {"thread_id": _thread_id(lead_id)}}
         with lf.trace("dialog.turn", lead_id=lead_id, mode=mode, stage=stage, input=text):
@@ -127,6 +138,7 @@ def _result(state: dict[str, Any], trace_id: str | None) -> DialogResult:
         document=state.get("document"),
         document_choices=list(state.get("document_choices") or []),
         service_request=bool(state.get("service_request")),
+        erp_used=bool(state.get("erp_used")),
         mode=state.get("mode", "prospect"),
         price_quoted=price_quoted(
             state.get("reply") or "", [h.get("content", "") for h in kb.get("hits", [])]

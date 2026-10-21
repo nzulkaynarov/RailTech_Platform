@@ -31,6 +31,7 @@
 - [x] GitHub environment `production` (M5-INF-01, `docs/runbooks/deploy.md` §1.4; включить Required reviewers): секреты `DEPLOY_SSH_KEY` (приватный ключ деплоя) и `DEPLOY_KNOWN_HOSTS` (`ssh-keyscan` VPS 1, отпечаток сверить); переменные `DEPLOY_HOST`, `DEPLOY_USER`, `CRM_DOMAIN`, `ERP_DOMAIN`, `CABINET_DOMAIN`, `TELEGRAM_BOT_USERNAME`.
 - [x] Секреты приложений (пароли баз, токены сервисов, `PLATFORM_SSO_SECRET`, `WEBHOOK_SECRET`, токен бота, ключи моделей, SMTP) — **не в GitHub**, а в `/opt/rt/.env.prod` на VPS 1 (`infra/deploy/make-env-prod.sh init` генерирует случайные; вписать вручную: ключи моделей, `TELEGRAM_BOT_TOKEN`, SMTP, адреса). Сохранить офлайн копию файлов, `BACKUP_ENC_PASSPHRASE` и `LITELLM_SALT_KEY`.
 - [x] Открыть на файрволе VPS 1 порт `9000` только для внутреннего IP VPS 2 (выгрузка бэкапов в RustFS) — runbook §1.1.
+- [ ] Включить `erp-mcp` на проде для сервисного режима бота (M3-CRM-07): в `/opt/rt/.env.prod` — `RT_PROFILES=mcp` (через запятую с остальными), затем обычный деплой; проверка — `docs/runbooks/deploy.md` (раздел про `erp-mcp`). Без этого бот отвечает клиентам на «где счёт / когда поставка» «не могу проверить» и передаёт менеджеру.
 - [ ] Лимиты расходов в консолях провайдеров моделей (третий уровень защиты).
 - [x] Решение о переносе данных со старого прода: не переносить, старый B2B удалён 2026-10-21 (DECISIONS).
 - [ ] **Вернуть репозиторий в приват** (публичный с 2026-10-20 ради минут Actions — DECISIONS) и проверить бюджет Actions.

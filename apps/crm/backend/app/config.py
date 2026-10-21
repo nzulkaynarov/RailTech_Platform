@@ -76,6 +76,11 @@ class Settings(BaseSettings):
     kb_mcp_url: AnyHttpUrl = AnyHttpUrl("http://kb-mcp:8101/mcp")
     crm_mcp_url: AnyHttpUrl = AnyHttpUrl("http://crm-mcp:8102/mcp")
     docs_mcp_url: AnyHttpUrl = AnyHttpUrl("http://docs-mcp:8103/mcp")
+    # Сервисный режим бота (M3-CRM-07): инструменты ERP через `erp-mcp` (CONTRACTS §5). Выключено —
+    # бот отвечает клиенту без данных ERP; включено — нужен `ERP_MCP_CONTEXT_KEY`, общий с ERP.
+    erp_mcp_enabled: bool = False
+    erp_mcp_url: AnyHttpUrl = AnyHttpUrl("http://erp-mcp:8104/mcp/erp")
+    erp_mcp_context_key: SecretStr = SecretStr("")
 
     ready_check_timeout_s: float = Field(default=2.0, gt=0, le=10)
 
@@ -170,6 +175,15 @@ class Settings(BaseSettings):
     @property
     def agent_context_key_bytes(self) -> bytes:
         return self.agent_context_key.get_secret_value().encode("utf-8")
+
+    @property
+    def erp_mcp_context_key_bytes(self) -> bytes:
+        return self.erp_mcp_context_key.get_secret_value().encode("utf-8")
+
+    @property
+    def erp_mcp_ready(self) -> bool:
+        """Бот пользуется `erp-mcp` только при включённом флаге и заданном ключе контекста."""
+        return self.erp_mcp_enabled and bool(self.erp_mcp_context_key.get_secret_value())
 
     @property
     def sqlalchemy_url(self) -> str:
