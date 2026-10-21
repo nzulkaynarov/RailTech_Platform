@@ -1,0 +1,9 @@
+axe-core WCAG 2.1 A/AA, подставной API (Playwright page.route), Vite dev из worktree fix-66, порт 5270
+list-webhook-not-configured-1440: hscroll=false axe=0
+detail-webhook-not-configured-1440: hscroll=false axe=0
+detail-delivery-error-1440: hscroll=false axe=0
+detail-ok-actual-address-1440: hscroll=false axe=0
+list-webhook-not-configured-390: hscroll=false axe=0
+detail-webhook-not-configured-390: hscroll=false axe=0
+detail-delivery-error-390: hscroll=false axe=0
+detail-ok-actual-address-390: hscroll=false axe=0
