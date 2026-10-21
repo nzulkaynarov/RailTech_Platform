@@ -27,6 +27,7 @@ from app.domain.errors import (
     UpstreamUnavailableError,
     ValidationFailedError,
 )
+from app.domain.system_status import ErpExternal
 from app.security.secrets_store import (
     ERP_SERVICE_TOKEN,
     ERP_WEBHOOK_SECRET,
@@ -40,6 +41,7 @@ logger = structlog.get_logger(__name__)
 Source = Literal["db", "env", "none"]
 ErpErrorKind = Literal["invalid_url", "unauthorized", "unavailable", "bad_response", "rate_limited"]
 HEALTH_TIMEOUT_S = 5.0
+_EXTERNAL_STATUSES = frozenset({"ok", "degraded", "fail", "unknown", "disabled"})
 #: Пауза при 429 без (или с неразборчивым) `Retry-After` и потолок: ERP не усыпит задачу надолго.
 DEFAULT_RETRY_AFTER_S = 30
 MAX_RETRY_AFTER_S = 600
@@ -223,6 +225,8 @@ class ErpHealth:
     queue_alive: bool
     checked_at: datetime
     latency_ms: int
+    # `Health.externals` (M3-ERP-06); None — ERP старше изменения и поля не прислала.
+    externals: tuple[ErpExternal, ...] | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -246,6 +250,48 @@ class _HealthPayload(BaseModel):
     migrations_applied: bool
     queue_alive: bool
     checked_at: datetime
+    # Сервисы ERP разбираются по одному (`_external`): кривая запись не ломает «Проверить связь».
+    externals: Any = None
+
+
+class _ExternalPayload(BaseModel):
+    """Запись `Health.externals[]`: лишнее игнорируем, неизвестные значения терпим (Q-FIX35-4)."""
+
+    model_config = ConfigDict(extra="ignore")
+
+    code: str
+    status: str = "unknown"
+    enabled: bool = True
+    switchable: bool = False
+    last_success_at: datetime | None = None
+    last_error_at: datetime | None = None
+    last_error: str | None = None
+    ok_24h: int = 0
+    errors_24h: int = 0
+
+
+def _external(raw: Any) -> ErpExternal | None:
+    try:
+        item = _ExternalPayload.model_validate(raw)
+    except ValidationError:
+        return None
+    return ErpExternal(
+        code=item.code,
+        status=item.status if item.status in _EXTERNAL_STATUSES else "unknown",
+        enabled=item.enabled,
+        switchable=item.switchable,
+        last_success_at=item.last_success_at,
+        last_error_at=item.last_error_at,
+        last_error=item.last_error[:200] if item.last_error else None,
+        ok_24h=max(item.ok_24h, 0),
+        errors_24h=max(item.errors_24h, 0),
+    )
+
+
+def _externals(raw: Any) -> tuple[ErpExternal, ...] | None:
+    if not isinstance(raw, list):
+        return None
+    return tuple(e for e in map(_external, raw) if e is not None)
 
 
 class ErpProbe(Protocol):
@@ -298,6 +344,7 @@ def _parse(response: httpx.Response, latency_ms: int) -> ErpHealth:
         queue_alive=payload.queue_alive,
         checked_at=payload.checked_at,
         latency_ms=latency_ms,
+        externals=_externals(payload.externals),
     )
 
 

@@ -9,7 +9,7 @@ from django.core.validators import RegexValidator
 from rest_framework import serializers
 from sales.models import DeliveryLineStatus
 
-from accounts.constants import Permission
+from accounts.constants import BackofficeRoleCode, Permission
 
 from .services import stages
 
@@ -212,6 +212,10 @@ class ProvisionUserRequestSerializer(serializers.Serializer):
     role = serializers.ChoiceField(choices=["admin", "backoffice"])
     # Только коды каталога прав ERP (`ErpPermission` контракта): чужой код — 422, а не молча сохранённая «роль» (S-11).
     permissions = serializers.ListField(child=serializers.ChoiceField(choices=Permission.values))
+    # Системные роли бэк-офиса из CRM (`SystemRoleCode`, FIX-63): поля нет — роли не трогаем (старый CRM), чужой код — 422.
+    role_codes = serializers.ListField(
+        child=serializers.ChoiceField(choices=BackofficeRoleCode.values), required=False, allow_empty=True
+    )
     is_active = serializers.BooleanField(default=True, required=False)
 
 
@@ -231,12 +235,38 @@ class AiUsageRowSerializer(serializers.Serializer):
     cost_usd = serializers.CharField()
 
 
+class ExternalServiceSerializer(serializers.Serializer):
+    """`ExternalService` контракта (M3-ERP-06): состояние внешнего сервиса ERP."""
+
+    code = serializers.ChoiceField(choices=["cbu_rates", "customs_tariff", "mail", "litellm", "s3", "sentry"])
+    status = serializers.ChoiceField(choices=["ok", "degraded", "fail", "unknown", "disabled"])
+    enabled = serializers.BooleanField()
+    switchable = serializers.BooleanField()
+    last_success_at = serializers.DateTimeField(allow_null=True)
+    last_error_at = serializers.DateTimeField(allow_null=True)
+    last_error = serializers.CharField(allow_null=True, max_length=200)
+    ok_24h = serializers.IntegerField(min_value=0)
+    errors_24h = serializers.IntegerField(min_value=0)
+
+
+class ExternalSwitchInSerializer(serializers.Serializer):
+    enabled = serializers.BooleanField()
+    reason = serializers.CharField(required=False, allow_null=True, allow_blank=True, max_length=200)
+
+
+class ExternalSwitchStateSerializer(serializers.Serializer):
+    code = serializers.CharField()
+    enabled = serializers.BooleanField()
+    changed_at = serializers.DateTimeField()
+
+
 class HealthSerializer(serializers.Serializer):
     status = serializers.ChoiceField(choices=["ok", "degraded"])
     version = serializers.CharField()
     migrations_applied = serializers.BooleanField()
     queue_alive = serializers.BooleanField()
     checked_at = serializers.DateTimeField()
+    externals = ExternalServiceSerializer(many=True, required=False)
 
 
 class PairingSecretField(serializers.CharField):

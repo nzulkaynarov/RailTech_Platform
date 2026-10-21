@@ -199,6 +199,30 @@
                 }
             }
         },
+        "/api/integration/v1/externals/{code}/switch": {
+            "put": {
+                "operationId": "api_integration_v1_externals_switch_update",
+                "description": "PUT /api/integration/v1/externals/{code}/switch (M3-ERP-06): выключатель внешнего сервиса ERP из CRM.",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "code",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "api"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No response body"
+                    }
+                }
+            }
+        },
         "/api/integration/v1/health": {
             "get": {
                 "operationId": "api_integration_v1_health_retrieve",
@@ -17237,6 +17261,61 @@
                 }
             }
         },
+        "/api/v1/sourcing/parse-request-text/": {
+            "post": {
+                "operationId": "sourcing_parse_request_text_create",
+                "description": "Заявка словами: клиент (или передача из CRM) описал потребность текстом, строк нет. Продавец жмёт «Разобрать текст в строки (ИИ)» в конструкторе КП — сервер берёт текст заявки сам (полный текст клиента, иначе комментарий сделки), разбирает его тем же извлечением, что и файл клиента (`ai.services.intake`), и дописывает строки В КОНЕЦ КП. ARCH-01: 202 + task_id, извлечение на Celery (поллинг sourcing/ai-status/). ИИ выключен — 503 `AI_DISABLED`, шлюз недоступен — результат задачи `AI_EXTRACT_FAILED`; ручной набор строк работает всегда.",
+                "summary": "Разобрать текст заявки в строки КП (AI, FIX-67)",
+                "tags": [
+                    "Sourcing"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ParseRequestTextRequestRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ParseRequestTextRequestRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ParseRequestTextRequestRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "security": [
+                    {
+                        "jwtAuth": []
+                    }
+                ],
+                "responses": {
+                    "202": {
+                        "description": "AI job queued, task_id returned (poll ai-status)"
+                    },
+                    "400": {
+                        "description": "QUOTE_ID_REQUIRED / REQUEST_TEXT_EMPTY"
+                    },
+                    "403": {
+                        "description": "Not own-company staff with pricing permission"
+                    },
+                    "404": {
+                        "description": "Quote not found"
+                    },
+                    "409": {
+                        "description": "Quote is not editable (QUOTE_NOT_DRAFT / QUOTE_FROZEN)"
+                    },
+                    "503": {
+                        "description": "AI disabled (AI_DISABLED)"
+                    }
+                }
+            }
+        },
         "/api/v1/system-settings/": {
             "get": {
                 "operationId": "system_settings_retrieve",
@@ -20192,6 +20271,16 @@
                         "description": "Исполнение закрыто целиком (оплата + поставка + акт) — НЕ то же, что «сделка выиграна».\n\nO4: `CLOSED_WON` наступает при подписании договора, когда покупателю ещё платить и\nпринимать. Слово «Завершено» в интерфейсе опирается на этот флаг, а не на стадию.",
                         "readOnly": true
                     },
+                    "request_lines_count": {
+                        "type": "integer",
+                        "description": "Строки заявки клиента (портал / передача CRM / прежнее «КП заявки») — не позиции КП продавца.",
+                        "readOnly": true
+                    },
+                    "request_text": {
+                        "type": "string",
+                        "description": "Заявка словами: полный текст клиента, иначе комментарий сделки.",
+                        "readOnly": true
+                    },
                     "created_at": {
                         "type": "string",
                         "format": "date-time",
@@ -20218,6 +20307,8 @@
                     "id",
                     "manager_name",
                     "quotes",
+                    "request_lines_count",
+                    "request_text",
                     "stage_code",
                     "stage_name",
                     "updated_at",
@@ -22950,6 +23041,17 @@
                     "code",
                     "expires_at",
                     "ttl_seconds"
+                ]
+            },
+            "ParseRequestTextRequestRequest": {
+                "type": "object",
+                "properties": {
+                    "quote_id": {
+                        "type": "integer"
+                    }
+                },
+                "required": [
+                    "quote_id"
                 ]
             },
             "PatchedAttachmentRequest": {

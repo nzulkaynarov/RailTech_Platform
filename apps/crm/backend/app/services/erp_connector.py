@@ -395,4 +395,5 @@ def _facts(health: ErpHealth) -> ErpFacts:
         queue_alive=health.queue_alive,
         checked_at=health.checked_at,
         latency_ms=health.latency_ms,
+        externals=health.externals,
     )

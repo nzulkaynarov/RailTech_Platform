@@ -32,6 +32,8 @@ from typing import NamedTuple
 import httpx
 from django.conf import settings
 
+from core.external_status import is_enabled
+
 from .budget import assert_budget_available
 from .context import current_trace
 from .errors import AI_BAD_RESPONSE, AI_GATEWAY_ERROR, AI_GATEWAY_UNAVAILABLE, AIBudgetExceeded
@@ -261,6 +263,8 @@ def _record(call: JsonCall, status: str, error_code: str, usage: CallUsage) -> N
 def call_json(call: JsonCall) -> JsonResult:
     """Структурный вызов модели через шлюз. Никогда не бросает, кроме ``AIBudgetExceeded``."""
     if not getattr(settings, "AI_IMPORT_ENABLED", False):
+        return JsonResult(status="disabled", error_code=AI_GATEWAY_UNAVAILABLE)
+    if not is_enabled("litellm"):  # выключатель из CRM (M3-ERP-06): вызова нет, ни платного, ни в журнале
         return JsonResult(status="disabled", error_code=AI_GATEWAY_UNAVAILABLE)
     assert_budget_available()
     body = build_body(call)

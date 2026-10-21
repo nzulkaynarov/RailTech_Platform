@@ -18,7 +18,12 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from .authentication import IntegrationTokenAuthentication
-from .exceptions import IntegrationNotFound, IntegrationValidationError, integration_exception_handler
+from .exceptions import (
+    IntegrationConflict,
+    IntegrationNotFound,
+    IntegrationValidationError,
+    integration_exception_handler,
+)
 from .idempotency import handle_idempotency
 from .models import CrmContactMapping
 from .serializers import (
@@ -31,6 +36,8 @@ from .serializers import (
     DealSerializer,
     DocumentLinkSerializer,
     DocumentSerializer,
+    ExternalSwitchInSerializer,
+    ExternalSwitchStateSerializer,
     HandoffRequestSerializer,
     HandoffResponseSerializer,
     HealthSerializer,
@@ -352,3 +359,29 @@ class PairingRotateView(BaseIntegrationView):
             }
         ).data
         return Response(data=body, status=status.HTTP_200_OK, headers={"Cache-Control": "no-store"})
+
+
+class ExternalSwitchView(BaseIntegrationView):
+    """PUT /api/integration/v1/externals/{code}/switch (M3-ERP-06): выключатель внешнего сервиса ERP из CRM."""
+
+    def put(self, request, code, *args, **kwargs):
+        from core import external_status
+
+        if code not in external_status.CODES:
+            raise IntegrationNotFound()
+        serializer = ExternalSwitchInSerializer(data=request.data)
+        if not serializer.is_valid():
+            raise IntegrationValidationError("VALIDATION_ERROR")
+        try:
+            row = external_status.set_enabled(
+                code, serializer.validated_data["enabled"], serializer.validated_data.get("reason") or ""
+            )
+        except external_status.NotSwitchable:
+            raise IntegrationConflict("NOT_SWITCHABLE")
+        logger.info("integration: external service %s enabled=%s", code, row.enabled)
+        return Response(
+            data=ExternalSwitchStateSerializer(
+                {"code": row.code, "enabled": row.enabled, "changed_at": row.changed_at}
+            ).data,
+            status=status.HTTP_200_OK,
+        )

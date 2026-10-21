@@ -239,14 +239,17 @@ async def receive_erp_event(
     x_event_id: Annotated[str | None, Header(alias="X-Event-Id")] = None,
     x_event_type: Annotated[str | None, Header(alias="X-Event-Type")] = None,
     x_signature: Annotated[str | None, Header(alias="X-Signature")] = None,
+    x_timestamp: Annotated[str | None, Header(alias="X-Timestamp")] = None,
 ) -> ErpWebhookReceipt:
-    """Приём входящих вебхуков событий ERP (M3-CRM-04, CONTRACTS §3, FIX-33).
+    """Приём входящих вебхуков событий ERP (M3-CRM-04, CONTRACTS §3, FIX-33, FIX-61).
 
-    Порядок: подпись HMAC-SHA256 по сырому телу (X-Signature, ERP_WEBHOOK_SECRET) — ДО разбора
-    тела и проверки остальных заголовков; идемпотентность по X-Event-Id; быстрый 200 и фоновая
-    обработка в Procrastinate. 401 — только неверная подпись; тело, которое мы принять не можем
-    (чужой тип события, расхождение с заголовком), записывается как `rejected` и тоже получает 200:
-    ретраи ERP ничего бы не изменили.
+    Порядок: подпись — ДО разбора тела и проверки остальных заголовков. Схема v2:
+    HMAC-SHA256(ERP_WEBHOOK_SECRET, "{X-Event-Id}.{X-Timestamp}.{тело}"); пока
+    `ERP_WEBHOOK_SIGN_LEGACY=true`, принимается и старая (HMAC только тела). Идемпотентность по
+    X-Event-Id; быстрый 200 и фоновая обработка в Procrastinate. 401 — только неверная подпись;
+    тело, которое мы принять не можем (чужой тип события, расхождение с заголовком), и метка v2
+    вне окна 300 с записываются как `rejected` и тоже получают 200: ретраи ERP ничего бы не
+    изменили (ERP подписывает ретрай заново).
     """
     raw_body = await request.body()
     duplicate, _ = await container.erp_events_service.receive_event(
@@ -254,6 +257,7 @@ async def receive_erp_event(
         event_type=x_event_type,
         signature=x_signature,
         raw_body=raw_body,
+        timestamp=x_timestamp,
     )
     return ErpWebhookReceipt(status="ok", duplicate=duplicate)
 

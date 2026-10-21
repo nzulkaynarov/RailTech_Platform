@@ -163,7 +163,8 @@ class WebhookEventStatus(models.TextChoices):
 class IntegrationWebhookEvent(models.Model):
     """Журнал и очередь исходящих вебхуков событий ERP → CRM (CONTRACTS §3).
 
-    Заголовки запроса: X-Event-Id (UUID), X-Event-Type, X-Timestamp, X-Signature: sha256=<HMAC>.
+    Заголовки запроса: X-Event-Id (UUID), X-Event-Type, X-Timestamp, X-Signature: sha256=<HMAC(secret, "{X-Event-Id}.{X-Timestamp}.{body}")> (схема v2, FIX-61;
+    заголовки перезаписываются при каждой попытке доставки).
     Ретраи: 1, 5, 30 мин, 2, 6, 24 ч. При исчерпании попыток — статус FAILED для ручного разбора.
     """
 

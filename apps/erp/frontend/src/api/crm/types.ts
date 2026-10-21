@@ -370,6 +370,10 @@ export interface Deal {
 	title?: string;
 	total_value?: string;
 	notes?: string;
+	/** FIX-67: строк в заявке клиента (портал / передача CRM) — от этого зависит кнопка «Взять в работу и подготовить». */
+	request_lines_count?: number;
+	/** FIX-67: заявка словами — полный текст клиента, иначе комментарий сделки. */
+	request_text?: string;
 	active_quote?: Quote | null;
 	quotes?: Quote[];
 	/** O4: исполнение закрыто целиком (оплата + поставка + акт) — не то же, что «сделка выиграна». */

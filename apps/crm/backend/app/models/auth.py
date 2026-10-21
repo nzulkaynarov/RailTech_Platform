@@ -39,6 +39,13 @@ class User(TimestampMixin, Base):
             'AND platform_access <@ CAST(\'["crm", "erp"]\' AS jsonb)',
             name="platform_access",
         ),
+        # Роли ERP (FIX-63): JSON-массив кодов из каталога `domain/erp_roles.py`.
+        CheckConstraint(
+            "jsonb_typeof(erp_role_codes) = 'array' "
+            'AND erp_role_codes <@ CAST(\'["CALCULATION", "CATALOG_SUPPLY", "FULFILLMENT", '
+            '"FINANCE", "HEAD", "VIEWER"]\' AS jsonb)',
+            name="erp_role_codes",
+        ),
     )
 
     id: Mapped[int] = mapped_column(BigInteger, Identity(), primary_key=True)
@@ -62,6 +69,10 @@ class User(TimestampMixin, Base):
     platform_access: Mapped[list[str]] = mapped_column(
         JSONB, server_default=sql("""'["crm"]'::jsonb""")
     )
+    # Системные роли бэк-офиса ERP, выданные админом CRM (FIX-63, Q-FIX50-1 (1)): уходят
+    # в провижининг как `role_codes`; пусто по умолчанию. Хранятся и без доступа к ERP — уйдут
+    # при его выдаче.
+    erp_role_codes: Mapped[list[str]] = mapped_column(JSONB, server_default=sql("'[]'::jsonb"))
     # Последняя ошибка синхронизации с ERP (провижининг или отзыв); NULL — ERP в курсе. Читает
     # проверка «Синхронизация с ERP» центра внешних сервисов (ADR-0024); пользователю не видна.
     erp_sync_error: Mapped[str | None] = mapped_column(Text)

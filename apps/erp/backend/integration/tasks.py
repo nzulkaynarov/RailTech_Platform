@@ -4,8 +4,8 @@
 Заголовки:
 - X-Event-Id (UUID)
 - X-Event-Type
-- X-Timestamp (ISO-8601 with tz)
-- X-Signature: sha256=<HMAC(body, ERP_WEBHOOK_SECRET)>
+- X-Timestamp (UTC ISO 8601) — заново при КАЖДОЙ попытке, `X-Event-Id` тот же
+- X-Signature: sha256=<HMAC(secret, "{X-Event-Id}.{X-Timestamp}.{body}")> — схема v2 (FIX-61)
 """
 
 from __future__ import annotations
@@ -21,8 +21,16 @@ from celery.exceptions import Retry
 from django.db.models import Q
 from django.utils import timezone
 
+from core.log_mask import mask_secrets
+
 from .models import IntegrationWebhookEvent, WebhookEventStatus
-from .services.webhooks import delivery_payload, discard_secret_payload, sign_payload, webhook_signing_secret
+from .services.webhooks import (
+    delivery_payload,
+    discard_secret_payload,
+    sign_payload_v2,
+    signature_timestamp,
+    webhook_signing_secret,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -37,7 +45,7 @@ SWEEP_BATCH = 200
 
 def _register_failure(event: IntegrationWebhookEvent, error_msg: str, has_retries_left: bool, current_attempt: int):
     """Итог неудачной попытки: FAILED, если ретраи кончились, иначе PENDING с плановым временем следующей."""
-    event.last_error = error_msg
+    event.last_error = mask_secrets(error_msg)  # FIX-66b: эхо заголовков/ключей в ответе CRM не оседает в БД
     if has_retries_left:
         event.next_attempt_at = timezone.now() + timedelta(seconds=RETRY_DELAYS[current_attempt])
     else:
@@ -98,14 +106,16 @@ def deliver_webhook_event(self, event_id: int) -> bool:
     event.attempts += 1
     event.last_attempt_at = timezone.now()
     body_bytes = json.dumps(payload, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
-    signature = sign_payload(secret, body_bytes)
-
+    # Подпись v2 (FIX-61) покрывает X-Event-Id, X-Timestamp и реальные байты тела (с кодом акцепта из кэша). Метка — момент
+    # ЭТОЙ попытки: ретрай подписывается заново, иначе CRM отклонит его по окну 300 с; `occurred_at` остаётся в теле.
+    event_id_header = str(event.event_id)
+    timestamp = signature_timestamp()
     headers = {
         "Content-Type": "application/json",
-        "X-Event-Id": str(event.event_id),
+        "X-Event-Id": event_id_header,
         "X-Event-Type": event.event_type,
-        "X-Timestamp": event.payload.get("occurred_at", timezone.now().isoformat()),
-        "X-Signature": signature,
+        "X-Timestamp": timestamp,
+        "X-Signature": sign_payload_v2(secret, event_id_header, timestamp, body_bytes),
     }
     event.headers = headers
 
@@ -151,7 +161,8 @@ def deliver_webhook_event(self, event_id: int) -> bool:
             return True
 
         # Non-2xx HTTP response from CRM
-        error_msg = f"HTTP {response.status_code}: {response.text[:500]}"
+        # FIX-66b: маска ДО усечения — иначе секрет на границе обрезки теряет хвост и не опознаётся
+        error_msg = f"HTTP {response.status_code}: {mask_secrets(response.text)[:500]}"
         _register_failure(event, error_msg, has_retries_left, current_attempt)
 
         if has_retries_left:

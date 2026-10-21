@@ -14,7 +14,17 @@
  * `Contact` закрыт через `unevaluatedProperties` (Q-FIX35-3); `CompanySummary.receivables_by_currency` (Q-FIX30-2);
  * `erp_document_id` — идентификатор документа портала (FIX-38).
  *
- * OpenAPI spec version: 0.3.0
+ * 0.4.0 (M3-ERP-06): `Health.externals[]` — внешние сервисы ERP (статус, последний успех и ошибка, счётчики за 24 ч);
+ * `PUT /externals/{code}/switch` — выключатель из CRM. Аддитивно, терпимый читатель.
+ *
+ * 0.5.0 (FIX-63): `ProvisionUserRequest.role_codes[]` (`SystemRoleCode`) — системные роли ERP, выбранные в CRM;
+ * поле необязательное, аддитивно: без него ERP системные роли не трогает.
+ *
+ * 0.6.0 (M3-ERP-05/CRM-10): сопряжение CRM ↔ ERP в один клик — `POST /pairing/accept` (код из ERP либо bootstrap без кода
+ * по доказательству `X-Pairing-Proof` от `PLATFORM_SSO_SECRET`, ADR-0009) и `POST /pairing/rotate` (ротация без простоя).
+ * Аддитивно: новые операции и коды ошибок; существующие операции не меняются.
+ *
+ * OpenAPI spec version: 0.6.0
  */
 
 /**

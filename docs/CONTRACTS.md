@@ -41,9 +41,10 @@ Contract-first действует для `portal`, `integration`, событий
 | `GET /deals/{erp_deal_id}/documents` | документы сделки | `[{erp_document_id, kind, number, date, title, status}]` |
 | `GET /documents/{erp_document_id}/link` | ссылка на файл | подписанный URL на 10 минут на публичный маршрут ERP (токен проверяется во вьюхе); выдача и скачивание — в журнал ERP с `crm_*` контекстом; без сопоставления компании, черновик или внутренний документ — 404 |
 | `GET /catalog/search?q=&mode=lead|client` | опубликованный каталог | в режиме `lead` без цен и остатков; в `client` — с ценой и статусом наличия |
-| `POST /users/provision` | сотрудник из CRM | `crm_user_id, email, name, role (admin|backoffice), permissions[]` (коды каталога ERP, `ErpPermission`; чужой код → 422); ответ `erp_user_id`; e-mail занят другим пользователем ERP (другой `crm_user_id` или нет сопоставления) → 409 `EMAIL_CONFLICT` |
+| `POST /users/provision` | сотрудник из CRM | `crm_user_id, email, name, role (admin|backoffice), permissions[]` (коды каталога ERP, `ErpPermission`; чужой код → 422), необязательное `role_codes[]` (системные роли бэк-офиса, `SystemRoleCode`: `CALCULATION, CATALOG_SUPPLY, FULFILLMENT, FINANCE, HEAD, VIEWER`; чужой код → 422; поля нет — системные роли не трогаются; ERP снимает только выданные ранее из CRM; ручные роли не затираются); ответ `erp_user_id`; e-mail занят другим пользователем ERP (другой `crm_user_id` или нет сопоставления) → 409 `EMAIL_CONFLICT` |
 | `DELETE /users/{crm_user_id}/sessions` | отзыв сессий и входа | при снятии доступа в CRM: refresh и access-токены гаснут (прежний access → 401), вход закрыт; аудит `sso.revoke` |
-| `GET /health` | здоровье для «Состояния системы» CRM | версия, миграции применены, очередь жива |
+| `GET /health` | здоровье для «Состояния системы» CRM и центра внешних сервисов | версия, миграции применены, очередь жива; `externals[]` (M3-ERP-06, необязательно) — внешние сервисы ERP: `code` (`cbu_rates`, `customs_tariff`, `mail`, `litellm`, `s3`, `sentry`), `status` (`ok`/`degraded`/`fail`/`unknown`/`disabled`), `enabled`, `switchable`, `last_success_at`, `last_error_at`, `last_error` (≤ 200 знаков, без секретов), `ok_24h`, `errors_24h` |
+| `PUT /externals/{code}/switch` | выключатель внешнего сервиса ERP из центра внешних сервисов CRM (M3-ERP-06) | вход: `enabled`, `reason?`; ответ: `code`, `enabled`, `changed_at`. Идемпотентно; неизвестный `code` → 404, Sentry (`switchable: false`) → 409 `NOT_SWITCHABLE` |
 | `POST /pairing/accept` | сопряжение по одноразовому коду (вместо ручного копирования ключей) | вход: `crm_to_erp_token`, `erp_to_crm_token`, `webhook_secret` (CRM генерирует сама); аутентификация — код сопряжения, не сервисный токен. Ответ: `paired`, `paired_at`, `erp_version`. Вместо кода допустим `X-Pairing-Proof` (bootstrap, ниже). Ошибки 401: `PAIRING_CODE_INVALID`/`_EXPIRED`/`_USED`, `PAIRING_PROOF_INVALID`/`_EXPIRED`/`_REPLAYED`; 409 `BOOTSTRAP_CLOSED` |
 | `POST /pairing/rotate` | ротация ключей без простоя | вход — новая тройка секретов под действующим токеном CRM→ERP; прежний токен действует ещё `previous_token_valid_until` (два активных), затем 401 |
 
@@ -63,6 +64,12 @@ v1.<ts>.<jti>.<hex>` — доказательство владения общи�
 `HMAC-SHA256(ключ, "<ts>.<jti>.<sha256-hex тела>")`; окно метки 300 с, `jti` одноразов (10 минут), тело привязано хешем. Окно
 закрывается НАВСЕГДА после первого успешного сопряжения любым способом (постоянный флаг ERP): дальше 409 `BOOTSTRAP_CLOSED`, только код
 из ERP или «Обновить ключи». Тест-вектор — `packages/contracts/examples/pairing-bootstrap.json`.
+
+
+`externals[]` в `/health` (M3-ERP-06) строится по журналам и счётчикам ERP без обращений к самим сервисам — ответ быстрый
+(< 300 мс). Добавлено аддитивно (необязательное поле, новая операция); читатель CRM терпимый: нет поля — «нет данных»,
+неизвестные `code` и `status` пропускаются. Выключенный из CRM сервис ERP не вызывается (курсы и ТН ВЭД — прогон
+пропускается, почта — `FAILED` «выключено из CRM», модели — нейтральный отказ, S3 — запись отклоняется).
 
 Передача (`/clients/handoff`): компания ищется по `crm_client_id`, затем по ИНН; сопоставление создаётся **до** сделки, поэтому
 `request.created(source=crm)` и `invite.sent` доходят до CRM; ИНН чужого `crm_client_id` — 409 `INN_CONFLICT`; согласие хранится

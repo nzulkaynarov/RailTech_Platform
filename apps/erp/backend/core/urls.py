@@ -107,6 +107,7 @@ from sourcing.views import (  # noqa: F811
     ImportStatusView,
     MatchCatalogView,
     QuoteImportFileView,
+    QuoteParseRequestTextView,
 )
 
 router = DefaultRouter()
@@ -210,6 +211,11 @@ urlpatterns = (
         path("api/v1/sourcing/match-catalog/", MatchCatalogView.as_view(), name="match-catalog"),
         path("api/v1/sourcing/extract-document/", DocumentExtractView.as_view(), name="extract-document"),
         path("api/v1/sourcing/import-quote-lines/", QuoteImportFileView.as_view(), name="import-quote-lines"),
+        path(
+            "api/v1/sourcing/parse-request-text/",
+            QuoteParseRequestTextView.as_view(),
+            name="parse-request-text",
+        ),
         path("api/v1/catalog/product-enrich/", ProductEnrichView.as_view(), name="product-enrich"),
         path(
             "api/v1/crm/quotes/<int:quote_id>/request-diff/", QuoteRequestDiffView.as_view(), name="quote-request-diff"

@@ -19,6 +19,7 @@ import structlog
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.domain.erp_permissions import erp_access
+from app.domain.erp_roles import normalize_erp_roles
 from app.domain.erp_sync import ERP
 from app.domain.errors import ConflictError, DomainError, Reason, ValidationFailedError
 from app.integrations.erp_users import ErpUsersClient, ProvisionPayload
@@ -51,6 +52,7 @@ class ErpAccessService:
                 name=user.full_name,
                 role=access.role,
                 permissions=access.permissions,
+                role_codes=tuple(normalize_erp_roles(user.erp_role_codes or [])),
             )
         await self._call(
             "erp_provision_user", user_id, lambda: self._client.provision_user(payload)

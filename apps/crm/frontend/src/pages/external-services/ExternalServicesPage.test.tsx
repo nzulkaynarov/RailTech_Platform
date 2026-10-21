@@ -117,15 +117,42 @@ const erp: ExternalServiceOut = {
   system: "erp",
   source: "erp",
   frequency: "erp",
-  status: "unknown",
-  summary: "Нет данных: ERP пока не передаёт состояние",
-  checked_at: null,
+  status: "ok",
+  summary: "Курсы ЦБ загружаются",
+  metrics: {
+    ok_24h: 3,
+    errors_24h: 0,
+    last_success_at: "2026-10-14T08:00:00Z",
+    last_error_at: null,
+  },
+  switch: {
+    kind: "erp",
+    available: true,
+    disabled: false,
+    effect: "ERP перестанет загружать курсы ЦБ; в КП действуют последние загруженные",
+    problem: null,
+    reason: null,
+    changed_at: null,
+    changed_by: null,
+  },
+};
+
+const erpMail: ExternalServiceOut = {
+  ...erp,
+  key: "erp.mail",
+  title: "Почта ERP",
+  status: "fail",
+  summary: "ERP не может отправить письма — клиенты не получают приглашения и КП",
+  error: "SMTPServerDisconnected: connection unexpectedly closed",
+  hint: "Проверьте почтовый релей ERP (адрес, логин, пароль); письма — в журнале ERP",
+  fix_path: "/integrations?tab=erp",
+  metrics: { ok_24h: 0, errors_24h: 4 },
 };
 
 const list: ExternalServicesOut = {
   checked_at: "2026-10-14T08:59:00Z",
-  summary: { ok: 3, warn: 0, fail: 1, unknown: 1, off: 0, disabled: 1 },
-  services: [base, telegram, mail, gemini, erp],
+  summary: { ok: 3, warn: 0, fail: 2, unknown: 0, off: 0, disabled: 1 },
+  services: [base, telegram, mail, gemini, erp, erpMail],
 };
 
 const detail: ExternalServiceDetailOut = {
@@ -190,7 +217,7 @@ describe("ExternalServicesPage", () => {
     expect(screen.getAllByRole("heading", { level: 1 })).toHaveLength(1);
     expect(screen.getByRole("heading", { level: 1, name: "Внешние сервисы" })).toBeVisible();
     const summary = screen.getByRole("status", { name: "Сводка по внешним сервисам" });
-    expect(within(summary).getByText("Сбой: 1")).toBeInTheDocument();
+    expect(within(summary).getByText("Сбой: 2")).toBeInTheDocument();
     expect(within(summary).getByText("Выключено вручную: 1")).toBeInTheDocument();
     const groups = screen.getAllByRole("heading", { level: 2 }).map((h) => h.textContent);
     expect(groups).toEqual(["Требуют внимания", "Выключены вручную", "Работают", "Сервисы ERP"]);
@@ -218,7 +245,11 @@ describe("ExternalServicesPage", () => {
 
   it("asks for the admin password before switching off", () => {
     renderAt("/external-services");
-    fireEvent.click(screen.getByRole("button", { name: "Выключить" }));
+    const card = screen
+      .getByRole("heading", { level: 3, name: "Telegram Bot API" })
+      .closest(".ant-card");
+    if (!(card instanceof HTMLElement)) throw new Error("no card");
+    fireEvent.click(within(card).getByRole("button", { name: "Выключить" }));
     const dialog = screen.getByRole("dialog");
     expect(within(dialog).getByText("Бот перестанет отвечать клиентам")).toBeInTheDocument();
     const confirm = within(dialog).getByRole("button", { name: "Выключить" });
@@ -232,10 +263,41 @@ describe("ExternalServicesPage", () => {
     });
   });
 
-  it("checks a service now, but not ERP-reported ones", () => {
+  it("shows ERP services: counters in Russian, a failing one among the problems with its last error", () => {
+    renderAt("/external-services");
+    expect(screen.getByText("Курсы ЦБ")).toBeInTheDocument();
+    expect(screen.getAllByText("Успешных операций за 24 ч").length).toBeGreaterThan(0);
+    expect(screen.getByText("Последний успех")).toBeInTheDocument();
+    const attention = screen
+      .getByRole("heading", { level: 2, name: "Требуют внимания" })
+      .closest("section");
+    if (!attention) throw new Error("no attention section");
+    expect(within(attention).getByText("Почта ERP")).toBeInTheDocument();
+    expect(
+      within(attention).getByText("Ошибка: SMTPServerDisconnected: connection unexpectedly closed"),
+    ).toBeInTheDocument();
+    expect(document.body.textContent).not.toMatch(/erp\.mail|erp\.cbu_rates/);
+  });
+
+  it("switches an ERP service off with the effect text from the server", () => {
+    renderAt("/external-services");
+    const card = screen.getByRole("heading", { level: 3, name: "Курсы ЦБ" }).closest(".ant-card");
+    if (!(card instanceof HTMLElement)) throw new Error("no card");
+    fireEvent.click(within(card).getByRole("button", { name: "Выключить" }));
+    const dialog = screen.getByRole("dialog");
+    expect(within(dialog).getByText(/ERP перестанет загружать курсы ЦБ/)).toBeInTheDocument();
+    fireEvent.change(within(dialog).getByLabelText("Ваш пароль"), { target: { value: "pw" } });
+    fireEvent.click(within(dialog).getByRole("button", { name: "Выключить" }));
+    expect(disable.mutate).toHaveBeenCalledWith({
+      key: "erp.cbu_rates",
+      data: { password: "pw", reason: null },
+    });
+  });
+
+  it("checks any service now, ERP ones too", () => {
     renderAt("/external-services");
     const buttons = screen.getAllByRole("button", { name: "Проверить сейчас" });
-    expect(buttons).toHaveLength(4);
+    expect(buttons).toHaveLength(6);
     const [first] = buttons;
     if (!first) throw new Error("no check button");
     fireEvent.click(first);

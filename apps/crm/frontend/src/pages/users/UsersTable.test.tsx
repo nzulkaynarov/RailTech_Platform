@@ -80,3 +80,23 @@ describe("UsersTable — «Доступ к ERP» (FIX-11)", () => {
     expect(erpSwitch()).toBeDisabled();
   });
 });
+
+describe("UsersTable — роли ERP (FIX-63)", () => {
+  it("рядом с доступом показаны выданные роли ERP", () => {
+    renderTable([
+      user({ platform_access: ["crm", "erp"], erp_role_codes: ["CALCULATION", "HEAD"] }),
+    ]);
+    expect(screen.getByText("Расчёт")).toBeInTheDocument();
+    expect(screen.getByText("Руководитель")).toBeInTheDocument();
+  });
+
+  it("без доступа к ERP роли не показываются, даже если сохранены", () => {
+    renderTable([user({ platform_access: ["crm"], erp_role_codes: ["HEAD"] })]);
+    expect(screen.queryByText("Руководитель")).toBeNull();
+  });
+
+  it("у администратора CRM вместо ролей — пометка суперпользователя", () => {
+    renderTable([user({ roles: ["admin"], platform_access: ["crm", "erp"], erp_role_codes: [] })]);
+    expect(screen.getByText("Все права ERP")).toBeInTheDocument();
+  });
+});

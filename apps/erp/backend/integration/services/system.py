@@ -82,10 +82,20 @@ def get_system_health() -> Tuple[Dict[str, Any], int]:
     status_str = "ok" if (migrations_applied and queue_alive) else "degraded"
     http_status = 200 if status_str == "ok" else 503
 
-    return {
+    health = {
         "status": status_str,
         "version": getattr(settings, "ERP_VERSION", "0.1.0"),
         "migrations_applied": migrations_applied,
         "queue_alive": queue_alive,
         "checked_at": timezone.now().isoformat(),
-    }, http_status
+    }
+    # M3-ERP-06: внешние сервисы ERP по журналам и счётчикам (без обращений к сервисам). Поле необязательное —
+    # без миграций или кэша его просто нет, а `/health` по-прежнему отвечает.
+    if migrations_applied:
+        try:
+            from .externals import build_externals
+
+            health["externals"] = build_externals()
+        except Exception as exc:  # noqa: BLE001 — внешние сервисы не должны ронять проверку здоровья
+            logger.warning("Error building externals: %s", exc)
+    return health, http_status

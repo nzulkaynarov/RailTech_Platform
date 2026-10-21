@@ -12,7 +12,7 @@ MetricValue = float | int | str | None
 class ServiceSwitchOut(BaseModel):
     """Выключатель сервиса: доступен ли, выключен ли вручную, что произойдёт при выключении."""
 
-    kind: Literal["vendor", "langfuse", "mail", "telegram"]
+    kind: Literal["vendor", "langfuse", "mail", "telegram", "erp"]
     available: bool
     disabled: bool
     effect: str

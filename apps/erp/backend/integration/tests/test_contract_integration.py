@@ -15,7 +15,7 @@ FIX-35: сторож покрывает ВСЕ операции контракт
 404, 409, 422, 503): `test_every_documented_status_is_exercised` падает, если для операции или кода нет вызова.
 
 FIX-60a (контракт 0.3.0): `Contact` и `ContactIn` закрыты через `unevaluatedProperties`, ответы проверяются по схеме
-контракта как есть — без обхода `allOf`; на КАЖДУЮ из 12 операций есть вызов, дающий 429 `TOO_MANY_REQUESTS` с `Retry-After`
+контракта как есть — без обхода `allOf`; на КАЖДУЮ из 13 операций (12 + выключатель внешнего сервиса, M3-ERP-06) есть вызов, дающий 429 `TOO_MANY_REQUESTS` с `Retry-After`
 (лимит сервисного токена `INTEGRATION_RATE`, Q-FIX35-1).
 
 Код проверок общий с сторожем портала (`core/tests/openapi_contract.py`). Падение сторожа — падение теста: ни `skip`,
@@ -153,6 +153,16 @@ def test_every_get_response_matches_the_contract(client, world, catalog_product)
     assert not problems, "\n".join(problems)
 
 
+def test_health_externals_cover_every_contract_code_and_status_is_in_the_enum(client, world):
+    """M3-ERP-06: `/health` несёт все шесть кодов контракта, статусы — из enum; сторож не проходит на пустом `externals`."""
+    health = client.get(f"{PREFIX}/health").json()
+    codes = [item["code"] for item in health["externals"]]
+    assert sorted(codes) == sorted(enum_values("ExternalServiceCode")) and len(codes) == 6
+    allowed = set(component("ExternalService")["properties"]["status"]["enum"])
+    assert {item["status"] for item in health["externals"]} <= allowed
+    assert not check_response(health, response_schema("/health"))
+
+
 def test_deal_responses_are_not_empty_for_the_full_deal(client, world):
     """Сторож не должен проходить на пустых ответах: у полной сделки есть всё, что описывает контракт."""
     deal = client.get(f"{PREFIX}/deals/{world['full'].pk}").json()
@@ -287,6 +297,7 @@ WRITE_PATHS = {
     ("DELETE", "/users/{crm_user_id}/sessions"),
     ("POST", "/pairing/accept"),
     ("POST", "/pairing/rotate"),
+    ("PUT", "/externals/{code}/switch"),
 }
 
 
@@ -322,6 +333,7 @@ def provision_body(crm_user_id, email):
         "name": "Сотрудник Сторожа",
         "role": "backoffice",
         "permissions": ["deal.manage"],
+        "role_codes": ["CALCULATION"],
         "is_active": True,
     }
 
@@ -356,6 +368,7 @@ THROTTLE_CASES = {
     # Сопряжение (M3-ERP-05): `accept` лимитирует свой scope `pairing` (по адресу), `rotate` — общий `integration`.
     ("POST", "/pairing/accept"): ("/pairing/accept", PAIRING_SECRETS),
     ("POST", "/pairing/rotate"): ("/pairing/rotate", ROTATED_SECRETS),
+    ("PUT", "/externals/{code}/switch"): ("/externals/mail/switch", {"enabled": True}),
 }
 
 
@@ -435,6 +448,14 @@ def exercise_all(client, world):
     hit("POST", provision, provision, 200, body=provision_body(8801, "guard-8801@railtech.uz"))
     hit("POST", provision, provision, 409, body=provision_body(8802, "guard-8801@railtech.uz"))
     hit("POST", provision, provision, 422, body={"crm_user_id": 8803})
+    # FIX-63: чужой код системной роли — 422 (`role_codes`: SystemRoleCode)
+    hit(
+        "POST",
+        provision,
+        provision,
+        422,
+        body={**provision_body(8805, "guard-8805@railtech.uz"), "role_codes": ["ROOT"]},
+    )
     hit("POST", provision, provision, 401, api=anonymous, body=provision_body(8804, "guard-8804@railtech.uz"))
 
     # DELETE /users/{id}/sessions: 204 → 404 → 401
@@ -442,6 +463,16 @@ def exercise_all(client, world):
     hit("DELETE", sessions, "/users/8801/sessions", 204)
     hit("DELETE", sessions, "/users/999999/sessions", 404)
     hit("DELETE", sessions, "/users/8801/sessions", 401, api=anonymous)
+
+    # PUT /externals/{code}/switch (M3-ERP-06): 200 → 404 (чужой код) → 409 (Sentry) → 422 → 401
+    switch = "/externals/{code}/switch"
+    state = hit("PUT", switch, "/externals/mail/switch", 200, body={"enabled": False, "reason": "сторож контракта"})
+    assert state["enabled"] is False
+    hit("PUT", switch, "/externals/mail/switch", 200, body={"enabled": True})
+    hit("PUT", switch, "/externals/telegram/switch", 404, body={"enabled": False})
+    hit("PUT", switch, "/externals/sentry/switch", 409, body={"enabled": False})
+    hit("PUT", switch, "/externals/mail/switch", 422, body={"reason": "без enabled"})
+    hit("PUT", switch, "/externals/mail/switch", 401, api=anonymous, body={"enabled": False})
 
     exercise_pairing(hit, anonymous, out)
     return out
@@ -526,7 +557,7 @@ def exercised(client, world, catalog_product, monkeypatch):
 
 def test_every_operation_has_a_throttle_case():
     assert set(THROTTLE_CASES) == set(contract_operations()), "каждой операции контракта нужен вызов на 429"
-    assert len(THROTTLE_CASES) == 14
+    assert len(THROTTLE_CASES) == 15
 
 
 @pytest.mark.parametrize(("method", "path"), sorted(THROTTLE_CASES), ids=lambda value: str(value))
@@ -596,4 +627,43 @@ def test_error_codes_are_the_documented_ones(exercised):
     )
     assert codes[404] == {"NOT_FOUND"}
     assert codes[422] == {"VALIDATION_ERROR"}
-    assert codes[409] <= {"INN_CONFLICT", "EMAIL_CONFLICT", "BOOTSTRAP_CLOSED"} and codes[409]
+    assert codes[409] <= {"INN_CONFLICT", "EMAIL_CONFLICT", "BOOTSTRAP_CLOSED", "NOT_SWITCHABLE"} and codes[409]
+
+
+# --- FIX-63: `role_codes` в провижининге (SystemRoleCode) --------------------------------------------------------
+
+
+def test_provision_request_serializer_fields_are_the_contract_properties():
+    """Сторож тела: поля `ProvisionUserRequestSerializer` = свойства `ProvisionUserRequest` контракта (ни лишних, ни забытых)."""
+    from integration.serializers import ProvisionUserRequestSerializer
+
+    assert set(ProvisionUserRequestSerializer().fields) == set(component("ProvisionUserRequest")["properties"])
+
+
+def test_role_codes_are_optional_in_the_contract_and_enum_equals_erp_catalog():
+    from accounts.constants import BackofficeRoleCode
+
+    request = component("ProvisionUserRequest")
+    assert "role_codes" not in request["required"], "аддитивно: старый CRM поле не шлёт"
+    assert request["properties"]["role_codes"]["items"] == component(
+        "SystemRoleCode"
+    ), "items — ссылка на SystemRoleCode"
+    assert enum_values("SystemRoleCode") == list(BackofficeRoleCode.values)
+
+
+def test_provision_with_every_system_role_code_of_the_contract(client, world, settings):
+    from accounts.models import Company, CompanyMember, WorkspaceRole
+
+    WorkspaceRole.objects.get_or_create(code="MEMBER", defaults={"name": "Member", "sort_order": 10})
+    settings.OWN_COMPANY_ID = Company.objects.create(name="Own Co", inn="OWN-GUARD63").pk
+
+    codes = enum_values("SystemRoleCode")
+    response = client.post(
+        f"{PREFIX}/users/provision",
+        {**provision_body(8950, "guard-8950@railtech.uz"), "role_codes": codes},
+        format="json",
+        HTTP_IDEMPOTENCY_KEY=str(uuid.uuid4()),
+    )
+    assert response.status_code == 201, response.content
+    member = CompanyMember.objects.get(user__email="guard-8950@railtech.uz")
+    assert set(member.company_roles.exclude(code="").values_list("code", flat=True)) == set(codes)

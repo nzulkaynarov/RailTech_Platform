@@ -50,6 +50,41 @@ WITH_ERP = replace(CRM_ONLY, platform_access=("crm", "erp"))
             CRM_ONLY, replace(CRM_ONLY, roles=("admin",)), None, None, id="role-changed-crm-only"
         ),
         pytest.param(
+            WITH_ERP,
+            replace(WITH_ERP, erp_role_codes=("FINANCE",)),
+            "provision",
+            None,
+            id="erp-roles-chosen",
+        ),
+        pytest.param(
+            replace(WITH_ERP, erp_role_codes=("FINANCE", "HEAD")),
+            replace(WITH_ERP, erp_role_codes=("FINANCE",)),
+            "provision",
+            None,
+            id="erp-role-dropped",
+        ),
+        pytest.param(
+            replace(WITH_ERP, erp_role_codes=("CALCULATION", "FINANCE")),
+            replace(WITH_ERP, erp_role_codes=("FINANCE", "CALCULATION")),
+            None,
+            None,
+            id="erp-roles-reordered-same-set",
+        ),
+        pytest.param(
+            CRM_ONLY,
+            replace(CRM_ONLY, erp_role_codes=("HEAD",)),
+            None,
+            None,
+            id="erp-roles-without-erp-access-wait",
+        ),
+        pytest.param(
+            replace(WITH_ERP, erp_role_codes=("HEAD",)),
+            replace(CRM_ONLY, erp_role_codes=("HEAD",)),
+            "revoke",
+            "platform_access.revoked",
+            id="revoke-keeps-the-chosen-roles-for-later",
+        ),
+        pytest.param(
             replace(WITH_ERP, is_active=False),
             CRM_ONLY,
             "revoke",

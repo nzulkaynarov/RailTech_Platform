@@ -87,6 +87,23 @@ class AiBudgetFacts:
 
 
 @dataclass(frozen=True, slots=True)
+class ErpExternal:
+    """Внешний сервис ERP из `Health.externals[]` (M3-ERP-06): как его описала сама ERP."""
+
+    code: str
+    status: (
+        str  # ok | degraded | fail | unknown | disabled (чужое значение читатель сводит к unknown)
+    )
+    enabled: bool
+    switchable: bool
+    last_success_at: datetime | None
+    last_error_at: datetime | None
+    last_error: str | None
+    ok_24h: int
+    errors_24h: int
+
+
+@dataclass(frozen=True, slots=True)
 class ErpFacts:
     """Итог последней проверки коннектора ERP (`services/erp_connector.py`, кэш 30 с)."""
 
@@ -100,6 +117,8 @@ class ErpFacts:
     # Класс ошибки пробы (`integrations/erp.ErpErrorKind`); None — ответ получен.
     error: str | None = None
     detail: str | None = None
+    # Внешние сервисы ERP: None — ERP не передала поле (версия до M3-ERP-06), () — передала пустой.
+    externals: tuple[ErpExternal, ...] | None = None
 
 
 STALE_BACKUP_HOURS = 26

@@ -14,10 +14,21 @@
  * `Contact` закрыт через `unevaluatedProperties` (Q-FIX35-3); `CompanySummary.receivables_by_currency` (Q-FIX30-2);
  * `erp_document_id` — идентификатор документа портала (FIX-38).
  *
- * OpenAPI spec version: 0.3.0
+ * 0.4.0 (M3-ERP-06): `Health.externals[]` — внешние сервисы ERP (статус, последний успех и ошибка, счётчики за 24 ч);
+ * `PUT /externals/{code}/switch` — выключатель из CRM. Аддитивно, терпимый читатель.
+ *
+ * 0.5.0 (FIX-63): `ProvisionUserRequest.role_codes[]` (`SystemRoleCode`) — системные роли ERP, выбранные в CRM;
+ * поле необязательное, аддитивно: без него ERP системные роли не трогает.
+ *
+ * 0.6.0 (M3-ERP-05/CRM-10): сопряжение CRM ↔ ERP в один клик — `POST /pairing/accept` (код из ERP либо bootstrap без кода
+ * по доказательству `X-Pairing-Proof` от `PLATFORM_SSO_SECRET`, ADR-0009) и `POST /pairing/rotate` (ротация без простоя).
+ * Аддитивно: новые операции и коды ошибок; существующие операции не меняются.
+ *
+ * OpenAPI spec version: 0.6.0
  */
 import type { ErpPermission } from "./erpPermission";
 import type { ProvisionUserRequestRole } from "./provisionUserRequestRole";
+import type { SystemRoleCode } from "./systemRoleCode";
 
 export interface ProvisionUserRequest {
   crm_user_id: number;
@@ -27,5 +38,7 @@ export interface ProvisionUserRequest {
   role: ProvisionUserRequestRole;
   /** Коды из каталога прав ERP (`ErpPermission`). Для `role: backoffice` складываются в роль сотрудника; для `role: admin` игнорируются (суперпользователь ERP имеет все права). Код вне каталога — 422. Карту «роль CRM → коды» ведёт CRM (`app/domain/erp_permissions.py`), идентификаторы ролей и прав от модели не приходят. */
   permissions: ErpPermission[];
+  /** Системные роли бэк-офиса ERP, выданные из CRM (FIX-63, Q-FIX50-1 (1)). Необязательное: поля нет — ERP не трогает системные роли сотрудника (старый CRM); пустой список — снимает все системные роли, ранее выданные из CRM. ERP добавляет только пришедшие и снимает только те системные роли, что сама выдала по `role_codes` раньше (пометка «выдана из CRM»); роли, назначенные в ERP вручную («Настройки → Команда»), и роль «CRM Sync: <e-mail>» (права по `permissions`) этим не затрагиваются. Для `role: admin` игнорируется (суперпользователь имеет все права), ранее выданные роли снимаются. Код вне `SystemRoleCode` — 422. Читатель терпим: старый ERP поле игнорирует. Перечень ролей и их названия ведёт CRM; идентификаторы ролей от модели не приходят. */
+  role_codes?: SystemRoleCode[];
   is_active?: boolean;
 }

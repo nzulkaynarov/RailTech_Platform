@@ -32,6 +32,7 @@ def build_checks(c: "Container") -> ExternalChecks:
         erp_url=erp_url,
         defaults=c.settings.litellm_models_path,
         erp_configured=erp_configured,
+        erp_facts=c.erp_connector.health_facts,
     )
     alerts = AlertSender(
         c.session_factory,
