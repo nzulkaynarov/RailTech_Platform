@@ -1,0 +1,1550 @@
+[
+  {
+    "screen": "sso-erp-from-crm",
+    "width": 1440,
+    "axe": true,
+    "rulesPassed": 41,
+    "overflowPx": 0,
+    "violations": [
+      {
+        "id": "heading-order",
+        "impact": "moderate",
+        "help": "Heading levels should only increase by one",
+        "nodes": 1,
+        "sample": ".flex-col.gap-2.flex > h3"
+      },
+      {
+        "id": "region",
+        "impact": "moderate",
+        "help": "All page content should be contained by landmarks",
+        "nodes": 1,
+        "sample": ".text-center"
+      }
+    ]
+  },
+  {
+    "screen": "sso-erp-from-crm",
+    "width": 390,
+    "axe": true,
+    "rulesPassed": 38,
+    "overflowPx": 0,
+    "violations": [
+      {
+        "id": "heading-order",
+        "impact": "moderate",
+        "help": "Heading levels should only increase by one",
+        "nodes": 1,
+        "sample": ".flex-col.gap-2.flex > h3"
+      },
+      {
+        "id": "region",
+        "impact": "moderate",
+        "help": "All page content should be contained by landmarks",
+        "nodes": 1,
+        "sample": ".text-center"
+      }
+    ]
+  },
+  {
+    "screen": "login",
+    "width": 1440,
+    "axe": true,
+    "rulesPassed": 39,
+    "overflowPx": 0,
+    "violations": []
+  },
+  {
+    "screen": "login",
+    "width": 390,
+    "axe": true,
+    "rulesPassed": 39,
+    "overflowPx": 0,
+    "violations": []
+  },
+  {
+    "screen": "new-client-validation",
+    "width": 1440,
+    "axe": true,
+    "rulesPassed": 39,
+    "overflowPx": 0,
+    "violations": []
+  },
+  {
+    "screen": "new-client-validation",
+    "width": 390,
+    "axe": true,
+    "rulesPassed": 39,
+    "overflowPx": 0,
+    "violations": []
+  },
+  {
+    "screen": "new-client-form",
+    "width": 1440,
+    "axe": true,
+    "rulesPassed": 39,
+    "overflowPx": 0,
+    "violations": []
+  },
+  {
+    "screen": "new-client-form",
+    "width": 390,
+    "axe": true,
+    "rulesPassed": 39,
+    "overflowPx": 0,
+    "violations": []
+  },
+  {
+    "screen": "new-client-sent",
+    "width": 1440,
+    "axe": true,
+    "rulesPassed": 34,
+    "overflowPx": 0,
+    "violations": []
+  },
+  {
+    "screen": "new-client-sent",
+    "width": 390,
+    "axe": true,
+    "rulesPassed": 34,
+    "overflowPx": 0,
+    "violations": []
+  },
+  {
+    "screen": "crm-lead-from-cabinet-form",
+    "width": 1440,
+    "axe": true,
+    "rulesPassed": 49,
+    "overflowPx": 0,
+    "violations": [
+      {
+        "id": "label-content-name-mismatch",
+        "impact": "serious",
+        "help": "Elements must have their visible text as part of their accessible name",
+        "nodes": 1,
+        "sample": ".ant-btn-text"
+      }
+    ]
+  },
+  {
+    "screen": "crm-lead-from-cabinet-form",
+    "width": 390,
+    "axe": true,
+    "rulesPassed": 43,
+    "overflowPx": 0,
+    "violations": [
+      {
+        "id": "label-content-name-mismatch",
+        "impact": "serious",
+        "help": "Elements must have their visible text as part of their accessible name",
+        "nodes": 2,
+        "sample": "button[aria-label=\"В бэк-офис (ERP)\"]"
+      }
+    ]
+  },
+  {
+    "screen": "crm-clients-after-handoff",
+    "width": 1440,
+    "axe": true,
+    "rulesPassed": 50,
+    "overflowPx": 0,
+    "violations": [
+      {
+        "id": "label-content-name-mismatch",
+        "impact": "serious",
+        "help": "Elements must have their visible text as part of their accessible name",
+        "nodes": 1,
+        "sample": ".ant-btn-text"
+      }
+    ]
+  },
+  {
+    "screen": "crm-clients-after-handoff",
+    "width": 390,
+    "axe": true,
+    "rulesPassed": 45,
+    "overflowPx": 0,
+    "violations": [
+      {
+        "id": "label-content-name-mismatch",
+        "impact": "serious",
+        "help": "Elements must have their visible text as part of their accessible name",
+        "nodes": 2,
+        "sample": "button[aria-label=\"В бэк-офис (ERP)\"]"
+      }
+    ]
+  },
+  {
+    "screen": "requests-first-login",
+    "width": 1440,
+    "axe": true,
+    "rulesPassed": 31,
+    "overflowPx": 0,
+    "violations": []
+  },
+  {
+    "screen": "requests-first-login",
+    "width": 390,
+    "axe": true,
+    "rulesPassed": 31,
+    "overflowPx": 0,
+    "violations": []
+  },
+  {
+    "screen": "crm-manual-lead-before-consent",
+    "width": 1440,
+    "axe": true,
+    "rulesPassed": 50,
+    "overflowPx": 0,
+    "violations": [
+      {
+        "id": "label-content-name-mismatch",
+        "impact": "serious",
+        "help": "Elements must have their visible text as part of their accessible name",
+        "nodes": 1,
+        "sample": ".ant-btn-text"
+      }
+    ]
+  },
+  {
+    "screen": "crm-manual-lead-before-consent",
+    "width": 390,
+    "axe": true,
+    "rulesPassed": 44,
+    "overflowPx": 0,
+    "violations": [
+      {
+        "id": "label-content-name-mismatch",
+        "impact": "serious",
+        "help": "Elements must have their visible text as part of their accessible name",
+        "nodes": 2,
+        "sample": "button[aria-label=\"В бэк-офис (ERP)\"]"
+      }
+    ]
+  },
+  {
+    "screen": "crm-consent-dialog",
+    "width": 1440,
+    "axe": true,
+    "rulesPassed": 51,
+    "overflowPx": 0,
+    "violations": [
+      {
+        "id": "label-content-name-mismatch",
+        "impact": "serious",
+        "help": "Elements must have their visible text as part of their accessible name",
+        "nodes": 1,
+        "sample": ".ant-btn-text"
+      }
+    ]
+  },
+  {
+    "screen": "crm-consent-dialog",
+    "width": 390,
+    "axe": true,
+    "rulesPassed": 45,
+    "overflowPx": 0,
+    "violations": [
+      {
+        "id": "label-content-name-mismatch",
+        "impact": "serious",
+        "help": "Elements must have their visible text as part of their accessible name",
+        "nodes": 2,
+        "sample": "button[aria-label=\"В бэк-офис (ERP)\"]"
+      }
+    ]
+  },
+  {
+    "screen": "crm-manual-lead-after-consent",
+    "width": 1440,
+    "axe": true,
+    "rulesPassed": 50,
+    "overflowPx": 0,
+    "violations": [
+      {
+        "id": "label-content-name-mismatch",
+        "impact": "serious",
+        "help": "Elements must have their visible text as part of their accessible name",
+        "nodes": 1,
+        "sample": ".ant-btn-text"
+      }
+    ]
+  },
+  {
+    "screen": "crm-manual-lead-after-consent",
+    "width": 390,
+    "axe": true,
+    "rulesPassed": 44,
+    "overflowPx": 0,
+    "violations": [
+      {
+        "id": "label-content-name-mismatch",
+        "impact": "serious",
+        "help": "Elements must have their visible text as part of their accessible name",
+        "nodes": 2,
+        "sample": "button[aria-label=\"В бэк-офис (ERP)\"]"
+      }
+    ]
+  },
+  {
+    "screen": "crm-manual-lead-after-handoff",
+    "width": 1440,
+    "axe": true,
+    "rulesPassed": 49,
+    "overflowPx": 0,
+    "violations": [
+      {
+        "id": "label-content-name-mismatch",
+        "impact": "serious",
+        "help": "Elements must have their visible text as part of their accessible name",
+        "nodes": 1,
+        "sample": ".ant-btn-text"
+      },
+      {
+        "id": "region",
+        "impact": "moderate",
+        "help": "All page content should be contained by landmarks",
+        "nodes": 1,
+        "sample": ".ant-notification-notice-close"
+      }
+    ]
+  },
+  {
+    "screen": "crm-manual-lead-after-handoff",
+    "width": 390,
+    "axe": true,
+    "rulesPassed": 43,
+    "overflowPx": 0,
+    "violations": [
+      {
+        "id": "label-content-name-mismatch",
+        "impact": "serious",
+        "help": "Elements must have their visible text as part of their accessible name",
+        "nodes": 2,
+        "sample": "button[aria-label=\"В бэк-офис (ERP)\"]"
+      }
+    ]
+  },
+  {
+    "screen": "crm-handoff-pending",
+    "width": 1440,
+    "axe": true,
+    "rulesPassed": 49,
+    "overflowPx": 0,
+    "violations": [
+      {
+        "id": "label-content-name-mismatch",
+        "impact": "serious",
+        "help": "Elements must have their visible text as part of their accessible name",
+        "nodes": 1,
+        "sample": ".ant-btn-text"
+      },
+      {
+        "id": "region",
+        "impact": "moderate",
+        "help": "All page content should be contained by landmarks",
+        "nodes": 1,
+        "sample": ".ant-notification-notice-close"
+      }
+    ]
+  },
+  {
+    "screen": "crm-handoff-pending",
+    "width": 390,
+    "axe": true,
+    "rulesPassed": 43,
+    "overflowPx": 0,
+    "violations": [
+      {
+        "id": "label-content-name-mismatch",
+        "impact": "serious",
+        "help": "Elements must have their visible text as part of their accessible name",
+        "nodes": 2,
+        "sample": "button[aria-label=\"В бэк-офис (ERP)\"]"
+      }
+    ]
+  },
+  {
+    "screen": "crm-handoff-inn-conflict",
+    "width": 1440,
+    "axe": true,
+    "rulesPassed": 49,
+    "overflowPx": 0,
+    "violations": [
+      {
+        "id": "label-content-name-mismatch",
+        "impact": "serious",
+        "help": "Elements must have their visible text as part of their accessible name",
+        "nodes": 1,
+        "sample": ".ant-btn-text"
+      }
+    ]
+  },
+  {
+    "screen": "crm-handoff-inn-conflict",
+    "width": 390,
+    "axe": true,
+    "rulesPassed": 43,
+    "overflowPx": 0,
+    "violations": [
+      {
+        "id": "label-content-name-mismatch",
+        "impact": "serious",
+        "help": "Elements must have their visible text as part of their accessible name",
+        "nodes": 2,
+        "sample": "button[aria-label=\"В бэк-офис (ERP)\"]"
+      }
+    ]
+  },
+  {
+    "screen": "requests-action-required",
+    "width": 1440,
+    "axe": true,
+    "rulesPassed": 35,
+    "overflowPx": 0,
+    "violations": []
+  },
+  {
+    "screen": "requests-action-required",
+    "width": 390,
+    "axe": true,
+    "rulesPassed": 35,
+    "overflowPx": 0,
+    "violations": []
+  },
+  {
+    "screen": "quotes-list",
+    "width": 1440,
+    "axe": true,
+    "rulesPassed": 31,
+    "overflowPx": 0,
+    "violations": []
+  },
+  {
+    "screen": "quotes-list",
+    "width": 390,
+    "axe": true,
+    "rulesPassed": 31,
+    "overflowPx": 0,
+    "violations": []
+  },
+  {
+    "screen": "quote-detail",
+    "width": 1440,
+    "axe": true,
+    "rulesPassed": 43,
+    "overflowPx": 0,
+    "violations": []
+  },
+  {
+    "screen": "quote-detail",
+    "width": 390,
+    "axe": true,
+    "rulesPassed": 40,
+    "overflowPx": 0,
+    "violations": []
+  },
+  {
+    "screen": "quote-accept-dialog-request-code",
+    "width": 1440,
+    "axe": true,
+    "rulesPassed": 33,
+    "overflowPx": 0,
+    "violations": []
+  },
+  {
+    "screen": "quote-accept-dialog-request-code",
+    "width": 390,
+    "axe": true,
+    "rulesPassed": 33,
+    "overflowPx": 0,
+    "violations": []
+  },
+  {
+    "screen": "quote-accept-dialog-wrong-code",
+    "width": 1440,
+    "axe": true,
+    "rulesPassed": 37,
+    "overflowPx": 0,
+    "violations": []
+  },
+  {
+    "screen": "quote-accept-dialog-wrong-code",
+    "width": 390,
+    "axe": true,
+    "rulesPassed": 37,
+    "overflowPx": 0,
+    "violations": []
+  },
+  {
+    "screen": "quote-accepted",
+    "width": 1440,
+    "axe": true,
+    "rulesPassed": 43,
+    "overflowPx": 0,
+    "violations": []
+  },
+  {
+    "screen": "quote-accepted",
+    "width": 390,
+    "axe": true,
+    "rulesPassed": 40,
+    "overflowPx": 0,
+    "violations": []
+  },
+  {
+    "screen": "requests-action-required-contract",
+    "width": 1440,
+    "axe": true,
+    "rulesPassed": 35,
+    "overflowPx": 0,
+    "violations": []
+  },
+  {
+    "screen": "requests-action-required-contract",
+    "width": 390,
+    "axe": true,
+    "rulesPassed": 35,
+    "overflowPx": 0,
+    "violations": []
+  },
+  {
+    "screen": "contracts-awaiting-signature",
+    "width": 1440,
+    "axe": true,
+    "rulesPassed": 38,
+    "overflowPx": 0,
+    "violations": []
+  },
+  {
+    "screen": "contracts-awaiting-signature",
+    "width": 390,
+    "axe": true,
+    "rulesPassed": 36,
+    "overflowPx": 0,
+    "violations": []
+  },
+  {
+    "screen": "contract-sign-dialog",
+    "width": 1440,
+    "axe": true,
+    "rulesPassed": 35,
+    "overflowPx": 0,
+    "violations": []
+  },
+  {
+    "screen": "contract-sign-dialog",
+    "width": 390,
+    "axe": true,
+    "rulesPassed": 36,
+    "overflowPx": 0,
+    "violations": []
+  },
+  {
+    "screen": "contracts-signed-by-client",
+    "width": 1440,
+    "axe": true,
+    "rulesPassed": 38,
+    "overflowPx": 0,
+    "violations": []
+  },
+  {
+    "screen": "contracts-signed-by-client",
+    "width": 390,
+    "axe": true,
+    "rulesPassed": 36,
+    "overflowPx": 0,
+    "violations": []
+  },
+  {
+    "screen": "contracts-signed-both",
+    "width": 1440,
+    "axe": true,
+    "rulesPassed": 38,
+    "overflowPx": 0,
+    "violations": []
+  },
+  {
+    "screen": "contracts-signed-both",
+    "width": 390,
+    "axe": true,
+    "rulesPassed": 36,
+    "overflowPx": 0,
+    "violations": []
+  },
+  {
+    "screen": "invoices",
+    "width": 1440,
+    "axe": true,
+    "rulesPassed": 38,
+    "overflowPx": 0,
+    "violations": []
+  },
+  {
+    "screen": "invoices",
+    "width": 390,
+    "axe": true,
+    "rulesPassed": 36,
+    "overflowPx": 0,
+    "violations": []
+  },
+  {
+    "screen": "deliveries-shipped",
+    "width": 1440,
+    "axe": true,
+    "rulesPassed": 27,
+    "overflowPx": 0,
+    "violations": []
+  },
+  {
+    "screen": "deliveries-shipped",
+    "width": 390,
+    "axe": true,
+    "rulesPassed": 31,
+    "overflowPx": 0,
+    "violations": []
+  },
+  {
+    "screen": "deliveries-delivered",
+    "width": 1440,
+    "axe": true,
+    "rulesPassed": 30,
+    "overflowPx": 0,
+    "violations": []
+  },
+  {
+    "screen": "deliveries-delivered",
+    "width": 390,
+    "axe": true,
+    "rulesPassed": 32,
+    "overflowPx": 0,
+    "violations": []
+  },
+  {
+    "screen": "delivery-dispute-dialog",
+    "width": 1440,
+    "axe": true,
+    "rulesPassed": 33,
+    "overflowPx": 0,
+    "violations": []
+  },
+  {
+    "screen": "delivery-dispute-dialog",
+    "width": 390,
+    "axe": true,
+    "rulesPassed": 33,
+    "overflowPx": 0,
+    "violations": []
+  },
+  {
+    "screen": "deliveries-accepted-and-disputed",
+    "width": 1440,
+    "axe": true,
+    "rulesPassed": 27,
+    "overflowPx": 0,
+    "violations": []
+  },
+  {
+    "screen": "deliveries-accepted-and-disputed",
+    "width": 390,
+    "axe": true,
+    "rulesPassed": 31,
+    "overflowPx": 0,
+    "violations": []
+  },
+  {
+    "screen": "requests-action-required-act",
+    "width": 1440,
+    "axe": true,
+    "rulesPassed": 35,
+    "overflowPx": 0,
+    "violations": []
+  },
+  {
+    "screen": "requests-action-required-act",
+    "width": 390,
+    "axe": true,
+    "rulesPassed": 35,
+    "overflowPx": 0,
+    "violations": []
+  },
+  {
+    "screen": "acts-awaiting",
+    "width": 1440,
+    "axe": true,
+    "rulesPassed": 38,
+    "overflowPx": 0,
+    "violations": []
+  },
+  {
+    "screen": "acts-awaiting",
+    "width": 390,
+    "axe": true,
+    "rulesPassed": 36,
+    "overflowPx": 0,
+    "violations": []
+  },
+  {
+    "screen": "act-accept-dialog-with-scan",
+    "width": 1440,
+    "axe": true,
+    "rulesPassed": 38,
+    "overflowPx": 0,
+    "violations": []
+  },
+  {
+    "screen": "act-accept-dialog-with-scan",
+    "width": 390,
+    "axe": true,
+    "rulesPassed": 39,
+    "overflowPx": 0,
+    "violations": []
+  },
+  {
+    "screen": "acts-accepted-with-scan",
+    "width": 1440,
+    "axe": true,
+    "rulesPassed": 38,
+    "overflowPx": 0,
+    "violations": []
+  },
+  {
+    "screen": "acts-accepted-with-scan",
+    "width": 390,
+    "axe": true,
+    "rulesPassed": 36,
+    "overflowPx": 0,
+    "violations": []
+  },
+  {
+    "screen": "deal-full-path",
+    "width": 1440,
+    "axe": true,
+    "rulesPassed": 34,
+    "overflowPx": 0,
+    "violations": []
+  },
+  {
+    "screen": "deal-full-path",
+    "width": 390,
+    "axe": true,
+    "rulesPassed": 36,
+    "overflowPx": 0,
+    "violations": []
+  },
+  {
+    "screen": "documents",
+    "width": 1440,
+    "axe": true,
+    "rulesPassed": 41,
+    "overflowPx": 0,
+    "violations": []
+  },
+  {
+    "screen": "documents",
+    "width": 390,
+    "axe": true,
+    "rulesPassed": 39,
+    "overflowPx": 0,
+    "violations": []
+  },
+  {
+    "screen": "documents-filter-invoices",
+    "width": 1440,
+    "axe": true,
+    "rulesPassed": 41,
+    "overflowPx": 0,
+    "violations": []
+  },
+  {
+    "screen": "documents-filter-invoices",
+    "width": 390,
+    "axe": true,
+    "rulesPassed": 39,
+    "overflowPx": 0,
+    "violations": []
+  },
+  {
+    "screen": "documents-search",
+    "width": 1440,
+    "axe": true,
+    "rulesPassed": 41,
+    "overflowPx": 0,
+    "violations": []
+  },
+  {
+    "screen": "documents-search",
+    "width": 390,
+    "axe": true,
+    "rulesPassed": 39,
+    "overflowPx": 0,
+    "violations": []
+  },
+  {
+    "screen": "documents-search-empty",
+    "width": 1440,
+    "axe": true,
+    "rulesPassed": 36,
+    "overflowPx": 0,
+    "violations": []
+  },
+  {
+    "screen": "documents-search-empty",
+    "width": 390,
+    "axe": true,
+    "rulesPassed": 38,
+    "overflowPx": 0,
+    "violations": []
+  },
+  {
+    "screen": "documents-waybill",
+    "width": 1440,
+    "axe": true,
+    "rulesPassed": 41,
+    "overflowPx": 0,
+    "violations": []
+  },
+  {
+    "screen": "documents-waybill",
+    "width": 390,
+    "axe": true,
+    "rulesPassed": 39,
+    "overflowPx": 0,
+    "violations": []
+  },
+  {
+    "screen": "catalog-item-with-photo",
+    "width": 1440,
+    "axe": true,
+    "rulesPassed": 31,
+    "overflowPx": 0,
+    "violations": []
+  },
+  {
+    "screen": "catalog-item-with-photo",
+    "width": 390,
+    "axe": true,
+    "rulesPassed": 33,
+    "overflowPx": 0,
+    "violations": []
+  },
+  {
+    "screen": "catalog",
+    "width": 1440,
+    "axe": true,
+    "rulesPassed": 38,
+    "overflowPx": 0,
+    "violations": []
+  },
+  {
+    "screen": "catalog",
+    "width": 390,
+    "axe": true,
+    "rulesPassed": 40,
+    "overflowPx": 0,
+    "violations": []
+  },
+  {
+    "screen": "request-new-draft-restored",
+    "width": 1440,
+    "axe": true,
+    "rulesPassed": 33,
+    "overflowPx": 0,
+    "violations": []
+  },
+  {
+    "screen": "request-new-draft-restored",
+    "width": 390,
+    "axe": true,
+    "rulesPassed": 35,
+    "overflowPx": 0,
+    "violations": []
+  },
+  {
+    "screen": "request-new-from-catalog",
+    "width": 1440,
+    "axe": true,
+    "rulesPassed": 33,
+    "overflowPx": 0,
+    "violations": []
+  },
+  {
+    "screen": "request-new-from-catalog",
+    "width": 390,
+    "axe": true,
+    "rulesPassed": 35,
+    "overflowPx": 0,
+    "violations": []
+  },
+  {
+    "screen": "request-detail-new",
+    "width": 1440,
+    "axe": true,
+    "rulesPassed": 30,
+    "overflowPx": 0,
+    "violations": []
+  },
+  {
+    "screen": "request-detail-new",
+    "width": 390,
+    "axe": true,
+    "rulesPassed": 34,
+    "overflowPx": 0,
+    "violations": []
+  },
+  {
+    "screen": "quote-reject-dialog",
+    "width": 1440,
+    "axe": true,
+    "rulesPassed": 36,
+    "overflowPx": 0,
+    "violations": []
+  },
+  {
+    "screen": "quote-reject-dialog",
+    "width": 390,
+    "axe": true,
+    "rulesPassed": 36,
+    "overflowPx": 0,
+    "violations": []
+  },
+  {
+    "screen": "quote-rejected",
+    "width": 1440,
+    "axe": true,
+    "rulesPassed": 43,
+    "overflowPx": 0,
+    "violations": []
+  },
+  {
+    "screen": "quote-rejected",
+    "width": 390,
+    "axe": true,
+    "rulesPassed": 40,
+    "overflowPx": 0,
+    "violations": []
+  },
+  {
+    "screen": "act-return-dialog",
+    "width": 1440,
+    "axe": true,
+    "rulesPassed": 38,
+    "overflowPx": 0,
+    "violations": []
+  },
+  {
+    "screen": "act-return-dialog",
+    "width": 390,
+    "axe": true,
+    "rulesPassed": 39,
+    "overflowPx": 0,
+    "violations": []
+  },
+  {
+    "screen": "acts-returned",
+    "width": 1440,
+    "axe": true,
+    "rulesPassed": 38,
+    "overflowPx": 0,
+    "violations": []
+  },
+  {
+    "screen": "acts-returned",
+    "width": 390,
+    "axe": true,
+    "rulesPassed": 36,
+    "overflowPx": 0,
+    "violations": []
+  },
+  {
+    "screen": "company",
+    "width": 1440,
+    "axe": true,
+    "rulesPassed": 31,
+    "overflowPx": 0,
+    "violations": []
+  },
+  {
+    "screen": "company",
+    "width": 390,
+    "axe": true,
+    "rulesPassed": 33,
+    "overflowPx": 0,
+    "violations": []
+  },
+  {
+    "screen": "company-edit",
+    "width": 1440,
+    "axe": true,
+    "rulesPassed": 37,
+    "overflowPx": 0,
+    "violations": []
+  },
+  {
+    "screen": "company-edit",
+    "width": 390,
+    "axe": true,
+    "rulesPassed": 39,
+    "overflowPx": 0,
+    "violations": []
+  },
+  {
+    "screen": "team-invite-dialog",
+    "width": 1440,
+    "axe": true,
+    "rulesPassed": 34,
+    "overflowPx": 0,
+    "violations": []
+  },
+  {
+    "screen": "team-invite-dialog",
+    "width": 390,
+    "axe": true,
+    "rulesPassed": 34,
+    "overflowPx": 0,
+    "violations": []
+  },
+  {
+    "screen": "team-invited",
+    "width": 1440,
+    "axe": true,
+    "rulesPassed": 31,
+    "overflowPx": 0,
+    "violations": []
+  },
+  {
+    "screen": "team-invited",
+    "width": 390,
+    "axe": true,
+    "rulesPassed": 33,
+    "overflowPx": 0,
+    "violations": []
+  },
+  {
+    "screen": "profile-uz",
+    "width": 1440,
+    "axe": true,
+    "rulesPassed": 36,
+    "overflowPx": 0,
+    "violations": []
+  },
+  {
+    "screen": "profile-uz",
+    "width": 390,
+    "axe": true,
+    "rulesPassed": 38,
+    "overflowPx": 0,
+    "violations": []
+  },
+  {
+    "screen": "requests-uz",
+    "width": 1440,
+    "axe": true,
+    "rulesPassed": 31,
+    "overflowPx": 0,
+    "violations": []
+  },
+  {
+    "screen": "requests-uz",
+    "width": 390,
+    "axe": true,
+    "rulesPassed": 31,
+    "overflowPx": 0,
+    "violations": []
+  },
+  {
+    "screen": "invoices-uz",
+    "width": 1440,
+    "axe": true,
+    "rulesPassed": 38,
+    "overflowPx": 0,
+    "violations": []
+  },
+  {
+    "screen": "invoices-uz",
+    "width": 390,
+    "axe": true,
+    "rulesPassed": 36,
+    "overflowPx": 0,
+    "violations": []
+  },
+  {
+    "screen": "documents-search-empty-uz",
+    "width": 1440,
+    "axe": true,
+    "rulesPassed": 36,
+    "overflowPx": 0,
+    "violations": []
+  },
+  {
+    "screen": "documents-search-empty-uz",
+    "width": 390,
+    "axe": true,
+    "rulesPassed": 38,
+    "overflowPx": 0,
+    "violations": []
+  },
+  {
+    "screen": "profile-en",
+    "width": 1440,
+    "axe": true,
+    "rulesPassed": 36,
+    "overflowPx": 0,
+    "violations": []
+  },
+  {
+    "screen": "profile-en",
+    "width": 390,
+    "axe": true,
+    "rulesPassed": 38,
+    "overflowPx": 0,
+    "violations": []
+  },
+  {
+    "screen": "requests-en",
+    "width": 1440,
+    "axe": true,
+    "rulesPassed": 31,
+    "overflowPx": 0,
+    "violations": []
+  },
+  {
+    "screen": "requests-en",
+    "width": 390,
+    "axe": true,
+    "rulesPassed": 31,
+    "overflowPx": 0,
+    "violations": []
+  },
+  {
+    "screen": "profile-ru",
+    "width": 1440,
+    "axe": true,
+    "rulesPassed": 36,
+    "overflowPx": 0,
+    "violations": []
+  },
+  {
+    "screen": "profile-ru",
+    "width": 390,
+    "axe": true,
+    "rulesPassed": 38,
+    "overflowPx": 0,
+    "violations": []
+  },
+  {
+    "screen": "requests-ru",
+    "width": 1440,
+    "axe": true,
+    "rulesPassed": 31,
+    "overflowPx": 0,
+    "violations": []
+  },
+  {
+    "screen": "requests-ru",
+    "width": 390,
+    "axe": true,
+    "rulesPassed": 31,
+    "overflowPx": 0,
+    "violations": []
+  },
+  {
+    "screen": "requests-viewer-only",
+    "width": 1440,
+    "axe": true,
+    "rulesPassed": 35,
+    "overflowPx": 0,
+    "violations": []
+  },
+  {
+    "screen": "requests-viewer-only",
+    "width": 390,
+    "axe": true,
+    "rulesPassed": 35,
+    "overflowPx": 0,
+    "violations": []
+  },
+  {
+    "screen": "login-sent",
+    "width": 1440,
+    "axe": true,
+    "rulesPassed": 34,
+    "overflowPx": 0,
+    "violations": []
+  },
+  {
+    "screen": "login-sent",
+    "width": 390,
+    "axe": true,
+    "rulesPassed": 34,
+    "overflowPx": 0,
+    "violations": []
+  },
+  {
+    "screen": "magic-link-used",
+    "width": 1440,
+    "axe": true,
+    "rulesPassed": 24,
+    "overflowPx": 0,
+    "violations": []
+  },
+  {
+    "screen": "magic-link-used",
+    "width": 390,
+    "axe": true,
+    "rulesPassed": 24,
+    "overflowPx": 0,
+    "violations": []
+  },
+  {
+    "screen": "crm-lead-after-handoff",
+    "width": 1440,
+    "axe": true,
+    "rulesPassed": 49,
+    "overflowPx": 0,
+    "violations": [
+      {
+        "id": "label-content-name-mismatch",
+        "impact": "serious",
+        "help": "Elements must have their visible text as part of their accessible name",
+        "nodes": 1,
+        "sample": ".ant-btn-text"
+      }
+    ]
+  },
+  {
+    "screen": "crm-lead-after-handoff",
+    "width": 390,
+    "axe": true,
+    "rulesPassed": 43,
+    "overflowPx": 0,
+    "violations": [
+      {
+        "id": "label-content-name-mismatch",
+        "impact": "serious",
+        "help": "Elements must have their visible text as part of their accessible name",
+        "nodes": 2,
+        "sample": "button[aria-label=\"В бэк-офис (ERP)\"]"
+      }
+    ]
+  },
+  {
+    "screen": "crm-client-card",
+    "width": 1440,
+    "axe": true,
+    "rulesPassed": 49,
+    "overflowPx": 0,
+    "violations": [
+      {
+        "id": "label-content-name-mismatch",
+        "impact": "serious",
+        "help": "Elements must have their visible text as part of their accessible name",
+        "nodes": 1,
+        "sample": ".ant-space-item:nth-child(4) > .ant-btn-text.ant-btn-variant-text.ant-dropdown-trigger"
+      }
+    ]
+  },
+  {
+    "screen": "crm-client-card",
+    "width": 390,
+    "axe": true,
+    "rulesPassed": 42,
+    "overflowPx": 0,
+    "violations": [
+      {
+        "id": "label-content-name-mismatch",
+        "impact": "serious",
+        "help": "Elements must have their visible text as part of their accessible name",
+        "nodes": 2,
+        "sample": "button[aria-label=\"В бэк-офис (ERP)\"]"
+      }
+    ]
+  },
+  {
+    "screen": "crm-client-deals",
+    "width": 1440,
+    "axe": true,
+    "rulesPassed": 50,
+    "overflowPx": 0,
+    "violations": [
+      {
+        "id": "label-content-name-mismatch",
+        "impact": "serious",
+        "help": "Elements must have their visible text as part of their accessible name",
+        "nodes": 1,
+        "sample": ".ant-space-item:nth-child(4) > .ant-btn-text.ant-btn-variant-text.ant-dropdown-trigger"
+      }
+    ]
+  },
+  {
+    "screen": "crm-client-deals",
+    "width": 390,
+    "axe": true,
+    "rulesPassed": 43,
+    "overflowPx": 0,
+    "violations": [
+      {
+        "id": "label-content-name-mismatch",
+        "impact": "serious",
+        "help": "Elements must have their visible text as part of their accessible name",
+        "nodes": 2,
+        "sample": "button[aria-label=\"В бэк-офис (ERP)\"]"
+      }
+    ]
+  },
+  {
+    "screen": "crm-client-documents",
+    "width": 1440,
+    "axe": true,
+    "rulesPassed": 50,
+    "overflowPx": 0,
+    "violations": [
+      {
+        "id": "label-content-name-mismatch",
+        "impact": "serious",
+        "help": "Elements must have their visible text as part of their accessible name",
+        "nodes": 1,
+        "sample": ".ant-space-item:nth-child(4) > .ant-btn-text.ant-btn-variant-text.ant-dropdown-trigger"
+      }
+    ]
+  },
+  {
+    "screen": "crm-client-documents",
+    "width": 390,
+    "axe": true,
+    "rulesPassed": 44,
+    "overflowPx": 0,
+    "violations": [
+      {
+        "id": "label-content-name-mismatch",
+        "impact": "serious",
+        "help": "Elements must have their visible text as part of their accessible name",
+        "nodes": 2,
+        "sample": "button[aria-label=\"В бэк-офис (ERP)\"]"
+      }
+    ]
+  },
+  {
+    "screen": "crm-deals",
+    "width": 1440,
+    "axe": true,
+    "rulesPassed": 49,
+    "overflowPx": 0,
+    "violations": [
+      {
+        "id": "label-content-name-mismatch",
+        "impact": "serious",
+        "help": "Elements must have their visible text as part of their accessible name",
+        "nodes": 1,
+        "sample": ".ant-space-item:nth-child(4) > .ant-btn-text.ant-btn-variant-text.ant-dropdown-trigger"
+      }
+    ]
+  },
+  {
+    "screen": "crm-deals",
+    "width": 390,
+    "axe": true,
+    "rulesPassed": 44,
+    "overflowPx": 0,
+    "violations": [
+      {
+        "id": "label-content-name-mismatch",
+        "impact": "serious",
+        "help": "Elements must have their visible text as part of their accessible name",
+        "nodes": 2,
+        "sample": "button[aria-label=\"В бэк-офис (ERP)\"]"
+      }
+    ]
+  },
+  {
+    "screen": "crm-deal-erp-owned",
+    "width": 1440,
+    "axe": true,
+    "rulesPassed": 51,
+    "overflowPx": 8,
+    "violations": [
+      {
+        "id": "label-content-name-mismatch",
+        "impact": "serious",
+        "help": "Elements must have their visible text as part of their accessible name",
+        "nodes": 1,
+        "sample": ".ant-space-item:nth-child(4) > .ant-btn-text.ant-btn-variant-text.ant-dropdown-trigger"
+      }
+    ]
+  },
+  {
+    "screen": "crm-deal-erp-owned",
+    "width": 390,
+    "axe": true,
+    "rulesPassed": 46,
+    "overflowPx": 8,
+    "violations": [
+      {
+        "id": "label-content-name-mismatch",
+        "impact": "serious",
+        "help": "Elements must have their visible text as part of their accessible name",
+        "nodes": 2,
+        "sample": "button[aria-label=\"В бэк-офис (ERP)\"]"
+      }
+    ]
+  },
+  {
+    "screen": "crm-external-services",
+    "width": 1440,
+    "axe": true,
+    "rulesPassed": 46,
+    "overflowPx": 0,
+    "violations": [
+      {
+        "id": "label-content-name-mismatch",
+        "impact": "serious",
+        "help": "Elements must have their visible text as part of their accessible name",
+        "nodes": 1,
+        "sample": ".ant-btn-text"
+      }
+    ]
+  },
+  {
+    "screen": "crm-external-services",
+    "width": 390,
+    "axe": true,
+    "rulesPassed": 40,
+    "overflowPx": 0,
+    "violations": [
+      {
+        "id": "label-content-name-mismatch",
+        "impact": "serious",
+        "help": "Elements must have their visible text as part of their accessible name",
+        "nodes": 2,
+        "sample": "button[aria-label=\"В бэк-офис (ERP)\"]"
+      }
+    ]
+  },
+  {
+    "screen": "crm-external-services-erp-events",
+    "width": 1440,
+    "axe": true,
+    "rulesPassed": 51,
+    "overflowPx": 0,
+    "violations": [
+      {
+        "id": "label-content-name-mismatch",
+        "impact": "serious",
+        "help": "Elements must have their visible text as part of their accessible name",
+        "nodes": 1,
+        "sample": ".ant-btn-text"
+      }
+    ]
+  },
+  {
+    "screen": "crm-external-services-erp-events",
+    "width": 390,
+    "axe": true,
+    "rulesPassed": 42,
+    "overflowPx": 0,
+    "violations": [
+      {
+        "id": "label-content-name-mismatch",
+        "impact": "serious",
+        "help": "Elements must have their visible text as part of their accessible name",
+        "nodes": 2,
+        "sample": "button[aria-label=\"В бэк-офис (ERP)\"]"
+      }
+    ]
+  },
+  {
+    "screen": "crm-integrations-erp",
+    "width": 1440,
+    "axe": true,
+    "rulesPassed": 48,
+    "overflowPx": 0,
+    "violations": [
+      {
+        "id": "label-content-name-mismatch",
+        "impact": "serious",
+        "help": "Elements must have their visible text as part of their accessible name",
+        "nodes": 1,
+        "sample": ".ant-btn-text"
+      }
+    ]
+  },
+  {
+    "screen": "crm-integrations-erp",
+    "width": 390,
+    "axe": true,
+    "rulesPassed": 42,
+    "overflowPx": 0,
+    "violations": [
+      {
+        "id": "label-content-name-mismatch",
+        "impact": "serious",
+        "help": "Elements must have their visible text as part of their accessible name",
+        "nodes": 2,
+        "sample": "button[aria-label=\"В бэк-офис (ERP)\"]"
+      }
+    ]
+  },
+  {
+    "screen": "crm-settings-company",
+    "width": 1440,
+    "axe": true,
+    "rulesPassed": 44,
+    "overflowPx": 0,
+    "violations": [
+      {
+        "id": "label-content-name-mismatch",
+        "impact": "serious",
+        "help": "Elements must have their visible text as part of their accessible name",
+        "nodes": 1,
+        "sample": ".ant-btn-text"
+      }
+    ]
+  },
+  {
+    "screen": "crm-settings-company",
+    "width": 390,
+    "axe": true,
+    "rulesPassed": 38,
+    "overflowPx": 0,
+    "violations": [
+      {
+        "id": "label-content-name-mismatch",
+        "impact": "serious",
+        "help": "Elements must have their visible text as part of their accessible name",
+        "nodes": 2,
+        "sample": ".ant-btn-default"
+      }
+    ]
+  },
+  {
+    "screen": "crm-settings-bot-texts",
+    "width": 1440,
+    "axe": true,
+    "rulesPassed": 49,
+    "overflowPx": 0,
+    "violations": [
+      {
+        "id": "label-content-name-mismatch",
+        "impact": "serious",
+        "help": "Elements must have their visible text as part of their accessible name",
+        "nodes": 1,
+        "sample": ".ant-btn-text"
+      }
+    ]
+  },
+  {
+    "screen": "crm-settings-bot-texts",
+    "width": 390,
+    "axe": true,
+    "rulesPassed": 45,
+    "overflowPx": 0,
+    "violations": [
+      {
+        "id": "label-content-name-mismatch",
+        "impact": "serious",
+        "help": "Elements must have their visible text as part of their accessible name",
+        "nodes": 2,
+        "sample": "button[aria-label=\"В бэк-офис (ERP)\"]"
+      }
+    ]
+  }
+]

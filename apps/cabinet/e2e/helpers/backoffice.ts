@@ -21,41 +21,47 @@ export async function pickProducts(erp: ErpApi, names: string[]): Promise<number
   });
 }
 
-async function approveAllAndSend(erp: ErpApi, quoteId: number): Promise<void> {
-  await erp.ok('POST', `crm/quotes/${quoteId}/submit-for-review/`);
+/**
+ * Согласование и отправка. Автор КП не закрывает шаги проверяющих своего КП (SELF_APPROVAL_NOT_ALLOWED, FIX-55 D-02),
+ * поэтому КП ведёт один сотрудник (`author` — «FIX-51 Менеджер»), а шаги закрывает администратор (`approver`,
+ * суперпользователь: закрывает за других согласующих, в журнале — «от имени», D-11).
+ */
+async function approveAllAndSend(author: ErpApi, approver: ErpApi, quoteId: number): Promise<void> {
+  await author.ok('POST', `crm/quotes/${quoteId}/submit-for-review/`);
   for (let round = 0; round < 4; round += 1) {
-    const { json } = await erp.ok('GET', `crm/quotes/${quoteId}/`);
+    const { json } = await approver.ok('GET', `crm/quotes/${quoteId}/`);
     if (json.status_code === 'READY_TO_SEND') break;
     const steps = (json.approval_steps as { id: number; status: string; can_act: boolean }[]).filter((s) => s.status === 'PENDING' && s.can_act);
-    expect(steps.length, 'есть шаг согласования, который сотрудник FIX-51 может выполнить').toBeGreaterThan(0);
+    expect(steps.length, 'есть шаг согласования, который администратор FIX-51b может выполнить').toBeGreaterThan(0);
     for (const step of steps) {
-      await erp.ok('POST', `crm/quotes/${quoteId}/approval-act/`, { step_id: step.id, decision: 'APPROVE', comment: 'FIX-51: подготовка данных прогона' });
+      await approver.ok('POST', `crm/quotes/${quoteId}/approval-act/`, { step_id: step.id, decision: 'APPROVE', comment: 'FIX-51b: подготовка данных прогона' });
     }
   }
-  await erp.ok('POST', `crm/quotes/${quoteId}/send-to-client/`, {});
+  await author.ok('POST', `crm/quotes/${quoteId}/send-to-client/`, {});
 }
 
 /** Заявка → расчёт → КП со строками → согласование → отправка клиенту. Возвращает id КП. */
-export async function buildAndSendQuote(erp: ErpApi, dealId: number, lines: QuoteLine[]): Promise<number> {
-  await erp.ok('POST', `crm/deals/${dealId}/claim/`);
-  await erp.ok('POST', `crm/deals/${dealId}/change-stage/`, { stage_code: 'SOURCING' });
-  await erp.ok('POST', `crm/deals/${dealId}/change-stage/`, { stage_code: 'CALCULATING' });
-  const quote = await erp.ok('POST', 'crm/quotes/', { deal: dealId });
+export async function buildAndSendQuote(author: ErpApi, approver: ErpApi, dealId: number, lines: QuoteLine[]): Promise<number> {
+  const claim = await author.call('POST', `crm/deals/${dealId}/claim/`);
+  if (claim.status >= 300 && claim.json?.detail !== 'DEAL_ALREADY_CLAIMED') throw new Error(`claim: ${claim.status} ${JSON.stringify(claim.json).slice(0, 200)}`);
+  await author.ok('POST', `crm/deals/${dealId}/change-stage/`, { stage_code: 'SOURCING' });
+  await author.ok('POST', `crm/deals/${dealId}/change-stage/`, { stage_code: 'CALCULATING' });
+  const quote = await author.ok('POST', 'crm/quotes/', { deal: dealId });
   const quoteId = quote.json.id as number;
   for (const line of lines) {
-    const item = await erp.ok('POST', 'crm/quote-items/', { quote: quoteId, product: line.product, quantity: line.quantity, margin_percent: '25.00' });
-    await erp.ok('PATCH', `crm/quote-items/${item.json.id}/`, { frozen_base_price: line.price, frozen_currency: 'UZS', lead_time_days: 14, unit: 'шт' });
+    const item = await author.ok('POST', 'crm/quote-items/', { quote: quoteId, product: line.product, quantity: line.quantity, margin_percent: '25.00' });
+    await author.ok('PATCH', `crm/quote-items/${item.json.id}/`, { frozen_base_price: line.price, frozen_currency: 'UZS', lead_time_days: 14, unit: 'шт' });
   }
-  await erp.ok('PATCH', `crm/quotes/${quoteId}/`, { delivery_lead_time_days: 14 });
-  await approveAllAndSend(erp, quoteId);
+  await author.ok('PATCH', `crm/quotes/${quoteId}/`, { delivery_lead_time_days: 14 });
+  await approveAllAndSend(author, approver, quoteId);
   return quoteId;
 }
 
 /** Новая версия КП после отказа клиента (копия строк) → согласование → отправка. Возвращает id новой версии. */
-export async function resendQuoteVersion(erp: ErpApi, quoteId: number): Promise<number> {
-  const copy = await erp.ok('POST', `crm/quotes/${quoteId}/duplicate/`, {});
+export async function resendQuoteVersion(author: ErpApi, approver: ErpApi, quoteId: number): Promise<number> {
+  const copy = await author.ok('POST', `crm/quotes/${quoteId}/duplicate/`, {});
   const next = copy.json.id as number;
-  await approveAllAndSend(erp, next);
+  await approveAllAndSend(author, approver, next);
   return next;
 }
 
@@ -94,11 +100,11 @@ export async function signAndInvoice(erp: ErpApi, dealId: number, contractId: nu
 }
 
 export async function recordPayment(erp: ErpApi, invoiceId: number, amount: string): Promise<void> {
-  await erp.ok('POST', `crm/invoices/${invoiceId}/record-payment/`, { amount, paid_at: new Date().toISOString().slice(0, 10), method: 'BANK_TRANSFER', reference: 'FIX-51 аванс' });
+  await erp.ok('POST', `crm/invoices/${invoiceId}/record-payment/`, { amount, paid_at: new Date().toISOString().slice(0, 10), method: 'BANK_TRANSFER', reference: 'FIX-51b аванс' });
 }
 
 export async function shipAndDeliver(erp: ErpApi, dealId: number, step: 'SHIPPED' | 'DELIVERED'): Promise<void> {
-  const extra = step === 'SHIPPED' ? { tracking_number: 'FIX51-TRK-001', carrier: 'FIX-51 Логистика', expected_delivery_date: '2026-11-05' } : {};
+  const extra = step === 'SHIPPED' ? { tracking_number: 'FIX51B-TRK-001', carrier: 'FIX-51b Логистика', expected_delivery_date: '2026-11-05' } : {};
   await erp.ok('POST', 'crm/fulfillments/update-status/', { deal_id: dealId, status: step, ...extra });
 }
 
