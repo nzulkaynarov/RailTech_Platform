@@ -352,3 +352,35 @@ def test_the_public_page_decision_has_no_contact_ids(sent_quote, mapped, client_
     body = outcome("quote.rejected").payload
     assert event_errors(body) == []
     assert "erp_contact_id" not in body["payload"] and "crm_contact_id" not in body["payload"]
+
+
+def test_a_contact_without_a_channel_does_not_touch_the_active_code_of_a_colleague(
+    sent_quote, portal_client, colleague, client_contact
+):
+    """Канал проверяется ДО выпуска: 422 не гасит код коллеги и не оставляет «сиротский» активный код."""
+    post(colleague, f"/quotes/{sent_quote.pk}/request-code")
+    colleague_row = QuoteAcceptanceCode.objects.get(quote=sent_quote)
+    # Контакт только с Telegram: ни сопоставления в CRM, ни почты.
+    Contact.objects.filter(pk=client_contact.pk).update(email="")
+
+    response = post(portal_client, f"/quotes/{sent_quote.pk}/request-code")
+
+    assert response.status_code == 422 and response.json() == {"detail": "CONTACT_CHANNEL_REQUIRED"}
+    rows = list(QuoteAcceptanceCode.objects.filter(quote=sent_quote))
+    assert [row.pk for row in rows] == [colleague_row.pk], "код коллеги остался единственным активным"
+    assert rows[0].consumed_at is None and rows[0].contact_id == colleague.contact.pk
+
+
+def test_a_failed_event_without_an_email_leaves_no_orphan_code(
+    sent_quote, portal_client, mapped, contact_mapped, client_contact, monkeypatch
+):
+    def broken(*args, **kwargs):
+        raise RuntimeError("redis is down")
+
+    monkeypatch.setattr("integration.services.webhooks.emit_event", broken)
+    Contact.objects.filter(pk=client_contact.pk).update(email="")
+
+    response = post(portal_client, f"/quotes/{sent_quote.pk}/request-code")
+
+    assert response.status_code == 422 and response.json() == {"detail": "CONTACT_CHANNEL_REQUIRED"}
+    assert not QuoteAcceptanceCode.objects.filter(quote=sent_quote).exists()

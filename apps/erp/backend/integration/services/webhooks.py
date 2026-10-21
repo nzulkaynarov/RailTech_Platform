@@ -307,8 +307,6 @@ def emit_event(
     body_bytes = json.dumps(envelope, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
     # Секретное поле (код акцепта) в журнал не попадает: туда — тело с маской, настоящее значение — в кэш (см. выше).
     journal_payload, secret_values = mask_secret_payload(event_type, envelope["payload"])
-    if secret_values:
-        stash_secret_payload(event_id, secret_values)
 
     headers = {
         "Content-Type": "application/json",
@@ -327,6 +325,9 @@ def emit_event(
         headers=headers,
         status=WebhookEventStatus.PENDING,
     )
+    if secret_values:
+        # Секрет — в кэш только после записи в журнал: упавший `create` не оставляет в кэше значение без события.
+        stash_secret_payload(event_id, secret_values)
 
     def _queue_task():
         from ..tasks import deliver_webhook_event

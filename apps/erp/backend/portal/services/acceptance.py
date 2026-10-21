@@ -59,12 +59,29 @@ def _emit_code_event(quote, contact, code: str) -> bool:
         return False
 
 
+def _telegram_deliverable(contact) -> bool:
+    """Код можно отдать боту CRM: у контакта есть Telegram и сопоставление с контактом CRM, компания сопоставлена с клиентом."""
+    from integration.models import CrmClientMapping, CrmContactMapping
+
+    return bool(
+        contact.telegram_user_id
+        and CrmContactMapping.objects.filter(contact=contact).exists()
+        and CrmClientMapping.objects.filter(company_id=contact.company_id).exists()
+    )
+
+
 def request_acceptance_code(quote, contact, request_ip: str = "") -> dict:
-    """Выпустить код для контакта сессии и отправить. Возвращает тело `AcceptanceCodeSent`."""
+    """Выпустить код для контакта сессии и отправить. Возвращает тело `AcceptanceCodeSent`.
+
+    Канал выбирается ДО выпуска: контакт без канала получает `ContactChannelRequired`, и активный код коллеги не гасится.
+    """
     email = (contact.email or "").strip()
     expires_in = CODE_TTL_MINUTES * 60
+    telegram = _telegram_deliverable(contact)
+    if not telegram and not email:
+        raise ContactChannelRequired
 
-    if contact.telegram_user_id:
+    if telegram:
         emitted = []
 
         def send(code: str) -> None:
@@ -73,9 +90,17 @@ def request_acceptance_code(quote, contact, request_ip: str = "") -> dict:
         issue_acceptance_code(quote, request_ip, contact=contact, send=send)
         if emitted and emitted[0]:
             return {"channel": "telegram", "sent_to": mask_telegram(contact), "expires_in": expires_in}
-        # Событие не ушло (контакт не сопоставлен с CRM, сбой): откат на e-mail, если он есть.
+        # Событие не ушло (сбой журнала или кэша): откат на e-mail, если он есть.
+        if not email:
+            _drop_unsent_code(quote, contact)
+            raise ContactChannelRequired
 
-    if not email:
-        raise ContactChannelRequired
     issue_acceptance_code(quote, request_ip, contact=contact)
     return {"channel": "email", "sent_to": mask_email(email), "expires_in": expires_in}
+
+
+def _drop_unsent_code(quote, contact) -> None:
+    """Код, который не удалось отправить ни одним каналом, не остаётся активным."""
+    from sales.models.acceptance import QuoteAcceptanceCode
+
+    QuoteAcceptanceCode.objects.filter(quote=quote, contact=contact, consumed_at__isnull=True).delete()

@@ -139,3 +139,35 @@ def test_other_events_are_stored_and_delivered_unchanged(setup):
     event = emit_invite_sent(contact=contact, channels=["email"], send_async=False)
     assert event.payload["payload"]["erp_contact_id"] == contact.pk and SECRET_MASK not in json.dumps(event.payload)
     assert delivery_payload(event) is event.payload
+
+
+def test_a_lost_secret_does_not_overwrite_a_delivery_that_won_the_race(setup):
+    """Две доставки одного события: пока вторая видит «секрета нет», первая уже записала SENT — `FAILED` поверх не пишется."""
+    quote, contact, _ = setup
+    event = emit(quote, contact)
+
+    def lose_the_race(loaded):
+        IntegrationWebhookEvent.objects.filter(pk=loaded.pk).update(status=WebhookEventStatus.SENT)
+        return None
+
+    with patch("integration.tasks.delivery_payload", side_effect=lose_the_race), patch("httpx.Client.post") as post:
+        assert deliver_webhook_event(event.pk) is False
+
+    post.assert_not_called()
+    event.refresh_from_db()
+    assert event.status == WebhookEventStatus.SENT and event.last_error == ""
+
+
+def test_the_secret_is_stashed_only_after_the_journal_row_exists(setup):
+    quote, contact, _ = setup
+    seen = []
+    real = __import__("integration.services.webhooks", fromlist=["x"]).stash_secret_payload
+
+    def spy(event_id, values):
+        seen.append(IntegrationWebhookEvent.objects.filter(event_id=event_id).exists())
+        return real(event_id, values)
+
+    with patch("integration.services.webhooks.stash_secret_payload", side_effect=spy):
+        emit(quote, contact)
+
+    assert seen == [True]

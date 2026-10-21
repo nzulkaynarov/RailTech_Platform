@@ -83,13 +83,16 @@ def deliver_webhook_event(self, event_id: int) -> bool:
     # нечего и повторять незачем: клиент запросит новый код.
     payload = delivery_payload(event)
     if payload is None:
-        event.status = WebhookEventStatus.FAILED
-        event.last_error = "SECRET_EXPIRED: секретное поле тела события недоступно (срок кода вышел), отправка отменена"
-        event.next_attempt_at = None
-        event.save(update_fields=["status", "last_error", "next_attempt_at"])
-        logger.warning(
-            "deliver_webhook_event: event #%s (%s) lost its secret payload, not sent", event_id, event.event_type
+        # Условное обновление: параллельная доставка могла уже записать SENT (и убрать секрет) — её итог не затираем.
+        cancelled = IntegrationWebhookEvent.objects.filter(pk=event.pk, status=WebhookEventStatus.PENDING).update(
+            status=WebhookEventStatus.FAILED,
+            last_error="SECRET_EXPIRED: секретное поле тела события недоступно (срок кода вышел), отправка отменена",
+            next_attempt_at=None,
         )
+        if cancelled:
+            logger.warning(
+                "deliver_webhook_event: event #%s (%s) lost its secret payload, not sent", event_id, event.event_type
+            )
         return False
 
     event.attempts += 1
