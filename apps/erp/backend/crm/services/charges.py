@@ -8,6 +8,7 @@ large) quotes.py service so the feature stays an isolated unit.
 from django.db import transaction
 
 from crm.models import ChargeTemplate, Quote, QuoteCharge
+from crm.services.quotes.editable import quote_edit_lock_code
 from master_data.models import DeliveryBasis
 
 
@@ -83,8 +84,9 @@ def reorder_quote_charges(quote_id: int, ordered_ids, actor):
     quote = Quote.objects.filter(pk=quote_id).first()
     if quote is None:
         return None, "QUOTE_NOT_FOUND"
-    if quote.frozen_at:
-        return None, "QUOTE_FROZEN"
+    lock_code = quote_edit_lock_code(quote)
+    if lock_code:
+        return None, lock_code
     charges = {charge.id: charge for charge in quote.charges.all()}
     for index, charge_id in enumerate(ordered_ids):
         charge = charges.get(int(charge_id))
@@ -112,8 +114,9 @@ def set_quote_delivery_basis(quote_id: int, basis_id, actor):
         return None, "ONLY_SELLER_CAN_BUILD_QUOTE"
 
     quote = Quote.objects.select_for_update().get(pk=quote_id)
-    if quote.frozen_at:
-        return None, "QUOTE_FROZEN"
+    lock_code = quote_edit_lock_code(quote)
+    if lock_code:
+        return None, lock_code
 
     basis = None
     if basis_id:

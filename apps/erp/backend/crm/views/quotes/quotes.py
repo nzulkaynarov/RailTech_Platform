@@ -28,8 +28,23 @@ from crm import services as crm_services
 from crm.constants import QuoteStatusCode
 from crm.models import Quote, QuoteStatus
 from crm.serializers import QuoteSerializer
+from crm.services.quotes.editable import assert_quote_items_editable
 from crm.views._pdf import pdf_generating_response
 from crm.views.quotes.approval import QuoteApprovalMixin, _chain_error_response
+
+# Поля КП, влияющие на сумму/состав предложения: PATCH вне DRAFT → 409 (FIX-55, D-04).
+_QUOTE_PRICING_FIELDS = frozenset(
+    {
+        "deal",
+        "delivery_basis",
+        "quote_currency",
+        "cost_currency_default",
+        "tax_country",
+        "vat_rate",
+        "margin_percent",
+        "delivery_lead_time_days",
+    }
+)
 
 
 @extend_schema_view(
@@ -169,8 +184,11 @@ class QuoteViewSet(RoleGatedViewMixin, QuoteApprovalMixin, QuoteFxMixin, Optimis
         if not (getattr(user, "is_superuser", False) or can_edit_quote_pricing(user)):
             raise PermissionDenied("ONLY_SELLER_CAN_BUILD_QUOTE")
         quote = serializer.instance
-        if quote.frozen_at:
-            raise PermissionDenied("QUOTE_FROZEN")
+        # Правка настроек КП, влияющих на сумму, — только в DRAFT и пока КП не заморожено (FIX-55, D-04).
+        # Поля, не меняющие сумму (заметки, срок действия), вне черновика не блокируются, пока КП не отправлено.
+        locked_fields = _QUOTE_PRICING_FIELDS & set(serializer.validated_data)
+        if quote.frozen_at or locked_fields:
+            assert_quote_items_editable(quote)
         serializer.save()
         # vat_rate feeds the VAT computation, so a settings change must re-aggregate
         # the КП totals (vat_amount / total_incl_vat) — Rule 8: logic in the service.
@@ -184,14 +202,15 @@ class QuoteViewSet(RoleGatedViewMixin, QuoteApprovalMixin, QuoteFxMixin, Optimis
         description=(
             "Re-pull the seller company's CURRENT defaults (VAT rate, margin, delivery basis, "
             "validity term, cost currency) into this DRAFT КП, OVERWRITING those five fields "
-            "(Odoo «Update Prices» / Salesforce «Recalculate» pattern). Seller-only, unfrozen "
-            "КП only (else QUOTE_FROZEN). Returns `changed_fields` — the fields that actually "
+            "(Odoo «Update Prices» / Salesforce «Recalculate» pattern). Seller-only, DRAFT "
+            "КП only (else 409 QUOTE_NOT_DRAFT / QUOTE_FROZEN). Returns `changed_fields` — the fields that actually "
             "differed and were updated (empty when the КП already matched the defaults)."
         ),
         request=None,
         responses={
             200: OpenApiResponse(description="Applied — `changed_fields` lists what changed"),
-            403: OpenApiResponse(description="ONLY_SELLER_CAN_BUILD_QUOTE / QUOTE_FROZEN"),
+            403: OpenApiResponse(description="ONLY_SELLER_CAN_BUILD_QUOTE"),
+            409: OpenApiResponse(description="QUOTE_NOT_DRAFT / QUOTE_FROZEN"),
         },
         tags=["CRM"],
     )
@@ -207,8 +226,7 @@ class QuoteViewSet(RoleGatedViewMixin, QuoteApprovalMixin, QuoteFxMixin, Optimis
         user = request.user
         if not (getattr(user, "is_superuser", False) or can_edit_quote_pricing(user)):
             raise PermissionDenied("ONLY_SELLER_CAN_BUILD_QUOTE")
-        if quote.frozen_at:
-            raise PermissionDenied("QUOTE_FROZEN")
+        assert_quote_items_editable(quote)
         changed = crm_services.reapply_company_defaults(quote, _quote_seller_company(quote))
         # vat_rate / margin move the КП totals — re-aggregate only when something changed.
         if changed:
@@ -406,7 +424,11 @@ class QuoteViewSet(RoleGatedViewMixin, QuoteApprovalMixin, QuoteFxMixin, Optimis
             http_status = (
                 status.HTTP_403_FORBIDDEN
                 if err in ("ADMIN_VIEWER_CANNOT_ACT", "ONLY_SELLER_CAN_BUILD_QUOTE")
-                else status.HTTP_400_BAD_REQUEST
+                else (
+                    status.HTTP_409_CONFLICT
+                    if err in ("QUOTE_NOT_DRAFT", "QUOTE_FROZEN")
+                    else status.HTTP_400_BAD_REQUEST
+                )
             )
             return Response({"detail": err}, status=http_status)
         return Response(self.get_serializer(quote).data)
@@ -428,7 +450,11 @@ class QuoteViewSet(RoleGatedViewMixin, QuoteApprovalMixin, QuoteFxMixin, Optimis
             http_status = (
                 status.HTTP_403_FORBIDDEN
                 if err in ("ADMIN_VIEWER_CANNOT_ACT", "ONLY_SELLER_CAN_BUILD_QUOTE")
-                else status.HTTP_400_BAD_REQUEST
+                else (
+                    status.HTTP_409_CONFLICT
+                    if err in ("QUOTE_NOT_DRAFT", "QUOTE_FROZEN")
+                    else status.HTTP_400_BAD_REQUEST
+                )
             )
             return Response({"detail": err}, status=http_status)
         return Response(self.get_serializer(quote).data)

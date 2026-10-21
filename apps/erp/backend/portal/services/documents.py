@@ -14,6 +14,7 @@
 from __future__ import annotations
 
 import datetime
+import logging
 import mimetypes
 import os
 import re
@@ -21,16 +22,19 @@ from dataclasses import dataclass
 from typing import Any, Optional
 
 from django.core.cache import cache
+from django.db import transaction
 from django.db.models import Q
 from django.utils import timezone
 from django.utils.translation import gettext
 from documents.models import GeneratedDocument
 from portal import projections
 
-from crm.constants import DocumentTemplateKindCode, FulfillmentStatusCode, GeneratedDocumentStatusCode
+from crm.constants import FULFILLMENT_NOTE_ISSUED_STATUSES, DocumentTemplateKindCode, GeneratedDocumentStatusCode
 from crm.models import Act, Contract, Fulfillment, Invoice, Quote
 from crm.services.documents import quote_pdf_filename
 from crm.services.fulfillment import delivery_note_number
+
+logger = logging.getLogger(__name__)
 
 #: Слот вида источника в идентификаторе документа (`pk * 8 + слот`). Менять нельзя: id уже у клиентов в ссылках.
 SLOT_BY_SOURCE = {"generated": 0, "quote": 1, "contract": 2, "invoice": 3, "act": 4, "waybill": 5}
@@ -53,13 +57,7 @@ DOCUMENT_KINDS = ("quote", "contract", "invoice", "act", "specification", "waybi
 
 #: Накладная выпускается с отгрузки; видимость КП, договоров, счетов и актов — предикаты `portal.projections`
 #: (`client_*_q` / `client_*_visible`), те же, что у `GET /quotes|/contracts|/invoices|/acts`.
-WAYBILL_ISSUED = (
-    FulfillmentStatusCode.SHIPPED,
-    FulfillmentStatusCode.IN_TRANSIT,
-    FulfillmentStatusCode.DELIVERED,
-    FulfillmentStatusCode.ACCEPTED,
-    FulfillmentStatusCode.DISPUTED,
-)
+WAYBILL_ISSUED = FULFILLMENT_NOTE_ISSUED_STATUSES
 
 #: Тип задачи рендера `crm.render_document_pdf` по источнику.
 RENDER_TYPE = {
@@ -305,6 +303,22 @@ _ISSUED_Q = {
 }
 
 
+def _issue_legacy_waybills(fulfillments) -> None:
+    """Накладные, отгруженные до выпуска номера при отгрузке (нет ни номера, ни напечатанного файла), получают
+    итоговый номер и рендер сейчас — чтобы в списке портала не было `DN-<id>`, который после первой печати
+    превращается в другой номер (FIX-55, m2 D-6). Номер, уже ушедший клиенту в напечатанном файле, не трогаем."""
+    from crm.services.fulfillment import issue_delivery_note
+
+    for fulfillment in fulfillments:
+        if not fulfillment.note_number and not fulfillment.pdf_file:
+            try:
+                with transaction.atomic():
+                    issue_delivery_note(fulfillment)
+            except Exception:  # noqa: BLE001 — fault barrier: сбой нумерации не должен ронять список документов клиента
+                fulfillment.note_number = ""  # номер в памяти не должен пережить откат: клиенту уйдёт легаси-вид
+                logger.exception("Не удалось присвоить номер накладной отгрузки %s", fulfillment.pk)
+
+
 def _issued_queryset(source: str):
     """Выпущенные записи источника — тот же предикат, что в `is_issued` и в списках портала."""
     model, _build = _MODEL_BUILDERS[source]
@@ -331,7 +345,10 @@ def client_documents(company, *, kind: Optional[str] = None, deal_id: Optional[i
         queryset = _issued_queryset(source).filter(deal__company=company)
         if deal_id is not None:
             queryset = queryset.filter(deal_id=deal_id)
-        documents += [build(obj) for obj in queryset]
+        objects = list(queryset)
+        if source == "waybill":
+            _issue_legacy_waybills(objects)
+        documents += [build(obj) for obj in objects]
     if kind is None or kind in KIND_BY_TEMPLATE_KIND.values():
         generated = [_generated_document(d) for d in _generated_queryset(company, deal_id)]
         documents += [d for d in generated if kind in (None, d.kind)]

@@ -2398,7 +2398,7 @@
     "PAYMENT_EXCEEDS_BALANCE_DUE": "The amount is larger than the balance due. Enter an amount within the balance — overpayment is not accepted.",
     "REQUEST_HAS_NO_ITEMS": "The request has no line items — there is nothing for the seller to quote. Add at least one and submit again.",
     "QUOTE_FROZEN": "The quote has already been sent — create a new version to change it",
-    "QUOTE_NOT_DRAFT": "A negotiated rate can only change while the quote is a draft — return it to draft and resubmit for approval",
+    "QUOTE_NOT_DRAFT": "The quote can only be changed while it is a draft — recall it from approval or create a new version",
     "FX_CURRENCY_REQUIRED": "Select a currency",
     "FX_BASE_CURRENCY": "UZS is the base currency — no rate is set for it",
     "FX_CURRENCY_UNKNOWN": "This currency is not in the currency list",

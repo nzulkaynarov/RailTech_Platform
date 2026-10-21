@@ -156,11 +156,12 @@ class CompanyRoleSerializer(serializers.ModelSerializer):
             "name",
             "permissions",
             "is_system",
+            "managed_by_crm",
             "member_count",
             "created_at",
             "updated_at",
         ]
-        read_only_fields = ["company", "code", "is_system", "created_at", "updated_at"]
+        read_only_fields = ["company", "code", "is_system", "managed_by_crm", "created_at", "updated_at"]
 
     def get_member_count(self, obj) -> int | None:
         return getattr(obj, "member_count", None) if hasattr(obj, "member_count") else obj.members.count()

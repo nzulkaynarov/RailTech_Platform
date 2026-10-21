@@ -13,6 +13,7 @@ from rest_framework.response import Response
 from core.permissions import IsCompanyMemberOrPlatformAdmin, RoleGatedViewMixin
 from crm.models import ChargeTemplate, ChargeType, QuoteCharge, QuoteStatus
 from crm.serializers import ChargeTemplateSerializer, ChargeTypeSerializer, QuoteChargeSerializer
+from crm.services.quotes.editable import assert_quote_items_editable
 
 from .items import _assert_staff_may_write_quote
 
@@ -65,6 +66,7 @@ class QuoteChargeViewSet(RoleGatedViewMixin, viewsets.ModelViewSet):
         self._assert_seller()
         quote = serializer.validated_data.get("quote")
         _assert_staff_may_write_quote(self.request, quote)
+        assert_quote_items_editable(quote)
         # Append a manually-added charge at the BOTTOM of the cascade (after existing rows), so
         # e.g. a partner commission added last is based on the full running total above it.
         from django.db.models import Max
@@ -74,6 +76,11 @@ class QuoteChargeViewSet(RoleGatedViewMixin, viewsets.ModelViewSet):
 
     def perform_update(self, serializer):
         self._assert_seller()
+        # Расходы несут сумму КП: правка только в DRAFT и до заморозки (FIX-55, D-04).
+        assert_quote_items_editable(serializer.instance.quote)
+        target_quote = serializer.validated_data.get("quote")
+        if target_quote is not None:
+            assert_quote_items_editable(target_quote)
         # Editing a charge makes it the seller's deliberate value → mark it manual so a later
         # Incoterm switch (KP-05) won't wipe it with the rest of the old basis's template rows.
         serializer.save(from_template=False)
@@ -81,6 +88,7 @@ class QuoteChargeViewSet(RoleGatedViewMixin, viewsets.ModelViewSet):
     def perform_destroy(self, instance):
         self._assert_seller()
         quote = instance.quote
+        assert_quote_items_editable(quote)
         instance.delete()
         # save()-on-delete doesn't fire; recalc the КП so charges_total drops.
         quote.recalculate_totals()

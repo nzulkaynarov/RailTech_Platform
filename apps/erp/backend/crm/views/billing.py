@@ -457,6 +457,15 @@ class InvoiceViewSet(
     @extend_schema(
         summary="Record a payment against this invoice",
         tags=["CRM"],
+        description=(
+            "Идемпотентность по `reference`: повтор с тем же референсом, суммой и датой возвращает существующий "
+            "платёж (200); тот же референс с другой суммой или датой — 409 `PAYMENT_REFERENCE_CONFLICT`."
+        ),
+        responses={
+            200: OpenApiResponse(description="Повтор: существующий платёж с тем же референсом, суммой и датой"),
+            201: PaymentSerializer,
+            409: OpenApiResponse(description="PAYMENT_REFERENCE_CONFLICT"),
+        },
         request=inline_serializer(
             "RecordPayment",
             fields={
@@ -481,8 +490,13 @@ class InvoiceViewSet(
         if err:
             if err in ("MEMBER_REQUIRED_FOR_ACTION", "ROLE_NOT_PERMITTED"):
                 return Response({"detail": err}, status=403)
+            if err == "PAYMENT_REFERENCE_CONFLICT":
+                return Response({"detail": err}, status=409)
             return Response({"detail": err}, status=(404 if err == "NOT_FOUND" else 400))
-        return Response(PaymentSerializer(payment).data, status=201)
+        # Повтор с тем же референсом, суммой и датой — тот же платёж, 200 (не новая запись).
+        return Response(
+            PaymentSerializer(payment).data, status=200 if getattr(payment, "idempotent_replay", False) else 201
+        )
 
     @extend_schema(summary="Generate Act for this invoice", tags=["CRM"])
     @action(detail=True, methods=["post"], url_path="generate-act", permission_classes=[IsAuthenticated])
@@ -663,22 +677,38 @@ class FulfillmentViewSet(RoleGatedViewMixin, viewsets.ReadOnlyModelViewSet):
             return qs
         return qs.filter(_billing_visibility_q(user, self.request, deal_path="deal")).distinct()
 
-    @extend_schema(summary="Update fulfillment status", tags=["CRM"])
+    @extend_schema(
+        summary="Update fulfillment status",
+        responses={
+            200: FulfillmentSerializer,
+            400: OpenApiResponse(
+                description="DEAL_ID_AND_STATUS_REQUIRED / DEAL_ID_INVALID / FULFILLMENT_INVALID_STATUS"
+            ),
+            404: OpenApiResponse(description="NOT_FOUND (сделки нет)"),
+            409: OpenApiResponse(description="FULFILLMENT_NOT_READY (отгрузку ещё не создала задача после договора)"),
+        },
+        tags=["CRM"],
+    )
     @action(detail=False, methods=["post"], url_path="update-status", permission_classes=[IsAuthenticated])
     def update_status(self, request):
         deal_id = request.data.get("deal_id")
         status_code = request.data.get("status")
         if not deal_id or not status_code:
             return Response({"detail": "DEAL_ID_AND_STATUS_REQUIRED"}, status=400)
+        try:
+            deal_pk = int(deal_id)
+        except (TypeError, ValueError):
+            return Response({"detail": "DEAL_ID_INVALID"}, status=400)
         extra = {k: request.data.get(k) for k in ("tracking_number", "carrier", "expected_delivery_date", "notes")}
         obj, err = crm_services.update_fulfillment_status(
-            int(deal_id),
+            deal_pk,
             request.user,
             status_code,
             **extra,
         )
         if err:
-            return Response({"detail": err}, status=400)
+            http_status = {"FULFILLMENT_NOT_READY": 409, "NOT_FOUND": 404}.get(err, 400)
+            return Response({"detail": err}, status=http_status)
         return Response(FulfillmentSerializer(obj).data)
 
     @extend_schema(summary="Download the delivery note PDF (D2b)", tags=["CRM"])

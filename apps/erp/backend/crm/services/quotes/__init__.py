@@ -46,6 +46,7 @@ from .bulk import (
     reassign_quote_item_product,
 )
 from .duplicate import duplicate_quote
+from .editable import QuoteLockedError, assert_quote_items_editable, quote_edit_lock_code
 from .lifecycle import QuoteLifecycleService
 from .pricing import QuoteCalculationService, compute_quote_economics, effective_quote_lead_time
 
@@ -73,6 +74,10 @@ __all__ = [
     "approval_queue_for",
     "public_quote_gate",
     "_EXPIRED_STATUS_CODE",
+    # editable
+    "QuoteLockedError",
+    "assert_quote_items_editable",
+    "quote_edit_lock_code",
     # lifecycle
     "QuoteLifecycleService",
     # bulk

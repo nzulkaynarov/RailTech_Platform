@@ -262,6 +262,33 @@ def _render_invoice_pdf(invoice) -> None:
     save_rendered_pdf(invoice, f"Invoice_{invoice.number}.pdf", ContentFile(buf.getvalue()))
 
 
+def _as_date(value):
+    """Дата платежа из строки ISO / datetime / date — для сравнения с `Payment.paid_at`."""
+    from datetime import date, datetime
+
+    if isinstance(value, datetime):
+        return value.date()
+    if isinstance(value, date):
+        return value
+    try:
+        return date.fromisoformat(str(value)[:10])
+    except ValueError:
+        return None
+
+
+def _replay_or_conflict(existing, amount, paid_at):
+    """Повтор записи платежа с тем же референсом (FIX-55, D-05).
+
+    Та же сумма и дата — повторная отправка: возвращается существующий платёж с пометкой
+    `idempotent_replay` (вью отвечает 200, а не 201), деньги не дублируются. Иначе —
+    `PAYMENT_REFERENCE_CONFLICT`: тот же референс не может быть двумя разными платежами, новая сумма не теряется молча.
+    """
+    if existing.amount == amount and existing.paid_at == _as_date(paid_at):
+        existing.idempotent_replay = True
+        return existing, None
+    return None, "PAYMENT_REFERENCE_CONFLICT"
+
+
 @transaction.atomic
 def record_payment(
     payment_data_or_invoice_id,
@@ -322,10 +349,17 @@ def record_payment(
     # receivable: ISSUED / PARTIAL / OVERDUE.
     if invoice.status_code == InvoiceStatusCode.DRAFT:
         return None, "INVOICE_NOT_ISSUED"
+    amount_d = D(str(amount))
+    # Идемпотентность (FIX-55, D-05): банковский референс однозначно опознаёт реальный платёж. Проверка стоит
+    # ВЫШЕ проверок «счёт оплачен» и «сверх остатка»: повтор платежа, закрывшего счёт, — это повтор, а не
+    # INVOICE_ALREADY_PAID, а тот же референс с другой суммой не должен молча терять новую сумму.
+    if reference:
+        existing = Payment.objects.filter(invoice=invoice, reference=reference).first()
+        if existing is not None:
+            return _replay_or_conflict(existing, amount_d, paid_at)
     # A fully-paid invoice takes no further money (no over-payment).
     if invoice.status_code == InvoiceStatusCode.PAID:
         return None, "INVOICE_ALREADY_PAID"
-    amount_d = D(str(amount))
     if amount_d <= 0:
         return None, "PAYMENT_AMOUNT_MUST_BE_POSITIVE"
     # Сумма не больше ОСТАТКА, а не только «счёт ещё не закрыт».
@@ -349,13 +383,6 @@ def record_payment(
 
         validate_document_upload(proof_file)
 
-    # Idempotency: a bank reference uniquely identifies a real-world payment.
-    # A double-submit with the same reference must not be counted twice.
-    if reference:
-        existing = Payment.objects.filter(invoice=invoice, reference=reference).first()
-        if existing is not None:
-            return existing, None
-
     try:
         # Savepoint so a unique-constraint hit (concurrent same-reference
         # insert that slipped past the check above) rolls back cleanly without
@@ -376,7 +403,7 @@ def record_payment(
     except IntegrityError:
         existing = Payment.objects.filter(invoice=invoice, reference=reference).first()
         if existing is not None:
-            return existing, None
+            return _replay_or_conflict(existing, amount_d, paid_at)
         raise
 
     invoice.amount_paid = (invoice.amount_paid or D("0")) + amount_d

@@ -14,6 +14,7 @@ from crm.models import ActivityLog, Quote, QuoteItem
 from crm.services.availability import resolve_seller_offer, split_line_by_availability
 
 from ._shared import _quote_owner_company_id
+from .editable import quote_edit_lock_code
 from .pricing import QuoteCalculationService
 
 # Fields the КП builder grid may write per line (the exact set the single-item PATCH accepts
@@ -133,8 +134,9 @@ def bulk_update_quote_items(user, quote_id, items_payload, request):
     # anyone else gets 404 like the single PATCH.
     if not (is_superuser or is_seller(user)):
         return None, "QUOTE_NOT_FOUND", None
-    if quote.frozen_at:
-        return None, "QUOTE_FROZEN", None
+    lock_code = quote_edit_lock_code(quote)
+    if lock_code:
+        return None, lock_code, None
 
     validated, rows = _validate_bulk_item_rows(quote, items_payload, request)
     if rows:
@@ -280,8 +282,9 @@ def bulk_create_quote_items(user, quote_id, items_payload, request):
     # anyone else gets 404 like the single POST.
     if not (is_superuser or is_seller(user)):
         return None, "QUOTE_NOT_FOUND", None
-    if quote.frozen_at:
-        return None, "QUOTE_FROZEN", None
+    lock_code = quote_edit_lock_code(quote)
+    if lock_code:
+        return None, lock_code, None
 
     validated, rows = _validate_bulk_create_rows(quote, items_payload, request)
     if rows:
@@ -357,8 +360,9 @@ def bulk_delete_quote_items(user, quote_id, item_ids, request):
         return None, "QUOTE_NOT_FOUND", None
     if not (is_superuser or is_seller(user)):
         return None, "QUOTE_NOT_FOUND", None
-    if quote.frozen_at:
-        return None, "QUOTE_FROZEN", None
+    lock_code = quote_edit_lock_code(quote)
+    if lock_code:
+        return None, lock_code, None
 
     # Чужая строка — не «молча пропустить»: продавец должен узнать, что удалил не то, что видел.
     present = set(QuoteItem.objects.filter(quote_id=quote_pk, id__in=wanted).values_list("id", flat=True))
@@ -391,8 +395,9 @@ def reassign_quote_item_product(
     from catalog.models import Product
 
     item = QuoteItem.objects.select_for_update().select_related("quote").get(pk=quote_item_id)
-    if item.quote.frozen_at:
-        return None, "QUOTE_FROZEN_CANNOT_REASSIGN"
+    lock_code = quote_edit_lock_code(item.quote)
+    if lock_code:
+        return None, lock_code
     if product_id:
         product = Product.objects.filter(pk=product_id).first()
         if not product:
@@ -452,8 +457,9 @@ def import_extracted_lines_into_quote(quote: Quote, actor: CustomUser, rows: lis
     is_superuser = getattr(actor, "is_superuser", False)
     if not (is_superuser or can_edit_quote_pricing(actor)):
         return 0, False, "ONLY_SELLER_CAN_BUILD_QUOTE"
-    if quote.frozen_at:
-        return 0, False, "QUOTE_FROZEN"
+    lock_code = quote_edit_lock_code(quote)
+    if lock_code:
+        return 0, False, lock_code
 
     clean = [row for row in rows if isinstance(row, dict) and (row.get("name") or "").strip()]
     if not clean:

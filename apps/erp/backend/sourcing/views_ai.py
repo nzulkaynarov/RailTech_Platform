@@ -265,8 +265,11 @@ class QuoteImportFileView(RoleGatedViewMixin, APIView):
             return Response({"detail": "QUOTE_NOT_FOUND"}, status=status.HTTP_404_NOT_FOUND)
         if not (getattr(request.user, "is_superuser", False) or can_edit_quote_pricing(request.user)):
             return Response({"detail": "ONLY_SELLER_CAN_BUILD_QUOTE"}, status=status.HTTP_403_FORBIDDEN)
-        if quote.frozen_at:
-            return Response({"detail": "QUOTE_FROZEN"}, status=status.HTTP_400_BAD_REQUEST)
+        from crm.services.quotes.editable import quote_edit_lock_code
+
+        lock_code = quote_edit_lock_code(quote)
+        if lock_code:
+            return Response({"detail": lock_code}, status=status.HTTP_409_CONFLICT)
 
         uploaded = request.FILES.get("file")
         if uploaded is None:

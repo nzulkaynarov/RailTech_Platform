@@ -38,17 +38,20 @@ class RequestIDFilter(logging.Filter):
         return True
 
 
-# Ссылка входа в портал несёт токен в пути; `django.request` и access-логи пишут путь целиком (FIX-14, P-9).
-_PORTAL_LOGIN_TOKEN_RE = re.compile(r"(/auth/magic/)[^/?#&\s\"'<>]+")
+# Секретный токен в пути запроса; `django.request` и access-логи пишут путь целиком (FIX-14, P-9; FIX-55, D-14):
+# вход в портал (`/auth/magic/<токен>`) и публичные ссылки на КП, документы и подписанные ссылки CRM на файл
+# (`/public/quotes|documents|doc-links/<токен>/…`).
+_SECRET_PATH_TOKEN_RE = re.compile(r"(/auth/magic/|/public/(?:quotes|documents|doc-links)/)[^/?#&\s\"'<>]+")
+_SECRET_PATH_MARKERS = ("/auth/magic/", "/public/quotes/", "/public/documents/", "/public/doc-links/")
 
 
 class RedactPortalTokenFilter(logging.Filter):
-    """Заменяет токен magic-link в пути запроса на [REDACTED] в любой записи журнала."""
+    """Заменяет токен magic-link и токены публичных ссылок на документы в пути запроса на [REDACTED] в любой записи."""
 
     def filter(self, record: logging.LogRecord) -> bool:
         message = record.getMessage()
-        if "/auth/magic/" in message:
-            record.msg = _PORTAL_LOGIN_TOKEN_RE.sub(r"\1[REDACTED]", message)
+        if any(marker in message for marker in _SECRET_PATH_MARKERS):
+            record.msg = _SECRET_PATH_TOKEN_RE.sub(r"\1[REDACTED]", message)
             record.args = ()
         return True
 

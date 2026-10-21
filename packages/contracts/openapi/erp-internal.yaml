@@ -806,8 +806,14 @@ paths:
   /api/v1/accounts/company-roles/:
     get:
       operationId: accounts_company_roles_list
-      description: 'Роли бэк-офиса своей компании (M1-ERP-05): системные шаблоны + свои; запись — `team.manage`.'
+      description: 'Роли, которые ведёт провижининг из CRM («CRM Sync: …», `managed_by_crm`), по умолчанию не отдаются — их
+        нельзя назначить в «Команде». `include_managed=true` отдаёт их для чтения.'
+      summary: List company roles (assignable ones by default)
       parameters:
+      - in: query
+        name: include_managed
+        schema:
+          type: boolean
       - name: page
         required: false
         in: query
@@ -827,7 +833,7 @@ paths:
         schema:
           type: string
       tags:
-      - accounts
+      - Accounts
       security:
       - jwtAuth: []
       responses:
@@ -5951,6 +5957,12 @@ paths:
               schema:
                 $ref: '#/components/schemas/Fulfillment'
           description: ''
+        '400':
+          description: DEAL_ID_AND_STATUS_REQUIRED / DEAL_ID_INVALID / FULFILLMENT_INVALID_STATUS
+        '404':
+          description: NOT_FOUND (сделки нет)
+        '409':
+          description: FULFILLMENT_NOT_READY (отгрузку ещё не создала задача после договора)
   /api/v1/crm/fulfillments/{id}/:
     get:
       operationId: crm_fulfillments_retrieve
@@ -6668,15 +6680,8 @@ paths:
   /api/v1/crm/invoices/{id}/record-payment/:
     post:
       operationId: crm_invoices_record_payment_create
-      description: |-
-        Счета. Сырые `create`/`destroy` НЕ подключены намеренно (Rule 8).
-
-        Выставление счёта — только через сервисные экшены `create-manual` и
-        `generate-from-contract`; отмена — через `cancel` (сервис `cancel_invoice`).
-        Сырое удаление обходило бы отмену, а при наличии платежей падало бы в
-        `ProtectedError` → 500 (`Payment.invoice` объявлен с `on_delete=PROTECT`).
-        `update` оставлен: им правят черновик (due_date / notes), и он уже загейчен
-        на DRAFT ниже — фронтенд использует именно его.
+      description: 'Идемпотентность по `reference`: повтор с тем же референсом, суммой и датой возвращает существующий платёж
+        (200); тот же референс с другой суммой или датой — 409 `PAYMENT_REFERENCE_CONFLICT`.'
       summary: Record a payment against this invoice
       parameters:
       - in: path
@@ -6703,11 +6708,15 @@ paths:
       - jwtAuth: []
       responses:
         '200':
+          description: 'Повтор: существующий платёж с тем же референсом, суммой и датой'
+        '201':
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Invoice'
+                $ref: '#/components/schemas/Payment'
           description: ''
+        '409':
+          description: PAYMENT_REFERENCE_CONFLICT
   /api/v1/crm/numbering-scheme/:
     get:
       operationId: crm_numbering_scheme_retrieve
@@ -7229,11 +7238,12 @@ paths:
           description: ''
         '400':
           description: QUOTE_ITEMS_BULK_INVALID (with per-row `rows`) / QUOTE_ITEMS_BULK_EMPTY / QUOTE_ITEMS_BULK_TOO_LARGE
-            / QUOTE_FROZEN
         '403':
           description: ADMIN_VIEWER_CANNOT_ACT / ONLY_SELLER_CAN_BUILD_QUOTE
         '404':
           description: QUOTE_NOT_FOUND
+        '409':
+          description: QUOTE_NOT_DRAFT (КП не в черновике) / QUOTE_FROZEN (отправлено клиенту)
   /api/v1/crm/quote-items/bulk-delete/:
     post:
       operationId: crm_quote_items_bulk_delete_create
@@ -7262,11 +7272,12 @@ paths:
           description: '{"deleted": [ids]}'
         '400':
           description: QUOTE_ITEMS_BULK_INVALID (with per-row `rows`) / QUOTE_ITEMS_BULK_EMPTY / QUOTE_ITEMS_BULK_TOO_LARGE
-            / QUOTE_FROZEN
         '403':
           description: ADMIN_VIEWER_CANNOT_ACT / ONLY_SELLER_CAN_BUILD_QUOTE
         '404':
           description: QUOTE_NOT_FOUND
+        '409':
+          description: QUOTE_NOT_DRAFT (КП не в черновике) / QUOTE_FROZEN (отправлено клиенту)
   /api/v1/crm/quote-items/bulk-update/:
     post:
       operationId: crm_quote_items_bulk_update_create
@@ -7324,11 +7335,12 @@ paths:
           description: ''
         '400':
           description: QUOTE_ITEMS_BULK_INVALID (with per-row `rows`) / QUOTE_ITEMS_BULK_EMPTY / QUOTE_ITEMS_BULK_TOO_LARGE
-            / QUOTE_FROZEN
         '403':
           description: ADMIN_VIEWER_CANNOT_ACT / ONLY_SELLER_CAN_BUILD_QUOTE
         '404':
           description: QUOTE_NOT_FOUND
+        '409':
+          description: QUOTE_NOT_DRAFT (КП не в черновике) / QUOTE_FROZEN (отправлено клиенту)
   /api/v1/crm/quote-items/{id}/:
     get:
       operationId: crm_quote_items_retrieve
@@ -7782,8 +7794,8 @@ paths:
       operationId: crm_quotes_apply_defaults_create
       description: Re-pull the seller company's CURRENT defaults (VAT rate, margin, delivery basis, validity term, cost currency)
         into this DRAFT КП, OVERWRITING those five fields (Odoo «Update Prices» / Salesforce «Recalculate» pattern). Seller-only,
-        unfrozen КП only (else QUOTE_FROZEN). Returns `changed_fields` — the fields that actually differed and were updated
-        (empty when the КП already matched the defaults).
+        DRAFT КП only (else 409 QUOTE_NOT_DRAFT / QUOTE_FROZEN). Returns `changed_fields` — the fields that actually differed
+        and were updated (empty when the КП already matched the defaults).
       summary: Reapply company defaults to the quote
       parameters:
       - in: path
@@ -7800,7 +7812,9 @@ paths:
         '200':
           description: Applied — `changed_fields` lists what changed
         '403':
-          description: ONLY_SELLER_CAN_BUILD_QUOTE / QUOTE_FROZEN
+          description: ONLY_SELLER_CAN_BUILD_QUOTE
+        '409':
+          description: QUOTE_NOT_DRAFT / QUOTE_FROZEN
   /api/v1/crm/quotes/{id}/approval-act/:
     post:
       operationId: crm_quotes_approval_act_create
@@ -7839,7 +7853,7 @@ paths:
         '400':
           description: Wrong status/step
         '403':
-          description: Role not permitted
+          description: ROLE_NOT_PERMITTED / SELF_APPROVAL_NOT_ALLOWED (автор КП не согласует своё КП)
   /api/v1/crm/quotes/{id}/approval-preview/:
     get:
       operationId: crm_quotes_approval_preview_retrieve
@@ -10211,6 +10225,8 @@ paths:
           description: No access to this deal
         '404':
           description: Deal not found
+        '409':
+          description: 'QUOTE_NOT_DRAFT / QUOTE_FROZEN: активное КП сделки уже не черновик'
   /api/v1/sourcing/import-quote-lines/:
     post:
       operationId: sourcing_import_quote_lines_create
@@ -11674,6 +11690,12 @@ components:
           readOnly: true
           title: Системная
           description: Роль-шаблон бэк-офиса — имя и права не меняются, удалить нельзя
+        managed_by_crm:
+          type: boolean
+          readOnly: true
+          title: Управляется CRM
+          description: 'Роль «CRM Sync: <e-mail>» ведёт провижининг из CRM (integration.services.provision): права и состав
+            приходят из CRM, в «Настройках → Команда» её нельзя назначить, изменить или снять'
         member_count:
           type: integer
           nullable: true
@@ -11692,6 +11714,7 @@ components:
       - created_at
       - id
       - is_system
+      - managed_by_crm
       - member_count
       - name
       - updated_at
@@ -15732,11 +15755,6 @@ components:
           type: integer
           title: Сделка
           description: Сделка, к которой относится КП
-        status:
-          type: integer
-          nullable: true
-          title: Статус
-          description: Текущий статус КП (черновик, отправлено, одобрено)
         delivery_basis:
           type: integer
           nullable: true
@@ -16914,6 +16932,7 @@ components:
             пока КП не отправлено.
         status:
           type: integer
+          readOnly: true
           nullable: true
           title: Статус
           description: Текущий статус КП (черновик, отправлено, одобрено)
@@ -17153,6 +17172,7 @@ components:
       - prepared_by
       - public_access_token
       - public_token_revoked
+      - status
       - status_code
       - status_name
       - subtotal_excl_vat
@@ -17752,11 +17772,6 @@ components:
           type: integer
           title: Сделка
           description: Сделка, к которой относится КП
-        status:
-          type: integer
-          nullable: true
-          title: Статус
-          description: Текущий статус КП (черновик, отправлено, одобрено)
         delivery_basis:
           type: integer
           nullable: true

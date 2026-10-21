@@ -17,6 +17,13 @@ from core.permissions import IsCompanyMemberOrPlatformAdmin, RoleGatedViewMixin
 from crm import services as crm_services
 from crm.models import QuoteItem
 from crm.serializers import QuoteItemSerializer
+from crm.services.quotes.editable import assert_quote_items_editable
+
+# Коды ошибок сервисов, которые вьюха отдаёт как 409 (FIX-55: КП не в черновике / заморожено).
+QUOTE_LOCK_HTTP = {
+    "QUOTE_NOT_DRAFT": status.HTTP_409_CONFLICT,
+    "QUOTE_FROZEN": status.HTTP_409_CONFLICT,
+}
 
 
 def _assert_staff_may_write_quote(request, quote):
@@ -114,6 +121,7 @@ class QuoteItemViewSet(RoleGatedViewMixin, viewsets.ModelViewSet):
         self._assert_seller()
         quote = serializer.validated_data.get("quote")
         _assert_staff_may_write_quote(self.request, quote)
+        assert_quote_items_editable(quote)
         # A new single line (add-line / add-section) lands at the END unless the caller pinned a
         # position — default position=0 would otherwise sort it above the backfilled existing rows.
         save_kwargs = {}
@@ -159,6 +167,12 @@ class QuoteItemViewSet(RoleGatedViewMixin, viewsets.ModelViewSet):
 
     def perform_update(self, serializer):
         self._assert_seller()
+        # Позиции правятся только в DRAFT и пока КП не заморожено (FIX-55, D-04); перенос позиции
+        # в другое КП проверяется по целевому КП тоже.
+        assert_quote_items_editable(serializer.instance.quote)
+        target_quote = serializer.validated_data.get("quote")
+        if target_quote is not None:
+            assert_quote_items_editable(target_quote)
         # Bump the optimistic-concurrency counter on a successful seller save (волна 3), so the
         # next stale-version save from a colleague is rejected. `version` is read-only on the
         # serializer, so set it on the instance before save; the full model save persists it.
@@ -167,6 +181,7 @@ class QuoteItemViewSet(RoleGatedViewMixin, viewsets.ModelViewSet):
 
     def perform_destroy(self, instance):
         self._assert_seller()
+        assert_quote_items_editable(instance.quote)
         instance.delete()
 
     @extend_schema(
@@ -192,6 +207,7 @@ class QuoteItemViewSet(RoleGatedViewMixin, viewsets.ModelViewSet):
         # reach another tenant's item, and a buyer hitting their own item is refused by _assert_seller).
         self._assert_seller()
         item = self.get_object()
+        assert_quote_items_editable(item.quote)
         product_id = request.data.get("product_id")
         updated, err = crm_services.reassign_quote_item_product(
             item.id,
@@ -199,7 +215,7 @@ class QuoteItemViewSet(RoleGatedViewMixin, viewsets.ModelViewSet):
             product_id=int(product_id) if product_id else None,
         )
         if err:
-            return Response({"detail": err}, status=400)
+            return Response({"detail": err}, status=QUOTE_LOCK_HTTP.get(err, status.HTTP_400_BAD_REQUEST))
         return Response(QuoteItemSerializer(updated, context={"request": request}).data)
 
     @extend_schema(
@@ -221,10 +237,11 @@ class QuoteItemViewSet(RoleGatedViewMixin, viewsets.ModelViewSet):
             200: QuoteItemSerializer(many=True),
             400: OpenApiResponse(
                 description="QUOTE_ITEMS_BULK_INVALID (with per-row `rows`) / QUOTE_ITEMS_BULK_EMPTY / "
-                "QUOTE_ITEMS_BULK_TOO_LARGE / QUOTE_FROZEN"
+                "QUOTE_ITEMS_BULK_TOO_LARGE"
             ),
             403: OpenApiResponse(description="ADMIN_VIEWER_CANNOT_ACT / ONLY_SELLER_CAN_BUILD_QUOTE"),
             404: OpenApiResponse(description="QUOTE_NOT_FOUND"),
+            409: OpenApiResponse(description="QUOTE_NOT_DRAFT (КП не в черновике) / QUOTE_FROZEN (отправлено клиенту)"),
         },
         tags=["CRM"],
     )
@@ -243,6 +260,7 @@ class QuoteItemViewSet(RoleGatedViewMixin, viewsets.ModelViewSet):
                 "ADMIN_VIEWER_CANNOT_ACT": status.HTTP_403_FORBIDDEN,
                 "ONLY_SELLER_CAN_BUILD_QUOTE": status.HTTP_403_FORBIDDEN,
                 "QUOTE_NOT_FOUND": status.HTTP_404_NOT_FOUND,
+                **QUOTE_LOCK_HTTP,
             }.get(error, status.HTTP_400_BAD_REQUEST)
             return Response({"detail": error}, status=http_status)
         return Response(self.get_serializer(items, many=True).data)
@@ -265,10 +283,11 @@ class QuoteItemViewSet(RoleGatedViewMixin, viewsets.ModelViewSet):
             200: OpenApiResponse(description='{"deleted": [ids]}'),
             400: OpenApiResponse(
                 description="QUOTE_ITEMS_BULK_INVALID (with per-row `rows`) / QUOTE_ITEMS_BULK_EMPTY / "
-                "QUOTE_ITEMS_BULK_TOO_LARGE / QUOTE_FROZEN"
+                "QUOTE_ITEMS_BULK_TOO_LARGE"
             ),
             403: OpenApiResponse(description="ADMIN_VIEWER_CANNOT_ACT / ONLY_SELLER_CAN_BUILD_QUOTE"),
             404: OpenApiResponse(description="QUOTE_NOT_FOUND"),
+            409: OpenApiResponse(description="QUOTE_NOT_DRAFT (КП не в черновике) / QUOTE_FROZEN (отправлено клиенту)"),
         },
         tags=["CRM"],
     )
@@ -287,6 +306,7 @@ class QuoteItemViewSet(RoleGatedViewMixin, viewsets.ModelViewSet):
                 "ADMIN_VIEWER_CANNOT_ACT": status.HTTP_403_FORBIDDEN,
                 "ONLY_SELLER_CAN_BUILD_QUOTE": status.HTTP_403_FORBIDDEN,
                 "QUOTE_NOT_FOUND": status.HTTP_404_NOT_FOUND,
+                **QUOTE_LOCK_HTTP,
             }.get(error, status.HTTP_400_BAD_REQUEST)
             return Response({"detail": error}, status=http_status)
         return Response({"deleted": deleted})
@@ -311,10 +331,11 @@ class QuoteItemViewSet(RoleGatedViewMixin, viewsets.ModelViewSet):
             201: QuoteItemSerializer(many=True),
             400: OpenApiResponse(
                 description="QUOTE_ITEMS_BULK_INVALID (with per-row `rows`) / QUOTE_ITEMS_BULK_EMPTY / "
-                "QUOTE_ITEMS_BULK_TOO_LARGE / QUOTE_FROZEN"
+                "QUOTE_ITEMS_BULK_TOO_LARGE"
             ),
             403: OpenApiResponse(description="ADMIN_VIEWER_CANNOT_ACT / ONLY_SELLER_CAN_BUILD_QUOTE"),
             404: OpenApiResponse(description="QUOTE_NOT_FOUND"),
+            409: OpenApiResponse(description="QUOTE_NOT_DRAFT (КП не в черновике) / QUOTE_FROZEN (отправлено клиенту)"),
         },
         tags=["CRM"],
     )
@@ -333,6 +354,7 @@ class QuoteItemViewSet(RoleGatedViewMixin, viewsets.ModelViewSet):
                 "ADMIN_VIEWER_CANNOT_ACT": status.HTTP_403_FORBIDDEN,
                 "ONLY_SELLER_CAN_BUILD_QUOTE": status.HTTP_403_FORBIDDEN,
                 "QUOTE_NOT_FOUND": status.HTTP_404_NOT_FOUND,
+                **QUOTE_LOCK_HTTP,
             }.get(error, status.HTTP_400_BAD_REQUEST)
             return Response({"detail": error}, status=http_status)
         return Response(self.get_serializer(items, many=True).data, status=status.HTTP_201_CREATED)

@@ -76,8 +76,14 @@ def grant_default_roles(membership: CompanyMember, workspace_role_code: str) -> 
         membership.company_roles.add(*roles)
 
 
-def list_roles_for_user(user: "CustomUser"):
-    """Роли своей компании (системные — первыми). Только сотрудникам и администратору."""
+SYNC_ROLE_PREFIX = "CRM Sync: "
+
+
+def list_roles_for_user(user: "CustomUser", include_managed: bool = False):
+    """Роли своей компании (системные — первыми). Только сотрудникам и администратору.
+
+    Роли, которые ведёт провижининг из CRM (`managed_by_crm`), по умолчанию не отдаются: их нельзя
+    назначить в «Команде» (FIX-55, D-15). `include_managed` — для чтения (роль самого сотрудника)."""
     from core.tenant import own_company
 
     company = own_company()
@@ -90,10 +96,11 @@ def list_roles_for_user(user: "CustomUser"):
         default=Value(len(BackofficeRoleCode.values)),
         output_field=IntegerField(),
     )
-    return (
-        CompanyRole.objects.filter(company=company)
-        .annotate(member_count=Count("members", distinct=True), template_order=template_order)
-        .order_by("template_order", "name")
+    roles = CompanyRole.objects.filter(company=company)
+    if not include_managed:
+        roles = roles.filter(managed_by_crm=False)
+    return roles.annotate(member_count=Count("members", distinct=True), template_order=template_order).order_by(
+        "template_order", "name"
     )
 
 
@@ -119,6 +126,8 @@ def create_company_role(user, company_id, name, permissions) -> Tuple[Optional[C
     name = (name or "").strip()
     if not name:
         return None, "ROLE_NAME_REQUIRED"
+    if name.startswith(SYNC_ROLE_PREFIX):
+        return None, "ROLE_NAME_RESERVED"
     perms, err = _validate_perms(permissions)
     if err:
         return None, err
@@ -136,10 +145,14 @@ def update_company_role(user, role: CompanyRole, name, permissions) -> Tuple[Opt
         return None, "ONLY_TEAM_MANAGER_CAN_MANAGE_ROLES"
     if role.is_system:
         return None, "SYSTEM_ROLE_IMMUTABLE"
+    if role.managed_by_crm:
+        return None, "ROLE_MANAGED_BY_CRM"
     perms, err = _validate_perms(permissions)
     if err:
         return None, err
     new_name = (name or role.name).strip()
+    if new_name.startswith(SYNC_ROLE_PREFIX):
+        return None, "ROLE_NAME_RESERVED"
     if CompanyRole.objects.filter(company_id=role.company_id, name__iexact=new_name).exclude(pk=role.pk).exists():
         return None, "ROLE_NAME_TAKEN"
     role.name = new_name
@@ -154,6 +167,8 @@ def delete_company_role(user, role: CompanyRole) -> Optional[str]:
         return "ONLY_TEAM_MANAGER_CAN_MANAGE_ROLES"
     if role.is_system:
         return "SYSTEM_ROLE_IMMUTABLE"
+    if role.managed_by_crm:
+        return "ROLE_MANAGED_BY_CRM"
     if role.members.exists():
         return "ROLE_HAS_MEMBERS_REASSIGN_FIRST"
     role.delete()
@@ -190,6 +205,13 @@ def set_member_roles(user, member_id, role_ids: Iterable) -> Tuple[Optional[Comp
         return None, "ROLE_NOT_FOUND"
     if any(role.company_id != member.company_id for role in roles):
         return None, "ROLE_COMPANY_MISMATCH"
+    # Управляемые роли («CRM Sync») ведёт CRM: чужую назначить нельзя, собственную — не снять (выбор в интерфейсе
+    # её не содержит, поэтому добавляем обратно) (FIX-55, D-15).
+    own_managed = list(member.company_roles.filter(managed_by_crm=True))
+    own_managed_ids = {role.pk for role in own_managed}
+    if any(role.managed_by_crm and role.pk not in own_managed_ids for role in roles):
+        return None, "ROLE_MANAGED_BY_CRM"
+    roles += [role for role in own_managed if role not in roles]
     keeps_team_manage = any(role.has_perm(Permission.TEAM_MANAGE) for role in roles)
     if member.user_id == user.pk and not user.is_superuser and not keeps_team_manage:
         return None, "CANNOT_DROP_OWN_TEAM_MANAGE"

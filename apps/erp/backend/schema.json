@@ -2599,8 +2599,16 @@
         "/api/v1/accounts/company-roles/": {
             "get": {
                 "operationId": "accounts_company_roles_list",
-                "description": "Роли бэк-офиса своей компании (M1-ERP-05): системные шаблоны + свои; запись — `team.manage`.",
+                "description": "Роли, которые ведёт провижининг из CRM («CRM Sync: …», `managed_by_crm`), по умолчанию не отдаются — их нельзя назначить в «Команде». `include_managed=true` отдаёт их для чтения.",
+                "summary": "List company roles (assignable ones by default)",
                 "parameters": [
+                    {
+                        "in": "query",
+                        "name": "include_managed",
+                        "schema": {
+                            "type": "boolean"
+                        }
+                    },
                     {
                         "name": "page",
                         "required": false,
@@ -2630,7 +2638,7 @@
                     }
                 ],
                 "tags": [
-                    "accounts"
+                    "Accounts"
                 ],
                 "security": [
                     {
@@ -10644,6 +10652,15 @@
                             }
                         },
                         "description": ""
+                    },
+                    "400": {
+                        "description": "DEAL_ID_AND_STATUS_REQUIRED / DEAL_ID_INVALID / FULFILLMENT_INVALID_STATUS"
+                    },
+                    "404": {
+                        "description": "NOT_FOUND (сделки нет)"
+                    },
+                    "409": {
+                        "description": "FULFILLMENT_NOT_READY (отгрузку ещё не создала задача после договора)"
                     }
                 }
             }
@@ -11464,7 +11481,7 @@
         "/api/v1/crm/invoices/{id}/record-payment/": {
             "post": {
                 "operationId": "crm_invoices_record_payment_create",
-                "description": "Счета. Сырые `create`/`destroy` НЕ подключены намеренно (Rule 8).\n\nВыставление счёта — только через сервисные экшены `create-manual` и\n`generate-from-contract`; отмена — через `cancel` (сервис `cancel_invoice`).\nСырое удаление обходило бы отмену, а при наличии платежей падало бы в\n`ProtectedError` → 500 (`Payment.invoice` объявлен с `on_delete=PROTECT`).\n`update` оставлен: им правят черновик (due_date / notes), и он уже загейчен\nна DRAFT ниже — фронтенд использует именно его.",
+                "description": "Идемпотентность по `reference`: повтор с тем же референсом, суммой и датой возвращает существующий платёж (200); тот же референс с другой суммой или датой — 409 `PAYMENT_REFERENCE_CONFLICT`.",
                 "summary": "Record a payment against this invoice",
                 "parameters": [
                     {
@@ -11507,14 +11524,20 @@
                 ],
                 "responses": {
                     "200": {
+                        "description": "Повтор: существующий платёж с тем же референсом, суммой и датой"
+                    },
+                    "201": {
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "$ref": "#/components/schemas/Invoice"
+                                    "$ref": "#/components/schemas/Payment"
                                 }
                             }
                         },
                         "description": ""
+                    },
+                    "409": {
+                        "description": "PAYMENT_REFERENCE_CONFLICT"
                     }
                 }
             }
@@ -12658,13 +12681,16 @@
                         "description": ""
                     },
                     "400": {
-                        "description": "QUOTE_ITEMS_BULK_INVALID (with per-row `rows`) / QUOTE_ITEMS_BULK_EMPTY / QUOTE_ITEMS_BULK_TOO_LARGE / QUOTE_FROZEN"
+                        "description": "QUOTE_ITEMS_BULK_INVALID (with per-row `rows`) / QUOTE_ITEMS_BULK_EMPTY / QUOTE_ITEMS_BULK_TOO_LARGE"
                     },
                     "403": {
                         "description": "ADMIN_VIEWER_CANNOT_ACT / ONLY_SELLER_CAN_BUILD_QUOTE"
                     },
                     "404": {
                         "description": "QUOTE_NOT_FOUND"
+                    },
+                    "409": {
+                        "description": "QUOTE_NOT_DRAFT (КП не в черновике) / QUOTE_FROZEN (отправлено клиенту)"
                     }
                 }
             }
@@ -12707,13 +12733,16 @@
                         "description": "{\"deleted\": [ids]}"
                     },
                     "400": {
-                        "description": "QUOTE_ITEMS_BULK_INVALID (with per-row `rows`) / QUOTE_ITEMS_BULK_EMPTY / QUOTE_ITEMS_BULK_TOO_LARGE / QUOTE_FROZEN"
+                        "description": "QUOTE_ITEMS_BULK_INVALID (with per-row `rows`) / QUOTE_ITEMS_BULK_EMPTY / QUOTE_ITEMS_BULK_TOO_LARGE"
                     },
                     "403": {
                         "description": "ADMIN_VIEWER_CANNOT_ACT / ONLY_SELLER_CAN_BUILD_QUOTE"
                     },
                     "404": {
                         "description": "QUOTE_NOT_FOUND"
+                    },
+                    "409": {
+                        "description": "QUOTE_NOT_DRAFT (КП не в черновике) / QUOTE_FROZEN (отправлено клиенту)"
                     }
                 }
             }
@@ -12805,13 +12834,16 @@
                         "description": ""
                     },
                     "400": {
-                        "description": "QUOTE_ITEMS_BULK_INVALID (with per-row `rows`) / QUOTE_ITEMS_BULK_EMPTY / QUOTE_ITEMS_BULK_TOO_LARGE / QUOTE_FROZEN"
+                        "description": "QUOTE_ITEMS_BULK_INVALID (with per-row `rows`) / QUOTE_ITEMS_BULK_EMPTY / QUOTE_ITEMS_BULK_TOO_LARGE"
                     },
                     "403": {
                         "description": "ADMIN_VIEWER_CANNOT_ACT / ONLY_SELLER_CAN_BUILD_QUOTE"
                     },
                     "404": {
                         "description": "QUOTE_NOT_FOUND"
+                    },
+                    "409": {
+                        "description": "QUOTE_NOT_DRAFT (КП не в черновике) / QUOTE_FROZEN (отправлено клиенту)"
                     }
                 }
             }
@@ -13174,7 +13206,7 @@
         "/api/v1/crm/quotes/{id}/apply-defaults/": {
             "post": {
                 "operationId": "crm_quotes_apply_defaults_create",
-                "description": "Re-pull the seller company's CURRENT defaults (VAT rate, margin, delivery basis, validity term, cost currency) into this DRAFT КП, OVERWRITING those five fields (Odoo «Update Prices» / Salesforce «Recalculate» pattern). Seller-only, unfrozen КП only (else QUOTE_FROZEN). Returns `changed_fields` — the fields that actually differed and were updated (empty when the КП already matched the defaults).",
+                "description": "Re-pull the seller company's CURRENT defaults (VAT rate, margin, delivery basis, validity term, cost currency) into this DRAFT КП, OVERWRITING those five fields (Odoo «Update Prices» / Salesforce «Recalculate» pattern). Seller-only, DRAFT КП only (else 409 QUOTE_NOT_DRAFT / QUOTE_FROZEN). Returns `changed_fields` — the fields that actually differed and were updated (empty when the КП already matched the defaults).",
                 "summary": "Reapply company defaults to the quote",
                 "parameters": [
                     {
@@ -13200,7 +13232,10 @@
                         "description": "Applied — `changed_fields` lists what changed"
                     },
                     "403": {
-                        "description": "ONLY_SELLER_CAN_BUILD_QUOTE / QUOTE_FROZEN"
+                        "description": "ONLY_SELLER_CAN_BUILD_QUOTE"
+                    },
+                    "409": {
+                        "description": "QUOTE_NOT_DRAFT / QUOTE_FROZEN"
                     }
                 }
             }
@@ -13264,7 +13299,7 @@
                         "description": "Wrong status/step"
                     },
                     "403": {
-                        "description": "Role not permitted"
+                        "description": "ROLE_NOT_PERMITTED / SELF_APPROVAL_NOT_ALLOWED (автор КП не согласует своё КП)"
                     }
                 }
             }
@@ -16984,6 +17019,9 @@
                     },
                     "404": {
                         "description": "Deal not found"
+                    },
+                    "409": {
+                        "description": "QUOTE_NOT_DRAFT / QUOTE_FROZEN: активное КП сделки уже не черновик"
                     }
                 }
             }
@@ -18990,6 +19028,12 @@
                         "title": "Системная",
                         "description": "Роль-шаблон бэк-офиса — имя и права не меняются, удалить нельзя"
                     },
+                    "managed_by_crm": {
+                        "type": "boolean",
+                        "readOnly": true,
+                        "title": "Управляется CRM",
+                        "description": "Роль «CRM Sync: <e-mail>» ведёт провижининг из CRM (integration.services.provision): права и состав приходят из CRM, в «Настройках → Команда» её нельзя назначить, изменить или снять"
+                    },
                     "member_count": {
                         "type": "integer",
                         "nullable": true,
@@ -19012,6 +19056,7 @@
                     "created_at",
                     "id",
                     "is_system",
+                    "managed_by_crm",
                     "member_count",
                     "name",
                     "updated_at"
@@ -24049,12 +24094,6 @@
                         "title": "Сделка",
                         "description": "Сделка, к которой относится КП"
                     },
-                    "status": {
-                        "type": "integer",
-                        "nullable": true,
-                        "title": "Статус",
-                        "description": "Текущий статус КП (черновик, отправлено, одобрено)"
-                    },
                     "delivery_basis": {
                         "type": "integer",
                         "nullable": true,
@@ -25654,6 +25693,7 @@
                     },
                     "status": {
                         "type": "integer",
+                        "readOnly": true,
                         "nullable": true,
                         "title": "Статус",
                         "description": "Текущий статус КП (черновик, отправлено, одобрено)"
@@ -25935,6 +25975,7 @@
                     "prepared_by",
                     "public_access_token",
                     "public_token_revoked",
+                    "status",
                     "status_code",
                     "status_name",
                     "subtotal_excl_vat",
@@ -26649,12 +26690,6 @@
                         "type": "integer",
                         "title": "Сделка",
                         "description": "Сделка, к которой относится КП"
-                    },
-                    "status": {
-                        "type": "integer",
-                        "nullable": true,
-                        "title": "Статус",
-                        "description": "Текущий статус КП (черновик, отправлено, одобрено)"
                     },
                     "delivery_basis": {
                         "type": "integer",

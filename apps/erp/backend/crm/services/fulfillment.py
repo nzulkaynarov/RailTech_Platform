@@ -5,7 +5,7 @@ from django.db import transaction
 from accounts.models import CustomUser
 from crm.services.pdf_storage import save_rendered_pdf
 
-from ..constants import DealStageCode, FulfillmentStatusCode
+from ..constants import FULFILLMENT_NOTE_ISSUED_STATUSES, DealStageCode, FulfillmentStatusCode
 from ..models import Deal
 from .deals import transition_deal_stage
 
@@ -24,6 +24,27 @@ def delivery_note_number(fulfillment) -> str:
     return fulfillment.note_number or f"DN-{fulfillment.id}"
 
 
+def _assign_delivery_note_number(fulfillment, seller_company) -> Tuple[str, bool]:
+    """(номер, присвоен ли он этим вызовом). Строка перечитывается под `select_for_update`: параллельный вызов,
+    у которого в памяти строка без номера, получает уже присвоенный номер и не тратит второй (FIX-55, m2 D-6)."""
+    from django.db import transaction
+
+    from .numbering import next_document_number
+
+    if fulfillment.note_number:
+        return fulfillment.note_number, False
+    with transaction.atomic():
+        current = type(fulfillment).objects.select_for_update().only("note_number").get(pk=fulfillment.pk)
+        if current.note_number:
+            fulfillment.note_number = current.note_number
+            return current.note_number, False
+        # Блокировка счётчика живёт до коммита — контракт `next_document_number`.
+        number = next_document_number("DN", "DN", company=seller_company)
+        fulfillment.note_number = number
+        fulfillment.save(update_fields=["note_number", "updated_at"])
+    return number, True
+
+
 def ensure_delivery_note_number(fulfillment, seller_company) -> str:
     """Присвоить номер из ОБЩЕЙ схемы при первой печати; дальше он неизменен.
 
@@ -31,17 +52,36 @@ def ensure_delivery_note_number(fulfillment, seller_company) -> str:
     собственный номерной диапазон. До этого номер собирался как `DN-{id}` в пяти местах кода,
     мимо схемы, по которой идут все прочие документы (квитанция уже по схеме).
     """
-    from django.db import transaction
+    return _assign_delivery_note_number(fulfillment, seller_company)[0]
 
-    from .numbering import next_document_number
 
+def _delivery_note_supplier(fulfillment):
+    """Компания-продавец накладной — продавец КП победившего договора (`None` — платформенная схема нумерации)."""
+    from .quotes import _quote_seller_company
+
+    contract = fulfillment.contract
+    quote = contract.quote if (contract and contract.quote_id) else None
+    return _quote_seller_company(quote) if quote else None
+
+
+def issue_delivery_note(fulfillment) -> str:
+    """Выпуск накладной: итоговый номер по схеме нумерации — один раз — и постановка рендера PDF.
+
+    Раньше номер присваивался только воркером при первой печати: до рендера документ в портале жил как `DN-<id>`,
+    а после менял номер (FIX-55, m2 D-6). Теперь номер появляется при выпуске (отгрузка) и больше не меняется;
+    рендер ставится только вместе с присвоением номера (повторные статусы его не дублируют). Выпущенная ранее
+    накладная с номером не трогается.
+    """
     if fulfillment.note_number:
         return fulfillment.note_number
-    with transaction.atomic():
-        # Блокировка счётчика живёт до коммита — контракт `next_document_number`.
-        number = next_document_number("DN", "DN", company=seller_company)
-        fulfillment.note_number = number
-        fulfillment.save(update_fields=["note_number", "updated_at"])
+    number, assigned = _assign_delivery_note_number(fulfillment, _delivery_note_supplier(fulfillment))
+    if assigned:
+        from django.db import transaction
+
+        from ..tasks import render_document_pdf
+
+        fulfillment_id = fulfillment.pk
+        transaction.on_commit(lambda: render_document_pdf.delay("delivery_note", fulfillment_id))
     return number
 
 
@@ -92,7 +132,6 @@ def update_fulfillment_status(
     valid = set(FulfillmentStatusCode.values)
     if status_code not in valid:
         return None, "FULFILLMENT_INVALID_STATUS"
-    obj = Fulfillment.objects.select_for_update().select_related("deal").get(deal_id=deal_id)
     # Seller drives shipping (PENDING→…→DELIVERED); the buyer ACCEPTS or DISPUTES on
     # receipt. Authorize the actor against the side that owns the target status.
     buyer_statuses = {FulfillmentStatusCode.ACCEPTED, FulfillmentStatusCode.DISPUTED}
@@ -109,6 +148,17 @@ def update_fulfillment_status(
         authorized = is_seller(actor)
     if not authorized:
         return None, "MEMBER_REQUIRED_FOR_ACTION"
+    # Право проверено раньше поиска: без него существование сделки и отгрузки по id не раскрывается (FIX-55).
+    obj = Fulfillment.objects.select_for_update().select_related("deal").filter(deal_id=deal_id).first()
+    if obj is None:
+        # Отгрузку создаёт Celery-задача после подписания договора: до неё менять нечего (FIX-55, m2 D-2).
+        from ..models import Deal
+
+        return None, ("FULFILLMENT_NOT_READY" if Deal.objects.filter(pk=deal_id).exists() else "NOT_FOUND")
+    if status_code in FULFILLMENT_NOTE_ISSUED_STATUSES:
+        # Номер накладной — ДО смены статуса: событие `document.created` для CRM (сигнал post_save на переходе в
+        # «выпущенный») должно нести итоговый номер, а не `DN-<id>` (FIX-55, m2 D-6).
+        issue_delivery_note(obj)
     obj.status = FulfillmentStatus.objects.get(code=status_code)
     now = timezone.now()
     if status_code == FulfillmentStatusCode.SHIPPED and not obj.shipped_at:
@@ -149,11 +199,10 @@ def _render_delivery_note_pdf(fulfillment) -> None:
 
     from .document_blocks import company_template_for, render_delivery_note_body
     from .documents import brand_context_for_pdf, document_brand_context
-    from .quotes import _quote_seller_company
 
     contract = fulfillment.contract
     quote = contract.quote if (contract and contract.quote_id) else None
-    supplier = _quote_seller_company(quote) if quote else None
+    supplier = _delivery_note_supplier(fulfillment)
     number = ensure_delivery_note_number(fulfillment, supplier)
     brand = document_brand_context(supplier)
     ccy = contract.currency.code if (contract and contract.currency_id) else "UZS"
