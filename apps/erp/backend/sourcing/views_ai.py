@@ -298,3 +298,66 @@ class QuoteImportFileView(RoleGatedViewMixin, APIView):
             "user_id": request.user.id,
         }
         return enqueue_ai_job("import_lines", payload, request.user)
+
+
+@extend_schema(
+    summary="Разобрать текст заявки в строки КП (AI, FIX-67)",
+    description=(
+        "Заявка словами: клиент (или передача из CRM) описал потребность текстом, строк нет. Продавец жмёт "
+        "«Разобрать текст в строки (ИИ)» в конструкторе КП — сервер берёт текст заявки сам (полный текст "
+        "клиента, иначе комментарий сделки), разбирает его тем же извлечением, что и файл клиента "
+        "(`ai.services.intake`), и дописывает строки В КОНЕЦ КП. ARCH-01: 202 + task_id, извлечение на Celery "
+        "(поллинг sourcing/ai-status/). ИИ выключен — 503 `AI_DISABLED`, шлюз недоступен — результат задачи "
+        "`AI_EXTRACT_FAILED`; ручной набор строк работает всегда."
+    ),
+    request=inline_serializer("ParseRequestTextRequest", fields={"quote_id": serializers.IntegerField()}),
+    responses={
+        202: OpenApiResponse(description="AI job queued, task_id returned (poll ai-status)"),
+        400: OpenApiResponse(description="QUOTE_ID_REQUIRED / REQUEST_TEXT_EMPTY"),
+        403: OpenApiResponse(description="Not own-company staff with pricing permission"),
+        404: OpenApiResponse(description="Quote not found"),
+        409: OpenApiResponse(description="Quote is not editable (QUOTE_NOT_DRAFT / QUOTE_FROZEN)"),
+        503: OpenApiResponse(description="AI disabled (AI_DISABLED)"),
+    },
+    tags=["Sourcing"],
+)
+class QuoteParseRequestTextView(RoleGatedViewMixin, APIView):
+    """FIX-67 — текст заявки → строки КП. Текст клиент не присылает: сервер читает его с самой сделки."""
+
+    required_permissions = {
+        "POST": "quote.build",
+    }
+
+    permission_classes = [IsAuthenticated]
+    throttle_classes = [ScopedRateThrottle]
+    throttle_scope = "ai_extract"
+
+    def post(self, request):
+        from django.conf import settings
+
+        if not getattr(settings, "AI_IMPORT_ENABLED", False):
+            return Response({"detail": "AI_DISABLED"}, status=status.HTTP_503_SERVICE_UNAVAILABLE)
+        try:
+            quote_id = int(request.data.get("quote_id"))
+        except (TypeError, ValueError):
+            return Response({"detail": "QUOTE_ID_REQUIRED"}, status=status.HTTP_400_BAD_REQUEST)
+
+        from accounts.services.permissions import can_edit_quote_pricing
+        from crm.models import Quote
+        from crm.services.draft_quote import deal_request_text
+        from crm.services.quotes.editable import quote_edit_lock_code
+
+        quote = Quote.objects.select_related("deal").filter(pk=quote_id).first()
+        if quote is None:
+            return Response({"detail": "QUOTE_NOT_FOUND"}, status=status.HTTP_404_NOT_FOUND)
+        if not (getattr(request.user, "is_superuser", False) or can_edit_quote_pricing(request.user)):
+            return Response({"detail": "ONLY_SELLER_CAN_BUILD_QUOTE"}, status=status.HTTP_403_FORBIDDEN)
+        lock_code = quote_edit_lock_code(quote)
+        if lock_code:
+            return Response({"detail": lock_code}, status=status.HTTP_409_CONFLICT)
+        if not deal_request_text(quote.deal):
+            return Response({"detail": "REQUEST_TEXT_EMPTY"}, status=status.HTTP_400_BAD_REQUEST)
+
+        from .ai_jobs import enqueue_ai_job
+
+        return enqueue_ai_job("parse_request_text", {"quote_id": quote_id, "user_id": request.user.id}, request.user)

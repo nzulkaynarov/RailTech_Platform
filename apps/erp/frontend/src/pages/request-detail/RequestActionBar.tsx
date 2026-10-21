@@ -56,7 +56,7 @@ export function RequestActionBar(props: RequestActionBarProps) {
   } = props;
 
   const stageActions = isDraft || isSourcing || isCalculating || hasQuote || canBuildNewVersion;
-  const showActionBar = stageActions || isWon || canClaim || canRelease || canTakeAndPrepare;
+  const showActionBar = stageActions || isWon || canClaim || canRelease || canTakeAndPrepare || canBuildQuote;
 
   if (!showActionBar) {
     return <p className="text-sm text-muted-foreground">{t('requestDetailActions.noActions')}</p>;
@@ -67,7 +67,7 @@ export function RequestActionBar(props: RequestActionBarProps) {
       <CardContent className="flex flex-wrap items-center gap-3 py-4">
         <span className="text-sm font-medium">{t('requestDetailActions.actionsLabel')}:</span>
         {/* W2 «одна кнопка» (one-click-quotation): claim + стадия + предзаполненный КП одним
-            действием — короткий путь; кнопки ниже остаются для пошагового сценария. */}
+            действием — короткий путь; только для заявки со строками (FIX-67), иначе сервер откажет. */}
         {canTakeAndPrepare && (
           <Button
             variant="default"
@@ -126,10 +126,12 @@ export function RequestActionBar(props: RequestActionBarProps) {
           </Button>
         )}
         {/* КП builder entry — create it, then open the focused full-page builder
-            (QuoteBuilderGrid: pricing, basis, charges, approval chain). */}
+            (QuoteBuilderGrid: pricing, basis, charges, approval chain). FIX-67: показывается всегда, пока
+            КП не начато (при праве на создание КП); рядом с «Взять в работу и подготовить» — вторичной,
+            потому что та кнопка есть только у заявки со строками. */}
         {canBuildQuote && (
           <Button
-            variant="default"
+            variant={canTakeAndPrepare ? 'outline' : 'default'}
             onClick={onOpenGenerate}
           >
             <FileText className="h-4 w-4 mr-2" />
