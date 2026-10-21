@@ -282,15 +282,20 @@ def _audit_paired(request, method: str) -> None:
     """Запись в журнал ERP: сопряжено (способ, адрес CRM, версия), без кода, доказательства и ключей (ADR-0009)."""
     from core.audit import log_admin_action
 
-    log_admin_action(
-        entity_type="crm_pairing",
-        entity_id=0,
-        action="Сопряжено по bootstrap (без кода)" if method == "bootstrap" else "Сопряжено по коду из ERP",
-        detail=f"Способ: {method}",
-        actor=None,
-        after={"method": method, "remote_addr": request.META.get("REMOTE_ADDR", "")},
-        event_code="integration.paired_bootstrap" if method == "bootstrap" else "integration.paired_code",
-    )
+    # Сопряжение уже закоммичено (секреты заменены, код погашен, окно закрыто): сбой журнала не должен превращать успех
+    # в 500 — CRM повторила бы вызов с погашенным кодом и решила, что сопряжения нет. Пишем предупреждение без деталей.
+    try:
+        log_admin_action(
+            entity_type="crm_pairing",
+            entity_id=0,
+            action="Сопряжено по bootstrap (без кода)" if method == "bootstrap" else "Сопряжено по коду из ERP",
+            detail=f"Способ: {method}",
+            actor=None,
+            after={"method": method, "remote_addr": request.META.get("REMOTE_ADDR", "")},
+            event_code="integration.paired_bootstrap" if method == "bootstrap" else "integration.paired_code",
+        )
+    except Exception as exc:  # noqa: BLE001 - аудит вторичен
+        logger.warning("pairing audit entry (%s) was not written: %s", method, type(exc).__name__)
 
 
 class PairingAcceptView(APIView):

@@ -51,6 +51,7 @@ FAKE_JWT = "eyJfaXg2NmJmYWtl.eyJmaXg2NmJmYWtlcGF5bG9hZA.fix66bfakesig"
         ),
         (f"?x-amz-security-token={FAKE_SIG}", FAKE_SIG),
         (f"Authorization: Bearer {FAKE_SIG}", FAKE_SIG),
+        (f"X-Pairing-Proof: v1.1760000000.jti.{FAKE_SIG}", FAKE_SIG),  # bootstrap (M3-ERP-05)
         (f"headers={{'Authorization': 'Bearer {FAKE_SIG}', 'Accept': 'json'}}", FAKE_SIG),
         (f"authorization=Basic {FAKE_SIG}", FAKE_SIG),
         (f"X-Api-Key: {FAKE_SIG}", FAKE_SIG),
