@@ -1,6 +1,7 @@
 import json
 
 from django.conf import settings
+from django.core.exceptions import ValidationError as DjangoValidationError
 from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
 from rest_framework_simplejwt.token_blacklist.models import OutstandingToken
@@ -591,3 +592,34 @@ class ActiveSessionSerializer(serializers.ModelSerializer):
     def get_is_current(self, obj) -> bool:
         current_jti = self.context.get("current_jti")
         return bool(current_jti) and obj.jti == current_jti
+
+
+class OwnCompanySetupSerializer(serializers.Serializer):
+    """Форма мастера первого запуска (FIX-65): название обязательно, остальное — по желанию.
+
+    ИНН проверяется тем же валидатором, что у модели; занятый ИНН — ошибка поля, а не 500."""
+
+    name = serializers.CharField(max_length=255)
+    inn = serializers.CharField(required=False, allow_blank=True, max_length=20)
+    legal_address = serializers.CharField(required=False, allow_blank=True)
+    phone = serializers.CharField(required=False, allow_blank=True, max_length=50)
+    email = serializers.EmailField(required=False, allow_blank=True)
+
+    def validate_name(self, value):
+        value = value.strip()
+        if not value:
+            raise serializers.ValidationError("Укажите название компании.")
+        return value
+
+    def validate_inn(self, value):
+        value = (value or "").strip()
+        if not value:
+            return ""
+        for validator in Company._meta.get_field("inn").validators:
+            try:
+                validator(value)
+            except DjangoValidationError as exc:
+                raise serializers.ValidationError(exc.messages) from exc
+        if Company.objects.filter(inn=value).exists():
+            raise serializers.ValidationError("Компания с таким ИНН уже есть.")
+        return value
