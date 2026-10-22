@@ -97,6 +97,15 @@ class CrmUserMapping(models.Model):
         related_name="crm_user_mapping",
         verbose_name=_("Пользователь ERP"),
     )
+    # Последний провижининг: {"role", "permissions", "role_codes"}. Нужен, чтобы привязать сотрудника к своей компании,
+    # созданной ПОЗЖЕ провижининга (мастер первого запуска, FIX-P1-2): без неё ролям взяться неоткуда. NULL —
+    # сопоставление создано до этого поля (роль восстанавливается по `is_superuser`, права — минимальные).
+    provision_snapshot = models.JSONField(
+        null=True,
+        blank=True,
+        verbose_name=_("Последний провижининг"),
+        help_text=_("Роль, права и системные роли из последнего провижининга CRM"),
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

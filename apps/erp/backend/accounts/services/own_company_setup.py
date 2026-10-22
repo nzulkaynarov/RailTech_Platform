@@ -69,6 +69,12 @@ def create_own_company(user: CustomUser, data: Dict[str, Any]) -> Tuple[Optional
             transaction.set_rollback(True)
             return None, "OWN_COMPANY_ID_MISMATCH"
 
+        # Сотрудники, которых CRM провижинила до компании, становятся её участниками (FIX-P1-2, QA-P1-D-2):
+        # иначе они не видят сделок до следующей правки их ролей в CRM. Той же транзакцией — сбой откатит всё.
+        from integration.services.provision import attach_provisioned_users
+
+        attach_provisioned_users(company, actor=user)
+
         log_admin_action(
             entity_type="company",
             entity_id=company.id,
