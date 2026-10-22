@@ -18,6 +18,7 @@ from sqlalchemy import delete
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
+from app.bus import events as bus_events
 from app.config import Settings
 from app.domain.erp_permissions import erp_access
 from app.domain.erp_sync import ERP
@@ -181,6 +182,9 @@ class SsoService:
             name = str(payload.get("name") or "").strip()
             if name and user.full_name != name:
                 user.full_name = name
+                await bus_events.user_updated(
+                    session, user, Actor(user.id, ip=client.ip), ["full_name"]
+                )
 
             await audit.record(
                 session,

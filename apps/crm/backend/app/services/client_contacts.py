@@ -85,8 +85,7 @@ class ClientContactService:
         async with self._sessions() as session, session.begin():
             await _client(session, client_id, lock=True)
             await _check_identity(session, client_id, values["telegram_identity_id"])
-            if values["is_primary"]:
-                await _clear_primary(session, client_id)
+            demoted = await _clear_primary(session, client_id) if values["is_primary"] else []
             row = ClientContact(client_id=client_id, **values)
             session.add(row)
             await session.flush()
@@ -99,6 +98,7 @@ class ClientContactService:
                 after={"contact_id": row.id, **_snapshot(row)},
             )
             await bus_events.contact_created(session, row, who.actor)
+            await _publish_demoted(session, demoted, who)
             return row.id
 
     async def update(
@@ -110,8 +110,11 @@ class ClientContactService:
             row = await _contact(session, client_id, contact_id)
             await _check_identity(session, client_id, values["telegram_identity_id"])
             before = _snapshot(row)
-            if values["is_primary"] and not row.is_primary:
+            demoted = (
                 await _clear_primary(session, client_id)
+                if values["is_primary"] and not row.is_primary
+                else []
+            )
             for key, value in values.items():
                 setattr(row, key, value)
             await audit.record(
@@ -124,6 +127,7 @@ class ClientContactService:
                 after={"contact_id": contact_id, **_snapshot(row)},
             )
             await bus_events.contact_updated(session, row, who.actor)
+            await _publish_demoted(session, demoted, who)
 
     async def delete(self, who: Principal, client_id: int, contact_id: int) -> None:
         async with self._sessions() as session, session.begin():
@@ -177,10 +181,24 @@ async def _check_identity(session: AsyncSession, client_id: int, identity_id: in
         )
 
 
-async def _clear_primary(session: AsyncSession, client_id: int) -> None:
-    await session.execute(
+async def _clear_primary(session: AsyncSession, client_id: int) -> list[int]:
+    """Снимает признак «основной»; возвращает id контактов, которые его потеряли."""
+    demoted = await session.scalars(
         update(ClientContact)
         .where(ClientContact.client_id == client_id, ClientContact.is_primary.is_(True))
         .values(is_primary=False)
+        .returning(ClientContact.id)
     )
+    ids = list(demoted.all())
     await session.flush()
+    return ids
+
+
+async def _publish_demoted(session: AsyncSession, contact_ids: list[int], who: Principal) -> None:
+    """Контакты, потерявшие признак основного, — тоже изменились: `contact.updated` на каждый
+    (массовый UPDATE объекты в сессии не обновляет — строки перечитываются).
+    """
+    for contact_id in contact_ids:
+        contact = await session.get(ClientContact, contact_id, populate_existing=True)
+        if contact is not None:
+            await bus_events.contact_updated(session, contact, who.actor)

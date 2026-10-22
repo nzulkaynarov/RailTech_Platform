@@ -519,3 +519,15 @@ async def test_a_stale_event_does_not_roll_the_mirror_back() -> None:
 def test_the_pair_environment_name_matches_the_documented_convention() -> None:
     assert secret_env_name("erp", "crm") == "RT_BUS_SECRET_ERP_CRM"
     assert secret_env_name("platform-bff", "crm") == "RT_BUS_SECRET_PLATFORM_BFF_CRM"
+
+
+def test_the_notice_lease_covers_every_send_with_a_reserve() -> None:
+    """Аренда не короче «отправки × таймаут + запас»: сборщик не пошлёт то же сообщение дважды."""
+    from datetime import timedelta
+
+    from app.bus.notices import LEASE, LEASE_RESERVE_S, SEND_TIMEOUT_S, _lease_for
+
+    assert _lease_for(1) == LEASE
+    many = _lease_for(20)
+    assert many >= timedelta(seconds=20 * SEND_TIMEOUT_S + LEASE_RESERVE_S)
+    assert many > LEASE

@@ -1,0 +1,20 @@
+{
+  "specversion": "1.0",
+  "id": "0c57d9a6-6d3a-5d3c-9d57-8f6bb1a3e101",
+  "source": "rt://crm",
+  "type": "uz.railtech.crm.lead.erased.v1",
+  "time": "2026-10-22T08:20:00Z",
+  "subject": "lead/501",
+  "datacontenttype": "application/json",
+  "dataschema": "rt://contracts/events/crm/lead.erased/v1",
+  "tenant": "railtech",
+  "correlationid": "6a9d3f43-0a0e-5b6c-b9a0-2f0a5d9f7c11",
+  "data": {
+    "crm_lead_id": 501,
+    "crm_client_id": 42,
+    "erased_at": "2026-10-22T08:30:00Z",
+    "actor": {
+      "type": "bot"
+    }
+  }
+}

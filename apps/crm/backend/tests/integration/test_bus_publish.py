@@ -300,7 +300,7 @@ async def test_manual_lead_publishes_created_and_stage_changed(
     assert (change["from"], change["to"], change["reason"]) == (
         "new",
         "in_progress",
-        "created manually",
+        "created_manually",
     )
     assert change["actor"] == {"type": "staff", "crm_user_id": who.user_id}
 
@@ -556,6 +556,151 @@ async def test_an_event_that_does_not_fit_the_schema_is_refused_before_the_write
         with pytest.raises(EventValidationError):
             await bus.publish(session, "uz.railtech.crm.client.updated.v1", {"client": {}})
     assert await outbox(sessions) == []
+
+
+# ── Правки по ревью ─────────────────────────────────────────────────────────────────────────────
+
+
+async def test_handing_over_the_work_publishes_an_event_for_every_lead_and_client(
+    sessions: async_sessionmaker[AsyncSession], bus: Any
+) -> None:
+    admin, _ = await make_user(sessions, "handover-admin@railtech.uz", ["admin"])
+    leaving, _ = await make_user(sessions, "leaving@railtech.uz", ["manager"])
+    colleague, _ = await make_user(sessions, "colleague@railtech.uz", ["manager"])
+    async with sessions() as session, session.begin():
+        leads = [
+            Lead(display_name=f"Лид {n}", stage="in_progress", owner_mode="human") for n in range(2)
+        ]
+        for lead in leads:
+            lead.assigned_user_id = leaving.id
+        clients = [Client(name=f"ООО {n}", owner_user_id=leaving.id) for n in range(2)]
+        session.add_all([*leads, *clients])
+        await session.flush()
+        lead_ids = sorted(lead.id for lead in leads)
+        client_ids = sorted(client.id for client in clients)
+    await clear_outbox(sessions)
+
+    await UserService(sessions).update(
+        Actor(admin.id, "user"),
+        leaving.id,
+        UserPatch(is_active=False, transfer_to_user_id=colleague.id),
+    )
+
+    rows = await outbox(sessions)
+    by_type: dict[str, list[dict[str, Any]]] = {}
+    for row in rows:
+        by_type.setdefault(row["type"], []).append(row["envelope"]["data"])
+    lead_events = by_type["uz.railtech.crm.lead.updated.v1"]
+    client_events = by_type["uz.railtech.crm.client.updated.v1"]
+    assert sorted(d["lead"]["crm_lead_id"] for d in lead_events) == lead_ids
+    assert {d["lead"]["assigned_user"]["crm_user_id"] for d in lead_events} == {colleague.id}
+    assert sorted(d["client"]["crm_client_id"] for d in client_events) == client_ids
+    assert {d["client"]["owner"]["crm_user_id"] for d in client_events} == {colleague.id}
+    assert by_type["uz.railtech.identity.user.deactivated.v1"][0]["crm_user_id"] == leaving.id
+
+
+async def test_a_publish_failure_rolls_back_a_contact_and_a_lead(
+    sessions: async_sessionmaker[AsyncSession],
+) -> None:
+    who = await admin_user(sessions)
+    async with sessions() as session, session.begin():
+        client = Client(name="ООО Откат")
+        session.add(client)
+        await session.flush()
+        client_id = client.id
+
+    class BrokenBus:
+        async def publish(self, *_: Any, **__: Any) -> None:
+            raise RuntimeError("bus is down")
+
+    runtime.set_bus(BrokenBus())  # type: ignore[arg-type]
+    try:
+        with pytest.raises(RuntimeError, match="bus is down"):
+            await ClientContactService(sessions).create(
+                who, client_id, ContactIn(full_name="Не создастся")
+            )
+        with pytest.raises(RuntimeError, match="bus is down"):
+            await LeadIntakeService(sessions, SettingsService(sessions), b"k").create_manual(
+                who, ManualLeadIn(source="phone", name="Не создастся", phone="+998901112233")
+            )
+    finally:
+        runtime.set_bus(None)
+
+    async with sessions() as session:
+        assert (await session.scalars(select(ClientContact))).all() == []
+        assert (await session.scalars(select(Lead))).all() == []
+
+
+async def test_free_text_of_a_stage_reason_never_reaches_the_outbox(
+    sessions: async_sessionmaker[AsyncSession], bus: Any
+) -> None:
+    who = await admin_user(sessions)
+    async with sessions() as session, session.begin():
+        lead = Lead(display_name="Лид", stage="in_progress", owner_mode="human")
+        lead.assigned_user_id = who.user_id
+        session.add(lead)
+        await session.flush()
+        lead_id = lead.id
+    secret_text = "Клиент просил перезвонить на +998901234567, ИНН 300000001"
+
+    await LeadService(sessions, SettingsService(sessions), LeadMessenger(sessions, None)).close(
+        who, lead_id, "lost", secret_text
+    )
+
+    rows = await outbox(sessions)
+    assert "uz.railtech.crm.lead.stage_changed.v1" in [r["type"] for r in rows]
+    assert "перезвонить" not in str([r["envelope"] for r in rows])
+    stage_changed = next(r for r in rows if r["type"].endswith("lead.stage_changed.v1"))
+    assert "reason" not in stage_changed["envelope"]["data"], "свободный текст — без кода причины"
+
+
+@pytest.mark.parametrize(
+    ("source", "reason", "code"),
+    [
+        ("user", "taken by manager", "taken_by_manager"),
+        ("user", "won", "closed_won"),
+        ("qualifier", "qualifier: ask_budget", "qualifier"),
+        ("timer", "no reply for 5 days", "no_reply"),
+        ("trigger", "price_or_contract_asked, human_requested", "escalation_trigger"),
+        ("user", "Позвонить завтра", None),
+        ("user", "", None),
+    ],
+)
+def test_stage_reason_codes(source: str, reason: str, code: str | None) -> None:
+    from app.bus.reasons import reason_code
+
+    assert reason_code(source, reason) == code
+
+
+async def test_contacts_that_lose_the_primary_flag_are_published_too(
+    sessions: async_sessionmaker[AsyncSession], bus: Any
+) -> None:
+    who = await admin_user(sessions)
+    async with sessions() as session, session.begin():
+        client = Client(name="ООО Основной")
+        session.add(client)
+        await session.flush()
+        client_id = client.id
+    service = ClientContactService(sessions)
+    first = await service.create(who, client_id, ContactIn(full_name="Первый", is_primary=True))
+    await clear_outbox(sessions)
+
+    second = await service.create(who, client_id, ContactIn(full_name="Второй", is_primary=True))
+    rows = await outbox(sessions)
+    assert [(r["type"], r["subject"]) for r in rows] == [
+        ("uz.railtech.crm.contact.created.v1", f"contact/{second}"),
+        ("uz.railtech.crm.contact.updated.v1", f"contact/{first}"),
+    ]
+    assert rows[1]["envelope"]["data"]["contact"]["is_primary"] is False
+
+    await clear_outbox(sessions)
+    await service.update(who, client_id, first, ContactIn(full_name="Первый", is_primary=True))
+    rows = await outbox(sessions)
+    assert [(r["type"], r["subject"]) for r in rows] == [
+        ("uz.railtech.crm.contact.updated.v1", f"contact/{first}"),
+        ("uz.railtech.crm.contact.updated.v1", f"contact/{second}"),
+    ]
+    assert rows[1]["envelope"]["data"]["contact"]["is_primary"] is False
 
 
 # ── Подписчики и корреляция ─────────────────────────────────────────────────────────────────────

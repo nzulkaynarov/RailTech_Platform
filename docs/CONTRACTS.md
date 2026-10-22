@@ -317,6 +317,8 @@ enum, отсутствующее обязательное поле, наруше
 | `uz.railtech.crm.contact.created.v1` / `contact.updated.v1` | `rt://crm` → erp | снимок `contact`: `crm_contact_id`, `crm_client_id`, `erp_company_id?`, `full_name`, `position`, `phone_e164`, `email`, `telegram_user_id`, `is_primary`, `language?`, `preferred_channel?`, `updated_at` |
 | `uz.railtech.crm.contact.deleted.v1` | `rt://crm` → erp | `crm_contact_id`, `crm_client_id`, `erp_company_id?`, `deleted_at`, `actor`; поздний `contact.created/updated` с `updated_at` ≤ `deleted_at` не применяется |
 | `uz.railtech.crm.lead.created.v1` / `lead.updated.v1` / `lead.stage_changed.v1` | `rt://crm` → (Платформа, B5) | снимок `lead` без контактов и переписки: `crm_lead_id`, `crm_client_id?`, `display_name`, `company_name`, `stage`, `source`, `language`, `score`, `assigned_user`, `erp_request_id?`, `updated_at`; у `stage_changed` — `from`, `to`, `reason?` |
+| `uz.railtech.crm.lead.erased.v1` | `rt://crm` → (Платформа, B5) | только `crm_lead_id`, `crm_client_id`, `erased_at`, `actor`: лид обезличен по запросу, **подписчики обязаны стереть свои копии ПДн по лиду** |
+| `uz.railtech.crm.lead.merged.v1` | `rt://crm` → (Платформа, B5) | `lead` — снимок выжившего, `merged_lead_id` — поглощённый лид (в CRM его больше нет), `actor` |
 | `uz.railtech.identity.user.created.v1` / `user.updated.v1` | `rt://crm` → (ERP, Платформа — позже) | снимок `user`: `crm_user_id`, `email`, `full_name`, `position`, `language`, `is_active`, `platform_roles`, `systems`, `erp_role_codes?`, `updated_at` |
 | `uz.railtech.identity.user.deactivated.v1` | `rt://crm` → (ERP, Платформа — позже) | `crm_user_id`, `reason?`, `actor` |
 
@@ -413,11 +415,13 @@ subscribers:
 |---|---|
 | `crm.client.created.v1` | клиент создан вручную, «Сделать клиентом» с новым клиентом (`ClientService`) |
 | `crm.client.updated.v1` | изменены название, ИНН, сегмент, ответственный, активность; передача записала `erp_company_id` (`ClientService`, `ErpHandoffService`, обработчик событий ERP) |
-| `crm.contact.created.v1` / `updated.v1` / `deleted.v1` | `ClientContactService`; основной контакт, созданный передачей в бэк-офис (`ErpHandoffService`); `deleted_at` — время базы |
+| `crm.contact.created.v1` / `updated.v1` / `deleted.v1` | `ClientContactService` (в т. ч. `updated` для контактов, потерявших признак основного); основной контакт, созданный передачей в бэк-офис (`ErpHandoffService`); `deleted_at` — время базы |
 | `crm.lead.created.v1` | лид из бота, формы сайта, «Новый лид» вручную |
-| `crm.lead.stage_changed.v1` | любой переход стадии (`stages.transition`: менеджер, квалификатор, таймеры, склейка лидов) |
-| `crm.lead.updated.v1` | смена ответственного, привязка к клиенту, изменение `score`, заявка ERP (`erp_request_id`), склейка |
-| `identity.user.created.v1` / `updated.v1` / `deactivated.v1` | `UserService`: создание, смена имени, должности, языка, ролей Платформы и доступа, отключение; первый администратор |
+| `crm.lead.stage_changed.v1` | любой переход стадии (`stages.transition`: менеджер, квалификатор, таймеры, склейка лидов); `reason` — только код из справочника CRM (`app/bus/reasons.py`), свободный текст остаётся в CRM |
+| `crm.lead.updated.v1` | смена ответственного (в т. ч. массовая передача дел уходящего сотрудника — событие на каждый лид и клиента), привязка к клиенту, изменение `score`, заявка ERP (`erp_request_id`) |
+| `crm.lead.erased.v1` | лид обезличен по `/delete` бота (без данных, только идентификаторы) |
+| `crm.lead.merged.v1` | склейка Telegram-лида и лида с тем же телефоном |
+| `identity.user.created.v1` / `updated.v1` / `deactivated.v1` | `UserService`: создание, смена имени, должности, языка, ролей Платформы и доступа, отключение; первый администратор; смена имени при входе по SSO (`SsoService`) |
 
 Диалоги песочницы (`source = sandbox`) на шину не уходят. Контактов лида и переписки в событиях нет. `correlationid` — `X-Request-ID`
 запроса (middleware `BusCorrelationMiddleware` после `CorrelationIdMiddleware`), для задач очереди — новый UUID; `traceparent` —

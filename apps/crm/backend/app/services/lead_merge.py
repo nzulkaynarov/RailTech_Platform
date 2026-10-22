@@ -161,16 +161,17 @@ async def merge_by_phone(
     )
     await events.publish(session, "lead.updated", lead_id=absorbed.id, merged_into=survivor.id)
     logger.info("lead_merged", lead_id=survivor.id, absorbed_lead_id=absorbed.id, phone_set=True)
+    system = audit.Actor.system()
     if plan.stage_changed:
         await bus_events.lead_stage_changed(
             session,
             survivor,
             from_stage=before["survivor"]["stage"],
             to_stage=plan.stage.value,
-            actor=audit.Actor.system(),
+            actor=system,
+            source=TransitionSource.SYSTEM.value,
             reason=f"merged with lead #{absorbed.id}",
         )
-    else:
-        await bus_events.lead_updated(session, survivor, audit.Actor.system())
+    await bus_events.lead_merged(session, survivor, absorbed.id, system)
     escalations = await repo.active_escalation_ids(session, survivor.id)
     return MergeOutcome(survivor.id, absorbed.id, tuple(escalations))

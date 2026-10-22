@@ -17,6 +17,7 @@ from rt_bus.errors import NotInTransactionError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.bus import snapshots
+from app.bus.reasons import reason_code
 from app.bus.runtime import get_bus
 from app.models.auth import User
 from app.models.clients import Client, ClientContact
@@ -30,6 +31,8 @@ CONTACT_UPDATED = "uz.railtech.crm.contact.updated.v1"
 CONTACT_DELETED = "uz.railtech.crm.contact.deleted.v1"
 LEAD_CREATED = "uz.railtech.crm.lead.created.v1"
 LEAD_UPDATED = "uz.railtech.crm.lead.updated.v1"
+LEAD_ERASED = "uz.railtech.crm.lead.erased.v1"
+LEAD_MERGED = "uz.railtech.crm.lead.merged.v1"
 LEAD_STAGE_CHANGED = "uz.railtech.crm.lead.stage_changed.v1"
 USER_CREATED = "uz.railtech.identity.user.created.v1"
 USER_UPDATED = "uz.railtech.identity.user.updated.v1"
@@ -154,6 +157,7 @@ async def lead_stage_changed(
     from_stage: str,
     to_stage: str,
     actor: Actor,
+    source: str = "",
     reason: str | None = None,
 ) -> None:
     _require_transaction(session)
@@ -164,11 +168,40 @@ async def lead_stage_changed(
         "from": from_stage,
         "to": to_stage,
     }
-    text = snapshots.clip(reason, 500)
+    text = reason_code(source, reason)
     if text is not None:
         data["reason"] = text
     data["actor"] = snapshots.actor_of(actor)
     await _publish(session, LEAD_STAGE_CHANGED, data, f"lead/{lead.id}")
+
+
+async def lead_erased(session: AsyncSession, lead: Lead, actor: Actor) -> None:
+    """Лид обезличен по запросу: только идентификаторы и время; подписчики стирают свои копии."""
+    _require_transaction(session)
+    if _internal(lead):
+        return
+    data = {
+        "crm_lead_id": lead.id,
+        "crm_client_id": lead.client_id,
+        "erased_at": snapshots.utc(await snapshots.db_now(session)),
+        "actor": snapshots.actor_of(actor),
+    }
+    await _publish(session, LEAD_ERASED, data, f"lead/{lead.id}")
+
+
+async def lead_merged(
+    session: AsyncSession, survivor: Lead, merged_lead_id: int, actor: Actor
+) -> None:
+    """Два лида склеены: снимок выжившего и id поглощённого (его больше нет в CRM)."""
+    _require_transaction(session)
+    if _internal(survivor):
+        return
+    data = {
+        "lead": await snapshots.lead_snapshot(session, survivor),
+        "merged_lead_id": merged_lead_id,
+        "actor": snapshots.actor_of(actor),
+    }
+    await _publish(session, LEAD_MERGED, data, f"lead/{survivor.id}")
 
 
 async def user_created(session: AsyncSession, user: User, actor: Actor) -> None:

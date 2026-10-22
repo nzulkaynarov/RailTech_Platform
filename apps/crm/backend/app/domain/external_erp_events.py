@@ -53,7 +53,8 @@ def _hint(f: ErpEventsFacts) -> str:
     if f.stuck and not (f.dead or f.failed):
         return (
             "События приняты, но не обработаны: проверьте, что воркер CRM работает "
-            "(задачи очереди `notify`); зависшие ставятся в очередь автоматически"
+            "(очередь `rt_bus`, задача `rt_bus.process_inbox`); зависшие ставятся в очередь "
+            "автоматически"
         )
     return (
         "«company mismatch» — сверьте сопоставление клиента с компанией в ERP; «Client not found» "

@@ -44,6 +44,8 @@ SWEEP_AFTER = timedelta(seconds=60)
 LEASE = timedelta(seconds=45)
 SWEEP_LIMIT = 100
 SEND_TIMEOUT_S = 10
+#: Запас аренды сверх «число отправок × таймаут».
+LEASE_RESERVE_S = 30
 
 BotProvider = Callable[[], Awaitable[Bot | None]]
 
@@ -54,6 +56,10 @@ class _Send:
     chat_id: int
     text: str
     markup: InlineKeyboardMarkup | None
+
+
+def _lease_for(sends: int) -> timedelta:
+    return max(LEASE, timedelta(seconds=sends * SEND_TIMEOUT_S + LEASE_RESERVE_S))
 
 
 def _transient(exc: Exception) -> bool:
@@ -85,7 +91,11 @@ class ErpEventNotices:
 
     @staticmethod
     def add(session: AsyncSession, event_id: str, items: list[dict[str, Any]]) -> None:
-        """Записать сообщения события в транзакции обработки (повтор по тому же id заменяет их)."""
+        """Записать сообщения события в транзакции обработки (ключ — id события шины).
+
+        Повторной записи по тому же id нет: обработка идёт в одной транзакции со статусом inbox,
+        откат уносит и эту строку, а обработанное событие второй раз не выполняется.
+        """
         session.add(ErpEventNotice(event_id=uuid.UUID(event_id), items=items, sent=[]))
 
     async def deliver(self, event_id: str) -> int:
@@ -171,7 +181,8 @@ class ErpEventNotices:
             if not sends:
                 row.notified_at = now
                 return []
-            row.lease_until = now + LEASE
+            # Аренда: все отправки по таймауту каждой + запас; сборщик не пошлёт то же дважды.
+            row.lease_until = now + _lease_for(len(sends))
             return sends
 
     async def _release(self, key: uuid.UUID, done: list[str], *, retry: bool) -> None:

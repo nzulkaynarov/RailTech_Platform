@@ -42,6 +42,7 @@ async def transition(
             from_stage=decision.from_stage.value,
             to_stage=target.value,
             actor=_actor(source, actor_user_id),
+            source=source.value,
             reason=reason,
         )
         await events.publish(session, "lead.updated", lead_id=lead.id, stage=target.value)
