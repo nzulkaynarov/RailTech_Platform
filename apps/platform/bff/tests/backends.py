@@ -42,6 +42,7 @@ class Backends:
     """Поведение CRM и ERP, которое тесты меняют на лету (поля и `*_status`)."""
 
     def __init__(self, router: respx.MockRouter, clock: Clock) -> None:
+        self.router = router
         self.clock = clock
         self.profile = profile(["MANAGER"])
         self.crm_access_ttl = 600
