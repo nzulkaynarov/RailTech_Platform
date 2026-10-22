@@ -12,7 +12,7 @@
 ## Архитектура хранилища данных
 
 1. **Реляционная база данных**: PostgreSQL 17, база `erp`, владелец — пользователь `erp`.
-2. **Файловое хранилище (Media)**: S3-совместимое хранилище RustFS (`infra/compose`), бакет `erp`. Локальный dev-фолбэк — именованный docker volume `erp_media` (путь `/app/media`).
+2. **Файловое хранилище (Media)**: S3-совместимое хранилище RustFS (`infra/compose`), бакеты `erp-private`, `erp-public`, `erp-temp` (S0-1). Тома `erp_media` и папки `/app/media` с файлами нет.
 3. **Изоляция**: База `erp` не имеет общих таблиц или внешних ключей к базе `crm`. Связи хранятся через строковые/числовые внешние ID (`crm_client_id`, `crm_lead_id`).
 
 ---
@@ -49,18 +49,24 @@ SELECT pg_size_pretty(pg_database_size('erp')) AS erp_db_size;
    ```
 
 ### 2. Бэкап медиафайлов (S3 / RustFS)
-Если используется RustFS стенда:
+Файлы ERP лежат только в бакетах RustFS (`erp-private`, `erp-public`). Выгрузка бакетов в архив на стенде:
 ```bash
-# Синхронизация бакета erp в локальный архив
 mkdir -p backups/media
 docker compose -f infra/compose/base.yml -f infra/compose/dev.yml --env-file .env exec -T erp-backend python manage.py shell -c "
-import shutil, os
-if os.path.exists('/app/media'):
-    shutil.make_archive('/tmp/erp_media_backup', 'gztar', '/app/media')
-    print('Media archive created at /tmp/erp_media_backup.tar.gz')
+import os, boto3
+from django.conf import settings
+s3 = boto3.client('s3', endpoint_url=settings.MINIO_ENDPOINT, aws_access_key_id=settings.MINIO_ACCESS_KEY, aws_secret_access_key=settings.MINIO_SECRET_KEY)
+for bucket in (settings.MINIO_PRIVATE_BUCKET, settings.MINIO_PUBLIC_BUCKET):
+    for page in s3.get_paginator('list_objects_v2').paginate(Bucket=bucket):
+        for item in page.get('Contents', []):
+            target = os.path.join('/tmp/erp_media_backup', bucket, item['Key'])
+            os.makedirs(os.path.dirname(target), exist_ok=True)
+            s3.download_file(bucket, item['Key'], target)
+print('Buckets downloaded to /tmp/erp_media_backup')
 "
-docker compose -f infra/compose/base.yml -f infra/compose/dev.yml --env-file .env cp erp-backend:/tmp/erp_media_backup.tar.gz backups/media/
+docker compose -f infra/compose/base.yml -f infra/compose/dev.yml --env-file .env cp erp-backend:/tmp/erp_media_backup backups/media/
 ```
+На проде бакеты входят в копию вне VPS 1 (`docs/runbooks/deploy.md` §4).
 
 ### 3. ⚠️ Восстановление базы данных из дампа
 ⚠️ **Внимание: восстановление перезаписывает существующие таблицы базы `erp`!**
