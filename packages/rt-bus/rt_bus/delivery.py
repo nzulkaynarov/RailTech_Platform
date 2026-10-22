@@ -1,0 +1,168 @@
+"""Попытка доставки: запрос, отправка (httpx), итог по L3 — общая часть адаптеров SQLAlchemy и Django."""
+
+from __future__ import annotations
+
+import json
+import random
+import uuid
+from collections.abc import Mapping
+from dataclasses import dataclass
+from datetime import datetime, timedelta
+from enum import StrEnum
+from typing import Any
+
+import httpx
+
+from .policy import RETRY_AFTER_STATUSES, BreakerPolicy, RetryPolicy, Verdict, classify_status, parse_retry_after
+from .signing import signed_headers
+
+ERROR_LIMIT = 500
+
+
+def encode_body(envelope: Mapping[str, Any]) -> bytes:
+    """Тело запроса: конверт JSON без пробелов, UTF-8 (подпись считается по этим байтам)."""
+    return json.dumps(envelope, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
+
+
+def clip(text: str, limit: int = ERROR_LIMIT) -> str:
+    text = " ".join(text.split())
+    return text if len(text) <= limit else text[: limit - 1] + "…"
+
+
+@dataclass(frozen=True)
+class Claimed:
+    """Доставка, взятая воркером в аренду (`in_flight` до `lease_until`)."""
+
+    id: int
+    event_id: uuid.UUID
+    event_type: str
+    subscriber: str
+    attempts: int
+    lease_token: uuid.UUID
+    probe: bool = False
+
+
+@dataclass(frozen=True)
+class Attempt:
+    url: str
+    headers: dict[str, str]
+    body: bytes
+
+
+@dataclass(frozen=True)
+class AttemptResult:
+    verdict: Verdict
+    status_code: int | None
+    error: str | None
+    retry_after: float | None = None
+
+
+class OutcomeKind(StrEnum):
+    DELIVERED = "delivered"
+    RETRY = "retry"
+    DEAD = "dead"
+    #: Попытка не состоялась по нашей причине (нет секрета, нет подписчика в файле): попытка не засчитывается.
+    POSTPONE = "postpone"
+
+
+class BreakerEffect(StrEnum):
+    SUCCESS = "success"
+    FAILURE = "failure"
+    NONE = "none"
+
+
+@dataclass(frozen=True)
+class Outcome:
+    kind: OutcomeKind
+    next_attempt_at: datetime | None = None
+    status_code: int | None = None
+    error: str | None = None
+    breaker: BreakerEffect = BreakerEffect.NONE
+
+
+def build_attempt(envelope: Mapping[str, Any], *, publisher: str, url: str, secret: str, now: datetime) -> Attempt:
+    body = encode_body(envelope)
+    headers = signed_headers(
+        publisher=publisher,
+        event_id=str(envelope["id"]),
+        body=body,
+        secret=secret,
+        now=now,
+        correlation_id=envelope.get("correlationid"),
+        traceparent=envelope.get("traceparent"),
+    )
+    return Attempt(url=url, headers=headers, body=body)
+
+
+def result_from_response(response: httpx.Response, now: datetime) -> AttemptResult:
+    verdict = classify_status(response.status_code)
+    if verdict is Verdict.DELIVERED:
+        return AttemptResult(verdict, response.status_code, None)
+    retry_after = (
+        parse_retry_after(response.headers.get("Retry-After"), now)
+        if response.status_code in RETRY_AFTER_STATUSES
+        else None
+    )
+    try:
+        text = response.text
+    except (UnicodeDecodeError, httpx.ResponseNotRead):
+        text = ""
+    return AttemptResult(verdict, response.status_code, clip(f"HTTP {response.status_code}: {text}"), retry_after)
+
+
+def result_from_exception(exc: BaseException) -> AttemptResult:
+    return AttemptResult(Verdict.RETRY, None, clip(f"{type(exc).__name__}: {exc}"))
+
+
+async def send_async(client: httpx.AsyncClient, attempt: Attempt, http_timeout: float, now: datetime) -> AttemptResult:
+    try:
+        response = await client.post(attempt.url, content=attempt.body, headers=attempt.headers, timeout=http_timeout)
+    except Exception as exc:  # noqa: BLE001 — любой сбой попытки (сеть, неверный адрес) — повтор, а не потеря пачки
+        return result_from_exception(exc)
+    return result_from_response(response, now)
+
+
+def send_sync(client: httpx.Client, attempt: Attempt, http_timeout: float, now: datetime) -> AttemptResult:
+    try:
+        response = client.post(attempt.url, content=attempt.body, headers=attempt.headers, timeout=http_timeout)
+    except Exception as exc:  # noqa: BLE001 — любой сбой попытки (сеть, неверный адрес) — повтор, а не потеря пачки
+        return result_from_exception(exc)
+    return result_from_response(response, now)
+
+
+def decide_outcome(
+    claimed: Claimed, result: AttemptResult, *, policy: RetryPolicy, now: datetime, rng: random.Random
+) -> Outcome:
+    """Итог попытки: доставлено, повтор по расписанию (или `Retry-After`), `dead`."""
+    if result.verdict is Verdict.DELIVERED:
+        return Outcome(OutcomeKind.DELIVERED, status_code=result.status_code, breaker=BreakerEffect.SUCCESS)
+    if result.verdict is Verdict.DEAD:
+        # Подписчик ответил, но событие он не примет никогда: предохранитель не трогаем.
+        return Outcome(OutcomeKind.DEAD, status_code=result.status_code, error=result.error)
+    delay = policy.delay_after(claimed.attempts, rng, result.retry_after)
+    if delay is None:
+        return Outcome(
+            OutcomeKind.DEAD,
+            status_code=result.status_code,
+            error=clip(f"retries exhausted after {claimed.attempts} attempts; last: {result.error}"),
+            breaker=BreakerEffect.FAILURE,
+        )
+    return Outcome(
+        OutcomeKind.RETRY,
+        next_attempt_at=now + timedelta(seconds=delay),
+        status_code=result.status_code,
+        error=result.error,
+        breaker=BreakerEffect.FAILURE,
+    )
+
+
+def postpone(now: datetime, seconds: float, reason: str) -> Outcome:
+    return Outcome(OutcomeKind.POSTPONE, next_attempt_at=now + timedelta(seconds=seconds), error=clip(reason))
+
+
+def dead(reason: str) -> Outcome:
+    return Outcome(OutcomeKind.DEAD, error=clip(reason))
+
+
+def pause_until(now: datetime, breaker: BreakerPolicy) -> datetime:
+    return now + timedelta(seconds=breaker.pause_seconds)
