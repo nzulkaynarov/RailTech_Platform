@@ -3,7 +3,11 @@
 # Базы: crm, erp, litellm, langfuse — у каждой своя роль (<имя>_app), создаёт infra/db/prod-init.sh.
 # Порт 5432 слушает только внутренний IP VPS 2 (${DB_INTERNAL_IP}); pg_hba пускает по TLS только ${APP_INTERNAL_IP}
 # (VPS 1) и только роль своей базы. Файрвол (ufw) закрывает 5432 для остальных — runbook deploy.md.
-# Бэкап: infra/db/backup.sh в контейнере `backup` (профиль не нужен — работает всегда).
+# Бэкап: infra/db/backup.sh в контейнере `backup` (профиль не нужен — работает всегда) — ежедневный pg_dump, второй рубеж.
+# WAL-архив (S0-3, ADR-0017): образ postgres со встроенным WAL-G (infra/db/Dockerfile.postgres) шлёт каждый сегмент журнала в
+# бакет `wal` RustFS на VPS 1 (archive_timeout 60 с -> RPO <= 5 мин); боковой сервис `walg` делает ежедневную базовую копию,
+# применяет срок хранения 14 дней, при заданном BACKUP_EXT_* копирует архив во внешнее S3 и раз в месяц проверяет восстановление.
+# Восстановление на момент времени — infra/db/restore-pitr.sh; runbook — docs/runbooks/backup-pitr.md.
 
 name: rt-db
 
@@ -13,10 +17,24 @@ x-ops: &ops
     driver: json-file
     options: { max-size: "20m", max-file: "5" }
 
+# Настройки WAL-архива: читает rt-walg (infra/db/rt-walg.sh) и в сервисе postgres, и в walg. Ключ шифрования WAL_ENC_KEY —
+# 64 hex-символа, генерирует make-env-prod.sh; хранить офлайн: без него архив не прочитать (docs/runbooks/backup-pitr.md).
+x-walg-env: &walg-env
+  WAL_S3_ENDPOINT: ${WAL_S3_ENDPOINT:?set in .env.db}
+  # Ключи S3 в шаблоне пустые (init подставляет S3_*); их наличие проверяют db-up.sh и rt-walg, compose допускает пусто — как BACKUP_RUSTFS_*.
+  WAL_S3_ACCESS_KEY: ${WAL_S3_ACCESS_KEY:-}
+  WAL_S3_SECRET_KEY: ${WAL_S3_SECRET_KEY:-}
+  WAL_S3_BUCKET: ${WAL_S3_BUCKET:-wal}
+  WAL_S3_PREFIX: ${WAL_S3_PREFIX:-pg17}
+  WAL_ENC_KEY: ${WAL_ENC_KEY:?set in .env.db}
+
 services:
   postgres:
     <<: *ops
-    image: pgvector/pgvector:0.8.7-pg17
+    image: rt-db-postgres:local
+    build:
+      context: ../db
+      dockerfile: Dockerfile.postgres
     # Параметры памяти — servers.md: shared_buffers 512 МБ, work_mem 8 МБ, max_connections 100; лимит контейнера 1,25 ГБ.
     command:
       - postgres
@@ -48,7 +66,15 @@ services:
       - log_min_duration_statement=1000
       - -c
       - log_connections=on
+      # WAL-архив (S0-3): каждый сегмент — в хранилище; без активности сегмент закрывается раз в 60 с.
+      - -c
+      - archive_mode=on
+      - -c
+      - archive_timeout=60s
+      - -c
+      - archive_command=rt-walg wal-push %p
     environment:
+      <<: *walg-env
       POSTGRES_USER: postgres
       POSTGRES_DB: postgres
       POSTGRES_PASSWORD: ${DB_SUPERUSER_PASSWORD:?set in .env.db}
@@ -63,6 +89,8 @@ services:
     ports: ["${DB_INTERNAL_IP:?set in .env.db}:5432:5432"]
     volumes:
       - postgres_data:/var/lib/postgresql/data
+      # Сокет PostgreSQL общий с сервисом walg (peer-вход от postgres без паролей и без правки pg_hba).
+      - pgsock:/var/run/postgresql
       - ../db/prod-init.sh:/docker-entrypoint-initdb.d/10-prod-init.sh:ro
       # Файлы ниже готовит infra/deploy/db-up.sh: сертификат TLS (владелец uid 999, 0600) и pg_hba.conf с IP VPS 1.
       - ${RT_DB_DIR:-/opt/rt-db}/certs:/certs:ro
@@ -74,6 +102,44 @@ services:
       retries: 20
       start_period: 30s
     deploy: { resources: { limits: { memory: 1280M } } }
+
+  walg:
+    <<: *ops
+    image: rt-db-postgres:local
+    user: postgres
+    entrypoint: ["/usr/local/bin/walg-daemon"]
+    command: ["--daemon"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      <<: *walg-env
+      DB_NAMES: crm erp litellm langfuse
+      WAL_KEEP_DAYS: ${WAL_KEEP_DAYS:-14}
+      WAL_BASEBACKUP_AT_UTC: ${WAL_BASEBACKUP_AT_UTC:-21:00}
+      WAL_CHECK_DAY: ${WAL_CHECK_DAY:-1}
+      WAL_CHECK_AT_UTC: ${WAL_CHECK_AT_UTC:-02:00}
+      # Внешнее S3 (то же, что у недельного pg_dump): пусто — копия WAL туда выключена.
+      BACKUP_EXT_ENDPOINT: ${BACKUP_EXT_ENDPOINT:-}
+      BACKUP_EXT_ACCESS_KEY: ${BACKUP_EXT_ACCESS_KEY:-}
+      BACKUP_EXT_SECRET_KEY: ${BACKUP_EXT_SECRET_KEY:-}
+      BACKUP_EXT_BUCKET: ${BACKUP_EXT_BUCKET:-}
+      BACKUP_EXT_REGION: ${BACKUP_EXT_REGION:-}
+      TZ: UTC
+    volumes:
+      # Каталог данных только на чтение: wal-g backup-push читает файлы, пишет в хранилище.
+      - postgres_data:/var/lib/postgresql/data:ro
+      - pgsock:/var/run/postgresql
+      - walg_state:/walg-state
+      # Рабочий каталог проверки восстановления (размер как у базы), очищается после каждой проверки.
+      - walg_restore:/var/lib/walg-restore
+    healthcheck:
+      test: ["CMD", "/usr/local/bin/walg-healthcheck"]
+      interval: 5m
+      timeout: 30s
+      retries: 3
+      start_period: 2m
+    deploy: { resources: { limits: { memory: 384M } } }
 
   backup:
     <<: *ops
@@ -113,3 +179,6 @@ services:
 
 volumes:
   postgres_data:
+  pgsock:
+  walg_state:
+  walg_restore:

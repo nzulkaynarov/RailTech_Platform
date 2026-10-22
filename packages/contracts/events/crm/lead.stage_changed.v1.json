@@ -1,0 +1,32 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://railtech.uz/contracts/events/crm/lead.stage_changed.v1.json",
+  "title": "Стадия лида изменилась",
+  "description": "Тип uz.railtech.crm.lead.stage_changed.v1, источник rt://crm. Поле data конверта (envelope.v1.json). Переход стадии и снимок лида после него.",
+  "type": "object",
+  "required": [
+    "lead",
+    "from",
+    "to",
+    "actor"
+  ],
+  "properties": {
+    "lead": {
+      "$ref": "_defs.v1.json#/$defs/Lead"
+    },
+    "from": {
+      "$ref": "_defs.v1.json#/$defs/LeadStage"
+    },
+    "to": {
+      "$ref": "_defs.v1.json#/$defs/LeadStage"
+    },
+    "reason": {
+      "type": "string",
+      "maxLength": 500
+    },
+    "actor": {
+      "$ref": "_defs.v1.json#/$defs/Actor"
+    }
+  },
+  "additionalProperties": false
+}

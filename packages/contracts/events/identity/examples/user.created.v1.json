@@ -1,0 +1,34 @@
+{
+  "specversion": "1.0",
+  "id": "0e113bd3-7e4c-5645-90d3-07bd2a26cc95",
+  "source": "rt://crm",
+  "type": "uz.railtech.identity.user.created.v1",
+  "time": "2026-10-22T06:55:00Z",
+  "subject": "user/7",
+  "datacontenttype": "application/json",
+  "dataschema": "rt://contracts/events/identity/user.created/v1",
+  "tenant": "railtech",
+  "correlationid": "d9845ebe-f456-5c77-9e7f-0d0027e53f98",
+  "data": {
+    "user": {
+      "crm_user_id": 7,
+      "email": "aliya.karimova@example.com",
+      "full_name": "Алия Каримова",
+      "position": "Менеджер по продажам",
+      "language": "ru",
+      "is_active": true,
+      "platform_roles": [
+        "MANAGER"
+      ],
+      "systems": [
+        "crm"
+      ],
+      "erp_role_codes": [],
+      "updated_at": "2026-10-22T06:55:00Z"
+    },
+    "actor": {
+      "type": "staff",
+      "crm_user_id": 1
+    }
+  }
+}

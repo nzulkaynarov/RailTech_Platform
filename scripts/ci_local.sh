@@ -9,7 +9,7 @@ set -euo pipefail
 unset MAKEFLAGS MFLAGS MAKELEVEL args
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-ALL=(gitleaks crm contracts tokens infra erp cabinet platform crm-integration crm-build crm-e2e crm-audit platform-e2e)
+ALL=(gitleaks crm contracts tokens infra erp cabinet platform rt-bus crm-integration crm-build crm-e2e crm-audit platform-e2e)
 GITLEAKS_IMAGE=ghcr.io/gitleaks/gitleaks:v8.30.1
 CADDY_IMAGE=caddy:2.11.7-alpine
 LOGS="$ROOT/.ci-local"
@@ -26,11 +26,12 @@ usage() {
 Задания:
   gitleaks          секреты в истории текущей ветки (.gitleaks.toml, legacy/ в allowlist) и ссылки документации
   crm               make check-crm (ruff, mypy, eslint, prettier, tsc, unit) + OpenAPI CRM без диффа
-  contracts         make contracts + чистый diff packages/contracts/generated
+  contracts         make contracts (в т. ч. совместимость событий с origin/main) + чистый packages/contracts/generated
   tokens            make -C packages/ui-tokens check
   infra             docker compose config (dev + observability) и caddy validate
   erp, cabinet      make check-erp | make check-cabinet (до M1/M2 — пропуск внутри цели)
   platform          make check-platform (ruff, mypy, pytest bff; eslint, tsc, vitest web; клиент orval и токены свежие)
+  rt-bus            make check-rt-bus — библиотека шины: ruff, mypy, миграция Django, pytest на одноразовом postgres:17
   crm-integration   apps/crm/scripts/test_int_local.sh — одноразовые Postgres 17 и RustFS
   crm-build         образы CRM backend/frontend (prod) и backup с проверкой pg_dump 17
   crm-e2e           apps/crm/scripts/ci_local.sh e2e — одноразовый Postgres, API, preview, Playwright
@@ -48,12 +49,12 @@ STAGES=()
 for a in "$@"; do
   case "$a" in
     -h | --help) usage; exit 0 ;;
-    --quick) STAGES=(gitleaks crm contracts tokens infra erp cabinet platform) ;;
+    --quick) STAGES=(gitleaks crm contracts tokens infra erp cabinet platform rt-bus) ;;
     --full) STAGES=("${ALL[@]}") ;;
     *) STAGES+=("$a") ;;
   esac
 done
-[ ${#STAGES[@]} -eq 0 ] && STAGES=(gitleaks crm contracts tokens infra erp cabinet platform crm-integration crm-build)
+[ ${#STAGES[@]} -eq 0 ] && STAGES=(gitleaks crm contracts tokens infra erp cabinet platform rt-bus crm-integration crm-build)
 # platform-e2e всегда после platform: check-platform пересоздаёт src/shared/api/generated (orval), и vite e2e на лету
 # перезапускается/теряет модули (ERR_CONNECTION_REFUSED). Стадии идут строго по одной; порядок фиксируем явно.
 if [[ " ${STAGES[*]} " == *" platform-e2e "* ]]; then
@@ -83,8 +84,13 @@ stage_crm() {
 }
 
 stage_contracts() {
-  (cd "$ROOT" && make contracts && git diff --exit-code -- packages/contracts/generated) \
-    || { echo "packages/contracts/generated устарел — make contracts и закоммитьте"; return 1; }
+  # Совместимость схем событий (L8) — против свежей origin/main, как в CI; без сети — с последней скачанной.
+  (cd "$ROOT" && git fetch --no-tags --quiet origin main) \
+    || echo "contracts: git fetch origin main не удался — сравнение с локальной origin/main"
+  (cd "$ROOT" && CONTRACTS_BASE_REF="${CONTRACTS_BASE_REF:-origin/main}" make contracts \
+    && git diff --exit-code -- packages/contracts/generated \
+    && [ -z "$(git status --porcelain --untracked-files=all -- packages/contracts/generated)" ]) \
+    || { echo "make contracts упал или packages/contracts/generated устарел — make contracts и закоммитьте"; return 1; }
 }
 
 stage_tokens() { (cd "$ROOT" && make -C packages/ui-tokens check); }
@@ -120,6 +126,8 @@ stage_erp() {
 }
 stage_cabinet() { (cd "$ROOT" && make check-cabinet); }
 stage_platform() { (cd "$ROOT" && make check-platform); }
+# Как job rt-bus в ci.yml; PostgreSQL — одноразовый контейнер packages/rt-bus/scripts/with_pg.sh (стенд не трогается).
+stage_rt-bus() { (cd "$ROOT" && make -C packages/rt-bus install && make check-rt-bus); }
 
 stage_crm-integration() {
   local status=0

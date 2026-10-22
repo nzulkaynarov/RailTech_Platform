@@ -1,0 +1,36 @@
+{
+  "specversion": "1.0",
+  "id": "c808c7fb-ddec-56ea-a603-6f51ff0f06a6",
+  "source": "rt://erp",
+  "type": "uz.railtech.erp.delivery.line_disputed.v1",
+  "time": "2026-11-21T05:05:00Z",
+  "subject": "D-2026-0905",
+  "datacontenttype": "application/json",
+  "dataschema": "rt://contracts/events/erp/delivery.line_disputed/v1",
+  "tenant": "railtech",
+  "correlationid": "e29ac7eb-9084-558a-b6fb-4009baef8429",
+  "traceparent": "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01",
+  "data": {
+    "erp_company_id": 118,
+    "crm_client_id": 42,
+    "deal": {
+      "erp_deal_id": 905,
+      "number": "D-2026-0905",
+      "title": "Поставка оборудования, партия 1",
+      "stage": "fulfilment",
+      "amount": "125000000.00",
+      "currency": "UZS"
+    },
+    "actor": {
+      "type": "client",
+      "name": "Иван Петров"
+    },
+    "payload": {
+      "line_no": 2,
+      "title": "Насос центробежный CM 50-200",
+      "status": "disputed",
+      "remark": "Повреждена упаковка, корпус с вмятиной",
+      "decided_at": "2026-11-21T10:05:00+05:00"
+    }
+  }
+}
