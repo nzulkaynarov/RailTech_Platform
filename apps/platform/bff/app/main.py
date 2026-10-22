@@ -7,7 +7,7 @@ from fastapi import FastAPI
 from redis.asyncio import Redis
 
 from app import __version__
-from app.api import health
+from app.api import auth, health, me
 from app.clients import CrmClient, ErpClient
 from app.clients.base import TIMEOUT_SECONDS
 from app.config import Settings, get_settings
@@ -30,8 +30,9 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             socket_timeout=TIMEOUT_SECONDS,
         )
         crm = CrmClient(cfg.crm_url)
-        erp = ErpClient(cfg.erp_url)
+        erp = ErpClient(cfg.erp_url, cfg.erp_refresh_cookie)
         app.state.redis, app.state.crm, app.state.erp = redis, crm, erp
+        app.state.settings = cfg
         try:
             yield
         finally:
@@ -51,6 +52,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.add_middleware(RequestIdMiddleware)
     install_error_handlers(app)
     app.include_router(health.router, prefix=API_PREFIX)
+    app.include_router(auth.router, prefix=API_PREFIX)
+    app.include_router(me.router, prefix=API_PREFIX)
     return app
 
 

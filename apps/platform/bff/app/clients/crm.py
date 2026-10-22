@@ -1,8 +1,69 @@
-"""Клиент CRM (`crm-api`). Health CRM — `/health` в корне (apps/crm/backend/app/api/health.py)."""
+"""Клиент CRM (`crm-api`): вход, обновление и выход сотрудника, профиль, SSO-токен для ERP.
 
-from app.clients.base import BackendClient
+Контракт CRM — apps/crm/backend/app/api/v1/auth.py и me.py. Health CRM — `/health` в корне.
+"""
+
+from dataclasses import dataclass
+from typing import Any
+
+import httpx
+
+from app.clients.base import BackendClient, BackendUnavailableError, cookie_value
+
+REFRESH_COOKIE = "rt_refresh"
+
+
+@dataclass(frozen=True)
+class CrmTokens:
+    """Ответ входа и обновления CRM: access (в теле), refresh (cookie), срок access в секундах."""
+
+    access: str
+    expires_in: int
+    refresh: str | None
+    must_change_password: bool
 
 
 class CrmClient(BackendClient):
     def __init__(self, base_url: str) -> None:
         super().__init__("crm", base_url, "/health")
+
+    @staticmethod
+    def tokens(response: httpx.Response) -> CrmTokens:
+        body: dict[str, Any] = response.json()
+        return CrmTokens(
+            access=str(body["access_token"]),
+            expires_in=int(body["expires_in"]),
+            refresh=cookie_value(response, REFRESH_COOKIE),
+            must_change_password=bool(body.get("must_change_password", False)),
+        )
+
+    async def login(self, email: str, password: str) -> httpx.Response:
+        return await self.send(
+            "POST", "/api/v1/auth/login", json={"email": email, "password": password}
+        )
+
+    async def refresh(self, refresh_token: str) -> httpx.Response:
+        return await self.send(
+            "POST", "/api/v1/auth/refresh", cookies={REFRESH_COOKIE: refresh_token}
+        )
+
+    async def logout(self, refresh_token: str) -> None:
+        """Погасить семью refresh-токенов CRM. Ошибки не пробрасываются: выход идемпотентен."""
+        try:
+            await self.send("POST", "/api/v1/auth/logout", cookies={REFRESH_COOKIE: refresh_token})
+        except BackendUnavailableError:
+            return
+
+    async def me(self, access: str) -> httpx.Response:
+        return await self.send("GET", "/api/v1/me", access=access)
+
+    async def sso_token(self, access: str) -> httpx.Response:
+        return await self.send("POST", "/api/v1/auth/sso/token", access=access)
+
+    async def change_password(self, access: str, current: str, new: str) -> httpx.Response:
+        return await self.send(
+            "POST",
+            "/api/v1/auth/change-password",
+            access=access,
+            json={"current_password": current, "new_password": new},
+        )
