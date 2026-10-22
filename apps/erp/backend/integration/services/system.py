@@ -69,14 +69,16 @@ def get_system_health() -> Tuple[Dict[str, Any], int]:
         logger.warning("Error checking migrations: %s", exc)
         migrations_applied = False
 
+    # «Очередь жива» = брокер Celery (`redis-broker`) отвечает. Кэш (`redis-cache`) сюда не входит: его отказ ERP переживает
+    # (core.cache), и 503 здоровья из-за него заставил бы CRM считать рабочий ERP мёртвым (S0-2).
     queue_alive = True
     try:
-        from django.core.cache import cache
+        from core.celery import app as celery_app
 
-        cache.set("_health_ping", 1, timeout=5)
-        queue_alive = bool(cache.get("_health_ping"))
-    except Exception as exc:
-        logger.warning("Error checking queue/cache: %s", exc)
+        with celery_app.connection_for_read() as broker_connection:
+            broker_connection.ensure_connection(max_retries=1, interval_start=0, timeout=2)
+    except Exception as exc:  # noqa: BLE001 — любая ошибка брокера = очередь не жива, проверка здоровья не падает
+        logger.warning("Error checking queue (broker): %s", type(exc).__name__)
         queue_alive = False
 
     status_str = "ok" if (migrations_applied and queue_alive) else "degraded"

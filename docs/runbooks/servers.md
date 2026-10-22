@@ -26,7 +26,8 @@
 | Сервис | Лимит памяти | Примечание |
 |---|---|---|
 | `caddy` | 64 МБ | четыре домена, TLS (ACME), security headers |
-| `redis` | 128 МБ | БД 0 Langfuse, 1 ERP Celery, 2 ERP Channels, 3 сессии BFF Платформы |
+| `redis-broker` | 256 МБ (`maxmemory` 128 МБ) | брокер и результаты Celery ERP (БД 1), Channels ERP (БД 2); `appendonly yes`, `noeviction`, том `redis_broker_data` (S0-2) |
+| `redis-cache` | 192 МБ (`maxmemory` 96 МБ) | кэш, троттлинг и одноразовые `jti` ERP (БД 0), сессии BFF Платформы (БД 3), очереди Langfuse (БД 4, профиль `observability`); `volatile-lru`, RDB-снимок раз в 5 минут, том `redis_cache_data`; у своего пароля, не у брокера (S0-2) |
 | `rustfs` | 512 МБ | бакеты CRM, `erp`, `langfuse`, `backups` |
 | `litellm` | 768 МБ | шлюз моделей, свой образ `rt-litellm` (Debian, см. «CPU прод-VPS»); его БД `litellm` — на VPS 2 |
 | `crm-api`, `crm-worker` | 512 + 512 МБ | |
@@ -36,10 +37,10 @@
 | `erp-mcp` | 256 МБ (лимит; факт ≈ 200 МБ) | инструменты ERP для агента CRM, SDK `mcp`, образ `erp-backend` (FIX-36); порт 8104 только внутри сети; файл `packages/contracts/mcp-tools.json` (и `events.schema.json`, M5-INF-01c) монтируется в контейнер; профиль `mcp` включён на проде (`RT_PROFILES=mcp`): бот CRM в сервисном режиме берёт из него данные клиента (M3-CRM-07) |
 | `erp-worker`, `erp-worker-ai`, `erp-beat` | 512 + 384 + 192 МБ | |
 | `erp-web` | 64 МБ | nginx со сборкой |
-| `platform-bff` | 256 МБ (лимит; факт ≈ 150 МБ) | BFF Платформы (INF-P0-5): uvicorn, 2 процесса; БД нет, сессии в Redis БД 3 |
+| `platform-bff` | 256 МБ (лимит; факт ≈ 150 МБ) | BFF Платформы (INF-P0-5): uvicorn, 2 процесса; БД нет, сессии в `redis-cache` БД 3 |
 | `platform-web` | 64 МБ | статика Платформы за Caddy |
 | `s3-init`, `crm-migrate`, `litellm-seed`, `erp-ai-gateway` и одноразовые `run` миграций | 256–384 МБ | одноразовые, живут секунды при деплое; в «Итого постоянно» не входят; pg_dump-гейт идёт в отдельном контейнере с `pg_dump` (без лимита, до `up`) |
-| **Итого постоянно** | **≈ 5,7 ГБ** (5,2 + `erp-mcp` ≈ 0,2 + Платформа 0,3 по лимитам) | + ОС ≈ 0,5 ГБ |
+| **Итого постоянно** | **≈ 6,0 ГБ** (5,2 + `erp-mcp` ≈ 0,2 + Платформа 0,3 + второй Redis 0,3 по лимитам) | + ОС ≈ 0,5 ГБ |
 | `docling` (профиль `kb-ingest`) | 1,5 ГБ | **на проде не используется** (M5-CRM-02): база знаний принимает только Markdown (`docs/kb/FORMAT.md`), docling нужен лишь для текста документов клиентов; профиль — опция на случай, если сервер станет мощнее |
 | `clickhouse`, `langfuse-web`, `langfuse-worker` (профиль `observability`) | 768 + 768 + 512 МБ | включать, когда `docling` выключен; дашборд затрат ИИ (M3-CRM-09) не зависит от Langfuse — он читает БД LiteLLM |
 
