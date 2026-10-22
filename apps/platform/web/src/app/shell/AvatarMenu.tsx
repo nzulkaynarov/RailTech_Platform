@@ -6,7 +6,7 @@ import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router";
 
 import { getGetMeQueryKey, useLogout, useUpdateMe } from "../../shared/api/generated/platform-bff";
-import type { Language, Me, RoleCode } from "../../shared/api/generated/model";
+import type { Language, Me } from "../../shared/api/generated/model";
 import { LANGUAGES } from "../../shared/i18n";
 import "../../shared/ui/shell.css";
 import { roleCaption } from "./roleCaption";
@@ -61,8 +61,7 @@ export function AvatarMenu({ me, placement }: { me: Me; placement: "topLeft" | "
             children: [
               choice("role:all", t("avatar.allRoles"), selectedRole === "all"),
               ...me.roles.map((role) =>
-                // TODO(ADR-0012): название роли — из данных `/me`, а не из i18n по коду роли.
-                choice(`role:${role}`, t(`roles.${role}`), selectedRole === role),
+                choice(`role:${role.id}`, role.name, selectedRole === role.id),
               ),
             ],
           },
@@ -103,7 +102,7 @@ export function AvatarMenu({ me, placement }: { me: Me; placement: "topLeft" | "
     else if (key === "logout") logout.mutate();
     else if (key.startsWith("role:")) {
       const value = key.slice(5);
-      update.mutate({ data: { active_role: value === "all" ? null : (value as RoleCode) } });
+      update.mutate({ data: { active_role: value === "all" ? null : value } });
     } else if (key.startsWith("lang:")) {
       update.mutate({ data: { language: key.slice(5) as Language } });
     }
@@ -190,8 +189,7 @@ export function AvatarMenu({ me, placement }: { me: Me; placement: "topLeft" | "
           </Descriptions.Item>
           <Descriptions.Item label={t("profile.roles")}>
             {me.roles.map((role) => (
-              // TODO(ADR-0012): название роли — из данных `/me`, а не из i18n по коду роли.
-              <Tag key={role}>{t(`roles.${role}`)}</Tag>
+              <Tag key={role.id}>{role.name}</Tag>
             ))}
           </Descriptions.Item>
           <Descriptions.Item label={t("profile.access")}>

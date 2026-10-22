@@ -93,22 +93,6 @@
     "access": "Kirish",
     "noPosition": "ko‘rsatilmagan"
   },
-  "roles": {
-    "MANAGER": "Menejer",
-    "DIRECTOR": "Direktor",
-    "SUPPLY": "Ta‘minotchi",
-    "ENGINEER": "Bosh muhandis",
-    "ACCOUNTANT": "Buxgalter",
-    "ADMIN": "Administrator"
-  },
-  "rolesShort": {
-    "MANAGER": "Menejer",
-    "DIRECTOR": "Direktor",
-    "SUPPLY": "Ta‘minotchi",
-    "ENGINEER": "Bosh muh.",
-    "ACCOUNTANT": "Buxgalter",
-    "ADMIN": "Admin"
-  },
   "languages": {
     "ru": "Русский",
     "uz": "O‘zbekcha",

@@ -3,6 +3,7 @@ import { http, HttpResponse } from "msw";
 import { beforeEach, describe, expect, it } from "vitest";
 
 import type { Employee, EmployeeUpdate } from "../../shared/api/generated/model";
+import { ref } from "../../test/roles";
 import { server } from "../../test/server";
 import { renderUi } from "../../test/renderUi";
 import { DisableEmployee } from "./DisableEmployee";
@@ -12,7 +13,7 @@ const employee: Employee = {
   name: "Анна Демова",
   initials: "АД",
   email: "anna@demo.example",
-  roles: ["MANAGER"],
+  roles: [ref("MANAGER")],
   access: { crm: true, erp: true },
   status: "active",
   telegram_linked: false,
@@ -77,7 +78,7 @@ describe("DisableEmployee", () => {
   it("последнего администратора отключить нельзя: текст и неактивная кнопка", () => {
     renderUi(
       <DisableEmployee
-        employee={{ ...employee, id: "7", roles: ["ADMIN"] }}
+        employee={{ ...employee, id: "7", roles: [ref("ADMIN")] }}
         selfId="7"
         otherActiveAdmins={0}
       />,
@@ -97,7 +98,7 @@ describe("DisableEmployee", () => {
     );
     renderUi(
       <DisableEmployee
-        employee={{ ...employee, roles: ["ADMIN"] }}
+        employee={{ ...employee, roles: [ref("ADMIN")] }}
         selfId="7"
         otherActiveAdmins={1}
       />,

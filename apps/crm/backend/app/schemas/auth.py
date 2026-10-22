@@ -85,8 +85,24 @@ class UserOut(BaseModel):
     language: Language = "ru"
 
 
+class PlatformRoleGrantRef(PlatformRoleRef):
+    """Роль Платформы с матрицей — только в `/me` (R-2, ADR-0012 п. 5).
+
+    BFF Платформы вычисляет по ней разделы сотрудника (объединение ролей) и «вид» по активной роли.
+    У системных ролей — матрица каталога. В `/users` матрицы нет: администратор читает их через
+    `/api/v1/platform-roles`.
+    """
+
+    # Раздел каталога -> `full|read`; скрытые разделы не перечисляются.
+    access: dict[str, Literal["full", "read"]]
+    # Поля с ограничением, которые роль видит.
+    restricted_fields: list[str]
+
+
 class MeOut(UserOut):
     """Свой профиль + флаги развёртывания, по которым SPA прячет кнопки (истина — на сервере)."""
+
+    platform_role_refs: list[PlatformRoleGrantRef] = Field(default_factory=list)  # type: ignore[assignment]
 
     # Переход в ERP по SSO включён (PLATFORM_SSO_ENABLED, FIX-03); иначе кнопки «В бэк-офис» нет.
     sso_enabled: bool = False

@@ -222,12 +222,13 @@
       "roles": "Rollar matritsasi (RBAC)",
       "org": "Tashkiliy tuzilma",
       "integrations": "Tashqi integratsiyalar",
-      "tickets": "Jamoa tiketlari"
+      "tickets": "Jamoa tiketlari",
+      "company": "Kompaniya"
     },
     "stub": {
       "roles": {
         "title": "Rollar matritsasi shu yerda ochiladi",
-        "text": "Modullar va bo‘limlar bo‘yicha oltita rol jadvali: to‘liq kirish, o‘qish yoki yashirin. O‘zgarishlar darhol qo‘llanadi va jurnalga yoziladi.",
+        "text": "Kompaniya rollari matritsasi: tizim rollari va administrator yaratadigan rollar.",
         "action": "Tashkiliy tuzilma"
       },
       "org": {
@@ -244,6 +245,11 @@
         "title": "Tiketlar hozircha yo‘q",
         "text": "Xodimlarning administratorga murojaatlari: xato, kirish, taklif.",
         "action": "Tashkiliy tuzilma"
+      },
+      "company": {
+        "title": "Kompaniya rekvizitlari shu yerda ochiladi",
+        "text": "Kompaniya rekvizitlari, hujjat shablonlari, raqamlash va to'lov shartlari. Ekran ERP sozlamalari Platformaga ko'chirilishi bilan paydo bo'ladi.",
+        "action": "Tuzilma"
       }
     },
     "action": "Xodimni taklif qilish",
@@ -331,7 +337,8 @@
         "saved": "Saqlandi",
         "needRole": "Kamida bitta rolni tanlang. Kirishni butunlay yopish uchun xodimni o'chiring.",
         "lastAdmin": "Siz yagona administratorsiz: «Administrator» rolini olib bo'lmaydi. Avval boshqa xodimni administrator qiling.",
-        "unchanged": "O'zgarishlar yo'q."
+        "unchanged": "O'zgarishlar yo'q.",
+        "rolesError": "CRM dan rollarni yuklab bo'lmadi."
       },
       "consequence": {
         "modules": "Xodim quyidagi modullarni ko'radi: {{modules}}.",
@@ -341,8 +348,8 @@
         "positionCleared": "Kartochkadagi lavozim tozalanadi.",
         "self": "Siz o'z rollaringizni o'zgartiryapsiz: menyu saqlangandan keyin yangilanadi.",
         "selfLosesAdmin": "Siz Admin bo'limiga kirish huquqini yo'qotasiz.",
-        "erpRoles": "ERP da xodim quyidagi rollarni oladi: {{roles}}.",
-        "erpAdmin": "ERP da xodim administrator (superfoydalanuvchi) bo'ladi."
+        "erpAdmin": "ERP da xodim administrator (superfoydalanuvchi) bo'ladi.",
+        "erpSections": "ERP da xodim rollar bo'limlari bo'yicha huquq oladi; berish natijasi — kartochkada («ERP: berilmoqda», «ERP: xato»)."
       },
       "invite": {
         "title": "Xodimni taklif qilish",
@@ -358,9 +365,12 @@
         "sent": "Taklif yuborildi: {{email}}",
         "consequenceMail": "Ko'rsatilgan pochtaga vaqtinchalik parolli xat yuboriladi; birinchi kirishda uni almashtirish kerak.",
         "consequenceListed": "Xodim ro'yxatda «Taklif qilingan» holatida paydo bo'ladi.",
-        "notSent": "Xodim ro'yxatga «Taklif qilingan» holatida qo'shildi, lekin xat yuborilmadi: pochta ulanmagan yoki mavjud emas. Uni Admin · Integratsiyalar bo'limida ulang; taklifni qayta yuborish keyingi versiyada paydo bo'ladi.",
+        "notSent": "Xodim ro'yxatga «Taklif qilingan» holatida qo'shildi, lekin xat yuborilmadi: pochta ulanmagan yoki mavjud emas. Uni Admin · Integratsiyalar bo'limida ulang va xodim kartochkasidan taklifni qayta yuboring.",
         "openCard": "Kartochkani ochish",
-        "notSentUnavailable": "Xodim ro'yxatga «Taklif qilingan» holatida qo'shildi, lekin CRM javob bermadi va xat yuborilmadi. Keyinroq takrorlang; taklifni qayta yuborish keyingi versiyada paydo bo'ladi."
+        "notSentUnavailable": "Xodim ro'yxatga «Taklif qilingan» holatida qo'shildi, lekin CRM javob bermadi va xat yuborilmadi. Keyinroq kartochkadagi «Taklifni qayta yuborish» tugmasi bilan takrorlang.",
+        "resend": "Taklifni qayta yuborish",
+        "resendHint": "Yangi vaqtinchalik parolli yangi xat yuboriladi; avvalgisi amal qilmay qoladi.",
+        "resendNotSent": "Xat yuborilmadi: pochta ulanmagan yoki mavjud emas. Uni Admin · Integratsiyalar bo'limida ulang va takrorlang."
       },
       "disable": {
         "button": "Xodimni o'chirish",
@@ -377,21 +387,116 @@
       },
       "errors": {
         "LAST_ADMIN": "Administrator rolini olib bo'lmaydi va oxirgi administratorni o'chirib bo'lmaydi. Avval boshqa xodimni administrator qiling.",
+        "LAST_DIRECTOR": "Direktor rolini olib bo'lmaydi va oxirgi direktorni o'chirib bo'lmaydi. Avval boshqa xodimni direktor qiling.",
         "EMAIL_EXISTS": "Bunday pochtali xodim allaqachon bor.",
-        "ACTIVE_LEADS": "Xodimda ishdagi lidlar bor. Ularni CRM da hamkasbga topshiring, so'ng xodimni o'chiring yoki rolini o'zgartiring.",
+        "ACTIVE_LEADS": "Xodimda ishdagi lidlar bor. Ularni topshiradigan hamkasbni tanlang va takrorlang.",
         "FORBIDDEN": "Huquq yetarli emas: rollarni administrator beradi.",
         "BACKEND_UNAVAILABLE": "CRM javob bermayapti. Keyinroq takrorlang.",
         "VALIDATION_FAILED": "Maydonlarning to'ldirilganini tekshiring.",
         "DEFAULT": "Amalni bajarib bo'lmadi. Qayta urinib ko'ring."
       },
-      "erpRoles": {
-        "CALCULATION": "Hisob-kitob",
-        "CATALOG_SUPPLY": "Katalog va xaridlar",
-        "FULFILLMENT": "Bajarish va logistika",
-        "FINANCE": "Moliya",
-        "HEAD": "Rahbar",
-        "VIEWER": "Kuzatuvchi"
+      "transfer": {
+        "label": "Ishdagi lidlarni kimga topshirish",
+        "placeholder": "Hamkasbni tanlang",
+        "save": "Lidlarni topshirib saqlash"
       }
+    },
+    "roles": {
+      "title": "Rollar matritsasi",
+      "subtitle": "Har bir rol nimani ko'radi va nima qila oladi. Roldan tashqari modullar relsdan yashirilgan. Bir kishiga bir nechta rol berish mumkin — kirish va navbatlar qo'shiladi.",
+      "caption": "Rollar matritsasi: modullar bo'yicha bo'limlar va har bir rolning kirish darajasi",
+      "sectionColumn": "Modul · bo'lim",
+      "system": "tizim roli",
+      "systemNote": "Tizim roli: uning matritsasi Platforma katalogida belgilangan, uni o'zgartirib yoki o'chirib bo'lmaydi. Berish yoki olish — Tuzilmada.",
+      "gives": "Rol nima beradi",
+      "assign": "Xodimga rol berish",
+      "fieldsGroup": "Cheklangan maydonlar",
+      "cellLabel": "{{section}} — «{{role}}» roli",
+      "fieldLabel": "{{field}} — «{{role}}» roli ko'radi",
+      "level": {
+        "full": "To'liq kirish",
+        "read": "Faqat o'qish",
+        "hidden": "Yashirin"
+      },
+      "field": {
+        "on": "ko'radi",
+        "off": "ko'rmaydi"
+      },
+      "noModules": "Hozircha bo'limlar yo'q",
+      "adminNote": "Ushbu roldagi Admin «to'liq» xodimlar, rollar va ulanishlarni boshqarishni beradi, lekin to'liq CRM va ERP administratori qilmaydi: buni faqat «Administrator» tizim roli beradi.",
+      "employeesCount": "Xodimlar: {{count}}",
+      "create": "Rol yaratish",
+      "createdToast": "«{{name}}» roli yaratildi",
+      "savedToast": "Rol saqlandi",
+      "deletedToast": "Rol o'chirildi",
+      "readOnly": {
+        "title": "Rollar matritsasini administrator yuritadi",
+        "text": "Rollar, ularning bo'limlari va cheklangan maydonlarini administrator ko'radi va o'zgartiradi. Xodimlar rollari — Tuzilmada."
+      },
+      "loadError": {
+        "title": "Rollarni yuklab bo'lmadi",
+        "text": "Rollar CRM da saqlanadi. Qayta urinib ko'ring; xato qolsa, Admin · Integratsiyalar bo'limida CRM ni tekshiring."
+      },
+      "notFound": {
+        "title": "Rol topilmadi",
+        "text": "Rol o'chirilgan yoki havola eskirgan bo'lishi mumkin. Matritsada rolni tanlang."
+      },
+      "new": {
+        "title": "Yangi rol",
+        "from": "Boshlash",
+        "fromHint": "Shablon yangi rol ustuniga o'z bo'limlarini qo'yadi; keyin ularni o'zgartirish mumkin.",
+        "empty": "Noldan — barcha bo'limlar yashirin",
+        "submit": "Rol yaratish",
+        "cancel": "Bekor qilish",
+        "created": "Rol matritsada va Tuzilmadagi rollar ro'yxatida paydo bo'ladi; hozircha xodimlari yo'q — hech kimning huquqlari o'zgarmaydi.",
+        "assign": "Rolni xodimlarga berish — Admin · Tuzilma bo'limida."
+      },
+      "name": "Nomi",
+      "description": "Tavsif (ixtiyoriy)",
+      "matrixHint": "Bo'limlar darajalari va cheklangan maydonlar matritsadagi rol ustunida o'zgartiriladi.",
+      "save": "Rolni saqlash",
+      "reset": "O'zgarishlarni bekor qilish",
+      "renamed": "Rol nomi barcha xodimlari ({{count}}) uchun «{{name}}» bo'ladi; huquqlar o'zgarmaydi.",
+      "descriptionOnly": "Faqat rol tavsifi o'zgaradi; xodimlar huquqlari o'zgarmaydi.",
+      "applied": "CRM va ERP dagi huquqlar saqlangandan so'ng darhol qayta hisoblanadi; xodimlar menyusi bir daqiqa ichida yangilanadi. CRM jurnalida rolni kim va qachon o'zgartirgani qoladi.",
+      "preview": {
+        "section": "{{section}} ({{level}})",
+        "employees": {
+          "one": "{{count}} xodim",
+          "few": "{{count}} xodim",
+          "many": "{{count}} xodim",
+          "other": "{{count}} xodim"
+        },
+        "nobody": "Rol hech bir xodimga berilmagan: hech kimning huquqlari o'zgarmaydi.",
+        "unchanged": "Ushbu roldagi xodimlar huquqlari o'zgarmaydi: xuddi shu bo'limlarni boshqa rollari beradi.",
+        "gained": "{{who}} oladi: {{list}}.",
+        "lost": "{{who}} yo'qotadi: {{list}}.",
+        "fieldsGained": "Maydonlar ko'rinadi: {{list}}.",
+        "fieldsLost": "Maydonlar ko'rinmay qoladi: {{list}}.",
+        "loading": "Qaysi xodimlarning huquqlari o'zgarishi hisoblanmoqda…",
+        "failed": "Oqibatlarni hisoblab bo'lmadi: CRM javob bermadi. Saqlash baribir natijani ko'rsatadi."
+      },
+      "delete": "Rolni o'chirish",
+      "deleteBlocked": "O'chirib bo'lmaydi: rol xodimlarga berilgan ({{count}}). Avval Tuzilmada ularga boshqa rollar bering.",
+      "deleteTitle": "Rol o'chirilsinmi?",
+      "deleteResult": "Rol matritsadan va Tuzilmadagi rollar ro'yxatidan yo'qoladi. U bilan xodimlar yo'q — hech kimning huquqlari o'zgarmaydi.",
+      "deleteConfirm": "O'chirish",
+      "deleteCancel": "Bekor qilish",
+      "errors": {
+        "ROLE_IN_USE": "Rol xodimlarga berilgan ({{count}}): uni o'chirib bo'lmaydi. Avval Tuzilmada ularga boshqa rollar bering.",
+        "ROLE_SYSTEM": "Tizim rolini o'zgartirib yoki o'chirib bo'lmaydi.",
+        "NAME_TAKEN": "Bunday nomli rol allaqachon bor. Boshqa nom tanlang.",
+        "LAST_ADMIN": "O'zgarishdan so'ng kompaniyada administrator qolmaydi. Admin «to'liq»ni saqlang yoki administrator tayinlang.",
+        "FORBIDDEN": "Huquq yetarli emas: rollarni administrator o'zgartiradi.",
+        "BACKEND_UNAVAILABLE": "CRM javob bermayapti. Keyinroq takrorlang.",
+        "VALIDATION_FAILED": "Rol nomi, bo'limlari va maydonlarini tekshiring.",
+        "DEFAULT": "Amalni bajarib bo'lmadi. Qayta urinib ko'ring."
+      },
+      "employeesTitle": "«{{name}}» roli bilan xodimlar",
+      "employeesEmpty": "Rol hali hech kimga berilmagan. Tuzilmadagi xodim kartochkasida bering.",
+      "openEmployee": "Rollarni o'zgartirish: {{name}}",
+      "change": "O'zgartirish",
+      "modules": "Rol modullarni ochadi: {{modules}}."
     }
   },
   "tabs": {

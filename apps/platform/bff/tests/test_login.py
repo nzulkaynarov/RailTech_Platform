@@ -19,7 +19,9 @@ async def test_login_manager_with_erp(web: Web, check: ContractChecker) -> None:
     check(response, "/auth/login", "post")
     body = response.json()
     assert body["must_change_password"] is False
-    assert body["me"]["roles"] == ["MANAGER"]
+    assert body["me"]["roles"] == [
+        {"id": "3", "name": "Менеджер", "system": False, "code": "tpl:MANAGER"}
+    ]
     assert body["me"]["access"] == {"crm": True, "erp": True}
     assert body["me"]["id"] == "7"
     assert body["me"]["initials"] == "ИТ"
@@ -106,11 +108,22 @@ async def test_user_without_platform_role_is_refused(web: Web, check: ContractCh
     assert web.be.crm_sso.call_count == 0
 
 
-async def test_unknown_platform_role_codes_do_not_count(web: Web) -> None:
-    response = await web.login(["SUPERUSER"])
+async def test_without_platform_roles_there_is_no_entry(web: Web) -> None:
+    """Нет ролей Платформы (или CRM отдала только битые записи) — входа нет."""
+    response = await web.login([])
 
     assert response.status_code == 403
     assert response.json()["code"] == "NO_PLATFORM_ROLE"
+    web.be.profile["platform_role_refs"] = [{"id": "x"}, "MANAGER"]
+    assert (await web.login()).json()["code"] == "NO_PLATFORM_ROLE"
+
+
+async def test_old_code_field_of_crm_is_ignored(web: Web) -> None:
+    """BFF читает роли только из `platform_role_refs`: старое поле кодов прав не даёт (R-2)."""
+    web.be.set_roles([])
+    web.be.profile["platform_roles"] = ["ADMIN"]
+
+    assert (await web.login()).json()["code"] == "NO_PLATFORM_ROLE"
 
 
 async def test_staff_without_erp_access(web: Web, check: ContractChecker) -> None:

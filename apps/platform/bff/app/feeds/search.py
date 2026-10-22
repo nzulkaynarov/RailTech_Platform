@@ -25,8 +25,8 @@ from app.feeds.numbers import (
 )
 from app.feeds.snapshot import DEALS_PARAMS, DEALS_PATH
 from app.feeds.text import join, segment, short
-from app.rbac import allows
-from app.rbac_generated import ModuleCode, RoleCode
+from app.rbac import Access, allows
+from app.rbac_generated import ModuleCode
 
 GROUP_LIMIT = 10
 HITS_LIMIT = 10
@@ -110,7 +110,7 @@ def _doc_hit(doc: dict[str, Any], deals: dict[int, dict[str, Any]]) -> SearchHit
     return SearchHit(object=ref, title=label, subtitle=context)
 
 
-async def search(feed: Feed, roles: list[RoleCode], query: str) -> SearchResult:
+async def search(feed: Feed, access: Access, query: str) -> SearchResult:
     needle = query.strip().casefold()
     # Латинский префикс номера (`ZV-…`, `kp-…`) -> кириллический; запрос как набран ищется в сделках
     # и в документах ERP (номера документов строит схема нумерации ERP, BFF её не перестраивает).
@@ -119,10 +119,10 @@ async def search(feed: Feed, roles: list[RoleCode], query: str) -> SearchResult:
     canonical = number_query(query)
     needles = tuple(dict.fromkeys(n.casefold() for n in (needle, typed, canonical) if n))
     docs_query = typed
-    can_leads = allows(roles, "crm.leads", "read")
-    can_clients = allows(roles, "crm.clients", "read")
-    can_docs = any(allows(roles, res, "read") for res in set(_DOC_RESOURCE.values()))
-    can_deals = allows(roles, "eds.projects", "read") or can_clients
+    can_leads = allows(access, "crm.leads", "read")
+    can_clients = allows(access, "crm.clients", "read")
+    can_docs = any(allows(access, res, "read") for res in set(_DOC_RESOURCE.values()))
+    can_deals = allows(access, "eds.projects", "read") or can_clients
     lead_id = lead_id_of(query)
 
     async def leads() -> list[SearchHit]:
@@ -172,12 +172,12 @@ async def search(feed: Feed, roles: list[RoleCode], query: str) -> SearchResult:
     projects = [
         _deal_hit(d)
         for d in matching
-        if deal_ref(d).kind == "project" and allows(roles, "eds.projects", "read")
+        if deal_ref(d).kind == "project" and allows(access, "eds.projects", "read")
     ]
     documents = [
         h
         for doc in all_docs
-        if allows(roles, _DOC_RESOURCE.get(str(doc.get("type")), "admin"), "read")
+        if allows(access, _DOC_RESOURCE.get(str(doc.get("type")), "admin"), "read")
         and (h := _doc_hit(doc, index)) is not None
     ]
     by_module: dict[ModuleCode, list[SearchHit]] = {

@@ -18,6 +18,7 @@ import { setViewportWidth } from "../test/viewport";
 import { AppProviders } from "./providers";
 import { routes } from "./router";
 import { PANELS_STORAGE_KEY, usePanelsStore } from "./shell/panelsStore";
+import { ROLE_ID, type PresetCode } from "../mocks/fixtures/roles";
 
 function renderAt(path: string) {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
@@ -30,14 +31,11 @@ function renderAt(path: string) {
   return { router, queryClient };
 }
 
-function signIn(
-  email: string,
-  activeRole?: "MANAGER" | "DIRECTOR" | "SUPPLY" | "ENGINEER" | "ACCOUNTANT" | "ADMIN",
-) {
+function signIn(email: string, activeRole?: PresetCode) {
   const user = findUser(email);
   if (!user) throw new Error(`нет демо-пользователя ${email}`);
   startSession(user);
-  if (activeRole) updateSession({ activeRole });
+  if (activeRole) updateSession({ activeRole: ROLE_ID[activeRole] });
 }
 
 beforeEach(() => {

@@ -6,6 +6,7 @@ const EDS_ANY = [
   "eds.projects",
   "eds.payments",
   "eds.memo.create",
+  "eds.memo.approve",
 ] as const;
 
 export const eds: ModuleConfig = {

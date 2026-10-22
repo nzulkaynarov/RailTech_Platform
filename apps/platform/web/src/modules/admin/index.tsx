@@ -4,9 +4,10 @@ import { RequireAccess } from "../../app/RequireAccess";
 import { ModuleRoutes } from "../ModuleRoutes";
 import { matchSection } from "../registry";
 import { OrgPage } from "./org/OrgPage";
+import { RolesPage } from "./roles/RolesPage";
 
 /**
- * Модуль Admin. Оргструктура — настоящий экран (PLT-15); остальные разделы пока страницы-заглушки каркаса.
+ * Модуль Admin. Оргструктура (PLT-15) и Ролевая матрица (R-2) — настоящие экраны; остальные разделы пока заглушки каркаса.
  */
 export function Component() {
   const location = useLocation();
@@ -15,6 +16,13 @@ export function Component() {
     return (
       <RequireAccess rule={match.section.access}>
         <OrgPage objectId={match.objectId} />
+      </RequireAccess>
+    );
+  }
+  if (match?.module.code === "admin" && match.section.key === "roles") {
+    return (
+      <RequireAccess rule={match.section.access}>
+        <RolesPage />
       </RequireAccess>
     );
   }
