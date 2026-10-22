@@ -25,7 +25,7 @@ system_roles:
     access:
       dashboard.queue: full
       dashboard.summary: full
-      crm.leads: full
+      crm.leads: read
       crm.clients: full
       eds.inbox: full
       eds.drafts: full
@@ -38,10 +38,12 @@ system_roles:
       erp.calc.services: full
       erp.stock: full
       chats.internal: full
-      chats.external: full
+      chats.external: read
       company.settings: full
       admin: read
     restricted_fields: [cost_margin, supplier_prices]
+    # R-1b (уточнение ADR-0012 п. 2): директор видит воронку и переписку (`crm.leads`, `chats.external` — read), но не
+    # берёт лиды и не отвечает клиентам; директору, который сам ведёт лиды, администратор выдаёт вторую роль (объединение).
 
 # Шаблоны — строки матрицы SPEC-v3 §4.2 (колонки MANAGER, SUPPLY, ENGINEER, ACCOUNTANT) + два новых раздела расчёта.
 templates:

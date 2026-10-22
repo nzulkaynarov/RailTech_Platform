@@ -341,7 +341,7 @@ ROLE_ACCESS: Final[dict[str, dict[str, str]]] = {
     "DIRECTOR": {
         "dashboard.queue": "full",
         "dashboard.summary": "full",
-        "crm.leads": "full",
+        "crm.leads": "read",
         "crm.clients": "full",
         "eds.inbox": "full",
         "eds.drafts": "full",
@@ -354,7 +354,7 @@ ROLE_ACCESS: Final[dict[str, dict[str, str]]] = {
         "erp.calc.services": "full",
         "erp.stock": "full",
         "chats.internal": "full",
-        "chats.external": "full",
+        "chats.external": "read",
         "company.settings": "full",
         "admin": "read",
     },

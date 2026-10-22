@@ -322,7 +322,7 @@ SYSTEM_ROLES: Final[dict[str, CatalogRole]] = {
         "access": {
             "dashboard.queue": "full",
             "dashboard.summary": "full",
-            "crm.leads": "full",
+            "crm.leads": "read",
             "crm.clients": "full",
             "eds.inbox": "full",
             "eds.drafts": "full",
@@ -335,7 +335,7 @@ SYSTEM_ROLES: Final[dict[str, CatalogRole]] = {
             "erp.calc.services": "full",
             "erp.stock": "full",
             "chats.internal": "full",
-            "chats.external": "full",
+            "chats.external": "read",
             "admin": "read",
             "company.settings": "full",
         },
