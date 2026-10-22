@@ -5328,6 +5328,32 @@
             "title": "Platform Access",
             "type": "array"
           },
+          "platform_roles": {
+            "items": {
+              "enum": [
+                "MANAGER",
+                "DIRECTOR",
+                "SUPPLY",
+                "ENGINEER",
+                "ACCOUNTANT",
+                "ADMIN"
+              ],
+              "type": "string"
+            },
+            "title": "Platform Roles",
+            "type": "array"
+          },
+          "position": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Position"
+          },
           "roles": {
             "items": {
               "type": "string"
@@ -7895,24 +7921,64 @@
             "title": "Full Name",
             "type": "string"
           },
+          "platform_roles": {
+            "anyOf": [
+              {
+                "items": {
+                  "enum": [
+                    "MANAGER",
+                    "DIRECTOR",
+                    "SUPPLY",
+                    "ENGINEER",
+                    "ACCOUNTANT",
+                    "ADMIN"
+                  ],
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Platform Roles"
+          },
+          "position": {
+            "anyOf": [
+              {
+                "maxLength": 120,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Position"
+          },
           "roles": {
-            "items": {
-              "enum": [
-                "admin",
-                "manager",
-                "viewer"
-              ],
-              "type": "string"
-            },
-            "minItems": 1,
-            "title": "Roles",
-            "type": "array"
+            "anyOf": [
+              {
+                "items": {
+                  "enum": [
+                    "admin",
+                    "manager",
+                    "viewer"
+                  ],
+                  "type": "string"
+                },
+                "minItems": 1,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Roles"
           }
         },
         "required": [
           "email",
-          "full_name",
-          "roles"
+          "full_name"
         ],
         "title": "UserCreate",
         "type": "object"
@@ -7990,6 +8056,32 @@
             },
             "title": "Platform Access",
             "type": "array"
+          },
+          "platform_roles": {
+            "items": {
+              "enum": [
+                "MANAGER",
+                "DIRECTOR",
+                "SUPPLY",
+                "ENGINEER",
+                "ACCOUNTANT",
+                "ADMIN"
+              ],
+              "type": "string"
+            },
+            "title": "Platform Roles",
+            "type": "array"
+          },
+          "position": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Position"
           },
           "roles": {
             "items": {
@@ -8111,6 +8203,40 @@
               }
             ],
             "title": "Platform Access"
+          },
+          "platform_roles": {
+            "anyOf": [
+              {
+                "items": {
+                  "enum": [
+                    "MANAGER",
+                    "DIRECTOR",
+                    "SUPPLY",
+                    "ENGINEER",
+                    "ACCOUNTANT",
+                    "ADMIN"
+                  ],
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Platform Roles"
+          },
+          "position": {
+            "anyOf": [
+              {
+                "maxLength": 120,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Position"
           },
           "roles": {
             "anyOf": [

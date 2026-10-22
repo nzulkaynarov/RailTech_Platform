@@ -32,6 +32,8 @@ def to_out(view: UserView) -> UserOut:
         tg_dm_failed_at=view.tg_dm_failed_at,
         platform_access=view.platform_access,
         erp_role_codes=view.erp_role_codes,
+        platform_roles=view.platform_roles,
+        position=view.position,
     )
 
 
@@ -43,7 +45,12 @@ async def list_users(_: Reader, container: ContainerDep) -> list[UserOut]:
 @router.post("", response_model=UserCreated, status_code=status.HTTP_201_CREATED)
 async def create_user(body: UserCreate, who: Writer, container: ContainerDep) -> UserCreated:
     view, password = await container.user_service.create(
-        who.actor, body.email, body.full_name, body.roles
+        who.actor,
+        body.email,
+        body.full_name,
+        body.roles or [],
+        platform_roles=body.platform_roles or [],
+        position=body.position,
     )
     return UserCreated(user=to_out(view), temporary_password=password)
 
@@ -66,6 +73,8 @@ async def update_user(
         transfer_to_user_id=body.transfer_to_user_id,
         platform_access=body.platform_access,
         erp_role_codes=body.erp_role_codes,
+        platform_roles=body.platform_roles,
+        position=body.position,
     )
     return to_out(await container.user_service.update(who.actor, user_id, patch))
 

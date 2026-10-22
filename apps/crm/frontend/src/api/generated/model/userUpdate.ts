@@ -12,6 +12,9 @@ export interface UserUpdate {
   full_name?: string | null;
   is_active?: boolean | null;
   platform_access?: ("crm" | "erp")[] | null;
+  platform_roles?:
+    ("MANAGER" | "DIRECTOR" | "SUPPLY" | "ENGINEER" | "ACCOUNTANT" | "ADMIN")[] | null;
+  position?: string | null;
   roles?: ("admin" | "manager" | "viewer")[] | null;
   tg_user_id?: number | null;
   transfer_to_user_id?: number | null;

@@ -51,18 +51,24 @@ command -v docker >/dev/null && docker info >/dev/null 2>&1 \
   || { echo "Docker не запущен: open -a Docker, затем повторите."; exit 1; }
 mkdir -p "$LOGS"
 
-# Окружение без ключей стенда. Настройки читают ещё и ../.env (pydantic env_file), поэтому каждый
-# секрет задан явно: пустой или одноразовый, как в CI (`export JWT_SECRET=$(openssl rand -hex 32)`).
-# LiteLLM — на заведомо пустой порт: ни одного вызова модели (платного) из тестов.
+# Окружение заданий e2e и audit — ровно то, что задаёт `.github/workflows/ci.yml` (задания «CRM · e2e», «CRM · dependency audit»;
+# Q-W7-T1, как для integration в Q-W6-1): APP_ENV, LOG_FORMAT, POSTGRES_*, TELEGRAM_MODE/TELEGRAM_DRY_RUN, E2E_*, а для
+# процессов бэкенда ещё JWT_SECRET (`export JWT_SECRET=$(openssl rand -hex 32)`). Больше ничего: ни пустых ключей, ни
+# LITELLM_*, ни AGENT_CONTEXT_KEY — как у раннера CI, иначе тест зелёный локально и красный в CI. `env -i` отсекает остальное
+# окружение оболочки (токены, ключи разработчика); от машины зависят и потому остаются отличиями от CI: PATH и HOME (uv, pnpm,
+# кэши), адрес и порт одноразового Postgres (127.0.0.1 вместо localhost — Docker публикует порт только на IPv4), имя БД/пользователя
+# контейнера. Менять набор переменных — только вместе с ci.yml. Настройки читают ещё .env из backend/ и apps/crm/ — в CI таких
+# файлов нет, поэтому их наличие здесь — ошибка (проверка в stage_e2e). `CI=true` (его задаёт GitHub Actions: у Playwright retries
+# и forbidOnly) локально НЕ задан намеренно: так строже — retries 0, нестабильный тест виден сразу, а не прячется повтором.
 JWT_ONCE=$(openssl rand -hex 32)
-CTX_ONCE=$(openssl rand -hex 32)
 clean_env() {
-  env -i PATH="$PATH" HOME="$HOME" APP_ENV=test LOG_FORMAT=console \
-    JWT_SECRET="$JWT_ONCE" AGENT_CONTEXT_KEY="$CTX_ONCE" SECRETS_KEY= \
-    TELEGRAM_BOT_TOKEN= TELEGRAM_WEBHOOK_SECRET= TELEGRAM_MODE=disabled TELEGRAM_DRY_RUN=true \
-    LITELLM_BASE_URL=http://127.0.0.1:9 LITELLM_API_KEY= LITELLM_MASTER_KEY=sk-test \
-    ANTHROPIC_API_KEY= GEMINI_API_KEY= DOCLING_API_KEY= S3_ACCESS_KEY= S3_SECRET_KEY= \
-    LANGFUSE_PUBLIC_KEY= LANGFUSE_SECRET_KEY= "$@"
+  env -i PATH="$PATH" HOME="$HOME" "$@"
+}
+ci_job_env() {
+  clean_env APP_ENV=test LOG_FORMAT=console TELEGRAM_MODE=disabled TELEGRAM_DRY_RUN=true "$@"
+}
+backend_env() {
+  ci_job_env JWT_SECRET="$JWT_ONCE" "$@"
 }
 
 stage_lint() {
@@ -110,54 +116,57 @@ e2e_cleanup() {
 }
 
 stage_e2e() {
+  for f in "$ROOT/backend/.env" "$ROOT/.env"; do
+    [ ! -e "$f" ] || { echo "Найден $f: настройки CRM прочитают его, а в CI такого файла нет. Уберите файл и повторите."; return 1; }
+  done
   for port in "$E2E_PG_PORT" "$E2E_API_PORT" "$E2E_WEB_PORT"; do
     ! lsof -iTCP:"$port" -sTCP:LISTEN >/dev/null 2>&1 \
       || { echo "Порт $port занят: lsof -nP -iTCP:$port -sTCP:LISTEN"; return 1; }
   done
   # EXIT, а не RETURN: при сбое `set -e` завершает подоболочку задания, и RETURN не срабатывает.
   trap e2e_cleanup EXIT
-  docker run -d --name "$E2E_PG" -p "127.0.0.1:${E2E_PG_PORT}:5432" -e POSTGRES_DB=railtech_e2e \
-    -e POSTGRES_USER=railtech -e POSTGRES_PASSWORD="$PASS" "$PG_IMAGE" >/dev/null
+  docker run -d --name "$E2E_PG" -p "127.0.0.1:${E2E_PG_PORT}:5432" -e POSTGRES_DB=crm_e2e \
+    -e POSTGRES_USER=rt -e POSTGRES_PASSWORD="$PASS" "$PG_IMAGE" >/dev/null
   for _ in $(seq 1 30); do
-    docker exec "$E2E_PG" pg_isready -U railtech -d railtech_e2e >/dev/null 2>&1 && break
+    docker exec "$E2E_PG" pg_isready -U rt -d crm_e2e >/dev/null 2>&1 && break
     sleep 1
   done
-  local db=(POSTGRES_HOST=127.0.0.1 POSTGRES_PORT="$E2E_PG_PORT" POSTGRES_DB=railtech_e2e
-    POSTGRES_USER=railtech POSTGRES_PASSWORD="$PASS")
+  local db=(POSTGRES_HOST=127.0.0.1 POSTGRES_PORT="$E2E_PG_PORT" POSTGRES_DB=crm_e2e
+    POSTGRES_USER=rt POSTGRES_PASSWORD="$PASS")
   local who=(E2E_MANAGER_EMAIL=manager@demo.local E2E_MANAGER_PASSWORD=ci-e2e-demo-42
     E2E_ADMIN_EMAIL=admin@demo.local E2E_ADMIN_PASSWORD=ci-e2e-boss-42)
   (
     cd "$ROOT/backend"
-    clean_env "${db[@]}" uv run alembic upgrade head
-    clean_env "${db[@]}" uv run python -m app seed-demo --manager-password ci-e2e-demo-42
-    clean_env "${db[@]}" uv run python -m app create-admin --email admin@demo.local \
+    backend_env "${db[@]}" "${who[@]}" uv run alembic upgrade head
+    backend_env "${db[@]}" "${who[@]}" uv run python -m app seed-demo --manager-password ci-e2e-demo-42
+    backend_env "${db[@]}" "${who[@]}" uv run python -m app create-admin --email admin@demo.local \
       --password ci-e2e-boss-42
   )
-  (cd "$ROOT/backend" && clean_env "${db[@]}" uv run python -m app api --port "$E2E_API_PORT") \
+  (cd "$ROOT/backend" && backend_env "${db[@]}" "${who[@]}" uv run python -m app api --port "$E2E_API_PORT") \
     >"$LOGS/e2e-api.log" 2>&1 &
   for _ in $(seq 1 60); do
     curl -fsS "http://127.0.0.1:${E2E_API_PORT}/health" >/dev/null 2>&1 && break
     sleep 1
   done
-  (cd "$ROOT/frontend" && pnpm build >"$LOGS/e2e-build.log" 2>&1)
-  (cd "$ROOT/frontend" && VITE_API_PROXY_TARGET="http://127.0.0.1:${E2E_API_PORT}" \
+  (cd "$ROOT/frontend" && ci_job_env "${db[@]}" "${who[@]}" pnpm build >"$LOGS/e2e-build.log" 2>&1)
+  (cd "$ROOT/frontend" && ci_job_env "${db[@]}" "${who[@]}" VITE_API_PROXY_TARGET="http://127.0.0.1:${E2E_API_PORT}" \
     pnpm preview --port "$E2E_WEB_PORT" --strictPort) >"$LOGS/e2e-preview.log" 2>&1 &
   for _ in $(seq 1 30); do
     curl -fsS "http://127.0.0.1:${E2E_WEB_PORT}/" >/dev/null 2>&1 && break
     sleep 1
   done
   # Как в CI: свой Chromium Playwright (скачивается один раз, дальше — из кэша).
-  (cd "$ROOT/frontend" && pnpm exec playwright install chromium)
-  (cd "$ROOT/frontend" && env "${who[@]}" BASE_URL="http://localhost:${E2E_WEB_PORT}" pnpm e2e)
+  (cd "$ROOT/frontend" && ci_job_env "${db[@]}" "${who[@]}" pnpm exec playwright install chromium)
+  (cd "$ROOT/frontend" && ci_job_env "${db[@]}" "${who[@]}" BASE_URL="http://localhost:${E2E_WEB_PORT}" pnpm e2e)
 }
 
 stage_audit() {
   (
     cd "$ROOT/backend"
-    uv export --frozen --no-dev --no-emit-project --format requirements-txt -o "$LOGS/requirements.txt"
-    uvx pip-audit@2.10.1 -r "$LOGS/requirements.txt" --no-deps --disable-pip --progress-spinner off
+    clean_env uv export --frozen --no-dev --no-emit-project --format requirements-txt -o "$LOGS/requirements.txt"
+    clean_env uvx pip-audit@2.10.1 -r "$LOGS/requirements.txt" --no-deps --disable-pip --progress-spinner off
   )
-  (cd "$ROOT/frontend" && pnpm audit --prod --audit-level high)
+  (cd "$ROOT/frontend" && clean_env pnpm audit --prod --audit-level high)
 }
 
 stage_build() {

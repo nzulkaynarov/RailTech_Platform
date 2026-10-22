@@ -87,6 +87,10 @@ openapi: ## Экспорт OpenAPI → docs/api/openapi.json и генераци
 	cd $(BACKEND) && PYTHONPATH=. uv run python ../scripts/export_openapi.py ../docs/api/openapi.json
 	cd $(FRONTEND) && pnpm api:generate
 
+.PHONY: platform-roles
+platform-roles: ## Пересоздать app/domain/platform_roles_generated.py из packages/contracts/platform-rbac.yaml
+	cd $(BACKEND) && uv run python ../scripts/gen_platform_roles.py
+
 .PHONY: migration
 migration: ## Создать миграцию: make migration m="add leads"
 	@test -n "$(m)" || (echo 'Укажите описание: make migration m="..."'; exit 1)

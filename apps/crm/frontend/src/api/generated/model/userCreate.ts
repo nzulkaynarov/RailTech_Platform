@@ -4,7 +4,6 @@
  * RailTech CRM API
  * OpenAPI spec version: 0.1.0
  */
-import type { UserCreateRolesItem } from "./userCreateRolesItem";
 
 export interface UserCreate {
   /**
@@ -17,6 +16,8 @@ export interface UserCreate {
    * @maxLength 255
    */
   full_name: string;
-  /** @minItems 1 */
-  roles: UserCreateRolesItem[];
+  platform_roles?:
+    ("MANAGER" | "DIRECTOR" | "SUPPLY" | "ENGINEER" | "ACCOUNTANT" | "ADMIN")[] | null;
+  position?: string | null;
+  roles?: ("admin" | "manager" | "viewer")[] | null;
 }

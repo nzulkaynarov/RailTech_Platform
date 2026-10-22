@@ -46,6 +46,13 @@ class User(TimestampMixin, Base):
             '"FINANCE", "HEAD", "VIEWER"]\' AS jsonb)',
             name="erp_role_codes",
         ),
+        # Роли Платформы (CRM-01): JSON-массив кодов из `domain/platform_roles_generated.py`.
+        CheckConstraint(
+            "jsonb_typeof(platform_roles) = 'array' "
+            'AND platform_roles <@ CAST(\'["MANAGER", "DIRECTOR", "SUPPLY", "ENGINEER", '
+            '"ACCOUNTANT", "ADMIN"]\' AS jsonb)',
+            name="platform_roles",
+        ),
     )
 
     id: Mapped[int] = mapped_column(BigInteger, Identity(), primary_key=True)
@@ -73,6 +80,11 @@ class User(TimestampMixin, Base):
     # в провижининг как `role_codes`; пусто по умолчанию. Хранятся и без доступа к ERP — уйдут
     # при его выдаче.
     erp_role_codes: Mapped[list[str]] = mapped_column(JSONB, server_default=sql("'[]'::jsonb"))
+    # Роли Платформы (CRM-01, ADR-0011): непустой список вычисляет `user_roles`, `platform_access` и
+    # `erp_role_codes` (`domain/platform_roles.py`); пусто — их ведёт админ вручную.
+    platform_roles: Mapped[list[str]] = mapped_column(JSONB, server_default=sql("'[]'::jsonb"))
+    # Должность текстом (SPEC-v3 §4.3), ≤ 120 символов.
+    position: Mapped[str | None] = mapped_column(String(120))
     # Последняя ошибка синхронизации с ERP (провижининг или отзыв); NULL — ERP в курсе. Читает
     # проверка «Синхронизация с ERP» центра внешних сервисов (ADR-0024); пользователю не видна.
     erp_sync_error: Mapped[str | None] = mapped_column(Text)

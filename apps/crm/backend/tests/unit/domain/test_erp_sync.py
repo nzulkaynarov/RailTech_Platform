@@ -91,6 +91,27 @@ WITH_ERP = replace(CRM_ONLY, platform_access=("crm", "erp"))
             "platform_access.revoked",
             id="revoke-of-inactive-is-still-sent",
         ),
+        pytest.param(
+            WITH_ERP,
+            replace(WITH_ERP, platform_roles=("SUPPLY",)),
+            "provision",
+            None,
+            id="platform-roles-chosen-change-erp-rights",
+        ),
+        pytest.param(
+            replace(WITH_ERP, platform_roles=("SUPPLY", "ENGINEER")),
+            replace(WITH_ERP, platform_roles=("ENGINEER", "SUPPLY")),
+            None,
+            None,
+            id="platform-roles-reordered-same-set",
+        ),
+        pytest.param(
+            replace(WITH_ERP, platform_roles=("SUPPLY",)),
+            replace(WITH_ERP, platform_roles=("SUPPLY", "ENGINEER")),
+            "provision",
+            None,
+            id="platform-role-added-with-same-erp-roles",
+        ),
     ],
 )
 def test_sync_decision(
