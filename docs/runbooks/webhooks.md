@@ -1,5 +1,10 @@
 # Runbook: вебхуки ERP → CRM не доходят, дублируются, секрет меняется (FIX-33, FIX-35)
 
+> **Для CRM устарел (B4, волна 11).** CRM принимает события ERP не вебхуком, а по шине `rt_bus` (`POST /bus/v1/events`, подпись
+> `X-RT-*`): журнал `erp_incoming_events`, заголовки `X-Event-Id`/`X-Signature` и маршрут `/api/v1/integrations/erp/events` удалены.
+> Сбои приёма, DLQ, повтор и секреты пары — [`rt-bus-crm.md`](rt-bus-crm.md). Ниже — описание прежнего вебхука; сторону ERP
+> (журнал `IntegrationWebhookEvent`, «Повторить доставку») заменяет B3.
+
 Контракт — `docs/CONTRACTS.md` §3: заголовки `X-Event-Id`, `X-Event-Type`, `X-Timestamp`, `X-Signature`; ретраи ERP 1, 5, 30 мин, 2, 6, 24 ч; после них событие `FAILED` ждёт ручного повтора.
 
 ## Симптом → где смотреть
