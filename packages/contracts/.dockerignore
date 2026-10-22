@@ -1,0 +1,8 @@
+# Контекст `contracts` образов (apps/crm/backend/Dockerfile): схемы и сгенерированные модели,
+# без node_modules и окружений.
+node_modules
+.venv
+.mypy_cache
+.ruff_cache
+.pytest_cache
+**/__pycache__
