@@ -20,4 +20,5 @@ export interface PlatformRoleOut {
   restricted_fields: string[];
   updated_at: string;
   updated_by: number | null;
+  version: number;
 }

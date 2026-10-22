@@ -96,7 +96,6 @@ class UserService:
         roles: Sequence[str],
         *,
         platform_role_ids: Sequence[int] | None = None,
-        platform_role_codes: Sequence[str] | None = None,
         position: str | None = None,
     ) -> tuple[UserView, str]:
         """Новый пользователь и временный пароль (показывается один раз).
@@ -106,7 +105,7 @@ class UserService:
         """
         password = temporary_password()
         async with self._sessions() as session, session.begin():
-            platform = await resolve_requested(session, platform_role_ids, platform_role_codes)
+            platform = await resolve_requested(session, platform_role_ids)
             derived = derive_access(grants_of(platform)) if platform else None
             roles = [derived.crm_role] if derived else list(roles)
             check_roles(roles)
@@ -156,9 +155,7 @@ class UserService:
             held = await prepo.roles_of_user(session, user_id)
             before = view_of(user, roles, held)
             erp_before = access_state_of(before)
-            requested = await resolve_requested(
-                session, patch.platform_role_ids, patch.platform_role_codes
-            )
+            requested = await resolve_requested(session, patch.platform_role_ids)
             await guard_system_holders(
                 session,
                 user_id=user_id,

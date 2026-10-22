@@ -9,7 +9,6 @@ import type { UserOutErpRoleCodesItem } from "./userOutErpRoleCodesItem";
 import type { UserOutErpSync } from "./userOutErpSync";
 import type { UserOutLanguage } from "./userOutLanguage";
 import type { UserOutPlatformAccessItem } from "./userOutPlatformAccessItem";
-import type { UserOutPlatformRolesItem } from "./userOutPlatformRolesItem";
 
 export interface UserOut {
   email: string;
@@ -26,7 +25,6 @@ export interface UserOut {
   platform_access?: UserOutPlatformAccessItem[];
   platform_role_ids?: number[];
   platform_role_refs?: PlatformRoleRef[];
-  platform_roles?: UserOutPlatformRolesItem[];
   position?: string | null;
   roles: string[];
   tg_dm_failed_at?: string | null;

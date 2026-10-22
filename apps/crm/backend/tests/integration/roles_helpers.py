@@ -1,8 +1,9 @@
 """Помощники integration-тестов ролей Платформы: очередь ERP-заглушка, id ролей, аудит."""
 
-from collections.abc import Iterator
+from collections.abc import Iterator, Mapping
 
 from fastapi.testclient import TestClient
+from httpx2 import Response
 from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
@@ -42,6 +43,23 @@ def role_ids(client: TestClient, headers: dict[str, str]) -> dict[str, int]:
     response = client.get("/api/v1/platform-roles", headers=headers)
     assert response.status_code == 200, response.text
     return {r["code"]: r["id"] for r in response.json() if r["code"]}
+
+
+def patch_role(
+    client: TestClient,
+    headers: dict[str, str],
+    role_id: object,
+    body: Mapping[str, object],
+    *,
+    version: int | None = None,
+) -> Response:
+    """PATCH роли с прочитанной версией (R-1b); `version` — подменить, например устаревшую."""
+    if version is None:
+        current = client.get(f"/api/v1/platform-roles/{role_id}", headers=headers)
+        version = current.json()["version"] if current.status_code == 200 else 1
+    return client.patch(
+        f"/api/v1/platform-roles/{role_id}", json={**body, "version": version}, headers=headers
+    )
 
 
 def legacy_ids(client: TestClient, headers: dict[str, str], codes: list[str]) -> list[int]:

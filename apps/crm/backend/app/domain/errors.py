@@ -167,6 +167,12 @@ class RoleInUseError(ConflictError):
     code = "role_in_use"
 
 
+class RoleVersionConflictError(ConflictError):
+    """Роль изменена другим администратором после того, как её прочитал клиент (R-1b)."""
+
+    code = "role_version_conflict"
+
+
 class ActiveLeadsError(ConflictError):
     """Деактивация менеджера, который ведёт лидов, без передачи их коллеге (ADR-0015)."""
 

@@ -1,4 +1,4 @@
-"""Миграции 0035–0036 (R-1): коды `users.platform_roles` -> роли-данные -> столбец удалён.
+"""Миграции 0035–0037 (R-1, R-1b): коды `users.platform_roles` -> роли-данные -> столбец удалён.
 
 expand -> migrate -> contract: пользователь с `[MANAGER, ACCOUNTANT]` получает две роли с теми же
 правами, что до миграции; системные роли и шаблоны вставлены из снимка каталога; сотрудникам с
@@ -119,10 +119,21 @@ def test_codes_become_roles_the_column_goes_and_downgrade_brings_the_codes_back(
         assert after == before
         # Пересчёт прав ERP — активным сотрудникам с ролями и доступом к ERP.
         jobs = conn.execute("SELECT task_name, args FROM procrastinate_jobs ORDER BY id").fetchall()
+        # 0035 — всем с ролями; 0037 (R-1b, директор без лидов) — ещё раз держателю «Директора».
         assert jobs == [
             ("erp_provision_user", {"user_id": ids[name]})
-            for name in ("mgr_acc", "admin", "dir_sup")
+            for name in ("mgr_acc", "admin", "dir_sup", "dir_sup")
         ]
+        # Директор: лиды и внешние чаты — только чтение, версия роли выросла (0037).
+        director = conn.execute(
+            "SELECT access, version FROM platform_roles WHERE code = 'DIRECTOR'"
+        ).fetchone()
+        assert director is not None
+        assert (director[0]["crm.leads"], director[0]["chats.external"]) == ("read", "read")
+        assert director[1] == 2
+        assert conn.execute(
+            "SELECT DISTINCT version FROM platform_roles WHERE code <> 'DIRECTOR'"
+        ).fetchall() == [(1,)]
         # Столбец с кодами удалён, связь по роли не даёт её удалить.
         columns = conn.execute(
             "SELECT column_name FROM information_schema.columns "
@@ -181,7 +192,7 @@ def test_a_migrated_manager_and_accountant_keeps_the_same_rights(
         crm_after = client.get("/api/v1/me/permissions", headers=headers).json()["permissions"]
 
     assert me["roles"] == ["manager"]
-    assert me["platform_roles"] == ["MANAGER", "ACCOUNTANT"]
+    assert "platform_roles" not in me
     assert len(me["platform_role_ids"]) == 2
     roles = [make_role("MANAGER"), make_role("ACCOUNTANT")]
     derived = derive_access(

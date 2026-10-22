@@ -15,8 +15,6 @@ export interface UserUpdate {
   language?: UserUpdateLanguage;
   platform_access?: ("crm" | "erp")[] | null;
   platform_role_ids?: number[] | null;
-  platform_roles?:
-    ("MANAGER" | "DIRECTOR" | "SUPPLY" | "ENGINEER" | "ACCOUNTANT" | "ADMIN")[] | null;
   position?: string | null;
   roles?: ("admin" | "manager" | "viewer")[] | null;
   tg_user_id?: number | null;

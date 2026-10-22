@@ -8,10 +8,14 @@ import type { PlatformRoleUpdateAccess } from "./platformRoleUpdateAccess";
 
 /**
  * Изменение роли; не присланное поле не меняется. Системную роль менять нельзя (409).
+ *
+ * `version` — версия роли, которую видел клиент; при расхождении 409 `role_version_conflict`.
  */
 export interface PlatformRoleUpdate {
   access?: PlatformRoleUpdateAccess;
   description?: string | null;
   name?: string | null;
   restricted_fields?: string[] | null;
+  /** @minimum 1 */
+  version: number;
 }
