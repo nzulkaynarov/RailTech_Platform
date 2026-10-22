@@ -1,6 +1,7 @@
-"""Служебные таблицы эксплуатации (SPEC §13): дедупликация системных алертов."""
+"""Служебные таблицы эксплуатации (SPEC §13): дедупликация системных алертов, состояние бота."""
 
 from datetime import datetime
+from typing import Any
 
 from sqlalchemy import (
     BigInteger,
@@ -10,10 +11,12 @@ from sqlalchemy import (
     Float,
     Identity,
     Integer,
+    SmallInteger,
     String,
     Text,
     func,
 )
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.models.base import Base
@@ -57,3 +60,32 @@ class LlmUsage(Base):
     cost_usd: Mapped[float] = mapped_column(Float, nullable=False, default=0.0)
     lead_id: Mapped[int | None] = mapped_column(BigInteger)
     kind: Mapped[str] = mapped_column(String(8), nullable=False, default="work")
+
+
+class BotRuntimeState(Base):
+    """Единственная строка: связь `crm-api` и `crm-bot` через БД (S0-4, ADR-0017).
+
+    Пишет `crm-bot`: что он сейчас делает (`running`, `source`, `username`, `last_error`,
+    `profile`) и пульс `heartbeat_at`. Пишет `crm-api`: `restart_requested_at` — «токен сменили,
+    перезапусти бота». `crm-bot` применяет запрос и ставит `restart_applied_at`.
+    Токен сюда не попадает.
+    """
+
+    __tablename__ = "bot_runtime"
+    __table_args__ = (CheckConstraint("id = 1", name="single_row"),)
+
+    id: Mapped[int] = mapped_column(SmallInteger, primary_key=True, default=1, autoincrement=False)
+    running: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    mode: Mapped[str | None] = mapped_column(String(16))
+    source: Mapped[str] = mapped_column(String(8), nullable=False, default="none")
+    username: Mapped[str | None] = mapped_column(String(64))
+    last_error: Mapped[str | None] = mapped_column(String(160))
+    # Итог последней публикации профиля бота: `ok`, `at`, `changed`, `error`, `retry_after`.
+    profile: Mapped[dict[str, Any] | None] = mapped_column(JSONB(none_as_null=True))
+    heartbeat_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    restart_requested_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    restart_applied_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )

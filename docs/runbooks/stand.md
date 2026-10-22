@@ -36,7 +36,7 @@ make smoke        # /health доменов CRM, ERP, Cabinet и /api/v1/health +
 | `rustfs`, `s3-init` | S3; бакеты CRM (`kb-sources`, `client-documents`, `tg-attachments`), `langfuse`, `erp` |
 | `litellm`, `litellm-seed` | шлюз моделей по алиасам CRM и ERP (`infra/ai/litellm.models.yaml`); ключи провайдеров — только у `litellm` |
 | `docling` | распознавание документов клиентов CRM (база знаний его не использует — только Markdown) |
-| `crm-migrate`, `crm-api`, `crm-worker`, `crm-mcp-*`, `crm-web` | CRM из `apps/crm` (код монтируется, hot reload) |
+| `crm-migrate`, `crm-api`, `crm-bot`, `crm-worker`, `crm-mcp-*`, `crm-web` | CRM из `apps/crm` (код монтируется; hot reload только у `crm-api`, остальные — `docker compose restart <сервис>`). `crm-bot` — Telegram-бот отдельным процессом (S0-4): polling или `/telegram/webhook` через Caddy; токен меняется в «Подключениях» без перезапуска; без токена и Telegram на стенде — `docs/runbooks/crm-bot.md` (заглушка Bot API) |
 | `erp-backend`, `erp-mcp`, `erp-worker`, `erp-worker-ai`, `erp-beat`, `erp-web` | ERP из `apps/erp` (копия B2B, M1-ERP-01): Daphne мигрирует при старте (`AUTO_MIGRATE`), `erp-mcp` — инструменты ERP для агента CRM на SDK `mcp` (отдельный процесс, порт 8104 внутри сети, FIX-36; контракт `packages/contracts/mcp-tools.json` монтируется в контейнер), Celery-воркеры, Beat, nginx со сборкой Vite; код бэкенда монтируется, перезапуск руками |
 | `cabinet-web` | Cabinet из `apps/cabinet` (M2-CAB-01): nginx со сборкой Vite, своей логики нет; пересборка — `make up`. Имя бота для ссылок — `TELEGRAM_BOT_USERNAME` в `.env`. Разработка экранов — `make -C apps/cabinet dev` (мок, без стенда) |
 | `platform-bff`, `platform-web` | Платформа из `apps/platform` (INF-P0-4): BFF на FastAPI (сессии — Redis БД 3; CRM и ERP берёт по `http://crm-api:8000`, `http://erp-backend:8000`) и статика SPA (file-server Caddy, :8080). Нужен только `redis`: без CRM/ERP `/api/v1/health` отвечает 200 со `status: degraded`. Определены в `dev.yml`; пересборка — `make up`. Срок жизни сессии — `PLATFORM_SESSION_TTL_HOURS` в `.env` |
@@ -145,6 +145,7 @@ docker compose -f infra/compose/base.yml -f infra/compose/dev.yml --env-file .en
 
 - Поменяли `infra/caddy/Caddyfile.dev` (или подтянули его `git pull`), а домены ведут себя по-старому: Caddyfile смонтирован одиночным файлом, и после замены файла git'ом контейнер видит старую копию или пустоту («open /etc/caddy/Caddyfile: no such file»). Лечение — `make caddy-reload` (пересоздаёт контейнер Caddy).
 
+- Бот молчит, а `crm-api` в порядке: `make logs s=crm-bot`, статус — «Подключения» / «Состояние системы» (процесс `crm-bot` без пульса там помечен «не отвечает»). Бота запускает только `crm-bot`: `docker compose restart crm-bot`.
 - `make ps` → `crm-api` не healthy: `make logs s=crm-api`; чаще всего — не применились миграции (`make logs s=crm-migrate`).
 - `litellm` не healthy: `make logs s=litellm`; база `litellm` создаётся `db-init` — проверьте его лог.
 - `docling` стартует до минуты (образ 7 ГБ); `crm-worker` ждёт его.

@@ -18,6 +18,7 @@ class FakeRuntime:
         self.bot = self
         self.running = True
         self.profile = None
+        self.failure: str | None = None
 
     async def start(self) -> None:
         self.started = True
@@ -143,3 +144,87 @@ async def test_webhook_mode_with_https_url_starts() -> None:
     await h.supervisor.start()
     assert h.supervisor.running
     assert h.supervisor.last_error is None
+
+
+# --- S0-4: crm-bot сам поднимает бота, если старт не удался или polling упал -------------------
+
+
+async def test_recover_after_failed_start(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Telegram был недоступен при старте процесса: следующая попытка поднимает бота."""
+    h = Harness()
+    attempts = 0
+
+    async def flaky(self: FakeRuntime) -> None:
+        nonlocal attempts
+        attempts += 1
+        if attempts == 1:
+            raise RuntimeError("telegram down")
+        self.started = True
+
+    async def close() -> None:
+        return None
+
+    monkeypatch.setattr(FakeRuntime, "start", flaky)
+    monkeypatch.setattr(
+        FakeRuntime, "session", type("S", (), {"close": staticmethod(close)})(), raising=False
+    )
+    await h.supervisor.start()
+    assert not h.supervisor.running
+    await h.supervisor.recover()
+    assert h.supervisor.running
+    assert h.supervisor.last_error is None
+    assert h.dispatchers == 1
+
+
+async def test_recover_replaces_dead_polling_and_keeps_its_error() -> None:
+    h = Harness()
+    await h.supervisor.start()
+    dead = h.runtimes[0]
+    dead.running = False
+    dead.failure = "TelegramUnauthorizedError"
+    await h.supervisor.recover()
+    assert dead.stopped_with is False  # вебхук не трогаем
+    assert len(h.runtimes) == 2
+    assert h.supervisor.running
+
+
+async def test_recover_does_nothing_when_running() -> None:
+    h = Harness()
+    await h.supervisor.start()
+    await h.supervisor.recover()
+    assert len(h.runtimes) == 1
+
+
+async def test_recover_without_token_is_quiet() -> None:
+    from structlog.testing import capture_logs
+
+    h = Harness()
+    h.token = ("", "none")
+    with capture_logs() as logs:
+        await h.supervisor.recover()
+    assert h.runtimes == []
+    assert not [e for e in logs if e["log_level"] in ("warning", "error")]
+
+
+async def test_failed_stop_keeps_old_runtime_and_never_starts_a_second_consumer() -> None:
+    """stop старого бота бросил: ссылку не теряем, второй потребитель не стартует (409)."""
+    h = Harness()
+    await h.supervisor.start()
+    old = h.runtimes[0]
+    fail = True
+
+    async def stop(*, release_webhook: bool = False) -> None:
+        if fail:
+            raise RuntimeError("stop_polling failed")
+        old.stopped_with = release_webhook
+
+    old.stop = stop  # type: ignore[method-assign]
+    with pytest.raises(RuntimeError):
+        await h.supervisor.restart()
+    assert h.supervisor.runtime is old  # type: ignore[comparison-overlap]
+    assert len(h.runtimes) == 1
+    fail = False
+    await h.supervisor.restart()  # повтор: старый остановлен, только потом новый
+    assert old.stopped_with is True
+    assert len(h.runtimes) == 2
+    assert h.supervisor.runtime is h.runtimes[1]  # type: ignore[comparison-overlap]

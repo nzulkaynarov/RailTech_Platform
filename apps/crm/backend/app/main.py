@@ -9,7 +9,7 @@ from asgi_correlation_id import CorrelationIdMiddleware
 from fastapi import FastAPI
 
 from app import db
-from app.api import errors, health, telegram
+from app.api import errors, health
 from app.api.cors import WebLeadCorsMiddleware
 from app.api.v1 import (
     admin,
@@ -37,7 +37,6 @@ from app.api.v1 import (
     users,
 )
 from app.api.v1 import settings as settings_api
-from app.bot.setup import bot_lifespan
 from app.config import Settings, get_settings
 from app.container import Container
 from app.integrations import litellm, s3
@@ -47,30 +46,12 @@ from app.services.readiness import ReadinessService
 from app.tasks.lifespan import queue_lifespan
 
 
-async def _qualify(lead_id: int) -> None:
-    from app.tasks.qualify import enqueue_qualify
-
-    await enqueue_qualify(lead_id)
-
-
-async def _escalated(lead_id: int, escalation_id: int) -> None:
-    from app.tasks.notify import enqueue_escalation
-
-    await enqueue_escalation(escalation_id)
-
-
 async def _issue_setup_code(container: Container) -> None:
     """Первый запуск: код мастера в лог один раз; БД недоступна — код выдаст `/setup/state`."""
     try:
         await container.setup_service.ensure_code()
     except Exception as exc:  # noqa: BLE001 — старт api не должен падать из-за мастера
         structlog.get_logger(__name__).warning("setup_code_deferred", error=repr(exc))
-
-
-async def _lead_message(lead_id: int) -> None:
-    from app.tasks.notify import enqueue_lead_message
-
-    await enqueue_lead_message(lead_id)
 
 
 def create_app(settings: Settings | None = None) -> FastAPI:
@@ -84,16 +65,10 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         async with (
             httpx.AsyncClient(timeout=settings.ready_check_timeout_s) as http,
             queue_lifespan(settings),
-            bot_lifespan(
-                container,
-                on_activity=_qualify,
-                on_escalation=_escalated,
-                on_lead_message=_lead_message,
-            ) as bot,
         ):
+            # Бота в этом процессе нет: Telegram принимает `crm-bot` (`python -m app bot`, S0-4).
             app.state.container = container
             await _issue_setup_code(container)
-            app.state.bot = bot
             app.state.engine = engine
             app.state.http = http
             app.state.readiness = ReadinessService(
@@ -126,7 +101,6 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         # Только форма «Запрос» со страницы входа Cabinet; остальной API — same-origin (M3-CRM-05).
         app.add_middleware(WebLeadCorsMiddleware, origins=settings.cabinet_origins)
     app.include_router(health.router)
-    app.include_router(telegram.router)
     errors.install(app)
     routers = (
         auth,

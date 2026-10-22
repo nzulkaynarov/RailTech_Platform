@@ -3,8 +3,8 @@
 Апдейт проходит: IdempotencyMiddleware (`tg_updates`) → RateLimitMiddleware →
 MaintenanceMiddleware (выключатель Telegram, ADR-0024) → ClientStatusMiddleware
 (меню и номер по статусу, Q-011/Q-020) → обработчики
-`app/bot/client_handlers.py`, затем `app/bot/handlers.py`. В режиме webhook API отвечает Telegram
-сразу, а апдейт обрабатывается в фоне.
+`app/bot/client_handlers.py`, затем `app/bot/handlers.py`. В режиме webhook `crm-bot` отвечает
+Telegram сразу, а апдейт обрабатывается в фоне.
 """
 
 import asyncio
@@ -25,6 +25,7 @@ from app.bot.status import ClientStatusMiddleware
 from app.config import Settings
 from app.domain.telegram_webhook import webhook_url_problem
 from app.integrations.s3 import ObjectStorage
+from app.integrations.telegram import make_bot
 from app.schemas.settings_profile import BotProfileSettings
 from app.security.rbac import Rbac
 from app.services.client_bot import ClientBotService
@@ -103,7 +104,7 @@ class BotRuntime:
     @classmethod
     def create(cls, config: Settings, dispatcher: Dispatcher, token: str) -> "BotRuntime":
         """`token` — действующий токен (БД «Подключения» или env, `integrations/telegram.py`)."""
-        bot = Bot(token, default=DefaultBotProperties(link_preview_is_disabled=True))
+        bot = make_bot(config, token, default=DefaultBotProperties(link_preview_is_disabled=True))
         return cls(config, bot, dispatcher)
 
     async def start(self) -> None:
@@ -136,7 +137,8 @@ class BotRuntime:
     async def stop(self, *, release_webhook: bool = False) -> None:
         """`release_webhook` — при смене токена: старый бот больше не шлёт апдейты на наш URL."""
         if self._polling is not None:
-            await self.dispatcher.stop_polling()
+            if not self._polling.done():  # упавший polling уже остановлен: stop_polling бросил бы
+                await self.dispatcher.stop_polling()
             await asyncio.gather(self._polling, return_exceptions=True)
             self._polling = None
         if self._background:
@@ -154,6 +156,15 @@ class BotRuntime:
         if self._config.telegram_mode == "webhook":
             return True
         return self._polling is not None and not self._polling.done()
+
+    @property
+    def failure(self) -> str | None:
+        """Класс исключения, которым упал polling; `None` — не упал."""
+        task = self._polling
+        if task is None or not task.done() or task.cancelled():
+            return None
+        exc = task.exception()
+        return type(exc).__name__ if exc is not None else None
 
     def secret_matches(self, received: str | None) -> bool:
         expected = self._config.telegram_webhook_secret.get_secret_value()
