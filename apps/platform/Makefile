@@ -51,6 +51,16 @@ tokens-check: ## Копия токенов совпадает с packages/ui-tok
 	cmp -s $(TOKENS)/dist/antd.ts $(WEB)/src/app/tokens.generated.ts \
 	  || { echo "tokens.generated.ts устарел — make -C apps/platform tokens и закоммитьте"; exit 1; }
 
+# RBAC: матрица ролей, меню и поля с ограничением — из packages/contracts/platform-rbac.yaml (PLT-11).
+# Генератор лежит в scripts/ и запускается в окружении bff (pyyaml, jsonschema).
+.PHONY: rbac
+rbac: ## packages/contracts/platform-rbac.yaml → bff/app/rbac_generated.py и web/src/app/rbac.generated.ts
+	cd $(BFF) && uv run python ../scripts/gen_rbac.py
+
+.PHONY: rbac-check
+rbac-check: ## Сгенерированные файлы RBAC совпадают с контрактом
+	cd $(BFF) && uv run python ../scripts/gen_rbac.py --check
+
 # --- Качество (без Docker) ---------------------------------------------------------
 
 .PHONY: lint
@@ -69,7 +79,7 @@ test: ## pytest (bff) и vitest (web)
 	cd $(WEB) && pnpm test
 
 .PHONY: check
-check: lint typecheck test api-check tokens-check ## Всё вышеперечисленное — обязательно перед коммитом
+check: lint typecheck test api-check tokens-check rbac-check ## Всё вышеперечисленное — обязательно перед коммитом
 
 .PHONY: e2e
 e2e: ## Playwright + axe на MSW (поднимает vite --mode mock на :4173); браузеры: pnpm exec playwright install chromium

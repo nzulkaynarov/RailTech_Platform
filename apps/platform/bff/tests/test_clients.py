@@ -7,7 +7,7 @@ from fastapi import FastAPI
 from app.clients import CrmClient, ErpClient
 from app.clients.base import TIMEOUT_SECONDS
 from app.deps import get_redis
-from tests.conftest import CRM_URL, ERP_URL
+from tests.consts import CRM_URL, ERP_URL
 
 
 def test_timeout_is_three_seconds() -> None:

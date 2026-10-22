@@ -26,6 +26,11 @@
  * 0.2.0 (волна 8): смена пароля (`POST /auth/change-password`, `Session.must_change_password`); Admin · Оргструктура —
  * сотрудники, выдача ролей Платформы, приглашение по почте (`/admin/users*`, раздел матрицы `admin`).
  *
+ * 0.2.3 (Q-PLT-10-1): вход при недоступной ERP проходит (ERP подключается при первом обращении, агрегаты отдают
+ * `sources.erp = unavailable`); 503 на входе — только если не отвечает CRM; отключённый сотрудник получает
+ * `INVALID_CREDENTIALS` (CRM не различает «нет такого» и «отключён» — защита от перебора), `USER_DISABLED` остаётся для
+ * будущих путей; новый код `ACCOUNT_LOCKED` (423) — учётная запись временно заблокирована после неудачных попыток.
+ *
  * 0.2.2 (Q-PLT-12-1): `active_role` — «вид»: `modules`, `resources`, `restricted_fields` и очередь считаются по активной
  * роли, если она задана; право на операцию BFF всегда проверяет по объединению всех ролей сотрудника (смена активной роли
  * права не сужает и не расширяет). Пункты меню привязаны к разделам матрицы секцией `menu` в `platform-rbac.yaml`.
@@ -36,7 +41,7 @@
  * Лимиты: вход — 10 в минуту на IP и e-mail; остальные запросы — 300 в минуту на сессию; превышение — 429
  * `TOO_MANY_REQUESTS` с `Retry-After`.
  *
- * OpenAPI spec version: 0.2.2
+ * OpenAPI spec version: 0.2.3
  */
 import { useMutation, useQuery } from "@tanstack/react-query";
 import type {
@@ -56,7 +61,6 @@ import type {
 
 import type {
   ActivityFeed,
-  BackendUnavailableResponse,
   ChangePasswordIn,
   CsrfFailedResponse,
   Employee,
@@ -149,7 +153,7 @@ export const login = async (
 export const getLoginMutationKey = () => ["login"] as const;
 
 export const getLoginMutationOptions = <
-  TError = ErrorType<Error | TooManyRequestsResponse | BackendUnavailableResponse>,
+  TError = ErrorType<Error | TooManyRequestsResponse>,
   TContext = unknown,
 >(options?: {
   mutation?: UseMutationOptions<
@@ -185,18 +189,13 @@ export const getLoginMutationOptions = <
 
 export type LoginMutationResult = NonNullable<Awaited<ReturnType<typeof login>>>;
 export type LoginMutationBody = LoginIn;
-export type LoginMutationError = ErrorType<
-  Error | TooManyRequestsResponse | BackendUnavailableResponse
->;
+export type LoginMutationError = ErrorType<Error | TooManyRequestsResponse>;
 export type LoginMutationVariables = { data: LoginIn };
 
 /**
  * @summary Вход сотрудника
  */
-export const useLogin = <
-  TError = ErrorType<Error | TooManyRequestsResponse | BackendUnavailableResponse>,
-  TContext = unknown,
->(
+export const useLogin = <TError = ErrorType<Error | TooManyRequestsResponse>, TContext = unknown>(
   options?: {
     mutation?: UseMutationOptions<
       Awaited<ReturnType<typeof login>>,

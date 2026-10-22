@@ -10,7 +10,7 @@ import respx
 from fastapi import FastAPI
 
 from app.deps import get_redis
-from tests.conftest import CRM_URL, ERP_URL
+from tests.consts import CRM_URL, ERP_URL
 
 
 class FakeRedis:

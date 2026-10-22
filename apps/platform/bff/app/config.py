@@ -19,9 +19,21 @@ class Settings(BaseSettings):
     redis_url: str = Field(
         default="redis://redis:6379/0", validation_alias=AliasChoices("REDIS_URL")
     )
-    # Время жизни сессии сотрудника в Redis (часы). Используется с входом (фаза P1).
+    # Абсолютное время жизни сессии сотрудника в Redis (часы), от входа.
     session_ttl_hours: int = Field(
         default=12, ge=1, validation_alias=AliasChoices("PLATFORM_SESSION_TTL_HOURS")
+    )
+    # Secure у cookie сессии. Выключается только для разработки по http (`uv run` без Caddy).
+    cookie_secure: bool = Field(
+        default=True, validation_alias=AliasChoices("PLATFORM_COOKIE_SECURE")
+    )
+    # Имя cookie с refresh-токеном ERP (`REFRESH_COOKIE_NAME` ERP); у CRM — `rt_refresh`.
+    erp_refresh_cookie: str = Field(
+        default="refresh_token", validation_alias=AliasChoices("PLATFORM_ERP_REFRESH_COOKIE")
+    )
+    # Лимит попыток входа в минуту — отдельно на IP и на e-mail (platform-bff.yaml, «Лимиты»).
+    login_rate_per_minute: int = Field(
+        default=10, ge=1, validation_alias=AliasChoices("PLATFORM_LOGIN_RATE_PER_MINUTE")
     )
     log_level: Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"] = Field(
         default="INFO", validation_alias=AliasChoices("LOG_LEVEL")
