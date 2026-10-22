@@ -4,7 +4,8 @@
 Доступом к ERP управляет CRM (ADR-0003): выдача (`"erp"` в `platform_access`) → провижининг,
 снятие или деактивация пользователя → отзыв сессий; роли или имя у пользователя с доступом
 изменились → повторный провижининг (права ERP следуют за ролью CRM, `domain/erp_permissions.py`).
-Выбор системных ролей ERP (`erp_role_codes`, FIX-63) — тоже повод для повторного провижининга.
+Выбор системных ролей ERP (`erp_role_codes`, FIX-63) — тоже повод для повторного провижининга,
+как и смена ролей Платформы (`platform_roles`, CRM-01): от них зависят права ERP поверх ролей.
 """
 
 from dataclasses import dataclass
@@ -24,6 +25,8 @@ class AccessState:
     full_name: str
     # Системные роли ERP, выбранные админом (FIX-63): порядок не важен, как и у `roles`.
     erp_role_codes: tuple[str, ...] = ()
+    # Роли Платформы (CRM-01): определяют права ERP поверх системных ролей; порядок не важен.
+    platform_roles: tuple[str, ...] = ()
 
     @property
     def has_erp(self) -> bool:
@@ -37,10 +40,16 @@ def sync_action(before: AccessState, after: AccessState) -> SyncAction | None:
     if not (after.has_erp and after.is_active):
         return None
     became_available = not before.has_erp or not before.is_active
-    profile_changed = (set(before.roles), before.full_name, set(before.erp_role_codes)) != (
+    profile_changed = (
+        set(before.roles),
+        before.full_name,
+        set(before.erp_role_codes),
+        set(before.platform_roles),
+    ) != (
         set(after.roles),
         after.full_name,
         set(after.erp_role_codes),
+        set(after.platform_roles),
     )
     return "provision" if became_available or profile_changed else None
 

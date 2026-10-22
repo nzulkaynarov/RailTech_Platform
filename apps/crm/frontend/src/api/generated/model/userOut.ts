@@ -6,6 +6,7 @@
  */
 import type { UserOutErpRoleCodesItem } from "./userOutErpRoleCodesItem";
 import type { UserOutPlatformAccessItem } from "./userOutPlatformAccessItem";
+import type { UserOutPlatformRolesItem } from "./userOutPlatformRolesItem";
 
 export interface UserOut {
   email: string;
@@ -17,6 +18,8 @@ export interface UserOut {
   notify_leads: boolean;
   notify_system: boolean;
   platform_access?: UserOutPlatformAccessItem[];
+  platform_roles?: UserOutPlatformRolesItem[];
+  position?: string | null;
   roles: string[];
   tg_dm_failed_at?: string | null;
   tg_user_id: number | null;
