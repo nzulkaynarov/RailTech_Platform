@@ -1,0 +1,141 @@
+{
+  "docTitle": "{{page}} — RailTech Platform",
+  "soon": "P2 bosqichida paydo bo‘ladi",
+  "skip": "Tarkibga o‘tish",
+  "loading": "Yuklanmoqda…",
+  "rail": {
+    "label": "Modullar",
+    "logo": "RT — RailTech Platform"
+  },
+  "menu": {
+    "nav": "Modul bo‘limlari",
+    "collapse": "Menyuni yig‘ish",
+    "show": "Menyu",
+    "needsAction": "harakat talab qiladi"
+  },
+  "topbar": {
+    "crumbs": "Sahifa yo‘li",
+    "search": "Umumiy qidiruv",
+    "searchPlaceholder": "Xat raqami, mijoz STIRi, artikul",
+    "bell": "Bildirishnomalar markazi",
+    "bellUnread": "Bildirishnomalar markazi, {{count}} ta yangi",
+    "hidePanel": "Panelni yashirish",
+    "showPanel": "Panel",
+    "searchShort": "Qidiruv"
+  },
+  "notifications": {
+    "title": "Bildirishnomalar markazi",
+    "empty": "Yangi bildirishnoma yo‘q",
+    "text": "Qarorlar, mijoz xabarlari va tizim hodisalari shu yerda ko‘rinadi."
+  },
+  "panel": {
+    "label": "Yon oyna",
+    "hide": "Yon oynani yashirish",
+    "show": "Yon oynani ko‘rsatish"
+  },
+  "avatar": {
+    "open": "{{initials}} {{role}}: profil va sozlamalar, {{name}}",
+    "profile": "Profil",
+    "activeRole": "Faol rol",
+    "allRoles": "Barcha rollar",
+    "language": "Til",
+    "changePassword": "Parolni almashtirish",
+    "logout": "Chiqish",
+    "rolesMany": "Barcha rollar",
+    "selected": "Tanlangan"
+  },
+  "profile": {
+    "title": "Profil",
+    "name": "Ism",
+    "email": "Elektron pochta",
+    "position": "Lavozim",
+    "roles": "Rollar",
+    "access": "Kirish",
+    "close": "Yopish",
+    "noPosition": "ko‘rsatilmagan"
+  },
+  "roles": {
+    "MANAGER": "Menejer",
+    "DIRECTOR": "Direktor",
+    "SUPPLY": "Ta'minotchi",
+    "ENGINEER": "Bosh muhandis",
+    "ACCOUNTANT": "Buxgalter",
+    "ADMIN": "Administrator"
+  },
+  "rolesShort": {
+    "MANAGER": "Menejer",
+    "DIRECTOR": "Direktor",
+    "SUPPLY": "Ta'minotchi",
+    "ENGINEER": "Bosh muh.",
+    "ACCOUNTANT": "Buxgalter",
+    "ADMIN": "Admin"
+  },
+  "languages": {
+    "ru": "Русский",
+    "uz": "O‘zbekcha",
+    "en": "English"
+  },
+  "login": {
+    "title": "Platformaga kirish",
+    "lead": "RailTech xodimlarining yagona interfeysi. Administrator bergan pochta va parol bilan kiring.",
+    "email": "Elektron pochta",
+    "password": "Parol",
+    "submit": "Kirish",
+    "emailRequired": "Elektron pochtani kiriting",
+    "emailInvalid": "Elektron pochta manzilini tekshiring",
+    "passwordRequired": "Parolni kiriting",
+    "errors": {
+      "INVALID_CREDENTIALS": "Pochta yoki parol noto‘g‘ri. Ma’lumotlarni tekshirib, qayta urinib ko‘ring.",
+      "USER_DISABLED": "Hisob o‘chirilgan. Administratorga murojaat qiling.",
+      "NO_PLATFORM_ROLE": "Sizga Platformada rol berilmagan. Administratordan rol tayinlashni so‘rang.",
+      "TOO_MANY_REQUESTS": "Kirish urinishlari juda ko‘p. Bir daqiqa kutib, qayta urinib ko‘ring.",
+      "BACKEND_UNAVAILABLE": "CRM bilan aloqa o‘rnatib bo‘lmadi. Birozdan keyin qayta kiring.",
+      "CSRF_FAILED": "Brauzer sessiyasi eskirgan. Sahifani yangilab, qayta kiring.",
+      "default": "Kirib bo‘lmadi. Qayta urinib ko‘ring."
+    }
+  },
+  "changePassword": {
+    "title": "Parolni almashtirish",
+    "leadForced": "Administrator sizga vaqtinchalik parol berdi. Ishni davom ettirish uchun o‘zingizning parolingizni belgilang.",
+    "lead": "Yangi parol joriy parolni almashtiradi.",
+    "current": "Joriy parol",
+    "new": "Yangi parol",
+    "newHint": "Kamida 8 belgi",
+    "confirm": "Yangi parolni takrorlang",
+    "currentRequired": "Joriy parolni kiriting",
+    "newRequired": "Yangi parolni kiriting",
+    "newTooShort": "Parol kamida 8 belgidan iborat bo‘lishi kerak",
+    "mismatch": "Parollar mos kelmadi",
+    "submit": "Parolni almashtirish",
+    "cancel": "Bekor qilish",
+    "logout": "Chiqish",
+    "done": "Parol almashtirildi",
+    "errors": {
+      "WRONG_PASSWORD": "Joriy parol noto‘g‘ri kiritildi.",
+      "VALIDATION_FAILED": "Yangi parol xavfsizlik qoidalariga mos kelmaydi. Boshqasini tanlang.",
+      "default": "Parolni almashtirib bo‘lmadi. Qayta urinib ko‘ring."
+    }
+  },
+  "session": {
+    "errorTitle": "Platformani ochib bo‘lmadi",
+    "errorText": "Server javob bermadi. Ulanishni tekshirib, qayta urinib ko‘ring.",
+    "retry": "Qayta urinish"
+  },
+  "forbidden": {
+    "heading": "Ruxsat yo‘q",
+    "title": "Bu bo‘lim sizning rolingiz uchun mavjud emas",
+    "text": "Bo‘lim sizning rollaringiz huquqlariga kirmaydi. Ish uchun kerak bo‘lsa, administratorga yozing.",
+    "textRoles": "Bo‘lim quyidagi rollarga ochiq: {{roles}}. Ish uchun kerak bo‘lsa, administratorga yozing.",
+    "write": "Administratorga yozish"
+  },
+  "notFound": {
+    "heading": "Sahifa topilmadi",
+    "title": "Platformada bunday manzil yo‘q",
+    "text": "Havola eskirgan yoki manzilda xato bor. O‘z navbatingizga qayting.",
+    "back": "Mening navbatim"
+  },
+  "stub": {
+    "subtitle": "Bo‘lim keyingi bosqichlarda to‘ldiriladi: hozircha karkas va navigatsiya mavjud.",
+    "object": "{{id}} kartochkasi"
+  }
+}

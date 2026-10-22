@@ -1,0 +1,33 @@
+import type { ModuleConfig } from "../types";
+
+export const crm: ModuleConfig = {
+  code: "crm",
+  order: 2,
+  name: "CRM",
+  action: { access: "crm.clients" },
+  sections: [
+    {
+      key: "messages",
+      path: "/crm/messages",
+      access: { resource: "crm.leads" },
+      actionTo: "/crm/leads",
+    },
+    {
+      key: "leads",
+      path: "/crm/leads",
+      detail: "/crm/leads/:id",
+      access: { resource: "crm.leads" },
+      defaults: { panelOpen: false },
+    },
+    {
+      key: "clients",
+      path: "/crm/clients",
+      detail: "/crm/clients/:id",
+      access: { resource: "crm.clients" },
+      actionTo: "/crm/leads",
+    },
+    { key: "requests", path: "/crm/requests", access: { resource: "crm.clients" } },
+    { key: "channels", path: "/crm/channels", access: { resource: "crm.leads" } },
+    { key: "kb", path: "/crm/kb", access: { resource: "crm.leads" } },
+  ],
+};

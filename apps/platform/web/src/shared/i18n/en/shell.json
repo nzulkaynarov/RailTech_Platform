@@ -1,0 +1,141 @@
+{
+  "docTitle": "{{page}} — RailTech Platform",
+  "soon": "Coming in phase P2",
+  "skip": "Skip to content",
+  "loading": "Loading…",
+  "rail": {
+    "label": "Modules",
+    "logo": "RT — RailTech Platform"
+  },
+  "menu": {
+    "nav": "Module sections",
+    "collapse": "Collapse menu",
+    "show": "Menu",
+    "needsAction": "needs action"
+  },
+  "topbar": {
+    "crumbs": "Breadcrumbs",
+    "search": "Global search",
+    "searchPlaceholder": "Letter no., client tax ID, part number",
+    "bell": "Notification center",
+    "bellUnread": "Notification center, {{count}} new",
+    "hidePanel": "Hide panel",
+    "showPanel": "Panel",
+    "searchShort": "Search"
+  },
+  "notifications": {
+    "title": "Notification center",
+    "empty": "No new notifications",
+    "text": "Decisions, client messages and system events will appear here."
+  },
+  "panel": {
+    "label": "Side panel",
+    "hide": "Hide side panel",
+    "show": "Show side panel"
+  },
+  "avatar": {
+    "open": "{{initials}} {{role}}: profile and settings, {{name}}",
+    "profile": "Profile",
+    "activeRole": "Active role",
+    "allRoles": "All roles",
+    "language": "Language",
+    "changePassword": "Change password",
+    "logout": "Sign out",
+    "rolesMany": "All roles",
+    "selected": "Selected"
+  },
+  "profile": {
+    "title": "Profile",
+    "name": "Name",
+    "email": "Email",
+    "position": "Position",
+    "roles": "Roles",
+    "access": "Access",
+    "close": "Close",
+    "noPosition": "not set"
+  },
+  "roles": {
+    "MANAGER": "Manager",
+    "DIRECTOR": "Director",
+    "SUPPLY": "Supply specialist",
+    "ENGINEER": "Chief engineer",
+    "ACCOUNTANT": "Accountant",
+    "ADMIN": "Administrator"
+  },
+  "rolesShort": {
+    "MANAGER": "Manager",
+    "DIRECTOR": "Director",
+    "SUPPLY": "Supply",
+    "ENGINEER": "Engineer",
+    "ACCOUNTANT": "Accountant",
+    "ADMIN": "Admin"
+  },
+  "languages": {
+    "ru": "Русский",
+    "uz": "O‘zbekcha",
+    "en": "English"
+  },
+  "login": {
+    "title": "Sign in to the Platform",
+    "lead": "The unified RailTech staff interface. Sign in with the email and password your administrator gave you.",
+    "email": "Email",
+    "password": "Password",
+    "submit": "Sign in",
+    "emailRequired": "Enter your email",
+    "emailInvalid": "Check the email address",
+    "passwordRequired": "Enter your password",
+    "errors": {
+      "INVALID_CREDENTIALS": "Wrong email or password. Check your details and try again.",
+      "USER_DISABLED": "This account is disabled. Contact your administrator.",
+      "NO_PLATFORM_ROLE": "You have no role in the Platform yet. Ask your administrator to assign one.",
+      "TOO_MANY_REQUESTS": "Too many sign-in attempts. Wait a minute and try again.",
+      "BACKEND_UNAVAILABLE": "Cannot reach CRM. Try signing in again in a moment.",
+      "CSRF_FAILED": "The browser session is out of date. Reload the page and sign in again.",
+      "default": "Could not sign in. Please try again."
+    }
+  },
+  "changePassword": {
+    "title": "Change password",
+    "leadForced": "Your administrator gave you a temporary password. Set your own to continue.",
+    "lead": "The new password replaces the current one.",
+    "current": "Current password",
+    "new": "New password",
+    "newHint": "At least 8 characters",
+    "confirm": "Repeat the new password",
+    "currentRequired": "Enter your current password",
+    "newRequired": "Enter a new password",
+    "newTooShort": "The password must be at least 8 characters",
+    "mismatch": "Passwords do not match",
+    "submit": "Change password",
+    "cancel": "Cancel",
+    "logout": "Sign out",
+    "done": "Password changed",
+    "errors": {
+      "WRONG_PASSWORD": "The current password is wrong.",
+      "VALIDATION_FAILED": "The new password does not meet the security rules. Choose another one.",
+      "default": "Could not change the password. Please try again."
+    }
+  },
+  "session": {
+    "errorTitle": "Could not open the Platform",
+    "errorText": "The server did not respond. Check your connection and try again.",
+    "retry": "Try again"
+  },
+  "forbidden": {
+    "heading": "No access",
+    "title": "This section is not available for your role",
+    "text": "The section is outside the rights of your roles. If you need it for work, write to the administrator.",
+    "textRoles": "The section is available to roles: {{roles}}. If you need it for work, write to the administrator.",
+    "write": "Write to the administrator"
+  },
+  "notFound": {
+    "heading": "Page not found",
+    "title": "There is no such address in the Platform",
+    "text": "The link is outdated or the address has a typo. Go back to your queue.",
+    "back": "My queue"
+  },
+  "stub": {
+    "subtitle": "This section will be filled in later phases: the shell and navigation are available now.",
+    "object": "Card {{id}}"
+  }
+}

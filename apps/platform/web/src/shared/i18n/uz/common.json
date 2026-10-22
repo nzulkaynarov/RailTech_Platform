@@ -1,18 +1,3 @@
 {
-  "app": { "title": "RailTech platformasi" },
-  "scaffold": {
-    "title": "Platforma — P0 karkasi",
-    "lead": "Xodimlarning yagona interfeysi karkasi: web va BFF tayyor, modul ekranlari P1 bosqichida paydo bo'ladi.",
-    "health": {
-      "title": "Xizmatlar holati",
-      "overall": "Platforma",
-      "loading": "Xizmatlar tekshirilmoqda…",
-      "error": "Xizmatlar holatini olib bo'lmadi",
-      "retry": "Qayta urinish",
-      "version": "BFF versiyasi",
-      "status": { "ok": "Ishlayapti", "degraded": "To'liq ishlamayapti" },
-      "check": { "ok": "Mavjud", "fail": "Mavjud emas" },
-      "sources": { "redis": "Redis (sessiyalar)", "crm": "CRM", "erp": "ERP" }
-    }
-  }
+  "app": { "title": "RailTech platformasi" }
 }

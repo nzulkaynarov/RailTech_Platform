@@ -1,18 +1,3 @@
 {
-  "app": { "title": "RailTech Platform" },
-  "scaffold": {
-    "title": "Platform — P0 skeleton",
-    "lead": "Skeleton of the unified staff interface: web and BFF are built, module screens arrive in phase P1.",
-    "health": {
-      "title": "Service status",
-      "overall": "Platform",
-      "loading": "Checking services…",
-      "error": "Could not load service status",
-      "retry": "Retry",
-      "version": "BFF version",
-      "status": { "ok": "Working", "degraded": "Partially working" },
-      "check": { "ok": "Available", "fail": "Unavailable" },
-      "sources": { "redis": "Redis (sessions)", "crm": "CRM", "erp": "ERP" }
-    }
-  }
+  "app": { "title": "RailTech Platform" }
 }

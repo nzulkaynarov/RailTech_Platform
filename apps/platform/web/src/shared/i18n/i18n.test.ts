@@ -11,10 +11,32 @@ function keys(obj: object, prefix = ""): string[] {
 describe("i18n", () => {
   it("defaults to Russian", () => {
     expect(i18n.language).toBe("ru");
-    expect(i18n.t("scaffold.title")).toBe("Платформа — каркас P0");
+    expect(i18n.t("app.title")).toBe("Платформа RailTech");
+    expect(i18n.t("login.title", { ns: "shell" })).toBe("Вход в Платформу");
   });
 
-  it.each(["uz", "en"] as const)("%s has the same keys as ru", (lng) => {
-    expect(keys(resources[lng].common).sort()).toEqual(keys(resources.ru.common).sort());
+  it.each(["common", "shell", "modules"] as const)(
+    "пространство %s: uz и en — те же ключи, что ru",
+    (ns) => {
+      for (const lng of ["uz", "en"] as const) {
+        expect(keys(resources[lng][ns]).sort()).toEqual(keys(resources.ru[ns]).sort());
+      }
+    },
+  );
+
+  it("нет пустых строк ни в одном языке", () => {
+    for (const lng of ["ru", "uz", "en"] as const) {
+      for (const ns of ["common", "shell", "modules"] as const) {
+        for (const key of keys(resources[lng][ns])) {
+          const value = key
+            .split(".")
+            .reduce<unknown>(
+              (acc, part) => (acc as Record<string, unknown>)[part],
+              resources[lng][ns],
+            );
+          expect(value, `${lng}:${ns}:${key}`).not.toBe("");
+        }
+      }
+    }
   });
 });
