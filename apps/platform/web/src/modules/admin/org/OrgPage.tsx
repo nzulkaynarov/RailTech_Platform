@@ -1,7 +1,7 @@
 import { Button, Card, Input, Select, Skeleton } from "antd";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { useNavigate, useSearchParams } from "react-router";
+import { useLocation, useNavigate, useSearchParams } from "react-router";
 
 import { canEdit } from "../../../app/access";
 import { useAuth } from "../../../app/auth/useAuth";
@@ -31,6 +31,7 @@ export function OrgPage({ objectId }: { objectId?: string }) {
   const { t } = useTranslation(["modules", "shell"]);
   const { me } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const [params] = useSearchParams();
   const { wide } = useViewport();
   const editable = canEdit(me, "admin");
@@ -160,6 +161,8 @@ export function OrgPage({ objectId }: { objectId?: string }) {
           {t("modules:admin.org.invite.title")}
         </h3>
         <InviteEmployeeForm
+          // Повторное нажатие «Пригласить сотрудника» ведёт на тот же адрес, но с новым ключом навигации: форма чистая.
+          key={location.key}
           onInvited={(employee) => {
             openCard(employee.id);
           }}

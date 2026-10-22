@@ -12,6 +12,7 @@ from app.feeds.feed import SNAPSHOT_TTL_SECONDS, Feed, rows
 from app.feeds.models import ObjectRef, SearchGroup, SearchHit, SearchResult
 from app.feeds.numbers import (
     STEP_TITLES,
+    cyrillic_prefix,
     deal_number,
     deal_ref,
     deal_step,
@@ -19,6 +20,7 @@ from app.feeds.numbers import (
     lead_id_of,
     lead_number,
     lead_ref,
+    number_query,
     quote_ref,
 )
 from app.feeds.snapshot import DEALS_PARAMS, DEALS_PATH
@@ -76,13 +78,13 @@ def _deal_hit(deal: dict[str, Any]) -> SearchHit:
 
 
 # TODO(ERP-09): поиск сделок по номеру, названию и компании — операция ERP; пока ищет BFF.
-def _deal_matches(deal: dict[str, Any], needle: str) -> bool:
+def _deal_matches(deal: dict[str, Any], needles: tuple[str, ...]) -> bool:
     haystack = (
         deal_number(deal),
         str(deal.get("title") or ""),
         str(deal.get("company_name") or ""),
     )
-    return any(needle in part.casefold() for part in haystack)
+    return any(needle in part.casefold() for part in haystack for needle in needles)
 
 
 def _doc_hit(doc: dict[str, Any], deals: dict[int, dict[str, Any]]) -> SearchHit | None:
@@ -110,6 +112,13 @@ def _doc_hit(doc: dict[str, Any], deals: dict[int, dict[str, Any]]) -> SearchHit
 
 async def search(feed: Feed, roles: list[RoleCode], query: str) -> SearchResult:
     needle = query.strip().casefold()
+    # Латинский префикс номера (`ZV-…`, `kp-…`) -> кириллический; запрос как набран ищется в сделках
+    # и в документах ERP (номера документов строит схема нумерации ERP, BFF её не перестраивает).
+    # `ЗВ-2026-1` для сделок ищется ещё и как `ЗВ-2026-001`: номер сделки составляет BFF.
+    typed = cyrillic_prefix(query)
+    canonical = number_query(query)
+    needles = tuple(dict.fromkeys(n.casefold() for n in (needle, typed, canonical) if n))
+    docs_query = typed
     can_leads = allows(roles, "crm.leads", "read")
     can_clients = allows(roles, "crm.clients", "read")
     can_docs = any(allows(roles, res, "read") for res in set(_DOC_RESOURCE.values()))
@@ -147,7 +156,7 @@ async def search(feed: Feed, roles: list[RoleCode], query: str) -> SearchResult:
             feed.get(
                 "erp",
                 "/api/v1/crm/analytics/search-documents/",
-                {"q": query.strip(), "limit": HITS_LIMIT},
+                {"q": docs_query, "limit": HITS_LIMIT},
             )
             if can_docs
             else _none(),
@@ -158,7 +167,7 @@ async def search(feed: Feed, roles: list[RoleCode], query: str) -> SearchResult:
         leads(), clients(), deals_and_docs()
     )
     index = {int(d["id"]): d for d in all_deals if isinstance(d.get("id"), int)}
-    matching = [d for d in all_deals if isinstance(d.get("id"), int) and _deal_matches(d, needle)]
+    matching = [d for d in all_deals if isinstance(d.get("id"), int) and _deal_matches(d, needles)]
     requests = [_deal_hit(d) for d in matching if deal_ref(d).kind == "request" and can_clients]
     projects = [
         _deal_hit(d)

@@ -36,7 +36,8 @@ export function SectionStubPage({
   const roles =
     !me.active_role && me.roles.length > 1
       ? [t("shell:avatar.allRoles")]
-      : (me.active_role ? [me.active_role] : me.roles).map((r) => t(`shell:roles.${r}`));
+      : // TODO(ADR-0012): название роли — из данных `/me`, а не из i18n по коду роли.
+        (me.active_role ? [me.active_role] : me.roles).map((r) => t(`shell:roles.${r}`));
   const subtitle = isQueue
     ? [roles.join(", "), todayLabel(i18n.language)].join(" · ")
     : t("shell:stub.subtitle");

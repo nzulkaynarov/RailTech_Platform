@@ -7,6 +7,8 @@ import { erpAccessOfRoles } from "./access";
  * Строка «Что произойдёт» про ERP: роли ERP по карте платформенных ролей (генерируется из platform-rbac.yaml);
  * названия ролей ERP — в i18n, не в контракте. Роль без ролей ERP (только ADMIN) — «администратор».
  */
+// TODO(ADR-0012): «в ERP получит роли …» строится по кодам ролей Платформы (`ERP_ROLE_CODES`) и i18n `erpRoles.<код>`;
+// заменить на итог провижининга из данных (`erp_sync` / ответ `/admin/users`), роли — настраиваемые.
 export function erpConsequence(t: TFunction, roles: readonly RoleCode[]): string | null {
   const { admin, codes } = erpAccessOfRoles(roles);
   if (admin) return t("modules:admin.org.consequence.erpAdmin");
