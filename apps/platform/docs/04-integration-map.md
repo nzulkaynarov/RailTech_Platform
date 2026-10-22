@@ -17,7 +17,7 @@
 |---|---|---|---|
 | `POST /auth/login`, `POST /auth/logout`, `GET /auth/session` | `POST /auth/login`, `/auth/refresh`, `/auth/logout`, `GET /me`, `POST /auth/sso/token` | `POST /auth/sso/exchange/`, `/auth/token/refresh/`, `/auth/logout/` | ✓ |
 | `GET /me` (имя, роли Платформы, язык, модули) | `GET /me`, `GET /me/permissions` | — | Δ CRM-01 (`platform_roles`) |
-| `GET /search?q=` | `GET /leads?q=`, `GET /clients?q=` | `GET /crm/analytics/search-documents/`, `GET /crm/deals/?search=` | ✓ (поиск по чатам — Δ ERP-08) |
+| `GET /search?q=` | `GET /leads?q=`, `GET /clients?q=` | `GET /crm/analytics/search-documents/`; сделки по номеру и названию — **нет** (`DealViewSet` без `search_fields`) | частично; сделки — Δ ERP-09, чаты — Δ ERP-08 |
 | `GET /notifications`, `POST /notifications/read-all`, `POST /notifications/{id}/read` | Δ CRM-04 (уведомления сотрудникам из CRM) | `GET /notifications/`, `PATCH /notifications/mark_all_read/`, `PATCH /notifications/{id}/mark_read/` | ✓ ERP, Δ CRM |
 | `GET /events` (SSE, фаза P4) | `GET /stream` | Δ ERP-10 (Redis Streams) | Δ |
 | `GET /menu-counters` (бейджи подменю всех модулей) | `GET /inbox`, `GET /service-requests` | счётчики по §1.2–1.5 | агрегат |
@@ -200,7 +200,9 @@
 | ERP-06 | задача по расписанию: `OVERDUE` по сроку, событие `invoice.overdue`; включить `crm.send_payment_reminders` в расписание | P3 |
 | ERP-07 | признак `Deal.process = v3`; запрет переходов в обход резолюции, виз и одобрения для таких заявок в сервисном слое | P2 |
 | ERP-08 | приложение `chats`: чат проекта (создаётся с заявкой, архивируется на «Выполнено»/«Отказ»), командные и личные чаты, сообщения, вложения, системные сообщения о событиях проекта, поиск по тексту | P3 |
-| ERP-09 | `Deal.number` (ЗВ/ПР), типы нумерации ВХ, ИСХ, СЗ; поиск сделки по номеру | P2 |
+| ERP-09 | `Deal.number` (ЗВ/ПР), типы нумерации ВХ, ИСХ, СЗ; поиск сделки по номеру и названию (`search_fields` у списка сделок) | P2 |
+| ERP-16 | уведомления сотрудника: `unread_count` и признак прочитанного в выдаче (для колокольчика без перебора страниц); лента «Сегодня» для сотрудника — события компании по правам, а не `activity-logs` только администратору | P2 |
+| ERP-17 | часовой пояс компании в API (сейчас BFF берёт `Asia/Tashkent` константой) | P2 |
 | ERP-10 | публикация доменных событий в Redis Streams для BFF | P4 |
 | ERP-11 | атомарное «одобрить и отправить» КП: виза директора, ИСХ-номер, каналы (бот, кабинет, почта), одна транзакция | P2 |
 | ERP-12 | «Напомнить клиенту» по КП и напоминание за 2 дня до истечения срока — событие для бота | P3 |
@@ -219,6 +221,10 @@
 | CRM-05 | тикеты от команды | P4 |
 | CRM-06 | записка handoff (запрос, факты, причина, рекомендуемый шаг) в выдаче `GET /inbox` | P2 |
 | CRM-07 | ответ «как бот» из внешнего чата (сообщение уходит от имени бота, в журнале — сотрудник) | P3 |
+| CRM-01c | право читать сотрудников (`users:read`) по ролям Платформы: DIRECTOR — да, SUPPLY/ENGINEER — нет (базовая роль `viewer` его не даёт) | P1 (волна 8) |
+| CRM-08 | `GET /inbox` с фильтром «мои» (`taken_by`, отложенные) на стороне CRM, вместо фильтрации в BFF | P2 |
+| CRM-09 | итог провижининга в ERP в выдаче пользователя (`erp_sync`: ok/pending/error), повторная отправка приглашения без смены пароля | P2 |
+| CRM-10 | канал администратора для системных оповещений (никогда в канал команды), подавление «мигания» сервиса | по решению владельца |
 
 ### Cabinet и портал ERP
 
