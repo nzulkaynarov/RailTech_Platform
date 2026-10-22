@@ -88,7 +88,7 @@ openapi: ## Экспорт OpenAPI → packages/contracts/openapi/crm.yaml и г
 	cd $(FRONTEND) && pnpm api:generate
 
 .PHONY: platform-roles
-platform-roles: ## Пересоздать app/domain/platform_roles_generated.py из packages/contracts/platform-rbac.v2.yaml
+platform-roles: ## Пересоздать app/domain/platform_roles_generated.py из packages/contracts/platform-rbac.yaml
 	cd $(BACKEND) && uv run python ../scripts/gen_platform_roles.py
 
 .PHONY: migration

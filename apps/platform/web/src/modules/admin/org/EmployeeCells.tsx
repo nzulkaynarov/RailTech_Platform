@@ -4,16 +4,15 @@ import { EMPLOYEE_STATUS_TONE, erpAttention } from "../../../entities/employee/s
 import type { Employee } from "../../../shared/api/generated/model";
 import { StatusTag } from "../../../shared/ui/StatusTag";
 
-/** Роли сотрудника тегами со словом; без ролей — подпись «Нет ролей». */
+/** Роли сотрудника тегами со словом (названия — данные CRM); без ролей — подпись «Нет ролей». */
 export function RoleTags({ roles }: { roles: Employee["roles"] }) {
   const { t } = useTranslation(["modules", "shell"]);
   if (roles.length === 0) return <span className="pf-hint">{t("modules:admin.org.noRoles")}</span>;
   return (
     <span className="pf-org-tags">
       {roles.map((role) => (
-        <StatusTag key={role} tone="default">
-          {/* TODO(ADR-0012): название роли — из данных сотрудника (`/admin/users`), а не из i18n по коду роли. */}
-          {t(`shell:roles.${role}`)}
+        <StatusTag key={role.id} tone="default">
+          {role.name}
         </StatusTag>
       ))}
     </span>

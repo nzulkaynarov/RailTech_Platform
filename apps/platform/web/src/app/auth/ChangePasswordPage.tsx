@@ -11,7 +11,7 @@ import {
 import { AuthLayout } from "./AuthLayout";
 import { useAuth } from "./useAuth";
 import { authErrorText } from "./errors";
-import { DEFAULT_HOME } from "./redirect";
+import { homePath } from "../access";
 
 interface PasswordValues {
   current: string;
@@ -28,7 +28,8 @@ export function ChangePasswordPage() {
   const { message } = App.useApp();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const { mustChangePassword } = useAuth();
+  const { mustChangePassword, me } = useAuth();
+  const home = homePath(me);
   const logout = useLogout({
     mutation: {
       onSettled: () => {
@@ -42,7 +43,7 @@ export function ChangePasswordPage() {
       onSuccess: async () => {
         message.success(t("changePassword.done"));
         await queryClient.invalidateQueries({ queryKey: getGetSessionQueryKey() });
-        void navigate(DEFAULT_HOME, { replace: true });
+        void navigate(home, { replace: true });
       },
     },
   });
@@ -111,7 +112,7 @@ export function ChangePasswordPage() {
               type="link"
               style={{ padding: 0 }}
               onClick={() => {
-                void navigate(DEFAULT_HOME);
+                void navigate(home);
               }}
             >
               {t("changePassword.cancel")}

@@ -11,21 +11,22 @@ from app.feeds.feed import Feed
 from app.feeds.models import ActivityFeed, MenuCounters, Queue, QueueCards
 from app.feeds.snapshot import load_snapshot, wants_approvals, wants_projects
 from app.feeds.view import roles_of_view
-from app.rbac_generated import RoleCode
 
 router = APIRouter(tags=["dashboard"])
 
 QueueAuthed = Annotated[Authed, Depends(require("dashboard.queue", "read"))]
-RoleParam = Annotated[RoleCode | None, Query(description="Только очередь этой роли")]
+RoleParam = Annotated[
+    str | None, Query(pattern=r"^[0-9]+$", description="Только очередь этой роли (id)")
+]
 
 
 @router.get("/menu-counters", response_model=MenuCounters, operation_id="getMenuCounters")
 async def get_menu_counters(authed: QueueAuthed) -> MenuCounters:
     feed = Feed(authed)
-    roles = roles_of_view(authed, None)
-    snap = await load_snapshot(feed, roles, inbox=True, approvals=True, deals=wants_projects(roles))
-    items = queue.build_queue(feed, roles, snap)
-    return MenuCounters(items=queue.build_counters(roles, snap, items), sources=feed.sources)
+    view = roles_of_view(authed, None)
+    snap = await load_snapshot(feed, view, inbox=True, approvals=True, deals=wants_projects(view))
+    items = queue.build_queue(feed, view, snap)
+    return MenuCounters(items=queue.build_counters(view, snap, items), sources=feed.sources)
 
 
 @router.get(
@@ -33,11 +34,9 @@ async def get_menu_counters(authed: QueueAuthed) -> MenuCounters:
 )
 async def get_queue(authed: QueueAuthed, role: RoleParam = None) -> Queue:
     feed = Feed(authed)
-    roles = roles_of_view(authed, role)
-    snap = await load_snapshot(
-        feed, roles, inbox=True, approvals=True, deals=wants_approvals(roles)
-    )
-    return Queue(items=queue.build_queue(feed, roles, snap), sources=feed.sources)
+    view = roles_of_view(authed, role)
+    snap = await load_snapshot(feed, view, inbox=True, approvals=True, deals=wants_approvals(view))
+    return Queue(items=queue.build_queue(feed, view, snap), sources=feed.sources)
 
 
 @router.get(
@@ -48,16 +47,16 @@ async def get_queue(authed: QueueAuthed, role: RoleParam = None) -> Queue:
 )
 async def get_queue_cards(authed: QueueAuthed, role: RoleParam = None) -> QueueCards:
     feed = Feed(authed)
-    roles = roles_of_view(authed, role)
+    view = roles_of_view(authed, role)
     snap = await load_snapshot(
         feed,
-        roles,
+        view,
         inbox=True,
         approvals=True,
-        deals=wants_projects(roles) or wants_approvals(roles),
+        deals=wants_projects(view) or wants_approvals(view),
     )
-    items = queue.build_queue(feed, roles, snap)
-    return QueueCards(cards=queue.build_cards(roles, snap, items), sources=feed.sources)
+    items = queue.build_queue(feed, view, snap)
+    return QueueCards(cards=queue.build_cards(view, snap, items), sources=feed.sources)
 
 
 @router.get(

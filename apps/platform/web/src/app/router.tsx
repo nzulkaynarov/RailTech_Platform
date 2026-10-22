@@ -1,8 +1,9 @@
-import { Navigate, type RouteObject } from "react-router";
+import type { RouteObject } from "react-router";
+
+import { HomeRedirect } from "./HomeRedirect";
 
 import { AuthGate } from "./auth/AuthGate";
 import { ChangePasswordPage } from "./auth/ChangePasswordPage";
-import { DEFAULT_HOME } from "./auth/redirect";
 import { LoginPage } from "./auth/LoginPage";
 import { NotFoundPage } from "./NotFoundPage";
 import { AppShell } from "./shell/AppShell";
@@ -29,7 +30,7 @@ export const routes: RouteObject[] = [
           </PanelSlotProvider>
         ),
         children: [
-          { index: true, element: <Navigate to={DEFAULT_HOME} replace /> },
+          { index: true, element: <HomeRedirect /> },
           { path: "dashboard/*", lazy: () => import("../modules/dashboard") },
           { path: "crm/*", lazy: () => import("../modules/crm") },
           { path: "eds/*", lazy: () => import("../modules/eds") },

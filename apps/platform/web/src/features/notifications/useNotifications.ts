@@ -8,12 +8,21 @@ import {
 } from "../../shared/api/generated/platform-bff";
 import type { NotificationPage } from "../../shared/api/generated/model";
 import { pollQuery } from "../../shared/api/polling";
+import { canSee } from "../../app/access";
+import { useAuth } from "../../app/auth/useAuth";
 
 /** Одна страница на все места показа (колокольчик, popover, боковое окно): один запрос, один счётчик непрочитанных. */
 export const NOTIFICATION_PARAMS = { limit: 50 } as const;
 
+/**
+ * Уведомления открыты разделом «Моя очередь» (BFF: `require("dashboard.queue")`): у роли без него (ADR-0012 — например,
+ * «Менеджер и бухгалтер» без Dashboard) запрос не уходит, колокольчик пуст, ошибки «Нет доступа» на экране нет.
+ */
 export function useNotifications() {
-  return useListNotifications(NOTIFICATION_PARAMS, { query: pollQuery });
+  const { me } = useAuth();
+  const enabled = canSee(me, { resource: "dashboard.queue" });
+  const query = useListNotifications(NOTIFICATION_PARAMS, { query: { ...pollQuery, enabled } });
+  return { query, enabled };
 }
 
 type Context = { previous: NotificationPage | undefined };

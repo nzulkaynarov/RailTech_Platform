@@ -66,8 +66,10 @@ export function AppShell() {
   const activeModule = (matchedVisible ? match.module : undefined) ?? railModules[0] ?? MODULES[0];
   const sectionAllowed = (s: SectionConfig) => canSee(me, s.access);
 
-  const counters = useGetMenuCounters({ query: pollQuery });
-  const unread = useNotifications();
+  // Счётчики меню и уведомления открыты разделом «Моя очередь» (как в BFF): без него запросов нет.
+  const hasQueue = canSee(me, { resource: "dashboard.queue" });
+  const counters = useGetMenuCounters({ query: { ...pollQuery, enabled: hasQueue } });
+  const unread = useNotifications().query;
 
   const unreadCount = unread.data?.unread_count ?? 0;
 

@@ -4,8 +4,8 @@ import { resolve } from "node:path";
 import { parse } from "yaml";
 
 /**
- * Ожидания e2e строятся прямо из `packages/contracts/platform-rbac.yaml`, а не из фикстур MSW: если матрица и моки
- * разойдутся, сценарии смены роли упадут.
+ * Ожидания e2e строятся прямо из `packages/contracts/platform-rbac.yaml` (каталог версии 2: системные роли и шаблоны),
+ * а не из фикстур MSW: если каталог и моки разойдутся, сценарии смены роли упадут.
  */
 export type Role = "MANAGER" | "DIRECTOR" | "SUPPLY" | "ENGINEER" | "ACCOUNTANT" | "ADMIN";
 export const ROLES: readonly Role[] = [
@@ -25,28 +25,30 @@ export const ROLE_NAMES: Record<Role, string> = {
   ADMIN: "Администратор",
 };
 
-/** Подпись роли под аватаром (короткая форма, `shell.rolesShort`) */
-export const ROLE_CAPTIONS: Record<Role, string> = {
-  MANAGER: "Менеджер",
-  DIRECTOR: "Директор",
-  SUPPLY: "Снабженец",
-  ENGINEER: "Гл. инженер",
-  ACCOUNTANT: "Бухгалтер",
-  ADMIN: "Админ",
-};
+/** Подпись роли под аватаром — название роли из данных (ADR-0012), без сокращений по коду. */
+export const ROLE_CAPTIONS: Record<Role, string> = ROLE_NAMES;
 
-type Level = "full" | "read" | "hidden";
-interface Resource {
-  key: string;
-  module: string;
-  access: Record<Role, Level>;
+type Level = "full" | "read";
+interface CatalogRole {
+  access: Partial<Record<string, Level>>;
+}
+interface Catalog {
+  resources: { key: string; module: string }[];
+  menu: Record<string, Record<string, string[]>>;
+  system_roles: Partial<Record<string, CatalogRole>>;
+  templates: Partial<Record<string, CatalogRole>>;
 }
 
 const yamlPath = resolve(
   import.meta.dirname,
   "../../../../../packages/contracts/platform-rbac.yaml",
 );
-const matrix = parse(readFileSync(yamlPath, "utf8")) as { resources: Resource[] };
+const catalog = parse(readFileSync(yamlPath, "utf8")) as Catalog;
+
+/** Матрица предустановки (системной роли или шаблона) — роли из MSW создаются по ней (id 1–6). */
+function accessOf(role: Role): Partial<Record<string, Level>> {
+  return (catalog.system_roles[role] ?? catalog.templates[role])?.access ?? {};
+}
 
 export const MODULE_TITLES: Record<string, string> = {
   dashboard: "Dashboard",
@@ -58,9 +60,13 @@ export const MODULE_TITLES: Record<string, string> = {
 };
 const MODULE_ORDER = ["dashboard", "crm", "eds", "erp", "chats", "admin"];
 
+/** Модули рейла роли: виден хотя бы один пункт меню модуля (секция `menu` каталога). */
 export function visibleModules(role: Role): string[] {
+  const access = accessOf(role);
   return MODULE_ORDER.filter((module) =>
-    matrix.resources.some((r) => r.module === module && r.access[role] !== "hidden"),
+    Object.values(catalog.menu[module] ?? {}).some((sections) =>
+      sections.some((key) => access[key] !== undefined),
+    ),
   ).map((module) => MODULE_TITLES[module] ?? module);
 }
 
@@ -82,10 +88,11 @@ const ROUTE_OF: Record<string, string> = {
 export function routesFor(role: Role): { hidden: string[]; visible: string[] } {
   const hidden: string[] = [];
   const visible: string[] = [];
-  for (const resource of matrix.resources) {
+  const access = accessOf(role);
+  for (const resource of catalog.resources) {
     const route = ROUTE_OF[resource.key];
     if (!route) continue;
-    (resource.access[role] === "hidden" ? hidden : visible).push(route);
+    (access[resource.key] === undefined ? hidden : visible).push(route);
   }
   return { hidden, visible };
 }

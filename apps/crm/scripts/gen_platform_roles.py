@@ -1,4 +1,4 @@
-"""Генератор `platform_roles_generated.py` из каталога `packages/contracts/platform-rbac.v2.yaml`.
+"""Генератор `platform_roles_generated.py` из каталога `packages/contracts/platform-rbac.yaml`.
 
 Каталог возможностей (ADR-0012) — единственный источник отображения «раздел × уровень → права
 CRM и ERP», системных ролей, шаблонов ролей и правила базовой роли CRM. Модуль в репозитории не
@@ -17,7 +17,7 @@ from typing import Any
 import yaml
 
 REPO = Path(__file__).resolve().parents[3]
-CONTRACT = REPO / "packages" / "contracts" / "platform-rbac.v2.yaml"
+CONTRACT = REPO / "packages" / "contracts" / "platform-rbac.yaml"
 DOMAIN = REPO / "apps" / "crm" / "backend" / "app" / "domain"
 OUTPUT = DOMAIN / "platform_roles_generated.py"
 LEVELS = ("read", "full")
@@ -25,7 +25,7 @@ LEVELS = ("read", "full")
 HEADER = '''\
 """Каталог возможностей Платформы (роли как данные). ГЕНЕРИРУЕТСЯ — не править руками (ADR-0012).
 
-Источник: packages/contracts/platform-rbac.v2.yaml (version {version}). Пересоздание:
+Источник: packages/contracts/platform-rbac.yaml (version {version}). Пересоздание:
 `make -C apps/crm platform-roles`; тест `tests/unit/domain/test_platform_roles.py` сверяет
 файл с каталогом.
 """

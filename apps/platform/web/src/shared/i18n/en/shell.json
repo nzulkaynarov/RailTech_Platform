@@ -93,22 +93,6 @@
     "access": "Access",
     "noPosition": "not set"
   },
-  "roles": {
-    "MANAGER": "Manager",
-    "DIRECTOR": "Director",
-    "SUPPLY": "Supply specialist",
-    "ENGINEER": "Chief engineer",
-    "ACCOUNTANT": "Accountant",
-    "ADMIN": "Administrator"
-  },
-  "rolesShort": {
-    "MANAGER": "Manager",
-    "DIRECTOR": "Director",
-    "SUPPLY": "Supply",
-    "ENGINEER": "Engineer",
-    "ACCOUNTANT": "Accountant",
-    "ADMIN": "Admin"
-  },
   "languages": {
     "ru": "Русский",
     "uz": "O‘zbekcha",

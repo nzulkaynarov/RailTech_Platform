@@ -130,6 +130,13 @@ SPA  POST /api/v1/auth/login {email, password}
 вызывает провижининг ERP с `role_codes` и правами по карте `04-integration-map.md` §4. Матрица SPEC-v3 §4.2 —
 единственный источник; генерация в BFF и SPA из одного YAML (`packages/contracts/platform-rbac.yaml`).
 
+**С R-2 (BFF 0.3.0, каталог v2):** роли — данные CRM. BFF читает в `/me` CRM роли сотрудника с их матрицами
+(`platform_role_refs[].access`, `restricted_fields`; у системных — матрица каталога, Q-R2-1) и считает доступ
+объединением матриц, «вид» — по активной роли (id); «Моя очередь» — по секции `queue` каталога; CRM не вызывается
+по разделам, которых у ролей нет (источник `not_applicable`). Выдача ролей — полный набор `platform_role_ids` в CRM,
+права CRM и ERP вычисляет CRM. Admin · Ролевая матрица — редактор ролей поверх `/admin/roles*` BFF
+(→ `/api/v1/platform-roles*` CRM). Генераторы каталога: CRM (`gen_platform_roles.py`), BFF и SPA (`scripts/gen_rbac.py`).
+
 ## 7. Развёртывание
 
 | Что | Значение |

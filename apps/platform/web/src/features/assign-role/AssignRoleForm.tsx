@@ -2,14 +2,17 @@ import { Alert, App, Button, Input } from "antd";
 import { useId, useState } from "react";
 import { useTranslation } from "react-i18next";
 
-import type { RoleCode } from "../../app/rbac.generated";
-import { modulesOfRoles } from "../../entities/employee/access";
-import { erpConsequence } from "../../entities/employee/consequence";
+import { accessOfRoleIds } from "../../entities/employee/access";
+import { backendConsequence } from "../../entities/employee/consequence";
 import { employeeErrorText } from "../../entities/employee/errors";
+import { isSystemAdmin } from "../../entities/role/roles";
 import type { Employee } from "../../shared/api/generated/model";
 import { Consequence } from "../../shared/ui/Consequence";
 import { findModule } from "../../modules/registry";
 import { RoleCheckboxes } from "./RoleCheckboxes";
+import { useRoles } from "./useRoles";
+import { hasActiveLeads } from "./leads";
+import { TransferLeads } from "./TransferLeads";
 import { useEmployeeUpdate } from "./useEmployeeMutations";
 
 import "./assign-role.css";
@@ -27,48 +30,55 @@ function moduleList(codes: readonly string[]): string {
 }
 
 /**
- * Выдача ролей в карточке сотрудника (SPEC-v3 §7.6): несколько ролей и должность одной кнопкой «Сохранить роли»,
- * под ней — «Что произойдёт» из сгенерированной матрицы. Сохранение — `PATCH /admin/users/{id}`; запрет снять роль
- * последнего администратора принадлежит CRM (409 `LAST_ADMIN`), форма заранее показывает тот же запрет текстом.
+ * Выдача ролей в карточке сотрудника (SPEC-v3 §7.6, ADR-0012): роли — из списка ролей компании (`GET /admin/roles`),
+ * несколько ролей и должность одной кнопкой «Сохранить роли», под ней — «Что произойдёт» из матриц выбранных ролей.
+ * Сохранение — `PATCH /admin/users/{id}` с полным набором id; запреты («последний администратор», лиды в работе)
+ * принадлежат CRM, форма заранее показывает запрет снять последнего администратора и предлагает передать лиды.
  */
 export function AssignRoleForm({ employee, selfId, otherActiveAdmins }: AssignRoleFormProps) {
   const { t } = useTranslation("modules");
   const { message } = App.useApp();
   const noteId = useId();
   const positionId = useId();
-  const [draftRoles, setDraftRoles] = useState<RoleCode[] | null>(null);
+  const { query, roles } = useRoles();
+  const [draftRoles, setDraftRoles] = useState<string[] | null>(null);
   const [draftPosition, setDraftPosition] = useState<string | null>(null);
+  const [transferTo, setTransferTo] = useState<string | null>(null);
   const update = useEmployeeUpdate(selfId, () => {
     setDraftRoles(null);
     setDraftPosition(null);
+    setTransferTo(null);
     void message.success(t("admin.org.form.saved"));
   });
 
-  const roles = draftRoles ?? employee.roles;
+  const current = employee.roles.map((role) => role.id);
+  const selected = draftRoles ?? current;
   const position = draftPosition ?? employee.position ?? "";
   const rolesChanged =
-    roles.length !== employee.roles.length || roles.some((r) => !employee.roles.includes(r));
+    selected.length !== current.length || selected.some((id) => !current.includes(id));
   const positionChanged = position.trim() !== (employee.position ?? "");
   const dirty = rolesChanged || positionChanged;
-
   const isSelf = employee.id === selfId;
+  const adminRole = roles.find(isSystemAdmin);
   const dropsLastAdmin =
-    employee.roles.includes("ADMIN") && !roles.includes("ADMIN") && otherActiveAdmins === 0;
-  const noRoles = roles.length === 0;
+    employee.roles.some(isSystemAdmin) &&
+    adminRole !== undefined &&
+    !selected.includes(adminRole.id) &&
+    otherActiveAdmins === 0;
+  const noRoles = selected.length === 0;
   const blocker = dropsLastAdmin
     ? t("admin.org.form.lastAdmin")
     : noRoles
       ? t("admin.org.form.needRole")
       : null;
 
-  const before = modulesOfRoles(employee.roles);
-  const after = modulesOfRoles(roles);
-  const lost = before.filter((m) => !after.includes(m));
-  const erpLine = erpConsequence(t, roles);
+  const before = accessOfRoleIds(roles, current);
+  const after = accessOfRoleIds(roles, selected);
+  const lost = before.modules.filter((m) => !after.modules.includes(m));
   const items = [
-    t("admin.org.consequence.modules", { modules: moduleList(after) || "—" }),
+    t("admin.org.consequence.modules", { modules: moduleList(after.modules) || "—" }),
     ...(lost.length > 0 ? [t("admin.org.consequence.lost", { modules: moduleList(lost) })] : []),
-    ...(erpLine ? [erpLine] : []),
+    ...backendConsequence(t, after),
     ...(positionChanged
       ? [
           position.trim()
@@ -84,13 +94,15 @@ export function AssignRoleForm({ employee, selfId, otherActiveAdmins }: AssignRo
       : []),
     t("admin.org.consequence.applied"),
   ];
+  const leads = update.isError && hasActiveLeads(update.error);
 
   const save = () => {
     update.mutate({
       id: employee.id,
       data: {
-        ...(rolesChanged ? { roles } : {}),
+        ...(rolesChanged ? { role_ids: selected } : {}),
         ...(positionChanged ? { position: position.trim() } : {}),
+        ...(leads && transferTo ? { transfer_to_user_id: transferTo } : {}),
       },
     });
   };
@@ -123,12 +135,21 @@ export function AssignRoleForm({ employee, selfId, otherActiveAdmins }: AssignRo
         </p>
       </div>
       <RoleCheckboxes
-        value={roles}
+        roles={roles}
+        loading={query.isPending}
+        error={query.isError}
+        onRetry={() => {
+          void query.refetch();
+        }}
+        value={selected}
         onChange={setDraftRoles}
         note={blocker ? { id: noteId, text: blocker } : null}
       />
       {update.isError ? (
         <Alert type="error" showIcon message={employeeErrorText(t, update.error)} role="alert" />
+      ) : null}
+      {leads ? (
+        <TransferLeads employee={employee} value={transferTo} onChange={setTransferTo} />
       ) : null}
       <div>
         <Button
@@ -136,9 +157,9 @@ export function AssignRoleForm({ employee, selfId, otherActiveAdmins }: AssignRo
           htmlType="submit"
           block
           loading={update.isPending}
-          disabled={!dirty || blocker !== null}
+          disabled={!dirty || blocker !== null || (leads && !transferTo)}
         >
-          {t("admin.org.form.save")}
+          {leads ? t("admin.org.transfer.save") : t("admin.org.form.save")}
         </Button>
       </div>
       {blocker ? null : <Consequence items={items} />}

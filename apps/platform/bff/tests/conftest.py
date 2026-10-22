@@ -16,6 +16,7 @@ from app.main import create_app
 from tests.backends import PASSWORD, Backends
 from tests.consts import CRM_URL, ERP_URL
 from tests.fakes import Clock, FakeRedis
+from tests.roles import Role
 
 CONTRACT = Path(__file__).resolve().parents[4] / "packages/contracts/openapi/platform-bff.yaml"
 
@@ -125,14 +126,14 @@ class Web:
 
     async def login(
         self,
-        roles: list[str] | None = None,
+        roles: list[Role] | None = None,
         *,
         password: str = PASSWORD,
         email: str = "ivan.test@example.org",
         ip: str | None = None,
     ) -> httpx.Response:
         if roles is not None:
-            self.be.profile["platform_roles"] = roles
+            self.be.set_roles(roles)
         headers = {"X-Forwarded-For": ip} if ip else {}
         return await self.client.post(
             "/api/v1/auth/login", json={"email": email, "password": password}, headers=headers
