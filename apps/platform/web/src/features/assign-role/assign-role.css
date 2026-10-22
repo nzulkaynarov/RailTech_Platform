@@ -1,0 +1,48 @@
+/* Роли Платформы флажками (PLT-15): группа 6 ролей, подпись модулей под названием. */
+.pf-roles {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  min-width: 0;
+}
+.pf-roles-legend {
+  padding: 0;
+  margin-bottom: 4px;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 22px;
+  color: #1f1f1f;
+}
+.pf-roles-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.pf-roles-list li {
+  padding: 6px 0;
+  border-bottom: 1px solid #f0f0f0;
+}
+.pf-roles-list li:last-child {
+  border-bottom: 0;
+}
+.pf-role-name {
+  display: block;
+  line-height: 22px;
+}
+.pf-role-modules {
+  display: block;
+  font-size: 12px;
+  line-height: 20px;
+  color: #6e6e6e;
+}
+.pf-roles-note {
+  margin: 8px 0 0;
+  font-size: 13px;
+  line-height: 20px;
+  color: #a8071a;
+}
+.pf-panel-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}

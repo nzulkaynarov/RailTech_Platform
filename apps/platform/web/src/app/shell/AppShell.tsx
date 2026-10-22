@@ -10,6 +10,7 @@ import type { MenuCounter } from "../../shared/api/generated/model";
 import { ContextPanel, ContextPanelDrawer } from "../../shared/ui/ContextPanel";
 import { EmptyState } from "../../shared/ui/EmptyState";
 import { PlusIcon } from "../../shared/ui/icons";
+import { LinkButton } from "../../shared/ui/LinkButton";
 import { ModuleMenu, ModuleMenuContent, type MenuItem } from "../../shared/ui/ModuleMenu";
 import { ModuleRail, type RailModule } from "../../shared/ui/ModuleRail";
 import { SoonButton } from "../../shared/ui/SoonButton";
@@ -18,6 +19,7 @@ import "../../shared/ui/shell.css";
 import { canEdit, canSee } from "../access";
 import { useAuth } from "../auth/useAuth";
 import { AvatarMenu } from "./AvatarMenu";
+import { usePanelSlotHost } from "./panelSlotContext";
 import { usePanels } from "./usePanels";
 import { useViewport } from "./useViewport";
 
@@ -48,6 +50,7 @@ export function AppShell() {
 
   const match = matchSection(location.pathname, location.search);
   const panels = usePanels(me.id, match?.section);
+  const { attach: attachPanelSlot, claimed: panelClaimed } = usePanelSlotHost(panels.tab);
 
   const railModules = useMemo(
     () => me.modules.flatMap((code) => findModule(code) ?? []),
@@ -114,9 +117,15 @@ export function AppShell() {
 
   const action =
     activeModule.action && canEdit(me, activeModule.action.access) ? (
-      <SoonButton type="primary" block icon={<PlusIcon />}>
-        {t(`modules:${activeModule.code}.action`)}
-      </SoonButton>
+      activeModule.action.to ? (
+        <LinkButton type="primary" block icon={<PlusIcon />} to={activeModule.action.to}>
+          {t(`modules:${activeModule.code}.action`)}
+        </LinkButton>
+      ) : (
+        <SoonButton type="primary" block icon={<PlusIcon />}>
+          {t(`modules:${activeModule.code}.action`)}
+        </SoonButton>
+      )
     ) : undefined;
 
   const menuProps = {
@@ -155,12 +164,17 @@ export function AppShell() {
       panels.setPanelOpen(false);
     },
     children: (
-      <EmptyState
-        level={3}
-        compact
-        title={t(`modules:panel.${panels.tab}.title`)}
-        text={t(`modules:panel.${panels.tab}.text`)}
-      />
+      <>
+        <div ref={attachPanelSlot} />
+        {panelClaimed ? null : (
+          <EmptyState
+            level={3}
+            compact
+            title={t(`modules:panel.${panels.tab}.title`)}
+            text={t(`modules:panel.${panels.tab}.text`)}
+          />
+        )}
+      </>
     ),
   };
 

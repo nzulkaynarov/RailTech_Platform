@@ -218,7 +218,143 @@
         "action": "Tashkiliy tuzilma"
       }
     },
-    "action": "Xodimni taklif qilish"
+    "action": "Xodimni taklif qilish",
+    "org": {
+      "title": "Tashkiliy tuzilma",
+      "subtitle": "Xodimlar, rollar va CRM hamda ERP ga kirish. Ikkala tizimning rollari bitta kartochkada beriladi.",
+      "readOnly": "Faqat ko'rish: rollar va kirishni administrator o'zgartiradi.",
+      "listLabel": "Xodimlar",
+      "count": "Xodimlar soni: {{count}}",
+      "search": {
+        "label": "Xodimlarni qidirish",
+        "placeholder": "Ism, pochta yoki lavozim"
+      },
+      "statusFilter": {
+        "label": "Holat",
+        "all": "Barcha holatlar"
+      },
+      "columns": {
+        "employee": "Xodim",
+        "position": "Lavozim",
+        "roles": "Rollar",
+        "access": "Kirish va Telegram",
+        "status": "Holat"
+      },
+      "status": {
+        "active": "Faol",
+        "invited": "Taklif qilingan",
+        "disabled": "O'chirilgan"
+      },
+      "access": {
+        "crm": "CRM",
+        "erp": "ERP",
+        "crmNo": "CRM: yo'q",
+        "erpNo": "ERP: yo'q",
+        "erpPending": "ERP: berilmoqda",
+        "erpError": "ERP: xato",
+        "telegram": "Telegram",
+        "telegramNo": "Telegram: yo'q"
+      },
+      "telegram": {
+        "linked": "Ulangan",
+        "notLinked": "Ulanmagan"
+      },
+      "noRoles": "Rollar yo'q",
+      "noPosition": "ko'rsatilmagan",
+      "open": "Kartochkani ochish: {{name}}",
+      "empty": {
+        "title": "Hozircha xodimlar yo'q",
+        "text": "Rollar beriladigan yagona joy: ism, lavozim, rollar, CRM va ERP ga kirish, bildirishnomalar uchun Telegram, holat.",
+        "action": "Xodimni taklif qilish"
+      },
+      "noMatch": {
+        "title": "Hech kim topilmadi",
+        "text": "So'rovni o'zgartiring yoki boshqa holatni tanlang.",
+        "action": "Filtrlarni tozalash"
+      },
+      "loadError": {
+        "title": "Xodimlarni yuklab bo'lmadi",
+        "text": "Ro'yxat CRM dan olinadi. So'rovni takrorlang; xato qolsa, Admin · Integratsiyalar bo'limida CRM ni tekshiring.",
+        "retry": "Takrorlash"
+      },
+      "cardError": {
+        "title": "Xodim topilmadi",
+        "text": "Kartochka o'chirilgan yoki havola eskirgan bo'lishi mumkin. Ro'yxatdan xodimni tanlang."
+      },
+      "card": {
+        "close": "Kartochkani yopish",
+        "email": "Elektron pochta",
+        "position": "Lavozim",
+        "roles": "Rollar",
+        "crm": "CRM ga kirish",
+        "erp": "ERP ga kirish",
+        "telegram": "Bildirishnomalar uchun Telegram",
+        "status": "Holat",
+        "erpPending": "ERP ga kirish hali berilmoqda.",
+        "erpError": "ERP ga kirishni berib bo'lmadi: {{error}}",
+        "disabledNote": "Xodim o'chirilgan va kira olmaydi. Rollar va lavozim saqlangan."
+      },
+      "form": {
+        "rolesLegend": "Platforma rollari",
+        "rolesHint": "Bir kishiga bir nechta rol berish mumkin: kirish va navbatlar qo'shiladi.",
+        "positionLabel": "Lavozim",
+        "positionHint": "Kartochka va ro'yxatlar uchun matn, huquqlarga ta'sir qilmaydi.",
+        "save": "Rollarni saqlash",
+        "saved": "Saqlandi",
+        "needRole": "Kamida bitta rolni tanlang. Kirishni butunlay yopish uchun xodimni o'chiring.",
+        "lastAdmin": "Siz yagona administratorsiz: «Administrator» rolini olib bo'lmaydi. Avval boshqa xodimni administrator qiling.",
+        "unchanged": "O'zgarishlar yo'q."
+      },
+      "consequence": {
+        "modules": "Xodim quyidagi modullarni ko'radi: {{modules}}.",
+        "lost": "Quyidagi modullarni ko'rmaydi: {{modules}}.",
+        "erp": "ERP da xodim kirish huquqini oladi; ERP rollari va huquqlarini CRM Platforma rollari xaritasi bo'yicha belgilaydi.",
+        "applied": "O'zgarishlar darhol qo'llanadi; CRM jurnalida kim va qachon kiritgani qoladi.",
+        "position": "Kartochkadagi lavozim: «{{position}}».",
+        "positionCleared": "Kartochkadagi lavozim tozalanadi.",
+        "self": "Siz o'z rollaringizni o'zgartiryapsiz: menyu saqlangandan keyin yangilanadi.",
+        "selfLosesAdmin": "Siz Admin bo'limiga kirish huquqini yo'qotasiz."
+      },
+      "invite": {
+        "title": "Xodimni taklif qilish",
+        "name": "Ism va familiya",
+        "email": "Elektron pochta",
+        "position": "Lavozim (ixtiyoriy)",
+        "submit": "Taklif yuborish",
+        "cancel": "Bekor qilish",
+        "nameRequired": "Ism va familiyani kiriting",
+        "emailRequired": "Xodimning pochtasini kiriting",
+        "emailInvalid": "Pochtani name@company.uz ko'rinishida kiriting",
+        "needRole": "Kamida bitta rolni tanlang.",
+        "sent": "Taklif yuborildi: {{email}}",
+        "consequenceMail": "Ko'rsatilgan pochtaga vaqtinchalik parolli xat yuboriladi; birinchi kirishda uni almashtirish kerak.",
+        "consequenceListed": "Xodim ro'yxatda «Taklif qilingan» holatida paydo bo'ladi.",
+        "notSent": "Xodim ro'yxatga «Taklif qilingan» holatida qo'shildi, lekin xat yuborilmadi: pochta ulanmagan yoki mavjud emas. Uni Admin · Integratsiyalar bo'limida ulang; taklifni qayta yuborish keyingi versiyada paydo bo'ladi.",
+        "openCard": "Kartochkani ochish"
+      },
+      "disable": {
+        "button": "Xodimni o'chirish",
+        "title": "Xodimni o'chirasizmi?",
+        "sessions": "Platforma, CRM va ERP ga kirish yopiladi.",
+        "terms": "Ochiq seanslar 15 daqiqa ichida tugaydi.",
+        "kept": "Rollar va lavozim saqlanadi: xodimni qayta yoqish mumkin.",
+        "confirm": "O'chirish",
+        "cancel": "Bekor qilish",
+        "enable": "Xodimni yoqish",
+        "enableTitle": "Xodimni yoqasizmi?",
+        "enableResult": "Kirish yana ochiladi; rollar va lavozim avvalgidek qoladi.",
+        "enableConfirm": "Yoqish"
+      },
+      "errors": {
+        "LAST_ADMIN": "Administrator rolini olib bo'lmaydi va oxirgi administratorni o'chirib bo'lmaydi. Avval boshqa xodimni administrator qiling.",
+        "EMAIL_EXISTS": "Bunday pochtali xodim allaqachon bor.",
+        "ACTIVE_LEADS": "Xodimda ishdagi lidlar bor. Ularni CRM da hamkasbga topshiring, so'ng xodimni o'chiring yoki rolini o'zgartiring.",
+        "FORBIDDEN": "Huquq yetarli emas: rollarni administrator beradi.",
+        "BACKEND_UNAVAILABLE": "CRM javob bermayapti. Keyinroq takrorlang.",
+        "VALIDATION_FAILED": "Maydonlarning to'ldirilganini tekshiring.",
+        "DEFAULT": "Amalni bajarib bo'lmadi. Qayta urinib ko'ring."
+      }
+    }
   },
   "tabs": {
     "today": "Bugun",

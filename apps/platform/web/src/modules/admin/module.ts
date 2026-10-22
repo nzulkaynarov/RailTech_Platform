@@ -4,7 +4,7 @@ export const admin: ModuleConfig = {
   code: "admin",
   order: 6,
   name: "Admin",
-  action: { access: "admin" },
+  action: { access: "admin", to: "/admin/org?invite=open&panel=open" },
   sections: [
     {
       key: "roles",

@@ -1,0 +1,82 @@
+/* Admin · Оргструктура (PLT-15): фильтры, строки списка, инициалы. Значения — макет v3 и 03-frontend.md. */
+.pf-org-filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  padding: 16px 24px;
+  border-bottom: 1px solid #f0f0f0;
+}
+.pf-org-tags {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+.pf-org-avatar {
+  flex: none;
+  display: inline-grid;
+  place-items: center;
+  border-radius: 50%;
+  border: 2px solid #91caff;
+  background: #fff;
+  color: #0958d9;
+  font-weight: 600;
+}
+.pf-org-person {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+.pf-org-name {
+  color: #0958d9;
+  font-weight: 500;
+  text-decoration: none;
+}
+.pf-org-name:hover {
+  text-decoration: underline;
+}
+.pf-org-name[aria-current="true"] {
+  color: #1f1f1f;
+}
+.pf-org-row {
+  display: flex;
+  gap: 12px;
+  padding: 14px 16px;
+  border-bottom: 1px solid #f0f0f0;
+}
+.pf-org-row:last-child {
+  border-bottom: 0;
+}
+.pf-org-row-selected {
+  background: #e6f4ff;
+}
+.pf-org-row-body {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+  flex: 1;
+}
+.pf-org-row-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+/* Выбранная строка таблицы: фон #e6f4ff и под курсором. Цвет по умолчанию у antd под курсором темнее (#bae0ff) и роняет
+   контраст подписей #6e6e6e ниже 4.5:1. */
+.ant-table-wrapper .ant-table-tbody > tr.pf-org-table-row-selected > td,
+.ant-table-wrapper .ant-table-tbody > tr.pf-org-table-row-selected:hover > td {
+  background: #e6f4ff;
+}
+
+/* Длинные адреса не вылезают за колонку: при фиксированной раскладке переносятся по символам. */
+.pf-org-person > div {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.pf-org-row-body {
+  overflow-wrap: anywhere;
+}

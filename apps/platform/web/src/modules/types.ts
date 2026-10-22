@@ -29,6 +29,8 @@ export interface SectionConfig {
 export interface ModuleAction {
   /** Подпись берётся из `modules:<module>.action` */
   access: string;
+  /** Куда ведёт кнопка; без поля — неактивная («появится в фазе P2») */
+  to?: string;
 }
 
 export interface ModuleConfig {
