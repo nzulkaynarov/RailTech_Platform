@@ -1,0 +1,20 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://railtech.uz/contracts/events/crm/client.created.v1.json",
+  "title": "Клиент создан",
+  "description": "Тип uz.railtech.crm.client.created.v1, источник rt://crm. Поле data конверта (envelope.v1.json). Снимок клиента в client. ERP по нему не создаёт компанию (это делает передача в бэк-офис), а только обновляет проекцию, если erp_company_id известен.",
+  "type": "object",
+  "required": [
+    "client",
+    "actor"
+  ],
+  "properties": {
+    "client": {
+      "$ref": "_defs.v1.json#/$defs/Client"
+    },
+    "actor": {
+      "$ref": "_defs.v1.json#/$defs/Actor"
+    }
+  },
+  "additionalProperties": false
+}

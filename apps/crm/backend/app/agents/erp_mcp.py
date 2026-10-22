@@ -23,6 +23,7 @@ import structlog
 from mcp import Client
 from mcp.client.streamable_http import streamable_http_client
 
+from app.integrations.erp_transport import REQUEST_ID_HEADER, outgoing_request_id
 from app.security.erp_agent_context import HEADER_NAME, ErpScope, issue_erp_context
 
 logger = structlog.get_logger(__name__)
@@ -120,7 +121,7 @@ class ErpMcpClient:
         context = issue_erp_context(self._key, scope, now=self._now)
         async with (
             httpx2.AsyncClient(
-                headers={HEADER_NAME: context},
+                headers={HEADER_NAME: context, REQUEST_ID_HEADER: outgoing_request_id()},
                 timeout=self._timeout,
                 transport=self._transport,
                 event_hooks={"response": [rejection.on_response]},

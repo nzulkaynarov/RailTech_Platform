@@ -35,6 +35,18 @@ class MaskBotToken(logging.Filter):
         return True
 
 
+_REQUEST_ID = re.compile(r"[A-Za-z0-9._-]{1,128}")
+
+
+def is_valid_request_id(value: str) -> bool:
+    """Приходящий `X-Request-ID` (Caddy пропускает клиентский как есть): безопасная короткая строка.
+
+    Не только UUID4 (умолчание `asgi-correlation-id` подменило бы чужой идентификатор новым
+    и разорвало цепочку журналов), но без пробелов, переводов строк и длины сверх 128.
+    """
+    return _REQUEST_ID.fullmatch(value) is not None
+
+
 def add_request_id(_: WrappedLogger, __: str, event_dict: EventDict) -> EventDict:
     request_id = correlation_id.get()
     if request_id is not None:

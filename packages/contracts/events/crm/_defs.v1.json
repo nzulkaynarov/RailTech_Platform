@@ -1,0 +1,324 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://railtech.uz/contracts/events/crm/_defs.v1.json",
+  "title": "Общие определения событий CRM v1",
+  "description": "Не тип события: определения, на которые ссылаются схемы events/crm/*.v1.json. Поля — только те, которыми владеет CRM (ADR-0015), плюс внешние идентификаторы; секретов (пароли, токены, коды) нет.",
+  "$defs": {
+    "Phone": {
+      "type": "string",
+      "pattern": "^\\+[1-9][0-9]{6,14}$",
+      "description": "Телефон в E.164"
+    },
+    "Email": {
+      "type": "string",
+      "format": "email",
+      "maxLength": 255
+    },
+    "Language": {
+      "type": "string",
+      "enum": [
+        "ru",
+        "uz",
+        "en"
+      ]
+    },
+    "Actor": {
+      "type": "object",
+      "description": "Кто изменил: сотрудник CRM, бот или система",
+      "required": [
+        "type"
+      ],
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": [
+            "system",
+            "staff",
+            "bot"
+          ]
+        },
+        "crm_user_id": {
+          "type": "integer",
+          "description": "Сотрудник при type=staff"
+        }
+      },
+      "additionalProperties": false
+    },
+    "UserRef": {
+      "type": "object",
+      "description": "Сотрудник CRM (ответственный)",
+      "required": [
+        "crm_user_id",
+        "full_name"
+      ],
+      "properties": {
+        "crm_user_id": {
+          "type": "integer"
+        },
+        "full_name": {
+          "type": "string",
+          "maxLength": 255
+        }
+      },
+      "additionalProperties": false
+    },
+    "Client": {
+      "type": "object",
+      "description": "Снимок клиента CRM (event-carried state transfer): подписчик заменяет свою проекцию целиком; порядок — по updated_at (более старый снимок не применяется).",
+      "required": [
+        "crm_client_id",
+        "erp_company_id",
+        "name",
+        "inn",
+        "segment",
+        "is_active",
+        "owner",
+        "updated_at"
+      ],
+      "properties": {
+        "crm_client_id": {
+          "type": "integer"
+        },
+        "erp_company_id": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "description": "Компания в ERP, если клиент уже передан; null — ещё нет"
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 255,
+          "description": "Название клиента (владелец — CRM)"
+        },
+        "inn": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 32,
+          "description": "ИНН (владелец — CRM)"
+        },
+        "segment": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 64
+        },
+        "is_active": {
+          "type": "boolean"
+        },
+        "owner": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/UserRef"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Ответственный менеджер"
+        },
+        "updated_at": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "additionalProperties": false
+    },
+    "Contact": {
+      "type": "object",
+      "description": "Снимок контактного лица клиента CRM: подписчик заменяет проекцию целиком; порядок — по updated_at.",
+      "required": [
+        "crm_contact_id",
+        "crm_client_id",
+        "erp_company_id",
+        "full_name",
+        "position",
+        "phone_e164",
+        "email",
+        "telegram_user_id",
+        "is_primary",
+        "updated_at"
+      ],
+      "properties": {
+        "crm_contact_id": {
+          "type": "integer"
+        },
+        "crm_client_id": {
+          "type": "integer"
+        },
+        "erp_company_id": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "description": "Компания клиента в ERP, если известна"
+        },
+        "full_name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 255
+        },
+        "position": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 255
+        },
+        "phone_e164": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/Phone"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "email": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/Email"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "telegram_user_id": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "description": "Telegram контакта (вход в Cabinet, доставка кода акцепта ботом CRM); null — Telegram не привязан"
+        },
+        "is_primary": {
+          "type": "boolean",
+          "description": "Основной контакт клиента (не более одного)"
+        },
+        "language": {
+          "$ref": "#/$defs/Language"
+        },
+        "preferred_channel": {
+          "type": "string",
+          "enum": [
+            "telegram",
+            "email",
+            "both"
+          ]
+        },
+        "updated_at": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "additionalProperties": false
+    },
+    "LeadStage": {
+      "type": "string",
+      "enum": [
+        "new",
+        "engaged",
+        "qualified",
+        "handoff",
+        "in_progress",
+        "won",
+        "customer",
+        "lost",
+        "unresponsive"
+      ]
+    },
+    "LeadSource": {
+      "type": "string",
+      "enum": [
+        "telegram",
+        "web",
+        "phone",
+        "email",
+        "referral",
+        "sandbox"
+      ]
+    },
+    "Lead": {
+      "type": "object",
+      "description": "Снимок лида CRM без контактов и переписки (персональные данные лида не публикуются); порядок — по updated_at.",
+      "required": [
+        "crm_lead_id",
+        "crm_client_id",
+        "display_name",
+        "company_name",
+        "stage",
+        "source",
+        "language",
+        "score",
+        "assigned_user",
+        "erp_request_id",
+        "updated_at"
+      ],
+      "properties": {
+        "crm_lead_id": {
+          "type": "integer"
+        },
+        "crm_client_id": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "description": "Клиент, к которому привязан лид; null — ещё нет"
+        },
+        "display_name": {
+          "type": "string",
+          "maxLength": 255
+        },
+        "company_name": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 255
+        },
+        "stage": {
+          "$ref": "#/$defs/LeadStage"
+        },
+        "source": {
+          "$ref": "#/$defs/LeadSource"
+        },
+        "language": {
+          "$ref": "#/$defs/Language"
+        },
+        "score": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 100
+        },
+        "assigned_user": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/UserRef"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Ответственный"
+        },
+        "erp_request_id": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "description": "Заявка ERP, созданная передачей лида; null — не передан"
+        },
+        "updated_at": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "additionalProperties": false
+    }
+  }
+}

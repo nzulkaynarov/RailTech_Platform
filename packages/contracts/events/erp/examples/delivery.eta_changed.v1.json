@@ -1,0 +1,40 @@
+{
+  "specversion": "1.0",
+  "id": "e9c549a9-c1b1-522b-8384-26a74bbb33ee",
+  "source": "rt://erp",
+  "type": "uz.railtech.erp.delivery.eta_changed.v1",
+  "time": "2026-11-02T09:30:00Z",
+  "subject": "D-2026-0905",
+  "datacontenttype": "application/json",
+  "dataschema": "rt://contracts/events/erp/delivery.eta_changed/v1",
+  "tenant": "railtech",
+  "correlationid": "641c2bb7-b1d3-5b45-87d5-e03078225dc9",
+  "traceparent": "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01",
+  "data": {
+    "erp_company_id": 118,
+    "crm_client_id": 42,
+    "deal": {
+      "erp_deal_id": 905,
+      "number": "D-2026-0905",
+      "title": "Поставка оборудования, партия 1",
+      "stage": "fulfilment",
+      "amount": "125000000.00",
+      "currency": "UZS"
+    },
+    "actor": {
+      "type": "system"
+    },
+    "payload": {
+      "line_summary": "Строки 1–3: комплекты",
+      "line_nos": [
+        1,
+        2,
+        3
+      ],
+      "status": "in_transit",
+      "eta": "2026-11-20",
+      "previous_eta": "2026-11-15",
+      "tracking": null
+    }
+  }
+}

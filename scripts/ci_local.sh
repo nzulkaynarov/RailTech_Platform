@@ -26,7 +26,7 @@ usage() {
 Задания:
   gitleaks          секреты в истории текущей ветки (.gitleaks.toml, legacy/ в allowlist)
   crm               make check-crm (ruff, mypy, eslint, prettier, tsc, unit) + OpenAPI CRM без диффа
-  contracts         make contracts + чистый diff packages/contracts/generated
+  contracts         make contracts (в т. ч. совместимость событий с origin/main) + чистый packages/contracts/generated
   tokens            make -C packages/ui-tokens check
   infra             docker compose config (dev + observability) и caddy validate
   erp, cabinet      make check-erp | make check-cabinet (до M1/M2 — пропуск внутри цели)
@@ -82,8 +82,13 @@ stage_crm() {
 }
 
 stage_contracts() {
-  (cd "$ROOT" && make contracts && git diff --exit-code -- packages/contracts/generated) \
-    || { echo "packages/contracts/generated устарел — make contracts и закоммитьте"; return 1; }
+  # Совместимость схем событий (L8) — против свежей origin/main, как в CI; без сети — с последней скачанной.
+  (cd "$ROOT" && git fetch --no-tags --quiet origin main) \
+    || echo "contracts: git fetch origin main не удался — сравнение с локальной origin/main"
+  (cd "$ROOT" && CONTRACTS_BASE_REF="${CONTRACTS_BASE_REF:-origin/main}" make contracts \
+    && git diff --exit-code -- packages/contracts/generated \
+    && [ -z "$(git status --porcelain --untracked-files=all -- packages/contracts/generated)" ]) \
+    || { echo "make contracts упал или packages/contracts/generated устарел — make contracts и закоммитьте"; return 1; }
 }
 
 stage_tokens() { (cd "$ROOT" && make -C packages/ui-tokens check); }

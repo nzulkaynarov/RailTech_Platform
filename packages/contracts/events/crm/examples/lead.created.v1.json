@@ -1,0 +1,30 @@
+{
+  "specversion": "1.0",
+  "id": "69d2714d-f55b-5a6a-8786-2216f82b299c",
+  "source": "rt://crm",
+  "type": "uz.railtech.crm.lead.created.v1",
+  "time": "2026-10-22T08:00:00Z",
+  "subject": "lead/501",
+  "datacontenttype": "application/json",
+  "dataschema": "rt://contracts/events/crm/lead.created/v1",
+  "tenant": "railtech",
+  "correlationid": "a03eac8c-ba55-5022-bc64-17220f29e142",
+  "data": {
+    "lead": {
+      "crm_lead_id": 501,
+      "crm_client_id": null,
+      "display_name": "Иван Петров",
+      "company_name": "ООО «Пример Логистик»",
+      "stage": "new",
+      "source": "telegram",
+      "language": "ru",
+      "score": 0,
+      "assigned_user": null,
+      "erp_request_id": null,
+      "updated_at": "2026-10-22T08:00:00Z"
+    },
+    "actor": {
+      "type": "bot"
+    }
+  }
+}

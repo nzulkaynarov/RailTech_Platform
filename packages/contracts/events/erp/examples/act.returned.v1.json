@@ -1,0 +1,34 @@
+{
+  "specversion": "1.0",
+  "id": "9e645578-3572-5659-a90f-74ad421322f0",
+  "source": "rt://erp",
+  "type": "uz.railtech.erp.act.returned.v1",
+  "time": "2026-11-23T11:45:00Z",
+  "subject": "D-2026-0905",
+  "datacontenttype": "application/json",
+  "dataschema": "rt://contracts/events/erp/act.returned/v1",
+  "tenant": "railtech",
+  "correlationid": "07e8655b-b11b-5495-8484-dce508387391",
+  "traceparent": "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01",
+  "data": {
+    "erp_company_id": 118,
+    "crm_client_id": 42,
+    "deal": {
+      "erp_deal_id": 905,
+      "number": "D-2026-0905",
+      "title": "Поставка оборудования, партия 1",
+      "stage": "closing",
+      "amount": "125000000.00",
+      "currency": "UZS"
+    },
+    "actor": {
+      "type": "client",
+      "name": "Иван Петров"
+    },
+    "payload": {
+      "erp_act_id": 520,
+      "number": "АКТ-2026-0052",
+      "reason": "Не указана партия 2"
+    }
+  }
+}
