@@ -86,9 +86,10 @@ export const feedHandlers = [
     const roles = viewRoles(null);
     if (!roles) return expired();
     return HttpResponse.json({
+      // ERP не отвечает: бейджи разделов ERP (EDS, ERP, «Все проекты») не показываются, остаются очередь и CRM
       items: menuCountersFor(
         queueForRoles(roles.view).filter((i) => !erpDown() || i.role === "MANAGER").length,
-      ),
+      ).filter((c) => !erpDown() || c.module === "crm" || c.section === "queue"),
       sources: sources(),
     });
   }),

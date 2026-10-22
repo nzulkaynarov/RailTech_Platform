@@ -24,7 +24,7 @@ afterEach(() => {
 async function openBell(name = /^Центр уведомлений/) {
   const bell = await screen.findByRole("button", { name });
   fireEvent.click(bell);
-  return screen.findByRole("region", { name: "Центр уведомлений" });
+  return screen.findByRole("dialog", { name: "Центр уведомлений" });
 }
 
 describe("Центр уведомлений", () => {
@@ -38,7 +38,11 @@ describe("Центр уведомлений", () => {
     const center = await openBell(/^Центр уведомлений, 3 новых/);
 
     const tabs = within(center).getAllByRole("tab");
-    expect(tabs.map((t) => t.textContent)).toEqual(["Все 3", "Решения 2", "Клиенты 1", "Система"]);
+    // у выбранной вкладки antd добавляет скрытую подсказку «Tab 1 of 4», поэтому — окончание текста
+    ["Все 3", "Решения 2", "Клиенты 1", "Система"].forEach((label, index) => {
+      expect(tabs[index]?.textContent).toMatch(new RegExp(`${label}$`));
+    });
+    expect(tabs).toHaveLength(4);
     const list = await within(center).findByRole("list", { name: "Уведомления" });
     expect(within(list).getAllByRole("listitem")).toHaveLength(5);
     // непрочитанное помечено словом, не только цветом

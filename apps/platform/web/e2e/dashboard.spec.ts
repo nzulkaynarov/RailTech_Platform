@@ -124,8 +124,8 @@ test.describe("Центр уведомлений", () => {
   }) => {
     await loginAndWait(page, "director@demo.example");
     await page.getByRole("button", { name: "Центр уведомлений, 3 новых" }).click();
-    const center = page.getByRole("region", { name: "Центр уведомлений" });
-    await expect(center.getByRole("tab")).toHaveText([
+    const center = page.getByRole("dialog", { name: "Центр уведомлений" });
+    await expect(center.getByRole("tab")).toContainText([
       "Все 3",
       "Решения 2",
       "Клиенты 1",
@@ -145,10 +145,37 @@ test.describe("Центр уведомлений", () => {
     await expect(center).toHaveCount(0);
   });
 
+  test("с клавиатуры: Enter на колокольчике → фокус в диалоге → Tab внутри → Escape возвращает на колокольчик", async ({
+    page,
+  }) => {
+    await loginAndWait(page, "director@demo.example");
+    const bell = page.getByRole("button", { name: "Центр уведомлений, 3 новых" });
+    await bell.focus();
+    await page.keyboard.press("Enter");
+
+    const dialog = page.getByRole("dialog", { name: "Центр уведомлений" });
+    await expect(dialog).toBeVisible();
+    await expect(dialog.getByRole("tab", { selected: true })).toBeFocused();
+
+    await page.keyboard.press("Tab");
+    const inside = () =>
+      page.evaluate(
+        `document.activeElement !== null && !!document.activeElement.closest('[role="dialog"]')`,
+      );
+    expect(await inside()).toBe(true);
+    await page.keyboard.press("Tab");
+    await page.keyboard.press("Tab");
+    expect(await inside()).toBe(true);
+
+    await page.keyboard.press("Escape");
+    await expect(dialog).toBeHidden();
+    await expect(page.getByRole("button", { name: /^Центр уведомлений/ })).toBeFocused();
+  });
+
   test("«Отметить все прочитанными»", async ({ page }) => {
     await loginAndWait(page, "director@demo.example");
     await page.getByRole("button", { name: "Центр уведомлений, 3 новых" }).click();
-    const center = page.getByRole("region", { name: "Центр уведомлений" });
+    const center = page.getByRole("dialog", { name: "Центр уведомлений" });
 
     await center.getByRole("button", { name: "Отметить все прочитанными" }).click();
 
@@ -177,8 +204,18 @@ test("центр уведомлений на 390: список, переход �
   test.skip(!isMobile, "узкий экран — проект mobile");
   await loginAndWait(page, "director@demo.example");
   await page.getByRole("button", { name: "Центр уведомлений, 3 новых" }).click();
-  const center = page.getByRole("region", { name: "Центр уведомлений" });
+  const center = page.getByRole("dialog", { name: "Центр уведомлений" });
   await expect(center.getByText("КП-2026/118 ждёт вашего согласования")).toBeVisible();
+  // окно целиком внутри экрана: ни заголовок, ни вкладки, ни «Отметить все прочитанными» не обрезаны
+  const viewport = page.viewportSize();
+  const box = await center.boundingBox();
+  expect(box).not.toBeNull();
+  expect(box?.x ?? -1).toBeGreaterThanOrEqual(0);
+  expect((box?.x ?? 0) + (box?.width ?? 0)).toBeLessThanOrEqual(viewport?.width ?? 0);
+  const footer = await center
+    .getByRole("button", { name: "Отметить все прочитанными" })
+    .boundingBox();
+  expect(footer?.x ?? -1).toBeGreaterThanOrEqual(0);
   await settledScreenshot(page, "dashboard-notifications");
   await expectNoViolations(page, "notifications popover 390");
 

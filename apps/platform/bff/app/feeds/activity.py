@@ -9,7 +9,7 @@
 import asyncio
 from typing import Any
 
-from app.feeds.feed import Feed, rows
+from app.feeds.feed import SNAPSHOT_TTL_SECONDS, Feed, rows
 from app.feeds.models import ActivityFeed, ActivityItem, PersonRef
 from app.feeds.numbers import deal_number, deal_ref
 from app.feeds.snapshot import Snapshot
@@ -54,6 +54,7 @@ async def _timeline(feed: Feed, snap: Snapshot) -> list[dict[str, Any]]:
                 "erp",
                 "/api/v1/crm/timeline/",
                 {"deal_id": deal["id"], "limit": TIMELINE_PER_DEAL},
+                ttl=SNAPSHOT_TTL_SECONDS,
             )
             for deal in snap.deals[:TIMELINE_DEALS]
             if isinstance(deal.get("id"), int)
@@ -63,7 +64,13 @@ async def _timeline(feed: Feed, snap: Snapshot) -> list[dict[str, Any]]:
 
 
 async def today(feed: Feed, snap: Snapshot) -> ActivityFeed:
-    payload = await feed.get("erp", "/api/v1/crm/activity-logs/", {"page_size": LOG_PAGE})
+    payload = await feed.get(
+        "erp",
+        "/api/v1/crm/activity-logs/",
+        {"page_size": LOG_PAGE},
+        ttl=SNAPSHOT_TTL_SECONDS,
+        remember_refusal=True,
+    )
     entries = rows(payload)
     if payload is None and feed.states["erp"] == "ok":
         # Журнал платформы закрыт для сотрудника (403): лента из таймлайнов его сделок.

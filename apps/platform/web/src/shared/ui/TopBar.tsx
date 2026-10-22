@@ -1,5 +1,5 @@
 import { Button, Layout, Popover, theme } from "antd";
-import type { ReactNode } from "react";
+import { type ReactNode, useEffect, useRef } from "react";
 import { Link } from "react-router";
 
 import { BellIcon, ExpandRightIcon, PanelIcon } from "./icons";
@@ -91,6 +91,28 @@ export function TopBar({
   mobile,
 }: TopBarProps) {
   const { token } = theme.useToken();
+  const bellRef = useRef<HTMLButtonElement>(null);
+  const dialogRef = useRef<HTMLDivElement>(null);
+  // Окно уведомлений — диалог в портале в конце body: при открытии фокус переходит внутрь (на выбранную вкладку),
+  // Escape закрывает окно и возвращает фокус на колокольчик (клавиатурный путь без мыши). Окно показывается не
+  // сразу (портал, переход), поэтому фокус ставится по кадрам, пока элемент не станет доступен.
+  useEffect(() => {
+    if (!bellOpen) return;
+    let frame = 0;
+    let tries = 0;
+    const focusInside = () => {
+      const target = dialogRef.current?.querySelector<HTMLElement>(
+        '[role="tab"][aria-selected="true"], button:not(:disabled), a',
+      );
+      target?.focus();
+      if (target && document.activeElement === target) return;
+      if (tries++ < 60) frame = window.requestAnimationFrame(focusInside);
+    };
+    frame = window.requestAnimationFrame(focusInside);
+    return () => {
+      window.cancelAnimationFrame(frame);
+    };
+  }, [bellOpen]);
   return (
     <Layout.Header
       style={{
@@ -128,12 +150,29 @@ export function TopBar({
         trigger="click"
         placement="bottomRight"
         title={bellTitle}
-        content={bellContent}
+        content={
+          <div
+            ref={dialogRef}
+            role="dialog"
+            aria-label={bellTitle}
+            onKeyDown={(event) => {
+              if (event.key !== "Escape") return;
+              event.stopPropagation();
+              onBellOpenChange(false);
+              bellRef.current?.focus();
+            }}
+          >
+            {bellContent}
+          </div>
+        }
         open={bellOpen}
         onOpenChange={onBellOpenChange}
-        styles={{ body: { width: 400, maxWidth: "calc(100vw - 32px)" } }}
+        // правый край окна — у колокольчика; на узком экране окно сдвигается внутрь экрана, а не уезжает за левый край
+        align={{ overflow: { shiftX: 8, adjustX: true } }}
+        styles={{ body: { width: "min(400px, calc(100vw - 32px))", maxWidth: "none" } }}
       >
         <button
+          ref={bellRef}
           type="button"
           className="pf-icon-btn pf-focusable"
           aria-label={labels.bell}

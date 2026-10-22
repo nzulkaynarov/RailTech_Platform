@@ -10,13 +10,15 @@ import base64
 import binascii
 from typing import Any
 
-from app.feeds.feed import Feed, rows
+from app.feeds.feed import SNAPSHOT_TTL_SECONDS, Feed, rows
 from app.feeds.models import Notification, NotificationPage, NotificationTab, ObjectRef
 from app.feeds.numbers import deal_number, deal_ref
 from app.feeds.snapshot import Snapshot
 from app.feeds.text import join, parse_dt, short
 
 ERP_PAGE = 200
+NOTIFICATIONS_PATH = "/api/v1/notifications/"
+NOTIFICATIONS_PARAMS = {"page_size": ERP_PAGE}
 DEFAULT_LIMIT = 20
 
 # Решения: от сотрудника ждут действия.
@@ -117,7 +119,9 @@ def _cursor(offset: int) -> str:
 async def list_notifications(
     feed: Feed, snap: Snapshot, tab: NotificationTab, cursor: str | None, limit: int
 ) -> NotificationPage:
-    payload = await feed.get("erp", "/api/v1/notifications/", {"page_size": ERP_PAGE})
+    payload = await feed.get(
+        "erp", NOTIFICATIONS_PATH, NOTIFICATIONS_PARAMS, ttl=SNAPSHOT_TTL_SECONDS
+    )
     deals = snap.deal_index
     mapped = [n for row in rows(payload) if (n := map_erp(row, deals)) is not None]
     mapped.sort(key=lambda n: n.created_at, reverse=True)

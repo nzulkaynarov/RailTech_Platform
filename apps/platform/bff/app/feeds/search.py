@@ -8,7 +8,7 @@
 import asyncio
 from typing import Any
 
-from app.feeds.feed import Feed, rows
+from app.feeds.feed import SNAPSHOT_TTL_SECONDS, Feed, rows
 from app.feeds.models import ObjectRef, SearchGroup, SearchHit, SearchResult
 from app.feeds.numbers import (
     STEP_TITLES,
@@ -21,7 +21,7 @@ from app.feeds.numbers import (
     lead_ref,
     quote_ref,
 )
-from app.feeds.snapshot import DEALS_PAGE_SIZE
+from app.feeds.snapshot import DEALS_PARAMS, DEALS_PATH
 from app.feeds.text import join, segment, short
 from app.rbac import allows
 from app.rbac_generated import ModuleCode, RoleCode
@@ -140,7 +140,7 @@ async def search(feed: Feed, roles: list[RoleCode], query: str) -> SearchResult:
 
     async def deals_and_docs() -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
         deal_rows, doc_rows = await asyncio.gather(
-            feed.get("erp", "/api/v1/crm/deals/", {"page_size": DEALS_PAGE_SIZE})
+            feed.get("erp", DEALS_PATH, DEALS_PARAMS, ttl=SNAPSHOT_TTL_SECONDS)
             if can_deals or can_docs
             else _none(),
             feed.get(

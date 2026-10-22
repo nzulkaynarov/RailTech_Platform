@@ -7,7 +7,7 @@ import asyncio
 from dataclasses import dataclass, field
 from typing import Any
 
-from app.feeds.feed import Feed, rows
+from app.feeds.feed import SNAPSHOT_TTL_SECONDS, Feed, rows
 from app.rbac import allows
 from app.rbac_generated import RoleCode
 
@@ -15,6 +15,8 @@ from app.rbac_generated import RoleCode
 # работают по ним.
 DEALS_PAGE_SIZE = 100
 APPROVALS_PAGE_SIZE = 50
+DEALS_PATH = "/api/v1/crm/deals/"
+DEALS_PARAMS = {"page_size": DEALS_PAGE_SIZE}
 
 
 @dataclass
@@ -42,7 +44,7 @@ def wants_projects(roles: list[RoleCode]) -> bool:
 
 
 async def _inbox(feed: Feed) -> dict[str, list[dict[str, Any]]] | None:
-    payload = await feed.get("crm", "/api/v1/inbox")
+    payload = await feed.get("crm", "/api/v1/inbox", ttl=SNAPSHOT_TTL_SECONDS)
     if not isinstance(payload, dict):
         return None
     return {key: rows(payload.get(key)) for key in ("escalations", "mine", "unassigned")}
@@ -66,6 +68,7 @@ async def load_snapshot(
                 "erp",
                 "/api/v1/crm/quotes/my-approval-queue/",
                 {"page_size": APPROVALS_PAGE_SIZE},
+                ttl=SNAPSHOT_TTL_SECONDS,
             )
             snap.approvals = rows(payload)
             total = payload.get("count") if isinstance(payload, dict) else None
@@ -73,7 +76,7 @@ async def load_snapshot(
 
     async def load_deals() -> None:
         if deals:
-            payload = await feed.get("erp", "/api/v1/crm/deals/", {"page_size": DEALS_PAGE_SIZE})
+            payload = await feed.get("erp", DEALS_PATH, DEALS_PARAMS, ttl=SNAPSHOT_TTL_SECONDS)
             snap.deals = rows(payload)
 
     await asyncio.gather(load_inbox(), load_approvals(), load_deals())

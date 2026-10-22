@@ -102,7 +102,7 @@ export function NotificationCenter({ variant, onClose }: NotificationCenterProps
   );
 
   return (
-    <section aria-label={t("notifications.title")} className="pf-notes-section">
+    <div className="pf-notes-section">
       <SourceBanner
         sources={page?.sources}
         onRetry={() => {
@@ -140,6 +140,6 @@ export function NotificationCenter({ variant, onClose }: NotificationCenterProps
         body
       )}
       {query.isPending || query.isError ? null : footer}
-    </section>
+    </div>
   );
 }

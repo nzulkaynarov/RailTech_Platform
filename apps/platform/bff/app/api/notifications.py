@@ -51,6 +51,7 @@ async def mark_all_read(authed: NotifyAuthed) -> Response:
         status = await feed.send("erp", "PATCH", "/api/v1/notifications/mark_all_read/")
         if status >= 400:
             raise _failed(status)
+        await _forget(feed)
     return Response(status_code=204)
 
 
@@ -76,7 +77,13 @@ async def mark_read(notification_id: str, authed: NotifyAuthed) -> Response:
         raise _not_found()
     if status >= 400:
         raise _failed(status)
+    await _forget(feed)
     return Response(status_code=204)
+
+
+async def _forget(feed: Feed) -> None:
+    """Отметка «прочитано» устарила кэш ленты: следующий опрос должен увидеть новое состояние."""
+    await feed.invalidate("erp", service.NOTIFICATIONS_PATH, service.NOTIFICATIONS_PARAMS)
 
 
 def _failed(status: int) -> PlatformError:

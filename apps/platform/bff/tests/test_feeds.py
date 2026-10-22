@@ -800,3 +800,172 @@ async def test_search_validates_the_query(web: Web, check: ContractChecker) -> N
     check(short, "/search", "get")
     assert (await web.client.get("/api/v1/search")).status_code == 422
     assert (await web.client.get("/api/v1/search", params={"q": "x" * 101})).status_code == 422
+
+
+# --- Кэш снимка источников ---------------------------------------------------------------------
+
+
+def _deals_calls(fb: FeedBackends) -> int:
+    return fb.calls(fb.erp["deals"])
+
+
+async def test_endpoints_in_a_row_share_one_erp_snapshot(web: Web, fb: FeedBackends) -> None:
+    director_data(fb)
+    erp_notifications(fb)
+    await web.login(["DIRECTOR"])
+
+    for path in ("/queue", "/queue/cards", "/menu-counters", "/notifications", "/activity/today"):
+        assert (await web.client.get(f"/api/v1{path}")).status_code == 200
+
+    assert _deals_calls(fb) == 1  # сделки ERP — один запрос на все экраны
+    assert fb.calls(fb.erp["approvals"]) == 1
+    assert fb.calls(fb.erp["notifications"]) == 1
+
+
+async def test_snapshot_expires_after_a_few_seconds(web: Web, fb: FeedBackends) -> None:
+    director_data(fb)
+    await web.login(["DIRECTOR"])
+    await web.client.get("/api/v1/queue")
+    web.clock.advance(5)
+    await web.client.get("/api/v1/queue/cards")
+    assert _deals_calls(fb) == 1
+
+    web.clock.advance(5)  # 10 с с первого запроса — кэш устарел
+    await web.client.get("/api/v1/queue")
+
+    assert _deals_calls(fb) == 2
+
+
+async def test_snapshot_is_per_session(web: Web, fb: FeedBackends) -> None:
+    director_data(fb)
+    await web.login(["DIRECTOR"])
+    await web.client.get("/api/v1/queue")
+    await web.client.post("/api/v1/auth/logout", headers={"X-CSRF-Token": web.csrf})
+    await web.login(["DIRECTOR"])
+
+    await web.client.get("/api/v1/queue")
+
+    assert _deals_calls(fb) == 2  # чужой снимок другой сессии не используется
+
+
+async def test_failed_source_is_not_cached(web: Web, fb: FeedBackends) -> None:
+    director_data(fb)
+    fb.erp_down = 503
+    await web.login(["DIRECTOR"])
+    assert (await web.client.get("/api/v1/queue")).json()["sources"]["erp"] == "unavailable"
+
+    fb.erp_down = None
+    again = await web.client.get("/api/v1/queue")
+
+    assert again.json()["sources"]["erp"] == "ok"
+    assert len(again.json()["items"]) == 2
+
+
+async def test_mark_read_drops_the_cached_notifications(web: Web, fb: FeedBackends) -> None:
+    erp_notifications(fb)
+    await web.login(["DIRECTOR"])
+    first = (await web.client.get("/api/v1/notifications")).json()
+    assert first["unread_count"] == 3
+
+    fb.state["notifications"]["results"][0]["is_read"] = True
+    await web.send("POST", "/api/v1/notifications/erp:1/read")
+    second = (await web.client.get("/api/v1/notifications")).json()
+
+    assert second["unread_count"] == 2
+    assert fb.calls(fb.erp["notifications"]) == 2
+
+    fb.state["notifications"]["results"][2]["is_read"] = True
+    await web.send("POST", "/api/v1/notifications/read-all")
+    third = (await web.client.get("/api/v1/notifications")).json()
+    assert third["unread_count"] == 1
+    assert fb.calls(fb.erp["notifications"]) == 3
+
+
+async def test_refused_activity_log_is_remembered_for_a_minute(web: Web, fb: FeedBackends) -> None:
+    fb.state["deals"]["results"] = [deal(5, "QUOTE_SENT")]
+    await web.login(["MANAGER"])
+
+    await web.client.get("/api/v1/activity/today")
+    assert fb.calls(fb.erp["activity_logs"]) == 1
+
+    web.clock.advance(20)  # кэш снимка уже устарел, но отказ ERP помнится
+    await web.client.get("/api/v1/activity/today")
+    assert fb.calls(fb.erp["activity_logs"]) == 1
+
+    web.clock.advance(45)  # минута прошла — спрашиваем снова
+    await web.client.get("/api/v1/activity/today")
+    assert fb.calls(fb.erp["activity_logs"]) == 2
+
+
+# --- Утечка полей с ограничением и токен сотрудника ---------------------------------------------
+
+SECRETS = ("margin_percent", "economics", "gross_profit", "23.40", "supplier_price", "7777.77")
+
+
+async def test_search_never_returns_restricted_fields(web: Web, fb: FeedBackends) -> None:
+    search_data(fb)
+    for row in fb.state["deals"]["results"]:
+        row["margin_percent"] = "23.40"
+        row["active_quote"]["supplier_price"] = "7777.77"
+    for doc in fb.state["documents"]["results"]:
+        doc["margin_percent"] = "23.40"
+        doc["economics"] = {"gross_profit": "7777.77"}
+    await web.login(["MANAGER", "DIRECTOR", "SUPPLY", "ACCOUNTANT"])
+
+    text = (await web.client.get("/api/v1/search", params={"q": "Демо"})).text
+
+    assert "КП-2026/118" in text  # данные есть, но поля с ограничением в ответ не попали
+    for secret in SECRETS:
+        assert secret not in text
+
+
+async def test_activity_never_returns_restricted_fields(web: Web, fb: FeedBackends) -> None:
+    fb.state["deals"]["results"] = [deal(5, "QUOTE_SENT")]
+    fb.state["activity_logs"] = {
+        "results": [
+            log(
+                1,
+                fb.m.ago(minutes=5),
+                "КП одобрено",
+                event_params={"margin_percent": "23.40", "economics": {"gross_profit": "7777.77"}},
+                detail="маржа 23.40 %",
+                deal_id=5,
+            )
+        ]
+    }
+    await web.login(["MANAGER"])
+
+    response = await web.client.get("/api/v1/activity/today")
+
+    assert [i["text"] for i in response.json()["items"]] == ["КП одобрено · ЗВ-2027-005"]
+    for secret in ("margin_percent", "economics", "gross_profit", "7777.77"):
+        assert secret not in response.text
+
+
+async def test_every_backend_read_carries_the_employee_token(web: Web, fb: FeedBackends) -> None:
+    director_data(fb)
+    erp_notifications(fb)
+    search_data(fb)
+    fb.state["inbox"]["unassigned"] = [lead(2060, "Свободный")]
+    fb.state["lead"] = (200, lead(2041, "Демо Клиентов"))
+    await web.login(["MANAGER", "DIRECTOR"])
+    stored = web.redis.read_session(web.sid)
+    tokens = {"crm": stored["crm"]["access"], "erp": stored["erp"]["access"]}
+
+    for path in ("/queue", "/queue/cards", "/menu-counters", "/notifications", "/activity/today"):
+        await web.client.get(f"/api/v1{path}")
+    await web.client.get("/api/v1/search", params={"q": "L-2041"})
+    await web.send("POST", "/api/v1/notifications/erp:1/read")
+    await web.send("POST", "/api/v1/notifications/read-all")
+
+    seen = 0
+    for backend, routes in (
+        ("crm", [*fb.crm.values(), fb.lead]),
+        ("erp", [*fb.erp.values(), fb.mark_read, fb.mark_all]),
+    ):
+        for route in routes:
+            for call in route.calls:
+                seen += 1
+                assert call.request.headers["authorization"] == f"Bearer {tokens[backend]}"
+                assert "service" not in call.request.headers["authorization"].lower()
+    assert seen >= 10
