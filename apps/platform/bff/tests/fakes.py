@@ -76,6 +76,12 @@ class FakeRedis:
         deadline = self.expires.get(key)
         return -1 if deadline is None else max(int(deadline - self.clock.t), 0)
 
+    async def expire(self, key: str, seconds: int) -> bool:
+        if not self._alive(key):
+            return False
+        self.expires[key] = self.clock.t + seconds
+        return True
+
     async def eval(self, script: str, numkeys: int, *args: str) -> int:
         assert script == RELEASE_LOCK
         key, token = args[0], args[1]

@@ -18,7 +18,7 @@ from contextlib import asynccontextmanager
 from typing import Literal
 
 import structlog
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from redis.asyncio import Redis
 
 from app.errors import PlatformError
@@ -47,15 +47,15 @@ def now() -> float:
 
 
 class BackendTokens(BaseModel):
-    access: str
+    access: str = Field(repr=False)
     access_exp: float
-    refresh: str
+    refresh: str = Field(repr=False)
 
 
 class SessionData(BaseModel):
     """Содержимое `session:<sid>`: только JSON, секретов вне Redis нет."""
 
-    csrf: str
+    csrf: str = Field(repr=False)
     created_at: float
     expires_at: float
     # Снимок профиля CRM; обновляется не чаще раза в `PROFILE_TTL_SECONDS` (см. app/auth.py).
@@ -102,7 +102,13 @@ class SessionStore:
         raw = await self.redis.get(self._key(sid))
         if raw is None:
             return None
-        data = SessionData.model_validate(json.loads(raw))
+        try:
+            data = SessionData.model_validate(json.loads(raw))
+        except ValueError:  # битый JSON или сессия старой схемы (ValidationError — тоже ValueError)
+            # Содержимое сессии (токены) в журнал не попадает: только факт и тип ошибки.
+            log.warning("session_unreadable")
+            await self.delete(sid)
+            return None
         if data.expires_at <= now():
             await self.delete(sid)
             return None

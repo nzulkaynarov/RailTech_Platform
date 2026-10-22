@@ -40,8 +40,9 @@ PROFILE_TTL_SECONDS = 60
 # Не переподключать ERP чаще, если он не ответил.
 ERP_RETRY_SECONDS = 15
 RATE_WINDOW_SECONDS = 60
-# Статусы, после которых refresh-токен считается мёртвым (сотрудник отключён, токен отозван).
-_DEAD_TOKEN_STATUSES = frozenset({400, 401, 403, 404, 422})
+# Статусы, после которых refresh-токен считается мёртвым (сотрудник отключён, токен отозван);
+# остальные ответы (400, 404, 422, 429, 5xx) — сбой бэкенда, сессия остаётся.
+_DEAD_TOKEN_STATUSES = frozenset({401, 403})
 
 
 class ErpConnectError(Exception):
@@ -78,7 +79,11 @@ class LoginLimiter:
         await self.redis.set(key, 0, ex=RATE_WINDOW_SECONDS, nx=True)
         count = int(await self.redis.incr(key))
         ttl = int(await self.redis.ttl(key))
-        return count, ttl if ttl > 0 else RATE_WINDOW_SECONDS
+        if ttl < 0:
+            # Ключ без срока заблокировал бы вход навсегда (сбой между записью и сроком).
+            await self.redis.expire(key, RATE_WINDOW_SECONDS)
+            ttl = RATE_WINDOW_SECONDS
+        return count, ttl
 
     async def check(self, ip: str, email: str) -> None:
         digest = hashlib.sha256(email.strip().lower().encode()).hexdigest()[:32]

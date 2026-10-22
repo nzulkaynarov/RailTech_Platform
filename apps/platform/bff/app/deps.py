@@ -117,6 +117,8 @@ def require(resource: str, need: Need = "read") -> Callable[[Authed], Awaitable[
         raise KeyError(f"нет раздела матрицы: {resource}")
 
     async def dependency(authed: AuthedDep) -> Authed:
+        # Профиль CRM (кэш 60 с): роль, снятая в CRM, перестаёт действовать и без запроса /me.
+        authed.data = await authed.service.sync_profile(authed.sid, authed.data)
         if authed.data.must_change_password:
             raise PlatformError(
                 "FORBIDDEN",

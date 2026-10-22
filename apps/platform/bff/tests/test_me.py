@@ -254,3 +254,39 @@ async def test_disabled_employee_is_found_on_profile_sync(web: Web) -> None:
     assert response.status_code == 401
     assert response.json()["code"] == "SESSION_EXPIRED"
     assert web.redis.session_keys() == []
+
+
+async def test_require_notices_role_removed_in_crm_without_me(web: Web) -> None:
+    """Снятая в CRM роль перестаёт действовать на защищённых маршрутах и без запроса /me."""
+
+    @web.app.get("/api/v1/_op/leads")
+    async def leads(_: Annotated[Authed, Depends(require("crm.leads", "full"))]) -> dict[str, bool]:
+        return {"ok": True}
+
+    await web.login(["MANAGER", "DIRECTOR"])
+    assert (await web.client.get("/api/v1/_op/leads")).status_code == 200
+
+    web.be.profile["platform_roles"] = ["DIRECTOR"]  # DIRECTOR: crm.leads = read
+    web.clock.advance(30)
+    assert (await web.client.get("/api/v1/_op/leads")).status_code == 200  # кэш 60 с
+    web.clock.advance(31)
+    response = await web.client.get("/api/v1/_op/leads")
+
+    assert response.status_code == 403
+    assert response.json()["code"] == "FORBIDDEN"
+
+
+async def test_require_closes_session_when_all_roles_removed(web: Web) -> None:
+    @web.app.get("/api/v1/_op/queue")
+    async def queue(_: Annotated[Authed, Depends(require("dashboard.queue"))]) -> dict[str, bool]:
+        return {"ok": True}
+
+    await web.login(["MANAGER"])
+    web.be.profile["platform_roles"] = []
+    web.clock.advance(61)
+
+    response = await web.client.get("/api/v1/_op/queue")
+
+    assert response.status_code == 403
+    assert response.json()["code"] == "NO_PLATFORM_ROLE"
+    assert web.redis.session_keys() == []

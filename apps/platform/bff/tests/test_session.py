@@ -242,3 +242,84 @@ async def test_stuck_session_lock_gives_503_not_a_hang(
     assert caught.value.status_code == 503
     assert caught.value.body.code == "BACKEND_UNAVAILABLE"
     assert web.be.crm_refresh.call_count == 0  # без блокировки токены не трогаем
+
+
+@pytest.mark.parametrize("status", [400, 404, 422, 429, 500, 503])
+async def test_refresh_failure_other_than_401_403_keeps_the_session(
+    web: Web, check: ContractChecker, status: int
+) -> None:
+    """Только 401/403 убивают сессию; остальное — сбой бэкенда, 503, сессия жива."""
+    await web.login()
+    web.clock.advance(601)
+    web.be.refresh_status = status
+    svc = service(web)
+
+    with pytest.raises(PlatformError) as caught:
+        await svc.call(web.sid, "crm", "GET", "/api/v1/me")
+
+    assert caught.value.status_code == 503
+    assert caught.value.body.code == "BACKEND_UNAVAILABLE"
+    assert caught.value.body.source == "crm"
+    assert len(web.redis.session_keys()) == 1
+
+
+@pytest.mark.parametrize("status", [401, 403])
+async def test_refresh_401_403_end_the_session(web: Web, status: int) -> None:
+    await web.login()
+    web.clock.advance(601)
+    web.be.refresh_status = status
+
+    response = await web.client.get("/api/v1/me")
+
+    assert response.status_code == 401
+    assert web.redis.session_keys() == []
+
+
+@pytest.mark.parametrize(
+    "raw",
+    [
+        "not json at all {",
+        '{"csrf": "x", "crm": {"access": "SECRET-ACCESS-VALUE"}}',  # старая схема: нет полей
+        "[]",
+    ],
+)
+async def test_unreadable_session_is_treated_as_missing(
+    web: Web, check: ContractChecker, raw: str, capsys: pytest.CaptureFixture[str]
+) -> None:
+    await web.login()
+    web.redis.values[f"session:{web.sid}"] = raw
+
+    response = await web.client.get("/api/v1/me")
+
+    assert response.status_code == 401
+    check(response, "/me", "get")
+    assert response.json()["code"] == "SESSION_EXPIRED"
+    assert web.redis.session_keys() == []  # ключ удалён
+    assert "SECRET-ACCESS-VALUE" not in response.text
+    captured = capsys.readouterr()
+    assert "SECRET-ACCESS-VALUE" not in captured.out + captured.err
+
+
+def test_tokens_are_not_in_repr() -> None:
+    data = SessionData.model_validate(
+        {
+            "csrf": "csrf-secret",
+            "created_at": 1,
+            "expires_at": 2,
+            "user_id": 1,
+            "email": "a@b.c",
+            "name": "N",
+            "platform_roles": ["ADMIN"],
+            "platform_access": ["crm"],
+            "must_change_password": False,
+            "profile_checked_at": 1,
+            "crm": {"access": "access-secret", "access_exp": 1, "refresh": "refresh-secret"},
+            "erp_state": "not_applicable",
+        }
+    )
+
+    text = repr(data)
+
+    assert "access-secret" not in text
+    assert "refresh-secret" not in text
+    assert "csrf-secret" not in text

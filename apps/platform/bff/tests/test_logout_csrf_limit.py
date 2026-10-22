@@ -296,3 +296,17 @@ def test_client_ip_prefers_last_forwarded_hop() -> None:
     assert client_ip("1.1.1.1, 2.2.2.2", "10.0.0.1") == "2.2.2.2"
     assert client_ip("  ", "10.0.0.1") == "10.0.0.1"
     assert client_ip(None, None) == "unknown"
+
+
+async def test_rate_key_without_ttl_gets_one(web: Web) -> None:
+    """Ключ лимита без срока не должен блокировать вход навсегда."""
+    ip = "203.0.113.50"
+    web.redis.values[f"rl:login:ip:{ip}"] = "10"  # как если бы EXPIRE не дошёл до Redis
+
+    response = await web.login(password="nope", ip=ip)
+
+    assert response.status_code == 429
+    assert 0 < int(response.headers["retry-after"]) <= 60
+    assert 0 < await web.redis.ttl(f"rl:login:ip:{ip}") <= 60
+    web.clock.advance(61)
+    assert (await web.login(ip=ip)).status_code == 200
