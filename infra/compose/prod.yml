@@ -303,6 +303,9 @@ services:
     <<: [*ops, *mem-256]
     image: ${RT_IMAGE_REGISTRY:-ghcr.io/nzulkaynarov}/rt-platform-bff:${RT_IMAGE_TAG:?set RT_IMAGE_TAG}
     build: !reset null
+    environment:
+      # Прод — только https: cookie сессии всегда Secure, значением из .env.prod это не выключить (Q-PLT-10-1 п. 5).
+      PLATFORM_COOKIE_SECURE: "true"
 
   platform-web:
     <<: [*ops, *mem-64]

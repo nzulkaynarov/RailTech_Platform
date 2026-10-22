@@ -544,6 +544,11 @@ services:
       PLATFORM_ERP_URL: http://erp-backend:8000
       REDIS_URL: redis://:${REDIS_PASSWORD:?set in .env}@redis:6379/3
       PLATFORM_SESSION_TTL_HOURS: ${PLATFORM_SESSION_TTL_HOURS:-12}
+      # Вход сотрудника (Q-PLT-10-1 п. 5). Не секреты. Secure по умолчанию включён; на http-стенде его выключает dev.yml,
+      # на проде prod.yml жёстко ставит true. Имя refresh-cookie — REFRESH_COOKIE_NAME ERP.
+      PLATFORM_COOKIE_SECURE: ${PLATFORM_COOKIE_SECURE:-true}
+      PLATFORM_ERP_REFRESH_COOKIE: ${PLATFORM_ERP_REFRESH_COOKIE:-refresh_token}
+      PLATFORM_LOGIN_RATE_PER_MINUTE: ${PLATFORM_LOGIN_RATE_PER_MINUTE:-10}
     depends_on:
       redis:
         condition: service_healthy

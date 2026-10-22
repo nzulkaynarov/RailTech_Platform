@@ -18,6 +18,10 @@ fail() { echo "FAIL: $*"; exit 1; }
 sed 's/CHANGE_ME/ci-only-value/' "$root/infra/.env.prod.example" > "$tmp/env.prod"
 grep -q '^PLATFORM_DOMAIN=platform\.railtech\.uz$' "$tmp/env.prod" || fail ".env.prod.example: нет PLATFORM_DOMAIN=platform.railtech.uz"
 grep -q '^# PLATFORM_SESSION_TTL_HOURS=' "$tmp/env.prod" || fail ".env.prod.example: нет закомментированной PLATFORM_SESSION_TTL_HOURS"
+for v in PLATFORM_ERP_REFRESH_COOKIE PLATFORM_LOGIN_RATE_PER_MINUTE; do
+  grep -q "^# $v=" "$tmp/env.prod" || fail ".env.prod.example: нет закомментированной $v"
+done
+! grep -qE '^#? ?PLATFORM_COOKIE_SECURE' "$tmp/env.prod" || fail ".env.prod.example: PLATFORM_COOKIE_SECURE на проде не настраивается"
 
 # 1. Прод-конфигурация compose.
 RT_IMAGE_TAG=platform-test docker compose -f "$root/infra/compose/base.yml" -f "$root/infra/compose/prod.yml" \
@@ -36,6 +40,20 @@ done
 [[ "$(q '.services["platform-bff"].environment.PLATFORM_CRM_URL')" == http://crm-api:8000 ]] || fail "platform-bff: PLATFORM_CRM_URL"
 [[ "$(q '.services["platform-bff"].environment.PLATFORM_ERP_URL')" == http://erp-backend:8000 ]] || fail "platform-bff: PLATFORM_ERP_URL"
 [[ "$(q '.services["platform-bff"].environment.REDIS_URL')" == redis://:ci-only-value@redis:6379/3 ]] || fail "platform-bff: REDIS_URL не Redis БД 3 с паролем"
+[[ "$(q '.services["platform-bff"].environment.PLATFORM_COOKIE_SECURE')" == true ]] || fail "platform-bff: на проде PLATFORM_COOKIE_SECURE не true"
+[[ "$(q '.services["platform-bff"].environment.PLATFORM_ERP_REFRESH_COOKIE')" == refresh_token ]] || fail "platform-bff: PLATFORM_ERP_REFRESH_COOKIE по умолчанию не refresh_token"
+[[ "$(q '.services["platform-bff"].environment.PLATFORM_LOGIN_RATE_PER_MINUTE')" == 10 ]] || fail "platform-bff: PLATFORM_LOGIN_RATE_PER_MINUTE по умолчанию не 10"
+# Прод не даёт выключить Secure через .env.prod: даже PLATFORM_COOKIE_SECURE=false в файле остаётся true.
+{ cat "$tmp/env.prod"; echo 'PLATFORM_COOKIE_SECURE=false'; } > "$tmp/env.insecure"
+[[ "$(RT_IMAGE_TAG=platform-test docker compose -f "$root/infra/compose/base.yml" -f "$root/infra/compose/prod.yml" --env-file "$tmp/env.insecure" \
+  config --format json | jq -r '.services["platform-bff"].environment.PLATFORM_COOKIE_SECURE')" == true ]] || fail "prod.yml позволил выключить PLATFORM_COOKIE_SECURE из .env.prod"
+# dev-стенд (http): Secure выключен по умолчанию, явное значение в .env побеждает.
+grep -v '^#' "$root/.env.example" | sed 's/CHANGE_ME/ci-only-value/' > "$tmp/env.dev"
+dev_secure() { docker compose -f "$root/infra/compose/base.yml" -f "$root/infra/compose/dev.yml" --env-file "$1" config --format json \
+  | jq -r '.services["platform-bff"].environment.PLATFORM_COOKIE_SECURE'; }
+[[ "$(dev_secure "$tmp/env.dev")" == false ]] || fail "dev: на http-стенде PLATFORM_COOKIE_SECURE должен быть false по умолчанию"
+echo 'PLATFORM_COOKIE_SECURE=true' >> "$tmp/env.dev"
+[[ "$(dev_secure "$tmp/env.dev")" == true ]] || fail "dev: PLATFORM_COOKIE_SECURE=true из .env не применился"
 [[ "$(q '.services["platform-bff"].depends_on.redis.condition')" == service_healthy ]] || fail "platform-bff: нет зависимости от redis"
 [[ "$(q '.services.caddy.environment.PLATFORM_DOMAIN')" == platform.railtech.uz ]] || fail "caddy: PLATFORM_DOMAIN не передан"
 for svc in platform-bff platform-web; do
