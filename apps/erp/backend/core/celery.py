@@ -23,6 +23,21 @@ app.autodiscover_tasks()
 app.autodiscover_tasks(related_name="tasks_ai")
 
 
+def _get_bus():
+    from integration.bus import get_bus
+
+    return get_bus()
+
+
+# B3 (ADR-0014): задачи шины rt_bus и их расписание Beat — раскладка outbox и доставка (pump, 5 с), подбор зависших
+# записей inbox (60 с), метрики в журнал (5 мин), уборка (раз в сутки). Задачи регистрируются при импорте приложения
+# (core/__init__), поэтому `.delay()` работает и в веб-процессе; шину они берут лениво (`integration.bus.get_bus`).
+# Повторы доставки идут по `next_attempt_at` в таблицах rt_bus, а не ретраями Celery.
+from rt_bus.contrib.celery import install as _install_bus_tasks  # noqa: E402
+
+bus_tasks = _install_bus_tasks(app, _get_bus)
+
+
 # FIX-66b: воркер и Beat при старте заменяют обработчики корневого логгера своими (`worker_hijack_root_logger`), и
 # фильтры из Django `LOGGING` на них не действуют. Маска секретов вешается на обработчики, которые создал Celery.
 def _mask_celery_handlers(logger=None, **_kwargs):

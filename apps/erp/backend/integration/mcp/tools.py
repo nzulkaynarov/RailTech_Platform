@@ -24,6 +24,7 @@ from catalog.constants import MODE_CLIENT, MODE_LEAD
 from catalog.published import project_many, published_products
 from crm.models import Deal
 
+from ..services import events
 from ..services.stages import deal_stage, initial_fsm_stage
 from ..services.summary import (
     delivery_lines,
@@ -32,7 +33,6 @@ from ..services.summary import (
     get_document_link_data,
     list_company_deals_data,
 )
-from ..services.webhooks import build_actor
 from .context import AgentContext
 from .contract import ToolSpec
 
@@ -181,8 +181,8 @@ def search_catalog_tool(context: AgentContext, arguments: Dict[str, Any]) -> Lis
 def create_request_tool(context: AgentContext, arguments: Dict[str, Any]) -> Dict[str, Any]:
     """Заявка в ERP от имени клиента: модель предлагает текст, код решает, что это «запрос».
 
-    Событие request.created(source=crm) рождает сигнал `integration.signals` при сохранении сделки — ровно одно:
-    источник, актора и клиента CRM сигнал берёт из `deal.request_origin` (как для портала, FIX-23).
+    Событие request.created(source=crm) инструмент публикует на шину rt_bus сам, в транзакции создания заявки, — ровно одно:
+    источник, актор и клиент CRM заданы здесь (как для портала, FIX-23); сбой публикации откатывает заявку.
     """
     if context.mode != "customer" or not context.erp_company_id:
         raise ToolModeError("create_request is only available in customer mode")
@@ -209,12 +209,6 @@ def create_request_tool(context: AgentContext, arguments: Dict[str, Any]) -> Dic
         title=f"Заявка: {company.name}",
         notes=summary,
     )
-    deal.request_origin = {  # читает integration.signals: единственный request.created для этой сделки
-        "source": "crm",
-        "summary": summary,
-        "actor": build_actor(actor_type="client", name="CRM Agent"),
-        "crm_client_id": context.crm_client_id,
-    }
     deal.save()
 
     for idx, item in enumerate(lines_raw):
@@ -227,8 +221,8 @@ def create_request_tool(context: AgentContext, arguments: Dict[str, Any]) -> Dic
         if item.get("quantity") is not None:
             try:
                 qty_val = Decimal(str(item["quantity"]).replace(",", "."))
-            except Exception:
-                pass
+            except (ArithmeticError, ValueError):
+                pass  # количество не число — строка без количества, как указал клиент
 
         PortalRequestLine.objects.create(
             deal=deal,
@@ -238,6 +232,14 @@ def create_request_tool(context: AgentContext, arguments: Dict[str, Any]) -> Dic
             sort_order=idx + 1,
         )
 
+    events.publish_request_created(
+        deal,
+        source="crm",
+        erp_request_id=deal.id,
+        summary=summary,
+        actor=events.build_actor(actor_type="client", name="CRM Agent"),
+        crm_client_id=context.crm_client_id,
+    )
     return {
         "erp_request_id": deal.id,
         "number": f"D-{deal.id}",

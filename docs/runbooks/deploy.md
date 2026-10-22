@@ -10,7 +10,7 @@
 
 - **Образы** собирает `deploy.yml` (только `workflow_dispatch`) и кладёт в GHCR с тегом = полный git sha:
   `rt-crm-backend`, `rt-crm-frontend`, `rt-erp-backend`, `rt-erp-frontend`, `rt-cabinet`, `rt-platform-bff`, `rt-platform-web`, `rt-litellm` (свой образ LiteLLM на Debian, `infra/ai/litellm/`; официальный на прод-CPU не стартует). Деплоится только код, уже входящий в `main`.
-- **Релиз** на VPS 1 — каталог `/opt/rt/releases/<sha>/` (`infra/`, `apps/crm/infra/casbin`, `packages/contracts/mcp-tools.json`, `packages/contracts/events.schema.json`), `/opt/rt/current` — ссылка на текущий.
+- **Релиз** на VPS 1 — каталог `/opt/rt/releases/<sha>/` (`infra/`, `apps/crm/infra/casbin`, `packages/contracts/mcp-tools.json`), `/opt/rt/current` — ссылка на текущий.
   Состояние — `/opt/rt/state/{current_tag,previous_tag}`; хранятся пять последних релизов.
 - **Секреты приложений** лежат только на серверах: `/opt/rt/.env.prod` (VPS 1) и `/opt/rt-db/.env.db` (VPS 2), оба `chmod 600`.
   В GitHub environment `production` — лишь доступ к серверу (SSH-ключ, known_hosts) и несекретные имена. Решение принято
@@ -143,13 +143,12 @@ mcp-tools.json` монтируется в контейнер по пути `../.
 расхождение ключей между CRM и ERP) и нет `kind=unavailable` (сервис не запущен — профиля нет в `RT_PROFILES`). Выключить ходы бота к ERP,
 не останавливая `erp-mcp`: `ERP_MCP_ENABLED=false` в `.env.prod`.
 
-**Схема событий ERP → CRM (M5-INF-01c).** Файл `packages/contracts/events.schema.json` едет в релизе и монтируется read-only в
-`/packages/contracts/events.schema.json` сервисов `erp-backend`, `erp-worker`, `erp-worker-ai`, `erp-beat` (и `erp-mcp` под
-профилем `mcp`): по нему ERP проверяет тело каждого события перед отправкой (`ERP_EVENTS_CONTRACT_MODE=log` в проде —
-несоответствие пишется в лог ERROR без значений полей, событие уходит). Образ прода схему не содержит. `deploy.sh` останавливается
-до pull и миграций, если файла нет в релизе (релиз собран старым `deploy.yml`) — тогда пересобрать релиз с актуального `main`.
-Проверить после деплоя: `docker compose exec erp-backend ls -l /packages/contracts/events.schema.json`, а в логе ERP нет строки
-«events.schema.json не найден».
+**Схемы событий и подписки шины (B3, L14; раньше M5-INF-01c).** Каталог контрактов `packages/contracts/events` и
+`packages/contracts/bus` вшит в образ ERP (`/opt/rt/contracts`, `RT_BUS_CONTRACTS_DIR`, `RT_BUS_SUBSCRIPTIONS`): образ собирают
+`deploy.yml` и compose с именованными контекстами `rtbus` и `contracts`, монтирований схемы из релиза и проверки файла в
+`deploy.sh` больше нет (`events.schema.json` снят). Тело каждого события шина проверяет строго до записи в outbox — несоответствие
+это ошибка операции, а не строка в логе. Проверить после деплоя: `docker compose exec erp-backend ls /opt/rt/contracts/events/erp`
+(22 схемы), `docker compose exec erp-backend python manage.py bus_retry --metrics`; порядок эксплуатации — `rt-bus-erp.md`.
 
 Вручную с сервера (без Actions): `/opt/rt/releases/<sha>/infra/deploy/deploy.sh <sha>`; без миграций и дампа — `make up-prod RT_IMAGE_TAG=<sha>`.
 
@@ -175,8 +174,8 @@ Caddy (`no_erp_internal` в `Caddyfile.prod`/`Caddyfile.dev`) отвечает 4
   помечены `Secure`: Chrome и Firefox принимают их на `http://localhost`, Safari может не принять (используйте другой браузер или команду ниже).
   Закончив, закройте туннель.
 * **Команды без браузера:** `docker compose … exec erp-backend python manage.py <команда>` (`shell`, `pairing_code`, `pairing_close_bootstrap`).
-* **Повтор FAILED-событий вебхуков** — действие админки «Повторить доставку в CRM» через туннель либо команда в `shell` без админки:
-  `docs/runbooks/webhooks.md`, «Повторить доставку (ERP)».
+* **Повтор `dead`-доставок шины** — `manage.py bus_retry --all-dead --subscriber crm` либо действие админки (rt_bus → Delivery) через туннель:
+  `docs/runbooks/rt-bus-erp.md`.
 * **Откат на релиз до S0-5:** его Caddy ещё отдаёт `/admin/` и `/api/integration` наружу, поэтому smoke отката (404 на этих путях) будет красным,
   хотя откат выполнен; это ожидаемо, повторный деплой текущего релиза закрывает пути.
 

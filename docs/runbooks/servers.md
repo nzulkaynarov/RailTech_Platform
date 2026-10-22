@@ -33,7 +33,7 @@
 | `crm-mcp-kb`, `crm-mcp-crm`, `crm-mcp-docs` | 3 × 256 МБ | |
 | `crm-web` | 64 МБ | статика за Caddy |
 | `erp-backend` | 768 МБ | Daphne |
-| `erp-mcp` | 256 МБ (лимит; факт ≈ 200 МБ) | инструменты ERP для агента CRM, SDK `mcp`, образ `erp-backend` (FIX-36); порт 8104 только внутри сети; файл `packages/contracts/mcp-tools.json` (и `events.schema.json`, M5-INF-01c) монтируется в контейнер; профиль `mcp` включён на проде (`RT_PROFILES=mcp`): бот CRM в сервисном режиме берёт из него данные клиента (M3-CRM-07) |
+| `erp-mcp` | 256 МБ (лимит; факт ≈ 200 МБ) | инструменты ERP для агента CRM, SDK `mcp`, образ `erp-backend` (FIX-36); порт 8104 только внутри сети; файл `packages/contracts/mcp-tools.json` монтируется в контейнер (контракты шины вшиты в образ, B3); профиль `mcp` включён на проде (`RT_PROFILES=mcp`): бот CRM в сервисном режиме берёт из него данные клиента (M3-CRM-07) |
 | `erp-worker`, `erp-worker-ai`, `erp-beat` | 512 + 384 + 192 МБ | |
 | `erp-web` | 64 МБ | nginx со сборкой |
 | `platform-bff` | 256 МБ (лимит; факт ≈ 150 МБ) | BFF Платформы (INF-P0-5): uvicorn, 2 процесса; БД нет, сессии в Redis БД 3 |

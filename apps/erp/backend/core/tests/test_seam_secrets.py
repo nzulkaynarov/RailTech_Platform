@@ -86,23 +86,30 @@ def test_sso_exchange_is_unavailable_without_secret(no_seam_secrets, settings):
     assert response.data["detail"] == "SSO_NOT_CONFIGURED"
 
 
-@pytest.mark.django_db
-def test_webhook_without_secret_is_kept_pending_unsigned_and_never_sent(no_seam_secrets):
+@pytest.mark.django_db(transaction=True)
+def test_event_without_pair_secret_is_postponed_unsigned_and_never_sent(no_seam_secrets):
     """Секрета нет: пустым ключом не подписываем (FIX-01) и не шлём, но и не теряем событие (FIX-33) —
-    оно ждёт PENDING, пока секрет не появится."""
-    from unittest.mock import patch
+    доставка шины откладывается без засчитанной попытки, пока секрет не появится."""
+    import httpx
+    from django.db import transaction
+    from integration.bus import get_bus, pair_secrets
+    from integration.services import events
+    from rt_bus.django.models import Delivery
 
-    from integration.models import IntegrationWebhookEvent, WebhookEventStatus
-    from integration.services.webhooks import emit_event
-    from integration.tasks import deliver_webhook_event
+    assert pair_secrets("erp", "crm") == []
+    sent = []
+    bus = get_bus()
+    previous = bus._http
+    bus._http = httpx.Client(transport=httpx.MockTransport(lambda request: sent.append(request) or httpx.Response(200)))
+    try:
+        with transaction.atomic():
+            event = events.publish_event(
+                "invite.sent", erp_company_id=1, payload={"channels": ["email"]}, crm_client_id=1
+            )
+        bus.pump()
+    finally:
+        bus._http = previous
 
-    event = emit_event(
-        "invite.sent", erp_company_id=1, payload={"channels": ["email"]}, crm_client_id=1, send_async=False
-    )
-
-    assert event is not None and event.status == WebhookEventStatus.PENDING
-    assert "X-Signature" not in event.headers
-    with patch("httpx.Client.post") as post:
-        assert deliver_webhook_event(event.id) is False
-    post.assert_not_called()
-    assert IntegrationWebhookEvent.objects.get(pk=event.pk).status == WebhookEventStatus.PENDING
+    assert event is not None and sent == []
+    delivery = Delivery.objects.get(event_id=event.id)
+    assert delivery.status == "pending" and delivery.attempts == 0 and delivery.next_attempt_at is not None

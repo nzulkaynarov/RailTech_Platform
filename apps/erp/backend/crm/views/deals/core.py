@@ -1,6 +1,7 @@
 """Ядро DealViewSet: CRUD, скоупинг видимости и стадии.
 Workflow-экшены — в workflow.py (распил deals.py, тех-долг)."""
 
+from django.db import transaction
 from django.db.models import Prefetch
 from django.utils.translation import gettext_lazy as _
 from drf_spectacular.utils import OpenApiResponse, extend_schema, extend_schema_view, inline_serializer
@@ -165,8 +166,9 @@ class DealViewSet(RoleGatedViewMixin, DealAiActionsMixin, DealWorkflowActionsMix
             draft_stage = DealStage.objects.filter(code=DealStageCode.DRAFT).first()
             if draft_stage:
                 save_kwargs["stage"] = draft_stage
-        deal = serializer.save(**save_kwargs)
-        register_new_deal(deal, self.request.user)
+        with transaction.atomic():  # сделка, журнал и событие шины `request.created` (rt_bus) — одна транзакция
+            deal = serializer.save(**save_kwargs)
+            register_new_deal(deal, self.request.user)
 
     @extend_schema(
         summary="Change deal stage",

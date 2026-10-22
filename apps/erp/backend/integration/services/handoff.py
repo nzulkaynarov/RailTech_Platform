@@ -8,9 +8,9 @@
   `crm_client_id`, — `INN_CONFLICT` (409), ничего не создаётся и не переписывается. Компания без связи с CRM
   (заведена сотрудником) находится по ИНН и связывается, а не дублируется.
 - Сопоставление `CrmClientMapping` создаётся ДО сделки и приглашения: события `request.created` и `invite.sent`
-  строятся по нему и без него молча отбрасываются (`webhooks.build_event_envelope`).
+  строятся по нему и без него молча отбрасываются (`events.build_event_data`).
 - Заявка начинается со стадии FSM `DRAFT` (`stages.initial_fsm_stage`); `request.created` уходит с `source=crm` — его
-  источник ставит `Deal.request_origin`, который читает `integration.signals`.
+  `request.created(source=crm)` публикует `_create_request` на шину rt_bus в транзакции передачи.
 - Согласие (`consent.given_at`, `consent.version`) сохраняется на компании как пришло.
 - В `invite.sent_via` — только то, что реально ушло (`invite_contact_to_portal`): письмо; Telegram принадлежит CRM, ERP в
   него не пишет.
@@ -37,8 +37,7 @@ from crm.models import ActivityLog, Deal
 
 from ..exceptions import IntegrationConflict
 from ..models import CrmClientMapping, CrmContactMapping
-from . import stages
-from .webhooks import build_actor
+from . import events, stages
 
 logger = logging.getLogger(__name__)
 
@@ -174,7 +173,7 @@ def _create_contacts(
 
 
 def _create_request(company: Company, contact: Optional[Contact], data: Dict[str, Any], crm_client_id: int) -> Deal:
-    """Заявка из передачи: стадия FSM `DRAFT`, `request.created(source=crm)` рождает сигнал по `request_origin`."""
+    """Заявка из передачи: стадия FSM `DRAFT`, `request.created(source=crm)` — на шину в транзакции передачи."""
     summary = data["need"]["summary"]
     deal = Deal(
         company=company,
@@ -183,15 +182,17 @@ def _create_request(company: Company, contact: Optional[Contact], data: Dict[str
         title=f"Заявка: {company.name}",
         notes=summary,
     )
-    deal.request_origin = {  # читает integration.signals: единственный request.created для этой сделки
-        "source": "crm",
-        "summary": summary,
-        "actor": build_actor(actor_type="staff", name=(data.get("owner") or {}).get("name")),
-        "crm_client_id": crm_client_id,
-    }
     deal.save()
     for idx, item_text in enumerate(data["need"].get("product_interest") or []):
         PortalRequestLine.objects.create(deal=deal, text=str(item_text).strip(), sort_order=idx + 1)
+    events.publish_request_created(
+        deal,
+        source="crm",
+        erp_request_id=deal.id,
+        summary=summary,
+        actor=events.build_actor(actor_type="staff", name=(data.get("owner") or {}).get("name")),
+        crm_client_id=crm_client_id,
+    )
     return deal
 
 

@@ -4,6 +4,7 @@ import logging
 from datetime import timedelta
 
 from celery import shared_task
+from django.db import transaction
 from django.utils import timezone, translation
 
 from .constants import ActStatusCode, ContractStatusCode, FulfillmentStatusCode, InvoiceStatusCode
@@ -487,6 +488,7 @@ def send_payment_reminders(self, grace_days: int = 3) -> dict:
     вторую ступень добавим, если первая окажется недостаточной.
     """
     from django.utils import timezone
+    from integration.services import events
 
     from .models import Invoice
     from .services.deal_emails import email_payment_reminder
@@ -511,6 +513,10 @@ def send_payment_reminders(self, grace_days: int = 3) -> dict:
             reminded += 1
         # Отмечаем в любом случае: если у покупателя нет ни одного активного адреса, повторная
         # попытка завтра ничего не изменит и превратится в ежедневный холостой проход.
-        invoice.payment_reminder_sent_at = timezone.now()
-        invoice.save(update_fields=["payment_reminder_sent_at", "updated_at"])
+        # Событие шины `invoice.overdue` — на той же отметке: ровно одно на просроченный счёт (статуса «просрочен» нет, его
+        # вычисляет эта задача), в транзакции отметки; сбой публикации откатывает отметку и задача повторит проход.
+        with transaction.atomic():
+            invoice.payment_reminder_sent_at = timezone.now()
+            invoice.save(update_fields=["payment_reminder_sent_at", "updated_at"])
+            events.publish_invoice_event("invoice.overdue", invoice)
     return {"reminded": reminded}

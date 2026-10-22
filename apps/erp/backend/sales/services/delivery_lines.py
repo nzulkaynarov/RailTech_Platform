@@ -18,6 +18,7 @@ from typing import Iterable, Optional, Tuple
 from django.db import transaction
 from django.db.models import Prefetch
 from django.utils import timezone
+from rt_bus import RtBusError
 from sales.models import ActivityLog, DeliveryLine, DeliveryLineStatus, Fulfillment, Quote, QuoteItem
 
 from crm.constants import FulfillmentStatusCode, QuoteStatusCode
@@ -167,31 +168,15 @@ def _can_act(contact, line: DeliveryLine) -> bool:
     return bool(contact is not None and contact.can_act and contact.company_id == line.deal.company_id)
 
 
-def _emit_decision(line: DeliveryLine, contact) -> None:
-    """Событие для CRM о решении клиента (FIX-37). Сбой события не отменяет решение клиента: он уже принял строку.
+def _publish_decision(line: DeliveryLine, contact) -> None:
+    """Событие шины о решении клиента (FIX-37): `delivery.line_accepted|disputed`, в транзакции решения.
 
-    Запись события пишется в транзакции решения (в своей точке сохранения, чтобы сбой не сорвал транзакцию), задача
-    доставки встаёт в очередь после коммита (`integration.services.webhooks.emit_event`).
+    Откат решения — нет события; сбой публикации откатывает и само решение клиента (события и состояния не расходятся,
+    `except Exception` вокруг публикации нет): клиент видит ошибку и повторяет.
     """
-    from integration.services import webhooks
+    from integration.services import events
 
-    try:
-        with transaction.atomic():
-            webhooks.emit_delivery_line_decision(line, contact)
-    except Exception:
-        logger.exception("Не удалось создать событие о решении клиента по строке поставки #%s", line.pk)
-        # След для ручной досылки: какое событие и по какой строке не ушло (точка сохранения уже откачена).
-        event_type = webhooks.DELIVERY_LINE_EVENTS.get(str(line.status), "delivery.line_*")
-        ActivityLog.objects.create(
-            action="Событие для CRM не создано",
-            detail=f"Событие {event_type} по строке {line.line_no} (id {line.pk}) сделки #{line.deal_id} не создано, "
-            "решение клиента сохранено; досылать вручную",
-            event_code="delivery.line_event_failed",
-            event_params={"line_id": line.pk, "event_type": event_type, "deal_id": line.deal_id},
-            level="ERROR",
-            deal=line.deal,
-            company_id=line.deal.company_id,
-        )
+    events.publish_delivery_line_decision(line, contact)
 
 
 def close_fulfillment_if_all_accepted(deal_id: int, contact) -> Optional[Fulfillment]:
@@ -225,7 +210,13 @@ def close_fulfillment_if_all_accepted(deal_id: int, contact) -> Optional[Fulfill
             )
             if error:
                 transaction.set_rollback(True)
-    except Exception:
+    except RtBusError:
+        # Публикация не глотается: сбой шины откатывает и решение клиента по строке (клиент повторит), событие и состояние
+        # не расходятся (B3).
+        raise
+    except (
+        Exception
+    ):  # noqa: BLE001 — переход исполнения изолирован точкой сохранения выше; сбой не отменяет решение клиента
         logger.exception("Не удалось перевести исполнение сделки #%s в ACCEPTED после приёмки всех строк", deal_id)
         error = "EXCEPTION"
     if error:
@@ -264,7 +255,7 @@ def accept_delivery_line(line_id: int, contact) -> Tuple[Optional[DeliveryLine],
         deal=line.deal,
         company_id=line.deal.company_id,
     )
-    _emit_decision(line, contact)
+    _publish_decision(line, contact)
     close_fulfillment_if_all_accepted(line.deal_id, contact)
     return line, None
 
@@ -300,7 +291,7 @@ def dispute_delivery_line(line_id: int, contact, reason: str) -> Tuple[Optional[
         deal=line.deal,
         company_id=line.deal.company_id,
     )
-    _emit_decision(line, contact)
+    _publish_decision(line, contact)
     transaction.on_commit(lambda: _notify_dispute(line, clean_reason))
     return line, None
 
