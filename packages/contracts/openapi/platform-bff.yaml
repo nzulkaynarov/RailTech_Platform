@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: RailTech Platform — BFF API (Платформа → CRM и ERP)
-  version: 0.2.3
+  version: 0.2.4
   summary: Пространство `/api/v1/` BFF Платформы — вызывает SPA `apps/platform/web` от имени сотрудника.
   description: |
     Контракт по ADR-0011 и `apps/platform/docs/02-architecture.md`. Версия 0.1.0 (INF-P0-1) покрывает фазу P1:
@@ -27,6 +27,9 @@ info:
 
     0.2.0 (волна 8): смена пароля (`POST /auth/change-password`, `Session.must_change_password`); Admin · Оргструктура —
     сотрудники, выдача ролей Платформы, приглашение по почте (`/admin/users*`, раздел матрицы `admin`).
+
+    0.2.4: `423 ACCOUNT_LOCKED` объявлен и на `POST /auth/change-password` (CRM блокирует учётную запись после неверных
+    текущих паролей).
 
     0.2.3 (Q-PLT-10-1): вход при недоступной ERP проходит (ERP подключается при первом обращении, агрегаты отдают
     `sources.erp = unavailable`); 503 на входе — только если не отвечает CRM; отключённый сотрудник получает
@@ -151,6 +154,12 @@ paths:
           $ref: '#/components/responses/SessionExpired'
         '403':
           $ref: '#/components/responses/CsrfFailed'
+        '423':
+          description: '`ACCOUNT_LOCKED` — учётная запись временно заблокирована CRM после неверных паролей'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
         '422':
           description: '`WRONG_PASSWORD` (текущий неверен) или `VALIDATION_FAILED` (новый не проходит правила CRM)'
           content:
