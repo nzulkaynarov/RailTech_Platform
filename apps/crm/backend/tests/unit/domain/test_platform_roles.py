@@ -1,6 +1,8 @@
-"""Роли Платформы (CRM-01): сгенерированный модуль = контракт, карта, объединение, провижининг."""
+"""Каталог возможностей Платформы (R-1, ADR-0012): модуль = каталог, каждый элемент каталога,
+объединение ролей, базовая роль CRM для старого фронта, проверка черновика роли."""
 
 import importlib.util
+import json
 from pathlib import Path
 from types import ModuleType
 from typing import Any
@@ -10,26 +12,39 @@ import yaml
 
 from app.domain import platform_roles_generated as generated
 from app.domain.erp_permissions import ERP_PERMISSIONS
-from app.domain.erp_roles import ERP_ROLE_CODES as ERP_CATALOG
 from app.domain.platform_roles import (
-    PLATFORM_ROLE_GRANTS,
+    LEGACY_ROLE_CODES,
+    RoleGrant,
+    check_spec,
+    crm_policies,
+    default_roles,
     derive_access,
+    diff_access,
     erp_access_for,
+    erp_permissions_for,
+    legacy_code,
+    merge_access,
     normalize_platform_roles,
     normalize_position,
-    platform_grants,
+    role_code_for,
+    role_crm_base,
 )
+from app.security.rbac import CATALOG
+from tests.platform_role_data import make_grant, make_role
 
 REPO = Path(__file__).resolve().parents[6]
-RBAC = REPO / "packages" / "contracts" / "platform-rbac.yaml"
-SEAM = REPO / "packages" / "contracts" / "openapi" / "erp-integration.yaml"
+CONTRACTS = REPO / "packages" / "contracts"
+RBAC = CONTRACTS / "platform-rbac.v2.yaml"
+RBAC_V1 = CONTRACTS / "platform-rbac.yaml"
+SCHEMA = CONTRACTS / "platform-rbac.v2.schema.json"
+SEAM = CONTRACTS / "openapi" / "erp-integration.yaml"
 GENERATOR = REPO / "apps" / "crm" / "scripts" / "gen_platform_roles.py"
 GENERATED = REPO / "apps" / "crm" / "backend" / "app" / "domain" / "platform_roles_generated.py"
 
 
-def _contract() -> dict[str, dict[str, Any]]:
-    roles: dict[str, dict[str, Any]] = yaml.safe_load(RBAC.read_text(encoding="utf-8"))["roles"]
-    return roles
+def _spec() -> dict[str, Any]:
+    spec: dict[str, Any] = yaml.safe_load(RBAC.read_text(encoding="utf-8"))
+    return spec
 
 
 def _generator() -> ModuleType:
@@ -41,32 +56,20 @@ def _generator() -> ModuleType:
     return module
 
 
-# Таблица §4 apps/platform/docs/04-integration-map.md, записанная независимо от контракта:
-# (базовая роль CRM, role_codes ERP, права ERP поверх шаблонов).
-TABLE = {
-    "MANAGER": ("manager", ("VIEWER",), ("deal.manage",)),
-    "DIRECTOR": ("viewer", ("HEAD",), ()),
-    "SUPPLY": ("viewer", ("CATALOG_SUPPLY", "FULFILLMENT"), ("quote.build", "quote.edit_pricing")),
-    "ENGINEER": ("viewer", ("FULFILLMENT",), ("quote.build",)),
-    "ACCOUNTANT": ("manager", ("FINANCE",), ("contract.manage", "fulfillment.act")),
-    "ADMIN": ("admin", (), ()),
-}
+def _seam_permissions() -> set[str]:
+    schemas = yaml.safe_load(SEAM.read_text(encoding="utf-8"))["components"]["schemas"]
+    return set(schemas["ErpPermission"]["enum"])
 
 
-def test_generated_module_is_exactly_what_the_generator_renders_from_the_contract() -> None:
-    """«Сгенерированное = контракт»: файл в репозитории совпадает с выводом генератора по YAML."""
-    spec = yaml.safe_load(RBAC.read_text(encoding="utf-8"))
-    assert GENERATED.read_text(encoding="utf-8") == _generator().render(spec)
+def _crm_permissions() -> set[str]:
+    return {f"{res}:{act}" for res, acts in CATALOG.items() for act in acts}
 
 
-def test_generated_values_equal_the_contract_role_by_role() -> None:
-    roles = _contract()
-    assert list(generated.PLATFORM_ROLE_CODES) == list(roles)
-    for code, spec in roles.items():
-        assert generated.CRM_BASE_ROLE[code] == spec["crm_base_role"]
-        assert generated.ERP_ROLE_CODES[code] == tuple(spec["erp_role_codes"])
-        assert generated.ERP_EXTRA_PERMISSIONS[code] == tuple(spec["erp_extra_permissions"])
-    assert set(generated.CRM_BASE_ROLE) == set(generated.PLATFORM_ROLE_CODES)
+# --- модуль = каталог ---------------------------------------------------------------------------
+
+
+def test_generated_module_is_exactly_what_the_generator_renders_from_the_catalog() -> None:
+    assert GENERATED.read_text(encoding="utf-8") == _generator().render(_spec())
 
 
 def test_generator_check_mode_passes_on_a_fresh_checkout(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -74,117 +77,367 @@ def test_generator_check_mode_passes_on_a_fresh_checkout(monkeypatch: pytest.Mon
     assert _generator().main() == 0
 
 
-def test_contract_table_matches_the_documented_integration_map() -> None:
-    """Таблица ролей из 04-integration-map §4 = контракт (ловит расхождение карты и кода)."""
-    got = {
-        code: (
-            generated.CRM_BASE_ROLE[code],
-            generated.ERP_ROLE_CODES[code],
-            generated.ERP_EXTRA_PERMISSIONS[code],
-        )
-        for code in generated.PLATFORM_ROLE_CODES
-    }
-    assert got == TABLE
+def test_generated_values_equal_the_catalog() -> None:
+    spec = _spec()
+    resources = {r["key"]: r for r in spec["resources"]}
+    assert list(generated.RESOURCE_KEYS) == list(resources)
+    for key, res in resources.items():
+        assert generated.RESOURCE_LEVELS[key] == tuple(res.get("levels", ["read", "full"]))
+        for system, table in (("crm", generated.CRM_BACKEND), ("erp", generated.ERP_BACKEND)):
+            lists = res.get("backend", {}).get(system, {})
+            assert {lv: list(v) for lv, v in table[key].items()} == lists
+    assert list(generated.SYSTEM_ROLE_CODES) == list(spec["system_roles"])
+    assert list(generated.TEMPLATE_ROLE_CODES) == list(spec["templates"])
+    assert list(generated.CRM_BASE_ROLE_BY_CODE) == list(LEGACY_ROLE_CODES)
 
 
-def test_erp_codes_and_permissions_are_known_to_the_seam_contract() -> None:
-    schemas = yaml.safe_load(SEAM.read_text(encoding="utf-8"))["components"]["schemas"]
-    seam_roles = set(schemas["SystemRoleCode"]["enum"])
-    seam_permissions = set(schemas["ErpPermission"]["enum"])
-    assert seam_roles == set(ERP_CATALOG)
-    for code in generated.PLATFORM_ROLE_CODES:
-        assert set(generated.ERP_ROLE_CODES[code]) <= seam_roles
-        assert set(generated.ERP_EXTRA_PERMISSIONS[code]) <= seam_permissions
-        assert set(generated.ERP_EXTRA_PERMISSIONS[code]) <= set(ERP_PERMISSIONS)
+# --- целостность каталога -----------------------------------------------------------------------
 
 
-def test_the_seam_has_a_permissions_field_that_carries_the_extras() -> None:
-    """Права поверх шаблонов ролей ERP уходят в `permissions` провижининга — поле есть в шве."""
-    schemas = yaml.safe_load(SEAM.read_text(encoding="utf-8"))["components"]["schemas"]
-    request = schemas["ProvisionUserRequest"]
-    assert "permissions" in request["required"]
-    assert request["properties"]["permissions"]["items"] == {
-        "$ref": "#/components/schemas/ErpPermission"
-    }
+def test_every_erp_code_in_the_catalog_is_in_the_seam_permission_list() -> None:
+    seam = _seam_permissions()
+    assert set(ERP_PERMISSIONS) == seam
+    used = {p for table in generated.ERP_BACKEND.values() for ps in table.values() for p in ps}
+    used |= {p for ps in generated.FIELD_ERP_BACKEND.values() for p in ps}
+    assert used <= seam
 
 
-@pytest.mark.parametrize(("code", "expected"), list(TABLE.items()))
-def test_every_role_derives_crm_role_erp_roles_and_permissions(
-    code: str, expected: tuple[str, tuple[str, ...], tuple[str, ...]]
+def test_every_crm_right_in_the_catalog_is_in_the_casbin_catalog_of_the_code() -> None:
+    used = {p for table in generated.CRM_BACKEND.values() for ps in table.values() for p in ps}
+    assert used <= _crm_permissions()
+
+
+def test_contract_schema_enums_equal_the_seam_and_the_code_catalog() -> None:
+    defs = json.loads(SCHEMA.read_text(encoding="utf-8"))["$defs"]
+    assert set(defs["erpPermission"]["enum"]) == _seam_permissions()
+    assert set(defs["crmPermission"]["enum"]) == _crm_permissions()
+
+
+def test_full_level_lists_repeat_the_read_level() -> None:
+    for table in (generated.CRM_BACKEND, generated.ERP_BACKEND):
+        for key, levels in table.items():
+            if "read" in levels and "full" in levels:
+                assert set(levels["read"]) <= set(levels["full"]), key
+
+
+def test_roles_menu_and_queue_refer_only_to_catalog_resources() -> None:
+    spec = _spec()
+    keys = set(generated.RESOURCE_KEYS)
+    for code, role in {**spec["system_roles"], **spec["templates"]}.items():
+        for resource, level in role["access"].items():
+            assert resource in keys, (code, resource)
+            assert level in generated.RESOURCE_LEVELS[resource], (code, resource)
+        assert set(role["restricted_fields"]) <= set(spec["restricted_fields"]), code
+    for module in spec["menu"].values():
+        for resources in module.values():
+            assert set(resources) <= keys
+    for kind, need in spec["queue"].items():
+        assert need["resource"] in keys, kind
+        assert need["level"] in generated.RESOURCE_LEVELS[need["resource"]], kind
+    for conditions in generated.CRM_BASE_ROLE_BY_ACCESS.values():
+        for condition in conditions:
+            resource, _, level = condition.partition(":")
+            assert level in generated.RESOURCE_LEVELS[resource]
+
+
+def test_queue_kinds_equal_the_bff_contract() -> None:
+    bff = yaml.safe_load((CONTRACTS / "openapi" / "platform-bff.yaml").read_text(encoding="utf-8"))
+    assert set(_spec()["queue"]) == set(bff["components"]["schemas"]["QueueItemKind"]["enum"])
+
+
+# --- каждый элемент каталога: раздел × уровень -> права CRM и ERP ------------------------------
+
+LEADS_READ = {"leads:read", "stream:read", "dashboard:read", "kb:read"}
+LEADS_FULL = LEADS_READ | {
+    "leads:take",
+    "leads:work",
+    "leads:reply",
+    "leads:note",
+    "leads:assist",
+    "leads:create",
+    "reply_templates:read",
+}
+CLIENTS_READ = {"clients:read", "deals:read", "documents:read"}
+CLIENTS_FULL = CLIENTS_READ | {"clients:write", "deals:write", "documents:write"}
+ADMIN_READ = {
+    "users:read",
+    "integrations:read",
+    "system:read",
+    "external_services:read",
+    "audit:read",
+}
+ADMIN_FULL = ADMIN_READ | {
+    "users:write",
+    "settings:read",
+    "settings:write",
+    "integrations:write",
+    "models:read",
+    "models:test",
+    "models:write",
+    "external_services:write",
+    "backups:read",
+    "backups:write",
+    "spend:read",
+    "kb:read",
+    "kb:write",
+    "reply_templates:read",
+    "reply_templates:write",
+    "sandbox:use",
+    "export:read",
+}
+NOTHING: tuple[set[str], set[str]] = (set(), set())
+# (раздел, уровень) -> (права CRM `ресурс:действие`, права ERP). Выписано вручную по ADR-0012 и
+# runbook wave9-roles §3.2, независимо от yaml: ловит случайную правку отображения.
+EXPECTED: dict[tuple[str, str], tuple[set[str], set[str]]] = {
+    ("dashboard.queue", "read"): NOTHING,
+    ("dashboard.queue", "full"): NOTHING,
+    ("dashboard.summary", "read"): ({"dashboard:read", "spend:read"}, set()),
+    ("dashboard.summary", "full"): ({"dashboard:read", "spend:read"}, {"data.export"}),
+    ("crm.leads", "read"): (LEADS_READ, set()),
+    ("crm.leads", "full"): (LEADS_FULL, set()),
+    ("crm.clients", "read"): (CLIENTS_READ, set()),
+    ("crm.clients", "full"): (CLIENTS_FULL, {"deal.manage"}),
+    ("eds.inbox", "read"): NOTHING,
+    ("eds.inbox", "full"): (set(), {"deal.assign"}),
+    ("eds.drafts", "read"): NOTHING,
+    ("eds.drafts", "full"): (set(), {"quote.review", "quote.approve_final", "quote.send"}),
+    ("eds.projects", "read"): NOTHING,
+    ("eds.projects", "full"): (set(), {"contract.manage", "contract.sign", "fulfillment.act"}),
+    ("eds.payments", "read"): NOTHING,
+    (
+        "eds.payments",
+        "full",
+    ): (set(), {"finance.invoice", "finance.payment", "finance.rates", "data.export"}),
+    ("eds.memo.create", "read"): NOTHING,
+    ("eds.memo.create", "full"): NOTHING,
+    ("eds.memo.approve", "read"): NOTHING,
+    ("eds.memo.approve", "full"): NOTHING,
+    ("erp.calc", "read"): NOTHING,
+    ("erp.calc", "full"): (set(), {"deal.manage", "quote.build", "quote.edit_pricing"}),
+    ("erp.calc.goods", "full"): (set(), {"quote.build", "quote.edit_pricing"}),
+    ("erp.calc.services", "full"): (set(), {"quote.build"}),
+    ("erp.stock", "read"): NOTHING,
+    (
+        "erp.stock",
+        "full",
+    ): (set(), {"catalog.manage", "catalog.publish", "supply.manage", "fulfillment.manage"}),
+    ("chats.internal", "read"): NOTHING,
+    ("chats.internal", "full"): NOTHING,
+    ("chats.external", "read"): ({"leads:read"}, set()),
+    (
+        "chats.external",
+        "full",
+    ): ({"leads:read", "leads:reply", "leads:note", "leads:assist"}, set()),
+    ("company.settings", "read"): NOTHING,
+    ("company.settings", "full"): (set(), {"settings.edit", "settings.charge_templates"}),
+    ("admin", "read"): (ADMIN_READ, set()),
+    (
+        "admin",
+        "full",
+    ): (ADMIN_FULL, {"team.manage"}),
+}
+
+
+def test_expectation_table_covers_every_catalog_element() -> None:
+    elements = {(k, lv) for k in generated.RESOURCE_KEYS for lv in generated.RESOURCE_LEVELS[k]}
+    assert set(EXPECTED) == elements
+
+
+@pytest.mark.parametrize(("element", "expected"), list(EXPECTED.items()), ids=lambda v: str(v))
+def test_every_catalog_element_gives_the_expected_crm_and_erp_rights(
+    element: tuple[str, str], expected: tuple[set[str], set[str]]
 ) -> None:
-    crm_role, role_codes, extra = expected
-    derived = derive_access([code])
-    assert derived.crm_role == crm_role
+    resource, level = element
+    crm, erp = expected
+    access = {resource: level}
+    assert {f"{r}:{a}" for r, a in crm_policies(access)} == crm
+    assert set(erp_permissions_for(access, ())) == erp
+    derived = derive_access([RoleGrant(access)])
+    assert {f"{r}:{a}" for r, a in derived.crm_permissions} == crm
+    assert set(derived.erp_permissions) == erp
+
+
+FIELDS = {
+    "cost_margin": {"quote.view_cost_margin"},
+    "supplier_prices": set(),
+    "totals_only": set(),
+}
+
+
+@pytest.mark.parametrize(("name", "erp"), list(FIELDS.items()))
+def test_every_restricted_field_gives_the_expected_erp_rights(name: str, erp: set[str]) -> None:
+    assert set(erp_permissions_for({}, [name])) == erp
+    assert set(generated.FIELD_ERP_BACKEND) == set(FIELDS)
+
+
+# --- системные роли и шаблоны -------------------------------------------------------------------
+
+# Права ERP целых ролей, выписанные вручную.
+DIRECTOR_ERP = set(ERP_PERMISSIONS) - {"team.manage"}  # команду ведёт только администратор
+ROLE_ERP: dict[str, set[str]] = {
+    "MANAGER": {"deal.manage"},
+    "DIRECTOR": DIRECTOR_ERP,
+    "SUPPLY": {
+        "deal.manage",
+        "quote.build",
+        "quote.edit_pricing",
+        "quote.view_cost_margin",
+        "catalog.manage",
+        "catalog.publish",
+        "supply.manage",
+        "fulfillment.manage",
+    },
+    "ENGINEER": {
+        "deal.manage",
+        "quote.build",
+        "quote.edit_pricing",
+        "catalog.manage",
+        "catalog.publish",
+        "supply.manage",
+        "fulfillment.manage",
+    },
+    "ACCOUNTANT": {
+        "contract.manage",
+        "contract.sign",
+        "fulfillment.act",
+        "finance.invoice",
+        "finance.payment",
+        "finance.rates",
+        "data.export",
+    },
+    "ADMIN": {"team.manage", "settings.edit", "settings.charge_templates"},
+}
+# Базовая роль CRM для старого фронта (как в версии 1 каталога).
+ROLE_BASE = {
+    "MANAGER": "manager",
+    "DIRECTOR": "viewer",
+    "SUPPLY": "viewer",
+    "ENGINEER": "viewer",
+    "ACCOUNTANT": "manager",
+    "ADMIN": "admin",
+}
+
+
+@pytest.mark.parametrize("legacy", list(ROLE_ERP))
+def test_every_system_role_and_template_derives_the_expected_rights(legacy: str) -> None:
+    derived = derive_access([make_grant(legacy)])
+
+    assert set(derived.erp_permissions) == ROLE_ERP[legacy]
+    assert [p for p in ERP_PERMISSIONS if p in ROLE_ERP[legacy]] == list(derived.erp_permissions)
+    assert derived.crm_role == ROLE_BASE[legacy]
     assert derived.platform_access == ("crm", "erp")
-    assert derived.erp_role_codes == role_codes
-    assert derived.erp_extra_permissions == extra
-
-
-@pytest.mark.parametrize(("code", "expected"), list(TABLE.items()))
-def test_every_role_gives_the_erp_provisioning_role_and_rights(
-    code: str, expected: tuple[str, tuple[str, ...], tuple[str, ...]]
-) -> None:
-    access = erp_access_for([code])
-    if code == "ADMIN":
+    assert derived.erp_role_codes == ()  # системные роли ERP больше не выдаются
+    access = erp_access_for([make_grant(legacy)])
+    if legacy == "ADMIN":
         assert (access.role, access.permissions) == ("admin", ERP_PERMISSIONS)
     else:
-        assert (access.role, access.permissions) == ("backoffice", expected[2])
+        assert (access.role, set(access.permissions)) == ("backoffice", ROLE_ERP[legacy])
 
 
-@pytest.mark.parametrize(
-    ("codes", "crm_role", "role_codes", "extra"),
-    [
-        pytest.param(
-            ["SUPPLY", "ENGINEER"],
-            "viewer",
-            ("FULFILLMENT", "CATALOG_SUPPLY"),
-            ("quote.build", "quote.edit_pricing"),
-            id="supply+engineer-dedupes",
-        ),
-        pytest.param(
-            ["MANAGER", "DIRECTOR"],
-            "manager",
-            ("HEAD", "VIEWER"),
-            ("deal.manage",),
-            id="manager-outranks-viewer",
-        ),
-        pytest.param(
-            ["DIRECTOR", "ACCOUNTANT"],
-            "manager",
-            ("FINANCE", "HEAD"),
-            ("contract.manage", "fulfillment.act"),
-            id="accountant+director",
-        ),
-        pytest.param(
-            ["ADMIN", "MANAGER"],
-            "admin",
-            ("VIEWER",),
-            ("deal.manage",),
-            id="admin-outranks-all",
-        ),
-    ],
-)
-def test_union_of_two_roles(
-    codes: list[str], crm_role: str, role_codes: tuple[str, ...], extra: tuple[str, ...]
-) -> None:
-    derived = derive_access(codes)
-    assert derived.crm_role == crm_role
-    # Порядок — как в каталогах ERP, а не в порядке ролей.
-    assert sorted(derived.erp_role_codes) == sorted(role_codes)
-    assert [c for c in ERP_CATALOG if c in derived.erp_role_codes] == list(derived.erp_role_codes)
-    assert sorted(derived.erp_extra_permissions) == sorted(extra)
-    assert [p for p in ERP_PERMISSIONS if p in extra] == list(derived.erp_extra_permissions)
+def test_the_two_system_roles_are_fixed_by_the_catalog() -> None:
+    rows = {r["code"]: r for r in default_roles()}
+    assert rows["ADMIN"]["access"] == {
+        "admin": "full",
+        "company.settings": "full",
+        "dashboard.queue": "full",
+        "chats.internal": "full",
+        "eds.memo.create": "full",
+    }
+    director = dict(make_role("DIRECTOR").access)
+    assert director["admin"] == "read"
+    assert {k: v for k, v in director.items() if k != "admin"} == {
+        k: "full" for k in generated.RESOURCE_KEYS if k != "admin"
+    }
+    assert rows["DIRECTOR"]["restricted_fields"] == ["cost_margin", "supplier_prices"]
+    assert rows["ADMIN"]["is_system"] is True
+    assert rows["DIRECTOR"]["is_system"] is True
+    assert [r["code"] for r in default_roles() if not r["is_system"]] == [
+        "tpl:MANAGER",
+        "tpl:SUPPLY",
+        "tpl:ENGINEER",
+        "tpl:ACCOUNTANT",
+    ]
 
 
-def test_admin_with_other_roles_is_still_the_erp_superuser() -> None:
-    access = erp_access_for(["ADMIN", "DIRECTOR"])
+def _v1_columns() -> dict[str, dict[str, str]]:
+    v1 = yaml.safe_load(RBAC_V1.read_text(encoding="utf-8"))
+    columns: dict[str, dict[str, str]] = {code: {} for code in LEGACY_ROLE_CODES}
+    for res in v1["resources"]:
+        for code, level in res["access"].items():
+            if level != "hidden":
+                columns[code][res["key"]] = level
+    return columns
+
+
+@pytest.mark.parametrize("legacy", ["MANAGER", "SUPPLY", "ENGINEER", "ACCOUNTANT"])
+def test_templates_keep_the_v1_matrix_column_plus_the_new_calc_sections(legacy: str) -> None:
+    """Шаблоны = колонки матрицы SPEC-v3 §4.2 (версия 1) + виза расчёта у снабженца и инженера."""
+    added = {"SUPPLY": {"erp.calc.goods": "full"}, "ENGINEER": {"erp.calc.services": "full"}}
+    expected = {**_v1_columns()[legacy], **added.get(legacy, {})}
+    assert dict(make_grant(legacy).access) == expected
+
+
+def test_director_keeps_everything_v1_gave_and_gains_full_where_it_had_read() -> None:
+    """Версия 2 (ADR-0012): директор — все разделы full, Admin — read; ничего из v1 не отнято."""
+    v1 = _v1_columns()["DIRECTOR"]
+    v2 = dict(make_grant("DIRECTOR").access)
+    assert all(v2[k] == v1[k] or (v1[k] == "read" and v2[k] == "full") for k in v1)
+    raised = {k for k in v1 if v1[k] != v2[k]}
+    assert raised == {"crm.leads", "crm.clients", "eds.payments", "chats.external"}
+    assert set(v2) - set(v1) == {"erp.calc.goods", "erp.calc.services", "company.settings"}
+
+
+# --- объединение ролей --------------------------------------------------------------------------
+
+
+def test_union_takes_the_maximum_level_per_section_and_the_union_of_fields() -> None:
+    merged = merge_access(
+        [
+            RoleGrant({"crm.leads": "read", "eds.payments": "full"}, ("totals_only",)),
+            RoleGrant({"crm.leads": "full", "eds.inbox": "read"}, ("cost_margin",)),
+        ]
+    )
+    assert merged == {"crm.leads": "full", "eds.inbox": "read", "eds.payments": "full"}
+    derived = derive_access(
+        [
+            RoleGrant({"eds.payments": "full"}, ("totals_only",)),
+            RoleGrant({"crm.leads": "read"}, ("cost_margin",)),
+        ]
+    )
+    assert derived.restricted_fields == ("cost_margin", "totals_only")
+    assert set(derived.erp_permissions) == {
+        "finance.invoice",
+        "finance.payment",
+        "finance.rates",
+        "data.export",
+        "quote.view_cost_margin",
+    }
+
+
+def test_manager_plus_accountant_is_the_union_of_their_rights() -> None:
+    derived = derive_access([make_grant("MANAGER"), make_grant("ACCOUNTANT")])
+
+    assert derived.crm_role == "manager"
+    assert derived.access["crm.leads"] == "full"  # от менеджера
+    assert derived.access["eds.payments"] == "full"  # от бухгалтера
+    assert derived.access["eds.projects"] == "full"  # максимум: менеджер read, бухгалтер full
+    assert derived.restricted_fields == ("supplier_prices", "totals_only")
+    assert set(derived.erp_permissions) == ROLE_ERP["MANAGER"] | ROLE_ERP["ACCOUNTANT"]
+    assert crm_policies(make_grant("MANAGER").access) <= derived.crm_permissions
+
+
+def test_the_senior_crm_role_wins_and_admin_is_the_erp_superuser() -> None:
+    assert derive_access([make_grant("DIRECTOR"), make_grant("SUPPLY")]).crm_role == "viewer"
+    assert derive_access([make_grant("DIRECTOR"), make_grant("MANAGER")]).crm_role == "manager"
+    both = [make_grant("ADMIN"), make_grant("DIRECTOR")]
+    assert derive_access(both).crm_role == "admin"
+    access = erp_access_for(both)
     assert (access.role, access.permissions) == ("admin", ERP_PERMISSIONS)
 
 
-def test_derive_is_independent_of_order_and_duplicates() -> None:
-    assert derive_access(["ENGINEER", "SUPPLY", "ENGINEER"]) == derive_access(
-        ["SUPPLY", "ENGINEER"]
-    )
+def test_derive_is_independent_of_order() -> None:
+    a, b = make_grant("ENGINEER"), make_grant("SUPPLY")
+    assert derive_access([a, b]) == derive_access([b, a])
 
 
 def test_empty_set_has_no_derived_access() -> None:
@@ -192,46 +445,122 @@ def test_empty_set_has_no_derived_access() -> None:
         derive_access([])
 
 
+# --- базовая роль CRM для старого фронта --------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    ("access", "expected"),
+    [
+        ({"admin": "full"}, "admin"),
+        ({"admin": "read"}, "viewer"),
+        ({"crm.leads": "full"}, "manager"),
+        ({"crm.leads": "read", "chats.external": "full"}, "viewer"),
+        ({"crm.clients": "full", "eds.payments": "full"}, "viewer"),
+        ({"admin": "full", "crm.leads": "full"}, "admin"),
+        ({}, "viewer"),
+    ],
+)
+def test_role_without_a_code_gets_the_base_role_from_its_matrix(
+    access: dict[str, str], expected: str
+) -> None:
+    assert role_crm_base(RoleGrant(access, code=None)) == expected
+
+
+def test_role_with_a_code_keeps_the_v1_base_role_even_if_edited() -> None:
+    edited = RoleGrant({"crm.leads": "full"}, code="DIRECTOR")  # директор не становится менеджером
+    assert role_crm_base(edited) == "viewer"
+    assert role_crm_base(RoleGrant({}, code="tpl:ACCOUNTANT")) == "manager"
+
+
+# --- коды ----------------------------------------------------------------------------------------
+
+
+def test_legacy_codes_map_to_role_codes_and_back() -> None:
+    assert [role_code_for(c) for c in LEGACY_ROLE_CODES] == [
+        "tpl:MANAGER",
+        "DIRECTOR",
+        "tpl:SUPPLY",
+        "tpl:ENGINEER",
+        "tpl:ACCOUNTANT",
+        "ADMIN",
+    ]
+    assert [legacy_code(role_code_for(c)) for c in LEGACY_ROLE_CODES] == list(LEGACY_ROLE_CODES)
+    for foreign in (None, "tpl:ROOT", "MANAGER", "tpl:ADMIN", "ROOT"):
+        assert legacy_code(foreign) is None
+
+
 @pytest.mark.parametrize(
     ("given", "expected"),
     [
         ([], []),
-        (["ADMIN", "MANAGER"], ["MANAGER", "ADMIN"]),  # порядок контракта
+        (["ADMIN", "MANAGER"], ["MANAGER", "ADMIN"]),  # прежний порядок
         (["SUPPLY", "SUPPLY"], ["SUPPLY"]),
     ],
 )
-def test_normalize_dedupes_and_orders(given: list[str], expected: list[str]) -> None:
+def test_normalize_orders_the_legacy_codes_and_drops_duplicates(
+    given: list[str], expected: list[str]
+) -> None:
     assert normalize_platform_roles(given) == expected
 
 
 @pytest.mark.parametrize("bad", [["ROOT"], ["manager"], ["MANAGER", "admin"], [""]])
-def test_normalize_rejects_foreign_codes(bad: list[str]) -> None:
+def test_normalize_rejects_foreign_legacy_codes(bad: list[str]) -> None:
     with pytest.raises(ValueError, match="unknown"):
         normalize_platform_roles(bad)
 
 
 @pytest.mark.parametrize(
-    ("given", "expected"),
-    [(None, None), ("", None), ("   ", None), ("  Главный инженер ", "Главный инженер")],
+    ("value", "expected"), [(None, None), ("", None), ("  ", None), ("  Инженер  ", "Инженер")]
 )
-def test_position_is_trimmed_and_blank_is_none(given: str | None, expected: str | None) -> None:
-    assert normalize_position(given) == expected
+def test_position_is_trimmed_and_empty_means_none(value: str | None, expected: str | None) -> None:
+    assert normalize_position(value) == expected
 
 
-def test_position_limit_is_120_characters() -> None:
+def test_position_limit_is_120() -> None:
     assert normalize_position("я" * 120) == "я" * 120
-    with pytest.raises(ValueError, match="120"):
+    with pytest.raises(ValueError, match="longer"):
         normalize_position("я" * 121)
 
 
-def test_users_read_grants_follow_the_admin_row_of_the_matrix() -> None:
-    """CRM-01c: чтение сотрудников — роли с `admin: read` (DIRECTOR); ADMIN (full) — `admin` CRM."""
-    spec = yaml.safe_load(RBAC.read_text(encoding="utf-8"))
-    row = next(r for r in spec["resources"] if r["key"] == "admin")["access"]
+# --- проверка черновика роли --------------------------------------------------------------------
 
-    readers = {code for code, level in row.items() if level == "read"}
 
-    assert readers == {code for code, grants in PLATFORM_ROLE_GRANTS.items() if grants}
-    assert set(PLATFORM_ROLE_GRANTS) <= set(generated.PLATFORM_ROLE_CODES)
-    assert platform_grants(["DIRECTOR", "SUPPLY"]) == {("users", "read")}
-    assert platform_grants(["SUPPLY", "ENGINEER", "MANAGER", "ACCOUNTANT", "ADMIN", "x"]) == set()
+def test_check_spec_returns_the_canonical_form() -> None:
+    access, fields = check_spec(
+        {"admin": "read", "crm.leads": "full"}, ["totals_only", "cost_margin", "cost_margin"]
+    )
+    assert list(access) == ["crm.leads", "admin"]  # порядок каталога
+    assert fields == ["cost_margin", "totals_only"]
+
+
+@pytest.mark.parametrize(
+    ("access", "fields", "message"),
+    [
+        ({"crm.nothing": "full"}, [], "unknown resource"),
+        ({"crm.leads": "hidden"}, [], "not allowed"),
+        ({"crm.leads": "write"}, [], "not allowed"),
+        ({"erp.calc.goods": "read"}, [], "not allowed"),  # у раздела только full
+        ({}, ["secret_notes"], "unknown restricted fields"),
+    ],
+)
+def test_check_spec_rejects_unknown_sections_levels_and_fields(
+    access: dict[str, str], fields: list[str], message: str
+) -> None:
+    with pytest.raises(ValueError, match=message):
+        check_spec(access, fields)
+
+
+# --- разница матриц (preview) -------------------------------------------------------------------
+
+
+def test_diff_lists_what_is_gained_and_lost_with_levels() -> None:
+    diff = diff_access(
+        {"crm.leads": "full", "crm.clients": "read", "admin": "read"},
+        {"crm.leads": "read", "crm.clients": "full", "eds.payments": "read"},
+        ["cost_margin"],
+        ["totals_only"],
+    )
+    assert diff.gained == [("crm.clients", "full"), ("eds.payments", "read")]
+    assert diff.lost == [("crm.leads", "full"), ("admin", "read")]
+    assert (diff.fields_gained, diff.fields_lost) == (["totals_only"], ["cost_margin"])
+    assert diff_access({"admin": "full"}, {"admin": "full"}).gained == []

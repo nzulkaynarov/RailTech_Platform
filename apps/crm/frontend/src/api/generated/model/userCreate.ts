@@ -16,6 +16,7 @@ export interface UserCreate {
    * @maxLength 255
    */
   full_name: string;
+  platform_role_ids?: number[] | null;
   platform_roles?:
     ("MANAGER" | "DIRECTOR" | "SUPPLY" | "ENGINEER" | "ACCOUNTANT" | "ADMIN")[] | null;
   position?: string | null;

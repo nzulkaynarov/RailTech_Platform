@@ -14,7 +14,7 @@
     "generate": "pnpm gen:types && pnpm gen:crm && prettier --write generated --log-level warn",
     "check": "pnpm lint && pnpm generate && pnpm typecheck",
     "typecheck": "tsc -p tsconfig.json",
-    "lint:platform": "ajv compile --spec=draft2020 -s platform-rbac.schema.json && ajv validate --spec=draft2020 -s platform-rbac.schema.json -d platform-rbac.yaml && ajv compile --spec=draft2020 -s client-statuses.schema.json && ajv validate --spec=draft2020 -s client-statuses.schema.json -d client-statuses.yaml"
+    "lint:platform": "ajv compile --spec=draft2020 -s platform-rbac.schema.json && ajv validate --spec=draft2020 -s platform-rbac.schema.json -d platform-rbac.yaml && ajv compile --spec=draft2020 -s platform-rbac.v2.schema.json && ajv validate --spec=draft2020 -s platform-rbac.v2.schema.json -d platform-rbac.v2.yaml && ajv compile --spec=draft2020 -s client-statuses.schema.json && ajv validate --spec=draft2020 -s client-statuses.schema.json -d client-statuses.yaml"
   },
   "devDependencies": {
     "@redocly/cli": "2.19.0",

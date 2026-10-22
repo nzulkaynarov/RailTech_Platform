@@ -5,7 +5,7 @@
 снятие или деактивация пользователя → отзыв сессий; роли или имя у пользователя с доступом
 изменились → повторный провижининг (права ERP следуют за ролью CRM, `domain/erp_permissions.py`).
 Выбор системных ролей ERP (`erp_role_codes`, FIX-63) — тоже повод для повторного провижининга,
-как и смена ролей Платформы (`platform_roles`, CRM-01): от них зависят права ERP поверх ролей.
+как и смена ролей Платформы (`platform_role_ids`, R-1): от них зависят права ERP.
 """
 
 from dataclasses import dataclass
@@ -25,8 +25,8 @@ class AccessState:
     full_name: str
     # Системные роли ERP, выбранные админом (FIX-63): порядок не важен, как и у `roles`.
     erp_role_codes: tuple[str, ...] = ()
-    # Роли Платформы (CRM-01): определяют права ERP поверх системных ролей; порядок не важен.
-    platform_roles: tuple[str, ...] = ()
+    # Роли Платформы (id, R-1): определяют права ERP; порядок не важен.
+    platform_role_ids: tuple[int, ...] = ()
 
     @property
     def has_erp(self) -> bool:
@@ -44,14 +44,30 @@ def sync_action(before: AccessState, after: AccessState) -> SyncAction | None:
         set(before.roles),
         before.full_name,
         set(before.erp_role_codes),
-        set(before.platform_roles),
+        set(before.platform_role_ids),
     ) != (
         set(after.roles),
         after.full_name,
         set(after.erp_role_codes),
-        set(after.platform_roles),
+        set(after.platform_role_ids),
     )
     return "provision" if became_available or profile_changed else None
+
+
+ErpSyncStatus = Literal["ok", "pending", "error", "not_applicable"]
+
+
+def erp_sync_status(
+    *, has_erp: bool, is_active: bool, error: str | None, pending: bool
+) -> ErpSyncStatus:
+    """Итог синхронизации с ERP для карточки сотрудника: ошибка последней задачи — `error`; задача
+    в очереди или выполняется — `pending`; доступ к ERP выдан и активен — `ok`; иначе
+    `not_applicable`."""
+    if error:
+        return "error"
+    if pending:
+        return "pending"
+    return "ok" if has_erp and is_active else "not_applicable"
 
 
 def access_audit_action(before: AccessState, after: AccessState) -> str | None:
