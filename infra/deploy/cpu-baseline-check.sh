@@ -38,9 +38,10 @@ while read -r image; do
   name="${image##*/}"; name="${name%%:*}"
   case "$name" in
     rt-crm-backend)  probe "$image" python -c "$py_native" ;;
+    rt-platform-bff) probe "$image" python -c "$py_native" ;;
     rt-erp-backend)  probe "$image" python -c "$py_native" ;;
     rt-litellm)      probe "$image" python -c "import numpy; import litellm.proxy.proxy_server" ;;
-    rt-crm-frontend|caddy) probe "$image" caddy version ;;
+    rt-crm-frontend|rt-platform-web|caddy) probe "$image" caddy version ;;
     rt-erp-frontend|rt-cabinet) probe "$image" nginx -v ;;
     redis)           probe "$image" redis-server --version ;;
     rustfs)          probe "$image" rustfs --version ;;

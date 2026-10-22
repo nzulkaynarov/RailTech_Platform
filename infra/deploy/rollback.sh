@@ -19,14 +19,22 @@ require_env_file
 export RT_IMAGE_TAG="$target"
 log "откат $cur → $target"
 compose "$rel" config -q
-compose "$rel" pull crm-api crm-web erp-backend erp-web cabinet-web || log "pull не удался — используются локальные образы"
+# Платформа (INF-P0-5) есть не в каждом релизе: откат на тег до неё не должен просить у compose несуществующие сервисы.
+pull_services=(crm-api crm-web erp-backend erp-web cabinet-web)
+smoke_domains=("$(env_get CRM_DOMAIN)" "$(env_get ERP_DOMAIN)" "$(env_get CABINET_DOMAIN)")
+services="$(compose "$rel" config --services)"
+if grep -qx platform-bff <<<"$services"; then
+  pull_services+=(platform-bff platform-web)
+  smoke_domains+=("$(env_get PLATFORM_DOMAIN)")
+fi
+compose "$rel" pull "${pull_services[@]}" || log "pull не удался — используются локальные образы"
 compose "$rel" up -d --remove-orphans
 
 state_set previous_tag "$cur"
 state_set current_tag "$target"
 ln -sfn "$rel" "$RT_ROOT/current"
 
-"$rel/infra/deploy/smoke.sh" --domains "$(env_get CRM_DOMAIN)" "$(env_get ERP_DOMAIN)" "$(env_get CABINET_DOMAIN)" \
+"$rel/infra/deploy/smoke.sh" --domains "${smoke_domains[@]}" \
   --resolve-ip 127.0.0.1 --insecure --retries 30 \
   || die "smoke после отката не прошёл — смотрите docker compose logs"
 log "откат на $target завершён (миграции БД не откатывались)"

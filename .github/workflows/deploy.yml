@@ -2,14 +2,15 @@
 # Вход: git-ref (по умолчанию main) и действие deploy | rollback. Окружение `production` (GitHub environment) —
 # защита вручную: required reviewers задаёт владелец. ci.yml не трогает.
 #
-# deploy:   сборка шести образов -> push в GHCR с тегом = полный git sha -> загрузка infra/ на VPS 1 по SSH ->
-#           deploy.sh на сервере (pg_dump-гейт, миграции, up) -> smoke трёх доменов с раннера.
+# deploy:   сборка восьми образов -> push в GHCR с тегом = полный git sha -> загрузка infra/ на VPS 1 по SSH ->
+#           deploy.sh на сервере (pg_dump-гейт, миграции, up) -> smoke четырёх доменов с раннера.
 # rollback: rollback.sh на VPS 1 — предыдущий тег (по state на сервере). Миграции БД не откатываются.
 #
 # Секреты environment `production` (значений здесь нет): DEPLOY_SSH_KEY (приватный ключ деплоя),
 # DEPLOY_KNOWN_HOSTS (строка(и) known_hosts VPS 1: `ssh-keyscan -t ed25519 <host>`, сверенные владельцем).
 # Variables environment `production`: DEPLOY_HOST (публичный IP/имя VPS 1), DEPLOY_USER, CRM_DOMAIN, ERP_DOMAIN,
-# CABINET_DOMAIN, TELEGRAM_BOT_USERNAME (необязательно). Секреты приложений лежат на сервере (/opt/rt/.env.prod), не здесь.
+# CABINET_DOMAIN, TELEGRAM_BOT_USERNAME (необязательно), PLATFORM_DOMAIN (необязательно: по умолчанию platform.railtech.uz; домен для
+# smoke с раннера — сам домен читают Caddy и deploy.sh из /opt/rt/.env.prod на сервере). Секреты приложений лежат на сервере (/opt/rt/.env.prod), не здесь.
 name: Deploy
 
 on:
@@ -50,10 +51,11 @@ jobs:
       CRM_DOMAIN: ${{ vars.CRM_DOMAIN }}
       ERP_DOMAIN: ${{ vars.ERP_DOMAIN }}
       CABINET_DOMAIN: ${{ vars.CABINET_DOMAIN }}
+      PLATFORM_DOMAIN: ${{ vars.PLATFORM_DOMAIN || 'platform.railtech.uz' }}
     steps:
       - name: Проверка переменных окружения production
         run: |
-          for v in DEPLOY_HOST DEPLOY_USER CRM_DOMAIN ERP_DOMAIN CABINET_DOMAIN; do
+          for v in DEPLOY_HOST DEPLOY_USER CRM_DOMAIN ERP_DOMAIN CABINET_DOMAIN PLATFORM_DOMAIN; do
             [ -n "${!v}" ] || { echo "::error::не задана переменная environment production: $v"; exit 1; }
           done
 
@@ -144,6 +146,26 @@ jobs:
           cache-from: type=gha,scope=litellm
           cache-to: type=gha,mode=max,scope=litellm
 
+      - name: Образ rt-platform-bff
+        uses: docker/build-push-action@v6
+        with:
+          context: apps/platform/bff
+          target: prod
+          push: true
+          tags: ghcr.io/${{ steps.ver.outputs.owner }}/rt-platform-bff:${{ steps.ver.outputs.tag }}
+          cache-from: type=gha,scope=platform-bff
+          cache-to: type=gha,mode=max,scope=platform-bff
+
+      - name: Образ rt-platform-web
+        uses: docker/build-push-action@v6
+        with:
+          context: apps/platform/web
+          target: prod
+          push: true
+          tags: ghcr.io/${{ steps.ver.outputs.owner }}/rt-platform-web:${{ steps.ver.outputs.tag }}
+          cache-from: type=gha,scope=platform-web
+          cache-to: type=gha,mode=max,scope=platform-web
+
       - name: SSH к VPS 1
         env:
           DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
@@ -188,9 +210,9 @@ jobs:
           # shellcheck disable=SC2029
           ssh app "bash /opt/rt/releases/$TAG/infra/deploy/deploy.sh $TAG"
 
-      - name: Smoke трёх доменов (с раннера)
+      - name: Smoke четырёх доменов (с раннера)
         run: |
-          bash infra/deploy/smoke.sh --domains "$CRM_DOMAIN" "$ERP_DOMAIN" "$CABINET_DOMAIN" --retries 12
+          bash infra/deploy/smoke.sh --domains "$CRM_DOMAIN" "$ERP_DOMAIN" "$CABINET_DOMAIN" "$PLATFORM_DOMAIN" --retries 12
 
       - name: Выход из GHCR на сервере
         if: always()
@@ -244,5 +266,7 @@ jobs:
         run: ssh app "bash /opt/rt/current/infra/deploy/rollback.sh"
 
       - name: Smoke трёх доменов (с раннера)
+        # Платформу проверяет rollback.sh на сервере (домены берёт из .env.prod, и только если она есть в релизе отката):
+        # откат на тег до Платформы не должен краснеть из-за её отсутствия.
         run: |
           bash infra/deploy/smoke.sh --domains "$CRM_DOMAIN" "$ERP_DOMAIN" "$CABINET_DOMAIN" --retries 12

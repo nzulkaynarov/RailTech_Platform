@@ -99,7 +99,7 @@ stage_infra() {
   RT_IMAGE_TAG=ci-only docker compose -f "$ROOT/infra/compose/db.yml" --env-file "$prod_env" config -q
   rm -f "$prod_env"
   docker run --rm \
-    -e ACME_EMAIL=ci@example.com -e CRM_DOMAIN=crm.example.org -e ERP_DOMAIN=erp.example.org -e CABINET_DOMAIN=cabinet.example.org \
+    -e ACME_EMAIL=ci@example.com -e CRM_DOMAIN=crm.example.org -e ERP_DOMAIN=erp.example.org -e CABINET_DOMAIN=cabinet.example.org -e PLATFORM_DOMAIN=platform.example.org \
     -v "$ROOT/infra/caddy/Caddyfile.prod:/etc/caddy/Caddyfile:ro" "$CADDY_IMAGE" \
     caddy validate --config /etc/caddy/Caddyfile
 }
