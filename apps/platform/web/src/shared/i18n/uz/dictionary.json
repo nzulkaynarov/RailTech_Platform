@@ -1,0 +1,66 @@
+{
+  "stage": {
+    "REQUEST": "Ariza",
+    "RESOLUTION": "Rezolyutsiya",
+    "CALCULATION": "Hisob-kitob",
+    "QUOTE": "TT",
+    "CONTRACT": "Shartnoma",
+    "PAYMENT": "To‘lov",
+    "DONE": "Bajarildi",
+    "LOST": "Rad etildi"
+  },
+  "status": {
+    "incoming": {
+      "registered": "Ro‘yxatdan o‘tgan",
+      "awaiting_resolution": "Rezolyutsiya kutilmoqda",
+      "resolved": "Rezolyutsiya qo‘yilgan",
+      "returned": "Qaytarilgan",
+      "rejected": "Rad etilgan"
+    },
+    "quote": {
+      "draft": "Qoralama",
+      "revision": "Qayta ishlashda",
+      "approved": "Ma’qullangan",
+      "sent": "Yuborilgan",
+      "accepted": "Mijoz qabul qilgan",
+      "declined": "Mijoz rad etgan",
+      "expired": "Muddati tugagan"
+    },
+    "contract": {
+      "draft": "Loyiha",
+      "agreed": "Mijoz bilan kelishilgan",
+      "issued": "Operatorda rasmiylashtirilgan",
+      "signed": "Imzolangan",
+      "rejected": "Rad etilgan"
+    },
+    "invoice": {
+      "issued": "Rasmiylashtirilgan",
+      "proof_received": "To‘lov topshirig‘i olingan",
+      "partially_paid": "Qisman to‘langan",
+      "paid": "To‘langan",
+      "overdue": "Muddati o‘tgan"
+    },
+    "act": {
+      "draft": "Loyiha",
+      "issued": "Chiqarilgan",
+      "signed": "Imzolangan",
+      "returned": "Qaytarilgan"
+    },
+    "memo": {
+      "pending": "Kelishuvda",
+      "approved": "Kelishilgan",
+      "rejected": "Rad etilgan",
+      "returned": "Qayta ishlashga qaytarilgan",
+      "passed_to_accountant": "Buxgalterga topshirilgan",
+      "paid": "To‘langan"
+    },
+    "lead": {
+      "new": "Yangi",
+      "dialog": "Suhbatda",
+      "wants_quote": "TT so‘ramoqda",
+      "no_answer": "Javobsiz",
+      "client": "Mijoz",
+      "lost": "Rad etildi"
+    }
+  }
+}

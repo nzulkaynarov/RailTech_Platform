@@ -214,11 +214,3 @@
 .pf-crumbs a:hover {
   color: #1677ff;
 }
-
-/* Вкладки бокового окна: линия под всей шапкой (вкладки + «›»), активная вкладка перекрывает её */
-.pf-panel-tabs .ant-tabs-nav {
-  margin: 0 0 -1px;
-}
-.pf-panel-tabs .ant-tabs-nav::before {
-  border-bottom: 0;
-}

@@ -1,0 +1,83 @@
+/* Раскладка витрины /dev/ui — только для проверки глазами; значения компонентов живут в shared/ui/ui.css. */
+.dev-page {
+  min-height: 100vh;
+  background: #f5f5f5;
+}
+.dev-main {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+.dev-section {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.dev-h2 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 24px;
+}
+.dev-card {
+  padding: 16px;
+}
+.dev-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 0;
+}
+.dev-columns {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+.dev-statuses {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 16px;
+}
+.dev-tags,
+.dev-tones {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 8px;
+}
+.dev-tones {
+  margin-top: 0;
+}
+.dev-caption {
+  margin-bottom: 8px;
+}
+.dev-numbers {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+}
+.dev-panel {
+  display: flex;
+  max-width: 100%;
+  overflow: hidden;
+  align-self: flex-start;
+  border: 1px solid #f0f0f0;
+  border-radius: 8px;
+  background: #fff;
+}
+@media (max-width: 800px) {
+  .dev-columns {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+@media (max-width: 480px) {
+  .dev-main {
+    padding: 12px;
+  }
+  .dev-card {
+    padding: 12px;
+  }
+}

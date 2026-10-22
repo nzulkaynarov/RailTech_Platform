@@ -14,6 +14,9 @@ import { AppShell } from "./shell/AppShell";
 
 export const routes: RouteObject[] = [
   { path: "/login", element: <LoginPage /> },
+  // Витрина общих компонентов (PLT-13): статическое условие `import.meta.env.DEV` — сборка отбрасывает ветку вместе с
+  // модулем, в прод-бандле витрины нет.
+  ...(import.meta.env.DEV ? [{ path: "/dev/ui", lazy: () => import("../dev/UiShowcase") }] : []),
   {
     element: <AuthGate />,
     children: [

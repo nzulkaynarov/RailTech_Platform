@@ -1,0 +1,460 @@
+/*
+ * Стили общих компонентов (PLT-13). Значения — макет v3 и 03-frontend.md §5; переменные --ant-* живут только внутри
+ * компонентов antd, поэтому здесь литералы токенов (#1668dc primary, #0958d9 текст на #e6f4ff, #595959 вторичный,
+ * #6e6e6e третий, #f0f0f0 разделитель, #d9d9d9 рамка).
+ */
+.pf-sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.pf-num {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.pf-hint {
+  color: #6e6e6e;
+  font-size: 12px;
+  line-height: 20px;
+}
+
+.pf-card {
+  background: #fff;
+  border: 1px solid #f0f0f0;
+  border-radius: 8px;
+}
+.pf-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 24px;
+  border-bottom: 1px solid #f0f0f0;
+}
+.pf-card-title {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 22px;
+}
+.pf-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.pf-link:focus-visible,
+.pf-counter:focus-visible {
+  outline: 2px solid #1668dc;
+  outline-offset: 2px;
+}
+
+/* --- RequestSteps: круг 24, подпись 13 px, соединитель 1 px --- */
+.pf-steps-box {
+  container-type: inline-size;
+  min-width: 0;
+  flex: 1 1 auto;
+}
+.pf-steps {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.pf-step {
+  position: relative;
+  flex: 1 1 0;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.pf-step:last-child {
+  flex: 0 0 auto;
+}
+.pf-step-num {
+  flex: 0 0 24px;
+  width: 24px;
+  height: 24px;
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #d9d9d9;
+  border-radius: 50%;
+  background: #fff;
+  color: #595959;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1;
+}
+.pf-step--done .pf-step-num {
+  background: #1668dc;
+  border-color: #1668dc;
+  color: #fff;
+}
+.pf-step--current .pf-step-num {
+  background: #e6f4ff;
+  border-color: #1668dc;
+  color: #0958d9;
+}
+.pf-step-label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 13px;
+  color: #1f1f1f;
+}
+.pf-step--upcoming .pf-step-label {
+  color: #595959;
+}
+.pf-step--current .pf-step-label {
+  color: #0958d9;
+  font-weight: 500;
+}
+.pf-step-line {
+  flex: 1 1 8px;
+  min-width: 8px;
+  height: 1px;
+  background: #f0f0f0;
+}
+.pf-step--done .pf-step-line {
+  background: #1668dc;
+}
+.pf-steps-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+/* Узко (< 640 px): подпись только у текущего шага, остальные — кружки с номером; имена остаются для скринридера */
+@container (max-width: 640px) {
+  .pf-steps {
+    gap: 4px;
+  }
+  .pf-step {
+    gap: 4px;
+  }
+  .pf-step-line {
+    flex-basis: 0;
+    min-width: 0;
+  }
+  .pf-step:not(.pf-step--current) .pf-step-label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    padding: 0;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+  }
+  .pf-step--current {
+    flex: 0 1 auto;
+  }
+}
+
+/* --- Consequence: «Что произойдёт» --- */
+.pf-consequence {
+  padding: 12px;
+  background: #fafafa;
+  border: 1px solid #f0f0f0;
+  border-radius: 8px;
+  font-size: 13px;
+  line-height: 20px;
+}
+.pf-consequence-title {
+  margin: 0 0 6px;
+  color: #6e6e6e;
+  font-size: 12px;
+  line-height: 20px;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+.pf-consequence-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.pf-consequence-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+.pf-consequence-step {
+  flex: 0 0 18px;
+  width: 18px;
+  height: 18px;
+  margin-top: 1px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: #e6f4ff;
+  color: #0958d9;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1;
+}
+
+/* --- QueueList: «Что сделать сейчас» --- */
+.pf-queue {
+  container-type: inline-size;
+}
+.pf-queue-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 14px 24px;
+  border-bottom: 1px solid #f0f0f0;
+}
+.pf-queue-row:last-child {
+  border-bottom: 0;
+}
+.pf-queue-body {
+  flex: 1 1 0;
+  min-width: 0;
+}
+.pf-queue-title {
+  font-weight: 500;
+}
+@container (max-width: 560px) {
+  .pf-queue-row {
+    flex-wrap: wrap;
+    gap: 8px 12px;
+    padding: 14px 16px;
+  }
+  .pf-queue-body {
+    flex-basis: 100%;
+    order: 2;
+  }
+  .pf-queue-row > :last-child {
+    order: 3;
+  }
+}
+
+/* --- CounterCard: сетка 4 колонки, карточка 16/20 --- */
+.pf-counters {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(168px, 1fr));
+  gap: 16px;
+}
+.pf-counter {
+  display: block;
+  padding: 16px 20px;
+  color: inherit;
+  text-decoration: none;
+}
+.pf-counter:hover {
+  border-color: #91caff;
+  color: inherit;
+}
+.pf-counter-label,
+.pf-counter-source {
+  display: block;
+  color: #6e6e6e;
+  font-size: 12px;
+  line-height: 20px;
+}
+.pf-counter-value {
+  display: block;
+  font-size: 28px;
+  font-weight: 600;
+  line-height: 36px;
+  font-variant-numeric: tabular-nums;
+}
+
+/* --- History: точка 16, вертикальная линия 2 px --- */
+.pf-history {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.pf-history-item {
+  position: relative;
+  display: flex;
+  gap: 12px;
+  padding-bottom: 16px;
+}
+.pf-history-item::before {
+  content: "";
+  position: absolute;
+  left: 7px;
+  top: 18px;
+  bottom: 0;
+  width: 2px;
+  background: #f0f0f0;
+}
+.pf-history-item:last-child {
+  padding-bottom: 0;
+}
+.pf-history-item:last-child::before {
+  display: none;
+}
+.pf-history-dot {
+  flex: 0 0 16px;
+  width: 16px;
+  height: 16px;
+  box-sizing: border-box;
+  margin-top: 3px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid #d9d9d9;
+  border-radius: 50%;
+  background: #fff;
+  color: #fff;
+}
+.pf-history-dot--done {
+  border-color: #52c41a;
+  background: #52c41a;
+}
+.pf-history-dot--waiting {
+  border-color: #1668dc;
+  background: #e6f4ff;
+}
+.pf-history-dot--waiting::after {
+  content: "";
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: #1668dc;
+}
+.pf-history-title {
+  line-height: 22px;
+}
+
+/* --- Checklist: строки 13 px, отступ 8/0 --- */
+.pf-check {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 0;
+  border-bottom: 1px solid #f0f0f0;
+  font-size: 13px;
+  line-height: 20px;
+}
+.pf-check:last-child {
+  border-bottom: 0;
+}
+.pf-check-chip {
+  flex: 0 0 22px;
+  width: 22px;
+  height: 22px;
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid;
+  border-radius: 4px;
+}
+.pf-check-label {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+/* --- DocRow: сетка 150px 1fr auto, отступ 14/24 --- */
+.pf-docs {
+  container-type: inline-size;
+}
+.pf-doc {
+  display: grid;
+  grid-template-columns: 150px 1fr auto;
+  gap: 16px;
+  align-items: center;
+  padding: 14px 24px;
+  border-bottom: 1px solid #f0f0f0;
+}
+.pf-doc:last-child {
+  border-bottom: 0;
+}
+.pf-doc-number {
+  font-weight: 500;
+}
+@container (max-width: 560px) {
+  .pf-doc {
+    grid-template-columns: 1fr;
+    gap: 8px;
+    padding: 14px 16px;
+  }
+  .pf-doc-action {
+    justify-self: start;
+  }
+}
+
+/* --- DefinitionList: подпись 130 px #595959 --- */
+.pf-dl {
+  display: grid;
+  grid-template-columns: 130px minmax(0, 1fr);
+  gap: 8px 16px;
+  margin: 0;
+}
+.pf-dl dt {
+  margin: 0;
+  color: #595959;
+}
+.pf-dl dd {
+  margin: 0;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+@media (max-width: 420px) {
+  .pf-dl {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0;
+  }
+  .pf-dl dd {
+    margin-bottom: 8px;
+  }
+}
+
+/* --- SourceBanner --- */
+.pf-source {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 16px;
+  background: #fffbe6;
+  border: 1px solid #ffe58f;
+  border-radius: 8px;
+  color: #1f1f1f;
+}
+.pf-source-icon {
+  flex: 0 0 auto;
+  display: inline-flex;
+  color: #874d00;
+}
+.pf-source-text {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+.pf-docnum {
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+/* --- ContextPanel: активная вкладка 500 (03-frontend.md §4); остальное — токены Tabs темы --- */
+.pf-panel-tabs .ant-tabs-tab-active .ant-tabs-tab-btn {
+  font-weight: 500;
+}
+.pf-panel {
+  position: relative;
+}
+.pf-panel-hide {
+  position: absolute;
+  top: 9px;
+  right: 8px;
+}

@@ -1,0 +1,34 @@
+{
+  "open": "Open",
+  "openItem": "Open: {{title}}",
+  "steps": {
+    "label": "Request path",
+    "labelNumber": "Request path {{number}}",
+    "done": "completed",
+    "current": "current step",
+    "upcoming": "upcoming",
+    "lostAt": "stopped at step {{step}}"
+  },
+  "consequence": {
+    "title": "What will happen"
+  },
+  "history": {
+    "done": "Done",
+    "waiting": "Pending",
+    "todo": "Not started"
+  },
+  "checklist": {
+    "ok": "Passed",
+    "fail": "Failed",
+    "pending": "Pending"
+  },
+  "definition": {
+    "empty": "not specified"
+  },
+  "source": {
+    "erp": "ERP is not responding, data is incomplete",
+    "crm": "CRM is not responding, data is incomplete",
+    "both": "CRM and ERP are not responding, data is incomplete",
+    "retry": "Retry"
+  }
+}
