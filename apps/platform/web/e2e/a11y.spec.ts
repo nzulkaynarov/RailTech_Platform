@@ -25,7 +25,15 @@ test.describe("axe и скриншоты", () => {
     test(`Моя очередь (директор) на ${String(width)}: axe без нарушений`, async ({ page }) => {
       await page.setViewportSize({ width, height: width === 390 ? 844 : 900 });
       await loginAndWait(page, "director@demo.example");
-      await expect(page.getByText("Решений от вас пока не требуется")).toBeVisible();
+      await expect(
+        page.getByRole("heading", { level: 2, name: "Что сделать сейчас" }),
+      ).toBeVisible();
+      await expect(page.getByText("Наложить резолюцию на письмо ВХ-104/26")).toBeVisible();
+      if (width >= 1200) {
+        await expect(
+          page.getByRole("listitem").filter({ hasText: "Демо Бухгалтерова" }),
+        ).toBeVisible();
+      }
       await expectNoViolations(page, `dashboard ${String(width)}`);
       await settledScreenshot(page, "dashboard");
 
@@ -95,7 +103,7 @@ test.describe("axe и скриншоты", () => {
     await page.setViewportSize({ width: 1440, height: 900 });
     await loginAndWait(page, "director@demo.example");
     await page.getByRole("button", { name: /^Центр уведомлений/ }).click();
-    await expect(page.getByText("Новых уведомлений нет").first()).toBeVisible();
+    await expect(page.getByText("КП-2026/118 ждёт вашего согласования")).toBeVisible();
     await expectNoViolations(page, "notifications popover");
   });
 });

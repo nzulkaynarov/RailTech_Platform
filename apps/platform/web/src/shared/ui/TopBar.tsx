@@ -1,8 +1,8 @@
 import { Button, Layout, Popover, theme } from "antd";
-import { type ReactNode, type Ref } from "react";
+import type { ReactNode } from "react";
 import { Link } from "react-router";
 
-import { BellIcon, ExpandRightIcon, PanelIcon, SearchIcon } from "./icons";
+import { BellIcon, ExpandRightIcon, PanelIcon } from "./icons";
 import "./shell.css";
 
 export interface Crumb {
@@ -15,10 +15,6 @@ export interface TopBarProps {
   crumbs: readonly Crumb[];
   labels: {
     crumbs: string;
-    search: string;
-    searchPlaceholder: string;
-    /** Короткая подсказка на узком экране */
-    searchShort: string;
     /** «Меню» — кнопка возврата свёрнутого подменю */
     menu: string;
     /** Полное имя кнопки: «Центр уведомлений» или «Центр уведомлений, N новых» */
@@ -31,12 +27,14 @@ export interface TopBarProps {
   };
   /** Кнопка «›› Меню» — подменю свёрнуто (desktop) или открывается Drawer (< 768) */
   onShowMenu?: () => void;
-  searchRef: Ref<HTMLInputElement>;
-  /** «⌘K» или «Ctrl K» */
-  shortcut: string;
+  /** Поле глобального поиска с результатами (`GlobalSearch`): ширина и ⌘K — его забота */
+  search: ReactNode;
   unread: number;
   bellContent: ReactNode;
   bellTitle: string;
+  /** Окно уведомлений открыто — состояние снаружи, чтобы закрыть его после перехода по уведомлению */
+  bellOpen: boolean;
+  onBellOpenChange: (open: boolean) => void;
   /** Нет бокового окна у раздела (403, 404) — кнопка «Панель» не показывается */
   hasPanel: boolean;
   panelOpen: boolean;
@@ -75,16 +73,17 @@ function Crumbs({ crumbs, label }: { crumbs: readonly Crumb[]; label: string }) 
   );
 }
 
-/** Шапка 56 px: крошки, поиск 380 (до 420) с ⌘K, колокольчик, «Скрыть панель / Панель» (03-frontend.md §4, зона 3). */
+/** Шапка 56 px: крошки, поиск (слот), колокольчик, «Скрыть панель / Панель» (03-frontend.md §4, зона 3). */
 export function TopBar({
   crumbs,
   labels,
   onShowMenu,
-  searchRef,
-  shortcut,
+  search,
   unread,
   bellContent,
   bellTitle,
+  bellOpen,
+  onBellOpenChange,
   hasPanel,
   panelOpen,
   onTogglePanel,
@@ -124,45 +123,14 @@ export function TopBar({
       ) : null}
       {mobile ? null : <Crumbs crumbs={crumbs} label={labels.crumbs} />}
       {mobile ? null : <div style={{ flex: 1 }} />}
-      <label
-        style={{
-          position: "relative",
-          width: mobile ? undefined : 380,
-          maxWidth: 420,
-          flex: mobile ? "1 1 0" : "0 1 380px",
-          minWidth: 0,
-        }}
-      >
-        <span className="pf-sr-only">{labels.search}</span>
-        <span
-          style={{
-            position: "absolute",
-            left: 10,
-            top: 8,
-            color: token.colorTextTertiary,
-            display: "flex",
-          }}
-        >
-          <SearchIcon />
-        </span>
-        <input
-          ref={searchRef}
-          type="search"
-          className="pf-search"
-          placeholder={mobile ? labels.searchShort : labels.searchPlaceholder}
-          autoComplete="off"
-        />
-        {mobile ? null : (
-          <kbd className="pf-kbd" aria-hidden="true">
-            {shortcut}
-          </kbd>
-        )}
-      </label>
+      {search}
       <Popover
         trigger="click"
         placement="bottomRight"
         title={bellTitle}
         content={bellContent}
+        open={bellOpen}
+        onOpenChange={onBellOpenChange}
         styles={{ body: { width: 400, maxWidth: "calc(100vw - 32px)" } }}
       >
         <button

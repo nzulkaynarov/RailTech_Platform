@@ -21,6 +21,34 @@
         "text": "Bu yerda «xabar → to‘lov» voronkasi, qotib qolgan loyihalar, debitorlik qarzi va davr bo‘yicha rad etish sabablari ko‘rinadi.",
         "action": "Mening navbatim"
       }
+    },
+    "queue": {
+      "title": "Hozir nima qilish kerak",
+      "cardsLabel": "Navbat hisoblagichlari",
+      "decisions": {
+        "one": "{{count}} qaror",
+        "few": "{{count}} qaror",
+        "many": "{{count}} qaror",
+        "other": "{{count}} qaror"
+      },
+      "due": {
+        "overdue": "muddati o‘tgan",
+        "today": "muddat bugun",
+        "tomorrow": "ertaga",
+        "memo": "xizmat xati",
+        "none": "muddatsiz",
+        "until": "{{date}} gacha"
+      },
+      "loading": "Navbat yuklanmoqda…",
+      "loadErrorTitle": "Navbatni yuklab bo‘lmadi",
+      "loadErrorText": "Server javob bermadi. Ulanishni tekshirib, qayta urinib ko‘ring.",
+      "retry": "Qayta urinish"
+    },
+    "activity": {
+      "label": "Bugungi voqealar",
+      "loading": "Lenta yuklanmoqda…",
+      "loadErrorTitle": "Lentani yuklab bo‘lmadi",
+      "loadErrorText": "Server javob bermadi. Birozdan keyin qayta urinib ko‘ring."
     }
   },
   "crm": {
