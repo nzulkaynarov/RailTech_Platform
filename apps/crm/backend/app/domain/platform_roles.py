@@ -7,7 +7,9 @@
   viewer), `platform_access = ["crm", "erp"]`, `erp_role_codes` (объединение) и права ERP поверх
   шаблонов ролей (объединение `erp_extra_permissions`);
 - пустой список — прежнее поведение: роли CRM, `platform_access` и `erp_role_codes` ведёт админ
-  вручную.
+  вручную;
+- точечные права CRM поверх базовой роли (`PLATFORM_ROLE_GRANTS`, CRM-01c): директор (базовая роль
+  `viewer`) читает сотрудников для «Admin · Оргструктура» Платформы.
 """
 
 from collections.abc import Iterable
@@ -25,17 +27,28 @@ from app.domain.platform_roles_generated import (
 )
 
 __all__ = [
+    "PLATFORM_ROLE_GRANTS",
     "DerivedAccess",
     "PlatformRoleCode",
     "derive_access",
     "erp_access_for",
     "normalize_platform_roles",
     "normalize_position",
+    "platform_grants",
 ]
 
 POSITION_MAX_LEN: Final = 120
 # Старшинство базовых ролей CRM при нескольких ролях Платформы.
 _CRM_RANK: Final[tuple[str, ...]] = ("admin", "manager", "viewer")
+
+
+# Права casbin `(ресурс, действие)`, которые роль Платформы даёт сверх базовой роли CRM (CRM-01c,
+# Q-PLT-15-1 п. 1). Источник — раздел `admin` матрицы `platform-rbac.yaml`: DIRECTOR = read (только
+# чтение сотрудников), ADMIN = full (и так `admin` CRM), остальные роли — hidden. Seed `viewer` не
+# расширяется: иначе SUPPLY и ENGINEER (тоже `viewer`) читали бы всех сотрудников.
+PLATFORM_ROLE_GRANTS: Final[dict[str, frozenset[tuple[str, str]]]] = {
+    "DIRECTOR": frozenset({("users", "read")}),
+}
 
 
 @dataclass(frozen=True, slots=True)
@@ -63,6 +76,11 @@ def normalize_position(value: str | None) -> str | None:
     if len(text) > POSITION_MAX_LEN:
         raise ValueError(f"position is longer than {POSITION_MAX_LEN} characters")
     return text or None
+
+
+def platform_grants(codes: Iterable[str]) -> frozenset[tuple[str, str]]:
+    """Права `(ресурс, действие)` поверх базовой роли CRM по ролям Платформы; чужие коды — пусто."""
+    return frozenset(g for code in codes for g in PLATFORM_ROLE_GRANTS.get(code, frozenset()))
 
 
 def derive_access(codes: Iterable[str]) -> DerivedAccess:
