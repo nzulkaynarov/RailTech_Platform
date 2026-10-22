@@ -183,9 +183,8 @@ class Handler(BaseHTTPRequestHandler):
 
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__.split("\n")[0])
-    # Слушаем все интерфейсы внутри контейнера стенда.
-    host_default = "0.0.0.0"
-    parser.add_argument("--host", default=host_default)
+    # Пустой адрес — все интерфейсы (внутри контейнера стенда).
+    parser.add_argument("--host", default="")
     parser.add_argument("--port", type=int, default=8081)
     args = parser.parse_args()
     ThreadingHTTPServer((args.host, args.port), Handler).serve_forever()
