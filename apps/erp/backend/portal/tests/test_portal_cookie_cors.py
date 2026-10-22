@@ -98,6 +98,9 @@ def load_settings(**env) -> dict:
         ERP_WEBHOOK_SECRET="test-webhook-secret",
         ERP_MCP_CONTEXT_KEY="test-mcp-context-key",
         PLATFORM_SSO_SECRET="test-sso-secret",
+        MINIO_ENDPOINT="http://rustfs:9000",  # вне DEBUG без S3 ERP не стартует (S0-1)
+        MINIO_ACCESS_KEY="test-access",
+        MINIO_SECRET_KEY="test-secret",
     )
     base.update(env)
     result = subprocess.run(

@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# Smoke доменов (аналог `make smoke` для прода): /health каждого — 200, /mcp снаружи — 404 (FIX-03).
+# Smoke доменов (аналог `make smoke` для прода): /health каждого — 200, /mcp, /api/integration и /admin ERP снаружи — 404
+# (FIX-03, S0-5).
 #   smoke.sh --domains crm.example erp.example cabinet.example [platform.example] [--resolve-ip IP] [--insecure] [--retries N]
 # Четвёртый домен — Платформа (INF-P0-5): вместо /health её BFF отдаёт /api/v1/health — ждём 200 и "status":"ok"
 # (CRM и ERP живы — `degraded` при живых CRM и ERP означает сбой связи BFF с ними или с Redis). Три домена — релиз до Платформы (откат).
@@ -56,6 +57,13 @@ attempt() {
   code="$(code_of "${domains[1]}" /mcp/erp/)"
   printf '  %-32s /mcp/erp/ → %s (ожидается 404)\n' "${domains[1]}" "$code"
   [[ "$code" == 404 ]] || ok=0
+  # Машинный API ERP и Django admin снаружи закрыты (S0-5): CRM ходит в ERP по сети compose, админ — SSH-туннелем.
+  local p
+  for p in /api/integration/v1/health /admin/; do
+    code="$(code_of "${domains[1]}" "$p")"
+    printf '  %-32s %s → %s (ожидается 404)\n' "${domains[1]}" "$p" "$code"
+    [[ "$code" == 404 ]] || ok=0
+  done
   [[ $ok -eq 1 ]]
 }
 

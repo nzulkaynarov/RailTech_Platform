@@ -40,18 +40,12 @@ from app.security.secrets_store import (
 from app.services.erp_events import (
     ErpEventsService,
     sign_v2,
-    verify_signature,
-    verify_signature_any,
     verify_signature_v2,
+    verify_signature_v2_any,
 )
 from tests.seam_events import signature_vector
 
 SECRET = "erp-webhook-secret-xyz-42"
-
-
-def _sign(secret: str, body: bytes) -> str:
-    hex_digest = hmac.new(secret.encode("utf-8"), body, hashlib.sha256).hexdigest()
-    return f"sha256={hex_digest}"
 
 
 def _sample_envelope(
@@ -87,22 +81,32 @@ def _sample_envelope(
 # ---------------------------------------------------------------------------
 
 
+_EID = "0b6f3a52-3f4e-4c1d-9a55-5d1c4a7e8b10"
+_TS = "2026-10-21T10:00:00Z"
+
+
 def test_verify_signature_valid() -> None:
     body = b'{"hello": "world"}'
-    sig = _sign(SECRET, body)
-    assert verify_signature(SECRET, body, sig) is True
+    sig = sign_v2(SECRET, _EID, _TS, body)
+    assert verify_signature_v2(SECRET, _EID, _TS, body, sig) is True
 
 
 def test_verify_signature_tampered_body() -> None:
-    body = b'{"hello": "world"}'
-    sig = _sign(SECRET, body)
-    assert verify_signature(SECRET, b'{"hello": "tampered"}', sig) is False
+    sig = sign_v2(SECRET, _EID, _TS, b'{"hello": "world"}')
+    assert verify_signature_v2(SECRET, _EID, _TS, b'{"hello": "tampered"}', sig) is False
 
 
 def test_verify_signature_wrong_secret() -> None:
     body = b'{"hello": "world"}'
-    sig = _sign(SECRET, body)
-    assert verify_signature("wrong-secret", body, sig) is False
+    sig = sign_v2(SECRET, _EID, _TS, body)
+    assert verify_signature_v2("wrong-secret", _EID, _TS, body, sig) is False
+
+
+def test_verify_signature_is_bound_to_event_id_and_timestamp() -> None:
+    body = b'{"hello": "world"}'
+    sig = sign_v2(SECRET, _EID, _TS, body)
+    assert verify_signature_v2(SECRET, str(uuid.uuid4()), _TS, body, sig) is False
+    assert verify_signature_v2(SECRET, _EID, "2026-10-21T10:00:01Z", body, sig) is False
 
 
 @pytest.mark.parametrize(
@@ -116,7 +120,7 @@ def test_verify_signature_wrong_secret() -> None:
     ],
 )
 def test_verify_signature_invalid_formats(sec: str, head: str | None) -> None:
-    assert verify_signature(sec, b"test", head) is False
+    assert verify_signature_v2(sec, _EID, _TS, b"test", head) is False
 
 
 # ---------------------------------------------------------------------------
@@ -314,7 +318,6 @@ def _receiver(
     session: _MockSession | None = None,
     enqueued: list[str] | None = None,
     enqueue_error: Exception | None = None,
-    legacy: bool = True,
 ) -> tuple[ErpEventsService, _MockSession]:
     session = session if session is not None else _MockSession()
 
@@ -329,16 +332,30 @@ def _receiver(
         _mock_session_factory(session),
         _DummySettingsService(),  # type: ignore[arg-type]
         _DummyStore(secret),
-        Settings(erp_webhook_secret=secret or "", erp_webhook_sign_legacy=legacy),
+        Settings(erp_webhook_secret=secret or ""),
         _no_bot,
         enqueue_task=enqueue,
     )
     return service, session
 
 
-def _signed(body: dict[str, Any] | bytes) -> tuple[bytes, str]:
-    raw = body if isinstance(body, bytes) else json.dumps(body).encode("utf-8")
-    return raw, _sign(SECRET, raw)
+def _raw(body: dict[str, Any] | bytes) -> bytes:
+    return body if isinstance(body, bytes) else json.dumps(body).encode("utf-8")
+
+
+async def _deliver(
+    service: ErpEventsService,
+    event_id: str,
+    event_type: str | None,
+    raw: bytes,
+    *,
+    secret: str = SECRET,
+) -> tuple[bool, str]:
+    """Запрос, подписанный как ERP: схема v2 под этот `event_id` и свежую метку `X-Timestamp`."""
+    stamp = _stamp()
+    return await service.receive_event(
+        event_id, event_type, sign_v2(secret, event_id, stamp, raw), raw, timestamp=stamp
+    )
 
 
 @pytest.mark.asyncio
@@ -374,10 +391,10 @@ async def test_receive_event_new_and_duplicate() -> None:
     enqueued: list[str] = []
     service, session = _receiver(enqueued=enqueued)
     event_id = str(uuid.uuid4())
-    raw, sig = _signed(_sample_envelope())
+    raw = _raw(_sample_envelope())
 
     # Первый вызов — создание и постановка в очередь
-    assert await service.receive_event(event_id, "deal.stage_changed", sig, raw) == (
+    assert await _deliver(service, event_id, "deal.stage_changed", raw) == (
         False,
         "enqueued",
     )
@@ -385,7 +402,7 @@ async def test_receive_event_new_and_duplicate() -> None:
     assert session.events[event_id].status == "received"
 
     # Второй вызов с тем же event_id — duplicate без повторной очереди
-    assert await service.receive_event(event_id, "deal.stage_changed", sig, raw) == (
+    assert await _deliver(service, event_id, "deal.stage_changed", raw) == (
         True,
         "duplicate",
     )
@@ -397,9 +414,9 @@ async def test_a_failed_enqueue_keeps_the_row_and_still_answers_200() -> None:
     """FIX-33 (I-10): сбой очереди не теряет событие; строка `received` ждёт сборщика."""
     service, session = _receiver(enqueue_error=OSError("queue down"))
     event_id = str(uuid.uuid4())
-    raw, sig = _signed(_sample_envelope())
+    raw = _raw(_sample_envelope())
 
-    assert await service.receive_event(event_id, "deal.stage_changed", sig, raw) == (
+    assert await _deliver(service, event_id, "deal.stage_changed", raw) == (
         False,
         "stored",
     )
@@ -439,9 +456,9 @@ async def test_a_body_we_cannot_accept_is_recorded_as_rejected_and_answered_200(
     enqueued: list[str] = []
     service, session = _receiver(enqueued=enqueued)
     event_id = str(uuid.uuid4())
-    raw, sig = _signed(body)
+    raw = _raw(body)
 
-    assert await service.receive_event(event_id, header, sig, raw) == (False, "rejected")
+    assert await _deliver(service, event_id, header, raw) == (False, "rejected")
     row = session.events[event_id]
     assert row.status == "rejected"
     assert reason in (row.error or "")
@@ -455,9 +472,9 @@ async def test_an_unknown_event_type_is_skipped_with_200_not_422() -> None:
     enqueued: list[str] = []
     service, session = _receiver(enqueued=enqueued)
     event_id = str(uuid.uuid4())
-    raw, sig = _signed({**_sample_envelope(), "event": "warehouse.exploded"})
+    raw = _raw({**_sample_envelope(), "event": "warehouse.exploded"})
 
-    assert await service.receive_event(event_id, "warehouse.exploded", sig, raw) == (
+    assert await _deliver(service, event_id, "warehouse.exploded", raw) == (
         False,
         "skipped",
     )
@@ -480,9 +497,9 @@ async def test_the_reader_is_tolerant_to_new_fields_everywhere() -> None:
     enqueued: list[str] = []
     service, session = _receiver(enqueued=enqueued)
     event_id = str(uuid.uuid4())
-    raw, sig = _signed(data)
+    raw = _raw(data)
 
-    assert await service.receive_event(event_id, "deal.stage_changed", sig, raw) == (
+    assert await _deliver(service, event_id, "deal.stage_changed", raw) == (
         False,
         "enqueued",
     )
@@ -494,22 +511,22 @@ async def test_the_reader_is_tolerant_to_new_fields_everywhere() -> None:
 async def test_a_header_that_disagrees_with_the_body_is_rejected_not_422() -> None:
     service, session = _receiver()
     event_id = str(uuid.uuid4())
-    raw, sig = _signed(_sample_envelope(event="deal.stage_changed"))
+    raw = _raw(_sample_envelope(event="deal.stage_changed"))
 
-    assert await service.receive_event(event_id, "quote.sent", sig, raw) == (False, "rejected")
+    assert await _deliver(service, event_id, "quote.sent", raw) == (False, "rejected")
     assert "header mismatch" in (session.events[event_id].error or "")
 
 
 @pytest.mark.asyncio
 async def test_headers_are_validated_only_after_the_signature() -> None:
     service, _ = _receiver()
-    raw, sig = _signed(_sample_envelope())
+    raw = _raw(_sample_envelope())
 
     with pytest.raises(ValidationFailedError) as bad_id:
-        await service.receive_event("not-a-uuid", "deal.stage_changed", sig, raw)
+        await _deliver(service, "not-a-uuid", "deal.stage_changed", raw)
     assert bad_id.value.details["field"] == "X-Event-Id"
     with pytest.raises(ValidationFailedError) as no_type:
-        await service.receive_event(str(uuid.uuid4()), None, sig, raw)
+        await _deliver(service, str(uuid.uuid4()), None, raw)
     assert no_type.value.details["field"] == "X-Event-Type"
 
 
@@ -531,12 +548,14 @@ def api_client() -> Iterator[tuple[TestClient, _MockSession]]:
         yield test_client, session
 
 
-def _headers(event_id: str, event_type: str, signature: str | None) -> dict[str, str]:
-    headers = {
-        "X-Event-Id": event_id,
-        "X-Event-Type": event_type,
-        "X-Timestamp": "2026-10-16T12:00:00Z",
-    }
+def _headers(
+    event_id: str, event_type: str, raw: bytes | None, *, signature: str | None = None
+) -> dict[str, str]:
+    """Заголовки запроса ERP: подпись v2 по `raw`; `raw=None` — без подписи; `signature` — своя."""
+    stamp = _stamp()
+    headers = {"X-Event-Id": event_id, "X-Event-Type": event_type, "X-Timestamp": stamp}
+    if signature is None and raw is not None:
+        signature = sign_v2(SECRET, event_id, stamp, raw)
     if signature is not None:
         headers["X-Signature"] = signature
     return headers
@@ -555,8 +574,8 @@ def test_api_unsigned_request_is_401_whatever_the_body_and_headers(
 
 def test_api_invalid_event_id_not_uuid(api_client: tuple[TestClient, _MockSession]) -> None:
     client, _ = api_client
-    raw, sig = _signed(_sample_envelope())
-    res = client.post(URL, headers=_headers("not-a-uuid", "deal.stage_changed", sig), content=raw)
+    raw = _raw(_sample_envelope())
+    res = client.post(URL, headers=_headers("not-a-uuid", "deal.stage_changed", raw), content=raw)
     assert res.status_code == 422
     assert res.json()["details"]["field"] == "X-Event-Id"
 
@@ -565,27 +584,26 @@ def test_api_mismatched_event_type_is_200_and_recorded_as_rejected(
     api_client: tuple[TestClient, _MockSession],
 ) -> None:
     client, session = api_client
-    raw, sig = _signed(_sample_envelope(event="deal.stage_changed"))
+    raw = _raw(_sample_envelope(event="deal.stage_changed"))
     eid = str(uuid.uuid4())
-    res = client.post(URL, headers=_headers(eid, "quote.sent", sig), content=raw)
+    res = client.post(URL, headers=_headers(eid, "quote.sent", raw), content=raw)
     assert res.status_code == 200
     assert session.events[eid].status == "rejected"
 
 
 def test_api_invalid_signature(api_client: tuple[TestClient, _MockSession]) -> None:
     client, _ = api_client
-    raw, _ = _signed(_sample_envelope())
-    res = client.post(
-        URL, headers=_headers(str(uuid.uuid4()), "deal.stage_changed", "sha256=wrong"), content=raw
-    )
+    raw = _raw(_sample_envelope())
+    headers = _headers(str(uuid.uuid4()), "deal.stage_changed", raw, signature="sha256=wrong")
+    res = client.post(URL, headers=headers, content=raw)
     assert res.status_code == 401
 
 
 def test_api_success_and_idempotency(api_client: tuple[TestClient, _MockSession]) -> None:
     client, session = api_client
-    raw, sig = _signed(_sample_envelope(event="deal.stage_changed"))
+    raw = _raw(_sample_envelope(event="deal.stage_changed"))
     eid = str(uuid.uuid4())
-    headers = _headers(eid, "deal.stage_changed", sig)
+    headers = _headers(eid, "deal.stage_changed", raw)
 
     res = client.post(URL, headers=headers, content=raw)
     assert (res.status_code, res.json()) == (200, {"status": "ok", "duplicate": False})
@@ -1230,18 +1248,20 @@ def _rotating_receiver(
     return service, session
 
 
-def _signed_with(secret: str, body: dict[str, Any]) -> tuple[bytes, str]:
-    raw = json.dumps(body).encode("utf-8")
-    return raw, _sign(secret, raw)
-
-
 def test_verify_signature_any_accepts_each_listed_secret_and_only_them() -> None:
     body = b'{"hello": "world"}'
-    assert verify_signature_any([NEW_SECRET, OLD_SECRET], body, _sign(OLD_SECRET, body))
-    assert verify_signature_any([NEW_SECRET, OLD_SECRET], body, _sign(NEW_SECRET, body))
-    assert not verify_signature_any([NEW_SECRET, OLD_SECRET], body, _sign("third", body))
-    assert not verify_signature_any([], body, _sign(NEW_SECRET, body))
-    assert not verify_signature_any([NEW_SECRET], body, None)
+    both = [NEW_SECRET, OLD_SECRET]
+
+    def sig(secret: str) -> str:
+        return sign_v2(secret, _EID, _TS, body)
+
+    assert verify_signature_v2_any(both, _EID, _TS, body, sig(OLD_SECRET))
+    assert verify_signature_v2_any(both, _EID, _TS, body, sig(NEW_SECRET))
+    assert not verify_signature_v2_any(both, _EID, _TS, body, sig("third"))
+    assert not verify_signature_v2_any([], _EID, _TS, body, sig(NEW_SECRET))
+    assert not verify_signature_v2_any([NEW_SECRET], _EID, _TS, body, None)
+    assert not verify_signature_v2_any(both, None, _TS, body, sig(NEW_SECRET))
+    assert not verify_signature_v2_any(both, _EID, None, body, sig(NEW_SECRET))
 
 
 @pytest.mark.asyncio
@@ -1251,49 +1271,45 @@ async def test_old_secret_is_accepted_while_it_is_the_previous_one_and_refused_o
     """Ротация без простоя: ERP ещё подписывает старым — принимается; сняли предыдущий — 401."""
     service, _ = _rotating_receiver(_DummyStore(NEW_SECRET, previous=OLD_SECRET))
     for secret in (OLD_SECRET, NEW_SECRET):
-        raw, sig = _signed_with(
-            secret, _sample_envelope(payload={"from": "request", "to": "quoting", "n": secret})
-        )
-        assert await service.receive_event(str(uuid.uuid4()), "deal.stage_changed", sig, raw) == (
-            False,
-            "enqueued",
-        )
+        raw = _raw(_sample_envelope(payload={"from": "request", "to": "quoting", "n": secret}))
+        assert await _deliver(
+            service, str(uuid.uuid4()), "deal.stage_changed", raw, secret=secret
+        ) == (False, "enqueued")
 
     removed, _ = _rotating_receiver(_DummyStore(NEW_SECRET, previous=None))
-    raw, sig = _signed_with(OLD_SECRET, _sample_envelope())
+    raw = _raw(_sample_envelope())
     with pytest.raises(AuthError):
-        await removed.receive_event(str(uuid.uuid4()), "deal.stage_changed", sig, raw)
-    raw, sig = _signed_with(NEW_SECRET, _sample_envelope())
-    assert (await removed.receive_event(str(uuid.uuid4()), "deal.stage_changed", sig, raw))[
-        1
-    ] == "enqueued"
+        await _deliver(removed, str(uuid.uuid4()), "deal.stage_changed", raw, secret=OLD_SECRET)
+    assert (
+        await _deliver(removed, str(uuid.uuid4()), "deal.stage_changed", raw, secret=NEW_SECRET)
+    )[1] == "enqueued"
 
 
 @pytest.mark.asyncio
 async def test_a_secret_list_in_env_works_without_the_connector() -> None:
     service, _ = _rotating_receiver(_DummyStore(), env_secret=f"{NEW_SECRET},{OLD_SECRET}")
     for secret in (OLD_SECRET, NEW_SECRET):
-        raw, sig = _signed_with(
-            secret, _sample_envelope(payload={"from": "request", "to": "quoting", "n": secret})
-        )
-        assert (await service.receive_event(str(uuid.uuid4()), "deal.stage_changed", sig, raw))[
-            1
-        ] == "enqueued"
-    raw, sig = _signed_with("a-secret-nobody-listed", _sample_envelope())
+        raw = _raw(_sample_envelope(payload={"from": "request", "to": "quoting", "n": secret}))
+        assert (
+            await _deliver(service, str(uuid.uuid4()), "deal.stage_changed", raw, secret=secret)
+        )[1] == "enqueued"
+    raw = _raw(_sample_envelope())
     with pytest.raises(AuthError):
-        await service.receive_event(str(uuid.uuid4()), "deal.stage_changed", sig, raw)
+        await _deliver(
+            service, str(uuid.uuid4()), "deal.stage_changed", raw, secret="a-secret-nobody-listed"
+        )
 
 
 @pytest.mark.asyncio
 async def test_the_same_body_under_another_event_id_is_a_replay_and_is_rejected_with_200() -> None:
-    """X-Event-Id и X-Timestamp не подписаны: перехваченное тело под новым id — повтор (FIX-35)."""
+    """Тело под новым X-Event-Id (и с верной подписью v2) — повтор, а не новое событие (FIX-35)."""
     enqueued: list[str] = []
     service, session = _receiver(enqueued=enqueued)
-    raw, sig = _signed(_sample_envelope())
+    raw = _raw(_sample_envelope())
     first, replay = str(uuid.uuid4()), str(uuid.uuid4())
 
-    assert await service.receive_event(first, "deal.stage_changed", sig, raw) == (False, "enqueued")
-    assert await service.receive_event(replay, "deal.stage_changed", sig, raw) == (
+    assert await _deliver(service, first, "deal.stage_changed", raw) == (False, "enqueued")
+    assert await _deliver(service, replay, "deal.stage_changed", raw) == (
         False,
         "rejected",
     )
@@ -1304,15 +1320,15 @@ async def test_the_same_body_under_another_event_id_is_a_replay_and_is_rejected_
     assert row.processed_at is not None
     assert enqueued == [first], "повтор не ставится в очередь"
     # тот же id — по-прежнему обычный дубль, а не повтор
-    assert await service.receive_event(first, "deal.stage_changed", sig, raw) == (True, "duplicate")
+    assert await _deliver(service, first, "deal.stage_changed", raw) == (True, "duplicate")
 
 
 @pytest.mark.asyncio
 async def test_different_bodies_are_never_taken_for_a_replay() -> None:
     service, _ = _receiver()
     for stage in ("quoting", "quote_sent", "accepted"):
-        raw, sig = _signed(_sample_envelope(payload={"from": "request", "to": stage}))
-        assert (await service.receive_event(str(uuid.uuid4()), "deal.stage_changed", sig, raw))[
+        raw = _raw(_sample_envelope(payload={"from": "request", "to": stage}))
+        assert (await _deliver(service, str(uuid.uuid4()), "deal.stage_changed", raw))[
             1
         ] == "enqueued"
 
@@ -1320,8 +1336,8 @@ async def test_different_bodies_are_never_taken_for_a_replay() -> None:
 @pytest.mark.parametrize("header", ["sha256=" + "я" * 64, "sha256=é", "sha256=\u0000\u00ff"])
 def test_a_non_ascii_signature_is_just_invalid_not_a_crash(header: str) -> None:
     """`hmac.compare_digest` на не-ASCII строке бросает TypeError — ответ был бы 500, а не 401."""
-    assert verify_signature(SECRET, b"{}", header) is False
-    assert verify_signature_any([SECRET, NEW_SECRET], b"{}", header) is False
+    assert verify_signature_v2(SECRET, _EID, _TS, b"{}", header) is False
+    assert verify_signature_v2_any([SECRET, NEW_SECRET], _EID, _TS, b"{}", header) is False
 
 
 @pytest.mark.asyncio
@@ -1365,18 +1381,19 @@ def test_the_common_vector_gives_the_same_signature_as_the_erp_side() -> None:
         vec["signature_v2"]
         == "sha256=" + hmac.new(vec["secret"].encode(), signed, hashlib.sha256).hexdigest()
     )
-    # Старая подпись из вектора проходит старую проверку и не проходит v2.
-    assert verify_signature(vec["secret"], raw, vec["signature_legacy"])
+    # Старая подпись из вектора (HMAC только тела) схему v2 не проходит (S0-5).
     assert not verify_signature_v2(
         vec["secret"], vec["event_id"], vec["timestamp"], raw, vec["signature_legacy"]
     )
-    assert not verify_signature(vec["secret"], raw, vec["signature_v2"])
+    assert not verify_signature_v2_any(
+        [vec["secret"]], vec["event_id"], vec["timestamp"], raw, vec["signature_legacy"]
+    )
 
 
 @pytest.mark.asyncio
 async def test_a_v2_signed_event_is_accepted() -> None:
     enqueued: list[str] = []
-    service, session = _receiver(enqueued=enqueued, legacy=False)
+    service, session = _receiver(enqueued=enqueued)
     event_id, stamp, raw = str(uuid.uuid4()), _stamp(), _body()
 
     assert await service.receive_event(
@@ -1387,10 +1404,9 @@ async def test_a_v2_signed_event_is_accepted() -> None:
 
 
 @pytest.mark.asyncio
-@pytest.mark.parametrize("legacy", [True, False])
-async def test_a_body_intercepted_and_resent_under_a_new_event_id_is_refused(legacy: bool) -> None:
-    """Перехват: подпись v2 привязана к X-Event-Id — под чужим id не сходится (и в переходе)."""
-    service, session = _receiver(legacy=legacy)
+async def test_a_body_intercepted_and_resent_under_a_new_event_id_is_refused() -> None:
+    """Перехват: подпись v2 привязана к X-Event-Id — под чужим id не сходится."""
+    service, session = _receiver()
     original, stamp, raw = str(uuid.uuid4()), _stamp(), _body()
     signature = _v2(original, stamp, raw)
     assert await service.receive_event(
@@ -1424,7 +1440,7 @@ async def test_an_old_or_future_timestamp_is_recorded_as_rejected_and_answered_2
     offset_s: float,
 ) -> None:
     enqueued: list[str] = []
-    service, session = _receiver(enqueued=enqueued, legacy=False)
+    service, session = _receiver(enqueued=enqueued)
     event_id, stamp, raw = str(uuid.uuid4()), _stamp(offset_s), _body()
 
     assert await service.receive_event(
@@ -1441,7 +1457,7 @@ async def test_an_old_or_future_timestamp_is_recorded_as_rejected_and_answered_2
 @pytest.mark.asyncio
 @pytest.mark.parametrize("offset_s", [-290, 0, 290])
 async def test_a_timestamp_inside_the_window_is_accepted(offset_s: float) -> None:
-    service, _ = _receiver(legacy=False)
+    service, _ = _receiver()
     event_id, stamp, raw = str(uuid.uuid4()), _stamp(offset_s), _body()
     assert (
         await service.receive_event(
@@ -1456,7 +1472,7 @@ async def test_an_unreadable_or_naive_timestamp_with_a_valid_v2_signature_is_rej
     stamp: str,
 ) -> None:
     """Метка не читается или без пояса — окно проверить нельзя: 200 и `rejected`, не 401."""
-    service, session = _receiver(legacy=False)
+    service, session = _receiver()
     event_id, raw = str(uuid.uuid4()), _body()
     assert await service.receive_event(
         event_id, "deal.stage_changed", _v2(event_id, stamp, raw), raw, timestamp=stamp
@@ -1479,7 +1495,7 @@ async def test_a_stale_code_event_is_rejected_and_the_code_is_not_kept_or_delive
         ),
     }
     raw = json.dumps(code_body).encode()
-    service, session = _receiver(legacy=False)
+    service, session = _receiver()
     event_id, stamp = str(uuid.uuid4()), _stamp(-1000)
 
     assert await service.receive_event(
@@ -1492,50 +1508,22 @@ async def test_a_stale_code_event_is_rejected_and_the_code_is_not_kept_or_delive
     assert "739104" not in (row.error or "")
 
 
-@pytest.mark.asyncio
-async def test_both_schemes_are_accepted_during_the_transition() -> None:
-    """ERP_WEBHOOK_SIGN_LEGACY=true (по умолчанию): v2 и старая подпись только тела принимаются."""
-    enqueued: list[str] = []
-    service, session = _receiver(enqueued=enqueued)  # legacy по умолчанию
-    assert Settings().erp_webhook_sign_legacy is True
-
-    new_id, stamp, raw_new = str(uuid.uuid4()), _stamp(), _body(client_id=1)
-    assert (
-        await service.receive_event(
-            new_id, "deal.stage_changed", _v2(new_id, stamp, raw_new), raw_new, timestamp=stamp
-        )
-    )[1] == "enqueued"
-
-    old_id, raw_old = str(uuid.uuid4()), _body(client_id=2)
-    # Старая ERP: X-Timestamp = occurred_at (любой давности) — окно к ней не применяется.
-    assert (
-        await service.receive_event(
-            old_id,
-            "deal.stage_changed",
-            _sign(SECRET, raw_old),
-            raw_old,
-            timestamp="2026-10-16T12:00:00Z",
-        )
-    )[1] == "enqueued"
-    raw_bare = _body(client_id=3)
-    assert (
-        await service.receive_event(
-            str(uuid.uuid4()), "deal.stage_changed", _sign(SECRET, raw_bare), raw_bare
-        )
-    )[1] == "enqueued", "и без X-Timestamp вовсе"
-    assert {new_id, old_id} <= set(session.events)
+def _legacy_signature(secret: str, raw: bytes) -> str:
+    """Подпись схемы v1 (HMAC только тела) по эталонной формуле; приёмник её не знает (S0-5)."""
+    return "sha256=" + hmac.new(secret.encode(), raw, hashlib.sha256).hexdigest()
 
 
 @pytest.mark.asyncio
-async def test_with_legacy_off_the_old_signature_is_refused_and_v2_still_works() -> None:
-    service, session = _receiver(legacy=False)
+async def test_the_old_signature_is_refused_and_v2_works() -> None:
+    service, session = _receiver()
     event_id, raw = str(uuid.uuid4()), _body()
-    with pytest.raises(AuthError):
-        await service.receive_event(
-            event_id, "deal.stage_changed", _sign(SECRET, raw), raw, timestamp=_stamp()
-        )
-    with pytest.raises(AuthError):
-        await service.receive_event(event_id, "deal.stage_changed", _sign(SECRET, raw), raw)
+    legacy = _legacy_signature(SECRET, raw)
+    # Верная по старой схеме подпись: с меткой времени, со старой меткой ERP и вовсе без метки.
+    for stamp in (_stamp(), "2026-10-16T12:00:00Z", None):
+        with pytest.raises(AuthError):
+            await service.receive_event(
+                event_id, "deal.stage_changed", legacy, raw, timestamp=stamp
+            )
     assert session.events == {}
     stamp = _stamp()
     assert (
@@ -1543,6 +1531,30 @@ async def test_with_legacy_off_the_old_signature_is_refused_and_v2_still_works()
             event_id, "deal.stage_changed", _v2(event_id, stamp, raw), raw, timestamp=stamp
         )
     )[1] == "enqueued"
+
+
+def test_api_old_signature_is_401_and_v2_is_accepted(
+    api_client: tuple[TestClient, _MockSession],
+) -> None:
+    """HTTP: верная подпись v1 (только тела) — 401, ничего не записано; v2 тем же телом — 200."""
+    client, session = api_client
+    raw, eid = _body(), str(uuid.uuid4())
+    old = _headers(eid, "deal.stage_changed", raw, signature=_legacy_signature(SECRET, raw))
+    assert client.post(URL, headers=old, content=raw).status_code == 401
+    assert session.events == {}
+
+    res = client.post(URL, headers=_headers(eid, "deal.stage_changed", raw), content=raw)
+    assert (res.status_code, res.json()) == (200, {"status": "ok", "duplicate": False})
+    assert eid in session.events
+
+
+def test_the_legacy_setting_is_gone_and_a_leftover_env_variable_is_harmless(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Переменная ERP_WEBHOOK_SIGN_LEGACY из старого `.env` не ломает старт и ничего не включает."""
+    assert "erp_webhook_sign_legacy" not in Settings.model_fields
+    monkeypatch.setenv("ERP_WEBHOOK_SIGN_LEGACY", "true")
+    assert not hasattr(Settings(), "erp_webhook_sign_legacy")
 
 
 @pytest.mark.asyncio
@@ -1568,7 +1580,7 @@ async def test_v2_works_with_the_previous_secret_during_a_rotation() -> None:
 async def test_a_fresh_retry_of_an_event_rejected_for_its_timestamp_is_accepted() -> None:
     """Часы ERP ушли и вернулись: отклонённое по метке событие не теряется при ретрае."""
     enqueued: list[str] = []
-    service, session = _receiver(enqueued=enqueued, legacy=False)
+    service, session = _receiver(enqueued=enqueued)
     event_id, raw = str(uuid.uuid4()), _body()
     stale = _stamp(-1000)
     assert (

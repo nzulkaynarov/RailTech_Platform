@@ -2,7 +2,8 @@
 # Тест M5-INF-01c: схема событий ERP → CRM доезжает до сервисов ERP в проде.
 #  1. prod.yml монтирует packages/contracts/events.schema.json read-only в /packages/contracts/ сервисов ERP;
 #  2. файл входит в release.tgz (deploy.yml);
-#  3. deploy.sh отказывается деплоить релиз без этого файла до pull и миграций.
+#  3. deploy.sh отказывается деплоить релиз без этого файла до pull и миграций;
+#  4. (S0-1) файлы ERP — в RustFS: тома медиа нет, у сервисов ERP заданы MINIO_* и бакеты erp-*.
 # Секретов не требует: env — копия .env.prod.example с заглушками. Запуск: bash этот-файл
 set -euo pipefail
 here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -22,10 +23,19 @@ for svc in erp-backend erp-worker erp-worker-ai erp-beat erp-mcp; do
        and (.source | endswith("/packages/contracts/events.schema.json")))] | length' "$tmp/prod.json")"
   [[ "$ok" == 1 ]] || fail "$svc: нет read-only bind-монтирования events.schema.json в $target"
 done
-# Воркеры не потеряли том медиа (слияние volumes с base.yml).
-for svc in erp-worker erp-worker-ai; do
-  jq -e --arg s "$svc" '[.services[$s].volumes[]? | select(.target == "/app/media")] | length == 1' "$tmp/prod.json" >/dev/null \
-    || fail "$svc: пропал том /app/media"
+# Файлы ERP — в RustFS (S0-1): тома медиа нет, адрес и бакеты заданы всем сервисам ERP, где работают с файлами.
+jq -e '(.volumes | has("erp_media") | not)' "$tmp/prod.json" >/dev/null || fail "в prod-конфиге остался том erp_media"
+for svc in erp-backend erp-worker erp-worker-ai erp-beat erp-mcp; do
+  jq -e --arg s "$svc" '[.services[$s].volumes[]? | select(.target == "/app/media")] | length == 0' "$tmp/prod.json" >/dev/null \
+    || fail "$svc: смонтирован /app/media — файлы ERP должны лежать в RustFS, не на диске"
+  jq -e --arg s "$svc" '.services[$s].environment as $e
+      | $e.MINIO_ENDPOINT == "http://rustfs:9000" and ($e.MINIO_ACCESS_KEY | length > 0) and ($e.MINIO_SECRET_KEY | length > 0)
+        and $e.MINIO_PRIVATE_BUCKET == "erp-private" and $e.MINIO_PUBLIC_BUCKET == "erp-public" and $e.MINIO_TEMP_BUCKET == "erp-temp"' \
+    "$tmp/prod.json" >/dev/null || fail "$svc: не заданы MINIO_* (RustFS, бакеты erp-private/erp-public/erp-temp)"
+done
+buckets="$(jq -r '.services["s3-init"].environment.S3_BUCKETS' "$tmp/prod.json")"
+for bucket in erp-private erp-public erp-temp; do
+  [[ " $buckets " == *" $bucket "* ]] || fail "s3-init не создаёт бакет $bucket"
 done
 
 # 2. Файл в архиве релиза.

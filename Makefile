@@ -67,7 +67,7 @@ up-obs: _compose-check ## То же + Langfuse (профиль observability): l
 	$(COMPOSE) --profile observability up -d --build --renew-anon-volumes
 
 .PHONY: smoke
-smoke: ## /health доменов CRM, ERP, Cabinet и Платформы (+ / Платформы) через Caddy (порт HTTP_PORT из .env)
+smoke: ## /health доменов CRM, ERP, Cabinet и Платформы (+ / Платформы), 404 на /api/integration и /admin ERP — через Caddy (порт HTTP_PORT из .env)
 	@port=$${HTTP_PORT:-$(or $(HTTP_PORT),80)}; ok=1; \
 	for host in crm erp cabinet; do \
 	  code=$$(curl -sL -o /dev/null -w '%{http_code}' --resolve $$host.localhost:$$port:127.0.0.1 http://$$host.localhost:$$port/health); \
@@ -77,6 +77,10 @@ smoke: ## /health доменов CRM, ERP, Cabinet и Платформы (+ / П
 	printf '  %-18s /api/v1/health → %s\n' platform.localhost $$code; [ "$$code" = 200 ] || ok=0; \
 	code=$$(curl -sL -o /dev/null -w '%{http_code}' --resolve platform.localhost:$$port:127.0.0.1 http://platform.localhost:$$port/); \
 	printf '  %-18s / → %s\n' platform.localhost $$code; [ "$$code" = 200 ] || ok=0; \
+	for path in /api/integration/v1/health /admin/; do \
+	  code=$$(curl -s -o /dev/null -w '%{http_code}' --resolve erp.localhost:$$port:127.0.0.1 http://erp.localhost:$$port$$path); \
+	  printf '  %-18s %s → %s (ожидается 404)\n' erp.localhost $$path $$code; [ "$$code" = 404 ] || ok=0; \
+	done; \
 	[ $$ok = 1 ] && echo "smoke: ok" || { echo "smoke: FAIL"; exit 1; }
 
 .PHONY: caddy-reload
@@ -125,6 +129,7 @@ deploy-check: ## Проверка конфигурации прода без з�
 	@bash $(INFRA)/deploy/tests/crm-bot-test.sh
 	@bash $(INFRA)/deploy/tests/cpu-baseline-test.sh
 	@bash $(INFRA)/deploy/tests/platform-prod-test.sh
+	@bash $(INFRA)/deploy/tests/caddy-edge-test.sh
 	@bash $(INFRA)/deploy/tests/wal-archive-test.sh
 	@bash $(INFRA)/deploy/tests/walg-schedule-test.sh
 	@docker run --rm -v "$(CURDIR):/repo" -w /repo rhysd/actionlint:latest .github/workflows/deploy.yml && echo "actionlint: ok"

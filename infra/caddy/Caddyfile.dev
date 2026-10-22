@@ -77,17 +77,28 @@ http://crm.localhost {
 	}
 }
 
+# Машинный API ERP (/api/integration — вызовы CRM и коннекторов) и Django admin (/admin) — только внутри сети compose
+# (`http://erp-backend:8000`), снаружи 404 на всех доменах (S0-5). Матчер — по префиксу пути `/admin`: `/api/v1/admin/...`
+# (API шаблонов писем и др.) не затрагивается. Администратору в Django admin — SSH-туннель (docs/runbooks/deploy.md).
+(no_erp_internal) {
+	@erp_internal path /api/integration /api/integration/* /admin /admin/*
+	handle @erp_internal {
+		respond 404
+	}
+}
+
 # ─── ERP — бэк-офис (apps/erp; копия B2B с M1-ERP-01) ────────────────────────────────────
 http://erp.localhost {
 	import access_log
 	import request_id
+	import no_erp_internal
 	# erp-mcp — отдельный процесс, только для агента CRM внутри сети (crm-* → http://erp-mcp:8104/mcp/erp), наружу не
 	# публикуется: иначе контекст агента подбирают снаружи (FIX-03, аудит S-9). 404, а не SPA.
 	@mcp path /mcp /mcp/*
 	handle @mcp {
 		respond 404
 	}
-	@backend path /api/* /admin/* /admin /ws/* /static/* /media/* /health /health/
+	@backend path /api/* /ws/* /static/* /media/* /health /health/
 	handle @backend {
 		reverse_proxy erp-backend:8000
 	}

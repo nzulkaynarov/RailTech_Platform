@@ -194,13 +194,13 @@ def test_extract_endpoint_guards(settings, monkeypatch):
 @pytest.mark.django_db
 def test_extract_endpoint_enqueues_202(settings, monkeypatch):
     """ARCH-01: a valid upload with a visible reference is queued on Celery — 202 {task_id}
-    + an owned AIJob row. The document is staged in default_storage and only its KEY travels
+    + an owned AIJob row. The document is staged in the erp-temp bucket and only its KEY travels
     in the payload (bytes must never go through the Redis broker); expected values are
     resolved + JSON-serialized in the view (never the ORM)."""
-    from django.core.files.storage import default_storage
     from django.core.files.uploadedfile import SimpleUploadedFile
     from rest_framework.test import APIClient
 
+    import core.storage as core_storage
     from sourcing.models import AIJob
 
     settings.AI_IMPORT_ENABLED = True
@@ -235,8 +235,11 @@ def test_extract_endpoint_enqueues_202(settings, monkeypatch):
     # Bytes staged in storage, not shipped through the broker.
     assert "file_b64" not in payload
     assert payload["file_key"].startswith("ai_extract_tmp/")
+    from django.core.files.storage import default_storage
+
+    assert not default_storage.exists(payload["file_key"]), "staging не должен лежать в default_storage (S0-1)"
     try:
-        with default_storage.open(payload["file_key"]) as staged:
+        with core_storage.get_temp_storage().open(payload["file_key"]) as staged:
             assert staged.read() == b"%PDF-1.4 stub"
     finally:
-        default_storage.delete(payload["file_key"])
+        core_storage.get_temp_storage().delete(payload["file_key"])

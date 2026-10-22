@@ -147,8 +147,8 @@ class ContractViewSet(RoleGatedViewMixin, OptimisticLockingMixin, viewsets.Model
         return qs.filter(_billing_visibility_q(user, self.request, deal_path="deal")).distinct()
 
     # Private PDFs are streamed through these authenticated endpoints (get_object
-    # enforces tenant scope) — NOT via the raw /media URL, which 404s on prod
-    # (local FileSystemStorage, no MinIO). See core/file_streaming.py.
+    # enforces tenant scope) — NOT via the raw /media URL, which is 404 for private files
+    # (RustFS is not exposed to the browser). See core/file_streaming.py.
     @action(detail=True, methods=["get"], url_path="download-pdf")
     def download_pdf(self, request, pk=None):
         return _stream_or_render_pdf(self.get_object())
