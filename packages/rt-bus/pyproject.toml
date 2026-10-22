@@ -1,0 +1,92 @@
+[project]
+name = "rt-bus"
+version = "0.1.0"
+description = "rt_bus: шина событий RailTech Platform v1 — конверт CloudEvents, outbox, inbox, ретранслятор, доставка, DLQ, предохранитель, подпись (ADR-0014)"
+readme = "README.md"
+requires-python = ">=3.12"
+# Ядро — без фреймворков: ERP ставит пакет pip'ом рядом с Django и Celery, CRM и BFF — uv по пути.
+dependencies = [
+    "httpx>=0.28.1",
+    "jsonschema>=4.26.0",
+    "pyyaml>=6.0.3",
+    "referencing>=0.36.2",
+]
+
+[project.optional-dependencies]
+# Адаптер SQLAlchemy 2 async: драйвер выбирает сервис (CRM — psycopg 3, можно asyncpg).
+sqlalchemy = ["sqlalchemy[asyncio]>=2.0.36"]
+django = ["django>=5.2"]
+fastapi = ["fastapi>=0.115.0"]
+
+[dependency-groups]
+dev = [
+    "asyncpg>=0.31.0",
+    "celery>=5.6.3",
+    # Как в ERP (apps/erp/backend/requirements.txt): Django 6.0 и psycopg2.
+    "django>=6.0.8,<6.1",
+    "django-stubs>=5.2.0",
+    "fastapi>=0.143.0",
+    "mypy>=2.4.0",
+    "procrastinate>=3.10.0",
+    "psycopg[binary]>=3.3.6",
+    "psycopg2-binary>=2.9.12",
+    "pytest>=9.1.1",
+    "pytest-asyncio>=1.4.0",
+    "ruff>=0.17.0",
+    "sqlalchemy[asyncio]>=2.1.4",
+    "structlog>=26.1.0",
+    "types-jsonschema>=4.26.0",
+    "types-pyyaml>=6.0.12.20260906",
+]
+
+[build-system]
+requires = ["hatchling>=1.27"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["rt_bus"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+addopts = ["-ra", "--strict-markers"]
+markers = ["pg: тест против настоящего PostgreSQL (RT_BUS_TEST_DATABASE_URL)"]
+filterwarnings = ["error"]
+
+[tool.ruff]
+line-length = 120
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "W", "F", "I", "B", "UP", "SIM", "S", "BLE", "C4", "PT", "RUF", "ASYNC", "T20", "N"]
+ignore = ["RUF001", "RUF002", "RUF003", "SIM905"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["S101", "S105", "S106", "S107", "S311", "ASYNC240"]
+"rt_bus/django/migrations/**" = ["E501", "RUF012"]
+# Тексты SQL собираются из констант-имён таблиц и статусов, пользовательских данных в них нет (только параметры).
+"rt_bus/sql.py" = ["S608"]
+"rt_bus/django/models.py" = ["RUF012"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["rt_bus", "tests"]
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+mypy_path = "."
+explicit_package_bases = true
+plugins = ["mypy_django_plugin.main"]
+
+[tool.django-stubs]
+django_settings_module = "tests.django_settings"
+
+[[tool.mypy.overrides]]
+module = ["celery.*", "psycopg2.*"]
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = ["rt_bus.django.migrations.*"]
+ignore_errors = true

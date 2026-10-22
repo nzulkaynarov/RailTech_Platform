@@ -1,0 +1,41 @@
+# PostgreSQL 17 + pgvector + WAL-G (VPS 2, S0-3): один образ для сервиса `postgres` (archive_command → wal-g wal-push),
+# бокового сервиса `walg` (ежедневная базовая копия, срок хранения, выгрузка во внешнее S3, ежемесячная проверка
+# восстановления) и одноразового контейнера восстановления (infra/db/restore-pitr.sh).
+# Почему свой образ, а не боковой контейнер с бинарём: archive_command и restore_command исполняет сам PostgreSQL,
+# поэтому wal-g обязан лежать в его контейнере; боковой контейнер потребовал бы общий том с бинарём и ещё одну точку отказа.
+#
+# Бинарь WAL-G — официальный релиз (сборка Ubuntu 22.04, glibc 2.35 <= 2.36 образа bookworm), закреплён версией и SHA-256.
+# Go-сборка GOAMD64=v1, libsodium определяет возможности CPU во время работы: бинарь стартует на «QEMU Virtual CPU 2.5+»
+# без x86-64-v2 (docs/runbooks/servers.md, «CPU прод-VPS»); проверено qemu-x86_64 -cpu qemu64 — docs/runbooks/backup-pitr.md.
+# Обновление версии: поменять WALG_VERSION и обе суммы (https://github.com/wal-g/wal-g/releases, файл wal-g-pg-22.04-<arch>.tar.gz).
+FROM pgvector/pgvector:0.8.7-pg17
+
+ARG WALG_VERSION=v3.0.9
+ARG WALG_SHA256_AMD64=4f03ee4679db7f660bfd1b2b8291ac5df247cd2ec48074b60c112f4897299f24
+ARG WALG_SHA256_ARM64=20191a37ad091a880c25f4cc907e6f0deb7f12bdd8a53fd62dbc7fcbf2eac712
+
+RUN set -eux; \
+    apt-get update; \
+    apt-get install -y --no-install-recommends ca-certificates curl jq rclone; \
+    case "$(dpkg --print-architecture)" in \
+      amd64) arch=amd64;   sum="$WALG_SHA256_AMD64" ;; \
+      arm64) arch=aarch64; sum="$WALG_SHA256_ARM64" ;; \
+      *) echo "архитектура не поддерживается" >&2; exit 1 ;; \
+    esac; \
+    curl -fsSL -o /tmp/wal-g.tar.gz "https://github.com/wal-g/wal-g/releases/download/${WALG_VERSION}/wal-g-pg-22.04-${arch}.tar.gz"; \
+    echo "${sum}  /tmp/wal-g.tar.gz" | sha256sum -c -; \
+    tar -xzf /tmp/wal-g.tar.gz -C /tmp; \
+    install -m 0755 "/tmp/wal-g-pg-22.04-${arch}" /usr/local/bin/wal-g; \
+    rm -f /tmp/wal-g.tar.gz "/tmp/wal-g-pg-22.04-${arch}"; \
+    apt-get purge -y --auto-remove curl; \
+    rm -rf /var/lib/apt/lists/*; \
+    wal-g --version
+
+COPY rt-walg.sh /usr/local/bin/rt-walg
+COPY rt-pitr.sh /usr/local/bin/rt-pitr
+COPY walg-daemon.sh /usr/local/bin/walg-daemon
+COPY walg-healthcheck.sh /usr/local/bin/walg-healthcheck
+# Каталоги боковой проверки восстановления и состояния: тома наследуют владельца postgres (uid 999).
+RUN chmod 0755 /usr/local/bin/rt-walg /usr/local/bin/rt-pitr /usr/local/bin/walg-daemon /usr/local/bin/walg-healthcheck \
+    && install -d -o postgres -g postgres -m 0700 /var/lib/walg-restore \
+    && install -d -o postgres -g postgres -m 0755 /walg-state
