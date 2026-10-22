@@ -47,6 +47,7 @@ export function RoleCheckboxes({ value, onChange, disabled, note }: RoleCheckbox
                 onChange(ROLES.filter((r) => next.includes(r)));
               }}
             >
+              {/* TODO(ADR-0012): список ролей и их названия — из `GET /admin/roles` (роли администратор создаёт сам), не `ROLES` и i18n по коду. */}
               <span className="pf-role-name">{t(`shell:roles.${role}`)}</span>
               <span className="pf-role-modules">{moduleNames(role)}</span>
             </Checkbox>

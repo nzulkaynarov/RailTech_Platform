@@ -61,6 +61,7 @@ export function AvatarMenu({ me, placement }: { me: Me; placement: "topLeft" | "
             children: [
               choice("role:all", t("avatar.allRoles"), selectedRole === "all"),
               ...me.roles.map((role) =>
+                // TODO(ADR-0012): название роли — из данных `/me`, а не из i18n по коду роли.
                 choice(`role:${role}`, t(`roles.${role}`), selectedRole === role),
               ),
             ],
@@ -189,6 +190,7 @@ export function AvatarMenu({ me, placement }: { me: Me; placement: "topLeft" | "
           </Descriptions.Item>
           <Descriptions.Item label={t("profile.roles")}>
             {me.roles.map((role) => (
+              // TODO(ADR-0012): название роли — из данных `/me`, а не из i18n по коду роли.
               <Tag key={role}>{t(`roles.${role}`)}</Tag>
             ))}
           </Descriptions.Item>

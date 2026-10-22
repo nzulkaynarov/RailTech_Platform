@@ -51,6 +51,40 @@ def lead_id_of(text: str) -> int | None:
     return int(match.group(1)) if match else None
 
 
+# Латинская запись префикса бизнес-номера (раскладка клавиатуры «ZV»), O-4 отчёта гейта P1.
+_NUMBER_PREFIXES = {
+    "зв": "ЗВ",
+    "zv": "ЗВ",
+    "пр": "ПР",
+    "pr": "ПР",
+    "кп": "КП",
+    "kp": "КП",
+}
+_NUMBER_QUERY = re.compile(
+    r"(?P<prefix>[^\W\d_]{2})[\s\-–—/]*(?P<year>\d{4})[\s\-–—/]*(?P<seq>\d{1,6})"
+)
+
+
+def number_query(text: str) -> str | None:
+    """Запрос, похожий на бизнес-номер, в каноническом виде: `zv-2026-1` -> `ЗВ-2026-001`,
+    `KP 2026 118` -> `КП-2026/118`. Не номер — None.
+
+    Это нормализация строки поиска, а не разбор идентификатора: `id` сделки из номера не
+    извлекается (docs/QUESTIONS.md, Q-PLT-14-1). Номер для показа составляется с тремя знаками
+    (`deal_number`), поэтому `1` дополняется до `001`; запись без нулей ищется и как есть — так
+    «зв-2026-10» по-прежнему находит `ЗВ-2026-104`.
+    """
+    match = _NUMBER_QUERY.fullmatch(text.strip())
+    if match is None:
+        return None
+    prefix = _NUMBER_PREFIXES.get(match["prefix"].casefold())
+    if prefix is None:
+        return None
+    if prefix == "КП":
+        return f"{prefix}-{match['year']}/{match['seq']}"
+    return f"{prefix}-{match['year']}-{match['seq'].zfill(3)}"
+
+
 def deal_step(deal: dict[str, Any]) -> DealStep:
     if deal.get("execution_complete") is True:
         return "DONE"

@@ -97,7 +97,9 @@ export const feedHandlers = [
   http.get("*/activity/today", () => {
     const roles = viewRoles(null);
     if (!roles) return expired();
-    const items = roles.view.includes("ADMIN") || erpDown() ? [] : activityToday();
+    // Журнал ERP открыт администратору платформы: BFF отдаёт ему ту же ленту, без служебных записей входа (`sso.*`),
+    // с человекочитаемыми строками (QA-P1-D-1).
+    const items = erpDown() ? [] : activityToday();
     return HttpResponse.json({ items, sources: sources() });
   }),
 

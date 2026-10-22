@@ -336,7 +336,7 @@
       "consequence": {
         "modules": "Xodim quyidagi modullarni ko'radi: {{modules}}.",
         "lost": "Quyidagi modullarni ko'rmaydi: {{modules}}.",
-        "applied": "O'zgarishlar darhol qo'llanadi; CRM jurnalida kim va qachon kiritgani qoladi.",
+        "applied": "O'zgarishlar: CRM va ERP da — darhol; xodimning menyusi bir daqiqa ichida yoki keyingi kirishda yangilanadi. CRM jurnalida kim va qachon kiritgani qoladi.",
         "position": "Kartochkadagi lavozim: «{{position}}».",
         "positionCleared": "Kartochkadagi lavozim tozalanadi.",
         "self": "Siz o'z rollaringizni o'zgartiryapsiz: menyu saqlangandan keyin yangilanadi.",

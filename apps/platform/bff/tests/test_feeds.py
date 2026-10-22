@@ -447,6 +447,42 @@ async def test_activity_from_the_platform_log_for_admins(
     assert fb.calls(fb.erp["timeline"]) == 0
 
 
+async def test_activity_drops_service_events_and_never_shows_a_raw_code(
+    web: Web, fb: FeedBackends, check: ContractChecker
+) -> None:
+    m = fb.m
+    fb.state["activity_logs"] = {
+        "results": [
+            # вход сотрудника через SSO и отзыв сессий: служебные, в ленте их нет
+            log(1, m.ago(minutes=1), "sso.exchange", event_code="sso.exchange"),
+            log(2, m.ago(minutes=2), "sso.revoke", event_code="sso.revoke"),
+            log(3, m.ago(minutes=3), "auth.login", event_code=""),
+            # код есть в таблице: берётся человеческая строка таблицы
+            log(4, m.ago(minutes=4), "quote.sent", event_code="quote.sent"),
+            # кода в таблице нет, но ERP прислал фразу: показывается она, без служебной метки
+            log(5, m.ago(minutes=5), "[FORCE_ADMIN] Договор отменён", event_code="x.unknown"),
+            # неизвестный машинный код: нейтральная фраза, не сырой код
+            log(6, m.ago(minutes=6), "some.new_event", event_code="some.new_event"),
+            log(7, m.ago(minutes=7), "", event_code=""),
+            log(8, m.ago(minutes=8), "admin.thing.updated", event_code="admin.thing.updated"),
+        ]
+    }
+    await web.login(["DIRECTOR"])
+
+    response = await web.client.get("/api/v1/activity/today")
+
+    check(response, "/activity/today", "get")
+    assert [i["text"] for i in response.json()["items"]] == [
+        "КП отправлено клиенту",
+        "Договор отменён",
+        "Действие в ERP",
+        "Действие в ERP",
+        "Административное действие в ERP",
+    ]
+    for raw in ("sso.", "auth.", "some.new_event", "[FORCE_ADMIN]"):
+        assert raw not in response.text
+
+
 async def test_activity_falls_back_to_deal_timelines_when_log_is_closed(
     web: Web, fb: FeedBackends, check: ContractChecker
 ) -> None:
@@ -739,6 +775,61 @@ async def test_search_finds_a_deal_by_its_number(
     assert hit["object"]["path"].startswith("/crm/requests?request=")
     assert hit["title"] == "ЗВ-2027-104 · Стрелочные приводы"
     assert hit["subtitle"] == "ООО «Демо-Депо» · Расчёт"
+
+
+@pytest.mark.parametrize(
+    "query",
+    ["ЗВ-2027-104", "зв-2027-104", "ZV-2027-104", "zv 2027 104", "ZV2027104", "ЗВ-2027-104 "],
+)
+async def test_search_normalizes_latin_and_spacing_of_a_request_number(
+    web: Web, fb: FeedBackends, query: str
+) -> None:
+    search_data(fb)
+    fb.state["documents"] = {"results": []}
+    await web.login(["MANAGER"])
+
+    response = await web.client.get("/api/v1/search", params={"q": query})
+
+    numbers = [h["object"]["number"] for g in response.json()["groups"] for h in g["items"]]
+    assert "ЗВ-2027-104" in numbers
+
+
+async def test_search_finds_a_number_without_leading_zeros(web: Web, fb: FeedBackends) -> None:
+    search_data(fb)
+    fb.state["deals"]["results"] = [
+        deal(1, "SOURCING", title="Стрелочные приводы", created="2026-03-01T00:00:00Z"),
+        deal(104, "SOURCING", title="Рельсовые скрепления", created="2026-03-01T00:00:00Z"),
+        deal(7, "CLOSED_WON", title="Шпалы", created="2026-03-01T00:00:00Z"),
+    ]
+    fb.state["documents"] = {"results": []}
+    fb.state["leads"] = {"items": [], "total": 0}
+    fb.state["clients"] = []
+    await web.login(["MANAGER", "DIRECTOR"])
+
+    async def found(query: str) -> list[str]:
+        response = await web.client.get("/api/v1/search", params={"q": query})
+        return [h["object"]["number"] for g in response.json()["groups"] for h in g["items"]]
+
+    # ЗВ-2026-1 — это ЗВ-2026-001 (номер составляется с тремя знаками), а не любой номер на «1…»
+    assert "ЗВ-2026-001" in await found("ЗВ-2026-1")
+    assert "ЗВ-2026-001" in await found("zv-2026-1")
+    # неполный номер по-прежнему ищется как начало: «зв-2026-10» находит ЗВ-2026-104
+    assert await found("зв-2026-10") == ["ЗВ-2026-104"]
+    # латинский «PR» — проект (с шага «Договор»)
+    assert await found("PR-2026-7") == ["ПР-2026-007"]
+    # id из номера BFF не разбирает: запись без сделки с таким номером ничего не находит
+    assert await found("ZV-2026-999") == []
+
+
+async def test_search_sends_the_canonical_number_to_document_search(
+    web: Web, fb: FeedBackends
+) -> None:
+    search_data(fb)
+    await web.login(["DIRECTOR"])
+
+    await web.client.get("/api/v1/search", params={"q": "kp-2026-118"})
+
+    assert fb.query(fb.erp["documents"])["q"] == "КП-2026/118"
 
 
 async def test_search_by_lead_number_asks_crm_for_that_lead(

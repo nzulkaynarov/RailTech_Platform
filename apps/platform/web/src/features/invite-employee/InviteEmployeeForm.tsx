@@ -32,7 +32,8 @@ export interface InviteEmployeeFormProps {
 /**
  * Приглашение по почте (SPEC-v3 §7.6): имя, почта, должность, роли. BFF создаёт пользователя в CRM с ролями и просит
  * CRM отправить письмо с временным паролем; пароль в браузер не приходит. Главная кнопка — «Отправить приглашение»
- * с блоком «Что произойдёт».
+ * с блоком «Что произойдёт». Форма не хранит прошлое приглашение: после результата она сбрасывается, а при повторном
+ * открытии (`OrgPage` задаёт `key` по ключу навигации) создаётся заново.
  */
 export function InviteEmployeeForm({ onInvited, onOpenCard, onCancel }: InviteEmployeeFormProps) {
   const { t } = useTranslation("modules");
@@ -44,8 +45,17 @@ export function InviteEmployeeForm({ onInvited, onOpenCard, onCancel }: InviteEm
   const [notSent, setNotSent] = useState<{ id: string; crmDown: boolean } | null>(null);
   const invite = useEmployeeInvite((employee) => {
     void message.success(t("admin.org.invite.sent", { email: employee.email }));
+    reset();
     onInvited(employee);
   });
+
+  /** После результата форма пустая: поля, роли и ошибки не переходят в следующее приглашение (QA-P1-D-3). */
+  function reset() {
+    form.resetFields();
+    setRoles([]);
+    setRolesTouched(false);
+    setNotSent(null);
+  }
 
   const submit = (values: Values) => {
     setRolesTouched(true);
@@ -66,6 +76,8 @@ export function InviteEmployeeForm({ onInvited, onOpenCard, onCancel }: InviteEm
             form.setFields([{ name: "email", errors: [t("admin.org.errors.EMAIL_EXISTS")] }]);
           } else if (error instanceof ApiError && error.details["invite"] === "not_sent") {
             const id = error.details["employee_id"];
+            // Сотрудник уже создан: повторная отправка с теми же данными даст «такая почта уже есть».
+            reset();
             setNotSent({
               id: typeof id === "string" ? id : "",
               crmDown: error.code === "BACKEND_UNAVAILABLE",

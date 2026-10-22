@@ -33,6 +33,8 @@ export function sortRoles<T extends RoleCode>(
  * Что CRM выдаст в ERP набору ролей Платформы — из сгенерированной карты `erp_role_codes`: объединение ролей ERP по
  * порядку ролей; ADMIN — суперпользователь ERP (роли ERP ему не нужны, остальные роли в ERP не добавляют ничего).
  */
+// TODO(ADR-0012): карта роль Платформы -> роли ERP (`ERP_ROLE_CODES`) и особый случай `ADMIN` заменить на данные роли
+// из `/admin/roles` (права ERP вычисляются из матрицы возможностей); здесь останутся только ADMIN и DIRECTOR.
 export function erpAccessOfRoles(roles: readonly RoleCode[]): { admin: boolean; codes: string[] } {
   if (roles.includes("ADMIN")) return { admin: true, codes: [] };
   const codes: string[] = [];

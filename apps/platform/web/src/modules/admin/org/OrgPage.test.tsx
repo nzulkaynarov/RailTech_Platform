@@ -210,6 +210,24 @@ describe("Admin · Оргструктура (экран целиком на MSW)
     endSession();
   });
 
+  it("повторное «Пригласить сотрудника» открывает пустую форму (QA-P1-D-3)", async () => {
+    signIn("admin@demo.example");
+    const { router } = renderAt("/admin/org?invite=open&panel=open");
+    const panel = await panelEl();
+    fireEvent.change(await within(panel).findByLabelText("Имя и фамилия"), {
+      target: { value: "Черновик Приглашения" },
+    });
+    fireEvent.click(within(panel).getByRole("checkbox", { name: /^Директор/ }));
+    expect(within(panel).getByLabelText("Имя и фамилия")).toHaveValue("Черновик Приглашения");
+
+    await router.navigate("/admin/org?invite=open&panel=open");
+
+    await waitFor(() => {
+      expect(within(panel).getByLabelText("Имя и фамилия")).toHaveValue("");
+    });
+    for (const box of within(panel).getAllByRole("checkbox")) expect(box).not.toBeChecked();
+  });
+
   it("директору ?invite=open ничего не открывает", async () => {
     signIn("director@demo.example");
     renderAt("/admin/org?invite=open&panel=open");
