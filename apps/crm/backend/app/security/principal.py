@@ -12,6 +12,8 @@ class Principal:
     roles: tuple[str, ...]
     must_change_password: bool = False
     ip: str | None = None
+    # Роли Платформы (CRM-01): дают точечные права поверх `roles` (CRM-01c), см. `platform_grants`.
+    platform_roles: tuple[str, ...] = ()
 
     @property
     def is_admin(self) -> bool:
