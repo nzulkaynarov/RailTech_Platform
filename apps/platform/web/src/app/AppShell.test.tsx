@@ -242,7 +242,7 @@ describe("каркас на 1440", () => {
     signIn("director@demo.example");
     renderAt("/dashboard/queue");
     await screen.findByRole("heading", { level: 1, name: "Моя очередь" });
-    const search = screen.getByRole("searchbox", { name: "Глобальный поиск" });
+    const search = screen.getByRole("combobox", { name: "Глобальный поиск" });
 
     fireEvent.keyDown(document.body, { key: "k", ctrlKey: true });
     expect(search).toHaveFocus();

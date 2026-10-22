@@ -99,7 +99,7 @@ test.describe("панели", () => {
 
   test("Ctrl+K фокусирует глобальный поиск", async ({ page }) => {
     await loginAndWait(page, "director@demo.example");
-    const search = page.getByRole("searchbox", { name: "Глобальный поиск" });
+    const search = page.getByRole("combobox", { name: "Глобальный поиск" });
     await page.keyboard.press("Control+k");
     await expect(search).toBeFocused();
   });

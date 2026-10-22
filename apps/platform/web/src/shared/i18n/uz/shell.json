@@ -26,7 +26,47 @@
   "notifications": {
     "title": "Bildirishnomalar markazi",
     "empty": "Yangi bildirishnoma yo‘q",
-    "text": "Qarorlar, mijoz xabarlari va tizim hodisalari shu yerda ko‘rinadi."
+    "text": "Qarorlar, mijoz xabarlari va tizim hodisalari shu yerda ko‘rinadi.",
+    "label": "Bildirishnomalar",
+    "tabsLabel": "Bildirishnoma bo‘limlari",
+    "tabs": {
+      "all": "Hammasi",
+      "decisions": "Qarorlar",
+      "clients": "Mijozlar",
+      "system": "Tizim"
+    },
+    "markAll": "Hammasini o‘qilgan deb belgilash",
+    "seeAll": "Barcha bildirishnomalar",
+    "unreadMark": "Yangi",
+    "emptyTab": "Bu bo‘limda bildirishnoma yo‘q",
+    "loading": "Bildirishnomalar yuklanmoqda…",
+    "loadErrorTitle": "Bildirishnomalarni yuklab bo‘lmadi",
+    "loadErrorText": "Server javob bermadi. Birozdan keyin qayta urinib ko‘ring.",
+    "retry": "Qayta urinish",
+    "now": "hozir",
+    "minutes": "{{count}} daq",
+    "hours": "{{count}} soat",
+    "kindChip": {
+      "lead": "L",
+      "client": "M",
+      "request": "ZV",
+      "project": "PR",
+      "letter": "KX",
+      "quote": "TT",
+      "contract": "SH",
+      "invoice": "HF",
+      "act": "DN",
+      "memo": "XX",
+      "chat": "C",
+      "ticket": "T",
+      "integration": "!"
+    },
+    "tabChip": {
+      "all": "•",
+      "decisions": "Q",
+      "clients": "M",
+      "system": "!"
+    }
   },
   "panel": {
     "label": "Yon oyna",
@@ -140,5 +180,29 @@
   "stub": {
     "subtitle": "Bo‘lim keyingi bosqichlarda to‘ldiriladi: hozircha karkas va navigatsiya mavjud.",
     "object": "{{id}} kartochkasi"
+  },
+  "search": {
+    "label": "Qidiruv natijalari",
+    "hint": "Xat, ariza, TT yoki hisob-faktura raqami, mijoz STIRi, nomi yoki artikul bo‘yicha qidiring.",
+    "tooShort": "Kamida ikkita belgi kiriting.",
+    "loading": "Qidirilmoqda…",
+    "none": "«{{query}}» so‘rovi bo‘yicha hech narsa topilmadi.",
+    "error": "Qidiruvni bajarib bo‘lmadi. So‘rovni takrorlang.",
+    "found": "Topildi: {{count}}",
+    "kind": {
+      "lead": "Lid",
+      "client": "Mijoz",
+      "request": "Ariza",
+      "project": "Loyiha",
+      "letter": "Xat",
+      "quote": "TT",
+      "contract": "Shartnoma",
+      "invoice": "Hisob",
+      "act": "Dalolatnoma",
+      "memo": "Xizmat xati",
+      "chat": "Chat",
+      "ticket": "Tiket",
+      "integration": "Integratsiya"
+    }
   }
 }

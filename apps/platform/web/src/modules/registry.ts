@@ -23,6 +23,15 @@ export interface SectionMatch {
   objectId?: string;
 }
 
+/** Бизнес-номер из пути: `%D0%9A%D0%9F-2026/118` -> `КП-2026/118` (react-router декодирует `%2F`, но не остальное). */
+function decoded(value: string): string {
+  try {
+    return decodeURIComponent(value);
+  } catch {
+    return value;
+  }
+}
+
 function splitPath(path: string): { pathname: string; query: URLSearchParams } {
   const [pathname = "", search = ""] = path.split("?");
   return { pathname, query: new URLSearchParams(search) };
@@ -54,7 +63,7 @@ export function matchSection(pathname: string, search = ""): SectionMatch | unde
     const hit = matchPath({ path: section.detail, end: true }, pathname);
     if (hit) {
       const id = hit.params["id"] ?? hit.params["userId"];
-      return id === undefined ? { module, section } : { module, section, objectId: id };
+      return id === undefined ? { module, section } : { module, section, objectId: decoded(id) };
     }
   }
   return undefined;
