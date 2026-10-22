@@ -10,7 +10,8 @@
 - `s3-mirror --dest|--restore DIR` — копия бакетов для бэкапа;
 - `sample-dialogs` — выгрузка диалогов для еженедельной разметки (YAML в stdout);
 - `create-admin --email ...` — первый администратор CRM;
-- `litellm-seed` — модели ролей по умолчанию в БД LiteLLM (ADR-0020).
+- `litellm-seed` — модели ролей по умолчанию в БД LiteLLM (ADR-0020);
+- `bus status|dead|failed|retry|retry-dead|retry-inbox` — шина rt_bus (runbook `rt-bus-crm`).
 """
 
 import argparse
@@ -93,6 +94,10 @@ def _parser() -> argparse.ArgumentParser:
 
     commands.add_parser("kb-demo", help="загрузить демо-базу знаний (evals/fixtures/kb)")
     commands.add_parser("kb-eval", help="проверить поиск на демо-KB (гейт Фазы 1)")
+    bus = commands.add_parser("bus", help="шина rt_bus: метрики, DLQ, повтор доставки и обработки")
+    from app.cli import bus_cli
+
+    bus_cli.add_arguments(bus)
     commands.add_parser("test-alert", help="тестовый пост в канал команды")
     commands.add_parser("litellm-seed", help="модели ролей по умолчанию в БД LiteLLM")
     load = commands.add_parser("load-test", help="нагрузочный smoke: N параллельных диалогов")
@@ -140,6 +145,10 @@ async def _run_cli(args: argparse.Namespace) -> int:
         from app.cli import create_admin
 
         return await create_admin.run(args)
+    if args.command == "bus":
+        from app.cli import bus_cli
+
+        return await bus_cli.run(args)
     if args.command == "kb-demo":
         from app.cli import kb_demo
 
