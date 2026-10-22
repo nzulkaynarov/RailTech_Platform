@@ -127,9 +127,17 @@ class BotSupervisor:
         )
 
     async def _halt(self, *, release_webhook: bool) -> None:
-        runtime, self.runtime, self.username = self.runtime, None, None
-        if runtime is not None:
-            await runtime.stop(release_webhook=release_webhook)
+        """Ссылка на runtime снимается только после успешной остановки.
+
+        Если `stop` бросил, старый polling мог остаться жить: новый не стартуем (второй потребитель
+        `getUpdates` получил бы 409), исключение уходит вызывающему, остановка повторится со
+        следующей попыткой.
+        """
+        runtime = self.runtime
+        if runtime is None:
+            return
+        await runtime.stop(release_webhook=release_webhook)
+        self.runtime, self.username = None, None
 
     def secret_matches(self, received: str | None) -> bool:
         return self.runtime is not None and self.runtime.secret_matches(received)

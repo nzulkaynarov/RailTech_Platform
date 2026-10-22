@@ -168,3 +168,53 @@ async def test_database_outage_does_not_stop_the_loop() -> None:
     state.broken = False
     await process._guard(process._tick)
     assert state.reports  # цикл жив и снова пишет статус
+
+
+async def test_disabled_mode_confirms_restart_request() -> None:
+    """Без бота (TELEGRAM_MODE=disabled) запрос всё равно подтверждается: API не ждёт 10 с зря."""
+    state = FakeState()
+    process = make(None, state)
+    await process._boot()
+    state.pending = PendingRestart(T2, T1)
+    await process._tick()
+    assert state.applied == [T2]
+
+
+async def test_failed_restart_is_retried_and_not_confirmed() -> None:
+    sup, state = FakeSupervisor(), FakeState()
+    process = make(sup, state)
+    await process._boot()
+    state.pending = PendingRestart(T2, T1)
+    broken = True
+
+    async def restart() -> None:
+        if broken:
+            raise RuntimeError("stop failed")
+        sup.calls.append("restart")
+
+    sup.restart = restart  # type: ignore[method-assign]
+    await process._guard(process._tick)
+    assert state.applied == []
+    broken = False
+    await process._guard(process._tick)
+    assert sup.calls == ["start", "restart"]
+    assert state.applied == [T2]
+
+
+async def test_failed_restart_after_token_change_is_retried() -> None:
+    sup, state, stamp = FakeSupervisor(), FakeState(), Stamp()
+    process = make(sup, state, stamp)
+    await process._boot()
+    stamp.value = T2
+    broken = True
+
+    async def restart() -> None:
+        if broken:
+            raise RuntimeError("stop failed")
+        sup.calls.append("restart")
+
+    sup.restart = restart  # type: ignore[method-assign]
+    await process._guard(process._tick)
+    broken = False
+    await process._guard(process._tick)
+    assert sup.calls == ["start", "restart"]

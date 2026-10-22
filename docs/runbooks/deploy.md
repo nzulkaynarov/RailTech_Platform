@@ -122,7 +122,7 @@ Actions → **Deploy** → Run workflow: `ref` = `main` (или sha, входя�
 - Telegram принимает отдельный сервис `crm-bot` (S0-4; `python -m app bot`, тот же образ `rt-crm-backend`, одна реплика, порт 8001 только
   внутри сети): Caddy отдаёт `/telegram/webhook` ему, а не `crm-api`; секретный заголовок проверяет он же. `crm-api` бота не запускает —
   его перезапуск бота не останавливает, и наоборот. Смена токена в «Подключениях» доходит до `crm-bot` через БД (до пары секунд), руками
-  его перезапускать не нужно; режим (`TELEGRAM_MODE`) — только `.env.prod` и `up -d crm-bot`. Подробности — `docs/runbooks/crm-bot.md`;
+  его перезапускать не нужно; режим (`TELEGRAM_MODE`) — только `.env.prod` и `up -d crm-bot`. При выкладке старый `crm-api` с ботом и новый `crm-bot` могут недолго работать вместе — кратковременный `409` от Telegram ожидаем. Подробности — `docs/runbooks/crm-bot.md`;
 - Telegram-вебхук ставит `crm-bot` сам при `TELEGRAM_MODE=webhook`; адрес берётся из `CRM_DOMAIN` (`https://<CRM_DOMAIN>/telegram/webhook`,
   `prod.yml`), вписывать `TELEGRAM_WEBHOOK_URL` вручную не нужно — задавайте её, только если вебхук должен идти на другой https-адрес
   (явное значение переопределяет). Режим `webhook` с пустым или не-https адресом бота не запускает и вебхук не трогает: в журнале CRM

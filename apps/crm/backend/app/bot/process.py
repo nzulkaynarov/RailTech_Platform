@@ -33,7 +33,7 @@ from app.config import Settings, get_settings
 from app.container import Container
 from app.log import configure_logging
 from app.security.secrets_store import TELEGRAM_BOT_TOKEN
-from app.services.bot_state import BotStateService
+from app.services.bot_state import BotStateService, PendingRestart
 from app.tasks.lifespan import queue_lifespan
 
 logger = structlog.get_logger(__name__)
@@ -113,30 +113,37 @@ class BotProcess:
             await self._supervisor.start()
         self._last_attempt = time.monotonic()
         await self._report(started=True)
-        if pending.pending and pending.requested_at is not None:
-            await self._state.mark_applied(pending.requested_at)
+        await self._confirm(pending)
 
     async def _tick(self) -> None:
         sup = self._supervisor
-        if sup is None:  # TELEGRAM_MODE=disabled: процесс жив, бот не запускается
+        pending = await self._state.pending_restart()
+        if (
+            sup is None
+        ):  # TELEGRAM_MODE=disabled: бота нет, но запрос подтверждаем (API не ждёт зря)
+            await self._confirm(pending)
             await self._report()
             return
-        pending = await self._state.pending_restart()
         stamp = await self._token_stamp()
         if pending.pending or stamp != self._token_seen:
             logger.info("bot_restart_requested", by="api" if pending.pending else "token_changed")
+            await (
+                sup.restart()
+            )  # сбой остановки: метка и подтверждение не трогаем — повтор в след. тик
             self._token_seen = stamp
-            await sup.restart()
             self._last_attempt = time.monotonic()
             await self._report()
-            if pending.pending and pending.requested_at is not None:
-                await self._state.mark_applied(pending.requested_at)
+            await self._confirm(pending)
         elif not sup.running and time.monotonic() - self._last_attempt >= self._config.bot_retry_s:
             self._last_attempt = time.monotonic()
             await sup.recover()
             await self._report()
         else:
             await self._report()
+
+    async def _confirm(self, pending: PendingRestart) -> None:
+        if pending.pending and pending.requested_at is not None:
+            await self._state.mark_applied(pending.requested_at)
 
     async def _report(self, *, started: bool = False) -> None:
         """Записать статус: сразу при изменении, иначе раз в `BOT_HEARTBEAT_S` (пульс)."""

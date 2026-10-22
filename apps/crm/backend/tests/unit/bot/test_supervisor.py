@@ -204,3 +204,27 @@ async def test_recover_without_token_is_quiet() -> None:
         await h.supervisor.recover()
     assert h.runtimes == []
     assert not [e for e in logs if e["log_level"] in ("warning", "error")]
+
+
+async def test_failed_stop_keeps_old_runtime_and_never_starts_a_second_consumer() -> None:
+    """stop старого бота бросил: ссылку не теряем, второй потребитель не стартует (409)."""
+    h = Harness()
+    await h.supervisor.start()
+    old = h.runtimes[0]
+    fail = True
+
+    async def stop(*, release_webhook: bool = False) -> None:
+        if fail:
+            raise RuntimeError("stop_polling failed")
+        old.stopped_with = release_webhook
+
+    old.stop = stop  # type: ignore[method-assign]
+    with pytest.raises(RuntimeError):
+        await h.supervisor.restart()
+    assert h.supervisor.runtime is old  # type: ignore[comparison-overlap]
+    assert len(h.runtimes) == 1
+    fail = False
+    await h.supervisor.restart()  # повтор: старый остановлен, только потом новый
+    assert old.stopped_with is True
+    assert len(h.runtimes) == 2
+    assert h.supervisor.runtime is h.runtimes[1]  # type: ignore[comparison-overlap]
