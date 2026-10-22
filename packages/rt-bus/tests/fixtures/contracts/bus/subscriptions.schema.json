@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://railtech.uz/contracts/bus/subscriptions.schema.json",
   "title": "Подписки rt_bus v1",
-  "description": "Схема bus/subscriptions.yaml (docs/CONTRACTS.md, раздел «Шина rt_bus», L5). Издатель доставляет подписчику только свои события и не доставляет себе. Новый подписчик — строка в файле и секрет пары RT_BUS_SECRET_<ИЗДАТЕЛЬ>_<ПОДПИСЧИК> в окружении, без правки кода сервисов. Путь к файлу у сервисов — переменная RT_BUS_SUBSCRIPTIONS.",
+  "description": "Схема bus/subscriptions.yaml (CONTRACTS, раздел «Шина rt_bus», L5). Издатель доставляет подписчику только свои события и не доставляет себе. Новый подписчик — строка в файле и секрет пары RT_BUS_SECRET_<ИЗДАТЕЛЬ>_<ПОДПИСЧИК> в окружении, без правки кода сервисов. Путь к файлу у сервисов — переменная RT_BUS_SUBSCRIPTIONS.",
   "type": "object",
   "required": ["version", "subscribers"],
   "properties": {

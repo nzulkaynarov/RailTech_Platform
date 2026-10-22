@@ -1,4 +1,4 @@
-# rt-bus — библиотека шины событий (packages/rt-bus/README.md). Инструменты — как apps/platform/bff: uv, ruff, mypy, pytest.
+# rt-bus — библиотека шины событий (docs/architecture/rt-bus.md). Инструменты — как apps/platform/bff: uv, ruff, mypy, pytest.
 # Тесты адаптеров идут против настоящего PostgreSQL: RT_BUS_TEST_DATABASE_URL или одноразовый postgres:17 в Docker.
 
 SHELL := /bin/bash
