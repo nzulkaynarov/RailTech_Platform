@@ -16,6 +16,7 @@ import { PageHeader } from "../../shared/ui/PageHeader";
 import { QueueList, type QueueItem as RowItem } from "../../shared/ui/QueueList";
 import { SourceBanner } from "../../shared/ui/SourceBanner";
 import { matchSection } from "../registry";
+import { viewRoleNames } from "../../entities/role/roles";
 import { dueBadge, pluralForm } from "./queue";
 import "./dashboard.css";
 
@@ -48,14 +49,10 @@ export function QueuePage() {
   const title = t("modules:dashboard.sections.queue");
   useDocumentTitle(title);
 
-  const roles =
-    !me.active_role && me.roles.length > 1
-      ? [t("shell:avatar.allRoles")]
-      : // TODO(ADR-0012): название роли — из данных `/me`, а не из i18n по коду роли.
-        (me.active_role ? [me.active_role] : me.roles).map((r) => t(`shell:roles.${r}`));
+  const roles = viewRoleNames(me, t("shell:avatar.allRoles"));
   const count = queue.data?.items.length;
   const subtitle = [
-    roles.join(", "),
+    roles,
     todayLabel(i18n.language),
     count === undefined
       ? null

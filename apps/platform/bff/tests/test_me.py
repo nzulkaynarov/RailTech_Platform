@@ -7,10 +7,13 @@ import httpx
 import pytest
 from fastapi import Depends
 
-from app import rbac
 from app.deps import Authed, require
+from app.rbac_generated import MENU
 from tests.conftest import ContractChecker, Web
-from tests.rbac_oracle import MATRIX, ROLES, level, union
+from tests.rbac_oracle import FIELDS, MATRIX, ROLES, level, union
+from tests.roles import NAMES, custom, rid
+
+FIELD_ORDER = ("cost_margin", "supplier_prices", "totals_only")
 
 
 def expected_resources(roles: list[str]) -> dict[str, str]:
@@ -18,8 +21,25 @@ def expected_resources(roles: list[str]) -> dict[str, str]:
 
 
 def expected_modules(roles: list[str]) -> list[str]:
-    visible = {k.split(".")[0] for k in expected_resources(roles)}
-    return [m for m in ("dashboard", "crm", "eds", "erp", "chats", "admin") if m in visible]
+    visible = expected_resources(roles)
+    return [m for m, items in MENU.items() if any(s in visible for i in items.values() for s in i)]
+
+
+def expected_fields(roles: list[str]) -> list[str]:
+    return [f for f in FIELD_ORDER if any(f in FIELDS[r] for r in roles)]
+
+
+def refs_of(*codes: str) -> list[dict[str, object]]:
+    """`Me.roles` контракта: id строкой, название из данных, системная ли, код."""
+    return [
+        {
+            "id": rid(c),
+            "name": NAMES[c],
+            "system": c in ("ADMIN", "DIRECTOR"),
+            "code": c if c in ("ADMIN", "DIRECTOR") else f"tpl:{c}",
+        }
+        for c in codes
+    ]
 
 
 @pytest.mark.parametrize("role", ROLES)
@@ -31,12 +51,12 @@ async def test_me_for_each_role(web: Web, check: ContractChecker, role: str) -> 
     assert response.status_code == 200
     check(response, "/me", "get")
     me = response.json()
-    assert me["roles"] == [role]
+    assert me["roles"] == refs_of(role)
     assert me["active_role"] is None
     assert me["modules"] == expected_modules([role])
     assert me["resources"] == expected_resources([role])
     assert all(v in ("full", "read") for v in me["resources"].values())  # скрытые не перечисляются
-    assert me["restricted_fields"] == rbac.restricted_fields_for([role])
+    assert me["restricted_fields"] == expected_fields([role])
     assert me["language"] == "ru"
 
 
@@ -46,10 +66,30 @@ async def test_me_unites_several_roles(web: Web, check: ContractChecker) -> None
     me = (await web.client.get("/api/v1/me")).json()
 
     check(await web.client.get("/api/v1/me"), "/me", "get")
-    assert me["roles"] == ["SUPPLY", "ACCOUNTANT"]  # порядок контракта
+    assert me["roles"] == refs_of("ACCOUNTANT", "SUPPLY")  # порядок CRM
     assert me["resources"] == expected_resources(["SUPPLY", "ACCOUNTANT"])
     assert me["resources"]["eds.projects"] == "full"  # SUPPLY read + ACCOUNTANT full
-    assert me["restricted_fields"] == ["cost_margin", "totals_only", "supplier_prices"]
+    assert me["restricted_fields"] == ["cost_margin", "supplier_prices", "totals_only"]
+
+
+MIXED = custom(
+    40, "Менеджер и бухгалтер", {"crm.leads": "full", "eds.payments": "full"}, ("totals_only",)
+)
+
+
+async def test_created_role_gives_exactly_its_modules_and_sections(
+    web: Web, check: ContractChecker
+) -> None:
+    """Рядовой сотрудник с созданной ролью (без кода): модули и разделы — ровно из её матрицы."""
+    login = await web.login([MIXED])
+
+    assert login.status_code == 200
+    check(login, "/auth/login", "post")
+    me = login.json()["me"]
+    assert me["roles"] == [{"id": "40", "name": "Менеджер и бухгалтер", "system": False}]
+    assert me["modules"] == ["crm", "eds"]
+    assert me["resources"] == {"crm.leads": "full", "eds.payments": "full"}
+    assert me["restricted_fields"] == ["totals_only"]
 
 
 async def test_session_endpoint_matches_login(web: Web, check: ContractChecker) -> None:
@@ -133,7 +173,7 @@ async def test_patch_language_crm_rejects(web: Web, check: ContractChecker) -> N
 async def test_patch_active_role_does_not_call_crm(web: Web) -> None:
     await web.login(["MANAGER", "ACCOUNTANT"])
 
-    await web.send("PATCH", "/api/v1/me", json={"active_role": "ACCOUNTANT"})
+    await web.send("PATCH", "/api/v1/me", json={"active_role": rid("ACCOUNTANT")})
 
     assert web.be.crm_patch_me.call_count == 0
 
@@ -141,16 +181,16 @@ async def test_patch_active_role_does_not_call_crm(web: Web) -> None:
 async def test_active_role_is_a_view(web: Web, check: ContractChecker) -> None:
     await web.login(["MANAGER", "ACCOUNTANT"])
 
-    response = await web.send("PATCH", "/api/v1/me", json={"active_role": "ACCOUNTANT"})
+    response = await web.send("PATCH", "/api/v1/me", json={"active_role": rid("ACCOUNTANT")})
 
     assert response.status_code == 200
     check(response, "/me", "patch")
     me = response.json()
-    assert me["roles"] == ["MANAGER", "ACCOUNTANT"]  # роли остаются все
-    assert me["active_role"] == "ACCOUNTANT"
+    assert me["roles"] == refs_of("MANAGER", "ACCOUNTANT")  # роли остаются все
+    assert me["active_role"] == rid("ACCOUNTANT")
     assert me["modules"] == expected_modules(["ACCOUNTANT"])
     assert me["resources"] == expected_resources(["ACCOUNTANT"])
-    assert me["restricted_fields"] == ["totals_only", "supplier_prices"]
+    assert me["restricted_fields"] == ["supplier_prices", "totals_only"]
     assert "crm.leads" not in me["resources"]  # у бухгалтера раздела нет, у менеджера есть
 
     reset = await web.send("PATCH", "/api/v1/me", json={"active_role": None})
@@ -162,7 +202,7 @@ async def test_active_role_is_a_view(web: Web, check: ContractChecker) -> None:
 async def test_active_role_must_be_one_of_own_roles(web: Web, check: ContractChecker) -> None:
     await web.login(["MANAGER"])
 
-    for role in ("ADMIN", "BOSS"):
+    for role in (rid("ADMIN"), "999"):
         response = await web.send("PATCH", "/api/v1/me", json={"active_role": role})
         assert response.status_code == 422
         check(response, "/me", "patch")
@@ -171,7 +211,15 @@ async def test_active_role_must_be_one_of_own_roles(web: Web, check: ContractChe
 
 
 @pytest.mark.parametrize(
-    "payload", [{}, {"language": "fr"}, {"language": None}, {"theme": "dark"}, {"active_role": 5}]
+    "payload",
+    [
+        {},
+        {"language": "fr"},
+        {"language": None},
+        {"theme": "dark"},
+        {"active_role": 5},
+        {"active_role": "MANAGER"},
+    ],
 )
 async def test_patch_validation(
     web: Web, check: ContractChecker, payload: dict[str, object]
@@ -206,14 +254,15 @@ async def test_patch_active_role_does_not_change_operation_rights(web: Web) -> N
     before = (await web.client.get("/api/v1/_op/projects-full")).status_code
     assert before == 200
 
-    patched = await web.send("PATCH", "/api/v1/me", json={"active_role": "SUPPLY"})
+    patched = await web.send("PATCH", "/api/v1/me", json={"active_role": rid("SUPPLY")})
 
     assert patched.json()["resources"]["eds.projects"] == "read"  # вид сузился ...
     assert (await web.client.get("/api/v1/_op/projects-full")).status_code == 200  # ... право нет
     assert (await web.client.get("/api/v1/_op/admin")).status_code == 200  # DIRECTOR: admin = read
 
     # И наоборот: вид не расширяет права — чужую роль взять нельзя, права не растут.
-    assert (await web.send("PATCH", "/api/v1/me", json={"active_role": "ADMIN"})).status_code == 422
+    admin = {"active_role": rid("ADMIN")}
+    assert (await web.send("PATCH", "/api/v1/me", json=admin)).status_code == 422
     web.client.cookies.clear()
     await web.login(["SUPPLY"])
     assert (await web.client.get("/api/v1/_op/projects-full")).status_code == 403
@@ -235,8 +284,8 @@ async def test_profile_is_not_reread_within_a_minute(web: Web) -> None:
 
 async def test_role_change_in_crm_is_picked_up(web: Web, check: ContractChecker) -> None:
     await web.login(["MANAGER", "SUPPLY"])
-    await web.send("PATCH", "/api/v1/me", json={"active_role": "SUPPLY"})
-    web.be.profile["platform_roles"] = ["MANAGER", "DIRECTOR"]
+    await web.send("PATCH", "/api/v1/me", json={"active_role": rid("SUPPLY")})
+    web.be.set_roles(["MANAGER", "DIRECTOR"])
     web.be.profile["position"] = "Заместитель"
     web.clock.advance(61)
 
@@ -245,7 +294,7 @@ async def test_role_change_in_crm_is_picked_up(web: Web, check: ContractChecker)
     assert response.status_code == 200
     check(response, "/me", "get")
     me = response.json()
-    assert me["roles"] == ["MANAGER", "DIRECTOR"]
+    assert me["roles"] == refs_of("MANAGER", "DIRECTOR")
     assert me["active_role"] is None  # активной роли больше нет — вид сброшен
     assert me["position"] == "Заместитель"
     assert me["resources"] == expected_resources(["MANAGER", "DIRECTOR"])
@@ -253,7 +302,7 @@ async def test_role_change_in_crm_is_picked_up(web: Web, check: ContractChecker)
 
 async def test_roles_removed_in_crm_close_the_session(web: Web, check: ContractChecker) -> None:
     await web.login(["MANAGER"])
-    web.be.profile["platform_roles"] = []
+    web.be.set_roles([])
     web.clock.advance(61)
 
     response = await web.client.get("/api/v1/me")
@@ -294,7 +343,7 @@ async def test_crm_down_during_profile_sync_uses_the_snapshot(web: Web) -> None:
     response = await web.client.get("/api/v1/me")
 
     assert response.status_code == 200
-    assert response.json()["roles"] == ["DIRECTOR"]
+    assert response.json()["roles"] == refs_of("DIRECTOR")
 
 
 async def test_disabled_employee_is_found_on_profile_sync(web: Web) -> None:
@@ -317,10 +366,10 @@ async def test_require_notices_role_removed_in_crm_without_me(web: Web) -> None:
     async def leads(_: Annotated[Authed, Depends(require("crm.leads", "full"))]) -> dict[str, bool]:
         return {"ok": True}
 
-    await web.login(["MANAGER", "DIRECTOR"])
+    await web.login(["MANAGER", "ACCOUNTANT"])
     assert (await web.client.get("/api/v1/_op/leads")).status_code == 200
 
-    web.be.profile["platform_roles"] = ["DIRECTOR"]  # DIRECTOR: crm.leads = read
+    web.be.set_roles(["ACCOUNTANT"])  # у бухгалтера раздела лидов нет
     web.clock.advance(30)
     assert (await web.client.get("/api/v1/_op/leads")).status_code == 200  # кэш 60 с
     web.clock.advance(31)
@@ -336,7 +385,7 @@ async def test_require_closes_session_when_all_roles_removed(web: Web) -> None:
         return {"ok": True}
 
     await web.login(["MANAGER"])
-    web.be.profile["platform_roles"] = []
+    web.be.set_roles([])
     web.clock.advance(61)
 
     response = await web.client.get("/api/v1/_op/queue")

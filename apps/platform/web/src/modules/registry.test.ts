@@ -55,6 +55,7 @@ describe("меню модулей дословно SPEC-v3 §6.2", () => {
       "Оргструктура",
       "Внешние интеграции",
       "Тикеты от команды",
+      "Компания",
     ]);
   });
 
@@ -109,6 +110,7 @@ describe("карта маршрутов SPEC-v3 §6.3", () => {
     "/admin/org",
     "/admin/integrations",
     "/admin/tickets",
+    "/admin/company",
   ];
   it.each(listPaths)("%s — есть раздел", (path) => {
     expect(matchSection(path)).toBeDefined();

@@ -1,26 +1,27 @@
-"""Модели Admin · Оргструктура — схемы `Employee`, `EmployeeList`, `EmployeeInvite`,
-`EmployeeUpdate` из packages/contracts/openapi/platform-bff.yaml и перевод пользователя CRM
-в `Employee`."""
+"""Модели Admin · Оргструктура и Ролевая матрица — схемы `Employee*` и `Role*` из
+packages/contracts/openapi/platform-bff.yaml (0.3.0) и перевод пользователя и роли CRM в них."""
 
-from typing import Any, Literal
+from datetime import datetime
+from typing import Any, Literal, cast
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
-from app.rbac import known_roles
-from app.rbac_generated import RoleCode
-from app.schemas import AccessFlags, initials_of
+from app.rbac_generated import RestrictedField
+from app.schemas import AccessFlags, RoleId, RoleRef, initials_of
 
 EmployeeStatus = Literal["active", "invited", "disabled"]
 ErpSyncState = Literal["ok", "pending", "error", "not_applicable"]
+AccessLevel = Literal["full", "read"]
 
 _EMAIL = r"^[^@\s]+@[^@\s]+$"
 _MAX_TEXT = 120
+_ERP_SYNC: frozenset[str] = frozenset({"ok", "pending", "error", "not_applicable"})
 
 
-def _unique(roles: list[RoleCode] | None) -> list[RoleCode] | None:
-    if roles is not None and len(set(roles)) != len(roles):
+def _unique(ids: list[str] | None) -> list[str] | None:
+    if ids is not None and len(set(ids)) != len(ids):
         raise ValueError("роли не должны повторяться")
-    return roles
+    return ids
 
 
 class Employee(BaseModel):
@@ -29,7 +30,7 @@ class Employee(BaseModel):
     initials: str = Field(max_length=3)
     email: str
     position: str | None = Field(default=None, max_length=_MAX_TEXT)
-    roles: list[RoleCode]
+    roles: list[RoleRef]
     access: AccessFlags
     status: EmployeeStatus
     telegram_linked: bool
@@ -47,12 +48,12 @@ class EmployeeInvite(BaseModel):
     email: str = Field(max_length=254, pattern=_EMAIL)
     name: str = Field(min_length=1, max_length=_MAX_TEXT)
     position: str | None = Field(default=None, max_length=_MAX_TEXT)
-    roles: list[RoleCode] = Field(min_length=1)
+    role_ids: list[RoleId] = Field(min_length=1)
 
-    @field_validator("roles")
+    @field_validator("role_ids")
     @classmethod
-    def _roles_unique(cls, roles: list[RoleCode]) -> list[RoleCode]:
-        return _unique(roles) or roles
+    def _roles_unique(cls, ids: list[str]) -> list[str]:
+        return _unique(ids) or ids
 
     @field_validator("name")
     @classmethod
@@ -65,25 +66,23 @@ class EmployeeInvite(BaseModel):
 class EmployeeUpdate(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    roles: list[RoleCode] | None = None
+    role_ids: list[RoleId] | None = None
     position: str | None = Field(default=None, max_length=_MAX_TEXT)
     is_active: bool | None = None
+    transfer_to_user_id: str | None = Field(default=None, pattern=r"^[0-9]+$")
 
-    @field_validator("roles")
+    @field_validator("role_ids")
     @classmethod
-    def _roles_unique(cls, roles: list[RoleCode] | None) -> list[RoleCode] | None:
-        return _unique(roles)
+    def _roles_unique(cls, ids: list[str] | None) -> list[str] | None:
+        return _unique(ids)
 
     @model_validator(mode="after")
     def _not_empty(self) -> "EmployeeUpdate":
         if not self.model_fields_set:
-            raise ValueError("укажите roles, position или is_active")
-        if "roles" in self.model_fields_set and self.roles is None:
-            raise ValueError("roles не может быть null")
-        if "position" in self.model_fields_set and self.position is None:
-            raise ValueError("position не может быть null; пустая строка очищает должность")
-        if "is_active" in self.model_fields_set and self.is_active is None:
-            raise ValueError("is_active не может быть null")
+            raise ValueError("укажите role_ids, position, is_active или transfer_to_user_id")
+        for name in ("role_ids", "position", "is_active", "transfer_to_user_id"):
+            if name in self.model_fields_set and getattr(self, name) is None:
+                raise ValueError(f"{name} не может быть null")
         return self
 
 
@@ -96,27 +95,186 @@ def status_of(user: dict[str, Any]) -> EmployeeStatus:
     return "active"
 
 
+def role_refs(user: dict[str, Any]) -> list[RoleRef]:
+    """Роли из `platform_role_refs` CRM (названия — данные); битые записи пропускаются."""
+    refs: list[RoleRef] = []
+    for raw in user.get("platform_role_refs") or []:
+        if not isinstance(raw, dict) or not isinstance(raw.get("id"), int):
+            continue
+        refs.append(
+            RoleRef(
+                id=str(raw["id"]),
+                name=str(raw.get("name") or ""),
+                system=bool(raw.get("system")),
+                code=raw.get("code") if isinstance(raw.get("code"), str) else None,
+            )
+        )
+    return refs
+
+
 def to_employee(user: dict[str, Any]) -> Employee:
     """Пользователь CRM -> сотрудник Платформы. Решений здесь нет: только перевод полей.
 
-    `erp_sync`: CRM не отдаёт итог провижининга (`users.erp_sync_error` виден только центру
-    внешних сервисов), поэтому без доступа к ERP это `not_applicable`, с доступом — `ok`;
-    `pending` и `error` появятся, когда CRM отдаст поле (Q-PLT-15-2).
+    `erp_sync` и `erp_sync_error` — итог провижининга ERP из CRM (R-1, Q-PLT-15-1 п. 2).
     """
     name = str(user.get("full_name") or "")
     email = str(user["email"])
     access = {str(a) for a in user.get("platform_access") or ["crm"]}
     erp = "erp" in access
     position = str(user.get("position") or "").strip() or None
+    sync = str(user.get("erp_sync") or "")
+    error = user.get("erp_sync_error")
     return Employee(
         id=str(user["id"]),
         name=name,
         initials=initials_of(name, email),
         email=email,
         position=position,
-        roles=known_roles(user.get("platform_roles") or []),
+        roles=role_refs(user),
         access=AccessFlags(crm="crm" in access, erp=erp),
         status=status_of(user),
         telegram_linked=user.get("tg_user_id") is not None,
-        erp_sync="ok" if erp else "not_applicable",
+        erp_sync=cast(
+            ErpSyncState, sync if sync in _ERP_SYNC else ("ok" if erp else "not_applicable")
+        ),
+        erp_sync_error=str(error) if isinstance(error, str) and error else None,
+    )
+
+
+# --- Admin · Ролевая матрица -------------------------------------------------------------------
+
+
+class Role(BaseModel):
+    id: str
+    name: str
+    description: str
+    system: bool
+    code: str | None = None
+    access: dict[str, AccessLevel]
+    restricted_fields: list[RestrictedField]
+    employees: int = Field(ge=0)
+    updated_at: datetime
+
+
+class RoleList(BaseModel):
+    items: list[Role]
+
+
+class RoleCreate(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    name: str = Field(min_length=1, max_length=_MAX_TEXT)
+    description: str | None = Field(default=None, max_length=1000)
+    access: dict[str, AccessLevel]
+    restricted_fields: list[RestrictedField]
+
+    @field_validator("name")
+    @classmethod
+    def _name_not_blank(cls, name: str) -> str:
+        if not name.strip():
+            raise ValueError("название не может быть пустым")
+        return name.strip()
+
+
+class RoleUpdate(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    name: str | None = Field(default=None, min_length=1, max_length=_MAX_TEXT)
+    description: str | None = Field(default=None, max_length=1000)
+    access: dict[str, AccessLevel] | None = None
+    restricted_fields: list[RestrictedField] | None = None
+
+    @model_validator(mode="after")
+    def _not_empty(self) -> "RoleUpdate":
+        if not self.model_fields_set:
+            raise ValueError("укажите name, description, access или restricted_fields")
+        for name in self.model_fields_set:
+            if getattr(self, name) is None:
+                raise ValueError(f"{name} не может быть null")
+        if self.name is not None and not self.name.strip():
+            raise ValueError("название не может быть пустым")
+        return self
+
+
+class RolePreviewIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    role_id: RoleId | None = None
+    access: dict[str, AccessLevel] | None = None
+    restricted_fields: list[RestrictedField] | None = None
+
+
+class SectionLevel(BaseModel):
+    resource: str
+    level: AccessLevel
+
+
+class PersonRefOut(BaseModel):
+    id: str
+    name: str
+    initials: str = Field(max_length=3)
+
+
+class RoleImpact(BaseModel):
+    employee: PersonRefOut
+    gained: list[SectionLevel]
+    lost: list[SectionLevel]
+    fields_gained: list[RestrictedField]
+    fields_lost: list[RestrictedField]
+
+
+class RolePreview(BaseModel):
+    role_id: str | None
+    employees_total: int = Field(ge=0)
+    employees: list[RoleImpact]
+    gained: list[SectionLevel]
+    lost: list[SectionLevel]
+    fields_gained: list[RestrictedField]
+    fields_lost: list[RestrictedField]
+
+
+def to_role(raw: dict[str, Any]) -> Role:
+    """Роль CRM (`/api/v1/platform-roles`) -> роль контракта BFF."""
+    return Role(
+        id=str(raw["id"]),
+        name=str(raw["name"]),
+        description=str(raw.get("description") or ""),
+        system=bool(raw.get("is_system")),
+        code=raw.get("code") or None,
+        access=dict(raw.get("access") or {}),
+        restricted_fields=list(raw.get("restricted_fields") or []),
+        employees=int(raw.get("employees") or 0),
+        updated_at=raw["updated_at"],
+    )
+
+
+def _levels(rows: Any) -> list[SectionLevel]:
+    return [SectionLevel.model_validate(r) for r in rows or []]
+
+
+def to_preview(raw: dict[str, Any]) -> RolePreview:
+    """Предпросмотр CRM -> контракт BFF (сотрудник — `PersonRef`)."""
+    impacts = []
+    for e in raw.get("employees") or []:
+        name = str(e.get("full_name") or "")
+        impacts.append(
+            RoleImpact(
+                employee=PersonRefOut(
+                    id=str(e["user_id"]), name=name, initials=initials_of(name, name or "?")
+                ),
+                gained=_levels(e.get("gained")),
+                lost=_levels(e.get("lost")),
+                fields_gained=list(e.get("fields_gained") or []),
+                fields_lost=list(e.get("fields_lost") or []),
+            )
+        )
+    role_id = raw.get("role_id")
+    return RolePreview(
+        role_id=str(role_id) if role_id is not None else None,
+        employees_total=int(raw.get("employees_total") or 0),
+        employees=impacts,
+        gained=_levels(raw.get("gained")),
+        lost=_levels(raw.get("lost")),
+        fields_gained=list(raw.get("fields_gained") or []),
+        fields_lost=list(raw.get("fields_lost") or []),
     )

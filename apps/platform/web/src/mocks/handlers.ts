@@ -5,6 +5,7 @@ import {
   getRailTechPlatformBFFAPICRMERPMock,
 } from "../shared/api/generated/platform-bff.msw";
 import type { ChangePasswordIn, LoginIn, MeUpdate } from "../shared/api/generated/model";
+import { adminRolesHandlers } from "./adminRoles";
 import { adminUsersHandlers } from "./adminUsers";
 import { isEmployeeDisabled } from "./fixtures/employees";
 import { feedHandlers } from "./feedHandlers";
@@ -31,7 +32,7 @@ const sessionExpired = () => failure(401, "SESSION_EXPIRED", "Сессия ис�
 
 /**
  * Моки API Платформы для `pnpm dev:mock`, e2e и тестов. Общий набор генерирует orval из контракта (случайные
- * данные faker); здесь поверх — состояние сессии и профиля на 6 ролей из фикстур (по `platform-rbac.yaml`) и
+ * данные faker); здесь поверх — сессия, роли-данные (ADR-0012: системные и шаблоны `platform-rbac.yaml`) и
  * детерминированные счётчики, чтобы скриншоты и e2e не плавали. Вход принимает любой непустой пароль, кроме
  * `wrong-password`; адреса `disabled@`, `norole@`, `busy@`, `down@` дают ошибки входа.
  */
@@ -97,7 +98,7 @@ export const handlers = [
     if (!current) return sessionExpired();
     const body = (await request.json()) as MeUpdate;
     const user = buildMe(current);
-    if (body.active_role && !user?.roles.includes(body.active_role)) {
+    if (body.active_role && !user?.roles.some((role) => role.id === body.active_role)) {
       return failure(422, "VALIDATION_FAILED", "Роль не выдана сотруднику");
     }
     const next = updateSession({
@@ -109,6 +110,7 @@ export const handlers = [
   }),
 
   ...adminUsersHandlers,
+  ...adminRolesHandlers,
 
   getGetHealthMockHandler({
     status: "ok",

@@ -1,0 +1,35 @@
+# Снимок матрицы ролей версии 1 (packages/contracts/platform-rbac.yaml, version 1) — только разделы и уровни по шести
+# ролям кодом. Версия 1 удалена из контракта в R-2 (в packages/contracts — ровно один каталог ролей, версия 2); снимок
+# нужен тестам миграции кодов в роли-данные (R-1): «права после миграции = права до неё». Не источник истины.
+version: 1
+resources:
+- key: dashboard.queue
+  access: {MANAGER: full, DIRECTOR: full, SUPPLY: full, ENGINEER: full, ACCOUNTANT: full, ADMIN: full}
+- key: dashboard.summary
+  access: {MANAGER: hidden, DIRECTOR: full, SUPPLY: hidden, ENGINEER: hidden, ACCOUNTANT: read, ADMIN: hidden}
+- key: crm.leads
+  access: {MANAGER: full, DIRECTOR: read, SUPPLY: hidden, ENGINEER: hidden, ACCOUNTANT: hidden, ADMIN: hidden}
+- key: crm.clients
+  access: {MANAGER: full, DIRECTOR: read, SUPPLY: read, ENGINEER: read, ACCOUNTANT: read, ADMIN: hidden}
+- key: eds.inbox
+  access: {MANAGER: read, DIRECTOR: full, SUPPLY: hidden, ENGINEER: hidden, ACCOUNTANT: read, ADMIN: hidden}
+- key: eds.drafts
+  access: {MANAGER: read, DIRECTOR: full, SUPPLY: hidden, ENGINEER: hidden, ACCOUNTANT: hidden, ADMIN: hidden}
+- key: eds.projects
+  access: {MANAGER: read, DIRECTOR: full, SUPPLY: read, ENGINEER: read, ACCOUNTANT: full, ADMIN: hidden}
+- key: eds.payments
+  access: {MANAGER: read, DIRECTOR: read, SUPPLY: hidden, ENGINEER: hidden, ACCOUNTANT: full, ADMIN: hidden}
+- key: eds.memo.create
+  access: {MANAGER: full, DIRECTOR: full, SUPPLY: full, ENGINEER: full, ACCOUNTANT: full, ADMIN: full}
+- key: eds.memo.approve
+  access: {MANAGER: hidden, DIRECTOR: full, SUPPLY: hidden, ENGINEER: hidden, ACCOUNTANT: hidden, ADMIN: hidden}
+- key: erp.calc
+  access: {MANAGER: hidden, DIRECTOR: full, SUPPLY: full, ENGINEER: full, ACCOUNTANT: read, ADMIN: hidden}
+- key: erp.stock
+  access: {MANAGER: read, DIRECTOR: full, SUPPLY: full, ENGINEER: full, ACCOUNTANT: read, ADMIN: hidden}
+- key: chats.internal
+  access: {MANAGER: full, DIRECTOR: full, SUPPLY: full, ENGINEER: full, ACCOUNTANT: full, ADMIN: full}
+- key: chats.external
+  access: {MANAGER: full, DIRECTOR: read, SUPPLY: hidden, ENGINEER: hidden, ACCOUNTANT: full, ADMIN: hidden}
+- key: admin
+  access: {MANAGER: hidden, DIRECTOR: read, SUPPLY: hidden, ENGINEER: hidden, ACCOUNTANT: hidden, ADMIN: full}

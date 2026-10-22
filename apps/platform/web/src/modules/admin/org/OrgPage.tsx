@@ -7,6 +7,7 @@ import { canEdit } from "../../../app/access";
 import { useAuth } from "../../../app/auth/useAuth";
 import { PanelPortal } from "../../../app/shell/PanelSlot";
 import { EMPLOYEE_STATUSES } from "../../../entities/employee/status";
+import { isSystemAdmin } from "../../../entities/role/roles";
 import { InviteEmployeeForm } from "../../../features/invite-employee/InviteEmployeeForm";
 import type { EmployeeStatus } from "../../../shared/api/generated/model";
 import { useListEmployees } from "../../../shared/api/generated/platform-bff";
@@ -90,7 +91,8 @@ export function OrgPage({ objectId }: { objectId?: string }) {
   };
 
   const otherActiveAdmins = (id: string) =>
-    items.filter((e) => e.id !== id && e.status !== "disabled" && e.roles.includes("ADMIN")).length;
+    items.filter((e) => e.id !== id && e.status !== "disabled" && e.roles.some(isSystemAdmin))
+      .length;
 
   let body;
   if (list.isPending) {
