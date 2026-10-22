@@ -426,11 +426,11 @@ export interface components {
       position?: string;
       language: components["schemas"]["Language"];
       roles: components["schemas"]["RoleCode"][];
-      /** @description Роль, выбранная в профиле для «Моей очереди»; пусто — все роли вместе */
+      /** @description Роль, выбранная в профиле («вид»): при заданной роли `modules`, `resources`, `restricted_fields`, «Моя очередь» и карточки считаются только по ней; пусто — по объединению всех ролей. На права операций не влияет: BFF проверяет их по объединению ролей. */
       active_role?: components["schemas"]["RoleCode"] | null;
-      /** @description Модули рейла в порядке показа */
+      /** @description Модули рейла в порядке показа — для активной роли, если задана, иначе для объединения ролей */
       modules: components["schemas"]["ModuleCode"][];
-      /** @description Разделы и действия матрицы `platform-rbac.yaml` → уровень для объединения ролей сотрудника */
+      /** @description Разделы и действия матрицы `platform-rbac.yaml` → уровень (максимум по ролям) — для активной роли, если задана, иначе для объединения ролей. Видимость пункта меню — по секции `menu` того же файла. */
       resources: {
         [key: string]: components["schemas"]["AccessLevel"];
       };

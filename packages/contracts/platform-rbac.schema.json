@@ -4,83 +4,223 @@
   "title": "Ролевая матрица Платформы (platform-rbac.yaml)",
   "type": "object",
   "additionalProperties": false,
-  "required": ["version", "roles", "resources", "restricted_fields"],
+  "required": [
+    "version",
+    "roles",
+    "resources",
+    "menu",
+    "restricted_fields"
+  ],
   "$defs": {
-    "role": { "enum": ["MANAGER", "DIRECTOR", "SUPPLY", "ENGINEER", "ACCOUNTANT", "ADMIN"] },
-    "level": { "enum": ["full", "read", "hidden"] },
+    "role": {
+      "enum": [
+        "MANAGER",
+        "DIRECTOR",
+        "SUPPLY",
+        "ENGINEER",
+        "ACCOUNTANT",
+        "ADMIN"
+      ]
+    },
+    "level": {
+      "enum": [
+        "full",
+        "read",
+        "hidden"
+      ]
+    },
     "i18n": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["ru", "uz", "en"],
+      "required": [
+        "ru",
+        "uz",
+        "en"
+      ],
       "properties": {
-        "ru": { "type": "string", "minLength": 1 },
-        "uz": { "type": "string", "minLength": 1 },
-        "en": { "type": "string", "minLength": 1 }
+        "ru": {
+          "type": "string",
+          "minLength": 1
+        },
+        "uz": {
+          "type": "string",
+          "minLength": 1
+        },
+        "en": {
+          "type": "string",
+          "minLength": 1
+        }
       }
     },
-    "erpRoleCode": { "enum": ["CALCULATION", "CATALOG_SUPPLY", "FULFILLMENT", "FINANCE", "HEAD", "VIEWER"] },
+    "erpRoleCode": {
+      "enum": [
+        "CALCULATION",
+        "CATALOG_SUPPLY",
+        "FULFILLMENT",
+        "FINANCE",
+        "HEAD",
+        "VIEWER"
+      ]
+    },
     "erpPermission": {
       "enum": [
-        "deal.manage", "deal.assign",
-        "quote.build", "quote.edit_pricing", "quote.view_cost_margin", "quote.send", "quote.review", "quote.approve_final",
-        "contract.manage", "contract.sign",
-        "catalog.manage", "catalog.publish",
+        "deal.manage",
+        "deal.assign",
+        "quote.build",
+        "quote.edit_pricing",
+        "quote.view_cost_margin",
+        "quote.send",
+        "quote.review",
+        "quote.approve_final",
+        "contract.manage",
+        "contract.sign",
+        "catalog.manage",
+        "catalog.publish",
         "supply.manage",
-        "fulfillment.manage", "fulfillment.act",
-        "finance.invoice", "finance.payment", "finance.rates",
-        "settings.edit", "settings.charge_templates",
+        "fulfillment.manage",
+        "fulfillment.act",
+        "finance.invoice",
+        "finance.payment",
+        "finance.rates",
+        "settings.edit",
+        "settings.charge_templates",
         "team.manage",
         "data.export"
       ]
     },
     "queueKind": {
       "enum": [
-        "answer_lead", "take_lead", "create_request", "service_request",
-        "resolve_letter", "approve_quote", "approve_memo", "problem_project",
-        "calc_task", "supplier_overdue",
-        "confirm_payment", "issue_invoice", "issue_contract", "attach_scan", "pay_memo", "overdue_invoice",
-        "ticket", "integration_issue"
+        "answer_lead",
+        "take_lead",
+        "create_request",
+        "service_request",
+        "resolve_letter",
+        "approve_quote",
+        "approve_memo",
+        "problem_project",
+        "calc_task",
+        "supplier_overdue",
+        "confirm_payment",
+        "issue_invoice",
+        "issue_contract",
+        "attach_scan",
+        "pay_memo",
+        "overdue_invoice",
+        "ticket",
+        "integration_issue"
       ]
     },
     "roleDef": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["name", "crm_base_role", "erp_role_codes", "erp_extra_permissions", "queue"],
+      "required": [
+        "name",
+        "crm_base_role",
+        "erp_role_codes",
+        "erp_extra_permissions",
+        "queue"
+      ],
       "properties": {
-        "name": { "$ref": "#/$defs/i18n" },
-        "crm_base_role": { "enum": ["admin", "manager", "viewer"] },
-        "erp_role_codes": { "type": "array", "uniqueItems": true, "items": { "$ref": "#/$defs/erpRoleCode" } },
-        "erp_extra_permissions": { "type": "array", "uniqueItems": true, "items": { "$ref": "#/$defs/erpPermission" } },
-        "queue": { "type": "array", "uniqueItems": true, "items": { "$ref": "#/$defs/queueKind" } }
+        "name": {
+          "$ref": "#/$defs/i18n"
+        },
+        "crm_base_role": {
+          "enum": [
+            "admin",
+            "manager",
+            "viewer"
+          ]
+        },
+        "erp_role_codes": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/erpRoleCode"
+          }
+        },
+        "erp_extra_permissions": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/erpPermission"
+          }
+        },
+        "queue": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/queueKind"
+          }
+        }
       }
     },
     "accessRow": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["MANAGER", "DIRECTOR", "SUPPLY", "ENGINEER", "ACCOUNTANT", "ADMIN"],
+      "required": [
+        "MANAGER",
+        "DIRECTOR",
+        "SUPPLY",
+        "ENGINEER",
+        "ACCOUNTANT",
+        "ADMIN"
+      ],
       "properties": {
-        "MANAGER": { "$ref": "#/$defs/level" },
-        "DIRECTOR": { "$ref": "#/$defs/level" },
-        "SUPPLY": { "$ref": "#/$defs/level" },
-        "ENGINEER": { "$ref": "#/$defs/level" },
-        "ACCOUNTANT": { "$ref": "#/$defs/level" },
-        "ADMIN": { "$ref": "#/$defs/level" }
+        "MANAGER": {
+          "$ref": "#/$defs/level"
+        },
+        "DIRECTOR": {
+          "$ref": "#/$defs/level"
+        },
+        "SUPPLY": {
+          "$ref": "#/$defs/level"
+        },
+        "ENGINEER": {
+          "$ref": "#/$defs/level"
+        },
+        "ACCOUNTANT": {
+          "$ref": "#/$defs/level"
+        },
+        "ADMIN": {
+          "$ref": "#/$defs/level"
+        }
       }
     }
   },
   "properties": {
-    "version": { "const": 1 },
+    "version": {
+      "const": 1
+    },
     "roles": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["MANAGER", "DIRECTOR", "SUPPLY", "ENGINEER", "ACCOUNTANT", "ADMIN"],
+      "required": [
+        "MANAGER",
+        "DIRECTOR",
+        "SUPPLY",
+        "ENGINEER",
+        "ACCOUNTANT",
+        "ADMIN"
+      ],
       "properties": {
-        "MANAGER": { "$ref": "#/$defs/roleDef" },
-        "DIRECTOR": { "$ref": "#/$defs/roleDef" },
-        "SUPPLY": { "$ref": "#/$defs/roleDef" },
-        "ENGINEER": { "$ref": "#/$defs/roleDef" },
-        "ACCOUNTANT": { "$ref": "#/$defs/roleDef" },
-        "ADMIN": { "$ref": "#/$defs/roleDef" }
+        "MANAGER": {
+          "$ref": "#/$defs/roleDef"
+        },
+        "DIRECTOR": {
+          "$ref": "#/$defs/roleDef"
+        },
+        "SUPPLY": {
+          "$ref": "#/$defs/roleDef"
+        },
+        "ENGINEER": {
+          "$ref": "#/$defs/roleDef"
+        },
+        "ACCOUNTANT": {
+          "$ref": "#/$defs/roleDef"
+        },
+        "ADMIN": {
+          "$ref": "#/$defs/roleDef"
+        }
       }
     },
     "resources": {
@@ -89,12 +229,33 @@
       "items": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["key", "module", "label", "access"],
+        "required": [
+          "key",
+          "module",
+          "label",
+          "access"
+        ],
         "properties": {
-          "key": { "type": "string", "pattern": "^[a-z]+(\\.[a-z_]+)*$" },
-          "module": { "enum": ["dashboard", "crm", "eds", "erp", "chats", "admin"] },
-          "label": { "$ref": "#/$defs/i18n" },
-          "access": { "$ref": "#/$defs/accessRow" }
+          "key": {
+            "type": "string",
+            "pattern": "^[a-z]+(\\.[a-z_]+)*$"
+          },
+          "module": {
+            "enum": [
+              "dashboard",
+              "crm",
+              "eds",
+              "erp",
+              "chats",
+              "admin"
+            ]
+          },
+          "label": {
+            "$ref": "#/$defs/i18n"
+          },
+          "access": {
+            "$ref": "#/$defs/accessRow"
+          }
         }
       }
     },
@@ -103,10 +264,132 @@
       "additionalProperties": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["description", "visible_to"],
+        "required": [
+          "description",
+          "visible_to"
+        ],
         "properties": {
-          "description": { "$ref": "#/$defs/i18n" },
-          "visible_to": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "$ref": "#/$defs/role" } }
+          "description": {
+            "$ref": "#/$defs/i18n"
+          },
+          "visible_to": {
+            "type": "array",
+            "minItems": 1,
+            "uniqueItems": true,
+            "items": {
+              "$ref": "#/$defs/role"
+            }
+          }
+        }
+      }
+    },
+    "menu": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "dashboard",
+        "crm",
+        "eds",
+        "erp",
+        "chats",
+        "admin"
+      ],
+      "properties": {
+        "dashboard": {
+          "type": "object",
+          "minProperties": 1,
+          "propertyNames": {
+            "pattern": "^[a-z_]+$"
+          },
+          "additionalProperties": {
+            "type": "array",
+            "minItems": 1,
+            "uniqueItems": true,
+            "items": {
+              "type": "string",
+              "pattern": "^[a-z]+(\\.[a-z_]+)*$"
+            }
+          }
+        },
+        "crm": {
+          "type": "object",
+          "minProperties": 1,
+          "propertyNames": {
+            "pattern": "^[a-z_]+$"
+          },
+          "additionalProperties": {
+            "type": "array",
+            "minItems": 1,
+            "uniqueItems": true,
+            "items": {
+              "type": "string",
+              "pattern": "^[a-z]+(\\.[a-z_]+)*$"
+            }
+          }
+        },
+        "eds": {
+          "type": "object",
+          "minProperties": 1,
+          "propertyNames": {
+            "pattern": "^[a-z_]+$"
+          },
+          "additionalProperties": {
+            "type": "array",
+            "minItems": 1,
+            "uniqueItems": true,
+            "items": {
+              "type": "string",
+              "pattern": "^[a-z]+(\\.[a-z_]+)*$"
+            }
+          }
+        },
+        "erp": {
+          "type": "object",
+          "minProperties": 1,
+          "propertyNames": {
+            "pattern": "^[a-z_]+$"
+          },
+          "additionalProperties": {
+            "type": "array",
+            "minItems": 1,
+            "uniqueItems": true,
+            "items": {
+              "type": "string",
+              "pattern": "^[a-z]+(\\.[a-z_]+)*$"
+            }
+          }
+        },
+        "chats": {
+          "type": "object",
+          "minProperties": 1,
+          "propertyNames": {
+            "pattern": "^[a-z_]+$"
+          },
+          "additionalProperties": {
+            "type": "array",
+            "minItems": 1,
+            "uniqueItems": true,
+            "items": {
+              "type": "string",
+              "pattern": "^[a-z]+(\\.[a-z_]+)*$"
+            }
+          }
+        },
+        "admin": {
+          "type": "object",
+          "minProperties": 1,
+          "propertyNames": {
+            "pattern": "^[a-z_]+$"
+          },
+          "additionalProperties": {
+            "type": "array",
+            "minItems": 1,
+            "uniqueItems": true,
+            "items": {
+              "type": "string",
+              "pattern": "^[a-z]+(\\.[a-z_]+)*$"
+            }
+          }
         }
       }
     }
