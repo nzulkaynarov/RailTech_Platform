@@ -5,8 +5,6 @@ ERP подменена respx. Проверяется по CRM: роли, пар�
 принимает оба секрета в переход и снимает предыдущий по сроку, в аудите и журналах нет значений.
 """
 
-import hashlib
-import hmac
 import json
 import logging
 import uuid
@@ -25,6 +23,7 @@ from app.config import Settings
 from app.main import create_app
 from app.models.auth import AuditLog
 from app.models.integrations import IntegrationSecret
+from app.services.erp_events import sign_v2
 from tests.integration.crm_helpers import PASSWORD, login, make_user
 
 pytestmark = pytest.mark.integration
@@ -72,14 +71,15 @@ def post_event(client: TestClient, secret: str, serial: int) -> int:
     body = example_event("quote.viewed")
     body["occurred_at"] = f"2026-10-21T11:{serial:02d}:00+05:00"
     raw = json.dumps(body).encode()
-    signature = "sha256=" + hmac.new(secret.encode(), raw, hashlib.sha256).hexdigest()
+    event_id, stamp = str(uuid.uuid4()), datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
     return client.post(
         f"{ERP_URL}/events",
         content=raw,
         headers={
-            "X-Event-Id": str(uuid.uuid4()),
+            "X-Event-Id": event_id,
             "X-Event-Type": "quote.viewed",
-            "X-Signature": signature,
+            "X-Timestamp": stamp,
+            "X-Signature": sign_v2(secret, event_id, stamp, raw),
             "Content-Type": "application/json",
         },
     ).status_code

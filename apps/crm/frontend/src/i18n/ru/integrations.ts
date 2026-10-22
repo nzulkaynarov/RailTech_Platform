@@ -66,8 +66,8 @@ export const integrations = {
       source: "Откуда",
       baseUrl: "Адрес ERP",
       baseUrlHint:
-        "Корень ERP, например https://erp.example.com — путь /api/integration/v1 CRM добавит сама.",
-      baseUrlPlaceholder: "https://erp.example.com",
+        "Внутренний адрес ERP, обычно http://erp-backend:8000 — путь /api/integration/v1 CRM добавит сама.",
+      baseUrlPlaceholder: "http://erp-backend:8000",
       token: "Сервисный токен CRM → ERP",
       tokenSaved: "Задан: ••••{last4}",
       tokenEnv: "Задан в .env (ERP_SERVICE_TOKEN) — введите новый, чтобы хранить в CRM",
