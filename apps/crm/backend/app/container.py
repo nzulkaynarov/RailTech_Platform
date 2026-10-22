@@ -55,6 +55,7 @@ if TYPE_CHECKING:
     from app.services.leads import LeadService
     from app.services.llm_usage import DbUsageRecorder
     from app.services.mail import MailService
+    from app.services.platform_roles import PlatformRoleService
     from app.services.sandbox import SandboxService
     from app.services.setup import SetupService
     from app.services.smtp_connector import SmtpConnectorService
@@ -208,6 +209,13 @@ class Container:
             LockoutPolicy(self.settings.login_max_failures, self.settings.login_lockout_minutes),
             erp_sync=_enqueue_erp_sync,
         )
+
+    @cached_property
+    def platform_role_service(self) -> "PlatformRoleService":
+        """Роли Платформы как данные (R-1): изменение роли пересчитывает права её сотрудников."""
+        from app.services.platform_roles import PlatformRoleService
+
+        return PlatformRoleService(self.session_factory, erp_sync=_enqueue_erp_sync)
 
     @cached_property
     def erp_access_service(self) -> "ErpAccessService":

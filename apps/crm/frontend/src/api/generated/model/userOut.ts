@@ -4,7 +4,9 @@
  * RailTech CRM API
  * OpenAPI spec version: 0.1.0
  */
+import type { PlatformRoleRef } from "./platformRoleRef";
 import type { UserOutErpRoleCodesItem } from "./userOutErpRoleCodesItem";
+import type { UserOutErpSync } from "./userOutErpSync";
 import type { UserOutLanguage } from "./userOutLanguage";
 import type { UserOutPlatformAccessItem } from "./userOutPlatformAccessItem";
 import type { UserOutPlatformRolesItem } from "./userOutPlatformRolesItem";
@@ -12,6 +14,8 @@ import type { UserOutPlatformRolesItem } from "./userOutPlatformRolesItem";
 export interface UserOut {
   email: string;
   erp_role_codes?: UserOutErpRoleCodesItem[];
+  erp_sync?: UserOutErpSync;
+  erp_sync_error?: string | null;
   full_name: string;
   id: number;
   is_active: boolean;
@@ -20,6 +24,8 @@ export interface UserOut {
   notify_leads: boolean;
   notify_system: boolean;
   platform_access?: UserOutPlatformAccessItem[];
+  platform_role_ids?: number[];
+  platform_role_refs?: PlatformRoleRef[];
   platform_roles?: UserOutPlatformRolesItem[];
   position?: string | null;
   roles: string[];
