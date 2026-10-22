@@ -372,10 +372,24 @@ def test_partial_match_with_the_accepted_values_is_422(paired, same):
     assert not ServiceCredential.objects.filter(slot=CredentialSlot.CRM_TO_ERP_PREVIOUS).exists()
 
 
-def test_the_whole_current_triple_without_a_rotation_is_not_a_rotation(paired):
+def test_the_accepted_triple_sent_to_rotate_before_any_rotation_is_partial_repeat(paired):
+    """(а) Тройка приёма целиком, но ротации ещё не было: это не «последняя применённая ротация» → 422."""
     response = rotate(NEW_CRM_TOKEN, crm=NEW_CRM_TOKEN, erp=NEW_ERP_TOKEN, webhook=NEW_SECRET)
-    assert response.status_code == 422 and response.json() == {"detail": "VALIDATION_ERROR"}
+    assert response.status_code == 422 and response.json() == {"detail": "PAIRING_PARTIAL_REPEAT"}
+    assert _stored_values() == (NEW_CRM_TOKEN, NEW_ERP_TOKEN, NEW_SECRET)
     assert not ServiceCredential.objects.filter(slot=CredentialSlot.CRM_TO_ERP_PREVIOUS).exists()
+
+
+def test_the_old_token_with_the_current_rest_after_a_rotation_is_partial_repeat(paired):
+    """(б) После ротации A→B тройка (A, текущий erp, текущий webhook) — частичный повтор, а не новая ротация."""
+    assert (
+        rotate(NEW_CRM_TOKEN, crm=ROTATED_CRM_TOKEN, erp=ROTATED_ERP_TOKEN, webhook=ROTATED_SECRET).status_code == 200
+    )
+    stored = _stored_values()
+    for caller in (NEW_CRM_TOKEN, ROTATED_CRM_TOKEN):
+        response = rotate(caller, crm=NEW_CRM_TOKEN, erp=ROTATED_ERP_TOKEN, webhook=ROTATED_SECRET)
+        assert response.status_code == 422 and response.json() == {"detail": "PAIRING_PARTIAL_REPEAT"}
+        assert _stored_values() == stored
 
 
 def test_rotation_with_the_previous_token_value_is_422(paired):

@@ -58,7 +58,8 @@ mkdir -p "$LOGS"
 # окружение оболочки (токены, ключи разработчика); от машины зависят и потому остаются отличиями от CI: PATH и HOME (uv, pnpm,
 # кэши), адрес и порт одноразового Postgres (127.0.0.1 вместо localhost — Docker публикует порт только на IPv4), имя БД/пользователя
 # контейнера. Менять набор переменных — только вместе с ci.yml. Настройки читают ещё .env из backend/ и apps/crm/ — в CI таких
-# файлов нет, поэтому их наличие здесь — ошибка (проверка в stage_e2e).
+# файлов нет, поэтому их наличие здесь — ошибка (проверка в stage_e2e). `CI=true` (его задаёт GitHub Actions: у Playwright retries
+# и forbidOnly) локально НЕ задан намеренно: так строже — retries 0, нестабильный тест виден сразу, а не прячется повтором.
 JWT_ONCE=$(openssl rand -hex 32)
 clean_env() {
   env -i PATH="$PATH" HOME="$HOME" "$@"
@@ -124,24 +125,24 @@ stage_e2e() {
   done
   # EXIT, а не RETURN: при сбое `set -e` завершает подоболочку задания, и RETURN не срабатывает.
   trap e2e_cleanup EXIT
-  docker run -d --name "$E2E_PG" -p "127.0.0.1:${E2E_PG_PORT}:5432" -e POSTGRES_DB=railtech_e2e \
-    -e POSTGRES_USER=railtech -e POSTGRES_PASSWORD="$PASS" "$PG_IMAGE" >/dev/null
+  docker run -d --name "$E2E_PG" -p "127.0.0.1:${E2E_PG_PORT}:5432" -e POSTGRES_DB=crm_e2e \
+    -e POSTGRES_USER=rt -e POSTGRES_PASSWORD="$PASS" "$PG_IMAGE" >/dev/null
   for _ in $(seq 1 30); do
-    docker exec "$E2E_PG" pg_isready -U railtech -d railtech_e2e >/dev/null 2>&1 && break
+    docker exec "$E2E_PG" pg_isready -U rt -d crm_e2e >/dev/null 2>&1 && break
     sleep 1
   done
-  local db=(POSTGRES_HOST=127.0.0.1 POSTGRES_PORT="$E2E_PG_PORT" POSTGRES_DB=railtech_e2e
-    POSTGRES_USER=railtech POSTGRES_PASSWORD="$PASS")
+  local db=(POSTGRES_HOST=127.0.0.1 POSTGRES_PORT="$E2E_PG_PORT" POSTGRES_DB=crm_e2e
+    POSTGRES_USER=rt POSTGRES_PASSWORD="$PASS")
   local who=(E2E_MANAGER_EMAIL=manager@demo.local E2E_MANAGER_PASSWORD=ci-e2e-demo-42
     E2E_ADMIN_EMAIL=admin@demo.local E2E_ADMIN_PASSWORD=ci-e2e-boss-42)
   (
     cd "$ROOT/backend"
-    backend_env "${db[@]}" uv run alembic upgrade head
-    backend_env "${db[@]}" uv run python -m app seed-demo --manager-password ci-e2e-demo-42
-    backend_env "${db[@]}" uv run python -m app create-admin --email admin@demo.local \
+    backend_env "${db[@]}" "${who[@]}" uv run alembic upgrade head
+    backend_env "${db[@]}" "${who[@]}" uv run python -m app seed-demo --manager-password ci-e2e-demo-42
+    backend_env "${db[@]}" "${who[@]}" uv run python -m app create-admin --email admin@demo.local \
       --password ci-e2e-boss-42
   )
-  (cd "$ROOT/backend" && backend_env "${db[@]}" uv run python -m app api --port "$E2E_API_PORT") \
+  (cd "$ROOT/backend" && backend_env "${db[@]}" "${who[@]}" uv run python -m app api --port "$E2E_API_PORT") \
     >"$LOGS/e2e-api.log" 2>&1 &
   for _ in $(seq 1 60); do
     curl -fsS "http://127.0.0.1:${E2E_API_PORT}/health" >/dev/null 2>&1 && break

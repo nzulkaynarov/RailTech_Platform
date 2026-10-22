@@ -226,13 +226,15 @@ def rotate(
 
     Контракт шва 0.6.1: принимается либо полностью новая тройка, либо точный повтор последней применённой (CRM не
     получила ответ и зовёт снова — уже со старым токеном, он ещё действует): тот же результат, ничего не переписывается,
-    переходный срок не продлевается. Частичное совпадение с действующими значениями (одно или два значения из трёх) —
-    422 `PAIRING_PARTIAL_REPEAT`, ничего не применяется. Тройка, целиком равная действующей без ротации, — не ротация
-    (422 `VALIDATION_ERROR`). Токен из `.env` (сопряжения не было) тоже годится как «старый».
+    переходный срок не продлевается. Любая другая тройка, у которой хотя бы одно значение совпало с действующим
+    (в том числе тройка приёма до первой ротации и «старый токен + текущие остальные» после неё), — 422
+    `PAIRING_PARTIAL_REPEAT`, ничего не применяется (решение лида 2026-10-22, буквальный текст контракта). Токен из `.env` (сопряжения не было) тоже годится как «старый».
     """
     _check_secrets(crm_to_erp_token, erp_to_crm_token, webhook_secret)
     now = now or timezone.now()
     with transaction.atomic():
+        # Общая точка блокировки: первая ротация по `.env` (строк ServiceCredential ещё нет) не гоняется сама с собой.
+        PairingState.objects.select_for_update().get_or_create(pk=1)
         rows = {row.slot: row for row in ServiceCredential.objects.select_for_update().all()}
         if _is_repeat_of_last_rotation(rows, crm_to_erp_token, erp_to_crm_token, webhook_secret):
             current_row = rows[CredentialSlot.CRM_TO_ERP]
@@ -241,8 +243,6 @@ def rotate(
                 previous_token_valid_until=rows[CredentialSlot.CRM_TO_ERP_PREVIOUS].expires_at or now,
             )
         matches = _effective_matches(crm_to_erp_token, erp_to_crm_token, webhook_secret)
-        if matches == 3:
-            raise IntegrationValidationError()  # вся тройка действует, но это не повтор ротации
         if matches:
             raise IntegrationValidationError("PAIRING_PARTIAL_REPEAT")
         stored_current = credentials.stored_crm_token(rows)
