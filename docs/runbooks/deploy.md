@@ -215,6 +215,9 @@ mcp-tools.json` монтируется в контейнер по пути `../.
    (повторный `make-env-prod.sh init` тоже допишет её, но вернёт и переменные VPS 2 — после него нужен `drop-db-only`, см. §1.2).
    `deploy.sh` останавливается с понятным сообщением до pull и миграций, пока строки нет. `PLATFORM_SESSION_TTL_HOURS` (часы жизни сессии, по умолчанию 12) —
    необязательна, закомментирована в примере.
+   Так же необязательны `PLATFORM_ERP_REFRESH_COOKIE` (имя refresh-cookie ERP, по умолчанию `refresh_token`) и `PLATFORM_LOGIN_RATE_PER_MINUTE`
+   (попыток входа в минуту, по умолчанию 10). `PLATFORM_COOKIE_SECURE` на проде не настраивается: `prod.yml` жёстко ставит `true`, на http-стенде
+   `dev.yml` ставит `false`.
 3. **GitHub environment `production`** — ничего обязательного; необязательная Variable `PLATFORM_DOMAIN` (§1.4) нужна, только если
    домен отличается от `platform.railtech.uz`: по ней smoke с раннера ходит на Платформу.
 4. **Деплой** — обычный (§2): Actions → Deploy → `ref` = `main`, `action` = `deploy`. Не запускать, пока в `main` вливается PR (§6, гонка).
