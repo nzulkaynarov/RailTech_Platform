@@ -166,6 +166,61 @@ describe("InviteEmployeeForm: приглашение по почте", () => {
     expect(onInvited).not.toHaveBeenCalled();
   });
 
+  it("после «письмо не отправлено» поля и роли сброшены, повторить с теми же данными нельзя", async () => {
+    server.use(
+      http.post("*/admin/users/invite", () =>
+        HttpResponse.json(
+          {
+            code: "CONFLICT",
+            message: "x",
+            source: "crm",
+            details: { employee_id: "101", invite: "not_sent", reason: "smtp_not_configured" },
+          },
+          { status: 409 },
+        ),
+      ),
+    );
+    setup();
+    fill("Имя и фамилия", "Новый Сотрудник");
+    fill("Электронная почта", "new@demo.example");
+    fill("Должность (необязательно)", "Инженер");
+    fireEvent.click(screen.getByRole("checkbox", { name: /^Директор/ }));
+
+    submit();
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(/письмо не отправлено/);
+    expect(screen.getByLabelText("Имя и фамилия")).toHaveValue("");
+    expect(screen.getByLabelText("Электронная почта")).toHaveValue("");
+    expect(screen.getByLabelText("Должность (необязательно)")).toHaveValue("");
+    for (const box of screen.getAllByRole("checkbox")) expect(box).not.toBeChecked();
+  });
+
+  it("после успеха форма пустая, роли не накапливаются в следующем приглашении", async () => {
+    setup();
+    fill("Имя и фамилия", "Первый Сотрудник");
+    fill("Электронная почта", "first@demo.example");
+    fireEvent.click(screen.getByRole("checkbox", { name: /^Директор/ }));
+
+    submit();
+
+    await waitFor(() => {
+      expect(onInvited).toHaveBeenCalledTimes(1);
+    });
+    expect(screen.getByLabelText("Имя и фамилия")).toHaveValue("");
+    for (const box of screen.getAllByRole("checkbox")) expect(box).not.toBeChecked();
+
+    fill("Имя и фамилия", "Второй Сотрудник");
+    fill("Электронная почта", "second@demo.example");
+    fireEvent.click(screen.getByRole("checkbox", { name: /^Снабженец/ }));
+    // у кнопки ещё доигрывает анимация загрузки, и значок входит в её имя
+    fireEvent.click(screen.getByRole("button", { name: /Отправить приглашение/ }));
+
+    await waitFor(() => {
+      expect(bodies).toHaveLength(2);
+    });
+    expect(bodies[1]?.roles).toEqual(["SUPPLY"]);
+  });
+
   it("CRM не ответила после создания: текст про CRM, а не про почту", async () => {
     server.use(
       http.post("*/admin/users/invite", () =>

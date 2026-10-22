@@ -51,6 +51,45 @@ def lead_id_of(text: str) -> int | None:
     return int(match.group(1)) if match else None
 
 
+# Латинская запись префикса бизнес-номера (раскладка клавиатуры «ZV»), O-4 отчёта гейта P1.
+_LATIN_PREFIXES = {"zv": "ЗВ", "pr": "ПР", "kp": "КП"}
+_LATIN_PREFIX = re.compile(r"(?i:(zv|pr|kp))(?![^\W\d_])")
+_DEAL_NUMBER_QUERY = re.compile(
+    r"(?P<prefix>[^\W\d_]{2})[\s\-–—/]*(?P<year>\d{4})[\s\-–—/]*(?P<seq>\d{1,6})"
+)
+
+
+def cyrillic_prefix(text: str) -> str:
+    """Запрос как набран, но латинский префикс номера заменён кириллическим: `kp-2026-0` ->
+    `КП-2026-0`, `zv 2026` -> `ЗВ 2026`. Остальное не перестраивается: номера документов ERP
+    (`КП-2026-00001`, схема и ширина настраиваются) ищутся по подстроке как есть."""
+    stripped = text.strip()
+    match = _LATIN_PREFIX.match(stripped)
+    if match is None:
+        return stripped
+    return _LATIN_PREFIXES[match[1].casefold()] + stripped[match.end() :]
+
+
+def number_query(text: str) -> str | None:
+    """Запрос, похожий на номер заявки или проекта, в каноническом виде: `zv-2026-1` ->
+    `ЗВ-2026-001`. Не номер ЗВ/ПР — None. Номера документов (КП, счета, договоры) не трогаются:
+    их формат задаёт схема нумерации ERP (`cyrillic_prefix`).
+
+    Это нормализация строки поиска, а не разбор идентификатора: `id` сделки из номера не
+    извлекается (docs/QUESTIONS.md, Q-PLT-14-1). Номер для показа составляется с тремя знаками
+    (`deal_number`), поэтому `1` дополняется до `001`; запись как набрана ищется тоже — так
+    «зв-2026-10» по-прежнему находит `ЗВ-2026-104`.
+    """
+    match = _DEAL_NUMBER_QUERY.fullmatch(text.strip())
+    if match is None:
+        return None
+    prefix = match["prefix"].casefold()
+    prefix = _LATIN_PREFIXES.get(prefix, prefix.upper())
+    if prefix not in ("ЗВ", "ПР"):
+        return None
+    return f"{prefix}-{match['year']}-{match['seq'].zfill(3)}"
+
+
 def deal_step(deal: dict[str, Any]) -> DealStep:
     if deal.get("execution_complete") is True:
         return "DONE"

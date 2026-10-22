@@ -49,6 +49,18 @@ test.describe("Моя очередь", () => {
     await settledScreenshot(page, "dashboard-director");
   });
 
+  test("администратор: лента «Сегодня» — слова, без служебных кодов входа (QA-P1-D-1)", async ({
+    page,
+  }) => {
+    await loginAndWait(page, "admin@demo.example");
+
+    const panel = page.getByRole("complementary", { name: "Боковое окно" });
+    await expect(panel.getByRole("tab", { name: "Сегодня", selected: true })).toBeVisible();
+    await expect(panel.getByRole("listitem")).toHaveCount(4);
+    await expect(panel).not.toContainText(/sso\.|auth\.|login/i);
+    await settledScreenshot(page, "dashboard-admin-today");
+  });
+
   test("«Открыть» ведёт на объект и открывает нужную вкладку бокового окна", async ({ page }) => {
     await loginAndWait(page, "director@demo.example");
 

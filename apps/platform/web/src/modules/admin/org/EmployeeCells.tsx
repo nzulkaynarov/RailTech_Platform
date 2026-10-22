@@ -12,6 +12,7 @@ export function RoleTags({ roles }: { roles: Employee["roles"] }) {
     <span className="pf-org-tags">
       {roles.map((role) => (
         <StatusTag key={role} tone="default">
+          {/* TODO(ADR-0012): название роли — из данных сотрудника (`/admin/users`), а не из i18n по коду роли. */}
           {t(`shell:roles.${role}`)}
         </StatusTag>
       ))}

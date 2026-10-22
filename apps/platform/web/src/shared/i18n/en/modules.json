@@ -336,7 +336,7 @@
       "consequence": {
         "modules": "The employee will see the modules: {{modules}}.",
         "lost": "The employee will stop seeing the modules: {{modules}}.",
-        "applied": "Changes apply immediately; the CRM log records who made them and when.",
+        "applied": "Changes: in CRM and ERP — immediately; the employee's menu updates within a minute or at the next sign-in. The CRM log records who made them and when.",
         "position": "Position on the card: “{{position}}”.",
         "positionCleared": "The position on the card will be cleared.",
         "self": "You are changing your own roles: the menu updates after saving.",

@@ -9,6 +9,7 @@
 import asyncio
 from typing import Any
 
+from app.feeds.events import event_text, is_service_event
 from app.feeds.feed import SNAPSHOT_TTL_SECONDS, Feed, rows
 from app.feeds.models import ActivityFeed, ActivityItem, PersonRef
 from app.feeds.numbers import deal_number, deal_ref
@@ -21,7 +22,6 @@ FEED_SIZE = 8
 LOG_PAGE = 50
 TIMELINE_DEALS = 5
 TIMELINE_PER_DEAL = 10
-_MANUAL = "[MANUAL_MODE]"
 _ADMIN_ENTITIES = frozenset({"user", "setting", "integration", "email_template"})
 
 
@@ -31,9 +31,11 @@ def _item(entry: dict[str, Any], deals: dict[int, dict[str, Any]]) -> ActivityIt
         return None
     deal = deals.get(entry["deal_id"]) if isinstance(entry.get("deal_id"), int) else None
     name = str(entry.get("user_name") or "").strip() or "Система"
-    text = short(str(entry.get("action") or "").replace(_MANUAL, "").strip(), 120)
-    if not text:
+    code = str(entry.get("event_code") or "").strip()
+    action = str(entry.get("action") or "").strip()
+    if is_service_event(code, action):
         return None
+    text = short(event_text(code, action), 120)
     if deal is not None:
         text = f"{text} · {deal_number(deal)}"
     module: ModuleCode = "erp" if str(entry.get("entity_type") or "") in _ADMIN_ENTITIES else "eds"
