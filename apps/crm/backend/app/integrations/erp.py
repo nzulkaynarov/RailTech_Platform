@@ -28,6 +28,7 @@ from app.domain.errors import (
     ValidationFailedError,
 )
 from app.domain.system_status import ErpExternal
+from app.integrations.erp_transport import SharedAsyncClient, send
 from app.security.secrets_store import (
     ERP_SERVICE_TOKEN,
     ERP_WEBHOOK_SECRET,
@@ -301,8 +302,11 @@ class ErpProbe(Protocol):
 class HttpxErpProbe:
     """`GET {base_url}/api/integration/v1/health` с сервисным токеном, таймаут 5 с."""
 
-    def __init__(self, timeout_s: float = HEALTH_TIMEOUT_S) -> None:
+    def __init__(
+        self, timeout_s: float = HEALTH_TIMEOUT_S, *, http: SharedAsyncClient | None = None
+    ) -> None:
         self._timeout_s = timeout_s
+        self._http = http or SharedAsyncClient()
 
     async def health(self, connection: ErpConnection) -> ErpHealth:
         problem = base_url_problem(connection.base_url)
@@ -311,8 +315,13 @@ class HttpxErpProbe:
         headers = {"Authorization": f"Bearer {connection.token}", "Accept": "application/json"}
         started = time.monotonic()
         try:
-            async with httpx.AsyncClient(timeout=self._timeout_s) as client:
-                response = await client.get(health_url(connection.base_url), headers=headers)
+            response = await send(
+                self._http,
+                "GET",
+                health_url(connection.base_url),
+                timeout_s=self._timeout_s,
+                headers=headers,
+            )
         except httpx.TimeoutException as exc:
             raise ErpProbeError("unavailable", "timeout") from exc
         except httpx.InvalidURL as exc:
@@ -488,11 +497,13 @@ class HttpxErpClient:
         settings: SettingsService | None = None,
         *,
         timeout_s: float = 10.0,
+        http: SharedAsyncClient | None = None,
     ) -> None:
         self._store = store
         self._config = config
         self._settings = settings
         self._timeout_s = timeout_s
+        self._http = http or SharedAsyncClient()
 
     async def handoff_client(
         self, payload: HandoffPayload, *, idempotency_key: str | None = None
@@ -517,8 +528,9 @@ class HttpxErpClient:
         body = handoff_payload_to_dict(payload)
         url = f"{connection.base_url.rstrip('/')}/api/integration/v1/clients/handoff"
         try:
-            async with httpx.AsyncClient(timeout=self._timeout_s) as client:
-                response = await client.post(url, json=body, headers=headers)
+            response = await send(
+                self._http, "POST", url, timeout_s=self._timeout_s, headers=headers, json=body
+            )
         except httpx.TimeoutException as exc:
             raise UpstreamUnavailableError("erp timeout", reason=Reason.ERP_UNAVAILABLE) from exc
         except httpx.InvalidURL as exc:

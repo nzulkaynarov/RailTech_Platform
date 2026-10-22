@@ -1,0 +1,33 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://railtech.uz/contracts/events/erp/invite.sent.v1.json",
+  "title": "Приглашение в Cabinet отправлено",
+  "description": "Тип uz.railtech.erp.invite.sent.v1, источник rt://erp. Поле data конверта (envelope.v1.json); прежнее тело события invite.sent из events.schema.json без version, event, occurred_at. Что делает CRM: лента.",
+  "type": "object",
+  "required": [
+    "erp_company_id",
+    "crm_client_id",
+    "actor",
+    "payload"
+  ],
+  "properties": {
+    "erp_company_id": {
+      "type": "integer",
+      "description": "Компания клиента в ERP"
+    },
+    "crm_client_id": {
+      "type": "integer",
+      "description": "Клиент в CRM"
+    },
+    "deal": {
+      "$ref": "_defs.v1.json#/$defs/DealRef"
+    },
+    "actor": {
+      "$ref": "_defs.v1.json#/$defs/Actor"
+    },
+    "payload": {
+      "$ref": "_defs.v1.json#/$defs/InviteSent"
+    }
+  },
+  "additionalProperties": false
+}

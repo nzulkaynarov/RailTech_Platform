@@ -1,0 +1,20 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://railtech.uz/contracts/events/identity/user.created.v1.json",
+  "title": "Сотрудник создан",
+  "description": "Тип uz.railtech.identity.user.created.v1, источник rt://crm. Поле data конверта (envelope.v1.json). Идентичность v1 живёт в CRM (ADR-0015). Снимок сотрудника в user; секретов нет.",
+  "type": "object",
+  "required": [
+    "user",
+    "actor"
+  ],
+  "properties": {
+    "user": {
+      "$ref": "_defs.v1.json#/$defs/User"
+    },
+    "actor": {
+      "$ref": "_defs.v1.json#/$defs/Actor"
+    }
+  },
+  "additionalProperties": false
+}

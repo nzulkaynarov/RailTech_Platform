@@ -1,0 +1,30 @@
+{
+  "specversion": "1.0",
+  "id": "536053f2-57cd-555f-871b-55d95b95ed6b",
+  "source": "rt://crm",
+  "type": "uz.railtech.crm.client.created.v1",
+  "time": "2026-10-22T08:59:00Z",
+  "subject": "client/42",
+  "datacontenttype": "application/json",
+  "dataschema": "rt://contracts/events/crm/client.created/v1",
+  "tenant": "railtech",
+  "correlationid": "e1d918e6-d38f-5c60-aa36-e4258194e8b5",
+  "data": {
+    "client": {
+      "crm_client_id": 42,
+      "erp_company_id": null,
+      "name": "ООО «Пример Логистик»",
+      "inn": "300000001",
+      "segment": "rail",
+      "is_active": true,
+      "owner": {
+        "crm_user_id": 7,
+        "full_name": "Алия Каримова"
+      },
+      "updated_at": "2026-10-22T08:59:00Z"
+    },
+    "actor": {
+      "type": "bot"
+    }
+  }
+}

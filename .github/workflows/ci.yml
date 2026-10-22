@@ -510,6 +510,15 @@ jobs:
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v7
+      # Совместимость схем событий (L8) сравнивает с origin/main: нужен её коммит (дерево), история не нужна.
+      - name: База для проверки совместимости (origin/main)
+        run: git fetch --no-tags --depth=1 origin +refs/heads/main:refs/remotes/origin/main
+      - uses: astral-sh/setup-uv@v7
+        with:
+          version: ${{ env.UV_VERSION }}
+          python-version: ${{ env.PYTHON_VERSION }}
+          enable-cache: true
+          cache-dependency-glob: packages/contracts/uv.lock
       - uses: pnpm/action-setup@v6
         with:
           package_json_file: packages/contracts/package.json
@@ -520,10 +529,15 @@ jobs:
           cache-dependency-path: packages/contracts/pnpm-lock.yaml
       - name: make contracts
         run: make contracts
+        env:
+          CONTRACTS_BASE_REF: origin/main
       - name: Контракт и сгенерированное совпадают
         run: |
           git diff --exit-code -- packages/contracts/generated \
             || (echo "::error::packages/contracts/generated устарел — выполните make contracts и закоммитьте"; exit 1)
+          untracked=$(git status --porcelain --untracked-files=all -- packages/contracts/generated)
+          [ -z "$untracked" ] \
+            || (echo "::error::новые файлы в packages/contracts/generated не закоммичены: $untracked"; exit 1)
 
   # ─── packages: библиотека шины rt-bus (B1) ──────────────────────────────────────────────────
 

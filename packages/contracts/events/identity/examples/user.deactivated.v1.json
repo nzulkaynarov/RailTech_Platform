@@ -1,0 +1,20 @@
+{
+  "specversion": "1.0",
+  "id": "585d934e-6b61-53dd-bc3c-f38ad390d51d",
+  "source": "rt://crm",
+  "type": "uz.railtech.identity.user.deactivated.v1",
+  "time": "2026-10-22T18:00:00Z",
+  "subject": "user/7",
+  "datacontenttype": "application/json",
+  "dataschema": "rt://contracts/events/identity/user.deactivated/v1",
+  "tenant": "railtech",
+  "correlationid": "081daa1d-0f91-520a-b32f-984fc81a10f9",
+  "data": {
+    "crm_user_id": 7,
+    "reason": "Увольнение",
+    "actor": {
+      "type": "staff",
+      "crm_user_id": 1
+    }
+  }
+}
