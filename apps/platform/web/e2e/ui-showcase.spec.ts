@@ -56,7 +56,7 @@ test.describe("витрина общих компонентов", () => {
     });
   }
 
-  test("размеры и цвета на 1440 совпадают с таблицами docs/architecture/platform-frontend.md §5", async ({ page }) => {
+  test("размеры и цвета на 1440 совпадают с platform-frontend.md §5", async ({ page }) => {
     await openShowcase(page, 1440);
     // Размеры и вычисленные стили первого элемента по селектору (скрипт строкой: в e2e нет типов DOM)
     const box = (selector: string) =>
