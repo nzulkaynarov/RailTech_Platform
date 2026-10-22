@@ -1,0 +1,154 @@
+/* Admin · Ролевая матрица (R-2): таблица «разделы × роли», ячейки-уровни, столбец выбранной роли. Макет v3 «Admin —
+   ролевая матрица»; «скрыто» — #6e6e6e (контраст ≥ 4.5:1 на белом и на #e6f4ff), не #bfbfbf макета. */
+.pf-roles-legend {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 12px;
+  font-size: 12px;
+  line-height: 20px;
+  color: #595959;
+}
+.pf-roles-legend > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.pf-matrix-scroll {
+  overflow-x: auto;
+}
+.pf-matrix {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: 13px;
+}
+.pf-matrix th,
+.pf-matrix td {
+  padding: 8px;
+  border-bottom: 1px solid #f0f0f0;
+  text-align: center;
+  vertical-align: middle;
+  background: #fff;
+}
+.pf-matrix thead th {
+  background: #fafafa;
+  font-weight: 600;
+  white-space: nowrap;
+  vertical-align: bottom;
+}
+.pf-matrix th[scope="row"],
+.pf-matrix thead th:first-child {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  text-align: left;
+  font-weight: 400;
+  padding-left: 24px;
+  min-width: 220px;
+  max-width: 320px;
+}
+@media (max-width: 600px) {
+  .pf-matrix th[scope="row"],
+  .pf-matrix thead th:first-child {
+    min-width: 150px;
+    padding-left: 16px;
+  }
+}
+.pf-matrix thead th:first-child {
+  font-weight: 600;
+  background: #fafafa;
+}
+.pf-matrix tr.pf-matrix-group th {
+  text-align: left;
+  padding-left: 24px;
+  background: #fafafa;
+  font-weight: 600;
+  color: #595959;
+  font-size: 12px;
+}
+.pf-matrix .pf-matrix-sel {
+  background: #e6f4ff;
+}
+.pf-matrix-role {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  border: 0;
+  background: transparent;
+  padding: 2px 6px;
+  border-radius: 6px;
+  font: inherit;
+  font-weight: 600;
+  color: #1f1f1f;
+  cursor: pointer;
+}
+.pf-matrix-role:hover {
+  color: #0958d9;
+}
+.pf-matrix-role-sub {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  font-weight: 400;
+  color: #595959;
+}
+.pf-lvl {
+  display: inline-grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+}
+.pf-lvl-full {
+  background: #1668dc;
+  color: #fff;
+}
+.pf-lvl-read {
+  border: 2px solid #1668dc;
+  color: #0958d9;
+}
+.pf-lvl-none {
+  color: #6e6e6e;
+  font-weight: 600;
+}
+/* Уровень раздела в столбце изменяемой роли: нативный select (18 строк — легче и доступнее выпадающих antd). */
+.pf-level-select {
+  height: 28px;
+  min-width: 128px;
+  padding: 0 8px;
+  border: 1px solid #d9d9d9;
+  border-radius: 6px;
+  background: #fff;
+  color: #1f1f1f;
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+.pf-level-select:hover {
+  border-color: #1677ff;
+}
+.pf-role-head {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.pf-role-employees {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.pf-role-employees li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 0;
+  border-bottom: 1px solid #f0f0f0;
+}
+.pf-role-employees li:last-child {
+  border-bottom: 0;
+}

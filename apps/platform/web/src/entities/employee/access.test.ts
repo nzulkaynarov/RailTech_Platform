@@ -1,85 +1,63 @@
-import { readFileSync } from "node:fs";
-import { resolve } from "node:path";
-
-import { parse } from "yaml";
 import { describe, expect, it } from "vitest";
 
-import { ERP_EXTRA_PERMISSIONS, ERP_ROLE_CODES, ROLES } from "../../app/rbac.generated";
-import { erpAccessOfRoles, modulesOfRoles, sortRoles } from "./access";
+import { seedRoles, toRole } from "../../mocks/fixtures/roles";
+import type { Role } from "../../shared/api/generated/model";
+import { accessOfRoleIds, sortRoleIds } from "./access";
 
-interface Yaml {
-  roles: Record<string, { erp_role_codes: string[]; erp_extra_permissions: string[] }>;
-  resources: { key: string; module: string; access: Record<string, string> }[];
-}
-const matrix = parse(
-  readFileSync(
-    resolve(import.meta.dirname, "../../../../../../packages/contracts/platform-rbac.yaml"),
-    "utf8",
-  ),
-) as Yaml;
+const roles: Role[] = [
+  ...seedRoles().map((role) => toRole(role, 0)),
+  {
+    id: "41",
+    name: "Менеджер и бухгалтер",
+    description: "",
+    system: false,
+    access: { "crm.leads": "full", "eds.payments": "full" },
+    restricted_fields: ["totals_only"],
+    employees: 0,
+    updated_at: "2026-10-23T09:00:00Z",
+  },
+];
 
-const ORDER = ["dashboard", "crm", "eds", "erp", "chats", "admin"];
-
-/** Эталон прямо из YAML: модуль виден, если хоть один его раздел не скрыт хоть одной из ролей. */
-function expected(roles: string[]): string[] {
-  const visible = new Set(
-    matrix.resources
-      .filter((r) => roles.some((role) => r.access[role] !== "hidden"))
-      .map((r) => r.module),
-  );
-  return ORDER.filter((m) => visible.has(m));
-}
-
-describe("modulesOfRoles", () => {
-  it.each(ROLES)("роль %s: модули как в platform-rbac.yaml", (role) => {
-    expect(modulesOfRoles([role])).toEqual(expected([role]));
+describe("accessOfRoleIds — по матрицам ролей (ADR-0012)", () => {
+  it("созданная роль: ровно её модули; ERP — по разделу «Счета и оплаты»", () => {
+    const access = accessOfRoleIds(roles, ["41"]);
+    expect(access.modules).toEqual(["crm", "eds"]);
+    expect(access.erp).toBe(true);
+    expect(access.systemAdmin).toBe(false);
+    expect(access.adminWithoutSystem).toBe(false);
   });
 
-  it("объединение ролей — максимум по матрице, порядок модулей рейла", () => {
-    expect(modulesOfRoles(["ADMIN", "SUPPLY"])).toEqual(expected(["ADMIN", "SUPPLY"]));
-    expect(modulesOfRoles(["ADMIN", "SUPPLY"])).toContain("admin");
-    expect(modulesOfRoles([...ROLES])).toEqual(ORDER);
+  it("объединение ролей — максимум по разделу, модули в порядке рейла", () => {
+    const access = accessOfRoleIds(roles, ["4", "1"]);
+    expect(access.modules).toEqual(["dashboard", "crm", "eds", "erp", "chats", "admin"]);
+    expect(access.access["erp.calc"]).toBe("full");
+    expect(access.systemAdmin).toBe(true);
   });
 
-  it("без ролей модулей нет", () => {
-    expect(modulesOfRoles([])).toEqual([]);
+  it("системная роль «Администратор» — полный администратор; без ролей — ничего", () => {
+    expect(accessOfRoleIds(roles, ["1"]).modules).toEqual(["dashboard", "eds", "chats", "admin"]);
+    expect(accessOfRoleIds(roles, []).modules).toEqual([]);
+    expect(accessOfRoleIds(roles, ["999"]).modules).toEqual([]);
   });
 
-  it("только ADMIN: нет CRM и ERP, есть Admin", () => {
-    expect(modulesOfRoles(["ADMIN"])).toEqual(["dashboard", "eds", "chats", "admin"]);
+  it("Admin «полный» в созданной роли без системной — отдельное предупреждение", () => {
+    const custom: Role = {
+      id: "42",
+      name: "Офис-менеджер",
+      description: "",
+      system: false,
+      access: { admin: "full" },
+      restricted_fields: [],
+      employees: 0,
+      updated_at: "2026-10-23T09:00:00Z",
+    };
+    expect(accessOfRoleIds([...roles, custom], ["42"]).adminWithoutSystem).toBe(true);
+    expect(accessOfRoleIds([...roles, custom], ["42", "1"]).adminWithoutSystem).toBe(false);
   });
 });
 
-describe("sortRoles", () => {
-  it("порядок контракта, не порядок выбора", () => {
-    expect(sortRoles(["ADMIN", "MANAGER", "SUPPLY"], ROLES)).toEqual([
-      "MANAGER",
-      "SUPPLY",
-      "ADMIN",
-    ]);
-  });
-});
-
-describe("роли ERP из сгенерированной карты", () => {
-  it.each(ROLES)("роль %s: erp_role_codes и права = platform-rbac.yaml", (role) => {
-    expect([...ERP_ROLE_CODES[role]]).toEqual(matrix.roles[role]?.erp_role_codes);
-    expect([...ERP_EXTRA_PERMISSIONS[role]]).toEqual(matrix.roles[role]?.erp_extra_permissions);
-  });
-
-  it("объединение без повторов в порядке ролей", () => {
-    expect(erpAccessOfRoles(["SUPPLY", "ENGINEER"])).toEqual({
-      admin: false,
-      codes: ["CATALOG_SUPPLY", "FULFILLMENT"],
-    });
-    expect(erpAccessOfRoles(["ACCOUNTANT", "MANAGER"]).codes).toEqual(["VIEWER", "FINANCE"]);
-  });
-
-  it("ADMIN — суперпользователь ERP, остальные роли ERP не добавляют", () => {
-    expect(erpAccessOfRoles(["ADMIN"])).toEqual({ admin: true, codes: [] });
-    expect(erpAccessOfRoles(["SUPPLY", "ADMIN"])).toEqual({ admin: true, codes: [] });
-  });
-
-  it("без ролей ничего", () => {
-    expect(erpAccessOfRoles([])).toEqual({ admin: false, codes: [] });
+describe("sortRoleIds", () => {
+  it("порядок списка ролей, не порядок выбора", () => {
+    expect(sortRoleIds(["41", "1", "3"], roles)).toEqual(["1", "3", "41"]);
   });
 });

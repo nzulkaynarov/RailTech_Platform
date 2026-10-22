@@ -13,6 +13,7 @@ import { buildMe, endSession, readSession, startSession } from "../../../mocks/m
 import i18n from "../../../shared/i18n";
 import { server } from "../../../test/server";
 import { setViewportWidth } from "../../../test/viewport";
+import { ROLE_ID, ref } from "../../../test/roles";
 
 function renderAt(path: string) {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
@@ -79,7 +80,9 @@ describe("Admin · Оргструктура (экран целиком на MSW)
     ).toBeVisible();
     expect(router.state.location.search).toContain("employee=u-demo-manager");
     expect(router.state.location.search).toContain("panel=open");
-    expect(within(await panelEl()).getByRole("checkbox", { name: /^Менеджер/ })).toBeChecked();
+    expect(
+      await within(await panelEl()).findByRole("checkbox", { name: /^Менеджер/ }),
+    ).toBeChecked();
   });
 
   it("выдача роли: список и сохранённые роли меняются, при следующем входе — модули по матрице", async () => {
@@ -87,7 +90,7 @@ describe("Admin · Оргструктура (экран целиком на MSW)
     renderAt("/admin/org?employee=u-demo-manager&panel=open");
     await within(await panelEl()).findByRole("heading", { level: 3, name: "Демо Менеджеров" });
 
-    fireEvent.click(within(await panelEl()).getByRole("checkbox", { name: /^Менеджер/ }));
+    fireEvent.click(await within(await panelEl()).findByRole("checkbox", { name: /^Менеджер/ }));
     fireEvent.click(within(await panelEl()).getByRole("checkbox", { name: /^Директор/ }));
     fireEvent.click(within(await panelEl()).getByRole("button", { name: "Сохранить роли" }));
 
@@ -96,14 +99,16 @@ describe("Admin · Оргструктура (экран целиком на MSW)
         within(screen.getByRole("row", { name: /Демо Менеджеров/ })).getByText("Директор"),
       ).toBeVisible();
     });
-    expect(readEmployees().find((e) => e.id === "u-demo-manager")?.roles).toEqual(["DIRECTOR"]);
+    expect(readEmployees().find((e) => e.id === "u-demo-manager")?.role_ids).toEqual([
+      ROLE_ID.DIRECTOR,
+    ]);
     // тот же сотрудник входит позже: профиль мока считается по выданным ролям и матрице
     endSession();
     signIn("manager@demo.example");
     const me = buildMe(
       readSession() ?? { userId: "", activeRole: null, language: "ru", mustChangePassword: false },
     );
-    expect(me?.roles).toEqual(["DIRECTOR"]);
+    expect(me?.roles).toEqual([ref("DIRECTOR")]);
     expect(me?.resources["erp.calc"]).toBe("full");
     expect(me?.modules).toContain("admin");
   });

@@ -9,6 +9,7 @@ import { POLL_INTERVAL_MS } from "../../shared/api/polling";
 import { renderApp, signInAs } from "../../test/renderApp";
 import { server } from "../../test/server";
 import { setViewportWidth } from "../../test/viewport";
+import { ROLE_ID } from "../../test/roles";
 
 beforeEach(() => {
   window.localStorage.clear();
@@ -143,7 +144,7 @@ describe("Dashboard · Моя очередь", () => {
 
     expect(await within(page).findByText("Взять в работу лида L-2041")).toBeVisible();
     expect(within(page).queryByText(/Наложить резолюцию/)).toBeNull();
-    expect(seen).toContain("MANAGER");
+    expect(seen).toContain(ROLE_ID.MANAGER);
     server.events.removeAllListeners();
   });
 

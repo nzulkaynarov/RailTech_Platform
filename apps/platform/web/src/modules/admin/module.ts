@@ -34,5 +34,12 @@ export const admin: ModuleConfig = {
       tabs: [{ key: "card" }],
       actionTo: "/admin/org",
     },
+    {
+      key: "company",
+      path: "/admin/company",
+      access: { resource: "company.settings" },
+      tabs: [{ key: "card" }],
+      actionTo: "/admin/org",
+    },
   ],
 };

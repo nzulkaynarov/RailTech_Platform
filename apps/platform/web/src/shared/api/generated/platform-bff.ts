@@ -26,6 +26,18 @@
  * 0.2.0 (волна 8): смена пароля (`POST /auth/change-password`, `Session.must_change_password`); Admin · Оргструктура —
  * сотрудники, выдача ролей Платформы, приглашение по почте (`/admin/users*`, раздел матрицы `admin`).
  *
+ * **0.3.0 (R-2, ADR-0012) — ломающее (до 1.0 допустимо): роли — данные.** Роль сотрудника — `RoleRef {id, name,
+ * system, code?}` вместо перечисления `RoleCode` (удалено): `Me.roles: RoleRef[]`, `Me.active_role` и `MeUpdate.active_role` —
+ * id роли или `null`; `Employee.roles: RoleRef[]`, `EmployeeInvite.role_ids`, `EmployeeUpdate.role_ids`; параметр `role` очереди
+ * и карточек — id роли; `QueueItem.role` → `QueueItem.role_id`. Доступ сотрудника (`Me.modules`, `Me.resources`,
+ * `Me.restricted_fields`) — объединение матриц его ролей (матрицы и права бэкендов считает CRM), «вид» — по активной роли,
+ * как в 0.2.2. Новое: Admin · Ролевая матрица — `GET/POST /admin/roles`, `GET/PATCH/DELETE /admin/roles/{id}`,
+ * `POST /admin/roles/preview` («что произойдёт»); `POST /admin/users/{id}/invite` (повтор приглашения);
+ * `EmployeeUpdate.transfer_to_user_id` (кому передать лиды при отключении или смене ролей); `Employee.erp_sync` и
+ * `erp_sync_error` — из CRM. Коды ошибок: `ROLE_IN_USE`, `ROLE_SYSTEM`, `LAST_DIRECTOR` (вместе с `LAST_ADMIN`) и `CONFLICT` с
+ * `details.reason` (`user_has_active_leads`, `name_taken`) или `details.invite = not_sent`; у каждого 409 в `details.reason` —
+ * код CRM. Каталог разделов, меню, полей и видов очереди — `packages/contracts/platform-rbac.yaml` версии 2.
+ *
  * 0.2.4: `423 ACCOUNT_LOCKED` объявлен и на `POST /auth/change-password` (CRM блокирует учётную запись после неверных
  * текущих паролей).
  *
@@ -44,7 +56,7 @@
  * Лимиты: вход — 10 в минуту на IP и e-mail; остальные запросы — 300 в минуту на сессию; превышение — 429
  * `TOO_MANY_REQUESTS` с `Retry-After`.
  *
- * OpenAPI spec version: 0.2.4
+ * OpenAPI spec version: 0.3.0
  */
 import { useMutation, useQuery } from "@tanstack/react-query";
 import type {
@@ -85,6 +97,12 @@ import type {
   NotificationPage,
   Queue,
   QueueCards,
+  Role,
+  RoleCreate,
+  RoleList,
+  RolePreview,
+  RolePreviewIn,
+  RoleUpdate,
   SearchParams,
   SearchResult,
   Session,
@@ -955,8 +973,10 @@ export const getGetQueueUrl = (params?: GetQueueParams) => {
 };
 
 /**
- * Строки по всем ролям сотрудника (или по одной, если задан `role`). Порядок: просроченные → сегодня → по сроку
- * (SPEC-v3 §7.1). Одна строка — одно действие.
+ * Строки по всем ролям сотрудника (или по одной, если задан `role` — id роли; иначе по активной роли, если она задана).
+ * Какие виды работы попадают в очередь — секция `queue` каталога `platform-rbac.yaml`: вид виден, если у ролей «вида» есть
+ * его раздел с уровнем не ниже нужного. Порядок: просроченные → сегодня → по сроку (SPEC-v3 §7.1). Одна строка — одно
+ * действие.
  * @summary «Моя очередь» — что сделать сейчас
  */
 export const getQueue = async (
@@ -1090,7 +1110,7 @@ export const getGetQueueCardsUrl = (params?: GetQueueCardsParams) => {
 };
 
 /**
- * @summary Карточки-счётчики над очередью (набор задаёт роль)
+ * @summary Карточки-счётчики над очередью (набор задают разделы ролей «вида»)
  */
 export const getQueueCards = async (
   params?: GetQueueCardsParams,
@@ -1183,7 +1203,7 @@ export function useGetQueueCards<
   queryClient?: QueryClient,
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 /**
- * @summary Карточки-счётчики над очередью (набор задаёт роль)
+ * @summary Карточки-счётчики над очередью (набор задают разделы ролей «вида»)
  */
 
 export function useGetQueueCards<
@@ -1778,7 +1798,7 @@ export const getListEmployeesUrl = (params?: ListEmployeesParams) => {
 };
 
 /**
- * Доступ — раздел `admin` матрицы (ADMIN — full, DIRECTOR — read).
+ * Доступ — раздел `admin` каталога (чтение — список и карточки, полный — изменения).
  * @summary Сотрудники (Admin · Оргструктура)
  */
 export const listEmployees = async (
@@ -1900,7 +1920,7 @@ export const getInviteEmployeeUrl = () => {
 };
 
 /**
- * BFF создаёт пользователя в CRM с ролями Платформы и отправляет приглашение (CRM `/users`, `/users/{id}/invite`); провижининг в ERP делает CRM. Только ADMIN.
+ * BFF создаёт пользователя в CRM с ролями Платформы (`role_ids`) и отправляет приглашение (CRM `/users`, `/users/{id}/invite`); провижининг в ERP делает CRM. Раздел `admin` — полный. Письмо не ушло — 409 `CONFLICT` с `details.invite = not_sent` и `details.employee_id` (сотрудник создан; повтор — `POST /admin/users/{id}/invite`).
  * @summary Пригласить сотрудника по почте
  */
 export const inviteEmployee = async (
@@ -2003,6 +2023,95 @@ export const useInviteEmployee = <
   TContext
 > => {
   return useMutation(getInviteEmployeeMutationOptions(options), queryClient);
+};
+
+export const getResendInviteUrl = (id: string) => {
+  return `/api/v1/admin/users/${id}/invite`;
+};
+
+/**
+ * Повтор письма-приглашения сотруднику со статусом «Приглашён» (CRM `/users/{id}/invite`). CRM выдаёт новый временный пароль только при отправке письма: без подключённой почты пароль не меняется и ответ — 409 `CONFLICT` с `details.invite = not_sent`. Раздел `admin` — полный.
+ * @summary Отправить приглашение снова
+ */
+export const resendInvite = async (
+  id: string,
+  options?: Parameters<typeof http>[1],
+): Promise<Employee> => {
+  return http<Employee>(getResendInviteUrl(id), {
+    ...options,
+    method: "POST",
+  });
+};
+
+export const getResendInviteMutationKey = () => ["resendInvite"] as const;
+
+export const getResendInviteMutationOptions = <
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | Error>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof resendInvite>>,
+    TError,
+    ResendInviteMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof resendInvite>>,
+  TError,
+  ResendInviteMutationVariables,
+  TContext
+> => {
+  const mutationKey = getResendInviteMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof resendInvite>>,
+    ResendInviteMutationVariables
+  > = (props) => {
+    const { id } = props ?? {};
+
+    return resendInvite(id, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type ResendInviteMutationResult = NonNullable<Awaited<ReturnType<typeof resendInvite>>>;
+
+export type ResendInviteMutationError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | Error
+>;
+export type ResendInviteMutationVariables = { id: string };
+
+/**
+ * @summary Отправить приглашение снова
+ */
+export const useResendInvite = <
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | Error>,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof resendInvite>>,
+      TError,
+      ResendInviteMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof resendInvite>>,
+  TError,
+  ResendInviteMutationVariables,
+  TContext
+> => {
+  return useMutation(getResendInviteMutationOptions(options), queryClient);
 };
 
 export const getGetEmployeeUrl = (id: string) => {
@@ -2136,7 +2245,7 @@ export const getUpdateEmployeeUrl = (id: string) => {
 };
 
 /**
- * Только ADMIN. Снять у себя последнюю роль ADMIN или отключить последнего администратора нельзя — 409 `LAST_ADMIN`.
+ * Раздел `admin` — полный. Роли — полный новый набор `role_ids`; права в CRM и ERP вычисляет CRM. Снять последнего активного администратора или директора (роль или отключение) нельзя — 409 `LAST_ADMIN` / `LAST_DIRECTOR`. У сотрудника есть лиды в работе, а изменение отнимает у него работу с лидами, — 409 `CONFLICT` с `details.reason = user_has_active_leads`; повтор с `transfer_to_user_id` передаёт лиды коллеге.
  * @summary Роли, должность, отключение — единое место выдачи ролей обеих систем
  */
 export const updateEmployee = async (
@@ -2244,4 +2353,666 @@ export const useUpdateEmployee = <
   TContext
 > => {
   return useMutation(getUpdateEmployeeMutationOptions(options), queryClient);
+};
+
+export const getListRolesUrl = () => {
+  return `/api/v1/admin/roles`;
+};
+
+/**
+ * Раздел `admin` — полный (матрицы и выдачу ролей видит только администратор; CRM — `users:write`).
+ * @summary Роли Платформы (Admin · Ролевая матрица) — системные и созданные, с числом сотрудников
+ */
+export const listRoles = async (options?: Parameters<typeof http>[1]): Promise<RoleList> => {
+  return http<RoleList>(getListRolesUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getListRolesQueryKey = () => {
+  return [`/api/v1/admin/roles`] as const;
+};
+
+export const getListRolesQueryOptions = <
+  TData = Awaited<ReturnType<typeof listRoles>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse>,
+>(options?: {
+  query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listRoles>>, TError, TData>>;
+  request?: SecondParameter<typeof http>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getListRolesQueryKey();
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof listRoles>>> = ({ signal }) =>
+    listRoles({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listRoles>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type ListRolesQueryResult = NonNullable<Awaited<ReturnType<typeof listRoles>>>;
+export type ListRolesQueryError = ErrorType<SessionExpiredResponse | ForbiddenResponse>;
+
+export function useListRoles<
+  TData = Awaited<ReturnType<typeof listRoles>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse>,
+>(
+  options: {
+    query: Partial<UseQueryOptions<Awaited<ReturnType<typeof listRoles>>, TError, TData>> &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listRoles>>,
+          TError,
+          Awaited<ReturnType<typeof listRoles>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListRoles<
+  TData = Awaited<ReturnType<typeof listRoles>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse>,
+>(
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listRoles>>, TError, TData>> &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listRoles>>,
+          TError,
+          Awaited<ReturnType<typeof listRoles>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListRoles<
+  TData = Awaited<ReturnType<typeof listRoles>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse>,
+>(
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listRoles>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary Роли Платформы (Admin · Ролевая матрица) — системные и созданные, с числом сотрудников
+ */
+
+export function useListRoles<
+  TData = Awaited<ReturnType<typeof listRoles>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse>,
+>(
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listRoles>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getListRolesQueryOptions(options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export const getCreateRoleUrl = () => {
+  return `/api/v1/admin/roles`;
+};
+
+/**
+ * @summary Создать роль (с нуля или из шаблона каталога — шаблон SPA подставляет в черновик)
+ */
+export const createRole = async (
+  roleCreate: RoleCreate,
+  options?: Parameters<typeof http>[1],
+): Promise<Role> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<Role>(getCreateRoleUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
+    body: JSON.stringify(roleCreate),
+  });
+};
+
+export const getCreateRoleMutationKey = () => ["createRole"] as const;
+
+export const getCreateRoleMutationOptions = <
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | Error | ValidationFailedResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createRole>>,
+    TError,
+    CreateRoleMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof createRole>>,
+  TError,
+  CreateRoleMutationVariables,
+  TContext
+> => {
+  const mutationKey = getCreateRoleMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof createRole>>,
+    CreateRoleMutationVariables
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return createRole(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CreateRoleMutationResult = NonNullable<Awaited<ReturnType<typeof createRole>>>;
+export type CreateRoleMutationBody = RoleCreate;
+export type CreateRoleMutationError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse | Error | ValidationFailedResponse
+>;
+export type CreateRoleMutationVariables = { data: RoleCreate };
+
+/**
+ * @summary Создать роль (с нуля или из шаблона каталога — шаблон SPA подставляет в черновик)
+ */
+export const useCreateRole = <
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | Error | ValidationFailedResponse>,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof createRole>>,
+      TError,
+      CreateRoleMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof createRole>>,
+  TError,
+  CreateRoleMutationVariables,
+  TContext
+> => {
+  return useMutation(getCreateRoleMutationOptions(options), queryClient);
+};
+
+export const getPreviewRoleUrl = () => {
+  return `/api/v1/admin/roles/preview`;
+};
+
+/**
+ * Без `role_id` — черновик новой роли (сотрудников не затрагивает), с `role_id` — изменение существующей. Ничего не сохраняет. Системную роль изменить нельзя — 409 `ROLE_SYSTEM`.
+ * @summary «Что произойдёт» — кто из сотрудников какие разделы получит или потеряет при сохранении черновика
+ */
+export const previewRole = async (
+  rolePreviewIn: RolePreviewIn,
+  options?: Parameters<typeof http>[1],
+): Promise<RolePreview> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<RolePreview>(getPreviewRoleUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
+    body: JSON.stringify(rolePreviewIn),
+  });
+};
+
+export const getPreviewRoleMutationKey = () => ["previewRole"] as const;
+
+export const getPreviewRoleMutationOptions = <
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | Error | ValidationFailedResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof previewRole>>,
+    TError,
+    PreviewRoleMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof previewRole>>,
+  TError,
+  PreviewRoleMutationVariables,
+  TContext
+> => {
+  const mutationKey = getPreviewRoleMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof previewRole>>,
+    PreviewRoleMutationVariables
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return previewRole(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type PreviewRoleMutationResult = NonNullable<Awaited<ReturnType<typeof previewRole>>>;
+export type PreviewRoleMutationBody = RolePreviewIn;
+export type PreviewRoleMutationError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | Error | ValidationFailedResponse
+>;
+export type PreviewRoleMutationVariables = { data: RolePreviewIn };
+
+/**
+ * @summary «Что произойдёт» — кто из сотрудников какие разделы получит или потеряет при сохранении черновика
+ */
+export const usePreviewRole = <
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | Error | ValidationFailedResponse
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof previewRole>>,
+      TError,
+      PreviewRoleMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof previewRole>>,
+  TError,
+  PreviewRoleMutationVariables,
+  TContext
+> => {
+  return useMutation(getPreviewRoleMutationOptions(options), queryClient);
+};
+
+export const getGetRoleUrl = (id: string) => {
+  return `/api/v1/admin/roles/${id}`;
+};
+
+/**
+ * @summary Роль
+ */
+export const getRole = async (id: string, options?: Parameters<typeof http>[1]): Promise<Role> => {
+  return http<Role>(getGetRoleUrl(id), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetRoleQueryKey = (id: string) => {
+  return [`/api/v1/admin/roles/${id}`] as const;
+};
+
+export const getGetRoleQueryOptions = <
+  TData = Awaited<ReturnType<typeof getRole>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | NotFoundResponse>,
+>(
+  id: string,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getRole>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetRoleQueryKey(id);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getRole>>> = ({ signal }) =>
+    getRole(id, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: id !== null && id !== undefined,
+    ...queryOptions,
+  } as UseQueryOptions<Awaited<ReturnType<typeof getRole>>, TError, TData> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+};
+
+export type GetRoleQueryResult = NonNullable<Awaited<ReturnType<typeof getRole>>>;
+export type GetRoleQueryError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse | NotFoundResponse
+>;
+
+export function useGetRole<
+  TData = Awaited<ReturnType<typeof getRole>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | NotFoundResponse>,
+>(
+  id: string,
+  options: {
+    query: Partial<UseQueryOptions<Awaited<ReturnType<typeof getRole>>, TError, TData>> &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getRole>>,
+          TError,
+          Awaited<ReturnType<typeof getRole>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetRole<
+  TData = Awaited<ReturnType<typeof getRole>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | NotFoundResponse>,
+>(
+  id: string,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getRole>>, TError, TData>> &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getRole>>,
+          TError,
+          Awaited<ReturnType<typeof getRole>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetRole<
+  TData = Awaited<ReturnType<typeof getRole>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | NotFoundResponse>,
+>(
+  id: string,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getRole>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary Роль
+ */
+
+export function useGetRole<
+  TData = Awaited<ReturnType<typeof getRole>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | NotFoundResponse>,
+>(
+  id: string,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getRole>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getGetRoleQueryOptions(id, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export const getUpdateRoleUrl = (id: string) => {
+  return `/api/v1/admin/roles/${id}`;
+};
+
+/**
+ * Не присланное поле не меняется. Права сотрудников с этой ролью CRM пересчитывает сразу (CRM) и фоном (ERP). Системную роль изменить нельзя — 409 `ROLE_SYSTEM`; изменение, после которого не остаётся ни одного администратора, — 409 `LAST_ADMIN`.
+ * @summary Переименовать роль, изменить описание, матрицу или поля с ограничением
+ */
+export const updateRole = async (
+  id: string,
+  roleUpdate: RoleUpdate,
+  options?: Parameters<typeof http>[1],
+): Promise<Role> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<Role>(getUpdateRoleUrl(id), {
+    ...options,
+    method: "PATCH",
+    headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
+    body: JSON.stringify(roleUpdate),
+  });
+};
+
+export const getUpdateRoleMutationKey = () => ["updateRole"] as const;
+
+export const getUpdateRoleMutationOptions = <
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | Error | ValidationFailedResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateRole>>,
+    TError,
+    UpdateRoleMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof updateRole>>,
+  TError,
+  UpdateRoleMutationVariables,
+  TContext
+> => {
+  const mutationKey = getUpdateRoleMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof updateRole>>,
+    UpdateRoleMutationVariables
+  > = (props) => {
+    const { id, data } = props ?? {};
+
+    return updateRole(id, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type UpdateRoleMutationResult = NonNullable<Awaited<ReturnType<typeof updateRole>>>;
+export type UpdateRoleMutationBody = RoleUpdate;
+export type UpdateRoleMutationError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | Error | ValidationFailedResponse
+>;
+export type UpdateRoleMutationVariables = { id: string; data: RoleUpdate };
+
+/**
+ * @summary Переименовать роль, изменить описание, матрицу или поля с ограничением
+ */
+export const useUpdateRole = <
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | Error | ValidationFailedResponse
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof updateRole>>,
+      TError,
+      UpdateRoleMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof updateRole>>,
+  TError,
+  UpdateRoleMutationVariables,
+  TContext
+> => {
+  return useMutation(getUpdateRoleMutationOptions(options), queryClient);
+};
+
+export const getDeleteRoleUrl = (id: string) => {
+  return `/api/v1/admin/roles/${id}`;
+};
+
+/**
+ * Роль, выданную сотрудникам, удалить нельзя — 409 `ROLE_IN_USE` с `details.employees` (сколько сотрудников); системную — 409 `ROLE_SYSTEM`.
+ * @summary Удалить роль — только без сотрудников
+ */
+export const deleteRole = async (
+  id: string,
+  options?: Parameters<typeof http>[1],
+): Promise<void> => {
+  return http<void>(getDeleteRoleUrl(id), {
+    ...options,
+    method: "DELETE",
+  });
+};
+
+export const getDeleteRoleMutationKey = () => ["deleteRole"] as const;
+
+export const getDeleteRoleMutationOptions = <
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | Error>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof deleteRole>>,
+    TError,
+    DeleteRoleMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof deleteRole>>,
+  TError,
+  DeleteRoleMutationVariables,
+  TContext
+> => {
+  const mutationKey = getDeleteRoleMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof deleteRole>>,
+    DeleteRoleMutationVariables
+  > = (props) => {
+    const { id } = props ?? {};
+
+    return deleteRole(id, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type DeleteRoleMutationResult = NonNullable<Awaited<ReturnType<typeof deleteRole>>>;
+
+export type DeleteRoleMutationError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | Error
+>;
+export type DeleteRoleMutationVariables = { id: string };
+
+/**
+ * @summary Удалить роль — только без сотрудников
+ */
+export const useDeleteRole = <
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | Error>,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof deleteRole>>,
+      TError,
+      DeleteRoleMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof deleteRole>>,
+  TError,
+  DeleteRoleMutationVariables,
+  TContext
+> => {
+  return useMutation(getDeleteRoleMutationOptions(options), queryClient);
 };
