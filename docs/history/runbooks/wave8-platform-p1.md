@@ -1,6 +1,6 @@
 # Волна 8 — Платформа, фаза P1 (F0): каркас, вход через CRM, роли Платформы
 
-Архитектор, 2026-10-22. Основание: SPEC-v3 §5–§6, §10.1, §11.1 F0; ADR-0011; `apps/platform/docs/05-plan.md` P1.
+Архитектор, 2026-10-22. Основание: SPEC-v3 §5–§6, §10.1, §11.1 F0; ADR-0011; `docs/history/platform/05-plan.md` P1.
 Старт — после гейта P0 (волна 7: каркас `web`/`bff`, токены 0.2.0, стенд, CI влиты). Контракт BFF 0.2.0 (смена пароля,
 Admin · Оргструктура) — в PR этого runbook'а.
 
@@ -8,13 +8,13 @@ Admin · Оргструктура) — в PR этого runbook'а.
 
 ```
 Ты — лид разработки RailTech Platform (ORCHESTRATOR §4.1), ведёшь волну 8 «Платформа, фаза P1» по
-docs/runbooks/wave8-platform-p1.md. Код сам не пишешь. Прочитай: CLAUDE.md корня, ORCHESTRATOR.md (§3, §4.1, §6 «MP», §7),
-docs/HANDOFF.md, этот runbook целиком, apps/platform/CLAUDE.md, apps/platform/docs/SPEC-v3.md (§4–§6, §10.1, §11),
-02-architecture.md, 03-frontend.md, 04-integration-map.md (§1.1, §4), docs/CONTRACTS.md §8, apps/crm/CLAUDE.md.
+docs/history/runbooks/wave8-platform-p1.md. Код сам не пишешь. Прочитай: CLAUDE.md корня, docs/ORCHESTRATOR.md (§3, §4.1, §6 «MP», §7),
+docs/HANDOFF.md, этот runbook целиком, docs/systems/platform/CONVENTIONS.md, docs/product/SPEC-v3.md (§4–§6, §10.1, §11),
+docs/architecture/platform-bff.md, docs/architecture/platform-frontend.md, docs/architecture/integration-map.md (§1.1, §4), docs/architecture/CONTRACTS.md §8, docs/systems/crm/CONVENTIONS.md.
 Работай по раундам §2: worktree .claude/worktrees/<задача> от свежего origin/main, зависимости — до запуска исполнителя,
 исполнители — субагенты (model sonnet, run_in_background=false) с промптом «преамбула wave7 §3 + раздел §4.x этого runbook'а»,
 не больше двух параллельно. Ревью — свежий субагент ≠ исполнитель, по «готово, когда»; экраны — ещё и по чек-листу
-apps/platform/docs/03-frontend.md §10 (скриншоты рядом с артбордами v3). Перед автослиянием — merge origin/main в ветку,
+docs/architecture/platform-frontend.md §10 (скриншоты рядом с артбордами v3). Перед автослиянием — merge origin/main в ветку,
 повтор проверок, для CRM — голова Alembic одна; затем gh pr merge --auto --merge <n>. Перед раундом — одна проверка своих PR
 (gh pr view --json state,mergeable,mergeStateStatus,statusCheckRollup, без логов). Общий стенд rt-platform пересобираешь только
 ты и только между раундами, если владелец снял заморозку стенда; иначе — проверки в своих проектах compose.
@@ -86,7 +86,7 @@ Caddy зависит от `platform-bff` и `platform-web` по `condition: serv
 
 Зоны: `apps/platform/web/src/app/**`, `src/shared/ui/` (части каркаса), `src/modules/*/` (заглушки страниц), i18n, e2e.
 
-- Каркас строго по `03-frontend.md` §4: рейл 64, подменю 208 со сворачиванием до 0, шапка 56 (крошки, поиск 380 с ⌘K,
+- Каркас строго по `docs/architecture/platform-frontend.md` §4: рейл 64, подменю 208 со сворачиванием до 0, шапка 56 (крошки, поиск 380 с ⌘K,
   колокольчик, «Скрыть панель / Панель»), основное окно, боковое окно 360 со сворачиванием; состояние панелей по
   пользователю и маршруту в Zustand + `localStorage` (обёрнуто в try/catch) + `?panel=&tab=`; узкие экраны (< 1200 —
   `Drawer` справа, < 768 — нижняя панель модулей и `Drawer` подменю).
@@ -105,7 +105,7 @@ Caddy зависит от `platform-bff` и `platform-web` по `condition: serv
 
 Зоны: `apps/platform/bff/**`, генератор RBAC для web (`apps/platform/web/src/app/rbac.generated.ts`).
 
-- Сессия по `02-architecture.md` §3: `POST /auth/login` → CRM login (refresh-cookie CRM перехватывается и хранится в сессии), CRM
+- Сессия по `docs/architecture/platform-bff.md` §3: `POST /auth/login` → CRM login (refresh-cookie CRM перехватывается и хранится в сессии), CRM
   `/me`, при `platform_access ∋ erp` — CRM `sso/token` → ERP `sso/exchange` (refresh ERP — в сессии); Redis
   `session:<sid>` с TTL `PLATFORM_SESSION_TTL_HOURS`; cookie `rt_pf_session` (HttpOnly, Secure, SameSite=Lax) и `rt_pf_csrf`;
   проверка `X-CSRF-Token` на мутациях; обновление access CRM и ERP по истечении (одна попытка, под блокировкой сессии);
@@ -127,20 +127,20 @@ CSRF, лимит, сотрудника без ERP-доступа (`sources.erp =
 
 Зоны: `apps/platform/web/src/shared/ui/**`, `src/shared/lib/**`.
 
-Компоненты `03-frontend.md` §5: `RequestSteps`, `StatusTag` (+ карты статусов SPEC-v3 §2.4 для всех документов),
+Компоненты `docs/architecture/platform-frontend.md` §5: `RequestSteps`, `StatusTag` (+ карты статусов SPEC-v3 §2.4 для всех документов),
 `ContextPanel`, `Consequence`, `EmptyState`, `QueueList`, `CounterCard`, `History`, `Checklist`, `DocRow`, `DefinitionList`,
 `MoneyText`, `SourceBanner`, `Forbidden`; форматирование сумм (`1 234 567 сум`), дат (часовой пояс компании), номеров.
 
 Готово, когда: юнит-тесты на каждый компонент (состояния, `aria`-атрибуты, текст статуса не только цветом); страница-витрина
 `/dev/ui` (только в dev-сборке) со всеми компонентами; скриншоты витрины 1440 и 390 в PR; axe без нарушений; размеры и цвета —
-по таблицам §4–§5 `03-frontend.md` (отличия — списком в PR).
+по таблицам §4–§5 `docs/architecture/platform-frontend.md` (отличия — списком в PR).
 
 ### 3.5. PLT-14 — уведомления, поиск, очередь, счётчики (BFF + web)
 
 Зоны: `apps/platform/bff/app/api/{notifications,search,dashboard}.py` и клиенты, `apps/platform/web/src/modules/dashboard/**`,
 `src/features/notifications`, `src/shared/ui` (подключение).
 
-- BFF по `04-integration-map.md` §1.1–§1.2, только из существующих источников: уведомления — ERP (`erp:<id>`), CRM-лента пуста
+- BFF по `docs/architecture/integration-map.md` §1.1–§1.2, только из существующих источников: уведомления — ERP (`erp:<id>`), CRM-лента пуста
   до CRM-04; поиск — CRM лиды и клиенты, ERP сделки и документы; очередь — MANAGER: CRM `/inbox`; DIRECTOR: ERP
   `my-approval-queue`; остальные роли — пусто; карточки и лента «Сегодня» — из тех же источников и ERP `activity-logs`.
   Частичные данные — `sources`.

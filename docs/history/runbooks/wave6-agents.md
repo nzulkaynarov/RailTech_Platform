@@ -2,7 +2,7 @@
 
 Старт — **после гейтов M1 и M2** (волна 5 закрыта, владелец отметил гейты): до этого код под прогоном не меняется.
 Решения — `docs/DECISIONS.md` 2026-10-21. Контракт шва 0.3.0 (архитектор) уже закоммичен в ветку `fix/all-60-seam-030`
-(коммит `2d7a9001`, worktree `.claude/worktrees/fix-60`): `erp-integration.yaml` 0.3.0, `events.schema.json`, `docs/CONTRACTS.md` §3,
+(коммит `2d7a9001`, worktree `.claude/worktrees/fix-60`): `erp-integration.yaml` 0.3.0, `events.schema.json`, `docs/architecture/CONTRACTS.md` §3,
 пример события `quote.acceptance_code_requested`. Контракт в волне правит только архитектор.
 
 Цель волны — гейт **M3** (ORCHESTRATOR §6): лид из Telegram передаётся одной кнопкой, клиент получает приглашение, события ERP
@@ -12,9 +12,9 @@
 ## 0. Промпт лида — одним сообщением
 
 ```
-Ты — лид разработки RailTech Platform (ORCHESTRATOR §4.1), ведёшь волну 6 по docs/runbooks/wave6-agents.md. Код сам не пишешь.
-Прочитай: CLAUDE.md корня, ORCHESTRATOR.md (§3, §4.1, §6 «M3», «M5», §7), docs/HANDOFF.md, этот runbook целиком,
-docs/CONTRACTS.md, docs/PROGRESS.md, CLAUDE.md приложений, docs/runbooks/wave5-agents.md §5.0 (преамбула — общая) и §6–§7.
+Ты — лид разработки RailTech Platform (ORCHESTRATOR §4.1), ведёшь волну 6 по docs/history/runbooks/wave6-agents.md. Код сам не пишешь.
+Прочитай: CLAUDE.md корня, docs/ORCHESTRATOR.md (§3, §4.1, §6 «M3», «M5», §7), docs/HANDOFF.md, этот runbook целиком,
+docs/architecture/CONTRACTS.md, docs/PROGRESS.md, CLAUDE.md приложений, docs/history/runbooks/wave5-agents.md §5.0 (преамбула — общая) и §6–§7.
 Работай по раундам §3: worktree от свежего origin/main (FIX-60a/b — от fix/all-60-seam-030), зависимости, исполнители
 субагентами (model sonnet, run_in_background=false — ждёшь результата в своём ходе) с промптом «преамбула wave5 §5.0 с
 подставленными значениями + раздел §4.x этого runbook'а». Ревью — свежим субагентом ≠ исполнителю, по «готово, когда»;

@@ -3,7 +3,7 @@
 - Статус: proposed <!-- proposed | accepted (YYYY-MM-DD) | rejected | superseded by NNNN -->
 - Дата: YYYY-MM-DD
 - Авторы: <!-- кто предложил -->
-- Связано: <!-- SPEC §x.y, BUSINESS.md §x, PLAN фаза N, другие ADR -->
+- Связано: <!-- SPEC §x.y, docs/systems/crm/BUSINESS.md §x, PLAN фаза N, другие ADR -->
 
 ## Контекст и проблема
 

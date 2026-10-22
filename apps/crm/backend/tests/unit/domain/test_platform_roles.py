@@ -41,7 +41,7 @@ def _generator() -> ModuleType:
     return module
 
 
-# Таблица §4 apps/platform/docs/04-integration-map.md, записанная независимо от контракта:
+# Таблица §4 docs/architecture/integration-map.md, записанная независимо от контракта:
 # (базовая роль CRM, role_codes ERP, права ERP поверх шаблонов).
 TABLE = {
     "MANAGER": ("manager", ("VIEWER",), ("deal.manage",)),

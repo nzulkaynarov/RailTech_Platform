@@ -1,4 +1,4 @@
-"""Сессия сотрудника в Redis (02-architecture.md §3): `session:<sid>`.
+"""Сессия сотрудника в Redis (docs/architecture/platform-bff.md §3): `session:<sid>`.
 
 В сессии — токены CRM и ERP и снимок профиля. Браузер знает только `sid` (cookie `rt_pf_session`,
 256 бит случайности) и CSRF-значение; токены CRM и ERP не покидают Redis. Сессия живёт абсолютный

@@ -2,23 +2,23 @@
 
 Внутренняя CRM с ИИ-ассистентом первой линии в Telegram (диалоговый агент + асинхронный квалификатор), единым веб-интерфейсом команды и сервисным режимом для клиентов после сделки.
 
-Статус: **Фаза 0 — фундамент** (см. [`docs/PROGRESS.md`](docs/PROGRESS.md)).
+Статус: **Фаза 0 — фундамент** (см. [`docs/PROGRESS.md`](../../history/crm/PROGRESS.md)).
 
 ## Карта документов
 
 | Документ | Что в нём |
 |---|---|
-| [`BUSINESS.md`](BUSINESS.md) | Зачем проект, пользователи, сценарии C1–C6, критерии успеха |
-| [`SPEC.md`](SPEC.md) | Источник истины по архитектуре (ссылки вида `SPEC §7.1`) |
-| [`PLAN.md`](PLAN.md) | Фазы 0–10, задачи, DoD, гейты |
-| [`CLAUDE.md`](CLAUDE.md) | Правила работы для Claude Code |
-| [`docs/PROGRESS.md`](docs/PROGRESS.md) | Текущая фаза и статусы |
-| [`docs/QUESTIONS.md`](docs/QUESTIONS.md) | Открытые вопросы к человеку |
-| [`docs/adr/`](docs/adr/README.md) | Архитектурные решения (MADR) |
-| [`docs/runbooks/`](docs/runbooks/README.md) | Эксплуатация |
-| [`docs/api/openapi.json`](docs/api/openapi.json) | Контракт API (генерируется `make openapi`) |
+| [`docs/systems/crm/BUSINESS.md`](BUSINESS.md) | Зачем проект, пользователи, сценарии C1–C6, критерии успеха |
+| [`docs/systems/crm/SPEC.md`](SPEC.md) | Источник истины по архитектуре (ссылки вида `SPEC §7.1`) |
+| [`docs/history/crm/PLAN.md`](../../history/crm/PLAN.md) | Фазы 0–10, задачи, DoD, гейты |
+| [`docs/systems/crm/CONVENTIONS.md`](CONVENTIONS.md) | Правила работы для Claude Code |
+| [`docs/PROGRESS.md`](../../history/crm/PROGRESS.md) | Текущая фаза и статусы |
+| [`docs/QUESTIONS.md`](../../history/crm/QUESTIONS.md) | Открытые вопросы к человеку |
+| [`docs/adr/crm/`](../../adr/crm/README.md) | Архитектурные решения (MADR) |
+| [`docs/runbooks/crm/`](../../runbooks/crm/README.md) | Эксплуатация |
+| [`docs/api/openapi.json`](../../../apps/crm/docs/api/openapi.json) | Контракт API (генерируется `make openapi`) |
 
-При противоречиях: `BUSINESS.md` > `SPEC.md` > `PLAN.md` > код.
+При противоречиях: `docs/systems/crm/BUSINESS.md` > `docs/systems/crm/SPEC.md` > `docs/history/crm/PLAN.md` > код.
 
 ## dev-стенд за 15 минут
 
@@ -43,7 +43,7 @@ make smoke-dev                # /health и /ready напрямую и через
 
 Порты выше — по умолчанию; если какой-то занят другим проектом, переопределите его в `.env` (`DEV_API_PORT`, `DEV_POSTGRES_PORT`, `HTTP_PORT` и др., см. `.env.example`).
 
-Повседневные команды: `make up`, `make down`, `make ps`, `make logs s=api`, `make migrate`. Список — `make help`. Проблемы — [`docs/runbooks/dev-stand.md`](docs/runbooks/dev-stand.md).
+Повседневные команды: `make up`, `make down`, `make ps`, `make logs s=api`, `make migrate`. Список — `make help`. Проблемы — [`docs/runbooks/crm/dev-stand.md`](../../runbooks/crm/dev-stand.md).
 
 ### База знаний (Фаза 1)
 
@@ -83,14 +83,14 @@ E2E (Playwright) против стенда: `make test-e2e-local` с `E2E_MANAGE
 
 ### Качество и эксплуатация (Фаза 7)
 
-- `make eval` — golden-набор на реальных моделях (пороги SPEC §12); в PR при изменении промптов/агентов — job **Eval gate** с комментарием-отчётом (нужны GitHub Secrets, `docs/runbooks/eval-gate.md`).
+- `make eval` — golden-набор на реальных моделях (пороги SPEC §12); в PR при изменении промптов/агентов — job **Eval gate** с комментарием-отчётом (нужны GitHub Secrets, `docs/runbooks/crm/eval-gate.md`).
 - `LITELLM_API_KEY=<LITELLM_MASTER_KEY> make promptfoo` — матрица «промпт × модель».
 - В канал команды: алерты ⚠️ (упавшие задачи, LiteLLM, очередь, бюджет) и «📊 Итоги дня» в 18:05.
-- `scripts/sample_dialogs.py` — 20 случайных диалогов для еженедельной разметки (`docs/evals/labeling.md`).
+- `scripts/sample_dialogs.py` — 20 случайных диалогов для еженедельной разметки (`docs/systems/crm/evals-labeling.md`).
 
 ## prod (Фаза 8)
 
-Выкладка — тегом `v*` (workflow **Deploy prod**: образы в GHCR → VPS → бэкап → миграции → smoke → откат при провале). Первичная настройка VPS и откат — `docs/runbooks/deploy.md`.
+Выкладка — тегом `v*` (workflow **Deploy prod**: образы в GHCR → VPS → бэкап → миграции → smoke → откат при провале). Первичная настройка VPS и откат — `docs/runbooks/crm/deploy.md`.
 
 ```bash
 make up-prod            # на VPS: pull образов IMAGE_TAG + up (с сервисом backup)

@@ -4,7 +4,7 @@
  *
  * Источник — OpenAPI CRM (`apps/crm/docs/api/openapi.json`, `make -C apps/crm openapi`). Из всей
  * схемы CRM берутся только пути формы и схемы, на которые они ссылаются (транзитивно): остального
- * API CRM Cabinet не знает (CLAUDE.md §2.1). Результат — в stdout:
+ * API CRM Cabinet не знает (CONVENTIONS.md §2.1). Результат — в stdout:
  *
  *   make gen-api-types     → src/api/crm-form.d.ts
  *   make api-types-check   — сверка с закоммиченным файлом.

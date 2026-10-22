@@ -18,7 +18,7 @@ interface LoginValues {
   password: string;
 }
 
-/** Страница «Вход»: почта и пароль CRM (SPEC-v3 §6, 02-architecture.md §3). Ошибки — по `Error.code`. */
+/** Страница «Вход»: почта и пароль CRM (SPEC-v3 §6, docs/architecture/platform-bff.md §3). Ошибки — по `Error.code`. */
 export function LoginPage() {
   const { t } = useTranslation("shell");
   const navigate = useNavigate();

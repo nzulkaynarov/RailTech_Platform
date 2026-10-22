@@ -1,9 +1,9 @@
 # apps/cabinet — Cabinet (кабинет клиента)
 
 SPA клиента RailTech Platform без собственного бэкенда (ADR-0004): все данные — ERP `/api/portal/v1/*`
-(`docs/CONTRACTS.md` §4, схема `packages/contracts/openapi/erp-portal.yaml`). Один и тот же SPA открывается
-как сайт `cabinet.railtech.uz` и как Telegram Mini App клиентского бота CRM. Состав — `docs/ARCHITECTURE.md` §5,
-входы — §17, правила агента — `CLAUDE.md` рядом.
+(`docs/architecture/CONTRACTS.md` §4, схема `packages/contracts/openapi/erp-portal.yaml`). Один и тот же SPA открывается
+как сайт `cabinet.railtech.uz` и как Telegram Mini App клиентского бота CRM. Состав — `docs/history/ARCHITECTURE.md` §5,
+входы — §17, правила агента — `docs/systems/cabinet/CONVENTIONS.md` рядом.
 
 Стек: React 18 · TypeScript · Vite 7 · Tailwind CSS 4 · shadcn/ui (примитивы из `apps/erp/frontend`) ·
 React Query · react-router 7 · i18next (ru / uz — латиница / en) · openapi-typescript · MSW · Vitest + Testing Library + axe.

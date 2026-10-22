@@ -47,4 +47,4 @@ scripts/sample_dialogs.py            # dev; --prod для prod-стенда
    выдуманного факта, `must_include_any` для правильного.
 4. `make check` (схема golden) → PR → job `eval-gate` прогонит новый кейс.
 
-Метрики пилота (BUSINESS.md §10): доля `missed` и `invented` по неделям — в отчёт пилота.
+Метрики пилота (docs/systems/crm/BUSINESS.md §10): доля `missed` и `invented` по неделям — в отчёт пилота.

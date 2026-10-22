@@ -4,7 +4,7 @@ import type { TFunction } from 'i18next';
 import { isPortalApiError } from './portal';
 
 /**
- * Ошибка портала → ключ i18n (CLAUDE.md §5): код из `{"detail": CODE}`, для которого есть текст
+ * Ошибка портала → ключ i18n (CONVENTIONS.md §5): код из `{"detail": CODE}`, для которого есть текст
  * `apiErrors.<CODE>`, показывается своим текстом; иначе — общий текст по HTTP-статусу.
  * 404 всегда «не найдено» — без намёка, существует ли чужая сущность.
  */

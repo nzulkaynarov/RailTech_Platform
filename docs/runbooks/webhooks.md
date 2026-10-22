@@ -1,6 +1,6 @@
 # Runbook: вебхуки ERP → CRM не доходят, дублируются, секрет меняется (FIX-33, FIX-35)
 
-Контракт — `docs/CONTRACTS.md` §3: заголовки `X-Event-Id`, `X-Event-Type`, `X-Timestamp`, `X-Signature`; ретраи ERP 1, 5, 30 мин, 2, 6, 24 ч; после них событие `FAILED` ждёт ручного повтора.
+Контракт — `docs/architecture/CONTRACTS.md` §3: заголовки `X-Event-Id`, `X-Event-Type`, `X-Timestamp`, `X-Signature`; ретраи ERP 1, 5, 30 мин, 2, 6, 24 ч; после них событие `FAILED` ждёт ручного повтора.
 
 ## Симптом → где смотреть
 

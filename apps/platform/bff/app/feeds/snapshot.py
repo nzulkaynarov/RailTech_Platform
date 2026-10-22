@@ -1,6 +1,6 @@
 """Сырые данные на один запрос: входящие CRM, очередь одобрения ERP, сделки ERP.
 
-Источники — 04-integration-map.md §1.2.
+Источники — docs/architecture/integration-map.md §1.2.
 """
 
 import asyncio

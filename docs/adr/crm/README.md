@@ -1,6 +1,6 @@
 # Architecture Decision Records
 
-Формат — MADR, шаблон `0000-template.md`, процесс — CLAUDE.md §5 и скилл `.claude/skills/adr`.
+Формат — MADR, шаблон `0000-template.md`, процесс — docs/systems/crm/CONVENTIONS.md §5 и скилл `.claude/skills/adr`.
 Статусы: `proposed` → `accepted (дата)` / `rejected` / `superseded by NNNN`. `accepted` ставит человек.
 
 | ADR | Решение | Статус | Фаза |

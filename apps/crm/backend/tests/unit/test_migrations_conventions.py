@@ -1,4 +1,4 @@
-"""Соглашения о миграциях (CLAUDE.md §4): имя файла и реализованный downgrade."""
+"""Соглашения о миграциях (CONVENTIONS.md §4): имя файла и реализованный downgrade."""
 
 import ast
 import re

@@ -1,4 +1,4 @@
-"""Вход, выход и вызовы бэкендов от имени сотрудника (02-architecture.md §3).
+"""Вход, выход и вызовы бэкендов от имени сотрудника (docs/architecture/platform-bff.md §3).
 
 Вход: CRM login (refresh-cookie CRM перехватывается) -> CRM `/me` -> при доступе к ERP: CRM
 `sso/token` -> ERP `sso/exchange` (refresh-cookie ERP перехватывается) -> запись в Redis. Дальше

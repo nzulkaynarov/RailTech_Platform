@@ -2,7 +2,7 @@
 
 Когда применять: оркестратор запускает волну 1 (FIX-10…15) после закрытой волны 0. Источник задач —
 `docs/audits/2026-10-18-main-e0f089e.md` («Волна 1»), статусы — `docs/PROGRESS.md` «Исправления по аудиту»,
-правила — `ORCHESTRATOR.md` §4, §7 и `docs/HANDOFF.md` §4. Этот runbook — как разложить волну по сессиям,
+правила — `docs/ORCHESTRATOR.md` §4, §7 и `docs/HANDOFF.md` §4. Этот runbook — как разложить волну по сессиям,
 в каком порядке сливать и что вставить в каждую сессию как первое сообщение.
 
 ## 1. Исходное состояние (проверено 2026-10-18 вечером)
@@ -68,7 +68,7 @@ git worktree add .claude/worktrees/fix-15 -b fix/erp-15-portal-limits       orig
 | Сессия | Роль (§4) | Задача | Ветка | Зависит от | Размер | Зоны кода |
 |---|---|---|---|---|---|---|
 | S0 | Оркестратор | назначение, ревью, порядок слияния, PROGRESS | — | — | — | только `docs/` |
-| S1 | ERP + CRM | **FIX-10** SSO по контракту | `fix/all-10-sso-contract` | — | M | `accounts/services/sso.py`, `accounts/views/sso.py`, `integration/views.py` (provision), CRM `app/services/sso.py`, `packages/contracts/sso-token.md`, `erp-integration.yaml` |
+| S1 | ERP + CRM | **FIX-10** SSO по контракту | `fix/all-10-sso-contract` | — | M | `accounts/services/sso.py`, `accounts/views/sso.py`, `integration/views.py` (provision), CRM `app/services/sso.py`, `docs/architecture/sso-token.md`, `erp-integration.yaml` |
 | S2 | ERP + CRM | **FIX-12** строгий `X-Agent-Context`, проекции MCP | `fix/all-12-mcp-context` | — | M | `integration/mcp/{context,tools,views}.py`, CRM `app/security/agent_context.py`, `app/agents/mcp_client.py`, `packages/contracts/mcp-tools.json` |
 | S3 | ERP | **FIX-14** вход в портал | `fix/erp-14-portal-login` | — | M | `portal/models.py`, `portal/services/{magic_link,invitation,telegram_auth}.py`, `portal/authentication.py`, `portal/tests/test_portal_auth.py` |
 | S4 | ERP | **FIX-13** снять покупательские аккаунты | `fix/erp-13-no-buyer-accounts` | — (сливается последней) | L | `accounts/services/buyer_access.py`, `core/permissions.py`, `accounts/models`, миграция `accounts`, `crm/tests/*`, `catalog/tests/test_published_layer.py`, `accounts/tests/test_role_matrix.py` |
@@ -91,7 +91,7 @@ git worktree add .claude/worktrees/fix-15 -b fix/erp-15-portal-limits       orig
    (`can_buy`) и `portal/tests/conftest.py` (портальная сессия для сторожа), FIX-14 — `portal/services` и те же тесты.
 5. **FIX-11** и **FIX-15** — параллельно, не пересекаются.
 
-Контракт правят не вдвоём: `sso-token.md` и `erp-integration.yaml` — только S1 (и позже S5), `mcp-tools.json` —
+Контракт правят не вдвоём: `docs/architecture/sso-token.md` и `erp-integration.yaml` — только S1 (и позже S5), `mcp-tools.json` —
 только S2, `erp-portal.yaml` в волне 1 не трогает никто (это FIX-20, волна 2). Общие сгенерированные файлы
 (`packages/contracts/generated/*`, `apps/erp/frontend/src/api/schema.d.ts`, CRM `frontend/src/api/generated`)
 перегенерируются после каждого слияния тем, кто сливается следующим.
@@ -102,9 +102,9 @@ git worktree add .claude/worktrees/fix-15 -b fix/erp-15-portal-limits       orig
 
 ```
 Ты — агент {РОЛЬ} RailTech Platform. Работаешь в worktree {ПУТЬ}, ветка {ВЕТКА}, только эта задача: {ID}.
-Прочитай по порядку: ORCHESTRATOR.md (§3, §4, §7), docs/HANDOFF.md, docs/PROGRESS.md (раздел «Исправления по
+Прочитай по порядку: docs/ORCHESTRATOR.md (§3, §4, §7), docs/HANDOFF.md, docs/PROGRESS.md (раздел «Исправления по
 аудиту»), docs/DECISIONS.md (строки 2026-10-18), docs/audits/2026-10-18-main-e0f089e.md (раздел «Волна 1» и
-находки {НАХОДКИ} в реестре), CLAUDE.md приложения, которое правишь, docs/CONTRACTS.md и файл контракта задачи.
+находки {НАХОДКИ} в реестре), CLAUDE.md приложения, которое правишь, docs/architecture/CONTRACTS.md и файл контракта задачи.
 
 Правила, которые не обсуждаются:
 - `main` защищена: никаких push и merge в main; только PR из этой ветки, «готово» — только после зелёного «CI ok».
@@ -131,7 +131,7 @@ git worktree add .claude/worktrees/fix-15 -b fix/erp-15-portal-limits       orig
 ### 5.1. S1 — FIX-10 (ERP + CRM), `fix/all-10-sso-contract`, `ERP_TEST_NS=fix10`
 
 ```
-Задача FIX-10 (P0, находки S-2, S-3, S-7, I-17): SSO строго по packages/contracts/sso-token.md и решению владельца
+Задача FIX-10 (P0, находки S-2, S-3, S-7, I-17): SSO строго по docs/architecture/sso-token.md и решению владельца
 2026-10-18 «обмен SSO не создаёт пользователя ERP и не меняет его права».
 
 Готово, когда (всё — тестами):
@@ -147,7 +147,7 @@ git worktree add .claude/worktrees/fix-15 -b fix/erp-15-portal-limits       orig
 3. Провижининг `POST /api/integration/v1/users/provision` (ERP `integration/views.py` + сервис): коллизия e-mail с
    пользователем, у которого другой `crm_user_id` или нет сопоставления → 409 `EMAIL_CONFLICT`, пользователь не
    переписывается. В `erp-integration.yaml` описать 409.
-4. Контракт: в `sso-token.md` п.5 «Проверка приёмником» привести к решению владельца — «пользователь найден по `sub`
+4. Контракт: в `docs/architecture/sso-token.md` п.5 «Проверка приёмником» привести к решению владельца — «пользователь найден по `sub`
    и активен, иначе 403 USER_NOT_PROVISIONED; из токена обновляются только email и name; role и permissions —
    только провижинингом». Добавить явное правило «exp − iat ≤ 60». Правка контракта — первым коммитом.
 5. Тесты: ERP accounts/tests/test_sso.py (+ integration/tests/test_integration_api.py для 409), CRM tests для
@@ -218,7 +218,7 @@ PR: «FIX-14: вход в портал — хеши токенов, атомар
 ### 5.4. S4 — FIX-13 (ERP), `fix/erp-13-no-buyer-accounts`, `ERP_TEST_NS=fix13`
 
 ```
-Задача FIX-13 (P0, находки P-4, G-8, P-19): клиентов в ERP нет (инвариант §3.1, apps/erp/CLAUDE.md §2 п.1).
+Задача FIX-13 (P0, находки P-4, G-8, P-19): клиентов в ERP нет (инвариант §3.1, docs/systems/erp/CONVENTIONS.md §2 п.1).
 Размер L; ветка сливается в волне последней — перед PR обязательно `git merge origin/main` с FIX-10 и FIX-14.
 
 Готово, когда:
@@ -241,7 +241,7 @@ PR: «FIX-14: вход в портал — хеши токенов, атомар
 6. `make -C apps/erp openapi` — schema.d.ts и erp-internal-full.json без `can_buy`/покупательских путей;
    фронтенд ERP: `grep -rn "can_buy\|canBuy\|buyer" apps/erp/frontend/src` пусто (кроме i18n-ключей, которые
    тоже удалить парой ru/en). `make -C apps/erp check` зелёный.
-7. apps/erp/CLAUDE.md §6 и §9: абзацы «Покупательский аккаунт … до M2-ERP-01» заменить на факт удаления (FIX-13).
+7. docs/systems/erp/CONVENTIONS.md §6 и §9: абзацы «Покупательский аккаунт … до M2-ERP-01» заменить на факт удаления (FIX-13).
 Не трогать: portal/services/* (FIX-14), accounts/services/sso.py (FIX-10), контракты.
 PR: «FIX-13: покупательских аккаунтов в ERP нет — buyer_access, BUYER_ONLY, can_buy удалены; сторож на портальной сессии».
 ```
@@ -259,7 +259,7 @@ PR: «FIX-13: покупательских аккаунтов в ERP нет — 
    (идемпотентно по crm_user_id, ретраи); снятие → `erp_revoke_sessions` →
    `DELETE /api/integration/v1/users/{crm_user_id}/sessions`. Ошибки ERP — в ленту внешних сервисов (ADR-0024),
    не в ответ пользователю.
-3. Карта прав CRM → ERP: по кодам каталога ERP (`accounts.constants.Permission`, apps/erp/CLAUDE.md §6) — таблица в
+3. Карта прав CRM → ERP: по кодам каталога ERP (`accounts.constants.Permission`, docs/systems/erp/CONVENTIONS.md §6) — таблица в
    `app/services/sso.py` или отдельном модуле с тестом «каждый код есть в каталоге ERP» (снимок кодов в
    packages/contracts/erp-integration.yaml как enum `permissions`).
 4. Кнопка перехода в шапке CRM видна только при `"erp" in platform_access`; выдача токена `POST …/sso/token` без

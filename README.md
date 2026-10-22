@@ -9,12 +9,12 @@
 | **Cabinet** | клиент: запросы, КП, документы, статусы; без бэкенда, над `/api/portal/*` ERP | `cabinet.railtech.uz` | `apps/cabinet` (с M2) |
 
 Связь CRM ↔ ERP — только API и события, общих таблиц нет. Подробно — `CLAUDE.md` (карта репозитория)
-и **`ORCHESTRATOR.md`** (цель, инварианты, вехи, протокол работы агентов — читать первым).
+и **`docs/ORCHESTRATOR.md`** (цель, инварианты, вехи, протокол работы агентов — читать первым).
 
 ## Документация
 
 - `docs/README.md` — состав пакета документов ансамбля
-- `docs/BUSINESS.md` · `docs/ARCHITECTURE.md` · `docs/CONTRACTS.md` · `docs/MIGRATION-MAP.md`
+- `docs/product/BUSINESS.md` · `docs/history/ARCHITECTURE.md` · `docs/architecture/CONTRACTS.md` · `docs/history/MIGRATION-MAP.md`
 - `docs/DECISIONS.md` · `docs/QUESTIONS.md` · `docs/OWNER-CHECKLIST.md` · `docs/PROGRESS.md`
 - `docs/adr/` — архитектурные решения ансамбля; `docs/history/` — документы обсуждения, из которых собран пакет
 
@@ -28,7 +28,7 @@ make hooks            # pre-commit корня: gitleaks и быстрые про
 make ci-local         # локальный CI — гейт мержа, пока GitHub Actions недоступен (args="--quick" без integration и build)
 ```
 
-До появления стенда ансамбля CRM поднимается отдельно: `make -C apps/crm up` (см. `apps/crm/README.md`).
+До появления стенда ансамбля CRM поднимается отдельно: `make -C apps/crm up` (см. `docs/systems/crm/README.md`).
 
 ## Происхождение кода
 

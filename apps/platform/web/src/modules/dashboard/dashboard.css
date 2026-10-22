@@ -1,4 +1,4 @@
-/* Dashboard · Моя очередь: счётчики и «Что сделать сейчас» (макет «v3 · 1. Dashboard», 03-frontend.md §5). */
+/* Dashboard · Моя очередь: счётчики и «Что сделать сейчас» (макет «v3 · 1. Dashboard», docs/architecture/platform-frontend.md §5). */
 .pf-queue-page {
   display: flex;
   flex-direction: column;

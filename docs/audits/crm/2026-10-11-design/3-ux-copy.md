@@ -135,7 +135,7 @@
 - `frontend/src/app/providers/data.ts:15` — `dataProvider: … не поддерживается` — служебное, но если всплывёт в тосте, пользователь увидит техническую строку.
 - Неявный «хардкод»: `LeadSummary.tsx:24-27` и колонка «Продукт» в БЗ показывают сырые ключи продуктов; `SchemaFields.tsx:23` падает на `schema.title ?? key` — отсюда англ. ключи на вкладке «Тексты бота».
 
-Бэкенд (тексты, которые видит команда, вне `settings.texts` — CLAUDE.md §4 требует `settings.texts`/i18n):
+Бэкенд (тексты, которые видит команда, вне `settings.texts` — docs/systems/crm/CONVENTIONS.md §4 требует `settings.texts`/i18n):
 
 - `backend/app/bot/channel.py:19-30` — `NOT_LINKED`, `NO_RIGHTS`, `TEMPORARY_CREDENTIALS_HINT`, `TAKEN`, `REJECTED`.
 - `backend/app/services/channel_card.py:11-29, 59-97` — `REASONS`, `TIMELINES`, `ROLES`, «без имени», «Потребность:», «Интерес:», «Почему:», «Последнее:», «✅ Взял:», «💤 Отложено», «☑️ Закрыто», «🤖 Возвращён боту», «⏰ SLA просрочен».
@@ -144,7 +144,7 @@
 - `backend/app/bot/keyboards.py:14` — названия языков (допустимо, это эндонимы).
 - `backend/app/schemas/settings.py:38-45` — дни недели/часовой пояс (допустимо как справочник).
 
-Канал команды по CLAUDE.md §11 — только русский, поэтому вынесение в словарь здесь ради консистентности с CRM (п. 3, 6), а не ради перевода.
+Канал команды по docs/systems/crm/CONVENTIONS.md §11 — только русский, поэтому вынесение в словарь здесь ради консистентности с CRM (п. 3, 6), а не ради перевода.
 
 ---
 

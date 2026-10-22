@@ -5,11 +5,11 @@ description: Добавить REST-эндпоинт /api/v1 — роутер, Py
 
 # REST-эндпоинт
 
-Слои: `api` → `services` → `repositories` (CLAUDE.md §4). Ошибки домена — классы из `app/domain/errors.py`, маппинг в HTTP — один handler (`app/api/errors.py`). Формат ошибки — ADR-0017: `{code, message, details{reason, field, errors[]}}`; `details.reason` — значение `Reason` (StrEnum), фронт показывает текст из `t.apiReasons[reason]`.
+Слои: `api` → `services` → `repositories` (docs/systems/crm/CONVENTIONS.md §4). Ошибки домена — классы из `app/domain/errors.py`, маппинг в HTTP — один handler (`app/api/errors.py`). Формат ошибки — ADR-0017: `{code, message, details{reason, field, errors[]}}`; `details.reason` — значение `Reason` (StrEnum), фронт показывает текст из `t.apiReasons[reason]`.
 
 ## Шаги
 
-1. Найди эндпоинт в `PLAN.md` текущей фазы и `SPEC §10`; права — `infra/casbin/policy.seed.csv` (seed добавляет только недостающие правила; на стенде политика живёт в БД — новая строка применится при рестарте api). Каталог ресурсов/действий — `app/security/rbac.py CATALOG`.
+1. Найди эндпоинт в `docs/history/crm/PLAN.md` текущей фазы и `SPEC §10`; права — `infra/casbin/policy.seed.csv` (seed добавляет только недостающие правила; на стенде политика живёт в БД — новая строка применится при рестарте api). Каталог ресурсов/действий — `app/security/rbac.py CATALOG`.
 2. Схемы запроса/ответа — `app/schemas/` (Pydantic v2, mypy strict). Не возвращай ORM-объекты. Докстрока функции роутера попадает в OpenAPI — пиши её для потребителя API.
 3. Роутер `app/api/v1/<resource>.py`: зависимость `require(resource, action)` — именно в этом порядке, например `require("leads", "read")` (готовые алиасы `Reader`/`Writer`/`Worker` в начале модуля); объектные проверки (владелец лида, `domain/lead_access.py`) — в сервисе.
 4. Ошибки: бросай доменные исключения с `reason=Reason.<...>`; новое значение `Reason` → добавь текст в `frontend/src/i18n/ru/core.ts apiReasons` (тест `useApiErrorToast.test.tsx` ловит пропуски). Значения `Reason` не переименовывать — контракт.

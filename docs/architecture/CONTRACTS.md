@@ -179,7 +179,7 @@ JWT HS256, секрет `PLATFORM_SSO_SECRET` общий. Claims: `iss` (`crm`|`
 (`["crm"]` по умолчанию, `["crm","erp"]` — доступ выдан). Переключатель в шапке CRM и выдача токена
 (`POST /api/v1/auth/sso/token`, иначе 403) — только при `erp` в `platform_access`; в шапке ERP — только у
 пользователя с сопоставлением `CrmUserMapping`. Выдача доступа → провижининг в ERP, снятие → отзыв сессий
-(очередь CRM, ошибки ERP — в центре внешних сервисов). Роль CRM → коды прав ERP: `packages/contracts/sso-token.md`.
+(очередь CRM, ошибки ERP — в центре внешних сервисов). Роль CRM → коды прав ERP: `docs/architecture/sso-token.md`.
 
 ## 8. Платформа (SPA → BFF), ADR-0011
 
@@ -194,7 +194,7 @@ JWT HS256, секрет `PLATFORM_SSO_SECRET` общий. Claims: `iss` (`crm`|`
 
 Правила: словарь SPEC-v3 §2 — в именах полей и значениях; номера объектов — бизнес-номера; ошибки — `Error` с `source`;
 агрегирующие ответы несут `sources`. Разрывы бэкендов, нужные экранам, меняют контракты CRM и ERP в том же PR, что и код
-(`apps/platform/docs/04-integration-map.md` §7).
+(`docs/architecture/integration-map.md` §7).
 
 ## 7. Версионирование
 

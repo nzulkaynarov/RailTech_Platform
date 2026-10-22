@@ -2,7 +2,7 @@
 
 - Статус: accepted (2026-10-08, выбор владельца продукта: «по MinIO выбираем RustFS»)
 - Дата: 2026-10-08
-- Связано: SPEC §2 (Файлы, Бэкапы), §3.2, §11, §13, §14; BUSINESS.md §8 («бесплатные open-source решения на собственном сервере»); docs/QUESTIONS.md Q-002
+- Связано: SPEC §2 (Файлы, Бэкапы), §3.2, §11, §13, §14; docs/systems/crm/BUSINESS.md §8 («бесплатные open-source решения на собственном сервере»); docs/QUESTIONS.md Q-002
 
 ## Контекст и проблема
 
@@ -48,7 +48,7 @@ SPEC v2.0 выбирал MinIO (`minio/minio`) для документов кл�
 - Хорошо: поддерживаемый проект под Apache-2.0; воспроизводимый тег; замена прозрачна для кода (только S3 и `/health`).
 - Плохо: RustFS моложе MinIO и SeaweedFS — выше риск регрессий, поэтому integration-тесты хранилища в CI обязательны на каждом PR, а обновления RustFS — отдельными PR Dependabot с прогоном CI.
 - Бэкапы: `mc mirror` из SPEC v2.0 недоступен — инструмент зеркалирования S3-бакетов (rclone, aws-cli или средства RustFS) выбирается в Фазе 8 (отметка в SPEC §2).
-- Обновлены: SPEC §2, §3.1, §3.2, §4, §7.1, §9.2, §11, §13, §14, §16 (v2.1); PLAN; CLAUDE.md §3, §6; compose, CI, `.env.example`, README, runbook.
+- Обновлены: SPEC §2, §3.1, §3.2, §4, §7.1, §9.2, §11, §13, §14, §16 (v2.1); PLAN; docs/systems/crm/CONVENTIONS.md §3, §6; compose, CI, `.env.example`, README, runbook.
 
 ### Как проверяем
 

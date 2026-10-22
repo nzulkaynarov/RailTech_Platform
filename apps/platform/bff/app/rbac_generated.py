@@ -33,7 +33,7 @@ ROLE_NAMES: Final[dict[RoleCode, dict[str, str]]] = {
 }
 
 # Роли ERP и права поверх шаблонов, которые CRM выдаёт роли Платформы
-# (04-integration-map.md §4).
+# (docs/architecture/integration-map.md §4).
 # Пустой кортеж у ADMIN: суперпользователь ERP, роли ERP не нужны.
 ERP_ROLE_CODES: Final[dict[RoleCode, tuple[str, ...]]] = {
     "MANAGER": ("VIEWER",),

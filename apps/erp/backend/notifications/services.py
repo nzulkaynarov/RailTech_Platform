@@ -2,7 +2,7 @@
 Notification business logic — single source of truth.
 
 Called from both Django Unfold actions and DRF endpoints.
-See ADR-0001 and CLAUDE.md IRON RULE 8.
+See ADR-0001 and CONVENTIONS.md IRON RULE 8.
 """
 
 import logging

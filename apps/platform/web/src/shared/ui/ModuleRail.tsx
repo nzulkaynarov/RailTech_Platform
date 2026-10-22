@@ -39,7 +39,7 @@ function RailLink({ module }: { module: RailModule }) {
 }
 
 /**
- * Рейл модулей (03-frontend.md §4, зона 1): 64 px, логотип 36×36, кнопки 56×56, внизу аватар и роль.
+ * Рейл модулей (docs/architecture/platform-frontend.md §4, зона 1): 64 px, логотип 36×36, кнопки 56×56, внизу аватар и роль.
  * Модули вне роли в `modules` не приходят и не рендерятся. На экранах < 768 — нижняя панель.
  */
 export function ModuleRail({

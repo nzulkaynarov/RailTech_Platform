@@ -1,6 +1,6 @@
 # SSO-токен сотрудника (CRM ↔ ERP)
 
-Источник: `docs/CONTRACTS.md` §6, ADR-0003. Версия 0 (M0-INF-02). Реализация: ERP — M3-ERP-04, CRM — M3-CRM-06.
+Источник: `docs/architecture/CONTRACTS.md` §6, ADR-0003. Версия 0 (M0-INF-02). Реализация: ERP — M3-ERP-04, CRM — M3-CRM-06.
 
 ## Формат
 

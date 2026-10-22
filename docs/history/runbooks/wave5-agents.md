@@ -2,7 +2,7 @@
 
 Когда применять: волны 0–4 закрыты (последний docs-PR #103), M3 разморожена, стенд `make up` поднят от свежего `main`.
 Источник задач — `docs/audits/2026-10-18-main-e0f089e.md` (строки FIX-50…54 и «Реестр находок»), статусы — `docs/PROGRESS.md`,
-правила — `ORCHESTRATOR.md` §3, §4.1, §7 и `CLAUDE.md` корня («Среда разработки, тесты и CI»).
+правила — `docs/ORCHESTRATOR.md` §3, §4.1, §7 и `CLAUDE.md` корня («Среда разработки, тесты и CI»).
 
 Цель волны — **гейты M1 и M2 владельцем**: прогон глазами на стенде против настоящего ERP, со скриншотами и axe в PR, дефекты —
 одной волной, затем повторный прогон затронутых экранов. Один лид (Opus), исполнители — субагенты Sonnet, по одному на задачу,
@@ -13,8 +13,8 @@
 
 ```
 Ты — лид разработки RailTech Platform (ORCHESTRATOR §4.1), ведёшь волну 5: FIX-50…54. Код сам не пишешь.
-Прочитай: CLAUDE.md корня, ORCHESTRATOR.md (§3, §4.1, §7), docs/HANDOFF.md, docs/runbooks/wave5-agents.md целиком,
-docs/runbooks/stand.md, docs/PROGRESS.md, docs/BUSINESS.md (§4 путь клиента, §11 роли), CLAUDE.md приложений.
+Прочитай: CLAUDE.md корня, docs/ORCHESTRATOR.md (§3, §4.1, §7), docs/HANDOFF.md, docs/history/runbooks/wave5-agents.md целиком,
+docs/runbooks/stand.md, docs/PROGRESS.md, docs/product/BUSINESS.md (§4 путь клиента, §11 роли), CLAUDE.md приложений.
 Работай по раундам §4: worktree от свежего origin/main, исполнители субагентами (model sonnet) с промптом «§5.0 + §5.5x»,
 ревью свежим субагентом, gh pr merge --auto --merge <n>. Перед раундом — одна проверка своих PR
 (gh pr view <n> --json state,mergeable,mergeStateStatus,statusCheckRollup, без логов). После каждого «жду» — фоновый монитор
@@ -62,8 +62,8 @@ FIX-54 и дефекты — `fix/<система>-5x-…` (§3). `ERP_TEST_NS` 
 |---|---|---|---|---|
 | **FIX-50** прогон M1 | QA (ERP) | M | только `docs/screens/fix-50/`, `docs/runbooks/m1_qa_02_report.md`, сценарий в `apps/erp/frontend/e2e/gate-m1.spec.ts` | 1 |
 | **FIX-51** прогон M2 | QA (Cabinet) | M | только `docs/screens/fix-51/`, `docs/runbooks/m2_qa_02_report.md`, сценарий в `apps/cabinet/e2e/gate-m2.spec.ts` (+ конфиг) | 1 |
-| **FIX-52** документы | Оркестратор | M | `docs/*` кроме PROGRESS, `apps/erp/CLAUDE.md`, `apps/cabinet/CLAUDE.md`, `docs/runbooks/*` (кроме своих QA-отчётов) | 1 |
-| **FIX-53** правила процесса | Оркестратор | S | `ORCHESTRATOR.md` §4, §7; `CLAUDE.md` корня — только ссылка | 1 (после FIX-52, тот же исполнитель или второй PR) |
+| **FIX-52** документы | Оркестратор | M | `docs/*` кроме PROGRESS, `docs/systems/erp/CONVENTIONS.md`, `docs/systems/cabinet/CONVENTIONS.md`, `docs/runbooks/*` (кроме своих QA-отчётов) | 1 |
+| **FIX-53** правила процесса | Оркестратор | S | `docs/ORCHESTRATOR.md` §4, §7; `CLAUDE.md` корня — только ссылка | 1 (после FIX-52, тот же исполнитель или второй PR) |
 | **FIX-54** P2 из реестра | по системам | M | по одному PR на систему: ERP, Cabinet, CRM, infra/CI — **вместе с дефектами прогона этой системы** | 2 |
 | **дефекты FIX-50/51** | по системам | — | ERP — `fix/erp-55-gate-defects`, Cabinet — `fix/cabinet-56-gate-defects`, CRM — `fix/crm-57-gate-defects` | 2 |
 | **повтор** | QA | S | те же QA-ветки или новые `qa/*-50b`/`51b`: только экраны, затронутые раундом 2 | 3 |
@@ -88,8 +88,8 @@ FIX-54 и дефекты — `fix/<система>-5x-…` (§3). `ERP_TEST_NS` 
 
 ```
 Ты — исполнитель RailTech Platform (ORCHESTRATOR §4.1). Работаешь ТОЛЬКО в worktree {ПУТЬ} (все команды из него), ветка
-{ВЕТКА}, одна задача: {ID}. Прочитай: CLAUDE.md корня (раздел «Среда разработки, тесты и CI» — обязателен), ORCHESTRATOR.md
-(§3, §7), docs/runbooks/wave5-agents.md (§1, §2, §3 — твои зоны), docs/audits/2026-10-18-main-e0f089e.md (строка {ID} и
+{ВЕТКА}, одна задача: {ID}. Прочитай: CLAUDE.md корня (раздел «Среда разработки, тесты и CI» — обязателен), docs/ORCHESTRATOR.md
+(§3, §7), docs/history/runbooks/wave5-agents.md (§1, §2, §3 — твои зоны), docs/audits/2026-10-18-main-e0f089e.md (строка {ID} и
 находки {НАХОДКИ}), CLAUDE.md приложений, которые правишь или проверяешь.
 
 Правила, которые не обсуждаются:
@@ -150,7 +150,7 @@ PR: «FIX-51: прогон M2 на стенде против настоящег�
 2. Строки PROGRESS M1/M2/M3 и задачи без PR: в колонке PR — номер PR или «main (без PR)», без выдуманных веток (только
    перечень правок — лиду в описании PR; PROGRESS правит лид).
 3. Решения M3 «по рекомендации» — строками в DECISIONS; отклонения от CONTRACTS — ADR (или ссылка на существующий).
-4. apps/erp/CLAUDE.md и apps/cabinet/CLAUDE.md без ссылок на удалённый legacy/ как на рабочий источник (история — тег b2b-final).
+4. docs/systems/erp/CONVENTIONS.md и docs/systems/cabinet/CONVENTIONS.md без ссылок на удалённый legacy/ как на рабочий источник (история — тег b2b-final).
 5. Runbook без несуществующего /api/v1/ready (проверить каждый упомянутый путь health/ready по коду).
 6. Дубли Q-11/Q-12 в QUESTIONS сведены (один номер — один вопрос; переименованный — ссылкой).
 PR: «FIX-52: документы — HANDOFF, ORCHESTRATOR §9, честные ссылки, DECISIONS M3, CLAUDE.md без legacy».

@@ -4,16 +4,16 @@
 снабжение, склад, финансы), **Cabinet** (кабинет клиента, фронтенд над API ERP). Связь CRM ↔ ERP —
 только API и события. Общих таблиц нет.
 
-**Первым читай `ORCHESTRATOR.md`**, затем `docs/HANDOFF.md` — там цель, инварианты, роли агентов, текущая веха и протокол.
+**Первым читай `docs/ORCHESTRATOR.md`**, затем `docs/HANDOFF.md` — там цель, инварианты, роли агентов, текущая веха и протокол.
 Затем — `CLAUDE.md` того приложения, в котором работаешь: конвенции кода живут у приложений, не здесь.
 Правила процесса (коммиты с трейлером, ветки и PR, запрет `push`/`merge` в `main`, одна сессия — одна система, скриншоты в PR,
-`docs/PROGRESS.md` ведёт лид) — `ORCHESTRATOR.md` §4 и §7.
+`docs/PROGRESS.md` ведёт лид) — `docs/ORCHESTRATOR.md` §4 и §7.
 
 ```
-apps/crm/        FastAPI · SQLAlchemy · Alembic · Procrastinate · aiogram · LangGraph · Refine/AntD   → apps/crm/CLAUDE.md
-apps/erp/        Django · DRF · Celery · Channels · shadcn/Tailwind                                      → apps/erp/CLAUDE.md
-apps/cabinet/    React · shadcn · без бэкенда; ходит в apps/erp /api/portal/*                          → apps/cabinet/CLAUDE.md
-apps/platform/   единый интерфейс сотрудников (SPA + BFF без БД, поверх CRM и ERP; ADR-0011, фаза P0) → apps/platform/CLAUDE.md
+apps/crm/        FastAPI · SQLAlchemy · Alembic · Procrastinate · aiogram · LangGraph · Refine/AntD   → docs/systems/crm/CONVENTIONS.md
+apps/erp/        Django · DRF · Celery · Channels · shadcn/Tailwind                                      → docs/systems/erp/CONVENTIONS.md
+apps/cabinet/    React · shadcn · без бэкенда; ходит в apps/erp /api/portal/*                          → docs/systems/cabinet/CONVENTIONS.md
+apps/platform/   единый интерфейс сотрудников (SPA + BFF без БД, поверх CRM и ERP; ADR-0011, фаза P0) → docs/systems/platform/CONVENTIONS.md
 legacy/b2b/      удалена по плану M2-INF-01; исходная история сохранена в теге b2b-final
 packages/contracts/   OpenAPI ERP (internal, portal, integration), схемы событий, схемы MCP-инструментов
 packages/ui-tokens/   общие токены дизайна для AntD и shadcn
@@ -21,7 +21,7 @@ infra/           compose (base/dev/prod), caddy (3 домена), ai (LiteLLM, L
 docs/            HANDOFF (где мы и что дальше), BUSINESS, ARCHITECTURE, CONTRACTS, MIGRATION-MAP, DECISIONS, QUESTIONS, OWNER-CHECKLIST, PROGRESS.md, adr/, runbooks/, history/
 ```
 
-Правила уровня ансамбля (подробно — ORCHESTRATOR.md §3):
+Правила уровня ансамбля (подробно — docs/ORCHESTRATOR.md §3):
 1. Одна система — один главный пользователь. Не добавляй в систему чужого пользователя.
 2. Никаких общих таблиц между `crm` и `erp`. Только API, события, внешние идентификаторы.
 3. Контракт (`packages/contracts`) меняется раньше кода и в том же PR с обеих сторон.

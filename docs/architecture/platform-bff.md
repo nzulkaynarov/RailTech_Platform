@@ -127,7 +127,7 @@ SPA  POST /api/v1/auth/login {email, password}
 | SPA | видимость модулей, пунктов меню, кнопок; `<Restricted>` для полей | `web/src/app/rbac.ts` из того же файла матрицы (генерируется) |
 
 Выдача ролей — одна карточка сотрудника в Admin · Оргструктура. BFF сохраняет `platform_roles` в CRM и
-вызывает провижининг ERP с `role_codes` и правами по карте `04-integration-map.md` §4. Матрица SPEC-v3 §4.2 —
+вызывает провижининг ERP с `role_codes` и правами по карте `docs/architecture/integration-map.md` §4. Матрица SPEC-v3 §4.2 —
 единственный источник; генерация в BFF и SPA из одного YAML (`packages/contracts/platform-rbac.yaml`).
 
 ## 7. Развёртывание

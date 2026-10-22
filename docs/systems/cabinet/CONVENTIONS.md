@@ -1,4 +1,4 @@
-# CLAUDE.md — Cabinet (кабинет клиента), `apps/cabinet`
+# docs/systems/cabinet/CONVENTIONS.md — Cabinet (кабинет клиента), `apps/cabinet`
 
 Ты работаешь над **Cabinet** ансамбля RailTech Platform: одно окно клиента — запросы, КП, договоры,
 счета, акты, поставки, документы, опубликованный каталог. Один главный пользователь — **клиент**
@@ -16,13 +16,13 @@ magic-link), тема Telegram, i18n ru/uz/en, все экраны §4 с дей
 
 | Документ | Что в нём | Когда читать |
 |---|---|---|
-| `ORCHESTRATOR.md` (корень) | инварианты §3, роль агента Cabinet §4, веха M2 §6, протокол §7 | первым в каждой сессии |
+| `docs/ORCHESTRATOR.md` (корень) | инварианты §3, роль агента Cabinet §4, веха M2 §6, протокол §7 | первым в каждой сессии |
 | `docs/PROGRESS.md`, `docs/QUESTIONS.md`, `docs/DECISIONS.md` | состояние, вопросы, решения | в начале сессии |
-| `docs/ARCHITECTURE.md` §5 | **состав Cabinet**; §17 — входы клиента (Mini App, веб, приглашение); §8 — ИИ (у Cabinet своего нет) | перед любой реализацией |
-| `docs/CONTRACTS.md` §4 | **портальный API — единственный источник данных**; §0 — форматы | перед каждым экраном |
+| `docs/history/ARCHITECTURE.md` §5 | **состав Cabinet**; §17 — входы клиента (Mini App, веб, приглашение); §8 — ИИ (у Cabinet своего нет) | перед любой реализацией |
+| `docs/architecture/CONTRACTS.md` §4 | **портальный API — единственный источник данных**; §0 — форматы | перед каждым экраном |
 | `packages/contracts/openapi/erp-portal.yaml` | **схема портального API**; типы Cabinet — `src/api/portal.d.ts` (`make gen-api-types`, сверка в `make check`) | перед каждым экраном |
 | `docs/adr/0004-cabinet-without-backend.md`, `0005` | без бэкенда; без своего ИИ | перед любым «а давайте тут свой…» |
-| `docs/BUSINESS.md` §3.2, §4 | ценность и границы Cabinet, путь клиента | перед продуктовой задачей |
+| `docs/product/BUSINESS.md` §3.2, §4 | ценность и границы Cabinet, путь клиента | перед продуктовой задачей |
 | тег `b2b-final` (`git show b2b-final:legacy/b2b/frontend/src/<путь>`) | история: покупательские страницы и фронтовые конвенции B2B, откуда экраны Cabinet. Папки `legacy/b2b` в репозитории нет (удалена в M2-INF-01) — рабочим источником история не служит | когда нужно понять происхождение экрана; **только чтение** |
 
 Противоречия: `BUSINESS` > `ARCHITECTURE` > `CONTRACTS` > этот файл > код. Нашёл — в `docs/QUESTIONS.md`, не угадывай.

@@ -39,7 +39,7 @@ web/
                   contract-status, confirm-payment, request-payment-doc, approve-memo, make-memo-from-message,
                   invite-employee, assign-role
     modules/      dashboard, crm, eds, erp, chats, admin — страницы, подменю, конфигурация модуля
-  e2e/            сценарии Playwright по фазам (05-plan.md)
+  e2e/            сценарии Playwright по фазам (docs/history/platform/05-plan.md)
 ```
 
 Правила: страница модуля знает только `features` и `entities`; `features` не импортируют друг друга; всё, что
@@ -48,7 +48,7 @@ web/
 ## 3. Тема и токены
 
 Токены SPEC-v3 §5.2 становятся версией **0.2.0** общего пакета `packages/ui-tokens` (вопрос 7 в
-`06-questions.md`): так Cabinet и Платформа выглядят одной семьёй. `web/src/app/theme.ts` строится как
+`docs/history/platform/06-questions.md`): так Cabinet и Платформа выглядят одной семьёй. `web/src/app/theme.ts` строится как
 `apps/crm/frontend/src/app/theme.ts`: `cssVar: true`, токены из `tokens.generated.ts`, явные `*Bg`/`*Border`.
 
 | Токен antd | Значение | Отличие от ui-tokens 0.1 |

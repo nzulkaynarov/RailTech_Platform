@@ -44,7 +44,7 @@ export const ROLE_NAMES: Record<RoleCode, { ru: string; uz: string; en: string }
   },
 };
 
-/** Роли ERP, которые CRM выдаёт роли Платформы (04-integration-map.md §4); у ADMIN пусто: суперпользователь ERP. */
+/** Роли ERP, которые CRM выдаёт роли Платформы (docs/architecture/integration-map.md §4); у ADMIN пусто: суперпользователь ERP. */
 export const ERP_ROLE_CODES = {
   MANAGER: ["VIEWER"],
   DIRECTOR: ["HEAD"],

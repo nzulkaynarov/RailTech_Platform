@@ -61,7 +61,7 @@
 | Раскладка страницы | — | — | `KbPage.tsx:97`, `GapsPage.tsx:73`, `ClientDetailPage.tsx:72`, `LeadDetailPage.tsx:101` оборачивают в `Space size={16}` **и** `PageHeader` даёт `margin-bottom:16px` (`pages.css:36`) → между заголовком и контентом 32 px; на остальных страницах 16 px. Главные действия: `UsersPage`/`ClientsPage` — в `PageHeader.extra`, `KbPage.tsx:99` — отдельной строкой под заголовком. |
 | Disabled | `LeadActions.tsx:31` — disabled + Tooltip с причиной ✅ (но a11y, см. O2) | — | `LeadActionDialog.tsx:58` OK отключён без объяснения. |
 
-**Файлы > 400 строк:** `i18n/ru.ts` — 428 (CLAUDE.md §4: ≤ 400 → разделить по разделам). **Функции > 50 строк** (CLAUDE.md §4): `KbPage()` ~170, `GapsPage()` ~200, `ClientDocuments()` ~155, `ClientDetailPage()` ~150, `UsersPage()` ~135, `DashboardPage()` ~65, `LeadsPage.tsx` `Filters` ~58.
+**Файлы > 400 строк:** `i18n/ru.ts` — 428 (docs/systems/crm/CONVENTIONS.md §4: ≤ 400 → разделить по разделам). **Функции > 50 строк** (docs/systems/crm/CONVENTIONS.md §4): `KbPage()` ~170, `GapsPage()` ~200, `ClientDocuments()` ~155, `ClientDetailPage()` ~150, `UsersPage()` ~135, `DashboardPage()` ~65, `LeadsPage.tsx` `Filters` ~58.
 
 ### Naming
 

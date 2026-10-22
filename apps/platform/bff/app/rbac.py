@@ -1,4 +1,4 @@
-"""Доступ к разделам по матрице Платформы (SPEC-v3 §4.2, 02-architecture.md §6).
+"""Доступ к разделам по матрице Платформы (SPEC-v3 §4.2, docs/architecture/platform-bff.md §6).
 
 Данные — `app/rbac_generated.py` (из packages/contracts/platform-rbac.yaml); здесь только логика.
 Два режима расчёта (Q-PLT-12-1, контракт BFF 0.2.2):

@@ -2,7 +2,7 @@
 
 - Статус: accepted (2026-10-12, владелец: «делай все», ADR-0018 следующий шаг)
 - Связано: ADR-0004 (модели), ADR-0014 (лимиты), ADR-0018 (подключения и секреты), аудит
-  `docs/audit/2026-10-12-admin-console-scope.md` §3 п. 3; SPEC §2, §11; CLAUDE.md §2.3.
+  `docs/audits/crm/2026-10-12-admin-console-scope.md` §3 п. 3; SPEC §2, §11; docs/systems/crm/CONVENTIONS.md §2.3.
 
 ## Контекст
 
@@ -83,7 +83,7 @@
   нечитаемыми; модели по умолчанию с `os.environ/…` продолжат работать). Хранить с бэкапом `.env`.
 - Плохо: база `litellm` не входит в текущий `pg_dump` бэкапа (дампится `POSTGRES_DB`) — при потере
   `litellm-seed` вернёт значения по умолчанию, ключи из CRM нужно ввести заново.
-- Меняется: CLAUDE.md §2.3, SPEC §2/§11, `.env.example`, compose, runbooks `deploy.md`, `key-rotation.md`.
+- Меняется: docs/systems/crm/CONVENTIONS.md §2.3, SPEC §2/§11, `.env.example`, compose, runbooks `deploy.md`, `key-rotation.md`.
 
 ## Как проверяем
 

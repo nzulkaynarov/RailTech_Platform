@@ -315,7 +315,7 @@ FEATURE_HANDLERS = {
 }
 
 
-# SINGLE ATTEMPT — deliberate deviation from the CLAUDE.md Celery convention
+# SINGLE ATTEMPT — deliberate deviation from the CONVENTIONS.md Celery convention
 # (max_retries=3, autoretry_for=(Exception,), retry_backoff=True): every feature here is
 # a paid-per-call model request (compose fires TWO calls per attempt), and draft_quote
 # commits writes inside the handler. A blanket autoretry would multiply the spend up to 4x

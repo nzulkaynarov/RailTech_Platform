@@ -19,22 +19,22 @@
 | **Платформа** (с 2026-10-22, ADR-0011) | все сотрудники | единый интерфейс сотрудников: Dashboard, CRM, EDS, ERP, Chats, Admin поверх бэкендов CRM и ERP | `platform.railtech.uz` |
 
 Ансамбль универсален для товаров и услуг, без отраслевых сущностей, с ИИ во всех трёх по принципам
-CRM. Ценность и пути — `docs/BUSINESS.md`; устройство — `docs/ARCHITECTURE.md`; шов — `docs/CONTRACTS.md`.
+CRM. Ценность и пути — `docs/product/BUSINESS.md`; устройство — `docs/history/ARCHITECTURE.md`; шов — `docs/architecture/CONTRACTS.md`.
 
 **Трансформация 2026-10-22 (SPEC-v3, ADR-0011).** Сотрудники переходят в единый фронтенд **Платформа**
 (`apps/platform`): SPA + BFF без своей базы поверх CRM и ERP. До её готовности фронтенды CRM и ERP работают и
 заморожены (только P0 и безопасность); после переключения отключаются; затем бэкенды оптимизируются. Cabinet,
-Mini App и бот остаются каналами клиента. Источник требований — `apps/platform/docs/SPEC-v3.md`, план —
-`apps/platform/docs/05-plan.md`.
+Mini App и бот остаются каналами клиента. Источник требований — `docs/product/SPEC-v3.md`, план —
+`docs/history/platform/05-plan.md`.
 
 ## 2. Топология (чтобы все одинаково понимали «две сущности»)
 
 - **Два бэкенда**: `apps/crm` (своя база `crm`) и `apps/erp` (своя база `erp`).
 - **Три фронтенда**: CRM SPA, ERP SPA, Cabinet SPA. Cabinet без бэкенда — ходит в ERP `/api/portal/*`.
   С 2026-10-22 строится четвёртый — **Платформа** (`apps/platform`: SPA + BFF без БД), который заменит CRM SPA и
-  ERP SPA для сотрудников (этапы T0–T5, `apps/platform/docs/01-transformation.md`).
+  ERP SPA для сотрудников (этапы T0–T5, `docs/history/platform/01-transformation.md`).
 - **Связь CRM ↔ ERP**: интеграционный API ERP (CRM зовёт), вебхуки ERP → CRM, `erp-mcp` для бота,
-  SSO-токены в обе стороны. Всё в `docs/CONTRACTS.md`.
+  SSO-токены в обе стороны. Всё в `docs/architecture/CONTRACTS.md`.
 - **Общие сервисы** (`infra/`): Caddy, PostgreSQL 17 (две базы), Redis, LiteLLM, Langfuse, RustFS,
   SMTP-релей. Один клиентский Telegram-бот, принадлежит CRM; Mini App указывает на Cabinet.
 
@@ -65,10 +65,10 @@ Mini App и бот остаются каналами клиента. Источ�
 | Роль | Зона | Читает первым | Не трогает |
 |---|---|---|---|
 | **Оркестратор** (ведущая сессия) | назначает задачи, ведёт `PROGRESS.md` (docs-PR после раунда, §4.1), собирает вопросы владельцу, готовит гейты | ORCHESTRATOR, PROGRESS, QUESTIONS | код приложений |
-| **Агент CRM** | `apps/crm` | `apps/crm/CLAUDE.md`, SPEC CRM, CONTRACTS | `apps/erp`, `apps/cabinet` |
-| **Агент ERP** | `apps/erp` | `apps/erp/CLAUDE.md`, ARCHITECTURE §4, MIGRATION-MAP, CONTRACTS | `apps/crm`, `apps/cabinet` |
-| **Агент Cabinet** | `apps/cabinet` | `apps/cabinet/CLAUDE.md`, ARCHITECTURE §5, CONTRACTS (portal) | бэкенды; при нехватке портального API — задача агенту ERP через QUESTIONS и описание PR, не обход |
-| **Агент Platform** | `apps/platform` (web и bff) | `apps/platform/CLAUDE.md`, SPEC-v3, `apps/platform/docs/`, CONTRACTS | `apps/crm`, `apps/erp`, `apps/cabinet`; при нехватке операции бэкенда — разрыв (`04-integration-map.md` §7) задачей агенту ERP/CRM, не обход в BFF |
+| **Агент CRM** | `apps/crm` | `docs/systems/crm/CONVENTIONS.md`, SPEC CRM, CONTRACTS | `apps/erp`, `apps/cabinet` |
+| **Агент ERP** | `apps/erp` | `docs/systems/erp/CONVENTIONS.md`, ARCHITECTURE §4, MIGRATION-MAP, CONTRACTS | `apps/crm`, `apps/cabinet` |
+| **Агент Cabinet** | `apps/cabinet` | `docs/systems/cabinet/CONVENTIONS.md`, ARCHITECTURE §5, CONTRACTS (portal) | бэкенды; при нехватке портального API — задача агенту ERP через QUESTIONS и описание PR, не обход |
+| **Агент Platform** | `apps/platform` (web и bff) | `docs/systems/platform/CONVENTIONS.md`, SPEC-v3, `apps/platform/docs/`, CONTRACTS | `apps/crm`, `apps/erp`, `apps/cabinet`; при нехватке операции бэкенда — разрыв (`docs/architecture/integration-map.md` §7) задачей агенту ERP/CRM, не обход в BFF |
 | **Агент Infra** | `infra/`, `packages/`, CI, Makefile корня | ARCHITECTURE §10, CONTRACTS | бизнес-код |
 | **Агент QA (глазами)** | сквозные сценарии через три системы, скриншоты, axe, дефекты одной волной | BUSINESS §4–5 | не чинит сам — заводит находки |
 
@@ -162,10 +162,10 @@ Mini App и бот остаются каналами клиента. Источ�
 | ID | Задача | Зависит | Результат / DoD |
 |---|---|---|---|
 | M0-INF-01 | Монорепозиторий: структура из `CLAUDE.md`, перенос `crm-rt-ai` → `apps/crm` и `RailTech_SaaS_B2B` → `legacy/b2b` **с историей** (`git subtree`), тег `b2b-final` | — | обе истории видны в `git log --follow`; корневой `Makefile`, `.editorconfig`, `.gitignore`, pre-commit с gitleaks |
-| M0-INF-02 | `packages/contracts`: OpenAPI ERP v0 (три пространства: internal, portal, integration), `events.schema.json`, `mcp-tools.json`, `sso-token.md` — из `docs/CONTRACTS.md`; `make contracts` валидирует и генерирует клиенты (orval для CRM, openapi-typescript для ERP/Cabinet) | — | CI падает на расхождении контракта и сгенерированного |
+| M0-INF-02 | `packages/contracts`: OpenAPI ERP v0 (три пространства: internal, portal, integration), `events.schema.json`, `mcp-tools.json`, `docs/architecture/sso-token.md` — из `docs/architecture/CONTRACTS.md`; `make contracts` валидирует и генерирует клиенты (orval для CRM, openapi-typescript для ERP/Cabinet) | — | CI падает на расхождении контракта и сгенерированного |
 | M0-INF-03 | `infra/compose`: один PostgreSQL с базами `crm` (pgvector) и `erp`, Redis, LiteLLM, Langfuse, RustFS (бакеты `crm`, `erp`), Caddy на три `*.localhost`; `.env.example` с комментариями | M0-INF-01 | `make up` → все `/health` 200 |
 | M0-INF-04 | CI: один workflow, матрица по путям (`apps/crm/**`, `apps/erp/**`, `apps/cabinet/**`, `packages/**`, `infra/**`), job'ы lint → unit → integration (Postgres service) → build; `legacy/b2b` исключён из всех проверок | M0-INF-01 | зелёный прогон на пустом изменении |
-| M0-DOC-01 | ADR 0001–0007 из пакета → `docs/adr/` со статусом proposed; `docs/PROGRESS.md` с таблицей вех; `apps/erp/CLAUDE.md` и `apps/cabinet/CLAUDE.md` заготовки (конвенции из B2B минус удалённое) | — | владелец проставляет accepted |
+| M0-DOC-01 | ADR 0001–0007 из пакета → `docs/adr/` со статусом proposed; `docs/PROGRESS.md` с таблицей вех; `docs/systems/erp/CONVENTIONS.md` и `docs/systems/cabinet/CONVENTIONS.md` заготовки (конвенции из B2B минус удалённое) | — | владелец проставляет accepted |
 | M0-INF-05 | `packages/ui-tokens`: цвета, шрифт, радиусы, плотность; подключение в AntD-тему CRM и в Tailwind-конфиг ERP/Cabinet | — | один файл токенов, обе темы читают его |
 
 ### M1 — ERP выделена из B2B
@@ -177,7 +177,7 @@ Mini App и бот остаются каналами клиента. Источ�
 | ID | Задача | Зависит | Результат / DoD |
 |---|---|---|---|
 | M1-ERP-01 | Копирование `legacy/b2b/backend` → `apps/erp/backend`, `legacy/b2b/frontend` → `apps/erp/frontend`; сборка и тесты проходят как были | M0-INF-01 | `make check-erp` зелёный на копии |
-| M1-ERP-02 | Удаление слоёв по `docs/MIGRATION-MAP.md` §1 (колонка «удалить»): multi-seller routing, подписки/entitlements/DEMO, KYC-воронка, OperatorRole/break-glass/заявки на роли, `Lead`, `Message`/ChatDrawer/обращения, `CounterpartyRelationship`/merge, `EquipmentGroup`/ЖД-домен, 16 `Admin*`-страниц, `PlatformAdminShell`. Порядок: сначала невплетённое, потом entitlements и routing | M1-ERP-01 | тесты удалённого удалены, остальные зелёные; клин проходит глазами после каждого шага |
+| M1-ERP-02 | Удаление слоёв по `docs/history/MIGRATION-MAP.md` §1 (колонка «удалить»): multi-seller routing, подписки/entitlements/DEMO, KYC-воронка, OperatorRole/break-glass/заявки на роли, `Lead`, `Message`/ChatDrawer/обращения, `CounterpartyRelationship`/merge, `EquipmentGroup`/ЖД-домен, 16 `Admin*`-страниц, `PlatformAdminShell`. Порядок: сначала невплетённое, потом entitlements и routing | M1-ERP-01 | тесты удалённого удалены, остальные зелёные; клин проходит глазами после каждого шага |
 | M1-ERP-03 | Переименование приложений и **свежие миграции**: `accounts`, `parties`, `catalog`, `sales`, `finance`, `documents`, `ai`, `core`; по одной начальной миграции; словари сеются миграциями (Rule 1) | M1-ERP-02 | `migrate` на пустой базе даёт рабочую систему; `showmigrations` — по одной на приложение |
 | M1-ERP-04 | Бренд и отрасль → настройки: `PLATFORM_NAME`, `SUPPORT_EMAIL`, логотип, домен; письма, PDF-база, i18n без «RailTech»/ЖД; `DomainType` → «товар / услуга» | M1-ERP-02 | `grep -ri railtech apps/erp` пусто вне `.env.example` |
 | M1-ERP-05 | Роли бэк-офиса: `Role` с правами `quote.*`, `contract.*`, `finance.*`, `catalog.*`, `supply.*`; «Администратор» = суперпользователь; матрица прав в тестах | M1-ERP-03 | тест матрицы ролей на каждом эндпоинте мутации |
@@ -185,7 +185,7 @@ Mini App и бот остаются каналами клиента. Источ�
 | M1-ERP-07 | Каталог: единая карточка «товар / услуга» с политикой исполнения (для услуг: фикс / по этапам / по времени), два слоя и политика видимости `cabinet` / `on_request`, порог публикации | M1-ERP-03 | негативный тест: внутренний слой не отдаётся ни одним публичным/портальным эндпоинтом |
 | M1-ERP-08 | Курс на дату КП: снимок курса и даты в КП; отклонение маржи при фактической закупке — поле и показ в сделке (сама закупка — M4) | M1-ERP-03 | параметризованный тест расчёта |
 | M1-ERP-09 | Настройки ERP (Settings Hub из B2B минус удалённое): реквизиты, шаблоны и нумерация, роли, политики каталога и курса, уведомления клиенту о сдвигах; вернуть ушедшее с Admin* (шаблоны писем, справочники, категории — список в PROGRESS, волна 1a); общие для ансамбля настройки — только просмотр со ссылкой в CRM (§3.13) | M1-ERP-05 | проверка глазами |
-| M1-ERP-10 | `apps/erp/CLAUDE.md` окончательный; OpenAPI internal экспортирован в `packages/contracts`; runbook ERP (запуск, миграции, воркеры, бэкап) | M1-ERP-03…09 | `make contracts` зелёный |
+| M1-ERP-10 | `docs/systems/erp/CONVENTIONS.md` окончательный; OpenAPI internal экспортирован в `packages/contracts`; runbook ERP (запуск, миграции, воркеры, бэкап) | M1-ERP-03…09 | `make contracts` зелёный |
 | M1-QA-01 | Прогон клина глазами на `erp.localhost`, обе роли (бэк-офис и «глазами клиента»), 1440/390, axe 0; дефекты одной волной | M1-ERP-10 | отчёт со скриншотами в PR гейта |
 
 ### M2 — Cabinet
@@ -196,7 +196,7 @@ Mini App и бот остаются каналами клиента. Источ�
 
 | ID | Задача | Зависит | Результат / DoD |
 |---|---|---|---|
-| M2-ERP-01 | Приложение `portal`: API `/api/portal/v1/*` по `docs/CONTRACTS.md` §4 — только своя компания; вход по Telegram `initData` (проверка подписью токена бота) и magic-link; сессия портала отдельно от сессий сотрудников | M1-ERP-05 | негативные тесты: чужая компания 404, подделанный initData 401, просроченный magic-link 410 |
+| M2-ERP-01 | Приложение `portal`: API `/api/portal/v1/*` по `docs/architecture/CONTRACTS.md` §4 — только своя компания; вход по Telegram `initData` (проверка подписью токена бота) и magic-link; сессия портала отдельно от сессий сотрудников | M1-ERP-05 | негативные тесты: чужая компания 404, подделанный initData 401, просроченный magic-link 410 |
 | M2-ERP-02 | Приглашение в кабинет: «Пригласить» на контакте (e-mail и/или Telegram), предпочитаемый канал контакта; регистрация с улицы отключена | M2-ERP-01 | письмо рендерится в обеих локалях, журнал `EmailLog` |
 | M2-ERP-03 | Публичная страница акцепта КП и 202-PDF — в `portal` | M1-ERP-03 | тест 202 + Retry-After |
 | M2-CAB-01 | `apps/cabinet`: оболочка, маршруты, вход (Telegram / magic-link), режим Mini App (без шапки входа, тема Telegram), i18n ru/uz/en (uz — новый словарь) | M0-INF-05, M2-ERP-01 (или мок из OpenAPI) | открывается в Telegram Web App и в браузере |
@@ -214,9 +214,9 @@ Mini App и бот остаются каналами клиента. Источ�
 
 | ID | Задача | Зависит | Результат / DoD |
 |---|---|---|---|
-| M3-ERP-01 | Приложение `integration`: API по `docs/CONTRACTS.md` §2 (handoff, contacts, deals, documents, catalog search, users provision, sessions revoke) под сервисным токеном; идемпотентность по `crm_*` id | M1-ERP-05 | контрактные тесты из OpenAPI; повторный handoff не создаёт дубля |
-| M3-ERP-02 | Исходящие вебхуки по `docs/CONTRACTS.md` §3: Celery-задача, подпись HMAC, ретраи, журнал доставок, повтор вручную | M3-ERP-01 | тест подписи и ретраев; событие на каждую стадию |
-| M3-ERP-03 | `erp-mcp` (FastMCP) по `docs/CONTRACTS.md` §5 с контекстом `X-Agent-Context`: сделки, статусы поставки, документы, каталог (цены только в режиме клиента) | M3-ERP-01 | негативные тесты: без контекста 401, чужой клиент пусто |
+| M3-ERP-01 | Приложение `integration`: API по `docs/architecture/CONTRACTS.md` §2 (handoff, contacts, deals, documents, catalog search, users provision, sessions revoke) под сервисным токеном; идемпотентность по `crm_*` id | M1-ERP-05 | контрактные тесты из OpenAPI; повторный handoff не создаёт дубля |
+| M3-ERP-02 | Исходящие вебхуки по `docs/architecture/CONTRACTS.md` §3: Celery-задача, подпись HMAC, ретраи, журнал доставок, повтор вручную | M3-ERP-01 | тест подписи и ретраев; событие на каждую стадию |
+| M3-ERP-03 | `erp-mcp` (FastMCP) по `docs/architecture/CONTRACTS.md` §5 с контекстом `X-Agent-Context`: сделки, статусы поставки, документы, каталог (цены только в режиме клиента) | M3-ERP-01 | негативные тесты: без контекста 401, чужой клиент пусто |
 | M3-ERP-04 | SSO: приём токена CRM → сессия ERP; выдача токена ERP → CRM; переключатель в шапке ERP; отзыв сессий по запросу CRM | M3-ERP-01 | токен одноразовый (jti), 60 с |
 | M3-ERP-06 | ERP отдаёт состояние своих внешних сервисов (курсы ЦБ, тариф и ТН ВЭД, почта ERP, LiteLLM, S3, Sentry) по integration API: `externals[]` в `GET /health` (статус, последняя успешная операция, последняя ошибка, счётчики за 24 ч) и принимает выключатели из CRM; контракт — сначала в `packages/contracts` | M3-ERP-01 | центр внешних сервисов CRM показывает сервисы ERP; выключатель из CRM останавливает вызовы в ERP |
 | M3-ERP-05 | Сторона ERP для сопряжения и единой консоли: приём кода сопряжения, хранение сервисных токенов и секрета вебхуков шифрованными в БД (не в `.env`), получение общих настроек из CRM с кэшем и понятным статусом «нет связи с CRM» | M3-ERP-01 | ERP работает с настройками из CRM; без CRM — последние известные значения и предупреждение |
@@ -285,14 +285,14 @@ Runbook'и: волна 9 — роли (`wave9-roles.md`), волна 10 — эт
 
 ### MP — Платформа (единый интерфейс сотрудников, ADR-0011)
 
-Фазы P0–P6 и задачи с «готово, когда» — `apps/platform/docs/05-plan.md`; разрывы бэкендов — `04-integration-map.md` §7.
+Фазы P0–P6 и задачи с «готово, когда» — `docs/history/platform/05-plan.md`; разрывы бэкендов — `docs/architecture/integration-map.md` §7.
 Гейты: P0 — контракты v0 и каркас; P1 — каркас и вход; P2 — путь заявки шаги 1–5; P3 — проект, бухгалтер, служебки,
 чаты; P4 — Admin и склад; P5 — пилот → переключение → отключение старых фронтов; P6 — оптимизация бэкендов.
 Пилот с реальными клиентами идёт уже на Платформе (P5), а не на старых фронтах.
 
 ## 7. Протокол сессии агента
 
-1. Прочитать: `ORCHESTRATOR.md` → `docs/PROGRESS.md` → `docs/QUESTIONS.md` → `docs/DECISIONS.md` → `CLAUDE.md` своего приложения → разделы `docs/ARCHITECTURE.md`/`docs/CONTRACTS.md`, на которые ссылается задача.
+1. Прочитать: `docs/ORCHESTRATOR.md` → `docs/PROGRESS.md` → `docs/QUESTIONS.md` → `docs/DECISIONS.md` → `CLAUDE.md` своего приложения → разделы `docs/history/ARCHITECTURE.md`/`docs/architecture/CONTRACTS.md`, на которые ссылается задача.
 2. Взять задачу по ID, проверить, что её зависимости закрыты в PROGRESS. Если нет — взять другую или спросить оркестратора.
 3. Ветка по схеме §4. Для продуктовой задачи — короткий benchmark-разбор в описании PR.
 4. Реализация тест-first для доменной логики; контракт — раньше кода; документация — в том же PR.
@@ -325,11 +325,11 @@ Runbook'и: волна 9 — роли (`wave9-roles.md`), волна 10 — эт
 (`docs/audits/2026-10-18-main-e0f089e.md`) нашёл 11 проблем P0 в коде, влитом без PR и CI (15 задач M1–M3, 17 вливаний
 после PR #43). Исправления по аудиту идут волнами FIX-00…FIX-54 (порядок и статусы — `docs/PROGRESS.md`, раздел «Исправления
 по аудиту»): **волны 0–4 закрыты** 2026-10-18…20 (последний docs-PR #103); волна 2b (FIX-2xa #81, FIX-25 #84) и M5-INF-01
-(#80, #95) влиты; **волна 5** (FIX-50…54, `docs/runbooks/wave5-agents.md`) — прогоны глазами на стенде, документы и правила
+(#80, #95) влиты; **волна 5** (FIX-50…54, `docs/history/runbooks/wave5-agents.md`) — прогоны глазами на стенде, документы и правила
 процесса; после неё гейты M1 и M2 владельцем. **M3 разморожена 2026-10-20** (волна 3 закрыта); её остаток (M3-ERP-05,
 M3-ERP-06, M3-CRM-07, M3-CRM-10, M3-CRM-11, M3-QA-01) — после гейтов M1/M2. **M4** не начата — по решению владельца
 2026-10-20 после старта пилота. **M5**: M5-INF-01 влит, проверка на VPS — после данных владельца; пилот — после M3, без M4.
 `main` защищена: только PR с зелёным «CI ok».
-**2026-10-22:** владелец утвердил SPEC-v3 и ответил «да» на все вопросы `apps/platform/docs/06-questions.md` — началась
+**2026-10-22:** владелец утвердил SPEC-v3 и ответил «да» на все вопросы `docs/history/platform/06-questions.md` — началась
 веха **MP (Платформа)**, фаза P0; фронтенды CRM и ERP заморожены; продуктовые задачи только для них сняты.
 Сводка и порядок продолжения — **`docs/HANDOFF.md`**.

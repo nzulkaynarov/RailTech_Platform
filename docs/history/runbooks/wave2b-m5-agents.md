@@ -1,7 +1,7 @@
 # Runbook: волна 2b (FIX-2xa, FIX-25) ∥ M5-INF-01 — один лид, три исполнителя
 
 Решения — `docs/DECISIONS.md` 2026-10-20 («Путь к пилоту», «Вопросы волны 2», «FIX-25»). Идёт параллельно с волнами 3 и 4
-(`docs/runbooks/wave3-4-agents.md`, другая сессия): их зоны (`integration/*`, CRM, `quote_fx`, настройки, dev-команды,
+(`docs/history/runbooks/wave3-4-agents.md`, другая сессия): их зоны (`integration/*`, CRM, `quote_fx`, настройки, dev-команды,
 `QuoteBuilder`) не трогать. Контракт `erp-portal.yaml` 0.3.0 уже закоммичен архитектором в ветку `fix/erp-25-portal-030`
 (worktree `.claude/worktrees/fix-25`), правит его только архитектор.
 
@@ -9,8 +9,8 @@
 
 ```
 Ты — лид разработки RailTech Platform (ORCHESTRATOR §4.1), ведёшь волну 2b и M5-INF-01 по
-docs/runbooks/wave2b-m5-agents.md. Код сам не пишешь: ставишь задачи исполнителям-субагентам (Sonnet), ревьюишь
-свежим субагентом ≠ исполнителю, решаешь, ставишь автослияние. Прочитай: CLAUDE.md корня, ORCHESTRATOR.md (§3, §4.1, §7),
+docs/history/runbooks/wave2b-m5-agents.md. Код сам не пишешь: ставишь задачи исполнителям-субагентам (Sonnet), ревьюишь
+свежим субагентом ≠ исполнителю, решаешь, ставишь автослияние. Прочитай: CLAUDE.md корня, docs/ORCHESTRATOR.md (§3, §4.1, §7),
 этот runbook целиком.
 1. Worktree и зависимости (§2). Запусти параллельно: FIX-2xa, FIX-25-cabinet, M5-INF-01. FIX-25-erp — после того, как
    FIX-2xa открыл PR (один набор тестов ERP `ERP_TEST_NS=wave2b` на волну 2b — §2).
@@ -76,7 +76,7 @@ Docker (11,7 ГБ): волны 3–4 держат до трёх наборов E
 
 ```
 Ты — исполнитель RailTech Platform (ORCHESTRATOR §4.1), одна задача — один worktree — один PR. Работай только в своём
-worktree (§2 runbook'а docs/runbooks/wave2b-m5-agents.md). Прочитай CLAUDE.md корня («Среда разработки, тесты и CI»)
+worktree (§2 runbook'а docs/history/runbooks/wave2b-m5-agents.md). Прочитай CLAUDE.md корня («Среда разработки, тесты и CI»)
 и CLAUDE.md своего приложения. Итерации — только затронутые тесты; перед коммитом — make check-<приложение> (и
 make contracts, если менялся контракт); коммить только зелёное; перед push — scripts/ci_local.sh <задания>. Затем push и
 PR (описание — что и почему, «готово, когда» по пунктам), строка задачи в docs/PROGRESS.md — «готово к слиянию» со
@@ -121,7 +121,7 @@ PR (описание — что и почему, «готово, когда» п
   не стирает фрагмент (кнопка «Повторить»); подсказка длины кода — по контракту 4–12 (или по фактической длине кода ERP,
   если она фиксирована — проверить `QuoteAcceptanceCode`); тост на 1440 не перекрывает `h1`, нет гонки тостов;
   `DialogOverlay` с `forwardRef`, фокус после управляемых диалогов возвращается на кнопку-источник;
-- `apps/cabinet/CLAUDE.md`: правило «в тестах поиск по роли — внутри `within(…)`, не по всему документу».
+- `docs/systems/cabinet/CONVENTIONS.md`: правило «в тестах поиск по роли — внутри `within(…)`, не по всему документу».
 
 Готово, когда (обе половины): лид слил обе ветки в `fix/erp-25-portal-030`; `make contracts`, `make check-erp`,
 `make check-cabinet` зелёные на итоговой ветке; скриншоты 1440 и 390 в `docs/screens/fix-25/` (КП с НДС, ошибка

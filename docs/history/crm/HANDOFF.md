@@ -20,12 +20,12 @@
 
 | Что | Где |
 |---|---|
-| Отчёт продуктового аудита, статус волн | `docs/audit/2026-10-09-product-audit.md` |
+| Отчёт продуктового аудита, статус волн | `docs/audits/crm/2026-10-09-product-audit.md` |
 | Жизненный цикл без тупиков | ADR-0015 |
 | Квалификация и передача по цене — правила в «Настройках» | ADR-0016 |
-| Дизайн-аудит: отчёт + 4 приложения, статус | `docs/audit/2026-10-11-design-audit.md`, `2026-10-11-design/` |
+| Дизайн-аудит: отчёт + 4 приложения, статус | `docs/audits/crm/2026-10-11-design-audit.md`, `2026-10-11-design/` |
 | Подкоды ошибок API | ADR-0017 |
-| Бенчмарк конкурента, что перенято и почему | `docs/audit/2026-10-11-benchmark-business-os.md` |
+| Бенчмарк конкурента, что перенято и почему | `docs/audits/crm/2026-10-11-benchmark-business-os.md` |
 | Чек-листы приёмки «Проверить на dev» | описания PR #7, #8, #12, #13 на GitHub |
 
 Ни один гейт фаз в `docs/PROGRESS.md` ещё не отмечен человеком — приёмка одним проходом на dev впереди.
@@ -39,13 +39,13 @@
 контейнеры выходят напрямую; при VPN/прокси на Mac Docker теряет прямой выход — не обходить
 настройками, выключать VPN на время работы со стендом.
 
-Дальше — выкатка на VPS по `docs/runbooks/deploy.md` (нужны: сервер, DNS, секреты environment
+Дальше — выкатка на VPS по `docs/runbooks/crm/deploy.md` (нужны: сервер, DNS, секреты environment
 `production` в GitHub), затем тег `vX.Y.Z`.
 
 ## Состояние на 2026-10-12, 15:40
 
 Ветка `phase/9-admin-console` = PR #21: админка без терминала (ADR-0018), ИИ-помощь, контакты, сделки (ADR-0019) и все
-исправления полного аудита (`docs/audit/2026-10-12-full-audit.md`, волна H в PROGRESS). CI зелёный: unit 1132 + 456,
+исправления полного аудита (`docs/audits/crm/2026-10-12-full-audit.md`, волна H в PROGRESS). CI зелёный: unit 1132 + 456,
 integration 173, e2e. UI-ревью: 72 экрана (3 роли × 2 ширины) без нарушений доступности. Не смержен — ждёт приёмки.
 
 На стенде этого Mac Docker не достаёт до Telegram (DNS есть, TCP — таймаут; с хоста работает): бот показан «Сбой:
@@ -58,7 +58,7 @@ integration 173, e2e. UI-ревью: 72 экрана (3 роли × 2 ширин
 
 1. **Приёмка на dev** по чек-листу PR #21 (админка без терминала, ADR-0018) и PR #12, #15, #14.
    На стенде добавлен `SECRETS_KEY`; новые тексты бота и меню действуют без сброса настроек.
-   **Выкатка на VPS** — `docs/runbooks/deploy.md` (п. 4 и 7: `SECRETS_KEY`, мастер `/setup`).
+   **Выкатка на VPS** — `docs/runbooks/crm/deploy.md` (п. 4 и 7: `SECRETS_KEY`, мастер `/setup`).
 2. ~~Пополнить кредиты моделей~~ — пополнены 2026-10-12.
 3. ~~Контрольный прогон качества~~ — `make eval-quick` 2026-10-12: 14/14, faithfulness 0.96, выдуманных
    чисел 0, инъекции 100 %, квалификатор 1.0; $0.06 из $0.30. Полный eval-gate — меткой `run-evals` по согласию.
@@ -80,7 +80,7 @@ scripts/bootstrap_dev.sh          # .env со случайными секрет�
 - Порт занят другим проектом — `DEV_API_PORT`, `DEV_POSTGRES_PORT` и др. в `.env` (см. `.env.example`).
 - Данные стенда живут в Docker-томах и не переезжают: `make kb-demo`, `make create-admin email=…`,
   `make settings key=notifications value='{"channel_id": -100…}'`, Telegram ID пользователей в
-  «Пользователях»; либо перенос по `docs/runbooks/backup-restore.md`.
+  «Пользователях»; либо перенос по `docs/runbooks/crm/backup-restore.md`.
 - После `make up` контейнеры `worker`, `crm-mcp`, `kb-mcp`, `docs-mcp` не перечитывают код сами —
   `docker compose restart worker crm-mcp kb-mcp docs-mcp` (api и web перезагружаются).
 
@@ -105,4 +105,4 @@ scripts/bootstrap_dev.sh          # .env со случайными секрет�
 - Q-020 кнопка «Поделиться номером» — вместе с Q-011. Потолки расходов: Anthropic $3, Gemini $1 в сутки;
   `make eval` (≈ $0.5) и `make load-test` расходуют те же сутки.
 - Отложенное дизайн-аудита закрыто (2026-10-12); веса оценки лида остаются в коде (Q-024, 2026-10-13).
-- Фаза 9 (переезд на prod) — `docs/runbooks/promote-to-prod.md`, после гейтов.
+- Фаза 9 (переезд на prod) — `docs/runbooks/crm/promote-to-prod.md`, после гейтов.

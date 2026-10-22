@@ -2,7 +2,7 @@
 
 Один файл `tokens.json` задаёт цвета, шрифт, радиусы и плотность для всех фронтендов ансамбля
 (ARCHITECTURE §3: ансамбль выглядит одной семьёй; унификация компонентов — не цель). Версия 0.2.0 — токены
-SPEC-v3 §5.2 (`apps/platform/docs/03-frontend.md` §3); значения 0.1.0 были из темы CRM (дизайн-аудит 2026-10-11).
+SPEC-v3 §5.2 (`docs/architecture/platform-frontend.md` §3); значения 0.1.0 были из темы CRM (дизайн-аудит 2026-10-11).
 Контраст WCAG 2.1 AA ≥ 4.5:1 для пар «текст / фон» проверяют `contrast.test.mjs` (здесь) и
 `apps/crm/frontend/src/app/theme.test.ts`.
 
@@ -52,7 +52,7 @@ make -C packages/ui-tokens check   # CI: контраст + сгенериров
 ## Шрифт
 
 Шрифт `Inter, -apple-system, "Segoe UI", Roboto, Arial, sans-serif` задан в `font.family`, **файлов шрифта в пакете нет**
-(в `05-plan.md` «woff2 в пакете» отменено runbook'ом волны 7). Inter подключает само приложение пакетом
+(в `docs/history/platform/05-plan.md` «woff2 в пакете» отменено runbook'ом волны 7). Inter подключает само приложение пакетом
 `@fontsource-variable/inter` (самостоятельный хостинг, CSP `font-src 'self'`, не Google Fonts): Платформа — INF-P0-3,
 Cabinet — позже, CAB-03. Пока шрифт не подключён, стек падает на системный (`-apple-system`, `Segoe UI`, `Roboto`).
 ERP и CRM шрифт не подключают (заморожены, ADR-0011).

@@ -2,7 +2,7 @@
 
 Когда применять: волна 2 закрыта (FIX-21…24 влиты, FIX-24 проверен на стенде) и контракт шва 0.2.0 (FIX-29) в `main`.
 Источник задач — `docs/audits/2026-10-18-main-e0f089e.md` («Волна 3», «Волна 4»), статусы — `docs/PROGRESS.md`, правила —
-`ORCHESTRATOR.md` §3, §4.1, §7 и `CLAUDE.md` корня («Среда разработки, тесты и CI»).
+`docs/ORCHESTRATOR.md` §3, §4.1, §7 и `CLAUDE.md` корня («Среда разработки, тесты и CI»).
 
 Две волны идут параллельно, **у каждой свой лид** (ORCHESTRATOR §4.1: один лид на волну): волна 3 — сессия Claude Opus,
 волна 4 — вторая сессия Claude Opus или Gemini Argon. Исполнители — субагенты Sonnet (у Argon — Flash), по одному на задачу,
@@ -20,9 +20,9 @@ dev-команды безопасны.
 Ты — лид разработки RailTech Platform (ORCHESTRATOR §4.1), ведёшь волну 3 исправлений по аудиту: FIX-30…FIX-37.
 Код сам не пишешь — ставишь задачи субагентам-исполнителям, ревьюишь их PR свежим субагентом и ставишь автослияние.
 
-Прочитай: CLAUDE.md корня (раздел «Среда разработки, тесты и CI»), ORCHESTRATOR.md (§3, §4.1, §7), docs/HANDOFF.md,
-docs/runbooks/wave3-4-agents.md (целиком: §1 факты кода, §2 рабочее место, §3 раскладка, §4 порядок, §5 промпты, §6 цикл),
-docs/PROGRESS.md («Исправления по аудиту»), docs/DECISIONS.md (строки 2026-10-19), docs/CONTRACTS.md §2–§3,
+Прочитай: CLAUDE.md корня (раздел «Среда разработки, тесты и CI»), docs/ORCHESTRATOR.md (§3, §4.1, §7), docs/HANDOFF.md,
+docs/history/runbooks/wave3-4-agents.md (целиком: §1 факты кода, §2 рабочее место, §3 раскладка, §4 порядок, §5 промпты, §6 цикл),
+docs/PROGRESS.md («Исправления по аудиту»), docs/DECISIONS.md (строки 2026-10-19), docs/architecture/CONTRACTS.md §2–§3,
 packages/contracts/openapi/erp-integration.yaml и events.schema.json.
 
 Работай по раундам §4. Перед каждым раундом создай worktree задач раунда от свежего origin/main и поставь зависимости (§2).
@@ -42,8 +42,8 @@ packages/contracts/openapi/erp-integration.yaml и events.schema.json.
 Ты — лид разработки RailTech Platform (ORCHESTRATOR §4.1), ведёшь волну 4 исправлений по аудиту: FIX-40…FIX-44 (хвост M1).
 Параллельно идёт волна 3 у другого лида — её файлы (integration/*, CRM) не трогай. Код сам не пишешь.
 
-Прочитай: CLAUDE.md корня, ORCHESTRATOR.md (§3, §4.1, §7), docs/HANDOFF.md, docs/runbooks/wave3-4-agents.md (§1, §2, §3, §4
-«Волна 4», §5.0, §5.40–§5.44, §6), docs/PROGRESS.md, apps/erp/CLAUDE.md.
+Прочитай: CLAUDE.md корня, docs/ORCHESTRATOR.md (§3, §4.1, §7), docs/HANDOFF.md, docs/history/runbooks/wave3-4-agents.md (§1, §2, §3, §4
+«Волна 4», §5.0, §5.40–§5.44, §6), docs/PROGRESS.md, docs/systems/erp/CONVENTIONS.md.
 
 Работай по раундам §4 «Волна 4»: worktree от свежего origin/main, зависимости (§2), исполнители субагентами (model sonnet;
 у Gemini — flash) с промптом «§5.0 + §5.4x», ревью свежим субагентом, `gh pr merge --auto --merge <n>`, CI не опрашивать; перед раундом — одна проверка своих PR и docs-PR со статусами в
@@ -112,7 +112,7 @@ FIX-40 — последним и только после того, как лид
 - FIX-40. `packages/contracts/openapi/erp-internal.yaml` написан вручную (28 путей), `backend/schema.json` — 317 путей
   (`/api/v1` 250, portal 54, integration 12, mcp 1); `erp-internal-full.json` — побайтная копия `schema.json`
   (`apps/erp/Makefile`); `generated/erp-internal.d.ts` никто не импортирует (фронтенд ERP генерирует типы из
-  `backend/schema.json`), `apps/erp/CLAUDE.md` утверждает обратное; дрейф уже есть (нет `POST /api/portal/v1/auth/magic`);
+  `backend/schema.json`), `docs/systems/erp/CONVENTIONS.md` утверждает обратное; дрейф уже есть (нет `POST /api/portal/v1/auth/magic`);
   CI (`erp`, `scripts/ci_local.sh`) выгрузку spectacular не сверяет.
 - FIX-41. `sales/services/quote_fx.py`: договорной курс блокируется только при `frozen_at` (на `PENDING_APPROVAL`/
   `READY_TO_SEND` меняет цену без пересогласования); `finance/services/fx.py`: переменная окружения перебивает настройку
@@ -172,7 +172,7 @@ crm-integration` (одноразовые контейнеры, считаетс�
 | **FIX-43** безопасные dev-команды | ERP | S | — | `crm/management/commands/smoke_full_cycle.py`, `core/management/commands/core_seed.py`, force-эндпоинты (решение — §5.43) | — |
 | **FIX-44** два дефекта фронтенда | ERP фронтенд | S | — | `QuoteApprovalChain.tsx`, `QuoteBuilderGrid.tsx` и хуки | 42 (i18n) |
 | **FIX-42** настройки | ERP | S | 41 | `core/views/settings.py`, `PlatformSettings.tsx`, `catalog/models/taxonomy.py` (миграция), `settingsSections.tsx`, `notifications/views.py` | 41, 44 |
-| **FIX-40** `erp-internal` из схемы бэкенда, дрейф в CI | ERP + infra | M | волна 3 закрыта | `apps/erp/Makefile`, `packages/contracts` (internal), `.github/workflows/ci.yml` (только задание `erp` — по поручению этого runbook'а), `scripts/ci_local.sh`, `apps/erp/CLAUDE.md` | все PR ERP |
+| **FIX-40** `erp-internal` из схемы бэкенда, дрейф в CI | ERP + infra | M | волна 3 закрыта | `apps/erp/Makefile`, `packages/contracts` (internal), `.github/workflows/ci.yml` (только задание `erp` — по поручению этого runbook'а), `scripts/ci_local.sh`, `docs/systems/erp/CONVENTIONS.md` | все PR ERP |
 
 ## 4. Порядок
 
@@ -197,9 +197,9 @@ crm-integration` (одноразовые контейнеры, считаетс�
 
 ```
 Ты — исполнитель RailTech Platform (ORCHESTRATOR §4.1). Работаешь ТОЛЬКО в worktree {ПУТЬ} (все команды из него), ветка
-{ВЕТКА}, одна задача: {ID}. Прочитай: CLAUDE.md корня (раздел «Среда разработки, тесты и CI» — обязателен), ORCHESTRATOR.md
-(§3, §7), docs/runbooks/wave3-4-agents.md (§1 — факты кода, §3 — твои зоны), docs/audits/2026-10-18-main-e0f089e.md
-(задача {ID} и находки {НАХОДКИ}), CLAUDE.md приложений, которые правишь, docs/CONTRACTS.md и файлы контракта задачи.
+{ВЕТКА}, одна задача: {ID}. Прочитай: CLAUDE.md корня (раздел «Среда разработки, тесты и CI» — обязателен), docs/ORCHESTRATOR.md
+(§3, §7), docs/history/runbooks/wave3-4-agents.md (§1 — факты кода, §3 — твои зоны), docs/audits/2026-10-18-main-e0f089e.md
+(задача {ID} и находки {НАХОДКИ}), CLAUDE.md приложений, которые правишь, docs/architecture/CONTRACTS.md и файлы контракта задачи.
 
 Правила, которые не обсуждаются:
 - main защищена; PR только из этой ветки; PR не сливаешь — после открытия PR остановись и доложи лиду ссылкой.
@@ -374,7 +374,7 @@ PR: «FIX-37: события приёмки и замечаний по стро�
 2. Проверка дрейфа: задание erp в .github/workflows/ci.yml и scripts/ci_local.sh перегенерирует schema.json и падает при
    diff (поручение этого runbook'а — единственная разрешённая правка CI в волне); generated/erp-internal.d.ts — либо
    используется фронтендом ERP вместо schema.json, либо удалён (одно из двух, решение в PR).
-3. apps/erp/CLAUDE.md приведён к факту; make contracts, make -C apps/erp check зелёные; ci-local erp ловит дрейф (покажи в PR).
+3. docs/systems/erp/CONVENTIONS.md приведён к факту; make contracts, make -C apps/erp check зелёные; ci-local erp ловит дрейф (покажи в PR).
 PR: «FIX-40: erp-internal генерируется из схемы бэкенда, дрейф ловит CI».
 ```
 

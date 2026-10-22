@@ -1,8 +1,8 @@
 # apps/erp — ERP (бэк-офис)
 
 Django · DRF · Celery · Channels · React + shadcn/Tailwind. **M1-ERP-01 (2026-10-13):** код скопирован из
-`legacy/b2b` как есть (915 файлов бэкенда, 547 фронтенда); перестройка — задачи M1-ERP-02…10 (`ORCHESTRATOR.md`).
-Конвенции агента ERP — `CLAUDE.md` рядом. Состав приложений — `docs/ARCHITECTURE.md` §4, карта переезда — `docs/MIGRATION-MAP.md`.
+`legacy/b2b` как есть (915 файлов бэкенда, 547 фронтенда); перестройка — задачи M1-ERP-02…10 (`docs/ORCHESTRATOR.md`).
+Конвенции агента ERP — `docs/systems/erp/CONVENTIONS.md` рядом. Состав приложений — `docs/history/ARCHITECTURE.md` §4, карта переезда — `docs/history/MIGRATION-MAP.md`.
 
 ## Команды
 
@@ -28,5 +28,5 @@ ERP поднимается только корневым `make up` (`infra/compo
 
 Удаление слоёв маркетплейса/подписок/KYC/операторской плоскости (M1-ERP-02), новые имена приложений и свежие
 миграции (M1-ERP-03), бренд в настройки (M1-ERP-04), роли бэк-офиса (M1-ERP-05), ИИ через LiteLLM (M1-ERP-06),
-каталог с двумя слоями (M1-ERP-07), курс на дату КП (M1-ERP-08), настройки (M1-ERP-09), окончательный CLAUDE.md,
+каталог с двумя слоями (M1-ERP-07), курс на дату КП (M1-ERP-08), настройки (M1-ERP-09), окончательный docs/systems/erp/CONVENTIONS.md,
 OpenAPI в `packages/contracts`, runbook (M1-ERP-10). До M1-ERP-04 в UI и письмах остаётся бренд B2B.

@@ -1,5 +1,5 @@
 """
-Service-level tests for high-risk CRM logic (CLAUDE.md "Known test debt"):
+Service-level tests for high-risk CRM logic (CONVENTIONS.md "Known test debt"):
 force_approve_quote and reject_quote — the override paths that previously had no
 direct coverage.
 """

@@ -70,7 +70,7 @@ const lead = (id: number, title: string): ObjectRef => ({
   path: `/crm/leads?lead=L-${String(id)}&panel=open&tab=card`,
 });
 
-/** Очередь по ролям (04-integration-map.md §1.2); у снабженца, инженера, бухгалтера и админа до ERP-01…06 — пусто. */
+/** Очередь по ролям (docs/architecture/integration-map.md §1.2); у снабженца, инженера, бухгалтера и админа до ERP-01…06 — пусто. */
 function queueFor(role: RoleCode, now: number): QueueItem[] {
   if (role === "DIRECTOR") {
     return [

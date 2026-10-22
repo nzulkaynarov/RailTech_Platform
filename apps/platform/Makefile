@@ -1,4 +1,4 @@
-# Платформа (SPA + BFF) — команды разработки (apps/platform/CLAUDE.md §3).
+# Платформа (SPA + BFF) — команды разработки (docs/systems/platform/CONVENTIONS.md §3).
 # Всё, кроме Docker-целей, работает без Docker: web (pnpm) и bff (uv).
 
 SHELL := /bin/bash

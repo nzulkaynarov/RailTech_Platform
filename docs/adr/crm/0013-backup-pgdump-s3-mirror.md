@@ -50,4 +50,4 @@ CI job `build` собирает образ `backup` и проверяет `pg_du
 
 ## Поправка 2026-10-13 (RailTech Platform, M0)
 
-Сервер ансамбля — PostgreSQL 17 (`docs/ARCHITECTURE.md` §10, `infra/compose/base.yml`), поэтому правило «версия клиента = версия сервера» означает `postgresql-client-17`: `backend/Dockerfile` (target `backup`), `ops/backup.sh`, `ops/restore.sh`, образы Postgres в `infra/docker-compose.yml`, `scripts/test_int_local.sh`, `scripts/ci_local.sh` и workflows переведены на 17. Аргументы ADR не меняются.
+Сервер ансамбля — PostgreSQL 17 (`docs/history/ARCHITECTURE.md` §10, `infra/compose/base.yml`), поэтому правило «версия клиента = версия сервера» означает `postgresql-client-17`: `backend/Dockerfile` (target `backup`), `ops/backup.sh`, `ops/restore.sh`, образы Postgres в `infra/docker-compose.yml`, `scripts/test_int_local.sh`, `scripts/ci_local.sh` и workflows переведены на 17. Аргументы ADR не меняются.

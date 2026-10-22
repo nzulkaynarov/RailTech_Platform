@@ -1,7 +1,7 @@
 # Волна 7 — Платформа, фаза P0 (подготовка): токены, каркас web и bff, стенд, CI, прод
 
 Архитектор, 2026-10-22. Основание: SPEC-v3 и ответы владельца «на все да» (DECISIONS 2026-10-22), ADR-0011 (accepted),
-`apps/platform/docs/05-plan.md` P0. Контракты v0 (INF-P0-1) сделал архитектор: `packages/contracts/openapi/platform-bff.yaml`
+`docs/history/platform/05-plan.md` P0. Контракты v0 (INF-P0-1) сделал архитектор: `packages/contracts/openapi/platform-bff.yaml`
 0.1.0, `platform-rbac.yaml`, `client-statuses.yaml` (PR #140). Владелец **разрешил** правку `.github/workflows/ci.yml`,
 `scripts/ci_local.sh`, `.github/workflows/deploy.yml` и деплоя под Платформу (DECISIONS 2026-10-22, п. 10).
 
@@ -9,9 +9,9 @@
 
 ```
 Ты — лид разработки RailTech Platform (ORCHESTRATOR §4.1), ведёшь волну 7 «Платформа, фаза P0» по
-docs/runbooks/wave7-platform-p0.md. Код сам не пишешь. Прочитай: CLAUDE.md корня, ORCHESTRATOR.md (§3, §4.1, §6 «MP», §7),
-docs/HANDOFF.md, этот runbook целиком, apps/platform/CLAUDE.md, apps/platform/docs/02-architecture.md, 03-frontend.md,
-05-plan.md (P0), docs/CONTRACTS.md §8, packages/ui-tokens/README.md.
+docs/history/runbooks/wave7-platform-p0.md. Код сам не пишешь. Прочитай: CLAUDE.md корня, docs/ORCHESTRATOR.md (§3, §4.1, §6 «MP», §7),
+docs/HANDOFF.md, этот runbook целиком, docs/systems/platform/CONVENTIONS.md, docs/architecture/platform-bff.md, docs/architecture/platform-frontend.md,
+docs/history/platform/05-plan.md (P0), docs/architecture/CONTRACTS.md §8, docs/systems/ui-tokens/README.md.
 Старт — когда PR #140 влит в main (git ls-remote origin main + наличие packages/contracts/openapi/platform-bff.yaml).
 Работай по раундам §2: worktree .claude/worktrees/<задача> от свежего origin/main, зависимости ставишь до запуска
 исполнителя, исполнители — субагенты (model sonnet, run_in_background=false) с промптом «преамбула §3 с подставленными
@@ -48,9 +48,9 @@ origin/main в ветку и повтор проверок задачи; зат�
 
 ```
 Ты — исполнитель RailTech Platform (ORCHESTRATOR §4.1). Работаешь ТОЛЬКО в worktree {ПУТЬ} (все команды из него), ветка
-{ВЕТКА}, одна задача: {ID}. Прочитай: CLAUDE.md корня (раздел «Среда разработки, тесты и CI» обязателен), ORCHESTRATOR.md
-(§3, §7), docs/runbooks/wave7-platform-p0.md (§1 и свой раздел §4), apps/platform/CLAUDE.md, apps/platform/docs/02-architecture.md
-и 03-frontend.md, CLAUDE.md приложений, которые правишь.
+{ВЕТКА}, одна задача: {ID}. Прочитай: CLAUDE.md корня (раздел «Среда разработки, тесты и CI» обязателен), docs/ORCHESTRATOR.md
+(§3, §7), docs/history/runbooks/wave7-platform-p0.md (§1 и свой раздел §4), docs/systems/platform/CONVENTIONS.md, docs/architecture/platform-bff.md
+и docs/architecture/platform-frontend.md, CLAUDE.md приложений, которые правишь.
 
 Правила, которые не обсуждаются:
 - main защищена; PR только из этой ветки; PR не сливаешь — после открытия PR остановись и доложи лиду ссылкой.
@@ -72,7 +72,7 @@ origin/main в ветку и повтор проверок задачи; зат�
 Зоны: `packages/ui-tokens/**`, сгенерированные файлы тем: `apps/crm/frontend/src/app/tokens.generated.ts`, CSS токенов Cabinet и
 ERP, которые строит `make tokens`; тесты контраста. Экраны CRM и ERP не правятся.
 
-- `tokens.json` → версия 0.2.0, значения таблицы `apps/platform/docs/03-frontend.md` §3: primary `#1668dc` (hover `#1677ff`,
+- `tokens.json` → версия 0.2.0, значения таблицы `docs/architecture/platform-frontend.md` §3: primary `#1668dc` (hover `#1677ff`,
   bg `#e6f4ff`, text `#0958d9`); success `#52c41a` / текст `#237804`; warning `#faad14` / текст `#874d00`; error `#ff4d4f` /
   текст `#a8071a`; теги purple `#531dab`, cyan `#006d75`; текст `#1f1f1f` / `#595959` / `#767676`; рамки `#d9d9d9` /
   `#f0f0f0`; фон `#f5f5f5` / `#ffffff`; радиусы 6 и 8; шрифт `Inter, -apple-system, "Segoe UI", Roboto, Arial, sans-serif`.
@@ -82,7 +82,7 @@ ERP, которые строит `make tokens`; тесты контраста. �
 - Файлы шрифта в пакет не кладутся: Inter подключают приложения пакетом `@fontsource-variable/inter` (Платформа — INF-P0-3,
   Cabinet — позже в CAB-03). Без шрифта стек падает на системный.
 - Новые выходы `build.mjs` для Платформы: `dist/antd.ts` уже подходит; добавить экспорт компонентных токенов
-  (`03-frontend.md` §3, таблица «Компонентные токены»), если генератор их держит, иначе — в INF-P0-3 в `theme.ts` Платформы.
+  (`docs/architecture/platform-frontend.md` §3, таблица «Компонентные токены»), если генератор их держит, иначе — в INF-P0-3 в `theme.ts` Платформы.
 
 Готово, когда: `make -C packages/ui-tokens check`, `make check-crm`, `make check-cabinet`, `make check-erp` (только фронтенд-часть,
 если полная долгая — `cd apps/erp/frontend && npm run test` и `npm run lint:tsc`) зелёные; тест контраста ui-tokens проверяет
@@ -98,7 +98,7 @@ ERP, которые строит `make tokens`; тесты контраста. �
 `@ant-design/icons` ^5, react-router ^7, `@tanstack/react-query` ^5, zustand ^5, i18next + react-i18next (ru — по умолчанию,
 uz, en), `@fontsource-variable/inter`, orval (хуки TanStack Query и MSW-моки из `packages/contracts/openapi/platform-bff.yaml`
 в `src/shared/api/generated/`), msw, Vitest + Testing Library, Playwright + `@axe-core/playwright`, eslint
-(typescript-eslint, react-hooks), prettier. Структура каталогов — `03-frontend.md` §2. Тема `src/app/theme.ts` — как
+(typescript-eslint, react-hooks), prettier. Структура каталогов — `docs/architecture/platform-frontend.md` §2. Тема `src/app/theme.ts` — как
 `apps/crm/frontend/src/app/theme.ts` (`cssVar`, токены из ui-tokens через генерацию, компонентные токены §3). В каркасе:
 провайдеры (Query, ConfigProvider с ru-локалью antd, i18n), роутер с маршрутом `/` → страница-заглушка «Платформа — каркас P0»
 с вызовом `getHealth` через сгенерированный хук и выводом статуса; тест рендера; e2e-тест Playwright, открывающий
@@ -122,7 +122,7 @@ uv из того же образа), запуск `uvicorn app.main:app --host 0
 
 Готово, когда: `make -C apps/platform install && make check-platform` зелёные; `make contracts` зелёный; `docker build`
 обоих образов проходит локально; `docker run` образа bff отвечает на `/api/v1/health` 200 `degraded` без CRM и ERP;
-скриншот страницы-заглушки web 1440 в PR; `apps/platform/CLAUDE.md` §3 — команды актуальны.
+скриншот страницы-заглушки web 1440 в PR; `docs/systems/platform/CONVENTIONS.md` §3 — команды актуальны.
 
 ### 4.4. INF-P0-4 — дев-стенд Платформы
 
@@ -173,5 +173,5 @@ uv из того же образа), запуск `uvicorn app.main:app --host 0
 
 ## 5. Что после волны
 
-Гейт P0 (`05-plan.md`): контракты v0 и каркас влиты, `make check-platform` в CI. Затем волна 8 — фаза P1 (каркас AppShell,
+Гейт P0 (`docs/history/platform/05-plan.md`): контракты v0 и каркас влиты, `make check-platform` в CI. Затем волна 8 — фаза P1 (каркас AppShell,
 вход через CRM, CRM-01 роли Платформы) — runbook готовит архитектор.

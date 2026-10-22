@@ -22,22 +22,28 @@ def main() -> int:
     parser = argparse.ArgumentParser(
         description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
     )
-    parser.add_argument("action", nargs="?", default="info", choices=["info", "set", "delete"])
-    parser.add_argument("--dev", action="store_true", help="dev-стенд (по умолчанию prod)")
+    parser.add_argument(
+        "action", nargs="?", default="info", choices=["info", "set", "delete"]
+    )
+    parser.add_argument(
+        "--dev", action="store_true", help="dev-стенд (по умолчанию prod)"
+    )
     args = parser.parse_args()
     if not (ROOT / ".env").exists():
         sys.stderr.write("Нет .env в корне репозитория\n")
         return 1
-    overlay = "infra/docker-compose.dev.yml" if args.dev else "infra/docker-compose.prod.yml"
+    overlay = (
+        "infra/docker-compose.dev.yml" if args.dev else "infra/docker-compose.prod.yml"
+    )
     command = [
         *("docker", "compose", "-f", "infra/docker-compose.yml", "-f", overlay),
         *("--env-file", ".env", "exec", "-T", "api"),
         *("python", "-m", "app", "telegram-webhook", args.action),
     ]
-    result = subprocess.run(command, cwd=ROOT, check=False)  # noqa: S603 — аргументы фиксированы
+    result = subprocess.run(command, cwd=ROOT, check=False)
     if result.returncode != 0:
         sys.stderr.write(
-            "Не удалось: api запущен? (make ps). Runbook: docs/runbooks/bot-silent.md\n"
+            "Не удалось: api запущен? (make ps). Runbook: docs/runbooks/crm/bot-silent.md\n"
         )
     return result.returncode
 

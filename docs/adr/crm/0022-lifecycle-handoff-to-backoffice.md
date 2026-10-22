@@ -3,8 +3,8 @@
 - Статус: accepted (владелец, 2026-10-13, по рекомендации)
 - Дата: 2026-10-13
 - Авторы: агент CRM (M3-CRM-01), на решение владельца
-- Связано: ORCHESTRATOR §3.7, §6 M3; `docs/BUSINESS.md` §4 (три передачи), §6; `docs/CONTRACTS.md` §0, §2
-  (`POST /clients/handoff`), §3 (`deal.won` / `deal.lost`, `deal.stage_changed`); `docs/MIGRATION-MAP.md` §2;
+- Связано: ORCHESTRATOR §3.7, §6 M3; `docs/product/BUSINESS.md` §4 (три передачи), §6; `docs/architecture/CONTRACTS.md` §0, §2
+  (`POST /clients/handoff`), §3 (`deal.won` / `deal.lost`, `deal.stage_changed`); `docs/history/MIGRATION-MAP.md` §2;
   CRM SPEC §6.1, §6.2, §7.3, §10.1; ADR-0015, ADR-0018, ADR-0019; DECISIONS 2026-10-13 («Лид → клиент» —
   кнопка фронт-офиса; сервисные вопросы — ответственный по сделке из бэк-офиса)
 - Примечание о номере: в ORCHESTRATOR §6, CONTRACTS §3 и MIGRATION-MAP §2 решение названо «ADR-0021 CRM»;

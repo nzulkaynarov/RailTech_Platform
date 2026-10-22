@@ -1,7 +1,7 @@
 """Генератор RBAC Платформы из `packages/contracts/platform-rbac.yaml` (PLT-11).
 
 Контракт — единственный источник матрицы ролей, секции `menu` и полей с ограничением (ADR-0011,
-02-architecture.md §6). Из него получаются два файла, руками они не правятся:
+docs/architecture/platform-bff.md §6). Из него получаются два файла, руками они не правятся:
 
 - `apps/platform/bff/app/rbac_generated.py` — данные для BFF (`app/rbac.py` считает по ним доступ);
 - `apps/platform/web/src/app/rbac.generated.ts` — данные и чистые функции для SPA.
@@ -106,7 +106,7 @@ def render_py(spec: dict[str, Any]) -> str:
     lines += [
         "",
         "# Роли ERP и права поверх шаблонов, которые CRM выдаёт роли Платформы",
-        "# (04-integration-map.md §4).",
+        "# (docs/architecture/integration-map.md §4).",
         "# Пустой кортеж у ADMIN: суперпользователь ERP, роли ERP не нужны.",
     ]
     lines.append("ERP_ROLE_CODES: Final[dict[RoleCode, tuple[str, ...]]] = {")
@@ -259,7 +259,7 @@ def render_ts(spec: dict[str, Any]) -> str:
     out += [
         "};",
         "",
-        "/** Роли ERP, которые CRM выдаёт роли Платформы (04-integration-map.md §4); у ADMIN пусто: суперпользователь ERP. */",
+        "/** Роли ERP, которые CRM выдаёт роли Платформы (docs/architecture/integration-map.md §4); у ADMIN пусто: суперпользователь ERP. */",
         "export const ERP_ROLE_CODES = {",
     ]
     for r in roles:

@@ -1,7 +1,7 @@
 # Runbook: волна 2 — портал и Cabinet против настоящего ERP (FIX-21…24 ∥ FIX-11b)
 
 Когда применять: контракт портала 0.2.0 (FIX-20) влит в `main`. Источник задач — `docs/audits/2026-10-18-main-e0f089e.md`
-(«Волна 2»), статусы — `docs/PROGRESS.md`, правила — `ORCHESTRATOR.md` §3, §4.1, §7 и `CLAUDE.md` корня («Среда
+(«Волна 2»), статусы — `docs/PROGRESS.md`, правила — `docs/ORCHESTRATOR.md` §3, §4.1, §7 и `CLAUDE.md` корня («Среда
 разработки, тесты и CI»). Волну ведёт **одна сессия лида** (Claude Opus), исполнители — субагенты (Claude Sonnet),
 по одному на задачу, каждый в своём worktree. Архитектор (Fable) принимает итог волны.
 
@@ -15,9 +15,9 @@
 FIX-23, FIX-24 и параллельно FIX-11b. Работаешь в корне репозитория на ветке main; код сам не пишешь — ставишь задачи
 субагентам-исполнителям, ревьюишь их PR и сливаешь.
 
-Прочитай по порядку: CLAUDE.md корня (раздел «Среда разработки, тесты и CI»), ORCHESTRATOR.md (§3, §4, §4.1, §7),
-docs/HANDOFF.md, docs/runbooks/wave2-agents.md (этот runbook — целиком), docs/PROGRESS.md (раздел «Исправления по
-аудиту»), docs/DECISIONS.md (строки 2026-10-19), docs/CONTRACTS.md §4, packages/contracts/openapi/erp-portal.yaml.
+Прочитай по порядку: CLAUDE.md корня (раздел «Среда разработки, тесты и CI»), docs/ORCHESTRATOR.md (§3, §4, §4.1, §7),
+docs/HANDOFF.md, docs/history/runbooks/wave2-agents.md (этот runbook — целиком), docs/PROGRESS.md (раздел «Исправления по
+аудиту»), docs/DECISIONS.md (строки 2026-10-19), docs/architecture/CONTRACTS.md §4, packages/contracts/openapi/erp-portal.yaml.
 
 Порядок работы:
 1. Убедись, что worktree из §2 существуют (`git worktree list`) и зависимости в них установлены; чего нет — создай и
@@ -100,7 +100,7 @@ git worktree add .claude/worktrees/fix-23  -b fix/erp-23-documents-requests   or
 | S2 | **FIX-22** жизненный цикл через сервисы, `request-code`, приёмка строк | `fix/erp-22-portal-lifecycle`, `.claude/worktrees/fix-22` | `fix22` | FIX-21 влит | L | `portal/views.py` (quotes, contracts, acts, deliveries), `portal/services/*`, `crm/services/{contracts,billing,public_page}.py`, `sales/models` (строка поставки), миграция |
 | S3 | **FIX-23** документы и заявки | `fix/erp-23-documents-requests`, `.claude/worktrees/fix-23` | `fix23` | FIX-21 влит | M | `portal/views.py` (documents, requests, team), `portal/services/invitation.py`, `integration/signals.py`, шаблоны писем |
 | S4 | **FIX-24** Cabinet против настоящего ERP | `fix/cabinet-24-real-portal`, `.claude/worktrees/fix-24` | — | контракт 0.2.0; финал — после FIX-21…23 | M | `apps/cabinet/src/**` |
-| S5 | **FIX-11b** хвосты волны 1 | `fix/all-11b-erp-sync-tails`, `.claude/worktrees/fix-11b` | `fix11b` | — | S | CRM `app/services/erp_access.py`, `app/domain/external_erp_sync.py`, `packages/contracts/sso-token.md` (одна фраза), ERP `portal/throttles.py`, `portal/services/magic_link.py`, `core/logging.py` |
+| S5 | **FIX-11b** хвосты волны 1 | `fix/all-11b-erp-sync-tails`, `.claude/worktrees/fix-11b` | `fix11b` | — | S | CRM `app/services/erp_access.py`, `app/domain/external_erp_sync.py`, `docs/architecture/sso-token.md` (одна фраза), ERP `portal/throttles.py`, `portal/services/magic_link.py`, `core/logging.py` |
 
 ## 4. Порядок слияния и конфликтные зоны
 
@@ -121,9 +121,9 @@ git worktree add .claude/worktrees/fix-23  -b fix/erp-23-documents-requests   or
 ```
 Ты — исполнитель {РОЛЬ} RailTech Platform (ORCHESTRATOR §4.1). Работаешь ТОЛЬКО в worktree {ПУТЬ} (все команды из
 него; корень репозитория и другие worktree не трогать), ветка {ВЕТКА}, одна задача: {ID}.
-Прочитай по порядку: CLAUDE.md корня (раздел «Среда разработки, тесты и CI» — обязателен), ORCHESTRATOR.md (§3, §7),
-docs/runbooks/wave2-agents.md (§1 — факты кода, §4), docs/audits/2026-10-18-main-e0f089e.md (волна 2 и находки
-{НАХОДКИ}), CLAUDE.md приложения, которое правишь, docs/CONTRACTS.md §4 и packages/contracts/openapi/erp-portal.yaml
+Прочитай по порядку: CLAUDE.md корня (раздел «Среда разработки, тесты и CI» — обязателен), docs/ORCHESTRATOR.md (§3, §7),
+docs/history/runbooks/wave2-agents.md (§1 — факты кода, §4), docs/audits/2026-10-18-main-e0f089e.md (волна 2 и находки
+{НАХОДКИ}), CLAUDE.md приложения, которое правишь, docs/architecture/CONTRACTS.md §4 и packages/contracts/openapi/erp-portal.yaml
 (контракт 0.2.0 — источник правды о форме ответов и кодах ошибок).
 
 Правила, которые не обсуждаются:
@@ -281,7 +281,7 @@ PR: «FIX-24: Cabinet против настоящего портала — deal,
    доступ выдан в ту же секунду → сопоставление создано»; тест: «коннектор не настроен → erp_sync_error заполнен,
    задача повторится».
 2. Подсказка в app/domain/external_erp_sync.py соответствует поведению (повтор есть).
-3. packages/contracts/sso-token.md: убрать обещание провижининга при смене почты (AccessState следит за ролями и
+3. docs/architecture/sso-token.md: убрать обещание провижининга при смене почты (AccessState следит за ролями и
    именем) — одна фраза; make contracts без diff.
 4. ERP: docs/DECISIONS.md — строка о токенах без claim tv (= версия 0, без массового разлогина) — по рекомендации.
 5. ERP portal/throttles.py — мёртвая ветка ip: удалена или задокументирована тестом, что 401 раньше throttle;
