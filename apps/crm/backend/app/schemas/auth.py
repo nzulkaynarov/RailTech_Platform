@@ -15,6 +15,7 @@ from app.domain.platform_roles import (
 Role = Literal["admin", "manager", "viewer"]
 PlatformSystem = Literal["crm", "erp"]
 UiMode = Literal["admin", "manager"]
+Language = Literal["ru", "uz", "en"]
 
 
 def _crm_only() -> list[PlatformSystem]:
@@ -60,6 +61,8 @@ class UserOut(BaseModel):
     # `erp_role_codes`; пусто — их ведёт админ вручную. Должность — текстом (SPEC-v3 §4.3).
     platform_roles: list[PlatformRoleCode] = Field(default_factory=list)
     position: str | None = None
+    # Язык интерфейса сотрудника (CRM-01b): ru|uz|en, по умолчанию ru.
+    language: Language = "ru"
 
 
 class MeOut(UserOut):
@@ -75,6 +78,7 @@ class MePatch(BaseModel):
     ui_mode: UiMode | None = None
     notify_system: bool | None = None
     notify_leads: bool | None = None
+    language: Language | None = None
 
 
 class PermissionsResponse(BaseModel):
@@ -156,6 +160,7 @@ class UserUpdate(BaseModel):
     platform_roles: list[PlatformRoleCode] | None = None
     # Должность (SPEC-v3 §4.3): пустая строка очищает.
     position: str | None = Field(default=None, max_length=POSITION_MAX_LEN)
+    language: Language | None = None
 
     @field_validator("platform_roles")
     @classmethod

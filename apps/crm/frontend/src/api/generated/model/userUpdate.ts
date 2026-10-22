@@ -4,6 +4,7 @@
  * RailTech CRM API
  * OpenAPI spec version: 0.1.0
  */
+import type { UserUpdateLanguage } from "./userUpdateLanguage";
 
 export interface UserUpdate {
   clear_tg_user_id?: boolean;
@@ -11,6 +12,7 @@ export interface UserUpdate {
     ("CALCULATION" | "CATALOG_SUPPLY" | "FULFILLMENT" | "FINANCE" | "HEAD" | "VIEWER")[] | null;
   full_name?: string | null;
   is_active?: boolean | null;
+  language?: UserUpdateLanguage;
   platform_access?: ("crm" | "erp")[] | null;
   platform_roles?:
     ("MANAGER" | "DIRECTOR" | "SUPPLY" | "ENGINEER" | "ACCOUNTANT" | "ADMIN")[] | null;

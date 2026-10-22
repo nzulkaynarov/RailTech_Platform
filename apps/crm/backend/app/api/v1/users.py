@@ -34,6 +34,7 @@ def to_out(view: UserView) -> UserOut:
         erp_role_codes=view.erp_role_codes,
         platform_roles=view.platform_roles,
         position=view.position,
+        language=view.language,
     )
 
 
@@ -75,6 +76,7 @@ async def update_user(
         erp_role_codes=body.erp_role_codes,
         platform_roles=body.platform_roles,
         position=body.position,
+        language=body.language,
     )
     return to_out(await container.user_service.update(who.actor, user_id, patch))
 

@@ -5,6 +5,7 @@
  * OpenAPI spec version: 0.1.0
  */
 import type { UserOutErpRoleCodesItem } from "./userOutErpRoleCodesItem";
+import type { UserOutLanguage } from "./userOutLanguage";
 import type { UserOutPlatformAccessItem } from "./userOutPlatformAccessItem";
 import type { UserOutPlatformRolesItem } from "./userOutPlatformRolesItem";
 
@@ -14,6 +15,7 @@ export interface UserOut {
   full_name: string;
   id: number;
   is_active: boolean;
+  language?: UserOutLanguage;
   must_change_password: boolean;
   notify_leads: boolean;
   notify_system: boolean;

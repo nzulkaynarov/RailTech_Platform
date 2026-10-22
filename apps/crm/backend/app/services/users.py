@@ -60,6 +60,7 @@ class UserView:
     erp_role_codes: list[str] = field(default_factory=list)
     platform_roles: list[str] = field(default_factory=list)
     position: str | None = None
+    language: str = "ru"
 
 
 @dataclass(frozen=True, slots=True)
@@ -75,6 +76,7 @@ class UserPatch:
     # Роли Платформы (CRM-01): `None` — не менять, `[]` — снять; должность: `""` очищает.
     platform_roles: Sequence[str] | None = None
     position: str | None = None
+    language: str | None = None  # ru|uz|en (CRM-01b); None — не менять
 
 
 class UserService:
@@ -275,6 +277,21 @@ class UserService:
             user.ui_mode = mode
             return _view(user, roles)
 
+    async def set_language(self, actor: Actor, user_id: int, language: str) -> UserView:
+        """Язык интерфейса (CRM-01b): сотрудник меняет сам себе, значение проверено схемой."""
+        async with self._sessions() as session, session.begin():
+            user = await repo.get(session, user_id, for_update=True)
+            if user is None:
+                raise NotFoundError("user not found")
+            if user.language != language:
+                before = {"language": user.language}
+                user.language = language
+                await audit.record(
+                    session, actor, "user.update", "user", user_id,
+                    before=before, after={"language": language},
+                )  # fmt: skip
+            return _view(user, await repo.roles_of(session, user_id))
+
     async def set_notify(
         self, actor: Actor, user_id: int, *, system: bool | None, leads: bool | None
     ) -> UserView:
@@ -391,6 +408,8 @@ def _apply(user: User, patch: UserPatch) -> None:
         user.platform_roles = list(patch.platform_roles)
     if patch.position is not None:
         user.position = patch.position or None
+    if patch.language is not None:
+        user.language = patch.language
 
 
 async def revoke_tokens(session: AsyncSession, user_id: int) -> None:
@@ -418,6 +437,7 @@ def _view(user: User, roles: list[str]) -> UserView:
         erp_role_codes=list(user.erp_role_codes or []),
         platform_roles=list(user.platform_roles or []),
         position=user.position,
+        language=user.language,
     )
 
 
@@ -463,4 +483,5 @@ def _audit(view: UserView) -> dict[str, object]:
         "erp_role_codes": view.erp_role_codes,
         "platform_roles": view.platform_roles,
         "position": view.position,
+        "language": view.language,
     }
