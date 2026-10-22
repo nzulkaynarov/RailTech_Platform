@@ -1,0 +1,21 @@
+{
+  "specversion": "1.0",
+  "id": "d6787817-5d76-5a34-ae42-414f54ab74ff",
+  "source": "rt://crm",
+  "type": "uz.railtech.crm.contact.deleted.v1",
+  "time": "2026-10-22T09:10:00Z",
+  "subject": "contact/58",
+  "datacontenttype": "application/json",
+  "dataschema": "rt://contracts/events/crm/contact.deleted/v1",
+  "tenant": "railtech",
+  "correlationid": "b22b708a-3a9b-50e2-894f-f7572322b6af",
+  "data": {
+    "crm_contact_id": 58,
+    "crm_client_id": 42,
+    "erp_company_id": 118,
+    "actor": {
+      "type": "staff",
+      "crm_user_id": 1
+    }
+  }
+}

@@ -1,0 +1,1404 @@
+# AsyncAPI 3.0 — шина rt_bus v1 (ADR-0014; docs/CONTRACTS.md, раздел «Шина rt_bus»).
+# Канал = тип события; сообщение = конверт CloudEvents (envelope.v1.json) с data по схеме типа
+# (<домен>/<сущность>.<действие>.v<N>.json). Новый тип: файл схемы + пример + канал, сообщение и операция здесь
+# (тест packages/contracts/tests/test_events.py сверяет файлы и этот документ в обе стороны).
+asyncapi: 3.0.0
+info:
+  title: RailTech rt_bus
+  version: 1.0.0
+  description: |
+    События доменов ансамбля RailTech Platform. Доставка v1 — HTTP push от издателя каждому подписчику из
+    bus/subscriptions.yaml: `POST <endpoint подписчика>` (путь `/bus/v1/events`),
+    `Content-Type: application/cloudevents+json`, тело — конверт CloudEvents 1.0 (structured mode).
+
+    Заголовки: `X-RT-Publisher` (crm|erp|…), `X-RT-Event-Id` (= id конверта), `X-RT-Timestamp` (UTC ISO 8601 момента
+    попытки; при каждом повторе подпись пересчитывается), `X-RT-Signature: sha256=<hex HMAC-SHA256(secret,
+    "{X-RT-Event-Id}.{X-RT-Timestamp}.{raw_body}")>`, `traceparent`, `X-Request-ID` (= correlationid).
+    Секрет пары — `RT_BUS_SECRET_<ИЗДАТЕЛЬ>_<ПОДПИСЧИК>` (список через запятую: первым подписывают, принимают любой).
+
+    Приёмник: окно |now − X-RT-Timestamp| ≤ 300 с. Ответы: 2xx — принято (в т. ч. повтор id и skipped: неизвестный
+    тип или версия выше поддерживаемой); 401 — нет или неверная подпись, неизвестный издатель, вне окна; 400 — не
+    конверт или битый JSON; 422 — data известного типа не по схеме. Отправитель: 400, 404, 410, 413, 415, 422 —
+    сразу dead (ручной «повторить» из журнала); остальное (401, 408, 409, 429, 5xx, сеть, таймаут) — повтор по
+    расписанию.
+defaultContentType: application/cloudevents+json
+servers:
+  crm:
+    host: crm-api:8000
+    pathname: /bus/v1/events
+    protocol: http
+    description: Приёмник шины CRM (внутренняя сеть; переопределение — RT_BUS_ENDPOINT_CRM)
+  erp:
+    host: erp-backend:8000
+    pathname: /bus/v1/events
+    protocol: http
+    description: Приёмник шины ERP (внутренняя сеть; переопределение — RT_BUS_ENDPOINT_ERP)
+channels:
+  uz.railtech.crm.client.created.v1:
+    address: uz.railtech.crm.client.created.v1
+    title: Клиент создан
+    messages:
+      uz.railtech.crm.client.created.v1:
+        $ref: '#/components/messages/uz.railtech.crm.client.created.v1'
+  uz.railtech.crm.client.updated.v1:
+    address: uz.railtech.crm.client.updated.v1
+    title: Клиент изменён
+    messages:
+      uz.railtech.crm.client.updated.v1:
+        $ref: '#/components/messages/uz.railtech.crm.client.updated.v1'
+  uz.railtech.crm.contact.created.v1:
+    address: uz.railtech.crm.contact.created.v1
+    title: Контакт клиента создан
+    messages:
+      uz.railtech.crm.contact.created.v1:
+        $ref: '#/components/messages/uz.railtech.crm.contact.created.v1'
+  uz.railtech.crm.contact.deleted.v1:
+    address: uz.railtech.crm.contact.deleted.v1
+    title: Контакт клиента удалён
+    messages:
+      uz.railtech.crm.contact.deleted.v1:
+        $ref: '#/components/messages/uz.railtech.crm.contact.deleted.v1'
+  uz.railtech.crm.contact.updated.v1:
+    address: uz.railtech.crm.contact.updated.v1
+    title: Контакт клиента изменён
+    messages:
+      uz.railtech.crm.contact.updated.v1:
+        $ref: '#/components/messages/uz.railtech.crm.contact.updated.v1'
+  uz.railtech.crm.lead.created.v1:
+    address: uz.railtech.crm.lead.created.v1
+    title: Лид создан
+    messages:
+      uz.railtech.crm.lead.created.v1:
+        $ref: '#/components/messages/uz.railtech.crm.lead.created.v1'
+  uz.railtech.crm.lead.stage_changed.v1:
+    address: uz.railtech.crm.lead.stage_changed.v1
+    title: Стадия лида изменилась
+    messages:
+      uz.railtech.crm.lead.stage_changed.v1:
+        $ref: '#/components/messages/uz.railtech.crm.lead.stage_changed.v1'
+  uz.railtech.crm.lead.updated.v1:
+    address: uz.railtech.crm.lead.updated.v1
+    title: Лид изменён
+    messages:
+      uz.railtech.crm.lead.updated.v1:
+        $ref: '#/components/messages/uz.railtech.crm.lead.updated.v1'
+  uz.railtech.erp.act.accepted.v1:
+    address: uz.railtech.erp.act.accepted.v1
+    title: Акт принят клиентом
+    messages:
+      uz.railtech.erp.act.accepted.v1:
+        $ref: '#/components/messages/uz.railtech.erp.act.accepted.v1'
+  uz.railtech.erp.act.issued.v1:
+    address: uz.railtech.erp.act.issued.v1
+    title: Акт выставлен
+    messages:
+      uz.railtech.erp.act.issued.v1:
+        $ref: '#/components/messages/uz.railtech.erp.act.issued.v1'
+  uz.railtech.erp.act.returned.v1:
+    address: uz.railtech.erp.act.returned.v1
+    title: Акт возвращён клиентом
+    messages:
+      uz.railtech.erp.act.returned.v1:
+        $ref: '#/components/messages/uz.railtech.erp.act.returned.v1'
+  uz.railtech.erp.contract.signed.v1:
+    address: uz.railtech.erp.contract.signed.v1
+    title: Договор подписан
+    messages:
+      uz.railtech.erp.contract.signed.v1:
+        $ref: '#/components/messages/uz.railtech.erp.contract.signed.v1'
+  uz.railtech.erp.deal.lost.v1:
+    address: uz.railtech.erp.deal.lost.v1
+    title: Сделка проиграна
+    messages:
+      uz.railtech.erp.deal.lost.v1:
+        $ref: '#/components/messages/uz.railtech.erp.deal.lost.v1'
+  uz.railtech.erp.deal.stage_changed.v1:
+    address: uz.railtech.erp.deal.stage_changed.v1
+    title: Стадия сделки изменилась
+    messages:
+      uz.railtech.erp.deal.stage_changed.v1:
+        $ref: '#/components/messages/uz.railtech.erp.deal.stage_changed.v1'
+  uz.railtech.erp.deal.won.v1:
+    address: uz.railtech.erp.deal.won.v1
+    title: Сделка выиграна
+    messages:
+      uz.railtech.erp.deal.won.v1:
+        $ref: '#/components/messages/uz.railtech.erp.deal.won.v1'
+  uz.railtech.erp.delivery.eta_changed.v1:
+    address: uz.railtech.erp.delivery.eta_changed.v1
+    title: Срок поставки сдвинулся
+    messages:
+      uz.railtech.erp.delivery.eta_changed.v1:
+        $ref: '#/components/messages/uz.railtech.erp.delivery.eta_changed.v1'
+  uz.railtech.erp.delivery.line_accepted.v1:
+    address: uz.railtech.erp.delivery.line_accepted.v1
+    title: Клиент принял строку поставки
+    messages:
+      uz.railtech.erp.delivery.line_accepted.v1:
+        $ref: '#/components/messages/uz.railtech.erp.delivery.line_accepted.v1'
+  uz.railtech.erp.delivery.line_disputed.v1:
+    address: uz.railtech.erp.delivery.line_disputed.v1
+    title: Клиент оспорил строку поставки
+    messages:
+      uz.railtech.erp.delivery.line_disputed.v1:
+        $ref: '#/components/messages/uz.railtech.erp.delivery.line_disputed.v1'
+  uz.railtech.erp.delivery.status_changed.v1:
+    address: uz.railtech.erp.delivery.status_changed.v1
+    title: Статус поставки изменился
+    messages:
+      uz.railtech.erp.delivery.status_changed.v1:
+        $ref: '#/components/messages/uz.railtech.erp.delivery.status_changed.v1'
+  uz.railtech.erp.document.created.v1:
+    address: uz.railtech.erp.document.created.v1
+    title: Документ создан
+    messages:
+      uz.railtech.erp.document.created.v1:
+        $ref: '#/components/messages/uz.railtech.erp.document.created.v1'
+  uz.railtech.erp.invite.sent.v1:
+    address: uz.railtech.erp.invite.sent.v1
+    title: Приглашение в Cabinet отправлено
+    messages:
+      uz.railtech.erp.invite.sent.v1:
+        $ref: '#/components/messages/uz.railtech.erp.invite.sent.v1'
+  uz.railtech.erp.invoice.issued.v1:
+    address: uz.railtech.erp.invoice.issued.v1
+    title: Счёт выставлен
+    messages:
+      uz.railtech.erp.invoice.issued.v1:
+        $ref: '#/components/messages/uz.railtech.erp.invoice.issued.v1'
+  uz.railtech.erp.invoice.overdue.v1:
+    address: uz.railtech.erp.invoice.overdue.v1
+    title: Счёт просрочен
+    messages:
+      uz.railtech.erp.invoice.overdue.v1:
+        $ref: '#/components/messages/uz.railtech.erp.invoice.overdue.v1'
+  uz.railtech.erp.invoice.paid.v1:
+    address: uz.railtech.erp.invoice.paid.v1
+    title: Счёт оплачен
+    messages:
+      uz.railtech.erp.invoice.paid.v1:
+        $ref: '#/components/messages/uz.railtech.erp.invoice.paid.v1'
+  uz.railtech.erp.quote.acceptance_code_requested.v1:
+    address: uz.railtech.erp.quote.acceptance_code_requested.v1
+    title: Запрошен код акцепта КП
+    messages:
+      uz.railtech.erp.quote.acceptance_code_requested.v1:
+        $ref: '#/components/messages/uz.railtech.erp.quote.acceptance_code_requested.v1'
+  uz.railtech.erp.quote.accepted.v1:
+    address: uz.railtech.erp.quote.accepted.v1
+    title: КП принято клиентом
+    messages:
+      uz.railtech.erp.quote.accepted.v1:
+        $ref: '#/components/messages/uz.railtech.erp.quote.accepted.v1'
+  uz.railtech.erp.quote.rejected.v1:
+    address: uz.railtech.erp.quote.rejected.v1
+    title: КП отклонено клиентом
+    messages:
+      uz.railtech.erp.quote.rejected.v1:
+        $ref: '#/components/messages/uz.railtech.erp.quote.rejected.v1'
+  uz.railtech.erp.quote.sent.v1:
+    address: uz.railtech.erp.quote.sent.v1
+    title: КП отправлено клиенту
+    messages:
+      uz.railtech.erp.quote.sent.v1:
+        $ref: '#/components/messages/uz.railtech.erp.quote.sent.v1'
+  uz.railtech.erp.quote.viewed.v1:
+    address: uz.railtech.erp.quote.viewed.v1
+    title: КП просмотрено клиентом
+    messages:
+      uz.railtech.erp.quote.viewed.v1:
+        $ref: '#/components/messages/uz.railtech.erp.quote.viewed.v1'
+  uz.railtech.erp.request.created.v1:
+    address: uz.railtech.erp.request.created.v1
+    title: Заявка создана
+    messages:
+      uz.railtech.erp.request.created.v1:
+        $ref: '#/components/messages/uz.railtech.erp.request.created.v1'
+  uz.railtech.identity.user.created.v1:
+    address: uz.railtech.identity.user.created.v1
+    title: Сотрудник создан
+    messages:
+      uz.railtech.identity.user.created.v1:
+        $ref: '#/components/messages/uz.railtech.identity.user.created.v1'
+  uz.railtech.identity.user.deactivated.v1:
+    address: uz.railtech.identity.user.deactivated.v1
+    title: Сотрудник отключён
+    messages:
+      uz.railtech.identity.user.deactivated.v1:
+        $ref: '#/components/messages/uz.railtech.identity.user.deactivated.v1'
+  uz.railtech.identity.user.updated.v1:
+    address: uz.railtech.identity.user.updated.v1
+    title: Сотрудник изменён
+    messages:
+      uz.railtech.identity.user.updated.v1:
+        $ref: '#/components/messages/uz.railtech.identity.user.updated.v1'
+operations:
+  publish.uz.railtech.crm.client.created.v1:
+    action: send
+    summary: rt://crm публикует uz.railtech.crm.client.created.v1
+    channel:
+      $ref: '#/channels/uz.railtech.crm.client.created.v1'
+    messages:
+      - $ref: '#/channels/uz.railtech.crm.client.created.v1/messages/uz.railtech.crm.client.created.v1'
+    bindings:
+      $ref: '#/components/operationBindings/delivery'
+  publish.uz.railtech.crm.client.updated.v1:
+    action: send
+    summary: rt://crm публикует uz.railtech.crm.client.updated.v1
+    channel:
+      $ref: '#/channels/uz.railtech.crm.client.updated.v1'
+    messages:
+      - $ref: '#/channels/uz.railtech.crm.client.updated.v1/messages/uz.railtech.crm.client.updated.v1'
+    bindings:
+      $ref: '#/components/operationBindings/delivery'
+  publish.uz.railtech.crm.contact.created.v1:
+    action: send
+    summary: rt://crm публикует uz.railtech.crm.contact.created.v1
+    channel:
+      $ref: '#/channels/uz.railtech.crm.contact.created.v1'
+    messages:
+      - $ref: '#/channels/uz.railtech.crm.contact.created.v1/messages/uz.railtech.crm.contact.created.v1'
+    bindings:
+      $ref: '#/components/operationBindings/delivery'
+  publish.uz.railtech.crm.contact.deleted.v1:
+    action: send
+    summary: rt://crm публикует uz.railtech.crm.contact.deleted.v1
+    channel:
+      $ref: '#/channels/uz.railtech.crm.contact.deleted.v1'
+    messages:
+      - $ref: '#/channels/uz.railtech.crm.contact.deleted.v1/messages/uz.railtech.crm.contact.deleted.v1'
+    bindings:
+      $ref: '#/components/operationBindings/delivery'
+  publish.uz.railtech.crm.contact.updated.v1:
+    action: send
+    summary: rt://crm публикует uz.railtech.crm.contact.updated.v1
+    channel:
+      $ref: '#/channels/uz.railtech.crm.contact.updated.v1'
+    messages:
+      - $ref: '#/channels/uz.railtech.crm.contact.updated.v1/messages/uz.railtech.crm.contact.updated.v1'
+    bindings:
+      $ref: '#/components/operationBindings/delivery'
+  publish.uz.railtech.crm.lead.created.v1:
+    action: send
+    summary: rt://crm публикует uz.railtech.crm.lead.created.v1
+    channel:
+      $ref: '#/channels/uz.railtech.crm.lead.created.v1'
+    messages:
+      - $ref: '#/channels/uz.railtech.crm.lead.created.v1/messages/uz.railtech.crm.lead.created.v1'
+    bindings:
+      $ref: '#/components/operationBindings/delivery'
+  publish.uz.railtech.crm.lead.stage_changed.v1:
+    action: send
+    summary: rt://crm публикует uz.railtech.crm.lead.stage_changed.v1
+    channel:
+      $ref: '#/channels/uz.railtech.crm.lead.stage_changed.v1'
+    messages:
+      - $ref: '#/channels/uz.railtech.crm.lead.stage_changed.v1/messages/uz.railtech.crm.lead.stage_changed.v1'
+    bindings:
+      $ref: '#/components/operationBindings/delivery'
+  publish.uz.railtech.crm.lead.updated.v1:
+    action: send
+    summary: rt://crm публикует uz.railtech.crm.lead.updated.v1
+    channel:
+      $ref: '#/channels/uz.railtech.crm.lead.updated.v1'
+    messages:
+      - $ref: '#/channels/uz.railtech.crm.lead.updated.v1/messages/uz.railtech.crm.lead.updated.v1'
+    bindings:
+      $ref: '#/components/operationBindings/delivery'
+  publish.uz.railtech.erp.act.accepted.v1:
+    action: send
+    summary: rt://erp публикует uz.railtech.erp.act.accepted.v1
+    channel:
+      $ref: '#/channels/uz.railtech.erp.act.accepted.v1'
+    messages:
+      - $ref: '#/channels/uz.railtech.erp.act.accepted.v1/messages/uz.railtech.erp.act.accepted.v1'
+    bindings:
+      $ref: '#/components/operationBindings/delivery'
+  publish.uz.railtech.erp.act.issued.v1:
+    action: send
+    summary: rt://erp публикует uz.railtech.erp.act.issued.v1
+    channel:
+      $ref: '#/channels/uz.railtech.erp.act.issued.v1'
+    messages:
+      - $ref: '#/channels/uz.railtech.erp.act.issued.v1/messages/uz.railtech.erp.act.issued.v1'
+    bindings:
+      $ref: '#/components/operationBindings/delivery'
+  publish.uz.railtech.erp.act.returned.v1:
+    action: send
+    summary: rt://erp публикует uz.railtech.erp.act.returned.v1
+    channel:
+      $ref: '#/channels/uz.railtech.erp.act.returned.v1'
+    messages:
+      - $ref: '#/channels/uz.railtech.erp.act.returned.v1/messages/uz.railtech.erp.act.returned.v1'
+    bindings:
+      $ref: '#/components/operationBindings/delivery'
+  publish.uz.railtech.erp.contract.signed.v1:
+    action: send
+    summary: rt://erp публикует uz.railtech.erp.contract.signed.v1
+    channel:
+      $ref: '#/channels/uz.railtech.erp.contract.signed.v1'
+    messages:
+      - $ref: '#/channels/uz.railtech.erp.contract.signed.v1/messages/uz.railtech.erp.contract.signed.v1'
+    bindings:
+      $ref: '#/components/operationBindings/delivery'
+  publish.uz.railtech.erp.deal.lost.v1:
+    action: send
+    summary: rt://erp публикует uz.railtech.erp.deal.lost.v1
+    channel:
+      $ref: '#/channels/uz.railtech.erp.deal.lost.v1'
+    messages:
+      - $ref: '#/channels/uz.railtech.erp.deal.lost.v1/messages/uz.railtech.erp.deal.lost.v1'
+    bindings:
+      $ref: '#/components/operationBindings/delivery'
+  publish.uz.railtech.erp.deal.stage_changed.v1:
+    action: send
+    summary: rt://erp публикует uz.railtech.erp.deal.stage_changed.v1
+    channel:
+      $ref: '#/channels/uz.railtech.erp.deal.stage_changed.v1'
+    messages:
+      - $ref: '#/channels/uz.railtech.erp.deal.stage_changed.v1/messages/uz.railtech.erp.deal.stage_changed.v1'
+    bindings:
+      $ref: '#/components/operationBindings/delivery'
+  publish.uz.railtech.erp.deal.won.v1:
+    action: send
+    summary: rt://erp публикует uz.railtech.erp.deal.won.v1
+    channel:
+      $ref: '#/channels/uz.railtech.erp.deal.won.v1'
+    messages:
+      - $ref: '#/channels/uz.railtech.erp.deal.won.v1/messages/uz.railtech.erp.deal.won.v1'
+    bindings:
+      $ref: '#/components/operationBindings/delivery'
+  publish.uz.railtech.erp.delivery.eta_changed.v1:
+    action: send
+    summary: rt://erp публикует uz.railtech.erp.delivery.eta_changed.v1
+    channel:
+      $ref: '#/channels/uz.railtech.erp.delivery.eta_changed.v1'
+    messages:
+      - $ref: '#/channels/uz.railtech.erp.delivery.eta_changed.v1/messages/uz.railtech.erp.delivery.eta_changed.v1'
+    bindings:
+      $ref: '#/components/operationBindings/delivery'
+  publish.uz.railtech.erp.delivery.line_accepted.v1:
+    action: send
+    summary: rt://erp публикует uz.railtech.erp.delivery.line_accepted.v1
+    channel:
+      $ref: '#/channels/uz.railtech.erp.delivery.line_accepted.v1'
+    messages:
+      - $ref: '#/channels/uz.railtech.erp.delivery.line_accepted.v1/messages/uz.railtech.erp.delivery.line_accepted.v1'
+    bindings:
+      $ref: '#/components/operationBindings/delivery'
+  publish.uz.railtech.erp.delivery.line_disputed.v1:
+    action: send
+    summary: rt://erp публикует uz.railtech.erp.delivery.line_disputed.v1
+    channel:
+      $ref: '#/channels/uz.railtech.erp.delivery.line_disputed.v1'
+    messages:
+      - $ref: '#/channels/uz.railtech.erp.delivery.line_disputed.v1/messages/uz.railtech.erp.delivery.line_disputed.v1'
+    bindings:
+      $ref: '#/components/operationBindings/delivery'
+  publish.uz.railtech.erp.delivery.status_changed.v1:
+    action: send
+    summary: rt://erp публикует uz.railtech.erp.delivery.status_changed.v1
+    channel:
+      $ref: '#/channels/uz.railtech.erp.delivery.status_changed.v1'
+    messages:
+      - $ref: '#/channels/uz.railtech.erp.delivery.status_changed.v1/messages/uz.railtech.erp.delivery.status_changed.v1'
+    bindings:
+      $ref: '#/components/operationBindings/delivery'
+  publish.uz.railtech.erp.document.created.v1:
+    action: send
+    summary: rt://erp публикует uz.railtech.erp.document.created.v1
+    channel:
+      $ref: '#/channels/uz.railtech.erp.document.created.v1'
+    messages:
+      - $ref: '#/channels/uz.railtech.erp.document.created.v1/messages/uz.railtech.erp.document.created.v1'
+    bindings:
+      $ref: '#/components/operationBindings/delivery'
+  publish.uz.railtech.erp.invite.sent.v1:
+    action: send
+    summary: rt://erp публикует uz.railtech.erp.invite.sent.v1
+    channel:
+      $ref: '#/channels/uz.railtech.erp.invite.sent.v1'
+    messages:
+      - $ref: '#/channels/uz.railtech.erp.invite.sent.v1/messages/uz.railtech.erp.invite.sent.v1'
+    bindings:
+      $ref: '#/components/operationBindings/delivery'
+  publish.uz.railtech.erp.invoice.issued.v1:
+    action: send
+    summary: rt://erp публикует uz.railtech.erp.invoice.issued.v1
+    channel:
+      $ref: '#/channels/uz.railtech.erp.invoice.issued.v1'
+    messages:
+      - $ref: '#/channels/uz.railtech.erp.invoice.issued.v1/messages/uz.railtech.erp.invoice.issued.v1'
+    bindings:
+      $ref: '#/components/operationBindings/delivery'
+  publish.uz.railtech.erp.invoice.overdue.v1:
+    action: send
+    summary: rt://erp публикует uz.railtech.erp.invoice.overdue.v1
+    channel:
+      $ref: '#/channels/uz.railtech.erp.invoice.overdue.v1'
+    messages:
+      - $ref: '#/channels/uz.railtech.erp.invoice.overdue.v1/messages/uz.railtech.erp.invoice.overdue.v1'
+    bindings:
+      $ref: '#/components/operationBindings/delivery'
+  publish.uz.railtech.erp.invoice.paid.v1:
+    action: send
+    summary: rt://erp публикует uz.railtech.erp.invoice.paid.v1
+    channel:
+      $ref: '#/channels/uz.railtech.erp.invoice.paid.v1'
+    messages:
+      - $ref: '#/channels/uz.railtech.erp.invoice.paid.v1/messages/uz.railtech.erp.invoice.paid.v1'
+    bindings:
+      $ref: '#/components/operationBindings/delivery'
+  publish.uz.railtech.erp.quote.acceptance_code_requested.v1:
+    action: send
+    summary: rt://erp публикует uz.railtech.erp.quote.acceptance_code_requested.v1
+    channel:
+      $ref: '#/channels/uz.railtech.erp.quote.acceptance_code_requested.v1'
+    messages:
+      - $ref: '#/channels/uz.railtech.erp.quote.acceptance_code_requested.v1/messages/uz.railtech.erp.quote.acceptance_code_requested.v1'
+    bindings:
+      $ref: '#/components/operationBindings/delivery'
+  publish.uz.railtech.erp.quote.accepted.v1:
+    action: send
+    summary: rt://erp публикует uz.railtech.erp.quote.accepted.v1
+    channel:
+      $ref: '#/channels/uz.railtech.erp.quote.accepted.v1'
+    messages:
+      - $ref: '#/channels/uz.railtech.erp.quote.accepted.v1/messages/uz.railtech.erp.quote.accepted.v1'
+    bindings:
+      $ref: '#/components/operationBindings/delivery'
+  publish.uz.railtech.erp.quote.rejected.v1:
+    action: send
+    summary: rt://erp публикует uz.railtech.erp.quote.rejected.v1
+    channel:
+      $ref: '#/channels/uz.railtech.erp.quote.rejected.v1'
+    messages:
+      - $ref: '#/channels/uz.railtech.erp.quote.rejected.v1/messages/uz.railtech.erp.quote.rejected.v1'
+    bindings:
+      $ref: '#/components/operationBindings/delivery'
+  publish.uz.railtech.erp.quote.sent.v1:
+    action: send
+    summary: rt://erp публикует uz.railtech.erp.quote.sent.v1
+    channel:
+      $ref: '#/channels/uz.railtech.erp.quote.sent.v1'
+    messages:
+      - $ref: '#/channels/uz.railtech.erp.quote.sent.v1/messages/uz.railtech.erp.quote.sent.v1'
+    bindings:
+      $ref: '#/components/operationBindings/delivery'
+  publish.uz.railtech.erp.quote.viewed.v1:
+    action: send
+    summary: rt://erp публикует uz.railtech.erp.quote.viewed.v1
+    channel:
+      $ref: '#/channels/uz.railtech.erp.quote.viewed.v1'
+    messages:
+      - $ref: '#/channels/uz.railtech.erp.quote.viewed.v1/messages/uz.railtech.erp.quote.viewed.v1'
+    bindings:
+      $ref: '#/components/operationBindings/delivery'
+  publish.uz.railtech.erp.request.created.v1:
+    action: send
+    summary: rt://erp публикует uz.railtech.erp.request.created.v1
+    channel:
+      $ref: '#/channels/uz.railtech.erp.request.created.v1'
+    messages:
+      - $ref: '#/channels/uz.railtech.erp.request.created.v1/messages/uz.railtech.erp.request.created.v1'
+    bindings:
+      $ref: '#/components/operationBindings/delivery'
+  publish.uz.railtech.identity.user.created.v1:
+    action: send
+    summary: rt://crm публикует uz.railtech.identity.user.created.v1
+    channel:
+      $ref: '#/channels/uz.railtech.identity.user.created.v1'
+    messages:
+      - $ref: '#/channels/uz.railtech.identity.user.created.v1/messages/uz.railtech.identity.user.created.v1'
+    bindings:
+      $ref: '#/components/operationBindings/delivery'
+  publish.uz.railtech.identity.user.deactivated.v1:
+    action: send
+    summary: rt://crm публикует uz.railtech.identity.user.deactivated.v1
+    channel:
+      $ref: '#/channels/uz.railtech.identity.user.deactivated.v1'
+    messages:
+      - $ref: '#/channels/uz.railtech.identity.user.deactivated.v1/messages/uz.railtech.identity.user.deactivated.v1'
+    bindings:
+      $ref: '#/components/operationBindings/delivery'
+  publish.uz.railtech.identity.user.updated.v1:
+    action: send
+    summary: rt://crm публикует uz.railtech.identity.user.updated.v1
+    channel:
+      $ref: '#/channels/uz.railtech.identity.user.updated.v1'
+    messages:
+      - $ref: '#/channels/uz.railtech.identity.user.updated.v1/messages/uz.railtech.identity.user.updated.v1'
+    bindings:
+      $ref: '#/components/operationBindings/delivery'
+components:
+  operationBindings:
+    delivery:
+      http:
+        method: POST
+        bindingVersion: 0.3.0
+  messageBindings:
+    delivery:
+      http:
+        headers:
+          $ref: '#/components/schemas/DeliveryHeaders'
+        bindingVersion: 0.3.0
+  schemas:
+    Envelope:
+      schemaFormat: application/schema+json;version=draft-07
+      schema:
+        $ref: './envelope.v1.json'
+    DeliveryHeaders:
+      type: object
+      required: [Content-Type, X-RT-Publisher, X-RT-Event-Id, X-RT-Timestamp, X-RT-Signature, X-Request-ID]
+      properties:
+        Content-Type:
+          type: string
+          const: application/cloudevents+json
+        X-RT-Publisher:
+          type: string
+          pattern: '^[a-z][a-z0-9-]{0,62}$'
+          description: Имя издателя (crm, erp, eds, platform-bff, connector-<имя>)
+        X-RT-Event-Id:
+          type: string
+          format: uuid
+          description: Равен id конверта
+        X-RT-Timestamp:
+          type: string
+          format: date-time
+          description: UTC ISO 8601 момента попытки доставки; окно приёмника 300 с
+        X-RT-Signature:
+          type: string
+          pattern: '^sha256=[0-9a-f]{64}$'
+          description: 'sha256=<hex HMAC-SHA256(secret, "{X-RT-Event-Id}.{X-RT-Timestamp}.{raw_body}")>'
+        traceparent:
+          type: string
+          description: W3C Trace Context (если есть)
+        X-Request-ID:
+          type: string
+          description: Равен correlationid конверта
+  messages:
+    uz.railtech.crm.client.created.v1:
+      name: uz.railtech.crm.client.created.v1
+      title: Клиент создан
+      contentType: application/cloudevents+json
+      correlationId:
+        location: '$message.payload#/correlationid'
+      headers:
+        $ref: '#/components/schemas/DeliveryHeaders'
+      bindings:
+        $ref: '#/components/messageBindings/delivery'
+      payload:
+        schemaFormat: application/schema+json;version=draft-07
+        schema:
+          allOf:
+            - $ref: './envelope.v1.json'
+            - type: object
+              properties:
+                source:
+                  const: rt://crm
+                type:
+                  const: uz.railtech.crm.client.created.v1
+                dataschema:
+                  const: rt://contracts/events/crm/client.created/v1
+                data:
+                  $ref: './crm/client.created.v1.json'
+    uz.railtech.crm.client.updated.v1:
+      name: uz.railtech.crm.client.updated.v1
+      title: Клиент изменён
+      contentType: application/cloudevents+json
+      correlationId:
+        location: '$message.payload#/correlationid'
+      headers:
+        $ref: '#/components/schemas/DeliveryHeaders'
+      bindings:
+        $ref: '#/components/messageBindings/delivery'
+      payload:
+        schemaFormat: application/schema+json;version=draft-07
+        schema:
+          allOf:
+            - $ref: './envelope.v1.json'
+            - type: object
+              properties:
+                source:
+                  const: rt://crm
+                type:
+                  const: uz.railtech.crm.client.updated.v1
+                dataschema:
+                  const: rt://contracts/events/crm/client.updated/v1
+                data:
+                  $ref: './crm/client.updated.v1.json'
+    uz.railtech.crm.contact.created.v1:
+      name: uz.railtech.crm.contact.created.v1
+      title: Контакт клиента создан
+      contentType: application/cloudevents+json
+      correlationId:
+        location: '$message.payload#/correlationid'
+      headers:
+        $ref: '#/components/schemas/DeliveryHeaders'
+      bindings:
+        $ref: '#/components/messageBindings/delivery'
+      payload:
+        schemaFormat: application/schema+json;version=draft-07
+        schema:
+          allOf:
+            - $ref: './envelope.v1.json'
+            - type: object
+              properties:
+                source:
+                  const: rt://crm
+                type:
+                  const: uz.railtech.crm.contact.created.v1
+                dataschema:
+                  const: rt://contracts/events/crm/contact.created/v1
+                data:
+                  $ref: './crm/contact.created.v1.json'
+    uz.railtech.crm.contact.deleted.v1:
+      name: uz.railtech.crm.contact.deleted.v1
+      title: Контакт клиента удалён
+      contentType: application/cloudevents+json
+      correlationId:
+        location: '$message.payload#/correlationid'
+      headers:
+        $ref: '#/components/schemas/DeliveryHeaders'
+      bindings:
+        $ref: '#/components/messageBindings/delivery'
+      payload:
+        schemaFormat: application/schema+json;version=draft-07
+        schema:
+          allOf:
+            - $ref: './envelope.v1.json'
+            - type: object
+              properties:
+                source:
+                  const: rt://crm
+                type:
+                  const: uz.railtech.crm.contact.deleted.v1
+                dataschema:
+                  const: rt://contracts/events/crm/contact.deleted/v1
+                data:
+                  $ref: './crm/contact.deleted.v1.json'
+    uz.railtech.crm.contact.updated.v1:
+      name: uz.railtech.crm.contact.updated.v1
+      title: Контакт клиента изменён
+      contentType: application/cloudevents+json
+      correlationId:
+        location: '$message.payload#/correlationid'
+      headers:
+        $ref: '#/components/schemas/DeliveryHeaders'
+      bindings:
+        $ref: '#/components/messageBindings/delivery'
+      payload:
+        schemaFormat: application/schema+json;version=draft-07
+        schema:
+          allOf:
+            - $ref: './envelope.v1.json'
+            - type: object
+              properties:
+                source:
+                  const: rt://crm
+                type:
+                  const: uz.railtech.crm.contact.updated.v1
+                dataschema:
+                  const: rt://contracts/events/crm/contact.updated/v1
+                data:
+                  $ref: './crm/contact.updated.v1.json'
+    uz.railtech.crm.lead.created.v1:
+      name: uz.railtech.crm.lead.created.v1
+      title: Лид создан
+      contentType: application/cloudevents+json
+      correlationId:
+        location: '$message.payload#/correlationid'
+      headers:
+        $ref: '#/components/schemas/DeliveryHeaders'
+      bindings:
+        $ref: '#/components/messageBindings/delivery'
+      payload:
+        schemaFormat: application/schema+json;version=draft-07
+        schema:
+          allOf:
+            - $ref: './envelope.v1.json'
+            - type: object
+              properties:
+                source:
+                  const: rt://crm
+                type:
+                  const: uz.railtech.crm.lead.created.v1
+                dataschema:
+                  const: rt://contracts/events/crm/lead.created/v1
+                data:
+                  $ref: './crm/lead.created.v1.json'
+    uz.railtech.crm.lead.stage_changed.v1:
+      name: uz.railtech.crm.lead.stage_changed.v1
+      title: Стадия лида изменилась
+      contentType: application/cloudevents+json
+      correlationId:
+        location: '$message.payload#/correlationid'
+      headers:
+        $ref: '#/components/schemas/DeliveryHeaders'
+      bindings:
+        $ref: '#/components/messageBindings/delivery'
+      payload:
+        schemaFormat: application/schema+json;version=draft-07
+        schema:
+          allOf:
+            - $ref: './envelope.v1.json'
+            - type: object
+              properties:
+                source:
+                  const: rt://crm
+                type:
+                  const: uz.railtech.crm.lead.stage_changed.v1
+                dataschema:
+                  const: rt://contracts/events/crm/lead.stage_changed/v1
+                data:
+                  $ref: './crm/lead.stage_changed.v1.json'
+    uz.railtech.crm.lead.updated.v1:
+      name: uz.railtech.crm.lead.updated.v1
+      title: Лид изменён
+      contentType: application/cloudevents+json
+      correlationId:
+        location: '$message.payload#/correlationid'
+      headers:
+        $ref: '#/components/schemas/DeliveryHeaders'
+      bindings:
+        $ref: '#/components/messageBindings/delivery'
+      payload:
+        schemaFormat: application/schema+json;version=draft-07
+        schema:
+          allOf:
+            - $ref: './envelope.v1.json'
+            - type: object
+              properties:
+                source:
+                  const: rt://crm
+                type:
+                  const: uz.railtech.crm.lead.updated.v1
+                dataschema:
+                  const: rt://contracts/events/crm/lead.updated/v1
+                data:
+                  $ref: './crm/lead.updated.v1.json'
+    uz.railtech.erp.act.accepted.v1:
+      name: uz.railtech.erp.act.accepted.v1
+      title: Акт принят клиентом
+      contentType: application/cloudevents+json
+      correlationId:
+        location: '$message.payload#/correlationid'
+      headers:
+        $ref: '#/components/schemas/DeliveryHeaders'
+      bindings:
+        $ref: '#/components/messageBindings/delivery'
+      payload:
+        schemaFormat: application/schema+json;version=draft-07
+        schema:
+          allOf:
+            - $ref: './envelope.v1.json'
+            - type: object
+              properties:
+                source:
+                  const: rt://erp
+                type:
+                  const: uz.railtech.erp.act.accepted.v1
+                dataschema:
+                  const: rt://contracts/events/erp/act.accepted/v1
+                data:
+                  $ref: './erp/act.accepted.v1.json'
+    uz.railtech.erp.act.issued.v1:
+      name: uz.railtech.erp.act.issued.v1
+      title: Акт выставлен
+      contentType: application/cloudevents+json
+      correlationId:
+        location: '$message.payload#/correlationid'
+      headers:
+        $ref: '#/components/schemas/DeliveryHeaders'
+      bindings:
+        $ref: '#/components/messageBindings/delivery'
+      payload:
+        schemaFormat: application/schema+json;version=draft-07
+        schema:
+          allOf:
+            - $ref: './envelope.v1.json'
+            - type: object
+              properties:
+                source:
+                  const: rt://erp
+                type:
+                  const: uz.railtech.erp.act.issued.v1
+                dataschema:
+                  const: rt://contracts/events/erp/act.issued/v1
+                data:
+                  $ref: './erp/act.issued.v1.json'
+    uz.railtech.erp.act.returned.v1:
+      name: uz.railtech.erp.act.returned.v1
+      title: Акт возвращён клиентом
+      contentType: application/cloudevents+json
+      correlationId:
+        location: '$message.payload#/correlationid'
+      headers:
+        $ref: '#/components/schemas/DeliveryHeaders'
+      bindings:
+        $ref: '#/components/messageBindings/delivery'
+      payload:
+        schemaFormat: application/schema+json;version=draft-07
+        schema:
+          allOf:
+            - $ref: './envelope.v1.json'
+            - type: object
+              properties:
+                source:
+                  const: rt://erp
+                type:
+                  const: uz.railtech.erp.act.returned.v1
+                dataschema:
+                  const: rt://contracts/events/erp/act.returned/v1
+                data:
+                  $ref: './erp/act.returned.v1.json'
+    uz.railtech.erp.contract.signed.v1:
+      name: uz.railtech.erp.contract.signed.v1
+      title: Договор подписан
+      contentType: application/cloudevents+json
+      correlationId:
+        location: '$message.payload#/correlationid'
+      headers:
+        $ref: '#/components/schemas/DeliveryHeaders'
+      bindings:
+        $ref: '#/components/messageBindings/delivery'
+      payload:
+        schemaFormat: application/schema+json;version=draft-07
+        schema:
+          allOf:
+            - $ref: './envelope.v1.json'
+            - type: object
+              properties:
+                source:
+                  const: rt://erp
+                type:
+                  const: uz.railtech.erp.contract.signed.v1
+                dataschema:
+                  const: rt://contracts/events/erp/contract.signed/v1
+                data:
+                  $ref: './erp/contract.signed.v1.json'
+    uz.railtech.erp.deal.lost.v1:
+      name: uz.railtech.erp.deal.lost.v1
+      title: Сделка проиграна
+      contentType: application/cloudevents+json
+      correlationId:
+        location: '$message.payload#/correlationid'
+      headers:
+        $ref: '#/components/schemas/DeliveryHeaders'
+      bindings:
+        $ref: '#/components/messageBindings/delivery'
+      payload:
+        schemaFormat: application/schema+json;version=draft-07
+        schema:
+          allOf:
+            - $ref: './envelope.v1.json'
+            - type: object
+              properties:
+                source:
+                  const: rt://erp
+                type:
+                  const: uz.railtech.erp.deal.lost.v1
+                dataschema:
+                  const: rt://contracts/events/erp/deal.lost/v1
+                data:
+                  $ref: './erp/deal.lost.v1.json'
+    uz.railtech.erp.deal.stage_changed.v1:
+      name: uz.railtech.erp.deal.stage_changed.v1
+      title: Стадия сделки изменилась
+      contentType: application/cloudevents+json
+      correlationId:
+        location: '$message.payload#/correlationid'
+      headers:
+        $ref: '#/components/schemas/DeliveryHeaders'
+      bindings:
+        $ref: '#/components/messageBindings/delivery'
+      payload:
+        schemaFormat: application/schema+json;version=draft-07
+        schema:
+          allOf:
+            - $ref: './envelope.v1.json'
+            - type: object
+              properties:
+                source:
+                  const: rt://erp
+                type:
+                  const: uz.railtech.erp.deal.stage_changed.v1
+                dataschema:
+                  const: rt://contracts/events/erp/deal.stage_changed/v1
+                data:
+                  $ref: './erp/deal.stage_changed.v1.json'
+    uz.railtech.erp.deal.won.v1:
+      name: uz.railtech.erp.deal.won.v1
+      title: Сделка выиграна
+      contentType: application/cloudevents+json
+      correlationId:
+        location: '$message.payload#/correlationid'
+      headers:
+        $ref: '#/components/schemas/DeliveryHeaders'
+      bindings:
+        $ref: '#/components/messageBindings/delivery'
+      payload:
+        schemaFormat: application/schema+json;version=draft-07
+        schema:
+          allOf:
+            - $ref: './envelope.v1.json'
+            - type: object
+              properties:
+                source:
+                  const: rt://erp
+                type:
+                  const: uz.railtech.erp.deal.won.v1
+                dataschema:
+                  const: rt://contracts/events/erp/deal.won/v1
+                data:
+                  $ref: './erp/deal.won.v1.json'
+    uz.railtech.erp.delivery.eta_changed.v1:
+      name: uz.railtech.erp.delivery.eta_changed.v1
+      title: Срок поставки сдвинулся
+      contentType: application/cloudevents+json
+      correlationId:
+        location: '$message.payload#/correlationid'
+      headers:
+        $ref: '#/components/schemas/DeliveryHeaders'
+      bindings:
+        $ref: '#/components/messageBindings/delivery'
+      payload:
+        schemaFormat: application/schema+json;version=draft-07
+        schema:
+          allOf:
+            - $ref: './envelope.v1.json'
+            - type: object
+              properties:
+                source:
+                  const: rt://erp
+                type:
+                  const: uz.railtech.erp.delivery.eta_changed.v1
+                dataschema:
+                  const: rt://contracts/events/erp/delivery.eta_changed/v1
+                data:
+                  $ref: './erp/delivery.eta_changed.v1.json'
+    uz.railtech.erp.delivery.line_accepted.v1:
+      name: uz.railtech.erp.delivery.line_accepted.v1
+      title: Клиент принял строку поставки
+      contentType: application/cloudevents+json
+      correlationId:
+        location: '$message.payload#/correlationid'
+      headers:
+        $ref: '#/components/schemas/DeliveryHeaders'
+      bindings:
+        $ref: '#/components/messageBindings/delivery'
+      payload:
+        schemaFormat: application/schema+json;version=draft-07
+        schema:
+          allOf:
+            - $ref: './envelope.v1.json'
+            - type: object
+              properties:
+                source:
+                  const: rt://erp
+                type:
+                  const: uz.railtech.erp.delivery.line_accepted.v1
+                dataschema:
+                  const: rt://contracts/events/erp/delivery.line_accepted/v1
+                data:
+                  $ref: './erp/delivery.line_accepted.v1.json'
+    uz.railtech.erp.delivery.line_disputed.v1:
+      name: uz.railtech.erp.delivery.line_disputed.v1
+      title: Клиент оспорил строку поставки
+      contentType: application/cloudevents+json
+      correlationId:
+        location: '$message.payload#/correlationid'
+      headers:
+        $ref: '#/components/schemas/DeliveryHeaders'
+      bindings:
+        $ref: '#/components/messageBindings/delivery'
+      payload:
+        schemaFormat: application/schema+json;version=draft-07
+        schema:
+          allOf:
+            - $ref: './envelope.v1.json'
+            - type: object
+              properties:
+                source:
+                  const: rt://erp
+                type:
+                  const: uz.railtech.erp.delivery.line_disputed.v1
+                dataschema:
+                  const: rt://contracts/events/erp/delivery.line_disputed/v1
+                data:
+                  $ref: './erp/delivery.line_disputed.v1.json'
+    uz.railtech.erp.delivery.status_changed.v1:
+      name: uz.railtech.erp.delivery.status_changed.v1
+      title: Статус поставки изменился
+      contentType: application/cloudevents+json
+      correlationId:
+        location: '$message.payload#/correlationid'
+      headers:
+        $ref: '#/components/schemas/DeliveryHeaders'
+      bindings:
+        $ref: '#/components/messageBindings/delivery'
+      payload:
+        schemaFormat: application/schema+json;version=draft-07
+        schema:
+          allOf:
+            - $ref: './envelope.v1.json'
+            - type: object
+              properties:
+                source:
+                  const: rt://erp
+                type:
+                  const: uz.railtech.erp.delivery.status_changed.v1
+                dataschema:
+                  const: rt://contracts/events/erp/delivery.status_changed/v1
+                data:
+                  $ref: './erp/delivery.status_changed.v1.json'
+    uz.railtech.erp.document.created.v1:
+      name: uz.railtech.erp.document.created.v1
+      title: Документ создан
+      contentType: application/cloudevents+json
+      correlationId:
+        location: '$message.payload#/correlationid'
+      headers:
+        $ref: '#/components/schemas/DeliveryHeaders'
+      bindings:
+        $ref: '#/components/messageBindings/delivery'
+      payload:
+        schemaFormat: application/schema+json;version=draft-07
+        schema:
+          allOf:
+            - $ref: './envelope.v1.json'
+            - type: object
+              properties:
+                source:
+                  const: rt://erp
+                type:
+                  const: uz.railtech.erp.document.created.v1
+                dataschema:
+                  const: rt://contracts/events/erp/document.created/v1
+                data:
+                  $ref: './erp/document.created.v1.json'
+    uz.railtech.erp.invite.sent.v1:
+      name: uz.railtech.erp.invite.sent.v1
+      title: Приглашение в Cabinet отправлено
+      contentType: application/cloudevents+json
+      correlationId:
+        location: '$message.payload#/correlationid'
+      headers:
+        $ref: '#/components/schemas/DeliveryHeaders'
+      bindings:
+        $ref: '#/components/messageBindings/delivery'
+      payload:
+        schemaFormat: application/schema+json;version=draft-07
+        schema:
+          allOf:
+            - $ref: './envelope.v1.json'
+            - type: object
+              properties:
+                source:
+                  const: rt://erp
+                type:
+                  const: uz.railtech.erp.invite.sent.v1
+                dataschema:
+                  const: rt://contracts/events/erp/invite.sent/v1
+                data:
+                  $ref: './erp/invite.sent.v1.json'
+    uz.railtech.erp.invoice.issued.v1:
+      name: uz.railtech.erp.invoice.issued.v1
+      title: Счёт выставлен
+      contentType: application/cloudevents+json
+      correlationId:
+        location: '$message.payload#/correlationid'
+      headers:
+        $ref: '#/components/schemas/DeliveryHeaders'
+      bindings:
+        $ref: '#/components/messageBindings/delivery'
+      payload:
+        schemaFormat: application/schema+json;version=draft-07
+        schema:
+          allOf:
+            - $ref: './envelope.v1.json'
+            - type: object
+              properties:
+                source:
+                  const: rt://erp
+                type:
+                  const: uz.railtech.erp.invoice.issued.v1
+                dataschema:
+                  const: rt://contracts/events/erp/invoice.issued/v1
+                data:
+                  $ref: './erp/invoice.issued.v1.json'
+    uz.railtech.erp.invoice.overdue.v1:
+      name: uz.railtech.erp.invoice.overdue.v1
+      title: Счёт просрочен
+      contentType: application/cloudevents+json
+      correlationId:
+        location: '$message.payload#/correlationid'
+      headers:
+        $ref: '#/components/schemas/DeliveryHeaders'
+      bindings:
+        $ref: '#/components/messageBindings/delivery'
+      payload:
+        schemaFormat: application/schema+json;version=draft-07
+        schema:
+          allOf:
+            - $ref: './envelope.v1.json'
+            - type: object
+              properties:
+                source:
+                  const: rt://erp
+                type:
+                  const: uz.railtech.erp.invoice.overdue.v1
+                dataschema:
+                  const: rt://contracts/events/erp/invoice.overdue/v1
+                data:
+                  $ref: './erp/invoice.overdue.v1.json'
+    uz.railtech.erp.invoice.paid.v1:
+      name: uz.railtech.erp.invoice.paid.v1
+      title: Счёт оплачен
+      contentType: application/cloudevents+json
+      correlationId:
+        location: '$message.payload#/correlationid'
+      headers:
+        $ref: '#/components/schemas/DeliveryHeaders'
+      bindings:
+        $ref: '#/components/messageBindings/delivery'
+      payload:
+        schemaFormat: application/schema+json;version=draft-07
+        schema:
+          allOf:
+            - $ref: './envelope.v1.json'
+            - type: object
+              properties:
+                source:
+                  const: rt://erp
+                type:
+                  const: uz.railtech.erp.invoice.paid.v1
+                dataschema:
+                  const: rt://contracts/events/erp/invoice.paid/v1
+                data:
+                  $ref: './erp/invoice.paid.v1.json'
+    uz.railtech.erp.quote.acceptance_code_requested.v1:
+      name: uz.railtech.erp.quote.acceptance_code_requested.v1
+      title: Запрошен код акцепта КП
+      contentType: application/cloudevents+json
+      correlationId:
+        location: '$message.payload#/correlationid'
+      headers:
+        $ref: '#/components/schemas/DeliveryHeaders'
+      bindings:
+        $ref: '#/components/messageBindings/delivery'
+      payload:
+        schemaFormat: application/schema+json;version=draft-07
+        schema:
+          allOf:
+            - $ref: './envelope.v1.json'
+            - type: object
+              properties:
+                source:
+                  const: rt://erp
+                type:
+                  const: uz.railtech.erp.quote.acceptance_code_requested.v1
+                dataschema:
+                  const: rt://contracts/events/erp/quote.acceptance_code_requested/v1
+                data:
+                  $ref: './erp/quote.acceptance_code_requested.v1.json'
+    uz.railtech.erp.quote.accepted.v1:
+      name: uz.railtech.erp.quote.accepted.v1
+      title: КП принято клиентом
+      contentType: application/cloudevents+json
+      correlationId:
+        location: '$message.payload#/correlationid'
+      headers:
+        $ref: '#/components/schemas/DeliveryHeaders'
+      bindings:
+        $ref: '#/components/messageBindings/delivery'
+      payload:
+        schemaFormat: application/schema+json;version=draft-07
+        schema:
+          allOf:
+            - $ref: './envelope.v1.json'
+            - type: object
+              properties:
+                source:
+                  const: rt://erp
+                type:
+                  const: uz.railtech.erp.quote.accepted.v1
+                dataschema:
+                  const: rt://contracts/events/erp/quote.accepted/v1
+                data:
+                  $ref: './erp/quote.accepted.v1.json'
+    uz.railtech.erp.quote.rejected.v1:
+      name: uz.railtech.erp.quote.rejected.v1
+      title: КП отклонено клиентом
+      contentType: application/cloudevents+json
+      correlationId:
+        location: '$message.payload#/correlationid'
+      headers:
+        $ref: '#/components/schemas/DeliveryHeaders'
+      bindings:
+        $ref: '#/components/messageBindings/delivery'
+      payload:
+        schemaFormat: application/schema+json;version=draft-07
+        schema:
+          allOf:
+            - $ref: './envelope.v1.json'
+            - type: object
+              properties:
+                source:
+                  const: rt://erp
+                type:
+                  const: uz.railtech.erp.quote.rejected.v1
+                dataschema:
+                  const: rt://contracts/events/erp/quote.rejected/v1
+                data:
+                  $ref: './erp/quote.rejected.v1.json'
+    uz.railtech.erp.quote.sent.v1:
+      name: uz.railtech.erp.quote.sent.v1
+      title: КП отправлено клиенту
+      contentType: application/cloudevents+json
+      correlationId:
+        location: '$message.payload#/correlationid'
+      headers:
+        $ref: '#/components/schemas/DeliveryHeaders'
+      bindings:
+        $ref: '#/components/messageBindings/delivery'
+      payload:
+        schemaFormat: application/schema+json;version=draft-07
+        schema:
+          allOf:
+            - $ref: './envelope.v1.json'
+            - type: object
+              properties:
+                source:
+                  const: rt://erp
+                type:
+                  const: uz.railtech.erp.quote.sent.v1
+                dataschema:
+                  const: rt://contracts/events/erp/quote.sent/v1
+                data:
+                  $ref: './erp/quote.sent.v1.json'
+    uz.railtech.erp.quote.viewed.v1:
+      name: uz.railtech.erp.quote.viewed.v1
+      title: КП просмотрено клиентом
+      contentType: application/cloudevents+json
+      correlationId:
+        location: '$message.payload#/correlationid'
+      headers:
+        $ref: '#/components/schemas/DeliveryHeaders'
+      bindings:
+        $ref: '#/components/messageBindings/delivery'
+      payload:
+        schemaFormat: application/schema+json;version=draft-07
+        schema:
+          allOf:
+            - $ref: './envelope.v1.json'
+            - type: object
+              properties:
+                source:
+                  const: rt://erp
+                type:
+                  const: uz.railtech.erp.quote.viewed.v1
+                dataschema:
+                  const: rt://contracts/events/erp/quote.viewed/v1
+                data:
+                  $ref: './erp/quote.viewed.v1.json'
+    uz.railtech.erp.request.created.v1:
+      name: uz.railtech.erp.request.created.v1
+      title: Заявка создана
+      contentType: application/cloudevents+json
+      correlationId:
+        location: '$message.payload#/correlationid'
+      headers:
+        $ref: '#/components/schemas/DeliveryHeaders'
+      bindings:
+        $ref: '#/components/messageBindings/delivery'
+      payload:
+        schemaFormat: application/schema+json;version=draft-07
+        schema:
+          allOf:
+            - $ref: './envelope.v1.json'
+            - type: object
+              properties:
+                source:
+                  const: rt://erp
+                type:
+                  const: uz.railtech.erp.request.created.v1
+                dataschema:
+                  const: rt://contracts/events/erp/request.created/v1
+                data:
+                  $ref: './erp/request.created.v1.json'
+    uz.railtech.identity.user.created.v1:
+      name: uz.railtech.identity.user.created.v1
+      title: Сотрудник создан
+      contentType: application/cloudevents+json
+      correlationId:
+        location: '$message.payload#/correlationid'
+      headers:
+        $ref: '#/components/schemas/DeliveryHeaders'
+      bindings:
+        $ref: '#/components/messageBindings/delivery'
+      payload:
+        schemaFormat: application/schema+json;version=draft-07
+        schema:
+          allOf:
+            - $ref: './envelope.v1.json'
+            - type: object
+              properties:
+                source:
+                  const: rt://crm
+                type:
+                  const: uz.railtech.identity.user.created.v1
+                dataschema:
+                  const: rt://contracts/events/identity/user.created/v1
+                data:
+                  $ref: './identity/user.created.v1.json'
+    uz.railtech.identity.user.deactivated.v1:
+      name: uz.railtech.identity.user.deactivated.v1
+      title: Сотрудник отключён
+      contentType: application/cloudevents+json
+      correlationId:
+        location: '$message.payload#/correlationid'
+      headers:
+        $ref: '#/components/schemas/DeliveryHeaders'
+      bindings:
+        $ref: '#/components/messageBindings/delivery'
+      payload:
+        schemaFormat: application/schema+json;version=draft-07
+        schema:
+          allOf:
+            - $ref: './envelope.v1.json'
+            - type: object
+              properties:
+                source:
+                  const: rt://crm
+                type:
+                  const: uz.railtech.identity.user.deactivated.v1
+                dataschema:
+                  const: rt://contracts/events/identity/user.deactivated/v1
+                data:
+                  $ref: './identity/user.deactivated.v1.json'
+    uz.railtech.identity.user.updated.v1:
+      name: uz.railtech.identity.user.updated.v1
+      title: Сотрудник изменён
+      contentType: application/cloudevents+json
+      correlationId:
+        location: '$message.payload#/correlationid'
+      headers:
+        $ref: '#/components/schemas/DeliveryHeaders'
+      bindings:
+        $ref: '#/components/messageBindings/delivery'
+      payload:
+        schemaFormat: application/schema+json;version=draft-07
+        schema:
+          allOf:
+            - $ref: './envelope.v1.json'
+            - type: object
+              properties:
+                source:
+                  const: rt://crm
+                type:
+                  const: uz.railtech.identity.user.updated.v1
+                dataschema:
+                  const: rt://contracts/events/identity/user.updated/v1
+                data:
+                  $ref: './identity/user.updated.v1.json'

@@ -1,0 +1,20 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://railtech.uz/contracts/events/crm/lead.created.v1.json",
+  "title": "Лид создан",
+  "description": "Тип uz.railtech.crm.lead.created.v1, источник rt://crm. Поле data конверта (envelope.v1.json). Снимок лида (без контактов и переписки).",
+  "type": "object",
+  "required": [
+    "lead",
+    "actor"
+  ],
+  "properties": {
+    "lead": {
+      "$ref": "_defs.v1.json#/$defs/Lead"
+    },
+    "actor": {
+      "$ref": "_defs.v1.json#/$defs/Actor"
+    }
+  },
+  "additionalProperties": false
+}

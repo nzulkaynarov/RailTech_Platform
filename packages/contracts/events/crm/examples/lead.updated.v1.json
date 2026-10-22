@@ -1,0 +1,37 @@
+{
+  "specversion": "1.0",
+  "id": "76fa68bb-da5d-5b98-bb40-e3f46f90b992",
+  "source": "rt://crm",
+  "type": "uz.railtech.crm.lead.updated.v1",
+  "time": "2026-10-22T08:30:00Z",
+  "subject": "lead/501",
+  "datacontenttype": "application/json",
+  "dataschema": "rt://contracts/events/crm/lead.updated/v1",
+  "tenant": "railtech",
+  "correlationid": "6a3827cd-1fbf-5edd-8c1c-c9e4aade706a",
+  "data": {
+    "lead": {
+      "crm_lead_id": 501,
+      "crm_client_id": 42,
+      "display_name": "Иван Петров",
+      "company_name": "ООО «Пример Логистик»",
+      "stage": "qualified",
+      "source": "telegram",
+      "language": "ru",
+      "score": 70,
+      "assigned_user": {
+        "crm_user_id": 7,
+        "full_name": "Алия Каримова"
+      },
+      "erp_request_id": null,
+      "updated_at": "2026-10-22T08:30:00Z"
+    },
+    "changed_fields": [
+      "assigned_user"
+    ],
+    "actor": {
+      "type": "staff",
+      "crm_user_id": 1
+    }
+  }
+}

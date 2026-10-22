@@ -1,0 +1,34 @@
+{
+  "specversion": "1.0",
+  "id": "1c8507ae-3b5b-5ea8-a5dc-d5ef478d5b6e",
+  "source": "rt://erp",
+  "type": "uz.railtech.erp.document.created.v1",
+  "time": "2026-10-17T04:00:05Z",
+  "subject": "D-2026-0905",
+  "datacontenttype": "application/json",
+  "dataschema": "rt://contracts/events/erp/document.created/v1",
+  "tenant": "railtech",
+  "correlationid": "4c555a40-bad4-51ae-9b5a-7b46dc43c85a",
+  "traceparent": "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01",
+  "data": {
+    "erp_company_id": 118,
+    "crm_client_id": 42,
+    "deal": {
+      "erp_deal_id": 905,
+      "number": "D-2026-0905",
+      "title": "Поставка оборудования, партия 1",
+      "stage": "invoiced",
+      "amount": "125000000.00",
+      "currency": "UZS"
+    },
+    "actor": {
+      "type": "system"
+    },
+    "payload": {
+      "erp_document_id": 4412,
+      "kind": "invoice",
+      "number": "СЧ-2026-0441",
+      "title": "Счёт на оплату СЧ-2026-0441"
+    }
+  }
+}
