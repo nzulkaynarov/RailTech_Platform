@@ -113,7 +113,7 @@ Actions → **Deploy** → Run workflow: `ref` = `main` (или sha, входя�
 
 1. Сборка и push восьми образов в GHCR; загрузка релиза на VPS 1.
 2. `deploy.sh` на сервере. Если упал **pg_dump-гейт** — миграции не запускались, сервисы не тронуты; чините доступ к базе и запускайте снова.
-3. Smoke с сервера и с раннера: `/health` CRM, ERP, Cabinet — 200, `/api/v1/health` Платформы — 200 и `status: ok`, `erp…/mcp/erp/` и `<платформа>/mcp/x` — 404.
+3. Smoke с сервера и с раннера: `/health` CRM, ERP, Cabinet — 200, `/api/v1/health` Платформы — 200 и `status: ok`, `erp…/mcp/erp/`, `erp…/api/integration/v1/health`, `erp…/admin/` и `<платформа>/mcp/x` — 404.
 
 На первом запуске Caddy получает сертификаты Let's Encrypt — DNS должен уже указывать на VPS 1, порты 80/443 открыты. После деплоя:
 
@@ -152,6 +152,33 @@ mcp-tools.json` монтируется в контейнер по пути `../.
 «events.schema.json не найден».
 
 Вручную с сервера (без Actions): `/opt/rt/releases/<sha>/infra/deploy/deploy.sh <sha>`; без миграций и дампа — `make up-prod RT_IMAGE_TAG=<sha>`.
+
+### Django admin ERP и машинный API ERP — без внешнего маршрута (S0-5)
+
+Caddy (`no_erp_internal` в `Caddyfile.prod`/`Caddyfile.dev`) отвечает 404 на `/api/integration`, `/api/integration/*`, `/admin`, `/admin/*`
+домена ERP; через домены Cabinet и Платформы эти пути до `erp-backend` тоже не доходят (маршруты только `/api/portal/*`, `/media/*` и SPA/BFF).
+`/api/v1/admin/...` (API шаблонов писем и т. п.) — это API ERP, оно работает как раньше. Smoke деплоя (`infra/deploy/smoke.sh`) и
+`make deploy-check` (`infra/deploy/tests/caddy-edge-test.sh`) проверяют это.
+
+* **Кто ходит в `/api/integration`.** Только CRM и коннекторы — по внутренней сети compose, `http://erp-backend:8000` (адрес подставляет
+  «Подключить ERP»; `crm-erp-pairing.md`). Внешний адрес ERP в «Подключениях» для этого не годится — он даст 404. Сопряжение CRM с ERP
+  на **другом сервере** требует внутренней связи между серверами (частная сеть/VPN, адрес ERP — частный IP или имя без точки; ADR-0009 это
+  допускает, внешний `https://erp…` для `/api/integration` — нет).
+* **Попасть в Django admin (Unfold).** SSH-туннель к контейнеру `erp-backend` (порт наружу не публикуется), на VPS 1 из каталога релиза:
+  ```bash
+  # 1) адрес контейнера erp-backend в сети compose
+  docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' "$(docker compose … ps -q erp-backend)"
+  # 2) на своей машине (подставьте адрес из п. 1)
+  ssh -L 8000:<адрес контейнера>:8000 deploy@<VPS 1>
+  ```
+  Откройте `http://localhost:8000/admin/` (`localhost` разрешён в `ALLOWED_HOSTS` и `CSRF_TRUSTED_ORIGINS` ERP). Cookie сессии на проде
+  помечены `Secure`: Chrome и Firefox принимают их на `http://localhost`, Safari может не принять (используйте другой браузер или команду ниже).
+  Закончив, закройте туннель.
+* **Команды без браузера:** `docker compose … exec erp-backend python manage.py <команда>` (`shell`, `pairing_code`, `pairing_close_bootstrap`).
+* **Повтор FAILED-событий вебхуков** — действие админки «Повторить доставку в CRM» через туннель либо команда в `shell` без админки:
+  `docs/runbooks/webhooks.md`, «Повторить доставку (ERP)».
+* **Откат на релиз до S0-5:** его Caddy ещё отдаёт `/admin/` и `/api/integration` наружу, поэтому smoke отката (404 на этих путях) будет красным,
+  хотя откат выполнен; это ожидаемо, повторный деплой текущего релиза закрывает пути.
 
 ## 3. Откат
 

@@ -53,12 +53,23 @@
 	}
 }
 
+# Машинный API ERP (/api/integration — вызовы CRM и коннекторов) и Django admin (/admin) — только внутри сети compose
+# (`http://erp-backend:8000`), снаружи 404 на всех доменах (S0-5). Матчер — по префиксу пути `/admin`: `/api/v1/admin/...`
+# (API шаблонов писем и др.) не затрагивается. Администратору в Django admin — SSH-туннель (docs/runbooks/deploy.md).
+(no_erp_internal) {
+	@erp_internal path /api/integration /api/integration/* /admin /admin/*
+	handle @erp_internal {
+		respond 404
+	}
+}
+
 # ─── ERP — бэк-офис (apps/erp) ─────────────────────────────────────────────────────────────
 {$ERP_DOMAIN} {
 	encode zstd gzip
 	import security_headers
 	import no_mcp
-	@backend path /api/* /admin/* /admin /ws/* /static/* /media/* /health /health/
+	import no_erp_internal
+	@backend path /api/* /ws/* /static/* /media/* /health /health/
 	handle @backend {
 		reverse_proxy erp-backend:8000
 	}
