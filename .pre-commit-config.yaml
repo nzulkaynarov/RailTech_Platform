@@ -30,9 +30,22 @@ repos:
     hooks:
       - id: ruff-check
         args: [--fix]
-        files: ^apps/crm/(backend/|scripts/.*\.py$)
+        files: ^apps/crm/backend/
       - id: ruff-format
-        files: ^apps/crm/(backend/|scripts/.*\.py$)
+        files: ^apps/crm/backend/
+      # Скрипты apps/crm/scripts лежат вне backend/ и без своей конфигурации ruff: хук брал бы умолчания (строка 88, без правил S) —
+      # переформатировал бы скрипты и снимал бы `# noqa: S603`. Конфигурация бэкенда явно, как в ci_local.sh (стадия crm).
+      # Для backend/ --config не передаётся: пути per-file-ignores в нём считаются от каталога конфигурации, а не от корня репозитория.
+      - id: ruff-check
+        alias: ruff-check-crm-scripts
+        name: ruff check (apps/crm/scripts, конфигурация бэкенда)
+        args: [--fix, --config, apps/crm/backend/pyproject.toml]
+        files: ^apps/crm/scripts/.*\.py$
+      - id: ruff-format
+        alias: ruff-format-crm-scripts
+        name: ruff format (apps/crm/scripts, конфигурация бэкенда)
+        args: [--config, apps/crm/backend/pyproject.toml]
+        files: ^apps/crm/scripts/.*\.py$
 
   - repo: local
     hooks:
