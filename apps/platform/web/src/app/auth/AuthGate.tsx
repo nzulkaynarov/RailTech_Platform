@@ -41,14 +41,20 @@ export function AuthGate() {
   const meQuery = useGetMe();
 
   const here = useRef(location.pathname + location.search);
+  // Запоминаем, что профиль уже был: сессия и профиль падают с 401 оба, второй вызов видит пустой кэш.
+  const wasSignedIn = useRef(false);
+  useEffect(() => {
+    if (meQuery.data) wasSignedIn.current = true;
+  }, [meQuery.data]);
   useEffect(() => {
     here.current = location.pathname + location.search;
   });
   useEffect(
     () =>
       onSessionExpired(() => {
+        // «Сессия истекла» — только если сотрудник уже работал; первый заход без сессии — просто вход.
         queryClient.clear();
-        void navigate(loginPath(here.current), { replace: true });
+        void navigate(loginPath(here.current, wasSignedIn.current), { replace: true });
       }),
     [navigate, queryClient],
   );
@@ -64,7 +70,9 @@ export function AuthGate() {
   const value = useMemo(() => (me ? { me, mustChangePassword } : null), [me, mustChangePassword]);
 
   if (isSessionExpired(session.error) || isSessionExpired(meQuery.error)) {
-    return <Navigate to={loginPath(location.pathname + location.search)} replace />;
+    return (
+      <Navigate to={loginPath(location.pathname + location.search, me !== undefined)} replace />
+    );
   }
   if (session.isError || meQuery.isError) {
     return (

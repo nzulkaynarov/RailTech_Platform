@@ -21,6 +21,7 @@ export interface TopBarProps {
     searchShort: string;
     /** «Меню» — кнопка возврата свёрнутого подменю */
     menu: string;
+    /** Полное имя кнопки: «Центр уведомлений» или «Центр уведомлений, N новых» */
     bell: string;
     hidePanel: string;
     showPanel: string;
@@ -91,7 +92,6 @@ export function TopBar({
   mobile,
 }: TopBarProps) {
   const { token } = theme.useToken();
-  const bellLabel = unread > 0 ? `${labels.bell}, ${String(unread)}` : labels.bell;
   return (
     <Layout.Header
       style={{
@@ -168,7 +168,7 @@ export function TopBar({
         <button
           type="button"
           className="pf-icon-btn pf-focusable"
-          aria-label={bellLabel}
+          aria-label={labels.bell}
           aria-haspopup="dialog"
           style={{ position: "relative", width: 32, height: 32, flex: "0 0 auto" }}
         >

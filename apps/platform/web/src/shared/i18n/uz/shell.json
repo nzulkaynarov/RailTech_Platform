@@ -51,13 +51,12 @@
     "position": "Lavozim",
     "roles": "Rollar",
     "access": "Kirish",
-    "close": "Yopish",
     "noPosition": "ko‘rsatilmagan"
   },
   "roles": {
     "MANAGER": "Menejer",
     "DIRECTOR": "Direktor",
-    "SUPPLY": "Ta'minotchi",
+    "SUPPLY": "Ta‘minotchi",
     "ENGINEER": "Bosh muhandis",
     "ACCOUNTANT": "Buxgalter",
     "ADMIN": "Administrator"
@@ -65,7 +64,7 @@
   "rolesShort": {
     "MANAGER": "Menejer",
     "DIRECTOR": "Direktor",
-    "SUPPLY": "Ta'minotchi",
+    "SUPPLY": "Ta‘minotchi",
     "ENGINEER": "Bosh muh.",
     "ACCOUNTANT": "Buxgalter",
     "ADMIN": "Admin"
@@ -92,7 +91,8 @@
       "BACKEND_UNAVAILABLE": "CRM bilan aloqa o‘rnatib bo‘lmadi. Birozdan keyin qayta kiring.",
       "CSRF_FAILED": "Brauzer sessiyasi eskirgan. Sahifani yangilab, qayta kiring.",
       "default": "Kirib bo‘lmadi. Qayta urinib ko‘ring."
-    }
+    },
+    "expired": "Sessiya muddati tugadi. Qayta kiring."
   },
   "changePassword": {
     "title": "Parolni almashtirish",
@@ -126,7 +126,9 @@
     "title": "Bu bo‘lim sizning rolingiz uchun mavjud emas",
     "text": "Bo‘lim sizning rollaringiz huquqlariga kirmaydi. Ish uchun kerak bo‘lsa, administratorga yozing.",
     "textRoles": "Bo‘lim quyidagi rollarga ochiq: {{roles}}. Ish uchun kerak bo‘lsa, administratorga yozing.",
-    "write": "Administratorga yozish"
+    "write": "Administratorga yozish",
+    "titleActiveRole": "Bo‘lim tanlangan rol uchun mavjud emas",
+    "textActiveRole": "Barcha bo‘limlaringizga kirishni qaytarish uchun profil menyusida (avatar) «Barcha rollar»ni tanlang. Ish uchun kerak bo‘lsa, administratorga yozing."
   },
   "notFound": {
     "heading": "Sahifa topilmadi",

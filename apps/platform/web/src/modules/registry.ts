@@ -1,6 +1,5 @@
 import { matchPath } from "react-router";
 
-import type { ModuleCode } from "../shared/api/generated/model";
 import { admin } from "./admin/module";
 import { chats } from "./chats/module";
 import { crm } from "./crm/module";
@@ -12,10 +11,9 @@ import type { ModuleConfig, SectionConfig } from "./types";
 /** Шесть модулей в порядке рейла (SPEC-v3 §6.1). Конфигурация без кода страниц: страницы модулей грузятся лениво. */
 export const MODULES: readonly ModuleConfig[] = [dashboard, crm, eds, erp, chats, admin];
 
-export function getModule(code: ModuleCode): ModuleConfig {
-  const found = MODULES.find((m) => m.code === code);
-  if (!found) throw new Error(`Неизвестный модуль: ${code}`);
-  return found;
+/** Модуль по коду; неизвестный код из `Me.modules` (новый модуль на BFF, старая сборка SPA) — undefined, а не ошибка. */
+export function findModule(code: string): ModuleConfig | undefined {
+  return MODULES.find((m) => m.code === code);
 }
 
 export interface SectionMatch {

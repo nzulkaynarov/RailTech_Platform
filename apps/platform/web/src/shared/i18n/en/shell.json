@@ -51,7 +51,6 @@
     "position": "Position",
     "roles": "Roles",
     "access": "Access",
-    "close": "Close",
     "noPosition": "not set"
   },
   "roles": {
@@ -92,7 +91,8 @@
       "BACKEND_UNAVAILABLE": "Cannot reach CRM. Try signing in again in a moment.",
       "CSRF_FAILED": "The browser session is out of date. Reload the page and sign in again.",
       "default": "Could not sign in. Please try again."
-    }
+    },
+    "expired": "Your session has expired. Please sign in again."
   },
   "changePassword": {
     "title": "Change password",
@@ -126,7 +126,9 @@
     "title": "This section is not available for your role",
     "text": "The section is outside the rights of your roles. If you need it for work, write to the administrator.",
     "textRoles": "The section is available to roles: {{roles}}. If you need it for work, write to the administrator.",
-    "write": "Write to the administrator"
+    "write": "Write to the administrator",
+    "titleActiveRole": "This section is not available for the selected role",
+    "textActiveRole": "Choose “All roles” in the profile menu (the avatar) to get back all your sections. If you need this one for work, write to the administrator."
   },
   "notFound": {
     "heading": "Page not found",

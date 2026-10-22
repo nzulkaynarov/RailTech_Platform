@@ -9,7 +9,11 @@ export function safeNext(next: string | null | undefined): string {
   return next;
 }
 
-export function loginPath(from: string): string {
-  if (from === "/" || from === "") return "/login";
-  return `/login?next=${encodeURIComponent(safeNext(from))}`;
+/** Экран входа с возвратом на `from`; `expired` — сессия закончилась во время работы (показываем сообщение). */
+export function loginPath(from: string, expired = false): string {
+  const params = new URLSearchParams();
+  if (from !== "/" && from !== "") params.set("next", safeNext(from));
+  if (expired) params.set("reason", "expired");
+  const query = params.toString();
+  return query ? `/login?${query}` : "/login";
 }

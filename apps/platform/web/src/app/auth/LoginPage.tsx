@@ -25,6 +25,7 @@ export function LoginPage() {
   const queryClient = useQueryClient();
   const [params] = useSearchParams();
   const next = safeNext(params.get("next"));
+  const expired = params.get("reason") === "expired";
   const existing = useGetSession({ query: { retry: false } });
   const login = useLogin({
     mutation: {
@@ -53,6 +54,15 @@ export function LoginPage() {
 
   return (
     <AuthLayout title={t("login.title")} lead={t("login.lead")}>
+      {expired && !login.isError ? (
+        <Alert
+          type="info"
+          showIcon
+          role="status"
+          message={t("login.expired")}
+          style={{ marginBottom: 16 }}
+        />
+      ) : null}
       {login.isError ? (
         <Alert
           type="error"

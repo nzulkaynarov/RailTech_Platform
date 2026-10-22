@@ -1,9 +1,17 @@
 import { QueryClient } from "@tanstack/react-query";
 import { fireEvent, render, screen, within } from "@testing-library/react";
+import { HttpResponse, http } from "msw";
 import { RouterProvider, createMemoryRouter } from "react-router";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { endSession, readSession, startSession, updateSession } from "../mocks/mockSession";
+import { server } from "../test/server";
+import {
+  buildMe,
+  endSession,
+  readSession,
+  startSession,
+  updateSession,
+} from "../mocks/mockSession";
 import { findUser } from "../mocks/fixtures/users";
 import i18n from "../shared/i18n";
 import { setViewportWidth } from "../test/viewport";
@@ -19,7 +27,7 @@ function renderAt(path: string) {
       <RouterProvider router={router} />
     </AppProviders>,
   );
-  return router;
+  return { router, queryClient };
 }
 
 function signIn(
@@ -45,7 +53,7 @@ afterEach(() => {
 
 describe("вход и страж маршрутов", () => {
   it("без сессии любой адрес ведёт на «Вход» с возвратом на тот же URL", async () => {
-    const router = renderAt("/crm/leads?panel=open");
+    const { router } = renderAt("/crm/leads?panel=open");
     expect(
       await screen.findByRole("heading", { level: 1, name: "Вход в Платформу" }),
     ).toBeVisible();
@@ -55,9 +63,22 @@ describe("вход и страж маршрутов", () => {
 
   it("при активной сессии «Вход» ведёт в очередь", async () => {
     signIn("manager@demo.example");
-    const router = renderAt("/login");
+    const { router } = renderAt("/login");
     expect(await screen.findByRole("heading", { level: 1, name: "Моя очередь" })).toBeVisible();
     expect(router.state.location.pathname).toBe("/dashboard/queue");
+  });
+
+  it("сессия закончилась во время работы: экран входа с возвратом и сообщением", async () => {
+    signIn("manager@demo.example");
+    const { router, queryClient } = renderAt("/crm/leads");
+    await screen.findByRole("heading", { level: 1, name: "Все лиды" });
+    endSession();
+    await queryClient.invalidateQueries();
+    await vi.waitFor(() => {
+      expect(router.state.location.pathname).toBe("/login");
+    });
+    expect(router.state.location.search).toBe("?next=%2Fcrm%2Fleads&reason=expired");
+    expect(await screen.findByText("Сессия истекла. Войдите снова.")).toBeVisible();
   });
 
   it("форма входа показывает текст ошибки по Error.code", async () => {
@@ -71,7 +92,7 @@ describe("вход и страж маршрутов", () => {
   });
 
   it("успешный вход ведёт в /dashboard/queue и открывает сессию", async () => {
-    const router = renderAt("/login");
+    const { router } = renderAt("/login");
     fireEvent.change(await screen.findByLabelText("Электронная почта"), {
       target: { value: "director@demo.example" },
     });
@@ -84,7 +105,7 @@ describe("вход и страж маршрутов", () => {
 
   it("must_change_password: любой адрес ведёт на смену пароля", async () => {
     signIn("new@demo.example");
-    const router = renderAt("/crm/leads");
+    const { router } = renderAt("/crm/leads");
     expect(await screen.findByRole("heading", { level: 1, name: "Смена пароля" })).toBeVisible();
     expect(router.state.location.pathname).toBe("/change-password");
     expect(screen.queryByRole("navigation", { name: "Модули" })).not.toBeInTheDocument();
@@ -92,6 +113,27 @@ describe("вход и страж маршрутов", () => {
 });
 
 describe("каркас на 1440", () => {
+  it("неизвестный код модуля в Me.modules не роняет каркас: он пропускается", async () => {
+    signIn("manager@demo.example");
+    const session = readSession();
+    const me = session ? buildMe(session) : undefined;
+    if (!me) throw new Error("нет Me");
+    server.use(
+      http.get("*/me", () => HttpResponse.json({ ...me, modules: [...me.modules, "reports"] })),
+    );
+    renderAt("/dashboard/queue");
+    expect(await screen.findByRole("heading", { level: 1, name: "Моя очередь" })).toBeVisible();
+    const rail = screen.getByRole("navigation", { name: "Модули" });
+    expect(within(rail).getAllByRole("link")).toHaveLength(6);
+  });
+
+  it("403 при выбранной активной роли: нейтральный текст и подсказка про «Все роли»", async () => {
+    signIn("all@demo.example", "ACCOUNTANT");
+    renderAt("/admin/roles");
+    expect(await screen.findByText("Раздел недоступен для выбранной роли")).toBeVisible();
+    expect(screen.getByText(/Выберите «Все роли» в меню профиля/)).toBeVisible();
+  });
+
   it("рейл — модули роли, подменю — разделы активного модуля, главное действие неактивно", async () => {
     signIn("manager@demo.example");
     renderAt("/crm/leads");
@@ -142,7 +184,7 @@ describe("каркас на 1440", () => {
 
   it("умолчание CRM · Все лиды — боковое окно скрыто; «Панель» открывает его и пишет ?panel=open", async () => {
     signIn("manager@demo.example");
-    const router = renderAt("/crm/leads");
+    const { router } = renderAt("/crm/leads");
     await screen.findByRole("heading", { level: 1, name: "Все лиды" });
     expect(screen.queryByRole("complementary", { name: "Боковое окно" })).not.toBeInTheDocument();
 

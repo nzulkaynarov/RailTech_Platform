@@ -11,5 +11,5 @@ import { useAuth } from "./auth/useAuth";
  */
 export function RequireAccess({ rule, children }: { rule: AccessRule; children: ReactNode }) {
   const { me } = useAuth();
-  return canSee(me, rule) ? children : <Forbidden />;
+  return canSee(me, rule) ? children : <Forbidden activeRole={me.active_role != null} />;
 }

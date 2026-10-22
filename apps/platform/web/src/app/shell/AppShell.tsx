@@ -3,7 +3,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Outlet, useLocation } from "react-router";
 
-import { MODULES, getModule, isSectionActive, matchSection } from "../../modules/registry";
+import { MODULES, findModule, isSectionActive, matchSection } from "../../modules/registry";
 import type { ModuleConfig, SectionConfig } from "../../modules/types";
 import { useGetMenuCounters, useListNotifications } from "../../shared/api/generated/platform-bff";
 import type { MenuCounter } from "../../shared/api/generated/model";
@@ -49,7 +49,10 @@ export function AppShell() {
   const match = matchSection(location.pathname, location.search);
   const panels = usePanels(me.id, match?.section);
 
-  const railModules = useMemo(() => me.modules.map((code) => getModule(code)), [me.modules]);
+  const railModules = useMemo(
+    () => me.modules.flatMap((code) => findModule(code) ?? []),
+    [me.modules],
+  );
   // Подменю — активного модуля; если адрес ведёт в модуль вне роли (403), показываем первый доступный, а не чужой.
   const matchedVisible = match && railModules.some((m) => m.code === match.module.code);
   const activeModule = (matchedVisible ? match.module : undefined) ?? railModules[0] ?? MODULES[0];
@@ -57,6 +60,8 @@ export function AppShell() {
 
   const counters = useGetMenuCounters({ query: { refetchInterval: 30_000 } });
   const unread = useListNotifications({ limit: 1 }, { query: { refetchInterval: 30_000 } });
+
+  const unreadCount = unread.data?.unread_count ?? 0;
 
   // ⌘K / Ctrl+K фокусирует поиск, но не перехватывает ввод в других полях.
   useEffect(() => {
@@ -188,7 +193,8 @@ export function AppShell() {
             searchPlaceholder: t("topbar.searchPlaceholder"),
             searchShort: t("topbar.searchShort"),
             menu: t("menu.show"),
-            bell: t("topbar.bell"),
+            bell:
+              unreadCount > 0 ? t("topbar.bellUnread", { count: unreadCount }) : t("topbar.bell"),
             hidePanel: t("topbar.hidePanel"),
             showPanel: t("topbar.showPanel"),
             hidePanelIcon: t("panel.hide"),
@@ -205,7 +211,7 @@ export function AppShell() {
           }
           searchRef={searchRef}
           shortcut={isMac() ? "⌘K" : "Ctrl K"}
-          unread={unread.data?.unread_count ?? 0}
+          unread={unreadCount}
           bellTitle={t("notifications.title")}
           bellContent={
             <EmptyState

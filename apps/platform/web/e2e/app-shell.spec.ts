@@ -113,7 +113,7 @@ test.describe("панели", () => {
     );
     await expect(menu.getByRole("link", { name: "Моя очередь 3, требует действия" })).toBeVisible();
     await expect(menu.getByRole("link", { name: "Все проекты 4" })).toBeVisible();
-    await expect(page.getByRole("button", { name: /^Центр уведомлений, 3/ })).toBeVisible();
+    await expect(page.getByRole("button", { name: /^Центр уведомлений, 3 новых/ })).toBeVisible();
   });
 
   test("главные действия модулей — неактивные кнопки с подсказкой «появится в фазе P2»", async ({
