@@ -148,6 +148,9 @@ queue:                                      # вид работы → что н�
   # …остальные виды из QueueItemKind — по тому же правилу
 ```
 
+Уточнение R-1b (2026-10-23): у `system_roles.DIRECTOR` разделы `crm.leads` и `chats.external` — `read` (остальные бизнес-разделы `full`,
+`admin` — `read`); версия роли (`version`) — оптимистическая блокировка PATCH (ADR-0012 п. 2, DECISIONS 2026-10-23).
+
 Правила: каждый код права ERP — из `ErpPermission` контракта шва, каждое право CRM — из каталога `apps/crm/backend/app/security/rbac.py`
 (тест в CRM и в contracts); у раздела `levels` по умолчанию `[read, full]`; `system_roles.DIRECTOR` — все разделы `full`, `admin` — `read`.
 Исполнитель R-1/R-2 может уточнять отображения, если найдёт расхождение с фактическими проверками прав бэкендов, — с пометкой в PR.
