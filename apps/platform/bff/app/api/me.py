@@ -27,9 +27,10 @@ async def update_me(body: MeUpdate, authed: AuthedDep) -> Me:
             details={"fields": ["active_role"]},
         )
 
+    if "language" in body.model_fields_set and body.language is not None:
+        await authed.service.set_language(authed.sid, body.language)
+
     def apply(data: SessionData) -> None:
-        if "language" in body.model_fields_set and body.language is not None:
-            data.language = body.language
         if "active_role" in body.model_fields_set:
             data.active_role = body.active_role
 

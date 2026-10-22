@@ -29,7 +29,7 @@ from app.errors import (
     session_expired,
 )
 from app.rbac import known_roles
-from app.session import BackendTokens, SessionData, SessionStore, new_secret, now
+from app.session import BackendTokens, Language, SessionData, SessionStore, new_secret, now
 
 log = structlog.get_logger()
 
@@ -171,6 +171,7 @@ class AuthService:
             email=str(profile["email"]),
             name=str(profile["full_name"]),
             position=profile.get("position") or None,
+            language=_language(profile),
             platform_roles=list(roles),
             platform_access=access,
             must_change_password=must_change_password or bool(profile.get("must_change_password")),
@@ -420,6 +421,13 @@ class AuthService:
             raise session_expired()
         return updated
 
+    async def set_language(self, sid: str, language: Language) -> None:
+        """Язык хранит CRM (`PATCH /api/v1/me`); в сессии — копия до следующего чтения профиля."""
+        resp = await self.call(sid, "crm", "PATCH", "/api/v1/me", json={"language": language})
+        if resp.status_code != 200:
+            raise from_backend("crm", resp)
+        await self.store.update(sid, lambda d: setattr(d, "language", language))
+
     async def change_password(self, sid: str, current: str, new: str) -> None:
         resp = await self.call(
             sid,
@@ -456,11 +464,18 @@ def _failed_fields(resp: httpx.Response) -> list[str]:
     return [field] if isinstance(field, str) else []
 
 
+def _language(profile: dict[str, Any]) -> Language:
+    """Язык интерфейса из профиля CRM (`users.language`, CRM-01b); нет или неизвестен — `ru`."""
+    value = profile.get("language")
+    return value if value in ("ru", "uz", "en") else "ru"
+
+
 def _apply_profile(data: SessionData, profile: dict[str, Any]) -> None:
     roles = known_roles(profile.get("platform_roles") or [])
     access = list(profile.get("platform_access") or ["crm"])
     data.name = str(profile.get("full_name") or data.name)
     data.position = profile.get("position") or None
+    data.language = _language(profile)
     data.platform_roles = list(roles)
     data.platform_access = access
     data.must_change_password = bool(profile.get("must_change_password"))

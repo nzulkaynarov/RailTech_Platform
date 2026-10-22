@@ -1,7 +1,12 @@
 """POST /auth/login: сессия, cookie, перехват refresh-токенов CRM и ERP, ошибки."""
 
-import httpx
+from datetime import UTC, datetime, timedelta
+from email.utils import format_datetime
 
+import httpx
+import pytest
+
+from app.errors import retry_after_seconds
 from tests.backends import PASSWORD, Backends
 from tests.conftest import ContractChecker, Web
 from tests.consts import CRM_URL
@@ -145,15 +150,65 @@ async def test_crm_server_error_is_unavailable(web: Web) -> None:
     assert response.json()["source"] == "crm"
 
 
-async def test_locked_account_is_too_many_requests(web: Web, check: ContractChecker) -> None:
+async def test_locked_account_is_account_locked(web: Web, check: ContractChecker) -> None:
     web.be.login_status = 423
+
+    response = await web.login()
+
+    assert response.status_code == 423
+    check(response, "/auth/login", "post")
+    body = response.json()
+    assert body["code"] == "ACCOUNT_LOCKED"
+    assert body["source"] == "crm"
+    assert response.headers["retry-after"] == "60"  # CRM срок не назвал
+
+
+async def test_locked_account_retry_after_from_until(web: Web, check: ContractChecker) -> None:
+    until = datetime.fromtimestamp(web.clock() + 900, UTC).isoformat()
+    web.be.crm_login.mock(
+        return_value=httpx.Response(
+            423, json={"code": "account_locked", "message": "x", "details": {"until": until}}
+        )
+    )
+
+    response = await web.login()
+
+    assert response.status_code == 423
+    check(response, "/auth/login", "post")
+    assert 1 <= int(response.headers["retry-after"]) <= 900_000_000  # целое число секунд
+
+
+@pytest.mark.parametrize(
+    ("header", "expected"),
+    [("120", 120), ("30.5", 30), ("0", 1), ("garbage", 60)],
+)
+def test_retry_after_is_normalised_to_integer(header: str, expected: int) -> None:
+    response = httpx.Response(429, headers={"Retry-After": header}, json={})
+
+    assert retry_after_seconds(response) == expected
+
+
+def test_retry_after_http_date_and_missing() -> None:
+    soon = datetime.now(UTC) + timedelta(seconds=300)
+    response = httpx.Response(429, headers={"Retry-After": format_datetime(soon, usegmt=True)})
+
+    assert 290 <= retry_after_seconds(response) <= 300
+    assert retry_after_seconds(httpx.Response(429, json={})) == 60
+
+
+async def test_backend_429_on_login_keeps_integer_retry_after(
+    web: Web, check: ContractChecker
+) -> None:
+    web.be.crm_login.mock(
+        return_value=httpx.Response(429, headers={"Retry-After": "17.9"}, json={"code": "rate"})
+    )
 
     response = await web.login()
 
     assert response.status_code == 429
     check(response, "/auth/login", "post")
+    assert response.headers["retry-after"] == "17"
     assert response.json()["code"] == "TOO_MANY_REQUESTS"
-    assert int(response.headers["retry-after"]) > 0
 
 
 async def test_erp_down_does_not_block_login(web: Web, check: ContractChecker) -> None:

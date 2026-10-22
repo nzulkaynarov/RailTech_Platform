@@ -34,6 +34,7 @@ def profile(
         "platform_access": list(access),
         "platform_roles": roles,
         "position": "Менеджер по продажам",
+        "language": "ru",
     }
 
 
@@ -65,6 +66,7 @@ class Backends:
         self.crm_logout = router.post(f"{CRM_URL}/api/v1/auth/logout").mock(
             return_value=httpx.Response(204)
         )
+        self.crm_patch_me = router.patch(f"{CRM_URL}/api/v1/me").mock(side_effect=self._patch_me)
         self.crm_sso = router.post(f"{CRM_URL}/api/v1/auth/sso/token").mock(
             side_effect=self._sso_token
         )
@@ -148,6 +150,12 @@ class Backends:
                 401, json={"code": "auth_failed", "message": "bad token", "details": {}}
             )
         return httpx.Response(200, json={**self.profile, "must_change_password": self.must_change})
+
+    def _patch_me(self, request: httpx.Request) -> httpx.Response:
+        body = json.loads(request.content)
+        if "language" in body:
+            self.profile["language"] = body["language"]
+        return httpx.Response(200, json=self.profile)
 
     def _sso_token(self, request: httpx.Request) -> httpx.Response:
         if self.sso_status != 200:

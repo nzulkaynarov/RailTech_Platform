@@ -1,5 +1,8 @@
 """Единый формат ошибок BFF — схема `Error` из packages/contracts/openapi/platform-bff.yaml."""
 
+import contextlib
+from datetime import UTC, datetime
+from email.utils import parsedate_to_datetime
 from typing import Any, Literal, cast
 
 import httpx
@@ -148,13 +151,15 @@ def backend_unavailable(source: Source, reason: str | None = None) -> PlatformEr
 _MESSAGES: dict[str, str] = {
     **dict(_CODES.values()),
     "VALIDATION_FAILED": "Проверьте заполнение полей.",
+    "ACCOUNT_LOCKED": "Учётная запись временно заблокирована. Повторите позже.",
 }
+_DEFAULT_RETRY_AFTER = 60
 _BACKEND_CODES: dict[int, str] = {
     status.HTTP_403_FORBIDDEN: "FORBIDDEN",
     status.HTTP_404_NOT_FOUND: "NOT_FOUND",
     status.HTTP_409_CONFLICT: "CONFLICT",
     status.HTTP_422_UNPROCESSABLE_CONTENT: "VALIDATION_FAILED",
-    status.HTTP_423_LOCKED: "TOO_MANY_REQUESTS",
+    status.HTTP_423_LOCKED: "ACCOUNT_LOCKED",
     status.HTTP_429_TOO_MANY_REQUESTS: "TOO_MANY_REQUESTS",
 }
 
@@ -182,6 +187,22 @@ def backend_reason(response: httpx.Response) -> str | None:
     return reason if isinstance(reason, str) else None
 
 
+def retry_after_seconds(response: httpx.Response) -> int:
+    """Секунды до повтора целым: `Retry-After` бэкенда (секунды или дата), иначе `until` CRM."""
+    raw = response.headers.get("Retry-After")
+    if raw is not None:
+        try:
+            return max(int(float(raw)), 1)
+        except ValueError:
+            with contextlib.suppress(TypeError, ValueError, IndexError):
+                return max(int((parsedate_to_datetime(raw) - datetime.now(UTC)).total_seconds()), 1)
+    try:
+        until = response.json()["details"]["until"]
+        return max(int((datetime.fromisoformat(until) - datetime.now(UTC)).total_seconds()), 1)
+    except (ValueError, KeyError, TypeError):
+        return _DEFAULT_RETRY_AFTER
+
+
 def from_backend(source: Source, response: httpx.Response) -> PlatformError:
     """Ответ бэкенда 4xx -> ошибка BFF в формате `Error`; код и статус бэкенда — в `details`."""
     code = _BACKEND_CODES.get(response.status_code)
@@ -192,8 +213,8 @@ def from_backend(source: Source, response: httpx.Response) -> PlatformError:
     if (b_code := backend_code(response)) is not None:
         details["backend_code"] = b_code
     headers = None
-    if code == "TOO_MANY_REQUESTS":
-        headers = {"Retry-After": response.headers.get("Retry-After", "60")}
+    if code in ("TOO_MANY_REQUESTS", "ACCOUNT_LOCKED"):
+        headers = {"Retry-After": str(retry_after_seconds(response))}
     return PlatformError(
         code,
         message,

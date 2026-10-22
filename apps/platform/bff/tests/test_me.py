@@ -1,5 +1,6 @@
 """GET/PATCH /me и /auth/session: роли, вид по активной роли, синхронизация профиля с CRM."""
 
+import json
 from typing import Annotated
 
 import httpx
@@ -73,7 +74,7 @@ async def test_me_without_position_omits_the_field(web: Web, check: ContractChec
 # --- PATCH /me ------------------------------------------------------------------------------------
 
 
-async def test_patch_language(web: Web, check: ContractChecker) -> None:
+async def test_patch_language_goes_to_crm(web: Web, check: ContractChecker) -> None:
     await web.login(["MANAGER"])
 
     response = await web.send("PATCH", "/api/v1/me", json={"language": "uz"})
@@ -81,7 +82,60 @@ async def test_patch_language(web: Web, check: ContractChecker) -> None:
     assert response.status_code == 200
     check(response, "/me", "patch")
     assert response.json()["language"] == "uz"
+    sent = web.be.crm_patch_me.calls.last.request
+    assert json.loads(sent.content) == {"language": "uz"}
+    assert sent.headers["authorization"] == "Bearer crm-access-1"
     assert (await web.client.get("/api/v1/me")).json()["language"] == "uz"
+    # Язык хранит CRM: после нового входа он тот же.
+    web.client.cookies.clear()
+    assert (await web.login()).json()["me"]["language"] == "uz"
+
+
+async def test_language_comes_from_crm_profile(web: Web) -> None:
+    web.be.profile["language"] = "en"
+
+    response = await web.login(["MANAGER"])
+
+    assert response.json()["me"]["language"] == "en"
+    web.be.profile["language"] = "uz"
+    web.clock.advance(61)
+    assert (await web.client.get("/api/v1/me")).json()["language"] == "uz"
+
+
+async def test_unknown_crm_language_falls_back_to_ru(web: Web) -> None:
+    web.be.profile["language"] = "de"
+
+    assert (await web.login(["MANAGER"])).json()["me"]["language"] == "ru"
+
+
+async def test_patch_language_crm_down_keeps_session_language(web: Web) -> None:
+    await web.login(["MANAGER"])
+    web.be.crm_patch_me.mock(side_effect=httpx.ConnectError("down"))
+
+    response = await web.send("PATCH", "/api/v1/me", json={"language": "uz"})
+
+    assert response.status_code == 503
+    assert response.json()["source"] == "crm"
+    assert (await web.client.get("/api/v1/me")).json()["language"] == "ru"
+
+
+async def test_patch_language_crm_rejects(web: Web, check: ContractChecker) -> None:
+    await web.login(["MANAGER"])
+    web.be.crm_patch_me.mock(return_value=httpx.Response(422, json={"code": "validation_failed"}))
+
+    response = await web.send("PATCH", "/api/v1/me", json={"language": "uz"})
+
+    assert response.status_code == 422
+    check(response, "/me", "patch")
+    assert response.json()["code"] == "VALIDATION_FAILED"
+
+
+async def test_patch_active_role_does_not_call_crm(web: Web) -> None:
+    await web.login(["MANAGER", "ACCOUNTANT"])
+
+    await web.send("PATCH", "/api/v1/me", json={"active_role": "ACCOUNTANT"})
+
+    assert web.be.crm_patch_me.call_count == 0
 
 
 async def test_active_role_is_a_view(web: Web, check: ContractChecker) -> None:
