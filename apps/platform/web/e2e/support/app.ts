@@ -53,3 +53,13 @@ export async function spaGoto(page: Page, path: string): Promise<void> {
     `(() => { window.history.pushState({}, "", ${JSON.stringify(path)}); window.dispatchEvent(new PopStateEvent("popstate")); })()`,
   );
 }
+
+/**
+ * Ждёт конца анимаций antd (появление, исчезновение): во время fade-in/out `opacity` меняет вычисленный цвет, и axe
+ * ловит «нарушение контраста» у закрывающегося выпадающего меню под модальным окном (на медленном Linux-раннере — стабильно).
+ */
+export async function waitForMotionEnd(page: Page): Promise<void> {
+  await page.waitForFunction(
+    `() => !document.querySelector('[class*="-appear"], [class*="-enter"], [class*="-leave"]')`,
+  );
+}

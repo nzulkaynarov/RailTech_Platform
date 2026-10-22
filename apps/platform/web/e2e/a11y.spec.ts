@@ -1,13 +1,14 @@
 import AxeBuilder from "@axe-core/playwright";
 import { type Page, expect, test } from "@playwright/test";
 
-import { loginAndWait, openAvatarMenu, settledScreenshot } from "./support/app";
+import { loginAndWait, openAvatarMenu, settledScreenshot, waitForMotionEnd } from "./support/app";
 
 // axe (WCAG 2.1 AA) на 1440, 1280 и 390 и скриншоты экранов рядом с артбордами «0. Каркас» и «v3 · 1. Dashboard»
 // (`E2E_SCREENSHOT_DIR=<каталог>`, ORCHESTRATOR §7 п. 5).
 const WIDTHS = [1440, 1280, 390] as const;
 
 async function expectNoViolations(page: Page, context: string): Promise<void> {
+  await waitForMotionEnd(page);
   const results = await new AxeBuilder({ page })
     .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"])
     .analyze();
@@ -78,6 +79,8 @@ test.describe("axe и скриншоты", () => {
     await settledScreenshot(page, "avatar-menu");
     await expectNoViolations(page, "avatar menu");
     await page.getByRole("menuitem", { name: "Профиль" }).click();
+    // выпадающее меню закрылось до проверки модального окна
+    await expect(page.getByRole("menu")).toBeHidden();
     await expect(page.getByRole("dialog", { name: "Профиль" })).toBeVisible();
     await expectNoViolations(page, "profile modal");
   });
