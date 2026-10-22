@@ -139,6 +139,25 @@ def test_breaking_change_is_red(mutate: Any, check_id: str, tmp_path: Path) -> N
     assert any(f"[{check_id}]" in e for e in errors), errors
 
 
+def test_narrowed_enum_inside_all_of_is_red(tmp_path: Path) -> None:
+    """oasdiff сравнивает allOf по ветвям и снижает ERR до WARN; --flatten-allof возвращает красный."""
+
+    def with_all_of(enum: list[str]) -> dict[str, Any]:
+        spec = copy.deepcopy(BASE)
+        spec["components"] = {
+            "schemas": {
+                "Fields": {"type": "object", "properties": {"channel": {"type": "string", "enum": enum}}},
+                "Body": {"allOf": [{"$ref": "#/components/schemas/Fields"}, {"type": "object"}]},
+            }
+        }
+        body = spec["paths"]["/api/v1/items"]["post"]["requestBody"]["content"]["application/json"]
+        body["schema"] = {"$ref": "#/components/schemas/Body"}
+        return spec
+
+    errors = verdict(with_all_of(["a", "b"]), with_all_of(["a"]), tmp_path)[0]
+    assert errors and "enum-value-removed" in errors[0], errors
+
+
 def test_unchanged_and_additive_are_green(tmp_path: Path) -> None:
     assert verdict(BASE, copy.deepcopy(BASE), tmp_path)[0] == []
     assert verdict(BASE, mutated(_add_optional_and_path), tmp_path)[0] == []

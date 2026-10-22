@@ -119,6 +119,8 @@ def run_oasdiff(base: Path, head: Path) -> list[Change]:
         "180",
         "--deprecation-days-beta",
         "180",
+        # allOf сравнивать слитым: по ветвям oasdiff снижает ERR до WARN (суженный enum в allOf проходил бы зелёным).
+        "--flatten-allof",
     ]
     if exe:
         cmd = [exe, *args, str(base), str(head)]
