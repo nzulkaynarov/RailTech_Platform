@@ -57,11 +57,19 @@ def sign(raw: bytes, secret: str = SECRET) -> str:
     return "sha256=" + hmac.new(secret.encode(), raw, hashlib.sha256).hexdigest()
 
 
+async def deliver(harness: Harness, event_id: str, event_type: str, raw: bytes) -> tuple[bool, str]:
+    """Вебхук, подписанный как ERP: схема v2 под этот `event_id` и свежую метку `X-Timestamp`."""
+    stamp = _stamp()
+    return await harness.service.receive_event(
+        event_id, event_type, sign_v2(SECRET, event_id, stamp, raw), raw, timestamp=stamp
+    )
+
+
 async def receive(harness: Harness, body: dict[str, Any], event_id: str | None = None) -> str:
     """Подписанный вебхук через настоящий приёмник; возвращает id события."""
     event_id = event_id or str(uuid.uuid4())
     raw = json.dumps(body).encode()
-    result = await harness.service.receive_event(event_id, body["event"], sign(raw), raw)
+    result = await deliver(harness, event_id, body["event"], raw)
     assert result == (False, "enqueued")
     return event_id
 
@@ -181,7 +189,7 @@ async def test_an_unknown_event_is_skipped_with_200_and_changes_nothing(harness:
     raw = json.dumps(body).encode()
     event_id = str(uuid.uuid4())
 
-    result = await harness.service.receive_event(event_id, "warehouse.exploded", sign(raw), raw)
+    result = await deliver(harness, event_id, "warehouse.exploded", raw)
 
     assert result == (False, "skipped")
     row = await harness.row(event_id)
@@ -200,7 +208,7 @@ async def test_a_known_event_with_a_broken_body_is_rejected_not_skipped(harness:
     raw = json.dumps(body).encode()
     event_id = str(uuid.uuid4())
 
-    assert await harness.service.receive_event(event_id, body["event"], sign(raw), raw) == (
+    assert await deliver(harness, event_id, body["event"], raw) == (
         False,
         "rejected",
     )
@@ -219,7 +227,7 @@ async def test_skipped_events_do_not_light_up_the_external_services_center(
     body, _, _ = await seeded(harness, "quote.sent")
     body["event"] = "warehouse.exploded"
     raw = json.dumps(body).encode()
-    await harness.service.receive_event(str(uuid.uuid4()), "warehouse.exploded", sign(raw), raw)
+    await deliver(harness, str(uuid.uuid4()), "warehouse.exploded", raw)
     async with harness.sessions() as session:
         stats = await erp_events_stats(session, datetime.now(UTC))
     assert (stats.rejected, stats.failed, stats.stuck, stats.last_error) == (0, 0, 0, None)
@@ -328,12 +336,12 @@ async def test_a_replayed_body_under_a_new_event_id_is_rejected_and_not_applied(
     raw = json.dumps(body).encode()
     first, replay = str(uuid.uuid4()), str(uuid.uuid4())
 
-    assert await harness.service.receive_event(first, body["event"], sign(raw), raw) == (
+    assert await deliver(harness, first, body["event"], raw) == (
         False,
         "enqueued",
     )
     await harness.service.process_event(first)
-    assert await harness.service.receive_event(replay, body["event"], sign(raw), raw) == (
+    assert await deliver(harness, replay, body["event"], raw) == (
         False,
         "rejected",
     )
@@ -349,7 +357,7 @@ async def test_a_replayed_body_under_a_new_event_id_is_rejected_and_not_applied(
     assert len(await notes(harness, lead_id)) == 1
     assert len(harness.bot.sent) == 1
     # тот же id — обычный дубль
-    assert await harness.service.receive_event(first, body["event"], sign(raw), raw) == (
+    assert await deliver(harness, first, body["event"], raw) == (
         True,
         "duplicate",
     )
@@ -373,8 +381,8 @@ async def test_the_body_hash_is_stored_for_every_row(harness: Harness) -> None:
 async def test_client_is_untouched_by_the_replayed_event(harness: Harness) -> None:
     body, client_id, _ = await seeded(harness, "contract.signed")
     raw = json.dumps(body).encode()
-    await harness.service.receive_event(str(uuid.uuid4()), body["event"], sign(raw), raw)
-    await harness.service.receive_event(str(uuid.uuid4()), body["event"], sign(raw), raw)
+    await deliver(harness, str(uuid.uuid4()), body["event"], raw)
+    await deliver(harness, str(uuid.uuid4()), body["event"], raw)
     async with harness.sessions() as session:
         client = await session.get(Client, client_id)
         statuses = (await session.scalars(select(ErpIncomingEvent.status))).all()
@@ -392,16 +400,9 @@ def _stamp(offset_s: float = 0.0) -> str:
     return (datetime.now(UTC) + timedelta(seconds=offset_s)).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
-def _legacy_off(harness: Harness) -> None:
-    harness.service._config = harness.service._config.model_copy(
-        update={"erp_webhook_sign_legacy": False}
-    )
-
-
 async def test_v2_event_is_applied_and_the_forged_id_and_old_stamp_are_refused(
     harness: Harness,
 ) -> None:
-    _legacy_off(harness)
     body, _, lead_id = await seeded(harness, "invoice.issued")
     raw = json.dumps(body).encode()
     event_id, stamp = str(uuid.uuid4()), _stamp()
@@ -419,7 +420,7 @@ async def test_v2_event_is_applied_and_the_forged_id_and_old_stamp_are_refused(
         await harness.service.receive_event(forged, body["event"], signature, raw, timestamp=stamp)
     async with harness.sessions() as session:
         assert await session.get(ErpIncomingEvent, forged) is None
-    # старая схема после выключения настройки — отказ
+    # старая схема (HMAC только тела) — отказ
     with pytest.raises(AuthError):
         await harness.service.receive_event(forged, body["event"], sign(raw), raw, timestamp=stamp)
     # подписанное верно, но с меткой давности — `rejected`, без обработки и без хеша тела
@@ -436,7 +437,6 @@ async def test_v2_event_is_applied_and_the_forged_id_and_old_stamp_are_refused(
 async def test_a_retry_with_a_fresh_stamp_replaces_the_row_rejected_for_its_stamp(
     harness: Harness,
 ) -> None:
-    _legacy_off(harness)
     body, _, lead_id = await seeded(harness, "invoice.issued")
     raw = json.dumps(body).encode()
     event_id, stale, fresh = str(uuid.uuid4()), _stamp(-1200), _stamp()

@@ -1,11 +1,17 @@
 """
-Custom S3/MinIO storage backends for ERP Ecosystem.
+S3 storage backends for ERP (RustFS).
 
 Architecture:
-  - PublicStorage  -> erp-public  (product images, logos, avatars)
-  - PrivateStorage -> erp-private (deals, quotes, imports, company documents)
+  - PublicStorage  -> erp-public  (product images, logos, avatars, category icons)
+  - PrivateStorage -> erp-private (deals, quotes, invoices, acts, portal uploads, company documents)
+  - TempStorage    -> erp-temp    (short-lived staging)
 
-When MINIO_ENDPOINT is not set, falls back to Django's default FileSystemStorage.
+RustFS is NOT reachable from the browser. Hence no storage hands out an S3 address (presigned or not): `.url()` is
+always the path under MEDIA_URL (as the old FileSystemStorage did). Public files are served by Django at `/media/*`
+(`core.file_streaming.serve_public_media`), private ones — only through authenticated views that stream the bytes
+(`core.file_streaming.stream_file_field`).
+
+Without MINIO_ENDPOINT only DEBUG/tests are allowed (settings): then Django's default FileSystemStorage is used.
 All file names are UUID-based to prevent collisions and information leakage.
 """
 
@@ -14,6 +20,7 @@ import uuid
 
 from django.conf import settings
 from django.core.files.storage import default_storage
+from django.utils.encoding import filepath_to_uri
 
 
 class TrackedStorageMixin:
@@ -235,105 +242,50 @@ def temp_upload_path(instance, filename):
 
 
 # ────────────────────────────────────────────
-# Storage backend instances (lazy, configured in settings.py)
+# Storage backend instances (lazy, configured in settings)
 # ────────────────────────────────────────────
 
 
-def get_public_storage():
-    """Return the public storage backend (for product images, logos, etc.)."""
-    if _minio_is_configured():
-        S3Boto3Storage = _tracked_s3_storage()
+class MediaUrlMixin:
+    """`url()` — путь под MEDIA_URL, а не адрес в S3: RustFS снаружи недоступен, подписанные ссылки хранилища
+    наружу не выдаются (в браузер файл попадает только через Django). Так же отвечал FileSystemStorage."""
 
-        # Match URL scheme to environment: https in production, http in dev.
-        # Heuristic: if MINIO_PUBLIC_DOMAIN targets localhost or 127.0.0.1, we
-        # are in dev and TLS is not terminated, so emit http. Otherwise https.
-        public_domain = settings.MINIO_PUBLIC_DOMAIN or ""
-        is_local = any(h in public_domain for h in ("localhost", "127.0.0.1"))
-        url_protocol = "http:" if is_local else "https:"
-        return S3Boto3Storage(
-            endpoint_url=settings.MINIO_ENDPOINT,
-            access_key=settings.MINIO_ACCESS_KEY,
-            secret_key=settings.MINIO_SECRET_KEY,
-            bucket_name=settings.MINIO_PUBLIC_BUCKET,
-            querystring_auth=False,
-            custom_domain=settings.MINIO_PUBLIC_DOMAIN,
-            url_protocol=url_protocol,
-            file_overwrite=False,
-        )
+    def url(self, name, parameters=None, expire=None, http_method=None):
+        return settings.MEDIA_URL + filepath_to_uri(name)
+
+
+def _s3_storage(bucket_name):
+    S3Boto3Storage = _tracked_s3_storage()
+    storage_class = type("MediaUrlS3Storage", (MediaUrlMixin, S3Boto3Storage), {})
+    return storage_class(
+        endpoint_url=settings.MINIO_ENDPOINT,
+        access_key=settings.MINIO_ACCESS_KEY,
+        secret_key=settings.MINIO_SECRET_KEY,
+        bucket_name=bucket_name,
+        querystring_auth=False,
+        file_overwrite=False,
+    )
+
+
+def get_public_storage():
+    """Public storage backend (product images, logos, avatars): bucket erp-public, served by Django at /media/*."""
+    if _minio_is_configured():
+        return _s3_storage(settings.MINIO_PUBLIC_BUCKET)
     return default_storage
 
 
 def get_private_storage():
-    """
-    Return the private storage backend (for deals, imports, company documents, etc.).
-
-    Uses MINIO_EXTERNAL_ENDPOINT for presigned URL generation so URLs
-    are accessible from the browser (e.g. localhost:9000), while file
-    operations use the Docker-internal MINIO_ENDPOINT (e.g. minio:9000).
-    """
+    """Private storage backend (deals, imports, company documents, portal uploads): bucket erp-private."""
     if _minio_is_configured():
-        S3Boto3Storage = _tracked_s3_storage()
-
-        external = getattr(settings, "MINIO_EXTERNAL_ENDPOINT", "") or settings.MINIO_ENDPOINT
-        internal = settings.MINIO_ENDPOINT
-
-        class PrivateS3Storage(S3Boto3Storage):
-            """Rewrites presigned URLs to use external endpoint."""
-
-            def url(self, name, parameters=None, expire=None, http_method=None):
-                raw_url = super().url(
-                    name,
-                    parameters=parameters,
-                    expire=expire,
-                    http_method=http_method,
-                )
-                if internal != external and internal in raw_url:
-                    return raw_url.replace(internal, external, 1)
-                return raw_url
-
-        return PrivateS3Storage(
-            endpoint_url=internal,
-            access_key=settings.MINIO_ACCESS_KEY,
-            secret_key=settings.MINIO_SECRET_KEY,
-            bucket_name=settings.MINIO_PRIVATE_BUCKET,
-            querystring_auth=True,
-            querystring_expire=900,  # 15 minutes
-            file_overwrite=False,
-        )
+        return _s3_storage(settings.MINIO_PRIVATE_BUCKET)
     return default_storage
 
 
 def get_temp_storage():
     """
-    Return the temp storage backend — short-lived uploads (Excel staging, image previews)
+    Temp storage backend — short-lived uploads (Excel staging, image previews, wizard files)
     that are later promoted to public/private or purged by lifecycle rules.
     """
     if _minio_is_configured():
-        S3Boto3Storage = _tracked_s3_storage()
-
-        external = getattr(settings, "MINIO_EXTERNAL_ENDPOINT", "") or settings.MINIO_ENDPOINT
-        internal = settings.MINIO_ENDPOINT
-        temp_bucket = getattr(settings, "MINIO_TEMP_BUCKET", "") or "erp-temp"
-
-        class TempS3Storage(S3Boto3Storage):
-            def url(self, name, parameters=None, expire=None, http_method=None):
-                raw_url = super().url(
-                    name,
-                    parameters=parameters,
-                    expire=expire,
-                    http_method=http_method,
-                )
-                if internal != external and internal in raw_url:
-                    return raw_url.replace(internal, external, 1)
-                return raw_url
-
-        return TempS3Storage(
-            endpoint_url=internal,
-            access_key=settings.MINIO_ACCESS_KEY,
-            secret_key=settings.MINIO_SECRET_KEY,
-            bucket_name=temp_bucket,
-            querystring_auth=True,
-            querystring_expire=3600,  # 1 hour
-            file_overwrite=False,
-        )
+        return _s3_storage(getattr(settings, "MINIO_TEMP_BUCKET", "") or "erp-temp")
     return default_storage
