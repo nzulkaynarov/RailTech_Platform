@@ -57,4 +57,38 @@ for img in rt-platform-bff rt-platform-web; do
   grep -q "name: Образ $img" "$root/.github/workflows/deploy.yml" || fail "deploy.yml: нет сборки $img"
 done
 grep -q 'name: Образ rt-litellm' "$root/.github/workflows/deploy.yml" || fail "deploy.yml: нет сборки rt-litellm"
+
+# 4. S0-7: одна таблица правил на два места (деплой на сервере и CI под qemu64), и она согласована с тем, что собирает deploy.yml,
+#    с матрицей ci.yml и с образами VPS 2. Docker не нужен: list/params только читают таблицы.
+qcheck="$root/scripts/qemu_cpu_check.sh"
+rules_names="$(bash -c 'source "$1"; cpu_baseline_names' _ "$root/infra/deploy/cpu-baseline-rules.sh")"
+for n in $rules_names; do
+  bash -c 'source "$1"; cpu_baseline_rules "$2" true' _ "$root/infra/deploy/cpu-baseline-rules.sh" "$n" || fail "cpu-baseline-rules.sh: для $n в списке имён нет правила"
+done
+built="$("$qcheck" list built)"
+deploy_images="$(awk '/- name: Образ rt-/{print $NF}' "$root/.github/workflows/deploy.yml")"
+[[ -n "$deploy_images" ]] || fail "в deploy.yml не найдены сборки образов"
+for img in $deploy_images; do
+  grep -qx "$img" <<<"$built" || fail "$img собирается в deploy.yml, но scripts/qemu_cpu_check.sh не умеет его собирать и проверять (таблица build_spec)"
+  # контекст сборки в deploy.yml и в таблице проверки совпадают
+  ctx_deploy="$(awk -v n="name: Образ $img" 'index($0,n){f=1;next} f&&/- name:/{exit} f&&/^ *context:/{print $2; exit}' "$root/.github/workflows/deploy.yml")"
+  ctx_check="$("$qcheck" params "$img" | sed -n 's/^context=//p')"
+  [[ "$ctx_deploy" == "$ctx_check" ]] || fail "$img: контекст сборки в deploy.yml ($ctx_deploy) и в qemu_cpu_check.sh ($ctx_check) расходятся"
+  grep -q "^ *- $img\$" "$root/.github/workflows/ci.yml" || fail "$img нет в матрице задания cpu-image в ci.yml"
+done
+for img in $built; do
+  grep -qx "$img" <<<"$deploy_images" || [[ "$img" == rt-db-postgres || "$img" == rt-db-backup ]] \
+    || fail "$img есть в таблице проверки, но не в deploy.yml и не образ VPS 2"
+  grep -q "^ *- $img\$" "$root/.github/workflows/ci.yml" || fail "$img нет в матрице задания cpu-image в ci.yml"
+done
+for img in rt-db-postgres rt-db-backup; do
+  grep -q "image: $img:local" "$root/infra/compose/db.yml" || fail "db.yml: образ $img:local не найден — таблица проверки устарела"
+done
+for n in $("$qcheck" list pulled); do
+  [[ -n "$("$qcheck" ref "$n")" ]] || fail "сторонний образ $n не найден в infra/compose/base.yml"
+done
+# в матрице ci.yml нет лишних образов
+while read -r img; do
+  grep -qx "$img" <<<"$built" || fail "ci.yml: в матрице cpu-image лишний образ $img"
+done < <(sed -n '/^  cpu-image:/,/^    steps:/p' "$root/.github/workflows/ci.yml" | sed -n 's/^ *- \(rt-[a-z-]*\)$/\1/p')
 echo "cpu-baseline-test: ok"

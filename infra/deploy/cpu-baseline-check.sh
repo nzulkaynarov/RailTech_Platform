@@ -5,28 +5,29 @@
 # образе короткую команду, которая исполняет нативный код (import numpy, litellm.proxy, версия бинаря), — ловит это ДО миграций.
 # Вызывается из deploy.sh после pull и до pg_dump-гейта; вручную: infra/deploy/cpu-baseline-check.sh <каталог-релиза> <тег>.
 # Образы берутся из compose-конфигурации релиза (с учётом RT_PROFILES); образ без правила не проверяется, а печатается в списке.
+# Таблица правил — infra/deploy/cpu-baseline-rules.sh (общая с CI-проверкой под эмуляцией qemu64: scripts/qemu_cpu_check.sh).
 set -euo pipefail
 # shellcheck source=infra/deploy/lib.sh
 source "$(dirname "${BASH_SOURCE[0]}")/lib.sh"
+# shellcheck source=infra/deploy/cpu-baseline-rules.sh
+source "$(dirname "${BASH_SOURCE[0]}")/cpu-baseline-rules.sh"
 
 rel="${1:?usage: cpu-baseline-check.sh <каталог-релиза> <тег-образов>}"
 export RT_IMAGE_TAG="${2:?usage: cpu-baseline-check.sh <каталог-релиза> <тег-образов>}"
 
-# Нативные колёса, если они есть в образе: отсутствие модуля — не ошибка, падение при import — ошибка.
-py_native='import importlib.util as u; [__import__(m) for m in ("numpy","pandas","scipy") if u.find_spec(m)]'
-
 failed=()
 skipped=()
 
-# probe <образ> <entrypoint> <аргументы...>
+# probe <программа> <аргументы...> — обработчик правил для образа cur_image
+cur_image=""
 probe() {
-  local image="$1" entry="$2" out
-  shift 2
-  if out="$(docker run --rm --network none -e LITELLM_LOCAL_MODEL_COST_MAP=True --entrypoint "$entry" "$image" "$@" 2>&1)"; then
-    log "cpu-baseline: ok    $image"
+  local entry="$1" out
+  shift
+  if out="$(docker run --rm --network none -e LITELLM_LOCAL_MODEL_COST_MAP=True --entrypoint "$entry" "$cur_image" "$@" 2>&1)"; then
+    log "cpu-baseline: ok    $cur_image ($entry)"
   else
-    failed+=("$image")
-    printf '✘ cpu-baseline: %s\n%s\n' "$image" "$(printf '%s' "$out" | tail -n 4 | sed 's/^/    /')" >&2
+    failed+=("$cur_image")
+    printf '✘ cpu-baseline: %s\n%s\n' "$cur_image" "$(printf '%s' "$out" | tail -n 4 | sed 's/^/    /')" >&2
   fi
 }
 
@@ -36,17 +37,8 @@ images="$(compose "$rel" config --images)" || die "cpu-baseline: не удало
 while read -r image; do
   [[ -n "$image" ]] || continue
   name="${image##*/}"; name="${name%%:*}"
-  case "$name" in
-    rt-crm-backend)  probe "$image" python -c "$py_native" ;;
-    rt-platform-bff) probe "$image" python -c "$py_native" ;;
-    rt-erp-backend)  probe "$image" python -c "$py_native" ;;
-    rt-litellm)      probe "$image" python -c "import numpy; import litellm.proxy.proxy_server" ;;
-    rt-crm-frontend|rt-platform-web|caddy) probe "$image" caddy version ;;
-    rt-erp-frontend|rt-cabinet) probe "$image" nginx -v ;;
-    redis)           probe "$image" redis-server --version ;;
-    rustfs)          probe "$image" rustfs --version ;;
-    *)               skipped+=("$image") ;;
-  esac
+  cur_image="$image"
+  cpu_baseline_rules "$name" probe || skipped+=("$image")
 done < <(printf '%s\n' "$images" | sort -u)
 
 [[ ${#skipped[@]} -eq 0 ]] || log "cpu-baseline: без правила (не проверены): ${skipped[*]}"
