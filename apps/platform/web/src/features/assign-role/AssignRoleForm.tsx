@@ -103,7 +103,7 @@ export function AssignRoleForm({ employee, selfId, otherActiveAdmins }: AssignRo
       noValidate
     >
       <div>
-        <label htmlFor={positionId} style={{ display: "block", fontWeight: 600, marginBottom: 4 }}>
+        <label htmlFor={positionId} style={{ display: "block", marginBottom: 4 }}>
           {t("admin.org.form.positionLabel")}
         </label>
         <Input

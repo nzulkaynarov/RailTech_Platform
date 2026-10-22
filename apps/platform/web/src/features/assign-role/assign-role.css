@@ -5,9 +5,12 @@
   border: 0;
   min-width: 0;
 }
-.pf-roles-legend {
+/* Двойной класс: внутри `.ant-form` у `legend` свои серые стили и линия снизу */
+.pf-roles .pf-roles-legend {
+  width: auto;
   padding: 0;
   margin-bottom: 4px;
+  border: 0;
   font-size: 14px;
   font-weight: 600;
   line-height: 22px;

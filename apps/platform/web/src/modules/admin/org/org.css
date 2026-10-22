@@ -72,11 +72,12 @@
   background: #e6f4ff;
 }
 
-/* Длинные адреса не вылезают за колонку: при фиксированной раскладке переносятся по символам. */
-.pf-org-person > div {
+/* Длинные адреса не вылезают за колонку при фиксированной раскладке: переносятся, только если не помещаются. */
+.pf-org-person > div,
+.pf-org-email {
   min-width: 0;
-  overflow-wrap: anywhere;
+  overflow-wrap: break-word;
 }
 .pf-org-row-body {
-  overflow-wrap: anywhere;
+  overflow-wrap: break-word;
 }

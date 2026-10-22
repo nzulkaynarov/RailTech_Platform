@@ -85,16 +85,13 @@ export function EmployeeList({ items, selectedId, hrefOf, compact }: EmployeeLis
           key: "employee",
           width: "26%",
           render: (_, employee) => (
-            <div className="pf-org-person">
-              <Initials value={employee.initials} />
-              <div>
-                <NameLink
-                  employee={employee}
-                  selected={employee.id === selectedId}
-                  href={hrefOf(employee.id)}
-                />
-                <div className="pf-hint">{employee.email}</div>
-              </div>
+            <div>
+              <NameLink
+                employee={employee}
+                selected={employee.id === selectedId}
+                href={hrefOf(employee.id)}
+              />
+              <div className="pf-hint pf-org-email">{employee.email}</div>
             </div>
           ),
         },
