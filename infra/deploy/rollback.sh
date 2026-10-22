@@ -22,7 +22,8 @@ compose "$rel" config -q
 # Платформа (INF-P0-5) есть не в каждом релизе: откат на тег до неё не должен просить у compose несуществующие сервисы.
 pull_services=(crm-api crm-web erp-backend erp-web cabinet-web)
 smoke_domains=("$(env_get CRM_DOMAIN)" "$(env_get ERP_DOMAIN)" "$(env_get CABINET_DOMAIN)")
-if compose "$rel" config --services | grep -qx platform-bff; then
+services="$(compose "$rel" config --services)"
+if grep -qx platform-bff <<<"$services"; then
   pull_services+=(platform-bff platform-web)
   smoke_domains+=("$(env_get PLATFORM_DOMAIN)")
 fi
