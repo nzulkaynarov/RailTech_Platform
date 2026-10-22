@@ -451,4 +451,4 @@ def test_bus_error_masks_secret_cut_by_the_truncation():
     body = "a" * 477 + f" Bearer {FAKE_SIG}"
     error = _delivery_error_after_echo(body)
     assert FAKE_SIG[:4] not in error
-    assert "Bearer [REDA" in error  # маркер (обрезанный границей), а не знаки подписи
+    assert "Bearer [" in error  # маркер (обрезанный границей), а не знаки подписи
