@@ -18,7 +18,7 @@ help: ## Список целей
 # --- Проверки --------------------------------------------------------------------
 
 .PHONY: check
-check: check-crm check-erp check-cabinet check-platform ## Проверки всех приложений (lint + typecheck + unit)
+check: check-crm check-erp check-cabinet check-platform check-rt-bus ## Проверки всех приложений и rt-bus (lint + typecheck + unit)
 
 .PHONY: check-crm
 check-crm: ## CRM: ruff, mypy, eslint, tsc, pytest, vitest (apps/crm/Makefile)
@@ -35,6 +35,10 @@ check-cabinet: ## Cabinet: eslint, tsc, i18n ru/uz/en, токены, типы п
 .PHONY: check-platform
 check-platform: ## Платформа: ruff, mypy, pytest (bff); eslint, tsc, vitest, свежесть клиента orval и токенов (web) (apps/platform/Makefile)
 	$(MAKE) -C $(PLATFORM) check
+
+.PHONY: check-rt-bus
+check-rt-bus: ## Библиотека шины: ruff, mypy, миграция Django, pytest на PostgreSQL (packages/rt-bus/Makefile; без RT_BUS_TEST_DATABASE_URL — одноразовый postgres:17 в Docker)
+	$(MAKE) -C packages/rt-bus check
 
 .PHONY: tokens
 tokens: ## Токены дизайна: tokens.json → dist/, копии в apps/crm (tokens.generated.ts), apps/cabinet (tokens.generated.css), apps/platform (tokens.generated.ts)
@@ -125,6 +129,8 @@ deploy-check: ## Проверка конфигурации прода без з�
 	@bash $(INFRA)/deploy/tests/cpu-baseline-test.sh
 	@bash $(INFRA)/deploy/tests/platform-prod-test.sh
 	@bash $(INFRA)/deploy/tests/caddy-edge-test.sh
+	@bash $(INFRA)/deploy/tests/wal-archive-test.sh
+	@bash $(INFRA)/deploy/tests/walg-schedule-test.sh
 	@docker run --rm -v "$(CURDIR):/repo" -w /repo rhysd/actionlint:latest .github/workflows/deploy.yml && echo "actionlint: ok"
 
 # --- Локальный CI (гейт мержа, пока GitHub Actions недоступен — DECISIONS 2026-10-13) ---
