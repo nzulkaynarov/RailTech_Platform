@@ -226,7 +226,7 @@ Makefile · .env.example · docs/ (ADR и runbooks ERP в apps/erp/docs/runbooks
 |---|---|---|---|---|
 | internal | `/api/v1/` | ERP SPA | JWT сотрудника (access 30 мин, refresh в HttpOnly-cookie, как в B2B) | M1-ERP-01 (копия B2B); контракт — генерируемый срез схемы, FIX-40 |
 | portal | `/api/portal/v1/` | Cabinet | сессия портала: Telegram `initData` / magic-link | M2-ERP-01 |
-| integration | `/api/integration/v1/` | CRM | `Authorization: Bearer <SERVICE_TOKEN>` (по токену на направление, два активных для ротации) | M3-ERP-01 |
+| integration | `/api/integration/v1/` | CRM | `Authorization: Bearer <SERVICE_TOKEN>` (по токену на направление, два активных для ротации); токены выдаёт сопряжение по одноразовому коду (`POST /pairing/accept`, ADR-0009) и хранятся шифрованно в БД, `.env` — запасной путь | M3-ERP-01, M3-ERP-05 |
 | mcp | `/mcp/erp` (отдельный процесс `erp-mcp:8104`, не Daphne) | агент CRM | `X-Agent-Context` (HMAC, строгие claims `iat`/`exp`/одноразовый `jti`, 60 с; `prospect` — строго без компании; лимит по компании) | M3-ERP-03, FIX-12, FIX-36 |
 | события → CRM | `POST {CRM}/api/v1/integrations/erp/events` | ERP (Celery) | `X-Signature` HMAC v2 по `{X-Event-Id}.{X-Timestamp}.{body}` (метка заново при каждой попытке, FIX-61), `X-Event-Id`, ретраи 1 мин … 24 ч | M3-ERP-02 |
 

@@ -130,6 +130,17 @@ async def _stored_base_url(settings: SettingsService | None) -> str:
         return ""
 
 
+async def _previous_secret_until(settings: SettingsService | None) -> datetime | None:
+    """Срок приёма предыдущего секрета после «Обновить ключи» (M3-CRM-10); пусто — срока нет."""
+    if settings is None:
+        return None
+    try:
+        return (await settings.get()).integrations.erp_previous_secret_until
+    except Exception:
+        logger.warning("erp_previous_secret_until_db_unavailable", exc_info=True)
+        return None
+
+
 def _pick(db_value: str, env_value: str) -> tuple[str, Source]:
     if db_value:
         return db_value, "db"
@@ -158,6 +169,11 @@ async def resolve_erp(
     webhook, webhook_source = _pick(stored_current, env_secrets[0] if env_secrets else "")
     previous = ""
     previous_source: Source = "none"
+    until = await _previous_secret_until(settings)
+    if stored_previous and until is not None and until <= datetime.now(UTC):
+        # Переход после «Обновить ключи» закончился: предыдущий секрет не принимается уже при приёме
+        # события, а не когда его удалит проверка связи.
+        stored_previous = ""
     if stored_previous:
         previous, previous_source = stored_previous, "db"
     elif not stored_current and len(env_secrets) > 1:

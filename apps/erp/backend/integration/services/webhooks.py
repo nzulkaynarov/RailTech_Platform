@@ -27,7 +27,7 @@ from django.utils import timezone
 from portal import projections
 
 from ..models import CrmClientMapping, CrmContactMapping, IntegrationWebhookEvent, WebhookEventStatus
-from . import event_contract, stages
+from . import credentials, event_contract, stages
 
 logger = logging.getLogger(__name__)
 
@@ -58,18 +58,14 @@ VALID_EVENT_TYPES = {
 
 
 def webhook_signing_secret() -> str:
-    """Секрет, которым ERP подписывает вебхуки сейчас (FIX-35, ротация без простоя).
+    """Секрет, которым ERP подписывает вебхуки сейчас (FIX-35, M3-ERP-05).
 
-    `ERP_WEBHOOK_SECRET` — один секрет либо список через запятую (как сервисные токены): подписывает ПЕРВЫЙ,
-    остальные остаются в списке, чтобы обе стороны хранили одну и ту же строку на время ротации. CRM принимает
-    текущий и предыдущий секрет (docs/runbooks/webhooks.md, «Ротация секрета»). Пусто — секрета нет.
+    Источник — `credentials.webhook_secret()`: секрет, выданный сопряжением (БД, шифрованно), иначе `ERP_WEBHOOK_SECRET`
+    из окружения — один секрет либо список через запятую: подписывает ПЕРВЫЙ, остальные остаются в списке, чтобы обе
+    стороны хранили одну и ту же строку на время ротации. CRM принимает текущий и предыдущий секрет
+    (docs/runbooks/webhooks.md, «Ротация секрета»). Пусто — секрета нет.
     """
-    raw = getattr(settings, "ERP_WEBHOOK_SECRET", "") or ""
-    if isinstance(raw, (list, tuple)):
-        values = [str(item).strip() for item in raw]
-    else:
-        values = [item.strip() for item in str(raw).split(",")]
-    return next((value for value in values if value), "")
+    return credentials.webhook_secret()
 
 
 def sign_payload(secret: str, body_bytes: bytes) -> str:

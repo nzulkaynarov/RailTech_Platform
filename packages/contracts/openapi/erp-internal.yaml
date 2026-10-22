@@ -8654,6 +8654,39 @@ paths:
           description: ''
         '403':
           description: ROLE_NOT_PERMITTED
+  /api/v1/integration/crm-pairing/:
+    get:
+      operationId: integration_crm_pairing_retrieve
+      description: Только чтение. Значения ключей не возвращаются — состояние, источник и последние 4 символа.
+      summary: Состояние сопряжения с CRM
+      tags:
+      - System
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CrmPairingStatus'
+          description: ''
+  /api/v1/integration/crm-pairing/code/:
+    post:
+      operationId: integration_crm_pairing_code_create
+      description: 'Администратор (superuser). Код одноразовый, действует `ttl_seconds`, виден только в этом ответе; в базе
+        хранится хеш. Админ вводит его в CRM: «Подключения → ERP → Подключить ERP».'
+      summary: Выпустить код сопряжения с CRM
+      tags:
+      - System
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PairingCodeIssued'
+          description: ''
   /api/v1/master-data/countries/:
     get:
       operationId: master_data_countries_list
@@ -12445,6 +12478,57 @@ components:
             $ref: '#/components/schemas/ManualInvoiceLineRequest'
       required:
       - deal
+    CrmPairingStatus:
+      type: object
+      properties:
+        state:
+          allOf:
+          - $ref: '#/components/schemas/StateEnum'
+          description: |-
+            paired — сопряжено по коду; env — ключи из окружения (запасной путь); none — ключей нет.
+
+            * `paired` - paired
+            * `env` - env
+            * `none` - none
+        paired_at:
+          type: string
+          format: date-time
+          nullable: true
+        rotated_at:
+          type: string
+          format: date-time
+          nullable: true
+        token_source:
+          $ref: '#/components/schemas/TokenSourceEnum'
+        crm_to_erp_last4:
+          type: string
+        previous_token_valid_until:
+          type: string
+          format: date-time
+          nullable: true
+          description: 'Пока ротация не завершена: до какого срока ещё действует прежний токен CRM→ERP.'
+        erp_to_crm_configured:
+          type: boolean
+        webhook_secret_source:
+          $ref: '#/components/schemas/WebhookSecretSourceEnum'
+        webhook_secret_last4:
+          type: string
+        code_ttl_seconds:
+          type: integer
+        crm_frontend_url:
+          type: string
+      required:
+      - code_ttl_seconds
+      - crm_frontend_url
+      - crm_to_erp_last4
+      - erp_to_crm_configured
+      - paired_at
+      - previous_token_valid_until
+      - rotated_at
+      - state
+      - token_source
+      - webhook_secret_last4
+      - webhook_secret_source
     Currency:
       type: object
       properties:
@@ -14809,6 +14893,21 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/User'
+    PairingCodeIssued:
+      type: object
+      properties:
+        code:
+          type: string
+          description: Одноразовый код сопряжения; показывается один раз.
+        expires_at:
+          type: string
+          format: date-time
+        ttl_seconds:
+          type: integer
+      required:
+      - code
+      - expires_at
+      - ttl_seconds
     ParseRequestTextRequestRequest:
       type: object
       properties:
@@ -18281,6 +18380,16 @@ components:
       required:
       - can_setup
       - setup_required
+    StateEnum:
+      enum:
+      - paired
+      - env
+      - none
+      type: string
+      description: |-
+        * `paired` - paired
+        * `env` - env
+        * `none` - none
     StockStatus:
       type: object
       properties:
@@ -18740,6 +18849,16 @@ components:
           minLength: 1
       required:
       - refresh
+    TokenSourceEnum:
+      enum:
+      - db
+      - env
+      - none
+      type: string
+      description: |-
+        * `db` - db
+        * `env` - env
+        * `none` - none
     TypeEnum:
       enum:
       - quote
@@ -18974,6 +19093,16 @@ components:
       required:
       - email
       - username
+    WebhookSecretSourceEnum:
+      enum:
+      - db
+      - env
+      - none
+      type: string
+      description: |-
+        * `db` - db
+        * `env` - env
+        * `none` - none
     WorkspaceRoleLookup:
       type: object
       description: Response shape for the WorkspaceRole lookup feed ({code, name, applicable_to_types}).

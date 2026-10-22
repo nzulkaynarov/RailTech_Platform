@@ -34,7 +34,8 @@ export type SettingsSectionKey =
   | 'doc-templates'
   | 'email-templates'
   | 'team'
-  | 'platform';
+  | 'platform'
+  | 'crm-integration';
 
 /** Группа сайдбара — порядок: account → company → documents → sales → team → platform.
  * Группа «documents» (решение владельца 27-07): всё «как выглядят мои документы» — бланк/бренд,
@@ -158,6 +159,11 @@ const SECTION_RULES: SectionRule[] = [
   // ── platform ── SystemSettings (НДС, курс, имя платформы, 2FA) — только администратор
   // (`is_superuser`, M1-ERP-05); сервер (PATCH system-settings) — тоже только он.
   { def: { key: 'platform', labelKey: 'settings.tabs.platform', group: 'platform' }, visible: (input) => input.isSuperuser },
+  // «Интеграция с CRM» (M3-ERP-05): статус сопряжения и выпуск одноразового кода — администратор (сервер — тоже).
+  {
+    def: { key: 'crm-integration', labelKey: 'settings.tabs.crmIntegration', group: 'platform' },
+    visible: (input) => input.isSuperuser,
+  },
 ];
 
 /** Видимые секции для пользователя — скрытие, не дизейбл (ADR-0005). */

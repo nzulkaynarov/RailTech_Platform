@@ -21,6 +21,7 @@ from app.domain.errors import ConflictError, Reason, UpstreamUnavailableError, V
 from app.domain.system_status import ErpFacts
 from app.integrations.erp import ErpHealth, HttpxErpProbe
 from app.schemas.integrations import ErpConnectorIn, ErpStatusOut
+from app.schemas.settings import IntegrationsSettings
 from app.security.passwords import hash_password
 from app.security.principal import Principal
 from app.security.secrets_store import (
@@ -67,11 +68,13 @@ class FakeStore(SecretsStore):
         cipher = SecretCipher(secrets.token_hex(32)) if enabled else None
         super().__init__(fake_sessions(), cipher)
         self.saved: dict[str, str] = dict(stored)
+        self.put_sessions: list[int] = []
 
     async def get(self, key: str) -> str | None:
         return self.saved.get(key) if self.enabled else None
 
     async def put(self, session: Any, key: str, value: str, user_id: int | None) -> None:
+        self.put_sessions.append(id(session))
         self.saved[key] = value
 
     async def delete(self, session: Any, key: str) -> None:
@@ -84,16 +87,32 @@ class FakeStore(SecretsStore):
 
 class FakeSettings:
     def __init__(self, base_url: str = "") -> None:
-        self.base_url = base_url
+        self.value = IntegrationsSettings(erp_base_url=base_url)
         self.updates: list[tuple[str, dict[str, Any]]] = []
+        self.session_ids: list[int] = []
+        self.invalidations = 0
+
+    @property
+    def base_url(self) -> str:
+        return self.value.erp_base_url
 
     async def get(self) -> Any:
-        return SimpleNamespace(integrations=SimpleNamespace(erp_base_url=self.base_url))
+        return SimpleNamespace(integrations=self.value)
 
     async def update(self, key: str, value: dict[str, Any], user_id: int | None) -> Any:
         self.updates.append((key, value))
-        self.base_url = value["erp_base_url"]
+        self.value = IntegrationsSettings.model_validate(value)
         return value
+
+    async def update_in(
+        self, session: Any, key: str, value: dict[str, Any], user_id: int | None
+    ) -> Any:
+        """Запись в транзакции вызывающего; сессия запоминается для сверки с сессией секретов."""
+        self.session_ids.append(id(session))
+        return await self.update(key, value, user_id)
+
+    def invalidate(self) -> None:
+        self.invalidations += 1
 
 
 class Clock:
@@ -310,7 +329,12 @@ async def test_save_audits_without_values_and_switches_mode(
             password=PASSWORD,
         )
     assert store.saved == {ERP_SERVICE_TOKEN: TOKEN, ERP_WEBHOOK_SECRET: HOOK}
-    assert settings.updates == [("integrations", {"erp_base_url": BASE})]
+    assert [(key, value["erp_base_url"]) for key, value in settings.updates] == [
+        ("integrations", BASE)
+    ]
+    assert settings.value.smtp == IntegrationsSettings().smtp, (
+        "сохранение ERP не затирает остальные ключи «Подключений»"
+    )
     assert status.configured
     assert status.mode == BackofficeMode.ERP
     assert (status.base_url_source, status.token_source) == ("db", "db")

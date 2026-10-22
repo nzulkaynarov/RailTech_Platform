@@ -295,6 +295,8 @@ WRITE_PATHS = {
     ("PUT", "/contacts/{crm_contact_id}"),
     ("POST", "/users/provision"),
     ("DELETE", "/users/{crm_user_id}/sessions"),
+    ("POST", "/pairing/accept"),
+    ("POST", "/pairing/rotate"),
     ("PUT", "/externals/{code}/switch"),
 }
 
@@ -336,6 +338,18 @@ def provision_body(crm_user_id, email):
     }
 
 
+PAIRING_SECRETS = {
+    "crm_to_erp_token": "guard-crm-to-erp-" + "a" * 32,
+    "erp_to_crm_token": "guard-erp-to-crm-" + "b" * 32,
+    "webhook_secret": "guard-webhook-secret-" + "c" * 32,
+}
+ROTATED_SECRETS = {
+    "crm_to_erp_token": "guard-rotated-crm-to-erp-" + "d" * 32,
+    "erp_to_crm_token": "guard-rotated-erp-to-crm-" + "e" * 32,
+    "webhook_secret": "guard-rotated-webhook-" + "f" * 32,
+}
+
+
 #: Вызов на каждую операцию контракта для проверки лимита: первый запрос берёт единственное разрешение `1/minute`
 #: (ответ любой: 200/404/422 — не важно), второй обязан получить 429. Ключ — (МЕТОД, путь контракта).
 THROTTLE_CASES = {
@@ -351,6 +365,9 @@ THROTTLE_CASES = {
     ("PUT", "/contacts/{crm_contact_id}"): ("/contacts/999999", handoff_body(8301, "830100001")["contacts"][0]),
     ("POST", "/users/provision"): ("/users/provision", provision_body(8901, "guard-8901@railtech.uz")),
     ("DELETE", "/users/{crm_user_id}/sessions"): ("/users/999999/sessions", None),
+    # Сопряжение (M3-ERP-05): `accept` лимитирует свой scope `pairing` (по адресу), `rotate` — общий `integration`.
+    ("POST", "/pairing/accept"): ("/pairing/accept", PAIRING_SECRETS),
+    ("POST", "/pairing/rotate"): ("/pairing/rotate", ROTATED_SECRETS),
     ("PUT", "/externals/{code}/switch"): ("/externals/mail/switch", {"enabled": True}),
 }
 
@@ -361,6 +378,7 @@ def hit_twice_with_one_per_minute(client, method, url, body, monkeypatch):
 
     cache.clear()
     monkeypatch.setitem(SimpleRateThrottle.THROTTLE_RATES, "integration", "1/minute")
+    monkeypatch.setitem(SimpleRateThrottle.THROTTLE_RATES, "pairing", "1/minute")
     responses = []
     for _ in range(2):
         kwargs = {"format": "json"} if body is not None else {}
@@ -455,7 +473,67 @@ def exercise_all(client, world):
     hit("PUT", switch, "/externals/sentry/switch", 409, body={"enabled": False})
     hit("PUT", switch, "/externals/mail/switch", 422, body={"reason": "без enabled"})
     hit("PUT", switch, "/externals/mail/switch", 401, api=anonymous, body={"enabled": False})
+
+    exercise_pairing(hit, anonymous, out)
     return out
+
+
+def exercise_pairing(hit, anonymous, out):
+    """Сопряжение (M3-ERP-05): `POST /pairing/accept` и `/pairing/rotate` на каждый обещанный код — в самом конце.
+
+    После приёма токены лежат в БД и токен из `.env` перестаёт действовать, поэтому блок последний и в конце
+    возвращает ERP к `.env` (иначе следующие вызовы фикстуры получили бы 401).
+    """
+    from integration.models import ServiceCredential
+    from integration.services import pairing
+
+    def with_token(token):
+        api = APIClient()
+        api.credentials(HTTP_AUTHORIZATION=f"Bearer {token}")
+        return api
+
+    accept, rotate = "/pairing/accept", "/pairing/rotate"
+    rates = SimpleRateThrottle.THROTTLE_RATES
+    saved_rates = dict(rates)
+    try:
+        # Первое сопряжение без кода (`X-Pairing-Proof`): 401 (подделка) → 200; после него — 409 (окно закрыто).
+        import time as _time
+
+        from django.conf import settings as django_settings
+        from integration.services import bootstrap as bootstrap_proof
+
+        def bootstrap_call(expected, *, secret=None):
+            body = json.dumps(PAIRING_SECRETS, separators=(",", ":")).encode()
+            header = bootstrap_proof.sign(
+                secret or django_settings.PLATFORM_SSO_SECRET[0], body, int(_time.time()), uuid.uuid4().hex
+            )
+            response = APIClient().post(
+                PREFIX + accept, data=body, content_type="application/json", HTTP_X_PAIRING_PROOF=header
+            )
+            assert response.status_code == expected, f"bootstrap: {response.status_code} {response.content[:200]!r}"
+            out.append(("POST", accept, response.status_code, json.loads(response.content)))
+
+        bootstrap_call(401, secret="not-the-shared-secret")
+        bootstrap_call(200)
+        bootstrap_call(409)
+
+        code = pairing.issue_code().code
+        hit("POST", accept, accept, 422, api=with_token(code), body={"crm_to_erp_token": "short"}, key=False)
+        hit("POST", accept, accept, 200, api=with_token(code), body=PAIRING_SECRETS, key=False)
+        hit("POST", accept, accept, 401, api=with_token(code), body=PAIRING_SECRETS, key=False)
+        rates["pairing"] = "1/hour"
+        hit("POST", accept, accept, 429, api=with_token(code), body=PAIRING_SECRETS, key=False)
+        rates["pairing"] = saved_rates["pairing"]
+
+        current = with_token(PAIRING_SECRETS["crm_to_erp_token"])
+        hit("POST", rotate, rotate, 401, api=anonymous, body=ROTATED_SECRETS, key=False)
+        hit("POST", rotate, rotate, 422, api=current, body={"webhook_secret": "short"}, key=False)
+        hit("POST", rotate, rotate, 200, api=current, body=ROTATED_SECRETS, key=False)
+        rates["integration"] = "1/minute"
+        hit("POST", rotate, rotate, 429, api=current, body=ROTATED_SECRETS, key=False)  # прежний токен ещё действует
+    finally:
+        rates.update(saved_rates)
+        ServiceCredential.objects.all().delete()
 
 
 @pytest.fixture
@@ -479,7 +557,7 @@ def exercised(client, world, catalog_product, monkeypatch):
 
 def test_every_operation_has_a_throttle_case():
     assert set(THROTTLE_CASES) == set(contract_operations()), "каждой операции контракта нужен вызов на 429"
-    assert len(THROTTLE_CASES) == 13
+    assert len(THROTTLE_CASES) == 15
 
 
 @pytest.mark.parametrize(("method", "path"), sorted(THROTTLE_CASES), ids=lambda value: str(value))
@@ -534,10 +612,22 @@ def test_error_codes_are_the_documented_ones(exercised):
     codes = {
         (status): {body["detail"] for _, _, st, body in exercised if st == status} for status in (401, 404, 409, 422)
     }
-    assert codes[401] == {"UNAUTHORIZED"}
+    assert (
+        {"UNAUTHORIZED"}
+        <= codes[401]
+        <= {
+            "UNAUTHORIZED",
+            "PAIRING_CODE_INVALID",
+            "PAIRING_CODE_EXPIRED",
+            "PAIRING_CODE_USED",
+            "PAIRING_PROOF_INVALID",
+            "PAIRING_PROOF_EXPIRED",
+            "PAIRING_PROOF_REPLAYED",
+        }
+    )
     assert codes[404] == {"NOT_FOUND"}
     assert codes[422] == {"VALIDATION_ERROR"}
-    assert codes[409] <= {"INN_CONFLICT", "EMAIL_CONFLICT", "NOT_SWITCHABLE"} and codes[409]
+    assert codes[409] <= {"INN_CONFLICT", "EMAIL_CONFLICT", "BOOTSTRAP_CLOSED", "NOT_SWITCHABLE"} and codes[409]
 
 
 # --- FIX-63: `role_codes` в провижининге (SystemRoleCode) --------------------------------------------------------

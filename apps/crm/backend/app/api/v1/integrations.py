@@ -17,6 +17,9 @@ from app.schemas.integrations import (
     EmailStatus,
     ErpCheckOut,
     ErpConnectorIn,
+    ErpPairIn,
+    ErpPairingOut,
+    ErpRotateIn,
     ErpStatusOut,
     ProfilePublishOut,
     SmtpCheckOut,
@@ -30,6 +33,7 @@ from app.schemas.settings_profile import BotProfileSettings
 from app.security.principal import Principal
 from app.security.reauth import LockoutPolicy
 from app.services.erp_connector import ErpConnectorService, ErpStatus
+from app.services.erp_pairing import ErpPairingService, PairingOutcome
 from app.services.integrations import TelegramIntegrationService
 from app.services.mail import EmailLogView
 from app.services.smtp_connector import SmtpConnectorService
@@ -175,6 +179,57 @@ async def check_erp_connection(_: Writer, service: ErpDep) -> ErpCheckOut:
             status="rate_limited", checked_at=result.checked_at, retry_after_s=result.retry_after_s
         )
     return ErpCheckOut(**asdict(result))
+
+
+def get_erp_pairing(container: ContainerDep) -> ErpPairingService:
+    return container.erp_pairing
+
+
+ErpPairingDep = Annotated[ErpPairingService, Depends(get_erp_pairing)]
+
+
+def _pairing_out(outcome: PairingOutcome) -> ErpPairingOut:
+    check = ErpCheckOut(**asdict(outcome.check)) if outcome.check is not None else None
+    return ErpPairingOut(
+        status=_erp_out(outcome.status), check=check, check_error=outcome.check_error
+    )
+
+
+@router.post("/erp/pair", response_model=ErpPairingOut)
+async def pair_erp(body: ErpPairIn, who: Writer, service: ErpPairingDep) -> ErpPairingOut:
+    """«Подключить ERP»: адрес ERP и одноразовый код из её настроек (M3-CRM-10, CONTRACTS §2).
+
+    CRM сама генерирует токены обоих направлений и секрет вебхуков, передаёт их ERP по коду,
+    сохраняет зашифрованными и сразу делает «Проверить связь» (результат — в ответе). Пароль
+    админа обязателен.
+
+    Ошибки (`details.reason`): `erp_invalid_url` (422, поле `base_url`),
+    `erp_pairing_code_invalid` / `erp_pairing_code_expired` / `erp_pairing_code_used` (422, поле
+    `code`), `wrong_password` (422), `secrets_key_missing` (409), `erp_unavailable` /
+    `erp_bad_response` / `erp_pairing_unsupported` (502).
+    """
+    return _pairing_out(
+        await service.pair(
+            who,
+            base_url=body.base_url,
+            code=body.code.get_secret_value() if body.code is not None else None,
+            password=body.password.get_secret_value(),
+        )
+    )
+
+
+@router.post("/erp/rotate", response_model=ErpPairingOut)
+async def rotate_erp_keys(body: ErpRotateIn, who: Writer, service: ErpPairingDep) -> ErpPairingOut:
+    """«Обновить ключи»: CRM генерирует новую тройку секретов, ERP принимает её по токену.
+
+    Прежний токен CRM→ERP остаётся у ERP активным на переходный период (два активных), затем
+    гаснет сам; предыдущий секрет вебхуков CRM принимает наравне с новым и снимает по истечении
+    срока перехода.
+
+    Ошибки: `erp_not_configured` (409), `secrets_key_missing` (409), `wrong_password` (422),
+    `erp_unauthorized` / `erp_unavailable` / `erp_bad_response` (502).
+    """
+    return _pairing_out(await service.rotate(who, password=body.password.get_secret_value()))
 
 
 @router.post("/erp/events", response_model=ErpWebhookReceipt)

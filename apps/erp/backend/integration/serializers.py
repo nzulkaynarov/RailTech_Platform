@@ -5,6 +5,7 @@
 
 from __future__ import annotations
 
+from django.core.validators import RegexValidator
 from rest_framework import serializers
 from sales.models import DeliveryLineStatus
 
@@ -266,3 +267,38 @@ class HealthSerializer(serializers.Serializer):
     queue_alive = serializers.BooleanField()
     checked_at = serializers.DateTimeField()
     externals = ExternalServiceSerializer(many=True, required=False)
+
+
+class PairingSecretField(serializers.CharField):
+    """Секрет, который сгенерировала CRM: 32–512 символов URL-безопасного алфавита (контракт `PairingSecret`)."""
+
+    def __init__(self, **kwargs):
+        super().__init__(min_length=32, max_length=512, trim_whitespace=False, write_only=True, **kwargs)
+        self.validators.append(RegexValidator(r"^[A-Za-z0-9_\-]+$"))
+
+
+class PairingRequestSerializer(serializers.Serializer):
+    """Тело `POST /pairing/accept` и `POST /pairing/rotate`: тройка секретов (M3-ERP-05)."""
+
+    crm_to_erp_token = PairingSecretField()
+    erp_to_crm_token = PairingSecretField()
+    webhook_secret = PairingSecretField()
+
+    def to_internal_value(self, data):
+        # Лишние поля контракт не допускает (`additionalProperties: false`) — 422, а не молчаливое отбрасывание.
+        extra = set(getattr(data, "keys", lambda: [])()) - set(self.fields)
+        if extra:
+            raise serializers.ValidationError("VALIDATION_ERROR")
+        return super().to_internal_value(data)
+
+
+class PairingAcceptedSerializer(serializers.Serializer):
+    paired = serializers.BooleanField()
+    paired_at = serializers.DateTimeField()
+    erp_version = serializers.CharField()
+
+
+class PairingRotatedSerializer(serializers.Serializer):
+    rotated = serializers.BooleanField()
+    rotated_at = serializers.DateTimeField()
+    previous_token_valid_until = serializers.DateTimeField()

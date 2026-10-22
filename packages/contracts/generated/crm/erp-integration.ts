@@ -20,7 +20,11 @@
  * 0.5.0 (FIX-63): `ProvisionUserRequest.role_codes[]` (`SystemRoleCode`) — системные роли ERP, выбранные в CRM;
  * поле необязательное, аддитивно: без него ERP системные роли не трогает.
  *
- * OpenAPI spec version: 0.5.0
+ * 0.6.0 (M3-ERP-05/CRM-10): сопряжение CRM ↔ ERP в один клик — `POST /pairing/accept` (код из ERP либо bootstrap без кода
+ * по доказательству `X-Pairing-Proof` от `PLATFORM_SSO_SECRET`, ADR-0009) и `POST /pairing/rotate` (ротация без простоя).
+ * Аддитивно: новые операции и коды ошибок; существующие операции не меняются.
+ *
+ * OpenAPI spec version: 0.6.0
  */
 import type {
   AiUsageRow,
@@ -39,6 +43,10 @@ import type {
   HandoffRequest,
   HandoffResponse,
   Health,
+  PairingAcceptRequest,
+  PairingAccepted,
+  PairingRotateRequest,
+  PairingRotated,
   ProvisionUserRequest,
   ProvisionUserResponse,
   SearchCatalogParams,
@@ -399,6 +407,125 @@ export const getIntegrationHealth = async (options?: RequestInit): Promise<Healt
   const body = [204, 205, 304].includes(res.status) ? null : await res.text();
 
   const data: Health = body ? JSON.parse(body) : {};
+  return data;
+};
+
+export const getAcceptPairingUrl = () => {
+  return `/pairing/accept`;
+};
+
+/**
+ * ERP выпускает одноразовый код сопряжения (суперпользователь в настройках «Интеграция с CRM» либо команда
+ * `manage.py pairing_code`; срок жизни по умолчанию 15 минут, действует один выпуск — новый код гасит прежний
+ * неиспользованный). Админ вводит в CRM адрес ERP и этот код; CRM САМА генерирует три секрета — токен
+ * направления CRM→ERP, токен направления ERP→CRM и секрет подписи вебхуков — и передаёт их этой операцией.
+ * ERP сохраняет их шифрованно в своей базе; с этого момента аутентификация integration и подпись вебхуков
+ * берут секреты оттуда, а значения из `.env` остаются запасным путём только пока в базе пусто.
+ *
+ * Аутентификация — НЕ сервисный токен, а сам код: `Authorization: Bearer <код>`. Код сверяется по хешу, одноразов
+ * (успешный приём гасит его) и ограничен по сроку. Повторное сопряжение (новый код при уже сопряжённой ERP)
+ * заменяет все три секрета целиком, прежние токены перестают действовать сразу.
+ *
+ * **Первое сопряжение без кода (bootstrap, второй способ аутентификации).** Пока окно не закрыто, вместо кода CRM
+ * присылает заголовок `X-Pairing-Proof` — доказательство владения общим для обеих систем `PLATFORM_SSO_SECRET`
+ * (на проде оба сервиса читают один `.env`): `v1.<unix-время>.<jti>.<hex>`, где ключ = `HKDF-SHA256(PLATFORM_SSO_SECRET, info="rt-pairing-v1")`
+ * (32 байта; сам SSO-секрет напрямую не используется), подпись = `HMAC-SHA256(ключ,
+ * "<unix-время>.<jti>.<sha256-hex тела>")`. Метка времени — окно 300 с, `jti` (16–64 символа `[A-Za-z0-9_-]`) одноразов
+ * (ERP помнит 10 минут), хеш тела привязывает доказательство к конкретной тройке секретов. Окно bootstrap закрывается
+ * НАВСЕГДА после первого успешного сопряжения любым способом (постоянный флаг в БД ERP, переживает очистку токенов):
+ * дальше — 409 `BOOTSTRAP_CLOSED`, и сопрягаться можно только кодом из ERP; код остаётся запасным путём (ERP на другой
+ * инфраструктуре или без общего секрета). Тест-вектор — `examples/pairing-bootstrap.json`.
+ *
+ * Операция не принимает `Idempotency-Key`: идемпотентность даёт одноразовость кода. Повтор того же кода после
+ * успеха — 401 `PAIRING_CODE_USED`; CRM в этом случае просит у админа новый код. Тело запроса и коды в журналы
+ * не пишутся.
+ * @summary Сопряжение по одноразовому коду (CRM передаёт ERP ключи шва)
+ */
+export const acceptPairing = async (
+  pairingAcceptRequest: PairingAcceptRequest,
+  options?: RequestInit,
+): Promise<PairingAccepted> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  const res = await fetch(getAcceptPairingUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
+    body: JSON.stringify(pairingAcceptRequest),
+  });
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+
+  const data: PairingAccepted = body ? JSON.parse(body) : {};
+  return data;
+};
+
+export const getRotatePairingUrl = () => {
+  return `/pairing/rotate`;
+};
+
+/**
+ * CRM генерирует новую тройку секретов и передаёт её под ДЕЙСТВУЮЩИМ токеном CRM→ERP. ERP принимает новые
+ * значения, а токен, которым вызвана операция, остаётся активным на переходный период
+ * (`previous_token_valid_until`, по умолчанию 1 час) — одновременно действуют два токена CRM→ERP; затем старый
+ * гаснет сам, и вызов с ним даёт 401. Секрет подписи вебхуков ERP переключает сразу (подписывает новым);
+ * CRM принимает оба секрета (текущий и предыдущий, CONTRACTS §3). Повтор той же тройки под тем же токеном —
+ * 200 (операция идемпотентна по значениям).
+ *
+ * Если сопряжения нет (ERP работает на токенах из `.env`), операция тоже годится: секреты уходят в базу ERP,
+ * а использованный `.env`-токен получает тот же переходный срок.
+ * @summary Ротация ключей без простоя (два активных токена)
+ */
+export const rotatePairing = async (
+  pairingRotateRequest: PairingRotateRequest,
+  options?: RequestInit,
+): Promise<PairingRotated> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  const res = await fetch(getRotatePairingUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
+    body: JSON.stringify(pairingRotateRequest),
+  });
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+
+  const data: PairingRotated = body ? JSON.parse(body) : {};
   return data;
 };
 

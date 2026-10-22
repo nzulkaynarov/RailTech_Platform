@@ -5,6 +5,7 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, SecretStr, field_validator
 
+from app.domain.erp_connector import DEFAULT_INTERNAL_ERP_URL
 from app.schemas.settings_profile import BotProfileSettings
 
 
@@ -75,6 +76,18 @@ class ErpStatusOut(BaseModel):
     webhook_secret_previous_last4: str | None
     webhook_secret_previous_updated_at: datetime | None
     secrets_enabled: bool
+    # Сопряжение «Подключить ERP» (M3-CRM-10): токен ERP→CRM выдала CRM; `paired` — ключи выданы
+    # сопряжением.
+    inbound_token_configured: bool = False
+    inbound_token_last4: str | None = None
+    paired: bool = False
+    # Переход после «Обновить ключи»: до какого момента принимается предыдущий секрет вебхуков.
+    previous_secret_until: datetime | None = None
+    # «Обновить ключи» не доведено до ответа ERP (обрыв связи): повтор отправит ту же тройку.
+    rotation_pending: bool = False
+    # «Подключить ERP» одной кнопкой: внутренний адрес ERP, доступен ли путь без кода.
+    suggested_base_url: str = DEFAULT_INTERNAL_ERP_URL
+    bootstrap_available: bool = False
 
 
 class ErpConnectorIn(BaseModel):
@@ -100,6 +113,25 @@ class ErpConnectorIn(BaseModel):
         return value
 
 
+class ErpPairIn(BaseModel):
+    """«Подключить ERP»: адрес ERP, код из её настроек (необязателен) и пароль админа."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    base_url: str = Field(min_length=1, max_length=500)
+    # Пусто — первое сопряжение без кода по общему секрету платформы (ADR-0009), по кнопке админа.
+    code: SecretStr | None = Field(default=None, max_length=64)
+    password: SecretStr = Field(min_length=1, max_length=256)
+
+
+class ErpRotateIn(BaseModel):
+    """«Обновить ключи»: только пароль админа — новые секреты CRM генерирует сама."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    password: SecretStr = Field(min_length=1, max_length=256)
+
+
 class ErpCheckOut(BaseModel):
     """Итог «Проверить связь»: ответ ERP `GET /api/integration/v1/health` (схема `Health`) и время.
 
@@ -114,6 +146,18 @@ class ErpCheckOut(BaseModel):
     checked_at: datetime
     latency_ms: int | None = None
     retry_after_s: int | None = None
+
+
+class ErpPairingOut(BaseModel):
+    """Итог сопряжения или ротации: состояние коннектора и «Проверить связь», сделанная сразу после.
+
+    Сопряжение удалось, даже если проверка не прошла: тогда `check` пуст, а `check_error` — подкод
+    причины (`erp_unauthorized`, `erp_unavailable`, …) для понятной подсказки.
+    """
+
+    status: ErpStatusOut
+    check: ErpCheckOut | None
+    check_error: str | None
 
 
 Source = Literal["db", "env", "none"]

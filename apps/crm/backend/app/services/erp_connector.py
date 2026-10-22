@@ -18,7 +18,12 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.config import Settings
 from app.domain.backoffice import BackofficeMode, backoffice_mode
-from app.domain.erp_connector import base_url_problem, normalize_base_url
+from app.domain.erp_connector import (
+    DEFAULT_INTERNAL_ERP_URL,
+    base_url_problem,
+    normalize_base_url,
+    requires_https,
+)
 from app.domain.errors import ConflictError, Reason, UpstreamUnavailableError, ValidationFailedError
 from app.domain.system_status import ErpFacts
 from app.integrations.erp import (
@@ -35,6 +40,8 @@ from app.repositories import users as users_repo
 from app.security import audit, reauth
 from app.security.principal import Principal
 from app.security.secrets_store import (
+    ERP_INBOUND_TOKEN,
+    ERP_PENDING_SERVICE_TOKEN,
     ERP_SERVICE_TOKEN,
     ERP_WEBHOOK_SECRET,
     ERP_WEBHOOK_SECRET_PREVIOUS,
@@ -78,6 +85,18 @@ class ErpStatus:
     webhook_secret_previous_last4: str | None
     webhook_secret_previous_updated_at: datetime | None
     secrets_enabled: bool
+    # Сопряжение по коду (M3-CRM-10): токен ERP→CRM выдала CRM и хранит для приёмников M3-CRM-11.
+    inbound_token_configured: bool = False
+    inbound_token_last4: str | None = None
+    # Все три секрета в БД CRM и среди них токен ERP→CRM — их мог выдать только «Подключить ERP».
+    paired: bool = False
+    # Идёт переход после «Обновить ключи»: до какого момента принимается предыдущий секрет.
+    previous_secret_until: datetime | None = None
+    # «Обновить ключи» не доведено до ответа ERP (обрыв связи): повтор отправит ту же тройку.
+    rotation_pending: bool = False
+    # «Подключить ERP» одной кнопкой: внутренний адрес; без кода — при общем секрете.
+    suggested_base_url: str = DEFAULT_INTERNAL_ERP_URL
+    bootstrap_available: bool = False
 
 
 @dataclass(frozen=True, slots=True)
@@ -122,6 +141,14 @@ class ErpConnectorService:
         token = await self._secret_status(ERP_SERVICE_TOKEN)
         webhook = await self._secret_status(ERP_WEBHOOK_SECRET)
         previous = await self._secret_status(ERP_WEBHOOK_SECRET_PREVIOUS)
+        inbound = await self._secret_status(ERP_INBOUND_TOKEN)
+        pending = await self._secret_status(ERP_PENDING_SERVICE_TOKEN)
+        until = await self._previous_secret_until()
+        paired = (
+            inbound is not None
+            and resolved.token_source == "db"  # noqa: S105 — источник, не секрет
+            and resolved.webhook_secret_source == "db"  # noqa: S105 — источник, не секрет
+        )
         return ErpStatus(
             configured=resolved.connection is not None,
             mode=backoffice_mode(erp_connector_configured=resolved.connection is not None),
@@ -140,7 +167,22 @@ class ErpConnectorService:
             webhook_secret_previous_last4=previous.last4 if previous else None,
             webhook_secret_previous_updated_at=previous.updated_at if previous else None,
             secrets_enabled=self._store.enabled,
+            inbound_token_configured=inbound is not None,
+            inbound_token_last4=inbound.last4 if inbound else None,
+            paired=paired,
+            rotation_pending=pending is not None,
+            bootstrap_available=bool(self._config.platform_sso_secrets),
+            previous_secret_until=until
+            if resolved.webhook_secret_previous_source == "db"  # noqa: S105 — источник, не секрет
+            else None,
         )
+
+    async def _previous_secret_until(self) -> datetime | None:
+        try:
+            return (await self._settings.get()).integrations.erp_previous_secret_until
+        except Exception:
+            logger.warning("erp_previous_secret_until_unavailable", exc_info=True)
+            return None
 
     async def _secret_status(self, key: str) -> SecretStatus | None:
         if not self._store.enabled:
@@ -178,6 +220,12 @@ class ErpConnectorService:
                 reason=Reason.ERP_INVALID_URL,
                 field="base_url",
             )
+        if url and self._config.app_env == "prod" and requires_https(url):
+            raise ValidationFailedError(
+                "erp base url must be https in production",
+                reason=Reason.ERP_HTTPS_REQUIRED,
+                field="base_url",
+            )
         secrets = {
             ERP_SERVICE_TOKEN: service_token,
             ERP_WEBHOOK_SECRET: webhook_secret,
@@ -192,7 +240,13 @@ class ErpConnectorService:
             raise ConflictError("SECRETS_KEY is not set", reason=Reason.SECRETS_KEY_MISSING)
         await self._reauth(who.user_id, password)
         before = await self._audit_facts()
-        await self._settings.update(SETTINGS_KEY, {"erp_base_url": url}, who.user_id)
+        current = (await self._settings.get()).integrations
+        payload = current.model_dump(mode="json")
+        payload["erp_base_url"] = url
+        if ERP_WEBHOOK_SECRET_PREVIOUS in to_save or to_clear:
+            # Предыдущий секрет задан или снят вручную: автоснятие после «Обновить ключи» не нужно.
+            payload["erp_previous_secret_until"] = None
+        await self._settings.update(SETTINGS_KEY, payload, who.user_id)
         async with self._sessions() as session, session.begin():
             for key, value in to_save.items():
                 await self._store.put(session, key, value, who.user_id)
@@ -220,6 +274,36 @@ class ErpConnectorService:
             cleared=sorted(to_clear),
         )
         return await self.status()
+
+    async def confirm_password(self, user_id: int, password: str) -> None:
+        """Пароль админа перед действием над ключами (сопряжение, ротация); тот же lockout."""
+        await self._reauth(user_id, password)
+
+    async def audit_facts(self) -> dict[str, object]:
+        return await self._audit_facts()
+
+    def forget_cache(self) -> None:
+        """Забыть кэш здоровья ERP: после сопряжения или ротации первым будет живой запрос."""
+        self._cached = None
+
+    async def expire_previous_secret(self, *, now: datetime | None = None) -> bool:
+        """Снять предыдущий секрет вебхуков, когда вышел срок перехода после «Обновить ключи».
+
+        Вручную заданный предыдущий секрет (срока нет) не трогается. True — секрет снят.
+        """
+        until = await self._previous_secret_until()
+        if until is None or until > (now or datetime.now(UTC)):
+            return False
+        if await self._secret_status(ERP_PENDING_SERVICE_TOKEN) is not None:
+            return False  # ротация не подтверждена ERP: прежний секрет ещё может понадобиться
+        current = (await self._settings.get()).integrations
+        payload = current.model_dump(mode="json")
+        payload["erp_previous_secret_until"] = None
+        await self._settings.update(SETTINGS_KEY, payload, None)
+        async with self._sessions() as session, session.begin():
+            await self._store.delete(session, ERP_WEBHOOK_SECRET_PREVIOUS)
+        logger.info("erp_previous_webhook_secret_expired")
+        return True
 
     async def _audit_facts(self) -> dict[str, object]:
         """Что попадает в аудит: адрес и последние 4 символа секретов — никогда сами значения."""
@@ -269,6 +353,10 @@ class ErpConnectorService:
                 f"erp health check failed: {exc.kind}", reason=_REASONS[exc.kind]
             ) from exc
         self._remember(_facts(health))
+        try:
+            await self.expire_previous_secret()
+        except Exception:
+            logger.warning("erp_previous_secret_expire_failed", exc_info=True)
         return health
 
     async def health_facts(self) -> ErpFacts:

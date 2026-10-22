@@ -20,7 +20,11 @@
  * 0.5.0 (FIX-63): `ProvisionUserRequest.role_codes[]` (`SystemRoleCode`) — системные роли ERP, выбранные в CRM;
  * поле необязательное, аддитивно: без него ERP системные роли не трогает.
  *
- * OpenAPI spec version: 0.5.0
+ * 0.6.0 (M3-ERP-05/CRM-10): сопряжение CRM ↔ ERP в один клик — `POST /pairing/accept` (код из ERP либо bootstrap без кода
+ * по доказательству `X-Pairing-Proof` от `PLATFORM_SSO_SECRET`, ADR-0009) и `POST /pairing/rotate` (ротация без простоя).
+ * Аддитивно: новые операции и коды ошибок; существующие операции не меняются.
+ *
+ * OpenAPI spec version: 0.6.0
  */
 
 export * from "./actStatus";
@@ -73,6 +77,11 @@ export * from "./invoiceSummary";
 export * from "./language";
 export * from "./money";
 export * from "./notFoundResponse";
+export * from "./pairingAccepted";
+export * from "./pairingAcceptRequest";
+export * from "./pairingRotated";
+export * from "./pairingRotateRequest";
+export * from "./pairingSecret";
 export * from "./preferredChannel";
 export * from "./provisionUserRequest";
 export * from "./provisionUserRequestRole";
