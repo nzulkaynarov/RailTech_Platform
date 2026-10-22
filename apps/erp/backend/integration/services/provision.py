@@ -16,6 +16,7 @@ from sales.models import ActivityLog
 
 from accounts.models import CompanyMember, CompanyRole, CustomUser, WorkspaceRole
 from accounts.services.auth import revoke_user_refresh_tokens
+from accounts.services.own_company_setup import acquire_setup_lock
 from accounts.services.roles import SYNC_ROLE_PREFIX, ensure_default_company_roles
 from core.audit import log_admin_action
 from core.tenant import own_company
@@ -166,6 +167,12 @@ def provision_crm_user(data: Dict[str, Any]) -> Tuple[Dict[str, Any], bool]:
 
     Возвращает ({"erp_user_id": ..., "crm_user_id": ...}, created).
     """
+    # Своей компании ещё нет — встаём в очередь с её созданием (FIX-P1-2): иначе провижининг, начатый
+    # параллельно с мастером первого запуска, мог бы записать снимок уже после привязки и остаться без членства.
+    # Блокировка берётся до любых записей; создание компании держит её первой, взаимной блокировки нет.
+    if own_company() is None:
+        acquire_setup_lock()
+
     crm_user_id = data["crm_user_id"]
     email = data["email"].strip().lower()
     name = data["name"].strip()

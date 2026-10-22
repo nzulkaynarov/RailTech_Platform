@@ -28,6 +28,15 @@ from .members import add_company_member
 _SETUP_LOCK_KEY = 6_500_065
 
 
+def acquire_setup_lock() -> None:
+    """Рекомендательная блокировка Postgres «создаётся своя компания» до конца транзакции. Её берут создание
+    компании и провижининг сотрудника из CRM, пока компании нет (FIX-P1-2): провижининг, начатый параллельно,
+    дождётся коммита и увидит компанию, а не запишет сотрудника после того, как привязка уже прошла."""
+    if connection.vendor == "postgresql":
+        with connection.cursor() as cursor:
+            cursor.execute("SELECT pg_advisory_xact_lock(%s)", [_SETUP_LOCK_KEY])
+
+
 def is_setup_required() -> bool:
     """Своей компании ещё нет. Неоднозначность (несколько продавцов без `OWN_COMPANY_ID`) — не «первый
     запуск», а ошибка настройки: мастер её не чинит."""
@@ -42,9 +51,7 @@ def is_setup_required() -> bool:
 def create_own_company(user: CustomUser, data: Dict[str, Any]) -> Tuple[Optional[Company], Optional[str]]:
     """Создать свою компанию и сделать `user` её владельцем. Возвращает (компания, None) или (None, код ошибки)."""
     with transaction.atomic():
-        if connection.vendor == "postgresql":
-            with connection.cursor() as cursor:
-                cursor.execute("SELECT pg_advisory_xact_lock(%s)", [_SETUP_LOCK_KEY])
+        acquire_setup_lock()
         if not is_setup_required():
             return None, "OWN_COMPANY_ALREADY_EXISTS"
 

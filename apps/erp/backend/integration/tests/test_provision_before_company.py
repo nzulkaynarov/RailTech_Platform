@@ -7,15 +7,18 @@
 """
 
 import uuid
+from unittest import mock
 
 import pytest
 from integration.models import CrmUserMapping
+from integration.services.provision import attach_provisioned_users
 from rest_framework.test import APIClient
 from rest_framework_simplejwt.tokens import RefreshToken
 
-from accounts.models import CompanyMember, CustomUser, WorkspaceRole
+from accounts.models import Company, CompanyMember, CustomUser, WorkspaceRole
 from accounts.services.own_company_setup import create_own_company
 from accounts.services.permissions import member_has_permission, sees_all_deals
+from accounts.services.roles import ensure_default_company_roles
 from core.tenant import own_company_id
 from crm.models import ActivityLog, Deal, DealStage
 
@@ -139,8 +142,6 @@ def test_reattach_is_idempotent(crm, admin):
     member = CompanyMember.objects.get(user=manager, company=company)
     roles_before = set(member.company_roles.values_list("pk", flat=True))
 
-    from integration.services.provision import attach_provisioned_users
-
     attach_provisioned_users(company)
     attach_provisioned_users(company)
 
@@ -202,3 +203,45 @@ def test_reprovision_updates_snapshot_used_for_attach(crm, admin):
 
     assert member_has_permission(manager, company.pk, "quote.build")
     assert not member_has_permission(manager, company.pk, "deal.manage")
+
+
+def test_attach_failure_rolls_back_company_creation(crm, admin):
+    _provision(crm, 11, "rollback@own.test", permissions=["deal.manage"])
+
+    with (
+        mock.patch("integration.services.provision.attach_provisioned_users", side_effect=RuntimeError("boom")),
+        pytest.raises(RuntimeError),
+    ):
+        create_own_company(admin, COMPANY)
+
+    assert own_company_id() is None, "транзакция откатилась: своей компании нет"
+    assert not Company.objects.filter(name=COMPANY["name"]).exists()
+    assert not CompanyMember.objects.exists()
+    # Мастер можно пройти заново.
+    assert _create_company(admin).pk == own_company_id()
+
+
+def test_old_crm_without_role_codes_keeps_manual_system_roles(crm, admin):
+    manager = _provision(crm, 12, "oldcrm@own.test", permissions=["deal.manage"])  # поля role_codes нет
+    assert CrmUserMapping.objects.get(crm_user_id=12).provision_snapshot["role_codes"] is None
+    company = _create_company(admin)
+    member = CompanyMember.objects.get(user=manager, company=company)
+    manual = ensure_default_company_roles(company)["FINANCE"]
+    member.company_roles.add(manual)  # выдана в ERP вручную
+
+    attach_provisioned_users(company)
+
+    member.refresh_from_db()
+    assert manual in member.company_roles.all(), "role_codes=None — системные роли не трогаются"
+    assert member_has_permission(manager, company.pk, "deal.manage")
+    assert not member.crm_granted_roles.exists()
+
+
+def test_provision_waits_for_setup_lock_only_while_no_company(crm, admin):
+    with mock.patch("integration.services.provision.acquire_setup_lock") as lock:
+        _provision(crm, 13, "lock@own.test", permissions=["deal.manage"])
+        assert lock.call_count == 1, "компании нет — встаём в очередь с мастером первого запуска"
+
+        _create_company(admin)
+        _provision(crm, 14, "nolock@own.test", permissions=["deal.manage"])
+        assert lock.call_count == 1, "компания есть — блокировка не нужна"
