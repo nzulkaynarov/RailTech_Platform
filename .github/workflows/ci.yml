@@ -68,12 +68,14 @@ jobs:
               - 'apps/cabinet/**'
               - 'packages/contracts/**'
               - 'packages/ui-tokens/**'
-              # Типы формы лида Cabinet генерируются из OpenAPI CRM (src/api/crm-form.d.ts).
-              - 'apps/crm/docs/api/openapi.json'
+              # Типы формы лида Cabinet генерируются из OpenAPI CRM (src/api/crm-form.d.ts) — packages/contracts/openapi/crm.yaml
+              # попадает под packages/contracts/** выше.
             # Платформа: BFF строится по своему OpenAPI, роли и статусы читает из общих файлов контракта, токены — из ui-tokens.
             platform:
               - 'apps/platform/**'
               - 'packages/contracts/openapi/platform-bff.yaml'
+              # Модели ответов CRM в BFF генерируются из OpenAPI CRM (app/clients/crm_models.py).
+              - 'packages/contracts/openapi/crm.yaml'
               - 'packages/contracts/platform-rbac.yaml'
               - 'packages/contracts/client-statuses.yaml'
               - 'packages/ui-tokens/**'
@@ -154,10 +156,10 @@ jobs:
       - name: ui-tokens актуальны (packages/ui-tokens → tokens.generated.ts)
         working-directory: .
         run: make -C packages/ui-tokens check
-      - name: OpenAPI CRM актуален
+      - name: OpenAPI CRM актуален (packages/contracts/openapi/crm.yaml)
         run: |
           make openapi
-          git diff --exit-code -- docs/api/openapi.json frontend/src/api/generated \
+          git diff --exit-code -- ../../packages/contracts/openapi/crm.yaml frontend/src/api/generated \
             || (echo "::error::OpenAPI CRM или клиент orval устарели — make -C apps/crm openapi"; exit 1)
 
   crm-unit:
@@ -506,7 +508,8 @@ jobs:
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v7
-      # Совместимость схем событий (L8) сравнивает с origin/main: нужен её коммит (дерево), история не нужна.
+      # Совместимость схем событий (L8) и OpenAPI (oasdiff, ADR-0016) сравнивают с origin/main: нужен её коммит (дерево),
+      # история не нужна. oasdiff — закреплённый образ в одноразовом контейнере (scripts/openapi_compat.py).
       - name: База для проверки совместимости (origin/main)
         run: git fetch --no-tags --depth=1 origin +refs/heads/main:refs/remotes/origin/main
       - uses: astral-sh/setup-uv@v7

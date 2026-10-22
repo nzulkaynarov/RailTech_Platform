@@ -25,8 +25,8 @@ usage() {
 
 Задания:
   gitleaks          секреты в истории текущей ветки (.gitleaks.toml, legacy/ в allowlist)
-  crm               make check-crm (ruff, mypy, eslint, prettier, tsc, unit) + OpenAPI CRM без диффа
-  contracts         make contracts (в т. ч. совместимость событий с origin/main) + чистый packages/contracts/generated
+  crm               make check-crm (ruff, mypy, eslint, prettier, tsc, unit) + OpenAPI CRM (packages/contracts/openapi/crm.yaml) без диффа
+  contracts         make contracts (в т. ч. совместимость событий и oasdiff по OpenAPI с origin/main) + чистый packages/contracts/generated
   tokens            make -C packages/ui-tokens check
   infra             docker compose config (dev + observability) и caddy validate
   erp, cabinet      make check-erp | make check-cabinet (до M1/M2 — пропуск внутри цели)
@@ -77,12 +77,13 @@ stage_crm() {
   (cd "$ROOT" && make check-crm)
   (cd "$ROOT/apps/crm/backend" && uv run ruff check --config pyproject.toml ../scripts \
     && uv run ruff format --config pyproject.toml --check ../scripts)
-  (cd "$ROOT/apps/crm" && make openapi && git diff --exit-code -- docs/api frontend/src/api) \
+  (cd "$ROOT/apps/crm" && make openapi && git diff --exit-code -- ../../packages/contracts/openapi/crm.yaml frontend/src/api) \
     || { echo "OpenAPI CRM или клиент orval устарели — make -C apps/crm openapi и закоммитьте"; return 1; }
 }
 
 stage_contracts() {
-  # Совместимость схем событий (L8) — против свежей origin/main, как в CI; без сети — с последней скачанной.
+  # Совместимость схем событий (L8) и OpenAPI (oasdiff, ADR-0016) — против свежей origin/main, как в CI; без сети — с последней
+  # скачанной. oasdiff — закреплённый образ в одноразовом контейнере (нужен Docker; образ тянется при первом запуске).
   (cd "$ROOT" && git fetch --no-tags --quiet origin main) \
     || echo "contracts: git fetch origin main не удался — сравнение с локальной origin/main"
   (cd "$ROOT" && CONTRACTS_BASE_REF="${CONTRACTS_BASE_REF:-origin/main}" make contracts \

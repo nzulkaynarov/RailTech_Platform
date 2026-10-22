@@ -20,5 +20,5 @@ description: Добавить REST-эндпоинт /api/v1 — роутер, Py
    - integration (`tests/integration/`): матрица роль × действие (admin/manager/viewer/аноним) с ожидаемыми 2xx/401/403/404/409 и `details.reason`;
    - аудит-запись появилась.
    Локально integration — только на одноразовых контейнерах: скилл `stand-verify`.
-8. `make openapi` → закоммить `docs/api/openapi.json` и `frontend/src/api/generated/` (CI падает при любом расхождении, в том числе из-за докстроки). Клиент — orval, хуки TanStack Query — `frontend/src/api/queries.ts` / `adminQueries.ts`.
+8. `make openapi` → закоммить `packages/contracts/openapi/crm.yaml` (ломающее изменение — только новым мажором `/v2`, см. `docs/CONTRACTS.md` §7; `make contracts` из корня) и `frontend/src/api/generated/` (CI падает при любом расхождении, в том числе из-за докстроки). Клиент — orval, хуки TanStack Query — `frontend/src/api/queries.ts` / `adminQueries.ts`.
 9. `make check`; в PR — curl-пример и шаг для каждой роли в «Проверить на dev».
