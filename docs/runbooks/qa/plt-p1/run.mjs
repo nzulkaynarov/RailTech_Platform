@@ -1,5 +1,6 @@
 // QA-P1: сценарии гейта фазы P1 против живого стенда (Caddy → BFF → CRM/ERP). Запуск:
 //   QA_CREDS=<файл KEY=VALUE вне репозитория> node docs/runbooks/qa/plt-p1/run.mjs s1 s2 s3 ...
+// QA_OUT (каталог результатов; туда же пишется сгенерированный пароль сценария 7) — ТОЛЬКО вне репозитория.
 // Порт и адрес — QA_BASE (по умолчанию http://platform.localhost:18089). Список сценариев и ожидания — в отчёте
 // docs/runbooks/plt_p1_gate_report.md. Скрипт не меняет код приложений; сценарии 6, 7, 10 меняют данные своего стенда.
 import { execFileSync } from "node:child_process";
