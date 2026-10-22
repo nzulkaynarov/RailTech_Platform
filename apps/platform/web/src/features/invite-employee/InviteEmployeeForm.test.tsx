@@ -1,0 +1,202 @@
+import { fireEvent, screen, waitFor } from "@testing-library/react";
+import { http, HttpResponse } from "msw";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+
+import type { Employee, EmployeeInvite } from "../../shared/api/generated/model";
+import { server } from "../../test/server";
+import { renderUi } from "../../test/renderUi";
+import { InviteEmployeeForm } from "./InviteEmployeeForm";
+
+const created: Employee = {
+  id: "101",
+  name: "Новый Сотрудник",
+  initials: "НС",
+  email: "new@demo.example",
+  roles: ["SUPPLY"],
+  access: { crm: true, erp: true },
+  status: "invited",
+  telegram_linked: false,
+  erp_sync: "ok",
+};
+
+let bodies: EmployeeInvite[] = [];
+const onInvited = vi.fn();
+const onOpenCard = vi.fn();
+const onCancel = vi.fn();
+
+beforeEach(() => {
+  bodies = [];
+  onInvited.mockReset();
+  onOpenCard.mockReset();
+  onCancel.mockReset();
+  server.use(
+    http.post("*/admin/users/invite", async ({ request }) => {
+      bodies.push((await request.json()) as EmployeeInvite);
+      return HttpResponse.json(created, { status: 201 });
+    }),
+  );
+});
+
+function setup() {
+  return renderUi(
+    <InviteEmployeeForm onInvited={onInvited} onOpenCard={onOpenCard} onCancel={onCancel} />,
+  );
+}
+
+function fill(label: string, value: string) {
+  fireEvent.change(screen.getByLabelText(label), { target: { value } });
+}
+
+const submit = () => fireEvent.click(screen.getByRole("button", { name: "Отправить приглашение" }));
+
+describe("InviteEmployeeForm: приглашение по почте", () => {
+  it("пустая форма: тексты у полей и у ролей, запрос не уходит", async () => {
+    setup();
+
+    submit();
+
+    expect(await screen.findByText("Укажите имя и фамилию")).toBeInTheDocument();
+    expect(screen.getByText("Укажите почту сотрудника")).toBeInTheDocument();
+    expect(screen.getByText("Выберите хотя бы одну роль.")).toBeInTheDocument();
+    expect(bodies).toEqual([]);
+  });
+
+  it("неверная почта — формат в подсказке", async () => {
+    setup();
+    fill("Имя и фамилия", "Новый Сотрудник");
+    fill("Электронная почта", "не-почта");
+    fireEvent.click(screen.getByRole("checkbox", { name: /^Снабженец/ }));
+
+    submit();
+
+    expect(await screen.findByText(/в формате name@company.uz/)).toBeInTheDocument();
+    expect(bodies).toEqual([]);
+  });
+
+  it("«Что произойдёт» говорит про письмо и модули выбранных ролей", () => {
+    setup();
+    fireEvent.click(screen.getByRole("checkbox", { name: /^Администратор/ }));
+
+    expect(screen.getByText(/уйдёт письмо с временным паролем/)).toBeVisible();
+    expect(
+      screen.getByText("Сотрудник увидит модули: Dashboard, EDS, Chats, Admin."),
+    ).toBeVisible();
+    expect(screen.getByText(/появится в списке со статусом «Приглашён»/)).toBeVisible();
+  });
+
+  it("отправляет данные без лишних пробелов, роли в порядке контракта", async () => {
+    setup();
+    fill("Имя и фамилия", "  Новый Сотрудник ");
+    fill("Электронная почта", "new@demo.example");
+    fill("Должность (необязательно)", " Инженер ");
+    fireEvent.click(screen.getByRole("checkbox", { name: /^Снабженец/ }));
+    fireEvent.click(screen.getByRole("checkbox", { name: /^Менеджер/ }));
+
+    submit();
+
+    await waitFor(() => {
+      expect(onInvited).toHaveBeenCalledWith(created);
+    });
+    expect(bodies).toEqual([
+      {
+        email: "new@demo.example",
+        name: "Новый Сотрудник",
+        position: "Инженер",
+        roles: ["MANAGER", "SUPPLY"],
+      },
+    ]);
+  });
+
+  it("без должности поле не отправляется", async () => {
+    setup();
+    fill("Имя и фамилия", "Новый Сотрудник");
+    fill("Электронная почта", "new@demo.example");
+    fireEvent.click(screen.getByRole("checkbox", { name: /^Директор/ }));
+
+    submit();
+
+    await waitFor(() => {
+      expect(bodies).toHaveLength(1);
+    });
+    expect(bodies[0]).not.toHaveProperty("position");
+  });
+
+  it("EMAIL_EXISTS — ошибка у поля почты, форма остаётся", async () => {
+    server.use(
+      http.post("*/admin/users/invite", () =>
+        HttpResponse.json({ code: "EMAIL_EXISTS", message: "x", source: "crm" }, { status: 409 }),
+      ),
+    );
+    setup();
+    fill("Имя и фамилия", "Новый Сотрудник");
+    fill("Электронная почта", "dup@demo.example");
+    fireEvent.click(screen.getByRole("checkbox", { name: /^Директор/ }));
+
+    submit();
+
+    expect(await screen.findByText("Сотрудник с такой почтой уже есть.")).toBeInTheDocument();
+    expect(onInvited).not.toHaveBeenCalled();
+  });
+
+  it("почта не подключена: сотрудник создан — предупреждение и «Открыть карточку»", async () => {
+    server.use(
+      http.post("*/admin/users/invite", () =>
+        HttpResponse.json(
+          {
+            code: "CONFLICT",
+            message: "x",
+            source: "crm",
+            details: { employee_id: "101", invite: "not_sent", reason: "smtp_not_configured" },
+          },
+          { status: 409 },
+        ),
+      ),
+    );
+    setup();
+    fill("Имя и фамилия", "Новый Сотрудник");
+    fill("Электронная почта", "new@demo.example");
+    fireEvent.click(screen.getByRole("checkbox", { name: /^Директор/ }));
+
+    submit();
+
+    const alert = await screen.findByRole("alert");
+    expect(alert).toHaveTextContent(/письмо не отправлено/);
+    fireEvent.click(screen.getByRole("button", { name: "Открыть карточку" }));
+    expect(onOpenCard).toHaveBeenCalledWith("101");
+    expect(onInvited).not.toHaveBeenCalled();
+  });
+
+  it("CRM не ответила после создания: текст про CRM, а не про почту", async () => {
+    server.use(
+      http.post("*/admin/users/invite", () =>
+        HttpResponse.json(
+          {
+            code: "BACKEND_UNAVAILABLE",
+            message: "x",
+            source: "crm",
+            details: { employee_id: "101", invite: "not_sent" },
+          },
+          { status: 503 },
+        ),
+      ),
+    );
+    setup();
+    fill("Имя и фамилия", "Новый Сотрудник");
+    fill("Электронная почта", "new@demo.example");
+    fireEvent.click(screen.getByRole("checkbox", { name: /^Директор/ }));
+
+    submit();
+
+    const alert = await screen.findByRole("alert");
+    expect(alert).toHaveTextContent(/CRM не ответила/);
+    expect(alert).not.toHaveTextContent(/почта не подключена/);
+    fireEvent.click(screen.getByRole("button", { name: "Открыть карточку" }));
+    expect(onOpenCard).toHaveBeenCalledWith("101");
+  });
+
+  it("«Отмена» закрывает форму", () => {
+    setup();
+    fireEvent.click(screen.getByRole("button", { name: "Отмена" }));
+    expect(onCancel).toHaveBeenCalledTimes(1);
+  });
+});

@@ -246,7 +246,153 @@
         "action": "Org structure"
       }
     },
-    "action": "Invite employee"
+    "action": "Invite employee",
+    "org": {
+      "title": "Org structure",
+      "subtitle": "Employees, roles and access to CRM and ERP. Roles for both systems are granted in one card.",
+      "readOnly": "View only: an administrator changes roles and access.",
+      "listLabel": "Employees",
+      "count": "Employees: {{count}}",
+      "search": {
+        "label": "Search employees",
+        "placeholder": "Name, email or position"
+      },
+      "statusFilter": {
+        "label": "Status",
+        "all": "All statuses"
+      },
+      "columns": {
+        "employee": "Employee",
+        "position": "Position",
+        "roles": "Roles",
+        "access": "Access and Telegram",
+        "status": "Status"
+      },
+      "status": {
+        "active": "Active",
+        "invited": "Invited",
+        "disabled": "Disabled"
+      },
+      "access": {
+        "crm": "CRM",
+        "erp": "ERP",
+        "crmNo": "CRM: no",
+        "erpNo": "ERP: no",
+        "erpPending": "ERP: being granted",
+        "erpError": "ERP: error",
+        "telegram": "Telegram",
+        "telegramNo": "Telegram: no"
+      },
+      "telegram": {
+        "linked": "Linked",
+        "notLinked": "Not linked"
+      },
+      "noRoles": "No roles",
+      "noPosition": "not specified",
+      "open": "Open card: {{name}}",
+      "empty": {
+        "title": "No employees yet",
+        "text": "One place to grant roles: name, position, roles, CRM and ERP access, Telegram for notifications, status.",
+        "action": "Invite employee"
+      },
+      "noMatch": {
+        "title": "Nobody found",
+        "text": "Change the query or pick another status.",
+        "action": "Reset filters"
+      },
+      "loadError": {
+        "title": "Could not load employees",
+        "text": "The list comes from CRM. Try again; if the error stays, check CRM in Admin · Integrations.",
+        "retry": "Retry"
+      },
+      "cardError": {
+        "title": "Employee not found",
+        "text": "The card may have been removed or the link is out of date. Pick an employee from the list."
+      },
+      "card": {
+        "close": "Close card",
+        "email": "Email",
+        "position": "Position",
+        "roles": "Roles",
+        "crm": "CRM access",
+        "erp": "ERP access",
+        "telegram": "Telegram for notifications",
+        "status": "Status",
+        "erpPending": "ERP access is still being granted.",
+        "erpError": "ERP access could not be granted: {{error}}",
+        "disabledNote": "The employee is disabled and cannot sign in. Roles and position are kept."
+      },
+      "form": {
+        "rolesLegend": "Platform roles",
+        "rolesHint": "A person can have several roles: access and queues add up.",
+        "positionLabel": "Position",
+        "positionHint": "Text for the card and lists; it does not affect permissions.",
+        "save": "Save roles",
+        "saved": "Saved",
+        "needRole": "Pick at least one role. To close access completely, disable the employee.",
+        "lastAdmin": "You are the only administrator: the Administrator role cannot be removed. Appoint another administrator first.",
+        "unchanged": "No changes."
+      },
+      "consequence": {
+        "modules": "The employee will see the modules: {{modules}}.",
+        "lost": "The employee will stop seeing the modules: {{modules}}.",
+        "applied": "Changes apply immediately; the CRM log records who made them and when.",
+        "position": "Position on the card: “{{position}}”.",
+        "positionCleared": "The position on the card will be cleared.",
+        "self": "You are changing your own roles: the menu updates after saving.",
+        "selfLosesAdmin": "You will lose access to the Admin section.",
+        "erpRoles": "In ERP the employee will get the roles: {{roles}}.",
+        "erpAdmin": "In ERP the employee becomes an administrator (superuser)."
+      },
+      "invite": {
+        "title": "Invite employee",
+        "name": "First and last name",
+        "email": "Email",
+        "position": "Position (optional)",
+        "submit": "Send invitation",
+        "cancel": "Cancel",
+        "nameRequired": "Enter first and last name",
+        "emailRequired": "Enter the employee's email",
+        "emailInvalid": "Enter an email like name@company.uz",
+        "needRole": "Pick at least one role.",
+        "sent": "Invitation sent: {{email}}",
+        "consequenceMail": "An email with a temporary password goes to the address; it must be changed at first sign-in.",
+        "consequenceListed": "The employee appears in the list with the status “Invited”.",
+        "notSent": "The employee was added with the status “Invited”, but the email was not sent: mail is not connected or unavailable. Connect it in Admin · Integrations; resending the invitation will arrive in the next version.",
+        "openCard": "Open card",
+        "notSentUnavailable": "The employee was added with the status “Invited”, but CRM did not respond and the email was not sent. Try again later; resending the invitation will arrive in the next version."
+      },
+      "disable": {
+        "button": "Disable employee",
+        "title": "Disable the employee?",
+        "sessions": "Sign-in to the Platform, CRM and ERP will close.",
+        "terms": "Open sessions end within 15 minutes.",
+        "kept": "Roles and position are kept: the employee can be enabled again.",
+        "confirm": "Disable",
+        "cancel": "Cancel",
+        "enable": "Enable employee",
+        "enableTitle": "Enable the employee?",
+        "enableResult": "Sign-in opens again; roles and position stay as they were.",
+        "enableConfirm": "Enable"
+      },
+      "errors": {
+        "LAST_ADMIN": "You cannot remove the administrator role or disable the last administrator. Appoint another administrator first.",
+        "EMAIL_EXISTS": "An employee with this email already exists.",
+        "ACTIVE_LEADS": "The employee has leads in progress. Hand them to a colleague in CRM, then disable the employee or change their role.",
+        "FORBIDDEN": "Not enough rights: roles are granted by an administrator.",
+        "BACKEND_UNAVAILABLE": "CRM is not responding. Try again later.",
+        "VALIDATION_FAILED": "Check the fields.",
+        "DEFAULT": "The action failed. Try again."
+      },
+      "erpRoles": {
+        "CALCULATION": "Calculation",
+        "CATALOG_SUPPLY": "Catalog and procurement",
+        "FULFILLMENT": "Fulfilment and logistics",
+        "FINANCE": "Finance",
+        "HEAD": "Head",
+        "VIEWER": "Observer"
+      }
+    }
   },
   "tabs": {
     "today": "Today",

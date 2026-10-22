@@ -5,6 +5,8 @@ import {
   getRailTechPlatformBFFAPICRMERPMock,
 } from "../shared/api/generated/platform-bff.msw";
 import type { ChangePasswordIn, LoginIn, MeUpdate } from "../shared/api/generated/model";
+import { adminUsersHandlers } from "./adminUsers";
+import { isEmployeeDisabled } from "./fixtures/employees";
 import { feedHandlers } from "./feedHandlers";
 import { DEMO_WRONG_CURRENT_PASSWORD, DEMO_WRONG_PASSWORD, findUser } from "./fixtures/users";
 import {
@@ -54,6 +56,10 @@ export const handlers = [
         user.loginError.source,
       );
     }
+    // Отключённого в Оргструктуре CRM не отличает от неверного пароля (Q-PLT-10-1).
+    if (isEmployeeDisabled(user.id)) {
+      return failure(401, "INVALID_CREDENTIALS", "Неверная почта или пароль", "crm");
+    }
     const session = buildSession(startSession(user));
     return session ? HttpResponse.json(session) : failure(500, "INTERNAL_ERROR", "Нет сессии");
   }),
@@ -101,6 +107,8 @@ export const handlers = [
     const me = next ? buildMe(next) : undefined;
     return me ? HttpResponse.json(me) : sessionExpired();
   }),
+
+  ...adminUsersHandlers,
 
   getGetHealthMockHandler({
     status: "ok",

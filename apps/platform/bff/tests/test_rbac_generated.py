@@ -1,6 +1,7 @@
 """Сгенерированное = контракт: Python и TypeScript из packages/contracts/platform-rbac.yaml."""
 
 import importlib.util
+import json
 import subprocess
 import sys
 from pathlib import Path
@@ -60,6 +61,9 @@ def test_generated_data_equals_contract() -> None:
     assert list(generated.MODULES) == list(spec["menu"])
     for role, body in spec["roles"].items():
         assert generated.ROLE_NAMES[role] == body["name"]
+    for role, body in spec["roles"].items():
+        assert list(generated.ERP_ROLE_CODES[role]) == body["erp_role_codes"]
+        assert list(generated.ERP_EXTRA_PERMISSIONS[role]) == body["erp_extra_permissions"]
     assert list(generated.ACCESS) == [r["key"] for r in spec["resources"]]
     for row in spec["resources"]:
         assert generated.ACCESS[row["key"]] == row["access"]
@@ -90,3 +94,16 @@ def test_typescript_carries_every_cell_of_the_contract() -> None:
     for name, field in spec["restricted_fields"].items():
         line = next(ln for ln in text.splitlines() if ln.startswith(f"  {name}:"))
         assert all(f'"{r}"' in line for r in field["visible_to"])
+
+
+def test_typescript_carries_erp_roles_of_the_contract() -> None:
+    """Роли и права ERP каждой роли присутствуют в TS-файле буквально."""
+    text = TS_FILE.read_text(encoding="utf-8")
+    for role, body in contract()["roles"].items():
+        for name, key in (
+            ("ERP_ROLE_CODES", "erp_role_codes"),
+            ("ERP_EXTRA_PERMISSIONS", "erp_extra_permissions"),
+        ):
+            block = text[text.index(f"export const {name} = {{") :]
+            line = next(ln for ln in block.splitlines() if ln.startswith(f"  {role}:"))
+            assert line.strip() == f"{role}: {json.dumps(body[key])},", (name, role)

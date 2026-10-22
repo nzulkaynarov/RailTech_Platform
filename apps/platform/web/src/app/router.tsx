@@ -6,6 +6,7 @@ import { DEFAULT_HOME } from "./auth/redirect";
 import { LoginPage } from "./auth/LoginPage";
 import { NotFoundPage } from "./NotFoundPage";
 import { AppShell } from "./shell/AppShell";
+import { PanelSlotProvider } from "./shell/PanelSlot";
 
 /**
  * Карта маршрутов (SPEC-v3 §6.3): вход и смена пароля — вне каркаса, шесть модулей — внутри `AppShell`, каждый грузится
@@ -22,7 +23,11 @@ export const routes: RouteObject[] = [
     children: [
       { path: "/change-password", element: <ChangePasswordPage /> },
       {
-        element: <AppShell />,
+        element: (
+          <PanelSlotProvider>
+            <AppShell />
+          </PanelSlotProvider>
+        ),
         children: [
           { index: true, element: <Navigate to={DEFAULT_HOME} replace /> },
           { path: "dashboard/*", lazy: () => import("../modules/dashboard") },

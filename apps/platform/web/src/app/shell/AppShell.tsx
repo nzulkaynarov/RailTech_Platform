@@ -13,6 +13,7 @@ import type { MenuCounter } from "../../shared/api/generated/model";
 import { pollQuery } from "../../shared/api/polling";
 import { ContextPanel, ContextPanelDrawer } from "../../shared/ui/ContextPanel";
 import { PlusIcon } from "../../shared/ui/icons";
+import { LinkButton } from "../../shared/ui/LinkButton";
 import { ModuleMenu, ModuleMenuContent, type MenuItem } from "../../shared/ui/ModuleMenu";
 import { ModuleRail, type RailModule } from "../../shared/ui/ModuleRail";
 import { SoonButton } from "../../shared/ui/SoonButton";
@@ -22,6 +23,7 @@ import { canEdit, canSee } from "../access";
 import { useAuth } from "../auth/useAuth";
 import { AvatarMenu } from "./AvatarMenu";
 import { PanelContent } from "./PanelContent";
+import { usePanelSlotHost } from "./panelSlotContext";
 import { usePanels } from "./usePanels";
 import { useViewport } from "./useViewport";
 
@@ -53,6 +55,7 @@ export function AppShell() {
 
   const match = matchSection(location.pathname, location.search);
   const panels = usePanels(me.id, match?.section);
+  const { attach: attachPanelSlot, claimed: panelClaimed } = usePanelSlotHost(panels.tab);
 
   const railModules = useMemo(
     () => me.modules.flatMap((code) => findModule(code) ?? []),
@@ -119,9 +122,15 @@ export function AppShell() {
 
   const action =
     activeModule.action && canEdit(me, activeModule.action.access) ? (
-      <SoonButton type="primary" block icon={<PlusIcon />}>
-        {t(`modules:${activeModule.code}.action`)}
-      </SoonButton>
+      activeModule.action.to ? (
+        <LinkButton type="primary" block icon={<PlusIcon />} to={activeModule.action.to}>
+          {t(`modules:${activeModule.code}.action`)}
+        </LinkButton>
+      ) : (
+        <SoonButton type="primary" block icon={<PlusIcon />}>
+          {t(`modules:${activeModule.code}.action`)}
+        </SoonButton>
+      )
     ) : undefined;
 
   const menuProps = {
@@ -160,7 +169,12 @@ export function AppShell() {
       panels.setPanelOpen(false);
     },
     children: (
-      <PanelContent module={match?.module.code} section={match?.section.key} tab={panels.tab} />
+      <>
+        <div ref={attachPanelSlot} />
+        {panelClaimed ? null : (
+          <PanelContent module={match?.module.code} section={match?.section.key} tab={panels.tab} />
+        )}
+      </>
     ),
   };
 

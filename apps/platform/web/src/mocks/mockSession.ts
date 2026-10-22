@@ -1,4 +1,5 @@
 import type { Language, Me, RoleCode, Session } from "../shared/api/generated/model";
+import { effectiveRoles } from "./fixtures/employees";
 import { computeAccess } from "./fixtures/rbac";
 import { type DemoUser, DEMO_USERS } from "./fixtures/users";
 
@@ -65,7 +66,10 @@ function setCookie(name: string, value: string, maxAge = 60 * 60 * 12): void {
 export function buildMe(session: MockSession): Me | undefined {
   const user = DEMO_USERS.find((u) => u.id === session.userId);
   if (!user) return undefined;
-  const effective = session.activeRole ? [session.activeRole] : user.roles;
+  // Роли — с учётом выданных в Admin · Оргструктуре (мок хранит их в `fixtures/employees`).
+  const roles = effectiveRoles(user.id, user.roles);
+  const effective =
+    session.activeRole && roles.includes(session.activeRole) ? [session.activeRole] : roles;
   const computed = computeAccess(effective);
   return {
     id: user.id,
@@ -74,8 +78,9 @@ export function buildMe(session: MockSession): Me | undefined {
     initials: user.initials,
     position: user.position,
     language: session.language,
-    roles: user.roles,
-    active_role: session.activeRole,
+    roles,
+    active_role:
+      session.activeRole && roles.includes(session.activeRole) ? session.activeRole : null,
     modules: computed.modules,
     resources: computed.resources,
     restricted_fields: computed.restricted_fields,
