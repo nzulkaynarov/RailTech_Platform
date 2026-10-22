@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 
 import type { RoleCode } from "../../app/rbac.generated";
 import { modulesOfRoles } from "../../entities/employee/access";
+import { erpConsequence } from "../../entities/employee/consequence";
 import { employeeErrorText } from "../../entities/employee/errors";
 import type { Employee } from "../../shared/api/generated/model";
 import { Consequence } from "../../shared/ui/Consequence";
@@ -63,10 +64,11 @@ export function AssignRoleForm({ employee, selfId, otherActiveAdmins }: AssignRo
   const before = modulesOfRoles(employee.roles);
   const after = modulesOfRoles(roles);
   const lost = before.filter((m) => !after.includes(m));
+  const erpLine = erpConsequence(t, roles);
   const items = [
     t("admin.org.consequence.modules", { modules: moduleList(after) || "—" }),
     ...(lost.length > 0 ? [t("admin.org.consequence.lost", { modules: moduleList(lost) })] : []),
-    t("admin.org.consequence.erp"),
+    ...(erpLine ? [erpLine] : []),
     ...(positionChanged
       ? [
           position.trim()

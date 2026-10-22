@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 
 import type { RoleCode } from "../../app/rbac.generated";
 import { modulesOfRoles } from "../../entities/employee/access";
+import { erpConsequence } from "../../entities/employee/consequence";
 import { employeeErrorText } from "../../entities/employee/errors";
 import { ApiError } from "../../shared/api/errors";
 import type { Employee } from "../../shared/api/generated/model";
@@ -76,12 +77,13 @@ export function InviteEmployeeForm({ onInvited, onOpenCard, onCancel }: InviteEm
   };
 
   const modules = modulesOfRoles(roles).map((code) => findModule(code)?.name ?? code);
+  const erpLine = erpConsequence(t, roles);
   const items = [
     t("admin.org.invite.consequenceMail"),
     ...(modules.length > 0
       ? [t("admin.org.consequence.modules", { modules: modules.join(", ") })]
       : []),
-    t("admin.org.consequence.erp"),
+    ...(erpLine ? [erpLine] : []),
     t("admin.org.invite.consequenceListed"),
   ];
   const showRoleNote = rolesTouched && roles.length === 0;

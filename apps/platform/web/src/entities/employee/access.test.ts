@@ -4,10 +4,11 @@ import { resolve } from "node:path";
 import { parse } from "yaml";
 import { describe, expect, it } from "vitest";
 
-import { ROLES } from "../../app/rbac.generated";
-import { modulesOfRoles, sortRoles } from "./access";
+import { ERP_EXTRA_PERMISSIONS, ERP_ROLE_CODES, ROLES } from "../../app/rbac.generated";
+import { erpAccessOfRoles, modulesOfRoles, sortRoles } from "./access";
 
 interface Yaml {
+  roles: Record<string, { erp_role_codes: string[]; erp_extra_permissions: string[] }>;
   resources: { key: string; module: string; access: Record<string, string> }[];
 }
 const matrix = parse(
@@ -56,5 +57,29 @@ describe("sortRoles", () => {
       "SUPPLY",
       "ADMIN",
     ]);
+  });
+});
+
+describe("роли ERP из сгенерированной карты", () => {
+  it.each(ROLES)("роль %s: erp_role_codes и права = platform-rbac.yaml", (role) => {
+    expect([...ERP_ROLE_CODES[role]]).toEqual(matrix.roles[role]?.erp_role_codes);
+    expect([...ERP_EXTRA_PERMISSIONS[role]]).toEqual(matrix.roles[role]?.erp_extra_permissions);
+  });
+
+  it("объединение без повторов в порядке ролей", () => {
+    expect(erpAccessOfRoles(["SUPPLY", "ENGINEER"])).toEqual({
+      admin: false,
+      codes: ["CATALOG_SUPPLY", "FULFILLMENT"],
+    });
+    expect(erpAccessOfRoles(["ACCOUNTANT", "MANAGER"]).codes).toEqual(["VIEWER", "FINANCE"]);
+  });
+
+  it("ADMIN — суперпользователь ERP, остальные роли ERP не добавляют", () => {
+    expect(erpAccessOfRoles(["ADMIN"])).toEqual({ admin: true, codes: [] });
+    expect(erpAccessOfRoles(["SUPPLY", "ADMIN"])).toEqual({ admin: true, codes: [] });
+  });
+
+  it("без ролей ничего", () => {
+    expect(erpAccessOfRoles([])).toEqual({ admin: false, codes: [] });
   });
 });

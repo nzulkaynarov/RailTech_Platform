@@ -59,7 +59,11 @@ describe("AssignRoleForm: выдача ролей", () => {
       within(block).getByText("Сотрудник увидит модули: Dashboard, CRM, EDS, ERP, Chats."),
     ).toBeVisible();
     expect(within(block).getByText("Перестанет видеть модули: Admin.")).toBeVisible();
-    expect(within(block).getByText(/В ERP сотрудник получит доступ/)).toBeVisible();
+    expect(
+      within(block).getByText(
+        "В ERP сотрудник получит роли: Каталог и закупки, Исполнение и логистика.",
+      ),
+    ).toBeVisible();
   });
 
   it("отправляет только изменённые поля: роли в порядке контракта", async () => {

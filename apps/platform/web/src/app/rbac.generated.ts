@@ -44,6 +44,26 @@ export const ROLE_NAMES: Record<RoleCode, { ru: string; uz: string; en: string }
   },
 };
 
+/** Роли ERP, которые CRM выдаёт роли Платформы (04-integration-map.md §4); у ADMIN пусто: суперпользователь ERP. */
+export const ERP_ROLE_CODES = {
+  MANAGER: ["VIEWER"],
+  DIRECTOR: ["HEAD"],
+  SUPPLY: ["CATALOG_SUPPLY", "FULFILLMENT"],
+  ENGINEER: ["FULFILLMENT"],
+  ACCOUNTANT: ["FINANCE"],
+  ADMIN: [],
+} as const satisfies Record<RoleCode, readonly string[]>;
+
+/** Права ERP поверх шаблонов ролей ERP. */
+export const ERP_EXTRA_PERMISSIONS = {
+  MANAGER: ["deal.manage"],
+  DIRECTOR: [],
+  SUPPLY: ["quote.build", "quote.edit_pricing"],
+  ENGINEER: ["quote.build"],
+  ACCOUNTANT: ["contract.manage", "fulfillment.act"],
+  ADMIN: [],
+} as const satisfies Record<RoleCode, readonly string[]>;
+
 /** Матрица SPEC-v3 §4.2: раздел -> модуль и уровень по каждой роли. */
 export const RESOURCES = {
   "dashboard.queue": {

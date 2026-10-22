@@ -308,12 +308,13 @@
       "consequence": {
         "modules": "Xodim quyidagi modullarni ko'radi: {{modules}}.",
         "lost": "Quyidagi modullarni ko'rmaydi: {{modules}}.",
-        "erp": "ERP da xodim kirish huquqini oladi; ERP rollari va huquqlarini CRM Platforma rollari xaritasi bo'yicha belgilaydi.",
         "applied": "O'zgarishlar darhol qo'llanadi; CRM jurnalida kim va qachon kiritgani qoladi.",
         "position": "Kartochkadagi lavozim: «{{position}}».",
         "positionCleared": "Kartochkadagi lavozim tozalanadi.",
         "self": "Siz o'z rollaringizni o'zgartiryapsiz: menyu saqlangandan keyin yangilanadi.",
-        "selfLosesAdmin": "Siz Admin bo'limiga kirish huquqini yo'qotasiz."
+        "selfLosesAdmin": "Siz Admin bo'limiga kirish huquqini yo'qotasiz.",
+        "erpRoles": "ERP da xodim quyidagi rollarni oladi: {{roles}}.",
+        "erpAdmin": "ERP da xodim administrator (superfoydalanuvchi) bo'ladi."
       },
       "invite": {
         "title": "Xodimni taklif qilish",
@@ -354,6 +355,14 @@
         "BACKEND_UNAVAILABLE": "CRM javob bermayapti. Keyinroq takrorlang.",
         "VALIDATION_FAILED": "Maydonlarning to'ldirilganini tekshiring.",
         "DEFAULT": "Amalni bajarib bo'lmadi. Qayta urinib ko'ring."
+      },
+      "erpRoles": {
+        "CALCULATION": "Hisob-kitob",
+        "CATALOG_SUPPLY": "Katalog va xaridlar",
+        "FULFILLMENT": "Bajarish va logistika",
+        "FINANCE": "Moliya",
+        "HEAD": "Rahbar",
+        "VIEWER": "Kuzatuvchi"
       }
     }
   },

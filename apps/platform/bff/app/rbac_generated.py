@@ -32,6 +32,26 @@ ROLE_NAMES: Final[dict[RoleCode, dict[str, str]]] = {
     "ADMIN": {"ru": "Администратор", "uz": "Administrator", "en": "Administrator"},
 }
 
+# Роли ERP и права поверх шаблонов, которые CRM выдаёт роли Платформы
+# (04-integration-map.md §4).
+# Пустой кортеж у ADMIN: суперпользователь ERP, роли ERP не нужны.
+ERP_ROLE_CODES: Final[dict[RoleCode, tuple[str, ...]]] = {
+    "MANAGER": ("VIEWER",),
+    "DIRECTOR": ("HEAD",),
+    "SUPPLY": ("CATALOG_SUPPLY", "FULFILLMENT"),
+    "ENGINEER": ("FULFILLMENT",),
+    "ACCOUNTANT": ("FINANCE",),
+    "ADMIN": (),
+}
+ERP_EXTRA_PERMISSIONS: Final[dict[RoleCode, tuple[str, ...]]] = {
+    "MANAGER": ("deal.manage",),
+    "DIRECTOR": (),
+    "SUPPLY": ("quote.build", "quote.edit_pricing"),
+    "ENGINEER": ("quote.build",),
+    "ACCOUNTANT": ("contract.manage", "fulfillment.act"),
+    "ADMIN": (),
+}
+
 # Раздел матрицы -> модуль.
 RESOURCE_MODULE: Final[dict[str, ModuleCode]] = {
     "dashboard.queue": "dashboard",

@@ -308,12 +308,13 @@
       "consequence": {
         "modules": "The employee will see the modules: {{modules}}.",
         "lost": "The employee will stop seeing the modules: {{modules}}.",
-        "erp": "In ERP the employee will get access; CRM assigns ERP roles and permissions from the Platform role map.",
         "applied": "Changes apply immediately; the CRM log records who made them and when.",
         "position": "Position on the card: “{{position}}”.",
         "positionCleared": "The position on the card will be cleared.",
         "self": "You are changing your own roles: the menu updates after saving.",
-        "selfLosesAdmin": "You will lose access to the Admin section."
+        "selfLosesAdmin": "You will lose access to the Admin section.",
+        "erpRoles": "In ERP the employee will get the roles: {{roles}}.",
+        "erpAdmin": "In ERP the employee becomes an administrator (superuser)."
       },
       "invite": {
         "title": "Invite employee",
@@ -354,6 +355,14 @@
         "BACKEND_UNAVAILABLE": "CRM is not responding. Try again later.",
         "VALIDATION_FAILED": "Check the fields.",
         "DEFAULT": "The action failed. Try again."
+      },
+      "erpRoles": {
+        "CALCULATION": "Calculation",
+        "CATALOG_SUPPLY": "Catalog and procurement",
+        "FULFILLMENT": "Fulfilment and logistics",
+        "FINANCE": "Finance",
+        "HEAD": "Head",
+        "VIEWER": "Observer"
       }
     }
   },

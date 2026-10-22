@@ -103,6 +103,23 @@ def render_py(spec: dict[str, Any]) -> str:
             ]
             lines.append("    },")
     lines.append("}")
+    lines += [
+        "",
+        "# Роли ERP и права поверх шаблонов, которые CRM выдаёт роли Платформы",
+        "# (04-integration-map.md §4).",
+        "# Пустой кортеж у ADMIN: суперпользователь ERP, роли ERP не нужны.",
+    ]
+    lines.append("ERP_ROLE_CODES: Final[dict[RoleCode, tuple[str, ...]]] = {")
+    for r in roles:
+        lines.append(
+            _py_tuple(f"    {_q(r)}: ", [_q(c) for c in spec["roles"][r]["erp_role_codes"]], ",")
+        )
+    lines.append("}")
+    lines.append("ERP_EXTRA_PERMISSIONS: Final[dict[RoleCode, tuple[str, ...]]] = {")
+    for r in roles:
+        perms = [_q(c) for c in spec["roles"][r]["erp_extra_permissions"]]
+        lines.append(_py_tuple(f"    {_q(r)}: ", perms, ","))
+    lines.append("}")
     lines += ["", "# Раздел матрицы -> модуль."]
     lines.append("RESOURCE_MODULE: Final[dict[str, ModuleCode]] = {")
     lines += [f"    {_q(r['key'])}: {_q(r['module'])}," for r in spec["resources"]]
@@ -239,7 +256,30 @@ def render_ts(spec: dict[str, Any]) -> str:
         out.append(f"  {r}: {{")
         out += [f"    {lang}: {_q(spec['roles'][r]['name'][lang])}," for lang in LANGS]
         out.append("  },")
-    out += ["};", "", "/** Матрица SPEC-v3 §4.2: раздел -> модуль и уровень по каждой роли. */"]
+    out += [
+        "};",
+        "",
+        "/** Роли ERP, которые CRM выдаёт роли Платформы (04-integration-map.md §4); у ADMIN пусто: суперпользователь ERP. */",
+        "export const ERP_ROLE_CODES = {",
+    ]
+    for r in roles:
+        out.append(
+            f"  {r}: {_ts_arr(2 + len(r) + 2, [_q(c) for c in spec['roles'][r]['erp_role_codes']])},"
+        )
+    out += [
+        "} as const satisfies Record<RoleCode, readonly string[]>;",
+        "",
+        "/** Права ERP поверх шаблонов ролей ERP. */",
+        "export const ERP_EXTRA_PERMISSIONS = {",
+    ]
+    for r in roles:
+        perms = [_q(c) for c in spec["roles"][r]["erp_extra_permissions"]]
+        out.append(f"  {r}: {_ts_arr(2 + len(r) + 2, perms)},")
+    out += [
+        "} as const satisfies Record<RoleCode, readonly string[]>;",
+        "",
+        "/** Матрица SPEC-v3 §4.2: раздел -> модуль и уровень по каждой роли. */",
+    ]
     out.append("export const RESOURCES = {")
     for r in spec["resources"]:
         out.append(f"  {_ts_key(r['key'])}: {{")
