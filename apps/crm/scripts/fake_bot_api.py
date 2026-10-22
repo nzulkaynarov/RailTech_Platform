@@ -2,13 +2,13 @@
 """Заглушка Telegram Bot API для проверки `crm-bot` на стенде без настоящего токена (S0-4).
 
 Стандартная библиотека, без зависимостей. Бот и API CRM направляются на неё через
-`TELEGRAM_API_BASE_URL=http://fake-bot-api:8081`; любой токен формата `<число>:<строка>` принимается,
-имя бота — `fakebot<число>` (по нему видно, с каким токеном пришёл вызов). Токены в журнал не пишутся —
-только их число и последние 4 символа.
+`TELEGRAM_API_BASE_URL=http://fake-bot-api:8081`; любой токен формата `<число>:<строка>`
+принимается, имя бота — `fakebot<число>` (по нему видно, с каким токеном пришёл вызов).
+Токены в журнал не пишутся — только число и последние 4 символа.
 
 Bot API (как у Telegram):  POST /bot<token>/<метод>
-  getMe, getUpdates (long polling, ждёт `timeout`), sendMessage (запоминает), setWebhook/deleteWebhook/
-  getWebhookInfo; остальные методы профиля и меню отвечают пустым успехом.
+  getMe, getUpdates (long polling, ждёт `timeout`), sendMessage (запоминает),
+  setWebhook/deleteWebhook/getWebhookInfo; остальные методы профиля и меню — пустой успех.
 
 Управление стендом (без токена):
   POST /_inject   тело — update (JSON): кладёт в очередь getUpdates
@@ -183,7 +183,9 @@ class Handler(BaseHTTPRequestHandler):
 
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__.split("\n")[0])
-    parser.add_argument("--host", default="0.0.0.0")
+    # Слушаем все интерфейсы внутри контейнера стенда.
+    host_default = "0.0.0.0"
+    parser.add_argument("--host", default=host_default)
     parser.add_argument("--port", type=int, default=8081)
     args = parser.parse_args()
     ThreadingHTTPServer((args.host, args.port), Handler).serve_forever()
