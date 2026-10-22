@@ -22,6 +22,7 @@ from app.domain.errors import (
     UpstreamUnavailableError,
     ValidationFailedError,
 )
+from app.integrations.erp_transport import SharedAsyncClient, send
 from app.security import pairing_proof
 
 logger = structlog.get_logger(__name__)
@@ -129,8 +130,11 @@ def _detail(response: httpx.Response) -> str:
 class HttpxErpPairingClient:
     """`POST {base_url}/api/integration/v1/pairing/(accept|rotate)`, таймаут 10 с."""
 
-    def __init__(self, timeout_s: float = PAIRING_TIMEOUT_S) -> None:
+    def __init__(
+        self, timeout_s: float = PAIRING_TIMEOUT_S, *, http: SharedAsyncClient | None = None
+    ) -> None:
         self._timeout_s = timeout_s
+        self._http = http or SharedAsyncClient()
 
     async def accept_bootstrap(
         self, base_url: str, platform_secret: str, secrets_: PairingSecrets
@@ -211,10 +215,14 @@ class HttpxErpPairingClient:
             "Content-Type": "application/json",
         }
         try:
-            async with httpx.AsyncClient(timeout=self._timeout_s) as client:
-                return await client.post(
-                    base_url.rstrip("/") + path, content=content, headers=headers
-                )
+            return await send(
+                self._http,
+                "POST",
+                base_url.rstrip("/") + path,
+                timeout_s=self._timeout_s,
+                headers=headers,
+                content=content,
+            )
         except (httpx.ConnectError, httpx.ConnectTimeout) as exc:
             # Соединения не было: запрос до ERP не дошёл — исход однозначный.
             raise UpstreamUnavailableError(

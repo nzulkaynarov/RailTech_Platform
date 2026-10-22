@@ -3,7 +3,10 @@
 import pytest
 
 from app.config import Settings
+from app.domain.platform_roles import crm_policies, role_subject
+from app.security.principal import Principal
 from app.security.rbac import CATALOG, Rbac, read_seed
+from tests.platform_role_data import make_role
 
 CASBIN_DIR = Settings(_env_file=None).casbin_dir
 RBAC = Rbac.from_rules(CASBIN_DIR, read_seed(CASBIN_DIR / "policy.seed.csv"))
@@ -69,17 +72,112 @@ def test_permissions_payload_shape() -> None:
     }
 
 
-def test_director_platform_role_adds_only_users_read_on_top_of_viewer() -> None:
-    """CRM-01c: seed `viewer` не расширен; право — по роли Платформы."""
-    got = {
+# Роли Платформы: правила `pr:<id>` пишутся по матрице роли (id условные, как в миграции).
+ROLE_IDS = {"ADMIN": 1, "DIRECTOR": 2, "MANAGER": 3, "SUPPLY": 4, "ENGINEER": 5, "ACCOUNTANT": 6}
+
+
+def _with_platform_roles() -> Rbac:
+    rules = read_seed(CASBIN_DIR / "policy.seed.csv")
+    for legacy, role_id in ROLE_IDS.items():
+        for resource, action in sorted(crm_policies(make_role(legacy, role_id).access)):
+            rules.append([role_subject(role_id), "crm", resource, action])
+    return Rbac.from_rules(CASBIN_DIR, rules)
+
+
+PLATFORM = _with_platform_roles()
+
+
+def _rights(roles: list[str], platform: list[str]) -> set[tuple[str, str]]:
+    ids = [ROLE_IDS[code] for code in platform]
+    return {
         (r, a)
         for r, actions in CATALOG.items()
         for a in actions
-        if RBAC.allowed(["viewer"], r, a, ["DIRECTOR"])
+        if PLATFORM.allowed(roles, r, a, ids)
     }
 
-    assert got == VIEWER | {("users", "read")}
-    assert not RBAC.allowed(["viewer"], "users", "read")
-    for other in (["SUPPLY"], ["ENGINEER"], ["MANAGER"], ["ACCOUNTANT"], ["bogus"]):
-        assert not RBAC.allowed(["viewer"], "users", "read", other)
-    assert RBAC.permissions(["viewer"], ["DIRECTOR"])["users"] == {"read": True, "write": False}
+
+def test_director_reads_users_on_top_of_viewer_by_the_computed_admin_read() -> None:
+    """`users:read` директору даёт вычисленный раздел `admin` (read), а не код роли."""
+    got = _rights([], ["DIRECTOR"])
+
+    assert ("users", "read") in got
+    assert ("users", "write") not in got
+    assert not PLATFORM.allowed(["viewer"], "users", "read")  # seed `viewer` не расширен
+    for other in (["SUPPLY"], ["ENGINEER"], ["MANAGER"], ["ACCOUNTANT"], []):
+        assert ("users", "read") not in _rights([], other), other
+    assert PLATFORM.permissions(["viewer"], [ROLE_IDS["DIRECTOR"]])["users"] == {
+        "read": True,
+        "write": False,
+    }
+
+
+def test_roles_of_a_user_are_united_and_unknown_role_ids_give_nothing() -> None:
+    assert _rights([], ["MANAGER", "DIRECTOR"]) >= _rights([], ["MANAGER"])
+    assert _rights([], ["MANAGER", "DIRECTOR"]) >= _rights([], ["DIRECTOR"])
+    assert not PLATFORM.allowed(["viewer"], "users", "read", [999])
+    assert PLATFORM.allowed(["viewer"], "leads", "read", [999])  # базовая роль действует
+
+
+def test_accountant_reads_the_company_summary_spend_without_working_the_leads() -> None:
+    got = _rights([], ["ACCOUNTANT"])
+
+    assert ("spend", "read") in got  # dashboard.summary read
+    assert {("leads", "reply"), ("leads", "note")} <= got  # chats.external full
+    assert ("leads", "take") not in got
+    assert ("clients", "write") not in got
+
+
+def _custom(access: dict[str, str], role_id: int) -> Rbac:
+    """Seed ролей CRM + правила одной роли Платформы."""
+    rules = read_seed(CASBIN_DIR / "policy.seed.csv")
+    rules += [[role_subject(role_id), "crm", r, a] for r, a in sorted(crm_policies(access))]
+    return Rbac.from_rules(CASBIN_DIR, rules)
+
+
+def _all(rbac: Rbac, principal: Principal) -> set[tuple[str, str]]:
+    return {
+        (r, a)
+        for r, actions in CATALOG.items()
+        for a in actions
+        if rbac.allowed(principal.rbac_roles, r, a, principal.platform_role_ids)
+    }
+
+
+def _principal(roles: tuple[str, ...], ids: tuple[int, ...], admin: bool = False) -> Principal:
+    return Principal(1, "Тест", roles, platform_role_ids=ids, platform_admin=admin)
+
+
+def test_a_role_gives_exactly_its_own_rights_and_not_the_base_role_bundle() -> None:
+    """Роль {crm.leads: full} не даёт clients:write (его даёт seed manager), а {chats.internal:
+    full} — даже leads:read (его даёт seed viewer): базовая роль прав не даёт."""
+    leads = _custom({"crm.leads": "full"}, 90)
+    got = _all(leads, _principal(("manager",), (90,)))
+    assert got == {(r, a) for r, a in crm_policies({"crm.leads": "full"})}
+    assert ("clients", "write") not in got
+
+    chat = _custom({"chats.internal": "full"}, 91)
+    assert _all(chat, _principal(("viewer",), (91,))) == set()
+    assert not chat.allowed(_principal(("viewer",), (91,)).rbac_roles, "leads", "read", (91,))
+    assert chat.permissions((), (91,))["leads"]["read"] is False
+
+
+def test_the_system_admin_role_keeps_the_crm_admin_and_a_custom_admin_section_does_not() -> None:
+    rbac = _custom({}, 1)
+    everything = {(r, a) for r, actions in CATALOG.items() for a in actions}
+
+    assert _all(rbac, _principal(("admin",), (1,), admin=True)) == everything
+    custom = _custom({"admin": "full"}, 92)
+    got = _all(custom, _principal(("admin",), (92,)))  # роль с admin: full, но не системная
+    assert ("users", "write") in got
+    assert ("clients", "write") not in got
+    assert got < everything
+
+
+def test_a_user_without_platform_roles_is_checked_by_the_crm_roles_as_before() -> None:
+    manual = _principal(("manager",), ())
+    assert manual.rbac_roles == ("manager",)
+    assert RBAC.allowed(manual.rbac_roles, "clients", "write", manual.platform_role_ids)
+    assert _principal(("admin",), ()).is_admin is True
+    assert _principal(("admin",), (92,)).is_admin is False
+    assert _principal(("viewer",), (1,), admin=True).rbac_roles == ("admin",)

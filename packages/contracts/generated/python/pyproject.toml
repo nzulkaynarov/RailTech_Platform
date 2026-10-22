@@ -1,0 +1,16 @@
+# rt-contracts — модели Pydantic v2 событий rt_bus, сгенерированные из packages/contracts/events/ (L6, ADR-0014).
+# Модули src/rt_contracts/events/*.py руками не правятся: make -C packages/contracts generate.
+# Установка по пути: uv add --editable ../../packages/contracts/generated/python (или pip install <путь>).
+[project]
+name = "rt-contracts"
+version = "1.0.0"
+description = "RailTech Platform: модели событий rt_bus (CloudEvents-конверт и data каждого типа), генерация из JSON Schema"
+requires-python = ">=3.12"
+dependencies = ["pydantic[email]>=2.11,<3"]
+
+[build-system]
+requires = ["hatchling>=1.27"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/rt_contracts"]

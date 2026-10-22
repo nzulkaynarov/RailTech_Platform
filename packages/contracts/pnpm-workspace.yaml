@@ -5,3 +5,4 @@ allowBuilds:
   esbuild: true
   core-js: false
   protobufjs: false
+  '@scarf/scarf': false # телеметрия @asyncapi/parser — не нужна

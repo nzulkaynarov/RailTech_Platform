@@ -11,7 +11,7 @@ from app.schemas.auth import MeOut, MePatch, PermissionsResponse
 from app.schemas.leads import ActionResult
 from app.security.rbac import Rbac
 from app.services.staff_notifier import StaffNotifier
-from app.services.users import UserView
+from app.services.user_views import UserView
 
 router = APIRouter(prefix="/api/v1/me", tags=["me"])
 
@@ -59,7 +59,7 @@ async def permissions(
     principal: PrincipalDep, rbac: Annotated[Rbac, Depends(get_rbac)]
 ) -> PermissionsResponse:
     """Только для скрытия UI; истина — проверки на каждом эндпоинте."""
-    matrix = rbac.permissions(principal.roles, principal.platform_roles)
+    matrix = rbac.permissions(principal.rbac_roles, principal.platform_role_ids)
     if principal.must_change_password:
         matrix = {r: dict.fromkeys(actions, False) for r, actions in matrix.items()}
     return PermissionsResponse(roles=list(principal.roles), permissions=matrix)

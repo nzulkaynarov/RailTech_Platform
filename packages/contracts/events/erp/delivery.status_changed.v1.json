@@ -1,0 +1,34 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://railtech.uz/contracts/events/erp/delivery.status_changed.v1.json",
+  "title": "Статус поставки изменился",
+  "description": "Тип uz.railtech.erp.delivery.status_changed.v1, источник rt://erp. Поле data конверта (envelope.v1.json); прежнее тело события delivery.status_changed из events.schema.json без version, event, occurred_at. Что делает CRM: бот CRM по политике «сообщать о сдвигах».",
+  "type": "object",
+  "required": [
+    "erp_company_id",
+    "crm_client_id",
+    "deal",
+    "actor",
+    "payload"
+  ],
+  "properties": {
+    "erp_company_id": {
+      "type": "integer",
+      "description": "Компания клиента в ERP"
+    },
+    "crm_client_id": {
+      "type": "integer",
+      "description": "Клиент в CRM"
+    },
+    "deal": {
+      "$ref": "_defs.v1.json#/$defs/DealRef"
+    },
+    "actor": {
+      "$ref": "_defs.v1.json#/$defs/Actor"
+    },
+    "payload": {
+      "$ref": "_defs.v1.json#/$defs/DeliveryEvent"
+    }
+  },
+  "additionalProperties": false
+}

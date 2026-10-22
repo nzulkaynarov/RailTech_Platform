@@ -13,9 +13,9 @@ from typing import Final
 import casbin
 import structlog
 from casbin_async_sqlalchemy_adapter import Adapter
-from sqlalchemy.ext.asyncio import AsyncEngine
+from sqlalchemy.ext.asyncio import AsyncEngine, async_sessionmaker
 
-from app.domain.platform_roles import platform_grants
+from app.domain.platform_roles import role_subject
 from app.models.auth import CasbinRule
 
 logger = structlog.get_logger(__name__)
@@ -58,6 +58,8 @@ def read_seed(path: Path) -> list[list[str]]:
 class Rbac:
     def __init__(self, enforcer: casbin.AsyncEnforcer) -> None:
         self._enforcer = enforcer
+        # Перезагрузка политик после правки роли не удалась: повторить при ближайшей проверке.
+        self.stale = False
 
     @classmethod
     async def create(cls, engine: AsyncEngine, casbin_dir: Path) -> "Rbac":
@@ -69,6 +71,11 @@ class Rbac:
         if missing:
             await enforcer.add_policies(missing)
             logger.info("rbac_seed_applied", rules=len(missing))
+        from app.services.platform_policies import sync_policies
+
+        # Роли Платформы (`pr:<id>`): правила в БД сверяются с таблицей ролей (после миграции).
+        if await sync_policies(async_sessionmaker(engine)):
+            await enforcer.load_policy()
         return cls(enforcer)
 
     @classmethod
@@ -83,22 +90,31 @@ class Rbac:
     async def reload(self) -> None:
         await self._enforcer.load_policy()
 
+    async def safe_reload(self) -> None:
+        """Перезагрузить политики; сбой не ломает запрос — флаг `stale` повторит попытку позже."""
+        try:
+            await self.reload()
+        except Exception:
+            logger.exception("rbac_reload_failed")
+            self.stale = True
+        else:
+            self.stale = False
+
     def allowed(
         self,
         roles: Iterable[str],
         resource: str,
         action: str,
-        platform_roles: Iterable[str] = (),
+        platform_role_ids: Iterable[int] = (),
     ) -> bool:
-        """Право по ролям CRM (casbin) или по роли Платформы (`PLATFORM_ROLE_GRANTS`, CRM-01c)."""
-        if (resource, action) in platform_grants(platform_roles):
-            return True
-        return any(self._enforcer.enforce(role, DOMAIN, resource, action) for role in roles)
+        """Право по ролям CRM или по ролям Платформы (субъект `pr:<id>`, правила в casbin)."""
+        subjects = [*roles, *(role_subject(i) for i in platform_role_ids)]
+        return any(self._enforcer.enforce(sub, DOMAIN, resource, action) for sub in subjects)
 
     def permissions(
-        self, roles: Iterable[str], platform_roles: Iterable[str] = ()
+        self, roles: Iterable[str], platform_role_ids: Iterable[int] = ()
     ) -> dict[str, dict[str, bool]]:
-        role_list, platform_list = list(roles), list(platform_roles)
+        role_list, platform_list = list(roles), list(platform_role_ids)
         return {
             resource: {
                 action: self.allowed(role_list, resource, action, platform_list)

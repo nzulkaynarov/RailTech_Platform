@@ -1,0 +1,34 @@
+{
+  "specversion": "1.0",
+  "id": "2dd9f201-6aca-5347-b32b-f689ee470df7",
+  "source": "rt://erp",
+  "type": "uz.railtech.erp.deal.lost.v1",
+  "time": "2026-10-30T05:00:00Z",
+  "subject": "D-2026-0905",
+  "datacontenttype": "application/json",
+  "dataschema": "rt://contracts/events/erp/deal.lost/v1",
+  "tenant": "railtech",
+  "correlationid": "a4eba31e-29f9-5683-bf9a-874cde6e0762",
+  "traceparent": "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01",
+  "data": {
+    "erp_company_id": 118,
+    "crm_client_id": 42,
+    "deal": {
+      "erp_deal_id": 905,
+      "number": "D-2026-0905",
+      "title": "Поставка оборудования, партия 1",
+      "stage": "lost",
+      "amount": "125000000.00",
+      "currency": "UZS"
+    },
+    "actor": {
+      "type": "staff",
+      "name": "Расчётчик"
+    },
+    "payload": {
+      "amount": "125000000.00",
+      "currency": "UZS",
+      "lost_reason": "Выбрали другого поставщика"
+    }
+  }
+}

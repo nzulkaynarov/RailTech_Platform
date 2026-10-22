@@ -220,8 +220,10 @@ def test_user_platform_roles_and_position_come_and_go_with_the_revision(
     alembic_config: Config, live_settings: Settings
 ) -> None:
     """CRM-01: `users.platform_roles` — пустой массив по умолчанию, только коды контракта;
-    `position` — до 120 символов; downgrade обе колонки снимает."""
+    `position` — до 120 символов; downgrade обе колонки снимает. Столбец с кодами в R-1 удалён
+    миграцией 0036 (роли — данные): проверяем его на ревизии 0035, где downgrade его вернул."""
     command.upgrade(alembic_config, "head")
+    command.downgrade(alembic_config, "0035_platform_roles_data")
     with psycopg.connect(live_settings.libpq_dsn, autocommit=True) as conn:
         conn.execute("TRUNCATE users RESTART IDENTITY CASCADE")
         conn.execute(

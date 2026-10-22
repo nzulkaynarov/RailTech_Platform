@@ -1,0 +1,24 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://railtech.uz/contracts/events/identity/user.deactivated.v1.json",
+  "title": "Сотрудник отключён",
+  "description": "Тип uz.railtech.identity.user.deactivated.v1, источник rt://crm. Поле data конверта (envelope.v1.json). Подписчик закрывает доступ и сессии сотрудника; повтор — без действий.",
+  "type": "object",
+  "required": [
+    "crm_user_id",
+    "actor"
+  ],
+  "properties": {
+    "crm_user_id": {
+      "type": "integer"
+    },
+    "reason": {
+      "type": "string",
+      "maxLength": 500
+    },
+    "actor": {
+      "$ref": "_defs.v1.json#/$defs/Actor"
+    }
+  },
+  "additionalProperties": false
+}

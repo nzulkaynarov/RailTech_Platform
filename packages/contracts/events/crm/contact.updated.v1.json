@@ -1,0 +1,29 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://railtech.uz/contracts/events/crm/contact.updated.v1.json",
+  "title": "Контакт клиента изменён",
+  "description": "Тип uz.railtech.crm.contact.updated.v1, источник rt://crm. Поле data конверта (envelope.v1.json). Снимок контакта после изменения. Подписчик ERP обновляет проекцию по crm_contact_id (нет проекции — создаёт); более старый updated_at не применяется.",
+  "type": "object",
+  "required": [
+    "contact",
+    "actor"
+  ],
+  "properties": {
+    "contact": {
+      "$ref": "_defs.v1.json#/$defs/Contact"
+    },
+    "changed_fields": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "pattern": "^[a-z][a-z0-9_]*$"
+      },
+      "description": "Необязательно: имена изменённых полей снимка (подсказка; подписчик всё равно применяет снимок целиком)"
+    },
+    "actor": {
+      "$ref": "_defs.v1.json#/$defs/Actor"
+    }
+  },
+  "additionalProperties": false
+}
