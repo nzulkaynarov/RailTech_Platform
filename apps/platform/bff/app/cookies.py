@@ -35,6 +35,6 @@ def set_session_cookies(
     )
 
 
-def clear_session_cookies(response: Response) -> None:
-    response.delete_cookie(SESSION_COOKIE, path="/", secure=True, httponly=True, samesite="lax")
-    response.delete_cookie(CSRF_COOKIE, path="/", secure=True, httponly=False, samesite="lax")
+def clear_session_cookies(response: Response, *, secure: bool = True) -> None:
+    response.delete_cookie(SESSION_COOKIE, path="/", secure=secure, httponly=True, samesite="lax")
+    response.delete_cookie(CSRF_COOKIE, path="/", secure=secure, httponly=False, samesite="lax")

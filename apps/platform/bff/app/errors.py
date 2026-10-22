@@ -83,11 +83,12 @@ def error_response(
     )
 
 
-async def _platform_error(_: Request, exc: Exception) -> JSONResponse:
+async def _platform_error(request: Request, exc: Exception) -> JSONResponse:
     err = cast(PlatformError, exc)
     response = error_response(err.status_code, err.body, err.headers)
     if err.clear_session:
-        clear_session_cookies(response)
+        settings = getattr(request.app.state, "settings", None)
+        clear_session_cookies(response, secure=settings.cookie_secure if settings else True)
     return response
 
 

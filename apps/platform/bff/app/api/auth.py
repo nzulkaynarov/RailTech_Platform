@@ -38,10 +38,10 @@ async def login(
 
 
 @router.post("/auth/logout", status_code=status.HTTP_204_NO_CONTENT, operation_id="logout")
-async def logout(authed: AuthedDep) -> Response:
+async def logout(authed: AuthedDep, settings: SettingsDep) -> Response:
     await authed.service.logout(authed.sid)
     response = Response(status_code=status.HTTP_204_NO_CONTENT)
-    clear_session_cookies(response)
+    clear_session_cookies(response, secure=settings.cookie_secure)
     return response
 
 
