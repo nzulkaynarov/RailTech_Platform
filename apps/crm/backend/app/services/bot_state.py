@@ -196,6 +196,15 @@ class BotStateService:
         async with self._sessions() as session, session.begin():
             await session.execute(stmt)
 
+    async def mark_stopped(self) -> None:
+        """Штатная остановка: пульса больше не будет, API сразу видит «не отвечает»."""
+        async with self._sessions() as session, session.begin():
+            await session.execute(
+                update(BotRuntimeState)
+                .where(BotRuntimeState.id == _ROW)
+                .values(running=False, heartbeat_at=None, updated_at=func.now())
+            )
+
     async def mark_applied(self, requested_at: datetime) -> None:
         """Запрос выполнен: в `restart_applied_at` копируется то, что было прочитано."""
         async with self._sessions() as session, session.begin():

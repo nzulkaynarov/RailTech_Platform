@@ -63,6 +63,17 @@ async def test_report_is_visible_to_api_and_goes_stale_without_pulse(
     assert (await state.snapshot()).alive is True  # type: ignore[union-attr]
 
 
+async def test_graceful_stop_is_visible_at_once(
+    sessions: async_sessionmaker[AsyncSession],
+) -> None:
+    state = BotStateService(sessions)
+    await report(state)
+    await state.mark_stopped()
+    snapshot = await state.snapshot()
+    assert snapshot is not None
+    assert (snapshot.alive, snapshot.running) == (False, False)
+
+
 async def test_restart_request_is_applied_exactly_once(
     sessions: async_sessionmaker[AsyncSession],
 ) -> None:

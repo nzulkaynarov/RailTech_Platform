@@ -196,6 +196,8 @@ def create_bot_app(settings: Settings | None = None) -> FastAPI:
                     loop.cancel()
                     with contextlib.suppress(asyncio.CancelledError, Exception):
                         await loop
+                    with contextlib.suppress(Exception):  # БД могла уйти раньше процесса
+                        await container.bot_state.mark_stopped()
         finally:
             await container.aclose()
 
