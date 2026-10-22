@@ -70,7 +70,7 @@ jobs:
       - name: OpenAPI актуален
         run: |
           make openapi
-          git diff --exit-code -- docs/api/openapi.json frontend/src/api/generated \
+          git diff --exit-code -- ../../packages/contracts/openapi/crm.yaml frontend/src/api/generated \
             || (echo "::error::OpenAPI или клиент orval устарели — выполните make openapi"; exit 1)
       - name: Compose-файлы валидны
         run: |

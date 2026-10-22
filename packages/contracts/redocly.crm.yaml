@@ -1,0 +1,9 @@
+# Линт crm.yaml (make contracts). Файл генерируется из FastAPI (make -C apps/crm openapi), а не пишется руками, поэтому
+# правила, которые нельзя выполнить, не меняя то, что описывает бэкенд, выключены ТОЛЬКО для него (как redocly.internal.yaml).
+extends:
+  - ./redocly.yaml
+rules:
+  # FastAPI не пишет security у публичных операций (вход, вебхуки, /health, форма лида): защита — зависимости маршрутов (Casbin).
+  security-defined: off
+  # CRM не публикует адрес сервера в схеме: он зависит от стенда (прокси Caddy).
+  no-empty-servers: off
