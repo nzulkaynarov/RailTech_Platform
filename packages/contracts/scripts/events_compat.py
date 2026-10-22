@@ -6,11 +6,13 @@
 (`git show REF:<путь>`; по умолчанию переменная CONTRACTS_BASE_REF или origin/main). Файла или каталога в базе
 нет — новое, не ломающее. $ref (в том числе на _defs.vN.json) разворачиваются в обеих версиях до сравнения.
 
-В пределах vN допустимы только добавления: новое необязательное поле, новый тип (файл), расширение enum, снятие
-ограничений. Ломающее (код выхода 1): удаление или переименование поля; смена типа (кроме расширения);
-новое обязательное поле; сужение enum, const, формата, шаблона, границ; ужесточение additionalProperties; удаление
-файла типа или определения $defs; новые условия allOf/if/not. Ломающее делается только новым файлом v(N+1) с
-двойной публикацией на переходе. Код выхода 2 — базу не прочитать (нет ссылки: git fetch origin main).
+В пределах vN допустимы только новые необязательные поля (в `properties`), новые типы (файлы) и новые определения
+`$defs`; аннотации (title, description, examples, x-*) не сравниваются. Всё прочее — ломающее (код выхода 1), и сужение,
+и расширение: удаление или переименование поля, любая смена type, enum, const, format, pattern, границ, required (новое
+обязательное или снятое), additionalProperties, вариантов oneOf/anyOf/allOf, условий if/then/else/not, удаление файла
+или определения. Причина: приёмник терпим только к лишним полям (L10), а значение вне enum или поле без
+обязательности у старого подписчика — 422 и dead. Ломающее делается только новым файлом v(N+1) с двойной публикацией
+на переходе. Код выхода 2 — базу не прочитать (нет ссылки: git fetch origin main).
 """
 
 from __future__ import annotations
@@ -45,9 +47,6 @@ IGNORED = {
     "contentMediaType",
     "contentEncoding",
 }
-LOWER = ("minimum", "exclusiveMinimum", "minLength", "minItems", "minProperties", "minContains")
-UPPER = ("maximum", "exclusiveMaximum", "maxLength", "maxItems", "maxProperties", "maxContains")
-SUBSCHEMA = ("items", "contains", "propertyNames", "unevaluatedItems")
 
 
 def is_schema_path(path: str) -> bool:
@@ -138,175 +137,110 @@ def _norm(s: Any) -> dict[str, Any]:
     return s
 
 
-def _types(s: Mapping[str, Any]) -> set[str] | None:
-    t = s.get("type")
-    if t is None:
-        return None
-    ts = {t} if isinstance(t, str) else set(t)
-    return ts | {"integer"} if "number" in ts else ts
-
-
 def _fmt(v: Any) -> str:
     return json.dumps(v, ensure_ascii=False, sort_keys=True)
 
 
 def compare(old: Any, new: Any, at: str, out: list[str]) -> None:
-    """Добавляет в out описание каждого ломающего изменения new относительно old (L8)."""
+    """Добавляет в out описание каждого изменения new относительно old, кроме допустимых в vN (L8, L10).
+
+    Допустимо только: новое необязательное поле в `properties`, новое определение в `$defs`, аннотации
+    (title, description, examples, x-*). Всё остальное — и сужение, и расширение — ломает старого подписчика или
+    издателя (приёмник терпим только к лишним полям: additionalProperties, L10) и требует v(N+1).
+    """
     o, n = _norm(old), _norm(new)
     if o == n:
         return
     if "$recursive" in o or "$recursive" in n:
-        if o != n:
-            out.append(f"{at}: изменена рекурсивная ссылка")
+        out.append(f"{at}: изменена рекурсивная ссылка")
         return
 
-    ot, nt = _types(o), _types(n)
-    if nt is not None and (ot is None or not ot <= nt):
-        out.append(f"{at}: смена типа {_fmt(o.get('type'))} → {_fmt(n.get('type'))}")
-
-    if "const" in n and ("const" not in o or o["const"] != n["const"]):
-        out.append(f"{at}: const {_fmt(o.get('const'))} → {_fmt(n['const'])}")
-    if "enum" in n:
-        allowed = o["enum"] if "enum" in o else ([o["const"]] if "const" in o else None)
-        if allowed is None:
-            out.append(f"{at}: добавлен enum {_fmt(n['enum'])} (сужение)")
-        else:
-            lost = [v for v in allowed if v not in n["enum"]]
-            if lost:
-                out.append(f"{at}: сужение enum, убраны {_fmt(lost)}")
-
-    if n.get("format") and n.get("format") != o.get("format"):
-        out.append(f"{at}: формат {_fmt(o.get('format'))} → {_fmt(n['format'])}")
-    if "pattern" in n and n["pattern"] != o.get("pattern"):
-        out.append(f"{at}: шаблон {_fmt(o.get('pattern'))} → {_fmt(n['pattern'])}")
-    for k in LOWER:
-        if k in n and (k not in o or n[k] > o[k]):
-            out.append(f"{at}: {k} {_fmt(o.get(k))} → {_fmt(n[k])} (сужение)")
-    for k in UPPER:
-        if k in n and (k not in o or n[k] < o[k]):
-            out.append(f"{at}: {k} {_fmt(o.get(k))} → {_fmt(n[k])} (сужение)")
-    if "multipleOf" in n and n["multipleOf"] != o.get("multipleOf"):
-        out.append(f"{at}: multipleOf {_fmt(o.get('multipleOf'))} → {_fmt(n['multipleOf'])}")
-    if n.get("uniqueItems") and not o.get("uniqueItems"):
-        out.append(f"{at}: добавлено uniqueItems")
-
-    for name in sorted(set(n.get("required", [])) - set(o.get("required", []))):
-        out.append(f"{at}: новое обязательное поле «{name}»")
-    oprops, nprops = o.get("properties", {}), n.get("properties", {})
-    for name in oprops:
-        if name not in nprops:
-            out.append(f"{at}/properties/{name}: поле удалено или переименовано")
-        else:
-            compare(oprops[name], nprops[name], f"{at}/properties/{name}", out)
-    for key in ("additionalProperties", "unevaluatedProperties"):
-        oa, na = o.get(key, True), n.get(key, True)
-        if na is False and oa is not False:
-            out.append(f"{at}: ужесточение {key} ({_fmt(oa)} → false)")
-        elif na is not False:
-            compare(oa, na, f"{at}/{key}", out)
-    for name in sorted(set(o.get("patternProperties", {})) | set(n.get("patternProperties", {}))):
-        compare(
-            o.get("patternProperties", {}).get(name),
-            n.get("patternProperties", {}).get(name),
-            f"{at}/patternProperties/{name}",
-            out,
-        )
-
-    for key in SUBSCHEMA:
-        if key in o or key in n:
-            compare(o.get(key), n.get(key), f"{at}/{key}", out)
-    oprefix, nprefix = o.get("prefixItems", []), n.get("prefixItems", [])
-    for i in range(max(len(oprefix), len(nprefix))):
-        compare(
-            oprefix[i] if i < len(oprefix) else None,
-            nprefix[i] if i < len(nprefix) else None,
-            f"{at}/prefixItems/{i}",
-            out,
-        )
-
-    odefs, ndefs = o.get("$defs", {}), n.get("$defs", {})
-    for name in odefs:
-        if name not in ndefs:
-            out.append(f"{at}/$defs/{name}: определение удалено")
-        else:
-            compare(odefs[name], ndefs[name], f"{at}/$defs/{name}", out)
-
-    for key in ("oneOf", "anyOf"):
-        if key not in n:
+    for key in sorted((set(o) | set(n)) - IGNORED):
+        if key.startswith("x-"):
             continue
-        if key not in o:
-            out.append(f"{at}: добавлен {key} (сужение)")
-            continue
-        for i, branch in enumerate(o[key]):
-            if not any(_clean(branch, nb) for nb in n[key]):
-                out.append(f"{at}/{key}/{i}: вариант удалён или сужен")
-    if "allOf" in n:
-        for i, branch in enumerate(n["allOf"]):
-            if not any(_clean(ob, branch) for ob in o.get("allOf", [])):
-                out.append(f"{at}/allOf/{i}: новое или более строгое условие allOf")
+        ov, nv = o.get(key), n.get(key)
+        if key == "properties":
+            oprops, nprops = ov or {}, nv or {}
+            for name in oprops:
+                if name not in nprops:
+                    out.append(f"{at}/properties/{name}: поле удалено или переименовано")
+                else:
+                    compare(oprops[name], nprops[name], f"{at}/properties/{name}", out)
+            # Новые поля допустимы, если не обязательные — это проверяет required ниже.
+        elif key == "$defs":
+            odefs, ndefs = ov or {}, nv or {}
+            for name in odefs:
+                if name not in ndefs:
+                    out.append(f"{at}/$defs/{name}: определение удалено")
+                else:
+                    compare(odefs[name], ndefs[name], f"{at}/$defs/{name}", out)
+        elif key == "required":
+            added = sorted(set(nv or []) - set(ov or []))
+            removed = sorted(set(ov or []) - set(nv or []))
+            out += [f"{at}: новое обязательное поле «{name}»" for name in added]
+            out += [f"{at}: поле «{name}» стало необязательным" for name in removed]
+        elif key == "enum":
+            if ov is None or nv is None:
+                out.append(f"{at}: enum {_fmt(ov)} → {_fmt(nv)}")
+            else:
+                lost = [v for v in ov if v not in nv]
+                gained = [v for v in nv if v not in ov]
+                if lost:
+                    out.append(f"{at}: сужение enum, убраны {_fmt(lost)}")
+                if gained:
+                    out.append(f"{at}: расширение enum {_fmt(gained)} — старый подписчик отклонит (422)")
+        elif key == "type":
+            if _type_set(ov) != _type_set(nv):
+                out.append(f"{at}: смена типа {_fmt(ov)} → {_fmt(nv)}")
+        elif key in SUBSCHEMA_MAPS:
+            for name in sorted(set(ov or {}) | set(nv or {})):
+                if name not in (ov or {}) or name not in (nv or {}):
+                    out.append(f"{at}/{key}/{name}: добавлено или удалено")
+                else:
+                    compare(ov[name], nv[name], f"{at}/{key}/{name}", out)
+        elif key in SUBSCHEMA_LISTS:
+            if ov is None or nv is None or len(ov) != len(nv):
+                out.append(f"{at}/{key}: варианты добавлены или удалены ({_len(ov)} → {_len(nv)})")
+            else:
+                for i, (ob, nb) in enumerate(zip(ov, nv, strict=True)):
+                    compare(ob, nb, f"{at}/{key}/{i}", out)
+        elif key in SUBSCHEMA:
+            if ov in (None, True) and nv in (None, True):
+                continue  # отсутствие и true равнозначны
+            if key == "additionalProperties" and (ov is False) != (nv is False):
+                out.append(f"{at}: additionalProperties {_fmt(ov)} → {_fmt(nv)}")
+            elif ov is None or nv is None:
+                out.append(f"{at}/{key}: добавлено или удалено ({_fmt(ov)} → {_fmt(nv)})")
+            else:
+                compare(ov, nv, f"{at}/{key}", out)
+        elif ov != nv:
+            out.append(f"{at}: {key} {_fmt(ov)} → {_fmt(nv)}")
 
-    if "if" in n and n["if"] != o.get("if"):
-        out.append(f"{at}: новое или изменённое условие if")
-    for key in ("then", "else"):
-        if key in o or key in n:
-            compare(o.get(key), n.get(key), f"{at}/{key}", out)
-    if "not" in n and n["not"] != o.get("not"):
-        out.append(f"{at}: новое или изменённое условие not")
 
-    odr, ndr = o.get("dependentRequired", {}), n.get("dependentRequired", {})
-    for name, fields in ndr.items():
-        extra = sorted(set(fields) - set(odr.get(name, [])))
-        if extra:
-            out.append(f"{at}/dependentRequired/{name}: новые обязательные {_fmt(extra)}")
-    for name in sorted(set(o.get("dependentSchemas", {})) | set(n.get("dependentSchemas", {}))):
-        compare(
-            o.get("dependentSchemas", {}).get(name),
-            n.get("dependentSchemas", {}).get(name),
-            f"{at}/dependentSchemas/{name}",
-            out,
-        )
-
-    unknown = sorted(k for k in (set(o) | set(n)) - KNOWN - IGNORED if not k.startswith("x-"))
-    for k in unknown:
-        if o.get(k) != n.get(k):
-            out.append(f"{at}: изменено ключевое слово {k}, правило совместимости для него не задано")
-
-
-KNOWN = {
-    "type",
-    "const",
-    "enum",
-    "format",
-    "pattern",
-    *LOWER,
-    *UPPER,
-    "multipleOf",
-    "uniqueItems",
-    "required",
-    "properties",
+SUBSCHEMA = (
+    "items",
+    "contains",
+    "propertyNames",
+    "unevaluatedItems",
     "additionalProperties",
     "unevaluatedProperties",
-    "patternProperties",
-    *SUBSCHEMA,
-    "prefixItems",
-    "$defs",
-    "oneOf",
-    "anyOf",
-    "allOf",
     "if",
     "then",
     "else",
     "not",
-    "dependentRequired",
-    "dependentSchemas",
-    "$recursive",
-}
+)
+SUBSCHEMA_MAPS = ("patternProperties", "dependentSchemas")
+SUBSCHEMA_LISTS = ("oneOf", "anyOf", "allOf", "prefixItems")
 
 
-def _clean(old: Any, new: Any) -> bool:
-    probe: list[str] = []
-    compare(old, new, "#", probe)
-    return not probe
+def _type_set(t: Any) -> set[str] | None:
+    if t is None:
+        return None
+    return {t} if isinstance(t, str) else set(t)
+
+
+def _len(v: Any) -> str:
+    return "нет" if v is None else str(len(v))
 
 
 def check(base: Tree, head: Tree) -> list[str]:

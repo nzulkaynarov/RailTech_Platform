@@ -13,6 +13,7 @@
     "crm_contact_id": 58,
     "crm_client_id": 42,
     "erp_company_id": 118,
+    "deleted_at": "2026-10-22T09:10:00Z",
     "actor": {
       "type": "staff",
       "crm_user_id": 1

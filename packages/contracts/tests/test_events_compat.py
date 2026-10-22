@@ -65,29 +65,27 @@ def test_description_and_title_changes_are_compatible() -> None:
     assert run(BASE, changed(lambda s: s.update(title="Новое", description="Другое"))) == []
 
 
-def test_enum_widening_is_compatible() -> None:
-    assert run(BASE, changed(lambda s: s["properties"]["status"]["enum"].append("accepted"))) == []
+def test_annotations_are_compatible() -> None:
+    def annotate(s: dict[str, Any]) -> None:
+        s["properties"]["note"]["examples"] = ["пример"]
+        s["x-rt-owner"] = "erp"
+
+    assert run(BASE, changed(annotate)) == []
 
 
-def test_relaxing_constraints_is_compatible() -> None:
-    def relax(s: dict[str, Any]) -> None:
-        s["properties"]["note"]["maxLength"] = 200
-        s["properties"]["version"].pop("minimum")
-        s["properties"]["url"].pop("format")
-
-    assert run(BASE, changed(relax)) == []
+def test_new_optional_nested_field_is_compatible() -> None:
+    old = changed(lambda s: s["properties"].update(meta={"type": "object", "properties": {}}))
+    new = changed(lambda s: s["properties"].update(meta={"type": "object", "properties": {"a": {"type": "string"}}}))
+    assert run(old, new) == []
 
 
-def test_type_widening_to_nullable_is_compatible() -> None:
-    assert run(BASE, changed(lambda s: s["properties"]["note"].update(type=["string", "null"]))) == []
+def test_enum_reorder_is_compatible() -> None:
+    assert run(BASE, changed(lambda s: s["properties"]["status"]["enum"].reverse())) == []
 
 
-def test_oneof_new_variant_is_compatible() -> None:
-    assert run(BASE, changed(lambda s: s["properties"]["amount"]["oneOf"].append({"type": "integer"}))) == []
-
-
-def test_additional_properties_relaxed_is_compatible() -> None:
-    assert run(BASE, changed(lambda s: s.update(additionalProperties=True))) == []
+def test_additional_properties_absent_equals_true() -> None:
+    old = changed(lambda s: s.pop("additionalProperties"))
+    assert run(old, changed(lambda s: s.update(additionalProperties=True))) == []
 
 
 # ─── ломающее ─────────────────────────────────────────────────────────────────────────────────
@@ -135,7 +133,7 @@ def test_enum_narrowing_is_breaking() -> None:
 
 
 def test_enum_added_is_breaking() -> None:
-    assert_breaking(run(BASE, changed(lambda s: s["properties"]["note"].update(enum=["a"]))), "добавлен enum")
+    assert_breaking(run(BASE, changed(lambda s: s["properties"]["note"].update(enum=["a"]))), "enum")
 
 
 def test_const_change_is_breaking() -> None:
@@ -145,12 +143,12 @@ def test_const_change_is_breaking() -> None:
 
 
 def test_format_added_or_changed_is_breaking() -> None:
-    assert_breaking(run(BASE, changed(lambda s: s["properties"]["note"].update(format="email"))), "формат")
-    assert_breaking(run(BASE, changed(lambda s: s["properties"]["url"].update(format="uri-reference"))), "формат")
+    assert_breaking(run(BASE, changed(lambda s: s["properties"]["note"].update(format="email"))), "format")
+    assert_breaking(run(BASE, changed(lambda s: s["properties"]["url"].update(format="uri-reference"))), "format")
 
 
 def test_pattern_change_is_breaking() -> None:
-    assert_breaking(run(BASE, changed(lambda s: s["properties"]["note"].update(pattern="^[a-z]+$"))), "шаблон")
+    assert_breaking(run(BASE, changed(lambda s: s["properties"]["note"].update(pattern="^[a-z]+$"))), "pattern")
 
 
 @pytest.mark.parametrize(
@@ -163,9 +161,9 @@ def test_tightened_bounds_are_breaking(field: str, key: str, value: int) -> None
 
 def test_additional_properties_tightened_is_breaking() -> None:
     old = changed(lambda s: s.pop("additionalProperties"))
-    assert_breaking(run(old, copy.deepcopy(BASE)), "ужесточение additionalProperties")
+    assert_breaking(run(old, copy.deepcopy(BASE)), "additionalProperties")
     old_true = changed(lambda s: s.update(additionalProperties=True))
-    assert_breaking(run(old_true, copy.deepcopy(BASE)), "ужесточение additionalProperties")
+    assert_breaking(run(old_true, copy.deepcopy(BASE)), "additionalProperties")
 
 
 def test_additional_properties_schema_added_is_breaking() -> None:
@@ -178,13 +176,83 @@ def test_deleted_type_file_is_breaking() -> None:
     assert_breaking(run(BASE, None), "файл удалён")
 
 
+# Расширение в пределах vN тоже ломающее: приёмник терпим только к лишним полям (L10), остальное — 422 → dead.
+
+
+def test_enum_widening_is_breaking() -> None:
+    old = changed(lambda s: s["properties"].update(by={"type": "string", "enum": ["client", "company", "both"]}))
+    new = changed(
+        lambda s: s["properties"].update(by={"type": "string", "enum": ["client", "company", "both", "none"]})
+    )
+    assert_breaking(run(old, new), "расширение enum")
+
+
+def test_const_removed_is_breaking() -> None:
+    old = changed(lambda s: s["properties"]["status"].update(const="sent"))
+    assert_breaking(run(old, copy.deepcopy(BASE)), "const")
+
+
+def test_required_removed_is_breaking() -> None:
+    assert_breaking(run(BASE, changed(lambda s: s["required"].remove("erp_quote_id"))), "стало необязательным")
+
+
+def test_type_widening_is_breaking() -> None:
+    assert_breaking(run(BASE, changed(lambda s: s["properties"]["note"].update(type=["string", "null"]))), "смена типа")
+    assert_breaking(run(BASE, changed(lambda s: s["properties"]["version"].update(type="number"))), "смена типа")
+
+
+@pytest.mark.parametrize(
+    ("field", "key", "value"),
+    [("note", "maxLength", 200), ("version", "minimum", 0)],
+)
+def test_relaxed_bounds_are_breaking(field: str, key: str, value: int) -> None:
+    assert_breaking(run(BASE, changed(lambda s: s["properties"][field].update({key: value}))), key)
+
+
+@pytest.mark.parametrize(("field", "key"), [("note", "maxLength"), ("version", "minimum"), ("url", "format")])
+def test_removed_constraint_is_breaking(field: str, key: str) -> None:
+    assert_breaking(run(BASE, changed(lambda s: s["properties"][field].pop(key))), key)
+
+
+def test_relaxed_min_length_and_maximum_are_breaking() -> None:
+    old = changed(lambda s: s["properties"]["note"].update(minLength=3) or s["properties"]["version"].update(maximum=9))
+    new = changed(
+        lambda s: s["properties"]["note"].update(minLength=1) or s["properties"]["version"].update(maximum=99)
+    )
+    problems = run(old, new)
+    assert_breaking(problems, "minLength")
+    assert_breaking(problems, "maximum")
+
+
+def test_pattern_removed_is_breaking() -> None:
+    old = changed(lambda s: s["properties"]["note"].update(pattern="^[a-z]+$"))
+    assert_breaking(run(old, copy.deepcopy(BASE)), "pattern")
+
+
+def test_oneof_new_variant_is_breaking() -> None:
+    new = changed(lambda s: s["properties"]["amount"]["oneOf"].append({"type": "integer"}))
+    assert_breaking(run(BASE, new), "варианты добавлены")
+
+
+def test_anyof_new_variant_is_breaking() -> None:
+    old = changed(lambda s: s["properties"].update(ref={"anyOf": [{"type": "string"}]}))
+    new = changed(lambda s: s["properties"].update(ref={"anyOf": [{"type": "string"}, {"type": "integer"}]}))
+    assert_breaking(run(old, new), "anyOf")
+
+
+def test_additional_properties_relaxed_is_breaking() -> None:
+    assert_breaking(run(BASE, changed(lambda s: s.update(additionalProperties=True))), "additionalProperties")
+
+
 def test_oneof_variant_removed_is_breaking() -> None:
-    assert_breaking(run(BASE, changed(lambda s: s["properties"]["amount"]["oneOf"].pop())), "вариант удалён")
+    assert_breaking(
+        run(BASE, changed(lambda s: s["properties"]["amount"]["oneOf"].pop())), "варианты добавлены или удалены"
+    )
 
 
 def test_new_condition_is_breaking() -> None:
     cond = {"if": {"properties": {"status": {"const": "viewed"}}}, "then": {"required": ["note"]}}
-    assert_breaking(run(BASE, changed(lambda s: s.update(cond))), "условие if")
+    assert_breaking(run(BASE, changed(lambda s: s.update(cond))), "/if")
     assert_breaking(run(BASE, changed(lambda s: s.update(allOf=[{"required": ["note"]}]))), "allOf")
 
 
@@ -237,9 +305,9 @@ def test_broken_ref_in_new_tree_fails() -> None:
         check({}, new)
 
 
-def test_unknown_keyword_change_is_reported() -> None:
+def test_any_other_keyword_change_is_reported() -> None:
     assert run(BASE, changed(lambda s: s.update({"x-rt-note": 1}))) == [], "x-* — аннотации"
-    assert_breaking(run(BASE, changed(lambda s: s.update(dependencies={"note": ["url"]}))), "правило совместимости")
+    assert_breaking(run(BASE, changed(lambda s: s.update(dependencies={"note": ["url"]}))), "dependencies")
 
 
 # ─── CLI и git ────────────────────────────────────────────────────────────────────────────────

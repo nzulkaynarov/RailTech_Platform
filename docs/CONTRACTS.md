@@ -211,9 +211,10 @@ ADR-0016: у каждого файла контракта своя версия 
 - **API** — префикс пространства (`/api/integration/v1`, `/api/portal/v1`, `/api/v1`). Проверка ломающих изменений
   OpenAPI (`oasdiff` против `origin/main`) — задача B6.
 - **События шины** — мажор в типе и файле: `uz.railtech.<домен>.<сущность>.<действие>.v<N>` ↔
-  `events/<домен>/<сущность>.<действие>.v<N>.json` (§9.6). В пределах `vN` — новое необязательное поле, новый тип,
-  расширение enum; иначе — файл `v(N+1)`, издатель публикует оба типа, пока подписчики не перейдут. Машинная проверка —
-  `scripts/events_compat.py` в `make contracts` и в CI (§9.6).
+  `events/<домен>/<сущность>.<действие>.v<N>.json` (§9.6). В пределах `vN` — только новые необязательные поля и новые
+  типы; всё прочее, в том числе расширение (новое значение enum, снятый `required`, ослабленные ограничения), — файл
+  `v(N+1)`, издатель публикует оба типа, пока подписчики не перейдут. Машинная проверка — `scripts/events_compat.py` в
+  `make contracts` и в CI (§9.6).
 - **Старый вебхук §3** (поле `version` в теле) — до удаления в B3/B4 не меняется.
 
 ## 9. Шина rt_bus (события v2)
@@ -246,7 +247,9 @@ CloudEvents 1.0, structured mode, JSON; схема — `events/envelope.v1.json`
 терпимый: неизвестные атрибуты-расширения CloudEvents (имена `[a-z0-9]{1,20}`, значения — строка, число, булево)
 допускаются и игнорируются; неизвестные поля в `data` подписчик игнорирует — при проверке `data` по своей копии схемы
 ошибки `additionalProperties` не считаются отказом (модели `rt-contracts` для этого собраны с `extra="ignore"`), иначе
-новое необязательное поле издателя ломало бы старого подписчика.
+новое необязательное поле издателя ломало бы старого подписчика (L10). Других послаблений у приёмника нет: значение вне
+enum, отсутствующее обязательное поле, нарушенное ограничение — 422 и `dead`; поэтому в `vN` разрешены только новые
+необязательные поля (§9.6).
 
 ### 9.2. Типы и файлы (L2)
 
@@ -265,7 +268,7 @@ CloudEvents 1.0, structured mode, JSON; схема — `events/envelope.v1.json`
 | `uz.railtech.erp.<событие>.v1` — 22 события §3 | `rt://erp` → crm | прежнее тело §3 без `version`, `event`, `occurred_at`: `erp_company_id`, `crm_client_id`, `deal?`, `actor`, `payload` (определения — `erp/_defs.v1.json`) |
 | `uz.railtech.crm.client.created.v1` / `client.updated.v1` | `rt://crm` → erp (`updated`) | снимок `client`: `crm_client_id`, `erp_company_id?`, `name`, `inn`, `segment`, `is_active`, `owner{crm_user_id, full_name}`, `updated_at`; `changed_fields?`; `actor` |
 | `uz.railtech.crm.contact.created.v1` / `contact.updated.v1` | `rt://crm` → erp | снимок `contact`: `crm_contact_id`, `crm_client_id`, `erp_company_id?`, `full_name`, `position`, `phone_e164`, `email`, `telegram_user_id`, `is_primary`, `language?`, `preferred_channel?`, `updated_at` |
-| `uz.railtech.crm.contact.deleted.v1` | `rt://crm` → erp | `crm_contact_id`, `crm_client_id`, `erp_company_id?`, `actor` |
+| `uz.railtech.crm.contact.deleted.v1` | `rt://crm` → erp | `crm_contact_id`, `crm_client_id`, `erp_company_id?`, `deleted_at`, `actor`; поздний `contact.created/updated` с `updated_at` ≤ `deleted_at` не применяется |
 | `uz.railtech.crm.lead.created.v1` / `lead.updated.v1` / `lead.stage_changed.v1` | `rt://crm` → (Платформа, B5) | снимок `lead` без контактов и переписки: `crm_lead_id`, `crm_client_id?`, `display_name`, `company_name`, `stage`, `source`, `language`, `score`, `assigned_user`, `erp_request_id?`, `updated_at`; у `stage_changed` — `from`, `to`, `reason?` |
 | `uz.railtech.identity.user.created.v1` / `user.updated.v1` | `rt://crm` → (ERP, Платформа — позже) | снимок `user`: `crm_user_id`, `email`, `full_name`, `position`, `language`, `is_active`, `platform_roles`, `systems`, `erp_role_codes?`, `updated_at` |
 | `uz.railtech.identity.user.deactivated.v1` | `rt://crm` → (ERP, Платформа — позже) | `crm_user_id`, `reason?`, `actor` |
@@ -273,8 +276,12 @@ CloudEvents 1.0, structured mode, JSON; схема — `events/envelope.v1.json`
 События CRM и identity — снимки (event-carried state transfer): подписчик заменяет проекцию целиком по внешнему
 идентификатору; снимок с `updated_at` старше применённого не применяется (доставка может прийти не по порядку). Только
 поля, которыми владеет CRM (ADR-0015), и внешние идентификаторы; паролей, токенов, хэшей и одноразовых кодов нет
-(проверяется тестом). `payload.code` события `uz.railtech.erp.quote.acceptance_code_requested.v1` — секрет: подписчик
-не пишет его в ленту, журналы, inbox и логи.
+(проверяется тестом). Телефоны и e-mail в событиях CRM издатель нормализует до публикации (телефон — E.164,
+e-mail — без пробелов, по формату `email`; схема проверяет формат) — хвост B4.
+
+`payload.code` события `uz.railtech.erp.quote.acceptance_code_requested.v1` — секрет и для подписчика, и для издателя:
+подписчик не пишет его в ленту, журналы, inbox и логи; у издателя в outbox и журнале доставок он хранится маской
+(stash `rt_bus`, B1), открытое значение существует только в момент доставки.
 
 ### 9.3. Доставка и подпись (L3, L4)
 
@@ -328,10 +335,16 @@ subscribers:
 
 ### 9.6. Совместимость (L8) и генерация (L6)
 
-В пределах `vN` — только добавление необязательных полей и новых типов (и расширение: enum, `type` до надмножества,
-снятие ограничений). Ломающее: удаление или переименование поля, смена типа, новое обязательное поле, сужение
-enum/const/формата/шаблона/границ, ужесточение `additionalProperties`, удаление файла типа или определения `$defs`, новые
-условия `allOf`/`if`/`not`. Ломающее — только новым файлом `v(N+1)` с двойной публикацией на переходе.
+В пределах `vN` — только новые необязательные поля (в `properties`), новые типы (файлы) и новые определения `$defs`;
+аннотации (`title`, `description`, `examples`, `x-*`) не сравниваются. Всё прочее — ломающее, в обе стороны:
+
+- сужение: удаление или переименование поля, новое обязательное поле, сужение enum/const/`type`/`format`/`pattern`/
+  границ, ужесточение `additionalProperties`, новые условия `allOf`/`if`/`not`, удаление файла типа или определения;
+- расширение: новое значение enum или смена const, снятый `required`, расширенный `type` (в т. ч. `null`), ослабленные
+  или снятые `minimum`/`maximum`/`minLength`/`maxLength`/`pattern`/`format`, новая ветка `oneOf`/`anyOf`, ослабленный
+  `additionalProperties` — приёмник терпим только к лишним полям (L10), старый подписчик ответит 422 → `dead`.
+
+Ломающее — только новым файлом `v(N+1)` с двойной публикацией на переходе.
 
 `scripts/events_compat.py` сравнивает каждую схему `events/**` (кроме примеров) и `bus/subscriptions.schema.json` с
 базой `CONTRACTS_BASE_REF` (по умолчанию `origin/main`; `git show <ref>:<путь>`, `$ref` разворачиваются в обеих

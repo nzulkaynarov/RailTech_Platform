@@ -130,7 +130,7 @@ class ContactCreatedV1(BaseModel):
 
 class ContactDeletedV1(BaseModel):
     """
-    Тип uz.railtech.crm.contact.deleted.v1, источник rt://crm. Поле data конверта (envelope.v1.json). Подписчик ERP помечает проекцию контакта удалённой (доступ в Cabinet закрывается); повтор — без действий.
+    Тип uz.railtech.crm.contact.deleted.v1, источник rt://crm. Поле data конверта (envelope.v1.json). Подписчик ERP помечает проекцию контакта удалённой (доступ в Cabinet закрывается); повтор — без действий; поздний contact.created/updated с updated_at ≤ deleted_at не применяется.
     """
 
     model_config = ConfigDict(
@@ -141,6 +141,10 @@ class ContactDeletedV1(BaseModel):
     erp_company_id: int | None
     """
     Компания клиента в ERP, если известна
+    """
+    deleted_at: AwareDatetime
+    """
+    Момент удаления в CRM. Подписчик сравнивает с updated_at снимков contact.*: снимок с updated_at не новее deleted_at после удаления не применяется (поздняя доставка contact.updated не воскрешает контакт)
     """
     actor: Actor
 

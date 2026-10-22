@@ -2,12 +2,13 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://railtech.uz/contracts/events/crm/contact.deleted.v1.json",
   "title": "Контакт клиента удалён",
-  "description": "Тип uz.railtech.crm.contact.deleted.v1, источник rt://crm. Поле data конверта (envelope.v1.json). Подписчик ERP помечает проекцию контакта удалённой (доступ в Cabinet закрывается); повтор — без действий.",
+  "description": "Тип uz.railtech.crm.contact.deleted.v1, источник rt://crm. Поле data конверта (envelope.v1.json). Подписчик ERP помечает проекцию контакта удалённой (доступ в Cabinet закрывается); повтор — без действий; поздний contact.created/updated с updated_at ≤ deleted_at не применяется.",
   "type": "object",
   "required": [
     "crm_contact_id",
     "crm_client_id",
     "erp_company_id",
+    "deleted_at",
     "actor"
   ],
   "properties": {
@@ -23,6 +24,11 @@
         "null"
       ],
       "description": "Компания клиента в ERP, если известна"
+    },
+    "deleted_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Момент удаления в CRM. Подписчик сравнивает с updated_at снимков contact.*: снимок с updated_at не новее deleted_at после удаления не применяется (поздняя доставка contact.updated не воскрешает контакт)"
     },
     "actor": {
       "$ref": "_defs.v1.json#/$defs/Actor"

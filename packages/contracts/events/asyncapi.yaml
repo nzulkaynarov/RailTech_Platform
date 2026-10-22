@@ -2,6 +2,14 @@
 # Канал = тип события; сообщение = конверт CloudEvents (envelope.v1.json) с data по схеме типа
 # (<домен>/<сущность>.<действие>.v<N>.json). Новый тип: файл схемы + пример + канал, сообщение и операция здесь
 # (тест packages/contracts/tests/test_events.py сверяет файлы и этот документ в обе стороны).
+#
+# schemaFormat draft-07 при схемах JSON Schema 2020-12 — ограничение @asyncapi/parser 3.x: из JSON Schema он знает
+# только draft-07 (AsyncAPI Schema). Используемые ключевые слова (type, enum, const, $ref, properties, required,
+# additionalProperties, oneOf, if/then, propertyNames, format) в draft-07 значат то же; $defs разрешаются как
+# JSON Pointer. Источник истины для проверки data — сами файлы 2020-12 (jsonschema Draft202012Validator в тестах и rt_bus).
+#
+# address канала — логический (= тип события), а не путь: транспорт v1 один для всех типов — POST <endpoint
+# подписчика>/bus/v1/events (servers ниже и bus/subscriptions.yaml); тип читается из поля type конверта.
 asyncapi: 3.0.0
 info:
   title: RailTech rt_bus
@@ -33,6 +41,7 @@ servers:
     pathname: /bus/v1/events
     protocol: http
     description: Приёмник шины ERP (внутренняя сеть; переопределение — RT_BUS_ENDPOINT_ERP)
+# Канал = тип события; address — логический (= тип), фактическая доставка — POST /bus/v1/events (см. шапку).
 channels:
   uz.railtech.crm.client.created.v1:
     address: uz.railtech.crm.client.created.v1
