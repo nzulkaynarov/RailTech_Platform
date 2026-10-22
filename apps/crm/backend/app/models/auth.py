@@ -53,6 +53,8 @@ class User(TimestampMixin, Base):
             '"ACCOUNTANT", "ADMIN"]\' AS jsonb)',
             name="platform_roles",
         ),
+        # Язык интерфейса сотрудника (CRM-01b, Q-PLT-10-1 п. 6).
+        CheckConstraint("language IN ('ru', 'uz', 'en')", name="language"),
     )
 
     id: Mapped[int] = mapped_column(BigInteger, Identity(), primary_key=True)
@@ -85,6 +87,8 @@ class User(TimestampMixin, Base):
     platform_roles: Mapped[list[str]] = mapped_column(JSONB, server_default=sql("'[]'::jsonb"))
     # Должность текстом (SPEC-v3 §4.3), ≤ 120 символов.
     position: Mapped[str | None] = mapped_column(String(120))
+    # Язык интерфейса сотрудника ru|uz|en (CRM-01b); меняет сам себе или админ.
+    language: Mapped[str] = mapped_column(String(2), server_default=sql("'ru'"))
     # Последняя ошибка синхронизации с ERP (провижининг или отзыв); NULL — ERP в курсе. Читает
     # проверка «Синхронизация с ERP» центра внешних сервисов (ADR-0024); пользователю не видна.
     erp_sync_error: Mapped[str | None] = mapped_column(Text)
