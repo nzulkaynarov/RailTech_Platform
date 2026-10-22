@@ -5,7 +5,6 @@ from fastapi import APIRouter, Depends, Header, Query, Request
 
 from app.api.deps import ContainerDep, require
 from app.bot.profile import ProfilePublish
-from app.bot.supervisor import BotSupervisor
 from app.integrations.erp import ErpRateLimited
 from app.integrations.telegram import AiogramProbe
 from app.schemas.erp_events import ErpWebhookReceipt
@@ -45,17 +44,20 @@ Writer = Annotated[Principal, Depends(require("integrations", "write"))]
 
 
 def get_service(request: Request, container: ContainerDep) -> TelegramIntegrationService:
-    """Пробу Telegram тесты подменяют через `app.state.telegram_probe`."""
-    supervisor: BotSupervisor | None = getattr(request.app.state, "bot", None)
-    probe = getattr(request.app.state, "telegram_probe", None) or AiogramProbe()
+    """Пробу Telegram тесты подменяют через `app.state.telegram_probe`.
+
+    Бот живёт в `crm-bot`; сервис говорит с ним через БД (`container.bot_state`, S0-4).
+    """
+    probe = getattr(request.app.state, "telegram_probe", None) or AiogramProbe(container.settings)
     return TelegramIntegrationService(
         container.session_factory,
         container.settings_service,
         container.secrets_store,
         probe,
-        supervisor if isinstance(supervisor, BotSupervisor) else None,
+        container.bot_state,
         container.telegram_bot,
         mode=container.settings.telegram_mode,
+        restart_wait_s=container.settings.bot_restart_wait_s,
         lockout=LockoutPolicy(
             container.settings.login_max_failures, container.settings.login_lockout_minutes
         ),

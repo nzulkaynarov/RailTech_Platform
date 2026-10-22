@@ -67,6 +67,18 @@ class Settings(BaseSettings):
     telegram_webhook_secret: SecretStr = SecretStr("")
     # Только e2e/демо без Telegram: исходящие сообщения лиду пишутся в лог, а не отправляются.
     telegram_dry_run: bool = False
+    # Адрес Bot API: пусто — официальный `https://api.telegram.org`. Свой сервер Bot API или
+    # заглушка на стенде (S0-4: проверка crm-bot без токена); значение токена в адрес не входит.
+    telegram_api_base_url: str = ""
+    # Процесс бота (`python -m app bot`, S0-4): как часто он смотрит в БД, не просил ли `crm-api`
+    # перезапуск (смена токена в «Подключениях»); как часто пишет пульс; через сколько секунд без
+    # пульса «Состояние системы» считает процесс недоступным; пауза между попытками поднять бота.
+    bot_poll_interval_s: float = Field(default=2.0, gt=0)
+    bot_heartbeat_s: float = Field(default=10.0, gt=0)
+    bot_stale_after_s: float = Field(default=45.0, gt=0)
+    bot_retry_s: float = Field(default=30.0, gt=0)
+    # Сколько `crm-api` ждёт, пока `crm-bot` применит смену токена, прежде чем ответить админу.
+    bot_restart_wait_s: float = Field(default=10.0, ge=0)
 
     langfuse_public_key: str = ""
     langfuse_secret_key: SecretStr = SecretStr("")

@@ -118,6 +118,7 @@ deploy-check: ## Проверка конфигурации прода без з�
 	@bash $(INFRA)/deploy/tests/events-schema-mount-test.sh
 	@bash $(INFRA)/deploy/tests/crm-backup-source-test.sh
 	@bash $(INFRA)/deploy/tests/telegram-webhook-url-test.sh
+	@bash $(INFRA)/deploy/tests/crm-bot-test.sh
 	@bash $(INFRA)/deploy/tests/cpu-baseline-test.sh
 	@bash $(INFRA)/deploy/tests/platform-prod-test.sh
 	@docker run --rm -v "$(CURDIR):/repo" -w /repo rhysd/actionlint:latest .github/workflows/deploy.yml && echo "actionlint: ok"
