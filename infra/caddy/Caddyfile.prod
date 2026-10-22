@@ -91,8 +91,9 @@
 			flush_interval -1
 		}
 	}
+	# Вебхук принимает процесс бота (S0-4), не crm-api; секретный заголовок проверяет он же.
 	handle /telegram/webhook {
-		reverse_proxy crm-api:8000
+		reverse_proxy crm-bot:8001
 	}
 	handle /health {
 		reverse_proxy crm-api:8000

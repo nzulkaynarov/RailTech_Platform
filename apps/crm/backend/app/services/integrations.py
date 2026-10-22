@@ -36,28 +36,19 @@ from app.security import audit, reauth
 from app.security.principal import Principal
 from app.security.secrets_store import TELEGRAM_BOT_TOKEN, SecretsStore, last4
 from app.services import channel_texts
+from app.services.bot_state import BotSnapshot
 from app.services.settings import SettingsService
 
 logger = structlog.get_logger(__name__)
 
 
-class BotControl(Protocol):
-    """Что сервису нужно от супервизора бота (`app/bot/supervisor.py`)."""
+class BotLink(Protocol):
+    """Что сервису нужно от `crm-bot`: он в другом процессе, связь — через БД (`bot_state`)."""
 
-    @property
-    def mode(self) -> str: ...
-    @property
-    def running(self) -> bool: ...
-    @property
-    def source(self) -> TokenSource: ...
-    @property
-    def username(self) -> str | None: ...
-    @property
-    def last_error(self) -> str | None: ...
-
-    profile: ProfilePublish | None
-
-    async def restart(self) -> None: ...
+    async def snapshot(self) -> BotSnapshot | None: ...
+    async def request_restart(self, session: AsyncSession) -> datetime: ...
+    async def wait_applied(self, requested_at: datetime, timeout_s: float) -> bool: ...
+    async def record_profile(self, result: ProfilePublish) -> None: ...
 
 
 @dataclass(frozen=True, slots=True)
@@ -83,6 +74,15 @@ class ChatCandidate:
     detected_at: datetime
 
 
+def _bot_error(bot: BotSnapshot | None) -> str | None:
+    """Причина «бот не работает» для админа: нет пульса `crm-bot` — отдельная причина."""
+    if bot is None:
+        return "bot_process_never_started"
+    if not bot.alive:
+        return "bot_process_down"
+    return bot.last_error
+
+
 class TelegramIntegrationService:
     def __init__(
         self,
@@ -90,10 +90,11 @@ class TelegramIntegrationService:
         settings: SettingsService,
         store: SecretsStore,
         probe: TelegramProbe,
-        bot_control: BotControl | None,
+        bot_link: BotLink,
         current_bot: Callable[[], Awaitable[Bot | None]],
         *,
         mode: str,
+        restart_wait_s: float = 10.0,
         lockout: reauth.LockoutPolicy | None = None,
     ) -> None:
         self._lockout = lockout or reauth.LockoutPolicy()
@@ -101,7 +102,8 @@ class TelegramIntegrationService:
         self._settings = settings
         self._store = store
         self._probe = probe
-        self._bot = bot_control
+        self._bot = bot_link
+        self._restart_wait_s = restart_wait_s
         self._current_bot = current_bot
         self._mode = mode
 
@@ -113,17 +115,19 @@ class TelegramIntegrationService:
             async with self._sessions() as session:
                 row = await telegram_chats.get(session, channel_id)
             title = row.title if row is not None else None
-        bot = self._bot
-        source: TokenSource = bot.source if bot is not None else "none"
+        bot = await self._bot.snapshot()
+        reported: TokenSource = "none"
+        if bot is not None and bot.alive and bot.source in ("db", "env"):
+            reported = bot.source  # type: ignore[assignment]
         return TelegramStatus(
-            configured=source != "none" or stored is not None,
-            source=source if bot is not None else ("db" if stored else "none"),
+            configured=reported != "none" or stored is not None,
+            source=reported if reported != "none" else ("db" if stored else "none"),
             last4=stored.last4 if stored else None,
             updated_at=stored.updated_at if stored else None,
             username=bot.username if bot is not None else None,
-            mode=bot.mode if bot is not None else self._mode,
+            mode=self._mode,
             running=bot.running if bot is not None else False,
-            last_error=bot.last_error if bot is not None else None,
+            last_error=_bot_error(bot),
             secrets_enabled=self._store.enabled,
             channel_id=channel_id,
             channel_title=title,
@@ -137,6 +141,7 @@ class TelegramIntegrationService:
         identity = await self._check(token.strip())
         async with self._sessions() as session, session.begin():
             await self._store.put(session, TELEGRAM_BOT_TOKEN, token.strip(), who.user_id)
+            requested_at = await self._bot.request_restart(session)
             await audit.record(
                 session,
                 who.actor,
@@ -146,8 +151,11 @@ class TelegramIntegrationService:
                 after={"last4": last4(token.strip()), "bot_username": identity.username},
             )
         logger.info("bot_token_saved", user_id=who.user_id, bot_username=identity.username)
-        if self._bot is not None:
-            await self._bot.restart()
+        # Бот живёт в `crm-bot`: он замечает запрос в БД и перезапускается сам (S0-4). Ждём немного,
+        # чтобы ответ уже показывал новый статус; не успел — токен сохранён, статус обновится.
+        applied = await self._bot.wait_applied(requested_at, self._restart_wait_s)
+        if not applied:
+            logger.warning("bot_restart_not_confirmed", wait_s=self._restart_wait_s)
         return identity
 
     async def _reauth(self, user_id: int, password: str) -> None:
@@ -177,7 +185,8 @@ class TelegramIntegrationService:
     async def profile(self) -> tuple[BotProfileSettings, ProfilePublish | None]:
         """Профиль бота из настроек и итог последней публикации в Telegram."""
         current = (await self._settings.get()).bot_profile
-        return current, self._bot.profile if self._bot is not None else None
+        snapshot = await self._bot.snapshot()
+        return current, snapshot.profile if snapshot is not None else None
 
     async def save_profile(
         self, who: Principal, profile: BotProfileSettings
@@ -191,8 +200,7 @@ class TelegramIntegrationService:
             result = ProfilePublish(False, datetime.now(UTC), error="bot_not_running")
         else:
             result = await publish_profile(bot, profile)
-        if self._bot is not None:
-            self._bot.profile = result
+        await self._bot.record_profile(result)
         return profile, result
 
     async def candidates(self) -> list[ChatCandidate]:
