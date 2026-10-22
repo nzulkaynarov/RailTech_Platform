@@ -99,7 +99,7 @@ services:
   s3-init:
     logging: { driver: json-file, options: { max-size: "5m", max-file: "2" } }
     environment:
-      S3_BUCKETS: langfuse kb-sources client-documents tg-attachments erp-private erp-public erp-temp backups
+      S3_BUCKETS: langfuse kb-sources client-documents tg-attachments erp-private erp-public erp-temp backups wal
 
   litellm:
     <<: [*ops, *mem-768]

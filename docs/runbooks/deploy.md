@@ -77,8 +77,8 @@ scp /tmp/env.db deploy@<VPS 2>:/opt/rt-db/.env.db && shred -u /tmp/env.db
 infra/deploy/make-env-prod.sh drop-db-only    # убрать с VPS 1 то, что нужно только VPS 2 (суперпользователь, ключи бэкапа)
 ```
 
-Сохраните офлайн копию обоих файлов и отдельно `BACKUP_ENC_PASSPHRASE` и `LITELLM_SALT_KEY` (потеря первой — потеря внешних копий
-бэкапа; второй — расшифровки ключей провайдеров в БД LiteLLM). После `drop-db-only` повторный `init` вернёт удалённые
+Сохраните офлайн копию обоих файлов и отдельно `BACKUP_ENC_PASSPHRASE`, `WAL_ENC_KEY` и `LITELLM_SALT_KEY` (потеря первой — потеря внешних копий
+бэкапа; второй — потеря WAL-архива: восстановления на момент времени не будет; третьей — расшифровки ключей провайдеров в БД LiteLLM). После `drop-db-only` повторный `init` вернёт удалённые
 переменные — на VPS 1 его запускать только для добавления новых и снова выполнять `drop-db-only`.
 
 ### 1.3. VPS 2: база
@@ -89,7 +89,7 @@ ssh root@<VPS 2> /opt/rt-db/infra/deploy/db-up.sh      # только от root:
 ```
 
 Скрипт создаёт сертификат TLS (самоподписанный, `sslmode=require`; проверка `verify-ca` — после пилота), `pg_hba.conf` с IP VPS 1,
-поднимает `postgres` и `backup`, создаёт роли и базы (`crm`, `erp`, `litellm`, `langfuse`, `pgvector` в `crm`). Повторный запуск
+собирает образ `postgres` со встроенным WAL-G (и проверяет, что `wal-g` стартует на CPU сервера), поднимает `postgres`, `walg` и `backup`, создаёт роли и базы (`crm`, `erp`, `litellm`, `langfuse`, `pgvector` в `crm`). Повторный запуск
 безопасен и применяет смену паролей из `.env.db`. Проверка с VPS 1:
 `docker run --rm -e PGPASSWORD=… -e PGSSLMODE=require pgvector/pgvector:0.8.7-pg17 psql -h <DB_INTERNAL_IP> -U crm_app -d crm -c 'select 1'`.
 
@@ -162,6 +162,11 @@ mcp-tools.json` монтируется в контейнер по пути `../.
 
 ## 4. Бэкапы и восстановление
 
+- **WAL-архив и восстановление на момент времени (S0-3, ADR-0017):** `postgres` на VPS 2 непрерывно шлёт журнал транзакций (`archive_timeout` 60 с → RPO ≤ 5 мин)
+  в бакет `wal` RustFS на VPS 1, сервис `walg` ежедневно делает базовую копию (21:00 UTC), хранит 14 дней, при заданном `BACKUP_EXT_*` копирует архив во внешнее S3
+  и раз в месяц проверяет восстановление; сбой виден как `unhealthy` у контейнера `walg`. Восстановление на любой момент последних 14 суток в отдельный контейнер —
+  `infra/db/restore-pitr.sh --target-time "YYYY-MM-DD HH:MM:SS+00"`. Подробно (включение, где лежат копии, переключение, ключ `WAL_ENC_KEY`, ротация,
+  заполнение бакета) — `docs/runbooks/backup-pitr.md`. Ежедневный `pg_dump` ниже остаётся вторым рубежом.
 - **Расписание:** контейнер `backup` на VPS 2 ежедневно в 22:00 UTC (03:00 Ташкент) делает `pg_dump` каждой базы, проверяет читаемость
   (`pg_restore -l`), хранит `BACKUP_KEEP_DAYS` (14) дней в `/var/backups/rt/<UTC-штамп>/`, выгружает в бакет `backups` RustFS
   на VPS 1 (ежедневно) и **зашифрованную** (AES-256, `BACKUP_ENC_PASSPHRASE`) копию во внешнее S3-хранилище (раз в неделю,
@@ -202,6 +207,7 @@ mcp-tools.json` монтируется в контейнер по пути `../.
 | `pg_dump-гейт` падает | доступ VPS 1 → VPS 2:5432 (`ufw`, `pg_hba`, `DB_INTERNAL_IP`, пароль роли), `docker logs rt-db-postgres-1` на VPS 2 |
 | ERP/CRM не стартуют после деплоя | `docker compose … logs erp-backend crm-api`; `ps` — какие контейнеры не healthy |
 | Бэкап не создаётся | `docker logs rt-db-backup-1` на VPS 2, `/var/backups/rt/last_success`, healthcheck контейнера `backup` |
+| WAL-архив: `walg` unhealthy, `archive command failed` | `docker inspect --format '{{json .State.Health}}' rt-db-walg-1`, `docker exec -u postgres rt-db-walg-1 rt-pitr status`, `docker logs rt-db-postgres-1` — `docs/runbooks/backup-pitr.md`, разделы 4–5 |
 | Не хватает памяти | `docker stats`; профили `observability` и `kb-ingest` не включать вместе |
 
 Эскалация: владелец; агент Infra — правки compose/Caddy/скриптов через PR.
