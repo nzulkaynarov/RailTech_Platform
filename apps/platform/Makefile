@@ -82,7 +82,7 @@ test: ## pytest (bff) и vitest (web)
 check: lint typecheck test api-check tokens-check rbac-check ## Всё вышеперечисленное — обязательно перед коммитом
 
 .PHONY: e2e
-e2e: ## Playwright + axe на MSW (поднимает vite --mode mock на :4173); браузеры: pnpm exec playwright install chromium
+e2e: ## Playwright + axe на MSW (поднимает vite --mode mock на :4173, порт — переменная E2E_PORT); браузеры: pnpm exec playwright install chromium
 	cd $(WEB) && pnpm e2e
 
 # --- Образы (Docker, локальная проверка сборки) ----------------------------------------
