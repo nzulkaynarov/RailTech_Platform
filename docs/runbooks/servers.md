@@ -29,7 +29,7 @@
 | `redis` | 128 МБ | БД 0 Langfuse, 1 ERP Celery, 2 ERP Channels, 3 сессии BFF Платформы |
 | `rustfs` | 512 МБ | бакеты CRM, `erp`, `langfuse`, `backups` |
 | `litellm` | 768 МБ | шлюз моделей, свой образ `rt-litellm` (Debian, см. «CPU прод-VPS»); его БД `litellm` — на VPS 2 |
-| `crm-api`, `crm-worker` | 512 + 512 МБ | |
+| `crm-api`, `crm-bot`, `crm-worker` | 512 + 512 + 512 МБ | `crm-bot` (S0-4) — Telegram отдельным процессом, реплика одна; факт на стенде ≈ 320–340 МБ у каждого из `crm-api`/`crm-bot` |
 | `crm-mcp-kb`, `crm-mcp-crm`, `crm-mcp-docs` | 3 × 256 МБ | |
 | `crm-web` | 64 МБ | статика за Caddy |
 | `erp-backend` | 768 МБ | Daphne |
@@ -39,7 +39,7 @@
 | `platform-bff` | 256 МБ (лимит; факт ≈ 150 МБ) | BFF Платформы (INF-P0-5): uvicorn, 2 процесса; БД нет, сессии в Redis БД 3 |
 | `platform-web` | 64 МБ | статика Платформы за Caddy |
 | `s3-init`, `crm-migrate`, `litellm-seed`, `erp-ai-gateway` и одноразовые `run` миграций | 256–384 МБ | одноразовые, живут секунды при деплое; в «Итого постоянно» не входят; pg_dump-гейт идёт в отдельном контейнере с `pg_dump` (без лимита, до `up`) |
-| **Итого постоянно** | **≈ 5,7 ГБ** (5,2 + `erp-mcp` ≈ 0,2 + Платформа 0,3 по лимитам) | + ОС ≈ 0,5 ГБ |
+| **Итого постоянно** | **≈ 6,2 ГБ** (5,2 + `erp-mcp` ≈ 0,2 + Платформа 0,3 + `crm-bot` 0,5 по лимитам) | + ОС ≈ 0,5 ГБ; остаётся ≈ 1,3 ГБ из 8 |
 | `docling` (профиль `kb-ingest`) | 1,5 ГБ | **на проде не используется** (M5-CRM-02): база знаний принимает только Markdown (`docs/kb/FORMAT.md`), docling нужен лишь для текста документов клиентов; профиль — опция на случай, если сервер станет мощнее |
 | `clickhouse`, `langfuse-web`, `langfuse-worker` (профиль `observability`) | 768 + 768 + 512 МБ | включать, когда `docling` выключен; дашборд затрат ИИ (M3-CRM-09) не зависит от Langfuse — он читает БД LiteLLM |
 

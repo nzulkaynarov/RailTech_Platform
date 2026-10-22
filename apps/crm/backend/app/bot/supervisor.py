@@ -1,8 +1,9 @@
-"""Бот в процессе API с перезапуском на лету (аудит 2026-10-12 §3, «Подключения»).
+"""Бот процесса `crm-bot` с перезапуском на лету (аудит 2026-10-12 §3, «Подключения»; S0-4).
 
 Диспетчер (агент, чекпоинтер, роутеры) собирается один раз; при смене токена
 останавливается только `BotRuntime` (polling/webhook) и стартует новый с новым токеном —
-без перезапуска API. Для webhook-эндпоинта супервизор выглядит как `BotRuntime`.
+без перезапуска процесса. Просьбу о перезапуске приносит `BotProcess` из БД.
+Для webhook-эндпоинта супервизор выглядит как `BotRuntime`.
 """
 
 import asyncio
@@ -64,20 +65,31 @@ class BotSupervisor:
             await self._halt(release_webhook=True)
             await self._launch()
 
+    async def recover(self) -> None:
+        """Поднять бота, если он не работает: старт не удался (Telegram был недоступен) или
+        polling упал. Нет токена — молча: это не сбой, а «ещё не настроено»."""
+        async with self._lock:
+            if self.running:
+                return
+            if self.runtime is not None:
+                self.last_error = self.runtime.failure or self.last_error
+                await self._halt(release_webhook=False)
+            await self._launch(quiet=True)
+
     async def stop(self) -> None:
         async with self._lock:
             await self._halt(release_webhook=False)
 
-    async def _launch(self) -> None:
+    async def _launch(self, *, quiet: bool = False) -> None:
         if self._config.telegram_mode == "disabled":
             return
         token, self.source = await self._resolve()
         if not token:
-            logger.warning("bot_disabled", reason="no_token")
+            (logger.debug if quiet else logger.warning)("bot_disabled", reason="no_token")
             return
         problem = webhook_config_problem(self._config)
         if problem is not None:
-            self._webhook_not_configured(problem)
+            self._webhook_not_configured(problem, quiet=quiet)
             return
         runtime: BotRuntime | None = None
         try:
@@ -104,10 +116,10 @@ class BotSupervisor:
         except Exception:
             logger.warning("bot_get_me_failed", exc_info=True)
 
-    def _webhook_not_configured(self, problem: str) -> None:
+    def _webhook_not_configured(self, problem: str, *, quiet: bool = False) -> None:
         """Вебхук не ставим и не снимаем; причина — в журнале и в «Центре внешних сервисов»."""
         self.last_error = "webhook_not_configured"
-        logger.error(
+        (logger.debug if quiet else logger.error)(
             "bot_webhook_not_configured",
             problem=problem,
             mode=self._config.telegram_mode,
@@ -115,9 +127,17 @@ class BotSupervisor:
         )
 
     async def _halt(self, *, release_webhook: bool) -> None:
-        runtime, self.runtime, self.username = self.runtime, None, None
-        if runtime is not None:
-            await runtime.stop(release_webhook=release_webhook)
+        """Ссылка на runtime снимается только после успешной остановки.
+
+        Если `stop` бросил, старый polling мог остаться жить: новый не стартуем (второй потребитель
+        `getUpdates` получил бы 409), исключение уходит вызывающему, остановка повторится со
+        следующей попыткой.
+        """
+        runtime = self.runtime
+        if runtime is None:
+            return
+        await runtime.stop(release_webhook=release_webhook)
+        self.runtime, self.username = None, None
 
     def secret_matches(self, received: str | None) -> bool:
         return self.runtime is not None and self.runtime.secret_matches(received)

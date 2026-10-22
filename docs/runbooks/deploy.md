@@ -119,7 +119,11 @@ Actions → **Deploy** → Run workflow: `ref` = `main` (или sha, входя�
 
 - свою компанию ERP создаёт мастер первого запуска (п. «Первый вход», FIX-65); `OWN_COMPANY_ID` вписывать не нужно — только если
   в базе окажется несколько компаний-продавцов с участниками;
-- Telegram-вебхук ставит CRM сама при `TELEGRAM_MODE=webhook`; адрес берётся из `CRM_DOMAIN` (`https://<CRM_DOMAIN>/telegram/webhook`,
+- Telegram принимает отдельный сервис `crm-bot` (S0-4; `python -m app bot`, тот же образ `rt-crm-backend`, одна реплика, порт 8001 только
+  внутри сети): Caddy отдаёт `/telegram/webhook` ему, а не `crm-api`; секретный заголовок проверяет он же. `crm-api` бота не запускает —
+  его перезапуск бота не останавливает, и наоборот. Смена токена в «Подключениях» доходит до `crm-bot` через БД (до пары секунд), руками
+  его перезапускать не нужно; режим (`TELEGRAM_MODE`) — только `.env.prod` и `up -d crm-bot`. При выкладке старый `crm-api` с ботом и новый `crm-bot` могут недолго работать вместе — кратковременный `409` от Telegram ожидаем. Подробности — `docs/runbooks/crm-bot.md`;
+- Telegram-вебхук ставит `crm-bot` сам при `TELEGRAM_MODE=webhook`; адрес берётся из `CRM_DOMAIN` (`https://<CRM_DOMAIN>/telegram/webhook`,
   `prod.yml`), вписывать `TELEGRAM_WEBHOOK_URL` вручную не нужно — задавайте её, только если вебхук должен идти на другой https-адрес
   (явное значение переопределяет). Режим `webhook` с пустым или не-https адресом бота не запускает и вебхук не трогает: в журнале CRM
   `bot_webhook_not_configured`, в «Центре внешних сервисов» → Telegram — сбой «Вебхук Telegram не настроен» с подсказкой; там же
@@ -204,7 +208,7 @@ Caddy (`no_erp_internal` в `Caddyfile.prod`/`Caddyfile.dev`) отвечает 4
 - **Восстановление боевой базы** (остановка записи обязательна):
   ```bash
   # VPS 1: остановить приложения, ходящие в базу
-  docker compose -f … stop crm-api crm-worker crm-mcp-kb crm-mcp-crm crm-mcp-docs erp-backend erp-mcp erp-worker erp-worker-ai erp-beat
+  docker compose -f … stop crm-api crm-bot crm-worker crm-mcp-kb crm-mcp-crm crm-mcp-docs erp-backend erp-mcp erp-worker erp-worker-ai erp-beat
   # VPS 2: пересоздать базу и залить дамп (пример для erp)
   docker exec -u postgres rt-db-postgres-1 psql -U postgres -c 'DROP DATABASE erp' -c 'CREATE DATABASE erp OWNER erp_app'
   docker exec -i -u postgres rt-db-postgres-1 pg_restore -U postgres -d erp --no-owner --role=erp_app < /var/backups/rt/<штамп>/erp.dump
@@ -231,7 +235,7 @@ Caddy (`no_erp_internal` в `Caddyfile.prod`/`Caddyfile.dev`) отвечает 4
 |---|---|
 | Сайт не открывается / нет сертификата | `docker compose … logs caddy`; DNS, порты 80/443; лимит выпусков Let's Encrypt |
 | `pg_dump-гейт` падает | доступ VPS 1 → VPS 2:5432 (`ufw`, `pg_hba`, `DB_INTERNAL_IP`, пароль роли), `docker logs rt-db-postgres-1` на VPS 2 |
-| ERP/CRM не стартуют после деплоя | `docker compose … logs erp-backend crm-api`; `ps` — какие контейнеры не healthy |
+| ERP/CRM не стартуют после деплоя | `docker compose … logs erp-backend crm-api crm-bot`; `ps` — какие контейнеры не healthy |
 | Бэкап не создаётся | `docker logs rt-db-backup-1` на VPS 2, `/var/backups/rt/last_success`, healthcheck контейнера `backup` |
 | WAL-архив: `walg` unhealthy, `archive command failed` | `docker inspect --format '{{json .State.Health}}' rt-db-walg-1`, `docker exec -u postgres rt-db-walg-1 rt-pitr status`, `docker logs rt-db-postgres-1` — `docs/runbooks/backup-pitr.md`, разделы 4–5 |
 | Не хватает памяти | `docker stats`; профили `observability` и `kb-ingest` не включать вместе |

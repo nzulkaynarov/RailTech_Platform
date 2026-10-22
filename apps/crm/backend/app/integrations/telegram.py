@@ -9,6 +9,9 @@ from typing import Literal, Protocol
 
 import structlog
 from aiogram import Bot
+from aiogram.client.default import DefaultBotProperties
+from aiogram.client.session.aiohttp import AiohttpSession
+from aiogram.client.telegram import TelegramAPIServer
 from aiogram.exceptions import TelegramAPIError, TelegramNotFound, TelegramUnauthorizedError
 from aiogram.utils.token import TokenValidationError
 
@@ -38,12 +41,22 @@ class TelegramProbe(Protocol):
     async def get_me(self, token: str) -> BotIdentity: ...
 
 
+def make_bot(config: Settings, token: str, *, default: DefaultBotProperties | None = None) -> Bot:
+    """`Bot` с адресом Bot API из `TELEGRAM_API_BASE_URL` (пусто — официальный сервер)."""
+    base = config.telegram_api_base_url.strip()
+    session = AiohttpSession(api=TelegramAPIServer.from_base(base)) if base else None
+    return Bot(token, session=session, default=default)
+
+
 class AiogramProbe:
     """`getMe` отдельным клиентом: токен проверяется до сохранения и до перезапуска бота."""
 
+    def __init__(self, config: Settings | None = None) -> None:
+        self._config = config
+
     async def get_me(self, token: str) -> BotIdentity:
         try:
-            bot = Bot(token)
+            bot = make_bot(self._config, token) if self._config is not None else Bot(token)
         except TokenValidationError as exc:
             raise InvalidBotTokenError("malformed token") from exc
         try:
