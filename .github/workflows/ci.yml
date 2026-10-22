@@ -47,6 +47,7 @@ jobs:
       cabinet: ${{ github.event_name != 'pull_request' || steps.filter.outputs.cabinet == 'true' }}
       platform: ${{ github.event_name != 'pull_request' || steps.filter.outputs.platform == 'true' }}
       packages: ${{ github.event_name != 'pull_request' || steps.filter.outputs.packages == 'true' }}
+      rtbus: ${{ github.event_name != 'pull_request' || steps.filter.outputs.rtbus == 'true' }}
       infra: ${{ github.event_name != 'pull_request' || steps.filter.outputs.infra == 'true' }}
     steps:
       - uses: actions/checkout@v7
@@ -79,6 +80,9 @@ jobs:
               - 'packages/ui-tokens/**'
             packages:
               - 'packages/**'
+            # Библиотека шины (B1): тесты адаптеров на PostgreSQL.
+            rtbus:
+              - 'packages/rt-bus/**'
             infra:
               - 'infra/**'
               - 'scripts/**'
@@ -521,6 +525,42 @@ jobs:
           git diff --exit-code -- packages/contracts/generated \
             || (echo "::error::packages/contracts/generated устарел — выполните make contracts и закоммитьте"; exit 1)
 
+  # ─── packages: библиотека шины rt-bus (B1) ──────────────────────────────────────────────────
+
+  rt-bus:
+    name: packages · rt-bus
+    needs: changes
+    if: needs.changes.outputs.rtbus == 'true'
+    runs-on: ${{ vars.CI_RUNNER || 'ubuntu-latest' }}
+    timeout-minutes: 15
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_DB: postgres
+          POSTGRES_USER: rt
+          POSTGRES_PASSWORD: ci-only-password
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U rt -d postgres"
+          --health-interval 5s --health-timeout 3s --health-retries 20
+    env:
+      # make check видит URL и не поднимает свой контейнер (scripts/with_pg.sh); RT_BUS_REQUIRE_PG — без пропусков.
+      RT_BUS_TEST_DATABASE_URL: postgresql://rt:ci-only-password@localhost:5432/postgres
+      RT_BUS_REQUIRE_PG: "1"
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v7
+        with:
+          version: ${{ env.UV_VERSION }}
+          python-version: ${{ env.PYTHON_VERSION }}
+          enable-cache: true
+          cache-dependency-glob: packages/rt-bus/uv.lock
+      - name: Install
+        run: make -C packages/rt-bus install
+      # ruff, mypy --strict, миграция Django без дрейфа, pytest: ядро, SQLAlchemy (psycopg, asyncpg), Django (psycopg2, psycopg)
+      - run: make check-rt-bus
+
   # ─── infra: compose и Caddy валидны ────────────────────────────────────────────────────────
 
   infra:
@@ -562,7 +602,7 @@ jobs:
   ci-ok:
     name: CI ok
     if: always()
-    needs: [changes, gitleaks, crm-lint, crm-unit, crm-integration, crm-build, crm-e2e, crm-audit, erp, cabinet, platform, platform-e2e, contracts, infra]
+    needs: [changes, gitleaks, crm-lint, crm-unit, crm-integration, crm-build, crm-e2e, crm-audit, erp, cabinet, platform, platform-e2e, contracts, rt-bus, infra]
     runs-on: ${{ vars.CI_RUNNER || 'ubuntu-latest' }}
     timeout-minutes: 5
     steps:
