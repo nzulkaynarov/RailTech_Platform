@@ -39,6 +39,18 @@ class ChangePasswordRequest(BaseModel):
     new_password: str = Field(min_length=1, max_length=256)
 
 
+ErpSyncStatus = Literal["ok", "pending", "error", "not_applicable"]
+
+
+class PlatformRoleRef(BaseModel):
+    """Роль Платформы в карточке сотрудника."""
+
+    id: int
+    name: str
+    system: bool
+    code: str | None = None
+
+
 class UserOut(BaseModel):
     id: int
     email: str
@@ -57,9 +69,17 @@ class UserOut(BaseModel):
     platform_access: list[PlatformSystem] = Field(default_factory=_crm_only)
     # Системные роли бэк-офиса ERP, выданные админом (FIX-63): уходят в провижининг (`role_codes`).
     erp_role_codes: list[ErpRoleCode] = Field(default_factory=list)
-    # Роли Платформы (CRM-01, ADR-0011): непустой список вычисляет `roles`, `platform_access` и
-    # `erp_role_codes`; пусто — их ведёт админ вручную. Должность — текстом (SPEC-v3 §4.3).
+    # Роли Платформы — данные (R-1, ADR-0012): непустой набор вычисляет `roles`, `platform_access`
+    # и права ERP; пусто — их ведёт админ вручную. `platform_role_ids`/`platform_role_refs` — новое;
+    # `platform_roles` — старое поле с кодами (только у ролей, у которых код есть) до перевода BFF
+    # на роли-данные (R-2), потом будет удалено. Должность — текстом (SPEC-v3 §4.3).
     platform_roles: list[PlatformRoleCode] = Field(default_factory=list)
+    platform_role_ids: list[int] = Field(default_factory=list)
+    platform_role_refs: list[PlatformRoleRef] = Field(default_factory=list)
+    # Итог синхронизации с ERP: `pending` — задача в очереди, `error` — см. `erp_sync_error`,
+    # `not_applicable` — доступа к ERP нет.
+    erp_sync: ErpSyncStatus = "not_applicable"
+    erp_sync_error: str | None = None
     position: str | None = None
     # Язык интерфейса сотрудника (CRM-01b): ru|uz|en, по умолчанию ru.
     language: Language = "ru"
@@ -97,7 +117,8 @@ class UserCreate(BaseModel):
     full_name: str = Field(min_length=1, max_length=255)
     # Нужны роли CRM или роли Платформы; при непустых `platform_roles` роли CRM вычисляются.
     roles: list[Role] | None = Field(default=None, min_length=1)
-    platform_roles: list[PlatformRoleCode] | None = None
+    platform_roles: list[PlatformRoleCode] | None = None  # старые коды, совместимость до R-2
+    platform_role_ids: list[int] | None = None
     position: str | None = Field(default=None, max_length=POSITION_MAX_LEN)
 
     @field_validator("platform_roles")
@@ -109,8 +130,8 @@ class UserCreate(BaseModel):
 
     @model_validator(mode="after")
     def _has_roles(self) -> "UserCreate":
-        if not self.roles and not self.platform_roles:
-            raise ValueError("roles or platform_roles are required")
+        if not (self.roles or self.platform_roles or self.platform_role_ids):
+            raise ValueError("roles or platform roles are required")
         return self
 
 
@@ -155,8 +176,10 @@ class UserUpdate(BaseModel):
             return None
         return cast("list[ErpRoleCode]", normalize_erp_roles(value))
 
-    # Роли Платформы (CRM-01): полный новый набор, `[]` — снять все (доступ, выданный ролями,
+    # Роли Платформы (R-1): полный новый набор id ролей, `[]` — снять все (доступ, выданный ролями,
     # снимается); непустой набор перекрывает `roles`, `platform_access`, `erp_role_codes`.
+    # `platform_roles` — старый способ (коды), совместимость BFF до R-2; вместе слать нельзя.
+    platform_role_ids: list[int] | None = None
     platform_roles: list[PlatformRoleCode] | None = None
     # Должность (SPEC-v3 §4.3): пустая строка очищает.
     position: str | None = Field(default=None, max_length=POSITION_MAX_LEN)

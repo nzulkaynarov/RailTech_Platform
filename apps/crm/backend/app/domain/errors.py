@@ -149,6 +149,24 @@ class LastAdminError(ConflictError):
     code = "last_admin"
 
 
+class LastDirectorError(ConflictError):
+    """Компания не остаётся без активного директора (ADR-0012 п. 2)."""
+
+    code = "last_director"
+
+
+class RoleSystemError(ConflictError):
+    """Системную роль («Администратор», «Директор») нельзя изменить или удалить (ADR-0012 п. 2)."""
+
+    code = "role_system"
+
+
+class RoleInUseError(ConflictError):
+    """Роль выдана сотрудникам: сначала переназначьте их; `details.users` — сколько (ADR-0012)."""
+
+    code = "role_in_use"
+
+
 class ActiveLeadsError(ConflictError):
     """Деактивация менеджера, который ведёт лидов, без передачи их коллеге (ADR-0015)."""
 
