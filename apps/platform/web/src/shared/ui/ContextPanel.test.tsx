@@ -2,7 +2,7 @@ import { fireEvent, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
 import { renderUi } from "../../test/renderUi";
-import { ContextPanel } from "./ContextPanel";
+import { ContextPanel, ContextPanelDrawer } from "./ContextPanel";
 
 const TABS = [
   { key: "approval", label: "Одобрение" },
@@ -59,5 +59,42 @@ describe("ContextPanel", () => {
     expect(screen.queryByText("Содержимое вкладки")).toBeNull();
     expect(screen.queryByRole("tab")).toBeNull();
     expect(document.getElementById("ctx")).toHaveAttribute("aria-hidden", "true");
+  });
+
+  function duplicateIds(root: ParentNode): string[] {
+    const ids = Array.from(root.querySelectorAll("[id]")).map((el) => el.id);
+    return ids.filter((id, index) => ids.indexOf(id) !== index);
+  }
+
+  it("все id внутри бокового окна уникальны (Sider)", () => {
+    const { container } = renderUi(panel(true));
+    expect(container.querySelectorAll("[id]").length).toBeGreaterThan(1);
+    expect(duplicateIds(container)).toEqual([]);
+    // id корня окна не повторяется во вложенных вкладках; вкладки — под `<id>-tabs`
+    expect(container.querySelectorAll("#ctx")).toHaveLength(1);
+    expect(container.querySelector("#ctx-tabs-tab-approval")).not.toBeNull();
+  });
+
+  it("все id уникальны и в варианте Drawer", () => {
+    renderUi(
+      <ContextPanelDrawer
+        open
+        onClose={() => undefined}
+        offsetTop={56}
+        offsetBottom={0}
+        id="ctx"
+        label="Боковое окно"
+        hideLabel="Скрыть боковое окно"
+        tabs={TABS}
+        activeTab="approval"
+        onTabChange={() => undefined}
+        onHide={() => undefined}
+      >
+        <p>Содержимое вкладки</p>
+      </ContextPanelDrawer>,
+    );
+    expect(duplicateIds(document.body)).toEqual([]);
+    expect(document.body.querySelectorAll("#ctx")).toHaveLength(1);
+    expect(document.body.querySelector("#ctx-tabs-tab-approval")).not.toBeNull();
   });
 });

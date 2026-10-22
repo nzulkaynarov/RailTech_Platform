@@ -276,7 +276,7 @@
   font-variant-numeric: tabular-nums;
 }
 
-/* --- History: точка 16, вертикальная линия 2 px --- */
+/* --- History: точка 16, вертикальная линия 2 px; рамка и заливка точки ≥ 3:1 на белом (WCAG 1.4.11) --- */
 .pf-history {
   margin: 0;
   padding: 0;
@@ -312,14 +312,14 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  border: 2px solid #d9d9d9;
+  border: 2px solid #8c8c8c;
   border-radius: 50%;
   background: #fff;
   color: #fff;
 }
 .pf-history-dot--done {
-  border-color: #52c41a;
-  background: #52c41a;
+  border-color: #237804;
+  background: #237804;
 }
 .pf-history-dot--waiting {
   border-color: #1668dc;

@@ -39,7 +39,7 @@ function PanelBody({
   return (
     <div className="pf-panel">
       <Tabs
-        id={id}
+        id={`${id}-tabs`}
         className="pf-panel-tabs"
         activeKey={activeTab}
         onChange={onTabChange}

@@ -99,7 +99,7 @@ test.describe("витрина общих компонентов", () => {
 
     // History: точка 16
     expect(await box(".pf-history-dot")).toMatchObject({ width: 16, height: 16 });
-    expect(await box(".pf-history-dot--done")).toMatchObject({ background: "rgb(82, 196, 26)" });
+    expect(await box(".pf-history-dot--done")).toMatchObject({ background: "rgb(35, 120, 4)" });
 
     // Checklist: строка 13 px
     expect(await box(".pf-check")).toMatchObject({ size: "13px" });

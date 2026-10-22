@@ -59,8 +59,7 @@
       "dialog": "Suhbatda",
       "wants_quote": "TT so‘ramoqda",
       "no_answer": "Javobsiz",
-      "client": "Mijoz",
-      "lost": "Rad etildi"
+      "client": "Mijoz"
     }
   }
 }

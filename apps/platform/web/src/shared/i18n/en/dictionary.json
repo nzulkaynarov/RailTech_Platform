@@ -59,8 +59,7 @@
       "dialog": "In dialogue",
       "wants_quote": "Wants a quote",
       "no_answer": "No reply",
-      "client": "Client",
-      "lost": "Lost"
+      "client": "Client"
     }
   }
 }
