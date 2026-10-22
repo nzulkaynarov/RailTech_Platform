@@ -21,10 +21,12 @@ from celery.exceptions import Retry
 from django.db.models import Q
 from django.utils import timezone
 
+from core.cache import CacheUnavailable
 from core.log_mask import mask_secrets
 
 from .models import IntegrationWebhookEvent, WebhookEventStatus
 from .services.webhooks import (
+    SECRET_PAYLOAD_TTL,
     delivery_payload,
     discard_secret_payload,
     sign_payload_v2,
@@ -41,6 +43,9 @@ RETRY_DELAYS = [60, 300, 1800, 7200, 21600, 86400]
 # задача потеряна (рестарт Redis, воркер убит между acks), а не ждёт своего ретрая.
 STUCK_GRACE = timedelta(minutes=10)
 SWEEP_BATCH = 200
+
+# Через сколько секунд повторить доставку, если кэш с секретным полем тела (код акцепта) недоступен (S0-2).
+CACHE_RETRY_S = 30
 
 
 def _register_failure(event: IntegrationWebhookEvent, error_msg: str, has_retries_left: bool, current_attempt: int):
@@ -89,7 +94,18 @@ def deliver_webhook_event(self, event_id: int) -> bool:
 
     # Тело отправки = журнал + секреты из кэша (код акцепта в журнале замаскирован, FIX-60a). Секрет протух — отправлять
     # нечего и повторять незачем: клиент запросит новый код.
-    payload = delivery_payload(event)
+    try:
+        payload = delivery_payload(event)
+    except CacheUnavailable:
+        # Кэш с секретом лёг (S0-2): это не «код протух». Попытку не засчитываем, повторяем новой задачей, пока жив секрет.
+        age = (timezone.now() - event.created_at).total_seconds()
+        if age < SECRET_PAYLOAD_TTL:
+            logger.warning(
+                "deliver_webhook_event: cache is down, event #%s is retried in %s s", event_id, CACHE_RETRY_S
+            )
+            deliver_webhook_event.apply_async(args=[event_id], countdown=CACHE_RETRY_S)
+            return False
+        payload = None  # срок секрета вышел, пока кэш лежал: ниже — обычное SECRET_EXPIRED
     if payload is None:
         # Условное обновление: параллельная доставка могла уже записать SENT (и убрать секрет) — её итог не затираем.
         cancelled = IntegrationWebhookEvent.objects.filter(pk=event.pk, status=WebhookEventStatus.PENDING).update(

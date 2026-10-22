@@ -287,6 +287,126 @@ def test_mcp_gate_answers_503_while_the_jti_store_is_down(settings):
     assert response.json() == {"detail": "SERVICE_TEMPORARILY_UNAVAILABLE"}
 
 
+# ─── Билет WebSocket: гасится строго и один раз ──────────────────────────────────────────────────
+
+
+def _redeem_ws_ticket(ticket):
+    from asgiref.sync import async_to_sync
+
+    from core.middleware import get_user_from_ticket
+
+    return async_to_sync(get_user_from_ticket)(ticket)
+
+
+def test_ws_ticket_is_single_use_and_losing_the_race_is_refused(settings, user_factory):
+    user = _staff_superuser(user_factory)
+    settings.CACHES = LOCMEM
+    cache.set("ws_ticket:t1", user.id, 30)
+    # Выборка пользователя идёт в потоке consumer'а и в тесте с пулом БД не мостится (см. test_ws_ticket.py): подменяем её.
+    with mock.patch("accounts.models.CustomUser.objects") as users:
+        users.get.return_value = user
+        assert _redeem_ws_ticket("t1") is user
+    assert cache.get("ws_ticket:t1") is None  # погашен
+    assert not _redeem_ws_ticket("t1").is_authenticated
+
+    cache.set("ws_ticket:t2", user.id, 30)  # второй подключившийся читает билет, но удалить его уже не успевает
+    with mock.patch("django.core.cache.backends.locmem.LocMemCache.delete", return_value=False):
+        assert not _redeem_ws_ticket("t2").is_authenticated
+
+
+def test_ws_ticket_is_refused_while_the_cache_is_down(dead_cache):
+    assert not _redeem_ws_ticket("any").is_authenticated
+
+
+# ─── Секрет вебхука (код акцепта) живёт в кэше: «кэш лёг» ≠ «код протух» ───────────────────────────
+
+
+@pytest.fixture
+def code_event_world():
+    from integration.models import CrmContactMapping
+    from integration.tests.world import add_quote, make_company, make_deal
+    from parties.models import Contact
+
+    from crm.constants import QuoteStatusCode
+
+    company = make_company(crm_client_id=7001)
+    contact = Contact.objects.filter(company=company).first()
+    CrmContactMapping.objects.create(contact=contact, crm_contact_id=58)
+    quote = add_quote(make_deal(company), 1, QuoteStatusCode.SENT, "5000000")
+    return quote, contact
+
+
+def _emit_code(quote, contact):
+    from datetime import timedelta
+
+    from django.utils import timezone
+    from integration.services.webhooks import emit_quote_acceptance_code_requested
+
+    return emit_quote_acceptance_code_requested(
+        quote, contact, "739104", timezone.now() + timedelta(minutes=15), send_async=False
+    )
+
+
+def test_code_event_is_not_created_without_a_place_for_its_secret(settings, code_event_world):
+    from integration.models import IntegrationWebhookEvent
+    from portal.services.acceptance import _emit_code_event
+
+    quote, contact = code_event_world
+    settings.CACHES = DEAD
+    with pytest.raises(CacheUnavailable):
+        _emit_code(quote, contact)
+    assert not IntegrationWebhookEvent.objects.filter(event_type="quote.acceptance_code_requested").exists()
+    # Портал при этом не остаётся без кода: выпуск события не удался — откат на письмо (см. `_emit_code_event`).
+    assert _emit_code_event(quote, contact, "739104") is False
+
+
+def test_delivery_waits_for_the_cache_instead_of_losing_the_secret(settings, code_event_world):
+    from unittest.mock import MagicMock, patch
+
+    from integration.models import WebhookEventStatus
+    from integration.tasks import CACHE_RETRY_S, deliver_webhook_event
+
+    quote, contact = code_event_world
+    working_caches = settings.CACHES
+    event = _emit_code(quote, contact)  # секрет — в рабочий кэш
+
+    settings.CACHES = DEAD  # кэш лёг до доставки
+    with patch("httpx.Client.post") as post, patch.object(deliver_webhook_event, "apply_async") as again:
+        assert deliver_webhook_event(event.pk) is False
+    post.assert_not_called()
+    again.assert_called_once_with(args=[event.pk], countdown=CACHE_RETRY_S)
+    event.refresh_from_db()
+    assert event.status == WebhookEventStatus.PENDING and event.attempts == 0  # не SECRET_EXPIRED, попытка не потрачена
+
+    settings.CACHES = working_caches  # кэш вернулся: секрет цел, доставка проходит
+    with patch("httpx.Client.post", return_value=MagicMock(status_code=200, text="OK")) as post:
+        assert deliver_webhook_event(event.pk) is True
+    assert b"739104" in post.call_args.kwargs["content"]
+
+
+def test_delivery_gives_up_when_the_cache_stays_down_past_the_secret_lifetime(settings, code_event_world):
+    from datetime import timedelta
+    from unittest.mock import patch
+
+    from django.utils import timezone
+    from integration.models import IntegrationWebhookEvent, WebhookEventStatus
+    from integration.services.webhooks import SECRET_PAYLOAD_TTL
+    from integration.tasks import deliver_webhook_event
+
+    quote, contact = code_event_world
+    event = _emit_code(quote, contact)
+    IntegrationWebhookEvent.objects.filter(pk=event.pk).update(
+        created_at=timezone.now() - timedelta(seconds=SECRET_PAYLOAD_TTL + 60)
+    )
+    settings.CACHES = DEAD
+    with patch("httpx.Client.post") as post, patch.object(deliver_webhook_event, "apply_async") as again:
+        assert deliver_webhook_event(event.pk) is False
+    post.assert_not_called()
+    again.assert_not_called()
+    event.refresh_from_db()
+    assert event.status == WebhookEventStatus.FAILED and event.last_error.startswith("SECRET_EXPIRED")
+
+
 # ─── У каждого ключа кэша есть срок ────────────────────────────────────────────────────────────
 
 
