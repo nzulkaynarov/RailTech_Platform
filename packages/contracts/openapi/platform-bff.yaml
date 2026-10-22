@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: RailTech Platform — BFF API (Платформа → CRM и ERP)
-  version: 0.2.1
+  version: 0.2.2
   summary: Пространство `/api/v1/` BFF Платформы — вызывает SPA `apps/platform/web` от имени сотрудника.
   description: |
     Контракт по ADR-0011 и `apps/platform/docs/02-architecture.md`. Версия 0.1.0 (INF-P0-1) покрывает фазу P1:
@@ -27,6 +27,10 @@ info:
 
     0.2.0 (волна 8): смена пароля (`POST /auth/change-password`, `Session.must_change_password`); Admin · Оргструктура —
     сотрудники, выдача ролей Платформы, приглашение по почте (`/admin/users*`, раздел матрицы `admin`).
+
+    0.2.2 (Q-PLT-12-1): `active_role` — «вид»: `modules`, `resources`, `restricted_fields` и очередь считаются по активной
+    роли, если она задана; право на операцию BFF всегда проверяет по объединению всех ролей сотрудника (смена активной роли
+    права не сужает и не расширяет). Пункты меню привязаны к разделам матрицы секцией `menu` в `platform-rbac.yaml`.
 
     0.2.1 (Q-P0-3): перечень `Error.code` дополнен `INTERNAL_ERROR` (500) и нейтральными кодами 4xx `BAD_REQUEST`,
     `METHOD_NOT_ALLOWED`, `HTTP_<статус>` для ответов, которые не относятся ни к одному именованному коду.
@@ -733,18 +737,23 @@ components:
           items:
             $ref: '#/components/schemas/RoleCode'
         active_role:
-          description: Роль, выбранная в профиле для «Моей очереди»; пусто — все роли вместе
+          description: >-
+            Роль, выбранная в профиле («вид»): при заданной роли `modules`, `resources`, `restricted_fields`, «Моя очередь» и
+            карточки считаются только по ней; пусто — по объединению всех ролей. На права операций не влияет: BFF проверяет
+            их по объединению ролей.
           oneOf:
             - $ref: '#/components/schemas/RoleCode'
             - type: 'null'
         modules:
           type: array
-          description: Модули рейла в порядке показа
+          description: Модули рейла в порядке показа — для активной роли, если задана, иначе для объединения ролей
           items:
             $ref: '#/components/schemas/ModuleCode'
         resources:
           type: object
-          description: Разделы и действия матрицы `platform-rbac.yaml` → уровень для объединения ролей сотрудника
+          description: >-
+            Разделы и действия матрицы `platform-rbac.yaml` → уровень (максимум по ролям) — для активной роли, если задана,
+            иначе для объединения ролей. Видимость пункта меню — по секции `menu` того же файла.
           additionalProperties:
             $ref: '#/components/schemas/AccessLevel'
         restricted_fields:
