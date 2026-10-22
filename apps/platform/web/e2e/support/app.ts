@@ -60,6 +60,8 @@ export async function spaGoto(page: Page, path: string): Promise<void> {
  */
 export async function waitForMotionEnd(page: Page): Promise<void> {
   await page.waitForFunction(
-    `() => !document.querySelector('[class*="-appear"], [class*="-enter"], [class*="-leave"]')`,
+    // классы движения antd пропали и нет бегущих CSS-переходов (Drawer выезжает transform'ом уже после смены классов)
+    `() => !document.querySelector('[class*="-appear"], [class*="-enter"], [class*="-leave"]') &&
+      document.getAnimations().every((a) => a.playState !== "running")`,
   );
 }
