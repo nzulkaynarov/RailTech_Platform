@@ -75,6 +75,7 @@ def _deal_hit(deal: dict[str, Any]) -> SearchHit:
     )
 
 
+# TODO(ERP-09): поиск сделок по номеру, названию и компании — операция ERP; пока совпадение на стороне BFF.
 def _deal_matches(deal: dict[str, Any], needle: str) -> bool:
     haystack = (
         deal_number(deal),

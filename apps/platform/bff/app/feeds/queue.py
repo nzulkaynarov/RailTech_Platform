@@ -66,6 +66,7 @@ def _lead_row(
     return Row(item, waiting)
 
 
+# TODO(CRM-08): `/inbox` «мои» на стороне CRM; пока BFF отбирает чужие передачи и отложенные сам.
 def lead_rows(snap: Snapshot, me: int, now: datetime) -> list[Row]:
     """Лиды, по которым ждут именно этого менеджера: передачи бота, ответ клиенту, свободные
     лиды."""

@@ -116,6 +116,7 @@ def _cursor(offset: int) -> str:
     return base64.urlsafe_b64encode(f"o:{offset}".encode()).decode()
 
 
+# TODO(ERP-16): `unread_count` и фильтр `is_read` в ERP; пока считаем по новейшим 200 уведомлениям.
 async def list_notifications(
     feed: Feed, snap: Snapshot, tab: NotificationTab, cursor: str | None, limit: int
 ) -> NotificationPage:

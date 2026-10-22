@@ -62,6 +62,7 @@ def deal_kind(step: DealStep) -> ObjectKind:
 
 
 def deal_number(deal: dict[str, Any]) -> str:
+    # TODO(ERP-09): номер ЗВ/ПР выдаёт ERP (`Deal.number`); составной номер ниже — только до него.
     own = deal.get("number")
     if isinstance(own, str) and own:
         return own

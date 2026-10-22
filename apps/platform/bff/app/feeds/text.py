@@ -13,6 +13,7 @@ from app.feeds.models import DueLabel
 
 # Часовой пояс компании (03-frontend.md §8): Asia/Tashkent — UTC+5 без перехода на летнее время с
 # 2005 года.
+# TODO(ERP-17): часовой пояс компании берётся из настроек ERP; до этого — константа.
 COMPANY_TZ = timezone(timedelta(hours=5))
 NBSP = " "
 
