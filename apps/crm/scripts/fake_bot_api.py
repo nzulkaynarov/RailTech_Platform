@@ -173,9 +173,8 @@ class Handler(BaseHTTPRequestHandler):
         deadline = time.monotonic() + timeout
         with LOCK:
             while True:
-                UPDATES[:] = [
-                    u for u in UPDATES if int(u.get("update_id", 0)) >= offset
-                ]
+                live = [u for u in UPDATES if int(u.get("update_id", 0)) >= offset]
+                UPDATES[:] = live
                 if UPDATES or time.monotonic() >= deadline:
                     return list(UPDATES)
                 LOCK.wait(timeout=max(0.05, deadline - time.monotonic()))
