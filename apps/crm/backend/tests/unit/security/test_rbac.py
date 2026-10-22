@@ -67,3 +67,19 @@ def test_permissions_payload_shape() -> None:
         "assist": False,
         "create": False,
     }
+
+
+def test_director_platform_role_adds_only_users_read_on_top_of_viewer() -> None:
+    """CRM-01c: seed `viewer` не расширен; право — по роли Платформы."""
+    got = {
+        (r, a)
+        for r, actions in CATALOG.items()
+        for a in actions
+        if RBAC.allowed(["viewer"], r, a, ["DIRECTOR"])
+    }
+
+    assert got == VIEWER | {("users", "read")}
+    assert not RBAC.allowed(["viewer"], "users", "read")
+    for other in (["SUPPLY"], ["ENGINEER"], ["MANAGER"], ["ACCOUNTANT"], ["bogus"]):
+        assert not RBAC.allowed(["viewer"], "users", "read", other)
+    assert RBAC.permissions(["viewer"], ["DIRECTOR"])["users"] == {"read": True, "write": False}

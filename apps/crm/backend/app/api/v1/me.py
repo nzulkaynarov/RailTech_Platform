@@ -59,7 +59,7 @@ async def permissions(
     principal: PrincipalDep, rbac: Annotated[Rbac, Depends(get_rbac)]
 ) -> PermissionsResponse:
     """Только для скрытия UI; истина — проверки на каждом эндпоинте."""
-    matrix = rbac.permissions(principal.roles)
+    matrix = rbac.permissions(principal.roles, principal.platform_roles)
     if principal.must_change_password:
         matrix = {r: dict.fromkeys(actions, False) for r, actions in matrix.items()}
     return PermissionsResponse(roles=list(principal.roles), permissions=matrix)
