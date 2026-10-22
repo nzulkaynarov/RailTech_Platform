@@ -70,6 +70,7 @@ ERP работают до этапа T4 и с P0 заморожены (толь�
 | RBAC из `platform-rbac.yaml` → `bff/app/rbac_generated.py` и `web/src/app/rbac.generated.ts` | `make -C apps/platform rbac` (после правки матрицы или меню; проверка свежести — `rbac-check`, входит в `check-platform`) |
 | токены ui-tokens → `web/src/app/tokens.generated.ts` | `make tokens` из корня (или `make -C apps/platform tokens`); после правки `packages/ui-tokens` |
 | e2e Playwright + axe на MSW (BFF и стенд не нужны) | `make -C apps/platform e2e` (браузер один раз: `cd apps/platform/web && pnpm exec playwright install chromium`); скриншот — `E2E_SCREENSHOT_DIR=<каталог>` |
+| e2e в параллельном worktree (порт 4173 может быть занят другим прогоном) | `E2E_PORT=4191 make -C apps/platform e2e` (или `E2E_PORT=4191 scripts/ci_local.sh platform platform-e2e`); уже занятый порт — ошибка, чужой vite не подхватывается; `E2E_REUSE_SERVER=1` — осознанно переиспользовать сервер |
 | web без бэкенда, ответы MSW | `cd apps/platform/web && pnpm dev:mock` |
 | образы bff и web (локальная проверка сборки) | `make -C apps/platform docker-build` |
 | стенд | `make up` → `https://platform.localhost:8088` (появится с INF-P0-4) |

@@ -54,6 +54,13 @@ for a in "$@"; do
   esac
 done
 [ ${#STAGES[@]} -eq 0 ] && STAGES=(gitleaks crm contracts tokens infra erp cabinet platform crm-integration crm-build)
+# platform-e2e всегда после platform: check-platform пересоздаёт src/shared/api/generated (orval), и vite e2e на лету
+# перезапускается/теряет модули (ERR_CONNECTION_REFUSED). Стадии идут строго по одной; порядок фиксируем явно.
+if [[ " ${STAGES[*]} " == *" platform-e2e "* ]]; then
+  _rest=()
+  for s in "${STAGES[@]}"; do [ "$s" = platform-e2e ] || _rest+=("$s"); done
+  STAGES=(${_rest[@]+"${_rest[@]}"} platform-e2e) # bash 3.2 (macOS): пустой массив под set -u
+fi
 for s in "${STAGES[@]}"; do
   [[ " ${ALL[*]} " == *" $s "* ]] || { echo "Неизвестное задание: $s"; usage; exit 2; }
 done
@@ -133,6 +140,7 @@ stage_crm-e2e() { "$ROOT/apps/crm/scripts/ci_local.sh" e2e; }
 stage_crm-audit() { "$ROOT/apps/crm/scripts/ci_local.sh" audit; }
 
 # Как job platform-e2e в ci.yml: браузер Playwright ставится (быстро, если уже есть), vite --mode mock поднимает сам playwright.config.ts.
+# Порт — E2E_PORT (по умолчанию 4173); если другой worktree уже занял порт, прогон падает, а не идёт в чужой сервер.
 stage_platform-e2e() {
   (cd "$ROOT/apps/platform/web" && pnpm exec playwright install chromium)
   (cd "$ROOT" && make -C apps/platform e2e)
