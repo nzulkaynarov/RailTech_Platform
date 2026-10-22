@@ -65,23 +65,43 @@ class SettingsService:
         payload = validated.model_dump(mode="json")
         before = (await self.raw()).get(key) if actor is not None else None
         async with self._sessions() as session, session.begin():
-            stmt = insert(Setting).values(key=key, value=payload, updated_by=user_id)
-            await session.execute(
-                stmt.on_conflict_do_update(
-                    index_elements=[Setting.key],
-                    set_={
-                        "value": payload,
-                        "updated_by": user_id,
-                        "updated_at": stmt.excluded.updated_at,
-                    },
-                )
-            )
+            await self._upsert(session, key, payload, user_id)
             if actor is not None:
                 await audit.record(
                     session, actor, "settings.update", "settings", key, before=before, after=payload
                 )
         self.invalidate()
         return validated
+
+    async def update_in(
+        self, session: AsyncSession, key: str, value: dict[str, Any], user_id: int | None
+    ) -> BaseModel:
+        """Сохранить ключ в транзакции вызывающего (вместе с секретами и аудитом).
+
+        Кэш настроек вызывающий сбрасывает сам — `invalidate()` после коммита.
+        """
+        model = SETTINGS_MODELS.get(key)
+        if model is None:
+            raise UnknownSettingError(key)
+        validated = model.model_validate(value)
+        await self._upsert(session, key, validated.model_dump(mode="json"), user_id)
+        return validated
+
+    @staticmethod
+    async def _upsert(
+        session: AsyncSession, key: str, payload: dict[str, Any], user_id: int | None
+    ) -> None:
+        stmt = insert(Setting).values(key=key, value=payload, updated_by=user_id)
+        await session.execute(
+            stmt.on_conflict_do_update(
+                index_elements=[Setting.key],
+                set_={
+                    "value": payload,
+                    "updated_by": user_id,
+                    "updated_at": stmt.excluded.updated_at,
+                },
+            )
+        )
 
     async def reset(self, key: str) -> bool:
         """Удалить сохранённое значение ключа — снова действуют значения по умолчанию из схемы.

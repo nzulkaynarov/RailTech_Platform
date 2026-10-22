@@ -98,8 +98,41 @@ function IntegrationTabs({ status, erp, smtp }: TabsProps) {
         status={erp}
         saving={erpMutations.save.isPending}
         checking={erpMutations.check.isPending}
-        checkResult={erpMutations.check.data ?? null}
+        checkResult={
+          erpMutations.check.data ??
+          erpMutations.pair.data?.check ??
+          erpMutations.rotate.data?.check ??
+          null
+        }
         checkError={erpMutations.check.error}
+        pairing={erpMutations.pair.isPending}
+        rotating={erpMutations.rotate.isPending}
+        pairError={erpMutations.pair.error}
+        pairCheckError={
+          erpMutations.check.data
+            ? null
+            : (erpMutations.pair.data?.check_error ?? erpMutations.rotate.data?.check_error ?? null)
+        }
+        onPair={(body, done) => {
+          erpMutations.rotate.reset();
+          erpMutations.check.reset();
+          erpMutations.pair.mutate(body, {
+            onSuccess: () => {
+              done();
+              void message.success(t.integrations.erp.pairing.connected);
+            },
+          });
+        }}
+        onRotate={(body, done) => {
+          erpMutations.pair.reset();
+          erpMutations.check.reset();
+          erpMutations.rotate.mutate(body, {
+            onSuccess: () => {
+              done();
+              void message.success(t.integrations.erp.pairing.rotated);
+            },
+          });
+        }}
         onSave={(body, done) => {
           erpMutations.save.mutate(body, {
             onSuccess: () => {
@@ -110,6 +143,8 @@ function IntegrationTabs({ status, erp, smtp }: TabsProps) {
           });
         }}
         onCheck={() => {
+          erpMutations.pair.reset();
+          erpMutations.rotate.reset();
           erpMutations.check.mutate();
         }}
       />

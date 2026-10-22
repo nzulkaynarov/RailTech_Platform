@@ -12,6 +12,7 @@ from __future__ import annotations
 import datetime
 import logging
 
+from django.conf import settings
 from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -40,9 +41,13 @@ from .serializers import (
     HandoffRequestSerializer,
     HandoffResponseSerializer,
     HealthSerializer,
+    PairingAcceptedSerializer,
+    PairingRequestSerializer,
+    PairingRotatedSerializer,
     ProvisionUserRequestSerializer,
     ProvisionUserResponseSerializer,
 )
+from .services import bootstrap, pairing
 from .services.catalog import search_published_catalog
 from .services.handoff import process_client_handoff
 from .services.provision import provision_crm_user, revoke_crm_user_sessions
@@ -54,7 +59,7 @@ from .services.summary import (
     list_deal_documents_data,
 )
 from .services.system import get_ai_usage_rows, get_system_health
-from .throttles import IntegrationServiceRateThrottle
+from .throttles import IntegrationServiceRateThrottle, PairingAttemptThrottle
 
 logger = logging.getLogger(__name__)
 
@@ -264,6 +269,101 @@ class IntegrationHealthView(BaseIntegrationView):
         health_data, status_code = get_system_health()
         serializer = HealthSerializer(health_data)
         return Response(data=serializer.data, status=status_code)
+
+
+def _pairing_body(request):
+    serializer = PairingRequestSerializer(data=request.data)
+    if not serializer.is_valid():
+        raise IntegrationValidationError("VALIDATION_ERROR")
+    return serializer.validated_data
+
+
+def _audit_paired(request, method: str) -> None:
+    """Запись в журнал ERP: сопряжено (способ, адрес CRM, версия), без кода, доказательства и ключей (ADR-0009)."""
+    from core.audit import log_admin_action
+
+    # Сопряжение уже закоммичено (секреты заменены, код погашен, окно закрыто): сбой журнала не должен превращать успех
+    # в 500 — CRM повторила бы вызов с погашенным кодом и решила, что сопряжения нет. Пишем предупреждение без деталей.
+    try:
+        log_admin_action(
+            entity_type="crm_pairing",
+            entity_id=0,
+            action="Сопряжено по bootstrap (без кода)" if method == "bootstrap" else "Сопряжено по коду из ERP",
+            detail=f"Способ: {method}",
+            actor=None,
+            after={"method": method, "remote_addr": request.META.get("REMOTE_ADDR", "")},
+            event_code="integration.paired_bootstrap" if method == "bootstrap" else "integration.paired_code",
+        )
+    except Exception as exc:  # noqa: BLE001 - аудит вторичен
+        logger.warning("pairing audit entry (%s) was not written: %s", method, type(exc).__name__)
+
+
+class PairingAcceptView(APIView):
+    """POST /api/integration/v1/pairing/accept — аутентификация кодом сопряжения, а не сервисным токеном (M3-ERP-05)."""
+
+    authentication_classes = []
+    permission_classes = []
+    throttle_classes = [PairingAttemptThrottle]
+
+    def get_exception_handler(self):
+        return integration_exception_handler
+
+    def post(self, request, *args, **kwargs):
+        raw_body = request.body  # до разбора: доказательство bootstrap покрывает хеш сырого тела
+        proof = request.headers.get("X-Pairing-Proof")
+        if proof is not None:
+            return self._bootstrap(request, proof, raw_body)
+        header = request.headers.get("Authorization", "").strip().split()
+        # Код могли вставить с пробелами (`ABCD EFGH JKMN`): всё после схемы — код, нормализует сервис.
+        code = "".join(header[1:]) if len(header) >= 2 and header[0].lower() == "bearer" else ""
+        data = _pairing_body(request)
+        result = pairing.accept(
+            code,
+            crm_to_erp_token=data["crm_to_erp_token"],
+            erp_to_crm_token=data["erp_to_crm_token"],
+            webhook_secret=data["webhook_secret"],
+        )
+        _audit_paired(request, "code")
+        body = PairingAcceptedSerializer(
+            {"paired": True, "paired_at": result.paired_at, "erp_version": getattr(settings, "ERP_VERSION", "0.1.0")}
+        ).data
+        return Response(data=body, status=status.HTTP_200_OK, headers={"Cache-Control": "no-store"})
+
+    def _bootstrap(self, request, proof, raw_body):
+        """Первое сопряжение без кода: доказательство владения общим секретом платформы (ADR-0009)."""
+        bootstrap.verify(proof, raw_body)
+        data = _pairing_body(request)
+        result = pairing.accept_bootstrap(
+            crm_to_erp_token=data["crm_to_erp_token"],
+            erp_to_crm_token=data["erp_to_crm_token"],
+            webhook_secret=data["webhook_secret"],
+        )
+        _audit_paired(request, "bootstrap")
+        body = PairingAcceptedSerializer(
+            {"paired": True, "paired_at": result.paired_at, "erp_version": getattr(settings, "ERP_VERSION", "0.1.0")}
+        ).data
+        return Response(data=body, status=status.HTTP_200_OK, headers={"Cache-Control": "no-store"})
+
+
+class PairingRotateView(BaseIntegrationView):
+    """POST /api/integration/v1/pairing/rotate — «Обновить ключи» без простоя (два активных токена)."""
+
+    def post(self, request, *args, **kwargs):
+        data = _pairing_body(request)
+        result = pairing.rotate(
+            request.auth,
+            crm_to_erp_token=data["crm_to_erp_token"],
+            erp_to_crm_token=data["erp_to_crm_token"],
+            webhook_secret=data["webhook_secret"],
+        )
+        body = PairingRotatedSerializer(
+            {
+                "rotated": True,
+                "rotated_at": result.rotated_at,
+                "previous_token_valid_until": result.previous_token_valid_until,
+            }
+        ).data
+        return Response(data=body, status=status.HTTP_200_OK, headers={"Cache-Control": "no-store"})
 
 
 class ExternalSwitchView(BaseIntegrationView):

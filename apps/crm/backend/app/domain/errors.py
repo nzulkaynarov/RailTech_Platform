@@ -70,6 +70,19 @@ class Reason(StrEnum):
     ERP_RATE_LIMITED = "erp_rate_limited"
     # Передача клиента (FIX-31): ИНН уже принадлежит другому клиенту CRM в ERP (409 INN_CONFLICT).
     ERP_INN_CONFLICT = "erp_inn_conflict"
+    # Сопряжение с ERP по одноразовому коду (M3-CRM-10): код не принят, просрочен или уже
+    # использован; ERP старой версии без операции сопряжения.
+    ERP_PAIRING_CODE_INVALID = "erp_pairing_code_invalid"
+    ERP_PAIRING_CODE_EXPIRED = "erp_pairing_code_expired"
+    ERP_PAIRING_CODE_USED = "erp_pairing_code_used"
+    ERP_PAIRING_UNSUPPORTED = "erp_pairing_unsupported"
+    # В проде адрес ERP — только https: ключи и код сопряжения не идут по открытому каналу.
+    ERP_HTTPS_REQUIRED = "erp_https_required"
+    # Сопряжение без кода (bootstrap, ADR-0009): ERP не приняла доказательство, окно закрыто
+    # навсегда или у CRM нет общего секрета платформы.
+    ERP_BOOTSTRAP_REJECTED = "erp_bootstrap_rejected"
+    ERP_BOOTSTRAP_CLOSED = "erp_bootstrap_closed"
+    ERP_BOOTSTRAP_UNAVAILABLE = "erp_bootstrap_unavailable"
     # Коннектор «Почта» (M3-CRM-08, ADR-0018): SMTP-релей для писем сотрудникам.
     SMTP_NOT_CONFIGURED = "smtp_not_configured"
     SMTP_INVALID_HOST = "smtp_invalid_host"

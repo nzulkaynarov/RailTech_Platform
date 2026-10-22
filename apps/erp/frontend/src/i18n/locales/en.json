@@ -1243,7 +1243,8 @@
       "branding": "Letterhead & brand",
       "masterData": "Master Data",
       "categories": "Catalog Categories",
-      "emailTemplates": "Email Templates"
+      "emailTemplates": "Email Templates",
+      "crmIntegration": "CRM integration"
     },
     "groups": {
       "account": "Account",
@@ -1418,6 +1419,46 @@
       "deleted": "Email template deleted",
       "confirmDelete": "Delete template?",
       "confirmDeleteDesc": "The template will be deleted from the database. Default file template will be used."
+    },
+    "crmIntegration": {
+      "title": "CRM integration",
+      "description": "Pair with CRM using one code: CRM creates and passes the keys itself — no manual copying or .env editing.",
+      "status": "Status",
+      "state": {
+        "paired": "Paired",
+        "env": "Keys from environment (.env)",
+        "none": "Not paired"
+      },
+      "refresh": "Refresh status",
+      "pairedAt": "Paired",
+      "rotatedAt": "Keys renewed",
+      "keys": {
+        "crmToErp": "CRM → ERP key",
+        "erpToCrm": "ERP → CRM key",
+        "webhook": "Event signing secret"
+      },
+      "fromEnv": "set in the environment (.env)",
+      "issued": "issued",
+      "transitionTitle": "Switching to new keys",
+      "transition": "The previous CRM → ERP key is still valid until {{time}}, then it expires on its own.",
+      "connectTitle": "Connect CRM",
+      "repairTitle": "Connect CRM again",
+      "steps": {
+        "issue": "Click “Issue code” — it is valid for a short time and only once.",
+        "enter": "In CRM open “Connections → ERP”, enter this ERP's address and the code.",
+        "done": "Click “Connect ERP” in CRM — the keys are created and saved automatically, and the link is checked right away."
+      },
+      "codeLabel": "Pairing code — enter it in CRM",
+      "codeHint": "Valid for {{minutes}} min (until {{time}}), can be used once. A new code replaces the previous one.",
+      "issue": "Issue code",
+      "issueAgain": "Issue a new code",
+      "issueFailed": "Could not issue the code",
+      "copy": "Copy",
+      "copied": "Copied",
+      "copyFailed": "Could not copy — select the code manually",
+      "openCrm": "Open CRM",
+      "onceHint": "The code is shown only now: once you leave the page it cannot be shown again — issue a new one.",
+      "loadFailed": "Could not load the pairing status"
     }
   },
   "tour": {
@@ -3028,6 +3069,20 @@
           "title": "Break-glass access opened",
           "detail": "Operator {{operator_email}} opened temporary access to {{entity_type}} #{{entity_id}}"
         }
+      }
+    },
+    "integration": {
+      "pairing_code_issued": {
+        "title": "CRM pairing code issued",
+        "detail": "One-time code to connect CRM; the code itself is never logged"
+      },
+      "paired_bootstrap": {
+        "title": "CRM paired without a code (bootstrap)",
+        "detail": "First pairing by proof of the shared platform secret; keys and the proof are never logged"
+      },
+      "paired_code": {
+        "title": "CRM paired with an ERP code",
+        "detail": "Pairing by a one-time code; the code itself is never logged"
       }
     }
   },

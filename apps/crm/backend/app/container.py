@@ -41,6 +41,7 @@ if TYPE_CHECKING:
     from app.services.erp_connector import ErpConnectorService
     from app.services.erp_events import ErpEventsService
     from app.services.erp_handoff import ErpHandoffService
+    from app.services.erp_pairing import ErpPairingService
     from app.services.external_services.checks import ExternalChecks
     from app.services.external_services.switches import SwitchService
     from app.services.external_services.view import ExternalServicesView
@@ -388,6 +389,21 @@ class Container:
             lockout=LockoutPolicy(
                 self.settings.login_max_failures, self.settings.login_lockout_minutes
             ),
+        )
+
+    @cached_property
+    def erp_pairing(self) -> "ErpPairingService":
+        """Сопряжение с ERP по одноразовому коду и ротация ключей (M3-CRM-10)."""
+        from app.integrations.erp_pairing import HttpxErpPairingClient
+        from app.services.erp_pairing import ErpPairingService
+
+        return ErpPairingService(
+            self.session_factory,
+            self.settings_service,
+            self.secrets_store,
+            self.settings,
+            HttpxErpPairingClient(),
+            self.erp_connector,
         )
 
     @cached_property

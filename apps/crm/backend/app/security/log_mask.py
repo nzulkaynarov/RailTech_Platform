@@ -36,7 +36,7 @@ _RULES: Final[tuple[tuple[re.Pattern[str], str], ...]] = (
     # Заголовки с секретом: `Authorization: Bearer …`, `'Authorization': 'Bearer …'`, `X-Api-Key`.
     (
         re.compile(
-            r"(?i)((?:proxy-)?authorization|x-api-key|api-key|x-signature|x-telegram-bot-api-secret-token)"
+            r"(?i)((?:proxy-)?authorization|x-api-key|api-key|x-signature|x-pairing-proof|x-telegram-bot-api-secret-token)"
             r"([\"']?\s*[:=]\s*[\"']?)(?:(?:bearer|basic|token)\s+)?[^\s\"',}&;]+"
         ),
         r"\1\2" + REDACTED,
@@ -69,6 +69,7 @@ _HINTS: Final = (
     "authorization",
     "api-key",
     "x-signature",
+    "x-pairing-proof",
     "secret-token",
     "bearer",
     "sk-",
@@ -219,7 +220,7 @@ def quiet_noisy_loggers(level: int = logging.WARNING) -> None:
 
 _SECRET_HEADERS: Final = frozenset(
     {"authorization", "proxy-authorization", "cookie", "set-cookie", "x-api-key", "x-signature"}
-    | {"x-telegram-bot-api-secret-token"}
+    | {"x-telegram-bot-api-secret-token", "x-pairing-proof"}
 )
 
 

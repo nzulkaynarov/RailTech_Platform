@@ -29,6 +29,14 @@ ERP_WEBHOOK_SECRET: Final = "erp_webhook_secret"  # noqa: S105 — имя клю
 # Предыдущий секрет вебхуков: принимается наравне с текущим, пока админ не снимет его (ротация без
 # простоя, FIX-35).
 ERP_WEBHOOK_SECRET_PREVIOUS: Final = "erp_webhook_secret_previous"  # noqa: S105 — имя ключа, не секрет
+# Токен направления ERP→CRM, который CRM сама выдала при сопряжении (M3-CRM-10): ERP предъявит
+# его, когда начнёт ходить в CRM (общие настройки, M3-CRM-11). Сегодня CRM его только хранит.
+ERP_INBOUND_TOKEN: Final = "erp_inbound_token"  # noqa: S105 — имя ключа, не секрет (M3-CRM-10)
+# «Ожидающая» тройка «Обновить ключи» (M3-CRM-10): хранится, пока ERP не подтвердила её однозначно,
+# чтобы после обрыва связи повтор отправил ТУ ЖЕ тройку (ERP идемпотентна по ней, CONTRACTS §2).
+ERP_PENDING_SERVICE_TOKEN: Final = "erp_pending_service_token"  # noqa: S105 — имя ключа, не секрет
+ERP_PENDING_INBOUND_TOKEN: Final = "erp_pending_inbound_token"  # noqa: S105 — имя ключа, не секрет
+ERP_PENDING_WEBHOOK_SECRET: Final = "erp_pending_webhook_secret"  # noqa: S105 — имя ключа, не секрет
 SMTP_USERNAME: Final = "smtp_username"
 SMTP_PASSWORD: Final = "smtp_password"  # noqa: S105 — имя ключа, не секрет (M3-CRM-08)
 

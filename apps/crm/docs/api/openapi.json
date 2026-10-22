@@ -3084,6 +3084,101 @@
         "title": "ErpConnectorIn",
         "type": "object"
       },
+      "ErpPairIn": {
+        "additionalProperties": false,
+        "description": "«Подключить ERP»: адрес ERP, код из её настроек (необязателен) и пароль админа.",
+        "properties": {
+          "base_url": {
+            "maxLength": 500,
+            "minLength": 1,
+            "title": "Base Url",
+            "type": "string"
+          },
+          "code": {
+            "anyOf": [
+              {
+                "format": "password",
+                "maxLength": 64,
+                "type": "string",
+                "writeOnly": true
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Code"
+          },
+          "password": {
+            "format": "password",
+            "maxLength": 256,
+            "minLength": 1,
+            "title": "Password",
+            "type": "string",
+            "writeOnly": true
+          }
+        },
+        "required": [
+          "base_url",
+          "password"
+        ],
+        "title": "ErpPairIn",
+        "type": "object"
+      },
+      "ErpPairingOut": {
+        "description": "Итог сопряжения или ротации: состояние коннектора и «Проверить связь», сделанная сразу после.\n\nСопряжение удалось, даже если проверка не прошла: тогда `check` пуст, а `check_error` — подкод\nпричины (`erp_unauthorized`, `erp_unavailable`, …) для понятной подсказки.",
+        "properties": {
+          "check": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ErpCheckOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "check_error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Check Error"
+          },
+          "status": {
+            "$ref": "#/components/schemas/ErpStatusOut"
+          }
+        },
+        "required": [
+          "status",
+          "check",
+          "check_error"
+        ],
+        "title": "ErpPairingOut",
+        "type": "object"
+      },
+      "ErpRotateIn": {
+        "additionalProperties": false,
+        "description": "«Обновить ключи»: только пароль админа — новые секреты CRM генерирует сама.",
+        "properties": {
+          "password": {
+            "format": "password",
+            "maxLength": 256,
+            "minLength": 1,
+            "title": "Password",
+            "type": "string",
+            "writeOnly": true
+          }
+        },
+        "required": [
+          "password"
+        ],
+        "title": "ErpRotateIn",
+        "type": "object"
+      },
       "ErpStatusOut": {
         "description": "Коннектор «ERP» (M3-CRM-02): значения секретов не возвращаются — только «задан» и `last4`.",
         "properties": {
@@ -3100,9 +3195,30 @@
             "title": "Base Url Source",
             "type": "string"
           },
+          "bootstrap_available": {
+            "default": false,
+            "title": "Bootstrap Available",
+            "type": "boolean"
+          },
           "configured": {
             "title": "Configured",
             "type": "boolean"
+          },
+          "inbound_token_configured": {
+            "default": false,
+            "title": "Inbound Token Configured",
+            "type": "boolean"
+          },
+          "inbound_token_last4": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Inbound Token Last4"
           },
           "mode": {
             "enum": [
@@ -3112,9 +3228,36 @@
             "title": "Mode",
             "type": "string"
           },
+          "paired": {
+            "default": false,
+            "title": "Paired",
+            "type": "boolean"
+          },
+          "previous_secret_until": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Previous Secret Until"
+          },
+          "rotation_pending": {
+            "default": false,
+            "title": "Rotation Pending",
+            "type": "boolean"
+          },
           "secrets_enabled": {
             "title": "Secrets Enabled",
             "type": "boolean"
+          },
+          "suggested_base_url": {
+            "default": "http://erp-backend:8000",
+            "title": "Suggested Base Url",
+            "type": "string"
           },
           "token_configured": {
             "title": "Token Configured",
@@ -6106,6 +6249,14 @@
           "erp_bad_response",
           "erp_rate_limited",
           "erp_inn_conflict",
+          "erp_pairing_code_invalid",
+          "erp_pairing_code_expired",
+          "erp_pairing_code_used",
+          "erp_pairing_unsupported",
+          "erp_https_required",
+          "erp_bootstrap_rejected",
+          "erp_bootstrap_closed",
+          "erp_bootstrap_unavailable",
           "smtp_not_configured",
           "smtp_invalid_host",
           "smtp_unavailable",
@@ -10853,6 +11004,100 @@
           }
         },
         "summary": "Receive Erp Event",
+        "tags": [
+          "integrations"
+        ]
+      }
+    },
+    "/api/v1/integrations/erp/pair": {
+      "post": {
+        "description": "«Подключить ERP»: адрес ERP и одноразовый код из её настроек (M3-CRM-10, CONTRACTS §2).\n\nCRM сама генерирует токены обоих направлений и секрет вебхуков, передаёт их ERP по коду,\nсохраняет зашифрованными и сразу делает «Проверить связь» (результат — в ответе). Пароль\nадмина обязателен.\n\nОшибки (`details.reason`): `erp_invalid_url` (422, поле `base_url`),\n`erp_pairing_code_invalid` / `erp_pairing_code_expired` / `erp_pairing_code_used` (422, поле\n`code`), `wrong_password` (422), `secrets_key_missing` (409), `erp_unavailable` /\n`erp_bad_response` / `erp_pairing_unsupported` (502).",
+        "operationId": "pair_erp",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ErpPairIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErpPairingOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Ошибка валидации"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Pair Erp",
+        "tags": [
+          "integrations"
+        ]
+      }
+    },
+    "/api/v1/integrations/erp/rotate": {
+      "post": {
+        "description": "«Обновить ключи»: CRM генерирует новую тройку секретов, ERP принимает её по токену.\n\nПрежний токен CRM→ERP остаётся у ERP активным на переходный период (два активных), затем\nгаснет сам; предыдущий секрет вебхуков CRM принимает наравне с новым и снимает по истечении\nсрока перехода.\n\nОшибки: `erp_not_configured` (409), `secrets_key_missing` (409), `wrong_password` (422),\n`erp_unauthorized` / `erp_unavailable` / `erp_bad_response` (502).",
+        "operationId": "rotate_erp_keys",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ErpRotateIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErpPairingOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorOut"
+                }
+              }
+            },
+            "description": "Ошибка валидации"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Rotate Erp Keys",
         "tags": [
           "integrations"
         ]

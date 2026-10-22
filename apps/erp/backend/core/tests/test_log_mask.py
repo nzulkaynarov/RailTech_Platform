@@ -51,6 +51,7 @@ FAKE_JWT = "eyJfaXg2NmJmYWtl.eyJmaXg2NmJmYWtlcGF5bG9hZA.fix66bfakesig"
         (f"?x-amz-security-token={FAKE_SIG}", FAKE_SIG),
         # Заголовки
         (f"Authorization: Bearer {FAKE_SIG}", FAKE_SIG),
+        (f"X-Pairing-Proof: v1.1760000000.jti.{FAKE_SIG}", FAKE_SIG),  # доказательство bootstrap (M3-ERP-05)
         (f"headers={{'Authorization': 'Bearer {FAKE_SIG}', 'Accept': 'json'}}", FAKE_SIG),
         (f"authorization=Basic {FAKE_SIG}", FAKE_SIG),
         (f"X-Api-Key: {FAKE_SIG}", FAKE_SIG),
@@ -314,6 +315,27 @@ def test_sentry_event_after_hook_has_no_secrets():
     assert event["request"]["headers"]["Authorization"] == REDACTED
     assert "page=1" in event["request"]["query_string"]
     assert event["exception"]["values"][0]["type"] == "HTTPStatusError"
+
+
+@pytest.mark.parametrize(
+    "headers",
+    [
+        {"X-Pairing-Proof": f"v1.1760000000.jti.{FAKE_SIG}", "Accept": "json"},
+        {"x-pairing-proof": f"v1.1760000000.jti.{FAKE_SIG}", "Accept": "json"},
+        [["X-Pairing-Proof", f"v1.1760000000.jti.{FAKE_SIG}"], ["Accept", "json"]],
+    ],
+    ids=["dict-canonical-case", "dict-lowercase", "list-of-pairs"],
+)
+def test_sentry_event_pairing_proof_header_is_redacted(headers):
+    """M3-ERP-05: доказательство bootstrap (`X-Pairing-Proof`) не попадает в событие Sentry ни в каком виде заголовков."""
+    event = scrub_event({"request": {"url": "https://erp.test/api/integration/v1/pairing/accept", "headers": headers}})
+
+    assert FAKE_SIG not in repr(event)
+    request_headers = event["request"]["headers"]
+    pairs = request_headers.items() if isinstance(request_headers, dict) else request_headers
+    by_name = {str(name).lower(): value for name, value in pairs}
+    assert by_name["x-pairing-proof"] == REDACTED
+    assert by_name["accept"] == "json"  # лишнего не затёрто
 
 
 def test_sentry_event_hook_accepts_breadcrumbs_as_bare_list():

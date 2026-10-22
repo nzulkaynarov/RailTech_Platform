@@ -3,6 +3,7 @@ import {
   Alert,
   Button,
   Checkbox,
+  Collapse,
   Descriptions,
   Flex,
   Form,
@@ -13,12 +14,19 @@ import {
 } from "antd";
 import { useState } from "react";
 
-import type { ErpCheckOut, ErpConnectorIn, ErpStatusOut } from "../../api/generated/model";
+import type {
+  ErpCheckOut,
+  ErpConnectorIn,
+  ErpPairIn,
+  ErpRotateIn,
+  ErpStatusOut,
+} from "../../api/generated/model";
 import { BooleanTag } from "../../components/BooleanTag";
 import { ERP_STATE_COLOR, erpState } from "../../domain/integrations";
 import { apiErrorMessage } from "../../hooks/useApiErrorToast";
 import { t } from "../../i18n/ru";
 import { formatDateTime } from "../../lib/time";
+import { ErpPairing } from "./ErpPairing";
 
 type Props = {
   status: ErpStatusOut;
@@ -28,6 +36,14 @@ type Props = {
   checkError: unknown;
   onSave: (body: ErpConnectorIn, done: () => void) => void;
   onCheck: () => void;
+  /** Сопряжение «Подключить ERP» и «Обновить ключи» (M3-CRM-10). */
+  pairing: boolean;
+  rotating: boolean;
+  pairError: unknown;
+  /** Сбой «Проверить связь», сделанной сразу после сопряжения: подкод причины (сопряжение состоялось). */
+  pairCheckError: string | null;
+  onPair: (body: ErpPairIn, done: () => void) => void;
+  onRotate: (body: ErpRotateIn, done: () => void) => void;
 };
 
 const E = t.integrations.erp;
@@ -113,6 +129,12 @@ export function ErpCard({
   checkError,
   onSave,
   onCheck,
+  pairing,
+  rotating,
+  pairError,
+  pairCheckError,
+  onPair,
+  onRotate,
 }: Props) {
   const [baseUrl, setBaseUrl] = useState(status.base_url);
   const [token, setToken] = useState("");
@@ -122,6 +144,10 @@ export function ErpCard({
   const [password, setPassword] = useState("");
   const [confirming, setConfirming] = useState(false);
   const state = erpState(status);
+  // Пока ничего не задано, строки «не задан» ×4 — шум: остаются состояние и режим. После сопряжения ключи
+  // показывает карточка сопряжения (без значений), поэтому здесь остаются состояние, режим и адрес.
+  const showAddress = state !== "notConfigured";
+  const showKeys = showAddress && !status.paired;
   const close = () => {
     setConfirming(false);
     setPassword("");
@@ -142,158 +168,203 @@ export function ErpCard({
           <Tag color={ERP_STATE_COLOR[state]}>{E.state[state]}</Tag>
         </Descriptions.Item>
         <Descriptions.Item label={E.mode}>{E.modes[status.mode] ?? status.mode}</Descriptions.Item>
-        <Descriptions.Item label={E.baseUrl}>
-          {status.base_url ? (
-            <>
-              {status.base_url}{" "}
-              <Typography.Text type="secondary">
-                ({E.source}: {t.tokenSource[status.base_url_source] ?? status.base_url_source})
-              </Typography.Text>
-            </>
-          ) : (
-            E.notSet
-          )}
-        </Descriptions.Item>
-        <Descriptions.Item label={E.token}>
-          {status.token_configured
-            ? `${t.tokenSource[status.token_source] ?? status.token_source}${
-                status.token_last4 ? ` ••••${status.token_last4}` : ""
-              }`
-            : E.notSet}
-        </Descriptions.Item>
-        <Descriptions.Item label={E.webhook}>
-          {status.webhook_secret_configured
-            ? `${t.tokenSource[status.webhook_secret_source] ?? status.webhook_secret_source}${
-                status.webhook_secret_last4 ? ` ••••${status.webhook_secret_last4}` : ""
-              }`
-            : E.notSet}
-        </Descriptions.Item>
-        <Descriptions.Item label={E.webhookPrevious}>
-          {status.webhook_secret_previous_configured
-            ? `${
-                t.tokenSource[status.webhook_secret_previous_source] ??
-                status.webhook_secret_previous_source
-              }${
-                status.webhook_secret_previous_last4
-                  ? ` ••••${status.webhook_secret_previous_last4}`
-                  : ""
-              }`
-            : E.webhookPreviousNone}
-        </Descriptions.Item>
+        {showAddress ? (
+          <Descriptions.Item label={E.baseUrl}>
+            {status.base_url ? (
+              <>
+                {status.base_url}{" "}
+                <Typography.Text type="secondary">
+                  ({E.source}: {t.tokenSource[status.base_url_source] ?? status.base_url_source})
+                </Typography.Text>
+              </>
+            ) : (
+              E.notSet
+            )}
+          </Descriptions.Item>
+        ) : null}
+        {showKeys ? (
+          <>
+            <Descriptions.Item label={E.token}>
+              {status.token_configured
+                ? `${t.tokenSource[status.token_source] ?? status.token_source}${
+                    status.token_last4 ? ` ••••${status.token_last4}` : ""
+                  }`
+                : E.notSet}
+            </Descriptions.Item>
+            <Descriptions.Item label={E.webhook}>
+              {status.webhook_secret_configured
+                ? `${t.tokenSource[status.webhook_secret_source] ?? status.webhook_secret_source}${
+                    status.webhook_secret_last4 ? ` ••••${status.webhook_secret_last4}` : ""
+                  }`
+                : E.notSet}
+            </Descriptions.Item>
+            <Descriptions.Item label={E.webhookPrevious}>
+              {status.webhook_secret_previous_configured
+                ? `${
+                    t.tokenSource[status.webhook_secret_previous_source] ??
+                    status.webhook_secret_previous_source
+                  }${
+                    status.webhook_secret_previous_last4
+                      ? ` ••••${status.webhook_secret_previous_last4}`
+                      : ""
+                  }`
+                : E.webhookPreviousNone}
+            </Descriptions.Item>
+          </>
+        ) : null}
       </Descriptions>
       {status.secrets_enabled ? null : (
         <Alert type="warning" showIcon message={E.secretsDisabled} />
       )}
-      <Form
-        layout="vertical"
-        onFinish={() => {
-          setConfirming(true);
-        }}
-      >
-        <Form.Item label={E.baseUrl} htmlFor="erp-base-url" extra={E.baseUrlHint}>
-          <Input
-            id="erp-base-url"
-            type="url"
-            inputMode="url"
-            autoComplete="off"
-            value={baseUrl}
-            placeholder={E.baseUrlPlaceholder}
-            onChange={(e) => {
-              setBaseUrl(e.target.value);
-            }}
-          />
-        </Form.Item>
-        <Form.Item
-          label={E.token}
-          htmlFor="erp-service-token"
-          extra={secretHint(status.token_source, status.token_last4, {
-            saved: E.tokenSaved,
-            env: E.tokenEnv,
-            hint: E.tokenHint,
-          })}
+      <ErpPairing
+        status={status}
+        pairing={pairing}
+        rotating={rotating}
+        pairError={pairError}
+        onPair={onPair}
+        onRotate={onRotate}
+      />
+      <Flex wrap gap="small">
+        <Button
+          icon={<ApiOutlined aria-hidden />}
+          loading={checking}
+          disabled={!status.configured}
+          onClick={onCheck}
         >
-          <Input.Password
-            id="erp-service-token"
-            value={token}
-            autoComplete="off"
-            disabled={!status.secrets_enabled}
-            visibilityToggle={false}
-            onChange={(e) => {
-              setToken(e.target.value);
-            }}
-          />
-        </Form.Item>
-        <Form.Item
-          label={E.webhook}
-          htmlFor="erp-webhook-secret"
-          extra={secretHint(status.webhook_secret_source, status.webhook_secret_last4, {
-            saved: E.webhookSaved,
-            env: E.webhookEnv,
-            hint: E.webhookHint,
-          })}
-        >
-          <Input.Password
-            id="erp-webhook-secret"
-            value={webhook}
-            autoComplete="off"
-            disabled={!status.secrets_enabled}
-            visibilityToggle={false}
-            onChange={(e) => {
-              setWebhook(e.target.value);
-            }}
-          />
-        </Form.Item>
-        <Form.Item
-          label={E.webhookPrevious}
-          htmlFor="erp-webhook-secret-previous"
-          extra={
-            status.webhook_secret_previous_source === "db" && status.webhook_secret_previous_last4
-              ? `${E.webhookPreviousSaved.replace("{last4}", status.webhook_secret_previous_last4)}. ${E.webhookPreviousHint}`
-              : status.webhook_secret_previous_source === "env"
-                ? E.webhookPreviousEnv
-                : E.webhookPreviousHint
-          }
-        >
-          <Input.Password
-            id="erp-webhook-secret-previous"
-            value={previous}
-            autoComplete="off"
-            disabled={!status.secrets_enabled}
-            visibilityToggle={false}
-            onChange={(e) => {
-              setPrevious(e.target.value);
-              if (e.target.value) setClearPrevious(false);
-            }}
-          />
-          {canClear ? (
-            <Checkbox
-              style={{ marginTop: 8 }}
-              checked={clearPrevious}
-              disabled={previous.trim().length > 0 || !status.secrets_enabled}
-              onChange={(e) => {
-                setClearPrevious(e.target.checked);
-              }}
-            >
-              {E.webhookPreviousClear}
-              <Typography.Text type="secondary"> — {E.webhookPreviousClearHint}</Typography.Text>
-            </Checkbox>
-          ) : null}
-        </Form.Item>
-        <Flex wrap gap="small">
-          <Button type="primary" htmlType="submit" disabled={!dirty}>
-            {E.save}
-          </Button>
-          <Button
-            icon={<ApiOutlined aria-hidden />}
-            loading={checking}
-            disabled={!status.configured}
-            onClick={onCheck}
-          >
-            {E.check}
-          </Button>
-        </Flex>
-      </Form>
+          {E.check}
+        </Button>
+      </Flex>
       <CheckResult result={checkResult} error={checkError} />
+      {pairCheckError ? (
+        <Alert
+          type="warning"
+          showIcon
+          role="status"
+          message={E.pairing.checkFailedAfter}
+          description={t.apiReasons[pairCheckError] ?? t.errors.generic}
+        />
+      ) : null}
+      <Collapse
+        ghost
+        defaultActiveKey={status.configured && !status.paired ? ["manual"] : []}
+        items={[
+          {
+            key: "manual",
+            label: E.pairing.manual,
+            forceRender: true,
+            children: (
+              <Flex vertical gap="small">
+                <Typography.Paragraph type="secondary">{E.pairing.manualHint}</Typography.Paragraph>
+                <Form
+                  layout="vertical"
+                  onFinish={() => {
+                    setConfirming(true);
+                  }}
+                >
+                  <Form.Item label={E.baseUrl} htmlFor="erp-base-url" extra={E.baseUrlHint}>
+                    <Input
+                      id="erp-base-url"
+                      type="url"
+                      inputMode="url"
+                      autoComplete="off"
+                      value={baseUrl}
+                      placeholder={E.baseUrlPlaceholder}
+                      onChange={(e) => {
+                        setBaseUrl(e.target.value);
+                      }}
+                    />
+                  </Form.Item>
+                  <Form.Item
+                    label={E.token}
+                    htmlFor="erp-service-token"
+                    extra={secretHint(status.token_source, status.token_last4, {
+                      saved: E.tokenSaved,
+                      env: E.tokenEnv,
+                      hint: E.tokenHint,
+                    })}
+                  >
+                    <Input.Password
+                      id="erp-service-token"
+                      value={token}
+                      autoComplete="off"
+                      disabled={!status.secrets_enabled}
+                      visibilityToggle={false}
+                      onChange={(e) => {
+                        setToken(e.target.value);
+                      }}
+                    />
+                  </Form.Item>
+                  <Form.Item
+                    label={E.webhook}
+                    htmlFor="erp-webhook-secret"
+                    extra={secretHint(status.webhook_secret_source, status.webhook_secret_last4, {
+                      saved: E.webhookSaved,
+                      env: E.webhookEnv,
+                      hint: E.webhookHint,
+                    })}
+                  >
+                    <Input.Password
+                      id="erp-webhook-secret"
+                      value={webhook}
+                      autoComplete="off"
+                      disabled={!status.secrets_enabled}
+                      visibilityToggle={false}
+                      onChange={(e) => {
+                        setWebhook(e.target.value);
+                      }}
+                    />
+                  </Form.Item>
+                  <Form.Item
+                    label={E.webhookPrevious}
+                    htmlFor="erp-webhook-secret-previous"
+                    extra={
+                      status.webhook_secret_previous_source === "db" &&
+                      status.webhook_secret_previous_last4
+                        ? `${E.webhookPreviousSaved.replace("{last4}", status.webhook_secret_previous_last4)}. ${E.webhookPreviousHint}`
+                        : status.webhook_secret_previous_source === "env"
+                          ? E.webhookPreviousEnv
+                          : E.webhookPreviousHint
+                    }
+                  >
+                    <Input.Password
+                      id="erp-webhook-secret-previous"
+                      value={previous}
+                      autoComplete="off"
+                      disabled={!status.secrets_enabled}
+                      visibilityToggle={false}
+                      onChange={(e) => {
+                        setPrevious(e.target.value);
+                        if (e.target.value) setClearPrevious(false);
+                      }}
+                    />
+                    {canClear ? (
+                      <Checkbox
+                        style={{ marginTop: 8 }}
+                        checked={clearPrevious}
+                        disabled={previous.trim().length > 0 || !status.secrets_enabled}
+                        onChange={(e) => {
+                          setClearPrevious(e.target.checked);
+                        }}
+                      >
+                        {E.webhookPreviousClear}
+                        <Typography.Text type="secondary">
+                          {" "}
+                          — {E.webhookPreviousClearHint}
+                        </Typography.Text>
+                      </Checkbox>
+                    ) : null}
+                  </Form.Item>
+                  <Flex wrap gap="small">
+                    <Button type="primary" htmlType="submit" disabled={!dirty}>
+                      {E.save}
+                    </Button>
+                  </Flex>
+                </Form>
+              </Flex>
+            ),
+          },
+        ]}
+      />
       <Modal
         open={confirming}
         title={E.confirmTitle}

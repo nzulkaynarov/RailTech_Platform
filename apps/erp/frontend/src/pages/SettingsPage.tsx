@@ -16,6 +16,7 @@ import { SettingsLayout } from '@/components/Settings/SettingsLayout';
 import { ProfileSection } from '@/components/Settings/ProfileSection';
 import { SecuritySection } from '@/components/Settings/SecuritySection';
 import { PlatformSettings } from '@/components/Settings/PlatformSettings';
+import { CrmIntegrationSettings } from '@/components/Settings/CrmIntegrationSettings';
 import { CompanyTeamSettings } from '@/components/Settings/team/CompanyTeamSettings';
 import { ChargeTemplatesSettings } from '@/components/Cabinet/ChargeTemplatesSettings';
 import { DocumentTemplatesSettings } from '@/components/Settings/DocumentTemplatesSettings';
@@ -104,6 +105,8 @@ function SectionContent({ sectionKey }: { sectionKey: SettingsSectionKey }): Rea
       return <CompanyTeamSettings />;
     case 'platform':
       return <PlatformSettings />;
+    case 'crm-integration':
+      return <CrmIntegrationSettings />;
   }
 }
 

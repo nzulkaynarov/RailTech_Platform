@@ -87,7 +87,12 @@ vi.mock("../../api/integrationQueries", () => ({
     connect: mutation(),
     sendTest: mutation(),
   }),
-  useErpMutations: () => ({ save: mutation(), check: mutation() }),
+  useErpMutations: () => ({
+    save: mutation(),
+    check: mutation(),
+    pair: mutation(),
+    rotate: mutation(),
+  }),
   useSmtpStatus: () => query(smtp),
   useSmtpMutations: () => ({ save: mutation(), check: mutation(), testSend: mutation() }),
   useEmailLog: () => query([]),
@@ -141,7 +146,9 @@ describe("IntegrationsPage — ERP tab", () => {
     renderPage("?tab=erp");
     const panel = screen.getByRole("tabpanel");
     expect(within(panel).getByText("Настроен не полностью")).toBeInTheDocument();
-    expect(within(panel).getByLabelText("Адрес ERP")).toHaveValue("http://erp.localhost");
+    expect(within(panel).getByLabelText("Адрес ERP", { selector: "#erp-base-url" })).toHaveValue(
+      "http://erp.localhost",
+    );
     expect(within(panel).getByLabelText("Сервисный токен CRM → ERP")).toHaveValue("");
     expect(within(panel).getByRole("button", { name: "Проверить связь" })).toBeDisabled();
     expect(document.body.textContent).not.toMatch(/[a-z]+_[a-z]+_[a-z]+/);

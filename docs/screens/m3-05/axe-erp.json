@@ -1,0 +1,82 @@
+{
+  "erp-pairing-env-1440": {
+    "serious_critical": 0,
+    "violations": [
+      {
+        "id": "region",
+        "impact": "moderate",
+        "nodes": 1
+      }
+    ]
+  },
+  "erp-pairing-code-1440": {
+    "serious_critical": 0,
+    "violations": [
+      {
+        "id": "region",
+        "impact": "moderate",
+        "nodes": 1
+      }
+    ]
+  },
+  "erp-pairing-paired-1440": {
+    "serious_critical": 0,
+    "violations": [
+      {
+        "id": "region",
+        "impact": "moderate",
+        "nodes": 1
+      }
+    ]
+  },
+  "erp-pairing-rotated-1440": {
+    "serious_critical": 0,
+    "violations": [
+      {
+        "id": "region",
+        "impact": "moderate",
+        "nodes": 1
+      }
+    ]
+  },
+  "erp-pairing-env-390": {
+    "serious_critical": 0,
+    "violations": [
+      {
+        "id": "region",
+        "impact": "moderate",
+        "nodes": 1
+      }
+    ]
+  },
+  "erp-pairing-code-390": {
+    "serious_critical": 0,
+    "violations": [
+      {
+        "id": "region",
+        "impact": "moderate",
+        "nodes": 1
+      }
+    ]
+  },
+  "erp-pairing-paired-390": {
+    "serious_critical": 0,
+    "violations": [
+      {
+        "id": "region",
+        "impact": "moderate",
+        "nodes": 1
+      }
+    ]
+  },
+  "erp-pairing-rotated-390": {
+    "serious_critical": 0,
+    "violations": [
+      {
+        "id": "region",
+        "impact": "moderate",
+        "nodes": 1
+      }
+    ]
+  }
+}

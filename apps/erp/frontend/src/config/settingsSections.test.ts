@@ -41,7 +41,7 @@ describe('buildSettingsSections — S1 гейтинг = правда сохра�
     const gate = makeGate(ADMIN);
     expect(sectionKeys(gate)).toEqual([
       'profile', 'security', 'company', 'master-data', 'categories', 'branding', 'doc-templates', 'email-templates', 'numbering',
-      'defaults', 'templates', 'team', 'platform',
+      'defaults', 'templates', 'team', 'platform', 'crm-integration',
     ]);
     expect(defaultSettingsSection()).toBe('profile');
   });
@@ -80,6 +80,7 @@ describe('buildSettingsSections — S1 гейтинг = правда сохра�
     ]);
     expect(sectionKeys(gate)).not.toContain('templates');
     expect(sectionKeys(gate)).not.toContain('platform');
+    expect(sectionKeys(gate)).not.toContain('crm-integration');
     expect(defaultSettingsSection()).toBe('profile');
   });
 
