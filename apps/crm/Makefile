@@ -83,12 +83,12 @@ promptfoo: ## ПЛАТНО: матрица промпт × модель чере
 		npx -y promptfoo@$(PROMPTFOO_VERSION) eval -c promptfoo/promptfooconfig.yaml --no-cache
 
 .PHONY: openapi
-openapi: ## Экспорт OpenAPI → docs/api/openapi.json и генерация клиента orval (frontend/src/api/generated)
-	cd $(BACKEND) && PYTHONPATH=. uv run python ../scripts/export_openapi.py ../docs/api/openapi.json
+openapi: ## Экспорт OpenAPI → packages/contracts/openapi/crm.yaml и генерация клиента orval (frontend/src/api/generated)
+	cd $(BACKEND) && PYTHONPATH=. uv run python ../scripts/export_openapi.py ../../../packages/contracts/openapi/crm.yaml
 	cd $(FRONTEND) && pnpm api:generate
 
 .PHONY: platform-roles
-platform-roles: ## Пересоздать app/domain/platform_roles_generated.py из packages/contracts/platform-rbac.v2.yaml
+platform-roles: ## Пересоздать app/domain/platform_roles_generated.py из packages/contracts/platform-rbac.yaml
 	cd $(BACKEND) && uv run python ../scripts/gen_platform_roles.py
 
 .PHONY: migration

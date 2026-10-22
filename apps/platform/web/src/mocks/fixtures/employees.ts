@@ -1,23 +1,26 @@
-import type { Employee, RoleCode } from "../../shared/api/generated/model";
+import type { Employee } from "../../shared/api/generated/model";
+import { ROLE_ID, readRoles, roleRefOf, rolesOf } from "./roles";
 import { DEMO_USERS } from "./users";
 
 /**
- * Сотрудники для MSW (Admin · Оргструктура, PLT-15). Вымышленные, домен `.example`. Хранятся в `localStorage` страницы
- * (как сессия мока), поэтому выданные в интерфейсе роли переживают перезагрузку и действуют при следующем входе этого
- * сотрудника: `effectiveRoles` подмешивается в `buildMe` мока сессии. Без хранилища — копия в памяти.
+ * Сотрудники для MSW (Admin · Оргструктура, PLT-15, R-2). Вымышленные, домен `.example`. Хранятся в `localStorage`
+ * страницы (как сессия мока) с id ролей: выданные в интерфейсе роли переживают перезагрузку и действуют при следующем
+ * входе этого сотрудника (`effectiveRoleIds` подмешивается в `buildMe` мока сессии); названия ролей берутся из
+ * хранилища ролей, поэтому переименование роли сразу видно в списке. Без хранилища — копия в памяти.
  */
 const KEY = "rt-pf-mock-employees";
 
-function accessFor(roles: readonly RoleCode[]): Employee["access"] {
-  // CRM-01: непустые роли Платформы дают доступ к CRM и ERP; без ролей — только CRM.
-  return { crm: true, erp: roles.length > 0 };
+export type MockEmployee = Omit<Employee, "roles"> & { role_ids: string[] };
+
+function accessFor(roleIds: readonly string[]): Employee["access"] {
+  // R-1: непустые роли Платформы дают доступ к CRM и ERP; без ролей — только CRM.
+  return { crm: true, erp: roleIds.length > 0 };
 }
 
 interface Seed {
   id: string;
   telegram: boolean;
   status?: Employee["status"];
-  erpSync?: Employee["erp_sync"];
 }
 
 const SEEDS: readonly Seed[] = [
@@ -32,31 +35,32 @@ const SEEDS: readonly Seed[] = [
   { id: "u-demo-disabled", telegram: false, status: "disabled" },
 ];
 
-function seedEmployees(): Employee[] {
+function seedEmployees(): MockEmployee[] {
   const fromUsers = SEEDS.flatMap((seed) => {
     const user = DEMO_USERS.find((u) => u.id === seed.id);
     if (!user) return [];
-    const employee: Employee = {
+    const roleIds = user.roles.map((code) => ROLE_ID[code]);
+    const employee: MockEmployee = {
       id: user.id,
       name: user.name,
       initials: user.initials,
       email: user.email,
       ...(user.position && user.position !== "—" ? { position: user.position } : {}),
-      roles: [...user.roles],
-      access: accessFor(user.roles),
+      role_ids: roleIds,
+      access: accessFor(roleIds),
       status: seed.status ?? "active",
       telegram_linked: seed.telegram,
       erp_sync: "ok",
     };
     return [employee];
   });
-  const invited: Employee = {
+  const invited: MockEmployee = {
     id: "u-demo-invited",
     name: "Демо Приглашённая",
     initials: "ДП",
     email: "invited@demo.example",
     position: "Инженер по проектам",
-    roles: ["ENGINEER"],
+    role_ids: [ROLE_ID.ENGINEER],
     access: { crm: true, erp: true },
     status: "invited",
     telegram_linked: false,
@@ -65,12 +69,12 @@ function seedEmployees(): Employee[] {
   return [...fromUsers, invited];
 }
 
-let memory: Employee[] | null = null;
+let memory: MockEmployee[] | null = null;
 
-export function readEmployees(): Employee[] {
+export function readEmployees(): MockEmployee[] {
   try {
     const raw = window.localStorage.getItem(KEY);
-    return raw ? (JSON.parse(raw) as Employee[]) : seedEmployees();
+    return raw ? (JSON.parse(raw) as MockEmployee[]) : seedEmployees();
   } catch {
     // Хранилище недоступно — состояние живёт в памяти.
     memory ??= seedEmployees();
@@ -78,7 +82,7 @@ export function readEmployees(): Employee[] {
   }
 }
 
-export function writeEmployees(items: Employee[]): void {
+export function writeEmployees(items: MockEmployee[]): void {
   memory = items;
   try {
     window.localStorage.setItem(KEY, JSON.stringify(items));
@@ -96,10 +100,16 @@ export function resetEmployees(): void {
   }
 }
 
-/** Роли сотрудника с учётом выданного в Оргструктуре; нет записи — роли из `DEMO_USERS`. */
-export function effectiveRoles(userId: string, fallback: readonly RoleCode[]): RoleCode[] {
+/** Сотрудник в форме контракта: роли — ссылки с названиями из хранилища ролей (удалённые пропускаются). */
+export function toEmployee(employee: MockEmployee): Employee {
+  const { role_ids: roleIds, ...rest } = employee;
+  return { ...rest, roles: rolesOf(roleIds, readRoles()).map(roleRefOf) };
+}
+
+/** Id ролей сотрудника с учётом выданного в Оргструктуре; нет записи — роли из `DEMO_USERS`. */
+export function effectiveRoleIds(userId: string, fallback: readonly string[]): string[] {
   const employee = readEmployees().find((e) => e.id === userId);
-  return employee ? [...employee.roles] : [...fallback];
+  return employee ? [...employee.role_ids] : [...fallback];
 }
 
 /** Отключённый в Оргструктуре сотрудник входить не может (CRM отвечает как на неверный пароль). */

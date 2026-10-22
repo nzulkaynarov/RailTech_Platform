@@ -32,7 +32,8 @@ export const chats: ModuleConfig = {
     {
       key: "contacts",
       path: "/chats/contacts",
-      access: { anyOf: ["chats.internal", "chats.external"] },
+      // Как в секции `menu` каталога: «Контакты» — по разделу внутреннего чата.
+      access: { resource: "chats.internal" },
       tabs: CHATS_TABS,
     },
   ],

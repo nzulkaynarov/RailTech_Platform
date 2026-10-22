@@ -9,7 +9,7 @@ from typing import Literal
 
 from pydantic import BaseModel, Field
 
-from app.rbac_generated import ModuleCode, RoleCode
+from app.rbac_generated import ModuleCode
 
 SourceState = Literal["ok", "unavailable", "not_applicable"]
 ObjectKind = Literal[
@@ -87,7 +87,7 @@ class MenuCounters(BaseModel):
 
 class QueueItem(BaseModel):
     id: str
-    role: RoleCode
+    role_id: str
     kind: QueueItemKind
     title: str
     subtitle: str

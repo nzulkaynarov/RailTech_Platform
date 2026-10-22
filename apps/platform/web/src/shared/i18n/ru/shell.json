@@ -93,22 +93,6 @@
     "access": "Доступ",
     "noPosition": "не указана"
   },
-  "roles": {
-    "MANAGER": "Менеджер",
-    "DIRECTOR": "Директор",
-    "SUPPLY": "Снабженец",
-    "ENGINEER": "Гл. инженер",
-    "ACCOUNTANT": "Бухгалтер",
-    "ADMIN": "Администратор"
-  },
-  "rolesShort": {
-    "MANAGER": "Менеджер",
-    "DIRECTOR": "Директор",
-    "SUPPLY": "Снабженец",
-    "ENGINEER": "Гл. инженер",
-    "ACCOUNTANT": "Бухгалтер",
-    "ADMIN": "Админ"
-  },
   "languages": {
     "ru": "Русский",
     "uz": "O‘zbekcha",

@@ -1,9 +1,9 @@
 """Admin · Оргструктура: сотрудники, выдача ролей, отключение, приглашение (контракт: tag `admin`).
 
-BFF не решает: роли Платформы хранит CRM (`platform_roles`), он же вычисляет доступ к ERP и роли
-ERP и ставит провижининг; инвариант «последний администратор» тоже за CRM (409 `last_admin` ->
-`LAST_ADMIN`).
-Доступ к разделу `admin` матрицы: ADMIN — полный, DIRECTOR — только чтение.
+BFF не решает: роли Платформы — данные CRM (`platform_role_ids`, R-1), CRM же вычисляет права в CRM
+и ERP и ставит провижининг; инварианты «последний администратор / директор» и «лиды в работе» —
+тоже CRM (409 -> `LAST_ADMIN`, `LAST_DIRECTOR`, `CONFLICT`). Доступ — раздел `admin` каталога:
+чтение — список и карточки, полный — изменения.
 """
 
 from typing import Annotated, Any
@@ -32,6 +32,7 @@ EmployeeId = Annotated[str, Path(pattern=r"^[0-9]+$")]
 INVITE_CRM_UNAVAILABLE = (
     "CRM недоступна, повторите позже. Сотрудник уже добавлен, но письмо не отправлено."
 )
+RESEND_CRM_UNAVAILABLE = "CRM недоступна, повторите позже. Письмо не отправлено."
 INVITE_NOT_SENT = (
     "Сотрудник добавлен, но письмо не отправлено: проверьте подключение почты в Admin · Интеграции."
 )
@@ -84,7 +85,7 @@ async def invite_employee(body: EmployeeInvite, authed: Writer) -> Employee:
     payload: dict[str, Any] = {
         "email": body.email.strip(),
         "full_name": body.name,
-        "platform_roles": list(body.roles),
+        "platform_role_ids": [int(i) for i in body.role_ids],
     }
     if body.position and body.position.strip():
         payload["position"] = body.position.strip()
@@ -93,29 +94,48 @@ async def invite_employee(body: EmployeeInvite, authed: Writer) -> Employee:
         await users.invite(str(user["id"]))
     except PlatformError as exc:
         # Пользователь уже создан, временный пароль BFF наружу не отдаёт: письмо — единственный
-        # путь. Повтор приглашения — отдельная операция (разрыв, Q-PLT-15-3), ошибка несёт id.
-        details = {
-            "employee_id": str(user["id"]),
-            "invite": "not_sent",
-            **(exc.body.details or {}),
-        }
-        if exc.status_code == status.HTTP_503_SERVICE_UNAVAILABLE:
-            # CRM не ответила: про почту сказать нечего, коннектор «Почта» мог быть исправен.
-            raise PlatformError(
-                "BACKEND_UNAVAILABLE",
-                INVITE_CRM_UNAVAILABLE,
-                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-                source=exc.body.source,
-                details=details,
-            ) from exc
-        raise PlatformError(
-            "CONFLICT",
-            INVITE_NOT_SENT,
-            status_code=status.HTTP_409_CONFLICT,
+        # путь. Повтор — `POST /admin/users/{id}/invite`; ошибка несёт id сотрудника.
+        raise _not_sent(exc, str(user["id"]), INVITE_CRM_UNAVAILABLE) from exc
+    return to_employee(user)
+
+
+def _not_sent(exc: PlatformError, employee_id: str, unavailable: str) -> PlatformError:
+    details = {"employee_id": employee_id, "invite": "not_sent", **(exc.body.details or {})}
+    if exc.status_code == status.HTTP_503_SERVICE_UNAVAILABLE:
+        # CRM не ответила: про почту сказать нечего, коннектор «Почта» мог быть исправен.
+        return PlatformError(
+            "BACKEND_UNAVAILABLE",
+            unavailable,
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             source=exc.body.source,
             details=details,
-        ) from exc
-    return to_employee(user)
+        )
+    if exc.status_code in (status.HTTP_404_NOT_FOUND, status.HTTP_403_FORBIDDEN):
+        return exc
+    return PlatformError(
+        "CONFLICT",
+        INVITE_NOT_SENT,
+        status_code=status.HTTP_409_CONFLICT,
+        source=exc.body.source,
+        details=details,
+    )
+
+
+@router.post(
+    "/admin/users/{id}/invite",
+    response_model=Employee,
+    response_model_exclude_none=True,
+    operation_id="resendInvite",
+)
+async def resend_invite(id: EmployeeId, authed: Writer) -> Employee:
+    """Отправить приглашение снова. CRM меняет временный пароль только при отправке письма: без
+    подключённой почты пароль прежний, ответ — 409 `CONFLICT` с `details.invite = not_sent`."""
+    users = _users(authed)
+    try:
+        await users.invite(id)
+    except PlatformError as exc:
+        raise _not_sent(exc, id, RESEND_CRM_UNAVAILABLE) from exc
+    return to_employee(await users.get(id))
 
 
 @router.get(
@@ -135,10 +155,15 @@ async def get_employee(id: EmployeeId, authed: Reader) -> Employee:
     operation_id="updateEmployee",
 )
 async def update_employee(id: EmployeeId, body: EmployeeUpdate, authed: Writer) -> Employee:
-    """Роли (`platform_roles` в CRM), должность, отключение; «последний админ» — решение CRM."""
+    """Роли (`platform_role_ids` в CRM), должность, отключение, передача лидов; инварианты — CRM.
+
+    Роли уходят полным набором id: BFF не читает и не дописывает роли кодами (иначе слетели бы
+    роли без кода)."""
     payload: dict[str, Any] = {}
-    if "roles" in body.model_fields_set:
-        payload["platform_roles"] = list(body.roles or [])
+    if "role_ids" in body.model_fields_set:
+        payload["platform_role_ids"] = [int(i) for i in body.role_ids or []]
+    if "transfer_to_user_id" in body.model_fields_set and body.transfer_to_user_id is not None:
+        payload["transfer_to_user_id"] = int(body.transfer_to_user_id)
     if "position" in body.model_fields_set:
         payload["position"] = (body.position or "").strip()
     if "is_active" in body.model_fields_set:

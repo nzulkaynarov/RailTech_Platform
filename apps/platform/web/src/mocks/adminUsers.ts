@@ -1,16 +1,19 @@
 import { HttpResponse, http } from "msw";
 
-import type { Employee, EmployeeInvite, EmployeeUpdate } from "../shared/api/generated/model";
+import type { EmployeeInvite, EmployeeUpdate } from "../shared/api/generated/model";
 import {
+  type MockEmployee,
   accessFor,
   readEmployees,
   readPendingPasswordIds,
+  toEmployee,
   writeEmployees,
   writePendingPasswordIds,
 } from "./fixtures/employees";
+import { ROLE_ID, readRoles } from "./fixtures/roles";
 import { buildMe, readSession } from "./mockSession";
 
-function failure(
+export function failure(
   status: number,
   code: string,
   message: string,
@@ -24,25 +27,47 @@ type Level = "full" | "read" | undefined;
 
 function adminLevel(): Level | "no-session" {
   const session = readSession();
-  const me = session ? buildMe(session) : undefined;
-  return me ? me.resources["admin"] : "no-session";
+  if (!session) return "no-session";
+  // Права операций — по объединению ролей, а не по активной роли («вид»).
+  const all = buildMe({ ...session, activeRole: null });
+  if (!all) return "no-session";
+  return all.resources["admin"];
 }
 
 /** Проверка раздела `admin` как у BFF: нет сессии — 401, нет раздела — 403, запись — только full. */
-function guard(need: "read" | "full") {
+export function guard(need: "read" | "full") {
   const level = adminLevel();
   if (level === "no-session") return failure(401, "SESSION_EXPIRED", "Сессия истекла");
   if (!level || (need === "full" && level !== "full")) {
-    return failure(403, "FORBIDDEN", "Раздел или действие не положены вашей роли.");
+    return failure(403, "FORBIDDEN", "Раздел или действие не положены вашей роли.", "bff", {
+      resource: "admin",
+      need,
+    });
   }
   return null;
 }
 
-const activeAdmins = (items: readonly Employee[], excluding: string) =>
-  items.filter((e) => e.id !== excluding && e.status !== "disabled" && e.roles.includes("ADMIN"))
+/** Активные сотрудники с системной ролью кроме этого (инварианты CRM «≥ 1 администратор и директор»). */
+const activeHolders = (items: readonly MockEmployee[], roleId: string, excluding: string) =>
+  items.filter((e) => e.id !== excluding && e.status !== "disabled" && e.role_ids.includes(roleId))
     .length;
 
-/** Моки `/admin/users*` (PLT-15): состояние в `fixtures/employees`, правило «последнего админа» — как у CRM. */
+const LAST = {
+  [ROLE_ID.ADMIN]: {
+    code: "LAST_ADMIN",
+    text: "Нельзя снять роль администратора или отключить последнего администратора. Сначала назначьте администратором другого сотрудника.",
+  },
+  [ROLE_ID.DIRECTOR]: {
+    code: "LAST_DIRECTOR",
+    text: "Нельзя снять роль директора или отключить последнего директора. Сначала назначьте директором другого сотрудника.",
+  },
+} as const;
+
+function sorted(items: readonly MockEmployee[]) {
+  return [...items].sort((a, b) => a.name.localeCompare(b.name, "ru"));
+}
+
+/** Моки `/admin/users*` (PLT-15, R-2): состояние в `fixtures/employees`, инварианты — как у CRM. */
 export const adminUsersHandlers = [
   http.get("*/admin/users", ({ request }) => {
     const denied = guard("read");
@@ -50,12 +75,12 @@ export const adminUsersHandlers = [
     const url = new URL(request.url);
     const q = (url.searchParams.get("q") ?? "").trim().toLocaleLowerCase();
     const status = url.searchParams.get("status");
-    const items = readEmployees()
+    const items = sorted(readEmployees())
       .filter((e) => !status || e.status === status)
       .filter(
         (e) => !q || `${e.name} ${e.email} ${e.position ?? ""}`.toLocaleLowerCase().includes(q),
       )
-      .sort((a, b) => a.name.localeCompare(b.name, "ru"));
+      .map(toEmployee);
     return HttpResponse.json({ items });
   }),
 
@@ -68,8 +93,14 @@ export const adminUsersHandlers = [
     if (items.some((e) => e.email.toLowerCase() === email)) {
       return failure(409, "EMAIL_EXISTS", "Сотрудник с такой почтой уже есть.", "crm");
     }
+    const known = new Set(readRoles().map((r) => r.id));
+    if (body.role_ids.some((id) => !known.has(id))) {
+      return failure(422, "VALIDATION_FAILED", "Проверьте заполнение полей.", "crm", {
+        fields: ["role_ids"],
+      });
+    }
     const name = body.name.trim();
-    const employee: Employee = {
+    const employee: MockEmployee = {
       id: `u-demo-new-${String(items.length + 1)}`,
       name,
       initials: name
@@ -79,8 +110,8 @@ export const adminUsersHandlers = [
         .join(""),
       email,
       ...(body.position?.trim() ? { position: body.position.trim() } : {}),
-      roles: body.roles,
-      access: accessFor(body.roles),
+      role_ids: body.role_ids,
+      access: accessFor(body.role_ids),
       status: "invited",
       telegram_linked: false,
       erp_sync: "pending",
@@ -94,14 +125,31 @@ export const adminUsersHandlers = [
         reason: "smtp_not_configured",
       });
     }
-    return HttpResponse.json(employee, { status: 201 });
+    return HttpResponse.json(toEmployee(employee), { status: 201 });
+  }),
+
+  http.post("*/admin/users/:id/invite", ({ params }) => {
+    const denied = guard("full");
+    if (denied) return denied;
+    const employee = readEmployees().find((e) => e.id === params["id"]);
+    if (!employee) return failure(404, "NOT_FOUND", "Не найдено.", "crm");
+    if (employee.email.startsWith("nomail@")) {
+      return failure(409, "CONFLICT", "Письмо не отправлено.", "crm", {
+        employee_id: employee.id,
+        invite: "not_sent",
+        reason: "smtp_not_configured",
+      });
+    }
+    return HttpResponse.json(toEmployee(employee));
   }),
 
   http.get("*/admin/users/:id", ({ params }) => {
     const denied = guard("read");
     if (denied) return denied;
     const employee = readEmployees().find((e) => e.id === params["id"]);
-    return employee ? HttpResponse.json(employee) : failure(404, "NOT_FOUND", "Не найдено.", "crm");
+    return employee
+      ? HttpResponse.json(toEmployee(employee))
+      : failure(404, "NOT_FOUND", "Не найдено.", "crm");
   }),
 
   http.patch("*/admin/users/:id", async ({ request, params }) => {
@@ -112,17 +160,20 @@ export const adminUsersHandlers = [
     const current = items.find((e) => e.id === params["id"]);
     if (!current) return failure(404, "NOT_FOUND", "Не найдено.", "crm");
 
-    const dropsAdmin =
-      current.roles.includes("ADMIN") &&
-      ((body.roles !== undefined && !body.roles.includes("ADMIN")) || body.is_active === false);
-    if (dropsAdmin && activeAdmins(items, current.id) === 0) {
-      return failure(
-        409,
-        "LAST_ADMIN",
-        "Нельзя снять роль администратора или отключить последнего администратора. Сначала назначьте администратором другого сотрудника.",
-        "crm",
-        { backend_status: 409, backend_code: "last_admin" },
-      );
+    for (const roleId of [ROLE_ID.ADMIN, ROLE_ID.DIRECTOR]) {
+      const drops =
+        current.role_ids.includes(roleId) &&
+        ((body.role_ids !== undefined && !body.role_ids.includes(roleId)) ||
+          body.is_active === false);
+      if (drops && activeHolders(items, roleId, current.id) === 0) {
+        const rule = LAST[roleId];
+        if (!rule) continue;
+        return failure(409, rule.code, rule.text, "crm", {
+          backend_status: 409,
+          backend_code: rule.code.toLowerCase(),
+          reason: rule.code.toLowerCase(),
+        });
+      }
     }
 
     // Как CRM: у кого пароль ещё временный, после включения снова «Приглашён».
@@ -130,11 +181,11 @@ export const adminUsersHandlers = [
     if (current.status === "invited") pending.add(current.id);
     writePendingPasswordIds([...pending]);
 
-    const roles = body.roles ?? current.roles;
-    const next: Employee = {
+    const roleIds = body.role_ids ?? current.role_ids;
+    const next: MockEmployee = {
       ...current,
-      roles,
-      access: accessFor(roles),
+      role_ids: roleIds,
+      access: accessFor(roleIds),
       ...(body.is_active === undefined
         ? {}
         : {
@@ -146,6 +197,6 @@ export const adminUsersHandlers = [
       else delete next.position;
     }
     writeEmployees(items.map((e) => (e.id === next.id ? next : e)));
-    return HttpResponse.json(next);
+    return HttpResponse.json(toEmployee(next));
   }),
 ];

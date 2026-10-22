@@ -19,7 +19,7 @@ async def get_me(authed: AuthedDep) -> Me:
 @router.patch("/me", response_model=Me, operation_id="updateMe")
 async def update_me(body: MeUpdate, authed: AuthedDep) -> Me:
     """Язык и активная роль («вид»). Права на операции от активной роли не зависят."""
-    if body.active_role is not None and body.active_role not in authed.roles:
+    if body.active_role is not None and body.active_role not in {str(r.id) for r in authed.roles}:
         raise PlatformError(
             "VALIDATION_FAILED",
             "Эта роль вам не назначена.",
@@ -32,7 +32,7 @@ async def update_me(body: MeUpdate, authed: AuthedDep) -> Me:
 
     def apply(data: SessionData) -> None:
         if "active_role" in body.model_fields_set:
-            data.active_role = body.active_role
+            data.active_role = int(body.active_role) if body.active_role is not None else None
 
     updated = await authed.service.store.update(authed.sid, apply)
     if updated is None:

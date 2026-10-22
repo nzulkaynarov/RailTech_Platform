@@ -222,12 +222,13 @@
       "roles": "Role matrix (RBAC)",
       "org": "Org structure",
       "integrations": "External integrations",
-      "tickets": "Team tickets"
+      "tickets": "Team tickets",
+      "company": "Company"
     },
     "stub": {
       "roles": {
         "title": "The role matrix will open here",
-        "text": "A table of modules and sections by six roles: full access, read-only or hidden. Changes apply at once and are logged.",
+        "text": "The company role matrix: system roles and roles the administrator creates.",
         "action": "Org structure"
       },
       "org": {
@@ -244,6 +245,11 @@
         "title": "No tickets yet",
         "text": "Requests from staff to the administrator: an error, access, a suggestion.",
         "action": "Org structure"
+      },
+      "company": {
+        "title": "Company details will open here",
+        "text": "Company details, document templates, numbering and payment terms. The screen arrives when ERP settings move into the Platform.",
+        "action": "Org chart"
       }
     },
     "action": "Invite employee",
@@ -331,7 +337,8 @@
         "saved": "Saved",
         "needRole": "Pick at least one role. To close access completely, disable the employee.",
         "lastAdmin": "You are the only administrator: the Administrator role cannot be removed. Appoint another administrator first.",
-        "unchanged": "No changes."
+        "unchanged": "No changes.",
+        "rolesError": "Could not load roles from CRM."
       },
       "consequence": {
         "modules": "The employee will see the modules: {{modules}}.",
@@ -341,8 +348,8 @@
         "positionCleared": "The position on the card will be cleared.",
         "self": "You are changing your own roles: the menu updates after saving.",
         "selfLosesAdmin": "You will lose access to the Admin section.",
-        "erpRoles": "In ERP the employee will get the roles: {{roles}}.",
-        "erpAdmin": "In ERP the employee becomes an administrator (superuser)."
+        "erpAdmin": "In ERP the employee becomes an administrator (superuser).",
+        "erpSections": "In ERP the employee gets rights by the roles' sections; the outcome is in the card (“ERP: being granted”, “ERP: error”)."
       },
       "invite": {
         "title": "Invite employee",
@@ -358,9 +365,12 @@
         "sent": "Invitation sent: {{email}}",
         "consequenceMail": "An email with a temporary password goes to the address; it must be changed at first sign-in.",
         "consequenceListed": "The employee appears in the list with the status “Invited”.",
-        "notSent": "The employee was added with the status “Invited”, but the email was not sent: mail is not connected or unavailable. Connect it in Admin · Integrations; resending the invitation will arrive in the next version.",
+        "notSent": "The employee was added with the status “Invited”, but the email was not sent: mail is not connected or unavailable. Connect it in Admin · Integrations and send the invitation again from the employee card.",
         "openCard": "Open card",
-        "notSentUnavailable": "The employee was added with the status “Invited”, but CRM did not respond and the email was not sent. Try again later; resending the invitation will arrive in the next version."
+        "notSentUnavailable": "The employee was added with the status “Invited”, but CRM did not respond and the email was not sent. Try again later with “Send the invitation again” in the card.",
+        "resend": "Send the invitation again",
+        "resendHint": "A new email with a new temporary password goes out; the previous one stops working.",
+        "resendNotSent": "The email was not sent: mail is not connected or unavailable. Connect it in Admin · Integrations and try again."
       },
       "disable": {
         "button": "Disable employee",
@@ -377,21 +387,116 @@
       },
       "errors": {
         "LAST_ADMIN": "You cannot remove the administrator role or disable the last administrator. Appoint another administrator first.",
+        "LAST_DIRECTOR": "You cannot remove the director role or disable the last director. Appoint another director first.",
         "EMAIL_EXISTS": "An employee with this email already exists.",
-        "ACTIVE_LEADS": "The employee has leads in progress. Hand them to a colleague in CRM, then disable the employee or change their role.",
+        "ACTIVE_LEADS": "The employee has leads in progress. Pick a colleague to hand them over to and try again.",
         "FORBIDDEN": "Not enough rights: roles are granted by an administrator.",
         "BACKEND_UNAVAILABLE": "CRM is not responding. Try again later.",
         "VALIDATION_FAILED": "Check the fields.",
         "DEFAULT": "The action failed. Try again."
       },
-      "erpRoles": {
-        "CALCULATION": "Calculation",
-        "CATALOG_SUPPLY": "Catalog and procurement",
-        "FULFILLMENT": "Fulfilment and logistics",
-        "FINANCE": "Finance",
-        "HEAD": "Head",
-        "VIEWER": "Observer"
+      "transfer": {
+        "label": "Who takes over the leads in progress",
+        "placeholder": "Pick a colleague",
+        "save": "Hand over leads and save"
       }
+    },
+    "roles": {
+      "title": "Role matrix",
+      "subtitle": "What each role sees and can do. Modules outside the role are hidden from the rail. One person can hold several roles — access and queues add up.",
+      "caption": "Role matrix: sections by module and the access level of every role",
+      "sectionColumn": "Module · section",
+      "system": "system role",
+      "systemNote": "System role: its matrix is set by the Platform catalog and cannot be changed or deleted. Grant or remove it in the org chart.",
+      "gives": "What the role gives",
+      "assign": "Assign the role to an employee",
+      "fieldsGroup": "Restricted fields",
+      "cellLabel": "{{section}} — role “{{role}}”",
+      "fieldLabel": "{{field}} — visible to role “{{role}}”",
+      "level": {
+        "full": "Full access",
+        "read": "Read only",
+        "hidden": "Hidden"
+      },
+      "field": {
+        "on": "visible",
+        "off": "hidden"
+      },
+      "noModules": "No sections yet",
+      "adminNote": "Admin “full” in this role manages employees, roles and connections, but does not make a full CRM and ERP administrator: only the system role “Administrator” does.",
+      "employeesCount": "Employees: {{count}}",
+      "create": "Create role",
+      "createdToast": "Role “{{name}}” created",
+      "savedToast": "Role saved",
+      "deletedToast": "Role deleted",
+      "readOnly": {
+        "title": "The role matrix is kept by the administrator",
+        "text": "Roles, their sections and restricted fields are viewed and changed by the administrator. Employee roles are in the org chart."
+      },
+      "loadError": {
+        "title": "Could not load roles",
+        "text": "Roles are stored in CRM. Try again; if the error stays, check CRM in Admin · Integrations."
+      },
+      "notFound": {
+        "title": "Role not found",
+        "text": "The role may have been deleted or the link is outdated. Pick a role in the matrix."
+      },
+      "new": {
+        "title": "New role",
+        "from": "Start from",
+        "fromHint": "A template fills the new role's column with its sections; you can change them afterwards.",
+        "empty": "Scratch — all sections hidden",
+        "submit": "Create role",
+        "cancel": "Cancel",
+        "created": "The role appears in the matrix and in the org chart role list; nobody holds it yet — nobody's rights change.",
+        "assign": "Grant the role to employees in Admin · Org chart."
+      },
+      "name": "Name",
+      "description": "Description (optional)",
+      "matrixHint": "Section levels and restricted fields are changed in the role's column of the matrix.",
+      "save": "Save role",
+      "reset": "Discard changes",
+      "renamed": "The role will be called “{{name}}” for all its employees ({{count}}); rights do not change.",
+      "descriptionOnly": "Only the role description changes; employee rights stay the same.",
+      "applied": "CRM and ERP rights are recalculated right after saving; employees' menus refresh within a minute. The CRM log keeps who changed the role and when.",
+      "preview": {
+        "section": "{{section}} ({{level}})",
+        "employees": {
+          "one": "{{count}} employee",
+          "few": "{{count}} employees",
+          "many": "{{count}} employees",
+          "other": "{{count}} employees"
+        },
+        "nobody": "Nobody holds the role: nobody's rights change.",
+        "unchanged": "Rights of employees with this role do not change: their other roles give the same sections.",
+        "gained": "{{who}} will gain: {{list}}.",
+        "lost": "{{who}} will lose: {{list}}.",
+        "fieldsGained": "Fields become visible: {{list}}.",
+        "fieldsLost": "Fields stop being visible: {{list}}.",
+        "loading": "Working out whose rights change…",
+        "failed": "Could not work out the consequences: CRM did not respond. Saving will still show the result."
+      },
+      "delete": "Delete role",
+      "deleteBlocked": "Cannot delete: the role is held by employees ({{count}}). Give them other roles in the org chart first.",
+      "deleteTitle": "Delete the role?",
+      "deleteResult": "The role disappears from the matrix and the org chart role list. Nobody holds it — nobody's rights change.",
+      "deleteConfirm": "Delete",
+      "deleteCancel": "Cancel",
+      "errors": {
+        "ROLE_IN_USE": "The role is held by employees ({{count}}) and cannot be deleted. Give them other roles in the org chart first.",
+        "ROLE_SYSTEM": "A system role cannot be changed or deleted.",
+        "NAME_TAKEN": "A role with this name already exists. Choose another name.",
+        "LAST_ADMIN": "After this change the company would have no administrator. Keep Admin “full” or appoint an administrator.",
+        "FORBIDDEN": "Not enough rights: roles are changed by an administrator.",
+        "BACKEND_UNAVAILABLE": "CRM is not responding. Try again later.",
+        "VALIDATION_FAILED": "Check the role name, sections and fields.",
+        "DEFAULT": "The action failed. Try again."
+      },
+      "employeesTitle": "Employees with the role “{{name}}”",
+      "employeesEmpty": "Nobody holds the role yet. Grant it in the employee card in the org chart.",
+      "openEmployee": "Change roles: {{name}}",
+      "change": "Change",
+      "modules": "The role opens modules: {{modules}}."
     }
   },
   "tabs": {
