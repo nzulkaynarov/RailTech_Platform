@@ -8,6 +8,8 @@ import pytest
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.models.auth import User
+from app.models.platform_roles import UserPlatformRole
+from app.repositories import platform_roles as platform_repo
 from app.repositories import users as repo
 from app.services.users import UserService
 from tests.integration.crm_helpers import make_user
@@ -24,9 +26,10 @@ async def _state(
     async with sessions() as session:
         user = await repo.by_email(session, email)
         assert user is not None
+        held = await platform_repo.roles_of_user(session, user.id)
         return (
             user.id,
-            user.platform_roles,
+            [r.code or r.name for r in held],
             user.platform_access,
             await repo.roles_of(session, user.id),
         )
@@ -51,15 +54,18 @@ async def test_restoring_existing_user_keeps_platform_roles_and_adds_admin(
     queue = Queue()
     user, _ = await make_user(sessions, "dilshod@railtech.uz", ["manager"])
     async with sessions() as session, session.begin():
-        row = await session.get(User, user.id)
-        assert row is not None
-        row.platform_roles = ["MANAGER"]
+        (manager,) = await platform_repo.by_codes(session, ["tpl:MANAGER"])
+        session.add(UserPlatformRole(user_id=user.id, role_id=manager.id))
     service = UserService(sessions, erp_sync=queue)
 
     await service.bootstrap_admin("dilshod@railtech.uz", "Дилшод", PASSWORD)
 
     _, platform_roles, access, roles = await _state(sessions, "dilshod@railtech.uz")
-    assert (platform_roles, access, roles) == (["MANAGER", "ADMIN"], ["crm", "erp"], ["admin"])
+    assert (platform_roles, access, roles) == (
+        ["ADMIN", "tpl:MANAGER"],
+        ["crm", "erp"],
+        ["admin"],
+    )
     assert queue.jobs == [("provision", user.id)]
 
 

@@ -1,0 +1,29 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://railtech.uz/contracts/events/crm/lead.updated.v1.json",
+  "title": "Лид изменён",
+  "description": "Тип uz.railtech.crm.lead.updated.v1, источник rt://crm. Поле data конверта (envelope.v1.json). Снимок лида после изменения (кроме смены стадии — для неё lead.stage_changed).",
+  "type": "object",
+  "required": [
+    "lead",
+    "actor"
+  ],
+  "properties": {
+    "lead": {
+      "$ref": "_defs.v1.json#/$defs/Lead"
+    },
+    "changed_fields": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "pattern": "^[a-z][a-z0-9_]*$"
+      },
+      "description": "Необязательно: имена изменённых полей снимка (подсказка; подписчик всё равно применяет снимок целиком)"
+    },
+    "actor": {
+      "$ref": "_defs.v1.json#/$defs/Actor"
+    }
+  },
+  "additionalProperties": false
+}

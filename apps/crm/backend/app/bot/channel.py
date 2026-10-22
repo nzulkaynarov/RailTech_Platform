@@ -17,6 +17,7 @@ from app.domain.stages import OwnerMode
 from app.models.auth import User
 from app.models.leads import Lead
 from app.models.qualification import Escalation
+from app.repositories import platform_roles as platform_roles_repo
 from app.repositories import users as users_repo
 from app.security.principal import Principal
 from app.security.rbac import Rbac
@@ -44,6 +45,9 @@ async def on_take(
         escalation = await _escalation(session, *parsed)
         user = await users_repo.by_tg_user_id(session, query.from_user.id)
         roles = await users_repo.roles_of(session, user.id) if user else []
+        role_ids, platform_admin = (
+            await platform_roles_repo.rbac_identity(session, user.id) if user else ((), False)
+        )
         holder = await _holder(session, escalation.lead_id, user) if escalation else None
     if escalation is None or parsed[0] == "lead" or escalation.status not in TAKEABLE:
         await query.answer(tx.STALE_CARD, show_alert=True)
@@ -53,11 +57,18 @@ async def on_take(
     if user is None:
         await query.answer(tx.NOT_LINKED.format(tg_id=query.from_user.id), show_alert=True)
         return
-    principal = Principal(user.id, user.full_name, tuple(roles), user.must_change_password)
+    principal = Principal(
+        user.id,
+        user.full_name,
+        tuple(roles),
+        user.must_change_password,
+        platform_role_ids=role_ids,
+        platform_admin=platform_admin,
+    )
     if principal.must_change_password:
         await query.answer(tx.TEMPORARY_CREDENTIALS_HINT, show_alert=True)
         return
-    if not rbac.allowed(principal.roles, "leads", "take"):
+    if not rbac.allowed(principal.rbac_roles, "leads", "take", principal.platform_role_ids):
         await query.answer(tx.NO_RIGHTS, show_alert=True)
         return
     if holder is not None:

@@ -18,6 +18,7 @@ from app.domain.errors import (
     ValidationFailedError,
 )
 from app.integrations.erp import ErpConnection, rate_limited, resolve_connection
+from app.integrations.erp_transport import SharedAsyncClient, send
 from app.security.secrets_store import SecretsStore
 from app.services.settings import SettingsService
 
@@ -30,11 +31,13 @@ class ErpIntegrationHttp:
         settings: SettingsService | None = None,
         *,
         timeout_s: float = 10.0,
+        http: SharedAsyncClient | None = None,
     ) -> None:
         self._store = store
         self._config = config
         self._settings = settings
         self._timeout_s = timeout_s
+        self._http = http or SharedAsyncClient()
 
     async def _connection(self) -> ErpConnection:
         # Клиент работает в воркере, а коннектор сохраняют в API (другой процесс): TTL-кэш настроек
@@ -70,8 +73,9 @@ class ErpIntegrationHttp:
         }
         url = f"{connection.base_url.rstrip('/')}{INTEGRATION_PREFIX}{path}"
         try:
-            async with httpx.AsyncClient(timeout=self._timeout_s) as client:
-                response = await client.request(method, url, json=json, headers=headers)
+            response = await send(
+                self._http, method, url, timeout_s=self._timeout_s, headers=headers, json=json
+            )
         except httpx.TimeoutException as exc:
             raise UpstreamUnavailableError("erp timeout", reason=Reason.ERP_UNAVAILABLE) from exc
         except httpx.InvalidURL as exc:

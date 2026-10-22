@@ -1,12 +1,64 @@
 # dev: три домена ансамбля на *.localhost без TLS (ARCHITECTURE §10). Браузеры резолвят *.localhost
 # в 127.0.0.1 сами; для curl — `--resolve crm.localhost:80:127.0.0.1` или запись в /etc/hosts.
 # prod-вариант с ACME и security headers — infra/caddy/Caddyfile.prod (M5-INF-01).
+
+# Журнал доступа и идентификатор запроса (S0-6, ADR-0017): один сниппет на все сайты. Логика и порядок — одна в
+# Caddyfile.prod и Caddyfile.dev, расхождение — дефект.
+# Журнал: JSON в stdout, по строке на запрос. Секреты вырезаны filter-кодировщиком (`log_credentials` не включаем):
+# заголовки аутентификации и подписей удалены, токены в пути и в строке запроса (magic-link портала, публичные ссылки
+# на КП и документы, `token=`/`key=`/`signature=`) заменены на REDACTED. Имена заголовков — в каноническом виде Go.
+# Тот же фильтр (`log_filter`) стоит на журнале по умолчанию: ошибки проксирования (`http.log.error`, 502/504) печатают заголовки
+# запроса целиком, а Caddy маскирует по умолчанию только Cookie и Authorization.
+# Сниппет стоит до блока глобальных опций: иначе `import` внутри него не находит сниппет.
+(log_filter) {
+	format filter {
+		wrap json
+		request>headers>Authorization delete
+		request>headers>Proxy-Authorization delete
+		request>headers>Cookie delete
+		request>headers>X-Telegram-Bot-Api-Secret-Token delete
+		request>headers>X-Signature delete
+		request>headers>X-Agent-Context delete
+		request>headers>X-Crm-Context delete
+		request>headers>X-Pairing-Proof delete
+		request>headers>X-Portal-Session delete
+		request>headers>X-Api-Key delete
+		request>headers>X-Csrftoken delete
+		request>uri regexp `(/auth/magic/|/public/(?:quotes|documents|doc-links)/|[?&](?:token|access_token|key|api_key|signature|sig|code|secret)=)[^/?#&\s"']+` `${1}REDACTED`
+		request>headers>Referer regexp `(/auth/magic/|/public/(?:quotes|documents|doc-links)/|[?&](?:token|access_token|key|api_key|signature|sig|code|secret)=)[^/?#&\s"']+` `${1}REDACTED`
+		resp_headers>Set-Cookie delete
+	}
+}
+
 {
 	auto_https off
+	log {
+		import log_filter
+	}
+}
+
+(access_log) {
+	log {
+		output stdout
+		import log_filter
+	}
+}
+
+# X-Request-ID: пришёл от клиента — пропускаем как есть, нет (или пустой) — ставим UUID запроса. Заголовок уходит во все
+# апстримы (его читают CRM — asgi-correlation-id, ERP — RequestIDMiddleware), возвращается клиенту (отложенная установка
+# `>` заменяет собственный эхо-ответ апстрима, значение одно) и попадает в строку журнала доступа полем `request_id`.
+# Поиск запроса по идентификатору в журналах Caddy, CRM и ERP — docs/runbooks/request-id.md.
+(request_id) {
+	@no_request_id not header_regexp X-Request-ID .+
+	request_header @no_request_id X-Request-ID {http.request.uuid}
+	header >X-Request-ID {http.request.header.X-Request-ID}
+	log_append request_id {http.request.header.X-Request-ID}
 }
 
 # ─── CRM — фронт-офис (apps/crm) ───────────────────────────────────────────────────────────
 http://crm.localhost {
+	import access_log
+	import request_id
 	handle /api/* {
 		reverse_proxy crm-api:8000
 	}
@@ -36,6 +88,8 @@ http://crm.localhost {
 
 # ─── ERP — бэк-офис (apps/erp; копия B2B с M1-ERP-01) ────────────────────────────────────
 http://erp.localhost {
+	import access_log
+	import request_id
 	import no_erp_internal
 	# erp-mcp — отдельный процесс, только для агента CRM внутри сети (crm-* → http://erp-mcp:8104/mcp/erp), наружу не
 	# публикуется: иначе контекст агента подбирают снаружи (FIX-03, аудит S-9). 404, а не SPA.
@@ -58,6 +112,8 @@ http://erp.localhost {
 # /media/*: картинки каталога — абсолютные ссылки на этот же домен (`catalog/published.py`); Django ERP отдаёт только
 # публичные пути media (`core/urls.py`, allowlist), остальное — 404, как на erp.* (FIX-54, P-18).
 http://cabinet.localhost {
+	import access_log
+	import request_id
 	handle /api/portal/* {
 		reverse_proxy erp-backend:8000
 	}
@@ -74,6 +130,8 @@ http://cabinet.localhost {
 # Заголовки безопасности и CSP — как у CRM в Caddyfile.prod (HSTS в dev нет: HTTP без TLS); `style-src 'unsafe-inline'`
 # нужен Ant Design (CSS-in-JS). Логика и порядок директив — одна с prod; расхождение dev/prod здесь — дефект.
 http://platform.localhost {
+	import access_log
+	import request_id
 	# mcp-серверы агентов — только внутри сети compose (FIX-03, аудит S-9); у Платформы их нет, 404 на всякий случай.
 	@mcp path /mcp /mcp/*
 	handle @mcp {
@@ -100,9 +158,13 @@ http://platform.localhost {
 
 # ─── Служебные интерфейсы (только dev) ─────────────────────────────────────────────────────
 http://langfuse.localhost {
+	import access_log
+	import request_id
 	reverse_proxy langfuse-web:3000
 }
 
 http://s3.localhost {
+	import access_log
+	import request_id
 	reverse_proxy rustfs:9001
 }

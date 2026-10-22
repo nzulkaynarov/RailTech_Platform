@@ -6,10 +6,17 @@ from fastapi import APIRouter, Depends, status
 
 from app.api.deps import ContainerDep, require
 from app.api.v1.integrations import queued_out
-from app.schemas.auth import PasswordReset, UserCreate, UserCreated, UserOut, UserUpdate
+from app.schemas.auth import (
+    PasswordReset,
+    PlatformRoleRef,
+    UserCreate,
+    UserCreated,
+    UserOut,
+    UserUpdate,
+)
 from app.schemas.integrations import EmailQueuedOut
 from app.security.principal import Principal
-from app.services.users import UserPatch, UserView
+from app.services.user_views import UserPatch, UserView
 
 router = APIRouter(prefix="/api/v1/users", tags=["users"])
 
@@ -33,8 +40,20 @@ def to_out(view: UserView) -> UserOut:
         platform_access=view.platform_access,
         erp_role_codes=view.erp_role_codes,
         platform_roles=view.platform_roles,
+        platform_role_ids=view.platform_role_ids,
+        platform_role_refs=[
+            PlatformRoleRef(
+                id=r.id,
+                name=r.name,
+                system=r.system,
+                code=r.code,
+            )
+            for r in view.platform_role_refs
+        ],
         position=view.position,
         language=view.language,
+        erp_sync=view.erp_sync,
+        erp_sync_error=view.erp_sync_error,
     )
 
 
@@ -50,7 +69,8 @@ async def create_user(body: UserCreate, who: Writer, container: ContainerDep) ->
         body.email,
         body.full_name,
         body.roles or [],
-        platform_roles=body.platform_roles or [],
+        platform_role_ids=body.platform_role_ids,
+        platform_role_codes=body.platform_roles,
         position=body.position,
     )
     return UserCreated(user=to_out(view), temporary_password=password)
@@ -74,7 +94,8 @@ async def update_user(
         transfer_to_user_id=body.transfer_to_user_id,
         platform_access=body.platform_access,
         erp_role_codes=body.erp_role_codes,
-        platform_roles=body.platform_roles,
+        platform_role_ids=body.platform_role_ids,
+        platform_role_codes=body.platform_roles,
         position=body.position,
         language=body.language,
     )
