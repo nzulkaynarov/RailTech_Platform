@@ -11,9 +11,9 @@
   пересчитываются по новой матрице). Политики casbin `pr:<id>` приложение сверяет с таблицей
   при старте (`sync_policies`); данных прода нет, пересчёт простой.
 
-Revision ID: 0037_platform_role_version
-Revises: 0036_drop_user_platform_roles
-Create Date: 2026-10-23 11:00:00+00:00
+Revision ID: 0038_platform_role_version
+Revises: 0037_bot_runtime
+Create Date: 2026-10-23 11:10:00+00:00
 """
 
 from collections.abc import Sequence
@@ -21,8 +21,8 @@ from collections.abc import Sequence
 import sqlalchemy as sa
 from alembic import op
 
-revision: str = "0037_platform_role_version"
-down_revision: str | None = "0036_drop_user_platform_roles"
+revision: str = "0038_platform_role_version"
+down_revision: str | None = "0037_bot_runtime"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 

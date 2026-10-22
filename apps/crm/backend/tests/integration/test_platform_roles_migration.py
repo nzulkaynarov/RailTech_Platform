@@ -1,4 +1,4 @@
-"""Миграции 0035–0037 (R-1, R-1b): коды `users.platform_roles` -> роли-данные -> столбец удалён.
+"""Миграции 0035–0036 и 0038 (R-1, R-1b): коды `users.platform_roles` -> роли -> столбца нет.
 
 expand -> migrate -> contract: пользователь с `[MANAGER, ACCOUNTANT]` получает две роли с теми же
 правами, что до миграции; системные роли и шаблоны вставлены из снимка каталога; сотрудникам с
@@ -119,12 +119,12 @@ def test_codes_become_roles_the_column_goes_and_downgrade_brings_the_codes_back(
         assert after == before
         # Пересчёт прав ERP — активным сотрудникам с ролями и доступом к ERP.
         jobs = conn.execute("SELECT task_name, args FROM procrastinate_jobs ORDER BY id").fetchall()
-        # 0035 — всем с ролями; 0037 (R-1b, директор без лидов) — ещё раз держателю «Директора».
+        # 0035 — всем с ролями; 0038 (R-1b, директор без лидов) — ещё раз держателю «Директора».
         assert jobs == [
             ("erp_provision_user", {"user_id": ids[name]})
             for name in ("mgr_acc", "admin", "dir_sup", "dir_sup")
         ]
-        # Директор: лиды и внешние чаты — только чтение, версия роли выросла (0037).
+        # Директор: лиды и внешние чаты — только чтение, версия роли выросла (0038).
         director = conn.execute(
             "SELECT access, version FROM platform_roles WHERE code = 'DIRECTOR'"
         ).fetchone()
