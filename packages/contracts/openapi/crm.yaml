@@ -7543,9 +7543,9 @@ paths:
 
         Порядок: подпись — ДО разбора тела и проверки остальных заголовков. Схема v2:
 
-        HMAC-SHA256(ERP_WEBHOOK_SECRET, "{X-Event-Id}.{X-Timestamp}.{тело}"); пока
+        HMAC-SHA256(ERP_WEBHOOK_SECRET, "{X-Event-Id}.{X-Timestamp}.{тело}"); старая
 
-        `ERP_WEBHOOK_SIGN_LEGACY=true`, принимается и старая (HMAC только тела). Идемпотентность по
+        подпись (HMAC только тела) не принимается — 401. Идемпотентность по
 
         X-Event-Id; быстрый 200 и фоновая обработка в Procrastinate. 401 — только неверная подпись;
 

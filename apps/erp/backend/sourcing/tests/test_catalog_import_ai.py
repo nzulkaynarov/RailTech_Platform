@@ -14,10 +14,10 @@ import pandas as pd
 import pytest
 from ai.testing import install_fake_gateway
 from django.core.files.base import ContentFile
-from django.core.files.storage import default_storage
 from django.core.files.uploadedfile import SimpleUploadedFile
 from rest_framework.test import APIClient
 
+import core.storage as core_storage
 from sourcing.catalog_import import run_catalog_import
 from sourcing.tasks_ai import run_ai_job
 from sourcing.views_imports import CATALOG_TEMPLATE_HEADERS
@@ -39,7 +39,7 @@ def _template_row(**overrides):
 
 
 def _stage(content: bytes, extension: str) -> str:
-    return default_storage.save(f"ai_extract_tmp/{uuid4().hex}.{extension}", ContentFile(content))
+    return core_storage.get_temp_storage().save(f"ai_extract_tmp/{uuid4().hex}.{extension}", ContentFile(content))
 
 
 def _stub_ai_client(monkeypatch, rows):
@@ -116,7 +116,7 @@ def test_template_xlsx_free_path_no_ai_and_identical_report(lookups, company_fac
     assert result["ai_rows"] == 1
     ai_report = {key: value for key, value in result.items() if key not in ("ai_used", "ai_rows")}
     assert ai_report == standard
-    assert not default_storage.exists(storage_path)  # staging удалён после задачи
+    assert not core_storage.get_temp_storage().exists(storage_path)  # staging удалён после задачи
 
 
 @pytest.mark.django_db
@@ -180,7 +180,7 @@ def test_pdf_ai_rows_go_through_the_standard_engine(lookups, company_factory, se
     assert result["offers_upserted"] == 1
     # Карточка без категории/ТН ВЭД порог публикации не проходит — отчёт честно это считает.
     assert result["unpublishable"] == 1
-    assert not default_storage.exists(storage_path)
+    assert not core_storage.get_temp_storage().exists(storage_path)
 
     from catalog.models import Product
 
@@ -221,7 +221,7 @@ def test_empty_ai_answer_is_an_error_and_staging_is_deleted(lookups, settings, m
     result = run_ai_job("catalog_import_ai", {"storage_path": storage_path, "filename": "empty.pdf"})
 
     assert result == {"status": "error", "message": "AI_EXTRACT_EMPTY"}
-    assert not default_storage.exists(storage_path)
+    assert not core_storage.get_temp_storage().exists(storage_path)
 
 
 @pytest.mark.django_db
@@ -233,7 +233,7 @@ def test_extract_failure_is_an_error_and_staging_is_deleted(lookups, settings, m
     result = run_ai_job("catalog_import_ai", {"storage_path": storage_path, "filename": "off.pdf"})
 
     assert result == {"status": "error", "message": "AI_EXTRACT_FAILED"}
-    assert not default_storage.exists(storage_path)
+    assert not core_storage.get_temp_storage().exists(storage_path)
 
 
 # ── Вьюха import-catalog-ai ─────────────────────────────────────────────────
@@ -290,7 +290,7 @@ def test_view_rejects_unsupported_extension_and_spoofed_magic(settings, seller_u
 
 @pytest.mark.django_db
 def test_view_enqueues_202_with_staged_file(settings, seller_user, monkeypatch):
-    """202 {task_id} + AIJob-строка владельца; байты staged в default_storage, в payload —
+    """202 {task_id} + AIJob-строка владельца; байты staged в бакете erp-temp, в payload —
     только ключ (через брокер байты не едут), плюс разрешённая компания продавца и dry_run."""
     settings.AI_IMPORT_ENABLED = True
     user, company = seller_user
@@ -324,11 +324,14 @@ def test_view_enqueues_202_with_staged_file(settings, seller_user, monkeypatch):
     assert payload["supplier_company_id"] == company.id
     assert payload["dry_run"] is True
     assert payload["storage_path"].startswith("ai_extract_tmp/")
+    from django.core.files.storage import default_storage
+
+    assert not default_storage.exists(payload["storage_path"]), "staging не должен лежать в default_storage (S0-1)"
     try:
-        with default_storage.open(payload["storage_path"]) as staged:
+        with core_storage.get_temp_storage().open(payload["storage_path"]) as staged:
             assert staged.read() == PDF_BYTES
     finally:
-        default_storage.delete(payload["storage_path"])
+        core_storage.get_temp_storage().delete(payload["storage_path"])
 
 
 # ── Рефактор ядра ───────────────────────────────────────────────────────────

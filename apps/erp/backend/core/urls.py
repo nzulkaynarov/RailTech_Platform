@@ -1,8 +1,6 @@
 from django.conf import settings
-from django.conf.urls.static import static
 from django.contrib import admin
 from django.urls import include, path, re_path
-from django.views.static import serve as _serve_media
 from drf_spectacular.utils import extend_schema
 from drf_spectacular.views import SpectacularAPIView, SpectacularRedocView, SpectacularSwaggerView
 from finance.views import DealMarginDeviationView, DealPurchaseActualDetailView, DealPurchaseActualsView
@@ -60,6 +58,7 @@ from catalog.views import (
     StockStatusViewSet,
     SupplierOfferViewSet,
 )
+from core.file_streaming import serve_public_media
 from core.health import health_check
 from core.views import PageStatsView, PlatformDashboardView, SystemSettingsView
 from crm.views import (
@@ -313,21 +312,16 @@ urlpatterns = (
         if settings.DEBUG
         else []
     )
-    # Serve PUBLIC media (avatars, logos, product images, category/manufacturer
-    # assets) in production. When MinIO is disabled (VPS CPU lacks x86-64-v2,
-    # see Docs/dev/ops/vps-cpu-constraints.md) storage falls back to FileSystemStorage,
-    # but Django doesn't serve MEDIA with DEBUG=False — so uploads saved but never
-    # displayed. This whitelists ONLY public display-asset prefixes; private files
-    # (companies/*/documents, deals/**, sourcing/imports, temp)
-    # never match and stay unreachable via /media (served only through auth views).
+    # Serve PUBLIC media (avatars, logos, product images, category/manufacturer assets): ERP reads them from the
+    # `erp-public` bucket (RustFS is not exposed) and streams them; Caddy of the ERP and Cabinet domains routes
+    # /media/* here. This whitelists ONLY public display-asset prefixes; private files (companies/*/documents,
+    # deals/**, sourcing/imports, temp) never match and stay unreachable via /media (served only through auth views).
     + [
         re_path(
             r"^media/(?P<path>(?:users/\d+/avatar|companies/\d+/logo|manufacturers/\d+/logo"
             r"|products/\d+/images|categories/\d+/icon)/[^/]+)$",
-            _serve_media,
-            {"document_root": settings.MEDIA_ROOT},
+            serve_public_media,
             name="public-media",
         ),
     ]
-    + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 )

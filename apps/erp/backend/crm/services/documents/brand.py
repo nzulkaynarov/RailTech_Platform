@@ -67,7 +67,7 @@ def seller_logo_url(seller_profile) -> Optional[str]:
 def brand_context_for_pdf(brand: dict) -> dict:
     """Prepare a brand context for a WeasyPrint render: inline the seller logo as a data: URI.
 
-    On prod (FileSystemStorage) ``seller_logo_url`` is a RELATIVE ``/media/…`` URL — WeasyPrint
+    On prod (S3 storage, unreachable from the browser) ``seller_logo_url`` is a RELATIVE ``/media/…`` URL — WeasyPrint
     renders from ``HTML(string=…)`` with no ``base_url`` and deliberately no network fetching, so
     the logo came out as a broken-image box on every prod PDF. Browser surfaces (public pages,
     settings iframe, SPA) resolve the same URL fine, so the swap happens ONLY at PDF render time —
@@ -100,11 +100,11 @@ def brand_context_for_pdf(brand: dict) -> dict:
         except (OSError, ValueError, FileNotFoundError):
             data = None
     if data is None and logo_url.startswith(settings.MEDIA_URL):
-        from django.core.files.storage import default_storage
+        from core.storage import get_public_storage
 
         name = logo_url[len(settings.MEDIA_URL) :]
         try:
-            with default_storage.open(name, "rb") as file_handle:
+            with get_public_storage().open(name, "rb") as file_handle:
                 data = file_handle.read(_LOGO_EMBED_MAX_BYTES + 1)
         except (OSError, ValueError, FileNotFoundError):
             data = None

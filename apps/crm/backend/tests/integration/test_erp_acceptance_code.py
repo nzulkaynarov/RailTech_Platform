@@ -25,7 +25,7 @@ from app.models.integrations import ErpIncomingEvent
 from app.models.leads import Lead, LeadNote, TelegramIdentity
 from app.schemas.erp_events import CODE_EVENT, REDACTED
 from tests.integration.test_erp_events import Harness
-from tests.integration.test_erp_seam_events import COMPANY, notes, receive, seeded, sign
+from tests.integration.test_erp_seam_events import COMPANY, deliver, notes, receive, seeded
 from tests.seam_events import example_event
 
 pytestmark = pytest.mark.integration
@@ -95,7 +95,7 @@ async def code_body(
 async def send_code(harness: Harness, body: dict[str, Any], event_id: str | None = None) -> str:
     event_id = event_id or str(uuid.uuid4())
     raw = json.dumps(body).encode()
-    result = await harness.service.receive_event(event_id, body["event"], sign(raw), raw)
+    result = await deliver(harness, event_id, body["event"], raw)
     assert result[0] is False
     return event_id
 
@@ -261,7 +261,7 @@ async def test_the_same_event_id_is_a_duplicate_and_does_not_send_a_second_code(
     event_id = await send_code(harness, body)
     raw = json.dumps(body).encode()
 
-    again = await harness.service.receive_event(event_id, CODE_EVENT, sign(raw), raw)
+    again = await deliver(harness, event_id, CODE_EVENT, raw)
 
     assert again == (True, "duplicate")
     assert len(harness.bot.sent) == 1
@@ -325,7 +325,7 @@ async def test_a_code_event_with_a_wrong_header_type_keeps_no_code_either(
     raw = json.dumps(body).encode()
     event_id = str(uuid.uuid4())
 
-    result = await harness.service.receive_event(event_id, "quote.sent", sign(raw), raw)
+    result = await deliver(harness, event_id, "quote.sent", raw)
 
     assert result == (False, "rejected")
     assert CODE not in await everything_stored(harness)
@@ -335,7 +335,7 @@ async def test_a_broken_json_of_a_code_event_is_not_kept_even_in_part(harness: H
     raw = f'{{"event": "{CODE_EVENT}", "payload": {{"code": "{CODE}"'.encode()  # оборван
     event_id = str(uuid.uuid4())
 
-    result = await harness.service.receive_event(event_id, CODE_EVENT, sign(raw), raw)
+    result = await deliver(harness, event_id, CODE_EVENT, raw)
 
     assert result == (False, "rejected")
     assert CODE not in await everything_stored(harness)
