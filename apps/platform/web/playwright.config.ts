@@ -6,7 +6,7 @@ import { defineConfig, devices } from "@playwright/test";
 // BASE_URL задан — тесты идут против готового адреса (стенд), сервер не поднимается; без стенда
 // сценарии, зависящие от MSW, пропускаются самим тестом.
 // Порт dev-сервера — E2E_PORT (по умолчанию 4173): параллельные worktree запускают e2e на разных портах.
-const PORT = Number(process.env["E2E_PORT"] ?? "4173");
+const PORT = Number(process.env["E2E_PORT"] || "4173");
 const preinstalled = "/opt/pw-browsers/chromium";
 const launch =
   existsSync(preinstalled) && !process.env["CI"]

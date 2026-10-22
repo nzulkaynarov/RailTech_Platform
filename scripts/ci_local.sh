@@ -59,7 +59,7 @@ done
 if [[ " ${STAGES[*]} " == *" platform-e2e "* ]]; then
   _rest=()
   for s in "${STAGES[@]}"; do [ "$s" = platform-e2e ] || _rest+=("$s"); done
-  STAGES=("${_rest[@]}" platform-e2e)
+  STAGES=(${_rest[@]+"${_rest[@]}"} platform-e2e) # bash 3.2 (macOS): пустой массив под set -u
 fi
 for s in "${STAGES[@]}"; do
   [[ " ${ALL[*]} " == *" $s "* ]] || { echo "Неизвестное задание: $s"; usage; exit 2; }
