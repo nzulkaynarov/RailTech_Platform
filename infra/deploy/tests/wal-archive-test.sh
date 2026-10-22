@@ -75,9 +75,11 @@ echo "ARGS=$*"; echo "PREFIX=$WALG_S3_PREFIX"; echo "ENDPOINT=$AWS_ENDPOINT"; ec
 echo "KEYTRANSFORM=$WALG_LIBSODIUM_KEY_TRANSFORM"; echo "KEYLEN=${#WALG_LIBSODIUM_KEY}"; echo "ACCESS=$AWS_ACCESS_KEY_ID"
 STUB
 chmod +x "$tmp/bin/wal-g"
+# timeout есть не везде (macOS): заглушка отбрасывает «-k N сек» и запускает команду; ожидание — только проверка, что оно передано.
+printf '#!/usr/bin/env bash\necho "TIMEOUT=$*" >> "$RT_TEST_LOG"\nshift 3\nexec "$@"\n' > "$tmp/bin/timeout"; chmod +x "$tmp/bin/timeout"
 # walg <ПЕРЕМЕННАЯ=значение...> -- <аргументы rt-walg...>: чистое окружение, только перечисленные переменные.
 walg() {
-  local envs=()
+  local envs=("RT_TEST_LOG=$tmp/timeout.log")
   while [[ "$1" != -- ]]; do envs+=("$1"); shift; done
   shift
   env -i "PATH=$tmp/bin:$PATH" "${envs[@]}" bash "$root/infra/db/rt-walg.sh" "$@"
@@ -89,6 +91,20 @@ grep -q '^ARGS=wal-push pg_wal/X$' <<<"$out" || fail "rt-walg: аргумент�
 grep -q '^PATHSTYLE=true$' <<<"$out" && grep -q '^KEYTRANSFORM=hex$' <<<"$out" && grep -q '^KEYLEN=64$' <<<"$out" || fail "rt-walg: path-style/ключ libsodium не настроены"
 out="$(walg "${good[@]}" BACKUP_EXT_ENDPOINT=https://ext.test BACKUP_EXT_BUCKET=extb BACKUP_EXT_ACCESS_KEY=ea BACKUP_EXT_SECRET_KEY=es -- --source ext backup-list)" || fail "rt-walg --source ext не запустился"
 grep -q '^PREFIX=s3://extb/wal/pg17$' <<<"$out" && grep -q '^ACCESS=ea$' <<<"$out" || fail "rt-walg --source ext: бакет/ключи внешнего хранилища не применены ($out)"
+# wal-push идёт под timeout; остальные команды — без него.
+: > "$tmp/timeout.log"
+RT_TEST_LOG="$tmp/timeout.log" walg "${good[@]}" RT_TEST_LOG="$tmp/timeout.log" -- wal-push pg_wal/X >/dev/null
+grep -q 'TIMEOUT=-k 10 300 wal-g wal-push' "$tmp/timeout.log" || fail "rt-walg: wal-push не обёрнут в timeout ($(cat "$tmp/timeout.log"))"
+: > "$tmp/timeout.log"
+RT_TEST_LOG="$tmp/timeout.log" walg "${good[@]}" RT_TEST_LOG="$tmp/timeout.log" -- backup-list >/dev/null
+[[ ! -s "$tmp/timeout.log" ]] || fail "rt-walg: backup-list не должен идти под timeout"
+# Аварийный выключатель: файл есть — wal-push «успешен» и wal-g не запускается; остальные команды работают.
+touch "$tmp/archive-off"
+out="$(walg "${good[@]}" RT_ARCHIVE_OFF_FILE="$tmp/archive-off" -- wal-push pg_wal/X 2>&1)" || fail "rt-walg: при включённом выключателе wal-push должен отвечать успехом"
+grep -q 'ARGS=' <<<"$out" && fail "rt-walg: при включённом выключателе wal-g не должен запускаться"
+grep -q 'НЕ отправлен' <<<"$out" || fail "rt-walg: выключатель не сообщил, что сегмент не отправлен"
+out="$(walg "${good[@]}" RT_ARCHIVE_OFF_FILE="$tmp/archive-off" -- backup-list)" || fail "rt-walg: backup-list при выключателе"
+grep -q '^ARGS=backup-list$' <<<"$out" || fail "rt-walg: выключатель не должен влиять на другие команды"
 if walg "${good[@]}" -- --source ext backup-list >/dev/null 2>&1; then fail "rt-walg --source ext без BACKUP_EXT_* должен отказывать"; fi
 if walg WAL_S3_ENDPOINT=http://s3.test:9000 WAL_S3_ACCESS_KEY=ak WAL_S3_SECRET_KEY=sk WAL_ENC_KEY=short -- wal-push x >/dev/null 2>&1; then fail "rt-walg принял короткий ключ шифрования"; fi
 if walg WAL_ENC_KEY="$(printf 'a%.0s' $(seq 64))" -- wal-push x >/dev/null 2>&1; then fail "rt-walg запустился без адреса и ключей S3"; fi

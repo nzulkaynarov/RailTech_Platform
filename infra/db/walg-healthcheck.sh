@@ -5,7 +5,8 @@
 #      более свежего провала;
 #   2) архиватор PostgreSQL: последний сбой archive_command не новее последнего успеха (pg_stat_archiver);
 #   3) целостность цепочки WAL (wal-verify раз в 6 ч): нет более свежего провала;
-#   4) проверка восстановления: нет более свежего провала, успех не старше 40 дней, первая прошла в течение 3 суток.
+#   4) выключатель архива, внешняя копия (если настроена), размер pg_wal и свободное место;
+#   5) проверка восстановления: нет более свежего провала, успех не старше 40 дней, первая прошла в течение 3 суток.
 set -uo pipefail
 
 STATE_DIR="${WALG_STATE_DIR:-/walg-state}"
@@ -32,6 +33,26 @@ esac
 vok="$(marker verify_last_success)"
 vfail="$(marker verify_last_failure)"
 (( vfail <= vok )) || bad "в цепочке WAL-архива есть пропуск (wal-g wal-verify): точка во времени между копиями может не восстановиться — docker logs, rt-pitr status"
+
+# Аварийный выключатель архива (rt-walg.sh): пока он включён, цепочка WAL рвётся — это не должно быть тихо.
+off="${RT_ARCHIVE_OFF_FILE:-/var/run/postgresql/rt-archive-off}"
+[[ ! -e "$off" ]] || bad "архив приостановлен выключателем $off: WAL не отправляется; после возврата хранилища удалить файл и сделать новую копию (backup-pitr.md, «Крайняя мера»)"
+
+# Внешняя копия (если настроена): последняя успешная синхронизация не старше часа (шаг 5 минут; от запуска контейнера — тот же срок).
+if [[ -n "${BACKUP_EXT_ENDPOINT:-}" && -n "${BACKUP_EXT_BUCKET:-}" ]]; then
+  eref="$(marker ext_last_success)"
+  [[ "$eref" -gt 0 ]] || eref="$started"
+  (( now - eref < ${WAL_EXT_MAX_AGE_S:-3600} )) || bad "копия WAL во внешнее хранилище не обновлялась больше ${WAL_EXT_MAX_AGE_S:-3600} с (ext_last_success=$(marker ext_last_success)); docker logs: walg_ext_sync_failed"
+fi
+
+# Диск VPS 2: WAL копится, когда архив не уходит. Порог на размер pg_wal (в норме до ~1,1 ГБ при max_wal_size 1 ГБ) и на свободное место.
+pgdata="${PGDATA:-/var/lib/postgresql/data}"
+if [[ -d "$pgdata/pg_wal" ]]; then
+  walmb="$(du -sm "$pgdata/pg_wal" 2>/dev/null | cut -f1)"
+  [[ -z "$walmb" ]] || (( walmb <= ${WAL_MAX_PGWAL_MB:-2048} )) || bad "pg_wal занимает ${walmb} МБ (порог ${WAL_MAX_PGWAL_MB:-2048}): WAL копится — архив не уходит или слот держит журнал"
+  freemb="$(df -Pm "$pgdata" 2>/dev/null | awk 'NR==2 {print $4}')"
+  [[ -z "$freemb" ]] || (( freemb >= ${WAL_MIN_FREE_MB:-4096} )) || bad "на диске данных PostgreSQL свободно ${freemb} МБ (порог ${WAL_MIN_FREE_MB:-4096}): проверка восстановления и WAL требуют места"
+fi
 
 cok="$(marker check_last_success)"
 cfail="$(marker check_last_failure)"

@@ -77,7 +77,7 @@ serve() {
   local dir="${1:?rt-pitr serve <каталог>}"
   [[ -f "$dir/recovery.signal" ]] || die "$dir не подготовлен (rt-pitr prepare)"
   # archive_mode=off: восстановленный экземпляр не должен писать в боевой архив (другая ветка времени, те же имена сегментов).
-  exec postgres -D "$dir" -c archive_mode=off -c listen_addresses='*' -c ssl=off -c max_connections=100 -c log_connections=off
+  exec postgres -D "$dir" -c archive_mode=off -c listen_addresses='*' -c ssl=off -c max_connections=100 -c shared_buffers=64MB -c log_connections=off
 }
 
 psql_q() { psql -v ON_ERROR_STOP=1 -X -At "$@"; }

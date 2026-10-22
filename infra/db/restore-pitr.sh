@@ -8,7 +8,7 @@
 #   restore-pitr.sh --drop [--name rt-pitr]                    убрать контейнер и том восстановления
 # Параметры: --name <имя> (по умолчанию rt-pitr; должно начинаться с rt-pitr), --backup <имя-копии> (по умолчанию — последняя,
 #   завершённая до момента), --source primary|ext (хранилище: RustFS на VPS 1 или внешнее), --port <порт> (опубликовать на
-#   127.0.0.1), --memory <лимит> (по умолчанию 1g), --timeout <сек> (ожидание конца восстановления, по умолчанию 1800),
+#   127.0.0.1), --memory <лимит> (по умолчанию 512m: VPS 2 — 2 ГБ, боевая база держит 1,25 ГБ), --timeout <сек> (ожидание конца восстановления, по умолчанию 1800),
 #   --env-file <файл> (по умолчанию $RT_DB_DIR/.env.db), --image <образ> (по умолчанию rt-db-postgres:local).
 # Момент должен быть не позже последней зафиксированной транзакции в архиве: иначе PostgreSQL остановится с сообщением
 # «recovery ended before configured recovery target was reached» — тогда укажите более ранний момент или --latest.
@@ -18,7 +18,7 @@ RT_DB_DIR="${RT_DB_DIR:-/opt/rt-db}"
 envf="$RT_DB_DIR/.env.db"
 image="rt-db-postgres:local"
 name="rt-pitr"
-target="" latest=0 drop=0 backup="" source=primary port="" memory=1g timeout=1800
+target="" latest=0 drop=0 backup="" source=primary port="" memory=512m timeout=1800
 
 die() { echo "restore-pitr: $*" >&2; exit 1; }
 usage() { sed -n '2,14p' "$0"; }

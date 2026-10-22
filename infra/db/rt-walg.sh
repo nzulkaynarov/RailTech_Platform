@@ -16,6 +16,15 @@ fi
 
 err() { echo "rt-walg: $*" >&2; exit 1; }
 
+# Аварийный выключатель архива (runbook backup-pitr.md, «Крайняя мера»): пока существует файл, wal-push сообщает PostgreSQL об успехе,
+# ничего не отправляя, — WAL перестаёт копиться на диске. Цепочка архива при этом рвётся; healthcheck walg краснеет, пока файл есть.
+# Файл лежит в общем томе сокета (/var/run/postgresql), переживает перезапуск контейнера; ALTER SYSTEM тут не годится —
+# archive_command задан флагом -c и сильнее postgresql.auto.conf.
+if [[ "${1:-}" == wal-push && -e "${RT_ARCHIVE_OFF_FILE:-/var/run/postgresql/rt-archive-off}" ]]; then
+  echo "rt-walg: архив приостановлен выключателем ${RT_ARCHIVE_OFF_FILE:-/var/run/postgresql/rt-archive-off}: сегмент ${2:-?} НЕ отправлен" >&2
+  exit 0
+fi
+
 case "$source" in
   primary)
     export AWS_ENDPOINT="${WAL_S3_ENDPOINT:-}" AWS_ACCESS_KEY_ID="${WAL_S3_ACCESS_KEY:-}" AWS_SECRET_ACCESS_KEY="${WAL_S3_SECRET_KEY:-}"
@@ -42,4 +51,8 @@ export WALG_COMPRESSION_METHOD="${WALG_COMPRESSION_METHOD:-zstd}"
 export WALG_UPLOAD_CONCURRENCY="${WALG_UPLOAD_CONCURRENCY:-2}" WALG_DOWNLOAD_CONCURRENCY="${WALG_DOWNLOAD_CONCURRENCY:-2}"
 export WALG_UPLOAD_DISK_CONCURRENCY="${WALG_UPLOAD_DISK_CONCURRENCY:-1}"
 
+# wal-push под timeout: зависание хранилища не должно быть тихим — PostgreSQL увидит сбой команды и повторит попытку.
+if [[ "${1:-}" == wal-push ]]; then
+  exec timeout -k 10 "${WAL_PUSH_TIMEOUT_S:-300}" wal-g "$@"
+fi
 exec wal-g "$@"

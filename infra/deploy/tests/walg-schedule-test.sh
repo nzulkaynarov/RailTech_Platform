@@ -58,6 +58,25 @@ set_marker verify_last_failure $((real_now + 1)); if hc >/dev/null 2>&1; then fa
 rm "$STATE_DIR/verify_last_failure"
 set_marker check_last_failure $((real_now + 1)); if hc >/dev/null 2>&1; then fail "healthcheck: провал проверки восстановления должен давать UNHEALTHY"; fi
 rm "$STATE_DIR/check_last_failure"
+# выключатель архива
+touch "$tmp/off"; if RT_ARCHIVE_OFF_FILE="$tmp/off" hc >"$tmp/o" 2>&1; then fail "healthcheck: включённый выключатель архива должен давать UNHEALTHY"; fi
+grep -q 'приостановлен' "$tmp/o" || fail "healthcheck: причина (выключатель) не названа"
+rm "$tmp/off"
+# внешняя копия: без ext_last_success после старта — healthy до часа; старая отметка — UNHEALTHY
+extenv=(BACKUP_EXT_ENDPOINT=https://ext.test BACKUP_EXT_BUCKET=b)
+env "${extenv[@]}" PATH="$tmp/bin:$PATH" bash "$root/infra/db/walg-healthcheck.sh" >/dev/null || fail "healthcheck: ext настроен, контейнер только стартовал — ожидалось healthy"
+set_marker ext_last_success $((real_now - 7200))
+if env "${extenv[@]}" PATH="$tmp/bin:$PATH" bash "$root/infra/db/walg-healthcheck.sh" >"$tmp/o" 2>&1; then fail "healthcheck: ext не обновлялся 2 ч — UNHEALTHY"; fi
+grep -q 'внешн' "$tmp/o" || fail "healthcheck: причина (внешняя копия) не названа"
+env PATH="$tmp/bin:$PATH" bash "$root/infra/db/walg-healthcheck.sh" >/dev/null || fail "healthcheck: ext не настроен — отметка ext не должна влиять"
+rm "$STATE_DIR/ext_last_success"
+# pg_wal и свободное место
+mkdir -p "$tmp/pgdata/pg_wal"; head -c 3000000 /dev/zero > "$tmp/pgdata/pg_wal/seg"
+if env PGDATA="$tmp/pgdata" WAL_MAX_PGWAL_MB=1 PATH="$tmp/bin:$PATH" bash "$root/infra/db/walg-healthcheck.sh" >"$tmp/o" 2>&1; then fail "healthcheck: pg_wal больше порога — UNHEALTHY"; fi
+grep -q 'pg_wal' "$tmp/o" || fail "healthcheck: причина (pg_wal) не названа"
+if env PGDATA="$tmp/pgdata" WAL_MIN_FREE_MB=999999999 PATH="$tmp/bin:$PATH" bash "$root/infra/db/walg-healthcheck.sh" >"$tmp/o" 2>&1; then fail "healthcheck: мало свободного места — UNHEALTHY"; fi
+grep -q 'свободно' "$tmp/o" || fail "healthcheck: причина (диск) не названа"
+env PGDATA="$tmp/pgdata" PATH="$tmp/bin:$PATH" bash "$root/infra/db/walg-healthcheck.sh" >/dev/null || fail "healthcheck: при пороге по умолчанию малый pg_wal должен быть healthy"
 set_marker check_last_success $((real_now - 41 * 86400)); if hc >/dev/null 2>&1; then fail "healthcheck: проверка старше 40 дней должна давать UNHEALTHY"; fi
 rm "$STATE_DIR/check_last_success"; set_marker started $((real_now - 4 * 86400)); set_marker backup_last_success "$real_now"
 if hc >/dev/null 2>&1; then fail "healthcheck: первой проверки нет больше 3 суток — UNHEALTHY"; fi
