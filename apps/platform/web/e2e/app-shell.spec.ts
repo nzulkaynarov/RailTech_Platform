@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 
-import { loginAndWait, openAvatarMenu, railLinks, settledScreenshot } from "./support/app";
+import { loginAndWait, openAvatarMenu, railLinks, settledScreenshot, spaGoto } from "./support/app";
 import { ROLES, ROLE_CAPTIONS, ROLE_NAMES, routesFor, visibleModules } from "./support/rbac";
 
 // Каркас AppShell на MSW (PLT-12): панели и их память, роли по матрице, 403 по прямому URL, нижняя панель на 390.
@@ -153,14 +153,14 @@ test.describe("роли и доступ", () => {
 
       const { hidden, visible } = routesFor(role);
       for (const route of hidden) {
-        await page.goto(route);
+        await spaGoto(page, route);
         await expect(
           page.getByRole("heading", { level: 1, name: "Нет доступа" }),
           route,
         ).toBeVisible();
       }
       for (const route of visible) {
-        await page.goto(route);
+        await spaGoto(page, route);
         await expect(page.getByRole("heading", { level: 2 }), route).toBeVisible();
         await expect(
           page.getByRole("heading", { level: 1, name: "Нет доступа" }),
@@ -263,7 +263,7 @@ test.describe("узкие экраны", () => {
         "/chats?scope=internal",
         "/erp/calc",
       ]) {
-        await page.goto(route);
+        await spaGoto(page, route);
         await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
         const scrollWidth = await page.evaluate("document.documentElement.scrollWidth");
         expect(scrollWidth, `${String(width)} ${route}`).toBeLessThanOrEqual(width);

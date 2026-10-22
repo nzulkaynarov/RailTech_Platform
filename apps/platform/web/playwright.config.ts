@@ -14,7 +14,9 @@ const launch =
 
 export default defineConfig({
   testDir: "./e2e",
-  timeout: 60_000,
+  timeout: 90_000,
+  // Медленный раннер CI: dev-сервер vite отдаёт antd несобранным, ленивые модули и Drawer успевают позже 5 секунд.
+  expect: { timeout: 10_000 },
   retries: process.env["CI"] ? 1 : 0,
   workers: 1,
   reporter: process.env["CI"] ? [["github"], ["html", { open: "never" }]] : "list",

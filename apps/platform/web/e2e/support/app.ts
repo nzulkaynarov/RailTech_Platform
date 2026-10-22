@@ -43,3 +43,13 @@ export async function settledScreenshot(page: Page, name: string): Promise<void>
   await page.waitForTimeout(500);
   await screenshot(page, name);
 }
+
+/**
+ * Переход внутри SPA без перезагрузки страницы: `pushState` + `popstate` (react-router слушает его). Полная загрузка dev-сервера
+ * vite с нераспакованным antd — секунды на медленном раннере CI; циклы по десяткам адресов ходят этим способом.
+ */
+export async function spaGoto(page: Page, path: string): Promise<void> {
+  await page.evaluate(
+    `(() => { window.history.pushState({}, "", ${JSON.stringify(path)}); window.dispatchEvent(new PopStateEvent("popstate")); })()`,
+  );
+}
