@@ -313,14 +313,22 @@ class UserService:
             return _view(user, await repo.roles_of(session, user_id))
 
     async def bootstrap_admin(self, email: str, full_name: str, password: str | None) -> str:
-        """Первый админ (scripts/create_admin.py). Возвращает пароль (временный, если не задан)."""
+        """Первый админ или восстановление (CLI `create-admin`). Возвращает пароль (временный,
+        если не задан).
+
+        Админ — сотрудник Платформы с ролью ADMIN (CRM-01b): к уже имеющимся ролям Платформы она
+        добавляется, доступ `crm+erp`, после коммита ставится провижининг ERP (как в `/setup`).
+        """
         actor = Actor.system()
         secret = password or temporary_password()
         if password:
             _check_password(password, email)
         async with self._sessions() as session, session.begin():
-            user_id = await _upsert_admin(session, email, full_name, secret, password is None)
+            user_id = await _upsert_admin(
+                session, email, full_name, secret, password is None, platform_admin=True
+            )
             await audit.record(session, actor, "user.bootstrap_admin", "user", user_id)
+        await self._sync_erp("provision", user_id)
         return secret
 
     async def create_first_admin(

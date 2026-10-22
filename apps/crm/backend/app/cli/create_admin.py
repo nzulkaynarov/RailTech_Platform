@@ -8,11 +8,15 @@ from app.domain.errors import DomainError
 
 
 async def run(args: argparse.Namespace) -> int:
+    from app.tasks.queue import queue
+
     container = get_container()
     try:
-        password = await container.user_service.bootstrap_admin(
-            args.email, args.name, args.password
-        )
+        # Очередь открыта на время команды: провижининг ERP ставится задачей (CRM-01b).
+        async with queue.open_async():
+            password = await container.user_service.bootstrap_admin(
+                args.email, args.name, args.password
+            )
     except DomainError as exc:
         sys.stderr.write(f"Ошибка: {exc.message}\n")
         return 1
