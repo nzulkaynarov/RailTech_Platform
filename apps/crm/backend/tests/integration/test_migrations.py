@@ -244,3 +244,98 @@ def test_user_platform_roles_and_position_come_and_go_with_the_revision(
         ).fetchone() == (0,)
 
     command.upgrade(alembic_config, "head")
+
+
+def _seed_user(conn: psycopg.Connection, email: str, role: str | None, **columns: object) -> int:
+    """Пользователь с базовой ролью CRM (`user_roles`) и произвольными колонками `users`."""
+    names = ["email", "password_hash", "full_name", *columns]
+    marks = ", ".join(["%s"] * len(names))
+    sql = f"INSERT INTO users ({', '.join(names)}) VALUES ({marks}) RETURNING id"  # noqa: S608
+    row = conn.execute(sql, [email, "x", email, *columns.values()]).fetchone()
+    assert row is not None
+    if role is not None:
+        conn.execute(
+            "INSERT INTO user_roles (user_id, role_id) SELECT %s, id FROM roles WHERE name = %s",
+            (row[0], role),
+        )
+    return int(row[0])
+
+
+def test_admin_backfill_sets_platform_admin_only_for_active_admins_without_roles(
+    alembic_config: Config, live_settings: Settings
+) -> None:
+    """CRM-01b: активному admin с пустыми `platform_roles` — `["ADMIN"]`, доступ `crm+erp` и задача
+    провижининга, если ERP не было; уже заданные роли, неактивные и не-admin не трогаются; повтор —
+    без изменений; downgrade — no-op."""
+    command.upgrade(alembic_config, "head")
+    command.downgrade(alembic_config, "0032_user_platform_roles")
+    with psycopg.connect(live_settings.libpq_dsn, autocommit=True) as conn:
+        conn.execute("TRUNCATE users, audit_log, procrastinate_jobs RESTART IDENTITY CASCADE")
+        setup_admin = _seed_user(conn, "setup@x.uz", "admin")
+        admin_with_erp = _seed_user(
+            conn, "erp@x.uz", "admin", platform_access='["crm", "erp"]', erp_role_codes='["HEAD"]'
+        )
+        has_roles = _seed_user(conn, "roles@x.uz", "admin", platform_roles='["MANAGER"]')
+        inactive = _seed_user(conn, "off@x.uz", "admin", is_active=False)
+        manager = _seed_user(conn, "mgr@x.uz", "manager")
+        no_role = _seed_user(conn, "none@x.uz", None)
+
+    command.upgrade(alembic_config, "0033_admin_platform_roles")
+
+    snapshot_sql = (
+        "SELECT id, platform_roles, platform_access, erp_role_codes FROM users ORDER BY id"
+    )
+    with psycopg.connect(live_settings.libpq_dsn, autocommit=True) as conn:
+        rows = {r[0]: r[1:] for r in conn.execute(snapshot_sql).fetchall()}
+        assert rows[setup_admin] == (["ADMIN"], ["crm", "erp"], [])
+        assert rows[admin_with_erp] == (["ADMIN"], ["crm", "erp"], ["HEAD"])
+        assert rows[has_roles] == (["MANAGER"], ["crm"], [])
+        assert rows[inactive] == ([], ["crm"], [])
+        assert rows[manager] == ([], ["crm"], [])
+        assert rows[no_role] == ([], ["crm"], [])
+        # Провижининг ERP — только тем, у кого доступа не было (у второго он уже выдан).
+        jobs = conn.execute(
+            "SELECT task_name, lock, args FROM procrastinate_jobs ORDER BY id"
+        ).fetchall()
+        assert jobs == [("erp_provision_user", f"erp_user:{setup_admin}", {"user_id": setup_admin})]
+        audited = conn.execute(
+            "SELECT entity_id, actor_type FROM audit_log WHERE action = 'user.update' ORDER BY id"
+        ).fetchall()
+        assert audited == [(str(setup_admin), "system"), (str(admin_with_erp), "system")]
+
+    # Повтор (re-upgrade после no-op downgrade) ничего не меняет и не ставит задач.
+    command.downgrade(alembic_config, "0032_user_platform_roles")
+    with psycopg.connect(live_settings.libpq_dsn, autocommit=True) as conn:
+        assert {r[0]: r[1:] for r in conn.execute(snapshot_sql).fetchall()} == rows
+    command.upgrade(alembic_config, "0033_admin_platform_roles")
+    with psycopg.connect(live_settings.libpq_dsn, autocommit=True) as conn:
+        assert {r[0]: r[1:] for r in conn.execute(snapshot_sql).fetchall()} == rows
+        assert conn.execute("SELECT count(*) FROM procrastinate_jobs").fetchone() == (1,)
+        assert conn.execute("SELECT count(*) FROM audit_log").fetchone() == (2,)
+
+    command.upgrade(alembic_config, "head")
+
+
+def test_user_language_defaults_to_ru_accepts_only_known_codes_and_leaves_with_downgrade(
+    alembic_config: Config, live_settings: Settings
+) -> None:
+    """CRM-01b (Q-PLT-10-1 п. 6): `users.language` — ru|uz|en, по умолчанию ru; downgrade снимает"""
+    command.upgrade(alembic_config, "head")
+    with psycopg.connect(live_settings.libpq_dsn, autocommit=True) as conn:
+        conn.execute("TRUNCATE users RESTART IDENTITY CASCADE")
+        _seed_user(conn, "a@x.uz", None)
+        assert conn.execute("SELECT language FROM users").fetchone() == ("ru",)
+        for good in ("uz", "en", "ru"):
+            conn.execute("UPDATE users SET language = %s", (good,))
+        for bad in ("de", "RU", ""):
+            with pytest.raises(psycopg.errors.CheckViolation):
+                conn.execute("UPDATE users SET language = %s", (bad,))
+
+    command.downgrade(alembic_config, "0033_admin_platform_roles")
+    with psycopg.connect(live_settings.libpq_dsn, autocommit=True) as conn:
+        assert conn.execute(
+            "SELECT count(*) FROM information_schema.columns "
+            "WHERE table_name = 'users' AND column_name = 'language'"
+        ).fetchone() == (0,)
+
+    command.upgrade(alembic_config, "head")

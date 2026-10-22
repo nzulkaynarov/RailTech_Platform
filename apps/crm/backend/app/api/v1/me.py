@@ -34,6 +34,8 @@ async def update_me(body: MePatch, principal: PrincipalDep, container: Container
     view = await svc.get(principal.user_id)
     if body.ui_mode is not None:
         view = await svc.set_ui_mode(principal.actor, principal.user_id, body.ui_mode)
+    if body.language is not None:
+        view = await svc.set_language(principal.actor, principal.user_id, body.language)
     if body.notify_system is not None or body.notify_leads is not None:
         view = await svc.set_notify(
             principal.actor,

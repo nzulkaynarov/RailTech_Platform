@@ -5305,6 +5305,16 @@
             "title": "Is Active",
             "type": "boolean"
           },
+          "language": {
+            "default": "ru",
+            "enum": [
+              "ru",
+              "uz",
+              "en"
+            ],
+            "title": "Language",
+            "type": "string"
+          },
           "must_change_password": {
             "title": "Must Change Password",
             "type": "boolean"
@@ -5412,6 +5422,22 @@
       "MePatch": {
         "description": "Своё: режим навигации и подписки на личные уведомления от бота (Q-010).",
         "properties": {
+          "language": {
+            "anyOf": [
+              {
+                "enum": [
+                  "ru",
+                  "uz",
+                  "en"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Language"
+          },
           "notify_leads": {
             "anyOf": [
               {
@@ -8034,6 +8060,16 @@
             "title": "Is Active",
             "type": "boolean"
           },
+          "language": {
+            "default": "ru",
+            "enum": [
+              "ru",
+              "uz",
+              "en"
+            ],
+            "title": "Language",
+            "type": "string"
+          },
           "must_change_password": {
             "title": "Must Change Password",
             "type": "boolean"
@@ -8185,6 +8221,22 @@
               }
             ],
             "title": "Is Active"
+          },
+          "language": {
+            "anyOf": [
+              {
+                "enum": [
+                  "ru",
+                  "uz",
+                  "en"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Language"
           },
           "platform_access": {
             "anyOf": [

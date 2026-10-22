@@ -321,7 +321,7 @@ export interface components {
   schemas: {
     Error: {
       /**
-       * @description Стабильный код (`INVALID_CREDENTIALS`, `SESSION_EXPIRED`, `CSRF_FAILED`, `FORBIDDEN`, `NOT_FOUND`, `VALIDATION_FAILED`, `TOO_MANY_REQUESTS`, `BACKEND_UNAVAILABLE`, `NO_PLATFORM_ROLE`, `USER_DISABLED`, `CONFLICT`, `WRONG_PASSWORD`, `EMAIL_EXISTS`, `LAST_ADMIN`, `INTERNAL_ERROR`, `BAD_REQUEST`, `METHOD_NOT_ALLOWED`, `HTTP_<статус>`)
+       * @description Стабильный код (`INVALID_CREDENTIALS`, `SESSION_EXPIRED`, `CSRF_FAILED`, `FORBIDDEN`, `NOT_FOUND`, `VALIDATION_FAILED`, `TOO_MANY_REQUESTS`, `BACKEND_UNAVAILABLE`, `NO_PLATFORM_ROLE`, `USER_DISABLED`, `ACCOUNT_LOCKED`, `CONFLICT`, `WRONG_PASSWORD`, `EMAIL_EXISTS`, `LAST_ADMIN`, `INTERNAL_ERROR`, `BAD_REQUEST`, `METHOD_NOT_ALLOWED`, `HTTP_<статус>`)
        * @example SESSION_EXPIRED
        */
       code: string;
@@ -677,15 +677,6 @@ export interface components {
         "application/json": components["schemas"]["Error"];
       };
     };
-    /** @description `BACKEND_UNAVAILABLE` — CRM (вход невозможен) или ERP не ответили */
-    BackendUnavailable: {
-      headers: {
-        [name: string]: unknown;
-      };
-      content: {
-        "application/json": components["schemas"]["Error"];
-      };
-    };
   };
   parameters: {
     /** @description `crm_user_id` */
@@ -723,7 +714,7 @@ export interface operations {
           "application/json": components["schemas"]["Session"];
         };
       };
-      /** @description `INVALID_CREDENTIALS` или `USER_DISABLED` */
+      /** @description `INVALID_CREDENTIALS` — неверный e-mail или пароль, в том числе у отключённого сотрудника */
       401: {
         headers: {
           [name: string]: unknown;
@@ -741,8 +732,25 @@ export interface operations {
           "application/json": components["schemas"]["Error"];
         };
       };
+      /** @description `ACCOUNT_LOCKED` — учётная запись временно заблокирована CRM после неудачных попыток входа */
+      423: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Error"];
+        };
+      };
       429: components["responses"]["TooManyRequests"];
-      503: components["responses"]["BackendUnavailable"];
+      /** @description `BACKEND_UNAVAILABLE` — не отвечает CRM (вход невозможен). Недоступность ERP вход не останавливает */
+      503: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Error"];
+        };
+      };
     };
   };
   logout: {

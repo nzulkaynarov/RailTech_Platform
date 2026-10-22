@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: RailTech Platform — BFF API (Платформа → CRM и ERP)
-  version: 0.2.2
+  version: 0.2.3
   summary: Пространство `/api/v1/` BFF Платформы — вызывает SPA `apps/platform/web` от имени сотрудника.
   description: |
     Контракт по ADR-0011 и `apps/platform/docs/02-architecture.md`. Версия 0.1.0 (INF-P0-1) покрывает фазу P1:
@@ -27,6 +27,11 @@ info:
 
     0.2.0 (волна 8): смена пароля (`POST /auth/change-password`, `Session.must_change_password`); Admin · Оргструктура —
     сотрудники, выдача ролей Платформы, приглашение по почте (`/admin/users*`, раздел матрицы `admin`).
+
+    0.2.3 (Q-PLT-10-1): вход при недоступной ERP проходит (ERP подключается при первом обращении, агрегаты отдают
+    `sources.erp = unavailable`); 503 на входе — только если не отвечает CRM; отключённый сотрудник получает
+    `INVALID_CREDENTIALS` (CRM не различает «нет такого» и «отключён» — защита от перебора), `USER_DISABLED` остаётся для
+    будущих путей; новый код `ACCOUNT_LOCKED` (423) — учётная запись временно заблокирована после неудачных попыток.
 
     0.2.2 (Q-PLT-12-1): `active_role` — «вид»: `modules`, `resources`, `restricted_fields` и очередь считаются по активной
     роли, если она задана; право на операцию BFF всегда проверяет по объединению всех ролей сотрудника (смена активной роли
@@ -84,7 +89,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Session'
         '401':
-          description: '`INVALID_CREDENTIALS` или `USER_DISABLED`'
+          description: '`INVALID_CREDENTIALS` — неверный e-mail или пароль, в том числе у отключённого сотрудника'
           content:
             application/json:
               schema:
@@ -95,10 +100,20 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
+        '423':
+          description: '`ACCOUNT_LOCKED` — учётная запись временно заблокирована CRM после неудачных попыток входа'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
         '429':
           $ref: '#/components/responses/TooManyRequests'
         '503':
-          $ref: '#/components/responses/BackendUnavailable'
+          description: '`BACKEND_UNAVAILABLE` — не отвечает CRM (вход невозможен). Недоступность ERP вход не останавливает'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
 
   /auth/logout:
     post:
@@ -577,12 +592,6 @@ components:
         application/json:
           schema:
             $ref: '#/components/schemas/Error'
-    BackendUnavailable:
-      description: '`BACKEND_UNAVAILABLE` — CRM (вход невозможен) или ERP не ответили'
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/Error'
 
   schemas:
     Error:
@@ -592,7 +601,7 @@ components:
       properties:
         code:
           type: string
-          description: Стабильный код (`INVALID_CREDENTIALS`, `SESSION_EXPIRED`, `CSRF_FAILED`, `FORBIDDEN`, `NOT_FOUND`, `VALIDATION_FAILED`, `TOO_MANY_REQUESTS`, `BACKEND_UNAVAILABLE`, `NO_PLATFORM_ROLE`, `USER_DISABLED`, `CONFLICT`, `WRONG_PASSWORD`, `EMAIL_EXISTS`, `LAST_ADMIN`, `INTERNAL_ERROR`, `BAD_REQUEST`, `METHOD_NOT_ALLOWED`, `HTTP_<статус>`)
+          description: Стабильный код (`INVALID_CREDENTIALS`, `SESSION_EXPIRED`, `CSRF_FAILED`, `FORBIDDEN`, `NOT_FOUND`, `VALIDATION_FAILED`, `TOO_MANY_REQUESTS`, `BACKEND_UNAVAILABLE`, `NO_PLATFORM_ROLE`, `USER_DISABLED`, `ACCOUNT_LOCKED`, `CONFLICT`, `WRONG_PASSWORD`, `EMAIL_EXISTS`, `LAST_ADMIN`, `INTERNAL_ERROR`, `BAD_REQUEST`, `METHOD_NOT_ALLOWED`, `HTTP_<статус>`)
           examples: [SESSION_EXPIRED]
         message:
           type: string

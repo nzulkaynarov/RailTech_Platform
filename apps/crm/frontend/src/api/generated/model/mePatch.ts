@@ -4,12 +4,14 @@
  * RailTech CRM API
  * OpenAPI spec version: 0.1.0
  */
+import type { MePatchLanguage } from "./mePatchLanguage";
 import type { MePatchUiMode } from "./mePatchUiMode";
 
 /**
  * Своё: режим навигации и подписки на личные уведомления от бота (Q-010).
  */
 export interface MePatch {
+  language?: MePatchLanguage;
   notify_leads?: boolean | null;
   notify_system?: boolean | null;
   ui_mode?: MePatchUiMode;
