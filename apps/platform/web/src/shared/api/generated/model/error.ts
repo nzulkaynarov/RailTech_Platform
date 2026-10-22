@@ -26,6 +26,9 @@
  * 0.2.0 (волна 8): смена пароля (`POST /auth/change-password`, `Session.must_change_password`); Admin · Оргструктура —
  * сотрудники, выдача ролей Платформы, приглашение по почте (`/admin/users*`, раздел матрицы `admin`).
  *
+ * 0.2.4: `423 ACCOUNT_LOCKED` объявлен и на `POST /auth/change-password` (CRM блокирует учётную запись после неверных
+ * текущих паролей).
+ *
  * 0.2.3 (Q-PLT-10-1): вход при недоступной ERP проходит (ERP подключается при первом обращении, агрегаты отдают
  * `sources.erp = unavailable`); 503 на входе — только если не отвечает CRM; отключённый сотрудник получает
  * `INVALID_CREDENTIALS` (CRM не различает «нет такого» и «отключён» — защита от перебора), `USER_DISABLED` остаётся для
@@ -41,7 +44,7 @@
  * Лимиты: вход — 10 в минуту на IP и e-mail; остальные запросы — 300 в минуту на сессию; превышение — 429
  * `TOO_MANY_REQUESTS` с `Retry-After`.
  *
- * OpenAPI spec version: 0.2.3
+ * OpenAPI spec version: 0.2.4
  */
 import type { ErrorDetails } from "./errorDetails";
 import type { ErrorSource } from "./errorSource";

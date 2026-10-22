@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import { PF_COLORS, TAG_TEXT, appTheme } from "./theme";
 import { RT_TOKENS } from "./tokens.generated";
@@ -40,5 +40,31 @@ describe("appTheme", () => {
     ["neutral tag text", TAG_TEXT.default, PF_COLORS.split],
   ])("%s keeps WCAG AA 4.5:1", (_name, fg, bg) => {
     expect(contrast(fg, bg)).toBeGreaterThanOrEqual(4.5);
+  });
+});
+
+describe("prefers-reduced-motion (WCAG 2.3.3)", () => {
+  async function themeWith(reduce: boolean) {
+    vi.resetModules();
+    const original = window.matchMedia.bind(window);
+    window.matchMedia = ((query: string) => ({
+      matches: reduce && query.includes("prefers-reduced-motion"),
+      media: query,
+      addEventListener: () => undefined,
+      removeEventListener: () => undefined,
+    })) as unknown as typeof window.matchMedia;
+    try {
+      return (await import("./theme")).appTheme;
+    } finally {
+      window.matchMedia = original;
+    }
+  }
+
+  it("при reduce тема выключает анимации antd (motion: false)", async () => {
+    expect((await themeWith(true)).token?.motion).toBe(false);
+  });
+
+  it("без настройки анимации включены", async () => {
+    expect((await themeWith(false)).token?.motion).toBe(true);
   });
 });

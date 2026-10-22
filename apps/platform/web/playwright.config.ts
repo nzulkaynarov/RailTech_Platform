@@ -24,6 +24,9 @@ export default defineConfig({
     baseURL: process.env["BASE_URL"] ?? `http://localhost:${String(PORT)}`,
     trace: "retain-on-failure",
     locale: "ru-RU",
+    // Тема читает prefers-reduced-motion (theme.ts → token.motion = false): antd без анимаций, axe не ловит полупрозрачные
+    // меню, модалки и Drawer посреди перехода. Продукт не меняется — так он ведёт себя у пользователя с этой настройкой ОС.
+    reducedMotion: "reduce",
   },
   webServer: process.env["BASE_URL"]
     ? undefined
