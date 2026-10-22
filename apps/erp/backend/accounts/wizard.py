@@ -14,7 +14,6 @@ from django import forms
 from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.tokens import default_token_generator
-from django.core.files.storage import default_storage
 from django.shortcuts import redirect
 from django.urls import reverse
 from django.utils.encoding import force_bytes
@@ -22,6 +21,7 @@ from django.utils.http import urlsafe_base64_encode
 from django.utils.translation import gettext_lazy as _
 from formtools.wizard.views import SessionWizardView
 
+from core.storage import get_temp_storage
 from master_data.models import Country
 
 from .models import Company, CompanyMember, CompanyType, CustomUser, WorkspaceRole
@@ -165,7 +165,8 @@ WIZARD_FORMS = [
 
 class CompanyWizardView(SessionWizardView):
     template_name = "admin/accounts/company_wizard.html"
-    file_storage = default_storage
+    # Загруженный логотип между шагами мастера — во временном бакете (на диск контейнера ERP файлы не пишутся).
+    file_storage = get_temp_storage()
 
     def dispatch(self, request, *args, **kwargs):
         # Тот же гейт, что у самой админки (`core.admin_site.EngineeringAdminSite`), а не голый

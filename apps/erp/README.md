@@ -21,7 +21,7 @@ make -C apps/erp migrate|shell|createsuperuser|seed   # на стенде анс
 ERP поднимается только корневым `make up` (`infra/compose`): `erp-backend` (Daphne), `erp-worker`, `erp-worker-ai`,
 `erp-beat`, `erp-web` (nginx со сборкой Vite). Домен `http://erp.localhost`: `/api`, `/admin`, `/ws`, `/static`,
 `/media`, `/health` → бэкенд, остальное → SPA. База `erp` на общем PostgreSQL 17, Redis БД 1 (Celery) и 2 (Channels, кэш).
-Файлы — FileSystemStorage в томе `erp_media` (перевод на RustFS — отдельной задачей M1). Первый суперпользователь:
+Файлы — в RustFS (бакеты `erp-private`, `erp-public`, `erp-temp`; S0-1). Первый суперпользователь:
 `make -C apps/erp createsuperuser`; демо-справочники: `make -C apps/erp seed`.
 
 ## Что ещё не сделано (по вехе M1)

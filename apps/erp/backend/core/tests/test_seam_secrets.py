@@ -18,7 +18,8 @@ BACKEND_DIR = Path(__file__).resolve().parents[2]
 
 def _start_django(extra_env: dict) -> subprocess.CompletedProcess:
     env = {key: value for key, value in os.environ.items() if key not in SEAM_SECRETS}
-    env.update({"DJANGO_SETTINGS_MODULE": "core.settings", "DJANGO_SECRET_KEY": "x" * 50, **extra_env})
+    s3 = {"MINIO_ENDPOINT": "http://rustfs:9000", "MINIO_ACCESS_KEY": "erp", "MINIO_SECRET_KEY": "erp-secret"}  # S0-1
+    env.update({"DJANGO_SETTINGS_MODULE": "core.settings", "DJANGO_SECRET_KEY": "x" * 50, **s3, **extra_env})
     return subprocess.run(
         [sys.executable, "-c", "import django; django.setup()"],
         cwd=BACKEND_DIR,

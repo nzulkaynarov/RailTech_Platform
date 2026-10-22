@@ -99,7 +99,7 @@ services:
   s3-init:
     logging: { driver: json-file, options: { max-size: "5m", max-file: "2" } }
     environment:
-      S3_BUCKETS: langfuse kb-sources client-documents tg-attachments erp backups
+      S3_BUCKETS: langfuse kb-sources client-documents tg-attachments erp-private erp-public erp-temp backups
 
   litellm:
     <<: [*ops, *mem-768]
@@ -224,11 +224,12 @@ services:
     environment: *erp-prod-env
     volumes: !override
       - erp_static:/app/staticfiles
-      - erp_media:/app/media
       - *erp-events-schema
     depends_on: !override
       redis:
         condition: service_healthy
+      s3-init:
+        condition: service_completed_successfully
 
   # erp-mcp (FIX-36): инструменты ERP для агента CRM (SDK mcp), тот же образ, что erp-backend. Порт 8104 только во
   # внутренней сети compose, наружу не публикуется; Caddyfile.prod отдаёт `/mcp` на всех доменах 404 (FIX-03).
@@ -253,8 +254,7 @@ services:
         bind: { create_host_path: false }
       - *erp-events-schema
 
-  # erp-worker, erp-worker-ai, erp-beat: события уходят и из задач Celery — схема монтируется и им. `volumes` без
-  # !override сливается с base.yml (erp_media у воркеров остаётся).
+  # erp-worker, erp-worker-ai, erp-beat: события уходят и из задач Celery — схема монтируется и им.
   erp-worker:
     <<: [*ops, *mem-512]
     image: ${RT_IMAGE_REGISTRY:-ghcr.io/nzulkaynarov}/rt-erp-backend:${RT_IMAGE_TAG}

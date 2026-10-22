@@ -181,7 +181,18 @@ mcp-tools.json` монтируется в контейнер по пути `../.
   ```
   Для `crm` после восстановления проверьте, что расширение `vector` на месте (`restore-check.sh` это делает). Внешнюю копию сначала
   расшифровать: `openssl enc -d -aes-256-cbc -pbkdf2 -in crm.dump.enc -out crm.dump -pass env:BACKUP_ENC_PASSPHRASE`.
-- Файлы клиентов (RustFS на VPS 1, том `s3_data`) этим бэкапом **не** покрыты — только базы. Копирование бакетов — хвост M5 (см. PROGRESS).
+- Файлы клиентов (RustFS на VPS 1, том `s3_data`) этим бэкапом **не** покрыты — только базы. Копирование бакетов вне VPS 1 — хвост (стратегия A2,
+  внешнее хранилище даёт владелец).
+- **Файлы ERP — в бакетах RustFS** (S0-1): PDF КП, договоров, счетов, актов, сканы и загрузки портала — `erp-private`; картинки каталога,
+  логотипы, аватары — `erp-public`; временные — `erp-temp`. Тома `erp_media` и папки `/app/media` с файлами в контейнерах ERP нет: потеря
+  тома `s3_data` = потеря файлов ERP, поэтому бакеты `erp-*` входят в будущую копию вне VPS 1 наравне с `backups`. Порт RustFS наружу не открыт
+  (только внутренний IP для VPS 2), браузер в него не ходит: приватные файлы ERP отдаёт потоком (после проверки доступа), публичные
+  картинки — Django по `/media/*` доменов ERP и Cabinet. Запуск ERP без `MINIO_ENDPOINT`/`MINIO_ACCESS_KEY`/`MINIO_SECRET_KEY` вне
+  `DJANGO_DEBUG=true` останавливается с `ImproperlyConfigured` (молча писать на диск контейнера нельзя). Ключ RustFS пока общий с CRM
+  (`S3_ACCESS_KEY`/`S3_SECRET_KEY`): отдельный пользователь на сервис требует admin API RustFS (шифрованное тело, нужен `mc`/`rc` в
+  отдельном образе) — хвост ADR-0013 п. 6. Проверка: `docker compose … exec erp-backend sh -c 'ls /app/media | wc -l'` — 0;
+  листинг бакета: `curl --aws-sigv4 "aws:amz:us-east-1:s3" --user "$S3_ACCESS_KEY:$S3_SECRET_KEY" "http://rustfs:9000/erp-private?list-type=2"`
+  из контейнера `s3-init`/`rustfs` (curl есть в образе RustFS).
 
 ## 5. Что где проверять
 

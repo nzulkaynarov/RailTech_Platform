@@ -6,6 +6,8 @@ from django.db import models
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 
+from core.storage import get_private_storage
+
 
 class PortalSession(models.Model):
     """Изолированная сессия клиента в портале (Cabinet → ERP).
@@ -139,6 +141,7 @@ class PortalUpload(models.Model):
     )
     file = models.FileField(
         upload_to="portal_uploads/%Y/%m/",
+        storage=get_private_storage,
         verbose_name=_("Файл"),
     )
     size_bytes = models.PositiveIntegerField(
