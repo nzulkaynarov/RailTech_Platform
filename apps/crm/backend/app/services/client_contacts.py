@@ -9,6 +9,7 @@ from typing import Any
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
+from app.bus import events as bus_events
 from app.domain.contacts import contact_email, contact_phone, suggested_name
 from app.domain.errors import NotFoundError, Reason, ValidationFailedError
 from app.models.clients import Client, ClientContact
@@ -97,6 +98,7 @@ class ClientContactService:
                 client_id,
                 after={"contact_id": row.id, **_snapshot(row)},
             )
+            await bus_events.contact_created(session, row, who.actor)
             return row.id
 
     async def update(
@@ -121,12 +123,23 @@ class ClientContactService:
                 before={"contact_id": contact_id, **before},
                 after={"contact_id": contact_id, **_snapshot(row)},
             )
+            await bus_events.contact_updated(session, row, who.actor)
 
     async def delete(self, who: Principal, client_id: int, contact_id: int) -> None:
         async with self._sessions() as session, session.begin():
             row = await _contact(session, client_id, contact_id)
             before = _snapshot(row)
+            erp_company_id = await session.scalar(
+                select(Client.erp_company_id).where(Client.id == client_id)
+            )
             await session.delete(row)
+            await bus_events.contact_deleted(
+                session,
+                contact_id=contact_id,
+                client_id=client_id,
+                erp_company_id=erp_company_id,
+                actor=who.actor,
+            )
             await audit.record(
                 session,
                 who.actor,

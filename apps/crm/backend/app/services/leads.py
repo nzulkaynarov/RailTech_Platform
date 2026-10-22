@@ -14,6 +14,7 @@ from typing import Any, Final, Literal
 import structlog
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
+from app.bus import events as bus_events
 from app.domain.backoffice import BackofficeMode, may_close_locally
 from app.domain.errors import (
     ConflictError,
@@ -357,6 +358,8 @@ class LeadService:
             after=lead_parts.snapshot(lead),
         )
         await events.publish(session, "lead.updated", lead_id=lead.id, owner_mode=lead.owner_mode)
+        if before.get("assigned_user_id") != lead.assigned_user_id:
+            await bus_events.lead_updated(session, lead, who.actor, ["assigned_user"])
         if escalation is not None:
             await events.publish(
                 session,

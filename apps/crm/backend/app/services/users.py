@@ -12,6 +12,7 @@ from sqlalchemy import update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
+from app.bus import events as bus_events
 from app.domain.erp_roles import normalize_erp_roles
 from app.domain.erp_sync import AccessState, SyncAction, access_audit_action, sync_action
 from app.domain.errors import (
@@ -135,6 +136,7 @@ class UserService:
                 )
             view = view_of(user, sorted(roles), platform or [], erp_pending=bool(derived))
             await audit.record(session, actor, "user.create", "user", user.id, after=audit_of(view))
+            await bus_events.user_created(session, user, actor)
             if derived:
                 await _audit_access(session, actor, user.id, _NEW_USER_STATE, access_state_of(view))
         if derived:
@@ -210,6 +212,7 @@ class UserService:
             )
             erp_after = access_state_of(after)
             await _audit_access(session, actor, user_id, erp_before, erp_after)
+            await _publish_change(session, actor, user, before, after)
             action = sync_action(erp_before, erp_after)
         await self._sync_erp(action, user_id)
         if action == "provision":
@@ -288,6 +291,7 @@ class UserService:
                     session, actor, "user.update", "user", user_id,
                     before=before, after={"language": language},
                 )  # fmt: skip
+                await bus_events.user_updated(session, user, actor, ["language"])
             return await _loaded_view(session, user)
 
     async def set_notify(
@@ -374,6 +378,7 @@ async def _upsert_admin(
     platform_admin: bool = False,
 ) -> int:
     user = await repo.by_email(session, email, for_update=True)
+    created = user is None
     if user is None:
         user = User(email=normalize_email(email), full_name=full_name, password_hash="")
         session.add(user)
@@ -395,10 +400,31 @@ async def _upsert_admin(
         user.platform_access = list(derived.platform_access)
         user.erp_role_codes = list(derived.erp_role_codes)
         await repo.set_roles(session, user.id, [derived.crm_role], None)
+        await _publish_admin(session, user, created=created)
         return user.id
     roles = set(await repo.roles_of(session, user.id)) | {"admin"}
     await repo.set_roles(session, user.id, sorted(roles), None)
+    await _publish_admin(session, user, created=created)
     return user.id
+
+
+async def _publish_admin(session: AsyncSession, user: User, *, created: bool) -> None:
+    """Первый администратор или восстановление (CLI, мастер): событие — в той же транзакции."""
+    system = Actor.system()
+    if created:
+        await bus_events.user_created(session, user, system)
+    else:
+        await bus_events.user_updated(session, user, system)
+
+
+async def _publish_change(
+    session: AsyncSession, actor: Actor, user: User, before: UserView, after: UserView
+) -> None:
+    """Изменение сотрудника на шину: отключение — `deactivated`, прочее — снимок `updated`."""
+    if before.is_active and not after.is_active:
+        await bus_events.user_deactivated(session, user.id, actor)
+    elif audit_of(before) != audit_of(after):
+        await bus_events.user_updated(session, user, actor)
 
 
 def _apply(user: User, patch: UserPatch) -> None:
