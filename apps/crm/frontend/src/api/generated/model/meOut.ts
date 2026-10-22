@@ -5,9 +5,11 @@
  * OpenAPI spec version: 0.1.0
  */
 import type { MeOutErpRoleCodesItem } from "./meOutErpRoleCodesItem";
+import type { MeOutErpSync } from "./meOutErpSync";
 import type { MeOutLanguage } from "./meOutLanguage";
 import type { MeOutPlatformAccessItem } from "./meOutPlatformAccessItem";
 import type { MeOutPlatformRolesItem } from "./meOutPlatformRolesItem";
+import type { PlatformRoleRef } from "./platformRoleRef";
 
 /**
  * Свой профиль + флаги развёртывания, по которым SPA прячет кнопки (истина — на сервере).
@@ -15,6 +17,8 @@ import type { MeOutPlatformRolesItem } from "./meOutPlatformRolesItem";
 export interface MeOut {
   email: string;
   erp_role_codes?: MeOutErpRoleCodesItem[];
+  erp_sync?: MeOutErpSync;
+  erp_sync_error?: string | null;
   full_name: string;
   id: number;
   is_active: boolean;
@@ -23,6 +27,8 @@ export interface MeOut {
   notify_leads: boolean;
   notify_system: boolean;
   platform_access?: MeOutPlatformAccessItem[];
+  platform_role_ids?: number[];
+  platform_role_refs?: PlatformRoleRef[];
   platform_roles?: MeOutPlatformRolesItem[];
   position?: string | null;
   roles: string[];

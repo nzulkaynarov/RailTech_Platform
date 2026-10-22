@@ -1,8 +1,10 @@
-"""Генератор `platform_roles_generated.py` из `packages/contracts/platform-rbac.yaml` (CRM-01).
+"""Генератор `platform_roles_generated.py` из каталога `packages/contracts/platform-rbac.v2.yaml`.
 
-Контракт — единственный источник карты «роль Платформы → базовая роль CRM, роли и права ERP»
-(ADR-0011). Модуль в репозитории не правится руками: `make -C apps/crm platform-roles`
-пересоздаёт его, тест `tests/unit/domain/test_platform_roles.py` сверяет файл с контрактом.
+Каталог возможностей (ADR-0012) — единственный источник отображения «раздел × уровень → права
+CRM и ERP», системных ролей, шаблонов ролей и правила базовой роли CRM. Модуль в репозитории не
+правится руками: `make -C apps/crm platform-roles` пересоздаёт его, тест
+`tests/unit/domain/test_platform_roles.py` сверяет файл с каталогом. Контейнер CRM не содержит
+`packages/`, поэтому данные каталога живут в коде.
 
 Использование (из backend/): uv run python ../scripts/gen_platform_roles.py [--check]
 """
@@ -15,75 +17,140 @@ from typing import Any
 import yaml
 
 REPO = Path(__file__).resolve().parents[3]
-CONTRACT = REPO / "packages" / "contracts" / "platform-rbac.yaml"
+CONTRACT = REPO / "packages" / "contracts" / "platform-rbac.v2.yaml"
 DOMAIN = REPO / "apps" / "crm" / "backend" / "app" / "domain"
 OUTPUT = DOMAIN / "platform_roles_generated.py"
+LEVELS = ("read", "full")
 
 HEADER = '''\
-"""Роли Платформы и их карта в CRM и ERP. ГЕНЕРИРУЕТСЯ — не править руками (CRM-01).
+"""Каталог возможностей Платформы (роли как данные). ГЕНЕРИРУЕТСЯ — не править руками (ADR-0012).
 
-Источник: packages/contracts/platform-rbac.yaml (version {version}). Пересоздание:
+Источник: packages/contracts/platform-rbac.v2.yaml (version {version}). Пересоздание:
 `make -C apps/crm platform-roles`; тест `tests/unit/domain/test_platform_roles.py` сверяет
-файл с контрактом.
+файл с каталогом.
 """
 
-from typing import Final, Literal
+from typing import Final
 
 '''
 
 
-def _tuple(items: list[str]) -> str:
-    if not items:
-        return "()"
-    body = ", ".join(f'"{item}"' for item in items)
-    return f"({body},)" if len(items) == 1 else f"({body})"
+def _fmt(value: Any, depth: int = 0) -> str:
+    """Python-литерал в виде, который `ruff format` не меняет: каждый непустой контейнер раскрыт."""
+    pad, inner = "    " * depth, "    " * (depth + 1)
+    if isinstance(value, dict):
+        if not value:
+            return "{}"
+        rows = [f"{inner}{_fmt(k)}: {_fmt(v, depth + 1)}," for k, v in value.items()]
+        return "{\n" + "\n".join(rows) + f"\n{pad}}}"
+    if isinstance(value, (list, tuple)):
+        if not value:
+            return "()"
+        if len(value) == 1 and isinstance(value[0], str):
+            return f"({_fmt(value[0])},)"  # `ruff format` сворачивает кортеж из одного элемента
+        rows = [f"{inner}{_fmt(v, depth + 1)}," for v in value]
+        return "(\n" + "\n".join(rows) + f"\n{pad})"
+    if isinstance(value, str):
+        return '"' + value.replace("\\", "\\\\").replace('"', '\\"') + '"'
+    raise TypeError(f"unsupported literal: {value!r}")
 
 
-def _literal(name: str, items: list[str]) -> list[str]:
-    body = ", ".join(f'"{item}"' for item in items)
-    line = f"{name} = Literal[{body}]"
-    if len(line) <= 100:
-        return [line]
-    return [f"{name} = Literal[", *(f'    "{item}",' for item in items), "]"]
+def _const(name: str, annotation: str, value: Any, comment: str = "") -> str:
+    head = f"# {comment}\n" if comment else ""
+    return f"{head}{name}: Final[{annotation}] = {_fmt(value)}\n"
 
 
-def _mapping(name: str, annotation: str, rows: dict[str, str]) -> list[str]:
-    lines = [f"{name}: Final[{annotation}] = {{"]
-    lines += [f'    "{code}": {value},' for code, value in rows.items()]
-    lines.append("}")
-    return lines
+def _by_level(backend: dict[str, Any], system: str) -> dict[str, tuple[str, ...]]:
+    lists = (backend.get(system) or {}) if backend else {}
+    return {level: tuple(lists.get(level, ())) for level in LEVELS if level in lists}
 
 
 def render(spec: dict[str, Any]) -> str:
-    """Текст модуля по разобранному контракту; формат совместим с `ruff format`."""
-    roles: dict[str, dict[str, Any]] = spec["roles"]
-    codes = list(roles)
-    lines = _literal("PlatformRoleCode", codes)
-    lines.append("")
-    codes_line = f"PLATFORM_ROLE_CODES: Final[tuple[str, ...]] = {_tuple(codes)}"
-    lines.append(codes_line)
-    if len(codes_line) > 100:
-        lines[-1:] = [
-            "PLATFORM_ROLE_CODES: Final[tuple[str, ...]] = (",
-            *(f'    "{code}",' for code in codes),
-            ")",
-        ]
-    lines += ["", "# Базовая роль CRM (admin > manager > viewer при нескольких ролях)."]
-    base = {c: f'"{roles[c]["crm_base_role"]}"' for c in codes}
-    lines += _mapping("CRM_BASE_ROLE", "dict[str, str]", base)
-    lines += ["", "# Системные роли ERP -> `role_codes` провижининга."]
-    lines += _mapping(
-        "ERP_ROLE_CODES",
-        "dict[str, tuple[str, ...]]",
-        {c: _tuple(list(roles[c]["erp_role_codes"])) for c in codes},
-    )
-    lines += ["", "# Права ERP поверх шаблонов ролей -> `permissions` провижининга."]
-    lines += _mapping(
-        "ERP_EXTRA_PERMISSIONS",
-        "dict[str, tuple[str, ...]]",
-        {c: _tuple(list(roles[c]["erp_extra_permissions"])) for c in codes},
-    )
-    return HEADER.format(version=spec["version"]) + "\n".join(lines) + "\n"
+    """Текст модуля по разобранному каталогу; формат совместим с `ruff format`."""
+    resources: list[dict[str, Any]] = spec["resources"]
+    roles: dict[str, dict[str, Any]] = {**spec["system_roles"], **spec["templates"]}
+    base = spec["crm_base_role"]
+    blocks = [
+        _const(
+            "SYSTEM_ROLE_CODES",
+            "tuple[str, ...]",
+            tuple(spec["system_roles"]),
+            "Системные роли: неизменны, не удаляются (код в `platform_roles.code` как есть).",
+        ),
+        _const(
+            "TEMPLATE_ROLE_CODES",
+            "tuple[str, ...]",
+            tuple(spec["templates"]),
+            "Шаблоны: при первом запуске создаются обычными ролями с кодом `tpl:<код>`.",
+        ),
+        _const(
+            "RESOURCE_KEYS",
+            "tuple[str, ...]",
+            tuple(r["key"] for r in resources),
+            "Разделы каталога в порядке файла.",
+        ),
+        _const(
+            "RESOURCE_LEVELS",
+            "dict[str, tuple[str, ...]]",
+            {r["key"]: tuple(r.get("levels", LEVELS)) for r in resources},
+            "Допустимые уровни доступа раздела.",
+        ),
+        _const(
+            "CRM_BACKEND",
+            "dict[str, dict[str, tuple[str, ...]]]",
+            {r["key"]: _by_level(r.get("backend", {}), "crm") for r in resources},
+            "Раздел -> уровень -> права CRM `ресурс:действие` (уровень full включает read).",
+        ),
+        _const(
+            "ERP_BACKEND",
+            "dict[str, dict[str, tuple[str, ...]]]",
+            {r["key"]: _by_level(r.get("backend", {}), "erp") for r in resources},
+            "Раздел -> уровень -> права ERP (`Permission`; уровень full включает read).",
+        ),
+        _const(
+            "FIELD_ERP_BACKEND",
+            "dict[str, tuple[str, ...]]",
+            {
+                k: tuple(v["backend"]["erp"])
+                for k, v in spec["restricted_fields"].items()
+            },
+            "Поле с ограничением -> права ERP, которые оно открывает.",
+        ),
+        _const(
+            "ROLE_NAMES",
+            "dict[str, dict[str, str]]",
+            {code: dict(role["name"]) for code, role in roles.items()},
+            "Названия системных ролей и шаблонов (ru, uz, en).",
+        ),
+        _const(
+            "ROLE_ACCESS",
+            "dict[str, dict[str, str]]",
+            {code: dict(role["access"]) for code, role in roles.items()},
+            "Матрица системных ролей и шаблонов: раздел -> full|read (скрытые не хранятся).",
+        ),
+        _const(
+            "ROLE_RESTRICTED_FIELDS",
+            "dict[str, tuple[str, ...]]",
+            {code: tuple(role["restricted_fields"]) for code, role in roles.items()},
+            "Поля с ограничением, которые видит системная роль или шаблон.",
+        ),
+        _const(
+            "CRM_BASE_ROLE_BY_CODE",
+            "dict[str, str]",
+            dict(base["by_code"]),
+            "Базовая роль CRM для старого фронта: роль с кодом (порядок — прежние шесть ролей).",
+        ),
+        _const(
+            "CRM_BASE_ROLE_BY_ACCESS",
+            "dict[str, tuple[str, ...]]",
+            {
+                role: tuple(f"{c['resource']}:{c['level']}" for c in conds)
+                for role, conds in base["by_access"].items()
+            },
+            "Базовая роль CRM для роли без кода: достаточно одного условия `раздел:уровень`.",
+        ),
+    ]
+    return HEADER.format(version=spec["version"]) + "\n".join(blocks)
 
 
 def main() -> int:

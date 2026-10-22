@@ -22,9 +22,11 @@ from app.domain.erp_permissions import erp_access
 from app.domain.erp_roles import normalize_erp_roles
 from app.domain.erp_sync import ERP
 from app.domain.errors import ConflictError, DomainError, Reason, ValidationFailedError
-from app.domain.platform_roles import derive_access, erp_access_for
+from app.domain.platform_roles import erp_access_for
 from app.integrations.erp_users import ErpUsersClient, ProvisionPayload
+from app.repositories import platform_roles as platform_repo
 from app.repositories import users as repo
+from app.services.user_platform import grants_of
 
 logger = structlog.get_logger(__name__)
 MAX_ERROR_LEN = 500
@@ -46,11 +48,12 @@ class ErpAccessService:
             user = await repo.get(session, user_id)
             if user is None or not user.is_active or ERP not in user.platform_access:
                 return "skipped"  # доступ уже снят или пользователя нет — задача устарела
-            if user.platform_roles:
-                # Роли Платформы (CRM-01): карта контракта (сгенерированный модуль) вместо ручных
-                # ролей; вычисляется при каждом провижининге.
-                access = erp_access_for(user.platform_roles)
-                role_codes = derive_access(user.platform_roles).erp_role_codes
+            held = await platform_repo.roles_of_user(session, user_id)
+            if held:
+                # Роли Платформы (R-1): права ERP — объединение матриц ролей по каталогу,
+                # вычисляются при каждом провижининге; системные роли ERP (`role_codes`) пусты.
+                access = erp_access_for(grants_of(held))
+                role_codes: tuple[str, ...] = ()
             else:
                 access = erp_access(await repo.roles_of(session, user_id))
                 role_codes = tuple(normalize_erp_roles(user.erp_role_codes or []))

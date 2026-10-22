@@ -11,7 +11,9 @@ from app.domain.erp_permissions import ERP_PERMISSIONS
 from app.domain.errors import ConflictError, Reason, UpstreamUnavailableError
 from app.integrations.erp_users import ProvisionPayload
 from app.models.auth import User
+from app.models.platform_roles import PlatformRole
 from app.services.erp_access import ErpAccessService
+from tests.platform_role_data import make_role
 
 
 class FakeSession:
@@ -46,7 +48,6 @@ def _user(
     access: list[str] | None = None,
     error: str | None = None,
     erp_roles: list[str] | None = None,
-    platform_roles: list[str] | None = None,
 ) -> User:
     return User(
         id=5,
@@ -56,14 +57,13 @@ def _user(
         platform_access=access if access is not None else ["crm", "erp"],
         erp_sync_error=error,
         erp_role_codes=erp_roles if erp_roles is not None else [],
-        platform_roles=platform_roles if platform_roles is not None else [],
         must_change_password=False,
     )
 
 
 @pytest.fixture
 def wired(monkeypatch: pytest.MonkeyPatch) -> dict[str, Any]:
-    state: dict[str, Any] = {"user": _user(), "roles": ["manager"]}
+    state: dict[str, Any] = {"user": _user(), "roles": ["manager"], "platform": []}
 
     async def get(session: Any, user_id: int, **_: Any) -> User | None:
         user: User | None = state["user"]
@@ -73,6 +73,10 @@ def wired(monkeypatch: pytest.MonkeyPatch) -> dict[str, Any]:
         roles: list[str] = state["roles"]
         return roles
 
+    async def platform_roles_of(session: Any, user_id: int) -> list[PlatformRole]:
+        held: list[PlatformRole] = state["platform"]
+        return held
+
     async def set_error(session: Any, user_id: int, message: str | None) -> None:
         user: User | None = state["user"]
         if user is not None:
@@ -80,6 +84,7 @@ def wired(monkeypatch: pytest.MonkeyPatch) -> dict[str, Any]:
 
     monkeypatch.setattr("app.services.erp_access.repo.get", get)
     monkeypatch.setattr("app.services.erp_access.repo.roles_of", roles_of)
+    monkeypatch.setattr("app.services.erp_access.platform_repo.roles_of_user", platform_roles_of)
     monkeypatch.setattr("app.services.erp_access.repo.set_erp_sync_error", set_error)
     return state
 
@@ -125,69 +130,72 @@ async def test_provision_without_chosen_roles_sends_an_empty_list(wired: dict[st
     assert client.provisioned[0].role_codes == ()
 
 
+# Права ERP по матрицам ролей каталога, выписанные по разделам вручную (не из кода).
+SUPPLY_PERMISSIONS = (
+    "deal.manage",
+    "quote.build",
+    "quote.edit_pricing",
+    "quote.view_cost_margin",
+    "catalog.manage",
+    "catalog.publish",
+    "supply.manage",
+    "fulfillment.manage",
+)
+
+
 @pytest.mark.asyncio
 @pytest.mark.parametrize(
-    ("platform_role", "role", "role_codes", "permissions"),
+    ("platform_role", "role", "permissions"),
     [
-        ("MANAGER", "backoffice", ("VIEWER",), ("deal.manage",)),
-        ("DIRECTOR", "backoffice", ("HEAD",), ()),
+        ("MANAGER", "backoffice", ("deal.manage",)),
+        ("SUPPLY", "backoffice", SUPPLY_PERMISSIONS),
         (
-            "SUPPLY",
+            "ACCOUNTANT",
             "backoffice",
-            ("CATALOG_SUPPLY", "FULFILLMENT"),
-            ("quote.build", "quote.edit_pricing"),
+            (
+                "contract.manage",
+                "contract.sign",
+                "fulfillment.act",
+                "finance.invoice",
+                "finance.payment",
+                "finance.rates",
+            ),
         ),
-        ("ENGINEER", "backoffice", ("FULFILLMENT",), ("quote.build",)),
-        ("ACCOUNTANT", "backoffice", ("FINANCE",), ("contract.manage", "fulfillment.act")),
-        ("ADMIN", "admin", (), ERP_PERMISSIONS),
+        ("ADMIN", "admin", ERP_PERMISSIONS),
     ],
 )
-async def test_provision_by_platform_role_follows_the_contract_table(
-    wired: dict[str, Any],
-    platform_role: str,
-    role: str,
-    role_codes: tuple[str, ...],
-    permissions: tuple[str, ...],
+async def test_provision_by_platform_role_sends_computed_permissions_and_no_role_codes(
+    wired: dict[str, Any], platform_role: str, role: str, permissions: tuple[str, ...]
 ) -> None:
-    """CRM-01: роль Платформы -> `role_codes` и права поверх шаблонов ролей ERP (не роли CRM)."""
-    # Ручные роли в базе игнорируются: при непустых `platform_roles` правит карта контракта.
-    wired["user"] = _user(platform_roles=[platform_role], erp_roles=["CALCULATION"])
-    wired["roles"] = ["manager"]
+    """R-1: права ERP — вычисленный набор роли-данных, `role_codes` пусты (ручные игнорируются)."""
+    wired["user"] = _user(erp_roles=["CALCULATION"])
+    wired["platform"] = [make_role(platform_role)]
     client = FakeClient()
 
     await _service(client).provision(5)
 
     (payload,) = client.provisioned
-    assert (payload.role, payload.role_codes, payload.permissions) == (
-        role,
-        role_codes,
-        permissions,
-    )
+    assert (payload.role, payload.role_codes, payload.permissions) == (role, (), permissions)
 
 
 @pytest.mark.asyncio
 async def test_provision_by_two_platform_roles_is_the_union(wired: dict[str, Any]) -> None:
-    wired["user"] = _user(platform_roles=["SUPPLY", "ACCOUNTANT"])
+    wired["platform"] = [make_role("MANAGER"), make_role("SUPPLY")]
     client = FakeClient()
 
     await _service(client).provision(5)
 
     (payload,) = client.provisioned
     assert payload.role == "backoffice"
-    assert payload.role_codes == ("CATALOG_SUPPLY", "FULFILLMENT", "FINANCE")
-    assert payload.permissions == (
-        "quote.build",
-        "quote.edit_pricing",
-        "contract.manage",
-        "fulfillment.act",
-    )
+    assert payload.role_codes == ()
+    assert payload.permissions == SUPPLY_PERMISSIONS  # deal.manage у обеих, остальное — снабжение
 
 
 @pytest.mark.asyncio
 async def test_provision_after_platform_roles_are_removed_returns_to_manual_roles(
     wired: dict[str, Any],
 ) -> None:
-    wired["user"] = _user(platform_roles=[], erp_roles=["VIEWER"])
+    wired["user"] = _user(erp_roles=["VIEWER"])
     wired["roles"] = ["viewer"]
     client = FakeClient()
 

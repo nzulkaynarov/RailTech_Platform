@@ -46,13 +46,6 @@ class User(TimestampMixin, Base):
             '"FINANCE", "HEAD", "VIEWER"]\' AS jsonb)',
             name="erp_role_codes",
         ),
-        # Роли Платформы (CRM-01): JSON-массив кодов из `domain/platform_roles_generated.py`.
-        CheckConstraint(
-            "jsonb_typeof(platform_roles) = 'array' "
-            'AND platform_roles <@ CAST(\'["MANAGER", "DIRECTOR", "SUPPLY", "ENGINEER", '
-            '"ACCOUNTANT", "ADMIN"]\' AS jsonb)',
-            name="platform_roles",
-        ),
         # Язык интерфейса сотрудника (CRM-01b, Q-PLT-10-1 п. 6).
         CheckConstraint("language IN ('ru', 'uz', 'en')", name="language"),
     )
@@ -82,9 +75,8 @@ class User(TimestampMixin, Base):
     # в провижининг как `role_codes`; пусто по умолчанию. Хранятся и без доступа к ERP — уйдут
     # при его выдаче.
     erp_role_codes: Mapped[list[str]] = mapped_column(JSONB, server_default=sql("'[]'::jsonb"))
-    # Роли Платформы (CRM-01, ADR-0011): непустой список вычисляет `user_roles`, `platform_access` и
-    # `erp_role_codes` (`domain/platform_roles.py`); пусто — их ведёт админ вручную.
-    platform_roles: Mapped[list[str]] = mapped_column(JSONB, server_default=sql("'[]'::jsonb"))
+    # Роли Платформы — таблицы `platform_roles` и `user_platform_roles` (R-1, ADR-0012): непустой
+    # набор вычисляет `user_roles`, `platform_access` и права ERP (`domain/platform_roles.py`).
     # Должность текстом (SPEC-v3 §4.3), ≤ 120 символов.
     position: Mapped[str | None] = mapped_column(String(120))
     # Язык интерфейса сотрудника ru|uz|en (CRM-01b); меняет сам себе или админ.
@@ -161,6 +153,17 @@ class CasbinRule(Base):
     v3: Mapped[str | None] = mapped_column(String(255))
     v4: Mapped[str | None] = mapped_column(String(255))
     v5: Mapped[str | None] = mapped_column(String(255))
+
+    def __str__(self) -> str:
+        """Строка политики `p, sub, dom, obj, act` — по ней адаптер casbin загружает правила из БД
+        (`load_policy`); без неё правила не читались и жили только в памяти процесса."""
+        values = [self.ptype, self.v0, self.v1, self.v2, self.v3, self.v4, self.v5]
+        parts: list[str] = []
+        for value in values:
+            if value is None:
+                break
+            parts.append(value)
+        return ", ".join(parts)
 
 
 class SsoReplayToken(Base):

@@ -10,6 +10,7 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
 from app.container import Container
 from app.domain.errors import AuthError, ForbiddenError, PasswordChangeRequiredError
+from app.repositories import platform_roles as platform_roles_repo
 from app.repositories import users as users_repo
 from app.security.principal import Principal
 from app.security.rbac import Rbac
@@ -79,13 +80,14 @@ async def get_principal(
         if user is None or not user.is_active:
             raise AuthError("user inactive")
         roles = await users_repo.roles_of(session, user.id)
+        role_ids = await platform_roles_repo.role_ids_of_user(session, user.id)
     return Principal(
         user_id=user.id,
         full_name=user.full_name,
         roles=tuple(roles),
         must_change_password=user.must_change_password,
         ip=client_ip(request),
-        platform_roles=tuple(user.platform_roles or ()),
+        platform_role_ids=tuple(role_ids),
     )
 
 
@@ -100,7 +102,7 @@ def require(resource: str, action: str) -> Callable[..., Awaitable[Principal]]:
     ) -> Principal:
         if principal.must_change_password:
             raise PasswordChangeRequiredError("change the temporary password first")
-        if not rbac.allowed(principal.roles, resource, action, principal.platform_roles):
+        if not rbac.allowed(principal.roles, resource, action, principal.platform_role_ids):
             raise ForbiddenError(f"{resource}:{action} is not allowed", resource=resource)
         return principal
 

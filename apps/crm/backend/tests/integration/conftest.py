@@ -4,6 +4,7 @@
 передаются через те же переменные окружения, что и в приложении.
 """
 
+import json
 from collections.abc import AsyncIterator
 from pathlib import Path
 
@@ -15,6 +16,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app import db
 from app.config import Settings
+from app.domain.platform_roles import default_roles
 
 ALEMBIC_INI = Path(__file__).parents[2] / "alembic.ini"
 AGENT_KEY = "integration-agent-context-key-0123456789"
@@ -53,8 +55,29 @@ TABLES = (
     "external_service_incidents",
     "external_service_switches",
     "procrastinate_jobs",
+    "platform_roles",
 )
 FAKE_KEY = "x" * 40  # фиктивный ключ только для тестов
+
+
+async def reseed_platform_roles(session: AsyncSession) -> None:
+    """Системные роли и шаблоны как после миграции (id 1..6), чтобы тесты не мешали друг другу."""
+    insert = text(
+        "INSERT INTO platform_roles "
+        "(code, name, description, is_system, access, restricted_fields) "
+        "VALUES (:code, :name, '', :is_system, CAST(:access AS jsonb), CAST(:fields AS jsonb))"
+    )
+    for row in default_roles():
+        await session.execute(
+            insert,
+            {
+                "code": row["code"],
+                "name": row["name"],
+                "is_system": row["is_system"],
+                "access": json.dumps(row["access"]),
+                "fields": json.dumps(row["restricted_fields"]),
+            },
+        )
 
 
 @pytest.fixture(scope="session")
@@ -82,5 +105,7 @@ async def sessions(
     factory = db.create_session_factory(engine)
     async with factory() as session, session.begin():
         await session.execute(text(f"TRUNCATE {', '.join(TABLES)} RESTART IDENTITY CASCADE"))
+        await session.execute(text("DELETE FROM casbin_rule WHERE v0 LIKE 'pr:%'"))
+        await reseed_platform_roles(session)
     yield factory
     await engine.dispose()
