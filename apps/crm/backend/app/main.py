@@ -26,6 +26,7 @@ from app.api.v1 import (
     leads,
     me,
     models_admin,
+    platform_roles,
     reply_templates,
     sandbox,
     setup,
@@ -40,7 +41,7 @@ from app.bot.setup import bot_lifespan
 from app.config import Settings, get_settings
 from app.container import Container
 from app.integrations import litellm, s3
-from app.log import configure_logging
+from app.log import configure_logging, is_valid_request_id
 from app.schemas.errors import ErrorOut
 from app.services.readiness import ReadinessService
 from app.tasks.lifespan import queue_lifespan
@@ -118,7 +119,9 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         # Ошибки — единый формат `ErrorOut` (app/api/errors.py) вместо HTTPValidationError.
         responses={422: {"model": ErrorOut, "description": "Ошибка валидации"}},
     )
-    app.add_middleware(CorrelationIdMiddleware, header_name="X-Request-ID")
+    app.add_middleware(
+        CorrelationIdMiddleware, header_name="X-Request-ID", validator=is_valid_request_id
+    )
     if settings.cabinet_origins:
         # Только форма «Запрос» со страницы входа Cabinet; остальной API — same-origin (M3-CRM-05).
         app.add_middleware(WebLeadCorsMiddleware, origins=settings.cabinet_origins)
@@ -129,6 +132,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         auth,
         me,
         users,
+        platform_roles,
         # Раньше `leads`: `/leads/web*` не должен перехватываться `/leads/{lead_id}`.
         lead_intake,
         leads,

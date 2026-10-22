@@ -53,6 +53,7 @@ class FakeErpMcp:
         self.handler = handler or (lambda name, args: tool_ok([]))
         self.contexts: list[str] = []
         self.methods: list[str] = []
+        self.request_ids: list[str] = []
         self.tool_calls: list[tuple[str, dict[str, Any]]] = []
 
     def reject(
@@ -72,6 +73,7 @@ class FakeErpMcp:
         method = str(body.get("method"))
         self.contexts.append(request.headers.get(HEADER_NAME.lower(), ""))
         self.methods.append(method)
+        self.request_ids.append(request.headers.get("x-request-id", ""))
         outcome = self._gate_outcome(method)
         if isinstance(outcome, Exception):
             raise outcome

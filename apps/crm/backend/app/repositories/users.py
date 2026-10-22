@@ -2,7 +2,7 @@
 
 from collections.abc import Sequence
 
-from sqlalchemy import delete, func, select, update
+from sqlalchemy import delete, func, select, text, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.auth import Role, User, UserRole
@@ -79,3 +79,22 @@ async def lock_admin_set(session: AsyncSession) -> None:
 async def set_erp_sync_error(session: AsyncSession, user_id: int, message: str | None) -> None:
     """Итог синхронизации с ERP: ошибка (для ленты внешних сервисов) или `None` — всё в порядке."""
     await session.execute(update(User).where(User.id == user_id).values(erp_sync_error=message))
+
+
+# Задачи синхронизации с ERP в очереди или в работе: блокировка `erp_user:<id>`
+# (`tasks/erp_users.py`).
+_PENDING_ERP_SYNC = text(
+    """
+    SELECT DISTINCT CAST(substr(lock, length('erp_user:') + 1) AS bigint)
+    FROM procrastinate_jobs
+    WHERE task_name IN ('erp_provision_user', 'erp_revoke_sessions')
+      AND status IN ('todo', 'doing')
+      AND lock LIKE 'erp_user:%'
+    """
+)
+
+
+async def erp_sync_pending_ids(session: AsyncSession, user_id: int | None = None) -> set[int]:
+    """Пользователи, чья синхронизация с ERP стоит в очереди или выполняется (итог `pending`)."""
+    ids = {int(row[0]) for row in await session.execute(_PENDING_ERP_SYNC)}
+    return ids if user_id is None else ids & {user_id}

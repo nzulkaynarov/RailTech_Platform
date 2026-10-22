@@ -164,6 +164,9 @@ export const labelsRu = {
     "export.deals": "Выгрузил сделки в CSV",
     "external_service.disable": "Выключил внешний сервис вручную",
     "external_service.enable": "Включил внешний сервис",
+    "platform_role.create": "Создал роль Платформы",
+    "platform_role.update": "Изменил роль Платформы",
+    "platform_role.delete": "Удалил роль Платформы",
   } as Dict,
   entity: {
     lead: "Лид",
@@ -184,6 +187,7 @@ export const labelsRu = {
     integration_secret: "Подключение",
     integration: "Подключение",
     external_service: "Внешний сервис",
+    platform_role: "Роль Платформы",
   } as Dict,
   actor: { system: "Система", bot: "Бот", user: "Сотрудник" } as Dict,
 };

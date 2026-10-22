@@ -14,6 +14,7 @@ export interface UserUpdate {
   is_active?: boolean | null;
   language?: UserUpdateLanguage;
   platform_access?: ("crm" | "erp")[] | null;
+  platform_role_ids?: number[] | null;
   platform_roles?:
     ("MANAGER" | "DIRECTOR" | "SUPPLY" | "ENGINEER" | "ACCOUNTANT" | "ADMIN")[] | null;
   position?: string | null;

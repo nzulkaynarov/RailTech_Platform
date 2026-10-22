@@ -1,7 +1,8 @@
-"""Директор читает сотрудников (CRM-01c, Q-PLT-15-1 п. 1) на настоящем Postgres.
+"""Директор читает сотрудников (CRM-01c, Q-PLT-15-1 п. 1; R-1) на настоящем Postgres.
 
-`users:read` даётся по ролям Платформы (`PLATFORM_ROLE_GRANTS`), а не расширением casbin-seed
-`viewer`: SUPPLY и ENGINEER тоже `viewer` и сотрудников читать не должны. Изменения — только admin.
+`users:read` даётся вычисленным разделом `admin` (read) роли Платформы — правилом casbin `pr:<id>`,
+а не расширением seed `viewer`: SUPPLY и ENGINEER тоже `viewer` и сотрудников читать не должны.
+Изменения — только admin.
 """
 
 from collections.abc import Iterator
@@ -124,6 +125,9 @@ async def test_taking_the_director_role_away_takes_the_read_away(
 ) -> None:
     headers, _, boss, who_id = await _staff(client, sessions, ["DIRECTOR"])
     assert client.get("/api/v1/users", headers=headers).status_code == 200
+    # Второй директор нужен, иначе первого лишить роли нельзя (409 last_director).
+    second, _ = await make_user(sessions, "second@railtech.uz", ["viewer"])
+    client.patch(f"/api/v1/users/{second.id}", json={"platform_roles": ["DIRECTOR"]}, headers=boss)
 
     patched = client.patch(
         f"/api/v1/users/{who_id}", json={"platform_roles": ["SUPPLY"]}, headers=boss
