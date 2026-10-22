@@ -106,6 +106,7 @@ test.describe("Ролевая матрица: роли — данные", () => 
       /Каналы связи/,
       /База знаний/,
     ]);
+    await settledScreenshot(page, "roles-employee-view");
     await railLinks(page).filter({ hasText: "EDS" }).click();
     await expect(submenu.getByRole("link")).toHaveText([/Все документы/, /Счета и оплаты/]);
     // Название роли под аватаром — из данных.
@@ -117,7 +118,7 @@ test.describe("Ролевая матрица: роли — данные", () => 
       await spaGoto(page, path);
       await expect(page.getByRole("heading", { level: 1, name: "Нет доступа" })).toBeVisible();
     }
-    await settledScreenshot(page, "roles-employee-view");
+    await settledScreenshot(page, "roles-employee-forbidden");
 
     // Роль с сотрудником удалить нельзя: понятный отказ.
     await signOut(page);
