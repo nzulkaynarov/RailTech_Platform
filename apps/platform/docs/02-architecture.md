@@ -132,10 +132,10 @@ SPA  POST /api/v1/auth/login {email, password}
 |---|---|
 | Домен | `platform.railtech.uz` → VPS 1 (A-запись — владелец); TLS — Caddy, ACME как у остальных доменов |
 | Caddy | сайт `{$PLATFORM_DOMAIN}`: `/api/*` → `platform-bff:8000` (`flush_interval -1` для SSE), остальное → `platform-web`; заголовки безопасности и CSP как у CRM (`style-src 'unsafe-inline'` нужен Ant Design); `no_mcp` |
-| Сервисы compose | `platform-bff` (uvicorn, 2 процесса, ≈ 150 МБ), `platform-web` (статика); образы `rt-platform-bff`, `rt-platform-web` в GHCR по тегу sha, как остальные |
-| Переменные | `PLATFORM_DOMAIN`, `PLATFORM_SESSION_TTL_HOURS`, `PLATFORM_CRM_URL=http://crm-api:8000`, `PLATFORM_ERP_URL=http://erp-backend:8000`, `REDIS_URL`; нового секрета нет (сессия — случайный идентификатор, не подписанный токен) |
+| Сервисы compose | `platform-bff` (uvicorn, 2 процесса, лимит 256 МБ), `platform-web` (статика, лимит 64 МБ); образы `rt-platform-bff`, `rt-platform-web` в GHCR по тегу sha, собирает `deploy.yml` (INF-P0-5, #151). **Caddy не зависит от здоровья Платформы** (`depends_on: service_started`): сбой её образа даёт 502 только на `platform.`, остальные домены живут (INF-P1-0) |
+| Переменные | `PLATFORM_DOMAIN` (обязательна: `deploy.sh` без неё останавливается до pull — сначала DNS, потом строка в `/opt/rt/.env.prod`), `PLATFORM_SESSION_TTL_HOURS`, `PLATFORM_CRM_URL=http://crm-api:8000`, `PLATFORM_ERP_URL=http://erp-backend:8000`, `REDIS_URL`; нового секрета нет (сессия — случайный идентификатор, не подписанный токен) |
 | Дев-стенд | `platform.localhost` в `Caddyfile.dev`, `make up` поднимает оба сервиса; `make check-platform` |
-| Деплой | существующий `deploy.yml` + `deploy.sh`; добавление образов — правка workflow, только с явного разрешения владельца |
+| Деплой | существующий `deploy.yml` + `deploy.sh` (разрешено владельцем 2026-10-22, #151); smoke — четыре домена; smoke отката — тоже четыре (INF-P1-0) |
 | Память VPS 1 | +≈ 200 МБ к текущему стеку; после T4 −≈ 60 МБ (`crm-web`, `erp-web`) |
 | CPU | `cpu-baseline-check.sh` проверяет новые образы до миграций; базовый образ BFF — тот же Debian Python, что у CRM |
 

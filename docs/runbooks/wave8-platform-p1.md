@@ -37,12 +37,28 @@ apps/platform/docs/03-frontend.md §10 (скриншоты рядом с арт�
 
 | Раунд | Задачи | Ветки |
 |---|---|---|
+| 0 | **INF-P1-0** Caddy без зависимости от здоровья Платформы, smoke отката на 4 домена ∥ **W7-T1** хвосты волны 7 (ERP: частичный повтор ротации 422; CRM: `clean_env` в `apps/crm/scripts/ci_local.sh` как в CI) | `mp/inf-p1-0-caddy-decouple`, `mp/w7-t1-tails` |
 | 1 | **CRM-01** роли Платформы в CRM ∥ **PLT-12** каркас AppShell на MSW | `mp/crm-01-platform-roles`, `mp/plt-12-app-shell` |
 | 2 | **PLT-10** BFF: вход и сессия + **PLT-11** RBAC (один исполнитель, один PR) ∥ **PLT-13** общие компоненты | `mp/plt-10-bff-session`, `mp/plt-13-shared-ui` |
 | 3 | **PLT-14** уведомления, поиск, очередь, счётчики (BFF + web) ∥ **PLT-15** Admin · Оргструктура (выдача ролей) | `mp/plt-14-dashboard-feed`, `mp/plt-15-org` |
 | 4 | **QA-P1** прогон гейта | `qa/plt-p1-gate` |
 
 ## 3. Задачи («готово, когда»)
+
+### 3.0. INF-P1-0 — прод не зависит от здоровья Платформы (срочно, до первого деплоя Платформы)
+
+Зоны: `infra/compose/base.yml`, `infra/compose/prod.yml`, `.github/workflows/deploy.yml` (разрешено владельцем), `infra/deploy/*`.
+Caddy зависит от `platform-bff` и `platform-web` по `condition: service_started`, а не `service_healthy` (сбой образа Платформы
+даёт 502 только на её домене, CRM, ERP и Cabinet живут); smoke задания отката проверяет те же четыре домена, что и деплой.
+Готово, когда: `make deploy-check` зелёный; проверка в проекте compose `-p rt-p1-0`: `platform-bff` с намеренно битой командой
+запуска — Caddy поднят, `crm.localhost`/`erp.localhost`/`cabinet.localhost` отвечают, `platform.localhost/api/*` — 502 (вывод в PR).
+
+### 3.0a. W7-T1 — хвосты волны 7
+
+(1) ERP: ротация сопряжения по контракту 0.6.1 — частичное совпадение тройки с действующими значениями → 422
+`PAIRING_PARTIAL_REPEAT`, точный повтор последней применённой — 200; тесты на обе ветки. (2) `apps/crm/scripts/ci_local.sh`
+`clean_env` (стадии crm-e2e, crm-audit): окружение как в CI (`TELEGRAM_MODE` и прочие переопределения — сверить с `ci.yml`), как
+сделано в #146 для integration. Готово, когда: `make check-erp` (ERP_TEST_NS=w7-t1), `scripts/ci_local.sh crm-e2e` зелёные.
 
 ### 3.1. CRM-01 — роли Платформы в CRM
 
