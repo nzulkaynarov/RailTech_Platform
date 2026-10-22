@@ -22,6 +22,7 @@ from app.domain.erp_permissions import erp_access
 from app.domain.erp_roles import normalize_erp_roles
 from app.domain.erp_sync import ERP
 from app.domain.errors import ConflictError, DomainError, Reason, ValidationFailedError
+from app.domain.platform_roles import derive_access, erp_access_for
 from app.integrations.erp_users import ErpUsersClient, ProvisionPayload
 from app.repositories import users as repo
 
@@ -45,14 +46,21 @@ class ErpAccessService:
             user = await repo.get(session, user_id)
             if user is None or not user.is_active or ERP not in user.platform_access:
                 return "skipped"  # доступ уже снят или пользователя нет — задача устарела
-            access = erp_access(await repo.roles_of(session, user_id))
+            if user.platform_roles:
+                # Роли Платформы (CRM-01): карта контракта (сгенерированный модуль) вместо ручных
+                # ролей; вычисляется при каждом провижининге.
+                access = erp_access_for(user.platform_roles)
+                role_codes = derive_access(user.platform_roles).erp_role_codes
+            else:
+                access = erp_access(await repo.roles_of(session, user_id))
+                role_codes = tuple(normalize_erp_roles(user.erp_role_codes or []))
             payload = ProvisionPayload(
                 crm_user_id=user.id,
                 email=user.email,
                 name=user.full_name,
                 role=access.role,
                 permissions=access.permissions,
-                role_codes=tuple(normalize_erp_roles(user.erp_role_codes or [])),
+                role_codes=role_codes,
             )
         await self._call(
             "erp_provision_user", user_id, lambda: self._client.provision_user(payload)

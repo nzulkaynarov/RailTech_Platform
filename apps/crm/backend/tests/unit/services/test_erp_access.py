@@ -7,6 +7,7 @@ from typing import Any
 
 import pytest
 
+from app.domain.erp_permissions import ERP_PERMISSIONS
 from app.domain.errors import ConflictError, Reason, UpstreamUnavailableError
 from app.integrations.erp_users import ProvisionPayload
 from app.models.auth import User
@@ -45,6 +46,7 @@ def _user(
     access: list[str] | None = None,
     error: str | None = None,
     erp_roles: list[str] | None = None,
+    platform_roles: list[str] | None = None,
 ) -> User:
     return User(
         id=5,
@@ -54,6 +56,7 @@ def _user(
         platform_access=access if access is not None else ["crm", "erp"],
         erp_sync_error=error,
         erp_role_codes=erp_roles if erp_roles is not None else [],
+        platform_roles=platform_roles if platform_roles is not None else [],
         must_change_password=False,
     )
 
@@ -120,6 +123,82 @@ async def test_provision_without_chosen_roles_sends_an_empty_list(wired: dict[st
     client = FakeClient()
     await _service(client).provision(5)
     assert client.provisioned[0].role_codes == ()
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("platform_role", "role", "role_codes", "permissions"),
+    [
+        ("MANAGER", "backoffice", ("VIEWER",), ("deal.manage",)),
+        ("DIRECTOR", "backoffice", ("HEAD",), ()),
+        (
+            "SUPPLY",
+            "backoffice",
+            ("CATALOG_SUPPLY", "FULFILLMENT"),
+            ("quote.build", "quote.edit_pricing"),
+        ),
+        ("ENGINEER", "backoffice", ("FULFILLMENT",), ("quote.build",)),
+        ("ACCOUNTANT", "backoffice", ("FINANCE",), ("contract.manage", "fulfillment.act")),
+        ("ADMIN", "admin", (), ERP_PERMISSIONS),
+    ],
+)
+async def test_provision_by_platform_role_follows_the_contract_table(
+    wired: dict[str, Any],
+    platform_role: str,
+    role: str,
+    role_codes: tuple[str, ...],
+    permissions: tuple[str, ...],
+) -> None:
+    """CRM-01: роль Платформы -> `role_codes` и права поверх шаблонов ролей ERP (не роли CRM)."""
+    # Ручные роли в базе игнорируются: при непустых `platform_roles` правит карта контракта.
+    wired["user"] = _user(platform_roles=[platform_role], erp_roles=["CALCULATION"])
+    wired["roles"] = ["manager"]
+    client = FakeClient()
+
+    await _service(client).provision(5)
+
+    (payload,) = client.provisioned
+    assert (payload.role, payload.role_codes, payload.permissions) == (
+        role,
+        role_codes,
+        permissions,
+    )
+
+
+@pytest.mark.asyncio
+async def test_provision_by_two_platform_roles_is_the_union(wired: dict[str, Any]) -> None:
+    wired["user"] = _user(platform_roles=["SUPPLY", "ACCOUNTANT"])
+    client = FakeClient()
+
+    await _service(client).provision(5)
+
+    (payload,) = client.provisioned
+    assert payload.role == "backoffice"
+    assert payload.role_codes == ("CATALOG_SUPPLY", "FULFILLMENT", "FINANCE")
+    assert payload.permissions == (
+        "quote.build",
+        "quote.edit_pricing",
+        "contract.manage",
+        "fulfillment.act",
+    )
+
+
+@pytest.mark.asyncio
+async def test_provision_after_platform_roles_are_removed_returns_to_manual_roles(
+    wired: dict[str, Any],
+) -> None:
+    wired["user"] = _user(platform_roles=[], erp_roles=["VIEWER"])
+    wired["roles"] = ["viewer"]
+    client = FakeClient()
+
+    await _service(client).provision(5)
+
+    (payload,) = client.provisioned
+    assert (payload.role, payload.role_codes, payload.permissions) == (
+        "backoffice",
+        ("VIEWER",),
+        (),
+    )
 
 
 @pytest.mark.asyncio

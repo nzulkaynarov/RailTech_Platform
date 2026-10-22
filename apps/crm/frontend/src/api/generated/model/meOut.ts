@@ -6,6 +6,7 @@
  */
 import type { MeOutErpRoleCodesItem } from "./meOutErpRoleCodesItem";
 import type { MeOutPlatformAccessItem } from "./meOutPlatformAccessItem";
+import type { MeOutPlatformRolesItem } from "./meOutPlatformRolesItem";
 
 /**
  * Свой профиль + флаги развёртывания, по которым SPA прячет кнопки (истина — на сервере).
@@ -20,6 +21,8 @@ export interface MeOut {
   notify_leads: boolean;
   notify_system: boolean;
   platform_access?: MeOutPlatformAccessItem[];
+  platform_roles?: MeOutPlatformRolesItem[];
+  position?: string | null;
   roles: string[];
   sso_enabled?: boolean;
   tg_dm_failed_at?: string | null;

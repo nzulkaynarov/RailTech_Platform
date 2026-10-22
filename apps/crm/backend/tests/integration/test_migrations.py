@@ -214,3 +214,33 @@ def test_user_erp_role_codes_column_comes_and_goes_with_the_revision(
         ).fetchone() == (0,)
 
     command.upgrade(alembic_config, "head")
+
+
+def test_user_platform_roles_and_position_come_and_go_with_the_revision(
+    alembic_config: Config, live_settings: Settings
+) -> None:
+    """CRM-01: `users.platform_roles` — пустой массив по умолчанию, только коды контракта;
+    `position` — до 120 символов; downgrade обе колонки снимает."""
+    command.upgrade(alembic_config, "head")
+    with psycopg.connect(live_settings.libpq_dsn, autocommit=True) as conn:
+        conn.execute("TRUNCATE users RESTART IDENTITY CASCADE")
+        conn.execute(
+            "INSERT INTO users (email, password_hash, full_name) VALUES ('a@x.uz', 'x', 'A')"
+        )
+        assert conn.execute("SELECT platform_roles, position FROM users").fetchone() == ([], None)
+        conn.execute('UPDATE users SET platform_roles = \'["MANAGER", "ADMIN"]\'::jsonb')
+        for bad in ('["ROOT"]', '["manager"]', '"MANAGER"', "{}"):
+            with pytest.raises(psycopg.errors.CheckViolation):
+                conn.execute("UPDATE users SET platform_roles = %s::jsonb", (bad,))
+        conn.execute("UPDATE users SET position = %s", ("я" * 120,))
+        with pytest.raises(psycopg.errors.StringDataRightTruncation):
+            conn.execute("UPDATE users SET position = %s", ("я" * 121,))
+
+    command.downgrade(alembic_config, "0031_user_erp_role_codes")
+    with psycopg.connect(live_settings.libpq_dsn, autocommit=True) as conn:
+        assert conn.execute(
+            "SELECT count(*) FROM information_schema.columns "
+            "WHERE table_name = 'users' AND column_name IN ('platform_roles', 'position')"
+        ).fetchone() == (0,)
+
+    command.upgrade(alembic_config, "head")

@@ -4,7 +4,7 @@
 """
 
 from collections.abc import Awaitable, Callable, Sequence
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from datetime import UTC, datetime
 
 import structlog
@@ -22,6 +22,7 @@ from app.domain.errors import (
     ValidationFailedError,
 )
 from app.domain.lead_access import loses_work_role
+from app.domain.platform_roles import derive_access
 from app.models.auth import RefreshToken, User
 from app.repositories import users as repo
 from app.security import audit, reauth
@@ -35,6 +36,7 @@ from app.security.passwords import (
 )
 from app.services.user_handover import hand_over_work
 from app.services.user_parts import check_roles, normalize_email
+from app.services.user_platform import checked_platform_roles, checked_position, resolve_patch
 
 logger = structlog.get_logger(__name__)
 # Поставить в очередь синхронизацию с ERP (`tasks.erp_users.enqueue_erp_sync`): (действие, user_id).
@@ -56,6 +58,8 @@ class UserView:
     tg_dm_failed_at: datetime | None = None
     platform_access: list[str] = field(default_factory=lambda: ["crm"])
     erp_role_codes: list[str] = field(default_factory=list)
+    platform_roles: list[str] = field(default_factory=list)
+    position: str | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -68,6 +72,9 @@ class UserPatch:
     transfer_to_user_id: int | None = None
     platform_access: Sequence[str] | None = None
     erp_role_codes: Sequence[str] | None = None
+    # Роли Платформы (CRM-01): `None` — не менять, `[]` — снять; должность: `""` очищает.
+    platform_roles: Sequence[str] | None = None
+    position: str | None = None
 
 
 class UserService:
@@ -95,9 +102,23 @@ class UserService:
             return _view(user, await repo.roles_of(session, user_id))
 
     async def create(
-        self, actor: Actor, email: str, full_name: str, roles: Sequence[str]
+        self,
+        actor: Actor,
+        email: str,
+        full_name: str,
+        roles: Sequence[str],
+        *,
+        platform_roles: Sequence[str] = (),
+        position: str | None = None,
     ) -> tuple[UserView, str]:
-        """Новый пользователь и временный пароль (показывается один раз)."""
+        """Новый пользователь и временный пароль (показывается один раз).
+
+        Непустые `platform_roles` вычисляют роль CRM, доступ к ERP и роли ERP (CRM-01); `roles`
+        тогда игнорируются, а выдача доступа ставит провижининг в очередь.
+        """
+        platform = checked_platform_roles(platform_roles)
+        derived = derive_access(platform) if platform else None
+        roles = [derived.crm_role] if derived else list(roles)
         check_roles(roles)
         password = temporary_password()
         async with self._sessions() as session, session.begin():
@@ -107,7 +128,12 @@ class UserService:
                 password_hash=hash_password(password),
                 must_change_password=True,
                 ui_mode="admin" if "admin" in roles else "manager",
+                platform_roles=platform,
+                position=checked_position(position),
             )
+            if derived:
+                user.platform_access = list(derived.platform_access)
+                user.erp_role_codes = list(derived.erp_role_codes)
             session.add(user)
             try:
                 await session.flush()
@@ -118,11 +144,17 @@ class UserService:
             await repo.set_roles(session, user.id, roles, actor.user_id)
             view = _view(user, sorted(roles))
             await audit.record(session, actor, "user.create", "user", user.id, after=_audit(view))
+            if derived:
+                await _audit_access(session, actor, user.id, _NEW_USER_STATE, _access_state(view))
+        if derived:
+            await self._sync_erp("provision", view.id)
         return view, password
 
     async def update(self, actor: Actor, user_id: int, patch: UserPatch) -> UserView:
         if patch.roles is not None:
             check_roles(patch.roles)
+        position = None if patch.position is None else (checked_position(patch.position) or "")
+        patch = replace(patch, position=position)
         async with self._sessions() as session, session.begin():
             await repo.lock_admin_set(session)
             user = await repo.get(session, user_id, for_update=True)
@@ -131,18 +163,23 @@ class UserService:
             roles = await repo.roles_of(session, user_id)
             before = _view(user, roles)
             erp_before = _access_state(before)
+            patch = resolve_patch(before.platform_roles, patch)
+            if patch.roles is not None:
+                check_roles(patch.roles)
+            new_roles = None if patch.roles is None else sorted(set(patch.roles))
+            roles_changed = new_roles is not None and new_roles != roles
             loses_admin = "admin" in roles and (
-                (patch.roles is not None and "admin" not in patch.roles) or patch.is_active is False
+                (new_roles is not None and "admin" not in new_roles) or patch.is_active is False
             )
             if loses_admin and await repo.count_active_admins(session, excluding=user_id) == 0:
                 raise LastAdminError("the last active admin cannot lose the admin role")
             _apply(user, patch)
-            if patch.roles is not None:
-                await repo.set_roles(session, user_id, patch.roles, actor.user_id)
-                roles = sorted(patch.roles)
+            if new_roles is not None and roles_changed:
+                await repo.set_roles(session, user_id, new_roles, actor.user_id)
+                roles = new_roles
                 if "admin" not in roles:
                     user.ui_mode = "manager"
-            stops_work = patch.roles is not None and loses_work_role(before.roles, patch.roles)
+            stops_work = roles_changed and loses_work_role(before.roles, roles)
             if patch.is_active is False or stops_work:
                 await hand_over_work(session, actor, user_id, patch.transfer_to_user_id)
             if patch.is_active is False:
@@ -164,17 +201,7 @@ class UserService:
                 after=_audit(after),
             )
             erp_after = _access_state(after)
-            access_action = access_audit_action(erp_before, erp_after)
-            if access_action is not None:
-                await audit.record(
-                    session,
-                    actor,
-                    access_action,
-                    "user",
-                    user_id,
-                    before={"platform_access": list(erp_before.platform_access)},
-                    after={"platform_access": list(erp_after.platform_access)},
-                )
+            await _audit_access(session, actor, user_id, erp_before, erp_after)
             action = sync_action(erp_before, erp_after)
         await self._sync_erp(action, user_id)
         return after
@@ -292,12 +319,16 @@ class UserService:
             if await repo.count_active_admins(session) > 0:
                 raise ConflictError("admin already exists", reason=Reason.SETUP_DONE)
             try:
-                user_id = await _upsert_admin(session, email, full_name.strip(), password, False)
+                user_id = await _upsert_admin(
+                    session, email, full_name.strip(), password, False, platform_admin=True
+                )
             except IntegrityError as exc:
                 raise ConflictError("admin already exists", reason=Reason.SETUP_DONE) from exc
             await audit.record(
                 session, actor, "setup.admin_created", "user", user_id, after={"email": email}
             )
+        # Первый админ — сотрудник Платформы с ролью ADMIN (CRM-01): доступ к ERP выдан сразу.
+        await self._sync_erp("provision", user_id)
         return user_id
 
 
@@ -311,7 +342,13 @@ def _check_password(password: str, email: str) -> None:
 
 
 async def _upsert_admin(
-    session: AsyncSession, email: str, full_name: str, secret: str, temporary: bool
+    session: AsyncSession,
+    email: str,
+    full_name: str,
+    secret: str,
+    temporary: bool,
+    *,
+    platform_admin: bool = False,
 ) -> int:
     user = await repo.by_email(session, email, for_update=True)
     if user is None:
@@ -323,6 +360,15 @@ async def _upsert_admin(
     user.is_active = True
     user.ui_mode = "admin"
     user.failed_logins, user.locked_until = 0, None
+    if platform_admin or user.platform_roles:
+        # Роли Платформы ведут роль CRM и доступ к ERP (CRM-01): к ним добавляется ADMIN.
+        held = checked_platform_roles([*(user.platform_roles or []), "ADMIN"])
+        derived = derive_access(held)
+        user.platform_roles = held
+        user.platform_access = list(derived.platform_access)
+        user.erp_role_codes = list(derived.erp_role_codes)
+        await repo.set_roles(session, user.id, [derived.crm_role], None)
+        return user.id
     roles = set(await repo.roles_of(session, user.id)) | {"admin"}
     await repo.set_roles(session, user.id, sorted(roles), None)
     return user.id
@@ -341,6 +387,10 @@ def _apply(user: User, patch: UserPatch) -> None:
         user.platform_access = sorted(set(patch.platform_access) | {"crm"})
     if patch.erp_role_codes is not None:
         user.erp_role_codes = normalize_erp_roles(patch.erp_role_codes)
+    if patch.platform_roles is not None:
+        user.platform_roles = list(patch.platform_roles)
+    if patch.position is not None:
+        user.position = patch.position or None
 
 
 async def revoke_tokens(session: AsyncSession, user_id: int) -> None:
@@ -366,6 +416,8 @@ def _view(user: User, roles: list[str]) -> UserView:
         tg_dm_failed_at=user.tg_dm_failed_at,
         platform_access=list(user.platform_access or ["crm"]),
         erp_role_codes=list(user.erp_role_codes or []),
+        platform_roles=list(user.platform_roles or []),
+        position=user.position,
     )
 
 
@@ -376,7 +428,28 @@ def _access_state(view: UserView) -> AccessState:
         roles=tuple(view.roles),
         full_name=view.full_name,
         erp_role_codes=tuple(view.erp_role_codes),
+        platform_roles=tuple(view.platform_roles),
     )
+
+
+_NEW_USER_STATE = AccessState(platform_access=("crm",), is_active=True, roles=(), full_name="")
+
+
+async def _audit_access(
+    session: AsyncSession, actor: Actor, user_id: int, before: AccessState, after: AccessState
+) -> None:
+    """Аудит выдачи и снятия доступа к ERP (`platform_access.granted|revoked`)."""
+    action = access_audit_action(before, after)
+    if action is not None:
+        await audit.record(
+            session,
+            actor,
+            action,
+            "user",
+            user_id,
+            before={"platform_access": list(before.platform_access)},
+            after={"platform_access": list(after.platform_access)},
+        )
 
 
 def _audit(view: UserView) -> dict[str, object]:
@@ -388,4 +461,6 @@ def _audit(view: UserView) -> dict[str, object]:
         "tg_user_id": view.tg_user_id,
         "platform_access": view.platform_access,
         "erp_role_codes": view.erp_role_codes,
+        "platform_roles": view.platform_roles,
+        "position": view.position,
     }
