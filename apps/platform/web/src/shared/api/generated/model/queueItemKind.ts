@@ -26,6 +26,18 @@
  * 0.2.0 (волна 8): смена пароля (`POST /auth/change-password`, `Session.must_change_password`); Admin · Оргструктура —
  * сотрудники, выдача ролей Платформы, приглашение по почте (`/admin/users*`, раздел матрицы `admin`).
  *
+ * **0.3.0 (R-2, ADR-0012) — ломающее (до 1.0 допустимо): роли — данные.** Роль сотрудника — `RoleRef {id, name,
+ * system, code?}` вместо перечисления `RoleCode` (удалено): `Me.roles: RoleRef[]`, `Me.active_role` и `MeUpdate.active_role` —
+ * id роли или `null`; `Employee.roles: RoleRef[]`, `EmployeeInvite.role_ids`, `EmployeeUpdate.role_ids`; параметр `role` очереди
+ * и карточек — id роли; `QueueItem.role` → `QueueItem.role_id`. Доступ сотрудника (`Me.modules`, `Me.resources`,
+ * `Me.restricted_fields`) — объединение матриц его ролей (матрицы и права бэкендов считает CRM), «вид» — по активной роли,
+ * как в 0.2.2. Новое: Admin · Ролевая матрица — `GET/POST /admin/roles`, `GET/PATCH/DELETE /admin/roles/{id}`,
+ * `POST /admin/roles/preview` («что произойдёт»); `POST /admin/users/{id}/invite` (повтор приглашения);
+ * `EmployeeUpdate.transfer_to_user_id` (кому передать лиды при отключении или смене ролей); `Employee.erp_sync` и
+ * `erp_sync_error` — из CRM. Коды ошибок: `ROLE_IN_USE`, `ROLE_SYSTEM`, `LAST_DIRECTOR` (вместе с `LAST_ADMIN`) и `CONFLICT` с
+ * `details.reason` (`user_has_active_leads`, `name_taken`) или `details.invite = not_sent`; у каждого 409 в `details.reason` —
+ * код CRM. Каталог разделов, меню, полей и видов очереди — `packages/contracts/platform-rbac.yaml` версии 2.
+ *
  * 0.2.4: `423 ACCOUNT_LOCKED` объявлен и на `POST /auth/change-password` (CRM блокирует учётную запись после неверных
  * текущих паролей).
  *
@@ -44,11 +56,11 @@
  * Лимиты: вход — 10 в минуту на IP и e-mail; остальные запросы — 300 в минуту на сессию; превышение — 429
  * `TOO_MANY_REQUESTS` с `Retry-After`.
  *
- * OpenAPI spec version: 0.2.4
+ * OpenAPI spec version: 0.3.0
  */
 
 /**
- * Вид действия; набор растёт с фазами (SPEC-v3 §4.1)
+ * Вид действия; какой раздел и уровень нужен — секция `queue` каталога `platform-rbac.yaml`
  */
 export type QueueItemKind = (typeof QueueItemKind)[keyof typeof QueueItemKind];
 

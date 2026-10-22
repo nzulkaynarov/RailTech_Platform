@@ -2,18 +2,15 @@
 `ChangePasswordIn` из packages/contracts/openapi/platform-bff.yaml."""
 
 from datetime import UTC, datetime
-from typing import Any, Literal
+from typing import Annotated, Any, Literal, cast
 
 from pydantic import BaseModel, ConfigDict, Field, model_serializer, model_validator
 
-from app.rbac import (
-    modules_for,
-    resources_for,
-    restricted_fields_for,
-    view_roles,
-)
-from app.rbac_generated import ModuleCode, RoleCode
-from app.session import Language, SessionData
+from app.rbac import View, modules_for, view_roles
+from app.rbac_generated import ModuleCode, RestrictedField
+from app.session import Language, SessionData, SessionRole
+
+RoleId = Annotated[str, Field(pattern=r"^[0-9]+$")]
 
 _EMAIL = r"^[^@\s]+@[^@\s]+$"
 
@@ -36,7 +33,7 @@ class MeUpdate(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     language: Language | None = None
-    active_role: RoleCode | None = None
+    active_role: RoleId | None = None
 
     @model_validator(mode="after")
     def _not_empty(self) -> "MeUpdate":
@@ -52,6 +49,26 @@ class AccessFlags(BaseModel):
     erp: bool
 
 
+class RoleRef(BaseModel):
+    """Роль сотрудника для SPA: id, название из данных, системная ли, код (не у всех)."""
+
+    id: str
+    name: str
+    system: bool
+    code: str | None = None
+
+    @model_serializer(mode="wrap")
+    def _omit_empty_code(self, handler: Any) -> dict[str, Any]:
+        out: dict[str, Any] = handler(self)
+        if out.get("code") is None:
+            out.pop("code", None)
+        return out
+
+    @classmethod
+    def of(cls, role: SessionRole) -> "RoleRef":
+        return cls(id=str(role.id), name=role.name, system=role.system, code=role.code)
+
+
 class Me(BaseModel):
     id: str
     email: str
@@ -59,11 +76,11 @@ class Me(BaseModel):
     initials: str = Field(max_length=3)
     position: str | None = None
     language: Language
-    roles: list[RoleCode]
-    active_role: RoleCode | None
+    roles: list[RoleRef]
+    active_role: str | None
     modules: list[ModuleCode]
     resources: dict[str, Literal["full", "read"]]
-    restricted_fields: list[str]
+    restricted_fields: list[RestrictedField]
     access: AccessFlags
 
     @model_serializer(mode="wrap")
@@ -87,8 +104,8 @@ def initials_of(name: str, email: str) -> str:
 
 def build_me(data: SessionData) -> Me:
     """`Me` по снимку профиля. Вид (модули, разделы, поля) — по активной роли, если она задана."""
-    roles = view_roles(data.platform_roles, None)
-    shown = view_roles(data.platform_roles, data.active_role)
+    shown = View.of(view_roles(data.roles, data.active_role))
+    active = data.active_role if any(r.id == data.active_role for r in data.roles) else None
     return Me(
         id=str(data.user_id),
         email=data.email,
@@ -96,11 +113,11 @@ def build_me(data: SessionData) -> Me:
         initials=initials_of(data.name, data.email),
         position=data.position,
         language=data.language,
-        roles=roles,
-        active_role=data.active_role if data.active_role in roles else None,
-        modules=modules_for(shown),
-        resources=resources_for(shown),
-        restricted_fields=restricted_fields_for(shown),
+        roles=[RoleRef.of(r) for r in data.roles],
+        active_role=str(active) if active is not None else None,
+        modules=modules_for(shown.access),
+        resources=dict(shown.access),
+        restricted_fields=cast(list[RestrictedField], list(shown.fields)),
         access=AccessFlags(crm=True, erp="erp" in data.platform_access),
     )
 

@@ -1,17 +1,16 @@
 import { HttpResponse, http } from "msw";
 
-import type { Notification, RoleCode, Sources } from "../shared/api/generated/model";
+import type { Notification, Sources } from "../shared/api/generated/model";
 import {
   activityToday,
-  cardsForRoles,
+  cardsForView,
   menuCountersFor,
   notificationSeed,
-  queueForRoles,
+  queueForView,
   searchIndex,
 } from "./fixtures/feeds";
-import { computeAccess } from "./fixtures/rbac";
-import { DEMO_USERS } from "./fixtures/users";
-import { readSession } from "./mockSession";
+import { computeAccess, type MockRole } from "./fixtures/roles";
+import { readSession, sessionRoles } from "./mockSession";
 
 /**
  * Имитация сбоя ERP для скриншотов и e2e: `localStorage["rt-pf-mock-erp-down"] = "1"` (страница с MSW читает его при
@@ -36,24 +35,38 @@ function expired() {
   );
 }
 
-/** Роли «вида»: явный `role`, иначе активная роль сессии, иначе все роли сотрудника (контракт BFF 0.2.2). */
-function viewRoles(explicit: string | null): { all: RoleCode[]; view: RoleCode[] } | undefined {
+/** Роли «вида»: явный `role` (id), иначе активная роль сессии, иначе все роли сотрудника (контракт BFF 0.3.0). */
+function viewRoles(explicit: string | null): { all: MockRole[]; view: MockRole[] } | undefined {
   const session = readSession();
-  const user = session ? DEMO_USERS.find((u) => u.id === session.userId) : undefined;
-  if (!session || !user) return undefined;
-  const chosen = (explicit as RoleCode | null) ?? session.activeRole;
-  return { all: user.roles, view: chosen && user.roles.includes(chosen) ? [chosen] : user.roles };
+  const roles = session ? sessionRoles(session) : undefined;
+  if (!session || !roles) return undefined;
+  const chosen = roles.all.find((r) => r.id === (explicit ?? session.activeRole));
+  return { all: roles.all, view: chosen ? [chosen] : roles.all };
+}
+
+/** Раздел «Моя очередь» — как `require("dashboard.queue")` BFF: без него очередь, счётчики и уведомления — 403. */
+function noQueue(roles: { all: MockRole[] }) {
+  if (computeAccess(roles.all).resources["dashboard.queue"]) return null;
+  return HttpResponse.json(
+    {
+      code: "FORBIDDEN",
+      message: "Раздел или действие не положены вашей роли.",
+      source: "bff",
+      details: { resource: "dashboard.queue", need: "read" },
+    },
+    { status: 403 },
+  );
 }
 
 /** Прочитанные уведомления живут в памяти страницы: «Отметить все прочитанными» переживает опрос, но не перезагрузку. */
 const readIds = new Set<string>();
 let readAllAt = 0;
 
-function notificationsFor(roles: readonly RoleCode[]): Notification[] {
+function notificationsFor(roles: readonly MockRole[]): Notification[] {
   const now = Date.now();
   const seen = new Set<string>();
   return roles
-    .flatMap((role) => notificationSeed(role))
+    .flatMap((role) => notificationSeed(role.demo))
     .filter((n) => (seen.has(n.id) ? false : (seen.add(n.id), true)))
     .map(({ ago, ...n }) => ({
       ...n,
@@ -71,24 +84,30 @@ export const feedHandlers = [
   http.get("*/queue/cards", ({ request }) => {
     const roles = viewRoles(new URL(request.url).searchParams.get("role"));
     if (!roles) return expired();
-    const cards = cardsForRoles(roles.view).filter((c) => !erpDown() || c.path.startsWith("/crm"));
+    const denied = noQueue(roles);
+    if (denied) return denied;
+    const cards = cardsForView(roles.view).filter((c) => !erpDown() || c.path.startsWith("/crm"));
     return HttpResponse.json({ cards, sources: sources() });
   }),
 
   http.get("*/queue", ({ request }) => {
     const roles = viewRoles(new URL(request.url).searchParams.get("role"));
     if (!roles) return expired();
-    const items = queueForRoles(roles.view).filter((i) => !erpDown() || i.role === "MANAGER");
+    const denied = noQueue(roles);
+    if (denied) return denied;
+    const items = queueForView(roles.view).filter((i) => !erpDown() || i.kind.endsWith("_lead"));
     return HttpResponse.json({ items, sources: sources() });
   }),
 
   http.get("*/menu-counters", () => {
     const roles = viewRoles(null);
     if (!roles) return expired();
+    const denied = noQueue(roles);
+    if (denied) return denied;
     return HttpResponse.json({
       // ERP не отвечает: бейджи разделов ERP (EDS, ERP, «Все проекты») не показываются, остаются очередь и CRM
       items: menuCountersFor(
-        queueForRoles(roles.view).filter((i) => !erpDown() || i.role === "MANAGER").length,
+        queueForView(roles.view).filter((i) => !erpDown() || i.kind.endsWith("_lead")).length,
       ).filter((c) => !erpDown() || c.module === "crm" || c.section === "queue"),
       sources: sources(),
     });
@@ -106,6 +125,8 @@ export const feedHandlers = [
   http.get("*/notifications", ({ request }) => {
     const roles = viewRoles(null);
     if (!roles) return expired();
+    const denied = noQueue(roles);
+    if (denied) return denied;
     const params = new URL(request.url).searchParams;
     const tab = params.get("tab") ?? "all";
     const all = erpDown() ? [] : notificationsFor(roles.view);

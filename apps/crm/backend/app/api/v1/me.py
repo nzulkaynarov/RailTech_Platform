@@ -7,7 +7,7 @@ from fastapi import APIRouter, Depends
 from app.api.deps import ContainerDep, PrincipalDep, get_rbac
 from app.api.v1.users import to_out
 from app.container import Container
-from app.schemas.auth import MeOut, MePatch, PermissionsResponse
+from app.schemas.auth import MeOut, MePatch, PermissionsResponse, PlatformRoleGrantRef
 from app.schemas.leads import ActionResult
 from app.security.rbac import Rbac
 from app.services.staff_notifier import StaffNotifier
@@ -17,8 +17,21 @@ router = APIRouter(prefix="/api/v1/me", tags=["me"])
 
 
 def _me_out(view: UserView, container: Container) -> MeOut:
+    base = to_out(view).model_dump(exclude={"platform_role_refs"})
+    refs = [
+        PlatformRoleGrantRef(
+            id=r.id,
+            name=r.name,
+            system=r.system,
+            code=r.code,
+            access=dict(r.access),
+            restricted_fields=list(r.restricted_fields),
+        )
+        for r in view.platform_role_refs
+    ]
     return MeOut(
-        **to_out(view).model_dump(),
+        **base,
+        platform_role_refs=refs,
         sso_enabled=container.settings.platform_sso_enabled,
     )
 

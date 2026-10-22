@@ -190,6 +190,8 @@ export * from "./permissionsResponse";
 export * from "./permissionsResponsePermissions";
 export * from "./platformRoleCreate";
 export * from "./platformRoleCreateAccess";
+export * from "./platformRoleGrantRef";
+export * from "./platformRoleGrantRefAccess";
 export * from "./platformRoleOut";
 export * from "./platformRoleOutAccess";
 export * from "./platformRoleRef";
