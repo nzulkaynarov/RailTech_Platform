@@ -72,6 +72,7 @@ class Inbox(models.Model):
     status = models.CharField(max_length=16)
     attempts = models.IntegerField()
     error = models.TextField(null=True)
+    next_attempt_at = models.DateTimeField(null=True)
     received_at = models.DateTimeField()
     processed_at = models.DateTimeField(null=True)
     updated_at = models.DateTimeField()

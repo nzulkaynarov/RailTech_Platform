@@ -49,8 +49,9 @@ def parse_retry_after(value: str | None, now: datetime) -> float | None:
 class RetryPolicy:
     """Повторы: 30 с, 2 мин, 10 мин, 1 ч, 6 ч, 24 ч (± `jitter`); неудача после шестого повтора — `dead`.
 
-    `attempts` — сколько попыток уже сделано (первая — не повтор). `Retry-After` ответа 429/503 заменяет шаг
-    расписания (не меньше `min_retry_after`, не больше `max_retry_after`), но не продлевает число попыток.
+    `attempts` — сколько попыток уже сделано (первая — не повтор). `Retry-After` ответа 429/503 не сжигает попытки:
+    задержка — не меньше шага расписания и не меньше `Retry-After` (не больше `max_retry_after`), плюс jitter вверх,
+    чтобы не прийти раньше, чем просил подписчик.
     """
 
     delays: tuple[float, ...] = (30.0, 120.0, 600.0, 3600.0, 21600.0, 86400.0)
@@ -66,9 +67,10 @@ class RetryPolicy:
         """Через сколько секунд следующая попытка после неудачной попытки № `attempts`; `None` — попытки кончились."""
         if attempts < 1 or attempts > len(self.delays):
             return None
-        if retry_after is not None:
-            return min(max(retry_after, self.min_retry_after), self.max_retry_after)
         base = self.delays[attempts - 1]
+        asked = None if retry_after is None else min(max(retry_after, self.min_retry_after), self.max_retry_after)
+        if asked is not None and asked >= base * (1.0 - self.jitter):
+            return max(asked, base) * rng.uniform(1.0, 1.0 + self.jitter)
         return base * rng.uniform(1.0 - self.jitter, 1.0 + self.jitter)
 
 

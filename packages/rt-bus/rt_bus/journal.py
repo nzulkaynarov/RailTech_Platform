@@ -75,6 +75,8 @@ class BusMetrics:
     oldest_undelivered_age_seconds: float | None = None
     dlq_size: int = 0
     inbox_received: int = 0
+    #: Из них ждут автоповтора обработки (BusConfig.inbox_retry_delays).
+    inbox_retrying: int = 0
     inbox_failed: int = 0
     oldest_inbox_received_age_seconds: float | None = None
     subscribers: dict[str, SubscriberMetrics] = field(default_factory=dict)
@@ -124,6 +126,7 @@ def build_metrics(
     for row in inbox:
         if row["status"] == RECEIVED:
             metrics.inbox_received = int(row["n"])
+            metrics.inbox_retrying = int(row["retrying"] or 0)
             metrics.oldest_inbox_received_age_seconds = _age(now, row["oldest"])
         elif row["status"] == FAILED:
             metrics.inbox_failed = int(row["n"])
@@ -134,12 +137,13 @@ def log_metrics(service: str, metrics: BusMetrics) -> None:
     """Одна строка лога `rt_bus_metrics` со всеми метриками (поля — в `extra`)."""
     logger.info(
         "rt_bus_metrics service=%s outbox_pending=%d oldest_undelivered_age_s=%s dlq=%d inbox_received=%d "
-        "inbox_failed=%d paused=%s",
+        "inbox_retrying=%d inbox_failed=%d paused=%s",
         service,
         metrics.outbox_pending,
         "-" if metrics.oldest_undelivered_age_seconds is None else int(metrics.oldest_undelivered_age_seconds),
         metrics.dlq_size,
         metrics.inbox_received,
+        metrics.inbox_retrying,
         metrics.inbox_failed,
         ",".join(sorted(s.subscriber for s in metrics.subscribers.values() if s.paused)) or "-",
         extra={"rt_bus_service": service, "rt_bus_metrics": metrics.as_dict()},

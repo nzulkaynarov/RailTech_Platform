@@ -4,13 +4,12 @@ from __future__ import annotations
 
 import json
 import logging
-import math
 import os
 import random
 import uuid
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass, field
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
 from . import sql
@@ -29,7 +28,7 @@ from .delivery import (
 from .envelope import DEFAULT_TENANT, SERVICE_NAME_RE, Event, new_event, source_for
 from .errors import ConfigError, EventValidationError, UnknownEventTypeError
 from .handlers import Handler, HandlerRegistry
-from .masking import DEFAULT_SECRET_FIELDS, mask_data, unmask_data
+from .masking import DEFAULT_SECRET_FIELDS, mask_data, redact, unmask_data
 from .policy import BreakerPolicy, RetryPolicy
 from .receiver import Accepted, Rejection, decide
 from .schemas import SchemaRegistry
@@ -65,10 +64,14 @@ class BusConfig:
     delivery_batch: int = 10
     #: Сколько строк outbox раскладывается за раз.
     relay_batch: int = 100
-    #: Аренда взятой доставки: дольше любой попытки; упавший воркер отдаёт доставку другому по истечении.
+    #: Общий дедлайн одной попытки (вся пачка идёт параллельно — и пачки): медленный ответ не держит аренду.
+    attempt_deadline: float = 25.0
+    #: Аренда взятой доставки: дольше дедлайна попытки; упавший воркер отдаёт доставку другому по истечении.
     lease_seconds: float = 60.0
     #: Окно метки подписи у приёмника.
     window_seconds: float = 300.0
+    #: Автоповтор обработки записи inbox после ошибки обработчика (± jitter `retry`); затем `failed`.
+    inbox_retry_delays: tuple[float, ...] = (30.0, 120.0, 600.0)
     #: Отложить доставку, если попытка невозможна по нашей причине (нет секрета, подписчика нет в файле).
     postpone_seconds: float = 300.0
     secret_fields: Mapping[str, tuple[str, ...]] = field(default_factory=lambda: dict(DEFAULT_SECRET_FIELDS))
@@ -80,8 +83,8 @@ class BusConfig:
             raise ConfigError(f"service name {self.service!r} must match {SERVICE_NAME_RE.pattern}")
         if self.delivery_batch < 1 or self.relay_batch < 1:
             raise ConfigError("delivery_batch and relay_batch must be positive")
-        if self.lease_seconds < math.ceil(self.http_timeout * 3) + 5:
-            raise ConfigError("lease_seconds must exceed a delivery attempt (>= 3 × http_timeout + 5)")
+        if not self.http_timeout <= self.attempt_deadline <= self.lease_seconds - 10:
+            raise ConfigError("need http_timeout <= attempt_deadline <= lease_seconds - 10")
 
 
 @dataclass(frozen=True)
@@ -176,15 +179,28 @@ class BusCore:
             raise UnknownEventTypeError(f"no schema for {event.type} in {self.schemas.events_dir}")
         errors = self.schemas.validate_data(event.type, event.data, tolerant=False)
         if errors:
-            raise EventValidationError(f"data of {event.type} is invalid", errors)
+            paths = self.config.secret_fields.get(event.type, ())
+            secrets = mask_data(event.data, paths)[1] if paths else {}
+            raise EventValidationError(f"data of {event.type} is invalid", redact(errors, secrets))
 
-    def outbox_record(self, event: Event, *, mask: bool) -> OutboxRecord:
-        """Строка outbox; `mask` (есть хранилище секретов) — секретные поля заменены маской, значения отдельно."""
-        paths = self.config.secret_fields.get(event.type, ()) if mask else ()
+    def outbox_record(self, event: Event, *, stash_enabled: bool) -> OutboxRecord:
+        """Строка outbox: секретные поля типа (`secret_fields`) заменены маской, значения — отдельно, в хранилище.
+
+        Секрет по умолчанию закрыт: тип с секретными полями без хранилища (`stash=`) — `ConfigError`, а не код
+        акцепта открытым текстом в outbox (CONTRACTS §9.2).
+        """
+        paths = self.config.secret_fields.get(event.type, ())
+        if paths and not stash_enabled:
+            raise ConfigError(
+                f"{event.type} has secret fields {list(paths)}: pass stash= to the bus (e.g. DjangoCacheStash)"
+            )
         if not paths:
             return OutboxRecord(event, event.to_dict(), {})
         masked, secrets = mask_data(event.data, paths)
         return OutboxRecord(event, event.with_data(masked).to_dict(), secrets)
+
+    def disabled_subscribers(self) -> list[str]:
+        return [s.name for s in self.subscriptions().subscribers if not s.enabled]
 
     def targets(self, event_type: str, source: str) -> list[Subscriber]:
         return self.subscriptions().targets(event_type, source, self.service)
@@ -211,6 +227,8 @@ class BusCore:
             return postpone(
                 now, self.config.postpone_seconds, f"subscriber {claimed.subscriber!r} not in subscriptions"
             )
+        if not subscriber.enabled:
+            return postpone(now, self.config.postpone_seconds, f"subscriber {claimed.subscriber!r} is disabled")
         secrets = [s for s in self.config.secrets(self.service, claimed.subscriber) if s]
         if not secrets:
             return postpone(
@@ -387,6 +405,13 @@ def plan_queued(core: BusCore, registry: HandlerRegistry, event: Event) -> Queue
     if errors:
         return QueuedPlan([], sql.FAILED, "invalid data: " + "; ".join(errors[:5]))
     return QueuedPlan(handlers)
+
+
+def inbox_retry_at(core: BusCore, attempts: int, now: datetime) -> datetime | None:
+    """Когда повторить обработку после неудачной попытки № `attempts`; `None` — повторы кончились (`failed`)."""
+    policy = RetryPolicy(delays=core.config.inbox_retry_delays, jitter=core.config.retry.jitter)
+    delay = policy.delay_after(attempts, core.config.rng)
+    return None if delay is None else now + timedelta(seconds=delay)
 
 
 def handler_error(exc: BaseException) -> str:

@@ -36,6 +36,7 @@ from ..core import (
     finish_statements,
     handler_error,
     inbox_params,
+    inbox_retry_at,
     log_outcome,
     plan_queued,
 )
@@ -133,7 +134,7 @@ class AsyncBus:
         return await self._write(session, event)
 
     async def _write(self, session: AsyncSession, event: Event) -> Event:
-        record = self.core.outbox_record(event, mask=self.stash is not None)
+        record = self.core.outbox_record(event, stash_enabled=self.stash is not None)
         if record.secrets and self.stash is not None:
             await self.stash.put(event.id, record.secrets)
         await _exec(session, sql.INSERT_OUTBOX, record.params(self.core.now()))
@@ -172,8 +173,14 @@ class AsyncBus:
         async with self.sessions() as session, session.begin():
             states = (await _exec(session, sql.PAUSED_STATES)).mappings().all()
             blocked = [r["subscriber"] for r in states if r["paused_until"] > now]
+            # выключенный подписчик (enabled: false): уже разложенные доставки ждут включения, не уходят и не пробуются
+            disabled = self.core.disabled_subscribers()
             half_open = [
-                r for r in states if r["paused_until"] <= now and r["consecutive_failures"] >= breaker.threshold
+                r
+                for r in states
+                if r["paused_until"] <= now
+                and r["consecutive_failures"] >= breaker.threshold
+                and r["subscriber"] not in disabled
             ]
             for state in half_open:
                 slot = (
@@ -199,7 +206,7 @@ class AsyncBus:
                     )
                     continue
                 picked.append((int(probe[0]), True))
-            excluded = blocked + [r["subscriber"] for r in half_open]
+            excluded = blocked + [r["subscriber"] for r in half_open] + disabled
             if limit > len(picked):
                 rows = (
                     await _exec(
@@ -252,7 +259,13 @@ class AsyncBus:
             planned.append((item, self.core.plan(item, envelope, secret_values, stash_enabled=stash_enabled, now=now)))
 
         async def run(attempt: Attempt) -> AttemptResult:
-            return await send_async(self._client(), attempt, self.config.http_timeout, self.core.now())
+            return await send_async(
+                self._client(),
+                attempt,
+                self.config.http_timeout,
+                self.core.now(),
+                deadline=self.config.attempt_deadline,
+            )
 
         sends = [run(p) for _, p in planned if isinstance(p, Attempt)]
         results = iter(await asyncio.gather(*sends))
@@ -420,6 +433,8 @@ class AsyncBus:
                         return None
                     if row["status"] != sql.RECEIVED:
                         return str(row["status"])
+                    if row["next_attempt_at"] is not None and row["next_attempt_at"] > self.core.now():
+                        return sql.RECEIVED  # ждёт автоповтора — раньше срока не обрабатываем
                     event = Event.from_dict(as_json(row["envelope"]))
                     with correlation(event.correlationid, event.traceparent):
                         plan = plan_queued(self.core, self.registry, event)
@@ -436,10 +451,20 @@ class AsyncBus:
             except Exception as exc:
                 with correlation(event.correlationid if event else None, event.traceparent if event else None):
                     logger.exception("rt_bus_handler_failed", extra={"event_id": str(key)})
+                now = self.core.now()
                 async with session.begin():
-                    await _exec(
-                        session, sql.FAIL_INBOX, {"event_id": key, "error": handler_error(exc), "now": self.core.now()}
-                    )
+                    bumped = (
+                        await _exec(
+                            session, sql.INBOX_FAILURE, {"event_id": key, "error": handler_error(exc), "now": now}
+                        )
+                    ).first()
+                    if bumped is None:
+                        return None
+                    retry_at = inbox_retry_at(self.core, int(bumped[0]), now)
+                    if retry_at is not None:
+                        await _exec(session, sql.INBOX_RETRY_LATER, {"event_id": key, "next_attempt_at": retry_at})
+                        return sql.RECEIVED
+                    await _exec(session, sql.INBOX_FAILED, {"event_id": key})
                 return sql.FAILED
 
     async def retry_inbox(self, event_id: str | uuid.UUID) -> bool:
@@ -456,10 +481,12 @@ class AsyncBus:
         return True
 
     async def requeue_stuck_inbox(self, *, older_than: float = 60.0, limit: int = 100) -> int:
-        """Записи `received`, которых не взяла очередь (сбой постановки), — снова в очередь (или обработать здесь)."""
-        before = self.core.now() - timedelta(seconds=older_than)
-        async with self.sessions() as session:
-            rows = (await _exec(session, sql.STUCK_INBOX, {"before": before, "limit": limit})).all()
+        """Записи `received`, которых не взяла очередь (сбой постановки), и автоповторы, чей срок настал, — снова в
+        очередь (без очереди — обработать здесь). Отметка времени не даёт ставить ту же запись на каждом подборе."""
+        now = self.core.now()
+        before = now - timedelta(seconds=older_than)
+        async with self.sessions() as session, session.begin():
+            rows = (await _exec(session, sql.STUCK_INBOX, {"before": before, "now": now, "limit": limit})).all()
         for row in rows:
             if self.enqueue is None:
                 await self.process_inbox(row[0])

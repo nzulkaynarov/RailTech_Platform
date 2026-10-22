@@ -15,6 +15,10 @@ class NotInTransactionError(RtBusError):
     """`publish` вызван вне транзакции: событие не может быть атомарным с изменением (runbook §2)."""
 
 
+class InTransactionError(RtBusError):
+    """Доставка вызвана внутри транзакции: HTTP не идёт под внешней транзакцией (соединение и блокировки)."""
+
+
 class EventValidationError(RtBusError):
     """Конверт или `data` не по схеме у издателя (строгая проверка до записи в outbox)."""
 

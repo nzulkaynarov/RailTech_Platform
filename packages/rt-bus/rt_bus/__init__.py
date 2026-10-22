@@ -1,4 +1,4 @@
-"""rt_bus — шина событий RailTech Platform v1 (ADR-0014; docs/CONTRACTS.md §9; runbook волны 11 §2).
+"""rt_bus — шина событий RailTech Platform v1 (ADR-0014; CONTRACTS §9; docs/architecture/rt-bus.md).
 
 Ядро без фреймворков: конверт CloudEvents, схемы, подписки, подпись, политика повторов, приёмник. Адаптеры:
 `rt_bus.sqlalchemy` (async), `rt_bus.django`, `rt_bus.memory` (BFF без БД); обёртки `rt_bus.fastapi`,
@@ -20,6 +20,7 @@ from .envelope import Event, EventType, new_event, parse_type
 from .errors import (
     ConfigError,
     EventValidationError,
+    InTransactionError,
     NotInTransactionError,
     RtBusError,
     SubscriptionsError,
@@ -49,6 +50,7 @@ __all__ = [
     "EventValidationError",
     "Handler",
     "HandlerRegistry",
+    "InTransactionError",
     "InboxView",
     "MemoryStash",
     "NotInTransactionError",

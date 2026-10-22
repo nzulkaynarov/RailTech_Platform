@@ -66,12 +66,16 @@ def test_schedule_with_jitter_and_dead_after_sixth_retry() -> None:
     assert policy.delay_after(7, rng) is None  # шестой повтор не удался — dead
 
 
-def test_retry_after_replaces_step_within_bounds() -> None:
+def test_retry_after_does_not_burn_attempts() -> None:
     policy = RetryPolicy()
     rng = random.Random(1)
-    assert policy.delay_after(1, rng, retry_after=90) == 90
-    assert policy.delay_after(1, rng, retry_after=0) == 1
-    assert policy.delay_after(1, rng, retry_after=10**7) == 86400
+    for _ in range(50):
+        # Retry-After больше шага — не раньше просьбы подписчика, jitter только вверх
+        assert 90 <= (policy.delay_after(1, rng, retry_after=90) or 0) <= 108
+        # Retry-After меньше шага — шаг расписания (попытки не сжигаются частыми повторами)
+        assert 24 <= (policy.delay_after(1, rng, retry_after=0) or 0) <= 36
+        assert 480 <= (policy.delay_after(3, rng, retry_after=10) or 0) <= 720
+        assert 86400 <= (policy.delay_after(1, rng, retry_after=10**7) or 0) <= 86400 * 1.2
     assert policy.delay_after(7, rng, retry_after=5) is None
     assert parse_retry_after("120", T0) == 120
     assert parse_retry_after(format_http_date(T0 + timedelta(seconds=45)), T0) == 45

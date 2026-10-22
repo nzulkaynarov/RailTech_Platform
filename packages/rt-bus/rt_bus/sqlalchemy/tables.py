@@ -99,6 +99,7 @@ def bus_tables(metadata: MetaData) -> BusTables:
         Column("status", String(16), nullable=False),
         Column("attempts", Integer, nullable=False),
         Column("error", Text, nullable=True),
+        _ts("next_attempt_at", True),
         _ts("received_at", False),
         _ts("processed_at", True),
         _ts("updated_at", False),

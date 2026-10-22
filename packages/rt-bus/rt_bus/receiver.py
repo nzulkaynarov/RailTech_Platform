@@ -20,7 +20,7 @@ from typing import Any, Literal
 from .envelope import SERVICE_NAME_RE, Event, source_for
 from .errors import UnknownEventTypeError
 from .handlers import Handler, HandlerRegistry
-from .masking import mask_data
+from .masking import mask_data, redact
 from .schemas import SchemaRegistry
 from .signing import (
     HEADER_EVENT_ID,
@@ -117,7 +117,7 @@ def decide(
 
     event = Event.from_dict(payload)
     paths = secret_fields.get(event.type, ())
-    masked_data, _ = mask_data(event.data, paths) if paths else (event.data, {})
+    masked_data, secret_values = mask_data(event.data, paths) if paths else (event.data, {})
     stored = event.with_data(masked_data).to_dict()
 
     handlers = registry.match(event.type)
@@ -128,7 +128,7 @@ def decide(
     except UnknownEventTypeError:
         return Accepted(event, publisher, stored, "skipped", f"unknown type {event.type}: no schema")
     if data_errors:
-        return Rejection(422, "invalid_data", "; ".join(data_errors[:5]))
+        return Rejection(422, "invalid_data", "; ".join(redact(data_errors[:5], secret_values)))
     return Accepted(
         event,
         publisher,

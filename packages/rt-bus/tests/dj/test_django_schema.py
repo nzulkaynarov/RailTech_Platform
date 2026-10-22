@@ -63,5 +63,5 @@ def test_same_schema_as_sqlalchemy() -> None:
         engine.dispose()
     with connection.cursor() as cursor:
         dj_schema = snapshot(cursor)
-    assert len(sa_schema["columns"]) == 44
+    assert len(sa_schema["columns"]) == 45
     assert sa_schema == dj_schema

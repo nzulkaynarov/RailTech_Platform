@@ -116,3 +116,13 @@ def test_contracts_dir_resolution(monkeypatch: pytest.MonkeyPatch, tmp_path: Pat
     monkeypatch.setenv(CONTRACTS_DIR_ENV, str(tmp_path))
     with pytest.raises(ConfigError):
         resolve_contracts_dir()
+
+
+def test_publisher_error_does_not_leak_secret(subscriptions_file: Path) -> None:
+    core = BusCore(make_config("erp", Clock(), subscriptions_file))
+    data = example_data("erp/quote.acceptance_code_requested.v1")
+    data["payload"]["code"] = 482913
+    with pytest.raises(EventValidationError) as raised:
+        core.build_event("uz.railtech.erp.quote.acceptance_code_requested.v1", data)
+    assert "482913" not in str(raised.value)
+    assert all("482913" not in e for e in raised.value.errors)

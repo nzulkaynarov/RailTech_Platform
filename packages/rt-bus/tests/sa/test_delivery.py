@@ -3,20 +3,24 @@
 from __future__ import annotations
 
 import asyncio
+import os
+import time
 import uuid
 from collections.abc import Callable, Mapping
 from datetime import timedelta
+from pathlib import Path
 from typing import Any
 
 import httpx
 import pytest
+import yaml
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
-from rt_bus import MemoryStash, static_secrets, verify
+from rt_bus import ConfigError, MemoryStash, static_secrets, verify
 from rt_bus.sqlalchemy import AsyncBus
 
-from ..conftest import SECRETS, Clock, example_data
+from ..conftest import SECRETS, Clock, example_data, make_config
 from .conftest import Hub, rows
 
 pytestmark = pytest.mark.pg
@@ -136,7 +140,12 @@ async def test_retry_after_429(
     hub.responders["crm"] = lambda r: httpx.Response(429, headers={"Retry-After": "45"})
     await bus.deliver()
     row = await delivery(sessions)
-    assert row["next_attempt_at"] == clock() + timedelta(seconds=45)
+    assert 45 <= (row["next_attempt_at"] - clock()).total_seconds() <= 54  # max(45, шаг 30) + jitter вверх
+    clock.current = row["next_attempt_at"]
+    hub.responders["crm"] = lambda r: httpx.Response(503, headers={"Retry-After": "1"})
+    await bus.deliver()
+    row = await delivery(sessions)
+    assert 96 <= (row["next_attempt_at"] - clock()).total_seconds() <= 144  # шаг 2 мин, не 1 с
 
 
 async def test_network_error_is_retried(
@@ -359,3 +368,79 @@ async def test_metrics_and_purge(
     await bus.deliver()
     clock.advance(86400 * 31)
     assert await bus.purge() == {"deliveries": 5, "outbox": 3, "inbox": 0}
+
+
+async def test_secret_fields_without_stash_fail_closed(
+    make_bus: Callable[..., AsyncBus], sessions: async_sessionmaker[AsyncSession]
+) -> None:
+    bus = make_bus()
+    async with sessions() as session, session.begin():
+        with pytest.raises(ConfigError, match="secret fields"):
+            await bus.publish(session, CODE, example_data("erp/quote.acceptance_code_requested.v1"))
+    assert await rows(sessions, "SELECT id FROM rt_bus_outbox") == []
+
+
+async def test_slow_response_hits_attempt_deadline(
+    make_bus: Callable[..., AsyncBus], sessions: async_sessionmaker[AsyncSession], hub: Hub
+) -> None:
+    bus = make_bus(http_timeout=0.05, attempt_deadline=0.2)
+    await publish(bus, sessions)
+
+    async def dripping(request: httpx.Request) -> httpx.Response:
+        await asyncio.sleep(5)  # таймаут httpx на операцию такой ответ не ловит
+        return httpx.Response(200)
+
+    hub.responders["crm"] = dripping
+    started = time.monotonic()
+    stats = await bus.deliver()
+    assert time.monotonic() - started < 2
+    assert stats.retried == 1
+    row = await delivery(sessions)
+    assert (row["status"], row["last_error"]) == ("pending", "DeadlineExceeded: no complete response within 0.2 s")
+
+
+def test_deadline_must_fit_lease(clock: Clock, subscriptions_file: Path) -> None:
+    with pytest.raises(ConfigError):
+        make_config("erp", clock, subscriptions_file, attempt_deadline=55)
+    with pytest.raises(ConfigError):
+        make_config("erp", clock, subscriptions_file, http_timeout=30, attempt_deadline=20)
+
+
+async def test_disabled_subscriber_deliveries_wait(
+    make_bus: Callable[..., AsyncBus], sessions: async_sessionmaker[AsyncSession], hub: Hub, subscriptions_file: Path
+) -> None:
+    bus = make_bus()
+    await publish(bus, sessions, n=2)  # разложено crm до выключения
+    set_enabled(subscriptions_file, "crm", enabled=False)
+    stats = await bus.deliver()
+    assert (stats.claimed, hub.to("crm")) == (0, [])
+    assert {r["status"] for r in await rows(sessions, "SELECT status FROM rt_bus_delivery")} == {"pending"}
+    set_enabled(subscriptions_file, "crm", enabled=True)
+    assert (await bus.deliver()).delivered == 2
+
+
+async def test_permanent_answer_to_probe_closes_breaker(
+    make_bus: Callable[..., AsyncBus], sessions: async_sessionmaker[AsyncSession], hub: Hub, clock: Clock
+) -> None:
+    bus = make_bus()
+    await publish(bus, sessions, n=6)
+    hub.responders["crm"] = lambda r: httpx.Response(503)
+    await bus.deliver()
+    clock.advance(301)
+    hub.responders["crm"] = lambda r: httpx.Response(422)  # подписчик жив, но это событие не примет
+    stats = await bus.deliver()
+    assert (stats.claimed, stats.dead) == (1, 1)
+    [state] = await rows(sessions, "SELECT * FROM rt_bus_subscriber_state WHERE subscriber = 'crm'")
+    assert (state["consecutive_failures"], state["paused_until"]) == (0, None)
+    hub.responders.pop("crm")
+    assert (await bus.deliver()).delivered == 5
+
+
+def set_enabled(path: Path, name: str, *, enabled: bool) -> None:
+    raw = yaml.safe_load(path.read_text(encoding="utf-8"))
+    for item in raw["subscribers"]:
+        if item["name"] == name:
+            item["enabled"] = enabled
+    path.write_text(yaml.safe_dump(raw), encoding="utf-8")
+    st = path.stat()
+    os.utime(path, ns=(st.st_atime_ns, st.st_mtime_ns + 1_000_000))

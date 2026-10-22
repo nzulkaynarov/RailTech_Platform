@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import json
 import random
 import uuid
@@ -114,9 +115,21 @@ def result_from_exception(exc: BaseException) -> AttemptResult:
     return AttemptResult(Verdict.RETRY, None, clip(f"{type(exc).__name__}: {exc}"))
 
 
-async def send_async(client: httpx.AsyncClient, attempt: Attempt, http_timeout: float, now: datetime) -> AttemptResult:
+def deadline_result(seconds: float) -> AttemptResult:
+    return AttemptResult(Verdict.RETRY, None, f"DeadlineExceeded: no complete response within {seconds:g} s")
+
+
+async def send_async(
+    client: httpx.AsyncClient, attempt: Attempt, http_timeout: float, now: datetime, *, deadline: float
+) -> AttemptResult:
+    """Попытка с общим дедлайном `deadline` < аренды (таймаут httpx — на операцию, медленный ответ его обходит)."""
     try:
-        response = await client.post(attempt.url, content=attempt.body, headers=attempt.headers, timeout=http_timeout)
+        response = await asyncio.wait_for(
+            client.post(attempt.url, content=attempt.body, headers=attempt.headers, timeout=http_timeout),
+            timeout=deadline,
+        )
+    except TimeoutError:
+        return deadline_result(deadline)
     except Exception as exc:  # noqa: BLE001 — любой сбой попытки (сеть, неверный адрес) — повтор, а не потеря пачки
         return result_from_exception(exc)
     return result_from_response(response, now)
@@ -137,8 +150,10 @@ def decide_outcome(
     if result.verdict is Verdict.DELIVERED:
         return Outcome(OutcomeKind.DELIVERED, status_code=result.status_code, breaker=BreakerEffect.SUCCESS)
     if result.verdict is Verdict.DEAD:
-        # Подписчик ответил, но событие он не примет никогда: предохранитель не трогаем.
-        return Outcome(OutcomeKind.DEAD, status_code=result.status_code, error=result.error)
+        # Подписчик ответил, но событие он не примет никогда: счётчик предохранителя не растёт; ответ на пробную
+        # доставку — признак, что подписчик жив: предохранитель закрывается.
+        effect = BreakerEffect.SUCCESS if claimed.probe else BreakerEffect.NONE
+        return Outcome(OutcomeKind.DEAD, status_code=result.status_code, error=result.error, breaker=effect)
     delay = policy.delay_after(claimed.attempts, rng, result.retry_after)
     if delay is None:
         return Outcome(

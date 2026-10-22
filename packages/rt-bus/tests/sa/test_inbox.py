@@ -104,30 +104,65 @@ async def test_rejections_write_nothing(
     assert await rows(sessions, "SELECT event_id FROM rt_bus_inbox") == []
 
 
-async def test_handler_error_marks_failed_and_retry(
-    crm: AsyncBus, sessions: async_sessionmaker[AsyncSession], calls: list[tuple[str, str]]
+async def test_handler_error_autoretry_then_failed_then_manual_retry(
+    crm: AsyncBus, sessions: async_sessionmaker[AsyncSession], calls: list[tuple[str, str]], clock: Clock
 ) -> None:
     env = envelope()
     env["data"]["payload"]["erp_quote_id"] = 666
     headers, body = signed(env)
     await crm.receive(headers, body)
+    queued: list[str] = crm.queued  # type: ignore[attr-defined]
+    # три автоповтора: 30 с, 2 мин, 10 мин (± 20 %), затем failed
+    for attempt, base in enumerate([30, 120, 600], start=1):
+        assert await crm.process_inbox(env["id"]) == "received"
+        [row] = await rows(sessions, "SELECT status, attempts, error, next_attempt_at FROM rt_bus_inbox")
+        assert (row["status"], row["attempts"]) == ("received", attempt)
+        assert row["error"] == "ValueError: cannot apply quote 666"
+        delay = (row["next_attempt_at"] - clock()).total_seconds()
+        assert base * 0.8 <= delay <= base * 1.2
+        # раньше срока: задача очереди ничего не делает, подбор не ставит
+        assert await crm.process_inbox(env["id"]) == "received"
+        assert await crm.requeue_stuck_inbox() == 0
+        assert len(calls) == attempt
+        clock.current = row["next_attempt_at"]
+        before = len(queued)
+        assert await crm.requeue_stuck_inbox() == 1
+        assert queued[before:] == [env["id"]]
+        assert await crm.requeue_stuck_inbox() == 0  # уже в очереди — второй раз не ставим
     assert await crm.process_inbox(env["id"]) == "failed"
-    [row] = await rows(sessions, "SELECT status, attempts, error FROM rt_bus_inbox")
-    assert row == {"status": "failed", "attempts": 1, "error": "ValueError: cannot apply quote 666"}
+    [row] = await rows(sessions, "SELECT status, attempts, next_attempt_at FROM rt_bus_inbox")
+    assert row == {"status": "failed", "attempts": 4, "next_attempt_at": None}
     assert [r.status for r in await crm.list_inbox(status="failed")] == ["failed"]
+    assert (await crm.metrics()).inbox_failed == 1
 
     async with sessions() as session, session.begin():
         await session.execute(
             text("UPDATE rt_bus_inbox SET envelope = jsonb_set(envelope, '{data,payload,erp_quote_id}', '1203')")
         )
     assert await crm.retry_inbox(env["id"])
-    assert crm.queued[-1] == env["id"]  # type: ignore[attr-defined]
+    assert queued[-1] == env["id"]
     assert await crm.process_inbox(env["id"]) == "processed"
     assert not await crm.retry_inbox(env["id"])  # processed не повторяется
-    assert len(calls) == 2
+    assert len(calls) == 5
 
 
-async def test_enqueue_failure_is_swept(
+async def test_no_autoretry_when_disabled(
+    make_bus: Callable[..., AsyncBus], sessions: async_sessionmaker[AsyncSession]
+) -> None:
+    registry = HandlerRegistry()
+
+    @registry.subscribe("uz.railtech.erp.quote.sent.v1")
+    async def broken(event: Event, session: AsyncSession) -> None:
+        raise RuntimeError("always")
+
+    bus = make_bus("crm", registry=registry, inbox_retry_delays=())
+    env = envelope()
+    headers, body = signed(env)
+    await bus.receive(headers, body)
+    assert await bus.process_inbox(env["id"]) == "failed"
+
+
+async def test_enqueue_failure_is_swept_once_per_window(
     crm: AsyncBus, sessions: async_sessionmaker[AsyncSession], clock: Clock
 ) -> None:
     async def broken(event_id: str) -> None:
@@ -139,7 +174,20 @@ async def test_enqueue_failure_is_swept(
     assert (await crm.receive(headers, body)).status_code == 200  # запись inbox есть
     assert await crm.requeue_stuck_inbox(older_than=60) == 0
     clock.advance(61)
+    queued: list[str] = []
+
+    async def enqueue(event_id: str) -> None:
+        queued.append(event_id)
+
+    crm.enqueue = enqueue
+    assert await crm.requeue_stuck_inbox(older_than=60) == 1
+    # очередь ещё не обработала — следующий подбор не раздувает её той же записью
+    assert await crm.requeue_stuck_inbox(older_than=60) == 0
+    clock.advance(61)
+    assert await crm.requeue_stuck_inbox(older_than=60) == 1
+    assert queued == [env["id"], env["id"]]
     crm.enqueue = None  # без очереди — обработать на месте
+    clock.advance(61)
     assert await crm.requeue_stuck_inbox(older_than=60) == 1
     assert [r.status for r in await crm.list_inbox()] == ["processed"]
 

@@ -17,6 +17,7 @@ import uuid
 from collections.abc import Callable, Mapping
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timedelta
+from functools import partial
 from typing import Any
 
 import httpx
@@ -35,12 +36,13 @@ from ..core import (
     finish_statements,
     handler_error,
     inbox_params,
+    inbox_retry_at,
     log_outcome,
     plan_queued,
 )
-from ..delivery import Attempt, AttemptResult, Claimed, Outcome, decide_outcome, send_sync
+from ..delivery import Attempt, AttemptResult, Claimed, Outcome, deadline_result, decide_outcome, send_sync
 from ..envelope import Event
-from ..errors import NotInTransactionError
+from ..errors import InTransactionError, NotInTransactionError
 from ..handlers import HandlerRegistry, default_registry
 from ..journal import BusMetrics, DeliveryView, InboxView, build_metrics, log_metrics
 from ..masking import SecretStash
@@ -122,7 +124,7 @@ class DjangoBus:
         return self._write(event)
 
     def _write(self, event: Event) -> Event:
-        record = self.core.outbox_record(event, mask=self.stash is not None)
+        record = self.core.outbox_record(event, stash_enabled=self.stash is not None)
         if record.secrets and self.stash is not None:
             self.stash.put(event.id, record.secrets)
         self._exec(sql.INSERT_OUTBOX, record.params(self.core.now()))
@@ -134,6 +136,10 @@ class DjangoBus:
     def _require_atomic(self) -> None:
         if not transaction.get_connection(self.using).in_atomic_block:
             raise NotInTransactionError("rt_bus publish() needs transaction.atomic()")
+
+    def _forbid_atomic(self, what: str) -> None:
+        if transaction.get_connection(self.using).in_atomic_block:
+            raise InTransactionError(f"rt_bus {what}() must not run inside transaction.atomic(): HTTP goes outside")
 
     def _wake(self) -> None:
         try:
@@ -169,8 +175,14 @@ class DjangoBus:
         with self._atomic():
             states, _ = self._exec(sql.PAUSED_STATES)
             blocked = [r["subscriber"] for r in states if r["paused_until"] > now]
+            # выключенный подписчик (enabled: false): уже разложенные доставки ждут включения, не уходят и не пробуются
+            disabled = self.core.disabled_subscribers()
             half_open = [
-                r for r in states if r["paused_until"] <= now and r["consecutive_failures"] >= breaker.threshold
+                r
+                for r in states
+                if r["paused_until"] <= now
+                and r["consecutive_failures"] >= breaker.threshold
+                and r["subscriber"] not in disabled
             ]
             for state in half_open:
                 slot, _ = self._exec(
@@ -192,7 +204,7 @@ class DjangoBus:
                     )
                     continue
                 picked.append((int(probe[0]["id"]), True))
-            excluded = blocked + [r["subscriber"] for r in half_open]
+            excluded = blocked + [r["subscriber"] for r in half_open] + disabled
             if limit > len(picked):
                 rows, _ = self._exec(
                     sql.CLAIM_DELIVERIES, {"now": now, "excluded": excluded, "limit": limit - len(picked)}
@@ -220,7 +232,9 @@ class DjangoBus:
         return out
 
     def deliver(self, limit: int | None = None) -> DeliverStats:
-        """Взять пачку доставок в аренду, отправить параллельно (потоки), записать итоги. HTTP — вне транзакций."""
+        """Взять пачку доставок в аренду, отправить параллельно (потоки), записать итоги. HTTP — вне транзакций:
+        внутри `transaction.atomic()` — `InTransactionError`."""
+        self._forbid_atomic("deliver")
         stats = DeliverStats()
         now = self.core.now()
         claimed = self._claim(now, limit or self.config.delivery_batch)
@@ -242,8 +256,17 @@ class DjangoBus:
 
         results: list[AttemptResult] = []
         if attempts:
-            with ThreadPoolExecutor(max_workers=min(len(attempts), self.config.delivery_batch)) as pool:
-                results = list(pool.map(run, attempts))
+            # Общий дедлайн попытки (меньше аренды): поток с зависшим ответом не держит пачку — итог «повтор»,
+            # поток досчитает в фоне (его результат уже не пишется: доставка снова pending).
+            pool = ThreadPoolExecutor(max_workers=min(len(attempts), self.config.delivery_batch))
+            futures = [pool.submit(run, attempt) for attempt in attempts]
+            deadline = time.monotonic() + self.config.attempt_deadline
+            for future in futures:
+                try:
+                    results.append(future.result(timeout=max(deadline - time.monotonic(), 0.0)))
+                except TimeoutError:
+                    results.append(deadline_result(self.config.attempt_deadline))
+            pool.shutdown(wait=False, cancel_futures=True)
         result_iter = iter(results)
         finished_at = self.core.now()
         with self._atomic():
@@ -278,6 +301,7 @@ class DjangoBus:
 
     def pump(self, *, max_seconds: float = 20.0) -> PumpStats:
         """Раскладка outbox и доставка, пока есть работа (не дольше `max_seconds`) — тело задачи Celery."""
+        self._forbid_atomic("pump")
         stats = PumpStats()
         deadline = time.monotonic() + max_seconds
         while time.monotonic() < deadline:
@@ -369,7 +393,8 @@ class DjangoBus:
                 return ReceiveResult(503, {"error": "handler_failed"})
             logger.info("rt_bus_received", extra={"event_id": event.id, "event_type": event.type, "status": status})
             if status == sql.RECEIVED:
-                self._enqueue(event.id)
+                # После коммита внешней транзакции (ATOMIC_REQUESTS и т. п.); без неё — сразу.
+                transaction.on_commit(partial(self._enqueue, event.id), using=self.using)
         return ReceiveResult(200, {"status": status, "id": event.id})
 
     def _enqueue(self, event_id: str) -> None:
@@ -392,6 +417,8 @@ class DjangoBus:
                 row = rows[0]
                 if row["status"] != sql.RECEIVED:
                     return str(row["status"])
+                if row["next_attempt_at"] is not None and row["next_attempt_at"] > self.core.now():
+                    return sql.RECEIVED  # ждёт автоповтора — раньше срока не обрабатываем
                 event = Event.from_dict(as_json(row["envelope"]))
                 with correlation(event.correlationid, event.traceparent):
                     plan = plan_queued(self.core, self.registry, event)
@@ -407,8 +434,16 @@ class DjangoBus:
         except Exception as exc:
             with correlation(event.correlationid if event else None, event.traceparent if event else None):
                 logger.exception("rt_bus_handler_failed", extra={"event_id": str(key)})
+            now = self.core.now()
             with self._atomic():
-                self._exec(sql.FAIL_INBOX, {"event_id": key, "error": handler_error(exc), "now": self.core.now()})
+                bumped, _ = self._exec(sql.INBOX_FAILURE, {"event_id": key, "error": handler_error(exc), "now": now})
+                if not bumped:
+                    return None
+                retry_at = inbox_retry_at(self.core, int(bumped[0]["attempts"]), now)
+                if retry_at is not None:
+                    self._exec(sql.INBOX_RETRY_LATER, {"event_id": key, "next_attempt_at": retry_at})
+                    return sql.RECEIVED
+                self._exec(sql.INBOX_FAILED, {"event_id": key})
             return sql.FAILED
 
     def retry_inbox(self, event_id: str | uuid.UUID) -> bool:
@@ -420,17 +455,20 @@ class DjangoBus:
         if self.enqueue is None:
             self.process_inbox(key)
         else:
-            self._enqueue(str(key))
+            transaction.on_commit(partial(self._enqueue, str(key)), using=self.using)
         return True
 
     def requeue_stuck_inbox(self, *, older_than: float = 60.0, limit: int = 100) -> int:
-        before = self.core.now() - timedelta(seconds=older_than)
-        rows, _ = self._exec(sql.STUCK_INBOX, {"before": before, "limit": limit})
+        """Записи `received`, не взятые очередью, и автоповторы, чей срок настал, — снова в очередь (после коммита)."""
+        now = self.core.now()
+        before = now - timedelta(seconds=older_than)
+        with self._atomic():
+            rows, _ = self._exec(sql.STUCK_INBOX, {"before": before, "now": now, "limit": limit})
         for row in rows:
             if self.enqueue is None:
                 self.process_inbox(row["event_id"])
             else:
-                self._enqueue(str(row["event_id"]))
+                transaction.on_commit(partial(self._enqueue, str(row["event_id"])), using=self.using)
         return len(rows)
 
     def list_inbox(

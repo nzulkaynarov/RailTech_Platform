@@ -55,6 +55,21 @@ def unmask_data(data: Mapping[str, Any], secrets: Mapping[str, Any]) -> dict[str
     return restored
 
 
+def redact(messages: Sequence[str], secrets: Mapping[str, Any]) -> list[str]:
+    """Сообщения (ошибки схемы, логи) без значений секретных полей: jsonschema цитирует значение и объект целиком."""
+    needles = sorted(
+        {s for value in secrets.values() if value not in (None, "") for s in (repr(value), str(value))},
+        key=len,
+        reverse=True,
+    )
+    out = []
+    for message in messages:
+        for needle in needles:
+            message = message.replace(needle, MASK)
+        out.append(message)
+    return out
+
+
 class SecretStash(Protocol):
     """Временное хранилище секретных значений издателя (синхронное; Django — кэш)."""
 

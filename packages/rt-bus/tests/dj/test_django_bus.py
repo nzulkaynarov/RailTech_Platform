@@ -5,9 +5,9 @@ from __future__ import annotations
 import json
 import logging
 import threading
+import time
 import uuid
 from collections.abc import Callable
-from datetime import timedelta
 from typing import Any
 
 import httpx
@@ -15,7 +15,16 @@ import pytest
 from django.db import connection, connections, transaction
 from django.test import Client
 
-from rt_bus import CorrelationFilter, Event, HandlerRegistry, NotInTransactionError, get_correlation_id, verify
+from rt_bus import (
+    ConfigError,
+    CorrelationFilter,
+    Event,
+    HandlerRegistry,
+    InTransactionError,
+    NotInTransactionError,
+    get_correlation_id,
+    verify,
+)
 from rt_bus.django.bus import DjangoBus
 from tests import django_support
 
@@ -138,7 +147,7 @@ def test_retry_after(make_bus: Callable[..., DjangoBus], hub: SyncHub, clock: Cl
     publish(bus)
     hub.responders["crm"] = lambda r: httpx.Response(503, headers={"Retry-After": "90"})
     bus.deliver()
-    assert delivery()["next_attempt_at"] == clock() + timedelta(seconds=90)
+    assert 90 <= (delivery()["next_attempt_at"] - clock()).total_seconds() <= 108
 
 
 def test_breaker(make_bus: Callable[..., DjangoBus], hub: SyncHub, clock: Clock) -> None:
@@ -211,7 +220,7 @@ def test_receiver_view_idempotent_skipped_and_auth(make_bus: Callable[..., Djang
         if event.data["payload"]["erp_quote_id"] == 666:
             raise ValueError("bad quote")
 
-    crm = make_bus("crm", registry=registry)
+    crm = make_bus("crm", registry=registry, inbox_retry_delays=())  # без автоповтора: сразу failed
     queued: list[str] = []
     crm.enqueue = queued.append
     django_support.RECEIVER.append(crm)
@@ -310,3 +319,95 @@ def test_metrics_and_purge(make_bus: Callable[..., DjangoBus], hub: SyncHub, clo
     assert metrics.subscribers["crm"].dead == 2
     clock.advance(86400 * 31)
     assert bus.purge() == {"deliveries": 2, "outbox": 0, "inbox": 0}
+
+
+def test_secret_fields_without_stash_fail_closed(make_bus: Callable[..., DjangoBus]) -> None:
+    bus = make_bus()
+    with transaction.atomic(), pytest.raises(ConfigError, match="secret fields"):
+        bus.publish(
+            "uz.railtech.erp.quote.acceptance_code_requested.v1",
+            example_data("erp/quote.acceptance_code_requested.v1"),
+        )
+    assert rows("SELECT id FROM rt_bus_outbox") == []
+
+
+def test_delivery_refuses_outer_transaction(make_bus: Callable[..., DjangoBus], hub: SyncHub) -> None:
+    bus = make_bus()
+    publish(bus)
+    with transaction.atomic():
+        with pytest.raises(InTransactionError):
+            bus.deliver()
+        with pytest.raises(InTransactionError):
+            bus.pump()
+    assert hub.requests == []
+    assert bus.deliver().delivered == 1
+
+
+def test_receive_enqueues_after_outer_commit(make_bus: Callable[..., DjangoBus]) -> None:
+    registry = HandlerRegistry()
+    registry.add(QUOTE_SENT, lambda event: None)
+    crm = make_bus("crm", registry=registry)
+    queued: list[str] = []
+    crm.enqueue = queued.append
+
+    def receive_in_request(*, fail: bool) -> str:
+        env = {**example("erp/quote.sent.v1"), "id": str(uuid.uuid4())}
+        headers, body = signed(env)
+        with transaction.atomic():  # ATOMIC_REQUESTS или транзакция вызывающего кода
+            assert crm.receive(headers, body).body["status"] == "received"
+            assert queued == []  # до коммита задача не ставится: она не увидела бы запись inbox
+            if fail:
+                raise RuntimeError("request failed")
+        return str(env["id"])
+
+    with pytest.raises(RuntimeError):
+        receive_in_request(fail=True)
+    assert queued == []
+    assert rows("SELECT event_id FROM rt_bus_inbox") == []
+    event_id = receive_in_request(fail=False)
+    assert queued == [event_id]
+
+
+def test_slow_response_hits_attempt_deadline(make_bus: Callable[..., DjangoBus], hub: SyncHub) -> None:
+    bus = make_bus(http_timeout=0.05, attempt_deadline=0.2)
+    publish(bus)
+    done = threading.Event()
+
+    def dripping(request: httpx.Request) -> httpx.Response:
+        time.sleep(0.8)
+        done.set()
+        return httpx.Response(200)
+
+    hub.responders["crm"] = dripping
+    started = time.monotonic()
+    stats = bus.deliver()
+    assert time.monotonic() - started < 0.7
+    assert stats.retried == 1
+    assert delivery()["last_error"] == "DeadlineExceeded: no complete response within 0.2 s"
+    assert done.wait(2)  # фоновый поток досчитал; его ответ не записан
+    assert delivery()["status"] == "pending"
+
+
+def test_inbox_autoretry(make_bus: Callable[..., DjangoBus], clock: Clock) -> None:
+    registry = HandlerRegistry()
+    calls: list[str] = []
+
+    def flaky(event: Event) -> None:
+        calls.append(event.id)
+        if len(calls) < 3:
+            raise ConnectionError("db busy")
+
+    registry.add(QUOTE_SENT, flaky)
+    crm = make_bus("crm", registry=registry, inbox_retry_delays=(30.0, 60.0))
+    env = {**example("erp/quote.sent.v1"), "id": str(uuid.uuid4())}
+    headers, body = signed(env)
+    crm.receive(headers, body)  # без очереди: обработка — подбором
+    assert crm.requeue_stuck_inbox(older_than=-1) == 1
+    assert [r.status for r in crm.list_inbox()] == ["received"]
+    assert crm.requeue_stuck_inbox() == 0  # срок повтора не настал
+    clock.advance(37)
+    assert crm.requeue_stuck_inbox() == 1
+    clock.advance(73)
+    assert crm.requeue_stuck_inbox() == 1
+    assert [r.status for r in crm.list_inbox()] == ["processed"]
+    assert len(calls) == 3

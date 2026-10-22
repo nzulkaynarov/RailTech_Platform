@@ -176,3 +176,21 @@ def test_handler_patterns_validated() -> None:
     registry.add("uz.railtech.erp.*.v1", lambda e: None, inline=True)
     assert [h.inline for h in registry.match("uz.railtech.erp.quote.sent.v1")] == [True]
     assert registry.match("uz.railtech.erp.quote.sent.v2") == []
+
+
+async def test_invalid_data_errors_do_not_leak_secret(
+    clock: Clock, subscriptions_file: Path, caplog: pytest.LogCaptureFixture
+) -> None:
+    registry = HandlerRegistry()
+    registry.add("uz.railtech.erp.quote.acceptance_code_requested.v1", lambda e: None, inline=True)
+    receiver = MemoryReceiver(make_config("crm", clock, subscriptions_file), registry=registry)
+    envelope = {**example("erp/quote.acceptance_code_requested.v1"), "id": str(uuid.uuid4())}
+    envelope["data"]["payload"]["code"] = 482913  # не строка — ошибка схемы цитирует значение
+    headers, body = signed(envelope)
+    with caplog.at_level("WARNING", logger="rt_bus.receiver"):
+        result = await receiver.receive(headers, body)
+    assert result.status_code == 422
+    [record] = [r for r in caplog.records if r.getMessage() == "rt_bus_receive_rejected"]
+    reason: str = record.reason  # type: ignore[attr-defined]
+    assert "482913" not in reason
+    assert "***" in reason

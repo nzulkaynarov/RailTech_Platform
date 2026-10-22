@@ -182,27 +182,47 @@ RETURNING event_id
 """
 
 LOCK_INBOX = f"""
-SELECT event_id, type, envelope, status FROM {INBOX} WHERE event_id = :event_id FOR UPDATE SKIP LOCKED
+SELECT event_id, type, envelope, status, next_attempt_at FROM {INBOX}
+WHERE event_id = :event_id FOR UPDATE SKIP LOCKED
 """
 
 FINISH_INBOX = f"""
-UPDATE {INBOX} SET status = :status, attempts = attempts + 1, error = :error, processed_at = :now, updated_at = :now
+UPDATE {INBOX} SET status = :status, attempts = attempts + 1, error = :error, processed_at = :now,
+    next_attempt_at = NULL, updated_at = :now
 WHERE event_id = :event_id
 """
 
-FAIL_INBOX = f"""
-UPDATE {INBOX} SET status = '{FAILED}', attempts = attempts + 1, error = :error, updated_at = :now
+# Ошибка обработчика: счётчик и текст; дальше — повтор позже (INBOX_RETRY_LATER) или failed (INBOX_FAILED).
+INBOX_FAILURE = f"""
+UPDATE {INBOX} SET attempts = attempts + 1, error = :error, updated_at = :now
 WHERE event_id = :event_id AND status = '{RECEIVED}'
+RETURNING attempts
 """
 
+INBOX_RETRY_LATER = f"UPDATE {INBOX} SET next_attempt_at = :next_attempt_at WHERE event_id = :event_id"
+
+INBOX_FAILED = f"UPDATE {INBOX} SET status = '{FAILED}', next_attempt_at = NULL WHERE event_id = :event_id"
+
 RETRY_INBOX = f"""
-UPDATE {INBOX} SET status = '{RECEIVED}', error = NULL, processed_at = NULL, updated_at = :now
+UPDATE {INBOX} SET status = '{RECEIVED}', attempts = 0, error = NULL, processed_at = NULL, next_attempt_at = NULL,
+    updated_at = :now
 WHERE event_id = :event_id AND status IN ('{FAILED}', '{SKIPPED}')
 RETURNING event_id
 """
 
+# Подбор: `received`, не взятые очередью дольше `before`, и повторы, чей срок настал. Отметка updated_at (и сброс
+# next_attempt_at) — следующий подбор не ставит ту же запись снова, пока очередь её не обработала.
 STUCK_INBOX = f"""
-SELECT event_id FROM {INBOX} WHERE status = '{RECEIVED}' AND updated_at < :before ORDER BY received_at LIMIT :limit
+UPDATE {INBOX} SET updated_at = :now, next_attempt_at = NULL
+WHERE event_id IN (
+    SELECT event_id FROM {INBOX}
+    WHERE status = '{RECEIVED}'
+      AND ((next_attempt_at IS NULL AND updated_at < :before) OR next_attempt_at <= :now)
+    ORDER BY received_at
+    LIMIT :limit
+    FOR UPDATE SKIP LOCKED
+)
+RETURNING event_id
 """
 
 LIST_INBOX = f"""
@@ -228,7 +248,7 @@ GROUP BY d.subscriber, d.status
 METRICS_STATE = f"SELECT subscriber, consecutive_failures, paused_until FROM {STATE}"
 
 METRICS_INBOX = f"""
-SELECT status, count(*) AS n, min(received_at) AS oldest FROM {INBOX}
+SELECT status, count(*) AS n, count(next_attempt_at) AS retrying, min(received_at) AS oldest FROM {INBOX}
 WHERE status IN ('{RECEIVED}', '{FAILED}') GROUP BY status
 """
 
