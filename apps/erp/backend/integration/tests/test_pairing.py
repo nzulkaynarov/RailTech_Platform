@@ -276,8 +276,8 @@ def test_rotation_retry_with_the_same_values_is_idempotent(paired):
 
 def test_rotation_with_the_current_token_value_is_not_a_rotation(paired):
     response = rotate(NEW_CRM_TOKEN, crm=NEW_CRM_TOKEN, erp=ROTATED_ERP_TOKEN, webhook=ROTATED_SECRET)
-    assert response.status_code == 422
-    assert health(NEW_CRM_TOKEN) == 200
+    assert response.status_code == 422 and response.json() == {"detail": "PAIRING_PARTIAL_REPEAT"}
+    assert health(NEW_CRM_TOKEN) == 200 and health(ROTATED_CRM_TOKEN) == 401
 
 
 @pytest.mark.parametrize(
@@ -290,9 +290,92 @@ def test_rotation_with_the_current_token_value_is_not_a_rotation(paired):
 )
 def test_rotation_with_an_unchanged_secret_is_422(paired, kwargs):
     values = {"crm": ROTATED_CRM_TOKEN, "erp": ROTATED_ERP_TOKEN, "webhook": ROTATED_SECRET, **kwargs}
-    assert rotate(NEW_CRM_TOKEN, **values).status_code == 422
+    response = rotate(NEW_CRM_TOKEN, **values)
+    assert response.status_code == 422 and response.json() == {"detail": "PAIRING_PARTIAL_REPEAT"}
     assert health(ROTATED_CRM_TOKEN) == 401, "отказ ничего не применил"
     assert credentials.webhook_secret() == NEW_SECRET
+
+
+# ── Контракт шва 0.6.1: полностью новая тройка, точный повтор или PAIRING_PARTIAL_REPEAT ─────────────────
+
+
+def _stored_values():
+    return (
+        credentials.stored_crm_token(),
+        credentials.erp_to_crm_token(),
+        credentials.webhook_secret(),
+    )
+
+
+def test_rotation_with_a_fully_new_triple_is_applied(paired):
+    response = rotate(NEW_CRM_TOKEN, crm=ROTATED_CRM_TOKEN, erp=ROTATED_ERP_TOKEN, webhook=ROTATED_SECRET)
+    assert response.status_code == 200
+    assert _stored_values() == (ROTATED_CRM_TOKEN, ROTATED_ERP_TOKEN, ROTATED_SECRET)
+    # И следующая полностью новая тройка — под новым токеном — тоже применяется.
+    third = rotate(ROTATED_CRM_TOKEN, crm="g" * 40, erp="h" * 40, webhook="i" * 40)
+    assert third.status_code == 200
+    assert _stored_values() == ("g" * 40, "h" * 40, "i" * 40)
+
+
+def test_exact_repeat_of_the_last_rotation_is_200_and_changes_nothing(paired):
+    first = rotate(NEW_CRM_TOKEN, crm=ROTATED_CRM_TOKEN, erp=ROTATED_ERP_TOKEN, webhook=ROTATED_SECRET)
+    before = list(
+        ServiceCredential.objects.order_by("slot").values_list("slot", "ciphertext", "rotated_at", "expires_at")
+    )
+    # Старым токеном (CRM не получила ответ) и новым (CRM уже перешла на него): один и тот же результат.
+    for caller in (NEW_CRM_TOKEN, ROTATED_CRM_TOKEN):
+        again = rotate(caller, crm=ROTATED_CRM_TOKEN, erp=ROTATED_ERP_TOKEN, webhook=ROTATED_SECRET)
+        assert again.status_code == 200, again.content
+        assert again.json() == first.json(), "тот же rotated_at и срок прежнего токена"
+    after = list(
+        ServiceCredential.objects.order_by("slot").values_list("slot", "ciphertext", "rotated_at", "expires_at")
+    )
+    assert after == before, "повтор ничего не переписал и не продлил срок"
+
+
+@pytest.mark.parametrize(
+    "same",
+    [
+        {"crm"},
+        {"erp"},
+        {"webhook"},
+        {"crm", "erp"},
+        {"crm", "webhook"},
+        {"erp", "webhook"},
+    ],
+    ids=lambda same: "+".join(sorted(same)),
+)
+def test_partial_repeat_of_the_last_rotation_is_422(paired, same):
+    assert (
+        rotate(NEW_CRM_TOKEN, crm=ROTATED_CRM_TOKEN, erp=ROTATED_ERP_TOKEN, webhook=ROTATED_SECRET).status_code == 200
+    )
+    stored = _stored_values()
+    fresh = {"crm": "g" * 40, "erp": "h" * 40, "webhook": "i" * 40}
+    repeated = {"crm": ROTATED_CRM_TOKEN, "erp": ROTATED_ERP_TOKEN, "webhook": ROTATED_SECRET}
+    values = {key: repeated[key] if key in same else fresh[key] for key in fresh}
+    # И прежним токеном (CRM не знает, дошёл ли первый вызов), и новым.
+    for caller in (NEW_CRM_TOKEN, ROTATED_CRM_TOKEN):
+        response = rotate(caller, **values)
+        assert response.status_code == 422 and response.json() == {"detail": "PAIRING_PARTIAL_REPEAT"}
+        assert _stored_values() == stored, "частичный повтор ничего не применил"
+
+
+@pytest.mark.parametrize("same", [{"crm"}, {"erp"}, {"webhook"}, {"crm", "erp"}, {"erp", "webhook"}])
+def test_partial_match_with_the_accepted_values_is_422(paired, same):
+    """Частичное совпадение с действующими значениями — и до первой ротации (после приёма кода)."""
+    fresh = {"crm": ROTATED_CRM_TOKEN, "erp": ROTATED_ERP_TOKEN, "webhook": ROTATED_SECRET}
+    current = {"crm": NEW_CRM_TOKEN, "erp": NEW_ERP_TOKEN, "webhook": NEW_SECRET}
+    values = {key: current[key] if key in same else fresh[key] for key in fresh}
+    response = rotate(NEW_CRM_TOKEN, **values)
+    assert response.status_code == 422 and response.json() == {"detail": "PAIRING_PARTIAL_REPEAT"}
+    assert _stored_values() == (NEW_CRM_TOKEN, NEW_ERP_TOKEN, NEW_SECRET)
+    assert not ServiceCredential.objects.filter(slot=CredentialSlot.CRM_TO_ERP_PREVIOUS).exists()
+
+
+def test_the_whole_current_triple_without_a_rotation_is_not_a_rotation(paired):
+    response = rotate(NEW_CRM_TOKEN, crm=NEW_CRM_TOKEN, erp=NEW_ERP_TOKEN, webhook=NEW_SECRET)
+    assert response.status_code == 422 and response.json() == {"detail": "VALIDATION_ERROR"}
+    assert not ServiceCredential.objects.filter(slot=CredentialSlot.CRM_TO_ERP_PREVIOUS).exists()
 
 
 def test_rotation_with_the_previous_token_value_is_422(paired):
@@ -301,14 +384,14 @@ def test_rotation_with_the_previous_token_value_is_422(paired):
     )
     # Новое значение токена совпало с переходным прежним: оно ещё действует, ротация другой тройкой — 422.
     response = rotate(ROTATED_CRM_TOKEN, crm=NEW_CRM_TOKEN, erp="j" * 40, webhook="k" * 40)
-    assert response.status_code == 422
+    assert response.status_code == 422 and response.json() == {"detail": "PAIRING_PARTIAL_REPEAT"}
     assert credentials.webhook_secret() == ROTATED_SECRET
 
 
 def test_rotation_from_env_with_an_env_secret_is_422(settings):
     settings.ERP_WEBHOOK_SECRET = "env-webhook-secret-" + "z" * 40  # длинный: иначе 422 от формата, не от проверки
     response = rotate(ENV_TOKEN, crm=ROTATED_CRM_TOKEN, erp=ROTATED_ERP_TOKEN, webhook=settings.ERP_WEBHOOK_SECRET)
-    assert response.status_code == 422
+    assert response.status_code == 422 and response.json() == {"detail": "PAIRING_PARTIAL_REPEAT"}
     assert not ServiceCredential.objects.exists()
     assert rotate(ENV_TOKEN, crm=ROTATED_CRM_TOKEN, erp=ROTATED_ERP_TOKEN, webhook=ROTATED_SECRET).status_code == 200
 

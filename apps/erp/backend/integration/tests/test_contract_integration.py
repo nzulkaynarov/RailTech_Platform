@@ -529,6 +529,9 @@ def exercise_pairing(hit, anonymous, out):
         hit("POST", rotate, rotate, 401, api=anonymous, body=ROTATED_SECRETS, key=False)
         hit("POST", rotate, rotate, 422, api=current, body={"webhook_secret": "short"}, key=False)
         hit("POST", rotate, rotate, 200, api=current, body=ROTATED_SECRETS, key=False)
+        # 0.6.1: тройка, частично совпавшая с действующей (токен ERP→CRM тот же), — 422 PAIRING_PARTIAL_REPEAT.
+        partial = {**ROTATED_SECRETS, "crm_to_erp_token": "guard-rotated-again-" + "g" * 32}
+        hit("POST", rotate, rotate, 422, api=current, body=partial, key=False)
         rates["integration"] = "1/minute"
         hit("POST", rotate, rotate, 429, api=current, body=ROTATED_SECRETS, key=False)  # прежний токен ещё действует
     finally:
@@ -626,7 +629,7 @@ def test_error_codes_are_the_documented_ones(exercised):
         }
     )
     assert codes[404] == {"NOT_FOUND"}
-    assert codes[422] == {"VALIDATION_ERROR"}
+    assert codes[422] == {"VALIDATION_ERROR", "PAIRING_PARTIAL_REPEAT"}  # 0.6.1: частичный повтор ротации
     assert codes[409] <= {"INN_CONFLICT", "EMAIL_CONFLICT", "BOOTSTRAP_CLOSED", "NOT_SWITCHABLE"} and codes[409]
 
 

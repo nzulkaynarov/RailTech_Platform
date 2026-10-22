@@ -191,15 +191,27 @@ def accept(raw_code: str, *, crm_to_erp_token: str, erp_to_crm_token: str, webho
     return Accepted(paired_at=timezone.now())
 
 
-def _check_differs_from_effective(crm_to_erp: str, erp_to_crm: str, webhook: str) -> None:
-    """Новая тройка не повторяет ни одного действовавшего значения (токены CRM→ERP — и переходный прежний, и из `.env`;
-    токен ERP→CRM; секрет вебхуков): «обновить» ключ тем же значением — не ротация. Повтор УЖЕ применённой тройки
-    сюда не доходит — он распознан раньше и идемпотентен."""
-    if any(credentials.same_secret(crm_to_erp, token) for token in credentials.active_crm_tokens() if token):
-        raise IntegrationValidationError()
+def _effective_matches(crm_to_erp: str, erp_to_crm: str, webhook: str) -> int:
+    """Сколько значений новой тройки совпадает с действовавшими: токены CRM→ERP — и переходный прежний, и из `.env`;
+    токен ERP→CRM; секрет вебхуков."""
+    matches = int(any(credentials.same_secret(crm_to_erp, token) for token in credentials.active_crm_tokens() if token))
     for new, effective in ((erp_to_crm, credentials.erp_to_crm_token()), (webhook, credentials.webhook_secret())):
-        if effective and credentials.same_secret(new, effective):
-            raise IntegrationValidationError()
+        matches += int(bool(effective) and credentials.same_secret(new, effective))
+    return matches
+
+
+def _is_repeat_of_last_rotation(
+    rows: dict[str, ServiceCredential], crm_to_erp: str, erp_to_crm: str, webhook: str
+) -> bool:
+    """Тройка целиком равна той, что применила последняя ротация (есть строка прежнего токена — ротация была)."""
+    stored = credentials.stored_crm_token(rows)
+    return (
+        stored is not None
+        and CredentialSlot.CRM_TO_ERP_PREVIOUS in rows
+        and credentials.same_secret(crm_to_erp, stored)
+        and credentials.same_secret(erp_to_crm, credentials.erp_to_crm_token())
+        and credentials.same_secret(webhook, credentials.webhook_secret())
+    )
 
 
 def rotate(
@@ -212,29 +224,30 @@ def rotate(
 ) -> Rotated:
     """Ротация под действующим токеном: новая тройка, прежний токен CRM→ERP живёт ещё `rotation_grace_seconds`.
 
-    Повтор той же тройки (CRM не получила ответ и зовёт снова — уже со старым токеном, он ещё действует) — тот же
-    результат, переходный срок не продлевается. Новая тройка, которая совпадает с любым действовавшим значением
-    (до первого применения), — 422. Токен из `.env` (сопряжения не было) тоже годится как «старый».
+    Контракт шва 0.6.1: принимается либо полностью новая тройка, либо точный повтор последней применённой (CRM не
+    получила ответ и зовёт снова — уже со старым токеном, он ещё действует): тот же результат, ничего не переписывается,
+    переходный срок не продлевается. Частичное совпадение с действующими значениями (одно или два значения из трёх) —
+    422 `PAIRING_PARTIAL_REPEAT`, ничего не применяется. Тройка, целиком равная действующей без ротации, — не ротация
+    (422 `VALIDATION_ERROR`). Токен из `.env` (сопряжения не было) тоже годится как «старый».
     """
     _check_secrets(crm_to_erp_token, erp_to_crm_token, webhook_secret)
     now = now or timezone.now()
-    if credentials.same_secret(crm_to_erp_token, current_token):
-        raise IntegrationValidationError()  # «новый» токен равен тому, под которым вызвана ротация
     with transaction.atomic():
         rows = {row.slot: row for row in ServiceCredential.objects.select_for_update().all()}
+        if _is_repeat_of_last_rotation(rows, crm_to_erp_token, erp_to_crm_token, webhook_secret):
+            current_row = rows[CredentialSlot.CRM_TO_ERP]
+            return Rotated(
+                rotated_at=current_row.rotated_at or now,
+                previous_token_valid_until=rows[CredentialSlot.CRM_TO_ERP_PREVIOUS].expires_at or now,
+            )
+        matches = _effective_matches(crm_to_erp_token, erp_to_crm_token, webhook_secret)
+        if matches == 3:
+            raise IntegrationValidationError()  # вся тройка действует, но это не повтор ротации
+        if matches:
+            raise IntegrationValidationError("PAIRING_PARTIAL_REPEAT")
         stored_current = credentials.stored_crm_token(rows)
-        if stored_current is not None and credentials.same_secret(crm_to_erp_token, stored_current):
-            previous_row = rows.get(CredentialSlot.CRM_TO_ERP_PREVIOUS)
-            previous = credentials.stored_previous_token(rows)
-            if previous is not None and credentials.same_secret(current_token, previous) and previous_row is not None:
-                # Повтор уже применённой ротации.
-                _put(CredentialSlot.ERP_TO_CRM, erp_to_crm_token)
-                _put(CredentialSlot.WEBHOOK_SECRET, webhook_secret)
-                return Rotated(rotated_at=now, previous_token_valid_until=previous_row.expires_at)
-            raise IntegrationValidationError()  # новый токен уже действует: менять нечего
         if stored_current is not None and not credentials.same_secret(current_token, stored_current):
             raise _unauthorized()
-        _check_differs_from_effective(crm_to_erp_token, erp_to_crm_token, webhook_secret)
         valid_until = now + timedelta(seconds=rotation_grace_seconds())
         _put(CredentialSlot.CRM_TO_ERP_PREVIOUS, current_token, expires_at=valid_until)
         _put(CredentialSlot.CRM_TO_ERP, crm_to_erp_token, rotated_at=now)
