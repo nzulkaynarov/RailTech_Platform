@@ -1,5 +1,6 @@
-# GEMINI.md — контекст для агентов Gemini CLI
+# GEMINI.md — указатель для агентов Gemini CLI
 
-Правила проекта едины для всех агентов и живут в `CLAUDE.md` (корень и `apps/<приложение>/CLAUDE.md`).
-Прочитай сначала `CLAUDE.md` этой папки, затем `docs/ORCHESTRATOR.md` и `docs/HANDOFF.md`, затем `CLAUDE.md`
-приложения, в котором работаешь. Этот файл — только указатель, правил в нём нет.
+Правила проекта едины для всех агентов: прочитай [`CLAUDE.md`](CLAUDE.md) этой папки (карта монорепо и правило владельца о
+среде, тестах и CI), затем [`docs/ORCHESTRATOR.md`](docs/ORCHESTRATOR.md) и [`docs/HANDOFF.md`](docs/HANDOFF.md), затем
+`docs/systems/<система>/CONVENTIONS.md` своей зоны. Вся документация — в `docs/` ([`docs/README.md`](docs/README.md)).
+Этот файл — только указатель, правил в нём нет.

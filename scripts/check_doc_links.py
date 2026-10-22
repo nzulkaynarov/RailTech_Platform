@@ -76,6 +76,8 @@ def main() -> int:
         if path.startswith(HISTORY) or path.startswith("docs/PROGRESS.md") or path == "scripts/check_doc_links.py":
             continue
         for rx, hint in STALE:
+            if "ORCHESTRATOR" in rx.pattern and os.path.dirname(path) == "docs":
+                continue  # рядом с docs/ORCHESTRATOR.md короткое имя однозначно
             for m in rx.finditer(text):
                 errors.append(f"{path}:{lineno(m.start())}: устаревший путь «{m.group(0)}» — {hint}")
         # runbook волны называет файлы, которые создадут её задачи, — их наличие не проверяется

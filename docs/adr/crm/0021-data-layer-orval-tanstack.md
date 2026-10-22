@@ -1,4 +1,4 @@
-# 0021. Единый слой данных фронта — хуки TanStack Query из orval; Refine — оболочка
+# ADR CRM-0021. Единый слой данных фронта — хуки TanStack Query из orval; Refine — оболочка
 
 - Статус: accepted (2026-10-12, владелец: «по твоим рекомендациям, приступай» по `docs/audits/crm/2026-10-12-refine-antd-capabilities.md`)
 - Дата: 2026-10-12

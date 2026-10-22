@@ -1,6 +1,12 @@
-# Architecture Decision Records
+# ADR CRM — архитектурные решения CRM
+Статус: действует · Владелец: архитектор · Обновлено: 2026-10-23
 
-Формат — MADR, шаблон `0000-template.md`, процесс — docs/systems/crm/CONVENTIONS.md §5 и скилл `.claude/skills/adr`.
+Решения уровня CRM (серия началась до монорепозитория). Обозначение — **«ADR CRM-NNNN»**, чтобы не путать с общей серией
+ансамбля `docs/adr/` («ADR-NNNN»: номера 0001…0024 пересекаются). В коде CRM, написанном до 2026-10-23, ссылка «ADR-NNNN» без
+префикса означает ADR CRM-NNNN, кроме явных ссылок на решения ансамбля (ADR-0011 «Платформа», ADR-0012 «роли как данные»,
+ADR-0013…0019 стратегии). Новые решения, которые касаются не только CRM, пишутся в общую серию.
+
+Формат — MADR, шаблон `0000-template.md`, процесс — docs/systems/crm/CONVENTIONS.md §5 и скилл `apps/crm/.claude/skills/adr`.
 Статусы: `proposed` → `accepted (дата)` / `rejected` / `superseded by NNNN`. `accepted` ставит человек.
 
 | ADR | Решение | Статус | Фаза |

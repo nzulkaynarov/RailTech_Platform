@@ -1,4 +1,4 @@
-# 0011. docling как сервис docling-serve; MCP-серверы на официальном SDK (`MCPServer`)
+# ADR CRM-0011. docling как сервис docling-serve; MCP-серверы на официальном SDK (`MCPServer`)
 
 - Статус: accepted (2026-10-08, решение агента по поручению владельца)
 - Дата: 2026-10-08

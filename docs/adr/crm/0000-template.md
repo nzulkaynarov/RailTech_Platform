@@ -1,4 +1,4 @@
-# NNNN. Заголовок решения в повелительном наклонении
+# ADR CRM-NNNN. Заголовок решения в повелительном наклонении
 
 - Статус: proposed <!-- proposed | accepted (YYYY-MM-DD) | rejected | superseded by NNNN -->
 - Дата: YYYY-MM-DD

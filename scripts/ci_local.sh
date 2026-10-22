@@ -24,7 +24,7 @@ usage() {
   scripts/ci_local.sh --quick              без crm-integration и crm-build (быстрый гейт)
 
 Задания:
-  gitleaks          секреты в истории текущей ветки (.gitleaks.toml, legacy/ в allowlist)
+  gitleaks          секреты в истории текущей ветки (.gitleaks.toml, legacy/ в allowlist) и ссылки документации
   crm               make check-crm (ruff, mypy, eslint, prettier, tsc, unit) + OpenAPI CRM без диффа
   contracts         make contracts + чистый diff packages/contracts/generated
   tokens            make -C packages/ui-tokens check
@@ -71,6 +71,7 @@ mkdir -p "$LOGS"
 stage_gitleaks() {
   docker run --rm -v "$ROOT:/repo" -w /repo "$GITLEAKS_IMAGE" \
     git --redact --config .gitleaks.toml --log-opts=HEAD .
+  (cd "$ROOT" && scripts/check-doc-links.sh)   # как шаг задания gitleaks в ci.yml (DOCS-1)
 }
 
 stage_crm() {

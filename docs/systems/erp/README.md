@@ -1,8 +1,10 @@
-# apps/erp — ERP (бэк-офис)
+# ERP (бэк-офис) — `apps/erp`
+Статус: действует · Владелец: лид · Обновлено: 2026-10-23
 
-Django · DRF · Celery · Channels · React + shadcn/Tailwind. **M1-ERP-01 (2026-10-13):** код скопирован из
-`legacy/b2b` как есть (915 файлов бэкенда, 547 фронтенда); перестройка — задачи M1-ERP-02…10 (`docs/ORCHESTRATOR.md`).
-Конвенции агента ERP — `docs/systems/erp/CONVENTIONS.md` рядом. Состав приложений — `docs/history/ARCHITECTURE.md` §4, карта переезда — `docs/history/MIGRATION-MAP.md`.
+Домен бэк-офиса: каталог, расчёт, КП, договор, счёт, акт, оплаты, исполнение, склад, закупки; портальный API для Cabinet и
+интеграционный API для CRM. Django · DRF · Celery · Channels; фронтенд React + shadcn/Tailwind заморожен и удаляется на этапе C2.
+Выделена из B2B в M1 (история — тег `b2b-final`). Правила кода — [`CONVENTIONS.md`](CONVENTIONS.md); runbook'и —
+[`docs/runbooks/erp/`](../../runbooks/erp/README.md); границы домена — стратегия 2026-10-23 §3.3, ADR-0015.
 
 ## Команды
 

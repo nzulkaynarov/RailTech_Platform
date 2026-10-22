@@ -12,7 +12,7 @@
 этот runbook целиком, docs/systems/platform/CONVENTIONS.md, docs/architecture/platform-bff.md §6, docs/architecture/integration-map.md §4, docs/architecture/CONTRACTS.md §8,
 packages/contracts/platform-rbac.yaml (v1), packages/contracts/openapi/platform-bff.yaml (0.2.4), docs/systems/crm/CONVENTIONS.md.
 Порядок: R-1 → R-2 → R-3 (§2). Исполнители — субагенты, worktree .claude/worktrees/<задача> от свежего origin/main, зависимости ставишь ты;
-R-1 и R-3 — model "sonnet", R-2 — model "opus" (меняет контракт на обе стороны). Преамбула исполнителя — docs/history/runbooks/wave7-platform-p0.md §3
+R-1 и R-3 — model "sonnet", R-2 — model "opus" (меняет контракт на обе стороны). Преамбула исполнителя — docs/ORCHESTRATOR.md §4.2 (прежде — wave7 §3)
 с подставленными значениями; исключение для R-2: контракт (platform-rbac.yaml v2, platform-bff.yaml 0.3.0) он правит сам по §3.2 этого runbook'а.
 Ревью — свежий субагент ≠ исполнитель, по «готово, когда»; экраны — ещё по docs/architecture/platform-frontend.md §10. Перед автослиянием — merge
 origin/main, повтор проверок, одна голова Alembic CRM; затем gh pr merge --auto --merge <n>. CI не опрашиваешь, логи CI не читаешь; перед шагом —

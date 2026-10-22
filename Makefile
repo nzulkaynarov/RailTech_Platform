@@ -1,4 +1,4 @@
-# RailTech Platform — корневой Makefile ансамбля (CLAUDE.md, ORCHESTRATOR §4, §7).
+# RailTech Platform — корневой Makefile ансамбля (CLAUDE.md, docs/ORCHESTRATOR.md §4, §7).
 # Цели ансамбля делегируют в Makefile приложений: конвенции и команды живут у приложений.
 # Директория legacy/b2b удалена по плану M2-INF-01; исходная история сохранена в теге b2b-final.
 
@@ -18,7 +18,11 @@ help: ## Список целей
 # --- Проверки --------------------------------------------------------------------
 
 .PHONY: check
-check: check-crm check-erp check-cabinet check-platform ## Проверки всех приложений (lint + typecheck + unit)
+check: docs-links check-crm check-erp check-cabinet check-platform ## Проверки всех приложений (lint + typecheck + unit) и ссылок документации
+
+.PHONY: docs-links
+docs-links: ## Ссылки на документацию целы и ведут в docs/ (scripts/check-doc-links.sh, ORCHESTRATOR §3 п. 17)
+	scripts/check-doc-links.sh
 
 .PHONY: check-crm
 check-crm: ## CRM: ruff, mypy, eslint, tsc, pytest, vitest (apps/crm/Makefile)

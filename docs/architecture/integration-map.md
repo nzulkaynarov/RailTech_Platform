@@ -1,8 +1,16 @@
-# 04. Карта интеграции: экраны → BFF → CRM и ERP
+# Карта интеграции: экраны → BFF → домены (CRM, EDS, ERP)
+Статус: действует · Владелец: архитектор · Обновлено: 2026-10-23
 
 Версия 1.0 · 2026-10-22 · Сверено с `main @ fb3a3928`: CRM — `apps/crm/docs/api/openapi.json` (109 путей), ERP —
 `packages/contracts/openapi/erp-internal.yaml` (251 путь), шов — `erp-integration.yaml` 0.5.0, портал —
 `erp-portal.yaml` 0.3.0.
+
+> **Поправки стратегии 2026-10-23 (действуют поверх текста ниже).** Сущности EDS — письма, резолюции, служебные записки,
+> маршруты согласования и реестр документов — живут в **сервисе EDS** (ADR-0015), а не в приложении `eds` внутри ERP:
+> разрывы ERP-01 и ERP-05 стали **EDS-01** и **EDS-02** (§7), одобрение КП директором — маршрут согласования EDS
+> (`approval.requested/decided`, **EDS-03**). ERP-08 (чаты) из ERP уходит: по ADR-0015 чаты — домен коммуникаций CRM,
+> окончательно — на этапе D. ERP-10 (события для BFF) — шина `rt_bus` (ADR-0014, этап B), не Redis Streams. Колонка
+> «Фаза» (P2–P4) читается как этапы C–D стратегии; перенаправления §6 — этап C2 (старые фронты удаляются).
 
 Обозначения: **✓** — операция есть; **Δ** — нужна доработка бэкенда (номер разрыва из §7); BFF-эндпоинты
 описываются контрактом `packages/contracts/openapi/platform-bff.yaml` (создаётся в задаче PLT-02).
@@ -19,14 +27,14 @@
 | `GET /me` (имя, роли Платформы, язык, модули) | `GET /me`, `GET /me/permissions` | — | Δ CRM-01 (`platform_roles`) |
 | `GET /search?q=` | `GET /leads?q=`, `GET /clients?q=` | `GET /crm/analytics/search-documents/`; сделки по номеру и названию — **нет** (`DealViewSet` без `search_fields`) | частично; сделки — Δ ERP-09, чаты — Δ ERP-08 |
 | `GET /notifications`, `POST /notifications/read-all`, `POST /notifications/{id}/read` | Δ CRM-04 (уведомления сотрудникам из CRM) | `GET /notifications/`, `PATCH /notifications/mark_all_read/`, `PATCH /notifications/{id}/mark_read/` | ✓ ERP, Δ CRM |
-| `GET /events` (SSE, фаза P4) | `GET /stream` | Δ ERP-10 (Redis Streams) | Δ |
+| `GET /events` (SSE, фаза P4) | `GET /stream` | Δ ERP-10 (шина `rt_bus`, этап B) | Δ |
 | `GET /menu-counters` (бейджи подменю всех модулей) | `GET /inbox`, `GET /service-requests` | счётчики по §1.2–1.5 | агрегат |
 
 ### 1.2. Dashboard
 
 | BFF | Источники | Статус |
 |---|---|---|
-| `GET /queue` — строки «Что сделать сейчас» для всех ролей сотрудника | MANAGER: CRM `GET /inbox`, `GET /leads?stage=…`, `GET /service-requests`. DIRECTOR: ERP письма без резолюции (Δ ERP-01), `GET /crm/quotes/my-approval-queue/`, служебки на согласовании (Δ ERP-05), проблемные проекты (вывод BFF). SUPPLY, ENGINEER: задания на расчёт по резолюции (Δ ERP-01, ERP-02). ACCOUNTANT: платёжки на подтверждение (Δ ERP-04), `GET /crm/invoices/?status=DRAFT`, договоры к выставлению (Δ ERP-03), служебки к оплате (Δ ERP-05), просроченные счета (Δ ERP-06). ADMIN: тикеты (Δ CRM-05), CRM `GET /admin/external-services` с проблемами | частично ✓ |
+| `GET /queue` — строки «Что сделать сейчас» для всех ролей сотрудника | MANAGER: CRM `GET /inbox`, `GET /leads?stage=…`, `GET /service-requests`. DIRECTOR: письма без резолюции (Δ EDS-01), `GET /crm/quotes/my-approval-queue/`, служебки на согласовании (Δ EDS-02), проблемные проекты (вывод BFF). SUPPLY, ENGINEER: задания на расчёт по резолюции (Δ EDS-01, ERP-02). ACCOUNTANT: платёжки на подтверждение (Δ ERP-04), `GET /crm/invoices/?status=DRAFT`, договоры к выставлению (Δ ERP-03), служебки к оплате (Δ EDS-02), просроченные счета (Δ ERP-06). ADMIN: тикеты (Δ CRM-05), CRM `GET /admin/external-services` с проблемами | частично ✓ |
 | `GET /queue/counters` | то же, только числа | частично ✓ |
 | `GET /activity/today` (вкладка «Сегодня») | ERP `GET /crm/activity-logs/`, `GET /crm/timeline/`; CRM `GET /audit` | ✓ |
 | `GET /summary` (воронка, застрявшие, дебиторка, причины отказов) | CRM `GET /dashboard`, `GET /deals/summary`; ERP `GET /crm/analytics/dashboard/`, `GET /crm/analytics/time-to-first-quote/` | ✓ (застрявшие по 7 шагам — вывод BFF) |
@@ -38,7 +46,7 @@
 | Все лиды, вкладки и фильтры | `GET /leads` | `GET /leads` | — | ✓; статусы Платформы — §3.1, Δ CRM-02 для «Просит КП» |
 | Карточка лида в боковом окне | `GET /leads/{L-NNNN}` | `GET /leads/{id}`, `/messages`, `/notes`, `/decisions` | — | ✓ |
 | Забрать, Ответить, Вернуть боту, Отказ | `POST /leads/{no}/take` и т. п. | `POST /leads/{id}/actions/take|return_to_bot|close_lost`, `POST /leads/{id}/messages` | — | ✓ |
-| **Создать заявку** | `POST /leads/{no}/request {company{name,inn}, contact{…channels}, summary, letter_file?, urgency}` | `POST /leads/{id}/actions/make_customer` → передача в ERP (`POST /clients/handoff` шва) | handoff создаёт компанию, контакты, `Deal`; **плюс** письмо ВХ, чат проекта, `process = v3`, номер ЗВ | Δ CRM-03, Δ ERP-01, ERP-07, ERP-09, контракт шва |
+| **Создать заявку** | `POST /leads/{no}/request {company{name,inn}, contact{…channels}, summary, letter_file?, urgency}` | `POST /leads/{id}/actions/make_customer` → передача в ERP (`POST /clients/handoff` шва) | handoff создаёт компанию, контакты, `Deal`; **плюс** письмо ВХ, чат проекта, `process = v3`, номер ЗВ | Δ CRM-03, Δ EDS-01, ERP-07, ERP-09, контракт шва |
 | Все сообщения (передачи от бота с запиской, SLA) | `GET /inbox` | `GET /inbox`, `GET /leads/{id}/decisions` | — | ✓ (записка handoff — Δ CRM-06) |
 | Все клиенты, карточка 360° | `GET /clients`, `GET /clients/{id}` | `GET /clients`, `/clients/{id}`, `/contacts`, `/erp-receivables`, `/documents` | шов: `GET /companies/{id}/summary`, `/companies/{id}/deals`, `/deals/{id}/documents` | ✓ |
 | Новая заявка для клиента | `POST /clients/{id}/request` | `POST /leads/{id}/actions/new_deal` | handoff с `create_request` | Δ CRM-03 |
@@ -50,8 +58,8 @@
 
 | Экран / действие | BFF | ERP (если не указано) | Статус |
 |---|---|---|---|
-| Входящие, карточка письма | `GET /letters`, `GET /letters/{ВХ}` | новое `eds` | Δ ERP-01 |
-| **Утвердить резолюцию** / Вернуть менеджеру / Отклонить | `POST /requests/{ЗВ}/resolution {text, assignees[], due, min_margin}`; `/return`; `/reject {reason}` | новое `eds`; отклонение — `POST /crm/deals/{id}/change-stage/` в `CLOSED_LOST` | Δ ERP-01 |
+| Входящие, карточка письма | `GET /letters`, `GET /letters/{ВХ}` | сервис EDS | Δ EDS-01 |
+| **Утвердить резолюцию** / Вернуть менеджеру / Отклонить | `POST /requests/{ЗВ}/resolution {text, assignees[], due, min_margin}`; `/return`; `/reject {reason}` | сервис EDS; отклонение — `POST /crm/deals/{id}/change-stage/` в `CLOSED_LOST` | Δ EDS-01 |
 | Черновик КП, карточка | `GET /quotes/{КП}` (себестоимость и маржа — только DIRECTOR, SUPPLY) | `GET /crm/quotes/{id}/`, `/approval-preview/`, `/download-pdf/` | ✓ |
 | **Одобрить КП → Исходящие** (каналы) | `POST /quotes/{КП}/approve {channels[]}` | сейчас два шага: `POST /crm/quotes/{id}/approval-act/` + `POST /crm/quotes/{id}/send-to-client/`; нужно атомарно с ИСХ-номером и выбором каналов | Δ ERP-11 |
 | Вернуть на доработку | `POST /quotes/{КП}/return {comment}` | `POST /crm/quotes/{id}/approval-act/` (reject) → `DRAFT`, новая версия | ✓ |
@@ -61,9 +69,9 @@
 | Счета и оплаты, вкладки | `GET /invoices?tab=` | `GET /crm/invoices/`, `GET /crm/payments/` | ✓ (платёжки — Δ ERP-04, просрочка — Δ ERP-06) |
 | **Подтвердить оплату** / Частичная / Запросить платёжку | `POST /invoices/{СЧ}/confirm-payment {amount, date}`; `POST /invoices/{СЧ}/request-payment-doc` | `POST /crm/invoices/{id}/record-payment/` ✓; связь с платёжкой и запрос платёжки — новое | Δ ERP-04 |
 | Акт: выпустить, прикрепить скан, возврат | `POST /acts/{АКТ}/…` | `POST /crm/invoices/{id}/generate-act/`, `/acts/{id}/reissue/`, `/remind/`; загрузка скана сотрудником — новое; событие `act.returned` — FIX-62 | Δ ERP-13 |
-| На согласовании, служебная записка | `GET/POST /memos`, `POST /memos/{СЗ}/decision` | новое `eds` | Δ ERP-05 |
-| Создать документ (служебка, заявление, отчёт, письмо) | `POST /documents {type,…}` | новое `eds`; шаблоны — `GET /crm/document-templates/` | Δ ERP-05 |
-| Все документы | `GET /documents?type=&status=` | `GET /crm/generated-documents/`, КП, договоры, счета, акты + `eds` | агрегат |
+| На согласовании, служебная записка | `GET/POST /memos`, `POST /memos/{СЗ}/decision` | сервис EDS | Δ EDS-02 |
+| Создать документ (служебка, заявление, отчёт, письмо) | `POST /documents {type,…}` | сервис EDS; шаблоны — `GET /crm/document-templates/` | Δ EDS-02 |
+| Все документы | `GET /documents?type=&status=` | `GET /crm/generated-documents/`, КП, договоры, счета, акты + EDS | агрегат |
 
 ### 1.5. ERP
 
@@ -85,7 +93,7 @@
 |---|---|---|---|---|
 | Чаты проектов и команды, сообщения | `GET /chats`, `GET/POST /chats/{id}/messages` | — | новое `chats` | Δ ERP-08 |
 | Внешний чат клиента (Telegram, почта) | `GET /chats/external`, `POST /chats/external/{lead}/messages {as: SELF|BOT|NOTE}` | `GET/POST /leads/{id}/messages`, `POST /leads/{id}/actions/note`, `POST /leads/{id}/assist` | — | ✓ (`as: BOT` — Δ CRM-07) |
-| Сделать служебку из сообщения | `POST /chats/{id}/messages/{msg}/memo` | — | новое `eds` + `chats` | Δ ERP-05, ERP-08 |
+| Сделать служебку из сообщения | `POST /chats/{id}/messages/{msg}/memo` | — | сервис EDS + чаты | Δ EDS-02, ERP-08 |
 | Контакты | `GET /contacts` | `GET /team`, `GET /clients/{id}/contacts` | — | ✓ |
 | Ролевая матрица | `GET /admin/roles` | — (матрица — файл `platform-rbac.yaml`) | — | ✓, редактирование — вопрос 8 |
 | Оргструктура, карточка сотрудника, пригласить | `GET/PUT /admin/users/{id}`, `POST /admin/users/invite` | `GET/POST/PATCH /users`, `/users/{id}/invite` (провижининг в ERP с `role_codes` — FIX-63) | провижининг ✓ | Δ CRM-01 |
@@ -133,7 +141,7 @@
 | Договор | `DRAFT`, `PENDING_CLIENT`, `PENDING_MANAGER`, `SIGNED`, `CANCELLED` | Проект → Согласован клиентом → Выставлен у оператора → Подписан (скан) / Отклонён — из нового журнала договора (Δ ERP-03); старые договоры: `SIGNED` → «Подписан», остальное → «Проект» |
 | Счёт | `DRAFT`, `ISSUED`, `PARTIAL`, `PAID`, `OVERDUE`, `CANCELLED` | Выставлен ← ISSUED; Платёжка получена ← есть неподтверждённая `PaymentConfirmation` (Δ ERP-04); Частично оплачен ← PARTIAL; Оплачен ← PAID; Просрочен ← OVERDUE (Δ ERP-06 — сейчас не ставится) |
 | Акт | `DRAFT`, `ISSUED`, `SIGNED`, `CANCELLED` | Проект ← DRAFT; Выпущен ← ISSUED; Подписан (скан) ← SIGNED; Возвращён с причиной ← DRAFT + `rejection_reason` (FIX-62) |
-| Входящее письмо, служебная записка | — | новые статусы SPEC-v3 §2.4 в модели `eds` |
+| Входящее письмо, служебная записка | — | новые статусы SPEC-v3 §2.4 в сервисе EDS |
 
 ### 3.3. Для клиента
 
@@ -196,23 +204,34 @@
 
 | ID | Что | Фаза |
 |---|---|---|
-| ERP-01 | приложение `eds`: `Letter`, `Resolution` (исполнители, срок, мин. маржа), статусы письма; эндпоинты списка, карточки, резолюции, возврата, отклонения; задание исполнителям; события `letter.registered`, `letter.resolved` | P2 |
 | ERP-02 | `LineApproval` (строка, роль, сотрудник, время, заметка); правило «расчёт готов только при всех визах» в `submit_for_review` для процесса v3 | P2 |
 | ERP-03 | статусы и журнал договора (Проект → Согласован клиентом → Выставлен у оператора → Подписан (скан) / Отклонён), скан — файл; «подпись кликом» для процесса v3 выключена; автосчёт на предоплату по подписи договора | P3 |
 | ERP-04 | `PaymentConfirmation` (файл, источник CABINET/BOT/MANUAL, сумма, дата, кто подтвердил); связь с `record-payment`; «запросить платёжку» — событие для бота и письмо | P3 |
-| ERP-05 | `ServiceMemo` и решения, маршрут «директор → бухгалтер, если сумма», создание из сообщения чата; документы «Заявление», «Отчёт», «Письмо» как типы `eds` | P3 |
 | ERP-06 | задача по расписанию: `OVERDUE` по сроку, событие `invoice.overdue`; включить `crm.send_payment_reminders` в расписание | P3 |
 | ERP-07 | признак `Deal.process = v3`; запрет переходов в обход резолюции, виз и одобрения для таких заявок в сервисном слое | P2 |
-| ERP-08 | приложение `chats`: чат проекта (создаётся с заявкой, архивируется на «Выполнено»/«Отказ»), командные и личные чаты, сообщения, вложения, системные сообщения о событиях проекта, поиск по тексту | P3 |
 | ERP-09 | `Deal.number` (ЗВ/ПР), типы нумерации ВХ, ИСХ, СЗ; поиск сделки по номеру и названию (`search_fields` у списка сделок) | P2 |
 | ERP-16 | уведомления сотрудника: `unread_count` и признак прочитанного в выдаче (для колокольчика без перебора страниц); лента «Сегодня» для сотрудника — события компании по правам, а не `activity-logs` только администратору | P2 |
 | ERP-17 | часовой пояс компании в API (сейчас BFF берёт `Asia/Tashkent` константой) | P2 |
-| ERP-10 | публикация доменных событий в Redis Streams для BFF | P4 |
+| ERP-10 | публикация доменных событий для BFF — через шину `rt_bus` (ADR-0014; задачи B1–B8 стратегии), не Redis Streams | B |
 | ERP-11 | атомарное «одобрить и отправить» КП: виза директора, ИСХ-номер, каналы (бот, кабинет, почта), одна транзакция | P2 |
 | ERP-12 | «Напомнить клиенту» по КП и напоминание за 2 дня до истечения срока — событие для бота | P3 |
 | ERP-13 | загрузка подписанного скана акта сотрудником; статусы акта SPEC-v3 §2.4 (вместе с FIX-62) | P3 |
 | ERP-14 | склад и закупки (бывшая веха M4): остатки как сумма движений, резерв под проект, заказы поставщикам ЗП, приёмка, отгрузки по строкам, ожидаемые даты; до этого Расчёт показывает наличие из предложений поставщиков | P4 (минимум резерва — P3, вопрос 9) |
 | ERP-15 | бригады и исполнители услуг; файлы номенклатуры и проектов (ТЗ, чертежи, сертификаты) | P4 |
+
+### EDS (сервис `apps/eds`, ADR-0015; создаётся на этапе C1)
+
+| ID | Что | Фаза |
+|---|---|---|
+| EDS-01 (бывш. ERP-01) | сервис EDS: `Letter`, `Resolution` (исполнители, срок, мин. маржа), статусы письма; эндпоинты списка, карточки, резолюции, возврата, отклонения; задание исполнителям; события `letter.registered`, `letter.resolved` | P2 |
+| EDS-02 (бывш. ERP-05) | `ServiceMemo` и решения, маршрут «директор → бухгалтер, если сумма», создание из сообщения чата; документы «Заявление», «Отчёт», «Письмо» как типы документов EDS | P3 |
+| EDS-03 | маршрут согласования КП: ERP публикует `quote.ready_for_approval`, EDS ведёт маршрут и публикует `approval.decided`; ERP применяет решение (вместо своей цепочки виз директора) | C–D |
+
+### Чаты (домен уточняется на этапе D)
+
+| ID | Что | Фаза |
+|---|---|---|
+| ERP-08 | чаты (домен — коммуникации CRM по ADR-0015, окончательно — этап D): чат проекта (создаётся с заявкой, архивируется на «Выполнено»/«Отказ»), командные и личные чаты, сообщения, вложения, системные сообщения о событиях проекта, поиск по тексту | P3 |
 
 ### CRM
 

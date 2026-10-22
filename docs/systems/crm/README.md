@@ -1,31 +1,33 @@
-# RailTech CRM
+# RailTech CRM — `apps/crm`
+Статус: действует · Владелец: лид · Обновлено: 2026-10-23
 
-Внутренняя CRM с ИИ-ассистентом первой линии в Telegram (диалоговый агент + асинхронный квалификатор), единым веб-интерфейсом команды и сервисным режимом для клиентов после сделки.
+Домен фронт-офиса: лиды, клиенты и контакты, каналы и переписка, база знаний, клиентский Telegram-бот (диалоговый агент +
+асинхронный квалификатор, сервисный режим через `erp-mcp`); до этапа F — вход, роли и общие настройки ансамбля
+(идентичность v1). Фронтенд `apps/crm/frontend` заморожен и удаляется на этапе C2 (интерфейс сотрудников — Платформа).
 
-Статус: **Фаза 0 — фундамент** (см. [`docs/PROGRESS.md`](../../history/crm/PROGRESS.md)).
-
-## Карта документов
+## Карта документов CRM
 
 | Документ | Что в нём |
 |---|---|
-| [`docs/systems/crm/BUSINESS.md`](BUSINESS.md) | Зачем проект, пользователи, сценарии C1–C6, критерии успеха |
-| [`docs/systems/crm/SPEC.md`](SPEC.md) | Источник истины по архитектуре (ссылки вида `SPEC §7.1`) |
-| [`docs/history/crm/PLAN.md`](../../history/crm/PLAN.md) | Фазы 0–10, задачи, DoD, гейты |
-| [`docs/systems/crm/CONVENTIONS.md`](CONVENTIONS.md) | Правила работы для Claude Code |
-| [`docs/PROGRESS.md`](../../history/crm/PROGRESS.md) | Текущая фаза и статусы |
-| [`docs/QUESTIONS.md`](../../history/crm/QUESTIONS.md) | Открытые вопросы к человеку |
-| [`docs/adr/crm/`](../../adr/crm/README.md) | Архитектурные решения (MADR) |
-| [`docs/runbooks/crm/`](../../runbooks/crm/README.md) | Эксплуатация |
-| [`docs/api/openapi.json`](../../../apps/crm/docs/api/openapi.json) | Контракт API (генерируется `make openapi`) |
+| [`CONVENTIONS.md`](CONVENTIONS.md) | Правила кода CRM (разделы `§N`, на них ссылается код как `CONVENTIONS.md §N`) |
+| [`SPEC.md`](SPEC.md) | Техническое задание бэкенда CRM: стек, данные, агенты, безопасность (ссылки вида `SPEC §7.1`) |
+| [`BUSINESS.md`](BUSINESS.md) | Бизнес-требования CRM: сценарии C1–C6, жизненный цикл лида, критерии успеха |
+| [`evals-labeling.md`](evals-labeling.md) | Разметка диалогов и перенос в golden-кейсы |
+| [`../../adr/crm/`](../../adr/crm/README.md) | Архитектурные решения CRM (ADR CRM-00NN) |
+| [`../../runbooks/crm/`](../../runbooks/crm/README.md) | Эксплуатация CRM |
+| `apps/crm/docs/api/openapi.json` | OpenAPI CRM (генерируется `make -C apps/crm openapi`, не править) |
+| [`../../history/crm/`](../../history/crm/) | План фаз 0–10 и журналы CRM до монорепозитория (история) |
 
-При противоречиях: `docs/systems/crm/BUSINESS.md` > `docs/systems/crm/SPEC.md` > `docs/history/crm/PLAN.md` > код.
+При противоречиях: `docs/product/SPEC-v3.md` и стратегия > `BUSINESS.md` > `SPEC.md` > код. Процесс и статусы — общие:
+`docs/ORCHESTRATOR.md`, `docs/PROGRESS.md`, `docs/QUESTIONS.md`.
 
-## dev-стенд за 15 минут
+## Отдельный dev-стенд CRM
 
+Обычно CRM поднимается в составе ансамбля (`make up` из корня, `docs/runbooks/stand.md`). Отдельно, из `apps/crm`, — так.
 Нужно: Docker (Engine 24+ / Desktop) с `docker compose` v2, `make`, `curl`, `openssl`. 4 ГБ свободной RAM (8 ГБ — с Langfuse).
 
 ```bash
-git clone <repo> railtech-crm && cd railtech-crm
+cd apps/crm
 scripts/bootstrap_dev.sh      # создаёт .env со случайными секретами, собирает и поднимает стенд, ждёт /ready
 make smoke-dev                # /health и /ready напрямую и через Caddy
 ```

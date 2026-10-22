@@ -1,3 +1,5 @@
+> **История.** Заменено: docs/ORCHESTRATOR.md и docs/strategy/2026-10-23-platform-architecture-strategy.md §4. Не используется для решений.
+
 # RailTech CRM — план реализации
 
 Версия 2.0 · 2026-10-08

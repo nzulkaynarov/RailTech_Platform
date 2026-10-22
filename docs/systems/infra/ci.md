@@ -1,6 +1,9 @@
-# infra/ci
+# CI ансамбля — пояснения к `.github/workflows/ci.yml`
+Статус: действует · Владелец: лид · Обновлено: 2026-10-23
 
 Workflow ансамбля — `.github/workflows/ci.yml` (GitHub читает только корневой `.github/`). Здесь — пояснения.
+
+- **Ссылки на документацию** — `scripts/check-doc-links.sh` в задании gitleaks (DOCS-1): битые ссылки и пути вне `docs/` роняют CI.
 
 - **Матрица по путям** (`dorny/paths-filter`): `apps/crm/**` → job'ы CRM (lint → unit → integration с Postgres 17 и RustFS → build образов), `packages/**` → `make contracts` + чистый diff `generated/`, `infra/**` → `docker compose config` и `caddy validate`, `apps/erp/**` / `apps/cabinet/**` → `make check-erp|cabinet` (до M1/M2 — пропуск внутри цели). `legacy/b2b/**` не входит ни в один фильтр (ORCHESTRATOR §3.11).
 - **gitleaks** — всегда, по истории ветки, с `.gitleaks.toml` (`legacy/` в allowlist).

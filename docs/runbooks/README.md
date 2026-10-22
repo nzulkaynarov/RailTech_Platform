@@ -1,12 +1,18 @@
-# docs/runbooks — эксплуатация ансамбля
+# docs/runbooks — эксплуатация и волны агентов
+Статус: действует · Владелец: лид · Обновлено: 2026-10-23
 
-Runbook'и уровня ансамбля (деплой и откат, бэкапы двух баз, стенд с тремя доменами).
+**Ансамбль**
+- [`stand.md`](stand.md) — локальный стенд `make up`; [`servers.md`](servers.md) — серверы VPS1/VPS2; [`deploy.md`](deploy.md) — деплой и откат прода;
+- [`webhooks.md`](webhooks.md) — вебхуки ERP → CRM: журнал, ручной повтор, сбои приёма, ротация секрета;
+- [`crm-erp-pairing.md`](crm-erp-pairing.md) — сопряжение CRM ↔ ERP; [`log-secrets.md`](log-secrets.md) — что не попадает в логи.
 
-- [`stand.md`](stand.md) — локальный стенд `make up`; [`servers.md`](servers.md) — серверы M5; [`deploy.md`](deploy.md) — деплой и откат прода (M5-INF-01);
-  [`webhooks.md`](webhooks.md) — вебхуки ERP → CRM: журнал, ручной повтор, сбои приёма (FIX-33);
-  [`docs/history/runbooks/wave1-agents.md`](../history/runbooks/wave1-agents.md) — волна 1 исправлений параллельными сессиями Claude Code (worktree, порядок слияния, промпты);
-  [`docs/history/runbooks/wave2-agents.md`](../history/runbooks/wave2-agents.md), [`docs/history/runbooks/wave2b-m5-agents.md`](../history/runbooks/wave2b-m5-agents.md), [`docs/history/runbooks/wave3-4-agents.md`](../history/runbooks/wave3-4-agents.md) — волны 2–4;
-  [`docs/history/runbooks/wave5-agents.md`](../history/runbooks/wave5-agents.md) — волна 5: прогоны глазами M1/M2 на стенде, документы, правила процесса (FIX-50…54).
-У каждого приложения свой комплект эксплуатационных регламентов:
-- **CRM**: [`docs/runbooks/crm/`](crm/) (бот, эскалации, расходы ИИ, деплой, бэкапы)
-- **ERP**: [`docs/runbooks/erp/`](erp/) (dev-стенд, миграции, Celery/AI воркеры, бэкап/восстановление базы и медиа)
+**Системы**
+- **CRM**: [`crm/`](crm/README.md) — бот, эскалации, расходы ИИ, деплой, бэкапы, eval-gate, ротация ключей;
+- **ERP**: [`erp/`](erp/README.md) — dev-стенд, миграции, Celery/AI-воркеры, бэкап и восстановление базы и медиа.
+
+**Волны агентов** (промпт лида, раунды, задачи с «готово, когда»; преамбула исполнителя — `docs/ORCHESTRATOR.md` §4.2)
+- действующие: [`wave9-roles.md`](wave9-roles.md) (роли как данные), [`wave10-stage0.md`](wave10-stage0.md) (этап 0), `wave11-bus-v1.md` (шина v1);
+- закрытые волны 1–8 — [`../history/runbooks/`](../history/runbooks/).
+
+**Отчёты прогонов глазами** — [`m1_qa_02_report.md`](m1_qa_02_report.md), [`m2_qa_01_report.md`](m2_qa_01_report.md),
+[`m2_qa_02_report.md`](m2_qa_02_report.md), [`plt_p1_gate_report.md`](plt_p1_gate_report.md); снимки — `qa/`.

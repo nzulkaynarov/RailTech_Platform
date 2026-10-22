@@ -12,7 +12,7 @@ docs/runbooks/wave10-stage0.md. Код сам не пишешь. Прочита�
 docs/strategy/2026-10-23-platform-architecture-strategy.md (§1.1, §3.7, §7), ADR-0013, ADR-0017, этот runbook целиком,
 docs/research/2026-10-23-architecture/arch-audit-current.md (§1, §3, §7), docs/runbooks/deploy.md, infra/compose/*.yml, infra/caddy/*.
 Исполнители — субагенты model "sonnet", по одному на задачу, не больше трёх одновременно, worktree .claude/worktrees/<задача> от
-свежего origin/main (зависимости ставишь ты). Преамбула исполнителя — docs/history/runbooks/wave7-platform-p0.md §3 с подставленными
+свежего origin/main (зависимости ставишь ты). Преамбула исполнителя — docs/ORCHESTRATOR.md §4.2 (прежде — wave7 §3) с подставленными
 значениями. Ревью — свежий субагент ≠ исполнитель, по «готово, когда». Перед автослиянием — merge origin/main, повтор проверок,
 make deploy-check для задач infra; затем gh pr merge --auto --merge <n>. CI не опрашиваешь, логи CI не читаешь; перед шагом — одна
 проверка своих PR (gh pr view --json state,mergeable,mergeStateStatus,statusCheckRollup). Уборка после слияния — сразу (TaskStop,

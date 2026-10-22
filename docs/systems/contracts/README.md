@@ -1,4 +1,5 @@
-# packages/contracts — контракт CRM ↔ ERP ↔ Cabinet
+# Контракты — `packages/contracts`
+Статус: действует · Владелец: лид · Обновлено: 2026-10-23
 
 Источник истины шва ансамбля (ORCHESTRATOR §3.3: **контракт раньше кода**). Объяснение — `docs/architecture/CONTRACTS.md`;
 здесь — машиночитаемые файлы и генерация клиентов. Версия 0 (M0-INF-02).
@@ -10,7 +11,7 @@
 | `openapi/erp-internal.yaml` | Internal API `/api/v1/*` — **генерируется** из drf-spectacular (срез `/api/v1/` схемы бэкенда, `make -C apps/erp openapi`), руками не правится; дрейф ловит `make -C apps/erp openapi-check` (FIX-40) | ERP SPA (типы строит из `apps/erp/backend/schema.json`, не отсюда); CRM — SSO-обмен (`/auth/sso/*`) |
 | `events.schema.json` | События ERP → CRM (вебхук, HMAC, идемпотентность по `X-Event-Id`) + `examples/events/*.json` | ERP (M3-ERP-02); CRM приёмник (M3-CRM-04) |
 | `mcp-tools.json` | Инструменты `erp-mcp` для агента CRM с контекстом `X-Agent-Context`; схема — `mcp-tools.schema.json` (запрещает идентификаторы клиента в аргументах) | ERP (M3-ERP-03); бот CRM (M3-CRM-07) |
-| `docs/architecture/sso-token.md` | SSO-токен сотрудника: claims, передача, проверка, отзыв | ERP (M3-ERP-04); CRM (M3-CRM-06) |
+| `docs/architecture/sso-token.md` (документ, перенесён в `docs/` — машиночитаемой схемы у токена нет) | SSO-токен сотрудника: claims, передача, проверка, отзыв | ERP (M3-ERP-04); CRM (M3-CRM-06) |
 
 ## Команды
 

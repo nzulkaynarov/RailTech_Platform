@@ -1,3 +1,5 @@
+> **История.** Заменено: docs/strategy/2026-10-23-platform-architecture-strategy.md, docs/product/, docs/architecture/. Не используется для решений.
+
 # Целевая архитектура трёх систем и карта переезда
 
 Дата: 2026-10-13 · Статус: предложение · Опирается на `three-systems-value-and-journeys.md` и
