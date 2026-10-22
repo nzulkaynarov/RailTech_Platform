@@ -28,6 +28,7 @@ if TYPE_CHECKING:
     from app.domain.backoffice import BackofficeMode
     from app.integrations.erp import ErpClient
     from app.integrations.erp_externals import ErpSwitchClient
+    from app.integrations.erp_transport import SharedAsyncClient
     from app.services.ai_spend import AiSpendService
     from app.services.assist import AssistService
     from app.services.auth import AuthService
@@ -116,11 +117,20 @@ class Container:
         )
 
     @cached_property
+    def erp_http(self) -> "SharedAsyncClient":
+        """Один HTTP-клиент на процесс для вызовов CRM → ERP (S0-6); закрывается в `aclose()`."""
+        from app.integrations.erp_transport import SharedAsyncClient
+
+        return SharedAsyncClient()
+
+    @cached_property
     def erp_switch_client(self) -> "ErpSwitchClient":
         """Выключатели сервисов ERP (M3-ERP-06): `PUT /externals/{code}/switch`."""
         from app.integrations.erp_externals import HttpxErpSwitchClient
 
-        return HttpxErpSwitchClient(self.secrets_store, self.settings, self.settings_service)
+        return HttpxErpSwitchClient(
+            self.secrets_store, self.settings, self.settings_service, http=self.erp_http
+        )
 
     @cached_property
     def external_view(self) -> "ExternalServicesView":
@@ -215,7 +225,9 @@ class Container:
         from app.integrations.erp_users import HttpxErpUsersClient
         from app.services.erp_access import ErpAccessService
 
-        client = HttpxErpUsersClient(self.secrets_store, self.settings, self.settings_service)
+        client = HttpxErpUsersClient(
+            self.secrets_store, self.settings, self.settings_service, http=self.erp_http
+        )
         return ErpAccessService(self.session_factory, client)
 
     @cached_property
@@ -362,7 +374,9 @@ class Container:
         """Клиент интеграции ERP (M3-CRM-03): передача клиента (handoff)."""
         from app.integrations.erp import HttpxErpClient
 
-        return HttpxErpClient(self.secrets_store, self.settings, self.settings_service)
+        return HttpxErpClient(
+            self.secrets_store, self.settings, self.settings_service, http=self.erp_http
+        )
 
     @cached_property
     def erp_client_card(self) -> "ErpClientCardService":
@@ -370,7 +384,9 @@ class Container:
         from app.integrations.erp_company import HttpxErpCompanyClient
         from app.services.erp_client_card import ErpClientCardService
 
-        company = HttpxErpCompanyClient(self.secrets_store, self.settings, self.settings_service)
+        company = HttpxErpCompanyClient(
+            self.secrets_store, self.settings, self.settings_service, http=self.erp_http
+        )
         return ErpClientCardService(self.session_factory, company)
 
     @cached_property
@@ -385,7 +401,7 @@ class Container:
             self.settings_service,
             self.secrets_store,
             self.settings,
-            HttpxErpProbe(),
+            HttpxErpProbe(http=self.erp_http),
             lockout=LockoutPolicy(
                 self.settings.login_max_failures, self.settings.login_lockout_minutes
             ),
@@ -402,7 +418,7 @@ class Container:
             self.settings_service,
             self.secrets_store,
             self.settings,
-            HttpxErpPairingClient(),
+            HttpxErpPairingClient(http=self.erp_http),
             self.erp_connector,
         )
 
@@ -516,6 +532,8 @@ class Container:
             await self.sandbox_service.aclose()
         for bot in self._bots.values():
             await bot.session.close()
+        if "erp_http" in self.__dict__:
+            await self.erp_http.aclose()
         if "engine" in self.__dict__:
             await self.engine.dispose()
 

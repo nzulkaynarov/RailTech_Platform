@@ -6,6 +6,7 @@ from typing import Any
 
 import httpx2
 import pytest
+from asgi_correlation_id import correlation_id
 
 from app.agents.erp_mcp import ErpMcpClient, ErpMcpError
 from app.security.erp_agent_context import ErpScope
@@ -54,6 +55,29 @@ async def test_success_returns_unwrapped_result_with_scope_only_from_code() -> N
     seen = claims(fake.contexts[-1])
     assert (seen["crm_client_id"], seen["erp_company_id"], seen["mode"]) == (7, 42, "customer")
     assert seen["exp"] - seen["iat"] <= 60
+
+
+async def test_request_id_of_the_crm_request_goes_with_every_mcp_request() -> None:
+    fake = FakeErpMcp(lambda name, args: tool_ok(DEALS))
+    token = correlation_id.set("0b6c2c46-aaaa-4bbb-8ccc-1234567890ab")
+    try:
+        await make(fake).call("list_client_deals", {}, SCOPE)
+    finally:
+        correlation_id.reset(token)
+    assert set(fake.request_ids) == {"0b6c2c46-aaaa-4bbb-8ccc-1234567890ab"}
+
+
+async def test_outside_a_request_the_mcp_call_gets_a_fresh_request_id() -> None:
+    fake = FakeErpMcp(lambda name, args: tool_ok(DEALS))
+    client = make(fake)
+    await client.call("list_client_deals", {}, SCOPE)
+    await client.call("list_client_deals", {}, SCOPE)
+    first, second = (
+        set(fake.request_ids[: len(fake.request_ids) // 2]),
+        set(fake.request_ids[len(fake.request_ids) // 2 :]),
+    )
+    assert len(first) == len(second) == 1
+    assert first != second
 
 
 async def test_401_issues_new_context_and_retries_once() -> None:
