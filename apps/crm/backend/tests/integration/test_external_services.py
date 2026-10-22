@@ -3,6 +3,7 @@
 «Состоянии системы». Внешние сервисы — подставные (respx), платных вызовов нет."""
 
 import json
+import uuid
 from collections.abc import Iterator
 from datetime import UTC, datetime, timedelta
 from types import SimpleNamespace
@@ -501,27 +502,39 @@ async def test_erp_handoff_failures_land_in_the_feed_with_the_client_and_the_cod
     assert healed["status"] == "off"
 
 
-async def test_erp_events_rejections_land_in_the_feed_and_heal_when_old(
+INSERT_INBOX = """
+INSERT INTO rt_bus_inbox (event_id, type, source, publisher, correlation_id, envelope, status,
+                          attempts, error, received_at, updated_at)
+VALUES (:id, 'uz.railtech.erp.quote.sent.v1', 'rt://erp', 'erp', 'c-1', CAST('{}' AS jsonb),
+        :status, 4, :error, :at, :at)
+"""
+INSERT_DELIVERY = """
+INSERT INTO rt_bus_delivery (event_id, event_type, subscriber, status, attempts, last_error,
+                             created_at, updated_at)
+VALUES (:id, 'uz.railtech.crm.client.updated.v1', 'erp', 'dead', 7, :error, :at, :at)
+"""
+
+
+async def test_erp_events_failures_land_in_the_feed_and_heal_when_old(
     sessions: async_sessionmaker[AsyncSession], client: TestClient, alerts: FakeAlerts
 ) -> None:
-    """FIX-33: отклонённое событие (чужая компания, неизвестный тип) — сбой строки «События ERP»."""
-    from app.models.integrations import ErpIncomingEvent
+    """B4: необработанное событие ERP (inbox `failed`) и недоставленное ERP событие CRM (`dead`)
+    — сбой строки «События ERP»; старше недели в счёт не идут."""
+    from sqlalchemy import text
 
     auth = await headers(sessions, client, "admin")
     quiet = client.post(f"{URL}/erp_events/check", headers=auth).json()["service"]
     assert (quiet["status"], quiet["key"]) == ("ok", "erp_events")
 
     async with sessions() as session, session.begin():
-        session.add(
-            ErpIncomingEvent(
-                event_id="00000000-0000-4000-8000-000000000001",
-                event_type="quote.sent",
-                erp_company_id=7,
-                crm_client_id=1,
-                payload={},
-                status="rejected",
-                error="company mismatch: client #1 is erp company #5, event carries #7",
-            )
+        await session.execute(
+            text(INSERT_INBOX),
+            {
+                "id": uuid.UUID("00000000-0000-4000-8000-000000000001"),
+                "status": "failed",
+                "error": "ErpEventError: company mismatch: client #1 is erp company #5",
+                "at": datetime.now(UTC),
+            },
         )
     failed = client.post(f"{URL}/erp_events/check", headers=auth).json()["service"]
     assert failed["status"] == "fail"
@@ -530,11 +543,26 @@ async def test_erp_events_rejections_land_in_the_feed_and_heal_when_old(
     assert [k for k, _ in alerts.sent] == ["erp_events"]
 
     async with sessions() as session, session.begin():  # разобрано давно: в окно недели не входит
-        row = await session.get(ErpIncomingEvent, "00000000-0000-4000-8000-000000000001")
-        assert row is not None
-        row.received_at = datetime.now(UTC) - timedelta(days=30)
+        await session.execute(
+            text("UPDATE rt_bus_inbox SET received_at = :old"),
+            {"old": datetime.now(UTC) - timedelta(days=30)},
+        )
     healed = client.post(f"{URL}/erp_events/check", headers=auth).json()["service"]
     assert healed["status"] == "ok"
+
+    async with sessions() as session, session.begin():
+        await session.execute(
+            text(INSERT_DELIVERY),
+            {
+                "id": uuid.UUID("00000000-0000-4000-8000-000000000002"),
+                "error": "http 404",
+                "at": datetime.now(UTC),
+            },
+        )
+    dead = client.post(f"{URL}/erp_events/check", headers=auth).json()["service"]
+    assert dead["status"] == "fail"
+    assert "не доставлено ERP: 1" in dead["summary"]
+    assert "http 404" in dead["error"]
 
 
 # ── Сервисы ERP (M3-ERP-06) ──────────────────────────────────────────────────────────
