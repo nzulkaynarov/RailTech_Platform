@@ -580,10 +580,13 @@ services:
         condition: service_healthy
       cabinet-web:
         condition: service_healthy
+      # Платформа — НЕ условие входа ансамбля (INF-P1-0): service_started, не service_healthy. Сбой образа или BFF
+      # Платформы даёт 502 на её домене, а CRM, ERP и Cabinet продолжают отвечать (Caddy при этом поднят и не
+      # перезапускается). Здоровье Платформы проверяет smoke (четвёртый домен), а не очерёдность запуска.
       platform-bff:
-        condition: service_healthy
+        condition: service_started
       platform-web:
-        condition: service_healthy
+        condition: service_started
     volumes:
       - caddy_data:/data
       - caddy_config:/config

@@ -28,7 +28,7 @@ if grep -qx platform-bff <<<"$services"; then
   smoke_domains+=("$(env_get PLATFORM_DOMAIN)")
 fi
 compose "$rel" pull "${pull_services[@]}" || log "pull не удался — используются локальные образы"
-compose "$rel" up -d --remove-orphans
+up_stack "$rel"
 
 state_set previous_tag "$cur"
 state_set current_tag "$target"

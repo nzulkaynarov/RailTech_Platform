@@ -45,6 +45,24 @@ compose() {
     --env-file "$RT_ENV_FILE" ${profiles[@]+"${profiles[@]}"} "$@"
 }
 
+# Поднимает стек релиза так, чтобы сбой Платформы (INF-P1-0) не ронял остальное. Caddy ждёт platform-* по service_started
+# (base.yml), но если контейнер Платформы не стартует вовсе (битая команда/образ — ошибка exec), `up -d` падает до
+# запуска Caddy и все четыре домена остаются без входа. Поэтому: сначала всё, кроме Платформы (--scale …=0 — Caddy
+# стартует, upstream Платформы пока не резолвится -> 502 только на её домене), затем Платформа отдельно, и её сбой —
+# предупреждение, а не отказ деплоя/отката; итог по Платформе даёт smoke (четвёртый домен). Релиз до Платформы
+# (откат на старый тег) — обычный `up -d`.
+up_stack() {
+  local rel="$1" services
+  services="$(compose "$rel" config --services)"
+  if grep -qx platform-bff <<<"$services"; then
+    compose "$rel" up -d --remove-orphans --scale platform-bff=0 --scale platform-web=0
+    compose "$rel" up -d --no-deps platform-bff platform-web \
+      || log "внимание: Платформа не поднялась (docker compose logs platform-bff); CRM, ERP и Cabinet подняты, её домен отдаёт 502"
+  else
+    compose "$rel" up -d --remove-orphans
+  fi
+}
+
 release_dir() { echo "$RT_RELEASES/$1"; }
 
 state_get() { cat "$RT_STATE/$1" 2>/dev/null || true; }
