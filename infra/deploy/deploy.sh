@@ -40,8 +40,8 @@ log "миграции (после гейта)"
 compose "$rel" run --rm --no-deps crm-migrate
 compose "$rel" run --rm --no-deps erp-backend python manage.py migrate --noinput
 
-log "up"
-compose "$rel" up -d --remove-orphans
+log "up (сначала CRM, ERP, Cabinet и Caddy, затем Платформа: её сбой не должен останавливать остальное — INF-P1-0)"
+up_stack "$rel"
 
 if [[ "$prev" != "$tag" ]]; then
   [[ -n "$prev" ]] && state_set previous_tag "$prev"
@@ -52,7 +52,7 @@ ln -sfn "$rel" "$RT_ROOT/current"
 log "smoke на сервере (по IP 127.0.0.1; сертификат при первом запуске может ещё выпускаться)"
 "$rel/infra/deploy/smoke.sh" --domains "$(env_get CRM_DOMAIN)" "$(env_get ERP_DOMAIN)" "$(env_get CABINET_DOMAIN)" "$(env_get PLATFORM_DOMAIN)" \
   --resolve-ip 127.0.0.1 --insecure --retries 30 \
-  || die "smoke не прошёл: смотрите 'docker compose logs', откат кода — rollback.sh"
+  || die "smoke не прошёл (четыре домена; при сбое только Платформы CRM, ERP и Cabinet уже работают): смотрите 'docker compose logs', откат кода — rollback.sh"
 
 cleanup_old "$tag" "$(state_get previous_tag)"
 log "деплой $tag завершён"

@@ -1,10 +1,13 @@
 #!/usr/bin/env bash
 # Тест INF-P0-5: Платформа в проде.
 #  1. prod.yml: platform-bff/platform-web — образы GHCR rt-platform-* по RT_IMAGE_TAG без сборки, лимиты памяти, перезапуск,
-#     окружение BFF (CRM/ERP по сети compose, Redis БД 3), Caddy получает PLATFORM_DOMAIN и ждёт оба сервиса;
+#     окружение BFF (CRM/ERP по сети compose, Redis БД 3), Caddy получает PLATFORM_DOMAIN и зависит от обоих сервисов
+#     только по service_started (INF-P1-0: сбой Платформы не должен лишать входа CRM, ERP и Cabinet);
 #  2. Caddyfile.prod: сайт {$PLATFORM_DOMAIN}, /api/* -> platform-bff:8000, остальное -> platform-web:8080 (порт образа web);
 #  3. deploy.sh без PLATFORM_DOMAIN в .env.prod останавливается с понятным сообщением до обращения к docker;
-#  4. smoke.sh: Платформа проверяется как четвёртый домен (/api/v1/health: 200 и status ok), три домена работают как раньше.
+#  4. smoke.sh: Платформа проверяется как четвёртый домен (/api/v1/health: 200 и status ok), три домена работают как раньше;
+#  5. INF-P1-0: up_stack (lib.sh) — сначала стек без Платформы, затем Платформа, её сбой не роняет деплой/откат; релиз без
+#     Платформы — обычный up; задание rollback в deploy.yml проверяет четыре домена, если Платформа есть в релизе отката.
 # Секретов не требует: env — копия .env.prod.example с заглушками. Запуск: bash этот-файл
 set -euo pipefail
 here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -36,8 +39,17 @@ done
 [[ "$(q '.services["platform-bff"].depends_on.redis.condition')" == service_healthy ]] || fail "platform-bff: нет зависимости от redis"
 [[ "$(q '.services.caddy.environment.PLATFORM_DOMAIN')" == platform.railtech.uz ]] || fail "caddy: PLATFORM_DOMAIN не передан"
 for svc in platform-bff platform-web; do
-  [[ "$(q --arg s "$svc" '.services.caddy.depends_on[$s].condition // "none"')" == service_healthy ]] || fail "caddy не ждёт $svc"
+  [[ "$(q --arg s "$svc" '.services.caddy.depends_on[$s].condition // "none"')" == service_started ]] \
+    || fail "caddy должен зависеть от $svc по service_started (не service_healthy: INF-P1-0)"
 done
+# Остальное, без чего вход бессмыслен, Caddy по-прежнему ждёт по здоровью.
+for svc in crm-api crm-web erp-backend erp-web cabinet-web; do
+  [[ "$(q --arg s "$svc" '.services.caddy.depends_on[$s].condition // "none"')" == service_healthy ]] || fail "caddy не ждёт $svc по service_healthy"
+done
+# Ничто критичное, кроме самой Платформы, не зависит от её сервисов.
+[[ "$(q '[.services | to_entries[] | select(.key | startswith("platform-") | not) | select(.value.depends_on // {} | has("platform-bff") or has("platform-web")) | .key] | join(",")')" == caddy ]] \
+  || fail "от platform-* зависит не только caddy"
+
 # Домен обязателен: без него compose не разбирается (а deploy.sh говорит об этом понятнее — п. 3).
 grep -v '^PLATFORM_DOMAIN=' "$tmp/env.prod" > "$tmp/env.nodomain"
 if RT_IMAGE_TAG=platform-test docker compose -f "$root/infra/compose/base.yml" -f "$root/infra/compose/prod.yml" \
@@ -96,4 +108,46 @@ smoke --domains crm.test erp.test cab.test || { cat "$tmp/smoke.log"; fail "smok
 ! grep -q 'plat.test' "$tmp/smoke.log" || fail "smoke.sh: при трёх доменах проверяется Платформа"
 if RT_TEST_PLATFORM_BODY='{"status":"degraded"}' smoke --domains crm.test erp.test cab.test plat.test; then fail "smoke.sh: status degraded у Платформы должен падать"; fi
 if smoke --domains crm.test erp.test; then fail "smoke.sh: два домена должны отвергаться"; fi
+
+# 5. INF-P1-0: up_stack — docker подменён заглушкой, которая пишет вызовы и по переменным имитирует сбои.
+mkdir -p "$tmp/bin5"
+cat > "$tmp/bin5/docker" <<'STUB'
+#!/usr/bin/env bash
+echo "$*" >> "$RT_TEST_DOCKER_LOG"
+case " $* " in
+  *" config --services "*) printf '%s\n' $RT_TEST_SERVICES; exit 0 ;;
+  *" --no-deps platform-bff "*) [[ -z "${RT_TEST_FAIL_PLATFORM:-}" ]] || { echo "exec: no such file" >&2; exit 1; } ;;
+  *" --scale "*) [[ -z "${RT_TEST_FAIL_CORE:-}" ]] || exit 1 ;;
+esac
+exit 0
+STUB
+chmod +x "$tmp/bin5/docker"
+cp "$tmp/env.prod" "$tmp/env5"; chmod 600 "$tmp/env5"
+up5() { # переменные RT_TEST_* — из окружения вызова; результат — код возврата up_stack
+  # Отдельный bash: set -e действует, как в deploy.sh/rollback.sh, даже если up5 вызвана в условии (if/||).
+  : > "$tmp/docker5.log"
+  PATH="$tmp/bin5:$PATH" RT_ENV_FILE="$tmp/env5" RT_TEST_DOCKER_LOG="$tmp/docker5.log" \
+    bash -c 'set -euo pipefail; source "$1/infra/deploy/lib.sh"; up_stack "$2"' _ "$root" "$tmp/rel" >"$tmp/up5.log" 2>&1
+}
+export RT_TEST_SERVICES="crm-api caddy platform-bff platform-web"
+up5 || { cat "$tmp/up5.log"; fail "up_stack: штатный запуск с Платформой упал"; }
+[[ "$(grep -c ' up ' "$tmp/docker5.log")" == 2 ]] || fail "up_stack: ожидалось два up (стек без Платформы, затем Платформа)"
+grep ' up ' "$tmp/docker5.log" | sed -n 1p | grep -q -- '--scale platform-bff=0 --scale platform-web=0' || fail "up_stack: первый up не выключает Платформу (--scale …=0)"
+! grep ' up ' "$tmp/docker5.log" | sed -n 1p | grep -q -- '--no-deps' || fail "up_stack: первый up с --no-deps (потеряется порядок запуска)"
+grep ' up ' "$tmp/docker5.log" | sed -n 2p | grep -q -- 'up -d --no-deps platform-bff platform-web' || fail "up_stack: второй up не поднимает только Платформу"
+RT_TEST_FAIL_PLATFORM=1 up5 || { cat "$tmp/up5.log"; fail "up_stack: сбой запуска Платформы не должен ронять деплой/откат"; }
+grep -q 'Платформа не поднялась' "$tmp/up5.log" || fail "up_stack: сбой Платформы не отмечен в журнале"
+if RT_TEST_FAIL_CORE=1 up5; then fail "up_stack: сбой запуска CRM/ERP/Cabinet/Caddy должен ронять деплой"; fi
+RT_TEST_SERVICES="crm-api caddy" up5 || fail "up_stack: релиз без Платформы упал"
+[[ "$(grep -c ' up ' "$tmp/docker5.log")" == 1 ]] && ! grep -q -- '--scale' "$tmp/docker5.log" || fail "up_stack: релиз без Платформы — ожидался один обычный up"
+grep -q 'up -d --remove-orphans' "$tmp/docker5.log" || fail "up_stack: релиз без Платформы — нет up -d --remove-orphans"
+grep -q 'up_stack "\$rel"' "$root/infra/deploy/deploy.sh" || fail "deploy.sh не использует up_stack"
+grep -q 'up_stack "\$rel"' "$root/infra/deploy/rollback.sh" || fail "rollback.sh не использует up_stack"
+
+# deploy.yml, задание rollback: домен Платформы известен заданию, smoke — четыре домена, если Платформа есть в релизе отката.
+rb="$(awk '/^  rollback:/{f=1} f{print}' "$root/.github/workflows/deploy.yml")"
+grep -q 'PLATFORM_DOMAIN: ' <<<"$rb" || fail "deploy.yml: у задания rollback нет PLATFORM_DOMAIN"
+grep -q 'domains+=("\$PLATFORM_DOMAIN")' <<<"$rb" || fail "deploy.yml: smoke отката не добавляет домен Платформы"
+grep -q 'platform-bff:' <<<"$rb" || fail "deploy.yml: smoke отката не различает релиз с Платформой и без"
+! grep -q 'Smoke трёх доменов' <<<"$rb" || fail "deploy.yml: в rollback остался smoke только трёх доменов"
 echo "platform-prod-test: ok"
