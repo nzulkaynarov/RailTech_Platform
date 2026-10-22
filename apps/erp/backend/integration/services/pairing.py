@@ -249,7 +249,12 @@ def rotate(
         if stored_current is not None and not credentials.same_secret(current_token, stored_current):
             raise _unauthorized()
         valid_until = now + timedelta(seconds=rotation_grace_seconds())
+        previous_webhook = credentials.webhook_secret()  # действующий до ротации (БД, иначе .env)
         _put(CredentialSlot.CRM_TO_ERP_PREVIOUS, current_token, expires_at=valid_until)
+        if previous_webhook and previous_webhook != webhook_secret:
+            # Шина выводит секрет пары из секрета сопряжения (L12): на время перекрытия принимаем и прежний, чтобы
+            # события CRM, подписанные до ротации, не получали 401 (как прежний токен CRM→ERP).
+            _put(CredentialSlot.WEBHOOK_SECRET_PREVIOUS, previous_webhook, expires_at=valid_until)
         _put(CredentialSlot.CRM_TO_ERP, crm_to_erp_token, rotated_at=now)
         _put(CredentialSlot.ERP_TO_CRM, erp_to_crm_token)
         _put(CredentialSlot.WEBHOOK_SECRET, webhook_secret)

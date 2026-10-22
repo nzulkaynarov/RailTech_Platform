@@ -141,7 +141,7 @@ def test_a_failing_transition_does_not_undo_the_clients_decision(
     contract_world, portal_client, listed, mapped, monkeypatch
 ):
     def boom(*args, **kwargs):
-        raise RuntimeError("fulfillment service is broken")
+        raise ValueError("FSM_TRANSITION_NOT_ALLOWED")  # ошибка самого перехода исполнения: решение клиента остаётся
 
     monkeypatch.setattr("crm.services.fulfillment.update_fulfillment_status", boom)
     fulfillment = delivered_fulfillment(contract_world)
@@ -151,6 +151,25 @@ def test_a_failing_transition_does_not_undo_the_clients_decision(
     assert code_of(fulfillment) == FulfillmentStatusCode.DELIVERED
     trace = ActivityLog.objects.get(event_code="fulfillment.accept_failed", deal=fulfillment.deal)
     assert trace.event_params["deal_id"] == fulfillment.deal_id and trace.level == "ERROR"
+
+
+def test_an_unexpected_error_of_the_transition_goes_up_and_rolls_the_decision_back(
+    contract_world, portal_client, listed, mapped, monkeypatch
+):
+    """Не ошибка перехода (валидация/FSM), а неожиданный сбой — не глотается: откатывается и решение клиента по строке."""
+    fulfillment = delivered_fulfillment(contract_world)
+    first, last = lines_of(fulfillment)
+    assert post(portal_client, f"/deliveries/{first.pk}/accept").status_code == 200
+
+    def boom(*args, **kwargs):
+        raise RuntimeError("fulfillment service is broken")
+
+    monkeypatch.setattr("crm.services.fulfillment.update_fulfillment_status", boom)
+    with pytest.raises(RuntimeError):
+        post(portal_client, f"/deliveries/{last.pk}/accept")
+    last.refresh_from_db()
+    assert last.status == DeliveryLineStatus.DELIVERED
+    assert not ActivityLog.objects.filter(event_code="fulfillment.accept_failed", deal=fulfillment.deal).exists()
 
 
 def test_a_bus_failure_rolls_the_whole_client_action_back(contract_world, portal_client, listed, mapped, monkeypatch):

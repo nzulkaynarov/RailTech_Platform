@@ -255,7 +255,8 @@ def test_every_event_type_is_published_by_its_service(deal, buyer, manager, mapp
     invoice, _ = crm_services.generate_invoice_from_contract(contract.id, actor=manager)
     invoice, _ = crm_services.issue_invoice(invoice, manager)
     Invoice.objects.filter(pk=invoice.pk).update(due_date=timezone.localdate() - datetime.timedelta(days=30))
-    assert send_payment_reminders(grace_days=3) == {"reminded": 1} or bus_support.published("invoice.overdue")
+    assert send_payment_reminders(grace_days=3) == {"reminded": 1}
+    assert len(bus_support.published("invoice.overdue")) == 1
     invoice.refresh_from_db()
     _, error = crm_services.record_payment(
         invoice.id, manager, amount=invoice.total_incl_vat, paid_at=timezone.localdate(), manual=True
@@ -435,6 +436,9 @@ def test_every_publisher_runs_inside_an_atomic_block():
     assert (
         set(undecorated) <= ATOMIC_BY_CALLER
     ), f"публикует вне @transaction.atomic: {sorted(set(undecorated) - ATOMIC_BY_CALLER)}"
+    assert ATOMIC_BY_CALLER <= set(
+        undecorated
+    ), f"лишние записи в списке: {sorted(ATOMIC_BY_CALLER - set(undecorated))}"
 
 
 def _call_name(call: ast.Call) -> str:
@@ -446,10 +450,7 @@ def _call_name(call: ast.Call) -> str:
 ATOMIC_BY_CALLER = {
     "crm/services/deals.py::_publish_stage_events",  # из transition_deal_stage (@atomic)
     "crm/services/deals.py::register_new_deal",  # из DealViewSet.perform_create (with atomic)
-    "crm/services/fulfillment.py::ensure_fulfillment",
     "sales/services/delivery_lines.py::_publish_decision",  # из accept/dispute_delivery_line (@atomic)
-    "portal/services/requests.py::create_client_request",
     "portal/services/acceptance.py::_emit_code_event",  # из request_acceptance_code (with transaction.atomic)
     "integration/services/handoff.py::_create_request",  # из _handoff в transaction.atomic
-    "integration/mcp/tools.py::create_request_tool",
 }

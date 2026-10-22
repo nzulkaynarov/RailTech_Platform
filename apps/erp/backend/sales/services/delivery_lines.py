@@ -15,10 +15,10 @@ from __future__ import annotations
 import logging
 from typing import Iterable, Optional, Tuple
 
+from django.core.exceptions import ObjectDoesNotExist, ValidationError
 from django.db import transaction
 from django.db.models import Prefetch
 from django.utils import timezone
-from rt_bus import RtBusError
 from sales.models import ActivityLog, DeliveryLine, DeliveryLineStatus, Fulfillment, Quote, QuoteItem
 
 from crm.constants import FulfillmentStatusCode, QuoteStatusCode
@@ -210,13 +210,10 @@ def close_fulfillment_if_all_accepted(deal_id: int, contact) -> Optional[Fulfill
             )
             if error:
                 transaction.set_rollback(True)
-    except RtBusError:
-        # Публикация не глотается: сбой шины откатывает и решение клиента по строке (клиент повторит), событие и состояние
-        # не расходятся (B3).
-        raise
-    except (
-        Exception
-    ):  # noqa: BLE001 — переход исполнения изолирован точкой сохранения выше; сбой не отменяет решение клиента
+    except (ValueError, ValidationError, ObjectDoesNotExist):
+        # Ошибки самого перехода исполнения (валидация, FSM, нет справочника): изолированы точкой сохранения выше и не отменяют
+        # решение клиента по строке — след в журнале ниже. Всё прочее (в том числе сбой шины `RtBusError` и БД) идёт наверх:
+        # публикация не глотается, откатывается и решение клиента (клиент повторит), событие и состояние не расходятся.
         logger.exception("Не удалось перевести исполнение сделки #%s в ACCEPTED после приёмки всех строк", deal_id)
         error = "EXCEPTION"
     if error:

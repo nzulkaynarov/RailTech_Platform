@@ -12,7 +12,8 @@ from django.conf import settings
 from django.db import transaction
 from django.http import FileResponse, Http404
 from django.utils import timezone, translation
-from parties.models import Contact
+from integration.services.requisites import REQUISITES_MANAGED_BY_CRM, changed_crm_owned_fields
+from parties.models import Contact, active_contact_q
 from portal.authentication import PortalAuthentication
 from portal.exceptions import PortalBadRequest, PortalConflict, PortalValidationError, portal_exception_handler
 from portal.models import PortalUpload
@@ -834,6 +835,10 @@ class CompanyView(BasePortalView):
         data = serializer.validated_data
         company = request.portal_company
 
+        # Название и ИНН клиента ведёт CRM (B3): правка из Cabinet отвергается, значение вернулось бы со следующим снимком.
+        if changed_crm_owned_fields(company, data):
+            raise PortalValidationError(REQUISITES_MANAGED_BY_CRM)
+
         if "name" in data and data["name"].strip():
             company.name = data["name"].strip()
         if "inn" in data:
@@ -856,7 +861,9 @@ class TeamListView(BasePortalView):
     """GET /team — Список участников команды клиента."""
 
     def get(self, request):
-        contacts = Contact.objects.filter(company=request.portal_company).order_by("-is_primary", "name")
+        contacts = Contact.objects.filter(active_contact_q(), company=request.portal_company).order_by(
+            "-is_primary", "name"
+        )
         return Response(TeamMemberSerializer(contacts, many=True).data)
 
 

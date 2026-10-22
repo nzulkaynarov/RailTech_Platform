@@ -146,13 +146,23 @@ def webhook_secret() -> str:
 
 
 def webhook_secrets() -> list[str]:
-    """Все действующие секреты вебхуков сопряжения (первый — текущий): БД, иначе список из `.env` (ротация без простоя).
+    """Все действующие секреты вебхуков сопряжения (первый — текущий): БД (плюс прежний на переходный срок ротации), иначе
+    список из `.env` (ротация без простоя).
 
     Из них шина выводит направленные секреты пары CRM ↔ ERP (L12): подписывает первым, принимает любой.
     """
-    row = _rows().get(CredentialSlot.WEBHOOK_SECRET)
+    rows = _rows()
+    row = rows.get(CredentialSlot.WEBHOOK_SECRET)
     stored = _decrypt(row) if row else None
-    return [stored] if stored else env_webhook_secrets()
+    if not stored:
+        return env_webhook_secrets()
+    secrets_ = [stored]
+    previous_row = rows.get(CredentialSlot.WEBHOOK_SECRET_PREVIOUS)
+    if previous_row is not None and (previous_row.expires_at is None or previous_row.expires_at > timezone.now()):
+        previous = _decrypt(previous_row)
+        if previous and previous not in secrets_:
+            secrets_.append(previous)  # переходный срок ротации: принимается наравне с новым, подписывает первый
+    return secrets_
 
 
 def erp_to_crm_token() -> str:

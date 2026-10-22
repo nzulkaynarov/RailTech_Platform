@@ -30,14 +30,12 @@ COPY requirements.txt .
 RUN pip install --upgrade pip && \
     pip install --no-cache-dir --require-hashes --prefix=/install -r requirements.txt
 
-# rt_bus (B3, L14): библиотека шины из packages/rt-bus приходит именованным контекстом сборки `rtbus`
-# (compose: build.additional_contexts; docker build --build-context rtbus=…/packages/rt-bus). Её зависимости
-# (httpx, jsonschema, referencing, pyyaml) уже в requirements.txt под хэшами, поэтому --no-deps; сам пакет
-# собирает hatchling (build-isolation тянет его из PyPI), в /install попадает готовый rt_bus с миграциями Django.
-COPY --from=rtbus pyproject.toml README.md /src/rt-bus/
-COPY --from=rtbus rt_bus /src/rt-bus/rt_bus
-RUN pip install --no-cache-dir --no-deps --prefix=/install /src/rt-bus
-
+# rt_bus (B3, L14): библиотека шины из packages/rt-bus приходит именованным контекстом сборки `rtbus` (compose:
+# build.additional_contexts; docker build --build-context rtbus=…/packages/rt-bus). Это чистый Python без сборочных шагов, а её
+# зависимости (httpx, jsonschema, referencing, pyyaml) уже в requirements.txt под хэшами, поэтому пакет кладётся копией каталога
+# в site-packages префикса /install: никаких загрузок из сети при сборке и незакреплённых build-зависимостей (hatchling), миграции
+# Django (rt_bus/django/migrations) едут вместе с кодом.
+COPY --from=rtbus rt_bus /install/lib/python3.12/site-packages/rt_bus
 
 # ── Stage 2: Runtime ──────────────────────────────────────────────────────────
 FROM python:3.12-slim AS runtime

@@ -73,6 +73,8 @@ def invite_contact_to_portal(
         return None, "CONTACT_WITHOUT_COMPANY"
     if not company_in_circulation(contact.company_id):
         return None, "COMPANY_ARCHIVED"
+    if contact.is_archived:
+        return None, "CONTACT_ARCHIVED"  # контакт удалён в CRM: в Cabinet не приглашается
 
     effective_channel = channel or contact.preferred_channel or "email"
     if effective_channel not in ("email", "telegram", "both"):

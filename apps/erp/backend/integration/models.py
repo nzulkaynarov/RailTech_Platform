@@ -246,6 +246,7 @@ class CredentialSlot(models.TextChoices):
     CRM_TO_ERP_PREVIOUS = "crm_to_erp_previous", _("Прежний токен CRM→ERP (переход при ротации)")
     ERP_TO_CRM = "erp_to_crm", _("Токен ERP→CRM")
     WEBHOOK_SECRET = "webhook_secret", _("Секрет подписи вебхуков")
+    WEBHOOK_SECRET_PREVIOUS = "webhook_secret_previous", _("Прежний секрет сопряжения (переход при ротации)")
 
 
 class ServiceCredential(models.Model):

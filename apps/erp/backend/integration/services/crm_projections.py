@@ -5,14 +5,18 @@
 (`deleted_at` у удаления); порядок доставки не гарантирован, поэтому **более старый снимок уже применённого не применяется**
 (`CrmProjectionState`). Повтор того же снимка — без действий.
 
-Что обновляется. Только поля, которыми владеет CRM: у клиента — название компании (`Company.name`); у контакта — ФИО,
-должность, телефон, e-mail, Telegram, язык, канал связи, признак основного. Реквизиты и финансы (ИНН, адрес, банк, суммы)
-принадлежат ERP и снимком CRM не перезаписываются; права контакта в Cabinet (`can_act`), приглашения и входы — тоже ERP, а
-контакт, созданный по событию, получает `can_act=False` (право действовать не выдаётся молча — FIX-54).
+Что обновляется. Только поля, которыми владеет CRM (ORCHESTRATOR §3 п. 16): у клиента — название компании (`Company.name`)
+и ИНН (`Company.inn`), в ERP они только для чтения (`requisites.py`); у контакта — ФИО, должность, телефон, e-mail, Telegram,
+язык, канал связи, признак основного. Прочие реквизиты (адрес, банк, МФО), финансы, права контакта в Cabinet (`can_act`),
+приглашения и входы принадлежат ERP; в схеме `client.*.v1` остальных реквизитов нет (сегмент, `is_active` и ответственный
+в проекцию компании не переносятся — полей в ERP нет). Контакт, созданный по событию, получает `can_act=False` (право действовать
+не выдаётся молча — FIX-54).
 
 Неизвестный клиент CRM (нет `CrmClientMapping`) — не ошибка: событие пропускается с записью в журнал (`skipped`), клиент
-появится в ERP передачей (`POST /clients/handoff`). Контакт, удалённый в CRM, удаляется из ERP: сессии портала и ссылки входа
-каскадно снимаются (доступ в Cabinet закрывается сразу), сделки и документы остаются без контакта (`SET_NULL`).
+появится в ERP передачей (`POST /clients/handoff`). Контакт, удалённый в CRM, **архивируется, а не удаляется** (`Contact.archived_at`):
+каскад стёр бы коды акцепта (`QuoteAcceptanceCode`) — след, по которому КП принято. Запись и связи (сделки, документы, коды,
+сопоставление) остаются; `can_act=false`, Telegram отвязан, сессии портала и ссылки входа сняты, вход в Cabinet закрыт
+(`active_contact_q`). Контакт, переехавший к другому клиенту CRM, переносится в компанию нового клиента, если она известна ERP.
 """
 
 from __future__ import annotations
@@ -106,9 +110,22 @@ def apply_client_snapshot(data: Mapping[str, Any]) -> Outcome:
 
     company: Company = mapping.company
     name = str(snapshot["name"]).strip()
+    changed = []
     if name and company.name != name:
         company.name = name[: Company._meta.get_field("name").max_length]
-        company.save(update_fields=["name", "updated_at"])
+        changed.append("name")
+    inn = (snapshot.get("inn") or "").strip()
+    if inn and company.inn != inn:
+        if Company.objects.filter(inn=inn).exclude(pk=company.pk).exists():
+            # ИНН уникален в ERP: чужая компания уже держит его — не ломаем снимок, запись в журнал для сотрудника.
+            logger.warning(
+                "rt_bus_projection client.updated #%s: ИНН уже у другой компании ERP, поле не применено", crm_client_id
+            )
+        else:
+            company.inn = inn[: Company._meta.get_field("inn").max_length]
+            changed.append("inn")
+    if changed:
+        company.save(update_fields=[*changed, "updated_at"])
     _remember(CrmProjectionKind.CLIENT, crm_client_id, updated_at)
     return _log(Outcome(APPLIED, f"компания #{company.pk}"), "client.updated", crm_client_id)
 
@@ -171,12 +188,22 @@ def apply_contact_snapshot(data: Mapping[str, Any], event_type: str = "contact.u
     if mapping is not None:
         contact = mapping.contact
         fields = {**_contact_fields(snapshot), **_telegram_fields(snapshot, contact)}
+        moved = _move_to_new_client(contact, crm_client_id, fields)
         _apply_primary(contact.company_id, contact.pk, fields)
         for key, value in fields.items():
             setattr(contact, key, value)
+        if contact.archived_at is not None:
+            contact.archived_at = (
+                None  # более новый снимок после удаления: контакт вернулся (права и приглашение — заново)
+            )
+            fields["archived_at"] = None
         contact.save(update_fields=[*fields, "updated_at"])
         _remember(CrmProjectionKind.CONTACT, crm_contact_id, updated_at)
-        return _log(Outcome(APPLIED, f"контакт #{contact.pk}"), event_type, crm_contact_id)
+        return _log(
+            Outcome(APPLIED, f"контакт #{contact.pk}" + (" перенесён в компанию нового клиента" if moved else "")),
+            event_type,
+            crm_contact_id,
+        )
 
     client_mapping = CrmClientMapping.objects.select_related("company").filter(crm_client_id=crm_client_id).first()
     if client_mapping is None:
@@ -193,6 +220,29 @@ def apply_contact_snapshot(data: Mapping[str, Any], event_type: str = "contact.u
     return _log(Outcome(APPLIED, f"контакт #{contact.pk} создан"), event_type, crm_contact_id)
 
 
+def _move_to_new_client(contact: Contact, crm_client_id: int, fields: dict[str, Any]) -> bool:
+    """Контакт теперь у другого клиента CRM: переносим в компанию этого клиента, если она известна ERP, иначе — запись в журнал.
+
+    Старые сессии портала перестают действовать сами (сессия привязана к компании, `PortalAuthentication`); право действовать
+    принадлежало прежней компании — в новой оно выдаётся заново. Основной контакт старой компании снимком не затрагивается.
+    """
+    target = CrmClientMapping.objects.filter(crm_client_id=crm_client_id).values_list("company_id", flat=True).first()
+    if target is None:
+        logger.warning(
+            "rt_bus_projection contact: клиент CRM #%s контакта #%s не передан в ERP, контакт остался в прежней компании",
+            crm_client_id,
+            contact.pk,
+        )
+        return False
+    if target == contact.company_id:
+        return False
+    contact.company_id = target
+    contact.can_act = False
+    fields["company"] = contact.company
+    fields["can_act"] = False
+    return True
+
+
 def _apply_primary(company_id: int, contact_pk: Optional[int], fields: dict[str, Any]) -> None:
     """Основной контакт у компании один: снимок с `is_primary` снимает признак с остальных."""
     if fields.get("is_primary"):
@@ -202,9 +252,27 @@ def _apply_primary(company_id: int, contact_pk: Optional[int], fields: dict[str,
         others.update(is_primary=False)
 
 
+def archive_contact(contact: Contact, at: datetime) -> None:
+    """Контакт удалён в CRM: в архив, не физически (каскад стёр бы `QuoteAcceptanceCode` — след акцепта КП).
+
+    Запись, сделки, документы, коды акцепта и сопоставление остаются. Закрываем доступ: `can_act=false`, Telegram отвязан
+    (уникальный id освобождается, вход по нему невозможен), сессии портала и ссылки входа сняты; вход по e-mail и приглашение
+    отказывают архивному контакту (`active_contact_q`).
+    """
+    from portal.models import MagicLinkToken, PortalSession
+
+    contact.archived_at = at
+    contact.can_act = False
+    contact.telegram_user_id = None
+    contact.telegram_username = ""
+    contact.save(update_fields=["archived_at", "can_act", "telegram_user_id", "telegram_username", "updated_at"])
+    PortalSession.objects.filter(contact=contact).delete()
+    MagicLinkToken.objects.filter(contact=contact).delete()
+
+
 @transaction.atomic
 def apply_contact_deleted(data: Mapping[str, Any]) -> Outcome:
-    """`contact.deleted`: контакт удаляется из ERP (доступ в Cabinet закрывается), надгробие не пускает поздние снимки."""
+    """`contact.deleted`: контакт архивируется в ERP (доступ в Cabinet закрывается), отметка не пускает поздние снимки."""
     crm_contact_id = int(data["crm_contact_id"])
     deleted_at = _moment(data["deleted_at"])
 
@@ -216,8 +284,7 @@ def apply_contact_deleted(data: Mapping[str, Any]) -> Outcome:
     mapping = CrmContactMapping.objects.select_related("contact").filter(crm_contact_id=crm_contact_id).first()
     detail = "проекции не было"
     if mapping is not None:
-        contact_pk = mapping.contact_id
-        mapping.contact.delete()  # сессии и ссылки входа — каскадом; mapping уходит вместе с контактом
-        detail = f"контакт #{contact_pk} удалён"
+        archive_contact(mapping.contact, deleted_at)
+        detail = f"контакт #{mapping.contact_id} в архиве"
     _remember(CrmProjectionKind.CONTACT, crm_contact_id, deleted_at, deleted=True)
     return _log(Outcome(APPLIED, detail), "contact.deleted", crm_contact_id)

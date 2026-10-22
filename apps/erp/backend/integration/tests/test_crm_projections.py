@@ -72,13 +72,28 @@ def company():
 # ── client.updated ──────────────────────────────────────────────────────────────────────────────────
 
 
-def test_client_updated_renames_the_company_but_keeps_the_requisites_of_the_erp(company):
+def test_client_updated_applies_the_name_and_the_inn_the_crm_owns(company):
     outcome = projections.apply_client_snapshot(client_data(name="ООО «Новое имя»", inn="999000111"))
 
     company.refresh_from_db()
     assert outcome.applied and company.name == "ООО «Новое имя»"
-    assert company.inn == "123456789", "ИНН — реквизит, им владеет ERP (ADR-0015 п. 5)"
+    assert company.inn == "999000111", "ИНН и реквизиты клиента ведёт CRM (ORCHESTRATOR §3 п. 16)"
     assert CrmProjectionState.objects.get(kind="client", crm_id=42).applied_at == T0
+
+
+def test_an_inn_held_by_another_company_is_not_applied_but_the_name_is(company, caplog):
+    make_company(name="Другая", crm_client_id=77, inn="999000111")
+    with caplog.at_level(logging.WARNING):
+        outcome = projections.apply_client_snapshot(client_data(name="Новое имя", inn="999000111"))
+    company.refresh_from_db()
+    assert outcome.applied and company.name == "Новое имя" and company.inn == "123456789"
+    assert "ИНН уже у другой компании" in caplog.text
+
+
+def test_a_snapshot_without_an_inn_does_not_erase_the_inn_of_the_erp(company):
+    projections.apply_client_snapshot(client_data(name="Имя", inn=None))
+    company.refresh_from_db()
+    assert company.inn == "123456789"
 
 
 def test_an_older_client_snapshot_is_not_applied(company):
@@ -195,37 +210,149 @@ def test_a_contact_without_telegram_in_crm_clears_it_in_the_projection(company):
 # ── contact.deleted ────────────────────────────────────────────────────────────────────────────────
 
 
-def test_contact_deleted_removes_the_erp_contact_and_closes_its_sessions(company, client_company_session):
-    contact = client_company_session
+def test_contact_deleted_archives_the_contact_keeps_the_acceptance_trace_and_closes_access(company):
+    from integration.tests.world import add_quote, make_deal
+    from portal.models import MagicLinkToken
+    from sales.models.acceptance import QuoteAcceptanceCode
+
+    from crm.constants import QuoteStatusCode
+
+    contact = Contact.objects.filter(company=company).first()
+    contact.telegram_user_id = 424242
+    contact.save(update_fields=["telegram_user_id"])
     CrmContactMapping.objects.create(contact=contact, crm_contact_id=58)
-    assert PortalSession.objects.filter(contact=contact).exists()
+    from portal.tests.conftest import make_portal_session
+
+    make_portal_session(contact, company, "telegram")
+    MagicLinkToken.objects.create(token_hash="h" * 64, contact=contact, expires_at=T0 + timedelta(days=3650))
+    quote = add_quote(make_deal(company), 1, QuoteStatusCode.APPROVED, "1000")
+    code = QuoteAcceptanceCode.objects.create(
+        quote=quote,
+        contact=contact,
+        email=contact.email,
+        code_hash="c" * 64,
+        expires_at=T0 + timedelta(days=3650),
+        consumed_at=T0,
+    )
 
     outcome = projections.apply_contact_deleted(deleted_data())
 
-    assert outcome.applied and not Contact.objects.filter(pk=contact.pk).exists()
-    assert not PortalSession.objects.filter(contact_id=contact.pk).exists(), "доступ в Cabinet закрыт"
+    assert outcome.applied
+    contact.refresh_from_db()
+    assert contact.archived_at == T0 and contact.is_archived
+    assert contact.can_act is False and contact.telegram_user_id is None
+    assert CrmContactMapping.objects.filter(contact=contact, crm_contact_id=58).exists(), "связи остаются"
+    assert QuoteAcceptanceCode.objects.filter(pk=code.pk, contact=contact).exists(), "след акцепта сохранился"
+    assert not PortalSession.objects.filter(contact_id=contact.pk).exists(), "сессии сняты"
+    assert not MagicLinkToken.objects.filter(contact_id=contact.pk).exists(), "ссылки входа сняты"
     state = CrmProjectionState.objects.get(kind="contact", crm_id=58)
     assert state.deleted and state.applied_at == T0
 
 
-@pytest.fixture
-def client_company_session(company):
-    from portal.tests.conftest import make_portal_session
+def test_an_archived_contact_cannot_sign_in_or_be_invited(company):
+    from django.core import mail
+    from portal.services.invitation import invite_contact_to_portal
+    from portal.services.magic_link import deliver_login_link, find_login_contact
 
     contact = Contact.objects.filter(company=company).first()
-    make_portal_session(contact, company, "telegram")
-    return contact
+    CrmContactMapping.objects.create(contact=contact, crm_contact_id=58)
+    assert find_login_contact(contact.email) == contact
+    projections.apply_contact_deleted(deleted_data())
+
+    contact.refresh_from_db()
+    assert find_login_contact(contact.email) is None
+    assert deliver_login_link(contact.pk) is False
+    assert invite_contact_to_portal(contact, channel="email") == (None, "CONTACT_ARCHIVED")
+    assert mail.outbox == []
+
+
+def test_a_live_session_of_an_archived_contact_is_rejected_by_the_portal(company):
+    from portal.tests.conftest import make_portal_session
+    from rest_framework.test import APIClient
+
+    contact = Contact.objects.filter(company=company).first()
+    CrmContactMapping.objects.create(contact=contact, crm_contact_id=58)
+    session = make_portal_session(contact, company, "telegram")
+    client = APIClient()
+    client.credentials(HTTP_X_PORTAL_SESSION=session.raw_token)
+    assert client.get("/api/portal/v1/company").status_code == 200
+    # сессию снимает архивация; если бы её восстановили руками — аутентификация всё равно отказывает архивному контакту
+    projections.apply_contact_deleted(deleted_data())
+    session = make_portal_session(contact, company, "telegram")
+    client.credentials(HTTP_X_PORTAL_SESSION=session.raw_token)
+    assert client.get("/api/portal/v1/company").status_code == 401
+    assert client.get("/api/portal/v1/team").status_code == 401
+
+
+def test_archived_contact_is_not_in_the_team_list(company):
+    from portal.tests.conftest import make_portal_session
+    from rest_framework.test import APIClient
+
+    me = Contact.objects.filter(company=company).first()
+    colleague = Contact.objects.create(company=company, name="Коллега", email="k@x.uz", can_act=False)
+    CrmContactMapping.objects.create(contact=colleague, crm_contact_id=59)
+    session = make_portal_session(me, company, "telegram")
+    client = APIClient()
+    client.credentials(HTTP_X_PORTAL_SESSION=session.raw_token)
+    assert {m["name"] for m in client.get("/api/portal/v1/team").json()} == {me.name, "Коллега"}
+    projections.apply_contact_deleted(deleted_data(crm_contact_id=59))
+    assert {m["name"] for m in client.get("/api/portal/v1/team").json()} == {me.name}
 
 
 def test_late_update_after_deletion_does_not_resurrect_the_contact(company):
     projections.apply_contact_snapshot(contact_data(), "contact.created")
     projections.apply_contact_deleted(deleted_data(at=T0 + timedelta(minutes=2)))
-    assert not CrmContactMapping.objects.filter(crm_contact_id=58).exists()
+    contact = CrmContactMapping.objects.get(crm_contact_id=58).contact
+    assert contact.is_archived
 
     for moment in (T0 + timedelta(minutes=1), T0 + timedelta(minutes=2)):  # старше и ровно в момент удаления
-        outcome = projections.apply_contact_snapshot(contact_data(at=moment), "contact.updated")
+        outcome = projections.apply_contact_snapshot(contact_data(at=moment, full_name="Позднее"), "contact.updated")
         assert outcome.status == projections.SKIPPED_STALE
-    assert not Contact.objects.filter(name="Иван Петров").exists()
+    contact.refresh_from_db()
+    assert contact.is_archived and contact.name == "Иван Петров" and contact.can_act is False
+
+
+def test_a_newer_snapshot_after_archiving_returns_the_contact_without_the_right_to_act(company):
+    projections.apply_contact_snapshot(contact_data(), "contact.created")
+    contact = CrmContactMapping.objects.get(crm_contact_id=58).contact
+    projections.apply_contact_deleted(deleted_data(at=T0 + timedelta(minutes=1)))
+
+    outcome = projections.apply_contact_snapshot(contact_data(at=T0 + timedelta(minutes=2)), "contact.updated")
+
+    contact.refresh_from_db()
+    assert outcome.applied and not contact.is_archived and contact.can_act is False
+    assert CrmProjectionState.objects.get(kind="contact", crm_id=58).deleted is False
+
+
+def test_a_contact_moved_to_another_crm_client_follows_it_to_its_company(company):
+    other = make_company(name="Второй клиент", crm_client_id=43, inn="555000111")
+    projections.apply_contact_snapshot(contact_data(), "contact.created")
+    contact = CrmContactMapping.objects.get(crm_contact_id=58).contact
+    Contact.objects.filter(pk=contact.pk).update(can_act=True)
+
+    outcome = projections.apply_contact_snapshot(
+        contact_data(crm_client_id=43, at=T0 + timedelta(minutes=1)), "contact.updated"
+    )
+
+    contact.refresh_from_db()
+    assert outcome.applied and contact.company_id == other.pk
+    assert contact.can_act is False, "право действовать принадлежало прежней компании"
+
+
+def test_a_contact_moved_to_an_unknown_client_stays_and_leaves_a_log(company, caplog):
+    projections.apply_contact_snapshot(contact_data(), "contact.created")
+    with caplog.at_level(logging.WARNING):
+        projections.apply_contact_snapshot(
+            contact_data(crm_client_id=9999, at=T0 + timedelta(minutes=1)), "contact.updated"
+        )
+    assert CrmContactMapping.objects.get(crm_contact_id=58).contact.company_id == company.pk
+    assert "не передан в ERP" in caplog.text
+
+
+def test_the_email_of_crm_replaces_the_one_of_the_erp(company):
+    projections.apply_contact_snapshot(contact_data(), "contact.created")
+    projections.apply_contact_snapshot(contact_data(at=T0 + timedelta(minutes=1), email=None), "contact.updated")
+    assert CrmContactMapping.objects.get(crm_contact_id=58).contact.email == ""
 
 
 def test_a_newer_snapshot_after_deletion_creates_the_contact_again(company):

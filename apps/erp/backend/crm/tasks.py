@@ -488,10 +488,8 @@ def send_payment_reminders(self, grace_days: int = 3) -> dict:
     вторую ступень добавим, если первая окажется недостаточной.
     """
     from django.utils import timezone
-    from integration.services import events
 
     from .models import Invoice
-    from .services.deal_emails import email_payment_reminder
 
     cutoff = timezone.localdate() - timedelta(days=grace_days)
     overdue_qs = (
@@ -504,19 +502,38 @@ def send_payment_reminders(self, grace_days: int = 3) -> dict:
         .order_by("id")
     )
 
-    reminded = 0
+    reminded = failed = 0
     for invoice in overdue_qs:
         if invoice.balance_due <= 0:
             # Счёт закрыт деньгами, но статус не переключился — напоминать не о чем.
             continue
-        if email_payment_reminder(invoice):
-            reminded += 1
-        # Отмечаем в любом случае: если у покупателя нет ни одного активного адреса, повторная
-        # попытка завтра ничего не изменит и превратится в ежедневный холостой проход.
-        # Событие шины `invoice.overdue` — на той же отметке: ровно одно на просроченный счёт (статуса «просрочен» нет, его
-        # вычисляет эта задача), в транзакции отметки; сбой публикации откатывает отметку и задача повторит проход.
-        with transaction.atomic():
-            invoice.payment_reminder_sent_at = timezone.now()
-            invoice.save(update_fields=["payment_reminder_sent_at", "updated_at"])
-            events.publish_invoice_event("invoice.overdue", invoice)
+        try:
+            _remind_overdue_invoice(invoice)
+        except Exception:  # noqa: BLE001 — сбой одного счёта (шина, БД) не останавливает остальные; итог задачи — ниже
+            failed += 1
+            logger.exception("send_payment_reminders: счёт #%s не обработан, отметка и событие откатены", invoice.pk)
+            continue
+        reminded += 1
+    if failed:
+        # Не молча: задача завершается ошибкой (повтор по backoff подберёт необработанные — отмеченные счета не затрагиваются).
+        raise RuntimeError(f"send_payment_reminders: не обработано счетов — {failed}, обработано — {reminded}")
     return {"reminded": reminded}
+
+
+def _remind_overdue_invoice(invoice) -> None:
+    """Один просроченный счёт: отметка «напоминание отправлено» + событие шины `invoice.overdue` — в одной транзакции.
+
+    Событие рождается на отметке: ровно одно на просроченный счёт (статуса «просрочен» нет, его вычисляет задача). Письмо
+    покупателю уходит только после коммита (`on_commit`): откатилась отметка или публикация — письма нет. Отмечаем и тогда,
+    когда у покупателя нет ни одного активного адреса: повтор завтра ничего не изменит.
+    """
+    from django.utils import timezone
+    from integration.services import events
+
+    from .services.deal_emails import email_payment_reminder
+
+    with transaction.atomic():
+        invoice.payment_reminder_sent_at = timezone.now()
+        invoice.save(update_fields=["payment_reminder_sent_at", "updated_at"])
+        events.publish_invoice_event("invoice.overdue", invoice)
+        transaction.on_commit(lambda: email_payment_reminder(invoice), robust=True)
