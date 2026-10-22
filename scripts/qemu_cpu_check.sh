@@ -121,7 +121,7 @@ qemu_bin() {
 PROBE_OUT=""
 # probe_one <образ> <программа> <аргументы...> — 0 если команда прошла под qemu64; вывод — в PROBE_OUT
 probe_one() {
-  local image="$1" entry="$2" qemu cname outf rc=0 watchdog
+  local image="$1" entry="$2" qemu cname outf rc=0 ticks=0
   shift 2
   qemu="$(qemu_bin)"
   cname="rt-cpu-$$-$RANDOM"
@@ -131,15 +131,17 @@ probe_one() {
     'p="$(command -v "$1")" || { echo "в образе нет программы $1" >&2; exit 127; }; shift; exec /rt-qemu -cpu qemu64 -L / "$p" "$@"' \
     _ "$entry" "$@" >"$outf" 2>&1 &
   local pid=$!
-  (
-    sleep "$PROBE_TIMEOUT"
-    echo "таймаут ${PROBE_TIMEOUT} с" >>"$outf"
-    docker kill "$cname" >/dev/null 2>&1
-  ) &
-  watchdog=$!
+  # Таймаут — опросом в этом же shell, без фонового `sleep`: сирота-sleep держал бы stdout и вешал `| tail`, `$(...)`.
+  while kill -0 "$pid" 2>/dev/null; do
+    if [[ $ticks -ge $((PROBE_TIMEOUT * 5)) ]]; then
+      echo "таймаут ${PROBE_TIMEOUT} с" >>"$outf"
+      docker kill "$cname" >/dev/null 2>&1 || true
+      break
+    fi
+    sleep 0.2
+    ticks=$((ticks + 1))
+  done
   wait "$pid" || rc=$?
-  kill "$watchdog" 2>/dev/null || true
-  wait "$watchdog" 2>/dev/null || true
   PROBE_OUT="$(cat "$outf")"
   rm -f "$outf"
   return "$rc"
@@ -315,6 +317,19 @@ EOF
   # numpy 2.4+ собран с базой x86-64-v2 — RuntimeError при import; Wolfi (официальный LiteLLM) — SIGILL в ld.so/libc.
   expect_fail "numpy 2.4+ (колёса под базу x86-64-v2)" "$bad_image" 'X86_V2|x86-64-v2|Illegal instruction' python -c "$CPU_PY_NATIVE" || bad=1
   expect_fail "Wolfi, база официального образа LiteLLM (glibc под x86-64-v2)" "$wolfi" 'x86-64-v2|Illegal instruction' /bin/busybox true || bad=1
+
+  # Таймаут: зависшая команда прерывается, а после проверки не остаётся дочерних процессов (сирота `sleep` держал бы stdout
+  # и вешал `make cpu-selftest | tail`).
+  local t0=$SECONDS kids
+  rc=0
+  PROBE_TIMEOUT=2 probe_one "$ok_image" python -c "import time; time.sleep(60)" || rc=$?
+  kids="$(pgrep -P $$ || true)"
+  if [[ $rc -eq 0 || "$PROBE_OUT" != *"таймаут"* || $((SECONDS - t0)) -gt 20 || -n "$kids" ]]; then
+    printf '✘ selftest: таймаут проверки не сработал или оставил процессы (rc=%s, %s с, дочерние: %s)\n' "$rc" "$((SECONDS - t0))" "${kids:-нет}" >&2
+    bad=1
+  else
+    printf '✔ selftest: таймаут прерывает зависшую команду и не оставляет процессов\n' >&2
+  fi
 
   docker image rm -f "$ok_image" "$bad_image" "$wolfi" >/dev/null 2>&1 || true
   [[ $bad -eq 0 ]] || fail "самопроверка механики qemu64 не пройдена"
