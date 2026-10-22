@@ -1,0 +1,35 @@
+{
+  "specversion": "1.0",
+  "id": "f82d72d1-7f91-5dfe-85cf-be27bef986c3",
+  "source": "rt://crm",
+  "type": "uz.railtech.crm.contact.updated.v1",
+  "time": "2026-10-22T09:05:00Z",
+  "subject": "contact/58",
+  "datacontenttype": "application/json",
+  "dataschema": "rt://contracts/events/crm/contact.updated/v1",
+  "tenant": "railtech",
+  "correlationid": "4b6b822b-3e5a-50e9-9aa0-ff057ab64167",
+  "data": {
+    "contact": {
+      "crm_contact_id": 58,
+      "crm_client_id": 42,
+      "erp_company_id": 118,
+      "full_name": "Иван Петров",
+      "position": "Начальник снабжения",
+      "phone_e164": "+998900000001",
+      "email": "ivan.petrov@example.com",
+      "telegram_user_id": 100000001,
+      "is_primary": true,
+      "language": "ru",
+      "preferred_channel": "telegram",
+      "updated_at": "2026-10-22T09:05:00Z"
+    },
+    "changed_fields": [
+      "position"
+    ],
+    "actor": {
+      "type": "staff",
+      "crm_user_id": 1
+    }
+  }
+}

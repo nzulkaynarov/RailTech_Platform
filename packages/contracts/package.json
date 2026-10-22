@@ -3,12 +3,13 @@
   "version": "0.1.0",
   "private": true,
   "packageManager": "pnpm@10.28.0",
-  "description": "Контракт ансамбля RailTech Platform: OpenAPI ERP (internal, portal, integration), схема событий, erp-mcp, SSO-токен; Платформа (BFF API, ролевая матрица, статусы для клиента); генерация клиентов",
+  "description": "Контракт ансамбля RailTech Platform: OpenAPI ERP (internal, portal, integration), события шины rt_bus (CloudEvents, AsyncAPI 3, JSON Schema на тип), erp-mcp, SSO-токен; Платформа (BFF API, ролевая матрица, статусы для клиента); генерация клиентов",
   "scripts": {
     "lint:openapi": "redocly lint openapi/erp-portal.yaml openapi/erp-integration.yaml openapi/platform-bff.yaml && redocly lint --config redocly.internal.yaml openapi/erp-internal.yaml",
     "lint:events": "ajv compile --spec=draft2020 -c ajv-formats -s events.schema.json && ajv validate --spec=draft2020 -c ajv-formats -s events.schema.json -d \"examples/events/*.json\"",
+    "lint:asyncapi": "node scripts/validate-asyncapi.mjs events/asyncapi.yaml",
     "lint:mcp": "ajv compile --spec=draft2020 -c ajv-formats -s mcp-tools.schema.json && ajv validate --spec=draft2020 -c ajv-formats -s mcp-tools.schema.json -d mcp-tools.json",
-    "lint": "pnpm lint:openapi && pnpm lint:events && pnpm lint:mcp && pnpm lint:platform",
+    "lint": "pnpm lint:openapi && pnpm lint:events && pnpm lint:asyncapi && pnpm lint:mcp && pnpm lint:platform",
     "gen:types": "openapi-typescript openapi/erp-portal.yaml -o generated/erp-portal.d.ts && openapi-typescript openapi/erp-integration.yaml -o generated/erp-integration.d.ts && openapi-typescript openapi/platform-bff.yaml -o generated/platform-bff.d.ts",
     "gen:crm": "orval --config orval.config.ts",
     "generate": "pnpm gen:types && pnpm gen:crm && prettier --write generated --log-level warn",
@@ -17,6 +18,7 @@
     "lint:platform": "ajv compile --spec=draft2020 -s platform-rbac.schema.json && ajv validate --spec=draft2020 -s platform-rbac.schema.json -d platform-rbac.yaml && ajv compile --spec=draft2020 -s platform-rbac.v2.schema.json && ajv validate --spec=draft2020 -s platform-rbac.v2.schema.json -d platform-rbac.v2.yaml && ajv compile --spec=draft2020 -s client-statuses.schema.json && ajv validate --spec=draft2020 -s client-statuses.schema.json -d client-statuses.yaml"
   },
   "devDependencies": {
+    "@asyncapi/parser": "3.6.3",
     "@redocly/cli": "2.19.0",
     "ajv-cli": "5.0.0",
     "ajv-formats": "3.0.1",
