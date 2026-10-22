@@ -3,6 +3,7 @@
 Runbook'и уровня ансамбля (деплой и откат, бэкапы двух баз, стенд с тремя доменами).
 
 - [`stand.md`](stand.md) — локальный стенд `make up`; [`servers.md`](servers.md) — серверы M5; [`deploy.md`](deploy.md) — деплой и откат прода (M5-INF-01);
+  [`backup-pitr.md`](backup-pitr.md) — WAL-архив PostgreSQL (WAL-G), восстановление на момент времени, ежемесячная проверка (S0-3);
   [`request-id.md`](request-id.md) — найти запрос по `X-Request-ID` в журналах Caddy, CRM и ERP (S0-6);
   [`webhooks.md`](webhooks.md) — вебхуки ERP → CRM: журнал, ручной повтор, сбои приёма (FIX-33);
   [`wave1-agents.md`](wave1-agents.md) — волна 1 исправлений параллельными сессиями Claude Code (worktree, порядок слияния, промпты);
