@@ -8,7 +8,6 @@ from collections.abc import Awaitable, Callable, Sequence
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from decimal import Decimal
-from enum import StrEnum
 from typing import Any
 
 import structlog
@@ -71,11 +70,6 @@ def _hmac_matches(secret: str, message: bytes, signature_header: str | None) -> 
     return hmac.compare_digest(given_hex.encode("utf-8"), expected_hex.encode("utf-8"))
 
 
-def verify_signature(secret: str, raw_body: bytes, signature_header: str | None) -> bool:
-    """Старая подпись (схема v1): HMAC-SHA256 только по телу, `X-Signature: sha256=<hex>`."""
-    return _hmac_matches(secret, raw_body, signature_header)
-
-
 def _signed_v2(event_id: str, timestamp: str, raw_body: bytes) -> bytes:
     return f"{event_id}.{timestamp}.".encode() + raw_body
 
@@ -98,48 +92,25 @@ def verify_signature_v2(
     return _hmac_matches(secret, _signed_v2(event_id, timestamp, raw_body), signature_header)
 
 
-def verify_signature_any(
-    secrets: Sequence[str], raw_body: bytes, signature_header: str | None
-) -> bool:
-    """Старая подпись верна хотя бы одним из принимаемых секретов (текущий и предыдущий, FIX-35).
-
-    Проверяются все секреты без раннего выхода: время ответа не выдаёт, какой из них подошёл.
-    """
-    results = [verify_signature(secret, raw_body, signature_header) for secret in secrets]
-    return any(results)
-
-
-class SignatureScheme(StrEnum):
-    V2 = "v2"
-    LEGACY = "legacy"
-
-
-def match_signature(
+def verify_signature_v2_any(
     secrets: Sequence[str],
     event_id: str | None,
     timestamp: str | None,
     raw_body: bytes,
     signature_header: str | None,
-    *,
-    allow_legacy: bool,
-) -> SignatureScheme | None:
-    """Какой схемой и каким из принимаемых секретов подписан запрос; `None` — подпись неверна.
+) -> bool:
+    """Подпись v2 верна хотя бы одним из принимаемых секретов (текущий и предыдущий, FIX-35).
 
     v2 покрывает `X-Event-Id` и `X-Timestamp`, поэтому перехваченное тело под новым id не
-    проходит. Старая схема (только тело) принимается лишь пока `allow_legacy`
-    (ERP_WEBHOOK_SIGN_LEGACY). Все секреты и обе схемы проверяются без раннего выхода: время
-    ответа не выдаёт, что подошло.
+    проходит. Старая подпись (v1, HMAC только тела) не принимается (S0-5). Проверяются все
+    секреты без раннего выхода: время ответа не выдаёт, какой из них подошёл.
     """
-    v2_ok = False
-    if event_id is not None and timestamp is not None:
-        v2_results = [
-            verify_signature_v2(s, event_id, timestamp, raw_body, signature_header) for s in secrets
-        ]
-        v2_ok = any(v2_results)
-    legacy_ok = allow_legacy and verify_signature_any(secrets, raw_body, signature_header)
-    if v2_ok:
-        return SignatureScheme.V2
-    return SignatureScheme.LEGACY if legacy_ok else None
+    if event_id is None or timestamp is None:
+        return False
+    results = [
+        verify_signature_v2(s, event_id, timestamp, raw_body, signature_header) for s in secrets
+    ]
+    return any(results)
 
 
 #: Допустимое расхождение `X-Timestamp` (v2) с часами CRM, в обе стороны (Q-FIX35-2).
@@ -308,9 +279,9 @@ class ErpEventsService:
     ) -> tuple[bool, str]:
         """Приём вебхука: подпись → заголовки → разбор тела → идемпотентная фиксация → очередь.
 
-        Подпись — схема v2 (FIX-61): `HMAC(secret, "{X-Event-Id}.{X-Timestamp}.{body}")`; пока
-        `ERP_WEBHOOK_SIGN_LEGACY=true`, принимается и старая (HMAC только тела). Метка v2 вне
-        окна 300 с — постоянный отказ: 200 и строка `rejected` (ERP подписывает ретрай заново).
+        Подпись — схема v2 (FIX-61): `HMAC(secret, "{X-Event-Id}.{X-Timestamp}.{body}")`; старая
+        подпись (HMAC только тела) не принимается — 401 (S0-5). Метка v2 вне окна 300 с —
+        постоянный отказ: 200 и строка `rejected` (ERP подписывает ретрай заново).
 
         Подпись проверяется по сырому телу ДО любого разбора (FIX-33): неподписанный запрос не
         заставляет CRM разбирать JSON и не узнаёт, что именно в теле не так. Дальше:
@@ -327,19 +298,9 @@ class ErpEventsService:
                 "erp webhook secret is not configured", reason=Reason.ERP_NOT_CONFIGURED
             )
 
-        scheme = match_signature(
-            secrets,
-            event_id,
-            timestamp,
-            raw_body,
-            signature,
-            allow_legacy=self._config.erp_webhook_sign_legacy,
-        )
-        if scheme is None:
+        if not verify_signature_v2_any(secrets, event_id, timestamp, raw_body, signature):
             logger.warning("erp_webhook_invalid_signature", event_id=event_id)
             raise AuthError("invalid webhook signature")
-        if scheme is SignatureScheme.LEGACY:
-            logger.warning("erp_webhook_legacy_signature", event_id=event_id)
 
         try:
             event_id = str(uuid.UUID(event_id or ""))
@@ -354,11 +315,7 @@ class ErpEventsService:
         status, error = parsed.status, parsed.error
         # Метка подписи v2 вне окна: событие не обрабатывается (код акцепта не уходит), строка
         # `rejected`. Хеш тела не пишем: такая строка не должна делать «повтором» законный ретрай.
-        stale = (
-            timestamp_problem(timestamp, datetime.now(UTC))
-            if scheme is SignatureScheme.V2
-            else None
-        )
+        stale = timestamp_problem(timestamp, datetime.now(UTC))
         if stale is not None:
             status, error, body_hash = "rejected", stale, None
         # Код акцепта не ждёт очереди: задача и `outbox` хранили бы его в БД. Строка журнала
