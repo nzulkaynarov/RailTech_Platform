@@ -28,6 +28,8 @@ from app.integrations.erp_externals import HttpxErpSwitchClient
 from app.integrations.erp_pairing import HttpxErpPairingClient, PairingSecrets
 from app.integrations.erp_transport import REQUEST_ID_HEADER, SharedAsyncClient
 from app.integrations.erp_users import HttpxErpUsersClient, ProvisionPayload
+from app.log import is_valid_request_id
+from app.main import create_app
 from tests.unit.test_erp_handoff import _DummyStore, _sample_payload
 
 BASE = "https://erp.internal"
@@ -227,3 +229,30 @@ async def test_log_line_has_no_secrets(clean_context: None) -> None:
     assert "Bearer" not in dumped
     assert "erp.internal" not in dumped  # адрес сервера не нужен: путь и статус достаточно
     assert "/api/integration/v1/clients/handoff" in dumped
+
+
+@pytest.mark.parametrize(
+    ("value", "valid"),
+    [
+        ("0b6c2c46-aaaa-4bbb-8ccc-1234567890ab", True),
+        ("client-given-123", True),
+        ("trace.id_1", True),
+        ("", False),
+        ("a b", False),
+        ("a\nb", False),
+        ("x" * 129, False),
+    ],
+)
+def test_incoming_request_id_is_kept_when_it_is_a_safe_token(value: str, valid: bool) -> None:
+    assert is_valid_request_id(value) is valid
+
+
+async def test_api_keeps_a_non_uuid_request_id_from_the_edge() -> None:
+    app = create_app(Settings(_env_file=None))
+    async with httpx.AsyncClient(
+        transport=httpx.ASGITransport(app=app), base_url="http://test"
+    ) as client:
+        kept = await client.get("/health", headers={REQUEST_ID_HEADER: "client-given-123"})
+        replaced = await client.get("/health", headers={REQUEST_ID_HEADER: "bad id"})
+    assert kept.headers[REQUEST_ID_HEADER] == "client-given-123"
+    assert replaced.headers[REQUEST_ID_HEADER] != "bad id"
