@@ -14,6 +14,7 @@ dependencies = [
 
 [dependency-groups]
 dev = [
+    "datamodel-code-generator==0.83.0",
     "jsonschema>=4.26.0",
     "mypy>=2.4.0",
     "pytest>=9.1.1",
@@ -36,6 +37,8 @@ filterwarnings = ["error"]
 [tool.ruff]
 line-length = 100
 target-version = "py312"
+# Модели CRM генерирует datamodel-codegen из packages/contracts/openapi/crm.yaml (формат и линт — его, свежесть — make crm-models-check).
+extend-exclude = ["app/clients/crm_models.py"]
 
 [tool.ruff.lint]
 select = ["E", "W", "F", "I", "B", "UP", "SIM", "S", "BLE", "C4", "PT", "RUF", "ASYNC", "T20", "N"]

@@ -32,7 +32,7 @@ tokens-check: ## Копия токенов совпадает с генерац�
 	@echo "tokens: ok"
 
 .PHONY: api-types-check
-api-types-check: ## Типы совпадают с генерацией: портал (erp-portal.yaml) и форма лида CRM (apps/crm/docs/api/openapi.json)
+api-types-check: ## Типы совпадают с генерацией: портал (erp-portal.yaml) и форма лида CRM (packages/contracts/openapi/crm.yaml)
 	@npx openapi-typescript ../../packages/contracts/openapi/erp-portal.yaml 2>/dev/null | diff -q - src/api/portal.d.ts >/dev/null \
 	  || { echo "cabinet: src/api/portal.d.ts устарел — выполните make -C apps/cabinet gen-api-types"; exit 1; }
 	@node scripts/gen-crm-form-types.mjs | diff -q - src/api/crm-form.d.ts >/dev/null \

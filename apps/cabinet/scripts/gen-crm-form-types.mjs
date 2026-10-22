@@ -2,7 +2,7 @@
 /**
  * Типы публичной формы CRM «Запрос» (`/api/v1/leads/web*`, M3-CRM-05 / M2-CAB-03) для Cabinet.
  *
- * Источник — OpenAPI CRM (`apps/crm/docs/api/openapi.json`, `make -C apps/crm openapi`). Из всей
+ * Источник — OpenAPI CRM (`packages/contracts/openapi/crm.yaml`, `make -C apps/crm openapi`). Из всей
  * схемы CRM берутся только пути формы и схемы, на которые они ссылаются (транзитивно): остального
  * API CRM Cabinet не знает (CLAUDE.md §2.1). Результат — в stdout:
  *
@@ -14,13 +14,14 @@ import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import openapiTS, { astToString } from 'openapi-typescript';
+import { parse } from 'yaml';
 
 const here = dirname(fileURLToPath(import.meta.url));
-const source = resolve(here, '../../crm/docs/api/openapi.json');
+const source = resolve(here, '../../../packages/contracts/openapi/crm.yaml');
 const PATH_PREFIX = '/api/v1/leads/web';
 const SCHEMA_REF = '#/components/schemas/';
 
-const spec = JSON.parse(readFileSync(source, 'utf8'));
+const spec = parse(readFileSync(source, 'utf8'));
 const paths = Object.fromEntries(Object.entries(spec.paths).filter(([path]) => path.startsWith(PATH_PREFIX)));
 
 /** Схемы, достижимые по `$ref` из путей формы. */
@@ -54,6 +55,6 @@ const subset = {
 
 const ast = await openapiTS(subset);
 process.stdout.write(
-  '/**\n * Сгенерировано scripts/gen-crm-form-types.mjs из apps/crm/docs/api/openapi.json — не править руками.\n */\n\n' +
+  '/**\n * Сгенерировано scripts/gen-crm-form-types.mjs из packages/contracts/openapi/crm.yaml — не править руками.\n */\n\n' +
     astToString(ast),
 );

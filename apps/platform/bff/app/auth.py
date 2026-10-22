@@ -19,6 +19,7 @@ from redis.asyncio import Redis
 
 from app.clients import CrmClient, ErpClient
 from app.clients.base import Backend, BackendUnavailableError, cookie_value
+from app.clients.crm_models import SsoTokenResponse
 from app.config import Settings
 from app.errors import (
     PlatformError,
@@ -201,7 +202,7 @@ class AuthService:
         if sso.status_code != 200:
             raise ErpConnectError(f"crm sso/token: HTTP {sso.status_code}")
         try:
-            sso_token = str(sso.json()["token"])
+            sso_token = SsoTokenResponse.model_validate(sso.json()).token
         except (ValueError, KeyError, TypeError) as exc:
             raise ErpConnectError("crm sso/token: unexpected body") from exc
         exchange = await self.erp.sso_exchange(sso_token)
