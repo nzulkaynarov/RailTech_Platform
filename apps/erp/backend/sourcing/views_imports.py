@@ -382,16 +382,17 @@ class ImportCatalogAiView(RoleGatedViewMixin, APIView):
         if not content_matches_extension(raw[:16], extension):
             return Response({"detail": "FILE_CONTENT_MISMATCH"}, status=status.HTTP_400_BAD_REQUEST)
 
-        # ARCH-01: байты НИКОГДА не едут через Redis-брокер — staging в default_storage,
+        # ARCH-01: байты НИКОГДА не едут через Redis-брокер — staging в бакете erp-temp (файловая система у backend и воркера разная),
         # воркер читает по ключу и удаляет файл после попытки (см. _handle_catalog_import_ai).
         import uuid
 
         from django.core.files.base import ContentFile
-        from django.core.files.storage import default_storage
+
+        from core.storage import get_temp_storage
 
         from .ai_jobs import enqueue_ai_job
 
-        storage_path = default_storage.save(f"ai_extract_tmp/{uuid.uuid4().hex}.{extension}", ContentFile(raw))
+        storage_path = get_temp_storage().save(f"ai_extract_tmp/{uuid.uuid4().hex}.{extension}", ContentFile(raw))
         payload = {
             "storage_path": storage_path,
             "filename": file_obj.name,

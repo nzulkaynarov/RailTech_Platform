@@ -46,16 +46,17 @@ def _handle_extract(payload: dict) -> dict:
     The view resolves the (expected_total, expected_currency, kind) record of truth with
     its visibility checks BEFORE enqueue and ships them JSON-safe (total as str) — the
     worker never re-does request-scoped authorization. The document itself travels as a
-    default_storage key (NOT base64 through the broker: prod redis-celery runs maxmemory
+    erp-temp storage key (NOT base64 through the broker: prod redis-celery runs maxmemory
     128mb + noeviction, so a handful of queued 10MB uploads would brick all of Celery);
     the temp file is always deleted after the attempt.
     """
     from ai.services.documents import extract_document_fields, reconcile
-    from django.core.files.storage import default_storage
+
+    from core.storage import get_temp_storage
 
     file_key = payload["file_key"]
     try:
-        with default_storage.open(file_key) as stored:
+        with get_temp_storage().open(file_key) as stored:
             raw = stored.read()
         try:
             extracted = extract_document_fields(raw, payload["filename"])
@@ -64,7 +65,7 @@ def _handle_extract(payload: dict) -> dict:
             logger.warning("AI doc-extract failed: %s", exc)
             return {"error": "AI_EXTRACT_FAILED"}
     finally:
-        default_storage.delete(file_key)
+        get_temp_storage().delete(file_key)
 
     comparison = reconcile(extracted, payload.get("expected_total"), payload.get("expected_currency"))
     return {
@@ -81,9 +82,9 @@ def _handle_import_lines(payload: dict) -> dict:
     user (TOCTOU — как quote_diff): под очередью routing мог быть отозван. Файл едет storage-ключом
     (не через брокер), удаляется после попытки."""
     from ai.services.intake import extract_request_items
-    from django.core.files.storage import default_storage
 
     from accounts.models import CustomUser
+    from core.storage import get_temp_storage
     from crm.models import Quote
     from crm.services.quotes.bulk import import_extracted_lines_into_quote
 
@@ -91,10 +92,10 @@ def _handle_import_lines(payload: dict) -> dict:
     user = CustomUser.objects.filter(pk=payload["user_id"]).first()
     quote = Quote.objects.select_related("deal", "cost_currency_default").filter(pk=payload["quote_id"]).first()
     if user is None or quote is None:
-        default_storage.delete(file_key)
+        get_temp_storage().delete(file_key)
         return {"error": "QUOTE_NOT_FOUND"}
     try:
-        with default_storage.open(file_key) as stored:
+        with get_temp_storage().open(file_key) as stored:
             raw = stored.read()
         try:
             rows = extract_request_items(raw, payload.get("filename") or "upload")
@@ -102,7 +103,7 @@ def _handle_import_lines(payload: dict) -> dict:
             logger.warning("AI import-lines extract failed: %s", exc)
             return {"error": "AI_EXTRACT_FAILED"}
     finally:
-        default_storage.delete(file_key)
+        get_temp_storage().delete(file_key)
 
     added, truncated, err = import_extracted_lines_into_quote(quote, user, rows)
     if err:
@@ -245,13 +246,13 @@ def _handle_catalog_import_ai(payload: dict) -> dict:
     """
     import pandas as pd
     from ai.services.price_list import extract_price_rows
-    from django.core.files.storage import default_storage
 
+    from core.storage import get_temp_storage
     from sourcing.catalog_import import run_catalog_import_frame
 
     storage_path = payload["storage_path"]
     try:
-        with default_storage.open(storage_path) as stored:
+        with get_temp_storage().open(storage_path) as stored:
             raw = stored.read()
         try:
             rows, ai_used = extract_price_rows(raw, payload.get("filename") or "upload")
@@ -259,7 +260,7 @@ def _handle_catalog_import_ai(payload: dict) -> dict:
             logger.warning("AI catalog import: extract failed: %s", exc)
             return {"status": "error", "message": "AI_EXTRACT_FAILED"}
     finally:
-        default_storage.delete(storage_path)
+        get_temp_storage().delete(storage_path)
 
     if not rows:
         return {"status": "error", "message": "AI_EXTRACT_EMPTY"}

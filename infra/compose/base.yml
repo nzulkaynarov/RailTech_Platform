@@ -55,9 +55,6 @@ x-crm-backend: &crm-backend
     # Шов CRM ↔ ERP (FIX-01): значений по умолчанию в коде нет, без .env стенд не поднимается.
     # Сервисный токен и секрет вебхуков CRM берёт из «Подключений» → ERP (ADR-0022), SSO — отсюда.
     PLATFORM_SSO_SECRET: ${PLATFORM_SSO_SECRET:?set in .env}
-    # Подпись вебхуков ERP v2 (FIX-61): true — CRM принимает и старую подпись (только тело), пока ERP не выложен с v2;
-    # после выкладки обеих сторон — false (docs/runbooks/webhooks.md).
-    ERP_WEBHOOK_SIGN_LEGACY: ${ERP_WEBHOOK_SIGN_LEGACY:-true}
     # Переход CRM ↔ ERP по SSO; по умолчанию выключен (FIX-03), включает владелец после FIX-10/FIX-11.
     PLATFORM_SSO_ENABLED: ${PLATFORM_SSO_ENABLED:-false}
     # Публичный адрес ERP для перехода по SSO; на стенде с HTTP_PORT≠80 порт обязателен (иначе переход уходит на :80).
@@ -118,7 +115,7 @@ services:
       timeout: 5s
       retries: 20
 
-  # S3-хранилище файлов — RustFS (CRM ADR-0009). Бакеты CRM как были; `erp` — для ERP (M1).
+  # S3-хранилище файлов — RustFS (CRM ADR-0009). Бакеты CRM как были; ERP — `erp-private`, `erp-public`, `erp-temp` (S0-1).
   rustfs:
     image: rustfs/rustfs:1.0.1
     environment:
@@ -151,8 +148,8 @@ services:
     environment:
       S3_ACCESS_KEY: ${S3_ACCESS_KEY}
       S3_SECRET_KEY: ${S3_SECRET_KEY}
-      # CRM: kb-sources client-documents tg-attachments (app/config.py); Langfuse: langfuse; ERP: erp.
-      S3_BUCKETS: langfuse kb-sources client-documents tg-attachments erp
+      # CRM: kb-sources client-documents tg-attachments (app/config.py); Langfuse: langfuse; ERP: erp-private erp-public erp-temp.
+      S3_BUCKETS: langfuse kb-sources client-documents tg-attachments erp-private erp-public erp-temp
     healthcheck:
       disable: true
     depends_on:
@@ -341,8 +338,8 @@ services:
 
   # ─── ERP (apps/erp) — копия B2B, M1-ERP-01 ──────────────────────────────────────────────────
   # Один образ для backend (Daphne), воркеров Celery и Beat; команда выбирает процесс (как в B2B).
-  # База `erp` на общем Postgres, Redis БД 1 (Celery) и 2 (Channels/кэш). Файлы — FileSystemStorage в томе
-  # (перевод на RustFS — отдельной задачей M1). CORS/CSRF в коде B2B захардкожены по DEBUG — на dev DEBUG=true.
+  # База `erp` на общем Postgres, Redis БД 1 (Celery) и 2 (Channels/кэш). Файлы — только в RustFS (бакеты erp-*, MINIO_*);
+  # тома медиа нет, на диск контейнера ERP файлы не пишутся. CORS/CSRF в коде B2B захардкожены по DEBUG — на dev DEBUG=true.
 
   erp-backend:
     build:
@@ -395,14 +392,23 @@ services:
       # Тот же бот, что у CRM: ERP проверяет им подпись initData Mini App (пусто — вход через Mini App закрыт).
       TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
       TELEGRAM_BOT_USERNAME: ${TELEGRAM_BOT_USERNAME:-}
+      # Файлы ERP (PDF КП, договоров, счетов, актов, сканы, загрузки портала, картинки каталога, импорт) — RustFS внутри сети
+      # compose; наружу адрес не публикуется, файлы клиенту отдаёт сам ERP. Ключ пока общий с S3_* (ADR-0013 п. 6, хвост S0-1).
+      MINIO_ENDPOINT: http://rustfs:9000
+      MINIO_ACCESS_KEY: ${S3_ACCESS_KEY}
+      MINIO_SECRET_KEY: ${S3_SECRET_KEY}
+      MINIO_PRIVATE_BUCKET: erp-private
+      MINIO_PUBLIC_BUCKET: erp-public
+      MINIO_TEMP_BUCKET: erp-temp
     volumes:
       - erp_static:/app/staticfiles
-      - erp_media:/app/media
     depends_on:
       db-init:
         condition: service_completed_successfully
       redis:
         condition: service_healthy
+      s3-init:
+        condition: service_completed_successfully
     healthcheck:
       test: ["CMD", "curl", "-fsS", "http://127.0.0.1:8000/health/"]
       interval: 15s
@@ -444,8 +450,6 @@ services:
       context: ../../apps/erp/backend
     command: ["celery", "-A", "core", "worker", "-l", "info", "-Q", "default,pdf,imports"]
     environment: *erp-env
-    volumes:
-      - erp_media:/app/media
     depends_on:
       erp-backend:
         condition: service_healthy
@@ -461,8 +465,6 @@ services:
       context: ../../apps/erp/backend
     command: ["celery", "-A", "core", "worker", "-l", "info", "-Q", "ai", "--concurrency=2"]
     environment: *erp-env
-    volumes:
-      - erp_media:/app/media
     depends_on:
       erp-backend:
         condition: service_healthy
@@ -696,7 +698,6 @@ services:
 
 volumes:
   erp_static:
-  erp_media:
   postgres_data:
   redis_data:
   s3_data:

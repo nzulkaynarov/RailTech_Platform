@@ -53,7 +53,7 @@ frontend/  React 18 · TypeScript · Vite · Tailwind CSS 4 · shadcn/ui · Reac
 Версии зафиксированы в `backend/pyproject.toml` и `frontend/package.json` (на момент копирования M1-ERP-01 — как в B2B, тег `b2b-final`); обновления — отдельными PR с `make check-erp`.
 Общие сервисы (Postgres, Redis, LiteLLM, Langfuse, RustFS, Caddy) — из `infra/compose` (есть; сервисы `erp-*` добавлены в M1-ERP-01),
 ERP сам их не описывает. Токены дизайна — из `packages/ui-tokens` (есть: `dist/shadcn.css`); подключение в `frontend/src/index.css` — при перестройке UI (M1-ERP-04).
-Хранилище файлов — целевое RustFS через S3-бэкенд Django; после копирования пока FileSystemStorage в томе `erp_media` (перевод — отдельной задачей M1).
+Хранилище файлов — RustFS через S3-бэкенд Django (S0-1): бакеты `erp-private` (по умолчанию), `erp-public`, `erp-temp`; тома `erp_media` нет. Адрес RustFS наружу не отдаётся: `.url` любого хранилища — путь под `/media/`, приватные файлы — только потоком через аутентифицированное представление (`core/file_streaming.py`), публичные — `/media/*` (белый список в `core/urls.py`). Голого `default_storage` в коде нет (тест `test_no_bare_default_storage_in_application_code`): staging ИИ-импорта — `get_temp_storage()` (backend и воркер Celery файловой системы не делят), а `STORAGES["default"]` при заданном `MINIO_ENDPOINT` — тоже `erp-private` (`core/default_storage.py`). Вне `DJANGO_DEBUG` без `MINIO_ENDPOINT` и ключей ERP не стартует; в DEBUG и тестах — файловая система (`MEDIA_ROOT`).
 
 ## 4. Структура приложений (ARCHITECTURE §4; имена и одна миграция на приложение — ADR-0006)
 

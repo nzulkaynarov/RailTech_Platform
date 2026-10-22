@@ -113,7 +113,7 @@ url="${*: -1}"; fmt=0; for a in "$@"; do [[ "$a" == -w ]] && fmt=1; done
 case "$url" in
   https://plat.test/api/v1/health) code=200; body="${RT_TEST_PLATFORM_BODY:-{\"status\":\"ok\"\}}" ;;
   https://plat.test/mcp/*) code=404; body="" ;;
-  https://erp.test/mcp/*) code=404; body="" ;;
+  https://erp.test/mcp/*|https://erp.test/api/integration/*|https://erp.test/admin/*) code=404; body="" ;;
   *) code=200; body="ok" ;;
 esac
 if [[ $fmt -eq 1 ]]; then printf '%s' "$code"; else printf '%s' "$body"; fi

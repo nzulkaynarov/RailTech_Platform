@@ -315,18 +315,22 @@ async def test_receive_with_a_dead_queue_stores_the_event_and_the_sweeper_recove
     harness: Harness,
 ) -> None:
     """Сквозной путь I-10: постановка упала → ответ 200 → строка осталась → сборщик → обработано."""
-    import hashlib
-    import hmac
     import json
+    from datetime import UTC, datetime
+
+    from app.services.erp_events import sign_v2
 
     client_id, _ = await harness.seed_client()
     secret = "x" * 40
     raw = json.dumps(envelope_for("quote.sent", client_id)).encode()
-    signature = "sha256=" + hmac.new(secret.encode(), raw, hashlib.sha256).hexdigest()
     event_id = str(uuid.uuid4())
+    stamp = datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
+    signature = sign_v2(secret, event_id, stamp, raw)
     harness.enqueue_error = OSError("procrastinate down")
 
-    assert await harness.service.receive_event(event_id, "quote.sent", signature, raw) == (
+    assert await harness.service.receive_event(
+        event_id, "quote.sent", signature, raw, timestamp=stamp
+    ) == (
         False,
         "stored",
     )

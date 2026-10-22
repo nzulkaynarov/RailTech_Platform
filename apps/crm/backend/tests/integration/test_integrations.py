@@ -1,10 +1,9 @@
 """«Подключения»: матрица ролей, секреты шифруются и не возвращаются, канал из `my_chat_member`."""
 
-import hashlib
-import hmac
 import json
 import uuid
 from collections.abc import Iterator
+from datetime import UTC, datetime
 from typing import Any
 
 import httpx
@@ -213,19 +212,21 @@ NEW_HOOK = "integration-erp-webhook-NEW-secret-0002"  # фиктивный
 
 def post_event(client: TestClient, secret: str, serial: int) -> int:
     """Подписанное событие из примеров контракта; `serial` делает тело уникальным (иначе повтор)."""
+    from app.services.erp_events import sign_v2
     from tests.seam_events import example_event
 
     body = example_event("quote.viewed")
     body["occurred_at"] = f"2026-10-13T11:{serial:02d}:00+05:00"
     raw = json.dumps(body).encode()
-    signature = "sha256=" + hmac.new(secret.encode(), raw, hashlib.sha256).hexdigest()
+    event_id, stamp = str(uuid.uuid4()), datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
     response = client.post(
         EVENTS_URL,
         content=raw,
         headers={
-            "X-Event-Id": str(uuid.uuid4()),
+            "X-Event-Id": event_id,
             "X-Event-Type": "quote.viewed",
-            "X-Signature": signature,
+            "X-Timestamp": stamp,
+            "X-Signature": sign_v2(secret, event_id, stamp, raw),
             "Content-Type": "application/json",
         },
     )
