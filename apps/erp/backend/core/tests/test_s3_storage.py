@@ -166,3 +166,72 @@ def test_private_paths_are_not_reachable_via_media(public_bucket, path):
     public_bucket.save(path, ContentFile(b"secret"))
 
     assert APIClient().get(f"/media/{path}").status_code == 404
+
+
+def test_default_storage_is_the_private_bucket_when_s3_is_configured():
+    """Голый default_storage вне DEBUG не может писать на диск контейнера: он тоже в S3 (erp-private)."""
+    code = (
+        "import django; django.setup();"
+        "from django.core.files.storage import default_storage as d;"
+        "d._setup(); s = d._wrapped;"
+        "print(type(s).__name__, s.bucket_name, s.url('x/y.pdf'))"
+    )
+    env = {key: value for key, value in os.environ.items() if key not in S3_NAMES}
+    env.update(
+        {
+            "DJANGO_SETTINGS_MODULE": "core.settings",
+            "DJANGO_SECRET_KEY": "x" * 50,
+            "DJANGO_DEBUG": "False",
+            "MINIO_ENDPOINT": "http://rustfs:9000",
+            "MINIO_ACCESS_KEY": "erp",
+            "MINIO_SECRET_KEY": "erp-secret",
+            **SEAM_ENV,
+        }
+    )
+    result = subprocess.run(
+        [sys.executable, "-c", code], cwd=BACKEND_DIR, env=env, capture_output=True, text=True, timeout=120
+    )
+
+    assert result.returncode == 0, result.stderr
+    assert result.stdout.split() == ["DefaultPrivateStorage", "erp-private", "/media/x/y.pdf"]
+
+
+def test_no_bare_default_storage_in_application_code():
+    """Файлы идут через get_public_storage / get_private_storage / get_temp_storage. Голый `default_storage` (и
+    FileSystemStorage) в прикладном коде — запись на диск одного контейнера: воркер Celery не найдёт файл backend'а."""
+    import ast
+
+    allowed = {BACKEND_DIR / "core" / "storage.py"}
+    offenders = []
+    for path in BACKEND_DIR.rglob("*.py"):
+        parts = set(path.relative_to(BACKEND_DIR).parts)
+        if path in allowed or "tests" in parts or "migrations" in parts or path.name.startswith("test_"):
+            continue
+        if path.name == "conftest.py":
+            continue
+        for node in ast.walk(ast.parse(path.read_text(encoding="utf-8"))):
+            names = []
+            if isinstance(node, ast.ImportFrom):
+                names = [alias.name for alias in node.names]
+            elif isinstance(node, ast.Name):
+                names = [node.id]
+            elif isinstance(node, ast.Attribute):
+                names = [node.attr]
+            if {"default_storage", "FileSystemStorage"} & set(names):
+                offenders.append(f"{path.relative_to(BACKEND_DIR)}:{node.lineno}")
+    assert not offenders, offenders
+
+
+def test_every_file_field_chooses_its_bucket_explicitly():
+    """Поле файла без `storage=` уходило бы в default_storage, а не в нужный бакет."""
+    from django.apps import apps
+    from django.db.models import FileField
+
+    chosen = {storage_module.get_private_storage, storage_module.get_public_storage, storage_module.get_temp_storage}
+    missing = [
+        f"{model._meta.label}.{field.name}"
+        for model in apps.get_models()
+        for field in model._meta.get_fields()
+        if isinstance(field, FileField) and field._storage_callable not in chosen
+    ]
+    assert not missing, missing

@@ -192,17 +192,17 @@ def test_dispatch_preflight(monkeypatch):
 
 def _stage_extract_file(content: bytes) -> str:
     from django.core.files.base import ContentFile
-    from django.core.files.storage import default_storage
 
-    return default_storage.save("ai_extract_tmp/test-extract.pdf", ContentFile(content))
+    import core.storage as core_storage
+
+    return core_storage.get_temp_storage().save("ai_extract_tmp/test-extract.pdf", ContentFile(content))
 
 
 @pytest.mark.django_db
 def test_dispatch_extract(monkeypatch):
-    """The document travels as a default_storage key (never base64 through the broker);
+    """The document travels as a erp-temp storage key (never base64 through the broker);
     the handler reads it, runs extract+reconcile, and ALWAYS deletes the temp file."""
-    from django.core.files.storage import default_storage
-
+    import core.storage as core_storage
     from sourcing.tasks_ai import run_ai_job
 
     seen = {}
@@ -232,15 +232,14 @@ def test_dispatch_extract(monkeypatch):
         "comparison": {"ok": True, "mismatches": []},
     }
     assert seen == {"content": b"%PDF-1.4 stub", "filename": "contract.pdf"}
-    assert not default_storage.exists(file_key)  # temp file cleaned up
+    assert not core_storage.get_temp_storage().exists(file_key)  # temp file cleaned up
 
 
 @pytest.mark.django_db
 def test_dispatch_extract_failure_returns_error_code_and_cleans_up(monkeypatch):
     """A RuntimeError from the vision extraction becomes {"error": AI_EXTRACT_FAILED} —
     returned, not raised — and the staged temp file is still deleted."""
-    from django.core.files.storage import default_storage
-
+    import core.storage as core_storage
     from sourcing.tasks_ai import run_ai_job
 
     def _boom(content, filename):
@@ -250,7 +249,7 @@ def test_dispatch_extract_failure_returns_error_code_and_cleans_up(monkeypatch):
     file_key = _stage_extract_file(b"x")
     payload = {"file_key": file_key, "filename": "doc.pdf"}
     assert run_ai_job("extract", payload) == {"error": "AI_EXTRACT_FAILED"}
-    assert not default_storage.exists(file_key)
+    assert not core_storage.get_temp_storage().exists(file_key)
 
 
 @pytest.mark.django_db

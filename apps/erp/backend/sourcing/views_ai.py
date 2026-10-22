@@ -188,11 +188,12 @@ class DocumentExtractView(RoleGatedViewMixin, APIView):
         # runs maxmemory 128mb + noeviction, so a handful of queued 10MB uploads would brick
         # every Celery publish platform-wide. The worker deletes the temp file after the run.
         from django.core.files.base import ContentFile
-        from django.core.files.storage import default_storage
+
+        from core.storage import get_temp_storage
 
         from .ai_jobs import enqueue_ai_job
 
-        file_key = default_storage.save(f"ai_extract_tmp/{uuid.uuid4().hex}.{extension}", ContentFile(raw))
+        file_key = get_temp_storage().save(f"ai_extract_tmp/{uuid.uuid4().hex}.{extension}", ContentFile(raw))
         payload = {
             "file_key": file_key,
             "filename": uploaded.name,
@@ -286,11 +287,12 @@ class QuoteImportFileView(RoleGatedViewMixin, APIView):
             return Response({"detail": "FILE_TYPE_UNSUPPORTED"}, status=status.HTTP_400_BAD_REQUEST)
 
         from django.core.files.base import ContentFile
-        from django.core.files.storage import default_storage
+
+        from core.storage import get_temp_storage
 
         from .ai_jobs import enqueue_ai_job
 
-        file_key = default_storage.save(f"ai_extract_tmp/{uuid.uuid4().hex}.{extension}", ContentFile(raw))
+        file_key = get_temp_storage().save(f"ai_extract_tmp/{uuid.uuid4().hex}.{extension}", ContentFile(raw))
         payload = {
             "file_key": file_key,
             "filename": uploaded.name,
