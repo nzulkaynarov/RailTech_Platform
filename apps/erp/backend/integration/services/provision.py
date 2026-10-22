@@ -8,7 +8,7 @@ ERP провижинит пользователя, назначает роли �
 from __future__ import annotations
 
 import logging
-from typing import Any, Dict, Tuple
+from typing import Any, Dict, List, Tuple
 
 from django.db import transaction
 from django.db.models import F
@@ -16,7 +16,9 @@ from sales.models import ActivityLog
 
 from accounts.models import CompanyMember, CompanyRole, CustomUser, WorkspaceRole
 from accounts.services.auth import revoke_user_refresh_tokens
+from accounts.services.own_company_setup import acquire_setup_lock
 from accounts.services.roles import SYNC_ROLE_PREFIX, ensure_default_company_roles
+from core.audit import log_admin_action
 from core.tenant import own_company
 
 from ..exceptions import IntegrationConflict
@@ -63,12 +65,114 @@ def _sync_system_roles(member: CompanyMember, role_codes, company) -> None:
     member.crm_granted_roles.set(granted)
 
 
+def bind_member_to_company(
+    user: CustomUser,
+    company,
+    *,
+    role: str,
+    permissions,
+    role_codes,
+    is_active: bool,
+) -> CompanyMember:
+    """Участник своей компании с ролями из провижининга CRM (идемпотентно: get_or_create, роли — add/remove)."""
+    member, _ = CompanyMember.objects.get_or_create(
+        user=user,
+        company=company,
+        # `role` (должность) обязательна; доступ определяют роли бэк-офиса ниже, не должность.
+        defaults={
+            "is_primary": True,
+            "is_active": is_active,
+            "role": WorkspaceRole.objects.get(code="MEMBER"),
+        },
+    )
+    if member.is_active != is_active:
+        member.is_active = is_active
+        member.save(update_fields=["is_active"])
+
+    if role == "backoffice":
+        # Провижининг управляет только СВОЕЙ ролью «CRM Sync: <e-mail>»: создаёт, обновляет права и
+        # добавляет (add), а роли, выданные в ERP вручную, не трогает (FIX-55, D-07; Q-FIX50-1 (2)).
+        crm_role, _ = CompanyRole.objects.get_or_create(
+            company=company,
+            name=sync_role_name(user.email),
+            defaults={"permissions": permissions, "is_system": False, "created_by": user},
+        )
+        crm_role.permissions = permissions
+        crm_role.managed_by_crm = True
+        crm_role.save(update_fields=["permissions", "managed_by_crm", "updated_at"])
+        member.company_roles.add(crm_role)
+        # Сменился e-mail сотрудника — прежняя «CRM Sync: <старый e-mail>» больше не его: снимаем остальные
+        # управляемые роли, ручные не трогаем.
+        member.company_roles.remove(*member.company_roles.filter(managed_by_crm=True).exclude(pk=crm_role.pk))
+        if role_codes is not None:
+            _sync_system_roles(member, role_codes, company)
+    else:
+        # Админу роли бэк-офиса не нужны (is_superuser имеет все права): снимаем только роли из CRM
+        # (свою «CRM Sync» и выданные по `role_codes`), если сотрудник был backoffice; ручные роли остаются.
+        if role_codes is not None:
+            _drop_crm_roles(member)
+        else:
+            member.company_roles.remove(*member.company_roles.filter(managed_by_crm=True))
+    return member
+
+
+@transaction.atomic
+def attach_provisioned_users(company, actor=None) -> List[int]:
+    """Привязать к только что созданной своей компании сотрудников, которых CRM провижинила ДО неё (FIX-P1-2, QA-P1-D-2).
+
+    Пока своей компании нет, `provision_crm_user` сохраняет пользователя и сопоставление, но члена компании
+    создавать некуда. Здесь — те же шаги, что у провижининга (`bind_member_to_company`), по сохранённому
+    `CrmUserMapping.provision_snapshot`: роль, права, `role_codes`. Берутся только активные пользователи (отключённый
+    в CRM или отозванный — `is_active=False` — не привязывается: вернётся следующим провижинингом). Идемпотентно:
+    уже участник — роли выравниваются, дублей нет. Сопоставление без снимка (создано до поля) получает роль по
+    `is_superuser` и минимальные права: ни `permissions`, ни системных ролей.
+
+    Возвращает ERP-id привязанных пользователей; в аудит пишет одну запись (если кого-то привязали).
+    """
+    attached: List[int] = []
+    mappings = CrmUserMapping.objects.filter(user__is_active=True).select_related("user").order_by("pk")
+    for mapping in mappings:
+        user = mapping.user
+        snapshot = mapping.provision_snapshot or {}
+        role = snapshot.get("role") or ("admin" if user.is_superuser else "backoffice")
+        bind_member_to_company(
+            user,
+            company,
+            role=role,
+            permissions=snapshot.get("permissions") or [],
+            role_codes=snapshot.get("role_codes"),
+            is_active=True,
+        )
+        attached.append(user.pk)
+
+    if attached:
+        log_admin_action(
+            entity_type="company",
+            entity_id=company.id,
+            action="Сотрудники из CRM привязаны к своей компании",
+            detail=f"{company.name}: привязано сотрудников, заведённых из CRM до создания компании — {len(attached)}",
+            # Без `event_code`: подпись берётся из `action` (русский текст). Структурный код требует словаря
+            # во фронтенде ERP (тест activityCoverage), а он заморожен.
+            after={"count": len(attached), "erp_user_ids": attached},
+            actor=actor,
+            company_id=company.id,
+        )
+        logger.info("Attached %s CRM-provisioned users to own company %s", len(attached), company.pk)
+    return attached
+
+
 @transaction.atomic
 def provision_crm_user(data: Dict[str, Any]) -> Tuple[Dict[str, Any], bool]:
     """Провижининг сотрудника из CRM.
 
     Возвращает ({"erp_user_id": ..., "crm_user_id": ...}, created).
     """
+    # Своей компании ещё нет — встаём в очередь с её созданием (FIX-P1-2): иначе провижининг, начатый
+    # параллельно с мастером первого запуска, мог бы записать снимок уже после привязки и остаться без членства.
+    # Блокировка берётся до любых записей; создание компании держит её первой, взаимной блокировки нет.
+    if own_company() is None:
+        acquire_setup_lock()
+
     crm_user_id = data["crm_user_id"]
     email = data["email"].strip().lower()
     name = data["name"].strip()
@@ -125,47 +229,16 @@ def provision_crm_user(data: Dict[str, Any]) -> Tuple[Dict[str, Any], bool]:
     # update_fields: полная запись затёрла бы `token_version`, выросший при параллельном отзыве доступа.
     user.save(update_fields=update_fields)
 
+    # Что пришло в последний раз — для привязки к своей компании, созданной позже (FIX-P1-2).
+    mapping.provision_snapshot = {"role": role, "permissions": list(permissions), "role_codes": role_codes}
+    mapping.save(update_fields=["provision_snapshot", "updated_at"])
+
     # Привязка к компании бэк-офиса (own_company)
     company = own_company()
     if company:
-        member, _ = CompanyMember.objects.get_or_create(
-            user=user,
-            company=company,
-            # `role` (должность) обязательна; доступ определяют роли бэк-офиса ниже, не должность.
-            defaults={
-                "is_primary": True,
-                "is_active": is_active,
-                "role": WorkspaceRole.objects.get(code="MEMBER"),
-            },
+        bind_member_to_company(
+            user, company, role=role, permissions=permissions, role_codes=role_codes, is_active=is_active
         )
-        if member.is_active != is_active:
-            member.is_active = is_active
-            member.save(update_fields=["is_active"])
-
-        if role == "backoffice":
-            # Провижининг управляет только СВОЕЙ ролью «CRM Sync: <e-mail>»: создаёт, обновляет права и
-            # добавляет (add), а роли, выданные в ERP вручную, не трогает (FIX-55, D-07; Q-FIX50-1 (2)).
-            crm_role, _ = CompanyRole.objects.get_or_create(
-                company=company,
-                name=sync_role_name(user.email),
-                defaults={"permissions": permissions, "is_system": False, "created_by": user},
-            )
-            crm_role.permissions = permissions
-            crm_role.managed_by_crm = True
-            crm_role.save(update_fields=["permissions", "managed_by_crm", "updated_at"])
-            member.company_roles.add(crm_role)
-            # Сменился e-mail сотрудника — прежняя «CRM Sync: <старый e-mail>» больше не его: снимаем остальные
-            # управляемые роли, ручные не трогаем.
-            member.company_roles.remove(*member.company_roles.filter(managed_by_crm=True).exclude(pk=crm_role.pk))
-            if role_codes is not None:
-                _sync_system_roles(member, role_codes, company)
-        else:
-            # Админу роли бэк-офиса не нужны (is_superuser имеет все права): снимаем только роли из CRM
-            # (свою «CRM Sync» и выданные по `role_codes`), если сотрудник был backoffice; ручные роли остаются.
-            if role_codes is not None:
-                _drop_crm_roles(member)
-            else:
-                member.company_roles.remove(*member.company_roles.filter(managed_by_crm=True))
 
     return {
         "erp_user_id": user.pk,
