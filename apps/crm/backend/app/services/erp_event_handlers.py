@@ -1,37 +1,46 @@
-"""Применение входящих событий ERP к зеркалу CRM (FIX-35): по классу конверта, payload типизирован.
+"""Применение входящих событий ERP к зеркалу CRM (FIX-35, B4): по классу модели `data`.
 
-`dispatch` получает конверт, разобранный дискриминированной моделью (`schemas/erp_events.py`),
-меняет зеркало сделки и индекс документов клиента и возвращает текст заметки в ленту лида (если
-она нужна). Тексты клиенту и сотруднику строит `services/erp_bot_messages.py` из
-`settings.texts`; здесь их нет. Читатель терпимый: поле, которого модель не знает, сюда не
-доходит.
+`dispatch` получает событие шины (`app.bus.erp_event.ErpEvent`, модели — сгенерированные
+`rt_contracts.events.erp`), меняет зеркало сделки и индекс документов клиента и возвращает текст
+заметки в ленту лида (если она нужна). Тексты клиенту и сотруднику строит
+`services/erp_bot_messages.py` из `settings.texts`; здесь их нет. Читатель терпимый: поле, которого
+модель не знает, сюда не доходит.
 """
 
 from datetime import UTC, datetime
 from decimal import Decimal
 
+from rt_contracts.events.erp import (
+    ActAcceptedV1,
+    ActIssuedV1,
+    ActReturnedV1,
+    ContractSignedV1,
+    DealLostV1,
+    DealStageChangedV1,
+    DealWonV1,
+    DeliveryEtaChangedV1,
+    DeliveryLineAcceptedV1,
+    DeliveryLineDisputedV1,
+    DeliveryStatusChangedV1,
+    DocumentCreatedV1,
+    InviteSentV1,
+    InvoiceIssuedV1,
+    InvoiceOverdueV1,
+    InvoicePaidV1,
+    QuoteAcceptedV1,
+    QuoteRejectedV1,
+    QuoteSentV1,
+    QuoteViewedV1,
+    RequestCreatedV1,
+)
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.bus.erp_event import ErpEvent, plain
 from app.domain.deals import DealStage, plan_erp_outcome
 from app.models.clients import Client, ClientContact, Document
 from app.models.deals import Deal
-from app.schemas.erp_events import (
-    ActEnvelope,
-    ContractSignedEvent,
-    DealOutcomeEvent,
-    DealStageChangedEvent,
-    DeliveryEnvelope,
-    DeliveryLineEvent,
-    DocumentCreatedEvent,
-    ErpEventEnvelope,
-    InviteSentEvent,
-    InvoiceEnvelope,
-    QuoteOutcomeEvent,
-    QuoteSentEvent,
-    RequestCreatedEvent,
-)
 
 DOC_KIND_MAP: dict[str, str] = {
     "quote": "proposal",
@@ -66,23 +75,26 @@ def _set_stage(deal: Deal | None, stage: str) -> None:
         deal.external_stage = stage
 
 
-def _request_created(env: RequestCreatedEvent) -> str:
+def _request_created(env: ErpEvent) -> str:
     payload = env.payload
     return (
-        f"В бэк-офисе создана заявка #{payload.erp_request_id or '—'} (источник: {payload.source})."
+        f"В бэк-офисе создана заявка #{payload.erp_request_id or '—'} "
+        f"(источник: {plain(payload.source)})."
     )
 
 
-def _stage_changed(env: DealStageChangedEvent, deal: Deal | None) -> str:
+def _stage_changed(env: ErpEvent, deal: Deal | None) -> str:
     payload = env.payload
-    _set_stage(deal, payload.to)
-    note = f"Стадия сделки в бэк-офисе: {payload.from_} → {payload.to}"
+    to = str(plain(payload.to))
+    _set_stage(deal, to)
+    note = f"Стадия сделки в бэк-офисе: {plain(payload.from_)} → {to}"
     return note + (f" ({payload.reason})" if payload.reason else "")
 
 
-def _outcome(env: DealOutcomeEvent, deal: Deal | None, deal_title: str) -> str:
+def _outcome(env: ErpEvent, deal: Deal | None, deal_title: str) -> str:
     payload = env.payload
     won = env.event == "deal.won"
+    amount, currency = str(plain(payload.amount)), str(plain(payload.currency))
     if deal is not None and outcome_is_current(deal, env.occurred_at):
         reason = None if won else payload.lost_reason
         plan = plan_erp_outcome(env.event, _local_stage(deal), reason)
@@ -90,31 +102,29 @@ def _outcome(env: DealOutcomeEvent, deal: Deal | None, deal_title: str) -> str:
         deal.closed_at = env.occurred_at
         deal.external_stage = "won" if won else "lost"
         if won:
-            deal.amount = Decimal(payload.amount)
-            deal.currency = payload.currency
+            deal.amount = Decimal(amount)
+            deal.currency = currency
         else:
             deal.lost_reason = plan.lost_reason
     if won:
-        return (
-            f"Сделка «{deal_title}» успешно закрыта (won) "
-            f"на сумму {payload.amount} {payload.currency}."
-        )
+        return f"Сделка «{deal_title}» успешно закрыта (won) на сумму {amount} {currency}."
     reason = payload.lost_reason or "не указана"
     return f"Сделка «{deal_title}» закрыта отказом (lost). Причина: {reason}."
 
 
-def _quote_sent(env: QuoteSentEvent, deal: Deal | None) -> str:
+def _quote_sent(env: ErpEvent, deal: Deal | None) -> str:
     payload = env.payload
     _set_stage(deal, "quote_sent")
     parts = [f"Клиенту отправлено КП #{payload.erp_quote_id} v{payload.version}"]
-    if payload.total and payload.currency:
-        parts.append(f"на сумму {payload.total} {payload.currency}")
+    total, currency = plain(payload.total), plain(payload.currency)
+    if total and currency:
+        parts.append(f"на сумму {total} {currency}")
     if payload.public_url:
         parts.append(f"Ссылка: {payload.public_url}")
     return ". ".join(parts) + "."
 
 
-def _quote_outcome(env: QuoteOutcomeEvent, deal: Deal | None, contact_name: str | None) -> str:
+def _quote_outcome(env: ErpEvent, deal: Deal | None, contact_name: str | None) -> str:
     """Запись ленты по КП; у принятия и отказа — кто из контактов клиента это сделал (шов 0.3.0)."""
     payload = env.payload
     label = f"#{payload.erp_quote_id} v{payload.version}"
@@ -146,38 +156,39 @@ async def _crm_contact_name(
     return name.strip() or None if name else None
 
 
-def _contract_signed(env: ContractSignedEvent, deal: Deal | None) -> str:
+def _contract_signed(env: ErpEvent, deal: Deal | None) -> str:
     _set_stage(deal, "contract")
-    return f"Договор {env.payload.number or ''} подписан ({env.payload.by})."
+    return f"Договор {env.payload.number or ''} подписан ({plain(env.payload.by)})."
 
 
-def _invoice(env: InvoiceEnvelope, deal: Deal | None) -> str:
+def _invoice(env: ErpEvent, deal: Deal | None) -> str:
     payload = env.payload
+    amount, currency = plain(payload.amount), plain(payload.currency)
     if env.event == "invoice.issued":
         _set_stage(deal, "invoiced")
         return (
-            f"Выставлен счёт {payload.number} на сумму {payload.amount} {payload.currency} "
+            f"Выставлен счёт {payload.number} на сумму {amount} {currency} "
             f"со сроком оплаты до {payload.due_date}."
         )
     if env.event == "invoice.paid":
         _set_stage(deal, "paid")
-        return f"Счёт {payload.number} на сумму {payload.amount} {payload.currency} оплачен."
+        return f"Счёт {payload.number} на сумму {amount} {currency} оплачен."
     return f"Счёт {payload.number} просрочен (срок оплаты был {payload.due_date})."
 
 
-def _delivery(env: DeliveryEnvelope, deal: Deal | None) -> str:
+def _delivery(env: ErpEvent, deal: Deal | None) -> str:
     payload = env.payload
     if env.event == "delivery.status_changed":
         _set_stage(deal, "fulfilment")
         eta = f", ожидается {payload.eta}" if payload.eta else ""
-        return f"Статус поставки ({payload.line_summary}): {payload.status}{eta}"
+        return f"Статус поставки ({payload.line_summary}): {plain(payload.status)}{eta}"
     return (
         f"Изменилась дата поставки ({payload.line_summary}): "
         f"{payload.previous_eta or '—'} → {payload.eta}."
     )
 
 
-def _act(env: ActEnvelope, deal: Deal | None) -> str:
+def _act(env: ErpEvent, deal: Deal | None) -> str:
     payload = env.payload
     if env.event == "act.issued":
         _set_stage(deal, "closing")
@@ -187,17 +198,16 @@ def _act(env: ActEnvelope, deal: Deal | None) -> str:
     return f"Акт {payload.number} возвращён клиентом с замечаниями: {payload.reason or ''}."
 
 
-async def _document_created(
-    session: AsyncSession, env: DocumentCreatedEvent, client: Client
-) -> str:
+async def _document_created(session: AsyncSession, env: ErpEvent, client: Client) -> str:
     """Индекс документов клиента: upsert по `(client_id, erp_document_id)`, дублей не плодит."""
     payload = env.payload
-    title = payload.title or f"{payload.kind} {payload.number}"
+    kind = str(plain(payload.kind))
+    title = payload.title or f"{kind} {payload.number}"
     values = {
-        "type": DOC_KIND_MAP.get(payload.kind, "other"),
+        "type": DOC_KIND_MAP.get(kind, "other"),
         "title": title,
         "number": payload.number or None,
-        "filename": f"{payload.kind}_{payload.number}.pdf",
+        "filename": f"{kind}_{payload.number}.pdf",
     }
     existing = await _find_document(session, client.id, payload.erp_document_id)
     if existing is None:
@@ -239,47 +249,48 @@ async def _find_document(
     )
 
 
-def _invite_sent(env: InviteSentEvent) -> str:
-    channels = ", ".join(env.payload.channels)
+def _invite_sent(env: ErpEvent) -> str:
+    channels = ", ".join(str(plain(channel)) for channel in env.payload.channels)
     return f"Контакту отправлено приглашение в кабинет через каналы: {channels}."
 
 
 async def dispatch(
-    session: AsyncSession, env: ErpEventEnvelope, client: Client, deal: Deal | None
+    session: AsyncSession, env: ErpEvent, client: Client, deal: Deal | None
 ) -> str | None:
     """Меняет зеркало сделки и индекс документов; возвращает текст заметки в ленту лида или
     `None`.
     """
-    deal_title = env.deal.title if env.deal else (deal.title if deal else "Сделка")
-    match env:
-        case RequestCreatedEvent():
+    env_deal = env.deal
+    deal_title = env_deal.title if env_deal else (deal.title if deal else "Сделка")
+    match env.data:
+        case RequestCreatedV1():
             return _request_created(env)
-        case DealStageChangedEvent():
+        case DealStageChangedV1():
             return _stage_changed(env, deal)
-        case DealOutcomeEvent():
+        case DealWonV1() | DealLostV1():
             return _outcome(env, deal, deal_title)
-        case QuoteSentEvent():
+        case QuoteSentV1():
             return _quote_sent(env, deal)
-        case QuoteOutcomeEvent():
+        case QuoteViewedV1() | QuoteAcceptedV1() | QuoteRejectedV1():
             who = None
             if env.event != "quote.viewed":
                 who = await _crm_contact_name(session, client, env.payload.crm_contact_id)
             return _quote_outcome(env, deal, who)
-        case ContractSignedEvent():
+        case ContractSignedV1():
             return _contract_signed(env, deal)
-        case InvoiceEnvelope():
+        case InvoiceIssuedV1() | InvoicePaidV1() | InvoiceOverdueV1():
             return _invoice(env, deal)
-        case DeliveryEnvelope():
+        case DeliveryStatusChangedV1() | DeliveryEtaChangedV1():
             return _delivery(env, deal)
-        case ActEnvelope():
+        case ActIssuedV1() | ActAcceptedV1() | ActReturnedV1():
             return _act(env, deal)
-        case DocumentCreatedEvent():
+        case DocumentCreatedV1():
             return await _document_created(session, env, client)
-        case InviteSentEvent():
+        case InviteSentV1():
             return _invite_sent(env)
-        case DeliveryLineEvent():
+        case DeliveryLineAcceptedV1() | DeliveryLineDisputedV1():
             # Стадию сделки задаёт DealRef события (как у любого события со сделкой). Запись в
-            # ленту и сообщение
-            # ответственному строятся в `process_event` из `settings.texts`, клиенту бот молчит.
+            # ленту и сообщение ответственному строятся в `ErpEventsService.apply` из
+            # `settings.texts`, клиенту бот молчит.
             return None
     return None
