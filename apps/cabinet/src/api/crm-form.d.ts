@@ -1,5 +1,5 @@
 /**
- * Сгенерировано scripts/gen-crm-form-types.mjs из apps/crm/docs/api/openapi.json — не править руками.
+ * Сгенерировано scripts/gen-crm-form-types.mjs из packages/contracts/openapi/crm.yaml — не править руками.
  */
 
 export interface paths {

@@ -16,7 +16,7 @@
 | [`docs/QUESTIONS.md`](docs/QUESTIONS.md) | Открытые вопросы к человеку |
 | [`docs/adr/`](docs/adr/README.md) | Архитектурные решения (MADR) |
 | [`docs/runbooks/`](docs/runbooks/README.md) | Эксплуатация |
-| [`docs/api/openapi.json`](docs/api/openapi.json) | Контракт API (генерируется `make openapi`) |
+| [`../../packages/contracts/openapi/crm.yaml`](../../packages/contracts/openapi/crm.yaml) | Контракт API CRM (генерируется `make openapi`; ломающие изменения ловит `make contracts` — oasdiff, ADR-0016) |
 
 При противоречиях: `BUSINESS.md` > `SPEC.md` > `PLAN.md` > код.
 
@@ -105,7 +105,7 @@ make load-test          # 50 параллельных диалогов на dev:
 ```bash
 make install    # uv sync + pnpm install (нужны uv и pnpm 10: pip install uv; npm i -g pnpm@10)
 make check      # ruff, mypy, eslint, prettier, tsc, pytest (unit), vitest — перед каждым коммитом
-make openapi    # экспорт docs/api/openapi.json (CI проверяет актуальность)
+make openapi    # экспорт packages/contracts/openapi/crm.yaml (CI проверяет актуальность)
 uv tool install pre-commit && pre-commit install   # хуки: ruff, gitleaks, prettier, eslint
 ```
 

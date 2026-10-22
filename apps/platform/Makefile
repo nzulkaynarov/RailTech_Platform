@@ -37,6 +37,16 @@ api-check: gen-api ## Сгенерированный клиент свеж: по
 	@test -z "$$(git ls-files --others --exclude-standard -- $(WEB)/src/shared/api/generated)" \
 	  || { echo "Клиент orval: появились неотслеживаемые файлы — закоммитьте результат make gen-api"; exit 1; }
 
+# Модели ответов CRM для BFF: из packages/contracts/openapi/crm.yaml (его генерирует CRM: make -C apps/crm openapi).
+# Генератор — datamodel-code-generator (версия в bff/uv.lock), тот же, что для событий шины (packages/contracts).
+.PHONY: crm-models
+crm-models: ## packages/contracts/openapi/crm.yaml → bff/app/clients/crm_models.py (модели Pydantic v2 ответов CRM)
+	cd $(BFF) && uv run python ../scripts/gen_crm_models.py
+
+.PHONY: crm-models-check
+crm-models-check: ## Модели CRM совпадают с crm.yaml
+	cd $(BFF) && uv run python ../scripts/gen_crm_models.py --check
+
 # Токены: копия dist/antd.ts лежит в приложении, чтобы образ web собирался с контекстом apps/platform/web.
 # build.mjs пакета ui-tokens не знает про Платформу, поэтому копию делает этот Makefile
 # (флаги --no-* не трогают сгенерированные файлы CRM, Cabinet и ERP).
@@ -79,7 +89,7 @@ test: ## pytest (bff) и vitest (web)
 	cd $(WEB) && pnpm test
 
 .PHONY: check
-check: lint typecheck test api-check tokens-check rbac-check ## Всё вышеперечисленное — обязательно перед коммитом
+check: lint typecheck test api-check tokens-check rbac-check crm-models-check ## Всё вышеперечисленное — обязательно перед коммитом
 
 .PHONY: e2e
 e2e: ## Playwright + axe на MSW (поднимает vite --mode mock на :4173, порт — переменная E2E_PORT); браузеры: pnpm exec playwright install chromium
