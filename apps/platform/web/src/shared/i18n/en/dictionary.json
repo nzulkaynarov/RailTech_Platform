@@ -1,0 +1,65 @@
+{
+  "stage": {
+    "REQUEST": "Request",
+    "RESOLUTION": "Resolution",
+    "CALCULATION": "Costing",
+    "QUOTE": "Quote",
+    "CONTRACT": "Contract",
+    "PAYMENT": "Payment",
+    "DONE": "Completed",
+    "LOST": "Lost"
+  },
+  "status": {
+    "incoming": {
+      "registered": "Registered",
+      "awaiting_resolution": "Awaiting resolution",
+      "resolved": "Resolution given",
+      "returned": "Returned",
+      "rejected": "Rejected"
+    },
+    "quote": {
+      "draft": "Draft",
+      "revision": "Needs rework",
+      "approved": "Approved",
+      "sent": "Sent",
+      "accepted": "Accepted by client",
+      "declined": "Declined by client",
+      "expired": "Expired"
+    },
+    "contract": {
+      "draft": "Draft",
+      "agreed": "Agreed by client",
+      "issued": "Issued at operator",
+      "signed": "Signed",
+      "rejected": "Rejected"
+    },
+    "invoice": {
+      "issued": "Issued",
+      "proof_received": "Payment order received",
+      "partially_paid": "Partially paid",
+      "paid": "Paid",
+      "overdue": "Overdue"
+    },
+    "act": {
+      "draft": "Draft",
+      "issued": "Issued",
+      "signed": "Signed",
+      "returned": "Returned"
+    },
+    "memo": {
+      "pending": "Awaiting approval",
+      "approved": "Approved",
+      "rejected": "Rejected",
+      "returned": "Returned for rework",
+      "passed_to_accountant": "Passed to accountant",
+      "paid": "Paid"
+    },
+    "lead": {
+      "new": "New",
+      "dialog": "In dialogue",
+      "wants_quote": "Wants a quote",
+      "no_answer": "No reply",
+      "client": "Client"
+    }
+  }
+}

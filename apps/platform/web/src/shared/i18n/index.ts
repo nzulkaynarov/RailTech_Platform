@@ -2,22 +2,46 @@ import i18n from "i18next";
 import { initReactI18next } from "react-i18next";
 
 import enCommon from "./en/common.json";
+import enDictionary from "./en/dictionary.json";
 import enModules from "./en/modules.json";
 import enShell from "./en/shell.json";
+import enUi from "./en/ui.json";
 import ruCommon from "./ru/common.json";
+import ruDictionary from "./ru/dictionary.json";
 import ruModules from "./ru/modules.json";
 import ruShell from "./ru/shell.json";
+import ruUi from "./ru/ui.json";
 import uzCommon from "./uz/common.json";
+import uzDictionary from "./uz/dictionary.json";
 import uzModules from "./uz/modules.json";
 import uzShell from "./uz/shell.json";
+import uzUi from "./uz/ui.json";
 
 export const LANGUAGES = ["ru", "uz", "en"] as const;
 export type Language = (typeof LANGUAGES)[number];
 
 export const resources = {
-  ru: { common: ruCommon, shell: ruShell, modules: ruModules },
-  uz: { common: uzCommon, shell: uzShell, modules: uzModules },
-  en: { common: enCommon, shell: enShell, modules: enModules },
+  ru: {
+    common: ruCommon,
+    shell: ruShell,
+    modules: ruModules,
+    dictionary: ruDictionary,
+    ui: ruUi,
+  },
+  uz: {
+    common: uzCommon,
+    shell: uzShell,
+    modules: uzModules,
+    dictionary: uzDictionary,
+    ui: uzUi,
+  },
+  en: {
+    common: enCommon,
+    shell: enShell,
+    modules: enModules,
+    dictionary: enDictionary,
+    ui: enUi,
+  },
 } as const;
 
 export const LANGUAGE_STORAGE_KEY = "rt-pf-lang";
@@ -41,13 +65,13 @@ export function rememberLanguage(language: Language): void {
   }
 }
 
-/** ru — язык по умолчанию (SPEC-v3 §8); uz — латиница. Пространства имён: common, shell (каркас и вход), modules (меню и заглушки). */
+/** ru — язык по умолчанию (SPEC-v3 §8); uz — латиница. Пространства имён: common, shell (каркас и вход), modules (меню и заглушки), dictionary (словарь SPEC-v3 §2: стадии и статусы), ui (тексты общих компонентов). */
 void i18n.use(initReactI18next).init({
   resources,
   lng: storedLanguage(),
   fallbackLng: "ru",
   defaultNS: "common",
-  ns: ["common", "shell", "modules"],
+  ns: ["common", "shell", "modules", "dictionary", "ui"],
   interpolation: { escapeValue: false },
 });
 

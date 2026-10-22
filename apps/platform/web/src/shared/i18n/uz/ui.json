@@ -1,0 +1,34 @@
+{
+  "open": "Ochish",
+  "openItem": "Ochish: {{title}}",
+  "steps": {
+    "label": "Ariza yo‘li",
+    "labelNumber": "Ariza yo‘li {{number}}",
+    "done": "o‘tilgan",
+    "current": "joriy qadam",
+    "upcoming": "oldinda",
+    "lostAt": "{{step}}-qadamda to‘xtatilgan"
+  },
+  "consequence": {
+    "title": "Nima bo‘ladi"
+  },
+  "history": {
+    "done": "Bajarilgan",
+    "waiting": "Kutilmoqda",
+    "todo": "Boshlanmagan"
+  },
+  "checklist": {
+    "ok": "Bajarilgan",
+    "fail": "Bajarilmagan",
+    "pending": "Kutilmoqda"
+  },
+  "definition": {
+    "empty": "ko‘rsatilmagan"
+  },
+  "source": {
+    "erp": "ERP javob bermayapti, ma’lumotlar to‘liq emas",
+    "crm": "CRM javob bermayapti, ma’lumotlar to‘liq emas",
+    "both": "CRM va ERP javob bermayapti, ma’lumotlar to‘liq emas",
+    "retry": "Qayta urinish"
+  }
+}

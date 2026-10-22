@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 
 import { ChevronRightIcon } from "./icons";
 import "./shell.css";
+import "./ui.css";
 
 export interface ContextTab {
   key: string;
@@ -32,46 +33,33 @@ function PanelBody({
   onHide,
   children,
 }: ContextPanelProps) {
-  // Кнопка «›» — вне `tablist` (внутри него допустимы только вкладки, иначе axe: aria-required-children).
-  const tabsId = `${id}-tabs`;
+  // Кнопка «›» лежит рядом с `Tabs`, а не в `tabBarExtraContent`: antd вешает `role="tablist"` на всю полосу вместе с
+  // дополнительным содержимым, а внутри `tablist` допустимы только вкладки (axe: aria-required-children). Содержимое
+  // отдаём активной панели antd: свой `tabpanel` рядом с ней дублировал бы id и роль.
   return (
-    <>
-      <div
+    <div className="pf-panel">
+      <Tabs
+        id={`${id}-tabs`}
         className="pf-panel-tabs"
-        style={{
-          display: "flex",
-          alignItems: "center",
-          padding: "0 8px 0 16px",
-          borderBottom: "1px solid #f0f0f0",
-        }}
+        activeKey={activeTab}
+        onChange={onTabChange}
+        tabBarStyle={{ margin: 0, padding: "0 44px 0 16px" }}
+        items={tabs.map((tab) => ({
+          key: tab.key,
+          label: tab.label,
+          children: tab.key === activeTab ? <div style={{ padding: 16 }}>{children}</div> : null,
+        }))}
+      />
+      <button
+        type="button"
+        className="pf-icon-btn pf-focusable pf-panel-hide"
+        aria-label={hideLabel}
+        onClick={onHide}
+        style={{ width: 28, height: 28 }}
       >
-        <Tabs
-          id={tabsId}
-          activeKey={activeTab}
-          onChange={onTabChange}
-          style={{ flex: 1, minWidth: 0 }}
-          tabBarStyle={{ margin: 0 }}
-          items={tabs.map((tab) => ({ key: tab.key, label: tab.label }))}
-        />
-        <button
-          type="button"
-          className="pf-icon-btn pf-focusable"
-          aria-label={hideLabel}
-          onClick={onHide}
-          style={{ width: 28, height: 28, flex: "0 0 auto" }}
-        >
-          <ChevronRightIcon />
-        </button>
-      </div>
-      <div
-        role="tabpanel"
-        id={`${tabsId}-panel-${activeTab}`}
-        aria-labelledby={`${tabsId}-tab-${activeTab}`}
-        style={{ padding: 16 }}
-      >
-        {children}
-      </div>
-    </>
+        <ChevronRightIcon />
+      </button>
+    </div>
   );
 }
 

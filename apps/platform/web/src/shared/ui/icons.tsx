@@ -146,3 +146,37 @@ export function PlusIcon() {
     </Icon>
   );
 }
+
+/** Галочка статуса «сделано»: 12 px в круге шкалы, 10 px в точке журнала. */
+export function CheckIcon({ size = 12 }: { size?: number }) {
+  return (
+    <Icon size={size} stroke={2.5}>
+      <path d="M5 12.5l4.5 4.5L19 7.5" />
+    </Icon>
+  );
+}
+
+export function CrossIcon({ size = 12 }: { size?: number }) {
+  return (
+    <Icon size={size} stroke={2.5}>
+      <path d="M6 6l12 12M18 6L6 18" />
+    </Icon>
+  );
+}
+
+export function MinusIcon({ size = 12 }: { size?: number }) {
+  return (
+    <Icon size={size} stroke={2.5}>
+      <path d="M6 12h12" />
+    </Icon>
+  );
+}
+
+export function WarningIcon({ size = 18 }: { size?: number }) {
+  return (
+    <Icon size={size}>
+      <path d="M12 4l9 16H3z" />
+      <path d="M12 10v4.5M12 17.5v.01" />
+    </Icon>
+  );
+}

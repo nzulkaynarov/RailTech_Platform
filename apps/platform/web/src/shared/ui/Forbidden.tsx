@@ -11,15 +11,17 @@ export interface ForbiddenProps {
   roles?: readonly string[];
   /** У сотрудника выбрана активная роль: раздел может быть доступен другой его роли («Все роли» в меню профиля) */
   activeRole?: boolean;
+  /** Блок внутри другой страницы (витрина, боковое окно): без заголовка страницы `h1` и без смены заголовка вкладки */
+  embedded?: boolean;
 }
 
 /**
  * 403 по прямому URL (SPEC-v3 §11.2 п. 7): раздел не положен ролям сотрудника. Предложение написать
  * администратору — тикет Admin появится вместе с «Тикеты от команды», до тех пор кнопка неактивна с подсказкой.
  */
-export function Forbidden({ roles, activeRole = false }: ForbiddenProps) {
+export function Forbidden({ roles, activeRole = false, embedded = false }: ForbiddenProps) {
   const { t } = useTranslation("shell");
-  useDocumentTitle(t("forbidden.heading"));
+  useDocumentTitle(embedded ? undefined : t("forbidden.heading"));
   const text = activeRole
     ? t("forbidden.textActiveRole")
     : roles && roles.length > 0
@@ -27,11 +29,12 @@ export function Forbidden({ roles, activeRole = false }: ForbiddenProps) {
       : t("forbidden.text");
   return (
     <>
-      <PageHeader title={t("forbidden.heading")} />
-      <Card style={{ marginTop: 16 }}>
+      {embedded ? null : <PageHeader title={t("forbidden.heading")} />}
+      <Card style={{ marginTop: embedded ? 0 : 16 }}>
         <EmptyState
           title={activeRole ? t("forbidden.titleActiveRole") : t("forbidden.title")}
           text={text}
+          level={embedded ? 3 : 2}
           action={<SoonButton hint={t("forbidden.writeSoon")}>{t("forbidden.write")}</SoonButton>}
         />
       </Card>

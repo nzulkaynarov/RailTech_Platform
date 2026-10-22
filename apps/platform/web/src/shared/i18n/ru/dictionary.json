@@ -1,0 +1,65 @@
+{
+  "stage": {
+    "REQUEST": "Заявка",
+    "RESOLUTION": "Резолюция",
+    "CALCULATION": "Расчёт",
+    "QUOTE": "КП",
+    "CONTRACT": "Договор",
+    "PAYMENT": "Оплата",
+    "DONE": "Выполнено",
+    "LOST": "Отказ"
+  },
+  "status": {
+    "incoming": {
+      "registered": "Зарегистрировано",
+      "awaiting_resolution": "Ждёт резолюции",
+      "resolved": "Резолюция наложена",
+      "returned": "Возвращено",
+      "rejected": "Отклонено"
+    },
+    "quote": {
+      "draft": "Черновик",
+      "revision": "На доработке",
+      "approved": "Одобрено",
+      "sent": "Отправлено",
+      "accepted": "Принято клиентом",
+      "declined": "Отклонено клиентом",
+      "expired": "Срок истёк"
+    },
+    "contract": {
+      "draft": "Проект",
+      "agreed": "Согласован клиентом",
+      "issued": "Выставлен у оператора",
+      "signed": "Подписан",
+      "rejected": "Отклонён"
+    },
+    "invoice": {
+      "issued": "Выставлен",
+      "proof_received": "Платёжка получена",
+      "partially_paid": "Частично оплачен",
+      "paid": "Оплачен",
+      "overdue": "Просрочен"
+    },
+    "act": {
+      "draft": "Проект",
+      "issued": "Выпущен",
+      "signed": "Подписан",
+      "returned": "Возвращён"
+    },
+    "memo": {
+      "pending": "На согласовании",
+      "approved": "Согласована",
+      "rejected": "Отклонена",
+      "returned": "Возвращена на доработку",
+      "passed_to_accountant": "Передана бухгалтеру",
+      "paid": "Оплачена"
+    },
+    "lead": {
+      "new": "Новый",
+      "dialog": "В диалоге",
+      "wants_quote": "Просит КП",
+      "no_answer": "Без ответа",
+      "client": "Клиент"
+    }
+  }
+}
