@@ -16,7 +16,7 @@ RANK: Final = {"hidden": 0, "read": 1, "full": 2}
 MATRIX: Final[dict[str, str]] = {
     "dashboard.queue": "FFFFFF",
     "dashboard.summary": "HFHHHR",
-    "crm.leads": "HFFHHH",
+    "crm.leads": "HRFHHH",
     "crm.clients": "HFFRRR",
     "eds.inbox": "HFRHHR",
     "eds.drafts": "HFRHHH",
@@ -29,7 +29,7 @@ MATRIX: Final[dict[str, str]] = {
     "erp.calc.services": "HFHHFH",
     "erp.stock": "HFRFFR",
     "chats.internal": "FFFFFF",
-    "chats.external": "HFFHHF",
+    "chats.external": "HRFHHF",
     "admin": "FRHHHH",
     "company.settings": "FFHHHH",
 }

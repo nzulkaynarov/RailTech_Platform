@@ -150,6 +150,8 @@ class Role(BaseModel):
     description: str
     system: bool
     code: str | None = None
+    # Растёт при каждом изменении; PATCH присылает прочитанную (иначе 409 `role_version_conflict`).
+    version: int = Field(ge=1)
     access: dict[str, AccessLevel]
     restricted_fields: list[RestrictedField]
     employees: int = Field(ge=0)
@@ -179,6 +181,8 @@ class RoleCreate(BaseModel):
 class RoleUpdate(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
+    # Версия роли, которую видел клиент (оптимистическая блокировка, 0.3.1).
+    version: int = Field(ge=1)
     name: str | None = Field(default=None, min_length=1, max_length=_MAX_TEXT)
     description: str | None = Field(default=None, max_length=1000)
     access: dict[str, AccessLevel] | None = None
@@ -186,7 +190,7 @@ class RoleUpdate(BaseModel):
 
     @model_validator(mode="after")
     def _not_empty(self) -> "RoleUpdate":
-        if not self.model_fields_set:
+        if not self.model_fields_set - {"version"}:
             raise ValueError("укажите name, description, access или restricted_fields")
         for name in self.model_fields_set:
             if getattr(self, name) is None:
@@ -241,6 +245,7 @@ def to_role(raw: dict[str, Any]) -> Role:
         description=str(raw.get("description") or ""),
         system=bool(raw.get("is_system")),
         code=raw.get("code") or None,
+        version=int(raw.get("version") or 1),
         access=dict(raw.get("access") or {}),
         restricted_fields=list(raw.get("restricted_fields") or []),
         employees=int(raw.get("employees") or 0),

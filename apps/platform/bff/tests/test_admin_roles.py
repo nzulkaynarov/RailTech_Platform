@@ -27,6 +27,7 @@ def crm_role(role_id: int, name: str, **extra: Any) -> dict[str, Any]:
         "name": name,
         "description": "",
         "is_system": False,
+        "version": 1,
         "access": {},
         "restricted_fields": [],
         "employees": 0,
@@ -106,7 +107,10 @@ class CrmRoles:
             return self._error(404, "not_found")
         if role["is_system"]:
             return self._error(409, "role_system")
-        role.update(json.loads(request.content))
+        body = json.loads(request.content)
+        if body["version"] != role["version"]:
+            return self._error(409, "role_version_conflict", current=role["version"])
+        role.update({k: v for k, v in body.items() if k != "version"}, version=role["version"] + 1)
         return httpx.Response(200, json=role)
 
     def _delete(self, request: httpx.Request) -> httpx.Response:
@@ -183,28 +187,56 @@ async def test_list_roles_maps_crm_roles(web: Web, roles: CrmRoles, check: Contr
     assert "created_by" not in response.text
 
 
+WRITES: tuple[tuple[str, str, dict[str, Any] | None], ...] = (
+    ("POST", "/api/v1/admin/roles", {"name": "Х", "access": {}, "restricted_fields": []}),
+    ("PATCH", "/api/v1/admin/roles/3", {"name": "Х", "version": 1}),
+    ("DELETE", "/api/v1/admin/roles/3", None),
+    ("POST", "/api/v1/admin/roles/preview", {}),
+)
+
+
 @pytest.mark.parametrize("role", ["DIRECTOR", "MANAGER", "ACCOUNTANT"])
-async def test_only_admin_full_manages_roles(
+async def test_only_admin_full_changes_roles(
     web: Web, roles: CrmRoles, check: ContractChecker, role: str
 ) -> None:
-    """Раздел `admin` полный — только у ролей с ним (директор — чтение: матрицы не видит)."""
+    """Изменять роли может только `admin: full`; у директора (`read`) мутации — 403 до CRM."""
     await web.login([role])
 
-    for method, url, body in (
-        ("GET", "/api/v1/admin/roles", None),
-        ("GET", "/api/v1/admin/roles/3", None),
-        ("POST", "/api/v1/admin/roles", {"name": "Х", "access": {}, "restricted_fields": []}),
-        ("PATCH", "/api/v1/admin/roles/3", {"name": "Х"}),
-        ("DELETE", "/api/v1/admin/roles/3", None),
-        ("POST", "/api/v1/admin/roles/preview", {}),
-    ):
-        if method == "GET":
-            response = await web.client.get(url)
-        else:
-            response = await web.send(method, url, json=body)  # type: ignore[arg-type]
+    for method, url, body in WRITES:
+        response = await web.send(method, url, json=body)  # type: ignore[arg-type]
         assert response.status_code == 403, (method, url)
         assert response.json()["details"] == {"resource": "admin", "need": "full"}
-    assert roles.list_route.call_count == roles.create_route.call_count == 0
+    assert roles.create_route.call_count == roles.patch_route.call_count == 0
+    assert roles.delete_route.call_count == roles.preview_route.call_count == 0
+
+
+async def test_director_reads_the_matrix_but_cannot_change_it(
+    web: Web, roles: CrmRoles, check: ContractChecker
+) -> None:
+    """0.3.1: `GET /admin/roles*` — от `admin: read`, то есть и директору."""
+    await web.login(["DIRECTOR"])
+
+    listed = await web.client.get("/api/v1/admin/roles")
+    one = await web.client.get("/api/v1/admin/roles/3")
+
+    assert (listed.status_code, one.status_code) == (200, 200)
+    check(listed, "/admin/roles", "get")
+    check(one, "/admin/roles/{id}", "get")
+    assert [r["id"] for r in listed.json()["items"]] == ["1", "2", "3"]
+    assert roles.list_route.call_count == roles.get_route.call_count == 1
+
+
+@pytest.mark.parametrize("role", ["MANAGER", "ACCOUNTANT", "SUPPLY", "ENGINEER"])
+async def test_roles_without_admin_do_not_read_the_matrix(
+    web: Web, roles: CrmRoles, role: str
+) -> None:
+    await web.login([role])
+
+    for url in ("/api/v1/admin/roles", "/api/v1/admin/roles/3"):
+        response = await web.client.get(url)
+        assert response.status_code == 403, url
+        assert response.json()["details"] == {"resource": "admin", "need": "read"}
+    assert roles.list_route.call_count == roles.get_route.call_count == 0
 
 
 async def test_get_role_and_unknown_role(web: Web, roles: CrmRoles, check: ContractChecker) -> None:
@@ -301,12 +333,49 @@ async def test_rename_role_sends_only_the_changed_fields(
 ) -> None:
     await web.login(["ADMIN"])
 
-    response = await web.send("PATCH", "/api/v1/admin/roles/3", json={"name": " Продажи "})
+    response = await web.send(
+        "PATCH", "/api/v1/admin/roles/3", json={"name": " Продажи ", "version": 1}
+    )
 
     assert response.status_code == 200
     check(response, "/admin/roles/{id}", "patch")
-    assert response.json()["name"] == "Продажи"
-    assert json.loads(roles.patch_route.calls.last.request.content) == {"name": "Продажи"}
+    assert (response.json()["name"], response.json()["version"]) == ("Продажи", 2)
+    assert json.loads(roles.patch_route.calls.last.request.content) == {
+        "name": "Продажи",
+        "version": 1,
+    }
+
+
+async def test_stale_version_is_a_conflict_with_the_crm_reason(
+    web: Web, roles: CrmRoles, check: ContractChecker
+) -> None:
+    """R-1b: устаревшая версия в PATCH — 409 `CONFLICT` с `details.reason`."""
+    await web.login(["ADMIN"])
+    await web.send("PATCH", "/api/v1/admin/roles/3", json={"name": "Продажи", "version": 1})
+
+    stale = await web.send("PATCH", "/api/v1/admin/roles/3", json={"name": "Чужое", "version": 1})
+
+    assert stale.status_code == 409
+    check(stale, "/admin/roles/{id}", "patch")
+    body = stale.json()
+    assert body["code"] == "CONFLICT"
+    assert body["details"]["reason"] == "role_version_conflict"
+    assert body["details"]["current_version"] == 2
+    assert "обновите страницу" in body["message"]
+    assert roles.roles[3]["name"] == "Продажи"
+
+
+@pytest.mark.parametrize("body", [{"name": "Х"}, {"version": 1}, {"name": "Х", "version": 0}])
+async def test_role_update_needs_a_version_and_a_change(
+    web: Web, roles: CrmRoles, body: dict[str, Any]
+) -> None:
+    await web.login(["ADMIN"])
+
+    response = await web.send("PATCH", "/api/v1/admin/roles/3", json=body)
+
+    assert response.status_code == 422
+    assert response.json()["code"] == "VALIDATION_FAILED"
+    assert roles.patch_route.call_count == 0
 
 
 async def test_system_roles_are_not_editable(
@@ -314,7 +383,7 @@ async def test_system_roles_are_not_editable(
 ) -> None:
     await web.login(["ADMIN"])
 
-    patch = await web.send("PATCH", "/api/v1/admin/roles/2", json={"access": {}})
+    patch = await web.send("PATCH", "/api/v1/admin/roles/2", json={"access": {}, "version": 1})
     delete = await web.send("DELETE", "/api/v1/admin/roles/1")
     preview = await web.send("POST", "/api/v1/admin/roles/preview", json={"role_id": "2"})
 
@@ -361,7 +430,7 @@ async def test_editing_own_role_expires_the_profile_cache(web: Web, roles: CrmRo
     await web.login(["ADMIN", "MANAGER"])
     calls = web.be.crm_me.call_count
 
-    await web.send("PATCH", "/api/v1/admin/roles/3", json={"name": "Продажи"})
+    await web.send("PATCH", "/api/v1/admin/roles/3", json={"name": "Продажи", "version": 1})
     await web.client.get("/api/v1/me")
 
     assert web.be.crm_me.call_count == calls + 1

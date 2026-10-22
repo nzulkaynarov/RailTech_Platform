@@ -156,8 +156,8 @@ async def test_director_queue_comes_from_erp_approvals(
     }
     assert items[1]["subtitle"].startswith("ООО «Демо-Рейл» · 900 000,50 сум")
     assert items[1]["due_label"] == "later"
-    # Каталог v2: у директора «CRM · лиды» — full, вид работы «лиды» его, входящие CRM читаются.
-    assert fb.calls(fb.crm["inbox"]) == 1
+    # R-1b: у директора лиды только на чтение — видов работы «лиды» нет, входящие CRM не читаются.
+    assert fb.calls(fb.crm["inbox"]) == 0
 
 
 async def test_cost_and_margin_never_reach_the_response(web: Web, fb: FeedBackends) -> None:
@@ -383,13 +383,8 @@ async def test_cards_for_director(web: Web, fb: FeedBackends, check: ContractChe
 
     check(response, "/queue/cards", "get")
     cards = {c["key"]: c for c in response.json()["cards"]}
-    # Каталог v2: у директора «CRM · лиды» — full, карточки лидов тоже его.
-    assert list(cards) == [
-        "leads_without_answer",
-        "leads_to_take",
-        "quotes_to_approve",
-        "projects_in_work",
-    ]
+    # R-1b: лиды у директора только на чтение — карточек «Лиды без ответа / без менеджера» нет.
+    assert list(cards) == ["quotes_to_approve", "projects_in_work"]
     assert cards["quotes_to_approve"]["count"] == 2
     assert cards["quotes_to_approve"]["path"] == "/eds/drafts"
     assert cards["projects_in_work"]["count"] == 2  # исполнение закрыто целиком у одного
