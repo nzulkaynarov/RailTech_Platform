@@ -186,14 +186,41 @@ def test_new_file_is_not_breaking(tmp_path: Path) -> None:
 # ─── мажор ───────────────────────────────────────────────────────────────────────────────────
 
 
-def test_major_bump_with_new_path_allows_breaking(tmp_path: Path) -> None:
+def _deprecate_legacy(s: dict[str, Any], sunset: str = "2099-01-01") -> None:
+    op = s["paths"]["/api/v1/legacy"]["get"]
+    op["deprecated"] = True
+    op["x-sunset"] = sunset
+
+
+def test_major_bump_allows_breaking_of_deprecated_operation(tmp_path: Path) -> None:
     def to_v2(s: dict[str, Any]) -> None:
+        _deprecate_legacy(s)
         _remove_path(s)
         _add_v2(s)
 
-    errors, _, notes, _ = verdict(BASE, mutated(to_v2), tmp_path)
+    base = mutated(_deprecate_legacy)  # помечена в базе: старый мажор снимается переходом на /v2
+    head = mutated(to_v2)
+    head["paths"].pop("/api/v1/legacy", None)
+    errors, _, notes, _ = verdict(base, head, tmp_path)
     assert errors == []
-    assert any("api-path-removed-without-deprecation" in n and "/v2" in n for n in notes), notes
+    assert any("before-sunset" in n and "/v2" in n for n in notes), notes
+
+
+def test_major_bump_does_not_excuse_breaking_of_live_operation(tmp_path: Path) -> None:
+    """Старый мажор живёт рядом (двойная публикация): ломка операции без deprecated красная и при /v2 и 2.0.0."""
+
+    def to_v2(s: dict[str, Any]) -> None:
+        _remove_path(s)  # операция /api/v1/legacy не была deprecated
+        _add_v2(s)
+
+    errors = verdict(BASE, mutated(to_v2), tmp_path)[0]
+    assert errors and "api-path-removed-without-deprecation" in errors[0], errors
+
+    def narrow_and_v2(s: dict[str, Any]) -> None:
+        _narrow_enum(s)
+        _add_v2(s)
+
+    assert verdict(BASE, mutated(narrow_and_v2), tmp_path)[0]
 
 
 def test_major_bump_without_new_path_is_red(tmp_path: Path) -> None:
@@ -296,6 +323,13 @@ def test_check_all_end_to_end(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -
     monkeypatch.setattr(oc, "base_text", lambda ref, name: None)
     report = oc.check_all("origin/main", exemptions=[], today=TODAY, files=[head])
     assert report.errors == [] and "новый файл" in report.notes[0]
+
+
+def test_oasdiff_bin_missing_file_is_compat_error(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("OASDIFF_BIN", str(tmp_path / "нет-такого-oasdiff"))
+    with pytest.raises(oc.CompatError, match="не удалось запустить oasdiff"):
+        oc.run_oasdiff(tmp_path / "a.yaml", tmp_path / "b.yaml")
+    assert oc.main(["--base", "origin/main"]) == 2  # код 2 «проверка невозможна», не трейсбек
 
 
 def test_missing_oasdiff_is_not_green(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:

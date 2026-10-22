@@ -7,9 +7,11 @@
 не ломающее. Ломающее изменение уровня ERR (удалён путь или операция, удалено обязательное поле ответа, новое
 обязательное поле или параметр запроса, сужен enum, сменён тип…) — код выхода 1; уровень WARN печатается и не валит.
 
-Мажор. Контракт версионируется мажором в пути (`/api/v1/…` → `/api/v2/…`, ADR-0016): ломающее допустимо, только если
-в head поднят мажор `info.version` и появились пути нового мажора (`/v2`) — старый мажор живёт рядом, пока не пройдёт
-срок отказа (oasdiff проверяет `deprecated` и `x-sunset`, 180 дней для stable). Иначе — красный.
+Мажор. Контракт версионируется мажором в пути (`/api/v1/…` → `/api/v2/…`, ADR-0016) с двойной публикацией: старый
+мажор живёт рядом, пока не пройдёт срок отказа (oasdiff проверяет `deprecated` и `x-sunset`, 180 дней для stable).
+Ломающее изменение (ERR) допустимо, только если в head поднят мажор `info.version`, появились пути нового мажора (`/v2`)
+И изменение касается операции, помеченной в базе `deprecated`, или пути, которого в базе не было. Ломка операции
+старого мажора без `deprecated` — красный, даже при поднятом мажоре.
 
 Исключения. Одноразовое ломающее изменение внутреннего API (например, снятие вебхука, у которого уже нет потребителей)
 допускается только записью в `openapi-breaking-exceptions.yaml` — файл, id проверки, путь, причина, срок `until`
@@ -142,7 +144,13 @@ def run_oasdiff(base: Path, head: Path) -> list[Change]:
             f"/work/{base.name}",
             f"/work/{head.name}",
         ]
-    done = subprocess.run(cmd, capture_output=True, text=True, check=False)
+    try:
+        done = subprocess.run(cmd, capture_output=True, text=True, check=False)
+    except OSError as e:  # OASDIFF_BIN не существует или не исполняется, docker пропал между проверкой и запуском
+        raise CompatError(
+            f"openapi-compat: не удалось запустить oasdiff ({cmd[0]}): {e}. "
+            "Проверьте OASDIFF_BIN (бинарь oasdiff " + OASDIFF_VERSION + ") или уберите переменную и используйте Docker"
+        ) from e
     # --fail-on ERR: код 1 — найдено ERR (вывод разбираем сами); другое ненулевое — oasdiff не смог (схема, образ).
     if done.returncode not in (0, 1):
         raise CompatError(f"openapi-compat: oasdiff завершился с кодом {done.returncode}:\n{done.stdout}{done.stderr}")
@@ -172,7 +180,11 @@ def path_majors(spec: Mapping[str, Any]) -> dict[int, set[str]]:
 
 
 def major_bump_allows(base: Mapping[str, Any], head: Mapping[str, Any]) -> str | None:
-    """Если head поднял мажор и добавил пути нового мажора — описание переноса; иначе None (ломающее недопустимо)."""
+    """Если head поднял мажор и добавил пути нового мажора — описание переноса; иначе None (ломающее недопустимо).
+
+    Сам перенос ломающее не оправдывает: старый мажор живёт рядом (двойная публикация, ADR-0016). Допустимо только
+    для операций, помеченных в базе `deprecated`, и для путей нового мажора — это решает `check_file`.
+    """
     if info_major(head) <= info_major(base):
         return None
     base_paths = {p for paths in path_majors(base).values() for p in paths}
@@ -185,6 +197,17 @@ def major_bump_allows(base: Mapping[str, Any], head: Mapping[str, Any]) -> str |
         return None
     major = max(new_majors)
     return f"мажор {info_major(base)} → {info_major(head)}, новые пути /v{major} ({len(new_majors[major])})"
+
+
+def deprecated_in_base(base: Mapping[str, Any], change: Change) -> bool:
+    """Операция, которой касается изменение, в базе уже помечена `deprecated: true` (снимается по сроку)."""
+    path_item = (base.get("paths") or {}).get(change.path) or {}
+    operation = path_item.get(change.method.lower()) if change.method else None
+    return isinstance(operation, Mapping) and operation.get("deprecated") is True
+
+
+def is_new_path(base: Mapping[str, Any], change: Change) -> bool:
+    return change.path not in (base.get("paths") or {})
 
 
 # ─── исключения ────────────────────────────────────────────────────────────────────────────────
@@ -255,7 +278,7 @@ def check_file(
             if change.level == WARN:
                 warnings.append(line)
             continue
-        if allowed:
+        if allowed and (is_new_path(base_spec, change) or deprecated_in_base(base_spec, change)):
             notes.append(f"{line} — допустимо: {allowed}")
             continue
         hit = next((i for i, ex in enumerate(exemptions) if ex.matches(name, change)), None)
