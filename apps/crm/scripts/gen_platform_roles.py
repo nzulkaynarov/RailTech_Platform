@@ -70,6 +70,8 @@ def render(spec: dict[str, Any]) -> str:
     resources: list[dict[str, Any]] = spec["resources"]
     roles: dict[str, dict[str, Any]] = {**spec["system_roles"], **spec["templates"]}
     base = spec["crm_base_role"]
+    fields = spec["restricted_fields"]
+    field_erp = {name: tuple(f["backend"]["erp"]) for name, f in fields.items()}
     blocks = [
         _const(
             "SYSTEM_ROLE_CODES",
@@ -110,10 +112,7 @@ def render(spec: dict[str, Any]) -> str:
         _const(
             "FIELD_ERP_BACKEND",
             "dict[str, tuple[str, ...]]",
-            {
-                k: tuple(v["backend"]["erp"])
-                for k, v in spec["restricted_fields"].items()
-            },
+            field_erp,
             "Поле с ограничением -> права ERP, которые оно открывает.",
         ),
         _const(
