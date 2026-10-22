@@ -1,0 +1,224 @@
+/*
+ * Стили каркаса, которым нужны :hover и :focus-visible (inline-стили их не умеют). Значения — токены темы
+ * (03-frontend.md §3): переменные --ant-* живут только внутри компонентов antd, поэтому здесь литералы.
+ */
+.pf-sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.pf-skip-link {
+  position: absolute;
+  left: 8px;
+  top: -48px;
+  z-index: 2000;
+  padding: 8px 16px;
+  border-radius: 6px;
+  background: #1668dc;
+  color: #fff;
+  text-decoration: none;
+}
+.pf-skip-link:focus {
+  top: 8px;
+  color: #fff;
+}
+
+.pf-focusable:focus-visible {
+  outline: 2px solid #1668dc;
+  outline-offset: 2px;
+}
+
+/* Рейл: кнопка модуля 56×56, иконка 22, подпись 10 px */
+.pf-rail-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  width: 56px;
+  height: 56px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: #595959;
+  font: inherit;
+  font-size: 10px;
+  line-height: 1.2;
+  text-decoration: none;
+  cursor: pointer;
+}
+.pf-rail-btn:hover {
+  background: #f5f5f5;
+  color: #1f1f1f;
+}
+.pf-rail-btn[aria-current="page"] {
+  background: #e6f4ff;
+  color: #0958d9;
+  font-weight: 500;
+}
+
+/* Нижняя панель модулей (< 768) */
+.pf-bottom-bar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: space-around;
+  height: 60px;
+  padding: 0 4px;
+  background: #fff;
+  border-top: 1px solid #f0f0f0;
+}
+.pf-bottom-bar .pf-rail-btn {
+  width: auto;
+  flex: 1 1 0;
+  min-width: 0;
+  height: 52px;
+}
+
+/* Подменю: пункт 40 px, радиус 6 */
+.pf-menu-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.pf-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 40px;
+  padding: 0 12px;
+  border-radius: 6px;
+  color: #1f1f1f;
+  text-decoration: none;
+}
+.pf-menu-item:hover {
+  background: #f5f5f5;
+  color: #1f1f1f;
+}
+.pf-menu-item[aria-current="page"] {
+  background: #e6f4ff;
+  color: #0958d9;
+  font-weight: 500;
+}
+
+/* Бейдж очереди: красный требует действия, серый — счётчик */
+.pf-badge {
+  margin-left: auto;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+  border-radius: 10px;
+  background: #a8071a;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 20px;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+.pf-badge--quiet {
+  background: #f0f0f0;
+  color: #595959;
+}
+
+/* Поиск в шапке: фон #f5f5f5, без рамки */
+.pf-search {
+  width: 100%;
+  height: 32px;
+  padding: 0 52px 0 32px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: #f5f5f5;
+  color: #1f1f1f;
+  font: inherit;
+}
+.pf-search::placeholder {
+  color: #6e6e6e;
+}
+.pf-search:hover {
+  border-color: #1677ff;
+}
+.pf-search:focus-visible {
+  outline: 2px solid #1668dc;
+  outline-offset: 1px;
+  background: #fff;
+}
+.pf-kbd {
+  position: absolute;
+  right: 8px;
+  top: 6px;
+  padding: 0 5px;
+  border: 1px solid #d9d9d9;
+  border-radius: 4px;
+  background: #fff;
+  color: #6e6e6e;
+  font: inherit;
+  font-size: 11px;
+  line-height: 18px;
+  pointer-events: none;
+}
+
+/* Основное окно прокручивается внутри, страница — нет (SPEC-v3 §11.1 F0) */
+.pf-main {
+  min-width: 0;
+}
+
+/* Иконочная кнопка 28/32 px без рамки */
+.pf-icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: #1f1f1f;
+  cursor: pointer;
+}
+.pf-icon-btn:hover {
+  background: #f5f5f5;
+  color: #1677ff;
+}
+.pf-icon-btn[aria-expanded="true"] {
+  background: #e6f4ff;
+  color: #0958d9;
+}
+
+.pf-crumbs {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  color: #595959;
+  white-space: nowrap;
+}
+.pf-crumbs a {
+  color: #595959;
+  text-decoration: none;
+}
+.pf-crumbs a:hover {
+  color: #1677ff;
+}
+
+/* Вкладки бокового окна: линия под всей шапкой (вкладки + «›»), активная вкладка перекрывает её */
+.pf-panel-tabs .ant-tabs-nav {
+  margin: 0 0 -1px;
+}
+.pf-panel-tabs .ant-tabs-nav::before {
+  border-bottom: 0;
+}

@@ -14,7 +14,9 @@ const launch =
 
 export default defineConfig({
   testDir: "./e2e",
-  timeout: 60_000,
+  timeout: 90_000,
+  // Медленный раннер CI: dev-сервер vite отдаёт antd несобранным, ленивые модули и Drawer успевают позже 5 секунд.
+  expect: { timeout: 10_000 },
   retries: process.env["CI"] ? 1 : 0,
   workers: 1,
   reporter: process.env["CI"] ? [["github"], ["html", { open: "never" }]] : "list",
@@ -22,6 +24,9 @@ export default defineConfig({
     baseURL: process.env["BASE_URL"] ?? `http://localhost:${String(PORT)}`,
     trace: "retain-on-failure",
     locale: "ru-RU",
+    // Тема читает prefers-reduced-motion (theme.ts → token.motion = false): antd без анимаций, axe не ловит полупрозрачные
+    // меню, модалки и Drawer посреди перехода. Продукт не меняется — так он ведёт себя у пользователя с этой настройкой ОС.
+    reducedMotion: "reduce",
   },
   webServer: process.env["BASE_URL"]
     ? undefined
