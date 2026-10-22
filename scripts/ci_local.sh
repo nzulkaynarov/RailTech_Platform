@@ -72,8 +72,19 @@ command -v docker >/dev/null && docker info >/dev/null 2>&1 \
 mkdir -p "$LOGS"
 
 stage_gitleaks() {
-  docker run --rm -v "$ROOT:/repo" -w /repo "$GITLEAKS_IMAGE" \
-    git --redact --config .gitleaks.toml --log-opts=HEAD .
+  # В git worktree `.git` — файл со ссылкой на общий каталог за пределами $ROOT; без него в контейнере git не видит историю
+  # и gitleaks сканирует 0 коммитов. Общий каталог монтируется по тому же абсолютному пути (в основном checkout — ничего лишнего).
+  local common mounts=(-v "$ROOT:/repo") out
+  common="$(git -C "$ROOT" rev-parse --path-format=absolute --git-common-dir)"
+  [ "$common" = "$ROOT/.git" ] || mounts+=(-v "$common:$common:ro")
+  out="$(docker run --rm "${mounts[@]}" -w /repo "$GITLEAKS_IMAGE" \
+    git --redact --config .gitleaks.toml --log-opts=HEAD . 2>&1)" || { printf '%s\n' "$out"; return 1; }
+  printf '%s\n' "$out"
+  # 0 просканированных коммитов — не «чисто», а сломанный доступ к истории
+  if printf '%s' "$out" | grep -Eq '(^|[^0-9])0 commits scanned'; then
+    echo "gitleaks просканировал 0 коммитов — история недоступна в контейнере"
+    return 1
+  fi
 }
 
 stage_crm() {
