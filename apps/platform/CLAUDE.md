@@ -68,6 +68,7 @@ ERP работают до этапа T4 и с P0 заморожены (толь�
 | один тест web | `cd apps/platform/web && pnpm test -- <шаблон>` |
 | один тест bff | `cd apps/platform/bff && uv run pytest tests/<файл>.py -x -q` |
 | клиент, типы и MSW-моки web из контракта | `make -C apps/platform gen-api` (после правки `platform-bff.yaml`; результат коммитится) |
+| модели ответов CRM из `packages/contracts/openapi/crm.yaml` → `bff/app/clients/crm_models.py` | `make -C apps/platform crm-models` (после изменения OpenAPI CRM или списка `ROOTS` в `scripts/gen_crm_models.py`; свежесть — `crm-models-check`, входит в `check-platform`) |
 | RBAC из `platform-rbac.yaml` → `bff/app/rbac_generated.py` и `web/src/app/rbac.generated.ts` | `make -C apps/platform rbac` (после правки матрицы или меню; проверка свежести — `rbac-check`, входит в `check-platform`) |
 | токены ui-tokens → `web/src/app/tokens.generated.ts` | `make tokens` из корня (или `make -C apps/platform tokens`); после правки `packages/ui-tokens` |
 | e2e Playwright + axe на MSW (BFF и стенд не нужны) | `make -C apps/platform e2e` (браузер один раз: `cd apps/platform/web && pnpm exec playwright install chromium`); скриншот — `E2E_SCREENSHOT_DIR=<каталог>` |
