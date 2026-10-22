@@ -63,7 +63,7 @@ async def _timeline(feed: Feed, snap: Snapshot) -> list[dict[str, Any]]:
     return [entry for payload in payloads for entry in rows(payload)]
 
 
-# TODO(ERP-16): сквозная лента «Сегодня» по правам сотрудника в ERP; пока — журнал или timeline сделок.
+# TODO(ERP-16): сквозная лента «Сегодня» по правам сотрудника в ERP; пока — журнал или timeline.
 async def today(feed: Feed, snap: Snapshot) -> ActivityFeed:
     payload = await feed.get(
         "erp",
