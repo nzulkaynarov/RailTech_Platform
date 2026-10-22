@@ -110,6 +110,46 @@ resources:
     label: { ru: "Admin · Роли, Оргструктура, Интеграции, Тикеты", uz: "Admin · Rollar, tuzilma, integratsiyalar, tiketlar", en: "Admin · Roles, org chart, integrations, tickets" }
     access: { MANAGER: hidden, DIRECTOR: read, SUPPLY: hidden, ENGINEER: hidden, ACCOUNTANT: hidden, ADMIN: full }
 
+# Пункты меню модулей (SPEC-v3 §6.2) → разделы матрицы. Матрица §4.2 остаётся дословной; пункт виден, если у сотрудника
+# есть хотя бы один из разделов `any_of` (уровень не hidden). Содержимое смешанных реестров («Все документы», «Все чаты»)
+# BFF фильтрует по разделу каждого типа документа или чата. Q-PLT-12-2.
+menu:
+  dashboard:
+    queue: [dashboard.queue]
+    projects: [eds.projects]
+    summary: [dashboard.summary]
+  crm:
+    messages: [crm.leads]
+    leads: [crm.leads]
+    clients: [crm.clients]
+    requests: [crm.clients]
+    channels: [crm.leads]
+    kb: [crm.leads]
+  eds:
+    documents: [eds.inbox, eds.drafts, eds.projects, eds.payments, eds.memo.create, eds.memo.approve]
+    inbox: [eds.inbox]
+    outbox: [eds.drafts]
+    projects: [eds.projects]
+    drafts: [eds.drafts]
+    approvals: [eds.memo.approve, eds.memo.create]
+    payments: [eds.payments]
+  erp:
+    requests: [erp.calc]
+    calc: [erp.calc]
+    stock: [erp.stock]
+    catalog: [erp.stock]
+    docs: [erp.stock]
+  chats:
+    all: [chats.internal, chats.external]
+    internal: [chats.internal]
+    external: [chats.external]
+    contacts: [chats.internal]
+  admin:
+    roles: [admin]
+    org: [admin]
+    integrations: [admin]
+    tickets: [admin]
+
 # Поля с ограничением внутри экранов (SPEC-v3 §4.2, последний абзац). BFF вырезает поле из ответа, если ни одна роль
 # сотрудника его не видит; SPA скрывает компонентом <Restricted>.
 restricted_fields:
