@@ -47,7 +47,6 @@
 export * from "./accessLevel";
 export * from "./activityFeed";
 export * from "./activityItem";
-export * from "./backendUnavailableResponse";
 export * from "./changePasswordIn";
 export * from "./csrfFailedResponse";
 export * from "./csrfTokenParameter";

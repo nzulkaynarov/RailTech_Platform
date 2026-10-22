@@ -592,12 +592,6 @@ components:
         application/json:
           schema:
             $ref: '#/components/schemas/Error'
-    BackendUnavailable:
-      description: '`BACKEND_UNAVAILABLE` — CRM (вход невозможен) или ERP не ответили'
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/Error'
 
   schemas:
     Error:
