@@ -26,6 +26,18 @@
  * 0.2.0 (волна 8): смена пароля (`POST /auth/change-password`, `Session.must_change_password`); Admin · Оргструктура —
  * сотрудники, выдача ролей Платформы, приглашение по почте (`/admin/users*`, раздел матрицы `admin`).
  *
+ * **0.3.0 (R-2, ADR-0012) — ломающее (до 1.0 допустимо): роли — данные.** Роль сотрудника — `RoleRef {id, name,
+ * system, code?}` вместо перечисления `RoleCode` (удалено): `Me.roles: RoleRef[]`, `Me.active_role` и `MeUpdate.active_role` —
+ * id роли или `null`; `Employee.roles: RoleRef[]`, `EmployeeInvite.role_ids`, `EmployeeUpdate.role_ids`; параметр `role` очереди
+ * и карточек — id роли; `QueueItem.role` → `QueueItem.role_id`. Доступ сотрудника (`Me.modules`, `Me.resources`,
+ * `Me.restricted_fields`) — объединение матриц его ролей (матрицы и права бэкендов считает CRM), «вид» — по активной роли,
+ * как в 0.2.2. Новое: Admin · Ролевая матрица — `GET/POST /admin/roles`, `GET/PATCH/DELETE /admin/roles/{id}`,
+ * `POST /admin/roles/preview` («что произойдёт»); `POST /admin/users/{id}/invite` (повтор приглашения);
+ * `EmployeeUpdate.transfer_to_user_id` (кому передать лиды при отключении или смене ролей); `Employee.erp_sync` и
+ * `erp_sync_error` — из CRM. Коды ошибок: `ROLE_IN_USE`, `ROLE_SYSTEM`, `LAST_DIRECTOR` (вместе с `LAST_ADMIN`) и `CONFLICT` с
+ * `details.reason` (`user_has_active_leads`, `name_taken`) или `details.invite = not_sent`; у каждого 409 в `details.reason` —
+ * код CRM. Каталог разделов, меню, полей и видов очереди — `packages/contracts/platform-rbac.yaml` версии 2.
+ *
  * 0.2.4: `423 ACCOUNT_LOCKED` объявлен и на `POST /auth/change-password` (CRM блокирует учётную запись после неверных
  * текущих паролей).
  *
@@ -44,7 +56,7 @@
  * Лимиты: вход — 10 в минуту на IP и e-mail; остальные запросы — 300 в минуту на сессию; превышение — 429
  * `TOO_MANY_REQUESTS` с `Retry-After`.
  *
- * OpenAPI spec version: 0.2.4
+ * OpenAPI spec version: 0.3.0
  */
 import { faker } from "@faker-js/faker";
 
@@ -61,7 +73,7 @@ import {
   NotificationTab,
   ObjectKind,
   QueueItemKind,
-  RoleCode,
+  RestrictedField,
   SourceState,
   StepCode,
 } from "./model";
@@ -75,6 +87,9 @@ import type {
   NotificationPage,
   Queue,
   QueueCards,
+  Role,
+  RoleList,
+  RolePreview,
   SearchResult,
   Session,
 } from "./model";
@@ -92,19 +107,24 @@ export const getLoginResponseMock = (
       undefined,
     ]),
     language: faker.helpers.arrayElement(Object.values(Language)),
-    roles: faker.helpers.arrayElements(Object.values(RoleCode)),
-    active_role: faker.helpers.arrayElement([
-      faker.helpers.arrayElement(Object.values(RoleCode)),
-      null,
-    ]),
+    roles: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+      () => ({
+        id: faker.helpers.fromRegExp("^[0-9]+$"),
+        name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        system: faker.datatype.boolean(),
+        code: faker.helpers.arrayElement([
+          faker.string.alpha({ length: { min: 10, max: 20 } }),
+          undefined,
+        ]),
+      }),
+    ),
+    active_role: faker.helpers.arrayElement([faker.helpers.fromRegExp("^[0-9]+$"), null]),
     modules: faker.helpers.arrayElements(Object.values(ModuleCode)),
     resources: {
       [faker.string.alphanumeric(5)]: faker.helpers.arrayElement(Object.values(AccessLevel)),
     },
     restricted_fields: faker.helpers.arrayElement([
-      Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() =>
-        faker.string.alpha({ length: { min: 10, max: 20 } }),
-      ),
+      faker.helpers.arrayElements(Object.values(RestrictedField)),
       undefined,
     ]),
     access: { crm: faker.datatype.boolean(), erp: faker.datatype.boolean() },
@@ -127,19 +147,24 @@ export const getGetSessionResponseMock = (
       undefined,
     ]),
     language: faker.helpers.arrayElement(Object.values(Language)),
-    roles: faker.helpers.arrayElements(Object.values(RoleCode)),
-    active_role: faker.helpers.arrayElement([
-      faker.helpers.arrayElement(Object.values(RoleCode)),
-      null,
-    ]),
+    roles: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+      () => ({
+        id: faker.helpers.fromRegExp("^[0-9]+$"),
+        name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        system: faker.datatype.boolean(),
+        code: faker.helpers.arrayElement([
+          faker.string.alpha({ length: { min: 10, max: 20 } }),
+          undefined,
+        ]),
+      }),
+    ),
+    active_role: faker.helpers.arrayElement([faker.helpers.fromRegExp("^[0-9]+$"), null]),
     modules: faker.helpers.arrayElements(Object.values(ModuleCode)),
     resources: {
       [faker.string.alphanumeric(5)]: faker.helpers.arrayElement(Object.values(AccessLevel)),
     },
     restricted_fields: faker.helpers.arrayElement([
-      Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() =>
-        faker.string.alpha({ length: { min: 10, max: 20 } }),
-      ),
+      faker.helpers.arrayElements(Object.values(RestrictedField)),
       undefined,
     ]),
     access: { crm: faker.datatype.boolean(), erp: faker.datatype.boolean() },
@@ -159,19 +184,22 @@ export const getGetMeResponseMock = (overrideResponse: Partial<Extract<Me, objec
     undefined,
   ]),
   language: faker.helpers.arrayElement(Object.values(Language)),
-  roles: faker.helpers.arrayElements(Object.values(RoleCode)),
-  active_role: faker.helpers.arrayElement([
-    faker.helpers.arrayElement(Object.values(RoleCode)),
-    null,
-  ]),
+  roles: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+    id: faker.helpers.fromRegExp("^[0-9]+$"),
+    name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    system: faker.datatype.boolean(),
+    code: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      undefined,
+    ]),
+  })),
+  active_role: faker.helpers.arrayElement([faker.helpers.fromRegExp("^[0-9]+$"), null]),
   modules: faker.helpers.arrayElements(Object.values(ModuleCode)),
   resources: {
     [faker.string.alphanumeric(5)]: faker.helpers.arrayElement(Object.values(AccessLevel)),
   },
   restricted_fields: faker.helpers.arrayElement([
-    Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() =>
-      faker.string.alpha({ length: { min: 10, max: 20 } }),
-    ),
+    faker.helpers.arrayElements(Object.values(RestrictedField)),
     undefined,
   ]),
   access: { crm: faker.datatype.boolean(), erp: faker.datatype.boolean() },
@@ -190,19 +218,22 @@ export const getUpdateMeResponseMock = (
     undefined,
   ]),
   language: faker.helpers.arrayElement(Object.values(Language)),
-  roles: faker.helpers.arrayElements(Object.values(RoleCode)),
-  active_role: faker.helpers.arrayElement([
-    faker.helpers.arrayElement(Object.values(RoleCode)),
-    null,
-  ]),
+  roles: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+    id: faker.helpers.fromRegExp("^[0-9]+$"),
+    name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    system: faker.datatype.boolean(),
+    code: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      undefined,
+    ]),
+  })),
+  active_role: faker.helpers.arrayElement([faker.helpers.fromRegExp("^[0-9]+$"), null]),
   modules: faker.helpers.arrayElements(Object.values(ModuleCode)),
   resources: {
     [faker.string.alphanumeric(5)]: faker.helpers.arrayElement(Object.values(AccessLevel)),
   },
   restricted_fields: faker.helpers.arrayElement([
-    Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() =>
-      faker.string.alpha({ length: { min: 10, max: 20 } }),
-    ),
+    faker.helpers.arrayElements(Object.values(RestrictedField)),
     undefined,
   ]),
   access: { crm: faker.datatype.boolean(), erp: faker.datatype.boolean() },
@@ -246,7 +277,7 @@ export const getGetQueueResponseMock = (
 ): Queue => ({
   items: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
     id: faker.string.alpha({ length: { min: 10, max: 20 } }),
-    role: faker.helpers.arrayElement(Object.values(RoleCode)),
+    role_id: faker.helpers.fromRegExp("^[0-9]+$"),
     kind: faker.helpers.arrayElement(Object.values(QueueItemKind)),
     title: faker.string.alpha({ length: { min: 10, max: 20 } }),
     subtitle: faker.string.alpha({ length: { min: 10, max: 20 } }),
@@ -424,7 +455,17 @@ export const getListEmployeesResponseMock = (
       faker.string.alpha({ length: { min: 10, max: 120 } }),
       undefined,
     ]),
-    roles: faker.helpers.arrayElements(Object.values(RoleCode)),
+    roles: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+      () => ({
+        id: faker.helpers.fromRegExp("^[0-9]+$"),
+        name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        system: faker.datatype.boolean(),
+        code: faker.helpers.arrayElement([
+          faker.string.alpha({ length: { min: 10, max: 20 } }),
+          undefined,
+        ]),
+      }),
+    ),
     access: { crm: faker.datatype.boolean(), erp: faker.datatype.boolean() },
     status: faker.helpers.arrayElement(Object.values(EmployeeStatus)),
     telegram_linked: faker.datatype.boolean(),
@@ -448,7 +489,46 @@ export const getInviteEmployeeResponseMock = (
     faker.string.alpha({ length: { min: 10, max: 120 } }),
     undefined,
   ]),
-  roles: faker.helpers.arrayElements(Object.values(RoleCode)),
+  roles: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+    id: faker.helpers.fromRegExp("^[0-9]+$"),
+    name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    system: faker.datatype.boolean(),
+    code: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      undefined,
+    ]),
+  })),
+  access: { crm: faker.datatype.boolean(), erp: faker.datatype.boolean() },
+  status: faker.helpers.arrayElement(Object.values(EmployeeStatus)),
+  telegram_linked: faker.datatype.boolean(),
+  erp_sync: faker.helpers.arrayElement(Object.values(ErpSyncState)),
+  erp_sync_error: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    undefined,
+  ]),
+  ...overrideResponse,
+});
+
+export const getResendInviteResponseMock = (
+  overrideResponse: Partial<Extract<Employee, object>> = {},
+): Employee => ({
+  id: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  initials: faker.string.alpha({ length: { min: 3, max: 3 } }),
+  email: faker.internet.email(),
+  position: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 120 } }),
+    undefined,
+  ]),
+  roles: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+    id: faker.helpers.fromRegExp("^[0-9]+$"),
+    name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    system: faker.datatype.boolean(),
+    code: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      undefined,
+    ]),
+  })),
   access: { crm: faker.datatype.boolean(), erp: faker.datatype.boolean() },
   status: faker.helpers.arrayElement(Object.values(EmployeeStatus)),
   telegram_linked: faker.datatype.boolean(),
@@ -471,7 +551,15 @@ export const getGetEmployeeResponseMock = (
     faker.string.alpha({ length: { min: 10, max: 120 } }),
     undefined,
   ]),
-  roles: faker.helpers.arrayElements(Object.values(RoleCode)),
+  roles: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+    id: faker.helpers.fromRegExp("^[0-9]+$"),
+    name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    system: faker.datatype.boolean(),
+    code: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      undefined,
+    ]),
+  })),
   access: { crm: faker.datatype.boolean(), erp: faker.datatype.boolean() },
   status: faker.helpers.arrayElement(Object.values(EmployeeStatus)),
   telegram_linked: faker.datatype.boolean(),
@@ -494,7 +582,15 @@ export const getUpdateEmployeeResponseMock = (
     faker.string.alpha({ length: { min: 10, max: 120 } }),
     undefined,
   ]),
-  roles: faker.helpers.arrayElements(Object.values(RoleCode)),
+  roles: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+    id: faker.helpers.fromRegExp("^[0-9]+$"),
+    name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    system: faker.datatype.boolean(),
+    code: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      undefined,
+    ]),
+  })),
   access: { crm: faker.datatype.boolean(), erp: faker.datatype.boolean() },
   status: faker.helpers.arrayElement(Object.values(EmployeeStatus)),
   telegram_linked: faker.datatype.boolean(),
@@ -503,6 +599,131 @@ export const getUpdateEmployeeResponseMock = (
     faker.string.alpha({ length: { min: 10, max: 20 } }),
     undefined,
   ]),
+  ...overrideResponse,
+});
+
+export const getListRolesResponseMock = (
+  overrideResponse: Partial<Extract<RoleList, object>> = {},
+): RoleList => ({
+  items: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+    id: faker.helpers.fromRegExp("^[0-9]+$"),
+    name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    description: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    system: faker.datatype.boolean(),
+    code: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      undefined,
+    ]),
+    access: {
+      [faker.string.alphanumeric(5)]: faker.helpers.arrayElement(Object.values(AccessLevel)),
+    },
+    restricted_fields: faker.helpers.arrayElements(Object.values(RestrictedField)),
+    employees: faker.number.int({ min: 0 }),
+    updated_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+  })),
+  ...overrideResponse,
+});
+
+export const getCreateRoleResponseMock = (
+  overrideResponse: Partial<Extract<Role, object>> = {},
+): Role => ({
+  id: faker.helpers.fromRegExp("^[0-9]+$"),
+  name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  description: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  system: faker.datatype.boolean(),
+  code: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    undefined,
+  ]),
+  access: {
+    [faker.string.alphanumeric(5)]: faker.helpers.arrayElement(Object.values(AccessLevel)),
+  },
+  restricted_fields: faker.helpers.arrayElements(Object.values(RestrictedField)),
+  employees: faker.number.int({ min: 0 }),
+  updated_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+  ...overrideResponse,
+});
+
+export const getPreviewRoleResponseMock = (
+  overrideResponse: Partial<Extract<RolePreview, object>> = {},
+): RolePreview => ({
+  role_id: faker.helpers.arrayElement([faker.helpers.fromRegExp("^[0-9]+$"), null]),
+  employees_total: faker.number.int({ min: 0 }),
+  employees: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+    () => ({
+      employee: {
+        id: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        initials: faker.string.alpha({ length: { min: 3, max: 3 } }),
+      },
+      gained: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+        () => ({
+          resource: faker.string.alpha({ length: { min: 10, max: 20 } }),
+          level: faker.helpers.arrayElement(Object.values(AccessLevel)),
+        }),
+      ),
+      lost: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+        () => ({
+          resource: faker.string.alpha({ length: { min: 10, max: 20 } }),
+          level: faker.helpers.arrayElement(Object.values(AccessLevel)),
+        }),
+      ),
+      fields_gained: faker.helpers.arrayElements(Object.values(RestrictedField)),
+      fields_lost: faker.helpers.arrayElements(Object.values(RestrictedField)),
+    }),
+  ),
+  gained: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+    () => ({
+      resource: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      level: faker.helpers.arrayElement(Object.values(AccessLevel)),
+    }),
+  ),
+  lost: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+    resource: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    level: faker.helpers.arrayElement(Object.values(AccessLevel)),
+  })),
+  fields_gained: faker.helpers.arrayElements(Object.values(RestrictedField)),
+  fields_lost: faker.helpers.arrayElements(Object.values(RestrictedField)),
+  ...overrideResponse,
+});
+
+export const getGetRoleResponseMock = (
+  overrideResponse: Partial<Extract<Role, object>> = {},
+): Role => ({
+  id: faker.helpers.fromRegExp("^[0-9]+$"),
+  name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  description: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  system: faker.datatype.boolean(),
+  code: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    undefined,
+  ]),
+  access: {
+    [faker.string.alphanumeric(5)]: faker.helpers.arrayElement(Object.values(AccessLevel)),
+  },
+  restricted_fields: faker.helpers.arrayElements(Object.values(RestrictedField)),
+  employees: faker.number.int({ min: 0 }),
+  updated_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+  ...overrideResponse,
+});
+
+export const getUpdateRoleResponseMock = (
+  overrideResponse: Partial<Extract<Role, object>> = {},
+): Role => ({
+  id: faker.helpers.fromRegExp("^[0-9]+$"),
+  name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  description: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  system: faker.datatype.boolean(),
+  code: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    undefined,
+  ]),
+  access: {
+    [faker.string.alphanumeric(5)]: faker.helpers.arrayElement(Object.values(AccessLevel)),
+  },
+  restricted_fields: faker.helpers.arrayElements(Object.values(RestrictedField)),
+  employees: faker.number.int({ min: 0 }),
+  updated_at: faker.date.past().toISOString().slice(0, 19) + "Z",
   ...overrideResponse,
 });
 
@@ -869,6 +1090,28 @@ export const getInviteEmployeeMockHandler = (
   );
 };
 
+export const getResendInviteMockHandler = (
+  overrideResponse?:
+    | Employee
+    | ((info: Parameters<Parameters<typeof http.post>[1]>[0]) => Promise<Employee> | Employee),
+  options?: RequestHandlerOptions,
+) => {
+  return http.post(
+    "*/admin/users/:id/invite",
+    async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getResendInviteResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
 export const getGetEmployeeMockHandler = (
   overrideResponse?:
     | Employee
@@ -912,6 +1155,133 @@ export const getUpdateEmployeeMockHandler = (
     options,
   );
 };
+
+export const getListRolesMockHandler = (
+  overrideResponse?:
+    | RoleList
+    | ((info: Parameters<Parameters<typeof http.get>[1]>[0]) => Promise<RoleList> | RoleList),
+  options?: RequestHandlerOptions,
+) => {
+  return http.get(
+    "*/admin/roles",
+    async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getListRolesResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getCreateRoleMockHandler = (
+  overrideResponse?:
+    Role | ((info: Parameters<Parameters<typeof http.post>[1]>[0]) => Promise<Role> | Role),
+  options?: RequestHandlerOptions,
+) => {
+  return http.post(
+    "*/admin/roles",
+    async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getCreateRoleResponseMock(),
+        { status: 201 },
+      );
+    },
+    options,
+  );
+};
+
+export const getPreviewRoleMockHandler = (
+  overrideResponse?:
+    | RolePreview
+    | ((
+        info: Parameters<Parameters<typeof http.post>[1]>[0],
+      ) => Promise<RolePreview> | RolePreview),
+  options?: RequestHandlerOptions,
+) => {
+  return http.post(
+    "*/admin/roles/preview",
+    async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getPreviewRoleResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getGetRoleMockHandler = (
+  overrideResponse?:
+    Role | ((info: Parameters<Parameters<typeof http.get>[1]>[0]) => Promise<Role> | Role),
+  options?: RequestHandlerOptions,
+) => {
+  return http.get(
+    "*/admin/roles/:id",
+    async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getGetRoleResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getUpdateRoleMockHandler = (
+  overrideResponse?:
+    Role | ((info: Parameters<Parameters<typeof http.patch>[1]>[0]) => Promise<Role> | Role),
+  options?: RequestHandlerOptions,
+) => {
+  return http.patch(
+    "*/admin/roles/:id",
+    async (info: Parameters<Parameters<typeof http.patch>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getUpdateRoleResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getDeleteRoleMockHandler = (
+  overrideResponse?:
+    void | ((info: Parameters<Parameters<typeof http.delete>[1]>[0]) => Promise<void> | void),
+  options?: RequestHandlerOptions,
+) => {
+  return http.delete(
+    "*/admin/roles/:id",
+    async (info: Parameters<Parameters<typeof http.delete>[1]>[0]) => {
+      if (typeof overrideResponse === "function") {
+        await overrideResponse(info);
+      }
+
+      return new HttpResponse(null, { status: 204 });
+    },
+    options,
+  );
+};
 export const getRailTechPlatformBFFAPICRMERPMock = () => [
   getLoginMockHandler(),
   getLogoutMockHandler(),
@@ -930,6 +1300,13 @@ export const getRailTechPlatformBFFAPICRMERPMock = () => [
   getSearchMockHandler(),
   getListEmployeesMockHandler(),
   getInviteEmployeeMockHandler(),
+  getResendInviteMockHandler(),
   getGetEmployeeMockHandler(),
   getUpdateEmployeeMockHandler(),
+  getListRolesMockHandler(),
+  getCreateRoleMockHandler(),
+  getPreviewRoleMockHandler(),
+  getGetRoleMockHandler(),
+  getUpdateRoleMockHandler(),
+  getDeleteRoleMockHandler(),
 ];

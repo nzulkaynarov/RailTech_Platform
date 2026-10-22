@@ -140,8 +140,10 @@ export interface paths {
     };
     /**
      * «Моя очередь» — что сделать сейчас
-     * @description Строки по всем ролям сотрудника (или по одной, если задан `role`). Порядок: просроченные → сегодня → по сроку
-     *     (SPEC-v3 §7.1). Одна строка — одно действие.
+     * @description Строки по всем ролям сотрудника (или по одной, если задан `role` — id роли; иначе по активной роли, если она задана).
+     *     Какие виды работы попадают в очередь — секция `queue` каталога `platform-rbac.yaml`: вид виден, если у ролей «вида» есть
+     *     его раздел с уровнем не ниже нужного. Порядок: просроченные → сегодня → по сроку (SPEC-v3 §7.1). Одна строка — одно
+     *     действие.
      */
     get: operations["getQueue"];
     put?: never;
@@ -159,7 +161,7 @@ export interface paths {
       path?: never;
       cookie?: never;
     };
-    /** Карточки-счётчики над очередью (набор задаёт роль) */
+    /** Карточки-счётчики над очередью (набор задают разделы ролей «вида») */
     get: operations["getQueueCards"];
     put?: never;
     post?: never;
@@ -244,7 +246,10 @@ export interface paths {
       path?: never;
       cookie?: never;
     };
-    /** Сквозной поиск — номера, ИНН, название клиента, артикул; результаты группами по модулям */
+    /**
+     * Сквозной поиск — номера, ИНН, название клиента, артикул; результаты группами по модулям
+     * @description Доступен сотруднику с любым видимым разделом (в том числе роли без «Моей очереди»): каждая группа и каждый результат фильтруются по разделам ролей «вида»; источник без разделов у ролей — `not_applicable`.
+     */
     get: operations["search"];
     put?: never;
     post?: never;
@@ -263,7 +268,7 @@ export interface paths {
     };
     /**
      * Сотрудники (Admin · Оргструктура)
-     * @description Доступ — раздел `admin` матрицы (ADMIN — full, DIRECTOR — read).
+     * @description Доступ — раздел `admin` каталога (чтение — список и карточки, полный — изменения).
      */
     get: operations["listEmployees"];
     put?: never;
@@ -285,9 +290,29 @@ export interface paths {
     put?: never;
     /**
      * Пригласить сотрудника по почте
-     * @description BFF создаёт пользователя в CRM с ролями Платформы и отправляет приглашение (CRM `/users`, `/users/{id}/invite`); провижининг в ERP делает CRM. Только ADMIN.
+     * @description BFF создаёт пользователя в CRM с ролями Платформы (`role_ids`) и отправляет приглашение (CRM `/users`, `/users/{id}/invite`); провижининг в ERP делает CRM. Раздел `admin` — полный. Письмо не ушло — 409 `CONFLICT` с `details.invite = not_sent` и `details.employee_id` (сотрудник создан; повтор — `POST /admin/users/{id}/invite`).
      */
     post: operations["inviteEmployee"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/admin/users/{id}/invite": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Отправить приглашение снова
+     * @description Повтор письма-приглашения сотруднику со статусом «Приглашён» (CRM `/users/{id}/invite`). CRM выдаёт новый временный пароль только при отправке письма: без подключённой почты пароль не меняется и ответ — 409 `CONFLICT` с `details.invite = not_sent`. Раздел `admin` — полный.
+     */
+    post: operations["resendInvite"];
     delete?: never;
     options?: never;
     head?: never;
@@ -310,9 +335,75 @@ export interface paths {
     head?: never;
     /**
      * Роли, должность, отключение — единое место выдачи ролей обеих систем
-     * @description Только ADMIN. Снять у себя последнюю роль ADMIN или отключить последнего администратора нельзя — 409 `LAST_ADMIN`.
+     * @description Раздел `admin` — полный. Роли — полный новый набор `role_ids`; права в CRM и ERP вычисляет CRM. Снять последнего активного администратора или директора (роль или отключение) нельзя — 409 `LAST_ADMIN` / `LAST_DIRECTOR`. У сотрудника есть лиды в работе, а изменение отнимает у него работу с лидами, — 409 `CONFLICT` с `details.reason = user_has_active_leads`; повтор с `transfer_to_user_id` передаёт лиды коллеге.
      */
     patch: operations["updateEmployee"];
+    trace?: never;
+  };
+  "/admin/roles": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Роли Платформы (Admin · Ролевая матрица) — системные и созданные, с числом сотрудников
+     * @description Раздел `admin` — полный (матрицы и выдачу ролей видит только администратор; CRM — `users:write`).
+     */
+    get: operations["listRoles"];
+    put?: never;
+    /** Создать роль (с нуля или из шаблона каталога — шаблон SPA подставляет в черновик) */
+    post: operations["createRole"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/admin/roles/preview": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * «Что произойдёт» — кто из сотрудников какие разделы получит или потеряет при сохранении черновика
+     * @description Без `role_id` — черновик новой роли (сотрудников не затрагивает), с `role_id` — изменение существующей. Ничего не сохраняет. Системную роль изменить нельзя — 409 `ROLE_SYSTEM`.
+     */
+    post: operations["previewRole"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/admin/roles/{id}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Роль */
+    get: operations["getRole"];
+    put?: never;
+    post?: never;
+    /**
+     * Удалить роль — только без сотрудников
+     * @description Роль, выданную сотрудникам, удалить нельзя — 409 `ROLE_IN_USE` с `details.employees` (сколько сотрудников); системную — 409 `ROLE_SYSTEM`.
+     */
+    delete: operations["deleteRole"];
+    options?: never;
+    head?: never;
+    /**
+     * Переименовать роль, изменить описание, матрицу или поля с ограничением
+     * @description Не присланное поле не меняется. Права сотрудников с этой ролью CRM пересчитывает сразу (CRM) и фоном (ERP). Системную роль изменить нельзя — 409 `ROLE_SYSTEM`; изменение, после которого не остаётся ни одного администратора, — 409 `LAST_ADMIN`.
+     */
+    patch: operations["updateRole"];
     trace?: never;
   };
 }
@@ -321,7 +412,7 @@ export interface components {
   schemas: {
     Error: {
       /**
-       * @description Стабильный код (`INVALID_CREDENTIALS`, `SESSION_EXPIRED`, `CSRF_FAILED`, `FORBIDDEN`, `NOT_FOUND`, `VALIDATION_FAILED`, `TOO_MANY_REQUESTS`, `BACKEND_UNAVAILABLE`, `NO_PLATFORM_ROLE`, `USER_DISABLED`, `ACCOUNT_LOCKED`, `CONFLICT`, `WRONG_PASSWORD`, `EMAIL_EXISTS`, `LAST_ADMIN`, `INTERNAL_ERROR`, `BAD_REQUEST`, `METHOD_NOT_ALLOWED`, `HTTP_<статус>`)
+       * @description Стабильный код (`INVALID_CREDENTIALS`, `SESSION_EXPIRED`, `CSRF_FAILED`, `FORBIDDEN`, `NOT_FOUND`, `VALIDATION_FAILED`, `TOO_MANY_REQUESTS`, `BACKEND_UNAVAILABLE`, `NO_PLATFORM_ROLE`, `USER_DISABLED`, `ACCOUNT_LOCKED`, `CONFLICT`, `WRONG_PASSWORD`, `EMAIL_EXISTS`, `LAST_ADMIN`, `LAST_DIRECTOR`, `ROLE_IN_USE`, `ROLE_SYSTEM`, `INTERNAL_ERROR`, `BAD_REQUEST`, `METHOD_NOT_ALLOWED`, `HTTP_<статус>`)
        * @example SESSION_EXPIRED
        */
       code: string;
@@ -344,10 +435,87 @@ export interface components {
       erp: components["schemas"]["SourceState"];
     };
     /**
-     * @description Роли SPEC-v3 §4.1
+     * @description Id роли Платформы в CRM (роли — данные, ADR-0012)
+     * @example 3
+     */
+    RoleId: string;
+    RoleRef: {
+      id: components["schemas"]["RoleId"];
+      /** @description Название роли — данные (его задаёт администратор); интерфейс показывает его как есть */
+      name: string;
+      /** @description Системная роль («Администратор», «Директор») — неизменна, не удаляется */
+      system: boolean;
+      /** @description Код системной роли (`ADMIN`, `DIRECTOR`) или шаблона, из которого создана роль при первом запуске (`tpl:MANAGER`); у созданных администратором — нет. Интерфейс на коды не опирается, кроме двух системных. */
+      code?: string;
+    };
+    /** @description Раздел каталога `platform-rbac.yaml` → уровень; скрытые разделы не перечисляются */
+    ResourceAccess: {
+      [key: string]: components["schemas"]["AccessLevel"];
+    };
+    /**
+     * @description Поле с ограничением каталога (`restricted_fields`); роль перечисляет поля, которые она видит
      * @enum {string}
      */
-    RoleCode: "MANAGER" | "DIRECTOR" | "SUPPLY" | "ENGINEER" | "ACCOUNTANT" | "ADMIN";
+    RestrictedField: "cost_margin" | "supplier_prices" | "totals_only";
+    Role: {
+      id: components["schemas"]["RoleId"];
+      name: string;
+      description: string;
+      system: boolean;
+      /** @description Как в `RoleRef.code` */
+      code?: string;
+      access: components["schemas"]["ResourceAccess"];
+      restricted_fields: components["schemas"]["RestrictedField"][];
+      /** @description Сколько сотрудников имеют роль */
+      employees: number;
+      /** Format: date-time */
+      updated_at: string;
+    };
+    RoleList: {
+      items: components["schemas"]["Role"][];
+    };
+    RoleCreate: {
+      name: string;
+      description?: string;
+      access: components["schemas"]["ResourceAccess"];
+      restricted_fields: components["schemas"]["RestrictedField"][];
+    };
+    RoleUpdate: {
+      name?: string;
+      description?: string;
+      access?: components["schemas"]["ResourceAccess"];
+      restricted_fields?: components["schemas"]["RestrictedField"][];
+    };
+    RolePreviewIn: {
+      role_id?: components["schemas"]["RoleId"];
+      access?: components["schemas"]["ResourceAccess"];
+      restricted_fields?: components["schemas"]["RestrictedField"][];
+    };
+    SectionLevel: {
+      /** @description Раздел каталога */
+      resource: string;
+      level: components["schemas"]["AccessLevel"];
+    };
+    RoleImpact: {
+      employee: components["schemas"]["PersonRef"];
+      /** @description Разделы, которые появятся или станут полными (уровень «после») */
+      gained: components["schemas"]["SectionLevel"][];
+      /** @description Разделы, которые пропадут или станут только для чтения (уровень «до») */
+      lost: components["schemas"]["SectionLevel"][];
+      fields_gained: components["schemas"]["RestrictedField"][];
+      fields_lost: components["schemas"]["RestrictedField"][];
+    };
+    RolePreview: {
+      role_id?: components["schemas"]["RoleId"] | null;
+      /** @description Сколько сотрудников имеют роль (у черновика новой роли — 0) */
+      employees_total: number;
+      /** @description Только сотрудники, у которых права изменятся */
+      employees: components["schemas"]["RoleImpact"][];
+      gained: components["schemas"]["SectionLevel"][];
+      lost: components["schemas"]["SectionLevel"][];
+      fields_gained: components["schemas"]["RestrictedField"][];
+      fields_lost: components["schemas"]["RestrictedField"][];
+    };
     /** @enum {string} */
     ModuleCode: "dashboard" | "crm" | "eds" | "erp" | "chats" | "admin";
     /**
@@ -425,17 +593,18 @@ export interface components {
       /** @description Должность — текст (не роль) */
       position?: string;
       language: components["schemas"]["Language"];
-      roles: components["schemas"]["RoleCode"][];
-      /** @description Роль, выбранная в профиле («вид»): при заданной роли `modules`, `resources`, `restricted_fields`, «Моя очередь» и карточки считаются только по ней; пусто — по объединению всех ролей. На права операций не влияет: BFF проверяет их по объединению ролей. */
-      active_role?: components["schemas"]["RoleCode"] | null;
+      /** @description Роли сотрудника (названия — данные CRM) */
+      roles: components["schemas"]["RoleRef"][];
+      /** @description Id роли, выбранной в профиле («вид»): при заданной роли `modules`, `resources`, `restricted_fields`, «Моя очередь» и карточки считаются только по ней; пусто — по объединению всех ролей. На права операций не влияет: BFF проверяет их по объединению ролей. */
+      active_role?: components["schemas"]["RoleId"] | null;
       /** @description Модули рейла в порядке показа — для активной роли, если задана, иначе для объединения ролей */
       modules: components["schemas"]["ModuleCode"][];
-      /** @description Разделы и действия матрицы `platform-rbac.yaml` → уровень (максимум по ролям) — для активной роли, если задана, иначе для объединения ролей. Видимость пункта меню — по секции `menu` того же файла. */
+      /** @description Разделы каталога `platform-rbac.yaml` → уровень (максимум по матрицам ролей) — для активной роли, если задана, иначе для объединения ролей. Видимость пункта меню — по секции `menu` того же файла. */
       resources: {
         [key: string]: components["schemas"]["AccessLevel"];
       };
-      /** @description Поля с ограничением, которые сотруднику видны (`cost_margin`, `supplier_prices`, `totals_only`) */
-      restricted_fields?: string[];
+      /** @description Поля с ограничением, которые сотруднику видны */
+      restricted_fields?: components["schemas"]["RestrictedField"][];
       access: {
         crm: boolean;
         erp: boolean;
@@ -460,7 +629,7 @@ export interface components {
       email: string;
       /** @description Должность — текст, не роль */
       position?: string;
-      roles: components["schemas"]["RoleCode"][];
+      roles: components["schemas"]["RoleRef"][];
       access: {
         crm: boolean;
         erp: boolean;
@@ -469,6 +638,7 @@ export interface components {
       /** @description Привязан Telegram для уведомлений сотруднику */
       telegram_linked: boolean;
       erp_sync: components["schemas"]["ErpSyncState"];
+      /** @description Текст последней ошибки провижининга ERP (из CRM), если `erp_sync = error` */
       erp_sync_error?: string;
     };
     EmployeeList: {
@@ -479,16 +649,19 @@ export interface components {
       email: string;
       name: string;
       position?: string;
-      roles: components["schemas"]["RoleCode"][];
+      role_ids: components["schemas"]["RoleId"][];
     };
     EmployeeUpdate: {
-      roles?: components["schemas"]["RoleCode"][];
+      /** @description Полный новый набор ролей */
+      role_ids?: components["schemas"]["RoleId"][];
       position?: string;
       is_active?: boolean;
+      /** @description Кому передать лиды в работе (`crm_user_id` коллеги), если отключение или новые роли отнимают у сотрудника работу с лидами; без поля при таких лидах — 409 `CONFLICT` (`details.reason = user_has_active_leads`) */
+      transfer_to_user_id?: string;
     };
     MeUpdate: {
       language?: components["schemas"]["Language"];
-      active_role?: components["schemas"]["RoleCode"] | null;
+      active_role?: components["schemas"]["RoleId"] | null;
     };
     Health: {
       /** @enum {string} */
@@ -516,7 +689,7 @@ export interface components {
       sources: components["schemas"]["Sources"];
     };
     /**
-     * @description Вид действия; набор растёт с фазами (SPEC-v3 §4.1)
+     * @description Вид действия; какой раздел и уровень нужен — секция `queue` каталога `platform-rbac.yaml`
      * @enum {string}
      */
     QueueItemKind:
@@ -545,7 +718,7 @@ export interface components {
     DueLabel: "overdue" | "today" | "tomorrow" | "later" | "memo";
     QueueItem: {
       id: string;
-      role: components["schemas"]["RoleCode"];
+      role_id: components["schemas"]["RoleId"];
       kind: components["schemas"]["QueueItemKind"];
       /** @description Заголовок действия — «Наложить резолюцию на письмо ВХ-104/26» */
       title: string;
@@ -681,6 +854,10 @@ export interface components {
   parameters: {
     /** @description `crm_user_id` */
     EmployeeId: string;
+    /** @description Id роли Платформы (CRM) */
+    RoleIdPath: components["schemas"]["RoleId"];
+    /** @description Только по этой роли сотрудника (id); чужая роль — 403 */
+    RoleQuery: components["schemas"]["RoleId"];
     /** @description Значение cookie `rt_pf_csrf` */
     CsrfToken: string;
   };
@@ -937,7 +1114,8 @@ export interface operations {
   getQueue: {
     parameters: {
       query?: {
-        role?: components["schemas"]["RoleCode"];
+        /** @description Только по этой роли сотрудника (id); чужая роль — 403 */
+        role?: components["parameters"]["RoleQuery"];
       };
       header?: never;
       path?: never;
@@ -961,7 +1139,8 @@ export interface operations {
   getQueueCards: {
     parameters: {
       query?: {
-        role?: components["schemas"]["RoleCode"];
+        /** @description Только по этой роли сотрудника (id); чужая роль — 403 */
+        role?: components["parameters"]["RoleQuery"];
       };
       header?: never;
       path?: never;
@@ -1155,7 +1334,7 @@ export interface operations {
       };
       401: components["responses"]["SessionExpired"];
       403: components["responses"]["Forbidden"];
-      /** @description `EMAIL_EXISTS` */
+      /** @description `EMAIL_EXISTS`; `CONFLICT` с `details.invite = not_sent` (письмо не ушло) */
       409: {
         headers: {
           [name: string]: unknown;
@@ -1165,6 +1344,62 @@ export interface operations {
         };
       };
       422: components["responses"]["ValidationFailed"];
+      /** @description `BACKEND_UNAVAILABLE` — CRM не ответила; если сотрудник уже создан — `details.invite = not_sent` */
+      503: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Error"];
+        };
+      };
+    };
+  };
+  resendInvite: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path: {
+        /** @description `crm_user_id` */
+        id: components["parameters"]["EmployeeId"];
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Письмо поставлено в отправку */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Employee"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      /** @description `CONFLICT` с `details.invite = not_sent` — письмо не ушло (почта не подключена) */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Error"];
+        };
+      };
+      /** @description `BACKEND_UNAVAILABLE` */
+      503: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Error"];
+        };
+      };
     };
   };
   getEmployee: {
@@ -1224,7 +1459,213 @@ export interface operations {
       401: components["responses"]["SessionExpired"];
       403: components["responses"]["Forbidden"];
       404: components["responses"]["NotFound"];
-      /** @description `LAST_ADMIN` */
+      /** @description `LAST_ADMIN`, `LAST_DIRECTOR`, `CONFLICT` (`details.reason = user_has_active_leads`) */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Error"];
+        };
+      };
+      422: components["responses"]["ValidationFailed"];
+    };
+  };
+  listRoles: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Роли в порядке CRM (системные первыми) */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["RoleList"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+    };
+  };
+  createRole: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["RoleCreate"];
+      };
+    };
+    responses: {
+      /** @description Создана */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Role"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      /** @description `CONFLICT` с `details.reason = name_taken` — роль с таким названием уже есть */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Error"];
+        };
+      };
+      422: components["responses"]["ValidationFailed"];
+    };
+  };
+  previewRole: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["RolePreviewIn"];
+      };
+    };
+    responses: {
+      /** @description Последствия */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["RolePreview"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      /** @description `ROLE_SYSTEM` */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Error"];
+        };
+      };
+      422: components["responses"]["ValidationFailed"];
+    };
+  };
+  getRole: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        /** @description Id роли Платформы (CRM) */
+        id: components["parameters"]["RoleIdPath"];
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Роль */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Role"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+    };
+  };
+  deleteRole: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path: {
+        /** @description Id роли Платформы (CRM) */
+        id: components["parameters"]["RoleIdPath"];
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Удалена */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      /** @description `ROLE_IN_USE`, `ROLE_SYSTEM` */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Error"];
+        };
+      };
+    };
+  };
+  updateRole: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path: {
+        /** @description Id роли Платформы (CRM) */
+        id: components["parameters"]["RoleIdPath"];
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["RoleUpdate"];
+      };
+    };
+    responses: {
+      /** @description Сохранена */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Role"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      /** @description `ROLE_SYSTEM`, `LAST_ADMIN`, `CONFLICT` (`details.reason = name_taken`) */
       409: {
         headers: {
           [name: string]: unknown;

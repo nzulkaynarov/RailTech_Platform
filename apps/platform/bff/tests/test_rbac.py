@@ -1,4 +1,8 @@
-"""RBAC: тест на каждую ячейку матрицы (6 ролей x 15 разделов), объединение ролей, меню, поля."""
+"""RBAC по ролям-данным (ADR-0012): ячейки каталога, объединение ролей, вид, меню, очередь, поля.
+
+Роли приходят из CRM с матрицами; эталон шести предустановок — `rbac_oracle` (каталог версии 2
+дословно). Коды ролей в логике BFF не встречаются: проверки — по разделам матриц.
+"""
 
 import itertools
 from pathlib import Path
@@ -10,13 +14,14 @@ from fastapi import Depends
 
 from app import rbac
 from app.deps import Authed, require
-from app.rbac_generated import ACCESS, MENU, MODULES, RESOURCE_MODULE, ROLES
+from app.rbac_generated import MENU, MODULES, QUEUE, RESOURCE_MODULE
+from app.session import SessionRole
 from tests.conftest import Web
-from tests.rbac_oracle import MATRIX, RANK, RESTRICTED, level, union
-from tests.rbac_oracle import ROLES as ORACLE_ROLES
+from tests.rbac_oracle import FIELDS, MATRIX, MODULE_OF, RANK, ROLES, access_of, level, union
+from tests.roles import custom, ref
 
 CONTRACT = Path(__file__).resolve().parents[4] / "packages/contracts/platform-rbac.yaml"
-CELLS = list(itertools.product(ORACLE_ROLES, MATRIX))
+CELLS = list(itertools.product(ROLES, MATRIX))
 
 
 def spec() -> dict[str, Any]:
@@ -24,34 +29,41 @@ def spec() -> dict[str, Any]:
     return loaded
 
 
-def test_matrix_has_six_roles_and_fifteen_sections() -> None:
-    assert tuple(ROLES) == ORACLE_ROLES
-    assert len(MATRIX) == 15
-    assert len(CELLS) == 90
-    assert list(ACCESS) == list(MATRIX)  # порядок строк — SPEC-v3 §4.2 дословно
+def role(code_or_ref: str | dict[str, Any]) -> SessionRole:
+    return SessionRole.model_validate(ref(code_or_ref))
 
 
-def test_contract_equals_spec_oracle() -> None:
-    rows = {r["key"]: r["access"] for r in spec()["resources"]}
-    assert list(rows) == list(MATRIX)
-    for key, access in rows.items():
-        assert [access[role] for role in ORACLE_ROLES] == [level(r, key) for r in ORACLE_ROLES]
-    restricted = {k: tuple(v["visible_to"]) for k, v in spec()["restricted_fields"].items()}
-    assert restricted == RESTRICTED
+def roles(*codes: str | dict[str, Any]) -> list[SessionRole]:
+    return [role(c) for c in codes]
 
 
-@pytest.mark.parametrize(("role", "key"), CELLS)
-def test_cell_level_and_allows(role: str, key: str) -> None:
-    expected = level(role, key)
+def test_catalog_has_eighteen_sections_in_oracle_order() -> None:
+    assert list(RESOURCE_MODULE) == list(MATRIX)
+    assert len(CELLS) == 108
+    assert {k: RESOURCE_MODULE[k] for k in MATRIX} == MODULE_OF
 
-    assert rbac.level_for([role], key) == expected
-    assert ACCESS[key][role] == expected  # type: ignore[index]
-    assert rbac.allows([role], key, "read") is (RANK[expected] >= 1)
-    assert rbac.allows([role], key, "full") is (RANK[expected] == 2)
-    visible = rbac.resources_for([role])
-    assert (key in visible) is (expected != "hidden")
-    if expected != "hidden":
-        assert visible[key] == expected
+
+def test_contract_equals_oracle() -> None:
+    """Системные роли и шаблоны каталога — эталон версии 2 (матрица и поля)."""
+    data = spec()
+    catalog = {**data["system_roles"], **data["templates"]}
+    assert list(catalog) == ["ADMIN", "DIRECTOR", "MANAGER", "SUPPLY", "ENGINEER", "ACCOUNTANT"]
+    for code, body in catalog.items():
+        assert body["access"] == access_of(code), code
+        assert sorted(body["restricted_fields"]) == sorted(FIELDS[code]), code
+    assert [r["key"] for r in data["resources"]] == list(MATRIX)
+
+
+@pytest.mark.parametrize(("code", "key"), CELLS)
+def test_cell_level_and_allows(code: str, key: str) -> None:
+    """Каждая ячейка: уровень раздела у роли и проверка `allows` на чтение и изменение."""
+    expected = level(code, key)
+    access = rbac.merge([role(code)])
+
+    assert (rbac.level_for(access, key) or "hidden") == expected
+    assert rbac.allows(access, key, "read") is (RANK[expected] >= 1)
+    assert rbac.allows(access, key, "full") is (RANK[expected] == 2)
+    assert (key in access) is (expected != "hidden")
 
 
 @pytest.fixture
@@ -68,16 +80,16 @@ def probes(web: Web) -> None:
             make()
 
 
-@pytest.mark.parametrize("role", ORACLE_ROLES)
-async def test_every_cell_through_http(web: Web, probes: None, role: str) -> None:
-    """`require(resource, level)` на живом маршруте: 200 или 403 в каждой из 15 x 2 ячеек."""
-    assert (await web.login([role])).status_code == 200
+@pytest.mark.parametrize("code", ROLES)
+async def test_every_cell_through_http(web: Web, probes: None, code: str) -> None:
+    """`require(resource, level)` на живом маршруте: 200 или 403 в каждой из 18 x 2 ячеек."""
+    assert (await web.login([code])).status_code == 200
 
     for key in MATRIX:
         for need in ("read", "full"):
             response = await web.client.get(f"/api/v1/_rbac/{need}/{key}")
-            allowed = RANK[level(role, key)] >= RANK[need]
-            assert response.status_code == (200 if allowed else 403), (role, key, need)
+            allowed = RANK[level(code, key)] >= RANK[need]
+            assert response.status_code == (200 if allowed else 403), (code, key, need)
             if not allowed:
                 body = response.json()
                 assert body["code"] == "FORBIDDEN"
@@ -85,114 +97,171 @@ async def test_every_cell_through_http(web: Web, probes: None, role: str) -> Non
                 assert body["details"] == {"resource": key, "need": need}
 
 
-@pytest.mark.parametrize(("a", "b"), list(itertools.combinations(ORACLE_ROLES, 2)))
-def test_two_roles_take_the_maximum(a: str, b: str) -> None:
-    for key in MATRIX:
-        assert rbac.level_for([a, b], key) == union([a, b], key)
-        assert rbac.level_for([b, a], key) == union([a, b], key)
+MIXED = custom(
+    40, "Менеджер и бухгалтер", {"crm.leads": "full", "eds.payments": "full"}, ("totals_only",)
+)
 
 
-def test_all_roles_and_empty_set() -> None:
+async def test_created_role_opens_exactly_its_sections_through_http(web: Web, probes: None) -> None:
+    """Роль без кода, созданная администратором: доступ — ровно её разделы (ADR-0012)."""
+    assert (await web.login([MIXED])).status_code == 200
+
     for key in MATRIX:
-        assert rbac.level_for(list(ORACLE_ROLES), key) == union(list(ORACLE_ROLES), key)
-        assert rbac.level_for([], key) == "hidden"
-        assert rbac.level_for(["SUPERUSER"], key) == "hidden"  # чужой код роли ничего не даёт
-    assert rbac.level_for(["SUPERUSER", "ADMIN"], "admin") == "full"
+        for need in ("read", "full"):
+            response = await web.client.get(f"/api/v1/_rbac/{need}/{key}")
+            allowed = key in ("crm.leads", "eds.payments")
+            assert response.status_code == (200 if allowed else 403), (key, need)
+
+
+# --- права = объединение ролей --------------------------------------------------------------------
+
+
+@pytest.mark.parametrize(("a", "b"), list(itertools.combinations(ROLES, 2)))
+def test_rights_are_the_union_of_roles(a: str, b: str) -> None:
+    """Права = объединение ролей: максимум по разделу, порядок ролей не важен."""
+    for key in MATRIX:
+        expected = union([a, b], key)
+        assert (rbac.level_for(rbac.merge(roles(a, b)), key) or "hidden") == expected
+        assert (rbac.level_for(rbac.merge(roles(b, a)), key) or "hidden") == expected
+
+
+def test_union_of_created_roles_takes_the_maximum_and_all_fields() -> None:
+    first = custom(41, "Продажи", {"crm.leads": "read", "eds.payments": "full"}, ("totals_only",))
+    second = custom(42, "Лиды", {"crm.leads": "full", "eds.inbox": "read"}, ("cost_margin",))
+
+    merged = rbac.merge(roles(first, second))
+
+    assert merged == {"crm.leads": "full", "eds.inbox": "read", "eds.payments": "full"}
+    assert list(merged) == ["crm.leads", "eds.inbox", "eds.payments"]  # порядок каталога
+    assert rbac.fields_of(roles(first, second)) == ["cost_margin", "totals_only"]
+
+
+def test_unknown_sections_and_levels_of_a_role_give_nothing() -> None:
+    odd = custom(43, "Странная", {"payroll": "full", "admin": "owner", "erp.calc.goods": "read"})
+
+    assert rbac.merge(roles(odd)) == {}  # чужой раздел, чужой уровень, read там, где только full
+    assert rbac.merge([]) == {}
 
 
 def test_unknown_resource_is_an_error() -> None:
     with pytest.raises(KeyError):
-        rbac.level_for(["ADMIN"], "payroll")
+        rbac.level_for({}, "payroll")
     with pytest.raises(KeyError):
         require("payroll")
 
 
-def test_known_roles_dedup_and_order() -> None:
-    assert rbac.known_roles(["ADMIN", "MANAGER", "ADMIN", "X"]) == ["MANAGER", "ADMIN"]
+# --- активная роль — вид -------------------------------------------------------------------------
 
 
-def test_view_roles() -> None:
-    owned = ["SUPPLY", "ACCOUNTANT"]
-    assert rbac.view_roles(owned, None) == ["SUPPLY", "ACCOUNTANT"]
-    assert rbac.view_roles(owned, "ACCOUNTANT") == ["ACCOUNTANT"]
-    assert rbac.view_roles(owned, "ADMIN") == ["SUPPLY", "ACCOUNTANT"]  # чужая роль не даёт вид
+def test_active_role_is_the_view_and_does_not_change_rights() -> None:
+    """Активная роль сужает вид (модули, разделы, поля, очередь), права — по объединению."""
+    owned = roles("SUPPLY", MIXED)
+
+    view = rbac.View.of(rbac.view_roles(owned, 40))
+    union_access = rbac.merge(owned)
+
+    assert view.access == {"crm.leads": "full", "eds.payments": "full"}
+    assert rbac.modules_for(view.access) == ["crm", "eds"]
+    assert view.fields == ("totals_only",)
+    assert "calc_task" not in view.kinds
+    assert "answer_lead" in view.kinds
+    assert rbac.allows(union_access, "erp.calc", "full")  # право снабженца осталось
+    assert rbac.View.of(rbac.view_roles(owned, None)).access == union_access
+    assert rbac.view_roles(owned, 999) == owned  # чужая роль не даёт вид
 
 
-# --- модули и меню --------------------------------------------------------------------------------
+def test_queue_item_belongs_to_the_first_view_role_that_gives_the_kind() -> None:
+    view = rbac.View.of(roles("SUPPLY", MIXED, "MANAGER"))
+
+    assert view.role_for("answer_lead") == 40
+    assert view.role_for("calc_task") == 4
+    assert view.role_for("approve_quote") is None
 
 
-@pytest.mark.parametrize("role", ORACLE_ROLES)
-def test_modules_follow_visible_sections(role: str) -> None:
+# --- модули, меню, очередь -----------------------------------------------------------------------
+
+
+@pytest.mark.parametrize("code", ROLES)
+def test_modules_follow_visible_sections(code: str) -> None:
     expected = [
-        m
-        for m in MODULES
-        if any(level(role, k) != "hidden" for k in MATRIX if k.split(".")[0] == m)
+        m for m in MODULES if any(level(code, k) != "hidden" for k in MATRIX if MODULE_OF[k] == m)
     ]
 
-    assert rbac.modules_for([role]) == expected
-    assert "dashboard" in expected  # «Моя очередь» видна всем
-    assert ("admin" in expected) is (role in {"DIRECTOR", "ADMIN"})
+    assert rbac.modules_for(rbac.merge(roles(code))) == expected
+    assert "dashboard" in expected  # «Моя очередь» видна всем предустановкам
+    assert ("admin" in expected) is (code in {"DIRECTOR", "ADMIN"})
 
 
-@pytest.mark.parametrize("role", ORACLE_ROLES)
-def test_menu_item_visible_if_any_section_is_not_hidden(role: str) -> None:
-    menu = rbac.menu_for([role])
+@pytest.mark.parametrize("code", ROLES)
+def test_menu_item_visible_if_any_section_is_visible(code: str) -> None:
+    access = rbac.merge(roles(code))
+    menu = rbac.menu_for(access)
 
     for module, items in MENU.items():
         for item, sections in items.items():
-            expected = any(level(role, s) != "hidden" for s in sections)
-            assert (item in menu[module]) is expected, (role, module, item)
-        # Порядок пунктов — как в контракте.
+            expected = any(level(code, s) != "hidden" for s in sections)
+            assert (item in menu[module]) is expected, (code, module, item)
         assert menu[module] == [i for i in items if i in menu[module]]
-    # Модуль виден тогда и только тогда, когда виден хотя бы один его пункт.
-    assert [m for m in MODULES if menu[m]] == rbac.modules_for([role])
+    assert [m for m in MODULES if menu[m]] == rbac.modules_for(access)
 
 
 def test_menu_sections_exist_and_cover_every_section() -> None:
     covered = {s for items in MENU.values() for sections in items.values() for s in sections}
-    assert covered == set(MATRIX)  # ни один раздел матрицы не остался без пункта меню
+    # Визы расчёта — возможности внутри экрана «Расчёт», своего пункта меню у них нет.
+    assert set(MATRIX) - covered == {"erp.calc.goods", "erp.calc.services"}
     for module, items in MENU.items():
         for sections in items.values():
             assert all(RESOURCE_MODULE[s] in MODULES for s in sections)
         assert module in MODULES
 
 
-def test_menu_examples_from_spec() -> None:
-    assert rbac.menu_for(["ADMIN"])["dashboard"] == ["queue"]
-    assert rbac.menu_for(["ADMIN"])["admin"] == ["roles", "org", "integrations", "tickets"]
-    assert rbac.menu_for(["MANAGER"])["eds"] == [
-        "documents",
-        "inbox",
-        "outbox",
-        "projects",
-        "drafts",
-        "approvals",
-        "payments",
+def test_menu_examples() -> None:
+    admin = rbac.merge(roles("ADMIN"))
+    assert rbac.menu_for(admin)["dashboard"] == ["queue"]
+    assert rbac.menu_for(admin)["admin"] == ["roles", "org", "integrations", "tickets", "company"]
+    assert "summary" in rbac.menu_for(rbac.merge(roles("ACCOUNTANT")))["dashboard"]
+    assert "summary" not in rbac.menu_for(rbac.merge(roles("MANAGER", "SUPPLY")))["dashboard"]
+    assert rbac.menu_for(rbac.merge(roles("SUPPLY")))["chats"] == ["all", "internal", "contacts"]
+    mixed = rbac.menu_for(rbac.merge(roles(MIXED)))
+    assert mixed["crm"] == ["messages", "leads", "channels", "kb"]
+    assert mixed["eds"] == ["documents", "payments"]
+    assert mixed["dashboard"] == []
+
+
+def test_queue_kinds_follow_the_catalog_queue_section() -> None:
+    for code in ROLES:
+        access = rbac.merge(roles(code))
+        expected = [
+            kind
+            for kind, (resource, need) in QUEUE.items()
+            if RANK[level(code, resource)] >= RANK[need]
+        ]
+        assert rbac.queue_kinds(access) == expected, code
+    assert rbac.queue_kinds(rbac.merge(roles(MIXED))) == [
+        "answer_lead",
+        "take_lead",
+        "confirm_payment",
+        "issue_invoice",
+        "pay_memo",
+        "overdue_invoice",
     ]
-    assert "summary" in rbac.menu_for(["ACCOUNTANT"])["dashboard"]  # read открывает пункт
-    assert "summary" not in rbac.menu_for(["MANAGER", "SUPPLY"])["dashboard"]
-    # Смешанный реестр: Chats · Все чаты виден по любому из двух разделов.
-    assert "all" in rbac.menu_for(["SUPPLY"])["chats"]
-    assert rbac.menu_for(["SUPPLY"])["chats"] == ["all", "internal", "contacts"]
+
+
+def test_backends_of_the_sections() -> None:
+    only_payments = rbac.merge(roles(custom(44, "Касса", {"eds.payments": "full"})))
+    assert not rbac.gives_backend(only_payments, "crm")
+    assert rbac.gives_backend(only_payments, "erp")
+    assert rbac.gives_backend(rbac.merge(roles(MIXED)), "crm")
 
 
 # --- поля с ограничением --------------------------------------------------------------------------
 
 
-@pytest.mark.parametrize("role", ORACLE_ROLES)
-def test_restricted_fields_per_role(role: str) -> None:
-    expected = [name for name, roles in RESTRICTED.items() if role in roles]
+@pytest.mark.parametrize("code", ROLES)
+def test_restricted_fields_per_role(code: str) -> None:
+    expected = [f for f in ("cost_margin", "supplier_prices", "totals_only") if f in FIELDS[code]]
 
-    assert rbac.restricted_fields_for([role]) == expected
-
-
-def test_restricted_fields_union() -> None:
-    assert rbac.restricted_fields_for(["DIRECTOR", "ACCOUNTANT"]) == [
-        "cost_margin",
-        "totals_only",
-        "supplier_prices",
-    ]
-    assert rbac.restricted_fields_for(["MANAGER", "ENGINEER", "ADMIN"]) == []
+    assert rbac.fields_of(roles(code)) == expected
 
 
 RULES = {"cost_margin": ("cost", "margin"), "supplier_prices": ("supplier_price",)}
@@ -208,7 +277,7 @@ PAYLOAD: dict[str, Any] = {
 
 
 def test_strip_removes_fields_nobody_of_the_roles_sees() -> None:
-    result = rbac.strip_restricted(PAYLOAD, ["MANAGER"], RULES)
+    result = rbac.strip_restricted(PAYLOAD, rbac.fields_of(roles("MANAGER")), RULES)
 
     assert result == {
         "number": "КП-2026-014",
@@ -220,15 +289,13 @@ def test_strip_removes_fields_nobody_of_the_roles_sees() -> None:
 
 
 def test_strip_keeps_fields_visible_to_any_role() -> None:
-    # Бухгалтер видит цены поставщиков, но не себестоимость и маржу.
-    accountant = rbac.strip_restricted(PAYLOAD, ["ACCOUNTANT"], RULES)
+    accountant = rbac.strip_restricted(PAYLOAD, rbac.fields_of(roles("ACCOUNTANT")), RULES)
     assert accountant["lines"][0] == {"name": "Рельс", "supplier_price": 650}
-    # Директор видит всё; объединение ролей раскрывает поле.
-    assert rbac.strip_restricted(PAYLOAD, ["DIRECTOR"], RULES) == PAYLOAD
-    both = rbac.strip_restricted(PAYLOAD, ["MANAGER", "SUPPLY"], RULES)
+    assert rbac.strip_restricted(PAYLOAD, rbac.fields_of(roles("DIRECTOR")), RULES) == PAYLOAD
+    both = rbac.strip_restricted(PAYLOAD, rbac.fields_of(roles("MANAGER", "SUPPLY")), RULES)
     assert both == PAYLOAD
 
 
 def test_strip_rejects_unknown_group() -> None:
     with pytest.raises(ValueError, match="payroll"):
-        rbac.strip_restricted(PAYLOAD, ["ADMIN"], {"payroll": ("salary",)})
+        rbac.strip_restricted(PAYLOAD, [], {"payroll": ("salary",)})

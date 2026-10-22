@@ -1,4 +1,4 @@
-import type { RoleCode } from "../../shared/api/generated/model";
+import type { PresetCode } from "./roles";
 
 /** Вымышленные сотрудники для MSW (репозиторий публичный: ни реальных имён, ни адресов). Домен `.example` зарезервирован. */
 export interface DemoUser {
@@ -7,7 +7,8 @@ export interface DemoUser {
   name: string;
   initials: string;
   position: string;
-  roles: RoleCode[];
+  /** Роли при первом запуске — предустановки каталога (в моке их id 1–6) */
+  roles: PresetCode[];
   language: "ru" | "uz" | "en";
   mustChangePassword?: boolean;
   /** Ошибка входа, которую отдаёт мок для этого адреса (проверка текстов экрана входа) */

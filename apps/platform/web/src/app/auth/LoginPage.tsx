@@ -11,6 +11,8 @@ import {
 } from "../../shared/api/generated/platform-bff";
 import { AuthLayout } from "./AuthLayout";
 import { authErrorText } from "./errors";
+import { homePath } from "../access";
+import type { Me } from "../../shared/api/generated/model";
 import { safeNext } from "./redirect";
 
 interface LoginValues {
@@ -24,7 +26,10 @@ export function LoginPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [params] = useSearchParams();
-  const next = safeNext(params.get("next"));
+  const asked = params.get("next");
+  const next = safeNext(asked);
+  // Без явного адреса возврата — «домой» по ролям: у роли без Dashboard это её первый раздел.
+  const target = (me: Me) => (asked ? next : homePath(me));
   const expired = params.get("reason") === "expired";
   const existing = useGetSession({ query: { retry: false } });
   const login = useLogin({
@@ -32,7 +37,9 @@ export function LoginPage() {
       onSuccess: (session) => {
         queryClient.setQueryData(getGetSessionQueryKey(), session);
         queryClient.setQueryData(getGetMeQueryKey(), session.me);
-        void navigate(session.must_change_password ? "/change-password" : next, { replace: true });
+        void navigate(session.must_change_password ? "/change-password" : target(session.me), {
+          replace: true,
+        });
       },
     },
   });
@@ -49,7 +56,12 @@ export function LoginPage() {
     );
   }
   if (existing.isSuccess) {
-    return <Navigate to={existing.data.must_change_password ? "/change-password" : next} replace />;
+    return (
+      <Navigate
+        to={existing.data.must_change_password ? "/change-password" : target(existing.data.me)}
+        replace
+      />
+    );
   }
 
   return (

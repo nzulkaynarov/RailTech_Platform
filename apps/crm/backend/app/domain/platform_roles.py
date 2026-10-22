@@ -1,6 +1,6 @@
 """Роли Платформы как данные: вычисление прав по каталогу (ADR-0012, CRM-01 → R-1).
 
-Каталог возможностей — сгенерированный из `packages/contracts/platform-rbac.v2.yaml` модуль
+Каталог возможностей — сгенерированный из `packages/contracts/platform-rbac.yaml` модуль
 `platform_roles_generated.py`; здесь правила поверх него (чистые функции, без I/O):
 
 - роль = матрица `access` (раздел -> `full|read`, скрытые не хранятся) и `restricted_fields`;

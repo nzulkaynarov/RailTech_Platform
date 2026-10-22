@@ -1,20 +1,16 @@
 import type { TFunction } from "i18next";
 
-import type { RoleCode } from "../../app/rbac.generated";
-import { erpAccessOfRoles } from "./access";
+import type { RolesAccess } from "../role/roles";
 
 /**
- * Строка «Что произойдёт» про ERP: роли ERP по карте платформенных ролей (генерируется из platform-rbac.yaml);
- * названия ролей ERP — в i18n, не в контракте. Роль без ролей ERP (только ADMIN) — «администратор».
+ * Строки «Что произойдёт» про права в бэкендах из матрицы выбранных ролей (ADR-0012, решение R-1): системная роль
+ * «Администратор» — полный администратор CRM и ERP; раздел Admin «полный» в созданной роли полного администратора CRM не
+ * даёт; права ERP вычисляются из разделов ролей, итог провижининга виден в карточке («ERP: выдаётся», «ERP: ошибка»).
  */
-// TODO(ADR-0012): «в ERP получит роли …» строится по кодам ролей Платформы (`ERP_ROLE_CODES`) и i18n `erpRoles.<код>`;
-// заменить на итог провижининга из данных (`erp_sync` / ответ `/admin/users`), роли — настраиваемые.
-export function erpConsequence(t: TFunction, roles: readonly RoleCode[]): string | null {
-  const { admin, codes } = erpAccessOfRoles(roles);
-  if (admin) return t("modules:admin.org.consequence.erpAdmin");
-  if (codes.length === 0) return null;
-  const names = codes.map((code) =>
-    t(`modules:admin.org.erpRoles.${code}`, { defaultValue: code }),
-  );
-  return t("modules:admin.org.consequence.erpRoles", { roles: names.join(", ") });
+export function backendConsequence(t: TFunction, access: RolesAccess): string[] {
+  const lines: string[] = [];
+  if (access.systemAdmin) lines.push(t("modules:admin.org.consequence.erpAdmin"));
+  else if (access.erp) lines.push(t("modules:admin.org.consequence.erpSections"));
+  if (access.adminWithoutSystem) lines.push(t("modules:admin.roles.adminNote"));
+  return lines;
 }

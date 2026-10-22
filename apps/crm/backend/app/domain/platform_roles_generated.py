@@ -1,6 +1,6 @@
 """Каталог возможностей Платформы (роли как данные). ГЕНЕРИРУЕТСЯ — не править руками (ADR-0012).
 
-Источник: packages/contracts/platform-rbac.v2.yaml (version 2). Пересоздание:
+Источник: packages/contracts/platform-rbac.yaml (version 2). Пересоздание:
 `make -C apps/crm platform-roles`; тест `tests/unit/domain/test_platform_roles.py` сверяет
 файл с каталогом.
 """
