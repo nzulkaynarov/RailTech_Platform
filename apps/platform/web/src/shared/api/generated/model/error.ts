@@ -26,16 +26,19 @@
  * 0.2.0 (волна 8): смена пароля (`POST /auth/change-password`, `Session.must_change_password`); Admin · Оргструктура —
  * сотрудники, выдача ролей Платформы, приглашение по почте (`/admin/users*`, раздел матрицы `admin`).
  *
+ * 0.2.1 (Q-P0-3): перечень `Error.code` дополнен `INTERNAL_ERROR` (500) и нейтральными кодами 4xx `BAD_REQUEST`,
+ * `METHOD_NOT_ALLOWED`, `HTTP_<статус>` для ответов, которые не относятся ни к одному именованному коду.
+ *
  * Лимиты: вход — 10 в минуту на IP и e-mail; остальные запросы — 300 в минуту на сессию; превышение — 429
  * `TOO_MANY_REQUESTS` с `Retry-After`.
  *
- * OpenAPI spec version: 0.2.0
+ * OpenAPI spec version: 0.2.1
  */
 import type { ErrorDetails } from "./errorDetails";
 import type { ErrorSource } from "./errorSource";
 
 export interface Error {
-  /** Стабильный код (`INVALID_CREDENTIALS`, `SESSION_EXPIRED`, `CSRF_FAILED`, `FORBIDDEN`, `NOT_FOUND`, `VALIDATION_FAILED`, `TOO_MANY_REQUESTS`, `BACKEND_UNAVAILABLE`, `NO_PLATFORM_ROLE`, `USER_DISABLED`, `CONFLICT`) */
+  /** Стабильный код (`INVALID_CREDENTIALS`, `SESSION_EXPIRED`, `CSRF_FAILED`, `FORBIDDEN`, `NOT_FOUND`, `VALIDATION_FAILED`, `TOO_MANY_REQUESTS`, `BACKEND_UNAVAILABLE`, `NO_PLATFORM_ROLE`, `USER_DISABLED`, `CONFLICT`, `WRONG_PASSWORD`, `EMAIL_EXISTS`, `LAST_ADMIN`, `INTERNAL_ERROR`, `BAD_REQUEST`, `METHOD_NOT_ALLOWED`, `HTTP_<статус>`) */
   code: string;
   /** Текст для сотрудника на его языке */
   message: string;
