@@ -14,19 +14,20 @@ grep -q 'handle /telegram/webhook' "$root/infra/caddy/Caddyfile.prod" || fail "�
 grep -q 'WEBHOOK_PATH: Final = "/telegram/webhook"' "$root/apps/crm/backend/app/domain/telegram_webhook.py" \
   || fail "путь приёмника в CRM изменился: поправьте prod.yml и Caddyfile.prod"
 
-render() { # $1 — файл env; печатает TELEGRAM_WEBHOOK_URL у crm-api и crm-worker (по одному в строке)
+render() { # $1 — файл env; печатает TELEGRAM_WEBHOOK_URL у crm-api, crm-worker и crm-bot (по одному в строке)
   RT_IMAGE_TAG=webhook-url-test docker compose -f "$root/infra/compose/base.yml" -f "$root/infra/compose/prod.yml" \
     --env-file "$1" config --format json > "$tmp/prod.json"
-  for svc in crm-api crm-worker; do
+  for svc in crm-api crm-worker crm-bot; do
     jq -r --arg s "$svc" '.services[$s].environment.TELEGRAM_WEBHOOK_URL // "unset"' "$tmp/prod.json"
   done
 }
 check() { # $1 — файл env, $2 — ожидаемое значение
-  local svc=crm-api line
+  local services=(crm-api crm-worker crm-bot) i=0 line
   while IFS= read -r line; do
-    [[ "$line" == "$2" ]] || fail "$svc: TELEGRAM_WEBHOOK_URL=$line, ожидалось $2"
-    svc=crm-worker
+    [[ "$line" == "$2" ]] || fail "${services[$i]}: TELEGRAM_WEBHOOK_URL=$line, ожидалось $2"
+    i=$((i + 1))
   done < <(render "$1")
+  [[ "$i" -eq "${#services[@]}" ]] || fail "TELEGRAM_WEBHOOK_URL проверен у $i сервисов из ${#services[@]}"
 }
 
 base="$tmp/env.base"

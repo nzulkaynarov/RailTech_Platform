@@ -204,6 +204,22 @@ async def test_docling_without_url_is_off_not_a_failure() -> None:
 
 
 @respx.mock
+async def test_telegram_check_follows_configured_bot_api_address() -> None:
+    """Статус Telegram — прямой getMe/getWebhookInfo; адрес Bot API берётся из настроек."""
+    base = "http://fake-bot-api:8081"
+    me = respx.get(f"{base}/bot{TOKEN}/getMe").mock(
+        return_value=httpx.Response(200, json={"ok": True, "result": {"username": "rt_bot"}})
+    )
+    respx.get(f"{base}/bot{TOKEN}/getWebhookInfo").mock(
+        return_value=httpx.Response(200, json={"ok": True, "result": {"url": ""}})
+    )
+    config = CONFIG.model_copy(update={"telegram_api_base_url": f" {base}/ "})
+    result = (await collect(deps(config=config), ["telegram"]))["telegram"]
+    assert me.called
+    assert result.metrics["bot"] == "rt_bot"
+
+
+@respx.mock
 async def test_wrong_bot_token_is_a_failure_with_fix() -> None:
     respx.get(f"https://api.telegram.org/bot{TOKEN}/getMe").mock(
         return_value=httpx.Response(401, json={"ok": False})

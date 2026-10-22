@@ -10,9 +10,9 @@ outbox и принимает события ERP через inbox шины `rt_bu
 * `erp_incoming_events` удалена (карт-бланш владельца: данных прода нет; журнал вебхуков заменён
   inbox шины). Downgrade возвращает пустую таблицу в прежней форме, данные не восстанавливаются.
 
-Revision ID: 0037_rt_bus
-Revises: 0036_drop_user_platform_roles
-Create Date: 2026-10-23 11:00:00+00:00
+Revision ID: 0038_rt_bus
+Revises: 0037_bot_runtime
+Create Date: 2026-10-23 12:00:00+00:00
 """
 
 from collections.abc import Sequence
@@ -22,8 +22,8 @@ import sqlalchemy as sa
 from alembic import op
 from sqlalchemy.dialects import postgresql
 
-revision: str = "0037_rt_bus"
-down_revision: str | None = "0036_drop_user_platform_roles"
+revision: str = "0038_rt_bus"
+down_revision: str | None = "0037_bot_runtime"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 

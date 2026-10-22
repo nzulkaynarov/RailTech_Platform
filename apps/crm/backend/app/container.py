@@ -21,6 +21,7 @@ from app.integrations.litellm_admin import LiteLLMAdmin
 from app.integrations.litellm_catalog import ModelCatalog
 from app.integrations.s3 import ObjectStorage
 from app.security.secrets_store import SecretCipher, SecretsStore
+from app.services.bot_state import BotStateService
 from app.services.service_switches import SwitchBoard
 from app.services.settings import SettingsService
 
@@ -538,6 +539,11 @@ class Container:
         )
 
     @cached_property
+    def bot_state(self) -> BotStateService:
+        """Состояние `crm-bot` в БД: статус для «Подключений» и перезапуск при смене токена."""
+        return BotStateService(self.session_factory, stale_after_s=self.settings.bot_stale_after_s)
+
+    @cached_property
     def secrets_store(self) -> SecretsStore:
         cipher = SecretCipher.optional(self.settings.secrets_key.get_secret_value())
         return SecretsStore(self.session_factory, cipher)
@@ -552,7 +558,7 @@ class Container:
         Токен перечитывается при каждом вызове: смена в «Подключениях» действует и в воркере.
         Telegram выключен вручную (центр внешних сервисов, ADR-0024) — None: исходящие на паузе.
         """
-        from app.integrations.telegram import resolve_token
+        from app.integrations.telegram import make_bot, resolve_token
 
         if await self.switch_board.is_disabled("telegram"):
             return None
@@ -562,7 +568,7 @@ class Container:
             return None
         bot = self._bots.get(token)
         if bot is None:
-            bot = self._bots[token] = Bot(token)
+            bot = self._bots[token] = make_bot(self.settings, token)
         return bot
 
     async def aclose(self) -> None:

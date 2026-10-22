@@ -162,7 +162,11 @@ class _Run:
             return rules.telegram(
                 rules.TelegramFacts(configured=source != "none", mode=mode), self.now
             )
-        p = await probes.telegram(self.http, token)
+        p = await probes.telegram(
+            self.http,
+            token,
+            self.d.config.telegram_api_base_url.strip().rstrip("/") or probes.TELEGRAM_API,
+        )
         facts = rules.TelegramFacts(
             configured=True,
             mode=mode,
