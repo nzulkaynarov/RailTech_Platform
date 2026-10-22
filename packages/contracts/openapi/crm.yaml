@@ -2258,19 +2258,6 @@ components:
       - secrets_enabled
       title: ErpStatusOut
       type: object
-    ErpWebhookReceipt:
-      properties:
-        duplicate:
-          default: false
-          title: Duplicate
-          type: boolean
-        status:
-          const: ok
-          default: ok
-          title: Status
-          type: string
-      title: ErpWebhookReceipt
-      type: object
     ErrorDetails:
       additionalProperties: true
       description: Подробности ошибки; кроме описанных полей бывают контекстные (`assigned_user_name`, …).
@@ -7534,74 +7521,6 @@ paths:
       security:
       - HTTPBearer: []
       summary: Check Erp Connection
-      tags:
-      - integrations
-  /api/v1/integrations/erp/events:
-    post:
-      description: 'Приём входящих вебхуков событий ERP (M3-CRM-04, CONTRACTS §3, FIX-33, FIX-61).
-
-
-        Порядок: подпись — ДО разбора тела и проверки остальных заголовков. Схема v2:
-
-        HMAC-SHA256(ERP_WEBHOOK_SECRET, "{X-Event-Id}.{X-Timestamp}.{тело}"); старая
-
-        подпись (HMAC только тела) не принимается — 401. Идемпотентность по
-
-        X-Event-Id; быстрый 200 и фоновая обработка в Procrastinate. 401 — только неверная подпись;
-
-        тело, которое мы принять не можем (чужой тип события, расхождение с заголовком), и метка v2
-
-        вне окна 300 с записываются как `rejected` и тоже получают 200: ретраи ERP ничего бы не
-
-        изменили (ERP подписывает ретрай заново).'
-      operationId: receive_erp_event
-      parameters:
-      - in: header
-        name: X-Event-Id
-        required: false
-        schema:
-          anyOf:
-          - type: string
-          - type: 'null'
-          title: X-Event-Id
-      - in: header
-        name: X-Event-Type
-        required: false
-        schema:
-          anyOf:
-          - type: string
-          - type: 'null'
-          title: X-Event-Type
-      - in: header
-        name: X-Signature
-        required: false
-        schema:
-          anyOf:
-          - type: string
-          - type: 'null'
-          title: X-Signature
-      - in: header
-        name: X-Timestamp
-        required: false
-        schema:
-          anyOf:
-          - type: string
-          - type: 'null'
-          title: X-Timestamp
-      responses:
-        '200':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErpWebhookReceipt'
-          description: Successful Response
-        '422':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorOut'
-          description: Ошибка валидации
-      summary: Receive Erp Event
       tags:
       - integrations
   /api/v1/integrations/erp/pair:
