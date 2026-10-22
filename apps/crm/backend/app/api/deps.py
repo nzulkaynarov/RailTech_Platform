@@ -85,6 +85,7 @@ async def get_principal(
         roles=tuple(roles),
         must_change_password=user.must_change_password,
         ip=client_ip(request),
+        platform_roles=tuple(user.platform_roles or ()),
     )
 
 
@@ -99,7 +100,7 @@ def require(resource: str, action: str) -> Callable[..., Awaitable[Principal]]:
     ) -> Principal:
         if principal.must_change_password:
             raise PasswordChangeRequiredError("change the temporary password first")
-        if not rbac.allowed(principal.roles, resource, action):
+        if not rbac.allowed(principal.roles, resource, action, principal.platform_roles):
             raise ForbiddenError(f"{resource}:{action} is not allowed", resource=resource)
         return principal
 

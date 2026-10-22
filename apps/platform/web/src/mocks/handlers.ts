@@ -2,13 +2,12 @@ import { HttpResponse, http, passthrough } from "msw";
 
 import {
   getGetHealthMockHandler,
-  getListNotificationsMockHandler,
-  getGetMenuCountersMockHandler,
   getRailTechPlatformBFFAPICRMERPMock,
 } from "../shared/api/generated/platform-bff.msw";
 import type { ChangePasswordIn, LoginIn, MeUpdate } from "../shared/api/generated/model";
 import { adminUsersHandlers } from "./adminUsers";
 import { isEmployeeDisabled } from "./fixtures/employees";
+import { feedHandlers } from "./feedHandlers";
 import { DEMO_WRONG_CURRENT_PASSWORD, DEMO_WRONG_PASSWORD, findUser } from "./fixtures/users";
 import {
   buildMe,
@@ -117,27 +116,8 @@ export const handlers = [
     version: "0.2.0",
   }),
 
-  getGetMenuCountersMockHandler({
-    items: [
-      { module: "dashboard", section: "queue", count: 3, attention: true },
-      { module: "dashboard", section: "projects", count: 4, attention: false },
-      { module: "crm", section: "messages", count: 1, attention: true },
-      { module: "crm", section: "leads", count: 2, attention: true },
-      { module: "eds", section: "inbox", count: 1, attention: true },
-      { module: "eds", section: "drafts", count: 1, attention: true },
-      { module: "eds", section: "approvals", count: 1, attention: true },
-      { module: "eds", section: "payments", count: 2, attention: false },
-      { module: "erp", section: "calc", count: 2, attention: true },
-    ],
-    sources: { crm: "ok", erp: "ok" },
-  }),
-
-  getListNotificationsMockHandler({
-    items: [],
-    next_cursor: null,
-    unread_count: 3,
-    sources: { crm: "ok", erp: "ok" },
-  }),
+  // Dashboard, уведомления, поиск: данные по роли сессии (PLT-14)
+  ...feedHandlers,
 
   ...getRailTechPlatformBFFAPICRMERPMock(),
 ];

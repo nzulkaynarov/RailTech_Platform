@@ -5,10 +5,13 @@ import { Outlet, useLocation } from "react-router";
 
 import { MODULES, findModule, isSectionActive, matchSection } from "../../modules/registry";
 import type { ModuleConfig, SectionConfig } from "../../modules/types";
-import { useGetMenuCounters, useListNotifications } from "../../shared/api/generated/platform-bff";
+import { GlobalSearch } from "../../features/global-search/GlobalSearch";
+import { NotificationCenter } from "../../features/notifications/NotificationCenter";
+import { useNotifications } from "../../features/notifications/useNotifications";
+import { useGetMenuCounters } from "../../shared/api/generated/platform-bff";
 import type { MenuCounter } from "../../shared/api/generated/model";
+import { pollQuery } from "../../shared/api/polling";
 import { ContextPanel, ContextPanelDrawer } from "../../shared/ui/ContextPanel";
-import { EmptyState } from "../../shared/ui/EmptyState";
 import { PlusIcon } from "../../shared/ui/icons";
 import { LinkButton } from "../../shared/ui/LinkButton";
 import { ModuleMenu, ModuleMenuContent, type MenuItem } from "../../shared/ui/ModuleMenu";
@@ -19,6 +22,7 @@ import "../../shared/ui/shell.css";
 import { canEdit, canSee } from "../access";
 import { useAuth } from "../auth/useAuth";
 import { AvatarMenu } from "./AvatarMenu";
+import { PanelContent } from "./PanelContent";
 import { usePanelSlotHost } from "./panelSlotContext";
 import { usePanels } from "./usePanels";
 import { useViewport } from "./useViewport";
@@ -46,6 +50,7 @@ export function AppShell() {
   const location = useLocation();
   const viewport = useViewport();
   const [menuDrawer, setMenuDrawer] = useState(false);
+  const [bellOpen, setBellOpen] = useState(false);
   const searchRef = useRef<HTMLInputElement>(null);
 
   const match = matchSection(location.pathname, location.search);
@@ -61,8 +66,8 @@ export function AppShell() {
   const activeModule = (matchedVisible ? match.module : undefined) ?? railModules[0] ?? MODULES[0];
   const sectionAllowed = (s: SectionConfig) => canSee(me, s.access);
 
-  const counters = useGetMenuCounters({ query: { refetchInterval: 30_000 } });
-  const unread = useListNotifications({ limit: 1 }, { query: { refetchInterval: 30_000 } });
+  const counters = useGetMenuCounters({ query: pollQuery });
+  const unread = useNotifications();
 
   const unreadCount = unread.data?.unread_count ?? 0;
 
@@ -167,12 +172,7 @@ export function AppShell() {
       <>
         <div ref={attachPanelSlot} />
         {panelClaimed ? null : (
-          <EmptyState
-            level={3}
-            compact
-            title={t(`modules:panel.${panels.tab}.title`)}
-            text={t(`modules:panel.${panels.tab}.text`)}
-          />
+          <PanelContent module={match?.module.code} section={match?.section.key} tab={panels.tab} />
         )}
       </>
     ),
@@ -203,9 +203,6 @@ export function AppShell() {
           crumbs={crumbs}
           labels={{
             crumbs: t("topbar.crumbs"),
-            search: t("topbar.search"),
-            searchPlaceholder: t("topbar.searchPlaceholder"),
-            searchShort: t("topbar.searchShort"),
             menu: t("menu.show"),
             bell:
               unreadCount > 0 ? t("topbar.bellUnread", { count: unreadCount }) : t("topbar.bell"),
@@ -223,16 +220,23 @@ export function AppShell() {
                 : panels.toggleMenu
               : undefined
           }
-          searchRef={searchRef}
-          shortcut={isMac() ? "⌘K" : "Ctrl K"}
+          search={
+            <GlobalSearch
+              inputRef={searchRef}
+              shortcut={isMac() ? "⌘K" : "Ctrl K"}
+              mobile={viewport.mobile}
+            />
+          }
           unread={unreadCount}
           bellTitle={t("notifications.title")}
+          bellOpen={bellOpen}
+          onBellOpenChange={setBellOpen}
           bellContent={
-            <EmptyState
-              level={3}
-              compact
-              title={t("notifications.empty")}
-              text={t("notifications.text")}
+            <NotificationCenter
+              variant="popover"
+              onClose={() => {
+                setBellOpen(false);
+              }}
             />
           }
           hasPanel={hasPanel}

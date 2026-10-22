@@ -21,6 +21,34 @@
         "text": "The message-to-payment funnel, stuck projects, receivables and rejection reasons for the period will appear here.",
         "action": "My queue"
       }
+    },
+    "queue": {
+      "title": "What to do now",
+      "cardsLabel": "Queue counters",
+      "decisions": {
+        "one": "{{count}} decision",
+        "few": "{{count}} decisions",
+        "many": "{{count}} decisions",
+        "other": "{{count}} decisions"
+      },
+      "due": {
+        "overdue": "overdue",
+        "today": "due today",
+        "tomorrow": "tomorrow",
+        "memo": "memo",
+        "none": "no deadline",
+        "until": "until {{date}}"
+      },
+      "loading": "Loading the queue…",
+      "loadErrorTitle": "Could not load the queue",
+      "loadErrorText": "The server did not respond. Check the connection and try again.",
+      "retry": "Retry"
+    },
+    "activity": {
+      "label": "Today's events",
+      "loading": "Loading the feed…",
+      "loadErrorTitle": "Could not load the feed",
+      "loadErrorText": "The server did not respond. Try again later."
     }
   },
   "crm": {

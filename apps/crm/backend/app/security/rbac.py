@@ -15,6 +15,7 @@ import structlog
 from casbin_async_sqlalchemy_adapter import Adapter
 from sqlalchemy.ext.asyncio import AsyncEngine
 
+from app.domain.platform_roles import platform_grants
 from app.models.auth import CasbinRule
 
 logger = structlog.get_logger(__name__)
@@ -82,12 +83,26 @@ class Rbac:
     async def reload(self) -> None:
         await self._enforcer.load_policy()
 
-    def allowed(self, roles: Iterable[str], resource: str, action: str) -> bool:
+    def allowed(
+        self,
+        roles: Iterable[str],
+        resource: str,
+        action: str,
+        platform_roles: Iterable[str] = (),
+    ) -> bool:
+        """Право по ролям CRM (casbin) или по роли Платформы (`PLATFORM_ROLE_GRANTS`, CRM-01c)."""
+        if (resource, action) in platform_grants(platform_roles):
+            return True
         return any(self._enforcer.enforce(role, DOMAIN, resource, action) for role in roles)
 
-    def permissions(self, roles: Iterable[str]) -> dict[str, dict[str, bool]]:
-        role_list = list(roles)
+    def permissions(
+        self, roles: Iterable[str], platform_roles: Iterable[str] = ()
+    ) -> dict[str, dict[str, bool]]:
+        role_list, platform_list = list(roles), list(platform_roles)
         return {
-            resource: {action: self.allowed(role_list, resource, action) for action in actions}
+            resource: {
+                action: self.allowed(role_list, resource, action, platform_list)
+                for action in actions
+            }
             for resource, actions in CATALOG.items()
         }

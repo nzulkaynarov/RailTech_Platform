@@ -26,7 +26,47 @@
   "notifications": {
     "title": "Notification center",
     "empty": "No new notifications",
-    "text": "Decisions, client messages and system events will appear here."
+    "text": "Decisions, client messages and system events will appear here.",
+    "label": "Notifications",
+    "tabsLabel": "Notification sections",
+    "tabs": {
+      "all": "All",
+      "decisions": "Decisions",
+      "clients": "Clients",
+      "system": "System"
+    },
+    "markAll": "Mark all as read",
+    "seeAll": "All notifications",
+    "unreadMark": "New",
+    "emptyTab": "No notifications in this section",
+    "loading": "Loading notifications…",
+    "loadErrorTitle": "Could not load notifications",
+    "loadErrorText": "The server did not respond. Try again later.",
+    "retry": "Retry",
+    "now": "now",
+    "minutes": "{{count}} min",
+    "hours": "{{count}} h",
+    "kindChip": {
+      "lead": "L",
+      "client": "C",
+      "request": "RQ",
+      "project": "PR",
+      "letter": "IN",
+      "quote": "Q",
+      "contract": "CT",
+      "invoice": "INV",
+      "act": "ACT",
+      "memo": "M",
+      "chat": "Ch",
+      "ticket": "T",
+      "integration": "!"
+    },
+    "tabChip": {
+      "all": "•",
+      "decisions": "D",
+      "clients": "C",
+      "system": "!"
+    }
   },
   "panel": {
     "label": "Side panel",
@@ -140,5 +180,29 @@
   "stub": {
     "subtitle": "This section will be filled in later phases: the shell and navigation are available now.",
     "object": "Card {{id}}"
+  },
+  "search": {
+    "label": "Search results",
+    "hint": "Search by letter, request, quote or invoice number, client tax ID, name or article.",
+    "tooShort": "Enter at least two characters.",
+    "loading": "Searching…",
+    "none": "Nothing found for “{{query}}”.",
+    "error": "Search failed. Please try again.",
+    "found": "Found: {{count}}",
+    "kind": {
+      "lead": "Lead",
+      "client": "Client",
+      "request": "Request",
+      "project": "Project",
+      "letter": "Letter",
+      "quote": "Quote",
+      "contract": "Contract",
+      "invoice": "Invoice",
+      "act": "Act",
+      "memo": "Memo",
+      "chat": "Chat",
+      "ticket": "Ticket",
+      "integration": "Integration"
+    }
   }
 }

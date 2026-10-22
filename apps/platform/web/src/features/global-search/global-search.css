@@ -1,0 +1,95 @@
+/* Глобальный поиск шапки (PLT-14): значения — 03-frontend.md §3–§4, литералы токенов (как в ui.css). */
+.pf-gsearch {
+  position: relative;
+  width: 380px;
+  max-width: 420px;
+  min-width: 0;
+}
+.pf-gsearch-field {
+  position: relative;
+  display: block;
+}
+.pf-gsearch-icon {
+  position: absolute;
+  left: 10px;
+  top: 8px;
+  display: flex;
+  color: #6e6e6e;
+  pointer-events: none;
+}
+.pf-gsearch-pop {
+  position: absolute;
+  top: 38px;
+  right: 0;
+  z-index: 1050;
+  width: 480px;
+  max-width: calc(100vw - 24px);
+  max-height: min(70vh, 520px);
+  overflow: auto;
+  padding: 4px 0;
+  border: 1px solid #f0f0f0;
+  border-radius: 8px;
+  background: #fff;
+  box-shadow:
+    0 6px 16px rgba(0, 0, 0, 0.08),
+    0 3px 6px -4px rgba(0, 0, 0, 0.12),
+    0 9px 28px 8px rgba(0, 0, 0, 0.05);
+}
+.pf-gsearch-pop[hidden] {
+  display: none;
+}
+.pf-gsearch-msg {
+  padding: 12px 16px;
+  color: #595959;
+}
+.pf-gsearch-group {
+  padding: 8px 16px 4px;
+  color: #6e6e6e;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 20px;
+}
+.pf-gsearch-opt {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 16px;
+  cursor: pointer;
+}
+.pf-gsearch-opt--on {
+  background: #e6f4ff;
+}
+.pf-gsearch-main {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.pf-gsearch-title {
+  line-height: 22px;
+  overflow-wrap: anywhere;
+}
+.pf-gsearch-kind {
+  flex: 0 0 auto;
+  color: #595959;
+  font-size: 12px;
+  line-height: 22px;
+  white-space: nowrap;
+}
+@media (max-width: 767px) {
+  .pf-gsearch {
+    width: auto;
+    position: static;
+  }
+  .pf-gsearch-field {
+    position: relative;
+  }
+  .pf-gsearch-pop {
+    position: fixed;
+    top: 60px;
+    left: 12px;
+    right: 12px;
+    width: auto;
+    max-width: none;
+  }
+}

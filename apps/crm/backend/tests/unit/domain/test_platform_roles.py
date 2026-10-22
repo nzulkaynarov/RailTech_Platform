@@ -12,10 +12,12 @@ from app.domain import platform_roles_generated as generated
 from app.domain.erp_permissions import ERP_PERMISSIONS
 from app.domain.erp_roles import ERP_ROLE_CODES as ERP_CATALOG
 from app.domain.platform_roles import (
+    PLATFORM_ROLE_GRANTS,
     derive_access,
     erp_access_for,
     normalize_platform_roles,
     normalize_position,
+    platform_grants,
 )
 
 REPO = Path(__file__).resolve().parents[6]
@@ -220,3 +222,16 @@ def test_position_limit_is_120_characters() -> None:
     assert normalize_position("я" * 120) == "я" * 120
     with pytest.raises(ValueError, match="120"):
         normalize_position("я" * 121)
+
+
+def test_users_read_grants_follow_the_admin_row_of_the_matrix() -> None:
+    """CRM-01c: чтение сотрудников — роли с `admin: read` (DIRECTOR); ADMIN (full) — `admin` CRM."""
+    spec = yaml.safe_load(RBAC.read_text(encoding="utf-8"))
+    row = next(r for r in spec["resources"] if r["key"] == "admin")["access"]
+
+    readers = {code for code, level in row.items() if level == "read"}
+
+    assert readers == {code for code, grants in PLATFORM_ROLE_GRANTS.items() if grants}
+    assert set(PLATFORM_ROLE_GRANTS) <= set(generated.PLATFORM_ROLE_CODES)
+    assert platform_grants(["DIRECTOR", "SUPPLY"]) == {("users", "read")}
+    assert platform_grants(["SUPPLY", "ENGINEER", "MANAGER", "ACCOUNTANT", "ADMIN", "x"]) == set()
