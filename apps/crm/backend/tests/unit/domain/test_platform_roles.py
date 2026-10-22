@@ -204,7 +204,10 @@ EXPECTED: dict[tuple[str, str], tuple[set[str], set[str]]] = {
     ("eds.projects", "read"): NOTHING,
     ("eds.projects", "full"): (set(), {"contract.manage", "contract.sign", "fulfillment.act"}),
     ("eds.payments", "read"): NOTHING,
-    ("eds.payments", "full"): (set(), {"finance.invoice", "finance.payment", "finance.rates"}),
+    (
+        "eds.payments",
+        "full",
+    ): (set(), {"finance.invoice", "finance.payment", "finance.rates", "data.export"}),
     ("eds.memo.create", "read"): NOTHING,
     ("eds.memo.create", "full"): NOTHING,
     ("eds.memo.approve", "read"): NOTHING,
@@ -225,11 +228,13 @@ EXPECTED: dict[tuple[str, str], tuple[set[str], set[str]]] = {
         "chats.external",
         "full",
     ): ({"leads:read", "leads:reply", "leads:note", "leads:assist"}, set()),
+    ("company.settings", "read"): NOTHING,
+    ("company.settings", "full"): (set(), {"settings.edit", "settings.charge_templates"}),
     ("admin", "read"): (ADMIN_READ, set()),
     (
         "admin",
         "full",
-    ): (ADMIN_FULL, {"team.manage", "settings.edit", "settings.charge_templates"}),
+    ): (ADMIN_FULL, {"team.manage"}),
 }
 
 
@@ -268,7 +273,7 @@ def test_every_restricted_field_gives_the_expected_erp_rights(name: str, erp: se
 # --- системные роли и шаблоны -------------------------------------------------------------------
 
 # Права ERP целых ролей, выписанные вручную.
-DIRECTOR_ERP = set(ERP_PERMISSIONS) - {"settings.edit", "settings.charge_templates", "team.manage"}
+DIRECTOR_ERP = set(ERP_PERMISSIONS) - {"team.manage"}  # команду ведёт только администратор
 ROLE_ERP: dict[str, set[str]] = {
     "MANAGER": {"deal.manage"},
     "DIRECTOR": DIRECTOR_ERP,
@@ -298,6 +303,7 @@ ROLE_ERP: dict[str, set[str]] = {
         "finance.invoice",
         "finance.payment",
         "finance.rates",
+        "data.export",
     },
     "ADMIN": {"team.manage", "settings.edit", "settings.charge_templates"},
 }
@@ -332,6 +338,7 @@ def test_the_two_system_roles_are_fixed_by_the_catalog() -> None:
     rows = {r["code"]: r for r in default_roles()}
     assert rows["ADMIN"]["access"] == {
         "admin": "full",
+        "company.settings": "full",
         "dashboard.queue": "full",
         "chats.internal": "full",
         "eds.memo.create": "full",
@@ -377,7 +384,7 @@ def test_director_keeps_everything_v1_gave_and_gains_full_where_it_had_read() ->
     assert all(v2[k] == v1[k] or (v1[k] == "read" and v2[k] == "full") for k in v1)
     raised = {k for k in v1 if v1[k] != v2[k]}
     assert raised == {"crm.leads", "crm.clients", "eds.payments", "chats.external"}
-    assert set(v2) - set(v1) == {"erp.calc.goods", "erp.calc.services"}
+    assert set(v2) - set(v1) == {"erp.calc.goods", "erp.calc.services", "company.settings"}
 
 
 # --- объединение ролей --------------------------------------------------------------------------
@@ -402,6 +409,7 @@ def test_union_takes_the_maximum_level_per_section_and_the_union_of_fields() -> 
         "finance.invoice",
         "finance.payment",
         "finance.rates",
+        "data.export",
         "quote.view_cost_margin",
     }
 

@@ -38,6 +38,8 @@ async def get_rbac(request: Request, container: ContainerDep) -> Rbac:
             if rbac is None:
                 rbac = await Rbac.create(container.engine, container.settings.casbin_dir)
                 request.app.state.rbac = rbac
+    if rbac.stale:
+        await rbac.safe_reload()
     return rbac
 
 
@@ -80,14 +82,15 @@ async def get_principal(
         if user is None or not user.is_active:
             raise AuthError("user inactive")
         roles = await users_repo.roles_of(session, user.id)
-        role_ids = await platform_roles_repo.role_ids_of_user(session, user.id)
+        role_ids, platform_admin = await platform_roles_repo.rbac_identity(session, user.id)
     return Principal(
         user_id=user.id,
         full_name=user.full_name,
         roles=tuple(roles),
         must_change_password=user.must_change_password,
         ip=client_ip(request),
-        platform_role_ids=tuple(role_ids),
+        platform_role_ids=role_ids,
+        platform_admin=platform_admin,
     )
 
 
@@ -102,7 +105,7 @@ def require(resource: str, action: str) -> Callable[..., Awaitable[Principal]]:
     ) -> Principal:
         if principal.must_change_password:
             raise PasswordChangeRequiredError("change the temporary password first")
-        if not rbac.allowed(principal.roles, resource, action, principal.platform_role_ids):
+        if not rbac.allowed(principal.rbac_roles, resource, action, principal.platform_role_ids):
             raise ForbiddenError(f"{resource}:{action} is not allowed", resource=resource)
         return principal
 

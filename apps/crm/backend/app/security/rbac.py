@@ -58,6 +58,8 @@ def read_seed(path: Path) -> list[list[str]]:
 class Rbac:
     def __init__(self, enforcer: casbin.AsyncEnforcer) -> None:
         self._enforcer = enforcer
+        # Перезагрузка политик после правки роли не удалась: повторить при ближайшей проверке.
+        self.stale = False
 
     @classmethod
     async def create(cls, engine: AsyncEngine, casbin_dir: Path) -> "Rbac":
@@ -87,6 +89,16 @@ class Rbac:
 
     async def reload(self) -> None:
         await self._enforcer.load_policy()
+
+    async def safe_reload(self) -> None:
+        """Перезагрузить политики; сбой не ломает запрос — флаг `stale` повторит попытку позже."""
+        try:
+            await self.reload()
+        except Exception:
+            logger.exception("rbac_reload_failed")
+            self.stale = True
+        else:
+            self.stale = False
 
     def allowed(
         self,

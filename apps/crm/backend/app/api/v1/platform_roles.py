@@ -76,7 +76,7 @@ async def create_role(
     view = await container.platform_role_service.create(
         who.actor, body.name, body.description, body.access, body.restricted_fields
     )
-    await rbac.reload()
+    await rbac.safe_reload()
     return to_out(view)
 
 
@@ -105,12 +105,12 @@ async def update_role(
         restricted_fields=body.restricted_fields,
     )
     view = await container.platform_role_service.update(who.actor, role_id, patch)
-    await rbac.reload()
+    await rbac.safe_reload()
     return to_out(view)
 
 
 @router.delete("/{role_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_role(role_id: int, who: Admin, container: ContainerDep, rbac: RbacDep) -> Response:
     await container.platform_role_service.delete(who.actor, role_id)
-    await rbac.reload()
+    await rbac.safe_reload()
     return Response(status_code=status.HTTP_204_NO_CONTENT)

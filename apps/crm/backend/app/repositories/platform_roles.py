@@ -72,6 +72,12 @@ async def role_ids_of_user(session: AsyncSession, user_id: int) -> list[int]:
     return sorted((await session.scalars(stmt)).all())
 
 
+async def rbac_identity(session: AsyncSession, user_id: int) -> tuple[tuple[int, ...], bool]:
+    """Роли Платформы для проверки прав: (их id, есть ли системная роль «Администратор»)."""
+    held = await roles_of_user(session, user_id)
+    return tuple(r.id for r in held), any(r.code == "ADMIN" for r in held)
+
+
 async def user_ids_of_role(session: AsyncSession, role_id: int) -> list[int]:
     stmt = select(UserPlatformRole.user_id).where(UserPlatformRole.role_id == role_id)
     return sorted((await session.scalars(stmt)).all())

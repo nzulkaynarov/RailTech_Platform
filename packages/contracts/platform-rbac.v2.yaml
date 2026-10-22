@@ -16,7 +16,7 @@ version: 2
 system_roles:
   ADMIN:
     name: { ru: Администратор, uz: Administrator, en: Administrator }
-    access: { admin: full, dashboard.queue: full, chats.internal: full, eds.memo.create: full }
+    access: { admin: full, company.settings: full, dashboard.queue: full, chats.internal: full, eds.memo.create: full }
     restricted_fields: []
   DIRECTOR:
     name: { ru: Директор, uz: Direktor, en: Director }
@@ -37,6 +37,7 @@ system_roles:
       erp.stock: full
       chats.internal: full
       chats.external: full
+      company.settings: full
       admin: read
     restricted_fields: [cost_margin, supplier_prices]
 
@@ -155,7 +156,7 @@ resources:
     module: eds
     label: { ru: "EDS · Счета и оплаты · подтвердить оплату, запросить платёжку", uz: "EDS · Hisoblar va to'lovlar", en: "EDS · Invoices and payments" }
     backend:
-      erp: { full: [finance.invoice, finance.payment, finance.rates] }
+      erp: { full: [finance.invoice, finance.payment, finance.rates, data.export] }
   - key: eds.memo.create
     module: eds
     label: { ru: "EDS · Служебная записка · создать", uz: "EDS · Xizmat xati · yaratish", en: "EDS · Memo · create" }
@@ -224,7 +225,14 @@ resources:
           - reply_templates:write
           - sandbox:use
           - export:read
-      erp: { full: [team.manage, settings.edit, settings.charge_templates] }
+      erp: { full: [team.manage] }
+  # Реквизиты, шаблоны документов, нумерация, условия оплаты компании (решение архитектора по Q-R1-1):
+  # у ролей из шаблонов раздела нет, у директора и администратора — full.
+  - key: company.settings
+    module: admin
+    label: { ru: "Компания: реквизиты, шаблоны документов, нумерация, условия оплаты", uz: "Kompaniya: rekvizitlar, hujjat shablonlari, raqamlash, to'lov shartlari", en: "Company: details, document templates, numbering, payment terms" }
+    backend:
+      erp: { full: [settings.edit, settings.charge_templates] }
 
 # Пункты меню модулей (SPEC-v3 §6.2) → разделы. Пункт виден, если у сотрудника есть хотя бы один из разделов `any_of`
 # (раздел есть в объединённом `access`). Содержимое смешанных реестров («Все документы», «Все чаты») BFF фильтрует по разделу
@@ -265,6 +273,7 @@ menu:
     org: [admin]
     integrations: [admin]
     tickets: [admin]
+    company: [company.settings]
 
 # Поля с ограничением внутри экранов (SPEC-v3 §4.2). Роль перечисляет поля, которые она ВИДИТ; поле скрыто, если ни одна роль
 # сотрудника его не видит. Скрытие `supplier_prices` и `totals_only` делает BFF (у ERP для них нет отдельного права).

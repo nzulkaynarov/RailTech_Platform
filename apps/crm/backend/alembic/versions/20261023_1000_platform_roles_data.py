@@ -43,6 +43,7 @@ ROLES = json.loads(
         "is_system": true,
         "access": {
             "admin": "full",
+            "company.settings": "full",
             "dashboard.queue": "full",
             "chats.internal": "full",
             "eds.memo.create": "full"
@@ -71,6 +72,7 @@ ROLES = json.loads(
             "erp.stock": "full",
             "chats.internal": "full",
             "chats.external": "full",
+            "company.settings": "full",
             "admin": "read"
         },
         "restricted_fields": [

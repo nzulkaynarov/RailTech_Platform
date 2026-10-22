@@ -159,6 +159,7 @@ SUPPLY_PERMISSIONS = (
                 "finance.invoice",
                 "finance.payment",
                 "finance.rates",
+                "data.export",
             ),
         ),
         ("ADMIN", "admin", ERP_PERMISSIONS),

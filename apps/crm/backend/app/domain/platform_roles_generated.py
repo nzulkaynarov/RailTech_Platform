@@ -40,6 +40,7 @@ RESOURCE_KEYS: Final[tuple[str, ...]] = (
     "chats.internal",
     "chats.external",
     "admin",
+    "company.settings",
 )
 
 # Допустимые уровни доступа раздела.
@@ -103,6 +104,10 @@ RESOURCE_LEVELS: Final[dict[str, tuple[str, ...]]] = {
         "full",
     ),
     "admin": (
+        "read",
+        "full",
+    ),
+    "company.settings": (
         "read",
         "full",
     ),
@@ -206,6 +211,7 @@ CRM_BACKEND: Final[dict[str, dict[str, tuple[str, ...]]]] = {
             "export:read",
         ),
     },
+    "company.settings": {},
 }
 
 # Раздел -> уровень -> права ERP (`Permission`; уровень full включает read).
@@ -240,6 +246,7 @@ ERP_BACKEND: Final[dict[str, dict[str, tuple[str, ...]]]] = {
             "finance.invoice",
             "finance.payment",
             "finance.rates",
+            "data.export",
         ),
     },
     "eds.memo.create": {},
@@ -271,8 +278,10 @@ ERP_BACKEND: Final[dict[str, dict[str, tuple[str, ...]]]] = {
     "chats.internal": {},
     "chats.external": {},
     "admin": {
+        "full": ("team.manage",),
+    },
+    "company.settings": {
         "full": (
-            "team.manage",
             "settings.edit",
             "settings.charge_templates",
         ),
@@ -324,6 +333,7 @@ ROLE_NAMES: Final[dict[str, dict[str, str]]] = {
 ROLE_ACCESS: Final[dict[str, dict[str, str]]] = {
     "ADMIN": {
         "admin": "full",
+        "company.settings": "full",
         "dashboard.queue": "full",
         "chats.internal": "full",
         "eds.memo.create": "full",
@@ -345,6 +355,7 @@ ROLE_ACCESS: Final[dict[str, dict[str, str]]] = {
         "erp.stock": "full",
         "chats.internal": "full",
         "chats.external": "full",
+        "company.settings": "full",
         "admin": "read",
     },
     "MANAGER": {

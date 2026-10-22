@@ -15,6 +15,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.config import Settings
 from app.integrations.erp_users import ProvisionPayload
+from app.security.rbac import Rbac
 from app.services.erp_access import ErpAccessService
 from tests.integration.crm_helpers import PASSWORD, login, make_user
 from tests.integration.roles_helpers import (
@@ -413,6 +414,7 @@ async def test_provisioning_after_a_role_change_sends_the_recomputed_permissions
         "finance.invoice",
         "finance.payment",
         "finance.rates",
+        "data.export",
     )
 
 
@@ -596,3 +598,85 @@ async def test_policies_of_roles_created_outside_the_api_are_synced_on_start(
             await session.execute(text("SELECT count(*) FROM casbin_rule WHERE v0 = 'pr:777'"))
         ).scalar()
     assert stale == 0  # правила несуществующей роли убраны
+
+
+# --- права CRM только из ролей сотрудника -------------------------------------------------------
+
+
+async def _permissions_of(
+    client: TestClient, sessions: async_sessionmaker[AsyncSession], boss: dict[str, str],
+    role_id: int, email: str,
+) -> dict[str, dict[str, bool]]:  # fmt: skip
+    """Сотрудник (базовая роль manager) получает роль; возвращает его `/me/permissions`."""
+    account, password = await make_user(sessions, email, ["manager"])
+    client.patch(f"/api/v1/users/{account.id}", json={"platform_role_ids": [role_id]}, headers=boss)
+    mine = login(client, account.email, password)
+    permissions: dict[str, dict[str, bool]] = client.get(
+        "/api/v1/me/permissions", headers=mine
+    ).json()["permissions"]
+    return permissions
+
+
+async def test_a_role_gives_only_its_own_crm_rights_not_the_base_role_bundle(
+    client: TestClient, sessions: async_sessionmaker[AsyncSession]
+) -> None:
+    _, boss = await setup_staff(client, sessions)
+    leads = _create(client, boss, name="Только лиды", access={"crm.leads": "full"})
+    chat = _create(client, boss, name="Только чат", access={"chats.internal": "full"})
+
+    got = await _permissions_of(client, sessions, boss, int(leads["id"]), "leads@railtech.uz")  # type: ignore[call-overload]
+    assert got["leads"]["take"] is True
+    assert got["clients"] == {"read": False, "write": False}  # seed manager дал бы write
+    assert got["deals"] == {"read": False, "write": False}
+    assert got["users"] == {"read": False, "write": False}
+
+    nothing = await _permissions_of(client, sessions, boss, int(chat["id"]), "chat@railtech.uz")  # type: ignore[call-overload]
+    assert not any(v for actions in nothing.values() for v in actions.values())  # даже leads:read
+
+
+async def test_the_system_admin_role_keeps_every_crm_right(
+    client: TestClient, sessions: async_sessionmaker[AsyncSession]
+) -> None:
+    _, boss = await setup_staff(client, sessions)
+    (admin_role,) = legacy_ids(client, boss, ["ADMIN"])
+
+    got = await _permissions_of(client, sessions, boss, admin_role, "admin2@railtech.uz")
+
+    assert all(v for actions in got.values() for v in actions.values())
+
+
+async def test_a_failed_policy_reload_is_not_a_500_and_is_retried_on_the_next_check(
+    client: TestClient,
+    sessions: async_sessionmaker[AsyncSession],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    employee, boss = await setup_staff(client, sessions)
+    role = _create(client, boss, access={"crm.clients": "read"})
+    account, password = await make_user(sessions, "who@railtech.uz", ["viewer"])
+    client.patch(
+        f"/api/v1/users/{account.id}", json={"platform_role_ids": [role["id"]]}, headers=boss
+    )
+    mine = login(client, account.email, password)
+    assert client.get("/api/v1/users", headers=mine).status_code == 403
+
+    calls = {"n": 0}
+    real_reload = Rbac.reload
+
+    async def flaky(self: Rbac) -> None:
+        calls["n"] += 1
+        if calls["n"] == 1:
+            raise ConnectionError("db is down")
+        await real_reload(self)
+
+    monkeypatch.setattr(Rbac, "reload", flaky)
+
+    saved = client.patch(f"{ROLES}/{role['id']}", json={"access": {"admin": "read"}}, headers=boss)
+
+    assert saved.status_code == 200, saved.text  # роль сохранена, ответ не 500
+    assert calls["n"] == 1
+    assert client.app.state.rbac.stale is True  # type: ignore[attr-defined]
+    # Следующая проверка права перезагружает политики и видит новую роль.
+    assert client.get("/api/v1/users", headers=mine).status_code == 200
+    assert calls["n"] == 2
+    assert client.app.state.rbac.stale is False  # type: ignore[attr-defined]
+    assert employee
