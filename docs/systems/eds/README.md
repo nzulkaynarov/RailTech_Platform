@@ -13,10 +13,11 @@
 | входящие и исходящие письма с регистрацией, резолюции, служебные записки, заявления, отчёты; **общий движок маршрутов согласования** (КП, договор, служебка); реестр и архив документов (метаданные, версии, сканы, журнал «кто и когда») | `letter.*`, `resolution.*`, `memo.*`, `approval.requested/decided`, `document.registered/archived` | CRM: `request.created`; ERP: `quote.ready_for_approval`, документы ERP для реестра |
 
 Источник — стратегия §3.3. Сущности `Letter`, `Resolution`, `ServiceMemo` (SPEC-v3 §10.4, прежде планировались в ERP — ADR-0011 §4)
-создаются здесь; разрывы ERP-01, ERP-05, ERP-08 карты интеграции переходят в EDS ([`integration-map.md`](../../architecture/integration-map.md) §7).
+создаются здесь; разрывы ERP-01 и ERP-05 карты интеграции стали EDS-01 и EDS-02, одобрение КП — EDS-03
+([`integration-map.md`](../../architecture/integration-map.md) §7). Чаты (ERP-08) по ADR-0015 — домен коммуникаций CRM, окончательно — этап D.
 
 ## Когда сервис появится
 
 Задача C1 (runbook волны) создаёт: `apps/eds` (каркас, база, Docker, CI), контракты `packages/contracts/openapi/eds.yaml` и
-схемы событий, `docs/systems/eds/CONVENTIONS.md` и `apps/eds/CLAUDE.md`/`README.md`-указатели; этот файл становится README
+схемы событий, правила кода системы (CONVENTIONS рядом с этим файлом) и указатели CLAUDE/README в `apps/eds`; этот файл становится README
 системы с командами запуска.
