@@ -817,19 +817,32 @@ async def test_search_finds_a_number_without_leading_zeros(web: Web, fb: FeedBac
     assert await found("зв-2026-10") == ["ЗВ-2026-104"]
     # латинский «PR» — проект (с шага «Договор»)
     assert await found("PR-2026-7") == ["ПР-2026-007"]
+    # кириллический префикс + число как набрано: «ZV-2026-10» находит только ЗВ-2026-104
+    assert await found("ZV-2026-10") == ["ЗВ-2026-104"]
     # id из номера BFF не разбирает: запись без сделки с таким номером ничего не находит
     assert await found("ZV-2026-999") == []
 
 
-async def test_search_sends_the_canonical_number_to_document_search(
-    web: Web, fb: FeedBackends
+@pytest.mark.parametrize(
+    ("typed", "sent"),
+    [
+        ("КП-2026-00001", "КП-2026-00001"),  # реальный формат ERP: {type}-{YYYY}-{seq}, ширина 5
+        ("кп-2026-0", "кп-2026-0"),  # набор по мере ввода не перестраивается
+        ("kp-2026-00001", "КП-2026-00001"),  # меняется только латинский префикс
+        ("KP-2026-0", "КП-2026-0"),
+        ("СЧ-2026/142", "СЧ-2026/142"),
+        ("price list", "price list"),  # «pr…» без разделителя — не префикс номера
+    ],
+)
+async def test_search_sends_document_query_to_erp_as_typed(
+    web: Web, fb: FeedBackends, typed: str, sent: str
 ) -> None:
     search_data(fb)
     await web.login(["DIRECTOR"])
 
-    await web.client.get("/api/v1/search", params={"q": "kp-2026-118"})
+    await web.client.get("/api/v1/search", params={"q": typed})
 
-    assert fb.query(fb.erp["documents"])["q"] == "КП-2026/118"
+    assert fb.query(fb.erp["documents"])["q"] == sent
 
 
 async def test_search_by_lead_number_asks_crm_for_that_lead(

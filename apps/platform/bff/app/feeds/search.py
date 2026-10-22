@@ -12,6 +12,7 @@ from app.feeds.feed import SNAPSHOT_TTL_SECONDS, Feed, rows
 from app.feeds.models import ObjectRef, SearchGroup, SearchHit, SearchResult
 from app.feeds.numbers import (
     STEP_TITLES,
+    cyrillic_prefix,
     deal_number,
     deal_ref,
     deal_step,
@@ -111,10 +112,13 @@ def _doc_hit(doc: dict[str, Any], deals: dict[int, dict[str, Any]]) -> SearchHit
 
 async def search(feed: Feed, roles: list[RoleCode], query: str) -> SearchResult:
     needle = query.strip().casefold()
-    # Номер без нулей (`ЗВ-2026-1`) и латиница (`ZV-2026-001`, `KP-…`) приводятся к виду номера.
+    # Латинский префикс номера (`ZV-…`, `kp-…`) -> кириллический; запрос как набран ищется в сделках
+    # и в документах ERP (номера документов строит схема нумерации ERP, BFF её не перестраивает).
+    # `ЗВ-2026-1` для сделок ищется ещё и как `ЗВ-2026-001`: номер сделки составляет BFF.
+    typed = cyrillic_prefix(query)
     canonical = number_query(query)
-    needles = (needle, canonical.casefold()) if canonical else (needle,)
-    docs_query = canonical or query.strip()
+    needles = tuple(dict.fromkeys(n.casefold() for n in (needle, typed, canonical) if n))
+    docs_query = typed
     can_leads = allows(roles, "crm.leads", "read")
     can_clients = allows(roles, "crm.clients", "read")
     can_docs = any(allows(roles, res, "read") for res in set(_DOC_RESOURCE.values()))
