@@ -29,7 +29,6 @@ export function usePanels(userId: string, section: SectionConfig | undefined): P
   const entry = usePanelsStore((s) => s.entries[key]);
   const patch = usePanelsStore((s) => s.patch);
 
-  const tabParam = section?.tabParam ?? "tab";
   const tabs = useMemo(() => (section?.tabs ?? DEFAULT_TABS).map((t) => t.key), [section]);
 
   const urlPanel = params.get("panel");
@@ -42,7 +41,7 @@ export function usePanels(userId: string, section: SectionConfig | undefined): P
     : urlPanel === "open";
   const menuOpen = entry?.menuOpen ?? section?.defaults?.menuOpen ?? true;
 
-  const urlTab = params.get(tabParam);
+  const urlTab = params.get("tab");
   const tab =
     urlTab && tabs.includes(urlTab)
       ? urlTab
@@ -70,14 +69,14 @@ export function usePanels(userId: string, section: SectionConfig | undefined): P
       setParams(
         (prev) => {
           const copy = new URLSearchParams(prev);
-          copy.set(tabParam, next);
+          copy.set("tab", next);
           return copy;
         },
         { replace: true },
       );
       patch(key, { tab: next });
     },
-    [setParams, patch, key, tabParam],
+    [setParams, patch, key],
   );
 
   return {

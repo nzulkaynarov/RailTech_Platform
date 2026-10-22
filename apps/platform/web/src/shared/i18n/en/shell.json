@@ -128,7 +128,8 @@
     "textRoles": "The section is available to roles: {{roles}}. If you need it for work, write to the administrator.",
     "write": "Write to the administrator",
     "titleActiveRole": "This section is not available for the selected role",
-    "textActiveRole": "Choose “All roles” in the profile menu (the avatar) to get back all your sections. If you need this one for work, write to the administrator."
+    "textActiveRole": "Choose “All roles” in the profile menu (the avatar) to get back all your sections. If you need this one for work, write to the administrator.",
+    "writeSoon": "Coming in phase P4"
   },
   "notFound": {
     "heading": "Page not found",

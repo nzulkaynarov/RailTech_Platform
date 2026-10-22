@@ -128,7 +128,8 @@
     "textRoles": "Bo‘lim quyidagi rollarga ochiq: {{roles}}. Ish uchun kerak bo‘lsa, administratorga yozing.",
     "write": "Administratorga yozish",
     "titleActiveRole": "Bo‘lim tanlangan rol uchun mavjud emas",
-    "textActiveRole": "Barcha bo‘limlaringizga kirishni qaytarish uchun profil menyusida (avatar) «Barcha rollar»ni tanlang. Ish uchun kerak bo‘lsa, administratorga yozing."
+    "textActiveRole": "Barcha bo‘limlaringizga kirishni qaytarish uchun profil menyusida (avatar) «Barcha rollar»ni tanlang. Ish uchun kerak bo‘lsa, administratorga yozing.",
+    "writeSoon": "P4 bosqichida paydo bo‘ladi"
   },
   "notFound": {
     "heading": "Sahifa topilmadi",

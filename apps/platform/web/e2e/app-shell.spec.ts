@@ -257,7 +257,12 @@ test.describe("узкие экраны", () => {
     await loginAndWait(page, "all@demo.example");
     for (const width of [1440, 1280]) {
       await page.setViewportSize({ width, height: 900 });
-      for (const route of ["/dashboard/queue", "/eds/inbox", "/chats?tab=internal", "/erp/calc"]) {
+      for (const route of [
+        "/dashboard/queue",
+        "/eds/inbox",
+        "/chats?scope=internal",
+        "/erp/calc",
+      ]) {
         await page.goto(route);
         await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
         const scrollWidth = await page.evaluate("document.documentElement.scrollWidth");

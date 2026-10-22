@@ -138,9 +138,9 @@ describe("карта маршрутов SPEC-v3 §6.3", () => {
     expect(hit?.objectId).toBeUndefined();
   });
 
-  it("?tab=internal|external выбирает пункт Chats, без параметра — «Все чаты»", () => {
-    expect(matchSection("/chats", "?tab=internal")?.section.key).toBe("internal");
-    expect(matchSection("/chats", "?tab=external")?.section.key).toBe("external");
+  it("?scope=internal|external выбирает пункт Chats, без параметра — «Все чаты»", () => {
+    expect(matchSection("/chats", "?scope=internal")?.section.key).toBe("internal");
+    expect(matchSection("/chats", "?scope=external")?.section.key).toBe("external");
     expect(matchSection("/chats", "")?.section.key).toBe("all");
     expect(matchSection("/chats", "?panel=open")?.section.key).toBe("all");
   });
@@ -192,5 +192,12 @@ describe("карта маршрутов SPEC-v3 §6.3", () => {
         }
       }
     }
+  });
+});
+
+describe("Chats: ?scope= — фильтр списка, ?tab= — вкладка бокового окна", () => {
+  it("?tab= не меняет выбранный пункт Chats", () => {
+    expect(matchSection("/chats", "?scope=internal&tab=files")?.section.key).toBe("internal");
+    expect(matchSection("/chats", "?tab=files")?.section.key).toBe("all");
   });
 });

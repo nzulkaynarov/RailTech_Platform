@@ -75,7 +75,7 @@ const ROUTE_OF: Record<string, string> = {
   "eds.payments": "/eds/payments",
   "erp.calc": "/erp/calc",
   "erp.stock": "/erp/stock",
-  "chats.external": "/chats?tab=external",
+  "chats.external": "/chats?scope=external",
   admin: "/admin/roles",
 };
 

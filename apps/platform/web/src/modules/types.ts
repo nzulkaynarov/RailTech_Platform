@@ -20,8 +20,6 @@ export interface SectionConfig {
   hidden?: boolean;
   /** Вкладки бокового окна; первая — по действию экрана (SPEC-v3 §6.1). По умолчанию — Карточка · Чат проекта · Документы */
   tabs?: readonly PanelTab[];
-  /** Имя query-параметра вкладки бокового окна, если `tab` занят самим экраном (Chats: `?tab=internal|external`) */
-  tabParam?: string;
   /** Состояния панелей по умолчанию (SPEC-v3 приложение А); без поля — обе открыты */
   defaults?: { menuOpen?: boolean; panelOpen?: boolean };
   /** Куда ведёт действие пустого состояния; без поля — кнопка неактивна («появится в фазе P2») */

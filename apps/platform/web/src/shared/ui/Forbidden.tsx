@@ -32,7 +32,7 @@ export function Forbidden({ roles, activeRole = false }: ForbiddenProps) {
         <EmptyState
           title={activeRole ? t("forbidden.titleActiveRole") : t("forbidden.title")}
           text={text}
-          action={<SoonButton>{t("forbidden.write")}</SoonButton>}
+          action={<SoonButton hint={t("forbidden.writeSoon")}>{t("forbidden.write")}</SoonButton>}
         />
       </Card>
     </>
