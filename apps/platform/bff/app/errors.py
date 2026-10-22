@@ -1,13 +1,20 @@
 """Единый формат ошибок BFF — схема `Error` из packages/contracts/openapi/platform-bff.yaml."""
 
+import contextlib
+from datetime import UTC, datetime
+from email.utils import parsedate_to_datetime
 from typing import Any, Literal, cast
 
+import httpx
 import structlog
 from fastapi import FastAPI, Request, status
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
+from redis.exceptions import RedisError
 from starlette.exceptions import HTTPException as StarletteHTTPException
+
+from app.cookies import clear_session_cookies
 
 log = structlog.get_logger()
 
@@ -59,11 +66,14 @@ class PlatformError(Exception):
         source: Source = "bff",
         details: dict[str, Any] | None = None,
         headers: dict[str, str] | None = None,
+        clear_session: bool = False,
     ) -> None:
         super().__init__(message)
         self.body = ErrorBody(code=code, message=message, source=source, details=details)
         self.status_code = status_code
         self.headers = headers
+        # Сессии больше нет: вместе с ошибкой браузеру уходит сброс cookie `rt_pf_*`.
+        self.clear_session = clear_session
 
 
 def error_response(
@@ -76,9 +86,21 @@ def error_response(
     )
 
 
-async def _platform_error(_: Request, exc: Exception) -> JSONResponse:
+async def _platform_error(request: Request, exc: Exception) -> JSONResponse:
     err = cast(PlatformError, exc)
-    return error_response(err.status_code, err.body, err.headers)
+    response = error_response(err.status_code, err.body, err.headers)
+    if err.clear_session:
+        settings = getattr(request.app.state, "settings", None)
+        clear_session_cookies(response, secure=settings.cookie_secure if settings else True)
+    return response
+
+
+async def _redis_error(_: Request, exc: Exception) -> JSONResponse:
+    log.error("redis_error", error=type(exc).__name__)
+    code, message = _CODES[status.HTTP_503_SERVICE_UNAVAILABLE]
+    return error_response(
+        status.HTTP_503_SERVICE_UNAVAILABLE, ErrorBody(code=code, message=message, source="bff")
+    )
 
 
 async def _http_error(_: Request, exc: Exception) -> JSONResponse:
@@ -108,6 +130,96 @@ async def _unhandled(_: Request, exc: Exception) -> JSONResponse:
 
 def install_error_handlers(app: FastAPI) -> None:
     app.add_exception_handler(PlatformError, _platform_error)
+    app.add_exception_handler(RedisError, _redis_error)
     app.add_exception_handler(StarletteHTTPException, _http_error)
     app.add_exception_handler(RequestValidationError, _validation_error)
     app.add_exception_handler(Exception, _unhandled)
+
+
+def session_expired() -> PlatformError:
+    """Сессии нет, истекла или отозвана: 401 и сброс cookie."""
+    code, message = _CODES[status.HTTP_401_UNAUTHORIZED]
+    return PlatformError(code, message, status_code=401, clear_session=True)
+
+
+def backend_unavailable(source: Source, reason: str | None = None) -> PlatformError:
+    code, message = _CODES[status.HTTP_503_SERVICE_UNAVAILABLE]
+    details = {"reason": reason} if reason else None
+    return PlatformError(code, message, status_code=503, source=source, details=details)
+
+
+_MESSAGES: dict[str, str] = {
+    **dict(_CODES.values()),
+    "VALIDATION_FAILED": "Проверьте заполнение полей.",
+    "ACCOUNT_LOCKED": "Учётная запись временно заблокирована. Повторите позже.",
+}
+_DEFAULT_RETRY_AFTER = 60
+_BACKEND_CODES: dict[int, str] = {
+    status.HTTP_403_FORBIDDEN: "FORBIDDEN",
+    status.HTTP_404_NOT_FOUND: "NOT_FOUND",
+    status.HTTP_409_CONFLICT: "CONFLICT",
+    status.HTTP_422_UNPROCESSABLE_CONTENT: "VALIDATION_FAILED",
+    status.HTTP_423_LOCKED: "ACCOUNT_LOCKED",
+    status.HTTP_429_TOO_MANY_REQUESTS: "TOO_MANY_REQUESTS",
+}
+
+
+def backend_code(response: httpx.Response) -> str | None:
+    """Код ошибки бэкенда: у CRM `code` в теле, у ERP `detail`."""
+    try:
+        body = response.json()
+    except ValueError:
+        return None
+    if not isinstance(body, dict):
+        return None
+    value = body.get("code") or body.get("detail")
+    return value if isinstance(value, str) else None
+
+
+def backend_reason(response: httpx.Response) -> str | None:
+    """Подкод `details.reason` ошибки CRM (например `wrong_password`)."""
+    try:
+        body = response.json()
+    except ValueError:
+        return None
+    details = body.get("details") if isinstance(body, dict) else None
+    reason = details.get("reason") if isinstance(details, dict) else None
+    return reason if isinstance(reason, str) else None
+
+
+def retry_after_seconds(response: httpx.Response) -> int:
+    """Секунды до повтора целым: `Retry-After` бэкенда (секунды или дата), иначе `until` CRM."""
+    raw = response.headers.get("Retry-After")
+    if raw is not None:
+        try:
+            return max(int(float(raw)), 1)
+        except ValueError:
+            with contextlib.suppress(TypeError, ValueError, IndexError):
+                return max(int((parsedate_to_datetime(raw) - datetime.now(UTC)).total_seconds()), 1)
+    try:
+        until = response.json()["details"]["until"]
+        return max(int((datetime.fromisoformat(until) - datetime.now(UTC)).total_seconds()), 1)
+    except (ValueError, KeyError, TypeError):
+        return _DEFAULT_RETRY_AFTER
+
+
+def from_backend(source: Source, response: httpx.Response) -> PlatformError:
+    """Ответ бэкенда 4xx -> ошибка BFF в формате `Error`; код и статус бэкенда — в `details`."""
+    code = _BACKEND_CODES.get(response.status_code)
+    if code is None:
+        return backend_unavailable(source, f"HTTP {response.status_code}")
+    message = _MESSAGES[code]
+    details: dict[str, Any] = {"backend_status": response.status_code}
+    if (b_code := backend_code(response)) is not None:
+        details["backend_code"] = b_code
+    headers = None
+    if code in ("TOO_MANY_REQUESTS", "ACCOUNT_LOCKED"):
+        headers = {"Retry-After": str(retry_after_seconds(response))}
+    return PlatformError(
+        code,
+        message,
+        status_code=429 if code == "TOO_MANY_REQUESTS" else response.status_code,
+        source=source,
+        details=details,
+        headers=headers,
+    )
