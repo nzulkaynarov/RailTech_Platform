@@ -1,4 +1,5 @@
-"""Общие фикстуры: контракт (копия B2 в fixtures/contracts), подписки, секреты, часы, PostgreSQL.
+"""Общие фикстуры: контракт (packages/contracts; другой каталог — RT_BUS_TEST_CONTRACTS_DIR), подписки, секреты,
+часы, PostgreSQL.
 
 Тесты Django идут отдельным процессом (`RT_BUS_DJANGO_DRIVER=psycopg2|psycopg pytest tests/dj`): драйвер Django
 выбирается при импорте, а тесты SQLAlchemy уже загрузили psycopg 3.
@@ -24,7 +25,10 @@ if os.environ.get("RT_BUS_DJANGO_DRIVER"):
 else:
     collect_ignore, collect_ignore_glob = ["dj"], []
 
-FIXTURES = Path(__file__).parent / "fixtures" / "contracts"
+#: Каталог контракта: по умолчанию packages/contracts этого репозитория.
+FIXTURES = Path(
+    os.environ.get("RT_BUS_TEST_CONTRACTS_DIR") or Path(__file__).resolve().parents[2] / "contracts"
+).resolve()
 EVENTS_DIR = FIXTURES / "events"
 T0 = datetime(2026, 10, 23, 9, 0, tzinfo=UTC)
 

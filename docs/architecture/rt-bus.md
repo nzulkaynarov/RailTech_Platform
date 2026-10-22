@@ -221,3 +221,4 @@ make -C packages/rt-bus check                                          # ruff, m
 - Драйверы в тестах: SQLAlchemy — psycopg 3 и asyncpg; Django — psycopg2 (как ERP) и psycopg 3, отдельными процессами
   pytest.
 - HTTP — `httpx.MockTransport`/`ASGITransport`, без сети.
+- Схемы и подписки — из `packages/contracts` этого репозитория (другой каталог — `RT_BUS_TEST_CONTRACTS_DIR`).

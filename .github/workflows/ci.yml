@@ -83,6 +83,9 @@ jobs:
             # Библиотека шины (B1): тесты адаптеров на PostgreSQL.
             rtbus:
               - 'packages/rt-bus/**'
+              # тесты rt-bus идут на схемах и подписках контракта
+              - 'packages/contracts/events/**'
+              - 'packages/contracts/bus/**'
             infra:
               - 'infra/**'
               - 'scripts/**'
