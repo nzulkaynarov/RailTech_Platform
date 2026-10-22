@@ -78,6 +78,11 @@ v1.<ts>.<jti>.<hex>` — доказательство владения общи�
 
 ## 3. События (ERP → CRM)
 
+> **Устаревает (волна 11, ADR-0014).** Вебхук ниже заменяется шиной `rt_bus` (§9): те же 22 события публикуются как
+> `uz.railtech.erp.<событие>.v1`, тело события (без `version`, `event`, `occurred_at`) становится полем `data` конверта
+> CloudEvents, схемы — `packages/contracts/events/erp/*.v1.json`. `events.schema.json` и `examples/events/*.json`
+> остаются до перехода сторон: удаляют B3 (ERP, монтирование в `infra/deploy`) и B4 (ручная копия CRM и сами файлы).
+
 `POST {CRM}/api/v1/integrations/erp/events`. Заголовки: `X-Event-Id` (UUID), `X-Event-Type`,
 `X-Timestamp` (UTC ISO 8601), `X-Signature: sha256=<HMAC(WEBHOOK_SECRET, f"{X-Event-Id}.{X-Timestamp}.{body}")>` — схема v2
 (FIX-61, Q-FIX35-2); переход: CRM принимает и старую подпись только тела, пока `ERP_WEBHOOK_SIGN_LEGACY=true`, затем
@@ -198,6 +203,152 @@ JWT HS256, секрет `PLATFORM_SSO_SECRET` общий. Claims: `iss` (`crm`|`
 
 ## 7. Версионирование
 
-Пространства версионируются префиксом (`v1`). Несовместимое изменение — новый префикс и период
-совместимости в одну веху. События — поле `version` в теле (сейчас 1); новые поля добавляются без
-смены версии, удаление или смена смысла — со сменой.
+ADR-0016: у каждого файла контракта своя версия по semver; в пределах мажора — только добавления; ломающее — новый
+мажор (`/v2` в пути API, `.v2` в типе события) и двойная публикация или обслуживание обоих на переходе; старый мажор
+живёт ≥ 6 месяцев и ≥ 2 релизных поездов, помечается `Deprecation`/`Sunset`, после снятия — 410.
+
+- **API** — префикс пространства (`/api/integration/v1`, `/api/portal/v1`, `/api/v1`). Проверка ломающих изменений
+  OpenAPI (`oasdiff` против `origin/main`) — задача B6.
+- **События шины** — мажор в типе и файле: `uz.railtech.<домен>.<сущность>.<действие>.v<N>` ↔
+  `events/<домен>/<сущность>.<действие>.v<N>.json` (§9.6). В пределах `vN` — только новые необязательные поля и новые
+  типы; всё прочее, в том числе расширение (новое значение enum, снятый `required`, ослабленные ограничения), — файл
+  `v(N+1)`, издатель публикует оба типа, пока подписчики не перейдут. Машинная проверка — `scripts/events_compat.py` в
+  `make contracts` и в CI (§9.6).
+- **Старый вебхук §3** (поле `version` в теле) — до удаления в B3/B4 не меняется.
+
+## 9. Шина rt_bus (события v2)
+
+ADR-0014 (шина, правило «интеграции только через шину» — ORCHESTRATOR §3.14), ADR-0015 (владелец поля, домены),
+ADR-0016 (версии); runbook `docs/runbooks/wave11-bus-v1.md`. Источник истины — файлы `packages/contracts/events/` и
+`packages/contracts/bus/`; библиотека — `packages/rt-bus` (B1). Таблицы библиотеки: `rt_bus_outbox`, `rt_bus_delivery`,
+`rt_bus_inbox`, `rt_bus_subscriber_state`.
+
+### 9.1. Конверт (L1)
+
+CloudEvents 1.0, structured mode, JSON; схема — `events/envelope.v1.json`.
+
+| Атрибут | Обязателен | Значение |
+|---|---|---|
+| `specversion` | да | `"1.0"` |
+| `id` | да | UUID события; ключ дедупликации inbox, заголовок `X-RT-Event-Id` |
+| `source` | да | `rt://<сервис>`: `rt://crm`, `rt://erp`, `rt://eds`, `rt://platform-bff`; коннекторы — `rt://connector-<имя>` |
+| `type` | да | `uz.railtech.<домен>.<сущность>.<действие>.v<N>` |
+| `time` | да | момент события, RFC 3339 в UTC (`…Z`) |
+| `datacontenttype` | да | `"application/json"` |
+| `dataschema` | да | `rt://contracts/events/<домен>/<сущность>.<действие>/v<N>` |
+| `tenant` | да | арендатор, v1 — `"railtech"` |
+| `correlationid` | да | `X-Request-ID` исходного запроса или UUID; если нет — новый UUID |
+| `data` | да | объект по схеме типа |
+| `subject` | нет | объект события для человека (номер сделки, `client/42`), без персональных данных |
+| `traceparent` | нет | W3C Trace Context |
+
+Отправитель строгий: все обязательные атрибуты, `data` строго по схеме типа (`additionalProperties: false`). Читатель
+терпимый: неизвестные атрибуты-расширения CloudEvents (имена `[a-z0-9]{1,20}`, значения — строка, число, булево)
+допускаются и игнорируются; неизвестные поля в `data` подписчик игнорирует — при проверке `data` по своей копии схемы
+ошибки `additionalProperties` не считаются отказом (модели `rt-contracts` для этого собраны с `extra="ignore"`), иначе
+новое необязательное поле издателя ломало бы старого подписчика (L10). Других послаблений у приёмника нет: значение вне
+enum, отсутствующее обязательное поле, нарушенное ограничение — 422 и `dead`; поэтому в `vN` разрешены только новые
+необязательные поля (§9.6).
+
+### 9.2. Типы и файлы (L2)
+
+- Домены: `crm` (клиент, контакт, лид, обращения), `erp` (заявка, сделка, КП, договор, счёт, поставка, акт, документ),
+  `eds`, `identity` (сотрудник; v1 живёт в CRM, `source` = `rt://crm`), `platform`. Сущность и действие — по одному
+  сегменту snake_case: `uz.railtech.erp.delivery.line_accepted.v1`, `uz.railtech.erp.quote.acceptance_code_requested.v1`.
+- Схема `data` типа — `events/<домен>/<сущность>.<действие>.v<N>.json` (JSON Schema 2020-12, `$id` повторяет путь:
+  `https://railtech.uz/contracts/events/…`, поэтому относительные `$ref` разрешаются и по файлам, и по реестру `$id`).
+  Общие определения домена — `events/<домен>/_defs.v<N>.json` (не тип).
+- Пример полного конверта на каждый тип — `events/<домен>/examples/<сущность>.<действие>.v<N>.json`.
+- AsyncAPI 3.0 — `events/asyncapi.yaml`: канал и сообщение на каждый тип, `payload` = конверт + `data` по файлу типа.
+- Типы v1:
+
+| Тип | Издатель → подписчики v1 | `data` |
+|---|---|---|
+| `uz.railtech.erp.<событие>.v1` — 22 события §3 | `rt://erp` → crm | прежнее тело §3 без `version`, `event`, `occurred_at`: `erp_company_id`, `crm_client_id`, `deal?`, `actor`, `payload` (определения — `erp/_defs.v1.json`) |
+| `uz.railtech.crm.client.created.v1` / `client.updated.v1` | `rt://crm` → erp (`updated`) | снимок `client`: `crm_client_id`, `erp_company_id?`, `name`, `inn`, `segment`, `is_active`, `owner{crm_user_id, full_name}`, `updated_at`; `changed_fields?`; `actor` |
+| `uz.railtech.crm.contact.created.v1` / `contact.updated.v1` | `rt://crm` → erp | снимок `contact`: `crm_contact_id`, `crm_client_id`, `erp_company_id?`, `full_name`, `position`, `phone_e164`, `email`, `telegram_user_id`, `is_primary`, `language?`, `preferred_channel?`, `updated_at` |
+| `uz.railtech.crm.contact.deleted.v1` | `rt://crm` → erp | `crm_contact_id`, `crm_client_id`, `erp_company_id?`, `deleted_at`, `actor`; поздний `contact.created/updated` с `updated_at` ≤ `deleted_at` не применяется |
+| `uz.railtech.crm.lead.created.v1` / `lead.updated.v1` / `lead.stage_changed.v1` | `rt://crm` → (Платформа, B5) | снимок `lead` без контактов и переписки: `crm_lead_id`, `crm_client_id?`, `display_name`, `company_name`, `stage`, `source`, `language`, `score`, `assigned_user`, `erp_request_id?`, `updated_at`; у `stage_changed` — `from`, `to`, `reason?` |
+| `uz.railtech.identity.user.created.v1` / `user.updated.v1` | `rt://crm` → (ERP, Платформа — позже) | снимок `user`: `crm_user_id`, `email`, `full_name`, `position`, `language`, `is_active`, `platform_roles`, `systems`, `erp_role_codes?`, `updated_at` |
+| `uz.railtech.identity.user.deactivated.v1` | `rt://crm` → (ERP, Платформа — позже) | `crm_user_id`, `reason?`, `actor` |
+
+События CRM и identity — снимки (event-carried state transfer): подписчик заменяет проекцию целиком по внешнему
+идентификатору; снимок с `updated_at` старше применённого не применяется (доставка может прийти не по порядку). Только
+поля, которыми владеет CRM (ADR-0015), и внешние идентификаторы; паролей, токенов, хэшей и одноразовых кодов нет
+(проверяется тестом). Телефоны и e-mail в событиях CRM издатель нормализует до публикации (телефон — E.164,
+e-mail — без пробелов, по формату `email`; схема проверяет формат) — хвост B4.
+
+`payload.code` события `uz.railtech.erp.quote.acceptance_code_requested.v1` — секрет и для подписчика, и для издателя:
+подписчик не пишет его в ленту, журналы, inbox и логи; у издателя в outbox и журнале доставок он хранится маской
+(stash `rt_bus`, B1), открытое значение существует только в момент доставки.
+
+### 9.3. Доставка и подпись (L3, L4)
+
+`POST <endpoint подписчика>` (путь `/bus/v1/events`), `Content-Type: application/cloudevents+json`, тело — конверт.
+
+| Заголовок | Значение |
+|---|---|
+| `X-RT-Publisher` | имя издателя: `crm`, `erp`, … |
+| `X-RT-Event-Id` | `id` конверта |
+| `X-RT-Timestamp` | UTC ISO 8601 момента попытки; при каждом повторе подпись пересчитывается |
+| `X-RT-Signature` | `sha256=<hex HMAC-SHA256(secret, f"{X-RT-Event-Id}.{X-RT-Timestamp}.{raw_body}")>` |
+| `traceparent` | из конверта, если есть |
+| `X-Request-ID` | `correlationid` конверта |
+
+Секрет пары «издатель → подписчик» — `RT_BUS_SECRET_<ИЗДАТЕЛЬ>_<ПОДПИСЧИК>` (верхний регистр, `-` → `_`; несколько через
+запятую: первым подписывают, принимают любой — ротация без простоя). Сервис может подставить свой поставщик секретов
+(сопряжение в БД). Приёмник: окно `|now − X-RT-Timestamp| ≤ 300 с`.
+
+### 9.4. Ответы приёмника и повтор
+
+| Ответ приёмника | Когда | Отправитель |
+|---|---|---|
+| 2xx | принято; в т. ч. повтор `id` (без обработки) и `skipped` — неизвестный тип или версия выше поддерживаемой | доставлено |
+| 401 | нет или неверная подпись, неизвестный издатель, вне окна 300 с | повтор по расписанию |
+| 400 | не конверт, битый JSON | сразу `dead` |
+| 422 | `data` известного типа не по схеме | сразу `dead` |
+
+Отправитель: 400, 404, 410, 413, 415, 422 — сразу `dead` (повтор не поможет; «повторить» из журнала доступно);
+остальное (401, 408, 409, 429, 5xx, сеть, таймаут) — повтор `30 с, 2 мин, 10 мин, 1 ч, 6 ч, 24 ч` с jitter, затем
+`dead`; предохранитель на подписчика (5 ошибок подряд — пауза 5 мин).
+
+### 9.5. Подписки (L5)
+
+`packages/contracts/bus/subscriptions.yaml` (схема — `subscriptions.schema.json`); путь у сервисов — `RT_BUS_SUBSCRIPTIONS`.
+
+```yaml
+version: 1
+subscribers:
+  - name: crm                                   # уникальное имя подписчика
+    endpoint: http://crm-api:8000/bus/v1/events # адрес во внутренней сети
+    endpoint_env: RT_BUS_ENDPOINT_CRM           # необязательно: переопределение адреса из окружения
+    enabled: true                               # необязательно, по умолчанию true
+    types: ["uz.railtech.erp.*.v1"]             # маски fnmatch по полному типу, версия входит в маску
+```
+
+Издатель доставляет подписчику только свои события (по `source`) и не доставляет себе. Новый подписчик — строка в файле
+и секрет пары в окружении, без правки кода сервисов. Подписки v1: `crm` ← `uz.railtech.erp.*.v1`; `erp` ←
+`uz.railtech.crm.client.updated.v1`, `uz.railtech.crm.contact.*.v1` (ERP обновляет проекции компании и контактов, B4).
+`platform-bff` добавляется в B5. Тест проверяет: маска совпадает хотя бы с одним типом, подписчик не подписан на свои
+события.
+
+### 9.6. Совместимость (L8) и генерация (L6)
+
+В пределах `vN` — только новые необязательные поля (в `properties`), новые типы (файлы) и новые определения `$defs`;
+аннотации (`title`, `description`, `examples`, `x-*`) не сравниваются. Всё прочее — ломающее, в обе стороны:
+
+- сужение: удаление или переименование поля, новое обязательное поле, сужение enum/const/`type`/`format`/`pattern`/
+  границ, ужесточение `additionalProperties`, новые условия `allOf`/`if`/`not`, удаление файла типа или определения;
+- расширение: новое значение enum или смена const, снятый `required`, расширенный `type` (в т. ч. `null`), ослабленные
+  или снятые `minimum`/`maximum`/`minLength`/`maxLength`/`pattern`/`format`, новая ветка `oneOf`/`anyOf`, ослабленный
+  `additionalProperties` — приёмник терпим только к лишним полям (L10), старый подписчик ответит 422 → `dead`.
+
+Ломающее — только новым файлом `v(N+1)` с двойной публикацией на переходе.
+
+`scripts/events_compat.py` сравнивает каждую схему `events/**` (кроме примеров) и `bus/subscriptions.schema.json` с
+базой `CONTRACTS_BASE_REF` (по умолчанию `origin/main`; `git show <ref>:<путь>`, `$ref` разворачиваются в обеих
+версиях); файла в базе нет — новое. Обхода нет: красный `make contracts` — значит нужен `v(N+1)`.
+
+Модели — один генератор (`datamodel-code-generator`, Pydantic v2) → пакет `rt-contracts` в
+`packages/contracts/generated/python` (`from rt_contracts.events import TYPES, Envelope`), ставится по пути. `rt-bus`
+от него не зависит: проверяет `data` по JSON Schema из каталога `RT_BUS_CONTRACTS_DIR` (= `packages/contracts/events`).

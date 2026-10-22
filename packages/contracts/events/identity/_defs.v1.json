@@ -1,0 +1,135 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://railtech.uz/contracts/events/identity/_defs.v1.json",
+  "title": "Общие определения событий identity v1",
+  "description": "Не тип события: определения для events/identity/*.v1.json. Идентичность v1 живёт в CRM (ADR-0015, источник rt://crm); домен отделён, чтобы при выделении сервиса идентичности (этап F) схемы не менялись. Секретов (пароль, токены, Telegram) нет.",
+  "$defs": {
+    "Email": {
+      "type": "string",
+      "format": "email",
+      "maxLength": 255
+    },
+    "Language": {
+      "type": "string",
+      "enum": [
+        "ru",
+        "uz",
+        "en"
+      ]
+    },
+    "Actor": {
+      "type": "object",
+      "description": "Кто изменил: сотрудник CRM, бот или система",
+      "required": [
+        "type"
+      ],
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": [
+            "system",
+            "staff",
+            "bot"
+          ]
+        },
+        "crm_user_id": {
+          "type": "integer",
+          "description": "Сотрудник при type=staff"
+        }
+      },
+      "additionalProperties": false
+    },
+    "PlatformRoleCode": {
+      "type": "string",
+      "pattern": "^[A-Z][A-Z0-9_]*$",
+      "description": "Код роли Платформы из platform-rbac.yaml (MANAGER, DIRECTOR, SUPPLY, ENGINEER, ACCOUNTANT, ADMIN, …)"
+    },
+    "ErpRoleCode": {
+      "type": "string",
+      "enum": [
+        "CALCULATION",
+        "CATALOG_SUPPLY",
+        "FULFILLMENT",
+        "FINANCE",
+        "HEAD",
+        "VIEWER"
+      ],
+      "description": "Системная роль бэк-офиса ERP (SystemRoleCode в openapi/erp-integration.yaml)"
+    },
+    "User": {
+      "type": "object",
+      "description": "Снимок сотрудника (идентичность v1 живёт в CRM, ADR-0015): без пароля, токенов, Telegram и журнала входов; порядок — по updated_at.",
+      "required": [
+        "crm_user_id",
+        "email",
+        "full_name",
+        "position",
+        "language",
+        "is_active",
+        "platform_roles",
+        "systems",
+        "updated_at"
+      ],
+      "properties": {
+        "crm_user_id": {
+          "type": "integer"
+        },
+        "email": {
+          "$ref": "#/$defs/Email",
+          "description": "Рабочая почта — логин"
+        },
+        "full_name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 255
+        },
+        "position": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 120
+        },
+        "language": {
+          "$ref": "#/$defs/Language"
+        },
+        "is_active": {
+          "type": "boolean"
+        },
+        "platform_roles": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/PlatformRoleCode"
+          },
+          "description": "Роли Платформы; пусто — роли ведутся вручную"
+        },
+        "systems": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "enum": [
+              "crm",
+              "erp"
+            ]
+          },
+          "description": "Куда сотруднику можно (platform_access в CRM)"
+        },
+        "erp_role_codes": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/ErpRoleCode"
+          },
+          "description": "Системные роли ERP (как role_codes провижининга)"
+        },
+        "updated_at": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "additionalProperties": false
+    }
+  }
+}

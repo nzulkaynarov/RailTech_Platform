@@ -1,0 +1,33 @@
+{
+  "specversion": "1.0",
+  "id": "9299bb30-c347-53ba-ac1e-aa103b9eecf4",
+  "source": "rt://erp",
+  "type": "uz.railtech.erp.request.created.v1",
+  "time": "2026-10-13T03:00:00Z",
+  "subject": "D-2026-0905",
+  "datacontenttype": "application/json",
+  "dataschema": "rt://contracts/events/erp/request.created/v1",
+  "tenant": "railtech",
+  "correlationid": "d44111ac-7ef8-5a8c-bd5b-39a70d39b1a0",
+  "traceparent": "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01",
+  "data": {
+    "erp_company_id": 118,
+    "crm_client_id": 42,
+    "deal": {
+      "erp_deal_id": 905,
+      "number": "D-2026-0905",
+      "title": "Поставка оборудования, партия 1",
+      "stage": "request",
+      "amount": "0.00",
+      "currency": "UZS"
+    },
+    "actor": {
+      "type": "client"
+    },
+    "payload": {
+      "source": "cabinet",
+      "erp_request_id": 77,
+      "summary": "Нужны 20 комплектов, срок — ноябрь"
+    }
+  }
+}

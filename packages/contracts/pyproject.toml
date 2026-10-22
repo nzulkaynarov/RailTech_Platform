@@ -1,0 +1,36 @@
+# Python-инструменты контракта (L6, L8): генерация моделей rt-contracts, проверка схем событий и совместимости.
+# Не пакет: вызывается из Makefile через uv run. Сгенерированный пакет — generated/python (rt-contracts).
+[project]
+name = "rt-contracts-tools"
+version = "0.0.0"
+requires-python = ">=3.12,<3.13"
+dependencies = []
+
+[dependency-groups]
+dev = [
+    "datamodel-code-generator==0.83.0",
+    "jsonschema[format]==4.26.0",
+    "pytest==9.1.1",
+    "pyyaml==6.0.3",
+    "rt-contracts",
+    "ruff==0.17.0",
+]
+
+[tool.uv]
+package = false
+
+[tool.uv.sources]
+rt-contracts = { path = "generated/python", editable = true }
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["scripts"]
+addopts = "-q"
+
+[tool.ruff]
+line-length = 120
+target-version = "py312"
+extend-exclude = ["generated", "node_modules"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "SIM"]
