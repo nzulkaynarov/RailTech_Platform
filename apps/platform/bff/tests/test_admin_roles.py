@@ -466,3 +466,26 @@ async def test_resend_invite_crm_down_and_rights(
     web.client.cookies.clear()
     await web.login(["DIRECTOR"])
     assert (await web.send("POST", "/api/v1/admin/users/12/invite")).status_code == 403
+
+
+async def test_new_mutations_need_csrf(
+    web: Web, roles: CrmRoles, crm: CrmUsers, check: ContractChecker
+) -> None:
+    """Изменяющие операции 0.3.0 без верного `X-CSRF-Token` — 403 `CSRF_FAILED`, в CRM не уходят."""
+    await web.login(["ADMIN"])
+    body = {"name": "Х", "access": {}, "restricted_fields": []}
+
+    for method, url, payload, path in (
+        ("POST", "/api/v1/admin/roles", body, "/admin/roles"),
+        ("PATCH", "/api/v1/admin/roles/3", {"name": "Х"}, "/admin/roles/{id}"),
+        ("DELETE", "/api/v1/admin/roles/3", None, "/admin/roles/{id}"),
+        ("POST", "/api/v1/admin/roles/preview", {"role_id": "3"}, "/admin/roles/preview"),
+        ("POST", "/api/v1/admin/users/12/invite", None, "/admin/users/{id}/invite"),
+    ):
+        response = await web.send(method, url, json=payload, csrf="x")  # type: ignore[arg-type]
+        assert response.status_code == 403, (method, url)
+        check(response, path, method.lower())
+        assert response.json()["code"] == "CSRF_FAILED"
+    assert roles.create_route.call_count == roles.patch_route.call_count == 0
+    assert roles.delete_route.call_count == roles.preview_route.call_count == 0
+    assert crm.invite_route.call_count == 0

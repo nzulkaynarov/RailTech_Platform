@@ -1127,3 +1127,37 @@ async def test_every_backend_read_carries_the_employee_token(web: Web, fb: FeedB
                 assert call.request.headers["authorization"] == f"Bearer {tokens[backend]}"
                 assert "service" not in call.request.headers["authorization"].lower()
     assert seen >= 10
+
+
+SALES_AND_MONEY = custom(
+    45, "Менеджер и бухгалтер", {"crm.leads": "full", "eds.payments": "full"}, ("totals_only",)
+)
+
+
+async def test_role_without_dashboard_searches_its_own_sections(
+    web: Web, fb: FeedBackends, check: ContractChecker
+) -> None:
+    """Роль без «Моей очереди» ищет в шапке по своим разделам (R-2): лиды и счета, без клиентов,
+    КП и договоров."""
+    search_data(fb)
+    await web.login([SALES_AND_MONEY])
+
+    response = await web.client.get("/api/v1/search", params={"q": "Демо"})
+
+    assert response.status_code == 200
+    check(response, "/search", "get")
+    groups = {g["module"]: g["items"] for g in response.json()["groups"]}
+    assert [h["object"]["kind"] for h in groups["crm"]] == ["lead"]
+    assert {h["object"]["number"] for h in groups.get("eds", [])} <= {"СЧ-2026/142"}
+    assert fb.calls(fb.crm["clients"]) == 0
+    # Без раздела «Моя очередь» очередь закрыта, а поиск — нет.
+    assert (await web.client.get("/api/v1/queue")).status_code == 403
+
+
+async def test_search_needs_at_least_one_section(web: Web, fb: FeedBackends) -> None:
+    await web.login([custom(46, "Пустая", {})])
+
+    response = await web.client.get("/api/v1/search", params={"q": "Демо"})
+
+    assert response.status_code == 403
+    assert response.json()["details"] == {"reason": "no_sections"}

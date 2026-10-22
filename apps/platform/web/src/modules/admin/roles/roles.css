@@ -152,3 +152,8 @@
 .pf-role-employees li:last-child {
   border-bottom: 0;
 }
+/* Подпись группы (модуль) не уезжает при горизонтальной прокрутке таблицы. */
+.pf-matrix-group-label {
+  position: sticky;
+  left: 24px;
+}

@@ -1,4 +1,5 @@
 import { Checkbox } from "antd";
+import { useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
 
 import {
@@ -101,18 +102,34 @@ export function RoleMatrix({ columns, selectedId, onSelect, draft, onDraft }: Ro
       .map((level) => ({ value: level, label: t(`admin.roles.level.${level}`) })),
     { value: "hidden", label: t("admin.roles.level.hidden") },
   ];
+  // Выбранный (и новый) столбец прокручивается в видимую часть таблицы: на 1440 с открытым боковым окном правые
+  // столбцы уходят за край. Прокручивается только таблица, страница стоит на месте; учитывается закреплённый столбец.
+  const scrollRef = useRef<HTMLDivElement>(null);
+  // Ширина столбца меняется вместе с названием (новая роль): ключ — названия столбцов.
+  const columnKey = columns.map((column) => `${column.id}:${column.name}`).join("|");
+  useEffect(() => {
+    const box = scrollRef.current;
+    if (!box || !selectedId) return;
+    const cell = box.querySelector<HTMLElement>(`th[data-col="${selectedId}"]`);
+    const pinned = box.querySelector<HTMLElement>("thead th")?.offsetWidth ?? 0;
+    if (!cell) return;
+    const left = cell.offsetLeft - pinned;
+    const right = cell.offsetLeft + cell.offsetWidth - box.clientWidth;
+    if (box.scrollLeft > left) box.scrollLeft = left;
+    else if (box.scrollLeft < right) box.scrollLeft = right;
+  }, [selectedId, columnKey]);
   const isEditing = (column: MatrixColumn) => draft !== null && column.id === selectedId;
   const sel = (column: MatrixColumn) => (column.id === selectedId ? "pf-matrix-sel" : undefined);
 
   return (
-    <div className="pf-matrix-scroll">
+    <div className="pf-matrix-scroll" ref={scrollRef}>
       <table className="pf-matrix">
         <caption className="pf-sr-only">{t("admin.roles.caption")}</caption>
         <thead>
           <tr>
             <th scope="col">{t("admin.roles.sectionColumn")}</th>
             {columns.map((column) => (
-              <th key={column.id} scope="col" className={sel(column)}>
+              <th key={column.id} scope="col" className={sel(column)} data-col={column.id}>
                 <button
                   type="button"
                   className="pf-matrix-role pf-focusable"
@@ -141,7 +158,9 @@ export function RoleMatrix({ columns, selectedId, onSelect, draft, onDraft }: Ro
             return [
               <tr key={`group:${module}`} className="pf-matrix-group">
                 <th scope="colgroup" colSpan={columns.length + 1}>
-                  {`${String(config?.order ?? "")}. ${config?.name ?? module}`}
+                  <span className="pf-matrix-group-label">
+                    {`${String(config?.order ?? "")}. ${config?.name ?? module}`}
+                  </span>
                 </th>
               </tr>,
               ...keys.map((key) => {
@@ -183,7 +202,7 @@ export function RoleMatrix({ columns, selectedId, onSelect, draft, onDraft }: Ro
           })}
           <tr className="pf-matrix-group">
             <th scope="colgroup" colSpan={columns.length + 1}>
-              {t("admin.roles.fieldsGroup")}
+              <span className="pf-matrix-group-label">{t("admin.roles.fieldsGroup")}</span>
             </th>
           </tr>
           {FIELDS.map((field) => {

@@ -146,3 +146,27 @@ def require(resource: str, need: Need = "read") -> Callable[[Authed], Awaitable[
         return authed
 
     return dependency
+
+
+async def require_any_section(authed: AuthedDep) -> Authed:
+    """Зависимость маршрута: у ролей сотрудника есть хотя бы один раздел каталога.
+
+    Для сквозных экранов (поиск в шапке), которые сами фильтруют результат по разделам: роль без
+    «Моей очереди» (например, «Менеджер и бухгалтер») ищет по своим разделам, а не получает 403.
+    """
+    authed.data = await authed.service.sync_profile(authed.sid, authed.data)
+    if authed.data.must_change_password:
+        raise PlatformError(
+            "FORBIDDEN",
+            "Сначала смените временный пароль.",
+            status_code=403,
+            details={"reason": "password_change_required"},
+        )
+    if not authed.access:
+        raise PlatformError(
+            "FORBIDDEN",
+            "Раздел или действие не положены вашей роли.",
+            status_code=403,
+            details={"reason": "no_sections"},
+        )
+    return authed

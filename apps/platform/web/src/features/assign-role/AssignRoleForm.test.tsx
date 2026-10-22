@@ -213,8 +213,9 @@ describe("AssignRoleForm: выдача ролей", () => {
     await waitFor(() => {
       expect(transfer).toBeDisabled();
     });
-    fireEvent.mouseDown(screen.getByLabelText("Кому передать лиды в работе"));
-    fireEvent.click(await screen.findByText("Борис Коллегин"));
+    const colleague = screen.getByLabelText("Кому передать лиды в работе");
+    await screen.findByRole("option", { name: "Борис Коллегин" });
+    fireEvent.change(colleague, { target: { value: "12" } });
     fireEvent.click(transfer);
 
     await waitFor(() => {

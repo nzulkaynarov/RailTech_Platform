@@ -107,6 +107,13 @@ test.describe("Ролевая матрица: роли — данные", () => 
       /База знаний/,
     ]);
     await settledScreenshot(page, "roles-employee-view");
+    // Поиск в шапке работает и без «Моей очереди»: только по разделам роли (лиды — да, клиенты — нет).
+    const search = page.getByRole("combobox", { name: "Глобальный поиск" });
+    await search.click();
+    await search.fill("Демо-Депо");
+    await expect(page.getByRole("option", { name: /L-2041/ })).toBeVisible();
+    await expect(page.getByRole("option", { name: /ИНН 300000001/ })).toHaveCount(0);
+    await search.press("Escape");
     await railLinks(page).filter({ hasText: "EDS" }).click();
     await expect(submenu.getByRole("link")).toHaveText([/Все документы/, /Счета и оплаты/]);
     // Название роли под аватаром — из данных.
@@ -176,6 +183,24 @@ test.describe("Ролевая матрица: роли — данные", () => 
     await expect(page.getByText("Роль удалена")).toBeVisible();
     await expect(page.getByRole("button", { name: "Склад", exact: true })).toHaveCount(0);
   });
+});
+
+test.describe("Ролевая матрица: директор", () => {
+  test.skip(({ isMobile }) => isMobile, "ширины задаёт сам тест");
+
+  for (const width of WIDTHS) {
+    test(`директор (Admin — чтение) на ${String(width)} px: матрицу ведёт администратор, axe 0`, async ({
+      page,
+    }) => {
+      await page.setViewportSize({ width, height: 900 });
+      await loginAndWait(page, "director@demo.example");
+      await spaGoto(page, "/admin/roles");
+      await expect(page.getByText("Ролевую матрицу ведёт администратор")).toBeVisible();
+      await expect(page.locator("table.pf-matrix")).toHaveCount(0);
+      await expectNoViolations(page, `директор ${String(width)}`);
+      await settledScreenshot(page, "roles-director-readonly");
+    });
+  }
 });
 
 test.describe("Ролевая матрица: ширины, axe", () => {
