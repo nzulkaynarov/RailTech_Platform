@@ -5,7 +5,8 @@ import { defineConfig, devices } from "@playwright/test";
 // E2E на MSW: dev-сервер vite в режиме mock (VITE_API_MOCKING=true) отвечает за BFF, стенд и бэкенды не нужны.
 // BASE_URL задан — тесты идут против готового адреса (стенд), сервер не поднимается; без стенда
 // сценарии, зависящие от MSW, пропускаются самим тестом.
-const PORT = 4173;
+// Порт dev-сервера — E2E_PORT (по умолчанию 4173): параллельные worktree запускают e2e на разных портах.
+const PORT = Number(process.env["E2E_PORT"] ?? "4173");
 const preinstalled = "/opt/pw-browsers/chromium";
 const launch =
   existsSync(preinstalled) && !process.env["CI"]
@@ -35,7 +36,8 @@ export default defineConfig({
         url: `http://localhost:${String(PORT)}`,
         // MSW включается здесь, а не в .env.mock: не зависит от файла, который легко потерять из-за .gitignore (.env.*).
         env: { VITE_API_MOCKING: "true" },
-        reuseExistingServer: !process.env["CI"],
+        // Чужой vite (другой worktree на том же порту) не подхватываем: занятый порт — ошибка. Явно: E2E_REUSE_SERVER=1.
+        reuseExistingServer: process.env["E2E_REUSE_SERVER"] === "1",
         timeout: 60_000,
       },
   projects: [
