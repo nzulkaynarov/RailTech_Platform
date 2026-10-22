@@ -636,3 +636,53 @@ async def test_invite_body_is_validated(web: Web, crm: CrmUsers, payload: dict[s
     assert response.status_code == 422
     assert response.json()["code"] == "VALIDATION_FAILED"
     assert crm.create_route.call_count == 0
+
+
+async def test_changing_own_roles_expires_the_profile_cache(web: Web) -> None:
+    """Свои роли изменены — следующий `/me` сразу идёт в CRM, а не ждёт 60 секунд кэша."""
+    be = web.be
+    fake = CrmUsers(be)
+    fake.users = {ADMIN_ID: crm_user(ADMIN_ID, "Иван Тестов", platform_roles=["ADMIN", "MANAGER"])}
+    await login_as(web, "ADMIN")
+    be.profile["platform_roles"] = ["ADMIN", "MANAGER"]
+    calls = be.crm_me.call_count
+
+    await web.client.get("/api/v1/me")
+    assert be.crm_me.call_count == calls  # кэш жив
+
+    response = await web.send("PATCH", f"/api/v1/admin/users/{ADMIN_ID}", json={"roles": ["ADMIN"]})
+    be.profile["platform_roles"] = ["ADMIN"]
+    me = (await web.client.get("/api/v1/me")).json()
+
+    assert response.status_code == 200
+    assert be.crm_me.call_count == calls + 1  # профиль перечитан сразу
+    assert me["roles"] == ["ADMIN"]
+
+
+async def test_changing_someone_elses_roles_keeps_the_profile_cache(
+    web: Web, crm: CrmUsers
+) -> None:
+    await login_as(web, "ADMIN")
+    calls = web.be.crm_me.call_count
+
+    await web.send("PATCH", "/api/v1/admin/users/11", json={"roles": ["SUPPLY"]})
+    await web.client.get("/api/v1/me")
+
+    assert web.be.crm_me.call_count == calls
+
+
+async def test_invite_when_crm_goes_down_after_create(web: Web, crm: CrmUsers) -> None:
+    """CRM не ответила на приглашение: 503 про CRM, не про почту; id сотрудника в деталях."""
+    await login_as(web, "ADMIN")
+    crm.invite_route.mock(side_effect=httpx.ConnectError("crm down"))
+
+    response = await web.send("POST", "/api/v1/admin/users/invite", json=INVITE)
+
+    assert response.status_code == 503
+    body = response.json()
+    assert body["code"] == "BACKEND_UNAVAILABLE"
+    assert body["source"] == "crm"
+    assert "CRM недоступна" in body["message"]
+    assert "почт" not in body["message"].lower().replace("отправлено", "")
+    assert body["details"]["employee_id"] == "101"
+    assert body["details"]["invite"] == "not_sent"

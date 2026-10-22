@@ -108,6 +108,28 @@ describe("Admin · Оргструктура (экран целиком на MSW)
     expect(me?.modules).toContain("admin");
   });
 
+  it("включённый после отключения, с ещё временным паролем, снова «Приглашён»", async () => {
+    signIn("admin@demo.example");
+    renderAt("/admin/org?employee=u-demo-new&panel=open");
+    const side = await panelEl();
+    await within(side).findByRole("heading", { level: 3, name: "Демо Новичков" });
+
+    fireEvent.click(within(side).getByRole("button", { name: "Отключить сотрудника" }));
+    fireEvent.click(within(side).getByRole("button", { name: "Отключить" }));
+    await within(side).findByText(/Сотрудник отключён и не может войти/);
+    expect(
+      within(screen.getByRole("row", { name: /Демо Новичков/ })).getByText("Отключён"),
+    ).toBeVisible();
+
+    fireEvent.click(within(side).getByRole("button", { name: "Включить сотрудника" }));
+    fireEvent.click(within(side).getByRole("button", { name: "Включить" }));
+    await waitFor(() => {
+      expect(
+        within(screen.getByRole("row", { name: /Демо Новичков/ })).getByText("Приглашён"),
+      ).toBeVisible();
+    });
+  });
+
   it("директор читает, но не меняет: ни приглашения, ни флажков", async () => {
     signIn("director@demo.example");
     renderAt("/admin/org?employee=u-demo-manager&panel=open");

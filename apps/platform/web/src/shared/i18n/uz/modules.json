@@ -330,7 +330,8 @@
         "consequenceMail": "Ko'rsatilgan pochtaga vaqtinchalik parolli xat yuboriladi; birinchi kirishda uni almashtirish kerak.",
         "consequenceListed": "Xodim ro'yxatda «Taklif qilingan» holatida paydo bo'ladi.",
         "notSent": "Xodim ro'yxatga «Taklif qilingan» holatida qo'shildi, lekin xat yuborilmadi: pochta ulanmagan yoki mavjud emas. Uni Admin · Integratsiyalar bo'limida ulang; taklifni qayta yuborish keyingi versiyada paydo bo'ladi.",
-        "openCard": "Kartochkani ochish"
+        "openCard": "Kartochkani ochish",
+        "notSentUnavailable": "Xodim ro'yxatga «Taklif qilingan» holatida qo'shildi, lekin CRM javob bermadi va xat yuborilmadi. Keyinroq takrorlang; taklifni qayta yuborish keyingi versiyada paydo bo'ladi."
       },
       "disable": {
         "button": "Xodimni o'chirish",

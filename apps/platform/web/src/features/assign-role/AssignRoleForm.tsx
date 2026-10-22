@@ -139,7 +139,7 @@ export function AssignRoleForm({ employee, selfId, otherActiveAdmins }: AssignRo
           {t("admin.org.form.save")}
         </Button>
       </div>
-      <Consequence items={items} />
+      {blocker ? null : <Consequence items={items} />}
     </form>
   );
 }

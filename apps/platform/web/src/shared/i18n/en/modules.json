@@ -330,7 +330,8 @@
         "consequenceMail": "An email with a temporary password goes to the address; it must be changed at first sign-in.",
         "consequenceListed": "The employee appears in the list with the status “Invited”.",
         "notSent": "The employee was added with the status “Invited”, but the email was not sent: mail is not connected or unavailable. Connect it in Admin · Integrations; resending the invitation will arrive in the next version.",
-        "openCard": "Open card"
+        "openCard": "Open card",
+        "notSentUnavailable": "The employee was added with the status “Invited”, but CRM did not respond and the email was not sent. Try again later; resending the invitation will arrive in the next version."
       },
       "disable": {
         "button": "Disable employee",

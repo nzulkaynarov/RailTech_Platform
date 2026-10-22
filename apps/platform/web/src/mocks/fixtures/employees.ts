@@ -108,3 +108,29 @@ export function isEmployeeDisabled(userId: string): boolean {
 }
 
 export { accessFor };
+
+/**
+ * Сотрудники с ещё временным паролем (`must_change_password` в CRM): после включения они снова «Приглашён», а не «Активен».
+ * Отключение статус «Приглашён» затирает, поэтому признак хранится отдельно.
+ */
+const PENDING_KEY = "rt-pf-mock-employees-pending";
+
+export function readPendingPasswordIds(): string[] {
+  try {
+    const raw = window.localStorage.getItem(PENDING_KEY);
+    if (raw) return JSON.parse(raw) as string[];
+  } catch {
+    // Хранилище недоступно — считаем по статусу в списке.
+  }
+  return readEmployees()
+    .filter((e) => e.status === "invited")
+    .map((e) => e.id);
+}
+
+export function writePendingPasswordIds(ids: string[]): void {
+  try {
+    window.localStorage.setItem(PENDING_KEY, JSON.stringify(ids));
+  } catch {
+    // Остаётся расчёт по статусу.
+  }
+}

@@ -40,7 +40,7 @@ export function InviteEmployeeForm({ onInvited, onOpenCard, onCancel }: InviteEm
   const noteId = useId();
   const [roles, setRoles] = useState<RoleCode[]>([]);
   const [rolesTouched, setRolesTouched] = useState(false);
-  const [notSentId, setNotSentId] = useState<string | null>(null);
+  const [notSent, setNotSent] = useState<{ id: string; crmDown: boolean } | null>(null);
   const invite = useEmployeeInvite((employee) => {
     void message.success(t("admin.org.invite.sent", { email: employee.email }));
     onInvited(employee);
@@ -49,7 +49,7 @@ export function InviteEmployeeForm({ onInvited, onOpenCard, onCancel }: InviteEm
   const submit = (values: Values) => {
     setRolesTouched(true);
     if (roles.length === 0) return;
-    setNotSentId(null);
+    setNotSent(null);
     invite.mutate(
       {
         data: {
@@ -65,7 +65,10 @@ export function InviteEmployeeForm({ onInvited, onOpenCard, onCancel }: InviteEm
             form.setFields([{ name: "email", errors: [t("admin.org.errors.EMAIL_EXISTS")] }]);
           } else if (error instanceof ApiError && error.details["invite"] === "not_sent") {
             const id = error.details["employee_id"];
-            setNotSentId(typeof id === "string" ? id : "");
+            setNotSent({
+              id: typeof id === "string" ? id : "",
+              crmDown: error.code === "BACKEND_UNAVAILABLE",
+            });
           }
         },
       },
@@ -85,7 +88,7 @@ export function InviteEmployeeForm({ onInvited, onOpenCard, onCancel }: InviteEm
   const fieldError =
     invite.isError &&
     !(invite.error instanceof ApiError && invite.error.code === "EMAIL_EXISTS") &&
-    notSentId === null;
+    notSent === null;
 
   return (
     <Form<Values>
@@ -134,18 +137,20 @@ export function InviteEmployeeForm({ onInvited, onOpenCard, onCancel }: InviteEm
         }}
         note={showRoleNote ? { id: noteId, text: t("admin.org.invite.needRole") } : null}
       />
-      {notSentId !== null ? (
+      {notSent !== null ? (
         <Alert
           type="warning"
           showIcon
           role="alert"
-          message={t("admin.org.invite.notSent")}
+          message={t(
+            notSent.crmDown ? "admin.org.invite.notSentUnavailable" : "admin.org.invite.notSent",
+          )}
           action={
-            notSentId ? (
+            notSent.id ? (
               <Button
                 size="small"
                 onClick={() => {
-                  onOpenCard(notSentId);
+                  onOpenCard(notSent.id);
                 }}
               >
                 {t("admin.org.invite.openCard")}

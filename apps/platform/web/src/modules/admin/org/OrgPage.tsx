@@ -91,16 +91,6 @@ export function OrgPage({ objectId }: { objectId?: string }) {
   const otherActiveAdmins = (id: string) =>
     items.filter((e) => e.id !== id && e.status !== "disabled" && e.roles.includes("ADMIN")).length;
 
-  const inviteButton = editable ? (
-    <Button
-      onClick={() => {
-        void navigate(inviteHref);
-      }}
-    >
-      {t("modules:admin.action")}
-    </Button>
-  ) : null;
-
   let body;
   if (list.isPending) {
     body = <Skeleton active paragraph={{ rows: 6 }} title={false} />;
@@ -206,7 +196,6 @@ export function OrgPage({ objectId }: { objectId?: string }) {
       <PageHeader
         title={title}
         subtitle={editable ? t("modules:admin.org.subtitle") : t("modules:admin.org.readOnly")}
-        extra={inviteButton}
       />
       <div ref={blockRef}>
         <Card styles={{ body: { padding: 0 } }}>

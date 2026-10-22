@@ -146,6 +146,7 @@ test.describe("Оргструктура: последний администра
     await expect(note).toBeVisible();
     await expect(panel.getByRole("button", { name: "Сохранить роли" })).toBeDisabled();
     await expect(panel.getByRole("button", { name: "Отключить сотрудника" })).toBeDisabled();
+    await expect(panel.getByRole("group", { name: "Что произойдёт" })).toHaveCount(0);
     await tallScreenshot(page, "org-last-admin");
     await expectNoViolations(page, "last admin");
 

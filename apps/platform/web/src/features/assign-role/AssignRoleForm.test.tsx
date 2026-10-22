@@ -110,7 +110,9 @@ describe("AssignRoleForm: выдача ролей", () => {
 
     expect(screen.getByText(/Вы единственный администратор/)).toBeVisible();
     expect(save()).toBeDisabled();
-    expect(screen.getByText("Вы потеряете доступ к разделу Admin.")).toBeVisible();
+    // при запрете — только причина, без обещаний «что произойдёт»
+    expect(screen.queryByRole("group", { name: "Что произойдёт" })).toBeNull();
+    expect(screen.queryByText(/Сотрудник увидит модули/)).toBeNull();
     // форма не отправляется и по Enter в поле должности
     fireEvent.submit(save().closest("form") as HTMLFormElement);
     expect(sent).toEqual([]);

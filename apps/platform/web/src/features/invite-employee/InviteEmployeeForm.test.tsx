@@ -166,6 +166,34 @@ describe("InviteEmployeeForm: приглашение по почте", () => {
     expect(onInvited).not.toHaveBeenCalled();
   });
 
+  it("CRM не ответила после создания: текст про CRM, а не про почту", async () => {
+    server.use(
+      http.post("*/admin/users/invite", () =>
+        HttpResponse.json(
+          {
+            code: "BACKEND_UNAVAILABLE",
+            message: "x",
+            source: "crm",
+            details: { employee_id: "101", invite: "not_sent" },
+          },
+          { status: 503 },
+        ),
+      ),
+    );
+    setup();
+    fill("Имя и фамилия", "Новый Сотрудник");
+    fill("Электронная почта", "new@demo.example");
+    fireEvent.click(screen.getByRole("checkbox", { name: /^Директор/ }));
+
+    submit();
+
+    const alert = await screen.findByRole("alert");
+    expect(alert).toHaveTextContent(/CRM не ответила/);
+    expect(alert).not.toHaveTextContent(/почта не подключена/);
+    fireEvent.click(screen.getByRole("button", { name: "Открыть карточку" }));
+    expect(onOpenCard).toHaveBeenCalledWith("101");
+  });
+
   it("«Отмена» закрывает форму", () => {
     setup();
     fireEvent.click(screen.getByRole("button", { name: "Отмена" }));

@@ -21,6 +21,7 @@ from app.schemas_admin import (
     EmployeeUpdate,
     to_employee,
 )
+from app.session import SessionData
 
 router = APIRouter(tags=["admin"])
 
@@ -28,9 +29,16 @@ Reader = Annotated[Authed, Depends(require("admin", "read"))]
 Writer = Annotated[Authed, Depends(require("admin", "full"))]
 EmployeeId = Annotated[str, Path(pattern=r"^[0-9]+$")]
 
+INVITE_CRM_UNAVAILABLE = (
+    "CRM недоступна, повторите позже. Сотрудник уже добавлен, но письмо не отправлено."
+)
 INVITE_NOT_SENT = (
     "Сотрудник добавлен, но письмо не отправлено: проверьте подключение почты в Admin · Интеграции."
 )
+
+
+def _expire_profile(data: SessionData) -> None:
+    data.profile_checked_at = 0.0
 
 
 def _users(authed: Authed) -> CrmUsers:
@@ -86,16 +94,26 @@ async def invite_employee(body: EmployeeInvite, authed: Writer) -> Employee:
     except PlatformError as exc:
         # Пользователь уже создан, временный пароль BFF наружу не отдаёт: письмо — единственный
         # путь. Повтор приглашения — отдельная операция (разрыв, Q-PLT-15-3), ошибка несёт id.
+        details = {
+            "employee_id": str(user["id"]),
+            "invite": "not_sent",
+            **(exc.body.details or {}),
+        }
+        if exc.status_code == status.HTTP_503_SERVICE_UNAVAILABLE:
+            # CRM не ответила: про почту сказать нечего, коннектор «Почта» мог быть исправен.
+            raise PlatformError(
+                "BACKEND_UNAVAILABLE",
+                INVITE_CRM_UNAVAILABLE,
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                source=exc.body.source,
+                details=details,
+            ) from exc
         raise PlatformError(
             "CONFLICT",
             INVITE_NOT_SENT,
             status_code=status.HTTP_409_CONFLICT,
             source=exc.body.source,
-            details={
-                "employee_id": str(user["id"]),
-                "invite": "not_sent",
-                **(exc.body.details or {}),
-            },
+            details=details,
         ) from exc
     return to_employee(user)
 
@@ -125,4 +143,8 @@ async def update_employee(id: EmployeeId, body: EmployeeUpdate, authed: Writer) 
         payload["position"] = (body.position or "").strip()
     if "is_active" in body.model_fields_set:
         payload["is_active"] = body.is_active
-    return to_employee(await _users(authed).update(id, payload))
+    employee = to_employee(await _users(authed).update(id, payload))
+    if id == str(authed.data.user_id):
+        # Свои роли изменены: следующий `/me` перечитывает профиль CRM, а не ждёт конца кэша (60 с).
+        await authed.service.store.update(authed.sid, _expire_profile)
+    return employee

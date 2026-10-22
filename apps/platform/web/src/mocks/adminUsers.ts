@@ -1,7 +1,13 @@
 import { HttpResponse, http } from "msw";
 
 import type { Employee, EmployeeInvite, EmployeeUpdate } from "../shared/api/generated/model";
-import { accessFor, readEmployees, writeEmployees } from "./fixtures/employees";
+import {
+  accessFor,
+  readEmployees,
+  readPendingPasswordIds,
+  writeEmployees,
+  writePendingPasswordIds,
+} from "./fixtures/employees";
 import { buildMe, readSession } from "./mockSession";
 
 function failure(
@@ -119,6 +125,11 @@ export const adminUsersHandlers = [
       );
     }
 
+    // Как CRM: у кого пароль ещё временный, после включения снова «Приглашён».
+    const pending = new Set(readPendingPasswordIds());
+    if (current.status === "invited") pending.add(current.id);
+    writePendingPasswordIds([...pending]);
+
     const roles = body.roles ?? current.roles;
     const next: Employee = {
       ...current,
@@ -127,11 +138,7 @@ export const adminUsersHandlers = [
       ...(body.is_active === undefined
         ? {}
         : {
-            status: body.is_active
-              ? current.status === "invited"
-                ? "invited"
-                : "active"
-              : "disabled",
+            status: body.is_active ? (pending.has(current.id) ? "invited" : "active") : "disabled",
           }),
     };
     if (body.position !== undefined) {
