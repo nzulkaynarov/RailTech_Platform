@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: RailTech Platform ERP — Integration API (CRM → ERP)
-  version: 0.6.0
+  version: 0.6.1
   summary: Пространство `/api/integration/v1/` — вызывает только CRM под сервисным токеном.
   description: |
     Контракт по `docs/CONTRACTS.md` §0 и §2. Версия 0 (M0-INF-02): форма запросов и ответов, по которой
@@ -25,6 +25,9 @@ info:
     0.6.0 (M3-ERP-05/CRM-10): сопряжение CRM ↔ ERP в один клик — `POST /pairing/accept` (код из ERP либо bootstrap без кода
     по доказательству `X-Pairing-Proof` от `PLATFORM_SSO_SECRET`, ADR-0009) и `POST /pairing/rotate` (ротация без простоя).
     Аддитивно: новые операции и коды ошибок; существующие операции не меняются.
+
+    0.6.1 (архитектор, хвост ревью #143): ротация принимает либо полностью новую тройку, либо точный повтор последней
+    применённой (идемпотентно); частичное совпадение с действующими значениями — 422 `PAIRING_PARTIAL_REPEAT`.
   contact:
     name: RailTech Platform — docs/CONTRACTS.md
 servers:
@@ -666,7 +669,7 @@ components:
       properties:
         detail:
           type: string
-          examples: [NOT_FOUND, IDEMPOTENCY_CONFLICT, EMAIL_CONFLICT, VALIDATION_ERROR, TOO_MANY_REQUESTS, PAIRING_CODE_INVALID, PAIRING_CODE_EXPIRED, PAIRING_CODE_USED, PAIRING_PROOF_INVALID, PAIRING_PROOF_EXPIRED, PAIRING_PROOF_REPLAYED, BOOTSTRAP_CLOSED]
+          examples: [NOT_FOUND, IDEMPOTENCY_CONFLICT, EMAIL_CONFLICT, VALIDATION_ERROR, TOO_MANY_REQUESTS, PAIRING_CODE_INVALID, PAIRING_CODE_EXPIRED, PAIRING_CODE_USED, PAIRING_PROOF_INVALID, PAIRING_PROOF_EXPIRED, PAIRING_PROOF_REPLAYED, BOOTSTRAP_CLOSED, PAIRING_PARTIAL_REPEAT]
       additionalProperties: false
 
     Language:
@@ -1464,7 +1467,10 @@ components:
 
     PairingRotateRequest:
       type: object
-      description: Новая тройка секретов; значения различаются между собой и от действовавших до первого применения этой тройки (повтор той же тройки идемпотентен).
+      description: >-
+        Новая тройка секретов; значения различаются между собой и от действовавших до первого применения этой тройки.
+        Точный повтор последней применённой тройки — идемпотентный 200. Частичное совпадение (хотя бы одно значение
+        совпадает с действующим, но тройка не совпадает с последней применённой целиком) — 422 `PAIRING_PARTIAL_REPEAT`.
       required: [crm_to_erp_token, erp_to_crm_token, webhook_secret]
       properties:
         crm_to_erp_token:

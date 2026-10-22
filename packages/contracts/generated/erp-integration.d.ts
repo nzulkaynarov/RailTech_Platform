@@ -342,6 +342,7 @@ export interface components {
        * @example PAIRING_PROOF_EXPIRED
        * @example PAIRING_PROOF_REPLAYED
        * @example BOOTSTRAP_CLOSED
+       * @example PAIRING_PARTIAL_REPEAT
        */
       detail: string;
     };
@@ -785,7 +786,7 @@ export interface components {
       /** @description Версия ERP (как в `Health.version`) */
       erp_version: string;
     };
-    /** @description Новая тройка секретов; значения различаются между собой и от действовавших до первого применения этой тройки (повтор той же тройки идемпотентен). */
+    /** @description Новая тройка секретов; значения различаются между собой и от действовавших до первого применения этой тройки. Точный повтор последней применённой тройки — идемпотентный 200. Частичное совпадение (хотя бы одно значение совпадает с действующим, но тройка не совпадает с последней применённой целиком) — 422 `PAIRING_PARTIAL_REPEAT`. */
     PairingRotateRequest: {
       crm_to_erp_token: components["schemas"]["PairingSecret"];
       erp_to_crm_token: components["schemas"]["PairingSecret"];

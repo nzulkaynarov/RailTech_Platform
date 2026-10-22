@@ -85,7 +85,7 @@ ERP, которые строит `make tokens`; тесты контраста. �
   (`03-frontend.md` §3, таблица «Компонентные токены»), если генератор их держит, иначе — в INF-P0-3 в `theme.ts` Платформы.
 
 Готово, когда: `make -C packages/ui-tokens check`, `make check-crm`, `make check-cabinet`, `make check-erp` (только фронтенд-часть,
-если полная долгая — `cd apps/erp/frontend && npm run test` и `npm run typecheck`) зелёные; тест контраста ui-tokens проверяет
+если полная долгая — `cd apps/erp/frontend && npm run test` и `npm run lint:tsc`) зелёные; тест контраста ui-tokens проверяет
 каждую пару «текст / фон» ≥ 4.5:1; в PR — таблица «было → стало» и скриншоты входа Cabinet 1440 и 390 (MSW-режим Cabinet, без
 стенда).
 
