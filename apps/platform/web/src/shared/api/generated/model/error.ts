@@ -26,6 +26,11 @@
  * 0.2.0 (волна 8): смена пароля (`POST /auth/change-password`, `Session.must_change_password`); Admin · Оргструктура —
  * сотрудники, выдача ролей Платформы, приглашение по почте (`/admin/users*`, раздел матрицы `admin`).
  *
+ * 0.2.3 (Q-PLT-10-1): вход при недоступной ERP проходит (ERP подключается при первом обращении, агрегаты отдают
+ * `sources.erp = unavailable`); 503 на входе — только если не отвечает CRM; отключённый сотрудник получает
+ * `INVALID_CREDENTIALS` (CRM не различает «нет такого» и «отключён» — защита от перебора), `USER_DISABLED` остаётся для
+ * будущих путей; новый код `ACCOUNT_LOCKED` (423) — учётная запись временно заблокирована после неудачных попыток.
+ *
  * 0.2.2 (Q-PLT-12-1): `active_role` — «вид»: `modules`, `resources`, `restricted_fields` и очередь считаются по активной
  * роли, если она задана; право на операцию BFF всегда проверяет по объединению всех ролей сотрудника (смена активной роли
  * права не сужает и не расширяет). Пункты меню привязаны к разделам матрицы секцией `menu` в `platform-rbac.yaml`.
@@ -36,13 +41,13 @@
  * Лимиты: вход — 10 в минуту на IP и e-mail; остальные запросы — 300 в минуту на сессию; превышение — 429
  * `TOO_MANY_REQUESTS` с `Retry-After`.
  *
- * OpenAPI spec version: 0.2.2
+ * OpenAPI spec version: 0.2.3
  */
 import type { ErrorDetails } from "./errorDetails";
 import type { ErrorSource } from "./errorSource";
 
 export interface Error {
-  /** Стабильный код (`INVALID_CREDENTIALS`, `SESSION_EXPIRED`, `CSRF_FAILED`, `FORBIDDEN`, `NOT_FOUND`, `VALIDATION_FAILED`, `TOO_MANY_REQUESTS`, `BACKEND_UNAVAILABLE`, `NO_PLATFORM_ROLE`, `USER_DISABLED`, `CONFLICT`, `WRONG_PASSWORD`, `EMAIL_EXISTS`, `LAST_ADMIN`, `INTERNAL_ERROR`, `BAD_REQUEST`, `METHOD_NOT_ALLOWED`, `HTTP_<статус>`) */
+  /** Стабильный код (`INVALID_CREDENTIALS`, `SESSION_EXPIRED`, `CSRF_FAILED`, `FORBIDDEN`, `NOT_FOUND`, `VALIDATION_FAILED`, `TOO_MANY_REQUESTS`, `BACKEND_UNAVAILABLE`, `NO_PLATFORM_ROLE`, `USER_DISABLED`, `ACCOUNT_LOCKED`, `CONFLICT`, `WRONG_PASSWORD`, `EMAIL_EXISTS`, `LAST_ADMIN`, `INTERNAL_ERROR`, `BAD_REQUEST`, `METHOD_NOT_ALLOWED`, `HTTP_<статус>`) */
   code: string;
   /** Текст для сотрудника на его языке */
   message: string;
