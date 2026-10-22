@@ -22,4 +22,4 @@ async def search(
     authed: SearchAuthed,
     q: Annotated[str, Query(min_length=2, max_length=100)],
 ) -> SearchResult:
-    return await service.search(Feed(authed), roles_of_view(authed, None), q)
+    return await service.search(Feed(authed), roles_of_view(authed, None).access, q)

@@ -9,8 +9,8 @@
 один активный директор (роль `DIRECTOR`, если он уже был) — иначе 409 `last_admin`/`last_director`.
 """
 
-from collections.abc import Iterable, Sequence
-from dataclasses import dataclass, replace
+from collections.abc import Iterable, Mapping, Sequence
+from dataclasses import dataclass, field, replace
 from typing import TYPE_CHECKING
 
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -25,6 +25,11 @@ from app.domain.platform_roles import (
     normalize_position,
     role_code_for,
 )
+from app.domain.platform_roles_generated import (
+    ROLE_ACCESS,
+    ROLE_RESTRICTED_FIELDS,
+    SYSTEM_ROLE_CODES,
+)
 from app.models.platform_roles import PlatformRole
 from app.repositories import platform_roles as repo
 
@@ -38,20 +43,33 @@ DIRECTOR_CODE = "DIRECTOR"
 
 @dataclass(frozen=True, slots=True)
 class RoleRef:
-    """Ссылка на роль в карточке сотрудника."""
+    """Ссылка на роль в карточке сотрудника и её матрица (матрицу отдаёт только `/me`, R-2)."""
 
     id: int
     name: str
     system: bool
     code: str | None = None
+    access: Mapping[str, str] = field(default_factory=dict)
+    restricted_fields: tuple[str, ...] = ()
 
 
 def grants_of(roles: Iterable[PlatformRole]) -> list[RoleGrant]:
     return [RoleGrant(dict(r.access), tuple(r.restricted_fields), r.code) for r in roles]
 
 
+def _matrix(role: PlatformRole) -> tuple[dict[str, str], tuple[str, ...]]:
+    """Матрица роли: у системных — из каталога (неизменна, ADR-0012 п. 2), у прочих — данные."""
+    if role.is_system and role.code in SYSTEM_ROLE_CODES:
+        return dict(ROLE_ACCESS[role.code]), tuple(ROLE_RESTRICTED_FIELDS[role.code])
+    return dict(role.access), tuple(role.restricted_fields)
+
+
 def role_refs(roles: Iterable[PlatformRole]) -> list[RoleRef]:
-    return [RoleRef(r.id, r.name, r.is_system, r.code) for r in roles]
+    refs: list[RoleRef] = []
+    for r in roles:
+        access, fields = _matrix(r)
+        refs.append(RoleRef(r.id, r.name, r.is_system, r.code, access, fields))
+    return refs
 
 
 def legacy_codes(roles: Iterable[PlatformRole]) -> list[str]:

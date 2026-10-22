@@ -1,118 +1,244 @@
-# Ролевая матрица Платформы — единственный источник для BFF и SPA (ADR-0011, apps/platform/docs/02-architecture.md §6).
-# Основание: SPEC-v3 §4.1 (роли), §4.2 (матрица), §4.3 и apps/platform/docs/04-integration-map.md §4 (карта в CRM и ERP).
-# Уровни: full — полный доступ, read — только чтение, hidden — раздел скрыт (в рейле и меню не показывается, по прямому
-# URL — 403 с предложением написать администратору). У сотрудника с несколькими ролями берётся максимум: full > read > hidden.
-# Права на операции решают бэкенды (CRM casbin, ERP Permission); эта матрица — видимость и маршруты.
-# Изменение файла — PR с тестом матрицы в BFF и SPA (решение владельца 2026-10-22, вопрос 8).
-# Валидация — platform-rbac.schema.json (make contracts).
-version: 1
+# Каталог возможностей Платформы, версия 2 (ADR-0012). Роли — данные (CRM), каталог — код и контракт.
+# Основание: ADR-0012, docs/runbooks/wave9-roles.md §3.2, SPEC-v3 §4.2, apps/platform/docs/04-integration-map.md §4.
+# Что в каталоге: разделы (`resources`) с уровнями доступа и отображением в права бэкендов (CRM casbin и ERP `Permission`),
+# пункты меню (`menu`), поля с ограничением (`restricted_fields`), виды работы «Моей очереди» (`queue`), две системные роли
+# (`system_roles`, неизменны), шаблоны ролей (`templates`, при первом запуске создаются обычными редактируемыми ролями)
+# и правило базовой роли CRM для старого фронта (`crm_base_role`, до T4).
+# Уровни: full — полный доступ, read — только чтение, скрыто — раздела нет в `access` роли. У сотрудника с несколькими ролями
+# берётся максимум по разделу (full > read), поля с ограничением объединяются. Права бэкенда накапливаются: уровень `full`
+# включает права уровня `read` (списки `full` повторяют `read` для читаемости; раздел без списка `full` даёт то же, что `read`).
+# Правила: каждый код права ERP — из `ErpPermission` шва (openapi/erp-integration.yaml); каждое право CRM — `ресурс:действие`
+# из каталога apps/crm/backend/app/security/rbac.py (CATALOG). Обе сверки — в тестах CRM и в схеме (enum).
+# Изменение файла — PR с тестом каталога. Валидация — platform-rbac.schema.json (make contracts).
+# Единственный каталог ролей в packages/contracts (R-2): версия 1 (шесть ролей кодом) удалена, тест «ровно один каталог» —
+# apps/platform/bff/tests/test_rbac_generated.py. Генераторы: CRM (`make -C apps/crm platform-roles`), BFF и web
+# (`make -C apps/platform rbac`).
+version: 2
 
-roles:
-  MANAGER:
-    name: { ru: Менеджер, uz: Menejer, en: Manager }
-    crm_base_role: manager
-    erp_role_codes: [VIEWER]
-    erp_extra_permissions: [deal.manage]
-    queue: [answer_lead, take_lead, create_request, service_request]
-  DIRECTOR:
-    name: { ru: Директор, uz: Direktor, en: Director }
-    crm_base_role: viewer
-    erp_role_codes: [HEAD]
-    erp_extra_permissions: []
-    queue: [resolve_letter, approve_quote, approve_memo, problem_project]
-  SUPPLY:
-    name: { ru: Снабженец, uz: Ta'minotchi, en: Supply specialist }
-    crm_base_role: viewer
-    erp_role_codes: [CATALOG_SUPPLY, FULFILLMENT]
-    erp_extra_permissions: [quote.build, quote.edit_pricing]
-    queue: [calc_task, supplier_overdue]
-  ENGINEER:
-    name: { ru: Гл. инженер, uz: Bosh muhandis, en: Chief engineer }
-    crm_base_role: viewer
-    erp_role_codes: [FULFILLMENT]
-    erp_extra_permissions: [quote.build]
-    queue: [calc_task]
-  ACCOUNTANT:
-    name: { ru: Бухгалтер, uz: Buxgalter, en: Accountant }
-    # manager — чтобы отвечать клиенту во внешнем чате (Chats · Внешний = full); остальные разделы CRM скрывает матрица.
-    # CRM-01 заменяет базовые роли собственными ролями casbin по этой матрице.
-    crm_base_role: manager
-    erp_role_codes: [FINANCE]
-    erp_extra_permissions: [contract.manage, fulfillment.act]
-    queue: [confirm_payment, issue_invoice, issue_contract, attach_scan, pay_memo, overdue_invoice]
+system_roles:
   ADMIN:
     name: { ru: Администратор, uz: Administrator, en: Administrator }
-    crm_base_role: admin
-    erp_role_codes: []
-    erp_extra_permissions: []
-    queue: [ticket, integration_issue]
+    access: { admin: full, company.settings: full, dashboard.queue: full, chats.internal: full, eds.memo.create: full }
+    restricted_fields: []
+  DIRECTOR:
+    name: { ru: Директор, uz: Direktor, en: Director }
+    access:
+      dashboard.queue: full
+      dashboard.summary: full
+      crm.leads: full
+      crm.clients: full
+      eds.inbox: full
+      eds.drafts: full
+      eds.projects: full
+      eds.payments: full
+      eds.memo.create: full
+      eds.memo.approve: full
+      erp.calc: full
+      erp.calc.goods: full
+      erp.calc.services: full
+      erp.stock: full
+      chats.internal: full
+      chats.external: full
+      company.settings: full
+      admin: read
+    restricted_fields: [cost_margin, supplier_prices]
 
-# Порядок строк и уровни — SPEC-v3 §4.2 дословно. Колонки: MANAGER, DIRECTOR, SUPPLY, ENGINEER, ACCOUNTANT, ADMIN.
+# Шаблоны — строки матрицы SPEC-v3 §4.2 (колонки MANAGER, SUPPLY, ENGINEER, ACCOUNTANT) + два новых раздела расчёта.
+templates:
+  MANAGER:
+    name: { ru: Менеджер, uz: Menejer, en: Manager }
+    access:
+      dashboard.queue: full
+      crm.leads: full
+      crm.clients: full
+      eds.inbox: read
+      eds.drafts: read
+      eds.projects: read
+      eds.payments: read
+      eds.memo.create: full
+      erp.stock: read
+      chats.internal: full
+      chats.external: full
+    restricted_fields: []
+  SUPPLY:
+    name: { ru: Снабженец, uz: Ta'minotchi, en: Supply specialist }
+    access:
+      dashboard.queue: full
+      crm.clients: read
+      eds.projects: read
+      eds.memo.create: full
+      erp.calc: full
+      erp.calc.goods: full
+      erp.stock: full
+      chats.internal: full
+    restricted_fields: [cost_margin, supplier_prices]
+  ENGINEER:
+    name: { ru: Гл. инженер, uz: Bosh muhandis, en: Chief engineer }
+    access:
+      dashboard.queue: full
+      crm.clients: read
+      eds.projects: read
+      eds.memo.create: full
+      erp.calc: full
+      erp.calc.services: full
+      erp.stock: full
+      chats.internal: full
+    restricted_fields: []
+  ACCOUNTANT:
+    name: { ru: Бухгалтер, uz: Buxgalter, en: Accountant }
+    access:
+      dashboard.queue: full
+      dashboard.summary: read
+      crm.clients: read
+      eds.inbox: read
+      eds.projects: full
+      eds.payments: full
+      eds.memo.create: full
+      erp.calc: read
+      erp.stock: read
+      chats.internal: full
+      chats.external: full
+    restricted_fields: [totals_only, supplier_prices]
+
+# Базовая роль CRM (admin|manager|viewer) для старого фронта до T4: максимум по ролям сотрудника.
+# Роль с кодом из `by_code` (системные и шаблоны) — как в версии 1; роль без кода — по `by_access`; иначе viewer.
+crm_base_role:
+  by_code:
+    MANAGER: manager
+    DIRECTOR: viewer
+    SUPPLY: viewer
+    ENGINEER: viewer
+    ACCOUNTANT: manager
+    ADMIN: admin
+  by_access:
+    admin: [{ resource: admin, level: full }]
+    manager: [{ resource: crm.leads, level: full }]
+
 resources:
   - key: dashboard.queue
     module: dashboard
     label: { ru: "Dashboard · Моя очередь", uz: "Dashboard · Mening navbatim", en: "Dashboard · My queue" }
-    access: { MANAGER: full, DIRECTOR: full, SUPPLY: full, ENGINEER: full, ACCOUNTANT: full, ADMIN: full }
   - key: dashboard.summary
     module: dashboard
     label: { ru: "Dashboard · Сводка по компании", uz: "Dashboard · Kompaniya bo'yicha xulosa", en: "Dashboard · Company summary" }
-    access: { MANAGER: hidden, DIRECTOR: full, SUPPLY: hidden, ENGINEER: hidden, ACCOUNTANT: read, ADMIN: hidden }
+    backend:
+      crm: { read: [dashboard:read, spend:read] }
+      erp: { full: [data.export] }
   - key: crm.leads
     module: crm
     label: { ru: "CRM · Все сообщения, Все лиды, Каналы связи, База знаний", uz: "CRM · Xabarlar, lidlar, aloqa kanallari, bilimlar bazasi", en: "CRM · Messages, leads, channels, knowledge base" }
-    access: { MANAGER: full, DIRECTOR: read, SUPPLY: hidden, ENGINEER: hidden, ACCOUNTANT: hidden, ADMIN: hidden }
+    backend:
+      crm:
+        read: [leads:read, stream:read, dashboard:read, kb:read]
+        full: [leads:read, leads:take, leads:work, leads:reply, leads:note, leads:assist, leads:create, stream:read, dashboard:read, kb:read, reply_templates:read]
   - key: crm.clients
     module: crm
     label: { ru: "CRM · Все клиенты, Все заявки, Создать заявку", uz: "CRM · Mijozlar, arizalar, ariza yaratish", en: "CRM · Clients, requests, create request" }
-    access: { MANAGER: full, DIRECTOR: read, SUPPLY: read, ENGINEER: read, ACCOUNTANT: read, ADMIN: hidden }
+    backend:
+      crm:
+        read: [clients:read, deals:read, documents:read]
+        full: [clients:read, clients:write, deals:read, deals:write, documents:read, documents:write]
+      erp: { full: [deal.manage] }  # «Создать заявку» — передача в ERP
   - key: eds.inbox
     module: eds
     label: { ru: "EDS · Входящие · резолюция", uz: "EDS · Kiruvchi · rezolyutsiya", en: "EDS · Inbox · resolution" }
-    access: { MANAGER: read, DIRECTOR: full, SUPPLY: hidden, ENGINEER: hidden, ACCOUNTANT: read, ADMIN: hidden }
+    backend:
+      erp: { full: [deal.assign] }
   - key: eds.drafts
     module: eds
     label: { ru: "EDS · Черновик КП · одобрение и отправка", uz: "EDS · TT qoralamasi · tasdiqlash va yuborish", en: "EDS · Draft quote · approval and sending" }
-    access: { MANAGER: read, DIRECTOR: full, SUPPLY: hidden, ENGINEER: hidden, ACCOUNTANT: hidden, ADMIN: hidden }
+    backend:
+      erp: { full: [quote.review, quote.approve_final, quote.send] }
   - key: eds.projects
     module: eds
     label: { ru: "EDS · Все проекты · договор, счёт, акт, сканы", uz: "EDS · Loyihalar · shartnoma, hisob, dalolatnoma, skanlar", en: "EDS · Projects · contract, invoice, act, scans" }
-    access: { MANAGER: read, DIRECTOR: full, SUPPLY: read, ENGINEER: read, ACCOUNTANT: full, ADMIN: hidden }
+    backend:
+      erp: { full: [contract.manage, contract.sign, fulfillment.act] }
   - key: eds.payments
     module: eds
     label: { ru: "EDS · Счета и оплаты · подтвердить оплату, запросить платёжку", uz: "EDS · Hisoblar va to'lovlar", en: "EDS · Invoices and payments" }
-    access: { MANAGER: read, DIRECTOR: read, SUPPLY: hidden, ENGINEER: hidden, ACCOUNTANT: full, ADMIN: hidden }
+    backend:
+      erp: { full: [finance.invoice, finance.payment, finance.rates, data.export] }
   - key: eds.memo.create
     module: eds
     label: { ru: "EDS · Служебная записка · создать", uz: "EDS · Xizmat xati · yaratish", en: "EDS · Memo · create" }
-    access: { MANAGER: full, DIRECTOR: full, SUPPLY: full, ENGINEER: full, ACCOUNTANT: full, ADMIN: full }
   - key: eds.memo.approve
     module: eds
     label: { ru: "EDS · Служебная записка · согласовать", uz: "EDS · Xizmat xati · kelishish", en: "EDS · Memo · approve" }
-    access: { MANAGER: hidden, DIRECTOR: full, SUPPLY: hidden, ENGINEER: hidden, ACCOUNTANT: hidden, ADMIN: hidden }
   - key: erp.calc
     module: erp
     label: { ru: "ERP · Все запросы, Расчёт", uz: "ERP · So'rovlar, hisob-kitob", en: "ERP · Requests, calculation" }
-    access: { MANAGER: hidden, DIRECTOR: full, SUPPLY: full, ENGINEER: full, ACCOUNTANT: read, ADMIN: hidden }
+    backend:
+      erp: { full: [deal.manage, quote.build, quote.edit_pricing] }
+  # Виза строки расчёта по типу позиции вместо ролей SUPPLY и ENGINEER в процессе (ADR-0012 п. 6).
+  - key: erp.calc.goods
+    module: erp
+    levels: [full]
+    label: { ru: "ERP · Расчёт · виза по товарам и складу", uz: "ERP · Hisob-kitob · tovarlar va ombor vizasi", en: "ERP · Calculation · goods and stock sign-off" }
+    backend:
+      erp: { full: [quote.build, quote.edit_pricing] }
+  - key: erp.calc.services
+    module: erp
+    levels: [full]
+    label: { ru: "ERP · Расчёт · виза по услугам", uz: "ERP · Hisob-kitob · xizmatlar vizasi", en: "ERP · Calculation · services sign-off" }
+    backend:
+      erp: { full: [quote.build] }
   - key: erp.stock
     module: erp
     label: { ru: "ERP · Склад, Справочники, Документация", uz: "ERP · Ombor, ma'lumotnomalar, hujjatlar", en: "ERP · Stock, catalogs, documentation" }
-    access: { MANAGER: read, DIRECTOR: full, SUPPLY: full, ENGINEER: full, ACCOUNTANT: read, ADMIN: hidden }
+    backend:
+      erp: { full: [catalog.manage, catalog.publish, supply.manage, fulfillment.manage] }
   - key: chats.internal
     module: chats
     label: { ru: "Chats · Внутренний (проекты, команда)", uz: "Chats · Ichki (loyihalar, jamoa)", en: "Chats · Internal (projects, team)" }
-    access: { MANAGER: full, DIRECTOR: full, SUPPLY: full, ENGINEER: full, ACCOUNTANT: full, ADMIN: full }
   - key: chats.external
     module: chats
     label: { ru: "Chats · Внешний (клиент: Telegram-бот, почта)", uz: "Chats · Tashqi (mijoz: Telegram-bot, pochta)", en: "Chats · External (client: Telegram bot, email)" }
-    access: { MANAGER: full, DIRECTOR: read, SUPPLY: hidden, ENGINEER: hidden, ACCOUNTANT: full, ADMIN: hidden }
+    backend:
+      crm:
+        read: [leads:read]
+        full: [leads:read, leads:reply, leads:note, leads:assist]
   - key: admin
     module: admin
     label: { ru: "Admin · Роли, Оргструктура, Интеграции, Тикеты", uz: "Admin · Rollar, tuzilma, integratsiyalar, tiketlar", en: "Admin · Roles, org chart, integrations, tickets" }
-    access: { MANAGER: hidden, DIRECTOR: read, SUPPLY: hidden, ENGINEER: hidden, ACCOUNTANT: hidden, ADMIN: full }
+    backend:
+      crm:
+        read: [users:read, integrations:read, system:read, external_services:read, audit:read]
+        full:
+          - users:read
+          - users:write
+          - settings:read
+          - settings:write
+          - integrations:read
+          - integrations:write
+          - models:read
+          - models:test
+          - models:write
+          - system:read
+          - external_services:read
+          - external_services:write
+          - backups:read
+          - backups:write
+          - audit:read
+          - spend:read
+          - kb:read
+          - kb:write
+          - reply_templates:read
+          - reply_templates:write
+          - sandbox:use
+          - export:read
+      erp: { full: [team.manage] }
+  # Реквизиты, шаблоны документов, нумерация, условия оплаты компании (решение архитектора по Q-R1-1):
+  # у ролей из шаблонов раздела нет, у директора и администратора — full.
+  - key: company.settings
+    module: admin
+    label: { ru: "Компания: реквизиты, шаблоны документов, нумерация, условия оплаты", uz: "Kompaniya: rekvizitlar, hujjat shablonlari, raqamlash, to'lov shartlari", en: "Company: details, document templates, numbering, payment terms" }
+    backend:
+      erp: { full: [settings.edit, settings.charge_templates] }
 
-# Пункты меню модулей (SPEC-v3 §6.2) → разделы матрицы. Матрица §4.2 остаётся дословной; пункт виден, если у сотрудника
-# есть хотя бы один из разделов `any_of` (уровень не hidden). Содержимое смешанных реестров («Все документы», «Все чаты»)
-# BFF фильтрует по разделу каждого типа документа или чата. Q-PLT-12-2.
+# Пункты меню модулей (SPEC-v3 §6.2) → разделы. Пункт виден, если у сотрудника есть хотя бы один из разделов `any_of`
+# (раздел есть в объединённом `access`). Содержимое смешанных реестров («Все документы», «Все чаты») BFF фильтрует по разделу
+# каждого типа документа или чата. Q-PLT-12-2.
 menu:
   dashboard:
     queue: [dashboard.queue]
@@ -149,16 +275,38 @@ menu:
     org: [admin]
     integrations: [admin]
     tickets: [admin]
+    company: [company.settings]
 
-# Поля с ограничением внутри экранов (SPEC-v3 §4.2, последний абзац). BFF вырезает поле из ответа, если ни одна роль
-# сотрудника его не видит; SPA скрывает компонентом <Restricted>.
+# Поля с ограничением внутри экранов (SPEC-v3 §4.2). Роль перечисляет поля, которые она ВИДИТ; поле скрыто, если ни одна роль
+# сотрудника его не видит. Скрытие `supplier_prices` и `totals_only` делает BFF (у ERP для них нет отдельного права).
 restricted_fields:
   cost_margin:
     description: { ru: "Себестоимость и маржа", uz: "Tannarx va marja", en: "Cost and margin" }
-    visible_to: [DIRECTOR, SUPPLY]
-  totals_only:
-    description: { ru: "Только итоговые суммы расчёта (без себестоимости по строкам)", uz: "Faqat jami summalar", en: "Totals only" }
-    visible_to: [ACCOUNTANT]
+    backend: { erp: [quote.view_cost_margin] }
   supplier_prices:
     description: { ru: "Цены поставщиков", uz: "Yetkazib beruvchi narxlari", en: "Supplier prices" }
-    visible_to: [DIRECTOR, SUPPLY, ACCOUNTANT]
+    backend: { erp: [] }
+  totals_only:
+    description: { ru: "Только итоговые суммы расчёта (без себестоимости по строкам)", uz: "Faqat jami summalar", en: "Totals only" }
+    backend: { erp: [] }
+
+# Вид работы «Моей очереди» → что нужно сотруднику (раздел и уровень не ниже). Набор — QueueItemKind контракта BFF.
+queue:
+  answer_lead: { resource: crm.leads, level: full }
+  take_lead: { resource: crm.leads, level: full }
+  create_request: { resource: crm.clients, level: full }
+  service_request: { resource: crm.clients, level: full }
+  resolve_letter: { resource: eds.inbox, level: full }
+  approve_quote: { resource: eds.drafts, level: full }
+  approve_memo: { resource: eds.memo.approve, level: full }
+  problem_project: { resource: eds.projects, level: full }
+  calc_task: { resource: erp.calc, level: full }
+  supplier_overdue: { resource: erp.stock, level: full }
+  confirm_payment: { resource: eds.payments, level: full }
+  issue_invoice: { resource: eds.payments, level: full }
+  issue_contract: { resource: eds.projects, level: full }
+  attach_scan: { resource: eds.projects, level: full }
+  pay_memo: { resource: eds.payments, level: full }
+  overdue_invoice: { resource: eds.payments, level: full }
+  ticket: { resource: admin, level: full }
+  integration_issue: { resource: admin, level: full }

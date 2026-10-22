@@ -5440,7 +5440,7 @@
           },
           "platform_role_refs": {
             "items": {
-              "$ref": "#/components/schemas/PlatformRoleRef"
+              "$ref": "#/components/schemas/PlatformRoleGrantRef"
             },
             "title": "Platform Role Refs",
             "type": "array"
@@ -6042,6 +6042,61 @@
           "name"
         ],
         "title": "PlatformRoleCreate",
+        "type": "object"
+      },
+      "PlatformRoleGrantRef": {
+        "description": "Роль Платформы с матрицей — только в `/me` (R-2, ADR-0012 п. 5).\n\nBFF Платформы вычисляет по ней разделы сотрудника (объединение ролей) и «вид» по активной роли.\nУ системных ролей — матрица каталога. В `/users` матрицы нет: администратор читает их через\n`/api/v1/platform-roles`.",
+        "properties": {
+          "access": {
+            "additionalProperties": {
+              "enum": [
+                "full",
+                "read"
+              ],
+              "type": "string"
+            },
+            "title": "Access",
+            "type": "object"
+          },
+          "code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Code"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "restricted_fields": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Restricted Fields",
+            "type": "array"
+          },
+          "system": {
+            "title": "System",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "system",
+          "access",
+          "restricted_fields"
+        ],
+        "title": "PlatformRoleGrantRef",
         "type": "object"
       },
       "PlatformRoleOut": {

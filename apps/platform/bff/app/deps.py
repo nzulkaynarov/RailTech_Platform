@@ -15,9 +15,9 @@ from app.clients.base import Backend
 from app.config import Settings
 from app.cookies import CSRF_HEADER, SESSION_COOKIE
 from app.errors import PlatformError, session_expired
-from app.rbac import Need, allows, known_roles
-from app.rbac_generated import ACCESS, RoleCode
-from app.session import SessionData
+from app.rbac import Access, Need, allows, fields_of, merge
+from app.rbac_generated import RESOURCE_MODULE
+from app.session import SessionData, SessionRole
 
 _SAFE_METHODS = frozenset({"GET", "HEAD", "OPTIONS"})
 
@@ -71,9 +71,19 @@ class Authed:
     service: AuthService
 
     @property
-    def roles(self) -> list[RoleCode]:
+    def roles(self) -> list[SessionRole]:
         """Все роли сотрудника: права на операции считаются по ним (активная роль не влияет)."""
-        return known_roles(self.data.platform_roles)
+        return list(self.data.roles)
+
+    @property
+    def access(self) -> Access:
+        """Объединение матриц всех ролей сотрудника (права операций)."""
+        return merge(self.data.roles)
+
+    @property
+    def fields(self) -> list[str]:
+        """Поля с ограничением по объединению ролей (вырезание из ответов бэкендов)."""
+        return fields_of(self.data.roles)
 
     async def call(
         self,
@@ -108,13 +118,13 @@ AuthedDep = Annotated[Authed, Depends(get_authed)]
 
 
 def require(resource: str, need: Need = "read") -> Callable[[Authed], Awaitable[Authed]]:
-    """Зависимость маршрута: раздел матрицы доступен ролям сотрудника не ниже `need`.
+    """Зависимость маршрута: раздел каталога доступен ролям сотрудника не ниже `need`.
 
     Проверка идёт по объединению всех ролей (Q-PLT-12-1). Пока не сменён обязательный пароль,
     недоступно всё, кроме смены пароля и профиля. Неизвестный раздел — ошибка при описании маршрута.
     """
-    if resource not in ACCESS:
-        raise KeyError(f"нет раздела матрицы: {resource}")
+    if resource not in RESOURCE_MODULE:
+        raise KeyError(f"нет раздела каталога: {resource}")
 
     async def dependency(authed: AuthedDep) -> Authed:
         # Профиль CRM (кэш 60 с): роль, снятая в CRM, перестаёт действовать и без запроса /me.
@@ -126,7 +136,7 @@ def require(resource: str, need: Need = "read") -> Callable[[Authed], Awaitable[
                 status_code=403,
                 details={"reason": "password_change_required"},
             )
-        if not allows(authed.data.platform_roles, resource, need):
+        if not allows(authed.access, resource, need):
             raise PlatformError(
                 "FORBIDDEN",
                 "Раздел или действие не положены вашей роли.",

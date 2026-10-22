@@ -26,7 +26,8 @@ from tests.platform_role_data import make_role
 pytestmark = pytest.mark.integration
 REPO = Path(__file__).resolve().parents[5]
 CASBIN_DIR = REPO / "apps" / "crm" / "infra" / "casbin"
-V1 = REPO / "packages" / "contracts" / "platform-rbac.yaml"
+# Снимок матрицы версии 1 (из контракта удалена в R-2).
+V1 = Path(__file__).resolve().parents[1] / "fixtures" / "platform_rbac_v1_matrix.yaml"
 BEFORE = "0034_user_language"
 
 

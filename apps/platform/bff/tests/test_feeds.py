@@ -18,6 +18,7 @@ from tests.feeds_support import (
     notification,
     quote,
 )
+from tests.roles import custom, rid
 
 
 @pytest.fixture
@@ -70,7 +71,7 @@ async def test_manager_queue_comes_from_crm_inbox(
         ("L-2060", "take_lead"),
     ]
     first = body["items"][0]
-    assert first["role"] == "MANAGER"
+    assert first["role_id"] == rid("MANAGER")
     assert first["title"] == "Взять в работу лида L-2041"
     assert first["due_label"] == "today"
     assert "Демо Клиентов" in first["subtitle"]
@@ -143,7 +144,7 @@ async def test_director_queue_comes_from_erp_approvals(
     items = response.json()["items"]
     assert [i["title"] for i in items] == ["Одобрить КП-2026/118", "Одобрить КП v3"]
     first = items[0]
-    assert first["role"] == "DIRECTOR"
+    assert first["role_id"] == rid("DIRECTOR")
     assert first["kind"] == "approve_quote"
     assert first["due_label"] == "tomorrow"  # КП действует до 16.01 — завтра по календарю компании
     assert first["subtitle"].startswith("Стрелочные приводы · 12 450 000 сум")
@@ -155,7 +156,8 @@ async def test_director_queue_comes_from_erp_approvals(
     }
     assert items[1]["subtitle"].startswith("ООО «Демо-Рейл» · 900 000,50 сум")
     assert items[1]["due_label"] == "later"
-    assert fb.calls(fb.crm["inbox"]) == 0
+    # Каталог v2: у директора «CRM · лиды» — full, вид работы «лиды» его, входящие CRM читаются.
+    assert fb.calls(fb.crm["inbox"]) == 1
 
 
 async def test_cost_and_margin_never_reach_the_response(web: Web, fb: FeedBackends) -> None:
@@ -171,9 +173,9 @@ async def test_cost_and_margin_never_reach_the_response(web: Web, fb: FeedBacken
 def test_restricted_keys_are_stripped_for_roles_without_the_group() -> None:
     payload = {"id": 1, "margin_percent": "23.4", "items": [{"supplier_price": "5", "name": "x"}]}
 
-    manager = strip_restricted(payload, ["MANAGER"], RESTRICTED_KEYS)
-    director = strip_restricted(payload, ["DIRECTOR"], RESTRICTED_KEYS)
-    accountant = strip_restricted(payload, ["ACCOUNTANT"], RESTRICTED_KEYS)
+    manager = strip_restricted(payload, [], RESTRICTED_KEYS)
+    director = strip_restricted(payload, ["cost_margin", "supplier_prices"], RESTRICTED_KEYS)
+    accountant = strip_restricted(payload, ["supplier_prices", "totals_only"], RESTRICTED_KEYS)
 
     assert manager == {"id": 1, "items": [{"name": "x"}]}
     assert director == payload  # директору видны и маржа, и цены поставщиков
@@ -190,13 +192,13 @@ async def test_queue_unites_roles_and_active_role_narrows_it(web: Web, fb: FeedB
 
     union = (await web.client.get("/api/v1/queue")).json()["items"]
 
-    assert {i["role"] for i in union} == {"MANAGER", "DIRECTOR"}
+    assert {i["role_id"] for i in union} == {rid("MANAGER"), rid("DIRECTOR")}
     assert len(union) == 3
 
-    await web.send("PATCH", "/api/v1/me", json={"active_role": "DIRECTOR"})
+    await web.send("PATCH", "/api/v1/me", json={"active_role": rid("DIRECTOR")})
     only_director = (await web.client.get("/api/v1/queue")).json()["items"]
-    assert {i["role"] for i in only_director} == {"DIRECTOR"}
-    await web.send("PATCH", "/api/v1/me", json={"active_role": "MANAGER"})
+    assert {i["role_id"] for i in only_director} == {rid("DIRECTOR")}
+    await web.send("PATCH", "/api/v1/me", json={"active_role": rid("MANAGER")})
     only_manager = (await web.client.get("/api/v1/queue")).json()["items"]
     assert [i["object"]["number"] for i in only_manager] == ["L-2060"]
 
@@ -206,11 +208,11 @@ async def test_explicit_role_parameter(web: Web, fb: FeedBackends, check: Contra
     fb.state["inbox"]["unassigned"] = [lead(2060, "Свободный")]
     await web.login(["MANAGER", "DIRECTOR"])
 
-    response = await web.client.get("/api/v1/queue", params={"role": "MANAGER"})
+    response = await web.client.get("/api/v1/queue", params={"role": rid("MANAGER")})
     check(response, "/queue", "get")
-    assert {i["role"] for i in response.json()["items"]} == {"MANAGER"}
+    assert {i["role_id"] for i in response.json()["items"]} == {rid("MANAGER")}
 
-    foreign = await web.client.get("/api/v1/queue", params={"role": "ADMIN"})
+    foreign = await web.client.get("/api/v1/queue", params={"role": rid("ADMIN")})
     assert foreign.status_code == 403
     check(foreign, "/queue", "get")
     assert foreign.json()["details"]["reason"] == "role_not_assigned"
@@ -228,6 +230,52 @@ async def test_other_roles_have_an_empty_queue(
     assert response.json() == {"items": [], "sources": {"crm": "ok", "erp": "ok"}}
     assert fb.calls(fb.crm["inbox"]) == 0
     assert fb.calls(fb.erp["approvals"]) == 0
+
+
+MIXED = custom(
+    40,
+    "Менеджер и бухгалтер",
+    {"dashboard.queue": "full", "crm.leads": "full", "eds.payments": "full"},
+)
+CASHIER = custom(41, "Касса", {"dashboard.queue": "full", "eds.payments": "full"})
+
+
+async def test_created_role_gets_the_lead_queue_by_its_sections(
+    web: Web, fb: FeedBackends, check: ContractChecker
+) -> None:
+    """Очередь — по секции `queue` каталога: роль без кода с «CRM · лиды» full получает лиды."""
+    fb.state["inbox"]["unassigned"] = [lead(2060, "Свободный")]
+    await web.login([MIXED])
+
+    response = await web.client.get("/api/v1/queue", params={"role": "40"})
+
+    check(response, "/queue", "get")
+    assert [(i["kind"], i["role_id"]) for i in response.json()["items"]] == [("take_lead", "40")]
+    assert fb.calls(fb.erp["approvals"]) == 0
+
+
+async def test_employee_without_crm_sections_never_calls_crm(
+    web: Web, fb: FeedBackends, check: ContractChecker
+) -> None:
+    """Ни одна роль не даёт прав в CRM: агрегаты не зовут CRM (был бы 403), источник —
+    `not_applicable`, ошибки на экране нет."""
+    fb.state["inbox"]["unassigned"] = [lead(2060, "Свободный")]
+    await web.login([CASHIER])
+
+    queue = await web.client.get("/api/v1/queue")
+    cards = await web.client.get("/api/v1/queue/cards")
+    counters = await web.client.get("/api/v1/menu-counters")
+    found = await web.client.get("/api/v1/search", params={"q": "L-2060"})
+
+    for response, path in ((queue, "/queue"), (cards, "/queue/cards"), (found, "/search")):
+        assert response.status_code == 200
+        check(response, path, "get")
+        assert response.json()["sources"]["crm"] == "not_applicable"
+    assert counters.json()["sources"]["crm"] == "not_applicable"
+    assert queue.json()["items"] == []
+    assert fb.calls(fb.crm["inbox"]) == 0
+    assert fb.calls(fb.crm["leads"]) == 0
+    assert fb.lead.call_count == 0
 
 
 # --- Недоступный бэкенд и сотрудник без ERP -------------------------------------------------------
@@ -263,7 +311,7 @@ async def test_crm_down_keeps_erp_part_and_marks_source(
     check(response, "/queue", "get")
     body = response.json()
     assert body["sources"] == {"crm": "unavailable", "erp": "ok"}
-    assert [i["role"] for i in body["items"]] == ["DIRECTOR", "DIRECTOR"]
+    assert [i["role_id"] for i in body["items"]] == [rid("DIRECTOR"), rid("DIRECTOR")]
 
 
 async def test_both_backends_down_is_still_a_200(
@@ -335,7 +383,13 @@ async def test_cards_for_director(web: Web, fb: FeedBackends, check: ContractChe
 
     check(response, "/queue/cards", "get")
     cards = {c["key"]: c for c in response.json()["cards"]}
-    assert list(cards) == ["quotes_to_approve", "projects_in_work"]
+    # Каталог v2: у директора «CRM · лиды» — full, карточки лидов тоже его.
+    assert list(cards) == [
+        "leads_without_answer",
+        "leads_to_take",
+        "quotes_to_approve",
+        "projects_in_work",
+    ]
     assert cards["quotes_to_approve"]["count"] == 2
     assert cards["quotes_to_approve"]["path"] == "/eds/drafts"
     assert cards["projects_in_work"]["count"] == 2  # исполнение закрыто целиком у одного

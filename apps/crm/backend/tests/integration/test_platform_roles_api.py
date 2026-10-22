@@ -14,6 +14,7 @@ from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.config import Settings
+from app.domain.platform_roles_generated import ROLE_ACCESS, ROLE_RESTRICTED_FIELDS
 from app.integrations.erp_users import ProvisionPayload
 from app.security.rbac import Rbac
 from app.services.erp_access import ErpAccessService
@@ -680,3 +681,38 @@ async def test_a_failed_policy_reload_is_not_a_500_and_is_retried_on_the_next_ch
     assert calls["n"] == 2
     assert client.app.state.rbac.stale is False  # type: ignore[attr-defined]
     assert employee
+
+
+# --- матрицы ролей в /me для BFF Платформы (R-2) -----------------------------------------------
+
+
+async def test_me_gives_the_employee_the_matrices_of_his_roles_and_users_does_not(
+    client: TestClient, sessions: async_sessionmaker[AsyncSession]
+) -> None:
+    """Рядовой сотрудник с созданной ролью читает в `/me` её матрицу (BFF считает по ней разделы);
+    системная роль — матрица каталога; список `/users` матриц не несёт."""
+    _, boss = await setup_staff(client, sessions)
+    role = _create(
+        client,
+        boss,
+        access={"crm.leads": "full", "eds.payments": "full"},
+        restricted_fields=["totals_only"],
+    )
+    (director,) = legacy_ids(client, boss, ["DIRECTOR"])
+    account, password = await make_user(sessions, "mixed@railtech.uz", ["viewer"])
+    client.patch(
+        f"/api/v1/users/{account.id}",
+        json={"platform_role_ids": [role["id"], director]},
+        headers=boss,
+    )
+
+    me = client.get("/api/v1/me", headers=login(client, account.email, password)).json()
+
+    by_id = {r["id"]: r for r in me["platform_role_refs"]}
+    assert by_id[role["id"]]["access"] == {"crm.leads": "full", "eds.payments": "full"}
+    assert by_id[role["id"]]["restricted_fields"] == ["totals_only"]
+    assert by_id[role["id"]]["system"] is False
+    assert by_id[director]["access"] == dict(ROLE_ACCESS["DIRECTOR"])
+    assert by_id[director]["restricted_fields"] == list(ROLE_RESTRICTED_FIELDS["DIRECTOR"])
+    listed = client.get(f"/api/v1/users/{account.id}", headers=boss).json()
+    assert all(set(r) == {"id", "name", "system", "code"} for r in listed["platform_role_refs"])

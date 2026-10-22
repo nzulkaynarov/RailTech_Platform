@@ -1,8 +1,11 @@
 """«Моя очередь», карточки-счётчики и бейджи меню (04-integration-map.md §1.1–§1.2, SPEC-v3 §7.1).
 
-Источники, которые есть сегодня: MANAGER — CRM `/inbox`; DIRECTOR — ERP `my-approval-queue`;
-остальные роли — пусто (письма, служебки, задания и платёжки ждут ERP-01…06). Роль «вида» —
-активная, если задана (Q-PLT-12-1), иначе все роли сотрудника.
+Виды работы — секция `queue` каталога (`platform-rbac.yaml`): вид попадает в очередь, если у ролей
+«вида» есть его раздел с нужным уровнем (ADR-0012 п. 6, названия ролей не используются). Источники,
+которые есть сегодня: лиды — CRM `/inbox` (`answer_lead`, `take_lead`), одобрение КП — ERP
+`my-approval-queue` (`approve_quote`); письма, служебки, задания и платёжки ждут ERP-01…06. Роли
+«вида» — активная, если задана (Q-PLT-12-1), иначе все роли сотрудника. `QueueItem.role_id` — первая
+роль «вида», которая даёт этот вид работы.
 """
 
 from dataclasses import dataclass
@@ -18,10 +21,9 @@ from app.feeds.models import (
     QueueItemKind,
 )
 from app.feeds.numbers import deal_title, lead_number, lead_ref, quote_number, quote_ref
-from app.feeds.snapshot import Snapshot, wants_inbox, wants_projects
+from app.feeds.snapshot import Snapshot, wants_approvals, wants_inbox, wants_projects
 from app.feeds.text import ago, due_label, join, money, now_utc, parse_deadline, parse_dt, short
-from app.rbac import allows
-from app.rbac_generated import RoleCode
+from app.rbac import View
 
 _RANK: dict[DueLabel, int] = {"overdue": 0, "today": 1, "tomorrow": 2, "memo": 3, "later": 4}
 MAX_CARDS = 4
@@ -40,10 +42,16 @@ def _sort_key(row: Row) -> tuple[int, float, float]:
     return _RANK[row.item.due_label], due, since
 
 
+def _role_id(view: View, kind: QueueItemKind) -> str:
+    role = view.role_for(kind)
+    return str(role) if role is not None else ""
+
+
 def _lead_row(
     lead: dict[str, Any],
     kind: QueueItemKind,
     *,
+    role_id: str,
     why: str | None,
     due_at: datetime | None,
     now: datetime,
@@ -55,7 +63,7 @@ def _lead_row(
     action = "Взять в работу лида" if kind == "take_lead" else "Ответить лиду"
     item = QueueItem(
         id=f"lead:{lead_id}:{kind}",
-        role="MANAGER",
+        role_id=role_id,
         kind=kind,
         title=f"{action} {number}",
         subtitle=join(name, short(why or lead.get("need_summary")), ago(waiting, now)),
@@ -67,7 +75,7 @@ def _lead_row(
 
 
 # TODO(CRM-08): `/inbox` «мои» на стороне CRM; пока BFF отбирает чужие передачи и отложенные сам.
-def lead_rows(snap: Snapshot, me: int, now: datetime) -> list[Row]:
+def lead_rows(snap: Snapshot, me: int, now: datetime, view: View) -> list[Row]:
     """Лиды, по которым ждут именно этого менеджера: передачи бота, ответ клиенту, свободные
     лиды."""
     if snap.inbox is None:
@@ -89,26 +97,36 @@ def lead_rows(snap: Snapshot, me: int, now: datetime) -> list[Row]:
         if taker is not None and taker != me:
             continue
         kind: QueueItemKind = "take_lead" if taker is None else "answer_lead"
+        if not view.wants(kind):
+            continue
         row = _lead_row(
             lead,
             kind,
+            role_id=_role_id(view, kind),
             why=escalation.get("reason_text"),
             due_at=parse_dt(escalation.get("sla_due_at")),
             now=now,
         )
         add(row, int(lead["id"]))
-    for lead in snap.inbox["mine"]:
-        if lead.get("unread") is True:
-            add(_lead_row(lead, "answer_lead", why=None, due_at=None, now=now), int(lead["id"]))
-    for lead in snap.inbox["unassigned"]:
-        add(_lead_row(lead, "take_lead", why=None, due_at=None, now=now), int(lead["id"]))
+    if view.wants("answer_lead"):
+        answer = _role_id(view, "answer_lead")
+        for lead in snap.inbox["mine"]:
+            if lead.get("unread") is True:
+                row = _lead_row(lead, "answer_lead", role_id=answer, why=None, due_at=None, now=now)
+                add(row, int(lead["id"]))
+    if view.wants("take_lead"):
+        take = _role_id(view, "take_lead")
+        for lead in snap.inbox["unassigned"]:
+            row = _lead_row(lead, "take_lead", role_id=take, why=None, due_at=None, now=now)
+            add(row, int(lead["id"]))
     return out
 
 
-def quote_rows(snap: Snapshot, now: datetime) -> list[Row]:
+def quote_rows(snap: Snapshot, now: datetime, view: View) -> list[Row]:
     """КП, которые ждут одобрения этого сотрудника (ERP решает, чья очередь — BFF только
     показывает)."""
     deals = snap.deal_index
+    role_id = _role_id(view, "approve_quote")
     out: list[Row] = []
     for quote in snap.approvals:
         if not isinstance(quote.get("id"), int):
@@ -120,7 +138,7 @@ def quote_rows(snap: Snapshot, now: datetime) -> list[Row]:
         number = quote_number(quote)
         item = QueueItem(
             id=f"quote:{quote['id']}",
-            role="DIRECTOR",
+            role_id=role_id,
             kind="approve_quote",
             title=f"Одобрить {number}",
             subtitle=join(
@@ -136,13 +154,13 @@ def quote_rows(snap: Snapshot, now: datetime) -> list[Row]:
     return out
 
 
-def build_queue(feed: Feed, roles: list[RoleCode], snap: Snapshot) -> list[QueueItem]:
+def build_queue(feed: Feed, view: View, snap: Snapshot) -> list[QueueItem]:
     now = now_utc()
     rows_: list[Row] = []
-    if wants_inbox(roles):
-        rows_ += lead_rows(snap, feed.authed.data.user_id, now)
-    if "DIRECTOR" in roles:
-        rows_ += quote_rows(snap, now)
+    if wants_inbox(view):
+        rows_ += lead_rows(snap, feed.authed.data.user_id, now, view)
+    if wants_approvals(view):
+        rows_ += quote_rows(snap, now, view)
     rows_.sort(key=_sort_key)
     return [row.item for row in rows_]
 
@@ -156,11 +174,11 @@ def projects_in_work(snap: Snapshot) -> int:
     )
 
 
-def build_cards(roles: list[RoleCode], snap: Snapshot, queue: list[QueueItem]) -> list[QueueCard]:
-    """Набор карточек задаёт роль (SPEC-v3 §7.1); карточки без источника не показываются — ноль был
-    бы ложью."""
+def build_cards(view: View, snap: Snapshot, queue: list[QueueItem]) -> list[QueueCard]:
+    """Набор карточек задают виды работы ролей «вида» (SPEC-v3 §7.1); карточки без источника не
+    показываются — ноль был бы ложью."""
     cards: dict[str, QueueCard] = {}
-    if wants_inbox(roles):
+    if wants_inbox(view):
         answer = sum(1 for i in queue if i.kind == "answer_lead")
         take = sum(1 for i in queue if i.kind == "take_lead")
         cards["leads_without_answer"] = QueueCard(
@@ -177,7 +195,7 @@ def build_cards(roles: list[RoleCode], snap: Snapshot, queue: list[QueueItem]) -
             hint="CRM · Все сообщения",
             path="/crm/messages",
         )
-    if "DIRECTOR" in roles:
+    if wants_approvals(view):
         cards["quotes_to_approve"] = QueueCard(
             key="quotes_to_approve",
             label="КП на одобрение",
@@ -185,7 +203,7 @@ def build_cards(roles: list[RoleCode], snap: Snapshot, queue: list[QueueItem]) -
             hint="EDS · Черновик",
             path="/eds/drafts",
         )
-    if wants_projects(roles):
+    if wants_projects(view):
         cards["projects_in_work"] = QueueCard(
             key="projects_in_work",
             label="Проекты в работе",
@@ -196,23 +214,21 @@ def build_cards(roles: list[RoleCode], snap: Snapshot, queue: list[QueueItem]) -
     return list(cards.values())[:MAX_CARDS]
 
 
-def build_counters(
-    roles: list[RoleCode], snap: Snapshot, queue: list[QueueItem]
-) -> list[MenuCounter]:
-    """Бейджи подменю: красный — требует действия, серый — счётчик. Пункты вне роли не
+def build_counters(view: View, snap: Snapshot, queue: list[QueueItem]) -> list[MenuCounter]:
+    """Бейджи подменю: красный — требует действия, серый — счётчик. Пункты вне ролей «вида» не
     перечисляются."""
     items = [
         MenuCounter(module="dashboard", section="queue", count=len(queue), attention=bool(queue))
     ]
-    if wants_inbox(roles) and allows(roles, "crm.leads", "full"):
+    if wants_inbox(view):
         waiting = sum(1 for i in queue if i.kind in ("answer_lead", "take_lead"))
         items.append(
             MenuCounter(module="crm", section="messages", count=waiting, attention=waiting > 0)
         )
-    if "DIRECTOR" in roles and allows(roles, "eds.drafts", "full"):
+    if wants_approvals(view):
         total = snap.approvals_total
         items.append(MenuCounter(module="eds", section="drafts", count=total, attention=total > 0))
-    if wants_projects(roles):
+    if wants_projects(view):
         total = projects_in_work(snap)
         items.append(
             MenuCounter(module="dashboard", section="projects", count=total, attention=False)
