@@ -79,9 +79,15 @@ test.describe("axe и скриншоты", () => {
     await settledScreenshot(page, "avatar-menu");
     await expectNoViolations(page, "avatar menu");
     await page.getByRole("menuitem", { name: "Профиль" }).click();
-    // выпадающее меню закрылось до проверки модального окна
+    // axe — только на устоявшемся состоянии: меню аватара закрыто и убрано из видимых, модалка открыта и без движения
     await expect(page.getByRole("menu")).toBeHidden();
+    await expect
+      .poll(() => page.locator(".ant-dropdown:not(.ant-dropdown-hidden)").count())
+      .toBe(0);
     await expect(page.getByRole("dialog", { name: "Профиль" })).toBeVisible();
+    await expect
+      .poll(() => page.locator('[class*="-appear"], [class*="-enter"], [class*="-leave"]').count())
+      .toBe(0);
     await expectNoViolations(page, "profile modal");
   });
 
