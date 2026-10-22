@@ -19,7 +19,7 @@ import { LinkButton } from "../../../shared/ui/LinkButton";
 import { StatusTag } from "../../../shared/ui/StatusTag";
 import { LockIcon } from "../../../shared/ui/icons";
 import { pluralForm } from "../../dashboard/queue";
-import { roleErrorText } from "./errors";
+import { isVersionConflict, roleErrorText } from "./errors";
 import { type RoleDraft, type TemplateKey, TEMPLATE_KEYS, changesOf, newDraft } from "./draft";
 
 function modulesLine(access: RoleDraft["access"]): string {
@@ -66,8 +66,11 @@ function previewLines(t: TFunction, language: string, preview: RolePreview): str
   return lines;
 }
 
-/** Системная роль в боковом окне: только чтение, замок, что она даёт. */
-export function SystemRoleCard({ role }: { role: Role }) {
+/**
+ * Роль в боковом окне только для чтения: замок у системной, что она даёт. `readOnly` — режим директора (BFF 0.3.1,
+ * `admin: read`): любая роль без правки, без ссылки «Назначить роль сотруднику».
+ */
+export function SystemRoleCard({ role, readOnly = false }: { role: Role; readOnly?: boolean }) {
   const { t } = useTranslation("modules");
   return (
     <div className="pf-panel-stack">
@@ -76,12 +79,14 @@ export function SystemRoleCard({ role }: { role: Role }) {
           <h3 style={{ margin: 0, fontSize: 16, lineHeight: "24px", fontWeight: 600 }}>
             {role.name}
           </h3>
-          <StatusTag tone="default">
-            <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
-              <LockIcon size={12} />
-              {t("admin.roles.system")}
-            </span>
-          </StatusTag>
+          {role.system ? (
+            <StatusTag tone="default">
+              <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
+                <LockIcon size={12} />
+                {t("admin.roles.system")}
+              </span>
+            </StatusTag>
+          ) : null}
           <StatusTag tone="blue">
             {t("admin.roles.employeesCount", { count: role.employees })}
           </StatusTag>
@@ -90,7 +95,13 @@ export function SystemRoleCard({ role }: { role: Role }) {
           <p style={{ margin: "4px 0 0", color: "#595959" }}>{role.description}</p>
         ) : null}
       </div>
-      <Alert type="info" showIcon message={t("admin.roles.systemNote")} />
+      <Alert
+        type="info"
+        showIcon
+        message={
+          role.system && !readOnly ? t("admin.roles.systemNote") : t("admin.roles.readOnlyNote")
+        }
+      />
       <Consequence
         title={t("admin.roles.gives")}
         items={[
@@ -98,7 +109,7 @@ export function SystemRoleCard({ role }: { role: Role }) {
           ...(isSystemAdmin(role) ? [t("admin.org.consequence.erpAdmin")] : []),
         ]}
       />
-      <LinkButton to="/admin/org">{t("admin.roles.assign")}</LinkButton>
+      {readOnly ? null : <LinkButton to="/admin/org">{t("admin.roles.assign")}</LinkButton>}
     </div>
   );
 }
@@ -117,6 +128,8 @@ export interface RoleEditorProps {
   onSave: () => void;
   saving: boolean;
   saveError: unknown;
+  /** Роль изменена другим пользователем (409): перечитать роли и сбросить черновик */
+  onReload: () => void;
   onDelete: () => void;
   deleting: boolean;
   deleteError: unknown;
@@ -136,6 +149,7 @@ export function RoleEditor({
   onSave,
   saving,
   saveError,
+  onReload,
   onDelete,
   deleting,
   deleteError,
@@ -286,7 +300,19 @@ export function RoleEditor({
         <Alert type="warning" showIcon message={t("admin.roles.adminNote")} />
       ) : null}
       {saveError ? (
-        <Alert type="error" showIcon role="alert" message={roleErrorText(t, saveError)} />
+        <Alert
+          type="error"
+          showIcon
+          role="alert"
+          message={roleErrorText(t, saveError)}
+          action={
+            isVersionConflict(saveError) ? (
+              <Button size="small" onClick={onReload}>
+                {t("admin.roles.errors.reload")}
+              </Button>
+            ) : undefined
+          }
+        />
       ) : null}
       <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
         <Button

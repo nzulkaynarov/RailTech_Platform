@@ -33,6 +33,8 @@ export interface MockRole {
   description: string;
   system: boolean;
   code?: string;
+  /** Растёт при каждом изменении (оптимистическая блокировка, BFF 0.3.1). */
+  version: number;
   access: Partial<Record<string, AccessLevel>>;
   restricted_fields: RestrictedField[];
   updated_at: string;
@@ -58,6 +60,7 @@ function fromCatalog(code: PresetCode, role: CatalogRole, system: boolean): Mock
     description: DESCRIPTIONS[code] ?? "",
     system,
     code: system ? code : `tpl:${code}`,
+    version: 1,
     access: { ...role.access },
     restricted_fields: [...role.restricted_fields],
     updated_at: SEEDED_AT,
@@ -130,6 +133,7 @@ export function toRole(role: MockRole, employees: number): Role {
     description: role.description,
     system: role.system,
     ...(role.code ? { code: role.code } : {}),
+    version: role.version,
     access: role.access as Role["access"],
     restricted_fields: role.restricted_fields,
     employees,

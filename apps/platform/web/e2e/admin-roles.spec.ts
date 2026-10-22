@@ -185,22 +185,71 @@ test.describe("Ролевая матрица: роли — данные", () => 
   });
 });
 
-test.describe("Ролевая матрица: директор", () => {
+test.describe("Ролевая матрица: директор — только просмотр", () => {
   test.skip(({ isMobile }) => isMobile, "ширины задаёт сам тест");
 
   for (const width of WIDTHS) {
-    test(`директор (Admin — чтение) на ${String(width)} px: матрицу ведёт администратор, axe 0`, async ({
+    test(`директор (Admin — чтение) на ${String(width)} px: матрица для чтения, кнопок изменения нет, axe 0`, async ({
       page,
     }) => {
       await page.setViewportSize({ width, height: 900 });
       await loginAndWait(page, "director@demo.example");
       await spaGoto(page, "/admin/roles");
-      await expect(page.getByText("Ролевую матрицу ведёт администратор")).toBeVisible();
-      await expect(page.locator("table.pf-matrix")).toHaveCount(0);
+      await expect(page.getByRole("heading", { level: 1, name: "Ролевая матрица" })).toBeVisible();
+      await expect(page.getByRole("button", { name: /^Менеджер/ })).toBeVisible();
+      await expect(page.getByText("Ролевую матрицу ведёт администратор")).toHaveCount(0);
+      await expect(page.getByText("Только просмотр", { exact: true })).toBeVisible();
+      await expect(page.getByRole("button", { name: "Создать роль" })).toHaveCount(0);
+      await expect(matrix(page).getByRole("combobox")).toHaveCount(0);
+      await expect(matrix(page).getByRole("checkbox")).toHaveCount(0);
       await expectNoViolations(page, `директор ${String(width)}`);
       await settledScreenshot(page, "roles-director-readonly");
+
+      // Роль в боковом окне: описание и сотрудники, ни «Сохранить», ни «Удалить», ни «Назначить».
+      await spaGoto(page, "/admin/roles?role=3&panel=open&tab=role");
+      const panel = page.locator(PANEL);
+      await expect(panel.getByText(/Только просмотр: роль и её матрицу/)).toBeVisible();
+      await expect(panel.getByRole("button", { name: "Сохранить роль" })).toHaveCount(0);
+      await expect(panel.getByRole("button", { name: "Удалить роль" })).toHaveCount(0);
+      await expect(panel.getByRole("tab", { name: "Журнал" })).toHaveCount(0);
+      await expectNoViolations(page, `директор, роль ${String(width)}`);
+      await settledScreenshot(page, "roles-director-role");
     });
   }
+
+  test("прямые изменения ролей у директора — 403, чтение — 200", async ({ page }) => {
+    await loginAndWait(page, "director@demo.example");
+    const statuses = await page.evaluate(async () => {
+      const call = async (method: string, url: string, body?: unknown): Promise<number> => {
+        const response = await fetch(`/api/v1${url}`, {
+          method,
+          headers: { "Content-Type": "application/json", "X-CSRF-Token": "x" },
+          ...(body === undefined ? {} : { body: JSON.stringify(body) }),
+        });
+        return response.status;
+      };
+      return {
+        list: await call("GET", "/admin/roles"),
+        one: await call("GET", "/admin/roles/3"),
+        create: await call("POST", "/admin/roles", {
+          name: "Взлом",
+          access: {},
+          restricted_fields: [],
+        }),
+        patch: await call("PATCH", "/admin/roles/3", { name: "Взлом", version: 1 }),
+        remove: await call("DELETE", "/admin/roles/3"),
+        preview: await call("POST", "/admin/roles/preview", {}),
+      };
+    });
+    expect(statuses).toEqual({
+      list: 200,
+      one: 200,
+      create: 403,
+      patch: 403,
+      remove: 403,
+      preview: 403,
+    });
+  });
 });
 
 test.describe("Ролевая матрица: ширины, axe", () => {
