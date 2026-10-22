@@ -73,8 +73,10 @@ def test_queue(facts: QueueFacts, status: str) -> None:
         ),
         (BotFacts(True, "env", None), "polling", "ok", ""),
         (BotFacts(True, "env", None), "disabled", "fail", "выключен"),
+        (BotFacts(False, "none", "bot_process_never_started"), "polling", "fail", "crm-bot"),
+        (BotFacts(False, "db", "bot_process_down"), "polling", "fail", "не отвечает"),
     ],
-    ids=["no-supervisor", "no-token", "crashed", "running", "disabled"],
+    ids=["no-supervisor", "no-token", "crashed", "running", "disabled", "never", "down"],
 )
 def test_bot(facts: BotFacts | None, mode: str, status: str, needle: str) -> None:
     result = rules.bot(facts, mode, NOW)

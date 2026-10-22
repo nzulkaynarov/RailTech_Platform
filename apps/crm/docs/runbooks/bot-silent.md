@@ -7,8 +7,9 @@
 ## Диагностика
 1. `curl -fsS http://localhost:8000/ready` (prod: `https://crm.<домен>/api/ready`) —
    ожидается 200 и `database/s3/litellm: ok`.
-2. `make ps` — `api`, `worker`, `litellm`, `*-mcp` в состоянии healthy.
-3. `make logs` и фильтр по событиям:
+2. `make ps` — `crm-api`, `crm-bot`, `crm-worker`, `litellm`, `*-mcp` в состоянии healthy. Бота запускает только `crm-bot`
+   (S0-4): статус в «Подключениях» / «Состоянии системы», «Процесс бота не отвечает» = `crm-bot` лежит.
+3. `make logs s=crm-bot` и фильтр по событиям:
    - `bot_disabled` — нет токена или `TELEGRAM_MODE=disabled`;
    - `llm_call_failed` / `LlmUnavailableError` — модели недоступны (ответ «передам коллеге» — норма деградации); поле `detail` — текст провайдера: «credit balance is too low» / «exceeded your current quota» — кончились кредиты/квота, «x-api-key» — неверный ключ;
    - `tg_rate_limited` — клиент упёрся в лимит `bot.rate_limit_per_minute`;
@@ -30,7 +31,7 @@
    Ключи CI (GitHub Secrets) держите отдельными с лимитом — прогоны eval-gate расходуют сотни вызовов.
 4. MCP-сервер упал: `docker compose restart kb-mcp crm-mcp docs-mcp`.
 5. Webhook: `python scripts/set_webhook.py` (переустановить с secret_token).
-6. dev/polling: `docker compose restart api` (одновременно может быть только один polling-процесс
+6. dev/polling: `docker compose restart crm-bot` (одновременно может быть только один polling-процесс
    на токен — проверьте, что бот не запущен ещё где-то).
 
 ## Проверка
