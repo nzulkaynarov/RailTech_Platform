@@ -5,6 +5,7 @@
  * OpenAPI spec version: 0.1.0
  */
 import type { MeOutErpRoleCodesItem } from "./meOutErpRoleCodesItem";
+import type { MeOutLanguage } from "./meOutLanguage";
 import type { MeOutPlatformAccessItem } from "./meOutPlatformAccessItem";
 import type { MeOutPlatformRolesItem } from "./meOutPlatformRolesItem";
 
@@ -17,6 +18,7 @@ export interface MeOut {
   full_name: string;
   id: number;
   is_active: boolean;
+  language?: MeOutLanguage;
   must_change_password: boolean;
   notify_leads: boolean;
   notify_system: boolean;
