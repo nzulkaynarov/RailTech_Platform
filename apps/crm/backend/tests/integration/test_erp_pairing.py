@@ -23,7 +23,6 @@ from app.config import Settings
 from app.main import create_app
 from app.models.auth import AuditLog
 from app.models.integrations import IntegrationSecret
-from app.services.erp_events import sign_v2
 from tests.integration.crm_helpers import PASSWORD, login, make_user
 
 pytestmark = pytest.mark.integration
@@ -66,23 +65,15 @@ async def admin(sessions: async_sessionmaker[AsyncSession], client: TestClient) 
 
 
 def post_event(client: TestClient, secret: str, serial: int) -> int:
-    from tests.seam_events import example_event
+    """Событие ERP на приёмник шины, подписанное парой `erp → crm` (из секрета вебхуков)."""
+    from app.bus.secrets import derive_pair_secret
+    from tests.bus_events import example_envelope, signed_request
 
-    body = example_event("quote.viewed")
-    body["occurred_at"] = f"2026-10-21T11:{serial:02d}:00+05:00"
-    raw = json.dumps(body).encode()
-    event_id, stamp = str(uuid.uuid4()), datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
-    return client.post(
-        f"{ERP_URL}/events",
-        content=raw,
-        headers={
-            "X-Event-Id": event_id,
-            "X-Event-Type": "quote.viewed",
-            "X-Timestamp": stamp,
-            "X-Signature": sign_v2(secret, event_id, stamp, raw),
-            "Content-Type": "application/json",
-        },
-    ).status_code
+    envelope = example_envelope("uz.railtech.erp.quote.viewed.v1")
+    envelope["id"] = str(uuid.uuid4())
+    envelope["time"] = f"2026-10-21T06:{serial:02d}:00Z"
+    headers, body = signed_request(envelope, derive_pair_secret(secret, "erp", "crm"))
+    return client.post("/bus/v1/events", content=body, headers=headers).status_code
 
 
 @pytest.mark.parametrize("role", ["manager", "viewer"])

@@ -8,7 +8,8 @@
 
 - [`backup-pitr.md`](backup-pitr.md) — WAL-архив PostgreSQL (WAL-G), восстановление на момент времени, ежемесячная проверка;
   [`request-id.md`](request-id.md) — найти запрос по `X-Request-ID` в журналах Caddy, CRM и ERP;
-  [`rt-bus-erp.md`](rt-bus-erp.md) — шина rt_bus в ERP: журнал, DLQ, повтор, метрики, неверный endpoint (B3).
+  [`rt-bus-erp.md`](rt-bus-erp.md) — шина rt_bus в ERP: журнал, DLQ, повтор, метрики, неверный endpoint (B3);
+  [`rt-bus-crm.md`](rt-bus-crm.md) — шина rt_bus в CRM: DLQ, повтор, метрики, события ERP не обработаны (B4).
 
 **Системы**
 - **CRM**: [`crm/`](crm/README.md) — бот, эскалации, расходы ИИ, деплой, бэкапы, eval-gate, ротация ключей;

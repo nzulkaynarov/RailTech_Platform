@@ -14,6 +14,10 @@ x-crm-backend: &crm-backend
   build:
     context: ../../apps/crm/backend
     target: prod
+    # Шина событий rt_bus (ADR-0014, L14): пакет и схемы контракта лежат вне контекста сборки.
+    additional_contexts:
+      rtbus: ../../packages/rt-bus
+      contracts: ../../packages/contracts
   # Только нужные backend переменные, без env_file: ключи провайдеров и секреты инфраструктуры
   # в api/worker не попадают (CRM SPEC §11).
   environment: &crm-backend-env
@@ -58,6 +62,11 @@ x-crm-backend: &crm-backend
     # Шов CRM ↔ ERP (FIX-01): значений по умолчанию в коде нет, без .env стенд не поднимается.
     # Сервисный токен и секрет вебхуков CRM берёт из «Подключений» → ERP (ADR-0022), SSO — отсюда.
     PLATFORM_SSO_SECRET: ${PLATFORM_SSO_SECRET:?set in .env}
+    # Шина событий rt_bus (CONTRACTS §9): секрет пары задавать не обязательно — без него он выводится из
+    # секрета вебхуков сопряжения (L12); адрес ERP берётся из bus/subscriptions.yaml (в образе).
+    RT_BUS_SECRET_ERP_CRM: ${RT_BUS_SECRET_ERP_CRM:-}
+    RT_BUS_SECRET_CRM_ERP: ${RT_BUS_SECRET_CRM_ERP:-}
+    RT_BUS_ENDPOINT_ERP: ${RT_BUS_ENDPOINT_ERP:-}
     # Переход CRM ↔ ERP по SSO; по умолчанию выключен (FIX-03), включает владелец после FIX-10/FIX-11.
     PLATFORM_SSO_ENABLED: ${PLATFORM_SSO_ENABLED:-false}
     # Публичный адрес ERP для перехода по SSO; на стенде с HTTP_PORT≠80 порт обязателен (иначе переход уходит на :80).

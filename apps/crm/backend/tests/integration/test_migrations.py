@@ -7,6 +7,9 @@ from alembic.config import Config
 
 from app.config import Settings
 
+#: Последняя ревизия, где ещё есть `erp_incoming_events` (0039 заменяет её таблицами rt_bus).
+SEAM_REVISION = "0029_erp_seam_hardening"
+
 OBJECTS_SQL = """
 SELECT
   (SELECT count(*) FROM pg_tables WHERE tablename LIKE 'procrastinate%%'),
@@ -91,7 +94,7 @@ def test_webhook_reliability_revision_dedupes_erp_deal_ids_and_is_reversible(
         )
 
     with caplog.at_level("INFO", logger="alembic.runtime.migration"):
-        command.upgrade(alembic_config, "head")
+        command.upgrade(alembic_config, SEAM_REVISION)
     assert "collapsed 2 duplicate deals.erp_deal_id" in caplog.text
     with psycopg.connect(live_settings.libpq_dsn, autocommit=True) as conn:
         rows = conn.execute(
@@ -141,6 +144,7 @@ def test_seam_hardening_revision_is_reversible(
     """FIX-35: `documents.erp_document_id` (уникален в паре с клиентом), статус `skipped`,
     `body_sha256`; downgrade снимает всё и не переносит пропущенные события."""
     command.upgrade(alembic_config, "head")
+    command.downgrade(alembic_config, SEAM_REVISION)
     with psycopg.connect(live_settings.libpq_dsn, autocommit=True) as conn:
         conn.execute("TRUNCATE documents, clients, erp_incoming_events RESTART IDENTITY CASCADE")
         for name in ("A", "B"):
@@ -189,6 +193,43 @@ def test_seam_hardening_revision_is_reversible(
         assert index is not None
         assert "UNIQUE" in index[0]
         assert "erp_document_id IS NOT NULL" in index[0]
+
+
+def test_rt_bus_revision_replaces_the_webhook_journal_and_is_reversible(
+    alembic_config: Config, live_settings: Settings
+) -> None:
+    """B4: четыре таблицы rt_bus и `erp_event_notices` приходят, `erp_incoming_events` уходит;
+    downgrade возвращает пустой журнал вебхуков в прежней форме."""
+    bus_tables = (
+        "rt_bus_outbox",
+        "rt_bus_delivery",
+        "rt_bus_inbox",
+        "rt_bus_subscriber_state",
+        "erp_event_notices",
+    )
+    sql = "SELECT tablename FROM pg_tables WHERE tablename = ANY(%s) ORDER BY tablename"
+
+    command.upgrade(alembic_config, "head")
+    with psycopg.connect(live_settings.libpq_dsn, autocommit=True) as conn:
+        assert [r[0] for r in conn.execute(sql, (list(bus_tables),)).fetchall()] == sorted(
+            bus_tables
+        )
+        assert conn.execute(sql, (["erp_incoming_events"],)).fetchall() == []
+
+    command.downgrade(alembic_config, "0038_platform_role_version")
+    with psycopg.connect(live_settings.libpq_dsn, autocommit=True) as conn:
+        assert conn.execute(sql, (list(bus_tables),)).fetchall() == []
+        assert conn.execute(sql, (["erp_incoming_events"],)).fetchall() == [
+            ("erp_incoming_events",)
+        ]
+        conn.execute(
+            "INSERT INTO erp_incoming_events (event_id, event_type, status, payload) "
+            "VALUES ('s-1', 'warehouse.exploded', 'skipped', '{}')"
+        )
+
+    command.upgrade(alembic_config, "head")
+    with psycopg.connect(live_settings.libpq_dsn, autocommit=True) as conn:
+        assert len(conn.execute(sql, (list(bus_tables),)).fetchall()) == len(bus_tables)
 
 
 def test_user_erp_role_codes_column_comes_and_goes_with_the_revision(

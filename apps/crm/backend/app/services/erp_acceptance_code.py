@@ -1,13 +1,12 @@
-"""Доставка кода акцепта КП контакту в Telegram (шов 0.3.0, Q-FIX22-1).
+"""Доставка кода акцепта КП контакту в Telegram (шов 0.3.0, Q-FIX22-1, B4).
 
-Событие `quote.acceptance_code_requested`.
+Событие `uz.railtech.erp.quote.acceptance_code_requested.v1`.
 
-Код — секрет: он живёт только в памяти запроса вебхука и в сообщении бота. Строка журнала
-`erp_incoming_events` уже записана без него (`schemas/erp_events.redact_secrets`), `outbox` пуст
-(иначе код лежал бы в БД до отправки), в ленту лида и в логи он не попадает. Поэтому доставка не
-идёт через очередь: задача Procrastinate хранила бы аргументы в БД. Ретраев нет — код живёт
-минуты, повтор события не вернёт его (клиент запросит новый код в кабинете); недоставленное видно
-строкой `failed` (причина без кода) в журнале и центре внешних сервисов.
+Код — секрет: он живёт только в памяти запроса приёмника шины и в сообщении бота. Шина хранит в
+inbox маску вместо кода (`BusConfig.secret_fields`), очередь не используется (задача Procrastinate
+хранила бы аргументы в БД), в ленту лида и в логи код не попадает. Обработчик inline: ошибка
+доставки не откатывает приём и не просит издателя повторить — код живёт минуты, повтор события не
+вернёт его (клиент запросит новый код в кабинете); недоставленное пишется в лог (причина без кода).
 """
 
 from collections.abc import Awaitable, Callable
@@ -20,11 +19,10 @@ from aiogram.exceptions import TelegramAPIError
 from sqlalchemy import ColumnElement, select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
+from app.bus.erp_event import ErpEvent
 from app.config import Settings
 from app.models.clients import Client, ClientContact
-from app.models.integrations import ErpIncomingEvent
 from app.models.leads import Lead, TelegramIdentity
-from app.schemas.erp_events import QuoteAcceptanceCodeRequestedEvent
 from app.services.erp_bot_messages import acceptance_code_message, pick_language
 from app.services.erp_event_handlers import aware
 from app.services.settings import SettingsService
@@ -49,10 +47,9 @@ class AcceptanceCodeDelivery:
         self._bot_provider = bot_provider
         self._config = config
 
-    async def deliver(self, event_id: str, event: QuoteAcceptanceCodeRequestedEvent) -> str:
-        """Отправить код; вернуть статус строки журнала: `processed`, `skipped` или `failed`.
+    async def deliver(self, event_id: str, event: ErpEvent) -> str:
+        """Отправить код; вернуть исход: `processed`, `skipped` или `failed`.
 
-        Строка записана приёмником как `processed`; здесь она меняется только при неудаче.
         Исключения не пробрасываются: ответ ERP при любом исходе — 200 (ретрай бесполезен).
         """
         try:
@@ -67,14 +64,9 @@ class AcceptanceCodeDelivery:
             logger.info("erp_acceptance_code_sent", event_id=event_id)
             return "processed"
         logger.warning("erp_acceptance_code_not_sent", event_id=event_id, reason=error)
-        status = "skipped" if outcome == "skipped" else "failed"
-        async with self._sessions() as session, session.begin():
-            row = await session.get(ErpIncomingEvent, event_id, with_for_update=True)
-            if row is not None:
-                row.status, row.error, row.notified_at = status, error, None
-        return status
+        return "skipped" if outcome == "skipped" else "failed"
 
-    async def _send(self, event: QuoteAcceptanceCodeRequestedEvent) -> tuple[Outcome, str | None]:
+    async def _send(self, event: ErpEvent) -> tuple[Outcome, str | None]:
         payload = event.payload
         remaining = (aware(payload.expires_at) - datetime.now(UTC)).total_seconds()
         if remaining <= 0:
@@ -100,9 +92,9 @@ class AcceptanceCodeDelivery:
         if self._config.telegram_dry_run:
             return "skipped", "telegram dry run"
         message = acceptance_code_message(
-            code=payload.code.get_secret_value(),
+            code=payload.code,
             minutes=max(1, round(remaining / 60)),
-            deal_title=event.deal.title,
+            deal_title=(event.deal.title if event.deal else "—"),
             texts=(await self._settings_service.get()).texts,
             language=pick_language(lead.language if lead else None),
         )

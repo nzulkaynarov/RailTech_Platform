@@ -9,6 +9,10 @@ x-backend: &backend
   build:
     context: ../backend
     target: prod
+    # Шина событий rt_bus (ADR-0014, L14): пакет и схемы контракта лежат вне контекста сборки.
+    additional_contexts:
+      rtbus: ../../../packages/rt-bus
+      contracts: ../../../packages/contracts
   # Только нужные backend переменные, без env_file: ключи провайдеров и
   # секреты инфраструктуры в api/worker не попадают (SPEC §11).
   environment: &backend-env

@@ -9,9 +9,11 @@
 import logging
 import re
 import sys
+from typing import Any
 
 import structlog
 from asgi_correlation_id import correlation_id
+from rt_bus.context import TRACEPARENT_HEADER, correlation, valid_traceparent
 from structlog.types import EventDict, Processor, WrappedLogger
 
 from app.config import Settings
@@ -45,6 +47,25 @@ def is_valid_request_id(value: str) -> bool:
     и разорвало цепочку журналов), но без пробелов, переводов строк и длины сверх 128.
     """
     return _REQUEST_ID.fullmatch(value) is not None
+
+
+class BusCorrelationMiddleware:
+    """ASGI: id запроса (`X-Request-ID`, его ставит `CorrelationIdMiddleware` выше) становится
+    корреляцией шины: события, опубликованные в обработке запроса, несут `correlationid` = id
+    запроса, а вместе с `traceparent` он идёт в доставку, обработчики и логи подписчиков.
+    """
+
+    def __init__(self, app: Any) -> None:
+        self.app = app
+
+    async def __call__(self, scope: Any, receive: Any, send: Any) -> None:
+        if scope["type"] != "http":
+            await self.app(scope, receive, send)
+            return
+        headers = {k.decode("latin-1").lower(): v.decode("latin-1") for k, v in scope["headers"]}
+        traceparent = valid_traceparent(headers.get(TRACEPARENT_HEADER.lower()))
+        with correlation(correlation_id.get(), traceparent):
+            await self.app(scope, receive, send)
 
 
 def add_request_id(_: WrappedLogger, __: str, event_dict: EventDict) -> EventDict:

@@ -87,6 +87,10 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           context: apps/crm/backend
+          # Шина событий rt_bus (L14): пакет и контракт — именованные контексты Dockerfile.
+          build-contexts: |
+            rtbus=packages/rt-bus
+            contracts=packages/contracts
           target: prod
           push: true
           tags: ghcr.io/${{ steps.ver.outputs.owner }}/rt-crm-backend:${{ steps.ver.outputs.tag }}
