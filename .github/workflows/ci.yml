@@ -390,7 +390,7 @@ jobs:
       - name: pip-audit (backend, prod-зависимости)
         working-directory: apps/crm/backend
         run: |
-          uv export --frozen --no-dev --no-emit-project --format requirements-txt -o /tmp/requirements.txt
+          uv export --frozen --no-dev --no-emit-project --no-emit-local --format requirements-txt -o /tmp/requirements.txt
           uvx pip-audit@2.10.1 -r /tmp/requirements.txt --no-deps --disable-pip --progress-spinner off
       - name: pnpm audit (frontend, prod, high+)
         working-directory: apps/crm/frontend
