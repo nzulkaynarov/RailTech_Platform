@@ -112,6 +112,7 @@ qemu_bin() {
     local uid gid
     uid="$(id -u)"
     gid="$(id -g)"
+    tmp="$(mktemp -d "$dir/.qemu.XXXXXX")"
     docker run --rm --platform linux/amd64 -v "$tmp:/out" "$QEMU_SRC_IMAGE" sh -c \
       "set -e
        apt-get update -qq >/dev/null
