@@ -28,6 +28,7 @@ from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
+from app.bus import events as bus_events
 from app.domain.backoffice import HandoffConsent, handoff_consent
 from app.domain.erp_handoff import DONE, FAILED, PENDING, handoff_idempotency_key
 from app.domain.errors import ConflictError, DomainError, Reason, ValidationFailedError
@@ -135,9 +136,14 @@ class ErpHandoffService:
             lead = await session.get(Lead, lead_id)
             if client is None:
                 return
+            company_changed = client.erp_company_id != result.erp_company_id
             client.erp_company_id = result.erp_company_id
             client.erp_handoff_request = False
             _set_state(client, DONE, None)
+            if company_changed:
+                await bus_events.client_updated(
+                    session, client, audit.Actor.system(), ["erp_company_id"]
+                )
             erp_deal_id = None
             if create_request and result.erp_request_id and lead is not None:
                 await _mirror_request(session, client, lead, result.erp_request_id)
@@ -145,6 +151,9 @@ class ErpHandoffService:
                 # Результат передачи — отдельно от сделок лида: поздние заявки клиента из Cabinet
                 # привязываются к тому же лиду, и «последняя сделка» — уже не его заявка (D-10).
                 lead.erp_request_id = result.erp_request_id
+                await bus_events.lead_updated(
+                    session, lead, audit.Actor.system(), ["erp_request_id"]
+                )
             await audit.record(
                 session,
                 audit.Actor.system(),
@@ -280,6 +289,7 @@ async def _contacts_payload(
         )
         session.add(primary)
         await session.flush()
+        await bus_events.contact_created(session, primary, audit.Actor.system())
         rows = [primary]
     language = lead.language if lead.language in _LANGUAGES else "ru"
     out = []

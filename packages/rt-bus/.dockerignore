@@ -1,0 +1,8 @@
+# Контекст `rtbus` образов CRM (apps/crm/backend/Dockerfile): только библиотека, без окружения и тестов.
+.venv
+.mypy_cache
+.ruff_cache
+.pytest_cache
+**/__pycache__
+tests
+scripts

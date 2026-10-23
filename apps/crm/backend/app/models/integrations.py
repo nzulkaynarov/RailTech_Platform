@@ -1,18 +1,17 @@
 """Подключения из интерфейса админа (аудит 2026-10-12): секреты интеграций и найденные каналы."""
 
+import uuid
 from datetime import datetime
 from typing import Any
 
 from sqlalchemy import (
     BigInteger,
-    CheckConstraint,
     DateTime,
     ForeignKey,
     Index,
-    Integer,
     LargeBinary,
     String,
-    Text,
+    Uuid,
     func,
 )
 from sqlalchemy import text as sql
@@ -51,48 +50,35 @@ class TelegramChatCandidate(Base):
     )
 
 
-class ErpIncomingEvent(Base):
-    """Входящие вебхуки событий ERP (M3-CRM-04, CONTRACTS §3, ADR-0022).
+class ErpEventNotice(Base):
+    """Сообщения в Telegram по входящему событию ERP (B4: шина rt_bus, CONTRACTS §9).
 
-    Идемпотентность — по `event_id` (UUID). Повторный запрос с тем же `event_id` отдаёт 200 OK
-    без повторной обработки.
+    Обработчик `uz.railtech.erp.*.v1` считает сообщения в транзакции inbox и кладёт их сюда; уходят
+    они ПОСЛЕ коммита (откат или автоповтор обработчика не задваивает сообщения), задачей очереди и
+    сборщиком: сообщение не теряется при падении воркера, а уже отправленным адресатам (`sent`)
+    повторно не уходит. Ключ — id события шины; кода акцепта здесь нет (он идёт inline, мимо БД).
     """
 
-    __tablename__ = "erp_incoming_events"
+    __tablename__ = "erp_event_notices"
     __table_args__ = (
-        CheckConstraint(
-            "status IN ('received', 'processed', 'failed', 'rejected', 'skipped')", name="status"
+        Index(
+            "ix_erp_event_notices_pending",
+            "created_at",
+            postgresql_where=sql("notified_at IS NULL"),
         ),
-        Index("ix_erp_incoming_events_crm_client_id", "crm_client_id"),
-        Index("ix_erp_incoming_events_status", "status"),
-        Index("ix_erp_incoming_events_body_sha256", "body_sha256"),
     )
 
-    event_id: Mapped[str] = mapped_column(String(36), primary_key=True)
-    event_type: Mapped[str] = mapped_column(String(64), nullable=False)
-    # Пусто у отклонённого события, чьё тело не разобралось (оно записано, чтобы его было видно).
-    erp_company_id: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
-    crm_client_id: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
-    deal_id: Mapped[int | None] = mapped_column(
-        BigInteger, ForeignKey("deals.id", ondelete="SET NULL"), nullable=True
+    event_id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True)
+    # [{"kind": "client", "client_id", "text", "buttons"} | {"kind": "staff", "user_id", "text"}].
+    items: Mapped[list[dict[str, Any]]] = mapped_column(JSONB, nullable=False)
+    # Адресаты, которым сообщение уже ушло: "<номер сообщения>:<tg_user_id>".
+    sent: Mapped[list[str]] = mapped_column(
+        JSONB, server_default=sql("'[]'::jsonb"), nullable=False
     )
-    payload: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False)
-    status: Mapped[str] = mapped_column(
-        String(16), server_default=sql("'received'"), nullable=False
-    )
-    received_at: Mapped[datetime] = mapped_column(
+    created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )
-    processed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
-    error: Mapped[str | None] = mapped_column(Text, nullable=True)
-    # Неудачные обработки; на потолке событие становится `failed` (видно в центре внешних сервисов).
-    attempts: Mapped[int] = mapped_column(Integer, server_default=sql("0"), nullable=False)
-    # Сообщения в Telegram, посчитанные в транзакции обработки; уходят ПОСЛЕ коммита один раз:
-    # `notified_at` ставится при захвате строки, повтор события второго сообщения не шлёт.
-    outbox: Mapped[list[dict[str, Any]] | None] = mapped_column(
-        JSONB(none_as_null=True), nullable=True
-    )
+    # Все адресаты обслужены (или отправка больше не нужна: старше суток, у адресата нет Telegram).
     notified_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
-    # sha256 сырого тела: то же тело под другим `X-Event-Id` — повтор (подпись не покрывает
-    # заголовки), см. receive_event.
-    body_sha256: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    # Аренда на время отправки: задача после обработки и сборщик не шлют одно сообщение вдвоём.
+    lease_until: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)

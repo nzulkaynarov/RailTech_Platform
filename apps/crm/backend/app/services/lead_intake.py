@@ -18,6 +18,7 @@ from datetime import UTC, datetime, timedelta
 import structlog
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
+from app.bus import events as bus_events
 from app.domain.contacts import contact_email
 from app.domain.errors import ConflictError, RateLimitedError, Reason, ValidationFailedError
 from app.domain.lead_sources import LeadSource, normalize_phone_e164
@@ -156,6 +157,7 @@ class LeadIntakeService:
                 lead.id,
                 after={**_audit_view(lead), **_consent_view(moment)},
             )
+            await bus_events.lead_created(session, lead, audit.Actor.system())
             await events.publish(session, "lead.updated", lead_id=lead.id, owner_mode="paused")
             logger.info("web_lead_created", lead_id=lead.id, language=lead.language)
             return lead.id
@@ -202,6 +204,7 @@ class LeadIntakeService:
             )
             session.add(lead)
             await session.flush()
+            await bus_events.lead_created(session, lead, who.actor)
             await stages.transition(
                 session,
                 lead,

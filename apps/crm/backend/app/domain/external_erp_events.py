@@ -1,10 +1,12 @@
 """Строка «События из ERP» центра внешних сервисов (FIX-33, ADR-0024).
 
-Источник — `erp_incoming_events`: что ERP прислала и что CRM с этим сделала. Сбой — событие
-отклонено (чужая компания у клиента, неизвестный тип, сломанное тело), обработка упала на потолке
-попыток (`failed`) или оно «висит» принятым и не обработанным (воркер стоит, очередь не
-разбирается; сборщик раз в минуту ставит такие заново). Лечение — не в CRM: расхождение id
-клиента или формата правится на стороне ERP/контракта, поэтому подсказка называет, куда смотреть.
+Источник — таблицы шины rt_bus (B4, CONTRACTS §9): inbox (что ERP прислала и что CRM с этим
+сделала) и доставки (что CRM отправила подписчикам). Сбой — обработка упала на потолке попыток
+(`failed`: чужая компания у клиента, клиента нет, обработчик упал), событие «висит» принятым и не
+обработанным (воркер стоит, очередь не разбирается; сборщик раз в минуту ставит такие заново) или
+событие CRM не доставлено подписчику (`dead`, DLQ). Лечение — не в CRM: расхождение id клиента или
+формата правится на стороне ERP/контракта, недоставленное повторяют из журнала шины (runbook
+`rt-bus-crm.md`); подсказка называет, куда смотреть.
 """
 
 from dataclasses import dataclass
@@ -20,18 +22,18 @@ WINDOW_DAYS = 7
 
 @dataclass(frozen=True, slots=True)
 class ErpEventsFacts:
-    rejected: int
+    dead: int
     failed: int
     stuck: int
     last_error: str | None = None
 
 
 def erp_events(f: ErpEventsFacts) -> CheckResult:
-    metrics = {"rejected": f.rejected, "failed": f.failed, "stuck": f.stuck}
-    if f.rejected or f.failed or f.stuck:
+    metrics = {"dead": f.dead, "failed": f.failed, "stuck": f.stuck}
+    if f.dead or f.failed or f.stuck:
         parts = []
-        if f.rejected:
-            parts.append(f"отклонено: {f.rejected}")
+        if f.dead:
+            parts.append(f"не доставлено ERP: {f.dead}")
         if f.failed:
             parts.append(f"не обработано: {f.failed}")
         if f.stuck:
@@ -48,13 +50,14 @@ def erp_events(f: ErpEventsFacts) -> CheckResult:
 
 
 def _hint(f: ErpEventsFacts) -> str:
-    if f.stuck and not (f.rejected or f.failed):
+    if f.stuck and not (f.dead or f.failed):
         return (
             "События приняты, но не обработаны: проверьте, что воркер CRM работает "
-            "(задачи очереди `notify`); зависшие ставятся в очередь автоматически"
+            "(очередь `rt_bus`, задача `rt_bus.process_inbox`); зависшие ставятся в очередь "
+            "автоматически"
         )
     return (
-        "«company mismatch» — сверьте сопоставление клиента с компанией в ERP; «invalid event "
-        "envelope» или неизвестный тип — ERP прислала событие не по контракту, передайте "
-        "разработчикам ERP; «Client not found» — клиент удалён в CRM"
+        "«company mismatch» — сверьте сопоставление клиента с компанией в ERP; «Client not found» "
+        "— клиент удалён в CRM; недоставленное ERP — проверьте адрес и секрет шины и повторите "
+        "доставку из журнала (runbook rt-bus-crm)"
     )

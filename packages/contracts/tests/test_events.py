@@ -118,10 +118,35 @@ def test_line_disputed_requires_remark() -> None:
     assert not type_validator(t).is_valid(broken)
 
 
-def test_erp_types_cover_legacy_schema() -> None:
-    """Все 22 события events.schema.json (устаревает, L7) есть как uz.railtech.erp.<тип>.v1."""
-    legacy = set(load_json(CONTRACTS / "events.schema.json")["$defs"]["EventType"]["enum"])
-    assert {f"{t.entity}.{t.action}" for t in TYPES if t.domain == "erp" and t.version == 1} == legacy
+ERP_EVENTS = {
+    "act.accepted",
+    "act.issued",
+    "act.returned",
+    "contract.signed",
+    "deal.lost",
+    "deal.stage_changed",
+    "deal.won",
+    "delivery.eta_changed",
+    "delivery.line_accepted",
+    "delivery.line_disputed",
+    "delivery.status_changed",
+    "document.created",
+    "invite.sent",
+    "invoice.issued",
+    "invoice.overdue",
+    "invoice.paid",
+    "quote.acceptance_code_requested",
+    "quote.accepted",
+    "quote.rejected",
+    "quote.sent",
+    "quote.viewed",
+    "request.created",
+}
+
+
+def test_erp_types_are_the_22_events_of_the_former_webhook() -> None:
+    """22 события бывшего вебхука (events.schema.json удалён в B4) — по-прежнему uz.railtech.erp.<тип>.v1."""
+    assert {f"{t.entity}.{t.action}" for t in TYPES if t.domain == "erp" and t.version == 1} == ERP_EVENTS
 
 
 def _property_names(node: object) -> set[str]:

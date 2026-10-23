@@ -14,7 +14,7 @@ install: ## Зависимости генераторов: pnpm (lockfile) и uv
 	uv sync --locked
 
 .PHONY: lint
-lint: install ## Линт OpenAPI (redocly), ajv (старая схема событий, erp-mcp, Платформа), AsyncAPI (parser), ruff скриптов
+lint: install ## Линт OpenAPI (redocly), ajv (erp-mcp, Платформа), AsyncAPI (parser), ruff скриптов
 	pnpm lint
 	$(UV_RUN) ruff check scripts tests
 	$(UV_RUN) ruff format --check scripts tests

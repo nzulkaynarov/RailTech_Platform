@@ -16,6 +16,7 @@ import structlog
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
+from app.bus import events as bus_events
 from app.domain.backoffice import (
     BackofficeMode,
     HandoffConsent,
@@ -103,6 +104,7 @@ class ClientService:
             await audit.record(
                 session, who.actor, "client.create", "client", client.id, after={"name": name}
             )
+            await bus_events.client_created(session, client, who.actor)
             return client.id
 
     async def update(self, who: Principal, client_id: int, changes: dict[str, Any]) -> None:
@@ -138,6 +140,8 @@ class ClientService:
                     before=before,
                     after=after,
                 )
+                if fields := _snapshot_fields(after):
+                    await bus_events.client_updated(session, client, who.actor, fields)
             # Деактивированный клиент — снова меню лида (`verified_client`), и наоборот.
             chats = (
                 await leads_repo.chats_of_client(session, client_id) if "is_active" in after else []
@@ -161,6 +165,7 @@ class ClientService:
                 lead = await session.get(Lead, identity.lead_id, with_for_update=True)
                 if lead is not None and lead.client_id is None:
                     lead.client_id = client_id
+                    await bus_events.lead_updated(session, lead, who.actor, ["crm_client_id"])
             await audit.record(
                 session,
                 who.actor,
@@ -283,9 +288,13 @@ class ClientService:
             session.add(client)
             await session.flush()
             client_id = client.id
+            await bus_events.client_created(session, client, who.actor)
         else:
             client = await _client(session, client_id)
+        previous_client_id = lead.client_id
         lead.client_id = client_id
+        if previous_client_id != client_id:
+            await bus_events.lead_updated(session, lead, who.actor, ["crm_client_id"])
         if handoff.changed:  # повторная передача в ERP (resync) привязки не трогает
             await _bind_identities(session, lead_id, client_id, who)
         if handoff.call_erp:
@@ -424,6 +433,11 @@ async def _resolve_info_escalation(
         )
 
 
+def _snapshot_fields(changes: dict[str, Any]) -> list[str]:
+    """Изменённые поля клиента в терминах снимка события (`notes` в него не входят)."""
+    return ["owner" if name == "owner_user_id" else name for name in changes if name != "notes"]
+
+
 def only_service_request(reason_codes: list[str] | None) -> bool:
     """Эскалация создана только запросом клиента (других причин нет)."""
     codes = set(reason_codes or ())
@@ -447,6 +461,7 @@ async def _detach_lead(
     if still_linked is not None or lead is None or lead.client_id != client_id:
         return {}
     lead.client_id = None
+    await bus_events.lead_updated(session, lead, who.actor, ["crm_client_id"])
     changes: dict[str, Any] = {"lead_id": lead_id, "lead_client_cleared": True}
     if lead.stage == Stage.CUSTOMER:
         target = stage_after_unlink(await lead_parts.history(session, lead_id))

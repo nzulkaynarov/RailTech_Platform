@@ -14,6 +14,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.agents.qualifier.graph import QualifierAgent, QualifierInput, QualifierResult
+from app.bus import events as bus_events
 from app.domain import qualifier_decision as qd
 from app.domain.keywords import find_terms
 from app.domain.qualification import LeadSignals, Qualification
@@ -24,6 +25,7 @@ from app.models.qualification import QualifierRun
 from app.repositories import kb as kb_repo
 from app.repositories import leads as repo
 from app.schemas.settings import AppSettings, Language
+from app.security.audit import Actor
 from app.services import escalation, stages
 from app.services.lead_messenger import LeadMessenger
 from app.services.settings import SettingsService
@@ -181,7 +183,10 @@ async def _apply_decision(
     lead.qualification = stored
     lead.need_summary = decision.need_summary
     lead.product_interest = list(decision.product_interest)
+    score_changed = lead.score != decision.score
     lead.score = decision.score
+    if score_changed:
+        await bus_events.lead_updated(session, lead, Actor(None, "bot"), ["score"])
     lead.bot_turns_without_progress = decision.bot_turns_without_progress
 
 

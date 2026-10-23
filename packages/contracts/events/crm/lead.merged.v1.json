@@ -1,0 +1,25 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://railtech.uz/contracts/events/crm/lead.merged.v1.json",
+  "title": "Лиды склеены",
+  "description": "Тип uz.railtech.crm.lead.merged.v1, источник rt://crm. Поле data конверта (envelope.v1.json). Два лида с одним телефоном склеены в одну карточку (Telegram-лид и лид с сайта/вручную): lead — снимок выжившего лида после склейки, merged_lead_id — поглощённый лид, которого больше нет. Подписчик удаляет или перепривязывает у себя поглощённый лид к выжившему; повтор — без действий.",
+  "type": "object",
+  "required": [
+    "lead",
+    "merged_lead_id",
+    "actor"
+  ],
+  "properties": {
+    "lead": {
+      "$ref": "_defs.v1.json#/$defs/Lead"
+    },
+    "merged_lead_id": {
+      "type": "integer",
+      "description": "Поглощённый лид (crm_lead_id), удалён в CRM"
+    },
+    "actor": {
+      "$ref": "_defs.v1.json#/$defs/Actor"
+    }
+  },
+  "additionalProperties": false
+}

@@ -138,9 +138,11 @@ stage_crm-integration() {
 }
 
 stage_crm-build() {
-  docker build -q --target prod -t rt-platform-crm-backend:ci "$ROOT/apps/crm/backend" >/dev/null
+  # Шина событий rt_bus (L14): пакет и контракт — именованные контексты Dockerfile CRM.
+  local bus_contexts=(--build-context "rtbus=$ROOT/packages/rt-bus" --build-context "contracts=$ROOT/packages/contracts")
+  docker build -q --target prod "${bus_contexts[@]}" -t rt-platform-crm-backend:ci "$ROOT/apps/crm/backend" >/dev/null
   docker build -q --target prod -t rt-platform-crm-frontend:ci "$ROOT/apps/crm/frontend" >/dev/null
-  docker build -q --target backup -t rt-platform-crm-backup:ci "$ROOT/apps/crm/backend" >/dev/null
+  docker build -q --target backup "${bus_contexts[@]}" -t rt-platform-crm-backup:ci "$ROOT/apps/crm/backend" >/dev/null
   docker run --rm rt-platform-crm-backup:ci /usr/lib/postgresql/17/bin/pg_dump --version \
     | grep -q "pg_dump (PostgreSQL) 17"
   docker run --rm rt-platform-crm-backup:ci /app/ops/backup.sh --help >/dev/null

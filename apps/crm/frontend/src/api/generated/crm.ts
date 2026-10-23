@@ -65,7 +65,6 @@ import type {
   ErpPairingOut,
   ErpRotateIn,
   ErpStatusOut,
-  ErpWebhookReceipt,
   ErrorOut,
   EscalationSettings,
   ExportClientsParams,
@@ -5022,83 +5021,6 @@ export const useCheckErpConnection = <TError = ErrorType<ErrorOut>, TContext = u
   queryClient?: QueryClient,
 ): UseMutationResult<Awaited<ReturnType<typeof checkErpConnection>>, TError, void, TContext> => {
   return useMutation(getCheckErpConnectionMutationOptions(options), queryClient);
-};
-
-export const getReceiveErpEventUrl = () => {
-  return `/api/v1/integrations/erp/events`;
-};
-
-/**
- * Приём входящих вебхуков событий ERP (M3-CRM-04, CONTRACTS §3, FIX-33, FIX-61).
- *
- * Порядок: подпись — ДО разбора тела и проверки остальных заголовков. Схема v2:
- * HMAC-SHA256(ERP_WEBHOOK_SECRET, "{X-Event-Id}.{X-Timestamp}.{тело}"); старая
- * подпись (HMAC только тела) не принимается — 401. Идемпотентность по
- * X-Event-Id; быстрый 200 и фоновая обработка в Procrastinate. 401 — только неверная подпись;
- * тело, которое мы принять не можем (чужой тип события, расхождение с заголовком), и метка v2
- * вне окна 300 с записываются как `rejected` и тоже получают 200: ретраи ERP ничего бы не
- * изменили (ERP подписывает ретрай заново).
- * @summary Receive Erp Event
- */
-export const receiveErpEvent = async (
-  options?: Parameters<typeof http>[1],
-): Promise<ErpWebhookReceipt> => {
-  return http<ErpWebhookReceipt>(getReceiveErpEventUrl(), {
-    ...options,
-    method: "POST",
-  });
-};
-
-export const getReceiveErpEventMutationKey = () => ["receiveErpEvent"] as const;
-
-export const getReceiveErpEventMutationOptions = <
-  TError = ErrorType<ErrorOut>,
-  TContext = unknown,
->(options?: {
-  mutation?: UseMutationOptions<
-    Awaited<ReturnType<typeof receiveErpEvent>>,
-    TError,
-    void,
-    TContext
-  >;
-  request?: SecondParameter<typeof http>;
-}): UseMutationOptions<Awaited<ReturnType<typeof receiveErpEvent>>, TError, void, TContext> => {
-  const mutationKey = getReceiveErpEventMutationKey();
-  const { mutation: mutationOptions, request: requestOptions } = options
-    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
-      ? options
-      : { ...options, mutation: { ...options.mutation, mutationKey } }
-    : { mutation: { mutationKey }, request: undefined };
-
-  const mutationFn: MutationFunction<Awaited<ReturnType<typeof receiveErpEvent>>, void> = () => {
-    return receiveErpEvent(requestOptions);
-  };
-
-  return { mutationFn, ...mutationOptions };
-};
-
-export type ReceiveErpEventMutationResult = NonNullable<
-  Awaited<ReturnType<typeof receiveErpEvent>>
->;
-
-export type ReceiveErpEventMutationError = ErrorType<ErrorOut>;
-
-/**
- * @summary Receive Erp Event
- */
-export const useReceiveErpEvent = <TError = ErrorType<ErrorOut>, TContext = unknown>(
-  options?: {
-    mutation?: UseMutationOptions<
-      Awaited<ReturnType<typeof receiveErpEvent>>,
-      TError,
-      void,
-      TContext
-    >;
-    request?: SecondParameter<typeof http>;
-  },
-  queryClient?: QueryClient,
-): UseMutationResult<Awaited<ReturnType<typeof receiveErpEvent>>, TError, void, TContext> => {
-  return useMutation(getReceiveErpEventMutationOptions(options), queryClient);
 };
 
 export const getPairErpUrl = () => {

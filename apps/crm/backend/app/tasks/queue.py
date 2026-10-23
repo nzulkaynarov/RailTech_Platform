@@ -18,7 +18,7 @@ TASK_MODULES = (
     "app.tasks.monitoring",
     "app.tasks.mail",
     "app.tasks.external_services",
-    "app.tasks.erp_events",
+    "app.tasks.bus",
     "app.tasks.erp_users",
     "app.tasks.erp_handoff",
 )

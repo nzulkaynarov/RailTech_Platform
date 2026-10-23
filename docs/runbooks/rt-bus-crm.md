@@ -1,0 +1,88 @@
+# Runbook: шина rt_bus в CRM — события не доходят, застряли в DLQ, не обработаны (B4, ADR-0014)
+
+Контракт — `docs/architecture/CONTRACTS.md` §9 (особенно §9.3–§9.5, §9.8); устройство библиотеки — `docs/architecture/rt-bus.md`. CRM публикует
+события клиента, контакта, лида и сотрудника и принимает события ERP (`POST /bus/v1/events`, только во внутренней сети).
+
+## Когда применять
+- Данные клиента в ERP не совпадают с CRM (изменили название/ИНН/контакт, а в ERP старое).
+- Клиент не получил сообщение бота о КП, счёте, поставке; в ленте лида нет записи о событии ERP.
+- В центре внешних сервисов красная строка «События из ERP».
+- Алерт на рост DLQ (`dlq_size`) или возраст самого старого недоставленного (`oldest_undelivered_age_seconds` > 1 ч).
+
+## Как устроено (коротко)
+```text
+CRM пишет изменение + строку rt_bus_outbox в одной транзакции
+  → задача rt_bus.pump (каждые 5 с, воркер): outbox → rt_bus_delivery (строка на подписчика) → POST <подписчик>/bus/v1/events
+ERP шлёт событие → crm-api /bus/v1/events: подпись, окно 300 с → rt_bus_inbox (id — ключ) → задача rt_bus.process_inbox
+  → обработчик (зеркало сделки, документы, лента) в транзакции → сообщения Telegram после коммита (erp_event_notices)
+```
+Подписчики и адреса — `packages/contracts/bus/subscriptions.yaml` (в образе `/opt/rt/contracts/bus/`). CRM → ERP:
+`client.updated`, `contact.*`; остальные события CRM пока никому не доставляются (подписчиков нет — строк доставки нет, это норма).
+Секрет пары `erp ↔ crm`: `RT_BUS_SECRET_ERP_CRM` / `RT_BUS_SECRET_CRM_ERP` или, если не заданы, выводится из секрета вебхуков
+сопряжения («Подключения» → ERP).
+
+## Симптом → где смотреть
+| Симптом | Где смотреть | Что значит |
+|---|---|---|
+| Строка «События из ERP» красная: «не доставлено ERP: N» | `python -m app bus dead` | доставки CRM → ERP в DLQ: 404/410 — неверный адрес или ERP не развёрнута; 401 — разные секреты пары; 422 — ERP не приняла `data` (версия контракта) |
+| То же: «не обработано: N» | `python -m app bus failed` | событие ERP принято, но обработчик упал 4 раза: `company mismatch` — клиент CRM связан с другой компанией ERP; `Client #N not found` — клиента нет в CRM |
+| То же: «зависло: N» | `python -m app bus status`, воркер | принято и не обработано дольше 10 мин: воркер CRM не работает или очередь `rt_bus` не разбирается |
+| Изменения CRM не доходят до ERP, DLQ пуст | `python -m app bus status` | `outbox_pending` растёт — не работает `rt_bus.pump` (воркер); `paused: true` у `erp` — предохранитель (5 ошибок подряд, пауза 5 мин) |
+| ERP получает 401 от CRM | журнал `crm-api`, `rt_bus_receive_rejected` | неверная подпись / неизвестный издатель / метка дальше 300 с: сверить секреты пары и часы серверов |
+| Сообщение клиенту не пришло, событие `processed` | таблица `erp_event_notices` | `notified_at IS NULL` — ждёт бота (сборщик раз в минуту, не позже суток); бот не запущен или `TELEGRAM_DRY_RUN` |
+
+## Диагностика
+Команды — на VPS 1 из каталога проекта (`C` — как в `request-id.md`). CLI открывает очередь на время команды.
+
+```bash
+C="docker compose -f infra/compose/base.yml -f infra/compose/prod.yml --env-file .env.prod"   # dev: base.yml + dev.yml, --env-file .env
+
+$C exec crm-api python -m app bus status                  # метрики: outbox, DLQ, inbox, по подписчикам (возраст, пауза)
+$C exec crm-api python -m app bus dead --subscriber erp   # доставки в DLQ: тип, попытки, код ответа, последняя ошибка
+$C exec crm-api python -m app bus failed                  # события ERP, которые CRM не обработала
+$C logs --no-log-prefix crm-worker | grep rt_bus_metrics  # метрики раз в 5 минут в журнале воркера
+```
+Событие по его `X-Request-ID`/`correlationid` — как в `request-id.md`: у события CRM он равен `X-Request-ID` запроса,
+который его породил; у событий воркера — новый UUID. Прямой запрос в БД (только чтение):
+
+```sql
+SELECT id, event_type, subscriber, status, attempts, last_status_code, last_error
+  FROM rt_bus_delivery WHERE status = 'dead' ORDER BY id DESC LIMIT 20;
+SELECT event_id, type, status, attempts, error FROM rt_bus_inbox WHERE status IN ('failed', 'received') ORDER BY received_at DESC LIMIT 20;
+SELECT event_id, created_at, notified_at FROM erp_event_notices WHERE notified_at IS NULL;
+```
+
+## Действия
+1. **Исправить причину**, затем повторить (повтор безопасен: приёмник гасит дубли по `id`, ERP применяет снимки по `updated_at`).
+   - Неверный адрес ERP: `RT_BUS_ENDPOINT_ERP` в `.env.prod` или `endpoint` в `subscriptions.yaml` (в образе — перезапуск после деплоя).
+   - Секреты пары разошлись: сверить секрет вебхуков в «Подключения» → ERP с ERP; если задан `RT_BUS_SECRET_*` — он главнее выведенного
+     и должен быть одинаков на обеих сторонах (список «текущий,предыдущий» — для ротации).
+   - `company mismatch`: в карточке клиента CRM и в ERP должна быть одна компания; правка сопоставления — в ERP (`CrmClientMapping`).
+2. **Повторить доставки в DLQ:** `python -m app bus retry-dead --subscriber erp` (все) или `python -m app bus retry <id доставки>` (одну).
+   Попытки сбрасываются с нуля; подписчик на паузе получает пробную доставку сразу.
+3. **Повторить обработку события ERP:** `python -m app bus retry-inbox <event_id>` (`failed` и `skipped`).
+4. **Остановить доставку подписчику** на время работ: `enabled: false` в `subscriptions.yaml` (доставки ждут, потом уходят).
+5. Сообщения Telegram, не ушедшие из-за выключенного бота, уйдут сами, когда бот появится (не позже суток).
+
+## Проверка
+- `bus status`: `dlq_size = 0`, `oldest_undelivered_age_seconds` мал, `paused: false`, `inbox_failed = 0`.
+- Центр внешних сервисов → «События из ERP» → «Проверить сейчас»: зелёная.
+- Сквозная проверка: изменить название клиента в CRM → в течение ~10 с оно появилось в карточке компании ERP.
+
+## Эскалация
+DLQ растёт после исправления причины, `company mismatch` у многих клиентов, 422 от ERP после выкладки (расхождение версий контракта,
+`CONTRACTS` §9.6) — архитектору. Потеря события невозможна (строка outbox живёт, пока не доставлена), но порядок не гарантируется:
+подписчики применяют снимки по `updated_at`.
+
+## ERP не отвечает: воркер занят
+`rt_bus.pump` (каждые 5 с) раскладывает outbox и доставляет пачку; пока ERP висит, одна попытка занимает до 25 с (дедлайн
+`attempt_deadline`), весь тик — до 20 с + дедлайн. Задача идёт в очереди `rt_bus` того же воркера CRM, что и бот, таймеры и уведомления,
+поэтому воркер держит несколько задач одновременно: `WORKER_CONCURRENCY` (по умолчанию 4, `python -m app worker`). Признак нехватки —
+`oldest_undelivered_age_seconds` растёт, а задачи `notify`/`timers` запаздывают при живой ERP: поднимите `WORKER_CONCURRENCY` (до 8) в
+`.env` и перезапустите `crm-worker`. Предохранитель шины (5 ошибок подряд — пауза 5 мин) сам снимает нагрузку: подписчик на паузе
+не опрашивается. Выделять отдельный воркер под очередь `rt_bus` — отдельная задача инфраструктуры, не строка конфигурации.
+
+## Метрики и уборка
+`rt_bus.log_metrics` пишет строку `rt_bus_metrics` раз в 5 минут (`outbox_pending`, `dlq_size`, `inbox_failed`, по подписчикам).
+Доставленное и обработанное старше 30 суток удаляет `rt_bus.purge` (раз в сутки); `dead` и `failed` остаются до разбора.
+Задачи `rt_bus.*` создают по строке в `procrastinate_jobs` на тик; `rt_bus_jobs_cleanup` удаляет успешные старше часа.
