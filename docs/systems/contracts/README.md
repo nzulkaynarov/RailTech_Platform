@@ -74,6 +74,6 @@ data = TYPES[env.type].model_validate(env.data)   # например, rt_contrac
 ## Правила изменения
 
 1. Меняется файл здесь → в том же PR пересобирается `generated/` и обновляются обе стороны (ERP и CRM/Cabinet) в одной вехе.
-2. Несовместимое изменение API — новый префикс версии (`v2`), мажор в `info.version` и период совместимости (ADR-0016; проверяет `oasdiff` в `make contracts`, `docs/architecture/CONTRACTS.md` §7.1); события шины — новый файл и тип `.v(N+1)` с двойной публикацией (`docs/architecture/CONTRACTS.md` §7, §9.6; проверяет `make contracts`).
+2. Несовместимое изменение API — до 1.0 (`info.version` 0.x): повышение минорной версии (0.2.4 → 0.3.0); с 1.0 — новый префикс версии (`v2`), мажор в `info.version` и период совместимости (ADR-0016; проверяет `oasdiff` в `make contracts`, `docs/architecture/CONTRACTS.md` §7.1); события шины — новый файл и тип `.v(N+1)` с двойной публикацией (`docs/architecture/CONTRACTS.md` §7, §9.6; проверяет `make contracts`).
 3. Конфликт двух агентов на одном файле контракта решает оркестратор; контракт не правят вдвоём.
 4. Потребители: Cabinet и ERP SPA — `openapi-typescript` по этим файлам (Cabinet — ещё `crm.yaml`, только форма лида); CRM frontend — orval по `crm.yaml` (`apps/crm/frontend/src/api/generated`); BFF — модели ответов CRM из `crm.yaml`; `generated/crm/` — клиент Integration API; CRM backend (Python) — клиент по `erp-integration.yaml` появится в `apps/crm` на M3-CRM-02.

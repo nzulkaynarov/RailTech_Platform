@@ -32,6 +32,8 @@ from django.core.signing import BadSignature, SignatureExpired, TimestampSigner
 from rest_framework_simplejwt.exceptions import TokenError
 from rest_framework_simplejwt.tokens import RefreshToken
 
+from core.cache import fail_closed
+
 # How long the "password already verified" ticket stays valid (seconds).
 TICKET_MAX_AGE = 300
 
@@ -45,9 +47,10 @@ USED_CODE_TTL = 90
 
 _TICKET_SALT = "accounts.two_factor.login"
 
-# Redis cache keys (SEC-06 replay hardening). Both share the `default` cache with the
-# login lockout / throttles — a Redis outage already fails login closed system-wide
-# (login_guard.is_locked reads the same store), so there is no fail-open replay path.
+# Redis cache keys (SEC-06 replay hardening). Both live in the `default` cache. The cache is fail-open
+# for throttles and lockout (core.cache), so these replay guards run under `fail_closed()`: while
+# `redis-cache` is down the second login step answers 503 (CacheUnavailable) instead of letting a
+# spent ticket or TOTP code through.
 _TICKET_USED_PREFIX = "2fa_ticket_used:"
 _USED_CODE_PREFIX = "2fa_used_code:"
 
@@ -165,17 +168,19 @@ def redeem_login_ticket(temp_token: str, code: str):
     Replay hardening (SEC-06): the signed ticket is single-use (its nonce is marked
     spent in Redis on success) and every accepted TOTP code is remembered for
     USED_CODE_TTL so it cannot be replayed while still arithmetically valid. Both
-    checks read the `default` cache, the same store login_guard.is_locked() already
-    depends on — so a Redis outage fails login closed rather than opening a replay
-    hole.
+    checks run under `fail_closed()`: a cache outage raises `CacheUnavailable` (the
+    view answers 503 with an explicit message) rather than opening a replay hole.
     """
     try:
         payload = _signer().unsign(temp_token or "", max_age=TICKET_MAX_AGE)
     except (BadSignature, SignatureExpired):
         return None, "2FA_TICKET_INVALID"
     user_id, _, jti = payload.partition(":")
-    if not jti or cache.get(_TICKET_USED_PREFIX + jti) is not None:
-        # No nonce (legacy/tampered) or the ticket was already redeemed → invalid.
+    if not jti:
+        return None, "2FA_TICKET_INVALID"  # No nonce (legacy/tampered) → invalid.
+    with fail_closed():
+        ticket_spent = cache.get(_TICKET_USED_PREFIX + jti) is not None
+    if ticket_spent:  # The ticket was already redeemed → invalid.
         return None, "2FA_TICKET_INVALID"
     user = get_user_model().objects.filter(pk=user_id, is_active=True).first()
     if user is None or not user.is_2fa_enabled or not user.totp_secret:
@@ -185,10 +190,11 @@ def redeem_login_ticket(temp_token: str, code: str):
     # Correct code, but reject it if this exact code was already accepted for this
     # user inside its validity window (pyotp.verify has no memory of used codes).
     used_code_key = f"{_USED_CODE_PREFIX}{user.pk}:{code}"
-    if cache.get(used_code_key) is not None:
-        return user, "2FA_INVALID_CODE"
-    cache.set(used_code_key, 1, timeout=USED_CODE_TTL)
-    cache.set(_TICKET_USED_PREFIX + jti, 1, timeout=TICKET_MAX_AGE)
+    with fail_closed():
+        if cache.get(used_code_key) is not None:
+            return user, "2FA_INVALID_CODE"
+        cache.set(used_code_key, 1, timeout=USED_CODE_TTL)
+        cache.set(_TICKET_USED_PREFIX + jti, 1, timeout=TICKET_MAX_AGE)
     return user, None
 
 

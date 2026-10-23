@@ -19,7 +19,7 @@ ERP разделяет обработку фоновых задач на два 
 | `erp-worker-ai` | `ai` | Вызовы моделей через шлюз LiteLLM (`intake-model`, `match-model`, `draft-model`, `enrich-model`). Задачи выполняются **без повторных попыток** (платные вызовы). Строгий контроль суточного бюджета `AI_DAILY_BUDGET_USD`. |
 | `erp-beat` | — | Планировщик периодических задач (`refresh_exchange_rates` из ЦБ РУз, очистка временных файлов и устаревших сессий). |
 
-Транспорт очередей — **Redis БД 1** (`redis://redis:6379/1`).
+Транспорт очередей — **`redis-broker`, БД 1** (`redis://redis-broker:6379/1`): `appendonly yes`, `noeviction`, очередь переживает рестарт Redis (S0-2).
 
 ---
 
@@ -35,8 +35,8 @@ ERP разделяет обработку фоновых задач на два 
 
 Проверка длины очередей в Redis:
 ```bash
-docker compose -f infra/compose/base.yml -f infra/compose/dev.yml --env-file .env exec redis redis-cli -n 1 LLEN celery
-docker compose -f infra/compose/base.yml -f infra/compose/dev.yml --env-file .env exec redis redis-cli -n 1 LLEN ai
+docker compose -f infra/compose/base.yml -f infra/compose/dev.yml --env-file .env exec redis-broker redis-cli -n 1 LLEN default
+docker compose -f infra/compose/base.yml -f infra/compose/dev.yml --env-file .env exec redis-broker redis-cli -n 1 LLEN ai
 ```
 *Норма — 0 или небольшие значения при пиковой нагрузке.*
 
