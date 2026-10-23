@@ -112,7 +112,7 @@ wait_ready() {
     if (( SECONDS >= deadline )); then
       curl -sS "$url" || true
       echo
-      die "/ready не вернул 200 за ${TIMEOUT_S} с. Диагностика: make ps; make logs s=api; docs/runbooks/dev-stand.md"
+      die "/ready не вернул 200 за ${TIMEOUT_S} с. Диагностика: make ps; make logs s=api; docs/runbooks/crm/dev-stand.md"
     fi
     sleep 3
   done

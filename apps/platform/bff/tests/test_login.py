@@ -305,3 +305,19 @@ async def test_redis_down_is_backend_unavailable(
     assert body["code"] == "BACKEND_UNAVAILABLE"
     assert body["source"] == "bff"
     assert be.crm_login.call_count == 0
+
+
+@pytest.mark.parametrize(
+    "path", ["/api/v1/auth/session", "/api/v1/me", "/api/v1/menu-counters", "/api/v1/notifications"]
+)
+async def test_redis_down_with_a_session_cookie_is_503_not_500(
+    client: httpx.AsyncClient, check: ContractChecker, path: str
+) -> None:
+    """S0-2: `redis-cache` лёг — сессии недоступны (ожидаемо), но ответ честный 503, а не 500."""
+    client.cookies.set("rt_pf_session", "any-sid")
+    response = await client.get(path)
+
+    assert response.status_code == 503, response.text
+    body = response.json()
+    assert body["code"] == "BACKEND_UNAVAILABLE"
+    assert body["source"] == "bff"

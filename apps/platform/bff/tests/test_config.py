@@ -15,7 +15,7 @@ def test_defaults_point_to_compose_services(monkeypatch: pytest.MonkeyPatch) -> 
     s = Settings(_env_file=None)
     assert s.crm_url == "http://crm-api:8000"
     assert s.erp_url == "http://erp-backend:8000"
-    assert s.redis_url.startswith("redis://")
+    assert s.redis_url == "redis://redis-cache:6379/0"  # S0-2: сессии на redis-cache
     assert s.session_ttl_hours == 12
     assert s.log_level == "INFO"
 

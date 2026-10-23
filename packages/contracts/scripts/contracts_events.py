@@ -1,6 +1,6 @@
 """Общее для скриптов и тестов событий rt_bus: каталог типов, загрузка схем, разрешение $ref.
 
-Раскладка (docs/CONTRACTS.md, раздел «Шина rt_bus», L2):
+Раскладка (docs/architecture/CONTRACTS.md, раздел «Шина rt_bus», L2):
     events/envelope.v1.json                                  конверт CloudEvents
     events/<домен>/<сущность>.<действие>.v<N>.json           схема data типа uz.railtech.<домен>.<сущ>.<действие>.v<N>
     events/<домен>/_defs.v<N>.json                           общие определения домена (не тип)

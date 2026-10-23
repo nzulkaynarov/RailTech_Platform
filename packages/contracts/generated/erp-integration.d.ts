@@ -659,7 +659,7 @@ export interface components {
       is_active: boolean;
     };
     /**
-     * @description Код системной роли бэк-офиса ERP (`accounts.constants.BackofficeRoleCode`, apps/erp/CLAUDE.md §6): CALCULATION «Расчёт», CATALOG_SUPPLY «Каталог и закупки», FULFILLMENT «Исполнение и логистика», FINANCE «Финансы», HEAD «Руководитель», VIEWER «Наблюдатель». Новый код появляется в ERP и здесь в одном PR; тест CRM сверяет этот список с каталогом CRM, тест ERP — с `BackofficeRoleCode`.
+     * @description Код системной роли бэк-офиса ERP (`accounts.constants.BackofficeRoleCode`, docs/systems/erp/CONVENTIONS.md §6): CALCULATION «Расчёт», CATALOG_SUPPLY «Каталог и закупки», FULFILLMENT «Исполнение и логистика», FINANCE «Финансы», HEAD «Руководитель», VIEWER «Наблюдатель». Новый код появляется в ERP и здесь в одном PR; тест CRM сверяет этот список с каталогом CRM, тест ERP — с `BackofficeRoleCode`.
      * @enum {string}
      */
     SystemRoleCode:
@@ -670,7 +670,7 @@ export interface components {
       | "HEAD"
       | "VIEWER";
     /**
-     * @description Снимок каталога прав бэк-офиса ERP (`accounts.constants.Permission`, apps/erp/CLAUDE.md §6). Новый код появляется в каталоге ERP и здесь в одном PR; тест CRM сверяет этот список с каталогом и с картой прав CRM.
+     * @description Снимок каталога прав бэк-офиса ERP (`accounts.constants.Permission`, docs/systems/erp/CONVENTIONS.md §6). Новый код появляется в каталоге ERP и здесь в одном PR; тест CRM сверяет этот список с каталогом и с картой прав CRM.
      * @enum {string}
      */
     ErpPermission:
@@ -1128,7 +1128,7 @@ export interface operations {
         };
       };
       401: components["responses"]["Unauthorized"];
-      /** @description `EMAIL_CONFLICT` — e-mail занят пользователем ERP с другим `crm_user_id` или без сопоставления с CRM; пользователь не переписывается (sso-token.md, FIX-10). */
+      /** @description `EMAIL_CONFLICT` — e-mail занят пользователем ERP с другим `crm_user_id` или без сопоставления с CRM; пользователь не переписывается (docs/architecture/sso-token.md, FIX-10). */
       409: {
         headers: {
           [name: string]: unknown;

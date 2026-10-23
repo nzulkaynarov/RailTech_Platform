@@ -26,6 +26,8 @@ from starlette.datastructures import Headers
 from starlette.responses import JSONResponse
 from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
+from core.cache import CacheUnavailable
+
 from .context import HEADER_NAME, AgentContext, AgentContextError, mark_used, verify_agent_context
 from .contract import ToolsContract
 
@@ -193,6 +195,10 @@ class AgentContextGate:
         except AgentContextError as exc:
             logger.warning("erp-mcp: tools/call rejected (%s)", exc)
             return _invalid_context()
+        except CacheUnavailable:
+            # Хранилище одноразовых jti недоступно (S0-2): вызов не выполняем и не пропускаем без проверки повтора.
+            logger.warning("erp-mcp: tools/call refused, one-time jti store is unavailable")
+            return JSONResponse({"detail": "SERVICE_TEMPORARILY_UNAVAILABLE"}, status_code=503)
         for call in calls:
             params = call.get("params") if isinstance(call.get("params"), dict) else {}
             spec = self.contract.tools.get(str(params.get("name")))

@@ -1,6 +1,6 @@
 /*
  * Стили каркаса, которым нужны :hover и :focus-visible (inline-стили их не умеют). Значения — токены темы
- * (03-frontend.md §3): переменные --ant-* живут только внутри компонентов antd, поэтому здесь литералы.
+ * (docs/architecture/platform-frontend.md §3): переменные --ant-* живут только внутри компонентов antd, поэтому здесь литералы.
  */
 .pf-sr-only {
   position: absolute;

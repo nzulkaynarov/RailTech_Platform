@@ -1,7 +1,7 @@
 import { theme } from "antd";
 import type { ReactNode } from "react";
 
-/** Заголовок страницы основного окна: 20/600 (строка 28) и подзаголовок `#595959` (03-frontend.md §4). */
+/** Заголовок страницы основного окна: 20/600 (строка 28) и подзаголовок `#595959` (docs/architecture/platform-frontend.md §4). */
 export function PageHeader({
   title,
   subtitle,

@@ -5,7 +5,7 @@ description: Создать Alembic-миграцию по изменению SQL
 
 # Миграция
 
-Правила (CLAUDE.md §4): одна миграция на PR; обратимая; имя файла `YYYYMMDD_HHMM_slug` (задано в `backend/alembic.ini`, проверяется тестом `tests/unit/test_migrations_conventions.py`).
+Правила (docs/systems/crm/CONVENTIONS.md §4): одна миграция на PR; обратимая; имя файла `YYYYMMDD_HHMM_slug` (задано в `backend/alembic.ini`, проверяется тестом `tests/unit/test_migrations_conventions.py`).
 
 ## Шаги
 

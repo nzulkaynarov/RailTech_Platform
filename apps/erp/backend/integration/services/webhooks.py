@@ -26,6 +26,8 @@ from django.db import transaction
 from django.utils import timezone
 from portal import projections
 
+from core.cache import CacheUnavailable
+
 from ..models import CrmClientMapping, CrmContactMapping, IntegrationWebhookEvent, WebhookEventStatus
 from . import credentials, event_contract, stages
 
@@ -136,19 +138,29 @@ def mask_secret_payload(event_type: str, payload: Dict[str, Any]) -> tuple:
 
 
 def stash_secret_payload(event_id: Any, secrets_found: Dict[str, Any]) -> None:
+    """Секрет — в кэш. Кэш недоступен (S0-2) — `CacheUnavailable`: без секрета событие не создаём, а не теряем код молча."""
     from django.core.cache import cache
 
-    cache.set(_secret_cache_key(event_id), secrets_found, SECRET_PAYLOAD_TTL)
+    from core.cache import fail_closed
+
+    with fail_closed():
+        cache.set(_secret_cache_key(event_id), secrets_found, SECRET_PAYLOAD_TTL)
 
 
 def delivery_payload(event: IntegrationWebhookEvent) -> Optional[Dict[str, Any]]:
-    """Тело события для отправки: журнал плюс секреты из кэша. `None` — секрет потерян (протух), отправлять нечего."""
+    """Тело события для отправки: журнал плюс секреты из кэша. `None` — секрет потерян (протух), отправлять нечего.
+
+    Кэш недоступен (S0-2) — `CacheUnavailable`, а не `None`: «кэш лёг» и «код протух» — разные случаи, первый повторяют.
+    """
     fields = SECRET_PAYLOAD_FIELDS.get(event.event_type)
     if not fields:
         return event.payload
     from django.core.cache import cache
 
-    secrets_found = cache.get(_secret_cache_key(event.event_id))
+    from core.cache import fail_closed
+
+    with fail_closed():
+        secrets_found = cache.get(_secret_cache_key(event.event_id))
     if not secrets_found or any(name not in secrets_found for name in fields):
         return None
     return {**event.payload, "payload": {**event.payload["payload"], **secrets_found}}
@@ -349,7 +361,13 @@ def emit_event(
     )
     if secret_values:
         # Секрет — в кэш только после записи в журнал: упавший `create` не оставляет в кэше значение без события.
-        stash_secret_payload(event_id, secret_values)
+        try:
+            stash_secret_payload(event_id, secret_values)
+        except CacheUnavailable:
+            # S0-2: кэш недоступен — события без секрета не бывает: убираем строку и сообщаем вызывающему (код акцепта
+            # откатывается на письмо), а не оставляем событие, которое доставка потом отменит как SECRET_EXPIRED.
+            event_obj.delete()
+            raise
 
     def _queue_task():
         from ..tasks import deliver_webhook_event

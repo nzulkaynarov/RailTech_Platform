@@ -5,14 +5,14 @@ import reactRefresh from 'eslint-plugin-react-refresh'
 import tseslint from 'typescript-eslint'
 
 /**
- * Custom ERP ESLint rules enforcing CLAUDE.md coding standards.
+ * Custom ERP ESLint rules enforcing CONVENTIONS.md coding standards.
  * These catch violations that were previously only found by manual AI review.
  */
 const erpPlugin = {
   rules: {
     // Rule 4: No hardcoded non-semantic Tailwind colors
     'no-hardcoded-colors': {
-      meta: { type: 'problem', messages: { found: 'Use semantic tokens (bg-primary, text-destructive, etc.) instead of hardcoded color "{{match}}". See CLAUDE.md Rule 4.' } },
+      meta: { type: 'problem', messages: { found: 'Use semantic tokens (bg-primary, text-destructive, etc.) instead of hardcoded color "{{match}}". See CONVENTIONS.md Rule 4.' } },
       create(context) {
         const FORBIDDEN = /\b(text|bg|border|ring|outline|fill|stroke)-(red|green|blue|yellow|orange|pink|purple|violet|indigo|cyan|teal|lime|emerald|amber|rose|fuchsia|sky|slate|gray|zinc|neutral|stone|warm)-\d+/;
         const TEXT_WHITE_BLACK = /\b(text-white|text-black)\b/;
@@ -33,7 +33,7 @@ const erpPlugin = {
     },
     // Rule 4: No arbitrary pixel text sizes
     'no-arbitrary-text-size': {
-      meta: { type: 'problem', messages: { found: 'Use Tailwind scale (text-xs, text-sm, etc.) instead of arbitrary "{{match}}". See CLAUDE.md Rule 4.' } },
+      meta: { type: 'problem', messages: { found: 'Use Tailwind scale (text-xs, text-sm, etc.) instead of arbitrary "{{match}}". See CONVENTIONS.md Rule 4.' } },
       create(context) {
         const FORBIDDEN = /\btext-\[\d+px\]/;
         return {
@@ -105,7 +105,7 @@ export default tseslint.config(
         'warn',
         { allowConstantExport: true },
       ],
-      // ERP CLAUDE.md enforcement
+      // ERP CONVENTIONS.md enforcement
       'erp/no-hardcoded-colors': 'error',
       'erp/no-arbitrary-text-size': 'error',
     },
