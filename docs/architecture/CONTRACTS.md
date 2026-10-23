@@ -194,7 +194,7 @@ JWT HS256, секрет `PLATFORM_SSO_SECRET` общий. Claims: `iss` (`crm`|`
 
 | Файл | Что | Кто читает |
 |---|---|---|
-| `openapi/platform-bff.yaml` | API BFF `/api/v1` (0.4.0 — поток подсказок SSE `/events/stream` (B5); 0.3.0 — роли-данные ADR-0012: `RoleRef`, `/admin/roles*` и предпросмотр «что произойдёт», повтор приглашения, передача лидов; 0.2.x — фаза P1: сессия, профиль, очередь, уведомления, поиск, Admin · Оргструктура); растёт минорными версиями до кода экранов | SPA (orval), BFF (тесты ответов по схеме) |
+| `openapi/platform-bff.yaml` | API BFF `/api/v1` (0.5.0 — поток подсказок SSE `/events/stream` (B5); 0.3.0 — роли-данные ADR-0012: `RoleRef`, `/admin/roles*` и предпросмотр «что произойдёт», повтор приглашения, передача лидов; 0.2.x — фаза P1: сессия, профиль, очередь, уведомления, поиск, Admin · Оргструктура); растёт минорными версиями до кода экранов | SPA (orval), BFF (тесты ответов по схеме) |
 | `platform-rbac.yaml` (+ `.schema.json`) | **каталог возможностей версии 2** (ADR-0012, R-2): разделы с уровнями и отображением в права CRM (casbin) и ERP (`ErpPermission` шва), поля с ограничением, меню, виды работы «Моей очереди», две системные роли и шаблоны; роли — данные в CRM. Единственный каталог ролей в `packages/contracts` (тест в BFF); версия 1 удалена, её снимок — фикстура тестов миграции CRM | CRM (генератор `gen_platform_roles.py`, права и провижининг), BFF и SPA (генератор `apps/platform/scripts/gen_rbac.py`) |
 | `client-statuses.yaml` (+ `.schema.json`) | статусы для клиента SPEC-v3 §2.5 на трёх языках | бот CRM, Cabinet, письма ERP, BFF |
 
@@ -389,7 +389,7 @@ subscribers:
 и секрет пары в окружении, без правки кода сервисов. Подписки v1: `crm` ← `uz.railtech.erp.*.v1`; `erp` ←
 `uz.railtech.crm.client.updated.v1`, `uz.railtech.crm.contact.*.v1` (ERP обновляет проекции компании и контактов, B4).
 `platform-bff` (B5) ← `uz.railtech.erp.*.v1`, `uz.railtech.crm.lead.*.v1`, `uz.railtech.identity.user.*.v1`: BFF Платформы
-превращает события в подсказки инвалидации SSE (`GET /api/v1/events/stream`, `platform-bff.yaml` 0.4.0), данных событий не
+превращает события в подсказки инвалидации SSE (`GET /api/v1/events/stream`, `platform-bff.yaml` 0.5.0), данных событий не
 хранит; приёмник `http://platform-bff:8000/bus/v1/events` виден только внутри сети compose (Caddy `/bus/*` на домене
 Платформы отдаёт 404); секреты пар — `RT_BUS_SECRET_ERP_PLATFORM_BFF`, `RT_BUS_SECRET_CRM_PLATFORM_BFF` (только окружение).
 Тест проверяет: маска совпадает хотя бы с одним типом, подписчик не подписан на свои события.

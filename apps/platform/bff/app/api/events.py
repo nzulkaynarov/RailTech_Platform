@@ -50,6 +50,10 @@ async def frames(
             hint = stream.take()
             if hint is None:
                 continue
+            # Сессию проверяем перед каждым кадром: при частых подсказках heartbeat не наступает,
+            # а поток вышедшего сотрудника должен закрыться.
+            if await store.get(sid) is None:
+                return
             await drop_snapshots(redis, sid)
             yield frame(hint)
     finally:

@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: RailTech Platform — BFF API (Платформа → CRM и ERP)
-  version: 0.4.0
+  version: 0.5.0
   summary: Пространство `/api/v1/` BFF Платформы — вызывает SPA `apps/platform/web` от имени сотрудника.
   description: |
     Контракт по ADR-0011 и `docs/architecture/platform-bff.md`. Версия 0.1.0 (INF-P0-1) покрывает фазу P1:
@@ -48,7 +48,7 @@ info:
     `details.reason` (`user_has_active_leads`, `name_taken`) или `details.invite = not_sent`; у каждого 409 в `details.reason` —
     код CRM. Каталог разделов, меню, полей и видов очереди — `packages/contracts/platform-rbac.yaml` версии 2.
 
-    **0.4.0 (B5, ADR-0014) — поток вместо опроса.** `GET /events/stream` (SSE, `text/event-stream`): BFF — подписчик шины
+    **0.5.0 (B5, ADR-0014) — поток вместо опроса.** `GET /events/stream` (SSE, `text/event-stream`): BFF — подписчик шины
     событий `rt_bus`, на событие ERP, лида CRM или сотрудника шлёт открытому соединению подсказку инвалидации
     `InvalidationHint {topics, reason}`; SPA перезапрашивает уведомления, счётчики меню, «Мою очередь» и ленту «Сегодня»
     обычными API (с проверкой прав). Данных событий в потоке нет. Пока поток жив, опрос — редкий (5 минут), при обрыве —

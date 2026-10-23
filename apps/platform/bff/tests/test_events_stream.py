@@ -175,6 +175,23 @@ async def test_stream_ends_when_the_session_is_gone(
     assert hub.streams == 0
 
 
+async def test_stream_ends_on_a_hint_when_the_session_is_gone_even_without_heartbeat(
+    hub: EventHub, store: StubStore, redis: FakeRedis
+) -> None:
+    """Выход при потоке подсказок: без heartbeat кадр вышедшему не уходит, поток закрывается."""
+    redis.values["feed:sid-1:data:erp:/x:{}"] = "[]"
+    reader = open_stream(hub, store, redis, PLATFORM_EVENTS_HEARTBEAT_SECONDS=60)
+    await until(lambda: bool(redis.subscribers))
+    await hub.publish(Hint(("queue",), "first"))
+    await until(lambda: bool(reader.events()))
+    store.alive = False  # выход
+    await hub.publish(Hint(("queue",), "second"))
+    async with asyncio.timeout(2):
+        await reader.done.wait()
+    assert [e["reason"] for e in reader.events()] == ["first"]
+    assert hub.streams == 0
+
+
 async def test_hint_drops_the_session_feed_cache_but_not_the_others(
     hub: EventHub, store: StubStore, redis: FakeRedis
 ) -> None:
