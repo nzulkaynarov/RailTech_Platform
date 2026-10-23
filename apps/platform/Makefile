@@ -99,5 +99,5 @@ e2e: ## Playwright + axe на MSW (поднимает vite --mode mock на :417
 
 .PHONY: docker-build
 docker-build: ## Собрать prod-образы bff и web (теги rt-platform-bff / rt-platform-web, TAG=local)
-	docker build --target prod -t rt-platform-bff:$(or $(TAG),local) $(BFF)
+	docker build --target prod --build-context rtbus=../../packages/rt-bus --build-context contracts=../../packages/contracts -t rt-platform-bff:$(or $(TAG),local) $(BFF)
 	docker build --target prod -t rt-platform-web:$(or $(TAG),local) $(WEB)

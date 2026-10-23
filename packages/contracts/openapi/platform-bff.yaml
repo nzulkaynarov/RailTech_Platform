@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: RailTech Platform — BFF API (Платформа → CRM и ERP)
-  version: 0.4.0
+  version: 0.5.0
   summary: Пространство `/api/v1/` BFF Платформы — вызывает SPA `apps/platform/web` от имени сотрудника.
   description: |
     Контракт по ADR-0011 и `docs/architecture/platform-bff.md`. Версия 0.1.0 (INF-P0-1) покрывает фазу P1:
@@ -48,6 +48,12 @@ info:
     `details.reason` (`user_has_active_leads`, `name_taken`) или `details.invite = not_sent`; у каждого 409 в `details.reason` —
     код CRM. Каталог разделов, меню, полей и видов очереди — `packages/contracts/platform-rbac.yaml` версии 2.
 
+    **0.5.0 (B5, ADR-0014) — поток вместо опроса.** `GET /events/stream` (SSE, `text/event-stream`): BFF — подписчик шины
+    событий `rt_bus`, на событие ERP, лида CRM или сотрудника шлёт открытому соединению подсказку инвалидации
+    `InvalidationHint {topics, reason}`; SPA перезапрашивает уведомления, счётчики меню, «Мою очередь» и ленту «Сегодня»
+    обычными API (с проверкой прав). Данных событий в потоке нет. Пока поток жив, опрос — редкий (5 минут), при обрыве —
+    прежние 30 секунд. Чисто добавляющее изменение.
+
     0.2.4: `423 ACCOUNT_LOCKED` объявлен и на `POST /auth/change-password` (CRM блокирует учётную запись после неверных
     текущих паролей).
 
@@ -80,6 +86,8 @@ tags:
   - name: dashboard
   - name: notifications
   - name: search
+  - name: events
+    description: Поток подсказок инвалидации (SSE) — замена опроса уведомлений, счётчиков и очереди
   - name: admin
     description: Admin · Оргструктура и Ролевая матрица — сотрудники и роли (CRM — источник истины по людям и ролям)
 
@@ -402,6 +410,41 @@ paths:
           $ref: '#/components/responses/SessionExpired'
         '403':
           $ref: '#/components/responses/CsrfFailed'
+
+  /events/stream:
+    get:
+      tags: [events]
+      operationId: streamEvents
+      summary: Поток подсказок инвалидации (SSE) — что перезапросить после события шины
+      description: |
+        Долгоживущий ответ `text/event-stream` для вошедшего сотрудника с разделом «Моя очередь» (его имеет каждая роль).
+        Кадры:
+
+        - `event: invalidate`, `data: <InvalidationHint>` — после события шины (ERP, лид CRM, сотрудник). Всплеск событий
+          сливается в один кадр (окно около 300 мс): `topics` — объединение тем, `reason` — тип последнего события.
+          Подсказка адресована всем сессиям: события не несут адресата. Данных события в кадре нет — клиент перезапрашивает
+          обычные API, поэтому чужие данные в поток не попадают.
+        - `: ping` — комментарий-heartbeat каждые 20 секунд тишины (держит соединение через прокси). Если сессия закрыта
+          (выход, срок), BFF завершает поток при ближайшем heartbeat.
+        - `: connected` — первый кадр: заголовки и первый байт уходят сразу.
+
+        `Last-Event-ID` не поддерживается: после переподключения клиент делает разовый полный перезапрос. Обрыв потока —
+        сигнал вернуться к опросу (`POLL_INTERVAL_MS`). Ответ несёт `Cache-Control: no-cache, no-transform`.
+      responses:
+        '200':
+          description: Поток открыт
+          content:
+            text/event-stream:
+              schema:
+                type: string
+                description: Кадры SSE; `data` кадра `invalidate` — JSON `InvalidationHint`
+                contentMediaType: application/json
+                contentSchema:
+                  $ref: '#/components/schemas/InvalidationHint'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
 
   /search:
     get:
@@ -1389,6 +1432,29 @@ components:
           oneOf:
             - $ref: '#/components/schemas/RoleId'
             - type: 'null'
+
+    InvalidationTopic:
+      type: string
+      enum: [notifications, counters, queue, activity]
+      description: >-
+        Что перезапросить: `notifications` — `listNotifications`; `counters` — `getMenuCounters`; `queue` — `getQueue`
+        и `getQueueCards`; `activity` — `getActivityToday`.
+
+    InvalidationHint:
+      type: object
+      description: Данные кадра `invalidate` потока `/events/stream` — подсказка, не данные события.
+      additionalProperties: false
+      required: [topics, reason]
+      properties:
+        topics:
+          type: array
+          minItems: 1
+          uniqueItems: true
+          items:
+            $ref: '#/components/schemas/InvalidationTopic'
+        reason:
+          type: string
+          description: Тип события шины (`uz.railtech.erp.quote.sent.v1`) или `resync` (слушатель BFF переподключился — перезапросите всё)
 
     Health:
       type: object

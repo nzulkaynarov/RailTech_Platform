@@ -1,11 +1,12 @@
-import { fireEvent, screen, waitFor, within } from "@testing-library/react";
+import { act, fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { HttpResponse, http } from "msw";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { endSession } from "../../mocks/mockSession";
 import { usePanelsStore } from "../../app/shell/panelsStore";
 import i18n from "../../shared/i18n";
-import { POLL_INTERVAL_MS } from "../../shared/api/polling";
+import { POLL_INTERVAL_MS, STREAM_POLL_INTERVAL_MS } from "../../shared/api/polling";
+import { FakeEventSource } from "../../test/fakeEventSource";
 import { renderApp, signInAs } from "../../test/renderApp";
 import { server } from "../../test/server";
 import { setViewportWidth } from "../../test/viewport";
@@ -168,5 +169,90 @@ describe("Dashboard · Моя очередь", () => {
       expect(options?.refetchOnWindowFocus).toBe(true);
     }
     expect(POLL_INTERVAL_MS).toBe(30_000);
+  });
+
+  describe("поток подсказок BFF (SSE)", () => {
+    beforeEach(() => {
+      FakeEventSource.reset();
+      vi.stubGlobal("EventSource", FakeEventSource);
+    });
+    afterEach(() => {
+      vi.unstubAllGlobals();
+    });
+
+    function countRequests() {
+      const hits = { queue: 0, cards: 0, counters: 0, notifications: 0 };
+      server.events.on("request:start", ({ request }) => {
+        const path = new URL(request.url).pathname;
+        if (path === "/api/v1/queue") hits.queue += 1;
+        if (path === "/api/v1/queue/cards") hits.cards += 1;
+        if (path === "/api/v1/menu-counters") hits.counters += 1;
+        if (path === "/api/v1/notifications") hits.notifications += 1;
+      });
+      return hits;
+    }
+
+    it("подсказка обновляет очередь, карточки, счётчики и колокольчик без опроса; опрос при живом потоке редкий", async () => {
+      signInAs("director@demo.example");
+      const hits = countRequests();
+      const { queryClient } = renderApp("/dashboard/queue");
+      await main();
+      await waitFor(() => {
+        expect(FakeEventSource.instances).toHaveLength(1);
+        expect(hits.queue + hits.cards + hits.counters + hits.notifications).toBeGreaterThanOrEqual(
+          4,
+        );
+      });
+      act(() => {
+        FakeEventSource.last.open();
+      });
+      const before = { ...hits };
+
+      for (const query of queryClient.getQueryCache().getAll()) {
+        if (/\/api\/v1\/(queue|notifications|menu-counters)/.test(String(query.queryKey[0]))) {
+          expect(query.observers[0]?.options.refetchInterval).toBe(STREAM_POLL_INTERVAL_MS);
+        }
+      }
+
+      act(() => {
+        FakeEventSource.last.emit("invalidate", {
+          topics: ["queue", "counters", "notifications"],
+          reason: "uz.railtech.erp.quote.sent.v1",
+        });
+      });
+      await waitFor(() => {
+        expect(hits.queue).toBe(before.queue + 1);
+        expect(hits.cards).toBe(before.cards + 1);
+        expect(hits.counters).toBe(before.counters + 1);
+        expect(hits.notifications).toBe(before.notifications + 1);
+      });
+    });
+
+    it("поток оборвался — опрос возвращается к 30 с", async () => {
+      signInAs("director@demo.example");
+      const { queryClient } = renderApp("/dashboard/queue");
+      await main();
+      await waitFor(() => {
+        expect(FakeEventSource.instances).toHaveLength(1);
+      });
+      act(() => {
+        FakeEventSource.last.open();
+      });
+      act(() => {
+        FakeEventSource.last.fail();
+      });
+      await waitFor(() => {
+        const watched = queryClient
+          .getQueryCache()
+          .getAll()
+          .filter((q) =>
+            /\/api\/v1\/(queue|notifications|menu-counters)/.test(String(q.queryKey[0])),
+          );
+        expect(watched.length).toBeGreaterThanOrEqual(4);
+        for (const query of watched) {
+          expect(query.observers[0]?.options.refetchInterval).toBe(POLL_INTERVAL_MS);
+        }
+      });
+    });
   });
 });

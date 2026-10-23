@@ -29,7 +29,7 @@ def _dead_delivery(monkeypatch):
     bus = get_bus()
     monkeypatch.setattr(bus, "_http", httpx.Client(transport=httpx.MockTransport(lambda r: httpx.Response(404))))
     bus.pump()
-    delivery = Delivery.objects.get(event_id=event.id)
+    delivery = Delivery.objects.get(event_id=event.id, subscriber="crm")
     assert delivery.status == "dead"
     return delivery
 

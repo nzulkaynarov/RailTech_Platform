@@ -8,6 +8,7 @@ dependencies = [
     "httpx>=0.28.1",
     "pydantic-settings>=2.15.0",
     "redis>=7.4.0",
+    "rt-bus[fastapi]",
     "structlog>=26.1.0",
     "uvicorn[standard]>=0.54.0",
 ]
@@ -56,3 +57,7 @@ strict = true
 plugins = ["pydantic.mypy"]
 mypy_path = "."
 explicit_package_bases = true
+
+# Шина событий rt_bus (ADR-0014, L14): библиотека по пути; в образе пакет приходит именованным контекстом `rtbus`.
+[tool.uv.sources]
+rt-bus = { path = "../../../packages/rt-bus", editable = true }

@@ -46,6 +46,12 @@
  * `details.reason` (`user_has_active_leads`, `name_taken`) или `details.invite = not_sent`; у каждого 409 в `details.reason` —
  * код CRM. Каталог разделов, меню, полей и видов очереди — `packages/contracts/platform-rbac.yaml` версии 2.
  *
+ * **0.5.0 (B5, ADR-0014) — поток вместо опроса.** `GET /events/stream` (SSE, `text/event-stream`): BFF — подписчик шины
+ * событий `rt_bus`, на событие ERP, лида CRM или сотрудника шлёт открытому соединению подсказку инвалидации
+ * `InvalidationHint {topics, reason}`; SPA перезапрашивает уведомления, счётчики меню, «Мою очередь» и ленту «Сегодня»
+ * обычными API (с проверкой прав). Данных событий в потоке нет. Пока поток жив, опрос — редкий (5 минут), при обрыве —
+ * прежние 30 секунд. Чисто добавляющее изменение.
+ *
  * 0.2.4: `423 ACCOUNT_LOCKED` объявлен и на `POST /auth/change-password` (CRM блокирует учётную запись после неверных
  * текущих паролей).
  *
@@ -64,7 +70,7 @@
  * Лимиты: вход — 10 в минуту на IP и e-mail; остальные запросы — 300 в минуту на сессию; превышение — 429
  * `TOO_MANY_REQUESTS` с `Retry-After`.
  *
- * OpenAPI spec version: 0.4.0
+ * OpenAPI spec version: 0.5.0
  */
 import { useMutation, useQuery } from "@tanstack/react-query";
 import type {
@@ -1657,6 +1663,130 @@ export const useMarkAllNotificationsRead = <
 > => {
   return useMutation(getMarkAllNotificationsReadMutationOptions(options), queryClient);
 };
+
+export const getStreamEventsUrl = () => {
+  return `/api/v1/events/stream`;
+};
+
+/**
+ * Долгоживущий ответ `text/event-stream` для вошедшего сотрудника с разделом «Моя очередь» (его имеет каждая роль).
+ * Кадры:
+ *
+ * - `event: invalidate`, `data: <InvalidationHint>` — после события шины (ERP, лид CRM, сотрудник). Всплеск событий
+ *   сливается в один кадр (окно около 300 мс): `topics` — объединение тем, `reason` — тип последнего события.
+ *   Подсказка адресована всем сессиям: события не несут адресата. Данных события в кадре нет — клиент перезапрашивает
+ *   обычные API, поэтому чужие данные в поток не попадают.
+ * - `: ping` — комментарий-heartbeat каждые 20 секунд тишины (держит соединение через прокси). Если сессия закрыта
+ *   (выход, срок), BFF завершает поток при ближайшем heartbeat.
+ * - `: connected` — первый кадр: заголовки и первый байт уходят сразу.
+ *
+ * `Last-Event-ID` не поддерживается: после переподключения клиент делает разовый полный перезапрос. Обрыв потока —
+ * сигнал вернуться к опросу (`POLL_INTERVAL_MS`). Ответ несёт `Cache-Control: no-cache, no-transform`.
+ * @summary Поток подсказок инвалидации (SSE) — что перезапросить после события шины
+ */
+export const streamEvents = async (options?: Parameters<typeof http>[1]): Promise<string> => {
+  return http<string>(getStreamEventsUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getStreamEventsQueryKey = () => {
+  return [`/api/v1/events/stream`] as const;
+};
+
+export const getStreamEventsQueryOptions = <
+  TData = Awaited<ReturnType<typeof streamEvents>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse>,
+>(options?: {
+  query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof streamEvents>>, TError, TData>>;
+  request?: SecondParameter<typeof http>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getStreamEventsQueryKey();
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof streamEvents>>> = ({ signal }) =>
+    streamEvents({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof streamEvents>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type StreamEventsQueryResult = NonNullable<Awaited<ReturnType<typeof streamEvents>>>;
+export type StreamEventsQueryError = ErrorType<SessionExpiredResponse | ForbiddenResponse>;
+
+export function useStreamEvents<
+  TData = Awaited<ReturnType<typeof streamEvents>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse>,
+>(
+  options: {
+    query: Partial<UseQueryOptions<Awaited<ReturnType<typeof streamEvents>>, TError, TData>> &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof streamEvents>>,
+          TError,
+          Awaited<ReturnType<typeof streamEvents>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useStreamEvents<
+  TData = Awaited<ReturnType<typeof streamEvents>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse>,
+>(
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof streamEvents>>, TError, TData>> &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof streamEvents>>,
+          TError,
+          Awaited<ReturnType<typeof streamEvents>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useStreamEvents<
+  TData = Awaited<ReturnType<typeof streamEvents>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse>,
+>(
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof streamEvents>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary Поток подсказок инвалидации (SSE) — что перезапросить после события шины
+ */
+
+export function useStreamEvents<
+  TData = Awaited<ReturnType<typeof streamEvents>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse>,
+>(
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof streamEvents>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getStreamEventsQueryOptions(options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
 
 export const getSearchUrl = (params: SearchParams) => {
   const normalizedParams = new URLSearchParams();

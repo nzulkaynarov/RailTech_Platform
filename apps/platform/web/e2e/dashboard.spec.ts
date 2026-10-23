@@ -25,6 +25,33 @@ async function setMock(page: Page, key: string, value: string): Promise<void> {
 test.describe("Моя очередь", () => {
   test.skip(({ isMobile }) => isMobile, "ширины задаёт сам сценарий");
 
+  test("поток подсказок: событие шины обновляет колокольчик, бейджи и очередь без опроса", async ({
+    page,
+  }) => {
+    await loginAndWait(page, "director@demo.example");
+    await expect(page.getByRole("main").getByText(/Директор · .* · 3 решения/)).toBeVisible();
+    // Поток подключается вместе с каркасом: ждём, пока MSW примет соединение.
+    await expect
+      .poll(() => page.evaluate("window.__rtMockStreamCount?.() ?? 0"), { timeout: 5_000 })
+      .toBeGreaterThan(0);
+
+    const wanted = [
+      "/api/v1/queue",
+      "/api/v1/queue/cards",
+      "/api/v1/menu-counters",
+      "/api/v1/notifications",
+    ];
+    const seen = new Set<string>();
+    page.on("request", (request) => {
+      seen.add(new URL(request.url()).pathname);
+    });
+    await page.evaluate(
+      `window.__rtMockEmitHint?.({ topics: ["queue", "counters", "notifications"], reason: "uz.railtech.erp.quote.sent.v1" })`,
+    );
+    // Задержка подсказка → запросы укладывается в бюджет 2 с (слияние ≈ 0,3 с делает BFF, в моках его нет).
+    await expect.poll(() => wanted.every((path) => seen.has(path)), { timeout: 2_000 }).toBe(true);
+  });
+
   test("директор: счётчики, «Что сделать сейчас», лента «Сегодня»", async ({ page }) => {
     await loginAndWait(page, "director@demo.example");
     const main = page.getByRole("main");
@@ -100,9 +127,10 @@ test.describe("Моя очередь", () => {
     await expectNoViolations(page, "erp down");
   });
 
-  test("опрос: очередь и колокольчик обновляются через 30 с и при возврате на вкладку", async ({
+  test("опрос — запасной путь при недоступном потоке: очередь и колокольчик обновляются через 30 с и при возврате на вкладку", async ({
     page,
   }) => {
+    await page.addInitScript(`window.localStorage.setItem("rt-pf-mock-stream-down", "1")`);
     await page.clock.install();
     const calls: Record<string, number> = { queue: 0, notifications: 0 };
     page.on("request", (request) => {
