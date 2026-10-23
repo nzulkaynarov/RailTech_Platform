@@ -127,9 +127,10 @@ test.describe("Моя очередь", () => {
     await expectNoViolations(page, "erp down");
   });
 
-  test("опрос: очередь и колокольчик обновляются через 30 с и при возврате на вкладку", async ({
+  test("опрос — запасной путь при недоступном потоке: очередь и колокольчик обновляются через 30 с и при возврате на вкладку", async ({
     page,
   }) => {
+    await page.addInitScript(`window.localStorage.setItem("rt-pf-mock-stream-down", "1")`);
     await page.clock.install();
     const calls: Record<string, number> = { queue: 0, notifications: 0 };
     page.on("request", (request) => {

@@ -1,4 +1,4 @@
-import { HttpResponse, sse } from "msw";
+import { sse } from "msw";
 
 import type { InvalidationHint } from "../shared/api/generated/model";
 import { readSession } from "./mockSession";
@@ -10,6 +10,17 @@ import { readSession } from "./mockSession";
  */
 type MockClient = { send(payload: { event: "invalidate"; data: string }): void; close(): void };
 const clients = new Set<MockClient>();
+
+/** `localStorage["rt-pf-mock-stream-down"] = "1"`: поток подсказок недоступен (ошибка соединения), приложение опрашивает по-старому. */
+export const MOCK_STREAM_DOWN_KEY = "rt-pf-mock-stream-down";
+
+function streamDown(): boolean {
+  try {
+    return window.localStorage.getItem(MOCK_STREAM_DOWN_KEY) === "1";
+  } catch {
+    return false;
+  }
+}
 
 export function emitMockHint(hint: InvalidationHint): void {
   for (const client of clients) client.send({ event: "invalidate", data: JSON.stringify(hint) });
@@ -31,11 +42,13 @@ export const eventStreamHandlers =
     ? []
     : [
         sse<{ invalidate: string }>("*/api/v1/events/stream", ({ client }) => {
+          if (streamDown()) {
+            client.error();
+            return undefined;
+          }
           if (!readSession()) {
-            return HttpResponse.json(
-              { code: "SESSION_EXPIRED", message: "Сессия истекла", source: "bff" },
-              { status: 401 },
-            );
+            client.error();
+            return undefined;
           }
           clients.add(client);
           return undefined;
