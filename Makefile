@@ -133,6 +133,7 @@ deploy-check: ## Проверка конфигурации прода без з�
 	@bash $(INFRA)/deploy/tests/crm-bot-test.sh
 	@bash $(INFRA)/deploy/tests/cpu-baseline-test.sh
 	@bash $(INFRA)/deploy/tests/platform-prod-test.sh
+	@bash $(INFRA)/deploy/tests/platform-bus-test.sh
 	@bash $(INFRA)/deploy/tests/caddy-edge-test.sh
 	@bash $(INFRA)/deploy/tests/wal-archive-test.sh
 	@bash $(INFRA)/deploy/tests/walg-schedule-test.sh
