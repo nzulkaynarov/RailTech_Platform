@@ -3,7 +3,7 @@
 Библиотека [`packages/rt-bus`](../../packages/rt-bus/) (дистрибутив `rt-bus`, импорт `rt_bus`, Python 3.12) — единственный
 способ, которым сервис публикует события своих сущностей и получает чужие. Основание: [ADR-0014](../adr/0014-integration-bus-rt-bus.md),
 правило «интеграции только через шину» (ORCHESTRATOR §3 п. 14). Нормативка: CONTRACTS §9 «Шина rt_bus», [runbook волны 11](../runbooks/wave11-bus-v1.md) §2,
-решения лида L1–L11. Транспорт v1 — PostgreSQL outbox сервиса, ретранслятор и подписанный HTTP к подписчикам. Бизнес-код
+решения лида L1–L15 (§11). Транспорт v1 — PostgreSQL outbox сервиса, ретранслятор и подписанный HTTP к подписчикам. Бизнес-код
 транспорт не видит (v2 — NATS JetStream, этап F).
 
 ```text
@@ -222,3 +222,30 @@ make -C packages/rt-bus check                                          # ruff, m
   pytest.
 - HTTP — `httpx.MockTransport`/`ASGITransport`, без сети.
 - Схемы и подписки — из `packages/contracts` этого репозитория (другой каталог — `RT_BUS_TEST_CONTRACTS_DIR`).
+
+## 11. Решения волны 11 (L1–L15)
+
+Решения лида волны 11 (2026-10-22…23) по runbook §2 и ответам архитектора; источник правды — этот раздел и CONTRACTS §9.
+
+| № | Решение |
+|---|---|
+| L1 | Конверт CloudEvents 1.0, structured mode. Обязательны `specversion`, `id` (UUID), `source` (`rt://crm\|erp\|eds\|platform-bff`), `type`, `time` (UTC), `datacontenttype`, `dataschema` (`rt://contracts/events/<домен>/<сущность>.<действие>/v<N>`), `tenant` (`railtech`), `correlationid`, `data`; необязательны `subject`, `traceparent`. Отправитель строгий, читатель терпимый (доп. атрибуты-расширения допустимы). |
+| L2 | Тип `uz.railtech.<домен>.<сущность>.<действие>.v<N>` ↔ `packages/contracts/events/<домен>/<сущность>.<действие>.v<N>.json`; сущность и действие — один сегмент snake_case. Домены `crm`, `erp`, `eds`, `identity`, `platform`; сотрудник — `identity` с `source` `rt://crm` (ADR-0015). |
+| L3 | Доставка: `POST <подписчик>/bus/v1/events`, `application/cloudevents+json`, заголовки `X-RT-Publisher`, `X-RT-Event-Id`, `X-RT-Timestamp` (момент попытки), `X-RT-Signature: sha256=HMAC(secret, "{id}.{ts}.{body}")`, окно 300 с. Ответы: 2xx (в т. ч. повтор и skipped), 401, 400, 422. Неповторяемые у отправителя — 400, 404, 410, 413, 415, 422 (сразу dead); прочее — повтор 30 с, 2 мин, 10 мин, 1 ч, 6 ч, 24 ч с jitter ±20 %, затем dead (7 попыток). |
+| L4 | Секрет пары `RT_BUS_SECRET_<ИЗДАТЕЛЬ>_<ПОДПИСЧИК>` (список через запятую: первым подписывают, принимают любой) или поставщик секретов сервиса. |
+| L5 | `packages/contracts/bus/subscriptions.yaml`: `{version: 1, subscribers: [{name, endpoint, endpoint_env?, enabled?, types: [маски fnmatch]}]}`; издатель доставляет только свои события и не себе; новый подписчик — строка в файле и секрет в окружении. |
+| L6 | Один генератор моделей — datamodel-code-generator → Pydantic v2, пакет `rt-contracts` в `packages/contracts/generated/python/`; `rt-bus` от него не зависит и проверяет `data` по JSON Schema каталога контрактов. |
+| L7 | Старые `events.schema.json` и `examples/events/` удаляют последние потребители (B3 — ERP и infra, B4 — CRM и сами файлы). |
+| L8 | В пределах vN — только новые необязательные поля и новые типы; всё прочее, включая расширение enum и снятие required, — v(N+1) с двойной публикацией (`events_compat.py` в `make contracts`). |
+| L9 | Таблицы `rt_bus_outbox`, `rt_bus_delivery`, `rt_bus_inbox`, `rt_bus_subscriber_state` — одна схема в SQLAlchemy и Django. |
+| L10 | Схемы `data` строгие для отправителя; приёмник прощает только `additionalProperties` (новое необязательное поле не даёт 422). |
+| L11 | Пути контракта: см. CONTRACTS §9; события CRM/identity — снимки с `updated_at`, более старый снимок не применяется; `contact.deleted` несёт `deleted_at`. |
+| L12 | Секрет пары CRM ↔ ERP: окружение, иначе `hex(HMAC-SHA256(webhook_secret, "rt-bus/v1/{издатель}->{подписчик}"))` от каждого действующего секрета сопряжения (ERP хранит и прежний на время ротации). Прочие подписчики — только окружение. |
+| L13 | Одна сессия — одна система: ERP-часть шины (публикация, приёмник, проекции событий CRM) — B3, CRM-часть — B4. |
+| L14 | Пакеты в образах — compose `additional_contexts` (`rtbus`, `contracts`) и `COPY --from`, то же в `deploy.yml`; контракты в образе — `/opt/rt/contracts`. |
+| L15 | Документация шины — только в `docs/`: этот файл, CONTRACTS §9, runbook'и `docs/runbooks/rt-bus-*.md`. |
+
+Решения архитектора 2026-10-23 к волне: ИНН и реквизиты клиента — поле CRM, ERP применяет их в проекцию и не даёт править
+(`REQUISITES_MANAGED_BY_CRM`); `contact.deleted` в ERP — архивирование; стирание лида — `uz.railtech.crm.lead.erased.v1` (только
+идентификаторы); `lead.stage_changed.reason` — только код из справочника CRM; WARN oasdiff сборку не валит, ERR валит; до 1.0
+ломающее в OpenAPI — с повышением минорной (B6b).
