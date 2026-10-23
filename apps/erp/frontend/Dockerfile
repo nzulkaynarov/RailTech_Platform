@@ -39,7 +39,8 @@ RUN npm run build
 
 
 # ── Stage 2: Runtime ──────────────────────────────────────────────────────────
-FROM nginx:stable-alpine
+# Версия и digest закреплены (S0-9): сборка воспроизводима; обновление — осознанной правкой (stable-ветка nginx).
+FROM nginx:1.30.6-alpine3.24@sha256:47928bf67eb62a1863cb08d9ecb52d3e704304ba614eaee17884204677702951
 
 WORKDIR /usr/share/nginx/html
 

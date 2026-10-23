@@ -12,7 +12,7 @@ CPU_PY_NATIVE='import importlib.util as u; [__import__(m) for m in ("numpy","pan
 # cpu_baseline_names — имена образов, для которых есть правило (одно на строку).
 cpu_baseline_names() {
   printf '%s\n' rt-crm-backend rt-erp-backend rt-platform-bff rt-litellm rt-crm-frontend rt-erp-frontend rt-cabinet rt-platform-web \
-    rt-db-postgres rt-db-backup caddy redis rustfs
+    rt-db-postgres rt-db-backup caddy redis rustfs rc
 }
 
 # cpu_baseline_rules <имя образа без реестра и тега> <обработчик>
@@ -28,6 +28,8 @@ cpu_baseline_rules() {
     rt-erp-frontend | rt-cabinet) "$run" nginx -t ;;
     redis) "$run" redis-server --version ;;
     rustfs) "$run" rustfs --version ;;
+    # Клиент RustFS в одноразовом s3-init (S0-9): пользователи, политики, правило erp-temp.
+    rc) "$run" rc --version ;;
     # VPS 2 (infra/db): WAL-G (Go + libsodium), сервер PostgreSQL с pgvector; бэкап — pg_dump 17, rclone, openssl.
     # Бинарники PostgreSQL в образе pgvector лежат вне PATH — абсолютные пути.
     rt-db-postgres)

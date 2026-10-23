@@ -64,6 +64,7 @@ pulled_ref() {
     caddy) prefix="caddy:" ;;
     redis) prefix="redis:" ;;
     rustfs) prefix="rustfs/rustfs:" ;;
+    rc) prefix="rustfs/rc:" ;;
     *) return 1 ;;
   esac
   sed -n "s|^[[:space:]]*image:[[:space:]]*\(${prefix}[^[:space:]]*\)[[:space:]]*\$|\1|p" "$ROOT/infra/compose/base.yml" | head -n 1
@@ -87,11 +88,13 @@ default_image() { echo "$CHECK_REPO/$1:amd64"; }
 # на Mac arm64 он перенёс бы тег, например caddy:2.11.7-alpine, на amd64 и испортил бы чужие стенды. Берём digest amd64-манифеста
 # и тянем по нему — тег внешнего образа не трогается.
 alias_amd64() {
-  local ref="$1" tag="$2" digest
+  local ref="$1" tag="$2" digest repo
+  # Репозиторий без тега и digest: «имя:тег@sha256:…» (закреплённый образ, например rustfs/rc) и «имя:тег».
+  repo="${ref%@*}"; repo="${repo%:*}"
   digest="$(docker buildx imagetools inspect "$ref" --format '{{range .Manifest.Manifests}}{{if and (eq .Platform.OS "linux") (eq .Platform.Architecture "amd64")}}{{.Digest}}{{end}}{{end}}')"
   [[ "$digest" == sha256:* ]] || return 1
-  docker pull -q "${ref%:*}@$digest" >/dev/null
-  docker tag "${ref%:*}@$digest" "$tag"
+  docker pull -q "$repo@$digest" >/dev/null
+  docker tag "$repo@$digest" "$tag"
 }
 
 # ─── qemu-x86_64 (статический) ─────────────────────────────────────────────────────────────────────────────────────────────

@@ -48,7 +48,7 @@ const spec = parse(
 const ORACLE: Record<string, string> = {
   "dashboard.queue": "FFFFFF",
   "dashboard.summary": "HFHHHR",
-  "crm.leads": "HFFHHH",
+  "crm.leads": "HRFHHH",
   "crm.clients": "HFFRRR",
   "eds.inbox": "HFRHHR",
   "eds.drafts": "HFRHHH",
@@ -61,7 +61,7 @@ const ORACLE: Record<string, string> = {
   "erp.calc.services": "HFHHFH",
   "erp.stock": "HFRFFR",
   "chats.internal": "FFFFFF",
-  "chats.external": "HFFHHF",
+  "chats.external": "HRFHHF",
   admin: "FRHHHH",
   "company.settings": "FFHHHH",
 };

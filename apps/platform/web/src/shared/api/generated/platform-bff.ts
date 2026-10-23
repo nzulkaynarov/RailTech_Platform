@@ -26,6 +26,14 @@
  * 0.2.0 (волна 8): смена пароля (`POST /auth/change-password`, `Session.must_change_password`); Admin · Оргструктура —
  * сотрудники, выдача ролей Платформы, приглашение по почте (`/admin/users*`, раздел матрицы `admin`).
  *
+ * **0.4.0 (R-1b, ADR-0012 п. 2) — ломающее (до 1.0 допустимо).** Директор видит Ролевую матрицу только для чтения:
+ * `GET /admin/roles` и `GET /admin/roles/{id}` — от `admin: read` (раньше `full`), создание, изменение, удаление и
+ * `POST /admin/roles/preview` — по-прежнему `admin: full`. Оптимистическая блокировка роли: `Role.version` (целое, растёт при
+ * каждом изменении), `RoleUpdate.version` — обязательное поле (ломающее: тело PATCH без него — 422); устаревшая версия —
+ * 409 `CONFLICT` с `details.reason = role_version_conflict` и `details.current_version`. Системная роль «Директор»: лиды
+ * (`crm.leads`) и внешние чаты (`chats.external`) — только чтение (`platform-rbac.yaml`), поэтому «Моя очередь» директора без видов
+ * «ответить лиду» и «взять лид».
+ *
  * **0.3.0 (R-2, ADR-0012) — ломающее (до 1.0 допустимо): роли — данные.** Роль сотрудника — `RoleRef {id, name,
  * system, code?}` вместо перечисления `RoleCode` (удалено): `Me.roles: RoleRef[]`, `Me.active_role` и `MeUpdate.active_role` —
  * id роли или `null`; `Employee.roles: RoleRef[]`, `EmployeeInvite.role_ids`, `EmployeeUpdate.role_ids`; параметр `role` очереди
@@ -56,7 +64,7 @@
  * Лимиты: вход — 10 в минуту на IP и e-mail; остальные запросы — 300 в минуту на сессию; превышение — 429
  * `TOO_MANY_REQUESTS` с `Retry-After`.
  *
- * OpenAPI spec version: 0.3.0
+ * OpenAPI spec version: 0.4.0
  */
 import { useMutation, useQuery } from "@tanstack/react-query";
 import type {
@@ -2361,7 +2369,7 @@ export const getListRolesUrl = () => {
 };
 
 /**
- * Раздел `admin` — полный (матрицы и выдачу ролей видит только администратор; CRM — `users:write`).
+ * Раздел `admin` — от чтения (0.4.0): матрицу видят администратор (полный доступ) и директор (только чтение); CRM — `users:read`.
  * @summary Роли Платформы (Admin · Ролевая матрица) — системные и созданные, с числом сотрудников
  */
 export const listRoles = async (options?: Parameters<typeof http>[1]): Promise<RoleList> => {
@@ -2696,6 +2704,7 @@ export const getGetRoleUrl = (id: string) => {
 };
 
 /**
+ * Раздел `admin` — от чтения (0.4.0), как у списка.
  * @summary Роль
  */
 export const getRole = async (id: string, options?: Parameters<typeof http>[1]): Promise<Role> => {
@@ -2819,7 +2828,7 @@ export const getUpdateRoleUrl = (id: string) => {
 };
 
 /**
- * Не присланное поле не меняется. Права сотрудников с этой ролью CRM пересчитывает сразу (CRM) и фоном (ERP). Системную роль изменить нельзя — 409 `ROLE_SYSTEM`; изменение, после которого не остаётся ни одного администратора, — 409 `LAST_ADMIN`.
+ * Не присланное поле не меняется (кроме `version` нужно хотя бы одно — иначе 422); `version` — обязательная версия роли, которую видел клиент. Права сотрудников с этой ролью CRM пересчитывает сразу (CRM) и фоном (ERP). Системную роль изменить нельзя — 409 `ROLE_SYSTEM`; изменение, после которого не остаётся ни одного администратора, — 409 `LAST_ADMIN`; роль изменена после чтения клиентом — 409 `CONFLICT` с `details.reason = role_version_conflict` (SPA предлагает обновить страницу).
  * @summary Переименовать роль, изменить описание, матрицу или поля с ограничением
  */
 export const updateRole = async (

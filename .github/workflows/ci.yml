@@ -654,7 +654,7 @@ jobs:
         run: bash infra/deploy/tests/cpu-baseline-test.sh
       - name: Самопроверка механики (Wolfi и numpy 2.4+ обязаны падать, numpy<2.4 — проходить)
         run: scripts/qemu_cpu_check.sh selftest
-      - name: Сторонние образы прода (caddy, redis, rustfs)
+      - name: Сторонние образы прода (caddy, redis, rustfs, rc)
         run: |
           for n in $(scripts/qemu_cpu_check.sh list pulled); do
             scripts/qemu_cpu_check.sh check "$n"

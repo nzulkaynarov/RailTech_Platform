@@ -53,8 +53,10 @@ RT_ENV_FILE="$envf" bash "$root/infra/deploy/make-env-prod.sh" init "$envf" >/de
 key="$(grep '^WAL_ENC_KEY=' "$envf" | cut -d= -f2-)"
 [[ "$key" =~ ^[0-9a-f]{64}$ ]] || fail "WAL_ENC_KEY не 64 hex-символа"
 [[ "$key" != "$(grep '^LANGFUSE_ENCRYPTION_KEY=' "$envf" | cut -d= -f2-)" ]] || fail "WAL_ENC_KEY совпал с другим ключом"
-[[ "$(grep '^WAL_S3_ACCESS_KEY=' "$envf" | cut -d= -f2-)" == "$(grep '^S3_ACCESS_KEY=' "$envf" | cut -d= -f2-)" ]] || fail "WAL_S3_ACCESS_KEY не подставлен из S3_ACCESS_KEY"
-[[ "$(grep '^WAL_S3_SECRET_KEY=' "$envf" | cut -d= -f2-)" == "$(grep '^S3_SECRET_KEY=' "$envf" | cut -d= -f2-)" ]] || fail "WAL_S3_SECRET_KEY не подставлен из S3_SECRET_KEY"
+# Архив ходит своим ключом сервиса `wal` (S3_WAL_*, только бакет wal), не корневым (S0-9).
+[[ "$(grep '^WAL_S3_ACCESS_KEY=' "$envf" | cut -d= -f2-)" == "$(grep '^S3_WAL_ACCESS_KEY=' "$envf" | cut -d= -f2-)" ]] || fail "WAL_S3_ACCESS_KEY не подставлен из S3_WAL_ACCESS_KEY"
+[[ "$(grep '^WAL_S3_SECRET_KEY=' "$envf" | cut -d= -f2-)" == "$(grep '^S3_WAL_SECRET_KEY=' "$envf" | cut -d= -f2-)" ]] || fail "WAL_S3_SECRET_KEY не подставлен из S3_WAL_SECRET_KEY"
+[[ "$(grep '^WAL_S3_SECRET_KEY=' "$envf" | cut -d= -f2-)" != "$(grep '^S3_ROOT_SECRET_KEY=' "$envf" | cut -d= -f2-)" ]] || fail "WAL-G получил корневой ключ RustFS"
 grep -qE '^[A-Z0-9_]+=.*CHANGE_ME' "$envf" && fail "в сгенерированном файле остался CHANGE_ME"
 bash "$root/infra/deploy/make-env-prod.sh" extract-db "$envf" > "$tmp/env.db"
 for v in WAL_ENC_KEY WAL_S3_ENDPOINT WAL_S3_ACCESS_KEY WAL_S3_PREFIX WAL_KEEP_DAYS; do grep -q "^$v=" "$tmp/env.db" || fail "extract-db не отдаёт $v"; done

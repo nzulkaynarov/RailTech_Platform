@@ -3,7 +3,7 @@
 #  1. Старого сервиса `redis` и общей переменной REDIS_PASSWORD нет; есть `redis-broker` и `redis-cache`, у каждого свой пароль.
 #  2. Брокер: appendonly yes, noeviction, maxmemory, том для AOF. Кэш: volatile-lru, maxmemory; healthcheck у обоих.
 #  3. Потребители смотрят на «свой» экземпляр со «своим» паролем: Celery и Channels ERP — брокер, кэш ERP, сессии BFF и
-#     Langfuse (отдельной БД 4) — кэш; ни один адрес не ведёт на `redis`.
+#     Langfuse (BullMQ, отдельной БД 3, S0-9) — брокер (noeviction); ни один адрес не ведёт на `redis`.
 #  4. Прод: лимиты памяти больше maxmemory; erp-backend ждёт брокер по здоровью и кэш только по запуску (ERP живёт без кэша).
 #  5. Dev: оба экземпляра опубликованы на 127.0.0.1 на разных портах.
 #  6. make-env-prod.sh init выдаёт разные случайные пароли двум экземплярам.
@@ -73,7 +73,8 @@ env_of() { q --arg s "$1" --arg k "$2" '.services[$s].environment[$k] // "none"'
 [[ "$(env_of erp-backend CELERY_RESULT_BACKEND)" == redis://:brokerpw@redis-broker:6379/1 ]] || fail "erp-backend: CELERY_RESULT_BACKEND"
 [[ "$(env_of platform-bff REDIS_URL)" == redis://:cachepw@redis-cache:6379/3 ]] || fail "platform-bff: REDIS_URL"
 for svc in langfuse-web langfuse-worker; do
-  [[ "$(env_of "$svc" REDIS_CONNECTION_STRING)" == redis://:cachepw@redis-cache:6379/4 ]] || fail "$svc: Langfuse не на redis-cache БД 4"
+  # Очередь BullMQ вытеснять нельзя: брокер (noeviction, AOF), своя БД 3 — не Celery (1) и не Channels (2).
+  [[ "$(env_of "$svc" REDIS_CONNECTION_STRING)" == redis://:brokerpw@redis-broker:6379/3 ]] || fail "$svc: Langfuse не на redis-broker БД 3"
   [[ "$(env_of "$svc" REDIS_HOST)" == none ]] || fail "$svc: остался REDIS_HOST (БД не выбрать)"
 done
 # Все ERP-сервисы на одном образе получают те же адреса (воркеры, Beat, MCP): окружение общее.
@@ -85,9 +86,9 @@ done
 [[ "$(jq -r '[.services[] | .environment // {} | to_entries[] | select(.value | tostring | test("@redis:|REDIS_HOST"))] | length' "$tmp/prod.json")" == 0 ]] \
   || fail "в окружении остался адрес старого сервиса redis"
 leak="$(jq -r '[.services | to_entries[] | select(.value.environment // {} | tostring | test("brokerpw")) | .key] | sort | join(",")' "$tmp/prod.json")"
-[[ "$leak" == erp-ai-gateway,erp-backend,erp-beat,erp-mcp,erp-worker,erp-worker-ai,redis-broker ]] || fail "пароль брокера у лишних сервисов: $leak"
+[[ "$leak" == erp-ai-gateway,erp-backend,erp-beat,erp-mcp,erp-worker,erp-worker-ai,langfuse-web,langfuse-worker,redis-broker ]] || fail "пароль брокера у лишних сервисов: $leak"
 leak="$(jq -r '[.services | to_entries[] | select(.value.environment // {} | tostring | test("cachepw")) | .key] | sort | join(",")' "$tmp/prod.json")"
-[[ "$leak" == erp-ai-gateway,erp-backend,erp-beat,erp-mcp,erp-worker,erp-worker-ai,langfuse-web,langfuse-worker,platform-bff,redis-cache ]] || fail "пароль кэша у лишних сервисов: $leak"
+[[ "$leak" == erp-ai-gateway,erp-backend,erp-beat,erp-mcp,erp-worker,erp-worker-ai,platform-bff,redis-cache ]] || fail "пароль кэша у лишних сервисов: $leak"
 
 # 4. Прод: лимиты, зависимости.
 [[ "$(q '.services["redis-broker"].deploy.resources.limits.memory')" == 268435456 ]] || fail "redis-broker: лимит памяти не 256M"
@@ -95,7 +96,8 @@ leak="$(jq -r '[.services | to_entries[] | select(.value.environment // {} | tos
 [[ "$(q '.services["erp-backend"].depends_on["redis-broker"].condition')" == service_healthy ]] || fail "erp-backend: не ждёт брокер по здоровью"
 [[ "$(q '.services["erp-backend"].depends_on["redis-cache"].condition')" == service_started ]] || fail "erp-backend: кэш должен ждаться только по запуску (ERP живёт без кэша)"
 for svc in langfuse-web langfuse-worker; do
-  [[ "$(q --arg s "$svc" '.services[$s].depends_on["redis-cache"].condition')" == service_healthy ]] || fail "$svc: не ждёт redis-cache"
+  [[ "$(q --arg s "$svc" '.services[$s].depends_on["redis-broker"].condition')" == service_healthy ]] || fail "$svc: не ждёт redis-broker"
+  [[ "$(q --arg s "$svc" '.services[$s].depends_on | has("redis-cache")')" == false ]] || fail "$svc: зависит от redis-cache, а Langfuse теперь на брокере"
 done
 
 # 5. Dev: порты на 127.0.0.1, разные.

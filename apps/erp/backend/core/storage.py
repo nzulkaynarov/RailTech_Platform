@@ -15,6 +15,7 @@ Without MINIO_ENDPOINT only DEBUG/tests are allowed (settings): then Django's de
 All file names are UUID-based to prevent collisions and information leakage.
 """
 
+import asyncio
 import functools
 import uuid
 
@@ -22,10 +23,61 @@ from django.conf import settings
 from django.core.files.storage import default_storage
 from django.utils.encoding import filepath_to_uri
 
+# Размер порции при отдаче объекта клиенту: память одного скачивания ограничена порцией, а не размером файла (S0-9).
+STREAM_CHUNK_SIZE = 256 * 1024
+
+
+class ObjectStream:
+    """Тело объекта S3 для отдачи клиенту порциями: файл целиком в память или на диск не загружается.
+
+    `S3Boto3StorageFile` при первом `read()` скачивает объект полностью (в `SpooledTemporaryFile` без предела в памяти),
+    а Django под ASGI (daphne) складывает синхронный итератор ответа в список — файл в 50 МБ жил бы в памяти дважды.
+    Здесь тело читается порциями `iter_chunks`, а `aiter_chunks` отдаёт их асинхронно (чтение блокирующее — идёт в потоке),
+    поэтому ASGI-обработчик пишет порции клиенту по мере чтения."""
+
+    def __init__(self, body, size, name=""):
+        self._body = body
+        self.size = size
+        self.name = name
+
+    def iter_chunks(self, chunk_size=STREAM_CHUNK_SIZE):
+        return self._body.iter_chunks(chunk_size)
+
+    async def aiter_chunks(self, chunk_size=STREAM_CHUNK_SIZE):
+        chunks = iter(self.iter_chunks(chunk_size))
+        try:
+            while True:
+                chunk = await asyncio.to_thread(next, chunks, None)
+                if chunk is None:
+                    return
+                yield chunk
+        finally:
+            await asyncio.to_thread(self.close)
+
+    def close(self):
+        self._body.close()
+
 
 class TrackedStorageMixin:
     """Запись, чтение и удаление идут через `external_call("s3")` (M3-ERP-06): исход попадает в состояние сервиса S3
     (`/health` integration), а выключатель из центра внешних сервисов CRM останавливает обращения к хранилищу."""
+
+    def open_stream(self, name):
+        """Объект как `ObjectStream` (тело не загружается; размер — из ответа хранилища). Нет объекта — FileNotFoundError."""
+        from botocore.exceptions import ClientError
+        from storages.utils import clean_name
+
+        from core.external_status import external_call
+
+        key = self._normalize_name(clean_name(name))
+        with external_call("s3", benign=(FileNotFoundError,)):
+            try:
+                response = self.bucket.Object(key).get()
+            except ClientError as exc:
+                if exc.response.get("Error", {}).get("Code") in {"NoSuchKey", "404", "NotFound"}:
+                    raise FileNotFoundError(name) from exc
+                raise
+        return ObjectStream(response["Body"], response["ContentLength"], name)
 
     def _save(self, name, content):
         from core.external_status import external_call
