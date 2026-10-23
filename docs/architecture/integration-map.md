@@ -24,7 +24,7 @@
 | BFF | CRM | ERP | Статус |
 |---|---|---|---|
 | `POST /auth/login`, `POST /auth/logout`, `GET /auth/session` | `POST /auth/login`, `/auth/refresh`, `/auth/logout`, `GET /me`, `POST /auth/sso/token` | `POST /auth/sso/exchange/`, `/auth/token/refresh/`, `/auth/logout/` | ✓ |
-| `GET /me` (имя, роли Платформы, язык, модули) | `GET /me`, `GET /me/permissions` | — | Δ CRM-01 (`platform_roles`) |
+| `GET /me` (имя, роли Платформы, язык, модули) | `GET /me`, `GET /me/permissions` | — | Δ CRM-01, R-1 (`platform_role_refs`) |
 | `GET /search?q=` | `GET /leads?q=`, `GET /clients?q=` | `GET /crm/analytics/search-documents/`; сделки по номеру и названию — **нет** (`DealViewSet` без `search_fields`) | частично; сделки — Δ ERP-09, чаты — Δ ERP-08 |
 | `GET /notifications`, `POST /notifications/read-all`, `POST /notifications/{id}/read` | Δ CRM-04 (уведомления сотрудникам из CRM) | `GET /notifications/`, `PATCH /notifications/mark_all_read/`, `PATCH /notifications/{id}/mark_read/` | ✓ ERP, Δ CRM |
 | `GET /events` (SSE, фаза P4) | `GET /stream` | Δ ERP-10 (шина `rt_bus`, этап B) | Δ |
@@ -166,8 +166,8 @@
 
 `CALCULATION` (Расчёт) для новых сотрудников не выдаётся. Каждый сотрудник — пользователь CRM с
 `platform_access = ["crm","erp"]` (CRM — источник истины по людям); при нескольких ролях базовая роль CRM — старшая
-(`admin` > `manager` > `viewer`). CRM-01 добавляет `platform_roles` и заменяет базовые роли собственными ролями casbin
-по матрице. **Источник истины карты — `packages/contracts/platform-rbac.yaml`**; изменения — PR с тестом матрицы.
+(`admin` > `manager` > `viewer`). С R-1 (ADR-0012) роли Платформы — данные CRM, права CRM сотрудника — политики casbin его ролей (`pr:<id>`),
+базовые роли для проверки прав не используются (кроме `admin` у системной «Администратор»). **Источник истины карты — `packages/contracts/platform-rbac.yaml`**; изменения — PR с тестом матрицы.
 
 ## 5. Номера
 
@@ -237,7 +237,7 @@
 
 | ID | Что | Фаза |
 |---|---|---|
-| CRM-01 | `users.platform_roles[]` (6 ролей), выдача в карточке сотрудника, провижининг ERP по карте §4; `GET /me` отдаёт роли | P1 |
+| CRM-01 → R-1/R-1b | роли Платформы как данные (`platform_roles`, `user_platform_roles`, `version`), выдача `platform_role_ids`, провижининг ERP вычисленными правами; `GET /me` отдаёт `platform_role_refs` | P1 → волна 9 |
 | CRM-02 | вычисляемый статус лида для Платформы (`platform_status`: new, dialog, wants_quote, no_answer, client) и фильтр по нему | P2 |
 | CRM-03 | действие «Создать заявку»: из любой активной стадии лида и из клиента, без требования e-mail, с полями письма и срочности; передача в ERP с `letter`, `process = v3`; приглашение в канал контакта (`invite.requested`, бывшая FIX-68) и кнопка «Открыть кабинет» в боте | P2 |
 | CRM-04 | уведомления сотрудникам из событий CRM (SLA лида, сбой интеграции, новое обращение) — хранение и API чтения | P3 |
