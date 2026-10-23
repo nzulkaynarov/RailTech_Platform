@@ -6,7 +6,7 @@ from django.db import models
 from django.utils.translation import gettext_lazy as _
 
 from catalog.constants import FulfillmentPolicy, PriceVisibility
-from core.storage import get_public_storage, product_document_path, product_image_path
+from core.storage import get_private_storage, get_public_storage, product_document_path, product_image_path
 from master_data.models import Currency, UnitOfMeasure
 
 # ────────────────────────────────────────────
@@ -348,7 +348,10 @@ class ProductImage(models.Model):
 
 
 class ProductDocument(models.Model):
-    """Технические документы (паспорта, сертификаты ГОСТ)."""
+    """Технические документы (паспорта, сертификаты ГОСТ).
+
+    Файл — в приватном бакете `erp-private` (S0-9): документ товара не публичный, `/media/products/<id>/docs/*`
+    не открывается; сотрудник скачивает его через `GET catalog/products/{id}/download-document/{doc_id}/`."""
 
     product = models.ForeignKey(
         "catalog.Product",
@@ -358,7 +361,7 @@ class ProductDocument(models.Model):
     )
     file = models.FileField(
         upload_to=product_document_path,
-        storage=get_public_storage,
+        storage=get_private_storage,
         null=True,
         blank=True,
         verbose_name=_("Файл"),

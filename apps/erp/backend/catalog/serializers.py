@@ -1,5 +1,6 @@
 from drf_spectacular.utils import extend_schema_field, extend_schema_serializer
 from rest_framework import serializers
+from rest_framework.reverse import reverse
 
 from accounts.models import Company
 from master_data.models import Currency, DeliveryBasis, UnitOfMeasure
@@ -96,9 +97,21 @@ class ProductImageSerializer(serializers.ModelSerializer):
 
 
 class ProductDocumentSerializer(serializers.ModelSerializer):
+    # Файл документа приватный (S0-9): вместо адреса в хранилище — путь аутентифицированного скачивания
+    # (`GET catalog/products/{id}/download-document/{doc_id}/`, поток с проверкой прав); нет файла — null.
+    file = serializers.SerializerMethodField()
+
     class Meta:
         model = ProductDocument
         fields = ["id", "file", "file_url", "name", "uploaded_at"]
+
+    @extend_schema_field(
+        {"type": "string", "nullable": True, "description": "Путь скачивания файла (API), null — файла нет"}
+    )
+    def get_file(self, obj):
+        if not obj.file:
+            return None
+        return reverse("product-download-document", kwargs={"pk": obj.product_id, "doc_id": obj.pk})
 
 
 # --- Supplier Offer Serializer ---
@@ -436,7 +449,12 @@ class ProductSerializer(_CostGateMixin, serializers.ModelSerializer):
         docs = obj.documents.all()
         doc = next(iter(docs), None)
         if doc:
-            url = doc.file.url if doc.file else doc.file_url
+            # Загруженный файл приватный (S0-9): `/media/...` для него не открывается — отдаём путь аутентифицированного скачивания.
+            url = (
+                reverse("product-download-document", kwargs={"pk": doc.product_id, "doc_id": doc.pk})
+                if doc.file
+                else doc.file_url
+            )
             if url:
                 request = self.context.get("request")
                 if request and not url.startswith("http"):
