@@ -57,6 +57,14 @@
 	}
 }
 
+# Приёмник шины rt_bus (/bus/v1/events) — только внутри сети compose (B5): на домене Платформы снаружи 404.
+(no_bus) {
+	@bus path /bus /bus/*
+	handle @bus {
+		respond 404
+	}
+}
+
 (access_log) {
 	log {
 		output stdout
@@ -163,11 +171,12 @@
 	encode zstd gzip
 	import security_headers
 	import no_mcp
+	import no_bus
 	header Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'"
 
 	handle /api/* {
 		reverse_proxy platform-bff:8000 {
-			# SSE: без буферизации ответа
+			# SSE (/api/v1/events/stream): без буферизации ответа
 			flush_interval -1
 		}
 	}

@@ -138,6 +138,11 @@ http://platform.localhost {
 	handle @mcp {
 		respond 404
 	}
+	# Приёмник шины rt_bus (/bus/v1/events) — только внутри сети compose (B5).
+	@bus path /bus /bus/*
+	handle @bus {
+		respond 404
+	}
 	header {
 		X-Content-Type-Options "nosniff"
 		X-Frame-Options "DENY"
@@ -148,7 +153,7 @@ http://platform.localhost {
 	}
 	handle /api/* {
 		reverse_proxy platform-bff:8000 {
-			# SSE: без буферизации ответа
+			# SSE (/api/v1/events/stream): без буферизации ответа
 			flush_interval -1
 		}
 	}

@@ -1,12 +1,31 @@
+import { useMemo } from "react";
+
+import { useStreamLive } from "./streamState";
+
 /**
- * Опрос вместо потока событий в фазах P1–P3 (02-architecture.md §5, 03-frontend.md §7): «Моя очередь», бейджи меню и
- * колокольчик обновляются раз в 30 секунд и при возврате на вкладку (TanStack Query: `refetchOnWindowFocus` берёт
- * только устаревшие данные, `staleTime` клиента — 5 с). Фоновые вкладки не опрашиваются.
+ * Опрос — запасной путь (02-architecture.md §5, 03-frontend.md §7). Пока поток подсказок BFF (`/events/stream`, SSE) жив,
+ * «Моя очередь», бейджи меню и колокольчик обновляются по событию шины, а опрос редкий — страховка от потерянной
+ * подсказки. Поток оборвался — прежний опрос раз в 30 секунд и при возврате на вкладку (TanStack Query:
+ * `refetchOnWindowFocus` берёт только устаревшие данные, `staleTime` клиента — 5 с). Фоновые вкладки не опрашиваются.
  */
 export const POLL_INTERVAL_MS = 30_000;
+/** Опрос при живом потоке: подсказки приходят сами, это только страховка. */
+export const STREAM_POLL_INTERVAL_MS = 300_000;
 
-export const pollQuery = {
-  refetchInterval: POLL_INTERVAL_MS,
-  refetchOnWindowFocus: true,
-  refetchIntervalInBackground: false,
-} as const;
+export function pollInterval(streamLive: boolean): number {
+  return streamLive ? STREAM_POLL_INTERVAL_MS : POLL_INTERVAL_MS;
+}
+
+/** Параметры запроса «живых» данных: интервал зависит от того, жив ли поток подсказок. */
+export function usePollQuery() {
+  const live = useStreamLive();
+  return useMemo(
+    () =>
+      ({
+        refetchInterval: pollInterval(live),
+        refetchOnWindowFocus: true,
+        refetchIntervalInBackground: false,
+      }) as const,
+    [live],
+  );
+}

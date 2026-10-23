@@ -43,7 +43,7 @@ RUN --mount=type=cache,target=/root/.cache/uv uv sync --frozen --no-install-proj
 WORKDIR /app
 USER app
 EXPOSE 8000
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload", "--timeout-graceful-shutdown", "3"]
 
 FROM deps AS prod
 COPY --chown=app:app app ./app
@@ -51,4 +51,6 @@ USER app
 EXPOSE 8000
 HEALTHCHECK --interval=10s --timeout=4s --start-period=10s --retries=5 \
     CMD ["python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/v1/health', timeout=3)"]
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "2"]
+# SSE (/api/v1/events/stream) держит соединения открытыми: без --timeout-graceful-shutdown остановка ждала бы клиентов
+# дольше `docker stop`; браузеры переподключаются сами.
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "2", "--timeout-graceful-shutdown", "5"]

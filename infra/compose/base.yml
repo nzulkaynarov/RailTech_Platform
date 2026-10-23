@@ -604,6 +604,10 @@ services:
     build:
       context: ../../apps/platform/bff
       target: prod
+      # Шина событий rt_bus (B5, ADR-0014, L14): BFF — подписчик, пакет и схемы лежат вне контекста сборки.
+      additional_contexts:
+        rtbus: ../../packages/rt-bus
+        contracts: ../../packages/contracts
     environment:
       LOG_LEVEL: ${LOG_LEVEL:-INFO}
       PLATFORM_CRM_URL: http://crm-api:8000
@@ -615,6 +619,11 @@ services:
       PLATFORM_COOKIE_SECURE: ${PLATFORM_COOKIE_SECURE:-true}
       PLATFORM_ERP_REFRESH_COOKIE: ${PLATFORM_ERP_REFRESH_COOKIE:-refresh_token}
       PLATFORM_LOGIN_RATE_PER_MINUTE: ${PLATFORM_LOGIN_RATE_PER_MINUTE:-10}
+      # Шина rt_bus: приёмник POST /bus/v1/events (виден только внутри сети compose; Caddy /bus/* не отдаёт). Секрет пары
+      # «издатель → platform-bff» подписывает издатель (ERP, CRM), BFF проверяет; пусто — события не принимаются (401).
+      # Подписка и типы — packages/contracts/bus/subscriptions.yaml (строка platform-bff, в образе).
+      RT_BUS_SECRET_ERP_PLATFORM_BFF: ${RT_BUS_SECRET_ERP_PLATFORM_BFF:-}
+      RT_BUS_SECRET_CRM_PLATFORM_BFF: ${RT_BUS_SECRET_CRM_PLATFORM_BFF:-}
     depends_on:
       redis-cache:
         condition: service_healthy

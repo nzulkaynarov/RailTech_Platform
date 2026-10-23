@@ -100,6 +100,13 @@ check_edge() { # <ERP-host> <Cabinet-host> <Platform-host>
   expect "$cab" /media/catalog/a.jpg 200 ERP-BACKEND
   expect "$plat" /admin/ 200 PLATFORM-WEB
   expect "$plat" /api/integration/v1/health 200 PLATFORM-BFF
+  # B5: приёмник шины BFF (/bus/v1/events) снаружи не публикуется — ни в BFF, ни в статику SPA.
+  for p in /bus/v1/events /bus /bus/ //bus/v1/events /BUS/v1/events; do
+    expect_not_erp "$plat" "$p"
+  done
+  expect "$plat" /bus/v1/events 404
+  expect "$plat" /bus/ 404
+  expect "$plat" /api/v1/events/stream 200 PLATFORM-BFF   # сам поток SSE — через /api/*
 }
 
 # Prod: адреса сайтов — http://…, чтобы Caddy не пытался получить сертификат; маршруты те же.
