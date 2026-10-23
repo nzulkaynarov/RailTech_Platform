@@ -114,7 +114,9 @@ async def run(args: argparse.Namespace) -> int:
     if not args.yes:
         print(f"Будет ≈{args.dialogs * args.turns} ходов с реальными моделями. Добавьте --yes.")  # noqa: T201
         return 2
-    from app.main import _qualify  # тот же хук, что у API: квалификатор в очередь
+    from app.bot.process import (
+        qualify_hook as _qualify,
+    )  # тот же хук, что у бота: квалификатор в очередь
 
     c = get_container()
     await _cleanup()

@@ -50,7 +50,7 @@ class QueueFacts:
 
 @dataclass(frozen=True, slots=True)
 class BotFacts:
-    """Что известно о боте в процессе api (`BotSupervisor`): без значений токена."""
+    """Что известно о боте со слов процесса `crm-bot` (`bot_runtime`, S0-4): без значений токена."""
 
     running: bool
     source: str
@@ -191,11 +191,20 @@ def budget(alerts: Sequence[AlertRow], now: datetime) -> Component:
     return Component("budget", "Бюджет моделей", "ok", "", row.updated_at if row else now)
 
 
+# Бот живёт в отдельном процессе `crm-bot` (S0-4): если он не отчитывается, статус бота неизвестен.
+BOT_PROCESS_ERRORS = {
+    "bot_process_never_started": "Процесс бота (crm-bot) ещё не запускался — docker compose ps",
+    "bot_process_down": "Процесс бота (crm-bot) не отвечает — docker compose logs crm-bot",
+}
+
+
 def bot(facts: BotFacts | None, mode: str, now: datetime) -> Component:
     """Бот «работает» только если polling-задача жива; причина — из супервизора, не догадка."""
     title = "Telegram-бот"
     if mode == "disabled":
         return Component("bot", title, "fail", "Бот выключен настройкой сервера", now)
+    if facts is not None and facts.last_error in BOT_PROCESS_ERRORS:
+        return Component("bot", title, "fail", BOT_PROCESS_ERRORS[facts.last_error], now)
     if facts is None or facts.source == "none":
         reason = "Токен бота не задан — «Подключения» → «Telegram-бот»"
         return Component("bot", title, "fail", reason, now)

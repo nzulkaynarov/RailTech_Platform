@@ -21,6 +21,7 @@ from app.domain.platform_roles import default_roles
 ALEMBIC_INI = Path(__file__).parents[2] / "alembic.ini"
 AGENT_KEY = "integration-agent-context-key-0123456789"
 TABLES = (
+    "bot_runtime",
     "kb_chunks",
     "kb_documents",
     "kb_gaps",

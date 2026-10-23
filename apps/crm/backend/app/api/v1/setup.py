@@ -55,7 +55,6 @@ async def create_first_admin(
 
 @router.get("/checklist", response_model=SetupChecklist)
 async def get_setup_checklist(
-    request: Request,
     principal: Annotated[Principal, Depends(require("settings", "write"))],
     container: ContainerDep,
     readiness: Annotated[ReadinessService, Depends(get_readiness)],
@@ -65,7 +64,7 @@ async def get_setup_checklist(
     Бот и модели — из тех же проверок, что «Состояние системы» (бот = принимает сообщения).
     """
     cfg = await container.settings_service.get()
-    components = await collect_components(request, container, readiness, datetime.now(UTC))
+    components = await collect_components(container, readiness, datetime.now(UTC))
     models_ok, bot_running = checks.health_facts(components)
     async with container.session_factory() as session:
         saved = await checks.saved_settings(session)
