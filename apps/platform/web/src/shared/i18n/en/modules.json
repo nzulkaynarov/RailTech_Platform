@@ -429,10 +429,9 @@
       "createdToast": "Role “{{name}}” created",
       "savedToast": "Role saved",
       "deletedToast": "Role deleted",
-      "readOnly": {
-        "title": "The role matrix is kept by the administrator",
-        "text": "Roles, their sections and restricted fields are viewed and changed by the administrator. Employee roles are in the org chart."
-      },
+      "viewOnly": "View only",
+      "readOnlySubtitle": "What each role sees and can do. Roles and access are changed by the administrator.",
+      "readOnlyNote": "View only: the role and its matrix are changed by the administrator. Employee roles are in the org chart.",
       "loadError": {
         "title": "Could not load roles",
         "text": "Roles are stored in CRM. Try again; if the error stays, check CRM in Admin · Integrations."
@@ -490,6 +489,8 @@
         "FORBIDDEN": "Not enough rights: roles are changed by an administrator.",
         "BACKEND_UNAVAILABLE": "CRM is not responding. Try again later.",
         "VALIDATION_FAILED": "Check the role name, sections and fields.",
+        "ROLE_VERSION_CONFLICT": "The role was changed by someone else — refresh the page.",
+        "reload": "Refresh",
         "DEFAULT": "The action failed. Try again."
       },
       "employeesTitle": "Employees with the role “{{name}}”",
@@ -513,8 +514,7 @@
     "about": "About the chat",
     "files": "Files",
     "role": "Role",
-    "employees": "Employees",
-    "journal": "Log"
+    "employees": "Employees"
   },
   "panel": {
     "today": {
@@ -569,13 +569,9 @@
       "title": "No employees",
       "text": "Employees with the selected role and the Assign role button will appear here."
     },
-    "journal": {
-      "title": "No entries yet",
-      "text": "The change log: who changed a role or access, and when."
-    },
     "role": {
       "title": "No role selected",
-      "text": "Click a role column in the matrix and its description, morning queue and employees appear here."
+      "text": "Click a role column in the matrix and the role description and its employees appear here."
     }
   }
 }

@@ -3531,18 +3531,6 @@ components:
             $ref: '#/components/schemas/PlatformRoleGrantRef'
           title: Platform Role Refs
           type: array
-        platform_roles:
-          items:
-            enum:
-            - MANAGER
-            - DIRECTOR
-            - SUPPLY
-            - ENGINEER
-            - ACCOUNTANT
-            - ADMIN
-            type: string
-          title: Platform Roles
-          type: array
         position:
           anyOf:
           - type: string
@@ -4031,12 +4019,16 @@ components:
           - type: integer
           - type: 'null'
           title: Updated By
+        version:
+          title: Version
+          type: integer
       required:
       - id
       - code
       - name
       - description
       - is_system
+      - version
       - access
       - restricted_fields
       - employees
@@ -4070,7 +4062,10 @@ components:
       title: PlatformRoleRef
       type: object
     PlatformRoleUpdate:
-      description: Изменение роли; не присланное поле не меняется. Системную роль менять нельзя (409).
+      description: 'Изменение роли; не присланное поле не меняется. Системную роль менять нельзя (409).
+
+
+        `version` — версия роли, которую видел клиент; при расхождении 409 `role_version_conflict`.'
       properties:
         access:
           anyOf:
@@ -4099,6 +4094,12 @@ components:
             type: array
           - type: 'null'
           title: Restricted Fields
+        version:
+          minimum: 1.0
+          title: Version
+          type: integer
+      required:
+      - version
       title: PlatformRoleUpdate
       type: object
     PreviewIn:
@@ -5617,20 +5618,6 @@ components:
             type: array
           - type: 'null'
           title: Platform Role Ids
-        platform_roles:
-          anyOf:
-          - items:
-              enum:
-              - MANAGER
-              - DIRECTOR
-              - SUPPLY
-              - ENGINEER
-              - ACCOUNTANT
-              - ADMIN
-              type: string
-            type: array
-          - type: 'null'
-          title: Platform Roles
         position:
           anyOf:
           - maxLength: 120
@@ -5742,18 +5729,6 @@ components:
             $ref: '#/components/schemas/PlatformRoleRef'
           title: Platform Role Refs
           type: array
-        platform_roles:
-          items:
-            enum:
-            - MANAGER
-            - DIRECTOR
-            - SUPPLY
-            - ENGINEER
-            - ACCOUNTANT
-            - ADMIN
-            type: string
-          title: Platform Roles
-          type: array
         position:
           anyOf:
           - type: string
@@ -5849,20 +5824,6 @@ components:
             type: array
           - type: 'null'
           title: Platform Role Ids
-        platform_roles:
-          anyOf:
-          - items:
-              enum:
-              - MANAGER
-              - DIRECTOR
-              - SUPPLY
-              - ENGINEER
-              - ACCOUNTANT
-              - ADMIN
-              type: string
-            type: array
-          - type: 'null'
-          title: Platform Roles
         position:
           anyOf:
           - maxLength: 120
@@ -6000,7 +5961,7 @@ components:
       type: http
 info:
   title: RailTech CRM API
-  version: 0.1.0
+  version: 0.2.0
 openapi: 3.1.0
 paths:
   /api/v1/admin/ai-spend:

@@ -24,7 +24,6 @@ from app.domain.platform_roles import (
     erp_permissions_for,
     legacy_code,
     merge_access,
-    normalize_platform_roles,
     normalize_position,
     role_code_for,
     role_crm_base,
@@ -345,9 +344,11 @@ def test_the_two_system_roles_are_fixed_by_the_catalog() -> None:
         "eds.memo.create": "full",
     }
     director = dict(make_role("DIRECTOR").access)
-    assert director["admin"] == "read"
-    assert {k: v for k, v in director.items() if k != "admin"} == {
-        k: "full" for k in generated.RESOURCE_KEYS if k != "admin"
+    # R-1b (уточнение ADR-0012 п. 2): воронка и внешняя переписка — только чтение, лиды не берёт.
+    read_only = {"admin", "crm.leads", "chats.external"}
+    assert {k for k, v in director.items() if v == "read"} == read_only
+    assert {k: v for k, v in director.items() if k not in read_only} == {
+        k: "full" for k in generated.RESOURCE_KEYS if k not in read_only
     }
     assert rows["DIRECTOR"]["restricted_fields"] == ["cost_margin", "supplier_prices"]
     assert rows["ADMIN"]["is_system"] is True
@@ -358,6 +359,22 @@ def test_the_two_system_roles_are_fixed_by_the_catalog() -> None:
         "tpl:ENGINEER",
         "tpl:ACCOUNTANT",
     ]
+
+
+def test_director_sees_leads_but_cannot_take_or_reply() -> None:
+    """R-1b: директору — лиды на чтение (воронка, переписка), без `leads:take|reply|work|note`."""
+    crm = {f"{res}:{act}" for res, act in derive_access([make_grant("DIRECTOR")]).crm_permissions}
+
+    assert {"leads:read", "stream:read", "clients:write"} <= crm
+    assert not crm & {"leads:take", "leads:reply", "leads:work", "leads:note", "leads:assist"}
+    assert not crm & {"leads:create"}
+
+
+def test_a_second_role_with_leads_full_gives_the_director_the_lead_rights_back() -> None:
+    """Директору, который сам ведёт лиды, администратор выдаёт вторую роль (объединение прав)."""
+    merged = derive_access([make_grant("DIRECTOR"), make_grant("MANAGER")]).crm_permissions
+
+    assert {("leads", "take"), ("leads", "reply")} <= set(merged)
 
 
 def _v1_columns() -> dict[str, dict[str, str]]:
@@ -379,12 +396,13 @@ def test_templates_keep_the_v1_matrix_column_plus_the_new_calc_sections(legacy: 
 
 
 def test_director_keeps_everything_v1_gave_and_gains_full_where_it_had_read() -> None:
-    """Версия 2 (ADR-0012): директор — все разделы full, Admin — read; ничего из v1 не отнято."""
+    """Версия 2 (ADR-0012, R-1b): директор — как в v1, full там, где было read; лиды и внешние
+    чаты остаются на чтении, Admin — read."""
     v1 = _v1_columns()["DIRECTOR"]
     v2 = dict(make_grant("DIRECTOR").access)
     assert all(v2[k] == v1[k] or (v1[k] == "read" and v2[k] == "full") for k in v1)
     raised = {k for k in v1 if v1[k] != v2[k]}
-    assert raised == {"crm.leads", "crm.clients", "eds.payments", "chats.external"}
+    assert raised == {"crm.clients", "eds.payments"}
     assert set(v2) - set(v1) == {"erp.calc.goods", "erp.calc.services", "company.settings"}
 
 
@@ -488,26 +506,6 @@ def test_legacy_codes_map_to_role_codes_and_back() -> None:
     assert [legacy_code(role_code_for(c)) for c in LEGACY_ROLE_CODES] == list(LEGACY_ROLE_CODES)
     for foreign in (None, "tpl:ROOT", "MANAGER", "tpl:ADMIN", "ROOT"):
         assert legacy_code(foreign) is None
-
-
-@pytest.mark.parametrize(
-    ("given", "expected"),
-    [
-        ([], []),
-        (["ADMIN", "MANAGER"], ["MANAGER", "ADMIN"]),  # прежний порядок
-        (["SUPPLY", "SUPPLY"], ["SUPPLY"]),
-    ],
-)
-def test_normalize_orders_the_legacy_codes_and_drops_duplicates(
-    given: list[str], expected: list[str]
-) -> None:
-    assert normalize_platform_roles(given) == expected
-
-
-@pytest.mark.parametrize("bad", [["ROOT"], ["manager"], ["MANAGER", "admin"], [""]])
-def test_normalize_rejects_foreign_legacy_codes(bad: list[str]) -> None:
-    with pytest.raises(ValueError, match="unknown"):
-        normalize_platform_roles(bad)
 
 
 @pytest.mark.parametrize(

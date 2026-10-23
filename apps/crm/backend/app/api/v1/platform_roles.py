@@ -1,8 +1,9 @@
-"""Роли Платформы (только администратор): список, создание, изменение, удаление, предпросмотр.
+"""Роли Платформы: чтение — `users:read` (администратор и директор), изменение — `users:write`.
 
 Права сотрудников — объединение их ролей (ADR-0012). Системные роли («Администратор»,
 «Директор») не меняются и не удаляются (409 `role_system`); роль с сотрудниками не удаляется
-(409 `role_in_use`, `details.users`); неизвестный раздел или уровень вне `levels` — 422.
+(409 `role_in_use`, `details.users`); устаревшая версия роли в PATCH — 409 `role_version_conflict`;
+неизвестный раздел или уровень вне `levels` — 422.
 Выдача ролей сотрудникам — `PATCH /api/v1/users/{id}` с `platform_role_ids`.
 """
 
@@ -26,8 +27,10 @@ from app.services.platform_roles import Preview, RolePatch, RoleView
 
 router = APIRouter(prefix="/api/v1/platform-roles", tags=["platform-roles"])
 
-# «Только admin»: управление ролями — то же право, что запись сотрудников (`users:write`).
+# Изменение ролей — то же право, что запись сотрудников (`users:write`, раздел `admin: full`).
 Admin = Annotated[Principal, Depends(require("users", "write"))]
+# Чтение матрицы (R-1b): директор видит Ролевую матрицу только для чтения — `users:read`.
+Reader = Annotated[Principal, Depends(require("users", "read"))]
 RbacDep = Annotated[Rbac, Depends(get_rbac)]
 
 
@@ -65,7 +68,7 @@ def _preview_out(preview: Preview) -> PreviewOut:
 
 
 @router.get("", response_model=list[PlatformRoleOut])
-async def list_roles(_: Admin, container: ContainerDep) -> list[PlatformRoleOut]:
+async def list_roles(_: Reader, container: ContainerDep) -> list[PlatformRoleOut]:
     return [to_out(v) for v in await container.platform_role_service.list_roles()]
 
 
@@ -90,7 +93,7 @@ async def preview_role(body: PreviewIn, _: Admin, container: ContainerDep) -> Pr
 
 
 @router.get("/{role_id}", response_model=PlatformRoleOut)
-async def get_role(role_id: int, _: Admin, container: ContainerDep) -> PlatformRoleOut:
+async def get_role(role_id: int, _: Reader, container: ContainerDep) -> PlatformRoleOut:
     return to_out(await container.platform_role_service.get(role_id))
 
 
@@ -103,6 +106,7 @@ async def update_role(
         description=body.description,
         access=body.access,
         restricted_fields=body.restricted_fields,
+        version=body.version,
     )
     view = await container.platform_role_service.update(who.actor, role_id, patch)
     await rbac.safe_reload()

@@ -389,7 +389,7 @@ export const SYSTEM_ROLES = {
     access: {
       "dashboard.queue": "full",
       "dashboard.summary": "full",
-      "crm.leads": "full",
+      "crm.leads": "read",
       "crm.clients": "full",
       "eds.inbox": "full",
       "eds.drafts": "full",
@@ -402,7 +402,7 @@ export const SYSTEM_ROLES = {
       "erp.calc.services": "full",
       "erp.stock": "full",
       "chats.internal": "full",
-      "chats.external": "full",
+      "chats.external": "read",
       admin: "read",
       "company.settings": "full",
     },
