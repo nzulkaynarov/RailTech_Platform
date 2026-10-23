@@ -11,6 +11,7 @@ from sqlalchemy import (
     ForeignKey,
     Identity,
     Index,
+    Integer,
     String,
     Text,
     func,
@@ -41,6 +42,8 @@ class PlatformRole(TimestampMixin, Base):
     name: Mapped[str] = mapped_column(String(120))
     description: Mapped[str] = mapped_column(Text, server_default=sql("''"))
     is_system: Mapped[bool] = mapped_column(Boolean, server_default=sql("false"))
+    # Оптимистическая блокировка (R-1b): растёт при изменении роли; PATCH присылает прочитанную.
+    version: Mapped[int] = mapped_column(Integer, server_default=sql("1"))
     access: Mapped[dict[str, str]] = mapped_column(JSONB, server_default=sql("'{}'::jsonb"))
     restricted_fields: Mapped[list[str]] = mapped_column(JSONB, server_default=sql("'[]'::jsonb"))
     created_by: Mapped[int | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"))

@@ -15,6 +15,8 @@ class PlatformRoleOut(BaseModel):
     name: str
     description: str
     is_system: bool
+    # Растёт при каждом изменении; PATCH присылает прочитанную (иначе 409 `role_version_conflict`).
+    version: int
     # Раздел каталога -> `full|read`; скрытые разделы не хранятся.
     access: dict[str, AccessLevel]
     # Поля с ограничением, которые роль видит (`cost_margin`, `supplier_prices`, `totals_only`).
@@ -35,8 +37,11 @@ class PlatformRoleCreate(BaseModel):
 
 
 class PlatformRoleUpdate(BaseModel):
-    """Изменение роли; не присланное поле не меняется. Системную роль менять нельзя (409)."""
+    """Изменение роли; не присланное поле не меняется. Системную роль менять нельзя (409).
 
+    `version` — версия роли, которую видел клиент; при расхождении 409 `role_version_conflict`."""
+
+    version: int = Field(ge=1)
     name: str | None = Field(default=None, min_length=1, max_length=120)
     description: str | None = Field(default=None, max_length=1000)
     access: dict[str, str] | None = None

@@ -21,7 +21,7 @@ import { type MockRole, readRoles, rolesOf, toRole, writeRoles } from "./fixture
 /**
  * Моки `/admin/roles*` (R-2, ADR-0012) с правилами CRM (R-1): системные роли неизменны (409 `ROLE_SYSTEM`), роль с
  * сотрудниками не удаляется (409 `ROLE_IN_USE`), название уникально без учёта регистра (409 `CONFLICT`,
- * `name_taken`), раздел и уровень — только из каталога (422). Предпросмотр считает, кто что получит и потеряет.
+ * `name_taken`), чужая правка роли — 409 `CONFLICT` (`role_version_conflict`, BFF 0.4.0), раздел и уровень — только из каталога (422). Предпросмотр считает, кто что получит и потеряет.
  */
 const RANK: Record<AccessLevel, number> = { read: 1, full: 2 };
 
@@ -80,7 +80,7 @@ const unique = <T>(items: T[], key: (item: T) => string) => {
 
 export const adminRolesHandlers = [
   http.get("*/admin/roles", () => {
-    const denied = guard("full");
+    const denied = guard("read");
     if (denied) return denied;
     return HttpResponse.json({ items: readRoles().map((r) => toRole(r, holders(r.id))) });
   }),
@@ -167,6 +167,7 @@ export const adminRolesHandlers = [
       name: body.name.trim(),
       description: body.description?.trim() ?? "",
       system: false,
+      version: 1,
       access: body.access,
       restricted_fields: body.restricted_fields,
       updated_at: new Date().toISOString(),
@@ -176,7 +177,7 @@ export const adminRolesHandlers = [
   }),
 
   http.get("*/admin/roles/:id", ({ params }) => {
-    const denied = guard("full");
+    const denied = guard("read");
     if (denied) return denied;
     const role = readRoles().find((r) => r.id === params["id"]);
     return role
@@ -192,6 +193,15 @@ export const adminRolesHandlers = [
     const role = roles.find((r) => r.id === params["id"]);
     if (!role) return failure(404, "NOT_FOUND", "Не найдено.", "crm");
     if (role.system) return systemRefusal();
+    if (body.version !== role.version) {
+      return failure(
+        409,
+        "CONFLICT",
+        "Роль изменена другим пользователем — обновите страницу.",
+        "crm",
+        { reason: "role_version_conflict", current_version: role.version },
+      );
+    }
     if (body.name !== undefined && nameTaken(body.name, role.id)) {
       return failure(409, "CONFLICT", "Роль с таким названием уже есть.", "crm", {
         reason: "name_taken",
@@ -205,6 +215,7 @@ export const adminRolesHandlers = [
       ...(body.description !== undefined ? { description: body.description.trim() } : {}),
       ...(body.access ? { access: body.access } : {}),
       ...(body.restricted_fields ? { restricted_fields: body.restricted_fields } : {}),
+      version: role.version + 1,
       updated_at: new Date().toISOString(),
     };
     writeRoles(roles.map((r) => (r.id === next.id ? next : r)));
