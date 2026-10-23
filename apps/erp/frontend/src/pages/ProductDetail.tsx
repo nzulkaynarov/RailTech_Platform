@@ -23,6 +23,7 @@ import { useAuthStore } from '@/store/authStore';
 import { getDomainLabelKey } from '@/config/domainConfig';
 import { deliveryBasisLabelKey, productStatusLabelKey, stockStatusLabelKey, uomLabelKey } from '@/lib/codes';
 import { extractApiErrorCode, translateApiError } from '@/lib/apiError';
+import { downloadFile } from '@/lib/download';
 
 interface ProductDetailProps {
   productId: string;
@@ -326,18 +327,40 @@ export function ProductDetail({ productId, onBack, onProductEdit }: ProductDetai
               <CardContent className="p-5">
                 <h2 className="text-sm font-semibold mb-3">{t('productDetail.documents')} ({product.documents!.length})</h2>
                 <div className="space-y-2">
-                  {product.documents!.map((doc) => (
-                    <a
-                      key={doc.id}
-                      href={doc.file_url || doc.file || '#'}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex items-center gap-3 rounded-lg border p-3 hover:bg-accent transition-colors"
-                    >
-                      <FileText className="h-4 w-4 text-primary shrink-0" />
-                      <span className="text-sm font-medium">{doc.name || t('productDetail.document')}</span>
-                    </a>
-                  ))}
+                  {product.documents!.map((doc) => {
+                    const rowClass = 'flex w-full items-center gap-3 rounded-lg border p-3 text-left hover:bg-accent transition-colors';
+                    const label = doc.name || t('productDetail.document');
+                    // Загруженный файл приватный: открывается только через аутентифицированное скачивание (потоком), а не по адресу в хранилище.
+                    if (doc.file) {
+                      return (
+                        <button
+                          key={doc.id}
+                          type="button"
+                          className={rowClass}
+                          onClick={() => {
+                            downloadFile(`catalog/products/${product.id}/download-document/${doc.id}/`, label).catch((error) =>
+                              toast.error(translateApiError(error)),
+                            );
+                          }}
+                        >
+                          <FileText className="h-4 w-4 text-primary shrink-0" />
+                          <span className="text-sm font-medium">{label}</span>
+                        </button>
+                      );
+                    }
+                    return (
+                      <a
+                        key={doc.id}
+                        href={doc.file_url || '#'}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className={rowClass}
+                      >
+                        <FileText className="h-4 w-4 text-primary shrink-0" />
+                        <span className="text-sm font-medium">{label}</span>
+                      </a>
+                    );
+                  })}
                 </div>
               </CardContent>
             </Card>

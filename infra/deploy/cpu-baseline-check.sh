@@ -45,6 +45,7 @@ while read -r image; do
     rt-erp-frontend|rt-cabinet) probe "$image" nginx -v ;;
     redis)           probe "$image" redis-server --version ;;
     rustfs)          probe "$image" rustfs --version ;;
+    rc)              probe "$image" rc --version ;;
     *)               skipped+=("$image") ;;
   esac
 done < <(printf '%s\n' "$images" | sort -u)

@@ -1,10 +1,14 @@
+import mimetypes
+
 from django_filters.rest_framework import DjangoFilterBackend
+from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import OpenApiParameter, OpenApiResponse, extend_schema, extend_schema_view
 from rest_framework import filters, permissions, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.parsers import FormParser, MultiPartParser
 from rest_framework.response import Response
 
+from core.file_streaming import stream_file_field
 from core.permissions import RoleGatedViewMixin
 
 from ..filters import StableOrderingFilter
@@ -900,6 +904,36 @@ class ProductViewSet(RoleGatedViewMixin, viewsets.ModelViewSet):
         name = request.data.get("name") or file_obj.name
         doc = ProductDocument.objects.create(product=product, file=file_obj, name=name)
         return Response(ProductDocumentSerializer(doc).data, status=status.HTTP_201_CREATED)
+
+    @extend_schema(
+        summary="Download product document",
+        description=(
+            "Technical document of a product (private bucket): streamed through this authenticated endpoint with the "
+            "same visibility as the product card; `/media/products/<id>/docs/*` is not reachable."
+        ),
+        responses={
+            (200, "application/octet-stream"): OpenApiTypes.BINARY,
+            404: OpenApiResponse(description="Document not found or has no uploaded file"),
+        },
+        tags=["Catalog"],
+    )
+    @action(
+        detail=True,
+        methods=["get"],
+        url_path="download-document/(?P<doc_id>[0-9]+)",
+        url_name="download-document",
+    )
+    def download_document(self, request, pk=None, doc_id=None):
+        product = self.get_object()
+        doc = ProductDocument.objects.filter(pk=doc_id, product=product).first()
+        if not doc or not doc.file:
+            return Response({"detail": "DOCUMENT_NOT_FOUND"}, status=status.HTTP_404_NOT_FOUND)
+        response = stream_file_field(
+            doc.file, content_type=mimetypes.guess_type(doc.file.name)[0] or "application/octet-stream"
+        )
+        response["X-Content-Type-Options"] = "nosniff"
+        response["Cache-Control"] = "private, no-store"
+        return response
 
     @extend_schema(
         summary="Delete product document",

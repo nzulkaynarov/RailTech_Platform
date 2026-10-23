@@ -32,7 +32,7 @@ make smoke-dev
 ## Действие
 
 1. **`/ready` → `database: fail`**: `make logs s=postgres`. Если пароль в `.env` менялся после первого запуска — Postgres хранит старый. ⚠️ Сброс данных: `docker compose -f infra/docker-compose.yml -f infra/docker-compose.dev.yml --env-file .env down -v` (удаляет все volumes), затем `make up`.
-2. **`s3: fail`**: `make logs s=rustfs` и `make logs s=s3-init`. Если `s3-init` упал с `curl: (22) … 400/403` — неверная пара `S3_ACCESS_KEY`/`S3_SECRET_KEY` (сверьте `.env`, затем `make up`). Если `rustfs` не стартует — смотрите в логе ошибку тома `/data`.
+2. **`s3: fail`**: `make logs s=rustfs` и `make logs s=s3-init`. Если `s3-init` упал с `curl: (22) … 400/403` — неверная пара `S3_ACCESS_KEY`/`S3_SECRET_KEY` (сверьте `.env`, затем `make up`). В стенде ансамбля (`make up` из корня) пары другие (S0-9): корневая `S3_ROOT_*` у `rustfs`/`s3-init`, у CRM своя `S3_CRM_ACCESS_KEY`/`S3_CRM_SECRET_KEY` (в контейнерах CRM она видна как `S3_ACCESS_KEY`/`S3_SECRET_KEY`); `s3-init` падает с текстом проверки доступа — `make logs s=s3-init`. Если `rustfs` не стартует — смотрите в логе ошибку тома `/data`.
 3. **`litellm: fail`**: `make logs s=litellm`. Частые причины: `LITELLM_MASTER_KEY` не начинается с `sk-`; синтаксическая ошибка в `infra/litellm.config.yaml`.
 4. **`migrate` упал** → api/worker не стартуют: `make logs s=migrate`, исправьте причину, затем `make migrate` и `make up`.
 5. **Порт 80 занят** (Caddy не стартует): задайте `HTTP_PORT=8080` в `.env`, `make up`, CRM — `http://localhost:8080`.

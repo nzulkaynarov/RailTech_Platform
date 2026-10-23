@@ -27,8 +27,9 @@ x-crm-backend: &crm-backend
     POSTGRES_USER: ${POSTGRES_USER}
     POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     S3_ENDPOINT: http://rustfs:9000
-    S3_ACCESS_KEY: ${S3_ACCESS_KEY}
-    S3_SECRET_KEY: ${S3_SECRET_KEY}
+    # Свой ключ CRM (S0-9): чтение и запись в kb-sources, client-documents, tg-attachments, чтение backups; чужих бакетов нет.
+    S3_ACCESS_KEY: ${S3_CRM_ACCESS_KEY:?set in .env}
+    S3_SECRET_KEY: ${S3_CRM_SECRET_KEY:?set in .env}
     LITELLM_BASE_URL: http://litellm:4000
     LITELLM_API_KEY: ${LITELLM_MASTER_KEY}
     DOCLING_URL: http://docling:5001
@@ -102,9 +103,9 @@ services:
         condition: service_healthy
 
   # Два экземпляра Redis с разными паролями (S0-2, ADR-0013 п. 5, ADR-0017): отказ или переполнение кэша не трогает очереди.
-  # redis-broker — брокер и результаты Celery (БД 1), слой Channels ERP (БД 2); `appendonly yes`, `noeviction`: ничего не
-  # вытесняется, очередь переживает рестарт (том redis_broker_data). redis-cache — кэш Django, троттлинг и одноразовые
-  # jti ERP (БД 0), сессии BFF Платформы (БД 3), очереди Langfuse (БД 4); `volatile-lru`, у всех ключей есть срок.
+  # redis-broker — брокер и результаты Celery (БД 1), слой Channels ERP (БД 2), очереди BullMQ Langfuse (БД 3, S0-9);
+  # `appendonly yes`, `noeviction`: ничего не вытесняется, очередь переживает рестарт (том redis_broker_data). redis-cache — кэш Django, троттлинг и одноразовые
+  # jti ERP (БД 0), сессии BFF Платформы (БД 3); `volatile-lru`, у всех ключей есть срок.
   # Снимок RDB раз в 5 минут (том redis_cache_data) — сессии и jti переживают плановый рестарт. CRM Redis не использует
   # (очередь — Procrastinate в Postgres). Пределы памяти (maxmemory) ниже лимитов контейнеров на проде (prod.yml).
   redis-broker:
@@ -155,12 +156,13 @@ services:
       timeout: 5s
       retries: 20
 
-  # S3-хранилище файлов — RustFS (CRM ADR-0009). Бакеты CRM как были; ERP — `erp-private`, `erp-public`, `erp-temp` (S0-1).
+  # S3-хранилище файлов — RustFS (CRM ADR-0009). Ключ на сервис (ADR-0013 п. 6, S0-9): корневой ключ знают только RustFS и
+  # s3-init; ERP, CRM, Langfuse, WAL-G и бэкап ходят каждый со своим ключом и видят только свои бакеты.
   rustfs:
     image: rustfs/rustfs:1.0.1
     environment:
-      RUSTFS_ACCESS_KEY: ${S3_ACCESS_KEY:?set in .env}
-      RUSTFS_SECRET_KEY: ${S3_SECRET_KEY:?set in .env}
+      RUSTFS_ACCESS_KEY: ${S3_ROOT_ACCESS_KEY:?set in .env}
+      RUSTFS_SECRET_KEY: ${S3_ROOT_SECRET_KEY:?set in .env}
       RUSTFS_ADDRESS: 0.0.0.0:9000
       RUSTFS_CONSOLE_ENABLE: "false"
       RUSTFS_CONSOLE_ADDRESS: 0.0.0.0:9001
@@ -173,23 +175,32 @@ services:
       retries: 20
       start_period: 10s
 
+  # Одноразовый инициализатор (infra/s3/init.sh): бакеты, пользователь и политика на каждый сервис, удаление чужих
+  # пользователей, правило erp-temp (1 сутки), проверка матрицы доступа. Идемпотентен — выполняется при каждом `up`.
+  # Клиент rc — официальный образ RustFS (Alpine, Rust-бинарь без требований к CPU выше x86-64 v1); версия и digest закреплены.
   s3-init:
-    image: rustfs/rustfs:1.0.1
+    image: rustfs/rc:v0.1.36@sha256:ab024bfebee49a750ce886b4c70963ccd9ddaa03f491704a90710641d7a26699
     restart: "no"
-    entrypoint: ["sh", "-ec"]
-    command:
-      - >-
-        credentials="$${S3_ACCESS_KEY}:$${S3_SECRET_KEY}";
-        for bucket in $${S3_BUCKETS}; do
-        curl -fsS -o /dev/null --aws-sigv4 "aws:amz:us-east-1:s3"
-        --user "$${credentials}" -X PUT "http://rustfs:9000/$${bucket}";
-        echo "bucket ready: $${bucket}";
-        done
+    entrypoint: ["sh", "/init.sh"]
+    volumes:
+      - ../s3/init.sh:/init.sh:ro
     environment:
-      S3_ACCESS_KEY: ${S3_ACCESS_KEY}
-      S3_SECRET_KEY: ${S3_SECRET_KEY}
-      # CRM: kb-sources client-documents tg-attachments (app/config.py); Langfuse: langfuse; ERP: erp-private erp-public erp-temp.
-      S3_BUCKETS: langfuse kb-sources client-documents tg-attachments erp-private erp-public erp-temp
+      S3_ENDPOINT: http://rustfs:9000
+      # CRM: kb-sources client-documents tg-attachments (app/config.py); Langfuse: langfuse; ERP: erp-private erp-public
+      # erp-temp; VPS 2: wal (WAL-G), backups (дампы). Список доступов по сервисам — в init.sh.
+      S3_BUCKETS: langfuse kb-sources client-documents tg-attachments erp-private erp-public erp-temp backups wal
+      S3_ROOT_ACCESS_KEY: ${S3_ROOT_ACCESS_KEY:?set in .env}
+      S3_ROOT_SECRET_KEY: ${S3_ROOT_SECRET_KEY:?set in .env}
+      S3_ERP_ACCESS_KEY: ${S3_ERP_ACCESS_KEY:?set in .env}
+      S3_ERP_SECRET_KEY: ${S3_ERP_SECRET_KEY:?set in .env}
+      S3_CRM_ACCESS_KEY: ${S3_CRM_ACCESS_KEY:?set in .env}
+      S3_CRM_SECRET_KEY: ${S3_CRM_SECRET_KEY:?set in .env}
+      S3_LANGFUSE_ACCESS_KEY: ${S3_LANGFUSE_ACCESS_KEY:?set in .env}
+      S3_LANGFUSE_SECRET_KEY: ${S3_LANGFUSE_SECRET_KEY:?set in .env}
+      S3_WAL_ACCESS_KEY: ${S3_WAL_ACCESS_KEY:?set in .env}
+      S3_WAL_SECRET_KEY: ${S3_WAL_SECRET_KEY:?set in .env}
+      S3_BACKUP_ACCESS_KEY: ${S3_BACKUP_ACCESS_KEY:?set in .env}
+      S3_BACKUP_SECRET_KEY: ${S3_BACKUP_SECRET_KEY:?set in .env}
     healthcheck:
       disable: true
     depends_on:
@@ -454,10 +465,10 @@ services:
       TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
       TELEGRAM_BOT_USERNAME: ${TELEGRAM_BOT_USERNAME:-}
       # Файлы ERP (PDF КП, договоров, счетов, актов, сканы, загрузки портала, картинки каталога, импорт) — RustFS внутри сети
-      # compose; наружу адрес не публикуется, файлы клиенту отдаёт сам ERP. Ключ пока общий с S3_* (ADR-0013 п. 6, хвост S0-1).
+      # compose; наружу адрес не публикуется, файлы клиенту отдаёт сам ERP. Свой ключ ERP (S0-9): только бакеты erp-*.
       MINIO_ENDPOINT: http://rustfs:9000
-      MINIO_ACCESS_KEY: ${S3_ACCESS_KEY}
-      MINIO_SECRET_KEY: ${S3_SECRET_KEY}
+      MINIO_ACCESS_KEY: ${S3_ERP_ACCESS_KEY:?set in .env}
+      MINIO_SECRET_KEY: ${S3_ERP_SECRET_KEY:?set in .env}
       MINIO_PRIVATE_BUCKET: erp-private
       MINIO_PUBLIC_BUCKET: erp-public
       MINIO_TEMP_BUCKET: erp-temp
@@ -597,7 +608,7 @@ services:
       timeout: 5s
       retries: 10
 
-  # Платформа (apps/platform, INF-P0-4/5): BFF и статика SPA. redis-cache БД 3 — сессии BFF (0 — кэш ERP, 4 — Langfuse).
+  # Платформа (apps/platform, INF-P0-4/5): BFF и статика SPA. redis-cache БД 3 — сессии BFF (0 — кэш ERP).
   # CRM и ERP для запуска не обязательны: BFF отвечает `degraded`. Нового секрета нет. На проде образы из GHCR и лимиты
   # памяти — в prod.yml (как у CRM/ERP: здесь `build`, там `image` и `build: !reset null`).
   platform-bff:
@@ -696,7 +707,7 @@ services:
         condition: service_completed_successfully
       s3-init:
         condition: service_completed_successfully
-      redis-cache:
+      redis-broker:
         condition: service_healthy
       clickhouse:
         condition: service_healthy
@@ -713,21 +724,22 @@ services:
       CLICKHOUSE_CLUSTER_ENABLED: "false"
       LANGFUSE_S3_EVENT_UPLOAD_BUCKET: langfuse
       LANGFUSE_S3_EVENT_UPLOAD_REGION: auto
-      LANGFUSE_S3_EVENT_UPLOAD_ACCESS_KEY_ID: ${S3_ACCESS_KEY}
-      LANGFUSE_S3_EVENT_UPLOAD_SECRET_ACCESS_KEY: ${S3_SECRET_KEY}
+      LANGFUSE_S3_EVENT_UPLOAD_ACCESS_KEY_ID: ${S3_LANGFUSE_ACCESS_KEY:?set in .env}
+      LANGFUSE_S3_EVENT_UPLOAD_SECRET_ACCESS_KEY: ${S3_LANGFUSE_SECRET_KEY:?set in .env}
       LANGFUSE_S3_EVENT_UPLOAD_ENDPOINT: http://rustfs:9000
       LANGFUSE_S3_EVENT_UPLOAD_FORCE_PATH_STYLE: "true"
       LANGFUSE_S3_EVENT_UPLOAD_PREFIX: events/
       LANGFUSE_S3_MEDIA_UPLOAD_BUCKET: langfuse
       LANGFUSE_S3_MEDIA_UPLOAD_REGION: auto
-      LANGFUSE_S3_MEDIA_UPLOAD_ACCESS_KEY_ID: ${S3_ACCESS_KEY}
-      LANGFUSE_S3_MEDIA_UPLOAD_SECRET_ACCESS_KEY: ${S3_SECRET_KEY}
+      LANGFUSE_S3_MEDIA_UPLOAD_ACCESS_KEY_ID: ${S3_LANGFUSE_ACCESS_KEY:?set in .env}
+      LANGFUSE_S3_MEDIA_UPLOAD_SECRET_ACCESS_KEY: ${S3_LANGFUSE_SECRET_KEY:?set in .env}
       LANGFUSE_S3_MEDIA_UPLOAD_ENDPOINT: http://rustfs:9000
       LANGFUSE_S3_MEDIA_UPLOAD_FORCE_PATH_STYLE: "true"
       LANGFUSE_S3_MEDIA_UPLOAD_PREFIX: media/
       LANGFUSE_S3_BATCH_EXPORT_ENABLED: "false"
-      # БД 4 redis-cache: отдельная база от кэша ERP (0) и сессий BFF (3). Строка подключения — единственный способ выбрать БД.
-      REDIS_CONNECTION_STRING: redis://:${REDIS_CACHE_PASSWORD}@redis-cache:6379/4
+      # Очереди BullMQ нельзя вытеснять и терять: redis-broker (noeviction, AOF), отдельная БД 3 — не пересекается с Celery (1) и
+      # Channels (2) ERP. Строка подключения — единственный способ выбрать БД.
+      REDIS_CONNECTION_STRING: redis://:${REDIS_BROKER_PASSWORD}@redis-broker:6379/3
     healthcheck:
       test:
         - CMD

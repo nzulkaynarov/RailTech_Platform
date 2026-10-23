@@ -17,6 +17,24 @@ const PDF_POLL_DEFAULT_RETRY_SECONDS = 2;
  * A 202 means the PDF is still rendering off-thread (ARCH-03) — retry after the
  * server's Retry-After hint until the file lands or the attempt budget runs out.
  */
+/**
+ * The caller may only know a display name ("Паспорт изделия"), while the server names the file by its key
+ * (`<uuid>.pdf`): when the name has no extension, take it from `Content-Disposition` so the saved file opens.
+ */
+export function withServerExtension(filename: string, contentDisposition: unknown): string {
+  if (/\.[A-Za-z0-9]{1,8}$/.test(filename) || typeof contentDisposition !== 'string') return filename;
+  const match = /filename\*?=(?:UTF-8'')?"?([^";]+)/i.exec(contentDisposition);
+  if (!match) return filename;
+  let serverName = match[1];
+  try {
+    serverName = decodeURIComponent(serverName);
+  } catch {
+    // keep the raw value
+  }
+  const extension = /\.[A-Za-z0-9]{1,8}$/.exec(serverName)?.[0];
+  return extension ? `${filename}${extension}` : filename;
+}
+
 export async function downloadFile(path: string, filename: string): Promise<void> {
   for (let attempt = 0; attempt < PDF_POLL_MAX_ATTEMPTS; attempt++) {
     const response = await apiClient.get(path, { responseType: 'blob' });
@@ -24,7 +42,7 @@ export async function downloadFile(path: string, filename: string): Promise<void
       const url = window.URL.createObjectURL(new Blob([response.data]));
       const link = document.createElement('a');
       link.href = url;
-      link.setAttribute('download', filename);
+      link.setAttribute('download', withServerExtension(filename, response.headers?.['content-disposition']));
       document.body.appendChild(link);
       link.click();
       link.remove();
