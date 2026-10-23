@@ -429,7 +429,10 @@ paths:
             text/event-stream:
               schema:
                 type: string
-                description: Кадры SSE; полезная нагрузка `invalidate` — `InvalidationHint`
+                description: Кадры SSE; `data` кадра `invalidate` — JSON `InvalidationHint`
+                contentMediaType: application/json
+                contentSchema:
+                  $ref: '#/components/schemas/InvalidationHint'
         '401':
           $ref: '#/components/responses/SessionExpired'
         '403':

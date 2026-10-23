@@ -239,6 +239,38 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/events/stream": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Поток подсказок инвалидации (SSE) — что перезапросить после события шины
+     * @description Долгоживущий ответ `text/event-stream` для вошедшего сотрудника с разделом «Моя очередь» (его имеет каждая роль).
+     *     Кадры:
+     *
+     *     - `event: invalidate`, `data: <InvalidationHint>` — после события шины (ERP, лид CRM, сотрудник). Всплеск событий
+     *       сливается в один кадр (окно около 300 мс): `topics` — объединение тем, `reason` — тип последнего события.
+     *       Подсказка адресована всем сессиям: события не несут адресата. Данных события в кадре нет — клиент перезапрашивает
+     *       обычные API, поэтому чужие данные в поток не попадают.
+     *     - `: ping` — комментарий-heartbeat каждые 20 секунд тишины (держит соединение через прокси). Если сессия закрыта
+     *       (выход, срок), BFF завершает поток при ближайшем heartbeat.
+     *     - `: connected` — первый кадр: заголовки и первый байт уходят сразу.
+     *
+     *     `Last-Event-ID` не поддерживается: после переподключения клиент делает разовый полный перезапрос. Обрыв потока —
+     *     сигнал вернуться к опросу (`POLL_INTERVAL_MS`). Ответ несёт `Cache-Control: no-cache, no-transform`.
+     */
+    get: operations["streamEvents"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/search": {
     parameters: {
       query?: never;
@@ -662,6 +694,17 @@ export interface components {
     MeUpdate: {
       language?: components["schemas"]["Language"];
       active_role?: components["schemas"]["RoleId"] | null;
+    };
+    /**
+     * @description Что перезапросить: `notifications` — `listNotifications`; `counters` — `getMenuCounters`; `queue` — `getQueue` и `getQueueCards`; `activity` — `getActivityToday`.
+     * @enum {string}
+     */
+    InvalidationTopic: "notifications" | "counters" | "queue" | "activity";
+    /** @description Данные кадра `invalidate` потока `/events/stream` — подсказка, не данные события. */
+    InvalidationHint: {
+      topics: components["schemas"]["InvalidationTopic"][];
+      /** @description Тип события шины (`uz.railtech.erp.quote.sent.v1`) или `resync` (слушатель BFF переподключился — перезапросите всё) */
+      reason: string;
     };
     Health: {
       /** @enum {string} */
@@ -1256,6 +1299,28 @@ export interface operations {
       };
       401: components["responses"]["SessionExpired"];
       403: components["responses"]["CsrfFailed"];
+    };
+  };
+  streamEvents: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Поток открыт */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "text/event-stream": string;
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
     };
   };
   search: {
