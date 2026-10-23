@@ -24,6 +24,7 @@ from sales.models import ActivityLog
 
 from accounts.constants import Permission
 from accounts.models import CompanyMember, CustomUser
+from core.cache import UNAVAILABLE_MESSAGE, CacheUnavailable, fail_closed
 from core.tenant import own_company
 
 logger = logging.getLogger(__name__)
@@ -56,6 +57,14 @@ class SsoForbiddenError(SsoError):
 class SsoNotConfiguredError(SsoError):
     def __init__(self, detail: str = "SSO_NOT_CONFIGURED"):
         super().__init__(detail=detail, status_code=503)
+
+
+class SsoUnavailableError(SsoError):
+    """Хранилище одноразовых `jti` (кэш) недоступно: вход отклонён, токен не погашен и не принят «на веру» (S0-2)."""
+
+    def __init__(self, detail: str = "SSO_TEMPORARILY_UNAVAILABLE"):
+        super().__init__(detail=detail, status_code=503)
+        self.message = UNAVAILABLE_MESSAGE
 
 
 def get_sso_secrets() -> List[str]:
@@ -193,7 +202,12 @@ def verify_and_exchange_sso_token(token: str, client_ip: Optional[str] = None) -
 
     # 4. Проверка одноразовости jti (хранится 10 минут)
     cache_key = f"sso_jti:{jti}"
-    was_added = cache.add(cache_key, True, timeout=SSO_JTI_CACHE_TTL_S)
+    try:
+        with fail_closed():  # кэш недоступен — отказ входа, а не пропуск: иначе токен можно было бы предъявить повторно
+            was_added = cache.add(cache_key, True, timeout=SSO_JTI_CACHE_TTL_S)
+    except CacheUnavailable as exc:
+        logger.warning("SSO exchange refused: one-time jti store (cache) is unavailable")
+        raise SsoUnavailableError() from exc
     if not was_added:
         logger.warning("SSO token replay attack detected: jti=%s", jti)
         raise SsoValidationError("TOKEN_ALREADY_USED")

@@ -132,6 +132,7 @@ deploy-check: ## Проверка конфигурации прода без з�
 	@bash $(INFRA)/deploy/tests/caddy-edge-test.sh
 	@bash $(INFRA)/deploy/tests/wal-archive-test.sh
 	@bash $(INFRA)/deploy/tests/walg-schedule-test.sh
+	@bash $(INFRA)/deploy/tests/redis-split-test.sh
 	@docker run --rm -v "$(CURDIR):/repo" -w /repo rhysd/actionlint:latest .github/workflows/deploy.yml && echo "actionlint: ok"
 
 # --- Локальный CI (гейт мержа, пока GitHub Actions недоступен — DECISIONS 2026-10-13) ---

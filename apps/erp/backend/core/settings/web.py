@@ -7,12 +7,12 @@ from .apps import *  # noqa: F401,F403 — последовательная ко
 # ASGI Support for Channels (real-time notifications)
 ASGI_APPLICATION = "core.asgi.application"
 
-# Redis Channel Layer
+# Redis Channel Layer — на `redis-broker` (БД 2), не на кэше: сообщения слоя нельзя вытеснять (S0-2).
 CHANNEL_LAYERS = {
     "default": {
         "BACKEND": "channels_redis.core.RedisChannelLayer",
         "CONFIG": {
-            "hosts": [os.environ.get("REDIS_URL", "redis://localhost:6379/0")],
+            "hosts": [os.environ.get("REDIS_CHANNELS_URL", "redis://redis-broker:6379/2")],
             "capacity": 300,
             "expiry": 60,
         },
