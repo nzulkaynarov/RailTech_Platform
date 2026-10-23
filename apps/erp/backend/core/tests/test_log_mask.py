@@ -396,7 +396,7 @@ def _delivery_error_after_echo(body: str, status: int = 502) -> str:
         bus.pump()
     finally:
         bus._http = previous
-    return Delivery.objects.get(event_id=event.id).last_error or ""
+    return Delivery.objects.get(event_id=event.id, subscriber="crm").last_error or ""
 
 
 @pytest.mark.django_db(transaction=True)

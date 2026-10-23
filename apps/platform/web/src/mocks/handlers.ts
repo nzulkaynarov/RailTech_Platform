@@ -7,6 +7,7 @@ import {
 import type { ChangePasswordIn, LoginIn, MeUpdate } from "../shared/api/generated/model";
 import { adminRolesHandlers } from "./adminRoles";
 import { adminUsersHandlers } from "./adminUsers";
+import { eventStreamHandlers } from "./eventStream";
 import { isEmployeeDisabled } from "./fixtures/employees";
 import { feedHandlers } from "./feedHandlers";
 import { DEMO_WRONG_CURRENT_PASSWORD, DEMO_WRONG_PASSWORD, findUser } from "./fixtures/users";
@@ -120,6 +121,7 @@ export const handlers = [
 
   // Dashboard, уведомления, поиск: данные по роли сессии (PLT-14)
   ...feedHandlers,
+  ...eventStreamHandlers,
 
   ...getRailTechPlatformBFFAPICRMERPMock(),
 ];

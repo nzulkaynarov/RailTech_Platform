@@ -1,0 +1,18 @@
+# Подписки шины для тестов ERP: ровно те подписчики, на которых построены тесты (crm, erp). Боевой список —
+# packages/contracts/bus/subscriptions.yaml — растёт строкой на нового подписчика (platform-bff, коннекторы) и не должен
+# ломать тесты ERP; сам боевой файл проверяет test_bus_subscriptions.py. Тесты читают этот файл через RT_BUS_SUBSCRIPTIONS
+# (conftest.py).
+version: 1
+subscribers:
+  - name: crm
+    endpoint: http://crm-api:8000/bus/v1/events
+    endpoint_env: RT_BUS_ENDPOINT_CRM
+    types:
+      - uz.railtech.erp.*.v1
+
+  - name: erp
+    endpoint: http://erp-backend:8000/bus/v1/events
+    endpoint_env: RT_BUS_ENDPOINT_ERP
+    types:
+      - uz.railtech.crm.client.updated.v1
+      - uz.railtech.crm.contact.*.v1

@@ -5,13 +5,26 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from redis.asyncio import Redis
+from rt_bus.fastapi import bus_router
 
 from app import __version__
-from app.api import admin_roles, admin_users, auth, dashboard, health, me, notifications, search
+from app.api import (
+    admin_roles,
+    admin_users,
+    auth,
+    dashboard,
+    events,
+    health,
+    me,
+    notifications,
+    search,
+)
+from app.bus import create_receiver
 from app.clients import CrmClient, ErpClient
 from app.clients.base import TIMEOUT_SECONDS
 from app.config import Settings, get_settings
 from app.errors import install_error_handlers
+from app.hub import EventHub
 from app.logging import configure_logging
 from app.request_id import RequestIdMiddleware
 
@@ -21,6 +34,9 @@ API_PREFIX = "/api/v1"
 def create_app(settings: Settings | None = None) -> FastAPI:
     cfg = settings or get_settings()
     configure_logging(cfg.log_level)
+
+    # Подсказки шины → SSE (B5): Redis берётся при каждом обращении (`app.state.redis`).
+    hub = EventHub(lambda: app.state.redis)
 
     @asynccontextmanager
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:
@@ -33,9 +49,11 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         erp = ErpClient(cfg.erp_url, cfg.erp_refresh_cookie)
         app.state.redis, app.state.crm, app.state.erp = redis, crm, erp
         app.state.settings = cfg
+        app.state.hub = hub
         try:
             yield
         finally:
+            await hub.aclose()
             await crm.aclose()
             await erp.aclose()
             await redis.aclose()
@@ -59,6 +77,9 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(dashboard.router, prefix=API_PREFIX)
     app.include_router(notifications.router, prefix=API_PREFIX)
     app.include_router(search.router, prefix=API_PREFIX)
+    app.include_router(events.router, prefix=API_PREFIX)
+    # Приёмник шины rt_bus: POST /bus/v1/events (подпись пары издатель → platform-bff).
+    app.include_router(bus_router(create_receiver(hub)))
     return app
 
 

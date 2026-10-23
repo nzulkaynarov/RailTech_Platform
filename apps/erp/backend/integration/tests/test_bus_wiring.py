@@ -148,7 +148,7 @@ def test_delivery_to_crm_is_signed_with_the_derived_secret_and_carries_the_real_
     assert sent["type"] == "uz.railtech.erp.quote.acceptance_code_requested.v1" and sent["source"] == "rt://erp"
     assert sent["data"]["payload"]["code"] == CODE
     assert not bus_support.registry().validate_data(sent["type"], sent["data"], tolerant=False)
-    assert Delivery.objects.get(event_id=event.id).status == "delivered"
+    assert Delivery.objects.get(event_id=event.id, subscriber="crm").status == "delivered"
 
     stored = bus_support.only("quote.acceptance_code_requested")
     assert stored["data"]["payload"]["code"] == "***", "в outbox после доставки по-прежнему маска"
@@ -166,7 +166,7 @@ def test_a_lost_secret_makes_the_delivery_dead_without_a_request(code_setup, mon
         get_bus().pump()
 
     assert not received
-    delivery = Delivery.objects.get(event_id=event.id)
+    delivery = Delivery.objects.get(event_id=event.id, subscriber="crm")
     assert delivery.status == "dead" and "SECRET_EXPIRED" in (delivery.last_error or "")
     assert CODE not in caplog.text and CODE not in (delivery.last_error or "")
 
@@ -180,12 +180,12 @@ def test_a_wrong_endpoint_404_goes_dead_at_once_and_retry_all_dead_resends(code_
 
     get_bus().pump()
 
-    assert len(received) == 1 and Delivery.objects.get(event_id=event.id).status == "dead"
+    assert len(received) == 1 and Delivery.objects.get(event_id=event.id, subscriber="crm").status == "dead"
 
     received_ok = _crm_receiver(monkeypatch, status=200)
     assert get_bus().retry_all_dead("crm") == 1
     get_bus().pump()
-    assert len(received_ok) == 1 and Delivery.objects.get(event_id=event.id).status == "delivered"
+    assert len(received_ok) == 1 and Delivery.objects.get(event_id=event.id, subscriber="crm").status == "delivered"
 
 
 # ── Приёмник POST /bus/v1/events ─────────────────────────────────────────────────────────────────────

@@ -5,7 +5,7 @@ import { canSee } from "../../app/access";
 import { useAuth } from "../../app/auth/useAuth";
 import { useGetQueue, useGetQueueCards } from "../../shared/api/generated/platform-bff";
 import type { Sources } from "../../shared/api/generated/model";
-import { pollQuery } from "../../shared/api/polling";
+import { usePollQuery } from "../../shared/api/polling";
 import { todayLabel } from "../../shared/lib/format";
 import { useDocumentTitle } from "../../shared/lib/useDocumentTitle";
 import { useFormat } from "../../shared/lib/useFormat";
@@ -44,8 +44,9 @@ export function QueuePage() {
   const format = useFormat();
   const role = me.active_role ?? undefined;
   const params = role ? { role } : undefined;
-  const queue = useGetQueue(params, { query: pollQuery });
-  const cards = useGetQueueCards(params, { query: pollQuery });
+  const poll = usePollQuery();
+  const queue = useGetQueue(params, { query: poll });
+  const cards = useGetQueueCards(params, { query: poll });
   const title = t("modules:dashboard.sections.queue");
   useDocumentTitle(title);
 

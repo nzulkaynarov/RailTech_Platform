@@ -10,7 +10,8 @@ import { NotificationCenter } from "../../features/notifications/NotificationCen
 import { useNotifications } from "../../features/notifications/useNotifications";
 import { useGetMenuCounters } from "../../shared/api/generated/platform-bff";
 import type { MenuCounter } from "../../shared/api/generated/model";
-import { pollQuery } from "../../shared/api/polling";
+import { usePollQuery } from "../../shared/api/polling";
+import { useEventStream } from "../../shared/api/useEventStream";
 import { ContextPanel, ContextPanelDrawer } from "../../shared/ui/ContextPanel";
 import { PlusIcon } from "../../shared/ui/icons";
 import { LinkButton } from "../../shared/ui/LinkButton";
@@ -68,7 +69,10 @@ export function AppShell() {
 
   // Счётчики меню и уведомления открыты разделом «Моя очередь» (как в BFF): без него запросов нет.
   const hasQueue = canSee(me, { resource: "dashboard.queue" });
-  const counters = useGetMenuCounters({ query: { ...pollQuery, enabled: hasQueue } });
+  const poll = usePollQuery();
+  const counters = useGetMenuCounters({ query: { ...poll, enabled: hasQueue } });
+  // Поток подсказок BFF (SSE): события шины обновляют колокольчик, бейджи и очередь без ожидания опроса.
+  useEventStream(hasQueue);
   const unread = useNotifications().query;
 
   const unreadCount = unread.data?.unread_count ?? 0;

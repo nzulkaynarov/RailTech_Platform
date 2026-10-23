@@ -84,6 +84,10 @@ jobs:
               - 'packages/contracts/platform-rbac.yaml'
               - 'packages/contracts/client-statuses.yaml'
               - 'packages/ui-tokens/**'
+              # BFF — подписчик шины (B5): библиотека rt_bus, схемы событий и подписки читаются тестами и входят в образ.
+              - 'packages/rt-bus/**'
+              - 'packages/contracts/events/**'
+              - 'packages/contracts/bus/**'
             packages:
               - 'packages/**'
             # Библиотека шины (B1): тесты адаптеров на PostgreSQL.

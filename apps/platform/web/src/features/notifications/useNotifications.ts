@@ -7,7 +7,7 @@ import {
   useMarkNotificationRead,
 } from "../../shared/api/generated/platform-bff";
 import type { NotificationPage } from "../../shared/api/generated/model";
-import { pollQuery } from "../../shared/api/polling";
+import { usePollQuery } from "../../shared/api/polling";
 import { canSee } from "../../app/access";
 import { useAuth } from "../../app/auth/useAuth";
 
@@ -21,7 +21,8 @@ export const NOTIFICATION_PARAMS = { limit: 50 } as const;
 export function useNotifications() {
   const { me } = useAuth();
   const enabled = canSee(me, { resource: "dashboard.queue" });
-  const query = useListNotifications(NOTIFICATION_PARAMS, { query: { ...pollQuery, enabled } });
+  const poll = usePollQuery();
+  const query = useListNotifications(NOTIFICATION_PARAMS, { query: { ...poll, enabled } });
   return { query, enabled };
 }
 

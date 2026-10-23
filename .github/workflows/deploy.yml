@@ -159,6 +159,10 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           context: apps/platform/bff
+          # Шина событий rt_bus (B5, L14): пакет и контракты — именованные контексты Dockerfile.
+          build-contexts: |
+            rtbus=packages/rt-bus
+            contracts=packages/contracts
           target: prod
           push: true
           tags: ghcr.io/${{ steps.ver.outputs.owner }}/rt-platform-bff:${{ steps.ver.outputs.tag }}

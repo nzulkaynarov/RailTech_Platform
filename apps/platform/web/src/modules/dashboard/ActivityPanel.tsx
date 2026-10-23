@@ -5,7 +5,7 @@ import { Link } from "react-router";
 import { NotificationCenter } from "../../features/notifications/NotificationCenter";
 import type { ActivityItem } from "../../shared/api/generated/model";
 import { useGetActivityToday } from "../../shared/api/generated/platform-bff";
-import { pollQuery } from "../../shared/api/polling";
+import { usePollQuery } from "../../shared/api/polling";
 import { type StatusTone, TONE_STYLE } from "../../shared/lib/statuses";
 import { useFormat } from "../../shared/lib/useFormat";
 import { EmptyState } from "../../shared/ui/EmptyState";
@@ -58,7 +58,8 @@ function Row({ item }: { item: ActivityItem }) {
 /** Вкладка «Сегодня» бокового окна Dashboard (SPEC-v3 §7.1): лента событий компании за день, 4–8 записей. */
 export function TodayTab() {
   const { t } = useTranslation(["modules"]);
-  const query = useGetActivityToday({ query: pollQuery });
+  const poll = usePollQuery();
+  const query = useGetActivityToday({ query: poll });
   const retry = () => {
     void query.refetch();
   };

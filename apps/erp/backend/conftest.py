@@ -1,3 +1,6 @@
+import os
+from pathlib import Path
+
 import pytest
 from django.contrib.auth import get_user_model
 from rest_framework.test import APIClient
@@ -6,6 +9,12 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from accounts.models import Company, SystemRole, WorkspaceRole
 
 User = get_user_model()
+
+# Шина читает подписки тестов (crm, erp), а не боевой список: новый подписчик боевого файла (platform-bff, коннекторы)
+# не должен менять число доставок в тестах ERP. Боевой файл проверяет integration/tests/test_bus_subscriptions.py.
+TEST_SUBSCRIPTIONS = Path(__file__).resolve().parent / "integration/tests/fixtures/subscriptions.yaml"
+PRODUCTION_SUBSCRIPTIONS_ENV = os.environ.get("RT_BUS_SUBSCRIPTIONS", "")
+os.environ["RT_BUS_SUBSCRIPTIONS"] = str(TEST_SUBSCRIPTIONS)
 
 
 @pytest.fixture(autouse=True)
