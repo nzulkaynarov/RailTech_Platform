@@ -1,8 +1,14 @@
 #!/bin/sh
 set -e
 
-# Fix volume permissions (runs as root before dropping privileges)
-chown -R appuser:appuser /app/staticfiles /app/media
+# Fix volume permissions (runs as root before dropping privileges).
+# Только существующие каталоги (S0-2): файлы ERP лежат в RustFS (S0-1), тома media нет, а dev-стенд монтирует
+# apps/erp/backend в /app целиком — каталога /app/media там может не быть, и `chown` на нём ронял старт.
+for dir in /app/staticfiles /app/media; do
+    if [ -d "$dir" ]; then
+        chown -R appuser:appuser "$dir"
+    fi
+done
 
 # Run DB migrations + collectstatic ONLY for the web server process.
 # The same image powers backend (gunicorn/daphne), celery-worker and celery-beat;

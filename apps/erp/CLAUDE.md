@@ -44,7 +44,7 @@ Settings Hub (M1-ERP-09), фиксация курсов валют и учёт �
 
 ```
 backend/   Python 3.12 · Django 6 · DRF · Daphne (ASGI) · Channels · Celery (+ Beat) · PostgreSQL 17, база `erp` ·
-           Redis (отдельные БД под Channels и Celery) · RustFS (S3), бакет `erp` · WeasyPrint (PDF off-thread) ·
+           Redis: `redis-broker` (Celery БД 1, Channels БД 2) и `redis-cache` (кэш БД 0), S0-2 · RustFS (S3), бакет `erp` · WeasyPrint (PDF off-thread) ·
            pandas + openpyxl (Excel) · LiteLLM (алиасы intake-model, match-model, draft-model, enrich-model) · Langfuse
 frontend/  React 18 · TypeScript · Vite · Tailwind CSS 4 · shadcn/ui · React Query · Zustand · i18next (ru/en, uz позже) ·
            openapi-typescript (типы из packages/contracts) · Vitest + Testing Library
@@ -244,7 +244,7 @@ Makefile · .env.example · docs/ (ADR и runbooks ERP в apps/erp/docs/runbooks
 | `make -C apps/erp check \| test \| lint \| migrate \| openapi` | проверки, pytest, линтеры, миграции на стенде, экспорт `backend/schema.json` + `packages/contracts/openapi/erp-internal.yaml` (срез `/api/v1/`, `backend/scripts/export_internal_contract.py`) + типы фронтенда | есть (M1-ERP-01); срез в contracts — FIX-40 |
 | `make -C apps/erp openapi-check` | перегенерирует три файла выше и падает с diff, если они отличаются от рабочего дерева (дрейф схемы); входит в `make ci-local erp` и в шаг CI «ERP · check» | FIX-40 |
 | `make contracts` (из корня) | валидация контракта, генерация типов для ERP/Cabinet и клиента CRM | есть (M0-INF-02) |
-| `make up` (из корня) | весь ансамбль: `erp.localhost` через Caddy → `erp-backend`/`erp-web`, Postgres с базой `erp`, Redis (БД 1 Celery, 2 Channels), LiteLLM, Langfuse, RustFS (бакет `erp`) | есть (M1-ERP-01) |
+| `make up` (из корня) | весь ансамбль: `erp.localhost` через Caddy → `erp-backend`/`erp-web`, Postgres с базой `erp`, `redis-broker` (БД 1 Celery, 2 Channels) и `redis-cache` (БД 0 кэш), LiteLLM, Langfuse, RustFS (бакет `erp`) | есть (M1-ERP-01) |
 | `make logs s=<сервис>` / `make ps` | логи и статус стенда | есть (M0-INF-03) |
 | `make -C apps/erp eval-quick CONFIRM=yes` / `eval` | ПЛАТНО: golden-кейсы разбора запроса и сопоставления через шлюз стенда (`EVAL_MAX_USD`, по умолчанию $0.2 / $0.5) — только с согласия владельца на прогон | есть (M1-ERP-06) |
 | `make -C apps/erp ai-status` / `ai-gateway-sync` | состояние ИИ ERP без вызова моделей; перерегистрация ключа ERP в LiteLLM (бюджет, Langfuse) | есть (M1-ERP-06) |

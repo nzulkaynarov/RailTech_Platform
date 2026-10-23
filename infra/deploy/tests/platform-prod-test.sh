@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Тест INF-P0-5: Платформа в проде.
 #  1. prod.yml: platform-bff/platform-web — образы GHCR rt-platform-* по RT_IMAGE_TAG без сборки, лимиты памяти, перезапуск,
-#     окружение BFF (CRM/ERP по сети compose, Redis БД 3), Caddy получает PLATFORM_DOMAIN и зависит от обоих сервисов
+#     окружение BFF (CRM/ERP по сети compose, redis-cache БД 3), Caddy получает PLATFORM_DOMAIN и зависит от обоих сервисов
 #     только по service_started (INF-P1-0: сбой Платформы не должен лишать входа CRM, ERP и Cabinet);
 #  2. Caddyfile.prod: сайт {$PLATFORM_DOMAIN}, /api/* -> platform-bff:8000, остальное -> platform-web:8080 (порт образа web);
 #  3. deploy.sh без PLATFORM_DOMAIN в .env.prod останавливается с понятным сообщением до обращения к docker;
@@ -39,7 +39,7 @@ done
 [[ "$(q '.services["platform-web"].deploy.resources.limits.memory')" == 67108864 ]] || fail "platform-web: лимит памяти не 64M"
 [[ "$(q '.services["platform-bff"].environment.PLATFORM_CRM_URL')" == http://crm-api:8000 ]] || fail "platform-bff: PLATFORM_CRM_URL"
 [[ "$(q '.services["platform-bff"].environment.PLATFORM_ERP_URL')" == http://erp-backend:8000 ]] || fail "platform-bff: PLATFORM_ERP_URL"
-[[ "$(q '.services["platform-bff"].environment.REDIS_URL')" == redis://:ci-only-value@redis:6379/3 ]] || fail "platform-bff: REDIS_URL не Redis БД 3 с паролем"
+[[ "$(q '.services["platform-bff"].environment.REDIS_URL')" == redis://:ci-only-value@redis-cache:6379/3 ]] || fail "platform-bff: REDIS_URL не redis-cache БД 3 с паролем"
 [[ "$(q '.services["platform-bff"].environment.PLATFORM_COOKIE_SECURE')" == true ]] || fail "platform-bff: на проде PLATFORM_COOKIE_SECURE не true"
 [[ "$(q '.services["platform-bff"].environment.PLATFORM_ERP_REFRESH_COOKIE')" == refresh_token ]] || fail "platform-bff: PLATFORM_ERP_REFRESH_COOKIE по умолчанию не refresh_token"
 [[ "$(q '.services["platform-bff"].environment.PLATFORM_LOGIN_RATE_PER_MINUTE')" == 10 ]] || fail "platform-bff: PLATFORM_LOGIN_RATE_PER_MINUTE по умолчанию не 10"
@@ -54,7 +54,7 @@ dev_secure() { docker compose -f "$root/infra/compose/base.yml" -f "$root/infra/
 [[ "$(dev_secure "$tmp/env.dev")" == false ]] || fail "dev: на http-стенде PLATFORM_COOKIE_SECURE должен быть false по умолчанию"
 echo 'PLATFORM_COOKIE_SECURE=true' >> "$tmp/env.dev"
 [[ "$(dev_secure "$tmp/env.dev")" == true ]] || fail "dev: PLATFORM_COOKIE_SECURE=true из .env не применился"
-[[ "$(q '.services["platform-bff"].depends_on.redis.condition')" == service_healthy ]] || fail "platform-bff: нет зависимости от redis"
+[[ "$(q '.services["platform-bff"].depends_on["redis-cache"].condition')" == service_healthy ]] || fail "platform-bff: нет зависимости от redis-cache"
 [[ "$(q '.services.caddy.environment.PLATFORM_DOMAIN')" == platform.railtech.uz ]] || fail "caddy: PLATFORM_DOMAIN не передан"
 for svc in platform-bff platform-web; do
   [[ "$(q --arg s "$svc" '.services.caddy.depends_on[$s].condition // "none"')" == service_started ]] \
