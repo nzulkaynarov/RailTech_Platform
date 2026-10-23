@@ -10,7 +10,7 @@ export const admin: ModuleConfig = {
       key: "roles",
       path: "/admin/roles",
       access: { resource: "admin" },
-      tabs: [{ key: "role" }, { key: "employees" }, { key: "journal" }],
+      tabs: [{ key: "role" }, { key: "employees" }],
       actionTo: "/admin/org",
     },
     {

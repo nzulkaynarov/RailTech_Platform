@@ -429,10 +429,9 @@
       "createdToast": "«{{name}}» roli yaratildi",
       "savedToast": "Rol saqlandi",
       "deletedToast": "Rol o'chirildi",
-      "readOnly": {
-        "title": "Rollar matritsasini administrator yuritadi",
-        "text": "Rollar, ularning bo'limlari va cheklangan maydonlarini administrator ko'radi va o'zgartiradi. Xodimlar rollari — Tuzilmada."
-      },
+      "viewOnly": "Faqat ko'rish",
+      "readOnlySubtitle": "Har bir rol nimani ko'radi va nima qila oladi. Rollar va kirishni administrator o'zgartiradi.",
+      "readOnlyNote": "Faqat ko'rish: rolni va uning matritsasini administrator o'zgartiradi. Xodimlar rollari — Tuzilmada.",
       "loadError": {
         "title": "Rollarni yuklab bo'lmadi",
         "text": "Rollar CRM da saqlanadi. Qayta urinib ko'ring; xato qolsa, Admin · Integratsiyalar bo'limida CRM ni tekshiring."
@@ -490,6 +489,8 @@
         "FORBIDDEN": "Huquq yetarli emas: rollarni administrator o'zgartiradi.",
         "BACKEND_UNAVAILABLE": "CRM javob bermayapti. Keyinroq takrorlang.",
         "VALIDATION_FAILED": "Rol nomi, bo'limlari va maydonlarini tekshiring.",
+        "ROLE_VERSION_CONFLICT": "Rolni boshqa foydalanuvchi o'zgartirgan — sahifani yangilang.",
+        "reload": "Yangilash",
         "DEFAULT": "Amalni bajarib bo'lmadi. Qayta urinib ko'ring."
       },
       "employeesTitle": "«{{name}}» roli bilan xodimlar",
@@ -513,8 +514,7 @@
     "about": "Chat haqida",
     "files": "Fayllar",
     "role": "Rol",
-    "employees": "Xodimlar",
-    "journal": "Jurnal"
+    "employees": "Xodimlar"
   },
   "panel": {
     "today": {
@@ -569,13 +569,9 @@
       "title": "Xodimlar yo‘q",
       "text": "Bu yerda tanlangan roldagi xodimlar va «Xodimga rol tayinlash» tugmasi paydo bo‘ladi."
     },
-    "journal": {
-      "title": "Yozuvlar hozircha yo‘q",
-      "text": "O‘zgarishlar jurnali: kim va qachon rol yoki kirishni o‘zgartirgan."
-    },
     "role": {
       "title": "Rol tanlanmagan",
-      "text": "Matritsadagi rol ustunini bosing — bu yerda tavsif, ertalabki navbat va shu roldagi xodimlar paydo bo‘ladi."
+      "text": "Matritsadagi rol ustunini bosing — bu yerda rol tavsifi va shu roldagi xodimlar paydo bo‘ladi."
     }
   }
 }

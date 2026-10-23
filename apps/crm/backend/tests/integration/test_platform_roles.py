@@ -1,7 +1,7 @@
 """Роли Платформы как данные (R-1, ADR-0012) на настоящем Postgres: выдача роли сотруднику.
 
-Роли выдаются `PATCH/POST /users` с `platform_role_ids` (или старыми кодами `platform_roles` —
-совместимость BFF до R-2). Роли вычисляют роль CRM (старый фронт), доступ к ERP и очередь
+Роли выдаются `PATCH/POST /users` с `platform_role_ids` (старое поле с кодами `platform_roles`
+удалено в R-1b). Роли вычисляют роль CRM (старый фронт), доступ к ERP и очередь
 провижининга; права ERP считает провижининг из матриц ролей, `erp_role_codes` пусты.
 """
 
@@ -56,23 +56,20 @@ def client(
 async def test_defaults_are_empty_roles_and_no_position(
     client: TestClient, sessions: async_sessionmaker[AsyncSession]
 ) -> None:
-    employee, boss = await setup_staff(client, sessions)
+    _, boss = await setup_staff(client, sessions)
 
     listed = {u["email"]: u for u in client.get("/api/v1/users", headers=boss).json()}
     card = listed["dilshod@railtech.uz"]
-    assert (card["platform_roles"], card["platform_role_ids"], card["platform_role_refs"]) == (
-        [],
-        [],
-        [],
-    )
+    assert (card["platform_role_ids"], card["platform_role_refs"]) == ([], [])
+    assert "platform_roles" not in card
     assert (card["position"], card["erp_sync"], card["erp_sync_error"]) == (
         None,
         "not_applicable",
         None,
     )
     me = client.get("/api/v1/me", headers=boss).json()
-    assert (me["platform_roles"], me["platform_role_ids"], me["position"]) == ([], [], None)
-    assert client.get(f"/api/v1/users/{employee}", headers=boss).json()["platform_roles"] == []
+    assert (me["platform_role_ids"], me["position"]) == ([], None)
+    assert "platform_roles" not in me
 
 
 @pytest.mark.parametrize("code", list(BASE_ROLE))
@@ -93,7 +90,7 @@ async def test_every_catalog_role_by_id_computes_crm_role_access_and_queues_prov
     body = response.json()
     assert body["platform_role_ids"] == [role_id]
     assert [r["id"] for r in body["platform_role_refs"]] == [role_id]
-    assert body["platform_roles"] == [code]  # старое поле для BFF до R-2
+    assert "platform_roles" not in body  # старое поле с кодами удалено (R-1b)
     assert body["roles"] == [BASE_ROLE[code]]
     assert body["platform_access"] == ["crm", "erp"]
     assert body["erp_role_codes"] == []  # права ERP — вычисленный набор, не системные роли
@@ -106,37 +103,38 @@ async def test_every_catalog_role_by_id_computes_crm_role_access_and_queues_prov
     assert ref["code"] == (code if ref["system"] else f"tpl:{code}")
 
 
-async def test_old_codes_are_still_accepted_and_resolve_to_the_same_roles(
+async def test_old_codes_field_is_gone_and_ignored(
     client: TestClient, sessions: async_sessionmaker[AsyncSession], queue: Queue
 ) -> None:
-    """Совместимость BFF до R-2: `platform_roles` (коды) на входе = роли из шаблонов и системные."""
+    """R-1b: поле `platform_roles` (коды) на входе не действует — роли выдаются только по id."""
     employee, boss = await setup_staff(client, sessions)
 
     body = client.patch(
-        f"/api/v1/users/{employee}",
-        json={"platform_roles": ["ACCOUNTANT", "DIRECTOR", "ACCOUNTANT"]},
-        headers=boss,
+        f"/api/v1/users/{employee}", json={"platform_roles": ["ACCOUNTANT"]}, headers=boss
     ).json()
 
-    assert body["platform_roles"] == ["DIRECTOR", "ACCOUNTANT"]  # без дублей, прежний порядок
-    assert sorted(body["platform_role_ids"]) == sorted(
-        legacy_ids(client, boss, ["DIRECTOR", "ACCOUNTANT"])
-    )
-    assert body["roles"] == ["manager"]  # manager > viewer
-    assert body["erp_role_codes"] == []
+    assert body["platform_role_ids"] == []
+    assert "platform_roles" not in body
+    assert queue.jobs == []
+
+    ids = legacy_ids(client, boss, ["ACCOUNTANT", "DIRECTOR"])
+    united = client.patch(
+        f"/api/v1/users/{employee}", json={"platform_role_ids": ids + ids}, headers=boss
+    ).json()
+    assert united["platform_role_ids"] == sorted(ids)  # без дублей
+    assert united["roles"] == ["manager"]  # manager > viewer
+    assert united["erp_role_codes"] == []
     assert queue.jobs == [("provision", employee)]
 
     queue.jobs.clear()
     again = client.patch(
-        f"/api/v1/users/{employee}",
-        json={"platform_roles": ["ACCOUNTANT", "DIRECTOR"]},
-        headers=boss,
+        f"/api/v1/users/{employee}", json={"platform_role_ids": ids[::-1]}, headers=boss
     )
     assert again.status_code == 200
     assert queue.jobs == [], "тот же набор — ничего не меняется"
 
 
-async def test_two_roles_by_id_are_united_and_a_custom_role_has_no_legacy_code(
+async def test_two_roles_by_id_are_united(
     client: TestClient, sessions: async_sessionmaker[AsyncSession], queue: Queue
 ) -> None:
     employee, boss = await setup_staff(client, sessions)
@@ -154,7 +152,6 @@ async def test_two_roles_by_id_are_united_and_a_custom_role_has_no_legacy_code(
     ).json()
 
     assert body["platform_role_ids"] == sorted([custom["id"], manager_id])
-    assert body["platform_roles"] == ["MANAGER"]  # у роли без кода старого значения нет
     assert body["roles"] == ["manager"]  # crm.leads full -> manager
 
 
@@ -220,7 +217,7 @@ async def test_removing_all_roles_drops_the_derived_access(
 
     assert response.status_code == 200, response.text
     body = response.json()
-    assert (body["platform_roles"], body["platform_role_ids"]) == ([], [])
+    assert body["platform_role_ids"] == []
     assert (body["roles"], body["platform_access"], body["erp_role_codes"]) == (
         ["viewer"],
         ["crm"],
@@ -278,7 +275,7 @@ async def test_empty_platform_roles_keep_the_old_manual_behaviour(
         headers=boss,
     ).json()
 
-    assert (body["roles"], body["erp_role_codes"], body["platform_roles"]) == (
+    assert (body["roles"], body["erp_role_codes"], body["platform_role_ids"]) == (
         ["viewer"],
         ["HEAD"],
         [],
@@ -367,15 +364,10 @@ async def test_position_is_saved_trimmed_cleared_and_limited(
 @pytest.mark.parametrize(
     "body",
     [
-        {"platform_roles": ["ROOT"]},
-        {"platform_roles": ["manager"]},
-        {"platform_roles": ["MANAGER", "admin"]},
-        {"platform_roles": "MANAGER"},
-        {"platform_roles": [1]},
         {"platform_role_ids": [9999]},
         {"platform_role_ids": [0]},
         {"platform_role_ids": ["x"]},
-        {"platform_role_ids": [1], "platform_roles": ["MANAGER"]},
+        {"platform_role_ids": "1"},
     ],
 )
 async def test_foreign_platform_role_is_rejected(
@@ -401,7 +393,6 @@ async def test_only_admin_changes_platform_roles_and_position(
 
     for body in (
         {"platform_role_ids": [1]},
-        {"platform_roles": ["ADMIN"]},
         {"position": "Директор"},
     ):
         response = client.patch(f"/api/v1/users/{manager.id}", json=body, headers=mine)
@@ -412,7 +403,7 @@ async def test_only_admin_changes_platform_roles_and_position(
         headers=mine,
     )
     assert created.status_code == 403
-    assert client.get("/api/v1/me", headers=mine).json()["platform_roles"] == []
+    assert client.get("/api/v1/me", headers=mine).json()["platform_role_ids"] == []
     assert queue.jobs == []
 
 
@@ -541,7 +532,6 @@ async def test_create_with_platform_roles_computes_access_and_queues_provisionin
     user = response.json()["user"]
     assert response.json()["temporary_password"]
     assert user["roles"] == ["viewer"]
-    assert user["platform_roles"] == ["SUPPLY", "ENGINEER"]
     assert user["platform_role_ids"] == sorted(ids)
     assert user["position"] == "Начальник отдела закупок"
     assert (user["platform_access"], user["erp_role_codes"]) == (["crm", "erp"], [])
@@ -550,19 +540,10 @@ async def test_create_with_platform_roles_computes_access_and_queues_provisionin
     assert [e.entity_id for e in granted] == [str(user["id"])]
 
 
-async def test_create_by_old_codes_still_works_and_without_roles_needs_crm_roles(
+async def test_create_without_roles_needs_crm_roles_and_rejects_unknown_ones(
     client: TestClient, sessions: async_sessionmaker[AsyncSession], queue: Queue
 ) -> None:
     _, boss = await setup_staff(client, sessions)
-
-    by_code = client.post(
-        "/api/v1/users",
-        json={"email": "c@railtech.uz", "full_name": "В", "platform_roles": ["MANAGER"]},
-        headers=boss,
-    )
-    assert by_code.status_code == 201, by_code.text
-    assert by_code.json()["user"]["platform_roles"] == ["MANAGER"]
-    queue.jobs.clear()
 
     nothing = client.post(
         "/api/v1/users", json={"email": "a@railtech.uz", "full_name": "А"}, headers=boss
@@ -581,7 +562,7 @@ async def test_create_by_old_codes_still_works_and_without_roles_needs_crm_roles
         headers=boss,
     )
     assert old.status_code == 201
-    assert old.json()["user"]["platform_roles"] == []
+    assert old.json()["user"]["platform_role_ids"] == []
     assert old.json()["user"]["platform_access"] == ["crm"]
     assert queue.jobs == []
 
@@ -609,7 +590,6 @@ async def test_first_admin_from_setup_gets_the_admin_platform_role(
         me = client.get("/api/v1/me", headers=headers).json()
         roles = role_ids(client, headers)
 
-    assert me["platform_roles"] == ["ADMIN"]
     assert me["platform_role_ids"] == [roles["ADMIN"]]
     assert (me["roles"], me["platform_access"], me["erp_role_codes"]) == (
         ["admin"],
