@@ -254,18 +254,20 @@ Caddy (`no_erp_internal` в `Caddyfile.prod`/`Caddyfile.dev`) отвечает 4
 
 - **Генерация.** `make-env-prod.sh init` создаёт все ключи случайными, на экран не печатает и дописывает недостающие в существующий файл. Копии для VPS 2
   (`WAL_S3_*`, `BACKUP_RUSTFS_*`) он выставляет равными `S3_WAL_*` и `S3_BACKUP_*` при каждом запуске; `extract-db` отдаёт на VPS 2 только их — корневого
-  ключа и ключей ERP/CRM/Langfuse там нет. `reset-prod.sh` (S0-8) на чистом сервере вызывает ту же генерацию.
+  ключа и ключей ERP/CRM/Langfuse там нет. Только ключи S3, не трогая остальное (и не возвращая переменные VPS 2, убранные `drop-db-only`), создаёт
+  `make-env-prod.sh s3-keys`; именно его вызывает `reset-prod.sh` (S0-8) на шаге 0. Четыре строки для VPS 2 из ключей сервисов печатает
+  `make-env-prod.sh extract-s3` (работает и после `drop-db-only`; вывод — в файл, он содержит секреты).
 - **Создание пользователей.** Одноразовый `s3-init` (`infra/s3/init.sh`, образ `rustfs/rc` с закреплёнными версией и digest) при **каждом** деплое: создаёт бакеты,
   обновляет политики `rt-<сервис>` и пользователей, удаляет пользователей, которых нет в списке, ставит правило `erp-temp` и проверяет матрицу доступа реальными запросами
   под ключом каждого сервиса (чужой бакет доступен, запись в `backups` у CRM открыта — деплой останавливается с ошибкой). Остальные сервисы ждут `s3-init`.
-- **Обновление существующего прода** (`.env.prod` до S0-9): `make-env-prod.sh init` делает прежний `S3_ACCESS_KEY/S3_SECRET_KEY` корневым `S3_ROOT_*` (корень
-  не меняется — RustFS и VPS 2 со старой копией ключа работают без перерыва), удаляет старые строки и генерирует ключи сервисов. Порядок: `init` → деплой (`s3-init` заведёт
-  пользователей; ERP, CRM и Langfuse переходят на свои ключи) → `extract-db` → скопировать на VPS 2 → `db-up.sh` (п. 1.2, 1.3): WAL-G и бэкап переходят на свои ключи.
-  До этого VPS 2 ходит корневым ключом — работает, но с лишними правами; после перехода корневой ключ с VPS 2 исчезает вместе с `drop-db-only`.
-- **Ротация ключа сервиса.** Поменять `S3_<СЕРВИС>_SECRET_KEY` (или оба значения) в `.env.prod` → для `wal` и `backup` — `make-env-prod.sh init` (обновит копию для VPS 2) →
-  деплой (`s3-init` обновит пользователя, старый секрет перестаёт действовать сразу; смена идентификатора удаляет прежнего пользователя) → перезапуск потребителя
-  (ERP/CRM/Langfuse перезапускаются деплоем; VPS 2 — `extract-db` → `db-up.sh`). Корневой ключ меняется так же, но требует перезапуска `rustfs`.
-  Проверено на стенде: старый секрет — 403, новый — 200, лишний пользователь удалён.
+- **Обновление существующего прода** (`.env.prod` до S0-9): `make-env-prod.sh s3-keys` (или `init`) делает прежний `S3_ACCESS_KEY/S3_SECRET_KEY` корневым `S3_ROOT_*` (корень
+  не меняется — RustFS и VPS 2 со старой копией ключа работают без перерыва), удаляет старые строки и генерирует ключи сервисов. Порядок: `s3-keys` → деплой (`s3-init` заведёт
+  пользователей; ERP, CRM и Langfuse переходят на свои ключи) → `extract-s3 > /tmp/s3.env` → заменить такие же строки в `/opt/rt-db/.env.db` на VPS 2 → `db-up.sh`
+  (WAL-G и бэкап переходят на свои ключи) → `shred -u /tmp/s3.env`. До этого VPS 2 ходит старым (теперь корневым) ключом — работает, но с лишними правами.
+- **Ротация ключа сервиса.** Поменять `S3_<СЕРВИС>_SECRET_KEY` (или оба значения) в `.env.prod` →
+  деплой (`s3-init` обновит пользователя, старый секрет перестаёт действовать сразу; смена идентификатора удаляет прежнего пользователя; ERP/CRM/Langfuse подхватят новый
+  ключ при пересоздании контейнеров этим же деплоем) → для `wal` и `backup` дальше `extract-s3` → `.env.db` на VPS 2 → `db-up.sh`. Корневой ключ меняется так же, но требует
+  перезапуска `rustfs`. Проверено на стенде: старый секрет — 403, новый — 200, лишний пользователь удалён.
 - **Правило `erp-temp`**: объекты старше **1 суток** удаляются сервером (правило `rt-erp-temp-expire-1d` ставит `s3-init`; импорт правила заменяет набор целиком, повтор ничего не
   дублирует). Посмотреть: `docker compose … run --rm --entrypoint sh s3-init -c 'rc alias set r http://rustfs:9000 "$S3_ROOT_ACCESS_KEY" "$S3_ROOT_SECRET_KEY" >/dev/null; rc bucket lifecycle rule list r/erp-temp'`.
   Срабатывание зависит от сканера RustFS (проходит не мгновенно); в `erp-temp` лежит только промежуточное — важного там быть не должно.
@@ -443,11 +445,11 @@ Smoke с раннера в задании `rollback` устроен так же:
 
 | Шаг | Действие | Не трогает |
 |---|---|---|
-| 0 | Проверки до разрушения: `.env.prod`, релиз, **подтверждение вводом имени домена CRM**, `compose pull`, `cpu-baseline-check.sh` | — |
+| 0 | Проверки до разрушения: `.env.prod`, релиз, **подтверждение вводом имени домена CRM**, ключи S3 на сервис (`make-env-prod.sh s3-keys`: недостающие дописывает и генерирует, значения не печатает; если ключи `wal`/`backup` созданы заново — в конце напоминание про VPS 2), `compose pull`, `cpu-baseline-check.sh` | — |
 | 1 | Останавливает приложения проекта (CRM, ERP, Cabinet, Платформа, Redis, Langfuse, воркеры) | `rustfs`, `caddy`, `litellm`, `clickhouse` продолжают работать |
 | 2 | **Дамп** `crm` и `erp` (`predeploy-dump.sh`) и копия в `/opt/rt/state/reset/dumps/<время>/` (там дамп не вытесняется ротацией) | — |
 | 3 | Пересоздаёт `crm` и `erp` на VPS 2: `DROP DATABASE … WITH (FORCE)`, затем `10-prod-init.sh` (`CREATE DATABASE` с владельцем-ролью, `pgvector` в `crm`). С VPS 1 проверяет, что обе базы пусты | базы `litellm` (ключи моделей) и `langfuse`; роли и пароли |
-| 4 | Очищает бакеты RustFS `erp-private`, `erp-public`, `erp-temp`, `client-documents`, `tg-attachments`, `kb-sources` | бакеты `backups`, `wal`, `langfuse` |
+| 4 | Очищает бакеты RustFS `erp-private`, `erp-public`, `erp-temp`, `client-documents`, `tg-attachments`, `kb-sources` корневым ключом (одноразовый `s3-init`: ключи сервисов чужих бакетов не видят, S0-9) | бакеты `backups`, `wal`, `langfuse` |
 | 5 | Удаляет тома Redis: `redis_data` (старый), `redis_broker_data`, `redis_cache_data` | `s3_data` (RustFS), `caddy_data` (**сертификаты**), `caddy_config`, `postgres_*` |
 | 6 | `deploy.sh <тег>`: миграции на пустые базы, `up`, smoke | — |
 | 7 | Печатает, где взять код первого запуска CRM (сам код не печатает) | — |
@@ -476,8 +478,8 @@ Smoke с раннера в задании `rollback` устроен так же:
 1. **Сохранить офлайн** (если ещё нет): `/opt/rt/.env.prod`, `/opt/rt-db/.env.db`, отдельно `BACKUP_ENC_PASSPHRASE`, `WAL_ENC_KEY`, `LITELLM_SALT_KEY`; токен бота Telegram от BotFather
    (он хранится в базе CRM и исчезнет вместе с ней; после сброса вводится в «Подключениях» заново); при желании — пароли и ключи моделей, которые лежат у владельца вне сервера.
    Ключи моделей в базе `litellm` сохраняются, но ключ `LITELLM_SALT_KEY` обязателен для их расшифровки.
-2. **Переменные.** В `/opt/rt/.env.prod` есть всё, что требует main: `make-env-prod.sh init` дописывает новые (`REDIS_BROKER_PASSWORD`, `REDIS_CACHE_PASSWORD` и др.), после него
-   `drop-db-only` (п. 1.2). `PLATFORM_DOMAIN` и A-запись на месте (раздел «Платформа»).
+2. **Переменные.** В `/opt/rt/.env.prod` есть всё, что требует main: `make-env-prod.sh init` дописывает новые (`REDIS_BROKER_PASSWORD`, `REDIS_CACHE_PASSWORD`, ключи S3 на сервис `S3_*` и др.; прежний `S3_ACCESS_KEY/S3_SECRET_KEY` становится корневым `S3_ROOT_*`), после него
+   `drop-db-only` (п. 1.2). Ключи `wal` и `backup` для VPS 2 — `extract-s3` и `db-up.sh` (раздел «Ключи S3 на сервис»). `PLATFORM_DOMAIN` и A-запись на месте (раздел «Платформа»).
 3. **VPS 2** обновлён (`db-up.sh` после S0-3 выполнен, каталог `infra` версии релиза, `walg` и `postgres` healthy: `docker ps` на VPS 2).
 4. **Деплой main** обычным способом (Actions → Deploy, `ref` = `main`). Если он упал на миграциях старых данных — это не помеха сбросу: релиз уже лежит в
    `/opt/rt/releases/<sha>/`. Нужно только, чтобы там был `infra/deploy/reset-prod.sh` (`ls`), а образы с этим тегом уже в GHCR.
@@ -534,7 +536,7 @@ ssh root@<VPS 2> /opt/rt-db/infra/deploy/reset-prod.sh db --drop crm,erp     # �
 ### 7.5. Архитектору: последовательность команд
 
 1. Перед началом (владелец/архитектор): офлайн-копии `.env.prod`, `.env.db`, `BACKUP_ENC_PASSPHRASE`, `WAL_ENC_KEY`, `LITELLM_SALT_KEY`, токен бота (п. 7.1.1). Убедиться, что в `main` ничего не вливается.
-2. VPS 1: `infra/deploy/make-env-prod.sh init && infra/deploy/make-env-prod.sh drop-db-only` (новые переменные S0-2, S0-4); VPS 2: обновить `/opt/rt-db/infra` и `ssh root@<VPS 2> /opt/rt-db/infra/deploy/db-up.sh` (S0-3).
+2. VPS 1: `infra/deploy/make-env-prod.sh init && infra/deploy/make-env-prod.sh drop-db-only` (новые переменные S0-2, S0-4, S0-9); VPS 2: обновить `/opt/rt-db/infra` и `ssh root@<VPS 2> /opt/rt-db/infra/deploy/db-up.sh` (S0-3); после деплоя `make-env-prod.sh extract-s3` → строки `WAL_S3_*`/`BACKUP_RUSTFS_*` в `/opt/rt-db/.env.db` → `db-up.sh` (ключи S3 на сервис, S0-9).
 3. Actions → Deploy → `ref` = `main`, `action` = `deploy`. Дождаться окончания; красный результат на миграциях старых данных допустим, если релиз `<sha>` лёг на VPS 1.
 4. `ssh -t deploy@<VPS 1> /opt/rt/releases/<sha>/infra/deploy/reset-prod.sh <sha>` → ввод имени домена CRM → на шаге 3 в другом окне `ssh root@<VPS 2> /opt/rt-db/infra/deploy/reset-prod.sh db --drop crm,erp` → Enter.
 5. Код: `ssh deploy@<VPS 1> 'docker logs rt-platform-crm-api-1 2>&1 | grep setup_code_issued | tail -1'` → `https://<CRM_DOMAIN>/setup` → Платформа: Admin → Подключения (бот, «Подключить ERP») → роли → проверки п. 7.3.

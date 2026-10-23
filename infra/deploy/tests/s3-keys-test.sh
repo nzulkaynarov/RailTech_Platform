@@ -142,4 +142,19 @@ lv() { grep "^$1=" "$legacy" | cut -d= -f2-; }
 ! grep -qE '^S3_(ACCESS|SECRET)_KEY=' "$legacy" || fail "прежние S3_ACCESS_KEY/S3_SECRET_KEY не убраны"
 [[ "$(lv S3_ERP_SECRET_KEY)" != CHANGE_ME && -n "$(lv S3_ERP_SECRET_KEY)" ]] || fail "ключ ERP не сгенерирован в старом файле"
 [[ "$(lv WAL_S3_SECRET_KEY)" == "$(lv S3_WAL_SECRET_KEY)" && "$(lv WAL_S3_SECRET_KEY)" != legacy-secret ]] || fail "копия WAL_S3_* не переведена на ключ сервиса wal"
+# s3-keys: только ключи S3; переменные VPS 2, убранные drop-db-only, не возвращаются; extract-s3 отдаёт VPS 2 ключи сервисов.
+sk="$tmp/s3keys.env"
+printf 'CRM_DOMAIN=crm.example.org\nS3_ACCESS_KEY=legacy-access\nS3_SECRET_KEY=legacy-secret\n' > "$sk"
+bash "$root/infra/deploy/make-env-prod.sh" s3-keys "$sk" >/dev/null
+skv() { grep "^$1=" "$sk" | cut -d= -f2-; }
+[[ "$(skv S3_ROOT_ACCESS_KEY)" == legacy-access && "$(skv S3_ROOT_SECRET_KEY)" == legacy-secret ]] || fail "s3-keys: прежний ключ не стал корневым"
+for n in ERP CRM LANGFUSE WAL BACKUP; do [[ -n "$(skv "S3_${n}_SECRET_KEY")" && "$(skv "S3_${n}_SECRET_KEY")" != CHANGE_ME ]] || fail "s3-keys: нет ключа $n"; done
+! grep -qE '^(WAL_|BACKUP_|DB_SUPERUSER|REDIS_)' "$sk" || fail "s3-keys вернул/добавил переменные не про S3"
+before="$(cat "$sk")"; bash "$root/infra/deploy/make-env-prod.sh" s3-keys "$sk" >/dev/null
+[[ "$(cat "$sk")" == "$before" ]] || fail "повторный s3-keys изменил файл"
+bash "$root/infra/deploy/make-env-prod.sh" extract-s3 "$sk" > "$tmp/s3.vps2"
+[[ "$(grep '^WAL_S3_SECRET_KEY=' "$tmp/s3.vps2" | cut -d= -f2-)" == "$(skv S3_WAL_SECRET_KEY)" ]] || fail "extract-s3: WAL_S3_SECRET_KEY"
+[[ "$(grep '^BACKUP_RUSTFS_ACCESS_KEY=' "$tmp/s3.vps2" | cut -d= -f2-)" == "$(skv S3_BACKUP_ACCESS_KEY)" ]] || fail "extract-s3: BACKUP_RUSTFS_ACCESS_KEY"
+[[ "$(wc -l < "$tmp/s3.vps2" | tr -d ' ')" == 4 ]] || fail "extract-s3 должен отдавать ровно 4 переменные"
+! grep -qF -- "$(skv S3_ROOT_SECRET_KEY)" "$tmp/s3.vps2" || fail "extract-s3 отдал корневой ключ"
 echo "s3-keys-test: ok"

@@ -8,12 +8,13 @@
 #
 # Подтверждение — ввод имени домена CRM из .env.prod (с терминала, /dev/tty); флага «без вопросов» нет.
 # Порядок на VPS 1 (каждый шаг идемпотентен, повтор после сбоя безопасен):
-#   0. проверки до разрушения: env, релиз, подтверждение, pull образов, CPU-база образов
+#   0. проверки до разрушения: env, релиз, подтверждение, ключи S3 на сервис (make-env-prod.sh s3-keys), pull образов, CPU-база образов
 #   1. остановка приложений проекта (кроме rustfs, caddy, litellm, clickhouse: файлы, вход и ключи моделей остаются)
 #   2. предмиграционный дамп crm и erp (predeploy-dump.sh) + копия в $RT_STATE/reset/dumps/: откат возможен
 #   3. пересоздание баз crm и erp на VPS 2 (DROP + CREATE с владельцем-ролью, pgvector в crm) — ssh root@VPS 2 или команда
 #      вручную; litellm (ключи моделей) и langfuse не трогаются; затем проверка с VPS 1, что базы пусты
-#   4. очистка бакетов приложений RustFS (erp-private, erp-public, erp-temp, client-documents, tg-attachments, kb-sources);
+#   4. очистка бакетов приложений RustFS (erp-private, erp-public, erp-temp, client-documents, tg-attachments, kb-sources) корневым
+#      ключом через одноразовый s3-init (ключи сервисов чужих бакетов не видят, S0-9);
 #      backups, wal и langfuse НЕ трогаются
 #   5. удаление томов Redis (redis_data, redis_broker_data, redis_cache_data); s3_data, caddy_data, caddy_config НЕ трогаются
 #   6. deploy.sh выбранного релиза: миграции на пустые базы, up, smoke
@@ -109,7 +110,7 @@ tag="${1:-$(state_get current_tag)}"
 [[ -n "$tag" ]] || die "нет тега: state/current_tag пуст — укажите: reset-prod.sh <тег>"
 [[ "$tag" =~ ^[A-Za-z0-9_.-]+$ ]] || die "недопустимый тег: $tag"
 rel="$(release_dir "$tag")"
-for f in deploy.sh predeploy-dump.sh cpu-baseline-check.sh smoke.sh; do
+for f in deploy.sh predeploy-dump.sh cpu-baseline-check.sh smoke.sh make-env-prod.sh; do
   [[ -x "$rel/infra/deploy/$f" ]] || die "в релизе $rel нет исполняемого infra/deploy/$f (релиз загружен deploy.yml? хранятся пять последних)"
 done
 require_env_file
@@ -239,49 +240,24 @@ step_db() {
 step_buckets() {
   log "4. очистка бакетов RustFS: ${APP_BUCKETS[*]} (backups, wal, langfuse не трогаются)"
   compose "$rel" up -d --wait rustfs
-  # Одноразовый контейнер образа CRM (aiobotocore уже в нём); ключи и адрес S3 — из окружения сервиса, как у самого CRM.
-  compose "$rel" run --rm -T --no-deps crm-migrate python - "${APP_BUCKETS[@]}" <<'PY'
-import asyncio, os, sys
-from aiobotocore.session import get_session
-from botocore.exceptions import ClientError
-
-
-async def purge(s3, bucket):
-    try:
-        await s3.head_bucket(Bucket=bucket)
-    except ClientError as exc:
-        if exc.response.get("Error", {}).get("Code") in ("404", "NoSuchBucket", "NotFound"):
-            print(f"бакета {bucket} нет — пропуск (создаст s3-init)", flush=True)
-            return
-        raise
-    deleted = 0
-    while True:
-        keys = []
-        async for page in s3.get_paginator("list_objects_v2").paginate(Bucket=bucket):
-            keys += [o["Key"] for o in page.get("Contents", [])]
-        if not keys:
-            break
-        for i in range(0, len(keys), 16):
-            await asyncio.gather(*(s3.delete_object(Bucket=bucket, Key=k) for k in keys[i:i + 16]))
-        deleted += len(keys)
-    print(f"{bucket}: удалено объектов {deleted}, осталось 0", flush=True)
-
-
-async def main(buckets):
-    session = get_session()
-    async with session.create_client(
-        "s3",
-        endpoint_url=os.environ["S3_ENDPOINT"].rstrip("/"),
-        aws_access_key_id=os.environ["S3_ACCESS_KEY"],
-        aws_secret_access_key=os.environ["S3_SECRET_KEY"],
-        region_name=os.environ.get("S3_REGION", "us-east-1"),
-    ) as s3:
-        for bucket in buckets:
-            await purge(s3, bucket)
-
-
-asyncio.run(main(sys.argv[1:]))
-PY
+  # Ключи сервисов (S0-9) видят только свои бакеты, поэтому чистит корневой ключ: одноразовый s3-init (образ rustfs/rc) с окружением
+  # сервиса, где он есть. Корневой ключ нигде больше не используется и наружу не печатается.
+  # shellcheck disable=SC2016  # переменные раскрывает sh внутри контейнера, не эта оболочка
+  compose "$rel" run --rm -T --no-deps --entrypoint sh s3-init -c '
+set -eu
+rc alias set root "$S3_ENDPOINT" "$S3_ROOT_ACCESS_KEY" "$S3_ROOT_SECRET_KEY" >/dev/null
+for bucket in "$@"; do
+  if ! rc object list --recursive "root/$bucket/" >/dev/null 2>&1; then
+    echo "бакета $bucket нет — пропуск (создаст s3-init)"
+    continue
+  fi
+  rc object remove --recursive --force "root/$bucket/" >/dev/null
+  rc object remove --recursive --force --incomplete "root/$bucket/" >/dev/null
+  left="$(rc object list --recursive "root/$bucket/" --json | jq ".items | length")"
+  [ "$left" = 0 ] || { echo "$bucket: осталось объектов $left" >&2; exit 1; }
+  echo "$bucket: очищен, осталось 0"
+done
+' sh "${APP_BUCKETS[@]}"
 }
 
 step_volumes() {
@@ -335,6 +311,10 @@ if [[ $resume -eq 0 ]]; then
   rs_set started "$(date +%s)"
 fi
 
+log "0. ключи S3 на сервис (S0-9): make-env-prod.sh s3-keys дописывает недостающие и генерирует случайные (значения не печатаются)"
+s3_vps2_before="$(env_get S3_WAL_SECRET_KEY || true)/$(env_get S3_BACKUP_SECRET_KEY || true)"
+"$rel/infra/deploy/make-env-prod.sh" s3-keys "$RT_ENV_FILE" >&2
+s3_vps2_after="$(env_get S3_WAL_SECRET_KEY || true)/$(env_get S3_BACKUP_SECRET_KEY || true)"
 log "0. проверки до разрушения (конфигурация, pull образов, CPU-база образов)"
 compose "$rel" config -q
 compose "$rel" pull
@@ -369,3 +349,11 @@ cat >&2 <<EOF
      Платформа: Admin → Подключения  →  бот Telegram; ERP — кнопка «Подключить ERP» (адрес http://erp-backend:8000, без кода)
      затем роли пользователей. Полный порядок и проверки — docs/runbooks/deploy.md, «Сброс прода и первый запуск».
 EOF
+if [[ "$s3_vps2_before" != "$s3_vps2_after" ]]; then
+  cat >&2 <<REMIND
+
+8. Ключи S3 для VPS 2 созданы заново (S0-9): WAL-G и бэкап ходят в RustFS своими ключами. Пока их нет на VPS 2, архив WAL и дампы в бакеты не уходят
+   (WAL копится на диске VPS 2; перенести надо в первые часы). На VPS 1:  infra/deploy/make-env-prod.sh extract-s3  — напечатает 4 строки;
+   на VPS 2 заменить такие же строки в /opt/rt-db/.env.db и выполнить  ssh root@<VPS 2> /opt/rt-db/infra/deploy/db-up.sh  (docs/runbooks/deploy.md, «Ключи S3 на сервис»).
+REMIND
+fi
