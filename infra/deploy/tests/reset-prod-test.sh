@@ -228,6 +228,7 @@ assert_absent "ssh "; assert_absent "DROP DATABASE"; assert_absent "volume rm"; 
 
 # ── 6. сбой деплоя после сброса; повтор не снимает дамп и не сбрасывает данные заново ─────────────────────────────────
 reset_fake; touch "$tmp/deploy-fails"
+sed -i.bak "/^S3_/d" "$tmp/env" && rm -f "$tmp/env.bak"   # ключей S3 ещё нет: s3-keys создаст их в первом запуске
 if SSH_TARGET=root@vps2.example.org run_reset <<<"$domain"; then fail "сценарий прошёл при упавшем deploy.sh"; fi
 [[ -f "$tmp/state/reset/run" ]] || fail "состояние сброса не сохранено после сбоя"
 rm "$tmp/deploy-fails"; : > "$LOG"
