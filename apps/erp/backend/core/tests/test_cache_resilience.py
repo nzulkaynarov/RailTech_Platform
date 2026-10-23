@@ -318,7 +318,7 @@ def test_ws_ticket_is_refused_while_the_cache_is_down(dead_cache):
     assert not _redeem_ws_ticket("any").is_authenticated
 
 
-# ─── Секрет вебхука (код акцепта) живёт в кэше: «кэш лёг» ≠ «код протух» ───────────────────────────
+# ─── Секрет события (код акцепта) живёт в кэше: «кэш лёг» ≠ «код протух» (rt_bus, B3) ──────────
 
 
 @pytest.fixture
@@ -336,75 +336,95 @@ def code_event_world():
     return quote, contact
 
 
-def _emit_code(quote, contact):
+def _publish_code(quote, contact):
     from datetime import timedelta
 
+    from django.db import transaction
     from django.utils import timezone
-    from integration.services.webhooks import emit_quote_acceptance_code_requested
+    from integration.services.events import publish_quote_acceptance_code_requested
 
-    return emit_quote_acceptance_code_requested(
-        quote, contact, "739104", timezone.now() + timedelta(minutes=15), send_async=False
-    )
+    with transaction.atomic():
+        return publish_quote_acceptance_code_requested(quote, contact, "739104", timezone.now() + timedelta(minutes=15))
 
 
-def test_code_event_is_not_created_without_a_place_for_its_secret(settings, code_event_world):
-    from integration.models import IntegrationWebhookEvent
-    from portal.services.acceptance import _emit_code_event
+def test_code_event_is_not_published_without_a_place_for_its_secret(settings, code_event_world):
+    """Кэш лёг при публикации: код негде хранить — `CacheUnavailable`, события (даже маской) в outbox нет."""
+    from integration.tests import bus_support
 
     quote, contact = code_event_world
     settings.CACHES = DEAD
     with pytest.raises(CacheUnavailable):
-        _emit_code(quote, contact)
-    assert not IntegrationWebhookEvent.objects.filter(event_type="quote.acceptance_code_requested").exists()
-    # Портал при этом не остаётся без кода: выпуск события не удался — откат на письмо (см. `_emit_code_event`).
-    assert _emit_code_event(quote, contact, "739104") is False
+        _publish_code(quote, contact)
+    assert bus_support.published("quote.acceptance_code_requested") == []
 
 
-def test_delivery_waits_for_the_cache_instead_of_losing_the_secret(settings, code_event_world):
-    from unittest.mock import MagicMock, patch
-
-    from integration.models import WebhookEventStatus
-    from integration.tasks import CACHE_RETRY_S, deliver_webhook_event
-
-    quote, contact = code_event_world
-    working_caches = settings.CACHES
-    event = _emit_code(quote, contact)  # секрет — в рабочий кэш
-
-    settings.CACHES = DEAD  # кэш лёг до доставки
-    with patch("httpx.Client.post") as post, patch.object(deliver_webhook_event, "apply_async") as again:
-        assert deliver_webhook_event(event.pk) is False
-    post.assert_not_called()
-    again.assert_called_once_with(args=[event.pk], countdown=CACHE_RETRY_S)
-    event.refresh_from_db()
-    assert event.status == WebhookEventStatus.PENDING and event.attempts == 0  # не SECRET_EXPIRED, попытка не потрачена
-
-    settings.CACHES = working_caches  # кэш вернулся: секрет цел, доставка проходит
-    with patch("httpx.Client.post", return_value=MagicMock(status_code=200, text="OK")) as post:
-        assert deliver_webhook_event(event.pk) is True
-    assert b"739104" in post.call_args.kwargs["content"]
-
-
-def test_delivery_gives_up_when_the_cache_stays_down_past_the_secret_lifetime(settings, code_event_world):
-    from datetime import timedelta
-    from unittest.mock import patch
-
-    from django.utils import timezone
-    from integration.models import IntegrationWebhookEvent, WebhookEventStatus
-    from integration.services.webhooks import SECRET_PAYLOAD_TTL
-    from integration.tasks import deliver_webhook_event
+def test_cache_outage_rolls_back_the_issue_of_the_code(settings, code_event_world):
+    """Выпуск кода и событие — одна транзакция: кэш лёг — кода нет ни в базе, ни в outbox, письмо не уходит."""
+    from django.core import mail
+    from integration.tests import bus_support
+    from portal.services.acceptance import request_acceptance_code
+    from sales.models.acceptance import QuoteAcceptanceCode
 
     quote, contact = code_event_world
-    event = _emit_code(quote, contact)
-    IntegrationWebhookEvent.objects.filter(pk=event.pk).update(
-        created_at=timezone.now() - timedelta(seconds=SECRET_PAYLOAD_TTL + 60)
-    )
+    contact.telegram_user_id = 424242
+    contact.save(update_fields=["telegram_user_id"])
     settings.CACHES = DEAD
-    with patch("httpx.Client.post") as post, patch.object(deliver_webhook_event, "apply_async") as again:
-        assert deliver_webhook_event(event.pk) is False
-    post.assert_not_called()
-    again.assert_not_called()
-    event.refresh_from_db()
-    assert event.status == WebhookEventStatus.FAILED and event.last_error.startswith("SECRET_EXPIRED")
+    with pytest.raises(CacheUnavailable):
+        request_acceptance_code(quote, contact)
+    assert not QuoteAcceptanceCode.objects.filter(quote=quote).exists()
+    assert bus_support.published("quote.acceptance_code_requested") == [] and mail.outbox == []
+
+
+@pytest.mark.django_db(transaction=True)
+def test_delivery_while_the_cache_is_down_loses_the_secret_not_the_service(settings, code_event_world):
+    """Фактическое поведение библиотеки rt_bus: кэш лёг ДО доставки — секрета не достать, доставка уходит в `dead`
+    (`SECRET_EXPIRED`), запрос подписчику не идёт и значение кода нигде не пишется. Это не то, что делал журнал вебхуков
+    (откладывал доставку до возвращения кэша, S0-2); замена — клиент запрашивает код заново (срок кода 15 минут). Пункт
+    в PR B3: ждать кэш вместо `dead` может только сама библиотека (хвост B1)."""
+    import httpx
+    from integration.bus import get_bus
+    from rt_bus.django.models import Delivery
+
+    quote, contact = code_event_world
+    working = settings.CACHES
+    event = _publish_code(quote, contact)  # секрет — в рабочий кэш
+    sent = []
+    bus = get_bus()
+    previous = bus._http
+    bus._http = httpx.Client(transport=httpx.MockTransport(lambda r: sent.append(r) or httpx.Response(200)))
+    try:
+        settings.CACHES = DEAD  # кэш лёг до доставки
+        bus.pump()
+    finally:
+        bus._http = previous
+        settings.CACHES = working
+    assert sent == []
+    delivery = Delivery.objects.get(event_id=event.id)
+    assert delivery.status == "dead" and "SECRET_EXPIRED" in (delivery.last_error or "")
+    assert "739104" not in (delivery.last_error or "")
+
+
+@pytest.mark.django_db(transaction=True)
+def test_expired_secret_makes_the_delivery_dead_without_a_request(settings, code_event_world):
+    """Секрет протух (TTL кэша вышел): поведение библиотеки — доставка `dead` с `SECRET_EXPIRED`, запроса нет, код не в логах."""
+    import httpx
+    from integration.bus import get_bus
+    from rt_bus.django.models import Delivery
+
+    quote, contact = code_event_world
+    event = _publish_code(quote, contact)
+    cache.delete(f"rt_bus:secret:{event.id}")  # TTL вышел
+    sent = []
+    bus = get_bus()
+    previous = bus._http
+    bus._http = httpx.Client(transport=httpx.MockTransport(lambda r: sent.append(r) or httpx.Response(200)))
+    try:
+        bus.pump()
+    finally:
+        bus._http = previous
+    assert sent == []
+    delivery = Delivery.objects.get(event_id=event.id)
+    assert delivery.status == "dead" and "SECRET_EXPIRED" in (delivery.last_error or "")
 
 
 # ─── У каждого ключа кэша есть срок ────────────────────────────────────────────────────────────

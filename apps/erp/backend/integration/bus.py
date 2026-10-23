@@ -22,6 +22,8 @@ from rt_bus import BusConfig, default_registry, env_secrets
 from rt_bus.django.bus import DjangoBus
 from rt_bus.django.stash import DjangoCacheStash
 
+from core.cache import fail_closed
+
 from .bus_http import build_http_client
 from .services import credentials
 
@@ -34,6 +36,20 @@ PAIRED_SERVICE = "crm"
 
 _lock = threading.Lock()
 _bus: Optional[DjangoBus] = None
+
+
+class FailClosedCacheStash(DjangoCacheStash):
+    """Кэш секретных полей события (код акцепта), у которого запись при недоступном Redis не «молчит» (S0-2, ADR-0013 п. 5).
+
+    Кэш ERP при отказе отвечает «пусто» (`core.cache.ResilientRedisCache`): обычная запись пропала бы без следа, а событие
+    с кодом ушло бы в outbox маской, когда настоящего значения уже негде взять. Поэтому запись идёт под `fail_closed()`:
+    недоступный кэш — `CacheUnavailable` (503) наружу, публикация и вместе с ней изменение откатываются, события без секрета
+    не бывает. Чтение при доставке — библиотечное (см. `docs/runbooks/rt-bus-erp.md`).
+    """
+
+    def put(self, event_id, values):
+        with fail_closed():
+            super().put(event_id, values)
 
 
 def derive_pair_secret(webhook_secret: str, publisher: str, subscriber: str) -> str:
@@ -69,7 +85,7 @@ def build_bus() -> DjangoBus:
         config,
         registry=default_registry,
         http=build_http_client(config.http_timeout),
-        stash=DjangoCacheStash(),
+        stash=FailClosedCacheStash(),
         enqueue=bus_tasks.enqueue,
         wakeup=bus_tasks.wakeup,
     )

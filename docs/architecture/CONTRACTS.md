@@ -435,7 +435,7 @@ subscribers:
 
 Компания без `CrmClientMapping` событий не порождает. `correlationid` по умолчанию — `X-Request-ID` входящего запроса
 (`RequestIDMiddleware` принимает только безопасную строку `A-Za-z0-9._-` до 128 знаков, иначе новый UUID), вне запроса
-(Celery) — новый UUID. Код акцепта: в outbox маска `***`, значение — кэш Redis на 20 минут (`DjangoCacheStash`) до доставки;
+(Celery) — новый UUID. Код акцепта: в outbox маска `***`, значение — кэш Redis на 20 минут (`DjangoCacheStash`; в ERP запись идёт fail-closed — `integration.bus.FailClosedCacheStash`: кэш недоступен при публикации — `CacheUnavailable`, публикация и изменение откатываются, S0-2) до доставки;
 истёк — доставка `dead` с `SECRET_EXPIRED`, клиент запрашивает код заново.
 
 **Приёмник.** `POST /bus/v1/events` в `erp-backend` (JWT и сессия не нужны — подпись §9.3). Только внутри сети compose:
