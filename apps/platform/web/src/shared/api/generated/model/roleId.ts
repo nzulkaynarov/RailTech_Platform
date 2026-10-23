@@ -26,6 +26,14 @@
  * 0.2.0 (волна 8): смена пароля (`POST /auth/change-password`, `Session.must_change_password`); Admin · Оргструктура —
  * сотрудники, выдача ролей Платформы, приглашение по почте (`/admin/users*`, раздел матрицы `admin`).
  *
+ * **0.4.0 (R-1b, ADR-0012 п. 2) — ломающее (до 1.0 допустимо).** Директор видит Ролевую матрицу только для чтения:
+ * `GET /admin/roles` и `GET /admin/roles/{id}` — от `admin: read` (раньше `full`), создание, изменение, удаление и
+ * `POST /admin/roles/preview` — по-прежнему `admin: full`. Оптимистическая блокировка роли: `Role.version` (целое, растёт при
+ * каждом изменении), `RoleUpdate.version` — обязательное поле (ломающее: тело PATCH без него — 422); устаревшая версия —
+ * 409 `CONFLICT` с `details.reason = role_version_conflict` и `details.current_version`. Системная роль «Директор»: лиды
+ * (`crm.leads`) и внешние чаты (`chats.external`) — только чтение (`platform-rbac.yaml`), поэтому «Моя очередь» директора без видов
+ * «ответить лиду» и «взять лид».
+ *
  * **0.3.0 (R-2, ADR-0012) — ломающее (до 1.0 допустимо): роли — данные.** Роль сотрудника — `RoleRef {id, name,
  * system, code?}` вместо перечисления `RoleCode` (удалено): `Me.roles: RoleRef[]`, `Me.active_role` и `MeUpdate.active_role` —
  * id роли или `null`; `Employee.roles: RoleRef[]`, `EmployeeInvite.role_ids`, `EmployeeUpdate.role_ids`; параметр `role` очереди

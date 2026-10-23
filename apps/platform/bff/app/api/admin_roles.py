@@ -1,9 +1,11 @@
-"""Admin · Ролевая матрица: роли Платформы как данные (ADR-0012, контракт: tag `admin`, 0.3.0).
+"""Admin · Ролевая матрица: роли Платформы как данные (ADR-0012, контракт: tag `admin`, 0.4.0).
 
 BFF не решает: роли хранит CRM (`/api/v1/platform-roles`, R-1), она же проверяет каталог (раздел и
 уровень), считает «что произойдёт» и пересчитывает права сотрудников в CRM и ERP. Системные роли
 неизменны (409 `ROLE_SYSTEM`), роль с сотрудниками не удаляется (409 `ROLE_IN_USE`). Доступ — раздел
-`admin` каталога на запись (в CRM — `users:write`).
+`admin` каталога: чтение матрицы (`GET`) — от `read` (директор видит её только для чтения; в CRM —
+`users:read`), создание, изменение, удаление и «что произойдёт» — `full` (в CRM — `users:write`).
+Изменение несёт `version`; устаревшая — 409 `CONFLICT`, `details.reason = role_version_conflict`.
 """
 
 from typing import Annotated, Any
@@ -27,6 +29,7 @@ from app.session import SessionData
 router = APIRouter(tags=["admin"])
 
 Admin = Annotated[Authed, Depends(require("admin", "full"))]
+Reader = Annotated[Authed, Depends(require("admin", "read"))]
 RoleId = Annotated[str, Path(pattern=r"^[0-9]+$")]
 
 
@@ -50,7 +53,7 @@ async def _refresh_own_profile(authed: Authed, role_id: str) -> None:
     response_model_exclude_none=True,
     operation_id="listRoles",
 )
-async def list_roles(authed: Admin) -> RoleList:
+async def list_roles(authed: Reader) -> RoleList:
     return RoleList(items=[to_role(r) for r in await _roles(authed).list_all()])
 
 
@@ -94,7 +97,7 @@ async def preview_role(body: RolePreviewIn, authed: Admin) -> RolePreview:
     response_model_exclude_none=True,
     operation_id="getRole",
 )
-async def get_role(id: RoleId, authed: Admin) -> Role:
+async def get_role(id: RoleId, authed: Reader) -> Role:
     return to_role(await _roles(authed).get(id))
 
 

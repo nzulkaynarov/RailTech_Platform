@@ -381,7 +381,7 @@ export interface paths {
     };
     /**
      * Роли Платформы (Admin · Ролевая матрица) — системные и созданные, с числом сотрудников
-     * @description Раздел `admin` — полный (матрицы и выдачу ролей видит только администратор; CRM — `users:write`).
+     * @description Раздел `admin` — от чтения (0.4.0): матрицу видят администратор (полный доступ) и директор (только чтение); CRM — `users:read`.
      */
     get: operations["listRoles"];
     put?: never;
@@ -420,7 +420,10 @@ export interface paths {
       path?: never;
       cookie?: never;
     };
-    /** Роль */
+    /**
+     * Роль
+     * @description Раздел `admin` — от чтения (0.4.0), как у списка.
+     */
     get: operations["getRole"];
     put?: never;
     post?: never;
@@ -433,7 +436,7 @@ export interface paths {
     head?: never;
     /**
      * Переименовать роль, изменить описание, матрицу или поля с ограничением
-     * @description Не присланное поле не меняется. Права сотрудников с этой ролью CRM пересчитывает сразу (CRM) и фоном (ERP). Системную роль изменить нельзя — 409 `ROLE_SYSTEM`; изменение, после которого не остаётся ни одного администратора, — 409 `LAST_ADMIN`.
+     * @description Не присланное поле не меняется (кроме `version` нужно хотя бы одно — иначе 422); `version` — обязательная версия роли, которую видел клиент. Права сотрудников с этой ролью CRM пересчитывает сразу (CRM) и фоном (ERP). Системную роль изменить нельзя — 409 `ROLE_SYSTEM`; изменение, после которого не остаётся ни одного администратора, — 409 `LAST_ADMIN`; роль изменена после чтения клиентом — 409 `CONFLICT` с `details.reason = role_version_conflict` (SPA предлагает обновить страницу).
      */
     patch: operations["updateRole"];
     trace?: never;
@@ -496,6 +499,8 @@ export interface components {
       system: boolean;
       /** @description Как в `RoleRef.code` */
       code?: string;
+      /** @description Растёт при каждом изменении роли; `RoleUpdate.version` присылает прочитанную (0.4.0) */
+      version: number;
       access: components["schemas"]["ResourceAccess"];
       restricted_fields: components["schemas"]["RestrictedField"][];
       /** @description Сколько сотрудников имеют роль */
@@ -513,6 +518,8 @@ export interface components {
       restricted_fields: components["schemas"]["RestrictedField"][];
     };
     RoleUpdate: {
+      /** @description Версия роли, которую видел клиент (`Role.version`); при расхождении — 409 `role_version_conflict` */
+      version: number;
       name?: string;
       description?: string;
       access?: components["schemas"]["ResourceAccess"];
@@ -1730,7 +1737,7 @@ export interface operations {
       401: components["responses"]["SessionExpired"];
       403: components["responses"]["Forbidden"];
       404: components["responses"]["NotFound"];
-      /** @description `ROLE_SYSTEM`, `LAST_ADMIN`, `CONFLICT` (`details.reason = name_taken`) */
+      /** @description `ROLE_SYSTEM`, `LAST_ADMIN`, `CONFLICT` (`details.reason = name_taken` или `role_version_conflict`) */
       409: {
         headers: {
           [name: string]: unknown;

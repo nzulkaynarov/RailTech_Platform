@@ -61,7 +61,7 @@ httpx, pydantic v2, structlog.
 ```
 SPA  POST /api/v1/auth/login {email, password}
  └► BFF → CRM POST /api/v1/auth/login            → access (тело) + refresh (cookie rt_refresh)
-        → CRM GET  /api/v1/me                     → id, имя, роль CRM, platform_access, platform_roles*
+        → CRM GET  /api/v1/me                     → id, имя, роль CRM, platform_access, platform_role_refs*
         → CRM POST /api/v1/auth/sso/token {aud: erp}   (если есть доступ к ERP)
         → ERP POST /api/v1/auth/sso/exchange/     → access ERP + refresh ERP (cookie)
         → Redis: session:{sid} = {crm_access, crm_refresh, erp_access, erp_refresh, user, roles, exp}
@@ -79,7 +79,7 @@ SPA  POST /api/v1/auth/login {email, password}
 - Сотрудник без доступа к ERP (`platform_access = ["crm"]`): ERP-токенов в сессии нет, модули EDS/ERP скрыты.
 - Вход только по логину CRM. Форма входа ERP, страница `/sso/exchange` CRM, переключатель CRM ↔ ERP, ADR-0010
   «вход в ERP через страницу CRM» после T4 не нужны (T5 удаляет).
-- `platform_roles*` — новое поле пользователя CRM (§6).
+- `platform_role_refs*` — роли Платформы сотрудника с их матрицами (R-1/R-2, §6); старое поле `platform_roles` (коды) удалено в R-1b.
 
 ## 4. Кто владеет новыми сущностями (SPEC-v3 §10.4)
 
@@ -100,7 +100,7 @@ SPA  POST /api/v1/auth/login {email, password}
 | Уведомления сотрудникам | ERP `core.Notification` (расширить) + CRM (новое `staff_notifications` для событий CRM: SLA лида, сбой интеграции) | BFF сливает две ленты | у каждого события один источник |
 | Журнал «кто и когда» | ERP (таймлайн сделки и документов), CRM (аудит) | BFF сливает | журнал там, где действие |
 | Тикеты от команды (Admin) | CRM | новое `tickets` | Admin — консоль CRM |
-| Роли Платформы (6) | CRM (IdP) | `users.platform_roles[]` | CRM — источник истины по людям (ADR-0003); провижининг в ERP через `role_codes` (контракт 0.5.0, FIX-63) |
+| Роли Платформы (данные, ADR-0012) | CRM (IdP) | `platform_roles` (с `version`) + `user_platform_roles` | CRM — источник истины по людям (ADR-0003); системные «Администратор» и «Директор» неизменны, остальные создаёт администратор; провижининг в ERP — вычисленные `permissions`, `role_codes = []` |
 | Номера ЗВ/ПР/КП/ИСХ/ДОГ/СЧ/АКТ/СЗ/ЗП | ERP | `DocumentNumberingScheme` + поле `number` у `Deal` | одна нумерация на компанию |
 | Номер лида L-NNNN | CRM | форматирование `leads.id` | — |
 
@@ -155,9 +155,9 @@ SPA  POST /api/v1/auth/login {email, password}
 | BFF | доступ к маршруту и модулю по матрице SPEC-v3 §4.2; удаление полей с ограничением из ответа | `bff/app/rbac.py`, матрица в одном файле, тест на каждую ячейку |
 | SPA | видимость модулей, пунктов меню, кнопок; `<Restricted>` для полей | `web/src/app/rbac.ts` из того же файла матрицы (генерируется) |
 
-Выдача ролей — одна карточка сотрудника в Admin · Оргструктура. BFF сохраняет `platform_roles` в CRM и
-вызывает провижининг ERP с `role_codes` и правами по карте `docs/architecture/integration-map.md` §4. Матрица SPEC-v3 §4.2 —
-единственный источник; генерация в BFF и SPA из одного YAML (`packages/contracts/platform-rbac.yaml`).
+Выдача ролей — одна карточка сотрудника в Admin · Оргструктура (полный набор `platform_role_ids` в CRM; провижининг ERP
+делает CRM). Каталог разделов, шаблонов и системных ролей — один YAML (`packages/contracts/platform-rbac.yaml` v2); генерация
+в CRM, BFF и SPA из него.
 
 **С R-2 (BFF 0.3.0, каталог v2):** роли — данные CRM. BFF читает в `/me` CRM роли сотрудника с их матрицами
 (`platform_role_refs[].access`, `restricted_fields`; у системных — матрица каталога, Q-R2-1) и считает доступ
@@ -165,6 +165,12 @@ SPA  POST /api/v1/auth/login {email, password}
 по разделам, которых у ролей нет (источник `not_applicable`). Выдача ролей — полный набор `platform_role_ids` в CRM,
 права CRM и ERP вычисляет CRM. Admin · Ролевая матрица — редактор ролей поверх `/admin/roles*` BFF
 (→ `/api/v1/platform-roles*` CRM). Генераторы каталога: CRM (`gen_platform_roles.py`), BFF и SPA (`scripts/gen_rbac.py`).
+
+**С R-1b (BFF 0.4.0, CRM API 0.2.0):** директор — `crm.leads` и `chats.external` только чтение (уточнение ADR-0012 п. 2);
+чтение ролей — CRM `GET /platform-roles*` по `users:read`, BFF `GET /admin/roles*` по `admin: read` (директор видит матрицу
+только для просмотра), изменения — `admin: full`; у роли поле `version`, `PATCH` требует `version`, расхождение — 409
+`role_version_conflict` (BFF — 409 `CONFLICT`, `details.reason`); вкладки «Журнал» у роли нет (бэклог C2). Права CRM
+сотрудника с ролями Платформы — только политики его ролей `pr:<id>` (+ `admin` при системной «Администратор»).
 
 ## 7. Развёртывание
 

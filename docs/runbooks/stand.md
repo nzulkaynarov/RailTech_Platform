@@ -36,9 +36,9 @@ make smoke        # /health доменов CRM, ERP, Cabinet и /api/v1/health +
 | Сервис | Назначение |
 |---|---|
 | `postgres` | PostgreSQL 17 + pgvector; базы `crm`, `erp`, `litellm`, `langfuse` (создаёт `db-init`, идемпотентно) |
-| `redis-broker` | брокер и результаты Celery ERP (БД 1), Channels ERP (БД 2); `appendonly yes`, `noeviction` (S0-2) |
-| `redis-cache` | кэш, троттлинг и одноразовые `jti` ERP (БД 0), сессии Платформы (БД 3), Langfuse (БД 4); `volatile-lru`; свой пароль (S0-2) |
-| `rustfs`, `s3-init` | S3; бакеты CRM (`kb-sources`, `client-documents`, `tg-attachments`), `langfuse`, `erp` |
+| `redis-broker` | брокер и результаты Celery ERP (БД 1), Channels ERP (БД 2), очереди Langfuse (БД 3, S0-9); `appendonly yes`, `noeviction` (S0-2) |
+| `redis-cache` | кэш, троттлинг и одноразовые `jti` ERP (БД 0), сессии Платформы (БД 3); `volatile-lru`; свой пароль (S0-2) |
+| `rustfs`, `s3-init` | S3; бакеты CRM (`kb-sources`, `client-documents`, `tg-attachments`), ERP (`erp-private`, `erp-public`, `erp-temp`), `langfuse`, `backups`, `wal`. Ключ на сервис (S0-9): `s3-init` (образ `rustfs/rc`, `infra/s3/init.sh`) заводит пользователей и политики, ставит правило `erp-temp` (1 сутки) и проверяет доступ; корневой ключ `S3_ROOT_*` знают только `rustfs` и `s3-init`. В старом `.env` выполните `make env`: он допишет `S3_*_ACCESS_KEY/SECRET_KEY` (старые `S3_ACCESS_KEY/S3_SECRET_KEY` уберите и впишите их значения как `S3_ROOT_*`, если том `s3_data` нужно сохранить) |
 | `litellm`, `litellm-seed` | шлюз моделей по алиасам CRM и ERP (`infra/ai/litellm.models.yaml`); ключи провайдеров — только у `litellm` |
 | `docling` | распознавание документов клиентов CRM (база знаний его не использует — только Markdown) |
 | `crm-migrate`, `crm-api`, `crm-bot`, `crm-worker`, `crm-mcp-*`, `crm-web` | CRM из `apps/crm` (код монтируется; hot reload только у `crm-api`, остальные — `docker compose restart <сервис>`). `crm-bot` — Telegram-бот отдельным процессом (S0-4): polling или `/telegram/webhook` через Caddy; токен меняется в «Подключениях» без перезапуска; без токена и Telegram на стенде — `docs/runbooks/crm-bot.md` (заглушка Bot API) |

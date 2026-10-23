@@ -100,10 +100,9 @@ services:
     # Файрвол VPS 1 разрешает 9000/tcp только с внутреннего IP VPS 2 (runbook deploy.md).
     ports: ["${APP_INTERNAL_IP:?set in .env}:9000:9000"]
 
+  # Бакеты, пользователи и политики одинаковы на стенде и в проде — описаны в base.yml и infra/s3/init.sh.
   s3-init:
     logging: { driver: json-file, options: { max-size: "5m", max-file: "2" } }
-    environment:
-      S3_BUCKETS: langfuse kb-sources client-documents tg-attachments erp-private erp-public erp-temp backups wal
 
   litellm:
     <<: [*ops, *mem-768]
@@ -359,7 +358,7 @@ services:
     depends_on: !override
       s3-init:
         condition: service_completed_successfully
-      redis-cache:
+      redis-broker:
         condition: service_healthy
       clickhouse:
         condition: service_healthy
@@ -371,7 +370,7 @@ services:
     depends_on: !override
       s3-init:
         condition: service_completed_successfully
-      redis-cache:
+      redis-broker:
         condition: service_healthy
       clickhouse:
         condition: service_healthy
