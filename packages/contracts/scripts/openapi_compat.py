@@ -13,6 +13,11 @@
 И изменение касается операции, помеченной в базе `deprecated`, или пути, которого в базе не было. Ломка операции
 старого мажора без `deprecated` — красный, даже при поднятом мажоре.
 
+До 1.0. Семвер разрешает ломать минором, пока мажор 0 (решение архитектора 2026-10-23): у контракта с `info.version`
+0.x в head ломающее изменение (ERR) допустимо, если минорная версия head выше минорной базы (0.2.4 → 0.3.0); при той же
+минорной (0.2.4 → 0.2.5) — красный; понижение версии — всегда ошибка. Переход 0.x → 1.0.0 с ломающим допустим (первая
+стабильная). С 1.0 действует правило мажора выше. Правило «контракт раньше кода, обе стороны в одном PR» остаётся.
+
 Исключения. Одноразовое ломающее изменение внутреннего API (например, снятие вебхука, у которого уже нет потребителей)
 допускается только записью в `openapi-breaking-exceptions.yaml` — файл, id проверки, путь, причина, срок `until`
 (не молча, видно в ревью). Исключение, которому ничего не соответствует, — предупреждение; с истёкшим `until` — ошибка.
@@ -169,6 +174,27 @@ def info_major(spec: Mapping[str, Any]) -> int:
     return int(m.group(1)) if m else 0
 
 
+def info_version(spec: Mapping[str, Any]) -> tuple[int, int, int]:
+    """`info.version` → (мажор, минор, патч); недостающие части — 0, нечисловой префикс (`v`) допускается."""
+    version = str((spec.get("info") or {}).get("version", "0"))
+    m = re.match(r"\s*v?(\d+)(?:\.(\d+))?(?:\.(\d+))?", version)
+    return (int(m.group(1)), int(m.group(2) or 0), int(m.group(3) or 0)) if m else (0, 0, 0)
+
+
+def fmt_version(spec: Mapping[str, Any]) -> str:
+    return ".".join(str(n) for n in info_version(spec))
+
+
+def pre_release_allows(base: Mapping[str, Any], head: Mapping[str, Any]) -> str | None:
+    """До 1.0 ломающее допустимо при поднятой минорной (0.2.4 → 0.3.0) и при переходе 0.x → 1.x; иначе None."""
+    b, h = info_version(base), info_version(head)
+    if b[0] == 0 and h[0] == 0 and h[1] > b[1]:
+        return f"до 1.0 ломающее — повышением минорной версии ({fmt_version(base)} → {fmt_version(head)})"
+    if b[0] == 0 and h[0] >= 1:
+        return f"первая стабильная версия ({fmt_version(base)} → {fmt_version(head)})"
+    return None
+
+
 def path_majors(spec: Mapping[str, Any]) -> dict[int, set[str]]:
     """Мажор из префикса пути (/api/v2/…) → множество путей этого мажора."""
     out: dict[int, set[str]] = {}
@@ -272,11 +298,24 @@ def check_file(
     if base_spec is None:
         return errors, warnings, [f"{name}: новый файл — не ломающее"]
     allowed = major_bump_allows(base_spec, head_spec)
+    pre_release = pre_release_allows(base_spec, head_spec)
+    if info_version(head_spec) < info_version(base_spec):
+        errors.append(
+            f"{name}: версия понижена ({fmt_version(base_spec)} → {fmt_version(head_spec)}) — "
+            "info.version не может уменьшаться"
+        )
+    hint = ""
+    if info_version(head_spec)[0] == 0:
+        minor = info_version(base_spec)[1] + 1
+        hint = f" — поднимите минорную версию (до 1.0, например до 0.{minor}.0) или новый мажор"
     for change in changes:
         line = f"{name} [{change.id}] {change.where}: {change.text}"
         if change.level < ERR:
             if change.level == WARN:
                 warnings.append(line)
+            continue
+        if pre_release:
+            notes.append(f"{line} — допустимо: {pre_release}")
             continue
         if allowed and (is_new_path(base_spec, change) or deprecated_in_base(base_spec, change)):
             notes.append(f"{line} — допустимо: {allowed}")
@@ -290,7 +329,7 @@ def check_file(
             else:
                 notes.append(f"{line} — исключение до {ex.until}: {ex.reason}")
             continue
-        errors.append(line)
+        errors.append(line + hint)
     return errors, warnings, notes
 
 
@@ -380,7 +419,8 @@ def main(argv: list[str] | None = None) -> int:
     if report.errors:
         print(
             f"openapi-compat: ломающие изменения относительно {args.base} "
-            "(ADR-0016: ломающее — только новым мажором в пути /v2 с двойной публикацией; CONTRACTS §7):"
+            "(до 1.0 — поднимите минорную версию info.version, например 0.2.4 → 0.3.0; с 1.0 — только новый мажор "
+            "в пути /v2 с двойной публикацией, ADR-0016; CONTRACTS §7.1):"
         )
         for line in report.errors:
             print(f"  - {line}")
