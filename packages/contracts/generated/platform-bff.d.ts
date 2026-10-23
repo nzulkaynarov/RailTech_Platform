@@ -349,7 +349,7 @@ export interface paths {
     };
     /**
      * Роли Платформы (Admin · Ролевая матрица) — системные и созданные, с числом сотрудников
-     * @description Раздел `admin` — от чтения (0.3.1): матрицу видят администратор (полный доступ) и директор (только чтение); CRM — `users:read`.
+     * @description Раздел `admin` — от чтения (0.4.0): матрицу видят администратор (полный доступ) и директор (только чтение); CRM — `users:read`.
      */
     get: operations["listRoles"];
     put?: never;
@@ -390,7 +390,7 @@ export interface paths {
     };
     /**
      * Роль
-     * @description Раздел `admin` — от чтения (0.3.1), как у списка.
+     * @description Раздел `admin` — от чтения (0.4.0), как у списка.
      */
     get: operations["getRole"];
     put?: never;
@@ -467,7 +467,7 @@ export interface components {
       system: boolean;
       /** @description Как в `RoleRef.code` */
       code?: string;
-      /** @description Растёт при каждом изменении роли; `RoleUpdate.version` присылает прочитанную (0.3.1) */
+      /** @description Растёт при каждом изменении роли; `RoleUpdate.version` присылает прочитанную (0.4.0) */
       version: number;
       access: components["schemas"]["ResourceAccess"];
       restricted_fields: components["schemas"]["RestrictedField"][];
