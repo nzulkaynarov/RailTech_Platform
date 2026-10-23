@@ -229,11 +229,48 @@ Caddy (`no_erp_internal` в `Caddyfile.prod`/`Caddyfile.dev`) отвечает 4
   тома `s3_data` = потеря файлов ERP, поэтому бакеты `erp-*` входят в будущую копию вне VPS 1 наравне с `backups`. Порт RustFS наружу не открыт
   (только внутренний IP для VPS 2), браузер в него не ходит: приватные файлы ERP отдаёт потоком (после проверки доступа), публичные
   картинки — Django по `/media/*` доменов ERP и Cabinet. Запуск ERP без `MINIO_ENDPOINT`/`MINIO_ACCESS_KEY`/`MINIO_SECRET_KEY` вне
-  `DJANGO_DEBUG=true` останавливается с `ImproperlyConfigured` (молча писать на диск контейнера нельзя). Ключ RustFS пока общий с CRM
-  (`S3_ACCESS_KEY`/`S3_SECRET_KEY`): отдельный пользователь на сервис требует admin API RustFS (шифрованное тело, нужен `mc`/`rc` в
-  отдельном образе) — хвост ADR-0013 п. 6. Проверка: `docker compose … exec erp-backend sh -c 'ls /app/media | wc -l'` — 0;
-  листинг бакета: `curl --aws-sigv4 "aws:amz:us-east-1:s3" --user "$S3_ACCESS_KEY:$S3_SECRET_KEY" "http://rustfs:9000/erp-private?list-type=2"`
-  из контейнера `s3-init`/`rustfs` (curl есть в образе RustFS).
+  `DJANGO_DEBUG=true` останавливается с `ImproperlyConfigured` (молча писать на диск контейнера нельзя). Ключ у ERP свой — `S3_ERP_*`, только бакеты
+  `erp-*` (раздел «Ключи S3 на сервис» ниже). Проверка: `docker compose … exec erp-backend sh -c 'ls /app/media | wc -l'` — 0; листинг бакета —
+  `infra/deploy/tests/s3-keys-live-test.sh` (там же проверка, что чужие бакеты закрыты).
+- **Что публично в `/media`, что нет** (S0-9): `/media/*` доменов ERP и Cabinet отдаёт только белый список ключей `erp-public` — аватары (`users/<id>/avatar`),
+  логотипы компаний (`companies/<id>/logo`) и профиля документов (`companies/<id>/doc-profile/logo`: печатается в КП и договорах, показывается в кабинете),
+  логотипы производителей, фото товаров, иконки категорий. Всё остальное, включая **документы товаров** (`products/<id>/docs/*`, бакет `erp-private`), через
+  `/media` не открывается (404): сотрудник скачивает документ товара через `GET /api/v1/catalog/products/{id}/download-document/{doc_id}/` (вход + видимость карточки).
+- **Отдача файлов потоком** (S0-9): файл из RustFS читается порциями по 256 КиБ и сразу уходит клиенту — ни в память процесса, ни на диск он целиком не попадает
+  (раньше скачивание 40 МБ занимало ≈ 3× размера в памяти Daphne). Заголовки `Content-Length` и `Content-Disposition` прежние. Про остаток — «Хвосты» в PR S0-9.
+
+### Ключи S3 на сервис (S0-9, ADR-0013 п. 6)
+
+Раньше ERP, CRM, Langfuse, WAL-G и бэкап ходили в RustFS одним ключом. Теперь у каждого свой пользователь и политика, корневой ключ знают только `rustfs` и `s3-init`:
+
+| Сервис | Переменные `.env.prod` | Доступ |
+|---|---|---|
+| корень | `S3_ROOT_ACCESS_KEY`, `S3_ROOT_SECRET_KEY` | только RustFS и `s3-init` (создание бакетов, пользователей, правил) |
+| ERP | `S3_ERP_*` (в контейнерах — `MINIO_ACCESS_KEY/SECRET_KEY`) | запись `erp-private`, `erp-public`, `erp-temp` |
+| CRM | `S3_CRM_*` (в контейнерах — `S3_ACCESS_KEY/SECRET_KEY`) | запись `kb-sources`, `client-documents`, `tg-attachments`; **чтение** `backups` (статус бэкапа) |
+| Langfuse | `S3_LANGFUSE_*` | запись `langfuse` |
+| WAL-G (VPS 2) | `S3_WAL_*` → копия `WAL_S3_ACCESS_KEY/SECRET_KEY` | запись `wal` |
+| бэкап дампов (VPS 2) | `S3_BACKUP_*` → копия `BACKUP_RUSTFS_ACCESS_KEY/SECRET_KEY` | запись `backups` |
+
+- **Генерация.** `make-env-prod.sh init` создаёт все ключи случайными, на экран не печатает и дописывает недостающие в существующий файл. Копии для VPS 2
+  (`WAL_S3_*`, `BACKUP_RUSTFS_*`) он выставляет равными `S3_WAL_*` и `S3_BACKUP_*` при каждом запуске; `extract-db` отдаёт на VPS 2 только их — корневого
+  ключа и ключей ERP/CRM/Langfuse там нет. `reset-prod.sh` (S0-8) на чистом сервере вызывает ту же генерацию.
+- **Создание пользователей.** Одноразовый `s3-init` (`infra/s3/init.sh`, образ `rustfs/rc` с закреплёнными версией и digest) при **каждом** деплое: создаёт бакеты,
+  обновляет политики `rt-<сервис>` и пользователей, удаляет пользователей, которых нет в списке, ставит правило `erp-temp` и проверяет матрицу доступа реальными запросами
+  под ключом каждого сервиса (чужой бакет доступен, запись в `backups` у CRM открыта — деплой останавливается с ошибкой). Остальные сервисы ждут `s3-init`.
+- **Обновление существующего прода** (`.env.prod` до S0-9): `make-env-prod.sh init` делает прежний `S3_ACCESS_KEY/S3_SECRET_KEY` корневым `S3_ROOT_*` (корень
+  не меняется — RustFS и VPS 2 со старой копией ключа работают без перерыва), удаляет старые строки и генерирует ключи сервисов. Порядок: `init` → деплой (`s3-init` заведёт
+  пользователей; ERP, CRM и Langfuse переходят на свои ключи) → `extract-db` → скопировать на VPS 2 → `db-up.sh` (п. 1.2, 1.3): WAL-G и бэкап переходят на свои ключи.
+  До этого VPS 2 ходит корневым ключом — работает, но с лишними правами; после перехода корневой ключ с VPS 2 исчезает вместе с `drop-db-only`.
+- **Ротация ключа сервиса.** Поменять `S3_<СЕРВИС>_SECRET_KEY` (или оба значения) в `.env.prod` → для `wal` и `backup` — `make-env-prod.sh init` (обновит копию для VPS 2) →
+  деплой (`s3-init` обновит пользователя, старый секрет перестаёт действовать сразу; смена идентификатора удаляет прежнего пользователя) → перезапуск потребителя
+  (ERP/CRM/Langfuse перезапускаются деплоем; VPS 2 — `extract-db` → `db-up.sh`). Корневой ключ меняется так же, но требует перезапуска `rustfs`.
+  Проверено на стенде: старый секрет — 403, новый — 200, лишний пользователь удалён.
+- **Правило `erp-temp`**: объекты старше **1 суток** удаляются сервером (правило `rt-erp-temp-expire-1d` ставит `s3-init`; импорт правила заменяет набор целиком, повтор ничего не
+  дублирует). Посмотреть: `docker compose … run --rm --entrypoint sh s3-init -c 'rc alias set r http://rustfs:9000 "$S3_ROOT_ACCESS_KEY" "$S3_ROOT_SECRET_KEY" >/dev/null; rc bucket lifecycle rule list r/erp-temp'`.
+  Срабатывание зависит от сканера RustFS (проходит не мгновенно); в `erp-temp` лежит только промежуточное — важного там быть не должно.
+- **Проверка доступа руками** (на стенде, после `up`): `infra/deploy/tests/s3-keys-live-test.sh <проект compose> <файл env>` — независимым клиентом (curl SigV4) проверяет, что
+  ключом ERP нельзя читать `wal` и бакеты CRM, ключом CRM — бакеты ERP, а свои бакеты читаются.
 
 ## 5. Что где проверять
 
@@ -256,15 +293,16 @@ Caddy (`no_erp_internal` в `Caddyfile.prod`/`Caddyfile.dev`) отвечает 4
 
 | | `redis-broker` | `redis-cache` |
 |---|---|---|
-| Что хранит | брокер и результаты Celery ERP (БД 1), Channels ERP (БД 2) | кэш Django, троттлинг DRF, блокировка входа, одноразовые `jti` SSO/привязки/MCP и метки 2FA ERP (БД 0); сессии BFF Платформы (БД 3); очереди Langfuse (БД 4) |
+| Что хранит | брокер и результаты Celery ERP (БД 1), Channels ERP (БД 2), очереди Langfuse — BullMQ (БД 3, S0-9) | кэш Django, троттлинг DRF, блокировка входа, одноразовые `jti` SSO/привязки/MCP и метки 2FA ERP (БД 0); сессии BFF Платформы (БД 3) |
 | Пароль (`.env.prod`) | `REDIS_BROKER_PASSWORD` | `REDIS_CACHE_PASSWORD` |
 | Политика | `appendonly yes` (`everysec`), `noeviction`, `maxmemory` 128 МБ (`REDIS_BROKER_MAXMEMORY`) | `volatile-lru`, `maxmemory` 96 МБ (`REDIS_CACHE_MAXMEMORY`), RDB-снимок раз в 5 минут |
 | Том | `redis_broker_data` (AOF) | `redis_cache_data` (снимок) |
 | Лимит контейнера | 256 МБ | 192 МБ |
 
 У всех ключей кэша есть срок жизни: вытесняются только ключи со сроком (`volatile-lru`); тест `core/tests/test_cache_resilience.py` не даёт записать в кэш ключ без срока.
-Langfuse (BullMQ) пишет в журнал предупреждение «Eviction policy is volatile-lru. It should be noeviction»: его ключи без срока `volatile-lru` не вытесняет, при переполнении
-`redis-cache` запись в БД 4 упрётся в `OOM`, а не потеряет очередь молча. Следить за `used_memory` кэша; пока Langfuse включают профилем, это приемлемо.
+Langfuse (BullMQ) требует `noeviction`, поэтому его очереди живут на `redis-broker` (БД 3, отдельно от Celery и Channels) — предупреждение «Eviction policy is volatile-lru» ушло.
+Цена: очередь Langfuse делит с Celery лимит `maxmemory` брокера (128 МБ); при переполнении запись упрётся в `OOM` у обоих, а не потеряет данные молча. Следить за `used_memory`
+брокера, пока Langfuse включают профилем `observability`; если очередь Langfuse разрастётся — поднять `REDIS_BROKER_MAXMEMORY` (и лимит контейнера в `prod.yml`).
 
 **Что происходит при отказе `redis-cache`** (остановка, переполнение, сеть):
 
