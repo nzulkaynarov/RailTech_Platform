@@ -6,8 +6,9 @@
 в него не уходят.
 """
 
+import asyncio
 import json
-from collections.abc import Collection, Mapping
+from collections.abc import Awaitable, Callable, Collection, Mapping
 from typing import Any, cast
 
 import structlog
@@ -44,6 +45,31 @@ RESTRICTED_KEYS: Mapping[str, Collection[str]] = {
     ),
     "supplier_prices": ("offer", "supplier_price", "purchase_price", "unit_cost"),
 }
+
+
+# Одинаковые запросы одной сессии, начатые одновременно, делят один вызов бэкенда. Подсказка потока
+# (B5) заставляет браузер перезапросить очередь, карточки, счётчики, уведомления и ленту разом: все
+# пять читают одни и те же списки (сделки, согласования, входящие CRM), и без общего вызова каждый
+# из них ушёл бы в бэкенд по нескольку раз.
+_inflight: dict[str, "asyncio.Future[tuple[Any | None, SourceState]]"] = {}
+
+
+async def _single_flight(
+    key: str, load: Callable[[], Awaitable[tuple[Any | None, SourceState]]]
+) -> tuple[Any | None, SourceState]:
+    pending = _inflight.get(key)
+    if pending is None:
+        pending = asyncio.ensure_future(load())
+        _inflight[key] = pending
+
+        def _done(task: "asyncio.Future[tuple[Any | None, SourceState]]") -> None:
+            _inflight.pop(key, None)
+            if not task.cancelled():
+                task.exception()  # исключение уйдёт ожидающим; «не извлечено» в журнал не пишем
+
+        pending.add_done_callback(_done)
+    # shield: отмена одного запроса (клиент ушёл) не обрывает вызов, на который ждут другие
+    return await asyncio.shield(pending)
 
 
 class Feed:
@@ -112,32 +138,49 @@ class Feed:
             if cached is not None:
                 self.states[backend] = "ok"
                 return json.loads(cached)
+            payload, state = await _single_flight(
+                data_key,
+                lambda: self._load(backend, path, params, ttl, remember_refusal, data_key),
+            )
+        else:
+            payload, state = await self._load(backend, path, params, 0, remember_refusal, data_key)
+        self.states[backend] = state
+        return payload
+
+    async def _load(
+        self,
+        backend: Backend,
+        path: str,
+        params: dict[str, Any] | None,
+        ttl: int,
+        remember_refusal: bool,
+        data_key: str,
+    ) -> tuple[Any | None, SourceState]:
+        """Запрос к бэкенду: (ответ или None, состояние источника); успешный ответ — в кэш."""
         try:
             response = await self.authed.call(backend, "GET", path, params=params)
         except PlatformError as exc:
             if exc.status_code == 503:
-                self.states[backend] = "unavailable"
                 log.warning("feed_source_unavailable", backend=backend, path=path)
-                return None
+                return None, "unavailable"
             raise
-        self.states[backend] = "ok"
         if response.status_code >= 400:
             log.warning(
                 "feed_source_refused", backend=backend, path=path, status=response.status_code
             )
             if remember_refusal and response.status_code == 403:
+                refusal_key = self._key("refused", backend, path, params)
                 await self._redis.set(refusal_key, "1", ex=REFUSAL_TTL_SECONDS)
-            return None
+            return None, "ok"
         try:
             payload = response.json()
         except ValueError:
-            self.states[backend] = "unavailable"
             log.warning("feed_source_bad_json", backend=backend, path=path)
-            return None
+            return None, "unavailable"
         clean = strip_restricted(payload, self.fields, RESTRICTED_KEYS)
         if ttl:
             await self._redis.set(data_key, json.dumps(clean, ensure_ascii=False), ex=ttl)
-        return clean
+        return clean, "ok"
 
     async def send(self, backend: Backend, method: str, path: str) -> int:
         """Изменяющий вызов (отметка «прочитано»): статус ответа бэкенда; сбой источника — ошибка

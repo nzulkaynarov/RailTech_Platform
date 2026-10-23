@@ -1,6 +1,7 @@
 """Dashboard, уведомления и поиск: объединение источников CRM и ERP, недоступный бэкенд (`sources`),
 роли «вида», вырезание полей с ограничением (PLT-14)."""
 
+import asyncio
 from typing import Any
 
 import httpx
@@ -365,6 +366,22 @@ async def test_dashboard_needs_a_session(web: Web) -> None:
         response = await web.client.get(f"/api/v1{path}")
         assert response.status_code == 401, path
     assert (await web.client.get("/api/v1/search", params={"q": "ab"})).status_code == 401
+
+
+async def test_screens_refreshed_together_share_one_backend_call(
+    web: Web, fb: FeedBackends
+) -> None:
+    """Подсказка потока (B5): пять экранов перезапрашиваются разом, общие списки — один вызов."""
+    director_data(fb)
+    await web.login(["DIRECTOR"])
+    paths = ("/queue", "/queue/cards", "/menu-counters", "/notifications", "/activity/today")
+    responses = await asyncio.gather(*(web.client.get(f"/api/v1{path}") for path in paths))
+    assert [r.status_code for r in responses] == [200] * len(paths)
+    assert fb.calls(fb.erp["deals"]) == 1
+    assert fb.calls(fb.erp["approvals"]) == 1
+    # следующий опрос в пределах кэша не ходит в бэкенд вовсе
+    await web.client.get("/api/v1/queue")
+    assert fb.calls(fb.erp["deals"]) == 1
 
 
 # --- Карточки и счётчики меню ---------------------------------------------------------------------
