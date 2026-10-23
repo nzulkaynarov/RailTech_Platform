@@ -3,7 +3,7 @@ import { localeFor } from '@/i18n/locales';
 import type { Money } from '@/api/portal';
 
 /**
- * Форматирование денег, чисел и дат — одна точка входа (CLAUDE.md §5), по образцу B2B `lib/formatLocale.ts`.
+ * Форматирование денег, чисел и дат — одна точка входа (CONVENTIONS.md §5), по образцу B2B `lib/formatLocale.ts`.
  *
  * - Локаль — `formatLocale` из реестра языков (`ru-UZ`, `uz-Latn-UZ`, `en-US`): русский интерфейс в
  *   Узбекистане печатает узбекистанские форматы. Явный `language` — для тестов и подписей вне React.

@@ -74,10 +74,10 @@ jobs:
           REQUESTED: ${{ github.event_name == 'workflow_dispatch' || (github.event.action == 'labeled' && github.event.label.name == 'run-evals') }}
         run: |
           if [ "$REQUESTED" != "true" ]; then
-            echo "::notice::Evals платные и не запускались. Нужен прогон — добавьте PR метку run-evals (docs/runbooks/eval-gate.md)."
+            echo "::notice::Evals платные и не запускались. Нужен прогон — добавьте PR метку run-evals (docs/runbooks/crm/eval-gate.md)."
             echo "ready=false" >> "$GITHUB_OUTPUT"
           elif [ -z "$ANTHROPIC_API_KEY" ] || [ -z "$GEMINI_API_KEY" ]; then
-            echo "::warning::ANTHROPIC_API_KEY/GEMINI_API_KEY не заданы — eval-gate пропущен (docs/runbooks/eval-gate.md)"
+            echo "::warning::ANTHROPIC_API_KEY/GEMINI_API_KEY не заданы — eval-gate пропущен (docs/runbooks/crm/eval-gate.md)"
             echo "ready=false" >> "$GITHUB_OUTPUT"
           else
             echo "ready=true" >> "$GITHUB_OUTPUT"

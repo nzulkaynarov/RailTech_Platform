@@ -4,7 +4,7 @@ import { isPortalApiError } from '@/api/portal';
 import { ME_QUERY_KEY } from '@/session/session';
 
 /**
- * React Query — единственное хранилище данных портала (CLAUDE.md §3). 401 на любом запросе, кроме
+ * React Query — единственное хранилище данных портала (CONVENTIONS.md §3). 401 на любом запросе, кроме
  * самой сессии, перезапрашивает `['me']`: в вебе это ведёт на страницу входа, в Mini App — к
  * повторному `POST /auth/telegram`.
  */

@@ -199,7 +199,7 @@ export const RT_STATUS_FILL = ${tsObject({ error: c.error.default, warning: c.wa
 /** Плотность таблиц CRM: отступы ячеек обычной таблицы = small (paddingXS). У Платформы — RT_COMPONENTS.Table. */
 export const RT_TABLE_CELL_PADDING = ${tokens.density.tableCellPadding};
 
-/** Компонентные токены Платформы (ConfigProvider theme.components; 03-frontend.md §3). CRM их не подключает. */
+/** Компонентные токены Платформы (ConfigProvider theme.components; docs/architecture/platform-frontend.md §3). CRM их не подключает. */
 export const RT_COMPONENTS = ${tsConst(tokens.antdComponents)} as const;
 `;
 
