@@ -19,6 +19,7 @@ from app.domain.errors import (
     NotFoundError,
     RoleInUseError,
     RoleSystemError,
+    RoleVersionConflictError,
     ValidationFailedError,
 )
 from app.domain.platform_roles import (
@@ -47,6 +48,7 @@ class RoleView:
     name: str
     description: str
     is_system: bool
+    version: int
     access: dict[str, str]
     restricted_fields: list[str]
     employees: int
@@ -60,6 +62,7 @@ class RoleView:
 class RolePatch:
     """Изменения роли; `None` — не менять."""
 
+    version: int
     name: str | None = None
     description: str | None = None
     access: Mapping[str, str] | None = None
@@ -99,6 +102,7 @@ def _view(role: PlatformRole, employees: int) -> RoleView:
         name=role.name,
         description=role.description,
         is_system=role.is_system,
+        version=role.version,
         access=dict(role.access),
         restricted_fields=list(role.restricted_fields),
         employees=employees,
@@ -183,6 +187,10 @@ class PlatformRoleService:
             role = await _required(session, role_id, for_update=True)
             if role.is_system:
                 raise RoleSystemError("a system role cannot be changed")
+            if role.version != patch.version:
+                raise RoleVersionConflictError(
+                    "the role was changed by someone else: reload it", current=role.version
+                )
             before = role_snapshot(role)
             await self._apply(session, role, patch, actor)
             after = role_snapshot(role)
@@ -195,6 +203,8 @@ class PlatformRoleService:
                 await write_role_policies(session, role_id, role.access)
                 await _recompute_holders(session, actor, holders)
             if before != after:
+                role.version += 1
+                await session.flush()
                 await audit.record(
                     session, actor, "platform_role.update", "platform_role", role_id,
                     before=before, after=after,

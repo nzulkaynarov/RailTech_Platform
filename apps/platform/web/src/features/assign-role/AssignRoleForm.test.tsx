@@ -76,6 +76,7 @@ describe("AssignRoleForm: выдача ролей", () => {
           name: "Офис-менеджер",
           description: "",
           system: false,
+          version: 1,
           access: { admin: "full", "chats.internal": "full" },
           restricted_fields: [],
           employees: 0,

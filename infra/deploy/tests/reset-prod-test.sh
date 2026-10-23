@@ -77,9 +77,12 @@ case "$1" in
       echo rt-test-crm-api-1
     elif [[ "$args" == *" -a "* || "$2" == -a ]]; then
       cat "$FAKE/ps_all"
+    elif [[ -f "$FAKE/stopped" ]]; then
+      :
     else
       cat "$FAKE/ps"
     fi ;;
+  stop) touch "$FAKE/stopped" ;;
   volume)
     if [[ "$2" == ls ]]; then
       key="${args##*com.docker.compose.volume=}"; key="${key%% *}"
@@ -135,7 +138,7 @@ P
   echo dirty > "$FAKE/dbstate"
 }
 run_reset() { # вход: строки stdin; вывод в $tmp/out; код возврата
-  RT_RESET_DB_SSH="${SSH_TARGET-}" bash "$script" "$@" > "$tmp/out" 2>&1
+  RT_RESET_DB_SSH="${SSH_TARGET-}" bash "$script" ${TAG_ARG-$tag} "$@" > "$tmp/out" 2>&1
 }
 line_of() { grep -n -m1 -- "$1" "$LOG" | cut -d: -f1 || true; }
 assert_before() { # a b: первое вхождение a раньше первого вхождения b
@@ -256,18 +259,59 @@ for bad in "crm,litellm" "litellm" "langfuse" "crm,erp,langfuse" "postgres"; do
 done
 : > "$LOG"; if bash "$script" db >"$tmp/out" 2>&1; then fail "режим db без --drop выполнился"; fi; assert_absent "DROP DATABASE"
 rm "$tmp/as-root"; : > "$LOG"
-if bash "$script" db --drop crm,erp >"$tmp/out" 2>&1; then fail "режим db выполнился не от root"; fi
+if bash "$script" db --drop crm,erp --dump-taken /var/state/dump-1 >"$tmp/out" 2>&1; then fail "режим db выполнился не от root"; fi
 assert_absent "DROP DATABASE"
 touch "$tmp/as-root"; : > "$LOG"
-bash "$script" db --drop crm,erp >"$tmp/out" 2>&1 || fail "режим db упал на допустимом списке"
+bash "$script" db --drop crm,erp --dump-taken /var/state/dump-1 >"$tmp/out" 2>&1 || fail "режим db упал на допустимом списке"
 assert_present 'DROP DATABASE IF EXISTS "crm"'; assert_present 'DROP DATABASE IF EXISTS "erp"'
 assert_before 'DROP DATABASE IF EXISTS "erp"' "10-prod-init.sh"
 grep -q 'litellm цела' "$tmp/out" || fail "режим db не подтвердил сохранность litellm"
+
+# ── 9b. барьер режима db: без дампа от VPS 1 и без подтверждения человека — отказ ─────────────────────────────────────────
+reset_fake; touch "$tmp/as-root"
+check_refused() { # описание, команда...: режим db обязан отказать и не выполнить DROP
+  local what="$1"; shift
+  : > "$LOG"
+  if "$@" >"$tmp/out" 2>&1 </dev/null; then fail "режим db выполнился: $what"; fi
+  assert_absent "DROP DATABASE"
+}
+check_refused "без флага и без ввода (ssh без терминала)" bash -c "bash '$script' db --drop crm,erp </dev/null"
+check_refused "неверный ввод" bash -c "echo crm | bash '$script' db --drop crm,erp"
+check_refused "ввод только одной базы" bash -c "echo erp | bash '$script' db --drop crm,erp"
+check_refused "пустой --dump-taken" bash "$script" db --drop crm,erp --dump-taken ""
+check_refused "относительный --dump-taken" bash "$script" db --drop crm,erp --dump-taken dump-1
+check_refused "флаг-тестовый переключатель на боевом RT_STATE" env RT_STATE=/opt/rt/state bash -c "echo crm,erp | bash '$script' db --drop crm,erp"
+: > "$LOG"; echo "crm,erp" | bash "$script" db --drop crm,erp >"$tmp/out" 2>&1 || fail "режим db отказал при верном вводе crm,erp"
+assert_present 'DROP DATABASE IF EXISTS "crm"'
+# VPS-1-часть передаёт --dump-taken ssh-ом только после дампа
+reset_fake
+SSH_TARGET=root@vps2.example.org run_reset <<<"$domain" || fail "сценарий с ssh упал"
+assert_before "predeploy-dump.sh" "ssh -o BatchMode=yes root@vps2.example.org .*--dump-taken /"
 
 # ── 9a. сброс оборвался между DROP и CREATE: базы нет вовсе — это не «нет подключения», шаг 3 выполняется ───────────────
 reset_fake; echo missing > "$FAKE/dbstate"
 SSH_TARGET=root@vps2.example.org run_reset <<<"$domain" || fail "повтор при отсутствующих базах упал"
 assert_present "ssh -o BatchMode=yes"; assert_present "DROP DATABASE"; assert_present "deploy.sh $tag"
+
+# ── 9c. тег по умолчанию: скрипт запущен не из каталога релиза current_tag — отказ; явный тег — работает ──────────────────────
+reset_fake
+: > "$LOG"
+if TAG_ARG= RT_RESET_DB_SSH= bash "$script" > "$tmp/out" 2>&1 <<<"$domain"; then fail "тег по умолчанию принят при чужом каталоге релиза"; fi
+[[ ! -s "$LOG" ]] || fail "при несовпадении релиза выполнены действия"
+grep -q 'укажите тег явно' "$tmp/out" || fail "нет подсказки про явный тег"
+
+# ── 9d. приложения снова запущены после прерванной попытки: дамп снимается заново ─────────────────────────────────────────
+reset_fake; touch "$tmp/ssh-fails"
+if SSH_TARGET=root@vps2.example.org run_reset <<<"$domain"; then fail "сценарий прошёл при сбое ssh"; fi
+rm "$tmp/ssh-fails" "$FAKE/stopped"; : > "$LOG"      # кто-то поднял приложения
+SSH_TARGET=root@vps2.example.org run_reset <<<"$domain" || fail "повтор при поднятых приложениях упал"
+assert_present "predeploy-dump.sh"; grep -q '^dump_prev=' "$tmp/state/reset/done-"* || fail "прежний дамп не записан как dump_prev"
+
+# ── 9e. неверное имя проекта compose: нет rustfs/caddy — отказ до остановки ──────────────────────────────────────────────
+reset_fake; : > "$FAKE/ps_all"; : > "$FAKE/ps"
+if run_reset <<<"$domain"; then fail "сценарий прошёл при проекте без контейнеров"; fi
+assert_absent "docker stop"; assert_absent "predeploy-dump.sh"; assert_absent "volume rm"
+grep -q 'неверное имя проекта' "$tmp/out" || fail "нет подсказки про имя проекта"
 
 # ── 10. запуск от root на VPS 1 запрещён ───────────────────────────────────────────────────────────────────────────────
 reset_fake; touch "$tmp/as-root"

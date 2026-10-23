@@ -23,7 +23,8 @@ import {
 import { useDocumentTitle } from "../../../shared/lib/useDocumentTitle";
 import { EmptyState } from "../../../shared/ui/EmptyState";
 import { PageHeader } from "../../../shared/ui/PageHeader";
-import { PlusIcon } from "../../../shared/ui/icons";
+import { StatusTag } from "../../../shared/ui/StatusTag";
+import { LockIcon, PlusIcon } from "../../../shared/ui/icons";
 import { NEW_ROLE, type RoleDraft, changesOf, draftOf, newDraft } from "./draft";
 import { LevelMark, type MatrixColumn, RoleMatrix } from "./RoleMatrix";
 import { RoleEditor, SystemRoleCard } from "./RoleEditor";
@@ -79,32 +80,29 @@ function RoleEmployees({ role }: { role: Role }) {
  * Admin · Ролевая матрица (SPEC-v3 §7.6, ADR-0012, R-2): роли — данные. Строки — разделы каталога по модулям, столбцы —
  * роли компании; системные роли («Администратор», «Директор») только для чтения. Выбранная роль (`?role=<id>`) редактируется
  * в своём столбце и в боковом окне; «Создать роль» (`?role=new`) — с нуля или из шаблона. Перед сохранением — «Что
- * произойдёт» из предпросмотра CRM. Матрицы ролей видит и меняет только администратор (раздел `admin` — полный).
+ * произойдёт» из предпросмотра CRM. Меняет роли администратор (раздел `admin` — полный); директор (`admin` — чтение,
+ * BFF 0.4.0) видит ту же матрицу только для чтения: без кнопок создания, изменения и удаления, ячейки без выбора.
  */
 export function RolesPage() {
   const { t } = useTranslation(["modules", "shell"]);
   const { me } = useAuth();
-  const editable = canEdit(me, "admin");
+  const readOnly = !canEdit(me, "admin");
   const title = t("modules:admin.roles.title");
   useDocumentTitle(title);
-
-  if (!editable) {
-    return (
-      <>
-        <PageHeader title={title} subtitle={t("modules:admin.roles.subtitle")} />
-        <Card>
-          <EmptyState
-            title={t("modules:admin.roles.readOnly.title")}
-            text={t("modules:admin.roles.readOnly.text")}
-          />
-        </Card>
-      </>
-    );
-  }
-  return <RolesEditorPage title={title} selfRoleIds={me.roles.map((r) => r.id)} />;
+  return (
+    <RolesEditorPage title={title} selfRoleIds={me.roles.map((r) => r.id)} readOnly={readOnly} />
+  );
 }
 
-function RolesEditorPage({ title, selfRoleIds }: { title: string; selfRoleIds: string[] }) {
+function RolesEditorPage({
+  title,
+  selfRoleIds,
+  readOnly,
+}: {
+  title: string;
+  selfRoleIds: string[];
+  readOnly: boolean;
+}) {
   const { t } = useTranslation(["modules", "shell"]);
   const { message } = App.useApp();
   const navigate = useNavigate();
@@ -115,15 +113,21 @@ function RolesEditorPage({ title, selfRoleIds }: { title: string; selfRoleIds: s
   const roles = useMemo(() => list.data?.items ?? [], [list.data]);
   const selectedId = params.get("role");
   const selected = roles.find((role) => role.id === selectedId) ?? null;
-  const creating = selectedId === NEW_ROLE;
+  const creating = !readOnly && selectedId === NEW_ROLE;
 
-  // Черновик выбранной изменяемой роли (или новой): сбрасывается при выборе другой роли.
-  const base: RoleDraft | null = creating
-    ? newDraft(null)
-    : selected && !selected.system
-      ? draftOf(selected)
-      : null;
-  const baseKey = creating ? NEW_ROLE : selected ? `${selected.id}:${selected.updated_at}` : "";
+  // Черновик выбранной изменяемой роли (или новой): сбрасывается при выборе другой роли. Только просмотр — без черновика.
+  const base: RoleDraft | null = readOnly
+    ? null
+    : creating
+      ? newDraft(null)
+      : selected && !selected.system
+        ? draftOf(selected)
+        : null;
+  const baseKey = creating
+    ? NEW_ROLE
+    : selected
+      ? `${selected.id}:${selected.updated_at}:${String(selected.version)}`
+      : "";
   // Черновик привязан к ключу роли: выбрали другую роль (или роль сохранили) — черновик берётся заново (React:
   // «изменение состояния при смене входных данных» прямо при отрисовке, без эффекта).
   const [state, setState] = useState<{ key: string; draft: RoleDraft | null }>({
@@ -213,6 +217,7 @@ function RolesEditorPage({ title, selfRoleIds }: { title: string; selfRoleIds: s
     update.mutate({
       id: selected.id,
       data: {
+        version: selected.version,
         ...(changes.name ? { name: current.name.trim() } : {}),
         ...(changes.description ? { description: current.description.trim() } : {}),
         ...(changes.access ? { access: current.access } : {}),
@@ -296,13 +301,14 @@ function RolesEditorPage({ title, selfRoleIds }: { title: string; selfRoleIds: s
         onSave={save}
         saving={create.isPending}
         saveError={create.error}
+        onReload={() => undefined}
         onDelete={() => undefined}
         deleting={false}
         deleteError={null}
       />
     );
-  } else if (selected?.system) {
-    panel = <SystemRoleCard role={selected} />;
+  } else if (selected && (readOnly || selected.system)) {
+    panel = <SystemRoleCard role={selected} readOnly={readOnly} />;
   } else if (selected && base && current) {
     panel = (
       <RoleEditor
@@ -317,6 +323,11 @@ function RolesEditorPage({ title, selfRoleIds }: { title: string; selfRoleIds: s
         onSave={save}
         saving={update.isPending}
         saveError={update.error}
+        onReload={() => {
+          update.reset();
+          refresh();
+          void list.refetch();
+        }}
         onDelete={() => {
           remove.mutate({ id: selected.id });
         }}
@@ -339,9 +350,19 @@ function RolesEditorPage({ title, selfRoleIds }: { title: string; selfRoleIds: s
     <>
       <PageHeader
         title={title}
-        subtitle={t("modules:admin.roles.subtitle")}
+        subtitle={t(
+          readOnly ? "modules:admin.roles.readOnlySubtitle" : "modules:admin.roles.subtitle",
+        )}
         extra={
           <div className="pf-roles-legend" style={{ justifyContent: "flex-end" }}>
+            {readOnly ? (
+              <StatusTag tone="default">
+                <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
+                  <LockIcon size={12} />
+                  {t("modules:admin.roles.viewOnly")}
+                </span>
+              </StatusTag>
+            ) : null}
             <span>
               <LevelMark level="full" />
               <span aria-hidden="true">{t("modules:admin.roles.level.full")}</span>
@@ -354,15 +375,17 @@ function RolesEditorPage({ title, selfRoleIds }: { title: string; selfRoleIds: s
               <LevelMark level={undefined} />
               <span aria-hidden="true">{t("modules:admin.roles.level.hidden")}</span>
             </span>
-            <Button
-              icon={<PlusIcon />}
-              onClick={() => {
-                select(NEW_ROLE);
-              }}
-              disabled={creating}
-            >
-              {t("modules:admin.roles.create")}
-            </Button>
+            {readOnly ? null : (
+              <Button
+                icon={<PlusIcon />}
+                onClick={() => {
+                  select(NEW_ROLE);
+                }}
+                disabled={creating}
+              >
+                {t("modules:admin.roles.create")}
+              </Button>
+            )}
           </div>
         }
       />

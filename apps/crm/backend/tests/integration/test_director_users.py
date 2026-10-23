@@ -16,6 +16,7 @@ from app.config import Settings
 from app.main import create_app
 from app.services.users import UserService
 from tests.integration.crm_helpers import login, make_user
+from tests.integration.roles_helpers import legacy_ids
 from tests.integration.test_platform_access import Queue
 
 pytestmark = pytest.mark.integration
@@ -57,7 +58,9 @@ async def _staff(
     who, who_password = await make_user(sessions, "who@railtech.uz", ["viewer"])
     if platform_roles:
         patched = client.patch(
-            f"/api/v1/users/{who.id}", json={"platform_roles": platform_roles}, headers=boss
+            f"/api/v1/users/{who.id}",
+            json={"platform_role_ids": legacy_ids(client, boss, platform_roles)},
+            headers=boss,
         )
         assert patched.status_code == 200, patched.text
     return Staff(login(client, who.email, who_password), target.id, boss, who.id)
@@ -127,11 +130,41 @@ async def test_taking_the_director_role_away_takes_the_read_away(
     assert client.get("/api/v1/users", headers=headers).status_code == 200
     # Второй директор нужен, иначе первого лишить роли нельзя (409 last_director).
     second, _ = await make_user(sessions, "second@railtech.uz", ["viewer"])
-    client.patch(f"/api/v1/users/{second.id}", json={"platform_roles": ["DIRECTOR"]}, headers=boss)
+    (director,) = legacy_ids(client, boss, ["DIRECTOR"])
+    client.patch(f"/api/v1/users/{second.id}", json={"platform_role_ids": [director]}, headers=boss)
 
     patched = client.patch(
-        f"/api/v1/users/{who_id}", json={"platform_roles": ["SUPPLY"]}, headers=boss
+        f"/api/v1/users/{who_id}",
+        json={"platform_role_ids": legacy_ids(client, boss, ["SUPPLY"])},
+        headers=boss,
     )
 
     assert patched.status_code == 200, patched.text
     assert client.get("/api/v1/users", headers=headers).status_code == 403
+
+
+async def test_director_sees_leads_but_cannot_take_or_reply(
+    client: TestClient, sessions: async_sessionmaker[AsyncSession]
+) -> None:
+    """R-1b: директору — воронка и переписка на чтение; «Взять в работу» и ответ клиенту — нет."""
+    headers, *_ = await _staff(client, sessions, ["DIRECTOR"])
+
+    permissions = client.get("/api/v1/me/permissions", headers=headers).json()["permissions"]
+
+    assert permissions["leads"]["read"] is True
+    for action in ("take", "work", "reply", "note", "assist", "create"):
+        assert permissions["leads"].get(action) is False, action
+    assert client.get("/api/v1/leads", headers=headers).status_code == 200
+    assert client.post("/api/v1/leads/1/actions/take", headers=headers).status_code == 403
+
+
+async def test_director_with_a_lead_role_takes_the_lead_rights_back(
+    client: TestClient, sessions: async_sessionmaker[AsyncSession]
+) -> None:
+    """Вторая роль (объединение прав): директор + менеджер = и лиды ведёт."""
+    headers, *_ = await _staff(client, sessions, ["DIRECTOR", "MANAGER"])
+
+    permissions = client.get("/api/v1/me/permissions", headers=headers).json()["permissions"]
+
+    assert permissions["leads"]["take"] is True
+    assert permissions["leads"]["reply"] is True
