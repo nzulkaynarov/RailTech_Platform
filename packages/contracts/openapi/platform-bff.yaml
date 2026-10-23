@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: RailTech Platform — BFF API (Платформа → CRM и ERP)
-  version: 0.3.1
+  version: 0.4.0
   summary: Пространство `/api/v1/` BFF Платформы — вызывает SPA `apps/platform/web` от имени сотрудника.
   description: |
     Контракт по ADR-0011 и `apps/platform/docs/02-architecture.md`. Версия 0.1.0 (INF-P0-1) покрывает фазу P1:
@@ -28,7 +28,7 @@ info:
     0.2.0 (волна 8): смена пароля (`POST /auth/change-password`, `Session.must_change_password`); Admin · Оргструктура —
     сотрудники, выдача ролей Платформы, приглашение по почте (`/admin/users*`, раздел матрицы `admin`).
 
-    **0.3.1 (R-1b, ADR-0012 п. 2) — ломающее (до 1.0 допустимо).** Директор видит Ролевую матрицу только для чтения:
+    **0.4.0 (R-1b, ADR-0012 п. 2) — ломающее (до 1.0 допустимо).** Директор видит Ролевую матрицу только для чтения:
     `GET /admin/roles` и `GET /admin/roles/{id}` — от `admin: read` (раньше `full`), создание, изменение, удаление и
     `POST /admin/roles/preview` — по-прежнему `admin: full`. Оптимистическая блокировка роли: `Role.version` (целое, растёт при
     каждом изменении), `RoleUpdate.version` — обязательное поле (ломающее: тело PATCH без него — 422); устаревшая версия —
@@ -608,7 +608,7 @@ paths:
       operationId: listRoles
       summary: Роли Платформы (Admin · Ролевая матрица) — системные и созданные, с числом сотрудников
       description: >-
-        Раздел `admin` — от чтения (0.3.1): матрицу видят администратор (полный доступ) и директор (только чтение);
+        Раздел `admin` — от чтения (0.4.0): матрицу видят администратор (полный доступ) и директор (только чтение);
         CRM — `users:read`.
       responses:
         '200':
@@ -696,7 +696,7 @@ paths:
       tags: [admin]
       operationId: getRole
       summary: Роль
-      description: Раздел `admin` — от чтения (0.3.1), как у списка.
+      description: Раздел `admin` — от чтения (0.4.0), как у списка.
       parameters:
         - $ref: '#/components/parameters/RoleIdPath'
       responses:
@@ -951,7 +951,7 @@ components:
         version:
           type: integer
           minimum: 1
-          description: Растёт при каждом изменении роли; `RoleUpdate.version` присылает прочитанную (0.3.1)
+          description: Растёт при каждом изменении роли; `RoleUpdate.version` присылает прочитанную (0.4.0)
         access:
           $ref: '#/components/schemas/ResourceAccess'
         restricted_fields:

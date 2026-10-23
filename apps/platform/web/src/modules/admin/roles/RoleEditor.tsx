@@ -67,7 +67,7 @@ function previewLines(t: TFunction, language: string, preview: RolePreview): str
 }
 
 /**
- * Роль в боковом окне только для чтения: замок у системной, что она даёт. `readOnly` — режим директора (BFF 0.3.1,
+ * Роль в боковом окне только для чтения: замок у системной, что она даёт. `readOnly` — режим директора (BFF 0.4.0,
  * `admin: read`): любая роль без правки, без ссылки «Назначить роль сотруднику».
  */
 export function SystemRoleCard({ role, readOnly = false }: { role: Role; readOnly?: boolean }) {

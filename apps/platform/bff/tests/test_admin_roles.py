@@ -213,7 +213,7 @@ async def test_only_admin_full_changes_roles(
 async def test_director_reads_the_matrix_but_cannot_change_it(
     web: Web, roles: CrmRoles, check: ContractChecker
 ) -> None:
-    """0.3.1: `GET /admin/roles*` — от `admin: read`, то есть и директору."""
+    """0.4.0: `GET /admin/roles*` — от `admin: read`, то есть и директору."""
     await web.login(["DIRECTOR"])
 
     listed = await web.client.get("/api/v1/admin/roles")

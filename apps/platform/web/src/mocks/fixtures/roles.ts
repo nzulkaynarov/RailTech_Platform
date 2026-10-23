@@ -33,7 +33,7 @@ export interface MockRole {
   description: string;
   system: boolean;
   code?: string;
-  /** Растёт при каждом изменении (оптимистическая блокировка, BFF 0.3.1). */
+  /** Растёт при каждом изменении (оптимистическая блокировка, BFF 0.4.0). */
   version: number;
   access: Partial<Record<string, AccessLevel>>;
   restricted_fields: RestrictedField[];

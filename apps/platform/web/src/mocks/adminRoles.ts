@@ -21,7 +21,7 @@ import { type MockRole, readRoles, rolesOf, toRole, writeRoles } from "./fixture
 /**
  * Моки `/admin/roles*` (R-2, ADR-0012) с правилами CRM (R-1): системные роли неизменны (409 `ROLE_SYSTEM`), роль с
  * сотрудниками не удаляется (409 `ROLE_IN_USE`), название уникально без учёта регистра (409 `CONFLICT`,
- * `name_taken`), чужая правка роли — 409 `CONFLICT` (`role_version_conflict`, BFF 0.3.1), раздел и уровень — только из каталога (422). Предпросмотр считает, кто что получит и потеряет.
+ * `name_taken`), чужая правка роли — 409 `CONFLICT` (`role_version_conflict`, BFF 0.4.0), раздел и уровень — только из каталога (422). Предпросмотр считает, кто что получит и потеряет.
  */
 const RANK: Record<AccessLevel, number> = { read: 1, full: 2 };
 

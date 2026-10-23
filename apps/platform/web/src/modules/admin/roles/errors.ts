@@ -2,7 +2,7 @@ import type { TFunction } from "i18next";
 
 import { ApiError } from "../../../shared/api/errors";
 
-/** Роль изменена после того, как её прочитала страница (BFF 0.3.1: 409 `CONFLICT`, `role_version_conflict`). */
+/** Роль изменена после того, как её прочитала страница (BFF 0.4.0: 409 `CONFLICT`, `role_version_conflict`). */
 export function isVersionConflict(error: unknown): boolean {
   return (
     error instanceof ApiError &&

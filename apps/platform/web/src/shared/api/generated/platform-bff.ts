@@ -26,7 +26,7 @@
  * 0.2.0 (волна 8): смена пароля (`POST /auth/change-password`, `Session.must_change_password`); Admin · Оргструктура —
  * сотрудники, выдача ролей Платформы, приглашение по почте (`/admin/users*`, раздел матрицы `admin`).
  *
- * **0.3.1 (R-1b, ADR-0012 п. 2) — ломающее (до 1.0 допустимо).** Директор видит Ролевую матрицу только для чтения:
+ * **0.4.0 (R-1b, ADR-0012 п. 2) — ломающее (до 1.0 допустимо).** Директор видит Ролевую матрицу только для чтения:
  * `GET /admin/roles` и `GET /admin/roles/{id}` — от `admin: read` (раньше `full`), создание, изменение, удаление и
  * `POST /admin/roles/preview` — по-прежнему `admin: full`. Оптимистическая блокировка роли: `Role.version` (целое, растёт при
  * каждом изменении), `RoleUpdate.version` — обязательное поле (ломающее: тело PATCH без него — 422); устаревшая версия —
@@ -64,7 +64,7 @@
  * Лимиты: вход — 10 в минуту на IP и e-mail; остальные запросы — 300 в минуту на сессию; превышение — 429
  * `TOO_MANY_REQUESTS` с `Retry-After`.
  *
- * OpenAPI spec version: 0.3.1
+ * OpenAPI spec version: 0.4.0
  */
 import { useMutation, useQuery } from "@tanstack/react-query";
 import type {
@@ -2369,7 +2369,7 @@ export const getListRolesUrl = () => {
 };
 
 /**
- * Раздел `admin` — от чтения (0.3.1): матрицу видят администратор (полный доступ) и директор (только чтение); CRM — `users:read`.
+ * Раздел `admin` — от чтения (0.4.0): матрицу видят администратор (полный доступ) и директор (только чтение); CRM — `users:read`.
  * @summary Роли Платформы (Admin · Ролевая матрица) — системные и созданные, с числом сотрудников
  */
 export const listRoles = async (options?: Parameters<typeof http>[1]): Promise<RoleList> => {
@@ -2704,7 +2704,7 @@ export const getGetRoleUrl = (id: string) => {
 };
 
 /**
- * Раздел `admin` — от чтения (0.3.1), как у списка.
+ * Раздел `admin` — от чтения (0.4.0), как у списка.
  * @summary Роль
  */
 export const getRole = async (id: string, options?: Parameters<typeof http>[1]): Promise<Role> => {

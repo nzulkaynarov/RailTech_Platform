@@ -181,7 +181,7 @@ class RoleCreate(BaseModel):
 class RoleUpdate(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    # Версия роли, которую видел клиент (оптимистическая блокировка, 0.3.1).
+    # Версия роли, которую видел клиент (оптимистическая блокировка, 0.4.0).
     version: int = Field(ge=1)
     name: str | None = Field(default=None, min_length=1, max_length=_MAX_TEXT)
     description: str | None = Field(default=None, max_length=1000)
