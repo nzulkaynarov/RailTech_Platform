@@ -24,7 +24,8 @@ ENV VITE_API_URL=${VITE_API_URL} \
 RUN npm run build && rm -f dist/mockServiceWorker.js
 
 # ── Отдача ──────────────────────────────────────────────────────────────────────────────────
-FROM nginx:stable-alpine
+# Версия и digest закреплены (S0-9): сборка воспроизводима; обновление — осознанной правкой (stable-ветка nginx).
+FROM nginx:1.30.6-alpine3.24@sha256:47928bf67eb62a1863cb08d9ecb52d3e704304ba614eaee17884204677702951
 
 COPY nginx.conf /etc/nginx/conf.d/default.conf
 COPY --from=builder /app/dist /usr/share/nginx/html
