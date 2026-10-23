@@ -31,7 +31,7 @@ export const SsoExchangePage: React.FC = () => {
     let active = true;
 
     async function processToken() {
-      // Извлекаем токен из фрагмента URL: #token=<jwt> (ADR-0003, sso-token.md)
+      // Извлекаем токен из фрагмента URL: #token=<jwt> (ADR-0003, docs/architecture/sso-token.md)
       const hash = window.location.hash.replace(/^#/, '');
       const searchParams = new URLSearchParams(hash);
       const token = searchParams.get('token') || (hash.startsWith('token=') ? hash.slice(6) : null);

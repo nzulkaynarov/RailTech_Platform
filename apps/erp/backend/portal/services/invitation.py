@@ -1,7 +1,7 @@
 """Portal Invitation service (CONTRACTS §4, M2-ERP-02).
 
 Приглашение контакта клиента в Cabinet. Реально доставляется только письмо (`send_templated_email` → `EmailLog`):
-Telegram-бот принадлежит CRM, ERP в Telegram не пишет (apps/erp/CLAUDE.md §11), поэтому канал `telegram` не
+Telegram-бот принадлежит CRM, ERP в Telegram не пишет (CONVENTIONS.md §11), поэтому канал `telegram` не
 «отправляется» молча, а отвечает `INVALID_CHANNEL` (FIX-23, P-17; QUESTIONS Q-FIX23-1). Результат и событие
 `invite.sent` называют только те каналы, по которым приглашение действительно ушло.
 Рабочая ссылка входа уходит только клиенту, в письме; сотруднику, API и журналу отдаются факт
@@ -14,6 +14,7 @@ import logging
 from typing import Optional, Tuple
 
 from django.conf import settings
+from django.db import transaction
 from django.utils import timezone
 from parties.models import Contact
 from portal.exceptions import PortalDeliveryFailed, PortalValidationError
@@ -29,6 +30,30 @@ logger = logging.getLogger(__name__)
 
 #: Каналы, по которым ERP умеет доставить приглашение сама.
 DELIVERABLE_CHANNELS = ("email",)
+
+
+def _mark_invited(contact: Contact, actor, language: Optional[str]) -> None:
+    """Дата приглашения и событие шины `invite.sent` — одна транзакция и только после того, как письмо ушло.
+
+    Сбой публикации откатывает отметку (письмо уже у клиента, повторное приглашение безопасно).
+    """
+    from integration.services import events
+
+    update_fields = ["invited_at"]
+    with transaction.atomic():
+        contact.invited_at = timezone.now()
+        if language and language in ("ru", "uz", "en") and contact.language != language:
+            contact.language = language
+            update_fields.append("language")
+        contact.save(update_fields=update_fields)
+        events.publish_invite_sent(
+            contact=contact,
+            channels=["email"],
+            actor=events.build_actor(
+                user=actor if hasattr(actor, "id") else None,
+                name=str(actor) if isinstance(actor, str) else None,
+            ),
+        )
 
 
 def invite_contact_to_portal(
@@ -48,6 +73,8 @@ def invite_contact_to_portal(
         return None, "CONTACT_WITHOUT_COMPANY"
     if not company_in_circulation(contact.company_id):
         return None, "COMPANY_ARCHIVED"
+    if contact.is_archived:
+        return None, "CONTACT_ARCHIVED"  # контакт удалён в CRM: в Cabinet не приглашается
 
     effective_channel = channel or contact.preferred_channel or "email"
     if effective_channel not in ("email", "telegram", "both"):
@@ -94,26 +121,9 @@ def invite_contact_to_portal(
         logger.warning("Failed to send portal invitation email to %s: %s", clean_email, exc)
         return None, "EMAIL_DELIVERY_FAILED"
 
-    # Фиксируем дату приглашения: она ставится только после того, как письмо ушло
-    contact.invited_at = timezone.now()
-    update_fields = ["invited_at"]
-    if language and language in ("ru", "uz", "en") and contact.language != language:
-        contact.language = language
-        update_fields.append("language")
-    contact.save(update_fields=update_fields)
+    _mark_invited(contact, actor, language)
 
     logger.info("Contact %s invited to portal via email by %s", contact.id, actor or "system")
-
-    try:
-        from integration.services.webhooks import build_actor, emit_invite_sent
-
-        actor_dict = build_actor(
-            user=actor if hasattr(actor, "id") else None,
-            name=str(actor) if isinstance(actor, str) else None,
-        )
-        emit_invite_sent(contact=contact, channels=["email"], actor=actor_dict)
-    except Exception as exc:  # noqa: BLE001 — событие не должно ронять уже отправленное приглашение
-        logger.warning("Failed to emit invite.sent webhook for contact %s: %s", contact.id, exc)
 
     return {
         "ok": True,

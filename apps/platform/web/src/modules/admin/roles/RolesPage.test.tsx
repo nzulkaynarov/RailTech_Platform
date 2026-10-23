@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { usePanelsStore } from "../../../app/shell/panelsStore";
 import { writeEmployees, readEmployees } from "../../../mocks/fixtures/employees";
-import { ROLE_ID, readRoles } from "../../../mocks/fixtures/roles";
+import { ROLE_ID, readRoles, writeRoles } from "../../../mocks/fixtures/roles";
 import { endSession } from "../../../mocks/mockSession";
 import i18n from "../../../shared/i18n";
 import { renderApp, signInAs } from "../../../test/renderApp";
@@ -143,11 +143,89 @@ describe("Admin · Ролевая матрица (R-2, ADR-0012)", () => {
     });
   });
 
-  it("директор (Admin — чтение) матрицу не загружает: текст, что её ведёт администратор", async () => {
+  it("директор (Admin — чтение) видит матрицу только для чтения: без кнопок и полей выбора", async () => {
     signInAs("director@demo.example");
     renderApp("/admin/roles");
 
-    expect(await screen.findByText("Ролевую матрицу ведёт администратор")).toBeVisible();
-    expect(screen.queryByRole("table")).toBeNull();
+    expect(await screen.findByRole("button", { name: /^Менеджер/ })).toBeVisible();
+    expect(screen.queryByText("Ролевую матрицу ведёт администратор")).toBeNull();
+    expect(screen.getByText("Только просмотр")).toBeVisible();
+    expect(screen.queryByRole("button", { name: "Создать роль" })).toBeNull();
+    expect(within(table()).queryAllByRole("combobox")).toHaveLength(0);
+    expect(within(table()).queryAllByRole("checkbox")).toHaveLength(0);
+    // Права директора видны в его столбце: лиды — только чтение.
+    const row = within(table()).getByRole("row", { name: /Все сообщения, Все лиды/ });
+    expect(within(row).getAllByText("Только чтение").length).toBeGreaterThan(0);
+  });
+
+  it("директор: выбранная роль в боковом окне — без правки, удаления и ссылки «Назначить»", async () => {
+    signInAs("director@demo.example");
+    renderApp(`/admin/roles?role=${ROLE_ID.MANAGER}&panel=open&tab=role`);
+    const panel = await panelEl();
+
+    expect(await within(panel).findByText(/Только просмотр: роль и её матрицу/)).toBeVisible();
+    expect(within(panel).queryByRole("button", { name: "Сохранить роль" })).toBeNull();
+    expect(within(panel).queryByRole("button", { name: "Удалить роль" })).toBeNull();
+    expect(within(panel).queryByText("Назначить роль сотруднику")).toBeNull();
+    expect(within(panel).queryByLabelText("Название")).toBeNull();
+  });
+
+  it("вкладки роли: «Роль» и «Сотрудники», вкладки «Журнал» нет", async () => {
+    signInAs("admin@demo.example");
+    renderApp(`/admin/roles?role=${ROLE_ID.MANAGER}&panel=open&tab=role`);
+    const panel = await panelEl();
+
+    const tabs = await within(panel).findAllByRole("tab");
+    expect(tabs.map((tab) => tab.textContent)).toEqual(["Роль", "Сотрудники"]);
+  });
+
+  it("роль изменена другим пользователем: «обновите страницу» и кнопка «Обновить» возвращает данные", async () => {
+    signInAs("admin@demo.example");
+    renderApp(`/admin/roles?role=${ROLE_ID.MANAGER}&panel=open&tab=role`);
+    const panel = await panelEl();
+    fireEvent.change(await within(panel).findByLabelText("Название"), {
+      target: { value: "Продажи" },
+    });
+    // Пока администратор редактировал, роль изменил другой: версия в данных выросла.
+    writeRoles(
+      readRoles().map((r) =>
+        r.id === ROLE_ID.MANAGER ? { ...r, name: "Менеджер продаж", version: r.version + 1 } : r,
+      ),
+    );
+
+    fireEvent.click(within(panel).getByRole("button", { name: "Сохранить роль" }));
+
+    expect(
+      await within(panel).findByText("Роль изменена другим пользователем — обновите страницу."),
+    ).toBeVisible();
+    expect(readRoles().find((r) => r.id === ROLE_ID.MANAGER)?.name).toBe("Менеджер продаж");
+    fireEvent.click(within(panel).getByRole("button", { name: "Обновить" }));
+
+    await waitFor(() => {
+      expect(
+        within(panel).queryByText("Роль изменена другим пользователем — обновите страницу."),
+      ).toBeNull();
+    });
+    await waitFor(() => {
+      expect(within(panel).getByLabelText("Название")).toHaveValue("Менеджер продаж");
+    });
+  });
+
+  it("сохранение роли присылает прочитанную версию и поднимает её", async () => {
+    signInAs("admin@demo.example");
+    renderApp(`/admin/roles?role=${ROLE_ID.MANAGER}&panel=open&tab=role`);
+    const panel = await panelEl();
+    fireEvent.change(await within(panel).findByLabelText("Название"), {
+      target: { value: "Продажи" },
+    });
+
+    fireEvent.click(within(panel).getByRole("button", { name: "Сохранить роль" }));
+
+    await waitFor(() => {
+      expect(readRoles().find((r) => r.id === ROLE_ID.MANAGER)).toMatchObject({
+        name: "Продажи",
+        version: 2,
+      });
+    });
   });
 });

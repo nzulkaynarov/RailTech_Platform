@@ -1,37 +1,31 @@
 # CLAUDE.md — корень монорепозитория RailTech Platform (GitHub `RailTech_Platform`, кодовое имя `rt_platform`)
 
-Три системы одной компании: **CRM** (фронт-офис, лиды, бот), **ERP** (бэк-офис: заявки, КП, договоры,
-снабжение, склад, финансы), **Cabinet** (кабинет клиента, фронтенд над API ERP). Связь CRM ↔ ERP —
-только API и события. Общих таблиц нет.
+Бизнес-платформа одной компании: домены **CRM** (лиды, клиенты, бот), **EDS** (документооборот, с этапа C1) и **ERP**
+(бэк-офис) со своими базами, связанные шиной `rt_bus`; фронтенды — **Платформа** (все сотрудники) и **Cabinet** (клиент).
 
-**Первым читай `ORCHESTRATOR.md`**, затем `docs/HANDOFF.md` — там цель, инварианты, роли агентов, текущая веха и протокол.
-Затем — `CLAUDE.md` того приложения, в котором работаешь: конвенции кода живут у приложений, не здесь.
-Правила процесса (коммиты с трейлером, ветки и PR, запрет `push`/`merge` в `main`, одна сессия — одна система, скриншоты в PR,
-`docs/PROGRESS.md` ведёт лид) — `ORCHESTRATOR.md` §4 и §7.
+**Вся документация — в `docs/`, одна правда** (`docs/README.md` — карта «тема → документ»). Первым читай
+`docs/ORCHESTRATOR.md` (процесс, инварианты, роли агентов, протокол сессии), затем `docs/HANDOFF.md` (где мы и что дальше),
+затем `docs/systems/<система>/CONVENTIONS.md` той зоны, где работаешь. Правила процесса (коммиты с трейлером, ветки и PR,
+запрет `push`/`merge` в `main`, одна сессия — одна система, скриншоты в PR, `docs/PROGRESS.md` ведёт лид) — ORCHESTRATOR §4 и §7.
 
 ```
-apps/crm/        FastAPI · SQLAlchemy · Alembic · Procrastinate · aiogram · LangGraph · Refine/AntD   → apps/crm/CLAUDE.md
-apps/erp/        Django · DRF · Celery · Channels · shadcn/Tailwind                                      → apps/erp/CLAUDE.md
-apps/cabinet/    React · shadcn · без бэкенда; ходит в apps/erp /api/portal/*                          → apps/cabinet/CLAUDE.md
-apps/platform/   единый интерфейс сотрудников (SPA + BFF без БД, поверх CRM и ERP; ADR-0011, фаза P0) → apps/platform/CLAUDE.md
-legacy/b2b/      удалена по плану M2-INF-01; исходная история сохранена в теге b2b-final
-packages/contracts/   OpenAPI ERP (internal, portal, integration), схемы событий, схемы MCP-инструментов
-packages/ui-tokens/   общие токены дизайна для AntD и shadcn
-infra/           compose (base/dev/prod), caddy (3 домена), ai (LiteLLM, Langfuse), db (2 базы, бэкапы), ci
-docs/            HANDOFF (где мы и что дальше), BUSINESS, ARCHITECTURE, CONTRACTS, MIGRATION-MAP, DECISIONS, QUESTIONS, OWNER-CHECKLIST, PROGRESS.md, adr/, runbooks/, history/
+apps/crm/            домен CRM: FastAPI · SQLAlchemy · Procrastinate · aiogram · LangGraph (фронтенд удаляется на C2)
+apps/erp/            домен ERP: Django · DRF · Celery · Channels (фронтенд удаляется на C2)
+apps/cabinet/        кабинет клиента: React · shadcn, без бэкенда, портальный API ERP
+apps/platform/       Платформа: SPA (React · AntD) + BFF (FastAPI) без БД
+packages/contracts/  машиночитаемые контракты: OpenAPI, схемы событий, MCP, RBAC
+packages/ui-tokens/  токены дизайна для AntD и shadcn
+infra/               compose, caddy, ai (LiteLLM), db, deploy
+docs/                вся документация: ORCHESTRATOR, HANDOFF, strategy, product, architecture, systems, adr, runbooks, history
 ```
 
-Правила уровня ансамбля (подробно — ORCHESTRATOR.md §3):
-1. Одна система — один главный пользователь. Не добавляй в систему чужого пользователя.
-2. Никаких общих таблиц между `crm` и `erp`. Только API, события, внешние идентификаторы.
-3. Контракт (`packages/contracts`) меняется раньше кода и в том же PR с обеих сторон.
-4. Код решает, модель предлагает. Идентификаторы компании/клиента никогда не приходят от модели.
-5. Секретов в репозитории нет. Все модели — через LiteLLM по алиасам.
-6. DoD любой задачи с UI — сценарий, пройденный глазами (скриншот), не «тесты зелёные».
-7. Отклонение от ARCHITECTURE/CONTRACTS — только через ADR и решение владельца, не молча.
+Инварианты (подробно — `docs/ORCHESTRATOR.md` §3): одна система — один главный пользователь; общих таблиц нет, интеграции —
+через шину; контракт (`packages/contracts`) раньше кода и в том же PR с обеих сторон; код решает, модель предлагает; секретов в
+репозитории нет, модели — через LiteLLM по алиасам; DoD с UI — сценарий глазами со скриншотом; отклонение от стратегии, ADR и
+контрактов — только через ADR и решение владельца; документация — только в `docs/`.
 
-Команды: `make check` (все приложения), `make check-crm|erp|cabinet`, `make up` (весь ансамбль
-локально на трёх доменах `*.localhost`), `make contracts` (валидация и генерация клиентов).
+Команды: `make check` (все приложения и ссылки документации), `make check-crm|erp|cabinet|platform`, `make contracts`,
+`make docs-links`, `make up` (ансамбль локально), `make ci-local`.
 
 ## Среда разработки, тесты и CI (правило владельца 2026-10-19)
 

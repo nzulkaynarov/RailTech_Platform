@@ -7,7 +7,7 @@ import { getTelegramWebApp } from '@/telegram/webapp';
 
 /**
  * Mini App: системная кнопка «Назад» Telegram на вложенных экранах вместо своей (без дублирования
- * кнопок Telegram, CLAUDE.md §4). Первый экран после deep-link (`start_param`) ведёт к разделам.
+ * кнопок Telegram, CONVENTIONS.md §4). Первый экран после deep-link (`start_param`) ведёт к разделам.
  */
 export function useTelegramBackButton(): void {
   const mode = useAppMode();

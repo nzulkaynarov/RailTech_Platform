@@ -27,19 +27,24 @@ make smoke        # /health доменов CRM, ERP, Cabinet и /api/v1/health +
 
 Порты заняты другим проектом → поменяйте `HTTP_PORT` и `DEV_*_PORT` в `.env`, повторите `make up`.
 
+> **Redis (S0-2).** Вместо одного `redis` — `redis-broker` и `redis-cache` с паролями `REDIS_BROKER_PASSWORD` и `REDIS_CACHE_PASSWORD`; порты на хосте —
+> `DEV_REDIS_BROKER_PORT` (6379) и `DEV_REDIS_CACHE_PORT` (6380). В старом `.env` выполните `make env`: он допишет новые переменные; `REDIS_PASSWORD` и
+> `DEV_REDIS_PORT` больше не читаются. Старый том `<проект>_redis_data` можно удалить (`docker volume rm`).
+
 ## Что внутри
 
 | Сервис | Назначение |
 |---|---|
 | `postgres` | PostgreSQL 17 + pgvector; базы `crm`, `erp`, `litellm`, `langfuse` (создаёт `db-init`, идемпотентно) |
-| `redis` | один на ансамбль: БД 0 — Langfuse, 1 — ERP Celery (M1), 2 — ERP Channels (M1) |
-| `rustfs`, `s3-init` | S3; бакеты CRM (`kb-sources`, `client-documents`, `tg-attachments`), `langfuse`, `erp` |
+| `redis-broker` | брокер и результаты Celery ERP (БД 1), Channels ERP (БД 2), очереди Langfuse (БД 3, S0-9); `appendonly yes`, `noeviction` (S0-2) |
+| `redis-cache` | кэш, троттлинг и одноразовые `jti` ERP (БД 0), сессии Платформы (БД 3); `volatile-lru`; свой пароль (S0-2) |
+| `rustfs`, `s3-init` | S3; бакеты CRM (`kb-sources`, `client-documents`, `tg-attachments`), ERP (`erp-private`, `erp-public`, `erp-temp`), `langfuse`, `backups`, `wal`. Ключ на сервис (S0-9): `s3-init` (образ `rustfs/rc`, `infra/s3/init.sh`) заводит пользователей и политики, ставит правило `erp-temp` (1 сутки) и проверяет доступ; корневой ключ `S3_ROOT_*` знают только `rustfs` и `s3-init`. В старом `.env` выполните `make env`: он допишет `S3_*_ACCESS_KEY/SECRET_KEY` (старые `S3_ACCESS_KEY/S3_SECRET_KEY` уберите и впишите их значения как `S3_ROOT_*`, если том `s3_data` нужно сохранить) |
 | `litellm`, `litellm-seed` | шлюз моделей по алиасам CRM и ERP (`infra/ai/litellm.models.yaml`); ключи провайдеров — только у `litellm` |
 | `docling` | распознавание документов клиентов CRM (база знаний его не использует — только Markdown) |
 | `crm-migrate`, `crm-api`, `crm-bot`, `crm-worker`, `crm-mcp-*`, `crm-web` | CRM из `apps/crm` (код монтируется; hot reload только у `crm-api`, остальные — `docker compose restart <сервис>`). `crm-bot` — Telegram-бот отдельным процессом (S0-4): polling или `/telegram/webhook` через Caddy; токен меняется в «Подключениях» без перезапуска; без токена и Telegram на стенде — `docs/runbooks/crm-bot.md` (заглушка Bot API) |
 | `erp-backend`, `erp-mcp`, `erp-worker`, `erp-worker-ai`, `erp-beat`, `erp-web` | ERP из `apps/erp` (копия B2B, M1-ERP-01): Daphne мигрирует при старте (`AUTO_MIGRATE`), `erp-mcp` — инструменты ERP для агента CRM на SDK `mcp` (отдельный процесс, порт 8104 внутри сети, FIX-36; контракт `packages/contracts/mcp-tools.json` монтируется в контейнер), Celery-воркеры, Beat, nginx со сборкой Vite; код бэкенда монтируется, перезапуск руками |
 | `cabinet-web` | Cabinet из `apps/cabinet` (M2-CAB-01): nginx со сборкой Vite, своей логики нет; пересборка — `make up`. Имя бота для ссылок — `TELEGRAM_BOT_USERNAME` в `.env`. Разработка экранов — `make -C apps/cabinet dev` (мок, без стенда) |
-| `platform-bff`, `platform-web` | Платформа из `apps/platform` (INF-P0-4): BFF на FastAPI (сессии — Redis БД 3; CRM и ERP берёт по `http://crm-api:8000`, `http://erp-backend:8000`) и статика SPA (file-server Caddy, :8080). Нужен только `redis`: без CRM/ERP `/api/v1/health` отвечает 200 со `status: degraded`. Определены в `dev.yml`; пересборка — `make up`. Срок жизни сессии — `PLATFORM_SESSION_TTL_HOURS` в `.env` |
+| `platform-bff`, `platform-web` | Платформа из `apps/platform` (INF-P0-4): BFF на FastAPI (сессии — `redis-cache` БД 3; CRM и ERP берёт по `http://crm-api:8000`, `http://erp-backend:8000`) и статика SPA (file-server Caddy, :8080). Нужен только `redis-cache`: без CRM/ERP `/api/v1/health` отвечает 200 со `status: degraded`. Определены в `dev.yml`; пересборка — `make up`. Срок жизни сессии — `PLATFORM_SESSION_TTL_HOURS` в `.env` |
 | `caddy` | четыре домена ансамбля |
 | `clickhouse`, `langfuse-worker`, `langfuse-web` | профиль `observability` |
 

@@ -24,6 +24,7 @@ from tests.integration.roles_helpers import (
     crm_roles,
     legacy_ids,
     make_client,
+    patch_role,
     role_ids,
     setup_staff,
 )
@@ -96,30 +97,36 @@ async def test_list_has_system_roles_and_templates_with_employee_counts(
     assert client.get(f"{ROLES}/9999", headers=boss).status_code == 404
 
 
-async def test_only_admin_manages_roles_even_a_director_who_reads_users(
+async def test_admin_manages_roles_a_director_only_reads_and_others_have_no_access(
     client: TestClient, sessions: async_sessionmaker[AsyncSession]
 ) -> None:
+    """R-1b: чтение матрицы — `users:read` (директор), изменение — `users:write` (администратор)."""
     employee, boss = await setup_staff(client, sessions)
     (director,) = legacy_ids(client, boss, ["DIRECTOR"])
     client.patch(f"/api/v1/users/{employee}", json={"platform_role_ids": [director]}, headers=boss)
     other, password = await make_user(sessions, "viewer@railtech.uz", ["manager"])
-    calls: tuple[tuple[str, str, dict[str, object] | None], ...] = (
+    reads: tuple[tuple[str, str, dict[str, object] | None], ...] = (
         ("GET", ROLES, None),
+        ("GET", f"{ROLES}/3", None),
+    )
+    writes: tuple[tuple[str, str, dict[str, object] | None], ...] = (
         ("POST", ROLES, {"name": "Х"}),
         ("POST", f"{ROLES}/preview", {}),
-        ("GET", f"{ROLES}/1", None),
-        ("PATCH", f"{ROLES}/3", {"name": "Х"}),
+        ("PATCH", f"{ROLES}/3", {"name": "Х", "version": 1}),
         ("DELETE", f"{ROLES}/3", None),
     )
+    reader = login(client, "dilshod@railtech.uz", PASSWORD)
+    stranger = login(client, other.email, password)
 
-    for who in (
-        login(client, "dilshod@railtech.uz", PASSWORD),
-        login(client, other.email, password),
-    ):
-        for method, path, body in calls:
+    for method, path, body in reads:
+        assert client.request(method, path, json=body, headers=reader).status_code == 200
+        assert client.request(method, path, json=body, headers=stranger).status_code == 403
+    for method, path, body in writes:
+        for who in (reader, stranger):
             response = client.request(method, path, json=body, headers=who)
             assert response.status_code == 403, (method, path, response.text)
     assert client.get(ROLES).status_code == 401
+    assert len(client.get(ROLES, headers=reader).json()) == 6
 
 
 # --- создание и проверка ввода ------------------------------------------------------------------
@@ -215,8 +222,8 @@ async def test_system_roles_cannot_be_changed_or_deleted(
     before = client.get(f"{ROLES}/{role_id}", headers=boss).json()
 
     for method, body in (
-        ("PATCH", {"name": "Другая"}),
-        ("PATCH", {"access": {}}),
+        ("PATCH", {"name": "Другая", "version": 1}),
+        ("PATCH", {"access": {}, "version": 1}),
         ("DELETE", None),
     ):
         response = client.request(method, f"{ROLES}/{role_id}", json=body, headers=boss)
@@ -271,7 +278,8 @@ async def test_delete_unknown_role_is_404(
 ) -> None:
     _, boss = await setup_staff(client, sessions)
     assert client.delete(f"{ROLES}/9999", headers=boss).status_code == 404
-    assert client.patch(f"{ROLES}/9999", json={"name": "Х"}, headers=boss).status_code == 404
+    missing = patch_role(client, boss, 9999, {"name": "Х"})
+    assert missing.status_code == 404
 
 
 # --- изменение роли -----------------------------------------------------------------------------
@@ -288,15 +296,16 @@ async def test_update_changes_casbin_rights_at_once_without_restart(
     assert client.get("/api/v1/users", headers=mine).status_code == 403
 
     # Роль получает Admin · чтение: сотрудников читать можно, менять — нет.
-    client.patch(f"{ROLES}/{role['id']}", json={"access": {"admin": "read"}}, headers=boss)
+    patch_role(client, boss, role["id"], {"access": {"admin": "read"}})
     assert client.get("/api/v1/users", headers=mine).status_code == 200
-    assert client.get(ROLES, headers=mine).status_code == 403
+    assert client.get(ROLES, headers=mine).status_code == 200  # R-1b: матрицу читает `users:read`
+    assert patch_role(client, mine, role["id"], {"name": "Х"}).status_code == 403
     permissions = client.get("/api/v1/me/permissions", headers=mine).json()["permissions"]
     assert permissions["users"] == {"read": True, "write": False}
     assert permissions["audit"] == {"read": True}
 
     # Раздел снят: право пропадает сразу.
-    client.patch(f"{ROLES}/{role['id']}", json={"access": {"crm.leads": "read"}}, headers=boss)
+    patch_role(client, boss, role["id"], {"access": {"crm.leads": "read"}})
     assert client.get("/api/v1/users", headers=mine).status_code == 403
     assert client.get("/api/v1/me/permissions", headers=mine).json()["permissions"]["leads"]["read"]
     assert employee  # сотрудник из setup_staff не затронут
@@ -308,10 +317,11 @@ async def test_update_audits_before_and_after_and_keeps_unsent_fields(
     _, boss = await setup_staff(client, sessions)
     role = _create(client, boss, access={"crm.clients": "read"}, restricted_fields=["cost_margin"])
 
-    updated = client.patch(
-        f"{ROLES}/{role['id']}",
-        json={"name": "  Продажи ", "access": {"crm.clients": "full", "crm.leads": "read"}},
-        headers=boss,
+    updated = patch_role(
+        client,
+        boss,
+        role["id"],
+        {"name": "  Продажи ", "access": {"crm.clients": "full", "crm.leads": "read"}},
     )
 
     assert updated.status_code == 200, updated.text
@@ -328,11 +338,66 @@ async def test_update_audits_before_and_after_and_keeps_unsent_fields(
     assert entry.before["access"] == {"crm.clients": "read"}
     assert entry.after["access"] == {"crm.leads": "read", "crm.clients": "full"}
 
-    noop = client.patch(f"{ROLES}/{role['id']}", json={"name": "Продажи"}, headers=boss)
+    noop = patch_role(client, boss, role["id"], {"name": "Продажи"})
     assert noop.status_code == 200
     assert (
         len(await audit_rows(sessions, "platform_role.update")) == 1
     )  # без изменений — без записи
+
+
+async def test_version_grows_on_each_change_and_a_stale_patch_is_a_conflict(
+    client: TestClient, sessions: async_sessionmaker[AsyncSession]
+) -> None:
+    """R-1b: `version` растёт при каждом изменении; PATCH с устаревшей версией — 409."""
+    _, boss = await setup_staff(client, sessions)
+    role = _create(client, boss, access={"crm.clients": "read"})
+    assert role["version"] == 1
+    assert {r["version"] for r in client.get(ROLES, headers=boss).json()} <= {1, 2}
+
+    first = patch_role(client, boss, role["id"], {"name": "Продажи"}, version=1)
+    assert (first.status_code, first.json()["version"]) == (200, 2)
+    second = patch_role(client, boss, role["id"], {"access": {"crm.leads": "read"}}, version=2)
+    assert (second.status_code, second.json()["version"]) == (200, 3)
+
+    stale = patch_role(client, boss, role["id"], {"name": "Чужое"}, version=2)
+    assert stale.status_code == 409, stale.text
+    assert stale.json()["code"] == "role_version_conflict"
+    assert stale.json()["details"]["current"] == 3
+    current = client.get(f"{ROLES}/{role['id']}", headers=boss).json()
+    assert (current["name"], current["version"]) == ("Продажи", 3)  # устаревший запрос не применён
+
+    same = patch_role(client, boss, role["id"], {"name": "Продажи"}, version=3)
+    assert (same.status_code, same.json()["version"]) == (200, 3)  # без изменений — версия прежняя
+
+
+async def test_patch_without_a_version_is_rejected(
+    client: TestClient, sessions: async_sessionmaker[AsyncSession]
+) -> None:
+    _, boss = await setup_staff(client, sessions)
+    role = _create(client, boss)
+
+    for body in ({"name": "Х"}, {"name": "Х", "version": 0}, {"name": "Х", "version": None}):
+        response = client.patch(f"{ROLES}/{role['id']}", json=body, headers=boss)
+        assert response.status_code == 422, (body, response.text)
+
+
+async def test_the_second_of_two_admins_editing_the_same_role_gets_the_conflict(
+    client: TestClient, sessions: async_sessionmaker[AsyncSession]
+) -> None:
+    _, boss = await setup_staff(client, sessions)
+    other, password = await make_user(sessions, "second-admin@railtech.uz", ["admin"])
+    second = login(client, other.email, password)
+    role = _create(client, boss, access={"crm.clients": "read"})
+    seen = client.get(f"{ROLES}/{role['id']}", headers=second).json()["version"]
+
+    ok = patch_role(client, boss, role["id"], {"access": {"crm.clients": "full"}})
+    late = patch_role(client, second, role["id"], {"access": {"crm.clients": "read"}}, version=seen)
+
+    assert ok.status_code == 200
+    assert (late.status_code, late.json()["code"]) == (409, "role_version_conflict")
+    assert client.get(f"{ROLES}/{role['id']}", headers=boss).json()["access"] == {
+        "crm.clients": "full"
+    }
 
 
 async def test_update_validates_and_does_not_apply_anything_on_error(
@@ -348,7 +413,7 @@ async def test_update_validates_and_does_not_apply_anything_on_error(
         ({"name": "другая"}, 409),
         ({"name": "Новое", "access": {"admin": "x"}}, 422),
     ):
-        response = client.patch(f"{ROLES}/{role['id']}", json=body, headers=boss)
+        response = patch_role(client, boss, role["id"], body)
         assert response.status_code == status, (body, response.text)
     unchanged = client.get(f"{ROLES}/{role['id']}", headers=boss).json()
     assert (unchanged["name"], unchanged["access"]) == (
@@ -372,16 +437,16 @@ async def test_role_change_queues_provisioning_for_each_active_holder_with_erp_a
     client.patch(f"/api/v1/users/{off}", json={"is_active": False}, headers=boss)
     queue.jobs.clear()
 
-    only_name = client.patch(f"{ROLES}/{role['id']}", json={"name": "Другое"}, headers=boss)
+    only_name = patch_role(client, boss, role["id"], {"name": "Другое"})
     assert only_name.status_code == 200
     assert queue.jobs == [], "название не меняет права: пересчёт не нужен"
 
-    client.patch(f"{ROLES}/{role['id']}", json={"access": {"eds.payments": "full"}}, headers=boss)
+    patch_role(client, boss, role["id"], {"access": {"eds.payments": "full"}})
     assert sorted(queue.jobs) == [("provision", first), ("provision", second)]
     assert ("provision", off) not in queue.jobs  # отключённому провижининг не нужен
 
     queue.jobs.clear()
-    client.patch(f"{ROLES}/{role['id']}", json={"restricted_fields": ["cost_margin"]}, headers=boss)
+    patch_role(client, boss, role["id"], {"restricted_fields": ["cost_margin"]})
     assert sorted(queue.jobs) == [("provision", first), ("provision", second)]
 
 
@@ -397,13 +462,14 @@ async def test_provisioning_after_a_role_change_sends_the_recomputed_permissions
     service = ErpAccessService(sessions, erp)
 
     await service.provision(employee)
-    client.patch(
-        f"{ROLES}/{role['id']}",
-        json={
+    patch_role(
+        client,
+        boss,
+        role["id"],
+        {
             "access": {"eds.payments": "full", "erp.stock": "read"},
             "restricted_fields": ["cost_margin"],
         },
-        headers=boss,
     )
     await service.provision(employee)
 
@@ -429,9 +495,9 @@ async def test_changing_a_role_recomputes_the_crm_role_of_holders(
     )
     assert await crm_roles(sessions, employee) == ["viewer"]
 
-    client.patch(f"{ROLES}/{role['id']}", json={"access": {"crm.leads": "full"}}, headers=boss)
+    patch_role(client, boss, role["id"], {"access": {"crm.leads": "full"}})
     assert await crm_roles(sessions, employee) == ["manager"]  # crm.leads full -> manager
-    client.patch(f"{ROLES}/{role['id']}", json={"access": {"admin": "full"}}, headers=boss)
+    patch_role(client, boss, role["id"], {"access": {"admin": "full"}})
     assert await crm_roles(sessions, employee) == ["admin"]
     changed = [e for e in await audit_rows(sessions, "user.update") if e.entity_id == str(employee)]
     assert changed[-1].before == {"roles": ["manager"]}
@@ -448,9 +514,7 @@ async def test_a_role_change_cannot_leave_the_company_without_an_admin(
         f"/api/v1/users/{admin.id}", json={"platform_role_ids": [role["id"]]}, headers=boss
     )
 
-    blocked = client.patch(
-        f"{ROLES}/{role['id']}", json={"access": {"crm.leads": "read"}}, headers=boss
-    )
+    blocked = patch_role(client, boss, role["id"], {"access": {"crm.leads": "read"}})
 
     assert (blocked.status_code, blocked.json()["code"]) == (409, "last_admin")
     assert client.get(f"{ROLES}/{role['id']}", headers=boss).json()["access"] == {"admin": "full"}
@@ -459,9 +523,7 @@ async def test_a_role_change_cannot_leave_the_company_without_an_admin(
     # Со вторым администратором (не по этой роли) правка проходит.
     other, _ = await make_user(sessions, "second@railtech.uz", ["admin"])
     assert other.id != admin.id
-    allowed = client.patch(
-        f"{ROLES}/{role['id']}", json={"access": {"crm.leads": "read"}}, headers=boss
-    )
+    allowed = patch_role(client, boss, role["id"], {"access": {"crm.leads": "read"}})
     assert allowed.status_code == 200
 
 
@@ -671,7 +733,7 @@ async def test_a_failed_policy_reload_is_not_a_500_and_is_retried_on_the_next_ch
 
     monkeypatch.setattr(Rbac, "reload", flaky)
 
-    saved = client.patch(f"{ROLES}/{role['id']}", json={"access": {"admin": "read"}}, headers=boss)
+    saved = patch_role(client, boss, role["id"], {"access": {"admin": "read"}})
 
     assert saved.status_code == 200, saved.text  # роль сохранена, ответ не 500
     assert calls["n"] == 1

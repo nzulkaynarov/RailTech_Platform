@@ -226,12 +226,30 @@ class CompanyViewSet(RoleGatedViewMixin, CompanyDocumentsMixin, CompanyTeamMixin
         if not member_has_permission(user, company.id, "settings.edit"):
             raise exceptions.PermissionDenied("ONLY_COMPANY_OWNER_OR_ADMIN")
 
+    def _requisites_of_crm_rejected(self, company):
+        """Название и ИНН компании, связанной с CRM, ведёт CRM: правка в ERP — 400 `REQUISITES_MANAGED_BY_CRM` (B3).
+
+        Тело отвергается целиком (как `SHARED_SETTING_READ_ONLY`): частичное применение хуже отказа.
+        """
+        from integration.services.requisites import REQUISITES_MANAGED_BY_CRM, changed_crm_owned_fields
+
+        fields = changed_crm_owned_fields(company, self.request.data)
+        if fields:
+            return Response({"detail": REQUISITES_MANAGED_BY_CRM, "fields": fields}, status=400)
+        return None
+
     def update(self, request, *args, **kwargs):
-        self._assert_owner_or_admin(self.get_object())
+        company = self.get_object()
+        self._assert_owner_or_admin(company)
+        if (rejected := self._requisites_of_crm_rejected(company)) is not None:
+            return rejected
         return super().update(request, *args, **kwargs)
 
     def partial_update(self, request, *args, **kwargs):
-        self._assert_owner_or_admin(self.get_object())
+        company = self.get_object()
+        self._assert_owner_or_admin(company)
+        if (rejected := self._requisites_of_crm_rejected(company)) is not None:
+            return rejected
         return super().partial_update(request, *args, **kwargs)
 
     @extend_schema(

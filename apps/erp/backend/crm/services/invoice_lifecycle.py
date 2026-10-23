@@ -86,6 +86,7 @@ def _seller_and_bank_details(invoice):
     return seller, ", ".join(parts)
 
 
+@transaction.atomic
 def issue_invoice(invoice, user) -> Tuple[Optional[object], Optional[str]]:
     """Issue a DRAFT invoice → ISSUED: stamps the issue date, renders the PDF off-thread and
     notifies the buyer. Seller-side action; only DRAFT invoices can be issued."""
@@ -112,6 +113,9 @@ def issue_invoice(invoice, user) -> Tuple[Optional[object], Optional[str]]:
         # печатает «—» вместо ИНН, и запрет выпуска её не решает.
         return None, "SELLER_BANK_DETAILS_REQUIRED"
 
+    from integration.services import document_events, events
+
+    was_issued = document_events.document_was_issued("invoice", invoice)  # снимок до смены статуса (document.created)
     invoice.status = _istatus(InvoiceStatusCode.ISSUED)
     invoice.issued_at = timezone.localdate()
     updated = ["status", "issued_at", "updated_at"]
@@ -133,6 +137,9 @@ def issue_invoice(invoice, user) -> Tuple[Optional[object], Optional[str]]:
         invoice.due_date = invoice.issued_at + timedelta(days=invoice_due_days(invoice))
         updated.append("due_date")
     invoice.save(update_fields=updated)
+    # События шины (rt_bus) — в транзакции выставления: сбой публикации откатывает выставление счёта.
+    events.publish_invoice_event("invoice.issued", invoice)
+    document_events.publish_document_issued("invoice", invoice, was_issued=was_issued)
 
     # Render off the request thread, after commit (F1.6 — avoids orphan PDFs on rollback).
     from ..tasks import render_document_pdf

@@ -1,21 +1,26 @@
-"""Кэш и Celery (очереди default/pdf/imports/ai — ARCH-01)."""
+"""Кэш и Celery (очереди default/pdf/imports/ai — ARCH-01). Два экземпляра Redis (S0-2, ADR-0013 п. 5, ADR-0017):
+`redis-cache` — кэш Django, троттлинг, одноразовые jti; `redis-broker` — брокер и результаты Celery, Channels."""
 
 import os
 
 from .api import *  # noqa: F401,F403 — последовательная композиция настроек
 
-# Cache (Redis — already running for Channels)
+# Кэш — `redis-cache` (volatile-lru, у всех ключей есть срок: TIMEOUT ниже и явные `timeout=` в коде). Отказ кэша не роняет ERP:
+# `core.cache.ResilientRedisCache` отвечает «пусто» и пишет предупреждение; одноразовые jti и коды 2FA идут через
+# `core.cache.fail_closed()` и при отказе дают 503 с понятным текстом, а не пропуск. Короткие таймауты — чтобы зависший
+# (не отказавший) Redis не держал запросы.
 CACHES = {
     "default": {
-        "BACKEND": "django.core.cache.backends.redis.RedisCache",
-        "LOCATION": os.environ.get("REDIS_URL", "redis://redis:6379/0"),
+        "BACKEND": "core.cache.ResilientRedisCache",
+        "LOCATION": os.environ.get("REDIS_CACHE_URL", "redis://redis-cache:6379/0"),
         "TIMEOUT": 300,
+        "OPTIONS": {"socket_connect_timeout": 1, "socket_timeout": 1},
     }
 }
 
-# Celery Configuration Options
-CELERY_BROKER_URL = os.environ.get("CELERY_BROKER_URL", "redis://localhost:6379/1")
-CELERY_RESULT_BACKEND = os.environ.get("CELERY_RESULT_BACKEND", "redis://localhost:6379/1")
+# Celery — `redis-broker` (appendonly yes, noeviction): очередь и результаты не должны теряться при рестарте и вытесняться.
+CELERY_BROKER_URL = os.environ.get("CELERY_BROKER_URL", "redis://redis-broker:6379/1")
+CELERY_RESULT_BACKEND = os.environ.get("CELERY_RESULT_BACKEND", "redis://redis-broker:6379/1")
 CELERY_ACCEPT_CONTENT = ["application/json"]
 CELERY_TASK_SERIALIZER = "json"
 CELERY_RESULT_SERIALIZER = "json"
@@ -43,17 +48,5 @@ CELERY_TASK_ROUTES = {
     "sourcing.run_ai_job": {"queue": "ai"},
 }
 
-# Redis возвращает неподтверждённую задачу в очередь через `visibility_timeout` (по умолчанию 1 ч). Ретраи
-# вебхуков ERP → CRM уходят в брокер с `countdown` до 24 ч (`integration.tasks.RETRY_DELAYS`): при 1 ч задача на
-# 2/6/24 ч «возвращалась» бы раньше срока и доставка дублировалась (FIX-33, I-7). Срок — 25 ч: самый длинный
-# интервал + запас. Тест `integration/tests/test_webhook_reliability.py` сверяет значение с `RETRY_DELAYS`.
-CELERY_BROKER_TRANSPORT_OPTIONS = {"visibility_timeout": 25 * 3600}
-
-# Beat (django_celery_beat.DatabaseScheduler подхватывает записи при старте): подбор зависших PENDING-вебхуков
-# каждые 5 минут (FIX-33). Остальные периодические задачи сеются миграцией `core/0002` (`core/seeds/beat.py`).
-CELERY_BEAT_SCHEDULE = {
-    "integration-requeue-stuck-webhooks": {
-        "task": "integration.requeue_stuck_webhook_events",
-        "schedule": 300.0,
-    },
-}
+# Beat (django_celery_beat.DatabaseScheduler подхватывает записи при старте): периодические задачи шины rt_bus
+# добавляет `core/celery.py` (rt_bus.contrib.celery.install); остальные сеются миграцией `core/0002` (`core/seeds/beat.py`).

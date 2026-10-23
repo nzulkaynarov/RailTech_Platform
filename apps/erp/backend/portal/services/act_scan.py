@@ -66,7 +66,7 @@ def load_scan(company, upload_id, deal=None) -> tuple[PortalUpload, ContentFile]
 def attach_scan_document(act, upload: PortalUpload) -> GeneratedDocument:
     """Документ-скан акта в списке документов сделки. Файл — тот же, что в `Act.signed_file` (после `sign_act`).
 
-    Запись заводится `bulk_create`: сигнал `document.created` (исходящий документ ERP) для входящего скана не нужен.
+    Событие шины `document.created` (исходящий документ ERP) для входящего скана не публикуется (`document_events.publish_document_issued` его отсекает).
     """
     owner = own_company() or act.deal.company
     kind, _ = DocumentTemplateKind.objects.get_or_create(

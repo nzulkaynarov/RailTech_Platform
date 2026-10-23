@@ -15,7 +15,7 @@ export interface CounterCardProps {
 }
 
 /**
- * Счётчик Dashboard (03-frontend.md §5): карточка 16/20, подпись 12 px `#6e6e6e`, число 28/600 (строка 36) с
+ * Счётчик Dashboard (docs/architecture/platform-frontend.md §5): карточка 16/20, подпись 12 px `#6e6e6e`, число 28/600 (строка 36) с
  * `tabular-nums`, подпись источника; вся карточка — ссылка.
  */
 export function CounterCard({ label, value, source, to }: CounterCardProps) {

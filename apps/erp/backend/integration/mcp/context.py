@@ -26,6 +26,8 @@ from typing import Any, Final, Optional
 
 from django.core.cache import cache
 
+from core.cache import fail_closed
+
 HEADER_NAME: Final = "X-Agent-Context"
 DEFAULT_TTL_S: Final = 60
 CLOCK_SKEW_S: Final = 5
@@ -207,6 +209,11 @@ def verify_agent_context(
 
 
 def mark_used(context: AgentContext) -> None:
-    """Одноразовость: `jti` принимается один раз, помнится 10 минут. Повтор — AgentContextError."""
-    if not cache.add(f"erp_mcp_jti:{context.jti}", True, timeout=JTI_CACHE_TTL_S):
+    """Одноразовость: `jti` принимается один раз, помнится 10 минут. Повтор — AgentContextError.
+
+    Кэш недоступен — `CacheUnavailable` (S0-2): вратарь отвечает 503, вызов инструмента не выполняется и не пропускается.
+    """
+    with fail_closed():
+        added = cache.add(f"erp_mcp_jti:{context.jti}", True, timeout=JTI_CACHE_TTL_S)
+    if not added:
         raise AgentContextError("agent context replay")

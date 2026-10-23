@@ -53,8 +53,12 @@ done
 # Образ runtime (prod) + код смонтирован: pytest есть в образе (requirements.in, «Testing»).
 # packages/contracts смонтирован только на чтение (/packages/contracts): сторож контракта портала
 # (portal/tests/test_contract_guard.py) читает erp-portal.yaml и без него падает, а не пропускается (FIX-21).
+# rt_bus и контракты шины (B3, L14) приходят в образ именованными контекстами сборки — как в compose (additional_contexts).
 echo "▸ сборка образа $IMAGE"
-docker build -q -t "$IMAGE" "$ROOT/backend" >/dev/null
+docker build -q -t "$IMAGE" \
+  --build-context "rtbus=$ROOT/../../packages/rt-bus" \
+  --build-context "contracts=$ROOT/../../packages/contracts" \
+  "$ROOT/backend" >/dev/null
 
 run_in() {
   # Без entrypoint (он мигрирует и делает collectstatic только для daphne/gunicorn — здесь не нужен).
@@ -63,7 +67,8 @@ run_in() {
     -e DB_SSLMODE=disable \
     -e DJANGO_SECRET_KEY=ci-test-secret-key-not-for-production \
     -e DJANGO_DEBUG="${DJANGO_DEBUG:-True}" \
-    -e REDIS_URL="redis://${RD}:6379/0" \
+    -e REDIS_CACHE_URL="redis://${RD}:6379/0" \
+    -e REDIS_CHANNELS_URL="redis://${RD}:6379/2" \
     -e CELERY_BROKER_URL="redis://${RD}:6379/1" \
     -e CELERY_RESULT_BACKEND="redis://${RD}:6379/1" \
     -e EMAIL_BACKEND=django.core.mail.backends.locmem.EmailBackend \

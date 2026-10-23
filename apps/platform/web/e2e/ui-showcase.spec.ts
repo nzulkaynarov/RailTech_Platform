@@ -4,7 +4,7 @@ import { type Page, expect, test } from "@playwright/test";
 import { waitForMotionEnd } from "./support/app";
 
 // Витрина общих компонентов `/dev/ui` (PLT-13): axe (WCAG 2.1 AA) на 1440 и 390, скриншоты всей страницы
-// (`E2E_SCREENSHOT_DIR=<каталог>`) и размеры по таблицам 03-frontend.md §4–§5, снятые с живой страницы.
+// (`E2E_SCREENSHOT_DIR=<каталог>`) и размеры по таблицам docs/architecture/platform-frontend.md §4–§5, снятые с живой страницы.
 const WIDTHS = [1440, 390] as const;
 
 interface Box {
@@ -56,7 +56,7 @@ test.describe("витрина общих компонентов", () => {
     });
   }
 
-  test("размеры и цвета на 1440 совпадают с таблицами 03-frontend.md §5", async ({ page }) => {
+  test("размеры и цвета на 1440 совпадают с platform-frontend.md §5", async ({ page }) => {
     await openShowcase(page, 1440);
     // Размеры и вычисленные стили первого элемента по селектору (скрипт строкой: в e2e нет типов DOM)
     const box = (selector: string) =>

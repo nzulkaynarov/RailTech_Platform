@@ -2,7 +2,7 @@ import type { components } from './crm-form.d';
 
 /**
  * Публичная форма CRM «Запрос» (M3-CRM-05, M2-CAB-03) — единственный вызов Cabinet мимо портала ERP
- * (CLAUDE.md §2.1). Без аутентификации и без cookie: CRM разрешает CORS только origin Cabinet
+ * (CONVENTIONS.md §2.1). Без аутентификации и без cookie: CRM разрешает CORS только origin Cabinet
  * (`CABINET_ORIGIN`) и только на `/api/v1/leads/web*`.
  *
  * - База: `VITE_CRM_URL` (стенд `http://crm.localhost:<HTTP_PORT>`, прод `https://crm.railtech.uz`).

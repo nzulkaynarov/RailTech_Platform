@@ -507,7 +507,11 @@ export interface paths {
     };
     /** Профиль компании клиента */
     get: operations["getCompany"];
-    /** Обновить профиль компании */
+    /**
+     * Обновить профиль компании
+     * @description Название и ИНН компании, связанной с клиентом CRM, ведёт CRM (ORCHESTRATOR §3 п. 16): их правка — 422
+     *     `REQUISITES_MANAGED_BY_CRM`. Остальные поля правятся здесь.
+     */
     put: operations["updateCompany"];
     post?: never;
     delete?: never;
@@ -574,6 +578,7 @@ export interface components {
       | "VALIDATION_ERROR"
       | "REASON_REQUIRED"
       | "INN_INVALID"
+      | "REQUISITES_MANAGED_BY_CRM"
       | "TEAM_MEMBER_EXISTS"
       | "CONTACT_EMAIL_REQUIRED"
       | "CONTACT_CHANNEL_REQUIRED"

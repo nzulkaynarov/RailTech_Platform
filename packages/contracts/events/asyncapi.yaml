@@ -1,4 +1,4 @@
-# AsyncAPI 3.0 — шина rt_bus v1 (ADR-0014; docs/CONTRACTS.md, раздел «Шина rt_bus»).
+# AsyncAPI 3.0 — шина rt_bus v1 (ADR-0014; docs/architecture/CONTRACTS.md, раздел «Шина rt_bus»).
 # Канал = тип события; сообщение = конверт CloudEvents (envelope.v1.json) с data по схеме типа
 # (<домен>/<сущность>.<действие>.v<N>.json). Новый тип: файл схемы + пример + канал, сообщение и операция здесь
 # (тест packages/contracts/tests/test_events.py сверяет файлы и этот документ в обе стороны).

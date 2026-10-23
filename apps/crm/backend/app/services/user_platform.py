@@ -16,15 +16,7 @@ from typing import TYPE_CHECKING
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.domain.errors import LastAdminError, LastDirectorError, ValidationFailedError
-from app.domain.platform_roles import (
-    LEGACY_ROLE_CODES,
-    RoleGrant,
-    derive_access,
-    legacy_code,
-    normalize_platform_roles,
-    normalize_position,
-    role_code_for,
-)
+from app.domain.platform_roles import RoleGrant, derive_access, normalize_position
 from app.domain.platform_roles_generated import (
     ROLE_ACCESS,
     ROLE_RESTRICTED_FIELDS,
@@ -72,12 +64,6 @@ def role_refs(roles: Iterable[PlatformRole]) -> list[RoleRef]:
     return refs
 
 
-def legacy_codes(roles: Iterable[PlatformRole]) -> list[str]:
-    """Старое поле `platform_roles`: коды ролей, у которых они есть (совместимость BFF до R-2)."""
-    held = {code for r in roles if (code := legacy_code(r.code))}
-    return [code for code in LEGACY_ROLE_CODES if code in held]
-
-
 def checked_position(value: str | None) -> str | None:
     try:
         return normalize_position(value)
@@ -86,36 +72,19 @@ def checked_position(value: str | None) -> str | None:
 
 
 async def resolve_requested(
-    session: AsyncSession,
-    role_ids: Sequence[int] | None,
-    codes: Sequence[str] | None,
+    session: AsyncSession, role_ids: Sequence[int] | None
 ) -> list[PlatformRole] | None:
-    """Роли из запроса: `platform_role_ids` или старые `platform_roles` (коды); `None` — не менять.
+    """Роли из запроса (`platform_role_ids`); `None` — не менять.
 
     Неизвестная роль — 422: код решает, не модель."""
-    if role_ids is not None and codes is not None:
-        raise ValidationFailedError(
-            "send platform_role_ids or platform_roles, not both", field="platform_role_ids"
-        )
-    if role_ids is not None:
-        wanted = sorted(set(role_ids))
-        found = await repo.by_ids(session, wanted)
-        if len(found) != len(wanted):
-            missing = sorted(set(wanted) - {r.id for r in found})
-            raise ValidationFailedError(
-                f"unknown platform roles: {missing}", field="platform_role_ids"
-            )
-        return found
-    if codes is not None:
-        try:
-            legacy = normalize_platform_roles(codes)
-        except ValueError as exc:
-            raise ValidationFailedError(str(exc), field="platform_roles") from exc
-        found = await repo.by_codes(session, [role_code_for(c) for c in legacy])
-        if len(found) != len(legacy):
-            raise ValidationFailedError("platform role is not available", field="platform_roles")
-        return found
-    return None
+    if role_ids is None:
+        return None
+    wanted = sorted(set(role_ids))
+    found = await repo.by_ids(session, wanted)
+    if len(found) != len(wanted):
+        missing = sorted(set(wanted) - {r.id for r in found})
+        raise ValidationFailedError(f"unknown platform roles: {missing}", field="platform_role_ids")
+    return found
 
 
 def resolve_patch(

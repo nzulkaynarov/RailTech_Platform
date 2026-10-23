@@ -11,7 +11,7 @@ RUN npm ci
 
 COPY . .
 
-# Только VITE_*-переменные без секретов (CLAUDE.md §2.8). VITE_API_URL пустой — запросы same-origin.
+# Только VITE_*-переменные без секретов (docs/systems/cabinet/CONVENTIONS.md §2.8). VITE_API_URL пустой — запросы same-origin.
 # VITE_CRM_URL — CRM для формы «Я новый клиент» (M2-CAB-03); пусто — вместо формы «Написать в Telegram».
 ARG VITE_API_URL=
 ARG VITE_BOT_USERNAME=
@@ -24,7 +24,8 @@ ENV VITE_API_URL=${VITE_API_URL} \
 RUN npm run build && rm -f dist/mockServiceWorker.js
 
 # ── Отдача ──────────────────────────────────────────────────────────────────────────────────
-FROM nginx:stable-alpine
+# Версия и digest закреплены (S0-9): сборка воспроизводима; обновление — осознанной правкой (stable-ветка nginx).
+FROM nginx:1.30.6-alpine3.24@sha256:47928bf67eb62a1863cb08d9ecb52d3e704304ba614eaee17884204677702951
 
 COPY nginx.conf /etc/nginx/conf.d/default.conf
 COPY --from=builder /app/dist /usr/share/nginx/html

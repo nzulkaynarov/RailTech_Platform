@@ -1,7 +1,7 @@
 import { defineConfig } from "orval";
 
 // Клиент API генерируется из OpenAPI бэкенда (SPEC §10.3): `pnpm api:generate`.
-// Ручные типы API запрещены (CLAUDE.md §4). ADR-0021: хуки TanStack Query + fetch-функции
+// Ручные типы API запрещены (CONVENTIONS.md §4). ADR-0021: хуки TanStack Query + fetch-функции
 // (те же имена) поверх общего мутатора `http`; функции возвращают тело ответа, не конверт.
 export default defineConfig({
   crm: {

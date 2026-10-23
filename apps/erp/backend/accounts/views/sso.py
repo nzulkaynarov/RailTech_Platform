@@ -1,4 +1,4 @@
-"""SSO API Views for ERP (CONTRACTS §6, packages/contracts/sso-token.md, M3-CRM-06).
+"""SSO API Views for ERP (CONTRACTS §6, docs/architecture/sso-token.md, M3-CRM-06).
 
 Эндпоинты:
 1. POST /api/v1/auth/sso/token — выдать токен для перехода в CRM (iss=erp, aud=crm).
@@ -18,6 +18,7 @@ from rest_framework.throttling import BaseThrottle
 from accounts.services.sso import (
     SsoForbiddenError,
     SsoNotConfiguredError,
+    SsoUnavailableError,
     SsoValidationError,
     issue_sso_token,
     verify_and_exchange_sso_token,
@@ -85,6 +86,9 @@ class SsoExchangeView(views.APIView):
             return Response({"detail": exc.detail}, status=status.HTTP_403_FORBIDDEN)
         except SsoNotConfiguredError as exc:
             return Response({"detail": exc.detail}, status=status.HTTP_503_SERVICE_UNAVAILABLE)
+        except SsoUnavailableError as exc:
+            # Код для программ и текст для людей; токен не погашен — после восстановления кэша переход можно повторить в его 60 с.
+            return Response({"detail": exc.detail, "message": exc.message}, status=status.HTTP_503_SERVICE_UNAVAILABLE)
         except Exception as exc:
             logger.exception("Unexpected error during SSO exchange: %s", exc)
             return Response({"detail": "SSO_EXCHANGE_FAILED"}, status=status.HTTP_401_UNAUTHORIZED)

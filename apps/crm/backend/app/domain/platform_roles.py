@@ -41,7 +41,6 @@ __all__ = [
     "TEMPLATE_PREFIX",
     "AccessDiff",
     "DerivedAccess",
-    "PlatformRoleCode",
     "RoleGrant",
     "check_spec",
     "crm_policies",
@@ -52,21 +51,19 @@ __all__ = [
     "erp_permissions_for",
     "legacy_code",
     "merge_access",
-    "normalize_platform_roles",
     "normalize_position",
     "role_code_for",
     "role_subject",
 ]
 
-PlatformRoleCode = Literal["MANAGER", "DIRECTOR", "SUPPLY", "ENGINEER", "ACCOUNTANT", "ADMIN"]
 Level = Literal["full", "read"]
 
 POSITION_MAX_LEN: Final = 120
 TEMPLATE_PREFIX: Final = "tpl:"
 SUBJECT_PREFIX: Final = "pr:"
 POLICY_DOMAIN: Final = "crm"
-# Старые коды ролей (поле `platform_roles` в ответах CRM до перевода BFF на роли-данные, R-2):
-# порядок прежний — MANAGER, DIRECTOR, SUPPLY, ENGINEER, ACCOUNTANT, ADMIN.
+# Коды ролей каталога без префикса `tpl:` (порядок MANAGER, DIRECTOR, SUPPLY, ENGINEER, ACCOUNTANT,
+# ADMIN); публичного поля с кодами в API больше нет (удалено в R-1b).
 LEGACY_ROLE_CODES: Final[tuple[str, ...]] = tuple(CRM_BASE_ROLE_BY_CODE)
 _LEVEL_RANK: Final[dict[str, int]] = {"read": 1, "full": 2}
 # Старшинство базовых ролей CRM при нескольких ролях.
@@ -115,15 +112,6 @@ def legacy_code(code: str | None) -> str | None:
 def role_subject(role_id: int) -> str:
     """Субъект casbin роли Платформы."""
     return f"{SUBJECT_PREFIX}{role_id}"
-
-
-def normalize_platform_roles(codes: Iterable[str]) -> list[str]:
-    """Старые коды без дублей в прежнем порядке; чужой код — `ValueError`."""
-    held = set(codes)
-    unknown = held - set(LEGACY_ROLE_CODES)
-    if unknown:
-        raise ValueError(f"unknown platform role codes: {sorted(unknown)}")
-    return [code for code in LEGACY_ROLE_CODES if code in held]
 
 
 def normalize_position(value: str | None) -> str | None:

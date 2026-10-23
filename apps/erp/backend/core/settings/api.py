@@ -181,20 +181,12 @@ ERP_VERSION = os.environ.get("ERP_VERSION", "0.1.0")
 PAIRING_CODE_TTL_SECONDS = int(os.environ.get("PAIRING_CODE_TTL_SECONDS", "900"))
 PAIRING_ROTATION_GRACE_SECONDS = int(os.environ.get("PAIRING_ROTATION_GRACE_SECONDS", "3600"))
 
-# ERP → CRM вебхуки: адрес приёмника CRM и секрет подписи HMAC-SHA256 (X-Signature).
-CRM_BASE_URL = os.environ.get("CRM_BASE_URL", "http://crm.localhost:8000").rstrip("/")
-CRM_WEBHOOK_URL = os.environ.get(
-    "CRM_WEBHOOK_URL",
-    f"{CRM_BASE_URL}/api/v1/integrations/erp/events",
-)
-# Секрет — строка; для ротации без простоя допускается список через запятую (FIX-35): ERP подписывает ПЕРВЫМ
-# значением, остальные CRM принимает как «предыдущие» (см. integration/services/webhooks.py:webhook_signing_secret).
+# Шина событий rt_bus (B3, ADR-0014): адреса подписчиков и пути контрактов задают RT_BUS_* (читает сама библиотека,
+# docs/architecture/rt-bus.md §2) — в образе: RT_BUS_CONTRACTS_DIR=/opt/rt/contracts/events, RT_BUS_SUBSCRIPTIONS=…/bus/subscriptions.yaml.
+# Вебхуков ERP → CRM нет. Секрет вебхуков СОПРЯЖЕНИЯ — строка; для ротации без простоя допускается список через запятую:
+# первое значение текущее. Он нужен шине как источник направленных секретов пары CRM ↔ ERP, если `RT_BUS_SECRET_ERP_CRM` /
+# `RT_BUS_SECRET_CRM_ERP` не заданы (CONTRACTS §9, `integration.bus.pair_secrets`); сам по сети не ходит.
 ERP_WEBHOOK_SECRET = os.environ.get("ERP_WEBHOOK_SECRET", "").strip()
-
-# Проверка тела вебхука по events.schema.json (FIX-35, integration/services/event_contract.py): strict | log | off;
-# пусто — strict при DEBUG и log в проде. Путь к схеме — если она лежит не в /packages/contracts.
-ERP_EVENTS_CONTRACT_MODE = os.environ.get("ERP_EVENTS_CONTRACT_MODE", "").strip().lower()
-ERP_EVENTS_SCHEMA_PATH = os.environ.get("ERP_EVENTS_SCHEMA_PATH", "").strip()
 
 # erp-mcp: ключ HMAC-SHA256 заголовка X-Agent-Context (срок 60 с).
 ERP_MCP_CONTEXT_KEY = os.environ.get("ERP_MCP_CONTEXT_KEY", "").strip()
@@ -202,7 +194,7 @@ ERP_MCP_CONTEXT_KEY = os.environ.get("ERP_MCP_CONTEXT_KEY", "").strip()
 # (монтируется в compose и в контейнер тестов), затем поиск вверх от кода (запуск из клона репозитория).
 ERP_MCP_TOOLS_PATH = os.environ.get("ERP_MCP_TOOLS_PATH", "").strip()
 
-# SSO сотрудника CRM ↔ ERP (sso-token.md): общий секрет JWT HS256, ротация — через запятую.
+# SSO сотрудника CRM ↔ ERP (docs/architecture/sso-token.md): общий секрет JWT HS256, ротация — через запятую.
 PLATFORM_SSO_SECRET = _secret_list("PLATFORM_SSO_SECRET")
 
 _MISSING_SEAM_SECRETS = [

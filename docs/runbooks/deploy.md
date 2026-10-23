@@ -10,11 +10,13 @@
 
 - **Образы** собирает `deploy.yml` (только `workflow_dispatch`) и кладёт в GHCR с тегом = полный git sha:
   `rt-crm-backend`, `rt-crm-frontend`, `rt-erp-backend`, `rt-erp-frontend`, `rt-cabinet`, `rt-platform-bff`, `rt-platform-web`, `rt-litellm` (свой образ LiteLLM на Debian, `infra/ai/litellm/`; официальный на прод-CPU не стартует). Деплоится только код, уже входящий в `main`.
-- **Релиз** на VPS 1 — каталог `/opt/rt/releases/<sha>/` (`infra/`, `apps/crm/infra/casbin`, `packages/contracts/mcp-tools.json`, `packages/contracts/events.schema.json`), `/opt/rt/current` — ссылка на текущий.
+- **Релиз** на VPS 1 — каталог `/opt/rt/releases/<sha>/` (`infra/`, `apps/crm/infra/casbin`, `packages/contracts/mcp-tools.json`), `/opt/rt/current` — ссылка на текущий.
   Состояние — `/opt/rt/state/{current_tag,previous_tag}`; хранятся пять последних релизов.
 - **Секреты приложений** лежат только на серверах: `/opt/rt/.env.prod` (VPS 1) и `/opt/rt-db/.env.db` (VPS 2), оба `chmod 600`.
   В GitHub environment `production` — лишь доступ к серверу (SSH-ключ, known_hosts) и несекретные имена. Решение принято
   здесь, чтобы десятки секретов приложений не жили в GitHub; владелец вправе передумать (тогда `deploy.yml` дописывается).
+- **Redis — два экземпляра с разными паролями** (S0-2, ADR-0013 п. 5): `redis-broker` (брокер и результаты Celery, Channels; AOF, `noeviction`, том `redis_broker_data`) и
+  `redis-cache` (кэш и троттлинг ERP, одноразовые `jti`, сессии Платформы, Langfuse; `volatile-lru`). Подробно, с отказами — раздел «Redis: брокер и кэш раздельно» ниже.
 - **База** — на VPS 2: PostgreSQL 17 + pgvector, 4 базы, по роли на базу (`crm_app`, `erp_app`, `litellm_app`, `langfuse_app`),
   `pg_hba` — только TLS и только внутренний IP VPS 1.
 - **Порядок деплоя** (`infra/deploy/deploy.sh <sha>`): проверка env → `pull` → **проверка базы CPU образов** (`cpu-baseline-check.sh`: в каждом образе запускается import numpy / litellm.proxy / версия бинаря; образ, которому нужен x86-64-v2, останавливает деплой до дампа и миграций, см. servers.md «CPU прод-VPS») → **pg_dump-гейт** `crm` и `erp`
@@ -72,10 +74,13 @@ Docker публикует порты в обход `ufw`: compose поэтому
 infra/deploy/make-env-prod.sh init            # создаёт /opt/rt/.env.prod, секреты — случайные
 nano /opt/rt/.env.prod                         # впишите вручную: APP_INTERNAL_IP, DB_INTERNAL_IP, ACME_EMAIL,
                                                # домены, TELEGRAM_*, ANTHROPIC_API_KEY/GEMINI_API_KEY, SMTP_*, BACKUP_EXT_*
-infra/deploy/make-env-prod.sh extract-db > /tmp/env.db    # часть для VPS 2
+(umask 077; infra/deploy/make-env-prod.sh extract-db > /tmp/env.db)    # часть для VPS 2 (файл с секретами — только для владельца)
 scp /tmp/env.db deploy@<VPS 2>:/opt/rt-db/.env.db && shred -u /tmp/env.db
 infra/deploy/make-env-prod.sh drop-db-only    # убрать с VPS 1 то, что нужно только VPS 2 (суперпользователь, ключи бэкапа)
 ```
+
+`init` даёт обоим Redis разные случайные пароли (`REDIS_BROKER_PASSWORD`, `REDIS_CACHE_PASSWORD`). В `.env.prod`, созданном до S0-2, старая `REDIS_PASSWORD` больше
+не читается: повторный `init` допишет две новые переменные (потом `drop-db-only`, как ниже), строку `REDIS_PASSWORD` можно удалить.
 
 Сохраните офлайн копию обоих файлов и отдельно `BACKUP_ENC_PASSPHRASE`, `WAL_ENC_KEY` и `LITELLM_SALT_KEY` (потеря первой — потеря внешних копий
 бэкапа; второй — потеря WAL-архива: восстановления на момент времени не будет; третьей — расшифровки ключей провайдеров в БД LiteLLM). После `drop-db-only` повторный `init` вернёт удалённые
@@ -147,13 +152,12 @@ mcp-tools.json` монтируется в контейнер по пути `../.
 расхождение ключей между CRM и ERP) и нет `kind=unavailable` (сервис не запущен — профиля нет в `RT_PROFILES`). Выключить ходы бота к ERP,
 не останавливая `erp-mcp`: `ERP_MCP_ENABLED=false` в `.env.prod`.
 
-**Схема событий ERP → CRM (M5-INF-01c).** Файл `packages/contracts/events.schema.json` едет в релизе и монтируется read-only в
-`/packages/contracts/events.schema.json` сервисов `erp-backend`, `erp-worker`, `erp-worker-ai`, `erp-beat` (и `erp-mcp` под
-профилем `mcp`): по нему ERP проверяет тело каждого события перед отправкой (`ERP_EVENTS_CONTRACT_MODE=log` в проде —
-несоответствие пишется в лог ERROR без значений полей, событие уходит). Образ прода схему не содержит. `deploy.sh` останавливается
-до pull и миграций, если файла нет в релизе (релиз собран старым `deploy.yml`) — тогда пересобрать релиз с актуального `main`.
-Проверить после деплоя: `docker compose exec erp-backend ls -l /packages/contracts/events.schema.json`, а в логе ERP нет строки
-«events.schema.json не найден».
+**Схемы событий и подписки шины (B3, L14; раньше M5-INF-01c).** Каталог контрактов `packages/contracts/events` и
+`packages/contracts/bus` вшит в образ ERP (`/opt/rt/contracts`, `RT_BUS_CONTRACTS_DIR`, `RT_BUS_SUBSCRIPTIONS`): образ собирают
+`deploy.yml` и compose с именованными контекстами `rtbus` и `contracts`, монтирований схемы из релиза и проверки файла в
+`deploy.sh` больше нет (`events.schema.json` снят). Тело каждого события шина проверяет строго до записи в outbox — несоответствие
+это ошибка операции, а не строка в логе. Проверить после деплоя: `docker compose exec erp-backend ls /opt/rt/contracts/events/erp`
+(22 схемы), `docker compose exec erp-backend python manage.py bus_retry --metrics`; порядок эксплуатации — `rt-bus-erp.md`.
 
 Вручную с сервера (без Actions): `/opt/rt/releases/<sha>/infra/deploy/deploy.sh <sha>`; без миграций и дампа — `make up-prod RT_IMAGE_TAG=<sha>`.
 
@@ -179,8 +183,8 @@ Caddy (`no_erp_internal` в `Caddyfile.prod`/`Caddyfile.dev`) отвечает 4
   помечены `Secure`: Chrome и Firefox принимают их на `http://localhost`, Safari может не принять (используйте другой браузер или команду ниже).
   Закончив, закройте туннель.
 * **Команды без браузера:** `docker compose … exec erp-backend python manage.py <команда>` (`shell`, `pairing_code`, `pairing_close_bootstrap`).
-* **Повтор FAILED-событий вебхуков** — действие админки «Повторить доставку в CRM» через туннель либо команда в `shell` без админки:
-  `docs/runbooks/webhooks.md`, «Повторить доставку (ERP)».
+* **Повтор `dead`-доставок шины** — `manage.py bus_retry --all-dead --subscriber crm` либо действие админки (rt_bus → Delivery) через туннель:
+  `docs/runbooks/rt-bus-erp.md`.
 * **Откат на релиз до S0-5:** его Caddy ещё отдаёт `/admin/` и `/api/integration` наружу, поэтому smoke отката (404 на этих путях) будет красным,
   хотя откат выполнен; это ожидаемо, повторный деплой текущего релиза закрывает пути.
 
@@ -203,7 +207,7 @@ Caddy (`no_erp_internal` в `Caddyfile.prod`/`Caddyfile.dev`) отвечает 4
   на VPS 1 (ежедневно) и **зашифрованную** (AES-256, `BACKUP_ENC_PASSPHRASE`) копию во внешнее S3-хранилище (раз в неделю,
   `BACKUP_EXT_DAY`). Адрес и ключи внешнего хранилища — переменные `BACKUP_EXT_*`; провайдера выбирает владелец.
 - **Сейчас:** `infra/deploy/backup-now.sh [--ext]` на VPS 2.
-- **Статус в CRM:** «Внешние сервисы» → «Хранилище резервных копий» читает бакет `backups` RustFS (M5-CRM-01); нет копии за 26 ч — инцидент и оповещение. Подробно — `apps/crm/docs/runbooks/backup-restore.md`.
+- **Статус в CRM:** «Внешние сервисы» → «Хранилище резервных копий» читает бакет `backups` RustFS (M5-CRM-01); нет копии за 26 ч — инцидент и оповещение. Подробно — `docs/runbooks/crm/backup-restore.md`.
 - **Проверка восстановления** (раз в неделю и после любых изменений бэкапа): `infra/db/restore-check.sh [каталог]` на VPS 2 — разворачивает
   каждый дамп во временную базу, считает таблицы, проверяет `vector` в `crm`, удаляет базу. Боевые базы не затрагиваются.
 - **Восстановление боевой базы** (остановка записи обязательна):
@@ -224,11 +228,50 @@ Caddy (`no_erp_internal` в `Caddyfile.prod`/`Caddyfile.dev`) отвечает 4
   тома `s3_data` = потеря файлов ERP, поэтому бакеты `erp-*` входят в будущую копию вне VPS 1 наравне с `backups`. Порт RustFS наружу не открыт
   (только внутренний IP для VPS 2), браузер в него не ходит: приватные файлы ERP отдаёт потоком (после проверки доступа), публичные
   картинки — Django по `/media/*` доменов ERP и Cabinet. Запуск ERP без `MINIO_ENDPOINT`/`MINIO_ACCESS_KEY`/`MINIO_SECRET_KEY` вне
-  `DJANGO_DEBUG=true` останавливается с `ImproperlyConfigured` (молча писать на диск контейнера нельзя). Ключ RustFS пока общий с CRM
-  (`S3_ACCESS_KEY`/`S3_SECRET_KEY`): отдельный пользователь на сервис требует admin API RustFS (шифрованное тело, нужен `mc`/`rc` в
-  отдельном образе) — хвост ADR-0013 п. 6. Проверка: `docker compose … exec erp-backend sh -c 'ls /app/media | wc -l'` — 0;
-  листинг бакета: `curl --aws-sigv4 "aws:amz:us-east-1:s3" --user "$S3_ACCESS_KEY:$S3_SECRET_KEY" "http://rustfs:9000/erp-private?list-type=2"`
-  из контейнера `s3-init`/`rustfs` (curl есть в образе RustFS).
+  `DJANGO_DEBUG=true` останавливается с `ImproperlyConfigured` (молча писать на диск контейнера нельзя). Ключ у ERP свой — `S3_ERP_*`, только бакеты
+  `erp-*` (раздел «Ключи S3 на сервис» ниже). Проверка: `docker compose … exec erp-backend sh -c 'ls /app/media | wc -l'` — 0; листинг бакета —
+  `infra/deploy/tests/s3-keys-live-test.sh` (там же проверка, что чужие бакеты закрыты).
+- **Что публично в `/media`, что нет** (S0-9): `/media/*` доменов ERP и Cabinet отдаёт только белый список ключей `erp-public` — аватары (`users/<id>/avatar`),
+  логотипы компаний (`companies/<id>/logo`) и профиля документов (`companies/<id>/doc-profile/logo`: печатается в КП и договорах, показывается в кабинете),
+  логотипы производителей, фото товаров, иконки категорий. Всё остальное, включая **документы товаров** (`products/<id>/docs/*`, бакет `erp-private`), через
+  `/media` не открывается (404): сотрудник скачивает документ товара через `GET /api/v1/catalog/products/{id}/download-document/{doc_id}/` (вход + видимость карточки).
+- **Отдача файлов потоком** (S0-9): файл из RustFS читается порциями по 256 КиБ и сразу уходит клиенту — ни в память процесса, ни на диск он целиком не попадает
+  (раньше скачивание 40 МБ занимало ≈ 3× размера в памяти Daphne). Заголовки `Content-Length` и `Content-Disposition` прежние. Про остаток — «Хвосты» в PR S0-9.
+
+### Ключи S3 на сервис (S0-9, ADR-0013 п. 6)
+
+Раньше ERP, CRM, Langfuse, WAL-G и бэкап ходили в RustFS одним ключом. Теперь у каждого свой пользователь и политика, корневой ключ знают только `rustfs` и `s3-init`:
+
+| Сервис | Переменные `.env.prod` | Доступ |
+|---|---|---|
+| корень | `S3_ROOT_ACCESS_KEY`, `S3_ROOT_SECRET_KEY` | только RustFS и `s3-init` (создание бакетов, пользователей, правил) |
+| ERP | `S3_ERP_*` (в контейнерах — `MINIO_ACCESS_KEY/SECRET_KEY`) | запись `erp-private`, `erp-public`, `erp-temp` |
+| CRM | `S3_CRM_*` (в контейнерах — `S3_ACCESS_KEY/SECRET_KEY`) | запись `kb-sources`, `client-documents`, `tg-attachments`; **чтение** `backups` (статус бэкапа) |
+| Langfuse | `S3_LANGFUSE_*` | запись `langfuse` |
+| WAL-G (VPS 2) | `S3_WAL_*` → копия `WAL_S3_ACCESS_KEY/SECRET_KEY` | запись `wal` |
+| бэкап дампов (VPS 2) | `S3_BACKUP_*` → копия `BACKUP_RUSTFS_ACCESS_KEY/SECRET_KEY` | запись `backups` |
+
+- **Генерация.** `make-env-prod.sh init` создаёт все ключи случайными, на экран не печатает и дописывает недостающие в существующий файл. Копии для VPS 2
+  (`WAL_S3_*`, `BACKUP_RUSTFS_*`) он выставляет равными `S3_WAL_*` и `S3_BACKUP_*` при каждом запуске; `extract-db` отдаёт на VPS 2 только их — корневого
+  ключа и ключей ERP/CRM/Langfuse там нет. Только ключи S3, не трогая остальное (и не возвращая переменные VPS 2, убранные `drop-db-only`), создаёт
+  `make-env-prod.sh s3-keys`; именно его вызывает `reset-prod.sh` (S0-8) на шаге 0. Четыре строки для VPS 2 из ключей сервисов печатает
+  `make-env-prod.sh extract-s3` (работает и после `drop-db-only`; вывод — в файл, он содержит секреты).
+- **Создание пользователей.** Одноразовый `s3-init` (`infra/s3/init.sh`, образ `rustfs/rc` с закреплёнными версией и digest) при **каждом** деплое: создаёт бакеты,
+  обновляет политики `rt-<сервис>` и пользователей, удаляет пользователей, которых нет в списке, ставит правило `erp-temp` и проверяет матрицу доступа реальными запросами
+  под ключом каждого сервиса (чужой бакет доступен, запись в `backups` у CRM открыта — деплой останавливается с ошибкой). Остальные сервисы ждут `s3-init`.
+- **Обновление существующего прода** (`.env.prod` до S0-9): `make-env-prod.sh s3-keys` делает прежний `S3_ACCESS_KEY/S3_SECRET_KEY` корневым `S3_ROOT_*` (корень
+  не меняется — RustFS и VPS 2 со старой копией ключа работают без перерыва), удаляет старые строки и генерирует ключи сервисов. Порядок: `s3-keys` → деплой (`s3-init` заведёт
+  пользователей; ERP, CRM и Langfuse переходят на свои ключи) → `extract-s3 > /tmp/s3.env` → заменить такие же строки в `/opt/rt-db/.env.db` на VPS 2 → `db-up.sh`
+  (WAL-G и бэкап переходят на свои ключи) → `shred -u /tmp/s3.env`. До этого VPS 2 ходит старым (теперь корневым) ключом — работает, но с лишними правами.
+- **Ротация ключа сервиса.** Поменять `S3_<СЕРВИС>_SECRET_KEY` (или оба значения) в `.env.prod` →
+  деплой (`s3-init` обновит пользователя, старый секрет перестаёт действовать сразу; смена идентификатора удаляет прежнего пользователя; ERP/CRM/Langfuse подхватят новый
+  ключ при пересоздании контейнеров этим же деплоем) → для `wal` и `backup` дальше `extract-s3` → `.env.db` на VPS 2 → `db-up.sh`. Корневой ключ меняется так же, но требует
+  перезапуска `rustfs`. Проверено на стенде: старый секрет — 403, новый — 200, лишний пользователь удалён.
+- **Правило `erp-temp`**: объекты старше **1 суток** удаляются сервером (правило `rt-erp-temp-expire-1d` ставит `s3-init`; импорт правила заменяет набор целиком, повтор ничего не
+  дублирует). Посмотреть: `docker compose … run --rm --entrypoint sh s3-init -c 'rc alias set r http://rustfs:9000 "$S3_ROOT_ACCESS_KEY" "$S3_ROOT_SECRET_KEY" >/dev/null; rc bucket lifecycle rule list r/erp-temp'`.
+  Срабатывание зависит от сканера RustFS (проходит не мгновенно); в `erp-temp` лежит только промежуточное — важного там быть не должно.
+- **Проверка доступа руками** (на стенде, после `up`): `infra/deploy/tests/s3-keys-live-test.sh <проект compose> <файл env>` — независимым клиентом (curl SigV4) проверяет, что
+  ключом ERP нельзя читать `wal` и бакеты CRM, ключом CRM — бакеты ERP, а свои бакеты читаются.
 
 ## 5. Что где проверять
 
@@ -237,15 +280,66 @@ Caddy (`no_erp_internal` в `Caddyfile.prod`/`Caddyfile.dev`) отвечает 4
 | Сайт не открывается / нет сертификата | `docker compose … logs caddy`; DNS, порты 80/443; лимит выпусков Let's Encrypt |
 | `pg_dump-гейт` падает | доступ VPS 1 → VPS 2:5432 (`ufw`, `pg_hba`, `DB_INTERNAL_IP`, пароль роли), `docker logs rt-db-postgres-1` на VPS 2 |
 | ERP/CRM не стартуют после деплоя | `docker compose … logs erp-backend crm-api crm-bot`; `ps` — какие контейнеры не healthy |
+| Redis: ERP в журнале «Кэш (Redis) недоступен», сессии Платформы не работают, очередь стоит | «Redis: брокер и кэш раздельно» ниже: `docker compose … ps redis-broker redis-cache`, `logs`, `redis-cli ping` |
 | Бэкап не создаётся | `docker logs rt-db-backup-1` на VPS 2, `/var/backups/rt/last_success`, healthcheck контейнера `backup` |
 | WAL-архив: `walg` unhealthy, `archive command failed` | `docker inspect --format '{{json .State.Health}}' rt-db-walg-1`, `docker exec -u postgres rt-db-walg-1 rt-pitr status`, `docker logs rt-db-postgres-1` — `docs/runbooks/backup-pitr.md`, разделы 4–5 |
 | Не хватает памяти | `docker stats`; профили `observability` и `kb-ingest` не включать вместе |
 
 Эскалация: владелец; агент Infra — правки compose/Caddy/скриптов через PR.
 
+## Redis: брокер и кэш раздельно (S0-2)
+
+Один Redis делили очередь задач, кэш, сессии Платформы и Langfuse; кэш без игнорирования ошибок ронял ERP вместе с собой. Теперь два экземпляра
+(`infra/compose/base.yml`, лимиты памяти — `prod.yml`, `servers.md`), у каждого свой пароль:
+
+| | `redis-broker` | `redis-cache` |
+|---|---|---|
+| Что хранит | брокер и результаты Celery ERP (БД 1), Channels ERP (БД 2), очереди Langfuse — BullMQ (БД 3, S0-9) | кэш Django, троттлинг DRF, блокировка входа, одноразовые `jti` SSO/привязки/MCP и метки 2FA ERP (БД 0); сессии BFF Платформы (БД 3) |
+| Пароль (`.env.prod`) | `REDIS_BROKER_PASSWORD` | `REDIS_CACHE_PASSWORD` |
+| Политика | `appendonly yes` (`everysec`), `noeviction`, `maxmemory` 128 МБ (`REDIS_BROKER_MAXMEMORY`) | `volatile-lru`, `maxmemory` 96 МБ (`REDIS_CACHE_MAXMEMORY`), RDB-снимок раз в 5 минут |
+| Том | `redis_broker_data` (AOF) | `redis_cache_data` (снимок) |
+| Лимит контейнера | 256 МБ | 192 МБ |
+
+У всех ключей кэша есть срок жизни: вытесняются только ключи со сроком (`volatile-lru`); тест `core/tests/test_cache_resilience.py` не даёт записать в кэш ключ без срока.
+Langfuse (BullMQ) требует `noeviction`, поэтому его очереди живут на `redis-broker` (БД 3, отдельно от Celery и Channels) — предупреждение «Eviction policy is volatile-lru» ушло.
+Цена: очередь Langfuse делит с Celery лимит `maxmemory` брокера (128 МБ); при переполнении запись упрётся в `OOM` у обоих, а не потеряет данные молча. Следить за `used_memory`
+брокера, пока Langfuse включают профилем `observability`; если очередь Langfuse разрастётся — поднять `REDIS_BROKER_MAXMEMORY` (и лимит контейнера в `prod.yml`).
+
+**Что происходит при отказе `redis-cache`** (остановка, переполнение, сеть):
+
+- ERP работает без кэша: ответы API 200, в журнале `erp-backend` одно предупреждение «Кэш (Redis) недоступен, ERP работает без кэша» раз в 30 секунд (и «снова доступен»
+  при восстановлении); первые секунды запросы чуть медленнее (таймаут подключения 1 с, затем 5 секунд ERP вообще не обращается к кэшу). Троттлинг и блокировка входа по числу
+  попыток на это время пропускают запросы; пароль и код 2FA проверяются как обычно. `/health/` ERP остаётся 200, `healthy` контейнера не меняется: `erp-backend` ждёт кэш только
+  по запуску (`service_started`), на его отказ не перезапускается. Поле `queue_alive` health интеграции теперь про брокер, а не про кэш.
+- Вход по SSO из CRM, привязка ERP к CRM по доказательству и вызовы `erp-mcp` — **отказ, а не пропуск**: одноразовый `jti` негде запомнить. SSO отвечает 503
+  `SSO_TEMPORARILY_UNAVAILABLE` с текстом «Проверка одноразового токена временно недоступна… Повторите попытку через минуту» (токен не погашен, живёт свои 60 с); второй шаг входа с 2FA — 503
+  `2FA_TEMPORARILY_UNAVAILABLE`; MCP и привязка — 503 `SERVICE_TEMPORARILY_UNAVAILABLE`. Вход по паролю без 2FA работает.
+- Платформа: сессии лежат в `redis-cache`, поэтому вход и все запросы с сессией дают 503 `BACKEND_UNAVAILABLE` (не 500), `/api/v1/health` — `degraded` с `redis: fail`;
+  после возврата кэша сессии, не вытесненные и не потерянные с ним (снимок раз в 5 минут, при полной потере — вход заново), снова работают.
+
+**Что при отказе `redis-broker`:** задачи Celery не ставятся и не берутся (письма, PDF, импорты, доставка вебхуков в CRM — ERP при этом отвечает на запросы, но `queue_alive=false`,
+интеграционный `/health` 503); события в журнале `IntegrationWebhookEvent` не теряются (повторная постановка — beat). После рестарта очередь на месте (AOF).
+
+**Диагностика:**
+
+```bash
+cd /opt/rt/current/infra/compose
+dc() { docker compose -f base.yml -f prod.yml --env-file /opt/rt/.env.prod "$@"; }
+dc ps redis-broker redis-cache                                   # оба healthy
+dc exec redis-broker redis-cli info memory | grep -E 'used_memory_human|maxmemory_human'   # пароль подставляет REDISCLI_AUTH
+dc exec redis-broker redis-cli -n 1 llen default                 # длина очереди default (ai, pdf, imports — те же llen)
+dc exec redis-broker redis-cli info persistence | grep aof_       # aof_enabled:1, aof_last_write_status:ok
+dc exec redis-cache redis-cli info stats | grep evicted_keys     # вытеснения: рост = кэш мал, поднять REDIS_CACHE_MAXMEMORY и лимит
+dc exec redis-cache redis-cli -n 0 dbsize
+dc logs --since 10m erp-backend | grep -E 'Кэш \(Redis\)'      # предупреждения ERP о кэше
+```
+
+Кэш можно очистить без последствий (кроме выхода всех из Платформы и забытых меток `jti` на 10 минут): `dc exec redis-cache redis-cli flushall`. Брокер — **нет**: `flushall` на нём теряет очередь.
+Старый том `rt-platform_redis_data` и контейнер `redis` после перехода не нужны: контейнер уберёт `--remove-orphans`, том — `docker volume rm rt-platform_redis_data` (на проде данных в нём нет — сброс по S0-8).
+
 ## Платформа (INF-P0-5)
 
-Единое рабочее место сотрудника (`apps/platform`): BFF `platform-bff` (FastAPI, Redis БД 3 — сессии) и статика `platform-web`
+Единое рабочее место сотрудника (`apps/platform`): BFF `platform-bff` (FastAPI, `redis-cache` БД 3 — сессии) и статика `platform-web`
 за тем же Caddy, домен `platform.railtech.uz`. Нового секрета и базы у Платформы нет. Образы `rt-platform-bff`, `rt-platform-web`
 собирает тот же `deploy.yml` (тег = sha), на VPS 1 они занимают ≈ 256 МБ + 64 МБ (лимиты в `prod.yml`).
 
@@ -272,7 +366,7 @@ Caddy (`no_erp_internal` в `Caddyfile.prod`/`Caddyfile.dev`) отвечает 4
 
 **Проверка после деплоя:**
 
-- `curl -fsS https://platform.railtech.uz/api/v1/health` — ответ `200` и `"status":"ok"`: BFF видит Redis, CRM `/health` и ERP `/health`.
+- `curl -fsS https://platform.railtech.uz/api/v1/health` — ответ `200` и `"status":"ok"`: BFF видит `redis-cache`, CRM `/health` и ERP `/health`.
   `"status":"degraded"` при живых CRM и ERP — смотреть в теле поле `checks` (`redis`, `crm`, `erp` — `ok`/`fail`; схема `Health` в
   `packages/contracts/openapi/platform-bff.yaml`), затем `docker compose … logs platform-bff` и `docker compose … ps` (`platform-bff`,
   `platform-web` — `healthy`). BFF отвечает `200` всегда, `degraded` не ошибка запуска, но smoke деплоя считает его сбоем.
@@ -338,3 +432,131 @@ Smoke с раннера в задании `rollback` устроен так же:
 
 Мастер показывается, только пока в ERP нет своей компании, и только администратору. Сотрудник без компании до завершения мастера
 видит «администратор ещё не завершил первоначальную настройку ERP».
+
+## 7. Сброс прода и первый запуск (S0-8)
+
+**Когда применять.** Один раз, по решению владельца 2026-10-23: в проде нет ни данных, ни аккаунтов, и он переводится на чистые базы
+(стратегия §7, волна 10). Сценарий **разрушает** базы `crm` и `erp`, файлы приложений в RustFS и тома Redis. На живых данных его не
+запускают; после первого запуска он не нужен.
+
+**Что делает** `infra/deploy/reset-prod.sh [тег]` (VPS 1, под `deploy`; тег по умолчанию — `state/current_tag`; ввод идёт с терминала,
+флага «без вопросов» нет — нужен `ssh -t`):
+
+| Шаг | Действие | Не трогает |
+|---|---|---|
+| 0 | Проверки до разрушения: `.env.prod`, релиз, **подтверждение вводом имени домена CRM**, ключи S3 на сервис (`make-env-prod.sh s3-keys`: недостающие дописывает и генерирует, значения не печатает; если ключи `wal`/`backup` созданы заново — в конце напоминание про VPS 2), `compose pull`, `cpu-baseline-check.sh` | — |
+| 1 | Останавливает приложения проекта (CRM, ERP, Cabinet, Платформа, Redis, Langfuse, воркеры) | `rustfs`, `caddy`, `litellm`, `clickhouse` продолжают работать |
+| 2 | **Дамп** `crm` и `erp` (`predeploy-dump.sh`) и копия в `/opt/rt/state/reset/dumps/<время>/` (там дамп не вытесняется ротацией) | — |
+| 3 | Пересоздаёт `crm` и `erp` на VPS 2: `DROP DATABASE … WITH (FORCE)`, затем `10-prod-init.sh` (`CREATE DATABASE` с владельцем-ролью, `pgvector` в `crm`). С VPS 1 проверяет, что обе базы пусты | базы `litellm` (ключи моделей) и `langfuse`; роли и пароли |
+| 4 | Очищает бакеты RustFS `erp-private`, `erp-public`, `erp-temp`, `client-documents`, `tg-attachments`, `kb-sources` корневым ключом (одноразовый `s3-init`: ключи сервисов чужих бакетов не видят, S0-9) | бакеты `backups`, `wal`, `langfuse` |
+| 5 | Удаляет тома Redis: `redis_data` (старый), `redis_broker_data`, `redis_cache_data` | `s3_data` (RustFS), `caddy_data` (**сертификаты**), `caddy_config`, `postgres_*` |
+| 6 | `deploy.sh <тег>`: миграции на пустые базы, `up`, smoke | — |
+| 7 | Печатает, где взять код первого запуска CRM (сам код не печатает) | — |
+
+**Решения, принятые в сценарии.**
+
+- **Шаг 3 — отдельным заходом на VPS 2.** У `deploy` на VPS 2 нет `sudo`, а давать VPS 1 ключ `root` от VPS 2 ради одного сброса не нужно. Скрипт
+  печатает команду для VPS 2 (`<каталог>/infra/deploy/reset-prod.sh db --drop crm,erp`, от root), ждёт Enter и сам проверяет с VPS 1, что базы пусты и
+  `vector` в `crm` на месте. Если у VPS 1 есть ключ к VPS 2, `RT_RESET_DB_SSH=root@<VPS 2>` делает этот заход сам. Режим `db` принимает только `crm` и `erp`
+  (`litellm` и `langfuse` он отклоняет) и сверяет число таблиц `litellm` до и после. **Барьер перед `DROP`:** либо VPS-1-часть передаёт флаг `--dump-taken <каталог дампа>` (только
+  после снятия дампа; так работает `RT_RESET_DB_SSH`), либо человек вводит `crm,erp` с терминала; без флага и без терминала режим отказывает. На VPS 2 каталог `infra` должен быть той же версии, что релиз
+  (при выкладке S0-3 его обновляют так же, как в п. 1.3: скопировать `infra/` релиза в `/opt/rt-db/infra`).
+- **WAL-архив не переключается.** Кластер PostgreSQL тот же: `DROP`/`CREATE DATABASE` — обычные транзакции в том же потоке WAL, имена сегментов не повторяются,
+  поэтому `WAL_S3_PREFIX` и `WAL_ENC_KEY` остаются прежними (смена префикса — только при новом кластере, `initdb`, и по `backup-pitr.md` §6). Следствие: на момент до
+  сброса (до 14 суток) восстановление на момент времени остаётся возможным и вернёт старые данные; бакет `wal` сценарий не чистит. Чтобы у новых баз была своя
+  базовая копия раньше ночной, после первого запуска можно выполнить на VPS 2 `docker exec -u postgres rt-db-walg-1 walg-daemon --backup-now`.
+- **`langfuse` не сбрасывается.** Это служебная база трассировки (аккаунтов и данных клиентов в ней нет), её ключи прописаны в env CRM, а ClickHouse/Langfuse на этих
+  VPS не запускаются (`servers.md`, «CPU прод-VPS»): сброс ничего не очистил бы и только создал бы расхождение ключей.
+- **Дампы `backups` на VPS 2** (`/var/backups/rt`, бакет `backups`) хранят прежние данные до конца срока хранения (14 дней). Если они не должны жить дольше, владелец
+  решает отдельно: сценарий их не удаляет.
+- **Повторный запуск безопасен.** Шаги 1, 3–5 идемпотентны (остановленное не останавливается, пустые базы пропускаются, пустые бакеты и отсутствующие тома — не ошибка), дамп
+  второй раз не снимается. Состояние прерванного сброса — `/opt/rt/state/reset/run` (дамп снят, данные сброшены); если «данные сброшены» уже записано, повтор в течение
+  24 ч пропускает шаги 1–5 и сразу деплоит. Начать заново: `rm /opt/rt/state/reset/run`.
+
+### 7.1. До сброса
+
+1. **Сохранить офлайн** (если ещё нет): `/opt/rt/.env.prod`, `/opt/rt-db/.env.db`, отдельно `BACKUP_ENC_PASSPHRASE`, `WAL_ENC_KEY`, `LITELLM_SALT_KEY`; токен бота Telegram от BotFather
+   (он хранится в базе CRM и исчезнет вместе с ней; после сброса вводится в «Подключениях» заново); при желании — пароли и ключи моделей, которые лежат у владельца вне сервера.
+   Ключи моделей в базе `litellm` сохраняются, но ключ `LITELLM_SALT_KEY` обязателен для их расшифровки.
+2. **Переменные VPS 1** (порядок важен, подробности — `backup-pitr.md` §1): `infra/deploy/make-env-prod.sh init` допишет новые переменные (`REDIS_BROKER_PASSWORD`,
+   `REDIS_CACHE_PASSWORD`, `WAL_*` и др.), **впервые сгенерирует `WAL_ENC_KEY`** и ключи S3 на сервис `S3_*` (прежний `S3_ACCESS_KEY/S3_SECRET_KEY` станет корневым `S3_ROOT_*`;
+   S0-9). Сразу после `init`: (а) **сохранить `WAL_ENC_KEY` офлайн** — повторный `init` после `drop-db-only` создаст другой ключ, а потерянный не восстановить; (б) вписать вместо
+   заглушек `192.0.2.x` реальные адреса: `WAL_S3_ENDPOINT=http://<APP_INTERNAL_IP>:9000` (и `BACKUP_RUSTFS_ENDPOINT`, если `init` его дописал; деплой отказывается работать с
+   заглушками). `drop-db-only` пока **не** запускать: сначала п. 4. `PLATFORM_DOMAIN` и A-запись на месте (раздел «Платформа»).
+3. **Деплой main** обычным способом (Actions → Deploy, `ref` = `main`): он создаёт бакет `wal` и ключи сервисов (`s3-init`), без них архив на VPS 2 только копит WAL на диске. Если деплой
+   упал на миграциях старых данных — это не помеха сбросу: релиз уже лежит в `/opt/rt/releases/<sha>/`, а сам сброс (шаг 6) поднимет стек и создаст бакеты. Нужно только,
+   чтобы там был `infra/deploy/reset-prod.sh` (`ls`), а образы с этим тегом уже в GHCR.
+4. **VPS 2** (S0-3, ключи S3 — S0-9): дописать в `/opt/rt-db/.env.db` **только** настройки WAL и ключи S3 — слепой `extract-db > .env.db` перезаписал бы пароли баз VPS 2.
+   Ключи берутся из `extract-s3` (ключи сервисов `wal` и `backup`, не корневой), остальное `WAL_*` — из `extract-db`; прежние строки этих переменных на VPS 2 заменяются:
+   ```bash
+   # VPS 1, от deploy (файл с секретами — только для владельца)
+   umask 077
+   { infra/deploy/make-env-prod.sh extract-db | grep -E '^(WAL_|BACKUP_RUSTFS_(ENDPOINT|BUCKET)=)' | grep -vE '^WAL_S3_(ACCESS|SECRET)_KEY='; infra/deploy/make-env-prod.sh extract-s3; } > /tmp/vps2.env
+   scp /tmp/vps2.env deploy@<VPS 2>:/tmp/vps2.env && shred -u /tmp/vps2.env
+   # VPS 2, от deploy: убрать прежние строки этих переменных, дописать новые, пароли баз не трогать
+   ssh deploy@<VPS 2> 'f=/opt/rt-db/.env.db; t=$(mktemp); grep -vE "^($(cut -d= -f1 /tmp/vps2.env | paste -sd"|" -))=" "$f" > "$t"; cat /tmp/vps2.env >> "$t"; cat "$t" > "$f"; shred -u "$t" /tmp/vps2.env; chmod 600 "$f"'
+   # затем обновить /opt/rt-db/infra версией релиза (п. 1.3) и поднять базу с WAL-архивом
+   ssh root@<VPS 2> /opt/rt-db/infra/deploy/db-up.sh
+   # после этого на VPS 1:
+   infra/deploy/make-env-prod.sh drop-db-only
+   ```
+   Проверка WAL — `backup-pitr.md` §1 («Проверка»): `postgres` и `walg` healthy, бакет `wal` непустой.
+5. Не запускать сброс, пока в `main` вливается PR (гонка с релизом, раздел 6).
+
+### 7.2. Сброс и первый запуск
+
+```bash
+# VPS 1, под deploy, интерактивно (ssh -t): подтверждение — имя домена CRM; тег указывайте явно; на шаге 3 скрипт попросит выполнить команду на VPS 2
+ssh -t deploy@<VPS 1> /opt/rt/releases/<sha>/infra/deploy/reset-prod.sh <sha>
+# VPS 2, по просьбе скрипта на шаге 3, от root, с терминалом (-t): режим db попросит ввести crm,erp
+ssh -t root@<VPS 2> /opt/rt-db/infra/deploy/reset-prod.sh db --drop crm,erp     # затем Enter в сеансе VPS 1
+```
+
+После сообщения «сброс завершён» — первый запуск (один заход на сервер — за кодом, дальше браузер):
+
+1. Код первого запуска CRM (живёт 24 ч, выпускается при каждом старте `crm-api`, пока нет администратора): `ssh deploy@<VPS 1> 'docker logs rt-platform-crm-api-1 2>&1 | grep setup_code_issued | tail -1'`.
+   Нужна **последняя** строка: журнал контейнера хранит и прежние запуски (скрипт в конце печатает имя контейнера и число найденных строк).
+2. `https://<CRM_DOMAIN>/setup` → код, e-mail и пароль первого администратора (пароль задаёт владелец).
+3. **Платформа: Admin → Подключения** (то же есть в консоли CRM): бот Telegram — токен от BotFather; ERP — кнопка «Подключить ERP»: адрес `http://erp-backend:8000`
+   подставлен, **код не нужен**, вводится пароль администратора (`crm-erp-pairing.md`). Окно «без кода» одноразовое: на чистых базах оно открыто.
+4. Роли: «Пользователи» — доступ в ERP (`platform_access`) и роли сотрудников; мастер ERP «Настройка ERP: ваша компания» — при первом входе в ERP (раздел «Первый вход», п. 5–6).
+
+### 7.3. Что проверить после
+
+| Что | Как | Ожидается |
+|---|---|---|
+| Все домены | `curl -sS -o /dev/null -w '%{http_code}\n' https://<CRM_DOMAIN>/health` (то же для ERP и Cabinet) и `https://<PLATFORM_DOMAIN>/api/v1/health` | 200; у Платформы `"status":"ok"` |
+| `/mcp` снаружи | `curl … https://<домен>/mcp/x` для CRM, ERP, Cabinet, Платформы; `https://<ERP_DOMAIN>/mcp/erp/` | 404 везде |
+| Машинный API и admin ERP | `curl … https://<ERP_DOMAIN>/api/integration/v1/health` и `…/admin/` | 404 |
+| Сервисы VPS 1 | `docker compose -f /opt/rt/current/infra/compose/base.yml -f /opt/rt/current/infra/compose/prod.yml --env-file /opt/rt/.env.prod ps` | `crm-bot`, `crm-api`, `erp-backend`, `litellm`, `redis-broker`, `redis-cache`, `platform-bff` — `healthy`; `redis` (старый) и `redis_data` нет |
+| `walg` и `postgres` на VPS 2 | `docker inspect --format '{{.State.Health.Status}}' rt-db-walg-1 rt-db-postgres-1` | `healthy`; `docker exec -u postgres rt-db-walg-1 rt-pitr status` — архив идёт |
+| Что сохранилось | в «Подключениях» CRM модели и ключи на месте (база `litellm`); `ls` бакетов `backups` и `wal` не пуст; сертификаты Caddy те же (сайт открывается без паузы на выпуск) | да |
+| Что очищено | `/setup` открыт (мастер), список лидов/клиентов пуст, бакеты `erp-*` пусты | да |
+| Бот | сообщение боту после ввода токена; `docker compose … logs crm-bot` | отвечает, без `409` дольше минуты |
+
+### 7.4. Если сброс упал на середине
+
+Состояние всегда видно в выводе скрипта (номер шага) и в `/opt/rt/state/reset/run`. Общее правило: **повторите тот же запуск** (`reset-prod.sh <sha>`, ввод домена снова) —
+выполненное не повторяется. Блокировка от двойного запуска — `/opt/rt/state/reset.lock` (после жёсткого обрыва: `rmdir`).
+
+| Где упало | Что с данными | Что делать |
+|---|---|---|
+| До шага 1 (`pull`, `cpu-baseline-check`, `config`, неверный домен) | не тронуто, приложения работают | исправить причину (образ в GHCR, `.env.prod`), запустить снова |
+| Шаг 1–2 (остановка, дамп) | приложения остановлены, базы и файлы целы | дамп не прошёл — доступ VPS 1 → VPS 2:5432 (раздел 5, `pg_dump-гейт`); поднять приложения можно `deploy.sh <прежний тег>`; затем повторить сброс |
+| Шаг 3 (база) | дамп есть; базы могли удалиться не обе | повторить команду на VPS 2 (`DROP IF EXISTS` и init идемпотентны); `docker logs rt-db-postgres-1`; затем снова `reset-prod.sh` |
+| Шаг 4–5 (бакеты, тома) | базы уже пусты, приложения остановлены | причина — RustFS не healthy / образ CRM не запускается (`docker compose … logs rustfs`); повторить запуск |
+| Шаг 6 (миграции, `up`, smoke) | данные сброшены, дамп сохранён | чинить причину по разделу 5 (`logs erp-backend crm-api`, DNS, сертификат); затем `reset-prod.sh <sha>` (пропустит шаги 1–5) или `deploy.sh <sha>` |
+
+**Откат данных** (нужен только если сброс сделан по ошибке): приложения остановить, затем восстановление боевой базы из раздела 4, взяв дамп из
+`/opt/rt/state/reset/dumps/<время>/{crm,erp}.dump` (на VPS 2 они доставляются как в пункте 4 «Восстановление боевой базы»). Файлы бакетов и Redis восстановить нельзя —
+они удалены; поэтому подтверждение вводом домена обязательно.
+
+### 7.5. Архитектору: последовательность команд
+
+1. Перед началом (владелец/архитектор): офлайн-копии `.env.prod`, `.env.db`, `BACKUP_ENC_PASSPHRASE`, `WAL_ENC_KEY`, `LITELLM_SALT_KEY`, токен бота (п. 7.1.1). Убедиться, что в `main` ничего не вливается.
+2. VPS 1: `infra/deploy/make-env-prod.sh init` (WAL_ENC_KEY и ключи S3 на сервис генерируются; прежний `S3_ACCESS_KEY` становится корневым) → сразу сохранить `WAL_ENC_KEY` офлайн → вписать `WAL_S3_ENDPOINT=http://<APP_INTERNAL_IP>:9000` (и `BACKUP_RUSTFS_ENDPOINT`, если там заглушка). `drop-db-only` пока не запускать (п. 7.1.2).
+3. Actions → Deploy → `ref` = `main`, `action` = `deploy` (создаёт бакет `wal` и ключи сервисов). Дождаться окончания; красный результат на миграциях старых данных допустим, если релиз `<sha>` лёг на VPS 1.
+4. VPS 2 (п. 7.1.4): `extract-db | grep -E '^(WAL_|BACKUP_RUSTFS_(ENDPOINT|BUCKET)=)'` без `WAL_S3_*_KEY` + `extract-s3` → заменить такие же строки в `/opt/rt-db/.env.db` (не перезаписывать файл, пароли баз не трогать) → обновить `/opt/rt-db/infra` → `ssh root@<VPS 2> /opt/rt-db/infra/deploy/db-up.sh` → на VPS 1 `drop-db-only`.
+5. `ssh -t deploy@<VPS 1> /opt/rt/releases/<sha>/infra/deploy/reset-prod.sh <sha>` → ввод имени домена CRM (на шаге 0 скрипт сам вызовет `s3-keys`) → на шаге 3 в другом окне `ssh -t root@<VPS 2> /opt/rt-db/infra/deploy/reset-prod.sh db --drop crm,erp` (ввод `crm,erp`) → Enter в сеансе VPS 1.
+6. Код: `ssh deploy@<VPS 1> 'docker logs rt-platform-crm-api-1 2>&1 | grep setup_code_issued | tail -1'` → `https://<CRM_DOMAIN>/setup` → Платформа: Admin → Подключения (бот, «Подключить ERP») → роли → проверки п. 7.3.
+7. Данные для входа передать владельцу; затем гейт этапа 0 (`wave10-stage0.md` §3).

@@ -71,7 +71,7 @@ const lead = (id: number, title: string): ObjectRef => ({
   path: `/crm/leads?lead=L-${String(id)}&panel=open&tab=card`,
 });
 
-/** Демо-очередь предустановки (04-integration-map.md §1.2); у снабженца, инженера, бухгалтера и админа — пусто. */
+/** Демо-очередь предустановки (docs/architecture/integration-map.md §1.2); у снабженца, инженера, бухгалтера и админа — пусто. */
 function queueFor(preset: PresetCode, now: number): QueueItem[] {
   const role_id = ROLE_ID[preset];
   if (preset === "DIRECTOR") {

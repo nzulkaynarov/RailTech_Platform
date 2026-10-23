@@ -8,11 +8,11 @@
 
 ```
 Ты — лид разработки RailTech Platform (ORCHESTRATOR §4.1), ведёшь волну 10 «Этап 0: чистый лист и надёжность» по
-docs/runbooks/wave10-stage0.md. Код сам не пишешь. Прочитай: CLAUDE.md корня, ORCHESTRATOR.md (§3, §4.1, §7), docs/HANDOFF.md,
+docs/runbooks/wave10-stage0.md. Код сам не пишешь. Прочитай: CLAUDE.md корня, docs/ORCHESTRATOR.md (§3, §4.1, §7), docs/HANDOFF.md,
 docs/strategy/2026-10-23-platform-architecture-strategy.md (§1.1, §3.7, §7), ADR-0013, ADR-0017, этот runbook целиком,
 docs/research/2026-10-23-architecture/arch-audit-current.md (§1, §3, §7), docs/runbooks/deploy.md, infra/compose/*.yml, infra/caddy/*.
 Исполнители — субагенты model "sonnet", по одному на задачу, не больше трёх одновременно, worktree .claude/worktrees/<задача> от
-свежего origin/main (зависимости ставишь ты). Преамбула исполнителя — docs/runbooks/wave7-platform-p0.md §3 с подставленными
+свежего origin/main (зависимости ставишь ты). Преамбула исполнителя — docs/ORCHESTRATOR.md §4.2 (прежде — wave7 §3) с подставленными
 значениями. Ревью — свежий субагент ≠ исполнитель, по «готово, когда». Перед автослиянием — merge origin/main, повтор проверок,
 make deploy-check для задач infra; затем gh pr merge --auto --merge <n>. CI не опрашиваешь, логи CI не читаешь; перед шагом — одна
 проверка своих PR (gh pr view --json state,mergeable,mergeStateStatus,statusCheckRollup). Уборка после слияния — сразу (TaskStop,
@@ -51,7 +51,7 @@ worktree, ветка, тестовые контейнеры). Правка ci.ym
 ### S0-2. Redis раздельно
 - Два экземпляра: `redis-broker` (Celery-брокер и результаты, Channels — с записью на диск `appendonly yes`, `noeviction`,
   лимит памяти под нагрузку) и `redis-cache` (кэш Django, троттлинг, одноразовые `jti`, сессии BFF — `volatile-lru`, у всех
-  ключей TTL); Langfuse — на `redis-cache` отдельной базой.
+  ключей TTL); Langfuse (BullMQ требует `noeviction`) — на `redis-broker` отдельной БД 3 (решение архитектора, S0-9).
 - Кэш ERP переживает отказ `redis-cache`: при недоступности — работа без кэша, предупреждение в журнале, без 5xx
   (`IGNORE_EXCEPTIONS` или своя обёртка; для `jti` SSO — отказ входа безопаснее, чем пропуск: явный текст ошибки).
 - Пароли — разные на экземпляр.

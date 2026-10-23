@@ -67,16 +67,8 @@ x-erp-prod-env: &erp-prod-env
   EMAIL_USE_TLS: ${SMTP_USE_TLS:-True}
   DEFAULT_FROM_EMAIL: ${SMTP_FROM:-noreply@example.com}
 
-# Схема событий ERP → CRM (M5-INF-01c, Q-FIX35-5 п. 2): файл packages/contracts/events.schema.json едет в release.tgz и
-# монтируется read-only туда, где его ищет ERP (integration/services/event_contract.py, MOUNTED_PATH). В образ прода контракт
-# не вшит; без монтирования проверка тела события молча пропускалась бы. Файла нет — сервис не стартует
-# (create_host_path: false — Docker не подменяет его пустым каталогом); deploy.sh проверяет наличие до pull и миграций.
-x-erp-events-schema: &erp-events-schema
-  type: bind
-  source: ../../packages/contracts/events.schema.json
-  target: /packages/contracts/events.schema.json
-  read_only: true
-  bind: { create_host_path: false }
+# Контракты событий и подписки шины rt_bus (B3, L14) вшиты в образ ERP (/opt/rt/contracts, RT_BUS_CONTRACTS_DIR,
+# RT_BUS_SUBSCRIPTIONS): монтирований схемы событий из релиза больше нет (events.schema.json удалён вместе с вебхуками).
 
 services:
   # ─── База — снаружи (VPS 2) ─────────────────────────────────────────────────────────────────
@@ -86,9 +78,13 @@ services:
     profiles: [local-db]
 
   # ─── Общая инфраструктура ──────────────────────────────────────────────────────────────────
-  redis:
-    <<: [*ops, *mem-128]
-    command: ["--requirepass", "${REDIS_PASSWORD}", "--maxmemory", "100mb", "--maxmemory-policy", "noeviction"]
+  # Два экземпляра Redis (S0-2); команды и политики вытеснения — в base.yml. maxmemory (base: 128 МБ у брокера, 96 МБ у
+  # кэша) заметно ниже лимита контейнера: запас под буферы клиентов, перезапись AOF (брокер) и копирование при снимке RDB (кэш).
+  redis-broker:
+    <<: [*ops, *mem-256]
+
+  redis-cache:
+    <<: [*ops, *mem-192]
 
   rustfs:
     <<: [*ops, *mem-512]
@@ -96,10 +92,9 @@ services:
     # Файрвол VPS 1 разрешает 9000/tcp только с внутреннего IP VPS 2 (runbook deploy.md).
     ports: ["${APP_INTERNAL_IP:?set in .env}:9000:9000"]
 
+  # Бакеты, пользователи и политики одинаковы на стенде и в проде — описаны в base.yml и infra/s3/init.sh.
   s3-init:
     logging: { driver: json-file, options: { max-size: "5m", max-file: "2" } }
-    environment:
-      S3_BUCKETS: langfuse kb-sources client-documents tg-attachments erp-private erp-public erp-temp backups wal
 
   litellm:
     <<: [*ops, *mem-768]
@@ -241,10 +236,11 @@ services:
     environment: *erp-prod-env
     volumes: !override
       - erp_static:/app/staticfiles
-      - *erp-events-schema
     depends_on: !override
-      redis:
+      redis-broker:
         condition: service_healthy
+      redis-cache:
+        condition: service_started
       s3-init:
         condition: service_completed_successfully
 
@@ -255,7 +251,7 @@ services:
   # Профиль `mcp`: бот CRM в сервисном режиме (M3-CRM-07) берёт данные клиента из erp-mcp, поэтому на проде профиль
   # включён (`RT_PROFILES=mcp` в .env.prod, infra/.env.prod.example; release.tgz файл контракта несёт). Без профиля
   # сервис не стартует, а бот на вопросы о счетах и поставках честно отвечает «не могу проверить» и передаёт менеджеру.
-  # Схема событий (events.schema.json) нужна и ему: инструменты могут порождать события ERP → CRM. Вручную:
+  # Вручную:
   #   docker compose -f base.yml -f prod.yml --profile mcp up -d erp-mcp
   erp-mcp:
     <<: [*ops, *mem-256]
@@ -269,32 +265,25 @@ services:
         target: /packages/contracts/mcp-tools.json
         read_only: true
         bind: { create_host_path: false }
-      - *erp-events-schema
 
-  # erp-worker, erp-worker-ai, erp-beat: события уходят и из задач Celery — схема монтируется и им.
+  # erp-worker, erp-worker-ai, erp-beat: тот же образ; контракты шины вшиты (раскладку и доставку событий ведёт воркер).
   erp-worker:
     <<: [*ops, *mem-512]
     image: ${RT_IMAGE_REGISTRY:-ghcr.io/nzulkaynarov}/rt-erp-backend:${RT_IMAGE_TAG}
     build: !reset null
     environment: *erp-prod-env
-    volumes:
-      - *erp-events-schema
 
   erp-worker-ai:
     <<: [*ops, *mem-384]
     image: ${RT_IMAGE_REGISTRY:-ghcr.io/nzulkaynarov}/rt-erp-backend:${RT_IMAGE_TAG}
     build: !reset null
     environment: *erp-prod-env
-    volumes:
-      - *erp-events-schema
 
   erp-beat:
     <<: [*ops, *mem-192]
     image: ${RT_IMAGE_REGISTRY:-ghcr.io/nzulkaynarov}/rt-erp-backend:${RT_IMAGE_TAG}
     build: !reset null
     environment: *erp-prod-env
-    volumes:
-      - *erp-events-schema
 
   erp-ai-gateway:
     <<: [*ops, *mem-256]
@@ -314,8 +303,8 @@ services:
     build: !reset null
 
   # ─── Платформа (apps/platform) ──────────────────────────────────────────────────────────────
-  # Объявлены в base.yml (окружение, healthcheck, зависимость от redis); здесь — образы GHCR и лимиты памяти.
-  # BFF ходит в CRM и ERP по сети compose (PLATFORM_CRM_URL / PLATFORM_ERP_URL), БД у него нет, сессии — Redis БД 3.
+  # Объявлены в base.yml (окружение, healthcheck, зависимость от redis-cache); здесь — образы GHCR и лимиты памяти.
+  # BFF ходит в CRM и ERP по сети compose (PLATFORM_CRM_URL / PLATFORM_ERP_URL), БД у него нет, сессии — redis-cache БД 3.
   platform-bff:
     <<: [*ops, *mem-256]
     image: ${RT_IMAGE_REGISTRY:-ghcr.io/nzulkaynarov}/rt-platform-bff:${RT_IMAGE_TAG:?set RT_IMAGE_TAG}
@@ -353,7 +342,7 @@ services:
     depends_on: !override
       s3-init:
         condition: service_completed_successfully
-      redis:
+      redis-broker:
         condition: service_healthy
       clickhouse:
         condition: service_healthy
@@ -365,7 +354,7 @@ services:
     depends_on: !override
       s3-init:
         condition: service_completed_successfully
-      redis:
+      redis-broker:
         condition: service_healthy
       clickhouse:
         condition: service_healthy

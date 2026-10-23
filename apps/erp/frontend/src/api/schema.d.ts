@@ -3241,6 +3241,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/catalog/products/{id}/download-document/{doc_id}/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Download product document
+         * @description Technical document of a product (private bucket): streamed through this authenticated endpoint with the same visibility as the product card; `/media/products/<id>/docs/*` is not reachable.
+         */
+        get: operations["catalog_products_download_document_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/catalog/products/{id}/merge/": {
         parameters: {
             query?: never;
@@ -11515,12 +11535,8 @@ export interface components {
         };
         ProductDocument: {
             readonly id: number;
-            /**
-             * Файл
-             * Format: uri
-             * @description Загруженный документ (PDF, DOCX)
-             */
-            file?: string | null;
+            /** @description Путь скачивания файла (API), null — файла нет */
+            readonly file: string | null;
             /**
              * URL документа
              * @description Внешняя ссылка на документ (если файл не загружен)
@@ -11538,12 +11554,6 @@ export interface components {
             readonly uploaded_at: string;
         };
         ProductDocumentRequest: {
-            /**
-             * Файл
-             * Format: binary
-             * @description Загруженный документ (PDF, DOCX)
-             */
-            file?: string | null;
             /**
              * URL документа
              * @description Внешняя ссылка на документ (если файл не загружен)
@@ -17896,6 +17906,36 @@ export interface operations {
                 content?: never;
             };
             /** @description Image not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    catalog_products_download_document_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                doc_id: string;
+                /** @description A unique integer value identifying this Товар (PIM). */
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/octet-stream": string;
+                };
+            };
+            /** @description Document not found or has no uploaded file */
             404: {
                 headers: {
                     [name: string]: unknown;

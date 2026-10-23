@@ -1,15 +1,15 @@
 # Отчёт M2-QA-01: Сквозной QA-прогон Cabinet (Web + Telegram Mini App, axe 0)
 
-**Дата:** 2026-10-16  
-**Стенд:** `http://localhost:5175/` (Vite dev-сервер с полным моком MSW по OpenAPI `packages/contracts/openapi/erp-portal.yaml` и CRM Lead Form)  
-**Окружение:** macOS, Chromium, Node.js v20+, Vite 7, React 18, Tailwind v4, shadcn/ui, Telegram WebApp SDK  
+**Дата:** 2026-10-16
+**Стенд:** `http://localhost:5175/` (Vite dev-сервер с полным моком MSW по OpenAPI `packages/contracts/openapi/erp-portal.yaml` и CRM Lead Form)
+**Окружение:** macOS, Chromium, Node.js v20+, Vite 7, React 18, Tailwind v4, shadcn/ui, Telegram WebApp SDK
 **Статус:** **ПРОЙДЕН (PASS) — 0 дефектов, axe 0, горизонтальный скролл 0px**
 
 ---
 
 ## 1. Цели и критерии приёмки (DoD)
 
-По `ORCHESTRATOR.md` (§6, §9) и `docs/PROGRESS.md`:
+По `docs/ORCHESTRATOR.md` (§6, §9) и `docs/PROGRESS.md`:
 1. **Сквозной клиентский сценарий пути клиента без пробелов (M2-CAB-04):**
    - Вход в кабинет: Web (magic-link на e-mail) и Telegram Mini App (`init_data` / deep-link `deal_<id>`).
    - Публичная форма «Я новый клиент» (`/new-client`): имя, компания, телефон, сообщение, обязательное согласие на ПДн, антиспам-токен CRM.
@@ -117,7 +117,7 @@
 
 ## 5. Артефакты прогона
 
-- **Видеозапись мобильного и сквозного прогона:**  
+- **Видеозапись мобильного и сквозного прогона:**
   `cabinet_mobile_audit_1792129963782.webp`
 - **Скриншоты ключевых экранов:**
   - `quotes_list_1792129969219.png` — реестр КП на десктопе 1440px

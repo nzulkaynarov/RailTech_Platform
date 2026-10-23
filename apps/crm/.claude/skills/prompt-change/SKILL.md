@@ -14,5 +14,5 @@ description: Изменить промпт агента (backend/prompts/*.md) �
 3. Golden: обнови/добавь кейсы (`backend/evals/golden/*.yaml`, квалификатор — `evals/qualifier/`); `uv run pytest tests/unit/test_golden.py -q` — схема валидна.
 4. Версия промпта — `prompts.version(name)` (12 символов sha256 содержимого), уходит в трейсы Langfuse как `prompt_version`; Prompt Management Langfuse не используется, в UI ничего не правь. Откат — runbook `prompt-rollback.md`.
 5. `make check`.
-6. Прогон — ПЛАТНЫЙ (CLAUDE.md §6.5): назови число вызовов и стоимость (`make eval-quick CONFIRM=yes` ~20 вызовов ≤ $0.3; один кейс `EVAL_CASES=<id>`; полный `make eval` ~150) и дождись «да» владельца на этот прогон. Нет кредитов/согласия — так и напиши в PR, прогон остаётся в чек-листе владельца. В CI — метка `run-evals` на PR (один раз перед мержем).
+6. Прогон — ПЛАТНЫЙ (docs/systems/crm/CONVENTIONS.md §6.5): назови число вызовов и стоимость (`make eval-quick CONFIRM=yes` ~20 вызовов ≤ $0.3; один кейс `EVAL_CASES=<id>`; полный `make eval` ~150) и дождись «да» владельца на этот прогон. Нет кредитов/согласия — так и напиши в PR, прогон остаётся в чек-листе владельца. В CI — метка `run-evals` на PR (один раз перед мержем).
 7. В PR: какие метрики `SPEC §12` затронуты, до/после (если прогон был); раздел «Проверить на dev» с 2–3 диалогами (ru/uz/en) и ожидаемыми ответами.

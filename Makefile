@@ -1,4 +1,4 @@
-# RailTech Platform — корневой Makefile ансамбля (CLAUDE.md, ORCHESTRATOR §4, §7).
+# RailTech Platform — корневой Makefile ансамбля (CLAUDE.md, docs/ORCHESTRATOR.md §4, §7).
 # Цели ансамбля делегируют в Makefile приложений: конвенции и команды живут у приложений.
 # Директория legacy/b2b удалена по плану M2-INF-01; исходная история сохранена в теге b2b-final.
 
@@ -18,7 +18,11 @@ help: ## Список целей
 # --- Проверки --------------------------------------------------------------------
 
 .PHONY: check
-check: check-crm check-erp check-cabinet check-platform check-rt-bus ## Проверки всех приложений и rt-bus (lint + typecheck + unit)
+check: docs-links check-crm check-erp check-cabinet check-platform check-rt-bus ## Проверки всех приложений, rt-bus (lint + typecheck + unit) и ссылок документации
+
+.PHONY: docs-links
+docs-links: ## Ссылки на документацию целы и ведут в docs/ (scripts/check-doc-links.sh, ORCHESTRATOR §3 п. 17)
+	scripts/check-doc-links.sh
 
 .PHONY: check-crm
 check-crm: ## CRM: ruff, mypy, eslint, tsc, pytest, vitest (apps/crm/Makefile)
@@ -121,9 +125,10 @@ deploy-check: ## Проверка конфигурации прода без з�
 	docker compose -f $(INFRA)/compose/base.yml -f $(INFRA)/compose/prod.yml --env-file $$envfile --profile observability --profile kb-ingest --profile mcp config -q; \
 	docker compose -f $(INFRA)/compose/db.yml --env-file $$envfile config -q; echo "compose prod/db: ok"
 	@docker run --rm -e ACME_EMAIL=a@example.com -e CRM_DOMAIN=crm.example.org -e ERP_DOMAIN=erp.example.org -e CABINET_DOMAIN=cabinet.example.org -e PLATFORM_DOMAIN=platform.example.org 	  -v "$(CURDIR)/$(INFRA)/caddy/Caddyfile.prod:/etc/caddy/Caddyfile:ro" caddy:2.11.7-alpine caddy validate --config /etc/caddy/Caddyfile 2>&1 | grep -q "Valid configuration" && echo "caddy validate: ok"
-	@docker run --rm -e LANG=C.UTF-8 -v "$(CURDIR):/mnt" -w /mnt koalaman/shellcheck:stable -x $(INFRA)/deploy/*.sh $(INFRA)/db/*.sh && echo "shellcheck: ok"
+	@docker run --rm -e LANG=C.UTF-8 -v "$(CURDIR):/mnt" -w /mnt koalaman/shellcheck:stable -x $(INFRA)/deploy/*.sh $(INFRA)/db/*.sh $(INFRA)/s3/*.sh && echo "shellcheck: ok"
 	@bash $(INFRA)/deploy/tests/predeploy-dump-test.sh
-	@bash $(INFRA)/deploy/tests/events-schema-mount-test.sh
+	@bash $(INFRA)/deploy/tests/reset-prod-test.sh
+	@bash $(INFRA)/deploy/tests/bus-contracts-image-test.sh
 	@bash $(INFRA)/deploy/tests/crm-backup-source-test.sh
 	@bash $(INFRA)/deploy/tests/telegram-webhook-url-test.sh
 	@bash $(INFRA)/deploy/tests/crm-bot-test.sh
@@ -132,6 +137,8 @@ deploy-check: ## Проверка конфигурации прода без з�
 	@bash $(INFRA)/deploy/tests/caddy-edge-test.sh
 	@bash $(INFRA)/deploy/tests/wal-archive-test.sh
 	@bash $(INFRA)/deploy/tests/walg-schedule-test.sh
+	@bash $(INFRA)/deploy/tests/redis-split-test.sh
+	@bash $(INFRA)/deploy/tests/s3-keys-test.sh
 	@docker run --rm -v "$(CURDIR):/repo" -w /repo rhysd/actionlint:latest .github/workflows/deploy.yml && echo "actionlint: ok"
 
 # --- Локальный CI (гейт мержа, пока GitHub Actions недоступен — DECISIONS 2026-10-13) ---

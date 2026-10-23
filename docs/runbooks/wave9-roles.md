@@ -8,13 +8,13 @@
 
 ```
 Ты — лид разработки RailTech Platform (ORCHESTRATOR §4.1), ведёшь волну 9 «Настраиваемые роли» по docs/runbooks/wave9-roles.md.
-Код сам не пишешь. Прочитай: CLAUDE.md корня, ORCHESTRATOR.md (§3, §4.1, §7), docs/HANDOFF.md, docs/adr/0012-configurable-platform-roles.md,
-этот runbook целиком, apps/platform/CLAUDE.md, apps/platform/docs/02-architecture.md §6, 04-integration-map.md §4, docs/CONTRACTS.md §8,
-packages/contracts/platform-rbac.yaml (v1), packages/contracts/openapi/platform-bff.yaml (0.2.4), apps/crm/CLAUDE.md.
+Код сам не пишешь. Прочитай: CLAUDE.md корня, docs/ORCHESTRATOR.md (§3, §4.1, §7), docs/HANDOFF.md, docs/adr/0012-configurable-platform-roles.md,
+этот runbook целиком, docs/systems/platform/CONVENTIONS.md, docs/architecture/platform-bff.md §6, docs/architecture/integration-map.md §4, docs/architecture/CONTRACTS.md §8,
+packages/contracts/platform-rbac.yaml (v1), packages/contracts/openapi/platform-bff.yaml (0.2.4), docs/systems/crm/CONVENTIONS.md.
 Порядок: R-1 → R-2 → R-3 (§2). Исполнители — субагенты, worktree .claude/worktrees/<задача> от свежего origin/main, зависимости ставишь ты;
-R-1 и R-3 — model "sonnet", R-2 — model "opus" (меняет контракт на обе стороны). Преамбула исполнителя — docs/runbooks/wave7-platform-p0.md §3
+R-1 и R-3 — model "sonnet", R-2 — model "opus" (меняет контракт на обе стороны). Преамбула исполнителя — docs/ORCHESTRATOR.md §4.2 (прежде — wave7 §3)
 с подставленными значениями; исключение для R-2: контракт (platform-rbac.yaml v2, platform-bff.yaml 0.3.0) он правит сам по §3.2 этого runbook'а.
-Ревью — свежий субагент ≠ исполнитель, по «готово, когда»; экраны — ещё по apps/platform/docs/03-frontend.md §10. Перед автослиянием — merge
+Ревью — свежий субагент ≠ исполнитель, по «готово, когда»; экраны — ещё по docs/architecture/platform-frontend.md §10. Перед автослиянием — merge
 origin/main, повтор проверок, одна голова Alembic CRM; затем gh pr merge --auto --merge <n>. CI не опрашиваешь, логи CI не читаешь; перед шагом —
 одна проверка своих PR (gh pr view --json state,mergeable,mergeStateStatus,statusCheckRollup). После слияния PR — сразу останови исполнителя
 (TaskStop), удали worktree, ветку и тестовые контейнеры задачи. Прод не деплоится. Вопросы вне задачи — архитектору сообщением.
@@ -147,6 +147,9 @@ queue:                                      # вид работы → что н�
   ticket: {resource: admin, level: full}
   # …остальные виды из QueueItemKind — по тому же правилу
 ```
+
+Уточнение R-1b (2026-10-23): у `system_roles.DIRECTOR` разделы `crm.leads` и `chats.external` — `read` (остальные бизнес-разделы `full`,
+`admin` — `read`); версия роли (`version`) — оптимистическая блокировка PATCH (ADR-0012 п. 2, DECISIONS 2026-10-23).
 
 Правила: каждый код права ERP — из `ErpPermission` контракта шва, каждое право CRM — из каталога `apps/crm/backend/app/security/rbac.py`
 (тест в CRM и в contracts); у раздела `levels` по умолчанию `[read, full]`; `system_roles.DIRECTOR` — все разделы `full`, `admin` — `read`.

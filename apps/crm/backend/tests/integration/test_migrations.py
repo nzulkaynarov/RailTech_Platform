@@ -7,7 +7,7 @@ from alembic.config import Config
 
 from app.config import Settings
 
-#: Последняя ревизия, где ещё есть `erp_incoming_events` (0038 заменяет её таблицами rt_bus).
+#: Последняя ревизия, где ещё есть `erp_incoming_events` (0039 заменяет её таблицами rt_bus).
 SEAM_REVISION = "0029_erp_seam_hardening"
 
 OBJECTS_SQL = """
@@ -216,7 +216,7 @@ def test_rt_bus_revision_replaces_the_webhook_journal_and_is_reversible(
         )
         assert conn.execute(sql, (["erp_incoming_events"],)).fetchall() == []
 
-    command.downgrade(alembic_config, "0037_bot_runtime")
+    command.downgrade(alembic_config, "0038_platform_role_version")
     with psycopg.connect(live_settings.libpq_dsn, autocommit=True) as conn:
         assert conn.execute(sql, (list(bus_tables),)).fetchall() == []
         assert conn.execute(sql, (["erp_incoming_events"],)).fetchall() == [

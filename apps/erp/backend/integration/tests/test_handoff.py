@@ -15,7 +15,8 @@ import pytest
 from django.core import mail
 from django.db import connections
 from django.utils import timezone
-from integration.models import CrmClientMapping, CrmContactMapping, IntegrationWebhookEvent
+from integration.models import CrmClientMapping, CrmContactMapping
+from integration.tests import bus_support
 from parties.models import Company, CompanyType, Contact
 from rest_framework.test import APIClient
 
@@ -71,8 +72,8 @@ def handoff(api, body, key=None):
 
 
 def events(event_type=None):
-    qs = IntegrationWebhookEvent.objects.all()
-    return qs.filter(event_type=event_type) if event_type else qs
+    """Опубликованные на шину события (конверты) — все или одного короткого типа (`request.created`)."""
+    return bus_support.published(event_type)
 
 
 # ─── Повтор: те же идентификаторы, без второй сделки и без вторых событий ──────────────────────────
@@ -83,7 +84,7 @@ def test_repeat_with_same_crm_client_id_returns_200_and_same_ids_without_new_obj
     first = handoff(api, payload())
     assert first.status_code == 201
     deals, companies, contacts = Deal.objects.count(), Company.objects.count(), Contact.objects.count()
-    sent_events = events().count()
+    sent_events = len(events())
     emails = len(mail.outbox)
 
     again = handoff(api, payload())  # другой Idempotency-Key: повтор после таймаута, ключ потерян
@@ -92,7 +93,7 @@ def test_repeat_with_same_crm_client_id_returns_200_and_same_ids_without_new_obj
     assert again.json()["erp_company_id"] == first.json()["erp_company_id"]
     assert again.json()["erp_request_id"] == first.json()["erp_request_id"]
     assert (Deal.objects.count(), Company.objects.count(), Contact.objects.count()) == (deals, companies, contacts)
-    assert events().count() == sent_events, "повтор не должен рождать события"
+    assert len(events()) == sent_events, "повтор не должен рождать события"
     assert len(mail.outbox) == emails, "повтор не должен слать второе приглашение"
 
 
@@ -126,7 +127,7 @@ def test_inn_of_another_crm_client_is_409_inn_conflict_and_nothing_is_created(ap
         Deal.objects.count(),
         CrmClientMapping.objects.count(),
         CrmContactMapping.objects.count(),
-        events().count(),
+        len(events()),
         len(mail.outbox),
     )
 
@@ -140,7 +141,7 @@ def test_inn_of_another_crm_client_is_409_inn_conflict_and_nothing_is_created(ap
         Deal.objects.count(),
         CrmClientMapping.objects.count(),
         CrmContactMapping.objects.count(),
-        events().count(),
+        len(events()),
         len(mail.outbox),
     )
     assert after == before
@@ -220,9 +221,9 @@ def test_inn_link_gives_new_contacts_no_right_to_act_and_sends_no_invite(api):
     assert new_contact.can_act is False
     assert new_contact.invited_at is None
     assert len(mail.outbox) == 0
-    assert events("invite.sent").count() == 0
+    assert len(events("invite.sent")) == 0
     # заявка и request.created на месте — передача не теряется
-    assert events("request.created").count() == 1
+    assert len(events("request.created")) == 1
     log = ActivityLog.objects.get(event_code="company.linked_by_inn")
     assert log.company_id == existing.pk
     assert "проверьте контакты" in log.action
@@ -334,7 +335,7 @@ def test_request_created_is_emitted_once_with_source_crm_and_deal_in_request_sta
 
     created = list(events("request.created"))
     assert len(created) == 1
-    body = created[0].payload
+    body = created[0]["data"]
     assert body["crm_client_id"] == 1001
     assert body["erp_company_id"] == deal.company_id
     assert body["payload"]["source"] == "crm"
@@ -354,8 +355,8 @@ def test_invite_sent_reaches_crm_with_only_channels_that_really_went_out(api):
     assert resp.json()["invite"]["sent_via"] == ["email"]
     sent = list(events("invite.sent"))
     assert len(sent) == 1
-    assert sent[0].payload["crm_client_id"] == 1001
-    assert sent[0].payload["payload"]["channels"] == ["email"]
+    assert sent[0]["data"]["crm_client_id"] == 1001
+    assert sent[0]["data"]["payload"]["channels"] == ["email"]
     assert len(mail.outbox) == 1
 
 
@@ -365,11 +366,11 @@ def test_telegram_only_invite_is_not_claimed_as_sent(api):
 
     assert resp.status_code == 201
     assert resp.json()["invite"]["sent_via"] == [], "ERP в Telegram не пишет (INVALID_CHANNEL у службы приглашений)"
-    assert events("invite.sent").count() == 0
+    assert len(events("invite.sent")) == 0
     assert len(mail.outbox) == 0
     # заявка и сопоставление при этом на месте — передача не теряется из-за недоставленного приглашения
     assert resp.json()["erp_request_id"] is not None
-    assert events("request.created").count() == 1
+    assert len(events("request.created")) == 1
 
 
 @pytest.mark.django_db
@@ -378,7 +379,7 @@ def test_contact_without_email_gets_no_invite_but_handoff_succeeds(api):
     resp = handoff(api, body)
     assert resp.status_code == 201
     assert resp.json()["invite"]["sent_via"] == []
-    assert events("invite.sent").count() == 0
+    assert len(events("invite.sent")) == 0
 
 
 @pytest.mark.django_db
@@ -387,8 +388,8 @@ def test_without_create_request_no_deal_and_no_request_event(api):
     assert resp.status_code == 201
     assert resp.json()["erp_request_id"] is None
     assert Deal.objects.count() == 0
-    assert events("request.created").count() == 0
-    assert events("invite.sent").count() == 1
+    assert len(events("request.created")) == 0
+    assert len(events("invite.sent")) == 1
 
 
 # ─── Согласие ──────────────────────────────────────────────────────────────────────────────────────
@@ -427,11 +428,11 @@ def test_consent_is_required_by_contract(api):
 def test_same_key_same_body_replays_first_answer_without_second_effects(api):
     key = str(uuid.uuid4())
     first = handoff(api, payload(), key)
-    events_count = events().count()
+    events_count = len(events())
     replay = handoff(api, payload(), key)
     assert replay.status_code == first.status_code == 201
     assert replay.json() == first.json()
-    assert events().count() == events_count
+    assert len(events()) == events_count
 
 
 # ─── Параллельные передачи ─────────────────────────────────────────────────────────────────────────
@@ -474,8 +475,8 @@ def test_two_parallel_handoffs_of_one_client_make_one_company_one_deal_and_one_s
     assert Company.objects.count() == 1
     assert Deal.objects.count() == 1
     assert CrmClientMapping.objects.count() == 1
-    assert events("request.created").count() == 1
-    assert events("invite.sent").count() == 1
+    assert len(events("request.created")) == 1
+    assert len(events("invite.sent")) == 1
     assert len(mail.outbox) == 1
 
 

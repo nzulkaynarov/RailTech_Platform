@@ -45,7 +45,7 @@ check "$EDGE_URL/"
 if [[ "$failed" == 1 ]]; then
   echo
   echo "Что делать: make ps (все ли сервисы healthy), make logs s=api,"
-  echo "curl -s $API_URL/ready (какая зависимость fail), docs/runbooks/dev-stand.md"
+  echo "curl -s $API_URL/ready (какая зависимость fail), docs/runbooks/crm/dev-stand.md"
   exit 1
 fi
 echo "Smoke OK"

@@ -13,6 +13,14 @@
 #
 # Запись, которой ничего не соответствует (изменение уже слито), печатается предупреждением: удалите её.
 exceptions:
+  # B3 (волна 11): новый код ошибки портала REQUISITES_MANAGED_BY_CRM (PUT /company: название и ИНН клиента ведёт CRM,
+  # ORCHESTRATOR §3 п. 16). ErrorCode — открытое множество: `detail` описан как anyOf [ErrorCode, string], а Cabinet по незнакомому
+  # коду показывает текст по HTTP-статусу (контракт, Q-17). Потребитель один (Cabinet того же релиза), каждая операция получает
+  # проверку на одно и то же добавленное значение. Удалить после слияния B3 (проверка напечатает предупреждение).
+  - file: erp-portal.yaml
+    id: response-property-enum-value-added
+    reason: "B3: ErrorCode открыт (anyOf со string), Cabinet обрабатывает незнакомый код по статусу; единственный потребитель выкатывается тем же релизом"
+    until: 2026-12-31
   # B4 (волна 11): приёмник шины /bus/v1/events заменяет вебхук ERP → CRM. Вызывающая сторона (ERP) переходит на шину в B3,
   # данных прода нет (карт-бланш владельца, runbook wave11-bus-v1), поэтому deprecated и срок отказа не нужны. Запись удалить
   # сразу после слияния B4 (проверка напечатает предупреждение, что она ничему не соответствует).
@@ -22,46 +30,3 @@ exceptions:
     operation: POST
     reason: "B4: вебхук ERP → CRM заменён шиной rt_bus (POST /bus/v1/events), вызывающая сторона ERP переведена в B3; потребителей нет"
     until: 2026-12-31
-  # R-2 (волна 9, ADR-0012): BFF Платформы 0.2.4 → 0.3.0 — роли стали данными (RoleRef вместо кодов). BFF 0.x, единственный
-  # потребитель — web Платформы, который выкатывается тем же релизом; внешних клиентов и данных прода нет (карт-бланш владельца).
-  # Удалить после слияния R-2 (проверка напечатает, что запись ничему не соответствует).
-  - file: platform-bff.yaml
-    id: new-required-request-property
-    reason: "R-2: BFF 0.3.0 (ADR-0012) — роли как данные; потребитель только web Платформы того же релиза"
-    until: 2026-11-30
-  - file: platform-bff.yaml
-    id: request-parameter-enum-value-removed
-    reason: "R-2: BFF 0.3.0 (ADR-0012) — роли как данные; потребитель только web Платформы того же релиза"
-    until: 2026-11-30
-  - file: platform-bff.yaml
-    id: request-parameter-pattern-added
-    reason: "R-2: BFF 0.3.0 (ADR-0012) — роли как данные; потребитель только web Платформы того же релиза"
-    until: 2026-11-30
-  - file: platform-bff.yaml
-    id: request-property-one-of-removed
-    reason: "R-2: BFF 0.3.0 (ADR-0012) — роли как данные; потребитель только web Платформы того же релиза"
-    until: 2026-11-30
-  - file: platform-bff.yaml
-    id: request-property-removed
-    reason: "R-2: BFF 0.3.0 (ADR-0012) — роли как данные; потребитель только web Платформы того же релиза"
-    until: 2026-11-30
-  - file: platform-bff.yaml
-    id: response-property-enum-value-added
-    reason: "R-2: BFF 0.3.0 (ADR-0012) — роли как данные; потребитель только web Платформы того же релиза"
-    until: 2026-11-30
-  - file: platform-bff.yaml
-    id: response-property-one-of-added
-    reason: "R-2: BFF 0.3.0 (ADR-0012) — роли как данные; потребитель только web Платформы того же релиза"
-    until: 2026-11-30
-  - file: platform-bff.yaml
-    id: response-property-type-changed
-    reason: "R-2: BFF 0.3.0 (ADR-0012) — роли как данные; потребитель только web Платформы того же релиза"
-    until: 2026-11-30
-  - file: platform-bff.yaml
-    id: response-property-unique-items-unset
-    reason: "R-2: BFF 0.3.0 (ADR-0012) — роли как данные; потребитель только web Платформы того же релиза"
-    until: 2026-11-30
-  - file: platform-bff.yaml
-    id: response-required-property-removed
-    reason: "R-2: BFF 0.3.0 (ADR-0012) — роли как данные; потребитель только web Платформы того же релиза"
-    until: 2026-11-30

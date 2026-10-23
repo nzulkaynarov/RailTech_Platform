@@ -15,15 +15,13 @@ import hashlib
 import io
 import logging
 from datetime import timedelta
-from unittest.mock import MagicMock, patch
 
 import pytest
 from django.core.management import call_command
 from django.utils import timezone
-from integration.models import CredentialSlot, IntegrationWebhookEvent, PairingCode, ServiceCredential
+from integration.bus import derive_pair_secret, pair_secrets
+from integration.models import CredentialSlot, PairingCode, ServiceCredential
 from integration.services import credentials, pairing
-from integration.services.webhooks import verify_signature_v2, webhook_signing_secret
-from integration.tasks import deliver_webhook_event
 from rest_framework.test import APIClient
 from rest_framework.throttling import SimpleRateThrottle
 
@@ -138,24 +136,18 @@ def test_after_pairing_db_tokens_work_and_env_token_is_ignored():
     assert health("wrong-token") == 401
 
 
-def test_webhooks_are_signed_with_the_secret_from_db(paired):
-    assert webhook_signing_secret() == NEW_SECRET, "секрет из БД перекрывает ERP_WEBHOOK_SECRET из .env"
-    event = IntegrationWebhookEvent.objects.create(
-        event_type="invite.sent",
-        target_url="http://crm.test/events",
-        payload={"event": "invite.sent", "occurred_at": timezone.now().isoformat()},
-    )
-    with patch("httpx.Client.post", return_value=MagicMock(status_code=200, text="OK")) as post:
-        assert deliver_webhook_event(event.id) is True
-    sent = post.call_args.kwargs
-    headers = sent["headers"]
-    args = (headers["X-Event-Id"], headers["X-Timestamp"], sent["content"], headers["X-Signature"])
-    assert verify_signature_v2(NEW_SECRET, *args)  # подпись v2 (FIX-61) секретом из БД
-    assert not verify_signature_v2("test-webhook-secret", *args)
+def test_bus_pair_secrets_are_derived_from_the_secret_from_db(paired):
+    """Секрет сопряжения из БД перекрывает `ERP_WEBHOOK_SECRET` из .env; от него шина выводит секреты пары CRM ↔ ERP (L12)."""
+    assert credentials.webhook_secret() == NEW_SECRET
+    assert credentials.webhook_secrets() == [NEW_SECRET]
+    assert pair_secrets("erp", "crm") == [derive_pair_secret(NEW_SECRET, "erp", "crm")]
+    assert pair_secrets("crm", "erp") == [derive_pair_secret(NEW_SECRET, "crm", "erp")]
+    assert derive_pair_secret("test-webhook-secret", "erp", "crm") not in pair_secrets("erp", "crm")
 
 
 def test_webhook_secret_falls_back_to_env_without_pairing():
-    assert webhook_signing_secret() == "test-webhook-secret"
+    assert credentials.webhook_secret() == "test-webhook-secret"
+    assert pair_secrets("erp", "crm") == [derive_pair_secret("test-webhook-secret", "erp", "crm")]
 
 
 def test_code_cannot_be_used_twice(paired):
@@ -224,7 +216,7 @@ def test_second_pairing_replaces_everything(paired):
     assert accept(code, crm=ROTATED_CRM_TOKEN, erp=ROTATED_ERP_TOKEN, webhook=ROTATED_SECRET).status_code == 200
     assert health(ROTATED_CRM_TOKEN) == 200
     assert health(NEW_CRM_TOKEN) == 401, "прежние токены гаснут сразу"
-    assert webhook_signing_secret() == ROTATED_SECRET
+    assert credentials.webhook_secret() == ROTATED_SECRET
 
 
 def test_attempts_are_rate_limited(monkeypatch):
@@ -254,7 +246,7 @@ def test_rotation_keeps_two_tokens_active_then_the_old_one_dies(paired, settings
     assert health(NEW_CRM_TOKEN) == 200, "переход: старый токен ещё работает"
     assert health(ROTATED_CRM_TOKEN) == 200, "и новый тоже"
     assert credentials.erp_to_crm_token() == ROTATED_ERP_TOKEN
-    assert webhook_signing_secret() == ROTATED_SECRET, "вебхуки подписываются новым секретом сразу"
+    assert credentials.webhook_secret() == ROTATED_SECRET, "секрет пары шины выводится из нового секрета сразу"
 
     ServiceCredential.objects.filter(slot=CredentialSlot.CRM_TO_ERP_PREVIOUS).update(
         expires_at=timezone.now() - timedelta(seconds=1)
@@ -446,7 +438,7 @@ def test_undecryptable_secrets_fall_back_to_env(paired, settings, caplog):
     settings.SECRET_KEY = "another-secret-key-after-rotation-of-django-secret"
     with caplog.at_level(logging.ERROR):
         assert health(ENV_TOKEN) == 200
-        assert webhook_signing_secret() == "test-webhook-secret"
+        assert credentials.webhook_secret() == "test-webhook-secret"
     assert health(NEW_CRM_TOKEN) == 401
     assert "undecryptable" in caplog.text
     assert NEW_CRM_TOKEN not in caplog.text

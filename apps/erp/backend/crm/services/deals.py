@@ -37,7 +37,7 @@ def user_can_access_deal(user: CustomUser, deal: Deal) -> bool:
 # ──────────────────────────────────────────────────────────────────────────
 # Admin operations — single source of truth for business logic.
 # Called from both Django Unfold actions and DRF endpoints.
-# See ADR-0001 and CLAUDE.md IRON RULE 8.
+# See ADR-0001 and CONVENTIONS.md IRON RULE 8.
 # ──────────────────────────────────────────────────────────────────────────
 
 
@@ -105,6 +105,18 @@ def register_new_deal(deal: Deal, actor: CustomUser) -> Deal:
         from .assignment import assign_creator_as_owner
 
         assign_creator_as_owner(deal, actor)
+
+    # Событие шины `request.created` (rt_bus, B3): заявка заведена сотрудником — источник `erp` (портал и передача из CRM
+    # публикуют своё, со своим источником). Сделка без клиента (калькулятор) события не даёт. Вызывать в транзакции создания.
+    from integration.services import events
+
+    events.publish_request_created(
+        deal,
+        source="erp",
+        erp_request_id=deal.id,
+        summary=deal.title or f"Заявка #{deal.id}",
+        actor=events.build_actor(user=actor),
+    )
     return deal
 
 
@@ -131,6 +143,33 @@ def assert_user_may_change_stage(deal: Deal, actor: Optional[CustomUser], target
     return None
 
 
+def _publish_stage_events(deal: Deal, prev_code: Optional[str]) -> None:
+    """События шины о смене стадии: `deal.stage_changed` (стадия контракта изменилась) и итог — `deal.won` / `deal.lost`.
+
+    Публикуются в транзакции смены стадии (B3, rt_bus): сбой публикации откатывает переход. Сделка без компании клиента
+    (черновик калькулятора) событий не даёт.
+    """
+    from integration.services import events, stages
+
+    if not deal.company_id:
+        return
+    curr_code = stages.fsm_code(deal)
+    if not curr_code or prev_code == curr_code:
+        return
+    prev_stage = stages.deal_stage(deal, with_fsm_code=prev_code)
+    curr_stage = stages.deal_stage(deal)
+    if prev_stage != curr_stage:
+        events.publish_deal_stage_changed(deal, from_stage=prev_stage, to_stage=curr_stage)
+    outcome = stages.fsm_outcome(curr_code)
+    if outcome == "won":
+        events.publish_deal_outcome(deal, won=True)
+    elif outcome == "lost":
+        events.publish_deal_outcome(
+            deal, won=False, lost_reason=getattr(deal, "lost_reason", "") or "Сделка закрыта со статусом lost"
+        )
+
+
+@transaction.atomic
 def transition_deal_stage(
     deal: Deal,
     target_stage_code: str,
@@ -187,6 +226,7 @@ def transition_deal_stage(
     old_stage_name = deal.stage.name if deal.stage else "—"
     deal.stage = target_stage
     deal.save(update_fields=["stage"])
+    _publish_stage_events(deal, old_stage_code or None)
 
     from core.audit import log_admin_action
 

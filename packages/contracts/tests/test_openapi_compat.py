@@ -250,6 +250,76 @@ def test_major_helpers() -> None:
     }
 
 
+# ─── до 1.0: ломающее — повышением минорной ───────────────────────────────────────────────────
+
+
+def _versioned(
+    base_version: str, head_version: str, mutate: Any = _remove_path
+) -> tuple[dict[str, Any], dict[str, Any]]:
+    base = mutated(lambda s: s["info"].update(version=base_version))
+
+    def head_mutation(s: dict[str, Any]) -> None:
+        mutate(s)
+        s["info"]["version"] = head_version
+
+    return base, mutated(head_mutation)
+
+
+def test_pre_1_0_minor_bump_allows_breaking(tmp_path: Path) -> None:
+    for mutate in (_remove_path, _remove_response_field, _required_request_field, _narrow_enum):
+        base, head = _versioned("0.2.4", "0.3.0", mutate)
+        errors, _, notes, _ = verdict(base, head, tmp_path)
+        assert errors == [], errors
+        assert notes and "0.2.4 → 0.3.0" in notes[0], notes
+
+
+def test_pre_1_0_same_minor_is_red_with_hint(tmp_path: Path) -> None:
+    base, head = _versioned("0.2.4", "0.2.5")
+    errors = verdict(base, head, tmp_path)[0]
+    assert errors and "api-path-removed-without-deprecation" in errors[0], errors
+    assert "поднимите минорную версию (до 1.0" in errors[0] and "новый мажор" in errors[0], errors
+    # Версия не менялась вовсе — тоже красный.
+    base, head = _versioned("0.2.4", "0.2.4")
+    assert verdict(base, head, tmp_path)[0]
+
+
+def test_pre_1_0_additive_change_is_green_without_bump(tmp_path: Path) -> None:
+    base, head = _versioned("0.2.4", "0.2.5", _add_optional_and_path)
+    assert verdict(base, head, tmp_path)[0] == []
+
+
+def test_from_0_x_to_1_0_breaking_is_allowed(tmp_path: Path) -> None:
+    base, head = _versioned("0.9.3", "1.0.0")
+    errors, _, notes, _ = verdict(base, head, tmp_path)
+    assert errors == [] and "первая стабильная" in notes[0], (errors, notes)
+
+
+def test_from_1_0_breaking_without_new_major_is_red(tmp_path: Path) -> None:
+    base, head = _versioned("1.0.0", "1.1.0")
+    errors = verdict(base, head, tmp_path)[0]
+    assert errors and "api-path-removed-without-deprecation" in errors[0], errors
+    assert "поднимите минорную" not in errors[0], errors  # для ≥ 1.0 подсказки про минорную нет
+    # Ни новая минорная, ни патч не оправдывают ломку и при 1.x → 1.y.
+    assert verdict(*_versioned("1.2.0", "1.9.0", _narrow_enum), tmp_path)[0]
+
+
+def test_version_downgrade_is_error(tmp_path: Path) -> None:
+    for old, new in (("0.3.0", "0.2.9"), ("1.2.0", "0.9.0"), ("1.2.0", "1.1.0")):
+        base, head = _versioned(old, new, lambda s: None)
+        errors = verdict(base, head, tmp_path)[0]
+        assert errors and "версия понижена" in errors[0], (old, new, errors)
+    # Понижение при ломающем: 0.3.0 → 0.2.0 минорной не повышает — две ошибки (версия и сама ломка).
+    base, head = _versioned("0.3.0", "0.2.0")
+    assert len(verdict(base, head, tmp_path)[0]) == 2
+
+
+def test_info_version_helper() -> None:
+    assert oc.info_version({"info": {"version": "0.2.4"}}) == (0, 2, 4)
+    assert oc.info_version({"info": {"version": "v1.3"}}) == (1, 3, 0)
+    assert oc.info_version({"info": {}}) == (0, 0, 0)
+    assert oc.info_version({"info": {"version": "x"}}) == (0, 0, 0)
+
+
 # ─── исключения ───────────────────────────────────────────────────────────────────────────────
 
 

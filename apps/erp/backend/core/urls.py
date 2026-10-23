@@ -4,6 +4,7 @@ from django.urls import include, path, re_path
 from drf_spectacular.utils import extend_schema
 from drf_spectacular.views import SpectacularAPIView, SpectacularRedocView, SpectacularSwaggerView
 from finance.views import DealMarginDeviationView, DealPurchaseActualDetailView, DealPurchaseActualsView
+from integration.bus import get_bus
 from integration.public_views import PublicDocumentLinkView
 from integration.staff_views import CrmPairingCodeView, CrmPairingStatusView
 from portal.exceptions import portal_not_found
@@ -18,6 +19,7 @@ from portal.public_views import (
 )
 from rest_framework.permissions import IsAdminUser
 from rest_framework.routers import DefaultRouter
+from rt_bus.django.views import bus_view
 
 from accounts.views import (
     CompanyRoleViewSet,
@@ -169,6 +171,8 @@ urlpatterns = (
         path("api/portal/v1/", include("portal.urls")),
         re_path(r"^api/portal/", portal_not_found, name="portal-not-found"),  # FIX-54: JSON 404 вместо HTML Django
         path("api/integration/v1/", include("integration.urls")),
+        # Приёмник шины rt_bus (B3): подпись HMAC v2, не JWT/сессия; снаружи закрыт Caddy (404), ходит только сеть compose.
+        path("bus/v1/events", bus_view(get_bus), name="rt-bus-events"),
         path("api/v1/integration/crm-pairing/", CrmPairingStatusView.as_view(), name="crm-pairing-status"),
         path("api/v1/integration/crm-pairing/code/", CrmPairingCodeView.as_view(), name="crm-pairing-code"),
         path("api/v1/auth/sso/token/", SsoIssueTokenView.as_view(), name="sso-token"),
@@ -314,12 +318,13 @@ urlpatterns = (
     )
     # Serve PUBLIC media (avatars, logos, product images, category/manufacturer assets): ERP reads them from the
     # `erp-public` bucket (RustFS is not exposed) and streams them; Caddy of the ERP and Cabinet domains routes
-    # /media/* here. This whitelists ONLY public display-asset prefixes; private files (companies/*/documents,
+    # /media/* here. This whitelists ONLY public display-asset prefixes (the document-profile logo is public too: it is
+    # printed on the КП/contract forms and shown in the cabinet); private files (companies/*/documents, products/*/docs,
     # deals/**, sourcing/imports, temp) never match and stay unreachable via /media (served only through auth views).
     + [
         re_path(
-            r"^media/(?P<path>(?:users/\d+/avatar|companies/\d+/logo|manufacturers/\d+/logo"
-            r"|products/\d+/images|categories/\d+/icon)/[^/]+)$",
+            r"^media/(?P<path>(?:users/\d+/avatar|companies/\d+/logo|companies/\d+/doc-profile/logo"
+            r"|manufacturers/\d+/logo|products/\d+/images|categories/\d+/icon)/[^/]+)$",
             serve_public_media,
             name="public-media",
         ),

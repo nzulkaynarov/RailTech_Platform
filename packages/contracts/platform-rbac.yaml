@@ -1,5 +1,5 @@
 # Каталог возможностей Платформы, версия 2 (ADR-0012). Роли — данные (CRM), каталог — код и контракт.
-# Основание: ADR-0012, docs/runbooks/wave9-roles.md §3.2, SPEC-v3 §4.2, apps/platform/docs/04-integration-map.md §4.
+# Основание: ADR-0012, docs/runbooks/wave9-roles.md §3.2, SPEC-v3 §4.2, docs/architecture/integration-map.md §4.
 # Что в каталоге: разделы (`resources`) с уровнями доступа и отображением в права бэкендов (CRM casbin и ERP `Permission`),
 # пункты меню (`menu`), поля с ограничением (`restricted_fields`), виды работы «Моей очереди» (`queue`), две системные роли
 # (`system_roles`, неизменны), шаблоны ролей (`templates`, при первом запуске создаются обычными редактируемыми ролями)
@@ -25,7 +25,7 @@ system_roles:
     access:
       dashboard.queue: full
       dashboard.summary: full
-      crm.leads: full
+      crm.leads: read
       crm.clients: full
       eds.inbox: full
       eds.drafts: full
@@ -38,10 +38,12 @@ system_roles:
       erp.calc.services: full
       erp.stock: full
       chats.internal: full
-      chats.external: full
+      chats.external: read
       company.settings: full
       admin: read
     restricted_fields: [cost_margin, supplier_prices]
+    # R-1b (уточнение ADR-0012 п. 2): директор видит воронку и переписку (`crm.leads`, `chats.external` — read), но не
+    # берёт лиды и не отвечает клиентам; директору, который сам ведёт лиды, администратор выдаёт вторую роль (объединение).
 
 # Шаблоны — строки матрицы SPEC-v3 §4.2 (колонки MANAGER, SUPPLY, ENGINEER, ACCOUNTANT) + два новых раздела расчёта.
 templates:

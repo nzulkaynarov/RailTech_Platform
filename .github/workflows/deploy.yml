@@ -108,9 +108,13 @@ jobs:
           cache-to: type=gha,mode=max,scope=crm-frontend
 
       - name: Образ rt-erp-backend
+        # rt_bus и контракты шины вшиваются именованными контекстами (L14): COPY --from=rtbus / --from=contracts в Dockerfile
         uses: docker/build-push-action@v6
         with:
           context: apps/erp/backend
+          build-contexts: |
+            rtbus=packages/rt-bus
+            contracts=packages/contracts
           push: true
           tags: ghcr.io/${{ steps.ver.outputs.owner }}/rt-erp-backend:${{ steps.ver.outputs.tag }}
           cache-from: type=gha,scope=erp-backend
@@ -196,7 +200,7 @@ jobs:
           TAG: ${{ steps.ver.outputs.tag }}
         run: |
           # TAG — полный git sha из шага ver; подстановка на клиенте намеренная
-          tar -czf release.tgz infra apps/crm/infra/casbin packages/contracts/mcp-tools.json packages/contracts/events.schema.json
+          tar -czf release.tgz infra apps/crm/infra/casbin packages/contracts/mcp-tools.json
           # shellcheck disable=SC2029
           ssh app "mkdir -p /opt/rt/releases/$TAG"
           # shellcheck disable=SC2029
