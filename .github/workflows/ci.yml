@@ -702,6 +702,9 @@ jobs:
           context: ${{ steps.p.outputs.context }}
           file: ${{ steps.p.outputs.file }}
           target: ${{ steps.p.outputs.target }}
+          build-contexts: |
+            rtbus=packages/rt-bus
+            contracts=packages/contracts
           platforms: linux/amd64
           load: true
           tags: ${{ steps.p.outputs.tag }}

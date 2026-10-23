@@ -228,6 +228,9 @@ cmd_build() {
   IFS='|' read -r ctx file target _ <<<"$spec"
   [[ -z "$file" ]] || args+=(-f "$ROOT/$ctx/$file")
   [[ -z "$target" ]] || args+=(--target "$target")
+  if [[ "$name" == "rt-crm-backend" || "$name" == "rt-erp-backend" ]]; then
+    args+=(--build-context "rtbus=$ROOT/packages/rt-bus" --build-context "contracts=$ROOT/packages/contracts")
+  fi
   say "сборка $name (linux/amd64, $ctx) → $CHECK_REPO/$name:amd64"
   docker build --platform linux/amd64 "${args[@]+"${args[@]}"}" -t "$CHECK_REPO/$name:amd64" "$ROOT/$ctx"
 }
@@ -334,7 +337,7 @@ EOF
   local t0=$SECONDS kids
   rc=0
   PROBE_TIMEOUT=2 probe_one "$ok_image" python -c "import time; time.sleep(60)" || rc=$?
-  kids="$(pgrep -P $$ || true)"
+  kids="$(jobs -p)"
   if [[ $rc -eq 0 || "$PROBE_OUT" != *"таймаут"* || $((SECONDS - t0)) -gt 20 || -n "$kids" ]]; then
     printf '✘ selftest: таймаут проверки не сработал или оставил процессы (rc=%s, %s с, дочерние: %s)\n' "$rc" "$((SECONDS - t0))" "${kids:-нет}" >&2
     bad=1
