@@ -1,4 +1,7 @@
-"""Вход, выход, сессия и смена пароля (контракт: tag `auth`, 02-architecture.md §3)."""
+"""Вход, выход, сессия и смена пароля.
+
+Контракт: tag `auth`; устройство — docs/architecture/platform-bff.md §3.
+"""
 
 from fastapi import APIRouter, Request, Response, status
 

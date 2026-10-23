@@ -3,7 +3,7 @@ import { useMemo } from "react";
 import { useStreamLive } from "./streamState";
 
 /**
- * Опрос — запасной путь (02-architecture.md §5, 03-frontend.md §7). Пока поток подсказок BFF (`/events/stream`, SSE) жив,
+ * Опрос — запасной путь (docs/architecture/platform-bff.md §5, docs/architecture/platform-frontend.md §7). Пока поток подсказок BFF (`/events/stream`, SSE) жив,
  * «Моя очередь», бейджи меню и колокольчик обновляются по событию шины, а опрос редкий — страховка от потерянной
  * подсказки. Поток оборвался — прежний опрос раз в 30 секунд и при возврате на вкладку (TanStack Query:
  * `refetchOnWindowFocus` берёт только устаревшие данные, `staleTime` клиента — 5 с). Фоновые вкладки не опрашиваются.

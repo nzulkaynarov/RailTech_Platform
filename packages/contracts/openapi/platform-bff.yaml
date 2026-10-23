@@ -4,11 +4,11 @@ info:
   version: 0.4.0
   summary: Пространство `/api/v1/` BFF Платформы — вызывает SPA `apps/platform/web` от имени сотрудника.
   description: |
-    Контракт по ADR-0011 и `apps/platform/docs/02-architecture.md`. Версия 0.1.0 (INF-P0-1) покрывает фазу P1:
+    Контракт по ADR-0011 и `docs/architecture/platform-bff.md`. Версия 0.1.0 (INF-P0-1) покрывает фазу P1:
     сессия, профиль, счётчики меню, «Моя очередь», лента «Сегодня», уведомления, поиск. Экраны фаз P2–P4 добавляются
-    минорными версиями этого файла до кода (`apps/platform/docs/04-integration-map.md` §1).
+    минорными версиями этого файла до кода (`docs/architecture/integration-map.md` §1).
 
-    Словарь — SPEC-v3 §2 (`apps/platform/docs/SPEC-v3.md`): старых кодов стадий и статусов CRM и ERP в ответах нет.
+    Словарь — SPEC-v3 §2 (`docs/product/SPEC-v3.md`): старых кодов стадий и статусов CRM и ERP в ответах нет.
     BFF не имеет своей базы: данные приходят из CRM и ERP, каждый вызов бэкенда — с токеном сотрудника.
 
     **Сессия.** `POST /auth/login` ставит cookie `rt_pf_session` (`HttpOnly; Secure; SameSite=Lax; Path=/`) и CSRF-cookie

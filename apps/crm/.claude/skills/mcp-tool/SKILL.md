@@ -9,7 +9,7 @@ description: Добавить инструмент в MCP-сервер (kb-mcp, 
 
 ## Шаги
 
-1. Проверь, что инструмент есть в таблице `SPEC §7.1` и в текущей фазе `PLAN.md`. Нет — вопрос человеку (`docs/QUESTIONS.md`).
+1. Проверь, что инструмент есть в таблице `SPEC §7.1` и в текущей фазе `docs/history/crm/PLAN.md`. Нет — вопрос человеку (`docs/QUESTIONS.md`).
 2. Сверь API FastMCP с установленной версией: `cd backend && uv run python -c "import mcp, importlib.metadata as m; print(m.version('mcp'))"` и документацией (WebFetch). Не выдумывай декораторы/параметры.
 3. Реализация в `backend/app/mcp/<kb|crm|docs>_server.py`, общее — `app/mcp/common.py`, запуск — `app/mcp/servers.py`:
    - входная схема — Pydantic-модель, описание полей для модели;

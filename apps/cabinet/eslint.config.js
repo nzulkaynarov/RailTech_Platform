@@ -5,7 +5,7 @@ import reactRefresh from 'eslint-plugin-react-refresh';
 import tseslint from 'typescript-eslint';
 
 /**
- * Правила RailTech из CLAUDE.md §5 (те же, что в apps/erp/frontend): только семантические токены
+ * Правила RailTech из CONVENTIONS.md §5 (те же, что в apps/erp/frontend): только семантические токены
  * shadcn (`bg-primary`, `text-destructive`…) и шкала размеров Tailwind — без палитры и пикселей.
  */
 const railtechPlugin = {
@@ -15,7 +15,7 @@ const railtechPlugin = {
         type: 'problem',
         messages: {
           found:
-            'Use semantic tokens (bg-primary, text-destructive, etc.) instead of hardcoded color "{{match}}". See CLAUDE.md §5.',
+            'Use semantic tokens (bg-primary, text-destructive, etc.) instead of hardcoded color "{{match}}". See CONVENTIONS.md §5.',
         },
       },
       create(context) {
@@ -41,7 +41,7 @@ const railtechPlugin = {
       meta: {
         type: 'problem',
         messages: {
-          found: 'Use Tailwind scale (text-xs, text-sm, etc.) instead of arbitrary "{{match}}". See CLAUDE.md §5.',
+          found: 'Use Tailwind scale (text-xs, text-sm, etc.) instead of arbitrary "{{match}}". See CONVENTIONS.md §5.',
         },
       },
       create(context) {
@@ -79,7 +79,7 @@ export default tseslint.config(
       railtech: railtechPlugin,
     },
     rules: {
-      // Правила React Compiler включены целиком (CLAUDE.md §5) — в новом коде долга нет.
+      // Правила React Compiler включены целиком (CONVENTIONS.md §5) — в новом коде долга нет.
       ...reactHooks.configs.recommended.rules,
       'react-refresh/only-export-components': ['warn', { allowConstantExport: true }],
       'railtech/no-hardcoded-colors': 'error',

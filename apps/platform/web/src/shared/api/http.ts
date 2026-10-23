@@ -1,5 +1,5 @@
 /**
- * HTTP-слой для клиента orval (apps/platform/docs/03-frontend.md §7). Сессия — httpOnly-cookie
+ * HTTP-слой для клиента orval (docs/architecture/platform-frontend.md §7). Сессия — httpOnly-cookie
  * `rt_pf_session`, браузер её не читает; мутации несут `X-CSRF-Token` из cookie `rt_pf_csrf`
  * (double submit, контракт platform-bff.yaml). 401 `SESSION_EXPIRED` сообщается подписчикам —
  * экран входа появится в фазе P1.

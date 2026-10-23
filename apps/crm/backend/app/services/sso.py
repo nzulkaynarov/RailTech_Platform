@@ -1,4 +1,4 @@
-"""Сервис платформенного SSO CRM ↔ ERP (CONTRACTS §6, packages/contracts/sso-token.md, M3-CRM-06).
+"""Сервис платформенного SSO CRM ↔ ERP (CONTRACTS §6, docs/architecture/sso-token.md, M3-CRM-06).
 
 Реализует:
 1. Выпуск SSO-токена в ERP (iss=crm, aud=erp, sub=crm_user_id).
@@ -168,7 +168,8 @@ class SsoService:
                 logger.warning("sso_replay_detected", jti=jti)
                 raise AuthError("token already used")
 
-            # Пользователь — только по sub (id в CRM); по e-mail не ищем (sso-token.md, S-3).
+            # Пользователь — только по sub (id в CRM); по e-mail не ищем
+            # (docs/architecture/sso-token.md, S-3).
             user: User | None = None
             with contextlib.suppress(ValueError, TypeError):
                 user = await session.get(User, int(payload["sub"]))

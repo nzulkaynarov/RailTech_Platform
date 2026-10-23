@@ -1,4 +1,4 @@
-"""Tests for ERP SSO (Employee CRM ↔ ERP SSO, CONTRACTS §6, packages/contracts/sso-token.md, M3-CRM-06).
+"""Tests for ERP SSO (Employee CRM ↔ ERP SSO, CONTRACTS §6, docs/architecture/sso-token.md, M3-CRM-06).
 
 Тестирует:
 1. Выпуск SSO-токена (POST /api/v1/auth/sso/token/)

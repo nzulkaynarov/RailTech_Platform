@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://railtech.uz/contracts/events/envelope.v1.json",
   "title": "Конверт события rt_bus v1",
-  "description": "CloudEvents 1.0, structured mode, JSON (ADR-0014; docs/CONTRACTS.md, раздел «Шина rt_bus»). Поле data проверяется отдельно схемой своего типа: uz.railtech.<домен>.<сущность>.<действие>.v<N> ↔ events/<домен>/<сущность>.<действие>.v<N>.json; dataschema — rt://contracts/events/<домен>/<сущность>.<действие>/v<N>. Отправитель строгий: заполняет все обязательные атрибуты по этой схеме. Читатель терпимый: неизвестные атрибуты-расширения CloudEvents (имена [a-z0-9]{1,20}) допускаются и игнорируются.",
+  "description": "CloudEvents 1.0, structured mode, JSON (ADR-0014; docs/architecture/CONTRACTS.md, раздел «Шина rt_bus»). Поле data проверяется отдельно схемой своего типа: uz.railtech.<домен>.<сущность>.<действие>.v<N> ↔ events/<домен>/<сущность>.<действие>.v<N>.json; dataschema — rt://contracts/events/<домен>/<сущность>.<действие>/v<N>. Отправитель строгий: заполняет все обязательные атрибуты по этой схеме. Читатель терпимый: неизвестные атрибуты-расширения CloudEvents (имена [a-z0-9]{1,20}) допускаются и игнорируются.",
   "type": "object",
   "required": [
     "specversion",

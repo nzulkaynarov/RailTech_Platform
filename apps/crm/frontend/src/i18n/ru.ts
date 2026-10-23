@@ -11,7 +11,7 @@ import { spend } from "./ru/spend";
 import { system } from "./ru/system";
 import { templates } from "./ru/templates";
 
-/** Тексты интерфейса CRM (команда работает на русском; CLAUDE.md §4 — без хардкода в компонентах).
+/** Тексты интерфейса CRM (команда работает на русском; CONVENTIONS.md §4 — без хардкода в компонентах).
  * Разделы — в `ru/*.ts`, чтобы словарь не превышал лимит файла. */
 export const ru = {
   ...core,
