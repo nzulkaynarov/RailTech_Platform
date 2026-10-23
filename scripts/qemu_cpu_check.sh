@@ -109,11 +109,18 @@ qemu_bin() {
   if [[ ! -x "$bin" ]]; then
     say "qemu-x86_64-static: извлекаю из пакета qemu-user-static ($QEMU_SRC_IMAGE), один раз → $bin"
     mkdir -p "$dir"
-    tmp="$(mktemp -d "$dir/.qemu.XXXXXX")"
+    local uid gid
+    uid="$(id -u)"
+    gid="$(id -g)"
     docker run --rm --platform linux/amd64 -v "$tmp:/out" "$QEMU_SRC_IMAGE" sh -c \
-      'apt-get update -qq >/dev/null && apt-get install -y -qq --no-install-recommends qemu-user-static >/dev/null && cp /usr/bin/qemu-x86_64-static /out/' >&2 \
+      "set -e
+       apt-get update -qq >/dev/null
+       apt-get install -y -qq --no-install-recommends qemu-user-static >/dev/null
+       cp /usr/bin/qemu-x86_64-static /out/
+       chmod 755 /out/qemu-x86_64-static
+       chown $uid:$gid /out/qemu-x86_64-static 2>/dev/null || true" >&2 \
       || { rm -rf "$tmp"; fail "не удалось получить qemu-x86_64-static из $QEMU_SRC_IMAGE"; }
-    chmod 755 "$tmp/qemu-x86_64-static"
+    chmod 755 "$tmp/qemu-x86_64-static" 2>/dev/null || true
     mv "$tmp/qemu-x86_64-static" "$bin"
     rmdir "$tmp"
   fi
