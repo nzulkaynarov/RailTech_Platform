@@ -449,7 +449,12 @@ class ProductSerializer(_CostGateMixin, serializers.ModelSerializer):
         docs = obj.documents.all()
         doc = next(iter(docs), None)
         if doc:
-            url = doc.file.url if doc.file else doc.file_url
+            # Загруженный файл приватный (S0-9): `/media/...` для него не открывается — отдаём путь аутентифицированного скачивания.
+            url = (
+                reverse("product-download-document", kwargs={"pk": doc.product_id, "doc_id": doc.pk})
+                if doc.file
+                else doc.file_url
+            )
             if url:
                 request = self.context.get("request")
                 if request and not url.startswith("http"):

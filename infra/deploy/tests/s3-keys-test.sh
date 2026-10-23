@@ -107,6 +107,13 @@ if command -v jq >/dev/null; then
     || fail "политика: в ro-бакете есть что-то кроме чтения"
 fi
 
+# Удаление «лишних» пользователей: корневой ключ не трогается, чужие удаляются, свои остаются (rc подменён заглушкой).
+fn="$(sed -n '/^prune_users() {/,/^}/p' "$init")"
+[[ -n "$fn" ]] || fail "init.sh: нет prune_users"
+printf 'keep-erp\nroot-ak\nstranger\n' > "$tmp/users.now"; printf 'keep-erp\n' > "$tmp/users.allowed"
+removed="$(bash -c 'log() { :; }; rc() { [ "$1 $2 $3" = "admin user rm" ] && echo "$5" >&2; }; S3_ROOT_ACCESS_KEY=root-ak; '"$fn"'; prune_users "$1" < "$2"' _ "$tmp/users.allowed" "$tmp/users.now" 2>&1)"
+[[ "$removed" == stranger ]] || fail "prune_users удалил не то: '$removed' (ожидался только stranger; корень и свои не трогаются)"
+
 # 4. Генерация ключей и перенос на VPS 2.
 file="$tmp/generated.env"
 out="$(bash "$root/infra/deploy/make-env-prod.sh" init "$file")"
@@ -122,15 +129,21 @@ all="$(grep -E '^S3_[A-Z]+_(ACCESS|SECRET)_KEY=' "$file" | cut -d= -f2- | sort)"
 val() { grep "^$1=" "$file" | cut -d= -f2-; }
 [[ "$(val BACKUP_RUSTFS_ACCESS_KEY)" == "$(val S3_BACKUP_ACCESS_KEY)" && "$(val BACKUP_RUSTFS_SECRET_KEY)" == "$(val S3_BACKUP_SECRET_KEY)" ]] || fail "BACKUP_RUSTFS_* не равны ключу сервиса backup"
 [[ "$(val WAL_S3_ACCESS_KEY)" == "$(val S3_WAL_ACCESS_KEY)" && "$(val WAL_S3_SECRET_KEY)" == "$(val S3_WAL_SECRET_KEY)" ]] || fail "WAL_S3_* не равны ключу сервиса wal"
-# Ротация: сменили ключ сервиса — копия для VPS 2 повторяет его при следующем init.
-sed -i.bak 's/^S3_WAL_SECRET_KEY=.*/S3_WAL_SECRET_KEY=rotated-secret/' "$file" && rm -f "$file.bak"
-bash "$root/infra/deploy/make-env-prod.sh" init "$file" >/dev/null
-[[ "$(val WAL_S3_SECRET_KEY)" == rotated-secret ]] || fail "после смены S3_WAL_SECRET_KEY копия WAL_S3_SECRET_KEY не обновилась"
+# Ротация: сменили ключ сервиса — `s3-keys` обновляет копию для VPS 2, `extract-s3` отдаёт её (после drop-db-only extract-db/init не годятся:
+# они заново сгенерировали бы WAL_ENC_KEY и пароли VPS 2).
 bash "$root/infra/deploy/make-env-prod.sh" extract-db "$file" > "$tmp/env.db"
 for v in WAL_S3_ACCESS_KEY WAL_S3_SECRET_KEY BACKUP_RUSTFS_ACCESS_KEY BACKUP_RUSTFS_SECRET_KEY; do grep -q "^$v=" "$tmp/env.db" || fail "extract-db не отдаёт $v"; done
 for n in ROOT ERP CRM LANGFUSE; do
   v="$(val "S3_${n}_SECRET_KEY")"; ! grep -qF -- "$v" "$tmp/env.db" || fail "extract-db отдал VPS 2 ключ $n"
 done
+enc_before="$(val WAL_ENC_KEY)"
+bash "$root/infra/deploy/make-env-prod.sh" drop-db-only "$file" >/dev/null
+sed -i.bak 's/^S3_WAL_SECRET_KEY=.*/S3_WAL_SECRET_KEY=rotated-secret/' "$file" && rm -f "$file.bak"
+bash "$root/infra/deploy/make-env-prod.sh" s3-keys "$file" >/dev/null
+! grep -qE '^(WAL_ENC_KEY|DB_SUPERUSER_PASSWORD|BACKUP_ENC_PASSPHRASE)=' "$file" || fail "s3-keys вернул переменные VPS 2 после drop-db-only"
+bash "$root/infra/deploy/make-env-prod.sh" extract-s3 "$file" > "$tmp/s3.vps2"
+[[ "$(grep '^WAL_S3_SECRET_KEY=' "$tmp/s3.vps2" | cut -d= -f2-)" == rotated-secret ]] || fail "после ротации S3_WAL_SECRET_KEY extract-s3 не отдал новый секрет"
+[[ -n "$enc_before" ]] || fail "WAL_ENC_KEY не был сгенерирован"
 # Прод до S0-9: прежний общий ключ становится корневым (RustFS и старая копия на VPS 2 не рвутся), остальные ключи генерируются.
 legacy="$tmp/legacy.env"
 grep -vE '^S3_(ROOT|ERP|CRM|LANGFUSE|WAL|BACKUP)_(ACCESS|SECRET)_KEY=' "$root/infra/.env.prod.example" > "$legacy"

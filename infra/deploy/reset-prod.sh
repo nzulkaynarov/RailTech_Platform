@@ -247,9 +247,11 @@ step_buckets() {
 set -eu
 rc alias set root "$S3_ENDPOINT" "$S3_ROOT_ACCESS_KEY" "$S3_ROOT_SECRET_KEY" >/dev/null
 for bucket in "$@"; do
-  if ! rc object list --recursive "root/$bucket/" >/dev/null 2>&1; then
-    echo "бакета $bucket нет — пропуск (создаст s3-init)"
-    continue
+  if ! probe="$(rc object list "root/$bucket/" 2>&1)"; then
+    case "$probe" in
+      *"Bucket not found"* | *NoSuchBucket*) echo "бакета $bucket нет — пропуск (создаст s3-init)"; continue ;;
+      *) echo "$bucket: не удалось прочитать бакет: $probe" >&2; exit 1 ;;
+    esac
   fi
   rc object remove --recursive --force "root/$bucket/" >/dev/null
   rc object remove --recursive --force --incomplete "root/$bucket/" >/dev/null

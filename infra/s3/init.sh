@@ -87,12 +87,17 @@ for svc in $SERVICES; do
   log "ключ сервиса $svc: политика rt-$svc (запись: $(rw_of "$svc"); только чтение: $(ro_of "$svc"))"
 done
 
-# 3. Чужие пользователи (старые ключи после смены идентификатора, заведённые вручную) удаляются.
+# 3. Чужие пользователи (старые ключи после смены идентификатора, заведённые вручную) удаляются. Корневой ключ не трогается никогда,
+# даже если RustFS покажет его в списке пользователей.
+prune_users() { # <файл со списком допустимых ключей> — на stdin текущие ключи, по одному на строку
+  while IFS= read -r existing; do
+    [ -n "$existing" ] || continue
+    [ "$existing" != "$S3_ROOT_ACCESS_KEY" ] || continue
+    grep -qxF -- "$existing" "$1" || { rc admin user rm root "$existing" >/dev/null; log "удалён пользователь вне списка"; }
+  done
+}
 rc admin user ls root --json | jq -r '.users[].accessKey' >"$work/existing"
-while IFS= read -r existing; do
-  [ -n "$existing" ] || continue
-  grep -qxF -- "$existing" "$work/access" || { rc admin user rm root "$existing" >/dev/null; log "удалён пользователь вне списка"; }
-done <"$work/existing"
+prune_users "$work/access" <"$work/existing"
 
 # 4. Жизненный цикл erp-temp: 1 сутки. Импорт заменяет набор правил целиком — повтор ничего не дублирует.
 cat >"$work/lifecycle.json" <<'JSON'

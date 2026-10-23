@@ -140,3 +140,24 @@ def test_document_key_is_not_served_through_media(world):
 
     assert key.startswith(f"products/{world['product'].pk}/docs/")
     assert APIClient().get(f"/media/{key}").status_code == 404
+
+
+def test_non_staff_cannot_download_a_product_document(world):
+    """Пользователь без членства в компании (клиентский аккаунт, которого в ERP нет) — 403, как у любого чтения каталога бэк-офиса."""
+    payload = _upload(world)
+    outsider = CustomUser.objects.create_user(email="out@docs.test", username="out@docs.test", password="pw")
+
+    response = _client_for(outsider).get(payload["file"])
+
+    assert response.status_code == 403
+
+
+def test_main_document_url_points_to_the_download_path(world):
+    _upload(world)
+    doc = world["product"].documents.get()
+
+    payload = _client_for(world["user"]).get(f"/api/v1/catalog/products/{world['product'].pk}/").json()
+
+    url = payload["main_document_url"]
+    assert f"/api/v1/catalog/products/{world['product'].pk}/download-document/{doc.pk}/" in url
+    assert "/media/" not in url
