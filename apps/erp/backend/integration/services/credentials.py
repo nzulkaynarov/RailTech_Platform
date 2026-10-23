@@ -3,7 +3,9 @@
 Источник по каждому секрету:
 - токены направления CRM→ERP: активны текущий и (на время ротации) прежний, пока `expires_at` не вышел; в БД пусто —
   `SERVICE_TOKEN_CRM_TO_ERP` из окружения (до двух значений через запятую, как раньше);
-- секрет подписи вебхуков: строка `webhook_secret` в БД, иначе первое значение `ERP_WEBHOOK_SECRET`.
+- секрет вебхуков сопряжения: строка `webhook_secret` в БД, иначе значения `ERP_WEBHOOK_SECRET`. Вебхуков ERP → CRM больше нет
+  (события идут по шине rt_bus, B3): секрет остался только как источник направленных секретов шины для пары CRM ↔ ERP
+  (`integration.bus.pair_secrets`, CONTRACTS §9, L12) — сам по шине не ходит и в подписи не участвует.
 
 Значения шифруются в БД (Fernet, ключ — из `SECRET_KEY`, как у секрета 2FA). Нечитаемое значение (сменили `SECRET_KEY`) —
 ошибка в лог без значения и возврат к `.env`: шов не должен падать 500-ми. В логи, ответы и аудит значения не попадают;
@@ -89,8 +91,12 @@ def env_crm_tokens() -> list[str]:
     return _env_list(getattr(settings, "SERVICE_TOKEN_CRM_TO_ERP", []))
 
 
+def env_webhook_secrets() -> list[str]:
+    return _env_list(getattr(settings, "ERP_WEBHOOK_SECRET", ""))
+
+
 def env_webhook_secret() -> str:
-    return next(iter(_env_list(getattr(settings, "ERP_WEBHOOK_SECRET", ""))), "")
+    return next(iter(env_webhook_secrets()), "")
 
 
 def stored_crm_token(rows: Optional[dict[str, ServiceCredential]] = None) -> Optional[str]:
@@ -133,10 +139,30 @@ def token_is_active(token: str) -> bool:
 
 
 def webhook_secret() -> str:
-    """Секрет, которым ERP подписывает вебхуки сейчас: БД, иначе `.env`. Пусто — секрета нет."""
+    """Секрет вебхуков сопряжения сейчас: БД, иначе `.env`. Пусто — секрета нет."""
     row = _rows().get(CredentialSlot.WEBHOOK_SECRET)
     stored = _decrypt(row) if row else None
     return stored or env_webhook_secret()
+
+
+def webhook_secrets() -> list[str]:
+    """Все действующие секреты вебхуков сопряжения (первый — текущий): БД (плюс прежний на переходный срок ротации), иначе
+    список из `.env` (ротация без простоя).
+
+    Из них шина выводит направленные секреты пары CRM ↔ ERP (L12): подписывает первым, принимает любой.
+    """
+    rows = _rows()
+    row = rows.get(CredentialSlot.WEBHOOK_SECRET)
+    stored = _decrypt(row) if row else None
+    if not stored:
+        return env_webhook_secrets()
+    secrets_ = [stored]
+    previous_row = rows.get(CredentialSlot.WEBHOOK_SECRET_PREVIOUS)
+    if previous_row is not None and (previous_row.expires_at is None or previous_row.expires_at > timezone.now()):
+        previous = _decrypt(previous_row)
+        if previous and previous not in secrets_:
+            secrets_.append(previous)  # переходный срок ротации: принимается наравне с новым, подписывает первый
+    return secrets_
 
 
 def erp_to_crm_token() -> str:

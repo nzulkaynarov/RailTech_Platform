@@ -25,6 +25,8 @@ import time
 import uuid
 from contextvars import ContextVar
 
+from rt_bus import correlation
+
 # Holds the current request/task correlation id. Defaults to "-" so logs emitted
 # outside any request (startup, management commands) still format cleanly.
 request_id_var: ContextVar[str] = ContextVar("request_id", default="-")
@@ -85,13 +87,26 @@ class JSONFormatter(logging.Formatter):
         return json.dumps(payload, ensure_ascii=False, default=str)
 
 
+_REQUEST_ID = re.compile(r"[A-Za-z0-9._-]{1,128}")
+
+
+def is_valid_request_id(value: str) -> bool:
+    """Приходящий `X-Request-ID` (Caddy пропускает клиентский как есть): безопасная короткая строка.
+
+    Как в CRM (`apps/crm/backend/app/log.py`): не только UUID, но без пробелов, переводов строк и длины сверх 128 знаков —
+    значение попадает в журналы и в `correlationid` событий шины rt_bus (S0-6, B3).
+    """
+    return _REQUEST_ID.fullmatch(value) is not None
+
+
 class RequestIDMiddleware:
     """Stamp each HTTP request with a correlation id and echo it back.
 
-    Reads an inbound `X-Request-ID` (set by an upstream proxy/load balancer) or
-    generates a uuid4. The id is exposed on `request.request_id`, stored in the
-    contextvar for the duration of the request, and returned as the
-    `X-Request-ID` response header.
+    Reads an inbound `X-Request-ID` (set by an upstream proxy/load balancer) only if it is a safe string
+    (`is_valid_request_id`: `A-Za-z0-9._-`, 1–128 знаков); anything else is replaced with a fresh uuid4. The id is exposed
+    on `request.request_id`, stored in the contextvar for the duration of the request, and returned as the
+    `X-Request-ID` response header. It is also the default `correlationid` of events published to the rt_bus within the
+    request (`rt_bus.correlation`, S0-6 / B3), together with an inbound valid W3C `traceparent`.
     """
 
     HEADER = "X-Request-ID"
@@ -101,11 +116,12 @@ class RequestIDMiddleware:
 
     def __call__(self, request):
         incoming = request.META.get("HTTP_X_REQUEST_ID", "").strip()
-        request_id = incoming or uuid.uuid4().hex
+        request_id = incoming if is_valid_request_id(incoming) else uuid.uuid4().hex
         request.request_id = request_id
         token = request_id_var.set(request_id)
         try:
-            response = self.get_response(request)
+            with correlation(request_id, request.META.get("HTTP_TRACEPARENT")):
+                response = self.get_response(request)
         finally:
             request_id_var.reset(token)
         response[self.HEADER] = request_id

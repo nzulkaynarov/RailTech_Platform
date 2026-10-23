@@ -9,7 +9,7 @@ import urllib.parse
 from typing import Tuple
 
 from django.conf import settings
-from parties.models import Contact
+from parties.models import Contact, active_contact_q
 from portal.models import PortalSession
 from portal.services.access import company_in_circulation
 from portal.services.tokens import issue_portal_session
@@ -92,7 +92,9 @@ def authenticate_telegram_user(
         raise AuthenticationFailed("INVALID_INIT_DATA")
 
     # Только подписанный telegram_user_id: username меняется и переназначается, по нему не входят (FIX-14, P-11).
-    contact = Contact.objects.filter(telegram_user_id=telegram_user_id).select_related("company").first()
+    contact = (
+        Contact.objects.filter(active_contact_q(), telegram_user_id=telegram_user_id).select_related("company").first()
+    )
 
     if not contact or not contact.company:
         logger.info("No contact found for telegram_user_id=%s", telegram_user_id)

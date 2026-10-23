@@ -5,6 +5,12 @@ from django.db import models
 from django.utils.translation import gettext_lazy as _
 
 
+def active_contact_q(prefix: str = "") -> models.Q:
+    """«Контакт не в архиве» — единый предикат входа и списков Cabinet (как `active_company_q` для компании)."""
+    field = f"{prefix}__archived_at__isnull" if prefix else "archived_at__isnull"
+    return models.Q(**{field: True})
+
+
 class Contact(models.Model):
     """A person at a client company who has NO platform login (the CRM "Contact").
 
@@ -82,8 +88,22 @@ class Contact(models.Model):
         blank=True,
         verbose_name=_("Дата последнего входа"),
     )
+    archived_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        db_index=True,
+        verbose_name=_("В архиве с"),
+        help_text=_(
+            "Контакт удалён в CRM: запись и связи (сделки, коды акцепта, сопоставление) остаются как след, вход в Cabinet "
+            "закрыт, права действовать нет"
+        ),
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+
+    @property
+    def is_archived(self) -> bool:
+        return self.archived_at is not None
 
     @property
     def has_telegram(self) -> bool:

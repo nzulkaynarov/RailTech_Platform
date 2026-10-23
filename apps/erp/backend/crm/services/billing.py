@@ -412,6 +412,11 @@ def record_payment(
     else:
         invoice.status = _istatus(InvoiceStatusCode.PARTIAL)
     invoice.save(update_fields=["amount_paid", "status", "updated_at"])
+    if invoice.status_code == InvoiceStatusCode.PAID:
+        from integration.services import events
+
+        # Событие шины (rt_bus) в транзакции платежа: сбой публикации откатывает и платёж.
+        events.publish_invoice_event("invoice.paid", invoice)
 
     marker = "[MANUAL_MODE] " if manual else ""
     ActivityLog.objects.create(
@@ -522,6 +527,11 @@ def generate_act(
         issuer_signer=actor,
         issuer_signed_at=timezone.now(),
     )
+    # События шины (rt_bus) — в транзакции выпуска акта: сбой публикации откатывает выпуск.
+    from integration.services import document_events, events
+
+    events.publish_act_event("act.issued", act)
+    document_events.publish_document_issued("act", act, was_issued=False)
     # Render off the request thread, after commit (F1.6 — avoids orphan PDFs on
     # rollback). The download endpoint renders lazily if a download races ahead.
     from ..tasks import render_document_pdf
@@ -709,6 +719,9 @@ def sign_act(
             "updated_at",
         ]
     )
+    from integration.services import events
+
+    events.publish_act_event("act.accepted", act)  # шина rt_bus, в транзакции приёмки
     # [MANUAL_MODE]: a button-click / uploaded scan is NOT a qualified e-signature — tag it so
     # these records can be told apart from real E-IMZO signatures once that lands (tech debt,
     # see memory tech_debt_payment_esign). Mirrors the contract-sign logs in contracts.py.
@@ -751,8 +764,8 @@ def reject_act(
     обязательна: без основания отказ бесполезен обеим сторонам.
 
     Акт возвращается в DRAFT — исполнитель правит и выпускает заново. Заказчик из портала (FIX-22) —
-    `portal_contact`, как у `sign_act`. CRM об этом узнаёт из события `act.returned` с причиной (FIX-62): статуса
-    «возвращён» у акта нет, событие выпускает сигнал по факту перехода (`integration.signals.handle_act_post_save`).
+    `portal_contact`, как у `sign_act`. CRM об этом узнаёт из события шины `act.returned` с причиной (FIX-62): статуса
+    «возвращён» у акта нет, событие публикуется здесь, в транзакции возврата (rt_bus).
     """
 
     clean_reason = (reason or "").strip()
@@ -767,13 +780,17 @@ def reject_act(
     act.status = _astatus(ActStatusCode.DRAFT)
     act.rejection_reason = clean_reason
     act.issuer_signed_at = None
-    # Событие `act.returned` (FIX-62) выпускает сигнал акта по факту перехода ISSUED → DRAFT с причиной; кто вернул —
-    # сигнал знать не может, поэтому лицо клиента передаётся ему на экземпляре.
-    if portal_contact is not None:
-        act._event_actor = (
-            {"type": "client", "name": portal_contact.name} if portal_contact.name else {"type": "client"}
-        )
     act.save(update_fields=["status", "rejection_reason", "issuer_signed_at", "updated_at"])
+    # Событие `act.returned` (FIX-62) — на шину rt_bus в транзакции возврата. Статуса «возвращён» у акта нет: возврат — это
+    # ISSUED → DRAFT с причиной. Лицо — клиент из портала (`portal_contact`), иначе система.
+    from integration.services import events
+
+    events.publish_act_event(
+        "act.returned",
+        act,
+        reason=clean_reason,
+        actor=events.client_actor(portal_contact) if portal_contact is not None else None,
+    )
     ActivityLog.objects.create(
         action="Акт отклонён заказчиком",
         detail=f"Акт {act.number} по сделке #{act.deal_id}: {clean_reason}",
@@ -853,6 +870,9 @@ def reissue_act(act_id: int, actor: CustomUser) -> Tuple[Optional[object], Optio
             "updated_at",
         ]
     )
+    from integration.services import events
+
+    events.publish_act_event("act.issued", act)  # шина rt_bus, в транзакции повторного выпуска
     ActivityLog.objects.create(
         action="Акт выпущен заново",
         detail=f"Акт {act.number} по сделке #{act.deal_id}",

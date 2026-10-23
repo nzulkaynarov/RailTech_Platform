@@ -28,7 +28,8 @@ from documents.models import DocumentTemplate, DocumentTemplateKind, GeneratedDo
 from integration.mcp import contract as mcp_contract
 from integration.mcp import tools as mcp_tools
 from integration.mcp.context import AgentContextError, issue_agent_context, mark_used, verify_agent_context
-from integration.models import CrmClientMapping, IntegrationWebhookEvent
+from integration.models import CrmClientMapping
+from integration.tests import bus_support
 from integration.tests.mcp_support import (
     MCP_SECRET,
     RAW_HEADERS,
@@ -771,11 +772,11 @@ def test_search_catalog_returns_only_published_projection_keys(test_data):
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# 8. Инструмент: create_request (одна заявка, одно событие request.created)
+# 8. Инструмент: create_request (одна заявка, одно событие request.created на шину rt_bus)
 # ─────────────────────────────────────────────────────────────────────────────
 
 
-def test_create_request_creates_deal_and_emits_one_webhook(test_data):
+def test_create_request_creates_deal_and_publishes_one_event(test_data):
     req_payload = {
         "summary": "Срочная потребность в партии рельсов",
         "lines": [
@@ -804,13 +805,9 @@ def test_create_request_creates_deal_and_emits_one_webhook(test_data):
     assert req_lines[1].text == "Накладка 1Р65"
 
     # request.created — ровно один (раньше сигнал и явный вызов давали два)
-    created = [
-        e
-        for e in IntegrationWebhookEvent.objects.filter(event_type="request.created")
-        if e.payload.get("deal", {}).get("erp_deal_id") == deal_id
-    ]
+    created = [e for e in bus_support.published("request.created") if e["data"]["deal"]["erp_deal_id"] == deal_id]
     assert len(created) == 1
-    envelope = created[0].payload
+    envelope = created[0]["data"]
     assert envelope["payload"]["source"] == "crm"
     assert envelope["payload"]["summary"] == "Срочная потребность в партии рельсов"
     assert envelope["erp_company_id"] == test_data["comp_a"].id
@@ -827,10 +824,12 @@ def test_create_request_takes_crm_client_from_the_signed_context(test_data):
             {"summary": "нужен рельс", "lines": [{"text": "рельс"}]},
         )
     )
-    event = IntegrationWebhookEvent.objects.get(
-        event_type="request.created", payload__deal__erp_deal_id=data["erp_request_id"]
-    )
-    assert event.payload["crm_client_id"] == 777
+    [event] = [
+        e
+        for e in bus_support.published("request.created")
+        if e["data"]["deal"]["erp_deal_id"] == data["erp_request_id"]
+    ]
+    assert event["data"]["crm_client_id"] == 777
 
 
 # ─────────────────────────────────────────────────────────────────────────────

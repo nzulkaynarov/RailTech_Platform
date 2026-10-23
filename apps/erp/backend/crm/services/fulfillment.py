@@ -85,6 +85,7 @@ def issue_delivery_note(fulfillment) -> str:
     return number
 
 
+@transaction.atomic
 def ensure_fulfillment(deal: Deal, contract=None) -> object:
     """Отгрузка сделки, создаётся идемпотентно.
 
@@ -103,13 +104,19 @@ def ensure_fulfillment(deal: Deal, contract=None) -> object:
 
     # status is now a FK (null=True); stamp the PENDING lookup on creation so a new
     # fulfillment keeps the old CharField default behaviour.
-    obj, _ = Fulfillment.objects.get_or_create(
+    obj, created = Fulfillment.objects.get_or_create(
         deal=deal,
         defaults={
             "status": FulfillmentStatus.objects.get(code=FulfillmentStatusCode.PENDING),
             "contract": contract,
         },
     )
+    if created:
+        from integration.services import events
+
+        # Исполнение заведено: `delivery.status_changed` на шину rt_bus в транзакции создания (ход поставки для CRM начинается
+        # со статуса «собирается»).
+        events.publish_delivery_event("delivery.status_changed", obj)
     if contract is not None and obj.contract_id is None:
         obj.contract = contract
         obj.save(update_fields=["contract", "updated_at"])
@@ -174,26 +181,42 @@ def update_fulfillment_status(
     if client_contact is not None and client_contact.company_id != obj.deal.company_id:
         return None, "MEMBER_REQUIRED_FOR_ACTION"
     if status_code in FULFILLMENT_NOTE_ISSUED_STATUSES:
-        # Номер накладной — ДО смены статуса: событие `document.created` для CRM (сигнал post_save на переходе в
-        # «выпущенный») должно нести итоговый номер, а не `DN-<id>` (FIX-55, m2 D-6).
+        # Номер накладной — ДО смены статуса: событие `document.created` для CRM (шина rt_bus, на переходе в «выпущенный»)
+        # должно нести итоговый номер, а не `DN-<id>` (FIX-55, m2 D-6).
         issue_delivery_note(obj)
-    obj.status = FulfillmentStatus.objects.get(code=status_code)
-    now = timezone.now()
-    if status_code == FulfillmentStatusCode.SHIPPED and not obj.shipped_at:
-        obj.shipped_at = now
-    if status_code == FulfillmentStatusCode.DELIVERED and not obj.delivered_at:
-        obj.delivered_at = now
-    if status_code == FulfillmentStatusCode.ACCEPTED and not obj.accepted_at:
-        obj.accepted_at = now
-    for key in ("tracking_number", "carrier", "expected_delivery_date", "notes"):
-        if key in extra and extra[key] is not None:
-            setattr(obj, key, extra[key])
-    if client_contact is not None:
-        # Событие `delivery.status_changed` для CRM несёт клиента, а не «систему» (сигнал читает лицо с экземпляра).
-        obj._event_actor = (
-            {"type": "client", "name": client_contact.name} if client_contact.name else {"type": "client"}
+    from integration.services import document_events, events
+
+    prev_status_code = obj.status.code if obj.status_id else None
+    prev_eta = obj.expected_delivery_date
+    with document_events.watch_document_issue("waybill", obj):  # document.created на выпуске накладной
+        obj.status = FulfillmentStatus.objects.get(code=status_code)
+        now = timezone.now()
+        if status_code == FulfillmentStatusCode.SHIPPED and not obj.shipped_at:
+            obj.shipped_at = now
+        if status_code == FulfillmentStatusCode.DELIVERED and not obj.delivered_at:
+            obj.delivered_at = now
+        if status_code == FulfillmentStatusCode.ACCEPTED and not obj.accepted_at:
+            obj.accepted_at = now
+        for key in ("tracking_number", "carrier", "expected_delivery_date", "notes"):
+            if key in extra and extra[key] is not None:
+                setattr(obj, key, extra[key])
+        obj.save()
+    # События шины (rt_bus) о ходе поставки — в транзакции изменения. Приёмку делает клиент (`client_contact`): лицо события —
+    # клиент, а не «система». В контракте у статуса поставки нет `accepted`, поэтому CRM видит «доставлено», а то, что
+    # принято, говорит `line_summary`.
+    actor = events.client_actor(client_contact) if client_contact is not None else None
+    if prev_status_code != status_code:
+        events.publish_delivery_event(
+            "delivery.status_changed",
+            obj,
+            line_summary=(
+                "Все строки приняты клиентом" if status_code == FulfillmentStatusCode.ACCEPTED else "Строки поставки"
+            ),
+            previous_eta=prev_eta,
+            actor=actor,
         )
-    obj.save()
+    if prev_eta and obj.expected_delivery_date and prev_eta != obj.expected_delivery_date:
+        events.publish_delivery_event("delivery.eta_changed", obj, previous_eta=prev_eta)
     if client_contact is not None:
         from core.audit import log_admin_action
 

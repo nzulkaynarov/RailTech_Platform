@@ -117,7 +117,7 @@ def fetch(client, anon_client, contract_path: str, url: str):
 def test_contract_is_mounted_and_readable():
     path = find_contract_path()
     assert path.name == "erp-portal.yaml"
-    assert load_contract()["info"]["version"] == "0.3.0"
+    assert load_contract()["info"]["version"] == "0.3.1"
 
 
 def test_every_contract_get_is_covered_by_the_guard():

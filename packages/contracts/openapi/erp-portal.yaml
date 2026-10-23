@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: RailTech Platform ERP — Portal API (Cabinet → ERP)
-  version: 0.3.0
+  version: 0.3.1
   summary: Пространство `/api/portal/v1/` — вызывает Cabinet SPA от имени клиента.
   description: |
     Контракт по `docs/architecture/CONTRACTS.md` §4 и ADR-0004 (Cabinet без бэкенда). Версия 0 (M0-INF-02):
@@ -952,6 +952,9 @@ paths:
       tags: [company]
       operationId: updateCompany
       summary: Обновить профиль компании
+      description: |
+        Название и ИНН компании, связанной с клиентом CRM, ведёт CRM (ORCHESTRATOR §3 п. 16): их правка — 422
+        `REQUISITES_MANAGED_BY_CRM`. Остальные поля правятся здесь.
       requestBody:
         required: true
         content:
@@ -1147,6 +1150,7 @@ components:
         - VALIDATION_ERROR
         - REASON_REQUIRED
         - INN_INVALID
+        - REQUISITES_MANAGED_BY_CRM
         - TEAM_MEMBER_EXISTS
         - CONTACT_EMAIL_REQUIRED
         - CONTACT_CHANNEL_REQUIRED

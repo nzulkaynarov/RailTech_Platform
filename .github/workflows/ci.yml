@@ -65,6 +65,8 @@ jobs:
               - 'apps/erp/**'
               - 'packages/contracts/**'
               - 'packages/ui-tokens/**'
+              # Библиотека шины вшивается в образ ERP (B3, L14): её правки проверяются тестами ERP.
+              - 'packages/rt-bus/**'
             cabinet:
               - 'apps/cabinet/**'
               - 'packages/contracts/**'

@@ -2,18 +2,19 @@
 
 Переход идёт через сервис `update_fulfillment_status` с актором «клиент» (контакт портала с `can_act`), а не в обход
 FIX-13: человека-исполнителя для приёмки по-прежнему нет, сервис отвергает любого пользователя ERP. Частичная приёмка
-и спор исполнение не меняют. Переход оставляет запись в журнале (кто принял) и событие `delivery.status_changed` с
-`actor.type=client`. Срыв перехода не отменяет решение клиента по строке: след в журнале для ручного разбора.
+и спор исполнение не меняют. Переход оставляет запись в журнале (кто принял) и событие шины `delivery.status_changed` (rt_bus, в той же
+транзакции) с `actor.type=client`. Срыв перехода не отменяет решение клиента по строке: след в журнале для ручного
+разбора; сбой публикации, напротив, откатывает всё действие клиента.
 """
 
 from __future__ import annotations
 
 import pytest
-from integration.models import CrmClientMapping, IntegrationWebhookEvent
+from integration.models import CrmClientMapping
+from integration.tests import bus_support
 from sales.models import ActivityLog, DeliveryLine, DeliveryLineStatus
 from sales.services import delivery_lines
 
-from core.tests.events_contract import event_errors
 from crm.constants import FulfillmentStatusCode
 from crm.services import update_fulfillment_status
 
@@ -46,7 +47,7 @@ def lines_of(fulfillment):
 
 
 def status_events():
-    return IntegrationWebhookEvent.objects.filter(event_type="delivery.status_changed")
+    return bus_support.published("delivery.status_changed")
 
 
 def code_of(fulfillment):
@@ -63,19 +64,20 @@ def test_the_last_accepted_line_moves_the_fulfillment_to_accepted(
 
     assert post(portal_client, f"/deliveries/{first.pk}/accept").status_code == 200
     assert code_of(fulfillment) == FulfillmentStatusCode.DELIVERED  # одной принятой строки мало
-    assert not status_events().exists()
+    assert not status_events()
 
     assert post(portal_client, f"/deliveries/{last.pk}/accept").status_code == 200
     assert code_of(fulfillment) == FulfillmentStatusCode.ACCEPTED
     assert fulfillment.accepted_at is not None
 
-    event = status_events().get()
-    assert event_errors(event.payload) == []
-    assert event.payload["actor"] == {"type": "client", "name": client_contact.name}
+    event = bus_support.only("delivery.status_changed")
+    bus_support.assert_matches_contract(event)
+    data = event["data"]
+    assert data["actor"] == {"type": "client", "name": client_contact.name}
     # в контракте у статуса поставки нет `accepted` (Q-FIX62-1): физически это «доставлено», приёмка — в line_summary
-    assert event.payload["payload"]["status"] == "delivered"
-    assert event.payload["payload"]["line_summary"] == "Все строки приняты клиентом"
-    assert event.payload["deal"]["erp_deal_id"] == fulfillment.deal_id
+    assert data["payload"]["status"] == "delivered"
+    assert data["payload"]["line_summary"] == "Все строки приняты клиентом"
+    assert data["deal"]["erp_deal_id"] == fulfillment.deal_id
 
 
 def test_the_change_is_audited_with_the_client_as_the_actor(
@@ -99,7 +101,7 @@ def test_a_dispute_keeps_the_fulfillment_unchanged(contract_world, portal_client
     assert post(portal_client, f"/deliveries/{last.pk}/dispute", {"reason": "Брак"}).status_code == 200
 
     assert code_of(fulfillment) == FulfillmentStatusCode.DELIVERED
-    assert not status_events().exists()
+    assert not status_events()
     assert not ActivityLog.objects.filter(event_code="fulfillment.accepted_by_client").exists()
 
 
@@ -122,7 +124,7 @@ def test_warehouse_progress_after_acceptance_does_not_reopen_the_fulfillment(
         post(portal_client, f"/deliveries/{line.pk}/accept")
     assert portal_client.get(f"{API}/deliveries").status_code == 200
     assert code_of(fulfillment) == FulfillmentStatusCode.ACCEPTED
-    assert status_events().count() == 1
+    assert len(status_events()) == 1
 
 
 def test_a_company_not_linked_to_crm_still_gets_the_fulfillment_accepted_without_an_event(
@@ -132,14 +134,14 @@ def test_a_company_not_linked_to_crm_still_gets_the_fulfillment_accepted_without
     for line in lines_of(fulfillment):
         assert post(portal_client, f"/deliveries/{line.pk}/accept").status_code == 200
     assert code_of(fulfillment) == FulfillmentStatusCode.ACCEPTED
-    assert not status_events().exists()
+    assert not status_events()
 
 
 def test_a_failing_transition_does_not_undo_the_clients_decision(
     contract_world, portal_client, listed, mapped, monkeypatch
 ):
     def boom(*args, **kwargs):
-        raise RuntimeError("fulfillment service is broken")
+        raise ValueError("FSM_TRANSITION_NOT_ALLOWED")  # ошибка самого перехода исполнения: решение клиента остаётся
 
     monkeypatch.setattr("crm.services.fulfillment.update_fulfillment_status", boom)
     fulfillment = delivered_fulfillment(contract_world)
@@ -149,6 +151,45 @@ def test_a_failing_transition_does_not_undo_the_clients_decision(
     assert code_of(fulfillment) == FulfillmentStatusCode.DELIVERED
     trace = ActivityLog.objects.get(event_code="fulfillment.accept_failed", deal=fulfillment.deal)
     assert trace.event_params["deal_id"] == fulfillment.deal_id and trace.level == "ERROR"
+
+
+def test_an_unexpected_error_of_the_transition_goes_up_and_rolls_the_decision_back(
+    contract_world, portal_client, listed, mapped, monkeypatch
+):
+    """Не ошибка перехода (валидация/FSM), а неожиданный сбой — не глотается: откатывается и решение клиента по строке."""
+    fulfillment = delivered_fulfillment(contract_world)
+    first, last = lines_of(fulfillment)
+    assert post(portal_client, f"/deliveries/{first.pk}/accept").status_code == 200
+
+    def boom(*args, **kwargs):
+        raise RuntimeError("fulfillment service is broken")
+
+    monkeypatch.setattr("crm.services.fulfillment.update_fulfillment_status", boom)
+    with pytest.raises(RuntimeError):
+        post(portal_client, f"/deliveries/{last.pk}/accept")
+    last.refresh_from_db()
+    assert last.status == DeliveryLineStatus.DELIVERED
+    assert not ActivityLog.objects.filter(event_code="fulfillment.accept_failed", deal=fulfillment.deal).exists()
+
+
+def test_a_bus_failure_rolls_the_whole_client_action_back(contract_world, portal_client, listed, mapped, monkeypatch):
+    """Сбой шины при переходе исполнения не глотается: откатывается и решение клиента по последней строке."""
+    from integration.services import events as bus_events
+    from rt_bus import RtBusError
+
+    fulfillment = delivered_fulfillment(contract_world)
+    first, last = lines_of(fulfillment)
+    assert post(portal_client, f"/deliveries/{first.pk}/accept").status_code == 200
+
+    def boom(*args, **kwargs):
+        raise RtBusError("bus is down")
+
+    monkeypatch.setattr(bus_events, "publish_delivery_event", boom)
+    with pytest.raises(RtBusError):
+        post(portal_client, f"/deliveries/{last.pk}/accept")
+    last.refresh_from_db()
+    assert last.status == DeliveryLineStatus.DELIVERED
+    assert code_of(fulfillment) == FulfillmentStatusCode.DELIVERED
 
 
 def test_a_fulfillment_not_yet_delivered_is_not_moved(contract_world, portal_client, listed, mapped, client_contact):
