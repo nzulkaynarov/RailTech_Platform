@@ -50,6 +50,15 @@ services:
       - crm_backups:/backups
     ports: ["127.0.0.1:${DEV_CRM_API_PORT:-8000}:8000"]
 
+  # Без --reload: правка кода бота — `docker compose restart crm-bot` (как у crm-worker).
+  crm-bot:
+    build: { target: dev }
+    volumes:
+      - ../../apps/crm/backend/app:/app/app:ro
+      - ../../apps/crm/backend/prompts:/app/prompts:ro
+      - ../../apps/crm/infra/casbin:/app/casbin:ro
+    restart: unless-stopped
+
   crm-worker:
     build: { target: dev }
     volumes: *crm-src

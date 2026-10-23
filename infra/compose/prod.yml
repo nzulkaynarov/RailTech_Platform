@@ -154,6 +154,23 @@ services:
       litellm-seed:
         condition: service_completed_successfully
 
+  # crm-bot (S0-4): приём Telegram отдельно от crm-api. 512 МБ — как у crm-api: те же зависимости (aiogram, LangGraph,
+  # агент диалога) в памяти постоянно. Реплика одна.
+  crm-bot:
+    <<: [*ops, *mem-512]
+    image: ${RT_IMAGE_REGISTRY:-ghcr.io/nzulkaynarov}/rt-crm-backend:${RT_IMAGE_TAG}
+    build: !reset null
+    environment: *crm-prod-env
+    depends_on: !override
+      crm-migrate:
+        condition: service_completed_successfully
+      s3-init:
+        condition: service_completed_successfully
+      litellm:
+        condition: service_healthy
+      litellm-seed:
+        condition: service_completed_successfully
+
   crm-worker:
     <<: [*ops, *mem-512]
     image: ${RT_IMAGE_REGISTRY:-ghcr.io/nzulkaynarov}/rt-crm-backend:${RT_IMAGE_TAG}

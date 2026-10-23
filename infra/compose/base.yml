@@ -40,6 +40,8 @@ x-crm-backend: &crm-backend
     TELEGRAM_MODE: ${TELEGRAM_MODE:-polling}
     TELEGRAM_WEBHOOK_URL: ${TELEGRAM_WEBHOOK_URL:-}
     TELEGRAM_WEBHOOK_SECRET: ${TELEGRAM_WEBHOOK_SECRET:-}
+    # Свой сервер Bot API или заглушка на стенде (S0-4); пусто — api.telegram.org.
+    TELEGRAM_API_BASE_URL: ${TELEGRAM_API_BASE_URL:-}
     LANGFUSE_HOST: http://langfuse-web:3000
     LANGFUSE_PUBLIC_KEY: ${CRM_LANGFUSE_PUBLIC_KEY:-}
     LANGFUSE_SECRET_KEY: ${CRM_LANGFUSE_SECRET_KEY:-}
@@ -300,6 +302,26 @@ services:
         - python
         - -c
         - import urllib.request; urllib.request.urlopen('http://localhost:8000/health', timeout=2)
+      interval: 10s
+      timeout: 3s
+      retries: 10
+      start_period: 10s
+
+  # crm-bot (S0-4): Telegram-бот отдельным процессом — polling или приём /telegram/webhook (Caddy ведёт туда сюда,
+  # не в crm-api). Реплика ровно одна: второй потребитель getUpdates получит 409. Смену токена в «Подключениях» он
+  # замечает сам (таблица bot_runtime), перезапускать его вручную не нужно. Порт 8001 внутренний.
+  crm-bot:
+    <<: *crm-backend
+    command: ["python", "-m", "app", "bot"]
+    volumes:
+      - ../../apps/crm/infra/casbin:/app/casbin:ro
+    depends_on: *crm-backend-deps
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - import urllib.request; urllib.request.urlopen('http://localhost:8001/health', timeout=2)
       interval: 10s
       timeout: 3s
       retries: 10

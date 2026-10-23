@@ -5,7 +5,7 @@ from datetime import UTC, datetime
 from typing import Annotated
 
 import structlog
-from fastapi import APIRouter, Depends, Request
+from fastapi import APIRouter, Depends
 
 from app.api.deps import ContainerDep, require
 from app.api.health import get_readiness
@@ -23,16 +23,25 @@ router = APIRouter(prefix="/api/v1/system", tags=["system"])
 _SEVERITY = ("ok", "unknown", "warn", "fail")
 
 
+async def _bot_facts(container: Container) -> BotFacts | None:
+    """Бот живёт в `crm-bot` (S0-4): факты — из его записи в БД, а не из памяти процесса API."""
+    try:
+        snapshot = await container.bot_state.snapshot()
+    except Exception as exc:  # noqa: BLE001 — «Состояние системы» не падает из-за статуса бота
+        logger.warning("bot_state_unavailable", error=type(exc).__name__)
+        return None
+    if snapshot is None:
+        return BotFacts(False, "none", "bot_process_never_started")
+    if not snapshot.alive:
+        return BotFacts(False, snapshot.source, "bot_process_down")
+    return BotFacts(snapshot.running, snapshot.source, snapshot.last_error)
+
+
 async def collect_components(
-    request: Request, container: Container, readiness: ReadinessService, now: datetime
+    container: Container, readiness: ReadinessService, now: datetime
 ) -> list[Component]:
     """Один источник здоровья для «Состояния», индикатора в шапке и чек-листа настройки."""
-    supervisor = getattr(request.app.state, "bot", None)
-    bot = (
-        None
-        if supervisor is None
-        else BotFacts(supervisor.running, supervisor.source, supervisor.last_error)
-    )
+    bot = await _bot_facts(container)
     _, source = await resolve_token(container.secrets_store, container.settings)
     has_token = source in ("db", "env")
     service = SystemStatusService(
@@ -57,7 +66,6 @@ async def collect_components(
 
 @router.get("/status", response_model=SystemStatusOut)
 async def system_status(
-    request: Request,
     _: Annotated[Principal, Depends(require("system", "read"))],
     container: ContainerDep,
     readiness: Annotated[ReadinessService, Depends(get_readiness)],
@@ -67,7 +75,7 @@ async def system_status(
     Компоненты отсортированы: сбой → предупреждение → неизвестно → норма.
     """
     now = datetime.now(UTC)
-    components = await collect_components(request, container, readiness, now)
+    components = await collect_components(container, readiness, now)
     worst = max((c.status for c in components), key=_SEVERITY.index, default="unknown")
     return SystemStatusOut(
         status=worst,
