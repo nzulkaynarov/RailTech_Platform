@@ -399,7 +399,7 @@ def test_delivery_while_the_cache_is_down_loses_the_secret_not_the_service(setti
         bus._http = previous
         settings.CACHES = working
     assert sent == []
-    delivery = Delivery.objects.get(event_id=event.id)
+    delivery = Delivery.objects.get(event_id=event.id, subscriber="crm")
     assert delivery.status == "dead" and "SECRET_EXPIRED" in (delivery.last_error or "")
     assert "739104" not in (delivery.last_error or "")
 
@@ -423,7 +423,7 @@ def test_expired_secret_makes_the_delivery_dead_without_a_request(settings, code
     finally:
         bus._http = previous
     assert sent == []
-    delivery = Delivery.objects.get(event_id=event.id)
+    delivery = Delivery.objects.get(event_id=event.id, subscriber="crm")
     assert delivery.status == "dead" and "SECRET_EXPIRED" in (delivery.last_error or "")
 
 

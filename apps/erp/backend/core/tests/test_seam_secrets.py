@@ -111,5 +111,5 @@ def test_event_without_pair_secret_is_postponed_unsigned_and_never_sent(no_seam_
         bus._http = previous
 
     assert event is not None and sent == []
-    delivery = Delivery.objects.get(event_id=event.id)
+    delivery = Delivery.objects.get(event_id=event.id, subscriber="crm")
     assert delivery.status == "pending" and delivery.attempts == 0 and delivery.next_attempt_at is not None
