@@ -2,7 +2,7 @@
 # Издатель доставляет подписчику только свои события (по source) и не доставляет себе.
 # Новый подписчик = строка здесь + секрет пары в окружении RT_BUS_SECRET_<ИЗДАТЕЛЬ>_<ПОДПИСЧИК>
 # (верхний регистр, «-» → «_»; несколько через запятую — первым подписывают, принимают любой).
-# Сервисы читают файл по пути из RT_BUS_SUBSCRIPTIONS. platform-bff добавляется в B5.
+# Сервисы читают файл по пути из RT_BUS_SUBSCRIPTIONS.
 version: 1
 subscribers:
   - name: crm
@@ -17,3 +17,14 @@ subscribers:
     types:
       - uz.railtech.crm.client.updated.v1
       - uz.railtech.crm.contact.*.v1
+
+  # BFF Платформы (B5): события ERP, лидов CRM и сотрудников → подсказки инвалидации в SSE браузеру (уведомления, счётчики
+  # меню, «Моя очередь», лента «Сегодня»). Данных событий BFF не хранит. Приёмник — только внутри сети compose (Caddy
+  # /bus/* на домене Платформы не отдаёт). Секреты пар: RT_BUS_SECRET_ERP_PLATFORM_BFF, RT_BUS_SECRET_CRM_PLATFORM_BFF.
+  - name: platform-bff
+    endpoint: http://platform-bff:8000/bus/v1/events
+    endpoint_env: RT_BUS_ENDPOINT_PLATFORM_BFF
+    types:
+      - uz.railtech.erp.*.v1
+      - uz.railtech.crm.lead.*.v1
+      - uz.railtech.identity.user.*.v1

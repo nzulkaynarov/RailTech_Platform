@@ -1,6 +1,8 @@
 """Тестовые двойники: Redis в памяти (только используемые BFF команды) и управляемые часы."""
 
+import asyncio
 import json
+from collections.abc import AsyncIterator
 from typing import Any
 
 from app.session import RELEASE_LOCK
@@ -19,11 +21,45 @@ class Clock:
         self.t += seconds
 
 
+class FakePubSub:
+    """Подписка pub/sub в памяти: `get_message` ждёт сообщение до `timeout` секунд (настоящих)."""
+
+    def __init__(self, redis: "FakeRedis") -> None:
+        self.redis = redis
+        self.queue: asyncio.Queue[dict[str, Any]] = asyncio.Queue()
+        self.channels: set[str] = set()
+
+    async def subscribe(self, *channels: str) -> None:
+        if self.redis.pubsub_down:
+            raise ConnectionError("redis down")
+        self.channels.update(channels)
+        self.redis.subscribers.append(self)
+
+    async def get_message(
+        self,
+        ignore_subscribe_messages: bool = False,
+        timeout: float = 0.0,  # noqa: ASYNC109
+    ) -> dict[str, Any] | None:
+        if self.redis.pubsub_down:
+            raise ConnectionError("redis down")
+        try:
+            return await asyncio.wait_for(self.queue.get(), timeout)
+        except TimeoutError:
+            return None
+
+    async def aclose(self) -> None:
+        if self in self.redis.subscribers:
+            self.redis.subscribers.remove(self)
+
+
 class FakeRedis:
     def __init__(self, clock: Clock) -> None:
         self.clock = clock
         self.values: dict[str, str] = {}
         self.expires: dict[str, float] = {}
+        self.subscribers: list[FakePubSub] = []
+        self.pubsub_down = False
+        self.published: list[tuple[str, str]] = []
 
     def _alive(self, key: str) -> bool:
         deadline = self.expires.get(key)
@@ -91,6 +127,24 @@ class FakeRedis:
 
     async def aclose(self) -> None:
         return None
+
+    async def publish(self, channel: str, message: str) -> int:
+        if self.pubsub_down:
+            raise ConnectionError("redis down")
+        self.published.append((channel, message))
+        receivers = [sub for sub in self.subscribers if channel in sub.channels]
+        for sub in receivers:
+            sub.queue.put_nowait({"type": "message", "channel": channel, "data": message})
+        return len(receivers)
+
+    def pubsub(self) -> FakePubSub:
+        return FakePubSub(self)
+
+    async def scan_iter(self, match: str, count: int = 10) -> AsyncIterator[str]:
+        prefix = match.removesuffix("*")
+        for key in list(self.values):
+            if key.startswith(prefix) and self._alive(key):
+                yield key
 
     # --- помощники тестов ---
     def session_keys(self) -> list[str]:

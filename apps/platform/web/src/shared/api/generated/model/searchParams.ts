@@ -38,6 +38,12 @@
  * `details.reason` (`user_has_active_leads`, `name_taken`) или `details.invite = not_sent`; у каждого 409 в `details.reason` —
  * код CRM. Каталог разделов, меню, полей и видов очереди — `packages/contracts/platform-rbac.yaml` версии 2.
  *
+ * **0.4.0 (B5, ADR-0014) — поток вместо опроса.** `GET /events/stream` (SSE, `text/event-stream`): BFF — подписчик шины
+ * событий `rt_bus`, на событие ERP, лида CRM или сотрудника шлёт открытому соединению подсказку инвалидации
+ * `InvalidationHint {topics, reason}`; SPA перезапрашивает уведомления, счётчики меню, «Мою очередь» и ленту «Сегодня»
+ * обычными API (с проверкой прав). Данных событий в потоке нет. Пока поток жив, опрос — редкий (5 минут), при обрыве —
+ * прежние 30 секунд. Чисто добавляющее изменение.
+ *
  * 0.2.4: `423 ACCOUNT_LOCKED` объявлен и на `POST /auth/change-password` (CRM блокирует учётную запись после неверных
  * текущих паролей).
  *
@@ -56,7 +62,7 @@
  * Лимиты: вход — 10 в минуту на IP и e-mail; остальные запросы — 300 в минуту на сессию; превышение — 429
  * `TOO_MANY_REQUESTS` с `Retry-After`.
  *
- * OpenAPI spec version: 0.3.0
+ * OpenAPI spec version: 0.4.0
  */
 
 export type SearchParams = {

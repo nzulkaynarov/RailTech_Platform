@@ -146,6 +146,12 @@ class Feed:
         return response.status_code
 
 
+async def drop_snapshots(redis: Any, sid: str) -> None:
+    """Сбросить кэш ответов бэкендов сессии: после подсказки шины (B5) данные свежие, не из кэша."""
+    async for key in redis.scan_iter(match=f"feed:{sid}:data:*", count=200):
+        await redis.delete(key)
+
+
 def rows(payload: Any) -> list[dict[str, Any]]:
     """Строки ответа списка: постраничный `{results: [...]}` ERP, `{items: [...]}` CRM или голый
     массив."""

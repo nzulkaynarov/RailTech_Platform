@@ -35,6 +35,13 @@ class Settings(BaseSettings):
     login_rate_per_minute: int = Field(
         default=10, ge=1, validation_alias=AliasChoices("PLATFORM_LOGIN_RATE_PER_MINUTE")
     )
+    # Поток подсказок (SSE, B5): окно слияния всплеска (мс), период heartbeat-комментария (с).
+    events_coalesce_ms: int = Field(
+        default=300, ge=0, le=2000, validation_alias=AliasChoices("PLATFORM_EVENTS_COALESCE_MS")
+    )
+    events_heartbeat_seconds: float = Field(
+        default=20.0, gt=0, validation_alias=AliasChoices("PLATFORM_EVENTS_HEARTBEAT_SECONDS")
+    )
     log_level: Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"] = Field(
         default="INFO", validation_alias=AliasChoices("LOG_LEVEL")
     )

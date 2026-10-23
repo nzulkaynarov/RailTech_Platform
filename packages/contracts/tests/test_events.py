@@ -198,7 +198,7 @@ def test_subscriptions_are_meaningful() -> None:
 
 def test_initial_subscriptions_v1() -> None:
     subs = {s["name"]: s for s in SUBSCRIPTIONS["subscribers"]}
-    assert set(subs) == {"crm", "erp"}
+    assert set(subs) == {"crm", "erp", "platform-bff"}
     assert subs["crm"]["types"] == ["uz.railtech.erp.*.v1"]
     assert subs["crm"]["endpoint"] == "http://crm-api:8000/bus/v1/events"
     assert subs["erp"]["endpoint"] == "http://erp-backend:8000/bus/v1/events"
@@ -209,6 +209,18 @@ def test_initial_subscriptions_v1() -> None:
         "uz.railtech.crm.contact.deleted.v1",
         "uz.railtech.crm.contact.updated.v1",
     ]
+
+
+def test_platform_bff_subscription_b5() -> None:
+    """BFF Платформы (B5): события ERP, лидов CRM и сотрудников; адрес — внутри сети compose."""
+    bff = {s["name"]: s for s in SUBSCRIPTIONS["subscribers"]}["platform-bff"]
+    assert bff["endpoint"] == "http://platform-bff:8000/bus/v1/events"
+    assert bff["endpoint_env"] == "RT_BUS_ENDPOINT_PLATFORM_BFF"
+    gets = {t.name for t in TYPES if any(fnmatch.fnmatchcase(t.name, m) for m in bff["types"])}
+    assert {t.name for t in TYPES if t.name.startswith("uz.railtech.erp.")} <= gets
+    assert {t.name for t in TYPES if t.name.startswith("uz.railtech.crm.lead.")} <= gets
+    assert {t.name for t in TYPES if t.name.startswith("uz.railtech.identity.user.")} <= gets
+    assert not {n for n in gets if n.startswith(("uz.railtech.crm.client.", "uz.railtech.crm.contact."))}
 
 
 # ─── сгенерированный пакет rt-contracts ────────────────────────────────────────────────────────
