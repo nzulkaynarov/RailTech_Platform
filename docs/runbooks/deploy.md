@@ -401,8 +401,8 @@ ssh root@<VPS 2> /opt/rt-db/infra/deploy/reset-prod.sh db --drop crm,erp     # �
 
 После сообщения «сброс завершён» — первый запуск (один заход на сервер — за кодом, дальше браузер):
 
-1. Код первого запуска CRM (живёт 24 ч, в журнале один раз): `ssh deploy@<VPS 1> 'docker logs rt-platform-crm-api-1 2>&1 | grep setup_code_issued'`
-   (скрипт в конце печатает имя контейнера и число найденных строк).
+1. Код первого запуска CRM (живёт 24 ч, выпускается при каждом старте `crm-api`, пока нет администратора): `ssh deploy@<VPS 1> 'docker logs rt-platform-crm-api-1 2>&1 | grep setup_code_issued | tail -1'`.
+   Нужна **последняя** строка: журнал контейнера хранит и прежние запуски (скрипт в конце печатает имя контейнера и число найденных строк).
 2. `https://<CRM_DOMAIN>/setup` → код, e-mail и пароль первого администратора (пароль задаёт владелец).
 3. **Платформа: Admin → Подключения** (то же есть в консоли CRM): бот Telegram — токен от BotFather; ERP — кнопка «Подключить ERP»: адрес `http://erp-backend:8000`
    подставлен, **код не нужен**, вводится пароль администратора (`crm-erp-pairing.md`). Окно «без кода» одноразовое: на чистых базах оно открыто.
@@ -444,5 +444,5 @@ ssh root@<VPS 2> /opt/rt-db/infra/deploy/reset-prod.sh db --drop crm,erp     # �
 2. VPS 1: `infra/deploy/make-env-prod.sh init && infra/deploy/make-env-prod.sh drop-db-only` (новые переменные S0-2, S0-4); VPS 2: обновить `/opt/rt-db/infra` и `ssh root@<VPS 2> /opt/rt-db/infra/deploy/db-up.sh` (S0-3).
 3. Actions → Deploy → `ref` = `main`, `action` = `deploy`. Дождаться окончания; красный результат на миграциях старых данных допустим, если релиз `<sha>` лёг на VPS 1.
 4. `ssh -t deploy@<VPS 1> /opt/rt/releases/<sha>/infra/deploy/reset-prod.sh <sha>` → ввод имени домена CRM → на шаге 3 в другом окне `ssh root@<VPS 2> /opt/rt-db/infra/deploy/reset-prod.sh db --drop crm,erp` → Enter.
-5. Код: `ssh deploy@<VPS 1> 'docker logs rt-platform-crm-api-1 2>&1 | grep setup_code_issued'` → `https://<CRM_DOMAIN>/setup` → Платформа: Admin → Подключения (бот, «Подключить ERP») → роли → проверки п. 7.3.
+5. Код: `ssh deploy@<VPS 1> 'docker logs rt-platform-crm-api-1 2>&1 | grep setup_code_issued | tail -1'` → `https://<CRM_DOMAIN>/setup` → Платформа: Admin → Подключения (бот, «Подключить ERP») → роли → проверки п. 7.3.
 6. Данные для входа передать владельцу; затем гейт этапа 0 (`wave10-stage0.md` §3).

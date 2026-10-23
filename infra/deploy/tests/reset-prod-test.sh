@@ -81,7 +81,12 @@ case "$1" in
     fi ;;
   run)   # psql в одноразовом контейнере (проверка баз с VPS 1)
     if [[ "$args" == *pg_extension* ]]; then echo 1
-    elif [[ "$args" == *pg_class* ]]; then [[ "$(state)" == empty ]] && echo 0 || echo 57
+    elif [[ "$args" == *pg_class* ]]; then
+      case "$(state)" in
+        empty) echo 0 ;;
+        missing) echo 'psql: error: connection to server failed: FATAL:  database "crm" does not exist'; exit 2 ;;
+        *) echo 57 ;;
+      esac
     fi ;;
   logs) echo "ts setup_code_issued code=SECRET-CODE-1234" ;;
   compose)
@@ -246,6 +251,11 @@ bash "$script" db --drop crm,erp >"$tmp/out" 2>&1 || fail "режим db упа�
 assert_present 'DROP DATABASE IF EXISTS "crm"'; assert_present 'DROP DATABASE IF EXISTS "erp"'
 assert_before 'DROP DATABASE IF EXISTS "erp"' "10-prod-init.sh"
 grep -q 'litellm цела' "$tmp/out" || fail "режим db не подтвердил сохранность litellm"
+
+# ── 9a. сброс оборвался между DROP и CREATE: базы нет вовсе — это не «нет подключения», шаг 3 выполняется ───────────────
+reset_fake; echo missing > "$FAKE/dbstate"
+SSH_TARGET=root@vps2.example.org run_reset <<<"$domain" || fail "повтор при отсутствующих базах упал"
+assert_present "ssh -o BatchMode=yes"; assert_present "DROP DATABASE"; assert_present "deploy.sh $tag"
 
 # ── 10. запуск от root на VPS 1 запрещён ───────────────────────────────────────────────────────────────────────────────
 reset_fake; touch "$tmp/as-root"

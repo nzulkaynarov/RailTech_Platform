@@ -145,15 +145,20 @@ project_containers() { # работающие контейнеры проект�
   docker ps --filter "label=com.docker.compose.project=$project" --format '{{.ID}} {{.Label "com.docker.compose.service"}}'
 }
 
-# Пусты ли crm и erp (нет ни одного отношения вне системных схем). Не удаётся подключиться — остановка.
+# Пусты ли crm и erp (нет ни одного отношения вне системных схем). Базы нет вовсе (сброс оборвался между DROP и CREATE) —
+# тоже «не готово» (код 1). Не удаётся подключиться по другой причине — остановка.
 dbs_empty() {
-  local pair db role var cnt
+  local pair db role var cnt err
   for pair in crm:crm_app:DB_CRM_PASSWORD erp:erp_app:DB_ERP_PASSWORD; do
     IFS=: read -r db role var <<<"$pair"
-    cnt="$(PGPASSWORD="$(env_get "$var")" "$PG_DOCKER" run --rm -e PGPASSWORD -e PGSSLMODE=require "$PG_IMAGE" \
+    if ! cnt="$(PGPASSWORD="$(env_get "$var")" "$PG_DOCKER" run --rm -e PGPASSWORD -e PGSSLMODE=require "$PG_IMAGE" \
       psql -h "$db_host" -p 5432 -U "$role" -d "$db" -tAc \
-      "SELECT count(*) FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace WHERE c.relkind IN ('r','p','v','m','f','S') AND n.nspname NOT IN ('pg_catalog','information_schema') AND n.nspname NOT LIKE 'pg_toast%'")" \
-      || die "нет подключения к базе $db на VPS 2 ($db_host:5432): ufw/pg_hba/пароль роли ${role}"
+      "SELECT count(*) FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace WHERE c.relkind IN ('r','p','v','m','f','S') AND n.nspname NOT IN ('pg_catalog','information_schema') AND n.nspname NOT LIKE 'pg_toast%'" 2>&1)"; then
+      err="$cnt"
+      if grep -q 'does not exist' <<<"$err"; then log "   базы $db нет (будет создана)"; return 1; fi
+      printf '%s\n' "$err" | tail -n 3 >&2
+      die "нет подключения к базе $db на VPS 2 ($db_host:5432): ufw/pg_hba/пароль роли ${role}"
+    fi
     [[ "$(tr -d '[:space:]' <<<"$cnt")" == 0 ]] || return 1
   done
 }
@@ -358,7 +363,7 @@ issued="$( { [[ -n "$api_name" ]] && docker logs "$api_name" 2>&1 | grep -c setu
 cat >&2 <<EOF
 
 7. Первый запуск (код живёт 24 ч, пишется в лог CRM один раз; сам скрипт его не печатает):
-     docker logs ${api_name:-<контейнер crm-api>} 2>&1 | grep setup_code_issued     # строк сейчас: ${issued:-0}
+     docker logs ${api_name:-<контейнер crm-api>} 2>&1 | grep setup_code_issued | tail -1     # строк в журнале: ${issued:-0}; нужна ПОСЛЕДНЯЯ (журнал контейнера хранит и прежние запуски)
    Дальше в браузере:
      https://$crm_domain/setup  →  код, e-mail и пароль первого администратора
      Платформа: Admin → Подключения  →  бот Telegram; ERP — кнопка «Подключить ERP» (адрес http://erp-backend:8000, без кода)
