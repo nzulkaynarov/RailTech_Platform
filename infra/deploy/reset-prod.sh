@@ -4,7 +4,9 @@
 # и аккаунтов в нём нет (решение владельца 2026-10-23); дальше скрипт не нужен, а запуск на живых данных — потеря данных.
 #
 #   VPS 1, под deploy:   reset-prod.sh [тег]       тег — релиз, на который сбрасываем (по умолчанию state/current_tag)
-#   VPS 2, под root:     reset-prod.sh db --drop crm,erp      только пересоздание баз (запускает шаг 3 ниже)
+#   VPS 2, под root:     reset-prod.sh db --drop crm,erp [--dump-taken <каталог дампа на VPS 1>]
+#                        только пересоздание баз (шаг 3 ниже). Барьер: без --dump-taken (его передаёт только VPS-1-часть, после дампа)
+#                        нужен ввод «crm,erp» с терминала; без флага и без терминала — отказ
 #
 # Подтверждение — ввод имени домена CRM из .env.prod (с терминала, /dev/tty); флага «без вопросов» нет.
 # Порядок на VPS 1 (каждый шаг идемпотентен, повтор после сбоя безопасен):
@@ -24,7 +26,8 @@
 #
 # Прерванный сброс: состояние в $RT_STATE/reset/run (дамп снят, данные сброшены); повторный запуск в течение 24 ч продолжает
 # с первого невыполненного шага. Бросить и начать заново: rm "$RT_STATE/reset/run".
-# Для теста (infra/deploy/tests/reset-prod-test.sh): RT_RESET_TEST_STDIN=1 — читать ответы из stdin, а не с терминала.
+# Для теста (infra/deploy/tests/reset-prod-test.sh): RT_RESET_TEST_STDIN=1 — читать ответы из stdin, а не с терминала;
+# действует только при RT_STATE, отличном от боевого /opt/rt/state.
 set -euo pipefail
 # shellcheck source=infra/deploy/lib.sh
 source "$(dirname "${BASH_SOURCE[0]}")/lib.sh"
@@ -49,6 +52,7 @@ in_list() { local x="$1"; shift; local i; for i in "$@"; do [[ "$i" == "$x" ]] &
 ask() { # текст приглашения -> ответ в $REPLY
   printf '%s' "$1" >&2
   if [[ "${RT_RESET_TEST_STDIN:-}" == 1 ]]; then
+    [[ "${RT_STATE:-}" != /opt/rt/state ]] || die "RT_RESET_TEST_STDIN — только для теста: на боевом RT_STATE=/opt/rt/state подтверждение вводится с терминала"
     IFS= read -r REPLY || die "ввод закрыт — сброс не подтверждён"
   else
     IFS= read -r REPLY </dev/tty || die "нет терминала для подтверждения — запустите скрипт в интерактивной сессии (ssh -t)"
@@ -57,10 +61,11 @@ ask() { # текст приглашения -> ответ в $REPLY
 
 # --- режим VPS 2: пересоздание баз ---------------------------------------------------------------------------------------
 run_db() {
-  local drop="" list=() d
+  local drop="" dump_taken="" list=() d
   while [[ $# -gt 0 ]]; do
     case "$1" in
       --drop) drop="${2:-}"; shift 2 ;;
+      --dump-taken) dump_taken="${2:-}"; shift 2 ;;
       *) die "неизвестный аргумент: $1 (usage: reset-prod.sh db --drop crm,erp)" ;;
     esac
   done
@@ -69,6 +74,14 @@ run_db() {
   for d in "${list[@]}"; do
     in_list "$d" "${RESET_DBS[@]}" || die "база '$d' не входит в сброс: разрешены только ${RESET_DBS[*]} (litellm хранит ключи моделей, langfuse не сбрасывается)"
   done
+  # Барьер перед DROP: либо VPS-1-часть подтверждает, что дамп снят (--dump-taken <каталог>), либо человек вводит список баз.
+  if [[ -n "$dump_taken" ]]; then
+    [[ "$dump_taken" == /* ]] || die "--dump-taken: нужен абсолютный путь каталога дампа на VPS 1, получено '$dump_taken'"
+    log "дамп до сброса снят на VPS 1: $dump_taken — продолжаю"
+  else
+    ask "ВНИМАНИЕ: будут удалены базы $drop на этом сервере, дамп из этого запуска не проверяется. Для подтверждения введите $drop: "
+    [[ "$REPLY" == "$drop" ]] || die "введено '$REPLY', ожидалось '$drop' — базы не тронуты (без терминала и без --dump-taken режим db отказывает)"
+  fi
   [[ "$(id -u)" -eq 0 ]] || die "режим db запускается от root на VPS 2 (sudo у deploy нет): ssh root@<VPS 2> $0 db --drop $drop"
   local infra envf
   infra="$(cd "$here/.." && pwd)"
@@ -105,8 +118,15 @@ if [[ "${1:-}" == db ]]; then shift; run_db "$@"; exit 0; fi
 
 # --- режим VPS 1 ----------------------------------------------------------------------------------------------------------
 [[ "$(id -u)" -ne 0 ]] || die "запускайте под пользователем deploy, не под root: файлы состояния и дампов должны принадлежать deploy"
-tag="${1:-$(state_get current_tag)}"
-[[ -n "$tag" ]] || die "нет тега: state/current_tag пуст — укажите: reset-prod.sh <тег>"
+tag="${1:-}"
+if [[ -z "$tag" ]]; then
+  # Тег не указан: берём state/current_tag, но только если скрипт запущен из каталога именно этого релиза — иначе сброс
+  # пошёл бы кодом одного релиза с образами и миграциями другого.
+  tag="$(state_get current_tag)"
+  [[ -n "$tag" ]] || die "нет тега: state/current_tag пуст — укажите: reset-prod.sh <тег>"
+  script_rel="$(basename "$(cd "$here/../.." && pwd)")"
+  [[ "$script_rel" == "$tag" ]] || die "скрипт запущен из релиза '$script_rel', а state/current_tag = '$tag': укажите тег явно (reset-prod.sh <тег>), чтобы не смешать релизы"
+fi
 [[ "$tag" =~ ^[A-Za-z0-9_.-]+$ ]] || die "недопустимый тег: $tag"
 rel="$(release_dir "$tag")"
 for f in deploy.sh predeploy-dump.sh cpu-baseline-check.sh smoke.sh; do
@@ -170,8 +190,13 @@ vector_present() {
   [[ "$(tr -d '[:space:]' <<<"$cnt")" == 1 ]] || die "в crm нет расширения vector — пересоздание баз на VPS 2 выполнено не полностью (db-up.sh или reset-prod.sh db)"
 }
 
+stopped_count=0
 step_stop() {
-  local id svc ids=() names=()
+  local id svc ids=() names=() all
+  # Проект должен существовать (хотя бы rustfs или caddy, в том числе остановленные): иначе неверное имя проекта compose
+  # (COMPOSE_PROJECT_NAME) — и мы «ничего не остановили», а потом удалили бы не то или не там.
+  all="$(docker ps -a --filter "label=com.docker.compose.project=$project" --format '{{.ID}} {{.Label "com.docker.compose.service"}}')"
+  grep -qE ' (rustfs|caddy)$' <<<"$all" || die "в проекте compose '$project' нет контейнеров rustfs и caddy — неверное имя проекта (COMPOSE_PROJECT_NAME / .env.prod) или стек не разворачивался; сброс остановлен до любых действий"
   while read -r id svc; do
     [[ -n "$id" ]] || continue
     in_list "$svc" "${KEEP_SERVICES[@]}" && continue
@@ -180,6 +205,7 @@ step_stop() {
   if [[ ${#ids[@]} -gt 0 ]]; then
     log "1. остановка приложений: ${names[*]}"
     docker stop -t 30 "${ids[@]}" >/dev/null
+    stopped_count=${#ids[@]}
   else
     log "1. работающих приложений нет (остаются: ${KEEP_SERVICES[*]})"
   fi
@@ -199,7 +225,7 @@ step_dump() {
   out="${out%/}"
   [[ -n "$out" && -s "$out/crm.dump" && -s "$out/erp.dump" ]] || die "дамп после predeploy-dump.sh не найден в $RT_STATE/predeploy"
   # predeploy хранит пять последних каталогов, а сброс и деплой после него снимут ещё дампы — копия живёт отдельно.
-  keep="$reset_dir/dumps/$(date -u +%Y%m%dT%H%M%SZ)"
+  keep="$reset_dir/dumps/$(date -u +%Y%m%dT%H%M%SZ)-$$"
   mkdir -p "$reset_dir/dumps"
   mkdir -m 700 "$keep"
   cp -a "$out/." "$keep/"
@@ -215,16 +241,22 @@ step_db() {
     return
   fi
   local remote="$RT_DB_DIR/infra/deploy/reset-prod.sh db --drop crm,erp"
+  # --dump-taken передаётся только отсюда и только после step_dump: режим db без него просит ввести «crm,erp» с терминала.
+  local remote_auto dump_dir
+  dump_dir="$(rs_get dump)"
+  remote_auto="$remote --dump-taken $dump_dir"
   log "3. пересоздание баз crm и erp на VPS 2 (litellm и langfuse не трогаются)"
   if [[ -n "${RT_RESET_DB_SSH:-}" ]]; then
-    log "   ssh $RT_RESET_DB_SSH: $remote"
-    ssh -o BatchMode=yes "$RT_RESET_DB_SSH" "$remote" || die "пересоздание баз на VPS 2 не выполнено (ssh)"
+    log "   ssh $RT_RESET_DB_SSH: $remote_auto"
+    ssh -o BatchMode=yes "$RT_RESET_DB_SSH" "$remote_auto" || die "пересоздание баз на VPS 2 не выполнено (ssh)"
   else
     {
       echo
       echo "   Выполните НА VPS 2 от root (у deploy sudo нет; скрипт там обновляется вместе с каталогом infra, см. runbook):"
       echo
-      echo "       ssh root@<VPS 2>  $remote"
+      echo "       ssh -t root@<VPS 2>  $remote"
+      echo
+      echo "   (дамп до сброса уже снят: $(rs_get dump); на VPS 2 скрипт попросит ввести crm,erp — без терминала он откажется.)"
       echo
       echo "   (RT_RESET_DB_SSH=root@<адрес VPS 2> — и скрипт сделает это сам, если у VPS 1 есть ключ.)"
       echo
@@ -255,7 +287,7 @@ async def purge(s3, bucket):
             return
         raise
     deleted = 0
-    while True:
+    for _ in range(1000):  # предел на случай, если бакет пополняется (запись приложением) быстрее, чем очищается
         keys = []
         async for page in s3.get_paginator("list_objects_v2").paginate(Bucket=bucket):
             keys += [o["Key"] for o in page.get("Contents", [])]
@@ -264,6 +296,8 @@ async def purge(s3, bucket):
         for i in range(0, len(keys), 16):
             await asyncio.gather(*(s3.delete_object(Bucket=bucket, Key=k) for k in keys[i:i + 16]))
         deleted += len(keys)
+    else:
+        raise SystemExit(f"бакет {bucket} не опустел за 1000 проходов — кто-то пишет в него; приложения остановлены?")
     print(f"{bucket}: удалено объектов {deleted}, осталось 0", flush=True)
 
 
@@ -344,6 +378,13 @@ if [[ -n "$(rs_get data_reset)" ]]; then
   log "данные уже сброшены ($(rs_get data_reset)) — шаги 1–5 пропущены, остаётся деплой"
 else
   step_stop
+  # Приложения работали (первый заход или кто-то поднял их между попытками) — дамп прежней попытки мог устареть: снимаем новый,
+  # прежний каталог остаётся на диске (dump_prev).
+  if [[ $stopped_count -gt 0 && -n "$(rs_get dump)" ]]; then
+    log "   приложения были запущены — дамп прежней попытки не используем, снимаем новый"
+    rs_set dump_prev "$(rs_get dump)"
+    rs_set dump ""
+  fi
   step_dump
   step_db
   step_buckets

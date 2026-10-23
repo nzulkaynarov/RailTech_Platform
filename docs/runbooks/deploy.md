@@ -419,7 +419,8 @@ Smoke с раннера в задании `rollback` устроен так же:
 - **Шаг 3 — отдельным заходом на VPS 2.** У `deploy` на VPS 2 нет `sudo`, а давать VPS 1 ключ `root` от VPS 2 ради одного сброса не нужно. Скрипт
   печатает команду для VPS 2 (`<каталог>/infra/deploy/reset-prod.sh db --drop crm,erp`, от root), ждёт Enter и сам проверяет с VPS 1, что базы пусты и
   `vector` в `crm` на месте. Если у VPS 1 есть ключ к VPS 2, `RT_RESET_DB_SSH=root@<VPS 2>` делает этот заход сам. Режим `db` принимает только `crm` и `erp`
-  (`litellm` и `langfuse` он отклоняет) и сверяет число таблиц `litellm` до и после. На VPS 2 каталог `infra` должен быть той же версии, что релиз
+  (`litellm` и `langfuse` он отклоняет) и сверяет число таблиц `litellm` до и после. **Барьер перед `DROP`:** либо VPS-1-часть передаёт флаг `--dump-taken <каталог дампа>` (только
+  после снятия дампа; так работает `RT_RESET_DB_SSH`), либо человек вводит `crm,erp` с терминала; без флага и без терминала режим отказывает. На VPS 2 каталог `infra` должен быть той же версии, что релиз
   (при выкладке S0-3 его обновляют так же, как в п. 1.3: скопировать `infra/` релиза в `/opt/rt-db/infra`).
 - **WAL-архив не переключается.** Кластер PostgreSQL тот же: `DROP`/`CREATE DATABASE` — обычные транзакции в том же потоке WAL, имена сегментов не повторяются,
   поэтому `WAL_S3_PREFIX` и `WAL_ENC_KEY` остаются прежними (смена префикса — только при новом кластере, `initdb`, и по `backup-pitr.md` §6). Следствие: на момент до
@@ -438,20 +439,35 @@ Smoke с раннера в задании `rollback` устроен так же:
 1. **Сохранить офлайн** (если ещё нет): `/opt/rt/.env.prod`, `/opt/rt-db/.env.db`, отдельно `BACKUP_ENC_PASSPHRASE`, `WAL_ENC_KEY`, `LITELLM_SALT_KEY`; токен бота Telegram от BotFather
    (он хранится в базе CRM и исчезнет вместе с ней; после сброса вводится в «Подключениях» заново); при желании — пароли и ключи моделей, которые лежат у владельца вне сервера.
    Ключи моделей в базе `litellm` сохраняются, но ключ `LITELLM_SALT_KEY` обязателен для их расшифровки.
-2. **Переменные.** В `/opt/rt/.env.prod` есть всё, что требует main: `make-env-prod.sh init` дописывает новые (`REDIS_BROKER_PASSWORD`, `REDIS_CACHE_PASSWORD` и др.), после него
-   `drop-db-only` (п. 1.2). `PLATFORM_DOMAIN` и A-запись на месте (раздел «Платформа»).
-3. **VPS 2** обновлён (`db-up.sh` после S0-3 выполнен, каталог `infra` версии релиза, `walg` и `postgres` healthy: `docker ps` на VPS 2).
-4. **Деплой main** обычным способом (Actions → Deploy, `ref` = `main`). Если он упал на миграциях старых данных — это не помеха сбросу: релиз уже лежит в
-   `/opt/rt/releases/<sha>/`. Нужно только, чтобы там был `infra/deploy/reset-prod.sh` (`ls`), а образы с этим тегом уже в GHCR.
+2. **Переменные VPS 1** (порядок важен, подробности — `backup-pitr.md` §1): `infra/deploy/make-env-prod.sh init` допишет новые переменные (`REDIS_BROKER_PASSWORD`,
+   `REDIS_CACHE_PASSWORD`, `WAL_*` и др.) и **впервые сгенерирует `WAL_ENC_KEY`**. Сразу после `init`: (а) **сохранить `WAL_ENC_KEY` офлайн** — повторный `init` после
+   `drop-db-only` создаст другой ключ, а потерянный не восстановить; (б) вписать вместо заглушек `192.0.2.x` реальные адреса: `WAL_S3_ENDPOINT=http://<APP_INTERNAL_IP>:9000`
+   (и `BACKUP_RUSTFS_ENDPOINT`, если `init` его дописал; деплой отказывается работать с заглушками). `drop-db-only` пока **не** запускать: сначала `extract-db` (п. 4).
+   `PLATFORM_DOMAIN` и A-запись на месте (раздел «Платформа»).
+3. **Деплой main** обычным способом (Actions → Deploy, `ref` = `main`): он создаёт бакет `wal` (`s3-init`), без которого архив на VPS 2 только копит WAL на диске. Если деплой упал на
+   миграциях старых данных — это не помеха сбросу: релиз уже лежит в `/opt/rt/releases/<sha>/`, а сам сброс (шаг 6) поднимет стек и создаст бакеты. Нужно только,
+   чтобы там был `infra/deploy/reset-prod.sh` (`ls`), а образы с этим тегом уже в GHCR.
+4. **VPS 2** (S0-3): дописать в `/opt/rt-db/.env.db` **только** `WAL_*` — слепой `extract-db > .env.db` перезаписал бы пароли баз VPS 2:
+   ```bash
+   # VPS 1, от deploy; если WAL_* в .env.db уже есть — не дописывать повторно
+   infra/deploy/make-env-prod.sh extract-db | grep -E '^WAL_' > /tmp/wal.env
+   scp /tmp/wal.env deploy@<VPS 2>:/tmp/wal.env && shred -u /tmp/wal.env
+   ssh deploy@<VPS 2> 'cat /tmp/wal.env >> /opt/rt-db/.env.db && shred -u /tmp/wal.env && chmod 600 /opt/rt-db/.env.db'
+   # затем обновить /opt/rt-db/infra версией релиза (п. 1.3) и поднять базу с WAL-архивом
+   ssh root@<VPS 2> /opt/rt-db/infra/deploy/db-up.sh
+   # после этого на VPS 1:
+   infra/deploy/make-env-prod.sh drop-db-only
+   ```
+   Проверка WAL — `backup-pitr.md` §1 («Проверка»): `postgres` и `walg` healthy, бакет `wal` непустой.
 5. Не запускать сброс, пока в `main` вливается PR (гонка с релизом, раздел 6).
 
 ### 7.2. Сброс и первый запуск
 
 ```bash
-# VPS 1, под deploy, интерактивно (ssh -t): подтверждение — имя домена CRM; на шаге 3 скрипт попросит выполнить команду на VPS 2
+# VPS 1, под deploy, интерактивно (ssh -t): подтверждение — имя домена CRM; тег указывайте явно; на шаге 3 скрипт попросит выполнить команду на VPS 2
 ssh -t deploy@<VPS 1> /opt/rt/releases/<sha>/infra/deploy/reset-prod.sh <sha>
-# VPS 2, по просьбе скрипта на шаге 3, от root:
-ssh root@<VPS 2> /opt/rt-db/infra/deploy/reset-prod.sh db --drop crm,erp     # затем Enter в сеансе VPS 1
+# VPS 2, по просьбе скрипта на шаге 3, от root, с терминалом (-t): режим db попросит ввести crm,erp
+ssh -t root@<VPS 2> /opt/rt-db/infra/deploy/reset-prod.sh db --drop crm,erp     # затем Enter в сеансе VPS 1
 ```
 
 После сообщения «сброс завершён» — первый запуск (один заход на сервер — за кодом, дальше браузер):
@@ -496,8 +512,9 @@ ssh root@<VPS 2> /opt/rt-db/infra/deploy/reset-prod.sh db --drop crm,erp     # �
 ### 7.5. Архитектору: последовательность команд
 
 1. Перед началом (владелец/архитектор): офлайн-копии `.env.prod`, `.env.db`, `BACKUP_ENC_PASSPHRASE`, `WAL_ENC_KEY`, `LITELLM_SALT_KEY`, токен бота (п. 7.1.1). Убедиться, что в `main` ничего не вливается.
-2. VPS 1: `infra/deploy/make-env-prod.sh init && infra/deploy/make-env-prod.sh drop-db-only` (новые переменные S0-2, S0-4); VPS 2: обновить `/opt/rt-db/infra` и `ssh root@<VPS 2> /opt/rt-db/infra/deploy/db-up.sh` (S0-3).
-3. Actions → Deploy → `ref` = `main`, `action` = `deploy`. Дождаться окончания; красный результат на миграциях старых данных допустим, если релиз `<sha>` лёг на VPS 1.
-4. `ssh -t deploy@<VPS 1> /opt/rt/releases/<sha>/infra/deploy/reset-prod.sh <sha>` → ввод имени домена CRM → на шаге 3 в другом окне `ssh root@<VPS 2> /opt/rt-db/infra/deploy/reset-prod.sh db --drop crm,erp` → Enter.
-5. Код: `ssh deploy@<VPS 1> 'docker logs rt-platform-crm-api-1 2>&1 | grep setup_code_issued | tail -1'` → `https://<CRM_DOMAIN>/setup` → Платформа: Admin → Подключения (бот, «Подключить ERP») → роли → проверки п. 7.3.
-6. Данные для входа передать владельцу; затем гейт этапа 0 (`wave10-stage0.md` §3).
+2. VPS 1: `infra/deploy/make-env-prod.sh init` → сразу сохранить `WAL_ENC_KEY` офлайн → вписать `WAL_S3_ENDPOINT=http://<APP_INTERNAL_IP>:9000` (и `BACKUP_RUSTFS_ENDPOINT`, если там заглушка). `drop-db-only` пока не запускать (п. 7.1.2).
+3. Actions → Deploy → `ref` = `main`, `action` = `deploy` (создаёт бакет `wal`). Дождаться окончания; красный результат на миграциях старых данных допустим, если релиз `<sha>` лёг на VPS 1.
+4. S0-3 на VPS 2 (п. 7.1.4): `extract-db | grep -E '^WAL_'` → дописать в `/opt/rt-db/.env.db` (не перезаписывать файл) → обновить `/opt/rt-db/infra` → `ssh root@<VPS 2> /opt/rt-db/infra/deploy/db-up.sh` → на VPS 1 `drop-db-only`.
+5. `ssh -t deploy@<VPS 1> /opt/rt/releases/<sha>/infra/deploy/reset-prod.sh <sha>` → ввод имени домена CRM → на шаге 3 в другом окне `ssh -t root@<VPS 2> /opt/rt-db/infra/deploy/reset-prod.sh db --drop crm,erp` (ввод `crm,erp`) → Enter в сеансе VPS 1.
+6. Код: `ssh deploy@<VPS 1> 'docker logs rt-platform-crm-api-1 2>&1 | grep setup_code_issued | tail -1'` → `https://<CRM_DOMAIN>/setup` → Платформа: Admin → Подключения (бот, «Подключить ERP») → роли → проверки п. 7.3.
+7. Данные для входа передать владельцу; затем гейт этапа 0 (`wave10-stage0.md` §3).
