@@ -19,7 +19,7 @@
   `redis-cache` (кэш и троттлинг ERP, одноразовые `jti`, сессии Платформы, Langfuse; `volatile-lru`). Подробно, с отказами — раздел «Redis: брокер и кэш раздельно» ниже.
 - **База** — на VPS 2: PostgreSQL 17 + pgvector, 4 базы, по роли на базу (`crm_app`, `erp_app`, `litellm_app`, `langfuse_app`),
   `pg_hba` — только TLS и только внутренний IP VPS 1.
-- **Порядок деплоя** (`infra/deploy/deploy.sh <sha>`): проверка env → `pull` → **проверка базы CPU образов** (`cpu-baseline-check.sh`: в каждом образе запускается import numpy / litellm.proxy / версия бинаря; образ, которому нужен x86-64-v2, останавливает деплой до дампа и миграций, см. servers.md «CPU прод-VPS») → **pg_dump-гейт** `crm` и `erp`
+- **Порядок деплоя** (`infra/deploy/deploy.sh <sha>`): проверка env → `pull` → **проверка базы CPU образов** (`cpu-baseline-check.sh`: в каждом образе запускается import numpy / litellm.proxy / версия бинаря; образ, которому нужен x86-64-v2, останавливает деплой до дампа и миграций, см. servers.md «CPU прод-VPS»); ту же таблицу команд раньше, в PR, прогоняет CI под эмуляцией CPU `qemu64` (задание `cpu-image`, `make deploy-check`, `scripts/qemu_cpu_check.sh`; servers.md, «Проверка под эмуляцией qemu64») → **pg_dump-гейт** `crm` и `erp`
   (`predeploy-dump.sh`; нет читаемого дампа — миграций нет) → миграции CRM и ERP явно (`AUTO_MIGRATE=false` у ERP) → `up -d` → smoke.
 - Правило FIX-03: `/mcp` снаружи — 404 на всех доменах, включая Платформу (Caddy); smoke это проверяет.
 
