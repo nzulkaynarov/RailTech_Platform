@@ -8,6 +8,5 @@ class IntegrationConfig(AppConfig):
     verbose_name = _("Интеграции")
 
     def ready(self):
-        from .signals import register_signals
-
-        register_signals()
+        # Обработчики входящих событий шины rt_bus (проекции данных клиента CRM) — в реестр по умолчанию.
+        from . import bus_handlers  # noqa: F401

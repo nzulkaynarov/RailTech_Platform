@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Тест S0-5: граница наружу в Caddyfile.prod и Caddyfile.dev.
-#  1. Домен ERP: /api/integration (машинный API, ходит только CRM по сети compose) и /admin (Django admin) снаружи — 404;
+#  1. Домен ERP: /api/integration (машинный API, ходит только CRM по сети compose), /admin (Django admin) и /bus (приёмник шины
+#     rt_bus, B3) снаружи — 404;
 #     /api/v1/* (включая /api/v1/admin/email-templates/ — это API, не /admin), /api/portal/*, /ws/*, /static/*, /media/*,
 #     /health работают как раньше (доходят до erp-backend), остальное — SPA (erp-web).
 #  2. Через домены Cabinet и Платформы эти пути до erp-backend не доходят.
@@ -73,7 +74,7 @@ check_edge() { # <ERP-host> <Cabinet-host> <Platform-host>
   echo "[$label]"
   # 1. ERP: закрыто снаружи.
   for p in /api/integration /api/integration/ /api/integration/v1/health /api/integration/v1/deals/1 \
-           /admin /admin/ /admin/login/ /admin/core/user/ /mcp /mcp/erp/; do
+           /admin /admin/ /admin/login/ /admin/core/user/ /mcp /mcp/erp/ /bus /bus/v1/events; do
     expect "$erp" "$p" 404
   done
   # ERP: прежние маршруты работают (до erp-backend доходят).
@@ -91,7 +92,7 @@ check_edge() { # <ERP-host> <Cabinet-host> <Platform-host>
   done
   # 2. Cabinet и Платформа: машинный API и admin ERP не проксируются.
   for h in "$cab" "$plat"; do
-    for p in /api/integration/v1/health /api/integration /admin /admin/ /admin/login/; do
+    for p in /api/integration/v1/health /api/integration /admin /admin/ /admin/login/ /bus/v1/events; do
       expect_not_erp "$h" "$p"
     done
   done

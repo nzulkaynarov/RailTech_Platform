@@ -10,13 +10,13 @@ import datetime
 from pathlib import Path
 
 import pytest
+from integration.services.events import build_deal_ref
 from integration.services.summary import (
     delivery_lines,
     get_company_summary_data,
     get_deal_detail_data,
     list_company_deals_data,
 )
-from integration.services.webhooks import build_deal_ref
 from integration.tests.world import (
     TODAY,
     add_contract,
@@ -413,7 +413,8 @@ def test_summary_does_not_swallow_errors():
     assert "except Exception" not in (INTEGRATION / "services" / "summary.py").read_text(encoding="utf-8")
 
 
-def test_webhooks_has_no_second_stage_mapping():
-    from integration.services import webhooks
+def test_events_have_no_second_stage_mapping():
+    from integration.services import event_builders, events
 
-    assert not hasattr(webhooks, "map_deal_stage") and not hasattr(webhooks, "VALID_DEAL_STAGES")
+    for module in (events, event_builders):
+        assert not hasattr(module, "map_deal_stage") and not hasattr(module, "VALID_DEAL_STAGES")

@@ -12,7 +12,8 @@ from decimal import Decimal
 
 import pytest
 from django.core.files.uploadedfile import SimpleUploadedFile
-from integration.models import CrmClientMapping, IntegrationWebhookEvent
+from integration.models import CrmClientMapping
+from integration.tests import bus_support
 from portal.models import PortalRequestLine, PortalRequestSummary, PortalUpload
 from portal.tests.contract_support import check_response, component
 
@@ -47,7 +48,7 @@ def upload(client, name="spec.pdf", content=b"%PDF-1.4 spec"):
 def assert_nothing_created(company):
     assert not Deal.objects.filter(company=company).exists()
     assert not PortalRequestLine.objects.exists()
-    assert not IntegrationWebhookEvent.objects.filter(event_type="request.created").exists()
+    assert not bus_support.published("request.created")
 
 
 # ── Количество: строка или null, без выдумок ──────────────────────────────────────────────────────
@@ -290,13 +291,12 @@ def test_request_created_event_has_source_cabinet(portal_client, client_company,
     assert response.status_code == 201
     created = response.json()
 
-    events = IntegrationWebhookEvent.objects.filter(event_type="request.created")
-    assert events.count() == 1, "одно событие на запрос"
-    envelope = events.get().payload
-    assert envelope["payload"]["source"] == "cabinet"
-    assert envelope["payload"]["erp_request_id"] == created["id"]
-    assert envelope["payload"]["summary"] == created["summary"], "в событии — полная суть запроса, не название сделки"
-    assert envelope["erp_company_id"] == client_company.pk and envelope["crm_client_id"] == mapped.crm_client_id
+    assert len(bus_support.published("request.created")) == 1, "одно событие на запрос"
+    data = bus_support.only("request.created")["data"]
+    assert data["payload"]["source"] == "cabinet"
+    assert data["payload"]["erp_request_id"] == created["id"]
+    assert data["payload"]["summary"] == created["summary"], "в событии — полная суть запроса, не название сделки"
+    assert data["erp_company_id"] == client_company.pk and data["crm_client_id"] == mapped.crm_client_id
 
 
 def test_request_source_is_cabinet_in_the_response_and_in_the_journal(portal_client):
@@ -322,36 +322,25 @@ def test_deal_created_by_portal_belongs_to_the_session_company_and_contact(
     assert deal.company_id == client_company.pk and deal.contact_id == client_contact.pk
 
 
-def test_staff_deal_event_is_not_cabinet(client_company, mapped):
-    """Сделку, заведённую не порталом (сотрудник, интеграция), сигнал помечает `erp`: контакт портала ни о чём не говорит."""
-    Deal.objects.create(company=client_company, title="Заведена в ERP")
-    event = IntegrationWebhookEvent.objects.get(event_type="request.created")
-    assert event.payload["payload"]["source"] == "erp"
+def test_request_event_is_in_the_same_transaction_as_the_request(portal_client, mapped, monkeypatch):
+    """Ошибка публикации откатывает запрос целиком: ни сделки, ни строк, ни события."""
+    from integration.services import events
 
+    def boom(*args, **kwargs):
+        raise RuntimeError("publish failed")
 
-def test_portal_marker_does_not_leak_to_later_saves(portal_client, client_company, mapped):
-    created = post(portal_client).json()
-    deal = Deal.objects.get(pk=created["id"])
-    deal.title = "Правка названия"
-    deal.save()
-    assert IntegrationWebhookEvent.objects.filter(event_type="request.created").count() == 1
+    monkeypatch.setattr(events, "publish_request_created", boom)
+    with pytest.raises(RuntimeError):
+        post(portal_client)
+    assert not Deal.objects.filter(company=mapped.company).exists()
+    assert not PortalRequestLine.objects.exists()
 
 
 def test_event_payload_matches_the_events_schema(portal_client, mapped):
-    import json
-    from pathlib import Path
-
-    from portal.tests.contract_support import find_contract_path
-
-    schema_path = find_contract_path().parents[1] / "events.schema.json"
-    schema = json.loads(Path(schema_path).read_text(encoding="utf-8"))
-    from jsonschema import Draft202012Validator
-
     post(portal_client)
-    payload = IntegrationWebhookEvent.objects.get(event_type="request.created").payload["payload"]
-    assert not list(
-        Draft202012Validator({**schema["$defs"]["RequestCreated"], "$defs": schema["$defs"]}).iter_errors(payload)
-    )
+    envelope = bus_support.only("request.created")
+    bus_support.assert_matches_contract(envelope)
+    assert envelope["type"] == "uz.railtech.erp.request.created.v1" and envelope["source"] == "rt://erp"
 
 
 # ── Форма ответа, права, изоляция ────────────────────────────────────────────────────────────────

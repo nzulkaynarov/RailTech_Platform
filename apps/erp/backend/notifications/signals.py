@@ -2,7 +2,7 @@ import logging
 
 from django.conf import settings
 from django.db import transaction
-from django.db.models.signals import post_save
+from django.db.models.signals import post_save, pre_save
 from django.dispatch import receiver
 
 from crm.constants import DealStageCode
@@ -127,13 +127,28 @@ def notify_deal_created(sender, instance, created, **kwargs):
         push_notification_ws(notif)
 
 
+@receiver(pre_save, sender=Deal)
+def remember_previous_stage(sender, instance, **kwargs):
+    """Запоминает прежнюю стадию сделки (`_prev_stage_id`) для `notify_deal_stage_change` — одно чтение на save (FIX-54).
+
+    `save(update_fields=[...])` без стадии стадию не меняет — прежнюю запись читать незачем. (До B3 этот признак ставил
+    сигнал из приложения интеграции вместе с вебхуками; события теперь публикует сервисный слой на шину rt_bus.)
+    """
+    update_fields = kwargs.get("update_fields")
+    if not instance.pk:
+        instance._prev_stage_id = None
+    elif update_fields is not None and not {"stage", "stage_id"} & set(update_fields):
+        instance._prev_stage_id = instance.stage_id
+    else:
+        instance._prev_stage_id = Deal.objects.filter(pk=instance.pk).values_list("stage_id", flat=True).first()
+
+
 @receiver(post_save, sender=Deal)
 def notify_deal_stage_change(sender, instance, created, **kwargs):
     """Notify client when deal stage changes.
 
-    Прежнюю стадию отдаёт `integration.signals.handle_deal_pre_save` (`_prev_stage_id`): одно чтение прежней записи на
-    весь save сделки, а не по SELECT на каждый обработчик (FIX-54). Нет признака (save не прошёл через pre_save,
-    `update_fields` без стадии) — стадия не менялась.
+    Прежнюю стадию отдаёт `remember_previous_stage` (`_prev_stage_id`). Нет признака (save не прошёл через pre_save) —
+    стадия не менялась.
     """
     if created:
         return  # New deal, skip

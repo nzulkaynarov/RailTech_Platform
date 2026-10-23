@@ -78,10 +78,10 @@ http://crm.localhost {
 }
 
 # Машинный API ERP (/api/integration — вызовы CRM и коннекторов) и Django admin (/admin) — только внутри сети compose
-# (`http://erp-backend:8000`), снаружи 404 на всех доменах (S0-5). Матчер — по префиксу пути `/admin`: `/api/v1/admin/...`
+# (`http://erp-backend:8000`), снаружи 404 на всех доменах (S0-5); так же приёмник шины rt_bus `/bus/v1/events` (B3). Матчер — по префиксу пути `/admin`: `/api/v1/admin/...`
 # (API шаблонов писем и др.) не затрагивается. Администратору в Django admin — SSH-туннель (docs/runbooks/deploy.md).
 (no_erp_internal) {
-	@erp_internal path /api/integration /api/integration/* /admin /admin/*
+	@erp_internal path /api/integration /api/integration/* /admin /admin/* /bus /bus/*
 	handle @erp_internal {
 		respond 404
 	}

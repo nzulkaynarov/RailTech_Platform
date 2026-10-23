@@ -101,7 +101,7 @@ def test_delivery_note_language_follows_the_buyer(lookups, caplog, render_calls)
 def test_document_created_event_carries_the_final_number(world, render_calls, monkeypatch):  # noqa: F811
     """Событие `document.created` для CRM уходит на переходе в «выпущенный» и несёт итоговый номер, а не `DN-<id>`."""
     sent = []
-    monkeypatch.setattr("integration.services.webhooks.emit_document_created", lambda document: sent.append(document))
+    monkeypatch.setattr("integration.services.document_events.publish_document_created", sent.append)
     crm_services.ensure_fulfillment(world["deal"])
 
     obj, _ = _ship(world)
