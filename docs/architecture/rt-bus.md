@@ -138,7 +138,7 @@ def on_client_updated(event): ...                  # Django: (event); SQLAlchemy
 - FastAPI: `app.include_router(bus_router(lambda: container.bus))`;
 - Django: `path("bus/v1/events", bus_view(get_bus))`;
 - BFF (B5): `bus_router(MemoryReceiver(BusConfig(service="platform-bff"), registry=…))` — `apps/platform/bff/app/bus.py`: обработчик
-  публикует подсказку в Redis, процессы BFF раздают её открытым SSE-соединениям (`apps/platform/docs/02-architecture.md` §5).
+  публикует подсказку в Redis, процессы BFF раздают её открытым SSE-соединениям (`docs/architecture/platform-bff.md` §5).
 
 Порядок обработки запроса:
 1. Подпись — любой действующий секрет пары, сравнение constant-time.
