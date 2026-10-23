@@ -38,7 +38,7 @@ export interface ModuleMenuContentProps {
   onNavigate?: () => void;
 }
 
-/** Заголовок 56 px, пункты 40 px с бейджами, внизу главное действие (03-frontend.md §4, зона 2). */
+/** Заголовок 56 px, пункты 40 px с бейджами, внизу главное действие (docs/architecture/platform-frontend.md §4, зона 2). */
 export function ModuleMenuContent({
   title,
   items,

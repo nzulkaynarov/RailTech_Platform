@@ -2,7 +2,7 @@
 
 Еженедельно 20 диалогов за 7 дней → YAML (stdout) с замаскированными PII и пустыми
 полями разметки. Менеджеры заполняют `label`; кейсы с `golden: true` переносятся
-в `evals/golden/` (формат — docs/evals/labeling.md, скилл `eval-case`).
+в `evals/golden/` (формат — docs/systems/crm/evals-labeling.md, скилл `eval-case`).
 """
 
 import argparse
@@ -104,7 +104,7 @@ async def run(args: argparse.Namespace) -> int:
     await container.engine.dispose()
     header = (
         f"# Разметка диалогов: {len(items)} шт. с {since:%Y-%m-%d}; "
-        "формат — docs/evals/labeling.md\n"
+        "формат — docs/systems/crm/evals-labeling.md\n"
     )
     sys.stdout.write(header + yaml.safe_dump(items, allow_unicode=True, sort_keys=False))
     return 0

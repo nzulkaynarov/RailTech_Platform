@@ -3,7 +3,7 @@
 
 Запускает `python -m app sample-dialogs` в контейнере worker и сохраняет YAML
 в reports/labeling/YYYY-MM-DD.yaml. PII (телефоны, e-mail, ИНН) замаскированы.
-Формат разметки и перенос в golden — docs/evals/labeling.md.
+Формат разметки и перенос в golden — docs/systems/crm/evals-labeling.md.
 
 Примеры:
   scripts/sample_dialogs.py                 # dev, 20 диалогов за 7 дней
@@ -54,7 +54,7 @@ def main() -> int:
     out.write_text(result.stdout, encoding="utf-8")
     sys.stdout.write(
         f"Готово: {out}\nДальше: раздайте файл менеджерам, заполните `label`; кейсы с\n"
-        "golden: true перенесите в backend/evals/golden/ (docs/evals/labeling.md).\n"
+        "golden: true перенесите в backend/evals/golden/ (docs/systems/crm/evals-labeling.md).\n"
     )
     return 0
 

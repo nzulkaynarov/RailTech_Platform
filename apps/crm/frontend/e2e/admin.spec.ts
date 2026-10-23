@@ -1,6 +1,6 @@
 import { expect, type Page, test } from "@playwright/test";
 
-// Сценарии C4/C6 (BUSINESS.md) в упрощённом виде: админ без разработчика меняет
+// Сценарии C4/C6 (docs/systems/crm/BUSINESS.md) в упрощённом виде: админ без разработчика меняет
 // приветствие, видит базу знаний, пробелы, дашборд и аудит.
 const email = process.env["E2E_ADMIN_EMAIL"] ?? "admin@demo.local";
 const password = process.env["E2E_ADMIN_PASSWORD"] ?? "";

@@ -4,7 +4,7 @@ info:
   version: 0.6.1
   summary: Пространство `/api/integration/v1/` — вызывает только CRM под сервисным токеном.
   description: |
-    Контракт по `docs/CONTRACTS.md` §0 и §2. Версия 0 (M0-INF-02): форма запросов и ответов, по которой
+    Контракт по `docs/architecture/CONTRACTS.md` §0 и §2. Версия 0 (M0-INF-02): форма запросов и ответов, по которой
     ERP реализует приложение `integration` (M3-ERP-01), а CRM — `services/handoff` и коннектор ERP (M3-CRM-02/03).
 
     Общие правила (§0): HTTPS, JSON, UTF-8; даты ISO-8601 с часовым поясом; деньги — строка с двумя знаками
@@ -29,7 +29,7 @@ info:
     0.6.1 (архитектор, хвост ревью #143): ротация принимает либо полностью новую тройку, либо точный повтор последней
     применённой (идемпотентно); частичное совпадение с действующими значениями — 422 `PAIRING_PARTIAL_REPEAT`.
   contact:
-    name: RailTech Platform — docs/CONTRACTS.md
+    name: RailTech Platform — docs/architecture/CONTRACTS.md
 servers:
   - url: https://erp.railtech.uz/api/integration/v1
     description: prod
@@ -327,7 +327,7 @@ paths:
         '409':
           description: >-
             `EMAIL_CONFLICT` — e-mail занят пользователем ERP с другим `crm_user_id` или без сопоставления
-            с CRM; пользователь не переписывается (sso-token.md, FIX-10).
+            с CRM; пользователь не переписывается (docs/architecture/sso-token.md, FIX-10).
           content:
             application/json:
               schema:
@@ -1243,7 +1243,7 @@ components:
     SystemRoleCode:
       type: string
       description: >-
-        Код системной роли бэк-офиса ERP (`accounts.constants.BackofficeRoleCode`, apps/erp/CLAUDE.md §6):
+        Код системной роли бэк-офиса ERP (`accounts.constants.BackofficeRoleCode`, docs/systems/erp/CONVENTIONS.md §6):
         CALCULATION «Расчёт», CATALOG_SUPPLY «Каталог и закупки», FULFILLMENT «Исполнение и логистика»,
         FINANCE «Финансы», HEAD «Руководитель», VIEWER «Наблюдатель». Новый код появляется в ERP и здесь в одном PR;
         тест CRM сверяет этот список с каталогом CRM, тест ERP — с `BackofficeRoleCode`.
@@ -1252,7 +1252,7 @@ components:
     ErpPermission:
       type: string
       description: >-
-        Снимок каталога прав бэк-офиса ERP (`accounts.constants.Permission`, apps/erp/CLAUDE.md §6). Новый код
+        Снимок каталога прав бэк-офиса ERP (`accounts.constants.Permission`, docs/systems/erp/CONVENTIONS.md §6). Новый код
         появляется в каталоге ERP и здесь в одном PR; тест CRM сверяет этот список с каталогом и с картой прав CRM.
       enum:
         - deal.manage

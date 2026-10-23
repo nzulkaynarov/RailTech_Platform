@@ -3,7 +3,7 @@ import { keepPreviousData, useMutation, useQuery, useQueryClient, type QueryKey 
 import * as portal from './portal';
 
 /**
- * React Query над портальным API — единственное хранилище данных экранов (CLAUDE.md §3).
+ * React Query над портальным API — единственное хранилище данных экранов (CONVENTIONS.md §3).
  * Ключи — по эндпоинту; после действия (принять, подписать, вернуть…) мутация кладёт ответ ERP
  * в кэш и инвалидирует связанные списки: ERP — источник правды, Cabinet ничего не досчитывает.
  */

@@ -1,4 +1,4 @@
-# RailTech CRM — команды разработки и эксплуатации (CLAUDE.md §3).
+# RailTech CRM — команды разработки и эксплуатации (docs/systems/crm/CONVENTIONS.md §3).
 # Docker-цели (up/down/logs/migrate/seed/smoke/backup) запускает человек на стенде;
 # check/test/openapi — где угодно, без Docker.
 

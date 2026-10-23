@@ -1,6 +1,6 @@
 """FIX-11 — доступом к ERP управляет CRM: провижининг, отзыв сессий и access-токенов (S-5, S-6, S-11).
 
-Пути, которые проверяет файл (ADR-0003, packages/contracts/sso-token.md «Отзыв»):
+Пути, которые проверяет файл (ADR-0003, docs/architecture/sso-token.md «Отзыв»):
 
 * провижининг принимает только коды из каталога прав ERP (`accounts.constants.Permission`);
 * `DELETE /api/integration/v1/users/{crm_user_id}/sessions` гасит refresh-токены, уже выданные

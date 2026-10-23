@@ -1,6 +1,6 @@
 import { useSyncExternalStore } from "react";
 
-/** Границы адаптивности каркаса (03-frontend.md §4): < 1200 — боковое окно Drawer, < 768 — нижняя панель. */
+/** Границы адаптивности каркаса (docs/architecture/platform-frontend.md §4): < 1200 — боковое окно Drawer, < 768 — нижняя панель. */
 export const WIDE_QUERY = "(min-width: 1200px)";
 export const TABLET_QUERY = "(min-width: 768px)";
 

@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 
-// Сценарий C2–C3 (BUSINESS.md): менеджер видит эскалацию, забирает лида и отвечает.
+// Сценарий C2–C3 (docs/systems/crm/BUSINESS.md): менеджер видит эскалацию, забирает лида и отвечает.
 // Данные: `python -m app seed-demo` (лид «Азиз» в handoff с горячей эскалацией).
 const email = process.env["E2E_MANAGER_EMAIL"] ?? "manager@demo.local";
 const password = process.env["E2E_MANAGER_PASSWORD"] ?? "";

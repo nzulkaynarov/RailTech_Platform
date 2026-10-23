@@ -11,7 +11,7 @@ RUN npm ci
 
 COPY . .
 
-# Только VITE_*-переменные без секретов (CLAUDE.md §2.8). VITE_API_URL пустой — запросы same-origin.
+# Только VITE_*-переменные без секретов (docs/systems/cabinet/CONVENTIONS.md §2.8). VITE_API_URL пустой — запросы same-origin.
 # VITE_CRM_URL — CRM для формы «Я новый клиент» (M2-CAB-03); пусто — вместо формы «Написать в Telegram».
 ARG VITE_API_URL=
 ARG VITE_BOT_USERNAME=

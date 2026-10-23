@@ -66,7 +66,7 @@ def invite_workspace_member(company: Company, email: str, role_code: str) -> Tup
 # ──────────────────────────────────────────────────────────────────────────
 # Admin operations — single source of truth for business logic.
 # Called from both Django Unfold actions and DRF endpoints.
-# See ADR-0001 and CLAUDE.md IRON RULE 8.
+# See ADR-0001 and CONVENTIONS.md IRON RULE 8.
 # ──────────────────────────────────────────────────────────────────────────
 
 

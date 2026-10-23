@@ -21,7 +21,7 @@ const CHIP: Record<CheckState, { tone: StatusTone; icon: ReactNode }> = {
 };
 
 /**
- * Чек-лист одобрения КП (03-frontend.md §5): строки 13 px, отступ 8/0, граница `#f0f0f0`, значок-статус (галочка,
+ * Чек-лист одобрения КП (docs/architecture/platform-frontend.md §5): строки 13 px, отступ 8/0, граница `#f0f0f0`, значок-статус (галочка,
  * крестик, тире — форма, а не только цвет, плюс слово для скринридера), справа дата и автор.
  */
 export function Checklist({ items, label }: { items: readonly ChecklistItem[]; label?: string }) {

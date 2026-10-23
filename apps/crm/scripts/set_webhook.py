@@ -37,7 +37,7 @@ def main() -> int:
     result = subprocess.run(command, cwd=ROOT, check=False)  # noqa: S603 — аргументы фиксированы
     if result.returncode != 0:
         sys.stderr.write(
-            "Не удалось: api запущен? (make ps). Runbook: docs/runbooks/bot-silent.md\n"
+            "Не удалось: api запущен? (make ps). Runbook: docs/runbooks/crm/bot-silent.md\n"
         )
     return result.returncode
 

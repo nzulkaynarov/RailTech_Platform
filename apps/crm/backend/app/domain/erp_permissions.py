@@ -1,4 +1,4 @@
-"""Карта «роль CRM → роль и права ERP» (FIX-11, S-11; packages/contracts/sso-token.md).
+"""Карта «роль CRM → роль и права ERP» (FIX-11, S-11; docs/architecture/sso-token.md).
 
 CRM — источник истины по людям (ADR-0003), ERP хранит только коды из своего каталога прав
 (`accounts.constants.Permission`). Прежние коды карты (`quote.view`, `quote.edit`) в ERP не
