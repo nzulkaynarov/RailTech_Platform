@@ -514,14 +514,9 @@ class QuoteViewSet(RoleGatedViewMixin, QuoteApprovalMixin, QuoteFxMixin, Optimis
                 return Response({"detail": "PDF generation failed"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
             return pdf_generating_response("quote", quote.pk)
 
-        from django.http import FileResponse
+        from core.file_streaming import stream_file_field
 
-        return FileResponse(
-            quote.pdf_file.open("rb"),
-            content_type="application/pdf",
-            as_attachment=True,
-            filename=quote.pdf_file.name.split("/")[-1],
-        )
+        return stream_file_field(quote.pdf_file)
 
     @extend_schema(
         summary="Export quote in a chosen format (pdf | xlsx | csv)",

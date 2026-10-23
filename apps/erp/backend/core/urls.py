@@ -314,12 +314,13 @@ urlpatterns = (
     )
     # Serve PUBLIC media (avatars, logos, product images, category/manufacturer assets): ERP reads them from the
     # `erp-public` bucket (RustFS is not exposed) and streams them; Caddy of the ERP and Cabinet domains routes
-    # /media/* here. This whitelists ONLY public display-asset prefixes; private files (companies/*/documents,
+    # /media/* here. This whitelists ONLY public display-asset prefixes (the document-profile logo is public too: it is
+    # printed on the КП/contract forms and shown in the cabinet); private files (companies/*/documents, products/*/docs,
     # deals/**, sourcing/imports, temp) never match and stay unreachable via /media (served only through auth views).
     + [
         re_path(
-            r"^media/(?P<path>(?:users/\d+/avatar|companies/\d+/logo|manufacturers/\d+/logo"
-            r"|products/\d+/images|categories/\d+/icon)/[^/]+)$",
+            r"^media/(?P<path>(?:users/\d+/avatar|companies/\d+/logo|companies/\d+/doc-profile/logo"
+            r"|manufacturers/\d+/logo|products/\d+/images|categories/\d+/icon)/[^/]+)$",
             serve_public_media,
             name="public-media",
         ),

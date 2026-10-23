@@ -118,15 +118,18 @@ def test_without_s3_in_debug_the_local_storage_is_used(settings):
 
 
 def test_models_keep_the_buckets_they_had():
+    from parties.models.document_profile import CompanyDocumentProfile
     from portal.models import PortalUpload
     from sales.models import Quote
 
     from accounts.models import CustomUser
-    from catalog.models import ProductImage
+    from catalog.models import ProductDocument, ProductImage
 
-    for model, field in ((Quote, "pdf_file"), (PortalUpload, "file")):
+    # Документ товара — приватный (S0-9): раньше лежал в erp-public.
+    for model, field in ((Quote, "pdf_file"), (PortalUpload, "file"), (ProductDocument, "file")):
         assert model._meta.get_field(field)._storage_callable is storage_module.get_private_storage
-    for model, field in ((CustomUser, "avatar"), (ProductImage, "image")):
+    # Логотип профиля документов — публичный: печатается в КП/договорах и показывается в кабинете.
+    for model, field in ((CustomUser, "avatar"), (ProductImage, "image"), (CompanyDocumentProfile, "logo")):
         assert model._meta.get_field(field)._storage_callable is storage_module.get_public_storage
 
 
@@ -152,6 +155,64 @@ def test_public_image_is_served_by_django(public_bucket):
 
 def test_missing_public_image_is_404(public_bucket):
     assert APIClient().get("/media/products/12/images/none.png").status_code == 404
+
+
+# Белый список /media (S0-9): по тесту на каждый публичный префикс — отдаётся; приватные — 404, даже если объект лежит в
+# публичном бакете (старые документы товаров после переноса, ошибка ключа).
+PUBLIC_PREFIXES = [
+    "users/7/avatar",
+    "companies/7/logo",
+    "companies/7/doc-profile/logo",
+    "manufacturers/7/logo",
+    "products/7/images",
+    "categories/7/icon",
+]
+PRIVATE_PREFIXES = [
+    "products/7/docs",
+    "products/7/attachments",
+    "companies/7/documents",
+    "companies/7/doc-profile",
+    "companies/7/generated",
+    "companies/7/kyc",
+    "deals/7/quotes",
+    "deals/7/contracts/signed",
+    "sourcing/imports/7",
+    "portal_uploads/2026/10",
+    "temp",
+]
+
+
+@pytest.mark.parametrize("prefix", PUBLIC_PREFIXES)
+def test_every_public_prefix_is_served(public_bucket, prefix):
+    key = f"{prefix}/0a1b2c.png"
+    public_bucket.save(key, ContentFile(b"\x89PNG-bytes"))
+
+    response = APIClient().get(f"/media/{key}")
+
+    assert response.status_code == 200, prefix
+    assert response["Content-Type"] == "image/png"
+    assert response["Content-Length"] == str(len(b"\x89PNG-bytes"))
+    assert b"".join(response.streaming_content) == b"\x89PNG-bytes"
+
+
+@pytest.mark.parametrize("prefix", PRIVATE_PREFIXES)
+def test_every_private_prefix_is_not_served(public_bucket, prefix):
+    key = f"{prefix}/0a1b2c.pdf"
+    public_bucket.save(key, ContentFile(b"secret"))
+
+    assert APIClient().get(f"/media/{key}").status_code == 404, prefix
+
+
+@pytest.mark.parametrize(
+    "key",
+    [
+        "companies/7/doc-profile/logo/nested/0a1b2c.png",  # вложенный путь не проходит
+        "companies/x/doc-profile/logo/0a1b2c.png",  # id не число
+        "companies/7/doc-profile/logo/",  # каталог, не файл
+    ],
+)
+def test_whitelist_does_not_match_malformed_keys(public_bucket, key):
+    assert APIClient().get(f"/media/{key}").status_code == 404
 
 
 @pytest.mark.parametrize(
