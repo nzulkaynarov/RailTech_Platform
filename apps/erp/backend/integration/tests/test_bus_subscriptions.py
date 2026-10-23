@@ -7,9 +7,8 @@
 import os
 from pathlib import Path
 
-from rt_bus.subscriptions import Subscriptions
-
 from conftest import PRODUCTION_SUBSCRIPTIONS_ENV, TEST_SUBSCRIPTIONS
+from rt_bus.subscriptions import Subscriptions
 
 
 def production_file() -> Path:
