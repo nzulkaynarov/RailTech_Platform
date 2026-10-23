@@ -83,7 +83,28 @@
 после `pull`, до pg_dump-гейта и миграций) запускает в каждом образе прода короткую команду, исполняющую нативный код. Для нового образа
 добавить правило в `case` скрипта (иначе он попадёт в список «не проверены»). Тест скрипта — `infra/deploy/tests/cpu-baseline-test.sh` (в `make deploy-check`).
 При падении проверки образ заменяют или фиксируют версию пакета (`constraint-dependencies` в `pyproject.toml` для Python), а не обходят проверку.
-Локально воспроизвести CPU без v2 на Mac нельзя (Rosetta/Apple Silicon); на x86-Linux — `qemu-x86_64 -cpu qemu64 <команда>` внутри контейнера.
+
+### Проверка под эмуляцией qemu64: в CI и локально (S0-7)
+
+Деплой ловит проблему на сервере, но до него её надо поймать ещё в PR. Раннеры GitHub и Mac (Rosetta/Apple Silicon) отдают современный CPU, поэтому
+образы запускаются под **эмуляцией `qemu64`**: `scripts/qemu_cpu_check.sh` монтирует в контейнер статический `qemu-x86_64` (при первом запуске
+извлекается из пакета `qemu-user-static` образа `debian:bookworm-slim` в `~/.cache/rt-platform`) и исполняет команду проверки так:
+`qemu-x86_64 -cpu qemu64 -L / <программа> <аргументы>` — корень образа служит sysroot, эмулируется и программа, и её libc/нативные модули. Нужны `--init`
+(иначе при SIGILL гостя qemu, будучи PID 1, зависает вместо падения) и `--platform linux/amd64`. Команды берутся из той же таблицы, что и деплой:
+`infra/deploy/cpu-baseline-rules.sh` — одна строка на образ, новый образ прода добавляется в неё (и в `build_spec` скрипта; согласованность с
+`deploy.yml` и матрицей `ci.yml` проверяет `infra/deploy/tests/cpu-baseline-test.sh`).
+
+| Где | Что |
+|---|---|
+| CI, `.github/workflows/ci.yml` | задание `cpu-image` (матрица: `rt-crm-backend`, `rt-erp-backend`, `rt-platform-bff`, `rt-litellm`, `rt-crm-frontend`, `rt-erp-frontend`, `rt-cabinet`, `rt-platform-web`, `rt-db-postgres`, `rt-db-backup`) собирает образ linux/amd64 (кэш слоёв buildx gha) и запускает проверку; красное задание называет образ. Задание `cpu-common` — самопроверка механики и сторонние образы (`caddy`, `redis`, `rustfs`). Запускаются при изменении Dockerfile, `uv.lock`/`pyproject.toml` CRM и BFF, `requirements*` ERP, nginx.conf, `infra/ai/litellm`, `infra/db`, `infra/compose`, самой проверки |
+| `make deploy-check` | `scripts/qemu_cpu_check.sh all --skip-missing`: проверяет образы `rt-cpu-check/<имя>:amd64`, которые есть локально, и сторонние; чего нет — печатает «пропуск» (не «ok») |
+| `make cpu-check` | собирает образы прода linux/amd64 по одному (эмуляция, на Mac arm64 — десятки минут), проверяет и удаляет; `make cpu-check args="rt-litellm"` — выборочно |
+| `make cpu-selftest` | доказательство, что механика ловит реальное: Wolfi (база официального LiteLLM) и numpy ≥ 2.4 обязаны упасть, numpy < 2.4 — пройти |
+| `scripts/ci_local.sh cpu-baseline` | то же, что `cpu-image` + `cpu-common` в CI |
+
+Отказ выглядит так: `✘ cpu-qemu64: rt-litellm (rt-cpu-check/rt-litellm:amd64) — illegal instruction …` (код выхода 132 — SIGILL гостя) либо исключение
+`NumPy was built with baseline optimizations: (X86_V2)`. Ограничения механики: программа должна быть ELF (shebang-скрипты qemu-user не запускает — в таблице
+указывается сам бинарь, например `/usr/lib/postgresql/17/bin/pg_dump`, а не обёртка `pg_dump`); процессы-потомки идут уже на настоящем CPU хоста.
 
 ## Диск
 

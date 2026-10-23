@@ -9,7 +9,7 @@ set -euo pipefail
 unset MAKEFLAGS MFLAGS MAKELEVEL args
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-ALL=(gitleaks crm contracts tokens infra erp cabinet platform rt-bus crm-integration crm-build crm-e2e crm-audit platform-e2e)
+ALL=(gitleaks crm contracts tokens infra erp cabinet platform rt-bus crm-integration crm-build crm-e2e crm-audit platform-e2e cpu-baseline)
 GITLEAKS_IMAGE=ghcr.io/gitleaks/gitleaks:v8.30.1
 CADDY_IMAGE=caddy:2.11.7-alpine
 LOGS="$ROOT/.ci-local"
@@ -18,8 +18,8 @@ usage() {
   cat <<EOF
 Локальный CI ансамбля (как .github/workflows/ci.yml).
 
-  scripts/ci_local.sh                      все задания, кроме crm-e2e, crm-audit и platform-e2e
-  scripts/ci_local.sh --full               всё, включая crm-e2e и platform-e2e (Playwright) и crm-audit
+  scripts/ci_local.sh                      все задания, кроме crm-e2e, crm-audit, platform-e2e и cpu-baseline
+  scripts/ci_local.sh --full               всё, включая crm-e2e и platform-e2e (Playwright), crm-audit и cpu-baseline
   scripts/ci_local.sh crm contracts        только выбранные
   scripts/ci_local.sh --quick              без crm-integration и crm-build (быстрый гейт)
 
@@ -38,6 +38,8 @@ usage() {
   crm-audit         apps/crm/scripts/ci_local.sh audit — pip-audit и pnpm audit
   platform-e2e      make -C apps/platform e2e — Playwright + axe на MSW (BFF и стенд не нужны); chromium
                     ставится при первом запуске (pnpm exec playwright install chromium)
+  cpu-baseline      как cpu-common и cpu-image в ci.yml (S0-7): самопроверка механики + сборка каждого образа прода linux/amd64
+                    и его старт под эмуляцией CPU qemu64 (scripts/qemu_cpu_check.sh); на Mac arm64 долго, образы по одному
 
 Стенд ансамбля и его БД не используются. Логи — .ci-local/<задание>.log. Код выхода 1 при любом сбое.
 Нехватка памяти Docker (OOM, код 137) — запускайте при остановленном стенде (make down) или
@@ -70,8 +72,19 @@ command -v docker >/dev/null && docker info >/dev/null 2>&1 \
 mkdir -p "$LOGS"
 
 stage_gitleaks() {
-  docker run --rm -v "$ROOT:/repo" -w /repo "$GITLEAKS_IMAGE" \
-    git --redact --config .gitleaks.toml --log-opts=HEAD .
+  # В git worktree `.git` — файл со ссылкой на общий каталог за пределами $ROOT; без него в контейнере git не видит историю
+  # и gitleaks сканирует 0 коммитов. Общий каталог монтируется по тому же абсолютному пути (в основном checkout — ничего лишнего).
+  local common mounts=(-v "$ROOT:/repo") out
+  common="$(git -C "$ROOT" rev-parse --path-format=absolute --git-common-dir)"
+  [ "$common" = "$ROOT/.git" ] || mounts+=(-v "$common:$common:ro")
+  out="$(docker run --rm "${mounts[@]}" -w /repo "$GITLEAKS_IMAGE" \
+    git --redact --config .gitleaks.toml --log-opts=HEAD . 2>&1)" || { printf '%s\n' "$out"; return 1; }
+  printf '%s\n' "$out"
+  # 0 просканированных коммитов — не «чисто», а сломанный доступ к истории
+  if printf '%s' "$out" | grep -Eq '(^|[^0-9])0 commits scanned'; then
+    echo "gitleaks просканировал 0 коммитов — история недоступна в контейнере"
+    return 1
+  fi
   (cd "$ROOT" && scripts/check-doc-links.sh)   # как шаг задания gitleaks в ci.yml (DOCS-1)
 }
 
@@ -156,6 +169,12 @@ stage_crm-audit() { "$ROOT/apps/crm/scripts/ci_local.sh" audit; }
 stage_platform-e2e() {
   (cd "$ROOT/apps/platform/web" && pnpm exec playwright install chromium)
   (cd "$ROOT" && make -C apps/platform e2e)
+}
+
+# S0-7: образы прода стартуют под эмуляцией CPU qemu64 (прод-VPS без x86-64-v2). Образы собираются и удаляются по одному.
+stage_cpu-baseline() {
+  "$ROOT/scripts/qemu_cpu_check.sh" selftest
+  "$ROOT/scripts/qemu_cpu_check.sh" run
 }
 
 declare -a RESULT=()

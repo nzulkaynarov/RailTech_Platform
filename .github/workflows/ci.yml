@@ -49,6 +49,7 @@ jobs:
       packages: ${{ github.event_name != 'pull_request' || steps.filter.outputs.packages == 'true' }}
       rtbus: ${{ github.event_name != 'pull_request' || steps.filter.outputs.rtbus == 'true' }}
       infra: ${{ github.event_name != 'pull_request' || steps.filter.outputs.infra == 'true' }}
+      cpu: ${{ github.event_name != 'pull_request' || steps.filter.outputs.cpu == 'true' }}
     steps:
       - uses: actions/checkout@v7
         if: github.event_name == 'pull_request'
@@ -101,6 +102,24 @@ jobs:
               - '.env.example'
               - 'Makefile'
               - '.github/workflows/**'
+            # Старт образов прода под CPU qemu64 (S0-7): Dockerfile, зависимости с нативным кодом, конфиги nginx, образы infra и правила проверки.
+            cpu:
+              - '**/Dockerfile*'
+              - 'apps/crm/backend/pyproject.toml'
+              - 'apps/crm/backend/uv.lock'
+              - 'apps/platform/bff/pyproject.toml'
+              - 'apps/platform/bff/uv.lock'
+              - 'apps/erp/backend/requirements*'
+              - 'apps/erp/frontend/nginx.conf'
+              - 'apps/cabinet/nginx.conf'
+              - 'infra/ai/litellm/**'
+              - 'infra/db/**'
+              - 'infra/compose/**'
+              - 'infra/deploy/cpu-baseline-*'
+              - 'infra/deploy/tests/cpu-baseline-test.sh'
+              - 'scripts/qemu_cpu_check.sh'
+              - '.github/workflows/ci.yml'
+              - '.github/workflows/deploy.yml'
 
   gitleaks:
     name: gitleaks
@@ -632,12 +651,78 @@ jobs:
             -v "$PWD/infra/caddy/Caddyfile.prod:/etc/caddy/Caddyfile:ro" \
             caddy:2.11.7-alpine caddy validate --config /etc/caddy/Caddyfile
 
+  # ─── CPU прод-VPS: старт каждого образа под qemu64 (S0-7, ADR-0013 п. 8) ────────────────────────────────────────────────────
+  # Прод-VPS отдают «QEMU Virtual CPU 2.5+» — базовый x86-64 без v2 (docs/runbooks/servers.md). Образ, которому нужен v2, падает здесь,
+  # а не на проде после деплоя. Механика и правила — scripts/qemu_cpu_check.sh, infra/deploy/cpu-baseline-rules.sh.
+
+  cpu-common:
+    name: CPU qemu64 · механика и сторонние образы
+    needs: changes
+    if: needs.changes.outputs.cpu == 'true'
+    runs-on: ${{ vars.CI_RUNNER || 'ubuntu-latest' }}
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+      - name: Таблица правил согласована с deploy.yml, ci.yml и deploy.sh
+        run: bash infra/deploy/tests/cpu-baseline-test.sh
+      - name: Самопроверка механики (Wolfi и numpy 2.4+ обязаны падать, numpy<2.4 — проходить)
+        run: scripts/qemu_cpu_check.sh selftest
+      - name: Сторонние образы прода (caddy, redis, rustfs, rc)
+        run: |
+          for n in $(scripts/qemu_cpu_check.sh list pulled); do
+            scripts/qemu_cpu_check.sh check "$n"
+          done
+
+  cpu-image:
+    name: CPU qemu64 · ${{ matrix.image }}
+    needs: changes
+    if: needs.changes.outputs.cpu == 'true'
+    runs-on: ${{ vars.CI_RUNNER || 'ubuntu-latest' }}
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      # Состав = scripts/qemu_cpu_check.sh list built (сверяет infra/deploy/tests/cpu-baseline-test.sh) = образы deploy.yml + VPS 2.
+      matrix:
+        image:
+          - rt-crm-backend
+          - rt-erp-backend
+          - rt-platform-bff
+          - rt-litellm
+          - rt-crm-frontend
+          - rt-erp-frontend
+          - rt-cabinet
+          - rt-platform-web
+          - rt-db-postgres
+          - rt-db-backup
+    steps:
+      - uses: actions/checkout@v7
+      - name: Параметры сборки образа
+        id: p
+        run: scripts/qemu_cpu_check.sh params "${{ matrix.image }}" >> "$GITHUB_OUTPUT"
+      - uses: docker/setup-buildx-action@v3
+      - name: Сборка ${{ matrix.image }} (linux/amd64, кэш слоёв как в deploy.yml)
+        uses: docker/build-push-action@v6
+        with:
+          context: ${{ steps.p.outputs.context }}
+          file: ${{ steps.p.outputs.file }}
+          target: ${{ steps.p.outputs.target }}
+          build-contexts: |
+            rtbus=packages/rt-bus
+            contracts=packages/contracts
+          platforms: linux/amd64
+          load: true
+          tags: ${{ steps.p.outputs.tag }}
+          cache-from: type=gha,scope=${{ steps.p.outputs.cache_scope }}
+          cache-to: type=gha,mode=max,scope=${{ steps.p.outputs.cache_scope }}
+      - name: Старт ${{ matrix.image }} под qemu64
+        run: scripts/qemu_cpu_check.sh check "${{ matrix.image }}"
+
   # ─── Итог для защиты main ──────────────────────────────────────────────────────────────────
 
   ci-ok:
     name: CI ok
     if: always()
-    needs: [changes, gitleaks, crm-lint, crm-unit, crm-integration, crm-build, crm-e2e, crm-audit, erp, cabinet, platform, platform-e2e, contracts, rt-bus, infra]
+    needs: [changes, gitleaks, crm-lint, crm-unit, crm-integration, crm-build, crm-e2e, crm-audit, erp, cabinet, platform, platform-e2e, contracts, rt-bus, infra, cpu-common, cpu-image]
     runs-on: ${{ vars.CI_RUNNER || 'ubuntu-latest' }}
     timeout-minutes: 5
     steps:
