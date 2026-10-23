@@ -27,12 +27,18 @@ def get_user_from_ticket(ticket):
     from django.core.cache import cache
 
     from accounts.models import CustomUser
+    from core.cache import CacheUnavailable, fail_closed
 
     key = f"ws_ticket:{ticket}"
-    user_id = cache.get(key)
-    if user_id is None:
+    # S0-2: билет гасится строго и атомарно — `delete` возвращает True только тому, кто реально удалил ключ, поэтому два
+    # одновременных подключения с одним билетом не пройдут оба; кэш недоступен — билет не принят (а не «пусто = можно»).
+    try:
+        with fail_closed():
+            user_id = cache.get(key)
+            if user_id is None or not cache.delete(key):  # consume — single use
+                return AnonymousUser()
+    except CacheUnavailable:
         return AnonymousUser()
-    cache.delete(key)  # consume — single use
     try:
         return CustomUser.objects.get(id=user_id)
     except CustomUser.DoesNotExist:

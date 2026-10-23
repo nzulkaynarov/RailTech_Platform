@@ -41,7 +41,7 @@ URL в браузере:
 | `make ps` | Сервисы `erp-backend`, `erp-web`, `erp-worker`, `erp-worker-ai`, `erp-beat` в статусе `Up (healthy)` | Статус `unhealthy`, `Restarting` или `Exit 1` |
 | `curl -s http://erp.localhost/health/` | HTTP 200, `{"status":"healthy","database":"up"}` | HTTP 503 `{"status":"unhealthy","database":"down"}`, 502 Bad Gateway или Connection refused |
 | `docker compose -f infra/compose/base.yml -f infra/compose/dev.yml --env-file .env exec erp-backend python manage.py migrate --check` | код возврата 0 (все миграции применены) | ненулевой код — есть ещё не применённые миграции |
-| `docker compose -f infra/compose/base.yml -f infra/compose/dev.yml --env-file .env exec redis sh -c 'redis-cli -a "$REDIS_PASSWORD" --no-auth-warning ping'` | `PONG` | нет ответа / ошибка авторизации |
+| `docker compose -f infra/compose/base.yml -f infra/compose/dev.yml --env-file .env exec redis-broker redis-cli ping` (и `exec redis-cache redis-cli ping`; пароль подставляет `REDISCLI_AUTH` контейнера) | `PONG` | нет ответа / ошибка авторизации |
 | `docker compose -f infra/compose/base.yml -f infra/compose/dev.yml --env-file .env exec erp-backend celery -A core inspect ping` | ответ `pong` от `celery@…` | нет ответа от воркеров |
 | `make logs s=erp-backend` | Логи Daphne/ASGI, статус ответов 200/201/204 | Трейсбеки Django, `OperationalError`, `ImproperlyConfigured` |
 | `make logs s=erp-worker` | `[celery@...] ready`, приём задач из очереди `celery` | Ошибки подключения к Redis, синтаксические ошибки задач |
@@ -73,8 +73,10 @@ URL в браузере:
    ```
 
 ### 3. Redis не отвечает на `ping` (сбой очереди/кэша)
-1. Проверьте контейнер Redis: `make logs s=redis`.
-2. ERP использует отдельную БД под Celery (БД 1) и Channels (БД 2). Убедитесь, что `REDIS_URL=redis://redis:6379/1`.
+Redis два (S0-2): `redis-broker` (очереди Celery — БД 1, Channels — БД 2) и `redis-cache` (кэш ERP — БД 0, сессии Платформы — БД 3). У каждого свой пароль.
+1. Проверьте контейнеры: `make logs s=redis-broker`, `make logs s=redis-cache`.
+2. Убедитесь, что у `erp-backend` заданы `CELERY_BROKER_URL=redis://:…@redis-broker:6379/1`, `REDIS_CHANNELS_URL=…@redis-broker:6379/2`, `REDIS_CACHE_URL=…@redis-cache:6379/0`.
+3. Отказ `redis-cache` ERP переживает (работа без кэша, предупреждение «Кэш (Redis) недоступен» в журнале `erp-backend`); отказ `redis-broker` останавливает задачи Celery — `docs/runbooks/deploy.md`, «Redis: брокер и кэш раздельно».
 
 ### 4. Celery worker не отвечает на `inspect ping`
 1. Проверьте активность основного воркера:
