@@ -243,6 +243,23 @@ Runbook — `docs/runbooks/wave10-stage0.md`; лид — Opus, исполнит�
 | S0-8 | `infra/deploy/reset-prod.sh` — сброс прода на чистые базы и первый запуск; runbook `deploy.md` §7 | в работе (доработка по ревью: барьер режима `db`, шаги §7) | PR #195 | — |
 | S0-9 | Хвосты хранилища: ключ S3 на сервис (инициализатор `rustfs/rc`), белый список `/media`, отдача S3 потоком, жизненный цикл `erp-temp`, Langfuse на брокере, nginx по digest | в работе (доработка по ревью: процедура ротации ключа в backup-pitr.md) | PR #198 | зависит от #195 |
 
+## Стратегия: этап B «Шина v1 и контракты» (волна 11) — частично
+
+Runbook — `docs/runbooks/wave11-bus-v1.md`; лид — Opus, исполнители — субагенты (B1, B2 — Opus; остальные — Sonnet), ревью — свежими
+субагентами (≠ исполнитель и ≠ лид) по «готово, когда»; решения лида L1–L15 и архитектора — `docs/architecture/rt-bus.md` §11.
+Гейт этапа B (runbook §3) не проводился.
+
+| ID | Задача | Статус | PR | Хвосты / заметки |
+|---|---|---|---|---|
+| B2 | Контракт событий v2: конверт CloudEvents, схема на тип (22 erp, crm, identity), AsyncAPI 3, `bus/subscriptions.yaml`, модели `rt-contracts`, проверка совместимости L8 в `make contracts` | **готово** 2026-10-22 | PR #180, [CI ok](https://github.com/nzulkaynarov/RailTech_Platform/actions/runs/39788136414/job/119874124559) | ревью: расширение enum/снятие required — ломающее (исправлено) |
+| B1 | `packages/rt-bus`: outbox, inbox, ретранслятор SKIP LOCKED, доставка HMAC v2, повтор с jitter, DLQ, предохранитель, корреляция; адаптеры SQLAlchemy async и Django; job CI «packages · rt-bus» | **готово** 2026-10-22 | PR #185, [CI ok](https://github.com/nzulkaynarov/RailTech_Platform/actions/runs/39799178468/job/119895236429) | ревью: секрет кода акцепта без stash — `ConfigError` (исправлено); автоповтор inbox 3 раза |
+| B6 | CI: oasdiff по всем `openapi/*.yaml` (ERR валит, WARN — нет), файл исключений с причиной и сроком; OpenAPI CRM — `packages/contracts/openapi/crm.yaml`; модели CRM в BFF | **готово** 2026-10-22 | PR #188, [CI ok](https://github.com/nzulkaynarov/RailTech_Platform/actions/runs/39827078832/job/120009640375) | ревью: правило мажора не прощает ломку живых операций старого мажора (исправлено) |
+| B6b | До 1.0 ломающее в OpenAPI — с повышением минорной версии (решение архитектора) | **готово** 2026-10-23 | PR #194, [CI ok](https://github.com/nzulkaynarov/RailTech_Platform/actions/runs/39904583186/job/120259917868) | устаревшие формулировки «только новый мажор» в ADR-0016 и ORCHESTRATOR §3 п. 15 — архитектору |
+| B3 | ERP на шине: 22 типа из сервисного слоя в транзакции, приёмник `/bus/v1/events`, проекции `client.updated`/`contact.*` (ИНН и название — только чтение в ERP, `contact.deleted` — архив), секрет пары L12, удалены сигналы, журнал вебхуков, `CRM_WEBHOOK_URL` | B3_STATUS | PR #192 | B3_TAIL |
+| B4 | CRM на шине: `client.*`, `contact.*`, `lead.*` (вкл. `lead.erased`, `lead.merged`), `identity.user.*` из сервисного слоя; приёмник `/bus/v1/events` вместо `/integrations/erp/events`; уведомления Telegram после коммита | B4_STATUS | PR #191 | B4_TAIL |
+| B5 | BFF — подписчик шины, SSE `GET /api/v1/events/stream` (подсказки инвалидации), опрос — запасной путь; замер ≤ 2 с (медиана 0,4–0,9 с) | готово к ревью (ревью не проводилось) | PR #200 | слить после B3 и B4; повторить замер после B5a |
+| B5a | Пробуждение ретранслятора по коммиту в ERP и CRM (≤ 2 с без ожидания pump) | не начата | — | промпт — у лида следующей сессии (runbook §1 дополнить) |
+
 ## Журнал сессий
 
 | Дата | Роль | Задача | Статус | Что сделано | Что осталось / нужно владельцу |
