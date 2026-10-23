@@ -709,7 +709,9 @@ async def test_contacts_that_lose_the_primary_flag_are_published_too(
 async def test_events_are_laid_out_only_for_the_subscribers_of_the_file(
     sessions: async_sessionmaker[AsyncSession], bus: Any
 ) -> None:
-    """ERP подписан на client.updated и contact.*; клиент-создан, лиды и сотрудники пока никому."""
+    """ERP подписан на client.updated и contact.*;
+    сотрудники и лиды — platform-bff; клиент-создан — пока никому.
+    """
     who = await admin_user(sessions)
     clients = ClientService(sessions)
     client_id = await clients.create(who, "ООО Раскладка", None, None)
@@ -729,6 +731,7 @@ async def test_events_are_laid_out_only_for_the_subscribers_of_the_file(
     assert [(t.removeprefix("uz.railtech."), s) for t, s in rows] == [
         ("crm.client.updated.v1", "erp"),
         ("crm.contact.created.v1", "erp"),
+        ("identity.user.created.v1", "platform-bff"),
     ]
 
 
