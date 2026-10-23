@@ -5,15 +5,17 @@
 контактом компании нельзя (`verify_code_and_accept(contact=)`). Здесь — выбор канала и маскирование адреса.
 
 Канал: Telegram — если у контакта есть `telegram_user_id` и он сопоставлен с контактом CRM (`CrmContactMapping`, а компания
-— с клиентом CRM): ERP выпускает событие `quote.acceptance_code_requested`, код доставляет бот CRM (бот принадлежит CRM, из
+— с клиентом CRM): ERP публикует на шину rt_bus событие `quote.acceptance_code_requested`, код доставляет бот CRM (бот принадлежит CRM, из
 ERP в Telegram никто не пишет). Иначе — e-mail контакта через `EmailLog`. Нет ни того ни другого — `ContactChannelRequired`
-(422 `CONTACT_CHANNEL_REQUIRED`). Код в событии — секрет: в журнал доставки он не попадает (`integration.services.webhooks`).
+(422 `CONTACT_CHANNEL_REQUIRED`). Код в событии — секрет: в outbox шины он лежит маской `***`, значение — в кэше на 20 минут
+(`rt_bus.django.stash.DjangoCacheStash`). Выпуск кода и событие — одна транзакция: сбой публикации откатывает выпуск кода.
 """
 
 from __future__ import annotations
 
 import logging
 
+from django.db import transaction
 from django.utils import timezone
 
 from crm.services.public_page import CODE_TTL_MINUTES, issue_acceptance_code
@@ -38,8 +40,11 @@ def mask_telegram(contact) -> str:
 
 
 def _emit_code_event(quote, contact, code: str) -> bool:
-    """Событие кода акцепта для бота CRM; `False` — событие не выпущено (контакт или клиент не сопоставлены, сбой)."""
-    from integration.services.webhooks import emit_quote_acceptance_code_requested
+    """Событие кода акцепта для бота CRM; `False` — событие не выпущено (контакт или клиент не сопоставлены).
+
+    Сбой публикации (шина, кэш секрета, схема) — исключение наружу: выпуск кода откатывается вместе с ним.
+    """
+    from integration.services import events
     from sales.models.acceptance import QuoteAcceptanceCode
 
     # Срок — у только что выпущенного кода (тот же момент, что проверяет акцепт), а не пересчитанный заново.
@@ -49,14 +54,7 @@ def _emit_code_event(quote, contact, code: str) -> bool:
         .values_list("expires_at", flat=True)
         .first()
     ) or timezone.now() + timezone.timedelta(minutes=CODE_TTL_MINUTES)
-    try:
-        return emit_quote_acceptance_code_requested(quote, contact, code, expires_at) is not None
-    except (
-        Exception
-    ) as exc:  # noqa: BLE001 — сбой журнала или кэша не должен оставить клиента без кода: откат на письмо
-        # В тексте исключения кода нет, но пишем только класс: тело события не должно попасть в лог.
-        logger.warning("Acceptance-code event was not emitted for quote %s: %s", quote.pk, type(exc).__name__)
-        return False
+    return events.publish_quote_acceptance_code_requested(quote, contact, code, expires_at) is not None
 
 
 def _telegram_deliverable(contact) -> bool:
@@ -87,10 +85,11 @@ def request_acceptance_code(quote, contact, request_ip: str = "") -> dict:
         def send(code: str) -> None:
             emitted.append(_emit_code_event(quote, contact, code))
 
-        issue_acceptance_code(quote, request_ip, contact=contact, send=send)
+        with transaction.atomic():  # код и событие шины — одна транзакция
+            issue_acceptance_code(quote, request_ip, contact=contact, send=send)
         if emitted and emitted[0]:
             return {"channel": "telegram", "sent_to": mask_telegram(contact), "expires_in": expires_in}
-        # Событие не ушло (сбой журнала или кэша): откат на e-mail, если он есть.
+        # Событие не выпущено (контакт или клиент не сопоставлены с CRM): откат на e-mail, если он есть.
         if not email:
             _drop_unsent_code(quote, contact)
             raise ContactChannelRequired

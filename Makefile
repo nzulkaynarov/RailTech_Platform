@@ -128,7 +128,7 @@ deploy-check: ## Проверка конфигурации прода без з�
 	@docker run --rm -e LANG=C.UTF-8 -v "$(CURDIR):/mnt" -w /mnt koalaman/shellcheck:stable -x $(INFRA)/deploy/*.sh $(INFRA)/db/*.sh $(INFRA)/s3/*.sh scripts/qemu_cpu_check.sh && echo "shellcheck: ok"
 	@bash $(INFRA)/deploy/tests/predeploy-dump-test.sh
 	@bash $(INFRA)/deploy/tests/reset-prod-test.sh
-	@bash $(INFRA)/deploy/tests/events-schema-mount-test.sh
+	@bash $(INFRA)/deploy/tests/bus-contracts-image-test.sh
 	@bash $(INFRA)/deploy/tests/crm-backup-source-test.sh
 	@bash $(INFRA)/deploy/tests/telegram-webhook-url-test.sh
 	@bash $(INFRA)/deploy/tests/crm-bot-test.sh

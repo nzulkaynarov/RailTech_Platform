@@ -67,16 +67,8 @@ x-erp-prod-env: &erp-prod-env
   EMAIL_USE_TLS: ${SMTP_USE_TLS:-True}
   DEFAULT_FROM_EMAIL: ${SMTP_FROM:-noreply@example.com}
 
-# Схема событий ERP → CRM (M5-INF-01c, Q-FIX35-5 п. 2): файл packages/contracts/events.schema.json едет в release.tgz и
-# монтируется read-only туда, где его ищет ERP (integration/services/event_contract.py, MOUNTED_PATH). В образ прода контракт
-# не вшит; без монтирования проверка тела события молча пропускалась бы. Файла нет — сервис не стартует
-# (create_host_path: false — Docker не подменяет его пустым каталогом); deploy.sh проверяет наличие до pull и миграций.
-x-erp-events-schema: &erp-events-schema
-  type: bind
-  source: ../../packages/contracts/events.schema.json
-  target: /packages/contracts/events.schema.json
-  read_only: true
-  bind: { create_host_path: false }
+# Контракты событий и подписки шины rt_bus (B3, L14) вшиты в образ ERP (/opt/rt/contracts, RT_BUS_CONTRACTS_DIR,
+# RT_BUS_SUBSCRIPTIONS): монтирований схемы событий из релиза больше нет (events.schema.json удалён вместе с вебхуками).
 
 services:
   # ─── База — снаружи (VPS 2) ─────────────────────────────────────────────────────────────────
@@ -244,7 +236,6 @@ services:
     environment: *erp-prod-env
     volumes: !override
       - erp_static:/app/staticfiles
-      - *erp-events-schema
     depends_on: !override
       redis-broker:
         condition: service_healthy
@@ -260,7 +251,7 @@ services:
   # Профиль `mcp`: бот CRM в сервисном режиме (M3-CRM-07) берёт данные клиента из erp-mcp, поэтому на проде профиль
   # включён (`RT_PROFILES=mcp` в .env.prod, infra/.env.prod.example; release.tgz файл контракта несёт). Без профиля
   # сервис не стартует, а бот на вопросы о счетах и поставках честно отвечает «не могу проверить» и передаёт менеджеру.
-  # Схема событий (events.schema.json) нужна и ему: инструменты могут порождать события ERP → CRM. Вручную:
+  # Вручную:
   #   docker compose -f base.yml -f prod.yml --profile mcp up -d erp-mcp
   erp-mcp:
     <<: [*ops, *mem-256]
@@ -274,32 +265,25 @@ services:
         target: /packages/contracts/mcp-tools.json
         read_only: true
         bind: { create_host_path: false }
-      - *erp-events-schema
 
-  # erp-worker, erp-worker-ai, erp-beat: события уходят и из задач Celery — схема монтируется и им.
+  # erp-worker, erp-worker-ai, erp-beat: тот же образ; контракты шины вшиты (раскладку и доставку событий ведёт воркер).
   erp-worker:
     <<: [*ops, *mem-512]
     image: ${RT_IMAGE_REGISTRY:-ghcr.io/nzulkaynarov}/rt-erp-backend:${RT_IMAGE_TAG}
     build: !reset null
     environment: *erp-prod-env
-    volumes:
-      - *erp-events-schema
 
   erp-worker-ai:
     <<: [*ops, *mem-384]
     image: ${RT_IMAGE_REGISTRY:-ghcr.io/nzulkaynarov}/rt-erp-backend:${RT_IMAGE_TAG}
     build: !reset null
     environment: *erp-prod-env
-    volumes:
-      - *erp-events-schema
 
   erp-beat:
     <<: [*ops, *mem-192]
     image: ${RT_IMAGE_REGISTRY:-ghcr.io/nzulkaynarov}/rt-erp-backend:${RT_IMAGE_TAG}
     build: !reset null
     environment: *erp-prod-env
-    volumes:
-      - *erp-events-schema
 
   erp-ai-gateway:
     <<: [*ops, *mem-256]

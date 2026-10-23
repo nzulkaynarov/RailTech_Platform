@@ -16,10 +16,8 @@ rel="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 require_env_file
 # Домен Платформы (INF-P0-5): без него Caddy не получит сертификат, а compose упал бы на `:?` уже при разборе конфигурации.
 require_env_var PLATFORM_DOMAIN "добавьте строку PLATFORM_DOMAIN=platform.railtech.uz (см. infra/.env.prod.example; A-запись домена на VPS 1 должна уже быть) и запустите деплой снова"
-# prod.yml монтирует схему событий в сервисы ERP (M5-INF-01c): без файла в релизе контейнеры не стартуют, а миграции
-# ERP упали бы уже после pg_dump — проверяем до pull. Релиз без файла — собран старым deploy.yml (release.tgz).
-[[ -f "$rel/packages/contracts/events.schema.json" ]] \
-  || die "в релизе нет packages/contracts/events.schema.json — release.tgz собран без него (deploy.yml); деплой остановлен до pull и миграций"
+# Схемы событий и подписки шины rt_bus вшиты в образ ERP (/opt/rt/contracts, B3, L14): файлов контрактов в релизе
+# больше не требуется (общий файл схемы событий снят вместе с вебхуками ERP → CRM).
 export RT_IMAGE_TAG="$tag"
 prev="$(state_get current_tag)"
 

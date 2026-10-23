@@ -206,6 +206,10 @@ class QuoteLifecycleService:
                 quote.valid_until = default_valid_until
                 validity_fields.append("valid_until")
 
+        from integration.services import document_events, events
+
+        was_issued = document_events.document_was_issued("quote", quote)  # снимок до смены статуса (document.created)
+
         # Freeze prices
         sent_status = QuoteStatus.objects.filter(code=QuoteStatusCode.SENT).first()
         quote.status = sent_status
@@ -229,6 +233,9 @@ class QuoteLifecycleService:
                 "updated_at",
             ]
         )
+        # События шины (rt_bus) — в этой же транзакции: сбой публикации откатывает отправку КП.
+        events.publish_quote_sent(quote)
+        document_events.publish_document_issued("quote", quote, was_issued=was_issued)
 
         # AI-калибровка: the sent КП is the ground truth for the draft's AI match candidates.
         from crm.services.ai_telemetry import finalize_outcomes_on_send
@@ -481,6 +488,9 @@ class QuoteLifecycleService:
         # quote.notes — that field is rendered verbatim in the CLIENT КП PDF «Примечания». The
         # override is fully captured below in the entity-scoped audit log (log_admin_action).
         quote.save(update_fields=["status", "approved_at", "approved_by", "updated_at"])
+        from integration.services import events
+
+        events.publish_quote_outcome("quote.accepted", quote)
         # Structured, entity-scoped audit (G2 Gap A) — route through log_admin_action like
         # transition_deal_stage, so the override carries reason + entity_type/id + before/after
         # and shows on the quote timeline and the «Журнал доступа» page (not a bare ActivityLog).

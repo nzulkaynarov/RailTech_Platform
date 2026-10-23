@@ -6,7 +6,7 @@ from typing import Any
 
 import pytest
 from fastapi.testclient import TestClient
-from sqlalchemy import select
+from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.config import Settings
@@ -304,6 +304,18 @@ async def test_telegram_lead_merges_into_web_lead_by_phone(
         "escalations",
     }
     assert refreshed == [escalation.id]
+    async with sessions() as session:
+        merged = (
+            await session.execute(
+                text(
+                    "SELECT envelope->'data' FROM rt_bus_outbox "
+                    "WHERE type = 'uz.railtech.crm.lead.merged.v1'"
+                )
+            )
+        ).scalar_one()
+    assert merged["merged_lead_id"] == tg_id
+    assert merged["lead"]["crm_lead_id"] == web_id
+    assert merged["actor"] == {"type": "system"}
 
     manager, password = await make_user(sessions, "merge@railtech.uz", ["manager"])
     auth = login(client, manager.email, password)

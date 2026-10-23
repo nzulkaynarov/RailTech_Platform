@@ -8,7 +8,8 @@ from __future__ import annotations
 
 import pytest
 from django.core import mail
-from integration.models import CrmClientMapping, IntegrationWebhookEvent
+from integration.models import CrmClientMapping
+from integration.tests import bus_support
 from parties.models import Contact
 from portal.models import MagicLinkToken
 from portal.tests.conftest import LOCMEM_CHANNELS
@@ -41,7 +42,7 @@ def nothing_happened(company, email="dilshod@example.uz"):
     assert not invited(company, email).exists(), "контакт не должен появиться"
     assert mail.outbox == [], "письмо не должно уйти"
     assert not MagicLinkToken.objects.filter(purpose="invite").exists()
-    assert not IntegrationWebhookEvent.objects.filter(event_type="invite.sent").exists()
+    assert not bus_support.published("invite.sent")
 
 
 # ── Канал telegram: честный отказ ────────────────────────────────────────────────────────────────
@@ -58,7 +59,7 @@ def test_telegram_channel_is_refused_not_pretended(portal_client, client_company
 def test_telegram_refusal_leaves_no_invite_event(portal_client, client_company):
     CrmClientMapping.objects.create(company=client_company, crm_client_id=77)
     portal_client.post(URL, body(channels=["telegram"]), format="json")
-    assert not IntegrationWebhookEvent.objects.filter(event_type="invite.sent").exists()
+    assert not bus_support.published("invite.sent")
 
 
 # ── Право действовать: приглашённый коллега по умолчанию только читает (FIX-54, P-18) ────────────────
@@ -90,8 +91,8 @@ def test_email_invitation_is_delivered(portal_client, client_company):
     assert EmailLog.objects.filter(to_emails__contains="dilshod@example.uz", status=EmailLog.STATUS_SENT).count() == 1
     assert MagicLinkToken.objects.filter(contact=contact, purpose="invite").count() == 1
 
-    event = IntegrationWebhookEvent.objects.get(event_type="invite.sent")
-    assert event.payload["payload"]["channels"] == ["email"], "в событии — только то, что реально ушло"
+    event = bus_support.only("invite.sent")
+    assert event["data"]["payload"]["channels"] == ["email"], "в событии — только то, что реально ушло"
 
 
 def test_response_never_carries_the_login_link(portal_client):
@@ -160,7 +161,7 @@ def test_failed_delivery_is_an_error_and_leaves_no_member(portal_client, client_
     assert response.json() == {"detail": "DELIVERY_FAILED"}
     assert not invited(client_company).exists(), "коллеги в команде нет: приглашение не дошло"
     assert EmailLog.objects.filter(status=EmailLog.STATUS_FAILED).count() == 1, "сбой виден в журнале писем"
-    assert not IntegrationWebhookEvent.objects.filter(event_type="invite.sent").exists()
+    assert not bus_support.published("invite.sent")
 
 
 def test_retry_after_failed_delivery_is_possible(portal_client, client_company, settings):
@@ -214,7 +215,7 @@ def test_staff_invite_service_refuses_telegram_only(client_contact):
 
     result, error = invite_contact_to_portal(client_contact, channel="telegram")
     assert result is None and error == "INVALID_CHANNEL"
-    assert mail.outbox == [] and not IntegrationWebhookEvent.objects.filter(event_type="invite.sent").exists()
+    assert mail.outbox == [] and not bus_support.published("invite.sent")
 
 
 def test_staff_invite_service_both_sends_email_and_names_only_what_went_out(client_contact):
@@ -224,5 +225,5 @@ def test_staff_invite_service_both_sends_email_and_names_only_what_went_out(clie
     assert error is None
     assert result["channel"] == "email" and result["email_sent"] is True  # telegram не отправлялся — и не назван
     assert len(mail.outbox) == 1
-    event = IntegrationWebhookEvent.objects.filter(event_type="invite.sent")
-    assert not event.exists() or event.get().payload["payload"]["channels"] == ["email"]
+    events = bus_support.published("invite.sent")
+    assert not events or events[0]["data"]["payload"]["channels"] == ["email"]

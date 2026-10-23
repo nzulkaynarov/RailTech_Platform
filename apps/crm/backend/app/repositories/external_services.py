@@ -11,6 +11,7 @@ from app.domain.external_erp_events import STUCK_AFTER_MINUTES as EVENTS_STUCK_A
 from app.domain.external_erp_events import WINDOW_DAYS as EVENTS_WINDOW_DAYS
 from app.domain.external_erp_handoff import STUCK_AFTER_MINUTES
 from app.models.auth import User
+from app.models.bus import TABLES
 from app.models.clients import Client
 from app.models.email import EmailLog
 from app.models.external_services import (
@@ -18,7 +19,6 @@ from app.models.external_services import (
     ExternalServiceIncident,
     ExternalServiceSwitch,
 )
-from app.models.integrations import ErpIncomingEvent
 
 LOCK_SQL = text("SELECT pg_advisory_xact_lock(hashtext('external_service_checks'))")
 LATEST_SQL = text(
@@ -258,41 +258,61 @@ async def erp_handoff_stats(session: AsyncSession, now: datetime) -> ErpHandoffS
 
 @dataclass(frozen=True, slots=True)
 class ErpEventsStats:
-    rejected: int
+    dead: int
     failed: int
     stuck: int
     last_error: str | None
 
 
 async def erp_events_stats(session: AsyncSession, now: datetime) -> ErpEventsStats:
-    """События ERP за неделю: отклонённые, упавшие и зависшие `received`; последняя ошибка."""
+    """Шина rt_bus за неделю: события ERP, не обработанные (`failed`) и зависшие `received`, и
+    события CRM, не доставленные ERP (`dead`); последняя ошибка.
+    """
     since = now - timedelta(days=EVENTS_WINDOW_DAYS)
     stuck_before = now - timedelta(minutes=EVENTS_STUCK_AFTER_MINUTES)
-    recent = ErpIncomingEvent.received_at >= since
+    inbox, delivery = TABLES.inbox.c, TABLES.delivery.c
+    from_erp = (inbox.publisher == "erp", inbox.received_at >= since)
 
-    async def count(*conditions: Any) -> int:
-        total = await session.scalar(
-            select(func.count()).select_from(ErpIncomingEvent).where(recent, *conditions)
-        )
+    async def count(table: Any, *conditions: Any) -> int:
+        total = await session.scalar(select(func.count()).select_from(table).where(*conditions))
         return int(total or 0)
 
-    last = (
+    last_inbox = (
         await session.execute(
-            select(ErpIncomingEvent.event_type, ErpIncomingEvent.error)
-            .where(
-                recent,
-                ErpIncomingEvent.status.in_(("rejected", "failed")),
-                ErpIncomingEvent.error.is_not(None),
-            )
-            .order_by(ErpIncomingEvent.received_at.desc())
+            select(inbox.type, inbox.error)
+            .where(*from_erp, inbox.status == "failed", inbox.error.is_not(None))
+            .order_by(inbox.received_at.desc())
             .limit(1)
         )
     ).first()
+    last_dead = (
+        await session.execute(
+            select(delivery.event_type, delivery.last_error)
+            .where(
+                delivery.status == "dead",
+                delivery.subscriber == "erp",
+                delivery.created_at >= since,
+                delivery.last_error.is_not(None),
+            )
+            .order_by(delivery.updated_at.desc())
+            .limit(1)
+        )
+    ).first()
+    last = last_inbox or last_dead
     return ErpEventsStats(
-        rejected=await count(ErpIncomingEvent.status == "rejected"),
-        failed=await count(ErpIncomingEvent.status == "failed"),
+        dead=await count(
+            TABLES.delivery,
+            delivery.status == "dead",
+            delivery.subscriber == "erp",
+            delivery.created_at >= since,
+        ),
+        failed=await count(TABLES.inbox, *from_erp, inbox.status == "failed"),
         stuck=await count(
-            ErpIncomingEvent.status == "received", ErpIncomingEvent.received_at < stuck_before
+            TABLES.inbox,
+            *from_erp,
+            inbox.status == "received",
+            inbox.received_at < stuck_before,
+            (inbox.next_attempt_at.is_(None)) | (inbox.next_attempt_at < stuck_before),
         ),
         last_error=f"{last[0]}: {last[1]}"[:500] if last else None,
     )

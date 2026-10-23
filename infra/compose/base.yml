@@ -14,6 +14,10 @@ x-crm-backend: &crm-backend
   build:
     context: ../../apps/crm/backend
     target: prod
+    # Шина событий rt_bus (ADR-0014, L14): пакет и схемы контракта лежат вне контекста сборки.
+    additional_contexts:
+      rtbus: ../../packages/rt-bus
+      contracts: ../../packages/contracts
   # Только нужные backend переменные, без env_file: ключи провайдеров и секреты инфраструктуры
   # в api/worker не попадают (CRM SPEC §11).
   environment: &crm-backend-env
@@ -58,6 +62,11 @@ x-crm-backend: &crm-backend
     # Шов CRM ↔ ERP (FIX-01): значений по умолчанию в коде нет, без .env стенд не поднимается.
     # Сервисный токен и секрет вебхуков CRM берёт из «Подключений» → ERP (ADR-0022), SSO — отсюда.
     PLATFORM_SSO_SECRET: ${PLATFORM_SSO_SECRET:?set in .env}
+    # Шина событий rt_bus (CONTRACTS §9): секрет пары задавать не обязательно — без него он выводится из
+    # секрета вебхуков сопряжения (L12); адрес ERP берётся из bus/subscriptions.yaml (в образе).
+    RT_BUS_SECRET_ERP_CRM: ${RT_BUS_SECRET_ERP_CRM:-}
+    RT_BUS_SECRET_CRM_ERP: ${RT_BUS_SECRET_CRM_ERP:-}
+    RT_BUS_ENDPOINT_ERP: ${RT_BUS_ENDPOINT_ERP:-}
     # Переход CRM ↔ ERP по SSO; по умолчанию выключен (FIX-03), включает владелец после FIX-10/FIX-11.
     PLATFORM_SSO_ENABLED: ${PLATFORM_SSO_ENABLED:-false}
     # Публичный адрес ERP для перехода по SSO; на стенде с HTTP_PORT≠80 порт обязателен (иначе переход уходит на :80).
@@ -413,8 +422,13 @@ services:
   # тома медиа нет, на диск контейнера ERP файлы не пишутся. CORS/CSRF в коде B2B захардкожены по DEBUG — на dev DEBUG=true.
 
   erp-backend:
-    build:
+    # Образ ERP получает rt_bus и контракты шины (B3, L14) именованными контекстами: COPY --from=rtbus / --from=contracts
+    # в apps/erp/backend/Dockerfile. Тот же блок — у всех сервисов ERP на этом образе (якорь).
+    build: &erp-build
       context: ../../apps/erp/backend
+      additional_contexts:
+        rtbus: ../../packages/rt-bus
+        contracts: ../../packages/contracts
     # -v 0: без access-лога Daphne — он печатает путь `/auth/magic/<токен>` в stdout мимо фильтра токена (FIX-15);
     # журнал запросов ведёт Django (core.logging.AccessLogMiddleware: console + RedactPortalTokenFilter).
     command: ["daphne", "-v", "0", "-b", "0.0.0.0", "-p", "8000", "core.asgi:application"]
@@ -445,14 +459,20 @@ services:
       # Шов CRM ↔ ERP (CONTRACTS §0, FIX-01): значений по умолчанию в коде нет; без DEBUG ERP без них
       # не стартует. Имена в .env — как в контракте (WEBHOOK_SECRET); ERP читает их под своими.
       SERVICE_TOKEN_CRM_TO_ERP: ${SERVICE_TOKEN_CRM_TO_ERP:?set in .env}
-      # Ротация секрета вебхуков без простоя (FIX-35): ERP подписывает первым значением; WEBHOOK_SECRET_PREVIOUS (необязателен)
-      # остаётся в списке, чтобы обе стороны хранили одну пару. В CRM пара вводится в «Подключениях» → ERP, без перезапуска.
+      # Секрет вебхуков сопряжения (FIX-35): список «текущий,прежний» для ротации без простоя. Вебхуков ERP → CRM больше нет;
+      # от него шина выводит секреты пары CRM ↔ ERP (L12). В CRM пара вводится в «Подключениях» → ERP, без перезапуска.
       ERP_WEBHOOK_SECRET: ${WEBHOOK_SECRET:?set in .env}${WEBHOOK_SECRET_PREVIOUS:+,${WEBHOOK_SECRET_PREVIOUS}}
       ERP_MCP_CONTEXT_KEY: ${ERP_MCP_CONTEXT_KEY:?set in .env}
       PLATFORM_SSO_SECRET: ${PLATFORM_SSO_SECRET:?set in .env}
       # Переход CRM ↔ ERP по SSO; по умолчанию выключен (FIX-03), включает владелец после FIX-10/FIX-11.
       PLATFORM_SSO_ENABLED: ${PLATFORM_SSO_ENABLED:-false}
-      CRM_WEBHOOK_URL: ${CRM_WEBHOOK_URL:-http://crm-api:8000/api/v1/integrations/erp/events}
+      # Шина rt_bus (B3, ADR-0014): подписчики и типы — packages/contracts/bus/subscriptions.yaml (в образе, RT_BUS_SUBSCRIPTIONS);
+      # адрес CRM переопределяет RT_BUS_ENDPOINT_CRM. Секрет пары задают RT_BUS_SECRET_ERP_CRM (ERP → CRM) и RT_BUS_SECRET_CRM_ERP
+      # (CRM → ERP); пусто — направленные секреты выводятся из секрета вебхуков сопряжения (CONTRACTS §9, L12). Приёмник
+      # POST /bus/v1/events виден только внутри сети compose (Caddy его наружу не отдаёт).
+      RT_BUS_ENDPOINT_CRM: ${RT_BUS_ENDPOINT_CRM:-}
+      RT_BUS_SECRET_ERP_CRM: ${RT_BUS_SECRET_ERP_CRM:-}
+      RT_BUS_SECRET_CRM_ERP: ${RT_BUS_SECRET_CRM_ERP:-}
       CRM_FRONTEND_URL: ${CRM_FRONTEND_URL:-http://crm.localhost:${HTTP_PORT:-80}}
       CABINET_URL: ${CABINET_URL:-http://cabinet.localhost:${HTTP_PORT:-80}}
       # Компания-владелец ERP (core.tenant); пусто — автоопределение, пока продавец с сотрудниками один.
@@ -497,8 +517,7 @@ services:
   # http://erp-mcp:8104/mcp/erp (CRM ходит к нему из сервисного режима бота — M3-CRM-07). Схемы инструментов — не копия в коде:
   # файл контракта монтируется только на чтение в /packages/contracts (как в тестах ERP); нет файла — сервис не стартует.
   erp-mcp:
-    build:
-      context: ../../apps/erp/backend
+    build: *erp-build
     command: ["python", "-m", "integration.mcp"]
     environment:
       <<: *erp-env
@@ -521,8 +540,7 @@ services:
       start_period: 20s
 
   erp-worker:
-    build:
-      context: ../../apps/erp/backend
+    build: *erp-build
     command: ["celery", "-A", "core", "worker", "-l", "info", "-Q", "default,pdf,imports"]
     environment: *erp-env
     depends_on:
@@ -536,8 +554,7 @@ services:
       start_period: 45s
 
   erp-worker-ai:
-    build:
-      context: ../../apps/erp/backend
+    build: *erp-build
     command: ["celery", "-A", "core", "worker", "-l", "info", "-Q", "ai", "--concurrency=2"]
     environment: *erp-env
     depends_on:
@@ -551,8 +568,7 @@ services:
       start_period: 45s
 
   erp-beat:
-    build:
-      context: ../../apps/erp/backend
+    build: *erp-build
     command: ["celery", "-A", "core", "beat", "-l", "info", "--scheduler", "django_celery_beat.schedulers:DatabaseScheduler"]
     environment: *erp-env
     depends_on:
@@ -564,8 +580,7 @@ services:
   # проект CRM). Одноразовый, идемпотентный, всегда завершается кодом 0; мастер-ключ — только здесь.
   # В M3-CRM-11 этот шаг переезжает в консоль CRM (бюджет — settings.budget.erp_daily_usd).
   erp-ai-gateway:
-    build:
-      context: ../../apps/erp/backend
+    build: *erp-build
     command: ["python", "manage.py", "ai_gateway_sync"]
     environment:
       <<: *erp-env

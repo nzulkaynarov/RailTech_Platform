@@ -217,6 +217,42 @@ class LeadCreatedV1(BaseModel):
     actor: Actor
 
 
+class LeadErasedV1(BaseModel):
+    """
+    Тип uz.railtech.crm.lead.erased.v1, источник rt://crm. Поле data конверта (envelope.v1.json). Лид обезличен по запросу (/delete, SPEC §6.4). Только идентификаторы и время стирания, никаких данных лида. Подписчики ОБЯЗАНЫ стереть у себя копии персональных данных по этому лиду (имя, компанию, контакты, переписку, производные записи) и не восстанавливать их из более ранних событий; снимки lead.* с updated_at ≤ erased_at после этого не применяются.
+    """
+
+    model_config = ConfigDict(
+        extra="ignore",
+    )
+    crm_lead_id: int
+    crm_client_id: int | None
+    """
+    Клиент, к которому лид был привязан, если был; null — нет
+    """
+    erased_at: AwareDatetime
+    """
+    Момент обезличивания в CRM (время базы)
+    """
+    actor: Actor
+
+
+class LeadMergedV1(BaseModel):
+    """
+    Тип uz.railtech.crm.lead.merged.v1, источник rt://crm. Поле data конверта (envelope.v1.json). Два лида с одним телефоном склеены в одну карточку (Telegram-лид и лид с сайта/вручную): lead — снимок выжившего лида после склейки, merged_lead_id — поглощённый лид, которого больше нет. Подписчик удаляет или перепривязывает у себя поглощённый лид к выжившему; повтор — без действий.
+    """
+
+    model_config = ConfigDict(
+        extra="ignore",
+    )
+    lead: Lead
+    merged_lead_id: int
+    """
+    Поглощённый лид (crm_lead_id), удалён в CRM
+    """
+    actor: Actor
+
+
 class LeadSource(StrEnum):
     telegram = "telegram"
     web = "web"
@@ -250,6 +286,9 @@ class LeadStageChangedV1(BaseModel):
     from_: Annotated[LeadStage, Field(alias="from")]
     to: LeadStage
     reason: Annotated[str | None, Field(max_length=500)] = None
+    """
+    Код причины из справочника CRM (snake_case, например taken_by_manager, closed_won, qualifier, no_reply); свободный текст сотрудника в событие не попадает и остаётся в CRM
+    """
     actor: Actor
 
 

@@ -1,7 +1,7 @@
 """Стадия и сумма сделки на языке контракта шва CRM ↔ ERP (`erp-integration.yaml` 0.2.0, FIX-30).
 
 Единственное место, где ERP превращает свои данные в `DealStage` контракта. Ответы integration (`summary.py`),
-`DealRef` во всех событиях (`webhooks.py`), сигналы смены стадии (`signals.py`), передача клиента (`handoff.py`) и
+`DealRef` во всех событиях шины (`event_builders.py`), публикация смены стадии (`crm/services/deals.py`), передача клиента (`handoff.py`) и
 инструменты MCP (FIX-36) берут стадию и сумму отсюда. Сырого кода FSM (`deal.stage.code`) в ответы и события не
 попадает: читать его можно только здесь (`fsm_code`).
 
@@ -63,7 +63,7 @@ from crm.models import Act, Contract, DealStage, Invoice, Quote
 
 logger = logging.getLogger(__name__)
 
-#: Коды `DealStage` контракта в порядке жизненного цикла (`erp-integration.yaml`, `events.schema.json`).
+#: Коды `DealStage` контракта в порядке жизненного цикла (`erp-integration.yaml`, `packages/contracts/events/erp/_defs.v1.json`).
 DEAL_STAGES = (
     "request",
     "quoting",

@@ -1,10 +1,10 @@
 """FIX-60a (контракт 0.3.0): код акцепта в Telegram — событием `quote.acceptance_code_requested`, а не вызовом Bot API.
 
-* `POST /quotes/{id}/request-code` для контакта с Telegram и сопоставлением в CRM выпускает событие (тело — по
-  `events.schema.json`, событие уходит после коммита); иначе — письмо, как раньше. Прямого вызова Telegram и флага
-  `PORTAL_ACCEPT_CODE_TELEGRAM` больше нет (Q-FIX22-1);
-* `payload.code` не попадает в журнал доставки (`IntegrationWebhookEvent`), в заголовки, в логи и в `EmailLog`: настоящее
-  значение живёт только в кэше до доставки;
+* `POST /quotes/{id}/request-code` для контакта с Telegram и сопоставлением в CRM публикует событие на шину rt_bus (тело —
+  по схеме `packages/contracts/events/erp/`, в одной транзакции с выпуском кода); иначе — письмо, как раньше. Прямого вызова
+  Telegram и флага `PORTAL_ACCEPT_CODE_TELEGRAM` больше нет (Q-FIX22-1);
+* `payload.code` не попадает в outbox шины (там маска `***`), в логи и в `EmailLog`: настоящее значение живёт только в кэше
+  (`DjangoCacheStash`, 20 минут) до доставки. Сбой публикации откатывает выпуск кода, а не уводит на письмо;
 * код привязан к контакту: другой контакт той же компании погасить его не может — `QUOTE_CODE_INVALID` (Q-FIX22-6);
 * `quote.accepted|rejected` несут `erp_contact_id`/`crm_contact_id` того, кто решил (Q-FIX22-6), тело — по схеме.
 """
@@ -13,19 +13,18 @@ from __future__ import annotations
 
 import json
 import re
-from unittest.mock import MagicMock
 
 import pytest
 from django.conf import settings as django_settings
 from django.core import mail
-from integration.models import CrmClientMapping, CrmContactMapping, IntegrationWebhookEvent
-from integration.services.webhooks import SECRET_MASK, delivery_payload
+from integration.models import CrmClientMapping, CrmContactMapping
+from integration.services import events as bus_events
+from integration.tests import bus_support
 from parties.models import Contact
 from portal.services import acceptance
 from portal.tests.conftest import LOCMEM_CHANNELS, PortalAPIClient, issue_test_acceptance_code, make_portal_session
 from sales.models.acceptance import QuoteAcceptanceCode
 
-from core.tests.events_contract import event_errors
 from crm.constants import QuoteStatusCode
 from notifications.models import EmailLog
 
@@ -44,16 +43,6 @@ def _locmem_mail(settings):
 
 
 @pytest.fixture
-def delay(monkeypatch):
-    """Постановка доставки вебхука в Celery: проверяем, когда и с чем её вызвали."""
-    from integration import tasks
-
-    mock = MagicMock()
-    monkeypatch.setattr(tasks.deliver_webhook_event, "delay", mock)
-    return mock
-
-
-@pytest.fixture
 def mapped(client_company):
     return CrmClientMapping.objects.create(company=client_company, crm_client_id=CRM_CLIENT_ID)
 
@@ -68,12 +57,12 @@ def post(client, path, body=None):
 
 
 def code_events():
-    return IntegrationWebhookEvent.objects.filter(event_type=CODE_EVENT)
+    return bus_support.published(CODE_EVENT)
 
 
 def requested_code(event) -> str:
-    """Настоящий код из тела доставки (в журнале он замаскирован)."""
-    return delivery_payload(event)["payload"]["code"]
+    """Настоящий код из тела доставки (в outbox он замаскирован, значение — в кэше издателя)."""
+    return bus_support.real_data(event)["payload"]["code"]
 
 
 @pytest.fixture
@@ -85,23 +74,17 @@ def sent_quote(contract_world):
 
 
 def test_telegram_contact_matched_in_crm_gets_the_event_and_no_email(
-    sent_quote, portal_client, mapped, contact_mapped, client_contact, delay, django_capture_on_commit_callbacks
+    sent_quote, portal_client, mapped, contact_mapped, client_contact
 ):
-    with django_capture_on_commit_callbacks(execute=False) as callbacks:
-        response = post(portal_client, f"/quotes/{sent_quote.pk}/request-code")
+    response = post(portal_client, f"/quotes/{sent_quote.pk}/request-code")
 
     assert response.status_code == 202
     assert response.json() == {"channel": "telegram", "sent_to": "@a***", "expires_in": 900}
     assert not mail.outbox and not EmailLog.objects.filter(template="quote_acceptance_code").exists()
-    event = code_events().get()
-    assert event.headers["X-Event-Type"] == CODE_EVENT
-    delay.assert_not_called()  # доставка ставится в очередь только после коммита запроса
-    assert len(callbacks) == 1
-    callbacks[0]()
-    delay.assert_called_once_with(event.id)
-
-    body = delivery_payload(event)
-    assert event_errors(body) == []
+    event = bus_support.only(CODE_EVENT)
+    assert event["type"] == "uz.railtech.erp.quote.acceptance_code_requested.v1"
+    body = bus_support.real_data(event)
+    assert not bus_support.registry().validate_data(event["type"], body, tolerant=False)
     row = QuoteAcceptanceCode.objects.get(quote=sent_quote)
     assert row.contact_id == client_contact.pk
     assert body["erp_company_id"] == sent_quote.deal.company_id and body["crm_client_id"] == CRM_CLIENT_ID
@@ -114,9 +97,9 @@ def test_telegram_contact_matched_in_crm_gets_the_event_and_no_email(
     assert re.fullmatch(r"[0-9]{6}", body["payload"]["code"])
 
 
-def test_the_code_from_the_event_accepts_the_quote(sent_quote, portal_client, mapped, contact_mapped, delay):
+def test_the_code_from_the_event_accepts_the_quote(sent_quote, portal_client, mapped, contact_mapped):
     post(portal_client, f"/quotes/{sent_quote.pk}/request-code")
-    code = requested_code(code_events().get())
+    code = requested_code(bus_support.only(CODE_EVENT))
 
     wrong = post(portal_client, f"/quotes/{sent_quote.pk}/accept", {"code": "000000" if code != "000000" else "111111"})
     accepted = post(portal_client, f"/quotes/{sent_quote.pk}/accept", {"code": code})
@@ -125,47 +108,51 @@ def test_the_code_from_the_event_accepts_the_quote(sent_quote, portal_client, ma
     assert accepted.status_code == 200 and accepted.json()["status"] == "accepted"
 
 
-def test_telegram_contact_without_a_crm_contact_gets_the_email(sent_quote, portal_client, mapped, delay):
+def test_telegram_contact_without_a_crm_contact_gets_the_email(sent_quote, portal_client, mapped):
     """Контакт с Telegram, но без сопоставления с контактом CRM: боту писать некому — письмо, события нет."""
     response = post(portal_client, f"/quotes/{sent_quote.pk}/request-code")
 
     assert response.json()["channel"] == "email"
-    assert mail.outbox and not code_events().exists()
+    assert mail.outbox and not code_events()
 
 
-def test_company_not_matched_in_crm_gets_the_email(sent_quote, portal_client, contact_mapped, delay):
+def test_company_not_matched_in_crm_gets_the_email(sent_quote, portal_client, contact_mapped):
     """Контакт сопоставлен, а компания с клиентом CRM — нет: событие не выпускается (CRM его не примет) — письмо."""
     response = post(portal_client, f"/quotes/{sent_quote.pk}/request-code")
 
     assert response.json()["channel"] == "email" and mail.outbox
-    assert not code_events().exists()
+    assert not code_events()
 
 
 def test_contact_without_telegram_gets_the_email_even_if_matched(
-    sent_quote, portal_client, mapped, contact_mapped, client_contact, delay
+    sent_quote, portal_client, mapped, contact_mapped, client_contact
 ):
     Contact.objects.filter(pk=client_contact.pk).update(telegram_user_id=None, telegram_username="")
 
     response = post(portal_client, f"/quotes/{sent_quote.pk}/request-code")
 
     assert response.json()["channel"] == "email" and mail.outbox
-    assert not code_events().exists()
+    assert not code_events()
 
 
-def test_a_failed_event_falls_back_to_the_email(sent_quote, portal_client, mapped, contact_mapped, monkeypatch, caplog):
+def test_a_publication_failure_rolls_the_code_back_instead_of_falling_back_to_the_email(
+    sent_quote, portal_client, mapped, contact_mapped, monkeypatch
+):
+    """Сбой шины или кэша секрета не глотается: выпуск кода откатывается, письмо не уходит (клиент запросит код снова)."""
+
     def broken(*args, **kwargs):
         raise RuntimeError("redis is down")
 
-    monkeypatch.setattr("integration.services.webhooks.emit_event", broken)
-    with caplog.at_level("WARNING"):
-        response = post(portal_client, f"/quotes/{sent_quote.pk}/request-code")
+    monkeypatch.setattr(bus_events, "publish_quote_acceptance_code_requested", broken)
+    with pytest.raises(RuntimeError):
+        post(portal_client, f"/quotes/{sent_quote.pk}/request-code")
 
-    assert response.status_code == 202 and response.json()["channel"] == "email" and mail.outbox
-    assert "RuntimeError" in caplog.text
+    assert not mail.outbox and not QuoteAcceptanceCode.objects.filter(quote=sent_quote).exists()
+    assert not code_events()
 
 
-def test_telegram_only_contact_whose_event_failed_is_422(
-    sent_quote, portal_client, mapped, client_contact, monkeypatch
+def test_telegram_only_contact_without_a_crm_contact_and_without_email_is_422(
+    sent_quote, portal_client, mapped, client_contact
 ):
     """Нет сопоставления с CRM и нет почты: канала нет."""
     Contact.objects.filter(pk=client_contact.pk).update(email="")
@@ -173,7 +160,7 @@ def test_telegram_only_contact_whose_event_failed_is_422(
     response = post(portal_client, f"/quotes/{sent_quote.pk}/request-code")
 
     assert response.status_code == 422 and response.json() == {"detail": "CONTACT_CHANNEL_REQUIRED"}
-    assert not code_events().exists() and not mail.outbox
+    assert not code_events() and not mail.outbox
 
 
 def test_erp_never_calls_the_telegram_bot_api_and_the_flag_is_gone(
@@ -198,33 +185,24 @@ def test_erp_never_calls_the_telegram_bot_api_and_the_flag_is_gone(
 # ── Код не попадает в журналы ────────────────────────────────────────────────────────────────────────
 
 
-def test_the_code_is_masked_in_the_journal_and_never_logged(
-    sent_quote, portal_client, mapped, contact_mapped, delay, caplog
-):
+def test_the_code_is_masked_in_the_outbox_and_never_logged(sent_quote, portal_client, mapped, contact_mapped, caplog):
     with caplog.at_level("DEBUG"):
         response = post(portal_client, f"/quotes/{sent_quote.pk}/request-code")
     assert response.status_code == 202
-    event = code_events().get()
+    event = bus_support.only(CODE_EVENT)
     code = requested_code(event)
 
-    assert event.payload["payload"]["code"] == SECRET_MASK
-    assert event.payload["payload"]["erp_contact_id"], "остальные поля тела в журнале на месте"
-    stored = json.dumps(
-        {
-            "payload": event.payload,
-            "headers": event.headers,
-            "last_error": event.last_error,
-            "target": event.target_url,
-            "event_id": str(event.event_id),
-        },
-        ensure_ascii=False,
-    )
-    assert code not in stored
+    assert event["data"]["payload"]["code"] == "***"
+    assert event["data"]["payload"]["erp_contact_id"], "остальные поля тела в outbox на месте"
+    assert code not in json.dumps(event, ensure_ascii=False), "код в конверте outbox"
     assert code not in caplog.text, "код акцепта попал в лог"
     assert not EmailLog.objects.filter(template="quote_acceptance_code").exists()
-    # Журнал целиком: ни одно поле ни одной записи не содержит код.
-    for row in IntegrationWebhookEvent.objects.values():
-        assert code not in json.dumps(row, default=str, ensure_ascii=False)
+    # Журнал шины целиком: ни одна строка ни одной таблицы не содержит код.
+    from rt_bus.django.models import Delivery, Inbox, Outbox, SubscriberState
+
+    for model in (Outbox, Delivery, Inbox, SubscriberState):
+        for row in model.objects.values():
+            assert code not in json.dumps(row, default=str, ensure_ascii=False)
     # В базе — только хеш кода.
     assert QuoteAcceptanceCode.objects.get(quote=sent_quote).code_hash != code
 
@@ -305,52 +283,52 @@ def test_the_public_page_does_not_consume_a_cabinet_code(sent_quote, client_cont
 
 
 def outcome(event_type):
-    return IntegrationWebhookEvent.objects.filter(event_type=event_type).get()
+    return bus_support.only(event_type)
 
 
-def test_accepted_event_carries_the_contact_ids(
-    sent_quote, portal_client, mapped, contact_mapped, client_contact, delay
-):
+def test_accepted_event_carries_the_contact_ids(sent_quote, portal_client, mapped, contact_mapped, client_contact):
     post(portal_client, f"/quotes/{sent_quote.pk}/request-code")
-    code = requested_code(code_events().get())
+    code = requested_code(bus_support.only(CODE_EVENT))
 
     assert post(portal_client, f"/quotes/{sent_quote.pk}/accept", {"code": code}).status_code == 200
 
-    body = outcome("quote.accepted").payload
-    assert event_errors(body) == []
+    event = outcome("quote.accepted")
+    bus_support.assert_matches_contract(event)
+    body = event["data"]
     assert body["payload"]["erp_contact_id"] == client_contact.pk
     assert body["payload"]["crm_contact_id"] == CRM_CONTACT_ID
     assert body["actor"] == {"type": "client", "name": client_contact.name}
 
 
-def test_rejected_event_carries_the_contact_ids(
-    sent_quote, portal_client, mapped, contact_mapped, client_contact, delay
-):
+def test_rejected_event_carries_the_contact_ids(sent_quote, portal_client, mapped, contact_mapped, client_contact):
     assert post(portal_client, f"/quotes/{sent_quote.pk}/reject", {"reason": "Дорого"}).status_code == 200
 
-    body = outcome("quote.rejected").payload
-    assert event_errors(body) == []
+    event = outcome("quote.rejected")
+    bus_support.assert_matches_contract(event)
+    body = event["data"]
     assert body["payload"]["erp_contact_id"] == client_contact.pk
     assert body["payload"]["crm_contact_id"] == CRM_CONTACT_ID
 
 
-def test_contact_not_matched_in_crm_has_a_null_crm_contact_id(sent_quote, portal_client, mapped, client_contact, delay):
+def test_contact_not_matched_in_crm_has_a_null_crm_contact_id(sent_quote, portal_client, mapped, client_contact):
     assert post(portal_client, f"/quotes/{sent_quote.pk}/reject", {"reason": "Дорого"}).status_code == 200
 
-    body = outcome("quote.rejected").payload
-    assert event_errors(body) == []
+    event = outcome("quote.rejected")
+    bus_support.assert_matches_contract(event)
+    body = event["data"]
     assert body["payload"]["erp_contact_id"] == client_contact.pk and body["payload"]["crm_contact_id"] is None
 
 
-def test_the_public_page_decision_has_no_contact_ids(sent_quote, mapped, client_contact, delay):
+def test_the_public_page_decision_has_no_contact_ids(sent_quote, mapped, client_contact):
     """Решение с публичной страницы КП (не из Cabinet) контакта не называет: в теле полей нет."""
     from crm.services.public_page import reject_from_public_page
 
     rejected, error = reject_from_public_page(sent_quote, "Дорого")
 
     assert error is None and rejected is not None
-    body = outcome("quote.rejected").payload
-    assert event_errors(body) == []
+    event = outcome("quote.rejected")
+    bus_support.assert_matches_contract(event)
+    body = event["data"]
     assert "erp_contact_id" not in body["payload"] and "crm_contact_id" not in body["payload"]
 
 
@@ -371,16 +349,16 @@ def test_a_contact_without_a_channel_does_not_touch_the_active_code_of_a_colleag
     assert rows[0].consumed_at is None and rows[0].contact_id == colleague.contact.pk
 
 
-def test_a_failed_event_without_an_email_leaves_no_orphan_code(
+def test_a_failed_publication_without_an_email_leaves_no_orphan_code(
     sent_quote, portal_client, mapped, contact_mapped, client_contact, monkeypatch
 ):
     def broken(*args, **kwargs):
         raise RuntimeError("redis is down")
 
-    monkeypatch.setattr("integration.services.webhooks.emit_event", broken)
+    monkeypatch.setattr(bus_events, "publish_quote_acceptance_code_requested", broken)
     Contact.objects.filter(pk=client_contact.pk).update(email="")
 
-    response = post(portal_client, f"/quotes/{sent_quote.pk}/request-code")
+    with pytest.raises(RuntimeError):
+        post(portal_client, f"/quotes/{sent_quote.pk}/request-code")
 
-    assert response.status_code == 422 and response.json() == {"detail": "CONTACT_CHANNEL_REQUIRED"}
     assert not QuoteAcceptanceCode.objects.filter(quote=sent_quote).exists()

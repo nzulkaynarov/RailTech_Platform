@@ -1,9 +1,7 @@
 """«Подключения»: матрица ролей, секреты шифруются и не возвращаются, канал из `my_chat_member`."""
 
-import json
 import uuid
 from collections.abc import Iterator
-from datetime import UTC, datetime
 from typing import Any
 
 import httpx
@@ -205,38 +203,31 @@ async def test_erp_saved_encrypted_checked_and_audited(
 
 # --- Ротация секрета вебхуков без простоя (FIX-35) --------------------------------------------
 
-EVENTS_URL = "/api/v1/integrations/erp/events"
+EVENTS_URL = "/bus/v1/events"
 OLD_HOOK = "integration-erp-webhook-OLD-secret-0001"  # фиктивный
 NEW_HOOK = "integration-erp-webhook-NEW-secret-0002"  # фиктивный
 
 
 def post_event(client: TestClient, secret: str, serial: int) -> int:
-    """Подписанное событие из примеров контракта; `serial` делает тело уникальным (иначе повтор)."""
-    from app.services.erp_events import sign_v2
-    from tests.seam_events import example_event
+    """Событие из примеров контракта, подписанное парой `erp → crm`, выведенной из секрета
+    вебхуков (L12); `serial` делает событие новым (иначе это дубль по id).
+    """
+    from app.bus.secrets import derive_pair_secret
+    from tests.bus_events import example_envelope, signed_request
 
-    body = example_event("quote.viewed")
-    body["occurred_at"] = f"2026-10-13T11:{serial:02d}:00+05:00"
-    raw = json.dumps(body).encode()
-    event_id, stamp = str(uuid.uuid4()), datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
-    response = client.post(
-        EVENTS_URL,
-        content=raw,
-        headers={
-            "X-Event-Id": event_id,
-            "X-Event-Type": "quote.viewed",
-            "X-Timestamp": stamp,
-            "X-Signature": sign_v2(secret, event_id, stamp, raw),
-            "Content-Type": "application/json",
-        },
-    )
-    return response.status_code
+    envelope = example_envelope("uz.railtech.erp.quote.viewed.v1")
+    envelope["id"] = str(uuid.uuid4())
+    envelope["time"] = f"2026-10-13T06:{serial:02d}:00Z"
+    headers, body = signed_request(envelope, derive_pair_secret(secret, "erp", "crm"))
+    return client.post(EVENTS_URL, content=body, headers=headers).status_code
 
 
 async def test_webhook_secret_rotation_without_downtime(
     sessions: async_sessionmaker[AsyncSession], client: TestClient
 ) -> None:
-    """Старый секрет принимается, пока он «предыдущий»; снят — 401. Без `.env`, без перезапуска."""
+    """Старый секрет принимается, пока он «предыдущий»; снят — 401. Без `.env`, без перезапуска:
+    секреты пары шины выводятся из секретов вебхуков и перечитываются при каждом приёме.
+    """
     auth = await headers(sessions, client, "admin")
 
     def save(**fields: Any) -> dict[str, Any]:
@@ -248,7 +239,7 @@ async def test_webhook_secret_rotation_without_downtime(
         status: dict[str, Any] = response.json()
         return status
 
-    assert post_event(client, OLD_HOOK, 1) == 409  # секрет ещё не задан
+    assert post_event(client, OLD_HOOK, 1) == 401  # секрет ещё не задан: пара не подписывается
     first = save(service_token=ERP_TOKEN, webhook_secret=OLD_HOOK)
     assert first["webhook_secret_previous_configured"] is False
     assert post_event(client, OLD_HOOK, 2) == 200

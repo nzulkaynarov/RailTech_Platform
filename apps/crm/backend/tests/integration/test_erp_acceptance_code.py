@@ -1,14 +1,14 @@
-"""Код акцепта КП и контакты в исходах КП (шов 0.3.0, FIX-60; Q-FIX22-1, Q-FIX22-6).
+"""Код акцепта КП и контакты в исходах КП (шов 0.3.0, FIX-60 → B4; Q-FIX22-1, Q-FIX22-6).
 
-`quote.acceptance_code_requested`: бот присылает код контакту в Telegram; `payload.code` не
-попадает в журнал `erp_incoming_events` (ни в `payload`, ни в `error`, ни в `outbox`), в ленту лида
-и в логи. Проверяется по СОДЕРЖИМОМУ: код — уникальная строка, её ищут во всех строках журнала,
+`uz.railtech.erp.quote.acceptance_code_requested.v1`: бот присылает код контакту в Telegram;
+`data.payload.code` не попадает в inbox шины (там маска `***`), в outbox, в очередь задач, в ленту
+лида и в логи. Проверяется по СОДЕРЖИМОМУ: код — уникальная строка, её ищут во всех таблицах,
 заметках и записях логов. `quote.accepted|rejected` показывают в ленте, какой контакт CRM принял КП.
 """
 
-import hashlib
 import json
 import logging
+import re
 import uuid
 from datetime import UTC, datetime, timedelta
 from typing import Any
@@ -16,28 +16,29 @@ from typing import Any
 import pytest
 from aiogram.exceptions import TelegramNetworkError
 from aiogram.methods import SendMessage
-from sqlalchemy import select
+from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
-from structlog.testing import capture_logs
 
+from app.bus.erp_event import CODE_TYPE
 from app.models.clients import Client, ClientContact
-from app.models.integrations import ErpIncomingEvent
-from app.models.leads import Lead, LeadNote, TelegramIdentity
-from app.schemas.erp_events import CODE_EVENT, REDACTED
-from tests.integration.test_erp_events import Harness
-from tests.integration.test_erp_seam_events import COMPANY, deliver, notes, receive, seeded
-from tests.seam_events import example_event
+from app.models.leads import Lead, TelegramIdentity
+from tests.bus_events import example_data, signed_raw
+from tests.integration.bus_harness import Harness
+from tests.integration.test_erp_seam_events import COMPANY, notes, receive, seeded
 
 pytestmark = pytest.mark.integration
 
 CODE = "739104"  # уникальная строка: ищем её везде, где её быть не должно
 TG_PRIMARY = 777
 TG_CONTACT = 4242
+NOT_SENT = "erp_acceptance_code_not_sent"
 
 
 @pytest.fixture
-def harness(sessions: async_sessionmaker[AsyncSession]) -> Harness:
-    return Harness(sessions)
+def harness(sessions: async_sessionmaker[AsyncSession]) -> Any:
+    stand = Harness(sessions)
+    yield stand
+    stand.close()
 
 
 async def add_contact(
@@ -66,13 +67,13 @@ async def add_contact(
         return contact.id
 
 
-async def code_body(
+async def code_envelope(
     harness: Harness, *, contact: str = "own", minutes: int = 15, language: str | None = None
 ) -> tuple[dict[str, Any], int, int]:
-    """Тело события с кодом для клиента с контактом `contact`: `own` — свой Telegram, `primary` —
+    """Конверт с кодом для клиента с контактом `contact`: `own` — свой Telegram, `primary` —
     основной контакт без привязки (Telegram клиента), `none` — без Telegram.
     """
-    body, client_id, lead_id = await seeded(harness, CODE_EVENT, tg_user_id=TG_PRIMARY)
+    envelope, client_id, lead_id = await seeded(harness, CODE_TYPE, tg_user_id=TG_PRIMARY)
     if language:
         async with harness.sessions() as session, session.begin():
             lead = await session.get(Lead, lead_id)
@@ -84,42 +85,48 @@ async def code_body(
         contact_id = await add_contact(harness, client_id, "Иван Петров", primary=True)
     else:
         contact_id = await add_contact(harness, client_id, "Иван Петров")
-    body["payload"].update(
+    envelope["data"]["payload"].update(
         code=CODE,
         crm_contact_id=contact_id,
         expires_at=(datetime.now(UTC) + timedelta(minutes=minutes)).isoformat(),
     )
-    return body, client_id, lead_id
+    return envelope, client_id, lead_id
 
 
-async def send_code(harness: Harness, body: dict[str, Any], event_id: str | None = None) -> str:
-    event_id = event_id or str(uuid.uuid4())
-    raw = json.dumps(body).encode()
-    result = await deliver(harness, event_id, body["event"], raw)
-    assert result[0] is False
-    return event_id
+async def send_code(harness: Harness, envelope: dict[str, Any]) -> str:
+    """Доставка с кодом через настоящий приёмник: inline-обработчик, ответ 200 `processed`."""
+    result = await harness.post(envelope)
+    assert (result.status_code, result.body["status"]) == (200, "processed"), result.body
+    return str(envelope["id"])
 
 
 async def everything_stored(harness: Harness) -> str:
-    """Журнал, заметки ленты и очередь задач одним текстом: кода в нём быть не должно."""
+    """Таблицы шины, лента, сообщения и очередь задач одним текстом: кода в нём быть не должно."""
+    queries = (
+        "SELECT * FROM rt_bus_inbox",
+        "SELECT * FROM rt_bus_outbox",
+        "SELECT * FROM rt_bus_delivery",
+        "SELECT * FROM erp_event_notices",
+        "SELECT text FROM lead_notes",
+        "SELECT * FROM procrastinate_jobs",
+    )
+    dumped: list[list[str]] = []
     async with harness.sessions() as session:
-        rows = (await session.execute(select(ErpIncomingEvent))).scalars().all()
-        dumped = [
-            {
-                column.name: str(getattr(row, column.name))
-                for column in ErpIncomingEvent.__table__.columns
-            }
-            for row in rows
-        ]
-        texts = (await session.scalars(select(LeadNote.text))).all()
-        jobs = (await session.execute(select_all_jobs())).all()
-    return json.dumps([dumped, list(texts), [list(map(str, j)) for j in jobs]], default=str)
+        for query in queries:
+            rows = (await session.execute(text(query))).all()
+            dumped.append([str(list(map(str, row))) for row in rows])
+    return json.dumps(dumped, default=str)
 
 
-def select_all_jobs() -> Any:
-    from sqlalchemy import text
-
-    return text("select * from procrastinate_jobs")
+def reasons(caplog: pytest.LogCaptureFixture) -> list[str]:
+    """Причины «код не отправлен» из записей лога доставки (structlog → stdlib)."""
+    found: list[str] = []
+    for record in caplog.records:
+        message = record.getMessage()
+        if NOT_SENT in message:
+            match = re.search(r"'reason': '([^']*)'", message)
+            found.append(match.group(1) if match else "")
+    return found
 
 
 # ── Доставка ────────────────────────────────────────────────────────────────────────────────────
@@ -128,36 +135,45 @@ def select_all_jobs() -> Any:
 async def test_the_code_goes_to_the_contact_in_telegram_and_nowhere_else(
     harness: Harness, caplog: pytest.LogCaptureFixture
 ) -> None:
-    body, client_id, lead_id = await code_body(harness)
+    envelope, client_id, lead_id = await code_envelope(harness)
     caplog.set_level(logging.DEBUG)
 
-    with capture_logs() as structured:
-        event_id = await send_code(harness, body)
+    event_id = await send_code(harness, envelope)
 
     assert [chat for chat, _ in harness.bot.sent] == [TG_CONTACT], "контакту, а не основному"
-    (_, text) = harness.bot.sent[0]
-    assert CODE in text
-    assert "15" in text or "14" in text, "срок действия назван в минутах"
-    assert body["deal"]["title"] in text
+    (_, text_) = harness.bot.sent[0]
+    assert CODE in text_
+    assert "15" in text_ or "14" in text_, "срок действия назван в минутах"
+    assert envelope["data"]["deal"]["title"] in text_
 
-    row = await harness.row(event_id)
-    assert (row.status, row.error, row.outbox) == ("processed", None, None)
-    assert row.payload["payload"]["code"] == REDACTED
-    assert row.payload["payload"]["crm_contact_id"] == body["payload"]["crm_contact_id"]
-    assert (row.erp_company_id, row.crm_client_id) == (COMPANY, client_id)
+    row = await harness.inbox(event_id)
+    assert (row["status"], row["error"]) == ("processed", None)
+    async with harness.sessions() as session:
+        stored = (
+            await session.execute(
+                text("SELECT envelope FROM rt_bus_inbox WHERE event_id = :id"),
+                {"id": uuid.UUID(event_id)},
+            )
+        ).scalar_one()
+    assert stored["data"]["payload"]["code"] == "***", "в inbox лежит маска, не код"
+    assert (
+        stored["data"]["payload"]["crm_contact_id"] == envelope["data"]["payload"]["crm_contact_id"]
+    )
 
-    assert CODE not in await everything_stored(harness), "кода нет ни в журнале, ни в ленте"
+    assert CODE not in await everything_stored(harness), (
+        "кода нет ни в шине, ни в ленте, ни в очереди"
+    )
     assert await notes(harness, lead_id) == []
     assert CODE not in caplog.text
-    assert CODE not in json.dumps(structured, default=str)
     assert harness.enqueued == [], "через очередь код не идёт — её аргументы лежат в БД"
+    assert client_id
 
 
 async def test_an_unlinked_primary_contact_gets_the_code_on_the_client_telegram(
     harness: Harness,
 ) -> None:
-    body, _, _ = await code_body(harness, contact="primary")
-    await send_code(harness, body)
+    envelope, _, _ = await code_envelope(harness, contact="primary")
+    await send_code(harness, envelope)
     assert [chat for chat, _ in harness.bot.sent] == [TG_PRIMARY]
 
 
@@ -168,68 +184,76 @@ async def test_an_unlinked_primary_contact_gets_the_code_on_the_client_telegram(
 async def test_the_text_is_in_the_language_of_the_lead(
     harness: Harness, language: str, needle: str
 ) -> None:
-    body, _, _ = await code_body(harness, language=language)
-    await send_code(harness, body)
-    (_, text) = harness.bot.sent[0]
-    assert needle in text
-    assert CODE in text
+    envelope, _, _ = await code_envelope(harness, language=language)
+    await send_code(harness, envelope)
+    (_, text_) = harness.bot.sent[0]
+    assert needle in text_
+    assert CODE in text_
 
 
-async def test_a_contact_without_telegram_gets_nothing_and_the_row_says_why(
-    harness: Harness,
+async def test_a_contact_without_telegram_gets_nothing_and_the_log_says_why(
+    harness: Harness, caplog: pytest.LogCaptureFixture
 ) -> None:
-    body, _, _ = await code_body(harness, contact="none")
-    event_id = await send_code(harness, body)
+    envelope, _, _ = await code_envelope(harness, contact="none")
+    caplog.set_level(logging.DEBUG)
+    await send_code(harness, envelope)
 
     assert harness.bot.sent == []
-    row = await harness.row(event_id)
-    assert (row.status, row.error) == ("failed", "contact has no telegram")
+    assert reasons(caplog) == ["contact has no telegram"]
     assert CODE not in await everything_stored(harness)
 
 
-async def test_a_contact_of_another_client_is_refused(harness: Harness) -> None:
-    body, _, _ = await code_body(harness)
+async def test_a_contact_of_another_client_is_refused(
+    harness: Harness, caplog: pytest.LogCaptureFixture
+) -> None:
+    envelope, _, _ = await code_envelope(harness)
     stranger_client, _ = await harness.seed_client(erp_company_id=COMPANY + 5, tg_user_id=9001)
-    body["payload"]["crm_contact_id"] = await add_contact(
+    envelope["data"]["payload"]["crm_contact_id"] = await add_contact(
         harness, stranger_client, "Чужой", tg_user_id=9002
     )
-    event_id = await send_code(harness, body)
+    caplog.set_level(logging.DEBUG)
+    await send_code(harness, envelope)
 
     assert harness.bot.sent == [], "код не уходит контакту другого клиента"
-    row = await harness.row(event_id)
-    assert row.status == "failed"
-    assert "not found" in (row.error or "")
+    assert len(reasons(caplog)) == 1
+    assert "not found" in reasons(caplog)[0]
 
 
-async def test_an_event_of_another_company_is_refused(harness: Harness) -> None:
-    body, _, _ = await code_body(harness)
-    body["erp_company_id"] = COMPANY + 1
-    event_id = await send_code(harness, body)
+async def test_an_event_of_another_company_is_refused(
+    harness: Harness, caplog: pytest.LogCaptureFixture
+) -> None:
+    envelope, _, _ = await code_envelope(harness)
+    envelope["data"]["erp_company_id"] = COMPANY + 1
+    caplog.set_level(logging.DEBUG)
+    await send_code(harness, envelope)
     assert harness.bot.sent == []
-    assert (await harness.row(event_id)).error == "company mismatch"
+    assert reasons(caplog) == ["company mismatch"]
 
 
-async def test_an_expired_code_is_not_sent(harness: Harness) -> None:
-    body, _, _ = await code_body(harness, minutes=-1)
-    event_id = await send_code(harness, body)
+async def test_an_expired_code_is_not_sent(
+    harness: Harness, caplog: pytest.LogCaptureFixture
+) -> None:
+    envelope, _, _ = await code_envelope(harness, minutes=-1)
+    caplog.set_level(logging.DEBUG)
+    await send_code(harness, envelope)
     assert harness.bot.sent == []
-    row = await harness.row(event_id)
-    assert (row.status, row.error) == ("skipped", "code already expired")
+    assert reasons(caplog) == ["code already expired"]
 
 
-async def test_without_a_running_bot_the_failure_is_recorded_without_the_code(
-    harness: Harness,
+async def test_without_a_running_bot_the_failure_is_logged_without_the_code(
+    harness: Harness, caplog: pytest.LogCaptureFixture
 ) -> None:
     harness.bot_available = False
-    body, _, _ = await code_body(harness)
-    event_id = await send_code(harness, body)
+    envelope, _, _ = await code_envelope(harness)
+    caplog.set_level(logging.DEBUG)
+    await send_code(harness, envelope)
 
-    row = await harness.row(event_id)
-    assert (row.status, row.error, row.notified_at) == ("failed", "bot is not running", None)
+    assert reasons(caplog) == ["bot is not running"]
     assert CODE not in await everything_stored(harness)
+    assert CODE not in caplog.text
 
 
-async def test_a_telegram_failure_is_recorded_without_leaking_the_code(
+async def test_a_telegram_failure_is_logged_without_leaking_the_code(
     harness: Harness, monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
 ) -> None:
     async def refuse(*_: Any, **__: Any) -> None:
@@ -238,17 +262,14 @@ async def test_a_telegram_failure_is_recorded_without_leaking_the_code(
         )
 
     monkeypatch.setattr(harness.bot, "send_message", refuse)
-    body, _, _ = await code_body(harness)
+    envelope, _, _ = await code_envelope(harness)
     caplog.set_level(logging.DEBUG)
 
-    with capture_logs() as structured:
-        event_id = await send_code(harness, body)
+    await send_code(harness, envelope)
 
-    row = await harness.row(event_id)
-    assert (row.status, row.error) == ("failed", "telegram: TelegramNetworkError")
+    assert reasons(caplog) == ["telegram: TelegramNetworkError"]
     assert CODE not in await everything_stored(harness)
     assert CODE not in caplog.text
-    assert CODE not in json.dumps(structured, default=str)
 
 
 # ── Повторы ─────────────────────────────────────────────────────────────────────────────────────
@@ -257,122 +278,109 @@ async def test_a_telegram_failure_is_recorded_without_leaking_the_code(
 async def test_the_same_event_id_is_a_duplicate_and_does_not_send_a_second_code(
     harness: Harness,
 ) -> None:
-    body, _, _ = await code_body(harness)
-    event_id = await send_code(harness, body)
-    raw = json.dumps(body).encode()
+    envelope, _, _ = await code_envelope(harness)
+    await send_code(harness, envelope)
 
-    again = await deliver(harness, event_id, CODE_EVENT, raw)
+    again = await harness.post(envelope)
 
-    assert again == (True, "duplicate")
+    assert (again.status_code, again.body["status"]) == (200, "duplicate")
     assert len(harness.bot.sent) == 1
 
 
-async def test_a_replayed_body_under_a_new_event_id_sends_nothing(harness: Harness) -> None:
-    body, _, _ = await code_body(harness)
-    await send_code(harness, body)
-    replay_id = await send_code(harness, body)  # тот же код под новым X-Event-Id
+async def test_the_queue_and_the_sweepers_never_touch_a_code_event(harness: Harness) -> None:
+    envelope, _, _ = await code_envelope(harness)
+    event_id = await send_code(harness, envelope)
 
+    assert await harness.bus.requeue_stuck_inbox(older_than=0) == 0
+    assert await harness.notices.sweep() == 0
+    assert await harness.process(event_id) == "processed"  # уже обработано: ничего нового
+    assert harness.enqueued == []
     assert len(harness.bot.sent) == 1
-    row = await harness.row(replay_id)
-    assert row.status == "rejected"
-    assert "replayed body" in (row.error or "")
-    assert row.notified_at is None
+
+
+# ── Тело, которое не разобралось, кода не уносит ────────────────────────────────────────────────
+
+
+async def test_a_broken_code_event_is_refused_and_leaves_no_code_behind(
+    harness: Harness, caplog: pytest.LogCaptureFixture
+) -> None:
+    envelope, _, _ = await code_envelope(harness)
+    envelope["data"]["payload"].pop("expires_at")  # не по схеме → 422
+    caplog.set_level(logging.DEBUG)
+
+    result = await harness.post(envelope)
+
+    assert (result.status_code, result.body) == (422, {"error": "invalid_data"})
+    assert harness.bot.sent == []
+    assert CODE not in json.dumps(result.body)
     assert CODE not in await everything_stored(harness)
+    assert CODE not in caplog.text, "ошибка схемы не печатает значение секретного поля"
 
 
-async def test_the_journal_hash_does_not_let_the_code_be_guessed(harness: Harness) -> None:
-    """Хеш в журнале — по телу без кода: перебор 4–12 цифр по нему невозможен."""
-    body, _, _ = await code_body(harness)
-    event_id = await send_code(harness, body)
-    stored = (await harness.row(event_id)).body_sha256
-    raw = json.dumps(body).encode()
+async def test_a_code_event_with_a_wrong_signature_is_refused_and_not_stored(
+    harness: Harness, caplog: pytest.LogCaptureFixture
+) -> None:
+    envelope, _, _ = await code_envelope(harness)
+    caplog.set_level(logging.DEBUG)
 
-    assert stored is not None
-    assert stored != hashlib.sha256(raw).hexdigest()
-    for guess in ("000000", CODE, "123456"):
-        guessed = {**body, "payload": {**body["payload"], "code": guess}}
-        assert stored != hashlib.sha256(json.dumps(guessed).encode()).hexdigest()
+    result = await harness.post(envelope, secret="not-the-pair-secret")
 
-
-async def test_the_sweeper_and_the_queue_never_touch_a_code_row(harness: Harness) -> None:
-    body, _, _ = await code_body(harness)
-    event_id = await send_code(harness, body)
-
-    assert await harness.service.sweep() == 0
-    assert await harness.service.process_event(event_id) is True  # уже обработано: ничего нового
-    assert len(harness.bot.sent) == 1
-
-
-# ── Тело, которое не разобралось, кода в журнал не уносит ───────────────────────────────────────
-
-
-async def test_a_rejected_code_event_keeps_no_code_in_the_journal(harness: Harness) -> None:
-    body, _, _ = await code_body(harness)
-    body["payload"].pop("expires_at")  # не по схеме → rejected, но тело записывается
-    event_id = await send_code(harness, body)
-
-    row = await harness.row(event_id)
-    assert row.status == "rejected"
-    assert row.payload["payload"]["code"] == REDACTED
+    assert result.status_code == 401
     assert harness.bot.sent == []
     assert CODE not in await everything_stored(harness)
+    assert CODE not in caplog.text
 
 
-async def test_a_code_event_with_a_wrong_header_type_keeps_no_code_either(
-    harness: Harness,
+async def test_a_broken_json_of_a_code_event_is_not_kept_even_in_part(
+    harness: Harness, caplog: pytest.LogCaptureFixture
 ) -> None:
-    body, _, _ = await code_body(harness)
-    raw = json.dumps(body).encode()
+    raw = f'{{"specversion": "1.0", "data": {{"payload": {{"code": "{CODE}"'.encode()  # оборван
     event_id = str(uuid.uuid4())
+    headers = signed_raw(raw, event_id, harness.secret())
+    caplog.set_level(logging.DEBUG)
 
-    result = await deliver(harness, event_id, "quote.sent", raw)
+    result = await harness.bus.receive(headers, raw)
 
-    assert result == (False, "rejected")
+    assert result.status_code == 400
     assert CODE not in await everything_stored(harness)
-
-
-async def test_a_broken_json_of_a_code_event_is_not_kept_even_in_part(harness: Harness) -> None:
-    raw = f'{{"event": "{CODE_EVENT}", "payload": {{"code": "{CODE}"'.encode()  # оборван
-    event_id = str(uuid.uuid4())
-
-    result = await deliver(harness, event_id, CODE_EVENT, raw)
-
-    assert result == (False, "rejected")
-    assert CODE not in await everything_stored(harness)
+    assert CODE not in caplog.text
 
 
 async def test_unknown_fields_in_a_code_event_do_not_break_it(harness: Harness) -> None:
     """Терпимый читатель (Q-FIX35-4): новое поле ERP не отказ и не дыра для кода."""
-    body, _, _ = await code_body(harness)
-    body["from_the_future"] = {"code": CODE}
-    body["payload"]["channel_hint"] = "sms"
-    event_id = await send_code(harness, body)
+    envelope, _, _ = await code_envelope(harness)
+    envelope["data"]["from_the_future"] = {"channel": "sms"}
+    envelope["data"]["payload"]["channel_hint"] = "sms"
+    event_id = await send_code(harness, envelope)
 
     assert [chat for chat, _ in harness.bot.sent] == [TG_CONTACT]
-    assert (await harness.row(event_id)).status == "processed"
+    assert (await harness.inbox(event_id))["status"] == "processed"
+    assert CODE not in await everything_stored(harness)
 
 
 # ── Исходы КП: кто принял ───────────────────────────────────────────────────────────────────────
 
 
 async def test_the_feed_names_the_contact_who_accepted_the_quote(harness: Harness) -> None:
-    body, client_id, lead_id = await seeded(harness, "quote.accepted")
-    body["payload"]["crm_contact_id"] = await add_contact(harness, client_id, "Иван Петров")
-    await harness.service.process_event(await receive(harness, body))
+    envelope, client_id, lead_id = await seeded(harness, "uz.railtech.erp.quote.accepted.v1")
+    envelope["data"]["payload"]["crm_contact_id"] = await add_contact(
+        harness, client_id, "Иван Петров"
+    )
+    await harness.process(await receive(harness, envelope))
 
     (note,) = await notes(harness, lead_id)
     assert "Иван Петров" in note
     assert "акцептовал" in note
-    assert f"#{body['payload']['erp_quote_id']}" in note
+    assert f"#{envelope['data']['payload']['erp_quote_id']}" in note
 
 
 async def test_the_feed_names_the_contact_who_rejected_the_quote_with_the_reason(
     harness: Harness,
 ) -> None:
-    body, client_id, lead_id = await seeded(harness, "quote.rejected")
+    envelope, client_id, lead_id = await seeded(harness, "uz.railtech.erp.quote.rejected.v1")
     contact_id = await add_contact(harness, client_id, "Алия Каримова")
-    body["payload"].update(crm_contact_id=contact_id, reason="Дорого")
-    await harness.service.process_event(await receive(harness, body))
+    envelope["data"]["payload"].update(crm_contact_id=contact_id, reason="Дорого")
+    await harness.process(await receive(harness, envelope))
 
     (note,) = await notes(harness, lead_id)
     assert "Алия Каримова" in note
@@ -381,20 +389,21 @@ async def test_the_feed_names_the_contact_who_rejected_the_quote_with_the_reason
 
 
 @pytest.mark.parametrize(
-    ("event", "expected"),
+    ("event_type", "expected"),
     [
-        ("quote.accepted", "Клиент акцептовал КП #1203 v2."),
-        ("quote.rejected", "КП #1203 v2 отклонено клиентом."),
+        ("uz.railtech.erp.quote.accepted.v1", "Клиент акцептовал КП #1203 v2."),
+        ("uz.railtech.erp.quote.rejected.v1", "КП #1203 v2 отклонено клиентом."),
     ],
 )
 async def test_without_a_crm_contact_the_feed_stays_neutral(
-    harness: Harness, event: str, expected: str
+    harness: Harness, event_type: str, expected: str
 ) -> None:
-    body, _, lead_id = await seeded(harness, event)
-    body["payload"].pop("crm_contact_id", None)
-    body["payload"].pop("reason", None)
-    body["payload"]["erp_contact_id"] = 311  # ERP контакт знает, CRM — нет
-    await harness.service.process_event(await receive(harness, body))
+    envelope, _, lead_id = await seeded(harness, event_type)
+    payload = envelope["data"]["payload"]
+    payload.pop("crm_contact_id", None)
+    payload.pop("reason", None)
+    payload["erp_contact_id"] = 311  # ERP контакт знает, CRM — нет
+    await harness.process(await receive(harness, envelope))
 
     (note,) = await notes(harness, lead_id)
     assert note == expected
@@ -403,25 +412,27 @@ async def test_without_a_crm_contact_the_feed_stays_neutral(
 async def test_a_contact_of_another_client_is_never_named_in_the_feed(harness: Harness) -> None:
     other_client, _ = await harness.seed_client(erp_company_id=COMPANY + 7, tg_user_id=9100)
     stranger = await add_contact(harness, other_client, "Посторонний Контакт")
-    body, _, lead_id = await seeded(harness, "quote.accepted")
-    body["payload"]["crm_contact_id"] = stranger
-    await harness.service.process_event(await receive(harness, body))
+    envelope, _, lead_id = await seeded(harness, "uz.railtech.erp.quote.accepted.v1")
+    envelope["data"]["payload"]["crm_contact_id"] = stranger
+    await harness.process(await receive(harness, envelope))
 
     (note,) = await notes(harness, lead_id)
     assert "Посторонний" not in note
 
 
 async def test_viewing_the_quote_does_not_name_a_contact(harness: Harness) -> None:
-    body, client_id, lead_id = await seeded(harness, "quote.viewed")
-    body["payload"]["crm_contact_id"] = await add_contact(harness, client_id, "Иван Петров")
-    await harness.service.process_event(await receive(harness, body))
+    envelope, client_id, lead_id = await seeded(harness, "uz.railtech.erp.quote.viewed.v1")
+    envelope["data"]["payload"]["crm_contact_id"] = await add_contact(
+        harness, client_id, "Иван Петров"
+    )
+    await harness.process(await receive(harness, envelope))
     (note,) = await notes(harness, lead_id)
     assert "Иван Петров" not in note
 
 
 async def test_client_row_is_not_changed_by_a_code_event(harness: Harness) -> None:
-    body, client_id, _ = await code_body(harness)
-    await send_code(harness, body)
+    envelope, client_id, _ = await code_envelope(harness)
+    await send_code(harness, envelope)
     async with harness.sessions() as session:
         client = await session.get(Client, client_id)
     assert client is not None
@@ -429,4 +440,4 @@ async def test_client_row_is_not_changed_by_a_code_event(harness: Harness) -> No
 
 
 def test_the_example_of_the_contract_carries_a_code_that_is_not_a_real_one() -> None:
-    assert example_event(CODE_EVENT)["payload"]["code"] == "000000"
+    assert example_data(CODE_TYPE)["payload"]["code"] == "000000"

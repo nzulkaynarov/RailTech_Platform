@@ -53,8 +53,12 @@ done
 # Образ runtime (prod) + код смонтирован: pytest есть в образе (requirements.in, «Testing»).
 # packages/contracts смонтирован только на чтение (/packages/contracts): сторож контракта портала
 # (portal/tests/test_contract_guard.py) читает erp-portal.yaml и без него падает, а не пропускается (FIX-21).
+# rt_bus и контракты шины (B3, L14) приходят в образ именованными контекстами сборки — как в compose (additional_contexts).
 echo "▸ сборка образа $IMAGE"
-docker build -q -t "$IMAGE" "$ROOT/backend" >/dev/null
+docker build -q -t "$IMAGE" \
+  --build-context "rtbus=$ROOT/../../packages/rt-bus" \
+  --build-context "contracts=$ROOT/../../packages/contracts" \
+  "$ROOT/backend" >/dev/null
 
 run_in() {
   # Без entrypoint (он мигрирует и делает collectstatic только для daphne/gunicorn — здесь не нужен).

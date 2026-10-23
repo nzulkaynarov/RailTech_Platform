@@ -9,8 +9,6 @@
   токены/секрет вебхуков, зашифрованные в БД (M3-ERP-05)
 """
 
-import uuid
-
 from django.conf import settings
 from django.db import models
 from django.utils import timezone
@@ -163,101 +161,32 @@ class IntegrationIdempotencyKey(models.Model):
         return f"IdempotencyKey({self.key}, status={self.response_status})"
 
 
-class WebhookEventStatus(models.TextChoices):
-    PENDING = "PENDING", _("В очереди")
-    SENT = "SENT", _("Отправлено")
-    FAILED = "FAILED", _("Ошибка")
+class CrmProjectionKind(models.TextChoices):
+    CLIENT = "client", _("Клиент CRM")
+    CONTACT = "contact", _("Контакт CRM")
 
 
-class IntegrationWebhookEvent(models.Model):
-    """Журнал и очередь исходящих вебхуков событий ERP → CRM (CONTRACTS §3).
+class CrmProjectionState(models.Model):
+    """Какой снимок CRM применён к проекции ERP (B3, ADR-0015 п. 5, CONTRACTS §9): порядок событий не гарантирован.
 
-    Заголовки запроса: X-Event-Id (UUID), X-Event-Type, X-Timestamp, X-Signature: sha256=<HMAC(secret, "{X-Event-Id}.{X-Timestamp}.{body}")> (схема v2, FIX-61;
-    заголовки перезаписываются при каждой попытке доставки).
-    Ретраи: 1, 5, 30 мин, 2, 6, 24 ч. При исчерпании попыток — статус FAILED для ручного разбора.
+    События CRM `client.updated` и `contact.*` — снимки с `updated_at` (`deleted_at` у удаления): более старый снимок
+    уже применённого не применяется. `applied_at` — момент самого нового применённого снимка; `deleted` — контакт
+    удалён (надгробие: поздний `contact.updated` не воскрешает контакт, а ERP-контакта уже нет).
     """
 
-    event_id = models.UUIDField(
-        default=uuid.uuid4,
-        unique=True,
-        db_index=True,
-        verbose_name=_("X-Event-Id (UUID)"),
-    )
-    event_type = models.CharField(
-        max_length=64,
-        db_index=True,
-        verbose_name=_("Тип события"),
-    )
-    target_url = models.URLField(
-        max_length=500,
-        verbose_name=_("URL назначения"),
-    )
-    payload = models.JSONField(
-        verbose_name=_("Тело события (JSON)"),
-    )
-    headers = models.JSONField(
-        default=dict,
-        blank=True,
-        verbose_name=_("Заголовки запроса"),
-    )
-    status = models.CharField(
-        max_length=20,
-        choices=WebhookEventStatus.choices,
-        default=WebhookEventStatus.PENDING,
-        db_index=True,
-        verbose_name=_("Статус отправки"),
-    )
-    attempts = models.PositiveIntegerField(
-        default=0,
-        verbose_name=_("Число попыток отправки"),
-    )
-    last_attempt_at = models.DateTimeField(
-        null=True,
-        blank=True,
-        verbose_name=_("Время последней попытки"),
-    )
-    next_attempt_at = models.DateTimeField(
-        null=True,
-        blank=True,
-        verbose_name=_("Плановое время следующей попытки"),
-        help_text=_(
-            "Когда доставка должна повториться по сетке ретраев; пусто — отправлено, исчерпано или ещё не планировалось. "
-            "Задача Beat подбирает PENDING, у которых этот срок давно прошёл (FIX-33)."
-        ),
-    )
-    last_error = models.TextField(
-        blank=True,
-        default="",
-        verbose_name=_("Текст последней ошибки"),
-    )
-    response_status = models.PositiveIntegerField(
-        null=True,
-        blank=True,
-        verbose_name=_("HTTP-код ответа CRM"),
-    )
-    created_at = models.DateTimeField(
-        auto_now_add=True,
-        db_index=True,
-        verbose_name=_("Дата создания"),
-    )
-    sent_at = models.DateTimeField(
-        null=True,
-        blank=True,
-        verbose_name=_("Дата успешной отправки"),
-    )
+    kind = models.CharField(max_length=16, choices=CrmProjectionKind.choices)
+    crm_id = models.BigIntegerField(verbose_name=_("Идентификатор в CRM"))
+    applied_at = models.DateTimeField(verbose_name=_("updated_at / deleted_at применённого снимка"))
+    deleted = models.BooleanField(default=False, verbose_name=_("Удалён в CRM"))
+    updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
-        verbose_name = _("Исходящее событие интеграции")
-        verbose_name_plural = _("Исходящие события интеграции")
-        ordering = ["-created_at"]
-        indexes = [
-            models.Index(fields=["status", "created_at"], name="int_event_status_created_idx"),
-            models.Index(fields=["status", "next_attempt_at"], name="int_event_status_next_idx"),
-            models.Index(fields=["event_type", "-created_at"], name="int_event_type_created_idx"),
-        ]
+        verbose_name = _("Состояние проекции CRM")
+        verbose_name_plural = _("Состояния проекций CRM")
+        constraints = [models.UniqueConstraint(fields=["kind", "crm_id"], name="int_crm_projection_uniq")]
 
     def __str__(self):
-        return f"WebhookEvent({self.event_id}, {self.event_type}, {self.status})"
+        return f"CrmProjectionState({self.kind}#{self.crm_id}, {self.applied_at:%Y-%m-%d %H:%M:%S}, deleted={self.deleted})"
 
 
 class PairingCode(models.Model):
@@ -317,6 +246,7 @@ class CredentialSlot(models.TextChoices):
     CRM_TO_ERP_PREVIOUS = "crm_to_erp_previous", _("Прежний токен CRM→ERP (переход при ротации)")
     ERP_TO_CRM = "erp_to_crm", _("Токен ERP→CRM")
     WEBHOOK_SECRET = "webhook_secret", _("Секрет подписи вебхуков")
+    WEBHOOK_SECRET_PREVIOUS = "webhook_secret_previous", _("Прежний секрет сопряжения (переход при ротации)")
 
 
 class ServiceCredential(models.Model):

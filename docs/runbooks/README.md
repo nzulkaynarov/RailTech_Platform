@@ -3,11 +3,13 @@
 
 **Ансамбль**
 - [`stand.md`](stand.md) — локальный стенд `make up`; [`servers.md`](servers.md) — серверы VPS1/VPS2; [`deploy.md`](deploy.md) — деплой и откат прода;
-- [`webhooks.md`](webhooks.md) — вебхуки ERP → CRM: журнал, ручной повтор, сбои приёма, ротация секрета;
+- [`webhooks.md`](webhooks.md) — вебхуки ERP → CRM (устарел, заменены шиной rt_bus) и ротация секрета сопряжения;
 - [`crm-erp-pairing.md`](crm-erp-pairing.md) — сопряжение CRM ↔ ERP; [`log-secrets.md`](log-secrets.md) — что не попадает в логи.
 
 - [`backup-pitr.md`](backup-pitr.md) — WAL-архив PostgreSQL (WAL-G), восстановление на момент времени, ежемесячная проверка;
-  [`request-id.md`](request-id.md) — найти запрос по `X-Request-ID` в журналах Caddy, CRM и ERP.
+  [`request-id.md`](request-id.md) — найти запрос по `X-Request-ID` в журналах Caddy, CRM и ERP;
+  [`rt-bus-erp.md`](rt-bus-erp.md) — шина rt_bus в ERP: журнал, DLQ, повтор, метрики, неверный endpoint (B3);
+  [`rt-bus-crm.md`](rt-bus-crm.md) — шина rt_bus в CRM: DLQ, повтор, метрики, события ERP не обработаны (B4).
 
 **Системы**
 - **CRM**: [`crm/`](crm/README.md) — бот, эскалации, расходы ИИ, деплой, бэкапы, eval-gate, ротация ключей;

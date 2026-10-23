@@ -15,7 +15,7 @@ from django.core.cache import cache
 from django.db import transaction
 from django.utils import timezone
 from kombu.exceptions import KombuError
-from parties.models import Contact, active_company_q
+from parties.models import Contact, active_company_q, active_contact_q
 from portal.exceptions import PortalGone, PortalTooManyRequests
 from portal.models import MagicLinkToken, PortalSession
 from portal.services.access import company_in_circulation
@@ -65,7 +65,9 @@ def find_login_contact(clean_email: str) -> Optional[Contact]:
     Архивные компании не входят. Если адрес указан у активных контактов РАЗНЫХ компаний, письмо
     не отправляется: ссылка открыла бы чужую компанию.
     """
-    contacts = Contact.objects.filter(active_company_q("company"), email__iexact=clean_email).select_related("company")
+    contacts = Contact.objects.filter(
+        active_company_q("company"), active_contact_q(), email__iexact=clean_email
+    ).select_related("company")
     company_ids = list(contacts.order_by().values_list("company_id", flat=True).distinct()[:2])
     if not company_ids:
         return None
@@ -108,7 +110,11 @@ def deliver_login_link(contact_id: int) -> bool:
     Вызывается задачей `portal.tasks.send_magic_link`. Контакт и компания проверяются заново: между запросом
     и выполнением задачи компанию могли отправить в архив.
     """
-    contact = Contact.objects.filter(active_company_q("company"), pk=contact_id).select_related("company").first()
+    contact = (
+        Contact.objects.filter(active_company_q("company"), active_contact_q(), pk=contact_id)
+        .select_related("company")
+        .first()
+    )
     if contact is None or not contact.email:
         logger.info("Magic link not sent: contact %s is gone, archived or has no e-mail", contact_id)
         return False
@@ -165,6 +171,10 @@ def exchange_magic_link(
 
         if not company_in_circulation(token_obj.contact.company_id):
             logger.info("Magic link for archived company rejected (contact %s)", token_obj.contact_id)
+            raise PermissionDenied("FORBIDDEN")
+
+        if token_obj.contact.is_archived:
+            logger.info("Magic link of an archived contact rejected (contact %s)", token_obj.contact_id)
             raise PermissionDenied("FORBIDDEN")
 
         token_obj.used_at = timezone.now()

@@ -163,7 +163,7 @@ stage_e2e() {
 stage_audit() {
   (
     cd "$ROOT/backend"
-    clean_env uv export --frozen --no-dev --no-emit-project --format requirements-txt -o "$LOGS/requirements.txt"
+    clean_env uv export --frozen --no-dev --no-emit-project --no-emit-local --format requirements-txt -o "$LOGS/requirements.txt"
     clean_env uvx pip-audit@2.10.1 -r "$LOGS/requirements.txt" --no-deps --disable-pip --progress-spinner off
   )
   (cd "$ROOT/frontend" && clean_env pnpm audit --prod --audit-level high)

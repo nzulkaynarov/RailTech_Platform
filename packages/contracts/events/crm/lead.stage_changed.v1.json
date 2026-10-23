@@ -22,7 +22,8 @@
     },
     "reason": {
       "type": "string",
-      "maxLength": 500
+      "maxLength": 500,
+      "description": "Код причины из справочника CRM (snake_case, например taken_by_manager, closed_won, qualifier, no_reply); свободный текст сотрудника в событие не попадает и остаётся в CRM"
     },
     "actor": {
       "$ref": "_defs.v1.json#/$defs/Actor"

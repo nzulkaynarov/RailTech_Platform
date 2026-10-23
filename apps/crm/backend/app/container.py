@@ -26,6 +26,8 @@ from app.services.service_switches import SwitchBoard
 from app.services.settings import SettingsService
 
 if TYPE_CHECKING:
+    from app.bus.notices import ErpEventNotices
+    from app.bus.runtime import CrmBus
     from app.domain.backoffice import BackofficeMode
     from app.integrations.erp import ErpClient
     from app.integrations.erp_externals import ErpSwitchClient
@@ -432,18 +434,46 @@ class Container:
         )
 
     @cached_property
+    def erp_notices(self) -> "ErpEventNotices":
+        """Сообщения Telegram по событиям ERP: после коммита обработки (`app.bus.notices`)."""
+        from app.bus.notices import ErpEventNotices
+
+        return ErpEventNotices(self.session_factory, self.telegram_bot, self.settings)
+
+    @cached_property
     def erp_events_service(self) -> "ErpEventsService":
-        """Приёмник и обработчик событий ERP (M3-CRM-04)."""
+        """Обработчики событий ERP, принятых с шины (M3-CRM-04, B4)."""
+        from app.services.erp_acceptance_code import AcceptanceCodeDelivery
         from app.services.erp_events import ErpEventsService
 
         return ErpEventsService(
-            self.session_factory,
             self.settings_service,
-            self.secrets_store,
-            self.settings,
-            self.telegram_bot,
-            _enqueue_erp_event,
+            self.erp_notices,
+            AcceptanceCodeDelivery(
+                self.session_factory, self.settings_service, self.telegram_bot, self.settings
+            ),
         )
+
+    @cached_property
+    def bus(self) -> "CrmBus":
+        """Шина процесса (rt_bus, сервис `crm`): публикация, доставка, приёмник, обработка inbox."""
+        from app.bus import handlers  # noqa: F401 — регистрирует обработчики событий ERP
+        from app.bus.runtime import build_bus
+        from app.tasks.bus import tasks
+
+        return build_bus(
+            lambda: self.session_factory(),
+            self._bus_webhook_secrets,
+            after_processed=self.erp_notices.deliver,
+            enqueue=tasks.enqueue,
+        )
+
+    async def _bus_webhook_secrets(self) -> tuple[str, ...]:
+        """Секреты вебхуков сопряжения CRM ↔ ERP: из них выводятся секреты пар шины (L12)."""
+        from app.integrations.erp import resolve_erp
+
+        resolution = await resolve_erp(self.secrets_store, self.settings, self.settings_service)
+        return resolution.webhook_secrets
 
     @cached_property
     def mail_service(self) -> "MailService":
@@ -546,6 +576,8 @@ class Container:
             await self.sandbox_service.aclose()
         for bot in self._bots.values():
             await bot.session.close()
+        if "bus" in self.__dict__:
+            await self.bus.aclose()
         if "erp_http" in self.__dict__:
             await self.erp_http.aclose()
         if "engine" in self.__dict__:
@@ -595,12 +627,6 @@ async def _enqueue_erp_handoff(client_id: int, lead_id: int, user_id: int) -> ob
     from app.tasks.erp_handoff import enqueue_erp_handoff
 
     return await enqueue_erp_handoff(client_id, lead_id, user_id)
-
-
-async def _enqueue_erp_event(event_id: str) -> int | None:
-    from app.tasks.erp_events import enqueue_erp_event
-
-    return await enqueue_erp_event(event_id)
 
 
 async def _escalation_changed(escalation_id: int) -> None:

@@ -53,9 +53,9 @@ Contract-first действует для `portal`, `integration`, событий
 либо `manage.py pairing_code`; 15 минут, один раз, хеш в базе, новый код гасит прежний). Админ в CRM «Подключения → ERP» вводит адрес и
 код, CRM генерирует три секрета (токены CRM→ERP и ERP→CRM, секрет вебхуков), вызывает `POST /pairing/accept` с кодом вместо токена,
 сохраняет секреты у себя и сразу делает «Проверить связь» (`GET /health`). ERP хранит секреты шифрованно в базе
-(Fernet, ключ из `SECRET_KEY`); аутентификация integration и подпись вебхуков берут их оттуда, `.env` — только пока в базе
-пусто. «Обновить ключи» — `POST /pairing/rotate`: ERP принимает новую тройку по действующему токену, прежний токен CRM→ERP действует
-ещё переходный срок (по умолчанию 1 час), прежний секрет вебхуков CRM принимает наравне с новым. Читатель терпимый: новые поля
+(Fernet, ключ из `SECRET_KEY`); аутентификация integration берёт токены оттуда, а от секрета вебхуков шина выводит секреты пары CRM ↔ ERP (§9.3); `.env` — только
+пока в базе пусто. «Обновить ключи» — `POST /pairing/rotate`: ERP принимает новую тройку по действующему токену, прежний токен CRM→ERP действует
+ещё переходный срок (по умолчанию 1 час), прежний секрет вебхуков (а с ним и выведенный из него секрет пары) CRM принимает наравне с новым. Читатель терпимый: новые поля
 ответов сопряжения CRM игнорирует.
 
 **Первое сопряжение без кода (bootstrap).** На свежем проде в ERP некому выпустить код, а сотрудники приходят из CRM
@@ -79,23 +79,29 @@ v1.<ts>.<jti>.<hex>` — доказательство владения общи�
 
 ## 3. События (ERP → CRM)
 
-> **Устаревает (волна 11, ADR-0014).** Вебхук ниже заменяется шиной `rt_bus` (§9): те же 22 события публикуются как
-> `uz.railtech.erp.<событие>.v1`, тело события (без `version`, `event`, `occurred_at`) становится полем `data` конверта
-> CloudEvents, схемы — `packages/contracts/events/erp/*.v1.json`. `events.schema.json` и `examples/events/*.json`
-> остаются до перехода сторон: удаляют B3 (ERP, монтирование в `infra/deploy`) и B4 (ручная копия CRM и сами файлы).
+> **Вебхук ERP → CRM заменён шиной `rt_bus` (волна 11, B3, ADR-0014).** ERP больше не шлёт `POST {CRM}/api/v1/integrations/erp/events`:
+> `CRM_WEBHOOK_URL`, подпись событий `ERP_WEBHOOK_SECRET`, журнал `IntegrationWebhookEvent`, ретраи 1 мин … 24 ч, сигналы Django
+> и проверка по `events.schema.json` удалены. Те же 22 события публикуются сервисами ERP в транзакции изменения как
+> `uz.railtech.erp.<событие>.v1` (§9): тело события (без `version`, `event`, `occurred_at` — они в конверте) стало полем `data`
+> конверта CloudEvents, схемы — `packages/contracts/events/erp/*.v1.json`. Доставка, подпись `X-RT-Signature`, окно 300 с,
+> повторы, DLQ и «читатель терпимый» — §9.3–§9.4; публикация и приёмник ERP — §9.7. Подпись по `X-Event-Id`/`X-Timestamp`/
+> `X-Signature` и ответ CRM «200 + `rejected`» прежней схемы больше не действуют. Файлы `events.schema.json` и
+> `examples/events/*.json` удалены (B4: последних потребителей не осталось).
 
-`POST {CRM}/api/v1/integrations/erp/events`. Заголовки: `X-Event-Id` (UUID), `X-Event-Type`,
-`X-Timestamp` (UTC ISO 8601), `X-Signature: sha256=<HMAC(WEBHOOK_SECRET, f"{X-Event-Id}.{X-Timestamp}.{body}")>` — схема v2
-(FIX-61, Q-FIX35-2); переход завершён (S0-5): старая подпись только тела не принимается (401), настройки
-`ERP_WEBHOOK_SIGN_LEGACY` нет. ERP при ретрае подписывает заново с актуальным `X-Timestamp`; `occurred_at` в теле — время события.
-CRM отвечает 200 быстро, обрабатывает асинхронно; повтор с тем же `X-Event-Id` — 200 без действий. Неверная подпись —
-401. **Постоянный отказ — 200 и запись `rejected` в журнале CRM** (Q-FIX33-1): `|now − X-Timestamp| > 300 с`, повтор того же
-тела под другим `X-Event-Id`, сломанный JSON, тело не по схеме известного события — ретраи не помогут. **Читатель
-терпимый** (Q-FIX35-4): неизвестные поля игнорируются, неизвестный `event` — 200 и `skipped`; отправитель соблюдает схему
-строго; новое необязательное поле или новый тип события не меняют `version` и не требуют одновременной выкладки CRM.
-Ретраи ERP: 1, 5, 30 мин, 2, 6, 24 ч; после — журнал с ручным повтором.
+События ERP CRM принимает по шине `rt_bus` (§9): **`POST {CRM}/bus/v1/events`** — приёмник библиотеки (`rt_bus.fastapi.bus_router`).
+Подпись пары `erp → crm` и окно 300 с (§9.3), идемпотентность по `id` конверта (повтор — 200 без действий), ответы 2xx/401/400/422
+(§9.4), неизвестный тип и версия выше поддерживаемой — 200 и `skipped`. Приёмник работает только во внутренней сети: Caddy
+`/bus/*` наружу не публикует. Прежнего вебхука `POST /api/v1/integrations/erp/events` нет (B4): ни маршрута, ни подписи
+`X-Signature`/`X-Event-Id`, ни журнала `erp_incoming_events`, ни настройки `ERP_WEBHOOK_SIGN_LEGACY`.
 
-Тело: `{event, occurred_at, erp_company_id, crm_client_id, deal{erp_deal_id, number, title, stage, amount, currency}, actor{type: system|staff|client, name?}, payload{...}}`;
+Тип события — `uz.railtech.erp.<событие>.v1`, поле `data` конверта — прежнее тело без `version`, `event`, `occurred_at`
+(время события — `time` конверта); схемы — `packages/contracts/events/erp/*.v1.json`, модели в CRM — `rt_contracts.events.erp`
+(ручной копии нет). **Читатель терпимый** (L10): неизвестные поля в `data` игнорируются; `data` известного типа с неверным
+значением или без обязательного поля — 422. Обработка в CRM — в очереди, в транзакции записи inbox (§9.8); ошибка — повтор
+через 30 с, 2 мин, 10 мин, затем `failed` (видно в центре внешних сервисов, строка «События из ERP»). Код акцепта обрабатывается
+inline и до БД не доходит (§9.2).
+
+Поле `data`: `{erp_company_id, crm_client_id, deal{erp_deal_id, number, title, stage, amount, currency}, actor{type: system|staff|client, name?}, payload{...}}`;
 `deal.amount` — сумма последнего КП, отправленного клиенту, или `null`.
 
 | Событие | payload | Что делает CRM |
@@ -215,7 +221,7 @@ ADR-0016: у каждого файла контракта своя версия 
   типы; всё прочее, в том числе расширение (новое значение enum, снятый `required`, ослабленные ограничения), — файл
   `v(N+1)`, издатель публикует оба типа, пока подписчики не перейдут. Машинная проверка — `scripts/events_compat.py` в
   `make contracts` и в CI (§9.6).
-- **Старый вебхук §3** (поле `version` в теле) — до удаления в B3/B4 не меняется.
+- **Старый вебхук §3** (поле `version` в теле) — в ERP снят (B3), приёмник CRM `/integrations/erp/events` удаляет B4.
 
 ### 7.1. Проверки машиной: `oasdiff` и `events_compat`
 
@@ -328,6 +334,8 @@ enum, отсутствующее обязательное поле, наруше
 | `uz.railtech.crm.contact.created.v1` / `contact.updated.v1` | `rt://crm` → erp | снимок `contact`: `crm_contact_id`, `crm_client_id`, `erp_company_id?`, `full_name`, `position`, `phone_e164`, `email`, `telegram_user_id`, `is_primary`, `language?`, `preferred_channel?`, `updated_at` |
 | `uz.railtech.crm.contact.deleted.v1` | `rt://crm` → erp | `crm_contact_id`, `crm_client_id`, `erp_company_id?`, `deleted_at`, `actor`; поздний `contact.created/updated` с `updated_at` ≤ `deleted_at` не применяется |
 | `uz.railtech.crm.lead.created.v1` / `lead.updated.v1` / `lead.stage_changed.v1` | `rt://crm` → (Платформа, B5) | снимок `lead` без контактов и переписки: `crm_lead_id`, `crm_client_id?`, `display_name`, `company_name`, `stage`, `source`, `language`, `score`, `assigned_user`, `erp_request_id?`, `updated_at`; у `stage_changed` — `from`, `to`, `reason?` |
+| `uz.railtech.crm.lead.erased.v1` | `rt://crm` → (Платформа, B5) | только `crm_lead_id`, `crm_client_id`, `erased_at`, `actor`: лид обезличен по запросу, **подписчики обязаны стереть свои копии ПДн по лиду** |
+| `uz.railtech.crm.lead.merged.v1` | `rt://crm` → (Платформа, B5) | `lead` — снимок выжившего, `merged_lead_id` — поглощённый лид (в CRM его больше нет), `actor` |
 | `uz.railtech.identity.user.created.v1` / `user.updated.v1` | `rt://crm` → (ERP, Платформа — позже) | снимок `user`: `crm_user_id`, `email`, `full_name`, `position`, `language`, `is_active`, `platform_roles`, `systems`, `erp_role_codes?`, `updated_at` |
 | `uz.railtech.identity.user.deactivated.v1` | `rt://crm` → (ERP, Платформа — позже) | `crm_user_id`, `reason?`, `actor` |
 
@@ -335,7 +343,8 @@ enum, отсутствующее обязательное поле, наруше
 идентификатору; снимок с `updated_at` старше применённого не применяется (доставка может прийти не по порядку). Только
 поля, которыми владеет CRM (ADR-0015), и внешние идентификаторы; паролей, токенов, хэшей и одноразовых кодов нет
 (проверяется тестом). Телефоны и e-mail в событиях CRM издатель нормализует до публикации (телефон — E.164,
-e-mail — без пробелов, по формату `email`; схема проверяет формат) — хвост B4.
+e-mail — без пробелов, по формату `email`; схема проверяет формат): снимок строит `app/bus/snapshots.py` (B4), значение,
+которое не приводится к виду схемы, не публикуется (`null`), а изменение из-за него не падает.
 
 `payload.code` события `uz.railtech.erp.quote.acceptance_code_requested.v1` — секрет и для подписчика, и для издателя:
 подписчик не пишет его в ленту, журналы, inbox и логи; у издателя в outbox и журнале доставок он хранится маской
@@ -357,6 +366,14 @@ e-mail — без пробелов, по формату `email`; схема пр
 Секрет пары «издатель → подписчик» — `RT_BUS_SECRET_<ИЗДАТЕЛЬ>_<ПОДПИСЧИК>` (верхний регистр, `-` → `_`; несколько через
 запятую: первым подписывают, принимают любой — ротация без простоя). Сервис может подставить свой поставщик секретов
 (сопряжение в БД). Приёмник: окно `|now − X-RT-Timestamp| ≤ 300 с`.
+
+**Секрет пары CRM ↔ ERP без правки сопряжения (L12).** Поставщик секретов сервиса берёт `RT_BUS_SECRET_<ИЗДАТЕЛЬ>_<ПОДПИСЧИК>`
+из окружения, если он задан; иначе выводит направленный секрет из секрета вебхуков сопряжения (каждого действующего — для
+ротации; первый подписывает, принимается любой): `hex(HMAC-SHA256(webhook_secret, "rt-bus/v1/{издатель}->{подписчик}"))`,
+например `"rt-bus/v1/erp->crm"` для событий ERP и `"rt-bus/v1/crm->erp"` для событий CRM. При ротации сопряжения ERP хранит и прежний секрет на переходный срок (как прежний токен CRM→ERP, по умолчанию 1 час): события,
+подписанные им, принимаются, без 401. Секрет вебхуков по шине не ходит и в подписи не участвует, обе стороны считают пару сами; ERP берёт его из сопряжения (`ServiceCredential`, шифровано), иначе из
+`ERP_WEBHOOK_SECRET`, CRM — из «Подключения → ERP». Остальным парам (platform-bff, заглушки, коннекторы) секрет нужен только в
+окружении: пока его нет, доставка откладывается на 5 минут без засчитанной попытки и неподписанной не уходит.
 
 ### 9.4. Ответы приёмника и повтор
 
@@ -411,3 +428,81 @@ subscribers:
 Модели — один генератор (`datamodel-code-generator`, Pydantic v2) → пакет `rt-contracts` в
 `packages/contracts/generated/python` (`from rt_contracts.events import TYPES, Envelope`), ставится по пути. `rt-bus`
 от него не зависит: проверяет `data` по JSON Schema из каталога `RT_BUS_CONTRACTS_DIR` (= `packages/contracts/events`).
+
+### 9.7. ERP на шине (B3)
+
+**Публикация.** События публикует сервисный слой ERP (`integration/services/events.py`, `document_events.py`) в той же
+`transaction.atomic()`, что и изменение: откат транзакции — события нет; ошибка публикации (шина, кэш секрета, `data` не по
+схеме типа) — исключение наружу и откат изменения; `except Exception` вокруг публикации нет (тест `test_bus_publish.py`).
+Сигналов Django для событий нет. Где какое событие рождается:
+
+| События | Сервис |
+|---|---|
+| `request.created` | заявка из Cabinet (`portal/services/requests.py`, `source=cabinet`), передача клиента из CRM (`integration/services/handoff.py` и инструмент `create_request` `erp-mcp`, `source=crm`), сделка сотрудника (`register_new_deal`, `source=erp`) |
+| `deal.stage_changed`, `deal.won`, `deal.lost` | `transition_deal_stage` (смена стадии FSM; стадию контракта даёт `stages.py`) |
+| `quote.sent`, `quote.viewed`, `quote.accepted`, `quote.rejected`, `quote.acceptance_code_requested` | отправка КП, просмотр публичной страницы, акцепт и отказ (`lifecycle_accept`, принудительное одобрение), код акцепта для Telegram (`portal/services/acceptance.py`) |
+| `contract.signed` | `sign_contract_by_client` / `sign_contract_by_manager` |
+| `invoice.issued`, `invoice.paid`, `invoice.overdue` | `issue_invoice`, `record_payment`, ежедневное напоминание об оплате (`send_payment_reminders`: одно `invoice.overdue` на просроченный счёт — статуса «просрочен» нет) |
+| `act.issued`, `act.accepted`, `act.returned` | `generate_act` и `reissue_act`, `sign_act`, `reject_act` |
+| `delivery.status_changed`, `delivery.eta_changed` | `ensure_fulfillment` (создание исполнения), `update_fulfillment_status` |
+| `delivery.line_accepted`, `delivery.line_disputed` | `accept_delivery_line`, `dispute_delivery_line` |
+| `document.created` | переход «не выпущен → выпущен» у КП, договора, счёта, акта, накладной, `GeneratedDocument` (правило `portal.services.documents.is_issued`) |
+| `invite.sent` | `invite_contact_to_portal` |
+
+Компания без `CrmClientMapping` событий не порождает. `correlationid` по умолчанию — `X-Request-ID` входящего запроса
+(`RequestIDMiddleware` принимает только безопасную строку `A-Za-z0-9._-` до 128 знаков, иначе новый UUID), вне запроса
+(Celery) — новый UUID. Код акцепта: в outbox маска `***`, значение — кэш Redis на 20 минут (`DjangoCacheStash`; в ERP запись идёт fail-closed — `integration.bus.FailClosedCacheStash`: кэш недоступен при публикации — `CacheUnavailable`, публикация и изменение откатываются, S0-2) до доставки;
+истёк — доставка `dead` с `SECRET_EXPIRED`, клиент запрашивает код заново.
+
+**Приёмник.** `POST /bus/v1/events` в `erp-backend` (JWT и сессия не нужны — подпись §9.3). Только внутри сети compose:
+Caddy отдаёт `/bus` и `/bus/*` на ERP-домене 404, другие домены до `erp-backend` не доводят. Неверный `endpoint` у издателя
+(404/410) уходит в `dead` сразу — runbook `docs/runbooks/rt-bus-erp.md`.
+
+**Подписки ERP (L13).** `uz.railtech.crm.client.updated.v1`, `uz.railtech.crm.contact.{created,updated,deleted}.v1` —
+проекции (`integration/services/crm_projections.py`, состояние применённых снимков — `CrmProjectionState`). ERP обновляет
+только поля, которыми владеет CRM (ADR-0015 п. 5, ORCHESTRATOR §3 п. 16): название и ИНН компании (`Company.name`, `Company.inn`;
+ИНН, занятый другой компанией ERP, не применяется — запись в журнал) и данные контакта (ФИО, должность, телефон, e-mail,
+Telegram, язык, канал, признак основного); сегмент, `is_active` и ответственный полей в ERP не имеют. Финансы, прочие
+реквизиты (адрес, банк, МФО — в схеме `client.*.v1` их нет) и права контакта в Cabinet (`can_act`) снимок не трогает; контакт,
+созданный по событию, получает `can_act=false`. **В ERP название и ИНН компании, связанной с CRM, только для чтения:** API ERP
+отклоняет их правку — internal `PATCH /accounts/companies/{id}/` 400, portal `PUT /company` 422, код
+`REQUISITES_MANAGED_BY_CRM` (контракт портала 0.3.1; несвязанная компания правится как раньше). Снимок старее применённого
+(`updated_at`; `deleted_at` у удаления) не применяется; `contact.deleted` **архивирует** контакт (`Contact.archived_at`, не
+удаляет: каскад стёр бы коды акцепта КП — след): `can_act=false`, Telegram отвязан, сессии портала и ссылки входа сняты, вход и
+приглашение закрыты, запись и связи остаются; более новый снимок возвращает контакт из архива (права — заново). Контакт,
+переехавший к другому клиенту CRM, переносится в компанию нового клиента, если она известна ERP, иначе остаётся с записью в
+журнал. Неизвестный клиент (нет `CrmClientMapping`) — пропуск с записью в журнал, не ошибка.
+
+### 9.8. CRM на шине (B4)
+
+**Публикация.** CRM — издатель `rt://crm`; события публикуются из сервисного слоя (`app/bus/events.py`) в транзакции изменения:
+строка outbox пишется тем же `COMMIT`, что и данные; откат — события нет; вне транзакции и при ошибке схемы публикация бросает
+исключение и изменение откатывается (никакого «сообщить потом»). Раскладку по подписчикам и доставку делает периодическая
+задача `rt_bus.pump` (Procrastinate, каждые 5 с).
+
+| Тип | Когда публикуется (сервис) |
+|---|---|
+| `crm.client.created.v1` | клиент создан вручную, «Сделать клиентом» с новым клиентом (`ClientService`) |
+| `crm.client.updated.v1` | изменены название, ИНН, сегмент, ответственный, активность; передача записала `erp_company_id` (`ClientService`, `ErpHandoffService`, обработчик событий ERP) |
+| `crm.contact.created.v1` / `updated.v1` / `deleted.v1` | `ClientContactService` (в т. ч. `updated` для контактов, потерявших признак основного); основной контакт, созданный передачей в бэк-офис (`ErpHandoffService`); `deleted_at` — время базы |
+| `crm.lead.created.v1` | лид из бота, формы сайта, «Новый лид» вручную |
+| `crm.lead.stage_changed.v1` | любой переход стадии (`stages.transition`: менеджер, квалификатор, таймеры, склейка лидов); `reason` — только код из справочника CRM (`app/bus/reasons.py`), свободный текст остаётся в CRM |
+| `crm.lead.updated.v1` | смена ответственного (в т. ч. массовая передача дел уходящего сотрудника — событие на каждый лид и клиента), привязка к клиенту, изменение `score`, заявка ERP (`erp_request_id`) |
+| `crm.lead.erased.v1` | лид обезличен по `/delete` бота (без данных, только идентификаторы) |
+| `crm.lead.merged.v1` | склейка Telegram-лида и лида с тем же телефоном |
+| `identity.user.created.v1` / `updated.v1` / `deactivated.v1` | `UserService`: создание, смена имени, должности, языка, ролей Платформы и доступа, отключение; первый администратор; смена имени при входе по SSO (`SsoService`) |
+
+Диалоги песочницы (`source = sandbox`) на шину не уходят. Контактов лида и переписки в событиях нет. `correlationid` — `X-Request-ID`
+запроса (middleware `BusCorrelationMiddleware` после `CorrelationIdMiddleware`), для задач очереди — новый UUID; `traceparent` —
+из заголовка запроса. Передача клиента в бэк-офис (`POST /clients/handoff`) остаётся REST (§2): синхронный вызов с ответом.
+
+**Приёмник и обработчики.** `uz.railtech.erp.*.v1` (кроме кода акцепта) — `ErpEventsService.apply` в транзакции inbox: зеркало
+сделки (порядок по `time`), индекс документов, лента лида, служебные уведомления; сообщения Telegram записываются в
+`erp_event_notices` и уходят после коммита (задача после обработки, сборщик раз в минуту, не позже суток; ушедшим адресатам
+повторно не шлются). Клиента нет или `erp_company_id` не совпадает — ошибка обработки (повтор, затем `failed`).
+`quote.acceptance_code_requested` — inline-обработчик: код доставляется в Telegram контакту из памяти запроса, в inbox лежит маска.
+
+**Секрет пары `erp ↔ crm`** (L12): `RT_BUS_SECRET_ERP_CRM` / `RT_BUS_SECRET_CRM_ERP`, если заданы; иначе
+`hex(HMAC-SHA256(webhook_secret, "rt-bus/v1/<издатель>-><подписчик>"))` из каждого действующего секрета вебхуков сопряжения
+(текущего и предыдущего, «Подключения» → ERP); перечитывается при каждом приёме и доставке, поэтому смена и ротация действуют
+без перезапуска. Прочие подписчики — только окружение. Эксплуатация (журнал, DLQ, повтор, метрики) — runbook `docs/runbooks/rt-bus-crm.md`.
