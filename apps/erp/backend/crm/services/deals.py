@@ -37,7 +37,7 @@ def user_can_access_deal(user: CustomUser, deal: Deal) -> bool:
 # ──────────────────────────────────────────────────────────────────────────
 # Admin operations — single source of truth for business logic.
 # Called from both Django Unfold actions and DRF endpoints.
-# See ADR-0001 and CLAUDE.md IRON RULE 8.
+# See ADR-0001 and CONVENTIONS.md IRON RULE 8.
 # ──────────────────────────────────────────────────────────────────────────
 
 

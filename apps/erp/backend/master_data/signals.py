@@ -7,6 +7,10 @@ from .models import Country, Currency, DeliveryBasis, UnitOfMeasure
 #: Справочники, списки которых кэшируются в `master_data/views.py`.
 CACHED_LOOKUPS = (Country, Currency, UnitOfMeasure, DeliveryBasis)
 
+#: Срок жизни номера редакции. Не `None`: кэш — `volatile-lru` (S0-2), у ключа без срока вытеснять нечего и он копился бы вечно.
+#: Номер заметно дольше страниц, которые от него зависят (10 минут): сброшенный в 1 номер найдёт только уже протухшие страницы.
+LOOKUP_VERSION_TTL = 7 * 24 * 3600
+
 
 def lookup_version_key(model) -> str:
     """Ключ редакции справочника. ЕДИНСТВЕННОЕ место, где задан его формат.
@@ -27,7 +31,7 @@ def bump_lookup_version(model) -> None:
     from django.core.cache import cache
 
     key = lookup_version_key(model)
-    cache.set(key, (cache.get(key, 1) or 1) + 1, None)
+    cache.set(key, (cache.get(key, 1) or 1) + 1, LOOKUP_VERSION_TTL)
 
 
 def _invalidate_lookup_cache(sender, **kwargs) -> None:

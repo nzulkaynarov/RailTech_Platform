@@ -10,7 +10,7 @@ import { SideNav } from './SideNav';
 import { useTelegramBackButton } from './useTelegramBackButton';
 
 /**
- * Оболочка кабинета (своя, не AppShell ERP — CLAUDE.md §4): телефон — шапка и нижняя навигация,
+ * Оболочка кабинета (своя, не AppShell ERP — CONVENTIONS.md §4): телефон — шапка и нижняя навигация,
  * десктоп — боковая навигация. В Mini App шапки нет: заголовок и «Назад» даёт Telegram.
  */
 export function AppShell() {

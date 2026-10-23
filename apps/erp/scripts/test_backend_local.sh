@@ -67,7 +67,8 @@ run_in() {
     -e DB_SSLMODE=disable \
     -e DJANGO_SECRET_KEY=ci-test-secret-key-not-for-production \
     -e DJANGO_DEBUG="${DJANGO_DEBUG:-True}" \
-    -e REDIS_URL="redis://${RD}:6379/0" \
+    -e REDIS_CACHE_URL="redis://${RD}:6379/0" \
+    -e REDIS_CHANNELS_URL="redis://${RD}:6379/2" \
     -e CELERY_BROKER_URL="redis://${RD}:6379/1" \
     -e CELERY_RESULT_BACKEND="redis://${RD}:6379/1" \
     -e EMAIL_BACKEND=django.core.mail.backends.locmem.EmailBackend \

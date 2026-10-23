@@ -40,10 +40,11 @@ for Django 6.0 compat risk):
       cache key (PII at rest / key injection). Lockout identity is therefore
       case-insensitive: variants of one address share a lock.
 
-Operational note: the `default` cache shares Redis DB 0 with Channels / WS
-tickets. All lockout keys are TTL-bounded; the store is assumed `noeviction`
-(prod default). If an LRU `maxmemory` policy is ever set on that instance, move
-the lockout keys to a dedicated cache DB so a lock can't be evicted early.
+Operational note (S0-2): the `default` cache is the dedicated `redis-cache` instance
+(`volatile-lru`; Channels and Celery live on `redis-broker`). All lockout keys are
+TTL-bounded and tiny, so they are evicted only if the whole cache overflows. The cache is
+fail-open (`core.cache`): while `redis-cache` is down the lockout is skipped, exactly like the
+DRF throttles, and the password / TOTP checks themselves stay in force.
 """
 
 import hashlib

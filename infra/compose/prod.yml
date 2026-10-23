@@ -78,9 +78,13 @@ services:
     profiles: [local-db]
 
   # ─── Общая инфраструктура ──────────────────────────────────────────────────────────────────
-  redis:
-    <<: [*ops, *mem-128]
-    command: ["--requirepass", "${REDIS_PASSWORD}", "--maxmemory", "100mb", "--maxmemory-policy", "noeviction"]
+  # Два экземпляра Redis (S0-2); команды и политики вытеснения — в base.yml. maxmemory (base: 128 МБ у брокера, 96 МБ у
+  # кэша) заметно ниже лимита контейнера: запас под буферы клиентов, перезапись AOF (брокер) и копирование при снимке RDB (кэш).
+  redis-broker:
+    <<: [*ops, *mem-256]
+
+  redis-cache:
+    <<: [*ops, *mem-192]
 
   rustfs:
     <<: [*ops, *mem-512]
@@ -234,8 +238,10 @@ services:
     volumes: !override
       - erp_static:/app/staticfiles
     depends_on: !override
-      redis:
+      redis-broker:
         condition: service_healthy
+      redis-cache:
+        condition: service_started
       s3-init:
         condition: service_completed_successfully
 
@@ -298,8 +304,8 @@ services:
     build: !reset null
 
   # ─── Платформа (apps/platform) ──────────────────────────────────────────────────────────────
-  # Объявлены в base.yml (окружение, healthcheck, зависимость от redis); здесь — образы GHCR и лимиты памяти.
-  # BFF ходит в CRM и ERP по сети compose (PLATFORM_CRM_URL / PLATFORM_ERP_URL), БД у него нет, сессии — Redis БД 3.
+  # Объявлены в base.yml (окружение, healthcheck, зависимость от redis-cache); здесь — образы GHCR и лимиты памяти.
+  # BFF ходит в CRM и ERP по сети compose (PLATFORM_CRM_URL / PLATFORM_ERP_URL), БД у него нет, сессии — redis-cache БД 3.
   platform-bff:
     <<: [*ops, *mem-256]
     image: ${RT_IMAGE_REGISTRY:-ghcr.io/nzulkaynarov}/rt-platform-bff:${RT_IMAGE_TAG:?set RT_IMAGE_TAG}
@@ -337,7 +343,7 @@ services:
     depends_on: !override
       s3-init:
         condition: service_completed_successfully
-      redis:
+      redis-cache:
         condition: service_healthy
       clickhouse:
         condition: service_healthy
@@ -349,7 +355,7 @@ services:
     depends_on: !override
       s3-init:
         condition: service_completed_successfully
-      redis:
+      redis-cache:
         condition: service_healthy
       clickhouse:
         condition: service_healthy

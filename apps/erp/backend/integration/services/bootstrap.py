@@ -26,6 +26,8 @@ from cryptography.hazmat.primitives.kdf.hkdf import HKDF
 from django.conf import settings
 from django.core.cache import cache
 
+from core.cache import fail_closed
+
 from .pairing import PairingCodeError
 
 LABEL = b"rt-pairing-v1"
@@ -80,5 +82,7 @@ def verify(header: str, body: bytes, *, now: Optional[float] = None) -> None:
     current = time.time() if now is None else now
     if abs(current - timestamp) > WINDOW_SECONDS:
         raise PairingCodeError("PAIRING_PROOF_EXPIRED")
-    if not cache.add(_CACHE_PREFIX + jti, 1, JTI_TTL_SECONDS):
+    with fail_closed():  # кэш недоступен — 503 `SERVICE_TEMPORARILY_UNAVAILABLE`, а не пропуск повтора (S0-2)
+        added = cache.add(_CACHE_PREFIX + jti, 1, JTI_TTL_SECONDS)
+    if not added:
         raise PairingCodeError("PAIRING_PROOF_REPLAYED")

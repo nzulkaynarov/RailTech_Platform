@@ -1,7 +1,7 @@
 """Portal Invitation service (CONTRACTS §4, M2-ERP-02).
 
 Приглашение контакта клиента в Cabinet. Реально доставляется только письмо (`send_templated_email` → `EmailLog`):
-Telegram-бот принадлежит CRM, ERP в Telegram не пишет (apps/erp/CLAUDE.md §11), поэтому канал `telegram` не
+Telegram-бот принадлежит CRM, ERP в Telegram не пишет (CONVENTIONS.md §11), поэтому канал `telegram` не
 «отправляется» молча, а отвечает `INVALID_CHANNEL` (FIX-23, P-17; QUESTIONS Q-FIX23-1). Результат и событие
 `invite.sent` называют только те каналы, по которым приглашение действительно ушло.
 Рабочая ссылка входа уходит только клиенту, в письме; сотруднику, API и журналу отдаются факт

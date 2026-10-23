@@ -1,6 +1,6 @@
 # Runbook: шина rt_bus в ERP — события не доходят, DLQ, повтор, метрики (B3)
 
-Контракт — `docs/CONTRACTS.md` §9 (конверт, доставка, подпись, повтор), §9.7 (ERP на шине); устройство и API библиотеки —
+Контракт — `docs/architecture/CONTRACTS.md` §9 (конверт, доставка, подпись, повтор), §9.7 (ERP на шине); устройство и API библиотеки —
 `docs/architecture/rt-bus.md`; решение — ADR-0014. Заменяет `webhooks.md` для стороны ERP. Для CRM — runbook шины CRM (B4).
 
 Как идут события ERP → CRM: сервис ERP пишет строку в `rt_bus_outbox` в транзакции изменения → Celery-задача `rt_bus.pump`

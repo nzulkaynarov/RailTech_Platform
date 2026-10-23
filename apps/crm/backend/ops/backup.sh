@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Бэкап RailTech (ADR-0013, runbook docs/runbooks/backup-restore.md):
+# Бэкап RailTech (ADR-0013, runbook docs/runbooks/crm/backup-restore.md):
 # pg_dump (custom format) + копия бакетов RustFS → $BACKUP_DIR/<UTC-штамп>/, ротация.
 #
 #   backup.sh --once     один бэкап (make backup)

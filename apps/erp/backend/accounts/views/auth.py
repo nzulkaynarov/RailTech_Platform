@@ -52,6 +52,7 @@ from accounts.services import (  # noqa: E402
 )
 from accounts.services.tokens import TOKEN_VERSION_CLAIM, refresh_for, token_version_of  # noqa: E402
 from accounts.throttles import PasswordResetEmailThrottle, ScopedRateThrottle  # noqa: E402
+from core.cache import UNAVAILABLE_MESSAGE, CacheUnavailable, fail_closed  # noqa: E402
 
 
 @extend_schema(
@@ -238,7 +239,8 @@ class WsTicketView(views.APIView):
         from django.core.cache import cache
 
         ticket = secrets.token_urlsafe(32)
-        cache.set(f"ws_ticket:{ticket}", request.user.id, timeout=WS_TICKET_TTL)
+        with fail_closed():  # билет, который негде хранить, не выдаём: 503 вместо билета, который не сработает (S0-2)
+            cache.set(f"ws_ticket:{ticket}", request.user.id, timeout=WS_TICKET_TTL)
         return Response({"ticket": ticket, "expires_in": WS_TICKET_TTL})
 
 
@@ -481,7 +483,14 @@ class TOTPLoginView(views.APIView):
         tags=["Auth"],
     )
     def post(self, request):
-        user, error = two_factor.redeem_login_ticket(request.data.get("temp_token"), request.data.get("code"))
+        try:
+            user, error = two_factor.redeem_login_ticket(request.data.get("temp_token"), request.data.get("code"))
+        except CacheUnavailable:
+            # Хранилище одноразовых меток (кэш) недоступно: вход не выполнен, билет и код не погашены (S0-2).
+            return Response(
+                {"detail": "2FA_TEMPORARILY_UNAVAILABLE", "message": UNAVAILABLE_MESSAGE},
+                status=status.HTTP_503_SERVICE_UNAVAILABLE,
+            )
         if error == "2FA_TICKET_INVALID":
             return Response({"detail": error}, status=status.HTTP_400_BAD_REQUEST)
         # The ticket resolved the account — a locked account answers 429 before

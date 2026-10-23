@@ -1,5 +1,5 @@
 /*
- * Стили общих компонентов (PLT-13). Значения — макет v3 и 03-frontend.md §5; переменные --ant-* живут только внутри
+ * Стили общих компонентов (PLT-13). Значения — макет v3 и docs/architecture/platform-frontend.md §5; переменные --ant-* живут только внутри
  * компонентов antd, поэтому здесь литералы токенов (#1668dc primary, #0958d9 текст на #e6f4ff, #595959 вторичный,
  * #6e6e6e третий, #f0f0f0 разделитель, #d9d9d9 рамка).
  */
@@ -446,7 +446,7 @@
   font-variant-numeric: tabular-nums;
 }
 
-/* --- ContextPanel: активная вкладка 500 (03-frontend.md §4); остальное — токены Tabs темы --- */
+/* --- ContextPanel: активная вкладка 500 (docs/architecture/platform-frontend.md §4); остальное — токены Tabs темы --- */
 .pf-panel-tabs .ant-tabs-tab-active .ant-tabs-tab-btn {
   font-weight: 500;
 }

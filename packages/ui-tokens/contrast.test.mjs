@@ -177,7 +177,7 @@ test("версия пакета 0.2.0", () => {
   assert.equal(tokens.version, "0.2.0");
 });
 
-test("значения SPEC-v3 §5.2 / 03-frontend.md §3", () => {
+test("значения SPEC-v3 §5.2 / docs/architecture/platform-frontend.md §3", () => {
   assert.deepEqual(
     [c.primary.default, c.primary.hover, c.primary.bg, c.primary.text],
     // hover: SPEC-v3 §5.2 даёт #1677ff (4.10:1 с белым), решение архитектора 2026-10-22 — #0958d9 (критерий §11.2 п. 6)

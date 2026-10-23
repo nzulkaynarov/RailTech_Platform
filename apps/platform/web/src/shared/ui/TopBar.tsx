@@ -73,7 +73,7 @@ function Crumbs({ crumbs, label }: { crumbs: readonly Crumb[]; label: string }) 
   );
 }
 
-/** Шапка 56 px: крошки, поиск (слот), колокольчик, «Скрыть панель / Панель» (03-frontend.md §4, зона 3). */
+/** Шапка 56 px: крошки, поиск (слот), колокольчик, «Скрыть панель / Панель» (docs/architecture/platform-frontend.md §4, зона 3). */
 export function TopBar({
   crumbs,
   labels,

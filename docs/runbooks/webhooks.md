@@ -4,7 +4,7 @@
 > неверный endpoint подписчика — в [`rt-bus-erp.md`](rt-bus-erp.md). `CRM_WEBHOOK_URL`, журнал `IntegrationWebhookEvent`, задачи
 > доставки и Beat-подбор, `ERP_EVENTS_CONTRACT_MODE` удалены. Этот файл остаётся ради разделов о приёме на стороне CRM (их заменяет
 > runbook шины CRM — B4) и о **секрете сопряжения**: `WEBHOOK_SECRET` теперь источник направленных секретов шины для пары
-> CRM ↔ ERP (CONTRACTS §9.3, L12), его ротация — раздел ниже.
+> CRM ↔ ERP (`docs/architecture/CONTRACTS.md` §9.3, L12), его ротация — раздел ниже.
 
 ## Симптом → где смотреть
 

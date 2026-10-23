@@ -4,7 +4,7 @@ info:
   version: 0.3.1
   summary: Пространство `/api/portal/v1/` — вызывает Cabinet SPA от имени клиента.
   description: |
-    Контракт по `docs/CONTRACTS.md` §4 и ADR-0004 (Cabinet без бэкенда). Версия 0 (M0-INF-02):
+    Контракт по `docs/architecture/CONTRACTS.md` §4 и ADR-0004 (Cabinet без бэкенда). Версия 0 (M0-INF-02):
     ERP реализует приложение `portal` (M2-ERP-01…03), Cabinet генерирует типы из этого файла (M2-CAB-01).
 
     Все ответы отфильтрованы по компании сессии: чужая компания → 404 (негативный тест на каждый эндпоинт).

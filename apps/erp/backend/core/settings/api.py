@@ -194,7 +194,7 @@ ERP_MCP_CONTEXT_KEY = os.environ.get("ERP_MCP_CONTEXT_KEY", "").strip()
 # (монтируется в compose и в контейнер тестов), затем поиск вверх от кода (запуск из клона репозитория).
 ERP_MCP_TOOLS_PATH = os.environ.get("ERP_MCP_TOOLS_PATH", "").strip()
 
-# SSO сотрудника CRM ↔ ERP (sso-token.md): общий секрет JWT HS256, ротация — через запятую.
+# SSO сотрудника CRM ↔ ERP (docs/architecture/sso-token.md): общий секрет JWT HS256, ротация — через запятую.
 PLATFORM_SSO_SECRET = _secret_list("PLATFORM_SSO_SECRET")
 
 _MISSING_SEAM_SECRETS = [

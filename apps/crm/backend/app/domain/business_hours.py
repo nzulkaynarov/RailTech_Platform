@@ -1,4 +1,7 @@
-"""Рабочие часы (CLAUDE.md §11: Asia/Tashkent, 09:00–18:00, пн–пт; `settings.business_hours`)."""
+"""Рабочие часы (CONVENTIONS.md §11: Asia/Tashkent, 09:00–18:00, пн–пт).
+
+Значения — `settings.business_hours`.
+"""
 
 from collections.abc import Collection
 from dataclasses import dataclass, field
