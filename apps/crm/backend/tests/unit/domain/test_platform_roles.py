@@ -34,9 +34,10 @@ from tests.platform_role_data import make_grant, make_role
 
 REPO = Path(__file__).resolve().parents[6]
 CONTRACTS = REPO / "packages" / "contracts"
-RBAC = CONTRACTS / "platform-rbac.v2.yaml"
-RBAC_V1 = CONTRACTS / "platform-rbac.yaml"
-SCHEMA = CONTRACTS / "platform-rbac.v2.schema.json"
+RBAC = CONTRACTS / "platform-rbac.yaml"
+# Снимок версии 1 (шесть ролей кодом) — в фикстурах тестов: из контракта она удалена (R-2).
+RBAC_V1 = Path(__file__).resolve().parents[2] / "fixtures" / "platform_rbac_v1_matrix.yaml"
+SCHEMA = CONTRACTS / "platform-rbac.schema.json"
 SEAM = CONTRACTS / "openapi" / "erp-integration.yaml"
 GENERATOR = REPO / "apps" / "crm" / "scripts" / "gen_platform_roles.py"
 GENERATED = REPO / "apps" / "crm" / "backend" / "app" / "domain" / "platform_roles_generated.py"

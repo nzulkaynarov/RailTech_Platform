@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 
 import { canSee } from "../app/access";
 import { useAuth } from "../app/auth/useAuth";
+import { viewRoleNames } from "../entities/role/roles";
 import { todayLabel } from "../shared/lib/format";
 import { useDocumentTitle } from "../shared/lib/useDocumentTitle";
 import { EmptyState } from "../shared/ui/EmptyState";
@@ -33,13 +34,9 @@ export function SectionStubPage({
   useDocumentTitle(title);
 
   const isQueue = module.code === "dashboard" && section.key === "queue";
-  const roles =
-    !me.active_role && me.roles.length > 1
-      ? [t("shell:avatar.allRoles")]
-      : // TODO(ADR-0012): название роли — из данных `/me`, а не из i18n по коду роли.
-        (me.active_role ? [me.active_role] : me.roles).map((r) => t(`shell:roles.${r}`));
+  const roles = viewRoleNames(me, t("shell:avatar.allRoles"));
   const subtitle = isQueue
-    ? [roles.join(", "), todayLabel(i18n.language)].join(" · ")
+    ? [roles, todayLabel(i18n.language)].join(" · ")
     : t("shell:stub.subtitle");
 
   const actionLabel = t(`modules:${base}stub.${section.key}.action`);

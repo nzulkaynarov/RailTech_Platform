@@ -5,7 +5,7 @@ import { defineConfig } from "orval";
 // (те же имена) поверх общего мутатора `http`; функции возвращают тело ответа, не конверт.
 export default defineConfig({
   crm: {
-    input: "../docs/api/openapi.json",
+    input: "../../../packages/contracts/openapi/crm.yaml",
     output: {
       mode: "split",
       target: "src/api/generated/crm.ts",

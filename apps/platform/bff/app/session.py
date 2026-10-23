@@ -52,6 +52,21 @@ class BackendTokens(BaseModel):
     refresh: str = Field(repr=False)
 
 
+class SessionRole(BaseModel):
+    """Роль Платформы сотрудника — снимок `/me` CRM (`platform_role_refs`, R-2).
+
+    Id, название из данных, системная ли, код (только у системных и созданных из шаблона), матрица
+    и поля с ограничением.
+    """
+
+    id: int
+    name: str
+    system: bool = False
+    code: str | None = None
+    access: dict[str, str] = Field(default_factory=dict)
+    restricted_fields: list[str] = Field(default_factory=list)
+
+
 class SessionData(BaseModel):
     """Содержимое `session:<sid>`: только JSON, секретов вне Redis нет."""
 
@@ -63,13 +78,14 @@ class SessionData(BaseModel):
     email: str
     name: str
     position: str | None = None
-    platform_roles: list[str]
+    roles: list[SessionRole]
     platform_access: list[str]
     must_change_password: bool
     profile_checked_at: float
     # Настройки сотрудника в рамках сессии (у BFF нет своей базы).
     language: Language = "ru"
-    active_role: str | None = None
+    # Id активной роли («вид», Q-PLT-12-1); None — все роли.
+    active_role: int | None = None
     crm: BackendTokens
     erp_state: ErpState
     erp: BackendTokens | None = None

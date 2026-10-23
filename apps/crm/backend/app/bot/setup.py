@@ -1,7 +1,6 @@
-"""Сборка диалогового контура в процессе API: чекпоинтер, агент, сервис, бот."""
+"""Сборка диалогового контура: чекпоинтер, агент, сервис, бот (бот — в процессе `crm-bot`)."""
 
 import asyncio
-import contextlib
 from collections.abc import AsyncIterator, Awaitable, Callable
 from contextlib import AsyncExitStack, asynccontextmanager
 
@@ -144,16 +143,23 @@ async def bot_lifespan(
     on_escalation: EscalationHook | None = None,
     on_lead_message: ActivityHook | None = None,
 ) -> AsyncIterator[BotSupervisor | None]:
-    """Супервизор бота: токен — из «Подключений» (БД) или env; смена токена — без рестарта API."""
+    """Супервизор бота процесса `crm-bot`: токен — из «Подключений» (БД) или env.
+
+    Сам бота не запускает: старт, перезапуск при смене токена и повторные попытки ведёт
+    `BotProcess` (`app/bot/process.py`) — недоступный Telegram не должен держать процесс.
+    """
     config = container.settings
     if config.telegram_mode == "disabled":
         logger.warning("bot_disabled", mode=config.telegram_mode)
         yield None
         return
     async with AsyncExitStack() as stack:
+        saver: AsyncPostgresSaver | None = None
 
         async def make_dispatcher() -> Dispatcher:
-            saver = await stack.enter_async_context(checkpointer(container))
+            nonlocal saver
+            if saver is None:  # повторная попытка после сбоя не открывает второй пул
+                saver = await stack.enter_async_context(checkpointer(container))
             conversation = build_conversation(
                 container, saver, on_activity, on_escalation, on_lead_message
             )
@@ -174,13 +180,7 @@ async def bot_lifespan(
             return await resolve_token(container.secrets_store, config)
 
         supervisor = BotSupervisor(config, resolve, make_dispatcher)
-        # Бот стартует в фоне: недоступный Telegram не должен держать старт CRM (иначе сбой
-        # Telegram = недоступная CRM); причина видна в «Подключениях» и «Состоянии».
-        starting = asyncio.create_task(supervisor.start(), name="bot_supervisor_start")
         try:
             yield supervisor
         finally:
-            starting.cancel()
-            with contextlib.suppress(asyncio.CancelledError, Exception):
-                await starting
             await supervisor.stop()

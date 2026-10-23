@@ -5,9 +5,10 @@ import type {
   ObjectRef,
   QueueCard,
   QueueItem,
-  RoleCode,
   SearchGroup,
 } from "../../shared/api/generated/model";
+import { QUEUE, allows, type ResourceKey } from "../../app/rbac.generated";
+import { ROLE_ID, type MockRole, type PresetCode } from "./roles";
 
 /**
  * Вымышленные данные Dashboard, уведомлений и поиска для MSW (PLT-14): те же формы, что вернёт BFF по
@@ -70,13 +71,14 @@ const lead = (id: number, title: string): ObjectRef => ({
   path: `/crm/leads?lead=L-${String(id)}&panel=open&tab=card`,
 });
 
-/** Очередь по ролям (docs/architecture/integration-map.md §1.2); у снабженца, инженера, бухгалтера и админа до ERP-01…06 — пусто. */
-function queueFor(role: RoleCode, now: number): QueueItem[] {
-  if (role === "DIRECTOR") {
+/** Демо-очередь предустановки (docs/architecture/integration-map.md §1.2); у снабженца, инженера, бухгалтера и админа — пусто. */
+function queueFor(preset: PresetCode, now: number): QueueItem[] {
+  const role_id = ROLE_ID[preset];
+  if (preset === "DIRECTOR") {
     return [
       {
         id: "letter:104",
-        role,
+        role_id,
         kind: "resolve_letter",
         title: "Наложить резолюцию на письмо ВХ-104/26",
         subtitle:
@@ -87,7 +89,7 @@ function queueFor(role: RoleCode, now: number): QueueItem[] {
       },
       {
         id: "quote:118",
-        role,
+        role_id,
         kind: "approve_quote",
         title: "Одобрить КП-2026/118 (черновик)",
         subtitle: "АО «Демо-Рейл» · расчёт готов, визы собраны · маржа 23,4 %",
@@ -97,7 +99,7 @@ function queueFor(role: RoleCode, now: number): QueueItem[] {
       },
       {
         id: "memo:31",
-        role,
+        role_id,
         kind: "approve_memo",
         title: "Согласовать СЗ-2026/031 · Закупка кофе и воды в офис, 450 000 сум",
         subtitle: "от Демо Офисовой (офис-менеджер) · создана из чата #офис · 2 вложения",
@@ -106,11 +108,11 @@ function queueFor(role: RoleCode, now: number): QueueItem[] {
       },
     ];
   }
-  if (role === "MANAGER") {
+  if (preset === "MANAGER") {
     return [
       {
         id: "lead:2041:take",
-        role,
+        role_id,
         kind: "take_lead",
         title: "Взять в работу лида L-2041",
         subtitle: "ООО «Демо-Депо» · просит КП на стрелочные приводы · 20 мин назад",
@@ -120,7 +122,7 @@ function queueFor(role: RoleCode, now: number): QueueItem[] {
       },
       {
         id: "lead:2050:answer",
-        role,
+        role_id,
         kind: "answer_lead",
         title: "Ответить лиду L-2050",
         subtitle: "Демо Клиентов · уточняет сроки поставки · 3 ч назад",
@@ -140,8 +142,8 @@ const PROJECTS_CARD: QueueCard = {
   path: "/eds/projects",
 };
 
-function cardsFor(role: RoleCode): QueueCard[] {
-  switch (role) {
+function cardsFor(preset: PresetCode): QueueCard[] {
+  switch (preset) {
     case "DIRECTOR":
       return [
         {
@@ -192,17 +194,56 @@ function cardsFor(role: RoleCode): QueueCard[] {
   }
 }
 
-export function queueForRoles(roles: readonly RoleCode[], now = Date.now()): QueueItem[] {
-  const rank = { overdue: 0, today: 1, tomorrow: 2, memo: 3, later: 4 } as const;
-  return roles
-    .flatMap((role) => queueFor(role, now))
-    .sort((a, b) => rank[a.due_label] - rank[b.due_label]);
+const PRESETS: readonly PresetCode[] = ["DIRECTOR", "MANAGER", "ACCOUNTANT", "SUPPLY", "ENGINEER"];
+
+/** Вид работы попадает в очередь роли, если её матрица даёт раздел вида (секция `queue` каталога, как в BFF). */
+function gives(role: MockRole, kind: QueueItem["kind"]): boolean {
+  const need = QUEUE[kind];
+  return allows(role.access, need.resource, need.level);
 }
 
-export function cardsForRoles(roles: readonly RoleCode[]): QueueCard[] {
+/**
+ * Очередь ролей «вида»: у предустановки — её демо-строки, у созданной администратором роли — строки любых демо-наборов,
+ * которые даёт её матрица. `role_id` — первая роль «вида», которой строка положена.
+ */
+export function queueForView(view: readonly MockRole[], now = Date.now()): QueueItem[] {
+  const rank = { overdue: 0, today: 1, tomorrow: 2, memo: 3, later: 4 } as const;
+  const everything = PRESETS.flatMap((preset) => queueFor(preset, now));
   const seen = new Set<string>();
-  return roles
-    .flatMap(cardsFor)
+  const items: QueueItem[] = [];
+  for (const role of view) {
+    for (const item of role.demo ? queueFor(role.demo, now) : everything) {
+      if (seen.has(item.id) || !gives(role, item.kind)) continue;
+      seen.add(item.id);
+      items.push({ ...item, role_id: role.id });
+    }
+  }
+  return items.sort((a, b) => rank[a.due_label] - rank[b.due_label]);
+}
+
+/** Что нужно роли для карточки над очередью: вид работы или раздел. */
+const CARD_NEEDS: Record<string, QueueItem["kind"] | ResourceKey> = {
+  leads_without_answer: "answer_lead",
+  leads_to_take: "take_lead",
+  letters_without_resolution: "resolve_letter",
+  quotes_to_approve: "approve_quote",
+  memos_to_approve: "approve_memo",
+  projects_in_work: "eds.projects",
+};
+
+function cardAllowed(role: MockRole, card: QueueCard): boolean {
+  const need = CARD_NEEDS[card.key];
+  if (!need) return true;
+  return need in QUEUE ? gives(role, need as QueueItem["kind"]) : role.access[need] !== undefined;
+}
+
+export function cardsForView(view: readonly MockRole[]): QueueCard[] {
+  const everything = PRESETS.flatMap(cardsFor);
+  const seen = new Set<string>();
+  return view
+    .flatMap((role) =>
+      (role.demo ? cardsFor(role.demo) : everything).filter((card) => cardAllowed(role, card)),
+    )
     .filter((card) => (seen.has(card.key) ? false : (seen.add(card.key), true)))
     .slice(0, 4);
 }
@@ -285,9 +326,9 @@ const note = (
   ...(object ? { object } : {}),
 });
 
-/** Уведомления по ролям: у директора три непрочитанных (бейдж «3 новых» из макета). */
-export function notificationSeed(role: RoleCode): SeedNotification[] {
-  switch (role) {
+/** Уведомления предустановок: у директора три непрочитанных (бейдж «3 новых» из макета). */
+export function notificationSeed(preset: PresetCode | undefined): SeedNotification[] {
+  switch (preset) {
     case "DIRECTOR":
       return [
         note(

@@ -79,7 +79,7 @@ stage_lint() {
   (cd "$ROOT" && make check)
   (cd "$ROOT/backend" && uv run ruff check --config pyproject.toml ../scripts \
     && uv run ruff format --config pyproject.toml --check ../scripts)
-  (cd "$ROOT" && make openapi && git diff --exit-code -- docs/api frontend/src/api) \
+  (cd "$ROOT" && make openapi && git diff --exit-code -- ../../packages/contracts/openapi/crm.yaml frontend/src/api) \
     || { echo "OpenAPI или клиент orval устарели — выполните make openapi и закоммитьте"; return 1; }
   local envfile
   envfile=$(mktemp)

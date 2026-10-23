@@ -1,4 +1,7 @@
-"""Webhook Telegram (prod): проверка `secret_token`, обработка апдейта в фоне (SPEC §9.2)."""
+"""Webhook Telegram (prod): проверка `secret_token`, обработка апдейта в фоне (SPEC §9.2).
+
+Подключается в приложение процесса `crm-bot` (`app/bot/process.py`), не в `crm-api` (S0-4).
+"""
 
 from typing import Any
 

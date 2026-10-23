@@ -1,6 +1,7 @@
 """Точки входа процессов: `python -m app <команда>`.
 
-- `api` — FastAPI (бот, REST, auth) под uvicorn;
+- `api` — FastAPI (REST, auth, SSE) под uvicorn;
+- `bot` — приём Telegram (polling или webhook) отдельным процессом, S0-4;
 - `worker` — воркер Procrastinate (квалификатор, таймеры, ингест);
 - `mcp kb|crm|docs` — MCP-серверы инструментов агентов;
 - `kb-ingest FILE...`, `kb-demo`, `kb-eval` — база знаний (CLI для человека);
@@ -35,6 +36,17 @@ def _run_api(args: argparse.Namespace) -> None:
     )
 
 
+def _run_bot(args: argparse.Namespace) -> None:
+    uvicorn.run(
+        "app.bot.process:create_bot_app",
+        factory=True,
+        host=args.host,
+        port=args.port,
+        log_config=None,
+        proxy_headers=True,
+    )
+
+
 async def _run_worker() -> None:
     from app.container import get_container
     from app.tasks.queue import queue
@@ -60,6 +72,10 @@ def _parser() -> argparse.ArgumentParser:
     api.add_argument("--host", default="0.0.0.0")  # noqa: S104 — слушаем внутри контейнера
     api.add_argument("--port", type=int, default=8000)
     api.add_argument("--reload", action="store_true", help="hot reload (только dev)")
+
+    bot = commands.add_parser("bot", help="бот Telegram: polling или webhook (одна реплика)")
+    bot.add_argument("--host", default="0.0.0.0")  # noqa: S104 — слушаем внутри контейнера
+    bot.add_argument("--port", type=int, default=8001)
 
     commands.add_parser("worker", help="воркер Procrastinate")
 
@@ -119,6 +135,8 @@ def main() -> None:
     configure_logging(get_settings())
     if args.command == "api":
         _run_api(args)
+    elif args.command == "bot":
+        _run_bot(args)
     elif args.command == "worker":
         asyncio.run(_run_worker())
     elif args.command == "mcp":

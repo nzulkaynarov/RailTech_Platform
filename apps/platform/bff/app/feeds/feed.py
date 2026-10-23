@@ -16,8 +16,7 @@ from app.clients.base import Backend
 from app.deps import Authed
 from app.errors import PlatformError
 from app.feeds.models import Sources, SourceState
-from app.rbac import strip_restricted
-from app.rbac_generated import RoleCode
+from app.rbac import gives_backend, strip_restricted
 
 log = structlog.get_logger()
 
@@ -30,8 +29,8 @@ SNAPSHOT_TTL_SECONDS = 8
 REFUSAL_TTL_SECONDS = 60
 
 # Поля ответов ERP с ограничением (platform-rbac.yaml `restricted_fields`): вырезаются из сырого
-# ответа до разбора и до кэша, чтобы ни один агрегат не мог вернуть их по ошибке. Роли берутся по
-# объединению (как права операций).
+# ответа до разбора и до кэша, чтобы ни один агрегат не мог вернуть их по ошибке. Поля берутся по
+# объединению ролей (как права операций).
 RESTRICTED_KEYS: Mapping[str, Collection[str]] = {
     "cost_margin": (
         "margin_percent",
@@ -55,14 +54,19 @@ class Feed:
         self.states: dict[Backend, SourceState] = cast(
             dict[Backend, SourceState], dict(authed.data.sources())
         )
+        # Ни одна роль не даёт прав в CRM (например, только «Счета и оплаты»): CRM для агрегатов —
+        # `not_applicable`, вызовы в неё не уходят (иначе CRM ответила бы 403).
+        if not gives_backend(authed.access, "crm"):
+            self.states["crm"] = "not_applicable"
 
     @property
     def sources(self) -> Sources:
         return Sources(crm=self.states["crm"], erp=self.states["erp"])
 
     @property
-    def roles(self) -> list[RoleCode]:
-        return self.authed.roles
+    def fields(self) -> list[str]:
+        """Поля с ограничением по объединению ролей (как права операций)."""
+        return self.authed.fields
 
     def usable(self, backend: Backend) -> bool:
         """Вызывать стоит: у сотрудника есть доступ (недоступный сейчас источник пробуем снова)."""
@@ -130,7 +134,7 @@ class Feed:
             self.states[backend] = "unavailable"
             log.warning("feed_source_bad_json", backend=backend, path=path)
             return None
-        clean = strip_restricted(payload, self.roles, RESTRICTED_KEYS)
+        clean = strip_restricted(payload, self.fields, RESTRICTED_KEYS)
         if ttl:
             await self._redis.set(data_key, json.dumps(clean, ensure_ascii=False), ex=ttl)
         return clean

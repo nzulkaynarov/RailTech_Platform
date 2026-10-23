@@ -9,6 +9,7 @@ import respx
 
 from tests.consts import CRM_URL, ERP_URL
 from tests.fakes import Clock
+from tests.roles import Role, refs
 
 ERP_COOKIE = "refresh_token"
 PASSWORD = "correct-horse"
@@ -22,8 +23,9 @@ def make_jwt(exp: float, jti: int) -> str:
 
 
 def profile(
-    roles: list[str], *, access: tuple[str, ...] = ("crm", "erp"), user_id: int = 7
+    roles: list[Role], *, access: tuple[str, ...] = ("crm", "erp"), user_id: int = 7
 ) -> dict[str, Any]:
+    held = refs(roles)
     return {
         "id": user_id,
         "email": "ivan.test@example.org",
@@ -32,7 +34,8 @@ def profile(
         "is_active": True,
         "must_change_password": False,
         "platform_access": list(access),
-        "platform_roles": roles,
+        "platform_role_ids": [r["id"] for r in held],
+        "platform_role_refs": held,
         "position": "Менеджер по продажам",
         "language": "ru",
     }
@@ -87,6 +90,12 @@ class Backends:
         self.erp_ping = router.get(f"{ERP_URL}/api/v1/notifications/").mock(
             return_value=httpx.Response(200, json={"results": []})
         )
+
+    def set_roles(self, roles: list[Role]) -> None:
+        """Роли сотрудника в `/me` CRM (коды предустановок или `custom`)."""
+        held = refs(roles)
+        self.profile["platform_role_ids"] = [r["id"] for r in held]
+        self.profile["platform_role_refs"] = held
 
     # --- CRM ---
     def _crm_tokens(self) -> tuple[str, str]:

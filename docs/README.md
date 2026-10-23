@@ -45,7 +45,7 @@
 
 Промпты агентов (`apps/*/backend/prompts/*.md`), шаблоны писем, фикстуры evals, навыки Claude Code
 (`apps/crm/.claude/skills/`), шаблоны PR (`.github/`), машиночитаемые контракты (`packages/contracts/**`) и
-сгенерированный OpenAPI CRM (`apps/crm/docs/api/openapi.json`). Их читают код, тесты и генераторы.
+сгенерированные контракты в `packages/contracts/` (включая OpenAPI CRM `openapi/crm.yaml`). Их читают код, тесты и генераторы.
 
 ## Статусы документов
 

@@ -1,7 +1,7 @@
 # Карта интеграции: экраны → BFF → домены (CRM, EDS, ERP)
 Статус: действует · Владелец: архитектор · Обновлено: 2026-10-23
 
-Версия 1.0 · 2026-10-22 · Сверено с `main @ fb3a3928`: CRM — `apps/crm/docs/api/openapi.json` (109 путей), ERP —
+Версия 1.0 · 2026-10-22 · Сверено с `main @ fb3a3928`: CRM — OpenAPI CRM (тогда `apps/crm/docs/api/openapi.json`, теперь `packages/contracts/openapi/crm.yaml`) (109 путей), ERP —
 `packages/contracts/openapi/erp-internal.yaml` (251 путь), шов — `erp-integration.yaml` 0.5.0, портал —
 `erp-portal.yaml` 0.3.0.
 

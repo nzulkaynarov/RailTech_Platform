@@ -3,8 +3,11 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { employeeErrorText } from "../../entities/employee/errors";
+import { isSystemAdmin } from "../../entities/role/roles";
 import type { Employee } from "../../shared/api/generated/model";
 import { Consequence } from "../../shared/ui/Consequence";
+import { hasActiveLeads } from "./leads";
+import { TransferLeads } from "./TransferLeads";
 import { useEmployeeUpdate } from "./useEmployeeMutations";
 
 import "./assign-role.css";
@@ -24,15 +27,24 @@ export function DisableEmployee({ employee, selfId, otherActiveAdmins }: Disable
   const { t } = useTranslation("modules");
   const { message } = App.useApp();
   const [confirming, setConfirming] = useState(false);
+  const [transferTo, setTransferTo] = useState<string | null>(null);
   const disabled = employee.status === "disabled";
   const update = useEmployeeUpdate(selfId, () => {
     setConfirming(false);
+    setTransferTo(null);
     void message.success(t("admin.org.form.saved"));
   });
-  const lastAdmin = !disabled && employee.roles.includes("ADMIN") && otherActiveAdmins === 0;
+  const lastAdmin = !disabled && employee.roles.some(isSystemAdmin) && otherActiveAdmins === 0;
+  const leads = update.isError && hasActiveLeads(update.error);
 
   const run = () => {
-    update.mutate({ id: employee.id, data: { is_active: disabled } });
+    update.mutate({
+      id: employee.id,
+      data: {
+        is_active: disabled,
+        ...(leads && transferTo ? { transfer_to_user_id: transferTo } : {}),
+      },
+    });
   };
 
   if (!confirming) {
@@ -78,8 +90,16 @@ export function DisableEmployee({ employee, selfId, otherActiveAdmins }: Disable
       {update.isError ? (
         <Alert type="error" showIcon message={employeeErrorText(t, update.error)} role="alert" />
       ) : null}
+      {leads ? (
+        <TransferLeads employee={employee} value={transferTo} onChange={setTransferTo} />
+      ) : null}
       <div style={{ display: "flex", gap: 8 }}>
-        <Button danger={!disabled} loading={update.isPending} onClick={run}>
+        <Button
+          danger={!disabled}
+          loading={update.isPending}
+          disabled={leads && !transferTo}
+          onClick={run}
+        >
           {disabled ? t("admin.org.disable.enableConfirm") : t("admin.org.disable.confirm")}
         </Button>
         <Button

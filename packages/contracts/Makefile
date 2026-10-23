@@ -1,7 +1,8 @@
 # packages/contracts — проверка контракта и генерация клиентов (ORCHESTRATOR §3.3: контракт раньше кода).
 # Вызывается из корня: make contracts. CI после make contracts требует чистый git diff в generated/.
 # Node (pnpm): OpenAPI, ajv, AsyncAPI, TS-клиенты. Python (uv, pyproject.toml + uv.lock): модели rt-contracts,
-# тесты схем событий и подписок, совместимость с базой (CONTRACTS_BASE_REF, по умолчанию origin/main).
+# тесты схем событий и подписок, совместимость с базой (CONTRACTS_BASE_REF, по умолчанию origin/main): схемы событий
+# (events_compat) и OpenAPI (oasdiff, openapi_compat).
 SHELL := /bin/bash
 .DEFAULT_GOAL := check
 
@@ -31,8 +32,12 @@ test: install ## Схемы событий валидны, примеры про
 compat: install ## Совместимость схем events/** и bus/subscriptions.schema.json с базой (L8)
 	$(UV_RUN) python scripts/events_compat.py
 
+.PHONY: openapi-compat
+openapi-compat: install ## oasdiff: ломающие изменения openapi/*.yaml против базы (ADR-0016); oasdiff закреплён, одноразовый контейнер Docker
+	$(UV_RUN) python scripts/openapi_compat.py
+
 .PHONY: check
-check: lint generate typecheck test compat ## Всё вместе
+check: lint generate typecheck test compat openapi-compat ## Всё вместе
 
 .PHONY: clean
 clean:

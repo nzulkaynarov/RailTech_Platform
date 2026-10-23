@@ -19,6 +19,7 @@ from redis.asyncio import Redis
 
 from app.clients import CrmClient, ErpClient
 from app.clients.base import Backend, BackendUnavailableError, cookie_value
+from app.clients.crm_models import SsoTokenResponse
 from app.config import Settings
 from app.errors import (
     PlatformError,
@@ -28,8 +29,15 @@ from app.errors import (
     from_backend,
     session_expired,
 )
-from app.rbac import known_roles
-from app.session import BackendTokens, Language, SessionData, SessionStore, new_secret, now
+from app.session import (
+    BackendTokens,
+    Language,
+    SessionData,
+    SessionRole,
+    SessionStore,
+    new_secret,
+    now,
+)
 
 log = structlog.get_logger()
 
@@ -154,7 +162,7 @@ class AuthService:
         except BackendUnavailableError as exc:
             raise backend_unavailable("crm", exc.reason) from exc
         profile: dict[str, Any] = _expect(resp, "crm").json()
-        roles = known_roles(profile.get("platform_roles") or [])
+        roles = roles_of(profile)
         if not roles:
             raise PlatformError(
                 "NO_PLATFORM_ROLE",
@@ -172,7 +180,7 @@ class AuthService:
             name=str(profile["full_name"]),
             position=profile.get("position") or None,
             language=_language(profile),
-            platform_roles=list(roles),
+            roles=roles,
             platform_access=access,
             must_change_password=must_change_password or bool(profile.get("must_change_password")),
             profile_checked_at=created,
@@ -201,7 +209,7 @@ class AuthService:
         if sso.status_code != 200:
             raise ErpConnectError(f"crm sso/token: HTTP {sso.status_code}")
         try:
-            sso_token = str(sso.json()["token"])
+            sso_token = SsoTokenResponse.model_validate(sso.json()).token
         except (ValueError, KeyError, TypeError) as exc:
             raise ErpConnectError("crm sso/token: unexpected body") from exc
         exchange = await self.erp.sso_exchange(sso_token)
@@ -404,7 +412,7 @@ class AuthService:
             log.warning("profile_sync_failed", status=resp.status_code)
             return data
         profile: dict[str, Any] = resp.json()
-        if not known_roles(profile.get("platform_roles") or []):
+        if not roles_of(profile):
             await self.logout(sid)
             raise PlatformError(
                 "NO_PLATFORM_ROLE",
@@ -470,17 +478,31 @@ def _language(profile: dict[str, Any]) -> Language:
     return value if value in ("ru", "uz", "en") else "ru"
 
 
+def roles_of(profile: dict[str, Any]) -> list[SessionRole]:
+    """Роли Платформы из `/me` CRM (`platform_role_refs` с матрицами, R-2). Битая запись не роняет
+    вход: такая роль пропускается (права всё равно решает CRM)."""
+    roles: list[SessionRole] = []
+    for raw in profile.get("platform_role_refs") or []:
+        if not isinstance(raw, dict):
+            continue
+        try:
+            roles.append(SessionRole.model_validate(raw))
+        except ValueError:
+            log.warning("platform_role_unreadable")
+    return roles
+
+
 def _apply_profile(data: SessionData, profile: dict[str, Any]) -> None:
-    roles = known_roles(profile.get("platform_roles") or [])
+    roles = roles_of(profile)
     access = list(profile.get("platform_access") or ["crm"])
     data.name = str(profile.get("full_name") or data.name)
     data.position = profile.get("position") or None
     data.language = _language(profile)
-    data.platform_roles = list(roles)
+    data.roles = roles
     data.platform_access = access
     data.must_change_password = bool(profile.get("must_change_password"))
     data.profile_checked_at = now()
-    if data.active_role not in roles:
+    if data.active_role not in {r.id for r in roles}:
         data.active_role = None
     if "erp" not in access:
         data.erp, data.erp_state = None, "not_applicable"

@@ -2,15 +2,15 @@ import { Alert, App, Button, Form, Input } from "antd";
 import { useId, useState } from "react";
 import { useTranslation } from "react-i18next";
 
-import type { RoleCode } from "../../app/rbac.generated";
-import { modulesOfRoles } from "../../entities/employee/access";
-import { erpConsequence } from "../../entities/employee/consequence";
+import { accessOfRoleIds } from "../../entities/employee/access";
+import { backendConsequence } from "../../entities/employee/consequence";
 import { employeeErrorText } from "../../entities/employee/errors";
 import { ApiError } from "../../shared/api/errors";
 import type { Employee } from "../../shared/api/generated/model";
 import { findModule } from "../../modules/registry";
 import { Consequence } from "../../shared/ui/Consequence";
 import { RoleCheckboxes } from "../assign-role/RoleCheckboxes";
+import { useRoles } from "../assign-role/useRoles";
 import { useEmployeeInvite } from "../assign-role/useEmployeeMutations";
 
 import "../assign-role/assign-role.css";
@@ -30,7 +30,7 @@ export interface InviteEmployeeFormProps {
 }
 
 /**
- * Приглашение по почте (SPEC-v3 §7.6): имя, почта, должность, роли. BFF создаёт пользователя в CRM с ролями и просит
+ * Приглашение по почте (SPEC-v3 §7.6): имя, почта, должность, роли (из списка ролей компании, ADR-0012). BFF создаёт пользователя в CRM с ролями и просит
  * CRM отправить письмо с временным паролем; пароль в браузер не приходит. Главная кнопка — «Отправить приглашение»
  * с блоком «Что произойдёт». Форма не хранит прошлое приглашение: после результата она сбрасывается, а при повторном
  * открытии (`OrgPage` задаёт `key` по ключу навигации) создаётся заново.
@@ -40,7 +40,8 @@ export function InviteEmployeeForm({ onInvited, onOpenCard, onCancel }: InviteEm
   const { message } = App.useApp();
   const [form] = Form.useForm<Values>();
   const noteId = useId();
-  const [roles, setRoles] = useState<RoleCode[]>([]);
+  const { query: rolesQuery, roles: companyRoles } = useRoles();
+  const [roles, setRoles] = useState<string[]>([]);
   const [rolesTouched, setRolesTouched] = useState(false);
   const [notSent, setNotSent] = useState<{ id: string; crmDown: boolean } | null>(null);
   const invite = useEmployeeInvite((employee) => {
@@ -67,7 +68,7 @@ export function InviteEmployeeForm({ onInvited, onOpenCard, onCancel }: InviteEm
           email: values.email.trim(),
           name: values.name.trim(),
           ...(values.position?.trim() ? { position: values.position.trim() } : {}),
-          roles,
+          role_ids: roles,
         },
       },
       {
@@ -88,14 +89,14 @@ export function InviteEmployeeForm({ onInvited, onOpenCard, onCancel }: InviteEm
     );
   };
 
-  const modules = modulesOfRoles(roles).map((code) => findModule(code)?.name ?? code);
-  const erpLine = erpConsequence(t, roles);
+  const access = accessOfRoleIds(companyRoles, roles);
+  const modules = access.modules.map((code) => findModule(code)?.name ?? code);
   const items = [
     t("admin.org.invite.consequenceMail"),
     ...(modules.length > 0
       ? [t("admin.org.consequence.modules", { modules: modules.join(", ") })]
       : []),
-    ...(erpLine ? [erpLine] : []),
+    ...(roles.length > 0 ? backendConsequence(t, access) : []),
     t("admin.org.invite.consequenceListed"),
   ];
   const showRoleNote = rolesTouched && roles.length === 0;
@@ -144,6 +145,12 @@ export function InviteEmployeeForm({ onInvited, onOpenCard, onCancel }: InviteEm
         <Input maxLength={120} autoComplete="off" />
       </Form.Item>
       <RoleCheckboxes
+        roles={companyRoles}
+        loading={rolesQuery.isPending}
+        error={rolesQuery.isError}
+        onRetry={() => {
+          void rolesQuery.refetch();
+        }}
         value={roles}
         onChange={(next) => {
           setRoles(next);

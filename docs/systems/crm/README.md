@@ -15,7 +15,7 @@
 | [`evals-labeling.md`](evals-labeling.md) | Разметка диалогов и перенос в golden-кейсы |
 | [`../../adr/crm/`](../../adr/crm/README.md) | Архитектурные решения CRM (ADR CRM-00NN) |
 | [`../../runbooks/crm/`](../../runbooks/crm/README.md) | Эксплуатация CRM |
-| `apps/crm/docs/api/openapi.json` | OpenAPI CRM (генерируется `make -C apps/crm openapi`, не править) |
+| `packages/contracts/openapi/crm.yaml` | OpenAPI CRM (генерируется `make -C apps/crm openapi`, не править; ломающие изменения ловит `make contracts` — oasdiff, ADR-0016) |
 | [`../../history/crm/`](../../history/crm/) | План фаз 0–10 и журналы CRM до монорепозитория (история) |
 
 При противоречиях: `docs/product/SPEC-v3.md` и стратегия > `BUSINESS.md` > `SPEC.md` > код. Процесс и статусы — общие:
@@ -107,7 +107,7 @@ make load-test          # 50 параллельных диалогов на dev:
 ```bash
 make install    # uv sync + pnpm install (нужны uv и pnpm 10: pip install uv; npm i -g pnpm@10)
 make check      # ruff, mypy, eslint, prettier, tsc, pytest (unit), vitest — перед каждым коммитом
-make openapi    # экспорт docs/api/openapi.json (CI проверяет актуальность)
+make openapi    # экспорт packages/contracts/openapi/crm.yaml (CI проверяет актуальность)
 uv tool install pre-commit && pre-commit install   # хуки: ruff, gitleaks, prettier, eslint
 ```
 

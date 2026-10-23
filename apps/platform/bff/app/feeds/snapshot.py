@@ -8,8 +8,7 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from app.feeds.feed import SNAPSHOT_TTL_SECONDS, Feed, rows
-from app.rbac import allows
-from app.rbac_generated import RoleCode
+from app.rbac import View, allows
 
 # Сделки ERP постранично (DRF: максимум 200 на страницу); берём новейшие — поиск и счётчики
 # работают по ним.
@@ -31,16 +30,21 @@ class Snapshot:
         return {int(d["id"]): d for d in self.deals if isinstance(d.get("id"), int)}
 
 
-def wants_inbox(roles: list[RoleCode]) -> bool:
-    return "MANAGER" in roles
+# Виды работы по лидам (секция `queue` каталога): их даёт раздел CRM-лидов; без него BFF не зовёт
+# CRM `/inbox` (у сотрудника нет прав CRM на лиды — был бы 403).
+LEAD_KINDS = ("answer_lead", "take_lead")
 
 
-def wants_approvals(roles: list[RoleCode]) -> bool:
-    return "DIRECTOR" in roles
+def wants_inbox(view: View) -> bool:
+    return any(view.wants(kind) for kind in LEAD_KINDS)
 
 
-def wants_projects(roles: list[RoleCode]) -> bool:
-    return allows(roles, "eds.projects", "read")
+def wants_approvals(view: View) -> bool:
+    return view.wants("approve_quote")
+
+
+def wants_projects(view: View) -> bool:
+    return allows(view.access, "eds.projects", "read")
 
 
 async def _inbox(feed: Feed) -> dict[str, list[dict[str, Any]]] | None:
@@ -51,19 +55,18 @@ async def _inbox(feed: Feed) -> dict[str, list[dict[str, Any]]] | None:
 
 
 async def load_snapshot(
-    feed: Feed, roles: list[RoleCode], *, inbox: bool, approvals: bool, deals: bool
+    feed: Feed, view: View, *, inbox: bool, approvals: bool, deals: bool
 ) -> Snapshot:
-    """Параллельно прочитать нужные источники. `roles` — роли «вида» (активная роль, если задана);
-    сделки
-    нужны и для подписей к очереди и уведомлениям, поэтому их читает тот, кто их просит."""
+    """Параллельно прочитать нужные источники. `view` — роли «вида» (активная роль, если задана);
+    сделки нужны и для подписей к очереди и уведомлениям, поэтому их читает тот, кто их просит."""
     snap = Snapshot()
 
     async def load_inbox() -> None:
-        if inbox and wants_inbox(roles):
+        if inbox and wants_inbox(view):
             snap.inbox = await _inbox(feed)
 
     async def load_approvals() -> None:
-        if approvals and wants_approvals(roles):
+        if approvals and wants_approvals(view):
             payload = await feed.get(
                 "erp",
                 "/api/v1/crm/quotes/my-approval-queue/",

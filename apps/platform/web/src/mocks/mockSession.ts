@@ -1,6 +1,6 @@
-import type { Language, Me, RoleCode, Session } from "../shared/api/generated/model";
-import { effectiveRoles } from "./fixtures/employees";
-import { computeAccess } from "./fixtures/rbac";
+import type { Language, Me, Session } from "../shared/api/generated/model";
+import { effectiveRoleIds } from "./fixtures/employees";
+import { ROLE_ID, computeAccess, readRoles, roleRefOf, rolesOf } from "./fixtures/roles";
 import { type DemoUser, DEMO_USERS } from "./fixtures/users";
 
 /**
@@ -11,7 +11,8 @@ const KEY = "rt-pf-mock-session";
 
 interface MockSession {
   userId: string;
-  activeRole: RoleCode | null;
+  /** Id активной роли («вид») */
+  activeRole: string | null;
   language: Language;
   mustChangePassword: boolean;
 }
@@ -62,15 +63,26 @@ function setCookie(name: string, value: string, maxAge = 60 * 60 * 12): void {
   }
 }
 
-/** `Me` для сессии: при выбранной активной роли модули и разделы считаются по ней одной, иначе — по объединению ролей. */
-export function buildMe(session: MockSession): Me | undefined {
+/** Роли сотрудника сессии (данные из хранилища ролей мока) и роли «вида» (активная, если задана). */
+export function sessionRoles(session: MockSession) {
   const user = DEMO_USERS.find((u) => u.id === session.userId);
   if (!user) return undefined;
   // Роли — с учётом выданных в Admin · Оргструктуре (мок хранит их в `fixtures/employees`).
-  const roles = effectiveRoles(user.id, user.roles);
-  const effective =
-    session.activeRole && roles.includes(session.activeRole) ? [session.activeRole] : roles;
-  const computed = computeAccess(effective);
+  const ids = effectiveRoleIds(
+    user.id,
+    user.roles.map((code) => ROLE_ID[code]),
+  );
+  const all = rolesOf(ids, readRoles());
+  const active = all.find((r) => r.id === session.activeRole);
+  return { user, all, view: active ? [active] : all, active };
+}
+
+/** `Me` для сессии: при выбранной активной роли модули и разделы считаются по ней одной, иначе — по объединению ролей. */
+export function buildMe(session: MockSession): Me | undefined {
+  const roles = sessionRoles(session);
+  if (!roles) return undefined;
+  const { user, all, view, active } = roles;
+  const computed = computeAccess(view);
   return {
     id: user.id,
     email: user.email,
@@ -78,13 +90,13 @@ export function buildMe(session: MockSession): Me | undefined {
     initials: user.initials,
     position: user.position,
     language: session.language,
-    roles,
-    active_role:
-      session.activeRole && roles.includes(session.activeRole) ? session.activeRole : null,
+    roles: all.map(roleRefOf),
+    active_role: active ? active.id : null,
     modules: computed.modules,
-    resources: computed.resources,
+    resources: computed.resources as Me["resources"],
     restricted_fields: computed.restricted_fields,
-    access: computed.access,
+    // R-1: роли Платформы дают доступ к CRM и ERP.
+    access: { crm: true, erp: all.length > 0 },
   };
 }
 

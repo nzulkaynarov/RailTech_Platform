@@ -68,10 +68,8 @@ test.describe("Оргструктура: выдача ролей", () => {
     // «Что произойдёт» строится из сгенерированной матрицы, а не из текста в коде
     const modules = visibleModules("SUPPLY").join(", ");
     await expect(panel.getByText(`Сотрудник увидит модули: ${modules}.`)).toBeVisible();
-    // роли ERP — по карте erp_role_codes из platform-rbac.yaml (SUPPLY: CATALOG_SUPPLY, FULFILLMENT)
-    await expect(
-      panel.getByText("В ERP сотрудник получит роли: Каталог и закупки, Исполнение и логистика."),
-    ).toBeVisible();
+    // права ERP вычисляет CRM из разделов ролей (ADR-0012), итог провижининга — в карточке
+    await expect(panel.getByText(/В ERP сотрудник получит права по разделам ролей/)).toBeVisible();
     await tallScreenshot(page, "org-card-roles");
 
     await panel.getByRole("button", { name: "Сохранить роли" }).click();

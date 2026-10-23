@@ -26,7 +26,7 @@ ADR-0002 обещал, что Refine даст `dataProvider` и CRUD-стран�
 
 Вариант A.
 
-- Хуки запросов и мутаций генерирует orval из `docs/api/openapi.json` (`client: "react-query"`, общий `mutator` `src/api/http.ts`). Файлы `src/api/*Queries.ts` остаются тонкими: инвалидация после мутаций, `placeholderData: keepPreviousData` для списков с пагинацией, составные хуки.
+- Хуки запросов и мутаций генерирует orval из `packages/contracts/openapi/crm.yaml` (до B6 — `docs/api/openapi.json`) (`client: "react-query"`, общий `mutator` `src/api/http.ts`). Файлы `src/api/*Queries.ts` остаются тонкими: инвалидация после мутаций, `placeholderData: keepPreviousData` для списков с пагинацией, составные хуки.
 - SSE сбрасывает кэш по сгенерированным ключам (`get…QueryKey`), явный список на каждое событие, с тестом.
 - Refine — оболочка: `authProvider`, `accessControlProvider` (`useCan`), `ThemedLayout`, `notificationProvider`, `UnsavedChangesNotifier` / `useWarnAboutChange`, `DocumentTitleHandler`. `dataProvider`-заглушка удаляется, если Refine 5 позволяет; иначе остаётся минимальной без использования.
 - Миграция — по одному файлу `*Queries.ts`, каждый шаг с зелёными unit и e2e.

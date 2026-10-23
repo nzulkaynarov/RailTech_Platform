@@ -1,14 +1,16 @@
 """Клиент CRM (`crm-api`): вход, обновление и выход сотрудника, профиль, SSO-токен для ERP.
 
-Контракт CRM — apps/crm/backend/app/api/v1/auth.py и me.py. Health CRM — `/health` в корне.
+Контракт CRM — `packages/contracts/openapi/crm.yaml` (его генерирует CRM).
+Тела ответов разбираются сгенерированными моделями `crm_models` (`make crm-models` платформы).
+Health CRM — `/health` в корне.
 """
 
 from dataclasses import dataclass
-from typing import Any
 
 import httpx
 
 from app.clients.base import BackendClient, BackendUnavailableError, cookie_value
+from app.clients.crm_models import TokenResponse
 
 REFRESH_COOKIE = "rt_refresh"
 
@@ -29,12 +31,12 @@ class CrmClient(BackendClient):
 
     @staticmethod
     def tokens(response: httpx.Response) -> CrmTokens:
-        body: dict[str, Any] = response.json()
+        body = TokenResponse.model_validate(response.json())
         return CrmTokens(
-            access=str(body["access_token"]),
-            expires_in=int(body["expires_in"]),
+            access=body.access_token,
+            expires_in=body.expires_in,
             refresh=cookie_value(response, REFRESH_COOKIE),
-            must_change_password=bool(body.get("must_change_password", False)),
+            must_change_password=body.must_change_password,
         )
 
     async def login(self, email: str, password: str) -> httpx.Response:

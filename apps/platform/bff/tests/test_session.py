@@ -309,7 +309,7 @@ def test_tokens_are_not_in_repr() -> None:
             "user_id": 1,
             "email": "a@b.c",
             "name": "N",
-            "platform_roles": ["ADMIN"],
+            "roles": [{"id": 1, "name": "Администратор", "system": True, "code": "ADMIN"}],
             "platform_access": ["crm"],
             "must_change_password": False,
             "profile_checked_at": 1,

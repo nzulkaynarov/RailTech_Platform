@@ -25,7 +25,7 @@ make -C apps/cabinet gen-api-types  # src/api/portal.d.ts из erp-portal.yaml; 
 | Путь | Что |
 |---|---|
 | `src/api/portal.d.ts` | типы портального API — **только генерация** (`make gen-api-types`; `check` сверяет с контрактом) |
-| `src/api/crm.ts`, `crm-form.d.ts` | публичная форма CRM «Запрос» (`GET /api/v1/leads/web/token`, `POST /api/v1/leads/web`; база `VITE_CRM_URL`, без cookie); типы — генерация из `apps/crm/docs/api/openapi.json` (`scripts/gen-crm-form-types.mjs`, только пути формы) |
+| `src/api/crm.ts`, `crm-form.d.ts` | публичная форма CRM «Запрос» (`GET /api/v1/leads/web/token`, `POST /api/v1/leads/web`; база `VITE_CRM_URL`, без cookie); типы — генерация из `packages/contracts/openapi/crm.yaml` (`scripts/gen-crm-form-types.mjs`, только пути формы) |
 | `src/api/portal.ts`, `errors.ts` | клиент: `fetch`, `credentials: 'include'`, база `/api/portal/v1`, `Idempotency-Key` на POST; `{"detail": CODE}` → `PortalApiError` → ключ `apiErrors.<CODE>` |
 | `src/mocks/` | MSW: `fixtures.ts` (все данные мока одним модулем, типизированы схемами контракта), `handlers.ts` (все эндпоинты), `crmForm.ts` (форма CRM «Запрос»), `browser.ts` (dev), `server.ts` (тесты) |
 | `src/session/` | сессия `GET /me` (`useMe`, `useCanAct`, `<CanAct>`, `useLogout`), режим `miniapp` / `web` |

@@ -37,7 +37,7 @@ check-cabinet: ## Cabinet: eslint, tsc, i18n ru/uz/en, токены, типы п
 	@if [ -f $(CABINET)/Makefile ]; then $(MAKE) -C $(CABINET) check; else echo "check-cabinet: $(CABINET) ещё без кода (M2-CAB-01) — пропуск"; fi
 
 .PHONY: check-platform
-check-platform: ## Платформа: ruff, mypy, pytest (bff); eslint, tsc, vitest, свежесть клиента orval и токенов (web) (apps/platform/Makefile)
+check-platform: ## Платформа: ruff, mypy, pytest (bff); eslint, tsc, vitest, свежесть клиента orval, токенов, RBAC и моделей CRM из crm.yaml (apps/platform/Makefile)
 	$(MAKE) -C $(PLATFORM) check
 
 .PHONY: check-rt-bus
@@ -130,6 +130,7 @@ deploy-check: ## Проверка конфигурации прода без з�
 	@bash $(INFRA)/deploy/tests/events-schema-mount-test.sh
 	@bash $(INFRA)/deploy/tests/crm-backup-source-test.sh
 	@bash $(INFRA)/deploy/tests/telegram-webhook-url-test.sh
+	@bash $(INFRA)/deploy/tests/crm-bot-test.sh
 	@bash $(INFRA)/deploy/tests/cpu-baseline-test.sh
 	@bash $(INFRA)/deploy/tests/platform-prod-test.sh
 	@bash $(INFRA)/deploy/tests/caddy-edge-test.sh
