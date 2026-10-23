@@ -1,7 +1,7 @@
 import type { TelegramThemeParams, TelegramWebApp } from './webapp';
 
 /**
- * Тема Telegram поверх семантических переменных shadcn (CLAUDE.md §3): компоненты не знают о
+ * Тема Telegram поверх семантических переменных shadcn (CONVENTIONS.md §3): компоненты не знают о
  * Telegram, меняются только `--background`, `--primary`… на `<html>`. Переменные, которых
  * в `themeParams` нет, остаются из `packages/ui-tokens`.
  */

@@ -1,5 +1,5 @@
 /*
- * Центр уведомлений и лента Dashboard (PLT-14): значения — макет «Shell» и «v3 · 1. Dashboard», 03-frontend.md §3.
+ * Центр уведомлений и лента Dashboard (PLT-14): значения — макет «Shell» и «v3 · 1. Dashboard», docs/architecture/platform-frontend.md §3.
  * Переменные --ant-* живут только внутри компонентов antd, поэтому литералы токенов (как в ui.css).
  */
 .pf-notes {

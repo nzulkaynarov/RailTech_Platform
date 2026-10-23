@@ -11,7 +11,8 @@ from urllib.parse import quote
 from app import session
 from app.feeds.models import DueLabel
 
-# Часовой пояс компании (03-frontend.md §8): Asia/Tashkent — UTC+5 без перехода на летнее время с
+# Часовой пояс компании (docs/architecture/platform-frontend.md §8): Asia/Tashkent — UTC+5
+# без перехода на летнее время с
 # 2005 года.
 # TODO(ERP-17): часовой пояс компании берётся из настроек ERP; до этого — константа.
 COMPANY_TZ = timezone(timedelta(hours=5))
@@ -103,5 +104,8 @@ def join(*parts: str | None) -> str:
 
 
 def segment(value: str) -> str:
-    """Бизнес-номер в пути SPA: `КП-2026/118` -> `%D0%9A…2F118` (03-frontend.md §6)."""
+    """Бизнес-номер в пути SPA: `КП-2026/118` -> `%D0%9A…2F118`.
+
+    Правило — docs/architecture/platform-frontend.md §6.
+    """
     return quote(value, safe="")

@@ -8,7 +8,7 @@ export interface RelativeLabels {
 
 /**
  * Время уведомления в одной строке справа: «сейчас», «5 мин», «1 ч»; старше суток — «вчера 09:24» или дата
- * (часовой пояс компании, 03-frontend.md §8).
+ * (часовой пояс компании, docs/architecture/platform-frontend.md §8).
  */
 export function relativeTime(
   value: string,

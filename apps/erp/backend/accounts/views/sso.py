@@ -1,4 +1,4 @@
-"""SSO API Views for ERP (CONTRACTS §6, packages/contracts/sso-token.md, M3-CRM-06).
+"""SSO API Views for ERP (CONTRACTS §6, docs/architecture/sso-token.md, M3-CRM-06).
 
 Эндпоинты:
 1. POST /api/v1/auth/sso/token — выдать токен для перехода в CRM (iss=erp, aud=crm).

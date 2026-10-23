@@ -1,4 +1,4 @@
-/** Часовой пояс компании (03-frontend.md §8): даты показываем в нём, а не в поясе браузера. */
+/** Часовой пояс компании (docs/architecture/platform-frontend.md §8): даты показываем в нём, а не в поясе браузера. */
 export const COMPANY_TIME_ZONE = "Asia/Tashkent";
 
 const LOCALES: Record<string, string> = { ru: "ru-RU", uz: "uz-Latn-UZ", en: "en-GB" };

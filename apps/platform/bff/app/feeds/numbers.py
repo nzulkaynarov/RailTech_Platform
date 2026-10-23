@@ -1,6 +1,7 @@
-"""Бизнес-номера и пути объектов SPA (SPEC-v3 §2.2, 03-frontend.md §6).
+"""Бизнес-номера и пути объектов SPA (SPEC-v3 §2.2, docs/architecture/platform-frontend.md §6).
 
-**Временно, до ERP-09** (`Deal.number`, 04-integration-map.md §7): в ERP у сделки нет номера ЗВ/ПР.
+**Временно, до ERP-09** (`Deal.number`, docs/architecture/integration-map.md §7): в ERP у сделки
+нет номера ЗВ/ПР.
 Пока поля нет, номер для показа составляется из года создания и идентификатора — `ЗВ-2026-104`.
 Это подпись, а не ключ: ни один код не разбирает `id` из номера (кроме `L-NNNN` лида CRM). Как
 только сделка приходит с полем `number`, берётся оно, и ссылки собираются заново.
@@ -25,7 +26,8 @@ STEP_TITLES: dict[str, str] = {
     "LOST": "Отказ",
 }
 
-# Шаг пути заявки по стадии сделки ERP; полный вывод по документам — 04-integration-map.md §2
+# Шаг пути заявки по стадии сделки ERP; полный вывод по документам —
+# docs/architecture/integration-map.md §2
 # (хвост PLT-2x).
 _STAGE_STEP: dict[str, DealStep] = {
     "DRAFT": "REQUEST",
