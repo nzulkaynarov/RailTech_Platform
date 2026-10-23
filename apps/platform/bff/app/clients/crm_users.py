@@ -34,6 +34,7 @@ ROLE_IN_USE_MESSAGE = (
 )
 ROLE_SYSTEM_MESSAGE = "Системную роль нельзя изменить или удалить."
 NAME_TAKEN_MESSAGE = "Роль с таким названием уже есть."
+ROLE_VERSION_MESSAGE = "Роль изменена другим пользователем — обновите страницу."
 # Поля CRM -> поля контракта BFF (`details.fields`).
 _FIELDS = {
     "full_name": "name",
@@ -82,6 +83,10 @@ def crm_error(response: httpx.Response) -> PlatformError:
             count = users if isinstance(users, int) else 0
             message = ROLE_IN_USE_MESSAGE.format(employees=count)
             return _replace(base, "ROLE_IN_USE", message, reason=code, employees=count)
+        if code == "role_version_conflict":
+            current = details.get("current")
+            extra = {"current_version": current} if isinstance(current, int) else {}
+            return _replace(base, "CONFLICT", ROLE_VERSION_MESSAGE, reason=code, **extra)
         if reason == "email_taken":
             return _replace(base, "EMAIL_EXISTS", EMAIL_EXISTS_MESSAGE, reason=reason)
         if code == "user_has_active_leads":
@@ -145,7 +150,7 @@ ROLES = "/api/v1/platform-roles"
 
 
 class CrmRoles:
-    """Роли Платформы в CRM (только администратор: `users:write`)."""
+    """Роли Платформы в CRM: чтение — `users:read`, изменение — `users:write`."""
 
     def __init__(self, call: Call) -> None:
         self._users = CrmUsers(call)

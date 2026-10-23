@@ -3,7 +3,7 @@
 import pytest
 
 from app.domain.errors import ValidationFailedError
-from app.services.user_platform import checked_position, legacy_codes, resolve_patch
+from app.services.user_platform import checked_position, resolve_patch
 from app.services.user_views import UserPatch
 from tests.platform_role_data import make_role
 
@@ -81,15 +81,6 @@ def test_old_behaviour_without_platform_roles_is_untouched() -> None:
     original = UserPatch(roles=["viewer"], platform_access=["crm", "erp"], erp_role_codes=["HEAD"])
 
     assert resolve_patch([], None, original) == original
-
-
-def test_legacy_codes_list_only_roles_that_have_a_code_in_the_old_order() -> None:
-    from app.models.platform_roles import PlatformRole
-
-    custom = PlatformRole(id=99, code=None, name="Свои", access={}, restricted_fields=[])
-    roles = [make_role("ADMIN"), custom, make_role("MANAGER")]
-
-    assert legacy_codes(roles) == ["MANAGER", "ADMIN"]
 
 
 def test_position_longer_than_120_is_a_validation_error() -> None:

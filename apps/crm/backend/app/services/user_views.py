@@ -7,7 +7,7 @@ from datetime import datetime
 from app.domain.erp_sync import AccessState, erp_sync_status
 from app.models.auth import User
 from app.models.platform_roles import PlatformRole
-from app.services.user_platform import RoleRef, legacy_codes, role_refs
+from app.services.user_platform import RoleRef, role_refs
 
 
 @dataclass(frozen=True, slots=True)
@@ -25,8 +25,6 @@ class UserView:
     tg_dm_failed_at: datetime | None = None
     platform_access: list[str] = field(default_factory=lambda: ["crm"])
     erp_role_codes: list[str] = field(default_factory=list)
-    # Старое поле с кодами (совместимость BFF до R-2): коды ролей, у которых они есть.
-    platform_roles: list[str] = field(default_factory=list)
     platform_role_ids: list[int] = field(default_factory=list)
     platform_role_refs: list[RoleRef] = field(default_factory=list)
     position: str | None = None
@@ -45,10 +43,8 @@ class UserPatch:
     transfer_to_user_id: int | None = None
     platform_access: Sequence[str] | None = None
     erp_role_codes: Sequence[str] | None = None
-    # Роли Платформы: `None` — не менять, `[]` — снять все. Выдача — по id ролей или по старым
-    # кодам (`platform_roles`, совместимость BFF до R-2); вместе их слать нельзя.
+    # Роли Платформы по id: `None` — не менять, `[]` — снять все.
     platform_role_ids: Sequence[int] | None = None
-    platform_role_codes: Sequence[str] | None = None
     position: str | None = None  # `""` очищает
     language: str | None = None  # ru|uz|en (CRM-01b); None — не менять
 
@@ -75,7 +71,6 @@ def view_of(
         tg_dm_failed_at=user.tg_dm_failed_at,
         platform_access=access,
         erp_role_codes=list(user.erp_role_codes or []),
-        platform_roles=legacy_codes(platform),
         platform_role_ids=[r.id for r in platform],
         platform_role_refs=role_refs(platform),
         position=user.position,
