@@ -95,6 +95,9 @@ class Settings(BaseSettings):
     erp_mcp_context_key: SecretStr = SecretStr("")
 
     ready_check_timeout_s: float = Field(default=2.0, gt=0, le=10)
+    # Задач очереди одновременно в одном воркере. Больше 1 нужно шине: `rt_bus.pump` держит воркер
+    # до 20 с, пока ERP не отвечает; без запаса остальные задачи (бот, таймеры) ждали бы.
+    worker_concurrency: int = Field(default=4, ge=1, le=32)
 
     # Ключ Fernet для секретов интеграций в БД (токен бота из «Подключений»). Без него — только env.
     secrets_key: SecretStr = SecretStr("")

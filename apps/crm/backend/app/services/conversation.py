@@ -15,6 +15,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.agents.dialog.graph import DialogAgent
 from app.agents.dialog.state import DialogResult
+from app.bus import events as bus_events
 from app.domain.consent import consent_required
 from app.domain.dialog_policy import Action
 from app.domain.language import Language, detect_language
@@ -25,6 +26,7 @@ from app.integrations.llm_usage import lead_scope
 from app.models.leads import Conversation, Lead
 from app.repositories import leads as repo
 from app.schemas.settings import AppSettings
+from app.security.audit import Actor
 from app.services import escalation, stages
 from app.services.conversation_erasure import DeliveryFailureMixin, ErasureMixin
 from app.services.conversation_records import RecordsMixin
@@ -299,6 +301,7 @@ class ConversationService(ErasureMixin, DeliveryFailureMixin, RecordsMixin):
             language=language,
             identity=identity,
         )
+        await bus_events.lead_created(session, lead, Actor(None, "bot"))
         logger.info("lead_created", lead_id=lead.id)
         return lead, conversation, True
 

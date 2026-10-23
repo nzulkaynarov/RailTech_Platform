@@ -271,13 +271,11 @@ class _Run:
         )
 
     async def erp_events(self) -> CheckResult:
-        """Итог приёма событий ERP (FIX-33): отклонённые, упавшие и зависшие, не пробный запрос."""
+        """Итог обмена событиями с ERP на шине: недоставленные, упавшие, зависшие."""
         async with self.d.sessions() as session:
             stats = await repo.erp_events_stats(session, self.now)
         return erp_events_rules.erp_events(
-            erp_events_rules.ErpEventsFacts(
-                stats.rejected, stats.failed, stats.stuck, stats.last_error
-            )
+            erp_events_rules.ErpEventsFacts(stats.dead, stats.failed, stats.stuck, stats.last_error)
         )
 
     async def langfuse(self) -> CheckResult:

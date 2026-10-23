@@ -96,7 +96,6 @@ export * from "./erpStatusOutMode";
 export * from "./erpStatusOutTokenSource";
 export * from "./erpStatusOutWebhookSecretPreviousSource";
 export * from "./erpStatusOutWebhookSecretSource";
-export * from "./erpWebhookReceipt";
 export * from "./errorDetails";
 export * from "./errorDetailsErrors";
 export * from "./errorOut";

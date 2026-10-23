@@ -85,6 +85,18 @@ channels:
     messages:
       uz.railtech.crm.lead.stage_changed.v1:
         $ref: '#/components/messages/uz.railtech.crm.lead.stage_changed.v1'
+  uz.railtech.crm.lead.erased.v1:
+    address: uz.railtech.crm.lead.erased.v1
+    title: Лид обезличен
+    messages:
+      uz.railtech.crm.lead.erased.v1:
+        $ref: '#/components/messages/uz.railtech.crm.lead.erased.v1'
+  uz.railtech.crm.lead.merged.v1:
+    address: uz.railtech.crm.lead.merged.v1
+    title: Лиды склеены
+    messages:
+      uz.railtech.crm.lead.merged.v1:
+        $ref: '#/components/messages/uz.railtech.crm.lead.merged.v1'
   uz.railtech.crm.lead.updated.v1:
     address: uz.railtech.crm.lead.updated.v1
     title: Лид изменён
@@ -303,6 +315,24 @@ operations:
       $ref: '#/channels/uz.railtech.crm.lead.stage_changed.v1'
     messages:
       - $ref: '#/channels/uz.railtech.crm.lead.stage_changed.v1/messages/uz.railtech.crm.lead.stage_changed.v1'
+    bindings:
+      $ref: '#/components/operationBindings/delivery'
+  publish.uz.railtech.crm.lead.erased.v1:
+    action: send
+    summary: rt://crm публикует uz.railtech.crm.lead.erased.v1
+    channel:
+      $ref: '#/channels/uz.railtech.crm.lead.erased.v1'
+    messages:
+      - $ref: '#/channels/uz.railtech.crm.lead.erased.v1/messages/uz.railtech.crm.lead.erased.v1'
+    bindings:
+      $ref: '#/components/operationBindings/delivery'
+  publish.uz.railtech.crm.lead.merged.v1:
+    action: send
+    summary: rt://crm публикует uz.railtech.crm.lead.merged.v1
+    channel:
+      $ref: '#/channels/uz.railtech.crm.lead.merged.v1'
+    messages:
+      - $ref: '#/channels/uz.railtech.crm.lead.merged.v1/messages/uz.railtech.crm.lead.merged.v1'
     bindings:
       $ref: '#/components/operationBindings/delivery'
   publish.uz.railtech.crm.lead.updated.v1:
@@ -761,6 +791,56 @@ components:
                   const: rt://contracts/events/crm/lead.stage_changed/v1
                 data:
                   $ref: './crm/lead.stage_changed.v1.json'
+    uz.railtech.crm.lead.erased.v1:
+      name: uz.railtech.crm.lead.erased.v1
+      title: Лид обезличен
+      contentType: application/cloudevents+json
+      correlationId:
+        location: '$message.payload#/correlationid'
+      headers:
+        $ref: '#/components/schemas/DeliveryHeaders'
+      bindings:
+        $ref: '#/components/messageBindings/delivery'
+      payload:
+        schemaFormat: application/schema+json;version=draft-07
+        schema:
+          allOf:
+            - $ref: './envelope.v1.json'
+            - type: object
+              properties:
+                source:
+                  const: rt://crm
+                type:
+                  const: uz.railtech.crm.lead.erased.v1
+                dataschema:
+                  const: rt://contracts/events/crm/lead.erased/v1
+                data:
+                  $ref: './crm/lead.erased.v1.json'
+    uz.railtech.crm.lead.merged.v1:
+      name: uz.railtech.crm.lead.merged.v1
+      title: Лиды склеены
+      contentType: application/cloudevents+json
+      correlationId:
+        location: '$message.payload#/correlationid'
+      headers:
+        $ref: '#/components/schemas/DeliveryHeaders'
+      bindings:
+        $ref: '#/components/messageBindings/delivery'
+      payload:
+        schemaFormat: application/schema+json;version=draft-07
+        schema:
+          allOf:
+            - $ref: './envelope.v1.json'
+            - type: object
+              properties:
+                source:
+                  const: rt://crm
+                type:
+                  const: uz.railtech.crm.lead.merged.v1
+                dataschema:
+                  const: rt://contracts/events/crm/lead.merged/v1
+                data:
+                  $ref: './crm/lead.merged.v1.json'
     uz.railtech.crm.lead.updated.v1:
       name: uz.railtech.crm.lead.updated.v1
       title: Лид изменён

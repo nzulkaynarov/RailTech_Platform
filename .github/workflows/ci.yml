@@ -60,6 +60,7 @@ jobs:
             crm:
               - 'apps/crm/**'
               - 'packages/contracts/**'
+              - 'packages/rt-bus/**'
               - 'packages/ui-tokens/**'
             erp:
               - 'apps/erp/**'
@@ -270,15 +271,21 @@ jobs:
           - name: backend
             context: apps/crm/backend
             target: prod
+            # Шина событий rt_bus (L14): пакет и контракт — именованные контексты Dockerfile.
+            contexts: |
+              rtbus=packages/rt-bus
+              contracts=packages/contracts
           - name: frontend
             context: apps/crm/frontend
             target: prod
+            contexts: ""
     steps:
       - uses: actions/checkout@v7
       - uses: docker/setup-buildx-action@v4
       - uses: docker/build-push-action@v7
         with:
           context: ${{ matrix.context }}
+          build-contexts: ${{ matrix.contexts }}
           target: ${{ matrix.target }}
           push: false
           tags: rt-platform-crm-${{ matrix.name }}:ci
@@ -387,7 +394,7 @@ jobs:
       - name: pip-audit (backend, prod-зависимости)
         working-directory: apps/crm/backend
         run: |
-          uv export --frozen --no-dev --no-emit-project --format requirements-txt -o /tmp/requirements.txt
+          uv export --frozen --no-dev --no-emit-project --no-emit-local --format requirements-txt -o /tmp/requirements.txt
           uvx pip-audit@2.10.1 -r /tmp/requirements.txt --no-deps --disable-pip --progress-spinner off
       - name: pnpm audit (frontend, prod, high+)
         working-directory: apps/crm/frontend

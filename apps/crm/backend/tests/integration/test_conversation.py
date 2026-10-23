@@ -6,7 +6,7 @@ from dataclasses import dataclass, field
 
 import pytest
 from pydantic import AnyHttpUrl
-from sqlalchemy import func, select
+from sqlalchemy import func, select, text
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.agents.dialog.graph import DialogAgent
@@ -259,6 +259,20 @@ async def test_delete_erases_messages_and_unlinks_identity(stack: Stack) -> None
     lead = await lead_row(stack.sessions)
     assert lead.erased_at is not None
     assert lead.display_name == ""
+    # Подписчикам — событие без данных: только идентификаторы, подписчики стирают свои копии ПДн.
+    async with stack.sessions() as session:
+        erased = (
+            await session.execute(
+                text(
+                    "SELECT subject, envelope->'data' FROM rt_bus_outbox "
+                    "WHERE type = 'uz.railtech.crm.lead.erased.v1'"
+                )
+            )
+        ).one()
+    assert erased[0] == f"lead/{lead.id}"
+    assert set(erased[1]) == {"crm_lead_id", "crm_client_id", "erased_at", "actor"}
+    assert (erased[1]["crm_lead_id"], erased[1]["crm_client_id"]) == (lead.id, None)
+    assert erased[1]["actor"] == {"type": "bot"}
     async with stack.sessions() as session:
         texts = set((await session.scalars(select(Message.text))).all())
     assert texts == {ERASED_TEXT}

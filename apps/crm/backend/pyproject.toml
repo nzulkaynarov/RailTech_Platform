@@ -26,6 +26,8 @@ dependencies = [
     "pydantic-settings>=2.15.0",
     "pyjwt>=2.15.1",
     "pyyaml>=6.0.3",
+    "rt-bus[fastapi,sqlalchemy]",
+    "rt-contracts",
     "sqlalchemy[asyncio]>=2.1.4",
     "structlog>=26.1.0",
     "uvicorn[standard]>=0.54.0",
@@ -116,3 +118,7 @@ override-dependencies = ["pillow>=13.0.0"]
 # процессор «QEMU Virtual CPU» только с базовым x86-64 — прод-CPU без x86-64-v2, docs/runbooks/servers.md.
 # numpy приходит транзитивно (docling-core -> pandas). Снять после смены хостера или CPU-модели ВМ.
 constraint-dependencies = ["numpy<2.4"]
+
+[tool.uv.sources]
+rt-bus = { path = "../../../packages/rt-bus", editable = true }
+rt-contracts = { path = "../../../packages/contracts/generated/python", editable = true }

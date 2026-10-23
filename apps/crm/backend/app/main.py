@@ -7,6 +7,7 @@ import httpx
 import structlog
 from asgi_correlation_id import CorrelationIdMiddleware
 from fastapi import FastAPI
+from rt_bus.fastapi import bus_router
 
 from app import db
 from app.api import errors, health
@@ -37,10 +38,11 @@ from app.api.v1 import (
     users,
 )
 from app.api.v1 import settings as settings_api
+from app.bus import runtime as bus_runtime
 from app.config import Settings, get_settings
 from app.container import Container
 from app.integrations import litellm, s3
-from app.log import configure_logging, is_valid_request_id
+from app.log import BusCorrelationMiddleware, configure_logging, is_valid_request_id
 from app.schemas.errors import ErrorOut
 from app.services.readiness import ReadinessService
 from app.tasks.lifespan import queue_lifespan
@@ -68,6 +70,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         ):
             # Бота в этом процессе нет: Telegram принимает `crm-bot` (`python -m app bot`, S0-4).
             app.state.container = container
+            bus_runtime.install(container)
             await _issue_setup_code(container)
             app.state.engine = engine
             app.state.http = http
@@ -83,6 +86,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             broker = getattr(app.state, "broker", None)
             if broker is not None:
                 await broker.stop()
+        bus_runtime.install(None)
         await container.aclose()
 
     app = FastAPI(
@@ -94,6 +98,9 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         # Ошибки — единый формат `ErrorOut` (app/api/errors.py) вместо HTTPValidationError.
         responses={422: {"model": ErrorOut, "description": "Ошибка валидации"}},
     )
+    # Порядок: добавленный раньше — глубже. Корреляция шины читает id, который ставит
+    # `CorrelationIdMiddleware`, поэтому лежит под ним.
+    app.add_middleware(BusCorrelationMiddleware)
     app.add_middleware(
         CorrelationIdMiddleware, header_name="X-Request-ID", validator=is_valid_request_id
     )
@@ -101,6 +108,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         # Только форма «Запрос» со страницы входа Cabinet; остальной API — same-origin (M3-CRM-05).
         app.add_middleware(WebLeadCorsMiddleware, origins=settings.cabinet_origins)
     app.include_router(health.router)
+    # Приёмник шины rt_bus (CONTRACTS §9): только внутренняя сеть, Caddy `/bus/*` не публикует.
+    app.include_router(bus_router(lambda: app.state.container.bus))
     errors.install(app)
     routers = (
         auth,

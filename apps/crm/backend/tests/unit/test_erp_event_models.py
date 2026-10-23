@@ -1,191 +1,195 @@
-"""Дискриминированные модели событий ERP → CRM против контракта (FIX-35, I-15, G-5).
+"""События ERP → CRM против контракта rt_bus: модели `rt_contracts`, схемы, подписки (B4, G-5).
 
-Источник правды — `packages/contracts/events.schema.json` и примеры `examples/events` (по одному
-на каждое из 22 событий; те же примеры — фикстуры тестов ERP). Проверяется, что CRM:
+Источник правды — `packages/contracts/events/` и примеры полного конверта рядом (по одному на каждый
+из 22 типов ERP; те же файлы — фикстуры ERP и самой шины). Ручной копии схем в CRM нет. Проверяется:
 
-* знает ровно те типы событий, что описаны в схеме, и разбирает каждый пример в модель нужного
-  класса с типизированным `payload` (класс тела называется как `$defs`-схема контракта);
-* требует `deal` там, где его требует схема, и поля тела, которые схема объявляет обязательными;
-* терпимо читает: лишние поля в конверте, в `deal`, в `actor` и в теле игнорирует;
-* не принимает чужие значения перечислений и форматов (стадия, сумма, валюта, статус строки).
+* CRM подписана ровно на те типы ERP, что описаны в контракте (кроме кода акцепта — он inline);
+* каждый пример разбирается в модель нужного типа, имя события и время берутся из конверта;
+* приёмник проверяет `data` терпимо: лишнее поле — не отказ, чужие значения перечислений и форматов,
+  потерянные обязательные поля — отказ (422), на уровне схем библиотеки;
+* код акцепта: маска в хранимом конверте, секретное поле объявлено, пример — не настоящий код.
 """
 
 from typing import Any
 
 import pytest
-from pydantic import BaseModel, ValidationError
+from pydantic import ValidationError
+from rt_bus import Event, SchemaRegistry
+from rt_bus.handlers import default_registry
+from rt_bus.masking import DEFAULT_SECRET_FIELDS
+from rt_contracts.events import TYPES
+from rt_contracts.events.erp import QuoteSentV1
 
-from app.schemas.erp_events import (
-    CODE_EVENT,
-    KNOWN_EVENTS,
-    REDACTED,
-    DealRef,
-    DeliveryLineDecision,
-    ErpEventEnvelope,
-    QuoteAcceptanceCodeRequested,
-    QuoteOutcome,
-    is_known_event,
-    parse_event,
-    redact_secrets,
-)
-from tests.seam_events import (
-    deal_required,
-    event_types,
-    example_event,
-    example_files,
-    payload_def_name,
-    required_payload_fields,
-)
+from app.bus import handlers  # noqa: F401 — регистрирует обработчики
+from app.bus.erp_event import CODE_TYPE, erp_types, parse_erp_event, plain
+from tests.bus_events import event_types, example_envelope, example_types
 
-ALL_EVENTS = event_types()
+ALL_TYPES = event_types("erp")
+REGISTRY = SchemaRegistry()
 
 
-def test_known_events_are_exactly_the_events_of_the_contract() -> None:
-    assert set(KNOWN_EVENTS) == set(ALL_EVENTS)
-    assert len(ALL_EVENTS) == 22
-    assert set(example_files()) == set(ALL_EVENTS), "на каждое событие контракта — один пример"
-    assert not is_known_event("warehouse.exploded")
-    assert not is_known_event(None)
+def event_of(event_type: str, **changes: Any) -> Event:
+    return Event.from_dict({**example_envelope(event_type), **changes})
 
 
-@pytest.mark.parametrize("event", ALL_EVENTS)
-def test_every_example_is_parsed_into_its_own_typed_envelope(event: str) -> None:
-    envelope = parse_event(example_event(event))
-    assert isinstance(envelope, ErpEventEnvelope)
-    assert envelope.event == event
-    assert isinstance(envelope.payload, BaseModel)
-    assert type(envelope.payload).__name__ == payload_def_name(event), (
-        "класс тела события называется как схема контракта"
-    )
-    assert (envelope.deal is not None) == ("deal" in example_event(event))
+def test_the_contract_has_twenty_two_erp_types_with_one_example_each() -> None:
+    assert len(ALL_TYPES) == 22
+    assert set(example_types("erp")) == set(ALL_TYPES), "на каждое событие контракта — один пример"
 
 
-@pytest.mark.parametrize("event", ALL_EVENTS)
-def test_deal_is_required_exactly_where_the_schema_requires_it(event: str) -> None:
-    body = example_event(event)
-    body.pop("deal", None)
-    if deal_required(event):
-        with pytest.raises(ValidationError):
-            parse_event(body)
-    else:
-        assert parse_event(body).deal is None
+def test_the_crm_listens_to_exactly_the_erp_events_of_the_contract_except_the_code() -> None:
+    assert set(erp_types()) == set(ALL_TYPES) - {CODE_TYPE}
+    assert len(erp_types()) == 21
+    for event_type in ALL_TYPES:
+        matched = default_registry.match(event_type)
+        assert len(matched) == 1, event_type
+        assert matched[0].inline is (event_type == CODE_TYPE)
 
 
-@pytest.mark.parametrize(
-    ("event", "field"),
-    [(event, field) for event in ALL_EVENTS for field in required_payload_fields(event)],
-)
-def test_required_payload_fields_of_the_schema_are_required(event: str, field: str) -> None:
-    body = example_event(event)
-    body["payload"].pop(field)
-    with pytest.raises(ValidationError):
-        parse_event(body)
+def test_handlers_do_not_listen_to_other_domains_or_future_versions() -> None:
+    assert default_registry.match("uz.railtech.crm.client.updated.v1") == []
+    assert default_registry.match("uz.railtech.erp.quote.sent.v2") == []
+    assert default_registry.match("uz.railtech.erp.warehouse.exploded.v1") == []
 
 
-@pytest.mark.parametrize(
-    "field", ["version", "occurred_at", "erp_company_id", "crm_client_id", "actor"]
-)
-def test_required_envelope_fields_are_required(field: str) -> None:
-    body = example_event("quote.sent")
-    body.pop(field)
-    with pytest.raises(ValidationError):
-        parse_event(body)
+@pytest.mark.parametrize("event_type", ALL_TYPES)
+def test_every_example_is_parsed_into_its_own_model(event_type: str) -> None:
+    env = parse_erp_event(event_of(event_type))
+    assert isinstance(env.data, TYPES[event_type])
+    assert event_type.endswith(f".{env.event}.v1")
+    assert env.occurred_at.tzinfo is not None
+    assert env.crm_client_id == example_envelope(event_type)["data"]["crm_client_id"]
+    assert (env.deal is not None) == ("deal" in example_envelope(event_type)["data"])
 
 
-@pytest.mark.parametrize("event", ALL_EVENTS)
-def test_new_fields_are_ignored_everywhere(event: str) -> None:
+@pytest.mark.parametrize("event_type", ALL_TYPES)
+def test_every_example_passes_the_schema_the_way_the_receiver_checks_it(event_type: str) -> None:
+    data = example_envelope(event_type)["data"]
+    assert REGISTRY.validate_data(event_type, data, tolerant=False) == []
+    assert REGISTRY.validate_data(event_type, data, tolerant=True) == []
+
+
+@pytest.mark.parametrize("event_type", ALL_TYPES)
+def test_new_fields_are_ignored_everywhere(event_type: str) -> None:
     """Терпимый читатель: поле, которого CRM не знает, не даёт отказа и не попадает в модель."""
-    body = example_event(event)
-    body["brand_new_field"] = {"nested": 1}
-    body["actor"]["brand_new_field"] = 1
-    body["payload"]["brand_new_field"] = [1, 2]
-    if "deal" in body:
-        body["deal"]["brand_new_field"] = "x"
-    envelope = parse_event(body)
-    assert not hasattr(envelope, "brand_new_field")
-    assert "brand_new_field" not in envelope.payload.model_dump()
-    assert envelope.event == event
+    envelope = example_envelope(event_type)
+    data = envelope["data"]
+    data["brand_new_field"] = {"nested": 1}
+    data["actor"]["brand_new_field"] = 1
+    data["payload"]["brand_new_field"] = [1, 2]
+    if "deal" in data:
+        data["deal"]["brand_new_field"] = "x"
+    assert REGISTRY.validate_data(event_type, data, tolerant=True) == []
+    assert REGISTRY.validate_data(event_type, data, tolerant=False), "отправитель строгий"
+    env = parse_erp_event(Event.from_dict(envelope))
+    assert "brand_new_field" not in env.payload.model_dump()
 
 
-def test_unknown_event_is_not_parsed_by_the_discriminated_union() -> None:
-    body = example_event("quote.sent")
-    body["event"] = "warehouse.exploded"
-    with pytest.raises(
-        ValidationError, match=r"union_tag_invalid|does not match any of the expected tags"
-    ):
-        parse_event(body)
+def test_a_type_of_another_domain_or_version_is_not_an_erp_event() -> None:
+    with pytest.raises(ValueError, match="not an ERP event type"):
+        parse_erp_event(
+            event_of("uz.railtech.erp.quote.sent.v1", type="uz.railtech.erp.quote.sent.v2")
+        )
+    crm_event = Event.from_dict(example_envelope("uz.railtech.crm.client.updated.v1"))
+    with pytest.raises(ValueError, match="not an ERP event type"):
+        parse_erp_event(crm_event)
 
 
-def test_version_other_than_one_is_refused() -> None:
-    body = example_event("quote.sent")
-    body["version"] = 2
+def test_a_body_that_does_not_fit_the_model_is_refused_by_the_parser() -> None:
+    envelope = example_envelope("uz.railtech.erp.quote.sent.v1")
+    del envelope["data"]["payload"]["erp_quote_id"]
     with pytest.raises(ValidationError):
-        parse_event(body)
+        parse_erp_event(Event.from_dict(envelope))
+
+
+@pytest.mark.parametrize("field", ["erp_company_id", "crm_client_id", "actor", "payload", "deal"])
+def test_required_fields_of_the_envelope_data_are_required(field: str) -> None:
+    data = example_envelope("uz.railtech.erp.invoice.issued.v1")["data"]
+    data.pop(field)
+    assert REGISTRY.validate_data("uz.railtech.erp.invoice.issued.v1", data, tolerant=True)
+
+
+def test_deal_is_optional_exactly_where_the_schema_says_so() -> None:
+    for event_type in ("uz.railtech.erp.document.created.v1", "uz.railtech.erp.invite.sent.v1"):
+        data = example_envelope(event_type)["data"]
+        data.pop("deal", None)
+        assert REGISTRY.validate_data(event_type, data, tolerant=True) == []
+        assert parse_erp_event(event_of(event_type, data=data)).deal is None
 
 
 @pytest.mark.parametrize(
-    ("event", "mutate"),
+    ("event_type", "mutate"),
     [
-        ("invoice.issued", lambda b: b["deal"].update(stage="CLOSED_WON")),
-        ("invoice.issued", lambda b: b["deal"].update(amount="125000000")),
-        ("invoice.issued", lambda b: b["deal"].update(currency="uzs")),
-        ("invoice.issued", lambda b: b["payload"].update(amount="62500000")),
-        ("invoice.issued", lambda b: b["payload"].update(due_date="24.10.2026")),
-        ("quote.sent", lambda b: b["payload"].update(version=0)),
-        ("contract.signed", lambda b: b["payload"].update(by="nobody")),
-        ("delivery.status_changed", lambda b: b["payload"].update(status="lost")),
-        ("invite.sent", lambda b: b["payload"].update(channels=[])),
-        ("invite.sent", lambda b: b["payload"].update(channels=["sms"])),
-        ("document.created", lambda b: b["payload"].update(kind="photo")),
-        ("deal.stage_changed", lambda b: b["payload"].update(to="nowhere")),
-        ("request.created", lambda b: b["payload"].update(source="fax")),
-        ("quote.viewed", lambda b: b.update(occurred_at="not a date")),
-        ("quote.viewed", lambda b: b["actor"].update(type="robot")),
+        ("invoice.issued", lambda d: d["deal"].update(stage="CLOSED_WON")),
+        ("invoice.issued", lambda d: d["deal"].update(amount="125000000")),
+        ("invoice.issued", lambda d: d["deal"].update(currency="uzs")),
+        ("invoice.issued", lambda d: d["payload"].update(amount="62500000")),
+        ("invoice.issued", lambda d: d["payload"].update(due_date="24.10.2026")),
+        ("quote.sent", lambda d: d["payload"].update(version=0)),
+        ("contract.signed", lambda d: d["payload"].update(by="nobody")),
+        ("delivery.status_changed", lambda d: d["payload"].update(status="lost")),
+        ("invite.sent", lambda d: d["payload"].update(channels=[])),
+        ("invite.sent", lambda d: d["payload"].update(channels=["sms"])),
+        ("document.created", lambda d: d["payload"].update(kind="photo")),
+        ("deal.stage_changed", lambda d: d["payload"].update(to="nowhere")),
+        ("request.created", lambda d: d["payload"].update(source="fax")),
+        ("quote.viewed", lambda d: d["actor"].update(type="robot")),
     ],
 )
-def test_values_outside_the_contract_are_refused(event: str, mutate: Any) -> None:
-    body = example_event(event)
-    mutate(body)
-    with pytest.raises(ValidationError):
-        parse_event(body)
+def test_values_outside_the_contract_are_refused_by_the_receiver_schema(
+    event_type: str, mutate: Any
+) -> None:
+    full = f"uz.railtech.erp.{event_type}.v1"
+    data = example_envelope(full)["data"]
+    mutate(data)
+    assert REGISTRY.validate_data(full, data, tolerant=True), "422 у приёмника"
 
 
 def test_deal_ref_amount_may_be_null() -> None:
     """FIX-29: сумма сделки — `null`, пока КП клиенту не отправлялось."""
-    body = example_event("request.created")
-    body["deal"]["amount"] = None
-    envelope = parse_event(body)
-    assert isinstance(envelope.deal, DealRef)
-    assert envelope.deal.amount is None
+    data = example_envelope("uz.railtech.erp.request.created.v1")["data"]
+    data["deal"]["amount"] = None
+    assert REGISTRY.validate_data("uz.railtech.erp.request.created.v1", data, tolerant=True) == []
+    env = parse_erp_event(event_of("uz.railtech.erp.request.created.v1", data=data))
+    assert env.deal is not None
+    assert env.deal.amount is None
 
 
 def test_stage_changed_keeps_the_from_alias_in_a_round_trip() -> None:
-    body = example_event("deal.stage_changed")
-    envelope = parse_event(body)
-    dumped = envelope.payload.model_dump(mode="json", by_alias=True)
-    assert dumped["from"] == body["payload"]["from"]
-    assert dumped["to"] == body["payload"]["to"]
+    envelope = example_envelope("uz.railtech.erp.deal.stage_changed.v1")
+    env = parse_erp_event(Event.from_dict(envelope))
+    dumped = env.payload.model_dump(mode="json", by_alias=True)
+    assert dumped["from"] == envelope["data"]["payload"]["from"]
+    assert dumped["to"] == envelope["data"]["payload"]["to"]
 
 
-# ── Приёмка и замечание по строке поставки: правила тела и конверта ─────────────────────
+def test_plain_unwraps_amounts_and_enums() -> None:
+    env = parse_erp_event(event_of("uz.railtech.erp.quote.sent.v1"))
+    assert isinstance(env.data, QuoteSentV1)
+    assert env.deal is not None
+    assert plain(env.deal.amount) == "125000000.00"
+    assert plain(env.deal.stage) == "quote_sent"
+    assert plain("x") == "x"
+
+
+# ── Приёмка и замечание по строке поставки: правила тела ────────────────────────────────────────
 
 
 def test_line_decision_rules() -> None:
-    accepted = example_event("delivery.line_accepted")
-    disputed = example_event("delivery.line_disputed")
-    assert isinstance(parse_event(accepted).payload, DeliveryLineDecision)
+    accepted = "uz.railtech.erp.delivery.line_accepted.v1"
+    disputed = "uz.railtech.erp.delivery.line_disputed.v1"
 
-    with pytest.raises(ValidationError, match=r"actor\.type=client"):
-        parse_event({**accepted, "actor": {"type": "staff"}})
-    with pytest.raises(ValidationError, match="does not match payload status"):
-        parse_event({**accepted, "event": "delivery.line_disputed"})
-    with pytest.raises(ValidationError, match="remark is required"):
-        parse_event({**disputed, "payload": {**disputed["payload"], "remark": "  "}})
-    with pytest.raises(ValidationError):
-        parse_event({**disputed, "payload": {**disputed["payload"], "remark": "я" * 2001}})
-    without_deal = {k: v for k, v in accepted.items() if k != "deal"}
-    with pytest.raises(ValidationError):
-        parse_event(without_deal)
+    data = example_envelope(disputed)["data"]
+    data["payload"]["remark"] = "я" * 2001
+    assert REGISTRY.validate_data(disputed, data, tolerant=True), "замечание длиннее 2000"
+
+    data = example_envelope(accepted)["data"]
+    data.pop("deal")
+    assert REGISTRY.validate_data(accepted, data, tolerant=True), "сделка обязательна"
+
+    data = example_envelope(accepted)["data"]
+    data["actor"] = {"type": "staff", "name": "М"}
+    assert REGISTRY.validate_data(accepted, data, tolerant=True), "решает клиент"
 
 
 # ── Шов 0.3.0 (FIX-60): код акцепта и контакт в исходах КП ───────────────────────────────────
@@ -193,53 +197,25 @@ def test_line_decision_rules() -> None:
 
 @pytest.mark.parametrize("code", ["12", "1234567890123", "12a456", "", " 123456", "١٢٣٤٥٦"])
 def test_acceptance_code_must_be_four_to_twelve_ascii_digits(code: str) -> None:
-    body = example_event(CODE_EVENT)
-    body["payload"]["code"] = code
-    with pytest.raises(ValidationError):
-        parse_event(body)
+    data = example_envelope(CODE_TYPE)["data"]
+    data["payload"]["code"] = code
+    assert REGISTRY.validate_data(CODE_TYPE, data, tolerant=True)
 
 
-def test_acceptance_code_is_a_secret_in_repr_and_dumps() -> None:
-    body = example_event(CODE_EVENT)
-    body["payload"]["code"] = "482913"
-    envelope = parse_event(body)
-    assert isinstance(envelope.payload, QuoteAcceptanceCodeRequested)
-    assert envelope.payload.code.get_secret_value() == "482913"
-    for rendered in (
-        repr(envelope),
-        str(envelope.payload),
-        envelope.model_dump_json(),
-        str(envelope.payload.model_dump(mode="json")),
-    ):
-        assert "482913" not in rendered
+def test_the_code_field_is_declared_secret_for_the_bus() -> None:
+    assert DEFAULT_SECRET_FIELDS[CODE_TYPE] == ("payload.code",)
 
 
-def test_redact_secrets_hides_only_the_code_and_leaves_the_original_untouched() -> None:
-    body = example_event(CODE_EVENT)
-    body["payload"]["code"] = "482913"
-    redacted = redact_secrets(body)
-    assert redacted["payload"]["code"] == REDACTED
-    assert {k: v for k, v in redacted["payload"].items() if k != "code"} == {
-        k: v for k, v in body["payload"].items() if k != "code"
-    }
-    assert body["payload"]["code"] == "482913", "исходное тело не меняется — по нему идёт доставка"
-    # тип события по заголовку тоже считается: тело с расхождением не уносит код в журнал
-    mismatched = {**body, "event": "quote.sent"}
-    assert redact_secrets(mismatched, CODE_EVENT)["payload"]["code"] == REDACTED
-    other = example_event("quote.sent")
-    assert redact_secrets(other) is other
+def test_the_example_of_the_contract_carries_a_code_that_is_not_a_real_one() -> None:
+    assert example_envelope(CODE_TYPE)["data"]["payload"]["code"] == "000000"
 
 
 def test_outcome_contacts_are_optional_and_unknown_ids_do_not_matter() -> None:
     """`erp_contact_id`/`crm_contact_id` необязательны: действие не из Cabinet их не несёт."""
-    body = example_event("quote.accepted")
-    assert isinstance(parse_event(body).payload, QuoteOutcome)
+    event_type = "uz.railtech.erp.quote.accepted.v1"
+    data = example_envelope(event_type)["data"]
     for field in ("erp_contact_id", "crm_contact_id"):
-        body["payload"].pop(field, None)
-    payload = parse_event(body).payload
-    assert isinstance(payload, QuoteOutcome)
+        data["payload"].pop(field, None)
+    assert REGISTRY.validate_data(event_type, data, tolerant=True) == []
+    payload = parse_erp_event(event_of(event_type, data=data)).payload
     assert (payload.erp_contact_id, payload.crm_contact_id) == (None, None)
-    body["payload"]["crm_contact_id"] = None
-    nulled = parse_event(body).payload
-    assert isinstance(nulled, QuoteOutcome)
-    assert nulled.crm_contact_id is None

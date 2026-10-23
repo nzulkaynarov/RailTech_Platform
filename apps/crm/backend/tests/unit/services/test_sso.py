@@ -150,6 +150,18 @@ class FakeAsyncSession:
         return FakeResult(None)
 
 
+@pytest.fixture(autouse=True)
+def published(monkeypatch: pytest.MonkeyPatch) -> list[tuple[int, list[str]]]:
+    """События сотрудника, которые сервис отправил бы на шину (сессии здесь подставные, без БД)."""
+    sent: list[tuple[int, list[str]]] = []
+
+    async def fake_user_updated(_: Any, user: User, __: Any, changed: Any = ()) -> None:
+        sent.append((user.id, list(changed)))
+
+    monkeypatch.setattr("app.services.sso.bus_events.user_updated", fake_user_updated)
+    return sent
+
+
 class FakeResult:
     def __init__(self, value: Any) -> None:
         self._value = value
@@ -281,7 +293,9 @@ def test_sso_is_disabled_by_default() -> None:
 
 
 @pytest.mark.asyncio
-async def test_exchange_sso_token_success(sso_settings: Settings) -> None:
+async def test_exchange_sso_token_success(
+    sso_settings: Settings, published: list[tuple[int, list[str]]]
+) -> None:
     user = User(
         id=42,
         email="manager@railtech.uz",
@@ -313,6 +327,8 @@ async def test_exchange_sso_token_success(sso_settings: Settings) -> None:
     assert session.user_id == 42
     assert user.full_name == "Менеджер Обновлённый"
     assert unique_jti in replay_set
+    # Смена имени при входе — изменение сотрудника: идентичность в CRM, шина сообщает остальным.
+    assert published == [(42, ["full_name"])]
 
 
 @pytest.mark.asyncio
