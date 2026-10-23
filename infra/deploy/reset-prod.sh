@@ -355,6 +355,8 @@ log "0. ключи S3 на сервис (S0-9): make-env-prod.sh s3-keys доп�
 s3_vps2_before="$(env_get S3_WAL_SECRET_KEY || true)/$(env_get S3_BACKUP_SECRET_KEY || true)"
 "$rel/infra/deploy/make-env-prod.sh" s3-keys "$RT_ENV_FILE" >&2
 s3_vps2_after="$(env_get S3_WAL_SECRET_KEY || true)/$(env_get S3_BACKUP_SECRET_KEY || true)"
+# Напоминание про VPS 2 запоминается в состоянии сброса: повторный запуск после сбоя его не теряет (в archive уходит вместе с run).
+[[ "$s3_vps2_before" == "$s3_vps2_after" ]] || rs_set s3_vps2 1
 log "0. проверки до разрушения (конфигурация, pull образов, CPU-база образов)"
 compose "$rel" config -q
 compose "$rel" pull
@@ -381,6 +383,7 @@ fi
 log "6. deploy.sh $tag: миграции на пустые базы, up, smoke"
 "$rel/infra/deploy/deploy.sh" "$tag" || die "deploy.sh не прошёл: данные уже сброшены. Чините причину (docker compose logs, smoke) и либо запустите reset-prod.sh снова (пропустит шаги 1–5, 24 ч), либо $rel/infra/deploy/deploy.sh $tag"
 
+s3_vps2_notice="$(rs_get s3_vps2)"
 archive="$reset_dir/done-$(date -u +%Y%m%dT%H%M%SZ)"
 mv "$run_file" "$archive"
 log "сброс завершён (запись: $archive; дамп до сброса: $(grep -E '^dump=' "$archive" | cut -d= -f2-))"
@@ -396,7 +399,7 @@ cat >&2 <<EOF
      Платформа: Admin → Подключения  →  бот Telegram; ERP — кнопка «Подключить ERP» (адрес http://erp-backend:8000, без кода)
      затем роли пользователей. Полный порядок и проверки — docs/runbooks/deploy.md, «Сброс прода и первый запуск».
 EOF
-if [[ "$s3_vps2_before" != "$s3_vps2_after" ]]; then
+if [[ -n "$s3_vps2_notice" ]]; then
   cat >&2 <<REMIND
 
 8. Ключи S3 для VPS 2 созданы заново (S0-9): WAL-G и бэкап ходят в RustFS своими ключами. Пока их нет на VPS 2, архив WAL и дампы в бакеты не уходят

@@ -234,6 +234,7 @@ rm "$tmp/deploy-fails"; : > "$LOG"
 SSH_TARGET=root@vps2.example.org run_reset <<<"$domain" || fail "повторный запуск после сбоя деплоя упал"
 assert_absent "predeploy-dump.sh"; assert_absent "ssh "; assert_absent "DROP DATABASE"; assert_absent "volume rm"; assert_absent "docker stop"
 assert_present "deploy.sh $tag"
+grep -q 'extract-s3' "$tmp/out" || fail "напоминание про ключи S3 VPS 2 потерялось при повторном запуске"
 [[ ! -f "$tmp/state/reset/run" ]] || fail "состояние не закрыто после успешного повтора"
 
 # ── 7. сбой ssh на VPS 2: ничего дальше не выполняется ────────────────────────────────────────────────────────────────

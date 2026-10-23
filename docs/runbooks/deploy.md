@@ -74,7 +74,7 @@ Docker публикует порты в обход `ufw`: compose поэтому
 infra/deploy/make-env-prod.sh init            # создаёт /opt/rt/.env.prod, секреты — случайные
 nano /opt/rt/.env.prod                         # впишите вручную: APP_INTERNAL_IP, DB_INTERNAL_IP, ACME_EMAIL,
                                                # домены, TELEGRAM_*, ANTHROPIC_API_KEY/GEMINI_API_KEY, SMTP_*, BACKUP_EXT_*
-infra/deploy/make-env-prod.sh extract-db > /tmp/env.db    # часть для VPS 2
+(umask 077; infra/deploy/make-env-prod.sh extract-db > /tmp/env.db)    # часть для VPS 2 (файл с секретами — только для владельца)
 scp /tmp/env.db deploy@<VPS 2>:/opt/rt-db/.env.db && shred -u /tmp/env.db
 infra/deploy/make-env-prod.sh drop-db-only    # убрать с VPS 1 то, что нужно только VPS 2 (суперпользователь, ключи бэкапа)
 ```
@@ -490,8 +490,9 @@ Smoke с раннера в задании `rollback` устроен так же:
 4. **VPS 2** (S0-3, ключи S3 — S0-9): дописать в `/opt/rt-db/.env.db` **только** настройки WAL и ключи S3 — слепой `extract-db > .env.db` перезаписал бы пароли баз VPS 2.
    Ключи берутся из `extract-s3` (ключи сервисов `wal` и `backup`, не корневой), остальное `WAL_*` — из `extract-db`; прежние строки этих переменных на VPS 2 заменяются:
    ```bash
-   # VPS 1, от deploy
-   { infra/deploy/make-env-prod.sh extract-db | grep -E '^WAL_' | grep -vE '^WAL_S3_(ACCESS|SECRET)_KEY='; infra/deploy/make-env-prod.sh extract-s3; } > /tmp/vps2.env
+   # VPS 1, от deploy (файл с секретами — только для владельца)
+   umask 077
+   { infra/deploy/make-env-prod.sh extract-db | grep -E '^(WAL_|BACKUP_RUSTFS_(ENDPOINT|BUCKET)=)' | grep -vE '^WAL_S3_(ACCESS|SECRET)_KEY='; infra/deploy/make-env-prod.sh extract-s3; } > /tmp/vps2.env
    scp /tmp/vps2.env deploy@<VPS 2>:/tmp/vps2.env && shred -u /tmp/vps2.env
    # VPS 2, от deploy: убрать прежние строки этих переменных, дописать новые, пароли баз не трогать
    ssh deploy@<VPS 2> 'f=/opt/rt-db/.env.db; t=$(mktemp); grep -vE "^($(cut -d= -f1 /tmp/vps2.env | paste -sd"|" -))=" "$f" > "$t"; cat /tmp/vps2.env >> "$t"; cat "$t" > "$f"; shred -u "$t" /tmp/vps2.env; chmod 600 "$f"'
@@ -556,7 +557,7 @@ ssh -t root@<VPS 2> /opt/rt-db/infra/deploy/reset-prod.sh db --drop crm,erp     
 1. Перед началом (владелец/архитектор): офлайн-копии `.env.prod`, `.env.db`, `BACKUP_ENC_PASSPHRASE`, `WAL_ENC_KEY`, `LITELLM_SALT_KEY`, токен бота (п. 7.1.1). Убедиться, что в `main` ничего не вливается.
 2. VPS 1: `infra/deploy/make-env-prod.sh init` (WAL_ENC_KEY и ключи S3 на сервис генерируются; прежний `S3_ACCESS_KEY` становится корневым) → сразу сохранить `WAL_ENC_KEY` офлайн → вписать `WAL_S3_ENDPOINT=http://<APP_INTERNAL_IP>:9000` (и `BACKUP_RUSTFS_ENDPOINT`, если там заглушка). `drop-db-only` пока не запускать (п. 7.1.2).
 3. Actions → Deploy → `ref` = `main`, `action` = `deploy` (создаёт бакет `wal` и ключи сервисов). Дождаться окончания; красный результат на миграциях старых данных допустим, если релиз `<sha>` лёг на VPS 1.
-4. VPS 2 (п. 7.1.4): `extract-db | grep ^WAL_` без `WAL_S3_*_KEY` + `extract-s3` → заменить такие же строки в `/opt/rt-db/.env.db` (не перезаписывать файл, пароли баз не трогать) → обновить `/opt/rt-db/infra` → `ssh root@<VPS 2> /opt/rt-db/infra/deploy/db-up.sh` → на VPS 1 `drop-db-only`.
+4. VPS 2 (п. 7.1.4): `extract-db | grep -E '^(WAL_|BACKUP_RUSTFS_(ENDPOINT|BUCKET)=)'` без `WAL_S3_*_KEY` + `extract-s3` → заменить такие же строки в `/opt/rt-db/.env.db` (не перезаписывать файл, пароли баз не трогать) → обновить `/opt/rt-db/infra` → `ssh root@<VPS 2> /opt/rt-db/infra/deploy/db-up.sh` → на VPS 1 `drop-db-only`.
 5. `ssh -t deploy@<VPS 1> /opt/rt/releases/<sha>/infra/deploy/reset-prod.sh <sha>` → ввод имени домена CRM (на шаге 0 скрипт сам вызовет `s3-keys`) → на шаге 3 в другом окне `ssh -t root@<VPS 2> /opt/rt-db/infra/deploy/reset-prod.sh db --drop crm,erp` (ввод `crm,erp`) → Enter в сеансе VPS 1.
 6. Код: `ssh deploy@<VPS 1> 'docker logs rt-platform-crm-api-1 2>&1 | grep setup_code_issued | tail -1'` → `https://<CRM_DOMAIN>/setup` → Платформа: Admin → Подключения (бот, «Подключить ERP») → роли → проверки п. 7.3.
 7. Данные для входа передать владельцу; затем гейт этапа 0 (`wave10-stage0.md` §3).
