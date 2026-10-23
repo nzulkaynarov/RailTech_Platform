@@ -29,6 +29,12 @@ echo "$s.sh \$*" >> "$LOG"
 exit 0
 EOF
 done
+cat > "$rel/infra/deploy/make-env-prod.sh" <<EOF
+#!/usr/bin/env bash
+echo "make-env-prod.sh \$*" >> "$LOG"
+# «генерация»: ключи сервисов wal и backup появляются, если их ещё нет (как у настоящего s3-keys)
+if ! grep -q '^S3_WAL_SECRET_KEY=' "\$2"; then printf 'S3_WAL_SECRET_KEY=w1\nS3_BACKUP_SECRET_KEY=b1\n' >> "\$2"; fi
+EOF
 cat > "$rel/infra/deploy/predeploy-dump.sh" <<EOF
 #!/usr/bin/env bash
 echo "predeploy-dump.sh \$*" >> "$LOG"
@@ -93,7 +99,7 @@ case "$1" in
     fi ;;
   logs) echo "ts setup_code_issued code=SECRET-CODE-1234" ;;
   compose)
-    if [[ "$args" == *" run "* ]]; then cat >/dev/null; fi   # скрипт Python со stdin
+    if [[ "$args" == *" run "* ]]; then cat >/dev/null; fi   # одноразовый контейнер (stdin не используется)
     if [[ "$args" == *" ps --format"* ]]; then echo healthy; fi
     if [[ "$args" == *" exec "* ]]; then
       if [[ "$args" == *pg_class* ]]; then echo 42; fi                                  # таблицы litellm
@@ -156,13 +162,14 @@ if : | run_reset; then fail "сброс прошёл при пустом вво�
 # ── 2. полный сценарий через ssh: порядок и неприкосновенное ──────────────────────────────────────────────────────────
 reset_fake
 SSH_TARGET=root@vps2.example.org run_reset <<<"$domain" || fail "сценарий с ssh упал"
+assert_before "make-env-prod.sh s3-keys" "docker compose .* pull"      # ключи S3 на сервис (S0-9) готовы до pull/config и до разрушения
 assert_before "docker compose .* pull" "docker stop"
 assert_before "cpu-baseline-check.sh" "docker stop"
 assert_before "docker stop" "predeploy-dump.sh pre-reset-$tag"
 assert_before "predeploy-dump.sh" "ssh -o BatchMode=yes root@vps2.example.org"
 assert_before "ssh -o BatchMode=yes root@vps2.example.org" "DROP DATABASE"
-assert_before "DROP DATABASE" "run --rm -T --no-deps crm-migrate python - erp-private"
-assert_before "run --rm -T --no-deps crm-migrate python - erp-private" "docker volume rm"
+assert_before "DROP DATABASE" "run --rm -T --no-deps --entrypoint sh s3-init -c"
+assert_before "run --rm -T --no-deps --entrypoint sh s3-init -c" "docker volume rm"
 assert_before "docker volume rm" "deploy.sh $tag"
 # останавливаются только приложения; rustfs, caddy, litellm — нет
 stop_line="$(grep -m1 '^docker stop' "$LOG")"
@@ -175,7 +182,9 @@ if grep 'DROP DATABASE' "$LOG" | grep -Eq 'litellm|langfuse'; then fail "DROP з
 assert_present "10-prod-init.sh"
 assert_before "DROP DATABASE" "10-prod-init.sh"
 # бакеты: ровно шесть приложений
-purge_line="$(grep -m1 'crm-migrate python -' "$LOG")"
+purge_line="$(awk '/entrypoint sh s3-init -c/ {on=1} on {print} on && /^. sh / {exit}' "$LOG" | tr '\n' ' ')"   # вызов многострочный: до строки с аргументами бакетов
+[[ "$purge_line" == *"S3_ROOT"* || "$purge_line" == *"rc alias set root"* ]] || fail "очистка бакетов не идёт корневым ключом через rc: $purge_line"
+[[ "$purge_line" == *"object remove --recursive --force"* ]] || fail "очистка бакетов не удаляет объекты рекурсивно: $purge_line"
 for b in erp-private erp-public erp-temp client-documents tg-attachments kb-sources; do [[ "$purge_line" == *" $b"* ]] || fail "бакет $b не очищается: $purge_line"; done
 for b in backups wal langfuse; do [[ "$purge_line" != *" $b"* ]] || fail "очищается бакет $b, который трогать нельзя: $purge_line"; done
 # тома: Redis снят, RustFS/Caddy/CRM-бэкапы целы
@@ -185,6 +194,9 @@ assert_absent "docker rm -f id-rustfs"; assert_absent "docker rm -f id-caddy"; a
 assert_present "docker rm -f id-oldredis"
 assert_absent "compose.* down"                       # down снял бы сети и тома проекта
 assert_absent "volume prune"; assert_absent "system prune"
+# ключи S3 созданы заново — напоминание про VPS 2 есть, значений ключей в выводе нет
+grep -q 'extract-s3' "$tmp/out" || fail "нет напоминания перенести ключи S3 на VPS 2"
+if grep -qE 'S3_(WAL|BACKUP)_SECRET_KEY=' "$tmp/out"; then fail "ключ S3 напечатан в вывод"; fi
 # код первого запуска: путь указан, значение не печатается
 grep -q 'grep setup_code_issued' "$tmp/out" || fail "не напечатано, где взять код первого запуска"
 if grep -q 'SECRET-CODE-1234' "$tmp/out"; then fail "код первого запуска напечатан в вывод скрипта"; fi
@@ -206,28 +218,30 @@ assert_absent "^ssh "
 reset_fake
 if printf '%s\n\n' "$domain" | run_reset; then fail "сценарий прошёл при непересозданных базах"; fi
 assert_absent "deploy.sh $tag"
-assert_absent "volume rm"; assert_absent "crm-migrate python -"
+assert_absent "volume rm"; assert_absent "entrypoint sh s3-init -c"
 grep -q 'не пусты' "$tmp/out" || fail "нет сообщения о непустых базах"
 
 # ── 5. нет дампа — нет разрушения ──────────────────────────────────────────────────────────────────────────────────────
 reset_fake; touch "$tmp/dump-fails"
 if SSH_TARGET=root@vps2.example.org run_reset <<<"$domain"; then fail "сценарий прошёл без дампа"; fi
-assert_absent "ssh "; assert_absent "DROP DATABASE"; assert_absent "volume rm"; assert_absent "crm-migrate python -"; assert_absent "deploy.sh"
+assert_absent "ssh "; assert_absent "DROP DATABASE"; assert_absent "volume rm"; assert_absent "entrypoint sh s3-init -c"; assert_absent "deploy.sh"
 
 # ── 6. сбой деплоя после сброса; повтор не снимает дамп и не сбрасывает данные заново ─────────────────────────────────
 reset_fake; touch "$tmp/deploy-fails"
+sed -i.bak "/^S3_/d" "$tmp/env" && rm -f "$tmp/env.bak"   # ключей S3 ещё нет: s3-keys создаст их в первом запуске
 if SSH_TARGET=root@vps2.example.org run_reset <<<"$domain"; then fail "сценарий прошёл при упавшем deploy.sh"; fi
 [[ -f "$tmp/state/reset/run" ]] || fail "состояние сброса не сохранено после сбоя"
 rm "$tmp/deploy-fails"; : > "$LOG"
 SSH_TARGET=root@vps2.example.org run_reset <<<"$domain" || fail "повторный запуск после сбоя деплоя упал"
 assert_absent "predeploy-dump.sh"; assert_absent "ssh "; assert_absent "DROP DATABASE"; assert_absent "volume rm"; assert_absent "docker stop"
 assert_present "deploy.sh $tag"
+grep -q 'extract-s3' "$tmp/out" || fail "напоминание про ключи S3 VPS 2 потерялось при повторном запуске"
 [[ ! -f "$tmp/state/reset/run" ]] || fail "состояние не закрыто после успешного повтора"
 
 # ── 7. сбой ssh на VPS 2: ничего дальше не выполняется ────────────────────────────────────────────────────────────────
 reset_fake; touch "$tmp/ssh-fails"
 if SSH_TARGET=root@vps2.example.org run_reset <<<"$domain"; then fail "сценарий прошёл при сбое ssh"; fi
-assert_absent "crm-migrate python -"; assert_absent "volume rm"; assert_absent "deploy.sh"
+assert_absent "entrypoint sh s3-init -c"; assert_absent "volume rm"; assert_absent "deploy.sh"
 # повтор после сбоя на середине (дамп уже есть) не снимает дамп второй раз и доходит до конца
 rm "$tmp/ssh-fails"; : > "$LOG"
 SSH_TARGET=root@vps2.example.org run_reset <<<"$domain" || fail "повтор после сбоя ssh упал"

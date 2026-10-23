@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { toast } from 'sonner';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
@@ -9,6 +10,8 @@ import {
 } from '@/hooks/useCatalog';
 import { ImageGalleryUpload } from '@/components/Shared/ImageGalleryUpload';
 import { FileUpload } from '@/components/Shared/FileUpload';
+import { translateApiError } from '@/lib/apiError';
+import { downloadFile } from '@/lib/download';
 
 /**
  * Медиа карточки товара.
@@ -37,11 +40,25 @@ export function ProductMediaSection({ productId }: { productId: number }) {
     // Подпись доезжает до <img alt>: без неё галерея отдавала скринридеру пустую строку.
     alt_text: img.alt_text,
   }));
+  // Загруженный файл приватный (S0-9): скачивается через аутентифицированный эндпоинт (`onDownload`), а не по `doc.file`.
+  // Документ-ссылка (`file_url`) открывается как внешний адрес.
   const docs = (product?.documents ?? []).map(doc => ({
     id: doc.id,
     name: doc.name,
-    url: doc.file ?? doc.file_url,
+    url: doc.file ? null : doc.file_url,
   }));
+  const downloadDoc = async (docId: string | number, name: string): Promise<void> => {
+    const doc = (product?.documents ?? []).find(item => item.id === Number(docId));
+    if (doc && !doc.file && doc.file_url) {
+      window.open(doc.file_url, '_blank', 'noopener,noreferrer');
+      return;
+    }
+    try {
+      await downloadFile(`catalog/products/${productId}/download-document/${docId}/`, name);
+    } catch (error) {
+      toast.error(translateApiError(error));
+    }
+  };
 
   return (
     <div className="space-y-4">
@@ -96,6 +113,7 @@ export function ProductMediaSection({ productId }: { productId: number }) {
           onRemove={async docId => {
             await deleteDoc.mutateAsync({ productId, docId: Number(docId) });
           }}
+          onDownload={downloadDoc}
           description={t('adminCatalog.media.documentsHelp')}
         />
       </div>

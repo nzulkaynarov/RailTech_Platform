@@ -21,7 +21,7 @@
 | Токен бота | @BotFather → `/revoke` → CRM «Подключения» → «Проверить и сохранить» (пароль админа); бот перезапускается без рестарта API. Без `SECRETS_KEY` — `TELEGRAM_BOT_TOKEN` в `.env` → `make up-prod` | старый токен перестаёт работать сразу |
 | `SECRETS_KEY` | `openssl rand -hex 32` → `.env` → `make up-prod`, затем заново ввести токен бота в «Подключениях» (старый шифртекст не расшифруется — до этого бот работает на `TELEGRAM_BOT_TOKEN` из `.env`, если он задан) | бот без токена из БД до повторного ввода |
 | `POSTGRES_PASSWORD` | ⚠️ `docker compose exec postgres psql -U $POSTGRES_USER -c "ALTER USER ... PASSWORD '...'"`, затем `.env`, `make up-prod` | минута простоя |
-| `S3_ACCESS_KEY/SECRET` | ⚠️ меняются вместе с данными RustFS: новый ключ в `.env`, `make up-prod`; проверить скачивание документа | минута простоя |
+| `S3_ACCESS_KEY/SECRET` | ⚠️ меняются вместе с данными RustFS: новый ключ в `.env`, `make up-prod`; проверить скачивание документа. В ансамбле (S0-9) у CRM свой ключ `S3_CRM_SECRET_KEY` (+ `S3_CRM_ACCESS_KEY`): поменять в `.env.prod` и задеплоить — `s3-init` обновит пользователя, CRM перезапустится деплоем; корневой ключ — `S3_ROOT_*` (docs/runbooks/deploy.md, «Ключи S3 на сервис») | минута простоя |
 | `DOCLING_API_KEY`, `LANGFUSE_*` | новое значение → `make up-prod` (Langfuse-ключи — создать в UI проекта) | без простоя |
 | GitHub `VPS_SSH_KEY` | новый ключ в `~deploy/.ssh/authorized_keys`, secret в GitHub, удалить старый | — |
 

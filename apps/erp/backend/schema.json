@@ -6860,6 +6860,57 @@
                 }
             }
         },
+        "/api/v1/catalog/products/{id}/download-document/{doc_id}/": {
+            "get": {
+                "operationId": "catalog_products_download_document_retrieve",
+                "description": "Technical document of a product (private bucket): streamed through this authenticated endpoint with the same visibility as the product card; `/media/products/<id>/docs/*` is not reachable.",
+                "summary": "Download product document",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "doc_id",
+                        "schema": {
+                            "type": "string",
+                            "pattern": "^[0-9]+$"
+                        },
+                        "required": true
+                    },
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "description": "A unique integer value identifying this Товар (PIM).",
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "Catalog"
+                ],
+                "security": [
+                    {
+                        "jwtAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/octet-stream": {
+                                "schema": {
+                                    "type": "string",
+                                    "format": "binary"
+                                }
+                            }
+                        },
+                        "description": ""
+                    },
+                    "404": {
+                        "description": "Document not found or has no uploaded file"
+                    }
+                }
+            }
+        },
         "/api/v1/catalog/products/{id}/merge/": {
             "post": {
                 "operationId": "catalog_products_merge_create",
@@ -25416,10 +25467,9 @@
                     },
                     "file": {
                         "type": "string",
-                        "format": "uri",
                         "nullable": true,
-                        "title": "Файл",
-                        "description": "Загруженный документ (PDF, DOCX)"
+                        "description": "Путь скачивания файла (API), null — файла нет",
+                        "readOnly": true
                     },
                     "file_url": {
                         "nullable": true,
@@ -25451,6 +25501,7 @@
                     }
                 },
                 "required": [
+                    "file",
                     "id",
                     "name",
                     "uploaded_at"
@@ -25459,13 +25510,6 @@
             "ProductDocumentRequest": {
                 "type": "object",
                 "properties": {
-                    "file": {
-                        "type": "string",
-                        "format": "binary",
-                        "nullable": true,
-                        "title": "Файл",
-                        "description": "Загруженный документ (PDF, DOCX)"
-                    },
                     "file_url": {
                         "nullable": true,
                         "title": "URL документа",
