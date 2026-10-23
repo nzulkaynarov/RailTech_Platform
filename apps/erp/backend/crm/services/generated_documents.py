@@ -459,20 +459,24 @@ def issue_document(document, user: CustomUser) -> Tuple[Optional[object], Option
         return None, "ROLE_NOT_PERMITTED"
     if document.status_code != GeneratedDocumentStatusCode.DRAFT:
         return None, "DOCUMENT_ALREADY_ISSUED"
+    from integration.services import document_events
+
     from .documents import document_brand_context
 
-    document.status = _status(GeneratedDocumentStatusCode.ISSUED)
-    document.issued_at = timezone.now()
-    # Freeze the letterhead (лого/реквизиты/accent) at issue so the ISSUED PDF never «плывёт» when
-    # the company later edits its CompanyDocumentProfile (J-a, immutability).
-    document.brand_snapshot = _serialize_brand_context(document_brand_context(document.company))
-    fields = ["status", "issued_at", "brand_snapshot", "updated_at"]
-    # Mint the public link ONCE, on issue (never on DRAFT) — the same pattern as Quote.public_access_token.
-    if not document.public_access_token:
-        document.public_access_token = secrets.token_urlsafe(32)
-        document.public_token_expires_at = timezone.now() + timezone.timedelta(days=DOCUMENT_PUBLIC_TOKEN_TTL_DAYS)
-        fields += ["public_access_token", "public_token_expires_at"]
-    document.save(update_fields=fields)
+    # document.created на шину rt_bus — на переходе «не выпущен → выпущен», в транзакции выпуска.
+    with document_events.watch_document_issue("generated", document):
+        document.status = _status(GeneratedDocumentStatusCode.ISSUED)
+        document.issued_at = timezone.now()
+        # Freeze the letterhead (лого/реквизиты/accent) at issue so the ISSUED PDF never «плывёт» when
+        # the company later edits its CompanyDocumentProfile (J-a, immutability).
+        document.brand_snapshot = _serialize_brand_context(document_brand_context(document.company))
+        fields = ["status", "issued_at", "brand_snapshot", "updated_at"]
+        # Mint the public link ONCE, on issue (never on DRAFT) — the same pattern as Quote.public_access_token.
+        if not document.public_access_token:
+            document.public_access_token = secrets.token_urlsafe(32)
+            document.public_token_expires_at = timezone.now() + timezone.timedelta(days=DOCUMENT_PUBLIC_TOKEN_TTL_DAYS)
+            fields += ["public_access_token", "public_token_expires_at"]
+        document.save(update_fields=fields)
 
     from ..tasks import render_document_pdf
 

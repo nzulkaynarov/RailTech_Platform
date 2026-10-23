@@ -48,6 +48,7 @@ INSTALLED_APPS = [
     "inventory.apps.InventoryConfig",
     "portal.apps.PortalConfig",
     "integration.apps.IntegrationConfig",
+    "rt_bus.django",  # таблицы шины rt_bus (outbox, delivery, inbox, subscriber_state), B3
     "crm",
     "sourcing",
     "master_data",

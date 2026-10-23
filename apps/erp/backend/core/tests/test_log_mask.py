@@ -12,7 +12,6 @@ import sys
 
 import httpx
 import pytest
-from celery.exceptions import Retry
 from django.conf import settings
 
 from core.log_mask import (
@@ -374,43 +373,38 @@ def test_sentry_hook_survives_garbage():
 # ─── Места из аудита (см. docs/runbooks/log-secrets.md) ───────────────────────
 
 
-@pytest.mark.django_db
-def test_webhook_retry_log_hides_secrets_from_the_crm_error(monkeypatch):
-    """Задача доставки вебхука на ретрае пишет ответ/исключение CRM; в нём бывает эхо заголовков запроса."""
-    from unittest.mock import patch
-
-    from integration.models import CrmClientMapping, IntegrationWebhookEvent
-    from integration.services.webhooks import emit_event
-    from integration.tasks import deliver_webhook_event
+def _delivery_error_after_echo(body: str, status: int = 502) -> str:
+    """Один сеанс доставки события подписчику, который отвечает `body`; возвращает `last_error` строки DLQ/повтора."""
+    from django.db import transaction
+    from integration.bus import get_bus
+    from integration.bus_http import SecretMaskingTransport
+    from integration.models import CrmClientMapping
+    from integration.services import events
     from parties.models import Company
+    from rt_bus.django.models import Delivery
 
     company = Company.objects.create(name="ООО FIX66b", inn="223456780")
     CrmClientMapping.objects.create(company=company, crm_client_id=66)
-    event = emit_event("invite.sent", company.id, {"channels": ["email"]}, send_async=False)
-    assert isinstance(event, IntegrationWebhookEvent)
-    echo = f"proxy rejected Authorization: Bearer {FAKE_SIG} for {FAKE_KEY}"
-    console = next(h for h in logging.getLogger().handlers if h.get_name() == "console")
-    stream = io.StringIO()
-    monkeypatch.setattr(console, "stream", stream)
+    with transaction.atomic():
+        event = events.publish_event("invite.sent", company.id, {"channels": ["email"]})
+    bus = get_bus()
+    previous = bus._http
+    bus._http = httpx.Client(
+        transport=SecretMaskingTransport(httpx.MockTransport(lambda request: httpx.Response(status, text=body)))
+    )
+    try:
+        bus.pump()
+    finally:
+        bus._http = previous
+    return Delivery.objects.get(event_id=event.id).last_error or ""
 
-    real_client = httpx.Client
 
-    def fake_client(*args, **kwargs):
-        return real_client(transport=httpx.MockTransport(lambda request: httpx.Response(502, text=echo)))
-
-    with (
-        patch("integration.tasks.httpx.Client", fake_client),
-        patch.object(deliver_webhook_event, "retry", side_effect=Retry()),
-        pytest.raises(Retry),
-    ):
-        deliver_webhook_event.run(event.id)
-
-    printed = stream.getvalue()
-    assert "Retrying in" in printed  # запись о ретрае есть
-    assert FAKE_SIG not in printed and FAKE_KEY not in printed
-    event.refresh_from_db()
-    assert event.last_error.startswith("HTTP 502")
-    assert FAKE_SIG not in event.last_error and FAKE_KEY not in event.last_error
+@pytest.mark.django_db(transaction=True)
+def test_bus_delivery_error_hides_secrets_from_the_subscribers_echo():
+    """Журнал доставки шины пишет ответ подписчика; в нём бывает эхо заголовков запроса (FIX-66b)."""
+    error = _delivery_error_after_echo(f"proxy rejected Authorization: Bearer {FAKE_SIG} for {FAKE_KEY}")
+    assert error.startswith("HTTP 502")
+    assert FAKE_SIG not in error and FAKE_KEY not in error
 
 
 def test_telegram_init_data_validation_does_not_log_the_bot_token(caplog, settings):
@@ -450,33 +444,11 @@ def test_ai_gateway_error_log_hides_the_key_echoed_by_the_gateway(monkeypatch):
     assert "AI intake error (http=401)" in stream.getvalue()
 
 
-@pytest.mark.django_db
-def test_webhook_error_masks_secret_cut_by_the_500_char_truncation(monkeypatch):
-    """Секрет на границе обрезки `[:500]`: маскировать нужно ДО усечения, иначе хвост <8 знаков уцелеет."""
-    from unittest.mock import patch
-
-    from integration.models import CrmClientMapping, IntegrationWebhookEvent
-    from integration.services.webhooks import emit_event
-    from integration.tasks import deliver_webhook_event
-    from parties.models import Company
-
-    company = Company.objects.create(name="ООО FIX66b-cut", inn="223456781")
-    CrmClientMapping.objects.create(company=company, crm_client_id=67)
-    event = emit_event("invite.sent", company.id, {"channels": ["email"]}, send_async=False)
-    assert isinstance(event, IntegrationWebhookEvent)
-    body = "a" * 485 + f" Bearer {FAKE_SIG}"  # «Bearer » + 7 знаков подписи попадают в первые 500
-    real_client = httpx.Client
-
-    def fake_client(*args, **kwargs):
-        return real_client(transport=httpx.MockTransport(lambda request: httpx.Response(502, text=body)))
-
-    with (
-        patch("integration.tasks.httpx.Client", fake_client),
-        patch.object(deliver_webhook_event, "retry", side_effect=Retry()),
-        pytest.raises(Retry),
-    ):
-        deliver_webhook_event.run(event.id)
-
-    event.refresh_from_db()
-    assert FAKE_SIG[:4] not in event.last_error
-    assert "Bearer [REDACT" in event.last_error  # маркер, а не 7 знаков подписи
+@pytest.mark.django_db(transaction=True)
+def test_bus_error_masks_secret_cut_by_the_truncation():
+    """Секрет на границе усечения ответа: маскировать нужно ДО усечения, иначе хвост <8 знаков уцелеет."""
+    # Лимит библиотеки — 500 знаков вместе с префиксом «HTTP 502: »: «Bearer » и первые знаки подписи попадают в границу усечения.
+    body = "a" * 477 + f" Bearer {FAKE_SIG}"
+    error = _delivery_error_after_echo(body)
+    assert FAKE_SIG[:4] not in error
+    assert "Bearer [" in error  # маркер (обрезанный границей), а не знаки подписи

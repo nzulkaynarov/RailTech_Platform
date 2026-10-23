@@ -88,7 +88,7 @@ grep -q '^:8080 {' "$root/apps/platform/web/Caddyfile" || fail "порт file-se
 # 3. deploy.sh без PLATFORM_DOMAIN — отказ до docker (docker подменён заглушкой, которая фиксирует вызов).
 rel="$tmp/releases/tag1"; mkdir -p "$rel/infra" "$rel/packages/contracts" "$tmp/bin"
 cp -R "$root/infra/deploy" "$rel/infra/deploy"
-cp "$root/packages/contracts/events.schema.json" "$rel/packages/contracts/"
+cp "$root/packages/contracts/mcp-tools.json" "$rel/packages/contracts/"
 printf '#!/usr/bin/env bash\necho "docker вызван: $*" >> "%s/docker.log"\nexit 1\n' "$tmp" > "$tmp/bin/docker"; chmod +x "$tmp/bin/docker"
 run() { PATH="$tmp/bin:$PATH" RT_ENV_FILE="$1" RT_STATE="$tmp/state" bash "$rel/infra/deploy/deploy.sh" tag1 >"$tmp/log" 2>&1; }
 mkenv() { sed -E "s/192\.0\.2\./10.0.0./g" "$1" > "$tmp/env"; chmod 600 "$tmp/env"; }

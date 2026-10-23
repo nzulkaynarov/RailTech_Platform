@@ -111,9 +111,12 @@ def generate_contract_from_quote(
     # request thread — rendering inside this atomic block wrote the file to storage
     # even when a later step rolled the transaction back, orphaning it. on_commit
     # fires only on success; the download endpoint renders lazily if this races behind.
-    if contract.status_code == ContractStatusCode.DRAFT:
-        contract.status = _cstatus(ContractStatusCode.PENDING_CLIENT)
-    contract.save(update_fields=["status", "updated_at"])
+    from integration.services import document_events
+
+    with document_events.watch_document_issue("contract", contract):  # document.created на выпуске (шина rt_bus)
+        if contract.status_code == ContractStatusCode.DRAFT:
+            contract.status = _cstatus(ContractStatusCode.PENDING_CLIENT)
+        contract.save(update_fields=["status", "updated_at"])
 
     from ..tasks import render_document_pdf
 
@@ -331,12 +334,16 @@ def sign_contract_by_client(
         allowed_statuses = {ContractStatusCode.DRAFT, ContractStatusCode.PENDING_CLIENT}
     if contract.status_code not in allowed_statuses:
         return None, "CONTRACT_CLIENT_SIGN_NOT_ALLOWED"
-    contract.client_signer = client_user
-    contract.client_signed_at = timezone.now()
-    contract.status = _cstatus(
-        ContractStatusCode.SIGNED if contract.manager_signed_at else ContractStatusCode.PENDING_MANAGER
-    )
-    contract.save(update_fields=["client_signer", "client_signed_at", "status", "updated_at"])
+    from integration.services import document_events, events
+
+    with document_events.watch_document_issue("contract", contract):  # document.created на выпуске (шина rt_bus)
+        contract.client_signer = client_user
+        contract.client_signed_at = timezone.now()
+        contract.status = _cstatus(
+            ContractStatusCode.SIGNED if contract.manager_signed_at else ContractStatusCode.PENDING_MANAGER
+        )
+        contract.save(update_fields=["client_signer", "client_signed_at", "status", "updated_at"])
+    events.publish_contract_signed(contract, by="both" if contract.manager_signed_at else "client")
     event_params = {"number": contract.number, "deal_id": contract.deal_id, "manual": True}
     if portal_contact is not None:
         event_params.update({"channel": "portal", "contact_id": portal_contact.pk})
@@ -381,12 +388,16 @@ def sign_contract_by_manager(
         ContractStatusCode.PENDING_CLIENT,
     }:
         return None, "CONTRACT_MANAGER_SIGN_NOT_ALLOWED"
-    contract.manager_signer = manager_user
-    contract.manager_signed_at = timezone.now()
-    contract.status = _cstatus(
-        ContractStatusCode.SIGNED if contract.client_signed_at else ContractStatusCode.PENDING_CLIENT
-    )
-    contract.save(update_fields=["manager_signer", "manager_signed_at", "status", "updated_at"])
+    from integration.services import document_events, events
+
+    with document_events.watch_document_issue("contract", contract):  # document.created на выпуске (шина rt_bus)
+        contract.manager_signer = manager_user
+        contract.manager_signed_at = timezone.now()
+        contract.status = _cstatus(
+            ContractStatusCode.SIGNED if contract.client_signed_at else ContractStatusCode.PENDING_CLIENT
+        )
+        contract.save(update_fields=["manager_signer", "manager_signed_at", "status", "updated_at"])
+    events.publish_contract_signed(contract, by="both" if contract.client_signed_at else "company")
     ActivityLog.objects.create(
         action="[MANUAL_MODE] Подписан договор (сторона продавца)",
         detail=f"Договор {contract.number} / сделка #{contract.deal_id}",

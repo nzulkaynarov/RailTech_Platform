@@ -5,9 +5,9 @@
 из `PortalUpload`. Ничего не подставляется за клиента: количество и единица — как указал клиент или пусто.
 
 Всё делается одной транзакцией: плохое вложение отклоняет запрос целиком, и от него не остаётся ни сделки, ни строк,
-ни события. Событие `request.created` рождает сигнал `integration.signals` при создании сделки; источник и полный
-текст он берёт из `deal.request_origin` — признака, который ставит этот сервис (контакт портала у сделки не доказывает,
-что её завёл портал: контакт ставит и сотрудник).
+ни события. Событие `request.created` с `source=cabinet` этот сервис публикует на шину rt_bus в той же транзакции
+(`integration.services.events`): сбой публикации откатывает запрос. Источник решает создатель сделки — контакт портала у
+сделки не доказывает, что её завёл портал: контакт ставит и сотрудник.
 """
 
 from __future__ import annotations
@@ -16,6 +16,7 @@ import uuid
 
 from django.core.files import File
 from django.db import transaction
+from integration.services import events
 from portal.exceptions import PortalValidationError
 from portal.models import PortalRequestLine, PortalRequestSummary, PortalUpload
 
@@ -74,7 +75,6 @@ def create_client_request(company, contact, *, summary: str, lines: list[dict], 
             stage=draft_stage,
             notes="Запрос создан клиентом из Cabinet",
         )
-        deal.request_origin = {"source": REQUEST_SOURCE, "summary": summary}  # читает integration.signals
         deal.save()
         PortalRequestSummary.objects.create(deal=deal, text=summary)
         PortalRequestLine.objects.bulk_create(
@@ -96,4 +96,5 @@ def create_client_request(company, contact, *, summary: str, lines: list[dict], 
             detail=f"Клиент создал запрос из Cabinet: {summary}",
             event_params={"source": REQUEST_SOURCE, "contact_id": contact.id},
         )
+        events.publish_request_created(deal, source=REQUEST_SOURCE, erp_request_id=deal.id, summary=summary)
     return deal

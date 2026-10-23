@@ -30,6 +30,12 @@ COPY requirements.txt .
 RUN pip install --upgrade pip && \
     pip install --no-cache-dir --require-hashes --prefix=/install -r requirements.txt
 
+# rt_bus (B3, L14): библиотека шины из packages/rt-bus приходит именованным контекстом сборки `rtbus` (compose:
+# build.additional_contexts; docker build --build-context rtbus=…/packages/rt-bus). Это чистый Python без сборочных шагов, а её
+# зависимости (httpx, jsonschema, referencing, pyyaml) уже в requirements.txt под хэшами, поэтому пакет кладётся копией каталога
+# в site-packages префикса /install: никаких загрузок из сети при сборке и незакреплённых build-зависимостей (hatchling), миграции
+# Django (rt_bus/django/migrations) едут вместе с кодом.
+COPY --from=rtbus rt_bus /install/lib/python3.12/site-packages/rt_bus
 
 # ── Stage 2: Runtime ──────────────────────────────────────────────────────────
 FROM python:3.12-slim AS runtime
@@ -68,6 +74,13 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 # Копируем установленные пакеты из builder
 COPY --from=builder /install /usr/local
+
+# Контракты шины (L14): схемы событий и подписки из packages/contracts приходят контекстом сборки `contracts`.
+# RT_BUS_CONTRACTS_DIR / RT_BUS_SUBSCRIPTIONS указывают на эту копию; тесты и стенд могут переопределить их.
+COPY --from=contracts events /opt/rt/contracts/events
+COPY --from=contracts bus /opt/rt/contracts/bus
+ENV RT_BUS_CONTRACTS_DIR=/opt/rt/contracts/events \
+    RT_BUS_SUBSCRIPTIONS=/opt/rt/contracts/bus/subscriptions.yaml
 
 # Создаём непривилегированного пользователя
 RUN useradd -m -u 1000 appuser
