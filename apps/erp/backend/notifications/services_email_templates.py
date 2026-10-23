@@ -1,6 +1,6 @@
 """Business logic for the Platform-Operator email-template editor.
 
-Keeps the DRF viewset thin (CLAUDE.md Rule 8): the viewset authorizes + validates
+Keeps the DRF viewset thin (CONVENTIONS.md Rule 8): the viewset authorizes + validates
 and calls exactly one of these functions. Two operations beyond plain CRUD:
 
   * `preview_template`  — render a key's subject/html/text against a SAMPLE

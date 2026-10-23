@@ -279,7 +279,7 @@ WEB = `apps/platform/web/src`, C = `packages/contracts`, IC = `infra/compose`.
 | `C/mcp-tools.json` | 0.1.0 | ERP парсит, CRM — тест |
 | `C/platform-rbac.yaml`, `C/client-statuses.yaml` | `version: 1` | генерация + тесты |
 
-Политика (`docs/CONTRACTS.md:199-203`): префикс `v1`, несовместимое — новый префикс; события — поле `version`, новые
+Политика (`docs/architecture/CONTRACTS.md:199-203`): префикс `v1`, несовместимое — новый префикс; события — поле `version`, новые
 поля без смены версии. Общие примеры событий `C/examples/events/` проверяются тестами обеих сторон. **OpenAPI CRM в
 `packages/contracts` нет** (лежит в `apps/crm/docs/api/openapi.json`), хотя BFF его потребляет.
 

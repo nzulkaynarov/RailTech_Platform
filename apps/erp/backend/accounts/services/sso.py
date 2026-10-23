@@ -1,4 +1,4 @@
-"""SSO Token Service (CRM ↔ ERP, CONTRACTS §6, packages/contracts/sso-token.md, M3-CRM-06).
+"""SSO Token Service (CRM ↔ ERP, CONTRACTS §6, docs/architecture/sso-token.md, M3-CRM-06).
 
 Реализует:
 1. Выпуск SSO-токена JWT HS256 для перехода в CRM (iss=erp, aud=crm).
@@ -126,7 +126,7 @@ def issue_sso_token(user: CustomUser) -> Tuple[str, str]:
 
     mapping = CrmUserMapping.objects.filter(user=user).first()
     if mapping is None:
-        # `sub` — только crm_user_id из сопоставления; запасного user.pk нет (sso-token.md, S-2).
+        # `sub` — только crm_user_id из сопоставления; запасного user.pk нет (docs/architecture/sso-token.md, S-2).
         raise SsoForbiddenError("USER_NOT_PROVISIONED")
     crm_user_id = mapping.crm_user_id
 

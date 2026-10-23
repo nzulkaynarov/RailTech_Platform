@@ -10,7 +10,7 @@ from pydantic import AwareDatetime, BaseModel, ConfigDict, Field, constr
 
 class Envelope(BaseModel):
     """
-    CloudEvents 1.0, structured mode, JSON (ADR-0014; docs/CONTRACTS.md, раздел «Шина rt_bus»). Поле data проверяется отдельно схемой своего типа: uz.railtech.<домен>.<сущность>.<действие>.v<N> ↔ events/<домен>/<сущность>.<действие>.v<N>.json; dataschema — rt://contracts/events/<домен>/<сущность>.<действие>/v<N>. Отправитель строгий: заполняет все обязательные атрибуты по этой схеме. Читатель терпимый: неизвестные атрибуты-расширения CloudEvents (имена [a-z0-9]{1,20}) допускаются и игнорируются.
+    CloudEvents 1.0, structured mode, JSON (ADR-0014; docs/architecture/CONTRACTS.md, раздел «Шина rt_bus»). Поле data проверяется отдельно схемой своего типа: uz.railtech.<домен>.<сущность>.<действие>.v<N> ↔ events/<домен>/<сущность>.<действие>.v<N>.json; dataschema — rt://contracts/events/<домен>/<сущность>.<действие>/v<N>. Отправитель строгий: заполняет все обязательные атрибуты по этой схеме. Читатель терпимый: неизвестные атрибуты-расширения CloudEvents (имена [a-z0-9]{1,20}) допускаются и игнорируются.
     """
 
     model_config = ConfigDict(

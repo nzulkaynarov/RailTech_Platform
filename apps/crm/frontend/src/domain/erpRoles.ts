@@ -2,7 +2,7 @@
  * Системные роли бэк-офиса ERP, которые админ выдаёт из CRM (FIX-63, Q-FIX50-1 (1)).
  *
  * Коды — `SystemRoleCode` контракта (`erp-integration.yaml`), порядок — как в «Настройках → Команда» ERP. Права
- * ролей ведёт ERP, здесь только коды и названия на трёх языках (CLAUDE.md §4: тексты — ru/uz/en). Интерфейс CRM
+ * ролей ведёт ERP, здесь только коды и названия на трёх языках (CONVENTIONS.md §4: тексты — ru/uz/en). Интерфейс CRM
  * пока на русском, поэтому по умолчанию показывается `ru`.
  */
 import type { UserOutErpRoleCodesItem } from "../api/generated/model";

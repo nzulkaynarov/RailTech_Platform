@@ -1,5 +1,5 @@
 # Каталог возможностей Платформы, версия 2 (ADR-0012). Роли — данные (CRM), каталог — код и контракт.
-# Основание: ADR-0012, docs/runbooks/wave9-roles.md §3.2, SPEC-v3 §4.2, apps/platform/docs/04-integration-map.md §4.
+# Основание: ADR-0012, docs/runbooks/wave9-roles.md §3.2, SPEC-v3 §4.2, docs/architecture/integration-map.md §4.
 # Что в каталоге: разделы (`resources`) с уровнями доступа и отображением в права бэкендов (CRM casbin и ERP `Permission`),
 # пункты меню (`menu`), поля с ограничением (`restricted_fields`), виды работы «Моей очереди» (`queue`), две системные роли
 # (`system_roles`, неизменны), шаблоны ролей (`templates`, при первом запуске создаются обычными редактируемыми ролями)

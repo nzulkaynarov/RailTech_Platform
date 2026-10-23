@@ -1,7 +1,7 @@
 import { COMPANY_TIME_ZONE } from "./format";
 
 /**
- * Даты в часовом поясе компании (03-frontend.md §8), а не браузера: сотрудник в другом поясе видит те же «сегодня» и
+ * Даты в часовом поясе компании (docs/architecture/platform-frontend.md §8), а не браузера: сотрудник в другом поясе видит те же «сегодня» и
  * «вчера», что и бухгалтерия. Формат русский `24.10.2026` для ru и uz, `24/10/2026` не используется нигде.
  */
 export type DateInput = Date | string | number | null | undefined;
