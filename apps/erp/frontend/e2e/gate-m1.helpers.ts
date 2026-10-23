@@ -57,7 +57,7 @@ export interface PersonaInfo {
   crmRole: 'Администратор' | 'Менеджер' | 'Наблюдатель';
   /** Системная роль ERP, которую админ выдаёт в «Настройки → Команда» (CRM отдаёт только manager/viewer/admin; D-10). */
   erpRole: 'Руководитель' | 'Расчёт' | 'Финансы' | 'Наблюдатель' | null;
-  /** Ожидаемые права `capabilities.permissions` после выдачи роли (apps/erp/CLAUDE.md §6). */
+  /** Ожидаемые права `capabilities.permissions` после выдачи роли (CONVENTIONS.md §6). */
   permissions: string[] | 'ALL';
 }
 

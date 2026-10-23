@@ -11,7 +11,7 @@ from accounts.services.permissions import member_has_permission, staff_permissio
 from accounts.services.roles import ensure_default_company_roles, set_member_roles
 from core.seeds import backoffice_roles as frozen
 
-# Документированная матрица (apps/erp/CLAUDE.md §6). Меняется только вместе с документом.
+# Документированная матрица (CONVENTIONS.md §6). Меняется только вместе с документом.
 EXPECTED_TEMPLATES = {
     "CALCULATION": {
         "deal.manage",

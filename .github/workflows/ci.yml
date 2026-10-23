@@ -128,6 +128,8 @@ jobs:
           curl -sSfL "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz" \
             | tar -xz -C /usr/local/bin gitleaks
           gitleaks git --redact --verbose --config .gitleaks.toml .
+      - name: Ссылки на документацию (scripts/check-doc-links.sh, DOCS-1)
+        run: scripts/check-doc-links.sh
 
   # ─── CRM (apps/crm) ────────────────────────────────────────────────────────────────────────
 

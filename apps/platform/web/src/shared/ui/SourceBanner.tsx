@@ -13,7 +13,7 @@ export interface SourceBannerProps {
 }
 
 /**
- * Плашка частичных данных (03-frontend.md §5, контракт BFF «Частичные данные»): «ERP не отвечает, данные неполные».
+ * Плашка частичных данных (docs/architecture/platform-frontend.md §5, контракт BFF «Частичные данные»): «ERP не отвечает, данные неполные».
  * `role="status"` — вежливое объявление, не прерывающее чтение; если оба бэкенда в порядке, плашки нет.
  */
 export function SourceBanner({ sources, onRetry }: SourceBannerProps) {

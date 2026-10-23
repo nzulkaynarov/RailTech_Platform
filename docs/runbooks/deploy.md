@@ -15,6 +15,8 @@
 - **Секреты приложений** лежат только на серверах: `/opt/rt/.env.prod` (VPS 1) и `/opt/rt-db/.env.db` (VPS 2), оба `chmod 600`.
   В GitHub environment `production` — лишь доступ к серверу (SSH-ключ, known_hosts) и несекретные имена. Решение принято
   здесь, чтобы десятки секретов приложений не жили в GitHub; владелец вправе передумать (тогда `deploy.yml` дописывается).
+- **Redis — два экземпляра с разными паролями** (S0-2, ADR-0013 п. 5): `redis-broker` (брокер и результаты Celery, Channels; AOF, `noeviction`, том `redis_broker_data`) и
+  `redis-cache` (кэш и троттлинг ERP, одноразовые `jti`, сессии Платформы, Langfuse; `volatile-lru`). Подробно, с отказами — раздел «Redis: брокер и кэш раздельно» ниже.
 - **База** — на VPS 2: PostgreSQL 17 + pgvector, 4 базы, по роли на базу (`crm_app`, `erp_app`, `litellm_app`, `langfuse_app`),
   `pg_hba` — только TLS и только внутренний IP VPS 1.
 - **Порядок деплоя** (`infra/deploy/deploy.sh <sha>`): проверка env → `pull` → **проверка базы CPU образов** (`cpu-baseline-check.sh`: в каждом образе запускается import numpy / litellm.proxy / версия бинаря; образ, которому нужен x86-64-v2, останавливает деплой до дампа и миграций, см. servers.md «CPU прод-VPS»); ту же таблицу команд раньше, в PR, прогоняет CI под эмуляцией CPU `qemu64` (задание `cpu-image`, `make deploy-check`, `scripts/qemu_cpu_check.sh`; servers.md, «Проверка под эмуляцией qemu64») → **pg_dump-гейт** `crm` и `erp`
@@ -76,6 +78,9 @@ infra/deploy/make-env-prod.sh extract-db > /tmp/env.db    # часть для VP
 scp /tmp/env.db deploy@<VPS 2>:/opt/rt-db/.env.db && shred -u /tmp/env.db
 infra/deploy/make-env-prod.sh drop-db-only    # убрать с VPS 1 то, что нужно только VPS 2 (суперпользователь, ключи бэкапа)
 ```
+
+`init` даёт обоим Redis разные случайные пароли (`REDIS_BROKER_PASSWORD`, `REDIS_CACHE_PASSWORD`). В `.env.prod`, созданном до S0-2, старая `REDIS_PASSWORD` больше
+не читается: повторный `init` допишет две новые переменные (потом `drop-db-only`, как ниже), строку `REDIS_PASSWORD` можно удалить.
 
 Сохраните офлайн копию обоих файлов и отдельно `BACKUP_ENC_PASSPHRASE`, `WAL_ENC_KEY` и `LITELLM_SALT_KEY` (потеря первой — потеря внешних копий
 бэкапа; второй — потеря WAL-архива: восстановления на момент времени не будет; третьей — расшифровки ключей провайдеров в БД LiteLLM). После `drop-db-only` повторный `init` вернёт удалённые
@@ -203,7 +208,7 @@ Caddy (`no_erp_internal` в `Caddyfile.prod`/`Caddyfile.dev`) отвечает 4
   на VPS 1 (ежедневно) и **зашифрованную** (AES-256, `BACKUP_ENC_PASSPHRASE`) копию во внешнее S3-хранилище (раз в неделю,
   `BACKUP_EXT_DAY`). Адрес и ключи внешнего хранилища — переменные `BACKUP_EXT_*`; провайдера выбирает владелец.
 - **Сейчас:** `infra/deploy/backup-now.sh [--ext]` на VPS 2.
-- **Статус в CRM:** «Внешние сервисы» → «Хранилище резервных копий» читает бакет `backups` RustFS (M5-CRM-01); нет копии за 26 ч — инцидент и оповещение. Подробно — `apps/crm/docs/runbooks/backup-restore.md`.
+- **Статус в CRM:** «Внешние сервисы» → «Хранилище резервных копий» читает бакет `backups` RustFS (M5-CRM-01); нет копии за 26 ч — инцидент и оповещение. Подробно — `docs/runbooks/crm/backup-restore.md`.
 - **Проверка восстановления** (раз в неделю и после любых изменений бэкапа): `infra/db/restore-check.sh [каталог]` на VPS 2 — разворачивает
   каждый дамп во временную базу, считает таблицы, проверяет `vector` в `crm`, удаляет базу. Боевые базы не затрагиваются.
 - **Восстановление боевой базы** (остановка записи обязательна):
@@ -237,15 +242,65 @@ Caddy (`no_erp_internal` в `Caddyfile.prod`/`Caddyfile.dev`) отвечает 4
 | Сайт не открывается / нет сертификата | `docker compose … logs caddy`; DNS, порты 80/443; лимит выпусков Let's Encrypt |
 | `pg_dump-гейт` падает | доступ VPS 1 → VPS 2:5432 (`ufw`, `pg_hba`, `DB_INTERNAL_IP`, пароль роли), `docker logs rt-db-postgres-1` на VPS 2 |
 | ERP/CRM не стартуют после деплоя | `docker compose … logs erp-backend crm-api crm-bot`; `ps` — какие контейнеры не healthy |
+| Redis: ERP в журнале «Кэш (Redis) недоступен», сессии Платформы не работают, очередь стоит | «Redis: брокер и кэш раздельно» ниже: `docker compose … ps redis-broker redis-cache`, `logs`, `redis-cli ping` |
 | Бэкап не создаётся | `docker logs rt-db-backup-1` на VPS 2, `/var/backups/rt/last_success`, healthcheck контейнера `backup` |
 | WAL-архив: `walg` unhealthy, `archive command failed` | `docker inspect --format '{{json .State.Health}}' rt-db-walg-1`, `docker exec -u postgres rt-db-walg-1 rt-pitr status`, `docker logs rt-db-postgres-1` — `docs/runbooks/backup-pitr.md`, разделы 4–5 |
 | Не хватает памяти | `docker stats`; профили `observability` и `kb-ingest` не включать вместе |
 
 Эскалация: владелец; агент Infra — правки compose/Caddy/скриптов через PR.
 
+## Redis: брокер и кэш раздельно (S0-2)
+
+Один Redis делили очередь задач, кэш, сессии Платформы и Langfuse; кэш без игнорирования ошибок ронял ERP вместе с собой. Теперь два экземпляра
+(`infra/compose/base.yml`, лимиты памяти — `prod.yml`, `servers.md`), у каждого свой пароль:
+
+| | `redis-broker` | `redis-cache` |
+|---|---|---|
+| Что хранит | брокер и результаты Celery ERP (БД 1), Channels ERP (БД 2) | кэш Django, троттлинг DRF, блокировка входа, одноразовые `jti` SSO/привязки/MCP и метки 2FA ERP (БД 0); сессии BFF Платформы (БД 3); очереди Langfuse (БД 4) |
+| Пароль (`.env.prod`) | `REDIS_BROKER_PASSWORD` | `REDIS_CACHE_PASSWORD` |
+| Политика | `appendonly yes` (`everysec`), `noeviction`, `maxmemory` 128 МБ (`REDIS_BROKER_MAXMEMORY`) | `volatile-lru`, `maxmemory` 96 МБ (`REDIS_CACHE_MAXMEMORY`), RDB-снимок раз в 5 минут |
+| Том | `redis_broker_data` (AOF) | `redis_cache_data` (снимок) |
+| Лимит контейнера | 256 МБ | 192 МБ |
+
+У всех ключей кэша есть срок жизни: вытесняются только ключи со сроком (`volatile-lru`); тест `core/tests/test_cache_resilience.py` не даёт записать в кэш ключ без срока.
+Langfuse (BullMQ) пишет в журнал предупреждение «Eviction policy is volatile-lru. It should be noeviction»: его ключи без срока `volatile-lru` не вытесняет, при переполнении
+`redis-cache` запись в БД 4 упрётся в `OOM`, а не потеряет очередь молча. Следить за `used_memory` кэша; пока Langfuse включают профилем, это приемлемо.
+
+**Что происходит при отказе `redis-cache`** (остановка, переполнение, сеть):
+
+- ERP работает без кэша: ответы API 200, в журнале `erp-backend` одно предупреждение «Кэш (Redis) недоступен, ERP работает без кэша» раз в 30 секунд (и «снова доступен»
+  при восстановлении); первые секунды запросы чуть медленнее (таймаут подключения 1 с, затем 5 секунд ERP вообще не обращается к кэшу). Троттлинг и блокировка входа по числу
+  попыток на это время пропускают запросы; пароль и код 2FA проверяются как обычно. `/health/` ERP остаётся 200, `healthy` контейнера не меняется: `erp-backend` ждёт кэш только
+  по запуску (`service_started`), на его отказ не перезапускается. Поле `queue_alive` health интеграции теперь про брокер, а не про кэш.
+- Вход по SSO из CRM, привязка ERP к CRM по доказательству и вызовы `erp-mcp` — **отказ, а не пропуск**: одноразовый `jti` негде запомнить. SSO отвечает 503
+  `SSO_TEMPORARILY_UNAVAILABLE` с текстом «Проверка одноразового токена временно недоступна… Повторите попытку через минуту» (токен не погашен, живёт свои 60 с); второй шаг входа с 2FA — 503
+  `2FA_TEMPORARILY_UNAVAILABLE`; MCP и привязка — 503 `SERVICE_TEMPORARILY_UNAVAILABLE`. Вход по паролю без 2FA работает.
+- Платформа: сессии лежат в `redis-cache`, поэтому вход и все запросы с сессией дают 503 `BACKEND_UNAVAILABLE` (не 500), `/api/v1/health` — `degraded` с `redis: fail`;
+  после возврата кэша сессии, не вытесненные и не потерянные с ним (снимок раз в 5 минут, при полной потере — вход заново), снова работают.
+
+**Что при отказе `redis-broker`:** задачи Celery не ставятся и не берутся (письма, PDF, импорты, доставка вебхуков в CRM — ERP при этом отвечает на запросы, но `queue_alive=false`,
+интеграционный `/health` 503); события в журнале `IntegrationWebhookEvent` не теряются (повторная постановка — beat). После рестарта очередь на месте (AOF).
+
+**Диагностика:**
+
+```bash
+cd /opt/rt/current/infra/compose
+dc() { docker compose -f base.yml -f prod.yml --env-file /opt/rt/.env.prod "$@"; }
+dc ps redis-broker redis-cache                                   # оба healthy
+dc exec redis-broker redis-cli info memory | grep -E 'used_memory_human|maxmemory_human'   # пароль подставляет REDISCLI_AUTH
+dc exec redis-broker redis-cli -n 1 llen default                 # длина очереди default (ai, pdf, imports — те же llen)
+dc exec redis-broker redis-cli info persistence | grep aof_       # aof_enabled:1, aof_last_write_status:ok
+dc exec redis-cache redis-cli info stats | grep evicted_keys     # вытеснения: рост = кэш мал, поднять REDIS_CACHE_MAXMEMORY и лимит
+dc exec redis-cache redis-cli -n 0 dbsize
+dc logs --since 10m erp-backend | grep -E 'Кэш \(Redis\)'      # предупреждения ERP о кэше
+```
+
+Кэш можно очистить без последствий (кроме выхода всех из Платформы и забытых меток `jti` на 10 минут): `dc exec redis-cache redis-cli flushall`. Брокер — **нет**: `flushall` на нём теряет очередь.
+Старый том `rt-platform_redis_data` и контейнер `redis` после перехода не нужны: контейнер уберёт `--remove-orphans`, том — `docker volume rm rt-platform_redis_data` (на проде данных в нём нет — сброс по S0-8).
+
 ## Платформа (INF-P0-5)
 
-Единое рабочее место сотрудника (`apps/platform`): BFF `platform-bff` (FastAPI, Redis БД 3 — сессии) и статика `platform-web`
+Единое рабочее место сотрудника (`apps/platform`): BFF `platform-bff` (FastAPI, `redis-cache` БД 3 — сессии) и статика `platform-web`
 за тем же Caddy, домен `platform.railtech.uz`. Нового секрета и базы у Платформы нет. Образы `rt-platform-bff`, `rt-platform-web`
 собирает тот же `deploy.yml` (тег = sha), на VPS 1 они занимают ≈ 256 МБ + 64 МБ (лимиты в `prod.yml`).
 
@@ -272,7 +327,7 @@ Caddy (`no_erp_internal` в `Caddyfile.prod`/`Caddyfile.dev`) отвечает 4
 
 **Проверка после деплоя:**
 
-- `curl -fsS https://platform.railtech.uz/api/v1/health` — ответ `200` и `"status":"ok"`: BFF видит Redis, CRM `/health` и ERP `/health`.
+- `curl -fsS https://platform.railtech.uz/api/v1/health` — ответ `200` и `"status":"ok"`: BFF видит `redis-cache`, CRM `/health` и ERP `/health`.
   `"status":"degraded"` при живых CRM и ERP — смотреть в теле поле `checks` (`redis`, `crm`, `erp` — `ok`/`fail`; схема `Health` в
   `packages/contracts/openapi/platform-bff.yaml`), затем `docker compose … logs platform-bff` и `docker compose … ps` (`platform-bff`,
   `platform-web` — `healthy`). BFF отвечает `200` всегда, `degraded` не ошибка запуска, но smoke деплоя считает его сбоем.

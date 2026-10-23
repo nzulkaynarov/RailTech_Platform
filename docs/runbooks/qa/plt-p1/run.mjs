@@ -628,7 +628,7 @@ scenarios.s11 = async (browser) => {
   return r;
 };
 
-const redis = (cmd) => compose("exec", "-T", "redis", "sh", "-c", `redis-cli --no-auth-warning -a "$REDIS_PASSWORD" -n 3 ${cmd}`).trim();
+const redis = (cmd) => compose("exec", "-T", "redis-cache", "sh", "-c", `redis-cli -n 3 ${cmd}`).trim();
 
 // 9. Выход: сессия гасится (после выхода /api/v1/me → 401).
 scenarios.s9 = async (browser) => {

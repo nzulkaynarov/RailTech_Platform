@@ -1,4 +1,4 @@
-"""Единый перевод ошибок в HTTP (CLAUDE.md §4).
+"""Единый перевод ошибок в HTTP (CONVENTIONS.md §4).
 
 Любая ошибка API — тело `{"code", "message", "details"}` (`app/domain/errors.py`):
 ошибки домена, ошибки валидации запроса FastAPI (`validation_failed` + `details.field`)

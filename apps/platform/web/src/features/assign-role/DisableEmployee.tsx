@@ -21,7 +21,7 @@ export interface DisableEmployeeProps {
 
 /**
  * Отключение и включение сотрудника: вторичное действие карточки с подтверждением на месте (без модального окна) и
- * блоком «Что произойдёт». Сессии гасит CRM (02-architecture.md §3); решение о праве — за CRM.
+ * блоком «Что произойдёт». Сессии гасит CRM (docs/architecture/platform-bff.md §3); решение о праве — за CRM.
  */
 export function DisableEmployee({ employee, selfId, otherActiveAdmins }: DisableEmployeeProps) {
   const { t } = useTranslation("modules");

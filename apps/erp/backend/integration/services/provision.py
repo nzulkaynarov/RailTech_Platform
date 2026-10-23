@@ -248,7 +248,7 @@ def provision_crm_user(data: Dict[str, Any]) -> Tuple[Dict[str, Any], bool]:
 
 @transaction.atomic
 def revoke_crm_user_sessions(crm_user_id: int) -> bool:
-    """Снятие доступа к ERP по запросу CRM (`DELETE /users/{crm_user_id}/sessions`, sso-token.md «Отзыв»).
+    """Снятие доступа к ERP по запросу CRM (`DELETE /users/{crm_user_id}/sessions`, docs/architecture/sso-token.md «Отзыв»).
 
     Гасит всё, чем сотрудник входит: refresh-токены (чёрный список), уже выданные access-токены (версия
     токенов растёт — `accounts.authentication` отвечает 401) и сам вход (`is_active=False`: локальный пароль и

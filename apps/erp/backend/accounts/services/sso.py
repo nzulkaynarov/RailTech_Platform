@@ -1,4 +1,4 @@
-"""SSO Token Service (CRM ↔ ERP, CONTRACTS §6, packages/contracts/sso-token.md, M3-CRM-06).
+"""SSO Token Service (CRM ↔ ERP, CONTRACTS §6, docs/architecture/sso-token.md, M3-CRM-06).
 
 Реализует:
 1. Выпуск SSO-токена JWT HS256 для перехода в CRM (iss=erp, aud=crm).
@@ -24,6 +24,7 @@ from sales.models import ActivityLog
 
 from accounts.constants import Permission
 from accounts.models import CompanyMember, CustomUser
+from core.cache import UNAVAILABLE_MESSAGE, CacheUnavailable, fail_closed
 from core.tenant import own_company
 
 logger = logging.getLogger(__name__)
@@ -56,6 +57,14 @@ class SsoForbiddenError(SsoError):
 class SsoNotConfiguredError(SsoError):
     def __init__(self, detail: str = "SSO_NOT_CONFIGURED"):
         super().__init__(detail=detail, status_code=503)
+
+
+class SsoUnavailableError(SsoError):
+    """Хранилище одноразовых `jti` (кэш) недоступно: вход отклонён, токен не погашен и не принят «на веру» (S0-2)."""
+
+    def __init__(self, detail: str = "SSO_TEMPORARILY_UNAVAILABLE"):
+        super().__init__(detail=detail, status_code=503)
+        self.message = UNAVAILABLE_MESSAGE
 
 
 def get_sso_secrets() -> List[str]:
@@ -117,7 +126,7 @@ def issue_sso_token(user: CustomUser) -> Tuple[str, str]:
 
     mapping = CrmUserMapping.objects.filter(user=user).first()
     if mapping is None:
-        # `sub` — только crm_user_id из сопоставления; запасного user.pk нет (sso-token.md, S-2).
+        # `sub` — только crm_user_id из сопоставления; запасного user.pk нет (docs/architecture/sso-token.md, S-2).
         raise SsoForbiddenError("USER_NOT_PROVISIONED")
     crm_user_id = mapping.crm_user_id
 
@@ -193,7 +202,12 @@ def verify_and_exchange_sso_token(token: str, client_ip: Optional[str] = None) -
 
     # 4. Проверка одноразовости jti (хранится 10 минут)
     cache_key = f"sso_jti:{jti}"
-    was_added = cache.add(cache_key, True, timeout=SSO_JTI_CACHE_TTL_S)
+    try:
+        with fail_closed():  # кэш недоступен — отказ входа, а не пропуск: иначе токен можно было бы предъявить повторно
+            was_added = cache.add(cache_key, True, timeout=SSO_JTI_CACHE_TTL_S)
+    except CacheUnavailable as exc:
+        logger.warning("SSO exchange refused: one-time jti store (cache) is unavailable")
+        raise SsoUnavailableError() from exc
     if not was_added:
         logger.warning("SSO token replay attack detected: jti=%s", jti)
         raise SsoValidationError("TOKEN_ALREADY_USED")

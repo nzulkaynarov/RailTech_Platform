@@ -3,7 +3,7 @@ import type { Schemas } from '@/api/portal';
 /**
  * Статусы из контракта → подпись (`status.<entity>.<code>` в словарях) и тон бейджа (семантический
  * токен: success / warning / danger / info / neutral). Код сравнивается как есть, показывается подпись
- * (CLAUDE.md §5). Тон отвечает на вопрос клиента «нужно ли что-то от меня»: warning — ждём его решения.
+ * (CONVENTIONS.md §5). Тон отвечает на вопрос клиента «нужно ли что-то от меня»: warning — ждём его решения.
  */
 export type StatusTone = 'success' | 'warning' | 'danger' | 'info' | 'neutral';
 

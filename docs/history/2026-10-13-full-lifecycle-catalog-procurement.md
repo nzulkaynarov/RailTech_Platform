@@ -1,3 +1,5 @@
+> **История.** Заменено: docs/strategy/2026-10-23-platform-architecture-strategy.md, docs/product/, docs/architecture/. Не используется для решений.
+
 # Полный жизненный цикл: каталог, остатки, закупки, исполнение — бенчмарк и рекомендации
 
 Дата: 2026-10-13 · Статус: обсуждение · Продолжение `2026-10-13-three-systems-value-and-journeys.md`

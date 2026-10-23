@@ -6,7 +6,7 @@ import { getTelegramWebApp } from '@/telegram/webapp';
 import { DEFAULT_LOCALE, LANGUAGE_STORAGE_KEY, i18nResources, isSupportedLocale } from './locales';
 
 /**
- * Порядок выбора языка (CLAUDE.md §5): явный выбор в профиле (localStorage) → язык пользователя
+ * Порядок выбора языка (CONVENTIONS.md §5): явный выбор в профиле (localStorage) → язык пользователя
  * Telegram в Mini App → язык браузера → `ru`. Язык контакта из `GET /me` применяется после входа
  * (`applyContactLanguage`), но не перекрывает явный выбор человека.
  */

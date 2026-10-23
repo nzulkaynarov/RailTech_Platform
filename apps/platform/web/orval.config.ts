@@ -1,7 +1,7 @@
 import { defineConfig } from "orval";
 
 // Клиент API Платформы генерируется из контракта BFF (ADR-0011): `pnpm gen:api`.
-// Ручные типы и `fetch` запрещены (apps/platform/docs/03-frontend.md §7). Выход коммитится:
+// Ручные типы и `fetch` запрещены (docs/architecture/platform-frontend.md §7). Выход коммитится:
 // образ web собирается с контекстом apps/platform/web, куда packages/contracts не попадает.
 // Хуки TanStack Query и fetch-функции — поверх общего мутатора `http`; MSW-моки — рядом (`*.msw.ts`).
 export default defineConfig({

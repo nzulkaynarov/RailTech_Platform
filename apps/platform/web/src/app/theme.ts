@@ -5,7 +5,7 @@ import { RT_TOKENS } from "./tokens.generated";
 /**
  * Тема Платформы: токены общего пакета `packages/ui-tokens` (через `tokens.generated.ts`, копию
  * делает `make -C apps/platform tokens`) плюс компонентные токены макета v3
- * (apps/platform/docs/03-frontend.md §3). Строится как тема CRM: `cssVar` даёт переменные `--ant-*`,
+ * (docs/architecture/platform-frontend.md §3). Строится как тема CRM: `cssVar` даёт переменные `--ant-*`,
  * явные `*Bg/*Border` обязательны — из тёмного сид-цвета antd генерирует серый фон.
  * Значения, которых нет в ui-tokens, заданы здесь по таблице §3; после выхода ui-tokens 0.2.0
  * (INF-P0-2) цвета и шрифт приходят из генерации, а повторы здесь можно удалить.
@@ -28,7 +28,7 @@ export const PF_COLORS = {
 
 /**
  * Цвет текста тегов по статусу: затравочные `#52c41a`, `#faad14`, `#ff4d4f` на светлом фоне тега
- * не дают 4.5:1, поэтому слово статуса красится этими значениями (03-frontend.md §3).
+ * не дают 4.5:1, поэтому слово статуса красится этими значениями (docs/architecture/platform-frontend.md §3).
  */
 export const TAG_TEXT = {
   success: "#237804",

@@ -17,7 +17,7 @@ class Settings(BaseSettings):
         default="http://erp-backend:8000", validation_alias=AliasChoices("PLATFORM_ERP_URL")
     )
     redis_url: str = Field(
-        default="redis://redis:6379/0", validation_alias=AliasChoices("REDIS_URL")
+        default="redis://redis-cache:6379/0", validation_alias=AliasChoices("REDIS_URL")
     )
     # Абсолютное время жизни сессии сотрудника в Redis (часы), от входа.
     session_ttl_hours: int = Field(
