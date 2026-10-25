@@ -11,7 +11,7 @@
 | Публичный IP | `176.101.56.141` | `170.168.6.209` |
 | Ресурсы | 4 vCPU · 8 ГБ ОЗУ · NVMe 120 ГБ | 2 vCPU · 2 ГБ ОЗУ · NVMe 40 ГБ |
 | Сеть | TAS-IX 200 Мбит/с · Интернет 200 Мбит/с · внутренняя сеть между VPS | то же |
-| Роль | все приложения и общие сервисы, вход (Caddy, три домена) | PostgreSQL 17 (базы `crm`, `erp`, `litellm`, `langfuse`), бэкапы |
+| Роль | все приложения и общие сервисы, вход (Caddy, четыре домена) | PostgreSQL 17 (базы `crm`, `erp`, `eds`, `litellm`, `langfuse`), бэкапы |
 | Внутренний IP | **уточнить у владельца** (OWNER-CHECKLIST) | **уточнить у владельца** |
 
 Почему так: база — единственное, что нельзя потерять, и единственное, что не нуждается в CPU и памяти
@@ -39,8 +39,9 @@
 | `erp-web` | 64 МБ | nginx со сборкой |
 | `platform-bff` | 256 МБ (лимит; факт ≈ 150 МБ) | BFF Платформы (INF-P0-5): uvicorn, 2 процесса; БД нет, сессии в `redis-cache` БД 3 |
 | `platform-web` | 64 МБ | статика Платформы за Caddy |
-| `s3-init` (образ `rustfs/rc`, ≈ 20 МБ), `crm-migrate`, `litellm-seed`, `erp-ai-gateway` и одноразовые `run` миграций | 256–384 МБ | одноразовые, живут секунды при деплое; в «Итого постоянно» не входят; pg_dump-гейт идёт в отдельном контейнере с `pg_dump` (без лимита, до `up`) |
-| **Итого постоянно** | **≈ 6,5 ГБ** (5,2 + `erp-mcp` ≈ 0,2 + Платформа 0,3 + `crm-bot` 0,5 + второй Redis 0,3 по лимитам) | + ОС ≈ 0,5 ГБ; остаётся ≈ 1,0 ГБ из 8 |
+| `eds-api`, `eds-worker` | 192 + 192 МБ (лимиты; факт на стенде, образ prod: ≈ 80 + 70 МБ) | сервис документооборота (волна 12, ADR-0015): образ `rt-eds`, база `eds` на VPS 2, бакет `eds-private`; **маршрута в Caddy нет** — только сеть compose (BFF Платформы, шина `rt_bus`) |
+| `s3-init` (образ `rustfs/rc`, ≈ 20 МБ), `crm-migrate`, `eds-migrate`, `litellm-seed`, `erp-ai-gateway` и одноразовые `run` миграций | 256–384 МБ | одноразовые, живут секунды при деплое; в «Итого постоянно» не входят; pg_dump-гейт идёт в отдельном контейнере с `pg_dump` (без лимита, до `up`) |
+| **Итого постоянно** | **≈ 6,9 ГБ** (5,2 + `erp-mcp` ≈ 0,2 + Платформа 0,3 + `crm-bot` 0,5 + второй Redis 0,3 + EDS 0,4 по лимитам) | + ОС ≈ 0,5 ГБ; остаётся ≈ 0,6 ГБ из 8 по лимитам (по факту больше: лимиты заняты не целиком); при росте домена EDS (E3) лимиты пересмотреть |
 | `docling` (профиль `kb-ingest`) | 1,5 ГБ | **на проде не используется** (M5-CRM-02): база знаний принимает только Markdown (`docs/kb/FORMAT.md`), docling нужен лишь для текста документов клиентов; профиль — опция на случай, если сервер станет мощнее |
 | `clickhouse`, `langfuse-web`, `langfuse-worker` (профиль `observability`) | 768 + 768 + 512 МБ | включать, когда `docling` выключен; дашборд затрат ИИ (M3-CRM-09) не зависит от Langfuse — он читает БД LiteLLM |
 
@@ -96,7 +97,7 @@
 
 | Где | Что |
 |---|---|
-| CI, `.github/workflows/ci.yml` | задание `cpu-image` (матрица: `rt-crm-backend`, `rt-erp-backend`, `rt-platform-bff`, `rt-litellm`, `rt-crm-frontend`, `rt-erp-frontend`, `rt-cabinet`, `rt-platform-web`, `rt-db-postgres`, `rt-db-backup`) собирает образ linux/amd64 (кэш слоёв buildx gha) и запускает проверку; красное задание называет образ. Задание `cpu-common` — самопроверка механики и сторонние образы (`caddy`, `redis`, `rustfs`). Запускаются при изменении Dockerfile, `uv.lock`/`pyproject.toml` CRM и BFF, `requirements*` ERP, nginx.conf, `infra/ai/litellm`, `infra/db`, `infra/compose`, самой проверки |
+| CI, `.github/workflows/ci.yml` | задание `cpu-image` (матрица: `rt-crm-backend`, `rt-erp-backend`, `rt-platform-bff`, `rt-eds`, `rt-litellm`, `rt-crm-frontend`, `rt-erp-frontend`, `rt-cabinet`, `rt-platform-web`, `rt-db-postgres`, `rt-db-backup`) собирает образ linux/amd64 (кэш слоёв buildx gha) и запускает проверку; красное задание называет образ. Задание `cpu-common` — самопроверка механики и сторонние образы (`caddy`, `redis`, `rustfs`). Запускаются при изменении Dockerfile, `uv.lock`/`pyproject.toml` CRM, BFF и EDS, `requirements*` ERP, nginx.conf, `infra/ai/litellm`, `infra/db`, `infra/compose`, самой проверки |
 | `make deploy-check` | `scripts/qemu_cpu_check.sh all --skip-missing`: проверяет образы `rt-cpu-check/<имя>:amd64`, которые есть локально, и сторонние; чего нет — печатает «пропуск» (не «ok») |
 | `make cpu-check` | собирает образы прода linux/amd64 по одному (эмуляция, на Mac arm64 — десятки минут), проверяет и удаляет; `make cpu-check args="rt-litellm"` — выборочно |
 | `make cpu-selftest` | доказательство, что механика ловит реальное: Wolfi (база официального LiteLLM) и numpy ≥ 2.4 обязаны упасть, numpy < 2.4 — пройти |
