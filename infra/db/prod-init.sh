@@ -29,17 +29,19 @@ ensure_db() { # база, владелец
 
 ensure_role crm_app DB_CRM_PASSWORD
 ensure_role erp_app DB_ERP_PASSWORD
+ensure_role eds_app DB_EDS_PASSWORD
 ensure_role litellm_app DB_LITELLM_PASSWORD
 ensure_role langfuse_app DB_LANGFUSE_PASSWORD
 ensure_role rt_backup DB_BACKUP_PASSWORD pg_read_all_data
 
 ensure_db crm crm_app
 ensure_db erp erp_app
+ensure_db eds eds_app
 ensure_db litellm litellm_app
 ensure_db langfuse langfuse_app
 
 # Базы не доступны чужим ролям: CONNECT только владельцу и rt_backup.
-for db in crm erp litellm langfuse; do
+for db in crm erp eds litellm langfuse; do
   psql_su -c "REVOKE CONNECT ON DATABASE \"${db}\" FROM PUBLIC" >/dev/null
   psql_su -c "GRANT CONNECT ON DATABASE \"${db}\" TO rt_backup" >/dev/null
 done

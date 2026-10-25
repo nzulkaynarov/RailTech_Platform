@@ -27,6 +27,9 @@ if grep -qx platform-bff <<<"$services"; then
   pull_services+=(platform-bff platform-web)
   smoke_domains+=("$(env_get PLATFORM_DOMAIN)")
 fi
+# EDS (волна 12) тоже есть не в каждом релизе; домена у него нет (маршрута наружу нет), здоровье — по healthcheck контейнера.
+have_eds=0
+if grep -qx eds-api <<<"$services"; then pull_services+=(eds-api); have_eds=1; fi
 compose "$rel" pull "${pull_services[@]}" || log "pull не удался — используются локальные образы"
 up_stack "$rel"
 
@@ -37,4 +40,5 @@ ln -sfn "$rel" "$RT_ROOT/current"
 "$rel/infra/deploy/smoke.sh" --domains "${smoke_domains[@]}" \
   --resolve-ip 127.0.0.1 --insecure --retries 30 \
   || die "smoke после отката не прошёл — смотрите docker compose logs"
+[[ $have_eds -eq 0 ]] || wait_healthy "$rel" eds-api 120 || die "после отката eds-api не стал healthy — смотрите docker compose logs eds-api"
 log "откат на $target завершён (миграции БД не откатывались)"

@@ -13,7 +13,7 @@ mkdir -p "$tmp/bin"
 cat > "$tmp/bin/docker" <<'STUB'
 #!/usr/bin/env bash
 if [[ "$1" == compose ]]; then
-  printf '%s\n' ghcr.io/o/rt-litellm:T ghcr.io/o/rt-crm-backend:T ghcr.io/o/rt-erp-backend:T ghcr.io/o/rt-cabinet:T ghcr.io/o/rt-platform-bff:T ghcr.io/o/rt-platform-web:T \
+  printf '%s\n' ghcr.io/o/rt-litellm:T ghcr.io/o/rt-crm-backend:T ghcr.io/o/rt-erp-backend:T ghcr.io/o/rt-cabinet:T ghcr.io/o/rt-platform-bff:T ghcr.io/o/rt-platform-web:T ghcr.io/o/rt-eds:T \
     caddy:2.11.7-alpine redis:7.4.11 rustfs/rustfs:1.0.1 langfuse/langfuse:4.56.0
   exit 0
 fi
@@ -32,6 +32,8 @@ run > "$tmp/out" 2>&1 || { cat "$tmp/out"; fail "ожидался успех, к
 grep -q 'litellm.proxy.proxy_server' "$tmp/run.log" || fail "LiteLLM не проверяется импортом litellm.proxy.proxy_server"
 grep -q 'rt-crm-backend:T -c' "$tmp/run.log" || fail "CRM не проверяется импортом numpy"
 grep -q 'rt-platform-bff:T -c' "$tmp/run.log" || fail "BFF Платформы не проверяется импортом numpy (нативные колёса)"
+grep -q 'rt-eds:T -c' "$tmp/run.log" || fail "EDS не проверяется импортом нативных колёс (numpy/pandas/scipy, если есть)"
+grep -q 'без правила.*rt-eds' "$tmp/out" && fail "образ EDS попал в список без правила"
 grep -q 'entrypoint caddy .*rt-platform-web:T version' "$tmp/run.log" || fail "web Платформы не проверяется запуском caddy"
 grep -q 'без правила.*rt-platform' "$tmp/out" && fail "образы Платформы попали в список без правила"
 grep -q 'langfuse/langfuse' "$tmp/run.log" && fail "образ без правила не должен запускаться"
@@ -40,6 +42,9 @@ grep -q 'без правила.*langfuse' "$tmp/out" || fail "образ без 
 # 2. Один образ падает — отказ, в сообщении имя образа.
 if RT_TEST_FAIL=rt-litellm run > "$tmp/out" 2>&1; then fail "ожидался отказ, когда rt-litellm падает на CPU без v2"; fi
 if ! grep -q 'rt-litellm' "$tmp/out" || ! grep -q 'x86-64' "$tmp/out"; then cat "$tmp/out"; fail "сообщение об отказе не называет образ и причину"; fi
+
+if RT_TEST_FAIL=rt-eds run > "$tmp/out" 2>&1; then fail "ожидался отказ, когда rt-eds падает на CPU без v2"; fi
+grep -q 'rt-eds' "$tmp/out" || { cat "$tmp/out"; fail "сообщение об отказе не называет rt-eds"; }
 
 if RT_TEST_FAIL=rt-platform-bff run > "$tmp/out" 2>&1; then fail "ожидался отказ, когда rt-platform-bff падает на CPU без v2"; fi
 grep -q 'rt-platform-bff' "$tmp/out" || { cat "$tmp/out"; fail "сообщение об отказе не называет rt-platform-bff"; }
@@ -52,6 +57,7 @@ dump="$(grep -n 'predeploy-dump.sh' "$root/infra/deploy/deploy.sh" | grep -v '^[
   || fail "deploy.sh: cpu-baseline-check.sh должен идти между pull и pg_dump-гейтом"
 grep -q 'pull .* litellm' "$root/infra/deploy/deploy.sh" || fail "deploy.sh: rt-litellm не входит в pull"
 grep -q 'pull .* platform-bff platform-web' "$root/infra/deploy/deploy.sh" || fail "deploy.sh: образы Платформы не входят в pull"
+grep -q 'pull .* eds-api' "$root/infra/deploy/deploy.sh" || fail "deploy.sh: образ EDS не входит в pull"
 grep -q 'platform-bff' "$root/infra/deploy/rollback.sh" || fail "rollback.sh: образы Платформы не входят в pull"
 for img in rt-platform-bff rt-platform-web; do
   grep -q "name: Образ $img" "$root/.github/workflows/deploy.yml" || fail "deploy.yml: нет сборки $img"
