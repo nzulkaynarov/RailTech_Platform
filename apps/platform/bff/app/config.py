@@ -3,8 +3,11 @@
 from functools import lru_cache
 from typing import Literal
 
-from pydantic import AliasChoices, Field
+from pydantic import AliasChoices, Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+from app.client_ip import DEFAULT_TRUSTED_PROXIES, Network, parse_networks
+from app.clients.base import CRM_TIMEOUT_SECONDS
 
 
 class Settings(BaseSettings):
@@ -31,7 +34,17 @@ class Settings(BaseSettings):
     erp_refresh_cookie: str = Field(
         default="refresh_token", validation_alias=AliasChoices("PLATFORM_ERP_REFRESH_COOKIE")
     )
-    # Лимит попыток входа в минуту — отдельно на IP и на e-mail (platform-bff.yaml, «Лимиты»).
+    # Таймаут вызовов CRM, секунды: вход идёт через CRM, под нагрузкой 3 с не хватало (503).
+    crm_timeout_seconds: float = Field(
+        default=CRM_TIMEOUT_SECONDS,
+        gt=0,
+        validation_alias=AliasChoices("PLATFORM_CRM_TIMEOUT_SECONDS"),
+    )
+    # Прокси, которым BFF верит в `X-Forwarded-For` (CIDR или адреса через запятую): Caddy.
+    trusted_proxies: str = Field(
+        default=DEFAULT_TRUSTED_PROXIES, validation_alias=AliasChoices("PLATFORM_TRUSTED_PROXIES")
+    )
+    # Лимит неудачных попыток входа в минуту — отдельно на IP и на e-mail (platform-bff.yaml).
     login_rate_per_minute: int = Field(
         default=10, ge=1, validation_alias=AliasChoices("PLATFORM_LOGIN_RATE_PER_MINUTE")
     )
@@ -45,6 +58,18 @@ class Settings(BaseSettings):
     log_level: Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"] = Field(
         default="INFO", validation_alias=AliasChoices("LOG_LEVEL")
     )
+
+    @field_validator("trusted_proxies")
+    @classmethod
+    def _check_trusted_proxies(cls, value: str) -> str:
+        parse_networks(
+            value
+        )  # опечатка в сети — ошибка при старте, а не молчаливое «никому не верим»
+        return value
+
+    @property
+    def trusted_proxy_networks(self) -> tuple[Network, ...]:
+        return parse_networks(self.trusted_proxies)
 
 
 @lru_cache
