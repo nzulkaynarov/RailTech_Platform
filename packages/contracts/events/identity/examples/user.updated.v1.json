@@ -27,6 +27,13 @@
       "erp_role_codes": [
         "VIEWER"
       ],
+      "permissions": {
+        "eds": [
+          "letters.read",
+          "memos.create",
+          "registry.read"
+        ]
+      },
       "updated_at": "2026-10-22T07:00:00Z"
     },
     "changed_fields": [

@@ -128,6 +128,25 @@ services:
     volumes:
       - ../../apps/erp/backend:/app
 
+  # EDS: код монтируется (uvicorn --reload в eds-api; воркер без автоперезагрузки — после правок перезапустить сервис). Порт на хост
+  # не публикуется: у EDS нет внешнего маршрута, смотреть его можно только из сети compose (docker compose exec / curl из контейнера).
+  eds-migrate:
+    build: { target: dev }
+    volumes: &eds-src
+      - ../../apps/eds/app:/app/app:ro
+      - ../../apps/eds/alembic:/app/alembic:ro
+      - ../../apps/eds/alembic.ini:/app/alembic.ini:ro
+
+  eds-api:
+    build: { target: dev }
+    command: ["python", "-m", "app", "api", "--reload"]
+    volumes: *eds-src
+
+  eds-worker:
+    build: { target: dev }
+    volumes: *eds-src
+    restart: unless-stopped
+
   caddy:
     volumes:
       - ../caddy/Caddyfile.dev:/etc/caddy/Caddyfile:ro

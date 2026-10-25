@@ -13,6 +13,7 @@ apps/crm/            домен CRM: FastAPI · SQLAlchemy · Procrastinate · a
 apps/erp/            домен ERP: Django · DRF · Celery · Channels (фронтенд удаляется на C2)
 apps/cabinet/        кабинет клиента: React · shadcn, без бэкенда, портальный API ERP
 apps/platform/       Платформа: SPA (React · AntD) + BFF (FastAPI) без БД
+apps/eds/            домен EDS: FastAPI · SQLAlchemy · Procrastinate (без фронтенда и без внешнего маршрута)
 packages/contracts/  машиночитаемые контракты: OpenAPI, схемы событий, MCP, RBAC
 packages/ui-tokens/  токены дизайна для AntD и shadcn
 infra/               compose, caddy, ai (LiteLLM), db, deploy
@@ -24,7 +25,7 @@ docs/                вся документация: ORCHESTRATOR, HANDOFF, str
 репозитории нет, модели — через LiteLLM по алиасам; DoD с UI — сценарий глазами со скриншотом; отклонение от стратегии, ADR и
 контрактов — только через ADR и решение владельца; документация — только в `docs/`.
 
-Команды: `make check` (все приложения и ссылки документации), `make check-crm|erp|cabinet|platform`, `make contracts`,
+Команды: `make check` (все приложения и ссылки документации), `make check-crm|erp|cabinet|platform|eds`, `make contracts`,
 `make docs-links`, `make up` (ансамбль локально), `make ci-local`.
 
 ## Среда разработки, тесты и CI (правило владельца 2026-10-19)

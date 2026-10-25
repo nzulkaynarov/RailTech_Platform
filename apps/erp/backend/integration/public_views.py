@@ -7,7 +7,6 @@
 Каждая выдача файла — запись журнала ERP (`document.link_downloaded`). Лимит частоты — общий с публичными ссылками.
 """
 
-from django.http import FileResponse
 from drf_spectacular.utils import OpenApiResponse, extend_schema
 from portal.services import documents as portal_documents
 from rest_framework import status
@@ -46,10 +45,10 @@ class PublicDocumentLinkView(APIView):
             return Response({"detail": "NOT_FOUND"}, status=status.HTTP_404_NOT_FOUND)
 
         document = link.document
-        stream = portal_documents.open_ready_file(document)
-        if stream is None and not portal_documents.renders_on_demand(document):
+        response = portal_documents.ready_file_response(document)
+        if response is None and not portal_documents.renders_on_demand(document):
             return Response({"detail": "NOT_FOUND"}, status=status.HTTP_404_NOT_FOUND)
-        if stream is None:
+        if response is None:
             portal_documents.enqueue_render(document)
             return Response(
                 {"detail": "DOCUMENT_PENDING"},
@@ -58,8 +57,5 @@ class PublicDocumentLinkView(APIView):
             )
 
         documents_link.record_download(link, ip=request.META.get("REMOTE_ADDR", "") or "")
-        response = FileResponse(
-            stream, content_type=document.content_type, as_attachment=True, filename=document.file_name
-        )
         response["Cache-Control"] = "private, no-store"  # ссылка с секретом: прокси и браузер файл не хранят
         return response

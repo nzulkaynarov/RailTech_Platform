@@ -106,6 +106,11 @@ class FakeRedis:
         self.values[key] = str(value)
         return value
 
+    async def decr(self, key: str) -> int:
+        value = int(self.values[key]) - 1 if self._alive(key) else -1
+        self.values[key] = str(value)
+        return value
+
     async def ttl(self, key: str) -> int:
         if not self._alive(key):
             return -2

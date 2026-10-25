@@ -1,0 +1,50 @@
+{
+  "specversion": "1.0",
+  "id": "a9d8bca7-ea47-5d9e-ac30-3f4bdb80a83b",
+  "source": "rt://eds",
+  "type": "uz.railtech.eds.letter.resolved.v1",
+  "time": "2026-10-26T06:30:00Z",
+  "subject": "ВХ-104/26",
+  "datacontenttype": "application/json",
+  "dataschema": "rt://contracts/events/eds/letter.resolved/v1",
+  "tenant": "railtech",
+  "correlationid": "adcf3223-3906-5ee9-9748-59d792ec1dc4",
+  "data": {
+    "letter": {
+      "eds_letter_id": "e2b7a5e9-37c3-5a33-948a-7a999c5e7ec9",
+      "number": "ВХ-104/26",
+      "subject": "Запрос КП на поставку стрелочных переводов"
+    },
+    "links": {
+      "erp_request_id": 905,
+      "erp_deal_id": 905,
+      "deal_number": "ЗВ-2026-104",
+      "crm_client_id": 42,
+      "erp_company_id": 118
+    },
+    "resolution": {
+      "text": "Подготовить расчёт и КП; маржа не ниже 15 %.",
+      "assignees": [
+        {
+          "crm_user_id": 11,
+          "zone": "goods"
+        },
+        {
+          "crm_user_id": 12,
+          "zone": "services"
+        }
+      ],
+      "due": "2026-10-29",
+      "min_margin_pct": "15",
+      "decided_by": {
+        "crm_user_id": 3,
+        "full_name": "Рустам Директоров"
+      },
+      "decided_at": "2026-10-26T06:30:00Z"
+    },
+    "actor": {
+      "type": "staff",
+      "crm_user_id": 3
+    }
+  }
+}

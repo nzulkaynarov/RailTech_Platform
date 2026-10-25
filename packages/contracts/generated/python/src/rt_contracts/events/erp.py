@@ -5,6 +5,7 @@ from __future__ import annotations
 from datetime import date
 from enum import StrEnum
 from typing import Annotated, Literal
+from uuid import UUID
 
 from pydantic import AnyUrl, AwareDatetime, BaseModel, ConfigDict, Field, RootModel
 
@@ -98,6 +99,15 @@ class By(StrEnum):
     client = "client"
     company = "company"
     both = "both"
+
+
+class CalcZone(StrEnum):
+    """
+    Зона визы расчёта: goods — товары и склад (снабженец), services — услуги (гл. инженер); ADR-0012 п. 6
+    """
+
+    goods = "goods"
+    services = "services"
 
 
 class Channel(StrEnum):
@@ -610,6 +620,88 @@ class QuoteOutcome(BaseModel):
     """
 
 
+class QuoteReadyForApproval(BaseModel):
+    """
+    Снимок КП для маршрута одобрения в EDS (EDS-03): суммы, маржа, визы, порог маржи резолюции
+    """
+
+    model_config = ConfigDict(
+        extra="ignore",
+    )
+    erp_quote_id: int
+    number: Annotated[str, Field(max_length=64, min_length=1)]
+    """
+    КП-ГГГГ/NNN
+    """
+    version: Annotated[int, Field(ge=1)]
+    client_name: Annotated[str | None, Field(max_length=255)] = None
+    total: Amount
+    """
+    Сумма КП с НДС
+    """
+    currency: Currency
+    cost: Amount | None = None
+    """
+    Себестоимость (видит только директор)
+    """
+    margin_amount: Amount | None = None
+    margin_pct: Annotated[str, Field(pattern="^-?\\d{1,3}(\\.\\d{1,2})?$")]
+    """
+    Маржа КП, % строкой; может быть отрицательной
+    """
+    min_margin_pct: Annotated[
+        str | None, Field(pattern="^(100(\\.0{1,2})?|\\d{1,2}(\\.\\d{1,2})?)$")
+    ]
+    """
+    Порог «маржа не ниже, %» из резолюции (letter.resolved) — снимок для показа; чек-лист EDS сверяет маржу с порогом своей резолюции (владелец поля — EDS). null — ограничения нет
+    """
+    required_zones: list[CalcZone]
+    """
+    Чьи визы нужны расчёту (по строкам КП и исполнителям резолюции)
+    """
+    visas: list[QuoteVisa]
+    """
+    Собранные визы: снабженец — goods, гл. инженер — services
+    """
+    due: date | None = None
+    """
+    Срок расчёта из резолюции
+    """
+    ready_at: AwareDatetime
+    """
+    Когда расчёт объявлен готовым
+    """
+    valid_until: date | None = None
+    """
+    Срок действия КП
+    """
+    eds_letter_id: UUID | None = None
+    """
+    Входящее письмо EDS, по резолюции которого считали (из letter.resolved)
+    """
+
+
+class QuoteReadyForApprovalV1(BaseModel):
+    """
+    Тип uz.railtech.erp.quote.ready_for_approval.v1, источник rt://erp. Поле data конверта (envelope.v1.json). Расчёт готов (все визы собраны) — ERP просит EDS открыть маршрут одобрения КП (EDS-03, runbook волны 12 §2.4, §2.5). payload — снимок для показа в маршруте и для чек-листа (визы, маржа, срок); порог маржи чек-лист берёт из резолюции EDS (владелец поля — EDS), payload.min_margin_pct — только снимок для показа. EDS коммерческого содержания не хранит сверх снимка. Новая версия КП после возврата — новое событие с version + 1. Содержит себестоимость и маржу: подписчики v1 — только eds (и platform-bff как подсказка без хранения); CRM на этот тип не подписана (bus/subscriptions.yaml). crm_client_id может быть null — компания без клиента CRM.
+    """
+
+    model_config = ConfigDict(
+        extra="ignore",
+    )
+    erp_company_id: int
+    """
+    Компания клиента в ERP
+    """
+    crm_client_id: int | None
+    """
+    Клиент в CRM; null — компания не сопоставлена
+    """
+    deal: DealRef
+    actor: Actor
+    payload: QuoteReadyForApproval
+
+
 class QuoteRejectedV1(BaseModel):
     """
     Тип uz.railtech.erp.quote.rejected.v1, источник rt://erp. Поле data конверта (envelope.v1.json); прежнее тело события quote.rejected из events.schema.json без version, event, occurred_at. Что делает CRM: лента.
@@ -683,6 +775,30 @@ class QuoteViewedV1(BaseModel):
     deal: DealRef
     actor: Actor
     payload: QuoteOutcome
+
+
+class QuoteVisa(BaseModel):
+    """
+    Виза строки расчёта по зоне: кто и когда
+    """
+
+    model_config = ConfigDict(
+        extra="ignore",
+    )
+    zone: CalcZone
+    by: QuoteVisaAuthor
+    at: AwareDatetime
+
+
+class QuoteVisaAuthor(BaseModel):
+    model_config = ConfigDict(
+        extra="ignore",
+    )
+    crm_user_id: int | None
+    """
+    null — сотрудник ERP без связи с CRM
+    """
+    full_name: Annotated[str, Field(max_length=255, min_length=1)]
 
 
 class RequestCreated(BaseModel):

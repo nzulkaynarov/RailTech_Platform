@@ -31,7 +31,7 @@
 | Платформа: фронтенд, каркас, размеры, тема | [`architecture/platform-frontend.md`](architecture/platform-frontend.md) | действует | архитектор |
 | Карта интеграции: экран → BFF → домены, разрывы | [`architecture/integration-map.md`](architecture/integration-map.md) | действует | архитектор |
 | Система: назначение, запуск, команды | `systems/<crm\|erp\|cabinet\|platform\|eds\|infra\|contracts\|ui-tokens>/README.md` | действует | лид |
-| Система: правила кода | `systems/<crm\|erp\|cabinet\|platform>/CONVENTIONS.md` | действует | лид |
+| Система: правила кода | `systems/<crm\|erp\|cabinet\|platform\|eds>/CONVENTIONS.md` | действует | лид |
 | CRM: техническое задание, бизнес-требования, разметка evals | [`systems/crm/SPEC.md`](systems/crm/SPEC.md), [`systems/crm/BUSINESS.md`](systems/crm/BUSINESS.md), [`systems/crm/evals-labeling.md`](systems/crm/evals-labeling.md) | действует для бэкенда CRM; при расхождении права `product/` | лид |
 | Архитектурные решения CRM | [`adr/crm/`](adr/crm/) (обозначение «ADR CRM-00NN») | действует | архитектор |
 | Эксплуатация | [`runbooks/`](runbooks/) (ансамбль), [`runbooks/crm/`](runbooks/crm/), [`runbooks/erp/`](runbooks/erp/); волны агентов — `runbooks/wave*.md` | действует | лид |

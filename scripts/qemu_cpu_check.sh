@@ -50,6 +50,7 @@ build_spec() {
     rt-cabinet) echo "apps/cabinet|||cabinet" ;;
     rt-litellm) echo "infra/ai/litellm|||litellm" ;;
     rt-platform-bff) echo "apps/platform/bff||prod|platform-bff" ;;
+    rt-eds) echo "apps/eds||prod|eds" ;;
     rt-platform-web) echo "apps/platform/web||prod|platform-web" ;;
     rt-db-postgres) echo "infra/db|Dockerfile.postgres||db-postgres" ;;
     rt-db-backup) echo "infra/db|Dockerfile.backup||db-backup" ;;
@@ -228,7 +229,8 @@ cmd_build() {
   IFS='|' read -r ctx file target _ <<<"$spec"
   [[ -z "$file" ]] || args+=(-f "$ROOT/$ctx/$file")
   [[ -z "$target" ]] || args+=(--target "$target")
-  if [[ "$name" == "rt-crm-backend" || "$name" == "rt-erp-backend" ]]; then
+  # Образы с шиной rt_bus получают пакет и контракты именованными контекстами (как build-contexts в ci.yml и deploy.yml).
+  if [[ "$name" == "rt-crm-backend" || "$name" == "rt-erp-backend" || "$name" == "rt-platform-bff" || "$name" == "rt-eds" ]]; then
     args+=(--build-context "rtbus=$ROOT/packages/rt-bus" --build-context "contracts=$ROOT/packages/contracts")
   fi
   say "сборка $name (linux/amd64, $ctx) → $CHECK_REPO/$name:amd64"

@@ -24,6 +24,13 @@
         "crm"
       ],
       "erp_role_codes": [],
+      "permissions": {
+        "eds": [
+          "letters.read",
+          "memos.create",
+          "registry.read"
+        ]
+      },
       "updated_at": "2026-10-22T06:55:00Z"
     },
     "actor": {

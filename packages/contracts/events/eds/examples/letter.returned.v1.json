@@ -1,0 +1,31 @@
+{
+  "specversion": "1.0",
+  "id": "a682d775-bfde-511a-ab28-6d147fbee930",
+  "source": "rt://eds",
+  "type": "uz.railtech.eds.letter.returned.v1",
+  "time": "2026-10-26T06:20:00Z",
+  "subject": "ВХ-104/26",
+  "datacontenttype": "application/json",
+  "dataschema": "rt://contracts/events/eds/letter.returned/v1",
+  "tenant": "railtech",
+  "correlationid": "adb1b578-048a-52cd-84ac-9e6f3b97016d",
+  "data": {
+    "letter": {
+      "eds_letter_id": "e2b7a5e9-37c3-5a33-948a-7a999c5e7ec9",
+      "number": "ВХ-104/26",
+      "subject": "Запрос КП на поставку стрелочных переводов"
+    },
+    "links": {
+      "erp_request_id": 905,
+      "erp_deal_id": 905,
+      "deal_number": "ЗВ-2026-104",
+      "crm_client_id": 42,
+      "erp_company_id": 118
+    },
+    "comment": "Нет спецификации от клиента — запросите перечень позиций.",
+    "actor": {
+      "type": "staff",
+      "crm_user_id": 3
+    }
+  }
+}

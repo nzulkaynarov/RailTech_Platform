@@ -1,5 +1,5 @@
 # Контракты — `packages/contracts`
-Статус: действует · Владелец: лид · Обновлено: 2026-10-23
+Статус: действует · Владелец: лид · Обновлено: 2026-10-26
 
 Источник истины шва ансамбля (ORCHESTRATOR §3.3: **контракт раньше кода**; события — только через шину `rt_bus`, §3.14). Объяснение — `docs/architecture/CONTRACTS.md` (шина — §9);
 здесь — машиночитаемые файлы и генерация клиентов. Версия 0 (M0-INF-02).
@@ -10,9 +10,10 @@
 | `openapi/erp-portal.yaml` | Portal API `/api/portal/v1/*` (Cabinet → ERP): вход Telegram/magic-link, запросы, КП, договоры, счета, акты, поставки, документы, каталог, компания | ERP `portal` (M2-ERP-01…03); Cabinet (M2-CAB-01) |
 | `openapi/erp-internal.yaml` | Internal API `/api/v1/*` — **генерируется** из drf-spectacular (срез `/api/v1/` схемы бэкенда, `make -C apps/erp openapi`), руками не правится; дрейф ловит `make -C apps/erp openapi-check` (FIX-40) | ERP SPA (типы строит из `apps/erp/backend/schema.json`, не отсюда); CRM — SSO-обмен (`/auth/sso/*`) |
 | `openapi/crm.yaml` | API CRM `/api/v1/*` (SPA CRM, Платформа, Cabinet — форма лида) — **генерируется** из FastAPI (`make -C apps/crm openapi`), руками не правится; дрейф ловят `crm-lint` в CI и стадия `crm` в `ci_local.sh`. Линт — `redocly.crm.yaml` | CRM frontend (orval), Cabinet (`crm-form.d.ts`), BFF (`app/clients/crm_models.py`, `make -C apps/platform crm-models`) |
+| `openapi/eds.yaml` | API сервиса EDS `/api/v1/*` (волна 12, C1): обмен токена сотрудника, письма и резолюции, документы, маршруты согласования, реестр и экспорт, файлы; право на каждую операцию — `x-rt-permissions` (`docs/architecture/CONTRACTS.md` §10) | EDS `apps/eds` (E2, E3); BFF Платформы (этап D); типы — `generated/eds.d.ts` |
 | `openapi-breaking-exceptions.yaml` | Исключения из проверки совместимости OpenAPI (файл, идентификатор проверки oasdiff, путь, причина, срок `until`); пуст по умолчанию — ломающее идёт новым мажором | `scripts/openapi_compat.py` (`docs/architecture/CONTRACTS.md` §7.1) |
 | `events/envelope.v1.json` | Конверт событий шины `rt_bus`: CloudEvents 1.0 + `tenant`, `correlationid`, `traceparent` (`docs/architecture/CONTRACTS.md` §9.1) | `packages/rt-bus` (B1); все издатели и подписчики |
-| `events/<домен>/<сущность>.<действие>.v<N>.json` | Схема `data` типа `uz.railtech.<домен>.<сущность>.<действие>.v<N>` (JSON Schema 2020-12); общие определения — `events/<домен>/_defs.v<N>.json`; домены v1: `erp` (22 типа), `crm` (клиент, контакт, лид), `identity` (сотрудник) | издатель — проверка строгая; подписчик — терпимая (§9.1) |
+| `events/<домен>/<сущность>.<действие>.v<N>.json` | Схема `data` типа `uz.railtech.<домен>.<сущность>.<действие>.v<N>` (JSON Schema 2020-12); общие определения — `events/<домен>/_defs.v<N>.json`; домены v1: `erp` (22 типа бывшего вебхука и `quote.ready_for_approval`), `crm` (клиент, контакт, лид), `identity` (сотрудник), `eds` (письма, документы, маршруты — волна 12) | издатель — проверка строгая; подписчик — терпимая (§9.1) |
 | `events/<домен>/examples/<сущность>.<действие>.v<N>.json` | Пример полного конверта на каждый тип (тест: проходит конверт и схему типа) | тесты сервисов |
 | `events/asyncapi.yaml` | AsyncAPI 3.0: канал и сообщение на каждый тип, HTTP-доставка `/bus/v1/events`, заголовки `X-RT-*`, подпись, коды ответов | документация, проверка `@asyncapi/parser` |
 | `bus/subscriptions.yaml` (+ `.schema.json`) | Подписки `rt_bus`: подписчик → адрес приёмника → маски типов (§9.5) | `rt-bus` у каждого сервиса (`RT_BUS_SUBSCRIPTIONS`) |

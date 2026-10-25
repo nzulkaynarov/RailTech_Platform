@@ -63,6 +63,18 @@ up_stack() {
   fi
 }
 
+# Ждёт, пока сервис compose станет healthy (до <секунд>); для сервисов без домена, которые smoke не видит (EDS: маршрута наружу нет).
+# wait_healthy <каталог-релиза> <сервис> [секунд]
+wait_healthy() {
+  local rel="$1" service="$2" limit="${3:-120}" waited=0 state=""
+  while (( waited < limit )); do
+    state="$(compose "$rel" ps --format '{{.Health}}' "$service" 2>/dev/null | head -n1 || true)"
+    [[ "$state" == healthy ]] && return 0
+    sleep 3; waited=$((waited + 3))
+  done
+  return 1
+}
+
 release_dir() { echo "$RT_RELEASES/$1"; }
 
 state_get() { cat "$RT_STATE/$1" 2>/dev/null || true; }
@@ -74,7 +86,7 @@ cleanup_old() {
   while read -r img; do
     [[ "$img" == *":$keep_a" || ( -n "$keep_b" && "$img" == *":$keep_b" ) ]] && continue
     docker rmi "$img" >/dev/null 2>&1 || true
-  done < <(docker images --format '{{.Repository}}:{{.Tag}}' | grep -E '/rt-(crm-backend|crm-frontend|erp-backend|erp-frontend|cabinet|litellm|platform-bff|platform-web):' || true)
+  done < <(docker images --format '{{.Repository}}:{{.Tag}}' | grep -E '/rt-(crm-backend|crm-frontend|erp-backend|erp-frontend|cabinet|litellm|platform-bff|platform-web|eds):' || true)
   # shellcheck disable=SC2012
   ls -1t "$RT_RELEASES" 2>/dev/null | tail -n +6 | while read -r old; do
     [[ "$old" == "$keep_a" || "$old" == "$keep_b" ]] || rm -rf "${RT_RELEASES:?}/$old"

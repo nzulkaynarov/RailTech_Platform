@@ -10,7 +10,7 @@ import logging
 
 from django.conf import settings
 from django.db import transaction
-from django.http import FileResponse, Http404
+from django.http import Http404
 from django.utils import timezone, translation
 from integration.services.requisites import REQUISITES_MANAGED_BY_CRM, changed_crm_owned_fields
 from parties.models import Contact, active_contact_q
@@ -688,10 +688,10 @@ class DocumentFileView(BasePortalView):
         if document is None:
             raise Http404
 
-        stream = portal_documents.open_ready_file(document)
-        if stream is None and not portal_documents.renders_on_demand(document):
+        response = portal_documents.ready_file_response(document)
+        if response is None and not portal_documents.renders_on_demand(document):
             raise Http404  # скан акта без файла: рисовать нечего, 202 был бы обещанием, которое не исполнится
-        if stream is None:
+        if response is None:
             # PDF ещё не отрисован (или потерян в хранилище): рендер идёт в очередь, клиент приходит позже.
             portal_documents.enqueue_render(document)
             return Response(
@@ -703,7 +703,7 @@ class DocumentFileView(BasePortalView):
         portal_documents.record_issue(
             document, contact=request.portal_contact, session=request.portal_session, ip=_client_ip(request)
         )
-        return FileResponse(stream, content_type=document.content_type, as_attachment=True, filename=document.file_name)
+        return response
 
 
 # ── 10. Uploads ─────────────────────────────────────────────────────────────

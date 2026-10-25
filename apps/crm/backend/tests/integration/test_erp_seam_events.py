@@ -19,7 +19,7 @@ from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
-from app.bus.erp_event import CODE_TYPE
+from app.bus.erp_event import CODE_TYPE, NOT_FOR_CRM
 from app.models.clients import Client, Document
 from app.models.leads import LeadNote
 from tests.bus_events import event_types, example_envelope
@@ -28,7 +28,7 @@ from tests.integration.bus_harness import Harness
 pytestmark = pytest.mark.integration
 
 #: Код акцепта не проходит очередь и журнал как остальные: отдельный набор тестов.
-ALL_TYPES = [t for t in event_types("erp") if t != CODE_TYPE]
+ALL_TYPES = [t for t in event_types("erp") if t != CODE_TYPE and t not in NOT_FOR_CRM]
 COMPANY = 118  # erp_company_id в примерах контракта
 #: События, по которым бот пишет клиенту (`client_message` в erp_bot_messages); по остальным молчит.
 CLIENT_MESSAGE_EVENTS = {

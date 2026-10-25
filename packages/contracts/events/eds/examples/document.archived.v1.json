@@ -1,0 +1,24 @@
+{
+  "specversion": "1.0",
+  "id": "e18b65da-5e66-5fec-a279-ed336aa27605",
+  "source": "rt://eds",
+  "type": "uz.railtech.eds.document.archived.v1",
+  "time": "2026-12-01T05:00:00Z",
+  "subject": "СЗ-2026/031",
+  "datacontenttype": "application/json",
+  "dataschema": "rt://contracts/events/eds/document.archived/v1",
+  "tenant": "railtech",
+  "correlationid": "fa893c49-5dab-57dd-8d06-77697e9534da",
+  "data": {
+    "document": {
+      "eds_document_id": "d347ad03-079b-5ddb-adb6-5569ca883e63",
+      "kind": "memo",
+      "number": "СЗ-2026/031"
+    },
+    "archived_at": "2026-12-01T05:00:00Z",
+    "reason": "Оплачена, проект закрыт",
+    "actor": {
+      "type": "system"
+    }
+  }
+}

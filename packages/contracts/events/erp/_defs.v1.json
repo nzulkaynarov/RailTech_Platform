@@ -517,6 +517,165 @@
         }
       },
       "additionalProperties": false
+    },
+    "CalcZone": {
+      "type": "string",
+      "enum": [
+        "goods",
+        "services"
+      ],
+      "description": "Зона визы расчёта: goods — товары и склад (снабженец), services — услуги (гл. инженер); ADR-0012 п. 6"
+    },
+    "QuoteVisaAuthor": {
+      "type": "object",
+      "required": [
+        "crm_user_id",
+        "full_name"
+      ],
+      "properties": {
+        "crm_user_id": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "description": "null — сотрудник ERP без связи с CRM"
+        },
+        "full_name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 255
+        }
+      },
+      "additionalProperties": false
+    },
+    "QuoteVisa": {
+      "type": "object",
+      "description": "Виза строки расчёта по зоне: кто и когда",
+      "required": [
+        "zone",
+        "by",
+        "at"
+      ],
+      "properties": {
+        "zone": {
+          "$ref": "#/$defs/CalcZone"
+        },
+        "by": {
+          "$ref": "#/$defs/QuoteVisaAuthor"
+        },
+        "at": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "additionalProperties": false
+    },
+    "QuoteReadyForApproval": {
+      "type": "object",
+      "description": "Снимок КП для маршрута одобрения в EDS (EDS-03): суммы, маржа, визы, порог маржи резолюции",
+      "required": [
+        "erp_quote_id",
+        "number",
+        "version",
+        "total",
+        "currency",
+        "margin_pct",
+        "min_margin_pct",
+        "required_zones",
+        "visas",
+        "ready_at"
+      ],
+      "properties": {
+        "erp_quote_id": {
+          "type": "integer"
+        },
+        "number": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64,
+          "description": "КП-ГГГГ/NNN"
+        },
+        "version": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "client_name": {
+          "type": "string",
+          "maxLength": 255
+        },
+        "total": {
+          "$ref": "#/$defs/Amount",
+          "description": "Сумма КП с НДС"
+        },
+        "currency": {
+          "$ref": "#/$defs/Currency"
+        },
+        "cost": {
+          "$ref": "#/$defs/Amount",
+          "description": "Себестоимость (видит только директор)"
+        },
+        "margin_amount": {
+          "$ref": "#/$defs/Amount"
+        },
+        "margin_pct": {
+          "type": "string",
+          "pattern": "^-?\\d{1,3}(\\.\\d{1,2})?$",
+          "description": "Маржа КП, % строкой; может быть отрицательной"
+        },
+        "min_margin_pct": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^(100(\\.0{1,2})?|\\d{1,2}(\\.\\d{1,2})?)$",
+          "description": "Порог «маржа не ниже, %» из резолюции (letter.resolved) — снимок для показа; чек-лист EDS сверяет маржу с порогом своей резолюции (владелец поля — EDS). null — ограничения нет"
+        },
+        "required_zones": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/CalcZone"
+          },
+          "description": "Чьи визы нужны расчёту (по строкам КП и исполнителям резолюции)"
+        },
+        "visas": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/QuoteVisa"
+          },
+          "description": "Собранные визы: снабженец — goods, гл. инженер — services"
+        },
+        "due": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "date",
+          "description": "Срок расчёта из резолюции"
+        },
+        "ready_at": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Когда расчёт объявлен готовым"
+        },
+        "valid_until": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "date",
+          "description": "Срок действия КП"
+        },
+        "eds_letter_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uuid",
+          "description": "Входящее письмо EDS, по резолюции которого считали (из letter.resolved)"
+        }
+      },
+      "additionalProperties": false
     }
   }
 }
