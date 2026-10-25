@@ -29,6 +29,7 @@ from django.utils.translation import gettext
 from documents.models import GeneratedDocument
 from portal import projections
 
+from core.file_streaming import storage_file_response
 from crm.constants import FULFILLMENT_NOTE_ISSUED_STATUSES, DocumentTemplateKindCode, GeneratedDocumentStatusCode
 from crm.models import Act, Contract, Fulfillment, Invoice, Quote
 from crm.services.documents import quote_pdf_filename
@@ -385,13 +386,20 @@ def file_size(document: PortalDocument) -> int:
         return 0
 
 
-def open_ready_file(document: PortalDocument):
-    """Открытый на чтение PDF или `None`, если он ещё не отрисован (или потерян в хранилище и будет отрисован заново)."""
+def ready_file_response(document: PortalDocument):
+    """Ответ с PDF документа (вложение) или `None`, если файл ещё не отрисован (или потерян в хранилище и будет
+    отрисован заново). Тело уходит порциями через `core.file_streaming` (S0-9, T3): объект S3 целиком не читается."""
     if not document.file:
         return None
     try:
-        return document.file.open("rb")
-    except (OSError, ValueError):
+        return storage_file_response(
+            document.file.storage,
+            document.file.name,
+            content_type=document.content_type,
+            as_attachment=True,
+            filename=document.file_name,
+        )
+    except (OSError, ValueError):  # FileNotFoundError — подкласс OSError
         return None
 
 
