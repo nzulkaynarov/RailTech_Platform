@@ -36,7 +36,8 @@ export interface paths {
      *     `PLATFORM_SSO_SECRET` (оба активных значения); 2) `iss = crm` и `aud = eds`; 3) `exp` не прошёл (допуск часов 5 с) и
      *     `exp − iat ≤ 60` (с допуском — не больше 65 с); 4) `jti` не встречался — EDS хранит использованные `jti` 10 минут в
      *     своей базе; 5) сотрудник найден **только по `sub`** в проекции сотрудников EDS (`identity.user.*`) — нет: 403
-     *     `USER_NOT_PROVISIONED`, `is_active = false`: 403 `USER_INACTIVE`. Отказы 1–4 — 401 `INVALID_SSO_TOKEN`.
+     *     `USER_NOT_PROVISIONED`, `is_active = false`: 403 `USER_INACTIVE`. Отказы 1–4 — 401 `INVALID_SSO_TOKEN`
+     *     (`details.reason`: `signature`, `issuer` — `iss ≠ crm`, `audience`, `expired`, `lifetime`, `replayed`, `malformed`).
      *     Обмен сотрудников не создаёт и прав не меняет (права — только из проекции). Выдаётся токен доступа EDS (HS256,
      *     `EDS_ACCESS_SECRET`, `iss = eds`, `aud = eds-api` — не `eds`, чтобы токен CRM и токен доступа не путались, `sub =
      *     crm_user_id`, срок 900 с); в журнал EDS — `sso.exchange`

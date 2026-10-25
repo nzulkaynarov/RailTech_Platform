@@ -91,7 +91,8 @@ ADR-0017), у ERP — `{"detail": "USER_NOT_PROVISIONED"}`; неактивный
 конфигурации секретов; `sub = crm_user_id`). API EDS принимает только `aud = eds-api`, обмен — только `aud = eds`.
 Refresh нет: истёк — BFF берёт у CRM новый токен сотрудника и обменивает снова. Проверки — по порядку
 раздела «Проверка приёмником»: подпись (оба значения `PLATFORM_SSO_SECRET`), `iss = crm` и `aud = eds`, срок (`exp − iat ≤ 60`, допуск 5 с —
-не больше 65 с), одноразовый `jti` (таблица в базе `eds`, 10 минут) — отказ 401 `INVALID_SSO_TOKEN` с `details.reason`;
+не больше 65 с), одноразовый `jti` (таблица в базе `eds`, 10 минут) — отказ 401 `INVALID_SSO_TOKEN` с `details.reason`:
+`signature`, `issuer` (`iss ≠ crm`), `audience`, `expired`, `lifetime`, `replayed`, `malformed`;
 сотрудник — **только по `sub`** в проекции сотрудников EDS (из `identity.user.*`): нет — 403 `USER_NOT_PROVISIONED`,
 `is_active = false` — 403 `USER_INACTIVE`. Обмен сотрудников не создаёт и прав не меняет; в журнал EDS — `sso.exchange`.
 
