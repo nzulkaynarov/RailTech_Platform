@@ -1,9 +1,42 @@
-import { expect, type Page, test } from "@playwright/test";
+import { type APIRequestContext, expect, type Page, test } from "@playwright/test";
 
 // Сценарии C4/C6 (docs/systems/crm/BUSINESS.md) в упрощённом виде: админ без разработчика меняет
-// приветствие, видит базу знаний, пробелы, дашборд и аудит.
+// приветствие, видит базу знаний, пробелы, дашборд и аудит (дашборд и клиенты — через вторую роль «Менеджер», R3-D-2).
 const email = process.env["E2E_ADMIN_EMAIL"] ?? "admin@demo.local";
 const password = process.env["E2E_ADMIN_PASSWORD"] ?? "";
+
+interface Me {
+  id: number;
+  platform_role_ids: number[];
+}
+interface PlatformRole {
+  id: number;
+  code: string | null;
+}
+
+/**
+ * Системная роль «Администратор» прав на лиды, клиентов и дашборд CRM не даёт (R3-D-2, решение архитектора
+ * 2026-10-23): бизнес-данные — второй ролью. Сценарий старого фронта идёт под администратором, которому, как живому
+ * сотруднику, выдана вторая роль «Менеджер» (шаблон каталога). Выдаёт сам администратор через API (`users:write`).
+ */
+async function grantManagerRole(request: APIRequestContext) {
+  const auth = await request.post("/api/v1/auth/login", { data: { email, password } });
+  expect(auth.ok(), await auth.text()).toBeTruthy();
+  const { access_token: token } = (await auth.json()) as { access_token: string };
+  const headers = { Authorization: `Bearer ${token}` };
+  const me = (await (await request.get("/api/v1/me", { headers })).json()) as Me;
+  const roles = (await (
+    await request.get("/api/v1/platform-roles", { headers })
+  ).json()) as PlatformRole[];
+  const manager = roles.find((role) => role.code === "tpl:MANAGER");
+  expect(manager, "шаблон «Менеджер» в каталоге ролей").toBeDefined();
+  if (!manager || me.platform_role_ids.includes(manager.id)) return;
+  const granted = await request.patch(`/api/v1/users/${String(me.id)}`, {
+    headers,
+    data: { platform_role_ids: [...me.platform_role_ids, manager.id] },
+  });
+  expect(granted.ok(), await granted.text()).toBeTruthy();
+}
 
 async function login(page: Page) {
   await page.goto("/login");
@@ -13,8 +46,9 @@ async function login(page: Page) {
   await page.waitForURL(/\/inbox/);
 }
 
-test("admin sections render and greeting can be changed", async ({ page }) => {
+test("admin sections render and greeting can be changed", async ({ page, request }) => {
   test.skip(!password, "E2E_ADMIN_PASSWORD не задан");
+  await grantManagerRole(request);
   await login(page);
 
   await page.goto("/dashboard");
