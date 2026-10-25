@@ -124,3 +124,66 @@ def test_own_company_id_pointing_elsewhere_rolls_back(admin):
     assert resp.status_code == 409
     assert resp.json()["detail"] == "OWN_COMPANY_ID_MISMATCH"
     assert not Company.objects.exists()
+
+
+# --- T2 (волна 11b): миграция ролей при OWN_COMPANY_ID на чистой базе (сброс прода 2026-10-26) ---
+
+
+@pytest.mark.django_db
+def test_role_seed_skips_nonexistent_own_company(caplog):
+    """Чистая база + `OWN_COMPANY_ID` на несуществующую компанию: сид миграции accounts/0003 пропускает её
+    с записью в лог (раньше — `IntegrityError` внешнего ключа, `migrate` падал)."""
+    from django.apps import apps as django_apps
+    from django.db import connection
+
+    from accounts.models import CompanyRole
+    from core.seeds import backoffice_roles as seed
+
+    with override_settings(OWN_COMPANY_ID=999999), caplog.at_level("WARNING", logger=seed.__name__):
+        seed.seed_backoffice_roles(django_apps, None)
+        connection.check_constraints()  # отложенные внешние ключи проверяются здесь, а не при коммите
+
+    assert not CompanyRole.objects.exists()
+    assert "OWN_COMPANY_ID=999999" in caplog.text
+
+
+@pytest.mark.django_db
+def test_role_seed_still_seeds_existing_configured_company(company_factory):
+    from django.apps import apps as django_apps
+
+    from accounts.models import CompanyRole
+    from core.seeds import backoffice_roles as seed
+
+    company = company_factory(inn="222333444")
+    with override_settings(OWN_COMPANY_ID=company.pk):
+        seed.seed_backoffice_roles(django_apps, None)
+    assert CompanyRole.objects.filter(company=company, is_system=True).count() == 6
+
+
+@pytest.mark.django_db
+def test_roles_of_own_company_appear_after_first_run_wizard(admin):
+    """`OWN_COMPANY_ID=<будущий id>` на чистой базе: миграция ролей не сеет ничего, мастер первого запуска
+    создаёт компанию с этим id — и `ensure_default_company_roles` досевает все системные роли."""
+    from django.apps import apps as django_apps
+
+    from accounts.constants import BackofficeRoleCode
+    from accounts.models import CompanyRole
+    from core.seeds import backoffice_roles as seed
+
+    probe = Company.objects.create(name="probe")
+    next_id = probe.pk + 1  # следующий id последовательности
+    probe.delete()
+
+    with override_settings(OWN_COMPANY_ID=next_id):
+        seed.seed_backoffice_roles(django_apps, None)
+        assert not CompanyRole.objects.exists()
+
+        resp = _client(admin).post(CREATE, {"name": "ООО Рейл"}, format="json")
+        assert resp.status_code == 201, resp.content
+        company = Company.objects.get(pk=resp.json()["id"])
+        assert company.pk == next_id
+
+    roles = CompanyRole.objects.filter(company=company, is_system=True)
+    assert set(roles.values_list("code", flat=True)) == set(BackofficeRoleCode.values)
+    member = CompanyMember.objects.get(user=admin, company=company)
+    assert set(member.company_roles.values_list("code", flat=True)) == {"HEAD"}
