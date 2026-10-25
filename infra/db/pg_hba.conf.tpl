@@ -4,6 +4,7 @@
 local    all        postgres                               peer
 hostssl  crm        crm_app       @APP_INTERNAL_IP@/32     scram-sha-256
 hostssl  erp        erp_app       @APP_INTERNAL_IP@/32     scram-sha-256
+hostssl  eds        eds_app       @APP_INTERNAL_IP@/32     scram-sha-256
 hostssl  litellm    litellm_app   @APP_INTERNAL_IP@/32     scram-sha-256
 hostssl  langfuse   langfuse_app  @APP_INTERNAL_IP@/32     scram-sha-256
 # Контейнер backup (сеть compose); с наружи сюда пакеты не попадают — порт связан с внутренним IP, ufw закрывает остальное.

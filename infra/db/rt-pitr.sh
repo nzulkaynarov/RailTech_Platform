@@ -94,7 +94,7 @@ check() {
   dir="$RESTORE_BASE/pgdata"; sock="$RESTORE_BASE/sock"
   local port=55432 started deadline
   local timeout="${WAL_CHECK_TIMEOUT_S:-3600}" max_lag="${WAL_CHECK_MAX_LAG_BYTES:-67108864}"
-  local db_names="${DB_NAMES:-crm erp litellm langfuse}"
+  local db_names="${DB_NAMES:-crm erp eds litellm langfuse}"
   local reason="" primary_lsn restored_lsn lag="" report=""
   started="$(date +%s)"
 

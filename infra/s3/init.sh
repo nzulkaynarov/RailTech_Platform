@@ -15,13 +15,14 @@ set -eu
 log() { printf 's3-init: %s\n' "$*"; }
 die() { printf 's3-init: ОШИБКА: %s\n' "$*" >&2; exit 1; }
 
-# Сервисы и их доступ. Бакеты: erp-* — файлы ERP; kb-sources, client-documents, tg-attachments — CRM; langfuse — события и
+# Сервисы и их доступ. Бакеты: erp-* — файлы ERP; kb-sources, client-documents, tg-attachments — CRM; eds-private — EDS; langfuse — события и
 # медиа Langfuse; wal — архив WAL-G (VPS 2); backups — ежедневные дампы (VPS 2 пишет, CRM читает статус бэкапа).
-SERVICES="erp crm langfuse wal backup"
+SERVICES="erp crm eds langfuse wal backup"
 rw_of() {
   case "$1" in
     erp) echo "erp-private erp-public erp-temp" ;;
     crm) echo "kb-sources client-documents tg-attachments" ;;
+    eds) echo "eds-private" ;; # документы EDS (волна 12): версии файлов, сканы; других бакетов у сервиса нет
     langfuse) echo "langfuse" ;;
     wal) echo "wal" ;;
     backup) echo "backups" ;;

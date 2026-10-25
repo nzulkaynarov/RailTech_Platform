@@ -11,7 +11,7 @@ CPU_PY_NATIVE='import importlib.util as u; [__import__(m) for m in ("numpy","pan
 
 # cpu_baseline_names — имена образов, для которых есть правило (одно на строку).
 cpu_baseline_names() {
-  printf '%s\n' rt-crm-backend rt-erp-backend rt-platform-bff rt-litellm rt-crm-frontend rt-erp-frontend rt-cabinet rt-platform-web \
+  printf '%s\n' rt-crm-backend rt-erp-backend rt-platform-bff rt-eds rt-litellm rt-crm-frontend rt-erp-frontend rt-cabinet rt-platform-web \
     rt-db-postgres rt-db-backup caddy redis rustfs rc
 }
 
@@ -22,6 +22,11 @@ cpu_baseline_rules() {
   local name="$1" run="$2"
   case "$name" in
     rt-crm-backend | rt-platform-bff | rt-erp-backend) "$run" python -c "$CPU_PY_NATIVE" ;;
+    # EDS: нет numpy, зато нативные колёса стека (Rust pydantic-core/rpds, libpq psycopg-binary, uvloop, httptools, watchfiles) — import исполняет их код.
+    rt-eds)
+      "$run" python -c "$CPU_PY_NATIVE"
+      "$run" python -c "import pydantic_core, psycopg, psycopg_binary, uvloop, httptools, watchfiles, rpds, yaml, jwt, sqlalchemy"
+      ;;
     rt-litellm) "$run" python -c "import numpy; import litellm.proxy.proxy_server" ;;
     # Статика: Caddy (Go, GOAMD64 определяется при старте) и nginx; -t разбирает конфигурацию образа (pcre, openssl).
     rt-crm-frontend | rt-platform-web | caddy) "$run" caddy version ;;

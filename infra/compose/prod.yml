@@ -67,6 +67,13 @@ x-erp-prod-env: &erp-prod-env
   EMAIL_USE_TLS: ${SMTP_USE_TLS:-True}
   DEFAULT_FROM_EMAIL: ${SMTP_FROM:-noreply@example.com}
 
+# Окружение EDS: внешняя база (роль eds_app, TLS в параметрах URL), prod-режим. Миграции — только явно, после pg_dump-гейта
+# (deploy.sh: `run --rm --no-deps eds-migrate`); eds-migrate в `up` не участвует.
+x-eds-prod-env: &eds-prod-env
+  APP_ENV: prod
+  EDS_DATABASE_URL: postgresql+psycopg://eds_app:${DB_EDS_PASSWORD:?set in .env}@${DB_INTERNAL_IP:?set in .env}:5432/eds?sslmode=require
+  EDS_VERSION: ${RT_IMAGE_TAG:?set RT_IMAGE_TAG}
+
 # Контракты событий и подписки шины rt_bus (B3, L14) вшиты в образ ERP (/opt/rt/contracts, RT_BUS_CONTRACTS_DIR,
 # RT_BUS_SUBSCRIPTIONS): монтирований схемы событий из релиза больше нет (events.schema.json удалён вместе с вебхуками).
 
@@ -227,6 +234,43 @@ services:
     <<: [*ops, *mem-64]
     image: ${RT_IMAGE_REGISTRY:-ghcr.io/nzulkaynarov}/rt-crm-frontend:${RT_IMAGE_TAG}
     build: !reset null
+
+  # ─── EDS (apps/eds, волна 12) ───────────────────────────────────────────────────────────────
+  # Без портов и без маршрута в Caddy: приёмник шины и API — только внутри сети compose (BFF Платформы, шина rt_bus).
+  # Память: факт на стенде (образ prod, непривилегированный пользователь) — eds-api ≈ 80 МБ, eds-worker ≈ 70 МБ; лимит 192 МБ — запас
+  # на файлы и отчёты домена (E3 пересмотрит).
+  eds-migrate:
+    <<: [*ops, *mem-256]
+    restart: "no"
+    image: ${RT_IMAGE_REGISTRY:-ghcr.io/nzulkaynarov}/rt-eds:${RT_IMAGE_TAG:?set RT_IMAGE_TAG}
+    build: !reset null
+    environment:
+      <<: *eds-prod-env
+    depends_on: !override {}
+
+  eds-api:
+    <<: [*ops, *mem-192]
+    image: ${RT_IMAGE_REGISTRY:-ghcr.io/nzulkaynarov}/rt-eds:${RT_IMAGE_TAG:?set RT_IMAGE_TAG}
+    build: !reset null
+    environment:
+      <<: *eds-prod-env
+    depends_on: !override
+      eds-migrate:
+        condition: service_completed_successfully
+      s3-init:
+        condition: service_completed_successfully
+
+  eds-worker:
+    <<: [*ops, *mem-192]
+    image: ${RT_IMAGE_REGISTRY:-ghcr.io/nzulkaynarov}/rt-eds:${RT_IMAGE_TAG:?set RT_IMAGE_TAG}
+    build: !reset null
+    environment:
+      <<: *eds-prod-env
+    depends_on: !override
+      eds-migrate:
+        condition: service_completed_successfully
+      s3-init:
+        condition: service_completed_successfully
 
   # ─── ERP ────────────────────────────────────────────────────────────────────────────────────
   erp-backend:
