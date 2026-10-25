@@ -18,6 +18,6 @@
 
 ## Когда сервис появится
 
-Задача C1 (runbook волны) создаёт: `apps/eds` (каркас, база, Docker, CI), контракты `packages/contracts/openapi/eds.yaml` и
+Задача C1 ([`wave12-eds-c1.md`](../../runbooks/wave12-eds-c1.md)) создаёт: `apps/eds` (каркас, база, Docker, CI), контракты `packages/contracts/openapi/eds.yaml` и
 схемы событий, правила кода системы (CONVENTIONS рядом с этим файлом) и указатели CLAUDE/README в `apps/eds`; этот файл становится README
 системы с командами запуска.
