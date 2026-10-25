@@ -184,7 +184,7 @@ SPA  POST /api/v1/auth/login {email, password}
 | Домен | `platform.railtech.uz` → VPS 1 (A-запись — владелец); TLS — Caddy, ACME как у остальных доменов |
 | Caddy | сайт `{$PLATFORM_DOMAIN}`: `/api/*` → `platform-bff:8000` (`flush_interval -1` для SSE), остальное → `platform-web`; заголовки безопасности и CSP как у CRM (`style-src 'unsafe-inline'` нужен Ant Design); `no_mcp` |
 | Сервисы compose | `platform-bff` (uvicorn, 2 процесса, лимит 256 МБ), `platform-web` (статика, лимит 64 МБ); образы `rt-platform-bff`, `rt-platform-web` в GHCR по тегу sha, собирает `deploy.yml` (INF-P0-5, #151). **Caddy не зависит от здоровья Платформы** (`depends_on: service_started`): сбой её образа даёт 502 только на `platform.`, остальные домены живут (INF-P1-0) |
-| Переменные | `PLATFORM_DOMAIN` (обязательна: `deploy.sh` без неё останавливается до pull — сначала DNS, потом строка в `/opt/rt/.env.prod`), `PLATFORM_SESSION_TTL_HOURS`, `PLATFORM_CRM_URL=http://crm-api:8000`, `PLATFORM_ERP_URL=http://erp-backend:8000`, `REDIS_URL`; нового секрета нет (сессия — случайный идентификатор, не подписанный токен) |
+| Переменные | `PLATFORM_DOMAIN` (обязательна: `deploy.sh` без неё останавливается до pull — сначала DNS, потом строка в `/opt/rt/.env.prod`), `PLATFORM_SESSION_TTL_HOURS`, `PLATFORM_CRM_URL=http://crm-api:8000`, `PLATFORM_ERP_URL=http://erp-backend:8000`, `REDIS_URL`; необязательные (не секреты): `PLATFORM_LOGIN_RATE_PER_MINUTE` (10), `PLATFORM_CRM_TIMEOUT_SECONDS` (5), `PLATFORM_TRUSTED_PROXIES` (см. §8); нового секрета нет (сессия — случайный идентификатор, не подписанный токен) |
 | Дев-стенд | `platform.localhost` в `Caddyfile.dev`, `make up` поднимает оба сервиса; `make check-platform` |
 | Деплой | существующий `deploy.yml` + `deploy.sh` (разрешено владельцем 2026-10-22, #151); smoke — четыре домена; smoke отката — тоже четыре (INF-P1-0) |
 | Память VPS 1 | +≈ 200 МБ к текущему стеку; после T4 −≈ 60 МБ (`crm-web`, `erp-web`) |
@@ -193,6 +193,21 @@ SPA  POST /api/v1/auth/login {email, password}
 ## 8. Наблюдаемость и устойчивость
 
 - `X-Request-Id` от Caddy проходит BFF и уходит в CRM и ERP; логи всех трёх связываются по нему.
+- **Адрес клиента (волна 11b, T5).** Caddy (`reverse_proxy`) сам ставит `X-Forwarded-For` и не верит такому заголовку от
+  клиента. BFF берёт адрес из заголовка только от доверенного прокси: идёт справа налево по цепочке, пока адрес входит в
+  `PLATFORM_TRUSTED_PROXIES` (CIDR или адреса через запятую; по умолчанию loopback и частные сети — сеть compose, наружу
+  BFF не публикуется); первый адрес вне списка — клиент. Если сокет-партнёр не доверенный (в обход Caddy), заголовок
+  игнорируется и берётся адрес сокета; нечитаемые элементы цепочки отбрасываются. Опечатка в списке — ошибка при старте.
+  Адрес идёт в лимит входа, в каждую запись журнала BFF (поле `client_ip` рядом с `request_id`; события входа:
+  `login_failed`, `login_not_completed`, `login_rate_limited`, `login_succeeded` — e-mail только короткий хеш) и в CRM
+  в `X-Forwarded-For` при входе (CRM видит BFF, аудит входа ведёт по заголовку).
+- **Лимит входа (O-1).** 10 **неудачных** попыток в минуту отдельно на IP и на e-mail (`PLATFORM_LOGIN_RATE_PER_MINUTE`).
+  Попытка записывается в Redis до обращения к CRM (параллельные запросы лимит не обходят) и возвращается, если вход не
+  провалился из-за учётных данных: успешный вход (офис за одним NAT), нет ролей Платформы, сбой CRM. Считаются
+  `INVALID_CREDENTIALS` и `ACCOUNT_LOCKED`. Успешный вход сбрасывает счётчик e-mail; счётчик IP хранит неудачи других
+  пользователей этого адреса. Сверх порога — 429 `TOO_MANY_REQUESTS` с `Retry-After`, в CRM попытка не уходит.
+- **Таймаут CRM.** Клиент CRM в BFF ждёт `PLATFORM_CRM_TIMEOUT_SECONDS` (по умолчанию 5 с; было 3 — под нагрузкой вход
+  давал 503, runbook r3 O-1; отдельного таймаута для входа нет). Клиент ERP, Redis и проверка health — по-прежнему 3 с.
 - Агрегирующие эндпоинты BFF ходят в источники параллельно с таймаутом 3 с и отдают частичный результат с
   флагом `sources: {crm: ok, erp: unavailable}`; SPA показывает плашку «ERP не отвечает, данные неполные»,
   а не пустой экран.

@@ -9,7 +9,12 @@ from dataclasses import dataclass
 
 import httpx
 
-from app.clients.base import BackendClient, BackendUnavailableError, cookie_value
+from app.clients.base import (
+    CRM_TIMEOUT_SECONDS,
+    BackendClient,
+    BackendUnavailableError,
+    cookie_value,
+)
 from app.clients.crm_models import TokenResponse
 
 REFRESH_COOKIE = "rt_refresh"
@@ -26,8 +31,8 @@ class CrmTokens:
 
 
 class CrmClient(BackendClient):
-    def __init__(self, base_url: str) -> None:
-        super().__init__("crm", base_url, "/health")
+    def __init__(self, base_url: str, timeout: float = CRM_TIMEOUT_SECONDS) -> None:
+        super().__init__("crm", base_url, "/health", timeout=timeout)
 
     @staticmethod
     def tokens(response: httpx.Response) -> CrmTokens:
@@ -39,9 +44,16 @@ class CrmClient(BackendClient):
             must_change_password=body.must_change_password,
         )
 
-    async def login(self, email: str, password: str) -> httpx.Response:
+    async def login(
+        self, email: str, password: str, client_ip: str | None = None
+    ) -> httpx.Response:
+        """Вход. `client_ip` — адрес сотрудника: CRM видит только BFF, а аудит входа ведёт по
+        `X-Forwarded-For` (uvicorn `proxy_headers`, `FORWARDED_ALLOW_IPS` у crm-api)."""
         return await self.send(
-            "POST", "/api/v1/auth/login", json={"email": email, "password": password}
+            "POST",
+            "/api/v1/auth/login",
+            json={"email": email, "password": password},
+            headers={"X-Forwarded-For": client_ip} if client_ip else None,
         )
 
     async def refresh(self, refresh_token: str) -> httpx.Response:

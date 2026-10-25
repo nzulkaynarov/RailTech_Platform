@@ -139,6 +139,31 @@ def test_link_streams_the_file(crm, public, world):
     assert response["Cache-Control"] == "private, no-store"
 
 
+def test_link_streams_a_big_file_in_chunks(crm, public, world, monkeypatch):
+    """T3 (хвост S0-9): объект S3 не читается целиком — ответ потоковый, пик памяти не растёт с размером файла."""
+    from core.file_streaming import ObjectStreamResponse
+    from core.tests.s3_fakes import MB, FakeBucket, drain, peak_memory_of, s3_status_not_touched, s3_storage
+
+    big = 40 * MB
+    document = world["document"]
+    issued = link_for(crm, document)  # ссылку выдаём до подмены хранилища: размер файла берётся из настоящего
+    bucket = FakeBucket(**{document.pdf_file.name: big})
+    monkeypatch.setattr(GeneratedDocument._meta.get_field("pdf_file"), "storage", s3_storage(bucket))
+    response = open_link(public, issued)
+
+    assert response.status_code == 200
+    assert isinstance(response, ObjectStreamResponse)
+    assert response["Content-Type"] == "application/pdf"
+    assert response["Content-Length"] == str(big)
+    assert response["Content-Disposition"].startswith("attachment")
+    assert response["Cache-Control"] == "private, no-store"
+    with s3_status_not_touched():
+        total, peak = peak_memory_of(lambda: drain(response))
+    assert total == big
+    assert peak < 4 * MB, f"пик памяти {peak / MB:.1f} МБ при файле {big / MB:.0f} МБ"
+    assert bucket.bodies[0].closed
+
+
 def test_size_is_absent_while_the_pdf_is_not_rendered_and_render_is_queued(crm, world, render_calls):
     document = make_document(world["company"], world["deal"], pdf=False)
     body = link_for(crm, document).json()
