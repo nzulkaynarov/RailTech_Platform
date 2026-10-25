@@ -100,17 +100,21 @@ async def container(request: pytest.FixtureRequest, settings: Settings) -> Async
 
 
 async def _truncate(settings: Settings) -> None:
+    """Очистить все таблицы сервиса, кроме служебных (alembic, procrastinate): список берётся из базы."""
     from sqlalchemy import text
     from sqlalchemy.ext.asyncio import create_async_engine
 
     engine = create_async_engine(settings.sqlalchemy_url)
     async with engine.begin() as conn:
-        await conn.execute(
-            text(
-                "TRUNCATE employees, sso_jti, rt_bus_outbox, rt_bus_delivery, rt_bus_inbox, "
-                "rt_bus_subscriber_state RESTART IDENTITY"
+        names = (
+            await conn.execute(
+                text(
+                    "SELECT quote_ident(tablename) FROM pg_tables WHERE schemaname = 'public' "
+                    "AND tablename <> 'alembic_version' AND tablename NOT LIKE 'procrastinate%'"
+                )
             )
-        )
+        ).scalars()
+        await conn.execute(text(f"TRUNCATE {', '.join(names)} RESTART IDENTITY CASCADE"))
     await engine.dispose()
 
 
