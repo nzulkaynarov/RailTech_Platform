@@ -14,6 +14,7 @@ from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.config import Settings
+from app.domain.erp_permissions import ERP_PERMISSIONS
 from app.domain.platform_roles import crm_policies
 from app.domain.platform_roles_generated import ROLE_ACCESS, ROLE_RESTRICTED_FIELDS
 from app.integrations.erp_users import ProvisionPayload
@@ -488,6 +489,35 @@ async def test_provisioning_after_a_role_change_sends_the_recomputed_permissions
         "finance.rates",
         "data.export",
     )
+
+
+async def test_only_the_system_admin_is_the_erp_superuser(
+    client: TestClient, sessions: async_sessionmaker[AsyncSession]
+) -> None:
+    """Q-R1c-1 п. 5 (архитектор, 2026-10-26): пользовательская роль с `admin: full` — администратор
+    CRM (базовая роль `admin`), но в ERP — `backoffice` с правами разделов; суперпользователь ERP —
+    только системная «Администратор»."""
+    employee, boss = await setup_staff(client, sessions)
+    custom = _create(client, boss, access={"admin": "full"})
+    (system_admin,) = legacy_ids(client, boss, ["ADMIN"])
+    erp = FakeErp()
+    service = ErpAccessService(sessions, erp)
+
+    client.patch(
+        f"/api/v1/users/{employee}", json={"platform_role_ids": [custom["id"]]}, headers=boss
+    )
+    await service.provision(employee)
+    client.patch(
+        f"/api/v1/users/{employee}",
+        json={"platform_role_ids": [custom["id"], system_admin]},
+        headers=boss,
+    )
+    await service.provision(employee)
+
+    assert await crm_roles(sessions, employee) == ["admin"]
+    custom_only, with_system = erp.payloads
+    assert (custom_only.role, custom_only.permissions) == ("backoffice", ("team.manage",))
+    assert (with_system.role, with_system.permissions) == ("admin", ERP_PERMISSIONS)
 
 
 async def test_changing_a_role_recomputes_the_crm_role_of_holders(
