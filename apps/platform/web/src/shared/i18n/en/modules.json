@@ -388,6 +388,7 @@
       "errors": {
         "LAST_ADMIN": "You cannot remove the administrator role or disable the last administrator. Appoint another administrator first.",
         "LAST_DIRECTOR": "You cannot remove the director role or disable the last director. Appoint another director first.",
+        "ROLES_REQUIRED": "At least one role is required. To close the employee's access, disable them.",
         "EMAIL_EXISTS": "An employee with this email already exists.",
         "ACTIVE_LEADS": "The employee has leads in progress. Pick a colleague to hand them over to and try again.",
         "FORBIDDEN": "Not enough rights: roles are granted by an administrator.",
@@ -423,7 +424,7 @@
         "off": "hidden"
       },
       "noModules": "No sections yet",
-      "adminNote": "Admin “full” in this role manages employees, roles and connections, but does not make a full CRM and ERP administrator: only the system role “Administrator” does.",
+      "adminNote": "Admin “full” in this role manages employees, roles and connections, but does not make an ERP superuser: only the system role “Administrator” does. Neither gives CRM leads, clients or deals — that needs a second role.",
       "employeesCount": "Employees: {{count}}",
       "create": "Create role",
       "createdToast": "Role “{{name}}” created",
@@ -460,16 +461,16 @@
       "applied": "CRM and ERP rights are recalculated right after saving; employees' menus refresh within a minute. The CRM log keeps who changed the role and when.",
       "preview": {
         "section": "{{section}} ({{level}})",
-        "employees": {
-          "one": "{{count}} employee",
-          "few": "{{count}} employees",
-          "many": "{{count}} employees",
-          "other": "{{count}} employees"
-        },
         "nobody": "Nobody holds the role: nobody's rights change.",
         "unchanged": "Rights of employees with this role do not change: their other roles give the same sections.",
-        "gained": "{{who}} will gain: {{list}}.",
-        "lost": "{{who}} will lose: {{list}}.",
+        "gained_one": "{{count}} employee will gain: {{list}}.",
+        "gained_few": "{{count}} employees will gain: {{list}}.",
+        "gained_many": "{{count}} employees will gain: {{list}}.",
+        "gained_other": "{{count}} employees will gain: {{list}}.",
+        "lost_one": "{{count}} employee will lose: {{list}}.",
+        "lost_few": "{{count}} employees will lose: {{list}}.",
+        "lost_many": "{{count}} employees will lose: {{list}}.",
+        "lost_other": "{{count}} employees will lose: {{list}}.",
         "fieldsGained": "Fields become visible: {{list}}.",
         "fieldsLost": "Fields stop being visible: {{list}}.",
         "loading": "Working out whose rights change…",
@@ -496,7 +497,9 @@
       "employeesTitle": "Employees with the role “{{name}}”",
       "employeesEmpty": "Nobody holds the role yet. Grant it in the employee card in the org chart.",
       "openEmployee": "Change roles: {{name}}",
+      "viewEmployee": "Open card: {{name}}",
       "change": "Change",
+      "view": "Open",
       "modules": "The role opens modules: {{modules}}."
     }
   },

@@ -388,6 +388,7 @@
       "errors": {
         "LAST_ADMIN": "Administrator rolini olib bo'lmaydi va oxirgi administratorni o'chirib bo'lmaydi. Avval boshqa xodimni administrator qiling.",
         "LAST_DIRECTOR": "Direktor rolini olib bo'lmaydi va oxirgi direktorni o'chirib bo'lmaydi. Avval boshqa xodimni direktor qiling.",
+        "ROLES_REQUIRED": "Kamida bitta rol kerak. Xodimga kirishni yopish uchun uni o'chiring.",
         "EMAIL_EXISTS": "Bunday pochtali xodim allaqachon bor.",
         "ACTIVE_LEADS": "Xodimda ishdagi lidlar bor. Ularni topshiradigan hamkasbni tanlang va takrorlang.",
         "FORBIDDEN": "Huquq yetarli emas: rollarni administrator beradi.",
@@ -423,7 +424,7 @@
         "off": "ko'rmaydi"
       },
       "noModules": "Hozircha bo'limlar yo'q",
-      "adminNote": "Ushbu roldagi Admin «to'liq» xodimlar, rollar va ulanishlarni boshqarishni beradi, lekin to'liq CRM va ERP administratori qilmaydi: buni faqat «Administrator» tizim roli beradi.",
+      "adminNote": "Ushbu roldagi Admin «to'liq» xodimlar, rollar va ulanishlarni boshqarishni beradi, lekin ERP superfoydalanuvchisi qilmaydi: buni faqat «Administrator» tizim roli beradi. CRM lidlari, mijozlari va bitimlarini ikkalasi ham bermaydi — ikkinchi rol kerak.",
       "employeesCount": "Xodimlar: {{count}}",
       "create": "Rol yaratish",
       "createdToast": "«{{name}}» roli yaratildi",
@@ -460,16 +461,16 @@
       "applied": "CRM va ERP dagi huquqlar saqlangandan so'ng darhol qayta hisoblanadi; xodimlar menyusi bir daqiqa ichida yangilanadi. CRM jurnalida rolni kim va qachon o'zgartirgani qoladi.",
       "preview": {
         "section": "{{section}} ({{level}})",
-        "employees": {
-          "one": "{{count}} xodim",
-          "few": "{{count}} xodim",
-          "many": "{{count}} xodim",
-          "other": "{{count}} xodim"
-        },
         "nobody": "Rol hech bir xodimga berilmagan: hech kimning huquqlari o'zgarmaydi.",
         "unchanged": "Ushbu roldagi xodimlar huquqlari o'zgarmaydi: xuddi shu bo'limlarni boshqa rollari beradi.",
-        "gained": "{{who}} oladi: {{list}}.",
-        "lost": "{{who}} yo'qotadi: {{list}}.",
+        "gained_one": "{{count}} xodim oladi: {{list}}.",
+        "gained_few": "{{count}} xodim oladi: {{list}}.",
+        "gained_many": "{{count}} xodim oladi: {{list}}.",
+        "gained_other": "{{count}} xodim oladi: {{list}}.",
+        "lost_one": "{{count}} xodim yo'qotadi: {{list}}.",
+        "lost_few": "{{count}} xodim yo'qotadi: {{list}}.",
+        "lost_many": "{{count}} xodim yo'qotadi: {{list}}.",
+        "lost_other": "{{count}} xodim yo'qotadi: {{list}}.",
         "fieldsGained": "Maydonlar ko'rinadi: {{list}}.",
         "fieldsLost": "Maydonlar ko'rinmay qoladi: {{list}}.",
         "loading": "Qaysi xodimlarning huquqlari o'zgarishi hisoblanmoqda…",
@@ -496,7 +497,9 @@
       "employeesTitle": "«{{name}}» roli bilan xodimlar",
       "employeesEmpty": "Rol hali hech kimga berilmagan. Tuzilmadagi xodim kartochkasida bering.",
       "openEmployee": "Rollarni o'zgartirish: {{name}}",
+      "viewEmployee": "Kartochkani ochish: {{name}}",
       "change": "O'zgartirish",
+      "view": "Ochish",
       "modules": "Rol modullarni ochadi: {{modules}}."
     }
   },

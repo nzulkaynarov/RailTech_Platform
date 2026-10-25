@@ -159,6 +159,16 @@ export const adminUsersHandlers = [
     const items = readEmployees();
     const current = items.find((e) => e.id === params["id"]);
     if (!current) return failure(404, "NOT_FOUND", "Не найдено.", "crm");
+    // Как BFF 0.6.0: пустой набор ролей в CRM не уходит (закрыть доступ — «Отключить сотрудника»).
+    if (body.role_ids !== undefined && body.role_ids.length === 0) {
+      return failure(
+        422,
+        "ROLES_REQUIRED",
+        "Нужна хотя бы одна роль. Чтобы закрыть сотруднику доступ, отключите его.",
+        "bff",
+        { fields: ["role_ids"] },
+      );
+    }
 
     for (const roleId of [ROLE_ID.ADMIN, ROLE_ID.DIRECTOR]) {
       const drops =

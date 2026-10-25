@@ -2,15 +2,16 @@
 
 BFF не решает: роли Платформы — данные CRM (`platform_role_ids`, R-1), CRM же вычисляет права в CRM
 и ERP и ставит провижининг; инварианты «последний администратор / директор» и «лиды в работе» —
-тоже CRM (409 -> `LAST_ADMIN`, `LAST_DIRECTOR`, `CONFLICT`). Доступ — раздел `admin` каталога:
-чтение — список и карточки, полный — изменения.
+тоже CRM (409 -> `LAST_ADMIN`, `LAST_DIRECTOR`, `CONFLICT`). Пустой набор ролей BFF отклоняет сам
+(422 `ROLES_REQUIRED`, 0.6.0) — это проверка формы запроса, а не решение. Доступ — раздел `admin`
+каталога: чтение — список и карточки, полный — изменения.
 """
 
 from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends, Path, Query, status
 
-from app.clients.crm_users import CrmUsers
+from app.clients.crm_users import CrmUsers, roles_required
 from app.deps import Authed, require
 from app.errors import PlatformError
 from app.schemas_admin import (
@@ -155,13 +156,16 @@ async def get_employee(id: EmployeeId, authed: Reader) -> Employee:
     operation_id="updateEmployee",
 )
 async def update_employee(id: EmployeeId, body: EmployeeUpdate, authed: Writer) -> Employee:
-    """Роли (`platform_role_ids` в CRM), должность, отключение, передача лидов; инварианты — CRM.
+    """Роли (`platform_role_ids` в CRM, хотя бы одна), должность, отключение, передача лидов;
+    инварианты — CRM.
 
     Роли уходят полным набором id: BFF не читает и не дописывает роли кодами (иначе слетели бы
     роли без кода)."""
     payload: dict[str, Any] = {}
     if "role_ids" in body.model_fields_set:
-        payload["platform_role_ids"] = [int(i) for i in body.role_ids or []]
+        if not body.role_ids:
+            raise roles_required()
+        payload["platform_role_ids"] = [int(i) for i in body.role_ids]
     if "transfer_to_user_id" in body.model_fields_set and body.transfer_to_user_id is not None:
         payload["transfer_to_user_id"] = int(body.transfer_to_user_id)
     if "position" in body.model_fields_set:

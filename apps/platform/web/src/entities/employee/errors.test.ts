@@ -13,6 +13,13 @@ describe("employeeErrorText", () => {
     expect(employeeErrorText(t, error)).toMatch(/последнего администратора/);
   });
 
+  it("ROLES_REQUIRED (BFF 0.6.0) — хотя бы одна роль, закрыть доступ — отключить", () => {
+    const error = new ApiError(422, "ROLES_REQUIRED", "x", "bff", { fields: ["role_ids"] });
+    expect(employeeErrorText(t, error)).toBe(
+      "Нужна хотя бы одна роль. Чтобы закрыть сотруднику доступ, отключите его.",
+    );
+  });
+
   it("EMAIL_EXISTS", () => {
     expect(employeeErrorText(t, new ApiError(409, "EMAIL_EXISTS", "x", "crm"))).toBe(
       "Сотрудник с такой почтой уже есть.",

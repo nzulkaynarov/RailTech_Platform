@@ -52,6 +52,10 @@
  * обычными API (с проверкой прав). Данных событий в потоке нет. Пока поток жив, опрос — редкий (5 минут), при обрыве —
  * прежние 30 секунд. Чисто добавляющее изменение.
  *
+ * **0.6.0 (R-1c, R3-D-1) — ломающее (до 1.0 допустимо).** У сотрудника хотя бы одна роль: `EmployeeUpdate.role_ids` —
+ * `minItems: 1`, пустой набор — 422 `ROLES_REQUIRED` (`details.fields = [role_ids]`), в CRM запрос не уходит; тот же код —
+ * перевод отказа CRM `roles_required` (CRM API 0.3.0). Закрыть доступ — `is_active = false` («Отключить сотрудника»).
+ *
  * 0.2.4: `423 ACCOUNT_LOCKED` объявлен и на `POST /auth/change-password` (CRM блокирует учётную запись после неверных
  * текущих паролей).
  *
@@ -70,7 +74,7 @@
  * Лимиты: вход — 10 в минуту на IP и e-mail; остальные запросы — 300 в минуту на сессию; превышение — 429
  * `TOO_MANY_REQUESTS` с `Retry-After`.
  *
- * OpenAPI spec version: 0.5.0
+ * OpenAPI spec version: 0.6.0
  */
 import { useMutation, useQuery } from "@tanstack/react-query";
 import type {
@@ -2384,7 +2388,7 @@ export const getUpdateEmployeeUrl = (id: string) => {
 };
 
 /**
- * Раздел `admin` — полный. Роли — полный новый набор `role_ids`; права в CRM и ERP вычисляет CRM. Снять последнего активного администратора или директора (роль или отключение) нельзя — 409 `LAST_ADMIN` / `LAST_DIRECTOR`. У сотрудника есть лиды в работе, а изменение отнимает у него работу с лидами, — 409 `CONFLICT` с `details.reason = user_has_active_leads`; повтор с `transfer_to_user_id` передаёт лиды коллеге.
+ * Раздел `admin` — полный. Роли — полный новый набор `role_ids`; права в CRM и ERP вычисляет CRM. Снять последнего активного администратора или директора (роль или отключение) нельзя — 409 `LAST_ADMIN` / `LAST_DIRECTOR`. У сотрудника есть лиды в работе, а изменение отнимает у него работу с лидами, — 409 `CONFLICT` с `details.reason = user_has_active_leads`; повтор с `transfer_to_user_id` передаёт лиды коллеге. Пустой набор ролей — 422 `ROLES_REQUIRED` (0.6.0): у сотрудника хотя бы одна роль, закрыть доступ — `is_active = false`.
  * @summary Роли, должность, отключение — единое место выдачи ролей обеих систем
  */
 export const updateEmployee = async (
@@ -2422,9 +2426,7 @@ export const updateEmployee = async (
 export const getUpdateEmployeeMutationKey = () => ["updateEmployee"] as const;
 
 export const getUpdateEmployeeMutationOptions = <
-  TError = ErrorType<
-    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | Error | ValidationFailedResponse
-  >,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | Error>,
   TContext = unknown,
 >(options?: {
   mutation?: UseMutationOptions<
@@ -2462,7 +2464,7 @@ export const getUpdateEmployeeMutationOptions = <
 export type UpdateEmployeeMutationResult = NonNullable<Awaited<ReturnType<typeof updateEmployee>>>;
 export type UpdateEmployeeMutationBody = EmployeeUpdate;
 export type UpdateEmployeeMutationError = ErrorType<
-  SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | Error | ValidationFailedResponse
+  SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | Error
 >;
 export type UpdateEmployeeMutationVariables = { id: string; data: EmployeeUpdate };
 
@@ -2470,9 +2472,7 @@ export type UpdateEmployeeMutationVariables = { id: string; data: EmployeeUpdate
  * @summary Роли, должность, отключение — единое место выдачи ролей обеих систем
  */
 export const useUpdateEmployee = <
-  TError = ErrorType<
-    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | Error | ValidationFailedResponse
-  >,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | Error>,
   TContext = unknown,
 >(
   options?: {
