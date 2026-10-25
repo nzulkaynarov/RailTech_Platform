@@ -6,7 +6,11 @@
 до шаблона в коде при следующем обращении.
 """
 
+import logging
+
 from django.conf import settings
+
+logger = logging.getLogger(__name__)
 
 ALL = [
     "deal.manage",
@@ -89,10 +93,24 @@ WORKSPACE_TO_ROLES = {
 def _own_company_ids(apps):
     """Своя компания так же, как `core.tenant.own_company_id`: настройка или единственная
     компания-продавец (тип SUPPLIER) с активными участниками. Несколько без настройки — никого:
-    роли досеет `ensure_default_company_roles`, когда `OWN_COMPANY_ID` будет задан."""
+    роли досеет `ensure_default_company_roles`, когда `OWN_COMPANY_ID` будет задан.
+
+    `OWN_COMPANY_ID` на компанию, которой в базе нет (чистая база при сбросе прода), — пропуск с записью
+    в лог, а не ошибка: роли строки `CompanyRole` ссылаются на компанию внешним ключом, и сев на
+    несуществующую, миграция падала бы `IntegrityError`. Роли такой компании появятся после мастера
+    первого запуска (`create_own_company` → `ensure_default_company_roles`)."""
     configured = getattr(settings, "OWN_COMPANY_ID", None)
     if configured:
-        return [int(configured)]
+        company_id = int(configured)
+        Company = apps.get_model("parties", "Company")
+        if not Company.objects.filter(pk=company_id).exists():
+            logger.warning(
+                "accounts.0003_backoffice_roles: OWN_COMPANY_ID=%s указывает на несуществующую компанию — "
+                "роли бэк-офиса не засеяны; их создаст мастер первого запуска (ensure_default_company_roles).",
+                company_id,
+            )
+            return []
+        return [company_id]
     CompanyMember = apps.get_model("accounts", "CompanyMember")
     ids = sorted(
         set(
