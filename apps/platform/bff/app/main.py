@@ -20,6 +20,7 @@ from app.api import (
     search,
 )
 from app.bus import create_receiver
+from app.client_ip import ClientIpMiddleware
 from app.clients import CrmClient, ErpClient
 from app.clients.base import TIMEOUT_SECONDS
 from app.config import Settings, get_settings
@@ -45,7 +46,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             socket_connect_timeout=TIMEOUT_SECONDS,
             socket_timeout=TIMEOUT_SECONDS,
         )
-        crm = CrmClient(cfg.crm_url)
+        crm = CrmClient(cfg.crm_url, cfg.crm_timeout_seconds)
         erp = ErpClient(cfg.erp_url, cfg.erp_refresh_cookie)
         app.state.redis, app.state.crm, app.state.erp = redis, crm, erp
         app.state.settings = cfg
@@ -68,6 +69,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         openapi_url=None,
     )
     app.add_middleware(RequestIdMiddleware)
+    app.add_middleware(ClientIpMiddleware, networks=cfg.trusted_proxy_networks)
     install_error_handlers(app)
     app.include_router(health.router, prefix=API_PREFIX)
     app.include_router(auth.router, prefix=API_PREFIX)

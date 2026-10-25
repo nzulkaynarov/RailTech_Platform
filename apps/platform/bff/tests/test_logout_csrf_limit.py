@@ -5,7 +5,6 @@ from typing import Annotated
 import httpx
 import pytest
 
-from app.auth import client_ip
 from tests.backends import PASSWORD
 from tests.conftest import ContractChecker, Web
 
@@ -265,12 +264,68 @@ async def test_login_limit_per_email_across_addresses(web: Web) -> None:
     assert response.status_code == 429
 
 
-async def test_login_limit_counts_successful_logins_too(web: Web) -> None:
-    for _ in range(10):
-        assert (await web.login(ip="203.0.113.9")).status_code == 200
+async def test_successful_logins_do_not_count(web: Web) -> None:
+    """Офис за одним NAT: много сотрудников входят с одного IP, лимит их не считает (O-1)."""
+    for i in range(15):
         web.client.cookies.clear()
+        response = await web.login(email=f"user{i}@example.org", ip="203.0.113.9")
+        assert response.status_code == 200
 
-    assert (await web.login(ip="203.0.113.9")).status_code == 429
+    # Счётчики по-прежнему пусты: неверные пароли считаются с нуля.
+    for _ in range(10):
+        assert (await web.login(password="nope", ip="203.0.113.9")).status_code == 401
+    assert (await web.login(password="nope", ip="203.0.113.9")).status_code == 429
+
+
+async def test_the_same_user_can_log_in_repeatedly(web: Web) -> None:
+    for _ in range(15):
+        web.client.cookies.clear()
+        assert (await web.login(ip="203.0.113.10")).status_code == 200
+
+
+async def test_failed_logins_count_and_give_429_at_the_threshold(
+    web: Web, check: ContractChecker
+) -> None:
+    for _ in range(10):
+        assert (await web.login(password="nope", ip="203.0.113.11")).status_code == 401
+
+    blocked = await web.login(ip="203.0.113.11")  # даже верный пароль: порог исчерпан
+
+    assert blocked.status_code == 429
+    check(blocked, "/auth/login", "post")
+    assert blocked.json()["code"] == "TOO_MANY_REQUESTS"
+    assert web.be.crm_login.call_count == 10
+
+
+async def test_success_resets_the_email_counter_but_keeps_the_ip_failures(web: Web) -> None:
+    for _ in range(9):
+        await web.login(password="nope", ip="203.0.113.12")
+
+    assert (await web.login(ip="203.0.113.12")).status_code == 200  # IP: 9 неудач, e-mail: сброс
+
+    web.client.cookies.clear()
+    assert (await web.login(password="nope", ip="203.0.113.12")).status_code == 401  # 10-я с IP
+    other = await web.login(password="nope", email="other.test@example.org", ip="203.0.113.12")
+    assert other.status_code == 429
+    # Счётчик e-mail после входа начался заново, поэтому с другого адреса вход открыт.
+    assert (await web.login(ip="203.0.113.99")).status_code == 200
+
+
+async def test_backend_failures_do_not_count(web: Web) -> None:
+    web.be.crm_login.mock(side_effect=httpx.ConnectError("down"))
+    for _ in range(12):
+        response = await web.login(ip="203.0.113.13")
+        assert response.status_code == 503
+
+    assert web.be.crm_login.call_count == 12
+
+
+async def test_login_without_platform_role_does_not_count(web: Web) -> None:
+    web.be.set_roles([])
+    for _ in range(12):
+        response = await web.login(ip="203.0.113.14")
+        assert response.status_code == 403
+        assert response.json()["code"] == "NO_PLATFORM_ROLE"
 
 
 async def test_login_limit_resets_after_a_minute(web: Web) -> None:
@@ -290,12 +345,6 @@ async def test_login_limit_email_is_case_insensitive(web: Web) -> None:
     response = await web.login(email="ivan.test@example.org", ip="192.0.2.99")
 
     assert response.status_code == 429
-
-
-def test_client_ip_prefers_last_forwarded_hop() -> None:
-    assert client_ip("1.1.1.1, 2.2.2.2", "10.0.0.1") == "2.2.2.2"
-    assert client_ip("  ", "10.0.0.1") == "10.0.0.1"
-    assert client_ip(None, None) == "unknown"
 
 
 async def test_rate_key_without_ttl_gets_one(web: Web) -> None:
