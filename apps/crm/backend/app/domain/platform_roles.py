@@ -10,6 +10,8 @@
 - базовая роль CRM `admin|manager|viewer` остаётся для старого фронта до T4: роль с кодом — как
   в версии 1 (`CRM_BASE_ROLE_BY_CODE`), роль без кода — по `CRM_BASE_ROLE_BY_ACCESS`; у сотрудника
   берётся старшая (admin > manager > viewer);
+- права EDS (`eds_permissions_of`) вычисляются так же, по `EDS_BACKEND`; неактивный сотрудник —
+  пустой список; CRM публикует их в `identity.user.*` как `permissions.eds` (задача E4);
 - провижининг ERP: `permissions` = вычисленный набор, `role_codes = []`; администратор CRM
   (`admin`) остаётся суперпользователем ERP.
 """
@@ -23,6 +25,7 @@ from app.domain.platform_roles_generated import (
     CRM_BACKEND,
     CRM_BASE_ROLE_BY_ACCESS,
     CRM_BASE_ROLE_BY_CODE,
+    EDS_BACKEND,
     ERP_BACKEND,
     FIELD_ERP_BACKEND,
     RESOURCE_KEYS,
@@ -47,6 +50,8 @@ __all__ = [
     "default_roles",
     "derive_access",
     "diff_access",
+    "eds_permissions_for",
+    "eds_permissions_of",
     "erp_access_for",
     "erp_permissions_for",
     "legacy_code",
@@ -209,6 +214,23 @@ def erp_permissions_for(access: Mapping[str, str], fields: Iterable[str]) -> tup
     }
     granted |= {p for name in fields for p in FIELD_ERP_BACKEND.get(name, ())}
     return tuple(p for p in ERP_PERMISSIONS if p in granted)
+
+
+def eds_permissions_for(access: Mapping[str, str]) -> tuple[str, ...]:
+    """Права EDS по матрице: объединение кодов разделов на их уровне (full ⊇ read), по алфавиту."""
+    granted = {
+        p for resource, level in access.items() for p in _accumulated(EDS_BACKEND, resource, level)
+    }
+    return tuple(sorted(granted))
+
+
+def eds_permissions_of(grants: Iterable[RoleGrant], *, is_active: bool = True) -> tuple[str, ...]:
+    """Права EDS сотрудника по его ролям: максимум по разделу, объединение кодов; неактивный и
+    сотрудник без ролей — пусто (`user.permissions.eds`, sso-token.md, токен для EDS)."""
+    roles = list(grants)
+    if not is_active or not roles:
+        return ()
+    return eds_permissions_for(merge_access(roles))
 
 
 def _meets(access: Mapping[str, str], condition: str) -> bool:

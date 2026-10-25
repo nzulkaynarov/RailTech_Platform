@@ -83,7 +83,11 @@ def test_generated_values_equal_the_catalog() -> None:
     assert list(generated.RESOURCE_KEYS) == list(resources)
     for key, res in resources.items():
         assert generated.RESOURCE_LEVELS[key] == tuple(res.get("levels", ["read", "full"]))
-        for system, table in (("crm", generated.CRM_BACKEND), ("erp", generated.ERP_BACKEND)):
+        for system, table in (
+            ("crm", generated.CRM_BACKEND),
+            ("erp", generated.ERP_BACKEND),
+            ("eds", generated.EDS_BACKEND),
+        ):
             lists = res.get("backend", {}).get(system, {})
             assert {lv: list(v) for lv, v in table[key].items()} == lists
     assert list(generated.SYSTEM_ROLE_CODES) == list(spec["system_roles"])
@@ -114,7 +118,7 @@ def test_contract_schema_enums_equal_the_seam_and_the_code_catalog() -> None:
 
 
 def test_full_level_lists_repeat_the_read_level() -> None:
-    for table in (generated.CRM_BACKEND, generated.ERP_BACKEND):
+    for table in (generated.CRM_BACKEND, generated.ERP_BACKEND, generated.EDS_BACKEND):
         for key, levels in table.items():
             if "read" in levels and "full" in levels:
                 assert set(levels["read"]) <= set(levels["full"]), key

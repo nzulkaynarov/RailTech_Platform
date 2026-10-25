@@ -183,6 +183,12 @@ class PasswordReset(BaseModel):
     temporary_password: str
 
 
+class SsoTokenRequest(BaseModel):
+    """Тело выдачи SSO-токена; необязательное: без него (или `aud = erp`) — токен для ERP."""
+
+    aud: Literal["erp", "eds"] = "erp"
+
+
 class SsoTokenResponse(BaseModel):
     token: str
     redirect_url: str

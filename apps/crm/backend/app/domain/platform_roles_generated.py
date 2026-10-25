@@ -288,6 +288,55 @@ ERP_BACKEND: Final[dict[str, dict[str, tuple[str, ...]]]] = {
     },
 }
 
+# Раздел -> уровень -> права EDS (`EdsPermission`; уровень full включает read).
+EDS_BACKEND: Final[dict[str, dict[str, tuple[str, ...]]]] = {
+    "dashboard.queue": {},
+    "dashboard.summary": {},
+    "crm.leads": {},
+    "crm.clients": {},
+    "eds.inbox": {
+        "read": (
+            "letters.read",
+            "registry.read",
+        ),
+        "full": (
+            "letters.read",
+            "registry.read",
+            "letters.register",
+            "letters.resolve",
+        ),
+    },
+    "eds.drafts": {
+        "full": ("approvals.decide",),
+    },
+    "eds.projects": {
+        "read": ("registry.read",),
+        "full": ("registry.read",),
+    },
+    "eds.payments": {
+        "read": ("registry.read",),
+        "full": (
+            "registry.read",
+            "registry.export",
+            "payments.confirm",
+        ),
+    },
+    "eds.memo.create": {
+        "full": ("memos.create",),
+    },
+    "eds.memo.approve": {
+        "full": ("memos.approve",),
+    },
+    "erp.calc": {},
+    "erp.calc.goods": {},
+    "erp.calc.services": {},
+    "erp.stock": {},
+    "chats.internal": {},
+    "chats.external": {},
+    "admin": {},
+    "company.settings": {},
+}
+
 # Поле с ограничением -> права ERP, которые оно открывает.
 FIELD_ERP_BACKEND: Final[dict[str, tuple[str, ...]]] = {
     "cost_margin": ("quote.view_cost_margin",),

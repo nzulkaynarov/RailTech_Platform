@@ -1,7 +1,7 @@
 """Сервис платформенного SSO CRM ↔ ERP (CONTRACTS §6, docs/architecture/sso-token.md, M3-CRM-06).
 
 Реализует:
-1. Выпуск SSO-токена в ERP (iss=crm, aud=erp, sub=crm_user_id).
+1. Выпуск SSO-токена в ERP или EDS (iss=crm, aud=erp|eds, sub=crm_user_id).
 2. Проверку и обмен SSO-токена из ERP (iss=erp, aud=crm) на сессию CRM с защитой от replay-атак.
 """
 
@@ -10,7 +10,9 @@ from __future__ import annotations
 import contextlib
 import time
 import uuid
+from collections.abc import Mapping
 from datetime import UTC, datetime, timedelta
+from typing import Literal
 
 import jwt
 import structlog
@@ -19,11 +21,13 @@ from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.bus import events as bus_events
+from app.bus import snapshots
 from app.config import Settings
 from app.domain.erp_permissions import erp_access
 from app.domain.erp_sync import ERP
 from app.domain.errors import AuthError, ConflictError, ForbiddenError, Reason
 from app.models.auth import SsoReplayToken, User
+from app.repositories import platform_roles as platform_roles_repo
 from app.repositories import users as repo
 from app.security import audit
 from app.security.audit import Actor
@@ -48,12 +52,29 @@ class SsoService:
         self._settings = settings
         self._auth_service = auth_service
 
-    async def issue_token(self, user_id: int) -> tuple[str, str]:
-        """Выпустить JWT SSO-токен для перехода текущего сотрудника в ERP."""
+    async def issue_token(
+        self, user_id: int, aud: Literal["erp", "eds"] = "erp"
+    ) -> tuple[str, str]:
+        """Выпустить JWT SSO-токен: `erp` — переход текущего сотрудника в ERP; `eds` — токен
+        сотрудника для обмена в EDS (sso-token.md, «Токен сотрудника для EDS»)."""
         if not self._settings.platform_sso_enabled:
             raise ForbiddenError("platform sso is disabled")
         async with self._sessions() as session:
             user = await session.get(User, user_id)
+            if aud == "eds":
+                # Только активному сотруднику с правами EDS из его ролей по каталогу (ADR-0012
+                # п. 5); иначе один отказ `eds_access_denied` (sso-token.md).
+                held = (
+                    []
+                    if user is None
+                    else await platform_roles_repo.roles_of_user(session, user.id)
+                )
+                eds_permissions = snapshots.eds_permissions(
+                    held, is_active=user is not None and bool(user.is_active)
+                )
+                if user is None or not eds_permissions:
+                    raise ForbiddenError("no permissions in eds", reason=Reason.EDS_ACCESS_DENIED)
+                return self._encode(user, aud, {"permissions": eds_permissions}), ""
             if user is None or not user.is_active:
                 raise ForbiddenError("user inactive", reason=Reason.USER_INACTIVE)
             # Переход в ERP — только тем, кому админ выдал доступ (FIX-11, S-5); истина здесь,
@@ -66,36 +87,34 @@ class SsoService:
 
         # Права — по карте «роль CRM → каталог ERP» (S-11): ни одного кода вне каталога ERP.
         access = erp_access(roles)
-        primary_role = _primary_role(roles)
-        permissions = list(access.permissions)
-
-        now = int(time.time())
-        jti = str(uuid.uuid4())
-
-        payload = {
-            "iss": "crm",
-            "aud": "erp",
-            "sub": str(user.id),
-            "email": user.email,
-            "name": user.full_name,
-            "role": primary_role,
-            "permissions": permissions,
-            "iat": now,
-            "exp": now + SSO_TOKEN_TTL_S,
-            "jti": jti,
-        }
-
-        secrets = self._settings.platform_sso_secrets
-        if not secrets:
-            raise ConflictError(
-                "platform sso secret is not configured", reason=Reason.SSO_NOT_CONFIGURED
-            )
-        token = jwt.encode(payload, secrets[0], algorithm=SSO_ALGORITHM)
+        claims = {"role": _primary_role(roles), "permissions": list(access.permissions)}
+        token = self._encode(user, aud, claims)
 
         erp_base = self._settings.erp_frontend_url.rstrip("/")
         redirect_url = f"{erp_base}/sso/exchange"
 
         return token, redirect_url
+
+    def _encode(self, user: User, aud: str, claims: Mapping[str, object]) -> str:
+        """JWT HS256 первым значением `PLATFORM_SSO_SECRET`; срок жизни — 60 с, `jti` — UUID v4."""
+        secrets = self._settings.platform_sso_secrets
+        if not secrets:
+            raise ConflictError(
+                "platform sso secret is not configured", reason=Reason.SSO_NOT_CONFIGURED
+            )
+        now = int(time.time())
+        payload = {
+            "iss": "crm",
+            "aud": aud,
+            "sub": str(user.id),
+            "email": user.email,
+            "name": user.full_name,
+            **claims,
+            "iat": now,
+            "exp": now + SSO_TOKEN_TTL_S,
+            "jti": str(uuid.uuid4()),
+        }
+        return jwt.encode(payload, secrets[0], algorithm=SSO_ALGORITHM)
 
     async def exchange_token(self, token: str, client: ClientInfo) -> Session:
         """Проверить SSO-токен от ERP и обменять его на сессию CRM."""
