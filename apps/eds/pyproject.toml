@@ -1,0 +1,72 @@
+[project]
+name = "railtech-eds"
+version = "0.1.0"
+description = "RailTech EDS: сервис электронного документооборота (API, воркер, шина rt_bus), ADR-0015"
+requires-python = ">=3.12,<3.13"
+dependencies = [
+    "alembic>=1.20.0",
+    "fastapi>=0.143.0",
+    "httpx>=0.28.1",
+    "procrastinate>=3.10.0",
+    "psycopg[binary,pool]>=3.3.6",
+    "pydantic-settings>=2.15.0",
+    "pyjwt>=2.15.1",
+    "rt-bus[fastapi,sqlalchemy]",
+    "rt-contracts",
+    "sqlalchemy[asyncio]>=2.1.4",
+    "structlog>=26.1.0",
+    "uvicorn[standard]>=0.54.0",
+]
+
+[dependency-groups]
+dev = [
+    "mypy>=2.4.0",
+    "pyyaml>=6.0.3",
+    "pytest>=9.1.1",
+    "pytest-asyncio>=1.4.0",
+    "ruff>=0.16.10",
+    "types-pyyaml>=6.0.12.20260906",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+addopts = ["-ra", "--strict-markers"]
+markers = [
+    "pg: тест на настоящем PostgreSQL (EDS_TEST_DATABASE_URL или одноразовый контейнер, scripts/with_pg.sh)",
+]
+filterwarnings = ["error", "ignore::DeprecationWarning:procrastinate.*"]
+
+[tool.ruff]
+line-length = 120
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "W", "F", "I", "B", "UP", "SIM", "S", "BLE", "C4", "PT", "RUF", "ASYNC", "T20", "N"]
+ignore = ["RUF001", "RUF002", "RUF003", "SIM905"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["S101", "S105", "S106"]
+"alembic/versions/**" = ["S608"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["app", "tests"]
+known-third-party = ["alembic"]
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+plugins = ["pydantic.mypy"]
+mypy_path = "."
+explicit_package_bases = true
+
+[[tool.mypy.overrides]]
+module = ["procrastinate.*"]
+ignore_missing_imports = true
+
+# Шина событий rt_bus (ADR-0014, L14) и модели контракта: библиотеки по пути; в образе приходят именованными контекстами.
+[tool.uv.sources]
+rt-bus = { path = "../../packages/rt-bus", editable = true }
+rt-contracts = { path = "../../packages/contracts/generated/python", editable = true }
