@@ -17,6 +17,7 @@ async def run(args: argparse.Namespace) -> int:
             password = await container.user_service.bootstrap_admin(
                 args.email, args.name, args.password
             )
+            await container.drain_bus()  # пробуждение шины — пока очередь открыта
     except DomainError as exc:
         sys.stderr.write(f"Ошибка: {exc.message}\n")
         return 1

@@ -1,5 +1,7 @@
 """Задачи шины rt_bus в очереди CRM (B4): регистрация, расписание, постановка обработки inbox."""
 
+import asyncio
+
 import pytest
 from procrastinate import testing
 
@@ -67,6 +69,24 @@ def test_the_container_bus_wakes_the_pump_after_commit() -> None:
     bus = Container(Settings(_env_file=None, app_env="test")).bus
     assert bus.wakeup == bus_tasks.tasks.wakeup
     assert bus.enqueue == bus_tasks.tasks.enqueue
+
+
+@pytest.mark.asyncio
+async def test_drain_bus_waits_for_pending_wakeups_only_when_the_bus_exists() -> None:
+    from app.config import Settings
+    from app.container import Container
+
+    container = Container(Settings(_env_file=None, app_env="test"))
+    await container.drain_bus()  # шины нет — ничего не создаётся
+    assert "bus" not in container.__dict__
+
+    connector = testing.InMemoryConnector()
+    with queue.replace_connector(connector):
+        task = asyncio.create_task(bus_tasks.tasks.wakeup())
+        container.bus._wake_tasks.add(task)
+        await container.drain_bus()
+    assert task.done()
+    assert [job["task_name"] for job in connector.jobs.values()] == ["rt_bus.pump"]
 
 
 def test_the_old_erp_event_tasks_are_gone() -> None:

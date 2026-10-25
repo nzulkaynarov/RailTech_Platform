@@ -116,6 +116,56 @@ async def test_wakeup_savepoint_waits_for_the_outer_commit(
     assert woken.count == 1
 
 
+async def test_wakeup_savepoint_rollback_takes_its_mark_with_it(
+    make_bus: Callable[..., AsyncBus], sessions: async_sessionmaker[AsyncSession]
+) -> None:
+    woken = Woken()
+    bus = make_bus()
+    bus.wakeup = woken
+
+    async def failed_savepoint(session: AsyncSession) -> None:
+        async with session.begin_nested():
+            await publish(bus, session)
+            raise RuntimeError("savepoint rolled back")
+
+    async def released_inside_failed(session: AsyncSession) -> None:
+        async with session.begin_nested():
+            async with session.begin_nested():
+                await publish(bus, session)
+            raise RuntimeError("outer savepoint rolled back")
+
+    async def released_nested(session: AsyncSession) -> None:
+        async with session.begin_nested(), session.begin_nested():
+            await publish(bus, session)
+
+    async with sessions() as session, session.begin():  # единственный publish — в отменённой точке сохранения
+        with pytest.raises(RuntimeError):
+            await failed_savepoint(session)
+    await bus.drain_wakeups()
+    assert woken.count == 0
+
+    async with sessions() as session, session.begin():  # publish в освобождённой точке внутри отменённой — тоже мимо
+        with pytest.raises(RuntimeError):
+            await released_inside_failed(session)
+    await bus.drain_wakeups()
+    assert woken.count == 0
+
+    async with sessions() as session, session.begin():  # publish до отменённой точки — одно пробуждение
+        await publish(bus, session)
+        with pytest.raises(RuntimeError):
+            await failed_savepoint(session)
+    await bus.drain_wakeups()
+    assert woken.count == 1
+
+    async with sessions() as session, session.begin():  # освобождённые точки: будит внешний коммит
+        await released_nested(session)
+        await bus.drain_wakeups()
+        assert woken.count == 1
+    await bus.drain_wakeups()
+    assert woken.count == 2
+    assert len(await rows(sessions, "SELECT id FROM rt_bus_outbox")) == 2
+
+
 async def test_wakeup_failure_does_not_break_commit(
     make_bus: Callable[..., AsyncBus],
     sessions: async_sessionmaker[AsyncSession],

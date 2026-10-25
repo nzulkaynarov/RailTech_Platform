@@ -572,6 +572,11 @@ class Container:
             bot = self._bots[token] = make_bot(self.settings, token)
         return bot
 
+    async def drain_bus(self) -> None:
+        """Дождаться пробуждений шины (B5a): вызывать, пока очередь Procrastinate ещё открыта."""
+        if "bus" in self.__dict__:
+            await self.bus.drain_wakeups()
+
     async def aclose(self) -> None:
         if "sandbox_service" in self.__dict__:
             await self.sandbox_service.aclose()

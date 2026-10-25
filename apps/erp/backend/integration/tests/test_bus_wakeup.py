@@ -17,6 +17,7 @@ from django.db import transaction
 from integration.bus import get_bus
 from integration.services import events
 from integration.tests.world import make_company
+from kombu.exceptions import OperationalError
 from rt_bus.django.models import Delivery, Outbox
 
 pytestmark = pytest.mark.django_db(transaction=True)
@@ -121,3 +122,19 @@ def test_wakeup_is_wired_into_the_bus_and_goes_to_a_queue_the_worker_serves():
     assert queue in SERVED_QUEUES, f"rt_bus.pump уходит в очередь {queue!r}, которую никто не обслуживает"
     beat = app.conf.beat_schedule["rt_bus.pump"]
     assert app.amqp.router.route(beat.get("options", {}), beat["task"])["queue"].name == queue
+
+
+def test_a_black_hole_broker_does_not_hold_the_commit_for_the_os_timeout():
+    """Адрес брокера, куда пакеты не доходят: подключение обрывается по `socket_connect_timeout`, а не через ~75 с."""
+    from core.celery import app
+
+    options = app.conf.broker_transport_options
+    assert options["socket_connect_timeout"] <= 1
+    assert options["socket_timeout"] >= 2, "блокирующее чтение воркера не должно рваться"
+    started = time.monotonic()
+    with app.connection_for_write(
+        "redis://10.255.255.1:6379/1"
+    ) as connection:  # те же настройки транспорта, что у `.delay()`
+        with pytest.raises(OperationalError):
+            connection.ensure_connection(max_retries=1, interval_start=0, interval_step=0.2)
+    assert time.monotonic() - started < 8

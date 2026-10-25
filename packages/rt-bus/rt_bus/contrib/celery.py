@@ -34,7 +34,8 @@ class CeleryTasks:
 
     def wakeup(self) -> None:
         """Поставить `pump` вне расписания; очередь — та же, что у beat (`install(queue=)` или маршрутизация Celery)."""
-        # короткие повторы подключения: недоступный брокер не держит коммитящий запрос (pump по расписанию подстрахует)
+        # один повтор подключения с паузой 0,2 с; само подключение ограничивает `broker_transport_options` сервиса
+        # (`socket_connect_timeout`), иначе недоступный брокер держит коммитящий запрос до таймаута ОС
         policy = {"max_retries": 1, "interval_start": 0, "interval_max": 0.2}
         self.pump.apply_async(retry=True, retry_policy=policy)
 

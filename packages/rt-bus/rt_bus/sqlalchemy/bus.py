@@ -56,9 +56,11 @@ SessionFactory = Callable[[], AsyncSession]
 Enqueue = Callable[[str], Awaitable[Any]]
 Wakeup = Callable[[], Awaitable[Any]]
 
-#: Метки в `Session.info`: сессия слушается (слушатели ставятся один раз) и в её транзакции есть `publish`.
+#: Метки в `Session.info`: сессия слушается (слушатели ставятся один раз); шина, которую будить; транзакции (корневая
+#: и точки сохранения), в которых был `publish`.
 _LISTENING = "rt_bus.listening"
 _WAKE = "rt_bus.wakeup"
+_MARKS = "rt_bus.wakeup_marks"
 
 _TEXT: dict[str, TextClause] = {}
 
@@ -79,18 +81,34 @@ def _rowcount(result: Any) -> int:
 
 
 def _wake_after_commit(session: Session) -> None:
-    """`after_commit`: коммит корневой транзакции с `publish` — будим ретранслятор (из sync-слушателя, без await)."""
-    if session.get_nested_transaction() is not None:
-        return  # RELEASE SAVEPOINT: событие ещё не зафиксировано, ждём коммит внешней транзакции
-    bus = session.info.pop(_WAKE, None)
+    """`after_commit`: RELEASE SAVEPOINT переносит метку на родителя, коммит корневой транзакции будит ретранслятор
+    (из sync-слушателя, без await)."""
+    marks: set[Any] | None = session.info.get(_MARKS)
+    if not marks:
+        return
+    nested = session.get_nested_transaction()
+    if nested is not None:
+        if nested in marks:
+            marks.discard(nested)
+            marks.add(nested.parent)
+        return
+    marks.clear()
+    bus = session.info.get(_WAKE)
     if bus is not None:
         bus._spawn_wakeup()
+
+
+def _rolled_back(session: Session, previous: Any) -> None:
+    """`after_soft_rollback`: откат точки сохранения уносит её метки — `publish` из неё будить не может."""
+    marks: set[Any] | None = session.info.get(_MARKS)
+    if marks and previous.nested:
+        marks.discard(previous)
 
 
 def _forget_wake(session: Session, transaction: Any) -> None:
     """`after_transaction_end` корневой транзакции (в том числе откат и закрытие сессии): пробуждения не будет."""
     if transaction.parent is None:
-        session.info.pop(_WAKE, None)
+        session.info.pop(_MARKS, None)
 
 
 class AsyncBus:
@@ -179,8 +197,11 @@ class AsyncBus:
         if _LISTENING not in sync.info:
             sync.info[_LISTENING] = True
             event.listen(sync, "after_commit", _wake_after_commit)
+            event.listen(sync, "after_soft_rollback", _rolled_back)
             event.listen(sync, "after_transaction_end", _forget_wake)
         sync.info[_WAKE] = self
+        marks: set[Any] = sync.info.setdefault(_MARKS, set())
+        marks.add(sync.get_nested_transaction() or sync.get_transaction())
 
     def _spawn_wakeup(self) -> None:
         """Вызывается из `after_commit` (sync-контекст): пробуждение уходит фоновой задачей, коммит не ждёт брокера."""
