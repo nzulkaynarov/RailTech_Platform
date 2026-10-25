@@ -9,6 +9,7 @@ CRM     := apps/crm
 ERP     := apps/erp
 CABINET := apps/cabinet
 PLATFORM := apps/platform
+EDS     := apps/eds
 INFRA   := infra
 
 .PHONY: help
@@ -18,7 +19,7 @@ help: ## Список целей
 # --- Проверки --------------------------------------------------------------------
 
 .PHONY: check
-check: docs-links check-crm check-erp check-cabinet check-platform check-rt-bus ## Проверки всех приложений, rt-bus (lint + typecheck + unit) и ссылок документации
+check: docs-links check-crm check-erp check-cabinet check-platform check-eds check-rt-bus ## Проверки всех приложений, rt-bus (lint + typecheck + unit) и ссылок документации
 
 .PHONY: docs-links
 docs-links: ## Ссылки на документацию целы и ведут в docs/ (scripts/check-doc-links.sh, ORCHESTRATOR §3 п. 17)
@@ -39,6 +40,10 @@ check-cabinet: ## Cabinet: eslint, tsc, i18n ru/uz/en, токены, типы п
 .PHONY: check-platform
 check-platform: ## Платформа: ruff, mypy, pytest (bff); eslint, tsc, vitest, свежесть клиента orval, токенов, RBAC и моделей CRM из crm.yaml (apps/platform/Makefile)
 	$(MAKE) -C $(PLATFORM) check
+
+.PHONY: check-eds
+check-eds: ## EDS: ruff, mypy --strict, pytest на PostgreSQL — миграции, шина, вход, права (apps/eds/Makefile; без EDS_TEST_DATABASE_URL — одноразовый postgres:17 в Docker)
+	$(MAKE) -C $(EDS) check
 
 .PHONY: check-rt-bus
 check-rt-bus: ## Библиотека шины: ruff, mypy, миграция Django, pytest на PostgreSQL (packages/rt-bus/Makefile; без RT_BUS_TEST_DATABASE_URL — одноразовый postgres:17 в Docker)
@@ -141,6 +146,7 @@ deploy-check: ## Проверка конфигурации прода без з�
 	@bash $(INFRA)/deploy/tests/walg-schedule-test.sh
 	@bash $(INFRA)/deploy/tests/redis-split-test.sh
 	@bash $(INFRA)/deploy/tests/s3-keys-test.sh
+	@bash $(INFRA)/deploy/tests/eds-prod-test.sh
 	@docker run --rm -v "$(CURDIR):/repo" -w /repo rhysd/actionlint:latest .github/workflows/deploy.yml && echo "actionlint: ok"
 
 # --- Локальный CI (гейт мержа, пока GitHub Actions недоступен — DECISIONS 2026-10-13) ---

@@ -1,6 +1,6 @@
 # prod, VPS 2 `db` (docs/runbooks/servers.md): PostgreSQL 17 + pgvector и ежедневный бэкап. Проект `rt-db`.
 #   docker compose -f db.yml --env-file /opt/rt-db/.env.db up -d      (или infra/deploy/db-up.sh)
-# Базы: crm, erp, litellm, langfuse — у каждой своя роль (<имя>_app), создаёт infra/db/prod-init.sh.
+# Базы: crm, erp, eds, litellm, langfuse — у каждой своя роль (<имя>_app), создаёт infra/db/prod-init.sh.
 # Порт 5432 слушает только внутренний IP VPS 2 (${DB_INTERNAL_IP}); pg_hba пускает по TLS только ${APP_INTERNAL_IP}
 # (VPS 1) и только роль своей базы. Файрвол (ufw) закрывает 5432 для остальных — runbook deploy.md.
 # Бэкап: infra/db/backup.sh в контейнере `backup` (профиль не нужен — работает всегда) — ежедневный pg_dump, второй рубеж.
@@ -81,6 +81,7 @@ services:
       # Пароли ролей приложений — для prod-init.sh (выполняется при создании пустого тома и по db-up.sh).
       DB_CRM_PASSWORD: ${DB_CRM_PASSWORD:?set in .env.db}
       DB_ERP_PASSWORD: ${DB_ERP_PASSWORD:?set in .env.db}
+      DB_EDS_PASSWORD: ${DB_EDS_PASSWORD:?set in .env.db}
       DB_LITELLM_PASSWORD: ${DB_LITELLM_PASSWORD:?set in .env.db}
       DB_LANGFUSE_PASSWORD: ${DB_LANGFUSE_PASSWORD:?set in .env.db}
       DB_BACKUP_PASSWORD: ${DB_BACKUP_PASSWORD:?set in .env.db}
@@ -114,7 +115,7 @@ services:
         condition: service_healthy
     environment:
       <<: *walg-env
-      DB_NAMES: crm erp litellm langfuse
+      DB_NAMES: crm erp eds litellm langfuse
       WAL_KEEP_DAYS: ${WAL_KEEP_DAYS:-14}
       WAL_BASEBACKUP_AT_UTC: ${WAL_BASEBACKUP_AT_UTC:-21:00}
       WAL_CHECK_DAY: ${WAL_CHECK_DAY:-1}
@@ -154,7 +155,7 @@ services:
       PGHOST: postgres
       PGUSER: rt_backup
       PGPASSWORD: ${DB_BACKUP_PASSWORD}
-      DB_NAMES: crm erp litellm langfuse
+      DB_NAMES: crm erp eds litellm langfuse
       BACKUP_DIR: /backups
       BACKUP_KEEP_DAYS: ${BACKUP_KEEP_DAYS:-14}
       BACKUP_AT_UTC: ${BACKUP_AT_UTC:-22:00}

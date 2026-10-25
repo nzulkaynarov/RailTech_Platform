@@ -35,7 +35,7 @@ for dump in "$dir"/*.dump; do
     fi
   fi
   if [[ "$tables" -gt 0 ]]; then echo "  ✔ $name: таблиц $tables$extra"
-  elif [[ "$name" == crm || "$name" == erp ]]; then echo "  ✘ $name: таблиц нет"; failed=1
+  elif [[ "$name" == crm || "$name" == erp || "$name" == eds ]]; then echo "  ✘ $name: таблиц нет"; failed=1
   else echo "  ! $name: таблиц нет (служебная база ещё не использовалась?)"; fi
   psql_su -c "DROP DATABASE IF EXISTS \"$tmp\"" >/dev/null
 done

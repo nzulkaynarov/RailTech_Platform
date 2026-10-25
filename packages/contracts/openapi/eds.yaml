@@ -1,0 +1,2208 @@
+openapi: 3.1.0
+info:
+  title: RailTech Platform — EDS API (электронный документооборот)
+  version: 0.1.0
+  summary: Пространство `/api/v1/` сервиса EDS — вызывает BFF Платформы от имени сотрудника.
+  description: |
+    Контракт сервиса EDS (`apps/eds`, ADR-0015; `docs/runbooks/wave12-eds-c1.md` §2). EDS — владелец реестра документов и
+    их номеров, входящих писем и резолюций, служебных записок, заявлений, отчётов, исходящих писем и общего движка маршрутов
+    согласования. Коммерческие объекты (заявка, сделка, КП) живут в ERP; EDS хранит ссылки (`ErpLinks`) и снимок КП для
+    показа в маршруте одобрения. Интеграции с CRM и ERP — только шина `rt_bus` (`events/eds/*.v1.json`, `bus/subscriptions.yaml`).
+
+    **Кто зовёт.** Только BFF Платформы во внутренней сети compose: у EDS нет внешнего маршрута в Caddy и своей формы входа
+    (решение архитектора 4 к волне 12). Машинный доступ — только приёмник шины `POST /bus/v1/events` (подпись HMAC,
+    `docs/architecture/CONTRACTS.md` §9.3; в этом файле не описан).
+
+    **Вход (решение лида L-C1-1, `docs/architecture/sso-token.md`, «Токен сотрудника для EDS»).** BFF берёт у CRM токен
+    сотрудника `POST /api/v1/auth/sso/token {"aud": "eds"}` (JWT HS256, `PLATFORM_SSO_SECRET`, `iss=crm`, `aud=eds`,
+    `sub=crm_user_id`, срок 60 с, одноразовый `jti`) и обменивает его здесь: `POST /api/v1/auth/sso/exchange` → собственный
+    токен доступа EDS (JWT HS256, секрет `EDS_ACCESS_SECRET`, `iss = eds`, `aud = eds-api`, срок 15 минут, без refresh: истёк — BFF берёт у CRM новый токен
+    сотрудника и обменивает снова). Каждый запрос `/api/v1/*`, кроме обмена, — `Authorization: Bearer <токен доступа EDS>`.
+
+    **Права (runbook §2.2).** Коды EDS v1: `letters.read`, `letters.register`, `letters.resolve`, `memos.create`, `memos.approve`,
+    `approvals.decide`, `registry.read`, `registry.export`, `payments.confirm` (`EdsPermission`; `payments.confirm` — решение
+    архитектора: шаг «бухгалтер» служебной записки с суммой). Их вычисляет CRM из ролей Платформы по каталогу
+    (`platform-rbac.yaml`, `backend.eds`) и публикует в `identity.user.created/updated` (`user.permissions.eds`); EDS держит
+    проекцию сотрудников и проверяет право **на каждый запрос по проекции на момент запроса** (claim `permissions` токена —
+    справочный, не применяется): отзыв роли или отключение сотрудника действуют сразу, без ожидания срока токена. Нет поля
+    `permissions` или `permissions.eds` в снимке сотрудника, или список пуст — доступа к EDS нет.
+    У каждой операции — расширение `x-rt-permissions`: список кодов, **любого** из которых достаточно для вызова
+    (403 `FORBIDDEN` иначе); пустой список — любой активный сотрудник из проекции. Сужение выдачи внутри операции (свои
+    документы, шаг маршрута, тип документа) описано в операции. Тесты сервиса сверяют таблицу маршрутов с этим расширением.
+
+    **Ошибки.** Тело любой ошибки — `Error` (как у BFF): стабильный `code`, текст на языке сотрудника, `source = eds`,
+    `details` для разбора. Коды: `UNAUTHORIZED` (401: нет, неверный или истёкший токен доступа; `details.reason`),
+    `INVALID_SSO_TOKEN` (401 обмена: `details.reason` — `signature`, `issuer`, `audience`, `expired`, `lifetime`, `replayed`,
+    `malformed`),
+    `USER_NOT_PROVISIONED`, `USER_INACTIVE` (403 обмена), `FORBIDDEN` (403, `details.permission` — недостающее право, или
+    `details.reason`), `NOT_FOUND`, `VALIDATION_FAILED` (422, `details.fields`), `CONFLICT` (409, `details.reason`),
+    `PAYLOAD_TOO_LARGE` (413), `UNSUPPORTED_MEDIA_TYPE` (415), `BAD_REQUEST`, `INTERNAL_ERROR`.
+
+    **Идентификаторы и номера.** Объекты EDS адресуются в пути **стабильным id (UUID)**, не номером: номер реестра содержит
+    `/` (`ВХ-104/26`), а `%2F` в пути проксируется и декодируется неодинаково. Номер — поле объекта и фильтр `number` реестра
+    (`GET /api/v1/registry?number=ВХ-104/26`). Форматы (runbook §2.1): `ВХ-NNN/ГГ`, `ИСХ-NNN/ГГ`, `СЗ-ГГГГ/NNN`, `ЗЯ-ГГГГ/NNN`,
+    `ОТ-ГГГГ/NNN`; счётчик — на тип и год по `Asia/Tashkent`, без пропусков (строка счётчика под `SELECT … FOR UPDATE` в
+    транзакции создания); отменённый документ номер не возвращает. Номера ЗВ/ПР/КП/ДОГ/СЧ/АКТ — у ERP.
+
+    **Списки** — курсорная пагинация: `cursor` (непрозрачный, из `next_cursor`) и `limit` (1–100, по умолчанию 50);
+    `next_cursor = null` — страниц больше нет. Порядок — от новых к старым.
+
+    **Идемпотентность.** Создающие `POST` принимают необязательный `Idempotency-Key` (повтор с тем же ключом и телом в течение
+    24 часов возвращает прежний ответ; с другим телом — 409 `CONFLICT`, `details.reason = idempotency_key_reused`).
+
+    **События.** Каждое изменение публикуется в той же транзакции (outbox): регистрация письма — `letter.registered`;
+    резолюция, возврат, отказ — `letter.resolved`, `letter.returned`, `letter.rejected`; номер документа — `document.registered`;
+    открытие маршрута (круга) — `approval.requested`; каждое решение — `approval.decided`. `document.archived` публикуется
+    **автоматически, без отдельной операции**, когда маршрут документа завершён окончательно: одобрен на последнем шаге
+    (служебная записка без суммы, заявление, отчёт — `approved`; с суммой — `paid`) или отклонён (`rejected`); исходящее письмо —
+    при отправке (`sent`). Документ сохраняет итоговый статус, получает `archived_at`. Возврат на доработку маршрут не
+    завершает. Входящие письма в C1 в архив не переносятся.
+
+    **Входящее письмо — статусы и переходы** (SPEC-v3 §2.4; `LetterStatus`):
+
+    | Из | Операция | В | Право | Событие |
+    |---|---|---|---|---|
+    | — | регистрация (`POST /letters` или по `erp.request.created`) | `awaiting_resolution` | `letters.register` | `letter.registered` |
+    | `awaiting_resolution` | `POST …/resolution` | `resolved` | `letters.resolve` | `letter.resolved` |
+    | `awaiting_resolution` | `POST …/return` | `returned` (письмо у регистратора) | `letters.resolve` | `letter.returned` |
+    | `awaiting_resolution` | `POST …/reject` | `rejected` | `letters.resolve` | `letter.rejected` |
+    | `returned` | `POST …/submit` (повторная подача, правки) | `awaiting_resolution` | `letters.register` | — (запись журнала `letter.resubmitted`) |
+
+    `resolved` и `rejected` — конечные. Операция не из своего статуса — 409 `CONFLICT`, `details.reason = invalid_state`.
+servers:
+  - url: http://eds-api:8000
+    description: внутренняя сеть compose (только BFF Платформы); снаружи маршрута нет
+security:
+  - edsAccess: []
+tags:
+  - name: system
+  - name: auth
+    description: Обмен токена сотрудника CRM на токен доступа EDS
+  - name: letters
+    description: Входящие письма и резолюции (EDS-01)
+  - name: documents
+    description: Служебные записки, заявления, отчёты, исходящие письма (EDS-02)
+  - name: approvals
+    description: Маршруты согласования — документы EDS и КП ERP (EDS-02, EDS-03)
+  - name: registry
+    description: Реестр «Все документы» и экспорт
+  - name: files
+    description: Файлы документов с версиями (S3 сервиса)
+
+paths:
+  /health:
+    get:
+      tags: [system]
+      operationId: health
+      summary: Живость сервиса и базы
+      security: []
+      responses:
+        '200':
+          description: Сервис и база доступны
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Health'
+        '503':
+          description: База недоступна
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Health'
+
+  /api/v1/auth/sso/exchange:
+    post:
+      tags: [auth]
+      operationId: ssoExchange
+      summary: Обмен токена сотрудника CRM на токен доступа EDS
+      description: |
+        Проверки по порядку (`docs/architecture/sso-token.md`, «Проверка приёмником»): 1) подпись HS256 секретом
+        `PLATFORM_SSO_SECRET` (оба активных значения); 2) `iss = crm` и `aud = eds`; 3) `exp` не прошёл (допуск часов 5 с) и
+        `exp − iat ≤ 60` (с допуском — не больше 65 с); 4) `jti` не встречался — EDS хранит использованные `jti` 10 минут в
+        своей базе; 5) сотрудник найден **только по `sub`** в проекции сотрудников EDS (`identity.user.*`) — нет: 403
+        `USER_NOT_PROVISIONED`, `is_active = false`: 403 `USER_INACTIVE`. Отказы 1–4 — 401 `INVALID_SSO_TOKEN`
+        (`details.reason`: `signature`, `issuer` — `iss ≠ crm`, `audience`, `expired`, `lifetime`, `replayed`, `malformed`).
+        Обмен сотрудников не создаёт и прав не меняет (права — только из проекции). Выдаётся токен доступа EDS (HS256,
+        `EDS_ACCESS_SECRET`, `iss = eds`, `aud = eds-api` — не `eds`, чтобы токен CRM и токен доступа не путались, `sub =
+        crm_user_id`, срок 900 с); в журнал EDS — `sso.exchange`
+        (`iss`, `sub`, `jti`).
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SsoExchangeIn'
+      responses:
+        '200':
+          description: Токен доступа EDS
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AccessToken'
+        '401':
+          description: '`INVALID_SSO_TOKEN` — подпись, `iss`, `aud`, срок, срок жизни или повтор `jti` (`details.reason`)'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: '`USER_NOT_PROVISIONED` — сотрудника нет в проекции EDS; `USER_INACTIVE` — отключён'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+
+  /api/v1/me:
+    get:
+      tags: [auth]
+      operationId: getMe
+      summary: Сотрудник и его права EDS по проекции
+      x-rt-permissions: []
+      responses:
+        '200':
+          description: Сотрудник
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Me'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/v1/letters:
+    get:
+      tags: [letters]
+      operationId: listLetters
+      summary: Входящие письма
+      x-rt-permissions: [letters.read]
+      parameters:
+        - name: status
+          in: query
+          required: false
+          description: Только письма в этих статусах (несколько — через повтор параметра)
+          schema:
+            type: array
+            items:
+              $ref: '#/components/schemas/LetterStatus'
+          style: form
+          explode: true
+        - name: q
+          in: query
+          required: false
+          description: Поиск по номеру, теме, отправителю, номеру заявки
+          schema:
+            type: string
+            maxLength: 200
+        - $ref: '#/components/parameters/Cursor'
+        - $ref: '#/components/parameters/Limit'
+      responses:
+        '200':
+          description: Страница писем
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LetterPage'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+    post:
+      tags: [letters]
+      operationId: registerLetter
+      summary: Зарегистрировать входящее письмо (номер ВХ-NNN/ГГ)
+      description: |
+        Ручная регистрация. Письмо по заявке из CRM EDS регистрирует сам по событию `uz.railtech.erp.request.created.v1`
+        (ссылки `ErpLinks` заполнены). Номер присваивается в транзакции создания; статус сразу `awaiting_resolution`;
+        публикуется `letter.registered`.
+      x-rt-permissions: [letters.register]
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LetterCreate'
+      responses:
+        '201':
+          description: Зарегистрировано
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Letter'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+
+  /api/v1/letters/{letter_id}:
+    get:
+      tags: [letters]
+      operationId: getLetter
+      summary: Карточка входящего письма
+      x-rt-permissions: [letters.read]
+      parameters:
+        - $ref: '#/components/parameters/LetterId'
+      responses:
+        '200':
+          description: Письмо с резолюцией и журналом
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Letter'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/v1/letters/{letter_id}/resolution:
+    post:
+      tags: [letters]
+      operationId: resolveLetter
+      summary: Утвердить резолюцию → задание в ERP
+      description: |
+        Только письмо в статусе `awaiting_resolution` (иначе 409 `CONFLICT`, `details.reason = invalid_state`). Статус →
+        `resolved`; публикуется `letter.resolved` (исполнители, срок, мин. маржа, ссылки на заявку и сделку ERP) — ERP создаёт
+        задание расчёта (EDS-01). Исполнители — активные сотрудники проекции (иначе 422, `details.fields.assignees`).
+      x-rt-permissions: [letters.resolve]
+      parameters:
+        - $ref: '#/components/parameters/LetterId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ResolutionIn'
+      responses:
+        '200':
+          description: Резолюция наложена
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Letter'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+
+  /api/v1/letters/{letter_id}/return:
+    post:
+      tags: [letters]
+      operationId: returnLetter
+      summary: Вернуть письмо менеджеру с комментарием
+      description: |
+        Только из `awaiting_resolution`; статус → `returned` — письмо у регистратора (`letters.register`), который правит его
+        и подаёт снова (`POST …/submit`); публикуется `letter.returned`.
+      x-rt-permissions: [letters.resolve]
+      parameters:
+        - $ref: '#/components/parameters/LetterId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LetterReturnIn'
+      responses:
+        '200':
+          description: Возвращено
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Letter'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+
+  /api/v1/letters/{letter_id}/reject:
+    post:
+      tags: [letters]
+      operationId: rejectLetter
+      summary: Отклонить письмо с причиной
+      description: |
+        Только из `awaiting_resolution`; статус → `rejected`; публикуется `letter.rejected` — ERP переводит сделку в `LOST`
+        с причиной.
+      x-rt-permissions: [letters.resolve]
+      parameters:
+        - $ref: '#/components/parameters/LetterId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LetterRejectIn'
+      responses:
+        '200':
+          description: Отклонено
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Letter'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+
+  /api/v1/letters/{letter_id}/submit:
+    post:
+      tags: [letters]
+      operationId: resubmitLetter
+      summary: Подать возвращённое письмо на резолюцию повторно
+      description: |
+        Только из `returned`; необязательные правки применяются, статус → `awaiting_resolution`, номер прежний; в журнал —
+        `letter.resubmitted` (события шины нет). Другой статус — 409 `CONFLICT` (`details.reason = invalid_state`).
+      x-rt-permissions: [letters.register]
+      parameters:
+        - $ref: '#/components/parameters/LetterId'
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LetterSubmitIn'
+      responses:
+        '200':
+          description: Снова ждёт резолюции
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Letter'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+
+  /api/v1/documents:
+    get:
+      tags: [documents]
+      operationId: listDocuments
+      summary: Документы (служебные записки, заявления, отчёты, исходящие письма)
+      description: |
+        Без `registry.read` — только документы, где сотрудник автор или участник маршрута; с `registry.read` — все.
+      x-rt-permissions: [memos.create, memos.approve, approvals.decide, registry.read]
+      parameters:
+        - name: kind
+          in: query
+          required: false
+          schema:
+            type: array
+            items:
+              $ref: '#/components/schemas/DocumentKind'
+          style: form
+          explode: true
+        - name: status
+          in: query
+          required: false
+          schema:
+            type: array
+            items:
+              $ref: '#/components/schemas/DocumentStatus'
+          style: form
+          explode: true
+        - name: mine
+          in: query
+          required: false
+          description: Только документы, где сотрудник — автор (`1`/`true`)
+          schema:
+            type: boolean
+            default: false
+        - $ref: '#/components/parameters/Cursor'
+        - $ref: '#/components/parameters/Limit'
+      responses:
+        '200':
+          description: Страница документов
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DocumentPage'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+    post:
+      tags: [documents]
+      operationId: createDocument
+      summary: Создать документ (черновик)
+      description: |
+        `memo`, `application`, `report` — право `memos.create`; номер (`СЗ-`, `ЗЯ-`, `ОТ-ГГГГ/NNN`) присваивается при создании,
+        публикуется `document.registered`; маршрут открывает `POST …/submit`. `letter_out` — право `letters.register`; номер
+        `ИСХ-NNN/ГГ` присваивается при отправке (`submit`), до неё `number = null`. Нет права на тип — 403 `FORBIDDEN`.
+        Документ из сообщения чата — `source_message_id` (ссылка, текст и вложения передаёт клиент).
+      x-rt-permissions: [memos.create, letters.register]
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DocumentCreate'
+      responses:
+        '201':
+          description: Создан
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Document'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+
+  /api/v1/documents/{document_id}:
+    get:
+      tags: [documents]
+      operationId: getDocument
+      summary: Карточка документа
+      description: Автор, участник маршрута или сотрудник с `registry.read`; иначе 404 `NOT_FOUND` (существование не раскрывается).
+      x-rt-permissions: [memos.create, memos.approve, approvals.decide, registry.read]
+      parameters:
+        - $ref: '#/components/parameters/DocumentId'
+      responses:
+        '200':
+          description: Документ с решениями и журналом
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Document'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/v1/documents/{document_id}/submit:
+    post:
+      tags: [documents]
+      operationId: submitDocument
+      summary: Отправить на согласование (или отправить исходящее письмо)
+      description: |
+        Только автор. `memo`, `application`, `report` из `draft` или `returned`: необязательные правки тела применяются,
+        после возврата `version` растёт на 1; открывается маршрут (новый круг) — статус `on_approval`, `approval.requested`.
+        Шаблоны (runbook §2.5): `memo` — директор (любой с `memos.approve`), затем, если указана сумма, бухгалтер (любой с
+        `payments.confirm` — решение архитектора); `application`, `report` — директор. Статусы по решениям — `DocumentStatus`.
+        `letter_out` из `draft`: присваивается `ИСХ-NNN/ГГ`, статус `sent`, `document.registered`, затем `document.archived`. Другой статус — 409 `CONFLICT`
+        (`details.reason = invalid_state`).
+      x-rt-permissions: [memos.create, letters.register]
+      parameters:
+        - $ref: '#/components/parameters/DocumentId'
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DocumentSubmitIn'
+      responses:
+        '200':
+          description: Отправлено
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Document'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+
+  /api/v1/approvals:
+    get:
+      tags: [approvals]
+      operationId: listApprovals
+      summary: Маршруты согласования («На согласовании», «Черновик КП»)
+      description: |
+        `mine=1` (по умолчанию) — маршруты, текущий шаг которых ждёт этого сотрудника (назначен по `crm_user_id` или он
+        держит право шага). `mine=0` — без `registry.read` маршруты, где сотрудник автор или участник; с `registry.read` — все.
+      x-rt-permissions: [memos.create, memos.approve, approvals.decide, payments.confirm, registry.read]
+      parameters:
+        - name: mine
+          in: query
+          required: false
+          schema:
+            type: boolean
+            default: true
+        - name: status
+          in: query
+          required: false
+          schema:
+            type: array
+            items:
+              $ref: '#/components/schemas/RouteStatus'
+          style: form
+          explode: true
+        - name: template
+          in: query
+          required: false
+          schema:
+            type: array
+            items:
+              $ref: '#/components/schemas/ApprovalTemplate'
+          style: form
+          explode: true
+        - $ref: '#/components/parameters/Cursor'
+        - $ref: '#/components/parameters/Limit'
+      responses:
+        '200':
+          description: Страница маршрутов
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApprovalPage'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+
+  /api/v1/approvals/{approval_id}:
+    get:
+      tags: [approvals]
+      operationId: getApproval
+      summary: Карточка маршрута (шаги, чек-лист КП, снимок КП)
+      description: |
+        Автор объекта, участник маршрута (в том числе держатель права шага) или сотрудник с `registry.read`; иначе 404.
+        Снимок КП (`quote`) с себестоимостью и маржой — только тем, кто решает шаг маршрута КП (`approvals.decide`).
+      x-rt-permissions: [memos.create, memos.approve, approvals.decide, payments.confirm, registry.read]
+      parameters:
+        - $ref: '#/components/parameters/ApprovalId'
+      responses:
+        '200':
+          description: Маршрут
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Approval'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/v1/approvals/{approval_id}/decision:
+    post:
+      tags: [approvals]
+      operationId: decideApproval
+      summary: Решение на текущем шаге (approve, return, reject)
+      description: |
+        Решает только тот, кого ждёт текущий шаг (назначен по `crm_user_id` или держит право шага); иначе 403
+        `FORBIDDEN` (`details.reason = not_your_step`). `comment` обязателен для `return` и `reject` (422). КП: `approve`
+        недоступно, пока чек-лист не зелёный (проверка на сервере; маржа сверяется с порогом резолюции EDS) — 409 `CONFLICT`, `details.reason = checklist_not_green`;
+        при одобрении КП присваивается `ИСХ-NNN/ГГ`, выбранные `channels` уходят в событие. Маршрут закрыт — 409
+        (`details.reason = route_closed`). Каждое решение — строка журнала и `approval.decided`.
+      x-rt-permissions: [memos.approve, approvals.decide, payments.confirm]
+      parameters:
+        - $ref: '#/components/parameters/ApprovalId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DecisionIn'
+      responses:
+        '200':
+          description: Решение принято
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Approval'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+
+  /api/v1/registry:
+    get:
+      tags: [registry]
+      operationId: listRegistry
+      summary: Реестр «Все документы» (SPEC-v3 §7.3)
+      description: |
+        Единый реестр с вкладками по типу и фильтрами статус · период · ответственный · клиент. КП — маршруты одобрения
+        (номер КП ERP); договоры, счета и акты ERP появятся, когда EDS начнёт вести их проекции (вне C1).
+      x-rt-permissions: [registry.read]
+      parameters:
+        - $ref: '#/components/parameters/RegistryKind'
+        - $ref: '#/components/parameters/RegistryStatus'
+        - $ref: '#/components/parameters/RegistryDateFrom'
+        - $ref: '#/components/parameters/RegistryDateTo'
+        - $ref: '#/components/parameters/RegistryResponsible'
+        - $ref: '#/components/parameters/RegistryClient'
+        - $ref: '#/components/parameters/RegistryNumber'
+        - $ref: '#/components/parameters/RegistryQuery'
+        - $ref: '#/components/parameters/Cursor'
+        - $ref: '#/components/parameters/Limit'
+      responses:
+        '200':
+          description: Страница реестра
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RegistryPage'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+
+  /api/v1/registry/export:
+    get:
+      tags: [registry]
+      operationId: exportRegistry
+      summary: Экспорт реестра с теми же фильтрами
+      description: Не больше 10 000 строк (иначе 422 `VALIDATION_FAILED`, `details.reason = export_too_large`); в журнал — `registry.export`.
+      x-rt-permissions: [registry.export]
+      parameters:
+        - $ref: '#/components/parameters/RegistryKind'
+        - $ref: '#/components/parameters/RegistryStatus'
+        - $ref: '#/components/parameters/RegistryDateFrom'
+        - $ref: '#/components/parameters/RegistryDateTo'
+        - $ref: '#/components/parameters/RegistryResponsible'
+        - $ref: '#/components/parameters/RegistryClient'
+        - $ref: '#/components/parameters/RegistryNumber'
+        - $ref: '#/components/parameters/RegistryQuery'
+        - name: format
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [xlsx, csv]
+            default: xlsx
+      responses:
+        '200':
+          description: Файл реестра
+          headers:
+            Content-Disposition:
+              description: '`attachment; filename*=UTF-8''''…`'
+              schema:
+                type: string
+          content:
+            application/vnd.openxmlformats-officedocument.spreadsheetml.sheet:
+              schema:
+                type: string
+                contentMediaType: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet
+            text/csv:
+              schema:
+                type: string
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+
+  /api/v1/files:
+    post:
+      tags: [files]
+      operationId: uploadFile
+      summary: Загрузить файл или новую версию файла
+      description: |
+        `multipart/form-data`: `file` и необязательный `version_of` (id файла — новая версия той же цепочки; прежние версии
+        остаются). Не больше 25 МБ (413), типы — PDF, изображения, документы Office (415). Файл привязывается к документу
+        полем `file_ids` при создании или отправке; непривязанный видит только загрузивший.
+      x-rt-permissions: [letters.register, letters.resolve, memos.create, memos.approve, approvals.decide]
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/FileUploadIn'
+      responses:
+        '201':
+          description: Файл сохранён
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FileRef'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '413':
+          description: '`PAYLOAD_TOO_LARGE`'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '415':
+          description: '`UNSUPPORTED_MEDIA_TYPE`'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+
+  /api/v1/files/{file_id}:
+    get:
+      tags: [files]
+      operationId: downloadFile
+      summary: Скачать файл (поток)
+      description: |
+        Последняя версия, или `version`. Видит тот, кому виден документ, к которому файл привязан, или загрузивший; иначе 404.
+      x-rt-permissions: [letters.read, memos.create, memos.approve, approvals.decide, registry.read]
+      parameters:
+        - $ref: '#/components/parameters/FileId'
+        - name: version
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+      responses:
+        '200':
+          description: Содержимое файла
+          headers:
+            Content-Disposition:
+              description: '`attachment; filename*=UTF-8''''…`'
+              schema:
+                type: string
+            ETag:
+              description: SHA-256 содержимого версии
+              schema:
+                type: string
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                contentMediaType: application/octet-stream
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/v1/files/{file_id}/versions:
+    get:
+      tags: [files]
+      operationId: listFileVersions
+      summary: Версии файла
+      x-rt-permissions: [letters.read, memos.create, memos.approve, approvals.decide, registry.read]
+      parameters:
+        - $ref: '#/components/parameters/FileId'
+      responses:
+        '200':
+          description: Версии от последней к первой
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FileVersions'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+components:
+  securitySchemes:
+    edsAccess:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: Токен доступа EDS из `POST /api/v1/auth/sso/exchange` (HS256, `iss = eds`, `aud = eds-api`, 15 минут); токен сотрудника CRM (`aud = eds`) здесь отклоняется — 401 `UNAUTHORIZED`
+
+  parameters:
+    LetterId:
+      name: letter_id
+      in: path
+      required: true
+      schema:
+        $ref: '#/components/schemas/Uuid'
+    DocumentId:
+      name: document_id
+      in: path
+      required: true
+      schema:
+        $ref: '#/components/schemas/Uuid'
+    ApprovalId:
+      name: approval_id
+      in: path
+      required: true
+      schema:
+        $ref: '#/components/schemas/Uuid'
+    FileId:
+      name: file_id
+      in: path
+      required: true
+      schema:
+        $ref: '#/components/schemas/Uuid'
+    Cursor:
+      name: cursor
+      in: query
+      required: false
+      description: Непрозрачный курсор из `next_cursor`
+      schema:
+        type: string
+        maxLength: 500
+    Limit:
+      name: limit
+      in: query
+      required: false
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 50
+    IdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: false
+      description: Ключ повтора (24 часа)
+      schema:
+        type: string
+        minLength: 8
+        maxLength: 128
+    RegistryKind:
+      name: kind
+      in: query
+      required: false
+      description: Вкладки реестра (несколько — повтором параметра)
+      schema:
+        type: array
+        items:
+          $ref: '#/components/schemas/RegistryKind'
+      style: form
+      explode: true
+    RegistryStatus:
+      name: status
+      in: query
+      required: false
+      description: Статус объекта (значения — `LetterStatus`, `DocumentStatus`, `RouteStatus` по типу)
+      schema:
+        type: array
+        items:
+          type: string
+          pattern: '^[a-z_]+$'
+      style: form
+      explode: true
+    RegistryDateFrom:
+      name: date_from
+      in: query
+      required: false
+      description: Дата регистрации с (включительно, `Asia/Tashkent`)
+      schema:
+        type: string
+        format: date
+    RegistryDateTo:
+      name: date_to
+      in: query
+      required: false
+      description: Дата регистрации по (включительно)
+      schema:
+        type: string
+        format: date
+    RegistryResponsible:
+      name: responsible
+      in: query
+      required: false
+      description: Ответственный — `crm_user_id` (менеджер письма, автор документа, кто решает текущий шаг)
+      schema:
+        type: integer
+    RegistryClient:
+      name: crm_client_id
+      in: query
+      required: false
+      description: Клиент CRM
+      schema:
+        type: integer
+    RegistryNumber:
+      name: number
+      in: query
+      required: false
+      description: Точный номер (`ВХ-104/26`, `СЗ-2026/031`, `КП-2026/115`)
+      schema:
+        type: string
+        maxLength: 64
+    RegistryQuery:
+      name: q
+      in: query
+      required: false
+      description: Поиск по номеру и теме
+      schema:
+        type: string
+        maxLength: 200
+
+  responses:
+    Unauthorized:
+      description: '`UNAUTHORIZED` — нет, неверный или истёкший токен доступа EDS (`details.reason`)'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    Forbidden:
+      description: '`FORBIDDEN` — нет права (`details.permission`) или действие не положено (`details.reason`)'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    NotFound:
+      description: '`NOT_FOUND`'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    Conflict:
+      description: '`CONFLICT` — `details.reason`: `invalid_state`, `route_closed`, `checklist_not_green`, `idempotency_key_reused`'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    ValidationFailed:
+      description: '`VALIDATION_FAILED` — `details.fields` перечисляет поля'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+  schemas:
+    Error:
+      type: object
+      additionalProperties: false
+      required: [code, message, source]
+      properties:
+        code:
+          type: string
+          description: Стабильный код (`UNAUTHORIZED`, `INVALID_SSO_TOKEN`, `USER_NOT_PROVISIONED`, `USER_INACTIVE`, `FORBIDDEN`, `NOT_FOUND`, `VALIDATION_FAILED`, `CONFLICT`, `PAYLOAD_TOO_LARGE`, `UNSUPPORTED_MEDIA_TYPE`, `BAD_REQUEST`, `INTERNAL_ERROR`)
+          examples: [FORBIDDEN]
+        message:
+          type: string
+          description: Текст для сотрудника на его языке
+        source:
+          type: string
+          enum: [eds]
+        details:
+          type: object
+          description: '`reason`, `permission`, `fields` — для разбора, не для показа'
+          additionalProperties: true
+
+    EdsPermission:
+      type: string
+      enum:
+        - letters.read
+        - letters.register
+        - letters.resolve
+        - memos.create
+        - memos.approve
+        - approvals.decide
+        - registry.read
+        - registry.export
+        - payments.confirm
+      description: |
+        Код права EDS v1 (runbook волны 12 §2.2; `platform-rbac.yaml`, `backend.eds`). `payments.confirm` — шаг «бухгалтер»
+        маршрута служебной записки с суммой (решение архитектора). В событиях шины (`identity`, `eds`) код — строка по шаблону
+        `^[a-z_]+\.[a-z_]+$`, не перечень: новый код не ломает события v1.
+
+    Uuid:
+      type: string
+      format: uuid
+
+    Amount:
+      type: string
+      pattern: '^-?\d+\.\d{2}$'
+      description: Деньги строкой с двумя знаками
+    Currency:
+      type: string
+      pattern: '^[A-Z]{3}$'
+    Money:
+      type: object
+      additionalProperties: false
+      required: [amount, currency]
+      properties:
+        amount:
+          $ref: '#/components/schemas/Amount'
+        currency:
+          $ref: '#/components/schemas/Currency'
+    MarginPct:
+      type: string
+      pattern: '^(100(\.0{1,2})?|\d{1,2}(\.\d{1,2})?)$'
+      description: Процент 0–100 строкой, до двух знаков (`15`, `12.5`)
+    LetterNumber:
+      type: string
+      pattern: '^ВХ-\d{3,}/\d{2}$'
+      examples: [ВХ-104/26]
+    OutgoingNumber:
+      type: string
+      pattern: '^ИСХ-\d{3,}/\d{2}$'
+      examples: [ИСХ-082/26]
+    DocumentNumber:
+      type: string
+      pattern: '^(ИСХ-\d{3,}/\d{2}|(СЗ|ЗЯ|ОТ)-\d{4}/\d{3,})$'
+      description: '`СЗ-ГГГГ/NNN`, `ЗЯ-ГГГГ/NNN`, `ОТ-ГГГГ/NNN`, `ИСХ-NNN/ГГ` (исходящее письмо)'
+      examples: [СЗ-2026/031]
+
+    PersonRef:
+      type: object
+      additionalProperties: false
+      required: [crm_user_id, full_name]
+      properties:
+        crm_user_id:
+          type: integer
+        full_name:
+          type: string
+
+    Me:
+      type: object
+      additionalProperties: false
+      required: [crm_user_id, full_name, email, permissions]
+      properties:
+        crm_user_id:
+          type: integer
+        full_name:
+          type: string
+        email:
+          type: string
+          format: email
+        permissions:
+          type: array
+          uniqueItems: true
+          items:
+            $ref: '#/components/schemas/EdsPermission'
+          description: Права по проекции на момент запроса
+
+    SsoExchangeIn:
+      type: object
+      additionalProperties: false
+      required: [token]
+      properties:
+        token:
+          type: string
+          minLength: 16
+          maxLength: 4096
+          description: Токен сотрудника CRM с `aud = eds`
+    AccessToken:
+      type: object
+      additionalProperties: false
+      required: [access_token, token_type, expires_in]
+      properties:
+        access_token:
+          type: string
+        token_type:
+          type: string
+          const: bearer
+        expires_in:
+          type: integer
+          const: 900
+          description: Секунды; refresh нет
+
+    Health:
+      type: object
+      additionalProperties: false
+      required: [status, checks]
+      properties:
+        status:
+          type: string
+          enum: [ok, unavailable]
+        version:
+          type: string
+          description: Версия сборки сервиса
+        checks:
+          type: object
+          additionalProperties:
+            type: string
+            enum: [ok, unavailable]
+          description: Зависимости (`database`, …)
+
+    ErpLinks:
+      type: object
+      additionalProperties: false
+      required: [erp_request_id, erp_deal_id, deal_number]
+      description: Ссылки на заявку и сделку ERP и клиента CRM; `null` — ещё не связано
+      properties:
+        erp_request_id:
+          type: [integer, 'null']
+        erp_deal_id:
+          type: [integer, 'null']
+        deal_number:
+          type: [string, 'null']
+          maxLength: 64
+          description: Бизнес-номер заявки или проекта ERP (`ЗВ-ГГГГ-NNN`, `ПР-ГГГГ-NNN`)
+        crm_client_id:
+          type: [integer, 'null']
+        erp_company_id:
+          type: [integer, 'null']
+    ErpLinksIn:
+      type: object
+      additionalProperties: false
+      properties:
+        erp_request_id:
+          type: [integer, 'null']
+        erp_deal_id:
+          type: [integer, 'null']
+        deal_number:
+          type: [string, 'null']
+          maxLength: 64
+        crm_client_id:
+          type: [integer, 'null']
+        erp_company_id:
+          type: [integer, 'null']
+
+    JournalEntry:
+      type: object
+      additionalProperties: false
+      required: [at, action, by]
+      description: Строка журнала «кто, что, когда, файл»
+      properties:
+        at:
+          type: string
+          format: date-time
+        action:
+          type: string
+          pattern: '^[a-z_.]+$'
+          description: '`letter.registered`, `letter.resolved`, `document.submitted`, `approval.decided`, `file.attached`, …'
+          examples: [approval.decided]
+        by:
+          oneOf:
+            - $ref: '#/components/schemas/PersonRef'
+            - type: 'null'
+          description: '`null` — система'
+        comment:
+          type: [string, 'null']
+        file_id:
+          oneOf:
+            - $ref: '#/components/schemas/Uuid'
+            - type: 'null'
+        version:
+          type: [integer, 'null']
+          minimum: 1
+
+    FileRef:
+      type: object
+      additionalProperties: false
+      required: [id, name, content_type, size, version, sha256, uploaded_at, uploaded_by]
+      properties:
+        id:
+          $ref: '#/components/schemas/Uuid'
+        name:
+          type: string
+          maxLength: 255
+        content_type:
+          type: string
+        size:
+          type: integer
+          minimum: 0
+        version:
+          type: integer
+          minimum: 1
+        sha256:
+          type: string
+          pattern: '^[0-9a-f]{64}$'
+        uploaded_at:
+          type: string
+          format: date-time
+        uploaded_by:
+          $ref: '#/components/schemas/PersonRef'
+    FileVersions:
+      type: object
+      additionalProperties: false
+      required: [items]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/FileRef'
+    FileUploadIn:
+      type: object
+      required: [file]
+      properties:
+        file:
+          type: string
+          contentMediaType: application/octet-stream
+        version_of:
+          $ref: '#/components/schemas/Uuid'
+
+    LetterStatus:
+      type: string
+      enum: [awaiting_resolution, resolved, returned, rejected]
+      description: |
+        SPEC-v3 §2.4 («Зарегистрировано → Ждёт резолюции» — одним шагом): `awaiting_resolution` — зарегистрировано и ждёт
+        резолюции директора; `resolved` — резолюция наложена; `returned` — возвращено, письмо у регистратора; `rejected` —
+        отклонено. Переходы — таблица в описании API.
+    Zone:
+      type: string
+      enum: [goods, services, payment_terms]
+      description: 'Зона исполнителя резолюции: `goods` — товары, склад, цены поставщиков (снабженец); `services` — услуги, ТЗ, бригада (гл. инженер); `payment_terms` — условия оплаты (бухгалтер)'
+    Assignee:
+      type: object
+      additionalProperties: false
+      required: [crm_user_id, zone]
+      properties:
+        crm_user_id:
+          type: integer
+        zone:
+          $ref: '#/components/schemas/Zone'
+        full_name:
+          type: string
+          readOnly: true
+    ResolutionIn:
+      type: object
+      additionalProperties: false
+      required: [text, assignees, due]
+      properties:
+        text:
+          type: string
+          minLength: 1
+          maxLength: 4000
+        assignees:
+          type: array
+          minItems: 1
+          uniqueItems: true
+          items:
+            $ref: '#/components/schemas/Assignee'
+        due:
+          type: string
+          format: date
+          description: Срок расчёта
+        min_margin_pct:
+          oneOf:
+            - $ref: '#/components/schemas/MarginPct'
+            - type: 'null'
+          description: '«Маржа не ниже, %»; нет или `null` — без ограничения'
+    Resolution:
+      type: object
+      additionalProperties: false
+      required: [text, assignees, due, min_margin_pct, decided_by, decided_at]
+      properties:
+        text:
+          type: string
+        assignees:
+          type: array
+          items:
+            $ref: '#/components/schemas/Assignee'
+        due:
+          type: string
+          format: date
+        min_margin_pct:
+          oneOf:
+            - $ref: '#/components/schemas/MarginPct'
+            - type: 'null'
+        decided_by:
+          $ref: '#/components/schemas/PersonRef'
+        decided_at:
+          type: string
+          format: date-time
+    LetterReturnIn:
+      type: object
+      additionalProperties: false
+      required: [comment]
+      properties:
+        comment:
+          type: string
+          minLength: 1
+          maxLength: 4000
+    LetterRejectIn:
+      type: object
+      additionalProperties: false
+      required: [reason]
+      properties:
+        reason:
+          type: string
+          minLength: 1
+          maxLength: 4000
+    LetterSubmitIn:
+      type: object
+      additionalProperties: false
+      description: Необязательные правки возвращённого письма перед повторной подачей
+      properties:
+        subject:
+          type: string
+          minLength: 1
+          maxLength: 300
+        summary:
+          type: string
+          minLength: 1
+          maxLength: 10000
+        links:
+          $ref: '#/components/schemas/ErpLinksIn'
+        file_ids:
+          type: array
+          uniqueItems: true
+          maxItems: 50
+          items:
+            $ref: '#/components/schemas/Uuid'
+        comment:
+          type: [string, 'null']
+          maxLength: 4000
+          description: Ответ на комментарий возврата (в журнал)
+    LetterSender:
+      type: object
+      additionalProperties: false
+      required: [name]
+      properties:
+        name:
+          type: [string, 'null']
+          maxLength: 255
+          description: '`null` — письмо зарегистрировано по заявке ERP, клиент — по `links.crm_client_id`'
+        inn:
+          type: [string, 'null']
+          pattern: '^\d{9,14}$'
+    SenderRef:
+      type: object
+      additionalProperties: false
+      description: Исходящий номер и дата письма у отправителя
+      properties:
+        number:
+          type: [string, 'null']
+          maxLength: 64
+        date:
+          type: [string, 'null']
+          format: date
+    LetterCreate:
+      type: object
+      additionalProperties: false
+      required: [subject, summary, sender, received_at]
+      properties:
+        subject:
+          type: string
+          minLength: 1
+          maxLength: 300
+        summary:
+          type: string
+          minLength: 1
+          maxLength: 10000
+          description: Суть документа
+        sender:
+          $ref: '#/components/schemas/LetterSender'
+        sender_ref:
+          $ref: '#/components/schemas/SenderRef'
+        received_at:
+          type: string
+          format: date
+        addressee_crm_user_id:
+          type: [integer, 'null']
+          description: На чьё имя; нет — директор
+        manager_crm_user_id:
+          type: [integer, 'null']
+          description: Ответственный менеджер
+        urgent:
+          type: boolean
+          default: false
+        links:
+          $ref: '#/components/schemas/ErpLinksIn'
+        file_ids:
+          type: array
+          uniqueItems: true
+          maxItems: 50
+          items:
+            $ref: '#/components/schemas/Uuid'
+    LetterListItem:
+      type: object
+      additionalProperties: false
+      required: [id, number, subject, sender, received_at, status, links, urgent]
+      properties:
+        id:
+          $ref: '#/components/schemas/Uuid'
+        number:
+          $ref: '#/components/schemas/LetterNumber'
+        subject:
+          type: string
+        sender:
+          $ref: '#/components/schemas/LetterSender'
+        received_at:
+          type: string
+          format: date
+        status:
+          $ref: '#/components/schemas/LetterStatus'
+        links:
+          $ref: '#/components/schemas/ErpLinks'
+        urgent:
+          type: boolean
+        due:
+          type: [string, 'null']
+          format: date
+          description: Срок расчёта по резолюции
+    LetterPage:
+      type: object
+      additionalProperties: false
+      required: [items, next_cursor]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/LetterListItem'
+        next_cursor:
+          type: [string, 'null']
+    Letter:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - number
+        - status
+        - subject
+        - summary
+        - sender
+        - received_at
+        - registered_at
+        - registered_by
+        - addressee
+        - manager
+        - urgent
+        - links
+        - files
+        - resolution
+        - return_comment
+        - reject_reason
+        - journal
+      properties:
+        id:
+          $ref: '#/components/schemas/Uuid'
+        number:
+          $ref: '#/components/schemas/LetterNumber'
+        status:
+          $ref: '#/components/schemas/LetterStatus'
+        subject:
+          type: string
+        summary:
+          type: string
+        sender:
+          $ref: '#/components/schemas/LetterSender'
+        sender_ref:
+          $ref: '#/components/schemas/SenderRef'
+        received_at:
+          type: string
+          format: date
+        registered_at:
+          type: string
+          format: date-time
+        registered_by:
+          oneOf:
+            - $ref: '#/components/schemas/PersonRef'
+            - type: 'null'
+          description: '`null` — зарегистрировано системой по заявке ERP'
+        addressee:
+          $ref: '#/components/schemas/PersonRef'
+        manager:
+          oneOf:
+            - $ref: '#/components/schemas/PersonRef'
+            - type: 'null'
+        urgent:
+          type: boolean
+        links:
+          $ref: '#/components/schemas/ErpLinks'
+        files:
+          type: array
+          items:
+            $ref: '#/components/schemas/FileRef'
+        resolution:
+          oneOf:
+            - $ref: '#/components/schemas/Resolution'
+            - type: 'null'
+        return_comment:
+          type: [string, 'null']
+        reject_reason:
+          type: [string, 'null']
+        journal:
+          type: array
+          items:
+            $ref: '#/components/schemas/JournalEntry'
+
+    DocumentKind:
+      type: string
+      enum: [memo, application, report, letter_out]
+      description: Служебная записка (СЗ), заявление (ЗЯ), отчёт (ОТ), исходящее письмо (ИСХ)
+    DocumentStatus:
+      type: string
+      enum: [draft, on_approval, returned, rejected, approved, to_accountant, paid, sent]
+      description: |
+        SPEC-v3 §2.4 «Служебная записка». Статус по решениям маршрута (шаг 1 — директор, `memos.approve`; шаг 2 — бухгалтер,
+        `payments.confirm`, только при сумме):
+
+        | Из | Действие | В | Маршрут | Архив |
+        |---|---|---|---|---|
+        | — | `POST /documents` | `draft` | — | — |
+        | `draft`, `returned` | `POST …/submit` (после возврата — `version + 1`, новый круг) | `on_approval` | `approval.requested` | — |
+        | `on_approval` | директор `approve`, суммы нет (и заявление, отчёт) | `approved` | закрыт: `approved` | `document.archived` |
+        | `on_approval` | директор `approve`, сумма есть | `to_accountant` (передана бухгалтеру) | открыт, шаг 2 | — |
+        | `to_accountant` | бухгалтер `approve` (оплачено) | `paid` | закрыт: `approved` | `document.archived` |
+        | `on_approval`, `to_accountant` | `return` (комментарий обязателен) | `returned` (автор правит) | закрыт: `returned` | — |
+        | `on_approval`, `to_accountant` | `reject` (комментарий обязателен) | `rejected` | закрыт: `rejected` | `document.archived` |
+        | `draft` (`letter_out`) | `POST …/submit` — отправка, `ИСХ-NNN/ГГ` | `sent` | — | `document.archived` |
+
+        Архив — признак `archived_at`, итоговый статус сохраняется.
+    DocumentCreate:
+      type: object
+      additionalProperties: false
+      required: [kind, subject, text]
+      properties:
+        kind:
+          $ref: '#/components/schemas/DocumentKind'
+        subject:
+          type: string
+          minLength: 1
+          maxLength: 300
+        text:
+          type: string
+          minLength: 1
+          maxLength: 20000
+        addressee_crm_user_id:
+          type: [integer, 'null']
+          description: Кому; нет — директор (первый шаг маршрута — любой с `memos.approve`)
+        amount:
+          oneOf:
+            - $ref: '#/components/schemas/Money'
+            - type: 'null'
+          description: Сумма — маршрут служебной записки после директора идёт бухгалтеру
+        due_date:
+          type: [string, 'null']
+          format: date
+          description: «Нужно до»
+        file_ids:
+          type: array
+          uniqueItems: true
+          maxItems: 50
+          items:
+            $ref: '#/components/schemas/Uuid'
+        source_message_id:
+          type: [string, 'null']
+          maxLength: 128
+          description: Сообщение чата, из которого создан документ (непрозрачная ссылка)
+        erp_deal_id:
+          type: [integer, 'null']
+          description: Связь с проектом (заявкой) ERP
+        recipient:
+          oneOf:
+            - $ref: '#/components/schemas/LetterSender'
+            - type: 'null'
+          description: Только `letter_out` — адресат исходящего письма
+        in_reply_to:
+          oneOf:
+            - $ref: '#/components/schemas/Uuid'
+            - type: 'null'
+          description: Только `letter_out` — входящее письмо, на которое отвечаем
+    DocumentSubmitIn:
+      type: object
+      additionalProperties: false
+      description: Необязательные правки перед отправкой (после возврата — новая версия)
+      properties:
+        subject:
+          type: string
+          minLength: 1
+          maxLength: 300
+        text:
+          type: string
+          minLength: 1
+          maxLength: 20000
+        amount:
+          oneOf:
+            - $ref: '#/components/schemas/Money'
+            - type: 'null'
+        due_date:
+          type: [string, 'null']
+          format: date
+        file_ids:
+          type: array
+          uniqueItems: true
+          maxItems: 50
+          items:
+            $ref: '#/components/schemas/Uuid'
+    DocumentDecision:
+      type: object
+      additionalProperties: false
+      required: [round, step, decision, comment, by, at]
+      properties:
+        round:
+          type: integer
+          minimum: 1
+          description: Круг маршрута (растёт после возврата)
+        step:
+          type: integer
+          minimum: 1
+        decision:
+          $ref: '#/components/schemas/Decision'
+        comment:
+          type: [string, 'null']
+        by:
+          $ref: '#/components/schemas/PersonRef'
+        at:
+          type: string
+          format: date-time
+    DocumentListItem:
+      type: object
+      additionalProperties: false
+      required: [id, kind, number, status, subject, author, created_at]
+      properties:
+        id:
+          $ref: '#/components/schemas/Uuid'
+        kind:
+          $ref: '#/components/schemas/DocumentKind'
+        number:
+          oneOf:
+            - $ref: '#/components/schemas/DocumentNumber'
+            - type: 'null'
+          description: '`null` — исходящее письмо до отправки'
+        status:
+          $ref: '#/components/schemas/DocumentStatus'
+        subject:
+          type: string
+        author:
+          $ref: '#/components/schemas/PersonRef'
+        amount:
+          oneOf:
+            - $ref: '#/components/schemas/Money'
+            - type: 'null'
+        due_date:
+          type: [string, 'null']
+          format: date
+        created_at:
+          type: string
+          format: date-time
+    DocumentPage:
+      type: object
+      additionalProperties: false
+      required: [items, next_cursor]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/DocumentListItem'
+        next_cursor:
+          type: [string, 'null']
+    Document:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - kind
+        - number
+        - status
+        - version
+        - subject
+        - text
+        - author
+        - addressee
+        - amount
+        - due_date
+        - files
+        - source_message_id
+        - erp_deal_id
+        - deal_number
+        - approval_id
+        - decisions
+        - journal
+        - created_at
+        - updated_at
+        - archived_at
+      properties:
+        id:
+          $ref: '#/components/schemas/Uuid'
+        kind:
+          $ref: '#/components/schemas/DocumentKind'
+        number:
+          oneOf:
+            - $ref: '#/components/schemas/DocumentNumber'
+            - type: 'null'
+        status:
+          $ref: '#/components/schemas/DocumentStatus'
+        version:
+          type: integer
+          minimum: 1
+        subject:
+          type: string
+        text:
+          type: string
+        author:
+          $ref: '#/components/schemas/PersonRef'
+        addressee:
+          oneOf:
+            - $ref: '#/components/schemas/PersonRef'
+            - type: 'null'
+          description: '`null` — директор (любой с `memos.approve`)'
+        amount:
+          oneOf:
+            - $ref: '#/components/schemas/Money'
+            - type: 'null'
+        due_date:
+          type: [string, 'null']
+          format: date
+        files:
+          type: array
+          items:
+            $ref: '#/components/schemas/FileRef'
+        source_message_id:
+          type: [string, 'null']
+        erp_deal_id:
+          type: [integer, 'null']
+        deal_number:
+          type: [string, 'null']
+        recipient:
+          oneOf:
+            - $ref: '#/components/schemas/LetterSender'
+            - type: 'null'
+        in_reply_to:
+          oneOf:
+            - $ref: '#/components/schemas/Uuid'
+            - type: 'null'
+        approval_id:
+          oneOf:
+            - $ref: '#/components/schemas/Uuid'
+            - type: 'null'
+          description: Маршрут текущего круга; `null` — не отправлялся
+        decisions:
+          type: array
+          items:
+            $ref: '#/components/schemas/DocumentDecision'
+        journal:
+          type: array
+          items:
+            $ref: '#/components/schemas/JournalEntry'
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+        archived_at:
+          type: [string, 'null']
+          format: date-time
+          description: Маршрут завершён окончательно — документ в архиве (`document.archived`)
+
+    ApprovalTemplate:
+      type: string
+      enum: [memo, application, report, quote]
+    RouteStatus:
+      type: string
+      enum: [open, approved, returned, rejected]
+    Decision:
+      type: string
+      enum: [approve, return, reject]
+    SendChannel:
+      type: string
+      enum: [telegram, cabinet, email]
+    StepAssignee:
+      type: object
+      additionalProperties: false
+      required: [crm_user_id, permission]
+      description: Конкретный сотрудник или любой с правом EDS — ровно одно не `null`
+      properties:
+        crm_user_id:
+          type: [integer, 'null']
+        permission:
+          oneOf:
+            - $ref: '#/components/schemas/EdsPermission'
+            - type: 'null'
+      if:
+        properties:
+          crm_user_id:
+            type: integer
+      then:
+        properties:
+          permission:
+            type: 'null'
+      else:
+        properties:
+          permission:
+            type: string
+    ApprovalStep:
+      type: object
+      additionalProperties: false
+      required: [index, label, assignee, status, decided_by, decided_at, comment]
+      properties:
+        index:
+          type: integer
+          minimum: 1
+        label:
+          type: string
+          description: «Директор», «Бухгалтер»
+        assignee:
+          $ref: '#/components/schemas/StepAssignee'
+        status:
+          type: string
+          enum: [pending, current, approved, returned, rejected, skipped]
+        decided_by:
+          oneOf:
+            - $ref: '#/components/schemas/PersonRef'
+            - type: 'null'
+        decided_at:
+          type: [string, 'null']
+          format: date-time
+        comment:
+          type: [string, 'null']
+    ApprovalObject:
+      type: object
+      additionalProperties: false
+      required: [kind]
+      description: Документ EDS (`document_id`, `number`) или КП ERP (`erp_quote_id`, `quote_number`, `quote_version`, `erp_deal_id`)
+      if:
+        properties:
+          kind:
+            const: quote
+      then:
+        required: [erp_quote_id, quote_number, quote_version, erp_deal_id]
+        properties:
+          erp_quote_id:
+            type: integer
+          quote_number:
+            type: string
+          quote_version:
+            type: integer
+          erp_deal_id:
+            type: [integer, 'null']
+      else:
+        required: [document_id, number]
+        properties:
+          document_id:
+            $ref: '#/components/schemas/Uuid'
+          number:
+            $ref: '#/components/schemas/DocumentNumber'
+      properties:
+        kind:
+          $ref: '#/components/schemas/ApprovalTemplate'
+        document_id:
+          $ref: '#/components/schemas/Uuid'
+        number:
+          $ref: '#/components/schemas/DocumentNumber'
+        erp_quote_id:
+          type: integer
+        quote_number:
+          type: string
+        quote_version:
+          type: integer
+          minimum: 1
+        erp_deal_id:
+          type: [integer, 'null']
+        deal_number:
+          type: [string, 'null']
+    ChecklistItem:
+      type: object
+      additionalProperties: false
+      required: [code, label, ok, by, at, value]
+      description: |
+        Строка чек-листа одобрения КП (SPEC-v3 §7.3) — с датой и автором. `margin` сверяет маржу КП с порогом **резолюции EDS**
+        (владелец поля — EDS); `min_margin_pct` из события ERP — только снимок для показа.
+      properties:
+        code:
+          type: string
+          enum: [visa_goods, visa_services, margin, due]
+          description: виза снабженца, виза гл. инженера, маржа ≥ порога резолюции, срок расчёта выдержан
+        label:
+          type: string
+        ok:
+          type: boolean
+        by:
+          oneOf:
+            - $ref: '#/components/schemas/QuoteVisaAuthor'
+            - type: 'null'
+          description: Кто поставил визу
+        at:
+          type: [string, 'null']
+          format: date-time
+        value:
+          type: [string, 'null']
+          description: Значение для показа (`17.6 % ≥ 15 %`)
+    CalcZone:
+      type: string
+      enum: [goods, services]
+      description: Зона визы расчёта (как `CalcZone` события ERP)
+    QuoteVisaAuthor:
+      type: object
+      additionalProperties: false
+      required: [crm_user_id, full_name]
+      properties:
+        crm_user_id:
+          type: [integer, 'null']
+          description: '`null` — сотрудник ERP без связи с CRM'
+        full_name:
+          type: string
+    QuoteVisa:
+      type: object
+      additionalProperties: false
+      required: [zone, by, at]
+      properties:
+        zone:
+          $ref: '#/components/schemas/CalcZone'
+        by:
+          $ref: '#/components/schemas/QuoteVisaAuthor'
+        at:
+          type: string
+          format: date-time
+    QuoteSnapshot:
+      type: object
+      additionalProperties: false
+      required: [erp_quote_id, number, version, total, currency, margin_pct, min_margin_pct, required_zones, visas, ready_at]
+      description: |
+        Снимок КП из `uz.railtech.erp.quote.ready_for_approval.v1` (поля — как `QuoteReadyForApproval` события) — только для
+        показа; `min_margin_pct` — порог, который видела ERP; чек-лист сверяет с порогом резолюции EDS.
+      properties:
+        erp_quote_id:
+          type: integer
+        number:
+          type: string
+        version:
+          type: integer
+          minimum: 1
+        client_name:
+          type: [string, 'null']
+        total:
+          $ref: '#/components/schemas/Amount'
+        currency:
+          $ref: '#/components/schemas/Currency'
+        cost:
+          oneOf:
+            - $ref: '#/components/schemas/Amount'
+            - type: 'null'
+        margin_amount:
+          oneOf:
+            - $ref: '#/components/schemas/Amount'
+            - type: 'null'
+        margin_pct:
+          type: string
+          pattern: '^-?\d{1,3}(\.\d{1,2})?$'
+          description: Маржа КП, % строкой; может быть отрицательной
+        min_margin_pct:
+          oneOf:
+            - $ref: '#/components/schemas/MarginPct'
+            - type: 'null'
+        required_zones:
+          type: array
+          uniqueItems: true
+          items:
+            $ref: '#/components/schemas/CalcZone'
+        visas:
+          type: array
+          items:
+            $ref: '#/components/schemas/QuoteVisa'
+        due:
+          type: [string, 'null']
+          format: date
+        ready_at:
+          type: string
+          format: date-time
+        valid_until:
+          type: [string, 'null']
+          format: date
+    ApprovalListItem:
+      type: object
+      additionalProperties: false
+      required: [id, template, title, object, status, round, current_step, created_at]
+      properties:
+        id:
+          $ref: '#/components/schemas/Uuid'
+        template:
+          $ref: '#/components/schemas/ApprovalTemplate'
+        title:
+          type: string
+        object:
+          $ref: '#/components/schemas/ApprovalObject'
+        status:
+          $ref: '#/components/schemas/RouteStatus'
+        round:
+          type: integer
+          minimum: 1
+        current_step:
+          oneOf:
+            - $ref: '#/components/schemas/ApprovalStep'
+            - type: 'null'
+          description: '`null` — маршрут закрыт'
+        created_at:
+          type: string
+          format: date-time
+    ApprovalPage:
+      type: object
+      additionalProperties: false
+      required: [items, next_cursor]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/ApprovalListItem'
+        next_cursor:
+          type: [string, 'null']
+    Approval:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - template
+        - title
+        - object
+        - status
+        - round
+        - steps
+        - checklist
+        - quote
+        - can_decide
+        - allowed_decisions
+        - outgoing_number
+        - created_at
+        - closed_at
+      properties:
+        id:
+          $ref: '#/components/schemas/Uuid'
+        template:
+          $ref: '#/components/schemas/ApprovalTemplate'
+        title:
+          type: string
+        object:
+          $ref: '#/components/schemas/ApprovalObject'
+        status:
+          $ref: '#/components/schemas/RouteStatus'
+        round:
+          type: integer
+          minimum: 1
+        steps:
+          type: array
+          items:
+            $ref: '#/components/schemas/ApprovalStep'
+        checklist:
+          type: array
+          items:
+            $ref: '#/components/schemas/ChecklistItem'
+          description: Только КП; у документов — пусто
+        quote:
+          oneOf:
+            - $ref: '#/components/schemas/QuoteSnapshot'
+            - type: 'null'
+          description: Снимок КП — только тому, кто решает шаг КП; иначе `null`
+        can_decide:
+          type: boolean
+          description: Текущий шаг ждёт этого сотрудника
+        allowed_decisions:
+          type: array
+          uniqueItems: true
+          items:
+            $ref: '#/components/schemas/Decision'
+          description: Что можно сейчас (`approve` нет, пока чек-лист КП не зелёный)
+        outgoing_number:
+          oneOf:
+            - $ref: '#/components/schemas/OutgoingNumber'
+            - type: 'null'
+          description: ИСХ-номер одобренного КП
+        created_at:
+          type: string
+          format: date-time
+        closed_at:
+          type: [string, 'null']
+          format: date-time
+    DecisionIn:
+      type: object
+      additionalProperties: false
+      required: [decision]
+      properties:
+        decision:
+          $ref: '#/components/schemas/Decision'
+        comment:
+          type: [string, 'null']
+          maxLength: 4000
+          description: Обязателен для `return` и `reject`
+        channels:
+          type: array
+          uniqueItems: true
+          items:
+            $ref: '#/components/schemas/SendChannel'
+          description: Только `approve` КП — каналы отправки клиенту (Telegram-бот, Кабинет, почта)
+      if:
+        properties:
+          decision:
+            enum: [return, reject]
+      then:
+        required: [comment]
+        properties:
+          comment:
+            type: string
+            minLength: 1
+
+    RegistryKind:
+      type: string
+      enum: [letter_in, letter_out, quote, memo, application, report]
+      description: 'Вкладки «Все документы» в C1: письма (входящие, исходящие), КП (маршруты одобрения), служебные, заявления, отчёты'
+    RegistryItem:
+      type: object
+      additionalProperties: false
+      required: [kind, id, number, title, status, registered_at, responsible, client, links]
+      properties:
+        kind:
+          $ref: '#/components/schemas/RegistryKind'
+        id:
+          $ref: '#/components/schemas/Uuid'
+          description: Письмо (`letter_in`), документ (`letter_out`, `memo`, `application`, `report`) или маршрут (`quote`)
+        number:
+          type: [string, 'null']
+          description: Номер реестра EDS или номер КП ERP; `null` — исходящее до отправки
+        title:
+          type: string
+        status:
+          type: string
+          description: Значение `LetterStatus`, `DocumentStatus` или `RouteStatus` по типу
+        registered_at:
+          type: string
+          format: date-time
+        responsible:
+          oneOf:
+            - $ref: '#/components/schemas/PersonRef'
+            - type: 'null'
+        client:
+          oneOf:
+            - $ref: '#/components/schemas/LetterSender'
+            - type: 'null'
+        links:
+          $ref: '#/components/schemas/ErpLinks'
+    RegistryPage:
+      type: object
+      additionalProperties: false
+      required: [items, next_cursor]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/RegistryItem'
+        next_cursor:
+          type: [string, 'null']

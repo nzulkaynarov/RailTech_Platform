@@ -9,7 +9,7 @@
 ## Как устроено
 
 - **Образы** собирает `deploy.yml` (только `workflow_dispatch`) и кладёт в GHCR с тегом = полный git sha:
-  `rt-crm-backend`, `rt-crm-frontend`, `rt-erp-backend`, `rt-erp-frontend`, `rt-cabinet`, `rt-platform-bff`, `rt-platform-web`, `rt-litellm` (свой образ LiteLLM на Debian, `infra/ai/litellm/`; официальный на прод-CPU не стартует). Деплоится только код, уже входящий в `main`.
+  `rt-crm-backend`, `rt-crm-frontend`, `rt-erp-backend`, `rt-erp-frontend`, `rt-cabinet`, `rt-platform-bff`, `rt-platform-web`, `rt-eds` (сервис документооборота, волна 12), `rt-litellm` (свой образ LiteLLM на Debian, `infra/ai/litellm/`; официальный на прод-CPU не стартует). Деплоится только код, уже входящий в `main`.
 - **Релиз** на VPS 1 — каталог `/opt/rt/releases/<sha>/` (`infra/`, `apps/crm/infra/casbin`, `packages/contracts/mcp-tools.json`), `/opt/rt/current` — ссылка на текущий.
   Состояние — `/opt/rt/state/{current_tag,previous_tag}`; хранятся пять последних релизов.
 - **Секреты приложений** лежат только на серверах: `/opt/rt/.env.prod` (VPS 1) и `/opt/rt-db/.env.db` (VPS 2), оба `chmod 600`.
@@ -17,10 +17,10 @@
   здесь, чтобы десятки секретов приложений не жили в GitHub; владелец вправе передумать (тогда `deploy.yml` дописывается).
 - **Redis — два экземпляра с разными паролями** (S0-2, ADR-0013 п. 5): `redis-broker` (брокер и результаты Celery, Channels; AOF, `noeviction`, том `redis_broker_data`) и
   `redis-cache` (кэш и троттлинг ERP, одноразовые `jti`, сессии Платформы, Langfuse; `volatile-lru`). Подробно, с отказами — раздел «Redis: брокер и кэш раздельно» ниже.
-- **База** — на VPS 2: PostgreSQL 17 + pgvector, 4 базы, по роли на базу (`crm_app`, `erp_app`, `litellm_app`, `langfuse_app`),
+- **База** — на VPS 2: PostgreSQL 17 + pgvector, 5 баз, по роли на базу (`crm_app`, `erp_app`, `eds_app`, `litellm_app`, `langfuse_app`),
   `pg_hba` — только TLS и только внутренний IP VPS 1.
-- **Порядок деплоя** (`infra/deploy/deploy.sh <sha>`): проверка env → `pull` → **проверка базы CPU образов** (`cpu-baseline-check.sh`: в каждом образе запускается import numpy / litellm.proxy / версия бинаря; образ, которому нужен x86-64-v2, останавливает деплой до дампа и миграций, см. servers.md «CPU прод-VPS»); ту же таблицу команд раньше, в PR, прогоняет CI под эмуляцией CPU `qemu64` (задание `cpu-image`, `make deploy-check`, `scripts/qemu_cpu_check.sh`; servers.md, «Проверка под эмуляцией qemu64») → **pg_dump-гейт** `crm` и `erp`
-  (`predeploy-dump.sh`; нет читаемого дампа — миграций нет) → миграции CRM и ERP явно (`AUTO_MIGRATE=false` у ERP) → `up -d` → smoke.
+- **Порядок деплоя** (`infra/deploy/deploy.sh <sha>`): проверка env → `pull` → **проверка базы CPU образов** (`cpu-baseline-check.sh`: в каждом образе запускается import numpy / litellm.proxy / версия бинаря; образ, которому нужен x86-64-v2, останавливает деплой до дампа и миграций, см. servers.md «CPU прод-VPS»); ту же таблицу команд раньше, в PR, прогоняет CI под эмуляцией CPU `qemu64` (задание `cpu-image`, `make deploy-check`, `scripts/qemu_cpu_check.sh`; servers.md, «Проверка под эмуляцией qemu64») → **pg_dump-гейт** `crm`, `erp` и `eds`
+  (`predeploy-dump.sh`; нет читаемого дампа — миграций нет) → миграции CRM, ERP и EDS явно (`AUTO_MIGRATE=false` у ERP, `eds-migrate` = `alembic upgrade head`) → `up -d` → smoke → здоровье `eds-api` (у EDS нет домена, smoke его не видит).
 - Правило FIX-03: `/mcp` снаружи — 404 на всех доменах, включая Платформу (Caddy); smoke это проверяет.
 
 ## 1. Первая установка
@@ -193,7 +193,7 @@ Caddy (`no_erp_internal` в `Caddyfile.prod`/`Caddyfile.dev`) отвечает 4
 - **Код:** Actions → Deploy → `action` = `rollback` (или на VPS 1: `/opt/rt/current/infra/deploy/rollback.sh [sha]`). Поднимает
   предыдущий тег (`state/previous_tag`) с конфигурацией того релиза. **Миграции не откатываются**: откат безопасен, пока
   миграции отменяемого релиза обратно совместимы со старым кодом. Если нет — восстановление данных (п. 4) решает владелец.
-- Предмиграционные дампы последних пяти деплоев — `/opt/rt/state/predeploy/<sha>-<время>/{crm,erp}.dump`.
+- Предмиграционные дампы последних пяти деплоев — `/opt/rt/state/predeploy/<sha>-<время>/{crm,erp,eds}.dump`.
 
 ## 4. Бэкапы и восстановление
 
@@ -247,6 +247,7 @@ Caddy (`no_erp_internal` в `Caddyfile.prod`/`Caddyfile.dev`) отвечает 4
 | корень | `S3_ROOT_ACCESS_KEY`, `S3_ROOT_SECRET_KEY` | только RustFS и `s3-init` (создание бакетов, пользователей, правил) |
 | ERP | `S3_ERP_*` (в контейнерах — `MINIO_ACCESS_KEY/SECRET_KEY`) | запись `erp-private`, `erp-public`, `erp-temp` |
 | CRM | `S3_CRM_*` (в контейнерах — `S3_ACCESS_KEY/SECRET_KEY`) | запись `kb-sources`, `client-documents`, `tg-attachments`; **чтение** `backups` (статус бэкапа) |
+| EDS | `S3_EDS_*` (в контейнерах — `S3_ACCESS_KEY/SECRET_KEY`) | запись `eds-private` (документы EDS; файлы появятся с доменом, E3) |
 | Langfuse | `S3_LANGFUSE_*` | запись `langfuse` |
 | WAL-G (VPS 2) | `S3_WAL_*` → копия `WAL_S3_ACCESS_KEY/SECRET_KEY` | запись `wal` |
 | бэкап дампов (VPS 2) | `S3_BACKUP_*` → копия `BACKUP_RUSTFS_ACCESS_KEY/SECRET_KEY` | запись `backups` |
@@ -383,6 +384,37 @@ Smoke с раннера в задании `rollback` устроен так же:
 `rollback.sh` поднимают стек функцией `up_stack` (`infra/deploy/lib.sh`): сначала всё, кроме Платформы, затем Платформа отдельно —
 её сбой (даже ошибка запуска контейнера) только предупреждение в журнале. Итог по Платформе — четвёртый домен в smoke: деплой при
 этом красный, CRM, ERP и Cabinet уже работают; чинить Платформу и повторить деплой (или `rollback.sh`).
+
+## EDS — сервис документооборота (волна 12, E2)
+
+Отдельный сервис `apps/eds` (FastAPI, SQLAlchemy 2, Alembic, Procrastinate; ADR-0015): образ `rt-eds`, три сервиса compose — `eds-api`, `eds-worker`,
+`eds-migrate` (один образ; лимиты 192 МБ у `eds-api` и `eds-worker`, факт ≈ 80 и 70 МБ, `eds-migrate` одноразовый). **Внешнего маршрута нет**: Caddyfile.prod на EDS не ведёт
+ни с одного домена, порты наружу не публикуются; сотрудники придут через BFF Платформы (этап D), системы — по шине `rt_bus`
+(`http://eds-api:8000/bus/v1/events` внутри сети compose). Устройство и команды — `docs/systems/eds/README.md`.
+
+**Что нужно на проде до первого деплоя с EDS** (всё — без значений в репозитории):
+
+1. **VPS 1, `/opt/rt/.env.prod`.** `make-env-prod.sh init` на сервере дописывает недостающее и генерирует секреты (на экран не печатает): `DB_EDS_PASSWORD`,
+   `EDS_ACCESS_SECRET`, ключ S3 `S3_EDS_ACCESS_KEY` / `S3_EDS_SECRET_KEY` (раздел «Ключи S3 на сервис»), секреты пар шины `RT_BUS_SECRET_CRM_EDS`,
+   `RT_BUS_SECRET_ERP_EDS`, `RT_BUS_SECRET_EDS_ERP`, `RT_BUS_SECRET_EDS_PLATFORM_BFF`; пустой `RT_BUS_ENDPOINT_EDS` — переопределение адреса, нужно редко.
+   Общий `PLATFORM_SSO_SECRET` уже есть (его проверяет и EDS: токен сотрудника с `aud=eds`). После `init` вернувшиеся переменные VPS 2 уберите `drop-db-only` (§1.2).
+2. **VPS 2: база `eds` и роль `eds_app`.** Новый пароль надо передать на VPS 2: `make-env-prod.sh extract-db > …` (или вручную дописать `DB_EDS_PASSWORD` в
+   `/opt/rt-db/.env.db`), затем под root `infra/deploy/db-up.sh` — он идемпотентно выполняет `infra/db/prod-init.sh` (роль `eds_app`, база `eds`, `REVOKE CONNECT` чужим
+   ролям, `rt_backup` читает), пересобирает `pg_hba.conf` (строка `hostssl eds eds_app <внутренний IP VPS 1>/32`) и перечитывает конфигурацию. Новая переменная в окружении `postgres` пересоздаёт его контейнер — PostgreSQL перезапустится на секунды, приложения переподключатся.
+   Бэкап (`DB_NAMES`), WAL-G и проверка восстановления уже включают `eds`. Проверка с VPS 1:
+   `docker run --rm -e PGPASSWORD=… -e PGSSLMODE=require pgvector/pgvector:0.8.7-pg17 psql -h <DB_INTERNAL_IP> -U eds_app -d eds -c 'select 1'`.
+3. **Бакет `eds-private` и ключ.** Ничего вручную: `s3-init` создаёт бакет и пользователя с политикой `rt-eds` (чтение и запись только `eds-private`) при каждом деплое и
+   проверяет, что чужие бакеты ему закрыты. Если `S3_EDS_*` нет в `.env.prod`, compose не разбирается — `make-env-prod.sh s3-keys` дописывает ключ.
+4. **Деплой** — обычный (§2). Порядок: pg_dump-гейт теперь снимает и `eds` (нет роли или базы — дамп падает и миграции не идут: это сигнал, что п. 2 не выполнен) →
+   `eds-migrate` → `up` → ожидание `healthy` у `eds-api` и `eds-worker` (до 120 с каждый). Образ `rt-eds` входит в проверку базы CPU (`cpu-baseline-check.sh`) и в задание `cpu-image`.
+
+**Проверка после деплоя.** `docker compose -f /opt/rt/current/infra/compose/base.yml -f /opt/rt/current/infra/compose/prod.yml --env-file /opt/rt/.env.prod ps eds-api eds-worker` —
+оба `healthy`; изнутри сети: `docker compose … exec eds-api python -c "import urllib.request; print(urllib.request.urlopen('http://localhost:8000/health').read())"` → `{"status":"ok",…,"checks":{"database":"ok"}}`.
+Снаружи любые пути на всех доменах — 404 или ответ чужого сервиса: EDS в Caddy нет (проверяет `infra/deploy/tests/eds-prod-test.sh`, `make deploy-check`).
+Очереди и шина: `docker compose … exec eds-api python -m app bus status` (метрики outbox, DLQ, inbox, подписчики); повтор `dead`/`failed` — `bus retry-dead`, `bus retry-inbox <id события>`.
+
+**Откат.** `rollback.sh` на тег до EDS убирает его контейнеры (`--remove-orphans`) и не проверяет здоровье; на тег с EDS тянет `eds-api` и ждёт `healthy`.
+Миграции Alembic EDS не откатываются (как у CRM и ERP). Сброс `reset-prod.sh` (S0-8) включает базу `eds` и бакет `eds-private`: список — `crm,erp,eds`, дамп `eds` обязателен, подтверждение на VPS 2 — ввод `crm,erp,eds`.
 
 ## 6. Первая установка 2026-10-21 — что пошло не так и как учтено
 

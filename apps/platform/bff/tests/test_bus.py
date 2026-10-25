@@ -73,6 +73,21 @@ async def test_duplicate_delivery_does_not_repeat_the_hint(web: Web) -> None:
     assert len(hints(web)) == 1
 
 
+async def test_eds_event_is_skipped_until_the_screens_of_stage_d(
+    web: Web, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Волна 12: подписка на события EDS есть, обработчика нет — 200 `skipped`, подсказки нет."""
+    monkeypatch.setenv("RT_BUS_SECRET_EDS_PLATFORM_BFF", "test-pair-secret-eds-platform-bff")
+    headers, raw = delivery(
+        envelope("eds", "letter.registered"),
+        publisher="eds",
+        secret="test-pair-secret-eds-platform-bff",
+    )
+    status, body = await post(web, headers, raw)
+    assert (status, body["status"]) == (200, "skipped")
+    assert hints(web) == []
+
+
 async def test_event_without_a_handler_is_skipped(web: Web) -> None:
     headers, raw = delivery(envelope("crm", "client.updated"), publisher="crm", secret=CRM_SECRET)
     status, body = await post(web, headers, raw)

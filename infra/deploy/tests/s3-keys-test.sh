@@ -16,7 +16,7 @@ tmp="$(mktemp -d)"; trap 'rm -rf "$tmp"' EXIT
 fail() { echo "FAIL: $*"; exit 1; }
 base="$root/infra/compose/base.yml"; prod="$root/infra/compose/prod.yml"; dev="$root/infra/compose/dev.yml"
 init="$root/infra/s3/init.sh"
-names=(ROOT ERP CRM LANGFUSE WAL BACKUP)
+names=(ROOT ERP CRM EDS LANGFUSE WAL BACKUP)
 
 # 1. Примеры.
 for example in "$root/.env.example" "$root/infra/.env.prod.example"; do
@@ -56,7 +56,12 @@ for f in prod dev; do
   done
   crm_holders="$(holders 'ak-CRM|sk-CRM')"
   [[ "$crm_holders" == *crm-api* && "$crm_holders" == *crm-worker* && "$crm_holders" == *crm-bot* ]] || fail "$f: ключ CRM не у crm-api/crm-worker/crm-bot: $crm_holders"
-  [[ "$crm_holders" != *erp-* && "$crm_holders" != *langfuse* && "$crm_holders" != *rustfs* ]] || fail "$f: ключ CRM попал не в CRM: $crm_holders"
+  [[ "$crm_holders" != *erp-* && "$crm_holders" != *eds-* && "$crm_holders" != *langfuse* && "$crm_holders" != *rustfs* ]] || fail "$f: ключ CRM попал не в CRM: $crm_holders"
+  # EDS (волна 12): свой ключ, только бакет eds-private; кроме EDS и s3-init его не знает никто.
+  [[ "$(holders 'ak-EDS|sk-EDS')" == eds-api,eds-migrate,eds-worker,s3-init ]] || fail "$f: ключ EDS у лишних сервисов: $(holders 'ak-EDS|sk-EDS')"
+  for svc in eds-api eds-worker eds-migrate; do
+    [[ "$(env_of "$svc" S3_ACCESS_KEY)" == ak-EDS && "$(env_of "$svc" S3_SECRET_KEY)" == sk-EDS ]] || fail "$f: $svc не на ключе EDS"
+  done
   for svc in crm-api crm-worker crm-bot; do
     [[ "$(env_of "$svc" S3_ACCESS_KEY)" == ak-CRM && "$(env_of "$svc" S3_SECRET_KEY)" == sk-CRM ]] || fail "$f: $svc не на ключе CRM"
   done
@@ -75,7 +80,7 @@ for f in prod dev; do
   [[ "$(jq -r '.services["s3-init"].entrypoint | join(" ")' "$j")" == "sh /init.sh" ]] || fail "$f: entrypoint s3-init не sh /init.sh"
   [[ "$(jq -r '[.services["s3-init"].volumes[] | select(.target == "/init.sh" and .read_only == true)] | length' "$j")" == 1 ]] || fail "$f: init.sh не смонтирован в s3-init только на чтение"
   buckets="$(jq -r '.services["s3-init"].environment.S3_BUCKETS' "$j")"
-  for b in langfuse kb-sources client-documents tg-attachments erp-private erp-public erp-temp backups wal; do
+  for b in langfuse kb-sources client-documents tg-attachments erp-private erp-public erp-temp eds-private backups wal; do
     [[ " $buckets " == *" $b "* ]] || fail "$f: s3-init не создаёт бакет $b"
   done
   [[ "$(jq -r '.services["s3-init"].depends_on.rustfs.condition' "$j")" == service_healthy ]] || fail "$f: s3-init не ждёт rustfs"
@@ -88,6 +93,7 @@ done
 # Содержимое init.sh: доступы, правило erp-temp, проверка матрицы, секреты не печатаются.
 grep -qE '^    erp\) echo "erp-private erp-public erp-temp" ;;$' "$init" || fail "init.sh: ERP не ограничен бакетами erp-*"
 grep -qE '^    crm\) echo "kb-sources client-documents tg-attachments" ;;$' "$init" || fail "init.sh: бакеты CRM"
+grep -qE '^    eds\) echo "eds-private" ;;' "$init" || fail "init.sh: EDS не ограничен бакетом eds-private"
 grep -qE '^    crm\) echo "backups" ;;' "$init" || fail "init.sh: CRM должен читать backups (только чтение)"
 grep -qE '^    wal\) echo "wal" ;;$' "$init" || fail "init.sh: WAL-G не ограничен бакетом wal"
 grep -qE '^    backup\) echo "backups" ;;$' "$init" || fail "init.sh: бэкап не ограничен бакетом backups"
@@ -125,7 +131,7 @@ for n in "${names[@]}"; do
   done
 done
 all="$(grep -E '^S3_[A-Z]+_(ACCESS|SECRET)_KEY=' "$file" | cut -d= -f2- | sort)"
-[[ "$(wc -l <<<"$all" | tr -d ' ')" == 12 && "$(uniq -d <<<"$all" | wc -l | tr -d ' ')" == 0 ]] || fail "ключи S3 не уникальны"
+[[ "$(wc -l <<<"$all" | tr -d ' ')" == 14 && "$(uniq -d <<<"$all" | wc -l | tr -d ' ')" == 0 ]] || fail "ключи S3 не уникальны"
 val() { grep "^$1=" "$file" | cut -d= -f2-; }
 [[ "$(val BACKUP_RUSTFS_ACCESS_KEY)" == "$(val S3_BACKUP_ACCESS_KEY)" && "$(val BACKUP_RUSTFS_SECRET_KEY)" == "$(val S3_BACKUP_SECRET_KEY)" ]] || fail "BACKUP_RUSTFS_* не равны ключу сервиса backup"
 [[ "$(val WAL_S3_ACCESS_KEY)" == "$(val S3_WAL_ACCESS_KEY)" && "$(val WAL_S3_SECRET_KEY)" == "$(val S3_WAL_SECRET_KEY)" ]] || fail "WAL_S3_* не равны ключу сервиса wal"
@@ -133,7 +139,7 @@ val() { grep "^$1=" "$file" | cut -d= -f2-; }
 # они заново сгенерировали бы WAL_ENC_KEY и пароли VPS 2).
 bash "$root/infra/deploy/make-env-prod.sh" extract-db "$file" > "$tmp/env.db"
 for v in WAL_S3_ACCESS_KEY WAL_S3_SECRET_KEY BACKUP_RUSTFS_ACCESS_KEY BACKUP_RUSTFS_SECRET_KEY; do grep -q "^$v=" "$tmp/env.db" || fail "extract-db не отдаёт $v"; done
-for n in ROOT ERP CRM LANGFUSE; do
+for n in ROOT ERP CRM EDS LANGFUSE; do
   v="$(val "S3_${n}_SECRET_KEY")"; ! grep -qF -- "$v" "$tmp/env.db" || fail "extract-db отдал VPS 2 ключ $n"
 done
 enc_before="$(val WAL_ENC_KEY)"
@@ -146,7 +152,7 @@ bash "$root/infra/deploy/make-env-prod.sh" extract-s3 "$file" > "$tmp/s3.vps2"
 [[ -n "$enc_before" ]] || fail "WAL_ENC_KEY не был сгенерирован"
 # Прод до S0-9: прежний общий ключ становится корневым (RustFS и старая копия на VPS 2 не рвутся), остальные ключи генерируются.
 legacy="$tmp/legacy.env"
-grep -vE '^S3_(ROOT|ERP|CRM|LANGFUSE|WAL|BACKUP)_(ACCESS|SECRET)_KEY=' "$root/infra/.env.prod.example" > "$legacy"
+grep -vE '^S3_(ROOT|ERP|CRM|EDS|LANGFUSE|WAL|BACKUP)_(ACCESS|SECRET)_KEY=' "$root/infra/.env.prod.example" > "$legacy"
 printf 'S3_ACCESS_KEY=legacy-access\nS3_SECRET_KEY=legacy-secret\nWAL_S3_ACCESS_KEY=legacy-access\nWAL_S3_SECRET_KEY=legacy-secret\n' >> "$legacy"
 sed -i.bak -E '/^WAL_S3_(ACCESS|SECRET)_KEY=$/d' "$legacy" && rm -f "$legacy.bak"
 bash "$root/infra/deploy/make-env-prod.sh" init "$legacy" >/dev/null
@@ -161,7 +167,7 @@ printf 'CRM_DOMAIN=crm.example.org\nS3_ACCESS_KEY=legacy-access\nS3_SECRET_KEY=l
 bash "$root/infra/deploy/make-env-prod.sh" s3-keys "$sk" >/dev/null
 skv() { grep "^$1=" "$sk" | cut -d= -f2-; }
 [[ "$(skv S3_ROOT_ACCESS_KEY)" == legacy-access && "$(skv S3_ROOT_SECRET_KEY)" == legacy-secret ]] || fail "s3-keys: прежний ключ не стал корневым"
-for n in ERP CRM LANGFUSE WAL BACKUP; do [[ -n "$(skv "S3_${n}_SECRET_KEY")" && "$(skv "S3_${n}_SECRET_KEY")" != CHANGE_ME ]] || fail "s3-keys: нет ключа $n"; done
+for n in ERP CRM EDS LANGFUSE WAL BACKUP; do [[ -n "$(skv "S3_${n}_SECRET_KEY")" && "$(skv "S3_${n}_SECRET_KEY")" != CHANGE_ME ]] || fail "s3-keys: нет ключа $n"; done
 ! grep -qE '^(WAL_|BACKUP_|DB_SUPERUSER|REDIS_)' "$sk" || fail "s3-keys вернул/добавил переменные не про S3"
 before="$(cat "$sk")"; bash "$root/infra/deploy/make-env-prod.sh" s3-keys "$sk" >/dev/null
 [[ "$(cat "$sk")" == "$before" ]] || fail "повторный s3-keys изменил файл"

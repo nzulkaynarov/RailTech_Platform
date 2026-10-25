@@ -1,0 +1,40 @@
+{
+  "specversion": "1.0",
+  "id": "64b3b8e1-f434-5590-927e-33d967bc3930",
+  "source": "rt://eds",
+  "type": "uz.railtech.eds.letter.registered.v1",
+  "time": "2026-10-26T04:00:00Z",
+  "subject": "ВХ-104/26",
+  "datacontenttype": "application/json",
+  "dataschema": "rt://contracts/events/eds/letter.registered/v1",
+  "tenant": "railtech",
+  "correlationid": "692c27e4-5215-5026-9c9b-4c91cae7aed9",
+  "data": {
+    "letter": {
+      "eds_letter_id": "e2b7a5e9-37c3-5a33-948a-7a999c5e7ec9",
+      "number": "ВХ-104/26",
+      "subject": "Запрос КП на поставку стрелочных переводов",
+      "received_at": "2026-10-26",
+      "registered_at": "2026-10-26T04:00:00Z",
+      "sender": {
+        "name": "ООО «Пример Логистик»",
+        "inn": "300000001"
+      },
+      "addressee": {
+        "crm_user_id": 3,
+        "full_name": "Рустам Директоров"
+      },
+      "urgent": false
+    },
+    "links": {
+      "erp_request_id": 905,
+      "erp_deal_id": 905,
+      "deal_number": "ЗВ-2026-104",
+      "crm_client_id": 42,
+      "erp_company_id": 118
+    },
+    "actor": {
+      "type": "system"
+    }
+  }
+}
