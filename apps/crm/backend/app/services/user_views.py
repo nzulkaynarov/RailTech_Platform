@@ -43,7 +43,7 @@ class UserPatch:
     transfer_to_user_id: int | None = None
     platform_access: Sequence[str] | None = None
     erp_role_codes: Sequence[str] | None = None
-    # Роли Платформы по id: `None` — не менять, `[]` — снять все.
+    # Роли Платформы по id: `None` — не менять; пустой набор — 422 `roles_required` (R3-D-1).
     platform_role_ids: Sequence[int] | None = None
     position: str | None = None  # `""` очищает
     language: str | None = None  # ru|uz|en (CRM-01b); None — не менять

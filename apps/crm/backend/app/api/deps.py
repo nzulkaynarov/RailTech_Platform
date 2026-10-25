@@ -82,7 +82,7 @@ async def get_principal(
         if user is None or not user.is_active:
             raise AuthError("user inactive")
         roles = await users_repo.roles_of(session, user.id)
-        role_ids, platform_admin = await platform_roles_repo.rbac_identity(session, user.id)
+        role_ids = await platform_roles_repo.rbac_identity(session, user.id)
     return Principal(
         user_id=user.id,
         full_name=user.full_name,
@@ -90,7 +90,6 @@ async def get_principal(
         must_change_password=user.must_change_password,
         ip=client_ip(request),
         platform_role_ids=role_ids,
-        platform_admin=platform_admin,
     )
 
 
@@ -99,14 +98,23 @@ PrincipalDep = Annotated[Principal, Depends(get_principal)]
 
 def require(resource: str, action: str) -> Callable[..., Awaitable[Principal]]:
     """Зависимость эндпоинта: право `action` на `resource` по Casbin."""
+    return require_all((resource, action))
+
+
+def require_all(*rights: tuple[str, str]) -> Callable[..., Awaitable[Principal]]:
+    """Зависимость эндпоинта: все права `(resource, action)` сразу (например, выгрузка лидов —
+    `export:read` и `leads:read`); 403 называет первое недостающее."""
 
     async def dependency(
         principal: PrincipalDep, rbac: Annotated[Rbac, Depends(get_rbac)]
     ) -> Principal:
         if principal.must_change_password:
             raise PasswordChangeRequiredError("change the temporary password first")
-        if not rbac.allowed(principal.rbac_roles, resource, action, principal.platform_role_ids):
-            raise ForbiddenError(f"{resource}:{action} is not allowed", resource=resource)
+        for resource, action in rights:
+            if not rbac.allowed(
+                principal.rbac_roles, resource, action, principal.platform_role_ids
+            ):
+                raise ForbiddenError(f"{resource}:{action} is not allowed", resource=resource)
         return principal
 
     return dependency

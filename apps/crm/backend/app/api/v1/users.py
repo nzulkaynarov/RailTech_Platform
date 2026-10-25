@@ -83,6 +83,9 @@ async def get_user(user_id: int, _: Reader, container: ContainerDep) -> UserOut:
 async def update_user(
     user_id: int, body: UserUpdate, who: Writer, container: ContainerDep
 ) -> UserOut:
+    """Изменить пользователя. Роли Платформы — полный набор `platform_role_ids`; пустой набор —
+    422 `roles_required` (R3-D-1: закрыть доступ — `is_active = false`); снять последнего
+    администратора или директора — 409 `last_admin` / `last_director`."""
     patch = UserPatch(
         full_name=body.full_name,
         roles=list(body.roles) if body.roles is not None else None,

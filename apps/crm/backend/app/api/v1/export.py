@@ -2,6 +2,8 @@
 
 Колонки — те же, что видны в списках CRM (без телефонов, переписки и квалификации); формат —
 `domain/csv_export.py` (UTF-8 с BOM, `;`, даты по Ташкенту). Аудит `export.<entity>` с числом строк.
+Право — `export:read` и чтение выгружаемых данных (`leads|clients|deals:read`): системный
+«Администратор» без второй роли бизнес-данные не выгружает (R3-D-2).
 """
 
 from collections.abc import Iterable, Mapping, Sequence
@@ -12,7 +14,7 @@ from fastapi import APIRouter, Depends, Query
 from fastapi.responses import StreamingResponse
 from sqlalchemy import select
 
-from app.api.deps import ContainerDep, require
+from app.api.deps import ContainerDep, require_all
 from app.api.v1.deals import deal_rows, filtered
 from app.domain import csv_export
 from app.models.auth import User
@@ -26,7 +28,11 @@ from app.services.channel_texts import STAGE
 
 router = APIRouter(prefix="/api/v1/export", tags=["export"])
 
-Exporter = Annotated[Principal, Depends(require("export", "read"))]
+LeadsExporter = Annotated[Principal, Depends(require_all(("export", "read"), ("leads", "read")))]
+ClientsExporter = Annotated[
+    Principal, Depends(require_all(("export", "read"), ("clients", "read")))
+]
+DealsExporter = Annotated[Principal, Depends(require_all(("export", "read"), ("deals", "read")))]
 # Потолок одной выгрузки: больше — сузьте фильтры (защита памяти API).
 MAX_ROWS: Final = 10_000
 _PAGE: Final = 500
@@ -108,7 +114,7 @@ async def _names(container: ContainerDep, ids: Iterable[int | None]) -> dict[int
 
 @router.get("/leads.csv", response_class=StreamingResponse)
 async def export_leads(
-    who: Exporter,
+    who: LeadsExporter,
     container: ContainerDep,
     stage: str | None = None,
     owner: str | None = Query(default=None, pattern=r"^(me|none|\d+)$"),
@@ -150,7 +156,9 @@ async def export_leads(
 
 @router.get("/clients.csv", response_class=StreamingResponse)
 async def export_clients(
-    who: Exporter, container: ContainerDep, q: Annotated[str | None, Query(max_length=100)] = None
+    who: ClientsExporter,
+    container: ContainerDep,
+    q: Annotated[str | None, Query(max_length=100)] = None,
 ) -> StreamingResponse:
     """Клиенты (как в списке «Клиенты», до 10 000 строк), CSV для Excel."""
     async with container.session_factory() as session:
@@ -175,7 +183,7 @@ async def export_clients(
 
 @router.get("/deals.csv", response_class=StreamingResponse)
 async def export_deals(
-    who: Exporter,
+    who: DealsExporter,
     container: ContainerDep,
     stage: DealStageName | None = None,
     owner_user_id: int | None = None,
