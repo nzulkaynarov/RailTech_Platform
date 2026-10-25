@@ -1,0 +1,37 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://railtech.uz/contracts/events/erp/quote.ready_for_approval.v1.json",
+  "title": "КП готово к одобрению директором",
+  "description": "Тип uz.railtech.erp.quote.ready_for_approval.v1, источник rt://erp. Поле data конверта (envelope.v1.json). Расчёт готов (все визы собраны) — ERP просит EDS открыть маршрут одобрения КП (EDS-03, runbook волны 12 §2.4, §2.5). payload — снимок для показа в маршруте и для чек-листа (визы, маржа ≥ порога резолюции, срок); EDS коммерческого содержания не хранит сверх снимка. Новая версия КП после возврата — новое событие с version + 1. Содержит себестоимость и маржу: подписчики v1 — только eds (и platform-bff как подсказка без хранения); CRM на этот тип не подписана (bus/subscriptions.yaml). crm_client_id может быть null — компания без клиента CRM.",
+  "type": "object",
+  "required": [
+    "erp_company_id",
+    "crm_client_id",
+    "deal",
+    "actor",
+    "payload"
+  ],
+  "properties": {
+    "erp_company_id": {
+      "type": "integer",
+      "description": "Компания клиента в ERP"
+    },
+    "crm_client_id": {
+      "type": [
+        "integer",
+        "null"
+      ],
+      "description": "Клиент в CRM; null — компания не сопоставлена"
+    },
+    "deal": {
+      "$ref": "_defs.v1.json#/$defs/DealRef"
+    },
+    "actor": {
+      "$ref": "_defs.v1.json#/$defs/Actor"
+    },
+    "payload": {
+      "$ref": "_defs.v1.json#/$defs/QuoteReadyForApproval"
+    }
+  },
+  "additionalProperties": false
+}

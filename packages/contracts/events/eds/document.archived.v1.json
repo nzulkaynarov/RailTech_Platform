@@ -1,0 +1,32 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://railtech.uz/contracts/events/eds/document.archived.v1.json",
+  "title": "Документ в архиве",
+  "description": "Тип uz.railtech.eds.document.archived.v1, источник rt://eds. Поле data конверта (envelope.v1.json). Документ реестра (в том числе входящее письмо) перенесён в архив; номер не освобождается (runbook §2.1).",
+  "type": "object",
+  "required": [
+    "document",
+    "archived_at",
+    "actor"
+  ],
+  "properties": {
+    "document": {
+      "$ref": "_defs.v1.json#/$defs/DocumentRef"
+    },
+    "archived_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "reason": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "maxLength": 1000
+    },
+    "actor": {
+      "$ref": "_defs.v1.json#/$defs/Actor"
+    }
+  },
+  "additionalProperties": false
+}

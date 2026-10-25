@@ -1,0 +1,382 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://railtech.uz/contracts/events/eds/_defs.v1.json",
+  "title": "Общие определения событий EDS v1",
+  "description": "Не тип события: определения для events/eds/*.v1.json. EDS — владелец реестра документов и их номеров (ВХ, ИСХ, СЗ, ЗЯ, ОТ; runbook волны 12 §2.1), резолюций и маршрутов согласования (ADR-0015). Коммерческие объекты (заявка, сделка, КП) — ссылки на ERP. Идентификаторы EDS — UUID (eds_letter_id, eds_document_id, eds_approval_id): стабильны, непрозрачны, безопасны в пути URL (номер содержит «/»).",
+  "$defs": {
+    "Uuid": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "Amount": {
+      "type": "string",
+      "pattern": "^-?\\d+\\.\\d{2}$"
+    },
+    "Currency": {
+      "type": "string",
+      "pattern": "^[A-Z]{3}$"
+    },
+    "Money": {
+      "type": "object",
+      "required": [
+        "amount",
+        "currency"
+      ],
+      "properties": {
+        "amount": {
+          "$ref": "#/$defs/Amount"
+        },
+        "currency": {
+          "$ref": "#/$defs/Currency"
+        }
+      },
+      "additionalProperties": false
+    },
+    "MarginPct": {
+      "type": "string",
+      "pattern": "^(100(\\.0{1,2})?|\\d{1,2}(\\.\\d{1,2})?)$",
+      "description": "Процент маржи 0–100, до двух знаков после точки, строкой (как деньги): «12.5»"
+    },
+    "LetterNumber": {
+      "type": "string",
+      "pattern": "^ВХ-\\d{3,}/\\d{2}$",
+      "description": "Номер входящего ВХ-NNN/ГГ; счётчик — на год по Asia/Tashkent, без пропусков"
+    },
+    "OutgoingNumber": {
+      "type": "string",
+      "pattern": "^ИСХ-\\d{3,}/\\d{2}$",
+      "description": "Исходящий номер ИСХ-NNN/ГГ: при одобрении КП и при отправке письма"
+    },
+    "RegistryNumber": {
+      "type": "string",
+      "pattern": "^(ВХ-\\d{3,}/\\d{2}|ИСХ-\\d{3,}/\\d{2}|(СЗ|ЗЯ|ОТ)-\\d{4}/\\d{3,})$",
+      "description": "Номер документа реестра EDS: ВХ-NNN/ГГ, ИСХ-NNN/ГГ, СЗ-ГГГГ/NNN, ЗЯ-ГГГГ/NNN, ОТ-ГГГГ/NNN"
+    },
+    "DocumentKind": {
+      "type": "string",
+      "enum": [
+        "letter_in",
+        "letter_out",
+        "memo",
+        "application",
+        "report"
+      ],
+      "description": "Тип документа реестра EDS: входящее, исходящее письмо, служебная записка, заявление, отчёт"
+    },
+    "EdsPermission": {
+      "type": "string",
+      "enum": [
+        "letters.read",
+        "letters.register",
+        "letters.resolve",
+        "memos.create",
+        "memos.approve",
+        "approvals.decide",
+        "registry.read",
+        "registry.export"
+      ],
+      "description": "Код права EDS v1 (runbook волны 12 §2.2; platform-rbac.yaml, backend.eds)"
+    },
+    "Actor": {
+      "type": "object",
+      "description": "Кто сделал: сотрудник (crm_user_id) или система EDS (задача, обработчик шины)",
+      "required": [
+        "type"
+      ],
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": [
+            "system",
+            "staff"
+          ]
+        },
+        "crm_user_id": {
+          "type": "integer",
+          "description": "Сотрудник при type=staff"
+        }
+      },
+      "additionalProperties": false
+    },
+    "PersonRef": {
+      "type": "object",
+      "description": "Сотрудник: crm_user_id (идентичность — CRM) и имя из проекции EDS на момент события",
+      "required": [
+        "crm_user_id",
+        "full_name"
+      ],
+      "properties": {
+        "crm_user_id": {
+          "type": "integer"
+        },
+        "full_name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 255
+        }
+      },
+      "additionalProperties": false
+    },
+    "Zone": {
+      "type": "string",
+      "enum": [
+        "goods",
+        "services",
+        "payment_terms"
+      ],
+      "description": "Зона ответственности исполнителя резолюции (SPEC-v3 §7.3): goods — товары, склад, цены поставщиков (раздел erp.calc.goods, снабженец); services — услуги, ТЗ, бригада (erp.calc.services, гл. инженер); payment_terms — условия оплаты (бухгалтер)"
+    },
+    "Assignee": {
+      "type": "object",
+      "required": [
+        "crm_user_id",
+        "zone"
+      ],
+      "properties": {
+        "crm_user_id": {
+          "type": "integer"
+        },
+        "zone": {
+          "$ref": "#/$defs/Zone"
+        }
+      },
+      "additionalProperties": false
+    },
+    "ErpLinks": {
+      "type": "object",
+      "description": "Ссылки на коммерческие объекты ERP и клиента CRM. Ключи erp_request_id, erp_deal_id, deal_number есть всегда; null — письмо ещё не связано с заявкой (зарегистрировано вручную до erp.request.created)",
+      "required": [
+        "erp_request_id",
+        "erp_deal_id",
+        "deal_number"
+      ],
+      "properties": {
+        "erp_request_id": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "description": "Заявка ERP (request.created)"
+        },
+        "erp_deal_id": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "description": "Сделка ERP (Deal), к которой относится письмо"
+        },
+        "deal_number": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 64,
+          "description": "Бизнес-номер заявки или проекта ERP (ЗВ-ГГГГ-NNN, ПР-ГГГГ-NNN)"
+        },
+        "crm_client_id": {
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "erp_company_id": {
+          "type": [
+            "integer",
+            "null"
+          ]
+        }
+      },
+      "additionalProperties": false
+    },
+    "LetterRef": {
+      "type": "object",
+      "required": [
+        "eds_letter_id",
+        "number",
+        "subject"
+      ],
+      "properties": {
+        "eds_letter_id": {
+          "$ref": "#/$defs/Uuid"
+        },
+        "number": {
+          "$ref": "#/$defs/LetterNumber"
+        },
+        "subject": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 300
+        }
+      },
+      "additionalProperties": false
+    },
+    "DocumentRef": {
+      "type": "object",
+      "required": [
+        "eds_document_id",
+        "kind",
+        "number"
+      ],
+      "properties": {
+        "eds_document_id": {
+          "$ref": "#/$defs/Uuid"
+        },
+        "kind": {
+          "$ref": "#/$defs/DocumentKind"
+        },
+        "number": {
+          "$ref": "#/$defs/RegistryNumber"
+        }
+      },
+      "additionalProperties": false
+    },
+    "ApprovalTemplate": {
+      "type": "string",
+      "enum": [
+        "memo",
+        "application",
+        "report",
+        "quote"
+      ],
+      "description": "Шаблон маршрута (runbook §2.5): memo — директор, затем бухгалтер, если указана сумма; quote — директор с чек-листом; application, report — директор"
+    },
+    "ApprovalObject": {
+      "type": "object",
+      "description": "Что согласуется. Документ EDS (memo, application, report) — eds_document_id и number; КП ERP (quote) — erp_quote_id, quote_number, quote_version, erp_deal_id (коммерческое содержание остаётся в ERP)",
+      "required": [
+        "kind"
+      ],
+      "properties": {
+        "kind": {
+          "$ref": "#/$defs/ApprovalTemplate"
+        },
+        "eds_document_id": {
+          "$ref": "#/$defs/Uuid"
+        },
+        "number": {
+          "$ref": "#/$defs/RegistryNumber"
+        },
+        "erp_quote_id": {
+          "type": "integer"
+        },
+        "quote_number": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64,
+          "description": "КП-ГГГГ/NNN"
+        },
+        "quote_version": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "erp_deal_id": {
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "deal_number": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 64
+        }
+      },
+      "additionalProperties": false,
+      "if": {
+        "properties": {
+          "kind": {
+            "const": "quote"
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "erp_quote_id",
+          "quote_number",
+          "quote_version",
+          "erp_deal_id"
+        ]
+      },
+      "else": {
+        "required": [
+          "eds_document_id",
+          "number"
+        ]
+      }
+    },
+    "StepAssignee": {
+      "type": "object",
+      "description": "Кто решает на шаге: конкретный сотрудник (crm_user_id) или любой с правом EDS (permission); ровно одно из двух не null",
+      "required": [
+        "crm_user_id",
+        "permission"
+      ],
+      "properties": {
+        "crm_user_id": {
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "permission": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/EdsPermission"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "additionalProperties": false
+    },
+    "Step": {
+      "type": "object",
+      "required": [
+        "index",
+        "assignee"
+      ],
+      "properties": {
+        "index": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Номер шага маршрута с 1"
+        },
+        "assignee": {
+          "$ref": "#/$defs/StepAssignee"
+        }
+      },
+      "additionalProperties": false
+    },
+    "Decision": {
+      "type": "string",
+      "enum": [
+        "approve",
+        "return",
+        "reject"
+      ]
+    },
+    "RouteStatus": {
+      "type": "string",
+      "enum": [
+        "open",
+        "approved",
+        "returned",
+        "rejected"
+      ],
+      "description": "Состояние маршрута после решения: open — есть следующий шаг; иначе маршрут закрыт"
+    },
+    "SendChannel": {
+      "type": "string",
+      "enum": [
+        "telegram",
+        "cabinet",
+        "email"
+      ],
+      "description": "Канал отправки КП клиенту, выбранный директором при одобрении (SPEC-v3 §7.3)"
+    }
+  }
+}

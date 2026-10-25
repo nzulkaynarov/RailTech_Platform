@@ -1,0 +1,47 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://railtech.uz/contracts/events/eds/approval.requested.v1.json",
+  "title": "Маршрут согласования открыт",
+  "description": "Тип uz.railtech.eds.approval.requested.v1, источник rt://eds. Поле data конверта (envelope.v1.json). Открыт маршрут (или новый круг после возврата): первый шаг и кто решает. Для КП — после uz.railtech.erp.quote.ready_for_approval.v1. Подписчики v1: platform-bff (колокольчик, «Моя очередь»).",
+  "type": "object",
+  "required": [
+    "approval",
+    "step",
+    "actor"
+  ],
+  "properties": {
+    "approval": {
+      "type": "object",
+      "required": [
+        "eds_approval_id",
+        "template",
+        "object"
+      ],
+      "properties": {
+        "eds_approval_id": {
+          "$ref": "_defs.v1.json#/$defs/Uuid"
+        },
+        "template": {
+          "$ref": "_defs.v1.json#/$defs/ApprovalTemplate"
+        },
+        "object": {
+          "$ref": "_defs.v1.json#/$defs/ApprovalObject"
+        },
+        "title": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 300,
+          "description": "Тема для уведомления"
+        }
+      },
+      "additionalProperties": false
+    },
+    "step": {
+      "$ref": "_defs.v1.json#/$defs/Step"
+    },
+    "actor": {
+      "$ref": "_defs.v1.json#/$defs/Actor"
+    }
+  },
+  "additionalProperties": false
+}

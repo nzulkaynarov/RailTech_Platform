@@ -112,6 +112,19 @@
         "external_services:write"
       ]
     },
+    "edsPermission": {
+      "enum": [
+        "letters.read",
+        "letters.register",
+        "letters.resolve",
+        "memos.create",
+        "memos.approve",
+        "approvals.decide",
+        "registry.read",
+        "registry.export"
+      ],
+      "description": "Код права EDS v1 (docs/runbooks/wave12-eds-c1.md §2.2; EdsPermission в openapi/eds.yaml)"
+    },
     "queueKind": {
       "enum": [
         "answer_lead",
@@ -197,6 +210,13 @@
       "uniqueItems": true,
       "items": {
         "$ref": "#/$defs/erpPermission"
+      }
+    },
+    "edsList": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "$ref": "#/$defs/edsPermission"
       }
     },
     "resourceRef": {
@@ -412,6 +432,18 @@
                   },
                   "full": {
                     "$ref": "#/$defs/erpList"
+                  }
+                }
+              },
+              "eds": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "read": {
+                    "$ref": "#/$defs/edsList"
+                  },
+                  "full": {
+                    "$ref": "#/$defs/edsList"
                   }
                 }
               }
