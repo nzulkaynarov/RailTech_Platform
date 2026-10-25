@@ -193,6 +193,19 @@ def test_approval_decided_requires_a_comment_to_return_or_reject(decision: str) 
     assert v.is_valid({**data, "comment": "Маржа ниже порога резолюции"})
 
 
+def test_step_assignee_is_exactly_one_of_a_person_or_a_permission() -> None:
+    v = _eds_validator("approval.requested")
+    data = _eds_example("approval.requested")
+    for assignee, ok in (
+        ({"crm_user_id": None, "permission": "approvals.decide"}, True),
+        ({"crm_user_id": 3, "permission": None}, True),
+        ({"crm_user_id": 3, "permission": "approvals.decide"}, False),
+        ({"crm_user_id": None, "permission": None}, False),
+    ):
+        data["step"]["assignee"] = assignee
+        assert v.is_valid(data) is ok, assignee
+
+
 def test_approval_object_of_a_quote_carries_the_erp_quote_and_a_document_carries_its_number() -> None:
     v = _eds_validator("approval.requested")
     data = _eds_example("approval.requested")
@@ -247,7 +260,7 @@ def test_letter_resolved_carries_assignees_due_margin_and_erp_links() -> None:
     assert not v.is_valid(empty)
 
 
-def test_identity_user_may_carry_eds_permissions_of_the_catalog_only() -> None:
+def test_identity_user_may_carry_eds_permission_codes() -> None:
     t = next(t for t in TYPES if t.name == "uz.railtech.identity.user.updated.v1")
     v = type_validator(t)
     data = load_json(t.example)["data"]
@@ -255,9 +268,13 @@ def test_identity_user_may_carry_eds_permissions_of_the_catalog_only() -> None:
     without = copy.deepcopy(data)
     del without["user"]["permissions"]
     assert v.is_valid(without), "поле необязательное (v1, аддитивно)"
-    broken = copy.deepcopy(data)
-    broken["user"]["permissions"]["eds"] = ["letters.delete"]
-    assert not v.is_valid(broken)
+    future = copy.deepcopy(data)
+    future["user"]["permissions"]["eds"] = ["payments.confirm"]
+    assert v.is_valid(future), "новый код EDS не ломает identity v1 (шаблон, не перечень)"
+    for bad in ("Letters.Read", "letters", "letters.read ", ""):
+        broken = copy.deepcopy(data)
+        broken["user"]["permissions"]["eds"] = [bad]
+        assert not v.is_valid(broken), bad
 
 
 def _property_names(node: object) -> set[str]:

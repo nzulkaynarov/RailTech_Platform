@@ -16,7 +16,7 @@ JWT **HS256**, общий секрет `PLATFORM_SSO_SECRET` (секрет ок�
 | `email` | string | e-mail сотрудника |
 | `name` | string | отображаемое имя |
 | `role` | string | `admin` \| `manager` \| `viewer` (роль CRM); `admin` = суперпользователь ERP |
-| `permissions` | string[] | коды из каталога прав ERP (`ErpPermission` в `erp-integration.yaml`: `deal.*`, `quote.*`, `contract.*`, `catalog.*`, `supply.*`, `fulfillment.*`, `finance.*`, `settings.*`, `team.*`, `data.*`) по карте ниже; для `aud=erp`, при обмене не применяются (права приходят провижинингом) |
+| `permissions` | string[] | коды из каталога прав ERP (`ErpPermission` в `erp-integration.yaml`: `deal.*`, `quote.*`, `contract.*`, `catalog.*`, `supply.*`, `fulfillment.*`, `finance.*`, `settings.*`, `team.*`, `data.*`) по карте ниже; для `aud=erp`, при обмене не применяются (права приходят провижинингом). Для `aud=eds` — коды `permissions.eds` сотрудника (`EdsPermission` в `openapi/eds.yaml`), справочно: EDS их не применяет (раздел «Токен сотрудника для EDS») |
 | `iat` | number | момент выдачи, unix seconds |
 | `exp` | number | `iat + 60` |
 | `jti` | string | UUID v4, одноразовый |
@@ -82,14 +82,15 @@ ADR-0017), у ERP — `{"detail": "USER_NOT_PROVISIONED"}`; неактивный
 `email`, `name`, `iat`, `exp = iat + 60`, `jti` (UUID v4); `permissions` — коды `permissions.eds` сотрудника, **справочно**
 (EDS их не применяет). Секрет — `PLATFORM_SSO_SECRET` (ротация — два активных значения). Токен выдаётся только активному
 сотруднику с непустым `permissions.eds` (их CRM вычисляет из ролей Платформы по каталогу `platform-rbac.yaml`,
-`backend.eds`), иначе 403, `details.reason = eds_access_denied`.
+`backend.eds`), иначе 403, `details.reason = eds_access_denied`. Нет поля `permissions` или `permissions.eds` в снимке
+`identity.user.*` (CRM до задачи E4 публикует без него) или список пуст — доступа к EDS нет.
 
 **Обмен (EDS).** `POST /api/v1/auth/sso/exchange {"token": "<jwt>"}` → 200 `{"access_token", "token_type": "bearer",
 "expires_in": 900}` — собственный токен доступа EDS (HS256, секрет `EDS_ACCESS_SECRET`, срок 15 минут, `iss = eds`,
 `aud = eds-api` — не `eds`, чтобы токен сотрудника CRM и токен доступа EDS не подменяли друг друга ни при какой ошибке
 конфигурации секретов; `sub = crm_user_id`). API EDS принимает только `aud = eds-api`, обмен — только `aud = eds`.
 Refresh нет: истёк — BFF берёт у CRM новый токен сотрудника и обменивает снова. Проверки — по порядку
-раздела «Проверка приёмником»: подпись (оба значения `PLATFORM_SSO_SECRET`), `aud = eds`, срок (`exp − iat ≤ 60`, допуск 5 с —
+раздела «Проверка приёмником»: подпись (оба значения `PLATFORM_SSO_SECRET`), `iss = crm` и `aud = eds`, срок (`exp − iat ≤ 60`, допуск 5 с —
 не больше 65 с), одноразовый `jti` (таблица в базе `eds`, 10 минут) — отказ 401 `INVALID_SSO_TOKEN` с `details.reason`;
 сотрудник — **только по `sub`** в проекции сотрудников EDS (из `identity.user.*`): нет — 403 `USER_NOT_PROVISIONED`,
 `is_active = false` — 403 `USER_INACTIVE`. Обмен сотрудников не создаёт и прав не меняет; в журнал EDS — `sso.exchange`.

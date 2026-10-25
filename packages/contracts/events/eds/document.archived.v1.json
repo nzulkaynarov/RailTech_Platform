@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://railtech.uz/contracts/events/eds/document.archived.v1.json",
   "title": "Документ в архиве",
-  "description": "Тип uz.railtech.eds.document.archived.v1, источник rt://eds. Поле data конверта (envelope.v1.json). Документ реестра (в том числе входящее письмо) перенесён в архив; номер не освобождается (runbook §2.1).",
+  "description": "Тип uz.railtech.eds.document.archived.v1, источник rt://eds. Поле data конверта (envelope.v1.json). Документ перенесён в архив; номер не освобождается (runbook §2.1). Публикуется автоматически, без отдельной операции: маршрут документа завершён окончательно — одобрен на последнем шаге (служебная записка без суммы, заявление, отчёт — approved; с суммой — paid) или отклонён (rejected); исходящее письмо — при отправке (sent). Документ сохраняет итоговый статус. Входящие письма (kind = letter_in) в C1 в архив не переносятся.",
   "type": "object",
   "required": [
     "document",

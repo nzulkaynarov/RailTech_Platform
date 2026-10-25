@@ -10,7 +10,7 @@
 # включает права уровня `read` (списки `full` повторяют `read` для читаемости; раздел без списка `full` даёт то же, что `read`).
 # Правила: каждый код права ERP — из `ErpPermission` шва (openapi/erp-integration.yaml); каждое право CRM — `ресурс:действие`
 # из каталога apps/crm/backend/app/security/rbac.py (CATALOG). Обе сверки — в тестах CRM и в схеме (enum). Каждый код EDS —
-# из восьми кодов v1 (enum в схеме); права EDS сотрудника CRM вычисляет так же, как права ERP, и публикует в
+# из девяти кодов v1 (enum в схеме); права EDS сотрудника CRM вычисляет так же, как права ERP, и публикует в
 # identity.user.* (`user.permissions.eds`); EDS своей модели ролей не имеет. Отображение ролей в коды EDS проверяет
 # packages/contracts/tests/test_platform_rbac.py.
 # Изменение файла — PR с тестом каталога. Валидация — platform-rbac.schema.json (make contracts).
@@ -171,7 +171,8 @@ resources:
     backend:
       erp: { full: [finance.invoice, finance.payment, finance.rates, data.export] }
       # data.export ERP ↔ registry.export EDS: выгрузка реестра — у того, кто выгружает данные «Счетов и оплат».
-      eds: { read: [registry.read], full: [registry.read, registry.export] }
+      # payments.confirm — шаг «бухгалтер» маршрута служебной записки с суммой (решение архитектора, волна 12).
+      eds: { read: [registry.read], full: [registry.read, registry.export, payments.confirm] }
   - key: eds.memo.create
     module: eds
     label: { ru: "EDS · Служебная записка · создать", uz: "EDS · Xizmat xati · yaratish", en: "EDS · Memo · create" }

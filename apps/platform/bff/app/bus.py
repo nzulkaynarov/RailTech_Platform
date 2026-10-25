@@ -3,7 +3,8 @@
 Событие шины превращается в подсказку инвалидации (`app/hub.py`), а не в данные: что изменилось,
 браузер узнаёт обычными запросами с проверкой прав. Подписки (типы и адрес) —
 `packages/contracts/bus/subscriptions.yaml`, строка `platform-bff`; секреты пар —
-`RT_BUS_SECRET_ERP_PLATFORM_BFF`, `RT_BUS_SECRET_CRM_PLATFORM_BFF` из окружения. Своих событий
+`RT_BUS_SECRET_ERP_PLATFORM_BFF`, `RT_BUS_SECRET_CRM_PLATFORM_BFF`, `RT_BUS_SECRET_EDS_PLATFORM_BFF`
+из окружения. События EDS (волна 12) приходят, но подсказок пока не дают (`skipped`). Своих событий
 BFF не публикует. Снаружи `/bus/*` домена Платформы не публикуется (Caddy отвечает 404).
 """
 

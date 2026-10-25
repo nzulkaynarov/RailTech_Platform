@@ -653,7 +653,7 @@ class QuoteReadyForApproval(BaseModel):
         str | None, Field(pattern="^(100(\\.0{1,2})?|\\d{1,2}(\\.\\d{1,2})?)$")
     ]
     """
-    Порог «маржа не ниже, %» из резолюции (letter.resolved); null — ограничения нет
+    Порог «маржа не ниже, %» из резолюции (letter.resolved) — снимок для показа; чек-лист EDS сверяет маржу с порогом своей резолюции (владелец поля — EDS). null — ограничения нет
     """
     required_zones: list[CalcZone]
     """
@@ -683,7 +683,7 @@ class QuoteReadyForApproval(BaseModel):
 
 class QuoteReadyForApprovalV1(BaseModel):
     """
-    Тип uz.railtech.erp.quote.ready_for_approval.v1, источник rt://erp. Поле data конверта (envelope.v1.json). Расчёт готов (все визы собраны) — ERP просит EDS открыть маршрут одобрения КП (EDS-03, runbook волны 12 §2.4, §2.5). payload — снимок для показа в маршруте и для чек-листа (визы, маржа ≥ порога резолюции, срок); EDS коммерческого содержания не хранит сверх снимка. Новая версия КП после возврата — новое событие с version + 1. Содержит себестоимость и маржу: подписчики v1 — только eds (и platform-bff как подсказка без хранения); CRM на этот тип не подписана (bus/subscriptions.yaml). crm_client_id может быть null — компания без клиента CRM.
+    Тип uz.railtech.erp.quote.ready_for_approval.v1, источник rt://erp. Поле data конверта (envelope.v1.json). Расчёт готов (все визы собраны) — ERP просит EDS открыть маршрут одобрения КП (EDS-03, runbook волны 12 §2.4, §2.5). payload — снимок для показа в маршруте и для чек-листа (визы, маржа, срок); порог маржи чек-лист берёт из резолюции EDS (владелец поля — EDS), payload.min_margin_pct — только снимок для показа. EDS коммерческого содержания не хранит сверх снимка. Новая версия КП после возврата — новое событие с version + 1. Содержит себестоимость и маржу: подписчики v1 — только eds (и platform-bff как подсказка без хранения); CRM на этот тип не подписана (bus/subscriptions.yaml). crm_client_id может быть null — компания без клиента CRM.
     """
 
     model_config = ConfigDict(

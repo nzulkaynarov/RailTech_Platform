@@ -1,7 +1,8 @@
 """Обработчики событий, которые CRM принимает с шины (`POST /bus/v1/events`).
 
-* `uz.railtech.erp.*.v1` (кроме кода акцепта) — в очереди Procrastinate, в транзакции записи inbox:
-  зеркало сделки, документы, лента лида, сообщения Telegram (`ErpEventsService.apply`);
+* события ERP (`erp_types()`: все `uz.railtech.erp.*.v1`, кроме кода акцепта и типов для EDS —
+  `NOT_FOR_CRM`) — в очереди Procrastinate, в транзакции записи inbox: зеркало сделки, документы,
+  лента лида, сообщения Telegram (`ErpEventsService.apply`);
 * `uz.railtech.erp.quote.acceptance_code_requested.v1` — inline, прямо в запросе приёмника: код
   акцепта не пишется в inbox (там маска), не уходит в очередь и не попадает в логи.
 

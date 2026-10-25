@@ -33,7 +33,7 @@ export interface paths {
     /**
      * Обмен токена сотрудника CRM на токен доступа EDS
      * @description Проверки по порядку (`docs/architecture/sso-token.md`, «Проверка приёмником»): 1) подпись HS256 секретом
-     *     `PLATFORM_SSO_SECRET` (оба активных значения); 2) `aud = eds`; 3) `exp` не прошёл (допуск часов 5 с) и
+     *     `PLATFORM_SSO_SECRET` (оба активных значения); 2) `iss = crm` и `aud = eds`; 3) `exp` не прошёл (допуск часов 5 с) и
      *     `exp − iat ≤ 60` (с допуском — не больше 65 с); 4) `jti` не встречался — EDS хранит использованные `jti` 10 минут в
      *     своей базе; 5) сотрудник найден **только по `sub`** в проекции сотрудников EDS (`identity.user.*`) — нет: 403
      *     `USER_NOT_PROVISIONED`, `is_active = false`: 403 `USER_INACTIVE`. Отказы 1–4 — 401 `INVALID_SSO_TOKEN`.
@@ -79,7 +79,8 @@ export interface paths {
     /**
      * Зарегистрировать входящее письмо (номер ВХ-NNN/ГГ)
      * @description Ручная регистрация. Письмо по заявке из CRM EDS регистрирует сам по событию `uz.railtech.erp.request.created.v1`
-     *     (ссылки `ErpLinks` заполнены). Номер присваивается в транзакции создания; публикуется `letter.registered`.
+     *     (ссылки `ErpLinks` заполнены). Номер присваивается в транзакции создания; статус сразу `awaiting_resolution`;
+     *     публикуется `letter.registered`.
      */
     post: operations["registerLetter"];
     delete?: never;
@@ -138,7 +139,8 @@ export interface paths {
     put?: never;
     /**
      * Вернуть письмо менеджеру с комментарием
-     * @description Только из `awaiting_resolution`; статус → `returned`; публикуется `letter.returned`.
+     * @description Только из `awaiting_resolution`; статус → `returned` — письмо у регистратора (`letters.register`), который правит его
+     *     и подаёт снова (`POST …/submit`); публикуется `letter.returned`.
      */
     post: operations["returnLetter"];
     delete?: never;
@@ -162,6 +164,27 @@ export interface paths {
      *     с причиной.
      */
     post: operations["rejectLetter"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/letters/{letter_id}/submit": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Подать возвращённое письмо на резолюцию повторно
+     * @description Только из `returned`; необязательные правки применяются, статус → `awaiting_resolution`, номер прежний; в журнал —
+     *     `letter.resubmitted` (события шины нет). Другой статус — 409 `CONFLICT` (`details.reason = invalid_state`).
+     */
+    post: operations["resubmitLetter"];
     delete?: never;
     options?: never;
     head?: never;
@@ -229,8 +252,8 @@ export interface paths {
      * @description Только автор. `memo`, `application`, `report` из `draft` или `returned`: необязательные правки тела применяются,
      *     после возврата `version` растёт на 1; открывается маршрут (новый круг) — статус `on_approval`, `approval.requested`.
      *     Шаблоны (runbook §2.5): `memo` — директор (любой с `memos.approve`), затем, если указана сумма, бухгалтер (любой с
-     *     `registry.export` — «Счета и оплаты», полный доступ); `application`, `report` — директор. `letter_out` из `draft`:
-     *     присваивается `ИСХ-NNN/ГГ`, статус `sent`, `document.registered`. Другой статус — 409 `CONFLICT`
+     *     `payments.confirm` — решение архитектора); `application`, `report` — директор. Статусы по решениям — `DocumentStatus`.
+     *     `letter_out` из `draft`: присваивается `ИСХ-NNN/ГГ`, статус `sent`, `document.registered`, затем `document.archived`. Другой статус — 409 `CONFLICT`
      *     (`details.reason = invalid_state`).
      */
     post: operations["submitDocument"];
@@ -295,7 +318,7 @@ export interface paths {
      * Решение на текущем шаге (approve, return, reject)
      * @description Решает только тот, кого ждёт текущий шаг (назначен по `crm_user_id` или держит право шага); иначе 403
      *     `FORBIDDEN` (`details.reason = not_your_step`). `comment` обязателен для `return` и `reject` (422). КП: `approve`
-     *     недоступно, пока чек-лист не зелёный (проверка на сервере) — 409 `CONFLICT`, `details.reason = checklist_not_green`;
+     *     недоступно, пока чек-лист не зелёный (проверка на сервере; маржа сверяется с порогом резолюции EDS) — 409 `CONFLICT`, `details.reason = checklist_not_green`;
      *     при одобрении КП присваивается `ИСХ-NNN/ГГ`, выбранные `channels` уходят в событие. Маршрут закрыт — 409
      *     (`details.reason = route_closed`). Каждое решение — строка журнала и `approval.decided`.
      */
@@ -426,7 +449,9 @@ export interface components {
       };
     };
     /**
-     * @description Код права EDS v1 (runbook волны 12 §2.2; `platform-rbac.yaml`, `backend.eds`)
+     * @description Код права EDS v1 (runbook волны 12 §2.2; `platform-rbac.yaml`, `backend.eds`). `payments.confirm` — шаг «бухгалтер»
+     *     маршрута служебной записки с суммой (решение архитектора). В событиях шины (`identity`, `eds`) код — строка по шаблону
+     *     `^[a-z_]+\.[a-z_]+$`, не перечень: новый код не ломает события v1.
      * @enum {string}
      */
     EdsPermission:
@@ -437,7 +462,8 @@ export interface components {
       | "memos.approve"
       | "approvals.decide"
       | "registry.read"
-      | "registry.export";
+      | "registry.export"
+      | "payments.confirm";
     /** Format: uuid */
     Uuid: string;
     /** @description Деньги строкой с двумя знаками */
@@ -544,17 +570,12 @@ export interface components {
       version_of?: components["schemas"]["Uuid"];
     };
     /**
-     * @description SPEC-v3 §2.4: `registered` — зарегистрировано; `awaiting_resolution` — ждёт резолюции директора; `resolved` —
-     *     резолюция наложена; `returned` — возвращено менеджеру; `rejected` — отклонено; `archived` — в архиве.
+     * @description SPEC-v3 §2.4 («Зарегистрировано → Ждёт резолюции» — одним шагом): `awaiting_resolution` — зарегистрировано и ждёт
+     *     резолюции директора; `resolved` — резолюция наложена; `returned` — возвращено, письмо у регистратора; `rejected` —
+     *     отклонено. Переходы — таблица в описании API.
      * @enum {string}
      */
-    LetterStatus:
-      | "registered"
-      | "awaiting_resolution"
-      | "resolved"
-      | "returned"
-      | "rejected"
-      | "archived";
+    LetterStatus: "awaiting_resolution" | "resolved" | "returned" | "rejected";
     /**
      * @description Зона исполнителя резолюции: `goods` — товары, склад, цены поставщиков (снабженец); `services` — услуги, ТЗ, бригада (гл. инженер); `payment_terms` — условия оплаты (бухгалтер)
      * @enum {string}
@@ -591,6 +612,15 @@ export interface components {
     };
     LetterRejectIn: {
       reason: string;
+    };
+    /** @description Необязательные правки возвращённого письма перед повторной подачей */
+    LetterSubmitIn: {
+      subject?: string;
+      summary?: string;
+      links?: components["schemas"]["ErpLinksIn"];
+      file_ids?: components["schemas"]["Uuid"][];
+      /** @description Ответ на комментарий возврата (в журнал) */
+      comment?: string | null;
     };
     LetterSender: {
       /** @description `null` — письмо зарегистрировано по заявке ERP, клиент — по `links.crm_client_id` */
@@ -670,9 +700,21 @@ export interface components {
      */
     DocumentKind: "memo" | "application" | "report" | "letter_out";
     /**
-     * @description SPEC-v3 §2.4 «Служебная записка»: `draft` → `on_approval` → `approved` / `rejected` / `returned` (автор правит и
-     *     отправляет снова) → если есть сумма `to_accountant` (передана бухгалтеру) → `paid`. Исходящее письмо: `draft` →
-     *     `sent`. Любой — `archived`.
+     * @description SPEC-v3 §2.4 «Служебная записка». Статус по решениям маршрута (шаг 1 — директор, `memos.approve`; шаг 2 — бухгалтер,
+     *     `payments.confirm`, только при сумме):
+     *
+     *     | Из | Действие | В | Маршрут | Архив |
+     *     |---|---|---|---|---|
+     *     | — | `POST /documents` | `draft` | — | — |
+     *     | `draft`, `returned` | `POST …/submit` (после возврата — `version + 1`, новый круг) | `on_approval` | `approval.requested` | — |
+     *     | `on_approval` | директор `approve`, суммы нет (и заявление, отчёт) | `approved` | закрыт: `approved` | `document.archived` |
+     *     | `on_approval` | директор `approve`, сумма есть | `to_accountant` (передана бухгалтеру) | открыт, шаг 2 | — |
+     *     | `to_accountant` | бухгалтер `approve` (оплачено) | `paid` | закрыт: `approved` | `document.archived` |
+     *     | `on_approval`, `to_accountant` | `return` (комментарий обязателен) | `returned` (автор правит) | закрыт: `returned` | — |
+     *     | `on_approval`, `to_accountant` | `reject` (комментарий обязателен) | `rejected` | закрыт: `rejected` | `document.archived` |
+     *     | `draft` (`letter_out`) | `POST …/submit` — отправка, `ИСХ-NNN/ГГ` | `sent` | — | `document.archived` |
+     *
+     *     Архив — признак `archived_at`, итоговый статус сохраняется.
      * @enum {string}
      */
     DocumentStatus:
@@ -683,8 +725,7 @@ export interface components {
       | "approved"
       | "to_accountant"
       | "paid"
-      | "sent"
-      | "archived";
+      | "sent";
     DocumentCreate: {
       kind: components["schemas"]["DocumentKind"];
       subject: string;
@@ -773,6 +814,11 @@ export interface components {
       created_at: string;
       /** Format: date-time */
       updated_at: string;
+      /**
+       * Format: date-time
+       * @description Маршрут завершён окончательно — документ в архиве (`document.archived`)
+       */
+      archived_at: string | null;
     };
     /** @enum {string} */
     ApprovalTemplate: "memo" | "application" | "report" | "quote";
@@ -799,7 +845,7 @@ export interface components {
       decided_at: string | null;
       comment: string | null;
     };
-    /** @description Документ EDS (`document_id`, `number`) или КП ERP (`erp_quote_id`, `quote_number`, `quote_version`) */
+    /** @description Документ EDS (`document_id`, `number`) или КП ERP (`erp_quote_id`, `quote_number`, `quote_version`, `erp_deal_id`) */
     ApprovalObject: {
       kind: components["schemas"]["ApprovalTemplate"];
       document_id?: components["schemas"]["Uuid"];
@@ -810,7 +856,10 @@ export interface components {
       erp_deal_id?: number | null;
       deal_number?: string | null;
     };
-    /** @description Строка чек-листа одобрения КП (SPEC-v3 §7.3) — с датой и автором */
+    /**
+     * @description Строка чек-листа одобрения КП (SPEC-v3 §7.3) — с датой и автором. `margin` сверяет маржу КП с порогом **резолюции EDS**
+     *     (владелец поля — EDS); `min_margin_pct` из события ERP — только снимок для показа.
+     */
     ChecklistItem: {
       /**
        * @description виза снабженца, виза гл. инженера, маржа ≥ порога резолюции, срок расчёта выдержан
@@ -819,21 +868,33 @@ export interface components {
       code: "visa_goods" | "visa_services" | "margin" | "due";
       label: string;
       ok: boolean;
-      /** @description Кто поставил визу (имя) */
-      by: string | null;
+      /** @description Кто поставил визу */
+      by: components["schemas"]["QuoteVisaAuthor"] | null;
       /** Format: date-time */
       at: string | null;
       /** @description Значение для показа (`17.6 % ≥ 15 %`) */
       value: string | null;
     };
+    /**
+     * @description Зона визы расчёта (как `CalcZone` события ERP)
+     * @enum {string}
+     */
+    CalcZone: "goods" | "services";
+    QuoteVisaAuthor: {
+      /** @description `null` — сотрудник ERP без связи с CRM */
+      crm_user_id: number | null;
+      full_name: string;
+    };
     QuoteVisa: {
-      /** @enum {string} */
-      zone: "goods" | "services";
-      by: string;
+      zone: components["schemas"]["CalcZone"];
+      by: components["schemas"]["QuoteVisaAuthor"];
       /** Format: date-time */
       at: string;
     };
-    /** @description Снимок КП из `uz.railtech.erp.quote.ready_for_approval.v1` — только для показа */
+    /**
+     * @description Снимок КП из `uz.railtech.erp.quote.ready_for_approval.v1` (поля — как `QuoteReadyForApproval` события) — только для
+     *     показа; `min_margin_pct` — порог, который видела ERP; чек-лист сверяет с порогом резолюции EDS.
+     */
     QuoteSnapshot: {
       erp_quote_id: number;
       number: string;
@@ -843,8 +904,10 @@ export interface components {
       currency: components["schemas"]["Currency"];
       cost?: components["schemas"]["Amount"] | null;
       margin_amount?: components["schemas"]["Amount"] | null;
+      /** @description Маржа КП, % строкой; может быть отрицательной */
       margin_pct: string;
       min_margin_pct: components["schemas"]["MarginPct"] | null;
+      required_zones: components["schemas"]["CalcZone"][];
       visas: components["schemas"]["QuoteVisa"][];
       /** Format: date */
       due?: string | null;
@@ -1055,7 +1118,7 @@ export interface operations {
           "application/json": components["schemas"]["AccessToken"];
         };
       };
-      /** @description `INVALID_SSO_TOKEN` — подпись, `aud`, срок, срок жизни или повтор `jti` (`details.reason`) */
+      /** @description `INVALID_SSO_TOKEN` — подпись, `iss`, `aud`, срок, срок жизни или повтор `jti` (`details.reason`) */
       401: {
         headers: {
           [name: string]: unknown;
@@ -1262,6 +1325,37 @@ export interface operations {
     };
     responses: {
       /** @description Отклонено */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Letter"];
+        };
+      };
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      409: components["responses"]["Conflict"];
+      422: components["responses"]["ValidationFailed"];
+    };
+  };
+  resubmitLetter: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        letter_id: components["parameters"]["LetterId"];
+      };
+      cookie?: never;
+    };
+    requestBody?: {
+      content: {
+        "application/json": components["schemas"]["LetterSubmitIn"];
+      };
+    };
+    responses: {
+      /** @description Снова ждёт резолюции */
       200: {
         headers: {
           [name: string]: unknown;

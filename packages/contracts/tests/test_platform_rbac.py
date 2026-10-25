@@ -25,6 +25,7 @@ EDS_CODES = {
     "approvals.decide",
     "registry.read",
     "registry.export",
+    "payments.confirm",
 }
 #: Публичные операции EDS: без токена доступа и без права.
 PUBLIC = {("get", "/health"), ("post", "/api/v1/auth/sso/exchange")}
@@ -63,7 +64,7 @@ def test_catalog_codes_are_exactly_the_eds_v1_codes() -> None:
         ("MANAGER", {"letters.read", "registry.read", "memos.create"}),
         ("SUPPLY", {"registry.read", "memos.create"}),
         ("ENGINEER", {"registry.read", "memos.create"}),
-        ("ACCOUNTANT", {"letters.read", "registry.read", "registry.export", "memos.create"}),
+        ("ACCOUNTANT", {"letters.read", "registry.read", "registry.export", "payments.confirm", "memos.create"}),
     ],
 )
 def test_system_roles_and_templates_map_to_their_eds_codes(code: str, expected: set[str]) -> None:
@@ -71,7 +72,18 @@ def test_system_roles_and_templates_map_to_their_eds_codes(code: str, expected: 
 
 
 def test_director_gets_every_eds_code() -> None:
+    assert len(EDS_CODES) == 9
     assert eds_permissions(role("DIRECTOR")) == EDS_CODES
+
+
+def test_accountant_step_of_a_memo_is_decided_with_payments_confirm() -> None:
+    """Решение архитектора (волна 12): шаг «бухгалтер» служебной записки с суммой — `payments.confirm`.
+
+    `registry.export` для этого не используется.
+    """
+    decision = EDS_YAML["paths"]["/api/v1/approvals/{approval_id}/decision"]["post"]
+    assert "payments.confirm" in decision["x-rt-permissions"]
+    assert "registry.export" not in decision["x-rt-permissions"]
 
 
 def test_administrator_sees_no_business_documents() -> None:
@@ -83,18 +95,18 @@ def test_administrator_sees_no_business_documents() -> None:
     """
     got = eds_permissions(role("ADMIN"))
     assert got == {"memos.create"}
-    assert not got & {"letters.read", "registry.read", "registry.export", "approvals.decide", "memos.approve"}
+    assert not got & (EDS_CODES - {"memos.create"})
 
 
 @pytest.mark.parametrize(
     ("access", "expected"),
     [
         # «Менеджер и бухгалтер» гейта R-3 (создана с нуля): лиды и «Счета и оплаты» — полный доступ.
-        ({"crm.leads": "full", "eds.payments": "full"}, {"registry.read", "registry.export"}),
+        ({"crm.leads": "full", "eds.payments": "full"}, {"registry.read", "registry.export", "payments.confirm"}),
         # «Менеджер и бухгалтер (из шаблона)»: матрица «Менеджер» + «Счета и оплаты» full.
         (
             {**CATALOG["templates"]["MANAGER"]["access"], "eds.payments": "full"},
-            {"letters.read", "registry.read", "registry.export", "memos.create"},
+            {"letters.read", "registry.read", "registry.export", "payments.confirm", "memos.create"},
         ),
     ],
     ids=["manager-and-accountant", "manager-and-accountant-from-template"],

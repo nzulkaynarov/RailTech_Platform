@@ -153,7 +153,7 @@ class Document(BaseModel):
 
 class DocumentArchivedV1(BaseModel):
     """
-    Тип uz.railtech.eds.document.archived.v1, источник rt://eds. Поле data конверта (envelope.v1.json). Документ реестра (в том числе входящее письмо) перенесён в архив; номер не освобождается (runbook §2.1).
+    Тип uz.railtech.eds.document.archived.v1, источник rt://eds. Поле data конверта (envelope.v1.json). Документ перенесён в архив; номер не освобождается (runbook §2.1). Публикуется автоматически, без отдельной операции: маршрут документа завершён окончательно — одобрен на последнем шаге (служебная записка без суммы, заявление, отчёт — approved; с суммой — paid) или отклонён (rejected); исходящее письмо — при отправке (sent). Документ сохраняет итоговый статус. Входящие письма (kind = letter_in) в C1 в архив не переносятся.
     """
 
     model_config = ConfigDict(
@@ -198,19 +198,11 @@ class DocumentRegisteredV1(BaseModel):
     actor: Actor
 
 
-class EdsPermission(StrEnum):
+class EdsPermission(RootModel[str]):
+    root: Annotated[str, Field(pattern="^[a-z_]+\\.[a-z_]+$")]
     """
-    Код права EDS v1 (runbook волны 12 §2.2; platform-rbac.yaml, backend.eds)
+    Код права EDS (runbook волны 12 §2.2). Шаблон, а не перечень: новый код не ломает события v1; перечень кодов — EdsPermission в openapi/eds.yaml и edsPermission в platform-rbac.schema.json
     """
-
-    letters_read = "letters.read"
-    letters_register = "letters.register"
-    letters_resolve = "letters.resolve"
-    memos_create = "memos.create"
-    memos_approve = "memos.approve"
-    approvals_decide = "approvals.decide"
-    registry_read = "registry.read"
-    registry_export = "registry.export"
 
 
 class ErpLinks(BaseModel):

@@ -65,17 +65,8 @@
     },
     "EdsPermission": {
       "type": "string",
-      "enum": [
-        "letters.read",
-        "letters.register",
-        "letters.resolve",
-        "memos.create",
-        "memos.approve",
-        "approvals.decide",
-        "registry.read",
-        "registry.export"
-      ],
-      "description": "Код права EDS v1 (runbook волны 12 §2.2; platform-rbac.yaml, backend.eds)"
+      "pattern": "^[a-z_]+\\.[a-z_]+$",
+      "description": "Код права EDS (runbook волны 12 §2.2). Шаблон, а не перечень: новый код не ломает события v1; перечень кодов — EdsPermission в openapi/eds.yaml и edsPermission в platform-rbac.schema.json"
     },
     "Actor": {
       "type": "object",
@@ -331,7 +322,28 @@
           ]
         }
       },
-      "additionalProperties": false
+      "additionalProperties": false,
+      "if": {
+        "properties": {
+          "crm_user_id": {
+            "type": "integer"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "permission": {
+            "type": "null"
+          }
+        }
+      },
+      "else": {
+        "properties": {
+          "permission": {
+            "type": "string"
+          }
+        }
+      }
     },
     "Step": {
       "type": "object",
