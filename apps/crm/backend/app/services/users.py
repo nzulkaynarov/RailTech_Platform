@@ -6,6 +6,7 @@
 from collections.abc import Sequence
 from dataclasses import replace
 from datetime import UTC, datetime
+from typing import Any
 
 import structlog
 from sqlalchemy import update
@@ -26,6 +27,7 @@ from app.domain.errors import (
 from app.domain.lead_access import loses_work_role
 from app.domain.platform_roles import derive_access
 from app.models.auth import RefreshToken, User
+from app.models.platform_roles import PlatformRole
 from app.repositories import platform_roles as prepo
 from app.repositories import users as repo
 from app.security import audit, reauth
@@ -157,7 +159,7 @@ class UserService:
             roles = await repo.roles_of(session, user_id)
             held = await prepo.roles_of_user(session, user_id)
             before = view_of(user, roles, held)
-            eds_before = snapshots.eds_permissions(held, is_active=before.is_active)
+            fields_before = snapshots.user_fields(user, held)
             erp_before = access_state_of(before)
             requested = await resolve_requested(session, patch.platform_role_ids)
             await guard_system_holders(
@@ -201,7 +203,9 @@ class UserService:
                 ) from exc
             effective = held if requested is None else requested
             after = view_of(user, roles, effective)
-            eds_after = snapshots.eds_permissions(effective, is_active=after.is_active)
+            changed = snapshots.changed_user_fields(
+                fields_before, snapshots.user_fields(user, effective)
+            )
             await audit.record(
                 session,
                 actor,
@@ -213,7 +217,7 @@ class UserService:
             )
             erp_after = access_state_of(after)
             await _audit_access(session, actor, user_id, erp_before, erp_after)
-            await _publish_change(session, actor, user, before, after, eds_before != eds_after)
+            await _publish_change(session, actor, user, before, after, changed)
             action = sync_action(erp_before, erp_after)
         await self._sync_erp(action, user_id)
         if action == "provision":
@@ -385,8 +389,7 @@ async def _upsert_admin(
         session.add(user)
         await session.flush()
     held = await prepo.roles_of_user(session, user.id)
-    was_active = not created and bool(user.is_active)
-    eds_before = snapshots.eds_permissions(held, is_active=was_active)
+    fields_before = None if created else snapshots.user_fields(user, held)
     user.password_hash = hash_password(secret)
     user.must_change_password = temporary
     user.is_active = True
@@ -403,25 +406,29 @@ async def _upsert_admin(
         user.platform_access = list(derived.platform_access)
         user.erp_role_codes = list(derived.erp_role_codes)
         await repo.set_roles(session, user.id, [derived.crm_role], None)
-        eds_after = snapshots.eds_permissions(held, is_active=True)
-        await _publish_admin(session, user, created=created, eds_changed=eds_before != eds_after)
+        await _publish_admin(session, user, held, fields_before)
         return user.id
     roles = set(await repo.roles_of(session, user.id)) | {"admin"}
     await repo.set_roles(session, user.id, sorted(roles), None)
-    eds_after = snapshots.eds_permissions(held, is_active=True)
-    await _publish_admin(session, user, created=created, eds_changed=eds_before != eds_after)
+    await _publish_admin(session, user, held, fields_before)
     return user.id
 
 
 async def _publish_admin(
-    session: AsyncSession, user: User, *, created: bool, eds_changed: bool
+    session: AsyncSession,
+    user: User,
+    held: Sequence[PlatformRole],
+    fields_before: dict[str, Any] | None,
 ) -> None:
-    """Первый администратор или восстановление (CLI, мастер): событие — в той же транзакции."""
+    """Первый администратор или восстановление (CLI, мастер): событие — в той же транзакции.
+
+    `fields_before` — срез полей снимка до изменения; `None` — сотрудник создан сейчас."""
     system = Actor.system()
-    if created:
+    if fields_before is None:
         await bus_events.user_created(session, user, system)
-    else:
-        await bus_events.user_updated(session, user, system, ["permissions"] if eds_changed else ())
+        return
+    changed = snapshots.changed_user_fields(fields_before, snapshots.user_fields(user, held))
+    await bus_events.user_updated(session, user, system, changed)
 
 
 async def _publish_change(
@@ -430,16 +437,16 @@ async def _publish_change(
     user: User,
     before: UserView,
     after: UserView,
-    eds_changed: bool,
+    changed: Sequence[str],
 ) -> None:
     """Изменение сотрудника на шину: отключение — `deactivated`, прочее — снимок `updated`.
 
-    Изменились права EDS (роли, активация) — событие уходит всегда, `changed_fields` включает
-    `permissions`: EDS проверяет право по проекции на момент запроса (sso-token.md)."""
+    `changed_fields` — все изменившиеся поля снимка (роли, системы, роли ERP, права EDS, ...):
+    EDS проверяет право по проекции на момент запроса (sso-token.md)."""
     if before.is_active and not after.is_active:
         await bus_events.user_deactivated(session, user.id, actor)
-    elif eds_changed or audit_of(before) != audit_of(after):
-        await bus_events.user_updated(session, user, actor, ["permissions"] if eds_changed else ())
+    elif changed or audit_of(before) != audit_of(after):
+        await bus_events.user_updated(session, user, actor, changed)
 
 
 def _apply(user: User, patch: UserPatch) -> None:

@@ -78,6 +78,11 @@ def holders_of(data: list[dict[str, Any]]) -> dict[int, dict[str, Any]]:
     return {d["user"]["crm_user_id"]: d for d in data}
 
 
+def no_eds_role(client: TestClient, boss: dict[str, str]) -> int:
+    """Роль без разделов EDS: сотрудника нельзя оставить совсем без ролей (422 `roles_required`)."""
+    return custom_role(client, boss, {"crm.clients": "read"}, name="Только клиенты")
+
+
 def assign(client: TestClient, boss: dict[str, str], user_id: int, role_ids_: list[int]) -> None:
     response = client.patch(
         f"/api/v1/users/{user_id}", json={"platform_role_ids": role_ids_}, headers=boss
@@ -85,10 +90,15 @@ def assign(client: TestClient, boss: dict[str, str], user_id: int, role_ids_: li
     assert response.status_code == 200, response.text
 
 
-def custom_role(client: TestClient, boss: dict[str, str], access: dict[str, str]) -> int:
+def custom_role(
+    client: TestClient,
+    boss: dict[str, str],
+    access: dict[str, str],
+    name: str = "Менеджер и бухгалтер",
+) -> int:
     response = client.post(
         "/api/v1/platform-roles",
-        json={"name": "Менеджер и бухгалтер", "access": access},
+        json={"name": name, "access": access},
         headers=boss,
     )
     assert response.status_code == 201, response.text
@@ -140,11 +150,12 @@ async def test_assigning_and_removing_roles_publishes_the_new_eds_permissions(
     employee, _ = await make_user(sessions, "dilshod@railtech.uz", ["manager"])
     boss = login(client, admin.email, password)
     manager, accountant = legacy_ids(client, boss, ["MANAGER", "ACCOUNTANT"])
+    plain = no_eds_role(client, boss)
     await clear_outbox(sessions)
 
     assign(client, boss, employee.id, [manager])
     assign(client, boss, employee.id, [manager, accountant])
-    assign(client, boss, employee.id, [])
+    assign(client, boss, employee.id, [plain])
 
     first, second, third = await events(sessions)
     assert first["user"]["permissions"] == {
@@ -154,8 +165,11 @@ async def test_assigning_and_removing_roles_publishes_the_new_eds_permissions(
     assert "payments.confirm" in second["user"]["permissions"]["eds"]
     assert third["user"]["permissions"] == {"eds": []}
     for data in (first, second, third):
-        assert "permissions" in data["changed_fields"]
         assert data["user"]["crm_user_id"] == employee.id
+    # changed_fields перечисляет все реально изменившиеся поля снимка, а не только права EDS.
+    assert first["changed_fields"] == ["permissions", "platform_roles", "systems"]
+    assert second["changed_fields"] == ["permissions", "platform_roles"]
+    assert third["changed_fields"] == ["permissions", "platform_roles"]
     assert second["user"]["platform_roles"] == ["ACCOUNTANT", "MANAGER"]
 
 
@@ -194,7 +208,7 @@ async def test_deactivation_and_activation_follow_the_eds_permissions(
     assert activated["user"]["permissions"] == {
         "eds": ["letters.read", "memos.create", "registry.read"]
     }
-    assert "permissions" in activated["changed_fields"]
+    assert activated["changed_fields"] == ["is_active", "permissions"]
 
 
 # --- роль: правка матрицы ----------------------------------------------------------------------
@@ -305,6 +319,7 @@ async def test_deleting_a_role_is_only_possible_without_holders_so_no_rights_cha
     employee, _ = await make_user(sessions, "dilshod@railtech.uz", ["manager"])
     boss = login(client, admin.email, password)
     role = custom_role(client, boss, {"eds.inbox": "read"})
+    plain = no_eds_role(client, boss)
     assign(client, boss, employee.id, [role])
     await clear_outbox(sessions)
 
@@ -312,7 +327,7 @@ async def test_deleting_a_role_is_only_possible_without_holders_so_no_rights_cha
     assert refused.status_code == 409
     assert await events(sessions) == []
 
-    assign(client, boss, employee.id, [])  # права снимает снятие роли, и событие уходит там
+    assign(client, boss, employee.id, [plain])  # права снимает смена роли, и событие уходит там
     (removed,) = await events(sessions)
     assert removed["user"]["permissions"] == {"eds": []}
     assert client.delete(f"/api/v1/platform-roles/{role}", headers=boss).status_code == 204
@@ -329,6 +344,7 @@ async def test_eds_token_follows_the_roles_of_the_employee(
     boss = login(client, admin.email, admin_password)
     me = login(client, employee.email, password)
     (accountant,) = legacy_ids(client, boss, ["ACCOUNTANT"])
+    plain = no_eds_role(client, boss)
 
     denied = client.post("/api/v1/auth/sso/token", json={"aud": "eds"}, headers=me)
     assert denied.status_code == 403
@@ -344,7 +360,7 @@ async def test_eds_token_follows_the_roles_of_the_employee(
     assert claims["permissions"] == ACCOUNTANT
     assert claims["exp"] - claims["iat"] == 60
 
-    assign(client, boss, employee.id, [])
+    assign(client, boss, employee.id, [plain])
     assert client.post("/api/v1/auth/sso/token", json={"aud": "eds"}, headers=me).status_code == 403
 
 
