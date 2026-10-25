@@ -152,6 +152,24 @@ async def test_deactivation_blocks_and_newer_snapshot_reactivates(
     assert row["is_active"] is True
 
 
+async def test_deactivation_with_old_event_time_still_deactivates(
+    client: httpx.AsyncClient, container: Container
+) -> None:
+    """Часы CRM ушли назад: `deactivated` старее сохранённого снимка всё равно отключает (в безопасную сторону)."""
+    await receive_and_process(client, container, user_event("created", when=T0, updated_at=iso(T0, 5)))
+    await receive_and_process(client, container, deactivated_event(when=T0 + timedelta(hours=1)))
+    row = await employee(container)
+    assert row["is_active"] is False
+    assert row["updated_at"] == T0 + timedelta(hours=5)  # версия не откатилась
+
+    older = user_event("updated", when=T0 + timedelta(hours=6), updated_at=iso(T0, 3))
+    await receive_and_process(client, container, older)  # старый снимок доступ не возвращает
+    assert (await employee(container))["is_active"] is False
+    newer = user_event("updated", when=T0 + timedelta(hours=7), updated_at=iso(T0, 6))
+    await receive_and_process(client, container, newer)  # настоящее повторное включение
+    assert (await employee(container))["is_active"] is True
+
+
 async def test_deactivation_arriving_first_leaves_a_tombstone(client: httpx.AsyncClient, container: Container) -> None:
     await receive_and_process(client, container, deactivated_event(when=T0 + timedelta(hours=1)))
     tomb = await employee(container)

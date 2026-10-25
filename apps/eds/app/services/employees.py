@@ -37,7 +37,12 @@ async def apply_snapshot(session: AsyncSession, snapshot: UserSnapshot, *, event
 
 
 async def apply_deactivation(session: AsyncSession, crm_user_id: int, *, at: datetime, event_id: uuid.UUID) -> bool:
-    """Применить `user.deactivated`. Нет строки — «надгробие»: запоздавший старый снимок доступа не вернёт."""
+    """Применить `user.deactivated` — всегда: ошибка часов или порядка доставки только отключает, а не оставляет доступ.
+
+    `updated_at` становится большим из прежнего и времени события: запоздавший старый снимок доступ не вернёт,
+    а настоящее повторное включение (снимок новее) сработает. Нет строки — «надгробие» (`email = ''`):
+    `deactivated` пришёл раньше `created`, и старый снимок доступа не вернёт.
+    """
     stmt = insert(Employee).values(
         crm_user_id=crm_user_id,
         email="",
@@ -51,11 +56,10 @@ async def apply_deactivation(session: AsyncSession, crm_user_id: int, *, at: dat
         index_elements=[Employee.crm_user_id],
         set_={
             "is_active": False,
-            "updated_at": stmt.excluded.updated_at,
+            "updated_at": func.greatest(Employee.updated_at, stmt.excluded.updated_at),
             "last_event_id": stmt.excluded.last_event_id,
             "synced_at": func.now(),
         },
-        where=Employee.updated_at <= stmt.excluded.updated_at,
     ).returning(Employee.crm_user_id)
     return (await session.execute(upsert)).first() is not None
 

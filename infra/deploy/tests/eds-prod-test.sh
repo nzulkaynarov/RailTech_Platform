@@ -174,7 +174,7 @@ mig="$(grep -n 'run --rm --no-deps eds-migrate' "$deploy" | head -1 | cut -d: -f
 up="$(grep -n '^up_stack' "$deploy" | head -1 | cut -d: -f1)"
 [[ -n "$dump" && -n "$mig" && -n "$up" && "$dump" -lt "$mig" && "$mig" -lt "$up" ]] || fail "deploy.sh: миграция EDS должна идти после pg_dump-гейта и до up"
 grep -qE 'pull .* eds-api' "$deploy" || fail "deploy.sh: eds-api не входит в pull"
-grep -q 'wait_healthy "$rel" eds-api' "$deploy" || fail "deploy.sh: нет проверки здоровья eds-api (у EDS нет домена для smoke)"
+grep -q 'wait_healthy "$rel" "$svc"' "$deploy" && grep -q 'for svc in eds-api eds-worker' "$deploy" || fail "deploy.sh: нет проверки здоровья eds-api и eds-worker (у EDS нет домена для smoke)"
 grep -q 'eds-api' "$root/infra/deploy/rollback.sh" || fail "rollback.sh: EDS не учтён при откате"
 grep -q 'platform-web|eds)' "$root/infra/deploy/lib.sh" || fail "lib.sh: cleanup_old не чистит образы rt-eds"
 echo "eds-prod-test: ok"

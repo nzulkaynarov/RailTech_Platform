@@ -1,21 +1,21 @@
 #!/usr/bin/env bash
 # Сброс прода на чистые базы и первый запуск (S0-8, стратегия §7; runbook — docs/runbooks/deploy.md, «Сброс прода и первый запуск»).
-# РАЗРУШАЕТ данные приложений: базы crm и erp, бакеты RustFS приложений, тома Redis. Прод сбрасывается один раз — данных
+# РАЗРУШАЕТ данные приложений: базы crm, erp и eds, бакеты RustFS приложений, тома Redis. Прод сбрасывается один раз — данных
 # и аккаунтов в нём нет (решение владельца 2026-10-23); дальше скрипт не нужен, а запуск на живых данных — потеря данных.
 #
 #   VPS 1, под deploy:   reset-prod.sh [тег]       тег — релиз, на который сбрасываем (по умолчанию state/current_tag)
-#   VPS 2, под root:     reset-prod.sh db --drop crm,erp [--dump-taken <каталог дампа на VPS 1>]
+#   VPS 2, под root:     reset-prod.sh db --drop crm,erp,eds [--dump-taken <каталог дампа на VPS 1>]
 #                        только пересоздание баз (шаг 3 ниже). Барьер: без --dump-taken (его передаёт только VPS-1-часть, после дампа)
-#                        нужен ввод «crm,erp» с терминала; без флага и без терминала — отказ
+#                        нужен ввод «crm,erp,eds» с терминала; без флага и без терминала — отказ
 #
 # Подтверждение — ввод имени домена CRM из .env.prod (с терминала, /dev/tty); флага «без вопросов» нет.
 # Порядок на VPS 1 (каждый шаг идемпотентен, повтор после сбоя безопасен):
 #   0. проверки до разрушения: env, релиз, подтверждение, ключи S3 на сервис (make-env-prod.sh s3-keys), pull образов, CPU-база образов
 #   1. остановка приложений проекта (кроме rustfs, caddy, litellm, clickhouse: файлы, вход и ключи моделей остаются)
-#   2. предмиграционный дамп crm и erp (predeploy-dump.sh) + копия в $RT_STATE/reset/dumps/: откат возможен
-#   3. пересоздание баз crm и erp на VPS 2 (DROP + CREATE с владельцем-ролью, pgvector в crm) — ssh root@VPS 2 или команда
+#   2. предмиграционный дамп crm, erp и eds (predeploy-dump.sh) + копия в $RT_STATE/reset/dumps/: откат возможен
+#   3. пересоздание баз crm, erp и eds на VPS 2 (DROP + CREATE с владельцем-ролью, pgvector в crm) — ssh root@VPS 2 или команда
 #      вручную; litellm (ключи моделей) и langfuse не трогаются; затем проверка с VPS 1, что базы пусты
-#   4. очистка бакетов приложений RustFS (erp-private, erp-public, erp-temp, client-documents, tg-attachments, kb-sources) корневым
+#   4. очистка бакетов приложений RustFS (erp-private, erp-public, erp-temp, eds-private, client-documents, tg-attachments, kb-sources) корневым
 #      ключом через одноразовый s3-init (ключи сервисов чужих бакетов не видят, S0-9);
 #      backups, wal и langfuse НЕ трогаются
 #   5. удаление томов Redis (redis_data, redis_broker_data, redis_cache_data); s3_data, caddy_data, caddy_config НЕ трогаются
@@ -35,14 +35,14 @@ source "$(dirname "${BASH_SOURCE[0]}")/lib.sh"
 here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 # Бакеты приложений. backups (дампы), wal (WAL-архив) и langfuse сюда не входят намеренно (тест это проверяет).
-APP_BUCKETS=(erp-private erp-public erp-temp client-documents tg-attachments kb-sources)
+APP_BUCKETS=(erp-private erp-public erp-temp eds-private client-documents tg-attachments kb-sources)
 # Тома приложений. s3_data (RustFS), caddy_data (сертификаты), caddy_config, postgres_* сюда не входят намеренно.
 APP_VOLUMES=(redis_data redis_broker_data redis_cache_data)
 # Сервисы, которые при сбросе остаются работать (остальное проекта останавливается).
 KEEP_SERVICES=(rustfs caddy litellm clickhouse)
 # Контейнеры каких сервисов вправе держать тома Redis (иначе том не трогаем).
 REDIS_SERVICES=(redis redis-broker redis-cache)
-RESET_DBS=(crm erp)
+RESET_DBS=(crm erp eds)
 PG_IMAGE="${PG_IMAGE:-pgvector/pgvector:0.8.7-pg17}"
 RT_DB_DIR="${RT_DB_DIR:-/opt/rt-db}"   # каталог на VPS 2 (db-up.sh)
 RESUME_MAX_AGE_S=86400
@@ -67,10 +67,10 @@ run_db() {
     case "$1" in
       --drop) drop="${2:-}"; shift 2 ;;
       --dump-taken) dump_taken="${2:-}"; shift 2 ;;
-      *) die "неизвестный аргумент: $1 (usage: reset-prod.sh db --drop crm,erp)" ;;
+      *) die "неизвестный аргумент: $1 (usage: reset-prod.sh db --drop crm,erp,eds)" ;;
     esac
   done
-  [[ -n "$drop" ]] || die "usage: reset-prod.sh db --drop crm,erp (список баз задаётся явно)"
+  [[ -n "$drop" ]] || die "usage: reset-prod.sh db --drop crm,erp,eds (список баз задаётся явно)"
   IFS=',' read -ra list <<<"$drop"
   for d in "${list[@]}"; do
     in_list "$d" "${RESET_DBS[@]}" || die "база '$d' не входит в сброс: разрешены только ${RESET_DBS[*]} (litellm хранит ключи моделей, langfuse не сбрасывается)"
@@ -134,7 +134,7 @@ for f in deploy.sh predeploy-dump.sh cpu-baseline-check.sh smoke.sh make-env-pro
   [[ -x "$rel/infra/deploy/$f" ]] || die "в релизе $rel нет исполняемого infra/deploy/$f (релиз загружен deploy.yml? хранятся пять последних)"
 done
 require_env_file
-for v in CRM_DOMAIN ERP_DOMAIN CABINET_DOMAIN PLATFORM_DOMAIN DB_INTERNAL_IP DB_CRM_PASSWORD DB_ERP_PASSWORD; do
+for v in CRM_DOMAIN ERP_DOMAIN CABINET_DOMAIN PLATFORM_DOMAIN DB_INTERNAL_IP DB_CRM_PASSWORD DB_ERP_PASSWORD DB_EDS_PASSWORD; do
   require_env_var "$v" "см. infra/.env.prod.example и docs/runbooks/deploy.md, §1.2"
 done
 crm_domain="$(env_get CRM_DOMAIN)"
@@ -166,11 +166,11 @@ project_containers() { # работающие контейнеры проект�
   docker ps --filter "label=com.docker.compose.project=$project" --format '{{.ID}} {{.Label "com.docker.compose.service"}}'
 }
 
-# Пусты ли crm и erp (нет ни одного отношения вне системных схем). Базы нет вовсе (сброс оборвался между DROP и CREATE) —
+# Пусты ли crm, erp и eds (нет ни одного отношения вне системных схем). Базы нет вовсе (сброс оборвался между DROP и CREATE) —
 # тоже «не готово» (код 1). Не удаётся подключиться по другой причине — остановка.
 dbs_empty() {
   local pair db role var cnt err
-  for pair in crm:crm_app:DB_CRM_PASSWORD erp:erp_app:DB_ERP_PASSWORD; do
+  for pair in crm:crm_app:DB_CRM_PASSWORD erp:erp_app:DB_ERP_PASSWORD eds:eds_app:DB_EDS_PASSWORD; do
     IFS=: read -r db role var <<<"$pair"
     if ! cnt="$(PGPASSWORD="$(env_get "$var")" "$PG_DOCKER" run --rm -e PGPASSWORD -e PGSSLMODE=require "$PG_IMAGE" \
       psql -h "$db_host" -p 5432 -U "$role" -d "$db" -tAc \
@@ -215,16 +215,16 @@ step_stop() {
 step_dump() {
   local saved out keep
   saved="$(rs_get dump)"
-  if [[ -n "$saved" && -s "$saved/crm.dump" && -s "$saved/erp.dump" ]]; then
+  if [[ -n "$saved" && -s "$saved/crm.dump" && -s "$saved/erp.dump" && -s "$saved/eds.dump" ]]; then
     log "2. дамп до сброса уже снят: $saved"
     return
   fi
-  log "2. предмиграционный дамп crm и erp (обязателен: нет читаемого дампа — сброса нет)"
+  log "2. предмиграционный дамп crm, erp и eds (обязателен: нет читаемого дампа — сброса нет)"
   "$rel/infra/deploy/predeploy-dump.sh" "pre-reset-$tag"
   # shellcheck disable=SC2012
   out="$(ls -1dt "$RT_STATE"/predeploy/pre-reset-"$tag"-*/ | sed -n 1p)"
   out="${out%/}"
-  [[ -n "$out" && -s "$out/crm.dump" && -s "$out/erp.dump" ]] || die "дамп после predeploy-dump.sh не найден в $RT_STATE/predeploy"
+  [[ -n "$out" && -s "$out/crm.dump" && -s "$out/erp.dump" && -s "$out/eds.dump" ]] || die "дамп после predeploy-dump.sh не найден в $RT_STATE/predeploy"
   # predeploy хранит пять последних каталогов, а сброс и деплой после него снимут ещё дампы — копия живёт отдельно.
   keep="$reset_dir/dumps/$(date -u +%Y%m%dT%H%M%SZ)-$$"
   mkdir -p "$reset_dir/dumps"
@@ -237,16 +237,16 @@ step_dump() {
 
 step_db() {
   if dbs_empty; then
-    log "3. базы crm и erp уже пустые — пересоздание на VPS 2 пропущено"
+    log "3. базы crm, erp и eds уже пустые — пересоздание на VPS 2 пропущено"
     vector_present
     return
   fi
-  local remote="$RT_DB_DIR/infra/deploy/reset-prod.sh db --drop crm,erp"
-  # --dump-taken передаётся только отсюда и только после step_dump: режим db без него просит ввести «crm,erp» с терминала.
+  local remote="$RT_DB_DIR/infra/deploy/reset-prod.sh db --drop crm,erp,eds"
+  # --dump-taken передаётся только отсюда и только после step_dump: режим db без него просит ввести «crm,erp,eds» с терминала.
   local remote_auto dump_dir
   dump_dir="$(rs_get dump)"
   remote_auto="$remote --dump-taken $dump_dir"
-  log "3. пересоздание баз crm и erp на VPS 2 (litellm и langfuse не трогаются)"
+  log "3. пересоздание баз crm, erp и eds на VPS 2 (litellm и langfuse не трогаются)"
   if [[ -n "${RT_RESET_DB_SSH:-}" ]]; then
     log "   ssh $RT_RESET_DB_SSH: $remote_auto"
     ssh -o BatchMode=yes "$RT_RESET_DB_SSH" "$remote_auto" || die "пересоздание баз на VPS 2 не выполнено (ssh)"
@@ -257,14 +257,14 @@ step_db() {
       echo
       echo "       ssh -t root@<VPS 2>  $remote"
       echo
-      echo "   (дамп до сброса уже снят: $(rs_get dump); на VPS 2 скрипт попросит ввести crm,erp — без терминала он откажется.)"
+      echo "   (дамп до сброса уже снят: $(rs_get dump); на VPS 2 скрипт попросит ввести crm,erp,eds — без терминала он откажется.)"
       echo
       echo "   (RT_RESET_DB_SSH=root@<адрес VPS 2> — и скрипт сделает это сам, если у VPS 1 есть ключ.)"
       echo
     } >&2
     ask "   Когда команда на VPS 2 завершилась без ошибок — нажмите Enter (нет — Ctrl+C, повтор безопасен): "
   fi
-  dbs_empty || die "базы crm/erp на VPS 2 не пусты — пересоздание не выполнено; повторите шаг 3 и запустите скрипт снова (повтор безопасен)"
+  dbs_empty || die "базы crm/erp/eds на VPS 2 не пусты — пересоздание не выполнено; повторите шаг 3 и запустите скрипт снова (повтор безопасен)"
   vector_present
   log "   базы пусты, pgvector на месте"
 }
@@ -335,7 +335,7 @@ cat >&2 <<EOF
 ════════════════════════════════════════════════════════════════════════════════════════
  СБРОС ПРОДА (S0-8): релиз $tag, проект compose $project
  Будет УНИЧТОЖЕНО:
-   - базы crm и erp на VPS 2 (дамп снимется до удаления: ${RT_STATE}/reset/dumps/)
+   - базы crm, erp и eds на VPS 2 (дамп снимется до удаления: ${RT_STATE}/reset/dumps/)
    - объекты бакетов RustFS: ${APP_BUCKETS[*]}
    - тома Redis: ${APP_VOLUMES[*]}
  Останется: litellm и langfuse (БД), бакеты backups/wal/langfuse, тома s3_data и caddy_*, файл $RT_ENV_FILE.

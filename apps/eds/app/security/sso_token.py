@@ -5,7 +5,8 @@
 
 1. подпись HS256 одним из действующих секретов `PLATFORM_SSO_SECRET` (ротация — два значения) — `signature`;
 2. `aud` равен `eds` — `audience`;
-3. `exp` не прошёл (допуск часов 5 с) — `expired`; `exp − iat` не больше 60 с (с тем же допуском) — `lifetime`;
+3. `exp` не прошёл (допуск часов 5 с) — `expired`; `exp − iat` не больше 60 с (с тем же допуском), `iat` не в будущем
+   дальше допуска — `lifetime`;
 4. `jti` одноразовый — проверяет и фиксирует `app.services.sso` (`replayed`).
 
 Структурно неверный токен (не JWT, нет `exp`/`iat`/`jti`/`sub`, `sub` не число) — `malformed`. Права и роль из токена
@@ -19,6 +20,7 @@ from typing import Any
 import jwt
 
 AUDIENCE = "eds"
+ISSUER = "crm"  # SSO-токен для EDS выдаёт только CRM (sso-token.md, «Токен сотрудника для EDS»)
 ALGORITHM = "HS256"
 MAX_LIFETIME_S = 60
 LEEWAY_S = 5
@@ -51,11 +53,13 @@ def verify_sso_token(token: str, secrets: Sequence[str], *, now: float) -> SsoCl
     audience = payload.get("aud")
     if not isinstance(audience, str) or audience != AUDIENCE:
         raise SsoTokenError("audience")
+    if payload.get("iss") != ISSUER:
+        raise SsoTokenError("issuer")
     exp = _number(payload.get("exp"))
     iat = _number(payload.get("iat"))
     if now > exp + LEEWAY_S:
         raise SsoTokenError("expired")
-    if exp < iat or exp - iat > MAX_LIFETIME_S + LEEWAY_S:
+    if exp < iat or exp - iat > MAX_LIFETIME_S + LEEWAY_S or iat > now + LEEWAY_S:
         raise SsoTokenError("lifetime")
     jti = payload.get("jti")
     if not isinstance(jti, str) or not 0 < len(jti) <= JTI_MAX_LENGTH:

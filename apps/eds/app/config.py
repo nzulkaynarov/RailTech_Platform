@@ -10,6 +10,8 @@ from typing import Literal
 from pydantic import AnyHttpUrl, Field, SecretStr, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+MIN_SECRET_LENGTH = 32
+
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(extra="ignore", populate_by_name=True)
@@ -21,7 +23,7 @@ class Settings(BaseSettings):
     # postgresql+psycopg://<роль>:<пароль>@<хост>:5432/eds (прод: роль eds_app, `?sslmode=require`).
     database_url: SecretStr = Field(validation_alias="EDS_DATABASE_URL")
     # Секрет токена доступа EDS (HS256, 15 минут): токен выпускает обмен SSO-токена, проверяет каждый запрос.
-    access_secret: SecretStr = Field(validation_alias="EDS_ACCESS_SECRET", min_length=16)
+    access_secret: SecretStr = Field(validation_alias="EDS_ACCESS_SECRET", min_length=32)
     # Общий секрет SSO-токена сотрудника CRM; ротация — два значения через запятую (docs/architecture/sso-token.md).
     platform_sso_secret: SecretStr = Field(validation_alias="PLATFORM_SSO_SECRET")
 
@@ -41,8 +43,11 @@ class Settings(BaseSettings):
     @field_validator("platform_sso_secret")
     @classmethod
     def _sso_secret_not_empty(cls, value: SecretStr) -> SecretStr:
-        if not [part for part in value.get_secret_value().split(",") if part.strip()]:
+        parts = [part.strip() for part in value.get_secret_value().split(",") if part.strip()]
+        if not parts:
             raise ValueError("PLATFORM_SSO_SECRET must hold at least one non-empty secret")
+        if any(len(part) < MIN_SECRET_LENGTH for part in parts):
+            raise ValueError(f"PLATFORM_SSO_SECRET: every secret must be at least {MIN_SECRET_LENGTH} characters")
         return value
 
     @property

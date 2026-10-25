@@ -40,5 +40,9 @@ ln -sfn "$rel" "$RT_ROOT/current"
 "$rel/infra/deploy/smoke.sh" --domains "${smoke_domains[@]}" \
   --resolve-ip 127.0.0.1 --insecure --retries 30 \
   || die "smoke после отката не прошёл — смотрите docker compose logs"
-[[ $have_eds -eq 0 ]] || wait_healthy "$rel" eds-api 120 || die "после отката eds-api не стал healthy — смотрите docker compose logs eds-api"
+if [[ $have_eds -eq 1 ]]; then
+  for svc in eds-api eds-worker; do
+    wait_healthy "$rel" "$svc" 120 || die "после отката $svc не стал healthy — смотрите docker compose logs eds-api eds-worker"
+  done
+fi
 log "откат на $target завершён (миграции БД не откатывались)"

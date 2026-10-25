@@ -55,7 +55,9 @@ log "smoke на сервере (по IP 127.0.0.1; сертификат при �
   || die "smoke не прошёл (четыре домена; при сбое только Платформы CRM, ERP и Cabinet уже работают): смотрите 'docker compose logs', откат кода — rollback.sh"
 
 # EDS не имеет домена (внешнего маршрута нет), поэтому smoke его не видит: здоровье — по healthcheck контейнера.
-wait_healthy "$rel" eds-api 120 || die "eds-api не стал healthy за 120 с: 'docker compose logs eds-api eds-worker'; остальные сервисы уже работают, откат кода — rollback.sh"
+for svc in eds-api eds-worker; do
+  wait_healthy "$rel" "$svc" 120 || die "$svc не стал healthy за 120 с: 'docker compose logs eds-api eds-worker'; остальные сервисы уже работают, откат кода — rollback.sh"
+done
 
 cleanup_old "$tag" "$(state_get previous_tag)"
 log "деплой $tag завершён"

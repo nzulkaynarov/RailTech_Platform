@@ -122,6 +122,20 @@ def test_structural_problems_are_malformed(claims: dict[str, Any]) -> None:
     assert reason(make(**claims)) == "malformed"
 
 
+@pytest.mark.parametrize("iss", ["erp", "eds", "CRM", ...])
+def test_only_crm_may_issue(iss: Any) -> None:
+    assert reason(make(iss=iss)) == "issuer"
+
+
+@pytest.mark.parametrize(("ahead", "expected"), [(0, None), (5, None), (5.5, "lifetime"), (3600, "lifetime")])
+def test_iat_in_the_future_is_rejected(ahead: float, expected: str | None) -> None:
+    token = make(iat=NOW + ahead, exp=NOW + ahead + 60)
+    if expected is None:
+        assert verify_sso_token(token, SECRETS, now=NOW).sub == 42
+    else:
+        assert reason(token) == expected
+
+
 def test_permissions_in_token_are_ignored() -> None:
     claims = verify_sso_token(make(permissions=["approvals.decide"], role="admin"), SECRETS, now=NOW)
     assert not hasattr(claims, "permissions")

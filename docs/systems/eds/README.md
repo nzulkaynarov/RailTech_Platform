@@ -76,7 +76,7 @@ apps/eds/
    Отказы первых четырёх — `401 INVALID_SSO_TOKEN` (`details.reason`: `signature`, `audience`, `expired`, `lifetime`, `replayed`, `malformed`). Обмен никого не создаёт.
 3. Ответ `{access_token, token_type: "bearer", expires_in: 900}`; refresh нет (истёк — новый SSO-токен у CRM).
 4. Каждый запрос — `Authorization: Bearer`; сотрудник и его права берутся из проекции **на момент запроса**: отзыв роли и отключение действуют сразу. Нет права — `403 FORBIDDEN`
-   (`details.permission`). Коды v1: `letters.read`, `letters.register`, `letters.resolve`, `memos.create`, `memos.approve`, `approvals.decide`, `registry.read`, `registry.export`.
+   (`details.permission`). Коды v1: `letters.read`, `letters.register`, `letters.resolve`, `memos.create`, `memos.approve`, `approvals.decide`, `registry.read`, `registry.export`, `payments.confirm`. Неизвестные будущие коды проекция хранит как строки и не падает.
 
 Тест `tests/test_contract_permissions.py` сверяет права маршрутов с `x-rt-permissions` в `eds.yaml`.
 

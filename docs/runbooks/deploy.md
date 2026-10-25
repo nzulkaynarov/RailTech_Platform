@@ -405,7 +405,7 @@ Smoke с раннера в задании `rollback` устроен так же:
 3. **Бакет `eds-private` и ключ.** Ничего вручную: `s3-init` создаёт бакет и пользователя с политикой `rt-eds` (чтение и запись только `eds-private`) при каждом деплое и
    проверяет, что чужие бакеты ему закрыты. Если `S3_EDS_*` нет в `.env.prod`, compose не разбирается — `make-env-prod.sh s3-keys` дописывает ключ.
 4. **Деплой** — обычный (§2). Порядок: pg_dump-гейт теперь снимает и `eds` (нет роли или базы — дамп падает и миграции не идут: это сигнал, что п. 2 не выполнен) →
-   `eds-migrate` → `up` → `wait_healthy eds-api` (до 120 с). Образ `rt-eds` входит в проверку базы CPU (`cpu-baseline-check.sh`) и в задание `cpu-image`.
+   `eds-migrate` → `up` → ожидание `healthy` у `eds-api` и `eds-worker` (до 120 с каждый). Образ `rt-eds` входит в проверку базы CPU (`cpu-baseline-check.sh`) и в задание `cpu-image`.
 
 **Проверка после деплоя.** `docker compose -f /opt/rt/current/infra/compose/base.yml -f /opt/rt/current/infra/compose/prod.yml --env-file /opt/rt/.env.prod ps eds-api eds-worker` —
 оба `healthy`; изнутри сети: `docker compose … exec eds-api python -c "import urllib.request; print(urllib.request.urlopen('http://localhost:8000/health').read())"` → `{"status":"ok",…,"checks":{"database":"ok"}}`.
@@ -413,7 +413,7 @@ Smoke с раннера в задании `rollback` устроен так же:
 Очереди и шина: `docker compose … exec eds-api python -m app bus status` (метрики outbox, DLQ, inbox, подписчики); повтор `dead`/`failed` — `bus retry-dead`, `bus retry-inbox <id события>`.
 
 **Откат.** `rollback.sh` на тег до EDS убирает его контейнеры (`--remove-orphans`) и не проверяет здоровье; на тег с EDS тянет `eds-api` и ждёт `healthy`.
-Миграции Alembic EDS не откатываются (как у CRM и ERP). Сброс `reset-prod.sh` (одноразовый, S0-8) базу `eds` не затрагивает: на момент его запуска сервиса не было.
+Миграции Alembic EDS не откатываются (как у CRM и ERP). Сброс `reset-prod.sh` (S0-8) включает базу `eds` и бакет `eds-private`: список — `crm,erp,eds`, дамп `eds` обязателен, подтверждение на VPS 2 — ввод `crm,erp,eds`.
 
 ## 6. Первая установка 2026-10-21 — что пошло не так и как учтено
 

@@ -60,3 +60,21 @@ async def test_health_ok(client: httpx.AsyncClient) -> None:
 def test_empty_sso_secret_is_refused() -> None:
     with pytest.raises(ValueError, match="PLATFORM_SSO_SECRET"):
         Settings(EDS_DATABASE_URL="postgresql://x/y", EDS_ACCESS_SECRET=ACCESS_SECRET, PLATFORM_SSO_SECRET=" , ")
+
+
+@pytest.mark.parametrize(
+    "overrides",
+    [
+        {"EDS_ACCESS_SECRET": "x" * 31},
+        {"PLATFORM_SSO_SECRET": f"{SSO_CURRENT},{'y' * 31}"},
+    ],
+)
+def test_short_secrets_are_refused(overrides: dict[str, str]) -> None:
+    values = {
+        "EDS_DATABASE_URL": "postgresql://x/y",
+        "EDS_ACCESS_SECRET": ACCESS_SECRET,
+        "PLATFORM_SSO_SECRET": SSO_CURRENT,
+        **overrides,
+    }
+    with pytest.raises(ValueError, match=r"(?i)at least|String should have"):
+        Settings.model_validate(values)
