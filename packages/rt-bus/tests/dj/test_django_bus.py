@@ -83,6 +83,62 @@ def test_publish_requires_atomic_and_rolls_back(make_bus: Callable[..., DjangoBu
     assert envelope == event.to_dict()
 
 
+def test_wakeup_is_one_per_transaction_and_follows_the_outer_commit(make_bus: Callable[..., DjangoBus]) -> None:
+    woke: list[int] = []
+    bus = make_bus()
+    bus.wakeup = lambda: woke.append(1)
+    with transaction.atomic():
+        bus.publish(DEAL_WON, example_data("erp/deal.won.v1"))
+        with transaction.atomic():  # вложенный блок (SAVEPOINT) тоже публикует
+            bus.publish(DEAL_WON, example_data("erp/deal.won.v1"))
+        bus.publish(DEAL_WON, example_data("erp/deal.won.v1"))
+        assert woke == []
+    assert woke == [1]  # три publish — одно пробуждение
+    assert len(rows("SELECT id FROM rt_bus_outbox")) == 3
+    with transaction.atomic():
+        bus.publish(DEAL_WON, example_data("erp/deal.won.v1"))
+    assert woke == [1, 1]  # новая транзакция — новое пробуждение
+
+
+def test_wakeup_savepoint_rollback_does_not_wake_or_leave_a_mark(make_bus: Callable[..., DjangoBus]) -> None:
+    woke: list[int] = []
+    bus = make_bus()
+    bus.wakeup = lambda: woke.append(1)
+    with transaction.atomic():
+        try:
+            with transaction.atomic():
+                bus.publish(DEAL_WON, example_data("erp/deal.won.v1"))
+                raise RuntimeError("savepoint rolled back")
+        except RuntimeError:
+            pass
+        bus.publish(DEAL_WON, example_data("erp/deal.won.v1"))  # отметка отката ушла вместе с точкой сохранения
+    assert woke == [1]
+    assert len(rows("SELECT id FROM rt_bus_outbox")) == 1
+    with transaction.atomic():
+        try:
+            with transaction.atomic():
+                bus.publish(DEAL_WON, example_data("erp/deal.won.v1"))
+                raise RuntimeError("savepoint rolled back")
+        except RuntimeError:
+            pass
+    assert woke == [1]  # от публикации в отменённой точке сохранения будить некого
+
+
+def test_wakeup_failure_does_not_break_publish(
+    make_bus: Callable[..., DjangoBus], caplog: pytest.LogCaptureFixture
+) -> None:
+    def broker_down() -> None:
+        raise ConnectionError("broker is down")
+
+    bus = make_bus()
+    bus.wakeup = broker_down
+    with caplog.at_level(logging.ERROR, logger="rt_bus"), transaction.atomic():
+        bus.publish(DEAL_WON, example_data("erp/deal.won.v1"))
+    assert "rt_bus_wakeup_failed" in caplog.text
+    assert len(rows("SELECT id FROM rt_bus_outbox")) == 1  # событие на месте, дойдёт периодическим проходом
+    assert bus.pump().relayed == 1
+
+
 def test_relay_and_signed_delivery_without_locks(make_bus: Callable[..., DjangoBus], hub: SyncHub) -> None:
     bus = make_bus()
     [quote] = publish(bus, QUOTE_SENT)

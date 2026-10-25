@@ -12,7 +12,7 @@
 ## Как устроено (коротко)
 ```text
 CRM пишет изменение + строку rt_bus_outbox в одной транзакции
-  → задача rt_bus.pump (каждые 5 с, воркер): outbox → rt_bus_delivery (строка на подписчика) → POST <подписчик>/bus/v1/events
+  → задача rt_bus.pump (сразу после коммита — «пробуждение»; плюс каждые 5 с как страховка; воркер): outbox → rt_bus_delivery (строка на подписчика) → POST <подписчик>/bus/v1/events
 ERP шлёт событие → crm-api /bus/v1/events: подпись, окно 300 с → rt_bus_inbox (id — ключ) → задача rt_bus.process_inbox
   → обработчик (зеркало сделки, документы, лента) в транзакции → сообщения Telegram после коммита (erp_event_notices)
 ```

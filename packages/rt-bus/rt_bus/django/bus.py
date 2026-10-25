@@ -128,8 +128,7 @@ class DjangoBus:
         if record.secrets and self.stash is not None:
             self.stash.put(event.id, record.secrets)
         self._exec(sql.INSERT_OUTBOX, record.params(self.core.now()))
-        if self.wakeup is not None:
-            transaction.on_commit(self._wake, using=self.using)
+        self._arm_wakeup()
         logger.info("rt_bus_published", extra={"event_id": event.id, "event_type": event.type})
         return event
 
@@ -140,6 +139,19 @@ class DjangoBus:
     def _forbid_atomic(self, what: str) -> None:
         if transaction.get_connection(self.using).in_atomic_block:
             raise InTransactionError(f"rt_bus {what}() must not run inside transaction.atomic(): HTTP goes outside")
+
+    def _arm_wakeup(self) -> None:
+        """После коммита внешней транзакции — одно пробуждение на сколько угодно `publish` в ней.
+
+        Повтор определяем по очереди `run_on_commit` соединения: откат точки сохранения убирает её записи, поэтому
+        `publish` из отменённого блока не оставляет «лишней» отметки. Изменился внутренний формат Django — просто
+        получим по пробуждению на `publish` (тест дедупликации это поймает)."""
+        if self.wakeup is None:
+            return
+        queued = getattr(transaction.get_connection(self.using), "run_on_commit", ())
+        if any(entry[1] == self._wake for entry in queued):
+            return
+        transaction.on_commit(self._wake, using=self.using)
 
     def _wake(self) -> None:
         try:

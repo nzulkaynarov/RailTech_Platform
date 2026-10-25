@@ -8,6 +8,10 @@
 * перед приёмом и доставкой перечитывает секреты вебхуков сопряжения (L12, `app.bus.secrets`);
 * после обработки записи inbox отправляет сообщения Telegram, посчитанные обработчиком, —
   уже после коммита (`ErpEventNotices.deliver`).
+
+Пробуждение ретранслятора (B5a): коммит транзакции с `publish` ставит задачу `rt_bus.pump`
+(`wakeup=tasks.wakeup`, `app.tasks.bus`) — доставка идёт сразу, а не на ближайшем тике (5 с).
+Периодический проход остаётся страховкой на случай, когда очередь недоступна.
 """
 
 from collections.abc import Awaitable, Callable, Mapping
@@ -37,8 +41,9 @@ class CrmBus(AsyncBus):
         secret_cache: SecretCache,
         after_processed: AfterProcessed | None = None,
         enqueue: Callable[[str], Awaitable[Any]] | None = None,
+        wakeup: Callable[[], Awaitable[Any]] | None = None,
     ) -> None:
-        super().__init__(config, sessions, enqueue=enqueue)
+        super().__init__(config, sessions, enqueue=enqueue, wakeup=wakeup)
         self.secret_cache = secret_cache
         self._after_processed = after_processed
 
@@ -63,6 +68,7 @@ def build_bus(
     *,
     after_processed: AfterProcessed | None = None,
     enqueue: Callable[[str], Awaitable[Any]] | None = None,
+    wakeup: Callable[[], Awaitable[Any]] | None = None,
 ) -> CrmBus:
     """Шина CRM. Каталог схем и файл подписок — из `RT_BUS_CONTRACTS_DIR` / `RT_BUS_SUBSCRIPTIONS`
     (в образе — `/opt/rt/contracts`, в репозитории библиотека находит `packages/contracts` сама).
@@ -74,6 +80,7 @@ def build_bus(
         secret_cache=secrets,
         after_processed=after_processed,
         enqueue=enqueue,
+        wakeup=wakeup,
     )
 
 

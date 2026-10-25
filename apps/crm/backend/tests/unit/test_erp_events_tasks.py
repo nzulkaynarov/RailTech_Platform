@@ -44,6 +44,31 @@ async def test_a_received_event_is_deferred_to_the_process_inbox_task() -> None:
     assert job["args"] == {"event_id": "00000000-0000-4000-8000-000000000001"}
 
 
+@pytest.mark.asyncio
+async def test_the_wakeup_defers_one_pump_to_the_bus_queue() -> None:
+    """Пробуждение по коммиту (B5a) — `rt_bus.pump` в очереди `rt_bus`; второй не копится."""
+    connector = testing.InMemoryConnector()
+    with queue.replace_connector(connector):
+        await bus_tasks.tasks.wakeup()
+        await bus_tasks.tasks.wakeup()
+
+    (job,) = connector.jobs.values()
+    assert (job["task_name"], job["queue_name"], job["queueing_lock"]) == (
+        "rt_bus.pump",
+        "rt_bus",
+        "rt_bus.pump",
+    )
+
+
+def test_the_container_bus_wakes_the_pump_after_commit() -> None:
+    from app.config import Settings
+    from app.container import Container
+
+    bus = Container(Settings(_env_file=None, app_env="test")).bus
+    assert bus.wakeup == bus_tasks.tasks.wakeup
+    assert bus.enqueue == bus_tasks.tasks.enqueue
+
+
 def test_the_old_erp_event_tasks_are_gone() -> None:
     assert "process_erp_event" not in queue.tasks
     assert "erp_events_sweep" not in queue.tasks

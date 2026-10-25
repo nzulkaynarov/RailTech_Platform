@@ -2,17 +2,21 @@
 
     from rt_bus.contrib.procrastinate import install
     tasks = install(procrastinate_app, get_bus)   # get_bus() -> AsyncBus
-    bus.enqueue = tasks.enqueue
+    bus.enqueue, bus.wakeup = tasks.enqueue, tasks.wakeup
 
 Периодические задачи (cron с шестым полем — секунды): `rt_bus.pump` (по умолчанию каждые 5 с),
 `rt_bus.requeue_stuck_inbox` и `rt_bus.log_metrics` (каждую минуту / 5 минут), `rt_bus.purge` (раз в сутки);
-`rt_bus.process_inbox(event_id)` — обработка записи inbox. `queueing_lock` не даёт копиться одинаковым периодическим
-задачам. Повторы доставки — по `next_attempt_at`. Периодические задачи создают по задаче на тик: включите удаление
-выполненных (`worker(delete_jobs="successful")`).
+`rt_bus.process_inbox(event_id)` — обработка записи inbox. `queueing_lock` не даёт копиться одинаковым
+периодическим задачам; им же `wakeup()` (пробуждение по коммиту, `AsyncBus.wakeup`) сливается с ожидающим `pump`:
+пока задача ждёт в очереди, она ещё не начала раскладку и заберёт и новое событие. Повторы доставки — по
+`next_attempt_at`. Периодические задачи создают по задаче на тик: включите
+удаление выполненных (`worker(delete_jobs="successful")`).
 """
 
 from __future__ import annotations
 
+import contextlib
+import time
 from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import timedelta
@@ -32,6 +36,13 @@ class ProcrastinateTasks:
 
     async def enqueue(self, event_id: str) -> None:
         await self.process_inbox.defer_async(event_id=event_id)
+
+    async def wakeup(self) -> None:
+        """Поставить `pump` вне расписания. Уже есть ожидающий `pump` (`queueing_lock`) — он и заберёт событие."""
+        from procrastinate.exceptions import AlreadyEnqueued
+
+        with contextlib.suppress(AlreadyEnqueued):
+            await self.pump.defer_async(timestamp=int(time.time()))
 
 
 def install(

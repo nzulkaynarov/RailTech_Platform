@@ -466,6 +466,7 @@ class Container:
             self._bus_webhook_secrets,
             after_processed=self.erp_notices.deliver,
             enqueue=tasks.enqueue,
+            wakeup=tasks.wakeup,
         )
 
     async def _bus_webhook_secrets(self) -> tuple[str, ...]:
