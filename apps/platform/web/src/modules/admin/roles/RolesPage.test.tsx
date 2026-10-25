@@ -97,7 +97,7 @@ describe("Admin · Ролевая матрица (R-2, ADR-0012)", () => {
     });
   });
 
-  it("Admin «полный» в созданной роли — предупреждение про полного администратора CRM", async () => {
+  it("Admin «полный» в созданной роли — предупреждение: суперпользователь ERP, без лидов CRM", async () => {
     signInAs("admin@demo.example");
     renderApp("/admin/roles?role=new&panel=open&tab=role");
     const panel = await panelEl();
@@ -110,7 +110,11 @@ describe("Admin · Ролевая матрица (R-2, ADR-0012)", () => {
       { target: { value: "full" } },
     );
 
-    expect(within(panel).getAllByText(/только системная роль «Администратор»/)[0]).toBeVisible();
+    expect(
+      within(panel).getAllByText(
+        /права администратора \(суперпользователь\), как у системной роли/,
+      )[0],
+    ).toBeVisible();
   });
 
   it("роль с сотрудниками: удалить нельзя — причина и неактивная кнопка; без сотрудников — можно", async () => {

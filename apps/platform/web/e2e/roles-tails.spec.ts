@@ -52,6 +52,8 @@ test.describe("Роли: хвосты QA (R3-D-1, R3-D-3, R3-D-4)", () => {
       await expect(panel.getByText(/Выберите хотя бы одну роль/)).toBeVisible();
       await expect(panel.getByRole("button", { name: "Сохранить роли" })).toBeDisabled();
       await expectNoViolations(page, `no roles ${String(width)}`);
+      // В кадре — текст запрета и неактивная кнопка (на 390 они ниже первого экрана панели).
+      await panel.getByRole("button", { name: "Сохранить роли" }).scrollIntoViewIfNeeded();
       await settledScreenshot(page, "org-card-no-roles");
 
       // Прямой вызов с пустым набором (как QA R3-D-1) — 422 ROLES_REQUIRED, роли на месте.

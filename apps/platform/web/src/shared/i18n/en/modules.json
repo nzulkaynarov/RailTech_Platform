@@ -424,7 +424,7 @@
         "off": "hidden"
       },
       "noModules": "No sections yet",
-      "adminNote": "Admin “full” in this role manages employees, roles and connections, but does not make an ERP superuser: only the system role “Administrator” does. Neither gives CRM leads, clients or deals — that needs a second role.",
+      "adminNote": "Admin “full” in this role manages employees, roles and connections and makes the employee an ERP administrator (superuser), like the system role “Administrator”. It does not give CRM leads, clients or deals — that needs a second role.",
       "employeesCount": "Employees: {{count}}",
       "create": "Create role",
       "createdToast": "Role “{{name}}” created",

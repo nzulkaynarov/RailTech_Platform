@@ -424,7 +424,7 @@
         "off": "ko'rmaydi"
       },
       "noModules": "Hozircha bo'limlar yo'q",
-      "adminNote": "Ushbu roldagi Admin «to'liq» xodimlar, rollar va ulanishlarni boshqarishni beradi, lekin ERP superfoydalanuvchisi qilmaydi: buni faqat «Administrator» tizim roli beradi. CRM lidlari, mijozlari va bitimlarini ikkalasi ham bermaydi — ikkinchi rol kerak.",
+      "adminNote": "Ushbu roldagi Admin «to'liq» xodimlar, rollar va ulanishlarni boshqarishni beradi, ERP'da esa administrator huquqlarini (superfoydalanuvchi) — «Administrator» tizim roli kabi. CRM lidlari, mijozlari va bitimlarini bu bo'lim bermaydi — ikkinchi rol kerak.",
       "employeesCount": "Xodimlar: {{count}}",
       "create": "Rol yaratish",
       "createdToast": "«{{name}}» roli yaratildi",
