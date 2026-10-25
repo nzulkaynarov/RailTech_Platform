@@ -27,6 +27,13 @@ class ChangedField(RootModel[str]):
     root: Annotated[str, Field(pattern="^[a-z][a-z0-9_]*$")]
 
 
+class EdsPermission(RootModel[str]):
+    root: Annotated[str, Field(pattern="^[a-z_]+\\.[a-z_]+$")]
+    """
+    Код права EDS (docs/runbooks/wave12-eds-c1.md §2.2). Шаблон, а не перечень: новый код EDS не ломает identity v1; перечень кодов — EdsPermission в openapi/eds.yaml и edsPermission в platform-rbac.schema.json
+    """
+
+
 class Email(RootModel[EmailStr]):
     root: Annotated[EmailStr, Field(max_length=255)]
 
@@ -48,6 +55,17 @@ class Language(StrEnum):
     ru = "ru"
     uz = "uz"
     en = "en"
+
+
+class Permissions(BaseModel):
+    """
+    Необязательно (v1, аддитивно с волны 12): права сотрудника в сервисах, которые сами ролей не ведут; CRM вычисляет их из ролей Платформы по каталогу platform-rbac.yaml (backend.<сервис>). eds — коды прав EDS. Нет поля permissions, нет permissions.eds или пустой список — доступа к EDS нет (CRM до задачи E4 публикует снимок без поля). Подписчик заменяет права целиком по снимку
+    """
+
+    model_config = ConfigDict(
+        extra="ignore",
+    )
+    eds: list[EdsPermission] | None = None
 
 
 class PlatformRoleCode(RootModel[str]):
@@ -96,6 +114,10 @@ class User(BaseModel):
     erp_role_codes: list[ErpRoleCode] | None = None
     """
     Системные роли ERP (как role_codes провижининга)
+    """
+    permissions: Permissions | None = None
+    """
+    Необязательно (v1, аддитивно с волны 12): права сотрудника в сервисах, которые сами ролей не ведут; CRM вычисляет их из ролей Платформы по каталогу platform-rbac.yaml (backend.<сервис>). eds — коды прав EDS. Нет поля permissions, нет permissions.eds или пустой список — доступа к EDS нет (CRM до задачи E4 публикует снимок без поля). Подписчик заменяет права целиком по снимку
     """
     updated_at: AwareDatetime
 

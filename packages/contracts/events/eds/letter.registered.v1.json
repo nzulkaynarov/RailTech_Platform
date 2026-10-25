@@ -1,0 +1,86 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://railtech.uz/contracts/events/eds/letter.registered.v1.json",
+  "title": "Входящее письмо зарегистрировано",
+  "description": "Тип uz.railtech.eds.letter.registered.v1, источник rt://eds. Поле data конверта (envelope.v1.json). Письмо получило номер ВХ-NNN/ГГ в реестре EDS и ждёт резолюции директора: вручную (POST /api/v1/letters) или автоматически по uz.railtech.erp.request.created.v1 (связь с заявкой — links). Подписчики v1: platform-bff.",
+  "type": "object",
+  "required": [
+    "letter",
+    "links",
+    "actor"
+  ],
+  "properties": {
+    "letter": {
+      "type": "object",
+      "required": [
+        "eds_letter_id",
+        "number",
+        "subject",
+        "received_at",
+        "registered_at",
+        "sender"
+      ],
+      "properties": {
+        "eds_letter_id": {
+          "$ref": "_defs.v1.json#/$defs/Uuid"
+        },
+        "number": {
+          "$ref": "_defs.v1.json#/$defs/LetterNumber"
+        },
+        "subject": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 300
+        },
+        "received_at": {
+          "type": "string",
+          "format": "date",
+          "description": "Дата получения письма"
+        },
+        "registered_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "sender": {
+          "type": "object",
+          "description": "Отправитель — организация клиента. Письмо, зарегистрированное автоматически по uz.railtech.erp.request.created.v1, может не знать имени (null): клиент — по links.crm_client_id",
+          "required": [
+            "name"
+          ],
+          "properties": {
+            "name": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "maxLength": 255
+            },
+            "inn": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "pattern": "^\\d{9,14}$"
+            }
+          },
+          "additionalProperties": false
+        },
+        "addressee": {
+          "$ref": "_defs.v1.json#/$defs/PersonRef",
+          "description": "На чьё имя (по умолчанию — директор)"
+        },
+        "urgent": {
+          "type": "boolean"
+        }
+      },
+      "additionalProperties": false
+    },
+    "links": {
+      "$ref": "_defs.v1.json#/$defs/ErpLinks"
+    },
+    "actor": {
+      "$ref": "_defs.v1.json#/$defs/Actor"
+    }
+  },
+  "additionalProperties": false
+}

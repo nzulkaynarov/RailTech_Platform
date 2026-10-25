@@ -1,0 +1,66 @@
+{
+  "specversion": "1.0",
+  "id": "5b5c595e-07aa-5bc9-aada-b84a0b3bd945",
+  "source": "rt://erp",
+  "type": "uz.railtech.erp.quote.ready_for_approval.v1",
+  "time": "2026-10-28T09:00:00Z",
+  "subject": "КП-2026/115",
+  "datacontenttype": "application/json",
+  "dataschema": "rt://contracts/events/erp/quote.ready_for_approval/v1",
+  "tenant": "railtech",
+  "correlationid": "15f8b007-2fe9-575d-84f0-0a1f17676d61",
+  "data": {
+    "erp_company_id": 118,
+    "crm_client_id": 42,
+    "deal": {
+      "erp_deal_id": 905,
+      "number": "ЗВ-2026-104",
+      "title": "Поставка стрелочных переводов",
+      "stage": "quoting",
+      "amount": null,
+      "currency": "UZS"
+    },
+    "actor": {
+      "type": "staff",
+      "name": "Расчётчик"
+    },
+    "payload": {
+      "erp_quote_id": 1203,
+      "number": "КП-2026/115",
+      "version": 2,
+      "client_name": "ООО «Пример Логистик»",
+      "total": "125000000.00",
+      "currency": "UZS",
+      "cost": "103000000.00",
+      "margin_amount": "22000000.00",
+      "margin_pct": "17.6",
+      "min_margin_pct": "15",
+      "required_zones": [
+        "goods",
+        "services"
+      ],
+      "visas": [
+        {
+          "zone": "goods",
+          "by": {
+            "crm_user_id": 11,
+            "full_name": "Сардор Снабженцев"
+          },
+          "at": "2026-10-28T07:40:00Z"
+        },
+        {
+          "zone": "services",
+          "by": {
+            "crm_user_id": 12,
+            "full_name": "Ильдар Инженеров"
+          },
+          "at": "2026-10-28T08:10:00Z"
+        }
+      ],
+      "due": "2026-10-29",
+      "ready_at": "2026-10-28T08:55:00Z",
+      "valid_until": "2026-11-27",
+      "eds_letter_id": "e2b7a5e9-37c3-5a33-948a-7a999c5e7ec9"
+    }
+  }
+}

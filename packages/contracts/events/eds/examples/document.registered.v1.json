@@ -1,0 +1,40 @@
+{
+  "specversion": "1.0",
+  "id": "3da9e598-2872-5405-a2dd-6a2e31efba3e",
+  "source": "rt://eds",
+  "type": "uz.railtech.eds.document.registered.v1",
+  "time": "2026-10-26T07:00:00Z",
+  "subject": "СЗ-2026/031",
+  "datacontenttype": "application/json",
+  "dataschema": "rt://contracts/events/eds/document.registered/v1",
+  "tenant": "railtech",
+  "correlationid": "1ffcf9ea-1cc9-5f3e-88ad-99360435c763",
+  "data": {
+    "document": {
+      "eds_document_id": "d347ad03-079b-5ddb-adb6-5569ca883e63",
+      "kind": "memo",
+      "number": "СЗ-2026/031",
+      "subject": "Оплата аренды погрузчика",
+      "author": {
+        "crm_user_id": 11,
+        "full_name": "Сардор Снабженцев"
+      },
+      "addressee": {
+        "crm_user_id": 3,
+        "full_name": "Рустам Директоров"
+      },
+      "registered_at": "2026-10-26T07:00:00Z",
+      "amount": {
+        "amount": "4500000.00",
+        "currency": "UZS"
+      },
+      "due_date": "2026-10-30",
+      "erp_deal_id": 905,
+      "deal_number": "ЗВ-2026-104"
+    },
+    "actor": {
+      "type": "staff",
+      "crm_user_id": 11
+    }
+  }
+}

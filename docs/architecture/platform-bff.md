@@ -113,7 +113,8 @@ SPA  POST /api/v1/auth/login {email, password}
 - **Поток подсказок (B5, волна 11, ADR-0014).** BFF — подписчик шины `rt_bus` (строка `platform-bff` в
   `packages/contracts/bus/subscriptions.yaml`: события ERP, лидов CRM, сотрудников; приёмник `POST /bus/v1/events` на
   `rt_bus.fastapi.bus_router` + `MemoryReceiver`, без базы; секреты пар `RT_BUS_SECRET_ERP_PLATFORM_BFF`,
-  `RT_BUS_SECRET_CRM_PLATFORM_BFF`; Caddy `/bus/*` на домене Платформы не отдаёт). Событие превращается в подсказку
+  `RT_BUS_SECRET_CRM_PLATFORM_BFF`, с волны 12 `RT_BUS_SECRET_EDS_PLATFORM_BFF` — события EDS подписаны, но до этапа D
+  подсказок не дают, приёмник отвечает `skipped`; Caddy `/bus/*` на домене Платформы не отдаёт). Событие превращается в подсказку
   `{"topics": ["notifications"|"counters"|"queue"|"activity"], "reason": "<тип события>"}` и уходит в браузер по
   `GET /api/v1/events/stream` (SSE, только вошедшему сотруднику с разделом «Моя очередь»). **В потоке нет данных**:
   браузер перезапрашивает обычные API (с RBAC), поэтому чужое в поток не попадает. Устройство:

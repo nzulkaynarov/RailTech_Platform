@@ -18,6 +18,10 @@ from rt_contracts.events.erp import Actor, DealRef
 
 ERP_DOMAIN_PREFIX: Final = "uz.railtech.erp."
 CODE_TYPE: Final = "uz.railtech.erp.quote.acceptance_code_requested.v1"
+#: Типы ERP не для CRM: КП на одобрение директором адресовано EDS (EDS-03), в нём
+#: себестоимость и маржа; CRM на него не подписана (`packages/contracts/bus/subscriptions.yaml`)
+#: и обработчика не регистрирует.
+NOT_FOR_CRM: Final = frozenset({"uz.railtech.erp.quote.ready_for_approval.v1"})
 _NAME: Final = re.compile(r"^uz\.railtech\.erp\.(?P<name>[a-z_]+\.[a-z_]+)\.v\d+$")
 
 
@@ -30,7 +34,11 @@ def plain(value: Any) -> Any:
 
 def erp_types() -> list[str]:
     """Типы событий ERP, которые CRM принимает через очередь (код акцепта — inline, отдельно)."""
-    return sorted(t for t in TYPES if t.startswith(ERP_DOMAIN_PREFIX) and t != CODE_TYPE)
+    return sorted(
+        t
+        for t in TYPES
+        if t.startswith(ERP_DOMAIN_PREFIX) and t != CODE_TYPE and t not in NOT_FOR_CRM
+    )
 
 
 @dataclass(frozen=True, slots=True)

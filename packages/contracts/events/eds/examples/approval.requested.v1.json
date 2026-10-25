@@ -1,0 +1,37 @@
+{
+  "specversion": "1.0",
+  "id": "a508723f-743b-56ad-9f58-188b80aae73f",
+  "source": "rt://eds",
+  "type": "uz.railtech.eds.approval.requested.v1",
+  "time": "2026-10-28T09:00:00Z",
+  "subject": "КП-2026/115",
+  "datacontenttype": "application/json",
+  "dataschema": "rt://contracts/events/eds/approval.requested/v1",
+  "tenant": "railtech",
+  "correlationid": "4a64b64d-d664-52e3-bd3b-92b03a91affc",
+  "data": {
+    "approval": {
+      "eds_approval_id": "bdf82d74-8306-5f9a-9e48-cb62bf8b8610",
+      "template": "quote",
+      "object": {
+        "kind": "quote",
+        "erp_quote_id": 1203,
+        "quote_number": "КП-2026/115",
+        "quote_version": 2,
+        "erp_deal_id": 905,
+        "deal_number": "ЗВ-2026-104"
+      },
+      "title": "КП-2026/115 v2 · ЗВ-2026-104"
+    },
+    "step": {
+      "index": 1,
+      "assignee": {
+        "crm_user_id": null,
+        "permission": "approvals.decide"
+      }
+    },
+    "actor": {
+      "type": "system"
+    }
+  }
+}

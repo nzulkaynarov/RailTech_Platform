@@ -1,6 +1,7 @@
 # Каталог возможностей Платформы, версия 2 (ADR-0012). Роли — данные (CRM), каталог — код и контракт.
 # Основание: ADR-0012, docs/runbooks/wave9-roles.md §3.2, SPEC-v3 §4.2, docs/architecture/integration-map.md §4.
-# Что в каталоге: разделы (`resources`) с уровнями доступа и отображением в права бэкендов (CRM casbin и ERP `Permission`),
+# Что в каталоге: разделы (`resources`) с уровнями доступа и отображением в права бэкендов (CRM casbin, ERP `Permission` и
+# с волны 12 — EDS: коды `EdsPermission` openapi/eds.yaml, runbook docs/runbooks/wave12-eds-c1.md §2.2),
 # пункты меню (`menu`), поля с ограничением (`restricted_fields`), виды работы «Моей очереди» (`queue`), две системные роли
 # (`system_roles`, неизменны), шаблоны ролей (`templates`, при первом запуске создаются обычными редактируемыми ролями)
 # и правило базовой роли CRM для старого фронта (`crm_base_role`, до T4).
@@ -8,7 +9,10 @@
 # берётся максимум по разделу (full > read), поля с ограничением объединяются. Права бэкенда накапливаются: уровень `full`
 # включает права уровня `read` (списки `full` повторяют `read` для читаемости; раздел без списка `full` даёт то же, что `read`).
 # Правила: каждый код права ERP — из `ErpPermission` шва (openapi/erp-integration.yaml); каждое право CRM — `ресурс:действие`
-# из каталога apps/crm/backend/app/security/rbac.py (CATALOG). Обе сверки — в тестах CRM и в схеме (enum).
+# из каталога apps/crm/backend/app/security/rbac.py (CATALOG). Обе сверки — в тестах CRM и в схеме (enum). Каждый код EDS —
+# из девяти кодов v1 (enum в схеме); права EDS сотрудника CRM вычисляет так же, как права ERP, и публикует в
+# identity.user.* (`user.permissions.eds`); EDS своей модели ролей не имеет. Отображение ролей в коды EDS проверяет
+# packages/contracts/tests/test_platform_rbac.py.
 # Изменение файла — PR с тестом каталога. Валидация — platform-rbac.schema.json (make contracts).
 # Единственный каталог ролей в packages/contracts (R-2): версия 1 (шесть ролей кодом) удалена, тест «ровно один каталог» —
 # apps/platform/bff/tests/test_rbac_generated.py. Генераторы: CRM (`make -C apps/crm platform-roles`), BFF и web
@@ -146,27 +150,39 @@ resources:
     label: { ru: "EDS · Входящие · резолюция", uz: "EDS · Kiruvchi · rezolyutsiya", en: "EDS · Inbox · resolution" }
     backend:
       erp: { full: [deal.assign] }
+      eds:
+        read: [letters.read, registry.read]
+        full: [letters.read, registry.read, letters.register, letters.resolve]
   - key: eds.drafts
     module: eds
     label: { ru: "EDS · Черновик КП · одобрение и отправка", uz: "EDS · TT qoralamasi · tasdiqlash va yuborish", en: "EDS · Draft quote · approval and sending" }
     backend:
       erp: { full: [quote.review, quote.approve_final, quote.send] }
+      eds: { full: [approvals.decide] }  # одобрение КП — маршрут EDS (EDS-03)
   - key: eds.projects
     module: eds
     label: { ru: "EDS · Все проекты · договор, счёт, акт, сканы", uz: "EDS · Loyihalar · shartnoma, hisob, dalolatnoma, skanlar", en: "EDS · Projects · contract, invoice, act, scans" }
     backend:
       erp: { full: [contract.manage, contract.sign, fulfillment.act] }
+      eds: { read: [registry.read], full: [registry.read] }
   - key: eds.payments
     module: eds
     label: { ru: "EDS · Счета и оплаты · подтвердить оплату, запросить платёжку", uz: "EDS · Hisoblar va to'lovlar", en: "EDS · Invoices and payments" }
     backend:
       erp: { full: [finance.invoice, finance.payment, finance.rates, data.export] }
+      # data.export ERP ↔ registry.export EDS: выгрузка реестра — у того, кто выгружает данные «Счетов и оплат».
+      # payments.confirm — шаг «бухгалтер» маршрута служебной записки с суммой (решение архитектора, волна 12).
+      eds: { read: [registry.read], full: [registry.read, registry.export, payments.confirm] }
   - key: eds.memo.create
     module: eds
     label: { ru: "EDS · Служебная записка · создать", uz: "EDS · Xizmat xati · yaratish", en: "EDS · Memo · create" }
+    backend:
+      eds: { full: [memos.create] }  # служебные записки, заявления, отчёты
   - key: eds.memo.approve
     module: eds
     label: { ru: "EDS · Служебная записка · согласовать", uz: "EDS · Xizmat xati · kelishish", en: "EDS · Memo · approve" }
+    backend:
+      eds: { full: [memos.approve] }
   - key: erp.calc
     module: erp
     label: { ru: "ERP · Все запросы, Расчёт", uz: "ERP · So'rovlar, hisob-kitob", en: "ERP · Requests, calculation" }
