@@ -97,7 +97,7 @@ describe("Admin · Ролевая матрица (R-2, ADR-0012)", () => {
     });
   });
 
-  it("Admin «полный» в созданной роли — предупреждение: суперпользователь ERP, без лидов CRM", async () => {
+  it("Admin «полный» в созданной роли — предупреждение: не суперпользователь ERP и без лидов CRM", async () => {
     signInAs("admin@demo.example");
     renderApp("/admin/roles?role=new&panel=open&tab=role");
     const panel = await panelEl();
@@ -112,7 +112,7 @@ describe("Admin · Ролевая матрица (R-2, ADR-0012)", () => {
 
     expect(
       within(panel).getAllByText(
-        /права администратора \(суперпользователь\), как у системной роли/,
+        /не суперпользователя ERP: его даёт только системная роль «Администратор»/,
       )[0],
     ).toBeVisible();
   });

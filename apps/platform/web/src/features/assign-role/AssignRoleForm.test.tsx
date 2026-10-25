@@ -89,7 +89,7 @@ describe("AssignRoleForm: выдача ролей", () => {
     fireEvent.click(await screen.findByRole("checkbox", { name: /^Офис-менеджер/ }));
 
     expect(
-      screen.getByText(/права администратора \(суперпользователь\), как у системной роли/),
+      screen.getByText(/не суперпользователя ERP: его даёт только системная роль «Администратор»/),
     ).toBeVisible();
   });
 
