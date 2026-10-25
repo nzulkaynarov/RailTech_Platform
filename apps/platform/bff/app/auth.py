@@ -11,6 +11,7 @@ import asyncio
 import base64
 import hashlib
 import json
+from dataclasses import dataclass
 from typing import Any
 
 import httpx
@@ -67,17 +68,28 @@ def jwt_expiry(token: str) -> float | None:
         return None
 
 
-def client_ip(forwarded_for: str | None, peer: str | None) -> str:
-    """Адрес клиента: последний элемент `X-Forwarded-For` (его добавляет Caddy), иначе сокет."""
-    if forwarded_for:
-        last = forwarded_for.split(",")[-1].strip()
-        if last:
-            return last
-    return peer or "unknown"
+# Коды отказа входа, которые считаются неудачной попыткой (подбор пароля, перебор пользователей).
+# Всё остальное — верные учётные данные или сбой бэкенда — лимит не расходует.
+FAILED_LOGIN_CODES = frozenset({"INVALID_CREDENTIALS", "ACCOUNT_LOCKED"})
+
+
+@dataclass(frozen=True)
+class LoginAttempt:
+    """Попытка входа, учтённая в лимите: ключи счётчиков IP и e-mail."""
+
+    ip_key: str
+    email_key: str
+    email_digest: str
 
 
 class LoginLimiter:
-    """Не больше N попыток входа в минуту — отдельно на IP и на e-mail (фиксированное окно)."""
+    """Не больше N неудачных попыток входа в минуту: отдельно на IP и на e-mail (фикс. окно).
+
+    Попытка записывается в счётчик до обращения к CRM (параллельные запросы не обходят лимит), а
+    потом возвращается, если вход не провалился из-за учётных данных: успешный вход (офис за одним
+    NAT, много сотрудников с одного IP), нет ролей Платформы, сбой бэкенда. Успешный вход ещё и
+    сбрасывает счётчик e-mail: опечатки сотрудника перед верным паролем не копятся.
+    """
 
     def __init__(self, redis: Redis, per_minute: int) -> None:
         self.redis = redis
@@ -93,10 +105,17 @@ class LoginLimiter:
             ttl = RATE_WINDOW_SECONDS
         return count, ttl
 
-    async def check(self, ip: str, email: str) -> None:
+    async def _release(self, key: str) -> None:
+        if int(await self.redis.decr(key)) < 0:
+            # Окно истекло между попыткой и возвратом: отрицательный счётчик без срока не оставляем.
+            await self.redis.delete(key)
+
+    async def check(self, ip: str, email: str) -> LoginAttempt:
+        """Записать попытку; сверх лимита — 429 (в CRM она не уходит, счётчик не возвращается)."""
         digest = hashlib.sha256(email.strip().lower().encode()).hexdigest()[:32]
+        attempt = LoginAttempt(f"rl:login:ip:{ip}", f"rl:login:email:{digest}", digest)
         retry_after = 0
-        for key in (f"rl:login:ip:{ip}", f"rl:login:email:{digest}"):
+        for key in (attempt.ip_key, attempt.email_key):
             count, ttl = await self._hit(key)
             if count > self.per_minute:
                 retry_after = max(retry_after, ttl)
@@ -107,6 +126,17 @@ class LoginLimiter:
                 status_code=429,
                 headers={"Retry-After": str(retry_after)},
             )
+        return attempt
+
+    async def refund(self, attempt: LoginAttempt) -> None:
+        """Вход не провалился из-за учётных данных: попытка в лимит не засчитывается."""
+        await self._release(attempt.ip_key)
+        await self._release(attempt.email_key)
+
+    async def succeeded(self, attempt: LoginAttempt) -> None:
+        """Успешный вход: IP-счётчик не расходуется, счётчик e-mail сбрасывается."""
+        await self._release(attempt.ip_key)
+        await self.redis.delete(attempt.email_key)
 
 
 def _expect(resp: httpx.Response, source: Backend, *, ok: int = 200) -> httpx.Response:
@@ -125,9 +155,11 @@ class AuthService:
 
     # --- вход -------------------------------------------------------------------------------------
 
-    async def login(self, email: str, password: str) -> tuple[str, SessionData]:
+    async def login(
+        self, email: str, password: str, client_ip: str | None = None
+    ) -> tuple[str, SessionData]:
         try:
-            resp = await self.crm.login(email, password)
+            resp = await self.crm.login(email, password, client_ip)
         except BackendUnavailableError as exc:
             raise backend_unavailable("crm", exc.reason) from exc
         if resp.status_code in (401, 403):

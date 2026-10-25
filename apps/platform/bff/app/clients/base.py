@@ -1,4 +1,4 @@
-"""Клиент бэкенда (CRM или ERP): таймаут 3 с, X-Request-Id пробрасывается из текущего запроса.
+"""Клиент бэкенда (CRM или ERP): таймаут 3 с (у CRM — 5 с, настройка), X-Request-Id из запроса.
 
 Вызовы идут от имени сотрудника (его токен), сервисных токенов у BFF нет (ADR-0011): токен
 передаётся в каждый вызов, клиент общий на всех сотрудников и ничего о них не помнит — в том числе
@@ -15,6 +15,8 @@ import httpx
 from app.request_id import HEADER, request_id_var
 
 TIMEOUT_SECONDS = 3.0
+# CRM: вход (хеш пароля) под нагрузкой не укладывался в 3 с; `PLATFORM_CRM_TIMEOUT_SECONDS`.
+CRM_TIMEOUT_SECONDS = 5.0
 
 Backend = Literal["crm", "erp"]
 
@@ -66,13 +68,14 @@ class BackendClient:
         base_url: str,
         health_path: str,
         *,
+        timeout: float = TIMEOUT_SECONDS,
         transport: httpx.AsyncBaseTransport | None = None,
     ) -> None:
         self.name = name
         self.health_path = health_path
         self.http = httpx.AsyncClient(
             base_url=base_url,
-            timeout=httpx.Timeout(TIMEOUT_SECONDS),
+            timeout=httpx.Timeout(timeout),
             event_hooks={"request": [_forward_request_id]},
             transport=transport,
         )
@@ -95,10 +98,11 @@ class BackendClient:
         cookies: dict[str, str] | None = None,
         json: Any = None,
         params: dict[str, Any] | None = None,
+        headers: dict[str, str] | None = None,
     ) -> httpx.Response:
         """Вызов бэкенда от имени сотрудника. 2xx и 4xx возвращаются как есть (решает вызывающий),
         сеть, таймаут и 5xx — `BackendUnavailableError`."""
-        headers: dict[str, str] = {}
+        headers = dict(headers or {})
         if access:
             headers["Authorization"] = f"Bearer {access}"
         if cookies:

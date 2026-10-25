@@ -1,0 +1,51 @@
+{
+  "specversion": "1.0",
+  "id": "c2c36e04-1171-551b-9a1d-3e47e4d88c32",
+  "source": "rt://eds",
+  "type": "uz.railtech.eds.approval.decided.v1",
+  "time": "2026-10-28T10:15:00Z",
+  "subject": "КП-2026/115",
+  "datacontenttype": "application/json",
+  "dataschema": "rt://contracts/events/eds/approval.decided/v1",
+  "tenant": "railtech",
+  "correlationid": "595fd042-6ec3-5172-9676-eb16ae233c81",
+  "data": {
+    "approval": {
+      "eds_approval_id": "bdf82d74-8306-5f9a-9e48-cb62bf8b8610",
+      "template": "quote",
+      "object": {
+        "kind": "quote",
+        "erp_quote_id": 1203,
+        "quote_number": "КП-2026/115",
+        "quote_version": 2,
+        "erp_deal_id": 905,
+        "deal_number": "ЗВ-2026-104"
+      },
+      "title": "КП-2026/115 v2 · ЗВ-2026-104"
+    },
+    "step": {
+      "index": 1,
+      "assignee": {
+        "crm_user_id": null,
+        "permission": "approvals.decide"
+      }
+    },
+    "decision": "approve",
+    "comment": null,
+    "decided_by": {
+      "crm_user_id": 3,
+      "full_name": "Рустам Директоров"
+    },
+    "decided_at": "2026-10-28T10:15:00Z",
+    "route_status": "approved",
+    "outgoing_number": "ИСХ-082/26",
+    "channels": [
+      "telegram",
+      "cabinet"
+    ],
+    "actor": {
+      "type": "staff",
+      "crm_user_id": 3
+    }
+  }
+}

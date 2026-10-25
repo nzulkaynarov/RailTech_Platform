@@ -1,0 +1,76 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://railtech.uz/contracts/events/eds/letter.resolved.v1.json",
+  "title": "Резолюция наложена",
+  "description": "Тип uz.railtech.eds.letter.resolved.v1, источник rt://eds. Поле data конверта (envelope.v1.json). Директор утвердил резолюцию: исполнители (crm_user_id, зона), срок, минимальная маржа, ссылки на заявку и сделку ERP. Что делает ERP (EDS-01): задание расчёта по сделке links.erp_deal_id исполнителям, стадия CALCULATION; links.erp_deal_id = null — пропуск с записью в журнал.",
+  "type": "object",
+  "required": [
+    "letter",
+    "links",
+    "resolution",
+    "actor"
+  ],
+  "properties": {
+    "letter": {
+      "$ref": "_defs.v1.json#/$defs/LetterRef"
+    },
+    "links": {
+      "$ref": "_defs.v1.json#/$defs/ErpLinks"
+    },
+    "resolution": {
+      "type": "object",
+      "required": [
+        "text",
+        "assignees",
+        "due",
+        "min_margin_pct",
+        "decided_by",
+        "decided_at"
+      ],
+      "properties": {
+        "text": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4000
+        },
+        "assignees": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "$ref": "_defs.v1.json#/$defs/Assignee"
+          },
+          "description": "Исполнители расчёта с зоной ответственности"
+        },
+        "due": {
+          "type": "string",
+          "format": "date",
+          "description": "Срок расчёта"
+        },
+        "min_margin_pct": {
+          "oneOf": [
+            {
+              "$ref": "_defs.v1.json#/$defs/MarginPct"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "«Маржа не ниже, %»; null — ограничения нет. Порог для чек-листа одобрения КП"
+        },
+        "decided_by": {
+          "$ref": "_defs.v1.json#/$defs/PersonRef"
+        },
+        "decided_at": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "additionalProperties": false
+    },
+    "actor": {
+      "$ref": "_defs.v1.json#/$defs/Actor"
+    }
+  },
+  "additionalProperties": false
+}

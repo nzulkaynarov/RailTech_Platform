@@ -690,6 +690,9 @@ services:
       PLATFORM_COOKIE_SECURE: ${PLATFORM_COOKIE_SECURE:-true}
       PLATFORM_ERP_REFRESH_COOKIE: ${PLATFORM_ERP_REFRESH_COOKIE:-refresh_token}
       PLATFORM_LOGIN_RATE_PER_MINUTE: ${PLATFORM_LOGIN_RATE_PER_MINUTE:-10}
+      # Таймаут вызовов CRM из BFF, секунды (T5, runbook r3 O-1) и прокси, которым BFF верит в X-Forwarded-For (Caddy в сети compose).
+      PLATFORM_CRM_TIMEOUT_SECONDS: ${PLATFORM_CRM_TIMEOUT_SECONDS:-5}
+      PLATFORM_TRUSTED_PROXIES: ${PLATFORM_TRUSTED_PROXIES:-127.0.0.0/8,::1/128,10.0.0.0/8,172.16.0.0/12,192.168.0.0/16,fc00::/7}
       # Шина rt_bus: приёмник POST /bus/v1/events (виден только внутри сети compose; Caddy /bus/* не отдаёт). Секрет пары
       # «издатель → platform-bff» подписывает издатель (ERP, CRM), BFF проверяет; пусто — события не принимаются (401).
       # Подписка и типы — packages/contracts/bus/subscriptions.yaml (строка platform-bff, в образе).

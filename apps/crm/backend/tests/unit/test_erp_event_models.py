@@ -21,10 +21,11 @@ from rt_contracts.events import TYPES
 from rt_contracts.events.erp import QuoteSentV1
 
 from app.bus import handlers  # noqa: F401 — регистрирует обработчики
-from app.bus.erp_event import CODE_TYPE, erp_types, parse_erp_event, plain
+from app.bus.erp_event import CODE_TYPE, NOT_FOR_CRM, erp_types, parse_erp_event, plain
 from tests.bus_events import event_types, example_envelope, example_types
 
-ALL_TYPES = event_types("erp")
+#: Типы ERP, которые принимает CRM (без адресованных EDS — `NOT_FOR_CRM`).
+ALL_TYPES = [t for t in event_types("erp") if t not in NOT_FOR_CRM]
 REGISTRY = SchemaRegistry()
 
 
@@ -34,7 +35,8 @@ def event_of(event_type: str, **changes: Any) -> Event:
 
 def test_the_contract_has_twenty_two_erp_types_with_one_example_each() -> None:
     assert len(ALL_TYPES) == 22
-    assert set(example_types("erp")) == set(ALL_TYPES), "на каждое событие контракта — один пример"
+    examples = set(example_types("erp"))
+    assert examples == set(event_types("erp")), "на каждое событие контракта — один пример"
 
 
 def test_the_crm_listens_to_exactly_the_erp_events_of_the_contract_except_the_code() -> None:
@@ -50,6 +52,8 @@ def test_handlers_do_not_listen_to_other_domains_or_future_versions() -> None:
     assert default_registry.match("uz.railtech.crm.client.updated.v1") == []
     assert default_registry.match("uz.railtech.erp.quote.sent.v2") == []
     assert default_registry.match("uz.railtech.erp.warehouse.exploded.v1") == []
+    for event_type in NOT_FOR_CRM:
+        assert default_registry.match(event_type) == [], "тип для EDS: CRM не обрабатывает"
 
 
 @pytest.mark.parametrize("event_type", ALL_TYPES)

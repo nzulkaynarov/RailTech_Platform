@@ -710,7 +710,7 @@ async def test_events_are_laid_out_only_for_the_subscribers_of_the_file(
     sessions: async_sessionmaker[AsyncSession], bus: Any
 ) -> None:
     """ERP подписан на client.updated и contact.*;
-    сотрудники и лиды — platform-bff; клиент-создан — пока никому.
+    сотрудники и лиды — platform-bff, сотрудники — и EDS (волна 12); клиент-создан — пока никому.
     """
     who = await admin_user(sessions)
     clients = ClientService(sessions)
@@ -732,6 +732,7 @@ async def test_events_are_laid_out_only_for_the_subscribers_of_the_file(
         ("crm.client.updated.v1", "erp"),
         ("crm.contact.created.v1", "erp"),
         ("identity.user.created.v1", "platform-bff"),
+        ("identity.user.created.v1", "eds"),
     ]
 
 

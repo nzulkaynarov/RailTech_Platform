@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://railtech.uz/contracts/events/eds/letter.rejected.v1.json",
+  "title": "Письмо отклонено",
+  "description": "Тип uz.railtech.eds.letter.rejected.v1, источник rt://eds. Поле data конверта (envelope.v1.json). Директор отклонил письмо с причиной (обязательна). Что делает ERP: сделка links.erp_deal_id → LOST с причиной reason.",
+  "type": "object",
+  "required": [
+    "letter",
+    "links",
+    "reason",
+    "actor"
+  ],
+  "properties": {
+    "letter": {
+      "$ref": "_defs.v1.json#/$defs/LetterRef"
+    },
+    "links": {
+      "$ref": "_defs.v1.json#/$defs/ErpLinks"
+    },
+    "reason": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 4000
+    },
+    "actor": {
+      "$ref": "_defs.v1.json#/$defs/Actor"
+    }
+  },
+  "additionalProperties": false
+}

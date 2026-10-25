@@ -1,0 +1,110 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://railtech.uz/contracts/events/eds/approval.decided.v1.json",
+  "title": "Решение по маршруту согласования",
+  "description": "Тип uz.railtech.eds.approval.decided.v1, источник rt://eds. Поле data конверта (envelope.v1.json). Решение на шаге маршрута: approve, return (на доработку), reject; comment обязателен для return и reject. route_status — состояние маршрута после решения (open — есть следующий шаг). Что делает ERP (EDS-03) для approval.object.kind = quote и закрытого маршрута: approved — ИСХ-номер outgoing_number на КП, отправка по channels разблокирована; returned — КП «На доработке» с комментарием; rejected — КП отклонено директором.",
+  "type": "object",
+  "required": [
+    "approval",
+    "step",
+    "decision",
+    "comment",
+    "decided_by",
+    "decided_at",
+    "route_status",
+    "outgoing_number",
+    "actor"
+  ],
+  "properties": {
+    "approval": {
+      "type": "object",
+      "required": [
+        "eds_approval_id",
+        "template",
+        "object"
+      ],
+      "properties": {
+        "eds_approval_id": {
+          "$ref": "_defs.v1.json#/$defs/Uuid"
+        },
+        "template": {
+          "$ref": "_defs.v1.json#/$defs/ApprovalTemplate"
+        },
+        "object": {
+          "$ref": "_defs.v1.json#/$defs/ApprovalObject"
+        },
+        "title": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 300,
+          "description": "Тема для уведомления"
+        }
+      },
+      "additionalProperties": false
+    },
+    "step": {
+      "$ref": "_defs.v1.json#/$defs/Step"
+    },
+    "decision": {
+      "$ref": "_defs.v1.json#/$defs/Decision"
+    },
+    "comment": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "maxLength": 4000
+    },
+    "decided_by": {
+      "$ref": "_defs.v1.json#/$defs/PersonRef"
+    },
+    "decided_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "route_status": {
+      "$ref": "_defs.v1.json#/$defs/RouteStatus"
+    },
+    "outgoing_number": {
+      "oneOf": [
+        {
+          "$ref": "_defs.v1.json#/$defs/OutgoingNumber"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "ИСХ-номер, присвоенный при одобрении КП (маршрут quote закрыт с approved); иначе null"
+    },
+    "channels": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "$ref": "_defs.v1.json#/$defs/SendChannel"
+      },
+      "description": "Для одобренного КП: каналы отправки клиенту, выбранные директором"
+    },
+    "actor": {
+      "$ref": "_defs.v1.json#/$defs/Actor"
+    }
+  },
+  "additionalProperties": false,
+  "if": {
+    "properties": {
+      "decision": {
+        "enum": [
+          "return",
+          "reject"
+        ]
+      }
+    }
+  },
+  "then": {
+    "properties": {
+      "comment": {
+        "type": "string",
+        "minLength": 1
+      }
+    }
+  }
+}

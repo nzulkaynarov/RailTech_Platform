@@ -56,6 +56,11 @@
       ],
       "description": "Системная роль бэк-офиса ERP (SystemRoleCode в openapi/erp-integration.yaml)"
     },
+    "EdsPermission": {
+      "type": "string",
+      "pattern": "^[a-z_]+\\.[a-z_]+$",
+      "description": "Код права EDS (docs/runbooks/wave12-eds-c1.md §2.2). Шаблон, а не перечень: новый код EDS не ломает identity v1; перечень кодов — EdsPermission в openapi/eds.yaml и edsPermission в platform-rbac.schema.json"
+    },
     "User": {
       "type": "object",
       "description": "Снимок сотрудника (идентичность v1 живёт в CRM, ADR-0015): без пароля, токенов, Telegram и журнала входов; порядок — по updated_at.",
@@ -123,6 +128,20 @@
             "$ref": "#/$defs/ErpRoleCode"
           },
           "description": "Системные роли ERP (как role_codes провижининга)"
+        },
+        "permissions": {
+          "type": "object",
+          "description": "Необязательно (v1, аддитивно с волны 12): права сотрудника в сервисах, которые сами ролей не ведут; CRM вычисляет их из ролей Платформы по каталогу platform-rbac.yaml (backend.<сервис>). eds — коды прав EDS. Нет поля permissions, нет permissions.eds или пустой список — доступа к EDS нет (CRM до задачи E4 публикует снимок без поля). Подписчик заменяет права целиком по снимку",
+          "properties": {
+            "eds": {
+              "type": "array",
+              "uniqueItems": true,
+              "items": {
+                "$ref": "#/$defs/EdsPermission"
+              }
+            }
+          },
+          "additionalProperties": false
         },
         "updated_at": {
           "type": "string",

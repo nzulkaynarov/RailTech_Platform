@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://railtech.uz/contracts/events/eds/letter.returned.v1.json",
+  "title": "Письмо возвращено менеджеру",
+  "description": "Тип uz.railtech.eds.letter.returned.v1, источник rt://eds. Поле data конверта (envelope.v1.json). Директор вернул письмо менеджеру с комментарием (обязателен). Подписчики v1: platform-bff (подсказка).",
+  "type": "object",
+  "required": [
+    "letter",
+    "links",
+    "comment",
+    "actor"
+  ],
+  "properties": {
+    "letter": {
+      "$ref": "_defs.v1.json#/$defs/LetterRef"
+    },
+    "links": {
+      "$ref": "_defs.v1.json#/$defs/ErpLinks"
+    },
+    "comment": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 4000
+    },
+    "actor": {
+      "$ref": "_defs.v1.json#/$defs/Actor"
+    }
+  },
+  "additionalProperties": false
+}

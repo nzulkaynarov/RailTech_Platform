@@ -1,19 +1,38 @@
-"""Клиенты CRM и ERP: таймаут 3 с и проброс X-Request-Id."""
+"""Клиенты CRM и ERP: таймауты (CRM — из настройки, по умолчанию 5 с) и проброс X-Request-Id."""
 
 import httpx
 import respx
 from fastapi import FastAPI
 
 from app.clients import CrmClient, ErpClient
-from app.clients.base import TIMEOUT_SECONDS
+from app.clients.base import CRM_TIMEOUT_SECONDS, TIMEOUT_SECONDS
+from app.config import Settings
 from app.deps import get_redis
+from app.main import create_app
 from tests.consts import CRM_URL, ERP_URL
 
 
-def test_timeout_is_three_seconds() -> None:
-    crm = CrmClient(CRM_URL)
+def test_crm_timeout_is_five_seconds_by_default() -> None:
+    assert CRM_TIMEOUT_SECONDS == 5.0
+    assert CrmClient(CRM_URL).http.timeout == httpx.Timeout(5.0)
+
+
+def test_erp_timeout_stays_three_seconds() -> None:
     assert TIMEOUT_SECONDS == 3.0
-    assert crm.http.timeout == httpx.Timeout(3.0)
+    assert ErpClient(ERP_URL).http.timeout == httpx.Timeout(3.0)
+
+
+async def test_app_builds_crm_client_with_default_timeout(app: FastAPI) -> None:
+    assert app.state.crm.http.timeout == httpx.Timeout(5.0)
+    assert app.state.erp.http.timeout == httpx.Timeout(3.0)
+
+
+async def test_app_builds_crm_client_with_timeout_from_settings(settings: Settings) -> None:
+    custom = settings.model_copy(update={"crm_timeout_seconds": 9.0})
+    application = create_app(custom)
+    async with application.router.lifespan_context(application):
+        assert application.state.crm.http.timeout == httpx.Timeout(9.0)
+        assert application.state.erp.http.timeout == httpx.Timeout(3.0)
 
 
 @respx.mock

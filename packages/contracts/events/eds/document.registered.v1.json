@@ -1,0 +1,86 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://railtech.uz/contracts/events/eds/document.registered.v1.json",
+  "title": "Документ зарегистрирован",
+  "description": "Тип uz.railtech.eds.document.registered.v1, источник rt://eds. Поле data конверта (envelope.v1.json). Документ получил номер реестра: служебная записка (СЗ), заявление (ЗЯ), отчёт (ОТ) — при создании; исходящее письмо (ИСХ) — при отправке. Входящие письма — letter.registered.",
+  "type": "object",
+  "required": [
+    "document",
+    "actor"
+  ],
+  "properties": {
+    "document": {
+      "type": "object",
+      "required": [
+        "eds_document_id",
+        "kind",
+        "number",
+        "subject",
+        "author",
+        "registered_at"
+      ],
+      "properties": {
+        "eds_document_id": {
+          "$ref": "_defs.v1.json#/$defs/Uuid"
+        },
+        "kind": {
+          "$ref": "_defs.v1.json#/$defs/DocumentKind"
+        },
+        "number": {
+          "$ref": "_defs.v1.json#/$defs/RegistryNumber"
+        },
+        "subject": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 300
+        },
+        "author": {
+          "$ref": "_defs.v1.json#/$defs/PersonRef"
+        },
+        "addressee": {
+          "$ref": "_defs.v1.json#/$defs/PersonRef"
+        },
+        "registered_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "amount": {
+          "oneOf": [
+            {
+              "$ref": "_defs.v1.json#/$defs/Money"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "due_date": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "date"
+        },
+        "erp_deal_id": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "description": "Связь с проектом (заявкой) ERP"
+        },
+        "deal_number": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 64
+        }
+      },
+      "additionalProperties": false
+    },
+    "actor": {
+      "$ref": "_defs.v1.json#/$defs/Actor"
+    }
+  },
+  "additionalProperties": false
+}

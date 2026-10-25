@@ -1,5 +1,5 @@
-# CONTRACTS — шов между CRM и ERP (и портальный вход Cabinet)
-Статус: действует · Владелец: архитектор · Обновлено: 2026-10-23
+# CONTRACTS — шов между CRM и ERP (и портальный вход Cabinet, сервис EDS)
+Статус: действует · Владелец: архитектор · Обновлено: 2026-10-26
 
 Версия 0 · 2026-10-13 · Источник истины — файлы в `packages/contracts/` (OpenAPI — в том числе `crm.yaml`, который генерирует CRM, — и JSON-схемы);
 этот документ объясняет их. Изменение контракта — PR с обеих сторон в одной вехе (ORCHESTRATOR §3.3).
@@ -192,6 +192,8 @@ JWT HS256, секрет `PLATFORM_SSO_SECRET` общий. Claims: `iss` (`crm`|`
 (`POST /api/v1/auth/sso/token`, иначе 403) — только при `erp` в `platform_access`; в шапке ERP — только у
 пользователя с сопоставлением `CrmUserMapping`. Выдача доступа → провижининг в ERP, снятие → отзыв сессий
 (очередь CRM, ошибки ERP — в центре внешних сервисов). Роль CRM → коды прав ERP: `docs/architecture/sso-token.md`.
+Токен для EDS (`aud = eds`, обмен на токен доступа EDS, права — проекция `identity.user.*`) — §10.3 и `sso-token.md`,
+«Токен сотрудника для EDS».
 
 ## 8. Платформа (SPA → BFF), ADR-0011
 
@@ -233,7 +235,7 @@ contracts` и в job «packages · contracts» CI. Сравнивают рабо
 
 | Что | Чем | Где правила |
 |---|---|---|
-| `openapi/*.yaml` — все пять файлов, в том числе сгенерированные `erp-internal.yaml` и `crm.yaml` | `scripts/openapi_compat.py` → `oasdiff breaking`, закреплённая версия (одноразовый контейнер `tufin/oasdiff` с тегом и digest; свой бинарь — `OASDIFF_BIN`) | oasdiff: уровень ERR валит; WARN (например, удалено необязательное свойство запроса) печатается и не валит — решение лида, строже (`--fail-on WARN`) не включено |
+| `openapi/*.yaml` — все файлы (с волны 12 их шесть, новый — `eds.yaml`), в том числе сгенерированные `erp-internal.yaml` и `crm.yaml` | `scripts/openapi_compat.py` → `oasdiff breaking`, закреплённая версия (одноразовый контейнер `tufin/oasdiff` с тегом и digest; свой бинарь — `OASDIFF_BIN`) | oasdiff: уровень ERR валит; WARN (например, удалено необязательное свойство запроса) печатается и не валит — решение лида, строже (`--fail-on WARN`) не включено |
 | `events/**`, `bus/subscriptions.schema.json` | `scripts/events_compat.py` | §9.6: в пределах `vN` — только новые необязательные поля |
 
 **Что считается ломающим в OpenAPI (ERR).** Удалён путь или операция (без `deprecated: true` и даты `x-sunset` не ближе 180 дней от пометки —
@@ -336,8 +338,10 @@ enum, отсутствующее обязательное поле, наруше
 | `uz.railtech.crm.lead.created.v1` / `lead.updated.v1` / `lead.stage_changed.v1` | `rt://crm` → (Платформа, B5) | снимок `lead` без контактов и переписки: `crm_lead_id`, `crm_client_id?`, `display_name`, `company_name`, `stage`, `source`, `language`, `score`, `assigned_user`, `erp_request_id?`, `updated_at`; у `stage_changed` — `from`, `to`, `reason?` |
 | `uz.railtech.crm.lead.erased.v1` | `rt://crm` → (Платформа, B5) | только `crm_lead_id`, `crm_client_id`, `erased_at`, `actor`: лид обезличен по запросу, **подписчики обязаны стереть свои копии ПДн по лиду** |
 | `uz.railtech.crm.lead.merged.v1` | `rt://crm` → (Платформа, B5) | `lead` — снимок выжившего, `merged_lead_id` — поглощённый лид (в CRM его больше нет), `actor` |
-| `uz.railtech.identity.user.created.v1` / `user.updated.v1` | `rt://crm` → (ERP, Платформа — позже) | снимок `user`: `crm_user_id`, `email`, `full_name`, `position`, `language`, `is_active`, `platform_roles`, `systems`, `erp_role_codes?`, `updated_at` |
-| `uz.railtech.identity.user.deactivated.v1` | `rt://crm` → (ERP, Платформа — позже) | `crm_user_id`, `reason?`, `actor` |
+| `uz.railtech.identity.user.created.v1` / `user.updated.v1` | `rt://crm` → platform-bff, eds | снимок `user`: `crm_user_id`, `email`, `full_name`, `position`, `language`, `is_active`, `platform_roles`, `systems`, `erp_role_codes?`, `permissions?` (`{eds: [код EDS]}`, код — строка по шаблону, не перечень; нет поля — доступа к EDS нет; волна 12 — §10.4), `updated_at` |
+| `uz.railtech.identity.user.deactivated.v1` | `rt://crm` → platform-bff, eds | `crm_user_id`, `reason?`, `actor` |
+| `uz.railtech.erp.quote.ready_for_approval.v1` | `rt://erp` → eds (platform-bff — подсказка) | КП готово к одобрению директором (EDS-03): `erp_company_id`, `crm_client_id` (может быть `null`), `deal`, `actor`, `payload` — снимок КП (`QuoteReadyForApproval`: номер, версия, сумма, валюта, себестоимость, маржа %, порог маржи резолюции, нужные и собранные визы — кто и когда, срок); **CRM не подписана** (себестоимость и маржа) |
+| `uz.railtech.eds.*.v1` — 8 типов §10.2 | `rt://eds` → erp (`letter.resolved`, `letter.rejected`, `approval.decided`), platform-bff (все) | письма, документы реестра, маршруты согласования (`events/eds/_defs.v1.json`) |
 
 События CRM и identity — снимки (event-carried state transfer): подписчик заменяет проекцию целиком по внешнему
 идентификатору; снимок с `updated_at` старше применённого не применяется (доставка может прийти не по порядку). Только
@@ -403,12 +407,17 @@ subscribers:
 ```
 
 Издатель доставляет подписчику только свои события (по `source`) и не доставляет себе. Новый подписчик — строка в файле
-и секрет пары в окружении, без правки кода сервисов. Подписки v1: `crm` ← `uz.railtech.erp.*.v1`; `erp` ←
-`uz.railtech.crm.client.updated.v1`, `uz.railtech.crm.contact.*.v1` (ERP обновляет проекции компании и контактов, B4).
-`platform-bff` (B5) ← `uz.railtech.erp.*.v1`, `uz.railtech.crm.lead.*.v1`, `uz.railtech.identity.user.*.v1`: BFF Платформы
+и секрет пары в окружении, без правки кода сервисов. Подписки v1: `crm` ← события ERP по сущностям (`act`, `contract`, `deal`, `delivery`, `document`, `invite`,
+`invoice`, `request` — маской `uz.railtech.erp.<сущность>.*.v1`, КП — пять типов поимённо), то есть все типы ERP, кроме
+`quote.ready_for_approval` (волна 12: себестоимость и маржа адресованы EDS); `erp` ← `uz.railtech.crm.client.updated.v1`,
+`uz.railtech.crm.contact.*.v1` (ERP обновляет проекции компании и контактов, B4) и с волны 12 `uz.railtech.eds.letter.resolved.v1`,
+`uz.railtech.eds.letter.rejected.v1`, `uz.railtech.eds.approval.decided.v1`; `eds` — §10.2.
+`platform-bff` (B5) ← `uz.railtech.erp.*.v1`, `uz.railtech.crm.lead.*.v1`, `uz.railtech.identity.user.*.v1` и с волны 12
+`uz.railtech.eds.*.v1` (обработчика в BFF пока нет — `skipped`; колокольчик и счётчики — этап D): BFF Платформы
 превращает события в подсказки инвалидации SSE (`GET /api/v1/events/stream`, `platform-bff.yaml` 0.5.0), данных событий не
 хранит; приёмник `http://platform-bff:8000/bus/v1/events` виден только внутри сети compose (Caddy `/bus/*` на домене
-Платформы отдаёт 404); секреты пар — `RT_BUS_SECRET_ERP_PLATFORM_BFF`, `RT_BUS_SECRET_CRM_PLATFORM_BFF` (только окружение).
+Платформы отдаёт 404); секреты пар — `RT_BUS_SECRET_ERP_PLATFORM_BFF`, `RT_BUS_SECRET_CRM_PLATFORM_BFF`, с волны 12
+`RT_BUS_SECRET_EDS_PLATFORM_BFF` (только окружение).
 Тест проверяет: маска совпадает хотя бы с одним типом, подписчик не подписан на свои события.
 
 ### 9.6. Совместимость (L8) и генерация (L6)
@@ -499,7 +508,8 @@ Telegram, язык, канал, признак основного); сегмен
 запроса (middleware `BusCorrelationMiddleware` после `CorrelationIdMiddleware`), для задач очереди — новый UUID; `traceparent` —
 из заголовка запроса. Передача клиента в бэк-офис (`POST /clients/handoff`) остаётся REST (§2): синхронный вызов с ответом.
 
-**Приёмник и обработчики.** `uz.railtech.erp.*.v1` (кроме кода акцепта) — `ErpEventsService.apply` в транзакции inbox: зеркало
+**Приёмник и обработчики.** События ERP (`erp_types()`: все `uz.railtech.erp.*.v1`, кроме кода акцепта и типов для EDS —
+`NOT_FOR_CRM`, сейчас `quote.ready_for_approval`) — `ErpEventsService.apply` в транзакции inbox: зеркало
 сделки (порядок по `time`), индекс документов, лента лида, служебные уведомления; сообщения Telegram записываются в
 `erp_event_notices` и уходят после коммита (задача после обработки, сборщик раз в минуту, не позже суток; ушедшим адресатам
 повторно не шлются). Клиента нет или `erp_company_id` не совпадает — ошибка обработки (повтор, затем `failed`).
@@ -509,3 +519,111 @@ Telegram, язык, канал, признак основного); сегмен
 `hex(HMAC-SHA256(webhook_secret, "rt-bus/v1/<издатель>-><подписчик>"))` из каждого действующего секрета вебхуков сопряжения
 (текущего и предыдущего, «Подключения» → ERP); перечитывается при каждом приёме и доставке, поэтому смена и ротация действуют
 без перезапуска. Прочие подписчики — только окружение. Эксплуатация (журнал, DLQ, повтор, метрики) — runbook `docs/runbooks/rt-bus-crm.md`.
+
+## 10. EDS (волна 12, этап C1)
+
+ADR-0015 (EDS — отдельный сервис, владелец реестра и маршрутов согласования), runbook
+[`wave12-eds-c1.md`](../runbooks/wave12-eds-c1.md) §2 (нормативка), карта интеграции §7 (EDS-01, EDS-02, EDS-03). Источник
+истины — файлы `packages/contracts/`; здесь — объяснение.
+
+| Файл | Что | Версия |
+|---|---|---|
+| `openapi/eds.yaml` | API EDS `/api/v1` для BFF Платформы: обмен токена, `/me`, письма и резолюции, документы, маршруты согласования, реестр и экспорт, файлы с версиями; `/health` | 0.1.0 |
+| `events/eds/*.v1.json` (+ `_defs.v1.json`, `examples/`) | 8 типов `uz.railtech.eds.*.v1` | v1 |
+| `events/erp/quote.ready_for_approval.v1.json` | КП готово к одобрению (определения — `QuoteReadyForApproval`, `QuoteVisa` в `erp/_defs.v1.json`) | v1 |
+| `events/identity/_defs.v1.json` | `User.permissions.eds` — необязательное, аддитивно в v1 | v1 |
+| `bus/subscriptions.yaml` | подписчик `eds`; новые типы `erp` и `platform-bff`; `crm` без `quote.ready_for_approval` | — |
+| `platform-rbac.yaml` (+ схема) | `backend.eds` разделов EDS → коды прав EDS | каталог v2 |
+
+### 10.1. API (`eds.yaml` 0.1.0)
+
+- **Кто зовёт.** Только BFF во внутренней сети (`http://eds-api:8000`); внешнего маршрута в Caddy нет, своей формы входа нет.
+- **Пути.** `/api/v1/letters` (список, регистрация), `/letters/{letter_id}` (карточка), `…/resolution` `{text, assignees[{crm_user_id,
+  zone}], due, min_margin_pct}`, `…/return` `{comment}`, `…/reject` `{reason}`, `…/submit` (повторная подача возвращённого); `/documents` (типы `memo`, `application`, `report`,
+  `letter_out`; поля `ServiceMemo` SPEC-v3 §10.4), `/documents/{document_id}`, `…/submit`; `/approvals?mine=1`,
+  `/approvals/{approval_id}` (шаги маршрута, чек-лист и снимок КП для показа), `…/decision` `{decision: approve|return|reject,
+  comment, channels?}` — `comment` обязателен для `return` и `reject`; `/registry` (фильтры «Все документы» SPEC-v3 §7.3: тип,
+  статус, период, ответственный, клиент, номер, поиск), `/registry/export` (xlsx, csv); `/files` (multipart, `version_of` — новая
+  версия), `/files/{file_id}` (поток), `/files/{file_id}/versions`.
+- **Идентификатор в пути — UUID объекта, не номер** (решение E1, принято лидом; для архитектора — уточнить формулировку runbook
+  §2.3 `/letters/{no}`): номер реестра содержит `/`, `%2F` в пути прокси и фреймворки декодируют по-разному. Номер — поле объекта
+  и фильтр `GET /api/v1/registry?number=ВХ-104/26`.
+- **Входящее письмо.** Регистрация сразу даёт `awaiting_resolution` (`letter.registered`); резолюция → `resolved`, отказ →
+  `rejected` (конечные); возврат → `returned`: письмо у регистратора (`letters.register`), повторная подача `POST …/submit` →
+  снова `awaiting_resolution`, номер прежний. Таблица переходов — `info.description` файла.
+- **Служебная записка, заявление, отчёт.** `draft` → `submit` → `on_approval`; директор `approve`: без суммы → `approved`, с суммой
+  → `to_accountant`, затем бухгалтер (`payments.confirm`) `approve` → `paid`; `return` → `returned` (автор правит, новая версия,
+  новый круг); `reject` → `rejected`. Исходящее письмо: `draft` → `submit` → `sent` (ИСХ). Таблица — `DocumentStatus`.
+- **Архив без операции.** `document.archived` EDS публикует сама, когда маршрут документа завершён окончательно (одобрен на
+  последнем шаге — `approved`/`paid` — или отклонён) и при отправке исходящего письма; документ сохраняет итоговый статус и
+  получает `archived_at`.
+- **Чек-лист КП** сверяет маржу с порогом **резолюции EDS** (владелец поля — EDS); `min_margin_pct` в
+  `erp.quote.ready_for_approval` — снимок для показа. Снимок КП в `Approval.quote` повторяет `QuoteReadyForApproval` события.
+- **Номера** (§2.1 runbook): `ВХ-NNN/ГГ`, `ИСХ-NNN/ГГ` (одобрение КП, отправка письма), `СЗ-ГГГГ/NNN`, `ЗЯ-ГГГГ/NNN`, `ОТ-ГГГГ/NNN`;
+  счётчик на тип и год (`Asia/Tashkent`) под `SELECT … FOR UPDATE`, без пропусков; номер не возвращается. ЗВ/ПР/КП/ДОГ/СЧ/АКТ —
+  у ERP, EDS хранит ссылки (`ErpLinks`).
+- **Ошибки** — `Error {code, message, source: "eds", details}`, как у BFF (§8); коды — в `info.description` файла.
+- **Пагинация** — `cursor` + `limit` (1–100), ответ `{items, next_cursor}`.
+- **Право на каждую операцию** — расширение `x-rt-permissions`: список кодов EDS, любого из которых достаточно (пустой — любой
+  активный сотрудник проекции, только `/me`). Публичны только `/health` и обмен токена. Тест контракта
+  (`tests/test_platform_rbac.py`) проверяет, что расширение есть у каждой защищённой операции; сервис сверяет с ним свою
+  таблицу маршрутов.
+
+### 10.2. События и подписки
+
+| Тип | Когда | Подписчики v1 |
+|---|---|---|
+| `uz.railtech.eds.letter.registered.v1` | письмо получило ВХ-номер: вручную или по `erp.request.created` | platform-bff |
+| `uz.railtech.eds.letter.resolved.v1` | резолюция: исполнители (`crm_user_id`, `zone`: `goods`, `services`, `payment_terms`), срок, `min_margin_pct`, `links` (`erp_request_id`, `erp_deal_id`, `deal_number`) | erp (задание расчёта, стадия `CALCULATION`), platform-bff |
+| `uz.railtech.eds.letter.returned.v1` | возврат регистратору с комментарием (повторная подача — `POST …/submit`, без события) | platform-bff |
+| `uz.railtech.eds.letter.rejected.v1` | отказ с причиной | erp (сделка → `LOST` с причиной), platform-bff |
+| `uz.railtech.eds.document.registered.v1` | номер документа (СЗ, ЗЯ, ОТ — при создании; ИСХ — при отправке письма) | platform-bff |
+| `uz.railtech.eds.document.archived.v1` | автоматически: маршрут документа завершён окончательно (одобрен на последнем шаге или отклонён), исходящее письмо отправлено | platform-bff |
+| `uz.railtech.eds.approval.requested.v1` | маршрут (круг) открыт: объект, первый шаг и кто решает | platform-bff |
+| `uz.railtech.eds.approval.decided.v1` | решение на шаге: `decision`, `comment`, `route_status`, для одобренного КП — `outgoing_number` (ИСХ) и `channels` | erp (EDS-03 для `object.kind = quote` и закрытого маршрута), platform-bff |
+
+ERP публикует `uz.railtech.erp.quote.ready_for_approval.v1` (EDS-03) — EDS открывает маршрут «КП» с чек-листом. Подписка `eds` ←
+`uz.railtech.identity.user.*.v1` (проекция сотрудников с `permissions.eds`), `uz.railtech.erp.request.created.v1` (письмо по
+заявке), `uz.railtech.erp.quote.ready_for_approval.v1`. Объект маршрута для ERP — `approval.object` (`erp_quote_id`,
+`quote_version`, `erp_deal_id`): решение применяется к той версии КП, для которой открыт маршрут. Секреты пар (только окружение):
+`RT_BUS_SECRET_CRM_EDS`, `RT_BUS_SECRET_ERP_EDS`, `RT_BUS_SECRET_EDS_ERP`, `RT_BUS_SECRET_EDS_PLATFORM_BFF`.
+
+### 10.3. Вход и права
+
+Сотрудник — только через BFF: CRM выдаёт токен сотрудника `aud = eds` (`POST /api/v1/auth/sso/token {"aud": "eds"}`, только
+активному с непустым `permissions.eds`, иначе 403 `eds_access_denied`), EDS обменивает его на свой токен доступа
+(`iss = eds`, `aud = eds-api`, 15 минут, без refresh) — `sso-token.md`, «Токен сотрудника для EDS» (решение лида L-C1-1).
+Обмен проверяет `iss = crm` и `aud = eds`; API принимает только `aud = eds-api`. Право проверяется по проекции сотрудников на
+момент запроса; отзыв действует сразу. Нет поля `permissions` (или `permissions.eds`) в снимке сотрудника — доступа к EDS нет
+(CRM до задачи E4 публикует снимок без поля).
+
+### 10.4. Права EDS из каталога ролей
+
+Коды v1 (`EdsPermission`, девять): `letters.read`, `letters.register`, `letters.resolve`, `memos.create`, `memos.approve`,
+`approvals.decide`, `registry.read`, `registry.export`, `payments.confirm` (решение архитектора: шаг «бухгалтер» служебной
+записки с суммой). Перечень — в `eds.yaml` и схеме каталога; в событиях шины (`identity`, `eds`) код — строка по шаблону
+`^[a-z_]+\.[a-z_]+$`, не перечень, поэтому новый код не ломает события v1. CRM вычисляет их из ролей Платформы так же, как права ERP (объединение по
+разделам; `full` включает `read`), и публикует в `identity.user.*` как `user.permissions.eds`. Отображение (`platform-rbac.yaml`,
+`backend.eds`):
+
+| Раздел | `read` | `full` |
+|---|---|---|
+| `eds.inbox` | `letters.read`, `registry.read` | + `letters.register`, `letters.resolve` |
+| `eds.drafts` | — | `approvals.decide` |
+| `eds.projects` | `registry.read` | `registry.read` |
+| `eds.payments` | `registry.read` | `registry.read`, `registry.export` (ERP `data.export` этого раздела), `payments.confirm` |
+| `eds.memo.create` | — | `memos.create` |
+| `eds.memo.approve` | — | `memos.approve` |
+
+Итог по ролям (тест `packages/contracts/tests/test_platform_rbac.py`): «Директор» — все 9; «Менеджер» — `letters.read`,
+`registry.read`, `memos.create`; «Снабженец», «Гл. инженер» — `registry.read`, `memos.create`; «Бухгалтер» — `letters.read`,
+`registry.read`, `registry.export`, `payments.confirm`, `memos.create`; «Менеджер и бухгалтер» гейта R-3 (лиды и «Счета и
+оплаты» — полный доступ) — `registry.read`, `registry.export`, `payments.confirm`; «Администратор» — только `memos.create` (свои
+служебные записки; писем, реестра и маршрутов не видит — R3-D-2; допустимо, решено архитектором). Шаг «бухгалтер» маршрута
+служебной записки с суммой решает любой с `payments.confirm` (решение архитектора; `registry.export` для этого не используется).
+
+### 10.5. Версии
+
+`eds.yaml` до 1.0 растёт минорными версиями (§7.1); события — правила §9.6 (`v(N+1)` для ломающего). Поле
+`identity.User.permissions` и тип `erp.quote.ready_for_approval.v1` — аддитивные изменения v1. Коды прав в событиях — шаблон,
+а не перечень: новый код EDS — не новая версия событий.

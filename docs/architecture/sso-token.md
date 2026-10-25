@@ -1,5 +1,5 @@
-# SSO-токен сотрудника (CRM ↔ ERP)
-Статус: действует · Владелец: архитектор · Обновлено: 2026-10-23
+# SSO-токен сотрудника (CRM ↔ ERP, CRM → EDS)
+Статус: действует · Владелец: архитектор · Обновлено: 2026-10-26
 
 Источник: `docs/architecture/CONTRACTS.md` §6, ADR-0003. Версия 0 (M0-INF-02). Реализация: ERP — M3-ERP-04, CRM — M3-CRM-06.
 
@@ -11,12 +11,12 @@ JWT **HS256**, общий секрет `PLATFORM_SSO_SECRET` (секрет ок�
 | Claim | Тип | Значение |
 |---|---|---|
 | `iss` | string | `crm` или `erp` — кто выдал |
-| `aud` | string | `erp` или `crm` — целевая система (приёмник отклоняет чужой `aud`) |
+| `aud` | string | `erp`, `crm` или `eds` — целевая система (приёмник отклоняет чужой `aud`; EDS — раздел «Токен сотрудника для EDS») |
 | `sub` | string | `crm_user_id` как строка — идентификатор сотрудника в CRM (источник истины по людям) |
 | `email` | string | e-mail сотрудника |
 | `name` | string | отображаемое имя |
 | `role` | string | `admin` \| `manager` \| `viewer` (роль CRM); `admin` = суперпользователь ERP |
-| `permissions` | string[] | коды из каталога прав ERP (`ErpPermission` в `erp-integration.yaml`: `deal.*`, `quote.*`, `contract.*`, `catalog.*`, `supply.*`, `fulfillment.*`, `finance.*`, `settings.*`, `team.*`, `data.*`) по карте ниже; для `aud=erp`, при обмене не применяются (права приходят провижинингом) |
+| `permissions` | string[] | коды из каталога прав ERP (`ErpPermission` в `erp-integration.yaml`: `deal.*`, `quote.*`, `contract.*`, `catalog.*`, `supply.*`, `fulfillment.*`, `finance.*`, `settings.*`, `team.*`, `data.*`) по карте ниже; для `aud=erp`, при обмене не применяются (права приходят провижинингом). Для `aud=eds` — коды `permissions.eds` сотрудника (`EdsPermission` в `openapi/eds.yaml`), справочно: EDS их не применяет (раздел «Токен сотрудника для EDS») |
 | `iat` | number | момент выдачи, unix seconds |
 | `exp` | number | `iat + 60` |
 | `jti` | string | UUID v4, одноразовый |
@@ -70,6 +70,42 @@ CRM выдаёт токен только при `erp` в `platform_access` (ин
 
 Формат ошибки 403 по п. 5 у CRM — `details.reason = user_not_provisioned` (подкод `Reason.USER_NOT_PROVISIONED`,
 ADR-0017), у ERP — `{"detail": "USER_NOT_PROVISIONED"}`; неактивный — `user_inactive` / `USER_INACTIVE`.
+
+## Токен сотрудника для EDS
+
+Решение лида L-C1-1 (волна 12, runbook [`wave12-eds-c1.md`](../runbooks/wave12-eds-c1.md) §2.2; контракт —
+`packages/contracts/openapi/eds.yaml`). У EDS нет своей формы входа и внешнего маршрута: сотрудник приходит только через BFF
+Платформы, BFF получает токен у CRM и обменивает его в EDS. Реализация: CRM — задача E4, EDS — E2.
+
+**Выдача (CRM).** Тот же JWT HS256 тем же `POST /api/v1/auth/sso/token` с телом `{"aud": "eds"}` (тело без `aud` или
+`{"aud": "erp"}` — токен для ERP, как раньше; совместимо). Claims: `iss = crm`, `aud = eds`, `sub` — `crm_user_id` строкой,
+`email`, `name`, `iat`, `exp = iat + 60`, `jti` (UUID v4); `permissions` — коды `permissions.eds` сотрудника, **справочно**
+(EDS их не применяет). Секрет — `PLATFORM_SSO_SECRET` (ротация — два активных значения). Токен выдаётся только активному
+сотруднику с непустым `permissions.eds` (их CRM вычисляет из ролей Платформы по каталогу `platform-rbac.yaml`,
+`backend.eds`), иначе 403, `details.reason = eds_access_denied`. Нет поля `permissions` или `permissions.eds` в снимке
+`identity.user.*` (CRM до задачи E4 публикует без него) или список пуст — доступа к EDS нет.
+
+**Обмен (EDS).** `POST /api/v1/auth/sso/exchange {"token": "<jwt>"}` → 200 `{"access_token", "token_type": "bearer",
+"expires_in": 900}` — собственный токен доступа EDS (HS256, секрет `EDS_ACCESS_SECRET`, срок 15 минут, `iss = eds`,
+`aud = eds-api` — не `eds`, чтобы токен сотрудника CRM и токен доступа EDS не подменяли друг друга ни при какой ошибке
+конфигурации секретов; `sub = crm_user_id`). API EDS принимает только `aud = eds-api`, обмен — только `aud = eds`.
+Refresh нет: истёк — BFF берёт у CRM новый токен сотрудника и обменивает снова. Проверки — по порядку
+раздела «Проверка приёмником»: подпись (оба значения `PLATFORM_SSO_SECRET`), `iss = crm` и `aud = eds`, срок (`exp − iat ≤ 60`, допуск 5 с —
+не больше 65 с), одноразовый `jti` (таблица в базе `eds`, 10 минут) — отказ 401 `INVALID_SSO_TOKEN` с `details.reason`:
+`signature`, `issuer` (`iss ≠ crm`), `audience`, `expired`, `lifetime`, `replayed`, `malformed`;
+сотрудник — **только по `sub`** в проекции сотрудников EDS (из `identity.user.*`): нет — 403 `USER_NOT_PROVISIONED`,
+`is_active = false` — 403 `USER_INACTIVE`. Обмен сотрудников не создаёт и прав не меняет; в журнал EDS — `sso.exchange`.
+
+**Каждый запрос.** `Authorization: Bearer <токен доступа EDS>`; право проверяется по проекции **на момент запроса** (коды
+`x-rt-permissions` операции в `eds.yaml`). Отзыв роли (`identity.user.updated` с новым `permissions.eds`) и отключение
+(`identity.user.deactivated`) действуют сразу, не дожидаясь срока токена доступа.
+
+| | ERP | EDS |
+|---|---|---|
+| `aud` | `erp` | `eds` |
+| Права | провижининг REST (`POST /api/integration/v1/users/provision`) | проекция из событий `identity.user.*` (`user.permissions.eds`) |
+| Условие выдачи в CRM | `erp` в `platform_access` | непустой `permissions.eds` |
+| Сессия приёмника | своя сессия ERP (access 30 минут + refresh) | токен доступа EDS 15 минут, без refresh |
 
 ## Доступ (`platform_access`)
 

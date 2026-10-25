@@ -44,8 +44,8 @@ ASYNCAPI = yaml.safe_load((EVENTS / "asyncapi.yaml").read_text(encoding="utf-8")
 
 def test_types_present() -> None:
     domains = {t.domain for t in TYPES}
-    assert {"erp", "crm", "identity"} <= domains
-    assert len([t for t in TYPES if t.domain == "erp"]) == 22
+    assert {"erp", "crm", "identity", "eds"} <= domains
+    assert len([t for t in TYPES if t.domain == "erp"]) == 23
 
 
 @pytest.mark.parametrize("path", schema_files(), ids=lambda p: p.relative_to(CONTRACTS).as_posix())
@@ -144,9 +144,137 @@ ERP_EVENTS = {
 }
 
 
-def test_erp_types_are_the_22_events_of_the_former_webhook() -> None:
-    """22 события бывшего вебхука (events.schema.json удалён в B4) — по-прежнему uz.railtech.erp.<тип>.v1."""
-    assert {f"{t.entity}.{t.action}" for t in TYPES if t.domain == "erp" and t.version == 1} == ERP_EVENTS
+#: Новые типы ERP после бывшего вебхука: волна 12 (EDS-03) — КП готово к одобрению директором в EDS.
+ERP_EVENTS_C1 = {"quote.ready_for_approval"}
+
+
+def test_erp_types_are_the_22_events_of_the_former_webhook_and_the_c1_ones() -> None:
+    """22 события бывшего вебхука (events.schema.json удалён в B4) — по-прежнему uz.railtech.erp.<тип>.v1; плюс C1."""
+    erp = {f"{t.entity}.{t.action}" for t in TYPES if t.domain == "erp" and t.version == 1}
+    assert erp == ERP_EVENTS | ERP_EVENTS_C1
+
+
+EDS_EVENTS = {
+    "letter.registered",
+    "letter.resolved",
+    "letter.returned",
+    "letter.rejected",
+    "document.registered",
+    "document.archived",
+    "approval.requested",
+    "approval.decided",
+}
+
+
+def test_eds_types_are_those_of_the_runbook() -> None:
+    """Волна 12 §2.4: восемь типов uz.railtech.eds.*.v1, издатель rt://eds."""
+    eds = [t for t in TYPES if t.domain == "eds"]
+    assert {f"{t.entity}.{t.action}" for t in eds} == EDS_EVENTS
+    assert {t.source for t in eds} == {"rt://eds"}
+
+
+def _eds_example(name: str) -> dict:
+    return copy.deepcopy(load_json(EVENTS / "eds" / "examples" / f"{name}.v1.json")["data"])
+
+
+def _eds_validator(name: str) -> Draft202012Validator:
+    return validator(load_json(EVENTS / "eds" / f"{name}.v1.json"))
+
+
+@pytest.mark.parametrize("decision", ["return", "reject"])
+def test_approval_decided_requires_a_comment_to_return_or_reject(decision: str) -> None:
+    v = _eds_validator("approval.decided")
+    data = _eds_example("approval.decided")
+    route_status = "returned" if decision == "return" else "rejected"
+    data.update(decision=decision, route_status=route_status, outgoing_number=None)
+    data.pop("channels")
+    for comment in (None, ""):
+        assert not v.is_valid({**data, "comment": comment}), comment
+    assert v.is_valid({**data, "comment": "Маржа ниже порога резолюции"})
+
+
+def test_step_assignee_is_exactly_one_of_a_person_or_a_permission() -> None:
+    v = _eds_validator("approval.requested")
+    data = _eds_example("approval.requested")
+    for assignee, ok in (
+        ({"crm_user_id": None, "permission": "approvals.decide"}, True),
+        ({"crm_user_id": 3, "permission": None}, True),
+        ({"crm_user_id": 3, "permission": "approvals.decide"}, False),
+        ({"crm_user_id": None, "permission": None}, False),
+    ):
+        data["step"]["assignee"] = assignee
+        assert v.is_valid(data) is ok, assignee
+
+
+def test_approval_object_of_a_quote_carries_the_erp_quote_and_a_document_carries_its_number() -> None:
+    v = _eds_validator("approval.requested")
+    data = _eds_example("approval.requested")
+    broken = copy.deepcopy(data)
+    del broken["approval"]["object"]["erp_quote_id"]
+    assert not v.is_valid(broken)
+    memo = copy.deepcopy(data)
+    memo["approval"]["template"] = "memo"
+    memo["approval"]["object"] = {"kind": "memo", "eds_document_id": "9b2f1f0e-6d7e-4a51-8d0a-3c1e2b4a5d60"}
+    assert not v.is_valid(memo), "документ EDS — с номером реестра"
+    memo["approval"]["object"]["number"] = "СЗ-2026/031"
+    assert v.is_valid(memo)
+
+
+@pytest.mark.parametrize(
+    ("number", "ok"),
+    [
+        ("ВХ-104/26", True),
+        ("ВХ-1/26", False),
+        ("ВХ-104/2026", False),
+        ("СЗ-2026/031", True),
+        ("ЗЯ-2026/001", True),
+        ("ОТ-2026/1200", True),
+        ("ИСХ-082/26", True),
+        ("СЗ-26/031", False),
+        ("КП-2026/115", False),
+    ],
+)
+def test_registry_numbers_follow_the_runbook_formats(number: str, ok: bool) -> None:
+    """§2.1: ВХ-NNN/ГГ, ИСХ-NNN/ГГ, СЗ-ГГГГ/NNN, ЗЯ-ГГГГ/NNN, ОТ-ГГГГ/NNN; коммерческие номера (КП) — у ERP."""
+    v = validator({"$ref": "https://railtech.uz/contracts/events/eds/_defs.v1.json#/$defs/RegistryNumber"})
+    assert v.is_valid(number) is ok
+
+
+def test_letter_resolved_carries_assignees_due_margin_and_erp_links() -> None:
+    v = _eds_validator("letter.resolved")
+    data = _eds_example("letter.resolved")
+    assert {a["zone"] for a in data["resolution"]["assignees"]} == {"goods", "services"}
+    for field in ("erp_request_id", "erp_deal_id", "deal_number"):
+        broken = copy.deepcopy(data)
+        del broken["links"][field]
+        assert not v.is_valid(broken), field
+    no_margin = copy.deepcopy(data)
+    no_margin["resolution"]["min_margin_pct"] = None
+    assert v.is_valid(no_margin), "резолюция без ограничения маржи"
+    for bad in ("101", "-1", "15%", "12.345"):
+        broken = copy.deepcopy(data)
+        broken["resolution"]["min_margin_pct"] = bad
+        assert not v.is_valid(broken), bad
+    empty = copy.deepcopy(data)
+    empty["resolution"]["assignees"] = []
+    assert not v.is_valid(empty)
+
+
+def test_identity_user_may_carry_eds_permission_codes() -> None:
+    t = next(t for t in TYPES if t.name == "uz.railtech.identity.user.updated.v1")
+    v = type_validator(t)
+    data = load_json(t.example)["data"]
+    assert data["user"]["permissions"]["eds"]
+    without = copy.deepcopy(data)
+    del without["user"]["permissions"]
+    assert v.is_valid(without), "поле необязательное (v1, аддитивно)"
+    future = copy.deepcopy(data)
+    future["user"]["permissions"]["eds"] = ["payments.confirm"]
+    assert v.is_valid(future), "новый код EDS не ломает identity v1 (шаблон, не перечень)"
+    for bad in ("Letters.Read", "letters", "letters.read ", ""):
+        broken = copy.deepcopy(data)
+        broken["user"]["permissions"]["eds"] = [bad]
+        assert not v.is_valid(broken), bad
 
 
 def _property_names(node: object) -> set[str]:
@@ -221,19 +349,45 @@ def test_subscriptions_are_meaningful() -> None:
             assert not own, f"{s['name']}: подписан на свои события {own} — издатель себе не доставляет"
 
 
+def _gets(sub: dict) -> set[str]:
+    return {t.name for t in TYPES if any(fnmatch.fnmatchcase(t.name, m) for m in sub["types"])}
+
+
 def test_initial_subscriptions_v1() -> None:
     subs = {s["name"]: s for s in SUBSCRIPTIONS["subscribers"]}
-    assert set(subs) == {"crm", "erp", "platform-bff"}
-    assert subs["crm"]["types"] == ["uz.railtech.erp.*.v1"]
+    assert set(subs) == {"crm", "erp", "platform-bff", "eds"}
     assert subs["crm"]["endpoint"] == "http://crm-api:8000/bus/v1/events"
     assert subs["erp"]["endpoint"] == "http://erp-backend:8000/bus/v1/events"
-    erp_gets = sorted(t.name for t in TYPES if any(fnmatch.fnmatchcase(t.name, m) for m in subs["erp"]["types"]))
-    assert erp_gets == [
+    assert sorted(_gets(subs["erp"])) == [
         "uz.railtech.crm.client.updated.v1",
         "uz.railtech.crm.contact.created.v1",
         "uz.railtech.crm.contact.deleted.v1",
         "uz.railtech.crm.contact.updated.v1",
+        "uz.railtech.eds.approval.decided.v1",
+        "uz.railtech.eds.letter.rejected.v1",
+        "uz.railtech.eds.letter.resolved.v1",
     ]
+
+
+def test_crm_gets_every_erp_event_except_the_quote_for_eds_approval() -> None:
+    """CRM — все типы ERP, кроме quote.ready_for_approval: в нём себестоимость и маржа, адресат — EDS (волна 12)."""
+    crm = {s["name"]: s for s in SUBSCRIPTIONS["subscribers"]}["crm"]
+    erp_types = {t.name for t in TYPES if t.domain == "erp"}
+    assert _gets(crm) == erp_types - {"uz.railtech.erp.quote.ready_for_approval.v1"}
+
+
+def test_eds_subscription_c1() -> None:
+    """EDS (волна 12 §2.4): сотрудники, заявка ERP (связать письмо), КП на одобрение; адрес — внутри сети compose."""
+    eds = {s["name"]: s for s in SUBSCRIPTIONS["subscribers"]}["eds"]
+    assert eds["endpoint"] == "http://eds-api:8000/bus/v1/events"
+    assert eds["endpoint_env"] == "RT_BUS_ENDPOINT_EDS"
+    assert _gets(eds) == {
+        "uz.railtech.identity.user.created.v1",
+        "uz.railtech.identity.user.updated.v1",
+        "uz.railtech.identity.user.deactivated.v1",
+        "uz.railtech.erp.request.created.v1",
+        "uz.railtech.erp.quote.ready_for_approval.v1",
+    }
 
 
 def test_platform_bff_subscription_b5() -> None:
@@ -245,6 +399,7 @@ def test_platform_bff_subscription_b5() -> None:
     assert {t.name for t in TYPES if t.name.startswith("uz.railtech.erp.")} <= gets
     assert {t.name for t in TYPES if t.name.startswith("uz.railtech.crm.lead.")} <= gets
     assert {t.name for t in TYPES if t.name.startswith("uz.railtech.identity.user.")} <= gets
+    assert {t.name for t in TYPES if t.domain == "eds"} <= gets, "волна 12: события EDS — колокольчик и счётчики"
     assert not {n for n in gets if n.startswith(("uz.railtech.crm.client.", "uz.railtech.crm.contact."))}
 
 
