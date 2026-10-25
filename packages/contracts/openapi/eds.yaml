@@ -16,7 +16,7 @@ info:
     **Вход (решение лида L-C1-1, `docs/architecture/sso-token.md`, «Токен сотрудника для EDS»).** BFF берёт у CRM токен
     сотрудника `POST /api/v1/auth/sso/token {"aud": "eds"}` (JWT HS256, `PLATFORM_SSO_SECRET`, `iss=crm`, `aud=eds`,
     `sub=crm_user_id`, срок 60 с, одноразовый `jti`) и обменивает его здесь: `POST /api/v1/auth/sso/exchange` → собственный
-    токен доступа EDS (JWT HS256, секрет `EDS_ACCESS_SECRET`, срок 15 минут, без refresh: истёк — BFF берёт у CRM новый токен
+    токен доступа EDS (JWT HS256, секрет `EDS_ACCESS_SECRET`, `iss = eds`, `aud = eds-api`, срок 15 минут, без refresh: истёк — BFF берёт у CRM новый токен
     сотрудника и обменивает снова). Каждый запрос `/api/v1/*`, кроме обмена, — `Authorization: Bearer <токен доступа EDS>`.
 
     **Права (runbook §2.2).** Коды EDS v1: `letters.read`, `letters.register`, `letters.resolve`, `memos.create`, `memos.approve`,
@@ -103,7 +103,8 @@ paths:
         своей базе; 5) сотрудник найден **только по `sub`** в проекции сотрудников EDS (`identity.user.*`) — нет: 403
         `USER_NOT_PROVISIONED`, `is_active = false`: 403 `USER_INACTIVE`. Отказы 1–4 — 401 `INVALID_SSO_TOKEN`.
         Обмен сотрудников не создаёт и прав не меняет (права — только из проекции). Выдаётся токен доступа EDS (HS256,
-        `EDS_ACCESS_SECRET`, `iss = eds`, `aud = eds`, `sub = crm_user_id`, срок 900 с); в журнал EDS — `sso.exchange`
+        `EDS_ACCESS_SECRET`, `iss = eds`, `aud = eds-api` — не `eds`, чтобы токен CRM и токен доступа не путались, `sub =
+        crm_user_id`, срок 900 с); в журнал EDS — `sso.exchange`
         (`iss`, `sub`, `jti`).
       security: []
       requestBody:
@@ -799,7 +800,7 @@ components:
       type: http
       scheme: bearer
       bearerFormat: JWT
-      description: Токен доступа EDS из `POST /api/v1/auth/sso/exchange` (HS256, 15 минут)
+      description: Токен доступа EDS из `POST /api/v1/auth/sso/exchange` (HS256, `iss = eds`, `aud = eds-api`, 15 минут); токен сотрудника CRM (`aud = eds`) здесь отклоняется — 401 `UNAUTHORIZED`
 
   parameters:
     LetterId:

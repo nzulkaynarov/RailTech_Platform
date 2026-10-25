@@ -38,7 +38,8 @@ export interface paths {
      *     своей базе; 5) сотрудник найден **только по `sub`** в проекции сотрудников EDS (`identity.user.*`) — нет: 403
      *     `USER_NOT_PROVISIONED`, `is_active = false`: 403 `USER_INACTIVE`. Отказы 1–4 — 401 `INVALID_SSO_TOKEN`.
      *     Обмен сотрудников не создаёт и прав не меняет (права — только из проекции). Выдаётся токен доступа EDS (HS256,
-     *     `EDS_ACCESS_SECRET`, `iss = eds`, `aud = eds`, `sub = crm_user_id`, срок 900 с); в журнал EDS — `sso.exchange`
+     *     `EDS_ACCESS_SECRET`, `iss = eds`, `aud = eds-api` — не `eds`, чтобы токен CRM и токен доступа не путались, `sub =
+     *     crm_user_id`, срок 900 с); в журнал EDS — `sso.exchange`
      *     (`iss`, `sub`, `jti`).
      */
     post: operations["ssoExchange"];
