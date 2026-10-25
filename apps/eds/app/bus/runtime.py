@@ -23,9 +23,12 @@ def build_bus(
     config: BusConfig | None = None,
     enqueue: Callable[[str], Awaitable[Any]] | None = None,
 ) -> AsyncBus:
-    return AsyncBus(
+    holder: list[AsyncBus] = []  # обработчики берут шину, которая их же и вызывает
+    bus = AsyncBus(
         config or BusConfig(service=SERVICE),
         sessions,
-        registry=build_registry(),
+        registry=build_registry(lambda: holder[0]),
         enqueue=enqueue,
     )
+    holder.append(bus)
+    return bus

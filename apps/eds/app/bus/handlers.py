@@ -4,24 +4,30 @@
 исключение откатывает изменения и ставит автоповтор. Повтор события ничего не меняет — ключ inbox `event id`
 и правило «более старый снимок не применяется».
 
-Типы без обработчика (`erp.request.created`, `erp.quote.ready_for_approval` — домен, задача E3) приёмник
-записывает как `skipped` и отвечает 200.
+Домен (E3): `erp.request.created` → входящее письмо по заявке (идемпотентно по `erp_request_id`);
+`erp.quote.ready_for_approval` → маршрут согласования КП (идемпотентно по КП и версии). Обработчики публикуют события
+EDS через шину процесса в той же транзакции, что и изменение.
 """
 
 import uuid
+from collections.abc import Callable
 
 import structlog
 from rt_bus import Event, HandlerRegistry
+from rt_bus.sqlalchemy import AsyncBus
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.bus.erp_snapshots import QuoteReady, RequestCreated
 from app.bus.snapshots import UserDeactivated, UserEnvelope, parse_time
-from app.services import employees
+from app.services import employees, letters, quotes
 
 log = structlog.get_logger(__name__)
 
 USER_CREATED = "uz.railtech.identity.user.created.v1"
 USER_UPDATED = "uz.railtech.identity.user.updated.v1"
 USER_DEACTIVATED = "uz.railtech.identity.user.deactivated.v1"
+REQUEST_CREATED = "uz.railtech.erp.request.created.v1"
+QUOTE_READY = "uz.railtech.erp.quote.ready_for_approval.v1"
 
 
 async def on_user_snapshot(event: Event, session: AsyncSession) -> None:
@@ -48,10 +54,38 @@ async def on_user_deactivated(event: Event, session: AsyncSession) -> None:
     )
 
 
-def build_registry() -> HandlerRegistry:
-    """Реестр обработчиков EDS; свой, а не общий `default_registry` — тесты и процессы не делят состояние."""
+def build_registry(get_bus: Callable[[], AsyncBus] | None = None) -> HandlerRegistry:
+    """Реестр обработчиков EDS; свой, а не общий `default_registry` — тесты и процессы не делят состояние.
+
+    `get_bus` отдаёт шину процесса для обработчиков, публикующих события; без неё регистрируется только проекция
+    сотрудников.
+    """
     registry = HandlerRegistry()
     registry.add(USER_CREATED, on_user_snapshot)
     registry.add(USER_UPDATED, on_user_snapshot)
     registry.add(USER_DEACTIVATED, on_user_deactivated)
+    if get_bus is not None:
+
+        async def request_created(event: Event, session: AsyncSession) -> None:
+            data = RequestCreated.model_validate(event.data)
+            letter = await letters.register_from_request(
+                session,
+                get_bus(),
+                moment=parse_time(event.time),
+                erp_company_id=data.erp_company_id,
+                crm_client_id=data.crm_client_id,
+                erp_deal_id=data.deal.erp_deal_id,
+                deal_number=data.deal.number,
+                title=data.deal.title,
+                erp_request_id=data.payload.erp_request_id,
+                summary=data.payload.summary,
+            )
+            log.info("letter_for_request", number=letter.number, event_id=event.id)
+
+        async def quote_ready(event: Event, session: AsyncSession) -> None:
+            route = await quotes.open_for_quote(session, get_bus(), QuoteReady.model_validate(event.data))
+            log.info("quote_route", route=str(route.id) if route else None, event_id=event.id)
+
+        registry.add(REQUEST_CREATED, request_created)
+        registry.add(QUOTE_READY, quote_ready)
     return registry

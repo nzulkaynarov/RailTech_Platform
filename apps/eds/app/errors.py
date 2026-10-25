@@ -125,3 +125,29 @@ def install(app: FastAPI) -> None:
     app.add_exception_handler(RequestValidationError, validation_handler)
     app.add_exception_handler(StarletteHTTPException, http_exception_handler)
     app.add_exception_handler(Exception, unhandled_handler)
+
+
+def not_found(message: str = "Не найдено.") -> EdsError:
+    """404 `NOT_FOUND`: объекта нет или он не виден сотруднику (существование не раскрывается)."""
+    return EdsError("NOT_FOUND", message, status_code=status.HTTP_404_NOT_FOUND)
+
+
+def conflict(reason: str, message: str, **details: Any) -> EdsError:
+    """409 `CONFLICT` с `details.reason`: `invalid_state`, `route_closed`, `checklist_not_green` и др."""
+    return EdsError("CONFLICT", message, status_code=status.HTTP_409_CONFLICT, details={"reason": reason, **details})
+
+
+def forbidden_reason(reason: str, message: str) -> EdsError:
+    """403 `FORBIDDEN` с `details.reason` — действие не положено сотруднику при наличии права на операцию."""
+    return EdsError("FORBIDDEN", message, status_code=status.HTTP_403_FORBIDDEN, details={"reason": reason})
+
+
+def invalid_fields(message: str, **fields: str) -> EdsError:
+    """422 `VALIDATION_FAILED`: `details.fields` — `[{field, message, type}]`, как у ошибок разбора запроса."""
+    items = [{"field": name, "message": text, "type": "value_error"} for name, text in fields.items()]
+    return EdsError(
+        "VALIDATION_FAILED",
+        message,
+        status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+        details={"fields": items},
+    )
