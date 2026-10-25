@@ -4,7 +4,7 @@
 401 `INVALID_SSO_TOKEN`:
 
 1. подпись HS256 одним из действующих секретов `PLATFORM_SSO_SECRET` (ротация — два значения) — `signature`;
-2. `aud` равен `eds` — `audience`;
+2. `iss` равен `crm` — `issuer`; `aud` равен `eds` — `audience`;
 3. `exp` не прошёл (допуск часов 5 с) — `expired`; `exp − iat` не больше 60 с (с тем же допуском), `iat` не в будущем
    дальше допуска — `lifetime`;
 4. `jti` одноразовый — проверяет и фиксирует `app.services.sso` (`replayed`).
@@ -50,11 +50,11 @@ def _number(value: Any) -> float:
 
 def verify_sso_token(token: str, secrets: Sequence[str], *, now: float) -> SsoClaims:
     payload = _decode(token, secrets)
+    if payload.get("iss") != ISSUER:
+        raise SsoTokenError("issuer")
     audience = payload.get("aud")
     if not isinstance(audience, str) or audience != AUDIENCE:
         raise SsoTokenError("audience")
-    if payload.get("iss") != ISSUER:
-        raise SsoTokenError("issuer")
     exp = _number(payload.get("exp"))
     iat = _number(payload.get("iat"))
     if now > exp + LEEWAY_S:

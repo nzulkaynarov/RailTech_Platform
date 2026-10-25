@@ -1,15 +1,14 @@
 """Таблица маршрутов сверена с контрактом: `x-rt-permissions` каждой операции `eds.yaml` = права зависимости маршрута.
 
-Файл контракта — `packages/contracts/openapi/eds.yaml` (или `EDS_OPENAPI_PATH`). Пока контракта нет в дереве (E1 ещё не
-слит), проверка пропускается; после слияния она идёт всегда и ловит как расхождение прав, так и маршрут, которого нет в
-контракте. Доменные маршруты (E3) попадают под ту же проверку без правок теста.
+Файл контракта — `packages/contracts/openapi/eds.yaml` (или `EDS_OPENAPI_PATH`). Проверка идёт всегда, без пропусков,
+и ловит как расхождение прав, так и маршрут, которого нет в контракте. Доменные маршруты (E3) попадают под ту же
+проверку без правок теста.
 """
 
 import os
 from pathlib import Path
 from typing import Any
 
-import pytest
 import yaml
 from fastapi.routing import APIRoute
 
@@ -20,8 +19,6 @@ from tests.conftest import ACCESS_SECRET  # noqa: F401  # окружение п�
 
 DEFAULT = Path(__file__).resolve().parents[3] / "packages" / "contracts" / "openapi" / "eds.yaml"
 CONTRACT = Path(os.environ.get("EDS_OPENAPI_PATH", DEFAULT))
-
-pytestmark = pytest.mark.skipif(not CONTRACT.exists(), reason="контракт eds.yaml (E1) ещё не в дереве")
 
 
 def route_permissions(route: APIRoute) -> tuple[str, ...] | None:
