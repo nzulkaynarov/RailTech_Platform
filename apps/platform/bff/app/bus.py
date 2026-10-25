@@ -20,7 +20,11 @@ SERVICE = "platform-bff"
 ERP_EVENTS = "uz.railtech.erp.*.v1"
 LEAD_EVENTS = "uz.railtech.crm.lead.*.v1"
 USER_EVENTS = "uz.railtech.identity.user.*.v1"
-SUBSCRIBED = (ERP_EVENTS, LEAD_EVENTS, USER_EVENTS)
+# События EDS (волна 12): подписка в контракте есть, обработчика нет — приёмник отвечает
+# 200 `skipped`, подсказок SSE нет (экраны EDS — этап D).
+EDS_EVENTS = "uz.railtech.eds.*.v1"
+SUBSCRIBED = (ERP_EVENTS, LEAD_EVENTS, USER_EVENTS, EDS_EVENTS)
+HANDLED = (ERP_EVENTS, LEAD_EVENTS, USER_EVENTS)
 
 # Что может изменить событие: уведомления, счётчики меню, «Моя очередь», лента «Сегодня».
 _TOPICS_BY_MASK: tuple[tuple[str, tuple[str, ...]], ...] = (
@@ -48,6 +52,6 @@ def create_receiver(hub: EventHub) -> MemoryReceiver:
     async def on_event(event: Event) -> None:
         await hub.publish(Hint(topics_for(event.type), event.type))
 
-    for mask in SUBSCRIBED:
+    for mask in HANDLED:
         registry.add(mask, on_event)
     return MemoryReceiver(BusConfig(service=SERVICE), registry=registry)

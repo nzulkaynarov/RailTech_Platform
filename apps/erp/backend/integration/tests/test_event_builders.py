@@ -67,7 +67,8 @@ def test_the_22_types_of_the_erp_are_the_files_of_the_contract():
 
     events_dir = Path(os.environ["RT_BUS_CONTRACTS_DIR"]) / "erp"
     names = {p.name[: -len(".v1.json")] for p in events_dir.glob("*.v1.json") if not p.name.startswith("_")}
-    assert names == VALID_EVENT_TYPES and len(names) == 22
+    # Волна 12 (E1): quote.ready_for_approval — в контракте; публикацию добавит E5 (тогда — в VALID_EVENT_TYPES).
+    assert names == VALID_EVENT_TYPES | {"quote.ready_for_approval"} and len(VALID_EVENT_TYPES) == 22
     for short in VALID_EVENT_TYPES:
         assert event_type_name(short) == f"uz.railtech.erp.{short}.v1"
         assert json.loads((events_dir / f"{short}.v1.json").read_text(encoding="utf-8"))["type"] == "object"
