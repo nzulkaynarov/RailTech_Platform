@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# pg_dump-гейт перед миграциями (VPS 1): дамп баз crm и erp с VPS 2 (одноразовый контейнер с pg_dump 17) в
+# pg_dump-гейт перед миграциями (VPS 1): дамп баз crm, erp и eds с VPS 2 (одноразовый контейнер с pg_dump 17) в
 # $RT_STATE/predeploy/<тег>-<время>/. Нет читаемого дампа или pg_dump вернул не 0 — код выхода ≠ 0, и deploy.sh
 # миграции не запускает. Код возврата pg_dump проверяется явно; частично записанный каталог удаляется по trap.
 #   predeploy-dump.sh <тег>
@@ -34,6 +34,7 @@ dump_db() { # база, роль, имя переменной с паролем
 
 dump_db crm crm_app DB_CRM_PASSWORD
 dump_db erp erp_app DB_ERP_PASSWORD
+dump_db eds eds_app DB_EDS_PASSWORD
 (cd "$out" && sha256sum -- *.dump > SHA256SUMS)
 ok=1
 log "pg_dump-гейт пройден: $out"

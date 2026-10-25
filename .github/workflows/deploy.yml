@@ -2,8 +2,8 @@
 # Вход: git-ref (по умолчанию main) и действие deploy | rollback. Окружение `production` (GitHub environment) —
 # защита вручную: required reviewers задаёт владелец. ci.yml не трогает.
 #
-# deploy:   сборка восьми образов -> push в GHCR с тегом = полный git sha -> загрузка infra/ на VPS 1 по SSH ->
-#           deploy.sh на сервере (pg_dump-гейт, миграции, up) -> smoke четырёх доменов с раннера.
+# deploy:   сборка девяти образов -> push в GHCR с тегом = полный git sha -> загрузка infra/ на VPS 1 по SSH ->
+#           deploy.sh на сервере (pg_dump-гейт баз crm, erp и eds, миграции, up) -> smoke четырёх доменов с раннера.
 # rollback: rollback.sh на VPS 1 — предыдущий тег (по state на сервере), затем smoke с раннера: те же четыре домена, если в релизе
 #           отката есть Платформа. Миграции БД не откатываются.
 #
@@ -178,6 +178,20 @@ jobs:
           tags: ghcr.io/${{ steps.ver.outputs.owner }}/rt-platform-web:${{ steps.ver.outputs.tag }}
           cache-from: type=gha,scope=platform-web
           cache-to: type=gha,mode=max,scope=platform-web
+
+      - name: Образ rt-eds
+        # Сервис документооборота (волна 12, ADR-0015): api, worker и миграции — один образ; rt_bus и контракты — как у CRM (L14).
+        uses: docker/build-push-action@v6
+        with:
+          context: apps/eds
+          build-contexts: |
+            rtbus=packages/rt-bus
+            contracts=packages/contracts
+          target: prod
+          push: true
+          tags: ghcr.io/${{ steps.ver.outputs.owner }}/rt-eds:${{ steps.ver.outputs.tag }}
+          cache-from: type=gha,scope=eds
+          cache-to: type=gha,mode=max,scope=eds
 
       - name: SSH к VPS 1
         env:

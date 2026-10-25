@@ -14,7 +14,7 @@ set -euo pipefail
 BACKUP_DIR="${BACKUP_DIR:-/backups}"
 KEEP_DAYS="${BACKUP_KEEP_DAYS:-14}"
 AT_UTC="${BACKUP_AT_UTC:-22:00}"
-DB_NAMES="${DB_NAMES:-crm erp litellm langfuse}"
+DB_NAMES="${DB_NAMES:-crm erp eds litellm langfuse}"
 EXT_DAY="${BACKUP_EXT_DAY:-0}"
 EXT_KEEP_DAYS="${BACKUP_EXT_KEEP_DAYS:-60}"
 

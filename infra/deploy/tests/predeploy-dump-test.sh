@@ -4,7 +4,7 @@
 set -euo pipefail
 here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 tmp="$(mktemp -d)"; trap 'rm -rf "$tmp"' EXIT
-printf 'DB_INTERNAL_IP=10.0.0.2\nDB_CRM_PASSWORD=x\nDB_ERP_PASSWORD=x\n' > "$tmp/env"; chmod 600 "$tmp/env"
+printf 'DB_INTERNAL_IP=10.0.0.2\nDB_CRM_PASSWORD=x\nDB_ERP_PASSWORD=x\nDB_EDS_PASSWORD=x\n' > "$tmp/env"; chmod 600 "$tmp/env"
 
 # Фейковый docker: ищет в аргументах pg_dump / pg_restore, ведёт себя по FAKE_MODE.
 cat > "$tmp/docker" <<'FAKE'

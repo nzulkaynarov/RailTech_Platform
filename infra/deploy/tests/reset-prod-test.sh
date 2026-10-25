@@ -2,7 +2,7 @@
 # Тест S0-8: infra/deploy/reset-prod.sh с подменёнными docker, ssh и id (ничего не запускается и не удаляется).
 # Проверяет: отказ при неверном подтверждении (до любого действия), порядок шагов, что litellm, backups, wal, langfuse,
 # тома s3_data/caddy_* и сервисы rustfs/caddy/litellm не трогаются, обязательный дамп, продолжение после сбоя деплоя,
-# режим VPS 2 (только crm и erp, litellm цела).  Запуск: bash этот-файл
+# режим VPS 2 (только crm, erp и eds, litellm цела).  Запуск: bash этот-файл
 set -euo pipefail
 here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 script="$here/../reset-prod.sh"
@@ -14,7 +14,7 @@ tag=t1
 mkdir -p "$tmp/bin" "$tmp/state"
 rel="$tmp/releases/$tag"
 mkdir -p "$rel/infra/deploy"
-printf 'CRM_DOMAIN=%s\nERP_DOMAIN=erp.example.org\nCABINET_DOMAIN=cabinet.example.org\nPLATFORM_DOMAIN=platform.example.org\nDB_INTERNAL_IP=198.51.100.2\nDB_CRM_PASSWORD=x\nDB_ERP_PASSWORD=x\nRT_PROFILES=\n' "$domain" > "$tmp/env"
+printf 'CRM_DOMAIN=%s\nERP_DOMAIN=erp.example.org\nCABINET_DOMAIN=cabinet.example.org\nPLATFORM_DOMAIN=platform.example.org\nDB_INTERNAL_IP=198.51.100.2\nDB_CRM_PASSWORD=x\nDB_ERP_PASSWORD=x\nDB_EDS_PASSWORD=x\nRT_PROFILES=\n' "$domain" > "$tmp/env"
 chmod 600 "$tmp/env"
 printf 'DB_SUPERUSER_PASSWORD=x\n' > "$tmp/db.env"   # режим VPS 2 только проверяет наличие файла
 mkdir -p "$tmp/rtdb"; cp "$tmp/db.env" "$tmp/rtdb/.env.db"
@@ -40,7 +40,7 @@ cat > "$rel/infra/deploy/predeploy-dump.sh" <<EOF
 echo "predeploy-dump.sh \$*" >> "$LOG"
 [[ -f "$tmp/dump-fails" ]] && exit 1
 d="$tmp/state/predeploy/\$1-\$(date -u +%Y%m%dT%H%M%SZ)"
-mkdir -p "\$d"; echo crm > "\$d/crm.dump"; echo erp > "\$d/erp.dump"
+mkdir -p "\$d"; echo crm > "\$d/crm.dump"; echo erp > "\$d/erp.dump"; echo eds > "\$d/eds.dump"
 EOF
 chmod +x "$rel"/infra/deploy/*.sh
 
@@ -175,17 +175,18 @@ assert_before "docker volume rm" "deploy.sh $tag"
 stop_line="$(grep -m1 '^docker stop' "$LOG")"
 for id in id-crmapi id-crmbot id-worker id-erp id-brk id-cache id-bff; do [[ "$stop_line" == *"$id"* ]] || fail "не остановлен $id: $stop_line"; done
 for id in id-rustfs id-caddy id-litellm; do [[ "$stop_line" != *"$id"* ]] || fail "остановлен $id, которому положено работать: $stop_line"; done
-# базы: только crm и erp
+# базы: только crm, erp и eds
 grep 'DROP DATABASE' "$LOG" | grep -q '"crm"' || fail "crm не удалена"
 grep 'DROP DATABASE' "$LOG" | grep -q '"erp"' || fail "erp не удалена"
+grep 'DROP DATABASE' "$LOG" | grep -q '"eds"' || fail "eds не удалена"
 if grep 'DROP DATABASE' "$LOG" | grep -Eq 'litellm|langfuse'; then fail "DROP затронул litellm или langfuse"; fi
 assert_present "10-prod-init.sh"
 assert_before "DROP DATABASE" "10-prod-init.sh"
-# бакеты: ровно шесть приложений
+# бакеты: ровно семь приложений
 purge_line="$(awk '/entrypoint sh s3-init -c/ {on=1} on {print} on && /^. sh / {exit}' "$LOG" | tr '\n' ' ')"   # вызов многострочный: до строки с аргументами бакетов
 [[ "$purge_line" == *"S3_ROOT"* || "$purge_line" == *"rc alias set root"* ]] || fail "очистка бакетов не идёт корневым ключом через rc: $purge_line"
 [[ "$purge_line" == *"object remove --recursive --force"* ]] || fail "очистка бакетов не удаляет объекты рекурсивно: $purge_line"
-for b in erp-private erp-public erp-temp client-documents tg-attachments kb-sources; do [[ "$purge_line" == *" $b"* ]] || fail "бакет $b не очищается: $purge_line"; done
+for b in erp-private erp-public erp-temp eds-private client-documents tg-attachments kb-sources; do [[ "$purge_line" == *" $b"* ]] || fail "бакет $b не очищается: $purge_line"; done
 for b in backups wal langfuse; do [[ "$purge_line" != *" $b"* ]] || fail "очищается бакет $b, который трогать нельзя: $purge_line"; done
 # тома: Redis снят, RustFS/Caddy/CRM-бэкапы целы
 for v in redis_broker_data redis_cache_data redis_data; do assert_present "volume rm rt-test_$v"; done
@@ -211,7 +212,7 @@ reset_fake
   echo empty > "$FAKE/dbstate"   # оператор выполнил команду на VPS 2
   echo
 ) | run_reset || fail "ручной режим упал"
-grep -q 'reset-prod.sh db --drop crm,erp' "$tmp/out" || fail "не напечатана команда для VPS 2"
+grep -q 'reset-prod.sh db --drop crm,erp,eds' "$tmp/out" || fail "не напечатана команда для VPS 2"
 assert_absent "^ssh "
 
 # ── 4. оператор не выполнил шаг на VPS 2: базы не пусты — деплоя нет ─────────────────────────────────────────────────────
@@ -252,7 +253,7 @@ reset_fake; echo empty > "$FAKE/dbstate"
 run_reset <<<"$domain" || fail "при пустых базах сценарий упал"
 assert_absent "ssh "; assert_absent "DROP DATABASE"; assert_present "volume rm"; assert_present "deploy.sh $tag"
 
-# ── 9. режим VPS 2: только crm и erp, litellm и langfuse отклоняются, нужен root ───────────────────────────────────────
+# ── 9. режим VPS 2: только crm, erp и eds, litellm и langfuse отклоняются, нужен root ───────────────────────────────────────
 reset_fake; touch "$tmp/as-root"
 for bad in "crm,litellm" "litellm" "langfuse" "crm,erp,langfuse" "postgres"; do
   : > "$LOG"
@@ -261,11 +262,11 @@ for bad in "crm,litellm" "litellm" "langfuse" "crm,erp,langfuse" "postgres"; do
 done
 : > "$LOG"; if bash "$script" db >"$tmp/out" 2>&1; then fail "режим db без --drop выполнился"; fi; assert_absent "DROP DATABASE"
 rm "$tmp/as-root"; : > "$LOG"
-if bash "$script" db --drop crm,erp --dump-taken /var/state/dump-1 >"$tmp/out" 2>&1; then fail "режим db выполнился не от root"; fi
+if bash "$script" db --drop crm,erp,eds --dump-taken /var/state/dump-1 >"$tmp/out" 2>&1; then fail "режим db выполнился не от root"; fi
 assert_absent "DROP DATABASE"
 touch "$tmp/as-root"; : > "$LOG"
-bash "$script" db --drop crm,erp --dump-taken /var/state/dump-1 >"$tmp/out" 2>&1 || fail "режим db упал на допустимом списке"
-assert_present 'DROP DATABASE IF EXISTS "crm"'; assert_present 'DROP DATABASE IF EXISTS "erp"'
+bash "$script" db --drop crm,erp,eds --dump-taken /var/state/dump-1 >"$tmp/out" 2>&1 || fail "режим db упал на допустимом списке"
+assert_present 'DROP DATABASE IF EXISTS "crm"'; assert_present 'DROP DATABASE IF EXISTS "erp"'; assert_present 'DROP DATABASE IF EXISTS "eds"'
 assert_before 'DROP DATABASE IF EXISTS "erp"' "10-prod-init.sh"
 grep -q 'litellm цела' "$tmp/out" || fail "режим db не подтвердил сохранность litellm"
 
@@ -277,13 +278,14 @@ check_refused() { # описание, команда...: режим db обяз�
   if "$@" >"$tmp/out" 2>&1 </dev/null; then fail "режим db выполнился: $what"; fi
   assert_absent "DROP DATABASE"
 }
-check_refused "без флага и без ввода (ssh без терминала)" bash -c "bash '$script' db --drop crm,erp </dev/null"
-check_refused "неверный ввод" bash -c "echo crm | bash '$script' db --drop crm,erp"
-check_refused "ввод только одной базы" bash -c "echo erp | bash '$script' db --drop crm,erp"
-check_refused "пустой --dump-taken" bash "$script" db --drop crm,erp --dump-taken ""
-check_refused "относительный --dump-taken" bash "$script" db --drop crm,erp --dump-taken dump-1
-check_refused "флаг-тестовый переключатель на боевом RT_STATE" env RT_STATE=/opt/rt/state bash -c "echo crm,erp | bash '$script' db --drop crm,erp"
-: > "$LOG"; echo "crm,erp" | bash "$script" db --drop crm,erp >"$tmp/out" 2>&1 || fail "режим db отказал при верном вводе crm,erp"
+check_refused "без флага и без ввода (ssh без терминала)" bash -c "bash '$script' db --drop crm,erp,eds </dev/null"
+check_refused "неверный ввод" bash -c "echo crm | bash '$script' db --drop crm,erp,eds"
+check_refused "ввод без eds" bash -c "echo crm,erp | bash '$script' db --drop crm,erp,eds"
+check_refused "ввод только одной базы" bash -c "echo erp | bash '$script' db --drop crm,erp,eds"
+check_refused "пустой --dump-taken" bash "$script" db --drop crm,erp,eds --dump-taken ""
+check_refused "относительный --dump-taken" bash "$script" db --drop crm,erp,eds --dump-taken dump-1
+check_refused "флаг-тестовый переключатель на боевом RT_STATE" env RT_STATE=/opt/rt/state bash -c "echo crm,erp,eds | bash '$script' db --drop crm,erp,eds"
+: > "$LOG"; echo "crm,erp,eds" | bash "$script" db --drop crm,erp,eds >"$tmp/out" 2>&1 || fail "режим db отказал при верном вводе crm,erp"
 assert_present 'DROP DATABASE IF EXISTS "crm"'
 # VPS-1-часть передаёт --dump-taken ssh-ом только после дампа
 reset_fake
