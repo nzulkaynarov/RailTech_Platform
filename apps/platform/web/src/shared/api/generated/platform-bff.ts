@@ -52,6 +52,17 @@
  * обычными API (с проверкой прав). Данных событий в потоке нет. Пока поток жив, опрос — редкий (5 минут), при обрыве —
  * прежние 30 секунд. Чисто добавляющее изменение.
  *
+ * **0.8.0 (W13-A3) — Admin · Компания.** Чисто добавляющее изменение: `GET/PATCH /admin/company` (реквизиты), `/admin/company/logo`
+ * (загрузка `multipart/form-data` и удаление), `/admin/company/brand` (+ `/logo`, `/preview`) — бланк и бренд документов,
+ * `/admin/company/numbering` (+ `/preview`), `/admin/company/quote-defaults`, `/admin/company/charge-types` и `charge-templates`,
+ * `/admin/company/document-templates` (+ `placeholders`, `preview`, `{id}/copy`), `/admin/company/email-templates` (+ `{id}/preview`),
+ * `/admin/company/reference/{kind}` (страны, валюты, единицы, базисы поставки), `/admin/company/categories`,
+ * `/admin/company/category-requests` (+ `approve`, `reject`), `/admin/company/platform-settings`. Доступ — раздел `company.settings`
+ * (чтение — `GET` и предпросмотры, полный — изменения). BFF только проксирует к ERP с токеном сотрудника и сам находит свою компанию по
+ * профилю сотрудника в ERP; нет компании — 409 `COMPANY_NOT_SET`. Ошибки ERP: 400 -> 422 `VALIDATION_FAILED` (`details.reason` —
+ * код ERP в нижнем регистре, `details.fields`), «используется», «префикс занят» и «уже рассмотрен» -> 409 `CONFLICT` с
+ * `details.reason`. Поля маржи `QuoteDefaults` вырезаются без права на группу `cost_margin` (правило 6 CONVENTIONS).
+ *
  * **0.6.0 (R-1c, R3-D-1) — ломающее (до 1.0 допустимо).** У сотрудника хотя бы одна роль: `EmployeeUpdate.role_ids` —
  * `minItems: 1`, пустой набор — 422 `ROLES_REQUIRED` (`details.fields = [role_ids]`), в CRM запрос не уходит; тот же код —
  * перевод отказа CRM `roles_required` (CRM API 0.3.0). Закрыть доступ — `is_active = false` («Отключить сотрудника»).
@@ -85,7 +96,7 @@
  * Лимиты: вход — 10 неудачных попыток в минуту на IP и e-mail; остальные запросы — 300 в минуту на сессию; превышение — 429
  * `TOO_MANY_REQUESTS` с `Retry-After`.
  *
- * OpenAPI spec version: 0.7.0
+ * OpenAPI spec version: 0.8.0
  */
 import { useMutation, useQuery } from "@tanstack/react-query";
 import type {
@@ -116,8 +127,39 @@ import type {
   BackupsStatus,
   BotProfile,
   BotProfileState,
+  BrandPreviewIn,
+  BrandProfile,
+  BrandProfileUpdate,
+  CatalogCategory,
+  CatalogCategoryIn,
+  CatalogCategoryList,
+  CatalogCategoryUpdate,
+  CategoryRequest,
+  CategoryRequestApproveIn,
+  CategoryRequestList,
+  CategoryRequestRejectIn,
   ChangePasswordIn,
+  ChargeTemplate,
+  ChargeTemplateIn,
+  ChargeTemplateList,
+  ChargeTemplateUpdate,
+  ChargeTypeList,
+  CompanyProfile,
+  CompanyProfileUpdate,
   CsrfFailedResponse,
+  DocumentPlaceholders,
+  DocumentPreview,
+  DocumentTemplate,
+  DocumentTemplateCopyIn,
+  DocumentTemplateIn,
+  DocumentTemplateList,
+  DocumentTemplatePreviewIn,
+  DocumentTemplateUpdate,
+  EmailTemplate,
+  EmailTemplateIn,
+  EmailTemplateList,
+  EmailTemplatePreview,
+  EmailTemplateUpdate,
   Employee,
   EmployeeInvite,
   EmployeeList,
@@ -140,10 +182,12 @@ import type {
   IntegrationFailedResponse,
   IntegrationInvalidResponse,
   IntegrationsOverview,
+  ListCategoryRequestsParams,
   ListEmployeesParams,
   ListMailLogParams,
   ListNotificationsParams,
   LoginIn,
+  LogoUpload,
   MailLog,
   MailQueued,
   Me,
@@ -151,9 +195,21 @@ import type {
   MenuCounters,
   NotFoundResponse,
   NotificationPage,
+  NumberingPreview,
+  NumberingPreviewIn,
+  NumberingScheme,
+  NumberingUpdate,
   PasswordConfirm,
+  PlatformSettings,
+  PlatformSettingsUpdate,
   Queue,
   QueueCards,
+  QuoteDefaults,
+  QuoteDefaultsUpdate,
+  ReferenceItem,
+  ReferenceItemIn,
+  ReferenceItemList,
+  ReferenceItemUpdate,
   Role,
   RoleCreate,
   RoleList,
@@ -6957,4 +7013,5068 @@ export const useDeleteRole = <
   TContext
 > => {
   return useMutation(getDeleteRoleMutationOptions(options), queryClient);
+};
+
+export const getGetCompanyUrl = () => {
+  return `/api/v1/admin/company`;
+};
+
+/**
+ * BFF находит свою компанию по `own_company_id` из `setup/status/` ERP; нет компании — 409 `COMPANY_NOT_SET`. Раздел `company.settings` — чтение.
+ * @summary Реквизиты своей компании (Admin · Компания)
+ */
+export const getCompany = async (options?: Parameters<typeof http>[1]): Promise<CompanyProfile> => {
+  return http<CompanyProfile>(getGetCompanyUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetCompanyQueryKey = () => {
+  return [`/api/v1/admin/company`] as const;
+};
+
+export const getGetCompanyQueryOptions = <
+  TData = Awaited<ReturnType<typeof getCompany>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | Error>,
+>(options?: {
+  query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getCompany>>, TError, TData>>;
+  request?: SecondParameter<typeof http>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetCompanyQueryKey();
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getCompany>>> = ({ signal }) =>
+    getCompany({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getCompany>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type GetCompanyQueryResult = NonNullable<Awaited<ReturnType<typeof getCompany>>>;
+export type GetCompanyQueryError = ErrorType<SessionExpiredResponse | ForbiddenResponse | Error>;
+
+export function useGetCompany<
+  TData = Awaited<ReturnType<typeof getCompany>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | Error>,
+>(
+  options: {
+    query: Partial<UseQueryOptions<Awaited<ReturnType<typeof getCompany>>, TError, TData>> &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getCompany>>,
+          TError,
+          Awaited<ReturnType<typeof getCompany>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetCompany<
+  TData = Awaited<ReturnType<typeof getCompany>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | Error>,
+>(
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getCompany>>, TError, TData>> &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getCompany>>,
+          TError,
+          Awaited<ReturnType<typeof getCompany>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetCompany<
+  TData = Awaited<ReturnType<typeof getCompany>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | Error>,
+>(
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getCompany>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary Реквизиты своей компании (Admin · Компания)
+ */
+
+export function useGetCompany<
+  TData = Awaited<ReturnType<typeof getCompany>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | Error>,
+>(
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getCompany>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getGetCompanyQueryOptions(options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export const getUpdateCompanyUrl = () => {
+  return `/api/v1/admin/company`;
+};
+
+/**
+ * Не присланное поле не меняется; ошибки полей — 422 с `details.fields`. Раздел `company.settings` — полный.
+ * @summary Изменить реквизиты
+ */
+export const updateCompany = async (
+  companyProfileUpdate: CompanyProfileUpdate,
+  options?: Parameters<typeof http>[1],
+): Promise<CompanyProfile> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<CompanyProfile>(getUpdateCompanyUrl(), {
+    ...options,
+    method: "PATCH",
+    headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
+    body: JSON.stringify(companyProfileUpdate),
+  });
+};
+
+export const getUpdateCompanyMutationKey = () => ["updateCompany"] as const;
+
+export const getUpdateCompanyMutationOptions = <
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | Error | ValidationFailedResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateCompany>>,
+    TError,
+    UpdateCompanyMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof updateCompany>>,
+  TError,
+  UpdateCompanyMutationVariables,
+  TContext
+> => {
+  const mutationKey = getUpdateCompanyMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof updateCompany>>,
+    UpdateCompanyMutationVariables
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return updateCompany(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type UpdateCompanyMutationResult = NonNullable<Awaited<ReturnType<typeof updateCompany>>>;
+export type UpdateCompanyMutationBody = CompanyProfileUpdate;
+export type UpdateCompanyMutationError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse | Error | ValidationFailedResponse
+>;
+export type UpdateCompanyMutationVariables = { data: CompanyProfileUpdate };
+
+/**
+ * @summary Изменить реквизиты
+ */
+export const useUpdateCompany = <
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | Error | ValidationFailedResponse>,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof updateCompany>>,
+      TError,
+      UpdateCompanyMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof updateCompany>>,
+  TError,
+  UpdateCompanyMutationVariables,
+  TContext
+> => {
+  return useMutation(getUpdateCompanyMutationOptions(options), queryClient);
+};
+
+export const getGetCompanyLogoImageUrl = () => {
+  return `/api/v1/admin/company/logo/image`;
+};
+
+/**
+ * BFF берёт файл в ERP по адресу из карточки компании (только публичный путь логотипа) и отдаёт с теми же защитными заголовками (`X-Content-Type-Options`, `Content-Security-Policy: sandbox`). Нет логотипа, чужой путь или файл больше 5 МБ — 404 `NOT_FOUND`. Раздел `company.settings` — чтение.
+ * @summary Файл логотипа компании
+ */
+export const getCompanyLogoImage = async (options?: Parameters<typeof http>[1]): Promise<Blob> => {
+  return http<Blob>(getGetCompanyLogoImageUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetCompanyLogoImageQueryKey = () => {
+  return [`/api/v1/admin/company/logo/image`] as const;
+};
+
+export const getGetCompanyLogoImageQueryOptions = <
+  TData = Awaited<ReturnType<typeof getCompanyLogoImage>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | Error>,
+>(options?: {
+  query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getCompanyLogoImage>>, TError, TData>>;
+  request?: SecondParameter<typeof http>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetCompanyLogoImageQueryKey();
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getCompanyLogoImage>>> = ({ signal }) =>
+    getCompanyLogoImage({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getCompanyLogoImage>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type GetCompanyLogoImageQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getCompanyLogoImage>>
+>;
+export type GetCompanyLogoImageQueryError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | Error
+>;
+
+export function useGetCompanyLogoImage<
+  TData = Awaited<ReturnType<typeof getCompanyLogoImage>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | Error>,
+>(
+  options: {
+    query: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getCompanyLogoImage>>, TError, TData>
+    > &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getCompanyLogoImage>>,
+          TError,
+          Awaited<ReturnType<typeof getCompanyLogoImage>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetCompanyLogoImage<
+  TData = Awaited<ReturnType<typeof getCompanyLogoImage>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | Error>,
+>(
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getCompanyLogoImage>>, TError, TData>
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getCompanyLogoImage>>,
+          TError,
+          Awaited<ReturnType<typeof getCompanyLogoImage>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetCompanyLogoImage<
+  TData = Awaited<ReturnType<typeof getCompanyLogoImage>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | Error>,
+>(
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getCompanyLogoImage>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary Файл логотипа компании
+ */
+
+export function useGetCompanyLogoImage<
+  TData = Awaited<ReturnType<typeof getCompanyLogoImage>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | Error>,
+>(
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getCompanyLogoImage>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getGetCompanyLogoImageQueryOptions(options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export const getUploadCompanyLogoUrl = () => {
+  return `/api/v1/admin/company/logo`;
+};
+
+/**
+ * `multipart/form-data`, поле `logo`; BFF передаёт файл в ERP как есть: не больше 2 МБ, тип части — PNG, JPEG, WebP или SVG, иначе 422 `VALIDATION_FAILED` (`details.reason = unsupported_type`); содержимое проверяет ERP. Раздел `company.settings` — полный.
+ * @summary Загрузить логотип компании
+ */
+export const uploadCompanyLogo = async (
+  logoUpload: LogoUpload,
+  options?: Parameters<typeof http>[1],
+): Promise<CompanyProfile> => {
+  const formData = new FormData();
+  formData.append(`logo`, logoUpload.logo);
+
+  return http<CompanyProfile>(getUploadCompanyLogoUrl(), {
+    ...options,
+    method: "POST",
+    body: formData,
+  });
+};
+
+export const getUploadCompanyLogoMutationKey = () => ["uploadCompanyLogo"] as const;
+
+export const getUploadCompanyLogoMutationOptions = <
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | Error | ValidationFailedResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof uploadCompanyLogo>>,
+    TError,
+    UploadCompanyLogoMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof uploadCompanyLogo>>,
+  TError,
+  UploadCompanyLogoMutationVariables,
+  TContext
+> => {
+  const mutationKey = getUploadCompanyLogoMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof uploadCompanyLogo>>,
+    UploadCompanyLogoMutationVariables
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return uploadCompanyLogo(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type UploadCompanyLogoMutationResult = NonNullable<
+  Awaited<ReturnType<typeof uploadCompanyLogo>>
+>;
+export type UploadCompanyLogoMutationBody = LogoUpload;
+export type UploadCompanyLogoMutationError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse | Error | ValidationFailedResponse
+>;
+export type UploadCompanyLogoMutationVariables = { data: LogoUpload };
+
+/**
+ * @summary Загрузить логотип компании
+ */
+export const useUploadCompanyLogo = <
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | Error | ValidationFailedResponse>,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof uploadCompanyLogo>>,
+      TError,
+      UploadCompanyLogoMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof uploadCompanyLogo>>,
+  TError,
+  UploadCompanyLogoMutationVariables,
+  TContext
+> => {
+  return useMutation(getUploadCompanyLogoMutationOptions(options), queryClient);
+};
+
+export const getDeleteCompanyLogoUrl = () => {
+  return `/api/v1/admin/company/logo`;
+};
+
+/**
+ * Раздел `company.settings` — полный.
+ * @summary Удалить логотип компании
+ */
+export const deleteCompanyLogo = async (options?: Parameters<typeof http>[1]): Promise<void> => {
+  return http<void>(getDeleteCompanyLogoUrl(), {
+    ...options,
+    method: "DELETE",
+  });
+};
+
+export const getDeleteCompanyLogoMutationKey = () => ["deleteCompanyLogo"] as const;
+
+export const getDeleteCompanyLogoMutationOptions = <
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | Error>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof deleteCompanyLogo>>,
+    TError,
+    void,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<Awaited<ReturnType<typeof deleteCompanyLogo>>, TError, void, TContext> => {
+  const mutationKey = getDeleteCompanyLogoMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteCompanyLogo>>, void> = () => {
+    return deleteCompanyLogo(requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type DeleteCompanyLogoMutationResult = NonNullable<
+  Awaited<ReturnType<typeof deleteCompanyLogo>>
+>;
+
+export type DeleteCompanyLogoMutationError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse | Error
+>;
+
+/**
+ * @summary Удалить логотип компании
+ */
+export const useDeleteCompanyLogo = <
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | Error>,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof deleteCompanyLogo>>,
+      TError,
+      void,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<Awaited<ReturnType<typeof deleteCompanyLogo>>, TError, void, TContext> => {
+  return useMutation(getDeleteCompanyLogoMutationOptions(options), queryClient);
+};
+
+export const getGetBrandProfileUrl = () => {
+  return `/api/v1/admin/company/brand`;
+};
+
+/**
+ * Профиль создаётся при первом чтении. Раздел `company.settings` — чтение.
+ * @summary Бланк и бренд документов
+ */
+export const getBrandProfile = async (
+  options?: Parameters<typeof http>[1],
+): Promise<BrandProfile> => {
+  return http<BrandProfile>(getGetBrandProfileUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetBrandProfileQueryKey = () => {
+  return [`/api/v1/admin/company/brand`] as const;
+};
+
+export const getGetBrandProfileQueryOptions = <
+  TData = Awaited<ReturnType<typeof getBrandProfile>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | Error>,
+>(options?: {
+  query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getBrandProfile>>, TError, TData>>;
+  request?: SecondParameter<typeof http>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetBrandProfileQueryKey();
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getBrandProfile>>> = ({ signal }) =>
+    getBrandProfile({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getBrandProfile>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type GetBrandProfileQueryResult = NonNullable<Awaited<ReturnType<typeof getBrandProfile>>>;
+export type GetBrandProfileQueryError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse | Error
+>;
+
+export function useGetBrandProfile<
+  TData = Awaited<ReturnType<typeof getBrandProfile>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | Error>,
+>(
+  options: {
+    query: Partial<UseQueryOptions<Awaited<ReturnType<typeof getBrandProfile>>, TError, TData>> &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getBrandProfile>>,
+          TError,
+          Awaited<ReturnType<typeof getBrandProfile>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetBrandProfile<
+  TData = Awaited<ReturnType<typeof getBrandProfile>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | Error>,
+>(
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getBrandProfile>>, TError, TData>> &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getBrandProfile>>,
+          TError,
+          Awaited<ReturnType<typeof getBrandProfile>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetBrandProfile<
+  TData = Awaited<ReturnType<typeof getBrandProfile>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | Error>,
+>(
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getBrandProfile>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary Бланк и бренд документов
+ */
+
+export function useGetBrandProfile<
+  TData = Awaited<ReturnType<typeof getBrandProfile>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | Error>,
+>(
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getBrandProfile>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getGetBrandProfileQueryOptions(options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export const getUpdateBrandProfileUrl = () => {
+  return `/api/v1/admin/company/brand`;
+};
+
+/**
+ * Не присланное поле не меняется. Раздел `company.settings` — полный.
+ * @summary Изменить бланк и бренд
+ */
+export const updateBrandProfile = async (
+  brandProfileUpdate: BrandProfileUpdate,
+  options?: Parameters<typeof http>[1],
+): Promise<BrandProfile> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<BrandProfile>(getUpdateBrandProfileUrl(), {
+    ...options,
+    method: "PATCH",
+    headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
+    body: JSON.stringify(brandProfileUpdate),
+  });
+};
+
+export const getUpdateBrandProfileMutationKey = () => ["updateBrandProfile"] as const;
+
+export const getUpdateBrandProfileMutationOptions = <
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | Error | ValidationFailedResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateBrandProfile>>,
+    TError,
+    UpdateBrandProfileMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof updateBrandProfile>>,
+  TError,
+  UpdateBrandProfileMutationVariables,
+  TContext
+> => {
+  const mutationKey = getUpdateBrandProfileMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof updateBrandProfile>>,
+    UpdateBrandProfileMutationVariables
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return updateBrandProfile(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type UpdateBrandProfileMutationResult = NonNullable<
+  Awaited<ReturnType<typeof updateBrandProfile>>
+>;
+export type UpdateBrandProfileMutationBody = BrandProfileUpdate;
+export type UpdateBrandProfileMutationError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse | Error | ValidationFailedResponse
+>;
+export type UpdateBrandProfileMutationVariables = { data: BrandProfileUpdate };
+
+/**
+ * @summary Изменить бланк и бренд
+ */
+export const useUpdateBrandProfile = <
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | Error | ValidationFailedResponse>,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof updateBrandProfile>>,
+      TError,
+      UpdateBrandProfileMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof updateBrandProfile>>,
+  TError,
+  UpdateBrandProfileMutationVariables,
+  TContext
+> => {
+  return useMutation(getUpdateBrandProfileMutationOptions(options), queryClient);
+};
+
+export const getGetBrandLogoImageUrl = () => {
+  return `/api/v1/admin/company/brand/logo/image`;
+};
+
+/**
+ * BFF берёт файл в ERP по адресу из профиля бланка (только публичный путь логотипа) и отдаёт с теми же защитными заголовками (`X-Content-Type-Options`, `Content-Security-Policy: sandbox`). Нет логотипа, чужой путь или файл больше 5 МБ — 404 `NOT_FOUND`. Раздел `company.settings` — чтение.
+ * @summary Файл логотипа бланка
+ */
+export const getBrandLogoImage = async (options?: Parameters<typeof http>[1]): Promise<Blob> => {
+  return http<Blob>(getGetBrandLogoImageUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetBrandLogoImageQueryKey = () => {
+  return [`/api/v1/admin/company/brand/logo/image`] as const;
+};
+
+export const getGetBrandLogoImageQueryOptions = <
+  TData = Awaited<ReturnType<typeof getBrandLogoImage>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | Error>,
+>(options?: {
+  query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getBrandLogoImage>>, TError, TData>>;
+  request?: SecondParameter<typeof http>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetBrandLogoImageQueryKey();
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getBrandLogoImage>>> = ({ signal }) =>
+    getBrandLogoImage({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getBrandLogoImage>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type GetBrandLogoImageQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getBrandLogoImage>>
+>;
+export type GetBrandLogoImageQueryError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | Error
+>;
+
+export function useGetBrandLogoImage<
+  TData = Awaited<ReturnType<typeof getBrandLogoImage>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | Error>,
+>(
+  options: {
+    query: Partial<UseQueryOptions<Awaited<ReturnType<typeof getBrandLogoImage>>, TError, TData>> &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getBrandLogoImage>>,
+          TError,
+          Awaited<ReturnType<typeof getBrandLogoImage>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetBrandLogoImage<
+  TData = Awaited<ReturnType<typeof getBrandLogoImage>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | Error>,
+>(
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getBrandLogoImage>>, TError, TData>> &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getBrandLogoImage>>,
+          TError,
+          Awaited<ReturnType<typeof getBrandLogoImage>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetBrandLogoImage<
+  TData = Awaited<ReturnType<typeof getBrandLogoImage>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | Error>,
+>(
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getBrandLogoImage>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary Файл логотипа бланка
+ */
+
+export function useGetBrandLogoImage<
+  TData = Awaited<ReturnType<typeof getBrandLogoImage>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | Error>,
+>(
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getBrandLogoImage>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getGetBrandLogoImageQueryOptions(options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export const getUploadBrandLogoUrl = () => {
+  return `/api/v1/admin/company/brand/logo`;
+};
+
+/**
+ * `multipart/form-data`, поле `logo`; логотип бланка отдельный от логотипа компании. Раздел `company.settings` — полный.
+ * @summary Загрузить логотип бланка
+ */
+export const uploadBrandLogo = async (
+  logoUpload: LogoUpload,
+  options?: Parameters<typeof http>[1],
+): Promise<BrandProfile> => {
+  const formData = new FormData();
+  formData.append(`logo`, logoUpload.logo);
+
+  return http<BrandProfile>(getUploadBrandLogoUrl(), {
+    ...options,
+    method: "POST",
+    body: formData,
+  });
+};
+
+export const getUploadBrandLogoMutationKey = () => ["uploadBrandLogo"] as const;
+
+export const getUploadBrandLogoMutationOptions = <
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | Error | ValidationFailedResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof uploadBrandLogo>>,
+    TError,
+    UploadBrandLogoMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof uploadBrandLogo>>,
+  TError,
+  UploadBrandLogoMutationVariables,
+  TContext
+> => {
+  const mutationKey = getUploadBrandLogoMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof uploadBrandLogo>>,
+    UploadBrandLogoMutationVariables
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return uploadBrandLogo(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type UploadBrandLogoMutationResult = NonNullable<
+  Awaited<ReturnType<typeof uploadBrandLogo>>
+>;
+export type UploadBrandLogoMutationBody = LogoUpload;
+export type UploadBrandLogoMutationError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse | Error | ValidationFailedResponse
+>;
+export type UploadBrandLogoMutationVariables = { data: LogoUpload };
+
+/**
+ * @summary Загрузить логотип бланка
+ */
+export const useUploadBrandLogo = <
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | Error | ValidationFailedResponse>,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof uploadBrandLogo>>,
+      TError,
+      UploadBrandLogoMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof uploadBrandLogo>>,
+  TError,
+  UploadBrandLogoMutationVariables,
+  TContext
+> => {
+  return useMutation(getUploadBrandLogoMutationOptions(options), queryClient);
+};
+
+export const getPreviewBrandDocumentUrl = () => {
+  return `/api/v1/admin/company/brand/preview`;
+};
+
+/**
+ * Образец КП, договора, счёта, акта или письма с несохранёнными правками `draft`; ничего не сохраняется. Раздел `company.settings` — чтение.
+ * @summary Предпросмотр образца документа на бланке
+ */
+export const previewBrandDocument = async (
+  brandPreviewIn: BrandPreviewIn,
+  options?: Parameters<typeof http>[1],
+): Promise<DocumentPreview> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<DocumentPreview>(getPreviewBrandDocumentUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
+    body: JSON.stringify(brandPreviewIn),
+  });
+};
+
+export const getPreviewBrandDocumentMutationKey = () => ["previewBrandDocument"] as const;
+
+export const getPreviewBrandDocumentMutationOptions = <
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | Error | ValidationFailedResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof previewBrandDocument>>,
+    TError,
+    PreviewBrandDocumentMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof previewBrandDocument>>,
+  TError,
+  PreviewBrandDocumentMutationVariables,
+  TContext
+> => {
+  const mutationKey = getPreviewBrandDocumentMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof previewBrandDocument>>,
+    PreviewBrandDocumentMutationVariables
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return previewBrandDocument(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type PreviewBrandDocumentMutationResult = NonNullable<
+  Awaited<ReturnType<typeof previewBrandDocument>>
+>;
+export type PreviewBrandDocumentMutationBody = BrandPreviewIn;
+export type PreviewBrandDocumentMutationError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse | Error | ValidationFailedResponse
+>;
+export type PreviewBrandDocumentMutationVariables = { data: BrandPreviewIn };
+
+/**
+ * @summary Предпросмотр образца документа на бланке
+ */
+export const usePreviewBrandDocument = <
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | Error | ValidationFailedResponse>,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof previewBrandDocument>>,
+      TError,
+      PreviewBrandDocumentMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof previewBrandDocument>>,
+  TError,
+  PreviewBrandDocumentMutationVariables,
+  TContext
+> => {
+  return useMutation(getPreviewBrandDocumentMutationOptions(options), queryClient);
+};
+
+export const getGetNumberingSchemeUrl = () => {
+  return `/api/v1/admin/company/numbering`;
+};
+
+/**
+ * Раздел `company.settings` — чтение.
+ * @summary Схема нумерации документов
+ */
+export const getNumberingScheme = async (
+  options?: Parameters<typeof http>[1],
+): Promise<NumberingScheme> => {
+  return http<NumberingScheme>(getGetNumberingSchemeUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetNumberingSchemeQueryKey = () => {
+  return [`/api/v1/admin/company/numbering`] as const;
+};
+
+export const getGetNumberingSchemeQueryOptions = <
+  TData = Awaited<ReturnType<typeof getNumberingScheme>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse>,
+>(options?: {
+  query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getNumberingScheme>>, TError, TData>>;
+  request?: SecondParameter<typeof http>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetNumberingSchemeQueryKey();
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getNumberingScheme>>> = ({ signal }) =>
+    getNumberingScheme({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getNumberingScheme>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type GetNumberingSchemeQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getNumberingScheme>>
+>;
+export type GetNumberingSchemeQueryError = ErrorType<SessionExpiredResponse | ForbiddenResponse>;
+
+export function useGetNumberingScheme<
+  TData = Awaited<ReturnType<typeof getNumberingScheme>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse>,
+>(
+  options: {
+    query: Partial<UseQueryOptions<Awaited<ReturnType<typeof getNumberingScheme>>, TError, TData>> &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getNumberingScheme>>,
+          TError,
+          Awaited<ReturnType<typeof getNumberingScheme>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetNumberingScheme<
+  TData = Awaited<ReturnType<typeof getNumberingScheme>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse>,
+>(
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getNumberingScheme>>, TError, TData>
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getNumberingScheme>>,
+          TError,
+          Awaited<ReturnType<typeof getNumberingScheme>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetNumberingScheme<
+  TData = Awaited<ReturnType<typeof getNumberingScheme>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse>,
+>(
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getNumberingScheme>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary Схема нумерации документов
+ */
+
+export function useGetNumberingScheme<
+  TData = Awaited<ReturnType<typeof getNumberingScheme>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse>,
+>(
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getNumberingScheme>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getGetNumberingSchemeQueryOptions(options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export const getUpdateNumberingSchemeUrl = () => {
+  return `/api/v1/admin/company/numbering`;
+};
+
+/**
+ * Действует на будущие номера; выданные не меняются. Префикс хранится в настройках компании ERP, схема — в нумерации: BFF сохраняет префикс, затем схему. Неверная маска — 422 `VALIDATION_FAILED` (`details.reason = invalid_numbering_pattern`). Раздел `company.settings` — полный.
+ * @summary Изменить схему нумерации
+ */
+export const updateNumberingScheme = async (
+  numberingUpdate: NumberingUpdate,
+  options?: Parameters<typeof http>[1],
+): Promise<NumberingScheme> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<NumberingScheme>(getUpdateNumberingSchemeUrl(), {
+    ...options,
+    method: "PATCH",
+    headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
+    body: JSON.stringify(numberingUpdate),
+  });
+};
+
+export const getUpdateNumberingSchemeMutationKey = () => ["updateNumberingScheme"] as const;
+
+export const getUpdateNumberingSchemeMutationOptions = <
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | Error | ValidationFailedResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateNumberingScheme>>,
+    TError,
+    UpdateNumberingSchemeMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof updateNumberingScheme>>,
+  TError,
+  UpdateNumberingSchemeMutationVariables,
+  TContext
+> => {
+  const mutationKey = getUpdateNumberingSchemeMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof updateNumberingScheme>>,
+    UpdateNumberingSchemeMutationVariables
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return updateNumberingScheme(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type UpdateNumberingSchemeMutationResult = NonNullable<
+  Awaited<ReturnType<typeof updateNumberingScheme>>
+>;
+export type UpdateNumberingSchemeMutationBody = NumberingUpdate;
+export type UpdateNumberingSchemeMutationError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse | Error | ValidationFailedResponse
+>;
+export type UpdateNumberingSchemeMutationVariables = { data: NumberingUpdate };
+
+/**
+ * @summary Изменить схему нумерации
+ */
+export const useUpdateNumberingScheme = <
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | Error | ValidationFailedResponse>,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof updateNumberingScheme>>,
+      TError,
+      UpdateNumberingSchemeMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof updateNumberingScheme>>,
+  TError,
+  UpdateNumberingSchemeMutationVariables,
+  TContext
+> => {
+  return useMutation(getUpdateNumberingSchemeMutationOptions(options), queryClient);
+};
+
+export const getPreviewNumberingUrl = () => {
+  return `/api/v1/admin/company/numbering/preview`;
+};
+
+/**
+ * Образцы номеров КП, договора, счёта, акта и письма; счётчики не меняются. Раздел `company.settings` — чтение.
+ * @summary Предпросмотр номера по черновику схемы
+ */
+export const previewNumbering = async (
+  numberingPreviewIn: NumberingPreviewIn,
+  options?: Parameters<typeof http>[1],
+): Promise<NumberingPreview> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<NumberingPreview>(getPreviewNumberingUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
+    body: JSON.stringify(numberingPreviewIn),
+  });
+};
+
+export const getPreviewNumberingMutationKey = () => ["previewNumbering"] as const;
+
+export const getPreviewNumberingMutationOptions = <
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | ValidationFailedResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof previewNumbering>>,
+    TError,
+    PreviewNumberingMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof previewNumbering>>,
+  TError,
+  PreviewNumberingMutationVariables,
+  TContext
+> => {
+  const mutationKey = getPreviewNumberingMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof previewNumbering>>,
+    PreviewNumberingMutationVariables
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return previewNumbering(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type PreviewNumberingMutationResult = NonNullable<
+  Awaited<ReturnType<typeof previewNumbering>>
+>;
+export type PreviewNumberingMutationBody = NumberingPreviewIn;
+export type PreviewNumberingMutationError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse | ValidationFailedResponse
+>;
+export type PreviewNumberingMutationVariables = { data: NumberingPreviewIn };
+
+/**
+ * @summary Предпросмотр номера по черновику схемы
+ */
+export const usePreviewNumbering = <
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | ValidationFailedResponse>,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof previewNumbering>>,
+      TError,
+      PreviewNumberingMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof previewNumbering>>,
+  TError,
+  PreviewNumberingMutationVariables,
+  TContext
+> => {
+  return useMutation(getPreviewNumberingMutationOptions(options), queryClient);
+};
+
+export const getGetQuoteDefaultsUrl = () => {
+  return `/api/v1/admin/company/quote-defaults`;
+};
+
+/**
+ * Поля маржи вырезаются из ответа без права на группу `cost_margin`. Раздел `company.settings` — чтение.
+ * @summary Условия КП по умолчанию
+ */
+export const getQuoteDefaults = async (
+  options?: Parameters<typeof http>[1],
+): Promise<QuoteDefaults> => {
+  return http<QuoteDefaults>(getGetQuoteDefaultsUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetQuoteDefaultsQueryKey = () => {
+  return [`/api/v1/admin/company/quote-defaults`] as const;
+};
+
+export const getGetQuoteDefaultsQueryOptions = <
+  TData = Awaited<ReturnType<typeof getQuoteDefaults>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | Error>,
+>(options?: {
+  query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getQuoteDefaults>>, TError, TData>>;
+  request?: SecondParameter<typeof http>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetQuoteDefaultsQueryKey();
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getQuoteDefaults>>> = ({ signal }) =>
+    getQuoteDefaults({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getQuoteDefaults>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type GetQuoteDefaultsQueryResult = NonNullable<Awaited<ReturnType<typeof getQuoteDefaults>>>;
+export type GetQuoteDefaultsQueryError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse | Error
+>;
+
+export function useGetQuoteDefaults<
+  TData = Awaited<ReturnType<typeof getQuoteDefaults>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | Error>,
+>(
+  options: {
+    query: Partial<UseQueryOptions<Awaited<ReturnType<typeof getQuoteDefaults>>, TError, TData>> &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getQuoteDefaults>>,
+          TError,
+          Awaited<ReturnType<typeof getQuoteDefaults>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetQuoteDefaults<
+  TData = Awaited<ReturnType<typeof getQuoteDefaults>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | Error>,
+>(
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getQuoteDefaults>>, TError, TData>> &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getQuoteDefaults>>,
+          TError,
+          Awaited<ReturnType<typeof getQuoteDefaults>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetQuoteDefaults<
+  TData = Awaited<ReturnType<typeof getQuoteDefaults>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | Error>,
+>(
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getQuoteDefaults>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary Условия КП по умолчанию
+ */
+
+export function useGetQuoteDefaults<
+  TData = Awaited<ReturnType<typeof getQuoteDefaults>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | Error>,
+>(
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getQuoteDefaults>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getGetQuoteDefaultsQueryOptions(options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export const getUpdateQuoteDefaultsUrl = () => {
+  return `/api/v1/admin/company/quote-defaults`;
+};
+
+/**
+ * Пустая строка или `null` очищает значение. Валюта и базис — коды справочников. Раздел `company.settings` — полный.
+ * @summary Изменить условия КП по умолчанию
+ */
+export const updateQuoteDefaults = async (
+  quoteDefaultsUpdate: QuoteDefaultsUpdate,
+  options?: Parameters<typeof http>[1],
+): Promise<QuoteDefaults> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<QuoteDefaults>(getUpdateQuoteDefaultsUrl(), {
+    ...options,
+    method: "PATCH",
+    headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
+    body: JSON.stringify(quoteDefaultsUpdate),
+  });
+};
+
+export const getUpdateQuoteDefaultsMutationKey = () => ["updateQuoteDefaults"] as const;
+
+export const getUpdateQuoteDefaultsMutationOptions = <
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | Error | ValidationFailedResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateQuoteDefaults>>,
+    TError,
+    UpdateQuoteDefaultsMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof updateQuoteDefaults>>,
+  TError,
+  UpdateQuoteDefaultsMutationVariables,
+  TContext
+> => {
+  const mutationKey = getUpdateQuoteDefaultsMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof updateQuoteDefaults>>,
+    UpdateQuoteDefaultsMutationVariables
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return updateQuoteDefaults(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type UpdateQuoteDefaultsMutationResult = NonNullable<
+  Awaited<ReturnType<typeof updateQuoteDefaults>>
+>;
+export type UpdateQuoteDefaultsMutationBody = QuoteDefaultsUpdate;
+export type UpdateQuoteDefaultsMutationError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse | Error | ValidationFailedResponse
+>;
+export type UpdateQuoteDefaultsMutationVariables = { data: QuoteDefaultsUpdate };
+
+/**
+ * @summary Изменить условия КП по умолчанию
+ */
+export const useUpdateQuoteDefaults = <
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | Error | ValidationFailedResponse>,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof updateQuoteDefaults>>,
+      TError,
+      UpdateQuoteDefaultsMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof updateQuoteDefaults>>,
+  TError,
+  UpdateQuoteDefaultsMutationVariables,
+  TContext
+> => {
+  return useMutation(getUpdateQuoteDefaultsMutationOptions(options), queryClient);
+};
+
+export const getListChargeTypesUrl = () => {
+  return `/api/v1/admin/company/charge-types`;
+};
+
+/**
+ * Справочник типов для шаблонов статей расхода. Раздел `company.settings` — чтение.
+ * @summary Типы статей расхода КП
+ */
+export const listChargeTypes = async (
+  options?: Parameters<typeof http>[1],
+): Promise<ChargeTypeList> => {
+  return http<ChargeTypeList>(getListChargeTypesUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getListChargeTypesQueryKey = () => {
+  return [`/api/v1/admin/company/charge-types`] as const;
+};
+
+export const getListChargeTypesQueryOptions = <
+  TData = Awaited<ReturnType<typeof listChargeTypes>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse>,
+>(options?: {
+  query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listChargeTypes>>, TError, TData>>;
+  request?: SecondParameter<typeof http>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getListChargeTypesQueryKey();
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof listChargeTypes>>> = ({ signal }) =>
+    listChargeTypes({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listChargeTypes>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type ListChargeTypesQueryResult = NonNullable<Awaited<ReturnType<typeof listChargeTypes>>>;
+export type ListChargeTypesQueryError = ErrorType<SessionExpiredResponse | ForbiddenResponse>;
+
+export function useListChargeTypes<
+  TData = Awaited<ReturnType<typeof listChargeTypes>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse>,
+>(
+  options: {
+    query: Partial<UseQueryOptions<Awaited<ReturnType<typeof listChargeTypes>>, TError, TData>> &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listChargeTypes>>,
+          TError,
+          Awaited<ReturnType<typeof listChargeTypes>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListChargeTypes<
+  TData = Awaited<ReturnType<typeof listChargeTypes>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse>,
+>(
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listChargeTypes>>, TError, TData>> &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listChargeTypes>>,
+          TError,
+          Awaited<ReturnType<typeof listChargeTypes>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListChargeTypes<
+  TData = Awaited<ReturnType<typeof listChargeTypes>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse>,
+>(
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listChargeTypes>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary Типы статей расхода КП
+ */
+
+export function useListChargeTypes<
+  TData = Awaited<ReturnType<typeof listChargeTypes>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse>,
+>(
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listChargeTypes>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getListChargeTypesQueryOptions(options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export const getListChargeTemplatesUrl = () => {
+  return `/api/v1/admin/company/charge-templates`;
+};
+
+/**
+ * Раздел `company.settings` — чтение.
+ * @summary Статьи расхода по базисам поставки
+ */
+export const listChargeTemplates = async (
+  options?: Parameters<typeof http>[1],
+): Promise<ChargeTemplateList> => {
+  return http<ChargeTemplateList>(getListChargeTemplatesUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getListChargeTemplatesQueryKey = () => {
+  return [`/api/v1/admin/company/charge-templates`] as const;
+};
+
+export const getListChargeTemplatesQueryOptions = <
+  TData = Awaited<ReturnType<typeof listChargeTemplates>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse>,
+>(options?: {
+  query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listChargeTemplates>>, TError, TData>>;
+  request?: SecondParameter<typeof http>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getListChargeTemplatesQueryKey();
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof listChargeTemplates>>> = ({ signal }) =>
+    listChargeTemplates({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listChargeTemplates>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type ListChargeTemplatesQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listChargeTemplates>>
+>;
+export type ListChargeTemplatesQueryError = ErrorType<SessionExpiredResponse | ForbiddenResponse>;
+
+export function useListChargeTemplates<
+  TData = Awaited<ReturnType<typeof listChargeTemplates>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse>,
+>(
+  options: {
+    query: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listChargeTemplates>>, TError, TData>
+    > &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listChargeTemplates>>,
+          TError,
+          Awaited<ReturnType<typeof listChargeTemplates>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListChargeTemplates<
+  TData = Awaited<ReturnType<typeof listChargeTemplates>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse>,
+>(
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listChargeTemplates>>, TError, TData>
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listChargeTemplates>>,
+          TError,
+          Awaited<ReturnType<typeof listChargeTemplates>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListChargeTemplates<
+  TData = Awaited<ReturnType<typeof listChargeTemplates>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse>,
+>(
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listChargeTemplates>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary Статьи расхода по базисам поставки
+ */
+
+export function useListChargeTemplates<
+  TData = Awaited<ReturnType<typeof listChargeTemplates>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse>,
+>(
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listChargeTemplates>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getListChargeTemplatesQueryOptions(options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export const getCreateChargeTemplateUrl = () => {
+  return `/api/v1/admin/company/charge-templates`;
+};
+
+/**
+ * Раздел `company.settings` — полный.
+ * @summary Добавить статью расхода
+ */
+export const createChargeTemplate = async (
+  chargeTemplateIn: ChargeTemplateIn,
+  options?: Parameters<typeof http>[1],
+): Promise<ChargeTemplate> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<ChargeTemplate>(getCreateChargeTemplateUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
+    body: JSON.stringify(chargeTemplateIn),
+  });
+};
+
+export const getCreateChargeTemplateMutationKey = () => ["createChargeTemplate"] as const;
+
+export const getCreateChargeTemplateMutationOptions = <
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | ValidationFailedResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createChargeTemplate>>,
+    TError,
+    CreateChargeTemplateMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof createChargeTemplate>>,
+  TError,
+  CreateChargeTemplateMutationVariables,
+  TContext
+> => {
+  const mutationKey = getCreateChargeTemplateMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof createChargeTemplate>>,
+    CreateChargeTemplateMutationVariables
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return createChargeTemplate(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CreateChargeTemplateMutationResult = NonNullable<
+  Awaited<ReturnType<typeof createChargeTemplate>>
+>;
+export type CreateChargeTemplateMutationBody = ChargeTemplateIn;
+export type CreateChargeTemplateMutationError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse | ValidationFailedResponse
+>;
+export type CreateChargeTemplateMutationVariables = { data: ChargeTemplateIn };
+
+/**
+ * @summary Добавить статью расхода
+ */
+export const useCreateChargeTemplate = <
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | ValidationFailedResponse>,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof createChargeTemplate>>,
+      TError,
+      CreateChargeTemplateMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof createChargeTemplate>>,
+  TError,
+  CreateChargeTemplateMutationVariables,
+  TContext
+> => {
+  return useMutation(getCreateChargeTemplateMutationOptions(options), queryClient);
+};
+
+export const getUpdateChargeTemplateUrl = (id: string) => {
+  return `/api/v1/admin/company/charge-templates/${id}`;
+};
+
+/**
+ * Раздел `company.settings` — полный.
+ * @summary Изменить статью расхода
+ */
+export const updateChargeTemplate = async (
+  id: string,
+  chargeTemplateUpdate: ChargeTemplateUpdate,
+  options?: Parameters<typeof http>[1],
+): Promise<ChargeTemplate> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<ChargeTemplate>(getUpdateChargeTemplateUrl(id), {
+    ...options,
+    method: "PATCH",
+    headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
+    body: JSON.stringify(chargeTemplateUpdate),
+  });
+};
+
+export const getUpdateChargeTemplateMutationKey = () => ["updateChargeTemplate"] as const;
+
+export const getUpdateChargeTemplateMutationOptions = <
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | ValidationFailedResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateChargeTemplate>>,
+    TError,
+    UpdateChargeTemplateMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof updateChargeTemplate>>,
+  TError,
+  UpdateChargeTemplateMutationVariables,
+  TContext
+> => {
+  const mutationKey = getUpdateChargeTemplateMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof updateChargeTemplate>>,
+    UpdateChargeTemplateMutationVariables
+  > = (props) => {
+    const { id, data } = props ?? {};
+
+    return updateChargeTemplate(id, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type UpdateChargeTemplateMutationResult = NonNullable<
+  Awaited<ReturnType<typeof updateChargeTemplate>>
+>;
+export type UpdateChargeTemplateMutationBody = ChargeTemplateUpdate;
+export type UpdateChargeTemplateMutationError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | ValidationFailedResponse
+>;
+export type UpdateChargeTemplateMutationVariables = { id: string; data: ChargeTemplateUpdate };
+
+/**
+ * @summary Изменить статью расхода
+ */
+export const useUpdateChargeTemplate = <
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | ValidationFailedResponse
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof updateChargeTemplate>>,
+      TError,
+      UpdateChargeTemplateMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof updateChargeTemplate>>,
+  TError,
+  UpdateChargeTemplateMutationVariables,
+  TContext
+> => {
+  return useMutation(getUpdateChargeTemplateMutationOptions(options), queryClient);
+};
+
+export const getDeleteChargeTemplateUrl = (id: string) => {
+  return `/api/v1/admin/company/charge-templates/${id}`;
+};
+
+/**
+ * Раздел `company.settings` — полный.
+ * @summary Удалить статью расхода
+ */
+export const deleteChargeTemplate = async (
+  id: string,
+  options?: Parameters<typeof http>[1],
+): Promise<void> => {
+  return http<void>(getDeleteChargeTemplateUrl(id), {
+    ...options,
+    method: "DELETE",
+  });
+};
+
+export const getDeleteChargeTemplateMutationKey = () => ["deleteChargeTemplate"] as const;
+
+export const getDeleteChargeTemplateMutationOptions = <
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | NotFoundResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof deleteChargeTemplate>>,
+    TError,
+    DeleteChargeTemplateMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof deleteChargeTemplate>>,
+  TError,
+  DeleteChargeTemplateMutationVariables,
+  TContext
+> => {
+  const mutationKey = getDeleteChargeTemplateMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof deleteChargeTemplate>>,
+    DeleteChargeTemplateMutationVariables
+  > = (props) => {
+    const { id } = props ?? {};
+
+    return deleteChargeTemplate(id, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type DeleteChargeTemplateMutationResult = NonNullable<
+  Awaited<ReturnType<typeof deleteChargeTemplate>>
+>;
+
+export type DeleteChargeTemplateMutationError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse | NotFoundResponse
+>;
+export type DeleteChargeTemplateMutationVariables = { id: string };
+
+/**
+ * @summary Удалить статью расхода
+ */
+export const useDeleteChargeTemplate = <
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | NotFoundResponse>,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof deleteChargeTemplate>>,
+      TError,
+      DeleteChargeTemplateMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof deleteChargeTemplate>>,
+  TError,
+  DeleteChargeTemplateMutationVariables,
+  TContext
+> => {
+  return useMutation(getDeleteChargeTemplateMutationOptions(options), queryClient);
+};
+
+export const getListDocumentTemplatesUrl = () => {
+  return `/api/v1/admin/company/document-templates`;
+};
+
+/**
+ * Раздел `company.settings` — чтение.
+ * @summary Шаблоны документов: свои и образцы платформы
+ */
+export const listDocumentTemplates = async (
+  options?: Parameters<typeof http>[1],
+): Promise<DocumentTemplateList> => {
+  return http<DocumentTemplateList>(getListDocumentTemplatesUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getListDocumentTemplatesQueryKey = () => {
+  return [`/api/v1/admin/company/document-templates`] as const;
+};
+
+export const getListDocumentTemplatesQueryOptions = <
+  TData = Awaited<ReturnType<typeof listDocumentTemplates>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse>,
+>(options?: {
+  query?: Partial<
+    UseQueryOptions<Awaited<ReturnType<typeof listDocumentTemplates>>, TError, TData>
+  >;
+  request?: SecondParameter<typeof http>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getListDocumentTemplatesQueryKey();
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof listDocumentTemplates>>> = ({ signal }) =>
+    listDocumentTemplates({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listDocumentTemplates>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type ListDocumentTemplatesQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listDocumentTemplates>>
+>;
+export type ListDocumentTemplatesQueryError = ErrorType<SessionExpiredResponse | ForbiddenResponse>;
+
+export function useListDocumentTemplates<
+  TData = Awaited<ReturnType<typeof listDocumentTemplates>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse>,
+>(
+  options: {
+    query: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listDocumentTemplates>>, TError, TData>
+    > &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listDocumentTemplates>>,
+          TError,
+          Awaited<ReturnType<typeof listDocumentTemplates>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListDocumentTemplates<
+  TData = Awaited<ReturnType<typeof listDocumentTemplates>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse>,
+>(
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listDocumentTemplates>>, TError, TData>
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listDocumentTemplates>>,
+          TError,
+          Awaited<ReturnType<typeof listDocumentTemplates>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListDocumentTemplates<
+  TData = Awaited<ReturnType<typeof listDocumentTemplates>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse>,
+>(
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listDocumentTemplates>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary Шаблоны документов: свои и образцы платформы
+ */
+
+export function useListDocumentTemplates<
+  TData = Awaited<ReturnType<typeof listDocumentTemplates>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse>,
+>(
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listDocumentTemplates>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getListDocumentTemplatesQueryOptions(options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export const getCreateDocumentTemplateUrl = () => {
+  return `/api/v1/admin/company/document-templates`;
+};
+
+/**
+ * Раздел `company.settings` — полный.
+ * @summary Создать шаблон документа
+ */
+export const createDocumentTemplate = async (
+  documentTemplateIn: DocumentTemplateIn,
+  options?: Parameters<typeof http>[1],
+): Promise<DocumentTemplate> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<DocumentTemplate>(getCreateDocumentTemplateUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
+    body: JSON.stringify(documentTemplateIn),
+  });
+};
+
+export const getCreateDocumentTemplateMutationKey = () => ["createDocumentTemplate"] as const;
+
+export const getCreateDocumentTemplateMutationOptions = <
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | ValidationFailedResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createDocumentTemplate>>,
+    TError,
+    CreateDocumentTemplateMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof createDocumentTemplate>>,
+  TError,
+  CreateDocumentTemplateMutationVariables,
+  TContext
+> => {
+  const mutationKey = getCreateDocumentTemplateMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof createDocumentTemplate>>,
+    CreateDocumentTemplateMutationVariables
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return createDocumentTemplate(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CreateDocumentTemplateMutationResult = NonNullable<
+  Awaited<ReturnType<typeof createDocumentTemplate>>
+>;
+export type CreateDocumentTemplateMutationBody = DocumentTemplateIn;
+export type CreateDocumentTemplateMutationError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse | ValidationFailedResponse
+>;
+export type CreateDocumentTemplateMutationVariables = { data: DocumentTemplateIn };
+
+/**
+ * @summary Создать шаблон документа
+ */
+export const useCreateDocumentTemplate = <
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | ValidationFailedResponse>,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof createDocumentTemplate>>,
+      TError,
+      CreateDocumentTemplateMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof createDocumentTemplate>>,
+  TError,
+  CreateDocumentTemplateMutationVariables,
+  TContext
+> => {
+  return useMutation(getCreateDocumentTemplateMutationOptions(options), queryClient);
+};
+
+export const getGetDocumentPlaceholdersUrl = () => {
+  return `/api/v1/admin/company/document-templates/placeholders`;
+};
+
+/**
+ * Раздел `company.settings` — чтение.
+ * @summary Подстановки `{{код}}` для шаблона документа
+ */
+export const getDocumentPlaceholders = async (
+  options?: Parameters<typeof http>[1],
+): Promise<DocumentPlaceholders> => {
+  return http<DocumentPlaceholders>(getGetDocumentPlaceholdersUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetDocumentPlaceholdersQueryKey = () => {
+  return [`/api/v1/admin/company/document-templates/placeholders`] as const;
+};
+
+export const getGetDocumentPlaceholdersQueryOptions = <
+  TData = Awaited<ReturnType<typeof getDocumentPlaceholders>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse>,
+>(options?: {
+  query?: Partial<
+    UseQueryOptions<Awaited<ReturnType<typeof getDocumentPlaceholders>>, TError, TData>
+  >;
+  request?: SecondParameter<typeof http>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetDocumentPlaceholdersQueryKey();
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getDocumentPlaceholders>>> = ({
+    signal,
+  }) => getDocumentPlaceholders({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getDocumentPlaceholders>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type GetDocumentPlaceholdersQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getDocumentPlaceholders>>
+>;
+export type GetDocumentPlaceholdersQueryError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse
+>;
+
+export function useGetDocumentPlaceholders<
+  TData = Awaited<ReturnType<typeof getDocumentPlaceholders>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse>,
+>(
+  options: {
+    query: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getDocumentPlaceholders>>, TError, TData>
+    > &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getDocumentPlaceholders>>,
+          TError,
+          Awaited<ReturnType<typeof getDocumentPlaceholders>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetDocumentPlaceholders<
+  TData = Awaited<ReturnType<typeof getDocumentPlaceholders>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse>,
+>(
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getDocumentPlaceholders>>, TError, TData>
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getDocumentPlaceholders>>,
+          TError,
+          Awaited<ReturnType<typeof getDocumentPlaceholders>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetDocumentPlaceholders<
+  TData = Awaited<ReturnType<typeof getDocumentPlaceholders>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse>,
+>(
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getDocumentPlaceholders>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary Подстановки `{{код}}` для шаблона документа
+ */
+
+export function useGetDocumentPlaceholders<
+  TData = Awaited<ReturnType<typeof getDocumentPlaceholders>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse>,
+>(
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getDocumentPlaceholders>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getGetDocumentPlaceholdersQueryOptions(options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export const getPreviewDocumentTemplateUrl = () => {
+  return `/api/v1/admin/company/document-templates/preview`;
+};
+
+/**
+ * Ничего не сохраняет. Раздел `company.settings` — чтение.
+ * @summary Предпросмотр шаблона на образце данных
+ */
+export const previewDocumentTemplate = async (
+  documentTemplatePreviewIn: DocumentTemplatePreviewIn,
+  options?: Parameters<typeof http>[1],
+): Promise<DocumentPreview> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<DocumentPreview>(getPreviewDocumentTemplateUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
+    body: JSON.stringify(documentTemplatePreviewIn),
+  });
+};
+
+export const getPreviewDocumentTemplateMutationKey = () => ["previewDocumentTemplate"] as const;
+
+export const getPreviewDocumentTemplateMutationOptions = <
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | ValidationFailedResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof previewDocumentTemplate>>,
+    TError,
+    PreviewDocumentTemplateMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof previewDocumentTemplate>>,
+  TError,
+  PreviewDocumentTemplateMutationVariables,
+  TContext
+> => {
+  const mutationKey = getPreviewDocumentTemplateMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof previewDocumentTemplate>>,
+    PreviewDocumentTemplateMutationVariables
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return previewDocumentTemplate(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type PreviewDocumentTemplateMutationResult = NonNullable<
+  Awaited<ReturnType<typeof previewDocumentTemplate>>
+>;
+export type PreviewDocumentTemplateMutationBody = DocumentTemplatePreviewIn;
+export type PreviewDocumentTemplateMutationError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse | ValidationFailedResponse
+>;
+export type PreviewDocumentTemplateMutationVariables = { data: DocumentTemplatePreviewIn };
+
+/**
+ * @summary Предпросмотр шаблона на образце данных
+ */
+export const usePreviewDocumentTemplate = <
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | ValidationFailedResponse>,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof previewDocumentTemplate>>,
+      TError,
+      PreviewDocumentTemplateMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof previewDocumentTemplate>>,
+  TError,
+  PreviewDocumentTemplateMutationVariables,
+  TContext
+> => {
+  return useMutation(getPreviewDocumentTemplateMutationOptions(options), queryClient);
+};
+
+export const getUpdateDocumentTemplateUrl = (id: string) => {
+  return `/api/v1/admin/company/document-templates/${id}`;
+};
+
+/**
+ * Образец платформы изменить нельзя — сначала копия. Раздел `company.settings` — полный.
+ * @summary Изменить шаблон документа
+ */
+export const updateDocumentTemplate = async (
+  id: string,
+  documentTemplateUpdate: DocumentTemplateUpdate,
+  options?: Parameters<typeof http>[1],
+): Promise<DocumentTemplate> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<DocumentTemplate>(getUpdateDocumentTemplateUrl(id), {
+    ...options,
+    method: "PATCH",
+    headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
+    body: JSON.stringify(documentTemplateUpdate),
+  });
+};
+
+export const getUpdateDocumentTemplateMutationKey = () => ["updateDocumentTemplate"] as const;
+
+export const getUpdateDocumentTemplateMutationOptions = <
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | ValidationFailedResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateDocumentTemplate>>,
+    TError,
+    UpdateDocumentTemplateMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof updateDocumentTemplate>>,
+  TError,
+  UpdateDocumentTemplateMutationVariables,
+  TContext
+> => {
+  const mutationKey = getUpdateDocumentTemplateMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof updateDocumentTemplate>>,
+    UpdateDocumentTemplateMutationVariables
+  > = (props) => {
+    const { id, data } = props ?? {};
+
+    return updateDocumentTemplate(id, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type UpdateDocumentTemplateMutationResult = NonNullable<
+  Awaited<ReturnType<typeof updateDocumentTemplate>>
+>;
+export type UpdateDocumentTemplateMutationBody = DocumentTemplateUpdate;
+export type UpdateDocumentTemplateMutationError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | ValidationFailedResponse
+>;
+export type UpdateDocumentTemplateMutationVariables = { id: string; data: DocumentTemplateUpdate };
+
+/**
+ * @summary Изменить шаблон документа
+ */
+export const useUpdateDocumentTemplate = <
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | ValidationFailedResponse
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof updateDocumentTemplate>>,
+      TError,
+      UpdateDocumentTemplateMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof updateDocumentTemplate>>,
+  TError,
+  UpdateDocumentTemplateMutationVariables,
+  TContext
+> => {
+  return useMutation(getUpdateDocumentTemplateMutationOptions(options), queryClient);
+};
+
+export const getDeleteDocumentTemplateUrl = (id: string) => {
+  return `/api/v1/admin/company/document-templates/${id}`;
+};
+
+/**
+ * Шаблон, по которому уже оформлены документы, удалить нельзя — 409 `CONFLICT` (`details.reason = template_in_use`). Раздел `company.settings` — полный.
+ * @summary Удалить шаблон документа
+ */
+export const deleteDocumentTemplate = async (
+  id: string,
+  options?: Parameters<typeof http>[1],
+): Promise<void> => {
+  return http<void>(getDeleteDocumentTemplateUrl(id), {
+    ...options,
+    method: "DELETE",
+  });
+};
+
+export const getDeleteDocumentTemplateMutationKey = () => ["deleteDocumentTemplate"] as const;
+
+export const getDeleteDocumentTemplateMutationOptions = <
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | Error>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof deleteDocumentTemplate>>,
+    TError,
+    DeleteDocumentTemplateMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof deleteDocumentTemplate>>,
+  TError,
+  DeleteDocumentTemplateMutationVariables,
+  TContext
+> => {
+  const mutationKey = getDeleteDocumentTemplateMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof deleteDocumentTemplate>>,
+    DeleteDocumentTemplateMutationVariables
+  > = (props) => {
+    const { id } = props ?? {};
+
+    return deleteDocumentTemplate(id, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type DeleteDocumentTemplateMutationResult = NonNullable<
+  Awaited<ReturnType<typeof deleteDocumentTemplate>>
+>;
+
+export type DeleteDocumentTemplateMutationError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | Error
+>;
+export type DeleteDocumentTemplateMutationVariables = { id: string };
+
+/**
+ * @summary Удалить шаблон документа
+ */
+export const useDeleteDocumentTemplate = <
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | Error>,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof deleteDocumentTemplate>>,
+      TError,
+      DeleteDocumentTemplateMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof deleteDocumentTemplate>>,
+  TError,
+  DeleteDocumentTemplateMutationVariables,
+  TContext
+> => {
+  return useMutation(getDeleteDocumentTemplateMutationOptions(options), queryClient);
+};
+
+export const getCopyDocumentTemplateUrl = (id: string) => {
+  return `/api/v1/admin/company/document-templates/${id}/copy`;
+};
+
+/**
+ * Раздел `company.settings` — полный.
+ * @summary Скопировать образец платформы к себе
+ */
+export const copyDocumentTemplate = async (
+  id: string,
+  documentTemplateCopyIn: DocumentTemplateCopyIn,
+  options?: Parameters<typeof http>[1],
+): Promise<DocumentTemplate> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<DocumentTemplate>(getCopyDocumentTemplateUrl(id), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
+    body: JSON.stringify(documentTemplateCopyIn),
+  });
+};
+
+export const getCopyDocumentTemplateMutationKey = () => ["copyDocumentTemplate"] as const;
+
+export const getCopyDocumentTemplateMutationOptions = <
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | ValidationFailedResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof copyDocumentTemplate>>,
+    TError,
+    CopyDocumentTemplateMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof copyDocumentTemplate>>,
+  TError,
+  CopyDocumentTemplateMutationVariables,
+  TContext
+> => {
+  const mutationKey = getCopyDocumentTemplateMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof copyDocumentTemplate>>,
+    CopyDocumentTemplateMutationVariables
+  > = (props) => {
+    const { id, data } = props ?? {};
+
+    return copyDocumentTemplate(id, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CopyDocumentTemplateMutationResult = NonNullable<
+  Awaited<ReturnType<typeof copyDocumentTemplate>>
+>;
+export type CopyDocumentTemplateMutationBody = DocumentTemplateCopyIn;
+export type CopyDocumentTemplateMutationError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | ValidationFailedResponse
+>;
+export type CopyDocumentTemplateMutationVariables = { id: string; data: DocumentTemplateCopyIn };
+
+/**
+ * @summary Скопировать образец платформы к себе
+ */
+export const useCopyDocumentTemplate = <
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | ValidationFailedResponse
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof copyDocumentTemplate>>,
+      TError,
+      CopyDocumentTemplateMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof copyDocumentTemplate>>,
+  TError,
+  CopyDocumentTemplateMutationVariables,
+  TContext
+> => {
+  return useMutation(getCopyDocumentTemplateMutationOptions(options), queryClient);
+};
+
+export const getListEmailTemplatesUrl = () => {
+  return `/api/v1/admin/company/email-templates`;
+};
+
+/**
+ * Активный шаблон заменяет файловый для всех получателей платформы. Раздел `company.settings` — чтение.
+ * @summary Шаблоны писем
+ */
+export const listEmailTemplates = async (
+  options?: Parameters<typeof http>[1],
+): Promise<EmailTemplateList> => {
+  return http<EmailTemplateList>(getListEmailTemplatesUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getListEmailTemplatesQueryKey = () => {
+  return [`/api/v1/admin/company/email-templates`] as const;
+};
+
+export const getListEmailTemplatesQueryOptions = <
+  TData = Awaited<ReturnType<typeof listEmailTemplates>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse>,
+>(options?: {
+  query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listEmailTemplates>>, TError, TData>>;
+  request?: SecondParameter<typeof http>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getListEmailTemplatesQueryKey();
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof listEmailTemplates>>> = ({ signal }) =>
+    listEmailTemplates({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listEmailTemplates>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type ListEmailTemplatesQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listEmailTemplates>>
+>;
+export type ListEmailTemplatesQueryError = ErrorType<SessionExpiredResponse | ForbiddenResponse>;
+
+export function useListEmailTemplates<
+  TData = Awaited<ReturnType<typeof listEmailTemplates>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse>,
+>(
+  options: {
+    query: Partial<UseQueryOptions<Awaited<ReturnType<typeof listEmailTemplates>>, TError, TData>> &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listEmailTemplates>>,
+          TError,
+          Awaited<ReturnType<typeof listEmailTemplates>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListEmailTemplates<
+  TData = Awaited<ReturnType<typeof listEmailTemplates>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse>,
+>(
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listEmailTemplates>>, TError, TData>
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listEmailTemplates>>,
+          TError,
+          Awaited<ReturnType<typeof listEmailTemplates>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListEmailTemplates<
+  TData = Awaited<ReturnType<typeof listEmailTemplates>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse>,
+>(
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listEmailTemplates>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary Шаблоны писем
+ */
+
+export function useListEmailTemplates<
+  TData = Awaited<ReturnType<typeof listEmailTemplates>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse>,
+>(
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listEmailTemplates>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getListEmailTemplatesQueryOptions(options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export const getCreateEmailTemplateUrl = () => {
+  return `/api/v1/admin/company/email-templates`;
+};
+
+/**
+ * Раздел `company.settings` — полный.
+ * @summary Создать шаблон письма
+ */
+export const createEmailTemplate = async (
+  emailTemplateIn: EmailTemplateIn,
+  options?: Parameters<typeof http>[1],
+): Promise<EmailTemplate> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<EmailTemplate>(getCreateEmailTemplateUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
+    body: JSON.stringify(emailTemplateIn),
+  });
+};
+
+export const getCreateEmailTemplateMutationKey = () => ["createEmailTemplate"] as const;
+
+export const getCreateEmailTemplateMutationOptions = <
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | ValidationFailedResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createEmailTemplate>>,
+    TError,
+    CreateEmailTemplateMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof createEmailTemplate>>,
+  TError,
+  CreateEmailTemplateMutationVariables,
+  TContext
+> => {
+  const mutationKey = getCreateEmailTemplateMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof createEmailTemplate>>,
+    CreateEmailTemplateMutationVariables
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return createEmailTemplate(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CreateEmailTemplateMutationResult = NonNullable<
+  Awaited<ReturnType<typeof createEmailTemplate>>
+>;
+export type CreateEmailTemplateMutationBody = EmailTemplateIn;
+export type CreateEmailTemplateMutationError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse | ValidationFailedResponse
+>;
+export type CreateEmailTemplateMutationVariables = { data: EmailTemplateIn };
+
+/**
+ * @summary Создать шаблон письма
+ */
+export const useCreateEmailTemplate = <
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | ValidationFailedResponse>,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof createEmailTemplate>>,
+      TError,
+      CreateEmailTemplateMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof createEmailTemplate>>,
+  TError,
+  CreateEmailTemplateMutationVariables,
+  TContext
+> => {
+  return useMutation(getCreateEmailTemplateMutationOptions(options), queryClient);
+};
+
+export const getUpdateEmailTemplateUrl = (id: string) => {
+  return `/api/v1/admin/company/email-templates/${id}`;
+};
+
+/**
+ * Раздел `company.settings` — полный.
+ * @summary Изменить шаблон письма
+ */
+export const updateEmailTemplate = async (
+  id: string,
+  emailTemplateUpdate: EmailTemplateUpdate,
+  options?: Parameters<typeof http>[1],
+): Promise<EmailTemplate> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<EmailTemplate>(getUpdateEmailTemplateUrl(id), {
+    ...options,
+    method: "PATCH",
+    headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
+    body: JSON.stringify(emailTemplateUpdate),
+  });
+};
+
+export const getUpdateEmailTemplateMutationKey = () => ["updateEmailTemplate"] as const;
+
+export const getUpdateEmailTemplateMutationOptions = <
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | ValidationFailedResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateEmailTemplate>>,
+    TError,
+    UpdateEmailTemplateMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof updateEmailTemplate>>,
+  TError,
+  UpdateEmailTemplateMutationVariables,
+  TContext
+> => {
+  const mutationKey = getUpdateEmailTemplateMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof updateEmailTemplate>>,
+    UpdateEmailTemplateMutationVariables
+  > = (props) => {
+    const { id, data } = props ?? {};
+
+    return updateEmailTemplate(id, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type UpdateEmailTemplateMutationResult = NonNullable<
+  Awaited<ReturnType<typeof updateEmailTemplate>>
+>;
+export type UpdateEmailTemplateMutationBody = EmailTemplateUpdate;
+export type UpdateEmailTemplateMutationError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | ValidationFailedResponse
+>;
+export type UpdateEmailTemplateMutationVariables = { id: string; data: EmailTemplateUpdate };
+
+/**
+ * @summary Изменить шаблон письма
+ */
+export const useUpdateEmailTemplate = <
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | ValidationFailedResponse
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof updateEmailTemplate>>,
+      TError,
+      UpdateEmailTemplateMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof updateEmailTemplate>>,
+  TError,
+  UpdateEmailTemplateMutationVariables,
+  TContext
+> => {
+  return useMutation(getUpdateEmailTemplateMutationOptions(options), queryClient);
+};
+
+export const getDeleteEmailTemplateUrl = (id: string) => {
+  return `/api/v1/admin/company/email-templates/${id}`;
+};
+
+/**
+ * Раздел `company.settings` — полный.
+ * @summary Удалить шаблон письма
+ */
+export const deleteEmailTemplate = async (
+  id: string,
+  options?: Parameters<typeof http>[1],
+): Promise<void> => {
+  return http<void>(getDeleteEmailTemplateUrl(id), {
+    ...options,
+    method: "DELETE",
+  });
+};
+
+export const getDeleteEmailTemplateMutationKey = () => ["deleteEmailTemplate"] as const;
+
+export const getDeleteEmailTemplateMutationOptions = <
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | NotFoundResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof deleteEmailTemplate>>,
+    TError,
+    DeleteEmailTemplateMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof deleteEmailTemplate>>,
+  TError,
+  DeleteEmailTemplateMutationVariables,
+  TContext
+> => {
+  const mutationKey = getDeleteEmailTemplateMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof deleteEmailTemplate>>,
+    DeleteEmailTemplateMutationVariables
+  > = (props) => {
+    const { id } = props ?? {};
+
+    return deleteEmailTemplate(id, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type DeleteEmailTemplateMutationResult = NonNullable<
+  Awaited<ReturnType<typeof deleteEmailTemplate>>
+>;
+
+export type DeleteEmailTemplateMutationError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse | NotFoundResponse
+>;
+export type DeleteEmailTemplateMutationVariables = { id: string };
+
+/**
+ * @summary Удалить шаблон письма
+ */
+export const useDeleteEmailTemplate = <
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | NotFoundResponse>,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof deleteEmailTemplate>>,
+      TError,
+      DeleteEmailTemplateMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof deleteEmailTemplate>>,
+  TError,
+  DeleteEmailTemplateMutationVariables,
+  TContext
+> => {
+  return useMutation(getDeleteEmailTemplateMutationOptions(options), queryClient);
+};
+
+export const getPreviewEmailTemplateUrl = (id: string) => {
+  return `/api/v1/admin/company/email-templates/${id}/preview`;
+};
+
+/**
+ * Письмо не отправляется. Раздел `company.settings` — чтение.
+ * @summary Предпросмотр шаблона письма на образце данных
+ */
+export const previewEmailTemplate = async (
+  id: string,
+  options?: Parameters<typeof http>[1],
+): Promise<EmailTemplatePreview> => {
+  return http<EmailTemplatePreview>(getPreviewEmailTemplateUrl(id), {
+    ...options,
+    method: "POST",
+  });
+};
+
+export const getPreviewEmailTemplateMutationKey = () => ["previewEmailTemplate"] as const;
+
+export const getPreviewEmailTemplateMutationOptions = <
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | NotFoundResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof previewEmailTemplate>>,
+    TError,
+    PreviewEmailTemplateMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof previewEmailTemplate>>,
+  TError,
+  PreviewEmailTemplateMutationVariables,
+  TContext
+> => {
+  const mutationKey = getPreviewEmailTemplateMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof previewEmailTemplate>>,
+    PreviewEmailTemplateMutationVariables
+  > = (props) => {
+    const { id } = props ?? {};
+
+    return previewEmailTemplate(id, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type PreviewEmailTemplateMutationResult = NonNullable<
+  Awaited<ReturnType<typeof previewEmailTemplate>>
+>;
+
+export type PreviewEmailTemplateMutationError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse | NotFoundResponse
+>;
+export type PreviewEmailTemplateMutationVariables = { id: string };
+
+/**
+ * @summary Предпросмотр шаблона письма на образце данных
+ */
+export const usePreviewEmailTemplate = <
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | NotFoundResponse>,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof previewEmailTemplate>>,
+      TError,
+      PreviewEmailTemplateMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof previewEmailTemplate>>,
+  TError,
+  PreviewEmailTemplateMutationVariables,
+  TContext
+> => {
+  return useMutation(getPreviewEmailTemplateMutationOptions(options), queryClient);
+};
+
+export const getListReferenceItemsUrl = (
+  kind: "countries" | "currencies" | "units" | "delivery-basis",
+) => {
+  return `/api/v1/admin/company/reference/${kind}`;
+};
+
+/**
+ * Вместе с отключёнными строками, чтобы их можно было включить обратно. Раздел `company.settings` — чтение.
+ * @summary Строки справочника ERP
+ */
+export const listReferenceItems = async (
+  kind: "countries" | "currencies" | "units" | "delivery-basis",
+  options?: Parameters<typeof http>[1],
+): Promise<ReferenceItemList> => {
+  return http<ReferenceItemList>(getListReferenceItemsUrl(kind), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getListReferenceItemsQueryKey = (
+  kind: "countries" | "currencies" | "units" | "delivery-basis",
+) => {
+  return [`/api/v1/admin/company/reference/${kind}`] as const;
+};
+
+export const getListReferenceItemsQueryOptions = <
+  TData = Awaited<ReturnType<typeof listReferenceItems>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse>,
+>(
+  kind: "countries" | "currencies" | "units" | "delivery-basis",
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listReferenceItems>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getListReferenceItemsQueryKey(kind);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof listReferenceItems>>> = ({ signal }) =>
+    listReferenceItems(kind, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: kind !== null && kind !== undefined,
+    ...queryOptions,
+  } as UseQueryOptions<Awaited<ReturnType<typeof listReferenceItems>>, TError, TData> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+};
+
+export type ListReferenceItemsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listReferenceItems>>
+>;
+export type ListReferenceItemsQueryError = ErrorType<SessionExpiredResponse | ForbiddenResponse>;
+
+export function useListReferenceItems<
+  TData = Awaited<ReturnType<typeof listReferenceItems>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse>,
+>(
+  kind: "countries" | "currencies" | "units" | "delivery-basis",
+  options: {
+    query: Partial<UseQueryOptions<Awaited<ReturnType<typeof listReferenceItems>>, TError, TData>> &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listReferenceItems>>,
+          TError,
+          Awaited<ReturnType<typeof listReferenceItems>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListReferenceItems<
+  TData = Awaited<ReturnType<typeof listReferenceItems>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse>,
+>(
+  kind: "countries" | "currencies" | "units" | "delivery-basis",
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listReferenceItems>>, TError, TData>
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listReferenceItems>>,
+          TError,
+          Awaited<ReturnType<typeof listReferenceItems>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListReferenceItems<
+  TData = Awaited<ReturnType<typeof listReferenceItems>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse>,
+>(
+  kind: "countries" | "currencies" | "units" | "delivery-basis",
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listReferenceItems>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary Строки справочника ERP
+ */
+
+export function useListReferenceItems<
+  TData = Awaited<ReturnType<typeof listReferenceItems>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse>,
+>(
+  kind: "countries" | "currencies" | "units" | "delivery-basis",
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listReferenceItems>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getListReferenceItemsQueryOptions(kind, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export const getCreateReferenceItemUrl = (
+  kind: "countries" | "currencies" | "units" | "delivery-basis",
+) => {
+  return `/api/v1/admin/company/reference/${kind}`;
+};
+
+/**
+ * Раздел `company.settings` — полный.
+ * @summary Добавить строку справочника
+ */
+export const createReferenceItem = async (
+  kind: "countries" | "currencies" | "units" | "delivery-basis",
+  referenceItemIn: ReferenceItemIn,
+  options?: Parameters<typeof http>[1],
+): Promise<ReferenceItem> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<ReferenceItem>(getCreateReferenceItemUrl(kind), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
+    body: JSON.stringify(referenceItemIn),
+  });
+};
+
+export const getCreateReferenceItemMutationKey = () => ["createReferenceItem"] as const;
+
+export const getCreateReferenceItemMutationOptions = <
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | ValidationFailedResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createReferenceItem>>,
+    TError,
+    CreateReferenceItemMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof createReferenceItem>>,
+  TError,
+  CreateReferenceItemMutationVariables,
+  TContext
+> => {
+  const mutationKey = getCreateReferenceItemMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof createReferenceItem>>,
+    CreateReferenceItemMutationVariables
+  > = (props) => {
+    const { kind, data } = props ?? {};
+
+    return createReferenceItem(kind, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CreateReferenceItemMutationResult = NonNullable<
+  Awaited<ReturnType<typeof createReferenceItem>>
+>;
+export type CreateReferenceItemMutationBody = ReferenceItemIn;
+export type CreateReferenceItemMutationError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse | ValidationFailedResponse
+>;
+export type CreateReferenceItemMutationVariables = {
+  kind: "countries" | "currencies" | "units" | "delivery-basis";
+  data: ReferenceItemIn;
+};
+
+/**
+ * @summary Добавить строку справочника
+ */
+export const useCreateReferenceItem = <
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | ValidationFailedResponse>,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof createReferenceItem>>,
+      TError,
+      CreateReferenceItemMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof createReferenceItem>>,
+  TError,
+  CreateReferenceItemMutationVariables,
+  TContext
+> => {
+  return useMutation(getCreateReferenceItemMutationOptions(options), queryClient);
+};
+
+export const getUpdateReferenceItemUrl = (
+  kind: "countries" | "currencies" | "units" | "delivery-basis",
+  id: string,
+) => {
+  return `/api/v1/admin/company/reference/${kind}/${id}`;
+};
+
+/**
+ * Раздел `company.settings` — полный.
+ * @summary Изменить строку справочника
+ */
+export const updateReferenceItem = async (
+  kind: "countries" | "currencies" | "units" | "delivery-basis",
+  id: string,
+  referenceItemUpdate: ReferenceItemUpdate,
+  options?: Parameters<typeof http>[1],
+): Promise<ReferenceItem> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<ReferenceItem>(getUpdateReferenceItemUrl(kind, id), {
+    ...options,
+    method: "PATCH",
+    headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
+    body: JSON.stringify(referenceItemUpdate),
+  });
+};
+
+export const getUpdateReferenceItemMutationKey = () => ["updateReferenceItem"] as const;
+
+export const getUpdateReferenceItemMutationOptions = <
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | ValidationFailedResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateReferenceItem>>,
+    TError,
+    UpdateReferenceItemMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof updateReferenceItem>>,
+  TError,
+  UpdateReferenceItemMutationVariables,
+  TContext
+> => {
+  const mutationKey = getUpdateReferenceItemMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof updateReferenceItem>>,
+    UpdateReferenceItemMutationVariables
+  > = (props) => {
+    const { kind, id, data } = props ?? {};
+
+    return updateReferenceItem(kind, id, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type UpdateReferenceItemMutationResult = NonNullable<
+  Awaited<ReturnType<typeof updateReferenceItem>>
+>;
+export type UpdateReferenceItemMutationBody = ReferenceItemUpdate;
+export type UpdateReferenceItemMutationError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | ValidationFailedResponse
+>;
+export type UpdateReferenceItemMutationVariables = {
+  kind: "countries" | "currencies" | "units" | "delivery-basis";
+  id: string;
+  data: ReferenceItemUpdate;
+};
+
+/**
+ * @summary Изменить строку справочника
+ */
+export const useUpdateReferenceItem = <
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | ValidationFailedResponse
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof updateReferenceItem>>,
+      TError,
+      UpdateReferenceItemMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof updateReferenceItem>>,
+  TError,
+  UpdateReferenceItemMutationVariables,
+  TContext
+> => {
+  return useMutation(getUpdateReferenceItemMutationOptions(options), queryClient);
+};
+
+export const getDeleteReferenceItemUrl = (
+  kind: "countries" | "currencies" | "units" | "delivery-basis",
+  id: string,
+) => {
+  return `/api/v1/admin/company/reference/${kind}/${id}`;
+};
+
+/**
+ * Строку, на которую ссылаются данные, удалить нельзя — 409 `CONFLICT` (`details.reason = lookup_in_use`); её отключают. Раздел `company.settings` — полный.
+ * @summary Удалить строку справочника
+ */
+export const deleteReferenceItem = async (
+  kind: "countries" | "currencies" | "units" | "delivery-basis",
+  id: string,
+  options?: Parameters<typeof http>[1],
+): Promise<void> => {
+  return http<void>(getDeleteReferenceItemUrl(kind, id), {
+    ...options,
+    method: "DELETE",
+  });
+};
+
+export const getDeleteReferenceItemMutationKey = () => ["deleteReferenceItem"] as const;
+
+export const getDeleteReferenceItemMutationOptions = <
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | Error>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof deleteReferenceItem>>,
+    TError,
+    DeleteReferenceItemMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof deleteReferenceItem>>,
+  TError,
+  DeleteReferenceItemMutationVariables,
+  TContext
+> => {
+  const mutationKey = getDeleteReferenceItemMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof deleteReferenceItem>>,
+    DeleteReferenceItemMutationVariables
+  > = (props) => {
+    const { kind, id } = props ?? {};
+
+    return deleteReferenceItem(kind, id, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type DeleteReferenceItemMutationResult = NonNullable<
+  Awaited<ReturnType<typeof deleteReferenceItem>>
+>;
+
+export type DeleteReferenceItemMutationError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | Error
+>;
+export type DeleteReferenceItemMutationVariables = {
+  kind: "countries" | "currencies" | "units" | "delivery-basis";
+  id: string;
+};
+
+/**
+ * @summary Удалить строку справочника
+ */
+export const useDeleteReferenceItem = <
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | Error>,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof deleteReferenceItem>>,
+      TError,
+      DeleteReferenceItemMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof deleteReferenceItem>>,
+  TError,
+  DeleteReferenceItemMutationVariables,
+  TContext
+> => {
+  return useMutation(getDeleteReferenceItemMutationOptions(options), queryClient);
+};
+
+export const getListCatalogCategoriesUrl = () => {
+  return `/api/v1/admin/company/categories`;
+};
+
+/**
+ * Все категории плоским списком; дерево строит SPA по `parent_id`. Раздел `company.settings` — чтение.
+ * @summary Категории каталога
+ */
+export const listCatalogCategories = async (
+  options?: Parameters<typeof http>[1],
+): Promise<CatalogCategoryList> => {
+  return http<CatalogCategoryList>(getListCatalogCategoriesUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getListCatalogCategoriesQueryKey = () => {
+  return [`/api/v1/admin/company/categories`] as const;
+};
+
+export const getListCatalogCategoriesQueryOptions = <
+  TData = Awaited<ReturnType<typeof listCatalogCategories>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse>,
+>(options?: {
+  query?: Partial<
+    UseQueryOptions<Awaited<ReturnType<typeof listCatalogCategories>>, TError, TData>
+  >;
+  request?: SecondParameter<typeof http>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getListCatalogCategoriesQueryKey();
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof listCatalogCategories>>> = ({ signal }) =>
+    listCatalogCategories({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listCatalogCategories>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type ListCatalogCategoriesQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listCatalogCategories>>
+>;
+export type ListCatalogCategoriesQueryError = ErrorType<SessionExpiredResponse | ForbiddenResponse>;
+
+export function useListCatalogCategories<
+  TData = Awaited<ReturnType<typeof listCatalogCategories>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse>,
+>(
+  options: {
+    query: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listCatalogCategories>>, TError, TData>
+    > &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listCatalogCategories>>,
+          TError,
+          Awaited<ReturnType<typeof listCatalogCategories>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListCatalogCategories<
+  TData = Awaited<ReturnType<typeof listCatalogCategories>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse>,
+>(
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listCatalogCategories>>, TError, TData>
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listCatalogCategories>>,
+          TError,
+          Awaited<ReturnType<typeof listCatalogCategories>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListCatalogCategories<
+  TData = Awaited<ReturnType<typeof listCatalogCategories>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse>,
+>(
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listCatalogCategories>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary Категории каталога
+ */
+
+export function useListCatalogCategories<
+  TData = Awaited<ReturnType<typeof listCatalogCategories>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse>,
+>(
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listCatalogCategories>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getListCatalogCategoriesQueryOptions(options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export const getCreateCatalogCategoryUrl = () => {
+  return `/api/v1/admin/company/categories`;
+};
+
+/**
+ * Раздел `company.settings` — полный.
+ * @summary Создать категорию
+ */
+export const createCatalogCategory = async (
+  catalogCategoryIn: CatalogCategoryIn,
+  options?: Parameters<typeof http>[1],
+): Promise<CatalogCategory> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<CatalogCategory>(getCreateCatalogCategoryUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
+    body: JSON.stringify(catalogCategoryIn),
+  });
+};
+
+export const getCreateCatalogCategoryMutationKey = () => ["createCatalogCategory"] as const;
+
+export const getCreateCatalogCategoryMutationOptions = <
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | ValidationFailedResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createCatalogCategory>>,
+    TError,
+    CreateCatalogCategoryMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof createCatalogCategory>>,
+  TError,
+  CreateCatalogCategoryMutationVariables,
+  TContext
+> => {
+  const mutationKey = getCreateCatalogCategoryMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof createCatalogCategory>>,
+    CreateCatalogCategoryMutationVariables
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return createCatalogCategory(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CreateCatalogCategoryMutationResult = NonNullable<
+  Awaited<ReturnType<typeof createCatalogCategory>>
+>;
+export type CreateCatalogCategoryMutationBody = CatalogCategoryIn;
+export type CreateCatalogCategoryMutationError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse | ValidationFailedResponse
+>;
+export type CreateCatalogCategoryMutationVariables = { data: CatalogCategoryIn };
+
+/**
+ * @summary Создать категорию
+ */
+export const useCreateCatalogCategory = <
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | ValidationFailedResponse>,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof createCatalogCategory>>,
+      TError,
+      CreateCatalogCategoryMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof createCatalogCategory>>,
+  TError,
+  CreateCatalogCategoryMutationVariables,
+  TContext
+> => {
+  return useMutation(getCreateCatalogCategoryMutationOptions(options), queryClient);
+};
+
+export const getUpdateCatalogCategoryUrl = (id: string) => {
+  return `/api/v1/admin/company/categories/${id}`;
+};
+
+/**
+ * Раздел `company.settings` — полный.
+ * @summary Переименовать или перенести категорию
+ */
+export const updateCatalogCategory = async (
+  id: string,
+  catalogCategoryUpdate: CatalogCategoryUpdate,
+  options?: Parameters<typeof http>[1],
+): Promise<CatalogCategory> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<CatalogCategory>(getUpdateCatalogCategoryUrl(id), {
+    ...options,
+    method: "PATCH",
+    headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
+    body: JSON.stringify(catalogCategoryUpdate),
+  });
+};
+
+export const getUpdateCatalogCategoryMutationKey = () => ["updateCatalogCategory"] as const;
+
+export const getUpdateCatalogCategoryMutationOptions = <
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | ValidationFailedResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateCatalogCategory>>,
+    TError,
+    UpdateCatalogCategoryMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof updateCatalogCategory>>,
+  TError,
+  UpdateCatalogCategoryMutationVariables,
+  TContext
+> => {
+  const mutationKey = getUpdateCatalogCategoryMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof updateCatalogCategory>>,
+    UpdateCatalogCategoryMutationVariables
+  > = (props) => {
+    const { id, data } = props ?? {};
+
+    return updateCatalogCategory(id, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type UpdateCatalogCategoryMutationResult = NonNullable<
+  Awaited<ReturnType<typeof updateCatalogCategory>>
+>;
+export type UpdateCatalogCategoryMutationBody = CatalogCategoryUpdate;
+export type UpdateCatalogCategoryMutationError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | ValidationFailedResponse
+>;
+export type UpdateCatalogCategoryMutationVariables = { id: string; data: CatalogCategoryUpdate };
+
+/**
+ * @summary Переименовать или перенести категорию
+ */
+export const useUpdateCatalogCategory = <
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | ValidationFailedResponse
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof updateCatalogCategory>>,
+      TError,
+      UpdateCatalogCategoryMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof updateCatalogCategory>>,
+  TError,
+  UpdateCatalogCategoryMutationVariables,
+  TContext
+> => {
+  return useMutation(getUpdateCatalogCategoryMutationOptions(options), queryClient);
+};
+
+export const getDeleteCatalogCategoryUrl = (id: string) => {
+  return `/api/v1/admin/company/categories/${id}`;
+};
+
+/**
+ * Категорию с подкатегориями удалить нельзя — 409 `CONFLICT` (`details.reason = category_has_children`). Раздел `company.settings` — полный.
+ * @summary Удалить категорию
+ */
+export const deleteCatalogCategory = async (
+  id: string,
+  options?: Parameters<typeof http>[1],
+): Promise<void> => {
+  return http<void>(getDeleteCatalogCategoryUrl(id), {
+    ...options,
+    method: "DELETE",
+  });
+};
+
+export const getDeleteCatalogCategoryMutationKey = () => ["deleteCatalogCategory"] as const;
+
+export const getDeleteCatalogCategoryMutationOptions = <
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | Error>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof deleteCatalogCategory>>,
+    TError,
+    DeleteCatalogCategoryMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof deleteCatalogCategory>>,
+  TError,
+  DeleteCatalogCategoryMutationVariables,
+  TContext
+> => {
+  const mutationKey = getDeleteCatalogCategoryMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof deleteCatalogCategory>>,
+    DeleteCatalogCategoryMutationVariables
+  > = (props) => {
+    const { id } = props ?? {};
+
+    return deleteCatalogCategory(id, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type DeleteCatalogCategoryMutationResult = NonNullable<
+  Awaited<ReturnType<typeof deleteCatalogCategory>>
+>;
+
+export type DeleteCatalogCategoryMutationError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | Error
+>;
+export type DeleteCatalogCategoryMutationVariables = { id: string };
+
+/**
+ * @summary Удалить категорию
+ */
+export const useDeleteCatalogCategory = <
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | Error>,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof deleteCatalogCategory>>,
+      TError,
+      DeleteCatalogCategoryMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof deleteCatalogCategory>>,
+  TError,
+  DeleteCatalogCategoryMutationVariables,
+  TContext
+> => {
+  return useMutation(getDeleteCatalogCategoryMutationOptions(options), queryClient);
+};
+
+export const getListCategoryRequestsUrl = (params?: ListCategoryRequestsParams) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : String(value));
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/v1/admin/company/category-requests?${stringifiedParams}`
+    : `/api/v1/admin/company/category-requests`;
+};
+
+/**
+ * ERP отдаёт запросы своей компании; администратор видит все. Раздел `company.settings` — чтение.
+ * @summary Запросы на категории
+ */
+export const listCategoryRequests = async (
+  params?: ListCategoryRequestsParams,
+  options?: Parameters<typeof http>[1],
+): Promise<CategoryRequestList> => {
+  return http<CategoryRequestList>(getListCategoryRequestsUrl(params), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getListCategoryRequestsQueryKey = (params?: ListCategoryRequestsParams) => {
+  return [`/api/v1/admin/company/category-requests`, ...(params ? [params] : [])] as const;
+};
+
+export const getListCategoryRequestsQueryOptions = <
+  TData = Awaited<ReturnType<typeof listCategoryRequests>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse>,
+>(
+  params?: ListCategoryRequestsParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listCategoryRequests>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getListCategoryRequestsQueryKey(params);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof listCategoryRequests>>> = ({ signal }) =>
+    listCategoryRequests(params, { signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listCategoryRequests>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type ListCategoryRequestsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listCategoryRequests>>
+>;
+export type ListCategoryRequestsQueryError = ErrorType<SessionExpiredResponse | ForbiddenResponse>;
+
+export function useListCategoryRequests<
+  TData = Awaited<ReturnType<typeof listCategoryRequests>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse>,
+>(
+  params: undefined | ListCategoryRequestsParams,
+  options: {
+    query: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listCategoryRequests>>, TError, TData>
+    > &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listCategoryRequests>>,
+          TError,
+          Awaited<ReturnType<typeof listCategoryRequests>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListCategoryRequests<
+  TData = Awaited<ReturnType<typeof listCategoryRequests>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse>,
+>(
+  params?: ListCategoryRequestsParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listCategoryRequests>>, TError, TData>
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listCategoryRequests>>,
+          TError,
+          Awaited<ReturnType<typeof listCategoryRequests>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListCategoryRequests<
+  TData = Awaited<ReturnType<typeof listCategoryRequests>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse>,
+>(
+  params?: ListCategoryRequestsParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listCategoryRequests>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary Запросы на категории
+ */
+
+export function useListCategoryRequests<
+  TData = Awaited<ReturnType<typeof listCategoryRequests>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse>,
+>(
+  params?: ListCategoryRequestsParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listCategoryRequests>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getListCategoryRequestsQueryOptions(params, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export const getApproveCategoryRequestUrl = (id: string) => {
+  return `/api/v1/admin/company/category-requests/${id}/approve`;
+};
+
+/**
+ * Решает ERP по праву `settings.edit` (его даёт раздел `company.settings`) или администратору; иначе 403 `FORBIDDEN` (`source = erp`). Решённый запрос — 409 `CONFLICT` (`details.reason = already_reviewed`). Раздел `company.settings` — полный.
+ * @summary Одобрить запрос: привязать заведённую категорию
+ */
+export const approveCategoryRequest = async (
+  id: string,
+  categoryRequestApproveIn: CategoryRequestApproveIn,
+  options?: Parameters<typeof http>[1],
+): Promise<CategoryRequest> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<CategoryRequest>(getApproveCategoryRequestUrl(id), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
+    body: JSON.stringify(categoryRequestApproveIn),
+  });
+};
+
+export const getApproveCategoryRequestMutationKey = () => ["approveCategoryRequest"] as const;
+
+export const getApproveCategoryRequestMutationOptions = <
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | Error | ValidationFailedResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof approveCategoryRequest>>,
+    TError,
+    ApproveCategoryRequestMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof approveCategoryRequest>>,
+  TError,
+  ApproveCategoryRequestMutationVariables,
+  TContext
+> => {
+  const mutationKey = getApproveCategoryRequestMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof approveCategoryRequest>>,
+    ApproveCategoryRequestMutationVariables
+  > = (props) => {
+    const { id, data } = props ?? {};
+
+    return approveCategoryRequest(id, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type ApproveCategoryRequestMutationResult = NonNullable<
+  Awaited<ReturnType<typeof approveCategoryRequest>>
+>;
+export type ApproveCategoryRequestMutationBody = CategoryRequestApproveIn;
+export type ApproveCategoryRequestMutationError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | Error | ValidationFailedResponse
+>;
+export type ApproveCategoryRequestMutationVariables = {
+  id: string;
+  data: CategoryRequestApproveIn;
+};
+
+/**
+ * @summary Одобрить запрос: привязать заведённую категорию
+ */
+export const useApproveCategoryRequest = <
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | Error | ValidationFailedResponse
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof approveCategoryRequest>>,
+      TError,
+      ApproveCategoryRequestMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof approveCategoryRequest>>,
+  TError,
+  ApproveCategoryRequestMutationVariables,
+  TContext
+> => {
+  return useMutation(getApproveCategoryRequestMutationOptions(options), queryClient);
+};
+
+export const getRejectCategoryRequestUrl = (id: string) => {
+  return `/api/v1/admin/company/category-requests/${id}/reject`;
+};
+
+/**
+ * Причина обязательна. Решает ERP по праву `settings.edit` (его даёт раздел `company.settings`) или администратору; иначе 403 `FORBIDDEN` (`source = erp`). Раздел `company.settings` — полный.
+ * @summary Отклонить запрос с причиной
+ */
+export const rejectCategoryRequest = async (
+  id: string,
+  categoryRequestRejectIn: CategoryRequestRejectIn,
+  options?: Parameters<typeof http>[1],
+): Promise<CategoryRequest> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<CategoryRequest>(getRejectCategoryRequestUrl(id), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
+    body: JSON.stringify(categoryRequestRejectIn),
+  });
+};
+
+export const getRejectCategoryRequestMutationKey = () => ["rejectCategoryRequest"] as const;
+
+export const getRejectCategoryRequestMutationOptions = <
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | Error | ValidationFailedResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof rejectCategoryRequest>>,
+    TError,
+    RejectCategoryRequestMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof rejectCategoryRequest>>,
+  TError,
+  RejectCategoryRequestMutationVariables,
+  TContext
+> => {
+  const mutationKey = getRejectCategoryRequestMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof rejectCategoryRequest>>,
+    RejectCategoryRequestMutationVariables
+  > = (props) => {
+    const { id, data } = props ?? {};
+
+    return rejectCategoryRequest(id, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type RejectCategoryRequestMutationResult = NonNullable<
+  Awaited<ReturnType<typeof rejectCategoryRequest>>
+>;
+export type RejectCategoryRequestMutationBody = CategoryRequestRejectIn;
+export type RejectCategoryRequestMutationError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | Error | ValidationFailedResponse
+>;
+export type RejectCategoryRequestMutationVariables = { id: string; data: CategoryRequestRejectIn };
+
+/**
+ * @summary Отклонить запрос с причиной
+ */
+export const useRejectCategoryRequest = <
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | Error | ValidationFailedResponse
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof rejectCategoryRequest>>,
+      TError,
+      RejectCategoryRequestMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof rejectCategoryRequest>>,
+  TError,
+  RejectCategoryRequestMutationVariables,
+  TContext
+> => {
+  return useMutation(getRejectCategoryRequestMutationOptions(options), queryClient);
+};
+
+export const getGetPlatformSettingsUrl = () => {
+  return `/api/v1/admin/company/platform-settings`;
+};
+
+/**
+ * Раздел `company.settings` — чтение.
+ * @summary Платформенные настройки: НДС и курс
+ */
+export const getPlatformSettings = async (
+  options?: Parameters<typeof http>[1],
+): Promise<PlatformSettings> => {
+  return http<PlatformSettings>(getGetPlatformSettingsUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetPlatformSettingsQueryKey = () => {
+  return [`/api/v1/admin/company/platform-settings`] as const;
+};
+
+export const getGetPlatformSettingsQueryOptions = <
+  TData = Awaited<ReturnType<typeof getPlatformSettings>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse>,
+>(options?: {
+  query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getPlatformSettings>>, TError, TData>>;
+  request?: SecondParameter<typeof http>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetPlatformSettingsQueryKey();
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getPlatformSettings>>> = ({ signal }) =>
+    getPlatformSettings({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getPlatformSettings>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type GetPlatformSettingsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getPlatformSettings>>
+>;
+export type GetPlatformSettingsQueryError = ErrorType<SessionExpiredResponse | ForbiddenResponse>;
+
+export function useGetPlatformSettings<
+  TData = Awaited<ReturnType<typeof getPlatformSettings>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse>,
+>(
+  options: {
+    query: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getPlatformSettings>>, TError, TData>
+    > &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getPlatformSettings>>,
+          TError,
+          Awaited<ReturnType<typeof getPlatformSettings>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetPlatformSettings<
+  TData = Awaited<ReturnType<typeof getPlatformSettings>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse>,
+>(
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getPlatformSettings>>, TError, TData>
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getPlatformSettings>>,
+          TError,
+          Awaited<ReturnType<typeof getPlatformSettings>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetPlatformSettings<
+  TData = Awaited<ReturnType<typeof getPlatformSettings>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse>,
+>(
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getPlatformSettings>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary Платформенные настройки: НДС и курс
+ */
+
+export function useGetPlatformSettings<
+  TData = Awaited<ReturnType<typeof getPlatformSettings>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse>,
+>(
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getPlatformSettings>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getGetPlatformSettingsQueryOptions(options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export const getUpdatePlatformSettingsUrl = () => {
+  return `/api/v1/admin/company/platform-settings`;
+};
+
+/**
+ * Ставку меняет ERP по праву `settings.edit` или администратору; иначе 403 `FORBIDDEN` (`source = erp`). Раздел `company.settings` — полный.
+ * @summary Изменить ставку НДС платформы
+ */
+export const updatePlatformSettings = async (
+  platformSettingsUpdate: PlatformSettingsUpdate,
+  options?: Parameters<typeof http>[1],
+): Promise<PlatformSettings> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<PlatformSettings>(getUpdatePlatformSettingsUrl(), {
+    ...options,
+    method: "PATCH",
+    headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
+    body: JSON.stringify(platformSettingsUpdate),
+  });
+};
+
+export const getUpdatePlatformSettingsMutationKey = () => ["updatePlatformSettings"] as const;
+
+export const getUpdatePlatformSettingsMutationOptions = <
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | ValidationFailedResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updatePlatformSettings>>,
+    TError,
+    UpdatePlatformSettingsMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof updatePlatformSettings>>,
+  TError,
+  UpdatePlatformSettingsMutationVariables,
+  TContext
+> => {
+  const mutationKey = getUpdatePlatformSettingsMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof updatePlatformSettings>>,
+    UpdatePlatformSettingsMutationVariables
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return updatePlatformSettings(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type UpdatePlatformSettingsMutationResult = NonNullable<
+  Awaited<ReturnType<typeof updatePlatformSettings>>
+>;
+export type UpdatePlatformSettingsMutationBody = PlatformSettingsUpdate;
+export type UpdatePlatformSettingsMutationError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse | ValidationFailedResponse
+>;
+export type UpdatePlatformSettingsMutationVariables = { data: PlatformSettingsUpdate };
+
+/**
+ * @summary Изменить ставку НДС платформы
+ */
+export const useUpdatePlatformSettings = <
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | ValidationFailedResponse>,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof updatePlatformSettings>>,
+      TError,
+      UpdatePlatformSettingsMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof updatePlatformSettings>>,
+  TError,
+  UpdatePlatformSettingsMutationVariables,
+  TContext
+> => {
+  return useMutation(getUpdatePlatformSettingsMutationOptions(options), queryClient);
 };

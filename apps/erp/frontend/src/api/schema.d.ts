@@ -2846,7 +2846,7 @@ export interface paths {
         put?: never;
         /**
          * Approve a category request
-         * @description Links the request to the category the operator actually created. Operator only.
+         * @description Links the request to the category the operator actually created. Needs `settings.edit` or administrator.
          */
         post: operations["catalog_category_requests_approve_create"];
         delete?: never;
@@ -2866,7 +2866,7 @@ export interface paths {
         put?: never;
         /**
          * Reject a category request
-         * @description Requires a reason — a refusal without grounds is not reviewable. Operator only.
+         * @description Requires a reason — a refusal without grounds is not reviewable. Needs `settings.edit` or administrator.
          */
         post: operations["catalog_category_requests_reject_create"];
         delete?: never;
@@ -7107,7 +7107,7 @@ export interface paths {
         head?: never;
         /**
          * Update system settings
-         * @description Partially update platform settings. Administrator (superuser) only. `platform_name`, `support_email`, `logo_url` and `domain` are shared by the whole ensemble and managed in CRM: a request that contains any of them is rejected with 400 `SHARED_SETTING_READ_ONLY`.
+         * @description Partially update platform settings. `vat_rate` — `settings.edit` or administrator; `maintenance_mode` and `is_two_factor_required` — administrator (superuser) only. `platform_name`, `support_email`, `logo_url` and `domain` are shared by the whole ensemble and managed in CRM: a request that contains any of them is rejected with 400 `SHARED_SETTING_READ_ONLY`.
          */
         patch: operations["system_settings_partial_update"];
         trace?: never;
@@ -12718,6 +12718,8 @@ export interface components {
         SetupStatus: {
             setup_required: boolean;
             can_setup: boolean;
+            /** @description Id своей компании (core.tenant, с учётом OWN_COMPANY_ID); null — её нет. */
+            own_company_id: number | null;
         };
         /**
          * @description * `paired` - paired

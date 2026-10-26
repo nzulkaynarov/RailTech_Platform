@@ -1,0 +1,486 @@
+{
+  "retry": "Retry",
+  "close": "Close",
+  "cancel": "Cancel",
+  "save": "Save",
+  "saved": "Saved",
+  "edit": "Edit",
+  "delete": "Delete",
+  "editNamed": "Edit: {{name}}",
+  "deleteNamed": "Delete: {{name}}",
+  "yes": "Yes",
+  "no": "No",
+  "active": "Active",
+  "inactive": "Disabled",
+  "status": "Status",
+  "actions": "Actions",
+  "required": "Fill in this field",
+  "subtitle": "Your company settings in ERP",
+  "readOnly": "Your role can only read company settings: the fields are locked.",
+  "tabsLabel": "Company settings sections",
+  "tabs": {
+    "details": "Details",
+    "brand": "Letterhead and brand",
+    "numbering": "Numbering",
+    "quote": "Quote terms",
+    "charges": "Charge items",
+    "templates": "Templates",
+    "reference": "Reference lists",
+    "categories": "Categories",
+    "platform": "Platform"
+  },
+  "kinds": {
+    "quote": "Quote",
+    "contract": "Contract",
+    "invoice": "Invoice",
+    "act": "Act",
+    "letter": "Letter"
+  },
+  "notSet": {
+    "title": "Your company has not been created in ERP yet",
+    "text": "Settings appear once the company is created in the first-run wizard. If you have already created it, check again.",
+    "action": "Check again"
+  },
+  "preview": {
+    "loading": "Preparing the sample…",
+    "empty": "The sample will appear here."
+  },
+  "logo": {
+    "alt": "Logo",
+    "none": "No logo",
+    "unavailable": "The logo is uploaded but the browser cannot show it",
+    "upload": "Upload logo",
+    "replace": "Replace logo",
+    "delete": "Delete logo",
+    "file": "Choose file: {{label}}",
+    "hint": "PNG, JPEG, WebP or SVG up to 2 MB.",
+    "uploaded": "Logo uploaded",
+    "deleted": "Logo deleted",
+    "deleteTitle": "Delete the company logo?",
+    "consequence": {
+      "card": "The logo disappears from the company card in ERP.",
+      "file": "The file is deleted from ERP storage and cannot be restored."
+    }
+  },
+  "errors": {
+    "DEFAULT": "The action failed. Try again later.",
+    "FORBIDDEN": "This section or action is not allowed for your role.",
+    "ERP_FORBIDDEN": "ERP did not allow this action: it is available to the platform administrator or an employee with company settings rights in ERP.",
+    "MARGIN_FORBIDDEN": "Margin fields are changed by roles that may see cost and margin.",
+    "COMPANY_NOT_SET": "Your company has not been created in ERP yet.",
+    "VALIDATION_FAILED": "Check the fields.",
+    "CONFLICT": "The object has changed or is in use. Refresh the page and try again.",
+    "BACKEND_UNAVAILABLE": "ERP is not responding. Try again later.",
+    "reason": {
+      "lookup_in_use": "The row is used in documents and data. Disable it instead of deleting.",
+      "category_has_children": "The category has subcategories. Move or delete them first.",
+      "template_in_use": "Documents were already issued from this template. Disable it instead of deleting.",
+      "doc_prefix_taken": "This numbering prefix is already taken by another company. Choose another one.",
+      "already_reviewed": "The request has already been reviewed. Refresh the list.",
+      "invalid_numbering_pattern": "The mask has no required {seq} token.",
+      "file_too_large": "The file is larger than 2 MB.",
+      "unsupported_type": "A PNG, JPEG, WebP or SVG file is required.",
+      "multipart_required": "Choose a logo file.",
+      "field_not_in_reference": "This reference list has no such field.",
+      "reason_required": "Enter the reason for rejection.",
+      "category_required": "Choose a category."
+    }
+  },
+  "details": {
+    "title": "Company details",
+    "hint": "Your company's legal data. It goes onto the letterhead wherever “Take details from the company card” is on.",
+    "logo": "Company logo",
+    "name": "Full name",
+    "nameRequired": "Enter the name",
+    "inn": "Tax ID",
+    "innHint": "9 digits or empty",
+    "innInvalid": "Tax ID is 9 digits",
+    "country": "Country of registration",
+    "legalAddress": "Legal address",
+    "bankAccount": "Bank account",
+    "mfo": "Bank code (MFO)",
+    "phone": "Phone",
+    "email": "Company email",
+    "emailInvalid": "Email as name@company.uz",
+    "contactPerson": "Contact person",
+    "website": "Website",
+    "iso": "Has ISO 9001 quality certificate",
+    "save": "Save details",
+    "invalidField": "Check the value",
+    "consequence": {
+      "erp": "The details are updated in your company card in ERP.",
+      "brand": "Letterheads with “Take details from the company card” on will use the new values."
+    }
+  },
+  "brand": {
+    "title": "Document letterhead and brand",
+    "hint": "How the company's quote, contract, invoice, act and letter look. The sample on the right follows your edits before you save.",
+    "logo": "Letterhead logo",
+    "legalName": "Name on the letterhead",
+    "inn": "Tax ID on the letterhead",
+    "legalAddress": "Legal address",
+    "bankDetails": "Bank details",
+    "signatoryName": "Signatory",
+    "signatoryPosition": "Signatory position",
+    "footer": "Footer",
+    "accent": "Primary colour",
+    "secondary": "Secondary colour",
+    "pickColor": "Pick colour: {{label}}",
+    "colorInvalid": "Colour as #RRGGBB",
+    "layout": "Layout",
+    "layouts": {
+      "light": "Light",
+      "boxed": "Boxed",
+      "bold": "Bold",
+      "striped": "Striped"
+    },
+    "font": "Font",
+    "fonts": {
+      "sans": "Sans-serif",
+      "serif": "Serif"
+    },
+    "printLegend": "What to print",
+    "flags": {
+      "use_company_defaults": "Take details from the company card",
+      "show_logo": "Show the logo",
+      "show_bank_in_header": "Bank details in the header",
+      "show_cover_letter": "Cover letter in the quote",
+      "show_lead_time": "Lead time in the quote",
+      "show_fx_note": "Exchange-rate note"
+    },
+    "inheritedTitle": "From the company card the document will print:",
+    "inheritedKeys": {
+      "legal_address": "Legal address",
+      "bank_details": "Bank details"
+    },
+    "wordingTitle": "Document wording",
+    "wording": {
+      "cover_letter_text": "Quote cover letter",
+      "contract_acceptance_text": "Contract: acceptance",
+      "contract_liability_text": "Contract: liability",
+      "contract_extra_terms_text": "Contract: extra terms",
+      "act_closing_text": "Act: closing sentence"
+    },
+    "save": "Save letterhead",
+    "invalidField": "Check the value",
+    "consequence": {
+      "documents": "New quotes, contracts, invoices and acts are issued on this letterhead.",
+      "preview": "The sample on the right shows unsaved edits; saving does not change it."
+    },
+    "previewTitle": "Document sample",
+    "previewKind": "Document type",
+    "previewFrame": "Sample: {{kind}}",
+    "previewHint": "The data in the sample is fictional."
+  },
+  "numbering": {
+    "title": "Document numbering",
+    "hint": "Format and prefix of your company's quote, contract, invoice, act and letter numbers.",
+    "prefix": "Numbering prefix",
+    "prefixHint": "Up to 16 characters: letters, digits, “-” and “_”.",
+    "prefixInvalid": "Latin letters, digits, “-” and “_” only",
+    "prefixTaken": "The prefix is taken by another company",
+    "prefixlessBanner": "Your own scheme works only with a prefix. The platform format applies now — set a prefix.",
+    "format": "Number format",
+    "presets": {
+      "brand": "With the brand prefix",
+      "slash": "With slashes",
+      "compact": "Compact",
+      "custom": "Custom mask"
+    },
+    "mask": "Number mask",
+    "maskHint": "Tokens: {prefix} {type} {YYYY} {YY} {MM} {seq}. {seq} is required.",
+    "maskInvalid": "The mask must contain {seq}",
+    "padding": "Counter width",
+    "paddingHint": "How many digits: 5 → 00001",
+    "reset": "Counter reset",
+    "resets": {
+      "never": "Never",
+      "yearly": "Every year",
+      "monthly": "Every month"
+    },
+    "start": "Start value",
+    "startHint": "First number = value + 1",
+    "labelsTitle": "Document type labels",
+    "labelsHint": "What is put into {type} for each document type.",
+    "save": "Save numbering",
+    "saved": "Numbering saved",
+    "consequence": {
+      "future": "New numbers follow this scheme.",
+      "issued": "Numbers already issued do not change.",
+      "noPrefix": "Without a prefix the platform format applies."
+    },
+    "previewTitle": "Number samples",
+    "previewUnavailable": "Enter a valid mask containing {seq}.",
+    "previewHint": "ERP calculates the sample from the draft scheme; counters do not change."
+  },
+  "quote": {
+    "title": "Default quote terms",
+    "hint": "What goes into a new quote and calculation: currency, delivery basis, VAT, term, warranty.",
+    "marginHidden": "Margin fields are hidden: roles with cost and margin rights see them.",
+    "currency": "Cost currency",
+    "currencyHint": "From the Currencies list",
+    "basis": "Delivery basis",
+    "basisHint": "From the Delivery bases list",
+    "vat": "VAT rate, %",
+    "default_margin_percent": "Default margin, %",
+    "min_margin_percent": "Minimum margin, %",
+    "target_margin_percent": "Target margin, %",
+    "validity": "Quote validity, days",
+    "paymentDays": "Payment delay, days",
+    "warranty": "Warranty, months",
+    "paymentTerms": "Payment terms",
+    "priceVisibility": "Catalogue price",
+    "visibility": {
+      "cabinet": "Show in the cabinet",
+      "on_request": "On request"
+    },
+    "threshold": "Card completeness threshold, %",
+    "thresholdHint": "Completeness from which a card may be published (1–100).",
+    "fxAge": "Maximum rate age, days",
+    "fxAgeHint": "From 1 to 90 days.",
+    "save": "Save terms",
+    "invalidField": "Check the value",
+    "consequence": {
+      "new": "New quotes and calculations take these values by default.",
+      "issued": "Quotes already issued do not change."
+    }
+  },
+  "charges": {
+    "title": "Quote charge items",
+    "hint": "Amounts and rates per delivery basis that go into a calculation: freight, insurance, customs.",
+    "basis": "Delivery basis",
+    "type": "Item",
+    "amount": "Amount",
+    "rate": "Rate, %",
+    "rateHint": "If set, calculated from the calculation total",
+    "deduction": "Deduction",
+    "deductionLabel": "Subtracted from the total",
+    "activeLabel": "Item is active",
+    "order": "Order",
+    "add": "Add item",
+    "addTitle": "New charge item",
+    "editTitle": "Edit charge item",
+    "deleteTitle": "Delete item “{{name}}”?",
+    "deleted": "Item deleted",
+    "invalidField": "Check the value",
+    "consequence": {
+      "delete": "The item disappears from calculation templates for this basis.",
+      "issued": "Quotes and calculations already issued do not change."
+    },
+    "empty": {
+      "title": "No charge items yet",
+      "text": "Add amounts and rates per delivery basis — they go into the request calculation."
+    }
+  },
+  "templates": {
+    "title": "Document and email templates",
+    "hint": "Contract, act and email texts. Platform samples are not edited — copy them to your company.",
+    "part": "Template type",
+    "parts": {
+      "documents": "Document templates",
+      "emails": "Email templates"
+    },
+    "documents": {
+      "name": "Name",
+      "kind": "Type",
+      "sample": "Platform sample",
+      "own": "Own",
+      "add": "Create template",
+      "addTitle": "New document template",
+      "editTitle": "Edit document template",
+      "viewTitle": "Document template",
+      "open": "Open",
+      "openNamed": "Open: {{name}}",
+      "body": "Template text (HTML)",
+      "bodyHint": "{{example}} placeholders are replaced with document data.",
+      "activeLabel": "Template is active",
+      "placeholders": "Available placeholders",
+      "previewTitle": "Sample on test data",
+      "previewFrame": "Sample document from the template",
+      "copy": "Copy to my company",
+      "copyNamed": "Copy to my company: {{name}}",
+      "copyTitle": "Copy “{{name}}”",
+      "copyName": "{{name}} (copy)",
+      "copyHint": "The copy becomes your template and can be edited. The platform sample does not change.",
+      "copied": "Copy created",
+      "deleteTitle": "Delete template “{{name}}”?",
+      "deleted": "Template deleted",
+      "invalidField": "Check the value",
+      "consequence": {
+        "delete": "The template disappears from the choice list when issuing documents.",
+        "inUse": "If documents were already issued from it, ERP refuses — disable the template instead."
+      },
+      "empty": {
+        "title": "No document templates yet",
+        "text": "Create a contract or act template or copy a platform sample."
+      }
+    },
+    "emails": {
+      "key": "Email key",
+      "language": "Language",
+      "subject": "Subject",
+      "textBody": "Plain text",
+      "htmlBody": "HTML body",
+      "variables": "Variables",
+      "variablesHint": "Comma-separated; in the text — {{example}}.",
+      "replaces": "Replaces the file one",
+      "fileUsed": "File template in use",
+      "activeLabel": "Template is active",
+      "activeWarning": "An active template immediately replaces the file one for all platform recipients.",
+      "add": "Create email template",
+      "addTitle": "New email template",
+      "editTitle": "Edit email template",
+      "viewTitle": "Email template",
+      "open": "Open",
+      "openNamed": "Open: {{name}}",
+      "previewTitle": "Email sample",
+      "showPreview": "Show sample",
+      "previewFrame": "Email sample",
+      "previewHint": "Nothing is sent; the sample is built on test data from the saved template.",
+      "previewAfterSave": "The sample is available after the template is saved.",
+      "deleteTitle": "Delete template “{{name}}”?",
+      "deleted": "Template deleted",
+      "invalidField": "Check the value",
+      "consequence": {
+        "delete": "Emails of this kind return to the platform file template.",
+        "file": "Emails already sent do not change."
+      },
+      "empty": {
+        "title": "No email templates yet",
+        "text": "For now emails use the platform file templates. Create your own template to replace the text."
+      }
+    }
+  },
+  "reference": {
+    "title": "ERP reference lists",
+    "hint": "Countries, currencies, units and delivery bases. A row that documents already use is disabled, not deleted.",
+    "kind": "Reference list",
+    "kinds": {
+      "countries": "Countries",
+      "currencies": "Currencies",
+      "units": "Units",
+      "delivery-basis": "Delivery bases"
+    },
+    "noApi": "Exchange rates, customs (HS) codes and manufacturers are still kept in the ERP panel: they have no API for the Platform yet.",
+    "code": "Code",
+    "name": "Name",
+    "alpha2": "ISO alpha-2",
+    "alpha3": "ISO alpha-3",
+    "isoNumeric": "ISO numeric code",
+    "vat": "VAT, %",
+    "symbol": "Symbol",
+    "description": "Description",
+    "sellerPays": "Seller pays",
+    "pays": {
+      "seller_pays_freight": "Freight",
+      "seller_pays_insurance": "Insurance",
+      "seller_pays_import": "Import",
+      "seller_pays_delivery": "Delivery"
+    },
+    "order": "Order",
+    "activeLabel": "Row is active",
+    "add": "Add row",
+    "addTitle": "New reference row",
+    "editTitle": "Edit reference row",
+    "disable": "Disable",
+    "enable": "Enable",
+    "disableNamed": "Disable: {{name}}",
+    "enableNamed": "Enable: {{name}}",
+    "deleteTitle": "Delete “{{name}}”?",
+    "deleted": "Row deleted",
+    "codeTaken": "This code already exists",
+    "invalidField": "Check the value",
+    "consequence": {
+      "delete": "The row disappears from choice lists.",
+      "disable": "If documents already use the row, ERP refuses — disable it instead."
+    },
+    "empty": {
+      "title": "No rows yet",
+      "text": "Add the first row of the list."
+    }
+  },
+  "categories": {
+    "title": "Catalogue categories and requests for them",
+    "hint": "The catalogue category tree. Employees request a new category; the platform administrator decides.",
+    "part": "Part",
+    "parts": {
+      "categories": "Categories",
+      "requests": "Requests ({{count}})",
+      "requestsPlain": "Category requests"
+    },
+    "add": "Add category",
+    "addChild": "Subcategory",
+    "addChildNamed": "Subcategory: add to “{{name}}”",
+    "addTitle": "New category",
+    "editTitle": "Edit category",
+    "name": "Name",
+    "parent": "Parent category",
+    "topLevel": "Top level",
+    "invalidField": "Check the value",
+    "deleteTitle": "Delete category “{{name}}”?",
+    "deleted": "Category deleted",
+    "consequence": {
+      "delete": "The category disappears from the catalogue.",
+      "children": "ERP will not delete a category with subcategories — move or delete them first."
+    },
+    "empty": {
+      "title": "No categories yet",
+      "text": "Create the top level of the tree — subcategories are added inside it."
+    },
+    "requests": {
+      "name": "Requested category",
+      "under": "under “{{name}}”",
+      "why": "Why",
+      "author": "Author",
+      "created": "Submitted",
+      "statuses": {
+        "pending": "Pending",
+        "approved": "Approved",
+        "rejected": "Rejected"
+      },
+      "approve": "Approve",
+      "reject": "Reject",
+      "approveNamed": "Approve request: {{name}}",
+      "rejectNamed": "Reject request: {{name}}",
+      "approveTitle": "Approve request “{{name}}”",
+      "rejectTitle": "Reject request “{{name}}”",
+      "pick": "The category you created for the request",
+      "pickHint": "Approval does not create a category: add it in the Categories part first.",
+      "reason": "Reason for rejection",
+      "reasonRequired": "The reason is required: a refusal without grounds cannot be reviewed.",
+      "approved": "Request approved",
+      "rejected": "Request rejected",
+      "consequence": {
+        "approve": {
+          "status": "The request becomes Approved with a link to the chosen category.",
+          "notify": "The author of the request is notified.",
+          "create": "This action does not create the category itself."
+        },
+        "reject": {
+          "status": "The request becomes Rejected with your reason.",
+          "notify": "The author of the request is notified with the reason."
+        }
+      },
+      "empty": {
+        "title": "No category requests",
+        "text": "When an employee asks for a new category, the request appears here."
+      }
+    }
+  },
+  "platform": {
+    "title": "Platform settings",
+    "hint": "ERP-wide settings for the whole platform: the VAT rate and the exchange rate.",
+    "vat": "VAT rate, %",
+    "vatHint": "From 0 to 100.",
+    "invalidVat": "The rate is a number from 0 to 100",
+    "rate": "USD → UZS rate",
+    "currencyUzs": "UZS",
+    "updated": "Settings updated",
+    "rateHint": "The rate is kept by ERP and is read-only here.",
+    "save": "Save VAT rate",
+    "consequence": {
+      "new": "New calculations and documents use this rate.",
+      "admin": "The platform administrator changes the rate; ERP refuses other roles."
+    }
+  }
+}

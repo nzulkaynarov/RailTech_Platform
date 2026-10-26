@@ -112,9 +112,11 @@ class BackendClient:
         params: dict[str, Any] | None = None,
         headers: dict[str, str] | None = None,
         probe: bool = False,
+        content: bytes | None = None,
     ) -> httpx.Response:
         """Вызов бэкенда от имени сотрудника. 2xx и 4xx возвращаются как есть (решает вызывающий),
-        сеть, таймаут и 5xx — `BackendUnavailableError`.
+        сеть, таймаут и 5xx — `BackendUnavailableError`. `content` — готовое тело (загрузка файла
+        `multipart/form-data` целиком, с `Content-Type` в `headers`).
 
         `probe` — проба внешнего сервиса через бэкенд: таймаут `PROBE_TIMEOUT_SECONDS`, а 502 CRM
         («сервис за мной не ответил: ERP, SMTP, Telegram») с JSON-телом приложения идёт как
@@ -132,6 +134,7 @@ class BackendClient:
                 headers=headers,
                 json=json,
                 params=params,
+                content=content,
                 timeout=httpx.Timeout(PROBE_TIMEOUT_SECONDS) if probe else httpx.USE_CLIENT_DEFAULT,
             )
         except httpx.HTTPError as exc:
