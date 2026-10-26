@@ -5,6 +5,7 @@ import {
   getRailTechPlatformBFFAPICRMERPMock,
 } from "../shared/api/generated/platform-bff.msw";
 import type { ChangePasswordIn, LoginIn, MeUpdate } from "../shared/api/generated/model";
+import { adminCompanyHandlers } from "./adminCompany";
 import { adminRolesHandlers } from "./adminRoles";
 import { adminUsersHandlers } from "./adminUsers";
 import { eventStreamHandlers } from "./eventStream";
@@ -112,6 +113,7 @@ export const handlers = [
 
   ...adminUsersHandlers,
   ...adminRolesHandlers,
+  ...adminCompanyHandlers,
 
   getGetHealthMockHandler({
     status: "ok",
