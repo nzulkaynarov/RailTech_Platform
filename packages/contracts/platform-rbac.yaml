@@ -225,7 +225,9 @@ resources:
     label: { ru: "Admin · Роли, Оргструктура, Интеграции, Тикеты", uz: "Admin · Rollar, tuzilma, integratsiyalar, tiketlar", en: "Admin · Roles, org chart, integrations, tickets" }
     backend:
       crm:
-        read: [users:read, integrations:read, models:read, system:read, external_services:read, backups:read, audit:read]
+        # W13-A5: директор (admin: read) читает и настройки бота, шаблоны ответов и базу знаний — без правки; правка и
+        # песочница — admin: full (settings:write, kb:write, reply_templates:write, sandbox:use, export:read).
+        read: [users:read, integrations:read, models:read, system:read, external_services:read, backups:read, audit:read, settings:read, reply_templates:read, kb:read]
         full:
           - users:read
           - users:write
@@ -272,7 +274,8 @@ menu:
     clients: [crm.clients]
     requests: [crm.clients]
     channels: [crm.leads]
-    kb: [crm.leads]
+    # W13-A5: базу знаний сопровождает администратор (kb:write у раздела admin), у него нет crm.leads — пункт открывает и admin.
+    kb: [crm.leads, admin]
   eds:
     documents: [eds.inbox, eds.drafts, eds.projects, eds.payments, eds.memo.create, eds.memo.approve]
     inbox: [eds.inbox]
@@ -298,6 +301,7 @@ menu:
     integrations: [admin]
     tickets: [admin]
     company: [company.settings]
+    bot: [admin]
 
 # Поля с ограничением внутри экранов (SPEC-v3 §4.2). Роль перечисляет поля, которые она ВИДИТ; поле скрыто, если ни одна роль
 # сотрудника его не видит. Скрытие `supplier_prices` и `totals_only` делает BFF (у ERP для них нет отдельного права).

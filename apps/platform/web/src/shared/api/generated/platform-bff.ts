@@ -67,6 +67,18 @@
  * он уходит только в CRM. Коды ошибок: `WRONG_PASSWORD` (422), `NOT_CONFIGURED`, `SECRETS_KEY_MISSING`,
  * `SERVICE_NOT_SWITCHABLE` (409), `INTEGRATION_FAILED` (502, причина в `details.reason`).
  *
+ * **0.11.0 (W13-A5) — добавляющее.** CRM · База знаний и Admin · Настройки бота (теги `kb` и `bot`). **База знаний** (`/crm/kb/*`,
+ * `/crm/sandbox/*`): документы (список, загрузка файла `.md` multipart, ручной ввод, включение и выключение, переиндексация,
+ * фрагменты), поиск «Что найдёт бот», пробелы (закрыть привязкой к документу, игнорировать, вернуть), справочник продуктов,
+ * песочница бота (сообщение, «начать заново»). Читают роли с `crm.leads` или `admin`; правят, переиндексируют и пользуются
+ * песочницей — `admin: full`. **Настройки бота** (`/admin/bot/*`): разделы CRM `/settings` значениями и JSON Schema (форма строится
+ * по схеме CRM), сохранение раздела, пробный прогон правил передачи, шаблоны быстрых ответов, выгрузки CSV лидов, клиентов и
+ * сделок — потоком, с правом на выгружаемые данные (`crm.leads` для лидов, `crm.clients` для клиентов и сделок). Чтение настроек
+ * — `admin` от `read`, правка — `admin: full`. Каталог ролей: директор (`admin: read`) читает настройки бота, шаблоны ответов и
+ * базу знаний (права CRM `settings:read`, `reply_templates:read`, `kb:read`); пункт меню CRM «База знаний» открывает и раздел
+ * `admin`; в Admin новый пункт «Настройки бота». Нового кода ошибки нет: ошибки формата документа и пути невалидных полей настроек
+ * — `VALIDATION_FAILED` с `details.reason`, `details.rule`, `details.messages`, `details.paths`.
+ *
  * 0.2.4: `423 ACCOUNT_LOCKED` объявлен и на `POST /auth/change-password` (CRM блокирует учётную запись после неверных
  * текущих паролей).
  *
@@ -85,7 +97,7 @@
  * Лимиты: вход — 10 неудачных попыток в минуту на IP и e-mail; остальные запросы — 300 в минуту на сессию; превышение — 429
  * `TOO_MANY_REQUESTS` с `Retry-After`.
  *
- * OpenAPI spec version: 0.7.0
+ * OpenAPI spec version: 0.11.0
  */
 import { useMutation, useQuery } from "@tanstack/react-query";
 import type {
@@ -116,8 +128,11 @@ import type {
   BackupsStatus,
   BotProfile,
   BotProfileState,
+  BotSettings,
   ChangePasswordIn,
+  CreatedId,
   CsrfFailedResponse,
+  DownloadCsvExportParams,
   Employee,
   EmployeeInvite,
   EmployeeList,
@@ -127,6 +142,8 @@ import type {
   ErpPairIn,
   ErpPairing,
   Error,
+  EscalationDryRun,
+  EscalationSettingsIn,
   ExternalService,
   ExternalServiceDetail,
   ExternalServiceList,
@@ -140,7 +157,20 @@ import type {
   IntegrationFailedResponse,
   IntegrationInvalidResponse,
   IntegrationsOverview,
+  KbChunkList,
+  KbDocument,
+  KbDocumentList,
+  KbDocumentPatch,
+  KbDocumentUpload,
+  KbGapPage,
+  KbGapResolveIn,
+  KbManualDocumentIn,
+  KbProductList,
+  KbSearchIn,
+  KbSearchResult,
   ListEmployeesParams,
+  ListKbDocumentsParams,
+  ListKbGapsParams,
   ListMailLogParams,
   ListNotificationsParams,
   LoginIn,
@@ -154,12 +184,17 @@ import type {
   PasswordConfirm,
   Queue,
   QueueCards,
+  ReplyTemplateIn,
+  ReplyTemplateList,
   Role,
   RoleCreate,
   RoleList,
   RolePreview,
   RolePreviewIn,
   RoleUpdate,
+  SandboxMessageIn,
+  SandboxTurn,
+  SaveBotSettingBody,
   SearchParams,
   SearchResult,
   ServiceSwitchIn,
@@ -6958,3 +6993,2770 @@ export const useDeleteRole = <
 > => {
   return useMutation(getDeleteRoleMutationOptions(options), queryClient);
 };
+
+export const getListKbDocumentsUrl = (params?: ListKbDocumentsParams) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : String(value));
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/v1/crm/kb/documents?${stringifiedParams}`
+    : `/api/v1/crm/kb/documents`;
+};
+
+/**
+ * CRM `GET /kb/documents`. Читают роли с разделом `crm.leads` или `admin` (любой уровень): у них есть право CRM `kb:read`. Администратор без `crm.leads` видит базу знаний тоже — пункт меню `kb` открывает и раздел `admin`.
+ * @summary CRM · База знаний: документы
+ */
+export const listKbDocuments = async (
+  params?: ListKbDocumentsParams,
+  options?: Parameters<typeof http>[1],
+): Promise<KbDocumentList> => {
+  return http<KbDocumentList>(getListKbDocumentsUrl(params), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getListKbDocumentsQueryKey = (params?: ListKbDocumentsParams) => {
+  return [`/api/v1/crm/kb/documents`, ...(params ? [params] : [])] as const;
+};
+
+export const getListKbDocumentsQueryOptions = <
+  TData = Awaited<ReturnType<typeof listKbDocuments>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse>,
+>(
+  params?: ListKbDocumentsParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listKbDocuments>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getListKbDocumentsQueryKey(params);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof listKbDocuments>>> = ({ signal }) =>
+    listKbDocuments(params, { signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listKbDocuments>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type ListKbDocumentsQueryResult = NonNullable<Awaited<ReturnType<typeof listKbDocuments>>>;
+export type ListKbDocumentsQueryError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse
+>;
+
+export function useListKbDocuments<
+  TData = Awaited<ReturnType<typeof listKbDocuments>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse>,
+>(
+  params: undefined | ListKbDocumentsParams,
+  options: {
+    query: Partial<UseQueryOptions<Awaited<ReturnType<typeof listKbDocuments>>, TError, TData>> &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listKbDocuments>>,
+          TError,
+          Awaited<ReturnType<typeof listKbDocuments>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListKbDocuments<
+  TData = Awaited<ReturnType<typeof listKbDocuments>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse>,
+>(
+  params?: ListKbDocumentsParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listKbDocuments>>, TError, TData>> &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listKbDocuments>>,
+          TError,
+          Awaited<ReturnType<typeof listKbDocuments>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListKbDocuments<
+  TData = Awaited<ReturnType<typeof listKbDocuments>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse>,
+>(
+  params?: ListKbDocumentsParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listKbDocuments>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary CRM · База знаний: документы
+ */
+
+export function useListKbDocuments<
+  TData = Awaited<ReturnType<typeof listKbDocuments>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse>,
+>(
+  params?: ListKbDocumentsParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listKbDocuments>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getListKbDocumentsQueryOptions(params, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export const getUploadKbDocumentUrl = () => {
+  return `/api/v1/crm/kb/documents`;
+};
+
+/**
+ * CRM `POST /kb/documents` (multipart). Раздел `admin` — полный (право CRM `kb:write`). Принимается один файл `.md` по формату базы знаний (`docs/kb/FORMAT.md`), не больше 25 МБ: BFF читает файл ограниченно и передаёт CRM, весь файл в память не накапливается сверх лимита. Индексация идёт в фоне — документ появляется в списке со статусом «В очереди». Нарушение формата — 422 `VALIDATION_FAILED` с `details.reason = kb_format`, `details.rule` и текстами `details.messages {ru, uz, en}` «что исправить»; не `.md` — `kb_markdown_only`; пустой файл — `file_empty`; больше 25 МБ — `file_too_large` (`details.max_bytes`); неизвестный продукт — `unknown_product`.
+ * @summary Загрузить файл Markdown в базу знаний
+ */
+export const uploadKbDocument = async (
+  kbDocumentUpload: KbDocumentUpload,
+  options?: Parameters<typeof http>[1],
+): Promise<CreatedId> => {
+  const formData = new FormData();
+  formData.append(`file`, kbDocumentUpload.file);
+  formData.append(`title`, kbDocumentUpload.title);
+  formData.append(`language`, kbDocumentUpload.language);
+  if (kbDocumentUpload.product_key !== undefined) {
+    formData.append(`product_key`, kbDocumentUpload.product_key);
+  }
+  if (kbDocumentUpload.gap_id !== undefined) {
+    formData.append(`gap_id`, kbDocumentUpload.gap_id.toString());
+  }
+
+  return http<CreatedId>(getUploadKbDocumentUrl(), {
+    ...options,
+    method: "POST",
+    body: formData,
+  });
+};
+
+export const getUploadKbDocumentMutationKey = () => ["uploadKbDocument"] as const;
+
+export const getUploadKbDocumentMutationOptions = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | ValidationFailedResponse
+    | IntegrationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof uploadKbDocument>>,
+    TError,
+    UploadKbDocumentMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof uploadKbDocument>>,
+  TError,
+  UploadKbDocumentMutationVariables,
+  TContext
+> => {
+  const mutationKey = getUploadKbDocumentMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof uploadKbDocument>>,
+    UploadKbDocumentMutationVariables
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return uploadKbDocument(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type UploadKbDocumentMutationResult = NonNullable<
+  Awaited<ReturnType<typeof uploadKbDocument>>
+>;
+export type UploadKbDocumentMutationBody = KbDocumentUpload;
+export type UploadKbDocumentMutationError = ErrorType<
+  | SessionExpiredResponse
+  | ForbiddenResponse
+  | ValidationFailedResponse
+  | IntegrationFailedResponse
+  | BackendUnavailableResponse
+>;
+export type UploadKbDocumentMutationVariables = { data: KbDocumentUpload };
+
+/**
+ * @summary Загрузить файл Markdown в базу знаний
+ */
+export const useUploadKbDocument = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | ValidationFailedResponse
+    | IntegrationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof uploadKbDocument>>,
+      TError,
+      UploadKbDocumentMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof uploadKbDocument>>,
+  TError,
+  UploadKbDocumentMutationVariables,
+  TContext
+> => {
+  return useMutation(getUploadKbDocumentMutationOptions(options), queryClient);
+};
+
+export const getCreateManualKbDocumentUrl = () => {
+  return `/api/v1/crm/kb/documents/manual`;
+};
+
+/**
+ * CRM `POST /kb/documents/manual`. Раздел `admin` — полный. Текст без заголовка получает заголовок из названия; формат front matter ручной ввод не проверяет. `gap_id` закрывает пробел базы знаний созданным документом.
+ * @summary Добавить документ базы знаний вручную (Markdown)
+ */
+export const createManualKbDocument = async (
+  kbManualDocumentIn: KbManualDocumentIn,
+  options?: Parameters<typeof http>[1],
+): Promise<CreatedId> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<CreatedId>(getCreateManualKbDocumentUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
+    body: JSON.stringify(kbManualDocumentIn),
+  });
+};
+
+export const getCreateManualKbDocumentMutationKey = () => ["createManualKbDocument"] as const;
+
+export const getCreateManualKbDocumentMutationOptions = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | ValidationFailedResponse
+    | IntegrationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createManualKbDocument>>,
+    TError,
+    CreateManualKbDocumentMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof createManualKbDocument>>,
+  TError,
+  CreateManualKbDocumentMutationVariables,
+  TContext
+> => {
+  const mutationKey = getCreateManualKbDocumentMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof createManualKbDocument>>,
+    CreateManualKbDocumentMutationVariables
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return createManualKbDocument(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CreateManualKbDocumentMutationResult = NonNullable<
+  Awaited<ReturnType<typeof createManualKbDocument>>
+>;
+export type CreateManualKbDocumentMutationBody = KbManualDocumentIn;
+export type CreateManualKbDocumentMutationError = ErrorType<
+  | SessionExpiredResponse
+  | ForbiddenResponse
+  | ValidationFailedResponse
+  | IntegrationFailedResponse
+  | BackendUnavailableResponse
+>;
+export type CreateManualKbDocumentMutationVariables = { data: KbManualDocumentIn };
+
+/**
+ * @summary Добавить документ базы знаний вручную (Markdown)
+ */
+export const useCreateManualKbDocument = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | ValidationFailedResponse
+    | IntegrationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof createManualKbDocument>>,
+      TError,
+      CreateManualKbDocumentMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof createManualKbDocument>>,
+  TError,
+  CreateManualKbDocumentMutationVariables,
+  TContext
+> => {
+  return useMutation(getCreateManualKbDocumentMutationOptions(options), queryClient);
+};
+
+export const getGetKbDocumentUrl = (id: number) => {
+  return `/api/v1/crm/kb/documents/${id}`;
+};
+
+/**
+ * @summary Документ базы знаний
+ */
+export const getKbDocument = async (
+  id: number,
+  options?: Parameters<typeof http>[1],
+): Promise<KbDocument> => {
+  return http<KbDocument>(getGetKbDocumentUrl(id), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetKbDocumentQueryKey = (id: number) => {
+  return [`/api/v1/crm/kb/documents/${id}`] as const;
+};
+
+export const getGetKbDocumentQueryOptions = <
+  TData = Awaited<ReturnType<typeof getKbDocument>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  id: number,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getKbDocument>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetKbDocumentQueryKey(id);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getKbDocument>>> = ({ signal }) =>
+    getKbDocument(id, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: id !== null && id !== undefined,
+    ...queryOptions,
+  } as UseQueryOptions<Awaited<ReturnType<typeof getKbDocument>>, TError, TData> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+};
+
+export type GetKbDocumentQueryResult = NonNullable<Awaited<ReturnType<typeof getKbDocument>>>;
+export type GetKbDocumentQueryError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+>;
+
+export function useGetKbDocument<
+  TData = Awaited<ReturnType<typeof getKbDocument>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  id: number,
+  options: {
+    query: Partial<UseQueryOptions<Awaited<ReturnType<typeof getKbDocument>>, TError, TData>> &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getKbDocument>>,
+          TError,
+          Awaited<ReturnType<typeof getKbDocument>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetKbDocument<
+  TData = Awaited<ReturnType<typeof getKbDocument>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  id: number,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getKbDocument>>, TError, TData>> &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getKbDocument>>,
+          TError,
+          Awaited<ReturnType<typeof getKbDocument>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetKbDocument<
+  TData = Awaited<ReturnType<typeof getKbDocument>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  id: number,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getKbDocument>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary Документ базы знаний
+ */
+
+export function useGetKbDocument<
+  TData = Awaited<ReturnType<typeof getKbDocument>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  id: number,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getKbDocument>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getGetKbDocumentQueryOptions(id, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export const getUpdateKbDocumentUrl = (id: number) => {
+  return `/api/v1/crm/kb/documents/${id}`;
+};
+
+/**
+ * CRM `PATCH /kb/documents/{id}`. Раздел `admin` — полный. Удаления документов в CRM нет: «Выключить» убирает документ из поиска бота, «Включить» возвращает (разрыв в `docs/QUESTIONS.md`).
+ * @summary Включить или выключить документ, сменить продукт или название
+ */
+export const updateKbDocument = async (
+  id: number,
+  kbDocumentPatch: KbDocumentPatch,
+  options?: Parameters<typeof http>[1],
+): Promise<ActionOk> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<ActionOk>(getUpdateKbDocumentUrl(id), {
+    ...options,
+    method: "PATCH",
+    headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
+    body: JSON.stringify(kbDocumentPatch),
+  });
+};
+
+export const getUpdateKbDocumentMutationKey = () => ["updateKbDocument"] as const;
+
+export const getUpdateKbDocumentMutationOptions = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateKbDocument>>,
+    TError,
+    UpdateKbDocumentMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof updateKbDocument>>,
+  TError,
+  UpdateKbDocumentMutationVariables,
+  TContext
+> => {
+  const mutationKey = getUpdateKbDocumentMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof updateKbDocument>>,
+    UpdateKbDocumentMutationVariables
+  > = (props) => {
+    const { id, data } = props ?? {};
+
+    return updateKbDocument(id, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type UpdateKbDocumentMutationResult = NonNullable<
+  Awaited<ReturnType<typeof updateKbDocument>>
+>;
+export type UpdateKbDocumentMutationBody = KbDocumentPatch;
+export type UpdateKbDocumentMutationError = ErrorType<
+  | SessionExpiredResponse
+  | ForbiddenResponse
+  | NotFoundResponse
+  | ValidationFailedResponse
+  | BackendUnavailableResponse
+>;
+export type UpdateKbDocumentMutationVariables = { id: number; data: KbDocumentPatch };
+
+/**
+ * @summary Включить или выключить документ, сменить продукт или название
+ */
+export const useUpdateKbDocument = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof updateKbDocument>>,
+      TError,
+      UpdateKbDocumentMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof updateKbDocument>>,
+  TError,
+  UpdateKbDocumentMutationVariables,
+  TContext
+> => {
+  return useMutation(getUpdateKbDocumentMutationOptions(options), queryClient);
+};
+
+export const getListKbChunksUrl = (id: number) => {
+  return `/api/v1/crm/kb/documents/${id}/chunks`;
+};
+
+/**
+ * @summary Фрагменты документа — как их видит поиск бота
+ */
+export const listKbChunks = async (
+  id: number,
+  options?: Parameters<typeof http>[1],
+): Promise<KbChunkList> => {
+  return http<KbChunkList>(getListKbChunksUrl(id), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getListKbChunksQueryKey = (id: number) => {
+  return [`/api/v1/crm/kb/documents/${id}/chunks`] as const;
+};
+
+export const getListKbChunksQueryOptions = <
+  TData = Awaited<ReturnType<typeof listKbChunks>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  id: number,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listKbChunks>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getListKbChunksQueryKey(id);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof listKbChunks>>> = ({ signal }) =>
+    listKbChunks(id, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: id !== null && id !== undefined,
+    ...queryOptions,
+  } as UseQueryOptions<Awaited<ReturnType<typeof listKbChunks>>, TError, TData> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+};
+
+export type ListKbChunksQueryResult = NonNullable<Awaited<ReturnType<typeof listKbChunks>>>;
+export type ListKbChunksQueryError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+>;
+
+export function useListKbChunks<
+  TData = Awaited<ReturnType<typeof listKbChunks>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  id: number,
+  options: {
+    query: Partial<UseQueryOptions<Awaited<ReturnType<typeof listKbChunks>>, TError, TData>> &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listKbChunks>>,
+          TError,
+          Awaited<ReturnType<typeof listKbChunks>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListKbChunks<
+  TData = Awaited<ReturnType<typeof listKbChunks>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  id: number,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listKbChunks>>, TError, TData>> &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listKbChunks>>,
+          TError,
+          Awaited<ReturnType<typeof listKbChunks>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListKbChunks<
+  TData = Awaited<ReturnType<typeof listKbChunks>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  id: number,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listKbChunks>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary Фрагменты документа — как их видит поиск бота
+ */
+
+export function useListKbChunks<
+  TData = Awaited<ReturnType<typeof listKbChunks>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  id: number,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listKbChunks>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getListKbChunksQueryOptions(id, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export const getReingestKbDocumentUrl = (id: number) => {
+  return `/api/v1/crm/kb/documents/${id}/reingest`;
+};
+
+/**
+ * CRM `POST /kb/documents/{id}/reingest`. Раздел `admin` — полный. Документ, который сейчас индексируется, — 409 `CONFLICT` с `details.reason = document_indexing`.
+ * @summary Переиндексировать документ
+ */
+export const reingestKbDocument = async (
+  id: number,
+  options?: Parameters<typeof http>[1],
+): Promise<ActionOk> => {
+  return http<ActionOk>(getReingestKbDocumentUrl(id), {
+    ...options,
+    method: "POST",
+  });
+};
+
+export const getReingestKbDocumentMutationKey = () => ["reingestKbDocument"] as const;
+
+export const getReingestKbDocumentMutationOptions = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | Error
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof reingestKbDocument>>,
+    TError,
+    ReingestKbDocumentMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof reingestKbDocument>>,
+  TError,
+  ReingestKbDocumentMutationVariables,
+  TContext
+> => {
+  const mutationKey = getReingestKbDocumentMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof reingestKbDocument>>,
+    ReingestKbDocumentMutationVariables
+  > = (props) => {
+    const { id } = props ?? {};
+
+    return reingestKbDocument(id, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type ReingestKbDocumentMutationResult = NonNullable<
+  Awaited<ReturnType<typeof reingestKbDocument>>
+>;
+
+export type ReingestKbDocumentMutationError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | Error | BackendUnavailableResponse
+>;
+export type ReingestKbDocumentMutationVariables = { id: number };
+
+/**
+ * @summary Переиндексировать документ
+ */
+export const useReingestKbDocument = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | Error
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof reingestKbDocument>>,
+      TError,
+      ReingestKbDocumentMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof reingestKbDocument>>,
+  TError,
+  ReingestKbDocumentMutationVariables,
+  TContext
+> => {
+  return useMutation(getReingestKbDocumentMutationOptions(options), queryClient);
+};
+
+export const getSearchKbUrl = () => {
+  return `/api/v1/crm/kb/search`;
+};
+
+/**
+ * CRM `POST /kb/search`: тот же поиск и порог, что у диалогового агента; ничего не меняет и не пишет в расходы (поиск по векторам и словам без вызова модели ответа).
+ * @summary Что найдёт бот на этот вопрос
+ */
+export const searchKb = async (
+  kbSearchIn: KbSearchIn,
+  options?: Parameters<typeof http>[1],
+): Promise<KbSearchResult> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<KbSearchResult>(getSearchKbUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
+    body: JSON.stringify(kbSearchIn),
+  });
+};
+
+export const getSearchKbMutationKey = () => ["searchKb"] as const;
+
+export const getSearchKbMutationOptions = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | ValidationFailedResponse
+    | IntegrationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof searchKb>>,
+    TError,
+    SearchKbMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof searchKb>>,
+  TError,
+  SearchKbMutationVariables,
+  TContext
+> => {
+  const mutationKey = getSearchKbMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof searchKb>>,
+    SearchKbMutationVariables
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return searchKb(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type SearchKbMutationResult = NonNullable<Awaited<ReturnType<typeof searchKb>>>;
+export type SearchKbMutationBody = KbSearchIn;
+export type SearchKbMutationError = ErrorType<
+  | SessionExpiredResponse
+  | ForbiddenResponse
+  | ValidationFailedResponse
+  | IntegrationFailedResponse
+  | BackendUnavailableResponse
+>;
+export type SearchKbMutationVariables = { data: KbSearchIn };
+
+/**
+ * @summary Что найдёт бот на этот вопрос
+ */
+export const useSearchKb = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | ValidationFailedResponse
+    | IntegrationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof searchKb>>,
+      TError,
+      SearchKbMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof searchKb>>,
+  TError,
+  SearchKbMutationVariables,
+  TContext
+> => {
+  return useMutation(getSearchKbMutationOptions(options), queryClient);
+};
+
+export const getListKbGapsUrl = (params?: ListKbGapsParams) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : String(value));
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/v1/crm/kb/gaps?${stringifiedParams}`
+    : `/api/v1/crm/kb/gaps`;
+};
+
+/**
+ * CRM `GET /kb/gaps`. По умолчанию — открытые, чаще повторяющиеся не выше, страницами.
+ * @summary Пробелы базы знаний: вопросы, на которые бот не нашёл ответа
+ */
+export const listKbGaps = async (
+  params?: ListKbGapsParams,
+  options?: Parameters<typeof http>[1],
+): Promise<KbGapPage> => {
+  return http<KbGapPage>(getListKbGapsUrl(params), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getListKbGapsQueryKey = (params?: ListKbGapsParams) => {
+  return [`/api/v1/crm/kb/gaps`, ...(params ? [params] : [])] as const;
+};
+
+export const getListKbGapsQueryOptions = <
+  TData = Awaited<ReturnType<typeof listKbGaps>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse>,
+>(
+  params?: ListKbGapsParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listKbGaps>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getListKbGapsQueryKey(params);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof listKbGaps>>> = ({ signal }) =>
+    listKbGaps(params, { signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listKbGaps>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type ListKbGapsQueryResult = NonNullable<Awaited<ReturnType<typeof listKbGaps>>>;
+export type ListKbGapsQueryError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse
+>;
+
+export function useListKbGaps<
+  TData = Awaited<ReturnType<typeof listKbGaps>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse>,
+>(
+  params: undefined | ListKbGapsParams,
+  options: {
+    query: Partial<UseQueryOptions<Awaited<ReturnType<typeof listKbGaps>>, TError, TData>> &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listKbGaps>>,
+          TError,
+          Awaited<ReturnType<typeof listKbGaps>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListKbGaps<
+  TData = Awaited<ReturnType<typeof listKbGaps>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse>,
+>(
+  params?: ListKbGapsParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listKbGaps>>, TError, TData>> &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listKbGaps>>,
+          TError,
+          Awaited<ReturnType<typeof listKbGaps>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListKbGaps<
+  TData = Awaited<ReturnType<typeof listKbGaps>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse>,
+>(
+  params?: ListKbGapsParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listKbGaps>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary Пробелы базы знаний: вопросы, на которые бот не нашёл ответа
+ */
+
+export function useListKbGaps<
+  TData = Awaited<ReturnType<typeof listKbGaps>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse>,
+>(
+  params?: ListKbGapsParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listKbGaps>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getListKbGapsQueryOptions(params, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export const getResolveKbGapUrl = (id: number) => {
+  return `/api/v1/crm/kb/gaps/${id}/resolve`;
+};
+
+/**
+ * CRM `POST /kb/gaps/{id}/resolve`. Раздел `admin` — полный. Привязывает пробел к документу и закрывает его.
+ * @summary Закрыть пробел: ответ есть в документе
+ */
+export const resolveKbGap = async (
+  id: number,
+  kbGapResolveIn: KbGapResolveIn,
+  options?: Parameters<typeof http>[1],
+): Promise<ActionOk> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<ActionOk>(getResolveKbGapUrl(id), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
+    body: JSON.stringify(kbGapResolveIn),
+  });
+};
+
+export const getResolveKbGapMutationKey = () => ["resolveKbGap"] as const;
+
+export const getResolveKbGapMutationOptions = <
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof resolveKbGap>>,
+    TError,
+    ResolveKbGapMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof resolveKbGap>>,
+  TError,
+  ResolveKbGapMutationVariables,
+  TContext
+> => {
+  const mutationKey = getResolveKbGapMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof resolveKbGap>>,
+    ResolveKbGapMutationVariables
+  > = (props) => {
+    const { id, data } = props ?? {};
+
+    return resolveKbGap(id, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type ResolveKbGapMutationResult = NonNullable<Awaited<ReturnType<typeof resolveKbGap>>>;
+export type ResolveKbGapMutationBody = KbGapResolveIn;
+export type ResolveKbGapMutationError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+>;
+export type ResolveKbGapMutationVariables = { id: number; data: KbGapResolveIn };
+
+/**
+ * @summary Закрыть пробел: ответ есть в документе
+ */
+export const useResolveKbGap = <
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof resolveKbGap>>,
+      TError,
+      ResolveKbGapMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof resolveKbGap>>,
+  TError,
+  ResolveKbGapMutationVariables,
+  TContext
+> => {
+  return useMutation(getResolveKbGapMutationOptions(options), queryClient);
+};
+
+export const getIgnoreKbGapUrl = (id: number) => {
+  return `/api/v1/crm/kb/gaps/${id}/ignore`;
+};
+
+/**
+ * CRM `POST /kb/gaps/{id}/ignore`. Раздел `admin` — полный. Вопрос уходит из открытых; вернуть его можно.
+ * @summary Игнорировать пробел
+ */
+export const ignoreKbGap = async (
+  id: number,
+  options?: Parameters<typeof http>[1],
+): Promise<ActionOk> => {
+  return http<ActionOk>(getIgnoreKbGapUrl(id), {
+    ...options,
+    method: "POST",
+  });
+};
+
+export const getIgnoreKbGapMutationKey = () => ["ignoreKbGap"] as const;
+
+export const getIgnoreKbGapMutationOptions = <
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof ignoreKbGap>>,
+    TError,
+    IgnoreKbGapMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof ignoreKbGap>>,
+  TError,
+  IgnoreKbGapMutationVariables,
+  TContext
+> => {
+  const mutationKey = getIgnoreKbGapMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof ignoreKbGap>>,
+    IgnoreKbGapMutationVariables
+  > = (props) => {
+    const { id } = props ?? {};
+
+    return ignoreKbGap(id, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type IgnoreKbGapMutationResult = NonNullable<Awaited<ReturnType<typeof ignoreKbGap>>>;
+
+export type IgnoreKbGapMutationError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+>;
+export type IgnoreKbGapMutationVariables = { id: number };
+
+/**
+ * @summary Игнорировать пробел
+ */
+export const useIgnoreKbGap = <
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof ignoreKbGap>>,
+      TError,
+      IgnoreKbGapMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof ignoreKbGap>>,
+  TError,
+  IgnoreKbGapMutationVariables,
+  TContext
+> => {
+  return useMutation(getIgnoreKbGapMutationOptions(options), queryClient);
+};
+
+export const getReopenKbGapUrl = (id: number) => {
+  return `/api/v1/crm/kb/gaps/${id}/reopen`;
+};
+
+/**
+ * CRM `POST /kb/gaps/{id}/reopen`. Раздел `admin` — полный.
+ * @summary Вернуть пробел в открытые
+ */
+export const reopenKbGap = async (
+  id: number,
+  options?: Parameters<typeof http>[1],
+): Promise<ActionOk> => {
+  return http<ActionOk>(getReopenKbGapUrl(id), {
+    ...options,
+    method: "POST",
+  });
+};
+
+export const getReopenKbGapMutationKey = () => ["reopenKbGap"] as const;
+
+export const getReopenKbGapMutationOptions = <
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof reopenKbGap>>,
+    TError,
+    ReopenKbGapMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof reopenKbGap>>,
+  TError,
+  ReopenKbGapMutationVariables,
+  TContext
+> => {
+  const mutationKey = getReopenKbGapMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof reopenKbGap>>,
+    ReopenKbGapMutationVariables
+  > = (props) => {
+    const { id } = props ?? {};
+
+    return reopenKbGap(id, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type ReopenKbGapMutationResult = NonNullable<Awaited<ReturnType<typeof reopenKbGap>>>;
+
+export type ReopenKbGapMutationError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+>;
+export type ReopenKbGapMutationVariables = { id: number };
+
+/**
+ * @summary Вернуть пробел в открытые
+ */
+export const useReopenKbGap = <
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof reopenKbGap>>,
+      TError,
+      ReopenKbGapMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof reopenKbGap>>,
+  TError,
+  ReopenKbGapMutationVariables,
+  TContext
+> => {
+  return useMutation(getReopenKbGapMutationOptions(options), queryClient);
+};
+
+export const getListKbProductsUrl = () => {
+  return `/api/v1/crm/kb/products`;
+};
+
+/**
+ * CRM `GET /kb/products` требует право `leads:read`. У администратора без второй роли его нет: CRM отвечает 403, BFF передаёт его как есть, а экран подставляет ключ продукта вручную (разрыв в `docs/QUESTIONS.md`).
+ * @summary Справочник продуктов (ключ → название)
+ */
+export const listKbProducts = async (
+  options?: Parameters<typeof http>[1],
+): Promise<KbProductList> => {
+  return http<KbProductList>(getListKbProductsUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getListKbProductsQueryKey = () => {
+  return [`/api/v1/crm/kb/products`] as const;
+};
+
+export const getListKbProductsQueryOptions = <
+  TData = Awaited<ReturnType<typeof listKbProducts>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse>,
+>(options?: {
+  query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listKbProducts>>, TError, TData>>;
+  request?: SecondParameter<typeof http>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getListKbProductsQueryKey();
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof listKbProducts>>> = ({ signal }) =>
+    listKbProducts({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listKbProducts>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type ListKbProductsQueryResult = NonNullable<Awaited<ReturnType<typeof listKbProducts>>>;
+export type ListKbProductsQueryError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse
+>;
+
+export function useListKbProducts<
+  TData = Awaited<ReturnType<typeof listKbProducts>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse>,
+>(
+  options: {
+    query: Partial<UseQueryOptions<Awaited<ReturnType<typeof listKbProducts>>, TError, TData>> &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listKbProducts>>,
+          TError,
+          Awaited<ReturnType<typeof listKbProducts>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListKbProducts<
+  TData = Awaited<ReturnType<typeof listKbProducts>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse>,
+>(
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listKbProducts>>, TError, TData>> &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listKbProducts>>,
+          TError,
+          Awaited<ReturnType<typeof listKbProducts>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListKbProducts<
+  TData = Awaited<ReturnType<typeof listKbProducts>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse>,
+>(
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listKbProducts>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary Справочник продуктов (ключ → название)
+ */
+
+export function useListKbProducts<
+  TData = Awaited<ReturnType<typeof listKbProducts>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse>,
+>(
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listKbProducts>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getListKbProductsQueryOptions(options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export const getSendSandboxMessageUrl = () => {
+  return `/api/v1/crm/sandbox/messages`;
+};
+
+/**
+ * CRM `POST /sandbox/messages`. Раздел `admin` — полный (право CRM `sandbox:use`). Тот же ход, что в Telegram: база знаний, тексты, правила передачи; **платно** — вызовы моделей пишутся в «Расходы» с пометкой «тест». Передача менеджеру только показывается в `why` и в CRM не создаётся. Таймаут ответа — как у проб (30 с).
+ * @summary Песочница: сообщение боту от имени тестового клиента
+ */
+export const sendSandboxMessage = async (
+  sandboxMessageIn: SandboxMessageIn,
+  options?: Parameters<typeof http>[1],
+): Promise<SandboxTurn> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<SandboxTurn>(getSendSandboxMessageUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
+    body: JSON.stringify(sandboxMessageIn),
+  });
+};
+
+export const getSendSandboxMessageMutationKey = () => ["sendSandboxMessage"] as const;
+
+export const getSendSandboxMessageMutationOptions = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | ValidationFailedResponse
+    | IntegrationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof sendSandboxMessage>>,
+    TError,
+    SendSandboxMessageMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof sendSandboxMessage>>,
+  TError,
+  SendSandboxMessageMutationVariables,
+  TContext
+> => {
+  const mutationKey = getSendSandboxMessageMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof sendSandboxMessage>>,
+    SendSandboxMessageMutationVariables
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return sendSandboxMessage(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type SendSandboxMessageMutationResult = NonNullable<
+  Awaited<ReturnType<typeof sendSandboxMessage>>
+>;
+export type SendSandboxMessageMutationBody = SandboxMessageIn;
+export type SendSandboxMessageMutationError = ErrorType<
+  | SessionExpiredResponse
+  | ForbiddenResponse
+  | ValidationFailedResponse
+  | IntegrationFailedResponse
+  | BackendUnavailableResponse
+>;
+export type SendSandboxMessageMutationVariables = { data: SandboxMessageIn };
+
+/**
+ * @summary Песочница: сообщение боту от имени тестового клиента
+ */
+export const useSendSandboxMessage = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | ValidationFailedResponse
+    | IntegrationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof sendSandboxMessage>>,
+      TError,
+      SendSandboxMessageMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof sendSandboxMessage>>,
+  TError,
+  SendSandboxMessageMutationVariables,
+  TContext
+> => {
+  return useMutation(getSendSandboxMessageMutationOptions(options), queryClient);
+};
+
+export const getResetSandboxUrl = () => {
+  return `/api/v1/crm/sandbox/reset`;
+};
+
+/**
+ * CRM `POST /sandbox/reset`. Раздел `admin` — полный. Тестовый диалог сотрудника удаляется целиком.
+ * @summary Песочница: начать заново
+ */
+export const resetSandbox = async (options?: Parameters<typeof http>[1]): Promise<void> => {
+  return http<void>(getResetSandboxUrl(), {
+    ...options,
+    method: "POST",
+  });
+};
+
+export const getResetSandboxMutationKey = () => ["resetSandbox"] as const;
+
+export const getResetSandboxMutationOptions = <
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<Awaited<ReturnType<typeof resetSandbox>>, TError, void, TContext>;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<Awaited<ReturnType<typeof resetSandbox>>, TError, void, TContext> => {
+  const mutationKey = getResetSandboxMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<Awaited<ReturnType<typeof resetSandbox>>, void> = () => {
+    return resetSandbox(requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type ResetSandboxMutationResult = NonNullable<Awaited<ReturnType<typeof resetSandbox>>>;
+
+export type ResetSandboxMutationError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse
+>;
+
+/**
+ * @summary Песочница: начать заново
+ */
+export const useResetSandbox = <
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse>,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<Awaited<ReturnType<typeof resetSandbox>>, TError, void, TContext>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<Awaited<ReturnType<typeof resetSandbox>>, TError, void, TContext> => {
+  return useMutation(getResetSandboxMutationOptions(options), queryClient);
+};
+
+export const getGetBotSettingsUrl = () => {
+  return `/api/v1/admin/bot/settings`;
+};
+
+/**
+ * CRM `GET /settings`. Раздел `admin` — от чтения (директор видит без правки): компания, рабочие часы, тексты бота, поведение бота, поиск по базе знаний, стоп-слова, конкуренты, правила передачи, квалификация, канал команды, бюджет моделей, сделки, форма «Запрос», оповещения о сбоях. Ключ раздела и его схема приходят из CRM как есть (JSON Schema Pydantic CRM): экран строит форму по схеме, поэтому новый параметр в CRM появляется в Платформе без правки BFF. Профиль бота и коннекторы правятся в «Внешних интеграциях» и сюда не входят.
+ * @summary Настройки бота: значения и схемы разделов
+ */
+export const getBotSettings = async (
+  options?: Parameters<typeof http>[1],
+): Promise<BotSettings> => {
+  return http<BotSettings>(getGetBotSettingsUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetBotSettingsQueryKey = () => {
+  return [`/api/v1/admin/bot/settings`] as const;
+};
+
+export const getGetBotSettingsQueryOptions = <
+  TData = Awaited<ReturnType<typeof getBotSettings>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse>,
+>(options?: {
+  query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getBotSettings>>, TError, TData>>;
+  request?: SecondParameter<typeof http>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetBotSettingsQueryKey();
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getBotSettings>>> = ({ signal }) =>
+    getBotSettings({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getBotSettings>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type GetBotSettingsQueryResult = NonNullable<Awaited<ReturnType<typeof getBotSettings>>>;
+export type GetBotSettingsQueryError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse
+>;
+
+export function useGetBotSettings<
+  TData = Awaited<ReturnType<typeof getBotSettings>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse>,
+>(
+  options: {
+    query: Partial<UseQueryOptions<Awaited<ReturnType<typeof getBotSettings>>, TError, TData>> &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getBotSettings>>,
+          TError,
+          Awaited<ReturnType<typeof getBotSettings>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetBotSettings<
+  TData = Awaited<ReturnType<typeof getBotSettings>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse>,
+>(
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getBotSettings>>, TError, TData>> &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getBotSettings>>,
+          TError,
+          Awaited<ReturnType<typeof getBotSettings>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetBotSettings<
+  TData = Awaited<ReturnType<typeof getBotSettings>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse>,
+>(
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getBotSettings>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary Настройки бота: значения и схемы разделов
+ */
+
+export function useGetBotSettings<
+  TData = Awaited<ReturnType<typeof getBotSettings>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse>,
+>(
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getBotSettings>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getGetBotSettingsQueryOptions(options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export const getSaveBotSettingUrl = (key: string) => {
+  return `/api/v1/admin/bot/settings/${key}`;
+};
+
+/**
+ * CRM `PUT /settings/{key}`. Раздел `admin` — полный (право CRM `settings:write`). Тело — значения раздела целиком (по схеме из `getBotSettings`). CRM проверяет значения своей моделью: ошибка — 422 `VALIDATION_FAILED`, `details.fields = [key]`, `details.paths` — пути невалидных полей («greeting.uz»). Неизвестный раздел — 404.
+ * @summary Сохранить раздел настроек бота
+ */
+export const saveBotSetting = async (
+  key: string,
+  saveBotSettingBody: SaveBotSettingBody,
+  options?: Parameters<typeof http>[1],
+): Promise<ActionOk> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<ActionOk>(getSaveBotSettingUrl(key), {
+    ...options,
+    method: "PUT",
+    headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
+    body: JSON.stringify(saveBotSettingBody),
+  });
+};
+
+export const getSaveBotSettingMutationKey = () => ["saveBotSetting"] as const;
+
+export const getSaveBotSettingMutationOptions = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof saveBotSetting>>,
+    TError,
+    SaveBotSettingMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof saveBotSetting>>,
+  TError,
+  SaveBotSettingMutationVariables,
+  TContext
+> => {
+  const mutationKey = getSaveBotSettingMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof saveBotSetting>>,
+    SaveBotSettingMutationVariables
+  > = (props) => {
+    const { key, data } = props ?? {};
+
+    return saveBotSetting(key, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type SaveBotSettingMutationResult = NonNullable<Awaited<ReturnType<typeof saveBotSetting>>>;
+export type SaveBotSettingMutationBody = SaveBotSettingBody;
+export type SaveBotSettingMutationError = ErrorType<
+  | SessionExpiredResponse
+  | ForbiddenResponse
+  | NotFoundResponse
+  | ValidationFailedResponse
+  | BackendUnavailableResponse
+>;
+export type SaveBotSettingMutationVariables = { key: string; data: SaveBotSettingBody };
+
+/**
+ * @summary Сохранить раздел настроек бота
+ */
+export const useSaveBotSetting = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof saveBotSetting>>,
+      TError,
+      SaveBotSettingMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof saveBotSetting>>,
+  TError,
+  SaveBotSettingMutationVariables,
+  TContext
+> => {
+  return useMutation(getSaveBotSettingMutationOptions(options), queryClient);
+};
+
+export const getDryRunEscalationUrl = () => {
+  return `/api/v1/admin/bot/settings/escalation/dry-run`;
+};
+
+/**
+ * CRM `POST /settings/escalation/dry-run`. Раздел `admin` — полный. Считает, сколько передач менеджеру было бы на последних 50 диалогах при новых значениях, и какие лиды изменились. Ничего не сохраняет и не меняет.
+ * @summary Пробный прогон правил передачи на последних диалогах
+ */
+export const dryRunEscalation = async (
+  escalationSettingsIn: EscalationSettingsIn,
+  options?: Parameters<typeof http>[1],
+): Promise<EscalationDryRun> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<EscalationDryRun>(getDryRunEscalationUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
+    body: JSON.stringify(escalationSettingsIn),
+  });
+};
+
+export const getDryRunEscalationMutationKey = () => ["dryRunEscalation"] as const;
+
+export const getDryRunEscalationMutationOptions = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | ValidationFailedResponse
+    | IntegrationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof dryRunEscalation>>,
+    TError,
+    DryRunEscalationMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof dryRunEscalation>>,
+  TError,
+  DryRunEscalationMutationVariables,
+  TContext
+> => {
+  const mutationKey = getDryRunEscalationMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof dryRunEscalation>>,
+    DryRunEscalationMutationVariables
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return dryRunEscalation(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type DryRunEscalationMutationResult = NonNullable<
+  Awaited<ReturnType<typeof dryRunEscalation>>
+>;
+export type DryRunEscalationMutationBody = EscalationSettingsIn;
+export type DryRunEscalationMutationError = ErrorType<
+  | SessionExpiredResponse
+  | ForbiddenResponse
+  | ValidationFailedResponse
+  | IntegrationFailedResponse
+  | BackendUnavailableResponse
+>;
+export type DryRunEscalationMutationVariables = { data: EscalationSettingsIn };
+
+/**
+ * @summary Пробный прогон правил передачи на последних диалогах
+ */
+export const useDryRunEscalation = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | ValidationFailedResponse
+    | IntegrationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof dryRunEscalation>>,
+      TError,
+      DryRunEscalationMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof dryRunEscalation>>,
+  TError,
+  DryRunEscalationMutationVariables,
+  TContext
+> => {
+  return useMutation(getDryRunEscalationMutationOptions(options), queryClient);
+};
+
+export const getListReplyTemplatesUrl = () => {
+  return `/api/v1/admin/bot/reply-templates`;
+};
+
+/**
+ * CRM `GET /reply-templates`. Читают `admin` от чтения и `crm.leads` полный (менеджеру шаблоны нужны в карточке лида); правит `admin` полный.
+ * @summary Шаблоны быстрых ответов
+ */
+export const listReplyTemplates = async (
+  options?: Parameters<typeof http>[1],
+): Promise<ReplyTemplateList> => {
+  return http<ReplyTemplateList>(getListReplyTemplatesUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getListReplyTemplatesQueryKey = () => {
+  return [`/api/v1/admin/bot/reply-templates`] as const;
+};
+
+export const getListReplyTemplatesQueryOptions = <
+  TData = Awaited<ReturnType<typeof listReplyTemplates>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse>,
+>(options?: {
+  query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listReplyTemplates>>, TError, TData>>;
+  request?: SecondParameter<typeof http>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getListReplyTemplatesQueryKey();
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof listReplyTemplates>>> = ({ signal }) =>
+    listReplyTemplates({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listReplyTemplates>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type ListReplyTemplatesQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listReplyTemplates>>
+>;
+export type ListReplyTemplatesQueryError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse
+>;
+
+export function useListReplyTemplates<
+  TData = Awaited<ReturnType<typeof listReplyTemplates>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse>,
+>(
+  options: {
+    query: Partial<UseQueryOptions<Awaited<ReturnType<typeof listReplyTemplates>>, TError, TData>> &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listReplyTemplates>>,
+          TError,
+          Awaited<ReturnType<typeof listReplyTemplates>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListReplyTemplates<
+  TData = Awaited<ReturnType<typeof listReplyTemplates>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse>,
+>(
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listReplyTemplates>>, TError, TData>
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listReplyTemplates>>,
+          TError,
+          Awaited<ReturnType<typeof listReplyTemplates>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListReplyTemplates<
+  TData = Awaited<ReturnType<typeof listReplyTemplates>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse>,
+>(
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listReplyTemplates>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary Шаблоны быстрых ответов
+ */
+
+export function useListReplyTemplates<
+  TData = Awaited<ReturnType<typeof listReplyTemplates>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse>,
+>(
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listReplyTemplates>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getListReplyTemplatesQueryOptions(options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export const getCreateReplyTemplateUrl = () => {
+  return `/api/v1/admin/bot/reply-templates`;
+};
+
+/**
+ * @summary Новый шаблон ответа
+ */
+export const createReplyTemplate = async (
+  replyTemplateIn: ReplyTemplateIn,
+  options?: Parameters<typeof http>[1],
+): Promise<CreatedId> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<CreatedId>(getCreateReplyTemplateUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
+    body: JSON.stringify(replyTemplateIn),
+  });
+};
+
+export const getCreateReplyTemplateMutationKey = () => ["createReplyTemplate"] as const;
+
+export const getCreateReplyTemplateMutationOptions = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createReplyTemplate>>,
+    TError,
+    CreateReplyTemplateMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof createReplyTemplate>>,
+  TError,
+  CreateReplyTemplateMutationVariables,
+  TContext
+> => {
+  const mutationKey = getCreateReplyTemplateMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof createReplyTemplate>>,
+    CreateReplyTemplateMutationVariables
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return createReplyTemplate(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CreateReplyTemplateMutationResult = NonNullable<
+  Awaited<ReturnType<typeof createReplyTemplate>>
+>;
+export type CreateReplyTemplateMutationBody = ReplyTemplateIn;
+export type CreateReplyTemplateMutationError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse | ValidationFailedResponse | BackendUnavailableResponse
+>;
+export type CreateReplyTemplateMutationVariables = { data: ReplyTemplateIn };
+
+/**
+ * @summary Новый шаблон ответа
+ */
+export const useCreateReplyTemplate = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof createReplyTemplate>>,
+      TError,
+      CreateReplyTemplateMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof createReplyTemplate>>,
+  TError,
+  CreateReplyTemplateMutationVariables,
+  TContext
+> => {
+  return useMutation(getCreateReplyTemplateMutationOptions(options), queryClient);
+};
+
+export const getUpdateReplyTemplateUrl = (id: number) => {
+  return `/api/v1/admin/bot/reply-templates/${id}`;
+};
+
+/**
+ * @summary Изменить шаблон ответа
+ */
+export const updateReplyTemplate = async (
+  id: number,
+  replyTemplateIn: ReplyTemplateIn,
+  options?: Parameters<typeof http>[1],
+): Promise<ActionOk> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<ActionOk>(getUpdateReplyTemplateUrl(id), {
+    ...options,
+    method: "PUT",
+    headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
+    body: JSON.stringify(replyTemplateIn),
+  });
+};
+
+export const getUpdateReplyTemplateMutationKey = () => ["updateReplyTemplate"] as const;
+
+export const getUpdateReplyTemplateMutationOptions = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateReplyTemplate>>,
+    TError,
+    UpdateReplyTemplateMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof updateReplyTemplate>>,
+  TError,
+  UpdateReplyTemplateMutationVariables,
+  TContext
+> => {
+  const mutationKey = getUpdateReplyTemplateMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof updateReplyTemplate>>,
+    UpdateReplyTemplateMutationVariables
+  > = (props) => {
+    const { id, data } = props ?? {};
+
+    return updateReplyTemplate(id, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type UpdateReplyTemplateMutationResult = NonNullable<
+  Awaited<ReturnType<typeof updateReplyTemplate>>
+>;
+export type UpdateReplyTemplateMutationBody = ReplyTemplateIn;
+export type UpdateReplyTemplateMutationError = ErrorType<
+  | SessionExpiredResponse
+  | ForbiddenResponse
+  | NotFoundResponse
+  | ValidationFailedResponse
+  | BackendUnavailableResponse
+>;
+export type UpdateReplyTemplateMutationVariables = { id: number; data: ReplyTemplateIn };
+
+/**
+ * @summary Изменить шаблон ответа
+ */
+export const useUpdateReplyTemplate = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof updateReplyTemplate>>,
+      TError,
+      UpdateReplyTemplateMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof updateReplyTemplate>>,
+  TError,
+  UpdateReplyTemplateMutationVariables,
+  TContext
+> => {
+  return useMutation(getUpdateReplyTemplateMutationOptions(options), queryClient);
+};
+
+export const getDeleteReplyTemplateUrl = (id: number) => {
+  return `/api/v1/admin/bot/reply-templates/${id}`;
+};
+
+/**
+ * Раздел `admin` — полный. Шаблон удаляется без возможности вернуть; в карточках лидов он больше не предлагается.
+ * @summary Удалить шаблон ответа
+ */
+export const deleteReplyTemplate = async (
+  id: number,
+  options?: Parameters<typeof http>[1],
+): Promise<ActionOk> => {
+  return http<ActionOk>(getDeleteReplyTemplateUrl(id), {
+    ...options,
+    method: "DELETE",
+  });
+};
+
+export const getDeleteReplyTemplateMutationKey = () => ["deleteReplyTemplate"] as const;
+
+export const getDeleteReplyTemplateMutationOptions = <
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof deleteReplyTemplate>>,
+    TError,
+    DeleteReplyTemplateMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof deleteReplyTemplate>>,
+  TError,
+  DeleteReplyTemplateMutationVariables,
+  TContext
+> => {
+  const mutationKey = getDeleteReplyTemplateMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof deleteReplyTemplate>>,
+    DeleteReplyTemplateMutationVariables
+  > = (props) => {
+    const { id } = props ?? {};
+
+    return deleteReplyTemplate(id, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type DeleteReplyTemplateMutationResult = NonNullable<
+  Awaited<ReturnType<typeof deleteReplyTemplate>>
+>;
+
+export type DeleteReplyTemplateMutationError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+>;
+export type DeleteReplyTemplateMutationVariables = { id: number };
+
+/**
+ * @summary Удалить шаблон ответа
+ */
+export const useDeleteReplyTemplate = <
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof deleteReplyTemplate>>,
+      TError,
+      DeleteReplyTemplateMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof deleteReplyTemplate>>,
+  TError,
+  DeleteReplyTemplateMutationVariables,
+  TContext
+> => {
+  return useMutation(getDeleteReplyTemplateMutationOptions(options), queryClient);
+};
+
+export const getDownloadCsvExportUrl = (
+  entity: "leads" | "clients" | "deals",
+  params?: DownloadCsvExportParams,
+) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : String(value));
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/v1/admin/bot/exports/${entity}?${stringifiedParams}`
+    : `/api/v1/admin/bot/exports/${entity}`;
+};
+
+/**
+ * CRM `GET /export/{leads|clients|deals}.csv`. Нужен `admin: full` (право CRM `export:read`) **и** чтение выгружаемых данных: лиды — `crm.leads`, клиенты и сделки — `crm.clients` (системная «Администратор» без второй роли бизнес-данные не выгружает, R3-D-2). BFF проверяет оба раздела и отдаёт файл потоком, не накапливая его в памяти: CSV для Excel (UTF-8 с BOM, разделитель `;`), до 10 000 строк, имя файла с датой в `Content-Disposition` (`leads-20261026-1530.csv`). Каждая выгрузка пишется в журнал аудита CRM. Фильтры — как на экранах списков; недопустимый — 422.
+ * @summary Выгрузка CSV: лиды, клиенты или сделки
+ */
+export const downloadCsvExport = async (
+  entity: "leads" | "clients" | "deals",
+  params?: DownloadCsvExportParams,
+  options?: Parameters<typeof http>[1],
+): Promise<Blob> => {
+  return http<Blob>(getDownloadCsvExportUrl(entity, params), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getDownloadCsvExportQueryKey = (
+  entity: "leads" | "clients" | "deals",
+  params?: DownloadCsvExportParams,
+) => {
+  return [`/api/v1/admin/bot/exports/${entity}`, ...(params ? [params] : [])] as const;
+};
+
+export const getDownloadCsvExportQueryOptions = <
+  TData = Awaited<ReturnType<typeof downloadCsvExport>>,
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+>(
+  entity: "leads" | "clients" | "deals",
+  params?: DownloadCsvExportParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof downloadCsvExport>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getDownloadCsvExportQueryKey(entity, params);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof downloadCsvExport>>> = ({ signal }) =>
+    downloadCsvExport(entity, params, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: entity !== null && entity !== undefined,
+    ...queryOptions,
+  } as UseQueryOptions<Awaited<ReturnType<typeof downloadCsvExport>>, TError, TData> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+};
+
+export type DownloadCsvExportQueryResult = NonNullable<
+  Awaited<ReturnType<typeof downloadCsvExport>>
+>;
+export type DownloadCsvExportQueryError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse | ValidationFailedResponse | BackendUnavailableResponse
+>;
+
+export function useDownloadCsvExport<
+  TData = Awaited<ReturnType<typeof downloadCsvExport>>,
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+>(
+  entity: "leads" | "clients" | "deals",
+  params: undefined | DownloadCsvExportParams,
+  options: {
+    query: Partial<UseQueryOptions<Awaited<ReturnType<typeof downloadCsvExport>>, TError, TData>> &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof downloadCsvExport>>,
+          TError,
+          Awaited<ReturnType<typeof downloadCsvExport>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useDownloadCsvExport<
+  TData = Awaited<ReturnType<typeof downloadCsvExport>>,
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+>(
+  entity: "leads" | "clients" | "deals",
+  params?: DownloadCsvExportParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof downloadCsvExport>>, TError, TData>> &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof downloadCsvExport>>,
+          TError,
+          Awaited<ReturnType<typeof downloadCsvExport>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useDownloadCsvExport<
+  TData = Awaited<ReturnType<typeof downloadCsvExport>>,
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+>(
+  entity: "leads" | "clients" | "deals",
+  params?: DownloadCsvExportParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof downloadCsvExport>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary Выгрузка CSV: лиды, клиенты или сделки
+ */
+
+export function useDownloadCsvExport<
+  TData = Awaited<ReturnType<typeof downloadCsvExport>>,
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+>(
+  entity: "leads" | "clients" | "deals",
+  params?: DownloadCsvExportParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof downloadCsvExport>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getDownloadCsvExportQueryOptions(entity, params, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}

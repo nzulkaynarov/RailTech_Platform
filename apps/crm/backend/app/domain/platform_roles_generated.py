@@ -187,6 +187,9 @@ CRM_BACKEND: Final[dict[str, dict[str, tuple[str, ...]]]] = {
             "external_services:read",
             "backups:read",
             "audit:read",
+            "settings:read",
+            "reply_templates:read",
+            "kb:read",
         ),
         "full": (
             "users:read",

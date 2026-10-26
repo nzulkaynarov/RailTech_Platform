@@ -167,7 +167,10 @@ MENU: Final[dict[ModuleCode, dict[str, tuple[str, ...]]]] = {
         "clients": ("crm.clients",),
         "requests": ("crm.clients",),
         "channels": ("crm.leads",),
-        "kb": ("crm.leads",),
+        "kb": (
+            "crm.leads",
+            "admin",
+        ),
     },
     "eds": {
         "documents": (
@@ -210,6 +213,7 @@ MENU: Final[dict[ModuleCode, dict[str, tuple[str, ...]]]] = {
         "integrations": ("admin",),
         "tickets": ("admin",),
         "company": ("company.settings",),
+        "bot": ("admin",),
     },
 }
 

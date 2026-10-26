@@ -57,6 +57,18 @@ ROOTS = (
     "AiSpendReport",
     "BackupsOut",
     "SystemStatusOut",
+    # CRM · База знаний и Admin · Настройки бота (W13-A5): документы, фрагменты, поиск, пробелы, продукты, песочница; разделы
+    # настроек (значения и схемы формы), пробный прогон правил передачи, шаблоны быстрых ответов.
+    "Created",
+    "KbDocumentOut",
+    "KbChunkOut",
+    "SearchResponse",
+    "KbGapPage",
+    "ProductOut",
+    "SandboxTurnOut",
+    "SettingsResponse",
+    "DryRunResponse",
+    "ReplyTemplateOut",
 )
 
 HEADER = (

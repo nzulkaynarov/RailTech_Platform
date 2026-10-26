@@ -67,6 +67,18 @@
  * он уходит только в CRM. Коды ошибок: `WRONG_PASSWORD` (422), `NOT_CONFIGURED`, `SECRETS_KEY_MISSING`,
  * `SERVICE_NOT_SWITCHABLE` (409), `INTEGRATION_FAILED` (502, причина в `details.reason`).
  *
+ * **0.11.0 (W13-A5) — добавляющее.** CRM · База знаний и Admin · Настройки бота (теги `kb` и `bot`). **База знаний** (`/crm/kb/*`,
+ * `/crm/sandbox/*`): документы (список, загрузка файла `.md` multipart, ручной ввод, включение и выключение, переиндексация,
+ * фрагменты), поиск «Что найдёт бот», пробелы (закрыть привязкой к документу, игнорировать, вернуть), справочник продуктов,
+ * песочница бота (сообщение, «начать заново»). Читают роли с `crm.leads` или `admin`; правят, переиндексируют и пользуются
+ * песочницей — `admin: full`. **Настройки бота** (`/admin/bot/*`): разделы CRM `/settings` значениями и JSON Schema (форма строится
+ * по схеме CRM), сохранение раздела, пробный прогон правил передачи, шаблоны быстрых ответов, выгрузки CSV лидов, клиентов и
+ * сделок — потоком, с правом на выгружаемые данные (`crm.leads` для лидов, `crm.clients` для клиентов и сделок). Чтение настроек
+ * — `admin` от `read`, правка — `admin: full`. Каталог ролей: директор (`admin: read`) читает настройки бота, шаблоны ответов и
+ * базу знаний (права CRM `settings:read`, `reply_templates:read`, `kb:read`); пункт меню CRM «База знаний» открывает и раздел
+ * `admin`; в Admin новый пункт «Настройки бота». Нового кода ошибки нет: ошибки формата документа и пути невалидных полей настроек
+ * — `VALIDATION_FAILED` с `details.reason`, `details.rule`, `details.messages`, `details.paths`.
+ *
  * 0.2.4: `423 ACCOUNT_LOCKED` объявлен и на `POST /auth/change-password` (CRM блокирует учётную запись после неверных
  * текущих паролей).
  *
@@ -85,7 +97,7 @@
  * Лимиты: вход — 10 неудачных попыток в минуту на IP и e-mail; остальные запросы — 300 в минуту на сессию; превышение — 429
  * `TOO_MANY_REQUESTS` с `Retry-After`.
  *
- * OpenAPI spec version: 0.7.0
+ * OpenAPI spec version: 0.11.0
  */
 import { faker } from "@faker-js/faker";
 
@@ -102,6 +114,7 @@ import {
   IntegrationCardKey,
   IntegrationNote,
   IntegrationStatus,
+  KbGapStatus,
   Language,
   ModuleCode,
   NotificationTab,
@@ -120,16 +133,25 @@ import type {
   AiSpendReport,
   BackupsStatus,
   BotProfileState,
+  BotSettings,
+  CreatedId,
   Employee,
   EmployeeList,
   ErpCheck,
   ErpConnector,
   ErpPairing,
+  EscalationDryRun,
   ExternalService,
   ExternalServiceDetail,
   ExternalServiceList,
   Health,
   IntegrationsOverview,
+  KbChunkList,
+  KbDocument,
+  KbDocumentList,
+  KbGapPage,
+  KbProductList,
+  KbSearchResult,
   MailLog,
   MailQueued,
   Me,
@@ -137,9 +159,11 @@ import type {
   NotificationPage,
   Queue,
   QueueCards,
+  ReplyTemplateList,
   Role,
   RoleList,
   RolePreview,
+  SandboxTurn,
   SearchResult,
   Session,
   SmtpCheck,
@@ -1944,6 +1968,297 @@ export const getUpdateRoleResponseMock = (
   ...overrideResponse,
 });
 
+export const getListKbDocumentsResponseMock = (
+  overrideResponse: Partial<Extract<KbDocumentList, object>> = {},
+): KbDocumentList => ({
+  items: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+    id: faker.number.int(),
+    title: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    product_key: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    language: faker.helpers.arrayElement(Object.values(Language)),
+    source_type: faker.helpers.arrayElement(["file", "url", "manual"] as const),
+    mime: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
+    version: faker.number.int({ min: 1 }),
+    is_active: faker.datatype.boolean(),
+    ingest_status: faker.helpers.arrayElement(["pending", "processing", "done", "failed"] as const),
+    ingest_error: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    chunk_count: faker.number.int({ min: 0 }),
+    created_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+    updated_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+  })),
+  ...overrideResponse,
+});
+
+export const getUploadKbDocumentResponseMock = (
+  overrideResponse: Partial<Extract<CreatedId, object>> = {},
+): CreatedId => ({ id: faker.number.int(), ...overrideResponse });
+
+export const getCreateManualKbDocumentResponseMock = (
+  overrideResponse: Partial<Extract<CreatedId, object>> = {},
+): CreatedId => ({ id: faker.number.int(), ...overrideResponse });
+
+export const getGetKbDocumentResponseMock = (
+  overrideResponse: Partial<Extract<KbDocument, object>> = {},
+): KbDocument => ({
+  id: faker.number.int(),
+  title: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  product_key: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
+  language: faker.helpers.arrayElement(Object.values(Language)),
+  source_type: faker.helpers.arrayElement(["file", "url", "manual"] as const),
+  mime: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
+  version: faker.number.int({ min: 1 }),
+  is_active: faker.datatype.boolean(),
+  ingest_status: faker.helpers.arrayElement(["pending", "processing", "done", "failed"] as const),
+  ingest_error: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
+  chunk_count: faker.number.int({ min: 0 }),
+  created_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+  updated_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+  ...overrideResponse,
+});
+
+export const getUpdateKbDocumentResponseMock = (
+  overrideResponse: Partial<Extract<ActionOk, object>> = {},
+): ActionOk => ({
+  id: faker.helpers.arrayElement([faker.number.int(), null]),
+  ok: true,
+  ...overrideResponse,
+});
+
+export const getListKbChunksResponseMock = (
+  overrideResponse: Partial<Extract<KbChunkList, object>> = {},
+): KbChunkList => ({
+  items: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+    id: faker.number.int(),
+    position: faker.number.int({ min: 0 }),
+    heading_path: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    content: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    token_count: faker.number.int({ min: 0 }),
+  })),
+  ...overrideResponse,
+});
+
+export const getReingestKbDocumentResponseMock = (
+  overrideResponse: Partial<Extract<ActionOk, object>> = {},
+): ActionOk => ({
+  id: faker.helpers.arrayElement([faker.number.int(), null]),
+  ok: true,
+  ...overrideResponse,
+});
+
+export const getSearchKbResponseMock = (
+  overrideResponse: Partial<Extract<KbSearchResult, object>> = {},
+): KbSearchResult => ({
+  hits: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+    chunk_id: faker.number.int(),
+    document_id: faker.number.int(),
+    document_title: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    heading_path: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    content: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    similarity: faker.helpers.arrayElement([faker.number.float({ fractionDigits: 2 }), null]),
+    rrf_score: faker.number.float({ fractionDigits: 2 }),
+  })),
+  best_score: faker.helpers.arrayElement([faker.number.float({ fractionDigits: 2 }), null]),
+  min_score: faker.number.float({ fractionDigits: 2 }),
+  confident: faker.datatype.boolean(),
+  language: faker.helpers.arrayElement(Object.values(Language)),
+  ...overrideResponse,
+});
+
+export const getListKbGapsResponseMock = (
+  overrideResponse: Partial<Extract<KbGapPage, object>> = {},
+): KbGapPage => ({
+  items: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+    id: faker.number.int(),
+    lead_id: faker.helpers.arrayElement([faker.number.int(), null]),
+    question: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    language: faker.helpers.arrayElement(Object.values(Language)),
+    best_score: faker.helpers.arrayElement([faker.number.float({ fractionDigits: 2 }), null]),
+    occurrences: faker.number.int({ min: 1 }),
+    status: faker.helpers.arrayElement(Object.values(KbGapStatus)),
+    resolved_document_id: faker.helpers.arrayElement([faker.number.int(), null]),
+    created_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+    updated_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+  })),
+  total: faker.number.int({ min: 0 }),
+  ...overrideResponse,
+});
+
+export const getResolveKbGapResponseMock = (
+  overrideResponse: Partial<Extract<ActionOk, object>> = {},
+): ActionOk => ({
+  id: faker.helpers.arrayElement([faker.number.int(), null]),
+  ok: true,
+  ...overrideResponse,
+});
+
+export const getIgnoreKbGapResponseMock = (
+  overrideResponse: Partial<Extract<ActionOk, object>> = {},
+): ActionOk => ({
+  id: faker.helpers.arrayElement([faker.number.int(), null]),
+  ok: true,
+  ...overrideResponse,
+});
+
+export const getReopenKbGapResponseMock = (
+  overrideResponse: Partial<Extract<ActionOk, object>> = {},
+): ActionOk => ({
+  id: faker.helpers.arrayElement([faker.number.int(), null]),
+  ok: true,
+  ...overrideResponse,
+});
+
+export const getListKbProductsResponseMock = (
+  overrideResponse: Partial<Extract<KbProductList, object>> = {},
+): KbProductList => ({
+  items: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+    key: faker.helpers.fromRegExp("^[a-z0-9][a-z0-9-]{0,63}$"),
+    name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    description: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    is_active: faker.datatype.boolean(),
+  })),
+  ...overrideResponse,
+});
+
+export const getSendSandboxMessageResponseMock = (
+  overrideResponse: Partial<Extract<SandboxTurn, object>> = {},
+): SandboxTurn => ({
+  replies: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+    () => ({
+      text: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      buttons: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+        () => faker.string.alpha({ length: { min: 10, max: 20 } }),
+      ),
+    }),
+  ),
+  why: {
+    decision: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    reason: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    best_score: faker.helpers.arrayElement([faker.number.float({ fractionDigits: 2 }), null]),
+    documents: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+      () => faker.string.alpha({ length: { min: 10, max: 20 } }),
+    ),
+    triggers: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+      () => faker.string.alpha({ length: { min: 10, max: 20 } }),
+    ),
+    priority: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+  },
+  ...overrideResponse,
+});
+
+export const getGetBotSettingsResponseMock = (
+  overrideResponse: Partial<Extract<BotSettings, object>> = {},
+): BotSettings => ({
+  values: {
+    [faker.string.alphanumeric(5)]: {},
+  },
+  schemas: {
+    [faker.string.alphanumeric(5)]: {},
+  },
+  ...overrideResponse,
+});
+
+export const getSaveBotSettingResponseMock = (
+  overrideResponse: Partial<Extract<ActionOk, object>> = {},
+): ActionOk => ({
+  id: faker.helpers.arrayElement([faker.number.int(), null]),
+  ok: true,
+  ...overrideResponse,
+});
+
+export const getDryRunEscalationResponseMock = (
+  overrideResponse: Partial<Extract<EscalationDryRun, object>> = {},
+): EscalationDryRun => ({
+  dialogs: faker.number.int({ min: 0 }),
+  escalated_current: faker.number.int({ min: 0 }),
+  escalated_candidate: faker.number.int({ min: 0 }),
+  by_code_current: {
+    [faker.string.alphanumeric(5)]: faker.number.int(),
+  },
+  by_code_candidate: {
+    [faker.string.alphanumeric(5)]: faker.number.int(),
+  },
+  changed: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+    () => ({
+      run_id: faker.number.int(),
+      lead_id: faker.number.int(),
+      at: faker.date.past().toISOString().slice(0, 19) + "Z",
+      current: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+        () => faker.string.alpha({ length: { min: 10, max: 20 } }),
+      ),
+      candidate: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+        () => faker.string.alpha({ length: { min: 10, max: 20 } }),
+      ),
+    }),
+  ),
+  ...overrideResponse,
+});
+
+export const getListReplyTemplatesResponseMock = (
+  overrideResponse: Partial<Extract<ReplyTemplateList, object>> = {},
+): ReplyTemplateList => ({
+  items: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+    id: faker.number.int(),
+    title: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    text: {
+      en: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      ru: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      uz: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    },
+    updated_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+  })),
+  ...overrideResponse,
+});
+
+export const getCreateReplyTemplateResponseMock = (
+  overrideResponse: Partial<Extract<CreatedId, object>> = {},
+): CreatedId => ({ id: faker.number.int(), ...overrideResponse });
+
+export const getUpdateReplyTemplateResponseMock = (
+  overrideResponse: Partial<Extract<ActionOk, object>> = {},
+): ActionOk => ({
+  id: faker.helpers.arrayElement([faker.number.int(), null]),
+  ok: true,
+  ...overrideResponse,
+});
+
+export const getDeleteReplyTemplateResponseMock = (
+  overrideResponse: Partial<Extract<ActionOk, object>> = {},
+): ActionOk => ({
+  id: faker.helpers.arrayElement([faker.number.int(), null]),
+  ok: true,
+  ...overrideResponse,
+});
+
+export const getDownloadCsvExportResponseMock = (): Blob =>
+  new Blob([new Uint8Array(faker.number.int({ min: 1, max: 64 }))]);
+
 export const getLoginMockHandler = (
   overrideResponse?:
     | Session
@@ -3247,6 +3562,521 @@ export const getDeleteRoleMockHandler = (
     options,
   );
 };
+
+export const getListKbDocumentsMockHandler = (
+  overrideResponse?:
+    | KbDocumentList
+    | ((
+        info: Parameters<Parameters<typeof http.get>[1]>[0],
+      ) => Promise<KbDocumentList> | KbDocumentList),
+  options?: RequestHandlerOptions,
+) => {
+  return http.get(
+    "*/crm/kb/documents",
+    async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getListKbDocumentsResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getUploadKbDocumentMockHandler = (
+  overrideResponse?:
+    | CreatedId
+    | ((info: Parameters<Parameters<typeof http.post>[1]>[0]) => Promise<CreatedId> | CreatedId),
+  options?: RequestHandlerOptions,
+) => {
+  return http.post(
+    "*/crm/kb/documents",
+    async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getUploadKbDocumentResponseMock(),
+        { status: 201 },
+      );
+    },
+    options,
+  );
+};
+
+export const getCreateManualKbDocumentMockHandler = (
+  overrideResponse?:
+    | CreatedId
+    | ((info: Parameters<Parameters<typeof http.post>[1]>[0]) => Promise<CreatedId> | CreatedId),
+  options?: RequestHandlerOptions,
+) => {
+  return http.post(
+    "*/crm/kb/documents/manual",
+    async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getCreateManualKbDocumentResponseMock(),
+        { status: 201 },
+      );
+    },
+    options,
+  );
+};
+
+export const getGetKbDocumentMockHandler = (
+  overrideResponse?:
+    | KbDocument
+    | ((info: Parameters<Parameters<typeof http.get>[1]>[0]) => Promise<KbDocument> | KbDocument),
+  options?: RequestHandlerOptions,
+) => {
+  return http.get(
+    "*/crm/kb/documents/:id",
+    async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getGetKbDocumentResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getUpdateKbDocumentMockHandler = (
+  overrideResponse?:
+    | ActionOk
+    | ((info: Parameters<Parameters<typeof http.patch>[1]>[0]) => Promise<ActionOk> | ActionOk),
+  options?: RequestHandlerOptions,
+) => {
+  return http.patch(
+    "*/crm/kb/documents/:id",
+    async (info: Parameters<Parameters<typeof http.patch>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getUpdateKbDocumentResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getListKbChunksMockHandler = (
+  overrideResponse?:
+    | KbChunkList
+    | ((info: Parameters<Parameters<typeof http.get>[1]>[0]) => Promise<KbChunkList> | KbChunkList),
+  options?: RequestHandlerOptions,
+) => {
+  return http.get(
+    "*/crm/kb/documents/:id/chunks",
+    async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getListKbChunksResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getReingestKbDocumentMockHandler = (
+  overrideResponse?:
+    | ActionOk
+    | ((info: Parameters<Parameters<typeof http.post>[1]>[0]) => Promise<ActionOk> | ActionOk),
+  options?: RequestHandlerOptions,
+) => {
+  return http.post(
+    "*/crm/kb/documents/:id/reingest",
+    async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getReingestKbDocumentResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getSearchKbMockHandler = (
+  overrideResponse?:
+    | KbSearchResult
+    | ((
+        info: Parameters<Parameters<typeof http.post>[1]>[0],
+      ) => Promise<KbSearchResult> | KbSearchResult),
+  options?: RequestHandlerOptions,
+) => {
+  return http.post(
+    "*/crm/kb/search",
+    async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getSearchKbResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getListKbGapsMockHandler = (
+  overrideResponse?:
+    | KbGapPage
+    | ((info: Parameters<Parameters<typeof http.get>[1]>[0]) => Promise<KbGapPage> | KbGapPage),
+  options?: RequestHandlerOptions,
+) => {
+  return http.get(
+    "*/crm/kb/gaps",
+    async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getListKbGapsResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getResolveKbGapMockHandler = (
+  overrideResponse?:
+    | ActionOk
+    | ((info: Parameters<Parameters<typeof http.post>[1]>[0]) => Promise<ActionOk> | ActionOk),
+  options?: RequestHandlerOptions,
+) => {
+  return http.post(
+    "*/crm/kb/gaps/:id/resolve",
+    async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getResolveKbGapResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getIgnoreKbGapMockHandler = (
+  overrideResponse?:
+    | ActionOk
+    | ((info: Parameters<Parameters<typeof http.post>[1]>[0]) => Promise<ActionOk> | ActionOk),
+  options?: RequestHandlerOptions,
+) => {
+  return http.post(
+    "*/crm/kb/gaps/:id/ignore",
+    async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getIgnoreKbGapResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getReopenKbGapMockHandler = (
+  overrideResponse?:
+    | ActionOk
+    | ((info: Parameters<Parameters<typeof http.post>[1]>[0]) => Promise<ActionOk> | ActionOk),
+  options?: RequestHandlerOptions,
+) => {
+  return http.post(
+    "*/crm/kb/gaps/:id/reopen",
+    async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getReopenKbGapResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getListKbProductsMockHandler = (
+  overrideResponse?:
+    | KbProductList
+    | ((
+        info: Parameters<Parameters<typeof http.get>[1]>[0],
+      ) => Promise<KbProductList> | KbProductList),
+  options?: RequestHandlerOptions,
+) => {
+  return http.get(
+    "*/crm/kb/products",
+    async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getListKbProductsResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getSendSandboxMessageMockHandler = (
+  overrideResponse?:
+    | SandboxTurn
+    | ((
+        info: Parameters<Parameters<typeof http.post>[1]>[0],
+      ) => Promise<SandboxTurn> | SandboxTurn),
+  options?: RequestHandlerOptions,
+) => {
+  return http.post(
+    "*/crm/sandbox/messages",
+    async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getSendSandboxMessageResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getResetSandboxMockHandler = (
+  overrideResponse?:
+    void | ((info: Parameters<Parameters<typeof http.post>[1]>[0]) => Promise<void> | void),
+  options?: RequestHandlerOptions,
+) => {
+  return http.post(
+    "*/crm/sandbox/reset",
+    async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+      if (typeof overrideResponse === "function") {
+        await overrideResponse(info);
+      }
+
+      return new HttpResponse(null, { status: 204 });
+    },
+    options,
+  );
+};
+
+export const getGetBotSettingsMockHandler = (
+  overrideResponse?:
+    | BotSettings
+    | ((info: Parameters<Parameters<typeof http.get>[1]>[0]) => Promise<BotSettings> | BotSettings),
+  options?: RequestHandlerOptions,
+) => {
+  return http.get(
+    "*/admin/bot/settings",
+    async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getGetBotSettingsResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getSaveBotSettingMockHandler = (
+  overrideResponse?:
+    | ActionOk
+    | ((info: Parameters<Parameters<typeof http.put>[1]>[0]) => Promise<ActionOk> | ActionOk),
+  options?: RequestHandlerOptions,
+) => {
+  return http.put(
+    "*/admin/bot/settings/:key",
+    async (info: Parameters<Parameters<typeof http.put>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getSaveBotSettingResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getDryRunEscalationMockHandler = (
+  overrideResponse?:
+    | EscalationDryRun
+    | ((
+        info: Parameters<Parameters<typeof http.post>[1]>[0],
+      ) => Promise<EscalationDryRun> | EscalationDryRun),
+  options?: RequestHandlerOptions,
+) => {
+  return http.post(
+    "*/admin/bot/settings/escalation/dry-run",
+    async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getDryRunEscalationResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getListReplyTemplatesMockHandler = (
+  overrideResponse?:
+    | ReplyTemplateList
+    | ((
+        info: Parameters<Parameters<typeof http.get>[1]>[0],
+      ) => Promise<ReplyTemplateList> | ReplyTemplateList),
+  options?: RequestHandlerOptions,
+) => {
+  return http.get(
+    "*/admin/bot/reply-templates",
+    async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getListReplyTemplatesResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getCreateReplyTemplateMockHandler = (
+  overrideResponse?:
+    | CreatedId
+    | ((info: Parameters<Parameters<typeof http.post>[1]>[0]) => Promise<CreatedId> | CreatedId),
+  options?: RequestHandlerOptions,
+) => {
+  return http.post(
+    "*/admin/bot/reply-templates",
+    async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getCreateReplyTemplateResponseMock(),
+        { status: 201 },
+      );
+    },
+    options,
+  );
+};
+
+export const getUpdateReplyTemplateMockHandler = (
+  overrideResponse?:
+    | ActionOk
+    | ((info: Parameters<Parameters<typeof http.put>[1]>[0]) => Promise<ActionOk> | ActionOk),
+  options?: RequestHandlerOptions,
+) => {
+  return http.put(
+    "*/admin/bot/reply-templates/:id",
+    async (info: Parameters<Parameters<typeof http.put>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getUpdateReplyTemplateResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getDeleteReplyTemplateMockHandler = (
+  overrideResponse?:
+    | ActionOk
+    | ((info: Parameters<Parameters<typeof http.delete>[1]>[0]) => Promise<ActionOk> | ActionOk),
+  options?: RequestHandlerOptions,
+) => {
+  return http.delete(
+    "*/admin/bot/reply-templates/:id",
+    async (info: Parameters<Parameters<typeof http.delete>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getDeleteReplyTemplateResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getDownloadCsvExportMockHandler = (
+  overrideResponse?:
+    Blob | ((info: Parameters<Parameters<typeof http.get>[1]>[0]) => Promise<Blob> | Blob),
+  options?: RequestHandlerOptions,
+) => {
+  return http.get(
+    "*/admin/bot/exports/:entity",
+    async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+      const binaryBody =
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getDownloadCsvExportResponseMock();
+      return new HttpResponse(binaryBody, {
+        status: 200,
+        headers: { "Content-Type": "application/octet-stream" },
+      });
+    },
+    options,
+  );
+};
 export const getRailTechPlatformBFFAPICRMERPMock = () => [
   getLoginMockHandler(),
   getLogoutMockHandler(),
@@ -3306,4 +4136,27 @@ export const getRailTechPlatformBFFAPICRMERPMock = () => [
   getGetRoleMockHandler(),
   getUpdateRoleMockHandler(),
   getDeleteRoleMockHandler(),
+  getListKbDocumentsMockHandler(),
+  getUploadKbDocumentMockHandler(),
+  getCreateManualKbDocumentMockHandler(),
+  getGetKbDocumentMockHandler(),
+  getUpdateKbDocumentMockHandler(),
+  getListKbChunksMockHandler(),
+  getReingestKbDocumentMockHandler(),
+  getSearchKbMockHandler(),
+  getListKbGapsMockHandler(),
+  getResolveKbGapMockHandler(),
+  getIgnoreKbGapMockHandler(),
+  getReopenKbGapMockHandler(),
+  getListKbProductsMockHandler(),
+  getSendSandboxMessageMockHandler(),
+  getResetSandboxMockHandler(),
+  getGetBotSettingsMockHandler(),
+  getSaveBotSettingMockHandler(),
+  getDryRunEscalationMockHandler(),
+  getListReplyTemplatesMockHandler(),
+  getCreateReplyTemplateMockHandler(),
+  getUpdateReplyTemplateMockHandler(),
+  getDeleteReplyTemplateMockHandler(),
+  getDownloadCsvExportMockHandler(),
 ];
