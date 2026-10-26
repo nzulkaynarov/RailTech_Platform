@@ -19,6 +19,7 @@ from app.integrations.litellm import EMBED_ALIAS
 from app.integrations.litellm_catalog import ModelEntry
 from app.integrations.llm_usage import COST_HEADER, UsageEvent, UsageSink, gateway_body, parse_cost
 from app.models.system import SystemAlert
+from app.schemas.settings import ModelKeyMask
 from app.schemas.spend import ModelStatus, ModelTestResult
 
 ALIASES: Final = ("dialog-model", "qualifier-model", "fallback-model", "embed-model", "judge-model")
@@ -28,6 +29,7 @@ def statuses(
     entries: Mapping[str, ModelEntry],
     alerts: Mapping[str, SystemAlert],
     today: Mapping[str, float],
+    keys: Mapping[str, ModelKeyMask] | None = None,
 ) -> list[ModelStatus]:
     aliases = list(ALIASES) + sorted(set(entries) - set(ALIASES))
     out: list[ModelStatus] = []
@@ -35,6 +37,7 @@ def statuses(
         entry = entries.get(alias)
         alert = alerts.get(f"model:{alias}")
         health = "unknown" if alert is None else ("problem" if alert.active else "ok")
+        mask = (keys or {}).get(alias)
         out.append(
             ModelStatus(
                 alias=alias,
@@ -44,6 +47,8 @@ def statuses(
                 health_detail=alert.detail if alert is not None and alert.active else None,
                 checked_at=alert.updated_at if alert is not None else None,
                 today_usd=round(today.get(alias, 0.0), 4),
+                key_source=mask.source if mask else None,
+                key_last4=mask.last4 if mask else None,
             )
         )
     return out

@@ -3744,6 +3744,19 @@ components:
           - type: string
           - type: 'null'
           title: Health Detail
+        key_last4:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Key Last4
+        key_source:
+          anyOf:
+          - enum:
+            - crm
+            - env
+            type: string
+          - type: 'null'
+          title: Key Source
         model:
           anyOf:
           - type: string

@@ -73,6 +73,27 @@ class SettingsService:
         self.invalidate()
         return validated
 
+    async def merge_map(
+        self, key: str, field: str, entries: dict[str, Any], user_id: int | None
+    ) -> BaseModel:
+        """Дописать записи в поле-словарь ключа настроек, не трогая остальные поля.
+
+        Строка читается в транзакции с блокировкой (`FOR UPDATE`) и мимо кэша процесса: поля,
+        которые другой запрос изменил после заполнения кэша (адрес ERP, срок приёма прежнего
+        секрета), не откатываются. Нет строки — берутся значения по умолчанию схемы.
+        """
+        model = SETTINGS_MODELS.get(key)
+        if model is None:
+            raise UnknownSettingError(key)
+        async with self._sessions() as session, session.begin():
+            row = await session.scalar(select(Setting).where(Setting.key == key).with_for_update())
+            current = dict(row.value) if row is not None else {}
+            current[field] = {**(current.get(field) or {}), **entries}
+            validated = model.model_validate(current)
+            await self._upsert(session, key, validated.model_dump(mode="json"), user_id)
+        self.invalidate()
+        return validated
+
     async def update_in(
         self, session: AsyncSession, key: str, value: dict[str, Any], user_id: int | None
     ) -> BaseModel:

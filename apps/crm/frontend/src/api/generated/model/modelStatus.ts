@@ -5,12 +5,15 @@
  * OpenAPI spec version: 0.4.0
  */
 import type { ModelStatusHealth } from "./modelStatusHealth";
+import type { ModelStatusKeySource } from "./modelStatusKeySource";
 
 export interface ModelStatus {
   alias: string;
   checked_at: string | null;
   health: ModelStatusHealth;
   health_detail: string | null;
+  key_last4?: string | null;
+  key_source?: ModelStatusKeySource;
   model: string | null;
   provider: string | null;
   today_usd: number;

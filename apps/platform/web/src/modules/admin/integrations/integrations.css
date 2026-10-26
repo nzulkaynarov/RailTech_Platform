@@ -1,0 +1,241 @@
+/* Admin · Внешние интеграции (W13-A1): «Требует внимания», карточки со статусом, панели настроек.
+   Значения — макет v3 и docs/architecture/platform-frontend.md §5: рамка #f0f0f0, радиус 8, без теней и градиентов;
+   второстепенный текст #595959 и #6e6e6e (контраст ≥ 4.5:1 на белом). */
+.pf-int {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+.pf-int-section-title {
+  margin: 0;
+  font-size: 16px;
+  line-height: 24px;
+  font-weight: 600;
+}
+.pf-int-attention {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.pf-int-attention li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 8px 12px;
+  padding: 12px 24px;
+  border-top: 1px solid #f0f0f0;
+}
+.pf-int-attention li:first-child {
+  border-top: 0;
+}
+.pf-int-attention-text {
+  flex: 1 1 260px;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.pf-int-attention-subject {
+  font-weight: 500;
+  line-height: 22px;
+}
+.pf-int-attention-detail {
+  color: #595959;
+  font-size: 13px;
+  line-height: 20px;
+  overflow-wrap: anywhere;
+}
+.pf-int-empty {
+  margin: 0;
+  padding: 16px 24px;
+  color: #595959;
+}
+.pf-int-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 16px;
+}
+.pf-int-card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 16px;
+  background: #fff;
+  border: 1px solid #f0f0f0;
+  border-radius: 8px;
+}
+.pf-int-card[data-selected="true"] {
+  background: #e6f4ff;
+  border-color: #91caff;
+}
+.pf-int-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.pf-int-card-title {
+  margin: 0;
+  font-size: 16px;
+  line-height: 24px;
+  font-weight: 600;
+}
+.pf-int-card-purpose {
+  margin: 0;
+  color: #595959;
+  font-size: 13px;
+  line-height: 20px;
+}
+.pf-int-card-note {
+  margin: 0;
+  line-height: 22px;
+}
+.pf-int-card-foot {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: auto;
+  padding-top: 8px;
+}
+.pf-int-panel-title {
+  margin: 0;
+  font-size: 16px;
+  line-height: 24px;
+  font-weight: 600;
+}
+.pf-int-block {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding-top: 16px;
+  border-top: 1px solid #f0f0f0;
+}
+.pf-int-block > h4 {
+  margin: 0;
+  font-size: 14px;
+  line-height: 22px;
+  font-weight: 600;
+}
+.pf-int-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.pf-int-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.pf-int-field > label,
+.pf-int-field > .pf-int-label {
+  font-size: 14px;
+  line-height: 22px;
+  color: #1f1f1f;
+}
+.pf-int-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.pf-int-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.pf-int-list > li {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 12px 0;
+  border-top: 1px solid #f0f0f0;
+}
+.pf-int-list > li:first-child {
+  border-top: 0;
+}
+.pf-int-item-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px 8px;
+}
+.pf-int-item-title {
+  font-weight: 500;
+  line-height: 22px;
+  overflow-wrap: anywhere;
+}
+.pf-int-sub {
+  margin: 0;
+  color: #595959;
+  font-size: 13px;
+  line-height: 20px;
+  overflow-wrap: anywhere;
+}
+.pf-int-table-wrap {
+  overflow-x: auto;
+}
+.pf-int-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+.pf-int-table th,
+.pf-int-table td {
+  padding: 6px 8px;
+  border-bottom: 1px solid #f0f0f0;
+  text-align: left;
+  vertical-align: top;
+}
+.pf-int-table th {
+  background: #fafafa;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.pf-int-table td.num,
+.pf-int-table th.num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.pf-int-tiles {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 8px;
+}
+.pf-int-tile {
+  padding: 8px 12px;
+  border: 1px solid #f0f0f0;
+  border-radius: 8px;
+}
+.pf-int-tile dt {
+  font-size: 12px;
+  line-height: 20px;
+  color: #595959;
+}
+.pf-int-tile dd {
+  margin: 0;
+  font-size: 16px;
+  line-height: 24px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.pf-int-meter {
+  display: inline-block;
+  width: 96px;
+  height: 6px;
+  border-radius: 3px;
+  background: #f0f0f0;
+  vertical-align: middle;
+}
+.pf-int-meter > span {
+  display: block;
+  height: 100%;
+  border-radius: 3px;
+  background: #1668dc;
+}
+.pf-int-meter[data-tone="warn"] > span {
+  background: #874d00;
+}
+.pf-int-meter[data-tone="fail"] > span {
+  background: #a8071a;
+}
