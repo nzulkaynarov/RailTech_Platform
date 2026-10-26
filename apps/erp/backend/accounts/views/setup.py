@@ -9,7 +9,7 @@ from rest_framework import permissions, serializers, status, views
 from rest_framework.response import Response
 
 from accounts.serializers import OwnCompanySetupSerializer
-from accounts.services.own_company_setup import create_own_company, is_setup_required
+from accounts.services.own_company_setup import create_own_company, is_setup_required, own_company_id_or_none
 from core.permissions import ADMIN_ONLY, IsPlatformAdmin, RoleGatedViewMixin
 
 
@@ -21,6 +21,10 @@ from core.permissions import ADMIN_ONLY, IsPlatformAdmin, RoleGatedViewMixin
             fields={
                 "setup_required": serializers.BooleanField(),
                 "can_setup": serializers.BooleanField(),
+                "own_company_id": serializers.IntegerField(
+                    allow_null=True,
+                    help_text="Id своей компании (core.tenant, с учётом OWN_COMPANY_ID); null — её нет.",
+                ),
             },
         )
     },
@@ -31,7 +35,14 @@ class SetupStatusView(views.APIView):
 
     def get(self, request):
         required = is_setup_required()
-        return Response({"setup_required": required, "can_setup": bool(required and request.user.is_superuser)})
+        return Response(
+            {
+                "setup_required": required,
+                "can_setup": bool(required and request.user.is_superuser),
+                # Платформа (BFF, W13-A3) берёт отсюда id своей компании: администратор работает без членства.
+                "own_company_id": own_company_id_or_none(),
+            }
+        )
 
 
 @extend_schema(

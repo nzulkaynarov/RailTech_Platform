@@ -1,9 +1,10 @@
 """Эндпоинты заявок на категорию (R6, D7) — тонкие обёртки над `catalog/category_requests.py`.
 
 Продавец: `POST` (подать) и `GET` (свои обращения — чтобы просьба не проваливалась в тишину).
-Оператор: `GET` (все обращения, фильтр по статусу) + `approve` / `reject`. Право оператора —
-`platform.settings`, ровно то же, что и на запись в сам справочник категорий: кто ведёт
-таксономию, тот и рассматривает обращения по ней.
+Решение (`approve` / `reject`) — по праву `settings.edit` (его даёт раздел Платформы «Компания», W13-A3,
+решение архитектора по Q-W13A3-1) или администратору (`is_superuser`): кто настраивает компанию и ведёт
+справочник категорий, тот и рассматривает обращения по нему. Список — обращения своей компании, администратор
+видит все, фильтр по статусу.
 """
 
 from django.db.models import Q
@@ -12,7 +13,7 @@ from rest_framework import mixins, permissions, serializers, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
 
-from core.permissions import ADMIN_ONLY, IsPlatformAdmin, RoleGatedViewMixin
+from core.permissions import RoleGatedViewMixin
 
 from ..category_requests import approve_category_request, reject_category_request, submit_category_request
 from ..models import Category, CategoryRequest
@@ -95,16 +96,15 @@ class CategoryRequestViewSet(
 ):
     required_permissions = {
         "create": "catalog.manage",
-        "approve": ADMIN_ONLY,
-        "reject": ADMIN_ONLY,
+        "approve": "settings.edit",
+        "reject": "settings.edit",
     }
 
     serializer_class = CategoryRequestSerializer
     #: Рассматривает тот же оператор, что ведёт справочник (см. CategoryViewSet).
 
     def get_permissions(self):
-        if self.action in ("approve", "reject"):
-            return [IsPlatformAdmin()]
+        # Право на решение проверяет гейт `required_permissions` (RoleGatedViewMixin) — до поиска объекта.
         return [permissions.IsAuthenticated()]
 
     def get_queryset(self):
@@ -138,7 +138,7 @@ class CategoryRequestViewSet(
 
     @extend_schema(
         summary="Approve a category request",
-        description="Links the request to the category the operator actually created. Operator only.",
+        description="Links the request to the category the operator actually created. Needs `settings.edit` or administrator.",
         request=CategoryRequestReviewSerializer,
         tags=["Catalog"],
     )
@@ -157,7 +157,7 @@ class CategoryRequestViewSet(
 
     @extend_schema(
         summary="Reject a category request",
-        description="Requires a reason — a refusal without grounds is not reviewable. Operator only.",
+        description="Requires a reason — a refusal without grounds is not reviewable. Needs `settings.edit` or administrator.",
         request=CategoryRequestReviewSerializer,
         tags=["Catalog"],
     )
