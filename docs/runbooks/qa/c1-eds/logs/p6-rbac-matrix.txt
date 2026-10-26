@@ -1,0 +1,25 @@
+[mgr_acc] /me: ['letters.read', 'memos.create', 'payments.confirm', 'registry.export', 'registry.read']  == каталог: True
+   разрешено (14): listLetters, getLetter, listDocuments, createDocument, getDocument, submitDocument, listApprovals, getApproval, decideApproval, listRegistry, exportRegistry, uploadFile, downloadFile, listFileVersions
+   403 (5): registerLetter, resolveLetter, returnLetter, rejectLetter, resubmitLetter
+   расхождений с x-rt-permissions: нет
+[director] /me: ['approvals.decide', 'letters.read', 'letters.register', 'letters.resolve', 'memos.approve', 'memos.create', 'payments.confirm', 'registry.export', 'registry.read']  == каталог: True
+   разрешено (19): listLetters, registerLetter, getLetter, resolveLetter, returnLetter, rejectLetter, resubmitLetter, listDocuments, createDocument, getDocument, submitDocument, listApprovals, getApproval, decideApproval, listRegistry, exportRegistry, uploadFile, downloadFile, listFileVersions
+   403 (0):
+   расхождений с x-rt-permissions: нет
+[manager] /me: ['letters.read', 'memos.create', 'registry.read']  == каталог: True
+   разрешено (12): listLetters, getLetter, listDocuments, createDocument, getDocument, submitDocument, listApprovals, getApproval, listRegistry, uploadFile, downloadFile, listFileVersions
+   403 (7): registerLetter, resolveLetter, returnLetter, rejectLetter, resubmitLetter, decideApproval, exportRegistry
+   расхождений с x-rt-permissions: нет
+[supply] /me: ['memos.create', 'registry.read']  == каталог: True
+   разрешено (10): listDocuments, createDocument, getDocument, submitDocument, listApprovals, getApproval, listRegistry, uploadFile, downloadFile, listFileVersions
+   403 (9): listLetters, registerLetter, getLetter, resolveLetter, returnLetter, rejectLetter, resubmitLetter, decideApproval, exportRegistry
+   расхождений с x-rt-permissions: нет
+[engineer] /me: ['memos.create', 'registry.read']  == каталог: True
+   разрешено (10): listDocuments, createDocument, getDocument, submitDocument, listApprovals, getApproval, listRegistry, uploadFile, downloadFile, listFileVersions
+   403 (9): listLetters, registerLetter, getLetter, resolveLetter, returnLetter, rejectLetter, resubmitLetter, decideApproval, exportRegistry
+   расхождений с x-rt-permissions: нет
+[admin] /me: ['memos.create']  == каталог: True
+   разрешено (9): listDocuments, createDocument, getDocument, submitDocument, listApprovals, getApproval, uploadFile, downloadFile, listFileVersions
+   403 (10): listLetters, registerLetter, getLetter, resolveLetter, returnLetter, rejectLetter, resubmitLetter, decideApproval, listRegistry, exportRegistry
+   расхождений с x-rt-permissions: нет
+ИТОГ расхождений: 0

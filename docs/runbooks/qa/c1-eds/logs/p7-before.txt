@@ -1,0 +1,25 @@
+## Состояние ДО остановки
+2026-10-26 04:07:33 UTC
+  subscriber  |  status   | count
+--------------+-----------+-------
+ eds          | delivered |     6
+ erp          | delivered |     6
+ platform-bff | delivered |    21
+(3 rows)
+
+  subscriber  |  status   | count
+--------------+-----------+-------
+ crm          | delivered |    11
+ eds          | delivered |     8
+ platform-bff | delivered |    16
+(3 rows)
+
+ letters | inbox | routes
+---------+-------+--------
+      53 |    14 |      7
+(1 row)
+
+ crm_user_id |              permissions_eds
+-------------+-------------------------------------------
+           6 | {letters.read,memos.create,registry.read}
+(1 row)

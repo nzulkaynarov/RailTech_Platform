@@ -1,0 +1,9 @@
+$ make smoke (HTTP_PORT=8092 из .env стенда rt-c1)
+  crm.localhost      /health → 200
+  erp.localhost      /health → 200
+  cabinet.localhost  /health → 200
+  platform.localhost /api/v1/health → 200
+  platform.localhost / → 200
+  erp.localhost      /api/integration/v1/health → 404 (ожидается 404)
+  erp.localhost      /admin/ → 404 (ожидается 404)
+smoke: ok

@@ -1,0 +1,12 @@
+-- crm: доставки подписчику eds, созданные после остановки (04:07:39)
+              event_type              | created  |  status   | attempts | last_attempt | delivered |               event_id
+--------------------------------------+----------+-----------+----------+--------------+-----------+--------------------------------------
+ uz.railtech.identity.user.updated.v1 | 04:07:47 | delivered |        4 | 04:22:28     | 04:22:29  | 2f68a1c2-2e62-43f6-b100-b484cce40fe4
+(1 row)
+
+-- erp: доставки подписчику eds, созданные после остановки (04:07:39)
+                 event_type                  | created  |  status   | attempts | last_attempt | delivered |               event_id
+---------------------------------------------+----------+-----------+----------+--------------+-----------+--------------------------------------
+ uz.railtech.erp.request.created.v1          | 04:07:46 | delivered |        4 | 04:22:28     | 04:22:29  | f0533a1d-0b89-4a70-b238-e846f172423e
+ uz.railtech.erp.quote.ready_for_approval.v1 | 04:07:48 | delivered |        4 | 04:25:37     | 04:25:44  | 31d14e85-1e95-4bc0-bcfa-263ca715f361
+(2 rows)

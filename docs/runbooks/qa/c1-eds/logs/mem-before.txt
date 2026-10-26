@@ -1,0 +1,14 @@
+rt-c1-caddy-1 13.36MiB / 11.67GiB 0.86%
+rt-c1-crm-worker-1 335.8MiB / 11.67GiB 2.57%
+rt-c1-crm-api-1 566.7MiB / 11.67GiB 0.31%
+rt-c1-eds-worker-1 94.22MiB / 11.67GiB 1.47%
+rt-c1-eds-api-1 187.1MiB / 11.67GiB 0.15%
+rt-c1-erp-worker-1 1.119GiB / 11.67GiB 0.66%
+rt-c1-erp-beat-1 165.3MiB / 11.67GiB 0.00%
+rt-c1-erp-backend-1 184.1MiB / 11.67GiB 2.62%
+rt-c1-litellm-1 731.2MiB / 11.67GiB 0.13%
+rt-c1-platform-bff-1 141.6MiB / 11.67GiB 15.31%
+rt-c1-postgres-1 212MiB / 11.67GiB 2.31%
+rt-c1-redis-cache-1 5.352MiB / 11.67GiB 0.19%
+rt-c1-redis-broker-1 5.367MiB / 11.67GiB 0.20%
+rt-c1-rustfs-1 44.47MiB / 11.67GiB 0.02%

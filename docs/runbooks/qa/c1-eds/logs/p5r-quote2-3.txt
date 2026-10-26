@@ -1,0 +1,34 @@
+===== КП 2 (сделка D-2, порог 25 %): красный чек-лист -> 409 -> возврат -> правка -> одобрение -> отправка
+submit-for-review 200 (3, None)
+visa 200 ('КП-2026-00002', 3) t=1792990968.0435255
+send-to-client до одобрения (PENDING_APPROVAL), от директора: 400 {'detail': 'INVALID_STATUS'}
+очередь директора (КП): [('62e12e2d-46eb-42bc-a494-29ac1d379e01', 'КП-2026-00002 v1 · D-2', 1)]
+шаги: [(1, 'Директор', 'current')]
+чек-лист: [{"code": "visa_goods", "label": "Виза снабженца (товары)", "ok": true, "by": {"crm_user_id": 4, "full_name": "Снабженец Демо"}, "at": "2026-10-26T05:02:48.054155Z", "value": null}, {"code": "visa_services", "label": "Виза гл. инженера (услуги)", "ok": true, "by": {"crm_user_id": 5, "full_name": "Инженер Демо"}, "at": "2026-10-26T05:02:48.048555Z", "value": null}, {"code": "margin", "label": "Маржа не ниже порога резолюции", "ok": false, "by": null, "at": null, "value": "23.1 % < 25 %"}, {"code": "due", "label": "Срок расчёта выдержан", "ok": true, "by": null, "at": null, "value": "готово 26.10.2026, срок 02.11.2026"}]
+снимок КП (ключи): ['client_name', 'cost', 'currency', 'due', 'erp_quote_id', 'margin_amount', 'margin_pct', 'min_margin_pct', 'number', 'ready_at', 'required_zones', 'total', 'valid_until', 'version', 'visas']
+can_decide: True allowed: ['return', 'reject'] round: 1
+decision approve -> 409 {'code': 'CONFLICT', 'message': 'Чек-лист КП не выполнен: одобрение недоступно.', 'source': 'eds', 'details': {'reason': 'checklist_not_green', 'failed': ['margin']}}
+decision return -> 200 ('returned', None)
+КП до правки: status 1 director_comment: None decision: None
+правка первой строки: 200
+повторная отправка: 200 ('КП-2026-00002', 3)
+статус после: 3
+visa 200 ('КП-2026-00002', 3) t=1792990975.3262467
+очередь директора (КП): [('c006f7fb-ebf3-41a5-b0b6-ea74a50af7ee', 'КП-2026-00002 v2 · D-2', 2)]
+шаги: [(1, 'Директор', 'current')]
+чек-лист: [{"code": "visa_goods", "label": "Виза снабженца (товары)", "ok": true, "by": {"crm_user_id": 4, "full_name": "Снабженец Демо"}, "at": "2026-10-26T05:02:55.335414Z", "value": null}, {"code": "visa_services", "label": "Виза гл. инженера (услуги)", "ok": true, "by": {"crm_user_id": 5, "full_name": "Инженер Демо"}, "at": "2026-10-26T05:02:55.331388Z", "value": null}, {"code": "margin", "label": "Маржа не ниже порога резолюции", "ok": true, "by": null, "at": null, "value": "30.2 % ≥ 25 %"}, {"code": "due", "label": "Срок расчёта выдержан", "ok": true, "by": null, "at": null, "value": "готово 26.10.2026, срок 02.11.2026"}]
+снимок КП (ключи): ['client_name', 'cost', 'currency', 'due', 'erp_quote_id', 'margin_amount', 'margin_pct', 'min_margin_pct', 'number', 'ready_at', 'required_zones', 'total', 'valid_until', 'version', 'visas']
+can_decide: True allowed: ['approve', 'return', 'reject'] round: 2
+decision approve -> 200 ('approved', 'ИСХ-002/26')
+send-to-client автором (снабженец): 403 {'detail': 'ROLE_NOT_PERMITTED'}
+send-to-client: 200 ('SENT', 'frozen')
+===== КП 3 (сделка D-3, срок резолюции вчера): тупик C1-G-1
+submit-for-review 200 (3, None)
+visa 200 ('КП-2026-00003', 3) t=1792990985.1358507
+очередь директора (КП): [('d02e361f-3b82-46b6-9d01-2a3fd636fb3a', 'КП-2026-00003 v1 · D-3', 1)]
+шаги: [(1, 'Директор', 'current')]
+чек-лист: [{"code": "visa_goods", "label": "Виза снабженца (товары)", "ok": true, "by": {"crm_user_id": 4, "full_name": "Снабженец Демо"}, "at": "2026-10-26T05:03:05.154062Z", "value": null}, {"code": "visa_services", "label": "Виза гл. инженера (услуги)", "ok": true, "by": {"crm_user_id": 5, "full_name": "Инженер Демо"}, "at": "2026-10-26T05:03:05.145176Z", "value": null}, {"code": "margin", "label": "Маржа не ниже порога резолюции", "ok": true, "by": null, "at": null, "value": "23.1 % ≥ 15 %"}, {"code": "due", "label": "Срок расчёта выдержан", "ok": false, "by": null, "at": null, "value": "готово 26.10.2026, срок 25.10.2026"}]
+снимок КП (ключи): ['client_name', 'cost', 'currency', 'due', 'erp_quote_id', 'margin_amount', 'margin_pct', 'min_margin_pct', 'number', 'ready_at', 'required_zones', 'total', 'valid_until', 'version', 'visas']
+can_decide: True allowed: ['return', 'reject'] round: 1
+decision approve -> 409 {'code': 'CONFLICT', 'message': 'Чек-лист КП не выполнен: одобрение недоступно.', 'source': 'eds', 'details': {'reason': 'checklist_not_green', 'failed': ['due']}}
+повторная резолюция по resolved-письму -> 409 {"code": "CONFLICT", "message": "Операция недоступна в текущем статусе письма.", "source": "eds", "details": {"reason": "invalid_state", "status": "resolved", "expected": "awaiting_resolution"}}
