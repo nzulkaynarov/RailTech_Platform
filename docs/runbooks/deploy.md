@@ -362,6 +362,8 @@ dc logs --since 10m erp-backend | grep -E 'Кэш \(Redis\)'      # предуп
    (неудачных попыток входа в минуту, по умолчанию 10), `PLATFORM_CRM_TIMEOUT_SECONDS` (таймаут CRM в BFF, по умолчанию 5) и
    `PLATFORM_TRUSTED_PROXIES` (прокси, которым BFF верит в `X-Forwarded-For`; по умолчанию частные сети compose). `PLATFORM_COOKIE_SECURE` на проде не настраивается: `prod.yml` жёстко ставит `true`, на http-стенде
    `dev.yml` ставит `false`.
+   Если перед Caddy появится CDN или прокси (например, Cloudflare), настройте в Caddy `trusted_proxies` (иначе весь трафик придёт с одного адреса) и сузьте
+   `PLATFORM_TRUSTED_PROXIES` до подсети compose: иначе IP-лимит входа начнёт блокировать всех сотрудников разом.
 3. **GitHub environment `production`** — ничего обязательного; необязательная Variable `PLATFORM_DOMAIN` (§1.4) нужна, только если
    домен отличается от `platform.railtech.uz`: по ней smoke с раннера ходит на Платформу.
 4. **Деплой** — обычный (§2): Actions → Deploy → `ref` = `main`, `action` = `deploy`. Не запускать, пока в `main` вливается PR (§6, гонка).
