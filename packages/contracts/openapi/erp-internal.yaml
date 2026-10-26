@@ -18439,8 +18439,13 @@ components:
           type: boolean
         can_setup:
           type: boolean
+        own_company_id:
+          type: integer
+          nullable: true
+          description: Id своей компании (core.tenant, с учётом OWN_COMPANY_ID); null — её нет.
       required:
       - can_setup
+      - own_company_id
       - setup_required
     StateEnum:
       enum:

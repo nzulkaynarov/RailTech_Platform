@@ -4,6 +4,8 @@ import type { TableColumnsType } from "antd";
 import { type ReactNode, useId, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
+import { canEdit } from "../../../app/access";
+import { useAuth } from "../../../app/auth/useAuth";
 import { ApiError } from "../../../shared/api/errors";
 import { Consequence } from "../../../shared/ui/Consequence";
 import { EmptyState } from "../../../shared/ui/EmptyState";
@@ -372,6 +374,7 @@ export function ListTable<T extends object>({
       <Table<T>
         size="middle"
         pagination={false}
+        scroll={{ x: "max-content" }}
         loading={loading}
         columns={columns}
         dataSource={data}
@@ -389,5 +392,27 @@ export function ListTable<T extends object>({
         }}
       />
     </div>
+  );
+}
+
+/**
+ * Доступ «чтение» к `company.settings`: поля и кнопки изменения заблокированы (`fieldset disabled`), а вкладки,
+ * переключатели видов и предпросмотры остаются снаружи — читатель их листает. `block` — без колонки с отступами.
+ */
+export function ReadOnlyFence({
+  children,
+  block = false,
+}: {
+  children: ReactNode;
+  block?: boolean;
+}) {
+  const { me } = useAuth();
+  return (
+    <fieldset
+      disabled={!canEdit(me, "company.settings")}
+      className={block ? "pf-co-fieldset-reset" : "pf-co-fieldset-reset pf-co-fieldset-stack"}
+    >
+      {children}
+    </fieldset>
   );
 }

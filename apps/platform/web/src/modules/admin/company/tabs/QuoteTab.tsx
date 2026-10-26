@@ -10,7 +10,7 @@ import {
   useListReferenceItems,
   useUpdateQuoteDefaults,
 } from "../../../../shared/api/generated/platform-bff";
-import { QueryGate, SaveBlock, TabHeader } from "../common";
+import { QueryGate, SaveBlock, TabHeader, ReadOnlyFence } from "../common";
 import { changedFields, codeLabel, isEmptyObject } from "../diff";
 import { errorFields } from "../errors";
 
@@ -25,9 +25,11 @@ export function QuoteTab() {
   return (
     <div className="pf-co-body">
       <TabHeader title={t("quote.title")} hint={t("quote.hint")} />
-      <QueryGate query={query}>
-        {(defaults) => <QuoteForm key={JSON.stringify(defaults)} defaults={defaults} />}
-      </QueryGate>
+      <ReadOnlyFence>
+        <QueryGate query={query}>
+          {(defaults) => <QuoteForm key={JSON.stringify(defaults)} defaults={defaults} />}
+        </QueryGate>
+      </ReadOnlyFence>
     </div>
   );
 }

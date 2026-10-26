@@ -1,6 +1,6 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { App, Checkbox, Form, Input, Select } from "antd";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import type { CompanyProfile } from "../../../../shared/api/generated/model";
@@ -12,7 +12,7 @@ import {
   useUpdateCompany,
   useUploadCompanyLogo,
 } from "../../../../shared/api/generated/platform-bff";
-import { LogoField, QueryGate, SaveBlock, TabHeader } from "../common";
+import { ConfirmModal, LogoField, QueryGate, SaveBlock, TabHeader, ReadOnlyFence } from "../common";
 import { changedFields, isEmptyObject } from "../diff";
 import { errorFields } from "../errors";
 
@@ -51,11 +51,13 @@ export function DetailsTab() {
   return (
     <div className="pf-co-body">
       <TabHeader title={t("details.title")} hint={t("details.hint")} />
-      <QueryGate query={query}>
-        {(company) => (
-          <DetailsForm key={JSON.stringify({ ...company, logo_url: null })} company={company} />
-        )}
-      </QueryGate>
+      <ReadOnlyFence>
+        <QueryGate query={query}>
+          {(company) => (
+            <DetailsForm key={JSON.stringify({ ...company, logo_url: null })} company={company} />
+          )}
+        </QueryGate>
+      </ReadOnlyFence>
     </div>
   );
 }
@@ -69,6 +71,7 @@ function DetailsForm({ company }: { company: CompanyProfile }) {
   const watched = Form.useWatch([], form);
   const changed = changedFields(initial, watched);
   const countries = useListReferenceItems("countries");
+  const [removing, setRemoving] = useState(false);
 
   const keep = (next: CompanyProfile) => {
     queryClient.setQueryData(getGetCompanyQueryKey(), next);
@@ -93,6 +96,7 @@ function DetailsForm({ company }: { company: CompanyProfile }) {
     mutation: {
       onSuccess: () => {
         keep({ ...company, logo_url: null });
+        setRemoving(false);
         void message.success(t("logo.deleted"));
       },
     },
@@ -125,7 +129,23 @@ function DetailsForm({ company }: { company: CompanyProfile }) {
           upload.mutate({ data: { logo: file } });
         }}
         onDelete={() => {
+          remove.reset();
+          setRemoving(true);
+        }}
+      />
+      <ConfirmModal
+        open={removing}
+        title={t("logo.deleteTitle")}
+        okLabel={t("logo.delete")}
+        danger
+        loading={remove.isPending}
+        error={remove.error}
+        items={[t("logo.consequence.card"), t("logo.consequence.file")]}
+        onOk={() => {
           remove.mutate();
+        }}
+        onCancel={() => {
+          setRemoving(false);
         }}
       />
       <Form<Values> form={form} layout="vertical" initialValues={initial} onFinish={submit}>

@@ -13,7 +13,14 @@ import {
   useUpdateEmailTemplate,
 } from "../../../../shared/api/generated/platform-bff";
 import { StatusTag } from "../../../../shared/ui/StatusTag";
-import { ConfirmModal, FormModal, ListTable, PreviewFrame, QueryGate } from "../common";
+import {
+  ConfirmModal,
+  FormModal,
+  ListTable,
+  PreviewFrame,
+  QueryGate,
+  ReadOnlyFence,
+} from "../common";
 import { changedFields, isEmptyObject } from "../diff";
 import { errorFields } from "../errors";
 
@@ -60,102 +67,104 @@ export function EmailTemplates() {
   );
 
   return (
-    <QueryGate query={query}>
-      {({ items }) => (
-        <>
-          {items.length > 0 ? <div>{add}</div> : null}
-          <ListTable<EmailTemplate>
-            label={t("templates.parts.emails")}
-            data={items}
-            rowKey={(row) => row.id}
-            empty={{
-              title: t("templates.emails.empty.title"),
-              text: t("templates.emails.empty.text"),
-              action: add,
-            }}
-            columns={[
-              {
-                title: t("templates.emails.key"),
-                dataIndex: "key",
-                render: (v: string) => <b className="pf-co-mono">{v}</b>,
-              },
-              { title: t("templates.emails.language"), dataIndex: "language" },
-              { title: t("templates.emails.subject"), dataIndex: "subject", responsive: ["md"] },
-              {
-                title: t("status"),
-                dataIndex: "is_active",
-                render: (value: boolean) => (
-                  <StatusTag tone={value ? "green" : "default"}>
-                    {t(value ? "templates.emails.replaces" : "templates.emails.fileUsed")}
-                  </StatusTag>
-                ),
-              },
-              {
-                title: t("actions"),
-                key: "actions",
-                render: (_: unknown, row) => (
-                  <span className="pf-co-actions">
-                    <Button
-                      type="link"
-                      size="small"
-                      aria-label={t("editNamed", { name: row.key })}
-                      onClick={() => {
-                        setEditing(row);
-                      }}
-                    >
-                      {t("edit")}
-                    </Button>
-                    <Button
-                      type="link"
-                      size="small"
-                      danger
-                      aria-label={t("deleteNamed", { name: row.key })}
-                      onClick={() => {
-                        remove.reset();
-                        setRemoving(row);
-                      }}
-                    >
-                      {t("delete")}
-                    </Button>
-                  </span>
-                ),
-              },
-            ]}
-          />
-          {editing !== null ? (
-            <EmailEditor
-              row={editing === "new" ? null : editing}
-              onClose={() => {
-                setEditing(null);
+    <ReadOnlyFence>
+      <QueryGate query={query}>
+        {({ items }) => (
+          <>
+            {items.length > 0 ? <div>{add}</div> : null}
+            <ListTable<EmailTemplate>
+              label={t("templates.parts.emails")}
+              data={items}
+              rowKey={(row) => row.id}
+              empty={{
+                title: t("templates.emails.empty.title"),
+                text: t("templates.emails.empty.text"),
+                action: add,
               }}
-              onSaved={() => {
-                void refresh();
-                setEditing(null);
-                void message.success(t("saved"));
+              columns={[
+                {
+                  title: t("templates.emails.key"),
+                  dataIndex: "key",
+                  render: (v: string) => <b className="pf-co-mono">{v}</b>,
+                },
+                { title: t("templates.emails.language"), dataIndex: "language" },
+                { title: t("templates.emails.subject"), dataIndex: "subject", responsive: ["md"] },
+                {
+                  title: t("status"),
+                  dataIndex: "is_active",
+                  render: (value: boolean) => (
+                    <StatusTag tone={value ? "green" : "default"}>
+                      {t(value ? "templates.emails.replaces" : "templates.emails.fileUsed")}
+                    </StatusTag>
+                  ),
+                },
+                {
+                  title: t("actions"),
+                  key: "actions",
+                  render: (_: unknown, row) => (
+                    <span className="pf-co-actions">
+                      <Button
+                        type="link"
+                        size="small"
+                        aria-label={t("editNamed", { name: row.key })}
+                        onClick={() => {
+                          setEditing(row);
+                        }}
+                      >
+                        {t("edit")}
+                      </Button>
+                      <Button
+                        type="link"
+                        size="small"
+                        danger
+                        aria-label={t("deleteNamed", { name: row.key })}
+                        onClick={() => {
+                          remove.reset();
+                          setRemoving(row);
+                        }}
+                      >
+                        {t("delete")}
+                      </Button>
+                    </span>
+                  ),
+                },
+              ]}
+            />
+            {editing !== null ? (
+              <EmailEditor
+                row={editing === "new" ? null : editing}
+                onClose={() => {
+                  setEditing(null);
+                }}
+                onSaved={() => {
+                  void refresh();
+                  setEditing(null);
+                  void message.success(t("saved"));
+                }}
+              />
+            ) : null}
+            <ConfirmModal
+              open={removing !== null}
+              title={t("templates.emails.deleteTitle", { name: removing?.key ?? "" })}
+              okLabel={t("delete")}
+              danger
+              loading={remove.isPending}
+              error={remove.error}
+              items={[
+                t("templates.emails.consequence.delete"),
+                t("templates.emails.consequence.file"),
+              ]}
+              onOk={() => {
+                if (removing) remove.mutate({ id: removing.id });
+              }}
+              onCancel={() => {
+                setRemoving(null);
               }}
             />
-          ) : null}
-          <ConfirmModal
-            open={removing !== null}
-            title={t("templates.emails.deleteTitle", { name: removing?.key ?? "" })}
-            okLabel={t("delete")}
-            danger
-            loading={remove.isPending}
-            error={remove.error}
-            items={[
-              t("templates.emails.consequence.delete"),
-              t("templates.emails.consequence.file"),
-            ]}
-            onOk={() => {
-              if (removing) remove.mutate({ id: removing.id });
-            }}
-            onCancel={() => {
-              setRemoving(null);
-            }}
-          />
-        </>
-      )}
-    </QueryGate>
+          </>
+        )}
+      </QueryGate>
+    </ReadOnlyFence>
   );
 }
 

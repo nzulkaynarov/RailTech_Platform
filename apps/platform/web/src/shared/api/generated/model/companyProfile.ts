@@ -89,7 +89,7 @@
  */
 
 /**
- * Реквизиты своей компании (ERP `accounts/companies/{id}`; id BFF находит сам по профилю сотрудника в ERP).
+ * Реквизиты своей компании (ERP `accounts/companies/{id}`; id BFF находит сам по `own_company_id` из `setup/status/` ERP).
  */
 export interface CompanyProfile {
   /**
@@ -137,7 +137,7 @@ export interface CompanyProfile {
   /** Есть сертификат качества ISO 9001 */
   has_iso9001: boolean;
   /**
-   * Адрес логотипа компании или `null`
+   * Адрес логотипа на BFF (`/admin/company/logo/image`, тот же origin: CSP Платформы адреса ERP не пускает) или `null`
    * @nullable
    */
   logo_url: string | null;

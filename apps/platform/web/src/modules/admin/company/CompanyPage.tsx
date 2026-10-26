@@ -83,28 +83,26 @@ export function CompanyPage() {
         {readOnly ? (
           <Alert type="info" showIcon style={{ margin: 16 }} message={t("company:readOnly")} />
         ) : null}
-        <fieldset disabled={readOnly} className="pf-co-fieldset-reset">
-          <SectionTabs
-            label={t("company:tabsLabel")}
-            active={active}
-            onChange={(key) => {
-              setParams(
-                (prev) => {
-                  const next = new URLSearchParams(prev);
-                  next.set("tab", key);
-                  return next;
-                },
-                { replace: true },
-              );
-            }}
-            tabs={TABS.map(({ key }) => ({ key, label: t(`company:tabs.${key}`) }))}
-          >
-            {(() => {
-              const Content = TABS.find((tab) => tab.key === active)?.Content ?? DetailsTab;
-              return <Content />;
-            })()}
-          </SectionTabs>
-        </fieldset>
+        <SectionTabs
+          label={t("company:tabsLabel")}
+          active={active}
+          onChange={(key) => {
+            setParams(
+              (prev) => {
+                const next = new URLSearchParams(prev);
+                next.set("tab", key);
+                return next;
+              },
+              { replace: true },
+            );
+          }}
+          tabs={TABS.map(({ key }) => ({ key, label: t(`company:tabs.${key}`) }))}
+        >
+          {(() => {
+            const Content = TABS.find((tab) => tab.key === active)?.Content ?? DetailsTab;
+            return <Content />;
+          })()}
+        </SectionTabs>
       </Card>
       <PanelPortal tab="card">
         <CompanySummary />

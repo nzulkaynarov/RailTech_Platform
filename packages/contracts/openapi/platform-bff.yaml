@@ -849,7 +849,7 @@ paths:
         - admin
       operationId: getCompany
       summary: Реквизиты своей компании (Admin · Компания)
-      description: BFF находит свою компанию по профилю сотрудника в ERP; нет компании — 409 `COMPANY_NOT_SET`. Раздел `company.settings`
+      description: BFF находит свою компанию по `own_company_id` из `setup/status/` ERP; нет компании — 409 `COMPANY_NOT_SET`. Раздел `company.settings`
         — чтение.
       responses:
         '200':
@@ -901,13 +901,35 @@ paths:
                 $ref: '#/components/schemas/Error'
         '422':
           $ref: '#/components/responses/ValidationFailed'
+  /admin/company/logo/image:
+    get:
+      tags:
+        - admin
+      operationId: getCompanyLogoImage
+      summary: Файл логотипа компании
+      description: 'BFF берёт файл в ERP по адресу из карточки компании (только публичный путь логотипа) и отдаёт с теми же защитными заголовками (`X-Content-Type-Options`, `Content-Security-Policy: sandbox`). Нет логотипа — 404 `NOT_FOUND`. Раздел `company.settings` — чтение.'
+      responses:
+        '200':
+          description: Изображение
+          content:
+            image/*:
+              schema:
+                type: string
+                format: binary
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
   /admin/company/logo:
     post:
       tags:
         - admin
       operationId: uploadCompanyLogo
       summary: Загрузить логотип компании
-      description: '`multipart/form-data`, поле `logo`; BFF передаёт файл в ERP как есть, не больше 2 МБ. Раздел `company.settings`
+      description: '`multipart/form-data`, поле `logo`; BFF передаёт файл в ERP как есть: не больше 2 МБ, тип части — PNG, JPEG, WebP или SVG, иначе 422 `VALIDATION_FAILED` (`details.reason = unsupported_type`); содержимое проверяет ERP. Раздел `company.settings`
         — полный.'
       parameters:
         - $ref: '#/components/parameters/CsrfToken'
@@ -1014,6 +1036,28 @@ paths:
                 $ref: '#/components/schemas/Error'
         '422':
           $ref: '#/components/responses/ValidationFailed'
+  /admin/company/brand/logo/image:
+    get:
+      tags:
+        - admin
+      operationId: getBrandLogoImage
+      summary: Файл логотипа бланка
+      description: 'BFF берёт файл в ERP по адресу из профиля бланка (только публичный путь логотипа) и отдаёт с теми же защитными заголовками (`X-Content-Type-Options`, `Content-Security-Policy: sandbox`). Нет логотипа — 404 `NOT_FOUND`. Раздел `company.settings` — чтение.'
+      responses:
+        '200':
+          description: Изображение
+          content:
+            image/*:
+              schema:
+                type: string
+                format: binary
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
   /admin/company/brand/logo:
     post:
       tags:
@@ -1843,7 +1887,7 @@ paths:
         - admin
       operationId: listCategoryRequests
       summary: Запросы на категории
-      description: ERP отдаёт запросы своей компании; администратор платформы видит все. Раздел `company.settings` — чтение.
+      description: ERP отдаёт запросы своей компании; администратор видит все. Раздел `company.settings` — чтение.
       parameters:
         - name: status
           in: query
@@ -1867,7 +1911,7 @@ paths:
         - admin
       operationId: approveCategoryRequest
       summary: 'Одобрить запрос: привязать заведённую категорию'
-      description: Решает администратор платформы в ERP; иначе 403 `FORBIDDEN` (`source = erp`). Решённый запрос — 409 `CONFLICT`
+      description: Решает ERP по праву `settings.edit` (его даёт раздел `company.settings`) или администратору; иначе 403 `FORBIDDEN` (`source = erp`). Решённый запрос — 409 `CONFLICT`
         (`details.reason = already_reviewed`). Раздел `company.settings` — полный.
       parameters:
         - $ref: '#/components/parameters/CsrfToken'
@@ -1905,7 +1949,7 @@ paths:
         - admin
       operationId: rejectCategoryRequest
       summary: Отклонить запрос с причиной
-      description: Причина обязательна. Решает администратор платформы в ERP; иначе 403 `FORBIDDEN` (`source = erp`). Раздел
+      description: Причина обязательна. Решает ERP по праву `settings.edit` (его даёт раздел `company.settings`) или администратору; иначе 403 `FORBIDDEN` (`source = erp`). Раздел
         `company.settings` — полный.
       parameters:
         - $ref: '#/components/parameters/CsrfToken'
@@ -1960,7 +2004,7 @@ paths:
         - admin
       operationId: updatePlatformSettings
       summary: Изменить ставку НДС платформы
-      description: Меняет администратор платформы в ERP; иначе 403 `FORBIDDEN` (`source = erp`). Раздел `company.settings`
+      description: Ставку меняет ERP по праву `settings.edit` или администратору; иначе 403 `FORBIDDEN` (`source = erp`). Раздел `company.settings`
         — полный.
       parameters:
         - $ref: '#/components/parameters/CsrfToken'
@@ -2910,7 +2954,7 @@ components:
     CompanyProfile:
       type: object
       additionalProperties: false
-      description: Реквизиты своей компании (ERP `accounts/companies/{id}`; id BFF находит сам по профилю сотрудника в ERP).
+      description: Реквизиты своей компании (ERP `accounts/companies/{id}`; id BFF находит сам по `own_company_id` из `setup/status/` ERP).
       required:
         - name
         - inn
@@ -2972,7 +3016,7 @@ components:
           type:
             - string
             - 'null'
-          description: Адрес логотипа компании или `null`
+          description: 'Адрес логотипа на BFF (`/admin/company/logo/image`, тот же origin: CSP Платформы адреса ERP не пускает) или `null`'
     CompanyProfileUpdate:
       type: object
       additionalProperties: false
@@ -3121,7 +3165,7 @@ components:
           type:
             - string
             - 'null'
-          description: Логотип бланка или `null`
+          description: 'Адрес логотипа бланка на BFF (`/admin/company/brand/logo/image`) или `null`'
         inherited:
           type:
             - object

@@ -8,8 +8,10 @@ BFF не решает: данные и права на операции — в E
 Логотипы передаются в ERP как есть (`multipart/form-data`, до 2 МБ).
 """
 
+import re
 from typing import Annotated, Any
 
+import httpx
 from fastapi import APIRouter, Depends, Path, Query, Request, Response, status
 
 from app.clients.erp_company import ErpCompany
@@ -92,6 +94,14 @@ ItemId = Annotated[str, Path(pattern=r"^[0-9]+$")]
 Kind = Annotated[ReferenceKind, Path()]
 
 MAX_LOGO_BYTES = 2 * 1024 * 1024
+LOGO_TYPES = frozenset({"image/png", "image/jpeg", "image/webp", "image/svg+xml"})
+# Заголовки части `logo` multipart: тип файла, который назвал браузер (содержимое проверяет ERP).
+_LOGO_PART = re.compile(
+    rb'content-disposition:[^\r\n]*name="logo"[^\r\n]*\r\n'
+    rb"(?:[^\r\n]+\r\n)*?content-type:[ \t]*([^\r\n;]+)",
+    re.IGNORECASE,
+)
+_PART_HEADERS_WINDOW = 4096
 _MULTIPART_OVERHEAD = 64 * 1024  # границы и заголовки частей поверх файла
 
 
@@ -120,6 +130,11 @@ async def _multipart(request: Request) -> tuple[bytes, str]:
     body = await request.body()
     if len(body) > limit:
         raise _bad_logo("file_too_large")
+    # Тип части `logo` — из её заголовков (начало тела); иначе ERP не вызывается.
+    found = _LOGO_PART.search(body[:_PART_HEADERS_WINDOW])
+    mime = found.group(1).strip().lower().decode("ascii", "ignore") if found else ""
+    if mime not in LOGO_TYPES:
+        raise _bad_logo("unsupported_type")
     return body, content_type
 
 
@@ -155,6 +170,30 @@ async def upload_company_logo(request: Request, authed: Writer) -> CompanyProfil
         "POST", await erp.company_path("upload-logo/"), content=content, content_type=content_type
     )
     return to_company(response.json())
+
+
+def _logo_image(file: httpx.Response | None) -> Response:
+    """Файл логотипа как есть и с защитными заголовками ERP (SVG не исполняет скрипты)."""
+    if file is None:
+        raise PlatformError("NOT_FOUND", "Логотипа нет.", status_code=404)
+    return Response(
+        content=file.content,
+        media_type=file.headers["content-type"].split(";")[0].strip(),
+        headers={
+            "Cache-Control": "private, max-age=3600",
+            "X-Content-Type-Options": "nosniff",
+            "Content-Security-Policy": "default-src 'none'; style-src 'unsafe-inline'; sandbox",
+        },
+    )
+
+
+@router.get(
+    "/admin/company/logo/image", response_class=Response, operation_id="getCompanyLogoImage"
+)
+async def get_company_logo_image(authed: Reader) -> Response:
+    erp = _erp(authed)
+    raw = await erp.data("GET", await erp.company_path())
+    return _logo_image(await erp.media(raw.get("logo")))
 
 
 @router.delete(
@@ -199,6 +238,15 @@ async def upload_brand_logo(request: Request, authed: Writer) -> BrandProfile:
     return to_brand(response.json())
 
 
+@router.get(
+    "/admin/company/brand/logo/image", response_class=Response, operation_id="getBrandLogoImage"
+)
+async def get_brand_logo_image(authed: Reader) -> Response:
+    erp = _erp(authed)
+    raw = await erp.data("GET", await erp.company_path("document-profile/"))
+    return _logo_image(await erp.media(raw.get("logo_url") or raw.get("logo")))
+
+
 @router.post(
     "/admin/company/brand/preview",
     response_model=DocumentPreview,
@@ -213,7 +261,7 @@ async def preview_brand_document(body: BrandPreviewIn, authed: Reader) -> Docume
     response = await erp.request(
         "POST", await erp.company_path("document-profile/preview/"), json=payload
     )
-    return DocumentPreview(html=response.text)
+    return DocumentPreview(html=await erp.inline_logos(response.text))
 
 
 # --- нумерация ---------------------------------------------------------------------------------
@@ -401,7 +449,8 @@ async def preview_document_template(
         "POST", "crm/document-templates/preview/", json={"body_html": body.body_html}
     )
     warnings = [text(w) for w in raw.get("warnings") or []]
-    html = text(raw.get("document_html")) or text(raw.get("rendered_html"))
+    erp = _erp(authed)
+    html = await erp.inline_logos(text(raw.get("document_html")) or text(raw.get("rendered_html")))
     return DocumentPreview(html=html, warnings=warnings or None)
 
 

@@ -3218,7 +3218,7 @@ export const getGetCompanyUrl = () => {
 };
 
 /**
- * BFF находит свою компанию по профилю сотрудника в ERP; нет компании — 409 `COMPANY_NOT_SET`. Раздел `company.settings` — чтение.
+ * BFF находит свою компанию по `own_company_id` из `setup/status/` ERP; нет компании — 409 `COMPANY_NOT_SET`. Раздел `company.settings` — чтение.
  * @summary Реквизиты своей компании (Admin · Компания)
  */
 export const getCompany = async (options?: Parameters<typeof http>[1]): Promise<CompanyProfile> => {
@@ -3435,12 +3435,136 @@ export const useUpdateCompany = <
   return useMutation(getUpdateCompanyMutationOptions(options), queryClient);
 };
 
+export const getGetCompanyLogoImageUrl = () => {
+  return `/api/v1/admin/company/logo/image`;
+};
+
+/**
+ * BFF берёт файл в ERP по адресу из карточки компании (только публичный путь логотипа) и отдаёт с теми же защитными заголовками (`X-Content-Type-Options`, `Content-Security-Policy: sandbox`). Нет логотипа — 404 `NOT_FOUND`. Раздел `company.settings` — чтение.
+ * @summary Файл логотипа компании
+ */
+export const getCompanyLogoImage = async (options?: Parameters<typeof http>[1]): Promise<Blob> => {
+  return http<Blob>(getGetCompanyLogoImageUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetCompanyLogoImageQueryKey = () => {
+  return [`/api/v1/admin/company/logo/image`] as const;
+};
+
+export const getGetCompanyLogoImageQueryOptions = <
+  TData = Awaited<ReturnType<typeof getCompanyLogoImage>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | NotFoundResponse>,
+>(options?: {
+  query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getCompanyLogoImage>>, TError, TData>>;
+  request?: SecondParameter<typeof http>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetCompanyLogoImageQueryKey();
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getCompanyLogoImage>>> = ({ signal }) =>
+    getCompanyLogoImage({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getCompanyLogoImage>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type GetCompanyLogoImageQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getCompanyLogoImage>>
+>;
+export type GetCompanyLogoImageQueryError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse | NotFoundResponse
+>;
+
+export function useGetCompanyLogoImage<
+  TData = Awaited<ReturnType<typeof getCompanyLogoImage>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | NotFoundResponse>,
+>(
+  options: {
+    query: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getCompanyLogoImage>>, TError, TData>
+    > &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getCompanyLogoImage>>,
+          TError,
+          Awaited<ReturnType<typeof getCompanyLogoImage>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetCompanyLogoImage<
+  TData = Awaited<ReturnType<typeof getCompanyLogoImage>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | NotFoundResponse>,
+>(
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getCompanyLogoImage>>, TError, TData>
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getCompanyLogoImage>>,
+          TError,
+          Awaited<ReturnType<typeof getCompanyLogoImage>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetCompanyLogoImage<
+  TData = Awaited<ReturnType<typeof getCompanyLogoImage>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | NotFoundResponse>,
+>(
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getCompanyLogoImage>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary Файл логотипа компании
+ */
+
+export function useGetCompanyLogoImage<
+  TData = Awaited<ReturnType<typeof getCompanyLogoImage>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | NotFoundResponse>,
+>(
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getCompanyLogoImage>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getGetCompanyLogoImageQueryOptions(options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
 export const getUploadCompanyLogoUrl = () => {
   return `/api/v1/admin/company/logo`;
 };
 
 /**
- * `multipart/form-data`, поле `logo`; BFF передаёт файл в ERP как есть, не больше 2 МБ. Раздел `company.settings` — полный.
+ * `multipart/form-data`, поле `logo`; BFF передаёт файл в ERP как есть: не больше 2 МБ, тип части — PNG, JPEG, WebP или SVG, иначе 422 `VALIDATION_FAILED` (`details.reason = unsupported_type`); содержимое проверяет ERP. Раздел `company.settings` — полный.
  * @summary Загрузить логотип компании
  */
 export const uploadCompanyLogo = async (
@@ -3829,6 +3953,122 @@ export const useUpdateBrandProfile = <
 > => {
   return useMutation(getUpdateBrandProfileMutationOptions(options), queryClient);
 };
+
+export const getGetBrandLogoImageUrl = () => {
+  return `/api/v1/admin/company/brand/logo/image`;
+};
+
+/**
+ * BFF берёт файл в ERP по адресу из профиля бланка (только публичный путь логотипа) и отдаёт с теми же защитными заголовками (`X-Content-Type-Options`, `Content-Security-Policy: sandbox`). Нет логотипа — 404 `NOT_FOUND`. Раздел `company.settings` — чтение.
+ * @summary Файл логотипа бланка
+ */
+export const getBrandLogoImage = async (options?: Parameters<typeof http>[1]): Promise<Blob> => {
+  return http<Blob>(getGetBrandLogoImageUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetBrandLogoImageQueryKey = () => {
+  return [`/api/v1/admin/company/brand/logo/image`] as const;
+};
+
+export const getGetBrandLogoImageQueryOptions = <
+  TData = Awaited<ReturnType<typeof getBrandLogoImage>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | NotFoundResponse>,
+>(options?: {
+  query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getBrandLogoImage>>, TError, TData>>;
+  request?: SecondParameter<typeof http>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetBrandLogoImageQueryKey();
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getBrandLogoImage>>> = ({ signal }) =>
+    getBrandLogoImage({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getBrandLogoImage>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type GetBrandLogoImageQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getBrandLogoImage>>
+>;
+export type GetBrandLogoImageQueryError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse | NotFoundResponse
+>;
+
+export function useGetBrandLogoImage<
+  TData = Awaited<ReturnType<typeof getBrandLogoImage>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | NotFoundResponse>,
+>(
+  options: {
+    query: Partial<UseQueryOptions<Awaited<ReturnType<typeof getBrandLogoImage>>, TError, TData>> &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getBrandLogoImage>>,
+          TError,
+          Awaited<ReturnType<typeof getBrandLogoImage>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetBrandLogoImage<
+  TData = Awaited<ReturnType<typeof getBrandLogoImage>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | NotFoundResponse>,
+>(
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getBrandLogoImage>>, TError, TData>> &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getBrandLogoImage>>,
+          TError,
+          Awaited<ReturnType<typeof getBrandLogoImage>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetBrandLogoImage<
+  TData = Awaited<ReturnType<typeof getBrandLogoImage>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | NotFoundResponse>,
+>(
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getBrandLogoImage>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary Файл логотипа бланка
+ */
+
+export function useGetBrandLogoImage<
+  TData = Awaited<ReturnType<typeof getBrandLogoImage>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | NotFoundResponse>,
+>(
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getBrandLogoImage>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getGetBrandLogoImageQueryOptions(options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
 
 export const getUploadBrandLogoUrl = () => {
   return `/api/v1/admin/company/brand/logo`;
@@ -7435,7 +7675,7 @@ export const getListCategoryRequestsUrl = (params?: ListCategoryRequestsParams) 
 };
 
 /**
- * ERP отдаёт запросы своей компании; администратор платформы видит все. Раздел `company.settings` — чтение.
+ * ERP отдаёт запросы своей компании; администратор видит все. Раздел `company.settings` — чтение.
  * @summary Запросы на категории
  */
 export const listCategoryRequests = async (
@@ -7569,7 +7809,7 @@ export const getApproveCategoryRequestUrl = (id: string) => {
 };
 
 /**
- * Решает администратор платформы в ERP; иначе 403 `FORBIDDEN` (`source = erp`). Решённый запрос — 409 `CONFLICT` (`details.reason = already_reviewed`). Раздел `company.settings` — полный.
+ * Решает ERP по праву `settings.edit` (его даёт раздел `company.settings`) или администратору; иначе 403 `FORBIDDEN` (`source = erp`). Решённый запрос — 409 `CONFLICT` (`details.reason = already_reviewed`). Раздел `company.settings` — полный.
  * @summary Одобрить запрос: привязать заведённую категорию
  */
 export const approveCategoryRequest = async (
@@ -7689,7 +7929,7 @@ export const getRejectCategoryRequestUrl = (id: string) => {
 };
 
 /**
- * Причина обязательна. Решает администратор платформы в ERP; иначе 403 `FORBIDDEN` (`source = erp`). Раздел `company.settings` — полный.
+ * Причина обязательна. Решает ERP по праву `settings.edit` (его даёт раздел `company.settings`) или администратору; иначе 403 `FORBIDDEN` (`source = erp`). Раздел `company.settings` — полный.
  * @summary Отклонить запрос с причиной
  */
 export const rejectCategoryRequest = async (
@@ -7930,7 +8170,7 @@ export const getUpdatePlatformSettingsUrl = () => {
 };
 
 /**
- * Меняет администратор платформы в ERP; иначе 403 `FORBIDDEN` (`source = erp`). Раздел `company.settings` — полный.
+ * Ставку меняет ERP по праву `settings.edit` или администратору; иначе 403 `FORBIDDEN` (`source = erp`). Раздел `company.settings` — полный.
  * @summary Изменить ставку НДС платформы
  */
 export const updatePlatformSettings = async (

@@ -123,7 +123,7 @@ export interface BrandProfile {
   show_lead_time: boolean;
   show_fx_note: boolean;
   /**
-   * Логотип бланка или `null`
+   * Адрес логотипа бланка на BFF (`/admin/company/brand/logo/image`) или `null`
    * @nullable
    */
   logo_url: string | null;

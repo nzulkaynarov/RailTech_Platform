@@ -829,6 +829,9 @@ export const getUpdateCompanyResponseMock = (
   ...overrideResponse,
 });
 
+export const getGetCompanyLogoImageResponseMock = (): Blob =>
+  new Blob([new Uint8Array(faker.number.int({ min: 1, max: 64 }))]);
+
 export const getUploadCompanyLogoResponseMock = (
   overrideResponse: Partial<Extract<CompanyProfile, object>> = {},
 ): CompanyProfile => ({
@@ -925,6 +928,9 @@ export const getUpdateBrandProfileResponseMock = (
   ]),
   ...overrideResponse,
 });
+
+export const getGetBrandLogoImageResponseMock = (): Blob =>
+  new Blob([new Uint8Array(faker.number.int({ min: 1, max: 64 }))]);
 
 export const getUploadBrandLogoResponseMock = (
   overrideResponse: Partial<Extract<BrandProfile, object>> = {},
@@ -2240,6 +2246,26 @@ export const getUpdateCompanyMockHandler = (
   );
 };
 
+export const getGetCompanyLogoImageMockHandler = (
+  overrideResponse?:
+    Blob | ((info: Parameters<Parameters<typeof http.get>[1]>[0]) => Promise<Blob> | Blob),
+  options?: RequestHandlerOptions,
+) => {
+  return http.get(
+    "*/admin/company/logo/image",
+    async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+      const binaryBody =
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getGetCompanyLogoImageResponseMock();
+      return new HttpResponse(binaryBody, { status: 200, headers: { "Content-Type": "image/*" } });
+    },
+    options,
+  );
+};
+
 export const getUploadCompanyLogoMockHandler = (
   overrideResponse?:
     | CompanyProfile
@@ -2325,6 +2351,26 @@ export const getUpdateBrandProfileMockHandler = (
           : getUpdateBrandProfileResponseMock(),
         { status: 200 },
       );
+    },
+    options,
+  );
+};
+
+export const getGetBrandLogoImageMockHandler = (
+  overrideResponse?:
+    Blob | ((info: Parameters<Parameters<typeof http.get>[1]>[0]) => Promise<Blob> | Blob),
+  options?: RequestHandlerOptions,
+) => {
+  return http.get(
+    "*/admin/company/brand/logo/image",
+    async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+      const binaryBody =
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getGetBrandLogoImageResponseMock();
+      return new HttpResponse(binaryBody, { status: 200, headers: { "Content-Type": "image/*" } });
     },
     options,
   );
@@ -3217,10 +3263,12 @@ export const getRailTechPlatformBFFAPICRMERPMock = () => [
   getDeleteRoleMockHandler(),
   getGetCompanyMockHandler(),
   getUpdateCompanyMockHandler(),
+  getGetCompanyLogoImageMockHandler(),
   getUploadCompanyLogoMockHandler(),
   getDeleteCompanyLogoMockHandler(),
   getGetBrandProfileMockHandler(),
   getUpdateBrandProfileMockHandler(),
+  getGetBrandLogoImageMockHandler(),
   getUploadBrandLogoMockHandler(),
   getPreviewBrandDocumentMockHandler(),
   getGetNumberingSchemeMockHandler(),

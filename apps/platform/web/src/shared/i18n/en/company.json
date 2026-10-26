@@ -54,7 +54,12 @@
     "file": "Choose file: {{label}}",
     "hint": "PNG, JPEG, WebP or SVG up to 2 MB.",
     "uploaded": "Logo uploaded",
-    "deleted": "Logo deleted"
+    "deleted": "Logo deleted",
+    "deleteTitle": "Delete the company logo?",
+    "consequence": {
+      "card": "The logo disappears from the company card in ERP.",
+      "file": "The file is deleted from ERP storage and cannot be restored."
+    }
   },
   "errors": {
     "DEFAULT": "The action failed. Try again later.",
@@ -73,6 +78,7 @@
       "already_reviewed": "The request has already been reviewed. Refresh the list.",
       "invalid_numbering_pattern": "The mask has no required {seq} token.",
       "file_too_large": "The file is larger than 2 MB.",
+      "unsupported_type": "A PNG, JPEG, WebP or SVG file is required.",
       "multipart_required": "Choose a logo file.",
       "field_not_in_reference": "This reference list has no such field.",
       "reason_required": "Enter the reason for rejection.",

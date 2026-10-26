@@ -21,7 +21,7 @@ import {
 } from "../../../../shared/api/generated/platform-bff";
 import { StatusTag } from "../../../../shared/ui/StatusTag";
 import { useFormat } from "../../../../shared/lib/useFormat";
-import { ConfirmModal, FormModal, ListTable, QueryGate, TabHeader } from "../common";
+import { ConfirmModal, FormModal, ListTable, QueryGate, TabHeader, ReadOnlyFence } from "../common";
 import { errorFields } from "../errors";
 
 type Part = "categories" | "requests";
@@ -117,70 +117,72 @@ function CategoryTree() {
   );
 
   return (
-    <QueryGate query={query}>
-      {({ items }) => {
-        const roots = buildTree(items);
-        return (
-          <>
-            {items.length > 0 ? <div>{add}</div> : null}
-            {items.length === 0 ? (
-              <div className="pf-co-hint">
-                <h3 className="pf-co-title">{t("categories.empty.title")}</h3>
-                <p>{t("categories.empty.text")}</p>
-                {add}
-              </div>
-            ) : (
-              <CategoryNodes
-                nodes={roots}
-                root
-                onAdd={(node) => {
-                  setEditing({ parentId: node.id });
+    <ReadOnlyFence>
+      <QueryGate query={query}>
+        {({ items }) => {
+          const roots = buildTree(items);
+          return (
+            <>
+              {items.length > 0 ? <div>{add}</div> : null}
+              {items.length === 0 ? (
+                <div className="pf-co-hint">
+                  <h3 className="pf-co-title">{t("categories.empty.title")}</h3>
+                  <p>{t("categories.empty.text")}</p>
+                  {add}
+                </div>
+              ) : (
+                <CategoryNodes
+                  nodes={roots}
+                  root
+                  onAdd={(node) => {
+                    setEditing({ parentId: node.id });
+                  }}
+                  onEdit={(node) => {
+                    setEditing({ node });
+                  }}
+                  onDelete={(node) => {
+                    remove.reset();
+                    setRemoving(node);
+                  }}
+                />
+              )}
+              {editing !== null ? (
+                <CategoryModal
+                  roots={roots}
+                  node={editing.node}
+                  parentId={editing.parentId}
+                  onClose={() => {
+                    setEditing(null);
+                  }}
+                  onSaved={(saved, created) => {
+                    patchCache((list) =>
+                      created ? [...list, saved] : list.map((c) => (c.id === saved.id ? saved : c)),
+                    );
+                    setEditing(null);
+                    void message.success(t("saved"));
+                  }}
+                />
+              ) : null}
+              <ConfirmModal
+                open={removing !== null}
+                title={t("categories.deleteTitle", { name: removing?.name ?? "" })}
+                okLabel={t("delete")}
+                danger
+                loading={remove.isPending}
+                error={remove.error}
+                items={[t("categories.consequence.delete"), t("categories.consequence.children")]}
+                onOk={() => {
+                  if (removing) remove.mutate({ id: removing.id });
                 }}
-                onEdit={(node) => {
-                  setEditing({ node });
-                }}
-                onDelete={(node) => {
-                  remove.reset();
-                  setRemoving(node);
+                onCancel={() => {
+                  setRemoving(null);
                 }}
               />
-            )}
-            {editing !== null ? (
-              <CategoryModal
-                roots={roots}
-                node={editing.node}
-                parentId={editing.parentId}
-                onClose={() => {
-                  setEditing(null);
-                }}
-                onSaved={(saved, created) => {
-                  patchCache((list) =>
-                    created ? [...list, saved] : list.map((c) => (c.id === saved.id ? saved : c)),
-                  );
-                  setEditing(null);
-                  void message.success(t("saved"));
-                }}
-              />
-            ) : null}
-            <ConfirmModal
-              open={removing !== null}
-              title={t("categories.deleteTitle", { name: removing?.name ?? "" })}
-              okLabel={t("delete")}
-              danger
-              loading={remove.isPending}
-              error={remove.error}
-              items={[t("categories.consequence.delete"), t("categories.consequence.children")]}
-              onOk={() => {
-                if (removing) remove.mutate({ id: removing.id });
-              }}
-              onCancel={() => {
-                setRemoving(null);
-              }}
-            />
-          </>
-        );
-      }}
-    </QueryGate>
+            </>
+          );
+        }}
+      </QueryGate>
+    </ReadOnlyFence>
   );
 }
 
@@ -374,122 +376,126 @@ function RequestList() {
     action: "approve" | "reject";
   } | null>(null);
   return (
-    <QueryGate query={query}>
-      {({ items }) => {
-        const sorted = [...items].sort(
-          (a, b) => Number(b.status === "pending") - Number(a.status === "pending"),
-        );
-        return (
-          <>
-            <ListTable<CategoryRequest>
-              label={t("categories.parts.requestsPlain")}
-              data={sorted}
-              rowKey={(row) => row.id}
-              empty={{
-                title: t("categories.requests.empty.title"),
-                text: t("categories.requests.empty.text"),
-              }}
-              columns={[
-                {
-                  title: t("categories.requests.name"),
-                  dataIndex: "proposed_name",
-                  render: (value: string, row) => (
-                    <>
-                      <b>{value}</b>
-                      {row.parent_name ? (
-                        <div className="pf-hint">
-                          {t("categories.requests.under", { name: row.parent_name })}
-                        </div>
-                      ) : null}
-                    </>
-                  ),
-                },
-                {
-                  title: t("categories.requests.why"),
-                  dataIndex: "justification",
-                  responsive: ["md"],
-                  render: (v?: string) => v ?? "—",
-                },
-                {
-                  title: t("categories.requests.author"),
-                  dataIndex: "requested_by",
-                  responsive: ["md"],
-                  render: (v?: string) => v ?? "—",
-                },
-                {
-                  title: t("categories.requests.created"),
-                  dataIndex: "created_at",
-                  responsive: ["md"],
-                  render: (value: string) => <span className="pf-num">{date(value)}</span>,
-                },
-                {
-                  title: t("status"),
-                  dataIndex: "status",
-                  render: (value: CategoryRequest["status"], row) => (
-                    <>
-                      <StatusTag
-                        tone={value === "pending" ? "gold" : value === "approved" ? "green" : "red"}
-                      >
-                        {t(`categories.requests.statuses.${value}`)}
-                      </StatusTag>
-                      {value === "approved" && row.resulting_category_name ? (
-                        <div className="pf-hint">{row.resulting_category_name}</div>
-                      ) : null}
-                      {value === "rejected" && row.review_notes ? (
-                        <div className="pf-hint">{row.review_notes}</div>
-                      ) : null}
-                    </>
-                  ),
-                },
-                {
-                  title: t("actions"),
-                  key: "actions",
-                  render: (_: unknown, row) =>
-                    row.status === "pending" ? (
-                      <span className="pf-co-actions">
-                        <Button
-                          type="link"
-                          size="small"
-                          aria-label={t("categories.requests.approveNamed", {
-                            name: row.proposed_name,
-                          })}
-                          onClick={() => {
-                            setDeciding({ row, action: "approve" });
-                          }}
-                        >
-                          {t("categories.requests.approve")}
-                        </Button>
-                        <Button
-                          type="link"
-                          size="small"
-                          danger
-                          aria-label={t("categories.requests.rejectNamed", {
-                            name: row.proposed_name,
-                          })}
-                          onClick={() => {
-                            setDeciding({ row, action: "reject" });
-                          }}
-                        >
-                          {t("categories.requests.reject")}
-                        </Button>
-                      </span>
-                    ) : null,
-                },
-              ]}
-            />
-            {deciding !== null ? (
-              <DecisionModal
-                row={deciding.row}
-                action={deciding.action}
-                onClose={() => {
-                  setDeciding(null);
+    <ReadOnlyFence>
+      <QueryGate query={query}>
+        {({ items }) => {
+          const sorted = [...items].sort(
+            (a, b) => Number(b.status === "pending") - Number(a.status === "pending"),
+          );
+          return (
+            <>
+              <ListTable<CategoryRequest>
+                label={t("categories.parts.requestsPlain")}
+                data={sorted}
+                rowKey={(row) => row.id}
+                empty={{
+                  title: t("categories.requests.empty.title"),
+                  text: t("categories.requests.empty.text"),
                 }}
+                columns={[
+                  {
+                    title: t("categories.requests.name"),
+                    dataIndex: "proposed_name",
+                    render: (value: string, row) => (
+                      <>
+                        <b>{value}</b>
+                        {row.parent_name ? (
+                          <div className="pf-hint">
+                            {t("categories.requests.under", { name: row.parent_name })}
+                          </div>
+                        ) : null}
+                      </>
+                    ),
+                  },
+                  {
+                    title: t("categories.requests.why"),
+                    dataIndex: "justification",
+                    responsive: ["md"],
+                    render: (v?: string) => v ?? "—",
+                  },
+                  {
+                    title: t("categories.requests.author"),
+                    dataIndex: "requested_by",
+                    responsive: ["md"],
+                    render: (v?: string) => v ?? "—",
+                  },
+                  {
+                    title: t("categories.requests.created"),
+                    dataIndex: "created_at",
+                    responsive: ["md"],
+                    render: (value: string) => <span className="pf-num">{date(value)}</span>,
+                  },
+                  {
+                    title: t("status"),
+                    dataIndex: "status",
+                    render: (value: CategoryRequest["status"], row) => (
+                      <>
+                        <StatusTag
+                          tone={
+                            value === "pending" ? "gold" : value === "approved" ? "green" : "red"
+                          }
+                        >
+                          {t(`categories.requests.statuses.${value}`)}
+                        </StatusTag>
+                        {value === "approved" && row.resulting_category_name ? (
+                          <div className="pf-hint">{row.resulting_category_name}</div>
+                        ) : null}
+                        {value === "rejected" && row.review_notes ? (
+                          <div className="pf-hint">{row.review_notes}</div>
+                        ) : null}
+                      </>
+                    ),
+                  },
+                  {
+                    title: t("actions"),
+                    key: "actions",
+                    render: (_: unknown, row) =>
+                      row.status === "pending" ? (
+                        <span className="pf-co-actions">
+                          <Button
+                            type="link"
+                            size="small"
+                            aria-label={t("categories.requests.approveNamed", {
+                              name: row.proposed_name,
+                            })}
+                            onClick={() => {
+                              setDeciding({ row, action: "approve" });
+                            }}
+                          >
+                            {t("categories.requests.approve")}
+                          </Button>
+                          <Button
+                            type="link"
+                            size="small"
+                            danger
+                            aria-label={t("categories.requests.rejectNamed", {
+                              name: row.proposed_name,
+                            })}
+                            onClick={() => {
+                              setDeciding({ row, action: "reject" });
+                            }}
+                          >
+                            {t("categories.requests.reject")}
+                          </Button>
+                        </span>
+                      ) : null,
+                  },
+                ]}
               />
-            ) : null}
-          </>
-        );
-      }}
-    </QueryGate>
+              {deciding !== null ? (
+                <DecisionModal
+                  row={deciding.row}
+                  action={deciding.action}
+                  onClose={() => {
+                    setDeciding(null);
+                  }}
+                />
+              ) : null}
+            </>
+          );
+        }}
+      </QueryGate>
+    </ReadOnlyFence>
   );
 }
 

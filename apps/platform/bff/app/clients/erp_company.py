@@ -6,9 +6,11 @@ ERP (`settings.edit`, `settings.charge_templates`, администратор п
 ответы и ошибки ERP в формат контракта.
 """
 
+import base64
 import re
 from collections.abc import Awaitable, Callable
 from typing import Any
+from urllib.parse import urlparse
 
 import httpx
 
@@ -19,7 +21,6 @@ Call = Callable[..., Awaitable[httpx.Response]]
 API = "/api/v1/"
 PAGE_SIZE = 200
 MAX_PAGES = 25  # потолок обхода: 5000 строк на один справочник — заведомо больше любой настройки
-SELLER_TYPE = "SUPPLIER"  # тип компании-продавца в ERP (accounts.constants.SELLER_COMPANY_TYPES)
 
 COMPANY_NOT_SET_MESSAGE = (
     "Своя компания в ERP ещё не создана. Создайте её в мастере первого запуска и обновите страницу."
@@ -63,6 +64,26 @@ _FIELD_OF: dict[str, str] = {
     "CATEGORY_REQUEST_NAME_REQUIRED": "name",
 }
 _CODE = re.compile(r"^[A-Z][A-Z0-9_]*(:.*)?$")
+
+# Публичные логотипы компании и бланка в хранилище ERP (core/urls.py: `public-media`);
+# других путей BFF не запрашивает.
+_MEDIA_PATH = re.compile(r"^/media/companies/\d+/(?:logo|doc-profile/logo)/[^/]+$")
+LOGO_IMAGE_TYPES = frozenset(
+    {"image/png", "image/jpeg", "image/webp", "image/svg+xml", "image/gif"}
+)
+# Ссылки на эти логотипы в HTML образца документа: ERP строит их от своего адреса,
+# а он для браузера внутренний.
+_MEDIA_SRC = re.compile(r"""(src=["'])(?:https?://[^"'/\s]+)?(/media/[^"'\s>]+)(["'])""")
+MAX_INLINE_IMAGES = 4
+MAX_INLINE_BYTES = 2 * 1024 * 1024
+
+
+def media_path(url: Any) -> str | None:
+    """Путь `/media/...` логотипа из адреса ERP; любой другой путь — `None`."""
+    if not isinstance(url, str) or not url:
+        return None
+    path = urlparse(url).path
+    return path if _MEDIA_PATH.match(path) else None
 
 
 def company_not_set() -> PlatformError:
@@ -174,28 +195,60 @@ class ErpCompany:
         return rows
 
     async def company_id(self) -> int:
-        """Id своей компании: основное членство сотрудника в ERP, иначе единственный продавец.
+        """Id своей компании: `own_company_id` из `setup/status/` ERP (core.tenant).
 
-        Администратор (суперпользователь ERP) может работать без членства; тогда своя компания —
-        единственная активная компания-продавец. Несколько кандидатов BFF не угадывает.
+        Администратор ERP (суперпользователь) работает без членства: профиль сотрудника не годится.
+        Ответ без поля (старая ERP) — основное членство сотрудника из `accounts/me/`. `null` — своей
+        компании ещё нет: 409 `COMPANY_NOT_SET`.
         """
         if self._company_id is not None:
             return self._company_id
-        profile = await self.data("GET", "accounts/me/")
-        found = _membership_company(profile if isinstance(profile, dict) else {})
-        if found is None:
-            sellers = rows_of(
-                await self.data(
-                    "GET",
-                    "accounts/companies/",
-                    params={"is_active": "true", "types__code": SELLER_TYPE, "page_size": 2},
-                )
-            )
-            found = _int(sellers[0].get("id")) if len(sellers) == 1 else None
+        status = await self.data("GET", "setup/status/")
+        if isinstance(status, dict) and "own_company_id" in status:
+            found = _int(status["own_company_id"])
+        else:
+            profile = await self.data("GET", "accounts/me/")
+            found = _membership_company(profile if isinstance(profile, dict) else {})
         if found is None:
             raise company_not_set()
         self._company_id = found
         return found
+
+    async def media(self, url: Any) -> httpx.Response | None:
+        """Файл логотипа по адресу из ответа ERP (только публичные пути логотипов) или `None`."""
+        path = media_path(url)
+        if path is None:
+            return None
+        response = await self._call("erp", "GET", path)
+        if response.status_code != 200:
+            return None
+        if (
+            response.headers.get("content-type", "").split(";")[0].strip().lower()
+            not in LOGO_IMAGE_TYPES
+        ):
+            return None
+        return response
+
+    async def inline_logos(self, html: str) -> str:
+        """Образец документа: логотипы ERP — данными в самом HTML (CSP чужих не пускает)."""
+        replaced: dict[str, str] = {}
+        for match in _MEDIA_SRC.finditer(html):
+            path = match.group(2)
+            if path in replaced or len(replaced) >= MAX_INLINE_IMAGES:
+                continue
+            file = await self.media(path)
+            if file is None or len(file.content) > MAX_INLINE_BYTES:
+                continue
+            mime = file.headers["content-type"].split(";")[0].strip().lower()
+            replaced[path] = f"data:{mime};base64,{base64.b64encode(file.content).decode('ascii')}"
+        return _MEDIA_SRC.sub(
+            lambda m: (
+                f"{m.group(1)}{replaced[m.group(2)]}{m.group(3)}"
+                if m.group(2) in replaced
+                else m.group(0)
+            ),
+            html,
+        )
 
     async def company_path(self, suffix: str = "") -> str:
         return f"accounts/companies/{await self.company_id()}/{suffix}"

@@ -15,7 +15,14 @@ import {
   useUpdateDocumentTemplate,
 } from "../../../../shared/api/generated/platform-bff";
 import { StatusTag } from "../../../../shared/ui/StatusTag";
-import { ConfirmModal, FormModal, ListTable, PreviewFrame, QueryGate } from "../common";
+import {
+  ConfirmModal,
+  FormModal,
+  ListTable,
+  PreviewFrame,
+  QueryGate,
+  ReadOnlyFence,
+} from "../common";
 import { changedFields, isEmptyObject } from "../diff";
 import { errorFields } from "../errors";
 
@@ -57,125 +64,135 @@ export function DocumentTemplates() {
   );
 
   return (
-    <QueryGate query={query}>
-      {({ items }) => (
-        <>
-          {items.length > 0 ? <div>{add}</div> : null}
-          <ListTable<DocumentTemplate>
-            label={t("templates.parts.documents")}
-            data={items}
-            rowKey={(row) => row.id}
-            empty={{
-              title: t("templates.documents.empty.title"),
-              text: t("templates.documents.empty.text"),
-              action: add,
-            }}
-            columns={[
-              { title: t("templates.documents.name"), dataIndex: "name" },
-              { title: t("templates.documents.kind"), dataIndex: "kind_name", responsive: ["md"] },
-              {
-                title: t("status"),
-                key: "status",
-                render: (_: unknown, row) => (
-                  <span className="pf-co-actions">
-                    <StatusTag tone={row.is_sample ? "blue" : "default"}>
-                      {t(row.is_sample ? "templates.documents.sample" : "templates.documents.own")}
-                    </StatusTag>
-                    {!row.is_active ? <StatusTag tone="default">{t("inactive")}</StatusTag> : null}
-                  </span>
-                ),
-              },
-              {
-                title: t("actions"),
-                key: "actions",
-                render: (_: unknown, row) =>
-                  row.is_sample ? (
-                    <Button
-                      type="link"
-                      size="small"
-                      aria-label={t("templates.documents.copyNamed", { name: row.name })}
-                      onClick={() => {
-                        setCopying(row);
-                      }}
-                    >
-                      {t("templates.documents.copy")}
-                    </Button>
-                  ) : (
+    <ReadOnlyFence>
+      <QueryGate query={query}>
+        {({ items }) => (
+          <>
+            {items.length > 0 ? <div>{add}</div> : null}
+            <ListTable<DocumentTemplate>
+              label={t("templates.parts.documents")}
+              data={items}
+              rowKey={(row) => row.id}
+              empty={{
+                title: t("templates.documents.empty.title"),
+                text: t("templates.documents.empty.text"),
+                action: add,
+              }}
+              columns={[
+                { title: t("templates.documents.name"), dataIndex: "name" },
+                {
+                  title: t("templates.documents.kind"),
+                  dataIndex: "kind_name",
+                  responsive: ["md"],
+                },
+                {
+                  title: t("status"),
+                  key: "status",
+                  render: (_: unknown, row) => (
                     <span className="pf-co-actions">
-                      <Button
-                        type="link"
-                        size="small"
-                        aria-label={t("editNamed", { name: row.name })}
-                        onClick={() => {
-                          setEditing(row);
-                        }}
-                      >
-                        {t("edit")}
-                      </Button>
-                      <Button
-                        type="link"
-                        size="small"
-                        danger
-                        aria-label={t("deleteNamed", { name: row.name })}
-                        onClick={() => {
-                          remove.reset();
-                          setRemoving(row);
-                        }}
-                      >
-                        {t("delete")}
-                      </Button>
+                      <StatusTag tone={row.is_sample ? "blue" : "default"}>
+                        {t(
+                          row.is_sample ? "templates.documents.sample" : "templates.documents.own",
+                        )}
+                      </StatusTag>
+                      {!row.is_active ? (
+                        <StatusTag tone="default">{t("inactive")}</StatusTag>
+                      ) : null}
                     </span>
                   ),
-              },
-            ]}
-          />
-          {editing !== null ? (
-            <DocumentEditor
-              row={editing === "new" ? null : editing}
-              onClose={() => {
-                setEditing(null);
+                },
+                {
+                  title: t("actions"),
+                  key: "actions",
+                  render: (_: unknown, row) =>
+                    row.is_sample ? (
+                      <Button
+                        type="link"
+                        size="small"
+                        aria-label={t("templates.documents.copyNamed", { name: row.name })}
+                        onClick={() => {
+                          setCopying(row);
+                        }}
+                      >
+                        {t("templates.documents.copy")}
+                      </Button>
+                    ) : (
+                      <span className="pf-co-actions">
+                        <Button
+                          type="link"
+                          size="small"
+                          aria-label={t("editNamed", { name: row.name })}
+                          onClick={() => {
+                            setEditing(row);
+                          }}
+                        >
+                          {t("edit")}
+                        </Button>
+                        <Button
+                          type="link"
+                          size="small"
+                          danger
+                          aria-label={t("deleteNamed", { name: row.name })}
+                          onClick={() => {
+                            remove.reset();
+                            setRemoving(row);
+                          }}
+                        >
+                          {t("delete")}
+                        </Button>
+                      </span>
+                    ),
+                },
+              ]}
+            />
+            {editing !== null ? (
+              <DocumentEditor
+                row={editing === "new" ? null : editing}
+                onClose={() => {
+                  setEditing(null);
+                }}
+                onSaved={() => {
+                  void refresh();
+                  setEditing(null);
+                  void message.success(t("saved"));
+                }}
+              />
+            ) : null}
+            {copying !== null ? (
+              <CopyModal
+                row={copying}
+                onClose={() => {
+                  setCopying(null);
+                }}
+                onCopied={() => {
+                  void refresh();
+                  setCopying(null);
+                  void message.success(t("templates.documents.copied"));
+                }}
+              />
+            ) : null}
+            <ConfirmModal
+              open={removing !== null}
+              title={t("templates.documents.deleteTitle", { name: removing?.name ?? "" })}
+              okLabel={t("delete")}
+              danger
+              loading={remove.isPending}
+              error={remove.error}
+              items={[
+                t("templates.documents.consequence.delete"),
+                t("templates.documents.consequence.inUse"),
+              ]}
+              onOk={() => {
+                if (removing) remove.mutate({ id: removing.id });
               }}
-              onSaved={() => {
-                void refresh();
-                setEditing(null);
-                void message.success(t("saved"));
+              onCancel={() => {
+                setRemoving(null);
               }}
             />
-          ) : null}
-          {copying !== null ? (
-            <CopyModal
-              row={copying}
-              onClose={() => {
-                setCopying(null);
-              }}
-              onCopied={() => {
-                void refresh();
-                setCopying(null);
-                void message.success(t("templates.documents.copied"));
-              }}
-            />
-          ) : null}
-          <ConfirmModal
-            open={removing !== null}
-            title={t("templates.documents.deleteTitle", { name: removing?.name ?? "" })}
-            okLabel={t("delete")}
-            danger
-            loading={remove.isPending}
-            error={remove.error}
-            items={[
-              t("templates.documents.consequence.delete"),
-              t("templates.documents.consequence.inUse"),
-            ]}
-            onOk={() => {
-              if (removing) remove.mutate({ id: removing.id });
-            }}
-            onCancel={() => {
-              setRemoving(null);
-            }}
-          />
-        </>
-      )}
-    </QueryGate>
+          </>
+        )}
+      </QueryGate>
+    </ReadOnlyFence>
   );
 }
 

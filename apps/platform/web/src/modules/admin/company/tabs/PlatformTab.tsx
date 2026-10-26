@@ -10,7 +10,7 @@ import {
 } from "../../../../shared/api/generated/platform-bff";
 import { useFormat } from "../../../../shared/lib/useFormat";
 import { DefinitionList } from "../../../../shared/ui/DefinitionList";
-import { QueryGate, SaveBlock, TabHeader } from "../common";
+import { QueryGate, SaveBlock, TabHeader, ReadOnlyFence } from "../common";
 import { errorFields } from "../errors";
 
 interface Values {
@@ -24,9 +24,11 @@ export function PlatformTab() {
   return (
     <div className="pf-co-body">
       <TabHeader title={t("platform.title")} hint={t("platform.hint")} />
-      <QueryGate query={query}>
-        {(settings) => <PlatformForm key={JSON.stringify(settings)} settings={settings} />}
-      </QueryGate>
+      <ReadOnlyFence>
+        <QueryGate query={query}>
+          {(settings) => <PlatformForm key={JSON.stringify(settings)} settings={settings} />}
+        </QueryGate>
+      </ReadOnlyFence>
     </div>
   );
 }

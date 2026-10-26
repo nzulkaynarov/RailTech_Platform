@@ -16,7 +16,7 @@ import {
   useUploadBrandLogo,
 } from "../../../../shared/api/generated/platform-bff";
 import { DefinitionList } from "../../../../shared/ui/DefinitionList";
-import { LogoField, PreviewFrame, QueryGate, SaveBlock, TabHeader } from "../common";
+import { LogoField, PreviewFrame, QueryGate, ReadOnlyFence, SaveBlock, TabHeader } from "../common";
 import { changedFields, isEmptyObject, omit } from "../diff";
 import { errorFields } from "../errors";
 
@@ -156,7 +156,7 @@ function BrandForm({ brand }: { brand: BrandProfile }) {
 
   return (
     <div className="pf-co-split">
-      <div>
+      <ReadOnlyFence block>
         <LogoField
           url={brand.logo_url}
           label={t("brand.logo")}
@@ -263,7 +263,7 @@ function BrandForm({ brand }: { brand: BrandProfile }) {
             consequence={[t("brand.consequence.documents"), t("brand.consequence.preview")]}
           />
         </Form>
-      </div>
+      </ReadOnlyFence>
       <div className="pf-co-panel">
         <div className="pf-co-toolbar">
           <h3 className="pf-co-title">{t("brand.previewTitle")}</h3>

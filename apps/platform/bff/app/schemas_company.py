@@ -5,10 +5,13 @@
 Поля с ограничением (правило 6 CONVENTIONS): маржа в условиях КП — группа `cost_margin`.
 """
 
+import hashlib
 from collections.abc import Collection, Mapping
 from typing import Any, ClassVar, Literal, Self
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
+
+from app.clients.erp_company import media_path
 
 DocumentKind = Literal["quote", "contract", "invoice", "act", "letter"]
 ResetPeriod = Literal["never", "yearly", "monthly"]
@@ -126,6 +129,16 @@ class CompanyProfileUpdate(Patch):
     has_iso9001: bool | None = None
 
 
+COMPANY_LOGO_IMAGE = "/api/v1/admin/company/logo/image"
+BRAND_LOGO_IMAGE = "/api/v1/admin/company/brand/logo/image"
+
+
+def logo_ref(url: Any, endpoint: str) -> str | None:
+    """Логотип для `<img>`: адрес BFF (тот же origin), не ERP; `v` сбрасывает кэш при замене."""
+    path = media_path(url)
+    return None if path is None else f"{endpoint}?v={hashlib.sha1(path.encode()).hexdigest()[:10]}"  # noqa: S324
+
+
 def to_company(raw: Mapping[str, Any]) -> CompanyProfile:
     return CompanyProfile(
         name=text(raw.get("name")),
@@ -139,7 +152,7 @@ def to_company(raw: Mapping[str, Any]) -> CompanyProfile:
         email=text(raw.get("email")),
         country=maybe_int(raw.get("country")),
         has_iso9001=flag(raw.get("has_iso9001")),
-        logo_url=raw.get("logo") or None,
+        logo_url=logo_ref(raw.get("logo"), COMPANY_LOGO_IMAGE),
     )
 
 
@@ -246,7 +259,7 @@ def to_brand(raw: Mapping[str, Any]) -> BrandProfile:
         **{name: flag(raw.get(name)) for name in BRAND_FLAGS},
         layout_preset=preset if preset in _PRESETS else "light",
         font_family=font if font in _FONTS else "sans",
-        logo_url=raw.get("logo_url") or raw.get("logo") or None,
+        logo_url=logo_ref(raw.get("logo_url") or raw.get("logo"), BRAND_LOGO_IMAGE),
         inherited={k: text(v) for k, v in inherited.items()}
         if isinstance(inherited, dict)
         else None,

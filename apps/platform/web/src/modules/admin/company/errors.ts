@@ -12,6 +12,7 @@ const REASONS = new Set([
   "invalid_numbering_pattern",
   "file_too_large",
   "multipart_required",
+  "unsupported_type",
   "field_not_in_reference",
   "reason_required",
   "category_required",

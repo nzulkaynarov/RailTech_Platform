@@ -54,7 +54,12 @@
     "file": "Fayl tanlash: {{label}}",
     "hint": "PNG, JPEG, WebP yoki SVG, 2 MB gacha.",
     "uploaded": "Logotip yuklandi",
-    "deleted": "Logotip o'chirildi"
+    "deleted": "Logotip o'chirildi",
+    "deleteTitle": "Kompaniya logotipini o'chirasizmi?",
+    "consequence": {
+      "card": "Logotip ERP dagi kompaniya kartasidan yo'qoladi.",
+      "file": "Fayl ERP omboridan o'chiriladi, uni tiklab bo'lmaydi."
+    }
   },
   "errors": {
     "DEFAULT": "Amalni bajarib bo'lmadi. Keyinroq qayta urinib ko'ring.",
@@ -73,6 +78,7 @@
       "already_reviewed": "So'rov allaqachon ko'rib chiqilgan. Ro'yxatni yangilang.",
       "invalid_numbering_pattern": "Niqobda majburiy {seq} tokeni yo'q.",
       "file_too_large": "Fayl 2 MB dan katta.",
+      "unsupported_type": "PNG, JPEG, WebP yoki SVG fayli kerak.",
       "multipart_required": "Logotip faylini tanlang.",
       "field_not_in_reference": "Bu ma'lumotnomada bunday maydon yo'q.",
       "reason_required": "Rad etish sababini kiriting.",

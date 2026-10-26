@@ -16,7 +16,7 @@ import {
   useUpdateReferenceItem,
 } from "../../../../shared/api/generated/platform-bff";
 import { StatusTag } from "../../../../shared/ui/StatusTag";
-import { ConfirmModal, FormModal, ListTable, QueryGate, TabHeader } from "../common";
+import { ConfirmModal, FormModal, ListTable, QueryGate, TabHeader, ReadOnlyFence } from "../common";
 import { changedFields, isEmptyObject, omit } from "../diff";
 import { errorFields } from "../errors";
 
@@ -87,157 +87,160 @@ function ReferenceList({ kind }: { kind: ReferenceKind }) {
   );
 
   return (
-    <QueryGate query={query}>
-      {({ items }) => (
-        <>
-          {items.length > 0 ? <div>{add}</div> : null}
-          {toggle.isError ? (
-            <Alert type="error" showIcon role="alert" message={t("errors.DEFAULT")} />
-          ) : null}
-          <ListTable<ReferenceItem>
-            label={t(`reference.kinds.${kind}`)}
-            data={items}
-            rowKey={(row) => row.id}
-            empty={{
-              title: t("reference.empty.title"),
-              text: t("reference.empty.text"),
-              action: add,
-            }}
-            columns={[
-              {
-                title: t("reference.code"),
-                dataIndex: "code",
-                render: (v: string) => <b className="pf-co-mono">{v}</b>,
-              },
-              { title: t("reference.name"), dataIndex: "name" },
-              ...(kind === "countries"
-                ? [
-                    {
-                      title: t("reference.alpha2"),
-                      dataIndex: "alpha2",
-                      responsive: ["md" as const],
-                    },
-                    {
-                      title: t("reference.alpha3"),
-                      dataIndex: "alpha3",
-                      responsive: ["md" as const],
-                    },
-                    {
-                      title: t("reference.vat"),
-                      dataIndex: "vat_rate",
-                      align: "right" as const,
-                      render: (v: string | null | undefined) => (v ? `${v} %` : "—"),
-                    },
-                  ]
-                : []),
-              ...(kind === "currencies"
-                ? [{ title: t("reference.symbol"), dataIndex: "symbol" }]
-                : []),
-              ...(kind === "delivery-basis"
-                ? [
-                    {
-                      title: t("reference.sellerPays"),
-                      key: "pays",
-                      render: (_: unknown, row: ReferenceItem) =>
-                        BASIS_FLAGS.filter((f) => row[f])
-                          .map((f) => t(`reference.pays.${f}`))
-                          .join(", ") || "—",
-                    },
-                  ]
-                : []),
-              {
-                title: t("reference.order"),
-                dataIndex: "sort_order",
-                align: "right" as const,
-                responsive: ["md" as const],
-              },
-              {
-                title: t("status"),
-                dataIndex: "is_active",
-                render: (value: boolean) => (
-                  <StatusTag tone={value ? "green" : "default"}>
-                    {value ? t("active") : t("inactive")}
-                  </StatusTag>
-                ),
-              },
-              {
-                title: t("actions"),
-                key: "actions",
-                render: (_: unknown, row: ReferenceItem) => (
-                  <span className="pf-co-actions">
-                    <Button
-                      type="link"
-                      size="small"
-                      aria-label={t("editNamed", { name: row.name })}
-                      onClick={() => {
-                        setEditing(row);
-                      }}
-                    >
-                      {t("edit")}
-                    </Button>
-                    <Button
-                      type="link"
-                      size="small"
-                      aria-label={t(
-                        row.is_active ? "reference.disableNamed" : "reference.enableNamed",
-                        { name: row.name },
-                      )}
-                      loading={toggle.isPending && toggle.variables.id === row.id}
-                      onClick={() => {
-                        toggle.mutate({ kind, id: row.id, data: { is_active: !row.is_active } });
-                      }}
-                    >
-                      {t(row.is_active ? "reference.disable" : "reference.enable")}
-                    </Button>
-                    <Button
-                      type="link"
-                      size="small"
-                      danger
-                      aria-label={t("deleteNamed", { name: row.name })}
-                      onClick={() => {
-                        remove.reset();
-                        setRemoving(row);
-                      }}
-                    >
-                      {t("delete")}
-                    </Button>
-                  </span>
-                ),
-              },
-            ]}
-          />
-          {editing !== null ? (
-            <ReferenceModal
-              kind={kind}
-              row={editing === "new" ? null : editing}
-              onClose={() => {
-                setEditing(null);
+    <ReadOnlyFence>
+      <QueryGate query={query}>
+        {({ items }) => (
+          <>
+            {items.length > 0 ? <div>{add}</div> : null}
+            {toggle.isError ? (
+              <Alert type="error" showIcon role="alert" message={t("errors.DEFAULT")} />
+            ) : null}
+            <ListTable<ReferenceItem>
+              label={t(`reference.kinds.${kind}`)}
+              data={items}
+              rowKey={(row) => row.id}
+              empty={{
+                title: t("reference.empty.title"),
+                text: t("reference.empty.text"),
+                action: add,
               }}
-              onSaved={() => {
-                void refresh();
-                setEditing(null);
-                void message.success(t("saved"));
+              columns={[
+                {
+                  title: t("reference.code"),
+                  dataIndex: "code",
+                  render: (v: string) => <b className="pf-co-mono">{v}</b>,
+                },
+                { title: t("reference.name"), dataIndex: "name" },
+                ...(kind === "countries"
+                  ? [
+                      {
+                        title: t("reference.alpha2"),
+                        dataIndex: "alpha2",
+                        responsive: ["md" as const],
+                      },
+                      {
+                        title: t("reference.alpha3"),
+                        dataIndex: "alpha3",
+                        responsive: ["md" as const],
+                      },
+                      {
+                        title: t("reference.vat"),
+                        dataIndex: "vat_rate",
+                        align: "right" as const,
+                        responsive: ["md" as const],
+                        render: (v: string | null | undefined) => (v ? `${v} %` : "—"),
+                      },
+                    ]
+                  : []),
+                ...(kind === "currencies"
+                  ? [{ title: t("reference.symbol"), dataIndex: "symbol" }]
+                  : []),
+                ...(kind === "delivery-basis"
+                  ? [
+                      {
+                        title: t("reference.sellerPays"),
+                        key: "pays",
+                        render: (_: unknown, row: ReferenceItem) =>
+                          BASIS_FLAGS.filter((f) => row[f])
+                            .map((f) => t(`reference.pays.${f}`))
+                            .join(", ") || "—",
+                      },
+                    ]
+                  : []),
+                {
+                  title: t("reference.order"),
+                  dataIndex: "sort_order",
+                  align: "right" as const,
+                  responsive: ["md" as const],
+                },
+                {
+                  title: t("status"),
+                  dataIndex: "is_active",
+                  render: (value: boolean) => (
+                    <StatusTag tone={value ? "green" : "default"}>
+                      {value ? t("active") : t("inactive")}
+                    </StatusTag>
+                  ),
+                },
+                {
+                  title: t("actions"),
+                  key: "actions",
+                  render: (_: unknown, row: ReferenceItem) => (
+                    <span className="pf-co-actions">
+                      <Button
+                        type="link"
+                        size="small"
+                        aria-label={t("editNamed", { name: row.name })}
+                        onClick={() => {
+                          setEditing(row);
+                        }}
+                      >
+                        {t("edit")}
+                      </Button>
+                      <Button
+                        type="link"
+                        size="small"
+                        aria-label={t(
+                          row.is_active ? "reference.disableNamed" : "reference.enableNamed",
+                          { name: row.name },
+                        )}
+                        loading={toggle.isPending && toggle.variables.id === row.id}
+                        onClick={() => {
+                          toggle.mutate({ kind, id: row.id, data: { is_active: !row.is_active } });
+                        }}
+                      >
+                        {t(row.is_active ? "reference.disable" : "reference.enable")}
+                      </Button>
+                      <Button
+                        type="link"
+                        size="small"
+                        danger
+                        aria-label={t("deleteNamed", { name: row.name })}
+                        onClick={() => {
+                          remove.reset();
+                          setRemoving(row);
+                        }}
+                      >
+                        {t("delete")}
+                      </Button>
+                    </span>
+                  ),
+                },
+              ]}
+            />
+            {editing !== null ? (
+              <ReferenceModal
+                kind={kind}
+                row={editing === "new" ? null : editing}
+                onClose={() => {
+                  setEditing(null);
+                }}
+                onSaved={() => {
+                  void refresh();
+                  setEditing(null);
+                  void message.success(t("saved"));
+                }}
+              />
+            ) : null}
+            <ConfirmModal
+              open={removing !== null}
+              title={t("reference.deleteTitle", { name: removing?.name ?? "" })}
+              okLabel={t("delete")}
+              danger
+              loading={remove.isPending}
+              error={remove.error}
+              items={[t("reference.consequence.delete"), t("reference.consequence.disable")]}
+              onOk={() => {
+                if (removing) remove.mutate({ kind, id: removing.id });
+              }}
+              onCancel={() => {
+                setRemoving(null);
               }}
             />
-          ) : null}
-          <ConfirmModal
-            open={removing !== null}
-            title={t("reference.deleteTitle", { name: removing?.name ?? "" })}
-            okLabel={t("delete")}
-            danger
-            loading={remove.isPending}
-            error={remove.error}
-            items={[t("reference.consequence.delete"), t("reference.consequence.disable")]}
-            onOk={() => {
-              if (removing) remove.mutate({ kind, id: removing.id });
-            }}
-            onCancel={() => {
-              setRemoving(null);
-            }}
-          />
-        </>
-      )}
-    </QueryGate>
+          </>
+        )}
+      </QueryGate>
+    </ReadOnlyFence>
   );
 }
 

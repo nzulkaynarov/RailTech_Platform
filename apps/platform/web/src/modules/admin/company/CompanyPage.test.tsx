@@ -148,6 +148,48 @@ describe("Admin · Компания: доступ и каркас", () => {
     expect(await screen.findByLabelText("Телефон")).toBeDisabled();
     expect(screen.getByRole("button", { name: "Сохранить реквизиты" })).toBeDisabled();
   });
+
+  it("доступ «чтение»: вкладки и вид образца переключаются, а поля и кнопки изменения остаются заблокированными", async () => {
+    writeRoles([
+      ...readRoles(),
+      {
+        id: "50",
+        name: "Читатель настроек",
+        description: "",
+        system: false,
+        version: 1,
+        access: { "dashboard.queue": "full", "company.settings": "read" },
+        restricted_fields: [],
+        updated_at: "2026-10-26T00:00:00.000Z",
+      },
+    ]);
+    writeEmployees(
+      readEmployees().map((e) => (e.id === "u-demo-manager" ? { ...e, role_ids: ["50"] } : e)),
+    );
+    await openTab("details", "manager@demo.example");
+    await screen.findByLabelText("Телефон");
+
+    fireEvent.click(screen.getByRole("tab", { name: "Бланк и бренд" }));
+    expect(screen.getByRole("tab", { name: "Бланк и бренд" })).toHaveAttribute(
+      "aria-selected",
+      "true",
+    );
+    expect(await screen.findByLabelText("Подписант")).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Сохранить бланк" })).toBeDisabled();
+    await screen.findByTitle("Образец: КП");
+    fireEvent.click(screen.getByText("Договор", { selector: ".ant-segmented-item-label" }));
+    await waitFor(() => {
+      expect(screen.getByTitle("Образец: Договор").getAttribute("srcdoc")).toContain(
+        "Договор поставки",
+      );
+    });
+
+    fireEvent.click(screen.getByRole("tab", { name: "Справочники" }));
+    expect(await screen.findByText("Казахстан")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Добавить строку" })).toBeDisabled();
+    fireEvent.click(screen.getByText("Валюты", { selector: ".ant-segmented-item-label" }));
+    expect(await screen.findByText("Евро")).toBeInTheDocument();
+  });
 });
 
 describe("Реквизиты и логотип", () => {
@@ -193,6 +235,10 @@ describe("Реквизиты и логотип", () => {
     expect(seen).toEqual([{ name: "logo.png", type: "image/png" }]);
     expect(readCompanyMock().company.logo_url).toMatch(/^data:image/);
     fireEvent.click(await button("Удалить логотип"));
+    const confirm = await screen.findByRole("dialog", { name: "Удалить логотип компании?" });
+    expect(within(confirm).getByText("Что произойдёт")).toBeInTheDocument();
+    expect(readCompanyMock().company.logo_url).toMatch(/^data:image/);
+    fireEvent.click(within(confirm).getByRole("button", { name: "Удалить логотип" }));
     expect(await screen.findByText("Логотип удалён")).toBeInTheDocument();
     expect(readCompanyMock().company.logo_url).toBeNull();
   });

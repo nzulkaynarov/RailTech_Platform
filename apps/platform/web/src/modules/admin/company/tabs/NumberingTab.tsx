@@ -15,7 +15,7 @@ import {
   usePreviewNumbering,
   useUpdateNumberingScheme,
 } from "../../../../shared/api/generated/platform-bff";
-import { QueryGate, SaveBlock, TabHeader } from "../common";
+import { QueryGate, SaveBlock, TabHeader, ReadOnlyFence } from "../common";
 import { changedFields, isEmptyObject } from "../diff";
 import { errorFields } from "../errors";
 
@@ -54,9 +54,11 @@ export function NumberingTab() {
   return (
     <div className="pf-co-body">
       <TabHeader title={t("numbering.title")} hint={t("numbering.hint")} />
-      <QueryGate query={query}>
-        {(scheme) => <NumberingForm key={JSON.stringify(scheme)} scheme={scheme} />}
-      </QueryGate>
+      <ReadOnlyFence>
+        <QueryGate query={query}>
+          {(scheme) => <NumberingForm key={JSON.stringify(scheme)} scheme={scheme} />}
+        </QueryGate>
+      </ReadOnlyFence>
     </div>
   );
 }

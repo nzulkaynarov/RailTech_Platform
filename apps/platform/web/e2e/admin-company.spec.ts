@@ -136,6 +136,8 @@ test.describe("Компания: реквизиты, бланк, нумерац�
     await expect(page.getByText("ИНН — 9 цифр")).toBeVisible();
     await page.getByLabel(/^ИНН/).fill("123456789");
 
+    // Тосты не накладываются на снимок: ждём, пока уйдёт «Сохранено», и только потом загружаем файл.
+    await expect(page.locator(".ant-message-notice")).toHaveCount(0);
     await page.getByLabel("Выбрать файл: Логотип компании").setInputFiles({
       name: "logo.png",
       mimeType: "image/png",
@@ -143,12 +145,16 @@ test.describe("Компания: реквизиты, бланк, нумерац�
     });
     await expect(toast(page, "Логотип загружен")).toBeVisible();
     await expect(page.getByRole("img", { name: "Логотип" })).toBeVisible();
+    await expect(page.locator(".ant-message-notice")).toHaveCount(1);
     await settledScreenshot(page, "company-details-logo");
 
     await page.reload();
     await expect(page.getByRole("heading", { level: 1, name: "Компания" })).toBeVisible();
     await expect(page.getByLabel("Телефон")).toHaveValue("+998 11 111 11 11");
     await page.getByRole("button", { name: "Удалить логотип" }).click();
+    const confirm = page.getByRole("dialog", { name: "Удалить логотип компании?" });
+    await expect(confirm.getByText("Что произойдёт")).toBeVisible();
+    await confirm.getByRole("button", { name: "Удалить логотип" }).click();
     await expect(toast(page, "Логотип удалён")).toBeVisible();
     await expect(page.getByText("Нет логотипа")).toBeVisible();
   });

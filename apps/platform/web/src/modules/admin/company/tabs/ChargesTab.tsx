@@ -18,7 +18,7 @@ import {
   useUpdateChargeTemplate,
 } from "../../../../shared/api/generated/platform-bff";
 import { StatusTag } from "../../../../shared/ui/StatusTag";
-import { ConfirmModal, FormModal, ListTable, QueryGate, TabHeader } from "../common";
+import { ConfirmModal, FormModal, ListTable, QueryGate, TabHeader, ReadOnlyFence } from "../common";
 import { changedFields, codeLabel } from "../diff";
 import { errorFields } from "../errors";
 
@@ -85,89 +85,91 @@ export function ChargesTab() {
   return (
     <div className="pf-co-body">
       <TabHeader title={t("charges.title")} hint={t("charges.hint")} />
-      <QueryGate query={query}>
-        {({ items }) => (
-          <>
-            {items.length > 0 ? <div>{add}</div> : null}
-            <ListTable<ChargeTemplate>
-              label={t("charges.title")}
-              data={items}
-              rowKey={(row) => row.id}
-              empty={{
-                title: t("charges.empty.title"),
-                text: t("charges.empty.text"),
-                action: add,
-              }}
-              columns={[
-                { title: t("charges.basis"), dataIndex: "delivery_basis_name" },
-                { title: t("charges.type"), dataIndex: "charge_type_name" },
-                {
-                  title: t("charges.amount"),
-                  dataIndex: "default_amount",
-                  align: "right",
-                  render: (value: string) => <span className="pf-num">{value}</span>,
-                },
-                {
-                  title: t("charges.rate"),
-                  dataIndex: "default_rate_percent",
-                  align: "right",
-                  responsive: ["md"],
-                  render: (value: string | null) =>
-                    value === null ? "—" : <span className="pf-num">{value} %</span>,
-                },
-                {
-                  title: t("charges.deduction"),
-                  dataIndex: "is_deduction",
-                  responsive: ["md"],
-                  render: (value: boolean) => (value ? t("yes") : t("no")),
-                },
-                {
-                  title: t("status"),
-                  dataIndex: "is_active",
-                  render: (value: boolean) => (
-                    <StatusTag tone={value ? "green" : "default"}>
-                      {value ? t("active") : t("inactive")}
-                    </StatusTag>
-                  ),
-                },
-                {
-                  title: t("actions"),
-                  key: "actions",
-                  render: (_: unknown, row) => {
-                    const name = `${row.charge_type_name} · ${row.delivery_basis}`;
-                    return (
-                      <span className="pf-co-actions">
-                        <Button
-                          type="link"
-                          size="small"
-                          aria-label={t("editNamed", { name })}
-                          onClick={() => {
-                            setEditing(row);
-                          }}
-                        >
-                          {t("edit")}
-                        </Button>
-                        <Button
-                          type="link"
-                          size="small"
-                          danger
-                          aria-label={t("deleteNamed", { name })}
-                          onClick={() => {
-                            remove.reset();
-                            setRemoving(row);
-                          }}
-                        >
-                          {t("delete")}
-                        </Button>
-                      </span>
-                    );
+      <ReadOnlyFence>
+        <QueryGate query={query}>
+          {({ items }) => (
+            <>
+              {items.length > 0 ? <div>{add}</div> : null}
+              <ListTable<ChargeTemplate>
+                label={t("charges.title")}
+                data={items}
+                rowKey={(row) => row.id}
+                empty={{
+                  title: t("charges.empty.title"),
+                  text: t("charges.empty.text"),
+                  action: add,
+                }}
+                columns={[
+                  { title: t("charges.basis"), dataIndex: "delivery_basis_name" },
+                  { title: t("charges.type"), dataIndex: "charge_type_name" },
+                  {
+                    title: t("charges.amount"),
+                    dataIndex: "default_amount",
+                    align: "right",
+                    render: (value: string) => <span className="pf-num">{value}</span>,
                   },
-                },
-              ]}
-            />
-          </>
-        )}
-      </QueryGate>
+                  {
+                    title: t("charges.rate"),
+                    dataIndex: "default_rate_percent",
+                    align: "right",
+                    responsive: ["md"],
+                    render: (value: string | null) =>
+                      value === null ? "—" : <span className="pf-num">{value} %</span>,
+                  },
+                  {
+                    title: t("charges.deduction"),
+                    dataIndex: "is_deduction",
+                    responsive: ["md"],
+                    render: (value: boolean) => (value ? t("yes") : t("no")),
+                  },
+                  {
+                    title: t("status"),
+                    dataIndex: "is_active",
+                    render: (value: boolean) => (
+                      <StatusTag tone={value ? "green" : "default"}>
+                        {value ? t("active") : t("inactive")}
+                      </StatusTag>
+                    ),
+                  },
+                  {
+                    title: t("actions"),
+                    key: "actions",
+                    render: (_: unknown, row) => {
+                      const name = `${row.charge_type_name} · ${row.delivery_basis}`;
+                      return (
+                        <span className="pf-co-actions">
+                          <Button
+                            type="link"
+                            size="small"
+                            aria-label={t("editNamed", { name })}
+                            onClick={() => {
+                              setEditing(row);
+                            }}
+                          >
+                            {t("edit")}
+                          </Button>
+                          <Button
+                            type="link"
+                            size="small"
+                            danger
+                            aria-label={t("deleteNamed", { name })}
+                            onClick={() => {
+                              remove.reset();
+                              setRemoving(row);
+                            }}
+                          >
+                            {t("delete")}
+                          </Button>
+                        </span>
+                      );
+                    },
+                  },
+                ]}
+              />
+            </>
+          )}
+        </QueryGate>
+      </ReadOnlyFence>
       {editing !== null ? (
         <ChargeModal
           row={editing === "new" ? null : editing}

@@ -24,10 +24,10 @@ COMPANY = f"{API}/accounts/companies/{CID}"
 NOW = "2026-10-26T09:00:00Z"
 
 
-def erp_company(be: Backends, **extra: Any) -> respx.Route:
-    """Профиль сотрудника в ERP: основная компания — id 3."""
-    body = {"id": 1, "primary_company": {"id": CID, "name": "ООО «Демо Рейл»"}, **extra}
-    return be.router.get(f"{API}/accounts/me/").mock(return_value=httpx.Response(200, json=body))
+def erp_company(be: Backends, own: int | None = CID) -> respx.Route:
+    """Статус первого запуска ERP: id своей компании — 3 (`own_company_id`)."""
+    body = {"setup_required": own is None, "can_setup": False, "own_company_id": own}
+    return be.router.get(f"{API}/setup/status/").mock(return_value=httpx.Response(200, json=body))
 
 
 @pytest.fixture
@@ -171,7 +171,7 @@ async def test_write_without_csrf_is_rejected(web: Web, erp: respx.MockRouter) -
 # --- своя компания -----------------------------------------------------------------------------
 
 
-async def test_company_is_found_by_the_employees_erp_profile(
+async def test_company_is_found_by_own_company_id_of_erp(
     web: Web, erp: respx.MockRouter, check: ContractChecker
 ) -> None:
     await web.login(["DIRECTOR"])
@@ -190,8 +190,14 @@ async def test_company_is_found_by_the_employees_erp_profile(
     assert route.calls.last.request.headers["authorization"].startswith("Bearer ")
 
 
-async def test_company_from_active_membership_when_no_primary(web: Web, be: Backends) -> None:
+async def test_company_from_membership_when_erp_has_no_own_company_id(
+    web: Web, be: Backends
+) -> None:
+    """Старая ERP без `own_company_id` в статусе: основное активное членство сотрудника."""
     await web.login(["ADMIN"])
+    be.router.get(f"{API}/setup/status/").mock(
+        return_value=httpx.Response(200, json={"setup_required": False, "can_setup": False})
+    )
     be.router.get(f"{API}/accounts/me/").mock(
         return_value=httpx.Response(
             200,
@@ -212,38 +218,26 @@ async def test_company_from_active_membership_when_no_primary(web: Web, be: Back
     assert route.call_count == 1
 
 
-async def test_superuser_without_membership_uses_the_only_seller_company(
-    web: Web, be: Backends, check: ContractChecker
+async def test_own_company_comes_from_setup_status_not_from_membership(
+    web: Web, be: Backends, erp: respx.MockRouter
 ) -> None:
+    """Администратор без членства (суперпользователь): профиль не нужен, id — из `setup/status/`."""
     await web.login(["ADMIN"])
-    be.router.get(f"{API}/accounts/me/").mock(
-        return_value=httpx.Response(200, json={"id": 1, "primary_company": None, "memberships": []})
-    )
-    listing = be.router.get(f"{API}/accounts/companies/").mock(
-        return_value=httpx.Response(200, json={"count": 1, "next": None, "results": [{"id": 3}]})
-    )
+    me = be.router.get(f"{API}/accounts/me/").mock(return_value=httpx.Response(200, json={}))
     be.router.get(f"{COMPANY}/").mock(return_value=httpx.Response(200, json=company_json()))
 
     response = await web.client.get("/api/v1/admin/company")
 
     assert response.status_code == 200
-    query = listing.calls.last.request.url.params
-    assert query["types__code"] == "SUPPLIER"
-    assert query["is_active"] == "true"
+    assert me.call_count == 0
 
 
-@pytest.mark.parametrize("sellers", [[], [{"id": 3}, {"id": 8}]])
-async def test_company_not_set_when_zero_or_many_candidates(
-    web: Web, be: Backends, check: ContractChecker, sellers: list[dict[str, Any]]
+async def test_company_not_set_when_erp_has_no_own_company(
+    web: Web, be: Backends, check: ContractChecker
 ) -> None:
-    """Нет компании или кандидатов несколько — 409 `COMPANY_NOT_SET`: продавца BFF не угадывает."""
+    """`own_company_id = null` — своей компании нет: 409 `COMPANY_NOT_SET` (первый запуск)."""
     await web.login(["DIRECTOR"])
-    be.router.get(f"{API}/accounts/me/").mock(
-        return_value=httpx.Response(200, json={"id": 1, "primary_company": None, "memberships": []})
-    )
-    be.router.get(f"{API}/accounts/companies/").mock(
-        return_value=httpx.Response(200, json={"count": len(sellers), "results": sellers})
-    )
+    erp_company(be, own=None)
 
     response = await web.client.get("/api/v1/admin/company")
 
@@ -346,7 +340,7 @@ async def test_company_logo_is_forwarded_as_multipart(
     await web.login(["DIRECTOR"])
     route = erp.post(f"{COMPANY}/upload-logo/").mock(
         return_value=httpx.Response(
-            200, json=company_json(logo="https://erp.example/media/logo.png")
+            200, json=company_json(logo="https://erp-backend:8000/media/companies/3/logo/a1b2.png")
         )
     )
 
@@ -354,7 +348,7 @@ async def test_company_logo_is_forwarded_as_multipart(
 
     assert response.status_code == 200
     check(response, "/admin/company/logo", "post")
-    assert response.json()["logo_url"] == "https://erp.example/media/logo.png"
+    assert response.json()["logo_url"].startswith("/api/v1/admin/company/logo/image?v=")
     request = route.calls.last.request
     assert request.headers["content-type"].startswith("multipart/form-data; boundary=")
     assert PNG in request.content
@@ -374,6 +368,132 @@ async def test_logo_must_be_multipart_and_not_too_big(web: Web, erp: respx.MockR
     assert wrong_type.json()["details"]["reason"] == "multipart_required"
     assert too_big.json()["details"]["reason"] == "file_too_large"
     assert route.call_count == 0
+
+
+async def test_logo_type_must_be_an_image_from_the_list(web: Web, erp: respx.MockRouter) -> None:
+    await web.login(["DIRECTOR"])
+    route = erp.post(f"{COMPANY}/upload-logo/").mock(return_value=httpx.Response(200, json={}))
+
+    html = await web.client.post(
+        "/api/v1/admin/company/logo",
+        files={"logo": ("logo.html", b"<script>1</script>", "text/html")},
+        headers={"X-CSRF-Token": web.csrf},
+    )
+    other_field = await web.client.post(
+        "/api/v1/admin/company/logo",
+        files={"file": ("logo.png", PNG, "image/png")},
+        headers={"X-CSRF-Token": web.csrf},
+    )
+
+    for response in (html, other_field):
+        assert response.status_code == 422
+        assert response.json()["details"] == {"fields": ["logo"], "reason": "unsupported_type"}
+    assert route.call_count == 0
+
+
+@pytest.mark.parametrize("mime", ["image/png", "image/jpeg", "image/webp", "image/svg+xml"])
+async def test_logo_accepts_the_listed_types(web: Web, erp: respx.MockRouter, mime: str) -> None:
+    await web.login(["DIRECTOR"])
+    route = erp.post(f"{COMPANY}/upload-logo/").mock(
+        return_value=httpx.Response(200, json=company_json())
+    )
+
+    response = await web.client.post(
+        "/api/v1/admin/company/logo",
+        files={"logo": ("logo", PNG, mime)},
+        headers={"X-CSRF-Token": web.csrf},
+    )
+
+    assert response.status_code == 200
+    assert route.call_count == 1
+
+
+async def test_logo_images_are_served_by_the_bff_not_by_erp_address(
+    web: Web, erp: respx.MockRouter
+) -> None:
+    """CSP не пускает адрес ERP: файл отдаёт BFF с защитными заголовками, чужие пути не берутся."""
+    await web.login(["DIRECTOR"])
+    erp.get(f"{COMPANY}/").mock(
+        return_value=httpx.Response(
+            200, json=company_json(logo="http://erp-backend:8000/media/companies/3/logo/a1b2.svg")
+        )
+    )
+    erp.get(f"{COMPANY}/document-profile/").mock(
+        return_value=httpx.Response(
+            200,
+            json=brand_json(
+                logo_url="http://erp-backend:8000/media/companies/3/doc-profile/logo/c.png"
+            ),
+        )
+    )
+    file = erp.get(f"{ERP_URL}/media/companies/3/logo/a1b2.svg").mock(
+        return_value=httpx.Response(
+            200, content=b"<svg/>", headers={"content-type": "image/svg+xml"}
+        )
+    )
+    erp.get(f"{ERP_URL}/media/companies/3/doc-profile/logo/c.png").mock(
+        return_value=httpx.Response(200, content=PNG, headers={"content-type": "image/png"})
+    )
+
+    company = await web.client.get("/api/v1/admin/company/logo/image")
+    brand = await web.client.get("/api/v1/admin/company/brand/logo/image")
+
+    assert (company.status_code, company.content) == (200, b"<svg/>")
+    assert company.headers["content-type"] == "image/svg+xml"
+    assert "sandbox" in company.headers["content-security-policy"]
+    assert company.headers["x-content-type-options"] == "nosniff"
+    assert (brand.status_code, brand.content) == (200, PNG)
+    assert file.call_count == 1
+
+
+async def test_logo_image_404_when_no_logo_or_foreign_path(web: Web, erp: respx.MockRouter) -> None:
+    await web.login(["DIRECTOR"])
+    erp.get(f"{COMPANY}/").mock(return_value=httpx.Response(200, json=company_json(logo=None)))
+    erp.get(f"{COMPANY}/document-profile/").mock(
+        return_value=httpx.Response(
+            200,
+            json=brand_json(
+                logo_url="http://erp-backend:8000/media/companies/3/documents/secret.pdf"
+            ),
+        )
+    )
+    secret = erp.get(f"{ERP_URL}/media/companies/3/documents/secret.pdf").mock(
+        return_value=httpx.Response(200, content=b"%PDF")
+    )
+
+    company = await web.client.get("/api/v1/admin/company/logo/image")
+    brand = await web.client.get("/api/v1/admin/company/brand/logo/image")
+
+    assert (company.status_code, brand.status_code) == (404, 404)
+    assert secret.call_count == 0
+
+
+async def test_logo_image_needs_the_company_section(web: Web, erp: respx.MockRouter) -> None:
+    await web.login(["MANAGER"])
+
+    for path in ("/admin/company/logo/image", "/admin/company/brand/logo/image"):
+        assert (await web.client.get(f"/api/v1{path}")).status_code == 403
+
+
+async def test_brand_preview_inlines_erp_logos_as_data(web: Web, erp: respx.MockRouter) -> None:
+    """Образец под CSP Платформы: логотип ERP встроен данными, чужие картинки не трогаются."""
+    await web.login(["DIRECTOR"])
+    html = (
+        '<img src="http://erp-backend:8000/media/companies/3/doc-profile/logo/c.png">'
+        '<img src="https://other.example/media/companies/3/documents/x.png">'
+    )
+    erp.post(f"{COMPANY}/document-profile/preview/").mock(
+        return_value=httpx.Response(200, text=html)
+    )
+    erp.get(f"{ERP_URL}/media/companies/3/doc-profile/logo/c.png").mock(
+        return_value=httpx.Response(200, content=b"PNGDATA", headers={"content-type": "image/png"})
+    )
+
+    response = await web.send("POST", "/api/v1/admin/company/brand/preview", json={"kind": "quote"})
+
+    body = response.json()["html"]
+    assert 'src="data:image/png;base64,UE5HREFUQQ=="' in body
+    assert "https://other.example/media/companies/3/documents/x.png" in body
 
 
 async def test_delete_company_logo(web: Web, erp: respx.MockRouter) -> None:
@@ -438,7 +558,12 @@ async def test_brand_profile_get_patch_and_logo(
         return_value=httpx.Response(200, json=brand_json(accent_color="#047857"))
     )
     logo = erp.post(f"{COMPANY}/document-profile/upload-logo/").mock(
-        return_value=httpx.Response(200, json=brand_json(logo_url="https://erp.example/m/b.png"))
+        return_value=httpx.Response(
+            200,
+            json=brand_json(
+                logo_url="https://erp-backend:8000/media/companies/3/doc-profile/logo/c3d4.png"
+            ),
+        )
     )
 
     got = await web.client.get("/api/v1/admin/company/brand")
@@ -454,7 +579,7 @@ async def test_brand_profile_get_patch_and_logo(
     assert got.json()["inherited"]["legal_address"].startswith("г. Демоград")
     assert changed.json()["accent_color"] == "#047857"
     assert sent(patch) == {"accent_color": "#047857"}
-    assert uploaded.json()["logo_url"] == "https://erp.example/m/b.png"
+    assert uploaded.json()["logo_url"].startswith("/api/v1/admin/company/brand/logo/image?v=")
     assert logo.call_count == 1
 
 
