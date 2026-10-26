@@ -72,11 +72,13 @@ LIMIT :limit
 FOR UPDATE SKIP LOCKED
 """
 
+# Проба идёт по сроку паузы предохранителя, а не по сроку повтора доставки (C1-G-6): берётся готовая доставка, а если
+# готовых нет — ближайшая по расписанию (`next_attempt_at` возвращается: неудача такой пробы расписание не двигает).
 CLAIM_PROBE = f"""
-SELECT id FROM {DELIVERY}
-WHERE ((status = '{PENDING}' AND next_attempt_at <= :now) OR (status = '{IN_FLIGHT}' AND lease_until < :now))
+SELECT id, next_attempt_at FROM {DELIVERY}
+WHERE (status = '{PENDING}' OR (status = '{IN_FLIGHT}' AND lease_until < :now))
   AND subscriber = :subscriber
-ORDER BY next_attempt_at, id
+ORDER BY (status = '{PENDING}' AND next_attempt_at > :now), next_attempt_at, id
 LIMIT 1
 FOR UPDATE SKIP LOCKED
 """

@@ -26,6 +26,7 @@ from .conftest import Hub, rows
 pytestmark = pytest.mark.pg
 
 QUOTE_SENT = "uz.railtech.erp.quote.sent.v1"
+PENDING_ALL = "SELECT id, attempts, next_attempt_at FROM rt_bus_delivery WHERE subscriber = 'crm' ORDER BY id"
 PENDING_CRM = "SELECT next_attempt_at, status FROM rt_bus_delivery WHERE status = 'pending' AND subscriber = 'crm'"
 
 
@@ -304,3 +305,54 @@ async def test_recovery_needs_open_breaker_to_reset_schedules(
     assert stats.deliver.recovered == 0
     [still] = await rows(sessions, PENDING_CRM)
     assert still["next_attempt_at"] == poison["next_attempt_at"]
+
+
+async def _open_breaker_with_far_schedule(
+    bus: AsyncBus, sessions: async_sessionmaker[AsyncSession], hub: Hub, clock: Clock
+) -> None:
+    """crm упал (предохранитель открыт), а срок повтора у всех его доставок далеко — тихий период без нового трафика."""
+    await publish(bus, sessions, n=3)
+    hub.responders["crm"] = lambda r: httpx.Response(503)
+    await bus.pump()
+    async with sessions() as session, session.begin():
+        await session.execute(
+            text("UPDATE rt_bus_delivery SET next_attempt_at = :far WHERE subscriber = 'crm'"),
+            {"far": clock() + timedelta(hours=2)},
+        )
+
+
+async def test_quiet_period_probe_goes_by_pause_not_by_delivery_schedule(
+    make_bus: Callable[..., AsyncBus],
+    sessions: async_sessionmaker[AsyncSession],
+    hub: Hub,
+    clock: Clock,
+) -> None:
+    """Без нового трафика проба идёт по сроку паузы предохранителя: восстановление не ждёт расписания повторов."""
+    bus = make_bus(breaker=BreakerPolicy(threshold=2))
+    await _open_breaker_with_far_schedule(bus, sessions, hub, clock)
+    clock.advance(301)  # пауза кончилась, все доставки crm по расписанию ещё не готовы
+    hub.responders.pop("crm")
+    stats = await bus.pump()
+    assert stats.deliver.recovered == 1
+    assert {r["status"] for r in await rows(sessions, "SELECT status FROM rt_bus_delivery")} == {"delivered"}
+
+
+async def test_failed_early_probe_keeps_schedule_and_attempts(
+    make_bus: Callable[..., AsyncBus],
+    sessions: async_sessionmaker[AsyncSession],
+    hub: Hub,
+    clock: Clock,
+) -> None:
+    """Неудача пробы, взявшей доставку раньше срока: пауза продлена, а срок и число попыток доставки прежние."""
+    bus = make_bus(breaker=BreakerPolicy(threshold=2))
+    await _open_breaker_with_far_schedule(bus, sessions, hub, clock)
+    before = {r["id"]: (r["attempts"], r["next_attempt_at"]) for r in await rows(sessions, PENDING_ALL)}
+    clock.advance(301)
+    stats = await bus.pump()  # crm по-прежнему отвечает 503
+    assert stats.deliver.postponed == 1
+    after = {r["id"]: (r["attempts"], r["next_attempt_at"]) for r in await rows(sessions, PENDING_ALL)}
+    assert after == before
+    [state] = await rows(sessions, "SELECT * FROM rt_bus_subscriber_state WHERE subscriber = 'crm'")
+    assert state["consecutive_failures"] == 4
+    assert state["paused_until"] == clock() + timedelta(seconds=300)
+    assert (await bus.pump()).deliver.claimed == 0  # пауза: следующая проба через 5 мин, а не сразу

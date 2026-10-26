@@ -16,6 +16,7 @@ import pytest
 import yaml
 from django.db import connection, connections, transaction
 
+from rt_bus import BreakerPolicy
 from rt_bus.django.bus import DjangoBus
 
 from ..conftest import Clock, example_data
@@ -218,3 +219,41 @@ def test_recovered_subscriber_gets_backlog_immediately(
     assert {r["status"] for r in rows("SELECT status FROM rt_bus_delivery")} == {"delivered"}
     [state] = rows("SELECT * FROM rt_bus_subscriber_state WHERE subscriber = 'crm'")
     assert (state["consecutive_failures"], state["paused_until"]) == (0, None)
+
+
+def _open_breaker_with_far_schedule(bus: DjangoBus, hub: SyncHub, clock: Clock) -> None:
+    publish(bus, n=3)
+    hub.responders["crm"] = lambda r: httpx.Response(503)
+    bus.pump()
+    with connection.cursor() as cursor:
+        cursor.execute(
+            "UPDATE rt_bus_delivery SET next_attempt_at = %(far)s WHERE subscriber = 'crm'",
+            {"far": clock() + timedelta(hours=2)},
+        )
+
+
+def test_quiet_period_probe_goes_by_pause_not_by_delivery_schedule(
+    make_bus: Callable[..., DjangoBus], hub: SyncHub, clock: Clock
+) -> None:
+    bus = make_bus(breaker=BreakerPolicy(threshold=2))
+    _open_breaker_with_far_schedule(bus, hub, clock)
+    clock.advance(301)
+    hub.responders.pop("crm")
+    assert bus.pump().deliver.recovered == 1
+    assert {r["status"] for r in rows("SELECT status FROM rt_bus_delivery")} == {"delivered"}
+
+
+def test_failed_early_probe_keeps_schedule_and_attempts(
+    make_bus: Callable[..., DjangoBus], hub: SyncHub, clock: Clock
+) -> None:
+    bus = make_bus(breaker=BreakerPolicy(threshold=2))
+    _open_breaker_with_far_schedule(bus, hub, clock)
+    query = "SELECT id, attempts, next_attempt_at FROM rt_bus_delivery WHERE subscriber = 'crm' ORDER BY id"
+    before = {r["id"]: (r["attempts"], r["next_attempt_at"]) for r in rows(query)}
+    clock.advance(301)
+    assert bus.pump().deliver.postponed == 1
+    assert {r["id"]: (r["attempts"], r["next_attempt_at"]) for r in rows(query)} == before
+    [state] = rows("SELECT * FROM rt_bus_subscriber_state WHERE subscriber = 'crm'")
+    assert state["consecutive_failures"] == 4
+    assert state["paused_until"] == clock() + timedelta(seconds=300)
+    assert bus.pump().deliver.claimed == 0

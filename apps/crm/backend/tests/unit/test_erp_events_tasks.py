@@ -93,3 +93,21 @@ async def test_drain_bus_waits_for_pending_wakeups_only_when_the_bus_exists() ->
 def test_the_old_erp_event_tasks_are_gone() -> None:
     assert "process_erp_event" not in queue.tasks
     assert "erp_events_sweep" not in queue.tasks
+
+
+@pytest.mark.asyncio
+async def test_the_worker_polls_the_queue_every_second(monkeypatch: pytest.MonkeyPatch) -> None:
+    """W11B-G-6: воркер CRM опрашивает очередь раз в секунду (`WORKER_OPTIONS`)."""
+    from typing import Any
+
+    from app.__main__ import _run_worker
+
+    seen: dict[str, Any] = {}
+
+    async def fake_run_worker(**kwargs: Any) -> None:
+        seen.update(kwargs)
+
+    monkeypatch.setattr(queue, "run_worker_async", fake_run_worker)
+    with queue.replace_connector(testing.InMemoryConnector()):
+        await _run_worker()
+    assert seen["fetch_job_polling_interval"] <= 1.0

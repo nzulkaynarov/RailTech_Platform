@@ -171,3 +171,20 @@ async def test_drain_bus_waits_for_pending_wakeups_only_when_the_bus_exists(
     await container.drain_bus()
     assert task.done()
     assert pump_jobs(connector) == ["rt_bus.pump"]
+
+
+async def test_the_worker_polls_the_queue_every_second(
+    connector: testing.InMemoryConnector, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """W11B-G-6: воркер EDS опрашивает очередь раз в секунду (`WORKER_OPTIONS`), как воркер CRM."""
+    from app.__main__ import _run_worker
+
+    seen: dict[str, Any] = {}
+
+    async def fake_run_worker(**kwargs: Any) -> None:
+        seen.update(kwargs)
+
+    monkeypatch.setattr(queue, "run_worker_async", fake_run_worker)
+    await _run_worker()
+    assert seen["fetch_job_polling_interval"] <= 1.0
+    assert seen["delete_jobs"] == "successful"

@@ -45,7 +45,7 @@ from ..core import (
     record_groups,
     retryable_db_error,
 )
-from ..delivery import Attempt, AttemptResult, Claimed, Outcome, decide_outcome, send_async
+from ..delivery import Attempt, AttemptResult, Claimed, Outcome, decide_outcome, early_probe_outcome, send_async
 from ..envelope import Event
 from ..errors import NotInTransactionError
 from ..handlers import HandlerRegistry, default_registry
@@ -255,7 +255,7 @@ class AsyncBus:
         breaker = self.config.breaker
         lease_until = now + timedelta(seconds=self.config.lease_seconds)
         token = uuid.uuid4()
-        picked: list[tuple[int, bool]] = []
+        picked: list[tuple[int, bool, datetime | None]] = []
         out: list[tuple[Claimed, dict[str, Any] | None]] = []
         async with self.sessions() as session, session.begin():
             states = (await _exec(session, sql.PAUSED_STATES)).mappings().all()
@@ -292,7 +292,8 @@ class AsyncBus:
                         {"paused_until": state["paused_until"], "subscriber": state["subscriber"]},
                     )
                     continue
-                picked.append((int(probe[0]), True))
+                due = probe[1]
+                picked.append((int(probe[0]), True, due if due is not None and due > now else None))
             excluded = blocked + [r["subscriber"] for r in half_open] + disabled
             if limit > len(picked):
                 rows = (
@@ -300,9 +301,9 @@ class AsyncBus:
                         session, sql.CLAIM_DELIVERIES, {"now": now, "excluded": excluded, "limit": limit - len(picked)}
                     )
                 ).all()
-                picked.extend((int(r[0]), False) for r in rows)
+                picked.extend((int(r[0]), False, None) for r in rows)
             envelopes: dict[uuid.UUID, dict[str, Any] | None] = {}
-            for delivery_id, is_probe in picked:
+            for delivery_id, is_probe, early_until in picked:
                 row = (
                     (
                         await _exec(
@@ -322,6 +323,7 @@ class AsyncBus:
                     attempts=row["attempts"],
                     lease_token=token,
                     probe=is_probe,
+                    early_until=early_until,
                 )
                 if claimed.event_id not in envelopes:
                     env = (await _exec(session, sql.SELECT_ENVELOPE, {"id": claimed.event_id})).first()
@@ -360,8 +362,9 @@ class AsyncBus:
         outcomes: list[tuple[Claimed, Outcome]] = []
         for item, plan in planned:
             if isinstance(plan, Attempt):
-                outcome = decide_outcome(
-                    item, next(results), policy=self.config.retry, now=finished_at, rng=self.config.rng
+                outcome = early_probe_outcome(
+                    item,
+                    decide_outcome(item, next(results), policy=self.config.retry, now=finished_at, rng=self.config.rng),
                 )
             else:
                 outcome = plan
