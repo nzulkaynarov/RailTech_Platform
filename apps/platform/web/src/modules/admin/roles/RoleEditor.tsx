@@ -18,7 +18,6 @@ import { Consequence } from "../../../shared/ui/Consequence";
 import { LinkButton } from "../../../shared/ui/LinkButton";
 import { StatusTag } from "../../../shared/ui/StatusTag";
 import { LockIcon } from "../../../shared/ui/icons";
-import { pluralForm } from "../../dashboard/queue";
 import { isVersionConflict, roleErrorText } from "./errors";
 import { type RoleDraft, type TemplateKey, TEMPLATE_KEYS, changesOf, newDraft } from "./draft";
 
@@ -28,7 +27,10 @@ function modulesLine(access: RoleDraft["access"]): string {
     .join(", ");
 }
 
-/** «Что произойдёт» из предпросмотра CRM: «N сотрудников получат: …», «… потеряют: …». */
+/**
+ * «Что произойдёт» из предпросмотра CRM: «1 сотрудник потеряет: …», «2 сотрудника потеряют: …» — число и глагол согласуются
+ * плюральными формами i18next (`gained_one|few|many|other`, по `count` и языку).
+ */
 function previewLines(t: TFunction, language: string, preview: RolePreview): string[] {
   const levels = (items: readonly SectionLevel[]) =>
     items
@@ -40,8 +42,6 @@ function previewLines(t: TFunction, language: string, preview: RolePreview): str
       )
       .join("; ");
   const fields = (items: readonly string[]) => items.map((f) => fieldLabel(f, language)).join(", ");
-  const who = (count: number) =>
-    t(`admin.roles.preview.employees.${pluralForm(language, count)}`, { count });
   const gainers = preview.employees.filter((e) => e.gained.length || e.fields_gained.length);
   const losers = preview.employees.filter((e) => e.lost.length || e.fields_lost.length);
   const lines: string[] = [];
@@ -49,13 +49,11 @@ function previewLines(t: TFunction, language: string, preview: RolePreview): str
   else if (preview.employees.length === 0) lines.push(t("admin.roles.preview.unchanged"));
   if (preview.gained.length) {
     lines.push(
-      t("admin.roles.preview.gained", { who: who(gainers.length), list: levels(preview.gained) }),
+      t("admin.roles.preview.gained", { count: gainers.length, list: levels(preview.gained) }),
     );
   }
   if (preview.lost.length) {
-    lines.push(
-      t("admin.roles.preview.lost", { who: who(losers.length), list: levels(preview.lost) }),
-    );
+    lines.push(t("admin.roles.preview.lost", { count: losers.length, list: levels(preview.lost) }));
   }
   if (preview.fields_gained.length) {
     lines.push(t("admin.roles.preview.fieldsGained", { list: fields(preview.fields_gained) }));

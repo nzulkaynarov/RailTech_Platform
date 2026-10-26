@@ -14,6 +14,8 @@ from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.config import Settings
+from app.domain.erp_permissions import ERP_PERMISSIONS
+from app.domain.platform_roles import crm_policies
 from app.domain.platform_roles_generated import ROLE_ACCESS, ROLE_RESTRICTED_FIELDS
 from app.integrations.erp_users import ProvisionPayload
 from app.security.rbac import Rbac
@@ -268,8 +270,12 @@ async def test_role_with_employees_cannot_be_deleted_and_a_free_one_can(
         ).scalar()
     assert left == 0
 
-    # После снятия роли с сотрудника её можно удалить.
-    client.patch(f"/api/v1/users/{employee}", json={"platform_role_ids": []}, headers=boss)
+    # После переназначения сотрудника на другую роль её можно удалить (пустой набор ролей — 422).
+    other = _create(client, boss, name="Другая", access={"crm.clients": "read"})
+    moved = client.patch(
+        f"/api/v1/users/{employee}", json={"platform_role_ids": [other["id"]]}, headers=boss
+    )
+    assert moved.status_code == 200, moved.text
     assert client.delete(f"{ROLES}/{role['id']}", headers=boss).status_code == 204
 
 
@@ -485,6 +491,35 @@ async def test_provisioning_after_a_role_change_sends_the_recomputed_permissions
     )
 
 
+async def test_only_the_system_admin_is_the_erp_superuser(
+    client: TestClient, sessions: async_sessionmaker[AsyncSession]
+) -> None:
+    """Q-R1c-1 п. 5 (архитектор, 2026-10-26): пользовательская роль с `admin: full` — администратор
+    CRM (базовая роль `admin`), но в ERP — `backoffice` с правами разделов; суперпользователь ERP —
+    только системная «Администратор»."""
+    employee, boss = await setup_staff(client, sessions)
+    custom = _create(client, boss, access={"admin": "full"})
+    (system_admin,) = legacy_ids(client, boss, ["ADMIN"])
+    erp = FakeErp()
+    service = ErpAccessService(sessions, erp)
+
+    client.patch(
+        f"/api/v1/users/{employee}", json={"platform_role_ids": [custom["id"]]}, headers=boss
+    )
+    await service.provision(employee)
+    client.patch(
+        f"/api/v1/users/{employee}",
+        json={"platform_role_ids": [custom["id"], system_admin]},
+        headers=boss,
+    )
+    await service.provision(employee)
+
+    assert await crm_roles(sessions, employee) == ["admin"]
+    custom_only, with_system = erp.payloads
+    assert (custom_only.role, custom_only.permissions) == ("backoffice", ("team.manage",))
+    assert (with_system.role, with_system.permissions) == ("admin", ERP_PERMISSIONS)
+
+
 async def test_changing_a_role_recomputes_the_crm_role_of_holders(
     client: TestClient, sessions: async_sessionmaker[AsyncSession]
 ) -> None:
@@ -697,15 +732,20 @@ async def test_a_role_gives_only_its_own_crm_rights_not_the_base_role_bundle(
     assert not any(v for actions in nothing.values() for v in actions.values())  # даже leads:read
 
 
-async def test_the_system_admin_role_keeps_every_crm_right(
+async def test_the_system_admin_role_gets_the_catalog_rights_not_every_crm_right(
     client: TestClient, sessions: async_sessionmaker[AsyncSession]
 ) -> None:
+    """R3-D-2: системная «Администратор» — права своей матрицы каталога, не `admin` CRM."""
     _, boss = await setup_staff(client, sessions)
     (admin_role,) = legacy_ids(client, boss, ["ADMIN"])
 
     got = await _permissions_of(client, sessions, boss, admin_role, "admin2@railtech.uz")
 
-    assert all(v for actions in got.values() for v in actions.values())
+    granted = {(r, a) for r, actions in got.items() for a, v in actions.items() if v}
+    assert granted == set(crm_policies(ROLE_ACCESS["ADMIN"]))
+    assert not any(got["leads"].values())
+    assert not any(got["clients"].values())
+    assert not any(got["deals"].values())
 
 
 async def test_a_failed_policy_reload_is_not_a_500_and_is_retried_on_the_next_check(

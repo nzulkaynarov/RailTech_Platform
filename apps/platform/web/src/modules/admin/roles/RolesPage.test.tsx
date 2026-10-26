@@ -97,7 +97,7 @@ describe("Admin · Ролевая матрица (R-2, ADR-0012)", () => {
     });
   });
 
-  it("Admin «полный» в созданной роли — предупреждение про полного администратора CRM", async () => {
+  it("Admin «полный» в созданной роли — предупреждение: не суперпользователь ERP и без лидов CRM", async () => {
     signInAs("admin@demo.example");
     renderApp("/admin/roles?role=new&panel=open&tab=role");
     const panel = await panelEl();
@@ -110,7 +110,11 @@ describe("Admin · Ролевая матрица (R-2, ADR-0012)", () => {
       { target: { value: "full" } },
     );
 
-    expect(within(panel).getAllByText(/только системная роль «Администратор»/)[0]).toBeVisible();
+    expect(
+      within(panel).getAllByText(
+        /не суперпользователя ERP: его даёт только системная роль «Администратор»/,
+      )[0],
+    ).toBeVisible();
   });
 
   it("роль с сотрудниками: удалить нельзя — причина и неактивная кнопка; без сотрудников — можно", async () => {
@@ -168,6 +172,60 @@ describe("Admin · Ролевая матрица (R-2, ADR-0012)", () => {
     expect(within(panel).queryByRole("button", { name: "Удалить роль" })).toBeNull();
     expect(within(panel).queryByText("Назначить роль сотруднику")).toBeNull();
     expect(within(panel).queryByLabelText("Название")).toBeNull();
+  });
+
+  it("директор: во вкладке «Сотрудники» ссылка «Открыть» (карточка для чтения), не «Изменить»", async () => {
+    signInAs("director@demo.example");
+    renderApp(`/admin/roles?role=${ROLE_ID.ENGINEER}&panel=open&tab=employees`);
+    const panel = await panelEl();
+
+    const link = await within(panel).findByRole("link", {
+      name: "Открыть карточку: Демо Инженеров",
+    });
+    expect(link).toHaveTextContent("Открыть");
+    expect(link.getAttribute("href")).toMatch(/^\/admin\/org\?employee=/);
+    expect(within(panel).queryByText("Изменить")).toBeNull();
+    expect(within(panel).queryByRole("link", { name: /^Изменить роли/ })).toBeNull();
+  });
+
+  it("админ: во вкладке «Сотрудники» ссылка «Изменить» ведёт в карточку с выдачей ролей", async () => {
+    signInAs("admin@demo.example");
+    renderApp(`/admin/roles?role=${ROLE_ID.ENGINEER}&panel=open&tab=employees`);
+    const panel = await panelEl();
+
+    const link = await within(panel).findByRole("link", { name: "Изменить роли: Демо Инженеров" });
+    expect(link).toHaveTextContent("Изменить");
+  });
+
+  it("«Что произойдёт»: число и глагол согласованы («1 сотрудник потеряет»)", async () => {
+    signInAs("admin@demo.example");
+    renderApp(`/admin/roles?role=${ROLE_ID.ACCOUNTANT}&panel=open&tab=role`);
+    const panel = await panelEl();
+    await within(panel).findByRole("button", { name: "Сохранить роль" });
+
+    fireEvent.change(
+      within(table()).getByRole("combobox", {
+        name: "Внешний (клиент: Telegram-бот, почта) — роль «Бухгалтер»",
+      }),
+      { target: { value: "" } },
+    );
+
+    expect(await within(panel).findByText(/^1 сотрудник потеряет: /)).toBeVisible();
+  });
+
+  it("плюральные формы предпросмотра в ru, uz, en", () => {
+    const t = (lng: string, key: string, count: number) =>
+      i18n.t(`modules:admin.roles.preview.${key}`, { lng, count, list: "X" });
+    expect(t("ru", "lost", 1)).toBe("1 сотрудник потеряет: X.");
+    expect(t("ru", "lost", 2)).toBe("2 сотрудника потеряют: X.");
+    expect(t("ru", "lost", 5)).toBe("5 сотрудников потеряют: X.");
+    expect(t("ru", "lost", 21)).toBe("21 сотрудник потеряет: X.");
+    expect(t("ru", "gained", 1)).toBe("1 сотрудник получит: X.");
+    expect(t("ru", "gained", 3)).toBe("3 сотрудника получат: X.");
+    expect(t("ru", "gained", 11)).toBe("11 сотрудников получат: X.");
+    expect(t("en", "lost", 1)).toBe("1 employee will lose: X.");
+    expect(t("en", "gained", 2)).toBe("2 employees will gain: X.");
+    expect(t("uz", "lost", 2)).toBe("2 xodim yo'qotadi: X.");
   });
 
   it("вкладки роли: «Роль» и «Сотрудники», вкладки «Журнал» нет", async () => {
