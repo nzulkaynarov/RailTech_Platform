@@ -194,8 +194,9 @@ async def test_before_deliver_runs_before_every_claim(
 def test_own_http_client_has_no_connection_cap(
     sessions: async_sessionmaker[AsyncSession], clock: Clock, subscriptions_file: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """Общий пул соединений — узкое место: 100+ запросов медленного подписчика в пути заставляли запрос быстрого ждать
-    свободного соединения, то есть чужого ответа (замер W13-A0: 3,6 с до platform-bff). У клиента шины потолка нет."""
+    """Общий потолок пула httpx — узкое место: 100+ запросов медленного подписчика в пути заставляли запрос быстрого
+    ждать свободного соединения, то есть чужого ответа (замер W13-A0: 3,6 с до platform-bff). Границу ставит предел на
+    подписчика (семафор), а у самого клиента шины потолка нет."""
     captured: dict[str, Any] = {}
 
     class FakeClient:
@@ -206,3 +207,55 @@ def test_own_http_client_has_no_connection_cap(
     bus = AsyncBus(make_config("erp", clock, subscriptions_file), sessions, registry=HandlerRegistry())
     bus._client()
     assert captured["limits"].max_connections is None
+
+
+async def test_subscriber_connections_are_capped_across_concurrent_passes(
+    make_bus: Callable[..., AsyncBus], sessions: async_sessionmaker[AsyncSession], hub: Hub
+) -> None:
+    """Предел на подписчика действует на весь процесс: два одновременных `pump` держат у медленного подписчика не больше
+    `subscriber_concurrency + delivery_batch` запросов, а запросы быстрого от этого не зависят."""
+    bus = make_bus(delivery_batch=2, subscriber_concurrency=2)
+    assert bus.config.subscriber_connections == 4
+    await publish(bus, sessions, n=12)
+    active = peak = 0
+
+    async def respond(request: httpx.Request) -> httpx.Response:
+        nonlocal active, peak
+        active += 1
+        peak = max(peak, active)
+        try:
+            await asyncio.sleep(0.5)
+        finally:
+            active -= 1
+        return httpx.Response(200)
+
+    hub.responders["crm"] = respond
+    pumps = asyncio.gather(bus.pump(), bus.pump())
+    elapsed = await wait_delivered(sessions, "audit", 12, within=2.0)
+    assert elapsed < 1.5
+    stats = await asyncio.wait_for(pumps, timeout=30)
+    assert sum(s.deliver.delivered for s in stats) == 24
+    assert 2 <= peak <= 4  # без общего предела два прохода дали бы до 6
+
+
+async def test_two_concurrent_pumps_deliver_each_event_once_without_blocking(
+    make_bus: Callable[..., AsyncBus], sessions: async_sessionmaker[AsyncSession], hub: Hub
+) -> None:
+    """Два процесса (две шины на одной базе) с новым циклом `pump`: каждая доставка уходит один раз, взаимных
+    блокировок и потерянной аренды нет."""
+    first, second = make_bus(delivery_batch=3), make_bus(delivery_batch=3)
+    ids = await publish(first, sessions, n=24)
+
+    async def jitter(request: httpx.Request) -> httpx.Response:
+        await asyncio.sleep(0.02 + 0.03 * (hash(request.headers["x-rt-event-id"]) % 5) / 4)
+        return httpx.Response(200)
+
+    hub.responders["crm"] = hub.responders["audit"] = jitter
+    stats = await asyncio.wait_for(asyncio.gather(first.pump(), second.pump()), timeout=30)
+    assert sum(s.deliver.delivered for s in stats) == 48
+    assert sum(s.deliver.lost_lease for s in stats) == 0
+    for subscriber in ("crm", "audit"):
+        sent = sorted(r.headers["x-rt-event-id"] for r in hub.to(subscriber))
+        assert sent == sorted(ids), subscriber  # ни пропусков, ни повторов
+    states = await rows(sessions, "SELECT status, attempts FROM rt_bus_delivery")
+    assert {(r["status"], r["attempts"]) for r in states} == {("delivered", 1)}

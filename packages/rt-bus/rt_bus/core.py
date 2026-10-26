@@ -96,6 +96,12 @@ class BusConfig:
     clock: Callable[[], datetime] = utcnow
     rng: random.Random = field(default_factory=random.Random)
 
+    @property
+    def subscriber_connections(self) -> int:
+        """Предел одновременных запросов к одному подписчику в процессе (все проходы вместе): `subscriber_concurrency`
+        плюс пачка, которую один проход может добавить сверх предела."""
+        return self.subscriber_concurrency + self.delivery_batch
+
     def __post_init__(self) -> None:
         if not SERVICE_NAME_RE.match(self.service):
             raise ConfigError(f"service name {self.service!r} must match {SERVICE_NAME_RE.pattern}")

@@ -184,6 +184,8 @@ class AsyncBus:
         #: Будит `pump` после коммита транзакции с `publish` (Procrastinate: `tasks.wakeup`). Сбой — лог, не отказ.
         self.wakeup = wakeup
         self._wake_tasks: set[asyncio.Task[None]] = set()
+        #: Предел одновременных запросов к подписчику в процессе (все проходы вместе), по семафору на подписчика.
+        self._gates: dict[str, asyncio.Semaphore] = {}
 
     @property
     def config(self) -> BusConfig:
@@ -395,13 +397,20 @@ class AsyncBus:
             planned.append((item, self.core.plan(item, envelope, secret_values, stash_enabled=stash_enabled, now=now)))
         return planned
 
-    async def _send(self, attempt: Attempt) -> AttemptResult:
+    def _gate(self, subscriber: str) -> asyncio.Semaphore:
+        gate = self._gates.get(subscriber)
+        if gate is None:
+            gate = self._gates[subscriber] = asyncio.Semaphore(self.config.subscriber_connections)
+        return gate
+
+    async def _send(self, attempt: Attempt, subscriber: str) -> AttemptResult:
         return await send_async(
             self._client(),
             attempt,
             self.config.http_timeout,
             self.core.now(),
             deadline=self.config.attempt_deadline,
+            gate=self._gate(subscriber),
         )
 
     async def _launch(
@@ -419,7 +428,9 @@ class AsyncBus:
         прочие подписчики продолжают."""
         subscriber = group[0][0].subscriber
         try:
-            results = list(await asyncio.gather(*(self._send(p) for _, p in group if isinstance(p, Attempt))))
+            results = list(
+                await asyncio.gather(*(self._send(p, subscriber) for _, p in group if isinstance(p, Attempt)))
+            )
             finished_at = self.core.now()
             outcomes = group_outcomes(self.config, group, results, finished_at)
             async with flight.record_lock:

@@ -12,6 +12,7 @@
 from __future__ import annotations
 
 import logging
+import threading
 import time
 import uuid
 from collections.abc import Callable, Mapping, Sequence
@@ -173,6 +174,8 @@ class DjangoBus:
         self.stash = stash
         self.wakeup = wakeup
         self.using = using
+        self._gates: dict[str, threading.BoundedSemaphore] = {}
+        self._gates_lock = threading.Lock()
 
     @property
     def config(self) -> BusConfig:
@@ -342,6 +345,14 @@ class DjangoBus:
                 out.append((claimed, envelopes[claimed.event_id]))
         return out
 
+    def _gate(self, subscriber: str) -> threading.BoundedSemaphore:
+        """Предел одновременных запросов к подписчику в процессе (все проходы вместе)."""
+        with self._gates_lock:
+            gate = self._gates.get(subscriber)
+            if gate is None:
+                gate = self._gates[subscriber] = threading.BoundedSemaphore(self.config.subscriber_connections)
+            return gate
+
     def before_deliver(self) -> None:
         """Перед каждым набором пачки (`deliver`, шаг `pump`); сервис переопределяет (например, обновить секреты)."""
 
@@ -359,12 +370,20 @@ class DjangoBus:
         """Взятое — по подписчикам (W11C-G-1): запросы группы уходят в пул потоков, итог группы пишется отдельно."""
         client = self._client()
 
-        def run(attempt: Attempt) -> AttemptResult:
-            return send_sync(client, attempt, self.config.http_timeout, self.core.now())
+        def run(attempt: Attempt, gate: threading.BoundedSemaphore) -> AttemptResult:
+            return send_sync(
+                client,
+                attempt,
+                self.config.http_timeout,
+                self.core.now(),
+                gate=gate,
+                deadline=self.config.attempt_deadline,
+            )
 
         for group in plan_groups(self._plan(claimed, now)):
             attempts = [p for _, p in group if isinstance(p, Attempt)]
-            futures = [flight.pool().submit(run, attempt) for attempt in attempts]
+            gate = self._gate(group[0][0].subscriber)
+            futures = [flight.pool().submit(run, attempt, gate) for attempt in attempts]
             deadline = time.monotonic() + self.config.attempt_deadline
             flight.groups.append(_Group(group[0][0].subscriber, group, futures, deadline))
 

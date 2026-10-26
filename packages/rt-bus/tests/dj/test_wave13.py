@@ -199,3 +199,54 @@ def test_own_http_client_has_no_connection_cap(
     bus = DjangoBus(make_config("erp", clock, subscriptions_file), registry=HandlerRegistry())
     bus._client()
     assert captured["limits"].max_connections is None
+
+
+def test_subscriber_connections_are_capped_across_concurrent_passes(
+    make_bus: Callable[..., DjangoBus], hub: SyncHub
+) -> None:
+    bus = make_bus(delivery_batch=2, subscriber_concurrency=2)
+    assert bus.config.subscriber_connections == 4
+    publish(bus, n=12)
+    lock = threading.Lock()
+    state = {"active": 0, "peak": 0}
+
+    def respond(request: httpx.Request) -> httpx.Response:
+        with lock:
+            state["active"] += 1
+            state["peak"] = max(state["peak"], state["active"])
+        try:
+            time.sleep(0.5)
+        finally:
+            with lock:
+                state["active"] -= 1
+        return httpx.Response(200)
+
+    hub.responders["crm"] = respond
+    workers = [Worker(bus.pump), Worker(bus.pump)]
+    elapsed = wait_delivered("audit", 12, within=2.0)
+    assert elapsed < 1.5
+    delivered = sum(w.join(30).deliver.delivered for w in workers)
+    assert delivered == 24
+    assert 2 <= state["peak"] <= 4
+
+
+def test_two_concurrent_pumps_deliver_each_event_once_without_blocking(
+    make_bus: Callable[..., DjangoBus], hub: SyncHub
+) -> None:
+    first, second = make_bus(delivery_batch=3), make_bus(delivery_batch=3)
+    ids = publish(first, n=24)
+
+    def jitter(request: httpx.Request) -> httpx.Response:
+        time.sleep(0.02 + 0.03 * (hash(request.headers["x-rt-event-id"]) % 5) / 4)
+        return httpx.Response(200)
+
+    hub.responders["crm"] = hub.responders["audit"] = jitter
+    workers = [Worker(first.pump), Worker(second.pump)]
+    stats = [w.join(30) for w in workers]
+    assert sum(s.deliver.delivered for s in stats) == 48
+    assert sum(s.deliver.lost_lease for s in stats) == 0
+    for subscriber in ("crm", "audit"):
+        sent = sorted(r.headers["x-rt-event-id"] for r in hub.to(subscriber))
+        assert sent == sorted(ids), subscriber
+    states = rows("SELECT status, attempts FROM rt_bus_delivery")
+    assert {(r["status"], r["attempts"]) for r in states} == {("delivered", 1)}

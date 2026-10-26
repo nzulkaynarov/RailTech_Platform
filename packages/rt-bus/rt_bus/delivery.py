@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 import json
 import random
+import threading
 import uuid
 from collections.abc import Mapping
 from dataclasses import dataclass
@@ -25,10 +26,11 @@ KEEPALIVE_CONNECTIONS = 50
 def delivery_limits() -> httpx.Limits:
     """Пул соединений клиента шины — без общего потолка (по умолчанию httpx — 100).
 
-    Один клиент обслуживает всех подписчиков процесса. Потолок делает пул общим узким местом: медленные ответы одного
-    подписчика (по `subscriber_concurrency` запросов на проход, а проходов в процессе несколько) занимают их все,
-    и запрос быстрого подписчика ждёт свободного — то есть конца чужого ответа (W11C-G-1, замер W13-A0). Число запросов
-    в пути ограничивают `subscriber_concurrency` и число проходов, а не пул."""
+    Один клиент обслуживает всех подписчиков процесса. Общий потолок делает пул узким местом: медленные ответы одного
+    подписчика занимают его весь, и запрос быстрого ждёт свободного соединения — конца чужого ответа (W11C-G-1, замер
+    W13-A0: 3,6 с до platform-bff). Границу ставит не пул, а свой предел на подписчика
+    (`BusConfig.subscriber_connections`, семафор в шине): медленный подписчик не может занять сокеты другого, а сокетов
+    в процессе не больше «подписчики × предел»."""
     return httpx.Limits(max_connections=None, max_keepalive_connections=KEEPALIVE_CONNECTIONS)
 
 
@@ -135,14 +137,26 @@ def deadline_result(seconds: float) -> AttemptResult:
 
 
 async def send_async(
-    client: httpx.AsyncClient, attempt: Attempt, http_timeout: float, now: datetime, *, deadline: float
+    client: httpx.AsyncClient,
+    attempt: Attempt,
+    http_timeout: float,
+    now: datetime,
+    *,
+    deadline: float,
+    gate: asyncio.Semaphore | None = None,
 ) -> AttemptResult:
-    """Попытка с общим дедлайном `deadline` < аренды (таймаут httpx — на операцию, медленный ответ его обходит)."""
+    """Попытка с общим дедлайном `deadline` < аренды (таймаут httpx — на операцию, медленный ответ его обходит).
+
+    `gate` — предел одновременных запросов к подписчику в процессе: ожидание места входит в дедлайн."""
+
+    async def post() -> httpx.Response:
+        if gate is None:
+            return await client.post(attempt.url, content=attempt.body, headers=attempt.headers, timeout=http_timeout)
+        async with gate:
+            return await client.post(attempt.url, content=attempt.body, headers=attempt.headers, timeout=http_timeout)
+
     try:
-        response = await asyncio.wait_for(
-            client.post(attempt.url, content=attempt.body, headers=attempt.headers, timeout=http_timeout),
-            timeout=deadline,
-        )
+        response = await asyncio.wait_for(post(), timeout=deadline)
     except TimeoutError:
         return deadline_result(deadline)
     except Exception as exc:  # noqa: BLE001 — любой сбой попытки (сеть, неверный адрес) — повтор, а не потеря пачки
@@ -150,11 +164,26 @@ async def send_async(
     return result_from_response(response, now)
 
 
-def send_sync(client: httpx.Client, attempt: Attempt, http_timeout: float, now: datetime) -> AttemptResult:
+def send_sync(
+    client: httpx.Client,
+    attempt: Attempt,
+    http_timeout: float,
+    now: datetime,
+    *,
+    gate: threading.BoundedSemaphore | None = None,
+    deadline: float | None = None,
+) -> AttemptResult:
+    """Попытка из потока пула. `gate` — предел одновременных запросов к подписчику в процессе; места ждём не дольше
+    `deadline` (иначе — итог «дедлайн», как у зависшего ответа)."""
+    if gate is not None and not gate.acquire(timeout=deadline):
+        return deadline_result(deadline or 0.0)
     try:
         response = client.post(attempt.url, content=attempt.body, headers=attempt.headers, timeout=http_timeout)
     except Exception as exc:  # noqa: BLE001 — любой сбой попытки (сеть, неверный адрес) — повтор, а не потеря пачки
         return result_from_exception(exc)
+    finally:
+        if gate is not None:
+            gate.release()
     return result_from_response(response, now)
 
 
