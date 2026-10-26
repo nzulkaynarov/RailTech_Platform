@@ -390,7 +390,7 @@ Smoke с раннера в задании `rollback` устроен так же:
 ## EDS — сервис документооборота (волна 12, E2)
 
 Отдельный сервис `apps/eds` (FastAPI, SQLAlchemy 2, Alembic, Procrastinate; ADR-0015): образ `rt-eds`, три сервиса compose — `eds-api`, `eds-worker`,
-`eds-migrate` (один образ; лимиты 192 МБ у `eds-api` и `eds-worker`, факт ≈ 80 и 70 МБ, `eds-migrate` одноразовый). **Внешнего маршрута нет**: Caddyfile.prod на EDS не ведёт
+`eds-migrate` (один образ; лимиты 256 МБ у `eds-api` и 192 МБ у `eds-worker`, факт гейта C1 ≈ 110 и 95–100 МиБ — C1-G-8, `eds-migrate` одноразовый). **Внешнего маршрута нет**: Caddyfile.prod на EDS не ведёт
 ни с одного домена, порты наружу не публикуются; сотрудники придут через BFF Платформы (этап D), системы — по шине `rt_bus`
 (`http://eds-api:8000/bus/v1/events` внутри сети compose). Устройство и команды — `docs/systems/eds/README.md`.
 
