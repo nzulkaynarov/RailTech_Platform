@@ -9,6 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker
 from app import db
 from app.bus.runtime import build_bus
 from app.config import Settings, get_settings
+from app.services.storage import ObjectStorage, build_storage
 
 
 @dataclass
@@ -22,6 +23,10 @@ class Container:
     @cached_property
     def session_factory(self) -> async_sessionmaker[AsyncSession]:
         return db.create_session_factory(self.engine)
+
+    @cached_property
+    def storage(self) -> ObjectStorage:
+        return build_storage(self.settings)
 
     @cached_property
     def bus(self) -> AsyncBus:

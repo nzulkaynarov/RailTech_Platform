@@ -5823,6 +5823,8 @@ components:
               type: integer
             type: array
           - type: 'null'
+          description: 'Полный новый набор ролей Платформы (id). Пустой набор — 422 `roles_required`: у сотрудника хотя бы
+            одна роль, закрыть доступ — `is_active = false`.'
           title: Platform Role Ids
         position:
           anyOf:
@@ -5961,7 +5963,7 @@ components:
       type: http
 info:
   title: RailTech CRM API
-  version: 0.3.0
+  version: 0.4.0
 openapi: 3.1.0
 paths:
   /api/v1/admin/ai-spend:
@@ -10257,6 +10259,11 @@ paths:
       tags:
       - users
     patch:
+      description: 'Изменить пользователя. Роли Платформы — полный набор `platform_role_ids`; пустой набор —
+
+        422 `roles_required` (R3-D-1: закрыть доступ — `is_active = false`); снять последнего
+
+        администратора или директора — 409 `last_admin` / `last_director`.'
       operationId: update_user
       parameters:
       - in: path

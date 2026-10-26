@@ -2,8 +2,8 @@
 
 Роли — данные (`platform_roles`). Непустой набор вычисляет роль CRM (для старого фронта),
 `platform_access`, а права ERP считаются из матриц ролей при каждом провижининге; ручные значения
-в том же запросе игнорируются. Снятие всех ролей снимает и выданный ими доступ: без явных ручных
-значений в запросе пользователь становится `viewer` только с CRM и без ролей ERP.
+в том же запросе игнорируются. Пустой набор не принимается — 422 `roles_required` (R3-D-1): у
+сотрудника хотя бы одна роль, закрыть доступ — отключить сотрудника (`is_active = false`).
 
 Инварианты: в компании всегда есть хотя бы один активный администратор (роль `ADMIN`) и хотя бы
 один активный директор (роль `DIRECTOR`, если он уже был) — иначе 409 `last_admin`/`last_director`.
@@ -15,7 +15,12 @@ from typing import TYPE_CHECKING
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.domain.errors import LastAdminError, LastDirectorError, ValidationFailedError
+from app.domain.errors import (
+    LastAdminError,
+    LastDirectorError,
+    RolesRequiredError,
+    ValidationFailedError,
+)
 from app.domain.platform_roles import RoleGrant, derive_access, normalize_position
 from app.domain.platform_roles_generated import (
     ROLE_ACCESS,
@@ -28,7 +33,6 @@ from app.repositories import platform_roles as repo
 if TYPE_CHECKING:
     from app.services.users import UserPatch
 
-DEFAULT_ROLES = ["viewer"]
 ADMIN_CODE = "ADMIN"
 DIRECTOR_CODE = "DIRECTOR"
 
@@ -76,9 +80,14 @@ async def resolve_requested(
 ) -> list[PlatformRole] | None:
     """Роли из запроса (`platform_role_ids`); `None` — не менять.
 
-    Неизвестная роль — 422: код решает, не модель."""
+    Пустой набор — 422 `roles_required`, неизвестная роль — 422: код решает, не модель."""
     if role_ids is None:
         return None
+    if not role_ids:
+        raise RolesRequiredError(
+            "an employee needs at least one platform role; deactivate the employee instead",
+            field="platform_role_ids",
+        )
     wanted = sorted(set(role_ids))
     found = await repo.by_ids(session, wanted)
     if len(found) != len(wanted):
@@ -99,13 +108,6 @@ def resolve_patch(
             roles=[derived.crm_role],
             platform_access=list(derived.platform_access),
             erp_role_codes=list(derived.erp_role_codes),
-        )
-    if requested is not None and held:  # роли Платформы сняли
-        return replace(
-            patch,
-            roles=patch.roles or DEFAULT_ROLES,
-            platform_access=patch.platform_access or ["crm"],
-            erp_role_codes=patch.erp_role_codes or [],
         )
     return patch
 

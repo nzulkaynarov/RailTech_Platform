@@ -1,9 +1,12 @@
-"""Роли Платформы в патче пользователя (R-1): вычисляется, игнорируется, снимается."""
+"""Роли Платформы в патче пользователя (R-1): вычисляется, игнорируется; пустой набор — 422."""
+
+from typing import cast
 
 import pytest
+from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.domain.errors import ValidationFailedError
-from app.services.user_platform import checked_position, resolve_patch
+from app.domain.errors import RolesRequiredError, ValidationFailedError
+from app.services.user_platform import checked_position, resolve_patch, resolve_requested
 from app.services.user_views import UserPatch
 from tests.platform_role_data import make_role
 
@@ -50,31 +53,14 @@ def test_unrelated_patch_of_a_platform_managed_user_keeps_the_computed_state() -
     assert patch.erp_role_codes == []
 
 
-def test_removing_all_roles_returns_the_least_privilege_defaults() -> None:
-    held = [make_role("ADMIN"), make_role("MANAGER")]
-    patch = resolve_patch(held, [], UserPatch())
+async def test_an_empty_set_of_roles_is_refused_before_any_lookup() -> None:
+    """R3-D-1: у сотрудника хотя бы одна роль; закрыть доступ — отключить (422 `roles_required`)."""
+    with pytest.raises(RolesRequiredError) as caught:
+        await resolve_requested(cast("AsyncSession", None), [])
 
-    assert (patch.roles, patch.platform_access, patch.erp_role_codes) == (["viewer"], ["crm"], [])
-
-
-def test_removing_roles_with_explicit_manual_values_keeps_them() -> None:
-    patch = resolve_patch(
-        [make_role("DIRECTOR")],
-        [],
-        UserPatch(roles=["manager"], platform_access=["crm", "erp"], erp_role_codes=["FINANCE"]),
-    )
-
-    assert (patch.roles, patch.platform_access, patch.erp_role_codes) == (
-        ["manager"],
-        ["crm", "erp"],
-        ["FINANCE"],
-    )
-
-
-def test_empty_set_for_a_user_without_roles_changes_nothing() -> None:
-    patch = resolve_patch([], [], UserPatch(roles=["manager"]))
-
-    assert (patch.roles, patch.platform_access, patch.erp_role_codes) == (["manager"], None, None)
+    assert isinstance(caught.value, ValidationFailedError)  # 422, как прочие ошибки валидации
+    assert caught.value.code == "roles_required"
+    assert caught.value.details == {"field": "platform_role_ids"}
 
 
 def test_old_behaviour_without_platform_roles_is_untouched() -> None:

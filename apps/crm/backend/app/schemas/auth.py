@@ -118,7 +118,8 @@ class PermissionsResponse(BaseModel):
 class UserCreate(BaseModel):
     email: str = Field(min_length=3, max_length=255)
     full_name: str = Field(min_length=1, max_length=255)
-    # Нужны роли CRM или роли Платформы; при непустых `platform_role_ids` роли CRM вычисляются.
+    # Нужны роли CRM или роли Платформы; при непустых `platform_role_ids` роли CRM вычисляются,
+    # пустой набор `platform_role_ids` — 422 `roles_required` (R3-D-1).
     roles: list[Role] | None = Field(default=None, min_length=1)
     platform_role_ids: list[int] | None = None
     position: str | None = Field(default=None, max_length=POSITION_MAX_LEN)
@@ -171,9 +172,15 @@ class UserUpdate(BaseModel):
             return None
         return cast("list[ErpRoleCode]", normalize_erp_roles(value))
 
-    # Роли Платформы (R-1): полный новый набор id ролей, `[]` — снять все (доступ, выданный ролями,
-    # снимается); непустой набор перекрывает `roles`, `platform_access`, `erp_role_codes`.
-    platform_role_ids: list[int] | None = None
+    # Роли Платформы (R-1): полный новый набор id ролей; перекрывает `roles`, `platform_access`,
+    # `erp_role_codes`. Пустой набор — 422 `roles_required` (R3-D-1): закрыть доступ — `is_active`.
+    platform_role_ids: list[int] | None = Field(
+        default=None,
+        description=(
+            "Полный новый набор ролей Платформы (id). Пустой набор — 422 `roles_required`: "
+            "у сотрудника хотя бы одна роль, закрыть доступ — `is_active = false`."
+        ),
+    )
     # Должность (SPEC-v3 §4.3): пустая строка очищает.
     position: str | None = Field(default=None, max_length=POSITION_MAX_LEN)
     language: Language | None = None

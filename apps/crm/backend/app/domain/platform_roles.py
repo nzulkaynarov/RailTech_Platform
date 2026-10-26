@@ -12,8 +12,10 @@
   берётся старшая (admin > manager > viewer);
 - права EDS (`eds_permissions_of`) вычисляются так же, по `EDS_BACKEND`; неактивный сотрудник —
   пустой список; CRM публикует их в `identity.user.*` как `permissions.eds` (задача E4);
-- провижининг ERP: `permissions` = вычисленный набор, `role_codes = []`; администратор CRM
-  (`admin`) остаётся суперпользователем ERP.
+- провижининг ERP: `permissions` = вычисленный набор, `role_codes = []`; суперпользователь ERP —
+  только у системной роли «Администратор» (код `ADMIN`, до C2); пользовательская роль с
+  `admin: full` (базовая роль CRM `admin` по `by_access`) получает в ERP лишь права своих разделов
+  (Q-R1c-1 п. 5).
 """
 
 from collections.abc import Iterable, Mapping, Sequence
@@ -268,10 +270,13 @@ def derive_access(grants: Iterable[RoleGrant]) -> DerivedAccess:
 
 
 def erp_access_for(grants: Iterable[RoleGrant]) -> ErpAccess:
-    """Роль и права провижининга ERP: `admin` CRM — суперпользователь, иначе `backoffice`
-    с вычисленными `permissions` (`role_codes` пусты)."""
-    derived = derive_access(grants)
-    if derived.crm_role == "admin":
+    """Роль и права провижининга ERP: системная «Администратор» (код `ADMIN`) — суперпользователь
+    (до C2), иначе `backoffice` с вычисленными `permissions` (`role_codes` пусты). Базовая роль CRM
+    `admin` у пользовательской роли с `admin: full` суперпользователя ERP не даёт (решение
+    архитектора по Q-R1c-1 п. 5, 2026-10-26)."""
+    roles = list(grants)
+    derived = derive_access(roles)
+    if any(legacy_code(r.code) == "ADMIN" for r in roles):
         return ErpAccess("admin", ERP_PERMISSIONS)
     return ErpAccess("backoffice", derived.erp_permissions)
 

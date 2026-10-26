@@ -34,8 +34,11 @@ import "./roles.css";
 
 const PATH = "/admin/roles";
 
-/** Сотрудники выбранной роли (вкладка «Сотрудники» бокового окна): ссылки на карточки в Оргструктуре. */
-function RoleEmployees({ role }: { role: Role }) {
+/**
+ * Сотрудники выбранной роли (вкладка «Сотрудники» бокового окна): ссылки на карточки в Оргструктуре. Администратор правит там
+ * роли — ссылка «Изменить»; директор (`admin` — чтение) видит карточку только для чтения — ссылка «Открыть», не «Изменить».
+ */
+function RoleEmployees({ role, readOnly }: { role: Role; readOnly: boolean }) {
   const { t } = useTranslation("modules");
   const list = useListEmployees();
   const holders = (list.data?.items ?? []).filter((e) => e.roles.some((r) => r.id === role.id));
@@ -64,9 +67,11 @@ function RoleEmployees({ role }: { role: Role }) {
               <Link
                 className="pf-focusable"
                 to={`/admin/org?employee=${encodeURIComponent(employee.id)}&panel=open`}
-                aria-label={t("admin.roles.openEmployee", { name: employee.name })}
+                aria-label={t(readOnly ? "admin.roles.viewEmployee" : "admin.roles.openEmployee", {
+                  name: employee.name,
+                })}
               >
-                {t("admin.roles.change")}
+                {t(readOnly ? "admin.roles.view" : "admin.roles.change")}
               </Link>
             </li>
           ))}
@@ -393,7 +398,7 @@ function RolesEditorPage({
       {panel ? <PanelPortal tab="role">{panel}</PanelPortal> : null}
       {selected ? (
         <PanelPortal tab="employees">
-          <RoleEmployees role={selected} />
+          <RoleEmployees role={selected} readOnly={readOnly} />
         </PanelPortal>
       ) : null}
     </>

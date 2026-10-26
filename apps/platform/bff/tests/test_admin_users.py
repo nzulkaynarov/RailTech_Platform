@@ -450,14 +450,43 @@ async def test_disable_and_enable(web: Web, crm: CrmUsers, check: ContractChecke
     assert json.loads(crm.patch_route.calls[0].request.content) == {"is_active": False}
 
 
-async def test_removing_all_roles_is_passed_to_crm(web: Web, crm: CrmUsers) -> None:
+@pytest.mark.parametrize(
+    "payload",
+    [{"role_ids": []}, {"role_ids": [], "is_active": False}, {"role_ids": [], "position": "X"}],
+)
+async def test_an_empty_set_of_roles_is_roles_required_and_never_reaches_crm(
+    web: Web, crm: CrmUsers, check: ContractChecker, payload: dict[str, Any]
+) -> None:
+    """R3-D-1 (0.6.0): у сотрудника хотя бы одна роль; закрыть доступ — «Отключить сотрудника»."""
     await login_as(web, "ADMIN")
 
-    response = await web.send("PATCH", "/api/v1/admin/users/11", json={"role_ids": []})
+    response = await web.send("PATCH", "/api/v1/admin/users/11", json=payload)
 
-    assert response.status_code == 200
-    assert json.loads(crm.patch_route.calls.last.request.content) == {"platform_role_ids": []}
-    assert response.json()["roles"] == []
+    assert response.status_code == 422
+    check(response, "/admin/users/{id}", "patch")
+    body = response.json()
+    assert (body["code"], body["source"]) == ("ROLES_REQUIRED", "bff")
+    assert body["details"]["fields"] == ["role_ids"]
+    assert "хотя бы одна роль" in body["message"]
+    assert crm.patch_route.call_count == 0
+    assert crm.users[11]["platform_role_ids"] == [ROLE_IDS["SUPPLY"], ROLE_IDS["MANAGER"]]
+
+
+async def test_crm_roles_required_is_translated_to_the_same_code(
+    web: Web, crm: CrmUsers, check: ContractChecker
+) -> None:
+    """Отказ CRM 422 `roles_required` (CRM API 0.3.0) — тот же код контракта, что и проверка BFF."""
+    await login_as(web, "ADMIN")
+    crm.update_error = CrmUsers._error(422, "roles_required", field="platform_role_ids")
+
+    response = await web.send("PATCH", "/api/v1/admin/users/13", json={"is_active": True})
+
+    assert response.status_code == 422
+    check(response, "/admin/users/{id}", "patch")
+    body = response.json()
+    assert (body["code"], body["source"]) == ("ROLES_REQUIRED", "crm")
+    assert body["details"]["reason"] == "roles_required"
+    assert body["details"]["fields"] == ["role_ids"]
 
 
 async def test_admin_can_drop_own_admin_role_when_another_admin_exists(
@@ -548,7 +577,9 @@ async def test_last_director_is_a_named_conflict(
     await login_as(web, "ADMIN")
     crm.update_error = CrmUsers._error(409, "last_director")
 
-    response = await web.send("PATCH", "/api/v1/admin/users/11", json={"role_ids": []})
+    response = await web.send(
+        "PATCH", "/api/v1/admin/users/11", json={"role_ids": [rid("MANAGER")]}
+    )
 
     assert response.status_code == 409
     check(response, "/admin/users/{id}", "patch")

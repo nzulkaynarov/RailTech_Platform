@@ -66,6 +66,21 @@ async def test_exchange_issues_access_token_and_me_works(client: httpx.AsyncClie
     }
 
 
+async def test_exchange_is_written_to_the_journal_without_the_token(
+    client: httpx.AsyncClient, container: Container
+) -> None:
+    await seed_employee(container)
+    token = sso_token(7)
+    assert (await exchange(client, token)).status_code == 200
+    async with container.session_factory() as session:
+        rows = (
+            await session.execute(text("SELECT action, by_crm_user_id, comment, letter_id, document_id FROM journal"))
+        ).all()
+    [(action, by, comment, letter_id, document_id)] = rows
+    assert (action, by, letter_id, document_id) == ("sso.exchange", 7, None, None)
+    assert comment is not None and comment.startswith("iss=crm, jti=") and token not in comment
+
+
 async def test_exchange_accepts_previous_secret_during_rotation(
     client: httpx.AsyncClient, container: Container
 ) -> None:

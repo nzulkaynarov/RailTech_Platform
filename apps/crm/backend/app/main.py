@@ -86,12 +86,13 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             broker = getattr(app.state, "broker", None)
             if broker is not None:
                 await broker.stop()
+            await container.drain_bus()  # пробуждения шины идут в очередь: она ещё открыта
         bus_runtime.install(None)
         await container.aclose()
 
     app = FastAPI(
         title="RailTech CRM API",
-        version="0.3.0",  # 0.3.0 (E4): тело `aud` у sso/token и подкод `eds_access_denied`
+        version="0.4.0",  # 0.4.0 (E4): тело `aud` у sso/token и подкод `eds_access_denied`
         lifespan=lifespan,
         # operationId = имя функции роута → читаемые имена в клиенте orval.
         generate_unique_id_function=lambda route: route.name,

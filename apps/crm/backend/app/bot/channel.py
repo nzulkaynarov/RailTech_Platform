@@ -45,9 +45,7 @@ async def on_take(
         escalation = await _escalation(session, *parsed)
         user = await users_repo.by_tg_user_id(session, query.from_user.id)
         roles = await users_repo.roles_of(session, user.id) if user else []
-        role_ids, platform_admin = (
-            await platform_roles_repo.rbac_identity(session, user.id) if user else ((), False)
-        )
+        role_ids = await platform_roles_repo.rbac_identity(session, user.id) if user else ()
         holder = await _holder(session, escalation.lead_id, user) if escalation else None
     if escalation is None or parsed[0] == "lead" or escalation.status not in TAKEABLE:
         await query.answer(tx.STALE_CARD, show_alert=True)
@@ -63,7 +61,6 @@ async def on_take(
         tuple(roles),
         user.must_change_password,
         platform_role_ids=role_ids,
-        platform_admin=platform_admin,
     )
     if principal.must_change_password:
         await query.answer(tx.TEMPORARY_CREDENTIALS_HINT, show_alert=True)

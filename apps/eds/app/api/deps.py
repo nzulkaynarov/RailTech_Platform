@@ -12,6 +12,7 @@ from typing import Annotated, Any
 
 from fastapi import Depends, Request, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from rt_bus.sqlalchemy import AsyncBus
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.container import Container
@@ -20,6 +21,7 @@ from app.models import Employee
 from app.security.access_token import AccessTokenError, verify_access_token
 from app.security.permissions import EdsPermission
 from app.services.employees import get_employee
+from app.services.storage import ObjectStorage
 
 PERMISSIONS_ATTR = "__eds_permissions__"
 _bearer = HTTPBearer(auto_error=False)
@@ -28,6 +30,15 @@ _bearer = HTTPBearer(auto_error=False)
 def get_container(request: Request) -> Container:
     container: Container = request.app.state.container
     return container
+
+
+def get_bus(request: Request) -> AsyncBus:
+    """Шина процесса: маршруты, которые пишут, публикуют события через неё в своей транзакции."""
+    return get_container(request).bus
+
+
+def get_storage(request: Request) -> ObjectStorage:
+    return get_container(request).storage
 
 
 async def get_session(request: Request) -> AsyncIterator[AsyncSession]:

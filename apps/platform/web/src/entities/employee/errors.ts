@@ -4,7 +4,8 @@ import { ApiError } from "../../shared/api/errors";
 
 /**
  * Текст ошибки операций над сотрудником для сотрудника-админа. Коды — контракт BFF (`LAST_ADMIN`, `LAST_DIRECTOR`,
- * `EMAIL_EXISTS`); `CONFLICT` с `details.reason = user_has_active_leads` — лиды в работе (CRM требует передать их коллеге).
+ * `EMAIL_EXISTS`, `ROLES_REQUIRED` — пустой набор ролей, 0.6.0); `CONFLICT` с `details.reason = user_has_active_leads` — лиды
+ * в работе (CRM требует передать их коллеге).
  */
 export function employeeErrorText(t: TFunction, error: unknown): string {
   const base = "modules:admin.org.errors.";
@@ -17,6 +18,7 @@ export function employeeErrorText(t: TFunction, error: unknown): string {
     [
       "LAST_ADMIN",
       "LAST_DIRECTOR",
+      "ROLES_REQUIRED",
       "EMAIL_EXISTS",
       "FORBIDDEN",
       "BACKEND_UNAVAILABLE",
