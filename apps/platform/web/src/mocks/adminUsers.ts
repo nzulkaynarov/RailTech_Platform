@@ -10,8 +10,9 @@ import {
   writeEmployees,
   writePendingPasswordIds,
 } from "./fixtures/employees";
+import { recordAudit } from "./fixtures/audit";
 import { ROLE_ID, readRoles } from "./fixtures/roles";
-import { buildMe, readSession } from "./mockSession";
+import { buildMe, currentActor, readSession } from "./mockSession";
 
 export function failure(
   status: number,
@@ -207,6 +208,21 @@ export const adminUsersHandlers = [
       else delete next.position;
     }
     writeEmployees(items.map((e) => (e.id === next.id ? next : e)));
+    const roleNames = (ids: string[]) =>
+      toEmployee({ ...current, role_ids: ids }).roles.map((r) => r.name);
+    recordAudit(currentActor(), {
+      action: "user.update",
+      entityType: "user",
+      entityId: next.id,
+      before: {
+        platform_role_names: roleNames(current.role_ids),
+        is_active: current.status !== "disabled",
+      },
+      after: {
+        platform_role_names: roleNames(next.role_ids),
+        is_active: next.status !== "disabled",
+      },
+    });
     return HttpResponse.json(toEmployee(next));
   }),
 ];

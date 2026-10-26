@@ -223,7 +223,8 @@
       "org": "Org structure",
       "integrations": "External integrations",
       "tickets": "Team tickets",
-      "company": "Company"
+      "company": "Company",
+      "audit": "Audit log"
     },
     "stub": {
       "roles": {
@@ -250,6 +251,11 @@
         "title": "Company details will open here",
         "text": "Company details, document templates, numbering and payment terms. The screen arrives when ERP settings move into the Platform.",
         "action": "Org chart"
+      },
+      "audit": {
+        "title": "No entries yet",
+        "text": "Every change will appear here: who granted a role, reset a password or changed settings, with date and time.",
+        "action": "Org structure"
       }
     },
     "action": "Invite employee",
@@ -517,7 +523,8 @@
     "about": "About the chat",
     "files": "Files",
     "role": "Role",
-    "employees": "Employees"
+    "employees": "Employees",
+    "journal": "Journal"
   },
   "panel": {
     "today": {
@@ -575,6 +582,10 @@
     "role": {
       "title": "No role selected",
       "text": "Click a role column in the matrix and the role description and its employees appear here."
+    },
+    "journal": {
+      "title": "No entry selected",
+      "text": "Select an entry in the log to see the details here: who, when and what changed."
     }
   }
 }

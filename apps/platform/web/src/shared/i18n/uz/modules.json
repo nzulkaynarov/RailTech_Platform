@@ -223,7 +223,8 @@
       "org": "Tashkiliy tuzilma",
       "integrations": "Tashqi integratsiyalar",
       "tickets": "Jamoa tiketlari",
-      "company": "Kompaniya"
+      "company": "Kompaniya",
+      "audit": "Audit jurnali"
     },
     "stub": {
       "roles": {
@@ -250,6 +251,11 @@
         "title": "Kompaniya rekvizitlari shu yerda ochiladi",
         "text": "Kompaniya rekvizitlari, hujjat shablonlari, raqamlash va to'lov shartlari. Ekran ERP sozlamalari Platformaga ko'chirilishi bilan paydo bo'ladi.",
         "action": "Tuzilma"
+      },
+      "audit": {
+        "title": "Hozircha yozuvlar yo'q",
+        "text": "Bu yerda har bir o'zgarish paydo bo'ladi: kim rol bergan, parolni tiklagan yoki sozlamani o'zgartirgan — sana va vaqt bilan.",
+        "action": "Tashkiliy tuzilma"
       }
     },
     "action": "Xodimni taklif qilish",
@@ -517,7 +523,8 @@
     "about": "Chat haqida",
     "files": "Fayllar",
     "role": "Rol",
-    "employees": "Xodimlar"
+    "employees": "Xodimlar",
+    "journal": "Jurnal"
   },
   "panel": {
     "today": {
@@ -575,6 +582,10 @@
     "role": {
       "title": "Rol tanlanmagan",
       "text": "Matritsadagi rol ustunini bosing — bu yerda rol tavsifi va shu roldagi xodimlar paydo bo‘ladi."
+    },
+    "journal": {
+      "title": "Yozuv tanlanmagan",
+      "text": "Jurnaldan yozuvni tanlang — bu yerda tafsilotlar paydo bo'ladi: kim, qachon va nima o'zgardi."
     }
   }
 }

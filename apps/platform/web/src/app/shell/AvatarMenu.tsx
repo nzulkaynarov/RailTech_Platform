@@ -7,6 +7,7 @@ import { useNavigate } from "react-router";
 
 import { getGetMeQueryKey, useLogout, useUpdateMe } from "../../shared/api/generated/platform-bff";
 import type { Language, Me } from "../../shared/api/generated/model";
+import { NotificationSettings } from "../../features/profile-notifications/NotificationSettings";
 import { LANGUAGES } from "../../shared/i18n";
 import "../../shared/ui/shell.css";
 import { roleCaption } from "./roleCaption";
@@ -198,6 +199,7 @@ export function AvatarMenu({ me, placement }: { me: Me; placement: "topLeft" | "
               .join(" · ")}
           </Descriptions.Item>
         </Descriptions>
+        <NotificationSettings me={me} />
       </Modal>
     </>
   );

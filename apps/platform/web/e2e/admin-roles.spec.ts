@@ -211,7 +211,8 @@ test.describe("Ролевая матрица: директор — только 
       await expect(panel.getByText(/Только просмотр: роль и её матрицу/)).toBeVisible();
       await expect(panel.getByRole("button", { name: "Сохранить роль" })).toHaveCount(0);
       await expect(panel.getByRole("button", { name: "Удалить роль" })).toHaveCount(0);
-      await expect(panel.getByRole("tab", { name: "Журнал" })).toHaveCount(0);
+      // Вкладка «Журнал» (W13-A6): директор читает журнал роли, изменять его нечем.
+      await expect(panel.getByRole("tab", { name: "Журнал" })).toHaveCount(1);
       await expectNoViolations(page, `директор, роль ${String(width)}`);
       await settledScreenshot(page, "roles-director-role");
     });

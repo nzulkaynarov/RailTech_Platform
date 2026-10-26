@@ -10,7 +10,7 @@ export const admin: ModuleConfig = {
       key: "roles",
       path: "/admin/roles",
       access: { resource: "admin" },
-      tabs: [{ key: "role" }, { key: "employees" }],
+      tabs: [{ key: "role" }, { key: "employees" }, { key: "journal" }],
       actionTo: "/admin/org",
     },
     {
@@ -41,6 +41,13 @@ export const admin: ModuleConfig = {
       tabs: [{ key: "card" }],
       // Настройки занимают всё основное окно; сводка по компании открывается по кнопке бокового окна.
       defaults: { panelOpen: false },
+      actionTo: "/admin/org",
+    },
+    {
+      key: "audit",
+      path: "/admin/audit",
+      access: { resource: "admin" },
+      tabs: [{ key: "card" }],
       actionTo: "/admin/org",
     },
   ],

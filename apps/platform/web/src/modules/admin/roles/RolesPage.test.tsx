@@ -228,13 +228,13 @@ describe("Admin · Ролевая матрица (R-2, ADR-0012)", () => {
     expect(t("uz", "lost", 2)).toBe("2 xodim yo'qotadi: X.");
   });
 
-  it("вкладки роли: «Роль» и «Сотрудники», вкладки «Журнал» нет", async () => {
+  it("вкладки роли: «Роль», «Сотрудники» и «Журнал» (с W13-A6)", async () => {
     signInAs("admin@demo.example");
     renderApp(`/admin/roles?role=${ROLE_ID.MANAGER}&panel=open&tab=role`);
     const panel = await panelEl();
 
     const tabs = await within(panel).findAllByRole("tab");
-    expect(tabs.map((tab) => tab.textContent)).toEqual(["Роль", "Сотрудники"]);
+    expect(tabs.map((tab) => tab.textContent)).toEqual(["Роль", "Сотрудники", "Журнал"]);
   });
 
   it("роль изменена другим пользователем: «обновите страницу» и кнопка «Обновить» возвращает данные", async () => {

@@ -3,6 +3,7 @@ import { useLocation } from "react-router";
 import { RequireAccess } from "../../app/RequireAccess";
 import { ModuleRoutes } from "../ModuleRoutes";
 import { matchSection } from "../registry";
+import { AuditPage } from "./audit/AuditPage";
 import { IntegrationsPage } from "./integrations/IntegrationsPage";
 import { CompanyPage } from "./company/CompanyPage";
 import { OrgPage } from "./org/OrgPage";
@@ -26,6 +27,13 @@ export function Component() {
     return (
       <RequireAccess rule={match.section.access}>
         <RolesPage />
+      </RequireAccess>
+    );
+  }
+  if (match?.module.code === "admin" && match.section.key === "audit") {
+    return (
+      <RequireAccess rule={match.section.access}>
+        <AuditPage />
       </RequireAccess>
     );
   }

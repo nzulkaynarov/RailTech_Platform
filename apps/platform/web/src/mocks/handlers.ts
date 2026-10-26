@@ -5,6 +5,7 @@ import {
   getRailTechPlatformBFFAPICRMERPMock,
 } from "../shared/api/generated/platform-bff.msw";
 import type { ChangePasswordIn, LoginIn, MeUpdate } from "../shared/api/generated/model";
+import { adminAuditHandlers } from "./adminAudit";
 import { adminIntegrationsHandlers } from "./adminIntegrations";
 import { adminCompanyHandlers } from "./adminCompany";
 import { adminRolesHandlers } from "./adminRoles";
@@ -113,6 +114,7 @@ export const handlers = [
   }),
 
   ...adminUsersHandlers,
+  ...adminAuditHandlers,
   ...adminRolesHandlers,
   ...adminIntegrationsHandlers,
   ...adminCompanyHandlers,

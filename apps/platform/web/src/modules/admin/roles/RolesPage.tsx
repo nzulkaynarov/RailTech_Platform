@@ -28,6 +28,7 @@ import { LockIcon, PlusIcon } from "../../../shared/ui/icons";
 import { NEW_ROLE, type RoleDraft, changesOf, draftOf, newDraft } from "./draft";
 import { LevelMark, type MatrixColumn, RoleMatrix } from "./RoleMatrix";
 import { RoleEditor, SystemRoleCard } from "./RoleEditor";
+import { RoleJournal } from "./RoleJournal";
 
 import "../../../features/assign-role/assign-role.css";
 import "./roles.css";
@@ -399,6 +400,11 @@ function RolesEditorPage({
       {selected ? (
         <PanelPortal tab="employees">
           <RoleEmployees role={selected} readOnly={readOnly} />
+        </PanelPortal>
+      ) : null}
+      {selected ? (
+        <PanelPortal tab="journal">
+          <RoleJournal role={selected} />
         </PanelPortal>
       ) : null}
     </>
