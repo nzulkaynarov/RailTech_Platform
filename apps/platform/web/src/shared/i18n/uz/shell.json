@@ -172,7 +172,7 @@
     "doneAction": "Kirishga o'tish",
     "errors": {
       "SETUP_CODE_INVALID": "Kod noto'g'ri. Uni server jurnalidan o'zgartirmasdan nusxalang.",
-      "SETUP_CODE_EXPIRED": "Kod eskirgan. Yangisini olish uchun crm-api'ni qayta ishga tushiring va jurnaldan kiriting.",
+      "SETUP_CODE_EXPIRED": "Kod eskirgan. /setup sahifasini qayta oching: tizim server jurnalida yangi kod beradi.",
       "SETUP_LOCKED": "Noto'g'ri kodlar juda ko'p. 15 daqiqadan keyin takrorlang.",
       "SETUP_DONE": "Administrator allaqachon yaratilgan. Platformaga kiring.",
       "TOO_MANY_REQUESTS": "Urinishlar juda ko'p. Bir daqiqa kuting va takrorlang.",

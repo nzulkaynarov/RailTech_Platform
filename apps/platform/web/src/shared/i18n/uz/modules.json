@@ -292,7 +292,7 @@
         "default": "Kompaniyani yaratib bo'lmadi. Urinishni takrorlang."
       },
       "connectionsTitle": "Ulanishlar",
-      "connectionsLead": "SPEC-v3 §7.6 dagi beshta qadam: har biri o'z ekraniga olib boradi.",
+      "connectionsLead": "Sozlashning beshta qadami: har biri o'z ekraniga olib boradi.",
       "progress": "Tayyor: {{done}} / {{total}}",
       "allDone": "Hammasi tayyor: Platforma sozlangan.",
       "loadError": "Sozlash holatini olib bo'lmadi",

@@ -3,7 +3,7 @@ packages/contracts/openapi/platform-bff.yaml (0.10.0, W13-A4)."""
 
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, SecretStr, field_validator
 
 from app.schemas_admin import Employee
 
@@ -23,10 +23,11 @@ class SetupState(BaseModel):
 class SetupAdminIn(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    code: str = Field(min_length=1, max_length=64)
+    # Код и пароль — секреты: не попадают в repr, журнал и сообщения об ошибках валидации.
+    code: SecretStr = Field(min_length=1, max_length=64)
     name: str = Field(min_length=1, max_length=120)
     email: str = Field(max_length=254, pattern=_EMAIL)
-    password: str = Field(min_length=1, max_length=256)
+    password: SecretStr = Field(min_length=1, max_length=256)
 
     @field_validator("name")
     @classmethod

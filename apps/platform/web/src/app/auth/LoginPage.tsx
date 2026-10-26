@@ -37,6 +37,8 @@ export function LoginPage() {
   const setupState = useGetSetupState({ query: { retry: false } });
   const login = useLogin({
     mutation: {
+      // Пароль не остаётся в кэше мутаций.
+      gcTime: 0,
       onSuccess: (session) => {
         queryClient.setQueryData(getGetSessionQueryKey(), session);
         queryClient.setQueryData(getGetMeQueryKey(), session.me);

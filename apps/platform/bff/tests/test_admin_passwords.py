@@ -334,6 +334,20 @@ async def test_own_password_is_changed_in_the_profile(
     assert pw.reset.call_count == 0
 
 
+@pytest.mark.parametrize("spelling", [f"0{ADMIN_ID}", f"00{ADMIN_ID}"])
+async def test_own_password_is_refused_for_any_spelling_of_the_id(
+    web: Web, crm: CrmUsers, pw: Passwords, spelling: str
+) -> None:
+    """Ведущие нули не обходят запрет: «07» — тот же сотрудник, что «7»."""
+    await web.login(["ADMIN"])
+
+    response = await web.send("POST", f"/api/v1/admin/users/{spelling}/temporary-password")
+
+    assert response.status_code == 409
+    assert response.json()["details"]["reason"] == "own_account"
+    assert pw.reset.call_count == 0
+
+
 async def test_issue_for_an_unknown_employee_is_404(
     web: Web, crm: CrmUsers, pw: Passwords, check: ContractChecker
 ) -> None:

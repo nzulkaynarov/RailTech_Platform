@@ -63,7 +63,8 @@ async def issue_temporary_password(
     id: EmployeeId, authed: Writer, response: Response
 ) -> EmployeeCredentials:
     """Новый временный пароль (CRM `reset-password`); прежний пароль и сессии не действуют."""
-    if id == str(authed.data.user_id):
+    # Сравнение числом: «07» и «7» — один сотрудник (шаблон пути допускает ведущие нули).
+    if int(id) == authed.data.user_id:
         raise PlatformError(
             "CONFLICT",
             OWN_ACCOUNT_MESSAGE,

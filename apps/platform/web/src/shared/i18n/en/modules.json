@@ -292,7 +292,7 @@
         "default": "Could not create the company. Try again."
       },
       "connectionsTitle": "Connections",
-      "connectionsLead": "Five steps from SPEC-v3 §7.6: each leads to its own screen.",
+      "connectionsLead": "Five setup steps: each leads to its own screen.",
       "progress": "Done {{done}} of {{total}}",
       "allDone": "All done: the Platform is set up.",
       "loadError": "Could not load the setup state",

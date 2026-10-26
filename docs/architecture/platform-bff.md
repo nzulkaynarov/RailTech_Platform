@@ -234,6 +234,10 @@ SPA  POST /api/v1/setup/admin {code, name, email, password}
   провалился из-за учётных данных: успешный вход (офис за одним NAT), нет ролей Платформы, сбой CRM. Считаются
   `INVALID_CREDENTIALS` и `ACCOUNT_LOCKED`. Успешный вход сбрасывает счётчик e-mail; счётчик IP хранит неудачи других
   пользователей этого адреса. Сверх порога — 429 `TOO_MANY_REQUESTS` с `Retry-After`, в CRM попытка не уходит.
+  Тот же лимит (те же счётчики IP и e-mail) действует на `POST /setup/admin` (W13-A4): считаются отказы `SETUP_CODE_INVALID` и
+  `SETUP_LOCKED` (перебор кода); `SETUP_CODE_EXPIRED`, `SETUP_DONE`, слабый пароль (`VALIDATION_FAILED`) и сбой CRM попытку возвращают.
+  Успешное создание администратора сбрасывает счётчик e-mail. Сверх лимита — 429 `TOO_MANY_REQUESTS`; блокировку кода на 15 минут
+  (10 неверных кодов) держит CRM — `SETUP_LOCKED`, 429 с `Retry-After: 900`.
 - **Таймаут CRM.** Клиент CRM в BFF ждёт `PLATFORM_CRM_TIMEOUT_SECONDS` (по умолчанию 5 с; было 3 — под нагрузкой вход
   давал 503, runbook r3 O-1; отдельного таймаута для входа нет). Клиент ERP, Redis и проверка health — по-прежнему 3 с.
 - **Пробы внешних сервисов (W13-A1).** «Проверить связь» ERP, SMTP и Telegram, сопряжение, ротация ключей, проверка модели и журнал

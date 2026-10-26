@@ -172,7 +172,7 @@
     "doneAction": "Go to sign-in",
     "errors": {
       "SETUP_CODE_INVALID": "The code is wrong. Copy it from the server log as is.",
-      "SETUP_CODE_EXPIRED": "The code has expired. Restart crm-api to get a new one and enter it from the log.",
+      "SETUP_CODE_EXPIRED": "The code has expired. Open /setup again: the system issues a new code in the server log.",
       "SETUP_LOCKED": "Too many wrong codes. Try again in 15 minutes.",
       "SETUP_DONE": "The administrator already exists. Sign in to the Platform.",
       "TOO_MANY_REQUESTS": "Too many attempts. Wait a minute and try again.",

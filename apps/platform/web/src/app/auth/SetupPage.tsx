@@ -43,6 +43,8 @@ export function SetupPage() {
   const existing = useGetSession({ query: { retry: false } });
   const create = useCreateFirstAdmin({
     mutation: {
+      // Пароль администратора не остаётся в кэше мутаций.
+      gcTime: 0,
       onSuccess: (session) => {
         queryClient.setQueryData(getGetSessionQueryKey(), session);
         queryClient.setQueryData(getGetMeQueryKey(), session.me);
@@ -173,12 +175,12 @@ export function SetupPage() {
         >
           <Input.Password autoComplete="new-password" />
         </Form.Item>
+        <div style={{ marginBottom: 16 }}>
+          <Consequence items={lines(t, "setup.consequence")} />
+        </div>
         <Button type="primary" htmlType="submit" block loading={create.isPending}>
           {t("setup.submit")}
         </Button>
-        <div style={{ marginTop: 16 }}>
-          <Consequence items={lines(t, "setup.consequence")} />
-        </div>
       </Form>
     </AuthLayout>
   );

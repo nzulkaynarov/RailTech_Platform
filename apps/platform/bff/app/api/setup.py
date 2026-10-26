@@ -55,10 +55,10 @@ async def create_first_admin(
     client_ip = None if ip == UNKNOWN else ip
     attempt = await limiter.check(ip, email)
     payload = {
-        "code": body.code,
+        "code": body.code.get_secret_value(),
         "email": email,
         "full_name": body.name,
-        "password": body.password,
+        "password": body.password.get_secret_value(),
     }
     try:
         refresh = await crm_setup.create_admin(service.crm, payload, client_ip)
@@ -75,7 +75,7 @@ async def create_first_admin(
     if refresh:
         await service.crm.logout(refresh)
     try:
-        sid, data = await service.login(email, body.password, client_ip)
+        sid, data = await service.login(email, body.password.get_secret_value(), client_ip)
     except BaseException:
         await limiter.refund(attempt)
         raise
