@@ -13,3 +13,15 @@ postgres: ошибки уровня ERROR/FATAL в журнале: 417
 crm: 0|0|0|3.28
 erp: 0|0|0|1.12
 eds: 0|0|0|0.30
+
+--- разбивка 417 строк ERROR/FATAL журнала Postgres (снято перед снятием стенда; вывод `sort | uniq -c | head -8`, остальное не распечатано — стенда уже нет)
+    406 ERROR:  duplicate key value violates unique constraint "procrastinate_jobs_queueing_lock_idx_v1"
+      1 ERROR:  relation "_prisma_migrations" does not exis
+      1 ERROR:  relation "MonthlyGlobalSpendPerUserPerKey" does not exis
+      1 ERROR:  relation "MonthlyGlobalSpendPerKey" does not exis
+      1 ERROR:  relation "MonthlyGlobalSpend" does not exis
+      1 ERROR:  relation "LiteLLM_VerificationTokenView" does not exis
+      1 ERROR:  relation "Last30dTopEndUsersSpend" does not exis
+      1 ERROR:  relation "Last30dModelsBySpend" does not exis
+# итого показано 413 из 417; ещё 4 строки не itemized — по характеру той же группы (миграции/запросы LiteLLM к своей базе при старте). Это вывод, не измерение.
+# 406 duplicate key на queueing_lock = AlreadyEnqueued при слиянии пробуждений (rt-bus.md §4: «повторное — AlreadyEnqueued, это норма»); к блокировкам (40P01) отношения не имеют.

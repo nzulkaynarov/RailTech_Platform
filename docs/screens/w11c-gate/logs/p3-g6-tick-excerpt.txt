@@ -1,5 +1,5 @@
 # Пункт 3, G-6: событие CRM в момент периодического тика (07:41:00 UTC, тик pump каждые 5 с). Журналы crm-api и crm-worker, окно 07:40:59.5–07:41:01.5, поля timestamp/event.
-# Строки rt_bus_delivered без extra-полей — см. наблюдение O-1 (JSON-журнал CRM не печатает extra).
+# Строки rt_bus_delivered без extra-полей — см. W11C-G-2 (JSON-журнал CRM не печатает extra).
 # lead.created: коммит (rt_bus_published) 07:41:00.027; в crm-api "Deferred 1 job" (постановка пробуждения) 07:41:00.053; wakeup-pump[392] стартовал 07:41:00.058; доставлено platform-bff 07:41:00.106 (81 мс от outbox.created_at). Периодический pump[395] поставлен только в 07:41:00.537 — с пробуждением не слился.
 07:41:00.026711 rt_bus_published
 07:41:00.034614 rt_bus_published

@@ -59,10 +59,11 @@ decision approve -> 200 ('approved', 'ИСХ-001/26')
  07:45:32 | approval.approved_late |  2 | Одобрено с опозданием: готово 26.10.2026, срок 25.10.2026
 (3 rows)
 
---- событие approval.decided (data.payload)
-Expecting value: line 2 column 1 (char 1)
---- approval_routes.approved_late
+--- approval_routes (EDS): approved_late
                   id                  | template |  status  | approved_late | outgoing_number
+--------------------------------------+----------+----------+---------------+-----------------
+ 10451c3a-f2c6-4c3c-a57b-f243ffcec610 | quote    | approved | t             | ИСХ-001/26
+--- событие approval.decided (EDS outbox, data) — выбранные поля
             "quote_number": "КП-2026-00001",
     "decision": "approve",
     "route_status": "approved",
