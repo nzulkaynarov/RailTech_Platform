@@ -11,6 +11,7 @@
 - `s3-mirror --dest|--restore DIR` — копия бакетов для бэкапа;
 - `sample-dialogs` — выгрузка диалогов для еженедельной разметки (YAML в stdout);
 - `create-admin --email ...` — первый администратор CRM;
+- `republish-identity [--user-id N] [--dry-run]` — снимки сотрудников на шину для новых подписчиков;
 - `litellm-seed` — модели ролей по умолчанию в БД LiteLLM (ADR-0020);
 - `bus status|dead|failed|retry|retry-dead|retry-inbox` — шина rt_bus (runbook `rt-bus-crm`).
 """
@@ -117,6 +118,13 @@ def _parser() -> argparse.ArgumentParser:
     from app.cli import bus_cli
 
     bus_cli.add_arguments(bus)
+    republish = commands.add_parser(
+        "republish-identity", help="переопубликовать снимки сотрудников на шину (новый подписчик)"
+    )
+    republish.add_argument("--user-id", type=int, help="только этот сотрудник (по умолчанию — все)")
+    republish.add_argument(
+        "--dry-run", action="store_true", help="только посчитать, не публиковать"
+    )
     commands.add_parser("test-alert", help="тестовый пост в канал команды")
     commands.add_parser("litellm-seed", help="модели ролей по умолчанию в БД LiteLLM")
     load = commands.add_parser("load-test", help="нагрузочный smoke: N параллельных диалогов")
@@ -166,6 +174,10 @@ async def _run_cli(args: argparse.Namespace) -> int:
         from app.cli import create_admin
 
         return await create_admin.run(args)
+    if args.command == "republish-identity":
+        from app.cli import republish_identity
+
+        return await republish_identity.run(args)
     if args.command == "bus":
         from app.cli import bus_cli
 
