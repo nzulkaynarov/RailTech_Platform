@@ -1,0 +1,10 @@
+2026-10-26T01:00:20.610Z crm.lead.created.v1 att 1 sig_ok True -> 422
+2026-10-26T01:00:20.612Z crm.lead.stage_changed.v1 att 1 sig_ok True -> 422
+2026-10-26T01:00:20.668Z crm.client.created.v1 att 1 sig_ok True -> 422
+2026-10-26T01:00:20.669Z crm.lead.updated.v1 att 1 sig_ok True -> 422
+2026-10-26T01:00:20.670Z crm.lead.stage_changed.v1 att 1 sig_ok True -> 422
+2026-10-26T01:00:20.682Z crm.contact.created.v1 att 1 sig_ok True -> 422
+2026-10-26T01:00:20.765Z erp.request.created.v1 att 1 sig_ok True -> 422
+2026-10-26T01:00:20.770Z erp.invite.sent.v1 att 1 sig_ok True -> 422
+2026-10-26T01:00:20.800Z crm.client.updated.v1 att 1 sig_ok True -> 422
+2026-10-26T01:00:20.801Z crm.lead.updated.v1 att 1 sig_ok True -> 422

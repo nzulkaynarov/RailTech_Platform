@@ -1,0 +1,30 @@
+-- crm
+01:00:11 consecutive_failures=0 paused_until=
+01:00:42 consecutive_failures=6 paused_until=01:05:20
+01:05:47 consecutive_failures=7 paused_until=01:10:25
+01:11:02 consecutive_failures=8 paused_until=01:15:35
+01:15:45 consecutive_failures=9 paused_until=01:20:40
+01:20:59 consecutive_failures=10 paused_until=01:25:45
+01:26:16 consecutive_failures=11 paused_until=01:30:50
+01:30:58 consecutive_failures=12 paused_until=01:35:50
+01:36:12 consecutive_failures=13 paused_until=01:40:55
+01:41:27 consecutive_failures=14 paused_until=01:46:00
+01:46:09 consecutive_failures=15 paused_until=01:51:00
+01:51:24 consecutive_failures=16 paused_until=01:56:05
+01:56:37 consecutive_failures=17 paused_until=02:01:10
+02:01:19 consecutive_failures=0 paused_until=
+-- erp
+01:00:12 consecutive_failures=2 paused_until=
+01:00:43 consecutive_failures=5 paused_until=01:05:39
+01:05:48 consecutive_failures=6 paused_until=01:10:41
+01:11:02 consecutive_failures=7 paused_until=01:15:45
+01:16:17 consecutive_failures=8 paused_until=01:20:46
+01:21:00 consecutive_failures=9 paused_until=01:25:46
+01:26:16 consecutive_failures=10 paused_until=01:30:47
+01:30:59 consecutive_failures=11 paused_until=01:35:47
+01:36:13 consecutive_failures=12 paused_until=01:40:47
+01:40:56 consecutive_failures=13 paused_until=01:45:48
+01:46:10 consecutive_failures=14 paused_until=01:50:49
+01:50:53 consecutive_failures=15 paused_until=01:55:51
+01:56:07 consecutive_failures=16 paused_until=02:00:54
+02:01:20 consecutive_failures=0 paused_until=

@@ -1,0 +1,18 @@
+02:00:20 crm: delivered:19 pending:115 | erp: delivered:4 pending:17 | state: 17/02:01:10
+02:00:41 crm: delivered:19 pending:115 | erp: delivered:4 pending:17 | state: 17/02:01:10
+02:01:02 crm: delivered:19 pending:115 | erp: delivered:21 | state: 17/02:01:10
+02:01:23 crm: delivered:134 | erp: delivered:21 | state: 0/-
+02:01:45 crm: delivered:134 | erp: delivered:21 | state: 0/-
+02:02:06 crm: delivered:134 | erp: delivered:21 | state: 0/-
+02:02:27 crm: delivered:134 | erp: delivered:21 | state: 0/-
+02:02:48 crm: delivered:134 | erp: delivered:21 | state: 0/-
+02:03:09 crm: delivered:134 | erp: delivered:21 | state: 0/-
+02:03:30 crm: delivered:134 | erp: delivered:21 | state: 0/-
+02:03:51 crm: delivered:134 | erp: delivered:21 | state: 0/-
+02:04:12 crm: delivered:134 | erp: delivered:21 | state: 0/-
+02:04:33 crm: delivered:134 | erp: delivered:21 | state: 0/-
+02:04:55 crm: delivered:134 | erp: delivered:21 | state: 0/-
+
+строк журнала заглушки: 155 ; уникальных id с 200: 155 ; повторных 200 по одному id: 0
+crm доставок stub в БД: 134 delivered: 134 ; из них есть в журнале заглушки: 134
+erp доставок stub в БД: 21 delivered: 21 ; из них есть в журнале заглушки: 21

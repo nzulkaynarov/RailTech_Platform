@@ -1,0 +1,6 @@
+migrate_exit=0
+
+companies до мастера: 0 roles: 0
+INFO 2026-10-26 06:56:00,275 [-] signals 29 281473339688128 Company 1 received {'SUPPLIER'} — auto-granted CLIENT capability (can buy).
+мастер: 1 None
+roles после мастера: 6

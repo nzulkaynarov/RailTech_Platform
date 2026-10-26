@@ -1,0 +1,5 @@
+ status  | attempts | count | min_next
+---------+----------+-------+----------
+ pending |        1 |     6 | 01:02:14
+ pending |        0 |     3 | 01:01:50
+(2 rows)
