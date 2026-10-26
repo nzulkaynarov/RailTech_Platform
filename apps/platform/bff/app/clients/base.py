@@ -15,6 +15,9 @@ import httpx
 from app.request_id import HEADER, request_id_var
 
 TIMEOUT_SECONDS = 3.0
+# Проба внешнего сервиса через CRM («Проверить связь», сопряжение, тестовое письмо, проба модели)
+# идёт дольше обычного вызова: у самой CRM таймаут пробы до 10 с (SMTP) плюс запас на очередь.
+PROBE_TIMEOUT_SECONDS = 30.0
 # CRM: вход (хеш пароля) под нагрузкой не укладывался в 3 с; `PLATFORM_CRM_TIMEOUT_SECONDS`.
 CRM_TIMEOUT_SECONDS = 5.0
 
@@ -99,9 +102,14 @@ class BackendClient:
         json: Any = None,
         params: dict[str, Any] | None = None,
         headers: dict[str, str] | None = None,
+        probe: bool = False,
     ) -> httpx.Response:
         """Вызов бэкенда от имени сотрудника. 2xx и 4xx возвращаются как есть (решает вызывающий),
-        сеть, таймаут и 5xx — `BackendUnavailableError`."""
+        сеть, таймаут и 5xx — `BackendUnavailableError`.
+
+        `probe` — проба внешнего сервиса через бэкенд: таймаут `PROBE_TIMEOUT_SECONDS`, а 502 CRM
+        («сервис за мной не ответил: ERP, SMTP, Telegram») возвращается как есть — причина в теле,
+        это результат проверки, а не сбой бэкенда."""
         headers = dict(headers or {})
         if access:
             headers["Authorization"] = f"Bearer {access}"
@@ -109,10 +117,17 @@ class BackendClient:
             headers["Cookie"] = "; ".join(f"{k}={v}" for k, v in cookies.items())
         try:
             response = await self.http.request(
-                method, path, headers=headers, json=json, params=params
+                method,
+                path,
+                headers=headers,
+                json=json,
+                params=params,
+                timeout=httpx.Timeout(PROBE_TIMEOUT_SECONDS) if probe else httpx.USE_CLIENT_DEFAULT,
             )
         except httpx.HTTPError as exc:
             raise BackendUnavailableError(self.name, type(exc).__name__) from exc
+        if probe and response.status_code == httpx.codes.BAD_GATEWAY:
+            return response
         if response.status_code >= 500:
             raise BackendUnavailableError(
                 self.name, f"HTTP {response.status_code}", status=response.status_code
