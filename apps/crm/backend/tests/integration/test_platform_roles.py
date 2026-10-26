@@ -200,68 +200,61 @@ async def test_manual_roles_in_the_same_request_are_overridden(
     assert (manual["roles"], manual["erp_role_codes"]) == (["viewer"], [])
 
 
-async def test_removing_all_roles_drops_the_derived_access(
-    client: TestClient, sessions: async_sessionmaker[AsyncSession], queue: Queue
+@pytest.mark.parametrize(
+    "extra",
+    [{}, {"roles": ["manager"], "platform_access": ["crm", "erp"], "erp_role_codes": ["FINANCE"]}],
+)
+async def test_an_empty_set_of_roles_is_refused_and_nothing_changes(
+    client: TestClient,
+    sessions: async_sessionmaker[AsyncSession],
+    queue: Queue,
+    extra: dict[str, object],
 ) -> None:
+    """R3-D-1: у сотрудника хотя бы одна роль; закрыть доступ — «Отключить сотрудника»."""
     employee, boss = await setup_staff(client, sessions)
-    client.patch(
-        f"/api/v1/users/{employee}",
-        json={"platform_role_ids": legacy_ids(client, boss, ["MANAGER", "ACCOUNTANT"])},
-        headers=boss,
-    )
+    ids = legacy_ids(client, boss, ["MANAGER", "ACCOUNTANT"])
+    client.patch(f"/api/v1/users/{employee}", json={"platform_role_ids": ids}, headers=boss)
     queue.jobs.clear()
 
     response = client.patch(
-        f"/api/v1/users/{employee}", json={"platform_role_ids": []}, headers=boss
+        f"/api/v1/users/{employee}", json={"platform_role_ids": [], **extra}, headers=boss
     )
 
-    assert response.status_code == 200, response.text
+    assert response.status_code == 422, response.text
     body = response.json()
-    assert body["platform_role_ids"] == []
-    assert (body["roles"], body["platform_access"], body["erp_role_codes"]) == (
-        ["viewer"],
-        ["crm"],
-        [],
-    )
-    assert queue.jobs == [("revoke", employee)]  # доступ к ERP снят вместе с ролями
-    assert [e.action for e in await audit_rows(sessions, "platform_access.revoked")] == [
-        "platform_access.revoked"
-    ]
+    assert (body["code"], body["details"]) == ("roles_required", {"field": "platform_role_ids"})
+    card = client.get(f"/api/v1/users/{employee}", headers=boss).json()
+    assert card["platform_role_ids"] == sorted(ids)
+    assert (card["roles"], card["platform_access"]) == (["manager"], ["crm", "erp"])
+    assert queue.jobs == []
+    assert await audit_rows(sessions, "platform_access.revoked") == []
+    # Отключение по-прежнему закрывает доступ и снимает его в ERP.
+    off = client.patch(f"/api/v1/users/{employee}", json={"is_active": False}, headers=boss)
+    assert off.status_code == 200, off.text
+    assert queue.jobs == [("revoke", employee)]
 
 
-async def test_removing_roles_with_manual_values_keeps_them(
+async def test_create_with_an_empty_set_of_roles_is_refused(
     client: TestClient, sessions: async_sessionmaker[AsyncSession], queue: Queue
 ) -> None:
-    employee, boss = await setup_staff(client, sessions)
-    client.patch(
-        f"/api/v1/users/{employee}",
-        json={"platform_role_ids": legacy_ids(client, boss, ["SUPPLY"])},
-        headers=boss,
-    )
-    queue.jobs.clear()
+    _, boss = await setup_staff(client, sessions)
 
-    body = client.patch(
-        f"/api/v1/users/{employee}",
+    response = client.post(
+        "/api/v1/users",
         json={
-            "platform_role_ids": [],
+            "email": "new@railtech.uz",
+            "full_name": "Новый",
             "roles": ["manager"],
-            "platform_access": ["crm", "erp"],
-            "erp_role_codes": ["FINANCE"],
+            "platform_role_ids": [],
         },
         headers=boss,
-    ).json()
-
-    assert (body["roles"], body["platform_access"], body["erp_role_codes"]) == (
-        ["manager"],
-        ["crm", "erp"],
-        ["FINANCE"],
     )
-    assert queue.jobs == [("provision", employee)]
-    # Дальше — прежнее поведение: роли и роли ERP ведутся вручную.
-    manual = client.patch(
-        f"/api/v1/users/{employee}", json={"roles": ["viewer"], "erp_role_codes": []}, headers=boss
-    ).json()
-    assert (manual["roles"], manual["erp_role_codes"]) == (["viewer"], [])
+
+    assert (response.status_code, response.json()["code"]) == (422, "roles_required")
+    assert "new@railtech.uz" not in {
+        u["email"] for u in client.get("/api/v1/users", headers=boss).json()
+    }
+    assert queue.jobs == []
 
 
 async def test_empty_platform_roles_keep_the_old_manual_behaviour(
@@ -288,22 +281,23 @@ async def test_roles_change_is_audited_with_before_and_after(
 ) -> None:
     """Аудит `user.update`: роли Платформы (id и названия) и вычисленные роли CRM — до и после."""
     employee, boss = await setup_staff(client, sessions)
-    (supply,) = legacy_ids(client, boss, ["SUPPLY"])
+    supply, engineer = legacy_ids(client, boss, ["SUPPLY", "ENGINEER"])
     client.patch(f"/api/v1/users/{employee}", json={"platform_role_ids": [supply]}, headers=boss)
-    client.patch(f"/api/v1/users/{employee}", json={"platform_role_ids": []}, headers=boss)
+    client.patch(f"/api/v1/users/{employee}", json={"platform_role_ids": [engineer]}, headers=boss)
 
     updates = [e for e in await audit_rows(sessions, "user.update") if e.entity_id == str(employee)]
-    granted, removed = updates
+    granted, changed = updates
     assert granted.before is not None
     assert granted.after is not None
     assert (granted.before["platform_role_ids"], granted.before["roles"]) == ([], ["manager"])
     assert (granted.after["platform_role_ids"], granted.after["roles"]) == ([supply], ["viewer"])
     assert granted.after["platform_role_names"] == ["Снабженец"]
     assert granted.after["platform_access"] == ["crm", "erp"]
-    assert removed.before is not None
-    assert removed.after is not None
-    assert removed.before["platform_role_ids"] == [supply]
-    assert (removed.after["platform_role_ids"], removed.after["platform_access"]) == ([], ["crm"])
+    assert changed.before is not None
+    assert changed.after is not None
+    assert changed.before["platform_role_ids"] == [supply]
+    assert changed.after["platform_role_ids"] == [engineer]
+    assert changed.after["platform_role_names"] == ["Гл. инженер"]
     assert granted.actor_user_id is not None
 
 
@@ -418,13 +412,14 @@ async def test_last_active_admin_cannot_lose_the_admin_role(
     )
     queue.jobs.clear()
 
-    demotions: list[list[int]] = [[director_role], []]
-    for roles in demotions:
-        response = client.patch(
-            f"/api/v1/users/{admin.id}", json={"platform_role_ids": roles}, headers=boss
-        )
-        assert response.status_code == 409, response.text
-        assert response.json()["code"] == "last_admin"
+    demoted = client.patch(
+        f"/api/v1/users/{admin.id}", json={"platform_role_ids": [director_role]}, headers=boss
+    )
+    assert (demoted.status_code, demoted.json()["code"]) == (409, "last_admin")
+    emptied = client.patch(
+        f"/api/v1/users/{admin.id}", json={"platform_role_ids": []}, headers=boss
+    )
+    assert (emptied.status_code, emptied.json()["code"]) == (422, "roles_required")
     deactivation = client.patch(
         f"/api/v1/users/{admin.id}", json={"is_active": False}, headers=boss
     )
@@ -465,10 +460,10 @@ async def test_second_admin_makes_the_demotion_possible(
     # Теперь админ один — другой, и его снять нельзя.
     blocked = client.patch(
         f"/api/v1/users/{other.id}",
-        json={"platform_role_ids": []},
+        json={"platform_role_ids": [director_role]},
         headers=login(client, "second@railtech.uz", PASSWORD),
     )
-    assert blocked.status_code == 409
+    assert (blocked.status_code, blocked.json()["code"]) == (409, "last_admin")
 
 
 async def test_last_active_director_cannot_lose_the_role_or_be_deactivated(
@@ -476,10 +471,10 @@ async def test_last_active_director_cannot_lose_the_role_or_be_deactivated(
 ) -> None:
     employee, boss = await setup_staff(client, sessions)
     second, _ = await make_user(sessions, "second@railtech.uz", ["viewer"])
-    (director,) = legacy_ids(client, boss, ["DIRECTOR"])
+    director, manager = legacy_ids(client, boss, ["DIRECTOR", "MANAGER"])
     client.patch(f"/api/v1/users/{employee}", json={"platform_role_ids": [director]}, headers=boss)
 
-    bodies: list[dict[str, object]] = [{"platform_role_ids": []}, {"is_active": False}]
+    bodies: list[dict[str, object]] = [{"platform_role_ids": [manager]}, {"is_active": False}]
     for body in bodies:
         blocked = client.patch(f"/api/v1/users/{employee}", json=body, headers=boss)
         assert (blocked.status_code, blocked.json()["code"]) == (409, "last_director"), body
@@ -491,7 +486,7 @@ async def test_last_active_director_cannot_lose_the_role_or_be_deactivated(
     client.patch(f"/api/v1/users/{second.id}", json={"platform_role_ids": [director]}, headers=boss)
     assert (
         client.patch(
-            f"/api/v1/users/{employee}", json={"platform_role_ids": []}, headers=boss
+            f"/api/v1/users/{employee}", json={"platform_role_ids": [manager]}, headers=boss
         ).status_code
         == 200
     )

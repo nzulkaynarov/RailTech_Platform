@@ -11,7 +11,7 @@ import pytest
 import yaml
 
 from app.domain import platform_roles_generated as generated
-from app.domain.erp_permissions import ERP_PERMISSIONS
+from app.domain.erp_permissions import ERP_PERMISSIONS, ErpAccess
 from app.domain.platform_roles import (
     LEGACY_ROLE_CODES,
     RoleGrant,
@@ -452,6 +452,28 @@ def test_the_senior_crm_role_wins_and_admin_is_the_erp_superuser() -> None:
     assert derive_access(both).crm_role == "admin"
     access = erp_access_for(both)
     assert (access.role, access.permissions) == ("admin", ERP_PERMISSIONS)
+
+
+def test_a_custom_role_with_full_admin_is_not_the_erp_superuser() -> None:
+    """Q-R1c-1 п. 5 (архитектор, 2026-10-26): суперпользователь ERP — только системная роль
+    «Администратор». Пользовательская роль с `admin: full` остаётся администратором CRM (базовая
+    роль `admin`), а в ERP получает права своих разделов по каталогу."""
+    custom = RoleGrant({"admin": "full", "company.settings": "full"}, (), None)
+
+    assert derive_access([custom]).crm_role == "admin"
+    access = erp_access_for([custom])
+    assert access.role == "backoffice"
+    assert set(access.permissions) == {"team.manage", "settings.edit", "settings.charge_templates"}
+    assert erp_access_for([custom, make_grant("MANAGER")]).role == "backoffice"
+    # Системная роль по-прежнему суперпользователь, в том числе вместе с пользовательской.
+    assert erp_access_for([custom, make_grant("ADMIN")]) == ErpAccess("admin", ERP_PERMISSIONS)
+
+
+def test_a_custom_role_named_like_a_system_code_is_not_the_admin() -> None:
+    """Суперпользователя даёт код системной роли, а не название или раздел."""
+    fake = RoleGrant(dict(make_grant("ADMIN").access), (), "tpl:ADMIN")
+
+    assert erp_access_for([fake]).role == "backoffice"
 
 
 def test_derive_is_independent_of_order() -> None:

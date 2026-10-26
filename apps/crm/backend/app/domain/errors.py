@@ -205,6 +205,13 @@ class ValidationFailedError(DomainError):
     code = "validation_failed"
 
 
+class RolesRequiredError(ValidationFailedError):
+    """Пустой набор ролей Платформы (R3-D-1): у сотрудника хотя бы одна роль, закрыть доступ —
+    отключить сотрудника (422, `details.field = platform_role_ids`)."""
+
+    code = "roles_required"
+
+
 class UpstreamUnavailableError(DomainError):
     """Внешний сервис (Telegram) не ответил или отказал (502)."""
 

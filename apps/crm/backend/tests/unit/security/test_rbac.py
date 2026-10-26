@@ -144,8 +144,8 @@ def _all(rbac: Rbac, principal: Principal) -> set[tuple[str, str]]:
     }
 
 
-def _principal(roles: tuple[str, ...], ids: tuple[int, ...], admin: bool = False) -> Principal:
-    return Principal(1, "Тест", roles, platform_role_ids=ids, platform_admin=admin)
+def _principal(roles: tuple[str, ...], ids: tuple[int, ...]) -> Principal:
+    return Principal(1, "Тест", roles, platform_role_ids=ids)
 
 
 def test_a_role_gives_exactly_its_own_rights_and_not_the_base_role_bundle() -> None:
@@ -162,16 +162,65 @@ def test_a_role_gives_exactly_its_own_rights_and_not_the_base_role_bundle() -> N
     assert chat.permissions((), (91,))["leads"]["read"] is False
 
 
-def test_the_system_admin_role_keeps_the_crm_admin_and_a_custom_admin_section_does_not() -> None:
-    rbac = _custom({}, 1)
-    everything = {(r, a) for r, actions in CATALOG.items() for a in actions}
+# Бизнес-данные CRM: лиды, переписка, клиенты, сделки, документы клиентов, сводка (R3-D-2).
+BUSINESS = {
+    (r, a)
+    for r in ("leads", "stream", "clients", "deals", "documents", "dashboard")
+    for a in CATALOG[r]
+}
+# Администрирование CRM: сотрудники и роли, подключения, модели ИИ, настройки, журнал, копии.
+ADMINISTRATION = {
+    ("users", "read"),
+    ("users", "write"),
+    ("settings", "read"),
+    ("settings", "write"),
+    ("integrations", "read"),
+    ("integrations", "write"),
+    ("external_services", "read"),
+    ("external_services", "write"),
+    ("models", "read"),
+    ("models", "test"),
+    ("models", "write"),
+    ("system", "read"),
+    ("backups", "read"),
+    ("backups", "write"),
+    ("audit", "read"),
+}
 
-    assert _all(rbac, _principal(("admin",), (1,), admin=True)) == everything
+
+def test_the_system_admin_gets_the_catalog_admin_section_not_the_crm_admin_wildcard() -> None:
+    """R3-D-2: системная «Администратор» — права раздела `admin` каталога, а не `admin` CRM
+    (`*:*`): лиды, клиенты, сделки ей не положены, администрирование — да."""
+    admin = _principal(("admin",), (ROLE_IDS["ADMIN"],))  # базовая роль CRM у неё — `admin`
+    got = _all(PLATFORM, admin)
+
+    assert admin.rbac_roles == ()
+    assert admin.is_admin is False  # объектных исключений админа (чужой лид, сделка) нет
+    assert got == set(crm_policies(make_role("ADMIN", ROLE_IDS["ADMIN"]).access))
+    assert got >= ADMINISTRATION
+    assert got.isdisjoint(BUSINESS), sorted(got & BUSINESS)
+    assert PLATFORM.permissions(admin.rbac_roles, admin.platform_role_ids)[
+        "leads"
+    ] == dict.fromkeys(CATALOG["leads"], False)
+
+
+def test_admin_and_director_get_the_director_rights_without_working_the_leads() -> None:
+    """Администратор + Директор = объединение двух матриц: директорское чтение лидов и клиенты,
+    но не `leads:take/reply/...`, которые раньше давал `admin` CRM."""
+    both = _all(PLATFORM, _principal(("admin",), (ROLE_IDS["ADMIN"], ROLE_IDS["DIRECTOR"])))
+
+    assert both == _rights([], ["ADMIN"]) | _rights([], ["DIRECTOR"])
+    assert {("leads", "read"), ("clients", "write"), ("deals", "write")} <= both
+    taken = {("leads", a) for a in ("take", "work", "reply", "note", "assist", "create")}
+    assert both.isdisjoint(taken), sorted(both & taken)
+
+
+def test_a_custom_admin_section_role_gives_the_same_as_the_system_admin() -> None:
     custom = _custom({"admin": "full"}, 92)
     got = _all(custom, _principal(("admin",), (92,)))  # роль с admin: full, но не системная
     assert ("users", "write") in got
     assert ("clients", "write") not in got
-    assert got < everything
+    assert got == set(crm_policies({"admin": "full"}))
 
 
 def test_a_user_without_platform_roles_is_checked_by_the_crm_roles_as_before() -> None:
@@ -180,4 +229,4 @@ def test_a_user_without_platform_roles_is_checked_by_the_crm_roles_as_before() -
     assert RBAC.allowed(manual.rbac_roles, "clients", "write", manual.platform_role_ids)
     assert _principal(("admin",), ()).is_admin is True
     assert _principal(("admin",), (92,)).is_admin is False
-    assert _principal(("viewer",), (1,), admin=True).rbac_roles == ("admin",)
+    assert _principal(("admin",), (1,)).rbac_roles == ()  # роли Платформы вытесняют базовые

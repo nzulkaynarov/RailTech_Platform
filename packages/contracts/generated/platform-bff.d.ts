@@ -367,7 +367,7 @@ export interface paths {
     head?: never;
     /**
      * Роли, должность, отключение — единое место выдачи ролей обеих систем
-     * @description Раздел `admin` — полный. Роли — полный новый набор `role_ids`; права в CRM и ERP вычисляет CRM. Снять последнего активного администратора или директора (роль или отключение) нельзя — 409 `LAST_ADMIN` / `LAST_DIRECTOR`. У сотрудника есть лиды в работе, а изменение отнимает у него работу с лидами, — 409 `CONFLICT` с `details.reason = user_has_active_leads`; повтор с `transfer_to_user_id` передаёт лиды коллеге.
+     * @description Раздел `admin` — полный. Роли — полный новый набор `role_ids`; права в CRM и ERP вычисляет CRM. Снять последнего активного администратора или директора (роль или отключение) нельзя — 409 `LAST_ADMIN` / `LAST_DIRECTOR`. У сотрудника есть лиды в работе, а изменение отнимает у него работу с лидами, — 409 `CONFLICT` с `details.reason = user_has_active_leads`; повтор с `transfer_to_user_id` передаёт лиды коллеге. Пустой набор ролей — 422 `ROLES_REQUIRED` (0.6.0): у сотрудника хотя бы одна роль, закрыть доступ — `is_active = false`.
      */
     patch: operations["updateEmployee"];
     trace?: never;
@@ -447,7 +447,7 @@ export interface components {
   schemas: {
     Error: {
       /**
-       * @description Стабильный код (`INVALID_CREDENTIALS`, `SESSION_EXPIRED`, `CSRF_FAILED`, `FORBIDDEN`, `NOT_FOUND`, `VALIDATION_FAILED`, `TOO_MANY_REQUESTS`, `BACKEND_UNAVAILABLE`, `NO_PLATFORM_ROLE`, `USER_DISABLED`, `ACCOUNT_LOCKED`, `CONFLICT`, `WRONG_PASSWORD`, `EMAIL_EXISTS`, `LAST_ADMIN`, `LAST_DIRECTOR`, `ROLE_IN_USE`, `ROLE_SYSTEM`, `INTERNAL_ERROR`, `BAD_REQUEST`, `METHOD_NOT_ALLOWED`, `HTTP_<статус>`)
+       * @description Стабильный код (`INVALID_CREDENTIALS`, `SESSION_EXPIRED`, `CSRF_FAILED`, `FORBIDDEN`, `NOT_FOUND`, `VALIDATION_FAILED`, `TOO_MANY_REQUESTS`, `BACKEND_UNAVAILABLE`, `NO_PLATFORM_ROLE`, `USER_DISABLED`, `ACCOUNT_LOCKED`, `CONFLICT`, `WRONG_PASSWORD`, `EMAIL_EXISTS`, `LAST_ADMIN`, `LAST_DIRECTOR`, `ROLE_IN_USE`, `ROLE_SYSTEM`, `ROLES_REQUIRED`, `INTERNAL_ERROR`, `BAD_REQUEST`, `METHOD_NOT_ALLOWED`, `HTTP_<статус>`)
        * @example SESSION_EXPIRED
        */
       code: string;
@@ -691,7 +691,7 @@ export interface components {
       role_ids: components["schemas"]["RoleId"][];
     };
     EmployeeUpdate: {
-      /** @description Полный новый набор ролей */
+      /** @description Полный новый набор ролей, хотя бы одна; пустой набор — 422 `ROLES_REQUIRED` (0.6.0) */
       role_ids?: components["schemas"]["RoleId"][];
       position?: string;
       is_active?: boolean;
@@ -1540,7 +1540,15 @@ export interface operations {
           "application/json": components["schemas"]["Error"];
         };
       };
-      422: components["responses"]["ValidationFailed"];
+      /** @description `ROLES_REQUIRED` — пустой набор `role_ids` (`details.fields = [role_ids]`); `VALIDATION_FAILED` — прочие поля (`details.fields`) */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Error"];
+        };
+      };
     };
   };
   listRoles: {

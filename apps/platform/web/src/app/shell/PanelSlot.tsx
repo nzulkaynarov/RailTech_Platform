@@ -1,4 +1,12 @@
-import { type ReactNode, useCallback, useContext, useEffect, useMemo, useState } from "react";
+import {
+  type ReactNode,
+  useCallback,
+  useContext,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useState,
+} from "react";
 import { createPortal } from "react-dom";
 
 import { PanelSlotContext } from "./panelSlotContext";
@@ -29,11 +37,27 @@ export function PanelSlotProvider({ children }: { children: ReactNode }) {
   return <PanelSlotContext.Provider value={value}>{children}</PanelSlotContext.Provider>;
 }
 
-/** Для страницы: содержимое вкладки `tab` бокового окна. Вкладка не активна или окно закрыто — ничего не рисуется. */
+/**
+ * Для страницы: содержимое вкладки `tab` бокового окна. Вкладка не активна — ничего не рисуется.
+ *
+ * Портал рисует в свой постоянный узел, а узел переносится в текущий элемент окна (R3-D-4). При смене ширины каркас
+ * меняет колонку справа на Drawer (и обратно) — элемент окна другой, а иногда на миг его нет; портал прямо в элемент окна
+ * пересоздал бы содержимое и потерял несохранённое (форму приглашения, подтверждение удаления роли). С постоянным узлом
+ * дерево страницы не пересоздаётся: пока окна нет (закрыто, перестраивается), узел просто отсоединён от документа.
+ */
 export function PanelPortal({ tab, children }: { tab: string; children: ReactNode }) {
   const slot = useContext(PanelSlotContext);
   const claim = slot?.claim;
   useEffect(() => claim?.(tab), [claim, tab]);
-  if (!slot?.element || slot.tab !== tab) return null;
-  return createPortal(children, slot.element);
+  const [host] = useState(() => document.createElement("div"));
+  const target = slot?.tab === tab ? slot.element : null;
+  useLayoutEffect(() => {
+    if (!target) return;
+    target.appendChild(host);
+    return () => {
+      if (host.parentNode === target) target.removeChild(host);
+    };
+  }, [target, host]);
+  if (!slot || slot.tab !== tab) return null;
+  return createPortal(children, host);
 }

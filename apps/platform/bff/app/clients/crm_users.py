@@ -35,6 +35,7 @@ ROLE_IN_USE_MESSAGE = (
 ROLE_SYSTEM_MESSAGE = "Системную роль нельзя изменить или удалить."
 NAME_TAKEN_MESSAGE = "Роль с таким названием уже есть."
 ROLE_VERSION_MESSAGE = "Роль изменена другим пользователем — обновите страницу."
+ROLES_REQUIRED_MESSAGE = "Нужна хотя бы одна роль. Чтобы закрыть сотруднику доступ, отключите его."
 # Поля CRM -> поля контракта BFF (`details.fields`).
 _FIELDS = {
     "full_name": "name",
@@ -95,9 +96,23 @@ def crm_error(response: httpx.Response) -> PlatformError:
             return _replace(base, "CONFLICT", NAME_TAKEN_MESSAGE, reason="name_taken")
         if code is not None:
             base.body.details = {**(base.body.details or {}), "reason": reason or code}
+    if status == 422 and code == "roles_required":
+        fields = ["role_ids"]
+        return _replace(base, "ROLES_REQUIRED", ROLES_REQUIRED_MESSAGE, reason=code, fields=fields)
     if status == 422 and (fields := _fields(response)):
         base.body.details = {**(base.body.details or {}), "fields": fields}
     return base
+
+
+def roles_required() -> PlatformError:
+    """422 `ROLES_REQUIRED` (0.6.0, R3-D-1): пустой набор ролей сотрудника BFF в CRM не шлёт; отказ
+    CRM `roles_required` (например, другим путём) переводится в тот же код в `crm_error`."""
+    return PlatformError(
+        "ROLES_REQUIRED",
+        ROLES_REQUIRED_MESSAGE,
+        status_code=422,
+        details={"fields": ["role_ids"]},
+    )
 
 
 def _replace(base: PlatformError, code: str, message: str, **extra: Any) -> PlatformError:

@@ -1,5 +1,5 @@
 import { QueryClient } from "@tanstack/react-query";
-import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { HttpResponse, http } from "msw";
 import { RouterProvider, createMemoryRouter } from "react-router";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
@@ -231,6 +231,24 @@ describe("Admin · Оргструктура (экран целиком на MSW)
       expect(within(panel).getByLabelText("Имя и фамилия")).toHaveValue("");
     });
     for (const box of within(panel).getAllByRole("checkbox")) expect(box).not.toBeChecked();
+  });
+
+  it("смена ширины через 1200 и 390 px не очищает форму приглашения (R3-D-4)", async () => {
+    signIn("admin@demo.example");
+    renderAt("/admin/org?invite=open&panel=open");
+    fireEvent.change(await within(await panelEl()).findByLabelText("Имя и фамилия"), {
+      target: { value: "Демо Новый" },
+    });
+    fireEvent.click(within(await panelEl()).getByRole("checkbox", { name: /^Бухгалтер/ }));
+
+    for (const width of [390, 1440]) {
+      act(() => {
+        setViewportWidth(width);
+      });
+      const panel = await panelEl();
+      expect(await within(panel).findByLabelText("Имя и фамилия")).toHaveValue("Демо Новый");
+      expect(within(panel).getByRole("checkbox", { name: /^Бухгалтер/ })).toBeChecked();
+    }
   });
 
   it("директору ?invite=open ничего не открывает", async () => {
