@@ -99,9 +99,11 @@ class BackendClient:
         json: Any = None,
         params: dict[str, Any] | None = None,
         headers: dict[str, str] | None = None,
+        content: bytes | None = None,
     ) -> httpx.Response:
         """Вызов бэкенда от имени сотрудника. 2xx и 4xx возвращаются как есть (решает вызывающий),
-        сеть, таймаут и 5xx — `BackendUnavailableError`."""
+        сеть, таймаут и 5xx — `BackendUnavailableError`. `content` — готовое тело (загрузка файла
+        `multipart/form-data` целиком, с `Content-Type` в `headers`)."""
         headers = dict(headers or {})
         if access:
             headers["Authorization"] = f"Bearer {access}"
@@ -109,7 +111,7 @@ class BackendClient:
             headers["Cookie"] = "; ".join(f"{k}={v}" for k, v in cookies.items())
         try:
             response = await self.http.request(
-                method, path, headers=headers, json=json, params=params
+                method, path, headers=headers, json=json, params=params, content=content
             )
         except httpx.HTTPError as exc:
             raise BackendUnavailableError(self.name, type(exc).__name__) from exc

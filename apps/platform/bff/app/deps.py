@@ -93,8 +93,19 @@ class Authed:
         *,
         json: Any = None,
         params: dict[str, Any] | None = None,
+        content: bytes | None = None,
+        content_type: str | None = None,
     ) -> httpx.Response:
-        return await self.service.call(self.sid, backend, method, path, json=json, params=params)
+        return await self.service.call(
+            self.sid,
+            backend,
+            method,
+            path,
+            json=json,
+            params=params,
+            content=content,
+            content_type=content_type,
+        )
 
 
 async def get_authed(request: Request, service: AuthServiceDep) -> Authed:
