@@ -157,7 +157,7 @@ resources:
     module: eds
     label: { ru: "EDS · Черновик КП · одобрение и отправка", uz: "EDS · TT qoralamasi · tasdiqlash va yuborish", en: "EDS · Draft quote · approval and sending" }
     backend:
-      erp: { full: [quote.review, quote.approve_final, quote.send] }
+      erp: { full: [quote.review, quote.send] }  # визы и отправка КП в ERP; одобряет директор в EDS (EDS-03, E5)
       eds: { full: [approvals.decide] }  # одобрение КП — маршрут EDS (EDS-03)
   - key: eds.projects
     module: eds

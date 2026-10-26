@@ -574,7 +574,7 @@ ADR-0015 (EDS — отдельный сервис, владелец реестр
 | Тип | Когда | Подписчики v1 |
 |---|---|---|
 | `uz.railtech.eds.letter.registered.v1` | письмо получило ВХ-номер: вручную или по `erp.request.created` | platform-bff |
-| `uz.railtech.eds.letter.resolved.v1` | резолюция: исполнители (`crm_user_id`, `zone`: `goods`, `services`, `payment_terms`), срок, `min_margin_pct`, `links` (`erp_request_id`, `erp_deal_id`, `deal_number`) | erp (задание расчёта, стадия `CALCULATION`), platform-bff |
+| `uz.railtech.eds.letter.resolved.v1` | резолюция: исполнители (`crm_user_id`, `zone`: `goods`, `services`, `payment_terms`), срок, `min_margin_pct`, `links` (`erp_request_id`, `erp_deal_id`, `deal_number`) | erp (задание расчёта, стадия `CALCULATION` — FSM ERP `CALCULATING`; §10.6), platform-bff |
 | `uz.railtech.eds.letter.returned.v1` | возврат регистратору с комментарием (повторная подача — `POST …/submit`, без события) | platform-bff |
 | `uz.railtech.eds.letter.rejected.v1` | отказ с причиной | erp (сделка → `LOST` с причиной), platform-bff |
 | `uz.railtech.eds.document.registered.v1` | номер документа (СЗ, ЗЯ, ОТ — при создании; ИСХ — при отправке письма) | platform-bff |
@@ -587,6 +587,8 @@ ERP публикует `uz.railtech.erp.quote.ready_for_approval.v1` (EDS-03) �
 заявке), `uz.railtech.erp.quote.ready_for_approval.v1`. Объект маршрута для ERP — `approval.object` (`erp_quote_id`,
 `quote_version`, `erp_deal_id`): решение применяется к той версии КП, для которой открыт маршрут. Секреты пар (только окружение):
 `RT_BUS_SECRET_CRM_EDS`, `RT_BUS_SECRET_ERP_EDS`, `RT_BUS_SECRET_EDS_ERP`, `RT_BUS_SECRET_EDS_PLATFORM_BFF`.
+
+ERP применяет события EDS (E5) — §10.6.
 
 ### 10.3. Вход и права
 
@@ -627,3 +629,28 @@ ERP публикует `uz.railtech.erp.quote.ready_for_approval.v1` (EDS-03) �
 `eds.yaml` до 1.0 растёт минорными версиями (§7.1); события — правила §9.6 (`v(N+1)` для ломающего). Поле
 `identity.User.permissions` и тип `erp.quote.ready_for_approval.v1` — аддитивные изменения v1. Коды прав в событиях — шаблон,
 а не перечень: новый код EDS — не новая версия событий.
+
+### 10.6. ERP ↔ EDS (E5): как ERP применяет события и когда публикует КП
+
+- **`eds.letter.resolved` (EDS-01).** Сделка — `links.erp_deal_id`, иначе `links.erp_request_id` (заявка ERP и есть сделка).
+  ERP заводит задание расчёта (`CalcTask`, одно на `eds_letter_id`; новая резолюция того же письма его обновляет):
+  исполнители (`crm_user_id` → пользователь ERP через `CrmUserMapping`, зона `goods`/`services`/`payment_terms`), срок,
+  `min_margin_pct` — проекция резолюции, владелец полей — EDS. Сделка переходит в FSM `CALCULATING` (`quoting` контракта)
+  обычным переходом (из `DRAFT` — через `SOURCING`, как отправка КП), событие `deal.stage_changed` — в той же транзакции.
+  Неизвестный сотрудник — исполнитель без пользователя и запись WARNING в журнале сделки; нет ссылки или сделки — пропуск с
+  записью в журнал; сделка дальше расчёта (КП отправлено, договор) — стадия не меняется, запись в журнал.
+- **`eds.letter.rejected`.** Сделка → `CLOSED_LOST` с причиной: `deal.lost` несёт `lost_reason` из события; уже проиграна —
+  без изменений.
+- **`erp.quote.ready_for_approval` (EDS-03).** Публикуется в транзакции, когда виз больше не ждём: последняя виза проверяющего
+  (`quote.review`) или отправка на согласование без проверяющих. КП получает номер ERP (КП-…), `version` события — редакция
+  `Quote.eds_revision` (растёт с каждой отправкой директору, в том числе после возврата); `visas` — пройденные визы
+  исполнителей резолюции по их зонам (автор КП, если он исполнитель, визирует свою зону отправкой); `required_zones`,
+  `min_margin_pct`, `due`, `eds_letter_id` — из задания расчёта. Компания без клиента CRM — `crm_client_id: null`; КП без
+  компании клиента (черновик-калькулятор) на согласование не уходит (`QUOTE_CLIENT_REQUIRED`).
+- **`eds.approval.decided` по КП** (закрытый маршрут; решения по документам EDS ERP не касаются): `approve` — ИСХ-номер
+  (`outgoing_number`) и `channels` на КП, статус «Готово к отправке» (отправка клиенту разблокирована); `return` — черновик с
+  комментарием директора; `reject` — КП отклонено. Решение по `quote_version`, отличной от текущей редакции, или по КП, которое
+  уже не ждёт одобрения (отозвано), не применяется — запись в журнал КП; повтор применённого решения — без изменений.
+- **Права.** Своей цепочки одобрения директором у ERP нет: код финального утверждения КП удалён из `ErpPermission`
+  (`erp-integration.yaml` 0.7.0, ломающее до 1.0 — минором, ADR-0016) и из `platform-rbac.yaml` (`eds.drafts` → ERP
+  `quote.review`, `quote.send`); данные ролей ERP чистят миграции `accounts/0010`, `integration/0010`.
