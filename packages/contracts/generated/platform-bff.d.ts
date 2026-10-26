@@ -1028,7 +1028,7 @@ export interface paths {
     put?: never;
     /**
      * Загрузить файл Markdown в базу знаний
-     * @description CRM `POST /kb/documents` (multipart). Раздел `admin` — полный (право CRM `kb:write`). Принимается один файл `.md` по формату базы знаний (`docs/kb/FORMAT.md`), не больше 25 МБ: BFF читает файл ограниченно и передаёт CRM, весь файл в память не накапливается сверх лимита. Индексация идёт в фоне — документ появляется в списке со статусом «В очереди». Нарушение формата — 422 `VALIDATION_FAILED` с `details.reason = kb_format`, `details.rule` и текстами `details.messages {ru, uz, en}` «что исправить»; не `.md` — `kb_markdown_only`; пустой файл — `file_empty`; больше 25 МБ — `file_too_large` (`details.max_bytes`); неизвестный продукт — `unknown_product`.
+     * @description CRM `POST /kb/documents` (multipart). Раздел `admin` — полный (право CRM `kb:write`). Принимается один файл `.md` по формату базы знаний (`docs/kb/FORMAT.md`), не больше 25 МБ: BFF читает файл ограниченно и передаёт CRM, весь файл в память не накапливается сверх лимита. Индексация идёт в фоне — документ появляется в списке со статусом «В очереди». Нарушение формата — 422 `VALIDATION_FAILED` с `details.reason = kb_format`, `details.rule` и текстами `details.messages {ru, uz, en}` «что исправить»; не `.md` — `kb_markdown_only`; пустой файл — `file_empty`; больше 25 МБ — `file_too_large` (`details.max_bytes`); неизвестный продукт — поле `product_key` в `details.fields`.
      */
     post: operations["uploadKbDocument"];
     delete?: never;
@@ -2411,7 +2411,7 @@ export interface components {
        */
       source_type: "file" | "url" | "manual";
       mime: string | null;
-      /** @description Растёт при переиндексации */
+      /** @description Версия документа */
       version: number;
       /** @description Выключенный документ в поиске бота не участвует */
       is_active: boolean;

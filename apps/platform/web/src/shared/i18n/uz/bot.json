@@ -611,7 +611,7 @@
   "fields": {
     "name": "Kompaniya nomi",
     "crm_base_url": "CRM manzili (kanaldagi havolalar uchun)",
-    "cabinet_url": "Mijoz kabineti manzili (bot xabarlaridagi «Kabinet» tugmasi; bo‘sh bo‘lsa — tugma yo‘q)",
+    "cabinet_url": "Mijoz kabineti manzili",
     "phone": "Kompaniya telefoni (bot mijoz so‘rovi bo‘yicha aytadi)",
     "site": "Kompaniya sayti",
     "address": "Kompaniya manzili",

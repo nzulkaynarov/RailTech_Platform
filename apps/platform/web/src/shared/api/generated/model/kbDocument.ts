@@ -120,7 +120,7 @@ export interface KbDocument {
   /** @nullable */
   mime: string | null;
   /**
-   * Растёт при переиндексации
+   * Версия документа
    * @minimum 1
    */
   version: number;

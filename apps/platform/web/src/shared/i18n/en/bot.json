@@ -611,7 +611,7 @@
   "fields": {
     "name": "Company name",
     "crm_base_url": "CRM address (for links in the channel)",
-    "cabinet_url": "Customer cabinet address (the \"Cabinet\" button in bot messages; empty — no button)",
+    "cabinet_url": "Customer cabinet address",
     "phone": "Company phone (the bot gives it when a customer asks)",
     "site": "Company website",
     "address": "Company address",

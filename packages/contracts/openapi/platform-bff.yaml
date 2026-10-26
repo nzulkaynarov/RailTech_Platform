@@ -1862,7 +1862,7 @@ paths:
         память не накапливается сверх лимита. Индексация идёт в фоне — документ появляется в списке со статусом «В очереди».
         Нарушение формата — 422 `VALIDATION_FAILED` с `details.reason = kb_format`, `details.rule` и текстами
         `details.messages {ru, uz, en}` «что исправить»; не `.md` — `kb_markdown_only`; пустой файл — `file_empty`; больше
-        25 МБ — `file_too_large` (`details.max_bytes`); неизвестный продукт — `unknown_product`.
+        25 МБ — `file_too_large` (`details.max_bytes`); неизвестный продукт — поле `product_key` в `details.fields`.
       parameters:
         - $ref: '#/components/parameters/CsrfToken'
       requestBody:
@@ -4198,7 +4198,7 @@ components:
           enum: [file, url, manual]
           description: '`file` — загруженный файл, `manual` — введён вручную, `url` — из ссылки (в CRM пока не создаётся)'
         mime: {type: [string, 'null']}
-        version: {type: integer, minimum: 1, description: 'Растёт при переиндексации'}
+        version: {type: integer, minimum: 1, description: 'Версия документа'}
         is_active: {type: boolean, description: 'Выключенный документ в поиске бота не участвует'}
         ingest_status:
           type: string

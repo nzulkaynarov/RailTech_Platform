@@ -129,9 +129,21 @@
 .pf-bot-table tr[data-selected="true"] td {
   background: #e6f4ff;
 }
+.pf-bot-table--texts {
+  table-layout: fixed;
+  min-width: 720px;
+}
+.pf-bot-table--texts th:first-child {
+  width: 28%;
+}
+.pf-bot-table--texts th:last-child {
+  width: 96px;
+}
 .pf-bot-text-cell {
   display: block;
-  max-width: 220px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .pf-bot-link {
   color: #0958d9;

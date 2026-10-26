@@ -1,4 +1,4 @@
-import { Button, Collapse, Form, Input, Tag, Tooltip, Typography } from "antd";
+import { Button, Collapse, Form, Input, Tag, Typography } from "antd";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate, useSearchParams } from "react-router";
@@ -30,11 +30,9 @@ function LangCell({ field, lang }: { field: string; lang: string }) {
   const text = oneLine(Form.useWatch([field, lang], { preserve: true }));
   if (!text) return <Tag color="warning">{t("texts.empty")}</Tag>;
   return (
-    <Tooltip title={text} placement="topLeft">
-      <Typography.Text ellipsis className="pf-bot-text-cell">
-        {text}
-      </Typography.Text>
-    </Tooltip>
+    <span className="pf-bot-text-cell" title={text}>
+      {text}
+    </span>
   );
 }
 
@@ -72,7 +70,7 @@ function TextsTable({
   const { mobile } = useViewport();
   return (
     <ScrollRegion label={t("bot:texts.tableScroll")}>
-      <table className="pf-bot-table">
+      <table className={mobile ? "pf-bot-table" : "pf-bot-table pf-bot-table--texts"}>
         <caption className="pf-sr-only">{t("bot:texts.caption")}</caption>
         <thead>
           <tr>

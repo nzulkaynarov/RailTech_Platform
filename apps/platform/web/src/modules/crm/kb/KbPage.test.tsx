@@ -1,6 +1,7 @@
-import { fireEvent, screen, waitFor, within } from "@testing-library/react";
+import { cleanup, fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 
+import { endSession } from "../../../mocks/mockSession";
 import { panelEl, renderAt, setupBotTests, signIn } from "../../../test/botKit";
 
 setupBotTests();
@@ -422,5 +423,33 @@ describe("CRM · База знаний: песочница", () => {
 
     expect(await screen.findByRole("heading", { level: 2, name: "Документы" })).toBeVisible();
     expect(screen.queryByRole("heading", { level: 2, name: "Песочница бота" })).toBeNull();
+  });
+});
+
+describe("CRM · База знаний: пункт меню и права", () => {
+  it("снабженцу пункта «База знаний» в меню CRM нет, по прямому адресу — «Нет доступа»", async () => {
+    signIn("supply@demo.example");
+    renderAt("/crm/clients");
+    expect(await screen.findByRole("heading", { level: 1, name: "Все клиенты" })).toBeVisible();
+    expect(screen.queryByRole("link", { name: "База знаний" })).toBeNull();
+    cleanup();
+
+    renderAt("/crm/kb");
+    expect(await screen.findByRole("heading", { level: 1, name: "Нет доступа" })).toBeVisible();
+  });
+
+  it("администратор без лидов видит в CRM единственный пункт — «База знаний»; менеджер — вместе с остальными", async () => {
+    signIn("admin@demo.example");
+    renderAt("/crm/kb");
+    const menu = await screen.findByRole("link", { name: "База знаний" });
+    expect(menu).toBeVisible();
+    expect(screen.queryByRole("link", { name: "Все лиды" })).toBeNull();
+    cleanup();
+    endSession();
+
+    signIn("manager@demo.example");
+    renderAt("/crm/kb");
+    expect(await screen.findByRole("link", { name: "База знаний" })).toBeVisible();
+    expect(screen.getByRole("link", { name: "Все лиды" })).toBeVisible();
   });
 });
