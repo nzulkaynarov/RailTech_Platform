@@ -160,6 +160,7 @@ def test_reason_values_are_a_stable_contract() -> None:
         "no_open_handoff",
         "sso_not_configured",
         "platform_access_denied",
+        "eds_access_denied",
         "user_not_provisioned",
         "user_inactive",
         "erp_email_conflict",

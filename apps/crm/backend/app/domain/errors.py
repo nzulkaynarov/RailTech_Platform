@@ -108,6 +108,8 @@ class Reason(StrEnum):
     SSO_NOT_CONFIGURED = "sso_not_configured"
     # SSO и доступ к ERP (FIX-11, M3-CRM-06): `platform_access` решает, кто может перейти в ERP.
     PLATFORM_ACCESS_DENIED = "platform_access_denied"
+    # Токен сотрудника для EDS (волна 12, E4): нет прав EDS (`permissions.eds` пуст) или нет вовсе.
+    EDS_ACCESS_DENIED = "eds_access_denied"
     USER_NOT_PROVISIONED = "user_not_provisioned"
     USER_INACTIVE = "user_inactive"
     # Синхронизация сотрудников с ERP: e-mail занят другим пользователем ERP (409 EMAIL_CONFLICT).
