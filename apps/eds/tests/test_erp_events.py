@@ -85,3 +85,65 @@ async def test_long_company_name_is_cut_to_the_column_and_blank_contact_is_dropp
     letter = (await client.get(f"/api/v1/letters/{item['id']}", headers=staff["manager"].headers)).json()
     validate("Letter", letter)
     assert letter["sender"] == {"name": "Я" * 255, "inn": "301234567", "contact": None}
+
+
+async def test_repeat_of_the_event_does_not_create_second_letter_or_number(
+    client: httpx.AsyncClient, container: Container, staff: dict[str, Person]
+) -> None:
+    first = request_created()
+    await deliver_erp(client, container, first)
+    # тот же event id: приёмник гасит повтор (inbox)
+    assert await deliver_erp(client, container, first) == "processed"
+    # другой event id, та же заявка ERP: обработчик находит прежнее письмо
+    second = request_created()
+    second["id"] = "5b5c595e-07aa-5bc9-aada-b84a0b3bd946"
+    assert await deliver_erp(client, container, second) == "processed"
+    assert await letters_count(container) == 1
+    assert len(await outbox(container, "letter.registered")) == 1
+
+    # следующее письмо получает следующий номер: прежний номер не «сгорел» и не повторён
+    registered = await client.post(
+        "/api/v1/letters",
+        json={"subject": "Другое", "summary": "Суть", "sender": {"name": "ООО «Другое»"}, "received_at": "2026-10-26"},
+        headers=staff["registrar"].headers,
+    )
+    assert registered.json()["number"] == "ВХ-002/26"
+
+
+async def test_event_without_request_id_is_deduplicated_by_deal(
+    client: httpx.AsyncClient, container: Container
+) -> None:
+    envelope = example("erp/request.created.v1")
+    del envelope["data"]["payload"]["erp_request_id"]
+    await deliver_erp(client, container, envelope)
+    second = example("erp/request.created.v1")
+    del second["data"]["payload"]["erp_request_id"]
+    await deliver_erp(client, container, second)
+    assert await letters_count(container) == 1
+
+
+async def test_two_requests_make_two_letters_and_director_can_resolve_with_links(
+    client: httpx.AsyncClient, container: Container, staff: dict[str, Person]
+) -> None:
+    await deliver_erp(client, container, request_created())
+    other = request_created(erp_request_id=78, summary="")
+    other["data"]["deal"].update({"erp_deal_id": 906, "number": "D-2026-0906", "title": ""})
+    await deliver_erp(client, container, other)
+    page = (await client.get("/api/v1/letters", headers=staff["director"].headers)).json()
+    assert [i["number"] for i in page["items"]] == ["ВХ-002/26", "ВХ-001/26"]
+    assert page["items"][0]["subject"] == "Заявка D-2026-0906"  # у заявки нет темы — по номеру сделки
+
+    resolved = await client.post(
+        f"/api/v1/letters/{page['items'][1]['id']}/resolution",
+        json={
+            "text": "Считать",
+            "assignees": [{"crm_user_id": 11, "zone": "goods"}],
+            "due": "2026-10-30",
+            "min_margin_pct": "15",
+        },
+        headers=staff["director"].headers,
+    )
+    assert resolved.status_code == 200
+    [event] = await outbox(container, "letter.resolved")
+    assert event["data"]["links"]["erp_request_id"] == 77 and event["data"]["links"]["erp_deal_id"] == 905
+    assert event["data"]["letter"]["number"] == "ВХ-001/26"

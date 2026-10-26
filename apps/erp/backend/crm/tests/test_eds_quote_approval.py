@@ -527,3 +527,20 @@ def test_approved_late_mark_reaches_the_quote_journal(world):
     assert eds_inbound.apply_approval_decided(data).applied
     entry = ActivityLog.objects.get(entity_id=quote.pk, event_code="quote.director_approved")
     assert entry.event_params["approved_late"] is True and "с опозданием" in entry.action
+
+
+def test_buyer_sees_the_outgoing_number_but_not_the_directors_decision(world):
+    """C1-G-5, инвариант 5: решение, комментарий и каналы директора — внутренняя кухня продавца; покупатель (пользователь
+    компании-клиента) своего КП их не получает, ИСХ-номер (он печатается на КП) — получает."""
+    quote = _submitted(world)
+    eds_inbound.apply_approval_decided(decided(quote, "approve", comment="Согласовано с опозданием"))
+    _member(world["client"], world["deal"].client, [])
+
+    response = _api(world["deal"].client).get(f"/api/v1/crm/quotes/{quote.pk}/")
+    assert response.status_code == 200, response.content
+    body = response.json()
+    assert body["outgoing_number"] == "ИСХ-082/26"
+    assert not {"director_decision", "director_comment", "send_channels"} & set(body)
+
+    staff = _api(world["calc"]).get(f"/api/v1/crm/quotes/{quote.pk}/").json()
+    assert staff["director_comment"] == "Согласовано с опозданием" and staff["send_channels"] == ["telegram", "cabinet"]
