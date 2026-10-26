@@ -1,3 +1,4 @@
+# Снимок ПОСЛЕ п. 7: роли сотрудника 6 уже изменены (Менеджер + Бухгалтер); до п. 7 у него были только «Менеджер»: letters.read, memos.create, registry.read
 1 admin@demo.example ['Администратор'] доступ: ['crm', 'erp'] erp_sync: ok
 2 director@demo.example ['Директор'] доступ: ['crm', 'erp'] erp_sync: ok
 3 mgr-acc@demo.example ['Менеджер', 'Бухгалтер'] доступ: ['crm', 'erp'] erp_sync: ok
