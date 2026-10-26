@@ -348,17 +348,16 @@ class QuoteLifecycleService:
             )
         return quote
 
-    # ── Internal approval chain (документооборот) ──────────────────────────
-    # DRAFT → PENDING_TRADE_REVIEW → PENDING_APPROVAL → READY_TO_SEND → (send).
-    # Each step is gated by the actor's WorkspaceRole in the company that owns the
-    # КП (the preparer's company); OWNER may act on any step. Returns
+    # ── Согласование КП: визы в ERP, одобрение директором — маршрут EDS (EDS-03) ──
+    # DRAFT → PENDING_APPROVAL (визы `quote.review`, затем quote.ready_for_approval в EDS) → решение EDS:
+    # READY_TO_SEND (одобрено, ИСХ-номер) → (send) | DRAFT (на доработку) | REJECTED. Returns
     # (quote, None) on success or (None, error_code) for views to map to HTTP.
 
     @staticmethod
     @transaction.atomic
     def submit_for_review(quote_id: int, actor: CustomUser) -> Tuple[Optional[Quote], Optional[str]]:
-        """Sales submits a built КП into the chain. DRAFT → PENDING_TRADE_REVIEW,
-        or straight to PENDING_APPROVAL if the company has no ВЭД member."""
+        """Отправка собранного КП на согласование: DRAFT → PENDING_APPROVAL, шаги виз проверяющих; без проверяющих —
+        сразу директору в EDS (`request_director_approval`, событие `quote.ready_for_approval`)."""
         quote = Quote.objects.select_related("status", "prepared_by", "deal").get(pk=quote_id)
 
         # Resolve the КП-owning company WITHOUT mutating anything (audit F0) and gate the
@@ -385,6 +384,10 @@ class QuoteLifecycleService:
         err = assert_submittable(quote, economics)
         if err:
             return None, err
+        # Одобряет директор в EDS по КП клиента (EDS-03: событие несёт компанию клиента): черновик-калькулятор без
+        # клиента на согласование не уходит.
+        if not quote.deal.company_id:
+            return None, "QUOTE_CLIENT_REQUIRED"
 
         # All gates passed — NOW it is safe to claim the КП: anchor BOTH the preparer and the
         # owning seller company to the VERIFIED company resolved above (audit F0/H2), so the
@@ -406,27 +409,16 @@ class QuoteLifecycleService:
         from crm.services.availability import auto_split_quote_by_availability
 
         auto_split_quote_by_availability(quote, company_id)
-        # Unified approval workflow: build the permission-driven step list (mandatory head +
-        # optional reviewer(s) + risk-aware reason), then route. Source of truth = the steps,
-        # not a granular status — the КП goes to a single «На согласовании» (PENDING_APPROVAL).
-        from crm.services.approvals import _active_order, _notify_order, auto_approve_solo_chain, build_approval_chain
+        # Визы КП: шаги проверяющих (`quote.review`); одобрение директором — маршрут EDS (EDS-03). Источник правды —
+        # шаги, КП в едином статусе «На согласовании» (PENDING_APPROVAL) до решения директора.
+        from crm.services.approvals import _active_order, _notify_order, build_approval_chain
+        from crm.services.eds_quote_approval import request_director_approval
 
         build_approval_chain(quote, company_id, economics=economics)
         _set_quote_status(quote, QuoteStatusCode.PENDING_APPROVAL)
         # Курсы фиксируются при выходе из черновика (после смены статуса: пересчёт черновика их бы
         # снова сделал живыми). Дальше пересчёт берёт курс только из снимка КП.
         fix_quote_rates(quote, actor)
-
-        # Salesforce «no approval rule triggered / only approver is the submitter» pattern: when
-        # every step of the freshly-built chain is assigned to the submitter themselves (a solo
-        # company, or the company admin submitting their own КП), auto-approve instantly →
-        # READY_TO_SEND, with an audited «согласовано автоматически» journal event. A genuine
-        # cross-person chain (a different head, a ВЭД reviewer, a below-floor escalation to
-        # someone else) is untouched and routes exactly as today. Removes ritual, not control —
-        # the below-floor justification gate still fires at send.
-        if auto_approve_solo_chain(quote, actor):
-            quote.refresh_from_db()
-            return quote, None
 
         first_order = _active_order(quote)
         if first_order is not None:
@@ -439,6 +431,9 @@ class QuoteLifecycleService:
             event_code="quote.submitted_for_review",
             event_params={"version": quote.version},
         )
+        if first_order is None:
+            # Виз ждать не от кого — КП сразу уходит директору (событие quote.ready_for_approval в этой транзакции).
+            request_director_approval(quote, actor)
         return quote, None
 
     @staticmethod

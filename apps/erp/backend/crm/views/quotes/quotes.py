@@ -91,7 +91,7 @@ class QuoteViewSet(RoleGatedViewMixin, QuoteApprovalMixin, QuoteFxMixin, Optimis
         # Договорной курс КП (M1-ERP-08) — финансы, с причиной; сам расчёт КП не меняет права расчётчика.
         "fx_override": "finance.rates",
         "send_to_client": "quote.send",
-        "approval_act": ("quote.review", "quote.approve_final"),
+        "approval_act": "quote.review",
         "force_approve": ADMIN_ONLY,
     }
 

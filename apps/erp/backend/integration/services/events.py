@@ -1,6 +1,6 @@
 """Публикация событий ERP на шину rt_bus из сервисного слоя (B3, ADR-0014, CONTRACTS §3 и §9).
 
-Единственный способ, которым ERP сообщает о своих сущностях: 22 типа `uz.railtech.erp.<сущность>.<действие>.v1`
+Единственный способ, которым ERP сообщает о своих сущностях: 23 типа `uz.railtech.erp.<сущность>.<действие>.v1`
 (`packages/contracts/events/erp/`). Вызывает сервис, который меняет состояние (продажи, документы, портал, интеграция), и
 только внутри `transaction.atomic()` этого изменения: `rt_bus` пишет строку outbox в ту же транзакцию, поэтому
 
@@ -8,7 +8,8 @@
 - ошибка публикации (в том числе `data` не по схеме типа: проверка строгая, `additionalProperties: false`) — исключение
   наружу и откат изменения. `except Exception` вокруг публикации в ERP нет.
 
-Компания без сопоставления с клиентом CRM (`CrmClientMapping`) событий не порождает — публикатор возвращает `None`.
+Компания без сопоставления с клиентом CRM (`CrmClientMapping`) событий не порождает — публикатор возвращает `None`;
+исключение — `quote.ready_for_approval` (адресат EDS, `crm_client_id: null`).
 Корреляция — `X-Request-ID` входящего запроса (`core.logging.RequestIDMiddleware`), вне запроса (Celery) — новый UUID.
 Сигналов Django здесь нет: что считать изменением, решает сервис. Событие `document.created` — `document_events.py`.
 """
@@ -24,7 +25,7 @@ from portal import projections
 from rt_bus import Event
 
 from ..bus import get_bus
-from ..models import CrmContactMapping
+from ..models import CrmClientMapping, CrmContactMapping
 from .event_builders import (  # noqa: F401 — публичная поверхность модуля: на неё ссылаются сервисы и тесты
     VALID_EVENT_TYPES,
     _aware,
@@ -224,6 +225,28 @@ def publish_quote_outcome(
             actor = client_actor(contact)
 
     return publish_event(event_type, erp_company_id=company_id, payload=payload, deal=deal, actor=actor)
+
+
+def publish_quote_ready_for_approval(
+    quote: Any, payload: Dict[str, Any], actor: Optional[Dict[str, Any]] = None
+) -> Event:
+    """Событие `quote.ready_for_approval` (EDS-03): КП готово к одобрению директором, EDS открывает маршрут «КП».
+
+    Адресат — EDS (и BFF как подсказка); в отличие от событий для CRM публикуется и для компании без клиента CRM
+    (`crm_client_id: null`). `payload` собирает `crm/services/eds_quote_approval.py`; `subject` — номер КП.
+    """
+    deal = quote.deal
+    crm_client_id = (
+        CrmClientMapping.objects.filter(company_id=deal.company_id).values_list("crm_client_id", flat=True).first()
+    )
+    data: Dict[str, Any] = {
+        "erp_company_id": int(deal.company_id),
+        "crm_client_id": crm_client_id,
+        "deal": build_deal_ref(deal),
+        "actor": actor or {"type": "system"},
+        "payload": payload,
+    }
+    return get_bus().publish(event_type_name("quote.ready_for_approval"), data, subject=payload["number"])
 
 
 def publish_quote_acceptance_code_requested(quote: Any, contact: Any, code: str, expires_at: Any) -> Optional[Event]:

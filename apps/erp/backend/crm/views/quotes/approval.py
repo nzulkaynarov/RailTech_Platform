@@ -94,7 +94,7 @@ class QuoteApprovalMixin:
         return Response(self.get_serializer(quote).data)
 
     @extend_schema(
-        summary="Act on a КП approval step (approve / reject)",
+        summary="Act on a КП visa step (approve / reject); the last visa sends the КП to the director in EDS",
         request=inline_serializer(
             "ApprovalActRequest",
             fields={
@@ -114,7 +114,7 @@ class QuoteApprovalMixin:
     )
     @action(detail=True, methods=["post"], url_path="approval-act", permission_classes=[IsAuthenticated])
     def approval_act(self, request, pk=None):
-        """An approver approves or rejects their step in the КП approval chain."""
+        """Проверяющий визирует или отклоняет свой шаг; последняя виза передаёт КП директору в EDS (EDS-03)."""
         from crm.services.approvals import act_on_step
 
         step_id = request.data.get("step_id")
@@ -130,7 +130,7 @@ class QuoteApprovalMixin:
         return Response(self.get_serializer(quote).data)
 
     @extend_schema(
-        summary="Recall a КП from approval back to DRAFT (submitter / head)",
+        summary="Recall a КП from approval back to DRAFT (submitter)",
         responses={
             200: QuoteSerializer,
             400: OpenApiResponse(description="Wrong status"),
@@ -151,14 +151,13 @@ class QuoteApprovalMixin:
     @extend_schema(
         summary="Preview the КП approval chain (who would approve if submitted now)",
         description=(
-            "Read-only Salesforce-style Approval Preview: the would-be reviewers + mandatory head "
-            "(names / roles), and whether the КП would auto-approve because the only approver is "
-            "the submitter. Builds and persists NOTHING (no side effects). Seller-side only — the "
-            "same quote.build gate as submit-for-review; feeds the «кто должен согласовать» preview "
-            "in the send dialog."
+            "Read-only Salesforce-style Approval Preview: the would-be reviewers (quote.review, names / roles). "
+            "After their visas the КП goes to the director's approval route in EDS (EDS-03) — not a step here. "
+            "Builds and persists NOTHING (no side effects). Seller-side only — the same quote.build gate as "
+            "submit-for-review; feeds the «кто должен согласовать» preview in the send dialog."
         ),
         responses={
-            200: OpenApiResponse(description="{would_auto_approve, below_floor, steps:[{...}]}"),
+            200: OpenApiResponse(description="{below_floor, steps:[{...}]}"),
             403: OpenApiResponse(description="Not permitted"),
             404: OpenApiResponse(description="Quote not found"),
         },

@@ -1,10 +1,12 @@
-"""КП internal approval chain — engine for the unified approval workflow.
+"""Визы КП внутри ERP и передача КП директору на одобрение в EDS (EDS-03, ADR-0015, runbook волны 12 §2.4–§2.5).
 
-Replaces the hardcoded WorkspaceRole 3-step FSM (submit→ВЭД→director) with a
-permission-driven, risk-aware STEP LIST: a mandatory final approver («руководитель»,
-holder of quote.approve_final) plus optional intermediate reviewers (quote.review),
-optionally an «informed» CC group. Same `order` runs in parallel; the head is always
-last. Rule 8: all logic here; the views are thin wrappers.
+Цепочка ERP — только визы: проверяющие с правом `quote.review` (тот же порядок — параллельно). Когда виз больше не ждём
+(все шаги пройдены или проверяющих нет), КП уходит директору: ERP публикует `uz.railtech.erp.quote.ready_for_approval.v1`
+в транзакции изменения (`request_director_approval`) и ждёт решения маршрута EDS. Решение (`eds.approval.decided`)
+применяет `apply_director_decision`: одобрено — ИСХ-номер EDS на КП и «Готово к отправке»; возвращено — черновик с
+комментарием директора (правка и повторная отправка — новая редакция, новое событие); отклонено — КП отклонено.
+Своей цепочки одобрения директором (шаг «Руководитель» и право финального утверждения КП) у ERP больше нет —
+решение архитектора волны 12 §4 п. 3. Rule 8: логика здесь, вьюхи — тонкие обёртки.
 """
 
 import logging
@@ -22,8 +24,6 @@ from crm.models.approvals import StepParticipation, StepStatus, StepTrigger
 
 logger = logging.getLogger(__name__)
 
-HEAD_ORDER = 100  # the руководитель is always the last (highest-order) step
-
 
 # ── helpers ────────────────────────────────────────────────────────────────
 def _members_with_permission(company_id: int, perm: str) -> list:
@@ -35,14 +35,6 @@ def _members_with_permission(company_id: int, perm: str) -> list:
         .prefetch_related("company_roles")
     )
     return [m for m in members if any(role.has_perm(perm) for role in m.company_roles.all())]
-
-
-def _fallback_head(company_id: int) -> Optional[CompanyMember]:
-    """Запасного «администратора компании» больше нет (M1-ERP-05): финальный согласующий — держатель
-    `quote.approve_final` (роль «Руководитель»), администратор бэк-офиса — `is_superuser`. Без
-    держателя шаг руководителя остаётся без исполнителя (вызывающий пишет предупреждение), и
-    утвердить КП может администратор."""
-    return None
 
 
 def _notify_user(
@@ -82,9 +74,7 @@ def _notify_user(
 
 
 def _step_permission(step: QuoteApprovalStep) -> str:
-    """The permission a member needs to act on this step."""
-    if step.participation == StepParticipation.HEAD:
-        return Permission.QUOTE_APPROVE_FINAL.value
+    """Право, с которым закрывают шаг визы: `quote.review` (одобрение директором — в EDS, не шаг ERP)."""
     return Permission.QUOTE_REVIEW.value
 
 
@@ -125,21 +115,11 @@ def _link(quote: Quote) -> str:
     return f"#deal-quote/{quote.deal_id}"
 
 
-def _chain_members(company_id: int, author_user_id: Optional[int]):
-    """Кто согласует КП: (держатель финального согласования, проверяющие). Автор КП в проверяющие не
-    попадает, а руководителем назначается не автор, если есть другой (FIX-55, D-02). Единственный
-    руководитель-автор остаётся на своём шаге — это автосогласование (`auto_approve_solo_chain`)."""
-    head_candidates = _members_with_permission(company_id, Permission.QUOTE_APPROVE_FINAL.value)
-    non_author_heads = [m for m in head_candidates if m.user_id != author_user_id]
-    pool = non_author_heads or head_candidates
-    head_member = pool[0] if pool else _fallback_head(company_id)
-    head_ids = {m.id for m in head_candidates}
-    reviewers = [
-        m
-        for m in _members_with_permission(company_id, Permission.QUOTE_REVIEW.value)
-        if m.id not in head_ids and m.user_id != author_user_id
+def _chain_members(company_id: int, author_user_id: Optional[int]) -> list:
+    """Кто визирует КП: держатели `quote.review`, кроме автора КП (FIX-55, D-02)."""
+    return [
+        m for m in _members_with_permission(company_id, Permission.QUOTE_REVIEW.value) if m.user_id != author_user_id
     ]
-    return head_member, reviewers
 
 
 def _on_behalf_params(step: QuoteApprovalStep, actor) -> dict:
@@ -153,25 +133,17 @@ def _on_behalf_params(step: QuoteApprovalStep, actor) -> dict:
 # ── build ──────────────────────────────────────────────────────────────────
 @transaction.atomic
 def build_approval_chain(quote: Quote, company_id: int, economics: Optional[dict] = None) -> None:
-    """(Re)build the AUTO steps on submit. Wipes prior auto steps (keeps manual/informed ones),
-    then creates: optional TRADE_REVIEW (a dedicated quote.review holder who isn't the head) at
-    order=1 (parallel), and the mandatory HEAD at HEAD_ORDER. routing_mode lives on the Quote;
-    'parallel' (default) gives every reviewer order=1, 'sequential' increments. Head always last.
-    """
+    """(Пере)строить авто-шаги виз при отправке на согласование: прежние авто-шаги (кроме пройденных) удаляются,
+    ручные и «для информации» остаются; каждому проверяющему (`quote.review`, не автор) — шаг APPROVER.
+    routing_mode живёт на КП: 'parallel' (по умолчанию) — у всех order=1, 'sequential' — по возрастанию.
+    Шага директора нет: одобрение — маршрут EDS после виз (`request_director_approval`)."""
     quote.approval_steps.filter(is_auto=True).exclude(status=StepStatus.APPROVED).delete()
 
-    head_member, reviewers = _chain_members(company_id, quote.prepared_by_id)
-    if head_member is None:
-        logger.warning(
-            "build_approval_chain: company %s has no quote.approve_final holder and no is_system "
-            "admin — the head approval step will have no approver (company is orphaned)",
-            company_id,
-        )
-
     sequential = getattr(quote, "approval_routing_mode", "PARALLEL") == "SEQUENTIAL"
+    margin = (economics or {}).get("gross_margin_percent")
     new_steps = []
     order = 1
-    for reviewer in reviewers:
+    for reviewer in _chain_members(company_id, quote.prepared_by_id):
         new_steps.append(
             QuoteApprovalStep(
                 quote=quote,
@@ -182,26 +154,11 @@ def build_approval_chain(quote: Quote, company_id: int, economics: Optional[dict
                 is_mandatory=False,
                 is_auto=True,
                 trigger_reason=StepTrigger.TRADE_REVIEW,
+                tested_value=margin,
             )
         )
         if sequential:
             order += 1  # parallel keeps order=1 for everyone
-
-    head_reason = StepTrigger.BELOW_FLOOR_ESCALATION if (economics or {}).get("below_floor") else StepTrigger.HEAD_FINAL
-    margin = (economics or {}).get("gross_margin_percent")
-    new_steps.append(
-        QuoteApprovalStep(
-            quote=quote,
-            order=HEAD_ORDER,
-            participation=StepParticipation.HEAD,
-            approver=head_member,
-            status=StepStatus.PENDING,
-            is_mandatory=True,
-            is_auto=True,
-            trigger_reason=head_reason,
-            tested_value=margin,
-        )
-    )
     QuoteApprovalStep.objects.bulk_create(new_steps)
 
 
@@ -250,16 +207,14 @@ def _notify_informed(quote: Quote, message: str, *, event_code: str, event_param
 
 # ── act / recall ─────────────────────────────────────────────────────────────
 @transaction.atomic
-def act_on_step(
-    step_id: int, actor, decision: str, comment: str = "", *, allow_self: bool = False
-) -> Tuple[Optional[Quote], Optional[str]]:
-    """An approver approves or rejects their step. decision ∈ {APPROVE, REJECT}.
-    APPROVE advances the chain (→ READY_TO_SEND once the head approves); REJECT returns the
-    КП to DRAFT, recalls open steps, and notifies the submitter with the reason.
+def act_on_step(step_id: int, actor, decision: str, comment: str = "") -> Tuple[Optional[Quote], Optional[str]]:
+    """Проверяющий визирует или отклоняет свой шаг. decision ∈ {APPROVE, REJECT}.
+    APPROVE продвигает цепочку виз; последняя виза передаёт КП директору — `request_director_approval`
+    (событие `quote.ready_for_approval` в EDS, КП остаётся «На утверждении»). REJECT возвращает КП в черновик,
+    отзывает открытые шаги и уведомляет автора с причиной.
 
-    Автор КП не закрывает шаг проверяющего своего КП (`SELF_APPROVAL_NOT_ALLOWED`, FIX-55, D-02); исключение —
-    автосогласование единственного согласующего (`allow_self=True`). Суперпользователь закрывает шаг за
-    другого, но в журнале это помечено «от имени» (D-11)."""
+    Автор КП не закрывает шаг проверяющего своего КП (`SELF_APPROVAL_NOT_ALLOWED`, FIX-55, D-02). Суперпользователь
+    закрывает шаг за другого, но в журнале это помечено «от имени» (D-11)."""
     from .quotes import _quote_owner_company_id
 
     step = (
@@ -277,8 +232,7 @@ def act_on_step(
     if not (getattr(actor, "is_superuser", False) or member_has_permission(actor, company_id, _step_permission(step))):
         return None, "ROLE_NOT_PERMITTED"
     if (
-        not allow_self
-        and step.participation == StepParticipation.APPROVER
+        step.participation == StepParticipation.APPROVER
         and quote.prepared_by_id is not None
         and quote.prepared_by_id == getattr(actor, "id", None)
     ):
@@ -289,7 +243,7 @@ def act_on_step(
         return None, "STEP_ALREADY_DECIDED"
     active_order = _active_order(quote)
     if step.order != active_order:
-        return None, "STEP_NOT_ACTIVE"  # earlier steps must resolve first (head can't jump the queue)
+        return None, "STEP_NOT_ACTIVE"  # earlier steps must resolve first
 
     on_behalf = _on_behalf_params(step, actor)
     on_behalf_text = f" (от имени {on_behalf['on_behalf_of']})" if on_behalf else ""
@@ -346,108 +300,33 @@ def act_on_step(
 
     next_order = _active_order(quote)
     if next_order is None:
-        # All acting steps approved → ready to send. Re-check loss-prevention defensively.
+        # Все визы собраны → КП уходит директору (маршрут EDS). Убыточное КП директору не уходит.
         from .quotes import compute_quote_economics
 
         econ = compute_quote_economics(quote)
         if econ["fx_missing"] or econ["below_cost"]:
             return None, "FX_RATE_MISSING" if econ["fx_missing"] else "QUOTE_BELOW_COST"
-        _set_status(quote, QuoteStatusCode.READY_TO_SEND)
-        _log(
-            quote,
-            actor,
-            "Согласование КП завершено",
-            "Все согласования получены → READY_TO_SEND",
-            event_code="quote.approval_complete",
-        )
+        from .eds_quote_approval import request_director_approval
+
+        request_director_approval(quote, actor)
         _notify_user(
             quote.prepared_by_id,
-            "КП согласован",
-            f"КП #{quote.number or quote.id} полностью согласован — можно отправлять клиенту.",
-            type_code="SUCCESS",
+            "Визы собраны",
+            f"КП #{quote.number or quote.id}: визы собраны, КП передано директору на одобрение.",
+            type_code="INFO",
             link=_link(quote),
-            event_code="quote.approval_complete",
+            event_code="quote.visas_complete",
             event_params={"number": quote.number or quote.id},
         )
         _notify_informed(
             quote,
-            f"КП #{quote.number or quote.id} согласован.",
-            event_code="quote.approval_complete_informed",
+            f"КП #{quote.number or quote.id}: визы собраны, КП у директора.",
+            event_code="quote.visas_complete_informed",
             event_params={"number": quote.number or quote.id},
         )
     elif next_order != step.order:
         _notify_order(quote, next_order)  # the next stage's turn
     return quote, None
-
-
-# ── auto-approve (Salesforce «no other approver» pattern) ────────────────────
-def _acting_pending_steps(quote: Quote):
-    """PENDING steps that BLOCK sending — every non-INFORMED step awaiting a decision."""
-    return quote.approval_steps.filter(status=StepStatus.PENDING).exclude(participation=StepParticipation.INFORMED)
-
-
-def chain_requires_only_submitter(quote: Quote, submitter_user_id: Optional[int]) -> bool:
-    """The exact predicate that decides auto-approve vs route.
-
-    True IFF every pending blocking step is assigned to the submitter themselves — i.e. NO step
-    needs a DIFFERENT person to act. Fail-closed: an unassigned step (approver is NULL — an
-    orphaned head) or ANY step whose approver is a different user makes this False, so a genuine
-    cross-person chain (a real head, a ВЭД reviewer, a below-floor escalation to someone else)
-    can NEVER auto-pass and routes exactly as today. Returns False for an empty step set (nothing
-    to auto-approve) and for an anonymous submitter."""
-    if not submitter_user_id:
-        return False
-    steps = list(_acting_pending_steps(quote).select_related("approver"))
-    if not steps:
-        return False
-    return all(step.approver is not None and step.approver.user_id == submitter_user_id for step in steps)
-
-
-def auto_approve_solo_chain(quote: Quote, submitter) -> bool:
-    """Salesforce «only approver is the submitter» → auto-approve the whole chain instantly.
-
-    Approves each blocking step AS the submitter via the normal ``act_on_step`` advance path
-    (reuse, not hand-mutation), so the КП lands in READY_TO_SEND through the same code a human
-    approval would, emitting the per-step + completion audit events; it can only succeed because
-    the submitter genuinely holds each step's permission. Writes an explicit «согласовано
-    автоматически» journal event so the audit shows an auto-pass, not a silent skip.
-
-    Runs inside the caller's transaction (submit_for_review is @transaction.atomic). Returns True
-    when the КП auto-advanced to READY_TO_SEND; False if it could not (e.g. the submitter turned
-    out to lack a step's permission) — in which case the caller routes exactly as today."""
-    submitter_id = getattr(submitter, "id", None)
-    if not chain_requires_only_submitter(quote, submitter_id):
-        return False
-    # Drain the blocking steps in order (a lower order resolves before the head becomes active).
-    while True:
-        active_order = _active_order(quote)
-        if active_order is None:
-            break
-        step = _acting_pending_steps(quote).filter(order=active_order).order_by("id").first()
-        if step is None:
-            break
-        _, err = act_on_step(
-            step.id,
-            submitter,
-            "APPROVE",
-            comment="Автосогласование (единственный согласующий — отправитель)",
-            allow_self=True,
-        )
-        if err:
-            logger.warning("auto_approve_solo_chain: step %s not auto-approvable (%s) — routing", step.id, err)
-            return False
-    quote.refresh_from_db()
-    if quote.status and quote.status.code == QuoteStatusCode.READY_TO_SEND:
-        _log(
-            quote,
-            submitter,
-            "Согласовано автоматически",
-            "Единственный согласующий — отправитель: цепочка пройдена автоматически",
-            event_code="quote.approval_auto",
-            event_params={},
-        )
-        return True
-    return False
 
 
 # ── preview (Salesforce «Approval Preview») ──────────────────────────────────
@@ -482,11 +361,9 @@ def _preview_step(member, participation: str, trigger: str, submitter_user_id: O
 
 
 def preview_approval_chain(quote_id: int, actor) -> Tuple[Optional[dict], Optional[str]]:
-    """Read-only «who would have to approve this КП if submitted now» (Salesforce Approval
-    Preview). Builds NO steps and persists NOTHING — it mirrors ``build_approval_chain``'s member
-    resolution to project the would-be chain (reviewers + mandatory head, with names/roles) plus
-    whether it would auto-approve (only the submitter on it). Scoped to a seller who could
-    actually submit the КП (quote.build on the owning company), via the resolver submit uses."""
+    """Только чтение: кто визирует КП, если отправить его сейчас (Salesforce Approval Preview). Шаги не строятся и
+    ничего не сохраняется — то же разрешение участников, что у `build_approval_chain`. После виз КП уходит директору
+    в EDS (EDS-03) — шагом ERP это не показывается. Доступно тому, кто может отправить КП (`quote.build`)."""
     from crm.services.quotes.lifecycle_gates import resolve_submit_company
     from crm.services.quotes.pricing import compute_quote_economics
 
@@ -498,31 +375,19 @@ def preview_approval_chain(quote_id: int, actor) -> Tuple[Optional[dict], Option
         return None, err
 
     economics = compute_quote_economics(quote)
-    below_floor = bool(economics.get("below_floor"))
-
-    head_member, reviewers = _chain_members(company_id, quote.prepared_by_id)
-
     submitter_id = getattr(actor, "id", None)
     steps = [
         _preview_step(reviewer, StepParticipation.APPROVER, StepTrigger.TRADE_REVIEW, submitter_id)
-        for reviewer in reviewers
+        for reviewer in _chain_members(company_id, quote.prepared_by_id)
     ]
-    head_trigger = StepTrigger.BELOW_FLOOR_ESCALATION if below_floor else StepTrigger.HEAD_FINAL
-    steps.append(_preview_step(head_member, StepParticipation.HEAD, head_trigger, submitter_id))
-
-    # Mirror chain_requires_only_submitter: every step assigned AND assigned to the submitter.
-    would_auto_approve = bool(steps) and all(step["is_assigned"] and step["is_submitter"] for step in steps)
-    return {
-        "would_auto_approve": would_auto_approve,
-        "below_floor": below_floor,
-        "steps": steps,
-    }, None
+    return {"below_floor": bool(economics.get("below_floor")), "steps": steps}, None
 
 
 @transaction.atomic
 def recall_quote(quote_id: int, actor) -> Tuple[Optional[Quote], Optional[str]]:
-    """Submitter (or head/owner) pulls a КП back out of approval to edit it. PENDING_APPROVAL →
-    DRAFT, open steps RECALLED. Forbidden once READY_TO_SEND (Salesforce rule)."""
+    """Автор КП (или суперпользователь) забирает КП с согласования на правку: PENDING_APPROVAL → DRAFT, открытые
+    шаги RECALLED. Запрещено после «Готово к отправке» (Salesforce rule). Если КП уже у директора в EDS, решение по
+    этой редакции придёт устаревшим и не применится; повторная отправка — новая редакция."""
     from .quotes import _quote_owner_company_id
 
     quote = Quote.objects.select_for_update(of=("self",)).select_related("status").get(pk=quote_id)
@@ -530,8 +395,7 @@ def recall_quote(quote_id: int, actor) -> Tuple[Optional[Quote], Optional[str]]:
     if not company_id:
         return None, "NO_QUOTE_COMPANY"
     is_submitter = quote.prepared_by_id == getattr(actor, "id", None)
-    is_head = member_has_permission(actor, company_id, Permission.QUOTE_APPROVE_FINAL.value)
-    if not (getattr(actor, "is_superuser", False) or is_submitter or is_head):
+    if not (getattr(actor, "is_superuser", False) or is_submitter):
         return None, "ROLE_NOT_PERMITTED"
     if not quote.status or quote.status.code != QuoteStatusCode.PENDING_APPROVAL:
         return None, "INVALID_STATUS"

@@ -194,12 +194,8 @@ def can_duplicate_quote(actor, quote) -> bool:
 
 
 def approval_queue_for(user):
-    """КП waiting on THIS user's pending approval STEP (unified step-based chain).
-
-    A КП is in my queue when it is PENDING_APPROVAL, has a PENDING acting step at the
-    CURRENT stage (lowest pending order), that step is in a company I belong to, and I hold
-    the step's permission (quote.review for an intermediate, quote.approve_final for the head).
-    """
+    """КП, ждущие визы ЭТОГО пользователя: PENDING_APPROVAL, PENDING-шаг текущей стадии (наименьший order) в его
+    компании, и у него есть `quote.review`. Одобрение директором — очередь маршрутов EDS, не здесь (EDS-03)."""
     from accounts.constants import Permission
     from accounts.services.permissions import member_has_permission
     from crm.models import QuoteApprovalStep
@@ -228,12 +224,7 @@ def approval_queue_for(user):
         active = active_order_by_quote.setdefault(quote.id, step.order)
         if step.order != active:
             continue
-        perm = (
-            Permission.QUOTE_APPROVE_FINAL.value
-            if step.participation == StepParticipation.HEAD
-            else Permission.QUOTE_REVIEW.value
-        )
-        if member_has_permission(user, company_id, perm):
+        if member_has_permission(user, company_id, Permission.QUOTE_REVIEW.value):
             actionable_quote_ids.add(quote.id)
     return (
         Quote.objects.filter(id__in=actionable_quote_ids)

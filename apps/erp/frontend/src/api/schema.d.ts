@@ -5658,8 +5658,8 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Act on a КП approval step (approve / reject)
-         * @description An approver approves or rejects their step in the КП approval chain.
+         * Act on a КП visa step (approve / reject); the last visa sends the КП to the director in EDS
+         * @description Проверяющий визирует или отклоняет свой шаг; последняя виза передаёт КП директору в EDS (EDS-03).
          */
         post: operations["crm_quotes_approval_act_create"];
         delete?: never;
@@ -5677,7 +5677,7 @@ export interface paths {
         };
         /**
          * Preview the КП approval chain (who would approve if submitted now)
-         * @description Read-only Salesforce-style Approval Preview: the would-be reviewers + mandatory head (names / roles), and whether the КП would auto-approve because the only approver is the submitter. Builds and persists NOTHING (no side effects). Seller-side only — the same quote.build gate as submit-for-review; feeds the «кто должен согласовать» preview in the send dialog.
+         * @description Read-only Salesforce-style Approval Preview: the would-be reviewers (quote.review, names / roles). After their visas the КП goes to the director's approval route in EDS (EDS-03) — not a step here. Builds and persists NOTHING (no side effects). Seller-side only — the same quote.build gate as submit-for-review; feeds the «кто должен согласовать» preview in the send dialog.
          */
         get: operations["crm_quotes_approval_preview_retrieve"];
         put?: never;
@@ -5858,7 +5858,7 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Recall a КП from approval back to DRAFT (submitter / head)
+         * Recall a КП from approval back to DRAFT (submitter)
          * @description Pull a КП back out of the approval chain to edit it (PENDING_APPROVAL → DRAFT).
          */
         post: operations["crm_quotes_recall_create"];
@@ -21737,7 +21737,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description {would_auto_approve, below_floor, steps:[{...}]} */
+            /** @description {below_floor, steps:[{...}]} */
             200: {
                 headers: {
                     [name: string]: unknown;

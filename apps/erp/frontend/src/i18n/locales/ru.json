@@ -2515,7 +2515,6 @@
     "quote_view_cost_margin": "Видеть себестоимость и маржу",
     "quote_send": "Отправлять КП клиенту",
     "quote_review": "Согласовывать КП",
-    "quote_approve_final": "Финально утверждать КП",
     "contract_manage": "Готовить договоры",
     "contract_sign": "Подписывать договоры от компании",
     "catalog_manage": "Вести каталог",
@@ -2803,6 +2802,30 @@
       "purchase_actual_removed": {
         "title": "Факт закупки удалён",
         "detail": "{{currency}}"
+      },
+      "calc_task_created": {
+        "title": "Резолюция директора: задание на расчёт",
+        "detail": "{{letter_number}}: срок {{due}}"
+      },
+      "calc_task_updated": {
+        "title": "Резолюция директора обновлена",
+        "detail": "{{letter_number}}: срок {{due}}"
+      },
+      "calc_assignee_unknown": {
+        "title": "Исполнитель резолюции не найден в ERP",
+        "detail": "Сотрудник CRM #{{crm_user_id}} из резолюции {{letter_number}} не заведён в ERP"
+      },
+      "calc_stage_kept": {
+        "title": "Стадия не изменена резолюцией",
+        "detail": "Резолюция {{letter_number}}: сделка на стадии {{stage_code}}"
+      },
+      "lost_by_letter_rejection": {
+        "title": "Письмо отклонено директором",
+        "detail": "{{letter_number}}: {{reason}}"
+      },
+      "letter_rejection_kept": {
+        "title": "Отказ по письму не применён",
+        "detail": "{{letter_number}}: сделка на стадии {{stage_code}}"
       }
     },
     "quote": {
@@ -2894,6 +2917,30 @@
       "fx_override_cleared": {
         "title": "Договорной курс КП снят",
         "detail": "КП v{{version}}: {{currency}} снова по курсу ЦБ — {{reason}}"
+      },
+      "sent_to_director": {
+        "title": "КП передано директору на одобрение",
+        "detail": "КП {{number}} (редакция {{revision}}) — маршрут одобрения EDS"
+      },
+      "director_decision_stale": {
+        "title": "Решение директора по устаревшей редакции КП не применено",
+        "detail": "Редакция {{version}}, действующая — {{current_revision}}"
+      },
+      "director_decision_ignored": {
+        "title": "Решение директора не применено: КП не ждёт одобрения",
+        "detail": "Статус КП — {{status_code}}"
+      },
+      "director_approved": {
+        "title": "КП одобрено директором",
+        "detail": "{{outgoing_number}} — готово к отправке"
+      },
+      "director_returned": {
+        "title": "КП возвращено директором на доработку",
+        "detail": "{{comment}}"
+      },
+      "director_rejected": {
+        "title": "КП отклонено директором",
+        "detail": "{{comment}}"
       }
     },
     "contract": {
@@ -3094,6 +3141,12 @@
       "paired_code": {
         "title": "CRM сопряжена по коду из ERP",
         "detail": "Сопряжение по одноразовому коду; сам код в журнал не пишется"
+      }
+    },
+    "eds": {
+      "letter_skipped": {
+        "title": "Событие EDS пропущено",
+        "detail": "{{letter_number}}: письмо не связано со сделкой ERP"
       }
     }
   },
@@ -3478,6 +3531,26 @@
     "catalog.category_request_rejected": {
       "title": "Обращение по категории отклонено",
       "message": "«{{category_name}}»: {{reason}}"
+    },
+    "quote.visas_complete": {
+      "title": "Визы собраны",
+      "message": "КП #{{number}}: визы собраны, КП передано директору на одобрение."
+    },
+    "quote.visas_complete_informed": {
+      "title": "КП — для информации",
+      "message": "КП #{{number}}: визы собраны, КП у директора."
+    },
+    "quote.director_approved": {
+      "title": "КП одобрено директором",
+      "message": "КП #{{number}} одобрено ({{outgoing_number}}) — можно отправлять клиенту."
+    },
+    "quote.director_rejected": {
+      "title": "КП отклонено директором",
+      "message": "КП #{{number}} отклонено директором. {{comment}}"
+    },
+    "deal.calc_assigned": {
+      "title": "Задание на расчёт",
+      "message": "Резолюция по {{letter_number}}: расчёт по заявке #{{deal_id}} до {{due}}."
     }
   },
   "approvalParticipation": {

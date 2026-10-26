@@ -52,7 +52,7 @@ def test_templates_cover_business_roles_and_prefixes():
     }
     # Каждое право бэк-офиса принадлежит хотя бы одной роли помимо «Руководителя».
     granted = set().union(*(set(p) for c, p in ROLE_TEMPLATES.items() if c != "HEAD"))
-    assert set(ALL_PERMISSIONS) - granted <= {"deal.assign", "quote.approve_final", "contract.sign"} | {
+    assert set(ALL_PERMISSIONS) - granted <= {"deal.assign", "contract.sign"} | {
         "settings.edit",
         "settings.charge_templates",
         "team.manage",
@@ -67,6 +67,29 @@ def test_frozen_migration_table_matches_code():
         code: set(perms) | set(frozen.ROLE_GRANTS_0004.get(code, [])) for code, _name, perms in frozen.BACKOFFICE_ROLES
     } == {code: set(perms) for code, perms in ROLE_TEMPLATES.items()}
     assert [name for _c, name, _p in frozen.BACKOFFICE_ROLES] == [label for _v, label in BackofficeRoleCode.choices]
+    # Волна 12 (EDS-03): каталог после accounts/0010 — ровно каталог кода.
+    assert set(frozen.CATALOG_0010) == set(ALL_PERMISSIONS)
+
+
+def test_migration_0010_prunes_codes_outside_the_catalog_from_roles_and_snapshots(db):
+    """Код финального утверждения КП (и любой код вне каталога) снимается с ролей и снимков провижининга CRM."""
+    from integration.models import CrmUserMapping
+
+    company = Company.objects.create(name="ООО Своя", inn="7700000999")
+    stale = "quote.final_" + "approval_v0"  # код вне каталога (снятый волной 12 — того же рода)
+    role = CompanyRole.objects.create(company=company, name="Руководитель+", permissions=["quote.review", stale])
+    user = CustomUser.objects.create_user(email="ceo@own.test", username="ceo@own.test", password=None)
+    mapping = CrmUserMapping.objects.create(
+        crm_user_id=77, user=user, provision_snapshot={"role": "backoffice", "permissions": ["deal.manage", stale]}
+    )
+
+    frozen.prune_unknown_permissions(django_apps, None)
+    frozen.prune_unknown_snapshot_permissions(django_apps, None)
+
+    role.refresh_from_db()
+    mapping.refresh_from_db()
+    assert role.permissions == ["quote.review"]
+    assert mapping.provision_snapshot == {"role": "backoffice", "permissions": ["deal.manage"]}
 
 
 @pytest.fixture

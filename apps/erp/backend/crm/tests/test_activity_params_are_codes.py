@@ -70,9 +70,9 @@ def test_approval_step_writes_participation_code(lookups):
 
     seller = Company.objects.create(name="Продавец ООО", inn="7000000004")
     seller.types.add(CompanyType.objects.get(code="SUPPLIER"))
-    # M1-ERP-05: финальный согласующий — держатель quote.approve_final (роль «Руководитель»).
+    # Визирует держатель quote.review; одобрение директором — маршрут EDS (EDS-03).
     admin_role = CompanyRole.objects.create(
-        company=seller, name="Руководитель", permissions=[Permission.QUOTE_APPROVE_FINAL.value]
+        company=seller, name="Руководитель", permissions=[Permission.QUOTE_REVIEW.value]
     )
     sales_role = CompanyRole.objects.create(company=seller, name="Продажи", permissions=[Permission.QUOTE_BUILD.value])
     sales_user = _user("sales@codes.test")
@@ -100,13 +100,13 @@ def test_approval_step_writes_participation_code(lookups):
         total_incl_vat=Decimal("112.00"),
     )
     QuoteLifecycleService.submit_for_review(quote.id, sales_user)
-    head_step = quote.approval_steps.get(participation=StepParticipation.HEAD)
+    head_step = quote.approval_steps.get(participation=StepParticipation.APPROVER)
 
     _quote, error = act_on_step(head_step.id, head_user, "APPROVE")
 
     assert error is None
     params = ActivityLog.objects.get(event_code="quote.approval_step_approved").event_params
-    assert params["participation_code"] == "HEAD"
+    assert params["participation_code"] == "APPROVER"
 
 
 def test_contract_wording_marks_standard_edition_with_a_code(lookups, monkeypatch):

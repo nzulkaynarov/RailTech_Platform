@@ -46,7 +46,7 @@ def test_viewer_member_can_do_nothing_sensitive(company):
     """A «Наблюдатель» (read-only) member holds none of the sensitive permissions."""
     viewer_role = CompanyRole.objects.create(company=company, name="Наблюдатель", permissions=[])
     viewer = _member(company, "view@a.test", role=viewer_role, can_sell=False)
-    for perm in ("quote.send", "quote.approve_final", "contract.sign", "finance.payment", "team.manage", "data.export"):
+    for perm in ("quote.send", "quote.review", "contract.sign", "finance.payment", "team.manage", "data.export"):
         assert member_has_permission(viewer.user, company.id, perm) is False
 
 
