@@ -35,6 +35,7 @@ from app.repositories import users as users_repo
 from app.security import audit, reauth
 from app.security.principal import Principal
 from app.security.secrets_store import last4
+from app.services.settings import SettingsService
 
 logger = structlog.get_logger(__name__)
 
@@ -116,6 +117,7 @@ class ModelsAdminService:
         invalidate: Callable[[], None],
         lockout: reauth.LockoutPolicy | None = None,
         new_id: Callable[[str], str] | None = None,
+        settings_service: SettingsService | None = None,
     ) -> None:
         self._sessions = sessions
         self._admin = admin
@@ -123,6 +125,7 @@ class ModelsAdminService:
         self._invalidate = invalidate
         self._lockout = lockout or reauth.LockoutPolicy()
         self._new_id = new_id or (lambda alias: f"rt-{alias}-{secrets.token_hex(4)}")
+        self._settings = settings_service
 
     async def change(
         self, who: Principal, alias: str, change: ModelChange, password: str
@@ -187,6 +190,7 @@ class ModelsAdminService:
         self._invalidate()
         provider, model = _split(str(params["model"]))
         await self._audit(who, alias, old, params, source, action)
+        await self._remember_key(who, alias, source, key)
         logger.info("model_changed", alias=alias, provider=provider, model=model, key=source)
         old_models = {d.model for d in old}
         return ChangeOutcome(
@@ -197,6 +201,21 @@ class ModelsAdminService:
             reindex_required=alias == EMBED_ALIAS and old_models != {params["model"]},
             quality_check_recommended=alias == DIALOG_ALIAS,
         )
+
+    async def _remember_key(self, who: Principal, alias: str, source: str, key: object) -> None:
+        """Маска ключа для экрана: источник и последние 4 символа; сам ключ нигде не хранится."""
+        if self._settings is None:
+            return
+        mask = {
+            "source": source,
+            "last4": last4(str(key)) if source == "crm" and key else None,
+            "updated_at": datetime.now(UTC).isoformat(),
+        }
+        try:
+            await self._settings.merge_map("integrations", "model_keys", {alias: mask}, who.user_id)
+        except Exception:  # noqa: BLE001 — любой сбой записи: модель уже сменена, ответ не ломаем
+            # Маска — справка для экрана; сбой её записи не должен давать 500.
+            logger.warning("model_key_mask_not_saved", alias=alias, key=source, exc_info=False)
 
     async def _audit(
         self,

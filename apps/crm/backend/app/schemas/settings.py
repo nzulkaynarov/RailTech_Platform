@@ -359,6 +359,18 @@ class SmtpSettings(StrictModel):
     from_name: str = Field(default="", max_length=120)
 
 
+class ModelKeyMask(StrictModel):
+    """Откуда ключ роли модели и его последние 4 символа (ADR-0020, W13-A1).
+
+    Сам ключ уходит только в LiteLLM и сюда не попадает; `last4` — маска для экрана «Модели ИИ».
+    `env` — ключ провайдера из настроек сервера (`last4` нет).
+    """
+
+    source: Literal["crm", "env"]
+    last4: str | None = Field(default=None, max_length=4)
+    updated_at: datetime
+
+
 class IntegrationsSettings(StrictModel):
     """Коннекторы «Подключений» без секретов (ADR-0018, M3-CRM-02); секреты — `integration_secrets`.
 
@@ -371,6 +383,8 @@ class IntegrationsSettings(StrictModel):
     # после чего его снимает сама CRM. Пусто — предыдущий секрет задан вручную и живёт, пока админ не снимет.
     erp_previous_secret_until: datetime | None = None
     smtp: SmtpSettings = Field(default_factory=SmtpSettings)
+    # Маска ключей ролей моделей (алиас → источник и последние 4 символа); пишет «Модели ИИ» при смене и сбросе.
+    model_keys: dict[str, ModelKeyMask] = Field(default_factory=dict)
 
 
 class WebFormSettings(StrictModel):

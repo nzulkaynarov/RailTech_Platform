@@ -31,7 +31,33 @@ OUTPUT = REPO / "apps" / "platform" / "bff" / "app" / "clients" / "crm_models.py
 SCHEMA_REF = "#/components/schemas/"
 
 # Ответы CRM, которые BFF разбирает моделью: вход/обновление (CrmClient.tokens) и SSO-токен для ERP (AuthService).
-ROOTS = ("TokenResponse", "SsoTokenResponse")
+ROOTS = (
+    "TokenResponse",
+    "SsoTokenResponse",
+    # Admin · Внешние интеграции (W13-A1): коннекторы ERP, Telegram, почта; реестр внешних сервисов; модели, расходы,
+    # бэкапы и состояние системы. Значений секретов в этих ответах нет — только «задан» и последние 4 символа.
+    "ErpStatusOut",
+    "ErpCheckOut",
+    "ErpPairingOut",
+    "TelegramStatusOut",
+    "ChatCandidateOut",
+    "BotProfileOut",
+    "ActionResult",
+    "SmtpStatusOut",
+    "SmtpCheckOut",
+    "EmailLogItem",
+    "EmailQueuedOut",
+    "ExternalServicesOut",
+    "ExternalServiceDetailOut",
+    "ExternalServiceOut",
+    "ModelStatus",
+    "ModelChangeResult",
+    "ModelTestResult",
+    "SpendReport",
+    "AiSpendReport",
+    "BackupsOut",
+    "SystemStatusOut",
+)
 
 HEADER = (
     "# Сгенерировано apps/platform/scripts/gen_crm_models.py из packages/contracts/openapi/crm.yaml — "

@@ -45,7 +45,7 @@ async def list_models(
         rows = await session.scalars(select(SystemAlert).where(SystemAlert.key.like("model:%")))
         alerts = {row.key: row for row in rows}
         today = {alias: usd for alias, usd, _ in await spend_repo.grouped(session, since, "alias")}
-    return models_status.statuses(entries, alerts, today)
+    return models_status.statuses(entries, alerts, today, cfg.integrations.model_keys)
 
 
 @router.post("/models/{alias}/test", response_model=ModelTestResult)
