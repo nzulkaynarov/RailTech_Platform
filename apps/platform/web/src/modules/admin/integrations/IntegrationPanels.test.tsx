@@ -81,6 +81,14 @@ describe("карточка ERP", () => {
       expect(within(side).getByText("•••• 5a1d")).toBeVisible();
     });
     expect(document.body.textContent).not.toContain("123456");
+    // форма закрыта, код и пароль из неё ушли: при повторном открытии поля пустые
+    expect(within(side).queryByRole("form", { name: "Подключить ERP" })).not.toBeInTheDocument();
+    // итог остаётся на панели и после закрытия формы
+    expect(within(side).getByText("Сопряжение выполнено.")).toBeVisible();
+    fireEvent.click(within(side).getByRole("button", { name: "Подключить заново" }));
+    const again = within(side).getByRole("form", { name: "Подключить ERP" });
+    expect(within(again).getByLabelText("Одноразовый код сопряжения")).toHaveValue("");
+    expect(within(again).getByLabelText("Ваш пароль администратора")).toHaveValue("");
   });
 
   it("ротация ключа: блок «Что произойдёт», пароль, итог; на карточке — переход на новые ключи", async () => {
@@ -96,6 +104,15 @@ describe("карточка ERP", () => {
     expect(await within(side).findByText("Ключи обновлены.")).toBeVisible();
     expect(await screen.findByText("Идёт переход на новые ключи")).toBeVisible();
     expect(within(side).getByText("•••• e7b2")).toBeVisible();
+    expect(
+      within(side).queryByRole("form", { name: "Ротация ключей ERP" }),
+    ).not.toBeInTheDocument();
+    fireEvent.click(within(side).getByRole("button", { name: "Ротация ключа" }));
+    expect(
+      within(within(side).getByRole("form", { name: "Ротация ключей ERP" })).getByLabelText(
+        "Ваш пароль администратора",
+      ),
+    ).toHaveValue("");
   });
 });
 
@@ -278,6 +295,17 @@ describe("карточка «Модели ИИ»", () => {
     fireEvent.click(
       within(side).getByRole("button", { name: "Проверить модель: Поиск по базе знаний" }),
     );
+    const confirm = within(side).getByRole("form", {
+      name: "Проверка модели «Поиск по базе знаний»",
+    });
+    expect(
+      within(within(confirm).getByRole("group", { name: "Что произойдёт" })).getByText(
+        /один короткий платный запрос/,
+      ),
+    ).toBeVisible();
+    // запроса к модели без подтверждения нет
+    expect(within(side).queryByText(/не ответила/)).not.toBeInTheDocument();
+    press(confirm, "Проверить модель");
     expect(
       await within(side).findByText("Модель «Поиск по базе знаний» не ответила"),
     ).toBeVisible();

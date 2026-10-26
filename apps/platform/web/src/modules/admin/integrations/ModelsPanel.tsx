@@ -173,7 +173,7 @@ function ModelRow({ model, editable }: { model: AiModel; editable: boolean }) {
   const { t } = useTranslation("integrations");
   const { date, money } = useFormat();
   const refresh = useRefreshIntegrations();
-  const [form, setForm] = useState<"change" | "reset" | null>(null);
+  const [form, setForm] = useState<"test" | "change" | "reset" | null>(null);
   const test = useTestAiModel({
     mutation: {
       onSuccess: () => {
@@ -205,10 +205,10 @@ function ModelRow({ model, editable }: { model: AiModel; editable: boolean }) {
         <div className="pf-int-row">
           <Button
             size="small"
-            loading={test.isPending}
             aria-label={t("models.test.aria", { alias: title })}
+            aria-expanded={form === "test"}
             onClick={() => {
-              test.mutate({ alias: model.alias });
+              setForm(form === "test" ? null : "test");
             }}
           >
             {t("common.check")}
@@ -256,6 +256,30 @@ function ModelRow({ model, editable }: { model: AiModel; editable: boolean }) {
         />
       ) : null}
       <ErrorNote error={test.error} />
+      {form === "test" ? (
+        <ActionForm
+          id={`model-test-${model.alias}`}
+          title={t("models.test.confirm.title", { alias: title })}
+          submitLabel={t("models.test.confirm.submit")}
+          needsPassword={false}
+          pending={test.isPending}
+          error={null}
+          consequence={[t("models.test.confirm.step1"), t("models.test.confirm.step2")]}
+          onCancel={() => {
+            setForm(null);
+          }}
+          onSubmit={() => {
+            test.mutate(
+              { alias: model.alias },
+              {
+                onSettled: () => {
+                  setForm(null);
+                },
+              },
+            );
+          }}
+        />
+      ) : null}
       {form === "change" ? (
         <ChangeForm
           model={model}

@@ -330,6 +330,12 @@
     "checkedAt": "Tekshirildi: {{date}}",
     "neverChecked": "Hali tekshirilmagan",
     "test": {
+      "confirm": {
+        "title": "«{{alias}}» modelini tekshirish",
+        "step1": "Modelga bitta qisqa pullik so‘rov yuboriladi: shunda kalit va model javob berayotgani ko‘rinadi.",
+        "step2": "Narxi (sentning ulushi) bugungi xarajatlarga qo‘shiladi.",
+        "submit": "Modelni tekshirish"
+      },
       "aria": "Modelni tekshirish: {{alias}}",
       "ok": "«{{alias}}» modeli javob beryapti",
       "fail": "«{{alias}}» modeli javob bermadi",

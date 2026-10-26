@@ -330,6 +330,12 @@
     "checkedAt": "Checked: {{date}}",
     "neverChecked": "Not checked yet",
     "test": {
+      "confirm": {
+        "title": "Check model “{{alias}}”",
+        "step1": "The model gets one short paid request: it shows that the key and the model respond.",
+        "step2": "The cost (a fraction of a cent) is added to today’s spend.",
+        "submit": "Check model"
+      },
       "aria": "Check model: {{alias}}",
       "ok": "Model “{{alias}}” responds",
       "fail": "Model “{{alias}}” did not respond",

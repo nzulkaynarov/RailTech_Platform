@@ -2,7 +2,7 @@ import { Alert, Button, Input } from "antd";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 
-import type { ErpCheck, ErpConnector } from "../../../shared/api/generated/model";
+import type { ErpCheck, ErpConnector, ErpPairing } from "../../../shared/api/generated/model";
 import {
   useCheckErpConnector,
   useGetErpConnector,
@@ -53,19 +53,56 @@ function CheckResult({ check }: { check: ErpCheck }) {
   );
 }
 
-function PairForm({ erp, onDone }: { erp: ErpConnector; onDone: () => void }) {
+type ErpResult = { kind: "pair" | "rotate"; data: ErpPairing };
+
+/** Итог сопряжения или ротации: остаётся на панели после закрытия формы (код и пароль из формы уходят). */
+function ResultNote({ result }: { result: ErpResult }) {
+  const { t } = useTranslation("integrations");
+  const { data } = result;
+  return (
+    <div className="pf-int-form">
+      <Alert
+        type="success"
+        showIcon
+        role="status"
+        message={t(result.kind === "pair" ? "erp.pair.done" : "erp.rotate.done")}
+      />
+      {data.check ? <CheckResult check={data.check} /> : null}
+      {data.check_error ? (
+        <Alert
+          type="warning"
+          showIcon
+          role="status"
+          message={reasonText(t, data.check_error) || t("errors.INTEGRATION_FAILED")}
+        />
+      ) : null}
+    </div>
+  );
+}
+
+function PairForm({
+  erp,
+  onSaved,
+  onCancel,
+}: {
+  erp: ErpConnector;
+  onSaved: (result: ErpResult) => void;
+  onCancel: () => void;
+}) {
   const { t } = useTranslation("integrations");
   const refresh = useRefreshIntegrations();
   const [baseUrl, setBaseUrl] = useState(erp.configured ? erp.base_url : erp.suggested_base_url);
   const [code, setCode] = useState("");
   const pair = usePairErp({
     mutation: {
-      onSuccess: () => {
+      onSuccess: (data) => {
         refresh();
+        // Форма закрывается и размонтируется: код сопряжения и пароль не остаются в состоянии.
+        setCode("");
+        onSaved({ kind: "pair", data });
       },
     },
   });
-  const result = pair.data;
   return (
     <div className="pf-int-form">
       <ActionForm
@@ -76,7 +113,7 @@ function PairForm({ erp, onDone }: { erp: ErpConnector; onDone: () => void }) {
         error={pair.error}
         invalid={baseUrl.trim() === ""}
         consequence={[t("erp.pair.step1"), t("erp.pair.step2"), t("erp.pair.step3")]}
-        onCancel={onDone}
+        onCancel={onCancel}
         onSubmit={(password) => {
           pair.mutate({
             data: {
@@ -110,31 +147,24 @@ function PairForm({ erp, onDone }: { erp: ErpConnector; onDone: () => void }) {
           />
         </Field>
       </ActionForm>
-      {result ? (
-        <div className="pf-int-form">
-          <Alert type="success" showIcon role="status" message={t("erp.pair.done")} />
-          {result.check ? <CheckResult check={result.check} /> : null}
-          {result.check_error ? (
-            <Alert
-              type="warning"
-              showIcon
-              role="status"
-              message={reasonText(t, result.check_error) || t("errors.INTEGRATION_FAILED")}
-            />
-          ) : null}
-        </div>
-      ) : null}
     </div>
   );
 }
 
-function RotateForm({ onDone }: { onDone: () => void }) {
+function RotateForm({
+  onSaved,
+  onCancel,
+}: {
+  onSaved: (result: ErpResult) => void;
+  onCancel: () => void;
+}) {
   const { t } = useTranslation("integrations");
   const refresh = useRefreshIntegrations();
   const rotate = useRotateErpKeys({
     mutation: {
-      onSuccess: () => {
+      onSuccess: (data) => {
         refresh();
+        onSaved({ kind: "rotate", data });
       },
     },
   });
@@ -147,17 +177,11 @@ function RotateForm({ onDone }: { onDone: () => void }) {
         pending={rotate.isPending}
         error={rotate.error}
         consequence={[t("erp.rotate.step1"), t("erp.rotate.step2"), t("erp.rotate.step3")]}
-        onCancel={onDone}
+        onCancel={onCancel}
         onSubmit={(password) => {
           rotate.mutate({ data: { password } });
         }}
       />
-      {rotate.data ? (
-        <>
-          <Alert type="success" showIcon role="status" message={t("erp.rotate.done")} />
-          {rotate.data.check ? <CheckResult check={rotate.data.check} /> : null}
-        </>
-      ) : null}
     </div>
   );
 }
@@ -167,6 +191,11 @@ function ErpBody({ erp, editable }: { erp: ErpConnector; editable: boolean }) {
   const { date } = useFormat();
   const refresh = useRefreshIntegrations();
   const [form, setForm] = useState<"pair" | "rotate" | null>(null);
+  const [saved, setSaved] = useState<ErpResult | null>(null);
+  const finish = (result: ErpResult) => {
+    setSaved(result);
+    setForm(null);
+  };
   const check = useCheckErpConnector({
     mutation: {
       onSuccess: () => {
@@ -242,12 +271,14 @@ function ErpBody({ erp, editable }: { erp: ErpConnector; editable: boolean }) {
             label={erp.configured ? t("erp.pair.reconnect") : t("erp.pair.button")}
             open={form === "pair"}
             onToggle={(open) => {
+              setSaved(null);
               setForm(open ? "pair" : null);
             }}
           >
             <PairForm
               erp={erp}
-              onDone={() => {
+              onSaved={finish}
+              onCancel={() => {
                 setForm(null);
               }}
             />
@@ -257,16 +288,19 @@ function ErpBody({ erp, editable }: { erp: ErpConnector; editable: boolean }) {
               label={t("erp.rotate.button")}
               open={form === "rotate"}
               onToggle={(open) => {
+                setSaved(null);
                 setForm(open ? "rotate" : null);
               }}
             >
               <RotateForm
-                onDone={() => {
+                onSaved={finish}
+                onCancel={() => {
                   setForm(null);
                 }}
               />
             </ActionToggle>
           ) : null}
+          {saved ? <ResultNote result={saved} /> : null}
         </>
       )}
     </div>

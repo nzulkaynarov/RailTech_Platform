@@ -949,3 +949,46 @@ async def test_errors_never_contain_submitted_secrets(web: Web, crm: CrmIntegrat
     assert response.status_code == 422
     assert token not in response.text
     assert PASSWORD not in response.text
+
+
+@pytest.mark.parametrize(
+    "answer",
+    [
+        httpx.Response(
+            502, content=b"<html>Bad Gateway</html>", headers={"content-type": "text/html"}
+        ),
+        httpx.Response(502),
+        httpx.Response(502, json=["not", "an", "app", "error"]),
+        httpx.Response(503, json={"code": "x", "message": "x", "details": {}}),
+        httpx.Response(504, content=b"gateway timeout"),
+    ],
+)
+async def test_proxy_gateway_errors_on_probe_stay_crm_unavailable(
+    web: Web, crm: CrmIntegrationsFake, check: ContractChecker, answer: httpx.Response
+) -> None:
+    """502/503/504 прокси — не итог проверки: «CRM недоступна» (503), а не INTEGRATION_FAILED."""
+    crm.overrides[("POST", "/api/v1/integrations/smtp/check")] = answer
+    await web.login(["ADMIN"])
+
+    response = await web.send("POST", f"{BASE}/smtp/check")
+
+    assert response.status_code == 503
+    check(response, "/admin/integrations/smtp/check", "post")
+    assert response.json()["code"] == "BACKEND_UNAVAILABLE"
+    assert response.json()["source"] == "crm"
+
+
+async def test_network_failure_on_probe_is_crm_unavailable(
+    web: Web, crm: CrmIntegrationsFake, check: ContractChecker
+) -> None:
+    def refuse(request: httpx.Request) -> httpx.Response:
+        raise httpx.ConnectError("refused", request=request)
+
+    crm.overrides[("POST", "/api/v1/integrations/erp/check")] = refuse
+    await web.login(["ADMIN"])
+
+    response = await web.send("POST", f"{BASE}/erp/check")
+
+    assert response.status_code == 503
+    check(response, "/admin/integrations/erp/check", "post")
+    assert response.json()["code"] == "BACKEND_UNAVAILABLE"

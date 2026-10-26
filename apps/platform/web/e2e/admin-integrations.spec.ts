@@ -227,6 +227,11 @@ test.describe("Внешние интеграции: администратор",
     await settledScreenshot(page, "models-panel");
 
     await panel.getByRole("button", { name: "Проверить модель: Поиск по базе знаний" }).click();
+    const confirm = panel.getByRole("form", { name: "Проверка модели «Поиск по базе знаний»" });
+    await expect(confirm.getByRole("group", { name: "Что произойдёт" })).toContainText(
+      "платный запрос",
+    );
+    await confirm.getByRole("button", { name: "Проверить модель" }).click();
     await expect(panel.getByText("Модель «Поиск по базе знаний» не ответила")).toBeVisible();
 
     await panel.getByRole("button", { name: "Сменить модель: Поиск по базе знаний" }).click();

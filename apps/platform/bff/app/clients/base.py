@@ -47,6 +47,15 @@ async def _forward_request_id(request: httpx.Request) -> None:
         request.headers[HEADER] = request_id
 
 
+def _is_app_error(response: httpx.Response) -> bool:
+    """502 — ответ самой CRM (тело `{code, ...}`), а не прокси (у прокси HTML или пусто)."""
+    try:
+        body = response.json()
+    except ValueError:
+        return False
+    return isinstance(body, dict) and isinstance(body.get("code"), str)
+
+
 def cookie_value(response: httpx.Response, name: str) -> str | None:
     """Значение cookie `name` из `Set-Cookie`; удаление cookie (пусто, Max-Age=0) — `None`."""
     for header in response.headers.get_list("set-cookie"):
@@ -108,8 +117,9 @@ class BackendClient:
         сеть, таймаут и 5xx — `BackendUnavailableError`.
 
         `probe` — проба внешнего сервиса через бэкенд: таймаут `PROBE_TIMEOUT_SECONDS`, а 502 CRM
-        («сервис за мной не ответил: ERP, SMTP, Telegram») возвращается как есть — причина в теле,
-        это результат проверки, а не сбой бэкенда."""
+        («сервис за мной не ответил: ERP, SMTP, Telegram») с JSON-телом приложения идёт как
+        есть — причина в теле, это результат проверки, а не сбой бэкенда. 502 прокси (HTML,
+        пустое тело) и сетевой сбой остаются `BackendUnavailableError`."""
         headers = dict(headers or {})
         if access:
             headers["Authorization"] = f"Bearer {access}"
@@ -126,7 +136,7 @@ class BackendClient:
             )
         except httpx.HTTPError as exc:
             raise BackendUnavailableError(self.name, type(exc).__name__) from exc
-        if probe and response.status_code == httpx.codes.BAD_GATEWAY:
+        if probe and response.status_code == httpx.codes.BAD_GATEWAY and _is_app_error(response):
             return response
         if response.status_code >= 500:
             raise BackendUnavailableError(
