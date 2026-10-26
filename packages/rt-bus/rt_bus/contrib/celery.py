@@ -3,6 +3,7 @@
     from rt_bus.contrib.celery import install
     tasks = install(celery_app, get_bus)          # get_bus() -> DjangoBus
     bus.enqueue = tasks.enqueue                   # приёмник ставит обработку inbox в очередь
+    bus.wakeup = tasks.wakeup                     # коммит транзакции с publish() будит pump без ожидания beat
 
 Задачи: `rt_bus.pump` (раскладка + доставка; beat каждые `pump_seconds`), `rt_bus.process_inbox(event_id)`,
 `rt_bus.requeue_stuck_inbox` и `rt_bus.log_metrics` (beat), `rt_bus.purge` (beat раз в сутки). Повторы доставки —
@@ -32,7 +33,11 @@ class CeleryTasks:
         self.process_inbox.delay(event_id)
 
     def wakeup(self) -> None:
-        self.pump.delay()
+        """Поставить `pump` вне расписания; очередь — та же, что у beat (`install(queue=)` или маршрутизация Celery)."""
+        # один повтор подключения с паузой 0,2 с; само подключение ограничивает `broker_transport_options` сервиса
+        # (`socket_connect_timeout`), иначе недоступный брокер держит коммитящий запрос до таймаута ОС
+        policy = {"max_retries": 1, "interval_start": 0, "interval_max": 0.2}
+        self.pump.apply_async(retry=True, retry_policy=policy)
 
 
 def install(

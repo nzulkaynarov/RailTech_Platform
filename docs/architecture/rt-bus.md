@@ -84,7 +84,32 @@ with transaction.atomic():
   - С хранилищем: в outbox пишется маска `***`, значение кладётся в `stash` (Django — `DjangoCacheStash`, TTL 20 мин) и
     подставляется в тело доставки. Значение истекло — доставка уходит в `dead` с ошибкой `SECRET_EXPIRED`.
   - В текстах ошибок схемы значения секретных полей тоже заменяются на `***`.
-- Django: `DjangoBus(..., wakeup=tasks.wakeup)` будит `pump` после коммита; иначе `pump` идёт по расписанию.
+
+**Пробуждение ретранслятора (B5a).** Транзакция с `publish` после коммита сразу ставит задачу `pump` — доставка начинается
+за доли секунды, а не на ближайшем тике (5 с). Периодический `pump` остаётся страховкой: он же подбирает события, если
+пробуждение потерялось.
+- Подключение: `bus.wakeup = tasks.wakeup` (ERP — `integration/bus.py`, CRM — `Container.bus`, `wakeup=tasks.wakeup`).
+  Без `wakeup` `pump` идёт только по расписанию.
+- **Откат — пробуждения нет.** Задача ставится только после настоящего коммита: `publish` из откатанной транзакции или
+  откатанной точки сохранения будить не может.
+- **Один раз на транзакцию.** Сколько бы `publish` ни было в транзакции (в том числе во вложенных блоках), пробуждение одно.
+  - Django: `transaction.on_commit` — после коммита внешней транзакции; повтор определяется по очереди `run_on_commit`.
+  - SQLAlchemy: слушатели сессии `after_commit`, `after_soft_rollback` и `after_transaction_end` (ставятся при первом
+    `publish` сессии), метка стоит на транзакции или точке сохранения, где был `publish`. `RELEASE SAVEPOINT` не будит —
+    метка переходит на родителя, будит коммит внешней транзакции; откат точки сохранения снимает её метки.
+  - Пробуждения разных транзакций сливает очередь: Procrastinate — `queueing_lock` у `rt_bus.pump` (ожидающий `pump` ещё
+    не начал раскладку и заберёт новое событие, повторное пробуждение — `AlreadyEnqueued`, это норма); Celery — каждая
+    транзакция ставит свою задачу, лишний `pump` безвреден (`FOR UPDATE SKIP LOCKED`).
+- **Недоступная очередь не ломает изменение.** Ошибка постановки — запись `rt_bus_wakeup_failed` в лог; коммит и событие на
+  месте, событие уйдёт периодическим `pump`. Django: Celery повторяет подключение один раз с паузой 0,2 с;
+  время подключения ограничено настройкой транспорта брокера сервиса — ERP: `CELERY_BROKER_TRANSPORT_OPTIONS` с
+  `socket_connect_timeout` 1 с (`core/settings/infra.py`); без неё недоступный адрес держал бы коммитящий запрос до
+  таймаута ОС (~75 с). SQLAlchemy: пробуждение — фоновая задача asyncio, коммит ответа не ждёт;
+  `AsyncBus.drain_wakeups()` (и `aclose()`) дожидается незавершённых. Сервис вызывает его, пока очередь ещё открыта (CRM: `Container.drain_bus()` в
+  lifespan API и бота, в воркере и в `create_admin`), иначе отложенное пробуждение упрётся в закрытый пул очереди.
+- Очередь: пробуждение идёт туда же, куда пишет Beat. ERP — `CELERY_TASK_DEFAULT_QUEUE = "default"`, её обслуживает
+  `erp-worker` (`-Q default,pdf,imports`); тест `integration/tests/test_bus_wakeup.py` ловит уход в очередь без воркера.
+  CRM — очередь `rt_bus`, воркер `python -m app worker` берёт все очереди.
 
 ## 5. Подписки и доставка
 
@@ -175,8 +200,9 @@ tasks = rt_bus.contrib.celery.install(celery_app, get_bus)    # ERP: pump 5 с, 
 bus.enqueue, bus.wakeup = tasks.enqueue, tasks.wakeup
 
 tasks = rt_bus.contrib.procrastinate.install(app, get_bus, pump_cron="* * * * * */5")   # CRM (6-е поле — секунды)
-bus.enqueue = tasks.enqueue
+bus.enqueue, bus.wakeup = tasks.enqueue, tasks.wakeup
 ```
+- `wakeup` — пробуждение по коммиту (§4): тот же `pump`, поставленный вне расписания.
 
 - Без очереди: `asyncio.create_task(bus.run_forever(interval=2))` в lifespan.
 - Повторы доставки и обработки управляются `next_attempt_at` в таблицах, а не ретраями очереди.

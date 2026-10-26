@@ -4,7 +4,7 @@
 `docs/architecture/rt-bus.md`; решение — ADR-0014. Заменяет `webhooks.md` для стороны ERP. Для CRM — runbook шины CRM (B4).
 
 Как идут события ERP → CRM: сервис ERP пишет строку в `rt_bus_outbox` в транзакции изменения → Celery-задача `rt_bus.pump`
-(Beat, каждые 5 с, плюс «будильник» после коммита) раскладывает outbox по подписчикам (`rt_bus_delivery`, строка на подписчика)
+(сразу после коммита — «пробуждение» через `transaction.on_commit`; Beat каждые 5 с остаётся страховкой) раскладывает outbox по подписчикам (`rt_bus_delivery`, строка на подписчика)
 и отправляет подписанный `POST <endpoint>/bus/v1/events` → при отказе повтор через 30 с, 2 мин, 10 мин, 1 ч, 6 ч, 24 ч (± 20 %),
 затем `dead`. В обратную сторону: `POST /bus/v1/events` в `erp-backend` → `rt_bus_inbox` → задача `rt_bus.process_inbox` →
 обработчик проекции (клиент и контакт CRM).

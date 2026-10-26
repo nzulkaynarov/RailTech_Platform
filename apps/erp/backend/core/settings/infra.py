@@ -25,6 +25,11 @@ CELERY_ACCEPT_CONTENT = ["application/json"]
 CELERY_TASK_SERIALIZER = "json"
 CELERY_RESULT_SERIALIZER = "json"
 CELERY_TIMEZONE = TIME_ZONE
+# Таймауты сокета брокера (rt_bus B5a): `.delay()` из `transaction.on_commit` (пробуждение ретранслятора шины) идёт в
+# коммитящем запросе. Без таймаута подключения недоступный адрес брокера (пакеты молча теряются) держал бы запрос до
+# таймаута ОС (~75 с). Подключение — 1 с, как у кэша; чтение — 5 с (блокирующие чтения воркера идут с коротким
+# `polling_interval`, так что простой очереди таймаутом не считается).
+CELERY_BROKER_TRANSPORT_OPTIONS = {"socket_connect_timeout": 1, "socket_timeout": 5}
 
 # Queue routing. TWO worker services consume the queues (see docker-compose[.prod].yml):
 # `celery-worker` runs `-Q default,pdf,imports` and `celery-worker-ai` runs `-Q ai` —

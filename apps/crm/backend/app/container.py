@@ -466,6 +466,7 @@ class Container:
             self._bus_webhook_secrets,
             after_processed=self.erp_notices.deliver,
             enqueue=tasks.enqueue,
+            wakeup=tasks.wakeup,
         )
 
     async def _bus_webhook_secrets(self) -> tuple[str, ...]:
@@ -570,6 +571,11 @@ class Container:
         if bot is None:
             bot = self._bots[token] = make_bot(self.settings, token)
         return bot
+
+    async def drain_bus(self) -> None:
+        """Дождаться пробуждений шины (B5a): вызывать, пока очередь Procrastinate ещё открыта."""
+        if "bus" in self.__dict__:
+            await self.bus.drain_wakeups()
 
     async def aclose(self) -> None:
         if "sandbox_service" in self.__dict__:

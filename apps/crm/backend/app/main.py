@@ -86,6 +86,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             broker = getattr(app.state, "broker", None)
             if broker is not None:
                 await broker.stop()
+            await container.drain_bus()  # пробуждения шины идут в очередь: она ещё открыта
         bus_runtime.install(None)
         await container.aclose()
 

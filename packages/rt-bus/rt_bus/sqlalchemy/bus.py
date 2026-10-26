@@ -6,7 +6,8 @@
         await bus.publish(session, "uz.railtech.crm.client.updated.v1", data, subject="client/42")
 
 Ретранслятор и доставка — `pump()` из периодической задачи (Procrastinate: `rt_bus.contrib.procrastinate`) или
-`run_forever()`; приёмник — `receive()` (FastAPI: `rt_bus.fastapi.bus_router`), обработка — `process_inbox()`.
+`run_forever()`; после коммита транзакции с `publish` шина будит `pump` сразу (`wakeup=`), не дожидаясь тика;
+приёмник — `receive()` (FastAPI: `rt_bus.fastapi.bus_router`), обработка — `process_inbox()`.
 """
 
 from __future__ import annotations
@@ -21,8 +22,9 @@ from datetime import datetime, timedelta
 from typing import Any, cast
 
 import httpx
-from sqlalchemy import CursorResult, TextClause, text
+from sqlalchemy import CursorResult, TextClause, event, text
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import Session
 
 from .. import sql
 from ..context import correlation
@@ -52,6 +54,13 @@ logger = logging.getLogger("rt_bus")
 
 SessionFactory = Callable[[], AsyncSession]
 Enqueue = Callable[[str], Awaitable[Any]]
+Wakeup = Callable[[], Awaitable[Any]]
+
+#: Метки в `Session.info`: сессия слушается (слушатели ставятся один раз); шина, которую будить; транзакции (корневая
+#: и точки сохранения), в которых был `publish`.
+_LISTENING = "rt_bus.listening"
+_WAKE = "rt_bus.wakeup"
+_MARKS = "rt_bus.wakeup_marks"
 
 _TEXT: dict[str, TextClause] = {}
 
@@ -71,6 +80,37 @@ def _rowcount(result: Any) -> int:
     return int(cast(CursorResult[Any], result).rowcount)
 
 
+def _wake_after_commit(session: Session) -> None:
+    """`after_commit`: RELEASE SAVEPOINT переносит метку на родителя, коммит корневой транзакции будит ретранслятор
+    (из sync-слушателя, без await)."""
+    marks: set[Any] | None = session.info.get(_MARKS)
+    if not marks:
+        return
+    nested = session.get_nested_transaction()
+    if nested is not None:
+        if nested in marks:
+            marks.discard(nested)
+            marks.add(nested.parent)
+        return
+    marks.clear()
+    bus = session.info.get(_WAKE)
+    if bus is not None:
+        bus._spawn_wakeup()
+
+
+def _rolled_back(session: Session, previous: Any) -> None:
+    """`after_soft_rollback`: откат точки сохранения уносит её метки — `publish` из неё будить не может."""
+    marks: set[Any] | None = session.info.get(_MARKS)
+    if marks and previous.nested:
+        marks.discard(previous)
+
+
+def _forget_wake(session: Session, transaction: Any) -> None:
+    """`after_transaction_end` корневой транзакции (в том числе откат и закрытие сессии): пробуждения не будет."""
+    if transaction.parent is None:
+        session.info.pop(_MARKS, None)
+
+
 class AsyncBus:
     """Шина сервиса на SQLAlchemy async: publish, ретранслятор, доставка, приёмник, inbox, журнал, метрики."""
 
@@ -83,6 +123,7 @@ class AsyncBus:
         http: httpx.AsyncClient | None = None,
         enqueue: Enqueue | None = None,
         stash: AsyncSecretStash | None = None,
+        wakeup: Wakeup | None = None,
     ) -> None:
         self.core = BusCore(config)
         self.sessions = sessions
@@ -91,6 +132,9 @@ class AsyncBus:
         self._own_http = http is None
         self.enqueue = enqueue
         self.stash = stash
+        #: Будит `pump` после коммита транзакции с `publish` (Procrastinate: `tasks.wakeup`). Сбой — лог, не отказ.
+        self.wakeup = wakeup
+        self._wake_tasks: set[asyncio.Task[None]] = set()
 
     @property
     def config(self) -> BusConfig:
@@ -102,6 +146,7 @@ class AsyncBus:
         return self._http
 
     async def aclose(self) -> None:
+        await self.drain_wakeups()
         if self._own_http and self._http is not None:
             await self._http.aclose()
             self._http = None
@@ -138,8 +183,47 @@ class AsyncBus:
         if record.secrets and self.stash is not None:
             await self.stash.put(event.id, record.secrets)
         await _exec(session, sql.INSERT_OUTBOX, record.params(self.core.now()))
+        self._arm_wakeup(session)
         logger.info("rt_bus_published", extra={"event_id": event.id, "event_type": event.type})
         return event
+
+    # --- пробуждение ретранслятора после коммита -------------------------------------------------------------------
+
+    def _arm_wakeup(self, session: AsyncSession) -> None:
+        """Пометить транзакцию сессии: после её коммита — одно пробуждение на сколько угодно `publish`."""
+        if self.wakeup is None:
+            return
+        sync = session.sync_session
+        if _LISTENING not in sync.info:
+            sync.info[_LISTENING] = True
+            event.listen(sync, "after_commit", _wake_after_commit)
+            event.listen(sync, "after_soft_rollback", _rolled_back)
+            event.listen(sync, "after_transaction_end", _forget_wake)
+        sync.info[_WAKE] = self
+        marks: set[Any] = sync.info.setdefault(_MARKS, set())
+        marks.add(sync.get_nested_transaction() or sync.get_transaction())
+
+    def _spawn_wakeup(self) -> None:
+        """Вызывается из `after_commit` (sync-контекст): пробуждение уходит фоновой задачей, коммит не ждёт брокера."""
+        try:
+            task = asyncio.get_running_loop().create_task(self._wake())
+        except RuntimeError:
+            logger.warning("rt_bus_wakeup_skipped_no_loop")
+            return
+        self._wake_tasks.add(task)
+        task.add_done_callback(self._wake_tasks.discard)
+
+    async def _wake(self) -> None:
+        try:
+            if self.wakeup is not None:
+                await self.wakeup()
+        except Exception:
+            logger.exception("rt_bus_wakeup_failed")  # событие дойдёт периодическим проходом
+
+    async def drain_wakeups(self) -> None:
+        """Дождаться постановленных пробуждений (остановка сервиса, тесты)."""
+        if self._wake_tasks:
+            await asyncio.gather(*self._wake_tasks, return_exceptions=True)
 
     # --- ретранслятор: раскладка outbox по подписчикам ------------------------------------------------------------
 

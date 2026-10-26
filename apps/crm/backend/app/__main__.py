@@ -54,7 +54,10 @@ async def _run_worker() -> None:
 
     try:
         async with queue.open_async():
-            await queue.run_worker_async(concurrency=get_settings().worker_concurrency)
+            try:
+                await queue.run_worker_async(concurrency=get_settings().worker_concurrency)
+            finally:
+                await get_container().drain_bus()  # пробуждения шины — пока очередь открыта
     finally:
         await get_container().aclose()
 
