@@ -14154,6 +14154,9 @@
                     },
                     "403": {
                         "description": "Role not permitted"
+                    },
+                    "409": {
+                        "description": "VISA_ASSIGNEE_NOT_IN_ERP — исполнитель зоны резолюции не заведён в ERP, визировать некому"
                     }
                 }
             }

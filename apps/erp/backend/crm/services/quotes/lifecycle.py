@@ -388,6 +388,13 @@ class QuoteLifecycleService:
         # клиента на согласование не уходит.
         if not quote.deal.company_id:
             return None, "QUOTE_CLIENT_REQUIRED"
+        # Зона резолюции, которую визировать некому (исполнитель не заведён в ERP или не в компании) — не отправляем:
+        # чек-лист EDS был бы заведомо красным (ревью лида E5). Исправляется провижинингом сотрудника из CRM.
+        from crm.services.approvals import visa_plan
+
+        _members, missing_zones = visa_plan(quote, company_id, quote.prepared_by_id or actor.id, persist=False)
+        if missing_zones:
+            return None, "VISA_ASSIGNEE_NOT_IN_ERP"
 
         # All gates passed — NOW it is safe to claim the КП: anchor BOTH the preparer and the
         # owning seller company to the VERIFIED company resolved above (audit F0/H2), so the

@@ -99,18 +99,23 @@ def visa_zones_of(task: Optional[CalcTask], crm_user_id: Optional[int]) -> list[
     return sorted(set(zones))
 
 
-def visa_assignee_user_ids(task: Optional[CalcTask]) -> list[int]:
-    """Пользователи ERP — исполнители зон goods/services задания (по порядку назначения, без повторов). Исполнителя,
-    заведённого в ERP после резолюции, привязывает здесь же по `CrmUserMapping`."""
+def visa_assignees(task: Optional[CalcTask], *, persist: bool = True) -> list[tuple[int, str, Optional[int]]]:
+    """Исполнители зон goods/services задания: (crm_user_id, зона, пользователь ERP | None) по порядку назначения.
+
+    Исполнителя, заведённого в ERP после резолюции, находит по `CrmUserMapping`; `persist=True` (отправка КП) записывает
+    привязку в задание, `persist=False` (превью, только чтение) — нет."""
     if task is None:
         return []
     rows = list(task.assignees.filter(zone__in=[Zone.GOODS, Zone.SERVICES]).order_by("id"))
-    missing = _users_by_crm_id({row.crm_user_id for row in rows if row.user_id is None})
+    found = _users_by_crm_id({row.crm_user_id for row in rows if row.user_id is None})
+    result = []
     for row in rows:
-        if row.user_id is None and row.crm_user_id in missing:
-            row.user_id = missing[row.crm_user_id]
+        user_id = row.user_id or found.get(row.crm_user_id)
+        if persist and row.user_id is None and user_id:
+            row.user_id = user_id
             row.save(update_fields=["user"])
-    return list(dict.fromkeys(row.user_id for row in rows if row.user_id))
+        result.append((row.crm_user_id, row.zone, user_id))
+    return result
 
 
 def required_visa_zones(task: Optional[CalcTask]) -> list[str]:

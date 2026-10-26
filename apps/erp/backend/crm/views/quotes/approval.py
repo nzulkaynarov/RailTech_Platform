@@ -22,7 +22,9 @@ from crm.serializers import QuoteSerializer
 def _chain_error_response(error):
     """Map a КП approval-chain service error code to an HTTP response."""
     forbidden = {"ROLE_NOT_PERMITTED", "SELF_APPROVAL_NOT_ALLOWED"}
-    conflict = {"QUOTE_AWAITING_DIRECTOR"}  # КП у директора в EDS: вернуть может только директор (EDS-03)
+    # КП у директора в EDS: вернуть может только директор; зону резолюции визировать некому — сначала завести
+    # исполнителя в ERP (EDS-03, волна 12).
+    conflict = {"QUOTE_AWAITING_DIRECTOR", "VISA_ASSIGNEE_NOT_IN_ERP"}
     if error in conflict:
         return Response({"detail": error}, status=status.HTTP_409_CONFLICT)
     http_status = status.HTTP_403_FORBIDDEN if error in forbidden else status.HTTP_400_BAD_REQUEST
@@ -84,6 +86,9 @@ class QuoteApprovalMixin:
             200: QuoteSerializer,
             400: OpenApiResponse(description="Wrong status"),
             403: OpenApiResponse(description="Role not permitted"),
+            409: OpenApiResponse(
+                description="VISA_ASSIGNEE_NOT_IN_ERP — исполнитель зоны резолюции не заведён в ERP, визировать некому"
+            ),
         },
         tags=["CRM"],
     )

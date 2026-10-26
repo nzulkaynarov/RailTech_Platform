@@ -22243,6 +22243,13 @@ export interface operations {
                 };
                 content?: never;
             };
+            /** @description VISA_ASSIGNEE_NOT_IN_ERP — исполнитель зоны резолюции не заведён в ERP, визировать некому */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
         };
     };
     crm_quotes_request_diff_retrieve: {

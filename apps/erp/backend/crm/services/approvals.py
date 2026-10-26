@@ -66,12 +66,20 @@ def _notify_user(
 
 
 def may_act_on_step(step: QuoteApprovalStep, actor, company_id: Optional[int]) -> bool:
-    """Может ли `actor` закрыть шаг: виза расчёта — только назначенный исполнитель шага (решение лида волны 12, Б1);
+    """Может ли `actor` закрыть шаг: виза расчёта — только назначенный исполнитель шага с действующим членством в
+    компании-владельце КП (решение лида волны 12, Б1);
     прежние шаги без назначения по резолюции — держатель `quote.review`; суперпользователь — за другого («от имени»)."""
     if getattr(actor, "is_superuser", False):
         return True
     if step.trigger_reason == StepTrigger.CALC_VISA:
-        return bool(step.approver_id) and step.approver.user_id == getattr(actor, "id", None)
+        approver = step.approver
+        return (
+            approver is not None
+            and approver.user_id == getattr(actor, "id", None)
+            and approver.is_active
+            and bool(company_id)
+            and approver.company_id == company_id
+        )
     return bool(company_id) and member_has_permission(actor, company_id, Permission.QUOTE_REVIEW.value)
 
 
@@ -112,23 +120,49 @@ def _link(quote: Quote) -> str:
     return f"#deal-quote/{quote.deal_id}"
 
 
-def _visa_members(quote: Quote, company_id: int) -> list:
-    """Кто визирует КП: исполнители задания расчёта сделки в зонах goods/services с пользователем ERP, кроме автора КП
-    (он визирует свою зону отправкой). Участник ERP — членство в компании-владельце КП, иначе любое действующее."""
-    from .calc_tasks import latest_task, visa_assignee_user_ids
+def visa_plan(quote: Quote, company_id: int, author_id: Optional[int], *, persist: bool = True) -> tuple[list, list]:
+    """Визы КП: (участники компании-владельца, которым нужен шаг визы; зоны резолюции, которые визировать некому).
 
-    user_ids = [uid for uid in visa_assignee_user_ids(latest_task(quote.deal_id)) if uid != quote.prepared_by_id]
-    members = []
-    for user_id in user_ids:
-        active = CompanyMember.objects.filter(user_id=user_id, is_active=True).select_related("user")
-        member = active.filter(company_id=company_id).first() or active.order_by("id").first()
-        if member is None:
-            logger.warning(
-                "Исполнитель расчёта #%s без членства в компании — шаг визы не создан (КП #%s)", user_id, quote.pk
-            )
+    Исполнители задания расчёта в зонах goods/services: автор КП визирует свою зону отправкой (шага нет); остальным —
+    шаг, если у исполнителя есть пользователь ERP с действующим членством в компании-владельце КП. Зона, у которой нет
+    ни автора, ни такого исполнителя, — «визировать некому» (`VISA_ASSIGNEE_NOT_IN_ERP` при отправке)."""
+    from integration.models import CrmUserMapping
+
+    from .calc_tasks import latest_task, visa_assignees
+
+    rows = visa_assignees(latest_task(quote.deal_id), persist=persist)
+    if not rows:
+        return [], []
+    author_crm = (
+        CrmUserMapping.objects.filter(user_id=author_id).values_list("crm_user_id", flat=True).first()
+        if author_id
+        else None
+    )
+    by_user = {
+        m.user_id: m
+        for m in CompanyMember.objects.filter(
+            company_id=company_id, is_active=True, user_id__in=[uid for _c, _z, uid in rows if uid]
+        ).select_related("user")
+    }
+    covered: set[str] = set()
+    members: list = []
+    for crm_user_id, zone, user_id in rows:
+        if (author_id and user_id == author_id) or (author_crm and crm_user_id == author_crm):
+            covered.add(zone)
             continue
-        members.append(member)
-    return members
+        member = by_user.get(user_id) if user_id else None
+        if member is None:
+            continue
+        covered.add(zone)
+        if member not in members:
+            members.append(member)
+    missing = sorted({zone for _c, zone, _u in rows} - covered)
+    return members, missing
+
+
+def _visa_members(quote: Quote, company_id: int, *, persist: bool = True) -> list:
+    """Кто визирует КП шагом (исполнители расчёта, кроме автора) — см. `visa_plan`."""
+    return visa_plan(quote, company_id, quote.prepared_by_id, persist=persist)[0]
 
 
 def _on_behalf_params(step: QuoteApprovalStep, actor) -> dict:
@@ -370,7 +404,8 @@ def _preview_step(member, participation: str, trigger: str, submitter_user_id: O
 
 
 def preview_approval_chain(quote_id: int, actor) -> Tuple[Optional[dict], Optional[str]]:
-    """Только чтение: кто визирует КП (исполнители расчёта), если отправить его сейчас (Salesforce Approval Preview). Шаги не строятся и
+    """Только чтение: кто визирует КП (исполнители расчёта), если отправить его сейчас (Salesforce Approval Preview).
+    Исполнитель, заведённый в ERP после резолюции, показывается, но привязка в задание не пишется. Шаги не строятся и
     ничего не сохраняется — то же разрешение участников, что у `build_approval_chain`. После виз КП уходит директору
     в EDS (EDS-03) — шагом ERP это не показывается. Доступно тому, кто может отправить КП (`quote.build`)."""
     from crm.services.quotes.lifecycle_gates import resolve_submit_company
@@ -387,7 +422,7 @@ def preview_approval_chain(quote_id: int, actor) -> Tuple[Optional[dict], Option
     submitter_id = getattr(actor, "id", None)
     steps = [
         _preview_step(member, StepParticipation.APPROVER, StepTrigger.CALC_VISA, submitter_id)
-        for member in _visa_members(quote, company_id)
+        for member in _visa_members(quote, company_id, persist=False)
     ]
     return {"below_floor": bool(economics.get("below_floor")), "steps": steps}, None
 

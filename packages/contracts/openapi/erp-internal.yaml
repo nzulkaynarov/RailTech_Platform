@@ -8379,6 +8379,8 @@ paths:
           description: Wrong status
         '403':
           description: Role not permitted
+        '409':
+          description: VISA_ASSIGNEE_NOT_IN_ERP — исполнитель зоны резолюции не заведён в ERP, визировать некому
   /api/v1/crm/quotes/{quote_id}/request-diff/:
     get:
       operationId: crm_quotes_request_diff_retrieve

@@ -161,8 +161,8 @@ def decided(quote, decision="approve", *, version=None, comment=None, outgoing="
 # ── quote.ready_for_approval ────────────────────────────────────────────────────────────────────────
 
 
-def test_submit_without_reviewers_sends_the_quote_to_the_director_in_eds(world):
-    _resolution(world["deal"])
+def test_author_as_the_only_assignee_sends_the_quote_to_the_director_in_eds(world):
+    _resolution(world["deal"], assignees=((21, "goods"),))  # автор (calc, crm 21) — единственный исполнитель
     quote = _quote(world)
 
     _, err = QLS.submit_for_review(quote.id, world["calc"])
@@ -180,10 +180,59 @@ def test_submit_without_reviewers_sends_the_quote_to_the_director_in_eds(world):
     assert payload["erp_quote_id"] == quote.pk and payload["number"] == quote.number and payload["version"] == 1
     assert payload["total"] == "112.00" and payload["currency"] == "UZS"
     assert payload["min_margin_pct"] == "15.00" and payload["due"] == "2026-10-29"
-    assert payload["required_zones"] == ["goods", "services"] and payload["visas"] == []
+    assert payload["required_zones"] == ["goods"]
+    assert [(v["zone"], v["by"]["crm_user_id"]) for v in payload["visas"]] == [("goods", 21)]
     assert payload["eds_letter_id"] == "e2b7a5e9-37c3-5a33-948a-7a999c5e7ec9"
     assert payload["client_name"] == "ООО Пример Логистик"
     assert ActivityLog.objects.filter(entity_id=quote.pk, event_code="quote.sent_to_director").count() == 1
+
+
+def test_zone_without_an_erp_assignee_blocks_the_submit(world):
+    """Исполнитель зоны не заведён в ERP — визировать некому: VISA_ASSIGNEE_NOT_IN_ERP (409), КП остаётся черновиком,
+    в EDS ничего не уходит (иначе чек-лист был бы заведомо красным)."""
+    from crm.tests.test_quote_approval_chain import _api
+
+    _resolution(world["deal"])  # 11 и 12 в ERP не заведены
+    quote = _quote(world)
+
+    _, err = QLS.submit_for_review(quote.id, world["calc"])
+    assert err == "VISA_ASSIGNEE_NOT_IN_ERP" and _status(quote) == "DRAFT"
+    response = _api(world["calc"]).post(f"/api/v1/crm/quotes/{quote.id}/submit-for-review/")
+    assert response.status_code == 409 and response.data["detail"] == "VISA_ASSIGNEE_NOT_IN_ERP"
+    assert bus_support.published("quote.ready_for_approval") == []
+
+
+def test_assignee_outside_the_owner_company_blocks_the_submit(world):
+    """Пользователь ERP есть, но без членства в компании-владельце КП — шага визы нет, зона не покрыта."""
+    outsider = _user("outsider@railtech.test", crm_user_id=12)
+    other = Company.objects.create(name="ООО Другая", inn="7700000202")
+    _member(other, outsider, [])
+    _resolution(world["deal"], assignees=((12, "services"),))
+    _, err = QLS.submit_for_review(_quote(world).id, world["calc"])
+    assert err == "VISA_ASSIGNEE_NOT_IN_ERP"
+
+
+def test_assignee_without_active_membership_cannot_visa(world):
+    engineer = _staff(world, "engineer@railtech.test", 12)
+    _resolution(world["deal"], assignees=((12, "services"),))
+    quote = _quote(world)
+    QLS.submit_for_review(quote.id, world["calc"])
+    (step,) = quote.approval_steps.all()
+    CompanyMember.objects.filter(user=engineer, company=world["seller"]).update(is_active=False)
+
+    assert act_on_step(step.id, engineer, "APPROVE")[1] == "ROLE_NOT_PERMITTED"
+    assert _status(quote) == "PENDING_APPROVAL"
+
+
+def test_preview_does_not_write_the_assignee_binding(world):
+    from crm.models import CalcTaskAssignee
+    from crm.services.approvals import preview_approval_chain
+
+    _resolution(world["deal"], assignees=((12, "services"),))  # инженер заведён в ERP позже резолюции
+    engineer = _staff(world, "engineer@railtech.test", 12)
+    data, err = preview_approval_chain(_quote(world).id, world["calc"])
+    assert err is None and [s["user_id"] for s in data["steps"]] == [engineer.pk]
+    assert CalcTaskAssignee.objects.get(crm_user_id=12).user_id is None, "превью только читает"
 
 
 def test_gate_scenario_supply_builds_engineer_visas_and_the_snapshot_covers_required_zones(world):
