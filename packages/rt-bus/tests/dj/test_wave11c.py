@@ -47,7 +47,8 @@ def edit_subscriber(path: Path, name: str, **fields: Any) -> None:
 def test_parallel_pumps_with_new_subscribers_do_not_deadlock(
     make_bus: Callable[..., DjangoBus], hub: SyncHub, clock: Clock
 ) -> None:
-    """Два pump (потоки, свои соединения) берут crm и audit в разном порядке; строки состояния новые."""
+    """Два прохода `deliver()` (потоки, свои соединения; `pump` с волны 13 набирает работу, пока она есть, и один забрал
+    бы всё) берут crm и audit в разном порядке; строки состояния новые."""
     first, second = make_bus(delivery_batch=2), make_bus(delivery_batch=2)
     for round_no in range(30):
         with connection.cursor() as cursor:
@@ -76,7 +77,7 @@ def test_parallel_pumps_with_new_subscribers_do_not_deadlock(
 
         def work(bus: DjangoBus, errors: list[BaseException] = errors, delivered: list[int] = delivered) -> None:
             try:
-                delivered.append(bus.pump().deliver.delivered)
+                delivered.append(bus.deliver().delivered)
             except BaseException as exc:  # noqa: BLE001 — передать в основной поток
                 errors.append(exc)
             finally:

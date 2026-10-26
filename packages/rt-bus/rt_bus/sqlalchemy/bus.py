@@ -17,7 +17,7 @@ import contextlib
 import logging
 import time
 import uuid
-from collections.abc import Awaitable, Callable, Mapping
+from collections.abc import Awaitable, Callable, Mapping, Sequence
 from datetime import datetime, timedelta
 from typing import Any, cast
 
@@ -33,19 +33,22 @@ from ..core import (
     BusConfig,
     BusCore,
     DeliverStats,
+    Planned,
     PumpStats,
     Statement,
     as_json,
     finish_statements,
+    group_outcomes,
     handler_error,
     inbox_params,
     inbox_retry_at,
     log_outcome,
+    plan_groups,
     plan_queued,
-    record_groups,
     retryable_db_error,
+    saturated_subscribers,
 )
-from ..delivery import Attempt, AttemptResult, Claimed, Outcome, decide_outcome, early_probe_outcome, send_async
+from ..delivery import Attempt, AttemptResult, Claimed, Outcome, delivery_limits, send_async
 from ..envelope import Event
 from ..errors import NotInTransactionError
 from ..handlers import HandlerRegistry, default_registry
@@ -114,6 +117,49 @@ def _forget_wake(session: Session, transaction: Any) -> None:
         session.info.pop(_MARKS, None)
 
 
+class _Flight:
+    """Доставки в пути одного прохода (`deliver`) или одного `pump`: по задаче на подписчика, общие счётчики и сбои."""
+
+    def __init__(self, stats: DeliverStats | None = None) -> None:
+        self.stats = stats if stats is not None else DeliverStats()
+        #: Задача подписчика → (подписчик, сколько доставок в ней).
+        self.tasks: dict[asyncio.Task[None], tuple[str, int]] = {}
+        #: Записи итогов идут по одной: на каждую группу нужно соединение, а число соединений пула ограничено.
+        self.record_lock = asyncio.Lock()
+        self.failures: list[Exception] = []
+
+    def reap(self) -> None:
+        for task in [t for t in self.tasks if t.done()]:
+            del self.tasks[task]
+
+    def in_flight(self) -> dict[str, int]:
+        counts: dict[str, int] = {}
+        for subscriber, size in self.tasks.values():
+            counts[subscriber] = counts.get(subscriber, 0) + size
+        return counts
+
+    async def wait_any(self, seconds: float) -> None:
+        if self.tasks:
+            await asyncio.wait(set(self.tasks), timeout=seconds, return_when=asyncio.FIRST_COMPLETED)
+
+    async def finish(self) -> None:
+        if self.tasks:
+            await asyncio.wait(set(self.tasks))
+        self.reap()
+
+    async def cancel(self) -> None:
+        """Остановка (отмена задачи воркера): запросы прерываются, аренда истечёт, доставки уйдут другому проходу."""
+        tasks = list(self.tasks)
+        for task in tasks:
+            task.cancel()
+        await asyncio.gather(*tasks, return_exceptions=True)
+        self.tasks.clear()
+
+    def raise_failure(self) -> None:
+        if self.failures:
+            raise self.failures[0]
+
+
 class AsyncBus:
     """Шина сервиса на SQLAlchemy async: publish, ретранслятор, доставка, приёмник, inbox, журнал, метрики."""
 
@@ -138,6 +184,8 @@ class AsyncBus:
         #: Будит `pump` после коммита транзакции с `publish` (Procrastinate: `tasks.wakeup`). Сбой — лог, не отказ.
         self.wakeup = wakeup
         self._wake_tasks: set[asyncio.Task[None]] = set()
+        #: Предел одновременных запросов к подписчику в процессе (все проходы вместе), по семафору на подписчика.
+        self._gates: dict[str, asyncio.Semaphore] = {}
 
     @property
     def config(self) -> BusConfig:
@@ -145,7 +193,9 @@ class AsyncBus:
 
     def _client(self) -> httpx.AsyncClient:
         if self._http is None:
-            self._http = httpx.AsyncClient(timeout=self.config.http_timeout, follow_redirects=False)
+            self._http = httpx.AsyncClient(
+                timeout=self.config.http_timeout, follow_redirects=False, limits=delivery_limits()
+            )
         return self._http
 
     async def aclose(self) -> None:
@@ -251,7 +301,10 @@ class AsyncBus:
 
     # --- доставка ------------------------------------------------------------------------------------------------
 
-    async def _claim(self, now: datetime, limit: int) -> list[tuple[Claimed, dict[str, Any] | None]]:
+    async def _claim(
+        self, now: datetime, limit: int, skip: Sequence[str] = ()
+    ) -> list[tuple[Claimed, dict[str, Any] | None]]:
+        """Взять пачку в аренду. `skip` — подписчики, для которых пачку не набирают (в пути уже предел запросов)."""
         breaker = self.config.breaker
         lease_until = now + timedelta(seconds=self.config.lease_seconds)
         token = uuid.uuid4()
@@ -294,7 +347,7 @@ class AsyncBus:
                     continue
                 due = probe[1]
                 picked.append((int(probe[0]), True, due if due is not None and due > now else None))
-            excluded = blocked + [r["subscriber"] for r in half_open] + disabled
+            excluded = blocked + [r["subscriber"] for r in half_open] + disabled + list(skip)
             if limit > len(picked):
                 rows = (
                     await _exec(
@@ -331,60 +384,80 @@ class AsyncBus:
                 out.append((claimed, envelopes[claimed.event_id]))
         return out
 
-    async def deliver(self, limit: int | None = None) -> DeliverStats:
-        """Взять пачку готовых доставок в аренду, отправить параллельно, записать итоги. HTTP — вне транзакций."""
-        stats = DeliverStats()
-        now = self.core.now()
-        claimed = await self._claim(now, limit or self.config.delivery_batch)
-        if not claimed:
-            return stats
-        stats.claimed = len(claimed)
+    async def before_deliver(self) -> None:
+        """Перед каждым набором пачки (`deliver`, шаг `pump`); сервис переопределяет (например, обновить секреты)."""
+
+    async def _plan(self, claimed: list[tuple[Claimed, dict[str, Any] | None]], now: datetime) -> list[Planned]:
         stash_enabled = self.stash is not None
-        planned: list[tuple[Claimed, Attempt | Outcome]] = []
+        planned: list[Planned] = []
         for item, envelope in claimed:
             secret_values = None
             if stash_enabled and self.stash is not None and self.core.needs_stash(item.event_type):
                 secret_values = await self.stash.get(str(item.event_id))
             planned.append((item, self.core.plan(item, envelope, secret_values, stash_enabled=stash_enabled, now=now)))
+        return planned
 
-        async def run(attempt: Attempt) -> AttemptResult:
-            return await send_async(
-                self._client(),
-                attempt,
-                self.config.http_timeout,
-                self.core.now(),
-                deadline=self.config.attempt_deadline,
+    def _gate(self, subscriber: str) -> asyncio.Semaphore:
+        gate = self._gates.get(subscriber)
+        if gate is None:
+            gate = self._gates[subscriber] = asyncio.Semaphore(self.config.subscriber_connections)
+        return gate
+
+    async def _send(self, attempt: Attempt, subscriber: str) -> AttemptResult:
+        return await send_async(
+            self._client(),
+            attempt,
+            self.config.http_timeout,
+            self.core.now(),
+            deadline=self.config.attempt_deadline,
+            gate=self._gate(subscriber),
+        )
+
+    async def _launch(
+        self, flight: _Flight, claimed: list[tuple[Claimed, dict[str, Any] | None]], now: datetime
+    ) -> None:
+        """Взятое — по подписчикам: на каждого своя задача (отправка своих запросов и запись своего итога)."""
+        for group in plan_groups(await self._plan(claimed, now)):
+            subscriber = group[0][0].subscriber
+            task = asyncio.get_running_loop().create_task(self._deliver_group(flight, group))
+            flight.tasks[task] = (subscriber, len(group))
+
+    async def _deliver_group(self, flight: _Flight, group: list[Planned]) -> None:
+        """Задача подписчика (W11C-G-1): запросы группы идут параллельно, итог пишется, как только ответили ВСЕ запросы
+        группы, — не дожидаясь ответов других подписчиков. Сбой записи не поднимается из задачи: он копится в `flight`,
+        прочие подписчики продолжают."""
+        subscriber = group[0][0].subscriber
+        try:
+            results = list(
+                await asyncio.gather(*(self._send(p, subscriber) for _, p in group if isinstance(p, Attempt)))
             )
+            finished_at = self.core.now()
+            outcomes = group_outcomes(self.config, group, results, finished_at)
+            async with flight.record_lock:
+                await self._record_group(outcomes, finished_at, flight.stats)
+        except Exception as exc:
+            logger.exception("rt_bus_record_failed", extra={"subscriber": subscriber})
+            flight.failures.append(exc)
 
-        sends = [run(p) for _, p in planned if isinstance(p, Attempt)]
-        results = iter(await asyncio.gather(*sends))
-        finished_at = self.core.now()
-        outcomes: list[tuple[Claimed, Outcome]] = []
-        for item, plan in planned:
-            if isinstance(plan, Attempt):
-                outcome = early_probe_outcome(
-                    item,
-                    decide_outcome(item, next(results), policy=self.config.retry, now=finished_at, rng=self.config.rng),
-                )
-            else:
-                outcome = plan
-            outcomes.append((item, outcome))
-        await self._record_all(outcomes, finished_at, stats)
-        return stats
-
-    async def _record_all(self, outcomes: list[tuple[Claimed, Outcome]], now: datetime, stats: DeliverStats) -> None:
-        """Итоги по подписчикам в порядке имён, по короткой транзакции на подписчика (W11B-G-1): параллельные `pump`
-        не блокируют друг друга на `rt_bus_subscriber_state`, а сбой одной группы не держит аренду чужих — остальные
-        группы записываются, ошибка поднимается в конце."""
-        failure: Exception | None = None
-        for group in record_groups(outcomes):
-            try:
-                await self._record_group(group, now, stats)
-            except Exception as exc:
-                logger.exception("rt_bus_record_failed", extra={"subscriber": group[0][0].subscriber})
-                failure = failure or exc
-        if failure is not None:
-            raise failure
+    async def deliver(self, limit: int | None = None) -> DeliverStats:
+        """Один проход: взять пачку готовых доставок в аренду, отправить, записать итоги. Подписчики независимы
+        (W11C-G-1): итог каждого пишется, как только ответил он сам; проход кончается, когда закончили все. HTTP — вне
+        транзакций. `pump()` не ждёт медленных между проходами."""
+        flight = _Flight()
+        await self.before_deliver()
+        now = self.core.now()
+        claimed = await self._claim(now, limit or self.config.delivery_batch)
+        if not claimed:
+            return flight.stats
+        flight.stats.claimed = len(claimed)
+        try:
+            await self._launch(flight, claimed, now)
+            await flight.finish()
+        except BaseException:
+            await flight.cancel()
+            raise
+        flight.raise_failure()
+        return flight.stats
 
     async def _record_group(self, group: list[tuple[Claimed, Outcome]], now: datetime, stats: DeliverStats) -> None:
         for attempt in range(1, RECORD_ATTEMPTS + 1):
@@ -429,20 +502,64 @@ class AsyncBus:
             logger.info("rt_bus_subscriber_recovered", extra={"subscriber": item.subscriber, "reset": _rowcount(reset)})
         return None
 
+    async def _relay_pending(self, deadline: float) -> int:
+        relayed = 0
+        while time.monotonic() < deadline:
+            step = await self.relay()
+            relayed += step
+            if step < self.config.relay_batch:
+                break
+        return relayed
+
     async def pump(self, *, max_seconds: float = 20.0) -> PumpStats:
-        """Раскладка outbox и доставка, пока есть работа (не дольше `max_seconds`) — тело периодической задачи."""
+        """Раскладка outbox и доставка, пока есть работа (не дольше `max_seconds`) — тело периодической задачи.
+
+        Подписчики независимы (W11C-G-1): `pump` не ждёт ответа медленного подписчика, чтобы взять следующую пачку для
+        остальных. Пока запросы в пути, он каждые `inflight_poll` секунд раскладывает новое и набирает пачку — кроме
+        подписчиков, у которых в пути уже `subscriber_concurrency` запросов. Итог каждого пишется, когда ответил он
+        сам. Когда времени или работы нет, `pump` дожидается запросов в пути (дедлайн попытки ограничивает ожидание)."""
         stats = PumpStats()
         deadline = time.monotonic() + max_seconds
-        while time.monotonic() < deadline:
-            relayed = await self.relay()
-            stats.relayed += relayed
-            if relayed < self.config.relay_batch:
-                break
-        while time.monotonic() < deadline:
-            step = await self.deliver()
-            stats.deliver.merge(step)
-            if step.claimed < self.config.delivery_batch and not step.recovered:
-                break
+        flight = _Flight(stats.deliver)
+        failure: Exception | None = None
+        stopping = False
+        seen_recovered = 0
+        try:
+            while True:
+                claimed_count = 0
+                saturated: list[str] = []
+                stopping = stopping or time.monotonic() >= deadline
+                if not stopping:
+                    try:
+                        stats.relayed += await self._relay_pending(deadline)
+                        await self.before_deliver()
+                        now = self.core.now()
+                        saturated = saturated_subscribers(flight.in_flight(), self.config.subscriber_concurrency)
+                        claimed = await self._claim(now, self.config.delivery_batch, saturated)
+                        claimed_count = len(claimed)
+                        if claimed:
+                            stats.deliver.claimed += claimed_count
+                            await self._launch(flight, claimed, now)
+                    except Exception as exc:
+                        # раскладка или набор упали: уже летящие запросы дописываются (их итоги не теряем), затем ошибка
+                        logger.exception("rt_bus_pump_step_failed")
+                        failure = failure or exc
+                        stopping = True
+                flight.reap()
+                recovered = stats.deliver.recovered != seen_recovered
+                seen_recovered = stats.deliver.recovered
+                if not flight.tasks:
+                    # короткая пачка = работы нет, если никого не пропускали
+                    if stopping or (claimed_count < self.config.delivery_batch and not recovered and not saturated):
+                        break
+                elif stopping or claimed_count < self.config.delivery_batch:
+                    await flight.wait_any(self.config.inflight_poll)
+        except BaseException:
+            await flight.cancel()
+            raise
+        if failure is not None:
+            raise failure
+        flight.raise_failure()
         return stats
 
     async def run_forever(self, *, interval: float = 2.0, stop: asyncio.Event | None = None) -> None:
