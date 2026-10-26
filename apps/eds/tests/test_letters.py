@@ -285,3 +285,17 @@ async def test_idempotency_key_replays_same_response_and_rejects_other_body(
     # тот же ключ у другого сотрудника — отдельная запись
     director = {**staff["director"].headers, "Idempotency-Key": "key-0001-letter"}
     assert (await client.post("/api/v1/letters", json={**NEW_LETTER, "links": {}}, headers=director)).status_code == 201
+
+
+async def test_resubmit_cannot_take_over_another_letters_request(
+    client: httpx.AsyncClient, staff: dict[str, Person]
+) -> None:
+    await register(client, staff["registrar"])  # заявка 77
+    other = await register(client, staff["registrar"], links={"erp_request_id": 78})
+    await act(client, staff["director"], other["id"], "return", {"comment": "Правки"})
+    clash = await act(client, staff["registrar"], other["id"], "submit", {"links": {"erp_request_id": 77}})
+    assert_error(clash, 409, "CONFLICT", reason="letter_exists_for_request")
+    ok = await act(
+        client, staff["registrar"], other["id"], "submit", {"links": {"erp_deal_id": 910, "erp_request_id": 78}}
+    )
+    assert ok.status_code == 200 and ok.json()["links"]["erp_deal_id"] == 910

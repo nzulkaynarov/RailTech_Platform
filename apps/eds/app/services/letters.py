@@ -255,6 +255,15 @@ async def reject(session: AsyncSession, bus: AsyncBus, *, actor_id: int, letter_
     return letter
 
 
+async def _check_request_link(session: AsyncSession, letter: Letter, links: ErpLinksIn) -> None:
+    """Правка ссылки на заявку не должна занять заявку другого письма."""
+    request_id = links.erp_request_id
+    if "erp_request_id" not in links.model_fields_set or request_id in (None, letter.erp_request_id):
+        return
+    if await find_by_request(session, request_id) is not None:
+        raise conflict("letter_exists_for_request", "Письмо по этой заявке уже зарегистрировано.")
+
+
 async def resubmit(
     session: AsyncSession, *, actor_id: int, letter_id: uuid.UUID, data: LetterSubmitIn | None
 ) -> Letter:
@@ -267,6 +276,7 @@ async def resubmit(
     if edits.summary is not None:
         letter.summary = edits.summary
     if edits.links is not None:
+        await _check_request_link(session, letter, edits.links)
         for name in edits.links.model_fields_set:
             setattr(letter, name, getattr(edits.links, name))
     if edits.file_ids:

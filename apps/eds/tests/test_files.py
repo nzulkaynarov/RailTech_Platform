@@ -131,6 +131,19 @@ async def test_file_attached_to_document_follows_document_visibility_and_is_jour
     assert_error(outsider, 404, "NOT_FOUND")  # письма читает, но документ ему не виден
 
 
+async def test_viewer_cannot_add_a_version_to_someone_elses_document_file(
+    client: httpx.AsyncClient, staff: dict[str, Person]
+) -> None:
+    ref = (await upload(client, staff["admin"])).json()
+    doc = await create(client, staff["admin"], file_ids=[ref["id"]])
+    # менеджер видит документ (registry.read) и может загружать файлы, но цепочку автора не продолжает
+    denied = await upload(client, staff["manager"], PDF + b"2", version_of=ref["id"])
+    assert_error(denied, 403, "FORBIDDEN", reason="not_file_owner")
+    assert (await upload(client, staff["admin"], PDF + b"2", version_of=ref["id"])).status_code == 201
+    current = (await client.get(f"/api/v1/documents/{doc['id']}", headers=staff["admin"].headers)).json()
+    assert current["files"][0]["version"] == 2
+
+
 async def test_file_attached_to_letter_is_visible_to_letter_readers(
     client: httpx.AsyncClient, staff: dict[str, Person]
 ) -> None:

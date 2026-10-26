@@ -17,9 +17,10 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app import clock
-from app.errors import EdsError, invalid_fields, not_found
-from app.models import Employee, FileVersion, StoredFile
+from app.errors import EdsError, forbidden_reason, invalid_fields, not_found
+from app.models import Document, Employee, FileVersion, StoredFile
 from app.schemas.common import FileRef
+from app.security.permissions import EdsPermission as P
 from app.services import access, journal
 from app.services.people import Directory, load_directory
 from app.services.storage import ObjectStorage
@@ -134,6 +135,18 @@ async def can_view_file(session: AsyncSession, employee: Employee, stored: Store
     return False
 
 
+async def can_add_version(session: AsyncSession, employee: Employee, stored: StoredFile) -> bool:
+    """Новую версию добавляет загрузивший, автор документа или регистратор/директор писем — не любой зритель."""
+    if stored.created_by == employee.crm_user_id:
+        return True
+    if stored.letter_id is not None:
+        return access.has(employee, P.LETTERS_REGISTER) or access.has(employee, P.LETTERS_RESOLVE)
+    if stored.document_id is not None:
+        owner = await session.execute(select(Document.author_crm_user_id).where(Document.id == stored.document_id))
+        return owner.scalar_one_or_none() == employee.crm_user_id
+    return False
+
+
 async def load_visible(
     session: AsyncSession, employee: Employee, file_id: uuid.UUID, *, lock: bool = False
 ) -> StoredFile:
@@ -156,6 +169,8 @@ async def upload(session: AsyncSession, storage: ObjectStorage, employee: Employ
         number = 1
     else:
         stored = await load_visible(session, employee, item.version_of, lock=True)
+        if not await can_add_version(session, employee, stored):
+            raise forbidden_reason("not_file_owner", "Новую версию добавляет загрузивший файл или автор документа.")
         last = await session.execute(select(func.max(FileVersion.version)).where(FileVersion.file_id == stored.id))
         number = int(last.scalar_one()) + 1
     await session.flush()
