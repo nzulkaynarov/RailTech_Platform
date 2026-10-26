@@ -1133,13 +1133,657 @@ export interface paths {
     patch: operations["updateRole"];
     trace?: never;
   };
+  "/admin/company": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Реквизиты своей компании (Admin · Компания)
+     * @description BFF находит свою компанию по `own_company_id` из `setup/status/` ERP; нет компании — 409 `COMPANY_NOT_SET`. Раздел `company.settings` — чтение.
+     */
+    get: operations["getCompany"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    /**
+     * Изменить реквизиты
+     * @description Не присланное поле не меняется; ошибки полей — 422 с `details.fields`. Раздел `company.settings` — полный.
+     */
+    patch: operations["updateCompany"];
+    trace?: never;
+  };
+  "/admin/company/logo/image": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Файл логотипа компании
+     * @description BFF берёт файл в ERP по адресу из карточки компании (только публичный путь логотипа) и отдаёт с теми же защитными заголовками (`X-Content-Type-Options`, `Content-Security-Policy: sandbox`). Нет логотипа, чужой путь или файл больше 5 МБ — 404 `NOT_FOUND`. Раздел `company.settings` — чтение.
+     */
+    get: operations["getCompanyLogoImage"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/admin/company/logo": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Загрузить логотип компании
+     * @description `multipart/form-data`, поле `logo`; BFF передаёт файл в ERP как есть: не больше 2 МБ, тип части — PNG, JPEG, WebP или SVG, иначе 422 `VALIDATION_FAILED` (`details.reason = unsupported_type`); содержимое проверяет ERP. Раздел `company.settings` — полный.
+     */
+    post: operations["uploadCompanyLogo"];
+    /**
+     * Удалить логотип компании
+     * @description Раздел `company.settings` — полный.
+     */
+    delete: operations["deleteCompanyLogo"];
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/admin/company/brand": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Бланк и бренд документов
+     * @description Профиль создаётся при первом чтении. Раздел `company.settings` — чтение.
+     */
+    get: operations["getBrandProfile"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    /**
+     * Изменить бланк и бренд
+     * @description Не присланное поле не меняется. Раздел `company.settings` — полный.
+     */
+    patch: operations["updateBrandProfile"];
+    trace?: never;
+  };
+  "/admin/company/brand/logo/image": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Файл логотипа бланка
+     * @description BFF берёт файл в ERP по адресу из профиля бланка (только публичный путь логотипа) и отдаёт с теми же защитными заголовками (`X-Content-Type-Options`, `Content-Security-Policy: sandbox`). Нет логотипа, чужой путь или файл больше 5 МБ — 404 `NOT_FOUND`. Раздел `company.settings` — чтение.
+     */
+    get: operations["getBrandLogoImage"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/admin/company/brand/logo": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Загрузить логотип бланка
+     * @description `multipart/form-data`, поле `logo`; логотип бланка отдельный от логотипа компании. Раздел `company.settings` — полный.
+     */
+    post: operations["uploadBrandLogo"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/admin/company/brand/preview": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Предпросмотр образца документа на бланке
+     * @description Образец КП, договора, счёта, акта или письма с несохранёнными правками `draft`; ничего не сохраняется. Раздел `company.settings` — чтение.
+     */
+    post: operations["previewBrandDocument"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/admin/company/numbering": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Схема нумерации документов
+     * @description Раздел `company.settings` — чтение.
+     */
+    get: operations["getNumberingScheme"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    /**
+     * Изменить схему нумерации
+     * @description Действует на будущие номера; выданные не меняются. Префикс хранится в настройках компании ERP, схема — в нумерации: BFF сохраняет префикс, затем схему. Неверная маска — 422 `VALIDATION_FAILED` (`details.reason = invalid_numbering_pattern`). Раздел `company.settings` — полный.
+     */
+    patch: operations["updateNumberingScheme"];
+    trace?: never;
+  };
+  "/admin/company/numbering/preview": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Предпросмотр номера по черновику схемы
+     * @description Образцы номеров КП, договора, счёта, акта и письма; счётчики не меняются. Раздел `company.settings` — чтение.
+     */
+    post: operations["previewNumbering"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/admin/company/quote-defaults": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Условия КП по умолчанию
+     * @description Поля маржи вырезаются из ответа без права на группу `cost_margin`. Раздел `company.settings` — чтение.
+     */
+    get: operations["getQuoteDefaults"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    /**
+     * Изменить условия КП по умолчанию
+     * @description Пустая строка или `null` очищает значение. Валюта и базис — коды справочников. Раздел `company.settings` — полный.
+     */
+    patch: operations["updateQuoteDefaults"];
+    trace?: never;
+  };
+  "/admin/company/charge-types": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Типы статей расхода КП
+     * @description Справочник типов для шаблонов статей расхода. Раздел `company.settings` — чтение.
+     */
+    get: operations["listChargeTypes"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/admin/company/charge-templates": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Статьи расхода по базисам поставки
+     * @description Раздел `company.settings` — чтение.
+     */
+    get: operations["listChargeTemplates"];
+    put?: never;
+    /**
+     * Добавить статью расхода
+     * @description Раздел `company.settings` — полный.
+     */
+    post: operations["createChargeTemplate"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/admin/company/charge-templates/{id}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post?: never;
+    /**
+     * Удалить статью расхода
+     * @description Раздел `company.settings` — полный.
+     */
+    delete: operations["deleteChargeTemplate"];
+    options?: never;
+    head?: never;
+    /**
+     * Изменить статью расхода
+     * @description Раздел `company.settings` — полный.
+     */
+    patch: operations["updateChargeTemplate"];
+    trace?: never;
+  };
+  "/admin/company/document-templates": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Шаблоны документов: свои и образцы платформы
+     * @description Раздел `company.settings` — чтение.
+     */
+    get: operations["listDocumentTemplates"];
+    put?: never;
+    /**
+     * Создать шаблон документа
+     * @description Раздел `company.settings` — полный.
+     */
+    post: operations["createDocumentTemplate"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/admin/company/document-templates/placeholders": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Подстановки `{{код}}` для шаблона документа
+     * @description Раздел `company.settings` — чтение.
+     */
+    get: operations["getDocumentPlaceholders"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/admin/company/document-templates/preview": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Предпросмотр шаблона на образце данных
+     * @description Ничего не сохраняет. Раздел `company.settings` — чтение.
+     */
+    post: operations["previewDocumentTemplate"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/admin/company/document-templates/{id}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post?: never;
+    /**
+     * Удалить шаблон документа
+     * @description Шаблон, по которому уже оформлены документы, удалить нельзя — 409 `CONFLICT` (`details.reason = template_in_use`). Раздел `company.settings` — полный.
+     */
+    delete: operations["deleteDocumentTemplate"];
+    options?: never;
+    head?: never;
+    /**
+     * Изменить шаблон документа
+     * @description Образец платформы изменить нельзя — сначала копия. Раздел `company.settings` — полный.
+     */
+    patch: operations["updateDocumentTemplate"];
+    trace?: never;
+  };
+  "/admin/company/document-templates/{id}/copy": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Скопировать образец платформы к себе
+     * @description Раздел `company.settings` — полный.
+     */
+    post: operations["copyDocumentTemplate"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/admin/company/email-templates": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Шаблоны писем
+     * @description Активный шаблон заменяет файловый для всех получателей платформы. Раздел `company.settings` — чтение.
+     */
+    get: operations["listEmailTemplates"];
+    put?: never;
+    /**
+     * Создать шаблон письма
+     * @description Раздел `company.settings` — полный.
+     */
+    post: operations["createEmailTemplate"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/admin/company/email-templates/{id}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post?: never;
+    /**
+     * Удалить шаблон письма
+     * @description Раздел `company.settings` — полный.
+     */
+    delete: operations["deleteEmailTemplate"];
+    options?: never;
+    head?: never;
+    /**
+     * Изменить шаблон письма
+     * @description Раздел `company.settings` — полный.
+     */
+    patch: operations["updateEmailTemplate"];
+    trace?: never;
+  };
+  "/admin/company/email-templates/{id}/preview": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Предпросмотр шаблона письма на образце данных
+     * @description Письмо не отправляется. Раздел `company.settings` — чтение.
+     */
+    post: operations["previewEmailTemplate"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/admin/company/reference/{kind}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Строки справочника ERP
+     * @description Вместе с отключёнными строками, чтобы их можно было включить обратно. Раздел `company.settings` — чтение.
+     */
+    get: operations["listReferenceItems"];
+    put?: never;
+    /**
+     * Добавить строку справочника
+     * @description Раздел `company.settings` — полный.
+     */
+    post: operations["createReferenceItem"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/admin/company/reference/{kind}/{id}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post?: never;
+    /**
+     * Удалить строку справочника
+     * @description Строку, на которую ссылаются данные, удалить нельзя — 409 `CONFLICT` (`details.reason = lookup_in_use`); её отключают. Раздел `company.settings` — полный.
+     */
+    delete: operations["deleteReferenceItem"];
+    options?: never;
+    head?: never;
+    /**
+     * Изменить строку справочника
+     * @description Раздел `company.settings` — полный.
+     */
+    patch: operations["updateReferenceItem"];
+    trace?: never;
+  };
+  "/admin/company/categories": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Категории каталога
+     * @description Все категории плоским списком; дерево строит SPA по `parent_id`. Раздел `company.settings` — чтение.
+     */
+    get: operations["listCatalogCategories"];
+    put?: never;
+    /**
+     * Создать категорию
+     * @description Раздел `company.settings` — полный.
+     */
+    post: operations["createCatalogCategory"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/admin/company/categories/{id}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post?: never;
+    /**
+     * Удалить категорию
+     * @description Категорию с подкатегориями удалить нельзя — 409 `CONFLICT` (`details.reason = category_has_children`). Раздел `company.settings` — полный.
+     */
+    delete: operations["deleteCatalogCategory"];
+    options?: never;
+    head?: never;
+    /**
+     * Переименовать или перенести категорию
+     * @description Раздел `company.settings` — полный.
+     */
+    patch: operations["updateCatalogCategory"];
+    trace?: never;
+  };
+  "/admin/company/category-requests": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Запросы на категории
+     * @description ERP отдаёт запросы своей компании; администратор видит все. Раздел `company.settings` — чтение.
+     */
+    get: operations["listCategoryRequests"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/admin/company/category-requests/{id}/approve": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Одобрить запрос: привязать заведённую категорию
+     * @description Решает ERP по праву `settings.edit` (его даёт раздел `company.settings`) или администратору; иначе 403 `FORBIDDEN` (`source = erp`). Решённый запрос — 409 `CONFLICT` (`details.reason = already_reviewed`). Раздел `company.settings` — полный.
+     */
+    post: operations["approveCategoryRequest"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/admin/company/category-requests/{id}/reject": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Отклонить запрос с причиной
+     * @description Причина обязательна. Решает ERP по праву `settings.edit` (его даёт раздел `company.settings`) или администратору; иначе 403 `FORBIDDEN` (`source = erp`). Раздел `company.settings` — полный.
+     */
+    post: operations["rejectCategoryRequest"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/admin/company/platform-settings": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Платформенные настройки: НДС и курс
+     * @description Раздел `company.settings` — чтение.
+     */
+    get: operations["getPlatformSettings"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    /**
+     * Изменить ставку НДС платформы
+     * @description Ставку меняет ERP по праву `settings.edit` или администратору; иначе 403 `FORBIDDEN` (`source = erp`). Раздел `company.settings` — полный.
+     */
+    patch: operations["updatePlatformSettings"];
+    trace?: never;
+  };
 }
 export type webhooks = Record<string, never>;
 export interface components {
   schemas: {
     Error: {
       /**
-       * @description Стабильный код (`INVALID_CREDENTIALS`, `SESSION_EXPIRED`, `CSRF_FAILED`, `FORBIDDEN`, `NOT_FOUND`, `VALIDATION_FAILED`, `TOO_MANY_REQUESTS`, `BACKEND_UNAVAILABLE`, `NO_PLATFORM_ROLE`, `USER_DISABLED`, `ACCOUNT_LOCKED`, `CONFLICT`, `WRONG_PASSWORD`, `EMAIL_EXISTS`, `LAST_ADMIN`, `LAST_DIRECTOR`, `ROLE_IN_USE`, `ROLE_SYSTEM`, `ROLES_REQUIRED`, `NOT_CONFIGURED`, `SECRETS_KEY_MISSING`, `SERVICE_NOT_SWITCHABLE`, `INTEGRATION_FAILED`, `INTERNAL_ERROR`, `BAD_REQUEST`, `METHOD_NOT_ALLOWED`, `HTTP_<статус>`)
+       * @description Стабильный код (`INVALID_CREDENTIALS`, `SESSION_EXPIRED`, `CSRF_FAILED`, `FORBIDDEN`, `NOT_FOUND`, `VALIDATION_FAILED`, `TOO_MANY_REQUESTS`, `BACKEND_UNAVAILABLE`, `NO_PLATFORM_ROLE`, `USER_DISABLED`, `ACCOUNT_LOCKED`, `CONFLICT`, `WRONG_PASSWORD`, `EMAIL_EXISTS`, `LAST_ADMIN`, `LAST_DIRECTOR`, `ROLE_IN_USE`, `ROLE_SYSTEM`, `ROLES_REQUIRED`, `NOT_CONFIGURED`, `SECRETS_KEY_MISSING`, `SERVICE_NOT_SWITCHABLE`, `INTEGRATION_FAILED`, `COMPANY_NOT_SET`, `INTERNAL_ERROR`, `BAD_REQUEST`, `METHOD_NOT_ALLOWED`, `HTTP_<статус>`)
        * @example SESSION_EXPIRED
        */
       code: string;
@@ -2256,6 +2900,568 @@ export interface components {
       groups: components["schemas"]["SearchGroup"][];
       sources: components["schemas"]["Sources"];
     };
+    /** @description Десятичное число строкой (как в ERP): `"20.00"` */
+    DecimalString: string;
+    /** @description Id объекта ERP строкой */
+    CompanyItemRef: string;
+    /** @description Реквизиты своей компании (ERP `accounts/companies/{id}`; id BFF находит сам по `own_company_id` из `setup/status/` ERP). */
+    CompanyProfile: {
+      /** @description Полное наименование организации */
+      name: string;
+      /** @description ИНН (9 цифр) или пусто */
+      inn: string | null;
+      /** @description Расчётный счёт */
+      bank_account: string;
+      /** @description МФО банка */
+      mfo: string;
+      /** @description Юридический адрес */
+      legal_address: string;
+      phone: string;
+      /** @description Ответственное лицо */
+      contact_person: string;
+      website: string;
+      /** @description Основная почта компании для уведомлений */
+      email: string;
+      /** @description Страна регистрации — `id` из справочника «Страны» */
+      country: number | null;
+      /** @description Есть сертификат качества ISO 9001 */
+      has_iso9001: boolean;
+      /** @description Адрес логотипа на BFF (`/admin/company/logo/image`, тот же origin: CSP Платформы адреса ERP не пускает) или `null` */
+      logo_url: string | null;
+    };
+    CompanyProfileUpdate: {
+      /** @description Полное наименование организации */
+      name?: string;
+      /** @description ИНН (9 цифр) или пусто */
+      inn?: string | null;
+      /** @description Расчётный счёт */
+      bank_account?: string;
+      /** @description МФО банка */
+      mfo?: string;
+      /** @description Юридический адрес */
+      legal_address?: string;
+      phone?: string;
+      /** @description Ответственное лицо */
+      contact_person?: string;
+      website?: string;
+      /** @description Основная почта компании для уведомлений */
+      email?: string;
+      /** @description Страна регистрации — `id` из справочника «Страны» */
+      country?: number | null;
+      /** @description Есть сертификат качества ISO 9001 */
+      has_iso9001?: boolean;
+    };
+    LogoUpload: {
+      /**
+       * Format: binary
+       * @description PNG, JPEG, WebP или SVG до 2 МБ
+       */
+      logo: string;
+    };
+    /** @description Бланк и бренд документов компании (ERP `document-profile`): реквизиты на бланке КП, договора, счёта и акта. */
+    BrandProfile: {
+      legal_name: string;
+      /** @description ИНН на бланке */
+      inn: string;
+      legal_address: string;
+      bank_details: string;
+      signatory_name: string;
+      signatory_position: string;
+      footer_text: string;
+      /** @description Основной цвет бренда, `#RRGGBB` */
+      accent_color: string;
+      /** @description Второй цвет бренда, `#RRGGBB` */
+      secondary_color: string;
+      cover_letter_text: string;
+      contract_acceptance_text: string;
+      contract_liability_text: string;
+      contract_extra_terms_text: string;
+      act_closing_text: string;
+      /**
+       * @description Оформление: светлое, в рамках, контрастное, полосатое
+       * @enum {string}
+       */
+      layout_preset: "light" | "boxed" | "bold" | "striped";
+      /**
+       * @description Шрифт: без засечек или с засечками
+       * @enum {string}
+       */
+      font_family: "sans" | "serif";
+      show_cover_letter: boolean;
+      show_bank_in_header: boolean;
+      use_company_defaults: boolean;
+      show_logo: boolean;
+      show_lead_time: boolean;
+      show_fx_note: boolean;
+      /** @description Адрес логотипа бланка на BFF (`/admin/company/brand/logo/image`) или `null` */
+      logo_url: string | null;
+      /** @description Что напечатается из реквизитов компании при включённом «Брать реквизиты из карточки компании» */
+      inherited: {
+        [key: string]: string;
+      } | null;
+    };
+    BrandProfileUpdate: {
+      legal_name?: string;
+      /** @description ИНН на бланке */
+      inn?: string;
+      legal_address?: string;
+      bank_details?: string;
+      signatory_name?: string;
+      signatory_position?: string;
+      footer_text?: string;
+      /** @description Основной цвет бренда, `#RRGGBB` */
+      accent_color?: string;
+      /** @description Второй цвет бренда, `#RRGGBB` */
+      secondary_color?: string;
+      cover_letter_text?: string;
+      contract_acceptance_text?: string;
+      contract_liability_text?: string;
+      contract_extra_terms_text?: string;
+      act_closing_text?: string;
+      /**
+       * @description Оформление: светлое, в рамках, контрастное, полосатое
+       * @enum {string}
+       */
+      layout_preset?: "light" | "boxed" | "bold" | "striped";
+      /**
+       * @description Шрифт: без засечек или с засечками
+       * @enum {string}
+       */
+      font_family?: "sans" | "serif";
+      show_cover_letter?: boolean;
+      show_bank_in_header?: boolean;
+      use_company_defaults?: boolean;
+      show_logo?: boolean;
+      show_lead_time?: boolean;
+      show_fx_note?: boolean;
+    };
+    /**
+     * @description Вид документа: КП, договор, счёт, акт, письмо (ERP `KP`, `CT`, `INV`, `ACT`, `DOC`)
+     * @enum {string}
+     */
+    DocumentKind: "quote" | "contract" | "invoice" | "act" | "letter";
+    BrandPreviewIn: {
+      kind: components["schemas"]["DocumentKind"];
+      /** @description Несохранённые правки бланка — предпросмотр накладывает их в памяти, ничего не сохраняя */
+      draft?: components["schemas"]["BrandProfileUpdate"];
+    };
+    DocumentPreview: {
+      /** @description Готовый HTML образца документа; SPA показывает его в изолированной рамке (`sandbox`), скриптов в нём нет */
+      html: string;
+      /** @description Предупреждения ERP (например, нет обязательного блока) */
+      warnings?: string[];
+    };
+    /**
+     * @description Никогда, раз в год, раз в месяц
+     * @enum {string}
+     */
+    NumberingResetPeriod: "never" | "yearly" | "monthly";
+    /** @description Что подставляется в `{type}` для каждого вида документа; ключи — `DocumentKind` */
+    NumberingLabels: {
+      [key: string]: string;
+    };
+    NumberingScheme: {
+      /** @description Маска номера: `{prefix}`, `{type}`, `{YYYY}`, `{YY}`, `{MM}`, `{seq}`; `{seq}` обязателен */
+      pattern: string;
+      /** @description Сколько цифр в счётчике (5 → 00001) */
+      padding: number;
+      reset_period: components["schemas"]["NumberingResetPeriod"];
+      /** @description Первый номер = значение + 1 */
+      start_value: number;
+      type_labels: components["schemas"]["NumberingLabels"];
+      /** @description Префикс нумерации компании */
+      prefix: string;
+      /** @description Своя схема применяется только с непустым префиксом */
+      is_effective: boolean;
+    };
+    NumberingUpdate: {
+      /** @description Маска номера: `{prefix}`, `{type}`, `{YYYY}`, `{YY}`, `{MM}`, `{seq}`; `{seq}` обязателен */
+      pattern?: string;
+      /** @description Сколько цифр в счётчике (5 → 00001) */
+      padding?: number;
+      reset_period?: components["schemas"]["NumberingResetPeriod"];
+      /** @description Первый номер = значение + 1 */
+      start_value?: number;
+      type_labels?: components["schemas"]["NumberingLabels"];
+      prefix?: string;
+    };
+    NumberingPreviewIn: {
+      /** @description Маска номера: `{prefix}`, `{type}`, `{YYYY}`, `{YY}`, `{MM}`, `{seq}`; `{seq}` обязателен */
+      pattern: string;
+      /** @description Сколько цифр в счётчике (5 → 00001) */
+      padding: number;
+      reset_period: components["schemas"]["NumberingResetPeriod"];
+      /** @description Первый номер = значение + 1 */
+      start_value: number;
+      type_labels?: components["schemas"]["NumberingLabels"];
+      prefix?: string;
+    };
+    NumberingPreviewItem: {
+      kind: components["schemas"]["DocumentKind"];
+      label: string;
+      number: string;
+    };
+    NumberingPreview: {
+      items: components["schemas"]["NumberingPreviewItem"][];
+    };
+    /** @description Условия КП по умолчанию (ERP `companies/{id}/settings`). Поля маржи вырезаются без права на `cost_margin`. */
+    QuoteDefaults: {
+      /** @description Валюта себестоимости — код из справочника «Валюты» */
+      default_cost_currency: string | null;
+      /** @description Базис поставки по умолчанию — код из справочника */
+      default_delivery_basis: string | null;
+      /** @description Ставка НДС в КП, % */
+      default_vat_rate: components["schemas"]["DecimalString"] | null;
+      /** @description Маржа по умолчанию, % — поле группы `cost_margin`: без права на неё в ответе нет */
+      default_margin_percent?: components["schemas"]["DecimalString"] | null;
+      /** @description Минимальная маржа, % — поле группы `cost_margin` */
+      min_margin_percent?: components["schemas"]["DecimalString"];
+      /** @description Целевая маржа, % — поле группы `cost_margin` */
+      target_margin_percent?: components["schemas"]["DecimalString"];
+      /** @description Срок действия КП, дней */
+      default_offer_validity_days: number | null;
+      /** @description Отсрочка платежа, дней */
+      payment_terms_days: number | null;
+      /** @description Условия оплаты текстом */
+      default_payment_terms: string;
+      /** @description Гарантия, месяцев */
+      default_warranty_months: number | null;
+      /**
+       * @description Цена в каталоге: показывать в кабинете или «по запросу»
+       * @enum {string}
+       */
+      catalog_price_visibility: "cabinet" | "on_request";
+      /** @description Порог полноты карточки для публикации, % */
+      catalog_publish_threshold: number;
+      /** @description Предельный возраст курса, дней */
+      fx_rate_max_age_days: number;
+    };
+    /** @description Поля маржи без права на `cost_margin` — 403 `FORBIDDEN` (`details.fields`). */
+    QuoteDefaultsUpdate: {
+      /** @description Валюта себестоимости — код из справочника «Валюты» */
+      default_cost_currency?: string | null;
+      /** @description Базис поставки по умолчанию — код из справочника */
+      default_delivery_basis?: string | null;
+      /** @description Ставка НДС в КП, % */
+      default_vat_rate?: components["schemas"]["DecimalString"] | null;
+      /** @description Маржа по умолчанию, % — поле группы `cost_margin`: без права на неё в ответе нет */
+      default_margin_percent?: components["schemas"]["DecimalString"] | null;
+      /** @description Минимальная маржа, % — поле группы `cost_margin` */
+      min_margin_percent?: components["schemas"]["DecimalString"];
+      /** @description Целевая маржа, % — поле группы `cost_margin` */
+      target_margin_percent?: components["schemas"]["DecimalString"];
+      /** @description Срок действия КП, дней */
+      default_offer_validity_days?: number | null;
+      /** @description Отсрочка платежа, дней */
+      payment_terms_days?: number | null;
+      /** @description Условия оплаты текстом */
+      default_payment_terms?: string;
+      /** @description Гарантия, месяцев */
+      default_warranty_months?: number | null;
+      /**
+       * @description Цена в каталоге: показывать в кабинете или «по запросу»
+       * @enum {string}
+       */
+      catalog_price_visibility?: "cabinet" | "on_request";
+      /** @description Порог полноты карточки для публикации, % */
+      catalog_publish_threshold?: number;
+      /** @description Предельный возраст курса, дней */
+      fx_rate_max_age_days?: number;
+    };
+    ChargeType: {
+      id: components["schemas"]["CompanyItemRef"];
+      code: string;
+      name: string;
+    };
+    ChargeTypeList: {
+      items: components["schemas"]["ChargeType"][];
+    };
+    ChargeTemplate: {
+      id: components["schemas"]["CompanyItemRef"];
+      /** @description Код базиса поставки */
+      delivery_basis: string;
+      /** @description Код типа статьи расхода (`ChargeType.code`) */
+      charge_type: string;
+      /** @description Сумма по умолчанию */
+      default_amount: components["schemas"]["DecimalString"];
+      /** @description Ставка по умолчанию, % */
+      default_rate_percent: components["schemas"]["DecimalString"] | null;
+      /** @description Статья вычитается из суммы */
+      is_deduction: boolean;
+      sort_order: number;
+      is_active: boolean;
+      delivery_basis_name: string;
+      charge_type_name: string;
+    };
+    ChargeTemplateList: {
+      items: components["schemas"]["ChargeTemplate"][];
+    };
+    ChargeTemplateIn: {
+      /** @description Код базиса поставки */
+      delivery_basis: string;
+      /** @description Код типа статьи расхода (`ChargeType.code`) */
+      charge_type: string;
+      /** @description Сумма по умолчанию */
+      default_amount?: components["schemas"]["DecimalString"];
+      /** @description Ставка по умолчанию, % */
+      default_rate_percent?: components["schemas"]["DecimalString"] | null;
+      /** @description Статья вычитается из суммы */
+      is_deduction?: boolean;
+      sort_order?: number;
+      is_active?: boolean;
+    };
+    ChargeTemplateUpdate: {
+      /** @description Код базиса поставки */
+      delivery_basis?: string;
+      /** @description Код типа статьи расхода (`ChargeType.code`) */
+      charge_type?: string;
+      /** @description Сумма по умолчанию */
+      default_amount?: components["schemas"]["DecimalString"];
+      /** @description Ставка по умолчанию, % */
+      default_rate_percent?: components["schemas"]["DecimalString"] | null;
+      /** @description Статья вычитается из суммы */
+      is_deduction?: boolean;
+      sort_order?: number;
+      is_active?: boolean;
+    };
+    DocumentTemplate: {
+      id: components["schemas"]["CompanyItemRef"];
+      name: string;
+      /** @description Вид документа словами */
+      kind_name: string;
+      body_html: string;
+      /** @description Образец платформы: правится только копия (`/copy`) */
+      is_sample: boolean;
+      /** @description Шаблон своей компании */
+      is_owned: boolean;
+      is_active: boolean;
+      placeholders_used: string[];
+      /** Format: date-time */
+      updated_at: string;
+    };
+    DocumentTemplateList: {
+      items: components["schemas"]["DocumentTemplate"][];
+    };
+    DocumentTemplateIn: {
+      name: string;
+      body_html?: string;
+      is_active?: boolean;
+    };
+    DocumentTemplateUpdate: {
+      name?: string;
+      body_html?: string;
+      is_active?: boolean;
+    };
+    DocumentTemplateCopyIn: {
+      name: string;
+    };
+    DocumentPlaceholder: {
+      /** @description Подставляется как `{{code}}` */
+      code: string;
+      label: string;
+    };
+    DocumentPlaceholderGroup: {
+      key: string;
+      label: string;
+      items: components["schemas"]["DocumentPlaceholder"][];
+    };
+    DocumentPlaceholders: {
+      groups: components["schemas"]["DocumentPlaceholderGroup"][];
+    };
+    DocumentTemplatePreviewIn: {
+      body_html: string;
+    };
+    EmailTemplate: {
+      id: components["schemas"]["CompanyItemRef"];
+      /** @description Ключ письма (например, `invoice_issued`) */
+      key: string;
+      /** @description Язык шаблона */
+      language: string;
+      subject: string;
+      html_body: string;
+      text_body: string;
+      /** @description Переменные шаблона через запятую */
+      available_variables: string;
+      /** @description Активный шаблон заменяет файловый для всех получателей */
+      is_active: boolean;
+      /** Format: date-time */
+      updated_at: string;
+      /** @description Почта сотрудника, правившего последним */
+      updated_by?: string;
+    };
+    EmailTemplateList: {
+      items: components["schemas"]["EmailTemplate"][];
+    };
+    EmailTemplateIn: {
+      /** @description Ключ письма (например, `invoice_issued`) */
+      key: string;
+      /** @description Язык шаблона */
+      language?: string;
+      subject: string;
+      html_body?: string;
+      text_body: string;
+      /** @description Переменные шаблона через запятую */
+      available_variables?: string;
+      /** @description Активный шаблон заменяет файловый для всех получателей */
+      is_active?: boolean;
+    };
+    EmailTemplateUpdate: {
+      /** @description Ключ письма (например, `invoice_issued`) */
+      key?: string;
+      /** @description Язык шаблона */
+      language?: string;
+      subject?: string;
+      html_body?: string;
+      text_body?: string;
+      /** @description Переменные шаблона через запятую */
+      available_variables?: string;
+      /** @description Активный шаблон заменяет файловый для всех получателей */
+      is_active?: boolean;
+    };
+    EmailTemplatePreview: {
+      subject: string;
+      text_body: string;
+      html_body: string;
+    };
+    /**
+     * @description Справочник ERP: страны, валюты, единицы измерения, базисы поставки
+     * @enum {string}
+     */
+    ReferenceKind: "countries" | "currencies" | "units" | "delivery-basis";
+    /** @description Строка справочника; поля вне вида справочника не приходят. */
+    ReferenceItem: {
+      id: components["schemas"]["CompanyItemRef"];
+      code: string;
+      name: string;
+      sort_order: number;
+      is_active: boolean;
+      /** @description Валюта: знак */
+      symbol?: string;
+      /** @description Страна: ISO alpha-2 */
+      alpha2?: string;
+      /** @description Страна: ISO alpha-3 */
+      alpha3?: string;
+      /** @description Страна: цифровой код ISO */
+      iso_numeric?: string;
+      /** @description Страна: ставка НДС, % */
+      vat_rate?: components["schemas"]["DecimalString"] | null;
+      /** @description Базис поставки: описание */
+      description?: string;
+      seller_pays_freight?: boolean;
+      seller_pays_insurance?: boolean;
+      seller_pays_import?: boolean;
+      seller_pays_delivery?: boolean;
+    };
+    ReferenceItemList: {
+      items: components["schemas"]["ReferenceItem"][];
+    };
+    ReferenceItemIn: {
+      code: string;
+      name: string;
+      sort_order?: number;
+      is_active?: boolean;
+      /** @description Валюта: знак */
+      symbol?: string;
+      /** @description Страна: ISO alpha-2 */
+      alpha2?: string;
+      /** @description Страна: ISO alpha-3 */
+      alpha3?: string;
+      /** @description Страна: цифровой код ISO */
+      iso_numeric?: string;
+      /** @description Страна: ставка НДС, % */
+      vat_rate?: components["schemas"]["DecimalString"] | null;
+      /** @description Базис поставки: описание */
+      description?: string;
+      seller_pays_freight?: boolean;
+      seller_pays_insurance?: boolean;
+      seller_pays_import?: boolean;
+      seller_pays_delivery?: boolean;
+    };
+    ReferenceItemUpdate: {
+      code?: string;
+      name?: string;
+      sort_order?: number;
+      is_active?: boolean;
+      /** @description Валюта: знак */
+      symbol?: string;
+      /** @description Страна: ISO alpha-2 */
+      alpha2?: string;
+      /** @description Страна: ISO alpha-3 */
+      alpha3?: string;
+      /** @description Страна: цифровой код ISO */
+      iso_numeric?: string;
+      /** @description Страна: ставка НДС, % */
+      vat_rate?: components["schemas"]["DecimalString"] | null;
+      /** @description Базис поставки: описание */
+      description?: string;
+      seller_pays_freight?: boolean;
+      seller_pays_insurance?: boolean;
+      seller_pays_import?: boolean;
+      seller_pays_delivery?: boolean;
+    };
+    CatalogCategory: {
+      id: components["schemas"]["CompanyItemRef"];
+      name: string;
+      parent_id: components["schemas"]["CompanyItemRef"] | null;
+    };
+    CatalogCategoryList: {
+      items: components["schemas"]["CatalogCategory"][];
+    };
+    CatalogCategoryIn: {
+      name: string;
+      parent_id?: components["schemas"]["CompanyItemRef"] | null;
+    };
+    CatalogCategoryUpdate: {
+      name?: string;
+      parent_id?: components["schemas"]["CompanyItemRef"] | null;
+    };
+    /**
+     * @description На рассмотрении, одобрен, отклонён
+     * @enum {string}
+     */
+    CategoryRequestStatus: "pending" | "approved" | "rejected";
+    /** @description Запрос сотрудника на новую категорию каталога (ERP `catalog/category-requests`). */
+    CategoryRequest: {
+      id: components["schemas"]["CompanyItemRef"];
+      proposed_name: string;
+      parent_name?: string;
+      justification?: string;
+      status: components["schemas"]["CategoryRequestStatus"];
+      company_name: string;
+      /** @description Почта автора */
+      requested_by?: string;
+      resulting_category_id?: components["schemas"]["CompanyItemRef"] | null;
+      resulting_category_name?: string;
+      /** @description Причина отказа */
+      review_notes?: string;
+      /** Format: date-time */
+      reviewed_at?: string | null;
+      /** Format: date-time */
+      created_at: string;
+    };
+    CategoryRequestList: {
+      items: components["schemas"]["CategoryRequest"][];
+    };
+    CategoryRequestApproveIn: {
+      /** @description Категория, которую оператор завёл для запроса */
+      category_id: components["schemas"]["CompanyItemRef"];
+    };
+    CategoryRequestRejectIn: {
+      /** @description Причина отказа — обязательна */
+      reason: string;
+    };
+    PlatformSettings: {
+      /** @description Ставка НДС платформы, % */
+      vat_rate: components["schemas"]["DecimalString"];
+      /** @description Курс USD→UZS (только чтение: курс ведёт ERP) */
+      exchange_rate_usd_uzs: components["schemas"]["DecimalString"] | null;
+      /** Format: date-time */
+      updated_at: string;
+    };
+    PlatformSettingsUpdate: {
+      /** @description Ставка НДС платформы, % */
+      vat_rate?: components["schemas"]["DecimalString"];
+    };
   };
   responses: {
     /** @description `SESSION_EXPIRED` — сессии нет, истекла или сотрудник отключён */
@@ -2380,6 +3586,10 @@ export interface components {
     BusLimit: number;
     /** @description Значение cookie `rt_pf_csrf` */
     CsrfToken: string;
+    /** @description Id объекта ERP (строкой) */
+    CompanyItemId: components["schemas"]["CompanyItemRef"];
+    /** @description Справочник ERP */
+    ReferenceKindPath: components["schemas"]["ReferenceKind"];
   };
   requestBodies: never;
   headers: never;
@@ -4318,6 +5528,1421 @@ export interface operations {
           "application/json": components["schemas"]["Error"];
         };
       };
+      422: components["responses"]["ValidationFailed"];
+    };
+  };
+  getCompany: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Реквизиты */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["CompanyProfile"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      /** @description `COMPANY_NOT_SET` — своя компания в ERP ещё не создана (мастер первого запуска) */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Error"];
+        };
+      };
+    };
+  };
+  updateCompany: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["CompanyProfileUpdate"];
+      };
+    };
+    responses: {
+      /** @description Сохранено */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["CompanyProfile"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      /** @description `COMPANY_NOT_SET` */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Error"];
+        };
+      };
+      422: components["responses"]["ValidationFailed"];
+    };
+  };
+  getCompanyLogoImage: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Изображение */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "image/*": string;
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      /** @description `COMPANY_NOT_SET` — своя компания в ERP ещё не создана */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Error"];
+        };
+      };
+    };
+  };
+  uploadCompanyLogo: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "multipart/form-data": components["schemas"]["LogoUpload"];
+      };
+    };
+    responses: {
+      /** @description Логотип заменён */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["CompanyProfile"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      /** @description `COMPANY_NOT_SET` */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Error"];
+        };
+      };
+      422: components["responses"]["ValidationFailed"];
+    };
+  };
+  deleteCompanyLogo: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Удалён */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      /** @description `COMPANY_NOT_SET` */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Error"];
+        };
+      };
+    };
+  };
+  getBrandProfile: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Бланк */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["BrandProfile"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      /** @description `COMPANY_NOT_SET` */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Error"];
+        };
+      };
+    };
+  };
+  updateBrandProfile: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["BrandProfileUpdate"];
+      };
+    };
+    responses: {
+      /** @description Сохранено */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["BrandProfile"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      /** @description `COMPANY_NOT_SET` */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Error"];
+        };
+      };
+      422: components["responses"]["ValidationFailed"];
+    };
+  };
+  getBrandLogoImage: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Изображение */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "image/*": string;
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      /** @description `COMPANY_NOT_SET` — своя компания в ERP ещё не создана */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Error"];
+        };
+      };
+    };
+  };
+  uploadBrandLogo: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "multipart/form-data": components["schemas"]["LogoUpload"];
+      };
+    };
+    responses: {
+      /** @description Логотип бланка заменён */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["BrandProfile"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      /** @description `COMPANY_NOT_SET` */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Error"];
+        };
+      };
+      422: components["responses"]["ValidationFailed"];
+    };
+  };
+  previewBrandDocument: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["BrandPreviewIn"];
+      };
+    };
+    responses: {
+      /** @description Образец */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["DocumentPreview"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      /** @description `COMPANY_NOT_SET` */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Error"];
+        };
+      };
+      422: components["responses"]["ValidationFailed"];
+    };
+  };
+  getNumberingScheme: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Схема */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["NumberingScheme"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+    };
+  };
+  updateNumberingScheme: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["NumberingUpdate"];
+      };
+    };
+    responses: {
+      /** @description Сохранено */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["NumberingScheme"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      /** @description `COMPANY_NOT_SET` или `CONFLICT` (`details.reason = doc_prefix_taken`) — префикс занят другой компанией */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Error"];
+        };
+      };
+      422: components["responses"]["ValidationFailed"];
+    };
+  };
+  previewNumbering: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["NumberingPreviewIn"];
+      };
+    };
+    responses: {
+      /** @description Образцы */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["NumberingPreview"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      422: components["responses"]["ValidationFailed"];
+    };
+  };
+  getQuoteDefaults: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Условия */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["QuoteDefaults"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      /** @description `COMPANY_NOT_SET` */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Error"];
+        };
+      };
+    };
+  };
+  updateQuoteDefaults: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["QuoteDefaultsUpdate"];
+      };
+    };
+    responses: {
+      /** @description Сохранено */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["QuoteDefaults"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      /** @description `COMPANY_NOT_SET` */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Error"];
+        };
+      };
+      422: components["responses"]["ValidationFailed"];
+    };
+  };
+  listChargeTypes: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Типы */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ChargeTypeList"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+    };
+  };
+  listChargeTemplates: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Статьи */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ChargeTemplateList"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+    };
+  };
+  createChargeTemplate: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["ChargeTemplateIn"];
+      };
+    };
+    responses: {
+      /** @description Создана */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ChargeTemplate"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      422: components["responses"]["ValidationFailed"];
+    };
+  };
+  deleteChargeTemplate: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path: {
+        /** @description Id объекта ERP (строкой) */
+        id: components["parameters"]["CompanyItemId"];
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Удалена */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+    };
+  };
+  updateChargeTemplate: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path: {
+        /** @description Id объекта ERP (строкой) */
+        id: components["parameters"]["CompanyItemId"];
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["ChargeTemplateUpdate"];
+      };
+    };
+    responses: {
+      /** @description Сохранена */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ChargeTemplate"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      422: components["responses"]["ValidationFailed"];
+    };
+  };
+  listDocumentTemplates: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Шаблоны */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["DocumentTemplateList"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+    };
+  };
+  createDocumentTemplate: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["DocumentTemplateIn"];
+      };
+    };
+    responses: {
+      /** @description Создан */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["DocumentTemplate"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      422: components["responses"]["ValidationFailed"];
+    };
+  };
+  getDocumentPlaceholders: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Подстановки */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["DocumentPlaceholders"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+    };
+  };
+  previewDocumentTemplate: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["DocumentTemplatePreviewIn"];
+      };
+    };
+    responses: {
+      /** @description Образец */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["DocumentPreview"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      422: components["responses"]["ValidationFailed"];
+    };
+  };
+  deleteDocumentTemplate: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path: {
+        /** @description Id объекта ERP (строкой) */
+        id: components["parameters"]["CompanyItemId"];
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Удалён */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      /** @description `CONFLICT` — шаблон используется */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Error"];
+        };
+      };
+    };
+  };
+  updateDocumentTemplate: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path: {
+        /** @description Id объекта ERP (строкой) */
+        id: components["parameters"]["CompanyItemId"];
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["DocumentTemplateUpdate"];
+      };
+    };
+    responses: {
+      /** @description Сохранён */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["DocumentTemplate"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      422: components["responses"]["ValidationFailed"];
+    };
+  };
+  copyDocumentTemplate: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path: {
+        /** @description Id объекта ERP (строкой) */
+        id: components["parameters"]["CompanyItemId"];
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["DocumentTemplateCopyIn"];
+      };
+    };
+    responses: {
+      /** @description Копия создана */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["DocumentTemplate"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      422: components["responses"]["ValidationFailed"];
+    };
+  };
+  listEmailTemplates: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Шаблоны */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["EmailTemplateList"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+    };
+  };
+  createEmailTemplate: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["EmailTemplateIn"];
+      };
+    };
+    responses: {
+      /** @description Создан */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["EmailTemplate"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      422: components["responses"]["ValidationFailed"];
+    };
+  };
+  deleteEmailTemplate: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path: {
+        /** @description Id объекта ERP (строкой) */
+        id: components["parameters"]["CompanyItemId"];
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Удалён */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+    };
+  };
+  updateEmailTemplate: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path: {
+        /** @description Id объекта ERP (строкой) */
+        id: components["parameters"]["CompanyItemId"];
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["EmailTemplateUpdate"];
+      };
+    };
+    responses: {
+      /** @description Сохранён */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["EmailTemplate"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      422: components["responses"]["ValidationFailed"];
+    };
+  };
+  previewEmailTemplate: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path: {
+        /** @description Id объекта ERP (строкой) */
+        id: components["parameters"]["CompanyItemId"];
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Образец */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["EmailTemplatePreview"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+    };
+  };
+  listReferenceItems: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        /** @description Справочник ERP */
+        kind: components["parameters"]["ReferenceKindPath"];
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Строки */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ReferenceItemList"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+    };
+  };
+  createReferenceItem: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path: {
+        /** @description Справочник ERP */
+        kind: components["parameters"]["ReferenceKindPath"];
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["ReferenceItemIn"];
+      };
+    };
+    responses: {
+      /** @description Создана */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ReferenceItem"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      422: components["responses"]["ValidationFailed"];
+    };
+  };
+  deleteReferenceItem: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path: {
+        /** @description Справочник ERP */
+        kind: components["parameters"]["ReferenceKindPath"];
+        /** @description Id объекта ERP (строкой) */
+        id: components["parameters"]["CompanyItemId"];
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Удалена */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      /** @description `CONFLICT` — строка используется */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Error"];
+        };
+      };
+    };
+  };
+  updateReferenceItem: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path: {
+        /** @description Справочник ERP */
+        kind: components["parameters"]["ReferenceKindPath"];
+        /** @description Id объекта ERP (строкой) */
+        id: components["parameters"]["CompanyItemId"];
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["ReferenceItemUpdate"];
+      };
+    };
+    responses: {
+      /** @description Сохранена */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ReferenceItem"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      422: components["responses"]["ValidationFailed"];
+    };
+  };
+  listCatalogCategories: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Категории */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["CatalogCategoryList"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+    };
+  };
+  createCatalogCategory: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["CatalogCategoryIn"];
+      };
+    };
+    responses: {
+      /** @description Создана */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["CatalogCategory"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      422: components["responses"]["ValidationFailed"];
+    };
+  };
+  deleteCatalogCategory: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path: {
+        /** @description Id объекта ERP (строкой) */
+        id: components["parameters"]["CompanyItemId"];
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Удалена */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      /** @description `CONFLICT` — у категории есть подкатегории */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Error"];
+        };
+      };
+    };
+  };
+  updateCatalogCategory: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path: {
+        /** @description Id объекта ERP (строкой) */
+        id: components["parameters"]["CompanyItemId"];
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["CatalogCategoryUpdate"];
+      };
+    };
+    responses: {
+      /** @description Сохранена */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["CatalogCategory"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      422: components["responses"]["ValidationFailed"];
+    };
+  };
+  listCategoryRequests: {
+    parameters: {
+      query?: {
+        status?: components["schemas"]["CategoryRequestStatus"];
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Запросы */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["CategoryRequestList"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+    };
+  };
+  approveCategoryRequest: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path: {
+        /** @description Id объекта ERP (строкой) */
+        id: components["parameters"]["CompanyItemId"];
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["CategoryRequestApproveIn"];
+      };
+    };
+    responses: {
+      /** @description Одобрен */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["CategoryRequest"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      /** @description `CONFLICT` — запрос уже рассмотрен */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Error"];
+        };
+      };
+      422: components["responses"]["ValidationFailed"];
+    };
+  };
+  rejectCategoryRequest: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path: {
+        /** @description Id объекта ERP (строкой) */
+        id: components["parameters"]["CompanyItemId"];
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["CategoryRequestRejectIn"];
+      };
+    };
+    responses: {
+      /** @description Отклонён */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["CategoryRequest"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      /** @description `CONFLICT` — запрос уже рассмотрен */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Error"];
+        };
+      };
+      422: components["responses"]["ValidationFailed"];
+    };
+  };
+  getPlatformSettings: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Настройки */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["PlatformSettings"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+    };
+  };
+  updatePlatformSettings: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["PlatformSettingsUpdate"];
+      };
+    };
+    responses: {
+      /** @description Сохранено */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["PlatformSettings"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
       422: components["responses"]["ValidationFailed"];
     };
   };

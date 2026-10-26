@@ -101,6 +101,7 @@
 | Внешние интеграции: ERP, Telegram, почта, реестр сервисов, модели ИИ, расходы, бэкапы, состояние | `/admin/integrations/{erp,telegram,smtp,services,models,spend,ai-spend,backups,system}*` — прокси с токеном сотрудника; чтение `admin: read`, изменения и пробы `admin: full` | `/integrations/{erp,telegram,smtp}*` (check, pair, rotate, token, channels, profile, test-send, log), `/admin/external-services*`, `/models*`, `/spend`, `/admin/ai-spend`, `/system/{status,backups}` | — | ✓ (BFF 0.7.0, W13-A1); разрывы CRM — `QUESTIONS.md` Q-W13-A1-2 |
 | Журнал интеграций: подписчики шины, доставки и DLQ, входящие с ошибками, повторы | `GET /admin/bus`, `/admin/bus/deliveries`, `/admin/bus/inbox` (слияние трёх доменов, `sources`), `POST /admin/bus/{domain}/…/retry*`; только `admin: full` | `/api/v1/bus/*` (`integrations:read`, `integrations:write`) | `/api/v1/integration/bus/*/` (`team.manage`); EDS `/api/v1/bus/*` (`bus.manage`, вход — SSO `aud=eds`) | ✓ (BFF 0.9.0, W13-A2) |
 | Тикеты от команды | `GET/POST /admin/tickets` | новое `tickets` | — | Δ CRM-05 |
+| Компания (W13-A3, BFF 0.8.0): реквизиты и логотип, бланк и бренд, нумерация, условия КП, статьи расхода, шаблоны документов и писем, справочники, категории и запросы, НДС | `/admin/company*` (раздел `company.settings`; `GET`/предпросмотры — чтение, изменения — полный) | — | `accounts/companies/{id}/` (+ `upload-logo`, `delete-logo`, `document-profile/` + `preview`, `upload-logo`, `settings/`), `crm/numbering-scheme/` (+ `preview`), `crm/charge-templates/`, `crm/charge-types/`, `crm/document-templates/*`, `settings/email-templates/`, `master-data/{countries,currencies,units,delivery-basis}/`, `catalog/categories/`, `catalog/category-requests/` (+ `approve`, `reject`), `system-settings/`; id компании — `setup/status/` (`own_company_id`) | ✓, разрывы — Q-W13A3-1 |
 
 ## 2. Шкала 7 шагов: как BFF выводит шаг
 
@@ -196,7 +197,7 @@
 | `erp.railtech.uz/deal-quote/:id` | `/erp/calc/:номер` |
 | `erp.railtech.uz/contracts`, `/invoices`, `/payments`, `/acts`, `/fulfillments` | `/eds/documents?type=…`, `/eds/payments`, `/erp/stock` |
 | `erp.railtech.uz/products…`, `/catalog-…` | `/erp/catalog` |
-| `erp.railtech.uz/settings` | `/admin/integrations` (бизнес-настройки компании — раздел Admin «Компания», Δ PLT) |
+| `erp.railtech.uz/settings` | `/admin/integrations` (бизнес-настройки компании — раздел Admin «Компания», `/admin/company`, W13-A3) |
 | остальное | `/dashboard/queue` |
 
 ## 7. Разрывы в бэкендах (что нужно добавить)

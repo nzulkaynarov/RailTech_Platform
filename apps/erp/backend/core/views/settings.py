@@ -6,7 +6,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from core.models import SystemSetting
-from core.permissions import ADMIN_ONLY, RoleGatedViewMixin
+from core.permissions import IsPlatformAdmin, RoleGatedViewMixin
 
 # ──────────────────────────────────────────────────────────────────────────
 # System Settings (singleton)
@@ -62,13 +62,18 @@ class SystemSettingSerializer(drf_serializers.ModelSerializer):
 class SystemSettingsView(RoleGatedViewMixin, APIView):
     """
     GET  /api/v1/system-settings/ — read current settings (any authenticated user)
-    PATCH /api/v1/system-settings/ — update settings (administrator = superuser only)
+    PATCH /api/v1/system-settings/ — update settings: `vat_rate` — право `settings.edit` (раздел Платформы «Компания»,
+    W13-A3) или администратор; остальные поля (`maintenance_mode`, `is_two_factor_required`) — только администратор
+    (`is_superuser`): они закрывают вход всем.
     """
 
     required_permissions = {
-        "PATCH": ADMIN_ONLY,
-        "PUT": ADMIN_ONLY,
+        "PATCH": "settings.edit",
+        "PUT": "settings.edit",
     }
+
+    #: Поля, которые вправе менять не администратор, а держатель `settings.edit`.
+    COMPANY_EDITABLE = frozenset({"vat_rate"})
 
     permission_classes = [IsAuthenticated]
 
@@ -88,7 +93,8 @@ class SystemSettingsView(RoleGatedViewMixin, APIView):
     @extend_schema(
         summary="Update system settings",
         description=(
-            "Partially update platform settings. Administrator (superuser) only. "
+            "Partially update platform settings. `vat_rate` — `settings.edit` or administrator; "
+            "`maintenance_mode` and `is_two_factor_required` — administrator (superuser) only. "
             "`platform_name`, `support_email`, `logo_url` and `domain` are shared by the whole ensemble and "
             "managed in CRM: a request that contains any of them is rejected with 400 `SHARED_SETTING_READ_ONLY`."
         ),
@@ -97,11 +103,11 @@ class SystemSettingsView(RoleGatedViewMixin, APIView):
         tags=["System"],
     )
     def patch(self, request):
-        # Write requires elevated permissions
-        if not request.user.is_superuser:
+        # Держатель `settings.edit` (гейт выше) меняет только ставку НДС; остальное — администратор.
+        if not request.user.is_superuser and not set(request.data) <= self.COMPANY_EDITABLE:
             from rest_framework.exceptions import PermissionDenied
 
-            raise PermissionDenied()
+            raise PermissionDenied(detail=IsPlatformAdmin.message, code=IsPlatformAdmin.message)
 
         # Общие поля ведёт CRM. Молча отбросить их нельзя: старый клиент увидел бы «сохранено» и решил бы, что
         # имя поменялось. Тело с такими полями отвергается целиком — частичное применение хуже отказа.

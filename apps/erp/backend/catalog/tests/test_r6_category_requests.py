@@ -42,11 +42,11 @@ def _seller_company(name: str, inn: str) -> Company:
     return company
 
 
-def _seller_member(company: Company, email: str) -> CustomUser:
+def _seller_member(company: Company, email: str, permissions=("catalog.manage",)) -> CustomUser:
     workspace_role, _ = WorkspaceRole.objects.get_or_create(
         code="SALES_MANAGER", defaults={"name": "Менеджер", "sort_order": 20}
     )
-    company_role = CompanyRole.objects.create(company=company, name=f"Роль {email}", permissions=["catalog.manage"])
+    company_role = CompanyRole.objects.create(company=company, name=f"Роль {email}", permissions=list(permissions))
     user = CustomUser.objects.create_user(email=email, username=email, password="pw")
     CompanyMember.objects.create(
         user=user,
@@ -247,3 +247,34 @@ def test_operator_sees_every_pending_request(world):
     assert response.status_code == 200
     payload = response.data["results"] if "results" in response.data else response.data
     assert len(payload) == 2
+
+
+def test_settings_editor_reviews_requests_without_superuser(world):
+    """W13-A3: решение — по праву `settings.edit` (раздел Платформы «Компания»), а не только суперпользователь."""
+    editor = _seller_member(world["company"], "editor@r6.test", permissions=("settings.edit",))
+    approved = CategoryRequest.objects.create(company=world["company"], proposed_name="Одобрить")
+    rejected = CategoryRequest.objects.create(company=world["company"], proposed_name="Отклонить")
+    created = Category.objects.create(name="Одобрить")
+    client = _client_for(editor)
+
+    ok = client.post(f"{ENDPOINT}{approved.pk}/approve/", {"category": created.pk}, format="json")
+    no = client.post(f"{ENDPOINT}{rejected.pk}/reject/", {"reason": "Дубль"}, format="json")
+
+    assert (ok.status_code, no.status_code) == (200, 200)
+    approved.refresh_from_db()
+    rejected.refresh_from_db()
+    assert (approved.status, rejected.status) == ("APPROVED", "REJECTED")
+
+
+def test_member_without_settings_edit_cannot_review_even_with_catalog_manage(world):
+    """`catalog.manage` ведёт справочник и подаёт запросы, но решение — только `settings.edit`."""
+    row = CategoryRequest.objects.create(company=world["company"], proposed_name="Без права")
+    created = Category.objects.create(name="Без права")
+    client = _client_for(world["seller"])
+
+    approve = client.post(f"{ENDPOINT}{row.pk}/approve/", {"category": created.pk}, format="json")
+    reject = client.post(f"{ENDPOINT}{row.pk}/reject/", {"reason": "Нет"}, format="json")
+
+    assert (approve.status_code, reject.status_code) == (403, 403)
+    row.refresh_from_db()
+    assert row.status == "PENDING"

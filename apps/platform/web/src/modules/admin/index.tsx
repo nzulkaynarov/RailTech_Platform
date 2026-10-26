@@ -5,12 +5,13 @@ import { ModuleRoutes } from "../ModuleRoutes";
 import { matchSection } from "../registry";
 import { BusJournalPage } from "./bus/BusJournalPage";
 import { IntegrationsPage } from "./integrations/IntegrationsPage";
+import { CompanyPage } from "./company/CompanyPage";
 import { OrgPage } from "./org/OrgPage";
 import { RolesPage } from "./roles/RolesPage";
 
 /**
- * Модуль Admin. Оргструктура (PLT-15), Ролевая матрица (R-2), Внешние интеграции (W13-A1) и Журнал интеграций (W13-A2) —
- * настоящие экраны; остальные разделы пока заглушки каркаса.
+ * Модуль Admin. Оргструктура (PLT-15), Ролевая матрица (R-2), Внешние интеграции (W13-A1), Компания (W13-A3) и Журнал
+ * интеграций (W13-A2) — настоящие экраны; остальные разделы пока заглушки каркаса.
  */
 export function Component() {
   const location = useLocation();
@@ -33,6 +34,13 @@ export function Component() {
     return (
       <RequireAccess rule={match.section.access}>
         <IntegrationsPage />
+      </RequireAccess>
+    );
+  }
+  if (match?.module.code === "admin" && match.section.key === "company") {
+    return (
+      <RequireAccess rule={match.section.access}>
+        <CompanyPage />
       </RequireAccess>
     );
   }

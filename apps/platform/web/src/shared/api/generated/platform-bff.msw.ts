@@ -52,9 +52,31 @@
  * обычными API (с проверкой прав). Данных событий в потоке нет. Пока поток жив, опрос — редкий (5 минут), при обрыве —
  * прежние 30 секунд. Чисто добавляющее изменение.
  *
+ * **0.8.0 (W13-A3) — Admin · Компания.** Чисто добавляющее изменение: `GET/PATCH /admin/company` (реквизиты), `/admin/company/logo`
+ * (загрузка `multipart/form-data` и удаление), `/admin/company/brand` (+ `/logo`, `/preview`) — бланк и бренд документов,
+ * `/admin/company/numbering` (+ `/preview`), `/admin/company/quote-defaults`, `/admin/company/charge-types` и `charge-templates`,
+ * `/admin/company/document-templates` (+ `placeholders`, `preview`, `{id}/copy`), `/admin/company/email-templates` (+ `{id}/preview`),
+ * `/admin/company/reference/{kind}` (страны, валюты, единицы, базисы поставки), `/admin/company/categories`,
+ * `/admin/company/category-requests` (+ `approve`, `reject`), `/admin/company/platform-settings`. Доступ — раздел `company.settings`
+ * (чтение — `GET` и предпросмотры, полный — изменения). BFF только проксирует к ERP с токеном сотрудника и сам находит свою компанию по
+ * профилю сотрудника в ERP; нет компании — 409 `COMPANY_NOT_SET`. Ошибки ERP: 400 -> 422 `VALIDATION_FAILED` (`details.reason` —
+ * код ERP в нижнем регистре, `details.fields`), «используется», «префикс занят» и «уже рассмотрен» -> 409 `CONFLICT` с
+ * `details.reason`. Поля маржи `QuoteDefaults` вырезаются без права на группу `cost_margin` (правило 6 CONVENTIONS).
+ *
  * **0.6.0 (R-1c, R3-D-1) — ломающее (до 1.0 допустимо).** У сотрудника хотя бы одна роль: `EmployeeUpdate.role_ids` —
  * `minItems: 1`, пустой набор — 422 `ROLES_REQUIRED` (`details.fields = [role_ids]`), в CRM запрос не уходит; тот же код —
  * перевод отказа CRM `roles_required` (CRM API 0.3.0). Закрыть доступ — `is_active = false` («Отключить сотрудника»).
+ *
+ * **0.7.0 (W13-A1) — добавляющее.** Admin · Внешние интеграции (SPEC-v3 §7.6, тег `integrations`): обзор `GET /admin/integrations`
+ * (карточки со статусом пятью уровнями — `ok`, `warn`, `fail`, `unknown`, `off` — уровни реестра внешних сервисов CRM, ADR-0024 CRM,
+ * последняя активность и список «Требует внимания») и прокси к CRM под `/admin/integrations/*`: коннектор ERP (проверка,
+ * сопряжение, ротация ключей), Telegram-бот (токен, канал команды, профиль), почта SMTP (настройки, проверка, тестовое
+ * письмо, журнал), реестр внешних сервисов (проверка, выключатель), модели ИИ (смена, сброс, проверка), расходы, бэкапы,
+ * состояние системы. Чтение — раздел `admin` от `read`; всё изменяющее и каждая проверка — `admin: full` (директору — 403).
+ * Секреты (токен бота, ключи моделей, пароль SMTP, коды сопряжения) BFF только передаёт в CRM и не возвращает — в ответах
+ * маски (`configured`, `*_last4`). Изменение секретов подтверждается паролем администратора (`password`, повторный ввод):
+ * он уходит только в CRM. Коды ошибок: `WRONG_PASSWORD` (422), `NOT_CONFIGURED`, `SECRETS_KEY_MISSING`,
+ * `SERVICE_NOT_SWITCHABLE` (409), `INTEGRATION_FAILED` (502, причина в `details.reason`).
  *
  * **0.9.0 (W13-A2) — добавляющее.** Admin · Журнал интеграций (тег `bus`): шина `rt_bus` всех трёх доменов в одном журнале
  * вместо CLI `bus status|retry` и Django admin ERP. `GET /admin/bus` — сводка по доменам (outbox, DLQ, inbox с ошибками) и
@@ -67,17 +89,6 @@
  * `admin: full` (директору — 403 в BFF); в каждый домен — с токеном сотрудника: CRM и ERP — как раньше, EDS — токен
  * сотрудника CRM `aud=eds` → `POST /api/v1/auth/sso/exchange` EDS (`docs/architecture/sso-token.md`), 15 минут, в сессии BFF.
  * Тел событий нет — только метаданные доставки. `Error.source` дополнен `eds`.
- *
- * **0.7.0 (W13-A1) — добавляющее.** Admin · Внешние интеграции (SPEC-v3 §7.6, тег `integrations`): обзор `GET /admin/integrations`
- * (карточки со статусом пятью уровнями — `ok`, `warn`, `fail`, `unknown`, `off` — уровни реестра внешних сервисов CRM, ADR-0024 CRM,
- * последняя активность и список «Требует внимания») и прокси к CRM под `/admin/integrations/*`: коннектор ERP (проверка,
- * сопряжение, ротация ключей), Telegram-бот (токен, канал команды, профиль), почта SMTP (настройки, проверка, тестовое
- * письмо, журнал), реестр внешних сервисов (проверка, выключатель), модели ИИ (смена, сброс, проверка), расходы, бэкапы,
- * состояние системы. Чтение — раздел `admin` от `read`; всё изменяющее и каждая проверка — `admin: full` (директору — 403).
- * Секреты (токен бота, ключи моделей, пароль SMTP, коды сопряжения) BFF только передаёт в CRM и не возвращает — в ответах
- * маски (`configured`, `*_last4`). Изменение секретов подтверждается паролем администратора (`password`, повторный ввод):
- * он уходит только в CRM. Коды ошибок: `WRONG_PASSWORD` (422), `NOT_CONFIGURED`, `SECRETS_KEY_MISSING`,
- * `SERVICE_NOT_SWITCHABLE` (409), `INTEGRATION_FAILED` (502, причина в `details.reason`).
  *
  * 0.2.4: `423 ACCOUNT_LOCKED` объявлен и на `POST /auth/change-password` (CRM блокирует учётную запись после неверных
  * текущих паролей).
@@ -112,6 +123,8 @@ import {
   BusInboxStatus,
   BusSourceState,
   BusSubscriberState,
+  CategoryRequestStatus,
+  DocumentKind,
   DueLabel,
   EmployeeStatus,
   ErpSyncState,
@@ -122,6 +135,7 @@ import {
   Language,
   ModuleCode,
   NotificationTab,
+  NumberingResetPeriod,
   ObjectKind,
   QueueItemKind,
   RestrictedField,
@@ -137,10 +151,26 @@ import type {
   AiSpendReport,
   BackupsStatus,
   BotProfileState,
+  BrandProfile,
   BusDeliveryPage,
   BusInboxPage,
   BusJournal,
   BusRetryResult,
+  CatalogCategory,
+  CatalogCategoryList,
+  CategoryRequest,
+  CategoryRequestList,
+  ChargeTemplate,
+  ChargeTemplateList,
+  ChargeTypeList,
+  CompanyProfile,
+  DocumentPlaceholders,
+  DocumentPreview,
+  DocumentTemplate,
+  DocumentTemplateList,
+  EmailTemplate,
+  EmailTemplateList,
+  EmailTemplatePreview,
   Employee,
   EmployeeList,
   ErpCheck,
@@ -156,8 +186,14 @@ import type {
   Me,
   MenuCounters,
   NotificationPage,
+  NumberingPreview,
+  NumberingScheme,
+  PlatformSettings,
   Queue,
   QueueCards,
+  QuoteDefaults,
+  ReferenceItem,
+  ReferenceItemList,
   Role,
   RoleList,
   RolePreview,
@@ -2127,6 +2163,836 @@ export const getUpdateRoleResponseMock = (
   ...overrideResponse,
 });
 
+export const getGetCompanyResponseMock = (
+  overrideResponse: Partial<Extract<CompanyProfile, object>> = {},
+): CompanyProfile => ({
+  name: faker.string.alpha({ length: { min: 1, max: 255 } }),
+  inn: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
+  bank_account: faker.string.alpha({ length: { min: 10, max: 50 } }),
+  mfo: faker.string.alpha({ length: { min: 10, max: 10 } }),
+  legal_address: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  phone: faker.string.alpha({ length: { min: 10, max: 50 } }),
+  contact_person: faker.string.alpha({ length: { min: 10, max: 255 } }),
+  website: faker.string.alpha({ length: { min: 10, max: 255 } }),
+  email: faker.string.alpha({ length: { min: 10, max: 254 } }),
+  country: faker.helpers.arrayElement([faker.number.int(), null]),
+  has_iso9001: faker.datatype.boolean(),
+  logo_url: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
+  ...overrideResponse,
+});
+
+export const getUpdateCompanyResponseMock = (
+  overrideResponse: Partial<Extract<CompanyProfile, object>> = {},
+): CompanyProfile => ({
+  name: faker.string.alpha({ length: { min: 1, max: 255 } }),
+  inn: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
+  bank_account: faker.string.alpha({ length: { min: 10, max: 50 } }),
+  mfo: faker.string.alpha({ length: { min: 10, max: 10 } }),
+  legal_address: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  phone: faker.string.alpha({ length: { min: 10, max: 50 } }),
+  contact_person: faker.string.alpha({ length: { min: 10, max: 255 } }),
+  website: faker.string.alpha({ length: { min: 10, max: 255 } }),
+  email: faker.string.alpha({ length: { min: 10, max: 254 } }),
+  country: faker.helpers.arrayElement([faker.number.int(), null]),
+  has_iso9001: faker.datatype.boolean(),
+  logo_url: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
+  ...overrideResponse,
+});
+
+export const getGetCompanyLogoImageResponseMock = (): Blob =>
+  new Blob([new Uint8Array(faker.number.int({ min: 1, max: 64 }))]);
+
+export const getUploadCompanyLogoResponseMock = (
+  overrideResponse: Partial<Extract<CompanyProfile, object>> = {},
+): CompanyProfile => ({
+  name: faker.string.alpha({ length: { min: 1, max: 255 } }),
+  inn: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
+  bank_account: faker.string.alpha({ length: { min: 10, max: 50 } }),
+  mfo: faker.string.alpha({ length: { min: 10, max: 10 } }),
+  legal_address: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  phone: faker.string.alpha({ length: { min: 10, max: 50 } }),
+  contact_person: faker.string.alpha({ length: { min: 10, max: 255 } }),
+  website: faker.string.alpha({ length: { min: 10, max: 255 } }),
+  email: faker.string.alpha({ length: { min: 10, max: 254 } }),
+  country: faker.helpers.arrayElement([faker.number.int(), null]),
+  has_iso9001: faker.datatype.boolean(),
+  logo_url: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
+  ...overrideResponse,
+});
+
+export const getGetBrandProfileResponseMock = (
+  overrideResponse: Partial<Extract<BrandProfile, object>> = {},
+): BrandProfile => ({
+  legal_name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  inn: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  legal_address: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  bank_details: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  signatory_name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  signatory_position: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  footer_text: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  accent_color: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  secondary_color: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  cover_letter_text: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  contract_acceptance_text: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  contract_liability_text: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  contract_extra_terms_text: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  act_closing_text: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  layout_preset: faker.helpers.arrayElement(["light", "boxed", "bold", "striped"] as const),
+  font_family: faker.helpers.arrayElement(["sans", "serif"] as const),
+  show_cover_letter: faker.datatype.boolean(),
+  show_bank_in_header: faker.datatype.boolean(),
+  use_company_defaults: faker.datatype.boolean(),
+  show_logo: faker.datatype.boolean(),
+  show_lead_time: faker.datatype.boolean(),
+  show_fx_note: faker.datatype.boolean(),
+  logo_url: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
+  inherited: faker.helpers.arrayElement([
+    {
+      [faker.string.alphanumeric(5)]: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    },
+    null,
+  ]),
+  ...overrideResponse,
+});
+
+export const getUpdateBrandProfileResponseMock = (
+  overrideResponse: Partial<Extract<BrandProfile, object>> = {},
+): BrandProfile => ({
+  legal_name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  inn: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  legal_address: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  bank_details: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  signatory_name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  signatory_position: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  footer_text: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  accent_color: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  secondary_color: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  cover_letter_text: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  contract_acceptance_text: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  contract_liability_text: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  contract_extra_terms_text: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  act_closing_text: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  layout_preset: faker.helpers.arrayElement(["light", "boxed", "bold", "striped"] as const),
+  font_family: faker.helpers.arrayElement(["sans", "serif"] as const),
+  show_cover_letter: faker.datatype.boolean(),
+  show_bank_in_header: faker.datatype.boolean(),
+  use_company_defaults: faker.datatype.boolean(),
+  show_logo: faker.datatype.boolean(),
+  show_lead_time: faker.datatype.boolean(),
+  show_fx_note: faker.datatype.boolean(),
+  logo_url: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
+  inherited: faker.helpers.arrayElement([
+    {
+      [faker.string.alphanumeric(5)]: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    },
+    null,
+  ]),
+  ...overrideResponse,
+});
+
+export const getGetBrandLogoImageResponseMock = (): Blob =>
+  new Blob([new Uint8Array(faker.number.int({ min: 1, max: 64 }))]);
+
+export const getUploadBrandLogoResponseMock = (
+  overrideResponse: Partial<Extract<BrandProfile, object>> = {},
+): BrandProfile => ({
+  legal_name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  inn: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  legal_address: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  bank_details: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  signatory_name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  signatory_position: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  footer_text: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  accent_color: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  secondary_color: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  cover_letter_text: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  contract_acceptance_text: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  contract_liability_text: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  contract_extra_terms_text: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  act_closing_text: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  layout_preset: faker.helpers.arrayElement(["light", "boxed", "bold", "striped"] as const),
+  font_family: faker.helpers.arrayElement(["sans", "serif"] as const),
+  show_cover_letter: faker.datatype.boolean(),
+  show_bank_in_header: faker.datatype.boolean(),
+  use_company_defaults: faker.datatype.boolean(),
+  show_logo: faker.datatype.boolean(),
+  show_lead_time: faker.datatype.boolean(),
+  show_fx_note: faker.datatype.boolean(),
+  logo_url: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
+  inherited: faker.helpers.arrayElement([
+    {
+      [faker.string.alphanumeric(5)]: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    },
+    null,
+  ]),
+  ...overrideResponse,
+});
+
+export const getPreviewBrandDocumentResponseMock = (
+  overrideResponse: Partial<Extract<DocumentPreview, object>> = {},
+): DocumentPreview => ({
+  html: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  warnings: faker.helpers.arrayElement([
+    Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() =>
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+    ),
+    undefined,
+  ]),
+  ...overrideResponse,
+});
+
+export const getGetNumberingSchemeResponseMock = (
+  overrideResponse: Partial<Extract<NumberingScheme, object>> = {},
+): NumberingScheme => ({
+  pattern: faker.string.alpha({ length: { min: 1, max: 100 } }),
+  padding: faker.number.int({ min: 1, max: 10 }),
+  reset_period: faker.helpers.arrayElement(Object.values(NumberingResetPeriod)),
+  start_value: faker.number.int({ min: 0 }),
+  type_labels: {
+    [faker.string.alphanumeric(5)]: faker.string.alpha({ length: { min: 10, max: 16 } }),
+  },
+  prefix: faker.string.alpha({ length: { min: 10, max: 16 } }),
+  is_effective: faker.datatype.boolean(),
+  ...overrideResponse,
+});
+
+export const getUpdateNumberingSchemeResponseMock = (
+  overrideResponse: Partial<Extract<NumberingScheme, object>> = {},
+): NumberingScheme => ({
+  pattern: faker.string.alpha({ length: { min: 1, max: 100 } }),
+  padding: faker.number.int({ min: 1, max: 10 }),
+  reset_period: faker.helpers.arrayElement(Object.values(NumberingResetPeriod)),
+  start_value: faker.number.int({ min: 0 }),
+  type_labels: {
+    [faker.string.alphanumeric(5)]: faker.string.alpha({ length: { min: 10, max: 16 } }),
+  },
+  prefix: faker.string.alpha({ length: { min: 10, max: 16 } }),
+  is_effective: faker.datatype.boolean(),
+  ...overrideResponse,
+});
+
+export const getPreviewNumberingResponseMock = (
+  overrideResponse: Partial<Extract<NumberingPreview, object>> = {},
+): NumberingPreview => ({
+  items: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+    kind: faker.helpers.arrayElement(Object.values(DocumentKind)),
+    label: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    number: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  })),
+  ...overrideResponse,
+});
+
+export const getGetQuoteDefaultsResponseMock = (
+  overrideResponse: Partial<Extract<QuoteDefaults, object>> = {},
+): QuoteDefaults => ({
+  default_cost_currency: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
+  default_delivery_basis: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
+  default_vat_rate: faker.helpers.arrayElement([
+    faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
+    null,
+  ]),
+  default_margin_percent: faker.helpers.arrayElement([
+    faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
+    null,
+  ]),
+  min_margin_percent: faker.helpers.arrayElement([
+    faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
+    undefined,
+  ]),
+  target_margin_percent: faker.helpers.arrayElement([
+    faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
+    undefined,
+  ]),
+  default_offer_validity_days: faker.helpers.arrayElement([faker.number.int({ min: 0 }), null]),
+  payment_terms_days: faker.helpers.arrayElement([faker.number.int({ min: 0 }), null]),
+  default_payment_terms: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  default_warranty_months: faker.helpers.arrayElement([faker.number.int({ min: 0 }), null]),
+  catalog_price_visibility: faker.helpers.arrayElement(["cabinet", "on_request"] as const),
+  catalog_publish_threshold: faker.number.int({ min: 1, max: 100 }),
+  fx_rate_max_age_days: faker.number.int({ min: 1, max: 90 }),
+  ...overrideResponse,
+});
+
+export const getUpdateQuoteDefaultsResponseMock = (
+  overrideResponse: Partial<Extract<QuoteDefaults, object>> = {},
+): QuoteDefaults => ({
+  default_cost_currency: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
+  default_delivery_basis: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
+  default_vat_rate: faker.helpers.arrayElement([
+    faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
+    null,
+  ]),
+  default_margin_percent: faker.helpers.arrayElement([
+    faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
+    null,
+  ]),
+  min_margin_percent: faker.helpers.arrayElement([
+    faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
+    undefined,
+  ]),
+  target_margin_percent: faker.helpers.arrayElement([
+    faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
+    undefined,
+  ]),
+  default_offer_validity_days: faker.helpers.arrayElement([faker.number.int({ min: 0 }), null]),
+  payment_terms_days: faker.helpers.arrayElement([faker.number.int({ min: 0 }), null]),
+  default_payment_terms: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  default_warranty_months: faker.helpers.arrayElement([faker.number.int({ min: 0 }), null]),
+  catalog_price_visibility: faker.helpers.arrayElement(["cabinet", "on_request"] as const),
+  catalog_publish_threshold: faker.number.int({ min: 1, max: 100 }),
+  fx_rate_max_age_days: faker.number.int({ min: 1, max: 90 }),
+  ...overrideResponse,
+});
+
+export const getListChargeTypesResponseMock = (
+  overrideResponse: Partial<Extract<ChargeTypeList, object>> = {},
+): ChargeTypeList => ({
+  items: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+    id: faker.helpers.fromRegExp("^[0-9]+$"),
+    code: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  })),
+  ...overrideResponse,
+});
+
+export const getListChargeTemplatesResponseMock = (
+  overrideResponse: Partial<Extract<ChargeTemplateList, object>> = {},
+): ChargeTemplateList => ({
+  items: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+    id: faker.helpers.fromRegExp("^[0-9]+$"),
+    delivery_basis: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    charge_type: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    default_amount: faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
+    default_rate_percent: faker.helpers.arrayElement([
+      faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
+      null,
+    ]),
+    is_deduction: faker.datatype.boolean(),
+    sort_order: faker.number.int(),
+    is_active: faker.datatype.boolean(),
+    delivery_basis_name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    charge_type_name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  })),
+  ...overrideResponse,
+});
+
+export const getCreateChargeTemplateResponseMock = (
+  overrideResponse: Partial<Extract<ChargeTemplate, object>> = {},
+): ChargeTemplate => ({
+  id: faker.helpers.fromRegExp("^[0-9]+$"),
+  delivery_basis: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  charge_type: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  default_amount: faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
+  default_rate_percent: faker.helpers.arrayElement([
+    faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
+    null,
+  ]),
+  is_deduction: faker.datatype.boolean(),
+  sort_order: faker.number.int(),
+  is_active: faker.datatype.boolean(),
+  delivery_basis_name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  charge_type_name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  ...overrideResponse,
+});
+
+export const getUpdateChargeTemplateResponseMock = (
+  overrideResponse: Partial<Extract<ChargeTemplate, object>> = {},
+): ChargeTemplate => ({
+  id: faker.helpers.fromRegExp("^[0-9]+$"),
+  delivery_basis: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  charge_type: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  default_amount: faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
+  default_rate_percent: faker.helpers.arrayElement([
+    faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
+    null,
+  ]),
+  is_deduction: faker.datatype.boolean(),
+  sort_order: faker.number.int(),
+  is_active: faker.datatype.boolean(),
+  delivery_basis_name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  charge_type_name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  ...overrideResponse,
+});
+
+export const getListDocumentTemplatesResponseMock = (
+  overrideResponse: Partial<Extract<DocumentTemplateList, object>> = {},
+): DocumentTemplateList => ({
+  items: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+    id: faker.helpers.fromRegExp("^[0-9]+$"),
+    name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    kind_name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    body_html: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    is_sample: faker.datatype.boolean(),
+    is_owned: faker.datatype.boolean(),
+    is_active: faker.datatype.boolean(),
+    placeholders_used: Array.from(
+      { length: faker.number.int({ min: 1, max: 10 }) },
+      (_, i) => i + 1,
+    ).map(() => faker.string.alpha({ length: { min: 10, max: 20 } })),
+    updated_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+  })),
+  ...overrideResponse,
+});
+
+export const getCreateDocumentTemplateResponseMock = (
+  overrideResponse: Partial<Extract<DocumentTemplate, object>> = {},
+): DocumentTemplate => ({
+  id: faker.helpers.fromRegExp("^[0-9]+$"),
+  name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  kind_name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  body_html: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  is_sample: faker.datatype.boolean(),
+  is_owned: faker.datatype.boolean(),
+  is_active: faker.datatype.boolean(),
+  placeholders_used: Array.from(
+    { length: faker.number.int({ min: 1, max: 10 }) },
+    (_, i) => i + 1,
+  ).map(() => faker.string.alpha({ length: { min: 10, max: 20 } })),
+  updated_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+  ...overrideResponse,
+});
+
+export const getGetDocumentPlaceholdersResponseMock = (
+  overrideResponse: Partial<Extract<DocumentPlaceholders, object>> = {},
+): DocumentPlaceholders => ({
+  groups: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+    () => ({
+      key: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      label: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      items: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+        () => ({
+          code: faker.string.alpha({ length: { min: 10, max: 20 } }),
+          label: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        }),
+      ),
+    }),
+  ),
+  ...overrideResponse,
+});
+
+export const getPreviewDocumentTemplateResponseMock = (
+  overrideResponse: Partial<Extract<DocumentPreview, object>> = {},
+): DocumentPreview => ({
+  html: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  warnings: faker.helpers.arrayElement([
+    Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() =>
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+    ),
+    undefined,
+  ]),
+  ...overrideResponse,
+});
+
+export const getUpdateDocumentTemplateResponseMock = (
+  overrideResponse: Partial<Extract<DocumentTemplate, object>> = {},
+): DocumentTemplate => ({
+  id: faker.helpers.fromRegExp("^[0-9]+$"),
+  name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  kind_name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  body_html: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  is_sample: faker.datatype.boolean(),
+  is_owned: faker.datatype.boolean(),
+  is_active: faker.datatype.boolean(),
+  placeholders_used: Array.from(
+    { length: faker.number.int({ min: 1, max: 10 }) },
+    (_, i) => i + 1,
+  ).map(() => faker.string.alpha({ length: { min: 10, max: 20 } })),
+  updated_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+  ...overrideResponse,
+});
+
+export const getCopyDocumentTemplateResponseMock = (
+  overrideResponse: Partial<Extract<DocumentTemplate, object>> = {},
+): DocumentTemplate => ({
+  id: faker.helpers.fromRegExp("^[0-9]+$"),
+  name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  kind_name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  body_html: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  is_sample: faker.datatype.boolean(),
+  is_owned: faker.datatype.boolean(),
+  is_active: faker.datatype.boolean(),
+  placeholders_used: Array.from(
+    { length: faker.number.int({ min: 1, max: 10 }) },
+    (_, i) => i + 1,
+  ).map(() => faker.string.alpha({ length: { min: 10, max: 20 } })),
+  updated_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+  ...overrideResponse,
+});
+
+export const getListEmailTemplatesResponseMock = (
+  overrideResponse: Partial<Extract<EmailTemplateList, object>> = {},
+): EmailTemplateList => ({
+  items: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+    id: faker.helpers.fromRegExp("^[0-9]+$"),
+    key: faker.string.alpha({ length: { min: 1, max: 100 } }),
+    language: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    subject: faker.string.alpha({ length: { min: 1, max: 20 } }),
+    html_body: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    text_body: faker.string.alpha({ length: { min: 1, max: 20 } }),
+    available_variables: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    is_active: faker.datatype.boolean(),
+    updated_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+    updated_by: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      undefined,
+    ]),
+  })),
+  ...overrideResponse,
+});
+
+export const getCreateEmailTemplateResponseMock = (
+  overrideResponse: Partial<Extract<EmailTemplate, object>> = {},
+): EmailTemplate => ({
+  id: faker.helpers.fromRegExp("^[0-9]+$"),
+  key: faker.string.alpha({ length: { min: 1, max: 100 } }),
+  language: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  subject: faker.string.alpha({ length: { min: 1, max: 20 } }),
+  html_body: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  text_body: faker.string.alpha({ length: { min: 1, max: 20 } }),
+  available_variables: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  is_active: faker.datatype.boolean(),
+  updated_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+  updated_by: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    undefined,
+  ]),
+  ...overrideResponse,
+});
+
+export const getUpdateEmailTemplateResponseMock = (
+  overrideResponse: Partial<Extract<EmailTemplate, object>> = {},
+): EmailTemplate => ({
+  id: faker.helpers.fromRegExp("^[0-9]+$"),
+  key: faker.string.alpha({ length: { min: 1, max: 100 } }),
+  language: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  subject: faker.string.alpha({ length: { min: 1, max: 20 } }),
+  html_body: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  text_body: faker.string.alpha({ length: { min: 1, max: 20 } }),
+  available_variables: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  is_active: faker.datatype.boolean(),
+  updated_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+  updated_by: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    undefined,
+  ]),
+  ...overrideResponse,
+});
+
+export const getPreviewEmailTemplateResponseMock = (
+  overrideResponse: Partial<Extract<EmailTemplatePreview, object>> = {},
+): EmailTemplatePreview => ({
+  subject: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  text_body: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  html_body: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  ...overrideResponse,
+});
+
+export const getListReferenceItemsResponseMock = (
+  overrideResponse: Partial<Extract<ReferenceItemList, object>> = {},
+): ReferenceItemList => ({
+  items: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+    id: faker.helpers.fromRegExp("^[0-9]+$"),
+    code: faker.string.alpha({ length: { min: 1, max: 50 } }),
+    name: faker.string.alpha({ length: { min: 1, max: 255 } }),
+    sort_order: faker.number.int(),
+    is_active: faker.datatype.boolean(),
+    symbol: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      undefined,
+    ]),
+    alpha2: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      undefined,
+    ]),
+    alpha3: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      undefined,
+    ]),
+    iso_numeric: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      undefined,
+    ]),
+    vat_rate: faker.helpers.arrayElement([
+      faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
+      null,
+    ]),
+    description: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      undefined,
+    ]),
+    seller_pays_freight: faker.helpers.arrayElement([faker.datatype.boolean(), undefined]),
+    seller_pays_insurance: faker.helpers.arrayElement([faker.datatype.boolean(), undefined]),
+    seller_pays_import: faker.helpers.arrayElement([faker.datatype.boolean(), undefined]),
+    seller_pays_delivery: faker.helpers.arrayElement([faker.datatype.boolean(), undefined]),
+  })),
+  ...overrideResponse,
+});
+
+export const getCreateReferenceItemResponseMock = (
+  overrideResponse: Partial<Extract<ReferenceItem, object>> = {},
+): ReferenceItem => ({
+  id: faker.helpers.fromRegExp("^[0-9]+$"),
+  code: faker.string.alpha({ length: { min: 1, max: 50 } }),
+  name: faker.string.alpha({ length: { min: 1, max: 255 } }),
+  sort_order: faker.number.int(),
+  is_active: faker.datatype.boolean(),
+  symbol: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    undefined,
+  ]),
+  alpha2: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    undefined,
+  ]),
+  alpha3: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    undefined,
+  ]),
+  iso_numeric: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    undefined,
+  ]),
+  vat_rate: faker.helpers.arrayElement([faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"), null]),
+  description: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    undefined,
+  ]),
+  seller_pays_freight: faker.helpers.arrayElement([faker.datatype.boolean(), undefined]),
+  seller_pays_insurance: faker.helpers.arrayElement([faker.datatype.boolean(), undefined]),
+  seller_pays_import: faker.helpers.arrayElement([faker.datatype.boolean(), undefined]),
+  seller_pays_delivery: faker.helpers.arrayElement([faker.datatype.boolean(), undefined]),
+  ...overrideResponse,
+});
+
+export const getUpdateReferenceItemResponseMock = (
+  overrideResponse: Partial<Extract<ReferenceItem, object>> = {},
+): ReferenceItem => ({
+  id: faker.helpers.fromRegExp("^[0-9]+$"),
+  code: faker.string.alpha({ length: { min: 1, max: 50 } }),
+  name: faker.string.alpha({ length: { min: 1, max: 255 } }),
+  sort_order: faker.number.int(),
+  is_active: faker.datatype.boolean(),
+  symbol: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    undefined,
+  ]),
+  alpha2: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    undefined,
+  ]),
+  alpha3: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    undefined,
+  ]),
+  iso_numeric: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    undefined,
+  ]),
+  vat_rate: faker.helpers.arrayElement([faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"), null]),
+  description: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    undefined,
+  ]),
+  seller_pays_freight: faker.helpers.arrayElement([faker.datatype.boolean(), undefined]),
+  seller_pays_insurance: faker.helpers.arrayElement([faker.datatype.boolean(), undefined]),
+  seller_pays_import: faker.helpers.arrayElement([faker.datatype.boolean(), undefined]),
+  seller_pays_delivery: faker.helpers.arrayElement([faker.datatype.boolean(), undefined]),
+  ...overrideResponse,
+});
+
+export const getListCatalogCategoriesResponseMock = (
+  overrideResponse: Partial<Extract<CatalogCategoryList, object>> = {},
+): CatalogCategoryList => ({
+  items: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+    id: faker.helpers.fromRegExp("^[0-9]+$"),
+    name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    parent_id: faker.helpers.arrayElement([faker.helpers.fromRegExp("^[0-9]+$"), null]),
+  })),
+  ...overrideResponse,
+});
+
+export const getCreateCatalogCategoryResponseMock = (
+  overrideResponse: Partial<Extract<CatalogCategory, object>> = {},
+): CatalogCategory => ({
+  id: faker.helpers.fromRegExp("^[0-9]+$"),
+  name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  parent_id: faker.helpers.arrayElement([faker.helpers.fromRegExp("^[0-9]+$"), null]),
+  ...overrideResponse,
+});
+
+export const getUpdateCatalogCategoryResponseMock = (
+  overrideResponse: Partial<Extract<CatalogCategory, object>> = {},
+): CatalogCategory => ({
+  id: faker.helpers.fromRegExp("^[0-9]+$"),
+  name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  parent_id: faker.helpers.arrayElement([faker.helpers.fromRegExp("^[0-9]+$"), null]),
+  ...overrideResponse,
+});
+
+export const getListCategoryRequestsResponseMock = (
+  overrideResponse: Partial<Extract<CategoryRequestList, object>> = {},
+): CategoryRequestList => ({
+  items: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+    id: faker.helpers.fromRegExp("^[0-9]+$"),
+    proposed_name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    parent_name: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      undefined,
+    ]),
+    justification: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      undefined,
+    ]),
+    status: faker.helpers.arrayElement(Object.values(CategoryRequestStatus)),
+    company_name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    requested_by: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      undefined,
+    ]),
+    resulting_category_id: faker.helpers.arrayElement([faker.helpers.fromRegExp("^[0-9]+$"), null]),
+    resulting_category_name: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      undefined,
+    ]),
+    review_notes: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      undefined,
+    ]),
+    reviewed_at: faker.helpers.arrayElement([
+      faker.date.past().toISOString().slice(0, 19) + "Z",
+      null,
+    ]),
+    created_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+  })),
+  ...overrideResponse,
+});
+
+export const getApproveCategoryRequestResponseMock = (
+  overrideResponse: Partial<Extract<CategoryRequest, object>> = {},
+): CategoryRequest => ({
+  id: faker.helpers.fromRegExp("^[0-9]+$"),
+  proposed_name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  parent_name: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    undefined,
+  ]),
+  justification: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    undefined,
+  ]),
+  status: faker.helpers.arrayElement(Object.values(CategoryRequestStatus)),
+  company_name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  requested_by: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    undefined,
+  ]),
+  resulting_category_id: faker.helpers.arrayElement([faker.helpers.fromRegExp("^[0-9]+$"), null]),
+  resulting_category_name: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    undefined,
+  ]),
+  review_notes: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    undefined,
+  ]),
+  reviewed_at: faker.helpers.arrayElement([
+    faker.date.past().toISOString().slice(0, 19) + "Z",
+    null,
+  ]),
+  created_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+  ...overrideResponse,
+});
+
+export const getRejectCategoryRequestResponseMock = (
+  overrideResponse: Partial<Extract<CategoryRequest, object>> = {},
+): CategoryRequest => ({
+  id: faker.helpers.fromRegExp("^[0-9]+$"),
+  proposed_name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  parent_name: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    undefined,
+  ]),
+  justification: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    undefined,
+  ]),
+  status: faker.helpers.arrayElement(Object.values(CategoryRequestStatus)),
+  company_name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  requested_by: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    undefined,
+  ]),
+  resulting_category_id: faker.helpers.arrayElement([faker.helpers.fromRegExp("^[0-9]+$"), null]),
+  resulting_category_name: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    undefined,
+  ]),
+  review_notes: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    undefined,
+  ]),
+  reviewed_at: faker.helpers.arrayElement([
+    faker.date.past().toISOString().slice(0, 19) + "Z",
+    null,
+  ]),
+  created_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+  ...overrideResponse,
+});
+
+export const getGetPlatformSettingsResponseMock = (
+  overrideResponse: Partial<Extract<PlatformSettings, object>> = {},
+): PlatformSettings => ({
+  vat_rate: faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
+  exchange_rate_usd_uzs: faker.helpers.arrayElement([
+    faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
+    null,
+  ]),
+  updated_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+  ...overrideResponse,
+});
+
+export const getUpdatePlatformSettingsResponseMock = (
+  overrideResponse: Partial<Extract<PlatformSettings, object>> = {},
+): PlatformSettings => ({
+  vat_rate: faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
+  exchange_rate_usd_uzs: faker.helpers.arrayElement([
+    faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
+    null,
+  ]),
+  updated_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+  ...overrideResponse,
+});
+
 export const getLoginMockHandler = (
   overrideResponse?:
     | Session
@@ -3572,6 +4438,1042 @@ export const getDeleteRoleMockHandler = (
     options,
   );
 };
+
+export const getGetCompanyMockHandler = (
+  overrideResponse?:
+    | CompanyProfile
+    | ((
+        info: Parameters<Parameters<typeof http.get>[1]>[0],
+      ) => Promise<CompanyProfile> | CompanyProfile),
+  options?: RequestHandlerOptions,
+) => {
+  return http.get(
+    "*/admin/company",
+    async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getGetCompanyResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getUpdateCompanyMockHandler = (
+  overrideResponse?:
+    | CompanyProfile
+    | ((
+        info: Parameters<Parameters<typeof http.patch>[1]>[0],
+      ) => Promise<CompanyProfile> | CompanyProfile),
+  options?: RequestHandlerOptions,
+) => {
+  return http.patch(
+    "*/admin/company",
+    async (info: Parameters<Parameters<typeof http.patch>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getUpdateCompanyResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getGetCompanyLogoImageMockHandler = (
+  overrideResponse?:
+    Blob | ((info: Parameters<Parameters<typeof http.get>[1]>[0]) => Promise<Blob> | Blob),
+  options?: RequestHandlerOptions,
+) => {
+  return http.get(
+    "*/admin/company/logo/image",
+    async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+      const binaryBody =
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getGetCompanyLogoImageResponseMock();
+      return new HttpResponse(binaryBody, { status: 200, headers: { "Content-Type": "image/*" } });
+    },
+    options,
+  );
+};
+
+export const getUploadCompanyLogoMockHandler = (
+  overrideResponse?:
+    | CompanyProfile
+    | ((
+        info: Parameters<Parameters<typeof http.post>[1]>[0],
+      ) => Promise<CompanyProfile> | CompanyProfile),
+  options?: RequestHandlerOptions,
+) => {
+  return http.post(
+    "*/admin/company/logo",
+    async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getUploadCompanyLogoResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getDeleteCompanyLogoMockHandler = (
+  overrideResponse?:
+    void | ((info: Parameters<Parameters<typeof http.delete>[1]>[0]) => Promise<void> | void),
+  options?: RequestHandlerOptions,
+) => {
+  return http.delete(
+    "*/admin/company/logo",
+    async (info: Parameters<Parameters<typeof http.delete>[1]>[0]) => {
+      if (typeof overrideResponse === "function") {
+        await overrideResponse(info);
+      }
+
+      return new HttpResponse(null, { status: 204 });
+    },
+    options,
+  );
+};
+
+export const getGetBrandProfileMockHandler = (
+  overrideResponse?:
+    | BrandProfile
+    | ((
+        info: Parameters<Parameters<typeof http.get>[1]>[0],
+      ) => Promise<BrandProfile> | BrandProfile),
+  options?: RequestHandlerOptions,
+) => {
+  return http.get(
+    "*/admin/company/brand",
+    async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getGetBrandProfileResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getUpdateBrandProfileMockHandler = (
+  overrideResponse?:
+    | BrandProfile
+    | ((
+        info: Parameters<Parameters<typeof http.patch>[1]>[0],
+      ) => Promise<BrandProfile> | BrandProfile),
+  options?: RequestHandlerOptions,
+) => {
+  return http.patch(
+    "*/admin/company/brand",
+    async (info: Parameters<Parameters<typeof http.patch>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getUpdateBrandProfileResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getGetBrandLogoImageMockHandler = (
+  overrideResponse?:
+    Blob | ((info: Parameters<Parameters<typeof http.get>[1]>[0]) => Promise<Blob> | Blob),
+  options?: RequestHandlerOptions,
+) => {
+  return http.get(
+    "*/admin/company/brand/logo/image",
+    async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+      const binaryBody =
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getGetBrandLogoImageResponseMock();
+      return new HttpResponse(binaryBody, { status: 200, headers: { "Content-Type": "image/*" } });
+    },
+    options,
+  );
+};
+
+export const getUploadBrandLogoMockHandler = (
+  overrideResponse?:
+    | BrandProfile
+    | ((
+        info: Parameters<Parameters<typeof http.post>[1]>[0],
+      ) => Promise<BrandProfile> | BrandProfile),
+  options?: RequestHandlerOptions,
+) => {
+  return http.post(
+    "*/admin/company/brand/logo",
+    async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getUploadBrandLogoResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getPreviewBrandDocumentMockHandler = (
+  overrideResponse?:
+    | DocumentPreview
+    | ((
+        info: Parameters<Parameters<typeof http.post>[1]>[0],
+      ) => Promise<DocumentPreview> | DocumentPreview),
+  options?: RequestHandlerOptions,
+) => {
+  return http.post(
+    "*/admin/company/brand/preview",
+    async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getPreviewBrandDocumentResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getGetNumberingSchemeMockHandler = (
+  overrideResponse?:
+    | NumberingScheme
+    | ((
+        info: Parameters<Parameters<typeof http.get>[1]>[0],
+      ) => Promise<NumberingScheme> | NumberingScheme),
+  options?: RequestHandlerOptions,
+) => {
+  return http.get(
+    "*/admin/company/numbering",
+    async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getGetNumberingSchemeResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getUpdateNumberingSchemeMockHandler = (
+  overrideResponse?:
+    | NumberingScheme
+    | ((
+        info: Parameters<Parameters<typeof http.patch>[1]>[0],
+      ) => Promise<NumberingScheme> | NumberingScheme),
+  options?: RequestHandlerOptions,
+) => {
+  return http.patch(
+    "*/admin/company/numbering",
+    async (info: Parameters<Parameters<typeof http.patch>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getUpdateNumberingSchemeResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getPreviewNumberingMockHandler = (
+  overrideResponse?:
+    | NumberingPreview
+    | ((
+        info: Parameters<Parameters<typeof http.post>[1]>[0],
+      ) => Promise<NumberingPreview> | NumberingPreview),
+  options?: RequestHandlerOptions,
+) => {
+  return http.post(
+    "*/admin/company/numbering/preview",
+    async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getPreviewNumberingResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getGetQuoteDefaultsMockHandler = (
+  overrideResponse?:
+    | QuoteDefaults
+    | ((
+        info: Parameters<Parameters<typeof http.get>[1]>[0],
+      ) => Promise<QuoteDefaults> | QuoteDefaults),
+  options?: RequestHandlerOptions,
+) => {
+  return http.get(
+    "*/admin/company/quote-defaults",
+    async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getGetQuoteDefaultsResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getUpdateQuoteDefaultsMockHandler = (
+  overrideResponse?:
+    | QuoteDefaults
+    | ((
+        info: Parameters<Parameters<typeof http.patch>[1]>[0],
+      ) => Promise<QuoteDefaults> | QuoteDefaults),
+  options?: RequestHandlerOptions,
+) => {
+  return http.patch(
+    "*/admin/company/quote-defaults",
+    async (info: Parameters<Parameters<typeof http.patch>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getUpdateQuoteDefaultsResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getListChargeTypesMockHandler = (
+  overrideResponse?:
+    | ChargeTypeList
+    | ((
+        info: Parameters<Parameters<typeof http.get>[1]>[0],
+      ) => Promise<ChargeTypeList> | ChargeTypeList),
+  options?: RequestHandlerOptions,
+) => {
+  return http.get(
+    "*/admin/company/charge-types",
+    async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getListChargeTypesResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getListChargeTemplatesMockHandler = (
+  overrideResponse?:
+    | ChargeTemplateList
+    | ((
+        info: Parameters<Parameters<typeof http.get>[1]>[0],
+      ) => Promise<ChargeTemplateList> | ChargeTemplateList),
+  options?: RequestHandlerOptions,
+) => {
+  return http.get(
+    "*/admin/company/charge-templates",
+    async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getListChargeTemplatesResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getCreateChargeTemplateMockHandler = (
+  overrideResponse?:
+    | ChargeTemplate
+    | ((
+        info: Parameters<Parameters<typeof http.post>[1]>[0],
+      ) => Promise<ChargeTemplate> | ChargeTemplate),
+  options?: RequestHandlerOptions,
+) => {
+  return http.post(
+    "*/admin/company/charge-templates",
+    async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getCreateChargeTemplateResponseMock(),
+        { status: 201 },
+      );
+    },
+    options,
+  );
+};
+
+export const getUpdateChargeTemplateMockHandler = (
+  overrideResponse?:
+    | ChargeTemplate
+    | ((
+        info: Parameters<Parameters<typeof http.patch>[1]>[0],
+      ) => Promise<ChargeTemplate> | ChargeTemplate),
+  options?: RequestHandlerOptions,
+) => {
+  return http.patch(
+    "*/admin/company/charge-templates/:id",
+    async (info: Parameters<Parameters<typeof http.patch>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getUpdateChargeTemplateResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getDeleteChargeTemplateMockHandler = (
+  overrideResponse?:
+    void | ((info: Parameters<Parameters<typeof http.delete>[1]>[0]) => Promise<void> | void),
+  options?: RequestHandlerOptions,
+) => {
+  return http.delete(
+    "*/admin/company/charge-templates/:id",
+    async (info: Parameters<Parameters<typeof http.delete>[1]>[0]) => {
+      if (typeof overrideResponse === "function") {
+        await overrideResponse(info);
+      }
+
+      return new HttpResponse(null, { status: 204 });
+    },
+    options,
+  );
+};
+
+export const getListDocumentTemplatesMockHandler = (
+  overrideResponse?:
+    | DocumentTemplateList
+    | ((
+        info: Parameters<Parameters<typeof http.get>[1]>[0],
+      ) => Promise<DocumentTemplateList> | DocumentTemplateList),
+  options?: RequestHandlerOptions,
+) => {
+  return http.get(
+    "*/admin/company/document-templates",
+    async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getListDocumentTemplatesResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getCreateDocumentTemplateMockHandler = (
+  overrideResponse?:
+    | DocumentTemplate
+    | ((
+        info: Parameters<Parameters<typeof http.post>[1]>[0],
+      ) => Promise<DocumentTemplate> | DocumentTemplate),
+  options?: RequestHandlerOptions,
+) => {
+  return http.post(
+    "*/admin/company/document-templates",
+    async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getCreateDocumentTemplateResponseMock(),
+        { status: 201 },
+      );
+    },
+    options,
+  );
+};
+
+export const getGetDocumentPlaceholdersMockHandler = (
+  overrideResponse?:
+    | DocumentPlaceholders
+    | ((
+        info: Parameters<Parameters<typeof http.get>[1]>[0],
+      ) => Promise<DocumentPlaceholders> | DocumentPlaceholders),
+  options?: RequestHandlerOptions,
+) => {
+  return http.get(
+    "*/admin/company/document-templates/placeholders",
+    async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getGetDocumentPlaceholdersResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getPreviewDocumentTemplateMockHandler = (
+  overrideResponse?:
+    | DocumentPreview
+    | ((
+        info: Parameters<Parameters<typeof http.post>[1]>[0],
+      ) => Promise<DocumentPreview> | DocumentPreview),
+  options?: RequestHandlerOptions,
+) => {
+  return http.post(
+    "*/admin/company/document-templates/preview",
+    async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getPreviewDocumentTemplateResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getUpdateDocumentTemplateMockHandler = (
+  overrideResponse?:
+    | DocumentTemplate
+    | ((
+        info: Parameters<Parameters<typeof http.patch>[1]>[0],
+      ) => Promise<DocumentTemplate> | DocumentTemplate),
+  options?: RequestHandlerOptions,
+) => {
+  return http.patch(
+    "*/admin/company/document-templates/:id",
+    async (info: Parameters<Parameters<typeof http.patch>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getUpdateDocumentTemplateResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getDeleteDocumentTemplateMockHandler = (
+  overrideResponse?:
+    void | ((info: Parameters<Parameters<typeof http.delete>[1]>[0]) => Promise<void> | void),
+  options?: RequestHandlerOptions,
+) => {
+  return http.delete(
+    "*/admin/company/document-templates/:id",
+    async (info: Parameters<Parameters<typeof http.delete>[1]>[0]) => {
+      if (typeof overrideResponse === "function") {
+        await overrideResponse(info);
+      }
+
+      return new HttpResponse(null, { status: 204 });
+    },
+    options,
+  );
+};
+
+export const getCopyDocumentTemplateMockHandler = (
+  overrideResponse?:
+    | DocumentTemplate
+    | ((
+        info: Parameters<Parameters<typeof http.post>[1]>[0],
+      ) => Promise<DocumentTemplate> | DocumentTemplate),
+  options?: RequestHandlerOptions,
+) => {
+  return http.post(
+    "*/admin/company/document-templates/:id/copy",
+    async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getCopyDocumentTemplateResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getListEmailTemplatesMockHandler = (
+  overrideResponse?:
+    | EmailTemplateList
+    | ((
+        info: Parameters<Parameters<typeof http.get>[1]>[0],
+      ) => Promise<EmailTemplateList> | EmailTemplateList),
+  options?: RequestHandlerOptions,
+) => {
+  return http.get(
+    "*/admin/company/email-templates",
+    async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getListEmailTemplatesResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getCreateEmailTemplateMockHandler = (
+  overrideResponse?:
+    | EmailTemplate
+    | ((
+        info: Parameters<Parameters<typeof http.post>[1]>[0],
+      ) => Promise<EmailTemplate> | EmailTemplate),
+  options?: RequestHandlerOptions,
+) => {
+  return http.post(
+    "*/admin/company/email-templates",
+    async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getCreateEmailTemplateResponseMock(),
+        { status: 201 },
+      );
+    },
+    options,
+  );
+};
+
+export const getUpdateEmailTemplateMockHandler = (
+  overrideResponse?:
+    | EmailTemplate
+    | ((
+        info: Parameters<Parameters<typeof http.patch>[1]>[0],
+      ) => Promise<EmailTemplate> | EmailTemplate),
+  options?: RequestHandlerOptions,
+) => {
+  return http.patch(
+    "*/admin/company/email-templates/:id",
+    async (info: Parameters<Parameters<typeof http.patch>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getUpdateEmailTemplateResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getDeleteEmailTemplateMockHandler = (
+  overrideResponse?:
+    void | ((info: Parameters<Parameters<typeof http.delete>[1]>[0]) => Promise<void> | void),
+  options?: RequestHandlerOptions,
+) => {
+  return http.delete(
+    "*/admin/company/email-templates/:id",
+    async (info: Parameters<Parameters<typeof http.delete>[1]>[0]) => {
+      if (typeof overrideResponse === "function") {
+        await overrideResponse(info);
+      }
+
+      return new HttpResponse(null, { status: 204 });
+    },
+    options,
+  );
+};
+
+export const getPreviewEmailTemplateMockHandler = (
+  overrideResponse?:
+    | EmailTemplatePreview
+    | ((
+        info: Parameters<Parameters<typeof http.post>[1]>[0],
+      ) => Promise<EmailTemplatePreview> | EmailTemplatePreview),
+  options?: RequestHandlerOptions,
+) => {
+  return http.post(
+    "*/admin/company/email-templates/:id/preview",
+    async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getPreviewEmailTemplateResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getListReferenceItemsMockHandler = (
+  overrideResponse?:
+    | ReferenceItemList
+    | ((
+        info: Parameters<Parameters<typeof http.get>[1]>[0],
+      ) => Promise<ReferenceItemList> | ReferenceItemList),
+  options?: RequestHandlerOptions,
+) => {
+  return http.get(
+    "*/admin/company/reference/:kind",
+    async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getListReferenceItemsResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getCreateReferenceItemMockHandler = (
+  overrideResponse?:
+    | ReferenceItem
+    | ((
+        info: Parameters<Parameters<typeof http.post>[1]>[0],
+      ) => Promise<ReferenceItem> | ReferenceItem),
+  options?: RequestHandlerOptions,
+) => {
+  return http.post(
+    "*/admin/company/reference/:kind",
+    async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getCreateReferenceItemResponseMock(),
+        { status: 201 },
+      );
+    },
+    options,
+  );
+};
+
+export const getUpdateReferenceItemMockHandler = (
+  overrideResponse?:
+    | ReferenceItem
+    | ((
+        info: Parameters<Parameters<typeof http.patch>[1]>[0],
+      ) => Promise<ReferenceItem> | ReferenceItem),
+  options?: RequestHandlerOptions,
+) => {
+  return http.patch(
+    "*/admin/company/reference/:kind/:id",
+    async (info: Parameters<Parameters<typeof http.patch>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getUpdateReferenceItemResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getDeleteReferenceItemMockHandler = (
+  overrideResponse?:
+    void | ((info: Parameters<Parameters<typeof http.delete>[1]>[0]) => Promise<void> | void),
+  options?: RequestHandlerOptions,
+) => {
+  return http.delete(
+    "*/admin/company/reference/:kind/:id",
+    async (info: Parameters<Parameters<typeof http.delete>[1]>[0]) => {
+      if (typeof overrideResponse === "function") {
+        await overrideResponse(info);
+      }
+
+      return new HttpResponse(null, { status: 204 });
+    },
+    options,
+  );
+};
+
+export const getListCatalogCategoriesMockHandler = (
+  overrideResponse?:
+    | CatalogCategoryList
+    | ((
+        info: Parameters<Parameters<typeof http.get>[1]>[0],
+      ) => Promise<CatalogCategoryList> | CatalogCategoryList),
+  options?: RequestHandlerOptions,
+) => {
+  return http.get(
+    "*/admin/company/categories",
+    async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getListCatalogCategoriesResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getCreateCatalogCategoryMockHandler = (
+  overrideResponse?:
+    | CatalogCategory
+    | ((
+        info: Parameters<Parameters<typeof http.post>[1]>[0],
+      ) => Promise<CatalogCategory> | CatalogCategory),
+  options?: RequestHandlerOptions,
+) => {
+  return http.post(
+    "*/admin/company/categories",
+    async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getCreateCatalogCategoryResponseMock(),
+        { status: 201 },
+      );
+    },
+    options,
+  );
+};
+
+export const getUpdateCatalogCategoryMockHandler = (
+  overrideResponse?:
+    | CatalogCategory
+    | ((
+        info: Parameters<Parameters<typeof http.patch>[1]>[0],
+      ) => Promise<CatalogCategory> | CatalogCategory),
+  options?: RequestHandlerOptions,
+) => {
+  return http.patch(
+    "*/admin/company/categories/:id",
+    async (info: Parameters<Parameters<typeof http.patch>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getUpdateCatalogCategoryResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getDeleteCatalogCategoryMockHandler = (
+  overrideResponse?:
+    void | ((info: Parameters<Parameters<typeof http.delete>[1]>[0]) => Promise<void> | void),
+  options?: RequestHandlerOptions,
+) => {
+  return http.delete(
+    "*/admin/company/categories/:id",
+    async (info: Parameters<Parameters<typeof http.delete>[1]>[0]) => {
+      if (typeof overrideResponse === "function") {
+        await overrideResponse(info);
+      }
+
+      return new HttpResponse(null, { status: 204 });
+    },
+    options,
+  );
+};
+
+export const getListCategoryRequestsMockHandler = (
+  overrideResponse?:
+    | CategoryRequestList
+    | ((
+        info: Parameters<Parameters<typeof http.get>[1]>[0],
+      ) => Promise<CategoryRequestList> | CategoryRequestList),
+  options?: RequestHandlerOptions,
+) => {
+  return http.get(
+    "*/admin/company/category-requests",
+    async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getListCategoryRequestsResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getApproveCategoryRequestMockHandler = (
+  overrideResponse?:
+    | CategoryRequest
+    | ((
+        info: Parameters<Parameters<typeof http.post>[1]>[0],
+      ) => Promise<CategoryRequest> | CategoryRequest),
+  options?: RequestHandlerOptions,
+) => {
+  return http.post(
+    "*/admin/company/category-requests/:id/approve",
+    async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getApproveCategoryRequestResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getRejectCategoryRequestMockHandler = (
+  overrideResponse?:
+    | CategoryRequest
+    | ((
+        info: Parameters<Parameters<typeof http.post>[1]>[0],
+      ) => Promise<CategoryRequest> | CategoryRequest),
+  options?: RequestHandlerOptions,
+) => {
+  return http.post(
+    "*/admin/company/category-requests/:id/reject",
+    async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getRejectCategoryRequestResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getGetPlatformSettingsMockHandler = (
+  overrideResponse?:
+    | PlatformSettings
+    | ((
+        info: Parameters<Parameters<typeof http.get>[1]>[0],
+      ) => Promise<PlatformSettings> | PlatformSettings),
+  options?: RequestHandlerOptions,
+) => {
+  return http.get(
+    "*/admin/company/platform-settings",
+    async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getGetPlatformSettingsResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getUpdatePlatformSettingsMockHandler = (
+  overrideResponse?:
+    | PlatformSettings
+    | ((
+        info: Parameters<Parameters<typeof http.patch>[1]>[0],
+      ) => Promise<PlatformSettings> | PlatformSettings),
+  options?: RequestHandlerOptions,
+) => {
+  return http.patch(
+    "*/admin/company/platform-settings",
+    async (info: Parameters<Parameters<typeof http.patch>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getUpdatePlatformSettingsResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
 export const getRailTechPlatformBFFAPICRMERPMock = () => [
   getLoginMockHandler(),
   getLogoutMockHandler(),
@@ -3637,4 +5539,49 @@ export const getRailTechPlatformBFFAPICRMERPMock = () => [
   getGetRoleMockHandler(),
   getUpdateRoleMockHandler(),
   getDeleteRoleMockHandler(),
+  getGetCompanyMockHandler(),
+  getUpdateCompanyMockHandler(),
+  getGetCompanyLogoImageMockHandler(),
+  getUploadCompanyLogoMockHandler(),
+  getDeleteCompanyLogoMockHandler(),
+  getGetBrandProfileMockHandler(),
+  getUpdateBrandProfileMockHandler(),
+  getGetBrandLogoImageMockHandler(),
+  getUploadBrandLogoMockHandler(),
+  getPreviewBrandDocumentMockHandler(),
+  getGetNumberingSchemeMockHandler(),
+  getUpdateNumberingSchemeMockHandler(),
+  getPreviewNumberingMockHandler(),
+  getGetQuoteDefaultsMockHandler(),
+  getUpdateQuoteDefaultsMockHandler(),
+  getListChargeTypesMockHandler(),
+  getListChargeTemplatesMockHandler(),
+  getCreateChargeTemplateMockHandler(),
+  getUpdateChargeTemplateMockHandler(),
+  getDeleteChargeTemplateMockHandler(),
+  getListDocumentTemplatesMockHandler(),
+  getCreateDocumentTemplateMockHandler(),
+  getGetDocumentPlaceholdersMockHandler(),
+  getPreviewDocumentTemplateMockHandler(),
+  getUpdateDocumentTemplateMockHandler(),
+  getDeleteDocumentTemplateMockHandler(),
+  getCopyDocumentTemplateMockHandler(),
+  getListEmailTemplatesMockHandler(),
+  getCreateEmailTemplateMockHandler(),
+  getUpdateEmailTemplateMockHandler(),
+  getDeleteEmailTemplateMockHandler(),
+  getPreviewEmailTemplateMockHandler(),
+  getListReferenceItemsMockHandler(),
+  getCreateReferenceItemMockHandler(),
+  getUpdateReferenceItemMockHandler(),
+  getDeleteReferenceItemMockHandler(),
+  getListCatalogCategoriesMockHandler(),
+  getCreateCatalogCategoryMockHandler(),
+  getUpdateCatalogCategoryMockHandler(),
+  getDeleteCatalogCategoryMockHandler(),
+  getListCategoryRequestsMockHandler(),
+  getApproveCategoryRequestMockHandler(),
+  getRejectCategoryRequestMockHandler(),
+  getGetPlatformSettingsMockHandler(),
+  getUpdatePlatformSettingsMockHandler(),
 ];

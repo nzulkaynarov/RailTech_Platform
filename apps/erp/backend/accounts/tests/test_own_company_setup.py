@@ -26,13 +26,13 @@ def admin(db):
 @pytest.mark.django_db
 def test_clean_database_admin_sees_setup_required(admin):
     data = _client(admin).get(STATUS).json()
-    assert data == {"setup_required": True, "can_setup": True}
+    assert data == {"setup_required": True, "can_setup": True, "own_company_id": None}
 
 
 @pytest.mark.django_db
 def test_staff_without_company_sees_required_but_cannot_setup(user_factory):
     user = user_factory(email="e@erp.test", username="e")
-    assert _client(user).get(STATUS).json() == {"setup_required": True, "can_setup": False}
+    assert _client(user).get(STATUS).json() == {"setup_required": True, "can_setup": False, "own_company_id": None}
 
 
 @pytest.mark.django_db
@@ -50,7 +50,11 @@ def test_admin_creates_own_company_and_becomes_owner(admin):
     assert "SUPPLIER" in set(company.types.values_list("code", flat=True))  # CLIENT добавляет сигнал
     member = CompanyMember.objects.get(user=admin, company=company)
     assert member.role.code == "OWNER" and member.is_primary and member.is_active
-    assert client.get(STATUS).json() == {"setup_required": False, "can_setup": False}
+    assert client.get(STATUS).json() == {
+        "setup_required": False,
+        "can_setup": False,
+        "own_company_id": company.pk,
+    }
 
     from crm.models import ActivityLog
 
@@ -187,3 +191,13 @@ def test_roles_of_own_company_appear_after_first_run_wizard(admin):
     assert set(roles.values_list("code", flat=True)) == set(BackofficeRoleCode.values)
     member = CompanyMember.objects.get(user=admin, company=company)
     assert set(member.company_roles.values_list("code", flat=True)) == {"HEAD"}
+
+
+@pytest.mark.django_db
+@override_settings(OWN_COMPANY_ID=987654)
+def test_own_company_id_pointing_nowhere_is_null_not_a_dangling_id(admin):
+    """`OWN_COMPANY_ID` на несуществующую компанию: статус честно «компании нет», а не id, дающий 404 у BFF."""
+    data = _client(admin).get(STATUS).json()
+
+    assert data["own_company_id"] is None
+    assert data["setup_required"] is True
