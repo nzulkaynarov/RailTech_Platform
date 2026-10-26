@@ -13908,6 +13908,9 @@
                     },
                     "403": {
                         "description": "Not permitted"
+                    },
+                    "409": {
+                        "description": "QUOTE_AWAITING_DIRECTOR — визы собраны, КП у директора в EDS"
                     }
                 }
             }

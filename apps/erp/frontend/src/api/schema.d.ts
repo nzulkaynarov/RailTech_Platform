@@ -22096,6 +22096,13 @@ export interface operations {
                 };
                 content?: never;
             };
+            /** @description QUOTE_AWAITING_DIRECTOR — визы собраны, КП у директора в EDS */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
         };
     };
     crm_quotes_revoke_public_link_create: {

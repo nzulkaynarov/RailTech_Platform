@@ -8214,6 +8214,8 @@ paths:
           description: Wrong status
         '403':
           description: Not permitted
+        '409':
+          description: QUOTE_AWAITING_DIRECTOR — визы собраны, КП у директора в EDS
   /api/v1/crm/quotes/{id}/revoke-public-link/:
     post:
       operationId: crm_quotes_revoke_public_link_create
