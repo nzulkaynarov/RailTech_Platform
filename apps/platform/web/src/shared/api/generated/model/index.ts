@@ -56,6 +56,17 @@
  * `minItems: 1`, пустой набор — 422 `ROLES_REQUIRED` (`details.fields = [role_ids]`), в CRM запрос не уходит; тот же код —
  * перевод отказа CRM `roles_required` (CRM API 0.3.0). Закрыть доступ — `is_active = false` («Отключить сотрудника»).
  *
+ * **0.7.0 (W13-A1) — добавляющее.** Admin · Внешние интеграции (SPEC-v3 §7.6, тег `integrations`): обзор `GET /admin/integrations`
+ * (карточки со статусом пятью уровнями — `ok`, `warn`, `fail`, `unknown`, `off` — уровни реестра внешних сервисов CRM, ADR-0024 CRM,
+ * последняя активность и список «Требует внимания») и прокси к CRM под `/admin/integrations/*`: коннектор ERP (проверка,
+ * сопряжение, ротация ключей), Telegram-бот (токен, канал команды, профиль), почта SMTP (настройки, проверка, тестовое
+ * письмо, журнал), реестр внешних сервисов (проверка, выключатель), модели ИИ (смена, сброс, проверка), расходы, бэкапы,
+ * состояние системы. Чтение — раздел `admin` от `read`; всё изменяющее и каждая проверка — `admin: full` (директору — 403).
+ * Секреты (токен бота, ключи моделей, пароль SMTP, коды сопряжения) BFF только передаёт в CRM и не возвращает — в ответах
+ * маски (`configured`, `*_last4`). Изменение секретов подтверждается паролем администратора (`password`, повторный ввод):
+ * он уходит только в CRM. Коды ошибок: `WRONG_PASSWORD` (422), `NOT_CONFIGURED`, `SECRETS_KEY_MISSING`,
+ * `SERVICE_NOT_SWITCHABLE` (409), `INTEGRATION_FAILED` (502, причина в `details.reason`).
+ *
  * 0.2.4: `423 ACCOUNT_LOCKED` объявлен и на `POST /auth/change-password` (CRM блокирует учётную запись после неверных
  * текущих паролей).
  *
@@ -74,12 +85,41 @@
  * Лимиты: вход — 10 неудачных попыток в минуту на IP и e-mail; остальные запросы — 300 в минуту на сессию; превышение — 429
  * `TOO_MANY_REQUESTS` с `Retry-After`.
  *
- * OpenAPI spec version: 0.6.0
+ * OpenAPI spec version: 0.7.0
  */
 
 export * from "./accessLevel";
+export * from "./accountLockedResponse";
+export * from "./actionOk";
 export * from "./activityFeed";
 export * from "./activityItem";
+export * from "./aiBudgetOverrun";
+export * from "./aiModel";
+export * from "./aiModelChange";
+export * from "./aiModelChangeIn";
+export * from "./aiModelChangeInProvider";
+export * from "./aiModelChangeKeySource";
+export * from "./aiModelHealth";
+export * from "./aiModelList";
+export * from "./aiModelTest";
+export * from "./aiSpendReport";
+export * from "./aiSpendReportGroup";
+export * from "./aiSpendRow";
+export * from "./aiSpendTotals";
+export * from "./aiSystemBudget";
+export * from "./attentionItem";
+export * from "./attentionItemSeverity";
+export * from "./attentionKind";
+export * from "./backendUnavailableResponse";
+export * from "./backupDatabase";
+export * from "./backupItem";
+export * from "./backupsStatus";
+export * from "./backupsStatusError";
+export * from "./backupsStatusSource";
+export * from "./botProfile";
+export * from "./botProfilePublish";
+export * from "./botProfilePublishError";
+export * from "./botProfileState";
 export * from "./changePasswordIn";
 export * from "./csrfFailedResponse";
 export * from "./csrfTokenParameter";
@@ -90,25 +130,58 @@ export * from "./employeeInvite";
 export * from "./employeeList";
 export * from "./employeeStatus";
 export * from "./employeeUpdate";
+export * from "./erpCheck";
+export * from "./erpCheckStatus";
+export * from "./erpConnector";
+export * from "./erpConnectorMode";
+export * from "./erpPairIn";
+export * from "./erpPairing";
 export * from "./erpSyncState";
 export * from "./error";
 export * from "./errorDetails";
 export * from "./errorSource";
+export * from "./externalService";
+export * from "./externalServiceDetail";
+export * from "./externalServiceFrequency";
+export * from "./externalServiceList";
+export * from "./externalServiceSource";
+export * from "./externalServiceStatus";
+export * from "./externalServiceSystem";
 export * from "./forbiddenResponse";
+export * from "./getAiSpendReportGroup";
+export * from "./getAiSpendReportParams";
 export * from "./getQueueCardsParams";
 export * from "./getQueueParams";
+export * from "./getSpendReportParams";
 export * from "./health";
 export * from "./healthChecks";
 export * from "./healthChecksCrm";
 export * from "./healthChecksErp";
 export * from "./healthChecksRedis";
 export * from "./healthStatus";
+export * from "./integrationAccess";
+export * from "./integrationCard";
+export * from "./integrationCardKey";
+export * from "./integrationConflictResponse";
+export * from "./integrationFailedResponse";
+export * from "./integrationInvalidResponse";
+export * from "./integrationNote";
+export * from "./integrationsOverview";
+export * from "./integrationStatus";
 export * from "./invalidationHint";
 export * from "./invalidationTopic";
 export * from "./language";
 export * from "./listEmployeesParams";
+export * from "./listMailLogParams";
+export * from "./listMailLogStatus";
 export * from "./listNotificationsParams";
+export * from "./localizedText";
 export * from "./loginIn";
+export * from "./mailLog";
+export * from "./mailLogItem";
+export * from "./mailLogItemStatus";
+export * from "./mailQueued";
+export * from "./mailQueuedStatus";
 export * from "./me";
 export * from "./meAccess";
 export * from "./menuCounter";
@@ -122,7 +195,9 @@ export * from "./notificationPage";
 export * from "./notificationTab";
 export * from "./objectKind";
 export * from "./objectRef";
+export * from "./passwordConfirm";
 export * from "./personRef";
+export * from "./providerToday";
 export * from "./queue";
 export * from "./queueCard";
 export * from "./queueCards";
@@ -145,10 +220,35 @@ export * from "./searchHit";
 export * from "./searchParams";
 export * from "./searchResult";
 export * from "./sectionLevel";
+export * from "./serviceCheck";
+export * from "./serviceCheckStatus";
+export * from "./serviceCheckTier";
+export * from "./serviceDay";
+export * from "./serviceIncident";
+export * from "./servicesSummary";
+export * from "./serviceSwitch";
+export * from "./serviceSwitchIn";
+export * from "./serviceSwitchKind";
 export * from "./session";
 export * from "./sessionExpiredResponse";
+export * from "./smtpCheck";
+export * from "./smtpConnector";
+export * from "./smtpConnectorSecurity";
+export * from "./smtpSettingsIn";
+export * from "./smtpSettingsInSecurity";
 export * from "./sources";
 export * from "./sourceState";
+export * from "./spendDay";
+export * from "./spendReport";
+export * from "./spendSlice";
 export * from "./stepCode";
+export * from "./systemComponent";
+export * from "./systemComponentStatus";
+export * from "./systemStatus";
+export * from "./systemStatusStatus";
+export * from "./telegramChannel";
+export * from "./telegramChannelList";
+export * from "./telegramConnector";
+export * from "./telegramTokenIn";
 export * from "./tooManyRequestsResponse";
 export * from "./validationFailedResponse";

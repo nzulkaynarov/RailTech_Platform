@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: RailTech Platform — BFF API (Платформа → CRM и ERP)
-  version: 0.6.0
+  version: 0.7.0
   summary: Пространство `/api/v1/` BFF Платформы — вызывает SPA `apps/platform/web` от имени сотрудника.
   description: |
     Контракт по ADR-0011 и `docs/architecture/platform-bff.md`. Версия 0.1.0 (INF-P0-1) покрывает фазу P1:
@@ -58,6 +58,17 @@ info:
     `minItems: 1`, пустой набор — 422 `ROLES_REQUIRED` (`details.fields = [role_ids]`), в CRM запрос не уходит; тот же код —
     перевод отказа CRM `roles_required` (CRM API 0.3.0). Закрыть доступ — `is_active = false` («Отключить сотрудника»).
 
+    **0.7.0 (W13-A1) — добавляющее.** Admin · Внешние интеграции (SPEC-v3 §7.6, тег `integrations`): обзор `GET /admin/integrations`
+    (карточки со статусом пятью уровнями — `ok`, `warn`, `fail`, `unknown`, `off` — уровни реестра внешних сервисов CRM, ADR-0024 CRM,
+    последняя активность и список «Требует внимания») и прокси к CRM под `/admin/integrations/*`: коннектор ERP (проверка,
+    сопряжение, ротация ключей), Telegram-бот (токен, канал команды, профиль), почта SMTP (настройки, проверка, тестовое
+    письмо, журнал), реестр внешних сервисов (проверка, выключатель), модели ИИ (смена, сброс, проверка), расходы, бэкапы,
+    состояние системы. Чтение — раздел `admin` от `read`; всё изменяющее и каждая проверка — `admin: full` (директору — 403).
+    Секреты (токен бота, ключи моделей, пароль SMTP, коды сопряжения) BFF только передаёт в CRM и не возвращает — в ответах
+    маски (`configured`, `*_last4`). Изменение секретов подтверждается паролем администратора (`password`, повторный ввод):
+    он уходит только в CRM. Коды ошибок: `WRONG_PASSWORD` (422), `NOT_CONFIGURED`, `SECRETS_KEY_MISSING`,
+    `SERVICE_NOT_SWITCHABLE` (409), `INTEGRATION_FAILED` (502, причина в `details.reason`).
+
     0.2.4: `423 ACCOUNT_LOCKED` объявлен и на `POST /auth/change-password` (CRM блокирует учётную запись после неверных
     текущих паролей).
 
@@ -94,6 +105,8 @@ tags:
     description: Поток подсказок инвалидации (SSE) — замена опроса уведомлений, счётчиков и очереди
   - name: admin
     description: Admin · Оргструктура и Ролевая матрица — сотрудники и роли (CRM — источник истины по людям и ролям)
+  - name: integrations
+    description: Admin · Внешние интеграции — ERP, Telegram, почта, реестр внешних сервисов, модели ИИ и расходы, бэкапы, состояние системы (прокси к CRM; раздел `admin`)
 
 paths:
   /auth/login:
@@ -477,6 +490,970 @@ paths:
           $ref: '#/components/responses/SessionExpired'
         '422':
           $ref: '#/components/responses/ValidationFailed'
+
+  /admin/integrations:
+    get:
+      tags: [integrations]
+      operationId: getIntegrationsOverview
+      summary: 'Обзор: карточки со статусом и «Требует внимания»'
+      description: >-
+        Раздел `admin` — от чтения. BFF параллельно читает реестр внешних сервисов, состояние системы, коннектор ERP,
+        модели, расходы и бэкапы CRM и сводит их в карточки: статус пятью уровнями (уровни реестра внешних сервисов CRM,
+        ADR-0024 CRM), последняя активность и список «Требует внимания». Часть, которую CRM не отдала (нет права в CRM или
+        не ответила), не роняет обзор: у карточки `access = forbidden | unavailable`. CRM не ответила целиком — 503.
+      responses:
+        '200':
+          description: Готово
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IntegrationsOverview'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+
+  /admin/integrations/erp:
+    get:
+      tags: [integrations]
+      operationId: getErpConnector
+      summary: 'Коннектор ERP: состояние сопряжения'
+      description: >-
+        CRM `GET /integrations/erp`. Значения токенов не возвращаются — только «задан» и последние 4 символа.
+      responses:
+        '200':
+          description: Готово
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErpConnector'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+
+  /admin/integrations/erp/check:
+    post:
+      tags: [integrations]
+      operationId: checkErpConnector
+      summary: 'Проверить связь с ERP'
+      description: >-
+        CRM `POST /integrations/erp/check` (проба до 5 с). ERP отвечает лимитом частоты — это `status = rate_limited`, не
+        ошибка. Раздел `admin` — полный. `INTEGRATION_FAILED` (502) — причина в `details.reason` (`erp_unauthorized`,
+        `erp_unavailable`, `erp_bad_response`); `NOT_CONFIGURED` (409) — ERP не подключена.
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+      responses:
+        '200':
+          description: Готово
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErpCheck'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/IntegrationConflict'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '502':
+          $ref: '#/components/responses/IntegrationFailed'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+
+  /admin/integrations/erp/pair:
+    post:
+      tags: [integrations]
+      operationId: pairErp
+      summary: 'Подключить ERP (сопряжение по одноразовому коду)'
+      description: >-
+        CRM `POST /integrations/erp/pair`: CRM сама генерирует токены обоих направлений и секрет вебхуков, передаёт их ERP
+        по коду, сохраняет зашифрованными и сразу проверяет связь. Пароль администратора обязателен и уходит только в CRM.
+        Сопряжение удалось, даже если проверка не прошла: `check = null`, `check_error` — причина.
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ErpPairIn'
+      responses:
+        '200':
+          description: Готово
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErpPairing'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/IntegrationConflict'
+        '422':
+          $ref: '#/components/responses/IntegrationInvalid'
+        '423':
+          $ref: '#/components/responses/AccountLocked'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '502':
+          $ref: '#/components/responses/IntegrationFailed'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+
+  /admin/integrations/erp/rotate:
+    post:
+      tags: [integrations]
+      operationId: rotateErpKeys
+      summary: 'Ротация ключей ERP'
+      description: >-
+        CRM `POST /integrations/erp/rotate`: новая тройка секретов; прежний токен действует на переходный период
+        (`ErpConnector.previous_secret_until`). Пароль администратора обязателен.
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PasswordConfirm'
+      responses:
+        '200':
+          description: Готово
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErpPairing'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/IntegrationConflict'
+        '422':
+          $ref: '#/components/responses/IntegrationInvalid'
+        '423':
+          $ref: '#/components/responses/AccountLocked'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '502':
+          $ref: '#/components/responses/IntegrationFailed'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+
+  /admin/integrations/telegram:
+    get:
+      tags: [integrations]
+      operationId: getTelegramConnector
+      summary: 'Telegram-бот: токен (маска), состояние, канал команды'
+      description: >-
+        CRM `GET /integrations/telegram`. Токен не возвращается никогда — только `configured` и `last4`.
+      responses:
+        '200':
+          description: Готово
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TelegramConnector'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+
+  /admin/integrations/telegram/token:
+    put:
+      tags: [integrations]
+      operationId: setTelegramToken
+      summary: 'Сохранить токен бота'
+      description: >-
+        CRM `PUT /integrations/telegram/token`: CRM проверяет токен в Telegram (`getMe`), сохраняет зашифрованным и
+        перезапускает бота. Токен и пароль уходят только в CRM, в ответ не попадают.
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TelegramTokenIn'
+      responses:
+        '200':
+          description: Готово
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TelegramConnector'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/IntegrationConflict'
+        '422':
+          $ref: '#/components/responses/IntegrationInvalid'
+        '423':
+          $ref: '#/components/responses/AccountLocked'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '502':
+          $ref: '#/components/responses/IntegrationFailed'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+
+  /admin/integrations/telegram/channels:
+    get:
+      tags: [integrations]
+      operationId: listTelegramChannels
+      summary: 'Чаты, куда добавлен бот (кандидаты в канал команды)'
+      description: >-
+        CRM `GET /integrations/telegram/channels`.
+      responses:
+        '200':
+          description: Готово
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TelegramChannelList'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+
+  /admin/integrations/telegram/channels/{chat_id}/connect:
+    post:
+      tags: [integrations]
+      operationId: connectTelegramChannel
+      summary: 'Подключить канал команды'
+      description: >-
+        CRM `POST /integrations/telegram/channels/{chat_id}/connect`.
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+        - name: chat_id
+          in: path
+          required: true
+          description: Идентификатор чата Telegram из `TelegramChannel.chat_id`
+          schema: {type: integer}
+      responses:
+        '200':
+          description: Готово
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ActionOk'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/IntegrationConflict'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '502':
+          $ref: '#/components/responses/IntegrationFailed'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+
+  /admin/integrations/telegram/channel/test:
+    post:
+      tags: [integrations]
+      operationId: testTelegramChannel
+      summary: 'Тестовое сообщение в канал команды'
+      description: >-
+        CRM `POST /integrations/telegram/channel/test`.
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+      responses:
+        '200':
+          description: Готово
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ActionOk'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/IntegrationConflict'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '502':
+          $ref: '#/components/responses/IntegrationFailed'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+
+  /admin/integrations/telegram/profile:
+    get:
+      tags: [integrations]
+      operationId: getBotProfile
+      summary: 'Профиль бота: имя и описания (ru, uz, en)'
+      description: >-
+        CRM `GET /integrations/telegram/profile`: тексты и итог последней публикации в Telegram.
+      responses:
+        '200':
+          description: Готово
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BotProfileState'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+    put:
+      tags: [integrations]
+      operationId: saveBotProfile
+      summary: 'Сохранить профиль бота и опубликовать в Telegram'
+      description: >-
+        CRM `PUT /integrations/telegram/profile`: имя до 64 символов, краткое описание до 120, описание до 512 — на трёх
+        языках.
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BotProfile'
+      responses:
+        '200':
+          description: Готово
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BotProfileState'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/IntegrationInvalid'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '502':
+          $ref: '#/components/responses/IntegrationFailed'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+
+  /admin/integrations/smtp:
+    get:
+      tags: [integrations]
+      operationId: getSmtpConnector
+      summary: 'Почта (SMTP): настройки, пароль — маска'
+      description: >-
+        CRM `GET /integrations/smtp`. Пароль SMTP не возвращается — только «задан» и `last4`.
+      responses:
+        '200':
+          description: Готово
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SmtpConnector'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+    put:
+      tags: [integrations]
+      operationId: saveSmtpConnector
+      summary: 'Сохранить настройки SMTP'
+      description: >-
+        CRM `PUT /integrations/smtp`. `smtp_password = null` — оставить прежний пароль SMTP; `password` — пароль
+        администратора (повторный ввод), в CRM уходит и нигде не сохраняется.
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SmtpSettingsIn'
+      responses:
+        '200':
+          description: Готово
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SmtpConnector'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/IntegrationConflict'
+        '422':
+          $ref: '#/components/responses/IntegrationInvalid'
+        '423':
+          $ref: '#/components/responses/AccountLocked'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '502':
+          $ref: '#/components/responses/IntegrationFailed'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+
+  /admin/integrations/smtp/check:
+    post:
+      tags: [integrations]
+      operationId: checkSmtp
+      summary: 'Проверить связь с почтовым релеем'
+      description: >-
+        CRM `POST /integrations/smtp/check`: соединение, EHLO, STARTTLS/SMTPS и вход без отправки письма (до 10 с).
+        `INTEGRATION_FAILED` (502) — `details.reason`: `smtp_unavailable`, `smtp_tls_failed`, `smtp_auth_failed`.
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+      responses:
+        '200':
+          description: Готово
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SmtpCheck'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/IntegrationConflict'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '502':
+          $ref: '#/components/responses/IntegrationFailed'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+
+  /admin/integrations/smtp/test-send:
+    post:
+      tags: [integrations]
+      operationId: sendSmtpTest
+      summary: 'Тестовое письмо на адрес самого администратора'
+      description: >-
+        CRM `POST /integrations/smtp/test-send`: письмо идёт через журнал и очередь, как настоящее; итог доставки — в
+        журнале.
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+      responses:
+        '200':
+          description: Готово
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MailQueued'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/IntegrationConflict'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '502':
+          $ref: '#/components/responses/IntegrationFailed'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+
+  /admin/integrations/smtp/log:
+    get:
+      tags: [integrations]
+      operationId: listMailLog
+      summary: 'Журнал отправок писем сотрудникам'
+      description: >-
+        CRM `GET /integrations/smtp/log`: последние записи, фильтр по статусу. Тел писем в журнале нет.
+      parameters:
+        - name: status
+          in: query
+          required: false
+          description: Только письма в этом статусе
+          schema: {type: string, enum: [queued, sent, failed, skipped_no_smtp]}
+        - name: limit
+          in: query
+          required: false
+          description: Сколько последних записей (по умолчанию 50)
+          schema: {type: integer, minimum: 1, maximum: 200, default: 50}
+      responses:
+        '200':
+          description: Готово
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MailLog'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+
+  /admin/integrations/services:
+    get:
+      tags: [integrations]
+      operationId: listExternalServices
+      summary: 'Реестр внешних сервисов ансамбля'
+      description: >-
+        CRM `GET /admin/external-services`: статус из последней фоновой проверки, подсказка «что сделать», выключатель.
+        Сервисы ERP CRM берёт из ответа ERP на `/health`.
+      responses:
+        '200':
+          description: Готово
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExternalServiceList'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+
+  /admin/integrations/services/{key}:
+    get:
+      tags: [integrations]
+      operationId: getExternalService
+      summary: 'Внешний сервис: проверки за 24 часа, дни, инциденты'
+      description: >-
+        CRM `GET /admin/external-services/{key}`.
+      parameters:
+        - name: key
+          in: path
+          required: true
+          description: Ключ сервиса реестра
+          schema: {type: string, maxLength: 64, pattern: '^[a-z0-9][a-z0-9_.-]*$'}
+      responses:
+        '200':
+          description: Готово
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExternalServiceDetail'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+
+  /admin/integrations/services/{key}/check:
+    post:
+      tags: [integrations]
+      operationId: checkExternalService
+      summary: 'Проверить сервис сейчас'
+      description: >-
+        CRM `POST /admin/external-services/{key}/check` (включая медленные пробы); инцидент и оповещение — как у фоновой.
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+        - name: key
+          in: path
+          required: true
+          description: Ключ сервиса реестра
+          schema: {type: string, maxLength: 64, pattern: '^[a-z0-9][a-z0-9_.-]*$'}
+      responses:
+        '200':
+          description: Готово
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExternalServiceDetail'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/IntegrationConflict'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '502':
+          $ref: '#/components/responses/IntegrationFailed'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+
+  /admin/integrations/services/{key}/disable:
+    post:
+      tags: [integrations]
+      operationId: disableExternalService
+      summary: 'Выключить сервис вручную'
+      description: >-
+        CRM `POST /admin/external-services/{key}/disable` (пароль администратора, аудит). Что произойдёт —
+        `ServiceSwitch.effect`. Нет выключателя — 409 `SERVICE_NOT_SWITCHABLE`.
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+        - name: key
+          in: path
+          required: true
+          description: Ключ сервиса реестра
+          schema: {type: string, maxLength: 64, pattern: '^[a-z0-9][a-z0-9_.-]*$'}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ServiceSwitchIn'
+      responses:
+        '200':
+          description: Готово
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExternalService'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/IntegrationConflict'
+        '422':
+          $ref: '#/components/responses/IntegrationInvalid'
+        '423':
+          $ref: '#/components/responses/AccountLocked'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '502':
+          $ref: '#/components/responses/IntegrationFailed'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+
+  /admin/integrations/services/{key}/enable:
+    post:
+      tags: [integrations]
+      operationId: enableExternalService
+      summary: 'Включить сервис обратно'
+      description: >-
+        CRM `POST /admin/external-services/{key}/enable` (пароль администратора, аудит); почта отправляет накопленные
+        письма.
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+        - name: key
+          in: path
+          required: true
+          description: Ключ сервиса реестра
+          schema: {type: string, maxLength: 64, pattern: '^[a-z0-9][a-z0-9_.-]*$'}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PasswordConfirm'
+      responses:
+        '200':
+          description: Готово
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExternalService'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/IntegrationConflict'
+        '422':
+          $ref: '#/components/responses/IntegrationInvalid'
+        '423':
+          $ref: '#/components/responses/AccountLocked'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '502':
+          $ref: '#/components/responses/IntegrationFailed'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+
+  /admin/integrations/models:
+    get:
+      tags: [integrations]
+      operationId: listAiModels
+      summary: 'Модели ИИ: алиасы, провайдер, здоровье, расход за сегодня'
+      description: >-
+        CRM `GET /models`. Ключи провайдеров не возвращаются.
+      responses:
+        '200':
+          description: Готово
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AiModelList'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+
+  /admin/integrations/models/{alias}:
+    put:
+      tags: [integrations]
+      operationId: changeAiModel
+      summary: 'Сменить провайдера, модель или ключ алиаса'
+      description: >-
+        CRM `PUT /models/{alias}`: LiteLLM без перезапуска. `api_key = null` — ключ провайдера из настроек сервера. Ключ и
+        пароль уходят только в CRM, в ответ не попадают.
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+        - name: alias
+          in: path
+          required: true
+          description: Алиас роли модели (`dialog-model`, `embed-model`, …)
+          schema: {type: string, maxLength: 64}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AiModelChangeIn'
+      responses:
+        '200':
+          description: Готово
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AiModelChange'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/IntegrationConflict'
+        '422':
+          $ref: '#/components/responses/IntegrationInvalid'
+        '423':
+          $ref: '#/components/responses/AccountLocked'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '502':
+          $ref: '#/components/responses/IntegrationFailed'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+
+  /admin/integrations/models/{alias}/reset:
+    post:
+      tags: [integrations]
+      operationId: resetAiModel
+      summary: 'Сбросить алиас к значению по умолчанию'
+      description: >-
+        CRM `POST /models/{alias}/reset`: конфигурация сервера, ключ из настроек сервера. Пароль администратора обязателен.
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+        - name: alias
+          in: path
+          required: true
+          description: Алиас роли модели
+          schema: {type: string, maxLength: 64}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PasswordConfirm'
+      responses:
+        '200':
+          description: Готово
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AiModelChange'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/IntegrationConflict'
+        '422':
+          $ref: '#/components/responses/IntegrationInvalid'
+        '423':
+          $ref: '#/components/responses/AccountLocked'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '502':
+          $ref: '#/components/responses/IntegrationFailed'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+
+  /admin/integrations/models/{alias}/test:
+    post:
+      tags: [integrations]
+      operationId: testAiModel
+      summary: 'Проверить модель (один платный запрос)'
+      description: >-
+        CRM `POST /models/{alias}/test`.
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+        - name: alias
+          in: path
+          required: true
+          description: Алиас роли модели
+          schema: {type: string, maxLength: 64}
+      responses:
+        '200':
+          description: Готово
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AiModelTest'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/IntegrationConflict'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '502':
+          $ref: '#/components/responses/IntegrationFailed'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+
+  /admin/integrations/spend:
+    get:
+      tags: [integrations]
+      operationId: getSpendReport
+      summary: 'Расходы бота на ИИ'
+      description: >-
+        CRM `GET /spend`. Директору — на чтение (в CRM право `spend:read` даёт «Сводка по компании»).
+      parameters:
+        - name: days
+          in: query
+          required: false
+          description: Период в днях, 1–180 (по умолчанию 30)
+          schema: {type: integer, minimum: 1, maximum: 180, default: 30}
+      responses:
+        '200':
+          description: Готово
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SpendReport'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+
+  /admin/integrations/ai-spend:
+    get:
+      tags: [integrations]
+      operationId: getAiSpendReport
+      summary: 'Расходы на ИИ всего ансамбля'
+      description: >-
+        CRM `GET /admin/ai-spend`: журнал LiteLLM по дням, системам, функциям и моделям; бюджеты и дни превышения. Период —
+        до 90 дней, не в будущем (422); шлюз недоступен — 502 `INTEGRATION_FAILED`.
+      parameters:
+        - name: from
+          in: query
+          required: false
+          description: Первый день (Ташкент); по умолчанию to − 29
+          schema: {type: string, format: date}
+        - name: to
+          in: query
+          required: false
+          description: Последний день (Ташкент); по умолчанию сегодня
+          schema: {type: string, format: date}
+        - name: group
+          in: query
+          required: false
+          description: Измерение рядов `rows`
+          schema: {type: string, enum: [day, system, feature, model], default: day}
+      responses:
+        '200':
+          description: Готово
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AiSpendReport'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/IntegrationInvalid'
+        '502':
+          $ref: '#/components/responses/IntegrationFailed'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+
+  /admin/integrations/backups:
+    get:
+      tags: [integrations]
+      operationId: getBackups
+      summary: 'Хранилище и бэкапы'
+      description: >-
+        CRM `GET /system/backups`: последние копии, свежесть, сервис бэкапа.
+      responses:
+        '200':
+          description: Готово
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BackupsStatus'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+    post:
+      tags: [integrations]
+      operationId: requestBackup
+      summary: 'Сделать бэкап сейчас'
+      description: >-
+        CRM `POST /system/backups`: сервис бэкапа начнёт в течение ~30 с. 409 — том бэкапов не смонтирован или бэкап делает
+        другой сервер.
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+      responses:
+        '202':
+          description: Готово
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BackupsStatus'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/IntegrationConflict'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '502':
+          $ref: '#/components/responses/IntegrationFailed'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+
+  /admin/integrations/system:
+    get:
+      tags: [integrations]
+      operationId: getSystemStatus
+      summary: 'Состояние системы'
+      description: >-
+        CRM `GET /system/status`: компоненты в порядке «сбой, предупреждение, нет данных, норма». Моделей не вызывает.
+      responses:
+        '200':
+          description: Готово
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SystemStatus'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
 
   /admin/users:
     get:
@@ -914,6 +1891,48 @@ components:
           schema:
             $ref: '#/components/schemas/Error'
 
+    IntegrationConflict:
+      description: >-
+        409: `NOT_CONFIGURED` (коннектор или сервис не настроен), `SECRETS_KEY_MISSING` (на сервере нет ключа шифрования),
+        `SERVICE_NOT_SWITCHABLE` (у сервиса нет выключателя), `CONFLICT` (состояние не позволяет действие); код CRM — в `details.reason`
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    IntegrationInvalid:
+      description: >-
+        422: `WRONG_PASSWORD` — пароль администратора неверен; `VALIDATION_FAILED` — поле не принято (`details.fields`,
+        `details.reason`: `erp_invalid_url`, `erp_pairing_code_invalid`, `smtp_invalid_host`, `invalid_bot_token`, `ai_spend_period`, …)
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    AccountLocked:
+      description: '`ACCOUNT_LOCKED` — после неверных паролей CRM временно блокирует учётную запись'
+      headers:
+        Retry-After:
+          description: Секунды до повтора
+          schema:
+            type: integer
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    IntegrationFailed:
+      description: >-
+        502 `INTEGRATION_FAILED` — CRM не достучалась до внешнего сервиса (ERP, SMTP, Telegram, LiteLLM) или он отказал; причина —
+        `details.reason` (`erp_unavailable`, `smtp_auth_failed`, `litellm_unavailable`, …)
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    BackendUnavailable:
+      description: '`BACKEND_UNAVAILABLE` — CRM не ответила за таймаут'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
   schemas:
     Error:
       type: object
@@ -922,7 +1941,7 @@ components:
       properties:
         code:
           type: string
-          description: Стабильный код (`INVALID_CREDENTIALS`, `SESSION_EXPIRED`, `CSRF_FAILED`, `FORBIDDEN`, `NOT_FOUND`, `VALIDATION_FAILED`, `TOO_MANY_REQUESTS`, `BACKEND_UNAVAILABLE`, `NO_PLATFORM_ROLE`, `USER_DISABLED`, `ACCOUNT_LOCKED`, `CONFLICT`, `WRONG_PASSWORD`, `EMAIL_EXISTS`, `LAST_ADMIN`, `LAST_DIRECTOR`, `ROLE_IN_USE`, `ROLE_SYSTEM`, `ROLES_REQUIRED`, `INTERNAL_ERROR`, `BAD_REQUEST`, `METHOD_NOT_ALLOWED`, `HTTP_<статус>`)
+          description: Стабильный код (`INVALID_CREDENTIALS`, `SESSION_EXPIRED`, `CSRF_FAILED`, `FORBIDDEN`, `NOT_FOUND`, `VALIDATION_FAILED`, `TOO_MANY_REQUESTS`, `BACKEND_UNAVAILABLE`, `NO_PLATFORM_ROLE`, `USER_DISABLED`, `ACCOUNT_LOCKED`, `CONFLICT`, `WRONG_PASSWORD`, `EMAIL_EXISTS`, `LAST_ADMIN`, `LAST_DIRECTOR`, `ROLE_IN_USE`, `ROLE_SYSTEM`, `ROLES_REQUIRED`, `NOT_CONFIGURED`, `SECRETS_KEY_MISSING`, `SERVICE_NOT_SWITCHABLE`, `INTEGRATION_FAILED`, `INTERNAL_ERROR`, `BAD_REQUEST`, `METHOD_NOT_ALLOWED`, `HTTP_<статус>`)
           examples: [SESSION_EXPIRED]
         message:
           type: string
@@ -1161,6 +2180,666 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/RestrictedField'
+
+    IntegrationCardKey:
+      type: string
+      enum: [erp, telegram, mail, services, models, spend, storage, system]
+      description: >-
+        Карточки экрана «Внешние интеграции» в порядке показа: ERP, Telegram, Почта, Внешние сервисы, Модели ИИ, Расходы,
+        Хранилище и бэкапы, Состояние системы.
+
+    IntegrationStatus:
+      type: string
+      enum: [ok, warn, fail, unknown, 'off']
+      description: >-
+        Статус пятью уровнями — уровни реестра внешних сервисов CRM (ADR-0024 CRM): `ok` работает, `warn` внимание, `fail`
+        сбой, `unknown` нет данных, `off` не подключён или не применимо. Интерфейс всегда показывает слово, не только цвет.
+
+    IntegrationAccess:
+      type: string
+      enum: [ok, forbidden, unavailable]
+      description: >-
+        Данные карточки получены (`ok`), CRM отказала ролям сотрудника (`forbidden`, например у директора нет моделей и
+        бэкапов) или не ответила (`unavailable`). Статус `unknown` у карточки без данных.
+
+    IntegrationNote:
+      type: string
+      enum: [all_ok, problems, not_configured, paused, rotation_pending, backup_stale, no_backups, bot_not_running, budget_near, budget_over, no_data]
+      description: >-
+        Короткая пометка карточки — машинный код, фраза на языке сотрудника собирается в интерфейсе. `count` — сколько
+        сервисов или алиасов с проблемой; `amount_usd` — расход за сегодня.
+
+    IntegrationCard:
+      type: object
+      additionalProperties: false
+      required: [key, status, access, note, count, amount_usd, last_activity_at]
+      properties:
+        key: {$ref: '#/components/schemas/IntegrationCardKey'}
+        status: {$ref: '#/components/schemas/IntegrationStatus'}
+        access: {$ref: '#/components/schemas/IntegrationAccess'}
+        note: {$ref: '#/components/schemas/IntegrationNote'}
+        count: {type: [integer, 'null']}
+        amount_usd: {type: [number, 'null']}
+        last_activity_at:
+          type: [string, 'null']
+          format: date-time
+          description: Последняя проверка или событие карточки; `null` — данных нет
+
+    AttentionKind:
+      type: string
+      enum: [not_configured, service, model_problem, backup_stale, component, budget_over, budget_near, rotation_pending, paused, bot_not_running]
+
+    AttentionItem:
+      type: object
+      additionalProperties: false
+      required: [id, card, severity, kind, subject, detail]
+      properties:
+        id: {type: string, description: 'Стабильный ключ строки (`service:telegram`, `model:dialog-model`, `setup:erp`)'}
+        card: {$ref: '#/components/schemas/IntegrationCardKey'}
+        severity:
+          type: string
+          enum: [fail, warn, setup]
+          description: '`fail` сбой, `warn` внимание, `setup` ещё не подключено'
+        kind: {$ref: '#/components/schemas/AttentionKind'}
+        subject:
+          type: [string, 'null']
+          description: Название сервиса, алиаса или компонента — данные CRM, показываются как есть
+        detail:
+          type: [string, 'null']
+          description: Итог проверки и подсказка «что сделать» от CRM (текст CRM, на русском)
+
+    IntegrationsOverview:
+      type: object
+      additionalProperties: false
+      required: [checked_at, cards, attention]
+      properties:
+        checked_at: {type: string, format: date-time}
+        cards:
+          type: array
+          items: {$ref: '#/components/schemas/IntegrationCard'}
+        attention:
+          type: array
+          description: '«Требует внимания»: сначала сбои, затем предупреждения, затем неподключённое'
+          items: {$ref: '#/components/schemas/AttentionItem'}
+
+    PasswordConfirm:
+      type: object
+      additionalProperties: false
+      required: [password]
+      properties:
+        password:
+          type: string
+          format: password
+          writeOnly: true
+          minLength: 1
+          maxLength: 256
+          description: Пароль администратора (повторный ввод); уходит только в CRM, нигде не сохраняется и не пишется в журнал
+
+    ErpPairIn:
+      type: object
+      additionalProperties: false
+      required: [base_url, password]
+      properties:
+        base_url: {type: string, minLength: 1, maxLength: 500, description: Адрес ERP}
+        code:
+          type: [string, 'null']
+          format: password
+          writeOnly: true
+          maxLength: 64
+          description: Одноразовый код из настроек ERP; без него — сопряжение без кода (если ERP его разрешает)
+        password: {type: string, format: password, writeOnly: true, minLength: 1, maxLength: 256}
+
+    TelegramTokenIn:
+      type: object
+      additionalProperties: false
+      required: [token, password]
+      properties:
+        token: {type: string, format: password, writeOnly: true, minLength: 20, maxLength: 128}
+        password: {type: string, format: password, writeOnly: true, minLength: 1, maxLength: 256}
+
+    SmtpSettingsIn:
+      type: object
+      additionalProperties: false
+      required: [host, password]
+      properties:
+        host: {type: string, maxLength: 253}
+        port: {type: integer, minimum: 1, maximum: 65535, default: 587}
+        security: {type: string, enum: [starttls, ssl, none], default: starttls}
+        from_email: {type: string, maxLength: 255, default: ''}
+        from_name: {type: string, maxLength: 120, default: ''}
+        username: {type: [string, 'null'], maxLength: 255, description: '`null` — оставить прежний логин'}
+        smtp_password:
+          type: [string, 'null']
+          format: password
+          writeOnly: true
+          minLength: 1
+          maxLength: 512
+          description: Пароль SMTP; `null` — оставить прежний
+        password: {type: string, format: password, writeOnly: true, minLength: 1, maxLength: 256, description: Пароль администратора}
+
+    ServiceSwitchIn:
+      type: object
+      additionalProperties: false
+      required: [password]
+      properties:
+        password: {type: string, format: password, writeOnly: true, minLength: 1, maxLength: 256}
+        reason: {type: [string, 'null'], maxLength: 200, description: Причина — попадает в аудит}
+
+    AiModelChangeIn:
+      type: object
+      additionalProperties: false
+      required: [provider, model, password]
+      properties:
+        provider: {type: string, enum: [anthropic, gemini, openai]}
+        model: {type: string, minLength: 1, maxLength: 128}
+        api_key:
+          type: [string, 'null']
+          format: password
+          writeOnly: true
+          minLength: 8
+          maxLength: 512
+          description: Ключ провайдера; `null` — ключ из настроек сервера
+        api_base: {type: [string, 'null'], maxLength: 256}
+        password: {type: string, format: password, writeOnly: true, minLength: 1, maxLength: 256}
+
+    TelegramChannelList:
+      type: object
+      additionalProperties: false
+      required: [items]
+      properties:
+        items:
+          type: array
+          items: {$ref: '#/components/schemas/TelegramChannel'}
+
+    MailLog:
+      type: object
+      additionalProperties: false
+      required: [items]
+      properties:
+        items:
+          type: array
+          items: {$ref: '#/components/schemas/MailLogItem'}
+
+    AiModelList:
+      type: object
+      additionalProperties: false
+      required: [items]
+      properties:
+        items:
+          type: array
+          items: {$ref: '#/components/schemas/AiModel'}
+
+    ExternalServiceList:
+      type: object
+      additionalProperties: false
+      required: [checked_at, summary, items]
+      properties:
+        checked_at: {type: [string, 'null'], format: date-time}
+        summary: {$ref: '#/components/schemas/ServicesSummary'}
+        items:
+          type: array
+          items: {$ref: '#/components/schemas/ExternalService'}
+
+    ErpConnector:
+      description: 'Коннектор ERP (CRM `GET /integrations/erp`). Значения токенов не возвращаются — только «задан» и последние 4 символа (`*_last4`).'
+      properties:
+        base_url: {type: string}
+        configured: {type: boolean}
+        mode: {enum: [local, erp], type: string}
+        paired: {type: boolean}
+        previous_secret_until: {format: date-time, type: [string, 'null']}
+        rotation_pending: {type: boolean}
+        secrets_enabled: {type: boolean}
+        suggested_base_url: {type: string}
+        token_configured: {type: boolean}
+        token_last4: {type: [string, 'null']}
+        token_updated_at: {format: date-time, type: [string, 'null']}
+        webhook_secret_configured: {type: boolean}
+        webhook_secret_last4: {type: [string, 'null']}
+      required: [base_url, configured, mode, paired, previous_secret_until, rotation_pending, secrets_enabled, suggested_base_url,
+        token_configured, token_last4, token_updated_at, webhook_secret_configured, webhook_secret_last4]
+      type: object
+      additionalProperties: false
+    ErpCheck:
+      description: 'Итог «Проверить связь» с ERP. `rate_limited` — ERP ответила лимитом частоты сервисного токена: это статус, не ошибка; `retry_after_s` — через сколько секунд повторить.'
+      properties:
+        checked_at: {format: date-time, type: string}
+        latency_ms: {type: [integer, 'null']}
+        migrations_applied: {type: [boolean, 'null']}
+        queue_alive: {type: [boolean, 'null']}
+        retry_after_s: {type: [integer, 'null']}
+        status: {enum: [ok, degraded, rate_limited], type: string}
+        version: {type: [string, 'null']}
+      required: [checked_at, latency_ms, migrations_applied, queue_alive, retry_after_s, status, version]
+      type: object
+      additionalProperties: false
+    ErpPairing:
+      description: 'Итог сопряжения или ротации: состояние коннектора и проверка связи сразу после. Сопряжение удалось, даже если проверка не прошла: тогда `check = null`, а `check_error` — подкод причины (`erp_unauthorized`, `erp_unavailable`, …).'
+      properties: {check: {anyOf: [{$ref: '#/components/schemas/ErpCheck'}, {type: 'null'}]}, check_error: {type: [string, 'null']},
+        status: {$ref: '#/components/schemas/ErpConnector'}}
+      required: [check, check_error, status]
+      type: object
+      additionalProperties: false
+    TelegramConnector:
+      description: 'Telegram-бот и канал команды. Значение токена не попадает сюда никогда — только `configured` и `last4`.'
+      properties:
+        channel_id: {type: [integer, 'null']}
+        channel_title: {type: [string, 'null']}
+        configured: {type: boolean}
+        last4: {type: [string, 'null']}
+        last_error: {type: [string, 'null']}
+        mode: {type: string}
+        running: {type: boolean}
+        secrets_enabled: {type: boolean}
+        updated_at: {format: date-time, type: [string, 'null']}
+        username: {type: [string, 'null']}
+      required: [channel_id, channel_title, configured, last4, last_error, mode, running, secrets_enabled, updated_at, username]
+      type: object
+      additionalProperties: false
+    TelegramChannel:
+      description: 'Чат, куда добавлен бот и откуда он получил сообщение: кандидат в канал команды.'
+      properties: {chat_id: {type: integer}, chat_type: {type: string}, detected_at: {format: date-time, type: string}, title: {
+          type: string}}
+      required: [chat_id, chat_type, detected_at, title]
+      type: object
+      additionalProperties: false
+    BotProfileState:
+      description: 'Профиль бота и итог последней публикации в Telegram.'
+      properties: {profile: {$ref: '#/components/schemas/BotProfile'}, published: {anyOf: [{$ref: '#/components/schemas/BotProfilePublish'},
+            {type: 'null'}]}}
+      required: [profile, published]
+      type: object
+      additionalProperties: false
+    BotProfile:
+      description: 'Имя и описания бота на трёх языках.'
+      additionalProperties: false
+      properties:
+        description:
+          $ref: '#/components/schemas/LocalizedText'
+          description: «Что умеет этот бот?» — видно до /start, до 512 символов
+        name:
+          $ref: '#/components/schemas/LocalizedText'
+          description: Имя бота в Telegram, до 64 символов
+        short_description:
+          $ref: '#/components/schemas/LocalizedText'
+          description: Краткое описание в профиле бота и при пересылке, до 120 символов
+      type: object
+      required: [description, name, short_description]
+    LocalizedText:
+      additionalProperties: false
+      properties: {en: {type: string}, ru: {type: string}, uz: {type: string}}
+      required: [en, ru, uz]
+      type: object
+    BotProfilePublish:
+      description: 'Итог последней публикации профиля в Telegram; `error` — код, текст — в интерфейсе.'
+      properties: {at: {format: date-time, type: string}, changed: {type: integer}, error: {enum: [rate_limited, telegram_error,
+            bot_not_running, null], type: [string, 'null']}, ok: {type: boolean}, retry_after: {type: [integer, 'null']}}
+      required: [at, changed, error, ok, retry_after]
+      type: object
+      additionalProperties: false
+    ActionOk:
+      description: 'Действие выполнено.'
+      properties: {id: {type: [integer, 'null']}, ok: {const: true, type: boolean}}
+      type: object
+      required: [id, ok]
+      additionalProperties: false
+    SmtpConnector:
+      description: 'Коннектор «Почта» (один SMTP на ансамбль). Пароль не возвращается — только «задан» и `last4`.'
+      properties:
+        configured: {type: boolean}
+        from_email: {type: string}
+        from_name: {type: string}
+        host: {type: string}
+        password_configured: {type: boolean}
+        password_last4: {type: [string, 'null']}
+        password_updated_at: {format: date-time, type: [string, 'null']}
+        port: {type: integer}
+        secrets_enabled: {type: boolean}
+        security: {enum: [starttls, ssl, none], type: string}
+        username: {type: string}
+      required: [configured, from_email, from_name, host, password_configured, password_last4, password_updated_at, port, secrets_enabled,
+        security, username]
+      type: object
+      additionalProperties: false
+    SmtpCheck:
+      description: 'Итог проверки связи с почтовым релеем: приветствие сервера, выполнен ли вход, время ответа.'
+      properties: {authenticated: {type: boolean}, latency_ms: {type: integer}, server: {type: string}}
+      required: [authenticated, latency_ms, server]
+      type: object
+      additionalProperties: false
+    MailLogItem:
+      description: 'Строка журнала писем сотрудникам; тела письма (временного пароля) в журнале нет.'
+      properties:
+        attempts: {type: integer}
+        created_at: {format: date-time, type: string}
+        error: {type: [string, 'null']}
+        id: {type: integer}
+        sent_at: {format: date-time, type: [string, 'null']}
+        status: {enum: [queued, sent, failed, skipped_no_smtp], type: string}
+        subject: {type: string}
+        template: {type: string}
+        to_email: {type: string}
+      required: [attempts, created_at, error, id, sent_at, status, subject, template, to_email]
+      type: object
+      additionalProperties: false
+    MailQueued:
+      description: 'Письмо поставлено в очередь: номер строки журнала, адрес получателя, статус.'
+      properties: {email_log_id: {type: integer}, status: {enum: [queued, sent, failed, skipped_no_smtp], type: string}, to_email: {
+          type: string}}
+      required: [email_log_id, status, to_email]
+      type: object
+      additionalProperties: false
+    ServicesSummary:
+      description: 'Сколько сервисов реестра в каждом статусе; `disabled` — выключены вручную.'
+      properties:
+        disabled: {type: integer}
+        fail: {type: integer}
+        'off': {type: integer}
+        ok: {type: integer}
+        unknown: {type: integer}
+        warn: {type: integer}
+      required: [disabled, fail, 'off', ok, unknown, warn]
+      type: object
+      additionalProperties: false
+    ExternalService:
+      description: 'Внешний сервис реестра CRM (ADR-0024 CRM): статус из последней проверки, подсказка «что сделать», выключатель.'
+      properties:
+        check:
+          description: Как проверяется — словами
+          type: string
+        checked_at: {format: date-time, type: [string, 'null']}
+        checks_24h: {type: integer}
+        error: {type: [string, 'null']}
+        failures_24h: {type: integer}
+        frequency: {enum: [minute, quarter, erp], type: string}
+        hint:
+          type: [string, 'null']
+          description: Что сделать, если не в норме
+        incident: {anyOf: [{$ref: '#/components/schemas/ServiceIncident'}, {type: 'null'}]}
+        key: {type: string}
+        latency_ms: {type: [integer, 'null']}
+        p95_ms_24h: {type: [integer, 'null']}
+        purpose: {type: string}
+        source:
+          description: 'Кто проверяет: CRM сама или передаёт ERP'
+          enum: [crm, erp]
+          type: string
+        stale: {type: boolean}
+        status: {enum: [ok, warn, fail, unknown, 'off'], type: string}
+        summary: {type: string}
+        switch: {anyOf: [{$ref: '#/components/schemas/ServiceSwitch'}, {type: 'null'}]}
+        system: {enum: [crm, erp, ensemble], type: string}
+        title: {type: string}
+        uptime_24h: {type: [number, 'null']}
+        uptime_7d: {type: [number, 'null']}
+        fix_card:
+          description: Карточка экрана, где это исправляется (`IntegrationCardKey`); `null` — настроить негде
+          anyOf:
+          - {$ref: '#/components/schemas/IntegrationCardKey'}
+          - {type: 'null'}
+      required: [check, checked_at, checks_24h, error, failures_24h, frequency, hint, incident, key, latency_ms, p95_ms_24h, purpose,
+        source, stale, status, summary, switch, system, title, uptime_24h, uptime_7d, fix_card]
+      type: object
+      additionalProperties: false
+    ExternalServiceDetail:
+      description: 'Сервис, его проверки за 24 часа, сводка по дням за 7 дней и инциденты за 30 дней.'
+      properties: {checks: {items: {$ref: '#/components/schemas/ServiceCheck'}, type: array}, days: {items: {$ref: '#/components/schemas/ServiceDay'},
+          type: array}, incidents: {items: {$ref: '#/components/schemas/ServiceIncident'}, type: array}, service: {$ref: '#/components/schemas/ExternalService'}}
+      required: [checks, days, incidents, service]
+      type: object
+      additionalProperties: false
+    ServiceCheck:
+      properties:
+        checked_at: {format: date-time, type: string}
+        error: {type: [string, 'null']}
+        latency_ms: {type: [integer, 'null']}
+        status: {enum: [ok, warn, fail, unknown, 'off'], type: string}
+        summary: {type: string}
+        tier: {enum: [cheap, heavy, manual], type: string}
+      required: [checked_at, error, latency_ms, status, summary, tier]
+      type: object
+      additionalProperties: false
+    ServiceDay:
+      properties:
+        day: {format: date, type: string}
+        fail: {type: integer}
+        ok: {type: integer}
+        unknown: {type: integer}
+        uptime: {type: [number, 'null']}
+        warn: {type: integer}
+      required: [day, fail, ok, unknown, uptime, warn]
+      type: object
+      additionalProperties: false
+    ServiceIncident:
+      properties:
+        duration_s:
+          type: [integer, 'null']
+          description: Длительность закрытого инцидента, секунд
+        ended_at: {format: date-time, type: [string, 'null']}
+        id: {type: integer}
+        last_error: {type: [string, 'null']}
+        started_at: {format: date-time, type: string}
+        summary: {type: string}
+      required: [duration_s, ended_at, id, last_error, started_at, summary]
+      type: object
+      additionalProperties: false
+    ServiceSwitch:
+      description: 'Выключатель сервиса: доступен ли, выключен ли вручную, что произойдёт при выключении (`effect` — текст CRM для блока «Что произойдёт»).'
+      properties:
+        available: {type: boolean}
+        changed_at: {format: date-time, type: [string, 'null']}
+        changed_by: {type: [string, 'null']}
+        disabled: {type: boolean}
+        effect: {type: string}
+        kind: {enum: [vendor, langfuse, mail, telegram, erp], type: string}
+        problem: {type: [string, 'null']}
+        reason: {type: [string, 'null']}
+      required: [available, changed_at, changed_by, disabled, effect, kind, problem, reason]
+      type: object
+      additionalProperties: false
+    AiModel:
+      description: 'Алиас роли модели ИИ: провайдер, модель, здоровье по последней проверке, расход за сегодня. Ключи не возвращаются.'
+      properties:
+        alias: {type: string}
+        checked_at: {format: date-time, type: [string, 'null']}
+        health: {enum: [ok, problem, unknown], type: string}
+        health_detail: {type: [string, 'null']}
+        model: {type: [string, 'null']}
+        provider: {type: [string, 'null']}
+        today_usd: {type: number}
+      required: [alias, checked_at, health, health_detail, model, provider, today_usd]
+      type: object
+      additionalProperties: false
+    AiModelChange:
+      description: 'Итог смены или сброса модели; `key_source`: `crm` — ключ задан в Платформе, `env` — из настроек сервера.'
+      properties:
+        alias: {type: string}
+        key_source: {enum: [crm, env], type: string}
+        model: {type: string}
+        provider: {type: string}
+        quality_check_recommended: {type: boolean}
+        reindex_required: {type: boolean}
+      required: [alias, key_source, model, provider, quality_check_recommended, reindex_required]
+      type: object
+      additionalProperties: false
+    AiModelTest:
+      description: 'Итог проверки модели одним платным запросом.'
+      properties: {alias: {type: string}, cost_usd: {type: [number, 'null']}, detail: {type: [string, 'null']}, latency_ms: {
+          type: integer}, ok: {type: boolean}}
+      required: [alias, cost_usd, detail, latency_ms, ok]
+      type: object
+      additionalProperties: false
+    SpendReport:
+      description: 'Расходы бота на ИИ за период (USD): по дням, назначению, виду, провайдерам и бюджетам на день.'
+      properties:
+        avg_per_lead_usd: {type: number}
+        by_kind: {items: {$ref: '#/components/schemas/SpendSlice'}, type: array}
+        by_purpose: {items: {$ref: '#/components/schemas/SpendSlice'}, type: array}
+        daily_usd: {type: number}
+        days: {type: integer}
+        leads: {type: integer}
+        providers: {items: {$ref: '#/components/schemas/ProviderToday'}, type: array}
+        series: {items: {$ref: '#/components/schemas/SpendDay'}, type: array}
+        today_usd: {type: number}
+        total_usd: {type: number}
+      required: [avg_per_lead_usd, by_kind, by_purpose, daily_usd, days, leads, providers, series, today_usd, total_usd]
+      type: object
+      additionalProperties: false
+    SpendSlice:
+      properties: {calls: {type: integer}, cost_usd: {type: number}, key: {type: string}}
+      required: [calls, cost_usd, key]
+      type: object
+      additionalProperties: false
+    SpendDay:
+      properties: {day: {format: date, type: string}, test_usd: {type: number}, work_usd: {type: number}}
+      required: [day, test_usd, work_usd]
+      type: object
+      additionalProperties: false
+    ProviderToday:
+      properties: {limit_usd: {type: number}, provider: {type: string}, spent_usd: {type: number}}
+      required: [limit_usd, provider, spent_usd]
+      type: object
+      additionalProperties: false
+    AiSpendReport:
+      description: 'Расходы на ИИ всего ансамбля из журнала LiteLLM: по дням, системам, функциям или моделям, бюджеты и дни превышения.'
+      properties:
+        date_from: {format: date, type: string}
+        date_to: {format: date, type: string}
+        erp_connected:
+          description: 'ERP ходит в шлюз: есть строки `system=erp` за период'
+          type: boolean
+        fetched_at: {format: date-time, type: string}
+        group: {enum: [day, system, feature, model], type: string}
+        overruns: {items: {$ref: '#/components/schemas/AiBudgetOverrun'}, type: array}
+        rows: {items: {$ref: '#/components/schemas/AiSpendRow'}, type: array}
+        systems: {items: {$ref: '#/components/schemas/AiSystemBudget'}, type: array}
+        timezone: {type: string}
+        totals: {$ref: '#/components/schemas/AiSpendTotals'}
+        truncated:
+          description: Журнал LiteLLM отдал не все строки (потолок выборки)
+          type: boolean
+      required: [date_from, date_to, erp_connected, fetched_at, group, overruns, rows, systems, timezone, totals, truncated]
+      type: object
+      additionalProperties: false
+    AiBudgetOverrun:
+      properties: {cost_usd: {type: number}, daily_usd: {type: number}, day: {format: date, type: string}, system: {type: string}}
+      required: [cost_usd, daily_usd, day, system]
+      type: object
+      additionalProperties: false
+    AiSpendRow:
+      properties:
+        calls:
+          description: Строк журнала LiteLLM (вызовов), включая неуспешные
+          type: integer
+        cost_usd: {type: number}
+        failed_calls: {type: integer}
+        fallback_calls:
+          description: 'Деградации: успешные вызовы через fallback-model'
+          type: integer
+        input_tokens: {type: integer}
+        key:
+          description: День `YYYY-MM-DD`, система, функция или алиас — по `group`
+          type: string
+        output_tokens: {type: integer}
+      required: [calls, cost_usd, failed_calls, fallback_calls, input_tokens, key, output_tokens]
+      type: object
+      additionalProperties: false
+    AiSpendTotals:
+      properties:
+        calls: {type: integer}
+        cost_usd: {type: number}
+        failed_calls: {type: integer}
+        fallback_calls: {type: integer}
+        input_tokens: {type: integer}
+        output_tokens: {type: integer}
+      required: [calls, cost_usd, failed_calls, fallback_calls, input_tokens, output_tokens]
+      type: object
+      additionalProperties: false
+    AiSystemBudget:
+      properties:
+        connected:
+          description: За период есть вызовы с тегом этой системы
+          type: boolean
+        daily_usd:
+          description: Бюджет на день; 0 — без лимита
+          type: number
+        days_over:
+          description: Дней периода с расходом ≥ бюджета
+          type: integer
+        fallback_calls: {type: integer}
+        over_today: {type: boolean}
+        period_calls: {type: integer}
+        period_usd: {type: number}
+        system: {type: string}
+        today_calls: {type: integer}
+        today_usd: {type: number}
+      required: [connected, daily_usd, days_over, fallback_calls, over_today, period_calls, period_usd, system, today_calls, today_usd]
+      type: object
+      additionalProperties: false
+    BackupsStatus:
+      description: 'Хранилище и бэкапы: источник (том или бакет), свежесть последней копии, состояние сервиса бэкапа.'
+      properties:
+        available:
+          description: Том бэкапов смонтирован в api / бакет `backups` читается
+          type: boolean
+        can_request:
+          description: «Сделать сейчас» доступно (только для тома)
+          type: boolean
+        daemon_alive:
+          description: 'Сервис бэкапа отвечает: heartbeat свежее 2 мин'
+          type: boolean
+        databases:
+          description: Последняя копия по каждой базе (бакет)
+          items: {$ref: '#/components/schemas/BackupDatabase'}
+          type: array
+        error:
+          enum: [bucket_missing, access_denied, unreachable, null]
+          type: [string, 'null']
+          description: Почему бакет не прочитан; None — прочитан
+        items: {items: {$ref: '#/components/schemas/BackupItem'}, type: array}
+        last_success_at: {format: date-time, type: [string, 'null']}
+        request_stuck:
+          description: Запрос «Сделать сейчас» старше 2 мин без новой копии — можно повторить
+          type: boolean
+        requested_at:
+          format: date-time
+          type: [string, 'null']
+          description: «Сделать сейчас» ждёт сервис бэкапа
+        source:
+          description: 'Откуда статус: том backup-контейнера (dev) или бакет `backups` RustFS (прод)'
+          enum: [volume, rustfs]
+          type: string
+        stale:
+          description: Последний успешный бэкап старше 26 ч или его нет
+          type: boolean
+      required: [available, can_request, daemon_alive, databases, error, items, last_success_at, request_stuck, requested_at,
+        source, stale]
+      type: object
+      additionalProperties: false
+    BackupItem:
+      properties: {at: {format: date-time, type: string}, name: {type: string}, size_bytes: {type: integer}}
+      required: [at, name, size_bytes]
+      type: object
+      additionalProperties: false
+    BackupDatabase:
+      properties: {last_success_at: {format: date-time, type: [string, 'null'], description: Последняя копия базы; нет — None},
+        name: {type: string}}
+      required: [last_success_at, name]
+      type: object
+      additionalProperties: false
+    SystemStatus:
+      description: 'Состояние системы: итог и компоненты в порядке «сбой, предупреждение, нет данных, норма».'
+      properties: {checked_at: {format: date-time, type: string}, components: {items: {$ref: '#/components/schemas/SystemComponent'},
+          type: array}, status: {enum: [ok, warn, fail, unknown], type: string}}
+      required: [checked_at, components, status]
+      type: object
+      additionalProperties: false
+    SystemComponent:
+      properties: {checked_at: {format: date-time, type: [string, 'null']}, key: {type: string}, reason: {type: string}, status: {
+          enum: [ok, warn, fail, unknown], type: string}, title: {type: string}}
+      required: [checked_at, key, reason, status, title]
+      type: object
+      additionalProperties: false
 
     ModuleCode:
       type: string
