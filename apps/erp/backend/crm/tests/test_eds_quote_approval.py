@@ -450,3 +450,80 @@ def test_there_is_no_director_step_and_no_final_approval_permission():
         "QUOTE_REVIEW",
     }
     assert StepStatus.PENDING  # шаги виз остаются
+
+
+# ── C1-G-4, C1-G-5 (решения архитектора 2026-10-26): кто отправляет одобренное КП; решение директора в API КП ──────────
+
+
+def _api(user):
+    from rest_framework.test import APIClient
+
+    client = APIClient()
+    client.force_authenticate(user=user)
+    return client
+
+
+def _approved_by_supply(world):
+    """КП снабженца (автор, права расчёта без `quote.send` — как у шаблона «Снабженец» каталога), одобренное в EDS."""
+    supply = _staff(
+        world,
+        "supply@railtech.test",
+        11,
+        [Permission.QUOTE_BUILD.value, Permission.QUOTE_EDIT_PRICING.value, Permission.QUOTE_VIEW_COST_MARGIN.value],
+    )
+    quote = _quote(world)
+    quote.prepared_by = supply
+    quote.save(update_fields=["prepared_by"])
+    QLS.submit_for_review(quote.id, supply)
+    quote.refresh_from_db()
+    assert eds_inbound.apply_approval_decided(decided(quote, "approve")).applied
+    return quote, supply
+
+
+def test_manager_with_quote_send_sends_the_approved_quote_and_the_author_without_it_gets_403(world):
+    """Менеджер — `quote.send` из раздела `crm.clients` full каталога (C1-G-4); снабженец-автор — нет."""
+    quote, supply = _approved_by_supply(world)
+    manager = _staff(world, "manager@railtech.test", 5, [Permission.DEAL_MANAGE.value, Permission.QUOTE_SEND.value])
+
+    denied = _api(supply).post(f"/api/v1/crm/quotes/{quote.pk}/send-to-client/", {}, format="json")
+    assert denied.status_code == 403, denied.content
+    assert _status(quote) == "READY_TO_SEND"
+
+    sent = _api(manager).post(f"/api/v1/crm/quotes/{quote.pk}/send-to-client/", {}, format="json")
+    assert sent.status_code == 200, sent.content
+    assert sent.json()["status_code"] == "SENT" and sent.json()["outgoing_number"] == "ИСХ-082/26"
+    assert _status(quote) == "SENT"
+
+
+def test_quote_api_shows_the_outgoing_number_and_the_directors_return_comment(world):
+    """C1-G-5: ИСХ-номер, решение и комментарий директора, каналы — в API КП ERP (только чтение)."""
+    quote = _submitted(world)
+    eds_inbound.apply_approval_decided(decided(quote, "return", comment="Поднять маржу до 18 %"))
+    staff = _api(world["calc"])
+
+    returned = staff.get(f"/api/v1/crm/quotes/{quote.pk}/").json()
+    assert returned["status_code"] == "DRAFT"
+    assert (returned["director_decision"], returned["director_comment"]) == ("return", "Поднять маржу до 18 %")
+    assert returned["outgoing_number"] == "" and returned["send_channels"] == []
+
+    QLS.submit_for_review(quote.id, world["calc"])
+    quote.refresh_from_db()
+    eds_inbound.apply_approval_decided(decided(quote, "approve"))
+    approved = staff.get(f"/api/v1/crm/quotes/{quote.pk}/").json()
+    assert (approved["outgoing_number"], approved["director_decision"]) == ("ИСХ-082/26", "approve")
+    assert approved["send_channels"] == ["telegram", "cabinet"]
+
+    # поля только для чтения: пишет их обработчик `eds.approval.decided`, не PATCH КП
+    staff.patch(f"/api/v1/crm/quotes/{quote.pk}/", {"outgoing_number": "ИСХ-999/26"}, format="json")
+    quote.refresh_from_db()
+    assert quote.outgoing_number == "ИСХ-082/26"
+
+
+def test_approved_late_mark_reaches_the_quote_journal(world):
+    """C1-G-1: директор одобрил КП, готовое позже срока резолюции, — отметка в журнале КП ERP."""
+    quote = _submitted(world)
+    data = decided(quote, "approve")
+    data["approved_late"] = True
+    assert eds_inbound.apply_approval_decided(data).applied
+    entry = ActivityLog.objects.get(entity_id=quote.pk, event_code="quote.director_approved")
+    assert entry.event_params["approved_late"] is True and "с опозданием" in entry.action

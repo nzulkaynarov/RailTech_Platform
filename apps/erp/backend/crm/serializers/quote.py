@@ -183,6 +183,16 @@ class QuoteSerializer(serializers.ModelSerializer):
     # M1-ERP-08 «курс на дату КП»: курсы с датой и источником, режим (живой черновик / зафиксировано).
     fx_rates = serializers.SerializerMethodField()
     fx_mode = serializers.SerializerMethodField()
+    # Решение директора в EDS (C1-G-5): пустая строка — решения по текущей редакции ещё нет.
+    director_decision = serializers.CharField(
+        read_only=True,
+        help_text="Последнее решение директора в EDS по текущей редакции: approve, return (на доработку), reject; пусто — нет",
+    )
+    send_channels = serializers.ListField(
+        child=serializers.CharField(),
+        read_only=True,
+        help_text="Каналы отправки клиенту, выбранные директором при одобрении (telegram, cabinet, email)",
+    )
 
     @extend_schema_field(QuoteFxRateSerializer(many=True))
     def get_fx_rates(self, obj) -> list:
@@ -295,6 +305,13 @@ class QuoteSerializer(serializers.ModelSerializer):
             "public_access_token",
             "approved_by",
             "approved_at",
+            # Решение директора в EDS (EDS-03, C1-G-5): ИСХ-номер одобренного КП, решение и комментарий (возврат на
+            # доработку — `director_decision = return` у черновика), каналы отправки. Только чтение: пишет обработчик
+            # `eds.approval.decided`.
+            "outgoing_number",
+            "director_decision",
+            "director_comment",
+            "send_channels",
             "items",
             "charges",
             "economics",
@@ -330,6 +347,10 @@ class QuoteSerializer(serializers.ModelSerializer):
             "public_access_token",
             "approved_by",
             "approved_at",
+            "outgoing_number",
+            "director_decision",
+            "director_comment",
+            "send_channels",
             "created_at",
             # prepared_by anchors the КП-owning (seller) company and the whole
             # approval chain — the server sets it to the seller building the КП,
@@ -371,10 +392,26 @@ class QuoteSerializer(serializers.ModelSerializer):
             cache[qid] = bool(user and quote is not None and can_view_quote_costs_for(user, quote))
         return cache[qid]
 
+    # Внутренняя кухня одобрения КП директором (C1-G-5): решение, комментарий и каналы — сотрудникам своей компании,
+    # не покупателю. ИСХ-номер не скрываем: он печатается на КП, которое уходит клиенту.
+    _STAFF_ONLY_FIELDS = ("director_decision", "director_comment", "send_channels")
+
+    def _is_staff(self) -> bool:
+        cached = getattr(self, "_staff_cache", None)
+        if cached is None:
+            from accounts.services.permissions import sees_all_deals
+
+            user = getattr(self.context.get("request"), "user", None)
+            cached = self._staff_cache = bool(user and sees_all_deals(user))
+        return cached
+
     def to_representation(self, instance):
         data = super().to_representation(instance)
         # QuoteItem → its .quote; Quote → itself.
         if not self._can_see_costs(getattr(instance, "quote", instance)):
             for field_name in self._SELLER_ONLY_FIELDS:
+                data.pop(field_name, None)
+        if not self._is_staff():
+            for field_name in self._STAFF_ONLY_FIELDS:
                 data.pop(field_name, None)
         return data

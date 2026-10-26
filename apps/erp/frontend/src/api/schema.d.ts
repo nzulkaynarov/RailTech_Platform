@@ -12061,6 +12061,20 @@ export interface components {
              * @description Когда КП было одобрено клиентом
              */
             readonly approved_at: string | null;
+            /**
+             * Исходящий номер (EDS)
+             * @description ИСХ-NNN/ГГ, присвоенный EDS при одобрении КП директором; пусто — КП не одобрено
+             */
+            readonly outgoing_number: string;
+            /** @description Последнее решение директора в EDS по текущей редакции: approve, return (на доработку), reject; пусто — нет */
+            readonly director_decision: string;
+            /**
+             * Комментарий директора
+             * @description Комментарий решения в EDS: обязателен при возврате на доработку и отклонении
+             */
+            readonly director_comment: string;
+            /** @description Каналы отправки клиенту, выбранные директором при одобрении (telegram, cabinet, email) */
+            readonly send_channels: string[];
             readonly items: components["schemas"]["QuoteItem"][];
             readonly charges: components["schemas"]["QuoteCharge"][];
             readonly economics: components["schemas"]["QuoteEconomics"] | null;

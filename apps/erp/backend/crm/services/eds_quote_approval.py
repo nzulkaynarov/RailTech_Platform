@@ -198,9 +198,11 @@ def apply_director_decision(
     channels: Optional[list[str]],
     decided_by: dict[str, Any],
     decided_at: datetime,
+    approved_late: bool = False,
 ) -> str:
     """Применить решение директора из EDS к КП. Возвращает исход: applied, duplicate, stale, ignored, route_open,
-    unknown_quote (исход не ошибка — повторять событие незачем)."""
+    unknown_quote (исход не ошибка — повторять событие незачем). `approved_late` — директор одобрил КП, готовое позже
+    срока резолюции (C1-G-1, решение архитектора 2026-10-26): отметка в журнале КП."""
     from .approvals import _link, _notify_user, _set_status
     from .quotes._shared import _log_quote
 
@@ -256,10 +258,16 @@ def apply_director_decision(
         _log_quote(
             quote,
             actor,
-            "КП одобрено директором",
-            f"{director}: {quote.outgoing_number or 'без ИСХ-номера'} → «Готово к отправке»",
+            "КП одобрено директором с опозданием" if approved_late else "КП одобрено директором",
+            f"{director}: {quote.outgoing_number or 'без ИСХ-номера'} → «Готово к отправке»"
+            + (" (готово позже срока резолюции, опоздание принято)" if approved_late else ""),
             event_code="quote.director_approved",
-            event_params={"number": number, "outgoing_number": quote.outgoing_number, "channels": quote.send_channels},
+            event_params={
+                "number": number,
+                "outgoing_number": quote.outgoing_number,
+                "channels": quote.send_channels,
+                "approved_late": approved_late,
+            },
         )
         _notify_user(
             quote.prepared_by_id,

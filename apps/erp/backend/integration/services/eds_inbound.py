@@ -102,5 +102,6 @@ def apply_approval_decided(data: dict[str, Any]) -> Outcome:
         channels=data.get("channels"),
         decided_by=data.get("decided_by") or {},
         decided_at=_when(data["decided_at"]),
+        approved_late=bool(data.get("approved_late")),
     )
     return Outcome(result == "applied", result)

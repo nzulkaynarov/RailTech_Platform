@@ -8,6 +8,7 @@
 from __future__ import annotations
 
 import logging
+import re
 from datetime import datetime
 from decimal import Decimal
 from typing import Any, Dict, Optional, Union
@@ -15,7 +16,7 @@ from typing import Any, Dict, Optional, Union
 from django.conf import settings
 from django.utils import timezone
 
-from ..models import CrmClientMapping, CrmContactMapping
+from ..models import CrmClientMapping, CrmContactMapping, CrmUserMapping
 from . import stages
 
 logger = logging.getLogger(__name__)
@@ -181,6 +182,52 @@ def _aware(moment: Optional[Any]) -> Optional[datetime]:
 def _cabinet_url() -> str:
     """Адрес Cabinet из настроек (`CABINET_URL`), без хвостового слэша: ссылки событий не зашивают прод-домен."""
     return getattr(settings, "CABINET_URL", "http://cabinet.localhost").rstrip("/")
+
+
+_INN = re.compile(r"^\d{9,14}$")
+
+
+def _user_name(user: Any) -> str:
+    name = user.get_full_name() if hasattr(user, "get_full_name") else ""
+    return (name or getattr(user, "email", "") or "").strip()
+
+
+def _crm_user_id(user: Optional[Any]) -> Optional[int]:
+    if user is None:
+        return None
+    return CrmUserMapping.objects.filter(user=user).values_list("crm_user_id", flat=True).first()
+
+
+def request_parties(deal: Any, manager_crm_user_id: Optional[int] = None) -> Dict[str, Any]:
+    """Отправитель и менеджер заявки для `request.created` (C1-G-7, решение 2026-10-26; поля необязательные, L8).
+
+    Отправитель — компания сделки (название, ИНН — только похожий на ИНН) и контакт: офлайн-контакт сделки, представитель
+    клиента или основной контакт компании. Менеджер — `manager_crm_user_id` вызывающего (ответственный передачи из CRM),
+    иначе ответственный сделки ERP (`assigned_to`, затем `manager`) с сопоставлением CRM. Чего нет — того поля нет.
+    """
+    parties: Dict[str, Any] = {}
+    company = getattr(deal, "company", None)
+    if company is not None:
+        name = (company.name or "").strip()
+        if name:
+            parties["company_name"] = name[:300]
+        inn = (company.inn or "").strip()
+        if _INN.match(inn):
+            parties["company_inn"] = inn
+    contact = getattr(deal, "contact", None)
+    client = getattr(deal, "client", None)
+    if contact is None and company is not None:
+        contact = company.contacts.filter(is_primary=True).first() or company.contacts.first()
+    contact_name = (contact.name if contact is not None else _user_name(client) if client is not None else "").strip()
+    if contact_name:
+        parties["contact_name"] = contact_name[:255]
+    if manager_crm_user_id is None:
+        manager_crm_user_id = _crm_user_id(getattr(deal, "assigned_to", None)) or _crm_user_id(
+            getattr(deal, "manager", None)
+        )
+    if manager_crm_user_id:
+        parties["manager_crm_user_id"] = int(manager_crm_user_id)
+    return parties
 
 
 def contact_refs(contact: Any) -> Dict[str, Any]:

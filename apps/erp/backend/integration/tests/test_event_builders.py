@@ -186,7 +186,13 @@ def test_all_22_event_types_payload_builders(mapped_company, deal_stages):
 
     publish_request_created(deal, source="cabinet", erp_request_id=12, summary="Строки")
     request = bus_support.only("request.created")["data"]
-    assert request["payload"] == {"source": "cabinet", "erp_request_id": 12, "summary": "Строки"}
+    assert request["payload"] == {
+        "source": "cabinet",
+        "erp_request_id": 12,
+        "summary": "Строки",
+        "company_name": "ООО ТестТранс",
+        "company_inn": "123456789",
+    }
     assert request["deal"]["erp_deal_id"] == deal.id
 
     publish_deal_stage_changed(deal, from_stage="request", to_stage="quoting", reason="КП готово")
@@ -280,3 +286,63 @@ def test_deal_outcome_payload_has_the_sent_amount_or_zero(mapped_company, deal_s
     won = bus_support.only("deal.won")["data"]
     assert won["payload"] == {"amount": "750000.00", "currency": "UZS"}
     assert won["deal"]["amount"] == "750000.00"
+
+
+# ─── request.created: отправитель и менеджер письма EDS (C1-G-7, решение архитектора 2026-10-26) ─────────────────────
+
+
+def _staff_user(email, crm_user_id=None):
+    from integration.models import CrmUserMapping
+
+    from accounts.models import CustomUser
+
+    user = CustomUser.objects.create_user(
+        email=email, username=email, password="pw", first_name="Алия", last_name="Каримова"
+    )
+    if crm_user_id is not None:
+        CrmUserMapping.objects.create(crm_user_id=crm_user_id, user=user)
+    return user
+
+
+def test_request_created_names_the_offline_contact_and_the_deal_owner_as_manager(mapped_company, deal_stages):
+    company, _ = mapped_company
+    contact = Contact.objects.create(company=company, name="Бахтиёр Каримов", email="b@client.test")
+    owner = _staff_user("owner@railtech.test", crm_user_id=7)
+    deal = Deal.objects.create(company=company, contact=contact, assigned_to=owner, stage=deal_stages["request"])
+
+    publish_request_created(deal, source="erp", erp_request_id=deal.id, summary="Заявка")
+    payload = bus_support.only("request.created")["data"]["payload"]
+    assert (payload["contact_name"], payload["manager_crm_user_id"]) == ("Бахтиёр Каримов", 7)
+
+
+def test_request_created_falls_back_to_the_primary_contact_and_the_deal_manager(mapped_company, deal_stages):
+    company, _ = mapped_company
+    Contact.objects.create(company=company, name="Второй", email="2@client.test")
+    Contact.objects.create(company=company, name="Основной", email="1@client.test", is_primary=True)
+    unmapped = _staff_user("nomap@railtech.test")
+    manager = _staff_user("manager@railtech.test", crm_user_id=8)
+    deal = Deal.objects.create(company=company, assigned_to=unmapped, manager=manager, stage=deal_stages["request"])
+
+    publish_request_created(deal, source="erp", erp_request_id=deal.id)
+    payload = bus_support.only("request.created")["data"]["payload"]
+    assert (payload["contact_name"], payload["manager_crm_user_id"]) == ("Основной", 8)
+
+
+def test_request_created_without_known_parties_omits_the_optional_fields(deal_stages):
+    """Компания без ИНН-похожего ИНН, без контактов и без ответственного — новых полей нет (событие как до C1-G-7)."""
+    company = Company.objects.create(name="ООО Без ИНН")
+    CrmClientMapping.objects.create(company=company, crm_client_id=43)
+    deal = Deal.objects.create(company=company, stage=deal_stages["request"])
+
+    publish_request_created(deal, source="erp", erp_request_id=deal.id)
+    payload = bus_support.only("request.created")["data"]["payload"]
+    assert payload == {"source": "erp", "erp_request_id": deal.id, "company_name": "ООО Без ИНН"}
+
+
+def test_explicit_manager_wins_over_the_deal_owner(mapped_company, deal_stages):
+    company, _ = mapped_company
+    owner = _staff_user("owner2@railtech.test", crm_user_id=9)
+    deal = Deal.objects.create(company=company, assigned_to=owner, stage=deal_stages["request"])
+
+    publish_request_created(deal, source="crm", erp_request_id=deal.id, manager_crm_user_id=101)
+    assert bus_support.only("request.created")["data"]["payload"]["manager_crm_user_id"] == 101
