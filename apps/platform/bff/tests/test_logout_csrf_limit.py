@@ -320,6 +320,36 @@ async def test_backend_failures_do_not_count(web: Web) -> None:
     assert web.be.crm_login.call_count == 12
 
 
+@pytest.mark.parametrize(
+    ("crm_status", "crm_body", "counts"),
+    [
+        (401, {"code": "invalid_credentials", "message": "x"}, True),
+        (423, {"code": "account_locked", "message": "x"}, True),
+        (422, {"code": "validation_failed", "message": "x"}, False),
+        (429, {"code": "rate_limited", "message": "x"}, False),
+    ],
+    ids=["invalid_credentials", "account_locked", "validation_failed", "crm_429"],
+)
+async def test_only_credential_failures_use_up_the_login_limit(
+    web: Web, crm_status: int, crm_body: dict[str, object], counts: bool
+) -> None:
+    """423 ACCOUNT_LOCKED расходует лимит как INVALID_CREDENTIALS; 422 и 429 CRM — нет (Q-T5-1)."""
+    web.be.crm_login.mock(
+        return_value=httpx.Response(crm_status, headers={"Retry-After": "5"}, json=crm_body)
+    )
+    ip = "203.0.113.60"
+    answers = [(await web.login(password="nope", ip=ip)) for _ in range(12)]
+
+    if counts:
+        assert [r.status_code for r in answers[:10]] == [crm_status] * 10
+        assert [r.status_code for r in answers[10:]] == [429, 429]
+        assert all(r.json()["code"] == "TOO_MANY_REQUESTS" for r in answers[10:])
+        assert web.be.crm_login.call_count == 10  # сверх лимита CRM не вызывается
+    else:
+        assert all(r.status_code == crm_status for r in answers)
+        assert web.be.crm_login.call_count == 12  # лимит BFF не сработал
+
+
 async def test_login_without_platform_role_does_not_count(web: Web) -> None:
     web.be.set_roles([])
     for _ in range(12):
