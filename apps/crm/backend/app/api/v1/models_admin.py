@@ -34,6 +34,7 @@ def get_service(request: Request, container: ContainerDep) -> ModelsAdminService
         load_defaults(settings.litellm_models_path),
         container.model_catalog.invalidate,
         lockout=LockoutPolicy(settings.login_max_failures, settings.login_lockout_minutes),
+        settings_service=container.settings_service,
     )
 
 

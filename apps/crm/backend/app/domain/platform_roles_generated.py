@@ -182,8 +182,10 @@ CRM_BACKEND: Final[dict[str, dict[str, tuple[str, ...]]]] = {
         "read": (
             "users:read",
             "integrations:read",
+            "models:read",
             "system:read",
             "external_services:read",
+            "backups:read",
             "audit:read",
         ),
         "full": (

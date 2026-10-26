@@ -53,6 +53,9 @@ class ModelStatus(BaseModel):
     health_detail: str | None
     checked_at: datetime | None
     today_usd: float
+    # Маска ключа роли: источник и последние 4 символа; сам ключ не отдаётся. Не менялся — `None`.
+    key_source: Literal["crm", "env"] | None = None
+    key_last4: str | None = None
 
 
 class ModelTestResult(BaseModel):

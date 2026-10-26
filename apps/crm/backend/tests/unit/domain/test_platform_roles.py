@@ -166,8 +166,10 @@ CLIENTS_FULL = CLIENTS_READ | {"clients:write", "deals:write", "documents:write"
 ADMIN_READ = {
     "users:read",
     "integrations:read",
+    "models:read",
     "system:read",
     "external_services:read",
+    "backups:read",
     "audit:read",
 }
 ADMIN_FULL = ADMIN_READ | {
@@ -373,6 +375,27 @@ def test_director_sees_leads_but_cannot_take_or_reply() -> None:
     assert {"leads:read", "stream:read", "clients:write"} <= crm
     assert not crm & {"leads:take", "leads:reply", "leads:work", "leads:note", "leads:assist"}
     assert not crm & {"leads:create"}
+
+
+def test_director_reads_integrations_models_and_backups_but_changes_nothing() -> None:
+    """W13-A1: «Внешние интеграции» на чтение — и модели, и бэкапы; записи и проб нет."""
+    crm = {f"{res}:{act}" for res, act in derive_access([make_grant("DIRECTOR")]).crm_permissions}
+
+    assert {
+        "integrations:read",
+        "external_services:read",
+        "system:read",
+        "models:read",
+        "backups:read",
+        "spend:read",
+    } <= crm
+    assert not crm & {
+        "integrations:write",
+        "external_services:write",
+        "models:write",
+        "models:test",
+        "backups:write",
+    }
 
 
 def test_a_second_role_with_leads_full_gives_the_director_the_lead_rights_back() -> None:

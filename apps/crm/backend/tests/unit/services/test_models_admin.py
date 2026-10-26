@@ -19,6 +19,7 @@ from app.domain.errors import (
     ValidationFailedError,
 )
 from app.integrations.litellm_admin import LiteLLMAdmin, env_keys, load_defaults
+from app.schemas.settings import AppSettings
 from app.security.principal import Principal
 from app.services import models_admin
 from app.services.models_admin import ModelChange, ModelsAdminService, build_params, validate
@@ -110,13 +111,33 @@ class _Recorder:
         self.audits: list[dict[str, Any]] = []
 
 
-def _service(rec: _Recorder, monkeypatch: pytest.MonkeyPatch) -> ModelsAdminService:
+class _Settings:
+    """Настройки в памяти: `SettingsService.get/update` без БД; запоминает записанное."""
+
+    def __init__(self) -> None:
+        self.current = AppSettings()
+        self.writes: list[tuple[str, dict[str, Any]]] = []
+
+    async def get(self) -> AppSettings:
+        return self.current
+
+    async def update(self, key: str, value: dict[str, Any], user_id: int | None) -> None:
+        self.writes.append((key, value))
+        self.current = self.current.model_copy(
+            update={key: type(getattr(self.current, key)).model_validate(value)}
+        )
+
+
+def _service(
+    rec: _Recorder, monkeypatch: pytest.MonkeyPatch, settings: _Settings | None = None
+) -> ModelsAdminService:
     service = ModelsAdminService(
         sessions=None,  # type: ignore[arg-type]  # БД не нужна: re-auth и аудит подменены
         admin=LiteLLMAdmin(AnyHttpUrl(BASE), SecretStr("sk-master-test")),
         defaults=DEFAULTS,
         invalidate=lambda: setattr(rec, "invalidated", rec.invalidated + 1),
         new_id=lambda alias: f"rt-{alias}-new",
+        settings_service=settings,  # type: ignore[arg-type]  # подставной: только get и update
     )
 
     async def no_reauth(_: int, __: str) -> None:
@@ -247,3 +268,46 @@ def test_providers_match_schema() -> None:
     from app.schemas.spend import ModelChangeIn
 
     assert get_args(ModelChangeIn.model_fields["provider"].annotation) == models_admin.PROVIDERS
+
+
+@respx.mock
+async def test_change_remembers_key_mask_but_never_the_key(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Маска ключа (источник, последние 4 символа) для экрана «Модели ИИ»; сам ключ не хранится."""
+    settings = _Settings()
+    service = _service(_Recorder(), monkeypatch, settings)
+    respx.get(f"{BASE}/model/info").mock(
+        httpx.Response(
+            200, json=_info(("rt-old", "dialog-model", "anthropic/claude-sonnet-5-5", True))
+        )
+    )
+    respx.post(f"{BASE}/model/new").mock(httpx.Response(200, json={}))
+    respx.post(f"{BASE}/model/delete").mock(httpx.Response(200, json={}))
+
+    await service.change(
+        ADMIN, "dialog-model", ModelChange("openai", "gpt-x", api_key=FAKE_KEY), "pw"
+    )
+
+    mask = settings.current.integrations.model_keys["dialog-model"]
+    assert (mask.source, mask.last4) == ("crm", FAKE_KEY[-4:])
+    assert FAKE_KEY not in json.dumps(settings.writes, default=str)
+    assert FAKE_KEY not in settings.current.model_dump_json()
+
+    await service.change(ADMIN, "dialog-model", ModelChange("anthropic", "claude-x"), "pw")
+    env_mask = settings.current.integrations.model_keys["dialog-model"]
+    assert (env_mask.source, env_mask.last4) == ("env", None)
+
+
+@respx.mock
+async def test_reset_marks_key_as_from_server_settings(monkeypatch: pytest.MonkeyPatch) -> None:
+    settings = _Settings()
+    service = _service(_Recorder(), monkeypatch, settings)
+    respx.get(f"{BASE}/model/info").mock(
+        httpx.Response(200, json=_info(("rt-x", "qualifier-model", "openai/gpt-x", True)))
+    )
+    respx.post(f"{BASE}/model/new").mock(httpx.Response(200, json={}))
+    respx.post(f"{BASE}/model/delete").mock(httpx.Response(200, json={}))
+
+    await service.reset(ADMIN, "qualifier-model", "pw")
+
+    mask = settings.current.integrations.model_keys["qualifier-model"]
+    assert (mask.source, mask.last4) == ("env", None)
