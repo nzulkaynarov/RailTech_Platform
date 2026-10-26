@@ -14713,6 +14713,338 @@
                 }
             }
         },
+        "/api/v1/integration/bus/deliveries/": {
+            "get": {
+                "operationId": "busDeliveries",
+                "description": "GET /api/v1/integration/bus/deliveries/ — доставки событий ERP, новые сверху; DLQ — `status=dead`.",
+                "summary": "Журнал шины: доставки (DLQ — status=dead)",
+                "parameters": [
+                    {
+                        "in": "query",
+                        "name": "before_id",
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1
+                        }
+                    },
+                    {
+                        "in": "query",
+                        "name": "created_from",
+                        "schema": {
+                            "type": "string",
+                            "format": "date-time"
+                        }
+                    },
+                    {
+                        "in": "query",
+                        "name": "created_to",
+                        "schema": {
+                            "type": "string",
+                            "format": "date-time"
+                        }
+                    },
+                    {
+                        "in": "query",
+                        "name": "limit",
+                        "schema": {
+                            "type": "integer",
+                            "maximum": 100,
+                            "minimum": 1,
+                            "default": 50
+                        }
+                    },
+                    {
+                        "in": "query",
+                        "name": "status",
+                        "schema": {
+                            "enum": [
+                                "pending",
+                                "in_flight",
+                                "delivered",
+                                "dead"
+                            ],
+                            "type": "string",
+                            "minLength": 1
+                        },
+                        "description": "* `pending` - pending\n* `in_flight` - in_flight\n* `delivered` - delivered\n* `dead` - dead"
+                    },
+                    {
+                        "in": "query",
+                        "name": "subscriber",
+                        "schema": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 64,
+                            "pattern": "^[a-z][a-z0-9-]{0,63}$"
+                        }
+                    },
+                    {
+                        "in": "query",
+                        "name": "type",
+                        "schema": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 200
+                        }
+                    }
+                ],
+                "tags": [
+                    "System"
+                ],
+                "security": [
+                    {
+                        "jwtAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/BusDeliveryPage"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/api/v1/integration/bus/deliveries/{delivery_id}/retry/": {
+            "post": {
+                "operationId": "busRetryDelivery",
+                "description": "POST /api/v1/integration/bus/deliveries/{delivery_id}/retry/ — «Повторить» доставку.",
+                "summary": "Журнал шины: повторить доставку (dead или ожидающую)",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "delivery_id",
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "System"
+                ],
+                "security": [
+                    {
+                        "jwtAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/BusRetryResult"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/api/v1/integration/bus/deliveries/retry-dead/": {
+            "post": {
+                "operationId": "busRetryDead",
+                "description": "POST /api/v1/integration/bus/deliveries/retry-dead/ — «Повторить все dead подписчика».",
+                "summary": "Журнал шины: повторить все dead подписчика",
+                "tags": [
+                    "System"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/BusRetryDeadInRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/BusRetryDeadInRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/BusRetryDeadInRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "security": [
+                    {
+                        "jwtAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/BusRetryResult"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/api/v1/integration/bus/inbox/": {
+            "get": {
+                "operationId": "busInbox",
+                "description": "GET /api/v1/integration/bus/inbox/ — принятые события; `errors=true` — обработка упала или ждёт повтора.",
+                "summary": "Журнал шины: принятые события (errors=true — с ошибкой)",
+                "parameters": [
+                    {
+                        "in": "query",
+                        "name": "before",
+                        "schema": {
+                            "type": "string",
+                            "format": "date-time"
+                        }
+                    },
+                    {
+                        "in": "query",
+                        "name": "before_event_id",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    },
+                    {
+                        "in": "query",
+                        "name": "errors",
+                        "schema": {
+                            "type": "boolean",
+                            "default": false
+                        }
+                    },
+                    {
+                        "in": "query",
+                        "name": "limit",
+                        "schema": {
+                            "type": "integer",
+                            "maximum": 100,
+                            "minimum": 1,
+                            "default": 50
+                        }
+                    },
+                    {
+                        "in": "query",
+                        "name": "status",
+                        "schema": {
+                            "enum": [
+                                "received",
+                                "processed",
+                                "failed",
+                                "skipped"
+                            ],
+                            "type": "string",
+                            "minLength": 1
+                        },
+                        "description": "* `received` - received\n* `processed` - processed\n* `failed` - failed\n* `skipped` - skipped"
+                    },
+                    {
+                        "in": "query",
+                        "name": "type",
+                        "schema": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 200
+                        }
+                    }
+                ],
+                "tags": [
+                    "System"
+                ],
+                "security": [
+                    {
+                        "jwtAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/BusInboxPage"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/api/v1/integration/bus/inbox/{event_id}/retry/": {
+            "post": {
+                "operationId": "busRetryInbox",
+                "description": "POST /api/v1/integration/bus/inbox/{event_id}/retry/ — повторить обработку записи `failed`/`skipped`.",
+                "summary": "Журнал шины: повторить обработку принятого события",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "event_id",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "System"
+                ],
+                "security": [
+                    {
+                        "jwtAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/BusRetryResult"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/api/v1/integration/bus/overview/": {
+            "get": {
+                "operationId": "busOverview",
+                "description": "GET /api/v1/integration/bus/overview/ — сводка шины ERP: outbox, DLQ, inbox, подписчики.",
+                "summary": "Журнал шины: сводка и подписчики",
+                "tags": [
+                    "System"
+                ],
+                "security": [
+                    {
+                        "jwtAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/BusOverview"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
         "/api/v1/integration/crm-pairing/": {
             "get": {
                 "operationId": "integration_crm_pairing_retrieve",
@@ -18097,6 +18429,340 @@
                 "required": [
                     "items",
                     "quote"
+                ]
+            },
+            "BusDelivery": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "integer"
+                    },
+                    "event_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "event_type": {
+                        "type": "string"
+                    },
+                    "subscriber": {
+                        "type": "string"
+                    },
+                    "status": {
+                        "$ref": "#/components/schemas/BusDeliveryStatusEnum"
+                    },
+                    "attempts": {
+                        "type": "integer"
+                    },
+                    "next_attempt_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    },
+                    "last_attempt_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    },
+                    "last_status_code": {
+                        "type": "integer",
+                        "nullable": true
+                    },
+                    "last_error": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "delivered_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    },
+                    "created_at": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "subject": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "correlation_id": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "event_created_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    }
+                },
+                "required": [
+                    "attempts",
+                    "correlation_id",
+                    "created_at",
+                    "delivered_at",
+                    "event_created_at",
+                    "event_id",
+                    "event_type",
+                    "id",
+                    "last_attempt_at",
+                    "last_error",
+                    "last_status_code",
+                    "next_attempt_at",
+                    "status",
+                    "subject",
+                    "subscriber"
+                ]
+            },
+            "BusDeliveryPage": {
+                "type": "object",
+                "properties": {
+                    "items": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/BusDelivery"
+                        }
+                    },
+                    "has_more": {
+                        "type": "boolean"
+                    }
+                },
+                "required": [
+                    "has_more",
+                    "items"
+                ]
+            },
+            "BusDeliveryStatusEnum": {
+                "enum": [
+                    "pending",
+                    "in_flight",
+                    "delivered",
+                    "dead"
+                ],
+                "type": "string",
+                "description": "* `pending` - pending\n* `in_flight` - in_flight\n* `delivered` - delivered\n* `dead` - dead"
+            },
+            "BusInboxEntry": {
+                "type": "object",
+                "properties": {
+                    "event_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "type": {
+                        "type": "string"
+                    },
+                    "publisher": {
+                        "type": "string"
+                    },
+                    "subject": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "correlation_id": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "status": {
+                        "$ref": "#/components/schemas/BusInboxEntryStatusEnum"
+                    },
+                    "attempts": {
+                        "type": "integer"
+                    },
+                    "error": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "received_at": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "processed_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    }
+                },
+                "required": [
+                    "attempts",
+                    "correlation_id",
+                    "error",
+                    "event_id",
+                    "processed_at",
+                    "publisher",
+                    "received_at",
+                    "status",
+                    "subject",
+                    "type"
+                ]
+            },
+            "BusInboxEntryStatusEnum": {
+                "enum": [
+                    "received",
+                    "processed",
+                    "failed",
+                    "skipped"
+                ],
+                "type": "string",
+                "description": "* `received` - received\n* `processed` - processed\n* `failed` - failed\n* `skipped` - skipped"
+            },
+            "BusInboxPage": {
+                "type": "object",
+                "properties": {
+                    "items": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/BusInboxEntry"
+                        }
+                    },
+                    "has_more": {
+                        "type": "boolean"
+                    }
+                },
+                "required": [
+                    "has_more",
+                    "items"
+                ]
+            },
+            "BusOverview": {
+                "type": "object",
+                "properties": {
+                    "service": {
+                        "type": "string"
+                    },
+                    "outbox_pending": {
+                        "type": "integer"
+                    },
+                    "oldest_undelivered_age_seconds": {
+                        "type": "number",
+                        "format": "double",
+                        "nullable": true
+                    },
+                    "dlq_size": {
+                        "type": "integer"
+                    },
+                    "inbox_received": {
+                        "type": "integer"
+                    },
+                    "inbox_retrying": {
+                        "type": "integer"
+                    },
+                    "inbox_failed": {
+                        "type": "integer"
+                    },
+                    "subscribers": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/BusSubscriber"
+                        }
+                    }
+                },
+                "required": [
+                    "dlq_size",
+                    "inbox_failed",
+                    "inbox_received",
+                    "inbox_retrying",
+                    "oldest_undelivered_age_seconds",
+                    "outbox_pending",
+                    "service",
+                    "subscribers"
+                ]
+            },
+            "BusRetryDeadInRequest": {
+                "type": "object",
+                "properties": {
+                    "subscriber": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 64,
+                        "pattern": "^[a-z][a-z0-9-]{0,63}$"
+                    }
+                },
+                "required": [
+                    "subscriber"
+                ]
+            },
+            "BusRetryResult": {
+                "type": "object",
+                "properties": {
+                    "retried": {
+                        "type": "integer",
+                        "minimum": 0
+                    }
+                },
+                "required": [
+                    "retried"
+                ]
+            },
+            "BusSubscriber": {
+                "type": "object",
+                "properties": {
+                    "name": {
+                        "type": "string"
+                    },
+                    "configured": {
+                        "type": "boolean"
+                    },
+                    "enabled": {
+                        "type": "boolean"
+                    },
+                    "drop": {
+                        "type": "boolean"
+                    },
+                    "endpoint": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "pending": {
+                        "type": "integer"
+                    },
+                    "in_flight": {
+                        "type": "integer"
+                    },
+                    "dead": {
+                        "type": "integer"
+                    },
+                    "oldest_undelivered_age_seconds": {
+                        "type": "number",
+                        "format": "double",
+                        "nullable": true
+                    },
+                    "consecutive_failures": {
+                        "type": "integer"
+                    },
+                    "paused_until": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    },
+                    "last_failure_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    },
+                    "last_success_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    },
+                    "last_error": {
+                        "type": "string",
+                        "nullable": true
+                    }
+                },
+                "required": [
+                    "configured",
+                    "consecutive_failures",
+                    "dead",
+                    "drop",
+                    "enabled",
+                    "endpoint",
+                    "in_flight",
+                    "last_error",
+                    "last_failure_at",
+                    "last_success_at",
+                    "name",
+                    "oldest_undelivered_age_seconds",
+                    "paused_until",
+                    "pending"
                 ]
             },
             "CancelActRequest": {

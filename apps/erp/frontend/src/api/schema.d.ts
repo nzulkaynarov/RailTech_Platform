@@ -6116,6 +6116,126 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/integration/bus/deliveries/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Журнал шины: доставки (DLQ — status=dead)
+         * @description GET /api/v1/integration/bus/deliveries/ — доставки событий ERP, новые сверху; DLQ — `status=dead`.
+         */
+        get: operations["busDeliveries"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/integration/bus/deliveries/{delivery_id}/retry/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Журнал шины: повторить доставку (dead или ожидающую)
+         * @description POST /api/v1/integration/bus/deliveries/{delivery_id}/retry/ — «Повторить» доставку.
+         */
+        post: operations["busRetryDelivery"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/integration/bus/deliveries/retry-dead/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Журнал шины: повторить все dead подписчика
+         * @description POST /api/v1/integration/bus/deliveries/retry-dead/ — «Повторить все dead подписчика».
+         */
+        post: operations["busRetryDead"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/integration/bus/inbox/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Журнал шины: принятые события (errors=true — с ошибкой)
+         * @description GET /api/v1/integration/bus/inbox/ — принятые события; `errors=true` — обработка упала или ждёт повтора.
+         */
+        get: operations["busInbox"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/integration/bus/inbox/{event_id}/retry/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Журнал шины: повторить обработку принятого события
+         * @description POST /api/v1/integration/bus/inbox/{event_id}/retry/ — повторить обработку записи `failed`/`skipped`.
+         */
+        post: operations["busRetryInbox"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/integration/bus/overview/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Журнал шины: сводка и подписчики
+         * @description GET /api/v1/integration/bus/overview/ — сводка шины ERP: outbox, DLQ, inbox, подписчики.
+         */
+        get: operations["busOverview"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/integration/crm-pairing/": {
         parameters: {
             query?: never;
@@ -7398,6 +7518,105 @@ export interface components {
             items: {
                 [key: string]: unknown;
             }[];
+        };
+        BusDelivery: {
+            id: number;
+            /** Format: uuid */
+            event_id: string;
+            event_type: string;
+            subscriber: string;
+            status: components["schemas"]["BusDeliveryStatusEnum"];
+            attempts: number;
+            /** Format: date-time */
+            next_attempt_at: string | null;
+            /** Format: date-time */
+            last_attempt_at: string | null;
+            last_status_code: number | null;
+            last_error: string | null;
+            /** Format: date-time */
+            delivered_at: string | null;
+            /** Format: date-time */
+            created_at: string;
+            subject: string | null;
+            correlation_id: string | null;
+            /** Format: date-time */
+            event_created_at: string | null;
+        };
+        BusDeliveryPage: {
+            items: components["schemas"]["BusDelivery"][];
+            has_more: boolean;
+        };
+        /**
+         * @description * `pending` - pending
+         *     * `in_flight` - in_flight
+         *     * `delivered` - delivered
+         *     * `dead` - dead
+         * @enum {string}
+         */
+        BusDeliveryStatusEnum: "pending" | "in_flight" | "delivered" | "dead";
+        BusInboxEntry: {
+            /** Format: uuid */
+            event_id: string;
+            type: string;
+            publisher: string;
+            subject: string | null;
+            correlation_id: string | null;
+            status: components["schemas"]["BusInboxEntryStatusEnum"];
+            attempts: number;
+            error: string | null;
+            /** Format: date-time */
+            received_at: string;
+            /** Format: date-time */
+            processed_at: string | null;
+        };
+        /**
+         * @description * `received` - received
+         *     * `processed` - processed
+         *     * `failed` - failed
+         *     * `skipped` - skipped
+         * @enum {string}
+         */
+        BusInboxEntryStatusEnum: "received" | "processed" | "failed" | "skipped";
+        BusInboxPage: {
+            items: components["schemas"]["BusInboxEntry"][];
+            has_more: boolean;
+        };
+        BusOverview: {
+            service: string;
+            outbox_pending: number;
+            /** Format: double */
+            oldest_undelivered_age_seconds: number | null;
+            dlq_size: number;
+            inbox_received: number;
+            inbox_retrying: number;
+            inbox_failed: number;
+            subscribers: components["schemas"]["BusSubscriber"][];
+        };
+        BusRetryDeadInRequest: {
+            subscriber: string;
+        };
+        BusRetryResult: {
+            retried: number;
+        };
+        BusSubscriber: {
+            name: string;
+            configured: boolean;
+            enabled: boolean;
+            drop: boolean;
+            endpoint: string | null;
+            pending: number;
+            in_flight: number;
+            dead: number;
+            /** Format: double */
+            oldest_undelivered_age_seconds: number | null;
+            consecutive_failures: number;
+            /** Format: date-time */
+            paused_until: string | null;
+            /** Format: date-time */
+            last_failure_at: string | null;
+            /** Format: date-time */
+            last_success_at: string | null;
+            last_error: string | null;
         };
         CancelActRequest: {
             reason: string;
@@ -22625,6 +22844,157 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+        };
+    };
+    busDeliveries: {
+        parameters: {
+            query?: {
+                before_id?: number;
+                created_from?: string;
+                created_to?: string;
+                limit?: number;
+                /**
+                 * @description * `pending` - pending
+                 *     * `in_flight` - in_flight
+                 *     * `delivered` - delivered
+                 *     * `dead` - dead
+                 */
+                status?: "pending" | "in_flight" | "delivered" | "dead";
+                subscriber?: string;
+                type?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BusDeliveryPage"];
+                };
+            };
+        };
+    };
+    busRetryDelivery: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                delivery_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BusRetryResult"];
+                };
+            };
+        };
+    };
+    busRetryDead: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BusRetryDeadInRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["BusRetryDeadInRequest"];
+                "multipart/form-data": components["schemas"]["BusRetryDeadInRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BusRetryResult"];
+                };
+            };
+        };
+    };
+    busInbox: {
+        parameters: {
+            query?: {
+                before?: string;
+                before_event_id?: string;
+                errors?: boolean;
+                limit?: number;
+                /**
+                 * @description * `received` - received
+                 *     * `processed` - processed
+                 *     * `failed` - failed
+                 *     * `skipped` - skipped
+                 */
+                status?: "received" | "processed" | "failed" | "skipped";
+                type?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BusInboxPage"];
+                };
+            };
+        };
+    };
+    busRetryInbox: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                event_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BusRetryResult"];
+                };
+            };
+        };
+    };
+    busOverview: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BusOverview"];
+                };
             };
         };
     };
