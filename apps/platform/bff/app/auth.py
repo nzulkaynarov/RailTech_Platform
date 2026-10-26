@@ -7,12 +7,9 @@
 `SESSION_EXPIRED`.
 
 EDS (W13-A2) входит лениво, при первом обращении: CRM `sso/token {"aud": "eds"}` -> EDS
-`sso/exchange`
--> токен доступа EDS на 15 минут в сессии (без refresh: истёк — новый обмен). Нет прав EDS у
-сотрудника —
-403 `FORBIDDEN` (`details.reason = eds_not_granted`); сбой — 503 и пауза `ERP_RETRY_SECONDS`. Отказ
-EDS не
-закрывает сессию Платформы.
+`sso/exchange` -> токен доступа EDS на 15 минут в сессии (без refresh: истёк — новый обмен). Нет
+прав EDS у сотрудника — 403 `FORBIDDEN` (`details.reason = eds_not_granted`); сбой — 503 и пауза
+`ERP_RETRY_SECONDS`. Отказ EDS не закрывает сессию Платформы.
 """
 
 import asyncio

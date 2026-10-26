@@ -1,11 +1,9 @@
 """Клиент EDS (`eds-api`): обмен токена сотрудника CRM на токен доступа EDS.
 
 Контракт — `packages/contracts/openapi/eds.yaml`; вход — `docs/architecture/sso-token.md`, «Токен
-сотрудника для EDS»:
-CRM `POST /api/v1/auth/sso/token {"aud": "eds"}` → EDS `POST /api/v1/auth/sso/exchange` → токен
-доступа EDS на 15 минут,
-без refresh (истёк — BFF обменивает новый токен CRM). Внешнего маршрута у EDS нет: только сеть
-compose. Health — `/health`.
+сотрудника для EDS»: CRM `POST /api/v1/auth/sso/token {"aud": "eds"}` → EDS `POST
+/api/v1/auth/sso/exchange` → токен доступа EDS на 15 минут, без refresh (истёк — BFF обменивает
+новый токен CRM). Внешнего маршрута у EDS нет: только сеть compose. Health — `/health`.
 """
 
 import httpx
