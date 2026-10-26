@@ -1,0 +1,14 @@
+Выдержка: пробуждение слилось с запоздавшей периодической задачей (W11B-G-6). Секретов нет; время UTC, стенд rt-w11b, 2026-10-26.
+
+crm-worker (журнал procrastinate):
+01:10:20.535 Periodic job rt_bus.pump[387] deferred          01:10:20.549 Starting job rt_bus.pump[387] (+14 мс)   ended: Success, 0.041 s
+01:10:25.542 Periodic job rt_bus.pump[388] deferred          01:10:25.548 Starting job rt_bus.pump[388] (+6 мс)    ended: Success, 0.047 s
+01:10:30.596 Periodic job rt_bus.pump[389] deferred          01:10:35.621 Starting job rt_bus.pump[389] (+5,02 с!)
+01:10:35.702 rt_bus_delivery_retry (проба к остановленному stub)  01:10:35.703 rt_bus_breaker_open  01:10:35.703/.704 rt_bus_delivered x2 (имена подписчиков в строках журнала не пишутся)
+01:10:35.704 Job rt_bus.pump[389] ended with status: Success, lasted 0.086 s
+
+БД CRM (событие по запросу `GET /leads/web` + `POST /leads/web`, 01:10:30):
+  crm.lead.created.v1  outbox.created_at 01:10:30.869   -> platform-bff delivered 01:10:35.7   (задержка 4832 мс)
+
+Между постановкой [389] (01:10:30.596) и созданием события (01:10:30.869) — 0,27 с: пробуждение по коммиту, по rt-bus.md §4, получило AlreadyEnqueued
+(queueing_lock) и ждало ту же задачу. Отдельной строки про AlreadyEnqueued в журнале нет (штатный тихий случай) — слияние выведено по времени.

@@ -1,0 +1,17 @@
+Выдержка: взаимная блокировка при записи итога доставки (W11B-G-1). Секретов нет; идентификаторы — стенда rt-w11b.
+
+postgres (01:00:13.062 UTC):
+  ERROR:  deadlock detected
+  DETAIL:  Process 1429 waits for ShareLock on transaction 3212; blocked by process 1562.
+           Process 1562 waits for ShareLock on transaction 3211; blocked by process 1429.
+  Process 1429: INSERT INTO rt_bus_subscriber_state (subscriber, consecutive_failures, paused_until, last_success_at, updated_at)
+                VALUES ($1, 0, NULL, $2, $2) ON CONFLICT (subscriber) DO UPDATE SET consecutive_failures = 0, ...
+
+crm-worker (01:00:13.067): Job rt_bus.pump[181](timestamp=1792976400) ended with status: Error, lasted 10.353 s
+  sqlalchemy.exc.OperationalError: (psycopg.errors.DeadlockDetected) deadlock detected
+  CONTEXT: while inserting index tuple (0,47) in relation "rt_bus_subscriber_state"   [subscriber = 'stub2', первая запись состояния нового подписчика]
+Одновременно шёл pump[188] (пробуждение по коммиту, старт 01:00:11.354). Периодический pump[181] стартовал 01:00:02.714.
+
+Последствие: доставки, взятые в аренду упавшим pump[181], вернулись в работу по истечении аренды (60 с):
+  crm.lead.created.v1       -> platform-bff, outbox 01:00:01.313, delivered через 74 275 мс
+  crm.lead.stage_changed.v1 -> platform-bff, 74 258 мс; crm.lead.updated.v1 -> 73 841 мс; crm.lead.stage_changed.v1 -> 10 262 мс

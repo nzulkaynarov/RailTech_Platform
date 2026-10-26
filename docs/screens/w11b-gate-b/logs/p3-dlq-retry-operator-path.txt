@@ -1,0 +1,27 @@
+Пункт 3. Подписчик stub2 отвечает 422 (01:00:20 UTC) -> доставки сразу dead, попытка 1. Затем 200 и «повторить» (01:00:55-01:01:30).
+
+# CRM (издатель crm), оператор: docker compose ... exec crm-api python -m app bus dead --subscriber stub2   (строки сокращены)
+id=93 crm.lead.updated.v1        subscriber=stub2 status=dead attempts=1 last_status_code=422
+id=90 crm.client.updated.v1      ...
+id=87 crm.contact.created.v1     ...
+id=84 crm.lead.stage_changed.v1  ...
+id=81 crm.lead.updated.v1        ...
+id=78 crm.client.created.v1      ...
+id=76 crm.lead.stage_changed.v1  ...
+id=73 crm.lead.created.v1        ...
+Строк: 8
+
+# ERP (издатель erp), оператор: docker compose ... exec erp-backend python manage.py bus_retry --list --status dead --subscriber stub2
+34  dead  stub2  uz.railtech.erp.invite.sent.v1      attempts=1  code=422  HTTP 422: {"status":"stub"}
+30  dead  stub2  uz.railtech.erp.request.created.v1  attempts=1  code=422  HTTP 422: {"status":"stub"}
+Строк: 2
+
+# Повтор одной доставки
+crm-api  python -m app bus retry 73                        -> «Поставлено на повтор.»  (лог: rt_bus_delivery_retry_manual); через ~4 с: delivered, attempts=1, 200
+erp-backend  python manage.py bus_retry --delivery 30      -> «Доставка 30 поставлена на повтор»; через ~6 с: delivered, attempts=1, 200
+
+# Повтор всех dead подписчика
+crm-api  python -m app bus retry-dead --subscriber stub2   -> «Поставлено на повтор: 7»     -> delivered
+erp-backend  python manage.py bus_retry --all-dead --subscriber stub2  -> «Поставлено на повтор (dead): 1» -> delivered
+
+Итог: stub2 — delivered: CRM 24 -> 24 (+9 после включения), dead 0; ERP dead 0. Заглушка видела тот же id дважды (422, затем 200), подпись верна.
