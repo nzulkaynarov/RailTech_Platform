@@ -1,0 +1,486 @@
+{
+  "retry": "Qayta urinish",
+  "close": "Yopish",
+  "cancel": "Bekor qilish",
+  "save": "Saqlash",
+  "saved": "Saqlandi",
+  "edit": "Tahrirlash",
+  "delete": "O'chirish",
+  "editNamed": "Tahrirlash: {{name}}",
+  "deleteNamed": "O'chirish: {{name}}",
+  "yes": "Ha",
+  "no": "Yo'q",
+  "active": "Faol",
+  "inactive": "O'chirilgan",
+  "status": "Holati",
+  "actions": "Amallar",
+  "required": "Maydonni to'ldiring",
+  "subtitle": "ERP dagi o'z kompaniyangiz sozlamalari",
+  "readOnly": "Rolingiz kompaniya sozlamalarini faqat o'qiy oladi: maydonlar bloklangan.",
+  "tabsLabel": "Kompaniya sozlamalari bo'limlari",
+  "tabs": {
+    "details": "Rekvizitlar",
+    "brand": "Blank va brend",
+    "numbering": "Raqamlash",
+    "quote": "TT shartlari",
+    "charges": "Xarajat moddalari",
+    "templates": "Shablonlar",
+    "reference": "Ma'lumotnomalar",
+    "categories": "Kategoriyalar",
+    "platform": "Platforma"
+  },
+  "kinds": {
+    "quote": "TT",
+    "contract": "Shartnoma",
+    "invoice": "Hisob",
+    "act": "Dalolatnoma",
+    "letter": "Xat"
+  },
+  "notSet": {
+    "title": "ERP da o'z kompaniyangiz hali yaratilmagan",
+    "text": "Kompaniya birinchi ishga tushirish ustasida yaratilgach, sozlamalar paydo bo'ladi. Allaqachon yaratgan bo'lsangiz, qayta tekshiring.",
+    "action": "Qayta tekshirish"
+  },
+  "preview": {
+    "loading": "Namuna tayyorlanmoqda…",
+    "empty": "Namuna shu yerda paydo bo'ladi."
+  },
+  "logo": {
+    "alt": "Logotip",
+    "none": "Logotip yo'q",
+    "unavailable": "Logotip yuklangan, lekin brauzer uni ko'rsata olmaydi",
+    "upload": "Logotipni yuklash",
+    "replace": "Logotipni almashtirish",
+    "delete": "Logotipni o'chirish",
+    "file": "Fayl tanlash: {{label}}",
+    "hint": "PNG, JPEG, WebP yoki SVG, 2 MB gacha.",
+    "uploaded": "Logotip yuklandi",
+    "deleted": "Logotip o'chirildi",
+    "deleteTitle": "Kompaniya logotipini o'chirasizmi?",
+    "consequence": {
+      "card": "Logotip ERP dagi kompaniya kartasidan yo'qoladi.",
+      "file": "Fayl ERP omboridan o'chiriladi, uni tiklab bo'lmaydi."
+    }
+  },
+  "errors": {
+    "DEFAULT": "Amalni bajarib bo'lmadi. Keyinroq qayta urinib ko'ring.",
+    "FORBIDDEN": "Bo'lim yoki amal rolingizga berilmagan.",
+    "ERP_FORBIDDEN": "ERP amalga ruxsat bermadi: u platforma administratoriga yoki ERP da kompaniya sozlamalari huquqiga ega xodimga mavjud.",
+    "MARGIN_FORBIDDEN": "Marja maydonlarini tannarx va marjani ko'rish huquqiga ega rollar o'zgartiradi.",
+    "COMPANY_NOT_SET": "ERP da o'z kompaniyangiz hali yaratilmagan.",
+    "VALIDATION_FAILED": "Maydonlarni tekshiring.",
+    "CONFLICT": "Obyekt o'zgargan yoki ishlatilmoqda. Sahifani yangilab, qayta urinib ko'ring.",
+    "BACKEND_UNAVAILABLE": "ERP javob bermayapti. Keyinroq qayta urinib ko'ring.",
+    "reason": {
+      "lookup_in_use": "Qator hujjat va ma'lumotlarda ishlatilmoqda. O'chirish o'rniga uni o'chirib qo'ying.",
+      "category_has_children": "Kategoriyada ichki kategoriyalar bor. Avval ularni ko'chiring yoki o'chiring.",
+      "template_in_use": "Shablon bo'yicha hujjatlar rasmiylashtirilgan. O'chirish o'rniga uni o'chirib qo'ying.",
+      "doc_prefix_taken": "Bunday raqamlash prefiksi boshqa kompaniyada band. Boshqasini tanlang.",
+      "already_reviewed": "So'rov allaqachon ko'rib chiqilgan. Ro'yxatni yangilang.",
+      "invalid_numbering_pattern": "Niqobda majburiy {seq} tokeni yo'q.",
+      "file_too_large": "Fayl 2 MB dan katta.",
+      "unsupported_type": "PNG, JPEG, WebP yoki SVG fayli kerak.",
+      "multipart_required": "Logotip faylini tanlang.",
+      "field_not_in_reference": "Bu ma'lumotnomada bunday maydon yo'q.",
+      "reason_required": "Rad etish sababini kiriting.",
+      "category_required": "Kategoriyani tanlang."
+    }
+  },
+  "details": {
+    "title": "Kompaniya rekvizitlari",
+    "hint": "Kompaniyangizning yuridik ma'lumotlari. Ular «Rekvizitlarni kompaniya kartasidan olish» yoqilgan hujjat blankiga tushadi.",
+    "logo": "Kompaniya logotipi",
+    "name": "To'liq nomi",
+    "nameRequired": "Nomini kiriting",
+    "inn": "STIR",
+    "innHint": "9 ta raqam yoki bo'sh",
+    "innInvalid": "STIR — 9 ta raqam",
+    "country": "Ro'yxatdan o'tgan davlat",
+    "legalAddress": "Yuridik manzil",
+    "bankAccount": "Hisob raqami",
+    "mfo": "Bank MFO si",
+    "phone": "Telefon",
+    "email": "Kompaniya pochtasi",
+    "emailInvalid": "Pochta name@company.uz ko'rinishida",
+    "contactPerson": "Mas'ul shaxs",
+    "website": "Veb-sayt",
+    "iso": "ISO 9001 sifat sertifikati bor",
+    "save": "Rekvizitlarni saqlash",
+    "invalidField": "Qiymatni tekshiring",
+    "consequence": {
+      "erp": "Rekvizitlar ERP dagi o'z kompaniyangiz kartasida yangilanadi.",
+      "brand": "«Rekvizitlarni kompaniya kartasidan olish» yoqilgan blank yangi qiymatlarni oladi."
+    }
+  },
+  "brand": {
+    "title": "Hujjatlar blanki va brendi",
+    "hint": "Kompaniyaning TT, shartnoma, hisob, dalolatnoma va xati qanday ko'rinadi. O'ngdagi namuna siz hali saqlamagan tahrirlar bilan o'zgaradi.",
+    "logo": "Blank logotipi",
+    "legalName": "Blankdagi nomi",
+    "inn": "Blankdagi STIR",
+    "legalAddress": "Yuridik manzil",
+    "bankDetails": "Bank rekvizitlari",
+    "signatoryName": "Imzo egasi",
+    "signatoryPosition": "Imzo egasi lavozimi",
+    "footer": "Pastki kolontitul",
+    "accent": "Asosiy rang",
+    "secondary": "Ikkinchi rang",
+    "pickColor": "Rang tanlash: {{label}}",
+    "colorInvalid": "Rang #RRGGBB ko'rinishida",
+    "layout": "Ko'rinish",
+    "layouts": {
+      "light": "Yorug'",
+      "boxed": "Ramkali",
+      "bold": "Kontrastli",
+      "striped": "Yo'l-yo'l"
+    },
+    "font": "Shrift",
+    "fonts": {
+      "sans": "Seriflarsiz",
+      "serif": "Serifli"
+    },
+    "printLegend": "Nimalar chop etiladi",
+    "flags": {
+      "use_company_defaults": "Rekvizitlarni kompaniya kartasidan olish",
+      "show_logo": "Logotipni ko'rsatish",
+      "show_bank_in_header": "Sarlavhada bank rekvizitlari",
+      "show_cover_letter": "TT da hamroh xat",
+      "show_lead_time": "TT da yetkazib berish muddati",
+      "show_fx_note": "Valyuta kursi haqida izoh"
+    },
+    "inheritedTitle": "Kompaniya kartasidan quyidagilar chop etiladi:",
+    "inheritedKeys": {
+      "legal_address": "Yuridik manzil",
+      "bank_details": "Bank rekvizitlari"
+    },
+    "wordingTitle": "Hujjat matnlari",
+    "wording": {
+      "cover_letter_text": "TT hamroh xati",
+      "contract_acceptance_text": "Shartnoma: qabul qilish tartibi",
+      "contract_liability_text": "Shartnoma: tomonlar javobgarligi",
+      "contract_extra_terms_text": "Shartnoma: qo'shimcha shartlar",
+      "act_closing_text": "Dalolatnoma: yakuniy gap"
+    },
+    "save": "Blankni saqlash",
+    "invalidField": "Qiymatni tekshiring",
+    "consequence": {
+      "documents": "Yangi TT, shartnoma, hisob va dalolatnomalar shu blankda rasmiylashtiriladi.",
+      "preview": "O'ngdagi namuna saqlanmagan tahrirlarni ko'rsatadi; saqlash uni o'zgartirmaydi."
+    },
+    "previewTitle": "Hujjat namunasi",
+    "previewKind": "Hujjat turi",
+    "previewFrame": "Namuna: {{kind}}",
+    "previewHint": "Namunadagi ma'lumotlar xayoliy."
+  },
+  "numbering": {
+    "title": "Hujjatlarni raqamlash",
+    "hint": "Kompaniyangizning TT, shartnoma, hisob, dalolatnoma va xatlari raqamlari formati va prefiksi.",
+    "prefix": "Raqamlash prefiksi",
+    "prefixHint": "16 belgigacha: harf, raqam, «-» va «_».",
+    "prefixInvalid": "Faqat lotin harflari, raqamlar, «-» va «_»",
+    "prefixTaken": "Prefiks boshqa kompaniyada band",
+    "prefixlessBanner": "Oʻz sxemangiz faqat prefiks bilan ishlaydi. Hozir platforma formati qo'llanmoqda — prefiksni kiriting.",
+    "format": "Raqam formati",
+    "presets": {
+      "brand": "Brend prefiksi bilan",
+      "slash": "Qiya chiziq bilan",
+      "compact": "Ixcham",
+      "custom": "O'z niqobi"
+    },
+    "mask": "Raqam niqobi",
+    "maskHint": "Tokenlar: {prefix} {type} {YYYY} {YY} {MM} {seq}. {seq} majburiy.",
+    "maskInvalid": "Niqobda {seq} tokeni majburiy",
+    "padding": "Hisoblagich kengligi",
+    "paddingHint": "Nechta raqam: 5 → 00001",
+    "reset": "Hisoblagichni nollash",
+    "resets": {
+      "never": "Hech qachon",
+      "yearly": "Har yili",
+      "monthly": "Har oy"
+    },
+    "start": "Boshlang'ich qiymat",
+    "startHint": "Birinchi raqam = qiymat + 1",
+    "labelsTitle": "Hujjat turlari belgilari",
+    "labelsHint": "Har bir hujjat turi uchun {type} ga nima qo'yiladi.",
+    "save": "Raqamlashni saqlash",
+    "saved": "Raqamlash saqlandi",
+    "consequence": {
+      "future": "Yangi raqamlar shu sxema bo'yicha beriladi.",
+      "issued": "Allaqachon berilgan raqamlar o'zgarmaydi.",
+      "noPrefix": "Prefikssiz platforma formati amal qiladi."
+    },
+    "previewTitle": "Raqamlar namunasi",
+    "previewUnavailable": "{seq} tokenli to'g'ri niqobni kiriting.",
+    "previewHint": "Namunani ERP sxema qoralamasi bo'yicha hisoblaydi; hisoblagichlar o'zgarmaydi."
+  },
+  "quote": {
+    "title": "TT bo'yicha standart shartlar",
+    "hint": "Yangi TT va hisob-kitobga nimalar qo'yiladi: valyuta, yetkazib berish bazisi, QQS, muddat, kafolat.",
+    "marginHidden": "Marja maydonlari yashirilgan: ularni tannarx va marja huquqiga ega rollar ko'radi.",
+    "currency": "Tannarx valyutasi",
+    "currencyHint": "«Valyutalar» ma'lumotnomasidan",
+    "basis": "Yetkazib berish bazisi",
+    "basisHint": "«Yetkazib berish bazislari» ma'lumotnomasidan",
+    "vat": "QQS stavkasi, %",
+    "default_margin_percent": "Standart marja, %",
+    "min_margin_percent": "Minimal marja, %",
+    "target_margin_percent": "Maqsadli marja, %",
+    "validity": "TT amal qilish muddati, kun",
+    "paymentDays": "To'lov muddati, kun",
+    "warranty": "Kafolat, oy",
+    "paymentTerms": "To'lov shartlari",
+    "priceVisibility": "Katalogdagi narx",
+    "visibility": {
+      "cabinet": "Kabinetda ko'rsatish",
+      "on_request": "So'rov bo'yicha"
+    },
+    "threshold": "Karta to'liqligi chegarasi, %",
+    "thresholdHint": "Karta qancha to'liqlikdan e'lon qilinishi mumkin (1–100).",
+    "fxAge": "Kurs eng ko'p yoshi, kun",
+    "fxAgeHint": "1 dan 90 kungacha.",
+    "save": "Shartlarni saqlash",
+    "invalidField": "Qiymatni tekshiring",
+    "consequence": {
+      "new": "Yangi TT va hisob-kitoblar bu qiymatlarni standart sifatida oladi.",
+      "issued": "Allaqachon rasmiylashtirilgan TT o'zgarmaydi."
+    }
+  },
+  "charges": {
+    "title": "TT xarajat moddalari",
+    "hint": "Yetkazib berish bazislari bo'yicha hisob-kitobga qo'yiladigan summa va stavkalar: yuk tashish, sug'urta, bojxona.",
+    "basis": "Yetkazib berish bazisi",
+    "type": "Modda",
+    "amount": "Summa",
+    "rate": "Stavka, %",
+    "rateHint": "Berilsa, hisob-kitob summasidan hisoblanadi",
+    "deduction": "Chegirma",
+    "deductionLabel": "Summadan ayiriladi",
+    "activeLabel": "Modda amal qiladi",
+    "order": "Tartib",
+    "add": "Modda qo'shish",
+    "addTitle": "Yangi xarajat moddasi",
+    "editTitle": "Xarajat moddasini tahrirlash",
+    "deleteTitle": "«{{name}}» moddasini o'chirasizmi?",
+    "deleted": "Modda o'chirildi",
+    "invalidField": "Qiymatni tekshiring",
+    "consequence": {
+      "delete": "Modda shu bazis uchun hisob-kitob shablonlaridan yo'qoladi.",
+      "issued": "Allaqachon rasmiylashtirilgan TT va hisob-kitoblar o'zgarmaydi."
+    },
+    "empty": {
+      "title": "Hozircha xarajat moddalari yo'q",
+      "text": "Yetkazib berish bazislari bo'yicha summa va stavkalarni qo'shing — ular arizani hisoblashga qo'yiladi."
+    }
+  },
+  "templates": {
+    "title": "Hujjat va xat shablonlari",
+    "hint": "Shartnoma, dalolatnoma va xat matnlari. Platforma namunalari tahrirlanmaydi — ular o'zingizga nusxalanadi.",
+    "part": "Shablon turi",
+    "parts": {
+      "documents": "Hujjat shablonlari",
+      "emails": "Xat shablonlari"
+    },
+    "documents": {
+      "name": "Nomi",
+      "kind": "Turi",
+      "sample": "Platforma namunasi",
+      "own": "O'zimizniki",
+      "add": "Shablon yaratish",
+      "addTitle": "Yangi hujjat shabloni",
+      "editTitle": "Hujjat shablonini tahrirlash",
+      "viewTitle": "Hujjat shabloni",
+      "open": "Ochish",
+      "openNamed": "Ochish: {{name}}",
+      "body": "Shablon matni (HTML)",
+      "bodyHint": "{{example}} ko'rinishidagi o'rinbosarlar hujjat ma'lumotlari bilan almashtiriladi.",
+      "activeLabel": "Shablon amal qiladi",
+      "placeholders": "Mavjud o'rinbosarlar",
+      "previewTitle": "Test ma'lumotlardagi namuna",
+      "previewFrame": "Shablon bo'yicha hujjat namunasi",
+      "copy": "O'zimizga nusxalash",
+      "copyNamed": "O'zimizga nusxalash: {{name}}",
+      "copyTitle": "«{{name}}» ni nusxalash",
+      "copyName": "{{name}} (nusxa)",
+      "copyHint": "Nusxa sizning shabloningiz bo'ladi: uni tahrirlash mumkin. Platforma namunasi o'zgarmaydi.",
+      "copied": "Nusxa yaratildi",
+      "deleteTitle": "«{{name}}» shablonini o'chirasizmi?",
+      "deleted": "Shablon o'chirildi",
+      "invalidField": "Qiymatni tekshiring",
+      "consequence": {
+        "delete": "Shablon hujjat rasmiylashtirishda tanlash ro'yxatidan yo'qoladi.",
+        "inUse": "Agar u bo'yicha hujjatlar rasmiylashtirilgan bo'lsa, ERP rad etadi — u holda shablonni o'chirib qo'ying."
+      },
+      "empty": {
+        "title": "Hozircha hujjat shablonlari yo'q",
+        "text": "Shartnoma yoki dalolatnoma shablonini yarating yoki platforma namunasini nusxalang."
+      }
+    },
+    "emails": {
+      "key": "Xat kaliti",
+      "language": "Til",
+      "subject": "Mavzu",
+      "textBody": "Xat matni",
+      "htmlBody": "Xat matni (HTML)",
+      "variables": "O'zgaruvchilar",
+      "variablesHint": "Vergul bilan; matnda — {{example}}.",
+      "replaces": "Fayldagisini almashtiradi",
+      "fileUsed": "Fayldagisi amal qiladi",
+      "activeLabel": "Shablon amal qiladi",
+      "activeWarning": "Faol shablon platformaning barcha qabul qiluvchilari uchun fayldagisini darhol almashtiradi.",
+      "add": "Xat shablonini yaratish",
+      "addTitle": "Yangi xat shabloni",
+      "editTitle": "Xat shablonini tahrirlash",
+      "viewTitle": "Xat shabloni",
+      "open": "Ochish",
+      "openNamed": "Ochish: {{name}}",
+      "previewTitle": "Xat namunasi",
+      "showPreview": "Namunani ko'rsatish",
+      "previewFrame": "Xat namunasi",
+      "previewHint": "Xat yuborilmaydi; namuna saqlangan shablon bo'yicha test ma'lumotlarda tuziladi.",
+      "previewAfterSave": "Namuna shablon saqlangandan keyin mavjud bo'ladi.",
+      "deleteTitle": "«{{name}}» shablonini o'chirasizmi?",
+      "deleted": "Shablon o'chirildi",
+      "invalidField": "Qiymatni tekshiring",
+      "consequence": {
+        "delete": "Shu turdagi xat platformaning fayl shabloniga qaytadi.",
+        "file": "Yuborilgan xatlar o'zgarmaydi."
+      },
+      "empty": {
+        "title": "Hozircha xat shablonlari yo'q",
+        "text": "Hozircha xatlar platformaning fayl shablonlari bo'yicha ketadi. Matnni almashtirish uchun o'z shabloningizni yarating."
+      }
+    }
+  },
+  "reference": {
+    "title": "ERP ma'lumotnomalari",
+    "hint": "Davlatlar, valyutalar, o'lchov birliklari va yetkazib berish bazislari. Hujjatlar ishlatayotgan qator o'chirilmaydi — u o'chirib qo'yiladi.",
+    "kind": "Ma'lumotnoma",
+    "kinds": {
+      "countries": "Davlatlar",
+      "currencies": "Valyutalar",
+      "units": "Birliklar",
+      "delivery-basis": "Yetkazib berish bazislari"
+    },
+    "noApi": "Valyuta kurslari, TIF TN kodlari va ishlab chiqaruvchilarni hozircha ERP o'z panelida yuritadi: ularning Platforma uchun dasturiy interfeysi yo'q.",
+    "code": "Kod",
+    "name": "Nomi",
+    "alpha2": "ISO alpha-2",
+    "alpha3": "ISO alpha-3",
+    "isoNumeric": "ISO raqamli kodi",
+    "vat": "QQS, %",
+    "symbol": "Belgi",
+    "description": "Tavsif",
+    "sellerPays": "Sotuvchi to'laydi",
+    "pays": {
+      "seller_pays_freight": "Yuk tashish",
+      "seller_pays_insurance": "Sug'urta",
+      "seller_pays_import": "Import",
+      "seller_pays_delivery": "Yetkazib berish"
+    },
+    "order": "Tartib",
+    "activeLabel": "Qator amal qiladi",
+    "add": "Qator qo'shish",
+    "addTitle": "Ma'lumotnomaning yangi qatori",
+    "editTitle": "Ma'lumotnoma qatorini tahrirlash",
+    "disable": "O'chirib qo'yish",
+    "enable": "Yoqish",
+    "disableNamed": "O'chirib qo'yish: {{name}}",
+    "enableNamed": "Yoqish: {{name}}",
+    "deleteTitle": "«{{name}}» ni o'chirasizmi?",
+    "deleted": "Qator o'chirildi",
+    "codeTaken": "Bunday kod mavjud",
+    "invalidField": "Qiymatni tekshiring",
+    "consequence": {
+      "delete": "Qator tanlash ro'yxatlaridan yo'qoladi.",
+      "disable": "Qatorni hujjatlar ishlatayotgan bo'lsa, ERP rad etadi — u holda uni o'chirib qo'ying."
+    },
+    "empty": {
+      "title": "Hozircha qatorlar yo'q",
+      "text": "Ma'lumotnomaning birinchi qatorini qo'shing."
+    }
+  },
+  "categories": {
+    "title": "Katalog kategoriyalari va ular bo'yicha so'rovlar",
+    "hint": "Katalog kategoriyalari daraxti. Xodimlar yangi kategoriyani so'rov bilan so'raydi — qarorni platforma administratori qabul qiladi.",
+    "part": "Bo'lim",
+    "parts": {
+      "categories": "Kategoriyalar",
+      "requests": "So'rovlar ({{count}})",
+      "requestsPlain": "Kategoriya so'rovlari"
+    },
+    "add": "Kategoriya qo'shish",
+    "addChild": "Ichki kategoriya",
+    "addChildNamed": "Ichki kategoriya: «{{name}}» ga qo'shish",
+    "addTitle": "Yangi kategoriya",
+    "editTitle": "Kategoriyani tahrirlash",
+    "name": "Nomi",
+    "parent": "Ota kategoriya",
+    "topLevel": "Yuqori daraja",
+    "invalidField": "Qiymatni tekshiring",
+    "deleteTitle": "«{{name}}» kategoriyasini o'chirasizmi?",
+    "deleted": "Kategoriya o'chirildi",
+    "consequence": {
+      "delete": "Kategoriya katalogdan yo'qoladi.",
+      "children": "Ichki kategoriyali kategoriyani ERP o'chirmaydi — avval ularni ko'chiring yoki o'chiring."
+    },
+    "empty": {
+      "title": "Hozircha kategoriyalar yo'q",
+      "text": "Daraxtning yuqori darajasini yarating — ichki kategoriyalar uning ichida qo'shiladi."
+    },
+    "requests": {
+      "name": "So'ralgan kategoriya",
+      "under": "«{{name}}» ichida",
+      "why": "Nima uchun",
+      "author": "Muallif",
+      "created": "Berilgan",
+      "statuses": {
+        "pending": "Ko'rib chiqilmoqda",
+        "approved": "Ma'qullangan",
+        "rejected": "Rad etilgan"
+      },
+      "approve": "Ma'qullash",
+      "reject": "Rad etish",
+      "approveNamed": "So'rovni ma'qullash: {{name}}",
+      "rejectNamed": "So'rovni rad etish: {{name}}",
+      "approveTitle": "«{{name}}» so'rovini ma'qullash",
+      "rejectTitle": "«{{name}}» so'rovini rad etish",
+      "pick": "So'rov uchun yaratgan kategoriyangiz",
+      "pickHint": "Ma'qullash kategoriyani o'zi yaratmaydi: avval uni «Kategoriyalar» bo'limida qo'shing.",
+      "reason": "Rad etish sababi",
+      "reasonRequired": "Sabab majburiy: usiz rad etishni tekshirib bo'lmaydi.",
+      "approved": "So'rov ma'qullandi",
+      "rejected": "So'rov rad etildi",
+      "consequence": {
+        "approve": {
+          "status": "So'rov tanlangan kategoriyaga havola bilan «Ma'qullangan» holatini oladi.",
+          "notify": "So'rov muallifi bildirishnoma oladi.",
+          "create": "Katalogdagi kategoriyaning o'zi bu amal bilan yaratilmaydi."
+        },
+        "reject": {
+          "status": "So'rov sizning sababingiz bilan «Rad etilgan» holatini oladi.",
+          "notify": "So'rov muallifi sabab bilan bildirishnoma oladi."
+        }
+      },
+      "empty": {
+        "title": "Kategoriya so'rovlari yo'q",
+        "text": "Xodim yangi kategoriya so'raganda, so'rov shu yerda paydo bo'ladi."
+      }
+    }
+  },
+  "platform": {
+    "title": "Platforma sozlamalari",
+    "hint": "Butun platforma uchun ERP ning umumiy sozlamalari: QQS stavkasi va kurs.",
+    "vat": "QQS stavkasi, %",
+    "vatHint": "0 dan 100 gacha.",
+    "invalidVat": "Stavka — 0 dan 100 gacha son",
+    "rate": "USD → UZS kursi",
+    "currencyUzs": "so'm",
+    "updated": "Sozlamalar yangilangan",
+    "rateHint": "Kursni ERP yuritadi, bu yerda u faqat o'qish uchun.",
+    "save": "QQS stavkasini saqlash",
+    "consequence": {
+      "new": "Yangi hisob-kitob va hujjatlar shu stavka bilan boradi.",
+      "admin": "Stavkani platforma administratori o'zgartiradi; boshqa rollarga ERP rad etadi."
+    }
+  }
+}

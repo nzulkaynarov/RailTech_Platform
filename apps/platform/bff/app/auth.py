@@ -392,6 +392,7 @@ class AuthService:
         stream: bool = False,
     ) -> httpx.Response:
         client = self.crm if backend == "crm" else self.erp
+        headers = {"Content-Type": content_type} if content_type else None
         try:
             return await client.send(
                 method,
@@ -399,9 +400,9 @@ class AuthService:
                 access=tokens.access,
                 json=json_body,
                 params=params,
-                probe=probe,
+                headers=headers,
                 content=content,
-                headers={"Content-Type": content_type} if content_type else None,
+                probe=probe,
                 stream=stream,
             )
         except BackendUnavailableError as exc:
@@ -416,9 +417,9 @@ class AuthService:
         *,
         json: Any = None,
         params: dict[str, Any] | None = None,
-        probe: bool = False,
         content: bytes | None = None,
         content_type: str | None = None,
+        probe: bool = False,
         stream: bool = False,
     ) -> httpx.Response:
         """Вызов CRM или ERP с токеном сотрудника. 2xx и 4xx бэкенда возвращаются как есть

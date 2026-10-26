@@ -39,6 +39,8 @@ export const admin: ModuleConfig = {
       path: "/admin/company",
       access: { resource: "company.settings" },
       tabs: [{ key: "card" }],
+      // Настройки занимают всё основное окно; сводка по компании открывается по кнопке бокового окна.
+      defaults: { panelOpen: false },
       actionTo: "/admin/org",
     },
     {

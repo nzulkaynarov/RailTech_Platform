@@ -3,6 +3,7 @@ import { initReactI18next } from "react-i18next";
 
 import enBot from "./en/bot.json";
 import enCommon from "./en/common.json";
+import enCompany from "./en/company.json";
 import enDictionary from "./en/dictionary.json";
 import enIntegrations from "./en/integrations.json";
 import enKb from "./en/kb.json";
@@ -11,6 +12,7 @@ import enShell from "./en/shell.json";
 import enUi from "./en/ui.json";
 import ruBot from "./ru/bot.json";
 import ruCommon from "./ru/common.json";
+import ruCompany from "./ru/company.json";
 import ruDictionary from "./ru/dictionary.json";
 import ruIntegrations from "./ru/integrations.json";
 import ruKb from "./ru/kb.json";
@@ -19,6 +21,7 @@ import ruShell from "./ru/shell.json";
 import ruUi from "./ru/ui.json";
 import uzBot from "./uz/bot.json";
 import uzCommon from "./uz/common.json";
+import uzCompany from "./uz/company.json";
 import uzDictionary from "./uz/dictionary.json";
 import uzIntegrations from "./uz/integrations.json";
 import uzKb from "./uz/kb.json";
@@ -39,6 +42,7 @@ export const resources = {
     kb: ruKb,
     bot: ruBot,
     ui: ruUi,
+    company: ruCompany,
   },
   uz: {
     common: uzCommon,
@@ -49,6 +53,7 @@ export const resources = {
     kb: uzKb,
     bot: uzBot,
     ui: uzUi,
+    company: uzCompany,
   },
   en: {
     common: enCommon,
@@ -59,6 +64,7 @@ export const resources = {
     kb: enKb,
     bot: enBot,
     ui: enUi,
+    company: enCompany,
   },
 } as const;
 
@@ -83,13 +89,13 @@ export function rememberLanguage(language: Language): void {
   }
 }
 
-/** ru — язык по умолчанию (SPEC-v3 §8); uz — латиница. Пространства имён: common, shell (каркас и вход), modules (меню и заглушки), dictionary (словарь SPEC-v3 §2: стадии и статусы), ui (тексты общих компонентов), integrations (Admin · Внешние интеграции), kb (CRM · База знаний), bot (Admin · Настройки бота). */
+/** ru — язык по умолчанию (SPEC-v3 §8); uz — латиница. Пространства имён: common, shell (каркас и вход), modules (меню и заглушки), dictionary (словарь SPEC-v3 §2: стадии и статусы), ui (тексты общих компонентов), integrations (Admin · Внешние интеграции), company (Admin · Компания), kb (CRM · База знаний), bot (Admin · Настройки бота). */
 void i18n.use(initReactI18next).init({
   resources,
   lng: storedLanguage(),
   fallbackLng: "ru",
   defaultNS: "common",
-  ns: ["common", "shell", "modules", "dictionary", "ui", "integrations", "kb", "bot"],
+  ns: ["common", "shell", "modules", "dictionary", "ui", "integrations", "company", "kb", "bot"],
   interpolation: { escapeValue: false },
 });
 

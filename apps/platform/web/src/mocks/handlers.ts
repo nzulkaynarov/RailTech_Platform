@@ -6,6 +6,7 @@ import {
 } from "../shared/api/generated/platform-bff.msw";
 import type { ChangePasswordIn, LoginIn, MeUpdate } from "../shared/api/generated/model";
 import { adminIntegrationsHandlers } from "./adminIntegrations";
+import { adminCompanyHandlers } from "./adminCompany";
 import { adminRolesHandlers } from "./adminRoles";
 import { botKbHandlers } from "./botKb";
 import { adminUsersHandlers } from "./adminUsers";
@@ -115,6 +116,7 @@ export const handlers = [
   ...adminUsersHandlers,
   ...adminRolesHandlers,
   ...adminIntegrationsHandlers,
+  ...adminCompanyHandlers,
   ...botKbHandlers,
 
   getGetHealthMockHandler({

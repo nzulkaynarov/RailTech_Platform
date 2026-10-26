@@ -116,17 +116,17 @@ class BackendClient:
         stream: bool = False,
     ) -> httpx.Response:
         """Вызов бэкенда от имени сотрудника. 2xx и 4xx возвращаются как есть (решает вызывающий),
-        сеть, таймаут и 5xx — `BackendUnavailableError`.
+        сеть, таймаут и 5xx — `BackendUnavailableError`. `content` — готовое тело (загрузка файла
+        `multipart/form-data` целиком, с `Content-Type` в `headers`).
 
         `probe` — проба внешнего сервиса через бэкенд: таймаут `PROBE_TIMEOUT_SECONDS`, а 502 CRM
         («сервис за мной не ответил: ERP, SMTP, Telegram») с JSON-телом приложения идёт как
         есть — причина в теле, это результат проверки, а не сбой бэкенда. 502 прокси (HTML,
         пустое тело) и сетевой сбой остаются `BackendUnavailableError`.
 
-        `content` — готовое тело запроса (multipart загрузки файла: границу задаёт заголовок
-        `Content-Type` вызывающего, BFF тело не разбирает). `stream` — ответ не читается целиком:
-        вызывающий обязан закрыть его (`aclose`), тело отдаёт `aiter_raw` (выгрузка CSV потоком,
-        W13-A5); таймаут — как у пробы (CRM собирает выборку до первого байта)."""
+        `stream` — ответ не читается целиком: вызывающий обязан закрыть его (`aclose`), тело отдаёт
+        `aiter_bytes` (выгрузка CSV потоком, W13-A5); таймаут — как у пробы (CRM собирает выборку до
+        первого байта)."""
         headers = dict(headers or {})
         if access:
             headers["Authorization"] = f"Bearer {access}"
