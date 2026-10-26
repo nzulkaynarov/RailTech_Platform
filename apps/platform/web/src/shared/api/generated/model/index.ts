@@ -52,6 +52,17 @@
  * обычными API (с проверкой прав). Данных событий в потоке нет. Пока поток жив, опрос — редкий (5 минут), при обрыве —
  * прежние 30 секунд. Чисто добавляющее изменение.
  *
+ * **0.7.0 (W13-A3) — Admin · Компания.** Чисто добавляющее изменение: `GET/PATCH /admin/company` (реквизиты), `/admin/company/logo`
+ * (загрузка `multipart/form-data` и удаление), `/admin/company/brand` (+ `/logo`, `/preview`) — бланк и бренд документов,
+ * `/admin/company/numbering` (+ `/preview`), `/admin/company/quote-defaults`, `/admin/company/charge-types` и `charge-templates`,
+ * `/admin/company/document-templates` (+ `placeholders`, `preview`, `{id}/copy`), `/admin/company/email-templates` (+ `{id}/preview`),
+ * `/admin/company/reference/{kind}` (страны, валюты, единицы, базисы поставки), `/admin/company/categories`,
+ * `/admin/company/category-requests` (+ `approve`, `reject`), `/admin/company/platform-settings`. Доступ — раздел `company.settings`
+ * (чтение — `GET` и предпросмотры, полный — изменения). BFF только проксирует к ERP с токеном сотрудника и сам находит свою компанию по
+ * профилю сотрудника в ERP; нет компании — 409 `COMPANY_NOT_SET`. Ошибки ERP: 400 -> 422 `VALIDATION_FAILED` (`details.reason` —
+ * код ERP в нижнем регистре, `details.fields`), «используется», «префикс занят» и «уже рассмотрен» -> 409 `CONFLICT` с
+ * `details.reason`. Поля маржи `QuoteDefaults` вырезаются без права на группу `cost_margin` (правило 6 CONVENTIONS).
+ *
  * **0.6.0 (R-1c, R3-D-1) — ломающее (до 1.0 допустимо).** У сотрудника хотя бы одна роль: `EmployeeUpdate.role_ids` —
  * `minItems: 1`, пустой набор — 422 `ROLES_REQUIRED` (`details.fields = [role_ids]`), в CRM запрос не уходит; тот же код —
  * перевод отказа CRM `roles_required` (CRM API 0.3.0). Закрыть доступ — `is_active = false` («Отключить сотрудника»).
@@ -74,16 +85,59 @@
  * Лимиты: вход — 10 неудачных попыток в минуту на IP и e-mail; остальные запросы — 300 в минуту на сессию; превышение — 429
  * `TOO_MANY_REQUESTS` с `Retry-After`.
  *
- * OpenAPI spec version: 0.6.0
+ * OpenAPI spec version: 0.7.0
  */
 
 export * from "./accessLevel";
 export * from "./activityFeed";
 export * from "./activityItem";
+export * from "./brandPreviewIn";
+export * from "./brandProfile";
+export * from "./brandProfileFontFamily";
+export * from "./brandProfileInherited";
+export * from "./brandProfileLayoutPreset";
+export * from "./brandProfileUpdate";
+export * from "./brandProfileUpdateFontFamily";
+export * from "./brandProfileUpdateLayoutPreset";
+export * from "./catalogCategory";
+export * from "./catalogCategoryIn";
+export * from "./catalogCategoryList";
+export * from "./catalogCategoryUpdate";
+export * from "./categoryRequest";
+export * from "./categoryRequestApproveIn";
+export * from "./categoryRequestList";
+export * from "./categoryRequestRejectIn";
+export * from "./categoryRequestStatus";
 export * from "./changePasswordIn";
+export * from "./chargeTemplate";
+export * from "./chargeTemplateIn";
+export * from "./chargeTemplateList";
+export * from "./chargeTemplateUpdate";
+export * from "./chargeType";
+export * from "./chargeTypeList";
+export * from "./companyItemRef";
+export * from "./companyProfile";
+export * from "./companyProfileUpdate";
 export * from "./csrfFailedResponse";
 export * from "./csrfTokenParameter";
+export * from "./decimalString";
+export * from "./documentKind";
+export * from "./documentPlaceholder";
+export * from "./documentPlaceholderGroup";
+export * from "./documentPlaceholders";
+export * from "./documentPreview";
+export * from "./documentTemplate";
+export * from "./documentTemplateCopyIn";
+export * from "./documentTemplateIn";
+export * from "./documentTemplateList";
+export * from "./documentTemplatePreviewIn";
+export * from "./documentTemplateUpdate";
 export * from "./dueLabel";
+export * from "./emailTemplate";
+export * from "./emailTemplateIn";
+export * from "./emailTemplateList";
+export * from "./emailTemplatePreview";
+export * from "./emailTemplateUpdate";
 export * from "./employee";
 export * from "./employeeAccess";
 export * from "./employeeInvite";
@@ -106,9 +160,11 @@ export * from "./healthStatus";
 export * from "./invalidationHint";
 export * from "./invalidationTopic";
 export * from "./language";
+export * from "./listCategoryRequestsParams";
 export * from "./listEmployeesParams";
 export * from "./listNotificationsParams";
 export * from "./loginIn";
+export * from "./logoUpload";
 export * from "./me";
 export * from "./meAccess";
 export * from "./menuCounter";
@@ -120,14 +176,32 @@ export * from "./notFoundResponse";
 export * from "./notification";
 export * from "./notificationPage";
 export * from "./notificationTab";
+export * from "./numberingLabels";
+export * from "./numberingPreview";
+export * from "./numberingPreviewIn";
+export * from "./numberingPreviewItem";
+export * from "./numberingResetPeriod";
+export * from "./numberingScheme";
+export * from "./numberingUpdate";
 export * from "./objectKind";
 export * from "./objectRef";
 export * from "./personRef";
+export * from "./platformSettings";
+export * from "./platformSettingsUpdate";
 export * from "./queue";
 export * from "./queueCard";
 export * from "./queueCards";
 export * from "./queueItem";
 export * from "./queueItemKind";
+export * from "./quoteDefaults";
+export * from "./quoteDefaultsCatalogPriceVisibility";
+export * from "./quoteDefaultsUpdate";
+export * from "./quoteDefaultsUpdateCatalogPriceVisibility";
+export * from "./referenceItem";
+export * from "./referenceItemIn";
+export * from "./referenceItemList";
+export * from "./referenceItemUpdate";
+export * from "./referenceKind";
 export * from "./resourceAccess";
 export * from "./restrictedField";
 export * from "./role";
