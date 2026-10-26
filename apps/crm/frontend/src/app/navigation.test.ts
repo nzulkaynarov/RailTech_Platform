@@ -79,8 +79,26 @@ describe("menu IA (audit 2026-10-12)", () => {
     ]);
   });
 
+  // Системный «Администратор» (R3-D-2): права на администрирование, без лидов, клиентов и дашборда.
+  const sysAdmin = matrix({
+    users: { read: true, write: true },
+    integrations: { read: true, write: true },
+    system: { read: true },
+    audit: { read: true },
+    settings: { read: true },
+  });
+
   it.each([
     ["admin", admin, "/inbox"],
+    ["admin without business rights", sysAdmin, "/users"],
+    [
+      "admin without users",
+      matrix({ integrations: { read: true }, audit: { read: true } }),
+      "/integrations",
+    ],
+    ["observer with clients only", matrix({ clients: { read: true } }), "/clients"],
+    ["nothing at all", matrix({}), "/profile"],
+    ["matrix not loaded", undefined, "/profile"],
     ["manager", manager, "/inbox"],
     ["viewer", viewer, "/dashboard"],
     ["nobody", matrix({ leads: { read: true } }), "/leads"],

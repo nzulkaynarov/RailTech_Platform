@@ -1,12 +1,13 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { Alert, App as AntApp, Button, Card, Flex, Form, Input, Typography } from "antd";
 import { useState } from "react";
-import { useNavigate } from "react-router";
+import { useNavigate, useSearchParams } from "react-router";
 
 import { changePassword } from "../../api/generated/crm";
 import { refreshAccess } from "../../api/http";
 import { apiErrorMessage } from "../../hooks/useApiErrorToast";
 import { t } from "../../i18n/ru";
+import { safeNextPath } from "../../lib/nextPath";
 import { passwordChange } from "../../app/providers/auth";
 import "../pages.css";
 
@@ -14,6 +15,7 @@ type Values = { current_password: string; new_password: string; repeat: string }
 
 export function ChangePasswordPage() {
   const navigate = useNavigate();
+  const next = safeNextPath(useSearchParams()[0].get("to"));
   const client = useQueryClient();
   const { message } = AntApp.useApp();
   const [error, setError] = useState<string | null>(null);
@@ -32,7 +34,7 @@ export function ChangePasswordPage() {
       await refreshAccess();
       await client.invalidateQueries();
       void message.success(t.auth.changed);
-      void navigate("/");
+      void navigate(next ?? "/");
     } catch (e) {
       setError(apiErrorMessage(e));
     } finally {

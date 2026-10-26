@@ -5,12 +5,14 @@ import { Alert, Badge, Button, Grid, Layout, Space, theme } from "antd";
 import { Link } from "react-router";
 
 import { useSystemStatus } from "../api/adminQueries";
+import { usePermissionsQuery } from "../api/queries";
 import { ModeSwitch } from "../components/ModeSwitch";
 import { useEventStream } from "../hooks/useEventStream";
 import { useLeadAlertHandler } from "../hooks/useLeadAlerts";
 import { criticalFailures, headerHealth, type HeaderTone } from "../domain/systemHealth";
 import { t } from "../i18n/ru";
 import { ErpSwitch } from "./ErpSwitch";
+import { allowed } from "./providers/access";
 import { UserMenu } from "./UserMenu";
 
 const BADGE: Record<HeaderTone, "success" | "warning" | "error"> = {
@@ -32,11 +34,21 @@ export function ConnectionStatus({ live, compact = false }: { live: boolean; com
 
 /**
  * Здоровье системы для админа (тот же `GET /system/status`, что «Состояние»): ссылка на `/system`.
- * Нет связи с CRM — показываем это: устаревшему «Онлайн» верить нельзя.
+ * Нет связи с CRM — показываем это: устаревшему «Онлайн» верить нельзя. Без права на поток
+ * (`streamed = false`, системный «Администратор») индикатора связи нет вовсе: здоровье — по HTTP.
  */
-function SystemHealth({ live, compact }: { live: boolean; compact: boolean }) {
+function SystemHealth({
+  live,
+  streamed,
+  compact,
+}: {
+  live: boolean;
+  streamed: boolean;
+  compact: boolean;
+}) {
   const query = useSystemStatus();
-  if (!live || !query.data) return <ConnectionStatus live={live} compact={compact} />;
+  if (!query.data) return streamed ? <ConnectionStatus live={live} compact={compact} /> : null;
+  if (streamed && !live) return <ConnectionStatus live={false} compact={compact} />;
   const health = headerHealth(query.data);
   // Живая область — обёртка, а не сама ссылка: у `<a>` роль status недопустима (axe aria-allowed-role).
   return (
@@ -77,7 +89,11 @@ export function Header() {
     sso_enabled?: boolean;
     platform_access?: string[];
   }>();
-  const live = useEventStream(Boolean(identity), useLeadAlertHandler());
+  // Поток — только при праве `stream:read` (матрица загружена): без него `GET /stream` отвечает 403,
+  // а индикатор «Нет связи» был бы вечным и неверным (W11B-G-3).
+  const perms = usePermissionsQuery();
+  const streamed = Boolean(identity) && allowed(perms.data, "stream", "read");
+  const live = useEventStream(streamed, useLeadAlertHandler());
   const { token } = theme.useToken();
   const screens = Grid.useBreakpoint();
   const { setMobileSiderOpen } = useThemedLayoutContext();
@@ -114,10 +130,10 @@ export function Header() {
         )}
         <Space size="small">
           {admin ? (
-            <SystemHealth live={live} compact={phone} />
-          ) : (
+            <SystemHealth live={live} streamed={streamed} compact={phone} />
+          ) : streamed ? (
             <ConnectionStatus live={live} compact={phone} />
-          )}
+          ) : null}
           {/* Переход в ERP — только при доступе к ERP и включённом SSO (FIX-03, FIX-11, поля /me). */}
           <ErpSwitch identity={identity} compact={phone} />
           <ModeSwitch />
