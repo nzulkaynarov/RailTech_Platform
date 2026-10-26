@@ -35,7 +35,10 @@ async def _run_worker() -> None:
     try:
         async with queue.open_async():
             # Периодические задачи создают по заданию на тик (pump каждые 5 с): выполненные удаляются сразу.
-            await queue.run_worker_async(concurrency=get_settings().worker_concurrency, delete_jobs="successful")
+            try:
+                await queue.run_worker_async(concurrency=get_settings().worker_concurrency, delete_jobs="successful")
+            finally:
+                await get_container().drain_bus()  # пробуждения шины — пока очередь открыта
     finally:
         await get_container().aclose()
 

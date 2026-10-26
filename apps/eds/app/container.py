@@ -30,11 +30,16 @@ class Container:
 
     @cached_property
     def bus(self) -> AsyncBus:
-        if self.settings.app_env == "test":  # очереди в тестах нет: обработку inbox вызывает сам тест
+        if self.settings.app_env == "test":  # очереди в тестах нет: обработку inbox и пробуждение вызывает сам тест
             return build_bus(self.session_factory)
         from app.tasks.bus import tasks  # лениво: модуль задач сам берёт контейнер
 
-        return build_bus(self.session_factory, enqueue=tasks.enqueue)
+        return build_bus(self.session_factory, enqueue=tasks.enqueue, wakeup=tasks.wakeup)
+
+    async def drain_bus(self) -> None:
+        """Дождаться пробуждений шины (B5a): вызывать, пока очередь Procrastinate ещё открыта."""
+        if "bus" in self.__dict__:
+            await self.bus.drain_wakeups()
 
     async def aclose(self) -> None:
         if "bus" in self.__dict__:

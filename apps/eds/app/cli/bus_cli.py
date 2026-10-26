@@ -43,7 +43,10 @@ async def run(args: argparse.Namespace) -> int:
     try:
         # Очередь открыта на время команды: повтор обработки ставит задачу `rt_bus.process_inbox`.
         async with queue.open_async():
-            return await _dispatch(bus, args)
+            try:
+                return await _dispatch(bus, args)
+            finally:
+                await container.drain_bus()  # пробуждения шины — пока очередь открыта
     finally:
         await container.aclose()
 

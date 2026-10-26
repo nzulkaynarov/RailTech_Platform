@@ -36,6 +36,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         app.state.container = container
         async with _queue_lifespan(settings):
             yield
+            await container.drain_bus()  # пробуждения шины идут в очередь: она ещё открыта
         await container.aclose()
 
     app = FastAPI(
