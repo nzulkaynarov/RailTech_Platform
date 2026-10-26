@@ -206,15 +206,16 @@ class ModelsAdminService:
         """Маска ключа для экрана: источник и последние 4 символа; сам ключ нигде не хранится."""
         if self._settings is None:
             return
-        current = (await self._settings.get()).integrations.model_dump(mode="json")
-        masks = dict(current.get("model_keys") or {})
-        masks[alias] = {
+        mask = {
             "source": source,
             "last4": last4(str(key)) if source == "crm" and key else None,
             "updated_at": datetime.now(UTC).isoformat(),
         }
-        current["model_keys"] = masks
-        await self._settings.update("integrations", current, who.user_id)
+        try:
+            await self._settings.merge_map("integrations", "model_keys", {alias: mask}, who.user_id)
+        except Exception:  # noqa: BLE001 — любой сбой записи: модель уже сменена, ответ не ломаем
+            # Маска — справка для экрана; сбой её записи не должен давать 500.
+            logger.warning("model_key_mask_not_saved", alias=alias, key=source, exc_info=False)
 
     async def _audit(
         self,

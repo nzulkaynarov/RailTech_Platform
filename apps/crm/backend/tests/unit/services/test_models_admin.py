@@ -11,6 +11,7 @@ import httpx
 import pytest
 import respx
 from pydantic import AnyHttpUrl, SecretStr
+from structlog.testing import capture_logs
 
 from app.domain.errors import (
     ConflictError,
@@ -112,20 +113,23 @@ class _Recorder:
 
 
 class _Settings:
-    """Настройки в памяти: `SettingsService.get/update` без БД; запоминает записанное."""
+    """Настройки в памяти: `SettingsService.merge_map` без БД; запоминает записанное."""
 
-    def __init__(self) -> None:
+    def __init__(self, broken: bool = False) -> None:
         self.current = AppSettings()
-        self.writes: list[tuple[str, dict[str, Any]]] = []
+        self.writes: list[tuple[str, str, dict[str, Any]]] = []
+        self.broken = broken
 
-    async def get(self) -> AppSettings:
-        return self.current
-
-    async def update(self, key: str, value: dict[str, Any], user_id: int | None) -> None:
-        self.writes.append((key, value))
-        self.current = self.current.model_copy(
-            update={key: type(getattr(self.current, key)).model_validate(value)}
-        )
+    async def merge_map(
+        self, key: str, field: str, entries: dict[str, Any], user_id: int | None
+    ) -> None:
+        if self.broken:
+            raise RuntimeError("db down")
+        self.writes.append((key, field, entries))
+        section = getattr(self.current, key)
+        data = section.model_dump(mode="json")
+        data[field] = {**data[field], **entries}
+        self.current = self.current.model_copy(update={key: type(section).model_validate(data)})
 
 
 def _service(
@@ -290,6 +294,9 @@ async def test_change_remembers_key_mask_but_never_the_key(monkeypatch: pytest.M
     mask = settings.current.integrations.model_keys["dialog-model"]
     assert (mask.source, mask.last4) == ("crm", FAKE_KEY[-4:])
     assert FAKE_KEY not in json.dumps(settings.writes, default=str)
+    assert [(key, field) for key, field, _ in settings.writes] == [
+        ("integrations", "model_keys")
+    ] * 1
     assert FAKE_KEY not in settings.current.model_dump_json()
 
     await service.change(ADMIN, "dialog-model", ModelChange("anthropic", "claude-x"), "pw")
@@ -311,3 +318,30 @@ async def test_reset_marks_key_as_from_server_settings(monkeypatch: pytest.Monke
 
     mask = settings.current.integrations.model_keys["qualifier-model"]
     assert (mask.source, mask.last4) == ("env", None)
+
+
+@respx.mock
+async def test_mask_write_failure_does_not_fail_a_done_change(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Модель уже сменена: сбой записи маски — предупреждение в журнале без ключа, не 500."""
+    settings = _Settings(broken=True)
+    service = _service(_Recorder(), monkeypatch, settings)
+    respx.get(f"{BASE}/model/info").mock(
+        httpx.Response(
+            200, json=_info(("rt-old", "dialog-model", "anthropic/claude-sonnet-5-5", True))
+        )
+    )
+    respx.post(f"{BASE}/model/new").mock(httpx.Response(200, json={}))
+    respx.post(f"{BASE}/model/delete").mock(httpx.Response(200, json={}))
+
+    with capture_logs() as logs:
+        out = await service.change(
+            ADMIN, "dialog-model", ModelChange("openai", "gpt-x", api_key=FAKE_KEY), "pw"
+        )
+
+    assert (out.provider, out.model, out.key_source) == ("openai", "gpt-x", "crm")
+    warnings = [e for e in logs if e["event"] == "model_key_mask_not_saved"]
+    assert len(warnings) == 1
+    assert warnings[0]["log_level"] == "warning"
+    assert FAKE_KEY not in str(logs)
