@@ -1,5 +1,9 @@
-import { QueryClient } from "@tanstack/react-query";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { renderHook } from "@testing-library/react";
+import { createElement, type ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+
+import { keys } from "../api/queries";
 
 import {
   getGetLeadQueryKey,
@@ -11,7 +15,14 @@ import {
   getListLeadsQueryKey,
   getListServiceRequestsQueryKey,
 } from "../api/generated/crm";
-import { type CrmEvent, consume, keysFor, parseSse } from "./useEventStream";
+import {
+  type CrmEvent,
+  StreamForbiddenError,
+  consume,
+  keysFor,
+  parseSse,
+  useEventStream,
+} from "./useEventStream";
 
 describe("parseSse", () => {
   it("splits complete events and keeps the tail", () => {
@@ -95,5 +106,62 @@ describe("consume", () => {
     await consume(new AbortController().signal, onEvent, onOpen);
     expect(onOpen).toHaveBeenCalledOnce();
     expect(onEvent.mock.calls[0]?.[0]).toEqual({ type: "lead.updated", lead_id: 3 });
+  });
+
+  it("treats 403 as a permission refusal, not as a network failure", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(null, { status: 403 })));
+    await expect(consume(new AbortController().signal, vi.fn())).rejects.toBeInstanceOf(
+      StreamForbiddenError,
+    );
+  });
+});
+
+describe("useEventStream", () => {
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.unstubAllGlobals();
+  });
+
+  const setup = (enabled: boolean) => {
+    const client = new QueryClient();
+    const invalidate = vi.spyOn(client, "invalidateQueries");
+    const wrapper = ({ children }: { children: ReactNode }) =>
+      createElement(QueryClientProvider, { client }, children);
+    const view = renderHook(() => useEventStream(enabled), { wrapper });
+    return { ...view, invalidate };
+  };
+
+  it("makes no request to /stream without the right (enabled = false)", async () => {
+    vi.useFakeTimers();
+    const fetchMock = vi.fn().mockResolvedValue(new Response(null, { status: 403 }));
+    vi.stubGlobal("fetch", fetchMock);
+    const { result } = setup(false);
+    await vi.advanceTimersByTimeAsync(10_000);
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(result.current).toBe(false);
+  });
+
+  it("does not retry every 3 s after a 403 and refreshes the permission matrix once", async () => {
+    vi.useFakeTimers();
+    const fetchMock = vi
+      .fn()
+      .mockImplementation(() => Promise.resolve(new Response(null, { status: 403 })));
+    vi.stubGlobal("fetch", fetchMock);
+    const { result, invalidate } = setup(true);
+    await vi.advanceTimersByTimeAsync(30_000);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(invalidate).toHaveBeenCalledWith({ queryKey: keys.permissions });
+    expect(result.current).toBe(false);
+  });
+
+  it("still retries after a network or server failure", async () => {
+    vi.useFakeTimers();
+    const fetchMock = vi
+      .fn()
+      .mockImplementation(() => Promise.resolve(new Response(null, { status: 503 })));
+    vi.stubGlobal("fetch", fetchMock);
+    setup(true);
+    await vi.advanceTimersByTimeAsync(3_100);
+    expect(fetchMock.mock.calls.length).toBeGreaterThanOrEqual(2);
   });
 });

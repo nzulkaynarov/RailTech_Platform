@@ -2,6 +2,7 @@ import { type QueryKey, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
 
 import { rawFetch } from "../api/http";
+import { keys } from "../api/queries";
 import { queryKeys } from "../api/queryKeys";
 
 export type CrmEvent = {
@@ -13,6 +14,14 @@ export type CrmEvent = {
 };
 
 const RETRY_MS = 3000;
+
+/** Сервер отказал в потоке по правам (403): повторять бессмысленно, пока права не изменятся. */
+export class StreamForbiddenError extends Error {
+  constructor() {
+    super("stream 403");
+    this.name = "StreamForbiddenError";
+  }
+}
 
 /** Разбор SSE-потока: события разделены пустой строкой, данные — в строках `data:`. */
 export function parseSse(buffer: string): { events: CrmEvent[]; rest: string } {
@@ -59,6 +68,7 @@ export async function consume(
     signal,
     headers: { Accept: "text/event-stream" },
   });
+  if (response.status === 403) throw new StreamForbiddenError();
   if (!response.ok || !response.body) throw new Error(`stream ${String(response.status)}`);
   onOpen();
   const reader = response.body.pipeThrough(new TextDecoderStream()).getReader();
@@ -72,7 +82,12 @@ export async function consume(
   }
 }
 
-/** Подписка на `GET /api/v1/stream`; при обрыве — переподключение и перечитывание данных. */
+/**
+ * Подписка на `GET /api/v1/stream`; при обрыве — переподключение и перечитывание данных.
+ * `enabled` — «есть право `stream:read` и профиль загружен»: без права запросов к потоку нет вовсе.
+ * Если 403 всё же пришёл (права отозвали), поток не переподключается раз в 3 с: матрица прав
+ * перечитывается, и шапка сама скроет индикатор.
+ */
 export function useEventStream(
   enabled: boolean,
   onExtra: (event: CrmEvent) => void = () => undefined,
@@ -100,8 +115,13 @@ export function useEventStream(
             // пока связи не было, события могли пропасть — перечитываем всё
             void client.invalidateQueries();
           });
-        } catch {
-          // сеть/401 — повтор после паузы
+        } catch (error) {
+          if (error instanceof StreamForbiddenError) {
+            setLive(false);
+            void client.invalidateQueries({ queryKey: keys.permissions });
+            return;
+          }
+          // сеть/5xx/401 — повтор после паузы
         }
         setLive(false);
         await new Promise((resolve) => setTimeout(resolve, RETRY_MS));
