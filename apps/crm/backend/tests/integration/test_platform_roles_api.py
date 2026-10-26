@@ -480,7 +480,11 @@ async def test_provisioning_after_a_role_change_sends_the_recomputed_permissions
     await service.provision(employee)
 
     first, second = erp.payloads
-    assert (first.role, first.role_codes, first.permissions) == ("backoffice", (), ("deal.manage",))
+    assert (first.role, first.role_codes, first.permissions) == (
+        "backoffice",
+        (),
+        ("deal.manage", "quote.send"),
+    )
     assert (second.role, second.role_codes) == ("backoffice", ())
     assert second.permissions == (
         "quote.view_cost_margin",

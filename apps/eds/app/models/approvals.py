@@ -6,6 +6,7 @@ from typing import Any
 
 from sqlalchemy import (
     BigInteger,
+    Boolean,
     CheckConstraint,
     DateTime,
     ForeignKey,
@@ -16,6 +17,7 @@ from sqlalchemy import (
     Text,
     UniqueConstraint,
     Uuid,
+    text,
 )
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
@@ -57,6 +59,8 @@ class ApprovalRoute(Base):
     quote_snapshot: Mapped[dict[str, Any] | None] = mapped_column(JSONB)
     outgoing_number: Mapped[str | None] = mapped_column(String(32))
     channels: Mapped[list[str] | None] = mapped_column(JSONB)
+    # КП одобрено, хотя готово позже срока резолюции: строка `due` чек-листа — предупреждение (C1-G-1, 2026-10-26)
+    approved_late: Mapped[bool] = mapped_column(Boolean, default=False, server_default=text("false"))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     closed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 

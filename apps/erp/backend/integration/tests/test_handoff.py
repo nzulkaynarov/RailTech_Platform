@@ -342,6 +342,13 @@ def test_request_created_is_emitted_once_with_source_crm_and_deal_in_request_sta
     assert body["payload"]["erp_request_id"] == deal.pk
     assert body["payload"]["summary"] == "Поставка рельсов Р65, 500 тонн"
     assert body["actor"] == {"type": "staff", "name": "Менеджер Продаж"}
+    # C1-G-7: отправитель письма EDS — компания и основной контакт, менеджер — ответственный передачи из CRM
+    assert {k: body["payload"][k] for k in ("company_name", "company_inn", "contact_name", "manager_crm_user_id")} == {
+        "company_name": "ООО Рельсы Тест",
+        "company_inn": "123456789",
+        "contact_name": "Иван Иванов",
+        "manager_crm_user_id": 101,
+    }
     assert body["deal"]["erp_deal_id"] == deal.pk
     assert body["deal"]["stage"] == "request"
     assert body["deal"]["amount"] is None

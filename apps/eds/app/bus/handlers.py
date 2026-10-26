@@ -68,6 +68,7 @@ def build_registry(get_bus: Callable[[], AsyncBus] | None = None) -> HandlerRegi
 
         async def request_created(event: Event, session: AsyncSession) -> None:
             data = RequestCreated.model_validate(event.data)
+            payload = data.payload
             letter = await letters.register_from_request(
                 session,
                 get_bus(),
@@ -77,8 +78,14 @@ def build_registry(get_bus: Callable[[], AsyncBus] | None = None) -> HandlerRegi
                 erp_deal_id=data.deal.erp_deal_id,
                 deal_number=data.deal.number,
                 title=data.deal.title,
-                erp_request_id=data.payload.erp_request_id,
-                summary=data.payload.summary,
+                erp_request_id=payload.erp_request_id,
+                summary=payload.summary,
+                parties=letters.RequestParties(
+                    company_name=payload.company_name,
+                    company_inn=payload.company_inn,
+                    contact_name=payload.contact_name,
+                    manager_crm_user_id=payload.manager_crm_user_id,
+                ),
             )
             log.info("letter_for_request", number=letter.number, event_id=event.id)
 

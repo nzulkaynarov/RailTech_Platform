@@ -147,7 +147,7 @@ SUPPLY_PERMISSIONS = (
 @pytest.mark.parametrize(
     ("platform_role", "role", "permissions"),
     [
-        ("MANAGER", "backoffice", ("deal.manage",)),
+        ("MANAGER", "backoffice", ("deal.manage", "quote.send")),
         ("SUPPLY", "backoffice", SUPPLY_PERMISSIONS),
         (
             "ACCOUNTANT",
@@ -189,7 +189,8 @@ async def test_provision_by_two_platform_roles_is_the_union(wired: dict[str, Any
     (payload,) = client.provisioned
     assert payload.role == "backoffice"
     assert payload.role_codes == ()
-    assert payload.permissions == SUPPLY_PERMISSIONS  # deal.manage у обеих, остальное — снабжение
+    # deal.manage у обеих, quote.send — от менеджера (C1-G-4), остальное — снабжение
+    assert payload.permissions == (*SUPPLY_PERMISSIONS[:4], "quote.send", *SUPPLY_PERMISSIONS[4:])
 
 
 @pytest.mark.asyncio

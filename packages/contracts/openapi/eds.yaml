@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: RailTech Platform — EDS API (электронный документооборот)
-  version: 0.1.0
+  version: 0.2.0
   summary: Пространство `/api/v1/` сервиса EDS — вызывает BFF Платформы от имени сотрудника.
   description: |
     Контракт сервиса EDS (`apps/eds`, ADR-0015; `docs/runbooks/wave12-eds-c1.md` §2). EDS — владелец реестра документов и
@@ -273,7 +273,9 @@ paths:
       description: |
         Только письмо в статусе `awaiting_resolution` (иначе 409 `CONFLICT`, `details.reason = invalid_state`). Статус →
         `resolved`; публикуется `letter.resolved` (исполнители, срок, мин. маржа, ссылки на заявку и сделку ERP) — ERP создаёт
-        задание расчёта (EDS-01). Исполнители — активные сотрудники проекции (иначе 422, `details.fields.assignees`).
+        задание расчёта (EDS-01). Исполнители — активные сотрудники проекции (иначе 422, `details.fields.assignees`). Срок
+        `due` — не раньше сегодняшней даты по `Asia/Tashkent` (иначе 422, `details.fields.due`; решение архитектора
+        2026-10-26, C1-G-1).
       x-rt-permissions: [letters.resolve]
       parameters:
         - $ref: '#/components/parameters/LetterId'
@@ -634,8 +636,12 @@ paths:
       description: |
         Решает только тот, кого ждёт текущий шаг (назначен по `crm_user_id` или держит право шага); иначе 403
         `FORBIDDEN` (`details.reason = not_your_step`). `comment` обязателен для `return` и `reject` (422). КП: `approve`
-        недоступно, пока чек-лист не зелёный (проверка на сервере; маржа сверяется с порогом резолюции EDS) — 409 `CONFLICT`, `details.reason = checklist_not_green`;
-        при одобрении КП присваивается `ИСХ-NNN/ГГ`, выбранные `channels` уходят в событие. Маршрут закрыт — 409
+        недоступно, пока не выполнены блокирующие строки чек-листа — визы и маржа (проверка на сервере; маржа сверяется с
+        порогом резолюции EDS) — 409 `CONFLICT`, `details.reason = checklist_not_green`, `details.failed` — коды красных
+        блокирующих строк. Строка «срок» (`due`, `blocking = false`) — предупреждение: КП, готовое позже срока резолюции,
+        директор одобряет, осознанно приняв опоздание; маршрут получает `approved_late = true`, журнал — строку
+        `approval.approved_late`, событие `approval.decided` — `approved_late: true` (решение архитектора 2026-10-26, C1-G-1).
+        При одобрении КП присваивается `ИСХ-NNN/ГГ`, выбранные `channels` уходят в событие. Маршрут закрыт — 409
         (`details.reason = route_closed`). Каждое решение — строка журнала и `approval.decided`.
       x-rt-permissions: [memos.approve, approvals.decide, payments.confirm]
       parameters:
@@ -1310,7 +1316,7 @@ components:
         due:
           type: string
           format: date
-          description: Срок расчёта
+          description: Срок расчёта — не раньше сегодняшней даты по `Asia/Tashkent` (иначе 422, `details.fields.due`)
         min_margin_pct:
           oneOf:
             - $ref: '#/components/schemas/MarginPct'
@@ -1386,14 +1392,34 @@ components:
       type: object
       additionalProperties: false
       required: [name]
+      description: Организация — отправитель письма, адресат исходящего письма, клиент в реестре
       properties:
         name:
           type: [string, 'null']
           maxLength: 255
-          description: '`null` — письмо зарегистрировано по заявке ERP, клиент — по `links.crm_client_id`'
+          description: '`null` — письмо зарегистрировано по заявке ERP без названия компании, клиент — по `links.crm_client_id`'
         inn:
           type: [string, 'null']
           pattern: '^\d{9,14}$'
+    IncomingLetterSender:
+      type: object
+      additionalProperties: false
+      required: [name]
+      description: |
+        Отправитель входящего письма (с 0.2.0): `LetterSender` и контактное лицо. Письмо по заявке ERP берёт название, ИНН и
+        контакт из `erp.request.created` (`payload.company_name`, `company_inn`, `contact_name`; C1-G-7)
+      properties:
+        name:
+          type: [string, 'null']
+          maxLength: 255
+          description: '`null` — письмо по заявке ERP без названия компании, клиент — по `links.crm_client_id`'
+        inn:
+          type: [string, 'null']
+          pattern: '^\d{9,14}$'
+        contact:
+          type: [string, 'null']
+          maxLength: 255
+          description: Контактное лицо отправителя
     SenderRef:
       type: object
       additionalProperties: false
@@ -1420,7 +1446,7 @@ components:
           maxLength: 10000
           description: Суть документа
         sender:
-          $ref: '#/components/schemas/LetterSender'
+          $ref: '#/components/schemas/IncomingLetterSender'
         sender_ref:
           $ref: '#/components/schemas/SenderRef'
         received_at:
@@ -1455,7 +1481,7 @@ components:
         subject:
           type: string
         sender:
-          $ref: '#/components/schemas/LetterSender'
+          $ref: '#/components/schemas/IncomingLetterSender'
         received_at:
           type: string
           format: date
@@ -1514,7 +1540,7 @@ components:
         summary:
           type: string
         sender:
-          $ref: '#/components/schemas/LetterSender'
+          $ref: '#/components/schemas/IncomingLetterSender'
         sender_ref:
           $ref: '#/components/schemas/SenderRef'
         received_at:
@@ -1924,10 +1950,12 @@ components:
     ChecklistItem:
       type: object
       additionalProperties: false
-      required: [code, label, ok, by, at, value]
+      required: [code, label, ok, blocking, by, at, value]
       description: |
         Строка чек-листа одобрения КП (SPEC-v3 §7.3) — с датой и автором. `margin` сверяет маржу КП с порогом **резолюции EDS**
-        (владелец поля — EDS); `min_margin_pct` из события ERP — только снимок для показа.
+        (владелец поля — EDS); `min_margin_pct` из события ERP — только снимок для показа. Блокирующие строки (`blocking = true`:
+        визы и маржа) — красная запрещает `approve`; строка `due` — предупреждение (`blocking = false`): красная показывает
+        опоздание, одобрение остаётся доступным (решение архитектора 2026-10-26, C1-G-1).
       properties:
         code:
           type: string
@@ -1937,6 +1965,9 @@ components:
           type: string
         ok:
           type: boolean
+        blocking:
+          type: boolean
+          description: '`true` — красная строка блокирует одобрение; `false` — предупреждение (`due`). С 0.2.0'
         by:
           oneOf:
             - $ref: '#/components/schemas/QuoteVisaAuthor'
@@ -2082,6 +2113,7 @@ components:
         - can_decide
         - allowed_decisions
         - outgoing_number
+        - approved_late
         - created_at
         - closed_at
       properties:
@@ -2120,12 +2152,17 @@ components:
           uniqueItems: true
           items:
             $ref: '#/components/schemas/Decision'
-          description: Что можно сейчас (`approve` нет, пока чек-лист КП не зелёный)
+          description: Что можно сейчас (`approve` нет, пока красна хотя бы одна блокирующая строка чек-листа КП)
         outgoing_number:
           oneOf:
             - $ref: '#/components/schemas/OutgoingNumber'
             - type: 'null'
           description: ИСХ-номер одобренного КП
+        approved_late:
+          type: boolean
+          description: |
+            КП одобрено с опозданием: готово позже срока резолюции, директор одобрил, приняв опоздание (C1-G-1, с 0.2.0).
+            У остальных маршрутов — `false`
         created_at:
           type: string
           format: date-time

@@ -222,16 +222,16 @@ ERP_BACKEND: Final[dict[str, dict[str, tuple[str, ...]]]] = {
     },
     "crm.leads": {},
     "crm.clients": {
-        "full": ("deal.manage",),
+        "full": (
+            "deal.manage",
+            "quote.send",
+        ),
     },
     "eds.inbox": {
         "full": ("deal.assign",),
     },
     "eds.drafts": {
-        "full": (
-            "quote.review",
-            "quote.send",
-        ),
+        "full": ("quote.review",),
     },
     "eds.projects": {
         "full": (

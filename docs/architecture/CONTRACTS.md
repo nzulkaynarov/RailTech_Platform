@@ -535,14 +535,14 @@ ADR-0015 (EDS — отдельный сервис, владелец реестр
 
 | Файл | Что | Версия |
 |---|---|---|
-| `openapi/eds.yaml` | API EDS `/api/v1` для BFF Платформы: обмен токена, `/me`, письма и резолюции, документы, маршруты согласования, реестр и экспорт, файлы с версиями; `/health` | 0.1.0 |
+| `openapi/eds.yaml` | API EDS `/api/v1` для BFF Платформы: обмен токена, `/me`, письма и резолюции, документы, маршруты согласования, реестр и экспорт, файлы с версиями; `/health` | 0.2.0 |
 | `events/eds/*.v1.json` (+ `_defs.v1.json`, `examples/`) | 8 типов `uz.railtech.eds.*.v1` | v1 |
 | `events/erp/quote.ready_for_approval.v1.json` | КП готово к одобрению (определения — `QuoteReadyForApproval`, `QuoteVisa` в `erp/_defs.v1.json`) | v1 |
 | `events/identity/_defs.v1.json` | `User.permissions.eds` — необязательное, аддитивно в v1 | v1 |
 | `bus/subscriptions.yaml` | подписчик `eds`; новые типы `erp` и `platform-bff`; `crm` без `quote.ready_for_approval` | — |
 | `platform-rbac.yaml` (+ схема) | `backend.eds` разделов EDS → коды прав EDS | каталог v2 |
 
-### 10.1. API (`eds.yaml` 0.1.0)
+### 10.1. API (`eds.yaml` 0.2.0)
 
 - **Кто зовёт.** Только BFF во внутренней сети (`http://eds-api:8000`); внешнего маршрута в Caddy нет, своей формы входа нет.
 - **Пути.** `/api/v1/letters` (список, регистрация), `/letters/{letter_id}` (карточка), `…/resolution` `{text, assignees[{crm_user_id,
@@ -566,6 +566,14 @@ ADR-0015 (EDS — отдельный сервис, владелец реестр
   получает `archived_at`.
 - **Чек-лист КП** сверяет маржу с порогом **резолюции EDS** (владелец поля — EDS); `min_margin_pct` в
   `erp.quote.ready_for_approval` — снимок для показа. Снимок КП в `Approval.quote` повторяет `QuoteReadyForApproval` события.
+  Строки визы и маржи — **блокирующие** (`ChecklistItem.blocking = true`): красная → `approve` 409 `checklist_not_green`.
+  Строка «срок» — **предупреждение** (`blocking = false`, решение архитектора 2026-10-26, C1-G-1): КП, готовое позже срока
+  резолюции, директор одобряет, осознанно приняв опоздание; маршрут получает `Approval.approved_late = true`, журнал —
+  строку `approval.approved_late`, событие `approval.decided` — `approved_late: true`. Срок резолюции раньше сегодняшней
+  даты (`Asia/Tashkent`) — 422 (`details.fields.due`). С 0.2.0 (аддитивно).
+- **Отправитель письма** (`IncomingLetterSender`, 0.2.0): `LetterSender` (название, ИНН) и контактное лицо (`contact`);
+  письмо по заявке ERP берёт их из `erp.request.created` (`payload.company_name`, `company_inn`, `contact_name`), менеджера —
+  из `payload.manager_crm_user_id` (C1-G-7). Адресат исходящего письма и клиент в реестре — `LetterSender`, как раньше.
 - **Номера** (§2.1 runbook): `ВХ-NNN/ГГ`, `ИСХ-NNN/ГГ` (одобрение КП, отправка письма), `СЗ-ГГГГ/NNN`, `ЗЯ-ГГГГ/NNN`, `ОТ-ГГГГ/NNN`;
   счётчик на тип и год (`Asia/Tashkent`) под `SELECT … FOR UPDATE`, без пропусков; номер не возвращается. ЗВ/ПР/КП/ДОГ/СЧ/АКТ —
   у ERP, EDS хранит ссылки (`ErpLinks`).
@@ -587,11 +595,13 @@ ADR-0015 (EDS — отдельный сервис, владелец реестр
 | `uz.railtech.eds.document.registered.v1` | номер документа (СЗ, ЗЯ, ОТ — при создании; ИСХ — при отправке письма) | platform-bff |
 | `uz.railtech.eds.document.archived.v1` | автоматически: маршрут документа завершён окончательно (одобрен на последнем шаге или отклонён), исходящее письмо отправлено | platform-bff |
 | `uz.railtech.eds.approval.requested.v1` | шаг стал текущим: маршрут (круг) открыт — первый шаг; решение передало маршрут дальше — следующий шаг (`step.index`); кто решает | platform-bff |
-| `uz.railtech.eds.approval.decided.v1` | решение на шаге: `decision`, `comment`, `route_status`, для одобренного КП — `outgoing_number` (ИСХ) и `channels` | erp (EDS-03 для `object.kind = quote` и закрытого маршрута), platform-bff |
+| `uz.railtech.eds.approval.decided.v1` | решение на шаге: `decision`, `comment`, `route_status`, для одобренного КП — `outgoing_number` (ИСХ), `channels` и `approved_late` (одобрено с опозданием; необязательное, с 2026-10-26) | erp (EDS-03 для `object.kind = quote` и закрытого маршрута), platform-bff |
 
 ERP публикует `uz.railtech.erp.quote.ready_for_approval.v1` (EDS-03) — EDS открывает маршрут «КП» с чек-листом. Подписка `eds` ←
 `uz.railtech.identity.user.*.v1` (проекция сотрудников с `permissions.eds`), `uz.railtech.erp.request.created.v1` (письмо по
-заявке), `uz.railtech.erp.quote.ready_for_approval.v1`. Объект маршрута для ERP — `approval.object` (`erp_quote_id`,
+заявке; отправитель и менеджер — необязательные поля `payload` с 2026-10-26, C1-G-7: `company_name`, `company_inn`,
+`contact_name`, `manager_crm_user_id`; ERP берёт менеджера из ответственного передачи CRM, иначе из ответственного сделки с
+сопоставлением CRM), `uz.railtech.erp.quote.ready_for_approval.v1`. Объект маршрута для ERP — `approval.object` (`erp_quote_id`,
 `quote_version`, `erp_deal_id`): решение применяется к той версии КП, для которой открыт маршрут. Секреты пар (только окружение):
 `RT_BUS_SECRET_CRM_EDS`, `RT_BUS_SECRET_ERP_EDS`, `RT_BUS_SECRET_EDS_ERP`, `RT_BUS_SECRET_EDS_PLATFORM_BFF`.
 
@@ -668,10 +678,16 @@ ERP применяет события EDS (E5) — §10.6.
   не отзывает (409 `QUOTE_AWAITING_DIRECTOR`; событие отзыва для EDS — вопрос Q-C1-E5-1). Компания без клиента CRM — `crm_client_id: null`; КП без
   компании клиента (черновик-калькулятор) на согласование не уходит (`QUOTE_CLIENT_REQUIRED`).
 - **`eds.approval.decided` по КП** (закрытый маршрут; решения по документам EDS ERP не касаются): `approve` — ИСХ-номер
-  (`outgoing_number`) и `channels` на КП, статус «Готово к отправке» (отправка клиенту разблокирована); `return` — черновик с
+  (`outgoing_number`) и `channels` на КП, статус «Готово к отправке» (отправка клиенту разблокирована; `approved_late` —
+  отметка «одобрено с опозданием» в журнале КП); `return` — черновик с
   комментарием директора; `reject` — КП отклонено (статус `REJECTED`; от отказа клиента его отличает
   `Quote.director_decision = reject` — КП клиенту не уходило, в портале и в сумме сделки его нет). Решение по `quote_version`, отличной от текущей редакции, или по КП, которое
   уже не ждёт одобрения, не применяется — запись в журнал КП; повтор применённого решения — без изменений.
 - **Права.** Своей цепочки одобрения директором у ERP нет: код финального утверждения КП удалён из `ErpPermission`
   (`erp-integration.yaml` 0.7.0, ломающее до 1.0 — минором, ADR-0016) и из `platform-rbac.yaml` (`eds.drafts` → ERP
-  `quote.review`, `quote.send`); данные ролей ERP чистят миграции `accounts/0010`, `integration/0010`.
+  `quote.review`); данные ролей ERP чистят миграции `accounts/0010`, `integration/0010`. **Отправить одобренное КП клиенту**
+  (`quote.send`, `POST /crm/quotes/{id}/send-to-client/`) могут менеджер заявки и директор: с 2026-10-26 код отделён от
+  `eds.drafts` и дан разделу `crm.clients` full (решение архитектора, C1-G-4); снабженец-автор, гл. инженер и бухгалтер — 403.
+  Объектной проверки «своя заявка» нет: в пути C1 у сделки из CRM нет ответственного в ERP.
+- **API КП** (`erp-internal.yaml`, `QuoteSerializer`, C1-G-5): `outgoing_number`, `director_decision`, `director_comment`,
+  `send_channels` — только чтение; решение, комментарий и каналы видят сотрудники своей компании, не покупатель.

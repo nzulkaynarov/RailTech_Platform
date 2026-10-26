@@ -24,6 +24,11 @@ class DealRef(_Tolerant):
 class RequestPayload(_Tolerant):
     erp_request_id: int | None = None
     summary: str | None = None
+    # Отправитель и менеджер письма (необязательные, с 2026-10-26, C1-G-7); старое событие их не несёт.
+    company_name: str | None = None
+    company_inn: str | None = None
+    contact_name: str | None = None
+    manager_crm_user_id: int | None = None
 
 
 class RequestCreated(_Tolerant):

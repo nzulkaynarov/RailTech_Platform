@@ -200,11 +200,12 @@ EXPECTED: dict[tuple[str, str], tuple[set[str], set[str]]] = {
     ("crm.leads", "read"): (LEADS_READ, set()),
     ("crm.leads", "full"): (LEADS_FULL, set()),
     ("crm.clients", "read"): (CLIENTS_READ, set()),
-    ("crm.clients", "full"): (CLIENTS_FULL, {"deal.manage"}),
+    # quote.send — отправка одобренного КП клиенту (C1-G-4, решение архитектора 2026-10-26)
+    ("crm.clients", "full"): (CLIENTS_FULL, {"deal.manage", "quote.send"}),
     ("eds.inbox", "read"): NOTHING,
     ("eds.inbox", "full"): (set(), {"deal.assign"}),
     ("eds.drafts", "read"): NOTHING,
-    ("eds.drafts", "full"): (set(), {"quote.review", "quote.send"}),
+    ("eds.drafts", "full"): (set(), {"quote.review"}),
     ("eds.projects", "read"): NOTHING,
     ("eds.projects", "full"): (set(), {"contract.manage", "contract.sign", "fulfillment.act"}),
     ("eds.payments", "read"): NOTHING,
@@ -279,7 +280,7 @@ def test_every_restricted_field_gives_the_expected_erp_rights(name: str, erp: se
 # Права ERP целых ролей, выписанные вручную.
 DIRECTOR_ERP = set(ERP_PERMISSIONS) - {"team.manage"}  # команду ведёт только администратор
 ROLE_ERP: dict[str, set[str]] = {
-    "MANAGER": {"deal.manage"},
+    "MANAGER": {"deal.manage", "quote.send"},
     "DIRECTOR": DIRECTOR_ERP,
     "SUPPLY": {
         "deal.manage",

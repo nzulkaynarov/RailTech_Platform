@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://railtech.uz/contracts/events/eds/approval.decided.v1.json",
   "title": "Решение по маршруту согласования",
-  "description": "Тип uz.railtech.eds.approval.decided.v1, источник rt://eds. Поле data конверта (envelope.v1.json). Решение на шаге маршрута: approve, return (на доработку), reject; comment обязателен для return и reject. route_status — состояние маршрута после решения (open — есть следующий шаг). Что делает ERP (EDS-03) для approval.object.kind = quote и закрытого маршрута: approved — ИСХ-номер outgoing_number на КП, отправка по channels разблокирована; returned — КП «На доработке» с комментарием; rejected — КП отклонено директором.",
+  "description": "Тип uz.railtech.eds.approval.decided.v1, источник rt://eds. Поле data конверта (envelope.v1.json). Решение на шаге маршрута: approve, return (на доработку), reject; comment обязателен для return и reject. route_status — состояние маршрута после решения (open — есть следующий шаг). Что делает ERP (EDS-03) для approval.object.kind = quote и закрытого маршрута: approved — ИСХ-номер outgoing_number на КП, отправка по channels разблокирована; returned — КП «На доработке» с комментарием; rejected — КП отклонено директором. Одобрение КП, готового позже срока резолюции, допустимо (строка «срок» чек-листа — предупреждение) и помечается approved_late = true.",
   "type": "object",
   "required": [
     "approval",
@@ -83,6 +83,10 @@
         "$ref": "_defs.v1.json#/$defs/SendChannel"
       },
       "description": "Для одобренного КП: каналы отправки клиенту, выбранные директором"
+    },
+    "approved_late": {
+      "type": "boolean",
+      "description": "Для одобренного КП: true — директор одобрил КП, готовое позже срока резолюции, осознанно приняв опоздание (строка чек-листа due — предупреждение, не блок; решение архитектора 2026-10-26, C1-G-1). Нет поля или false — срок выдержан или не задан. Необязательное"
     },
     "actor": {
       "$ref": "_defs.v1.json#/$defs/Actor"

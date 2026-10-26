@@ -35,7 +35,9 @@ async def test_request_created_registers_letter_with_links_and_event(
     assert (letter["number"], letter["status"]) == ("ВХ-001/26", "awaiting_resolution")
     assert letter["subject"] == "Поставка оборудования, партия 1"
     assert letter["summary"] == "Нужны 20 комплектов, срок — ноябрь"
-    assert letter["sender"] == {"name": None, "inn": None}
+    # C1-G-7: отправитель (компания, ИНН, контакт) и менеджер — из payload заявки
+    assert letter["sender"] == {"name": "ООО «Пример Логистик»", "inn": "301234567", "contact": "Бахтиёр Каримов"}
+    assert letter["manager"] == {"crm_user_id": 5, "full_name": "Алия Каримова"}
     assert letter["registered_by"] is None and letter["urgent"] is False
     assert letter["links"] == {
         "erp_request_id": 77,
@@ -50,7 +52,39 @@ async def test_request_created_registers_letter_with_links_and_event(
     [event] = await outbox(container, "letter.registered")
     assert event["data"]["actor"] == {"type": "system"}
     assert event["data"]["links"]["erp_request_id"] == 77 and event["data"]["links"]["crm_client_id"] == 42
+    assert event["data"]["letter"]["sender"] == {
+        "name": "ООО «Пример Логистик»",
+        "inn": "301234567",
+        "contact": "Бахтиёр Каримов",
+    }
+
+
+async def test_old_event_without_sender_and_manager_is_still_accepted(
+    client: httpx.AsyncClient, container: Container, staff: dict[str, Person]
+) -> None:
+    """L8: поля C1-G-7 необязательные — событие издателя до 2026-10-26 даёт письмо без отправителя и менеджера."""
+    envelope = example("erp/request.created.v1")
+    for name in ("company_name", "company_inn", "contact_name", "manager_crm_user_id"):
+        del envelope["data"]["payload"][name]
+    assert await deliver_erp(client, container, envelope) == "processed"
+    [item] = (await client.get("/api/v1/letters", headers=staff["manager"].headers)).json()["items"]
+    letter = (await client.get(f"/api/v1/letters/{item['id']}", headers=staff["manager"].headers)).json()
+    validate("Letter", letter)
+    assert letter["sender"] == {"name": None, "inn": None, "contact": None}
+    assert letter["manager"] is None
+    [event] = await outbox(container, "letter.registered")
     assert event["data"]["letter"]["sender"] == {"name": None, "inn": None}
+
+
+async def test_long_company_name_is_cut_to_the_column_and_blank_contact_is_dropped(
+    client: httpx.AsyncClient, container: Container, staff: dict[str, Person]
+) -> None:
+    """Название компании ERP — до 300 символов, отправитель письма EDS — до 255; пустой контакт — нет контакта."""
+    await deliver_erp(client, container, request_created(company_name="  " + "Я" * 298, contact_name=" "))
+    [item] = (await client.get("/api/v1/letters", headers=staff["manager"].headers)).json()["items"]
+    letter = (await client.get(f"/api/v1/letters/{item['id']}", headers=staff["manager"].headers)).json()
+    validate("Letter", letter)
+    assert letter["sender"] == {"name": "Я" * 255, "inn": "301234567", "contact": None}
 
 
 async def test_repeat_of_the_event_does_not_create_second_letter_or_number(

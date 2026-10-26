@@ -50,6 +50,7 @@ class Letter(Base):
     summary: Mapped[str] = mapped_column(Text)
     sender_name: Mapped[str | None] = mapped_column(String(255))
     sender_inn: Mapped[str | None] = mapped_column(String(14))
+    sender_contact: Mapped[str | None] = mapped_column(String(255))
     sender_ref_number: Mapped[str | None] = mapped_column(String(64))
     sender_ref_date: Mapped[date | None] = mapped_column(Date)
     received_at: Mapped[date] = mapped_column(Date)

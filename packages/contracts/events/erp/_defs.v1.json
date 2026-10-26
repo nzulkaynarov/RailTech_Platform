@@ -124,6 +124,28 @@
         },
         "summary": {
           "type": "string"
+        },
+        "company_name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 300,
+          "description": "Название компании клиента (отправитель письма EDS по заявке). Необязательное, с 2026-10-26 (C1-G-7); нет — EDS показывает клиента по crm_client_id"
+        },
+        "company_inn": {
+          "type": "string",
+          "pattern": "^\\d{9,14}$",
+          "description": "ИНН компании клиента; публикуется, только если похож на ИНН (9–14 цифр). Необязательное (C1-G-7)"
+        },
+        "contact_name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 255,
+          "description": "Контактное лицо клиента по заявке (офлайн-контакт сделки, представитель клиента или основной контакт передачи из CRM). Необязательное (C1-G-7)"
+        },
+        "manager_crm_user_id": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Менеджер заявки — сотрудник CRM (crm_user_id): ответственный передачи из CRM, иначе ответственный сделки ERP с сопоставлением CRM. Нет — менеджер не назначен. Необязательное (C1-G-7)"
         }
       },
       "additionalProperties": false

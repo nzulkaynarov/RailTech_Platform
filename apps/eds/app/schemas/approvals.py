@@ -93,6 +93,7 @@ class ChecklistItem(BaseModel):
     code: Literal["visa_goods", "visa_services", "margin", "due"]
     label: str
     ok: bool
+    blocking: bool
     by: QuoteVisaAuthor | None
     at: dt.datetime | None
     value: str | None
@@ -151,5 +152,6 @@ class Approval(BaseModel):
     can_decide: bool
     allowed_decisions: list[Decision]
     outgoing_number: str | None
+    approved_late: bool
     created_at: dt.datetime
     closed_at: dt.datetime | None

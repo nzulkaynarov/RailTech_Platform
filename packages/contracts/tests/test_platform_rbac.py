@@ -161,7 +161,7 @@ def test_eds_api_global_security_is_the_eds_access_token() -> None:
     assert EDS_YAML["security"] == [{"edsAccess": []}]
     scheme = EDS_YAML["components"]["securitySchemes"]["edsAccess"]
     assert (scheme["type"], scheme["scheme"], scheme["bearerFormat"]) == ("http", "bearer", "JWT")
-    assert EDS_YAML["info"]["version"] == "0.1.0"
+    assert EDS_YAML["info"]["version"] == "0.2.0"  # 0.2.0 — хвосты гейта C1 (F4, аддитивно)
 
 
 def test_numbers_are_not_path_parameters() -> None:
@@ -170,3 +170,39 @@ def test_numbers_are_not_path_parameters() -> None:
         for segment in Path(path).parts:
             if segment.startswith("{"):
                 assert segment.endswith("_id}"), path
+
+
+def erp_permissions(access: dict[str, str]) -> set[str]:
+    """Права ERP по объединённой матрице доступа — то же правило, что для EDS (ADR-0012 п. 5)."""
+    backend = {r["key"]: (r.get("backend") or {}).get("erp") or {} for r in CATALOG["resources"]}
+    codes: set[str] = set()
+    for key, level in access.items():
+        lists = backend[key]
+        codes.update(lists.get("read", ()))
+        if level == "full":
+            codes.update(lists.get("full", ()))
+    return codes
+
+
+@pytest.mark.parametrize(
+    ("code", "sends"),
+    [("DIRECTOR", True), ("MANAGER", True), ("SUPPLY", False), ("ENGINEER", False), ("ACCOUNTANT", False)],
+)
+def test_approved_quote_is_sent_to_the_client_by_the_manager_and_the_director(code: str, sends: bool) -> None:
+    """C1-G-4 (решение архитектора 2026-10-26): `quote.send` отделён от `eds.drafts` и дан разделу `crm.clients` full.
+
+    Отправляют менеджер заявки и директор; автор КП (снабженец), гл. инженер и бухгалтер — нет.
+    """
+    assert ("quote.send" in erp_permissions(role(code))) is sends
+
+
+def test_quote_send_comes_only_from_crm_clients_full() -> None:
+    holders = {
+        (r["key"], level)
+        for r in CATALOG["resources"]
+        for level, codes in ((r.get("backend") or {}).get("erp") or {}).items()
+        if "quote.send" in codes
+    }
+    assert holders == {("crm.clients", "full")}
+    drafts = next(r for r in CATALOG["resources"] if r["key"] == "eds.drafts")
+    assert drafts["backend"]["erp"] == {"full": ["quote.review"]}

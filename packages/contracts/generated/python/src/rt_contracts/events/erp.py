@@ -808,11 +808,27 @@ class RequestCreated(BaseModel):
     source: Source
     erp_request_id: int | None = None
     summary: str | None = None
+    company_name: Annotated[str | None, Field(max_length=300, min_length=1)] = None
+    """
+    Название компании клиента (отправитель письма EDS по заявке). Необязательное, с 2026-10-26 (C1-G-7); нет — EDS показывает клиента по crm_client_id
+    """
+    company_inn: Annotated[str | None, Field(pattern="^\\d{9,14}$")] = None
+    """
+    ИНН компании клиента; публикуется, только если похож на ИНН (9–14 цифр). Необязательное (C1-G-7)
+    """
+    contact_name: Annotated[str | None, Field(max_length=255, min_length=1)] = None
+    """
+    Контактное лицо клиента по заявке (офлайн-контакт сделки, представитель клиента или основной контакт передачи из CRM). Необязательное (C1-G-7)
+    """
+    manager_crm_user_id: Annotated[int | None, Field(ge=1)] = None
+    """
+    Менеджер заявки — сотрудник CRM (crm_user_id): ответственный передачи из CRM, иначе ответственный сделки ERP с сопоставлением CRM. Нет — менеджер не назначен. Необязательное (C1-G-7)
+    """
 
 
 class RequestCreatedV1(BaseModel):
     """
-    Тип uz.railtech.erp.request.created.v1, источник rt://erp. Поле data конверта (envelope.v1.json); прежнее тело события request.created из events.schema.json без version, event, occurred_at. Что делает CRM: лента лида в CRM; зеркало сделки open.
+    Тип uz.railtech.erp.request.created.v1, источник rt://erp. Поле data конверта (envelope.v1.json); прежнее тело события request.created из events.schema.json без version, event, occurred_at. Что делает CRM: лента лида в CRM; зеркало сделки open. Что делает EDS: регистрирует входящее письмо по заявке (EDS-01); отправитель — payload.company_name, company_inn и contact_name, менеджер — payload.manager_crm_user_id (необязательные, с 2026-10-26, C1-G-7; старое событие без них принимается).
     """
 
     model_config = ConfigDict(

@@ -37,6 +37,7 @@ from .event_builders import (  # noqa: F401 — публичная поверх�
     client_actor,
     contact_refs,
     event_type_name,
+    request_parties,
 )
 
 logger = logging.getLogger(__name__)
@@ -86,8 +87,13 @@ def publish_request_created(
     summary: Optional[str] = None,
     actor: Optional[Dict[str, Any]] = None,
     crm_client_id: Optional[int] = None,
+    manager_crm_user_id: Optional[int] = None,
 ) -> Optional[Event]:
-    """Событие `request.created`: заявка (сделка) создана. Источник решает создатель: портал — `cabinet`, передача из CRM — `crm`."""
+    """Событие `request.created`: заявка (сделка) создана. Источник решает создатель: портал — `cabinet`, передача из CRM — `crm`.
+
+    Отправитель и менеджер (C1-G-7) — `request_parties`: EDS заполняет ими письмо по заявке. `manager_crm_user_id` —
+    менеджер, известный вызывающему (ответственный передачи из CRM); иначе — ответственный сделки ERP.
+    """
     if source not in REQUEST_SOURCES:
         source = "erp"
     company_id = deal.company_id if hasattr(deal, "company_id") else deal["company_id"]
@@ -98,6 +104,8 @@ def publish_request_created(
         payload["erp_request_id"] = erp_request_id
     if summary:
         payload["summary"] = summary
+    if not isinstance(deal, dict):
+        payload.update(request_parties(deal, manager_crm_user_id))
 
     return publish_event(
         "request.created",

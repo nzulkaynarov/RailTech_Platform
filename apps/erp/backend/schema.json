@@ -26362,6 +26362,31 @@
                         "title": "Дата одобрения",
                         "description": "Когда КП было одобрено клиентом"
                     },
+                    "outgoing_number": {
+                        "type": "string",
+                        "readOnly": true,
+                        "title": "Исходящий номер (EDS)",
+                        "description": "ИСХ-NNN/ГГ, присвоенный EDS при одобрении КП директором; пусто — КП не одобрено"
+                    },
+                    "director_decision": {
+                        "type": "string",
+                        "readOnly": true,
+                        "description": "Последнее решение директора в EDS по текущей редакции: approve, return (на доработку), reject; пусто — нет"
+                    },
+                    "director_comment": {
+                        "type": "string",
+                        "readOnly": true,
+                        "title": "Комментарий директора",
+                        "description": "Комментарий решения в EDS: обязателен при возврате на доработку и отклонении"
+                    },
+                    "send_channels": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        },
+                        "readOnly": true,
+                        "description": "Каналы отправки клиенту, выбранные директором при одобрении (telegram, cabinet, email)"
+                    },
                     "items": {
                         "type": "array",
                         "items": {
@@ -26412,6 +26437,8 @@
                     "created_at",
                     "deal",
                     "delivery_basis_data",
+                    "director_comment",
+                    "director_decision",
                     "economics",
                     "effective_delivery_lead_time_days",
                     "first_viewed_at",
@@ -26424,9 +26451,11 @@
                     "id",
                     "items",
                     "number",
+                    "outgoing_number",
                     "prepared_by",
                     "public_access_token",
                     "public_token_revoked",
+                    "send_channels",
                     "status",
                     "status_code",
                     "status_name",

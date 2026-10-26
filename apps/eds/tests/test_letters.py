@@ -1,12 +1,13 @@
 """Входящие письма и резолюции (pg): регистрация, резолюция, возврат, отказ, повторная подача, события и журнал."""
 
-from datetime import date
+from datetime import UTC, date, datetime
 from typing import Any
 
 import httpx
 import pytest
 
 from app.container import Container
+from tests.conftest import FakeClock
 from tests.domain import Person, outbox, validate
 from tests.test_api_auth import assert_error
 
@@ -77,7 +78,14 @@ async def test_register_requires_sender_or_client(client: httpx.AsyncClient, sta
         headers=staff["registrar"].headers,
     )
     assert ok.status_code == 201
-    assert ok.json()["sender"] == {"name": None, "inn": None}
+    assert ok.json()["sender"] == {"name": None, "inn": None, "contact": None}
+    with_contact = await client.post(
+        "/api/v1/letters",
+        json={**NEW_LETTER, "sender": {"name": "ООО «Другое»", "contact": "Бахтиёр Каримов"}, "links": {}},
+        headers=staff["registrar"].headers,
+    )
+    assert with_contact.status_code == 201, with_contact.text
+    assert with_contact.json()["sender"] == {"name": "ООО «Другое»", "inn": None, "contact": "Бахтиёр Каримов"}
 
 
 async def test_register_rejects_unknown_fields_and_inactive_manager(
@@ -151,6 +159,24 @@ async def test_resolution_assignees_must_be_active_unique_employees(
     letter = await register(client, staff["registrar"])
     response = await act(client, staff["director"], letter["id"], "resolution", {**RESOLUTION, "assignees": assignees})
     assert_error(response, 422, "VALIDATION_FAILED")
+
+
+async def test_resolution_due_in_the_past_is_rejected_today_is_accepted(
+    client: httpx.AsyncClient, container: Container, staff: dict[str, Person], clock: FakeClock
+) -> None:
+    """C1-G-1 (решение архитектора 2026-10-26): срок резолюции раньше сегодняшней даты по Asia/Tashkent — 422."""
+    letter = await register(client, staff["registrar"])
+    past = await act(client, staff["director"], letter["id"], "resolution", {**RESOLUTION, "due": "2026-10-25"})
+    body = assert_error(past, 422, "VALIDATION_FAILED")
+    assert [f["field"] for f in body["details"]["fields"]] == ["due"]
+    assert await outbox(container, "letter.resolved") == []
+    # 26.10 20:30 UTC — уже 27.10 в Ташкенте (UTC+5): «вчера» по часовому поясу компании — 26.10
+    clock.set(datetime(2026, 10, 26, 20, 30, tzinfo=UTC))
+    still_past = await act(client, staff["director"], letter["id"], "resolution", {**RESOLUTION, "due": "2026-10-26"})
+    assert_error(still_past, 422, "VALIDATION_FAILED")
+    today = await act(client, staff["director"], letter["id"], "resolution", {**RESOLUTION, "due": "2026-10-27"})
+    assert today.status_code == 200, today.text
+    assert today.json()["resolution"]["due"] == "2026-10-27"
 
 
 async def test_return_requires_comment_and_resubmit_keeps_the_number(
