@@ -15,6 +15,9 @@ import httpx
 from app.request_id import HEADER, request_id_var
 
 TIMEOUT_SECONDS = 3.0
+# Проба внешнего сервиса через CRM («Проверить связь», сопряжение, тестовое письмо, проба модели)
+# идёт дольше обычного вызова: у самой CRM таймаут пробы до 10 с (SMTP) плюс запас на очередь.
+PROBE_TIMEOUT_SECONDS = 30.0
 # CRM: вход (хеш пароля) под нагрузкой не укладывался в 3 с; `PLATFORM_CRM_TIMEOUT_SECONDS`.
 CRM_TIMEOUT_SECONDS = 5.0
 
@@ -42,6 +45,15 @@ async def _forward_request_id(request: httpx.Request) -> None:
     request_id = request_id_var.get()
     if request_id:
         request.headers[HEADER] = request_id
+
+
+def _is_app_error(response: httpx.Response) -> bool:
+    """502 — ответ самой CRM (тело `{code, ...}`), а не прокси (у прокси HTML или пусто)."""
+    try:
+        body = response.json()
+    except ValueError:
+        return False
+    return isinstance(body, dict) and isinstance(body.get("code"), str)
 
 
 def cookie_value(response: httpx.Response, name: str) -> str | None:
@@ -99,11 +111,17 @@ class BackendClient:
         json: Any = None,
         params: dict[str, Any] | None = None,
         headers: dict[str, str] | None = None,
+        probe: bool = False,
         content: bytes | None = None,
     ) -> httpx.Response:
         """Вызов бэкенда от имени сотрудника. 2xx и 4xx возвращаются как есть (решает вызывающий),
         сеть, таймаут и 5xx — `BackendUnavailableError`. `content` — готовое тело (загрузка файла
-        `multipart/form-data` целиком, с `Content-Type` в `headers`)."""
+        `multipart/form-data` целиком, с `Content-Type` в `headers`).
+
+        `probe` — проба внешнего сервиса через бэкенд: таймаут `PROBE_TIMEOUT_SECONDS`, а 502 CRM
+        («сервис за мной не ответил: ERP, SMTP, Telegram») с JSON-телом приложения идёт как
+        есть — причина в теле, это результат проверки, а не сбой бэкенда. 502 прокси (HTML,
+        пустое тело) и сетевой сбой остаются `BackendUnavailableError`."""
         headers = dict(headers or {})
         if access:
             headers["Authorization"] = f"Bearer {access}"
@@ -111,10 +129,18 @@ class BackendClient:
             headers["Cookie"] = "; ".join(f"{k}={v}" for k, v in cookies.items())
         try:
             response = await self.http.request(
-                method, path, headers=headers, json=json, params=params, content=content
+                method,
+                path,
+                headers=headers,
+                json=json,
+                params=params,
+                content=content,
+                timeout=httpx.Timeout(PROBE_TIMEOUT_SECONDS) if probe else httpx.USE_CLIENT_DEFAULT,
             )
         except httpx.HTTPError as exc:
             raise BackendUnavailableError(self.name, type(exc).__name__) from exc
+        if probe and response.status_code == httpx.codes.BAD_GATEWAY and _is_app_error(response):
+            return response
         if response.status_code >= 500:
             raise BackendUnavailableError(
                 self.name, f"HTTP {response.status_code}", status=response.status_code

@@ -1,6 +1,6 @@
 """Модели Admin · Компания — схемы `Company*`, `Brand*`, `Numbering*`, `QuoteDefaults*`, `Charge*`,
 `DocumentTemplate*`, `EmailTemplate*`, `Reference*`, `Catalog*`, `CategoryRequest*`,
-`PlatformSettings*` из packages/contracts/openapi/platform-bff.yaml (0.7.0) и перевод ответов ERP.
+`PlatformSettings*` из packages/contracts/openapi/platform-bff.yaml (0.8.0) и перевод ответов ERP.
 
 Поля с ограничением (правило 6 CONVENTIONS): маржа в условиях КП — группа `cost_margin`.
 """

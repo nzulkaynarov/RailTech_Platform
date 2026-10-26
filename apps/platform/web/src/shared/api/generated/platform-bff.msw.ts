@@ -52,7 +52,7 @@
  * обычными API (с проверкой прав). Данных событий в потоке нет. Пока поток жив, опрос — редкий (5 минут), при обрыве —
  * прежние 30 секунд. Чисто добавляющее изменение.
  *
- * **0.7.0 (W13-A3) — Admin · Компания.** Чисто добавляющее изменение: `GET/PATCH /admin/company` (реквизиты), `/admin/company/logo`
+ * **0.8.0 (W13-A3) — Admin · Компания.** Чисто добавляющее изменение: `GET/PATCH /admin/company` (реквизиты), `/admin/company/logo`
  * (загрузка `multipart/form-data` и удаление), `/admin/company/brand` (+ `/logo`, `/preview`) — бланк и бренд документов,
  * `/admin/company/numbering` (+ `/preview`), `/admin/company/quote-defaults`, `/admin/company/charge-types` и `charge-templates`,
  * `/admin/company/document-templates` (+ `placeholders`, `preview`, `{id}/copy`), `/admin/company/email-templates` (+ `{id}/preview`),
@@ -66,6 +66,17 @@
  * **0.6.0 (R-1c, R3-D-1) — ломающее (до 1.0 допустимо).** У сотрудника хотя бы одна роль: `EmployeeUpdate.role_ids` —
  * `minItems: 1`, пустой набор — 422 `ROLES_REQUIRED` (`details.fields = [role_ids]`), в CRM запрос не уходит; тот же код —
  * перевод отказа CRM `roles_required` (CRM API 0.3.0). Закрыть доступ — `is_active = false` («Отключить сотрудника»).
+ *
+ * **0.7.0 (W13-A1) — добавляющее.** Admin · Внешние интеграции (SPEC-v3 §7.6, тег `integrations`): обзор `GET /admin/integrations`
+ * (карточки со статусом пятью уровнями — `ok`, `warn`, `fail`, `unknown`, `off` — уровни реестра внешних сервисов CRM, ADR-0024 CRM,
+ * последняя активность и список «Требует внимания») и прокси к CRM под `/admin/integrations/*`: коннектор ERP (проверка,
+ * сопряжение, ротация ключей), Telegram-бот (токен, канал команды, профиль), почта SMTP (настройки, проверка, тестовое
+ * письмо, журнал), реестр внешних сервисов (проверка, выключатель), модели ИИ (смена, сброс, проверка), расходы, бэкапы,
+ * состояние системы. Чтение — раздел `admin` от `read`; всё изменяющее и каждая проверка — `admin: full` (директору — 403).
+ * Секреты (токен бота, ключи моделей, пароль SMTP, коды сопряжения) BFF только передаёт в CRM и не возвращает — в ответах
+ * маски (`configured`, `*_last4`). Изменение секретов подтверждается паролем администратора (`password`, повторный ввод):
+ * он уходит только в CRM. Коды ошибок: `WRONG_PASSWORD` (422), `NOT_CONFIGURED`, `SECRETS_KEY_MISSING`,
+ * `SERVICE_NOT_SWITCHABLE` (409), `INTEGRATION_FAILED` (502, причина в `details.reason`).
  *
  * 0.2.4: `423 ACCOUNT_LOCKED` объявлен и на `POST /auth/change-password` (CRM блокирует учётную запись после неверных
  * текущих паролей).
@@ -85,7 +96,7 @@
  * Лимиты: вход — 10 неудачных попыток в минуту на IP и e-mail; остальные запросы — 300 в минуту на сессию; превышение — 429
  * `TOO_MANY_REQUESTS` с `Retry-After`.
  *
- * OpenAPI spec version: 0.7.0
+ * OpenAPI spec version: 0.8.0
  */
 import { faker } from "@faker-js/faker";
 
@@ -94,11 +105,16 @@ import type { RequestHandlerOptions } from "msw";
 
 import {
   AccessLevel,
+  AttentionKind,
   CategoryRequestStatus,
   DocumentKind,
   DueLabel,
   EmployeeStatus,
   ErpSyncState,
+  IntegrationAccess,
+  IntegrationCardKey,
+  IntegrationNote,
+  IntegrationStatus,
   Language,
   ModuleCode,
   NotificationTab,
@@ -110,7 +126,14 @@ import {
   StepCode,
 } from "./model";
 import type {
+  ActionOk,
   ActivityFeed,
+  AiModelChange,
+  AiModelList,
+  AiModelTest,
+  AiSpendReport,
+  BackupsStatus,
+  BotProfileState,
   BrandProfile,
   CatalogCategory,
   CatalogCategoryList,
@@ -129,7 +152,16 @@ import type {
   EmailTemplatePreview,
   Employee,
   EmployeeList,
+  ErpCheck,
+  ErpConnector,
+  ErpPairing,
+  ExternalService,
+  ExternalServiceDetail,
+  ExternalServiceList,
   Health,
+  IntegrationsOverview,
+  MailLog,
+  MailQueued,
   Me,
   MenuCounters,
   NotificationPage,
@@ -146,6 +178,12 @@ import type {
   RolePreview,
   SearchResult,
   Session,
+  SmtpCheck,
+  SmtpConnector,
+  SpendReport,
+  SystemStatus,
+  TelegramChannelList,
+  TelegramConnector,
 } from "./model";
 
 export const getLoginResponseMock = (
@@ -496,6 +534,1161 @@ export const getSearchResponseMock = (
     crm: faker.helpers.arrayElement(Object.values(SourceState)),
     erp: faker.helpers.arrayElement(Object.values(SourceState)),
   },
+  ...overrideResponse,
+});
+
+export const getGetIntegrationsOverviewResponseMock = (
+  overrideResponse: Partial<Extract<IntegrationsOverview, object>> = {},
+): IntegrationsOverview => ({
+  checked_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+  cards: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+    key: faker.helpers.arrayElement(Object.values(IntegrationCardKey)),
+    status: faker.helpers.arrayElement(Object.values(IntegrationStatus)),
+    access: faker.helpers.arrayElement(Object.values(IntegrationAccess)),
+    note: faker.helpers.arrayElement(Object.values(IntegrationNote)),
+    count: faker.helpers.arrayElement([faker.number.int(), null]),
+    amount_usd: faker.helpers.arrayElement([faker.number.float({ fractionDigits: 2 }), null]),
+    last_activity_at: faker.helpers.arrayElement([
+      faker.date.past().toISOString().slice(0, 19) + "Z",
+      null,
+    ]),
+  })),
+  attention: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+    () => ({
+      id: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      card: faker.helpers.arrayElement(Object.values(IntegrationCardKey)),
+      severity: faker.helpers.arrayElement(["fail", "warn", "setup"] as const),
+      kind: faker.helpers.arrayElement(Object.values(AttentionKind)),
+      subject: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        null,
+      ]),
+      detail: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        null,
+      ]),
+    }),
+  ),
+  ...overrideResponse,
+});
+
+export const getGetErpConnectorResponseMock = (
+  overrideResponse: Partial<Extract<ErpConnector, object>> = {},
+): ErpConnector => ({
+  base_url: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  configured: faker.datatype.boolean(),
+  mode: faker.helpers.arrayElement(["local", "erp"] as const),
+  paired: faker.datatype.boolean(),
+  previous_secret_until: faker.helpers.arrayElement([
+    faker.date.past().toISOString().slice(0, 19) + "Z",
+    null,
+  ]),
+  rotation_pending: faker.datatype.boolean(),
+  secrets_enabled: faker.datatype.boolean(),
+  suggested_base_url: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  token_configured: faker.datatype.boolean(),
+  token_last4: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
+  token_updated_at: faker.helpers.arrayElement([
+    faker.date.past().toISOString().slice(0, 19) + "Z",
+    null,
+  ]),
+  webhook_secret_configured: faker.datatype.boolean(),
+  webhook_secret_last4: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
+  ...overrideResponse,
+});
+
+export const getCheckErpConnectorResponseMock = (
+  overrideResponse: Partial<Extract<ErpCheck, object>> = {},
+): ErpCheck => ({
+  checked_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+  latency_ms: faker.helpers.arrayElement([faker.number.int(), null]),
+  migrations_applied: faker.helpers.arrayElement([faker.datatype.boolean(), null]),
+  queue_alive: faker.helpers.arrayElement([faker.datatype.boolean(), null]),
+  retry_after_s: faker.helpers.arrayElement([faker.number.int(), null]),
+  status: faker.helpers.arrayElement(["ok", "degraded", "rate_limited"] as const),
+  version: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
+  ...overrideResponse,
+});
+
+export const getPairErpResponseMock = (
+  overrideResponse: Partial<Extract<ErpPairing, object>> = {},
+): ErpPairing => ({
+  check: faker.helpers.arrayElement([
+    {
+      checked_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+      latency_ms: faker.helpers.arrayElement([faker.number.int(), null]),
+      migrations_applied: faker.helpers.arrayElement([faker.datatype.boolean(), null]),
+      queue_alive: faker.helpers.arrayElement([faker.datatype.boolean(), null]),
+      retry_after_s: faker.helpers.arrayElement([faker.number.int(), null]),
+      status: faker.helpers.arrayElement(["ok", "degraded", "rate_limited"] as const),
+      version: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        null,
+      ]),
+    },
+    null,
+  ]),
+  check_error: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
+  status: {
+    base_url: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    configured: faker.datatype.boolean(),
+    mode: faker.helpers.arrayElement(["local", "erp"] as const),
+    paired: faker.datatype.boolean(),
+    previous_secret_until: faker.helpers.arrayElement([
+      faker.date.past().toISOString().slice(0, 19) + "Z",
+      null,
+    ]),
+    rotation_pending: faker.datatype.boolean(),
+    secrets_enabled: faker.datatype.boolean(),
+    suggested_base_url: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    token_configured: faker.datatype.boolean(),
+    token_last4: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    token_updated_at: faker.helpers.arrayElement([
+      faker.date.past().toISOString().slice(0, 19) + "Z",
+      null,
+    ]),
+    webhook_secret_configured: faker.datatype.boolean(),
+    webhook_secret_last4: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+  },
+  ...overrideResponse,
+});
+
+export const getRotateErpKeysResponseMock = (
+  overrideResponse: Partial<Extract<ErpPairing, object>> = {},
+): ErpPairing => ({
+  check: faker.helpers.arrayElement([
+    {
+      checked_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+      latency_ms: faker.helpers.arrayElement([faker.number.int(), null]),
+      migrations_applied: faker.helpers.arrayElement([faker.datatype.boolean(), null]),
+      queue_alive: faker.helpers.arrayElement([faker.datatype.boolean(), null]),
+      retry_after_s: faker.helpers.arrayElement([faker.number.int(), null]),
+      status: faker.helpers.arrayElement(["ok", "degraded", "rate_limited"] as const),
+      version: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        null,
+      ]),
+    },
+    null,
+  ]),
+  check_error: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
+  status: {
+    base_url: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    configured: faker.datatype.boolean(),
+    mode: faker.helpers.arrayElement(["local", "erp"] as const),
+    paired: faker.datatype.boolean(),
+    previous_secret_until: faker.helpers.arrayElement([
+      faker.date.past().toISOString().slice(0, 19) + "Z",
+      null,
+    ]),
+    rotation_pending: faker.datatype.boolean(),
+    secrets_enabled: faker.datatype.boolean(),
+    suggested_base_url: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    token_configured: faker.datatype.boolean(),
+    token_last4: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    token_updated_at: faker.helpers.arrayElement([
+      faker.date.past().toISOString().slice(0, 19) + "Z",
+      null,
+    ]),
+    webhook_secret_configured: faker.datatype.boolean(),
+    webhook_secret_last4: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+  },
+  ...overrideResponse,
+});
+
+export const getGetTelegramConnectorResponseMock = (
+  overrideResponse: Partial<Extract<TelegramConnector, object>> = {},
+): TelegramConnector => ({
+  channel_id: faker.helpers.arrayElement([faker.number.int(), null]),
+  channel_title: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
+  configured: faker.datatype.boolean(),
+  last4: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
+  last_error: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
+  mode: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  running: faker.datatype.boolean(),
+  secrets_enabled: faker.datatype.boolean(),
+  updated_at: faker.helpers.arrayElement([
+    faker.date.past().toISOString().slice(0, 19) + "Z",
+    null,
+  ]),
+  username: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
+  ...overrideResponse,
+});
+
+export const getSetTelegramTokenResponseMock = (
+  overrideResponse: Partial<Extract<TelegramConnector, object>> = {},
+): TelegramConnector => ({
+  channel_id: faker.helpers.arrayElement([faker.number.int(), null]),
+  channel_title: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
+  configured: faker.datatype.boolean(),
+  last4: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
+  last_error: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
+  mode: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  running: faker.datatype.boolean(),
+  secrets_enabled: faker.datatype.boolean(),
+  updated_at: faker.helpers.arrayElement([
+    faker.date.past().toISOString().slice(0, 19) + "Z",
+    null,
+  ]),
+  username: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
+  ...overrideResponse,
+});
+
+export const getListTelegramChannelsResponseMock = (
+  overrideResponse: Partial<Extract<TelegramChannelList, object>> = {},
+): TelegramChannelList => ({
+  items: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+    chat_id: faker.number.int(),
+    chat_type: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    detected_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+    title: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  })),
+  ...overrideResponse,
+});
+
+export const getConnectTelegramChannelResponseMock = (
+  overrideResponse: Partial<Extract<ActionOk, object>> = {},
+): ActionOk => ({
+  id: faker.helpers.arrayElement([faker.number.int(), null]),
+  ok: true,
+  ...overrideResponse,
+});
+
+export const getTestTelegramChannelResponseMock = (
+  overrideResponse: Partial<Extract<ActionOk, object>> = {},
+): ActionOk => ({
+  id: faker.helpers.arrayElement([faker.number.int(), null]),
+  ok: true,
+  ...overrideResponse,
+});
+
+export const getGetBotProfileResponseMock = (
+  overrideResponse: Partial<Extract<BotProfileState, object>> = {},
+): BotProfileState => ({
+  profile: {
+    description: {
+      en: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      ru: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      uz: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    },
+    name: {
+      en: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      ru: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      uz: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    },
+    short_description: {
+      en: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      ru: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      uz: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    },
+  },
+  published: faker.helpers.arrayElement([
+    {
+      at: faker.date.past().toISOString().slice(0, 19) + "Z",
+      changed: faker.number.int(),
+      error: faker.helpers.arrayElement([
+        faker.helpers.arrayElement(["rate_limited", "telegram_error", "bot_not_running"] as const),
+        null,
+      ]),
+      ok: faker.datatype.boolean(),
+      retry_after: faker.helpers.arrayElement([faker.number.int(), null]),
+    },
+    null,
+  ]),
+  ...overrideResponse,
+});
+
+export const getSaveBotProfileResponseMock = (
+  overrideResponse: Partial<Extract<BotProfileState, object>> = {},
+): BotProfileState => ({
+  profile: {
+    description: {
+      en: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      ru: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      uz: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    },
+    name: {
+      en: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      ru: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      uz: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    },
+    short_description: {
+      en: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      ru: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      uz: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    },
+  },
+  published: faker.helpers.arrayElement([
+    {
+      at: faker.date.past().toISOString().slice(0, 19) + "Z",
+      changed: faker.number.int(),
+      error: faker.helpers.arrayElement([
+        faker.helpers.arrayElement(["rate_limited", "telegram_error", "bot_not_running"] as const),
+        null,
+      ]),
+      ok: faker.datatype.boolean(),
+      retry_after: faker.helpers.arrayElement([faker.number.int(), null]),
+    },
+    null,
+  ]),
+  ...overrideResponse,
+});
+
+export const getGetSmtpConnectorResponseMock = (
+  overrideResponse: Partial<Extract<SmtpConnector, object>> = {},
+): SmtpConnector => ({
+  configured: faker.datatype.boolean(),
+  from_email: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  from_name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  host: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  password_configured: faker.datatype.boolean(),
+  password_last4: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
+  password_updated_at: faker.helpers.arrayElement([
+    faker.date.past().toISOString().slice(0, 19) + "Z",
+    null,
+  ]),
+  port: faker.number.int(),
+  secrets_enabled: faker.datatype.boolean(),
+  security: faker.helpers.arrayElement(["starttls", "ssl", "none"] as const),
+  username: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  ...overrideResponse,
+});
+
+export const getSaveSmtpConnectorResponseMock = (
+  overrideResponse: Partial<Extract<SmtpConnector, object>> = {},
+): SmtpConnector => ({
+  configured: faker.datatype.boolean(),
+  from_email: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  from_name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  host: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  password_configured: faker.datatype.boolean(),
+  password_last4: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
+  password_updated_at: faker.helpers.arrayElement([
+    faker.date.past().toISOString().slice(0, 19) + "Z",
+    null,
+  ]),
+  port: faker.number.int(),
+  secrets_enabled: faker.datatype.boolean(),
+  security: faker.helpers.arrayElement(["starttls", "ssl", "none"] as const),
+  username: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  ...overrideResponse,
+});
+
+export const getCheckSmtpResponseMock = (
+  overrideResponse: Partial<Extract<SmtpCheck, object>> = {},
+): SmtpCheck => ({
+  authenticated: faker.datatype.boolean(),
+  latency_ms: faker.number.int(),
+  server: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  ...overrideResponse,
+});
+
+export const getSendSmtpTestResponseMock = (
+  overrideResponse: Partial<Extract<MailQueued, object>> = {},
+): MailQueued => ({
+  email_log_id: faker.number.int(),
+  status: faker.helpers.arrayElement(["queued", "sent", "failed", "skipped_no_smtp"] as const),
+  to_email: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  ...overrideResponse,
+});
+
+export const getListMailLogResponseMock = (
+  overrideResponse: Partial<Extract<MailLog, object>> = {},
+): MailLog => ({
+  items: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+    attempts: faker.number.int(),
+    created_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+    error: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
+    id: faker.number.int(),
+    sent_at: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 19) + "Z", null]),
+    status: faker.helpers.arrayElement(["queued", "sent", "failed", "skipped_no_smtp"] as const),
+    subject: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    template: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    to_email: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  })),
+  ...overrideResponse,
+});
+
+export const getListExternalServicesResponseMock = (
+  overrideResponse: Partial<Extract<ExternalServiceList, object>> = {},
+): ExternalServiceList => ({
+  checked_at: faker.helpers.arrayElement([
+    faker.date.past().toISOString().slice(0, 19) + "Z",
+    null,
+  ]),
+  summary: {
+    disabled: faker.number.int(),
+    fail: faker.number.int(),
+    off: faker.number.int(),
+    ok: faker.number.int(),
+    unknown: faker.number.int(),
+    warn: faker.number.int(),
+  },
+  items: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+    check: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    checked_at: faker.helpers.arrayElement([
+      faker.date.past().toISOString().slice(0, 19) + "Z",
+      null,
+    ]),
+    checks_24h: faker.number.int(),
+    error: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
+    failures_24h: faker.number.int(),
+    frequency: faker.helpers.arrayElement(["minute", "quarter", "erp"] as const),
+    hint: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
+    incident: faker.helpers.arrayElement([
+      {
+        duration_s: faker.helpers.arrayElement([faker.number.int(), null]),
+        ended_at: faker.helpers.arrayElement([
+          faker.date.past().toISOString().slice(0, 19) + "Z",
+          null,
+        ]),
+        id: faker.number.int(),
+        last_error: faker.helpers.arrayElement([
+          faker.string.alpha({ length: { min: 10, max: 20 } }),
+          null,
+        ]),
+        started_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+        summary: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      },
+      null,
+    ]),
+    key: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    latency_ms: faker.helpers.arrayElement([faker.number.int(), null]),
+    p95_ms_24h: faker.helpers.arrayElement([faker.number.int(), null]),
+    purpose: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    source: faker.helpers.arrayElement(["crm", "erp"] as const),
+    stale: faker.datatype.boolean(),
+    status: faker.helpers.arrayElement(["ok", "warn", "fail", "unknown", "off"] as const),
+    summary: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    switch: faker.helpers.arrayElement([
+      {
+        available: faker.datatype.boolean(),
+        changed_at: faker.helpers.arrayElement([
+          faker.date.past().toISOString().slice(0, 19) + "Z",
+          null,
+        ]),
+        changed_by: faker.helpers.arrayElement([
+          faker.string.alpha({ length: { min: 10, max: 20 } }),
+          null,
+        ]),
+        disabled: faker.datatype.boolean(),
+        effect: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        kind: faker.helpers.arrayElement([
+          "vendor",
+          "langfuse",
+          "mail",
+          "telegram",
+          "erp",
+        ] as const),
+        problem: faker.helpers.arrayElement([
+          faker.string.alpha({ length: { min: 10, max: 20 } }),
+          null,
+        ]),
+        reason: faker.helpers.arrayElement([
+          faker.string.alpha({ length: { min: 10, max: 20 } }),
+          null,
+        ]),
+      },
+      null,
+    ]),
+    system: faker.helpers.arrayElement(["crm", "erp", "ensemble"] as const),
+    title: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    uptime_24h: faker.helpers.arrayElement([faker.number.float({ fractionDigits: 2 }), null]),
+    uptime_7d: faker.helpers.arrayElement([faker.number.float({ fractionDigits: 2 }), null]),
+    fix_card: faker.helpers.arrayElement([
+      faker.helpers.arrayElement(Object.values(IntegrationCardKey)),
+      null,
+    ]),
+  })),
+  ...overrideResponse,
+});
+
+export const getGetExternalServiceResponseMock = (
+  overrideResponse: Partial<Extract<ExternalServiceDetail, object>> = {},
+): ExternalServiceDetail => ({
+  checks: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+    () => ({
+      checked_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+      error: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        null,
+      ]),
+      latency_ms: faker.helpers.arrayElement([faker.number.int(), null]),
+      status: faker.helpers.arrayElement(["ok", "warn", "fail", "unknown", "off"] as const),
+      summary: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      tier: faker.helpers.arrayElement(["cheap", "heavy", "manual"] as const),
+    }),
+  ),
+  days: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+    day: faker.date.past().toISOString().slice(0, 10),
+    fail: faker.number.int(),
+    ok: faker.number.int(),
+    unknown: faker.number.int(),
+    uptime: faker.helpers.arrayElement([faker.number.float({ fractionDigits: 2 }), null]),
+    warn: faker.number.int(),
+  })),
+  incidents: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+    () => ({
+      duration_s: faker.helpers.arrayElement([faker.number.int(), null]),
+      ended_at: faker.helpers.arrayElement([
+        faker.date.past().toISOString().slice(0, 19) + "Z",
+        null,
+      ]),
+      id: faker.number.int(),
+      last_error: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        null,
+      ]),
+      started_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+      summary: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    }),
+  ),
+  service: {
+    check: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    checked_at: faker.helpers.arrayElement([
+      faker.date.past().toISOString().slice(0, 19) + "Z",
+      null,
+    ]),
+    checks_24h: faker.number.int(),
+    error: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
+    failures_24h: faker.number.int(),
+    frequency: faker.helpers.arrayElement(["minute", "quarter", "erp"] as const),
+    hint: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
+    incident: faker.helpers.arrayElement([
+      {
+        duration_s: faker.helpers.arrayElement([faker.number.int(), null]),
+        ended_at: faker.helpers.arrayElement([
+          faker.date.past().toISOString().slice(0, 19) + "Z",
+          null,
+        ]),
+        id: faker.number.int(),
+        last_error: faker.helpers.arrayElement([
+          faker.string.alpha({ length: { min: 10, max: 20 } }),
+          null,
+        ]),
+        started_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+        summary: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      },
+      null,
+    ]),
+    key: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    latency_ms: faker.helpers.arrayElement([faker.number.int(), null]),
+    p95_ms_24h: faker.helpers.arrayElement([faker.number.int(), null]),
+    purpose: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    source: faker.helpers.arrayElement(["crm", "erp"] as const),
+    stale: faker.datatype.boolean(),
+    status: faker.helpers.arrayElement(["ok", "warn", "fail", "unknown", "off"] as const),
+    summary: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    switch: faker.helpers.arrayElement([
+      {
+        available: faker.datatype.boolean(),
+        changed_at: faker.helpers.arrayElement([
+          faker.date.past().toISOString().slice(0, 19) + "Z",
+          null,
+        ]),
+        changed_by: faker.helpers.arrayElement([
+          faker.string.alpha({ length: { min: 10, max: 20 } }),
+          null,
+        ]),
+        disabled: faker.datatype.boolean(),
+        effect: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        kind: faker.helpers.arrayElement([
+          "vendor",
+          "langfuse",
+          "mail",
+          "telegram",
+          "erp",
+        ] as const),
+        problem: faker.helpers.arrayElement([
+          faker.string.alpha({ length: { min: 10, max: 20 } }),
+          null,
+        ]),
+        reason: faker.helpers.arrayElement([
+          faker.string.alpha({ length: { min: 10, max: 20 } }),
+          null,
+        ]),
+      },
+      null,
+    ]),
+    system: faker.helpers.arrayElement(["crm", "erp", "ensemble"] as const),
+    title: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    uptime_24h: faker.helpers.arrayElement([faker.number.float({ fractionDigits: 2 }), null]),
+    uptime_7d: faker.helpers.arrayElement([faker.number.float({ fractionDigits: 2 }), null]),
+    fix_card: faker.helpers.arrayElement([
+      faker.helpers.arrayElement(Object.values(IntegrationCardKey)),
+      null,
+    ]),
+  },
+  ...overrideResponse,
+});
+
+export const getCheckExternalServiceResponseMock = (
+  overrideResponse: Partial<Extract<ExternalServiceDetail, object>> = {},
+): ExternalServiceDetail => ({
+  checks: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+    () => ({
+      checked_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+      error: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        null,
+      ]),
+      latency_ms: faker.helpers.arrayElement([faker.number.int(), null]),
+      status: faker.helpers.arrayElement(["ok", "warn", "fail", "unknown", "off"] as const),
+      summary: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      tier: faker.helpers.arrayElement(["cheap", "heavy", "manual"] as const),
+    }),
+  ),
+  days: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+    day: faker.date.past().toISOString().slice(0, 10),
+    fail: faker.number.int(),
+    ok: faker.number.int(),
+    unknown: faker.number.int(),
+    uptime: faker.helpers.arrayElement([faker.number.float({ fractionDigits: 2 }), null]),
+    warn: faker.number.int(),
+  })),
+  incidents: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+    () => ({
+      duration_s: faker.helpers.arrayElement([faker.number.int(), null]),
+      ended_at: faker.helpers.arrayElement([
+        faker.date.past().toISOString().slice(0, 19) + "Z",
+        null,
+      ]),
+      id: faker.number.int(),
+      last_error: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        null,
+      ]),
+      started_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+      summary: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    }),
+  ),
+  service: {
+    check: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    checked_at: faker.helpers.arrayElement([
+      faker.date.past().toISOString().slice(0, 19) + "Z",
+      null,
+    ]),
+    checks_24h: faker.number.int(),
+    error: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
+    failures_24h: faker.number.int(),
+    frequency: faker.helpers.arrayElement(["minute", "quarter", "erp"] as const),
+    hint: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
+    incident: faker.helpers.arrayElement([
+      {
+        duration_s: faker.helpers.arrayElement([faker.number.int(), null]),
+        ended_at: faker.helpers.arrayElement([
+          faker.date.past().toISOString().slice(0, 19) + "Z",
+          null,
+        ]),
+        id: faker.number.int(),
+        last_error: faker.helpers.arrayElement([
+          faker.string.alpha({ length: { min: 10, max: 20 } }),
+          null,
+        ]),
+        started_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+        summary: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      },
+      null,
+    ]),
+    key: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    latency_ms: faker.helpers.arrayElement([faker.number.int(), null]),
+    p95_ms_24h: faker.helpers.arrayElement([faker.number.int(), null]),
+    purpose: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    source: faker.helpers.arrayElement(["crm", "erp"] as const),
+    stale: faker.datatype.boolean(),
+    status: faker.helpers.arrayElement(["ok", "warn", "fail", "unknown", "off"] as const),
+    summary: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    switch: faker.helpers.arrayElement([
+      {
+        available: faker.datatype.boolean(),
+        changed_at: faker.helpers.arrayElement([
+          faker.date.past().toISOString().slice(0, 19) + "Z",
+          null,
+        ]),
+        changed_by: faker.helpers.arrayElement([
+          faker.string.alpha({ length: { min: 10, max: 20 } }),
+          null,
+        ]),
+        disabled: faker.datatype.boolean(),
+        effect: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        kind: faker.helpers.arrayElement([
+          "vendor",
+          "langfuse",
+          "mail",
+          "telegram",
+          "erp",
+        ] as const),
+        problem: faker.helpers.arrayElement([
+          faker.string.alpha({ length: { min: 10, max: 20 } }),
+          null,
+        ]),
+        reason: faker.helpers.arrayElement([
+          faker.string.alpha({ length: { min: 10, max: 20 } }),
+          null,
+        ]),
+      },
+      null,
+    ]),
+    system: faker.helpers.arrayElement(["crm", "erp", "ensemble"] as const),
+    title: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    uptime_24h: faker.helpers.arrayElement([faker.number.float({ fractionDigits: 2 }), null]),
+    uptime_7d: faker.helpers.arrayElement([faker.number.float({ fractionDigits: 2 }), null]),
+    fix_card: faker.helpers.arrayElement([
+      faker.helpers.arrayElement(Object.values(IntegrationCardKey)),
+      null,
+    ]),
+  },
+  ...overrideResponse,
+});
+
+export const getDisableExternalServiceResponseMock = (
+  overrideResponse: Partial<Extract<ExternalService, object>> = {},
+): ExternalService => ({
+  check: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  checked_at: faker.helpers.arrayElement([
+    faker.date.past().toISOString().slice(0, 19) + "Z",
+    null,
+  ]),
+  checks_24h: faker.number.int(),
+  error: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
+  failures_24h: faker.number.int(),
+  frequency: faker.helpers.arrayElement(["minute", "quarter", "erp"] as const),
+  hint: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
+  incident: faker.helpers.arrayElement([
+    {
+      duration_s: faker.helpers.arrayElement([faker.number.int(), null]),
+      ended_at: faker.helpers.arrayElement([
+        faker.date.past().toISOString().slice(0, 19) + "Z",
+        null,
+      ]),
+      id: faker.number.int(),
+      last_error: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        null,
+      ]),
+      started_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+      summary: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    },
+    null,
+  ]),
+  key: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  latency_ms: faker.helpers.arrayElement([faker.number.int(), null]),
+  p95_ms_24h: faker.helpers.arrayElement([faker.number.int(), null]),
+  purpose: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  source: faker.helpers.arrayElement(["crm", "erp"] as const),
+  stale: faker.datatype.boolean(),
+  status: faker.helpers.arrayElement(["ok", "warn", "fail", "unknown", "off"] as const),
+  summary: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  switch: faker.helpers.arrayElement([
+    {
+      available: faker.datatype.boolean(),
+      changed_at: faker.helpers.arrayElement([
+        faker.date.past().toISOString().slice(0, 19) + "Z",
+        null,
+      ]),
+      changed_by: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        null,
+      ]),
+      disabled: faker.datatype.boolean(),
+      effect: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      kind: faker.helpers.arrayElement(["vendor", "langfuse", "mail", "telegram", "erp"] as const),
+      problem: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        null,
+      ]),
+      reason: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        null,
+      ]),
+    },
+    null,
+  ]),
+  system: faker.helpers.arrayElement(["crm", "erp", "ensemble"] as const),
+  title: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  uptime_24h: faker.helpers.arrayElement([faker.number.float({ fractionDigits: 2 }), null]),
+  uptime_7d: faker.helpers.arrayElement([faker.number.float({ fractionDigits: 2 }), null]),
+  fix_card: faker.helpers.arrayElement([
+    faker.helpers.arrayElement(Object.values(IntegrationCardKey)),
+    null,
+  ]),
+  ...overrideResponse,
+});
+
+export const getEnableExternalServiceResponseMock = (
+  overrideResponse: Partial<Extract<ExternalService, object>> = {},
+): ExternalService => ({
+  check: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  checked_at: faker.helpers.arrayElement([
+    faker.date.past().toISOString().slice(0, 19) + "Z",
+    null,
+  ]),
+  checks_24h: faker.number.int(),
+  error: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
+  failures_24h: faker.number.int(),
+  frequency: faker.helpers.arrayElement(["minute", "quarter", "erp"] as const),
+  hint: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
+  incident: faker.helpers.arrayElement([
+    {
+      duration_s: faker.helpers.arrayElement([faker.number.int(), null]),
+      ended_at: faker.helpers.arrayElement([
+        faker.date.past().toISOString().slice(0, 19) + "Z",
+        null,
+      ]),
+      id: faker.number.int(),
+      last_error: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        null,
+      ]),
+      started_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+      summary: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    },
+    null,
+  ]),
+  key: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  latency_ms: faker.helpers.arrayElement([faker.number.int(), null]),
+  p95_ms_24h: faker.helpers.arrayElement([faker.number.int(), null]),
+  purpose: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  source: faker.helpers.arrayElement(["crm", "erp"] as const),
+  stale: faker.datatype.boolean(),
+  status: faker.helpers.arrayElement(["ok", "warn", "fail", "unknown", "off"] as const),
+  summary: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  switch: faker.helpers.arrayElement([
+    {
+      available: faker.datatype.boolean(),
+      changed_at: faker.helpers.arrayElement([
+        faker.date.past().toISOString().slice(0, 19) + "Z",
+        null,
+      ]),
+      changed_by: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        null,
+      ]),
+      disabled: faker.datatype.boolean(),
+      effect: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      kind: faker.helpers.arrayElement(["vendor", "langfuse", "mail", "telegram", "erp"] as const),
+      problem: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        null,
+      ]),
+      reason: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        null,
+      ]),
+    },
+    null,
+  ]),
+  system: faker.helpers.arrayElement(["crm", "erp", "ensemble"] as const),
+  title: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  uptime_24h: faker.helpers.arrayElement([faker.number.float({ fractionDigits: 2 }), null]),
+  uptime_7d: faker.helpers.arrayElement([faker.number.float({ fractionDigits: 2 }), null]),
+  fix_card: faker.helpers.arrayElement([
+    faker.helpers.arrayElement(Object.values(IntegrationCardKey)),
+    null,
+  ]),
+  ...overrideResponse,
+});
+
+export const getListAiModelsResponseMock = (
+  overrideResponse: Partial<Extract<AiModelList, object>> = {},
+): AiModelList => ({
+  items: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+    alias: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    checked_at: faker.helpers.arrayElement([
+      faker.date.past().toISOString().slice(0, 19) + "Z",
+      null,
+    ]),
+    health: faker.helpers.arrayElement(["ok", "problem", "unknown"] as const),
+    health_detail: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    key_last4: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 4, max: 4 } }),
+      null,
+    ]),
+    key_source: faker.helpers.arrayElement([
+      faker.helpers.arrayElement(["crm", "env"] as const),
+      null,
+    ]),
+    model: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
+    provider: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    today_usd: faker.number.float({ fractionDigits: 2 }),
+  })),
+  ...overrideResponse,
+});
+
+export const getChangeAiModelResponseMock = (
+  overrideResponse: Partial<Extract<AiModelChange, object>> = {},
+): AiModelChange => ({
+  alias: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  key_source: faker.helpers.arrayElement(["crm", "env"] as const),
+  model: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  provider: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  quality_check_recommended: faker.datatype.boolean(),
+  reindex_required: faker.datatype.boolean(),
+  ...overrideResponse,
+});
+
+export const getResetAiModelResponseMock = (
+  overrideResponse: Partial<Extract<AiModelChange, object>> = {},
+): AiModelChange => ({
+  alias: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  key_source: faker.helpers.arrayElement(["crm", "env"] as const),
+  model: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  provider: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  quality_check_recommended: faker.datatype.boolean(),
+  reindex_required: faker.datatype.boolean(),
+  ...overrideResponse,
+});
+
+export const getTestAiModelResponseMock = (
+  overrideResponse: Partial<Extract<AiModelTest, object>> = {},
+): AiModelTest => ({
+  alias: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  cost_usd: faker.helpers.arrayElement([faker.number.float({ fractionDigits: 2 }), null]),
+  detail: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
+  latency_ms: faker.number.int(),
+  ok: faker.datatype.boolean(),
+  ...overrideResponse,
+});
+
+export const getGetSpendReportResponseMock = (
+  overrideResponse: Partial<Extract<SpendReport, object>> = {},
+): SpendReport => ({
+  avg_per_lead_usd: faker.number.float({ fractionDigits: 2 }),
+  by_kind: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+    () => ({
+      calls: faker.number.int(),
+      cost_usd: faker.number.float({ fractionDigits: 2 }),
+      key: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    }),
+  ),
+  by_purpose: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+    () => ({
+      calls: faker.number.int(),
+      cost_usd: faker.number.float({ fractionDigits: 2 }),
+      key: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    }),
+  ),
+  daily_usd: faker.number.float({ fractionDigits: 2 }),
+  days: faker.number.int(),
+  leads: faker.number.int(),
+  providers: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+    () => ({
+      limit_usd: faker.number.float({ fractionDigits: 2 }),
+      provider: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      spent_usd: faker.number.float({ fractionDigits: 2 }),
+    }),
+  ),
+  series: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+    () => ({
+      day: faker.date.past().toISOString().slice(0, 10),
+      test_usd: faker.number.float({ fractionDigits: 2 }),
+      work_usd: faker.number.float({ fractionDigits: 2 }),
+    }),
+  ),
+  today_usd: faker.number.float({ fractionDigits: 2 }),
+  total_usd: faker.number.float({ fractionDigits: 2 }),
+  ...overrideResponse,
+});
+
+export const getGetAiSpendReportResponseMock = (
+  overrideResponse: Partial<Extract<AiSpendReport, object>> = {},
+): AiSpendReport => ({
+  date_from: faker.date.past().toISOString().slice(0, 10),
+  date_to: faker.date.past().toISOString().slice(0, 10),
+  erp_connected: faker.datatype.boolean(),
+  fetched_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+  group: faker.helpers.arrayElement(["day", "system", "feature", "model"] as const),
+  overruns: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+    () => ({
+      cost_usd: faker.number.float({ fractionDigits: 2 }),
+      daily_usd: faker.number.float({ fractionDigits: 2 }),
+      day: faker.date.past().toISOString().slice(0, 10),
+      system: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    }),
+  ),
+  rows: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+    calls: faker.number.int(),
+    cost_usd: faker.number.float({ fractionDigits: 2 }),
+    failed_calls: faker.number.int(),
+    fallback_calls: faker.number.int(),
+    input_tokens: faker.number.int(),
+    key: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    output_tokens: faker.number.int(),
+  })),
+  systems: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+    () => ({
+      connected: faker.datatype.boolean(),
+      daily_usd: faker.number.float({ fractionDigits: 2 }),
+      days_over: faker.number.int(),
+      fallback_calls: faker.number.int(),
+      over_today: faker.datatype.boolean(),
+      period_calls: faker.number.int(),
+      period_usd: faker.number.float({ fractionDigits: 2 }),
+      system: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      today_calls: faker.number.int(),
+      today_usd: faker.number.float({ fractionDigits: 2 }),
+    }),
+  ),
+  timezone: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  totals: {
+    calls: faker.number.int(),
+    cost_usd: faker.number.float({ fractionDigits: 2 }),
+    failed_calls: faker.number.int(),
+    fallback_calls: faker.number.int(),
+    input_tokens: faker.number.int(),
+    output_tokens: faker.number.int(),
+  },
+  truncated: faker.datatype.boolean(),
+  ...overrideResponse,
+});
+
+export const getGetBackupsResponseMock = (
+  overrideResponse: Partial<Extract<BackupsStatus, object>> = {},
+): BackupsStatus => ({
+  available: faker.datatype.boolean(),
+  can_request: faker.datatype.boolean(),
+  daemon_alive: faker.datatype.boolean(),
+  databases: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+    () => ({
+      last_success_at: faker.helpers.arrayElement([
+        faker.date.past().toISOString().slice(0, 19) + "Z",
+        null,
+      ]),
+      name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    }),
+  ),
+  error: faker.helpers.arrayElement([
+    faker.helpers.arrayElement(["bucket_missing", "access_denied", "unreachable"] as const),
+    null,
+  ]),
+  items: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+    at: faker.date.past().toISOString().slice(0, 19) + "Z",
+    name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    size_bytes: faker.number.int(),
+  })),
+  last_success_at: faker.helpers.arrayElement([
+    faker.date.past().toISOString().slice(0, 19) + "Z",
+    null,
+  ]),
+  request_stuck: faker.datatype.boolean(),
+  requested_at: faker.helpers.arrayElement([
+    faker.date.past().toISOString().slice(0, 19) + "Z",
+    null,
+  ]),
+  source: faker.helpers.arrayElement(["volume", "rustfs"] as const),
+  stale: faker.datatype.boolean(),
+  ...overrideResponse,
+});
+
+export const getRequestBackupResponseMock = (
+  overrideResponse: Partial<Extract<BackupsStatus, object>> = {},
+): BackupsStatus => ({
+  available: faker.datatype.boolean(),
+  can_request: faker.datatype.boolean(),
+  daemon_alive: faker.datatype.boolean(),
+  databases: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+    () => ({
+      last_success_at: faker.helpers.arrayElement([
+        faker.date.past().toISOString().slice(0, 19) + "Z",
+        null,
+      ]),
+      name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    }),
+  ),
+  error: faker.helpers.arrayElement([
+    faker.helpers.arrayElement(["bucket_missing", "access_denied", "unreachable"] as const),
+    null,
+  ]),
+  items: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+    at: faker.date.past().toISOString().slice(0, 19) + "Z",
+    name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    size_bytes: faker.number.int(),
+  })),
+  last_success_at: faker.helpers.arrayElement([
+    faker.date.past().toISOString().slice(0, 19) + "Z",
+    null,
+  ]),
+  request_stuck: faker.datatype.boolean(),
+  requested_at: faker.helpers.arrayElement([
+    faker.date.past().toISOString().slice(0, 19) + "Z",
+    null,
+  ]),
+  source: faker.helpers.arrayElement(["volume", "rustfs"] as const),
+  stale: faker.datatype.boolean(),
+  ...overrideResponse,
+});
+
+export const getGetSystemStatusResponseMock = (
+  overrideResponse: Partial<Extract<SystemStatus, object>> = {},
+): SystemStatus => ({
+  checked_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+  components: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+    () => ({
+      checked_at: faker.helpers.arrayElement([
+        faker.date.past().toISOString().slice(0, 19) + "Z",
+        null,
+      ]),
+      key: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      reason: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      status: faker.helpers.arrayElement(["ok", "warn", "fail", "unknown"] as const),
+      title: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    }),
+  ),
+  status: faker.helpers.arrayElement(["ok", "warn", "fail", "unknown"] as const),
   ...overrideResponse,
 });
 
@@ -1959,6 +3152,729 @@ export const getSearchMockHandler = (
   );
 };
 
+export const getGetIntegrationsOverviewMockHandler = (
+  overrideResponse?:
+    | IntegrationsOverview
+    | ((
+        info: Parameters<Parameters<typeof http.get>[1]>[0],
+      ) => Promise<IntegrationsOverview> | IntegrationsOverview),
+  options?: RequestHandlerOptions,
+) => {
+  return http.get(
+    "*/admin/integrations",
+    async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getGetIntegrationsOverviewResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getGetErpConnectorMockHandler = (
+  overrideResponse?:
+    | ErpConnector
+    | ((
+        info: Parameters<Parameters<typeof http.get>[1]>[0],
+      ) => Promise<ErpConnector> | ErpConnector),
+  options?: RequestHandlerOptions,
+) => {
+  return http.get(
+    "*/admin/integrations/erp",
+    async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getGetErpConnectorResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getCheckErpConnectorMockHandler = (
+  overrideResponse?:
+    | ErpCheck
+    | ((info: Parameters<Parameters<typeof http.post>[1]>[0]) => Promise<ErpCheck> | ErpCheck),
+  options?: RequestHandlerOptions,
+) => {
+  return http.post(
+    "*/admin/integrations/erp/check",
+    async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getCheckErpConnectorResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getPairErpMockHandler = (
+  overrideResponse?:
+    | ErpPairing
+    | ((info: Parameters<Parameters<typeof http.post>[1]>[0]) => Promise<ErpPairing> | ErpPairing),
+  options?: RequestHandlerOptions,
+) => {
+  return http.post(
+    "*/admin/integrations/erp/pair",
+    async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getPairErpResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getRotateErpKeysMockHandler = (
+  overrideResponse?:
+    | ErpPairing
+    | ((info: Parameters<Parameters<typeof http.post>[1]>[0]) => Promise<ErpPairing> | ErpPairing),
+  options?: RequestHandlerOptions,
+) => {
+  return http.post(
+    "*/admin/integrations/erp/rotate",
+    async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getRotateErpKeysResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getGetTelegramConnectorMockHandler = (
+  overrideResponse?:
+    | TelegramConnector
+    | ((
+        info: Parameters<Parameters<typeof http.get>[1]>[0],
+      ) => Promise<TelegramConnector> | TelegramConnector),
+  options?: RequestHandlerOptions,
+) => {
+  return http.get(
+    "*/admin/integrations/telegram",
+    async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getGetTelegramConnectorResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getSetTelegramTokenMockHandler = (
+  overrideResponse?:
+    | TelegramConnector
+    | ((
+        info: Parameters<Parameters<typeof http.put>[1]>[0],
+      ) => Promise<TelegramConnector> | TelegramConnector),
+  options?: RequestHandlerOptions,
+) => {
+  return http.put(
+    "*/admin/integrations/telegram/token",
+    async (info: Parameters<Parameters<typeof http.put>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getSetTelegramTokenResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getListTelegramChannelsMockHandler = (
+  overrideResponse?:
+    | TelegramChannelList
+    | ((
+        info: Parameters<Parameters<typeof http.get>[1]>[0],
+      ) => Promise<TelegramChannelList> | TelegramChannelList),
+  options?: RequestHandlerOptions,
+) => {
+  return http.get(
+    "*/admin/integrations/telegram/channels",
+    async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getListTelegramChannelsResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getConnectTelegramChannelMockHandler = (
+  overrideResponse?:
+    | ActionOk
+    | ((info: Parameters<Parameters<typeof http.post>[1]>[0]) => Promise<ActionOk> | ActionOk),
+  options?: RequestHandlerOptions,
+) => {
+  return http.post(
+    "*/admin/integrations/telegram/channels/:chatId/connect",
+    async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getConnectTelegramChannelResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getTestTelegramChannelMockHandler = (
+  overrideResponse?:
+    | ActionOk
+    | ((info: Parameters<Parameters<typeof http.post>[1]>[0]) => Promise<ActionOk> | ActionOk),
+  options?: RequestHandlerOptions,
+) => {
+  return http.post(
+    "*/admin/integrations/telegram/channel/test",
+    async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getTestTelegramChannelResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getGetBotProfileMockHandler = (
+  overrideResponse?:
+    | BotProfileState
+    | ((
+        info: Parameters<Parameters<typeof http.get>[1]>[0],
+      ) => Promise<BotProfileState> | BotProfileState),
+  options?: RequestHandlerOptions,
+) => {
+  return http.get(
+    "*/admin/integrations/telegram/profile",
+    async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getGetBotProfileResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getSaveBotProfileMockHandler = (
+  overrideResponse?:
+    | BotProfileState
+    | ((
+        info: Parameters<Parameters<typeof http.put>[1]>[0],
+      ) => Promise<BotProfileState> | BotProfileState),
+  options?: RequestHandlerOptions,
+) => {
+  return http.put(
+    "*/admin/integrations/telegram/profile",
+    async (info: Parameters<Parameters<typeof http.put>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getSaveBotProfileResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getGetSmtpConnectorMockHandler = (
+  overrideResponse?:
+    | SmtpConnector
+    | ((
+        info: Parameters<Parameters<typeof http.get>[1]>[0],
+      ) => Promise<SmtpConnector> | SmtpConnector),
+  options?: RequestHandlerOptions,
+) => {
+  return http.get(
+    "*/admin/integrations/smtp",
+    async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getGetSmtpConnectorResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getSaveSmtpConnectorMockHandler = (
+  overrideResponse?:
+    | SmtpConnector
+    | ((
+        info: Parameters<Parameters<typeof http.put>[1]>[0],
+      ) => Promise<SmtpConnector> | SmtpConnector),
+  options?: RequestHandlerOptions,
+) => {
+  return http.put(
+    "*/admin/integrations/smtp",
+    async (info: Parameters<Parameters<typeof http.put>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getSaveSmtpConnectorResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getCheckSmtpMockHandler = (
+  overrideResponse?:
+    | SmtpCheck
+    | ((info: Parameters<Parameters<typeof http.post>[1]>[0]) => Promise<SmtpCheck> | SmtpCheck),
+  options?: RequestHandlerOptions,
+) => {
+  return http.post(
+    "*/admin/integrations/smtp/check",
+    async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getCheckSmtpResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getSendSmtpTestMockHandler = (
+  overrideResponse?:
+    | MailQueued
+    | ((info: Parameters<Parameters<typeof http.post>[1]>[0]) => Promise<MailQueued> | MailQueued),
+  options?: RequestHandlerOptions,
+) => {
+  return http.post(
+    "*/admin/integrations/smtp/test-send",
+    async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getSendSmtpTestResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getListMailLogMockHandler = (
+  overrideResponse?:
+    MailLog | ((info: Parameters<Parameters<typeof http.get>[1]>[0]) => Promise<MailLog> | MailLog),
+  options?: RequestHandlerOptions,
+) => {
+  return http.get(
+    "*/admin/integrations/smtp/log",
+    async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getListMailLogResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getListExternalServicesMockHandler = (
+  overrideResponse?:
+    | ExternalServiceList
+    | ((
+        info: Parameters<Parameters<typeof http.get>[1]>[0],
+      ) => Promise<ExternalServiceList> | ExternalServiceList),
+  options?: RequestHandlerOptions,
+) => {
+  return http.get(
+    "*/admin/integrations/services",
+    async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getListExternalServicesResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getGetExternalServiceMockHandler = (
+  overrideResponse?:
+    | ExternalServiceDetail
+    | ((
+        info: Parameters<Parameters<typeof http.get>[1]>[0],
+      ) => Promise<ExternalServiceDetail> | ExternalServiceDetail),
+  options?: RequestHandlerOptions,
+) => {
+  return http.get(
+    "*/admin/integrations/services/:key",
+    async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getGetExternalServiceResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getCheckExternalServiceMockHandler = (
+  overrideResponse?:
+    | ExternalServiceDetail
+    | ((
+        info: Parameters<Parameters<typeof http.post>[1]>[0],
+      ) => Promise<ExternalServiceDetail> | ExternalServiceDetail),
+  options?: RequestHandlerOptions,
+) => {
+  return http.post(
+    "*/admin/integrations/services/:key/check",
+    async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getCheckExternalServiceResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getDisableExternalServiceMockHandler = (
+  overrideResponse?:
+    | ExternalService
+    | ((
+        info: Parameters<Parameters<typeof http.post>[1]>[0],
+      ) => Promise<ExternalService> | ExternalService),
+  options?: RequestHandlerOptions,
+) => {
+  return http.post(
+    "*/admin/integrations/services/:key/disable",
+    async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getDisableExternalServiceResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getEnableExternalServiceMockHandler = (
+  overrideResponse?:
+    | ExternalService
+    | ((
+        info: Parameters<Parameters<typeof http.post>[1]>[0],
+      ) => Promise<ExternalService> | ExternalService),
+  options?: RequestHandlerOptions,
+) => {
+  return http.post(
+    "*/admin/integrations/services/:key/enable",
+    async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getEnableExternalServiceResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getListAiModelsMockHandler = (
+  overrideResponse?:
+    | AiModelList
+    | ((info: Parameters<Parameters<typeof http.get>[1]>[0]) => Promise<AiModelList> | AiModelList),
+  options?: RequestHandlerOptions,
+) => {
+  return http.get(
+    "*/admin/integrations/models",
+    async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getListAiModelsResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getChangeAiModelMockHandler = (
+  overrideResponse?:
+    | AiModelChange
+    | ((
+        info: Parameters<Parameters<typeof http.put>[1]>[0],
+      ) => Promise<AiModelChange> | AiModelChange),
+  options?: RequestHandlerOptions,
+) => {
+  return http.put(
+    "*/admin/integrations/models/:alias",
+    async (info: Parameters<Parameters<typeof http.put>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getChangeAiModelResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getResetAiModelMockHandler = (
+  overrideResponse?:
+    | AiModelChange
+    | ((
+        info: Parameters<Parameters<typeof http.post>[1]>[0],
+      ) => Promise<AiModelChange> | AiModelChange),
+  options?: RequestHandlerOptions,
+) => {
+  return http.post(
+    "*/admin/integrations/models/:alias/reset",
+    async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getResetAiModelResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getTestAiModelMockHandler = (
+  overrideResponse?:
+    | AiModelTest
+    | ((
+        info: Parameters<Parameters<typeof http.post>[1]>[0],
+      ) => Promise<AiModelTest> | AiModelTest),
+  options?: RequestHandlerOptions,
+) => {
+  return http.post(
+    "*/admin/integrations/models/:alias/test",
+    async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getTestAiModelResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getGetSpendReportMockHandler = (
+  overrideResponse?:
+    | SpendReport
+    | ((info: Parameters<Parameters<typeof http.get>[1]>[0]) => Promise<SpendReport> | SpendReport),
+  options?: RequestHandlerOptions,
+) => {
+  return http.get(
+    "*/admin/integrations/spend",
+    async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getGetSpendReportResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getGetAiSpendReportMockHandler = (
+  overrideResponse?:
+    | AiSpendReport
+    | ((
+        info: Parameters<Parameters<typeof http.get>[1]>[0],
+      ) => Promise<AiSpendReport> | AiSpendReport),
+  options?: RequestHandlerOptions,
+) => {
+  return http.get(
+    "*/admin/integrations/ai-spend",
+    async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getGetAiSpendReportResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getGetBackupsMockHandler = (
+  overrideResponse?:
+    | BackupsStatus
+    | ((
+        info: Parameters<Parameters<typeof http.get>[1]>[0],
+      ) => Promise<BackupsStatus> | BackupsStatus),
+  options?: RequestHandlerOptions,
+) => {
+  return http.get(
+    "*/admin/integrations/backups",
+    async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getGetBackupsResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getRequestBackupMockHandler = (
+  overrideResponse?:
+    | BackupsStatus
+    | ((
+        info: Parameters<Parameters<typeof http.post>[1]>[0],
+      ) => Promise<BackupsStatus> | BackupsStatus),
+  options?: RequestHandlerOptions,
+) => {
+  return http.post(
+    "*/admin/integrations/backups",
+    async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getRequestBackupResponseMock(),
+        { status: 202 },
+      );
+    },
+    options,
+  );
+};
+
+export const getGetSystemStatusMockHandler = (
+  overrideResponse?:
+    | SystemStatus
+    | ((
+        info: Parameters<Parameters<typeof http.get>[1]>[0],
+      ) => Promise<SystemStatus> | SystemStatus),
+  options?: RequestHandlerOptions,
+) => {
+  return http.get(
+    "*/admin/integrations/system",
+    async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getGetSystemStatusResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
 export const getListEmployeesMockHandler = (
   overrideResponse?:
     | EmployeeList
@@ -3250,6 +5166,37 @@ export const getRailTechPlatformBFFAPICRMERPMock = () => [
   getMarkAllNotificationsReadMockHandler(),
   getStreamEventsMockHandler(),
   getSearchMockHandler(),
+  getGetIntegrationsOverviewMockHandler(),
+  getGetErpConnectorMockHandler(),
+  getCheckErpConnectorMockHandler(),
+  getPairErpMockHandler(),
+  getRotateErpKeysMockHandler(),
+  getGetTelegramConnectorMockHandler(),
+  getSetTelegramTokenMockHandler(),
+  getListTelegramChannelsMockHandler(),
+  getConnectTelegramChannelMockHandler(),
+  getTestTelegramChannelMockHandler(),
+  getGetBotProfileMockHandler(),
+  getSaveBotProfileMockHandler(),
+  getGetSmtpConnectorMockHandler(),
+  getSaveSmtpConnectorMockHandler(),
+  getCheckSmtpMockHandler(),
+  getSendSmtpTestMockHandler(),
+  getListMailLogMockHandler(),
+  getListExternalServicesMockHandler(),
+  getGetExternalServiceMockHandler(),
+  getCheckExternalServiceMockHandler(),
+  getDisableExternalServiceMockHandler(),
+  getEnableExternalServiceMockHandler(),
+  getListAiModelsMockHandler(),
+  getChangeAiModelMockHandler(),
+  getResetAiModelMockHandler(),
+  getTestAiModelMockHandler(),
+  getGetSpendReportMockHandler(),
+  getGetAiSpendReportMockHandler(),
+  getGetBackupsMockHandler(),
+  getRequestBackupMockHandler(),
+  getGetSystemStatusMockHandler(),
   getListEmployeesMockHandler(),
   getInviteEmployeeMockHandler(),
   getResendInviteMockHandler(),

@@ -291,6 +291,578 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/admin/integrations": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Обзор: карточки со статусом и «Требует внимания»
+     * @description Раздел `admin` — от чтения. BFF параллельно читает реестр внешних сервисов, состояние системы, коннектор ERP, модели, расходы и бэкапы CRM и сводит их в карточки: статус пятью уровнями (уровни реестра внешних сервисов CRM, ADR-0024 CRM), последняя активность и список «Требует внимания». Часть, которую CRM не отдала (нет права в CRM или не ответила), не роняет обзор: у карточки `access = forbidden | unavailable`. CRM не ответила целиком — 503.
+     */
+    get: operations["getIntegrationsOverview"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/admin/integrations/erp": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Коннектор ERP: состояние сопряжения
+     * @description CRM `GET /integrations/erp`. Значения токенов не возвращаются — только «задан» и последние 4 символа.
+     */
+    get: operations["getErpConnector"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/admin/integrations/erp/check": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Проверить связь с ERP
+     * @description CRM `POST /integrations/erp/check` (проба до 5 с). ERP отвечает лимитом частоты — это `status = rate_limited`, не ошибка. Раздел `admin` — полный. `INTEGRATION_FAILED` (502) — причина в `details.reason` (`erp_unauthorized`, `erp_unavailable`, `erp_bad_response`); `NOT_CONFIGURED` (409) — ERP не подключена.
+     */
+    post: operations["checkErpConnector"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/admin/integrations/erp/pair": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Подключить ERP (сопряжение по одноразовому коду)
+     * @description CRM `POST /integrations/erp/pair`: CRM сама генерирует токены обоих направлений и секрет вебхуков, передаёт их ERP по коду, сохраняет зашифрованными и сразу проверяет связь. Пароль администратора обязателен и уходит только в CRM. Сопряжение удалось, даже если проверка не прошла: `check = null`, `check_error` — причина.
+     */
+    post: operations["pairErp"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/admin/integrations/erp/rotate": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Ротация ключей ERP
+     * @description CRM `POST /integrations/erp/rotate`: новая тройка секретов; прежний токен действует на переходный период (`ErpConnector.previous_secret_until`). Пароль администратора обязателен.
+     */
+    post: operations["rotateErpKeys"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/admin/integrations/telegram": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Telegram-бот: токен (маска), состояние, канал команды
+     * @description CRM `GET /integrations/telegram`. Токен не возвращается никогда — только `configured` и `last4`.
+     */
+    get: operations["getTelegramConnector"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/admin/integrations/telegram/token": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    /**
+     * Сохранить токен бота
+     * @description CRM `PUT /integrations/telegram/token`: CRM проверяет токен в Telegram (`getMe`), сохраняет зашифрованным и перезапускает бота. Токен и пароль уходят только в CRM, в ответ не попадают.
+     */
+    put: operations["setTelegramToken"];
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/admin/integrations/telegram/channels": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Чаты, куда добавлен бот (кандидаты в канал команды)
+     * @description CRM `GET /integrations/telegram/channels`.
+     */
+    get: operations["listTelegramChannels"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/admin/integrations/telegram/channels/{chat_id}/connect": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Подключить канал команды
+     * @description CRM `POST /integrations/telegram/channels/{chat_id}/connect`.
+     */
+    post: operations["connectTelegramChannel"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/admin/integrations/telegram/channel/test": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Тестовое сообщение в канал команды
+     * @description CRM `POST /integrations/telegram/channel/test`.
+     */
+    post: operations["testTelegramChannel"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/admin/integrations/telegram/profile": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Профиль бота: имя и описания (ru, uz, en)
+     * @description CRM `GET /integrations/telegram/profile`: тексты и итог последней публикации в Telegram.
+     */
+    get: operations["getBotProfile"];
+    /**
+     * Сохранить профиль бота и опубликовать в Telegram
+     * @description CRM `PUT /integrations/telegram/profile`: имя до 64 символов, краткое описание до 120, описание до 512 — на трёх языках.
+     */
+    put: operations["saveBotProfile"];
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/admin/integrations/smtp": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Почта (SMTP): настройки, пароль — маска
+     * @description CRM `GET /integrations/smtp`. Пароль SMTP не возвращается — только «задан» и `last4`.
+     */
+    get: operations["getSmtpConnector"];
+    /**
+     * Сохранить настройки SMTP
+     * @description CRM `PUT /integrations/smtp`. `smtp_password = null` — оставить прежний пароль SMTP; `password` — пароль администратора (повторный ввод), в CRM уходит и нигде не сохраняется.
+     */
+    put: operations["saveSmtpConnector"];
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/admin/integrations/smtp/check": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Проверить связь с почтовым релеем
+     * @description CRM `POST /integrations/smtp/check`: соединение, EHLO, STARTTLS/SMTPS и вход без отправки письма (до 10 с). `INTEGRATION_FAILED` (502) — `details.reason`: `smtp_unavailable`, `smtp_tls_failed`, `smtp_auth_failed`.
+     */
+    post: operations["checkSmtp"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/admin/integrations/smtp/test-send": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Тестовое письмо на адрес самого администратора
+     * @description CRM `POST /integrations/smtp/test-send`: письмо идёт через журнал и очередь, как настоящее; итог доставки — в журнале.
+     */
+    post: operations["sendSmtpTest"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/admin/integrations/smtp/log": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Журнал отправок писем сотрудникам
+     * @description CRM `GET /integrations/smtp/log`: последние записи, фильтр по статусу. Тел писем в журнале нет.
+     */
+    get: operations["listMailLog"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/admin/integrations/services": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Реестр внешних сервисов ансамбля
+     * @description CRM `GET /admin/external-services`: статус из последней фоновой проверки, подсказка «что сделать», выключатель. Сервисы ERP CRM берёт из ответа ERP на `/health`.
+     */
+    get: operations["listExternalServices"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/admin/integrations/services/{key}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Внешний сервис: проверки за 24 часа, дни, инциденты
+     * @description CRM `GET /admin/external-services/{key}`.
+     */
+    get: operations["getExternalService"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/admin/integrations/services/{key}/check": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Проверить сервис сейчас
+     * @description CRM `POST /admin/external-services/{key}/check` (включая медленные пробы); инцидент и оповещение — как у фоновой.
+     */
+    post: operations["checkExternalService"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/admin/integrations/services/{key}/disable": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Выключить сервис вручную
+     * @description CRM `POST /admin/external-services/{key}/disable` (пароль администратора, аудит). Что произойдёт — `ServiceSwitch.effect`. Нет выключателя — 409 `SERVICE_NOT_SWITCHABLE`.
+     */
+    post: operations["disableExternalService"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/admin/integrations/services/{key}/enable": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Включить сервис обратно
+     * @description CRM `POST /admin/external-services/{key}/enable` (пароль администратора, аудит); почта отправляет накопленные письма.
+     */
+    post: operations["enableExternalService"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/admin/integrations/models": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Модели ИИ: алиасы, провайдер, здоровье, расход за сегодня
+     * @description CRM `GET /models`. Ключи провайдеров не возвращаются.
+     */
+    get: operations["listAiModels"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/admin/integrations/models/{alias}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    /**
+     * Сменить провайдера, модель или ключ алиаса
+     * @description CRM `PUT /models/{alias}`: LiteLLM без перезапуска. `api_key = null` — ключ провайдера из настроек сервера. Ключ и пароль уходят только в CRM, в ответ не попадают.
+     */
+    put: operations["changeAiModel"];
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/admin/integrations/models/{alias}/reset": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Сбросить алиас к значению по умолчанию
+     * @description CRM `POST /models/{alias}/reset`: конфигурация сервера, ключ из настроек сервера. Пароль администратора обязателен.
+     */
+    post: operations["resetAiModel"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/admin/integrations/models/{alias}/test": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Проверить модель (один платный запрос)
+     * @description CRM `POST /models/{alias}/test`.
+     */
+    post: operations["testAiModel"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/admin/integrations/spend": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Расходы бота на ИИ
+     * @description CRM `GET /spend`. Директору — на чтение (в CRM право `spend:read` даёт «Сводка по компании»).
+     */
+    get: operations["getSpendReport"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/admin/integrations/ai-spend": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Расходы на ИИ всего ансамбля
+     * @description CRM `GET /admin/ai-spend`: журнал LiteLLM по дням, системам, функциям и моделям; бюджеты и дни превышения. Период — до 90 дней, не в будущем (422); шлюз недоступен — 502 `INTEGRATION_FAILED`.
+     */
+    get: operations["getAiSpendReport"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/admin/integrations/backups": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Хранилище и бэкапы
+     * @description CRM `GET /system/backups`: последние копии, свежесть, сервис бэкапа.
+     */
+    get: operations["getBackups"];
+    put?: never;
+    /**
+     * Сделать бэкап сейчас
+     * @description CRM `POST /system/backups`: сервис бэкапа начнёт в течение ~30 с. 409 — том бэкапов не смонтирован или бэкап делает другой сервер.
+     */
+    post: operations["requestBackup"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/admin/integrations/system": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Состояние системы
+     * @description CRM `GET /system/status`: компоненты в порядке «сбой, предупреждение, нет данных, норма». Моделей не вызывает.
+     */
+    get: operations["getSystemStatus"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/admin/users": {
     parameters: {
       query?: never;
@@ -1091,7 +1663,7 @@ export interface components {
   schemas: {
     Error: {
       /**
-       * @description Стабильный код (`INVALID_CREDENTIALS`, `SESSION_EXPIRED`, `CSRF_FAILED`, `FORBIDDEN`, `NOT_FOUND`, `VALIDATION_FAILED`, `TOO_MANY_REQUESTS`, `BACKEND_UNAVAILABLE`, `NO_PLATFORM_ROLE`, `USER_DISABLED`, `ACCOUNT_LOCKED`, `CONFLICT`, `WRONG_PASSWORD`, `EMAIL_EXISTS`, `LAST_ADMIN`, `LAST_DIRECTOR`, `ROLE_IN_USE`, `ROLE_SYSTEM`, `ROLES_REQUIRED`, `COMPANY_NOT_SET`, `INTERNAL_ERROR`, `BAD_REQUEST`, `METHOD_NOT_ALLOWED`, `HTTP_<статус>`)
+       * @description Стабильный код (`INVALID_CREDENTIALS`, `SESSION_EXPIRED`, `CSRF_FAILED`, `FORBIDDEN`, `NOT_FOUND`, `VALIDATION_FAILED`, `TOO_MANY_REQUESTS`, `BACKEND_UNAVAILABLE`, `NO_PLATFORM_ROLE`, `USER_DISABLED`, `ACCOUNT_LOCKED`, `CONFLICT`, `WRONG_PASSWORD`, `EMAIL_EXISTS`, `LAST_ADMIN`, `LAST_DIRECTOR`, `ROLE_IN_USE`, `ROLE_SYSTEM`, `ROLES_REQUIRED`, `NOT_CONFIGURED`, `SECRETS_KEY_MISSING`, `SERVICE_NOT_SWITCHABLE`, `INTEGRATION_FAILED`, `COMPANY_NOT_SET`, `INTERNAL_ERROR`, `BAD_REQUEST`, `METHOD_NOT_ALLOWED`, `HTTP_<статус>`)
        * @example SESSION_EXPIRED
        */
       code: string;
@@ -1198,6 +1770,602 @@ export interface components {
       lost: components["schemas"]["SectionLevel"][];
       fields_gained: components["schemas"]["RestrictedField"][];
       fields_lost: components["schemas"]["RestrictedField"][];
+    };
+    /**
+     * @description Карточки экрана «Внешние интеграции» в порядке показа: ERP, Telegram, Почта, Внешние сервисы, Модели ИИ, Расходы, Хранилище и бэкапы, Состояние системы.
+     * @enum {string}
+     */
+    IntegrationCardKey:
+      | "erp"
+      | "telegram"
+      | "mail"
+      | "services"
+      | "models"
+      | "spend"
+      | "storage"
+      | "system";
+    /**
+     * @description Статус пятью уровнями — уровни реестра внешних сервисов CRM (ADR-0024 CRM): `ok` работает, `warn` внимание, `fail` сбой, `unknown` нет данных, `off` не подключён или не применимо. Интерфейс всегда показывает слово, не только цвет.
+     * @enum {string}
+     */
+    IntegrationStatus: "ok" | "warn" | "fail" | "unknown" | "off";
+    /**
+     * @description Данные карточки получены (`ok`), CRM отказала ролям сотрудника (`forbidden`, например у директора нет моделей и бэкапов) или не ответила (`unavailable`). Статус `unknown` у карточки без данных.
+     * @enum {string}
+     */
+    IntegrationAccess: "ok" | "forbidden" | "unavailable";
+    /**
+     * @description Короткая пометка карточки — машинный код, фраза на языке сотрудника собирается в интерфейсе. `count` — сколько сервисов или алиасов с проблемой; `amount_usd` — расход за сегодня.
+     * @enum {string}
+     */
+    IntegrationNote:
+      | "all_ok"
+      | "problems"
+      | "not_configured"
+      | "paused"
+      | "rotation_pending"
+      | "backup_stale"
+      | "no_backups"
+      | "bot_not_running"
+      | "budget_near"
+      | "budget_over"
+      | "no_data";
+    IntegrationCard: {
+      key: components["schemas"]["IntegrationCardKey"];
+      status: components["schemas"]["IntegrationStatus"];
+      access: components["schemas"]["IntegrationAccess"];
+      note: components["schemas"]["IntegrationNote"];
+      count: number | null;
+      amount_usd: number | null;
+      /**
+       * Format: date-time
+       * @description Последняя проверка или событие карточки; `null` — данных нет
+       */
+      last_activity_at: string | null;
+    };
+    /** @enum {string} */
+    AttentionKind:
+      | "not_configured"
+      | "service"
+      | "model_problem"
+      | "backup_stale"
+      | "component"
+      | "budget_over"
+      | "budget_near"
+      | "rotation_pending"
+      | "paused"
+      | "bot_not_running";
+    AttentionItem: {
+      /** @description Стабильный ключ строки (`service:telegram`, `model:dialog-model`, `setup:erp`) */
+      id: string;
+      card: components["schemas"]["IntegrationCardKey"];
+      /**
+       * @description `fail` сбой, `warn` внимание, `setup` ещё не подключено
+       * @enum {string}
+       */
+      severity: "fail" | "warn" | "setup";
+      kind: components["schemas"]["AttentionKind"];
+      /** @description Название сервиса, алиаса или компонента — данные CRM, показываются как есть */
+      subject: string | null;
+      /** @description Итог проверки и подсказка «что сделать» от CRM (текст CRM, на русском) */
+      detail: string | null;
+    };
+    IntegrationsOverview: {
+      /** Format: date-time */
+      checked_at: string;
+      cards: components["schemas"]["IntegrationCard"][];
+      /** @description «Требует внимания»: сначала сбои, затем предупреждения, затем неподключённое */
+      attention: components["schemas"]["AttentionItem"][];
+    };
+    PasswordConfirm: {
+      /**
+       * Format: password
+       * @description Пароль администратора (повторный ввод); уходит только в CRM, нигде не сохраняется и не пишется в журнал
+       */
+      password: string;
+    };
+    ErpPairIn: {
+      /** @description Адрес ERP */
+      base_url: string;
+      /**
+       * Format: password
+       * @description Одноразовый код из настроек ERP; без него — сопряжение без кода (если ERP его разрешает)
+       */
+      code?: string | null;
+      /** Format: password */
+      password: string;
+    };
+    TelegramTokenIn: {
+      /** Format: password */
+      token: string;
+      /** Format: password */
+      password: string;
+    };
+    SmtpSettingsIn: {
+      host: string;
+      /** @default 587 */
+      port: number;
+      /**
+       * @default starttls
+       * @enum {string}
+       */
+      security: "starttls" | "ssl" | "none";
+      /** @default  */
+      from_email: string;
+      /** @default  */
+      from_name: string;
+      /** @description `null` — оставить прежний логин */
+      username?: string | null;
+      /**
+       * Format: password
+       * @description Пароль SMTP; `null` — оставить прежний
+       */
+      smtp_password?: string | null;
+      /**
+       * Format: password
+       * @description Пароль администратора
+       */
+      password: string;
+    };
+    ServiceSwitchIn: {
+      /** Format: password */
+      password: string;
+      /** @description Причина — попадает в аудит */
+      reason?: string | null;
+    };
+    AiModelChangeIn: {
+      /** @enum {string} */
+      provider: "anthropic" | "gemini" | "openai";
+      model: string;
+      /**
+       * Format: password
+       * @description Ключ провайдера; `null` — ключ из настроек сервера
+       */
+      api_key?: string | null;
+      api_base?: string | null;
+      /** Format: password */
+      password: string;
+    };
+    TelegramChannelList: {
+      items: components["schemas"]["TelegramChannel"][];
+    };
+    MailLog: {
+      items: components["schemas"]["MailLogItem"][];
+    };
+    AiModelList: {
+      items: components["schemas"]["AiModel"][];
+    };
+    ExternalServiceList: {
+      /** Format: date-time */
+      checked_at: string | null;
+      summary: components["schemas"]["ServicesSummary"];
+      items: components["schemas"]["ExternalService"][];
+    };
+    /** @description Коннектор ERP (CRM `GET /integrations/erp`). Значения токенов не возвращаются — только «задан» и последние 4 символа (`*_last4`). */
+    ErpConnector: {
+      base_url: string;
+      configured: boolean;
+      /** @enum {string} */
+      mode: "local" | "erp";
+      paired: boolean;
+      /** Format: date-time */
+      previous_secret_until: string | null;
+      rotation_pending: boolean;
+      secrets_enabled: boolean;
+      suggested_base_url: string;
+      token_configured: boolean;
+      token_last4: string | null;
+      /** Format: date-time */
+      token_updated_at: string | null;
+      webhook_secret_configured: boolean;
+      webhook_secret_last4: string | null;
+    };
+    /** @description Итог «Проверить связь» с ERP. `rate_limited` — ERP ответила лимитом частоты сервисного токена: это статус, не ошибка; `retry_after_s` — через сколько секунд повторить. */
+    ErpCheck: {
+      /** Format: date-time */
+      checked_at: string;
+      latency_ms: number | null;
+      migrations_applied: boolean | null;
+      queue_alive: boolean | null;
+      retry_after_s: number | null;
+      /** @enum {string} */
+      status: "ok" | "degraded" | "rate_limited";
+      version: string | null;
+    };
+    /** @description Итог сопряжения или ротации: состояние коннектора и проверка связи сразу после. Сопряжение удалось, даже если проверка не прошла: тогда `check = null`, а `check_error` — подкод причины (`erp_unauthorized`, `erp_unavailable`, …). */
+    ErpPairing: {
+      check: components["schemas"]["ErpCheck"] | null;
+      check_error: string | null;
+      status: components["schemas"]["ErpConnector"];
+    };
+    /** @description Telegram-бот и канал команды. Значение токена не попадает сюда никогда — только `configured` и `last4`. */
+    TelegramConnector: {
+      channel_id: number | null;
+      channel_title: string | null;
+      configured: boolean;
+      last4: string | null;
+      last_error: string | null;
+      mode: string;
+      running: boolean;
+      secrets_enabled: boolean;
+      /** Format: date-time */
+      updated_at: string | null;
+      username: string | null;
+    };
+    /** @description Чат, куда добавлен бот и откуда он получил сообщение: кандидат в канал команды. */
+    TelegramChannel: {
+      chat_id: number;
+      chat_type: string;
+      /** Format: date-time */
+      detected_at: string;
+      title: string;
+    };
+    /** @description Профиль бота и итог последней публикации в Telegram. */
+    BotProfileState: {
+      profile: components["schemas"]["BotProfile"];
+      published: components["schemas"]["BotProfilePublish"] | null;
+    };
+    /** @description Имя и описания бота на трёх языках. */
+    BotProfile: {
+      /** @description «Что умеет этот бот?» — видно до /start, до 512 символов */
+      description: components["schemas"]["LocalizedText"];
+      /** @description Имя бота в Telegram, до 64 символов */
+      name: components["schemas"]["LocalizedText"];
+      /** @description Краткое описание в профиле бота и при пересылке, до 120 символов */
+      short_description: components["schemas"]["LocalizedText"];
+    };
+    LocalizedText: {
+      en: string;
+      ru: string;
+      uz: string;
+    };
+    /** @description Итог последней публикации профиля в Telegram; `error` — код, текст — в интерфейсе. */
+    BotProfilePublish: {
+      /** Format: date-time */
+      at: string;
+      changed: number;
+      /** @enum {string|null} */
+      error: "rate_limited" | "telegram_error" | "bot_not_running" | null;
+      ok: boolean;
+      retry_after: number | null;
+    };
+    /** @description Действие выполнено. */
+    ActionOk: {
+      id: number | null;
+      /** @constant */
+      ok: true;
+    };
+    /** @description Коннектор «Почта» (один SMTP на ансамбль). Пароль не возвращается — только «задан» и `last4`. */
+    SmtpConnector: {
+      configured: boolean;
+      from_email: string;
+      from_name: string;
+      host: string;
+      password_configured: boolean;
+      password_last4: string | null;
+      /** Format: date-time */
+      password_updated_at: string | null;
+      port: number;
+      secrets_enabled: boolean;
+      /** @enum {string} */
+      security: "starttls" | "ssl" | "none";
+      username: string;
+    };
+    /** @description Итог проверки связи с почтовым релеем: приветствие сервера, выполнен ли вход, время ответа. */
+    SmtpCheck: {
+      authenticated: boolean;
+      latency_ms: number;
+      server: string;
+    };
+    /** @description Строка журнала писем сотрудникам; тела письма (временного пароля) в журнале нет. */
+    MailLogItem: {
+      attempts: number;
+      /** Format: date-time */
+      created_at: string;
+      error: string | null;
+      id: number;
+      /** Format: date-time */
+      sent_at: string | null;
+      /** @enum {string} */
+      status: "queued" | "sent" | "failed" | "skipped_no_smtp";
+      subject: string;
+      template: string;
+      to_email: string;
+    };
+    /** @description Письмо поставлено в очередь: номер строки журнала, адрес получателя, статус. */
+    MailQueued: {
+      email_log_id: number;
+      /** @enum {string} */
+      status: "queued" | "sent" | "failed" | "skipped_no_smtp";
+      to_email: string;
+    };
+    /** @description Сколько сервисов реестра в каждом статусе; `disabled` — выключены вручную. */
+    ServicesSummary: {
+      disabled: number;
+      fail: number;
+      off: number;
+      ok: number;
+      unknown: number;
+      warn: number;
+    };
+    /** @description Внешний сервис реестра CRM (ADR-0024 CRM): статус из последней проверки, подсказка «что сделать», выключатель. */
+    ExternalService: {
+      /** @description Как проверяется — словами */
+      check: string;
+      /** Format: date-time */
+      checked_at: string | null;
+      checks_24h: number;
+      error: string | null;
+      failures_24h: number;
+      /** @enum {string} */
+      frequency: "minute" | "quarter" | "erp";
+      /** @description Что сделать, если не в норме */
+      hint: string | null;
+      incident: components["schemas"]["ServiceIncident"] | null;
+      key: string;
+      latency_ms: number | null;
+      p95_ms_24h: number | null;
+      purpose: string;
+      /**
+       * @description Кто проверяет: CRM сама или передаёт ERP
+       * @enum {string}
+       */
+      source: "crm" | "erp";
+      stale: boolean;
+      /** @enum {string} */
+      status: "ok" | "warn" | "fail" | "unknown" | "off";
+      summary: string;
+      switch: components["schemas"]["ServiceSwitch"] | null;
+      /** @enum {string} */
+      system: "crm" | "erp" | "ensemble";
+      title: string;
+      uptime_24h: number | null;
+      uptime_7d: number | null;
+      /** @description Карточка экрана, где это исправляется (`IntegrationCardKey`); `null` — настроить негде */
+      fix_card: components["schemas"]["IntegrationCardKey"] | null;
+    };
+    /** @description Сервис, его проверки за 24 часа, сводка по дням за 7 дней и инциденты за 30 дней. */
+    ExternalServiceDetail: {
+      checks: components["schemas"]["ServiceCheck"][];
+      days: components["schemas"]["ServiceDay"][];
+      incidents: components["schemas"]["ServiceIncident"][];
+      service: components["schemas"]["ExternalService"];
+    };
+    ServiceCheck: {
+      /** Format: date-time */
+      checked_at: string;
+      error: string | null;
+      latency_ms: number | null;
+      /** @enum {string} */
+      status: "ok" | "warn" | "fail" | "unknown" | "off";
+      summary: string;
+      /** @enum {string} */
+      tier: "cheap" | "heavy" | "manual";
+    };
+    ServiceDay: {
+      /** Format: date */
+      day: string;
+      fail: number;
+      ok: number;
+      unknown: number;
+      uptime: number | null;
+      warn: number;
+    };
+    ServiceIncident: {
+      /** @description Длительность закрытого инцидента, секунд */
+      duration_s: number | null;
+      /** Format: date-time */
+      ended_at: string | null;
+      id: number;
+      last_error: string | null;
+      /** Format: date-time */
+      started_at: string;
+      summary: string;
+    };
+    /** @description Выключатель сервиса: доступен ли, выключен ли вручную, что произойдёт при выключении (`effect` — текст CRM для блока «Что произойдёт»). */
+    ServiceSwitch: {
+      available: boolean;
+      /** Format: date-time */
+      changed_at: string | null;
+      changed_by: string | null;
+      disabled: boolean;
+      effect: string;
+      /** @enum {string} */
+      kind: "vendor" | "langfuse" | "mail" | "telegram" | "erp";
+      problem: string | null;
+      reason: string | null;
+    };
+    /** @description Алиас роли модели ИИ: провайдер, модель, здоровье по последней проверке, расход за сегодня и маска ключа (источник и последние 4 символа). Сам ключ не возвращается никогда. */
+    AiModel: {
+      alias: string;
+      /** Format: date-time */
+      checked_at: string | null;
+      /** @enum {string} */
+      health: "ok" | "problem" | "unknown";
+      health_detail: string | null;
+      /** @description Последние 4 символа ключа, введённого в Платформе; `null` — ключ из настроек сервера или не менялся */
+      key_last4: string | null;
+      /**
+       * @description Откуда ключ роли — `crm` (введён в Платформе), `env` (из настроек сервера); `null` — роль не менялась из Платформы
+       * @enum {string|null}
+       */
+      key_source: "crm" | "env" | null;
+      model: string | null;
+      provider: string | null;
+      today_usd: number;
+    };
+    /** @description Итог смены или сброса модели; `key_source`: `crm` — ключ задан в Платформе, `env` — из настроек сервера. */
+    AiModelChange: {
+      alias: string;
+      /** @enum {string} */
+      key_source: "crm" | "env";
+      model: string;
+      provider: string;
+      quality_check_recommended: boolean;
+      reindex_required: boolean;
+    };
+    /** @description Итог проверки модели одним платным запросом. */
+    AiModelTest: {
+      alias: string;
+      cost_usd: number | null;
+      detail: string | null;
+      latency_ms: number;
+      ok: boolean;
+    };
+    /** @description Расходы бота на ИИ за период (USD): по дням, назначению, виду, провайдерам и бюджетам на день. */
+    SpendReport: {
+      avg_per_lead_usd: number;
+      by_kind: components["schemas"]["SpendSlice"][];
+      by_purpose: components["schemas"]["SpendSlice"][];
+      daily_usd: number;
+      days: number;
+      leads: number;
+      providers: components["schemas"]["ProviderToday"][];
+      series: components["schemas"]["SpendDay"][];
+      today_usd: number;
+      total_usd: number;
+    };
+    SpendSlice: {
+      calls: number;
+      cost_usd: number;
+      key: string;
+    };
+    SpendDay: {
+      /** Format: date */
+      day: string;
+      test_usd: number;
+      work_usd: number;
+    };
+    ProviderToday: {
+      limit_usd: number;
+      provider: string;
+      spent_usd: number;
+    };
+    /** @description Расходы на ИИ всего ансамбля из журнала LiteLLM: по дням, системам, функциям или моделям, бюджеты и дни превышения. */
+    AiSpendReport: {
+      /** Format: date */
+      date_from: string;
+      /** Format: date */
+      date_to: string;
+      /** @description ERP ходит в шлюз: есть строки `system=erp` за период */
+      erp_connected: boolean;
+      /** Format: date-time */
+      fetched_at: string;
+      /** @enum {string} */
+      group: "day" | "system" | "feature" | "model";
+      overruns: components["schemas"]["AiBudgetOverrun"][];
+      rows: components["schemas"]["AiSpendRow"][];
+      systems: components["schemas"]["AiSystemBudget"][];
+      timezone: string;
+      totals: components["schemas"]["AiSpendTotals"];
+      /** @description Журнал LiteLLM отдал не все строки (потолок выборки) */
+      truncated: boolean;
+    };
+    AiBudgetOverrun: {
+      cost_usd: number;
+      daily_usd: number;
+      /** Format: date */
+      day: string;
+      system: string;
+    };
+    AiSpendRow: {
+      /** @description Строк журнала LiteLLM (вызовов), включая неуспешные */
+      calls: number;
+      cost_usd: number;
+      failed_calls: number;
+      /** @description Деградации: успешные вызовы через fallback-model */
+      fallback_calls: number;
+      input_tokens: number;
+      /** @description День `YYYY-MM-DD`, система, функция или алиас — по `group` */
+      key: string;
+      output_tokens: number;
+    };
+    AiSpendTotals: {
+      calls: number;
+      cost_usd: number;
+      failed_calls: number;
+      fallback_calls: number;
+      input_tokens: number;
+      output_tokens: number;
+    };
+    AiSystemBudget: {
+      /** @description За период есть вызовы с тегом этой системы */
+      connected: boolean;
+      /** @description Бюджет на день; 0 — без лимита */
+      daily_usd: number;
+      /** @description Дней периода с расходом ≥ бюджета */
+      days_over: number;
+      fallback_calls: number;
+      over_today: boolean;
+      period_calls: number;
+      period_usd: number;
+      system: string;
+      today_calls: number;
+      today_usd: number;
+    };
+    /** @description Хранилище и бэкапы: источник (том или бакет), свежесть последней копии, состояние сервиса бэкапа. */
+    BackupsStatus: {
+      /** @description Том бэкапов смонтирован в api / бакет `backups` читается */
+      available: boolean;
+      /** @description «Сделать сейчас» доступно (только для тома) */
+      can_request: boolean;
+      /** @description Сервис бэкапа отвечает: heartbeat свежее 2 мин */
+      daemon_alive: boolean;
+      /** @description Последняя копия по каждой базе (бакет) */
+      databases: components["schemas"]["BackupDatabase"][];
+      /**
+       * @description Почему бакет не прочитан; None — прочитан
+       * @enum {string|null}
+       */
+      error: "bucket_missing" | "access_denied" | "unreachable" | null;
+      items: components["schemas"]["BackupItem"][];
+      /** Format: date-time */
+      last_success_at: string | null;
+      /** @description Запрос «Сделать сейчас» старше 2 мин без новой копии — можно повторить */
+      request_stuck: boolean;
+      /**
+       * Format: date-time
+       * @description «Сделать сейчас» ждёт сервис бэкапа
+       */
+      requested_at: string | null;
+      /**
+       * @description Откуда статус: том backup-контейнера (dev) или бакет `backups` RustFS (прод)
+       * @enum {string}
+       */
+      source: "volume" | "rustfs";
+      /** @description Последний успешный бэкап старше 26 ч или его нет */
+      stale: boolean;
+    };
+    BackupItem: {
+      /** Format: date-time */
+      at: string;
+      name: string;
+      size_bytes: number;
+    };
+    BackupDatabase: {
+      /**
+       * Format: date-time
+       * @description Последняя копия базы; нет — None
+       */
+      last_success_at: string | null;
+      name: string;
+    };
+    /** @description Состояние системы: итог и компоненты в порядке «сбой, предупреждение, нет данных, норма». */
+    SystemStatus: {
+      /** Format: date-time */
+      checked_at: string;
+      components: components["schemas"]["SystemComponent"][];
+      /** @enum {string} */
+      status: "ok" | "warn" | "fail" | "unknown";
+    };
+    SystemComponent: {
+      /** Format: date-time */
+      checked_at: string | null;
+      key: string;
+      reason: string;
+      /** @enum {string} */
+      status: "ok" | "warn" | "fail" | "unknown";
+      title: string;
     };
     /** @enum {string} */
     ModuleCode: "dashboard" | "crm" | "eds" | "erp" | "chats" | "admin";
@@ -2106,6 +3274,53 @@ export interface components {
         "application/json": components["schemas"]["Error"];
       };
     };
+    /** @description 409: `NOT_CONFIGURED` (коннектор или сервис не настроен), `SECRETS_KEY_MISSING` (на сервере нет ключа шифрования), `SERVICE_NOT_SWITCHABLE` (у сервиса нет выключателя), `CONFLICT` (состояние не позволяет действие); код CRM — в `details.reason` */
+    IntegrationConflict: {
+      headers: {
+        [name: string]: unknown;
+      };
+      content: {
+        "application/json": components["schemas"]["Error"];
+      };
+    };
+    /** @description 422: `WRONG_PASSWORD` — пароль администратора неверен; `VALIDATION_FAILED` — поле не принято (`details.fields`, `details.reason`: `erp_invalid_url`, `erp_pairing_code_invalid`, `smtp_invalid_host`, `invalid_bot_token`, `ai_spend_period`, …) */
+    IntegrationInvalid: {
+      headers: {
+        [name: string]: unknown;
+      };
+      content: {
+        "application/json": components["schemas"]["Error"];
+      };
+    };
+    /** @description `ACCOUNT_LOCKED` — после неверных паролей CRM временно блокирует учётную запись */
+    AccountLocked: {
+      headers: {
+        /** @description Секунды до повтора */
+        "Retry-After"?: number;
+        [name: string]: unknown;
+      };
+      content: {
+        "application/json": components["schemas"]["Error"];
+      };
+    };
+    /** @description 502 `INTEGRATION_FAILED` — CRM не достучалась до внешнего сервиса (ERP, SMTP, Telegram, LiteLLM) или он отказал; причина — `details.reason` (`erp_unavailable`, `smtp_auth_failed`, `litellm_unavailable`, …) */
+    IntegrationFailed: {
+      headers: {
+        [name: string]: unknown;
+      };
+      content: {
+        "application/json": components["schemas"]["Error"];
+      };
+    };
+    /** @description `BACKEND_UNAVAILABLE` — CRM не ответила за таймаут */
+    BackendUnavailable: {
+      headers: {
+        [name: string]: unknown;
+      };
+      content: {
+        "application/json": components["schemas"]["Error"];
+      };
+    };
   };
   parameters: {
     /** @description `crm_user_id` */
@@ -2562,6 +3777,914 @@ export interface operations {
       };
       401: components["responses"]["SessionExpired"];
       422: components["responses"]["ValidationFailed"];
+    };
+  };
+  getIntegrationsOverview: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Готово */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["IntegrationsOverview"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  getErpConnector: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Готово */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErpConnector"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  checkErpConnector: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Готово */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErpCheck"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      409: components["responses"]["IntegrationConflict"];
+      429: components["responses"]["TooManyRequests"];
+      502: components["responses"]["IntegrationFailed"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  pairErp: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["ErpPairIn"];
+      };
+    };
+    responses: {
+      /** @description Готово */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErpPairing"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      409: components["responses"]["IntegrationConflict"];
+      422: components["responses"]["IntegrationInvalid"];
+      423: components["responses"]["AccountLocked"];
+      429: components["responses"]["TooManyRequests"];
+      502: components["responses"]["IntegrationFailed"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  rotateErpKeys: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["PasswordConfirm"];
+      };
+    };
+    responses: {
+      /** @description Готово */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ErpPairing"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      409: components["responses"]["IntegrationConflict"];
+      422: components["responses"]["IntegrationInvalid"];
+      423: components["responses"]["AccountLocked"];
+      429: components["responses"]["TooManyRequests"];
+      502: components["responses"]["IntegrationFailed"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  getTelegramConnector: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Готово */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["TelegramConnector"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  setTelegramToken: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["TelegramTokenIn"];
+      };
+    };
+    responses: {
+      /** @description Готово */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["TelegramConnector"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      409: components["responses"]["IntegrationConflict"];
+      422: components["responses"]["IntegrationInvalid"];
+      423: components["responses"]["AccountLocked"];
+      429: components["responses"]["TooManyRequests"];
+      502: components["responses"]["IntegrationFailed"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  listTelegramChannels: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Готово */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["TelegramChannelList"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  connectTelegramChannel: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path: {
+        /** @description Идентификатор чата Telegram из `TelegramChannel.chat_id` */
+        chat_id: number;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Готово */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ActionOk"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      409: components["responses"]["IntegrationConflict"];
+      429: components["responses"]["TooManyRequests"];
+      502: components["responses"]["IntegrationFailed"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  testTelegramChannel: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Готово */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ActionOk"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      409: components["responses"]["IntegrationConflict"];
+      429: components["responses"]["TooManyRequests"];
+      502: components["responses"]["IntegrationFailed"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  getBotProfile: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Готово */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["BotProfileState"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  saveBotProfile: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["BotProfile"];
+      };
+    };
+    responses: {
+      /** @description Готово */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["BotProfileState"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      422: components["responses"]["IntegrationInvalid"];
+      429: components["responses"]["TooManyRequests"];
+      502: components["responses"]["IntegrationFailed"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  getSmtpConnector: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Готово */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["SmtpConnector"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  saveSmtpConnector: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["SmtpSettingsIn"];
+      };
+    };
+    responses: {
+      /** @description Готово */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["SmtpConnector"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      409: components["responses"]["IntegrationConflict"];
+      422: components["responses"]["IntegrationInvalid"];
+      423: components["responses"]["AccountLocked"];
+      429: components["responses"]["TooManyRequests"];
+      502: components["responses"]["IntegrationFailed"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  checkSmtp: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Готово */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["SmtpCheck"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      409: components["responses"]["IntegrationConflict"];
+      429: components["responses"]["TooManyRequests"];
+      502: components["responses"]["IntegrationFailed"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  sendSmtpTest: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Готово */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["MailQueued"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      409: components["responses"]["IntegrationConflict"];
+      429: components["responses"]["TooManyRequests"];
+      502: components["responses"]["IntegrationFailed"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  listMailLog: {
+    parameters: {
+      query?: {
+        /** @description Только письма в этом статусе */
+        status?: "queued" | "sent" | "failed" | "skipped_no_smtp";
+        /** @description Сколько последних записей (по умолчанию 50) */
+        limit?: number;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Готово */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["MailLog"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  listExternalServices: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Готово */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ExternalServiceList"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  getExternalService: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        /** @description Ключ сервиса реестра */
+        key: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Готово */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ExternalServiceDetail"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  checkExternalService: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path: {
+        /** @description Ключ сервиса реестра */
+        key: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Готово */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ExternalServiceDetail"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      409: components["responses"]["IntegrationConflict"];
+      429: components["responses"]["TooManyRequests"];
+      502: components["responses"]["IntegrationFailed"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  disableExternalService: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path: {
+        /** @description Ключ сервиса реестра */
+        key: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["ServiceSwitchIn"];
+      };
+    };
+    responses: {
+      /** @description Готово */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ExternalService"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      409: components["responses"]["IntegrationConflict"];
+      422: components["responses"]["IntegrationInvalid"];
+      423: components["responses"]["AccountLocked"];
+      429: components["responses"]["TooManyRequests"];
+      502: components["responses"]["IntegrationFailed"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  enableExternalService: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path: {
+        /** @description Ключ сервиса реестра */
+        key: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["PasswordConfirm"];
+      };
+    };
+    responses: {
+      /** @description Готово */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ExternalService"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      409: components["responses"]["IntegrationConflict"];
+      422: components["responses"]["IntegrationInvalid"];
+      423: components["responses"]["AccountLocked"];
+      429: components["responses"]["TooManyRequests"];
+      502: components["responses"]["IntegrationFailed"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  listAiModels: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Готово */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["AiModelList"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  changeAiModel: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path: {
+        /** @description Алиас роли модели (`dialog-model`, `embed-model`, …) */
+        alias: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["AiModelChangeIn"];
+      };
+    };
+    responses: {
+      /** @description Готово */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["AiModelChange"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      409: components["responses"]["IntegrationConflict"];
+      422: components["responses"]["IntegrationInvalid"];
+      423: components["responses"]["AccountLocked"];
+      429: components["responses"]["TooManyRequests"];
+      502: components["responses"]["IntegrationFailed"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  resetAiModel: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path: {
+        /** @description Алиас роли модели */
+        alias: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["PasswordConfirm"];
+      };
+    };
+    responses: {
+      /** @description Готово */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["AiModelChange"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      409: components["responses"]["IntegrationConflict"];
+      422: components["responses"]["IntegrationInvalid"];
+      423: components["responses"]["AccountLocked"];
+      429: components["responses"]["TooManyRequests"];
+      502: components["responses"]["IntegrationFailed"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  testAiModel: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path: {
+        /** @description Алиас роли модели */
+        alias: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Готово */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["AiModelTest"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      409: components["responses"]["IntegrationConflict"];
+      429: components["responses"]["TooManyRequests"];
+      502: components["responses"]["IntegrationFailed"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  getSpendReport: {
+    parameters: {
+      query?: {
+        /** @description Период в днях, 1–180 (по умолчанию 30) */
+        days?: number;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Готово */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["SpendReport"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  getAiSpendReport: {
+    parameters: {
+      query?: {
+        /** @description Первый день (Ташкент); по умолчанию to − 29 */
+        from?: string;
+        /** @description Последний день (Ташкент); по умолчанию сегодня */
+        to?: string;
+        /** @description Измерение рядов `rows` */
+        group?: "day" | "system" | "feature" | "model";
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Готово */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["AiSpendReport"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      422: components["responses"]["IntegrationInvalid"];
+      502: components["responses"]["IntegrationFailed"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  getBackups: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Готово */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["BackupsStatus"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  requestBackup: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Готово */
+      202: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["BackupsStatus"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      409: components["responses"]["IntegrationConflict"];
+      429: components["responses"]["TooManyRequests"];
+      502: components["responses"]["IntegrationFailed"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  getSystemStatus: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Готово */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["SystemStatus"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      503: components["responses"]["BackendUnavailable"];
     };
   };
   listEmployees: {

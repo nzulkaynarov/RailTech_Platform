@@ -225,7 +225,7 @@ resources:
     label: { ru: "Admin · Роли, Оргструктура, Интеграции, Тикеты", uz: "Admin · Rollar, tuzilma, integratsiyalar, tiketlar", en: "Admin · Roles, org chart, integrations, tickets" }
     backend:
       crm:
-        read: [users:read, integrations:read, system:read, external_services:read, audit:read]
+        read: [users:read, integrations:read, models:read, system:read, external_services:read, backups:read, audit:read]
         full:
           - users:read
           - users:write

@@ -386,6 +386,7 @@ class AuthService:
         path: str,
         json_body: Any,
         params: dict[str, Any] | None,
+        probe: bool = False,
         content: bytes | None = None,
         content_type: str | None = None,
     ) -> httpx.Response:
@@ -400,6 +401,7 @@ class AuthService:
                 params=params,
                 headers=headers,
                 content=content,
+                probe=probe,
             )
         except BackendUnavailableError as exc:
             raise backend_unavailable(backend, exc.reason) from exc
@@ -415,8 +417,10 @@ class AuthService:
         params: dict[str, Any] | None = None,
         content: bytes | None = None,
         content_type: str | None = None,
+        probe: bool = False,
     ) -> httpx.Response:
-        """Вызов CRM или ERP с токеном сотрудника. 2xx и 4xx бэкенда возвращаются как есть.
+        """Вызов CRM или ERP с токеном сотрудника. 2xx и 4xx бэкенда возвращаются как есть
+        (`probe` — ещё и 502, см. `BackendClient.send`).
 
         Просроченный access обновляется заранее; если бэкенд всё же ответил 401 — одно обновление и
         повтор. Не помогло — сессия удаляется, 401 `SESSION_EXPIRED`.
@@ -424,13 +428,17 @@ class AuthService:
         data = await self._prepare(sid, backend)
         tokens = data.crm if backend == "crm" else data.erp
         assert tokens is not None  # noqa: S101 — _prepare гарантирует токены
-        resp = await self._send(backend, tokens, method, path, json, params, content, content_type)
+        resp = await self._send(
+            backend, tokens, method, path, json, params, probe, content, content_type
+        )
         if resp.status_code != 401:
             return resp
         data = await self._prepare(sid, backend, rejected=tokens.access)
         tokens = data.crm if backend == "crm" else data.erp
         assert tokens is not None  # noqa: S101
-        resp = await self._send(backend, tokens, method, path, json, params, content, content_type)
+        resp = await self._send(
+            backend, tokens, method, path, json, params, probe, content, content_type
+        )
         if resp.status_code == 401:
             await self.store.delete(sid)
             raise session_expired()

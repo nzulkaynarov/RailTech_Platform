@@ -230,7 +230,7 @@ const isKind = (value: unknown): value is ReferenceKind =>
   value === "units" ||
   value === "delivery-basis";
 
-/** Моки `/admin/company*` (W13-A3, BFF 0.7.0) с правилами ERP: проверки полей, «используется», решения оператора. */
+/** Моки `/admin/company*` (W13-A3, BFF 0.8.0) с правилами ERP: проверки полей, «используется», решения оператора. */
 export const adminCompanyHandlers = [
   // --- реквизиты и логотип
   http.get("*/admin/company", () => read("read", (_c, s) => s.company)),

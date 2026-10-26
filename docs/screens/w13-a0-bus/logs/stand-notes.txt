@@ -1,0 +1,22 @@
+Стенд замера W13-A0 (W11C-G-1)
+
+Проект compose: rt-c2 (base.yml + dev.yml + override вне репозитория), образы собраны из worktree ветки w13/a0-bus (rt-bus с правкой).
+HTTP_PORT=8097, DEV_* — 55970..55979. .env и override — вне репозитория; секреты стенда сгенерированы на месте.
+Поднято: postgres (+db-init), redis-broker, redis-cache, rustfs (+s3-init), litellm (+litellm-seed), crm-migrate, crm-api, crm-worker,
+erp-backend, erp-worker, erp-beat, eds-migrate, eds-api, eds-worker, platform-bff, bus-slow (slow_stub.py, ответ 200 через 2,5 с).
+Не поднимались: docling, crm-bot, crm-mcp-*, erp-mcp, erp-worker-ai, langfuse, *-web, caddy.
+Память (docker stats, все контейнеры машины / из них rt-c2): ~9,3-9,4 ГиБ / ~3,6-3,7 ГиБ при общем лимите Docker 11,67 ГиБ.
+Файл подписок — копия packages/contracts/bus/subscriptions.yaml, bind-mount каталога на /opt/rt/contracts/bus (crm-api, crm-worker,
+erp-backend, erp-worker, erp-beat, eds-api, eds-worker); строка подписчика slow дописывается на месте в начале фазы x1
+(секреты пары RT_BUS_SECRET_{CRM,ERP,EDS}_SLOW заданы окружением стенда). В контракт main строка не входит.
+Первый запуск: setup CRM, «Подключить ERP», мастер компании ERP, пять сотрудников, клиент со сделкой ERP (общие скрипты c1-eds).
+
+Предыдущие прогоны (не вошли в итог, нужны для диагностики):
+ 1. Прогон на коде без снятия потолка пула соединений httpx (100): burst, platform-bff max 3637 мс (волна из 25 лидов, 4 прохода pump
+    держат по 20 запросов к slow = все 100 соединений общего пула; запрос к platform-bff ждал чужого ответа). Исправлено:
+    delivery_limits() без потолка, см. docs/architecture/rt-bus.md §5.
+ 2. Прогоны с тяжёлой нагрузкой от ident_gen (25 параллельных правок сотрудников/клиентов на волну): отдельные волны с задержками
+    1,5-3,5 с у ВСЕХ подписчиков и издателей сразу (в том числе ERP -> CRM и relay). Диагностика: цикл событий воркера CRM
+    стоял 0,5-1,8 с (asyncio debug: один шаг задачи anyio try_connect — 1,78 с; блокировки tuple-lock `roles` в самом CRM от
+    параллельных PATCH /users), в журналах API, воркера и БД одновременно тишина — задержка среды (Docker VM, нагрузка 3 стендов),
+    а не очередь шины. Нагрузку ident_gen снизили до 10 параллельных на волну; в итоговом прогоне стоп-пауз нет.

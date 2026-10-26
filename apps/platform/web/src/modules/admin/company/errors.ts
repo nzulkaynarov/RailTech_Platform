@@ -2,7 +2,7 @@ import type { TFunction } from "i18next";
 
 import { ApiError } from "../../../shared/api/errors";
 
-/** Причины (`details.reason`) контракта BFF 0.7.0, у которых есть свой текст (`company:errors.reason.*`). */
+/** Причины (`details.reason`) контракта BFF 0.8.0, у которых есть свой текст (`company:errors.reason.*`). */
 const REASONS = new Set([
   "lookup_in_use",
   "category_has_children",

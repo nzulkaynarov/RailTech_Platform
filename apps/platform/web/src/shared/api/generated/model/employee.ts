@@ -52,7 +52,7 @@
  * обычными API (с проверкой прав). Данных событий в потоке нет. Пока поток жив, опрос — редкий (5 минут), при обрыве —
  * прежние 30 секунд. Чисто добавляющее изменение.
  *
- * **0.7.0 (W13-A3) — Admin · Компания.** Чисто добавляющее изменение: `GET/PATCH /admin/company` (реквизиты), `/admin/company/logo`
+ * **0.8.0 (W13-A3) — Admin · Компания.** Чисто добавляющее изменение: `GET/PATCH /admin/company` (реквизиты), `/admin/company/logo`
  * (загрузка `multipart/form-data` и удаление), `/admin/company/brand` (+ `/logo`, `/preview`) — бланк и бренд документов,
  * `/admin/company/numbering` (+ `/preview`), `/admin/company/quote-defaults`, `/admin/company/charge-types` и `charge-templates`,
  * `/admin/company/document-templates` (+ `placeholders`, `preview`, `{id}/copy`), `/admin/company/email-templates` (+ `{id}/preview`),
@@ -66,6 +66,17 @@
  * **0.6.0 (R-1c, R3-D-1) — ломающее (до 1.0 допустимо).** У сотрудника хотя бы одна роль: `EmployeeUpdate.role_ids` —
  * `minItems: 1`, пустой набор — 422 `ROLES_REQUIRED` (`details.fields = [role_ids]`), в CRM запрос не уходит; тот же код —
  * перевод отказа CRM `roles_required` (CRM API 0.3.0). Закрыть доступ — `is_active = false` («Отключить сотрудника»).
+ *
+ * **0.7.0 (W13-A1) — добавляющее.** Admin · Внешние интеграции (SPEC-v3 §7.6, тег `integrations`): обзор `GET /admin/integrations`
+ * (карточки со статусом пятью уровнями — `ok`, `warn`, `fail`, `unknown`, `off` — уровни реестра внешних сервисов CRM, ADR-0024 CRM,
+ * последняя активность и список «Требует внимания») и прокси к CRM под `/admin/integrations/*`: коннектор ERP (проверка,
+ * сопряжение, ротация ключей), Telegram-бот (токен, канал команды, профиль), почта SMTP (настройки, проверка, тестовое
+ * письмо, журнал), реестр внешних сервисов (проверка, выключатель), модели ИИ (смена, сброс, проверка), расходы, бэкапы,
+ * состояние системы. Чтение — раздел `admin` от `read`; всё изменяющее и каждая проверка — `admin: full` (директору — 403).
+ * Секреты (токен бота, ключи моделей, пароль SMTP, коды сопряжения) BFF только передаёт в CRM и не возвращает — в ответах
+ * маски (`configured`, `*_last4`). Изменение секретов подтверждается паролем администратора (`password`, повторный ввод):
+ * он уходит только в CRM. Коды ошибок: `WRONG_PASSWORD` (422), `NOT_CONFIGURED`, `SECRETS_KEY_MISSING`,
+ * `SERVICE_NOT_SWITCHABLE` (409), `INTEGRATION_FAILED` (502, причина в `details.reason`).
  *
  * 0.2.4: `423 ACCOUNT_LOCKED` объявлен и на `POST /auth/change-password` (CRM блокирует учётную запись после неверных
  * текущих паролей).
@@ -85,7 +96,7 @@
  * Лимиты: вход — 10 неудачных попыток в минуту на IP и e-mail; остальные запросы — 300 в минуту на сессию; превышение — 429
  * `TOO_MANY_REQUESTS` с `Retry-After`.
  *
- * OpenAPI spec version: 0.7.0
+ * OpenAPI spec version: 0.8.0
  */
 import type { EmployeeAccess } from "./employeeAccess";
 import type { EmployeeStatus } from "./employeeStatus";

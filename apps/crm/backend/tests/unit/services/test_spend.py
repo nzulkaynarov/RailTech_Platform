@@ -11,6 +11,7 @@ from openai import APIConnectionError
 from app.integrations.litellm_catalog import ModelEntry, parse_model_info
 from app.integrations.llm_usage import UsageEvent
 from app.models.system import SystemAlert
+from app.schemas.settings import ModelKeyMask
 from app.services import models_status
 from app.services.llm_usage import DbUsageRecorder
 from app.services.spend import provider_rows, series
@@ -143,3 +144,26 @@ async def test_recorder_never_breaks_the_call() -> None:
 
     recorder = DbUsageRecorder(cast(Any, broken_sessions), None)
     await recorder.record(UsageEvent("dialog", "dialog-model", "m", 1, 1, 0.1))
+
+
+def test_statuses_expose_key_mask_but_no_key() -> None:
+    now = datetime(2026, 10, 12, tzinfo=UTC)
+    keys = {
+        "dialog-model": ModelKeyMask(source="crm", last4="4321", updated_at=now),
+        "fallback-model": ModelKeyMask(source="env", updated_at=now),
+    }
+    rows = {r.alias: r for r in models_status.statuses({}, {}, {}, keys)}
+    assert (rows["dialog-model"].key_source, rows["dialog-model"].key_last4) == ("crm", "4321")
+    assert (rows["fallback-model"].key_source, rows["fallback-model"].key_last4) == ("env", None)
+    assert (rows["embed-model"].key_source, rows["embed-model"].key_last4) == (None, None)
+    assert set(rows["dialog-model"].model_dump()) == {
+        "alias",
+        "provider",
+        "model",
+        "health",
+        "health_detail",
+        "checked_at",
+        "today_usd",
+        "key_source",
+        "key_last4",
+    }
