@@ -10,7 +10,7 @@ from fastapi import Depends, Request
 from redis.asyncio import Redis
 
 from app.auth import AuthService, LoginLimiter
-from app.clients import CrmClient, ErpClient
+from app.clients import CrmClient, EdsClient, ErpClient
 from app.clients.base import Backend
 from app.config import Settings
 from app.cookies import CSRF_HEADER, SESSION_COOKIE
@@ -37,6 +37,11 @@ def get_erp(request: Request) -> ErpClient:
     return erp
 
 
+def get_eds(request: Request) -> EdsClient | None:
+    eds: EdsClient | None = getattr(request.app.state, "eds", None)
+    return eds
+
+
 def get_settings_dep(request: Request) -> Settings:
     settings: Settings = request.app.state.settings
     return settings
@@ -45,13 +50,14 @@ def get_settings_dep(request: Request) -> Settings:
 RedisDep = Annotated[Redis, Depends(get_redis)]
 CrmDep = Annotated[CrmClient, Depends(get_crm)]
 ErpDep = Annotated[ErpClient, Depends(get_erp)]
+EdsDep = Annotated[EdsClient | None, Depends(get_eds)]
 SettingsDep = Annotated[Settings, Depends(get_settings_dep)]
 
 
 def get_auth_service(
-    redis: RedisDep, crm: CrmDep, erp: ErpDep, settings: SettingsDep
+    redis: RedisDep, crm: CrmDep, erp: ErpDep, settings: SettingsDep, eds: EdsDep
 ) -> AuthService:
-    return AuthService(redis, crm, erp, settings)
+    return AuthService(redis, crm, erp, settings, eds)
 
 
 def get_login_limiter(redis: RedisDep, settings: SettingsDep) -> LoginLimiter:

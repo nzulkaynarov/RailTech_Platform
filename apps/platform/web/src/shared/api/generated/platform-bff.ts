@@ -56,6 +56,18 @@
  * `minItems: 1`, пустой набор — 422 `ROLES_REQUIRED` (`details.fields = [role_ids]`), в CRM запрос не уходит; тот же код —
  * перевод отказа CRM `roles_required` (CRM API 0.3.0). Закрыть доступ — `is_active = false` («Отключить сотрудника»).
  *
+ * **0.9.0 (W13-A2) — добавляющее.** Admin · Журнал интеграций (тег `bus`): шина `rt_bus` всех трёх доменов в одном журнале
+ * вместо CLI `bus status|retry` и Django admin ERP. `GET /admin/bus` — сводка по доменам (outbox, DLQ, inbox с ошибками) и
+ * подписчики с состоянием словом (`BusSubscriberState`: работает, ошибки подряд, пауза предохранителя до `paused_until`,
+ * есть DLQ, выключен, убран из подписок); `GET /admin/bus/deliveries` — доставки с фильтрами (домен, статус, подписчик,
+ * подстрока типа, период), DLQ — `status=dead`; `GET /admin/bus/inbox` — принятые события (`errors=true` — обработка упала
+ * или ждёт автоповтора); повторы `POST /admin/bus/{domain}/deliveries/{id}/retry`, `…/deliveries/retry-dead` (все `dead`
+ * подписчика), `…/inbox/{event_id}/retry`. Списки трёх доменов сливаются по времени, страница — непрозрачный `cursor` из
+ * `next_cursor`; домен, который не ответил или отказал, — `sources.<домен>`, ответ 200 с остальными. Только раздел
+ * `admin: full` (директору — 403 в BFF); в каждый домен — с токеном сотрудника: CRM и ERP — как раньше, EDS — токен
+ * сотрудника CRM `aud=eds` → `POST /api/v1/auth/sso/exchange` EDS (`docs/architecture/sso-token.md`), 15 минут, в сессии BFF.
+ * Тел событий нет — только метаданные доставки. `Error.source` дополнен `eds`.
+ *
  * **0.7.0 (W13-A1) — добавляющее.** Admin · Внешние интеграции (SPEC-v3 §7.6, тег `integrations`): обзор `GET /admin/integrations`
  * (карточки со статусом пятью уровнями — `ok`, `warn`, `fail`, `unknown`, `off` — уровни реестра внешних сервисов CRM, ADR-0024 CRM,
  * последняя активность и список «Требует внимания») и прокси к CRM под `/admin/integrations/*`: коннектор ERP (проверка,
@@ -85,7 +97,7 @@
  * Лимиты: вход — 10 неудачных попыток в минуту на IP и e-mail; остальные запросы — 300 в минуту на сессию; превышение — 429
  * `TOO_MANY_REQUESTS` с `Retry-After`.
  *
- * OpenAPI spec version: 0.7.0
+ * OpenAPI spec version: 0.9.0
  */
 import { useMutation, useQuery } from "@tanstack/react-query";
 import type {
@@ -116,6 +128,11 @@ import type {
   BackupsStatus,
   BotProfile,
   BotProfileState,
+  BusDeliveryPage,
+  BusInboxPage,
+  BusJournal,
+  BusRetryDeadIn,
+  BusRetryResult,
   ChangePasswordIn,
   CsrfFailedResponse,
   Employee,
@@ -140,6 +157,8 @@ import type {
   IntegrationFailedResponse,
   IntegrationInvalidResponse,
   IntegrationsOverview,
+  ListBusDeliveriesParams,
+  ListBusInboxParams,
   ListEmployeesParams,
   ListMailLogParams,
   ListNotificationsParams,
@@ -5725,6 +5744,720 @@ export function useGetSystemStatus<
 
   return withQueryKey(query, queryOptions.queryKey);
 }
+
+export const getGetBusJournalUrl = () => {
+  return `/api/v1/admin/bus`;
+};
+
+/**
+ * CRM `GET /api/v1/bus/overview`, ERP `GET /api/v1/integration/bus/overview/`, EDS `GET /api/v1/bus/overview` — параллельно, с токеном сотрудника. Домен, который не ответил или отказал, в `domains` не попадает, его состояние — `sources`.
+ * @summary Журнал интеграций: сводка шины по доменам и подписчики
+ */
+export const getBusJournal = async (options?: Parameters<typeof http>[1]): Promise<BusJournal> => {
+  return http<BusJournal>(getGetBusJournalUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetBusJournalQueryKey = () => {
+  return [`/api/v1/admin/bus`] as const;
+};
+
+export const getGetBusJournalQueryOptions = <
+  TData = Awaited<ReturnType<typeof getBusJournal>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse>,
+>(options?: {
+  query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getBusJournal>>, TError, TData>>;
+  request?: SecondParameter<typeof http>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetBusJournalQueryKey();
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getBusJournal>>> = ({ signal }) =>
+    getBusJournal({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getBusJournal>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type GetBusJournalQueryResult = NonNullable<Awaited<ReturnType<typeof getBusJournal>>>;
+export type GetBusJournalQueryError = ErrorType<SessionExpiredResponse | ForbiddenResponse>;
+
+export function useGetBusJournal<
+  TData = Awaited<ReturnType<typeof getBusJournal>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse>,
+>(
+  options: {
+    query: Partial<UseQueryOptions<Awaited<ReturnType<typeof getBusJournal>>, TError, TData>> &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getBusJournal>>,
+          TError,
+          Awaited<ReturnType<typeof getBusJournal>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetBusJournal<
+  TData = Awaited<ReturnType<typeof getBusJournal>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse>,
+>(
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getBusJournal>>, TError, TData>> &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getBusJournal>>,
+          TError,
+          Awaited<ReturnType<typeof getBusJournal>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetBusJournal<
+  TData = Awaited<ReturnType<typeof getBusJournal>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse>,
+>(
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getBusJournal>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary Журнал интеграций: сводка шины по доменам и подписчики
+ */
+
+export function useGetBusJournal<
+  TData = Awaited<ReturnType<typeof getBusJournal>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse>,
+>(
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getBusJournal>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getGetBusJournalQueryOptions(options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export const getListBusDeliveriesUrl = (params?: ListBusDeliveriesParams) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : String(value));
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/v1/admin/bus/deliveries?${stringifiedParams}`
+    : `/api/v1/admin/bus/deliveries`;
+};
+
+/**
+ * Доставки всех доменов (или одного — `domain`), новые сверху; списки доменов сливаются по `created_at`. Страница — `cursor` из `next_cursor` (`null` — дальше нет).
+ * @summary Журнал интеграций: доставки событий (DLQ — status=dead)
+ */
+export const listBusDeliveries = async (
+  params?: ListBusDeliveriesParams,
+  options?: Parameters<typeof http>[1],
+): Promise<BusDeliveryPage> => {
+  return http<BusDeliveryPage>(getListBusDeliveriesUrl(params), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getListBusDeliveriesQueryKey = (params?: ListBusDeliveriesParams) => {
+  return [`/api/v1/admin/bus/deliveries`, ...(params ? [params] : [])] as const;
+};
+
+export const getListBusDeliveriesQueryOptions = <
+  TData = Awaited<ReturnType<typeof listBusDeliveries>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | ValidationFailedResponse>,
+>(
+  params?: ListBusDeliveriesParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listBusDeliveries>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getListBusDeliveriesQueryKey(params);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof listBusDeliveries>>> = ({ signal }) =>
+    listBusDeliveries(params, { signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listBusDeliveries>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type ListBusDeliveriesQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listBusDeliveries>>
+>;
+export type ListBusDeliveriesQueryError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse | ValidationFailedResponse
+>;
+
+export function useListBusDeliveries<
+  TData = Awaited<ReturnType<typeof listBusDeliveries>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | ValidationFailedResponse>,
+>(
+  params: undefined | ListBusDeliveriesParams,
+  options: {
+    query: Partial<UseQueryOptions<Awaited<ReturnType<typeof listBusDeliveries>>, TError, TData>> &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listBusDeliveries>>,
+          TError,
+          Awaited<ReturnType<typeof listBusDeliveries>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListBusDeliveries<
+  TData = Awaited<ReturnType<typeof listBusDeliveries>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | ValidationFailedResponse>,
+>(
+  params?: ListBusDeliveriesParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listBusDeliveries>>, TError, TData>> &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listBusDeliveries>>,
+          TError,
+          Awaited<ReturnType<typeof listBusDeliveries>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListBusDeliveries<
+  TData = Awaited<ReturnType<typeof listBusDeliveries>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | ValidationFailedResponse>,
+>(
+  params?: ListBusDeliveriesParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listBusDeliveries>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary Журнал интеграций: доставки событий (DLQ — status=dead)
+ */
+
+export function useListBusDeliveries<
+  TData = Awaited<ReturnType<typeof listBusDeliveries>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | ValidationFailedResponse>,
+>(
+  params?: ListBusDeliveriesParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listBusDeliveries>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getListBusDeliveriesQueryOptions(params, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export const getListBusInboxUrl = (params?: ListBusInboxParams) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : String(value));
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/v1/admin/bus/inbox?${stringifiedParams}`
+    : `/api/v1/admin/bus/inbox`;
+};
+
+/**
+ * Принятые события всех доменов (или одного), новые сверху; `errors=true` — обработка упала (`failed`) или ждёт автоповтора после ошибки. Страница — `cursor` из `next_cursor`.
+ * @summary Журнал интеграций: принятые события (errors=true — с ошибкой обработки)
+ */
+export const listBusInbox = async (
+  params?: ListBusInboxParams,
+  options?: Parameters<typeof http>[1],
+): Promise<BusInboxPage> => {
+  return http<BusInboxPage>(getListBusInboxUrl(params), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getListBusInboxQueryKey = (params?: ListBusInboxParams) => {
+  return [`/api/v1/admin/bus/inbox`, ...(params ? [params] : [])] as const;
+};
+
+export const getListBusInboxQueryOptions = <
+  TData = Awaited<ReturnType<typeof listBusInbox>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | ValidationFailedResponse>,
+>(
+  params?: ListBusInboxParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listBusInbox>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getListBusInboxQueryKey(params);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof listBusInbox>>> = ({ signal }) =>
+    listBusInbox(params, { signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listBusInbox>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type ListBusInboxQueryResult = NonNullable<Awaited<ReturnType<typeof listBusInbox>>>;
+export type ListBusInboxQueryError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse | ValidationFailedResponse
+>;
+
+export function useListBusInbox<
+  TData = Awaited<ReturnType<typeof listBusInbox>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | ValidationFailedResponse>,
+>(
+  params: undefined | ListBusInboxParams,
+  options: {
+    query: Partial<UseQueryOptions<Awaited<ReturnType<typeof listBusInbox>>, TError, TData>> &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listBusInbox>>,
+          TError,
+          Awaited<ReturnType<typeof listBusInbox>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListBusInbox<
+  TData = Awaited<ReturnType<typeof listBusInbox>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | ValidationFailedResponse>,
+>(
+  params?: ListBusInboxParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listBusInbox>>, TError, TData>> &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listBusInbox>>,
+          TError,
+          Awaited<ReturnType<typeof listBusInbox>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListBusInbox<
+  TData = Awaited<ReturnType<typeof listBusInbox>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | ValidationFailedResponse>,
+>(
+  params?: ListBusInboxParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listBusInbox>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary Журнал интеграций: принятые события (errors=true — с ошибкой обработки)
+ */
+
+export function useListBusInbox<
+  TData = Awaited<ReturnType<typeof listBusInbox>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | ValidationFailedResponse>,
+>(
+  params?: ListBusInboxParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listBusInbox>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getListBusInboxQueryOptions(params, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export const getRetryBusDeliveryUrl = (domain: "crm" | "erp" | "eds", id: number) => {
+  return `/api/v1/admin/bus/${domain}/deliveries/${id}/retry`;
+};
+
+/**
+ * Доставка `dead` или ожидающая уходит сейчас, попытки с нуля; подписчик на паузе предохранителя получает пробу. Идемпотентно: доставлено, в работе или нет такой — `retried: 0`. Домен пишет повтор в свой журнал с автором.
+ * @summary «Повторить» доставку
+ */
+export const retryBusDelivery = async (
+  domain: "crm" | "erp" | "eds",
+  id: number,
+  options?: Parameters<typeof http>[1],
+): Promise<BusRetryResult> => {
+  return http<BusRetryResult>(getRetryBusDeliveryUrl(domain, id), {
+    ...options,
+    method: "POST",
+  });
+};
+
+export const getRetryBusDeliveryMutationKey = () => ["retryBusDelivery"] as const;
+
+export const getRetryBusDeliveryMutationOptions = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof retryBusDelivery>>,
+    TError,
+    RetryBusDeliveryMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof retryBusDelivery>>,
+  TError,
+  RetryBusDeliveryMutationVariables,
+  TContext
+> => {
+  const mutationKey = getRetryBusDeliveryMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof retryBusDelivery>>,
+    RetryBusDeliveryMutationVariables
+  > = (props) => {
+    const { domain, id } = props ?? {};
+
+    return retryBusDelivery(domain, id, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type RetryBusDeliveryMutationResult = NonNullable<
+  Awaited<ReturnType<typeof retryBusDelivery>>
+>;
+
+export type RetryBusDeliveryMutationError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse | ValidationFailedResponse | BackendUnavailableResponse
+>;
+export type RetryBusDeliveryMutationVariables = { domain: "crm" | "erp" | "eds"; id: number };
+
+/**
+ * @summary «Повторить» доставку
+ */
+export const useRetryBusDelivery = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof retryBusDelivery>>,
+      TError,
+      RetryBusDeliveryMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof retryBusDelivery>>,
+  TError,
+  RetryBusDeliveryMutationVariables,
+  TContext
+> => {
+  return useMutation(getRetryBusDeliveryMutationOptions(options), queryClient);
+};
+
+export const getRetryBusDeadLettersUrl = (domain: "crm" | "erp" | "eds") => {
+  return `/api/v1/admin/bus/${domain}/deliveries/retry-dead`;
+};
+
+/**
+ * Все доставки `dead` подписчика в домене уходят сейчас, попытки с нуля (после исправления причины: адрес, секрет, приёмник). Повтор безопасен — приёмник гасит дубли по id события. `retried` — сколько поставлено.
+ * @summary «Повторить все dead подписчика»
+ */
+export const retryBusDeadLetters = async (
+  domain: "crm" | "erp" | "eds",
+  busRetryDeadIn: BusRetryDeadIn,
+  options?: Parameters<typeof http>[1],
+): Promise<BusRetryResult> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<BusRetryResult>(getRetryBusDeadLettersUrl(domain), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
+    body: JSON.stringify(busRetryDeadIn),
+  });
+};
+
+export const getRetryBusDeadLettersMutationKey = () => ["retryBusDeadLetters"] as const;
+
+export const getRetryBusDeadLettersMutationOptions = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof retryBusDeadLetters>>,
+    TError,
+    RetryBusDeadLettersMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof retryBusDeadLetters>>,
+  TError,
+  RetryBusDeadLettersMutationVariables,
+  TContext
+> => {
+  const mutationKey = getRetryBusDeadLettersMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof retryBusDeadLetters>>,
+    RetryBusDeadLettersMutationVariables
+  > = (props) => {
+    const { domain, data } = props ?? {};
+
+    return retryBusDeadLetters(domain, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type RetryBusDeadLettersMutationResult = NonNullable<
+  Awaited<ReturnType<typeof retryBusDeadLetters>>
+>;
+export type RetryBusDeadLettersMutationBody = BusRetryDeadIn;
+export type RetryBusDeadLettersMutationError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse | ValidationFailedResponse | BackendUnavailableResponse
+>;
+export type RetryBusDeadLettersMutationVariables = {
+  domain: "crm" | "erp" | "eds";
+  data: BusRetryDeadIn;
+};
+
+/**
+ * @summary «Повторить все dead подписчика»
+ */
+export const useRetryBusDeadLetters = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof retryBusDeadLetters>>,
+      TError,
+      RetryBusDeadLettersMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof retryBusDeadLetters>>,
+  TError,
+  RetryBusDeadLettersMutationVariables,
+  TContext
+> => {
+  return useMutation(getRetryBusDeadLettersMutationOptions(options), queryClient);
+};
+
+export const getRetryBusInboxUrl = (domain: "crm" | "erp" | "eds", eventId: string) => {
+  return `/api/v1/admin/bus/${domain}/inbox/${eventId}/retry`;
+};
+
+/**
+ * Запись `failed` или `skipped` снова обрабатывается (после исправления обработчика или данных). Идемпотентно: обработано или ждёт — `retried: 0`.
+ * @summary «Повторить обработку» принятого события
+ */
+export const retryBusInbox = async (
+  domain: "crm" | "erp" | "eds",
+  eventId: string,
+  options?: Parameters<typeof http>[1],
+): Promise<BusRetryResult> => {
+  return http<BusRetryResult>(getRetryBusInboxUrl(domain, eventId), {
+    ...options,
+    method: "POST",
+  });
+};
+
+export const getRetryBusInboxMutationKey = () => ["retryBusInbox"] as const;
+
+export const getRetryBusInboxMutationOptions = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof retryBusInbox>>,
+    TError,
+    RetryBusInboxMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof retryBusInbox>>,
+  TError,
+  RetryBusInboxMutationVariables,
+  TContext
+> => {
+  const mutationKey = getRetryBusInboxMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof retryBusInbox>>,
+    RetryBusInboxMutationVariables
+  > = (props) => {
+    const { domain, eventId } = props ?? {};
+
+    return retryBusInbox(domain, eventId, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type RetryBusInboxMutationResult = NonNullable<Awaited<ReturnType<typeof retryBusInbox>>>;
+
+export type RetryBusInboxMutationError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse | ValidationFailedResponse | BackendUnavailableResponse
+>;
+export type RetryBusInboxMutationVariables = { domain: "crm" | "erp" | "eds"; eventId: string };
+
+/**
+ * @summary «Повторить обработку» принятого события
+ */
+export const useRetryBusInbox = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof retryBusInbox>>,
+      TError,
+      RetryBusInboxMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof retryBusInbox>>,
+  TError,
+  RetryBusInboxMutationVariables,
+  TContext
+> => {
+  return useMutation(getRetryBusInboxMutationOptions(options), queryClient);
+};
 
 export const getListEmployeesUrl = (params?: ListEmployeesParams) => {
   const normalizedParams = new URLSearchParams();

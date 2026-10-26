@@ -9,6 +9,7 @@ from rt_bus.fastapi import bus_router
 
 from app import __version__
 from app.api import (
+    admin_bus,
     admin_integrations,
     admin_roles,
     admin_users,
@@ -22,7 +23,7 @@ from app.api import (
 )
 from app.bus import create_receiver
 from app.client_ip import ClientIpMiddleware
-from app.clients import CrmClient, ErpClient
+from app.clients import CrmClient, EdsClient, ErpClient
 from app.clients.base import TIMEOUT_SECONDS
 from app.config import Settings, get_settings
 from app.errors import install_error_handlers
@@ -49,7 +50,9 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         )
         crm = CrmClient(cfg.crm_url, cfg.crm_timeout_seconds)
         erp = ErpClient(cfg.erp_url, cfg.erp_refresh_cookie)
+        eds = EdsClient(cfg.eds_url)
         app.state.redis, app.state.crm, app.state.erp = redis, crm, erp
+        app.state.eds = eds
         app.state.settings = cfg
         app.state.hub = hub
         try:
@@ -58,6 +61,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             await hub.aclose()
             await crm.aclose()
             await erp.aclose()
+            await eds.aclose()
             await redis.aclose()
 
     # Документация API — контракт в packages/contracts; /docs и схема FastAPI не публикуются.
@@ -78,6 +82,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(admin_users.router, prefix=API_PREFIX)
     app.include_router(admin_roles.router, prefix=API_PREFIX)
     app.include_router(admin_integrations.router, prefix=API_PREFIX)
+    app.include_router(admin_bus.router, prefix=API_PREFIX)
     app.include_router(dashboard.router, prefix=API_PREFIX)
     app.include_router(notifications.router, prefix=API_PREFIX)
     app.include_router(search.router, prefix=API_PREFIX)

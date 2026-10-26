@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: RailTech Platform — BFF API (Платформа → CRM и ERP)
-  version: 0.7.0
+  version: 0.9.0
   summary: Пространство `/api/v1/` BFF Платформы — вызывает SPA `apps/platform/web` от имени сотрудника.
   description: |
     Контракт по ADR-0011 и `docs/architecture/platform-bff.md`. Версия 0.1.0 (INF-P0-1) покрывает фазу P1:
@@ -58,6 +58,18 @@ info:
     `minItems: 1`, пустой набор — 422 `ROLES_REQUIRED` (`details.fields = [role_ids]`), в CRM запрос не уходит; тот же код —
     перевод отказа CRM `roles_required` (CRM API 0.3.0). Закрыть доступ — `is_active = false` («Отключить сотрудника»).
 
+    **0.9.0 (W13-A2) — добавляющее.** Admin · Журнал интеграций (тег `bus`): шина `rt_bus` всех трёх доменов в одном журнале
+    вместо CLI `bus status|retry` и Django admin ERP. `GET /admin/bus` — сводка по доменам (outbox, DLQ, inbox с ошибками) и
+    подписчики с состоянием словом (`BusSubscriberState`: работает, ошибки подряд, пауза предохранителя до `paused_until`,
+    есть DLQ, выключен, убран из подписок); `GET /admin/bus/deliveries` — доставки с фильтрами (домен, статус, подписчик,
+    подстрока типа, период), DLQ — `status=dead`; `GET /admin/bus/inbox` — принятые события (`errors=true` — обработка упала
+    или ждёт автоповтора); повторы `POST /admin/bus/{domain}/deliveries/{id}/retry`, `…/deliveries/retry-dead` (все `dead`
+    подписчика), `…/inbox/{event_id}/retry`. Списки трёх доменов сливаются по времени, страница — непрозрачный `cursor` из
+    `next_cursor`; домен, который не ответил или отказал, — `sources.<домен>`, ответ 200 с остальными. Только раздел
+    `admin: full` (директору — 403 в BFF); в каждый домен — с токеном сотрудника: CRM и ERP — как раньше, EDS — токен
+    сотрудника CRM `aud=eds` → `POST /api/v1/auth/sso/exchange` EDS (`docs/architecture/sso-token.md`), 15 минут, в сессии BFF.
+    Тел событий нет — только метаданные доставки. `Error.source` дополнен `eds`.
+
     **0.7.0 (W13-A1) — добавляющее.** Admin · Внешние интеграции (SPEC-v3 §7.6, тег `integrations`): обзор `GET /admin/integrations`
     (карточки со статусом пятью уровнями — `ok`, `warn`, `fail`, `unknown`, `off` — уровни реестра внешних сервисов CRM, ADR-0024 CRM,
     последняя активность и список «Требует внимания») и прокси к CRM под `/admin/integrations/*`: коннектор ERP (проверка,
@@ -107,6 +119,8 @@ tags:
     description: Admin · Оргструктура и Ролевая матрица — сотрудники и роли (CRM — источник истины по людям и ролям)
   - name: integrations
     description: Admin · Внешние интеграции — ERP, Telegram, почта, реестр внешних сервисов, модели ИИ и расходы, бэкапы, состояние системы (прокси к CRM; раздел `admin`)
+  - name: bus
+    description: Admin · Журнал интеграций — шина rt_bus CRM, ERP и EDS (подписчики, доставки и DLQ, inbox с ошибками, повторы; раздел `admin` full)
 
 paths:
   /auth/login:
@@ -1455,6 +1469,202 @@ paths:
         '503':
           $ref: '#/components/responses/BackendUnavailable'
 
+  /admin/bus:
+    get:
+      tags: [bus]
+      operationId: getBusJournal
+      summary: 'Журнал интеграций: сводка шины по доменам и подписчики'
+      description: >-
+        CRM `GET /api/v1/bus/overview`, ERP `GET /api/v1/integration/bus/overview/`, EDS `GET /api/v1/bus/overview` —
+        параллельно, с токеном сотрудника. Домен, который не ответил или отказал, в `domains` не попадает, его состояние —
+        `sources`.
+      responses:
+        '200':
+          description: Сводка
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BusJournal'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /admin/bus/deliveries:
+    get:
+      tags: [bus]
+      operationId: listBusDeliveries
+      summary: 'Журнал интеграций: доставки событий (DLQ — status=dead)'
+      description: >-
+        Доставки всех доменов (или одного — `domain`), новые сверху; списки доменов сливаются по `created_at`. Страница —
+        `cursor` из `next_cursor` (`null` — дальше нет).
+      parameters:
+        - $ref: '#/components/parameters/BusDomainQuery'
+        - name: status
+          in: query
+          required: false
+          schema:
+            $ref: '#/components/schemas/BusDeliveryStatus'
+        - $ref: '#/components/parameters/BusSubscriberQuery'
+        - $ref: '#/components/parameters/BusTypeQuery'
+        - name: from
+          in: query
+          required: false
+          description: Создана не раньше (включительно)
+          schema: {type: string, format: date-time}
+        - name: to
+          in: query
+          required: false
+          description: Создана раньше (не включительно)
+          schema: {type: string, format: date-time}
+        - $ref: '#/components/parameters/BusCursor'
+        - $ref: '#/components/parameters/BusLimit'
+      responses:
+        '200':
+          description: Страница доставок
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BusDeliveryPage'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+
+  /admin/bus/inbox:
+    get:
+      tags: [bus]
+      operationId: listBusInbox
+      summary: 'Журнал интеграций: принятые события (errors=true — с ошибкой обработки)'
+      description: >-
+        Принятые события всех доменов (или одного), новые сверху; `errors=true` — обработка упала (`failed`) или ждёт
+        автоповтора после ошибки. Страница — `cursor` из `next_cursor`.
+      parameters:
+        - $ref: '#/components/parameters/BusDomainQuery'
+        - name: errors
+          in: query
+          required: false
+          schema: {type: boolean, default: false}
+        - name: status
+          in: query
+          required: false
+          schema:
+            $ref: '#/components/schemas/BusInboxStatus'
+        - $ref: '#/components/parameters/BusTypeQuery'
+        - $ref: '#/components/parameters/BusCursor'
+        - $ref: '#/components/parameters/BusLimit'
+      responses:
+        '200':
+          description: Страница принятых событий
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BusInboxPage'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+
+  /admin/bus/{domain}/deliveries/{id}/retry:
+    post:
+      tags: [bus]
+      operationId: retryBusDelivery
+      summary: '«Повторить» доставку'
+      description: >-
+        Доставка `dead` или ожидающая уходит сейчас, попытки с нуля; подписчик на паузе предохранителя получает пробу.
+        Идемпотентно: доставлено, в работе или нет такой — `retried: 0`. Домен пишет повтор в свой журнал с автором.
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+        - $ref: '#/components/parameters/BusDomainPath'
+        - name: id
+          in: path
+          required: true
+          description: Id доставки в домене
+          schema: {type: integer, minimum: 1}
+      responses:
+        '200':
+          description: Поставлено на повтор
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BusRetryResult'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+
+  /admin/bus/{domain}/deliveries/retry-dead:
+    post:
+      tags: [bus]
+      operationId: retryBusDeadLetters
+      summary: '«Повторить все dead подписчика»'
+      description: >-
+        Все доставки `dead` подписчика в домене уходят сейчас, попытки с нуля (после исправления причины: адрес, секрет,
+        приёмник). Повтор безопасен — приёмник гасит дубли по id события. `retried` — сколько поставлено.
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+        - $ref: '#/components/parameters/BusDomainPath'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BusRetryDeadIn'
+      responses:
+        '200':
+          description: Поставлено на повтор
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BusRetryResult'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+
+  /admin/bus/{domain}/inbox/{event_id}/retry:
+    post:
+      tags: [bus]
+      operationId: retryBusInbox
+      summary: '«Повторить обработку» принятого события'
+      description: >-
+        Запись `failed` или `skipped` снова обрабатывается (после исправления обработчика или данных). Идемпотентно:
+        обработано или ждёт — `retried: 0`.
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+        - $ref: '#/components/parameters/BusDomainPath'
+        - name: event_id
+          in: path
+          required: true
+          schema: {type: string, format: uuid}
+      responses:
+        '200':
+          description: Поставлено на повтор
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BusRetryResult'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+
   /admin/users:
     get:
       tags: [admin]
@@ -1839,6 +2049,42 @@ components:
       description: Только по этой роли сотрудника (id); чужая роль — 403
       schema:
         $ref: '#/components/schemas/RoleId'
+    BusDomainQuery:
+      name: domain
+      in: query
+      required: false
+      description: Только этот домен (по умолчанию — все три)
+      schema:
+        $ref: '#/components/schemas/BusDomain'
+    BusDomainPath:
+      name: domain
+      in: path
+      required: true
+      schema:
+        $ref: '#/components/schemas/BusDomain'
+    BusSubscriberQuery:
+      name: subscriber
+      in: query
+      required: false
+      schema:
+        $ref: '#/components/schemas/BusSubscriberName'
+    BusTypeQuery:
+      name: type
+      in: query
+      required: false
+      description: Подстрока типа события (`quote.`, `client.updated`)
+      schema: {type: string, minLength: 1, maxLength: 200}
+    BusCursor:
+      name: cursor
+      in: query
+      required: false
+      description: Непрозрачный курсор из `next_cursor`
+      schema: {type: string, maxLength: 2000}
+    BusLimit:
+      name: limit
+      in: query
+      required: false
+      schema: {type: integer, minimum: 1, maximum: 100, default: 50}
     CsrfToken:
       name: X-CSRF-Token
       in: header
@@ -1948,11 +2194,166 @@ components:
           description: Текст для сотрудника на его языке
         source:
           type: string
-          enum: [bff, crm, erp]
+          enum: [bff, crm, erp, eds]
         details:
           type: object
           description: Код и тело ошибки бэкенда, поля валидации — для разбора, не для показа
           additionalProperties: true
+
+    BusDomain:
+      type: string
+      enum: [crm, erp, eds]
+      description: Домен-издатель журнала шины
+    BusSourceState:
+      type: string
+      enum: [ok, unavailable, forbidden, not_applicable]
+      description: >-
+        `unavailable` — домен не ответил (сеть, таймаут, 5xx); `forbidden` — домен отказал в праве (например, права ещё не
+        дошли до EDS); `not_applicable` — у сотрудника нет доступа к домену или домен вне фильтра
+    BusSources:
+      type: object
+      additionalProperties: false
+      required: [crm, erp, eds]
+      properties:
+        crm: {$ref: '#/components/schemas/BusSourceState'}
+        erp: {$ref: '#/components/schemas/BusSourceState'}
+        eds: {$ref: '#/components/schemas/BusSourceState'}
+    BusSubscriberName:
+      type: string
+      pattern: '^[a-z][a-z0-9-]{0,63}$'
+      description: Имя подписчика шины (`crm`, `erp`, `eds`, `platform-bff`)
+    BusDeliveryStatus:
+      type: string
+      enum: [pending, in_flight, delivered, dead]
+      description: '`pending` — ждёт отправки или повтора, `in_flight` — отправляется, `delivered` — доставлено, `dead` — DLQ'
+    BusInboxStatus:
+      type: string
+      enum: [received, processed, failed, skipped]
+    BusSubscriberState:
+      type: string
+      enum: [ok, failing, paused, dead_letters, disabled, removed]
+      description: >-
+        Состояние словом (по порядку важности): `removed` — подписчика нет в файле подписок, остались доставки; `disabled` —
+        выключен (`enabled: false`), события копятся; `paused` — пауза предохранителя до `paused_until`; `dead_letters` — есть
+        доставки в DLQ; `failing` — ошибки подряд ниже порога предохранителя; `ok` — работает
+    BusSubscriber:
+      type: object
+      additionalProperties: false
+      required: [name, state, configured, enabled, drop, endpoint, pending, in_flight, dead, oldest_undelivered_age_seconds,
+                 consecutive_failures, paused_until, last_failure_at, last_success_at, last_error]
+      properties:
+        name: {type: string}
+        state: {$ref: '#/components/schemas/BusSubscriberState'}
+        configured: {type: boolean}
+        enabled: {type: boolean}
+        drop: {type: boolean, description: 'Выключен с `drop: true` — события за время остановки не копятся'}
+        endpoint: {type: [string, 'null'], description: Адрес приёмника (без учётных данных URL)}
+        pending: {type: integer}
+        in_flight: {type: integer}
+        dead: {type: integer}
+        oldest_undelivered_age_seconds: {type: [number, 'null'], description: Возраст самого старого недоставленного (без DLQ)}
+        consecutive_failures: {type: integer}
+        paused_until: {type: [string, 'null'], format: date-time}
+        last_failure_at: {type: [string, 'null'], format: date-time}
+        last_success_at: {type: [string, 'null'], format: date-time}
+        last_error: {type: [string, 'null']}
+    BusDomainOverview:
+      type: object
+      additionalProperties: false
+      required: [domain, outbox_pending, oldest_undelivered_age_seconds, dlq_size, inbox_received, inbox_retrying,
+                 inbox_failed, subscribers]
+      properties:
+        domain: {$ref: '#/components/schemas/BusDomain'}
+        outbox_pending: {type: integer, description: События ещё не разложены по подписчикам}
+        oldest_undelivered_age_seconds: {type: [number, 'null']}
+        dlq_size: {type: integer}
+        inbox_received: {type: integer, description: Принятые события ждут обработки}
+        inbox_retrying: {type: integer, description: 'Из них ждут автоповтора после ошибки'}
+        inbox_failed: {type: integer}
+        subscribers:
+          type: array
+          items: {$ref: '#/components/schemas/BusSubscriber'}
+    BusJournal:
+      type: object
+      additionalProperties: false
+      required: [domains, sources]
+      properties:
+        domains:
+          type: array
+          items: {$ref: '#/components/schemas/BusDomainOverview'}
+        sources: {$ref: '#/components/schemas/BusSources'}
+    BusDelivery:
+      type: object
+      additionalProperties: false
+      required: [domain, id, event_id, event_type, subscriber, status, attempts, next_attempt_at, last_attempt_at,
+                 last_status_code, last_error, delivered_at, created_at, subject, correlation_id]
+      description: Метаданные доставки; тела события нет.
+      properties:
+        domain: {$ref: '#/components/schemas/BusDomain'}
+        id: {type: integer}
+        event_id: {type: string, format: uuid}
+        event_type: {type: string}
+        subscriber: {type: string}
+        status: {$ref: '#/components/schemas/BusDeliveryStatus'}
+        attempts: {type: integer}
+        next_attempt_at: {type: [string, 'null'], format: date-time}
+        last_attempt_at: {type: [string, 'null'], format: date-time}
+        last_status_code: {type: [integer, 'null']}
+        last_error: {type: [string, 'null']}
+        delivered_at: {type: [string, 'null'], format: date-time}
+        created_at: {type: string, format: date-time}
+        subject: {type: [string, 'null']}
+        correlation_id: {type: [string, 'null']}
+    BusDeliveryPage:
+      type: object
+      additionalProperties: false
+      required: [items, next_cursor, sources]
+      properties:
+        items:
+          type: array
+          items: {$ref: '#/components/schemas/BusDelivery'}
+        next_cursor: {type: [string, 'null']}
+        sources: {$ref: '#/components/schemas/BusSources'}
+    BusInboxEntry:
+      type: object
+      additionalProperties: false
+      required: [domain, event_id, type, publisher, subject, correlation_id, status, attempts, error, received_at,
+                 processed_at]
+      description: Принятое доменом событие (метаданные; тела нет).
+      properties:
+        domain: {$ref: '#/components/schemas/BusDomain'}
+        event_id: {type: string, format: uuid}
+        type: {type: string}
+        publisher: {type: string}
+        subject: {type: [string, 'null']}
+        correlation_id: {type: [string, 'null']}
+        status: {$ref: '#/components/schemas/BusInboxStatus'}
+        attempts: {type: integer}
+        error: {type: [string, 'null']}
+        received_at: {type: string, format: date-time}
+        processed_at: {type: [string, 'null'], format: date-time}
+    BusInboxPage:
+      type: object
+      additionalProperties: false
+      required: [items, next_cursor, sources]
+      properties:
+        items:
+          type: array
+          items: {$ref: '#/components/schemas/BusInboxEntry'}
+        next_cursor: {type: [string, 'null']}
+        sources: {$ref: '#/components/schemas/BusSources'}
+    BusRetryDeadIn:
+      type: object
+      additionalProperties: false
+      required: [subscriber]
+      properties:
+        subscriber: {$ref: '#/components/schemas/BusSubscriberName'}
+    BusRetryResult:
+      type: object
+      additionalProperties: false
+      required: [retried]
+      properties:
+        retried: {type: integer, minimum: 0, description: 'Сколько поставлено на повтор; 0 — повторять нечего'}
 
     SourceState:
       type: string

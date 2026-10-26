@@ -91,6 +91,11 @@ class SessionData(BaseModel):
     erp: BackendTokens | None = None
     # Не пытаться переподключить ERP раньше этого момента (ERP недоступен при входе).
     erp_next_try: float = 0.0
+    # Токен доступа EDS (15 минут, без refresh: `refresh` пуст) — берётся при первом обращении к EDS
+    # обменом SSO-токена CRM `aud=eds` (docs/architecture/sso-token.md). Не вышло — повтор не
+    # раньше `eds_next_try`.
+    eds: BackendTokens | None = None
+    eds_next_try: float = 0.0
 
     def sources(self) -> dict[str, str]:
         """Состояние источников для `sources` агрегирующих ответов (контракт: `Sources`)."""

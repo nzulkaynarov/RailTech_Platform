@@ -56,6 +56,18 @@
  * `minItems: 1`, пустой набор — 422 `ROLES_REQUIRED` (`details.fields = [role_ids]`), в CRM запрос не уходит; тот же код —
  * перевод отказа CRM `roles_required` (CRM API 0.3.0). Закрыть доступ — `is_active = false` («Отключить сотрудника»).
  *
+ * **0.9.0 (W13-A2) — добавляющее.** Admin · Журнал интеграций (тег `bus`): шина `rt_bus` всех трёх доменов в одном журнале
+ * вместо CLI `bus status|retry` и Django admin ERP. `GET /admin/bus` — сводка по доменам (outbox, DLQ, inbox с ошибками) и
+ * подписчики с состоянием словом (`BusSubscriberState`: работает, ошибки подряд, пауза предохранителя до `paused_until`,
+ * есть DLQ, выключен, убран из подписок); `GET /admin/bus/deliveries` — доставки с фильтрами (домен, статус, подписчик,
+ * подстрока типа, период), DLQ — `status=dead`; `GET /admin/bus/inbox` — принятые события (`errors=true` — обработка упала
+ * или ждёт автоповтора); повторы `POST /admin/bus/{domain}/deliveries/{id}/retry`, `…/deliveries/retry-dead` (все `dead`
+ * подписчика), `…/inbox/{event_id}/retry`. Списки трёх доменов сливаются по времени, страница — непрозрачный `cursor` из
+ * `next_cursor`; домен, который не ответил или отказал, — `sources.<домен>`, ответ 200 с остальными. Только раздел
+ * `admin: full` (директору — 403 в BFF); в каждый домен — с токеном сотрудника: CRM и ERP — как раньше, EDS — токен
+ * сотрудника CRM `aud=eds` → `POST /api/v1/auth/sso/exchange` EDS (`docs/architecture/sso-token.md`), 15 минут, в сессии BFF.
+ * Тел событий нет — только метаданные доставки. `Error.source` дополнен `eds`.
+ *
  * **0.7.0 (W13-A1) — добавляющее.** Admin · Внешние интеграции (SPEC-v3 §7.6, тег `integrations`): обзор `GET /admin/integrations`
  * (карточки со статусом пятью уровнями — `ok`, `warn`, `fail`, `unknown`, `off` — уровни реестра внешних сервисов CRM, ADR-0024 CRM,
  * последняя активность и список «Требует внимания») и прокси к CRM под `/admin/integrations/*`: коннектор ERP (проверка,
@@ -85,7 +97,7 @@
  * Лимиты: вход — 10 неудачных попыток в минуту на IP и e-mail; остальные запросы — 300 в минуту на сессию; превышение — 429
  * `TOO_MANY_REQUESTS` с `Retry-After`.
  *
- * OpenAPI spec version: 0.7.0
+ * OpenAPI spec version: 0.9.0
  */
 import { faker } from "@faker-js/faker";
 
@@ -95,6 +107,11 @@ import type { RequestHandlerOptions } from "msw";
 import {
   AccessLevel,
   AttentionKind,
+  BusDeliveryStatus,
+  BusDomain,
+  BusInboxStatus,
+  BusSourceState,
+  BusSubscriberState,
   DueLabel,
   EmployeeStatus,
   ErpSyncState,
@@ -120,6 +137,10 @@ import type {
   AiSpendReport,
   BackupsStatus,
   BotProfileState,
+  BusDeliveryPage,
+  BusInboxPage,
+  BusJournal,
+  BusRetryResult,
   Employee,
   EmployeeList,
   ErpCheck,
@@ -1656,6 +1677,168 @@ export const getGetSystemStatusResponseMock = (
   ...overrideResponse,
 });
 
+export const getGetBusJournalResponseMock = (
+  overrideResponse: Partial<Extract<BusJournal, object>> = {},
+): BusJournal => ({
+  domains: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+    () => ({
+      domain: faker.helpers.arrayElement(Object.values(BusDomain)),
+      outbox_pending: faker.number.int(),
+      oldest_undelivered_age_seconds: faker.helpers.arrayElement([
+        faker.number.float({ fractionDigits: 2 }),
+        null,
+      ]),
+      dlq_size: faker.number.int(),
+      inbox_received: faker.number.int(),
+      inbox_retrying: faker.number.int(),
+      inbox_failed: faker.number.int(),
+      subscribers: Array.from(
+        { length: faker.number.int({ min: 1, max: 10 }) },
+        (_, i) => i + 1,
+      ).map(() => ({
+        name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        state: faker.helpers.arrayElement(Object.values(BusSubscriberState)),
+        configured: faker.datatype.boolean(),
+        enabled: faker.datatype.boolean(),
+        drop: faker.datatype.boolean(),
+        endpoint: faker.helpers.arrayElement([
+          faker.string.alpha({ length: { min: 10, max: 20 } }),
+          null,
+        ]),
+        pending: faker.number.int(),
+        in_flight: faker.number.int(),
+        dead: faker.number.int(),
+        oldest_undelivered_age_seconds: faker.helpers.arrayElement([
+          faker.number.float({ fractionDigits: 2 }),
+          null,
+        ]),
+        consecutive_failures: faker.number.int(),
+        paused_until: faker.helpers.arrayElement([
+          faker.date.past().toISOString().slice(0, 19) + "Z",
+          null,
+        ]),
+        last_failure_at: faker.helpers.arrayElement([
+          faker.date.past().toISOString().slice(0, 19) + "Z",
+          null,
+        ]),
+        last_success_at: faker.helpers.arrayElement([
+          faker.date.past().toISOString().slice(0, 19) + "Z",
+          null,
+        ]),
+        last_error: faker.helpers.arrayElement([
+          faker.string.alpha({ length: { min: 10, max: 20 } }),
+          null,
+        ]),
+      })),
+    }),
+  ),
+  sources: {
+    crm: faker.helpers.arrayElement(Object.values(BusSourceState)),
+    erp: faker.helpers.arrayElement(Object.values(BusSourceState)),
+    eds: faker.helpers.arrayElement(Object.values(BusSourceState)),
+  },
+  ...overrideResponse,
+});
+
+export const getListBusDeliveriesResponseMock = (
+  overrideResponse: Partial<Extract<BusDeliveryPage, object>> = {},
+): BusDeliveryPage => ({
+  items: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+    domain: faker.helpers.arrayElement(Object.values(BusDomain)),
+    id: faker.number.int(),
+    event_id: faker.string.uuid(),
+    event_type: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    subscriber: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    status: faker.helpers.arrayElement(Object.values(BusDeliveryStatus)),
+    attempts: faker.number.int(),
+    next_attempt_at: faker.helpers.arrayElement([
+      faker.date.past().toISOString().slice(0, 19) + "Z",
+      null,
+    ]),
+    last_attempt_at: faker.helpers.arrayElement([
+      faker.date.past().toISOString().slice(0, 19) + "Z",
+      null,
+    ]),
+    last_status_code: faker.helpers.arrayElement([faker.number.int(), null]),
+    last_error: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    delivered_at: faker.helpers.arrayElement([
+      faker.date.past().toISOString().slice(0, 19) + "Z",
+      null,
+    ]),
+    created_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+    subject: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    correlation_id: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+  })),
+  next_cursor: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
+  sources: {
+    crm: faker.helpers.arrayElement(Object.values(BusSourceState)),
+    erp: faker.helpers.arrayElement(Object.values(BusSourceState)),
+    eds: faker.helpers.arrayElement(Object.values(BusSourceState)),
+  },
+  ...overrideResponse,
+});
+
+export const getListBusInboxResponseMock = (
+  overrideResponse: Partial<Extract<BusInboxPage, object>> = {},
+): BusInboxPage => ({
+  items: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+    domain: faker.helpers.arrayElement(Object.values(BusDomain)),
+    event_id: faker.string.uuid(),
+    type: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    publisher: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    subject: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    correlation_id: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    status: faker.helpers.arrayElement(Object.values(BusInboxStatus)),
+    attempts: faker.number.int(),
+    error: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
+    received_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+    processed_at: faker.helpers.arrayElement([
+      faker.date.past().toISOString().slice(0, 19) + "Z",
+      null,
+    ]),
+  })),
+  next_cursor: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
+  sources: {
+    crm: faker.helpers.arrayElement(Object.values(BusSourceState)),
+    erp: faker.helpers.arrayElement(Object.values(BusSourceState)),
+    eds: faker.helpers.arrayElement(Object.values(BusSourceState)),
+  },
+  ...overrideResponse,
+});
+
+export const getRetryBusDeliveryResponseMock = (
+  overrideResponse: Partial<Extract<BusRetryResult, object>> = {},
+): BusRetryResult => ({ retried: faker.number.int({ min: 0 }), ...overrideResponse });
+
+export const getRetryBusDeadLettersResponseMock = (
+  overrideResponse: Partial<Extract<BusRetryResult, object>> = {},
+): BusRetryResult => ({ retried: faker.number.int({ min: 0 }), ...overrideResponse });
+
+export const getRetryBusInboxResponseMock = (
+  overrideResponse: Partial<Extract<BusRetryResult, object>> = {},
+): BusRetryResult => ({ retried: faker.number.int({ min: 0 }), ...overrideResponse });
+
 export const getListEmployeesResponseMock = (
   overrideResponse: Partial<Extract<EmployeeList, object>> = {},
 ): EmployeeList => ({
@@ -3009,6 +3192,148 @@ export const getGetSystemStatusMockHandler = (
   );
 };
 
+export const getGetBusJournalMockHandler = (
+  overrideResponse?:
+    | BusJournal
+    | ((info: Parameters<Parameters<typeof http.get>[1]>[0]) => Promise<BusJournal> | BusJournal),
+  options?: RequestHandlerOptions,
+) => {
+  return http.get(
+    "*/admin/bus",
+    async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getGetBusJournalResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getListBusDeliveriesMockHandler = (
+  overrideResponse?:
+    | BusDeliveryPage
+    | ((
+        info: Parameters<Parameters<typeof http.get>[1]>[0],
+      ) => Promise<BusDeliveryPage> | BusDeliveryPage),
+  options?: RequestHandlerOptions,
+) => {
+  return http.get(
+    "*/admin/bus/deliveries",
+    async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getListBusDeliveriesResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getListBusInboxMockHandler = (
+  overrideResponse?:
+    | BusInboxPage
+    | ((
+        info: Parameters<Parameters<typeof http.get>[1]>[0],
+      ) => Promise<BusInboxPage> | BusInboxPage),
+  options?: RequestHandlerOptions,
+) => {
+  return http.get(
+    "*/admin/bus/inbox",
+    async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getListBusInboxResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getRetryBusDeliveryMockHandler = (
+  overrideResponse?:
+    | BusRetryResult
+    | ((
+        info: Parameters<Parameters<typeof http.post>[1]>[0],
+      ) => Promise<BusRetryResult> | BusRetryResult),
+  options?: RequestHandlerOptions,
+) => {
+  return http.post(
+    "*/admin/bus/:domain/deliveries/:id/retry",
+    async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getRetryBusDeliveryResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getRetryBusDeadLettersMockHandler = (
+  overrideResponse?:
+    | BusRetryResult
+    | ((
+        info: Parameters<Parameters<typeof http.post>[1]>[0],
+      ) => Promise<BusRetryResult> | BusRetryResult),
+  options?: RequestHandlerOptions,
+) => {
+  return http.post(
+    "*/admin/bus/:domain/deliveries/retry-dead",
+    async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getRetryBusDeadLettersResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getRetryBusInboxMockHandler = (
+  overrideResponse?:
+    | BusRetryResult
+    | ((
+        info: Parameters<Parameters<typeof http.post>[1]>[0],
+      ) => Promise<BusRetryResult> | BusRetryResult),
+  options?: RequestHandlerOptions,
+) => {
+  return http.post(
+    "*/admin/bus/:domain/inbox/:eventId/retry",
+    async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getRetryBusInboxResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
 export const getListEmployeesMockHandler = (
   overrideResponse?:
     | EmployeeList
@@ -3295,6 +3620,12 @@ export const getRailTechPlatformBFFAPICRMERPMock = () => [
   getGetBackupsMockHandler(),
   getRequestBackupMockHandler(),
   getGetSystemStatusMockHandler(),
+  getGetBusJournalMockHandler(),
+  getListBusDeliveriesMockHandler(),
+  getListBusInboxMockHandler(),
+  getRetryBusDeliveryMockHandler(),
+  getRetryBusDeadLettersMockHandler(),
+  getRetryBusInboxMockHandler(),
   getListEmployeesMockHandler(),
   getInviteEmployeeMockHandler(),
   getResendInviteMockHandler(),

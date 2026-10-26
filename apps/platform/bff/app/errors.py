@@ -18,7 +18,7 @@ from app.cookies import clear_session_cookies
 
 log = structlog.get_logger()
 
-Source = Literal["bff", "crm", "erp"]
+Source = Literal["bff", "crm", "erp", "eds"]
 
 _CODES: dict[int, tuple[str, str]] = {
     status.HTTP_401_UNAUTHORIZED: ("SESSION_EXPIRED", "Сессия истекла. Войдите снова."),

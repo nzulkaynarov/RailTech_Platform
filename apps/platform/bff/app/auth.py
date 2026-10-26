@@ -5,6 +5,14 @@
 каждый вызов бэкенда идёт через `AuthService.call`: просроченный access обновляется refresh-токеном
 под блокировкой сессии (одна попытка); провал обновления удаляет сессию и даёт 401
 `SESSION_EXPIRED`.
+
+EDS (W13-A2) входит лениво, при первом обращении: CRM `sso/token {"aud": "eds"}` -> EDS
+`sso/exchange`
+-> токен доступа EDS на 15 минут в сессии (без refresh: истёк — новый обмен). Нет прав EDS у
+сотрудника —
+403 `FORBIDDEN` (`details.reason = eds_not_granted`); сбой — 503 и пауза `ERP_RETRY_SECONDS`. Отказ
+EDS не
+закрывает сессию Платформы.
 """
 
 import asyncio
@@ -18,7 +26,7 @@ import httpx
 import structlog
 from redis.asyncio import Redis
 
-from app.clients import CrmClient, ErpClient
+from app.clients import CrmClient, EdsClient, ErpClient
 from app.clients.base import Backend, BackendUnavailableError, cookie_value
 from app.clients.crm_models import SsoTokenResponse
 from app.config import Settings
@@ -56,6 +64,19 @@ _DEAD_TOKEN_STATUSES = frozenset({401, 403})
 
 class ErpConnectError(Exception):
     """ERP не выдал сессию по SSO (не 200, нет refresh-cookie, неожиданный ответ)."""
+
+
+class EdsConnectError(Exception):
+    """EDS не выдал токен доступа (сбой CRM или EDS, неожиданный ответ)."""
+
+
+class EdsNotGrantedError(Exception):
+    """У сотрудника нет прав EDS: CRM не выдаёт токен (`eds_access_denied`) или EDS его не знает
+    или отключил."""
+
+
+# Токен доступа EDS живёт 15 минут (eds.yaml `AccessToken.expires_in`).
+EDS_TOKEN_SECONDS = 900
 
 
 def jwt_expiry(token: str) -> float | None:
@@ -146,11 +167,19 @@ def _expect(resp: httpx.Response, source: Backend, *, ok: int = 200) -> httpx.Re
 
 
 class AuthService:
-    def __init__(self, redis: Redis, crm: CrmClient, erp: ErpClient, settings: Settings) -> None:
+    def __init__(
+        self,
+        redis: Redis,
+        crm: CrmClient,
+        erp: ErpClient,
+        settings: Settings,
+        eds: EdsClient | None = None,
+    ) -> None:
         self.redis = redis
         self.store = SessionStore(redis)
         self.crm = crm
         self.erp = erp
+        self.eds = eds
         self.settings = settings
 
     # --- вход -------------------------------------------------------------------------------------
@@ -317,6 +346,10 @@ class AuthService:
                 if self._stale(data.crm, rejected):
                     await self._refresh(sid, data, "crm")
                 return data
+            if backend == "eds":
+                if data.eds is None or self._stale(data.eds, rejected):
+                    await self._connect_eds(sid, data)
+                return data
             if data.erp_state == "not_applicable":
                 raise PlatformError(
                     "FORBIDDEN",
@@ -343,6 +376,56 @@ class AuthService:
             raise backend_unavailable("erp", "sso_failed")
         data.erp, data.erp_state = tokens, "ok"
         await self.store.save(sid, data)
+
+    async def _connect_eds(self, sid: str, data: SessionData) -> None:
+        """Токен доступа EDS: SSO-токен CRM `aud=eds` -> обмен в EDS (под блокировкой сессии)."""
+        if self.eds is None:
+            raise backend_unavailable("eds", "not_configured")
+        if now() < data.eds_next_try:
+            raise backend_unavailable("eds", "reconnect_cooldown")
+        if self._stale(data.crm, None):
+            await self._refresh(sid, data, "crm")
+        try:
+            access = await self._exchange_eds(data.crm.access)
+        except EdsNotGrantedError as exc:
+            raise PlatformError(
+                "FORBIDDEN",
+                "Нет доступа к EDS.",
+                status_code=403,
+                source="eds",
+                details={"reason": "eds_not_granted"},
+            ) from exc
+        except (BackendUnavailableError, EdsConnectError) as exc:
+            log.warning("eds_connect_failed", error=str(exc))
+            data.eds, data.eds_next_try = None, now() + ERP_RETRY_SECONDS
+            await self.store.save(sid, data)
+            raise backend_unavailable("eds", "sso_failed") from exc
+        data.eds = BackendTokens(
+            access=access, access_exp=jwt_expiry(access) or now() + EDS_TOKEN_SECONDS, refresh=""
+        )
+        data.eds_next_try = 0.0
+        await self.store.save(sid, data)
+
+    async def _exchange_eds(self, crm_access: str) -> str:
+        assert self.eds is not None  # noqa: S101 — проверено в _connect_eds
+        sso = await self.crm.sso_token(crm_access, aud="eds")
+        if sso.status_code == 403:
+            raise EdsNotGrantedError("crm sso/token: eds_access_denied")
+        if sso.status_code != 200:
+            raise EdsConnectError(f"crm sso/token: HTTP {sso.status_code}")
+        try:
+            sso_token = SsoTokenResponse.model_validate(sso.json()).token
+        except (ValueError, KeyError, TypeError) as exc:
+            raise EdsConnectError("crm sso/token: unexpected body") from exc
+        exchange = await self.eds.sso_exchange(sso_token)
+        if exchange.status_code == 403:
+            raise EdsNotGrantedError(f"eds sso/exchange: {backend_code(exchange)}")
+        if exchange.status_code != 200:
+            raise EdsConnectError(f"eds sso/exchange: HTTP {exchange.status_code}")
+        try:
+            return str(exchange.json()["access_token"])
+        except (ValueError, KeyError, TypeError) as exc:
+            raise EdsConnectError("eds sso/exchange: unexpected body") from exc
 
     async def _refresh(self, sid: str, data: SessionData, backend: Backend) -> None:
         """Одна попытка обновить access refresh-токеном (под блокировкой сессии)."""
@@ -388,7 +471,9 @@ class AuthService:
         params: dict[str, Any] | None,
         probe: bool = False,
     ) -> httpx.Response:
-        client = self.crm if backend == "crm" else self.erp
+        client = {"crm": self.crm, "erp": self.erp, "eds": self.eds}[backend]
+        if client is None:
+            raise backend_unavailable(backend, "not_configured")
         try:
             return await client.send(
                 method, path, access=tokens.access, json=json_body, params=params, probe=probe
@@ -414,16 +499,19 @@ class AuthService:
         повтор. Не помогло — сессия удаляется, 401 `SESSION_EXPIRED`.
         """
         data = await self._prepare(sid, backend)
-        tokens = data.crm if backend == "crm" else data.erp
+        tokens = _tokens(data, backend)
         assert tokens is not None  # noqa: S101 — _prepare гарантирует токены
         resp = await self._send(backend, tokens, method, path, json, params, probe)
         if resp.status_code != 401:
             return resp
         data = await self._prepare(sid, backend, rejected=tokens.access)
-        tokens = data.crm if backend == "crm" else data.erp
+        tokens = _tokens(data, backend)
         assert tokens is not None  # noqa: S101
         resp = await self._send(backend, tokens, method, path, json, params, probe)
         if resp.status_code == 401:
+            if backend == "eds":
+                # Свежий токен EDS отвергнут: сбой EDS (секреты), а не конец сессии Платформы.
+                raise backend_unavailable("eds", "access_rejected")
             await self.store.delete(sid)
             raise session_expired()
         return resp
@@ -493,6 +581,10 @@ class AuthService:
                 err.body.details = {**(err.body.details or {}), "fields": _failed_fields(resp)}
             raise err
         await self.store.update(sid, _clear_must_change)
+
+
+def _tokens(data: SessionData, backend: Backend) -> BackendTokens | None:
+    return {"crm": data.crm, "erp": data.erp, "eds": data.eds}[backend]
 
 
 def _clear_must_change(data: SessionData) -> None:

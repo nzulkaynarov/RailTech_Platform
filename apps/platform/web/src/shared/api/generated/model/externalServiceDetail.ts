@@ -56,6 +56,18 @@
  * `minItems: 1`, пустой набор — 422 `ROLES_REQUIRED` (`details.fields = [role_ids]`), в CRM запрос не уходит; тот же код —
  * перевод отказа CRM `roles_required` (CRM API 0.3.0). Закрыть доступ — `is_active = false` («Отключить сотрудника»).
  *
+ * **0.9.0 (W13-A2) — добавляющее.** Admin · Журнал интеграций (тег `bus`): шина `rt_bus` всех трёх доменов в одном журнале
+ * вместо CLI `bus status|retry` и Django admin ERP. `GET /admin/bus` — сводка по доменам (outbox, DLQ, inbox с ошибками) и
+ * подписчики с состоянием словом (`BusSubscriberState`: работает, ошибки подряд, пауза предохранителя до `paused_until`,
+ * есть DLQ, выключен, убран из подписок); `GET /admin/bus/deliveries` — доставки с фильтрами (домен, статус, подписчик,
+ * подстрока типа, период), DLQ — `status=dead`; `GET /admin/bus/inbox` — принятые события (`errors=true` — обработка упала
+ * или ждёт автоповтора); повторы `POST /admin/bus/{domain}/deliveries/{id}/retry`, `…/deliveries/retry-dead` (все `dead`
+ * подписчика), `…/inbox/{event_id}/retry`. Списки трёх доменов сливаются по времени, страница — непрозрачный `cursor` из
+ * `next_cursor`; домен, который не ответил или отказал, — `sources.<домен>`, ответ 200 с остальными. Только раздел
+ * `admin: full` (директору — 403 в BFF); в каждый домен — с токеном сотрудника: CRM и ERP — как раньше, EDS — токен
+ * сотрудника CRM `aud=eds` → `POST /api/v1/auth/sso/exchange` EDS (`docs/architecture/sso-token.md`), 15 минут, в сессии BFF.
+ * Тел событий нет — только метаданные доставки. `Error.source` дополнен `eds`.
+ *
  * **0.7.0 (W13-A1) — добавляющее.** Admin · Внешние интеграции (SPEC-v3 §7.6, тег `integrations`): обзор `GET /admin/integrations`
  * (карточки со статусом пятью уровнями — `ok`, `warn`, `fail`, `unknown`, `off` — уровни реестра внешних сервисов CRM, ADR-0024 CRM,
  * последняя активность и список «Требует внимания») и прокси к CRM под `/admin/integrations/*`: коннектор ERP (проверка,
@@ -85,7 +97,7 @@
  * Лимиты: вход — 10 неудачных попыток в минуту на IP и e-mail; остальные запросы — 300 в минуту на сессию; превышение — 429
  * `TOO_MANY_REQUESTS` с `Retry-After`.
  *
- * OpenAPI spec version: 0.7.0
+ * OpenAPI spec version: 0.9.0
  */
 import type { ExternalService } from "./externalService";
 import type { ServiceCheck } from "./serviceCheck";
