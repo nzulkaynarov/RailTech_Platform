@@ -387,11 +387,22 @@ class AuthService:
         json_body: Any,
         params: dict[str, Any] | None,
         probe: bool = False,
+        content: bytes | None = None,
+        content_type: str | None = None,
+        stream: bool = False,
     ) -> httpx.Response:
         client = self.crm if backend == "crm" else self.erp
         try:
             return await client.send(
-                method, path, access=tokens.access, json=json_body, params=params, probe=probe
+                method,
+                path,
+                access=tokens.access,
+                json=json_body,
+                params=params,
+                probe=probe,
+                content=content,
+                headers={"Content-Type": content_type} if content_type else None,
+                stream=stream,
             )
         except BackendUnavailableError as exc:
             raise backend_unavailable(backend, exc.reason) from exc
@@ -406,24 +417,36 @@ class AuthService:
         json: Any = None,
         params: dict[str, Any] | None = None,
         probe: bool = False,
+        content: bytes | None = None,
+        content_type: str | None = None,
+        stream: bool = False,
     ) -> httpx.Response:
         """Вызов CRM или ERP с токеном сотрудника. 2xx и 4xx бэкенда возвращаются как есть
         (`probe` — ещё и 502, см. `BackendClient.send`).
 
         Просроченный access обновляется заранее; если бэкенд всё же ответил 401 — одно обновление и
-        повтор. Не помогло — сессия удаляется, 401 `SESSION_EXPIRED`.
+        повтор. Не помогло — сессия удаляется, 401 `SESSION_EXPIRED`. `stream` — ответ отдаётся
+        открытым (тело не прочитано), закрывает его вызывающий; отвергнутый 401 закрывается здесь.
         """
         data = await self._prepare(sid, backend)
         tokens = data.crm if backend == "crm" else data.erp
         assert tokens is not None  # noqa: S101 — _prepare гарантирует токены
-        resp = await self._send(backend, tokens, method, path, json, params, probe)
+        resp = await self._send(
+            backend, tokens, method, path, json, params, probe, content, content_type, stream
+        )
         if resp.status_code != 401:
             return resp
+        if stream:
+            await resp.aclose()
         data = await self._prepare(sid, backend, rejected=tokens.access)
         tokens = data.crm if backend == "crm" else data.erp
         assert tokens is not None  # noqa: S101
-        resp = await self._send(backend, tokens, method, path, json, params, probe)
+        resp = await self._send(
+            backend, tokens, method, path, json, params, probe, content, content_type, stream
+        )
         if resp.status_code == 401:
+            if stream:
+                await resp.aclose()
             await self.store.delete(sid)
             raise session_expired()
         return resp

@@ -112,6 +112,8 @@ class BackendClient:
         params: dict[str, Any] | None = None,
         headers: dict[str, str] | None = None,
         probe: bool = False,
+        content: bytes | None = None,
+        stream: bool = False,
     ) -> httpx.Response:
         """Вызов бэкенда от имени сотрудника. 2xx и 4xx возвращаются как есть (решает вызывающий),
         сеть, таймаут и 5xx — `BackendUnavailableError`.
@@ -119,23 +121,39 @@ class BackendClient:
         `probe` — проба внешнего сервиса через бэкенд: таймаут `PROBE_TIMEOUT_SECONDS`, а 502 CRM
         («сервис за мной не ответил: ERP, SMTP, Telegram») с JSON-телом приложения идёт как
         есть — причина в теле, это результат проверки, а не сбой бэкенда. 502 прокси (HTML,
-        пустое тело) и сетевой сбой остаются `BackendUnavailableError`."""
+        пустое тело) и сетевой сбой остаются `BackendUnavailableError`.
+
+        `content` — готовое тело запроса (multipart загрузки файла: границу задаёт заголовок
+        `Content-Type` вызывающего, BFF тело не разбирает). `stream` — ответ не читается целиком:
+        вызывающий обязан закрыть его (`aclose`), тело отдаёт `aiter_raw` (выгрузка CSV потоком,
+        W13-A5); таймаут — как у пробы (CRM собирает выборку до первого байта)."""
         headers = dict(headers or {})
         if access:
             headers["Authorization"] = f"Bearer {access}"
         if cookies:
             headers["Cookie"] = "; ".join(f"{k}={v}" for k, v in cookies.items())
         try:
-            response = await self.http.request(
+            request = self.http.build_request(
                 method,
                 path,
                 headers=headers,
                 json=json,
                 params=params,
-                timeout=httpx.Timeout(PROBE_TIMEOUT_SECONDS) if probe else httpx.USE_CLIENT_DEFAULT,
+                content=content,
+                timeout=httpx.Timeout(PROBE_TIMEOUT_SECONDS)
+                if probe or stream
+                else httpx.USE_CLIENT_DEFAULT,
             )
+            response = await self.http.send(request, stream=stream)
         except httpx.HTTPError as exc:
             raise BackendUnavailableError(self.name, type(exc).__name__) from exc
+        if stream:
+            if response.status_code >= 500:
+                await response.aclose()
+                raise BackendUnavailableError(
+                    self.name, f"HTTP {response.status_code}", status=response.status_code
+                )
+            return response
         if probe and response.status_code == httpx.codes.BAD_GATEWAY and _is_app_error(response):
             return response
         if response.status_code >= 500:
