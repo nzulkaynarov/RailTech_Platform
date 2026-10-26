@@ -81,6 +81,33 @@ SPA  POST /api/v1/auth/login {email, password}
   «вход в ERP через страницу CRM» после T4 не нужны (T5 удаляет).
 - `platform_role_refs*` — роли Платформы сотрудника с их матрицами (R-1/R-2, §6); старое поле `platform_roles` (коды) удалено в R-1b.
 
+### 3.1. Первый запуск и временный пароль (W13-A4, BFF 0.10.0)
+
+Пока в CRM нет активного администратора, вход ведёт на экран «Первый запуск» (`/setup`, без сессии):
+
+```
+SPA  GET  /api/v1/setup/state                    → BFF → CRM GET /setup/state          {needs_admin}
+SPA  POST /api/v1/setup/admin {code, name, email, password}
+ └► BFF → лимит входа (IP и e-mail; неверный код расходует попытку)
+        → CRM POST /setup/admin {code, email, full_name, password}   → первый администратор (роль ADMIN, ERP — провижининг)
+        → CRM POST /auth/logout (refresh, который CRM открыла сама)    → семья токенов не висит
+        → обычный вход (CRM login → /me → SSO → ERP exchange → Redis)   → cookie rt_pf_session и rt_pf_csrf
+```
+
+- Код первого запуска знает только CRM: она выдаёт его, пока администратора нет, и один раз пишет в журнал `crm-api`
+  (`setup_code_issued`); BFF его не хранит и не возвращает. Блокировку перебора (10 неверных кодов — 15 минут) держит CRM,
+  BFF добавляет лимит входа.
+- Дальше — мастер в Admin (`/admin/setup`, раздел `admin` полный): шаг «своя компания» — ERP `setup/status/` и `setup/company/`
+  токеном администратора (ERP выдаёт доступ новому администратору с задержкой провижининга: до тех пор BFF отвечает
+  503 `BACKEND_UNAVAILABLE` с `source = erp`, а экран предлагает «Проверить снова»); чек-лист из пяти шагов
+  (`GET /setup/checklist`) — бот и модели из CRM `/setup/checklist`, ERP — `/integrations/erp`, почта — `/integrations/smtp`,
+  первый сотрудник — `/users` (есть активный сотрудник кроме администратора). Чего бэкенд не сказал, то `unknown`.
+- Сотрудник без почты: `POST /admin/users` (CRM `POST /users`) и `POST /admin/users/{id}/temporary-password` (CRM
+  `POST /users/{id}/reset-password`) отдают **временный пароль один раз** в теле ответа с `Cache-Control: no-store`.
+  CRM хранит только хеш, поэтому повторно получить пароль нельзя — выдают новый, а прежний и сессии сотрудника гаснут.
+  BFF не пишет пароль в журнал и ошибки, не кладёт в Redis и сессию; SPA держит его в состоянии одного окна и убирает по «Готово».
+  Сотрудник входит с временным паролем (`must_change_password`) и обязан сменить его (`POST /auth/change-password`).
+
 ## 4. Кто владеет новыми сущностями (SPEC-v3 §10.4)
 
 Правило выбора: сущность живёт там, где живёт объект, к которому она привязана, и тот, кто отвечает за её стадию.
