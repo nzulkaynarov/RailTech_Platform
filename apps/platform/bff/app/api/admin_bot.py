@@ -14,13 +14,16 @@ R3-D-2). Файл идёт потоком: BFF читает ответ CRM ку�
 """
 
 import re
+from collections.abc import AsyncIterator
 from datetime import datetime
 from typing import Annotated, Any, Literal
 from zoneinfo import ZoneInfo
 
+import anyio
+import httpx
 from fastapi import APIRouter, Depends, Path, Query, status
 from fastapi.responses import StreamingResponse
-from starlette.background import BackgroundTask
+from starlette.types import Send
 
 from app.clients import crm_models as crm
 from app.clients.crm_proxy import CrmProxy, crm_error
@@ -205,11 +208,33 @@ async def download_export(
             raise crm_error(response)
         finally:
             await response.aclose()
-    return StreamingResponse(
-        response.aiter_raw(),
-        media_type="text/csv; charset=utf-8",
+    return CsvStream(
+        response,
         headers={
             "Content-Disposition": _filename(response.headers.get("content-disposition"), entity)
         },
-        background=BackgroundTask(response.aclose),
     )
+
+
+async def _relay(response: httpx.Response) -> AsyncIterator[bytes]:
+    """Куски ответа CRM — браузеру. `aiter_bytes` снимает сжатие CRM: заголовок `Content-Encoding`
+    дальше не идёт, а файл должен остаться читаемым."""
+    async for chunk in response.aiter_bytes():
+        yield chunk
+
+
+class CsvStream(StreamingResponse):
+    """Выгрузка CSV потоком; ответ CRM закрывается всегда — файл отдан, клиент оборвал загрузку
+    (Starlette отменяет отправку и сам генератор не закрывает), CRM оборвала поток. Закрытие
+    защищено от отмены: иначе соединение с CRM осталось бы открытым до сборки мусора."""
+
+    def __init__(self, upstream: httpx.Response, headers: dict[str, str]) -> None:
+        super().__init__(_relay(upstream), media_type="text/csv; charset=utf-8", headers=headers)
+        self._upstream = upstream
+
+    async def stream_response(self, send: Send) -> None:
+        try:
+            await super().stream_response(send)
+        finally:
+            with anyio.CancelScope(shield=True):
+                await self._upstream.aclose()

@@ -6,14 +6,19 @@ CRM — на respx (`kb_support`), ответы BFF проверяются по 
 изменений, пути невалидных полей из CRM, выгрузка CSV потоком. Решения (значения, формат) — за CRM.
 """
 
+import asyncio
+import gzip
+from collections.abc import MutableMapping
 from typing import Any
 
+import httpx
 import pytest
 
+from app.api.admin_bot import CsvStream
 from app.clients.base import PROBE_TIMEOUT_SECONDS
 from tests.backends import Backends
 from tests.conftest import ContractChecker, Web
-from tests.kb_support import CSV_LEADS, CrmBotFake, text3
+from tests.kb_support import CSV_LEADS, Chunks, CrmBotFake, text3
 from tests.roles import custom
 
 BASE = "/api/v1/admin/bot"
@@ -460,3 +465,77 @@ async def test_role_with_admin_and_clients_exports_clients_but_not_leads(
     leads = await web.client.get(f"{BASE}/exports/leads")
 
     assert (clients.status_code, deals.status_code, leads.status_code) == (200, 200, 403)
+
+
+# --- выгрузка: обрыв клиента и сжатие ответа CRM -------------------------------------------------
+
+
+async def test_export_stream_closes_crm_response_when_client_disconnects() -> None:
+    """Клиент оборвал загрузку после первого куска: ответ CRM закрывается, остаток не читается."""
+    stream = Chunks([b"ID\r\n", b"1\r\n", b"2\r\n"])
+    upstream = httpx.Response(200, stream=stream)
+    sent: list[str] = []
+    first_chunk_sent = asyncio.Event()
+
+    async def receive() -> dict[str, str]:
+        await first_chunk_sent.wait()
+        return {"type": "http.disconnect"}
+
+    async def send(message: MutableMapping[str, Any]) -> None:
+        sent.append(message["type"])
+        if message["type"] == "http.response.body":
+            first_chunk_sent.set()
+            await asyncio.sleep(0)  # отдать управление: слушатель обрыва успевает сработать
+
+    response = CsvStream(upstream, headers={"Content-Disposition": 'attachment; filename="a.csv"'})
+    await response({"type": "http", "asgi": {"spec_version": "2.0"}}, receive, send)
+
+    assert stream.closed is True
+    assert stream.sent < 3  # весь файл не читался
+
+
+async def test_export_stream_closes_crm_response_after_the_whole_file() -> None:
+    stream = Chunks([b"ID\r\n", b"1\r\n"])
+    upstream = httpx.Response(200, stream=stream)
+    bodies: list[bytes] = []
+
+    async def receive() -> dict[str, str]:
+        await asyncio.sleep(3600)
+        return {"type": "http.disconnect"}
+
+    async def send(message: MutableMapping[str, Any]) -> None:
+        if message["type"] == "http.response.body":
+            bodies.append(message["body"])
+
+    await CsvStream(upstream, headers={})(
+        {"type": "http", "asgi": {"spec_version": "2.0"}}, receive, send
+    )
+
+    assert b"".join(bodies) == b"ID\r\n1\r\n"
+    assert stream.closed is True
+
+
+async def test_export_of_a_compressed_crm_answer_reaches_the_browser_as_plain_text(
+    web: Web, crm: CrmBotFake
+) -> None:
+    """CRM ответила gzip: BFF отдаёт распакованный CSV и не передаёт `Content-Encoding`."""
+    csv = CSV_LEADS.encode("utf-8")
+    crm.answer(
+        "GET",
+        "export/leads.csv",
+        200,
+        None,
+        content=gzip.compress(csv),
+        headers={
+            "content-type": "text/csv",
+            "content-encoding": "gzip",
+            "content-disposition": 'attachment; filename="leads-20261026-1430.csv"',
+        },
+    )
+    await web.login(["ADMIN", "MANAGER"])
+
+    response = await web.client.get(f"{BASE}/exports/leads")
+
+    assert response.status_code == 200
+    assert response.content == csv
+    assert "content-encoding" not in response.headers
