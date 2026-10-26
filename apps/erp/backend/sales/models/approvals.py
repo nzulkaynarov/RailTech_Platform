@@ -20,6 +20,7 @@ class StepStatus(models.TextChoices):
 
 
 class StepTrigger(models.TextChoices):
+    CALC_VISA = "CALC_VISA", _("Виза расчёта")
     TRADE_REVIEW = "TRADE_REVIEW", _("Проверка ВЭД")
     INFORMED = "INFORMED", _("Для информации")
     MANUAL = "MANUAL", _("Добавлен вручную")

@@ -1,7 +1,10 @@
 """Визы КП внутри ERP и передача КП директору на одобрение в EDS (EDS-03, ADR-0015, runbook волны 12 §2.4–§2.5).
 
-Цепочка ERP — только визы: проверяющие с правом `quote.review` (тот же порядок — параллельно). Когда виз больше не ждём
-(все шаги пройдены или проверяющих нет), КП уходит директору: ERP публикует `uz.railtech.erp.quote.ready_for_approval.v1`
+Цепочка ERP — только визы расчёта: шаги строятся из исполнителей задания расчёта (`CalcTask`, резолюция EDS) в зонах
+goods и services, у которых есть пользователь ERP; визирует назначенный исполнитель шага (право — назначение, а не
+`quote.review`), автор КП визирует свою зону самой отправкой. Директор и прочие держатели `quote.review` в визы ERP не
+попадают — одобрение директора только в EDS. КП без задания расчёта виз не ждёт. Когда виз больше не ждём (все шаги
+пройдены или их нет), КП уходит директору: ERP публикует `uz.railtech.erp.quote.ready_for_approval.v1`
 в транзакции изменения (`request_director_approval`) и ждёт решения маршрута EDS. Решение (`eds.approval.decided`)
 применяет `apply_director_decision`: одобрено — ИСХ-номер EDS на КП и «Готово к отправке»; возвращено — черновик с
 комментарием директора (правка и повторная отправка — новая редакция, новое событие); отклонено — КП отклонено.
@@ -26,17 +29,6 @@ logger = logging.getLogger(__name__)
 
 
 # ── helpers ────────────────────────────────────────────────────────────────
-def _members_with_permission(company_id: int, perm: str) -> list:
-    """Активные участники компании с правом `perm` — объединение их ролей (M1-ERP-05), одним
-    запросом с prefetch, без похода в `member_has_permission` на каждого."""
-    members = (
-        CompanyMember.objects.filter(company_id=company_id, is_active=True, user__isnull=False)
-        .select_related("user", "role")
-        .prefetch_related("company_roles")
-    )
-    return [m for m in members if any(role.has_perm(perm) for role in m.company_roles.all())]
-
-
 def _notify_user(
     user_id: Optional[int],
     title: str,
@@ -73,9 +65,14 @@ def _notify_user(
     push_notification_ws(notif)
 
 
-def _step_permission(step: QuoteApprovalStep) -> str:
-    """Право, с которым закрывают шаг визы: `quote.review` (одобрение директором — в EDS, не шаг ERP)."""
-    return Permission.QUOTE_REVIEW.value
+def may_act_on_step(step: QuoteApprovalStep, actor, company_id: Optional[int]) -> bool:
+    """Может ли `actor` закрыть шаг: виза расчёта — только назначенный исполнитель шага (решение лида волны 12, Б1);
+    прежние шаги без назначения по резолюции — держатель `quote.review`; суперпользователь — за другого («от имени»)."""
+    if getattr(actor, "is_superuser", False):
+        return True
+    if step.trigger_reason == StepTrigger.CALC_VISA:
+        return bool(step.approver_id) and step.approver.user_id == getattr(actor, "id", None)
+    return bool(company_id) and member_has_permission(actor, company_id, Permission.QUOTE_REVIEW.value)
 
 
 def _set_status(quote: Quote, code: str) -> None:
@@ -115,11 +112,23 @@ def _link(quote: Quote) -> str:
     return f"#deal-quote/{quote.deal_id}"
 
 
-def _chain_members(company_id: int, author_user_id: Optional[int]) -> list:
-    """Кто визирует КП: держатели `quote.review`, кроме автора КП (FIX-55, D-02)."""
-    return [
-        m for m in _members_with_permission(company_id, Permission.QUOTE_REVIEW.value) if m.user_id != author_user_id
-    ]
+def _visa_members(quote: Quote, company_id: int) -> list:
+    """Кто визирует КП: исполнители задания расчёта сделки в зонах goods/services с пользователем ERP, кроме автора КП
+    (он визирует свою зону отправкой). Участник ERP — членство в компании-владельце КП, иначе любое действующее."""
+    from .calc_tasks import latest_task, visa_assignee_user_ids
+
+    user_ids = [uid for uid in visa_assignee_user_ids(latest_task(quote.deal_id)) if uid != quote.prepared_by_id]
+    members = []
+    for user_id in user_ids:
+        active = CompanyMember.objects.filter(user_id=user_id, is_active=True).select_related("user")
+        member = active.filter(company_id=company_id).first() or active.order_by("id").first()
+        if member is None:
+            logger.warning(
+                "Исполнитель расчёта #%s без членства в компании — шаг визы не создан (КП #%s)", user_id, quote.pk
+            )
+            continue
+        members.append(member)
+    return members
 
 
 def _on_behalf_params(step: QuoteApprovalStep, actor) -> dict:
@@ -134,8 +143,8 @@ def _on_behalf_params(step: QuoteApprovalStep, actor) -> dict:
 @transaction.atomic
 def build_approval_chain(quote: Quote, company_id: int, economics: Optional[dict] = None) -> None:
     """(Пере)строить авто-шаги виз при отправке на согласование: прежние авто-шаги (кроме пройденных) удаляются,
-    ручные и «для информации» остаются; каждому проверяющему (`quote.review`, не автор) — шаг APPROVER.
-    routing_mode живёт на КП: 'parallel' (по умолчанию) — у всех order=1, 'sequential' — по возрастанию.
+    ручные и «для информации» остаются; каждому исполнителю расчёта (зоны goods/services, не автор) — шаг визы
+    `CALC_VISA`. routing_mode живёт на КП: 'parallel' (по умолчанию) — у всех order=1, 'sequential' — по возрастанию.
     Шага директора нет: одобрение — маршрут EDS после виз (`request_director_approval`)."""
     quote.approval_steps.filter(is_auto=True).exclude(status=StepStatus.APPROVED).delete()
 
@@ -143,17 +152,17 @@ def build_approval_chain(quote: Quote, company_id: int, economics: Optional[dict
     margin = (economics or {}).get("gross_margin_percent")
     new_steps = []
     order = 1
-    for reviewer in _chain_members(company_id, quote.prepared_by_id):
+    for member in _visa_members(quote, company_id):
         new_steps.append(
             QuoteApprovalStep(
                 quote=quote,
                 order=order,
                 participation=StepParticipation.APPROVER,
-                approver=reviewer,
+                approver=member,
                 status=StepStatus.PENDING,
-                is_mandatory=False,
+                is_mandatory=True,
                 is_auto=True,
-                trigger_reason=StepTrigger.TRADE_REVIEW,
+                trigger_reason=StepTrigger.CALC_VISA,
                 tested_value=margin,
             )
         )
@@ -208,7 +217,7 @@ def _notify_informed(quote: Quote, message: str, *, event_code: str, event_param
 # ── act / recall ─────────────────────────────────────────────────────────────
 @transaction.atomic
 def act_on_step(step_id: int, actor, decision: str, comment: str = "") -> Tuple[Optional[Quote], Optional[str]]:
-    """Проверяющий визирует или отклоняет свой шаг. decision ∈ {APPROVE, REJECT}.
+    """Исполнитель расчёта визирует или отклоняет свой шаг. decision ∈ {APPROVE, REJECT}.
     APPROVE продвигает цепочку виз; последняя виза передаёт КП директору — `request_director_approval`
     (событие `quote.ready_for_approval` в EDS, КП остаётся «На утверждении»). REJECT возвращает КП в черновик,
     отзывает открытые шаги и уведомляет автора с причиной.
@@ -229,7 +238,7 @@ def act_on_step(step_id: int, actor, decision: str, comment: str = "") -> Tuple[
     company_id = _quote_owner_company_id(quote)
     if not company_id:
         return None, "NO_QUOTE_COMPANY"
-    if not (getattr(actor, "is_superuser", False) or member_has_permission(actor, company_id, _step_permission(step))):
+    if not may_act_on_step(step, actor, company_id):
         return None, "ROLE_NOT_PERMITTED"
     if (
         step.participation == StepParticipation.APPROVER
@@ -361,7 +370,7 @@ def _preview_step(member, participation: str, trigger: str, submitter_user_id: O
 
 
 def preview_approval_chain(quote_id: int, actor) -> Tuple[Optional[dict], Optional[str]]:
-    """Только чтение: кто визирует КП, если отправить его сейчас (Salesforce Approval Preview). Шаги не строятся и
+    """Только чтение: кто визирует КП (исполнители расчёта), если отправить его сейчас (Salesforce Approval Preview). Шаги не строятся и
     ничего не сохраняется — то же разрешение участников, что у `build_approval_chain`. После виз КП уходит директору
     в EDS (EDS-03) — шагом ERP это не показывается. Доступно тому, кто может отправить КП (`quote.build`)."""
     from crm.services.quotes.lifecycle_gates import resolve_submit_company
@@ -377,17 +386,17 @@ def preview_approval_chain(quote_id: int, actor) -> Tuple[Optional[dict], Option
     economics = compute_quote_economics(quote)
     submitter_id = getattr(actor, "id", None)
     steps = [
-        _preview_step(reviewer, StepParticipation.APPROVER, StepTrigger.TRADE_REVIEW, submitter_id)
-        for reviewer in _chain_members(company_id, quote.prepared_by_id)
+        _preview_step(member, StepParticipation.APPROVER, StepTrigger.CALC_VISA, submitter_id)
+        for member in _visa_members(quote, company_id)
     ]
     return {"below_floor": bool(economics.get("below_floor")), "steps": steps}, None
 
 
 @transaction.atomic
 def recall_quote(quote_id: int, actor) -> Tuple[Optional[Quote], Optional[str]]:
-    """Автор КП (или суперпользователь) забирает КП с согласования на правку: PENDING_APPROVAL → DRAFT, открытые
-    шаги RECALLED. Запрещено после «Готово к отправке» (Salesforce rule). Если КП уже у директора в EDS, решение по
-    этой редакции придёт устаревшим и не применится; повторная отправка — новая редакция."""
+    """Автор КП (или суперпользователь) забирает КП с визирования на правку: PENDING_APPROVAL → DRAFT, открытые
+    шаги RECALLED. Запрещено после «Готово к отправке» (Salesforce rule) и после передачи директору в EDS
+    (`QUOTE_AWAITING_DIRECTOR`, 409): маршрут EDS открыт, вернуть КП может только директор («на доработку»)."""
     from .quotes import _quote_owner_company_id
 
     quote = Quote.objects.select_for_update(of=("self",)).select_related("status").get(pk=quote_id)
@@ -399,6 +408,8 @@ def recall_quote(quote_id: int, actor) -> Tuple[Optional[Quote], Optional[str]]:
         return None, "ROLE_NOT_PERMITTED"
     if not quote.status or quote.status.code != QuoteStatusCode.PENDING_APPROVAL:
         return None, "INVALID_STATUS"
+    if _active_order(quote) is None:
+        return None, "QUOTE_AWAITING_DIRECTOR"  # визы собраны, КП у директора в EDS
     quote.approval_steps.filter(status=StepStatus.PENDING).exclude(participation=StepParticipation.INFORMED).update(
         status=StepStatus.RECALLED
     )

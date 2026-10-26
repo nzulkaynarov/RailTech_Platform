@@ -119,10 +119,9 @@ def _resolution(deal, assignees=((11, "goods"), (12, "services"))):
     ).task
 
 
-def _reviewer(world, email, crm_user_id):
-    role = CompanyRole.objects.create(
-        company=world["seller"], name=f"Визы {email}", permissions=[Permission.QUOTE_REVIEW.value]
-    )
+def _staff(world, email, crm_user_id, permissions=()):
+    """Сотрудник своей компании с сопоставлением CRM; права роли — только перечисленные (для визы не нужны)."""
+    role = CompanyRole.objects.create(company=world["seller"], name=f"Роль {email}", permissions=list(permissions))
     user = _user(email, crm_user_id=crm_user_id)
     _member(world["seller"], user, [role])
     return user
@@ -187,26 +186,46 @@ def test_submit_without_reviewers_sends_the_quote_to_the_director_in_eds(world):
     assert ActivityLog.objects.filter(entity_id=quote.pk, event_code="quote.sent_to_director").count() == 1
 
 
-def test_event_waits_for_the_visas_and_carries_them_by_zone(world):
-    _resolution(world["deal"])
-    supply = _reviewer(world, "supply@railtech.test", 11)
-    engineer = _reviewer(world, "engineer@railtech.test", 12)
+def test_gate_scenario_supply_builds_engineer_visas_and_the_snapshot_covers_required_zones(world):
+    """Гейт C1: goods — снабженцу, services — инженеру; КП собирает снабженец, инженер визирует в ERP (без
+    quote.review) → visas = [goods, services] покрывает required_zones (чек-лист EDS зелёный)."""
+    _resolution(world["deal"])  # исполнители заведены в ERP позже резолюции — привязка по CrmUserMapping при отправке
+    supply = _staff(world, "supply@railtech.test", 11, [Permission.QUOTE_BUILD.value])
+    engineer = _staff(world, "engineer@railtech.test", 12)
     quote = _quote(world)
+    quote.prepared_by = supply
+    quote.save(update_fields=["prepared_by"])
 
-    QLS.submit_for_review(quote.id, world["calc"])
-    assert bus_support.published("quote.ready_for_approval") == [], "визы ещё не собраны"
-    steps = {s.approver.user_id: s for s in quote.approval_steps.select_related("approver")}
-    assert {s.participation for s in steps.values()} == {StepParticipation.APPROVER}
+    QLS.submit_for_review(quote.id, supply)
+    assert bus_support.published("quote.ready_for_approval") == [], "виза инженера ещё не стоит"
+    (step,) = quote.approval_steps.select_related("approver")
+    assert step.approver.user_id == engineer.pk and step.participation == StepParticipation.APPROVER
 
-    assert act_on_step(steps[supply.pk].id, supply, "APPROVE")[1] is None
-    assert bus_support.published("quote.ready_for_approval") == []
-    assert act_on_step(steps[engineer.pk].id, engineer, "APPROVE")[1] is None
+    assert act_on_step(step.id, engineer, "APPROVE")[1] is None
 
     assert _status(quote) == "PENDING_APPROVAL", "после виз КП ждёт директора, а не «Готово к отправке»"
     event = bus_support.only("quote.ready_for_approval")
     bus_support.assert_matches_contract(event)
-    visas = {(v["zone"], v["by"]["crm_user_id"]) for v in event["data"]["payload"]["visas"]}
+    payload = event["data"]["payload"]
+    visas = {(v["zone"], v["by"]["crm_user_id"]) for v in payload["visas"]}
     assert visas == {("goods", 11), ("services", 12)}
+    assert {zone for zone, _ in visas} >= set(payload["required_zones"]) == {"goods", "services"}
+
+
+def test_director_gets_no_visa_step_and_cannot_visa(world):
+    from accounts.services.roles import ensure_default_company_roles
+
+    director = _user("director@railtech.test", crm_user_id=3)
+    _member(world["seller"], director, [ensure_default_company_roles(world["seller"])["HEAD"]])
+    engineer = _staff(world, "engineer@railtech.test", 12)
+    _resolution(world["deal"], assignees=((12, "services"),))
+    quote = _quote(world)
+
+    QLS.submit_for_review(quote.id, world["calc"])
+
+    (step,) = quote.approval_steps.all()
+    assert step.approver.user_id == engineer.pk, "директор (quote.review) визы в ERP не получает"
+    assert act_on_step(step.id, director, "APPROVE")[1] == "ROLE_NOT_PERMITTED"
 
 
 def test_company_without_crm_client_still_reaches_eds(world):
@@ -319,11 +338,17 @@ def test_decision_on_a_stale_version_is_ignored_and_journaled(world):
     assert entry.event_params["version"] == 1 and entry.event_params["current_revision"] == 2
 
 
-def test_decision_after_recall_is_not_applied(world):
+def test_author_cannot_recall_a_quote_handed_to_the_director(world):
     from crm.services.approvals import recall_quote
 
     quote = _submitted(world)
-    recall_quote(quote.id, world["calc"])
+    _, err = recall_quote(quote.id, world["calc"])
+    assert err == "QUOTE_AWAITING_DIRECTOR" and _status(quote) == "PENDING_APPROVAL"
+
+
+def test_decision_on_a_quote_not_awaiting_approval_is_not_applied(world):
+    quote = _submitted(world)
+    Quote.objects.filter(pk=quote.pk).update(status=QuoteStatus.objects.get(code="DRAFT"))
     outcome = eds_inbound.apply_approval_decided(decided(quote, "approve"))
     assert outcome.reason == "ignored" and _status(quote) == "DRAFT"
     assert ActivityLog.objects.filter(entity_id=quote.pk, event_code="quote.director_decision_ignored").exists()
@@ -376,29 +401,3 @@ def test_there_is_no_director_step_and_no_final_approval_permission():
         "QUOTE_REVIEW",
     }
     assert StepStatus.PENDING  # шаги виз остаются
-
-
-def test_migration_drops_director_steps_and_returns_quotes_waiting_only_for_them_to_draft(world):
-    """sales/0005: шаги «Руководитель» прежней цепочки удаляются; КП, ждавшее только руководителя, — в черновик."""
-    import importlib
-
-    from django.apps import apps
-
-    from crm.models import QuoteApprovalStep
-
-    migration = importlib.import_module("sales.migrations.0005_eds_calc_tasks_director_decision")
-    waiting = _quote(world)
-    waiting.status = QuoteStatus.objects.get(code="PENDING_APPROVAL")
-    waiting.save(update_fields=["status"])
-    QuoteApprovalStep.objects.create(quote=waiting, order=100, participation="HEAD", status="PENDING")
-    reviewer_left = Quote.objects.create(
-        deal=world["deal"], version=2, status=QuoteStatus.objects.get(code="PENDING_APPROVAL")
-    )
-    QuoteApprovalStep.objects.create(quote=reviewer_left, order=1, participation="APPROVER", status="PENDING")
-    QuoteApprovalStep.objects.create(quote=reviewer_left, order=100, participation="HEAD", status="PENDING")
-
-    migration.drop_head_steps(apps, None)
-
-    assert not QuoteApprovalStep.objects.filter(participation="HEAD").exists()
-    assert _status(waiting) == "DRAFT"
-    assert _status(reviewer_left) == "PENDING_APPROVAL", "виза проверяющего ещё ждёт — КП остаётся на согласовании"

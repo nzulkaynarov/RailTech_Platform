@@ -70,10 +70,8 @@ def test_approval_step_writes_participation_code(lookups):
 
     seller = Company.objects.create(name="Продавец ООО", inn="7000000004")
     seller.types.add(CompanyType.objects.get(code="SUPPLIER"))
-    # Визирует держатель quote.review; одобрение директором — маршрут EDS (EDS-03).
-    admin_role = CompanyRole.objects.create(
-        company=seller, name="Руководитель", permissions=[Permission.QUOTE_REVIEW.value]
-    )
+    # Визирует исполнитель резолюции (задание расчёта, волна 12 Б1); одобрение директором — маршрут EDS (EDS-03).
+    admin_role = CompanyRole.objects.create(company=seller, name="Инженер", permissions=[])
     sales_role = CompanyRole.objects.create(company=seller, name="Продажи", permissions=[Permission.QUOTE_BUILD.value])
     sales_user = _user("sales@codes.test")
     head_user = _user("head@codes.test")
@@ -99,6 +97,9 @@ def test_approval_step_writes_participation_code(lookups):
         subtotal_excl_vat=Decimal("100.00"),
         total_incl_vat=Decimal("112.00"),
     )
+    from integration.tests.eds_support import assign_calc
+
+    assign_calc(deal, (head_user, 12, "services"))
     QuoteLifecycleService.submit_for_review(quote.id, sales_user)
     head_step = quote.approval_steps.get(participation=StepParticipation.APPROVER)
 

@@ -2815,6 +2815,10 @@
       "letter_rejection_kept": {
         "title": "Letter rejection not applied",
         "detail": "{{letter_number}}: the deal is at stage {{stage_code}}"
+      },
+      "calc_resolution_stale": {
+        "title": "Outdated resolution not applied",
+        "detail": "{{letter_number}} of {{decided_at}} is older than the current one"
       }
     },
     "quote": {

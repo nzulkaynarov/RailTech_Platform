@@ -2,8 +2,8 @@
 
 Deliverables, benchmark = Salesforce CPQ Advanced Approvals:
 
-  1. Visa chain routing: reviewers (quote.review) other than the submitter visa the КП; with no one else to visa it
-     goes straight to the director's approval route in EDS (`quote.ready_for_approval`). The former auto-approve of a
+  1. Visa chain routing: the calculation-task assignees (EDS resolution) other than the submitter visa the КП; with no
+     one else to visa it goes straight to the director's approval route in EDS (`quote.ready_for_approval`). The former auto-approve of a
      solo chain is gone together with the ERP director step — approval is the director's decision in EDS.
   2. Approval-preview read endpoint (Salesforce Approval Preview): who WOULD visa if submitted now — read-only,
      builds/persists nothing.
@@ -18,6 +18,7 @@ from unittest import mock
 import pytest
 from django.utils import timezone
 from integration.tests import bus_support
+from integration.tests.eds_support import assign_calc
 
 from accounts.constants import Permission
 from accounts.models import Company, CompanyMember, CompanyRole, CompanySettings, CompanyType, CustomUser, WorkspaceRole
@@ -75,8 +76,8 @@ def _seller_company(name, inn):
 
 @pytest.fixture
 def solo(lookups):
-    """A one-person seller: the sole member holds the «Руководитель» role (every permission,
-    incl. quote.build + quote.review) — so there is no one else to visa their КП."""
+    """A one-person seller: the sole member holds the «Руководитель» role (every permission) and there is no
+    calculation task — so there is no one to visa their КП."""
     company = _seller_company("Solo LLC", "7700000010")
     admin_role = ensure_default_company_roles(company)["HEAD"]
     owner = _user("owner@solo.test")
@@ -86,8 +87,8 @@ def solo(lookups):
 
 @pytest.fixture
 def two_person(lookups):
-    """A two-person seller: SALES (quote.build only, submits) + HEAD («Руководитель», visas).
-    The head is a DIFFERENT user than the submitter → a genuine cross-person chain."""
+    """A two-person seller: SALES (quote.build only, submits) + HEAD («Руководитель»). Tests assign the head as the
+    services assignee of the deal's resolution → a genuine cross-person visa chain."""
     company = _seller_company("Duo LLC", "7700000011")
     admin_role = ensure_default_company_roles(company)["HEAD"]
     sales_role = CompanyRole.objects.create(company=company, name="Продажи", permissions=[Permission.QUOTE_BUILD.value])
@@ -157,9 +158,10 @@ def test_solo_seller_goes_straight_to_the_director_in_eds(solo):
 
 
 def test_real_chain_with_a_different_reviewer_still_routes(two_person):
-    """Two-person company, reviewer ≠ submitter → the head visas first; nothing goes to EDS yet."""
+    """Two-person company, assignee ≠ submitter → the assignee visas first; nothing goes to EDS yet."""
     client_co = _client_co(None)
     deal = _deal(client_co, two_person["sales"])
+    assign_calc(deal, (two_person["head"], 12, "services"))
     quote = _quote(deal, two_person["sales"], two_person["company"])
 
     q, err = QLS.submit_for_review(quote.id, two_person["sales"])
@@ -191,6 +193,7 @@ def test_preview_solo_has_no_visa_steps_and_no_side_effects(solo):
 def test_preview_two_person_would_route(two_person):
     client_co = _client_co(None)
     deal = _deal(client_co, two_person["sales"])
+    assign_calc(deal, (two_person["head"], 12, "services"))
     quote = _quote(deal, two_person["sales"], two_person["company"])
 
     data, err = preview_approval_chain(quote.id, two_person["sales"])

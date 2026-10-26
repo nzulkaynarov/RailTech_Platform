@@ -186,6 +186,28 @@ def test_resolution_on_a_deal_past_calculation_keeps_its_stage(people):
     assert ActivityLog.objects.filter(deal=deal, event_code="deal.calc_stage_kept", level="WARNING").exists()
 
 
+def test_resolution_does_not_reopen_a_lost_deal(people):
+    deal = make_deal(make_company(crm_client_id=45), DealStageCode.CLOSED_LOST)
+    eds_inbound.apply_letter_resolved(resolved(deal))
+    assert _stage(deal) == DealStageCode.CLOSED_LOST
+    assert ActivityLog.objects.filter(deal=deal, event_code="deal.calc_stage_kept", level="WARNING").exists()
+
+
+def test_older_resolution_arriving_after_a_newer_one_is_not_applied(deal, people):
+    newer = resolved(deal)
+    newer["resolution"]["decided_at"] = "2026-10-27T09:00:00Z"
+    newer["resolution"]["due"] = "2026-11-05"
+    eds_inbound.apply_letter_resolved(newer, event_id=uuid.uuid4())
+    older = resolved(deal, assignees=[{"crm_user_id": 12, "zone": "services"}])  # decided_at 2026-10-26 из примера
+
+    outcome = eds_inbound.apply_letter_resolved(older, event_id=uuid.uuid4())
+
+    assert not outcome.applied
+    task = CalcTask.objects.get(deal=deal)
+    assert task.due == date(2026, 11, 5) and task.assignees.count() == 2
+    assert ActivityLog.objects.filter(deal=deal, event_code="deal.calc_resolution_stale", level="WARNING").exists()
+
+
 # ── letter.rejected → LOST ───────────────────────────────────────────────────────────────────────────
 
 
@@ -219,6 +241,21 @@ def test_rejection_of_a_won_deal_is_not_applied_and_is_journaled():
     assert not outcome.applied
     assert _stage(deal) == DealStageCode.CLOSED_WON
     assert ActivityLog.objects.filter(deal=deal, event_code="deal.letter_rejection_kept", level="WARNING").exists()
+
+
+def test_rejection_after_the_quote_was_sent_keeps_the_deal_and_is_journaled():
+    deal = make_deal(make_company(crm_client_id=46), DealStageCode.QUOTE_SENT)
+    outcome = eds_inbound.apply_letter_rejected(rejected(deal))
+    assert not outcome.applied
+    assert _stage(deal) == DealStageCode.QUOTE_SENT
+    assert bus_support.published("deal.lost") == []
+    assert ActivityLog.objects.filter(deal=deal, event_code="deal.letter_rejection_kept", level="WARNING").exists()
+
+
+def test_rejection_during_calculation_closes_the_deal(people):
+    deal = make_deal(make_company(crm_client_id=47), DealStageCode.CALCULATING)
+    assert eds_inbound.apply_letter_rejected(rejected(deal)).applied
+    assert _stage(deal) == DealStageCode.CLOSED_LOST
 
 
 def test_rollback_of_the_handler_transaction_leaves_neither_task_nor_event(deal, people):

@@ -1,14 +1,16 @@
 """FIX-55 / D-02, D-11: автор КП не согласует своё КП; суперпользователь за другого — «от имени».
 
-D-02: автор КП, держащий `quote.review`, попадал в проверяющие своего же КП и мог закрыть шаг APPROVER.
-Теперь автор исключён из проверяющих (в цепочке и в превью), а действие автора на шаге APPROVER
-отклоняется `SELF_APPROVAL_NOT_ALLOWED`. Визировать некому, кроме автора, — КП сразу уходит директору в EDS (EDS-03,
+D-02: автор КП попадал в проверяющие своего же КП и мог закрыть шаг APPROVER. Теперь (волна 12, Б1) визы — исполнители
+задания расчёта; автор-исполнитель исключён из шагов (в цепочке и в превью) и визирует свою зону самой отправкой, а
+действие автора на шаге APPROVER отклоняется `SELF_APPROVAL_NOT_ALLOWED`. Визировать некому, кроме автора, — КП сразу уходит директору в EDS (EDS-03,
 автосогласования больше нет). D-11: суперпользователь закрывает шаг за другого — разрешено, но журнал помечает «от имени».
 """
 
 # flake8: noqa: F811  (фикстуры импортируются из соседних тестов и подставляются аргументами)
 
 import pytest
+from integration.tests import bus_support
+from integration.tests.eds_support import assign_calc
 
 from accounts.constants import Permission
 from accounts.models import CompanyRole
@@ -30,59 +32,45 @@ from crm.tests.test_quote_approval_chain import (  # noqa: F401
 pytestmark = pytest.mark.django_db
 
 
-def _reviewer_author(seller):
-    """Автор КП, который сам держит quote.build и quote.review (ВЭД, собирающий КП)."""
+def _author_supply(seller):
+    """Автор КП — снабженец, исполнитель зоны goods резолюции (quote.build, без quote.review)."""
     role = CompanyRole.objects.create(
-        company=seller["company"],
-        name="ВЭД-автор",
-        permissions=[Permission.QUOTE_BUILD.value, Permission.QUOTE_REVIEW.value],
+        company=seller["company"], name="Снабжение", permissions=[Permission.QUOTE_BUILD.value]
     )
-    author = _user("ved-author@seller.test")
+    author = _user("supply-author@seller.test")
     _member(seller["company"], author, workspace_role="MEMBER", company_roles=[role])
     return author
 
 
-def _other_reviewer(seller, email="ved2@seller.test"):
-    role = CompanyRole.objects.create(
-        company=seller["company"], name=f"ВЭД {email}", permissions=[Permission.QUOTE_REVIEW.value]
-    )
-    user = _user(email)
-    _member(seller["company"], user, workspace_role="MEMBER", company_roles=[role])
-    return user
-
-
-def test_author_is_not_a_reviewer_of_own_quote(seller, deal):
-    author = _reviewer_author(seller)
-    other = _other_reviewer(seller)
+def test_author_is_not_a_visa_step_of_own_quote(seller, deal):
+    author = _author_supply(seller)
+    assign_calc(deal, (author, 11, "goods"), (seller["engineer"], 12, "services"))
     quote = _quote(deal, prepared_by=author)
 
     _, err = QLS.submit_for_review(quote.id, author)
 
     assert err is None
-    reviewer_steps = quote.approval_steps.filter(participation=StepParticipation.APPROVER)
-    # «Руководитель» тоже держит quote.review и визирует; автора среди проверяющих нет.
-    assert {step.approver.user_id for step in reviewer_steps} == {other.id, seller["head"].id}
+    steps = quote.approval_steps.filter(participation=StepParticipation.APPROVER)
+    assert [step.approver.user_id for step in steps] == [seller["engineer"].id]
 
 
-def test_preview_excludes_author_from_reviewers(seller, deal):
-    author = _reviewer_author(seller)
-    other = _other_reviewer(seller)
+def test_preview_excludes_author_from_visas(seller, deal):
+    author = _author_supply(seller)
+    assign_calc(deal, (author, 11, "goods"), (seller["engineer"], 12, "services"))
     quote = _quote(deal, prepared_by=author)
 
     preview, err = preview_approval_chain(quote.id, author)
 
     assert err is None
-    reviewer_user_ids = {s["user_id"] for s in preview["steps"] if s["trigger"] == StepTrigger.TRADE_REVIEW}
-    assert reviewer_user_ids == {other.id, seller["head"].id}
+    assert [s["user_id"] for s in preview["steps"] if s["trigger"] == StepTrigger.CALC_VISA] == [seller["engineer"].id]
 
 
 def test_author_cannot_act_on_approver_step(seller, deal):
-    """Шаг APPROVER на имя автора (старая цепочка / роль выдана позже) автор закрыть не может."""
-    author = _reviewer_author(seller)
+    """Шаг APPROVER на имя автора (старая цепочка / назначение изменили позже) автор закрыть не может."""
+    author = _author_supply(seller)
     quote = _quote(deal, prepared_by=author)
-    other = _other_reviewer(seller)
     QLS.submit_for_review(quote.id, author)
-    step = quote.approval_steps.get(participation=StepParticipation.APPROVER, approver__user=other)
+    step = quote.approval_steps.get(participation=StepParticipation.APPROVER)
     author_member = author.memberships.get(company=seller["company"])
     QuoteApprovalStep.objects.filter(pk=step.pk).update(approver=author_member)
 
@@ -96,11 +84,10 @@ def test_author_cannot_act_on_approver_step(seller, deal):
 def test_author_cannot_approve_via_endpoint(seller, deal):
     from crm.tests.test_quote_approval_chain import _api
 
-    author = _reviewer_author(seller)
+    author = _author_supply(seller)
     quote = _quote(deal, prepared_by=author)
-    other = _other_reviewer(seller)
     QLS.submit_for_review(quote.id, author)
-    step = quote.approval_steps.get(participation=StepParticipation.APPROVER, approver__user=other)
+    step = quote.approval_steps.get(participation=StepParticipation.APPROVER)
     QuoteApprovalStep.objects.filter(pk=step.pk).update(approver=author.memberships.get(company=seller["company"]))
 
     response = _api(author).post(
@@ -112,30 +99,17 @@ def test_author_cannot_approve_via_endpoint(seller, deal):
 
 
 def test_author_alone_goes_straight_to_the_director_in_eds(seller, deal):
-    """Визировать некому, кроме автора (руководитель собрал КП): шагов нет, КП сразу у директора в EDS."""
-    from integration.tests import bus_support
+    """Исполнитель резолюции — только сам автор: шагов нет, его зона завизирована отправкой, КП сразу у директора."""
+    author = _author_supply(seller)
+    assign_calc(deal, (author, 11, "goods"))
+    quote = _quote(deal, prepared_by=author)
 
-    head = seller["head"]
-    quote = _quote(deal, prepared_by=head)
-
-    _, err = QLS.submit_for_review(quote.id, head)
+    _, err = QLS.submit_for_review(quote.id, author)
 
     assert err is None
     assert _status(quote) == "PENDING_APPROVAL" and not quote.approval_steps.exists()
-    assert len(bus_support.published("quote.ready_for_approval")) == 1
-
-
-def test_another_head_visas_instead_of_the_author(seller, deal):
-    """Автор-руководитель при втором руководителе не визирует сам себя: шаг идёт другому."""
-    second_head = _user("head2@seller.test")
-    _member(seller["company"], second_head, workspace_role="MEMBER", company_roles=[seller["admin_role"]])
-    quote = _quote(deal, prepared_by=seller["head"])
-
-    QLS.submit_for_review(quote.id, seller["head"])
-
-    step = quote.approval_steps.get(participation=StepParticipation.APPROVER)
-    assert step.approver.user_id == second_head.id
-    assert _status(quote) == "PENDING_APPROVAL"
+    (event,) = bus_support.published("quote.ready_for_approval")
+    assert [(v["zone"], v["by"]["crm_user_id"]) for v in event["data"]["payload"]["visas"]] == [("goods", 11)]
 
 
 def test_superuser_acting_for_the_approver_is_marked_on_behalf(seller, deal):
@@ -144,15 +118,15 @@ def test_superuser_acting_for_the_approver_is_marked_on_behalf(seller, deal):
     admin.save(update_fields=["is_superuser"])
     quote = _quote(deal, prepared_by=seller["sales"])
     QLS.submit_for_review(quote.id, seller["sales"])
-    head_step = quote.approval_steps.get(participation=StepParticipation.APPROVER)
+    step = quote.approval_steps.get(participation=StepParticipation.APPROVER)
 
-    _, err = act_on_step(head_step.id, admin, "APPROVE")
+    _, err = act_on_step(step.id, admin, "APPROVE")
 
     assert err is None and _status(quote) == "PENDING_APPROVAL"
     event = ActivityLog.objects.filter(entity_id=quote.id, event_code="quote.approval_step_approved").latest("id")
     assert event.user_id == admin.id
-    assert event.event_params["on_behalf_of_user_id"] == seller["head"].id
-    assert "head@seller.test" in event.event_params["on_behalf_of"]
+    assert event.event_params["on_behalf_of_user_id"] == seller["engineer"].id
+    assert "engineer@seller.test" in event.event_params["on_behalf_of"]
     assert "от имени" in event.detail
 
 
@@ -162,21 +136,21 @@ def test_superuser_rejecting_for_the_approver_is_marked_on_behalf(seller, deal):
     admin.save(update_fields=["is_superuser"])
     quote = _quote(deal, prepared_by=seller["sales"])
     QLS.submit_for_review(quote.id, seller["sales"])
-    head_step = quote.approval_steps.get(participation=StepParticipation.APPROVER)
+    step = quote.approval_steps.get(participation=StepParticipation.APPROVER)
 
-    act_on_step(head_step.id, admin, "REJECT", comment="нет")
+    act_on_step(step.id, admin, "REJECT", comment="нет")
 
     event = ActivityLog.objects.filter(entity_id=quote.id, event_code="quote.approval_step_rejected").latest("id")
-    assert event.event_params["on_behalf_of_user_id"] == seller["head"].id
+    assert event.event_params["on_behalf_of_user_id"] == seller["engineer"].id
     assert event.event_params["comment"] == "нет"
 
 
 def test_regular_approver_is_not_marked_on_behalf(seller, deal):
     quote = _quote(deal, prepared_by=seller["sales"])
     QLS.submit_for_review(quote.id, seller["sales"])
-    head_step = quote.approval_steps.get(participation=StepParticipation.APPROVER)
+    step = quote.approval_steps.get(participation=StepParticipation.APPROVER)
 
-    act_on_step(head_step.id, seller["head"], "APPROVE")
+    act_on_step(step.id, seller["engineer"], "APPROVE")
 
     event = ActivityLog.objects.filter(entity_id=quote.id, event_code="quote.approval_step_approved").latest("id")
     assert "on_behalf_of" not in event.event_params

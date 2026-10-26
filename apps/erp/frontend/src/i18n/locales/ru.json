@@ -2826,6 +2826,10 @@
       "letter_rejection_kept": {
         "title": "Отказ по письму не применён",
         "detail": "{{letter_number}}: сделка на стадии {{stage_code}}"
+      },
+      "calc_resolution_stale": {
+        "title": "Устаревшая резолюция не применена",
+        "detail": "{{letter_number}} от {{decided_at}} старше действующей"
       }
     },
     "quote": {

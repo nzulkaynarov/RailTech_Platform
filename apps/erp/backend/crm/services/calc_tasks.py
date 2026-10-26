@@ -5,7 +5,8 @@
   без изменений; новая резолюция того же письма обновляет задание. Сотрудник CRM без пользователя ERP (`CrmUserMapping`) —
   исполнитель без пользователя и предупреждение в журнале сделки, не ошибка.
 * `apply_letter_rejection` — `eds.letter.rejected`: сделка в `CLOSED_LOST` с причиной (обычный переход FSM: событие
-  `deal.lost` с `lost_reason` публикуется в той же транзакции). Сделка уже проиграна — без изменений.
+  `deal.lost` с `lost_reason` публикуется в той же транзакции) — только до отправки КП клиенту; позже — WARNING в журнал.
+  Сделка уже проиграна — без изменений.
 
 Вызываются обработчиками шины (`integration/services/eds_inbound.py`) в транзакции записи inbox: исключение — автоповтор
 шины, поэтому «нельзя применить» (стадия не пускает, сделка закрыта) — запись в журнал, а не исключение.
@@ -29,14 +30,17 @@ from ..models import Deal
 
 logger = logging.getLogger(__name__)
 
-#: Стадии FSM, из которых резолюция переводит сделку в «Расчёт» (дальше сделка уже ушла: КП отправлено, договор).
+#: Стадии FSM, из которых резолюция переводит сделку в «Расчёт». Дальше сделка уже ушла (КП отправлено, договор) или
+#: закрыта (выиграна, проиграна) — резолюция её не двигает и не переоткрывает: запись WARNING в журнал.
 _BEFORE_CALCULATION = {
     DealStageCode.DRAFT,
     DealStageCode.KYC_PENDING,
     DealStageCode.RFQ_OPEN,
     DealStageCode.SOURCING,
-    DealStageCode.CLOSED_LOST,
 }
+#: Стадии, в которых отказ директора по письму закрывает сделку (до отправки КП клиенту). После отправки КП судьбу
+#: сделки решает клиент и менеджер — отказ по письму пишется в журнал WARNING, сделка не закрывается.
+_REJECTABLE = _BEFORE_CALCULATION | {DealStageCode.CALCULATING}
 
 
 @dataclass
@@ -93,6 +97,20 @@ def visa_zones_of(task: Optional[CalcTask], crm_user_id: Optional[int]) -> list[
         "zone", flat=True
     )
     return sorted(set(zones))
+
+
+def visa_assignee_user_ids(task: Optional[CalcTask]) -> list[int]:
+    """Пользователи ERP — исполнители зон goods/services задания (по порядку назначения, без повторов). Исполнителя,
+    заведённого в ERP после резолюции, привязывает здесь же по `CrmUserMapping`."""
+    if task is None:
+        return []
+    rows = list(task.assignees.filter(zone__in=[Zone.GOODS, Zone.SERVICES]).order_by("id"))
+    missing = _users_by_crm_id({row.crm_user_id for row in rows if row.user_id is None})
+    for row in rows:
+        if row.user_id is None and row.crm_user_id in missing:
+            row.user_id = missing[row.crm_user_id]
+            row.save(update_fields=["user"])
+    return list(dict.fromkeys(row.user_id for row in rows if row.user_id))
 
 
 def required_visa_zones(task: Optional[CalcTask]) -> list[str]:
@@ -182,6 +200,17 @@ def apply_resolution(
     task = CalcTask.objects.select_for_update().filter(eds_letter_id=eds_letter_id).first()
     if task is not None and event_id is not None and task.eds_event_id == event_id:
         return ResolutionOutcome(task=task, created=False, changed=False)
+    if task is not None and task.decided_at > decided_at:
+        # События не по порядку: более старая резолюция пришла после новой — не откатываем задание.
+        deal_log(
+            deal,
+            "Устаревшая резолюция не применена",
+            f"Резолюция {letter_number} от {decided_at.isoformat()} старше действующей ({task.decided_at.isoformat()})",
+            event_code="deal.calc_resolution_stale",
+            event_params={"letter_number": letter_number, "decided_at": decided_at.isoformat()},
+            level="WARNING",
+        )
+        return ResolutionOutcome(task=task, created=False, changed=False)
 
     fields = {
         "deal": deal,
@@ -257,6 +286,17 @@ def apply_letter_rejection(deal: Deal, *, letter_number: str, reason: str) -> bo
     deal = Deal.objects.select_for_update(of=("self",)).select_related("stage").get(pk=deal.pk)
     current = deal.stage.code if deal.stage_id else DealStageCode.DRAFT
     if current == DealStageCode.CLOSED_LOST:
+        return False
+    if current not in _REJECTABLE:
+        deal_log(
+            deal,
+            "Отказ по письму не применён",
+            f"Письмо {letter_number} отклонено директором, но сделка на стадии {current} (КП уже у клиента или сделка "
+            "закрыта) — сделка не закрывается",
+            event_code="deal.letter_rejection_kept",
+            event_params={"letter_number": letter_number, "stage_code": current, "reason": reason},
+            level="WARNING",
+        )
         return False
     _, error = transition_deal_stage(
         deal,

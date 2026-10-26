@@ -129,8 +129,7 @@ class QuoteApprovalStepSerializer(serializers.ModelSerializer):
         return (f"{user.first_name} {user.last_name}".strip() or user.email) if user else ""
 
     def get_can_act(self, obj) -> bool:
-        from accounts.services.permissions import member_has_permission
-        from crm.services.approvals import _active_order, _step_permission
+        from crm.services.approvals import _active_order, may_act_on_step
         from crm.services.quotes import _quote_owner_company_id
 
         request = self.context.get("request")
@@ -145,10 +144,7 @@ class QuoteApprovalStepSerializer(serializers.ModelSerializer):
         if obj.order != _active_order(quote):
             return False
         company_id = _quote_owner_company_id(quote)
-        return bool(
-            company_id
-            and (getattr(user, "is_superuser", False) or member_has_permission(user, company_id, _step_permission(obj)))
-        )
+        return bool(company_id) and may_act_on_step(obj, user, company_id)
 
 
 class QuoteSerializer(serializers.ModelSerializer):

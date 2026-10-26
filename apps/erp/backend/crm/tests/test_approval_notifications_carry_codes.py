@@ -12,12 +12,13 @@
 перевода, и это лучше пустоты.
 
 Заготовка повторяет `test_quote_approval_chain.py`: та же связка ролей (продавец строит и
-подаёт, проверяющий визирует; одобряет директор в EDS — EDS-03) — иначе тест мерил бы не тот путь.
+подаёт, исполнитель резолюции визирует; одобряет директор в EDS — EDS-03) — иначе тест мерил бы не тот путь.
 """
 
 from decimal import Decimal
 
 import pytest
+from integration.tests.eds_support import assign_calc
 
 from accounts.constants import Permission
 from accounts.models import Company, CompanyMember, CompanyRole, CompanyType, CustomUser, WorkspaceRole
@@ -67,10 +68,8 @@ def _member(company, user, *, workspace_role, company_roles):
 def seller(lookups):
     company = Company.objects.create(name="Продавец согласований", inn="908700001")
     company.types.add(CompanyType.objects.get(code="SUPPLIER"))
-    # Визирует держатель quote.review; одобрение директором — маршрут EDS (EDS-03).
-    admin_role = CompanyRole.objects.create(
-        company=company, name="Руководитель", permissions=[Permission.QUOTE_REVIEW.value]
-    )
+    # Визирует исполнитель резолюции (задание расчёта, волна 12 Б1) — права роли для визы не нужны.
+    admin_role = CompanyRole.objects.create(company=company, name="Инженер", permissions=[])
     sales_role = CompanyRole.objects.create(company=company, name="Продажи", permissions=[Permission.QUOTE_BUILD.value])
     sales_user = _user("sales@codes.test")
     _member(company, sales_user, workspace_role="SALES_MANAGER", company_roles=[sales_role])
@@ -83,12 +82,14 @@ def seller(lookups):
 def deal(seller, lookups):
     client_company = Company.objects.create(name="Заказчик", inn="908700002")
     client_company.types.add(CompanyType.objects.get(code="CLIENT"))
-    return Deal.objects.create(
+    deal = Deal.objects.create(
         title="Сделка согласований",
         company=client_company,
         manager=seller["sales"],
         stage=DealStage.objects.get(code="DRAFT"),
     )
+    assign_calc(deal, (seller["head"], 12, "services"))
+    return deal
 
 
 def _quote(deal, prepared_by):

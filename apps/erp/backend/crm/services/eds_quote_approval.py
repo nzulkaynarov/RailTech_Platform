@@ -81,7 +81,7 @@ def _visas(quote: Quote, task, ready_at: datetime) -> list[dict[str, Any]]:
         quote.approval_steps.filter(participation=StepParticipation.APPROVER, status=StepStatus.APPROVED)
         .exclude(acted_by__isnull=True)
         .select_related("acted_by")
-        .order_by("decided_at", "id")
+        .order_by("-decided_at", "-id")  # каждый круг визирует заново: в снимок — последняя виза человека
     )
     people = [(step.acted_by, step.decided_at or ready_at) for step in steps]
     if quote.prepared_by_id:
