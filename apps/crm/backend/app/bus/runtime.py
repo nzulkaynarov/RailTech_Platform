@@ -51,9 +51,9 @@ class CrmBus(AsyncBus):
         await self.secret_cache.refresh()
         return await super().receive(headers, body)
 
-    async def deliver(self, limit: int | None = None) -> Any:
+    async def before_deliver(self) -> None:
+        # перед каждым набором пачки: в `deliver()` и в каждом шаге `pump()`
         await self.secret_cache.refresh()
-        return await super().deliver(limit)
 
     async def process_inbox(self, event_id: Any) -> str | None:
         status = await super().process_inbox(event_id)

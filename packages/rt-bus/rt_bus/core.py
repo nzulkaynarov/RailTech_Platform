@@ -15,6 +15,7 @@ from typing import Any
 from . import sql
 from .delivery import (
     Attempt,
+    AttemptResult,
     BreakerEffect,
     Claimed,
     Outcome,
@@ -22,6 +23,8 @@ from .delivery import (
     build_attempt,
     clip,
     dead,
+    decide_outcome,
+    early_probe_outcome,
     pause_until,
     postpone,
 )
@@ -67,9 +70,16 @@ class BusConfig:
     http_timeout: float = 10.0
     #: Сколько доставок воркер берёт за раз и отправляет параллельно.
     delivery_batch: int = 10
+    #: Сколько запросов одному подписчику `pump` держит в пути одновременно (мягкий предел: пачка может добавить до
+    #: `delivery_batch - 1`). Подписчик, у которого столько уже в пути, пропускает набор очередной пачки — медленный
+    #: подписчик не занимает пачки быстрых (W11C-G-1).
+    subscriber_concurrency: int = 20
+    #: Как часто `pump`, пока ждёт ответов, заглядывает в базу за новой работой.
+    inflight_poll: float = 0.25
     #: Сколько строк outbox раскладывается за раз.
     relay_batch: int = 100
-    #: Общий дедлайн одной попытки (вся пачка идёт параллельно — и пачки): медленный ответ не держит аренду.
+    #: Общий дедлайн одной попытки (запросы идут параллельно, итог пишется по подписчику): медленный ответ не держит
+    #: аренду.
     attempt_deadline: float = 25.0
     #: Аренда взятой доставки: дольше дедлайна попытки; упавший воркер отдаёт доставку другому по истечении.
     lease_seconds: float = 60.0
@@ -89,8 +99,10 @@ class BusConfig:
     def __post_init__(self) -> None:
         if not SERVICE_NAME_RE.match(self.service):
             raise ConfigError(f"service name {self.service!r} must match {SERVICE_NAME_RE.pattern}")
-        if self.delivery_batch < 1 or self.relay_batch < 1:
-            raise ConfigError("delivery_batch and relay_batch must be positive")
+        if self.delivery_batch < 1 or self.relay_batch < 1 or self.subscriber_concurrency < 1:
+            raise ConfigError("delivery_batch, relay_batch and subscriber_concurrency must be positive")
+        if self.inflight_poll <= 0:
+            raise ConfigError("inflight_poll must be positive")
         if not self.http_timeout <= self.attempt_deadline <= self.lease_seconds - 10:
             raise ConfigError("need http_timeout <= attempt_deadline <= lease_seconds - 10")
 
@@ -331,16 +343,43 @@ def retryable_db_error(exc: BaseException) -> bool:
     return False
 
 
-def record_groups(outcomes: list[tuple[Claimed, Outcome]]) -> list[list[tuple[Claimed, Outcome]]]:
-    """Итоги попыток по подписчикам: группы в порядке имён, внутри — по `id` доставки.
+Planned = tuple[Claimed, Attempt | Outcome]
 
-    Строка `rt_bus_subscriber_state` — общая у параллельных `pump`; единый порядок записи и отдельная короткая
-    транзакция на подписчика не дают двум проходам взаимно заблокироваться (W11B-G-1), а сбой одной группы не держит
-    аренду чужих."""
-    groups: dict[str, list[tuple[Claimed, Outcome]]] = {}
-    for pair in sorted(outcomes, key=lambda p: (p[0].subscriber, p[0].id)):
+
+def plan_groups(planned: list[Planned]) -> list[list[Planned]]:
+    """Взятые доставки по подписчикам (W11C-G-1): группа — единица отправки и записи итога. Группы в порядке имён,
+    внутри — по `id` доставки.
+
+    Группа отправляется и записывается независимо от остальных: медленный подписчик задерживает только себя. Запись
+    группы — одна короткая транзакция, затрагивающая только строки её подписчика (доставки и `rt_bus_subscriber_state`),
+    поэтому группы разных подписчиков не могут взаимно заблокироваться (W11B-G-1), а сбой одной не держит аренду
+    чужих."""
+    groups: dict[str, list[Planned]] = {}
+    for pair in sorted(planned, key=lambda p: (p[0].subscriber, p[0].id)):
         groups.setdefault(pair[0].subscriber, []).append(pair)
     return list(groups.values())
+
+
+def group_outcomes(
+    config: BusConfig, group: list[Planned], results: list[AttemptResult], finished_at: datetime
+) -> list[tuple[Claimed, Outcome]]:
+    """Итоги группы: результаты отправки (по порядку попыток группы) → решения по L3; прочие — как запланировано."""
+    attempts = iter(results)
+    outcomes: list[tuple[Claimed, Outcome]] = []
+    for item, plan in group:
+        if isinstance(plan, Attempt):
+            outcome = early_probe_outcome(
+                item, decide_outcome(item, next(attempts), policy=config.retry, now=finished_at, rng=config.rng)
+            )
+        else:
+            outcome = plan
+        outcomes.append((item, outcome))
+    return outcomes
+
+
+def saturated_subscribers(in_flight: Mapping[str, int], limit: int) -> list[str]:
+    """Подписчики, у которых в пути уже `limit` запросов и более: очередную пачку для них не набирают."""
+    return sorted(name for name, count in in_flight.items() if count >= limit)
 
 
 def log_outcome(claimed: Claimed, outcome: Outcome, failures: int | None, threshold: int) -> None:

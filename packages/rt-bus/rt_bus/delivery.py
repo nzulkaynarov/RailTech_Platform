@@ -18,6 +18,18 @@ from .policy import RETRY_AFTER_STATUSES, BreakerPolicy, RetryPolicy, Verdict, c
 from .signing import signed_headers
 
 ERROR_LIMIT = 500
+#: Сколько простаивающих соединений держит клиент шины между попытками.
+KEEPALIVE_CONNECTIONS = 50
+
+
+def delivery_limits() -> httpx.Limits:
+    """Пул соединений клиента шины — без общего потолка (по умолчанию httpx — 100).
+
+    Один клиент обслуживает всех подписчиков процесса. Потолок делает пул общим узким местом: медленные ответы одного
+    подписчика (по `subscriber_concurrency` запросов на проход, а проходов в процессе несколько) занимают их все,
+    и запрос быстрого подписчика ждёт свободного — то есть конца чужого ответа (W11C-G-1, замер W13-A0). Число запросов
+    в пути ограничивают `subscriber_concurrency` и число проходов, а не пул."""
+    return httpx.Limits(max_connections=None, max_keepalive_connections=KEEPALIVE_CONNECTIONS)
 
 
 def encode_body(envelope: Mapping[str, Any]) -> bytes:

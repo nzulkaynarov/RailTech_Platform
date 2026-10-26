@@ -14,8 +14,9 @@ from __future__ import annotations
 import logging
 import time
 import uuid
-from collections.abc import Callable, Mapping
-from concurrent.futures import ThreadPoolExecutor
+from collections.abc import Callable, Mapping, Sequence
+from concurrent.futures import FIRST_COMPLETED, Future, ThreadPoolExecutor, wait
+from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from functools import partial
 from typing import Any
@@ -31,17 +32,20 @@ from ..core import (
     BusConfig,
     BusCore,
     DeliverStats,
+    Planned,
     PumpStats,
     Statement,
     as_json,
     finish_statements,
+    group_outcomes,
     handler_error,
     inbox_params,
     inbox_retry_at,
     log_outcome,
+    plan_groups,
     plan_queued,
-    record_groups,
     retryable_db_error,
+    saturated_subscribers,
 )
 from ..delivery import (
     Attempt,
@@ -49,8 +53,8 @@ from ..delivery import (
     Claimed,
     Outcome,
     deadline_result,
-    decide_outcome,
-    early_probe_outcome,
+    delivery_limits,
+    result_from_exception,
     send_sync,
 )
 from ..envelope import Event
@@ -70,6 +74,82 @@ def _rows(cursor: CursorWrapper) -> list[dict[str, Any]]:
         return []
     names = [col[0] for col in cursor.description]
     return [dict(zip(names, row, strict=True)) for row in cursor.fetchall()]
+
+
+@dataclass
+class _Group:
+    """Доставки одного подписчика в пути: запросы в потоках, итог пишется основным потоком, когда ответили все."""
+
+    subscriber: str
+    items: list[Planned]
+    futures: list[Future[AttemptResult]]
+    #: Общий дедлайн попыток группы (`time.monotonic()`): позже — «повтор», поток досчитает в фоне.
+    deadline: float
+
+    def ready(self, now: float) -> bool:
+        return now >= self.deadline or all(f.done() for f in self.futures)
+
+    def results(self, attempt_deadline: float) -> list[AttemptResult]:
+        out: list[AttemptResult] = []
+        for future in self.futures:
+            if not future.done():
+                out.append(deadline_result(attempt_deadline))
+                continue
+            try:
+                out.append(future.result())
+            except Exception as exc:  # noqa: BLE001 — любой сбой потока — повтор, а не потеря группы
+                out.append(result_from_exception(exc))
+        return out
+
+
+@dataclass
+class _Flight:
+    """Доставки в пути одного прохода (`deliver`) или одного `pump`: группы подписчиков, пул потоков отправки."""
+
+    config: BusConfig
+    stats: DeliverStats = field(default_factory=DeliverStats)
+    groups: list[_Group] = field(default_factory=list)
+    failures: list[Exception] = field(default_factory=list)
+    _pool: ThreadPoolExecutor | None = None
+
+    def pool(self) -> ThreadPoolExecutor:
+        if self._pool is None:
+            # потоки создаются по мере надобности; размер — чтобы медленные подписчики (по `subscriber_concurrency`
+            # запросов у каждого) не занимали потоки быстрых
+            self._pool = ThreadPoolExecutor(
+                max_workers=max(32, 4 * self.config.subscriber_concurrency), thread_name_prefix="rt-bus-send"
+            )
+        return self._pool
+
+    def in_flight(self) -> dict[str, int]:
+        counts: dict[str, int] = {}
+        for group in self.groups:
+            counts[group.subscriber] = counts.get(group.subscriber, 0) + len(group.items)
+        return counts
+
+    def wait(self, poll: float | None) -> None:
+        """Ждать, пока группа не станет готовой к записи, но не дольше `poll` и не дольше ближайшего дедлайна группы.
+        Готовая группа уже есть — не ждать."""
+        if not self.groups:
+            return
+        # порядок важен: сначала снимок незавершённых запросов, потом проверка готовности — группа, не готовая при
+        # проверке, ждёт запроса, который есть в снимке, и его завершение разбудит ожидание
+        pending = {f for g in self.groups for f in g.futures if not f.done()}
+        now = time.monotonic()
+        if not pending or any(g.ready(now) for g in self.groups):
+            return
+        timeout = max(min(g.deadline for g in self.groups) - now, 0.0)
+        wait(pending, timeout=timeout if poll is None else min(timeout, poll), return_when=FIRST_COMPLETED)
+
+    def close(self) -> None:
+        if self._pool is not None:
+            # зависший ответ не держит проход: поток дойдёт до таймаута httpx сам, его результат уже не пишется
+            self._pool.shutdown(wait=False, cancel_futures=True)
+            self._pool = None
+
+    def raise_failure(self) -> None:
+        if self.failures:
+            raise self.failures[0]
 
 
 class DjangoBus:
@@ -100,7 +180,9 @@ class DjangoBus:
 
     def _client(self) -> httpx.Client:
         if self._http is None:
-            self._http = httpx.Client(timeout=self.config.http_timeout, follow_redirects=False)
+            self._http = httpx.Client(
+                timeout=self.config.http_timeout, follow_redirects=False, limits=delivery_limits()
+            )
         return self._http
 
     def _exec(self, statement: str, params: Mapping[str, Any] | None = None) -> tuple[list[dict[str, Any]], int]:
@@ -190,7 +272,10 @@ class DjangoBus:
 
     # --- доставка ------------------------------------------------------------------------------------------------
 
-    def _claim(self, now: datetime, limit: int) -> list[tuple[Claimed, dict[str, Any] | None]]:
+    def _claim(
+        self, now: datetime, limit: int, skip: Sequence[str] = ()
+    ) -> list[tuple[Claimed, dict[str, Any] | None]]:
+        """Взять пачку в аренду. `skip` — подписчики, для которых пачку не набирают (в пути уже предел запросов)."""
         breaker = self.config.breaker
         lease_until = now + timedelta(seconds=self.config.lease_seconds)
         token = uuid.uuid4()
@@ -229,7 +314,7 @@ class DjangoBus:
                     continue
                 due = probe[0]["next_attempt_at"]
                 picked.append((int(probe[0]["id"]), True, due if due is not None and due > now else None))
-            excluded = blocked + [r["subscriber"] for r in half_open] + disabled
+            excluded = blocked + [r["subscriber"] for r in half_open] + disabled + list(skip)
             if limit > len(picked):
                 rows, _ = self._exec(
                     sql.CLAIM_DELIVERIES, {"now": now, "excluded": excluded, "limit": limit - len(picked)}
@@ -257,73 +342,70 @@ class DjangoBus:
                 out.append((claimed, envelopes[claimed.event_id]))
         return out
 
-    def deliver(self, limit: int | None = None) -> DeliverStats:
-        """Взять пачку доставок в аренду, отправить параллельно (потоки), записать итоги. HTTP — вне транзакций:
-        внутри `transaction.atomic()` — `InTransactionError`."""
-        self._forbid_atomic("deliver")
-        stats = DeliverStats()
-        now = self.core.now()
-        claimed = self._claim(now, limit or self.config.delivery_batch)
-        if not claimed:
-            return stats
-        stats.claimed = len(claimed)
+    def before_deliver(self) -> None:
+        """Перед каждым набором пачки (`deliver`, шаг `pump`); сервис переопределяет (например, обновить секреты)."""
+
+    def _plan(self, claimed: list[tuple[Claimed, dict[str, Any] | None]], now: datetime) -> list[Planned]:
         stash_enabled = self.stash is not None
-        planned: list[tuple[Claimed, Attempt | Outcome]] = []
+        planned: list[Planned] = []
         for item, envelope in claimed:
             secret_values = None
             if self.stash is not None and self.core.needs_stash(item.event_type):
                 secret_values = self.stash.get(str(item.event_id))
             planned.append((item, self.core.plan(item, envelope, secret_values, stash_enabled=stash_enabled, now=now)))
-        attempts = [p for _, p in planned if isinstance(p, Attempt)]
+        return planned
+
+    def _launch(self, flight: _Flight, claimed: list[tuple[Claimed, dict[str, Any] | None]], now: datetime) -> None:
+        """Взятое — по подписчикам (W11C-G-1): запросы группы уходят в пул потоков, итог группы пишется отдельно."""
         client = self._client()
 
         def run(attempt: Attempt) -> AttemptResult:
             return send_sync(client, attempt, self.config.http_timeout, self.core.now())
 
-        results: list[AttemptResult] = []
-        if attempts:
-            # Общий дедлайн попытки (меньше аренды): поток с зависшим ответом не держит пачку — итог «повтор»,
-            # поток досчитает в фоне (его результат уже не пишется: доставка снова pending).
-            pool = ThreadPoolExecutor(max_workers=min(len(attempts), self.config.delivery_batch))
-            futures = [pool.submit(run, attempt) for attempt in attempts]
+        for group in plan_groups(self._plan(claimed, now)):
+            attempts = [p for _, p in group if isinstance(p, Attempt)]
+            futures = [flight.pool().submit(run, attempt) for attempt in attempts]
             deadline = time.monotonic() + self.config.attempt_deadline
-            for future in futures:
-                try:
-                    results.append(future.result(timeout=max(deadline - time.monotonic(), 0.0)))
-                except TimeoutError:
-                    results.append(deadline_result(self.config.attempt_deadline))
-            pool.shutdown(wait=False, cancel_futures=True)
-        result_iter = iter(results)
-        finished_at = self.core.now()
-        outcomes: list[tuple[Claimed, Outcome]] = []
-        for item, plan in planned:
-            outcome = (
-                early_probe_outcome(
-                    item,
-                    decide_outcome(
-                        item, next(result_iter), policy=self.config.retry, now=finished_at, rng=self.config.rng
-                    ),
-                )
-                if isinstance(plan, Attempt)
-                else plan
-            )
-            outcomes.append((item, outcome))
-        self._record_all(outcomes, finished_at, stats)
-        return stats
+            flight.groups.append(_Group(group[0][0].subscriber, group, futures, deadline))
 
-    def _record_all(self, outcomes: list[tuple[Claimed, Outcome]], now: datetime, stats: DeliverStats) -> None:
-        """Итоги по подписчикам в порядке имён, по короткой транзакции на подписчика (W11B-G-1): параллельные `pump`
-        не блокируют друг друга на `rt_bus_subscriber_state`, а сбой одной группы не держит аренду чужих — остальные
-        группы записываются, ошибка поднимается в конце."""
-        failure: Exception | None = None
-        for group in record_groups(outcomes):
+    def _reap(self, flight: _Flight) -> None:
+        """Записать итоги групп, у которых ответили все запросы (или вышел дедлайн): по короткой транзакции на
+        подписчика, в порядке готовности. Сбой записи одной группы не мешает остальным — ошибка поднимается в конце."""
+        now_monotonic = time.monotonic()
+        ready = [g for g in flight.groups if g.ready(now_monotonic)]
+        for group in ready:
+            flight.groups.remove(group)
+            finished_at = self.core.now()
+            outcomes = group_outcomes(
+                self.config, group.items, group.results(self.config.attempt_deadline), finished_at
+            )
             try:
-                self._record_group(group, now, stats)
+                self._record_group(outcomes, finished_at, flight.stats)
             except Exception as exc:
-                logger.exception("rt_bus_record_failed", extra={"subscriber": group[0][0].subscriber})
-                failure = failure or exc
-        if failure is not None:
-            raise failure
+                logger.exception("rt_bus_record_failed", extra={"subscriber": group.subscriber})
+                flight.failures.append(exc)
+
+    def deliver(self, limit: int | None = None) -> DeliverStats:
+        """Один проход: взять пачку доставок в аренду, отправить (потоки), записать итоги. Подписчики независимы
+        (W11C-G-1): итог каждого пишется, как только ответил он сам; проход кончается, когда закончили все. HTTP — вне
+        транзакций: внутри `transaction.atomic()` — `InTransactionError`. `pump()` не ждёт медленных между проходами."""
+        self._forbid_atomic("deliver")
+        flight = _Flight(self.config)
+        self.before_deliver()
+        now = self.core.now()
+        claimed = self._claim(now, limit or self.config.delivery_batch)
+        if not claimed:
+            return flight.stats
+        flight.stats.claimed = len(claimed)
+        try:
+            self._launch(flight, claimed, now)
+            while flight.groups:
+                flight.wait(None)
+                self._reap(flight)
+        finally:
+            flight.close()
+        flight.raise_failure()
+        return flight.stats
 
     def _record_group(self, group: list[tuple[Claimed, Outcome]], now: datetime, stats: DeliverStats) -> None:
         for attempt in range(1, RECORD_ATTEMPTS + 1):
@@ -364,21 +446,65 @@ class DjangoBus:
             logger.info("rt_bus_subscriber_recovered", extra={"subscriber": item.subscriber, "reset": reset})
         return None
 
+    def _relay_pending(self, deadline: float) -> int:
+        relayed = 0
+        while time.monotonic() < deadline:
+            step = self.relay()
+            relayed += step
+            if step < self.config.relay_batch:
+                break
+        return relayed
+
     def pump(self, *, max_seconds: float = 20.0) -> PumpStats:
-        """Раскладка outbox и доставка, пока есть работа (не дольше `max_seconds`) — тело задачи Celery."""
+        """Раскладка outbox и доставка, пока есть работа (не дольше `max_seconds`) — тело задачи Celery.
+
+        Подписчики независимы (W11C-G-1): `pump` не ждёт ответа медленного подписчика, чтобы взять следующую пачку для
+        остальных. Пока запросы в пути, он каждые `inflight_poll` секунд раскладывает новое и набирает пачку — кроме
+        подписчиков, у которых в пути уже `subscriber_concurrency` запросов. Итог каждого пишется, когда ответил он
+        сам. Когда времени или работы нет, `pump` дожидается запросов в пути (дедлайн попытки ограничивает ожидание)."""
         self._forbid_atomic("pump")
         stats = PumpStats()
         deadline = time.monotonic() + max_seconds
-        while time.monotonic() < deadline:
-            relayed = self.relay()
-            stats.relayed += relayed
-            if relayed < self.config.relay_batch:
-                break
-        while time.monotonic() < deadline:
-            step = self.deliver()
-            stats.deliver.merge(step)
-            if step.claimed < self.config.delivery_batch and not step.recovered:
-                break
+        flight = _Flight(self.config, stats.deliver)
+        failure: Exception | None = None
+        stopping = False
+        seen_recovered = 0
+        try:
+            while True:
+                claimed_count = 0
+                saturated: list[str] = []
+                stopping = stopping or time.monotonic() >= deadline
+                if not stopping:
+                    try:
+                        stats.relayed += self._relay_pending(deadline)
+                        self.before_deliver()
+                        now = self.core.now()
+                        saturated = saturated_subscribers(flight.in_flight(), self.config.subscriber_concurrency)
+                        claimed = self._claim(now, self.config.delivery_batch, saturated)
+                        claimed_count = len(claimed)
+                        if claimed:
+                            stats.deliver.claimed += claimed_count
+                            self._launch(flight, claimed, now)
+                    except Exception as exc:
+                        # раскладка или набор упали: уже летящие запросы дописываются (их итоги не теряем), затем ошибка
+                        logger.exception("rt_bus_pump_step_failed")
+                        failure = failure or exc
+                        stopping = True
+                self._reap(flight)
+                recovered = stats.deliver.recovered != seen_recovered
+                seen_recovered = stats.deliver.recovered
+                if not flight.groups:
+                    # короткая пачка = работы нет, если никого не пропускали
+                    if stopping or (claimed_count < self.config.delivery_batch and not recovered and not saturated):
+                        break
+                elif stopping or claimed_count < self.config.delivery_batch:
+                    flight.wait(self.config.inflight_poll)
+                    self._reap(flight)
+        finally:
+            flight.close()
+        if failure is not None:
+            raise failure
+        flight.raise_failure()
         return stats
 
     # --- ручное и журнал -------------------------------------------------------------------------------------------

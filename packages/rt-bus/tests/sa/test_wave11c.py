@@ -58,8 +58,9 @@ async def test_parallel_pumps_with_new_subscribers_do_not_deadlock(
     engine: AsyncEngine,
     clock: Clock,
 ) -> None:
-    """Периодический pump и пробуждение берут по доставке crm и audit в разном порядке; строки состояния обоих
-    подписчиков новые. Раньше итоги писались в порядке пачки в одной транзакции — `DeadlockDetected`, аренда на 60 с."""
+    """Периодический проход и пробуждение (по одному `deliver()`: `pump` с волны 13 набирает работу, пока она есть, и
+    один забрал бы всё) берут по доставке crm и audit в разном порядке; строки состояния обоих подписчиков новые.
+    Раньше итоги писались в порядке пачки в одной транзакции — `DeadlockDetected`, аренда на 60 с."""
     first, second = make_bus(delivery_batch=2), make_bus(delivery_batch=2)
     for round_no in range(30):
         async with engine.begin() as conn:
@@ -90,9 +91,9 @@ async def test_parallel_pumps_with_new_subscribers_do_not_deadlock(
             return httpx.Response(200)
 
         hub.responders["crm"] = hub.responders["audit"] = meet
-        stats = await asyncio.wait_for(asyncio.gather(first.pump(), second.pump()), timeout=30)
-        assert sum(s.deliver.delivered for s in stats) == 4, round_no
-        assert sum(s.deliver.lost_lease for s in stats) == 0
+        stats = await asyncio.wait_for(asyncio.gather(first.deliver(), second.deliver()), timeout=30)
+        assert sum(s.delivered for s in stats) == 4, round_no
+        assert sum(s.lost_lease for s in stats) == 0
         statuses = await rows(sessions, "SELECT subscriber, status FROM rt_bus_delivery")
         assert (
             sorted((r["subscriber"], r["status"]) for r in statuses)
