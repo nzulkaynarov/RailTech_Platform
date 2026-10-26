@@ -104,6 +104,23 @@ export function troubledSources(
   });
 }
 
+/**
+ * `sources` всех загруженных страниц: домен, который не ответил или отказал хотя бы на одной, остаётся таким —
+ * плашка «данные неполные» не пропадает после «Показать ещё» (строк этого домена в списке нет).
+ */
+export function mergeSources(pages: readonly { sources: BusSources }[]): BusSources | undefined {
+  const last = pages.at(-1);
+  if (!last) return undefined;
+  const merged = { ...last.sources };
+  for (const page of pages) {
+    for (const domain of DOMAINS) {
+      const state = page.sources[domain];
+      if (state === "unavailable" || state === "forbidden") merged[domain] = state;
+    }
+  }
+  return merged;
+}
+
 /** Сброс кэша журнала после повтора: сводка, доставки и inbox перечитываются. */
 export function useRefreshBus(): () => void {
   const queryClient = useQueryClient();

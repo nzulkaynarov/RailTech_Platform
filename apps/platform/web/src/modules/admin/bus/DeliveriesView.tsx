@@ -24,6 +24,7 @@ import {
   deliveryKey,
   deliveryWord,
   domainName,
+  mergeSources,
   shortType,
   subscriberName,
 } from "./format";
@@ -97,7 +98,7 @@ export function DeliveriesView({ mode, subscribers, selectedKey, onOpen }: Deliv
     getNextPageParam: (last) => last.next_cursor ?? undefined,
   });
   const items = query.data?.pages.flatMap((page) => page.items) ?? [];
-  const sources = query.data?.pages[query.data.pages.length - 1]?.sources;
+  const sources = mergeSources(query.data?.pages ?? []);
   const caption = t(mode === "dlq" ? "deliveries.dlqCaption" : "deliveries.caption");
   const filtered =
     domain !== "all" || status !== "all" || subscriber !== "all" || type !== "" || from || to;

@@ -35,6 +35,8 @@ def test_publisher_serves_only_subscribers_of_its_domains_and_never_itself() -> 
 def test_endpoint_hides_credentials_in_url() -> None:
     assert public_endpoint("http://crm-api:8000/bus/v1/events") == "http://crm-api:8000/bus/v1/events"
     assert public_endpoint("https://user:secret@hook.test:8443/bus/v1/events") == "https://hook.test:8443/bus/v1/events"
+    assert public_endpoint("https://hook.test/bus/v1/events?token=abc#frag") == "https://hook.test/bus/v1/events"
+    assert public_endpoint("http://u@hook.test:9000/bus/v1/events?a=1") == "http://hook.test:9000/bus/v1/events"
 
 
 def test_subscribers_merge_file_queue_and_breaker_state() -> None:

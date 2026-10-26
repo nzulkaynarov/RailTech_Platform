@@ -109,7 +109,7 @@ export interface BusSubscriber {
   /** Выключен с `drop: true` — события за время остановки не копятся */
   drop: boolean;
   /**
-   * Адрес приёмника (без учётных данных URL)
+   * Адрес приёмника: только схема, хост, порт и путь
    * @nullable
    */
   endpoint: string | null;

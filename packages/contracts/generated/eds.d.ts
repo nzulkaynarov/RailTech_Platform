@@ -585,8 +585,8 @@ export interface components {
     BusInboxStatus: "received" | "processed" | "failed" | "skipped";
     /**
      * @description Подписчик издателя. `configured = false` — его больше нет в файле подписок, но остались доставки или состояние.
-     *     `paused_until` — действующая пауза предохранителя (в будущем), иначе `null`. `endpoint` — адрес приёмника без
-     *     учётных данных URL. `oldest_undelivered_age_seconds` — возраст самого старого недоставленного (без `dead`).
+     *     `paused_until` — действующая пауза предохранителя (в будущем), иначе `null`. `endpoint` — адрес приёмника: только
+     *     схема, хост, порт и путь. `oldest_undelivered_age_seconds` — возраст самого старого недоставленного (без `dead`).
      */
     BusSubscriber: {
       name: string;

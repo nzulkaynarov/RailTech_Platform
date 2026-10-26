@@ -173,6 +173,10 @@ class BusDomainsFake:
             200, json={"token": f"sso-eds-{len(self.sso_auds)}", "redirect_url": ""}
         )
 
+    def exchange_response(self, request: httpx.Request) -> httpx.Response:
+        """Ответ обмена в EDS (тест может обернуть его, например, задержкой)."""
+        return self._exchange(request)
+
     def _exchange(self, request: httpx.Request) -> httpx.Response:
         if self.eds_exchange_status != 200:
             return httpx.Response(

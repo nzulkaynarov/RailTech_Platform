@@ -7,6 +7,7 @@
 повторов. Решения (что повторять, права) — за доменами.
 """
 
+import asyncio
 import json
 from typing import Any
 
@@ -402,3 +403,79 @@ async def test_retry_errors_keep_the_error_format(
         assert (await web.send("POST", url, json=body)).status_code == 422, url
     no_csrf = await web.client.post(f"{BASE}/crm/deliveries/1/retry")
     assert (no_csrf.status_code, no_csrf.json()["code"]) == (403, "CSRF_FAILED")
+
+
+async def test_a_domain_lost_on_the_first_page_stays_in_sources_on_the_next(
+    web: Web, domains: BusDomainsFake, check: ContractChecker
+) -> None:
+    rows = [delivery(30, 50), delivery(20, 30), delivery(10, 10)]
+
+    def crm_page(request: httpx.Request) -> httpx.Response:
+        before = request.url.params.get("before_id")
+        tail = [r for r in rows if before is None or r["id"] < int(before)]
+        return httpx.Response(200, json=page(tail[:2], has_more=len(tail) > 2))
+
+    domains.answer_with("crm", "GET", "deliveries", crm_page)
+    domains.answer("erp", "GET", "deliveries", {"detail": "down"}, 503)
+    await _admin(web)
+    first = (await web.client.get(f"{BASE}/deliveries", params={"limit": 2})).json()
+    assert first["sources"] == {"crm": "ok", "erp": "unavailable", "eds": "ok"}
+    second = check(
+        await web.client.get(
+            f"{BASE}/deliveries", params={"limit": 2, "cursor": first["next_cursor"]}
+        ),
+        "/admin/bus/deliveries",
+        "get",
+    ).json()
+    assert [i["id"] for i in second["items"]] == [10]
+    # ERP на второй странице не спрашивают, но плашка «данные неполные» остаётся
+    assert second["sources"] == {"crm": "ok", "erp": "unavailable", "eds": "ok"}
+    assert len(domains.made("erp", "GET", "deliveries")) == 1
+
+
+async def test_eds_refusal_is_cached_and_not_exchanged_on_every_request(
+    web: Web, domains: BusDomainsFake
+) -> None:
+    domains.eds_sso_status = 403
+    await _admin(web)
+    for _ in range(3):
+        assert (await web.client.get(BASE)).json()["sources"]["eds"] == "not_applicable"
+    assert domains.sso_auds.count("eds") == 1  # отказ запомнен на минуту
+    domains.eds_sso_status = 200
+    web.clock.advance(61)
+    assert (await web.client.get(BASE)).json()["sources"]["eds"] == "ok"
+    assert domains.sso_auds.count("eds") == 2
+
+
+async def test_rejected_fresh_eds_token_pauses_the_exchange(
+    web: Web, domains: BusDomainsFake
+) -> None:
+    domains.answer("eds", "GET", "overview", {"code": "UNAUTHORIZED", "source": "eds"}, 401)
+    await _admin(web)
+    assert (await web.client.get(BASE)).json()["sources"]["eds"] == "unavailable"
+    assert domains.exchange.call_count == 2  # повтор с новым токеном, затем пауза
+    assert (await web.client.get(BASE)).json()["sources"]["eds"] == "unavailable"
+    assert domains.exchange.call_count == 2
+    assert (await web.client.get("/api/v1/me")).status_code == 200  # сессия Платформы жива
+
+
+async def test_parallel_first_access_exchanges_once_and_does_not_block_crm(
+    web: Web, domains: BusDomainsFake, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    async def slow(request: httpx.Request) -> httpx.Response:
+        await asyncio.sleep(0.4)
+        return domains.exchange_response(request)
+
+    domains.exchange.side_effect = slow
+    await _admin(web)
+    # Общая блокировка сессии ждёт мало: если бы обмен с EDS шёл под ней, CRM получил бы 503.
+    monkeypatch.setattr("app.session.LOCK_WAIT_SECONDS", 0.1)
+    first, second, crm_only = await asyncio.gather(
+        web.client.get(BASE),
+        web.client.get(BASE),
+        web.client.get(f"{BASE}/deliveries", params={"domain": "crm"}),
+    )
+    assert domains.exchange.call_count == 1
+    assert first.json()["sources"]["eds"] == "ok"
+    assert second.json()["sources"]["eds"] == "ok"
+    assert crm_only.json()["sources"]["crm"] == "ok"

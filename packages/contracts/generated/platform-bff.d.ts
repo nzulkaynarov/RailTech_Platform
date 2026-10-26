@@ -1188,7 +1188,7 @@ export interface components {
       enabled: boolean;
       /** @description Выключен с `drop: true` — события за время остановки не копятся */
       drop: boolean;
-      /** @description Адрес приёмника (без учётных данных URL) */
+      /** @description Адрес приёмника: только схема, хост, порт и путь */
       endpoint: string | null;
       pending: number;
       in_flight: number;

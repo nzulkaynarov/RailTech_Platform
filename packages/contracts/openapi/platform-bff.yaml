@@ -2247,7 +2247,7 @@ components:
         configured: {type: boolean}
         enabled: {type: boolean}
         drop: {type: boolean, description: 'Выключен с `drop: true` — события за время остановки не копятся'}
-        endpoint: {type: [string, 'null'], description: Адрес приёмника (без учётных данных URL)}
+        endpoint: {type: [string, 'null'], description: 'Адрес приёмника: только схема, хост, порт и путь'}
         pending: {type: integer}
         in_flight: {type: integer}
         dead: {type: integer}

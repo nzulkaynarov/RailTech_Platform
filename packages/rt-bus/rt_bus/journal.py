@@ -130,14 +130,13 @@ class BusOverview:
 
 
 def public_endpoint(url: str) -> str:
-    """Адрес приёмника без учётных данных в URL (`user:pass@` не показываем даже администратору)."""
+    """Адрес приёмника для показа: только `scheme://host[:port]/path`. Учётные данные (`user:pass@`),
+    query и fragment не показываем даже администратору: в них может оказаться токен."""
     parts = urlsplit(url)
-    if parts.username is None and parts.password is None:
-        return url
     host = parts.hostname or ""
     if parts.port is not None:
         host = f"{host}:{parts.port}"
-    return urlunsplit((parts.scheme, host, parts.path, parts.query, parts.fragment))
+    return urlunsplit((parts.scheme, host, parts.path, "", ""))
 
 
 def serves(subscriber: Subscriber, service: str, domains: Iterable[str]) -> bool:

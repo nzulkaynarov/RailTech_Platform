@@ -18,6 +18,7 @@ import {
   INBOX_TONE,
   busErrorText,
   domainName,
+  mergeSources,
   inboxKey,
   inboxWord,
   shortType,
@@ -49,7 +50,7 @@ export function InboxView({ selectedKey, onOpen }: InboxViewProps) {
     getNextPageParam: (last) => last.next_cursor ?? undefined,
   });
   const items = query.data?.pages.flatMap((page) => page.items) ?? [];
-  const sources = query.data?.pages[query.data.pages.length - 1]?.sources;
+  const sources = mergeSources(query.data?.pages ?? []);
   const caption = t("inboxView.caption");
 
   const more = query.hasNextPage ? (

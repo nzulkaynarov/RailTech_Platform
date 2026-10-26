@@ -8,8 +8,9 @@
 
 EDS (W13-A2) входит лениво, при первом обращении: CRM `sso/token {"aud": "eds"}` -> EDS
 `sso/exchange` -> токен доступа EDS на 15 минут в сессии (без refresh: истёк — новый обмен). Нет
-прав EDS у сотрудника — 403 `FORBIDDEN` (`details.reason = eds_not_granted`); сбой — 503 и пауза
-`ERP_RETRY_SECONDS`. Отказ EDS не закрывает сессию Платформы.
+прав EDS у сотрудника — 403 `FORBIDDEN` (`details.reason = eds_not_granted`, новый обмен через
+минуту); сбой — 503 и пауза `ERP_RETRY_SECONDS`. Отказ EDS не закрывает сессию Платформы. Обмен
+идёт под своей блокировкой сессии (`eds`), не под общей.
 """
 
 import asyncio
@@ -74,6 +75,21 @@ class EdsNotGrantedError(Exception):
 
 # Токен доступа EDS живёт 15 минут (eds.yaml `AccessToken.expires_in`).
 EDS_TOKEN_SECONDS = 900
+# EDS отказал в доступе (нет `permissions.eds`, сотрудник не заведён): новый обмен не раньше чем
+# через минуту — каждый обмен пишет в EDS одноразовый `jti` и строку журнала `sso.exchange`.
+EDS_DENIED_RETRY_SECONDS = 60
+# Ожидание блокировки входа в EDS — дольше худшего обмена (CRM 5 с + EDS 3 с).
+EDS_LOCK_WAIT_SECONDS = 12.0
+
+
+def _eds_not_granted() -> PlatformError:
+    return PlatformError(
+        "FORBIDDEN",
+        "Нет доступа к EDS.",
+        status_code=403,
+        source="eds",
+        details={"reason": "eds_not_granted"},
+    )
 
 
 def jwt_expiry(token: str) -> float | None:
@@ -337,15 +353,13 @@ class AuthService:
         `rejected` — access, который бэкенд только что отверг: если за время ожидания блокировки его
         уже обновил другой запрос, повторно не обновляем.
         """
+        if backend == "eds":
+            return await self._prepare_eds(sid, rejected)
         async with self.store.lock(sid):
             data = await self._load(sid)
             if backend == "crm":
                 if self._stale(data.crm, rejected):
                     await self._refresh(sid, data, "crm")
-                return data
-            if backend == "eds":
-                if data.eds is None or self._stale(data.eds, rejected):
-                    await self._connect_eds(sid, data)
                 return data
             if data.erp_state == "not_applicable":
                 raise PlatformError(
@@ -374,34 +388,54 @@ class AuthService:
         data.erp, data.erp_state = tokens, "ok"
         await self.store.save(sid, data)
 
-    async def _connect_eds(self, sid: str, data: SessionData) -> None:
-        """Токен доступа EDS: SSO-токен CRM `aud=eds` -> обмен в EDS (под блокировкой сессии)."""
-        if self.eds is None:
-            raise backend_unavailable("eds", "not_configured")
-        if now() < data.eds_next_try:
-            raise backend_unavailable("eds", "reconnect_cooldown")
-        if self._stale(data.crm, None):
-            await self._refresh(sid, data, "crm")
-        try:
-            access = await self._exchange_eds(data.crm.access)
-        except EdsNotGrantedError as exc:
-            raise PlatformError(
-                "FORBIDDEN",
-                "Нет доступа к EDS.",
-                status_code=403,
-                source="eds",
-                details={"reason": "eds_not_granted"},
-            ) from exc
-        except (BackendUnavailableError, EdsConnectError) as exc:
-            log.warning("eds_connect_failed", error=str(exc))
-            data.eds, data.eds_next_try = None, now() + ERP_RETRY_SECONDS
-            await self.store.save(sid, data)
-            raise backend_unavailable("eds", "sso_failed") from exc
-        data.eds = BackendTokens(
-            access=access, access_exp=jwt_expiry(access) or now() + EDS_TOKEN_SECONDS, refresh=""
-        )
-        data.eds_next_try = 0.0
-        await self.store.save(sid, data)
+    async def _prepare_eds(self, sid: str, rejected: str | None) -> SessionData:
+        """Сессия с живым токеном доступа EDS. Обмен — под своей блокировкой `eds` (один на сессию
+        при параллельном первом обращении), а не под общей: CRM и ERP той же сессии не ждут его."""
+        data = await self._load(sid)
+        if data.eds is not None and not self._stale(data.eds, rejected):
+            return data
+        async with self.store.lock(sid, scope="eds", wait_seconds=EDS_LOCK_WAIT_SECONDS):
+            data = await self._load(sid)
+            if data.eds is not None and not self._stale(data.eds, rejected):
+                return data  # пока ждали блокировку, вошёл другой запрос
+            if self.eds is None:
+                raise backend_unavailable("eds", "not_configured")
+            if now() < data.eds_next_try:
+                if data.eds_denied:
+                    raise _eds_not_granted()
+                raise backend_unavailable("eds", "reconnect_cooldown")
+            crm = await self._prepare(sid, "crm")  # живой access CRM (общая блокировка — коротко)
+            try:
+                access = await self._exchange_eds(crm.crm.access)
+            except EdsNotGrantedError as exc:
+                await self._pause_eds(sid, denied=True, seconds=EDS_DENIED_RETRY_SECONDS)
+                raise _eds_not_granted() from exc
+            except (BackendUnavailableError, EdsConnectError) as exc:
+                log.warning("eds_connect_failed", error=str(exc))
+                await self._pause_eds(sid, denied=False, seconds=ERP_RETRY_SECONDS)
+                raise backend_unavailable("eds", "sso_failed") from exc
+            tokens = BackendTokens(
+                access=access,
+                access_exp=jwt_expiry(access) or now() + EDS_TOKEN_SECONDS,
+                refresh="",
+            )
+
+            def apply(d: SessionData) -> None:
+                d.eds, d.eds_next_try, d.eds_denied = tokens, 0.0, False
+
+            updated = await self.store.update(sid, apply)
+            if updated is None:
+                raise session_expired()
+            return updated
+
+    async def _pause_eds(self, sid: str, *, denied: bool, seconds: float) -> None:
+        """Не повторять вход в EDS `seconds` секунд: отказ (`denied`) — 403, сбой — 503."""
+        until = now() + seconds
+
+        def apply(d: SessionData) -> None:
+            d.eds, d.eds_next_try, d.eds_denied = None, until, denied
+
+        await self.store.update(sid, apply)
 
     async def _exchange_eds(self, crm_access: str) -> str:
         assert self.eds is not None  # noqa: S101 — проверено в _connect_eds
@@ -507,7 +541,9 @@ class AuthService:
         resp = await self._send(backend, tokens, method, path, json, params, probe)
         if resp.status_code == 401:
             if backend == "eds":
-                # Свежий токен EDS отвергнут: сбой EDS (секреты), а не конец сессии Платформы.
+                # Свежий токен EDS отвергнут: сбой EDS (секреты), а не конец сессии Платформы. Токен
+                # сбрасывается, новый обмен — не раньше паузы.
+                await self._pause_eds(sid, denied=False, seconds=ERP_RETRY_SECONDS)
                 raise backend_unavailable("eds", "access_rejected")
             await self.store.delete(sid)
             raise session_expired()

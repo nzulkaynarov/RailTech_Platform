@@ -39,6 +39,7 @@ from app.schemas_bus import (
 log = structlog.get_logger()
 
 Params = dict[str, Any]
+LOST_STATES: frozenset[str] = frozenset({"unavailable", "forbidden", "not_applicable"})
 
 
 def bus_path(domain: BusDomain, tail: str) -> str:
@@ -196,6 +197,9 @@ class Pager:
 
     keyset: Keyset
     positions: dict[BusDomain, Params | None] = field(default_factory=dict)
+    #: Домены, выбывшие из-за сбоя или отказа, и почему: их состояние повторяется в `sources`
+    #: следующих страниц — плашка «данные неполные» не пропадает после «Показать ещё».
+    lost: dict[BusDomain, BusSourceState] = field(default_factory=dict)
 
     @classmethod
     def start(cls, keyset: Keyset, domains: Sequence[BusDomain], cursor: str | None) -> "Pager":
@@ -211,19 +215,31 @@ class Pager:
             if params is not None and not isinstance(params, dict):
                 raise bad_cursor()
             positions[domain] = None if params is None else (params and keyset.check(params))
-        return cls(keyset, positions)
+        lost: dict[BusDomain, BusSourceState] = {}
+        raw_lost = raw.get("x", {})
+        if not isinstance(raw_lost, dict):
+            raise bad_cursor()
+        for domain, state in raw_lost.items():
+            if domain not in domains or state not in LOST_STATES:
+                raise bad_cursor()
+            lost[domain] = state
+        return cls(keyset, positions, lost)
 
     def pending(self) -> list[BusDomain]:
         """Домены, у которых ещё есть строки (по порядку DOMAINS)."""
         return [d for d in DOMAINS if d in self.positions and self.positions[d] is not None]
 
     def take(
-        self, pages: dict[BusDomain, tuple[list[Any], bool]], limit: int
+        self,
+        pages: dict[BusDomain, tuple[list[Any], bool]],
+        limit: int,
+        states: dict[BusDomain, BusSourceState] | None = None,
     ) -> list[tuple[BusDomain, Any]]:
         """Слить страницы доменов по времени (новые сверху) и сдвинуть позиции на показанное.
 
         Домен без ответа (нет в `pages`) считается дошедшим до конца: страница и так неполная
-        (`sources`), а «Показать ещё» не крутится вхолостую по недоступному домену.
+        (`sources`), а «Показать ещё» не крутится вхолостую по недоступному домену. Его состояние
+        из `states` запоминается в курсоре (`lost`).
         """
         heads = dict.fromkeys(pages, 0)
         merged: list[tuple[BusDomain, Any]] = []
@@ -244,6 +260,8 @@ class Pager:
         for domain in self.pending():
             if domain not in pages:
                 self.positions[domain] = None
+                state = (states or {}).get(domain, "unavailable")
+                self.lost[domain] = state if state in LOST_STATES else "unavailable"
                 continue
             rows, more = pages[domain]
             used = heads[domain]
@@ -256,7 +274,7 @@ class Pager:
     def next_cursor(self) -> str | None:
         if not self.pending():
             return None
-        return _encode({"k": self.keyset.kind, "p": dict(self.positions)})
+        return _encode({"k": self.keyset.kind, "p": dict(self.positions), "x": dict(self.lost)})
 
 
 async def gather_pages[T: BaseModel](

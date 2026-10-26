@@ -62,7 +62,8 @@ def _scope(domain: BusDomain | None) -> tuple[BusDomain, ...]:
 
 
 def _states(scope: tuple[BusDomain, ...]) -> dict[BusDomain, BusSourceState]:
-    """Домены вне фильтра — `not_applicable`; дошедшие до конца на прошлых страницах — `ok`."""
+    """Домены вне фильтра — `not_applicable`; дошедшие до конца на прошлых страницах — `ok`, а
+    выбывшие из-за сбоя или отказа — их состояние из курсора (`Pager.lost`)."""
     return {d: "ok" if d in scope else "not_applicable" for d in DOMAINS}
 
 
@@ -112,7 +113,7 @@ async def deliveries(
         "created_from": from_.isoformat() if from_ else None,
         "created_to": to.isoformat() if to else None,
     }
-    states = _states(scope)
+    states = {**_states(scope), **pager.lost}
     pages = await gather_pages(
         authed,
         pager,
@@ -122,7 +123,9 @@ async def deliveries(
         DomainDeliveryPage,
         states,
     )
-    items = [BusDelivery(**row.model_dump(), domain=d) for d, row in pager.take(pages, limit)]
+    items = [
+        BusDelivery(**row.model_dump(), domain=d) for d, row in pager.take(pages, limit, states)
+    ]
     return BusDeliveryPage(items=items, next_cursor=pager.next_cursor(), sources=sources(states))
 
 
@@ -139,7 +142,7 @@ async def inbox(
     scope = _scope(domain)
     pager = Pager.start(INBOX, scope, cursor)
     filters: dict[str, Any] = {"errors": "true" if errors else None, "status": status, "type": type}
-    states = _states(scope)
+    states = {**_states(scope), **pager.lost}
     pages = await gather_pages(
         authed,
         pager,
@@ -149,7 +152,9 @@ async def inbox(
         DomainInboxPage,
         states,
     )
-    items = [BusInboxEntry(**row.model_dump(), domain=d) for d, row in pager.take(pages, limit)]
+    items = [
+        BusInboxEntry(**row.model_dump(), domain=d) for d, row in pager.take(pages, limit, states)
+    ]
     return BusInboxPage(items=items, next_cursor=pager.next_cursor(), sources=sources(states))
 
 
