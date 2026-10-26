@@ -1,0 +1,1 @@
+C1-G-5: поля КП №2 (SENT, ИСХ-002/26) в API ERP, содержащие outgoing/director/send_channels/eds: нет

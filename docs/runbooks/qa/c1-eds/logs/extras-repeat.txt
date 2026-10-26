@@ -1,0 +1,19 @@
+обмен токена: 1-й 200 | повтор того же 401 {'reason': 'replayed'}
+токен aud=erp в EDS -> 401 {'reason': 'audience'}
+мусорный токен -> 422 {'fields': [{'field': 'token', 'message': 'String should have at least 16 characters', 'type': 'string_too_short'}]}
+запрос без Bearer -> 401 UNAUTHORIZED
+recall КП у директора -> 409 {'detail': 'QUOTE_AWAITING_DIRECTOR'}
+reject письма ВХ-004/26 -> 200 rejected
+прошло 4.0 с
+## ERP: сделки после reject письма
+ id |    stage
+----+-------------
+  1 | QUOTE_SENT
+  2 | QUOTE_SENT
+  3 | CALCULATING
+  4 | CLOSED_LOST
+(4 rows)
+
+ERROR:  relation "crm_activitylog" does not exist
+LINE 1: select * from crm_activitylog where deal_id=4 order by id de...
+                      ^

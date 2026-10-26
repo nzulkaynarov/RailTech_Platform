@@ -1,0 +1,27 @@
+===== КП 1 (сделка D-1, порог 15 %): виза -> возврат -> повторная отправка -> одобрение
+submit-for-review 200 (3, None)
+visa 200 ('КП-2026-00001', 3) t=1792990945.1624181
+очередь директора (КП): [('6dedc351-0705-48bd-823d-7398d2b5a904', 'КП-2026-00001 v1 · D-1', 1)]
+шаги: [(1, 'Директор', 'current')]
+чек-лист: [{"code": "visa_goods", "label": "Виза снабженца (товары)", "ok": true, "by": {"crm_user_id": 4, "full_name": "Снабженец Демо"}, "at": "2026-10-26T05:02:25.174995Z", "value": null}, {"code": "visa_services", "label": "Виза гл. инженера (услуги)", "ok": true, "by": {"crm_user_id": 5, "full_name": "Инженер Демо"}, "at": "2026-10-26T05:02:25.167643Z", "value": null}, {"code": "margin", "label": "Маржа не ниже порога резолюции", "ok": true, "by": null, "at": null, "value": "23.1 % ≥ 15 %"}, {"code": "due", "label": "Срок расчёта выдержан", "ok": true, "by": null, "at": null, "value": "готово 26.10.2026, срок 02.11.2026"}]
+снимок КП (ключи): ['client_name', 'cost', 'currency', 'due', 'erp_quote_id', 'margin_amount', 'margin_pct', 'min_margin_pct', 'number', 'ready_at', 'required_zones', 'total', 'valid_until', 'version', 'visas']
+can_decide: True allowed: ['approve', 'return', 'reject'] round: 1
+decision return -> 200 ('returned', None)
+## ERP: КП
+ id | version |  erp_number   | status | eds_revision | isx | director_decision |                   director_comment
+----+---------+---------------+--------+--------------+-----+-------------------+-------------------------------------------------------
+  1 |       1 | КП-2026-00001 | DRAFT  |            1 |     | return            | Уточните сроки поставки в КП и приложите спецификацию
+(1 row)
+КП до правки: status 1 director_comment: None decision: None
+правка первой строки: 200
+повторная отправка: 200 ('КП-2026-00001', 3)
+статус после: 3
+visa 200 ('КП-2026-00001', 3) t=1792990951.8299046
+очередь директора (КП): [('3942f5fa-4460-49fd-b1bb-4c6236300402', 'КП-2026-00001 v2 · D-1', 2)]
+шаги: [(1, 'Директор', 'current')]
+чек-лист: [{"code": "visa_goods", "label": "Виза снабженца (товары)", "ok": true, "by": {"crm_user_id": 4, "full_name": "Снабженец Демо"}, "at": "2026-10-26T05:02:31.838496Z", "value": null}, {"code": "visa_services", "label": "Виза гл. инженера (услуги)", "ok": true, "by": {"crm_user_id": 5, "full_name": "Инженер Демо"}, "at": "2026-10-26T05:02:31.834535Z", "value": null}, {"code": "margin", "label": "Маржа не ниже порога резолюции", "ok": true, "by": null, "at": null, "value": "23.1 % ≥ 15 %"}, {"code": "due", "label": "Срок расчёта выдержан", "ok": true, "by": null, "at": null, "value": "готово 26.10.2026, срок 02.11.2026"}]
+снимок КП (ключи): ['client_name', 'cost', 'currency', 'due', 'erp_quote_id', 'margin_amount', 'margin_pct', 'min_margin_pct', 'number', 'ready_at', 'required_zones', 'total', 'valid_until', 'version', 'visas']
+can_decide: True allowed: ['approve', 'return', 'reject'] round: 2
+decision approve -> 200 ('approved', 'ИСХ-001/26')
+send-to-client автором (снабженец): 403 {'detail': 'ROLE_NOT_PERMITTED'}
+send-to-client: 200 ('SENT', 'frozen')
