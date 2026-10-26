@@ -13,6 +13,7 @@ from typing import Any
 import structlog
 from rt_bus.sqlalchemy import AsyncBus
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app import clock
@@ -95,6 +96,8 @@ async def _insert(
 ) -> Letter:
     """Номер, строка письма, вложения, журнал и `letter.registered` — в транзакции вызывающего."""
     now = clock.now()
+    if values.get("addressee_crm_user_id") is None:  # адресат по умолчанию фиксируется при регистрации
+        values["addressee_crm_user_id"] = await default_director(session)
     letter = Letter(
         id=uuid.uuid4(),
         number=await numbering.allocate(session, numbering.NumberKind.LETTER_IN, now),
@@ -136,7 +139,7 @@ async def register(session: AsyncSession, bus: AsyncBus, *, actor_id: int, data:
         session, addressee_crm_user_id=data.addressee_crm_user_id, manager_crm_user_id=data.manager_crm_user_id
     )
     ref = data.sender_ref
-    values = {
+    values: dict[str, Any] = {
         "subject": data.subject,
         "summary": data.summary,
         "sender_name": data.sender.name,
@@ -149,7 +152,10 @@ async def register(session: AsyncSession, bus: AsyncBus, *, actor_id: int, data:
         "urgent": data.urgent,
         **_link_values(data.links),
     }
-    return await _insert(session, bus, actor_id=actor_id, values=values, file_ids=data.file_ids)
+    try:
+        return await _insert(session, bus, actor_id=actor_id, values=values, file_ids=data.file_ids)
+    except IntegrityError as exc:  # гонка с обработчиком `request.created`: заявку уже заняло другое письмо
+        raise conflict("letter_exists_for_request", "Письмо по этой заявке уже зарегистрировано.") from exc
 
 
 async def find_by_request(session: AsyncSession, erp_request_id: int) -> Letter | None:

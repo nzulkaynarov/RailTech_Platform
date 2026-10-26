@@ -12,5 +12,6 @@ ROUTERS: tuple[APIRouter, ...] = (
     documents.router,
     approvals.router,
     files.router,
+    files.upload_router,
     registry.router,
 )

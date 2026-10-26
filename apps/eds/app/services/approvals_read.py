@@ -80,7 +80,11 @@ async def present(session: AsyncSession, employee: Employee, route: ApprovalRout
     if is_quote:
         items = checklist.build(route.quote_snapshot or {}, await checklist.resolution_threshold(session, route))
     current = next((s for s in steps if s.index == route.current_step), None)
-    can_decide = route.status == RouteStatus.OPEN.value and current is not None and approvals.is_mine(current, employee)
+    can_decide = (
+        route.status == RouteStatus.OPEN.value
+        and current is not None
+        and await approvals.may_decide(session, employee, route.id, current.index)
+    )
     allowed: list[Decision] = []
     if can_decide:
         allowed = [Decision.RETURN, Decision.REJECT]
@@ -122,7 +126,7 @@ async def list_page(
             select(1).where(
                 ApprovalStep.approval_id == ApprovalRoute.id,
                 ApprovalStep.index == ApprovalRoute.current_step,
-                access.step_is_mine(employee),
+                access.step_open_to(employee),
             )
         )
         stmt = stmt.where(ApprovalRoute.status == RouteStatus.OPEN.value, waiting)

@@ -10,12 +10,49 @@ from rt_bus.sqlalchemy import AsyncBus
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app import clock
 from app.bus.erp_snapshots import QuoteReady
 from app.models import ApprovalRoute
-from app.schemas.approvals import ApprovalTemplate
-from app.services import approvals
+from app.schemas.approvals import ApprovalTemplate, RouteStatus
+from app.services import approvals, journal
 
 log = structlog.get_logger(__name__)
+
+
+async def _supersede_open(session: AsyncSession, erp_quote_id: int, new_version: int) -> None:
+    """Новая версия КП закрывает открытые круги прежних версий: решение по ним — 409 `route_closed`.
+
+    Это не решение директора: события нет, только строка журнала. Круг получает статус `returned` (в контракте нет
+    отдельного), текущий шаг — `skipped`, комментарий журнала называет новую версию.
+    """
+    stale = (
+        await session.execute(
+            select(ApprovalRoute)
+            .where(
+                ApprovalRoute.erp_quote_id == erp_quote_id,
+                ApprovalRoute.quote_version < new_version,
+                ApprovalRoute.status == RouteStatus.OPEN.value,
+            )
+            .with_for_update()
+        )
+    ).scalars()
+    for route in stale:
+        steps = await approvals.load_steps(session, route.id)
+        for step in steps:
+            if step.status in ("current", "pending"):
+                step.status = "skipped"
+        route.status, route.current_step, route.closed_at = RouteStatus.RETURNED.value, None, clock.now()
+        await journal.record(
+            session,
+            "approval.superseded",
+            by=None,
+            approval_id=route.id,
+            comment=f"заменён версией {new_version}",
+            version=route.round,
+        )
+        log.info(
+            "quote_route_superseded", quote=route.quote_number, version=route.quote_version, by_version=new_version
+        )
 
 
 async def open_for_quote(session: AsyncSession, bus: AsyncBus, data: QuoteReady) -> ApprovalRoute | None:
@@ -32,6 +69,7 @@ async def open_for_quote(session: AsyncSession, bus: AsyncBus, data: QuoteReady)
     if newest is not None and newest > quote.version:
         log.warning("quote_event_stale", quote=quote.number, version=quote.version, newest=newest)
         return None
+    await _supersede_open(session, quote.erp_quote_id, quote.version)
     rounds = (await session.execute(select(func.count()).select_from(ApprovalRoute).where(same_quote))).scalar_one()
     fields = {
         "erp_quote_id": quote.erp_quote_id,

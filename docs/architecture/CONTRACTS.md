@@ -579,7 +579,7 @@ ADR-0015 (EDS — отдельный сервис, владелец реестр
 | `uz.railtech.eds.letter.rejected.v1` | отказ с причиной | erp (сделка → `LOST` с причиной), platform-bff |
 | `uz.railtech.eds.document.registered.v1` | номер документа (СЗ, ЗЯ, ОТ — при создании; ИСХ — при отправке письма) | platform-bff |
 | `uz.railtech.eds.document.archived.v1` | автоматически: маршрут документа завершён окончательно (одобрен на последнем шаге или отклонён), исходящее письмо отправлено | platform-bff |
-| `uz.railtech.eds.approval.requested.v1` | маршрут (круг) открыт: объект, первый шаг и кто решает | platform-bff |
+| `uz.railtech.eds.approval.requested.v1` | шаг стал текущим: маршрут (круг) открыт — первый шаг; решение передало маршрут дальше — следующий шаг (`step.index`); кто решает | platform-bff |
 | `uz.railtech.eds.approval.decided.v1` | решение на шаге: `decision`, `comment`, `route_status`, для одобренного КП — `outgoing_number` (ИСХ) и `channels` | erp (EDS-03 для `object.kind = quote` и закрытого маршрута), platform-bff |
 
 ERP публикует `uz.railtech.erp.quote.ready_for_approval.v1` (EDS-03) — EDS открывает маршрут «КП» с чек-листом. Подписка `eds` ←

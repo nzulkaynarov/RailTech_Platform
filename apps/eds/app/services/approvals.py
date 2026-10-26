@@ -22,7 +22,6 @@ from app.errors import conflict, forbidden_reason, not_found
 from app.models import ApprovalRoute, ApprovalStep, Document, Employee
 from app.schemas.approvals import ApprovalTemplate, Decision, DecisionIn, RouteStatus
 from app.security.permissions import EdsPermission as P
-from app.security.permissions import known_permissions
 from app.services import access, checklist, document_state, events, journal, numbering
 from app.services.people import load_directory
 
@@ -63,11 +62,14 @@ def assignee_dict(step: ApprovalStep | StepSpec) -> dict[str, Any]:
     return {"crm_user_id": step.crm_user_id, "permission": step.permission}
 
 
-def is_mine(step: ApprovalStep, employee: Employee) -> bool:
-    """Шаг ждёт сотрудника: назначен ему или он держит право шага."""
-    if step.assignee_crm_user_id is not None:
-        return step.assignee_crm_user_id == employee.crm_user_id
-    return step.assignee_permission in known_permissions(employee.permissions_eds)
+async def may_decide(session: AsyncSession, employee: Employee, route_id: uuid.UUID, step_index: int) -> bool:
+    """Шаг ждёт сотрудника и разделение обязанностей не мешает (`access.step_open_to`)."""
+    found = await session.execute(
+        select(ApprovalStep.index)
+        .join(ApprovalRoute, ApprovalRoute.id == ApprovalStep.approval_id)
+        .where(ApprovalStep.approval_id == route_id, ApprovalStep.index == step_index, access.step_open_to(employee))
+    )
+    return found.scalar_one_or_none() is not None
 
 
 async def load_steps(session: AsyncSession, route_id: uuid.UUID) -> list[ApprovalStep]:
@@ -181,7 +183,7 @@ async def decide(
         raise conflict("route_closed", "Маршрут уже завершён.", status=route.status)
     steps = await load_steps(session, route.id)
     current = next(s for s in steps if s.index == route.current_step)
-    if not is_mine(current, employee):
+    if not await may_decide(session, employee, route.id, current.index):
         raise forbidden_reason("not_your_step", "Сейчас решение за другим сотрудником.")
     if route.template == ApprovalTemplate.QUOTE.value and body.decision is Decision.APPROVE:
         await _require_green(session, route)
@@ -238,6 +240,8 @@ async def _apply(
         version=route.round,
     )
     await _publish_decided(session, bus, employee, route, document, current, body, route_status, now)
+    if route_status is RouteStatus.OPEN and following is not None:
+        await _publish_step_requested(session, bus, employee, route, document, following)
     if document is not None:  # статус документа и архив — после решения: события идут в порядке причин
         await document_state.apply_decision(
             session,
@@ -249,6 +253,32 @@ async def _apply(
             actor_id=employee.crm_user_id,
         )
     return route
+
+
+async def _publish_step_requested(
+    session: AsyncSession,
+    bus: AsyncBus,
+    employee: Employee,
+    route: ApprovalRoute,
+    document: Document | None,
+    step: ApprovalStep,
+) -> None:
+    """Следующий шаг стал текущим: `approval.requested` с номером этого шага (бухгалтер после директора)."""
+    await journal.record(
+        session,
+        "approval.requested",
+        by=employee.crm_user_id,
+        approval_id=route.id,
+        document_id=route.document_id,
+        comment=f"шаг {step.index}: {step.label}",
+        version=route.round,
+    )
+    data = {
+        "approval": approval_ref(route, document),
+        "step": {"index": step.index, "assignee": assignee_dict(step)},
+        "actor": events.actor(employee.crm_user_id),
+    }
+    await events.publish(bus, session, "approval.requested", data, subject=_subject(route, document))
 
 
 async def _publish_decided(

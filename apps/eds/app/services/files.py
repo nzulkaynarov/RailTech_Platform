@@ -17,8 +17,8 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app import clock
-from app.errors import EdsError, forbidden_reason, invalid_fields, not_found
-from app.models import Document, Employee, FileVersion, StoredFile
+from app.errors import EdsError, conflict, forbidden_reason, invalid_fields, not_found
+from app.models import Document, Employee, FileVersion, Letter, StoredFile
 from app.schemas.common import FileRef
 from app.security.permissions import EdsPermission as P
 from app.services import access, journal
@@ -147,6 +147,22 @@ async def can_add_version(session: AsyncSession, employee: Employee, stored: Sto
     return False
 
 
+async def require_editable_owner(session: AsyncSession, stored: StoredFile) -> None:
+    """Версии привязанного файла меняются, пока объект редактируется: документ — `draft`/`returned`, письмо —
+    `awaiting_resolution`/`returned`; после отправки на согласование, резолюции или отказа — 409 `invalid_state`."""
+    if stored.document_id is not None:
+        found = await session.execute(select(Document.status).where(Document.id == stored.document_id))
+        editable = {"draft", "returned"}
+    elif stored.letter_id is not None:
+        found = await session.execute(select(Letter.status).where(Letter.id == stored.letter_id))
+        editable = {"awaiting_resolution", "returned"}
+    else:
+        return
+    status = found.scalar_one()
+    if status not in editable:
+        raise conflict("invalid_state", "Файл нельзя менять: объект уже не редактируется.", status=status)
+
+
 async def load_visible(
     session: AsyncSession, employee: Employee, file_id: uuid.UUID, *, lock: bool = False
 ) -> StoredFile:
@@ -171,6 +187,7 @@ async def upload(session: AsyncSession, storage: ObjectStorage, employee: Employ
         stored = await load_visible(session, employee, item.version_of, lock=True)
         if not await can_add_version(session, employee, stored):
             raise forbidden_reason("not_file_owner", "Новую версию добавляет загрузивший файл или автор документа.")
+        await require_editable_owner(session, stored)
         last = await session.execute(select(func.max(FileVersion.version)).where(FileVersion.file_id == stored.id))
         number = int(last.scalar_one()) + 1
     await session.flush()

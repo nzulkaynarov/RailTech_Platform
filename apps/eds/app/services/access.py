@@ -6,7 +6,7 @@
 
 import uuid
 
-from sqlalchemy import ColumnElement, exists, or_, select, true
+from sqlalchemy import ColumnElement, and_, any_, exists, not_, or_, select, true
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models import ApprovalRoute, ApprovalStep, Document, Employee
@@ -23,6 +23,27 @@ def step_is_mine(employee: Employee) -> ColumnElement[bool]:
         ApprovalStep.assignee_crm_user_id == employee.crm_user_id,
         ApprovalStep.assignee_permission.in_(known_permissions(employee.permissions_eds)),
     )
+
+
+def step_open_to(employee: Employee) -> ColumnElement[bool]:
+    """Шаг вправе решить сотрудник: он «мой» и это не разделение обязанностей наоборот.
+
+    Автор документа не решает шаг по своему документу, если есть кому другому: шаг на него самого — никогда;
+    шаг «любой с правом X» — пока в проекции есть другой активный держатель X. Единственный держатель (директор
+    без заместителя) решает свои документы сам. Для КП автора нет — ограничение не действует.
+    """
+    own_document = exists(
+        select(1).where(Document.id == ApprovalRoute.document_id, Document.author_crm_user_id == employee.crm_user_id)
+    )
+    other_holder = exists(
+        select(1).where(
+            Employee.is_active.is_(True),
+            Employee.crm_user_id != employee.crm_user_id,
+            ApprovalStep.assignee_permission == any_(Employee.permissions_eds),
+        )
+    )
+    blocked = and_(own_document, or_(ApprovalStep.assignee_crm_user_id.is_not(None), other_holder))
+    return and_(step_is_mine(employee), not_(blocked))
 
 
 def participates_in(employee: Employee) -> ColumnElement[bool]:
@@ -77,4 +98,5 @@ __all__ = [
     "participates_in",
     "route_visible",
     "step_is_mine",
+    "step_open_to",
 ]

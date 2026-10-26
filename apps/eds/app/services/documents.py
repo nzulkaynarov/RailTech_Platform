@@ -53,10 +53,12 @@ def _check_amount(amount: Money | None) -> None:
         raise invalid_fields("Сумма должна быть больше нуля.", amount="must_be_positive")
 
 
-async def _check_addressee(session: AsyncSession, kind: DocumentKind, addressee: int | None) -> None:
-    """Конкретный адресат решает первый шаг, поэтому обязан быть активным сотрудником с `memos.approve`."""
+async def _check_addressee(session: AsyncSession, kind: DocumentKind, addressee: int | None, author: int) -> None:
+    """Адресат решает первый шаг: активный сотрудник с `memos.approve` и не сам автор (разделение обязанностей)."""
     if addressee is None or kind is DocumentKind.LETTER_OUT:
         return
+    if addressee == author:
+        raise invalid_fields("Нельзя адресовать документ самому себе.", addressee_crm_user_id="same_as_author")
     if not await holds_permission(session, addressee, P.MEMOS_APPROVE.value):
         raise invalid_fields("Адресат не может согласовывать документы.", addressee_crm_user_id="cannot_approve")
 
@@ -127,7 +129,7 @@ async def create(session: AsyncSession, bus: AsyncBus, *, employee: Employee, da
     if not is_letter and (data.recipient is not None or data.in_reply_to is not None):
         raise invalid_fields("Адресат и ответ на письмо — только у исходящего письма.", recipient="letter_out_only")
     _check_amount(data.amount)
-    await _check_addressee(session, data.kind, data.addressee_crm_user_id)
+    await _check_addressee(session, data.kind, data.addressee_crm_user_id, employee.crm_user_id)
     if data.in_reply_to is not None and await session.get(Letter, data.in_reply_to) is None:
         raise invalid_fields("Входящее письмо не найдено.", in_reply_to="not_found")
     now = clock.now()
@@ -233,7 +235,7 @@ async def _send_letter(session: AsyncSession, bus: AsyncBus, document: Document,
 async def _open_approval(
     session: AsyncSession, bus: AsyncBus, document: Document, employee: Employee, kind: DocumentKind
 ) -> None:
-    await _check_addressee(session, kind, document.addressee_crm_user_id)
+    await _check_addressee(session, kind, document.addressee_crm_user_id, document.author_crm_user_id)
     if document.status == DocumentStatus.RETURNED.value:
         document.version += 1
     document.status, document.updated_at = DocumentStatus.ON_APPROVAL.value, clock.now()

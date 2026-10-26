@@ -1,11 +1,13 @@
 """Файлы документов с версиями: `/api/v1/files…` (eds.yaml, тег `files`); правила — `services/files.py`."""
 
 import uuid
+from collections.abc import Callable, Coroutine
 from typing import Annotated, Any
 from urllib.parse import quote
 
-from fastapi import APIRouter, Depends, File, Form, Header, Query, UploadFile
-from fastapi.responses import StreamingResponse
+from fastapi import APIRouter, Depends, File, Form, Header, Query, Request, UploadFile
+from fastapi.responses import Response, StreamingResponse
+from fastapi.routing import APIRoute
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_session, get_storage, require_permission
@@ -16,7 +18,25 @@ from app.security.permissions import EdsPermission as P
 from app.services import files, idempotency
 from app.services.storage import ObjectStorage
 
+
+class SizeGuardRoute(APIRoute):
+    """Отказ 413 по `Content-Length` до разбора multipart: лишние мегабайты не читаются и не пишутся на диск."""
+
+    def get_route_handler(self) -> Callable[[Request], Coroutine[Any, Any, Response]]:
+        handler = super().get_route_handler()
+
+        async def guarded(request: Request) -> Response:
+            declared = request.headers.get("content-length", "")
+            if declared.isdigit() and int(declared) > files.MAX_BYTES + MULTIPART_OVERHEAD:
+                raise files.too_large()
+            return await handler(request)
+
+        return guarded
+
+
 router = APIRouter(prefix="/api/v1", tags=["files"])
+upload_router = APIRouter(prefix="/api/v1", tags=["files"], route_class=SizeGuardRoute)
+MULTIPART_OVERHEAD = 1024 * 1024  # границы и поля multipart сверх самого файла
 
 IdemKey = Annotated[str | None, Header(alias="Idempotency-Key", min_length=8, max_length=128)]
 Uploader = Annotated[
@@ -44,7 +64,7 @@ async def _read_limited(upload: UploadFile) -> bytes:
     return bytes(data)
 
 
-@router.post("/files", response_model=FileRef, status_code=201, operation_id="uploadFile")
+@upload_router.post("/files", response_model=FileRef, status_code=201, operation_id="uploadFile")
 async def upload_file(
     employee: Uploader,
     session: Session,
