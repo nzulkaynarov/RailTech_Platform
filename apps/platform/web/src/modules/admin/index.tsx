@@ -3,12 +3,13 @@ import { useLocation } from "react-router";
 import { RequireAccess } from "../../app/RequireAccess";
 import { ModuleRoutes } from "../ModuleRoutes";
 import { matchSection } from "../registry";
+import { BotPage } from "./bot/BotPage";
 import { IntegrationsPage } from "./integrations/IntegrationsPage";
 import { OrgPage } from "./org/OrgPage";
 import { RolesPage } from "./roles/RolesPage";
 
 /**
- * Модуль Admin. Оргструктура (PLT-15), Ролевая матрица (R-2) и Внешние интеграции (W13-A1) — настоящие экраны; остальные разделы пока заглушки каркаса.
+ * Модуль Admin. Оргструктура (PLT-15), Ролевая матрица (R-2), Внешние интеграции (W13-A1) и Настройки бота (W13-A5) — настоящие экраны; остальные разделы пока заглушки каркаса.
  */
 export function Component() {
   const location = useLocation();
@@ -31,6 +32,13 @@ export function Component() {
     return (
       <RequireAccess rule={match.section.access}>
         <IntegrationsPage />
+      </RequireAccess>
+    );
+  }
+  if (match?.module.code === "admin" && match.section.key === "bot") {
+    return (
+      <RequireAccess rule={match.section.access}>
+        <BotPage />
       </RequireAccess>
     );
   }

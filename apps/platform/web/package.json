@@ -18,7 +18,8 @@
     "typecheck": "tsc -b",
     "test": "vitest run",
     "e2e": "playwright test",
-    "gen:api": "orval && prettier --write src/shared/api/generated --log-level warn"
+    "gen:api": "orval && prettier --write src/shared/api/generated --log-level warn",
+    "kb:sync": "node scripts/sync-kb-docs.mjs"
   },
   "dependencies": {
     "@ant-design/icons": "^5.6.1",

@@ -7,6 +7,7 @@ import {
 import type { ChangePasswordIn, LoginIn, MeUpdate } from "../shared/api/generated/model";
 import { adminIntegrationsHandlers } from "./adminIntegrations";
 import { adminRolesHandlers } from "./adminRoles";
+import { botKbHandlers } from "./botKb";
 import { adminUsersHandlers } from "./adminUsers";
 import { eventStreamHandlers } from "./eventStream";
 import { isEmployeeDisabled } from "./fixtures/employees";
@@ -114,6 +115,7 @@ export const handlers = [
   ...adminUsersHandlers,
   ...adminRolesHandlers,
   ...adminIntegrationsHandlers,
+  ...botKbHandlers,
 
   getGetHealthMockHandler({
     status: "ok",

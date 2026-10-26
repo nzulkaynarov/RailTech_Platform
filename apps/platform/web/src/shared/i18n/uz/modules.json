@@ -223,7 +223,8 @@
       "org": "Tashkiliy tuzilma",
       "integrations": "Tashqi integratsiyalar",
       "tickets": "Jamoa tiketlari",
-      "company": "Kompaniya"
+      "company": "Kompaniya",
+      "bot": "Bot sozlamalari"
     },
     "stub": {
       "roles": {
@@ -249,6 +250,11 @@
       "company": {
         "title": "Kompaniya rekvizitlari shu yerda ochiladi",
         "text": "Kompaniya rekvizitlari, hujjat shablonlari, raqamlash va to'lov shartlari. Ekran ERP sozlamalari Platformaga ko'chirilishi bilan paydo bo'ladi.",
+        "action": "Tuzilma"
+      },
+      "bot": {
+        "title": "Bot sozlamalari shu yerda ochiladi",
+        "text": "Telegram-botning matnlari, xulq-atvori va uzatish qoidalari, javob shablonlari va CSV yuklamalar.",
         "action": "Tuzilma"
       }
     },

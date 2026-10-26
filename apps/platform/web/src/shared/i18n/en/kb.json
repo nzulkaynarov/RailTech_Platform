@@ -1,0 +1,320 @@
+{
+  "subtitle": "The documents the bot answers customers from: the \"What the bot will find\" search, gaps — questions without an answer — and a sandbox for testing the bot.",
+  "readOnlySubtitle": "View only: documents, gaps and the sandbox are managed by the administrator.",
+  "viewOnly": "View only",
+  "common": {
+    "retry": "Retry",
+    "readOnly": "View only: changes are made by the administrator."
+  },
+  "views": {
+    "label": "Knowledge base section",
+    "docs": "Documents",
+    "gaps": "Gaps",
+    "sandbox": "Bot sandbox"
+  },
+  "languages": { "ru": "Russian", "uz": "Uzbek", "en": "English" },
+  "ingest": {
+    "pending": "Queued",
+    "processing": "Processing",
+    "done": "Ready",
+    "failed": "Error"
+  },
+  "source": { "file": "File", "manual": "Entered manually", "url": "Link" },
+  "state": {
+    "loadError": {
+      "title": "Could not load the data",
+      "text": "Try again: nothing has been lost."
+    },
+    "unavailable": {
+      "title": "CRM is not responding",
+      "text": "Wait a minute and try again: nothing has been lost."
+    },
+    "forbidden": {
+      "title": "Not available to your role",
+      "text": "This data is available to roles with the \"All leads\" section, or to the administrator."
+    }
+  },
+  "fields": {
+    "title": "Title",
+    "language": "Document language",
+    "product": "Product",
+    "productHint": "Leave the product empty if the document is about the company as a whole.",
+    "productKeyHint": "The product directory is not available to you: enter the key manually (Latin letters, digits, hyphen) or leave it empty.",
+    "noProduct": "No product",
+    "text": "Document text (Markdown)"
+  },
+  "search": {
+    "title": "What the bot will find",
+    "hint": "Check which fragments the bot finds for a customer question and whether it will answer. The search changes nothing.",
+    "query": "Customer question",
+    "language": "Question language",
+    "anyLanguage": "Any language",
+    "submit": "Find",
+    "confident": "The bot will answer from the knowledge base",
+    "notConfident": "The bot will say \"I don't know\" and offer a manager",
+    "score": "Best match: {{score}}, threshold: {{min}}",
+    "noScore": "none",
+    "noHits": "Nothing found.",
+    "hitsLabel": "Found fragments",
+    "similarity": "Similarity {{value}}"
+  },
+  "documents": {
+    "title": "Documents",
+    "upload": "Upload a file",
+    "manual": "Add manually",
+    "caption": "Knowledge base documents",
+    "tableScroll": "Knowledge base documents: the table can be scrolled",
+    "open": "Open document: {{title}}",
+    "disabled": "Disabled",
+    "noProduct": "No product",
+    "columns": {
+      "title": "Title",
+      "language": "Language",
+      "product": "Product",
+      "status": "Indexing",
+      "chunks": "Fragments",
+      "updated": "Updated"
+    },
+    "empty": {
+      "title": "No documents yet",
+      "text": "The bot answers customers only from knowledge base documents. Upload the first Markdown file or add the text manually."
+    }
+  },
+  "panel": {
+    "actions": "Actions",
+    "active": "Used in bot search",
+    "ingestError": "Indexing failed: {{error}}",
+    "fields": {
+      "language": "Language",
+      "product": "Product",
+      "source": "Source",
+      "version": "Version",
+      "chunks": "Fragments",
+      "created": "Created",
+      "updated": "Updated"
+    },
+    "toggle": {
+      "off": "Disable the document",
+      "on": "Enable the document",
+      "offStep1": "The document stops taking part in the bot's search: for questions about it the bot will say \"I don't know\" or use another document.",
+      "offStep2": "The file and fragments are not deleted — you can enable the document again.",
+      "onStep1": "The document takes part in the bot's search again.",
+      "onStep2": "The fragments are already built, no re-indexing is needed.",
+      "step3": "The change is written to the CRM audit log: who and when.",
+      "submitOff": "Disable document",
+      "submitOn": "Enable document",
+      "doneOff": "Document disabled",
+      "doneOn": "Document enabled"
+    },
+    "reingest": {
+      "button": "Re-index",
+      "submit": "Re-index the document",
+      "step1": "The document joins the indexing queue — status \"Queued\".",
+      "step2": "The fragments are rebuilt from the saved file; it takes up to a minute.",
+      "step3": "If the document is being indexed right now, CRM refuses: wait and try again.",
+      "done": "Document queued for re-indexing"
+    },
+    "chunks": {
+      "title": "Fragments",
+      "hint": "This is how the bot's search sees the document: the bot answers from these pieces of text.",
+      "empty": "No fragments yet: the document has not been indexed.",
+      "number": "Fragment {{number}}",
+      "tokens": "{{count}} tokens"
+    }
+  },
+  "create": {
+    "upload": {
+      "title": "Upload a Markdown file",
+      "file": ".md file",
+      "fileHint": "One .md file in the knowledge base format, up to 25 MB.",
+      "submit": "Upload document"
+    },
+    "manual": {
+      "title": "Add a document manually",
+      "textHint": "You can skip the first-level heading: it is taken from the title.",
+      "submit": "Add document"
+    },
+    "step1": "The document joins the indexing queue — status \"Queued\".",
+    "step1Gap": "The document joins the indexing queue, and the gap it was created from is closed.",
+    "step2": "In a minute the bot starts answering from the new document; check it in \"What the bot will find\".",
+    "step3": "The upload is written to the CRM audit log: who and when.",
+    "done": "Document added — indexing takes up to a minute",
+    "doneGap": "Document added, gap closed — indexing takes up to a minute",
+    "errors": {
+      "notMarkdown": "Only Markdown (.md) files are accepted.",
+      "empty": "The file is empty.",
+      "tooLarge": "The file is larger than 25 MB."
+    }
+  },
+  "format": {
+    "title": "How to prepare the file",
+    "intro": "The file is prepared by a person or an AI assistant outside the system; here it is only checked and split into fragments.",
+    "rules": [
+      "At the start — a front matter block between --- lines: title, language (ru, uz or en), source (where the document comes from), updated (YYYY-MM-DD); optional tags and audience.",
+      "One document — one topic. One \"# …\" heading, then \"##\" and \"###\" sections: the bot splits the text into fragments by them.",
+      "Tables in GFM format, whole. No images or links to files: describe the image in words.",
+      "No customers' personal data or internal cost prices. Up to 100 KB, UTF-8 encoding."
+    ],
+    "spec": "Full specification",
+    "specTitle": "Knowledge base document format",
+    "prompt": "Copy the prompt for AI",
+    "promptCopied": "Prompt copied",
+    "promptCopyFailed": "Could not copy the prompt",
+    "example": "Download an example",
+    "close": "Close"
+  },
+  "gaps": {
+    "title": "Knowledge base gaps",
+    "hint": "Customer questions the bot found no answer to. The most frequently asked are on top.",
+    "status": "Gap status",
+    "caption": "Knowledge base gaps",
+    "tableScroll": "Knowledge base gaps: the table can be scrolled",
+    "open": "Open gap: {{question}}",
+    "noLead": "—",
+    "total": "Total: {{count}}",
+    "statuses": { "open": "Open", "resolved": "Closed", "ignored": "Ignored" },
+    "columns": {
+      "question": "Question",
+      "occurrences": "Asked",
+      "language": "Language",
+      "score": "Match",
+      "lead": "Lead"
+    },
+    "empty": {
+      "open": {
+        "title": "No open gaps",
+        "text": "Questions the bot found no answer to appear here — close them with a new document."
+      },
+      "resolved": {
+        "title": "No closed gaps",
+        "text": "A gap is closed by a document: create it from the question or link an existing one."
+      },
+      "ignored": {
+        "title": "No ignored gaps",
+        "text": "Questions that need no answer, such as jokes, end up here."
+      }
+    }
+  },
+  "gapPanel": {
+    "notFound": "The gap is not in this list: it may have been closed already.",
+    "stepAudit": "The change is written to the CRM audit log: who and when.",
+    "fields": {
+      "occurrences": "Asked",
+      "language": "Language",
+      "score": "Best match",
+      "lead": "Lead",
+      "created": "First time",
+      "updated": "Last time"
+    },
+    "create": { "button": "Create a document from the question" },
+    "link": {
+      "button": "Link to a document",
+      "document": "Document with the answer",
+      "placeholder": "Choose a document",
+      "step1": "The gap is closed: the answer to the question is already in the chosen document.",
+      "step2": "The document itself does not change — if the answer is not there, add it before closing.",
+      "step3": "A closed gap can be returned to the open ones.",
+      "submit": "Link and close the gap",
+      "done": "Gap closed"
+    },
+    "ignore": {
+      "button": "Ignore",
+      "step1": "The question leaves the open gaps.",
+      "step2": "The bot answers it as before; you can return the question on the \"Ignored\" tab.",
+      "submit": "Ignore the gap",
+      "done": "Gap hidden"
+    },
+    "reopen": {
+      "button": "Return to open",
+      "step1": "The question appears among the open gaps again.",
+      "step2": "If the gap was closed by a document, the link to it is removed.",
+      "submit": "Return the gap",
+      "done": "Gap returned to open"
+    }
+  },
+  "sandbox": {
+    "title": "Bot sandbox",
+    "intro": "Write to the bot as a customer: the reply goes the same way as in Telegram — knowledge base, texts, handoff rules. Customers and managers do not see this conversation.",
+    "paid": "Paid: replies are counted in \"Spend\" as a test.",
+    "handoffNote": "Handoff to a manager is only shown below: it is not sent to the team channel or CRM.",
+    "language": "Customer language",
+    "log": "Conversation with the bot",
+    "placeholder": "Customer question",
+    "send": "Send to the bot",
+    "you": "You (as a customer)",
+    "bot": "Bot",
+    "empty": "Ask a question customers often ask — for example, about delivery time or warranty.",
+    "thinking": "The bot is replying…",
+    "noReply": "The bot stayed silent",
+    "buttons": "Buttons under the message",
+    "step1": "The message goes to the bot on behalf of a test customer: the bot answers from the knowledge base, texts and handoff rules.",
+    "step2": "The reply is paid: model calls go to \"Spend\" marked \"test\".",
+    "step3": "Handoff to a manager is only shown below; no handoff is created in CRM.",
+    "reset": {
+      "button": "Start over",
+      "submit": "Clear the conversation",
+      "step1": "The test conversation is deleted completely — customers and managers do not have it.",
+      "step2": "The thread on the screen is cleared and the bot starts from scratch.",
+      "step3": "The action is written to the CRM audit log: who and when."
+    },
+    "why": {
+      "title": "Why the bot answered this way",
+      "decision": "Decision",
+      "reason": "Reason",
+      "score": "Match with the knowledge base",
+      "documents": "Knowledge base documents",
+      "none": "none found",
+      "triggers": "Handoff rules triggered",
+      "priority": "Priority"
+    },
+    "decisions": {
+      "answer": "answer from the knowledge base",
+      "fallback": "no answer in the knowledge base",
+      "handoff": "handoff to a manager",
+      "deliver_document": "sending a document",
+      "choose_document": "choosing a document with buttons",
+      "silent": "no reply",
+      "system": "service reply"
+    }
+  },
+  "triggers": {
+    "human_requested": "Asks for a person",
+    "callback_requested": "Asks for a call",
+    "price_or_contract_asked": "Price or terms — not in the base",
+    "negative_sentiment": "Negative mood",
+    "complaint": "Complaint",
+    "kb_gap_streak": "Bot found no answer",
+    "no_progress": "No progress",
+    "competitor_mentioned": "Competitor",
+    "high_score": "High score",
+    "qualifier_recommend": "Qualifier recommendation",
+    "document_not_found": "Document not found",
+    "service_request": "Service request",
+    "attachment_received": "Sent a file",
+    "agent_unavailable": "AI assistant failure",
+    "delivery_failed": "Could not send the file"
+  },
+  "errors": {
+    "DEFAULT": "The action was not completed. Try again later or contact the administrator.",
+    "FORBIDDEN": "This action is not available to your role.",
+    "NOT_FOUND": "The object was not found: it may have been changed. Refresh the page.",
+    "BACKEND_UNAVAILABLE": "CRM is not responding. Wait a minute and try again.",
+    "INTEGRATION_FAILED": "A service needed for the reply did not respond. Try again later.",
+    "TOO_MANY_REQUESTS": "Too many requests. Try again in a minute.",
+    "VALIDATION_FAILED": "Check the form fields.",
+    "CONFLICT": "The object has changed. Refresh the page and try again.",
+    "SESSION_EXPIRED": "The session has expired. Sign in again.",
+    "kb_format": "The file does not follow the knowledge base format: {{message}}",
+    "reasons": {
+      "kb_markdown_only": "Only Markdown (.md) files in the knowledge base format are accepted.",
+      "kb_format": "The file does not follow the knowledge base format: see \"How to prepare the file\".",
+      "file_empty": "The file is empty.",
+      "file_too_large": "The file is larger than 25 MB — split it into several documents by topic.",
+      "multipart_required": "The file must be sent through the upload form.",
+      "document_indexing": "The document is being indexed right now. Wait a minute and try again.",
+      "unknown_product": "There is no such product in the directory.",
+      "litellm_unavailable": "The model gateway is not responding: the bot cannot form a reply. Try again later.",
+      "storage_unavailable": "File storage is not responding. Try again later."
+    }
+  }
+}
