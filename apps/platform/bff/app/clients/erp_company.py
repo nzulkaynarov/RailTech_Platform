@@ -75,6 +75,7 @@ LOGO_IMAGE_TYPES = frozenset(
 # а он для браузера внутренний.
 _MEDIA_SRC = re.compile(r"""(src=["'])(?:https?://[^"'/\s]+)?(/media/[^"'\s>]+)(["'])""")
 MAX_INLINE_IMAGES = 4
+MAX_LOGO_FILE_BYTES = 5 * 1024 * 1024  # потолок файла логотипа, как у ERP
 MAX_INLINE_BYTES = 2 * 1024 * 1024
 
 
@@ -219,8 +220,12 @@ class ErpCompany:
         path = media_path(url)
         if path is None:
             return None
+        # Только файлы своей компании: чужой `companies/<id>/...` BFF не запрашивает.
+        own = await self.company_id()
+        if not path.startswith(f"/media/companies/{own}/"):
+            return None
         response = await self._call("erp", "GET", path)
-        if response.status_code != 200:
+        if response.status_code != 200 or len(response.content) > MAX_LOGO_FILE_BYTES:
             return None
         if (
             response.headers.get("content-type", "").split(";")[0].strip().lower()

@@ -184,7 +184,7 @@ SPA  POST /api/v1/auth/login {email, password}
 `settings.charge_templates`; запросы на категории и ставка НДС — тоже `settings.edit` или суперпользователь). Id своей компании BFF берёт из
 `own_company_id` в `setup/status/` ERP (старая ERP без поля — основное членство), нет компании — 409 `COMPANY_NOT_SET`. Логотипы
 BFF отдаёт сам (`/admin/company/logo/image`, `/admin/company/brand/logo/image`): CSP Платформы адреса ERP не пускает.
-Загрузка логотипа — `multipart/form-data` целиком, BFF файл не разбирает (до 2 МБ). Поля маржи условий КП — группа `cost_margin`
+Загрузка логотипа — `multipart/form-data` целиком, BFF содержимое не разбирает, а проверяет размер (до 2 МБ) и тип части `logo` по её заголовкам (PNG, JPEG, WebP, SVG); содержимое проверяет ERP. Поля маржи условий КП — группа `cost_margin`
 (вырезаются и не принимаются без права). Ошибки ERP: 400 → 422 `VALIDATION_FAILED` (`details.reason`, `details.fields`),
 «используется»/«уже рассмотрен»/«префикс занят» → 409 `CONFLICT`. Разрывы в ERP — `docs/QUESTIONS.md`, Q-W13A3-1.
 

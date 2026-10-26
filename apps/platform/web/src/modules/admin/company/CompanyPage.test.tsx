@@ -184,6 +184,16 @@ describe("Admin · Компания: доступ и каркас", () => {
       );
     });
 
+    fireEvent.click(screen.getByRole("tab", { name: "Шаблоны" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Открыть: Договор поставки (наш)" }));
+    const viewer = await screen.findByRole("dialog", { name: "Шаблон документа" });
+    expect(within(viewer).getByLabelText(/^Текст шаблона/)).toBeDisabled();
+    expect(within(viewer).queryByRole("button", { name: "Сохранить" })).toBeNull();
+    expect(await within(viewer).findByTitle("Образец документа по шаблону")).toBeInTheDocument();
+    fireEvent.click(within(viewer).getByRole("button", { name: "Закрыть" }));
+    expect(screen.getByRole("button", { name: "Создать шаблон" })).toBeDisabled();
+    expect(screen.queryByRole("button", { name: /^Изменить:/ })).toBeNull();
+
     fireEvent.click(screen.getByRole("tab", { name: "Справочники" }));
     expect(await screen.findByText("Казахстан")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Добавить строку" })).toBeDisabled();

@@ -3440,7 +3440,7 @@ export const getGetCompanyLogoImageUrl = () => {
 };
 
 /**
- * BFF берёт файл в ERP по адресу из карточки компании (только публичный путь логотипа) и отдаёт с теми же защитными заголовками (`X-Content-Type-Options`, `Content-Security-Policy: sandbox`). Нет логотипа — 404 `NOT_FOUND`. Раздел `company.settings` — чтение.
+ * BFF берёт файл в ERP по адресу из карточки компании (только публичный путь логотипа) и отдаёт с теми же защитными заголовками (`X-Content-Type-Options`, `Content-Security-Policy: sandbox`). Нет логотипа, чужой путь или файл больше 5 МБ — 404 `NOT_FOUND`. Раздел `company.settings` — чтение.
  * @summary Файл логотипа компании
  */
 export const getCompanyLogoImage = async (options?: Parameters<typeof http>[1]): Promise<Blob> => {
@@ -3456,7 +3456,7 @@ export const getGetCompanyLogoImageQueryKey = () => {
 
 export const getGetCompanyLogoImageQueryOptions = <
   TData = Awaited<ReturnType<typeof getCompanyLogoImage>>,
-  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | NotFoundResponse>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | Error>,
 >(options?: {
   query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getCompanyLogoImage>>, TError, TData>>;
   request?: SecondParameter<typeof http>;
@@ -3479,12 +3479,12 @@ export type GetCompanyLogoImageQueryResult = NonNullable<
   Awaited<ReturnType<typeof getCompanyLogoImage>>
 >;
 export type GetCompanyLogoImageQueryError = ErrorType<
-  SessionExpiredResponse | ForbiddenResponse | NotFoundResponse
+  SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | Error
 >;
 
 export function useGetCompanyLogoImage<
   TData = Awaited<ReturnType<typeof getCompanyLogoImage>>,
-  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | NotFoundResponse>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | Error>,
 >(
   options: {
     query: Partial<
@@ -3504,7 +3504,7 @@ export function useGetCompanyLogoImage<
 ): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 export function useGetCompanyLogoImage<
   TData = Awaited<ReturnType<typeof getCompanyLogoImage>>,
-  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | NotFoundResponse>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | Error>,
 >(
   options?: {
     query?: Partial<
@@ -3524,7 +3524,7 @@ export function useGetCompanyLogoImage<
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 export function useGetCompanyLogoImage<
   TData = Awaited<ReturnType<typeof getCompanyLogoImage>>,
-  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | NotFoundResponse>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | Error>,
 >(
   options?: {
     query?: Partial<
@@ -3540,7 +3540,7 @@ export function useGetCompanyLogoImage<
 
 export function useGetCompanyLogoImage<
   TData = Awaited<ReturnType<typeof getCompanyLogoImage>>,
-  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | NotFoundResponse>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | Error>,
 >(
   options?: {
     query?: Partial<
@@ -3959,7 +3959,7 @@ export const getGetBrandLogoImageUrl = () => {
 };
 
 /**
- * BFF берёт файл в ERP по адресу из профиля бланка (только публичный путь логотипа) и отдаёт с теми же защитными заголовками (`X-Content-Type-Options`, `Content-Security-Policy: sandbox`). Нет логотипа — 404 `NOT_FOUND`. Раздел `company.settings` — чтение.
+ * BFF берёт файл в ERP по адресу из профиля бланка (только публичный путь логотипа) и отдаёт с теми же защитными заголовками (`X-Content-Type-Options`, `Content-Security-Policy: sandbox`). Нет логотипа, чужой путь или файл больше 5 МБ — 404 `NOT_FOUND`. Раздел `company.settings` — чтение.
  * @summary Файл логотипа бланка
  */
 export const getBrandLogoImage = async (options?: Parameters<typeof http>[1]): Promise<Blob> => {
@@ -3975,7 +3975,7 @@ export const getGetBrandLogoImageQueryKey = () => {
 
 export const getGetBrandLogoImageQueryOptions = <
   TData = Awaited<ReturnType<typeof getBrandLogoImage>>,
-  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | NotFoundResponse>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | Error>,
 >(options?: {
   query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getBrandLogoImage>>, TError, TData>>;
   request?: SecondParameter<typeof http>;
@@ -3998,12 +3998,12 @@ export type GetBrandLogoImageQueryResult = NonNullable<
   Awaited<ReturnType<typeof getBrandLogoImage>>
 >;
 export type GetBrandLogoImageQueryError = ErrorType<
-  SessionExpiredResponse | ForbiddenResponse | NotFoundResponse
+  SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | Error
 >;
 
 export function useGetBrandLogoImage<
   TData = Awaited<ReturnType<typeof getBrandLogoImage>>,
-  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | NotFoundResponse>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | Error>,
 >(
   options: {
     query: Partial<UseQueryOptions<Awaited<ReturnType<typeof getBrandLogoImage>>, TError, TData>> &
@@ -4021,7 +4021,7 @@ export function useGetBrandLogoImage<
 ): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 export function useGetBrandLogoImage<
   TData = Awaited<ReturnType<typeof getBrandLogoImage>>,
-  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | NotFoundResponse>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | Error>,
 >(
   options?: {
     query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getBrandLogoImage>>, TError, TData>> &
@@ -4039,7 +4039,7 @@ export function useGetBrandLogoImage<
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 export function useGetBrandLogoImage<
   TData = Awaited<ReturnType<typeof getBrandLogoImage>>,
-  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | NotFoundResponse>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | Error>,
 >(
   options?: {
     query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getBrandLogoImage>>, TError, TData>>;
@@ -4053,7 +4053,7 @@ export function useGetBrandLogoImage<
 
 export function useGetBrandLogoImage<
   TData = Awaited<ReturnType<typeof getBrandLogoImage>>,
-  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | NotFoundResponse>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | Error>,
 >(
   options?: {
     query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getBrandLogoImage>>, TError, TData>>;

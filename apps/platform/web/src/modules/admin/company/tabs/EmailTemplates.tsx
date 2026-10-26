@@ -13,14 +13,8 @@ import {
   useUpdateEmailTemplate,
 } from "../../../../shared/api/generated/platform-bff";
 import { StatusTag } from "../../../../shared/ui/StatusTag";
-import {
-  ConfirmModal,
-  FormModal,
-  ListTable,
-  PreviewFrame,
-  QueryGate,
-  ReadOnlyFence,
-} from "../common";
+import { ConfirmModal, FormModal, ListTable, PreviewFrame, QueryGate } from "../common";
+import { useReadOnly } from "../useReadOnly";
 import { changedFields, isEmptyObject } from "../diff";
 import { errorFields } from "../errors";
 
@@ -55,9 +49,11 @@ export function EmailTemplates() {
       },
     },
   });
+  const readOnly = useReadOnly();
   const add = (
     <Button
       type="primary"
+      disabled={readOnly}
       onClick={() => {
         setEditing("new");
       }}
@@ -67,41 +63,52 @@ export function EmailTemplates() {
   );
 
   return (
-    <ReadOnlyFence>
-      <QueryGate query={query}>
-        {({ items }) => (
-          <>
-            {items.length > 0 ? <div>{add}</div> : null}
-            <ListTable<EmailTemplate>
-              label={t("templates.parts.emails")}
-              data={items}
-              rowKey={(row) => row.id}
-              empty={{
-                title: t("templates.emails.empty.title"),
-                text: t("templates.emails.empty.text"),
-                action: add,
-              }}
-              columns={[
-                {
-                  title: t("templates.emails.key"),
-                  dataIndex: "key",
-                  render: (v: string) => <b className="pf-co-mono">{v}</b>,
-                },
-                { title: t("templates.emails.language"), dataIndex: "language" },
-                { title: t("templates.emails.subject"), dataIndex: "subject", responsive: ["md"] },
-                {
-                  title: t("status"),
-                  dataIndex: "is_active",
-                  render: (value: boolean) => (
-                    <StatusTag tone={value ? "green" : "default"}>
-                      {t(value ? "templates.emails.replaces" : "templates.emails.fileUsed")}
-                    </StatusTag>
-                  ),
-                },
-                {
-                  title: t("actions"),
-                  key: "actions",
-                  render: (_: unknown, row) => (
+    <QueryGate query={query}>
+      {({ items }) => (
+        <>
+          {items.length > 0 ? <div>{add}</div> : null}
+          <ListTable<EmailTemplate>
+            label={t("templates.parts.emails")}
+            data={items}
+            rowKey={(row) => row.id}
+            empty={{
+              title: t("templates.emails.empty.title"),
+              text: t("templates.emails.empty.text"),
+              action: add,
+            }}
+            columns={[
+              {
+                title: t("templates.emails.key"),
+                dataIndex: "key",
+                render: (v: string) => <b className="pf-co-mono">{v}</b>,
+              },
+              { title: t("templates.emails.language"), dataIndex: "language" },
+              { title: t("templates.emails.subject"), dataIndex: "subject", responsive: ["md"] },
+              {
+                title: t("status"),
+                dataIndex: "is_active",
+                render: (value: boolean) => (
+                  <StatusTag tone={value ? "green" : "default"}>
+                    {t(value ? "templates.emails.replaces" : "templates.emails.fileUsed")}
+                  </StatusTag>
+                ),
+              },
+              {
+                title: t("actions"),
+                key: "actions",
+                render: (_: unknown, row) =>
+                  readOnly ? (
+                    <Button
+                      type="link"
+                      size="small"
+                      aria-label={t("templates.emails.openNamed", { name: row.key })}
+                      onClick={() => {
+                        setEditing(row);
+                      }}
+                    >
+                      {t("templates.emails.open")}
+                    </Button>
+                  ) : (
                     <span className="pf-co-actions">
                       <Button
                         type="link"
@@ -127,44 +134,44 @@ export function EmailTemplates() {
                       </Button>
                     </span>
                   ),
-                },
-              ]}
-            />
-            {editing !== null ? (
-              <EmailEditor
-                row={editing === "new" ? null : editing}
-                onClose={() => {
-                  setEditing(null);
-                }}
-                onSaved={() => {
-                  void refresh();
-                  setEditing(null);
-                  void message.success(t("saved"));
-                }}
-              />
-            ) : null}
-            <ConfirmModal
-              open={removing !== null}
-              title={t("templates.emails.deleteTitle", { name: removing?.key ?? "" })}
-              okLabel={t("delete")}
-              danger
-              loading={remove.isPending}
-              error={remove.error}
-              items={[
-                t("templates.emails.consequence.delete"),
-                t("templates.emails.consequence.file"),
-              ]}
-              onOk={() => {
-                if (removing) remove.mutate({ id: removing.id });
+              },
+            ]}
+          />
+          {editing !== null ? (
+            <EmailEditor
+              row={editing === "new" ? null : editing}
+              readOnly={readOnly}
+              onClose={() => {
+                setEditing(null);
               }}
-              onCancel={() => {
-                setRemoving(null);
+              onSaved={() => {
+                void refresh();
+                setEditing(null);
+                void message.success(t("saved"));
               }}
             />
-          </>
-        )}
-      </QueryGate>
-    </ReadOnlyFence>
+          ) : null}
+          <ConfirmModal
+            open={removing !== null}
+            title={t("templates.emails.deleteTitle", { name: removing?.key ?? "" })}
+            okLabel={t("delete")}
+            danger
+            loading={remove.isPending}
+            error={remove.error}
+            items={[
+              t("templates.emails.consequence.delete"),
+              t("templates.emails.consequence.file"),
+            ]}
+            onOk={() => {
+              if (removing) remove.mutate({ id: removing.id });
+            }}
+            onCancel={() => {
+              setRemoving(null);
+            }}
+          />
+        </>
+      )}
+    </QueryGate>
   );
 }
 
@@ -172,10 +179,12 @@ function EmailEditor({
   row,
   onClose,
   onSaved,
+  readOnly,
 }: {
   row: EmailTemplate | null;
   onClose: () => void;
   onSaved: () => void;
+  readOnly: boolean;
 }) {
   const { t } = useTranslation("company");
   const formId = useId();
@@ -232,7 +241,13 @@ function EmailEditor({
     <FormModal
       open
       width={1040}
-      title={row ? t("templates.emails.editTitle") : t("templates.emails.addTitle")}
+      title={
+        readOnly
+          ? t("templates.emails.viewTitle")
+          : row
+            ? t("templates.emails.editTitle")
+            : t("templates.emails.addTitle")
+      }
       formId={formId}
       submitLabel={t("save")}
       saving={mutation.isPending}
@@ -240,9 +255,11 @@ function EmailEditor({
         mutation.error && errorFields(mutation.error).length === 0 ? mutation.error : undefined
       }
       onCancel={onClose}
+      readOnly={readOnly}
     >
       <div className="pf-co-split">
         <Form<Values>
+          disabled={readOnly}
           id={formId}
           form={form}
           layout="vertical"

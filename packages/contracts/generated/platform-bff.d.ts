@@ -474,7 +474,7 @@ export interface paths {
     };
     /**
      * Файл логотипа компании
-     * @description BFF берёт файл в ERP по адресу из карточки компании (только публичный путь логотипа) и отдаёт с теми же защитными заголовками (`X-Content-Type-Options`, `Content-Security-Policy: sandbox`). Нет логотипа — 404 `NOT_FOUND`. Раздел `company.settings` — чтение.
+     * @description BFF берёт файл в ERP по адресу из карточки компании (только публичный путь логотипа) и отдаёт с теми же защитными заголовками (`X-Content-Type-Options`, `Content-Security-Policy: sandbox`). Нет логотипа, чужой путь или файл больше 5 МБ — 404 `NOT_FOUND`. Раздел `company.settings` — чтение.
      */
     get: operations["getCompanyLogoImage"];
     put?: never;
@@ -542,7 +542,7 @@ export interface paths {
     };
     /**
      * Файл логотипа бланка
-     * @description BFF берёт файл в ERP по адресу из профиля бланка (только публичный путь логотипа) и отдаёт с теми же защитными заголовками (`X-Content-Type-Options`, `Content-Security-Policy: sandbox`). Нет логотипа — 404 `NOT_FOUND`. Раздел `company.settings` — чтение.
+     * @description BFF берёт файл в ERP по адресу из профиля бланка (только публичный путь логотипа) и отдаёт с теми же защитными заголовками (`X-Content-Type-Options`, `Content-Security-Policy: sandbox`). Нет логотипа, чужой путь или файл больше 5 МБ — 404 `NOT_FOUND`. Раздел `company.settings` — чтение.
      */
     get: operations["getBrandLogoImage"];
     put?: never;
@@ -3058,6 +3058,15 @@ export interface operations {
       401: components["responses"]["SessionExpired"];
       403: components["responses"]["Forbidden"];
       404: components["responses"]["NotFound"];
+      /** @description `COMPANY_NOT_SET` — своя компания в ERP ещё не создана */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Error"];
+        };
+      };
     };
   };
   uploadCompanyLogo: {
@@ -3222,6 +3231,15 @@ export interface operations {
       401: components["responses"]["SessionExpired"];
       403: components["responses"]["Forbidden"];
       404: components["responses"]["NotFound"];
+      /** @description `COMPANY_NOT_SET` — своя компания в ERP ещё не создана */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Error"];
+        };
+      };
     };
   };
   uploadBrandLogo: {

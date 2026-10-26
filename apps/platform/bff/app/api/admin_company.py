@@ -181,6 +181,7 @@ def _logo_image(file: httpx.Response | None) -> Response:
         media_type=file.headers["content-type"].split(";")[0].strip(),
         headers={
             "Cache-Control": "private, max-age=3600",
+            "Content-Disposition": "inline",
             "X-Content-Type-Options": "nosniff",
             "Content-Security-Policy": "default-src 'none'; style-src 'unsafe-inline'; sandbox",
         },

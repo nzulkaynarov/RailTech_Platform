@@ -254,6 +254,7 @@ export function FormModal({
   error,
   onCancel,
   width = 560,
+  readOnly = false,
   children,
 }: {
   open: boolean;
@@ -264,6 +265,8 @@ export function FormModal({
   error?: unknown;
   onCancel: () => void;
   width?: number;
+  /** Просмотр без права на изменение: вместо «Отмена» и главной кнопки — «Закрыть» */
+  readOnly?: boolean;
   children: ReactNode;
 }) {
   const { t } = useTranslation("company");
@@ -275,14 +278,22 @@ export function FormModal({
       onCancel={onCancel}
       destroyOnHidden
       maskClosable={false}
-      footer={[
-        <Button key="cancel" onClick={onCancel}>
-          {t("cancel")}
-        </Button>,
-        <Button key="submit" type="primary" htmlType="submit" form={formId} loading={saving}>
-          {submitLabel}
-        </Button>,
-      ]}
+      footer={
+        readOnly
+          ? [
+              <Button key="close" onClick={onCancel}>
+                {t("close")}
+              </Button>,
+            ]
+          : [
+              <Button key="cancel" onClick={onCancel}>
+                {t("cancel")}
+              </Button>,
+              <Button key="submit" type="primary" htmlType="submit" form={formId} loading={saving}>
+                {submitLabel}
+              </Button>,
+            ]
+      }
     >
       {error ? (
         <Alert

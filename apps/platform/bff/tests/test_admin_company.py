@@ -442,6 +442,7 @@ async def test_logo_images_are_served_by_the_bff_not_by_erp_address(
     assert company.headers["content-type"] == "image/svg+xml"
     assert "sandbox" in company.headers["content-security-policy"]
     assert company.headers["x-content-type-options"] == "nosniff"
+    assert company.headers["content-disposition"] == "inline"
     assert (brand.status_code, brand.content) == (200, PNG)
     assert file.call_count == 1
 
@@ -466,6 +467,52 @@ async def test_logo_image_404_when_no_logo_or_foreign_path(web: Web, erp: respx.
 
     assert (company.status_code, brand.status_code) == (404, 404)
     assert secret.call_count == 0
+
+
+async def test_logo_image_takes_only_own_company_files_within_the_size_cap(
+    web: Web, erp: respx.MockRouter
+) -> None:
+    await web.login(["DIRECTOR"])
+    erp.get(f"{COMPANY}/").mock(
+        return_value=httpx.Response(
+            200, json=company_json(logo="http://erp-backend:8000/media/companies/8/logo/other.png")
+        )
+    )
+    erp.get(f"{COMPANY}/document-profile/").mock(
+        return_value=httpx.Response(
+            200,
+            json=brand_json(
+                logo_url="http://erp-backend:8000/media/companies/3/doc-profile/logo/big.png"
+            ),
+        )
+    )
+    foreign = erp.get(f"{ERP_URL}/media/companies/8/logo/other.png").mock(
+        return_value=httpx.Response(200, content=PNG, headers={"content-type": "image/png"})
+    )
+    erp.get(f"{ERP_URL}/media/companies/3/doc-profile/logo/big.png").mock(
+        return_value=httpx.Response(
+            200, content=b"0" * (5 * 1024 * 1024 + 1), headers={"content-type": "image/png"}
+        )
+    )
+
+    company = await web.client.get("/api/v1/admin/company/logo/image")
+    brand = await web.client.get("/api/v1/admin/company/brand/logo/image")
+
+    assert (company.status_code, brand.status_code) == (404, 404)
+    assert foreign.call_count == 0
+
+
+async def test_logo_image_without_own_company_is_409(
+    web: Web, be: Backends, check: ContractChecker
+) -> None:
+    await web.login(["DIRECTOR"])
+    erp_company(be, own=None)
+
+    for path in ("/admin/company/logo/image", "/admin/company/brand/logo/image"):
+        response = await web.client.get(f"/api/v1{path}")
+        assert response.status_code == 409
+        check(response, path, "get")
+        assert response.json()["code"] == "COMPANY_NOT_SET"
 
 
 async def test_logo_image_needs_the_company_section(web: Web, erp: respx.MockRouter) -> None:

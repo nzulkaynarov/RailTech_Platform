@@ -191,3 +191,13 @@ def test_roles_of_own_company_appear_after_first_run_wizard(admin):
     assert set(roles.values_list("code", flat=True)) == set(BackofficeRoleCode.values)
     member = CompanyMember.objects.get(user=admin, company=company)
     assert set(member.company_roles.values_list("code", flat=True)) == {"HEAD"}
+
+
+@pytest.mark.django_db
+@override_settings(OWN_COMPANY_ID=987654)
+def test_own_company_id_pointing_nowhere_is_null_not_a_dangling_id(admin):
+    """`OWN_COMPANY_ID` на несуществующую компанию: статус честно «компании нет», а не id, дающий 404 у BFF."""
+    data = _client(admin).get(STATUS).json()
+
+    assert data["own_company_id"] is None
+    assert data["setup_required"] is True

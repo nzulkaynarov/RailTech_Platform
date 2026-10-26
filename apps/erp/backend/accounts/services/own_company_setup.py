@@ -50,10 +50,13 @@ def is_setup_required() -> bool:
 
 def own_company_id_or_none() -> Optional[int]:
     """Id своей компании или None (её нет либо выбор неоднозначен — как в `is_setup_required`)."""
+    from core.tenant import own_company
+
     try:
-        return own_company_id()
+        company = own_company()  # OWN_COMPANY_ID на несуществующую компанию — как «компании нет»
     except ImproperlyConfigured:
         return None
+    return company.pk if company else None
 
 
 def create_own_company(user: CustomUser, data: Dict[str, Any]) -> Tuple[Optional[Company], Optional[str]]:

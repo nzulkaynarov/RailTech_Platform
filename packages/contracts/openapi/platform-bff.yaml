@@ -907,7 +907,7 @@ paths:
         - admin
       operationId: getCompanyLogoImage
       summary: Файл логотипа компании
-      description: 'BFF берёт файл в ERP по адресу из карточки компании (только публичный путь логотипа) и отдаёт с теми же защитными заголовками (`X-Content-Type-Options`, `Content-Security-Policy: sandbox`). Нет логотипа — 404 `NOT_FOUND`. Раздел `company.settings` — чтение.'
+      description: 'BFF берёт файл в ERP по адресу из карточки компании (только публичный путь логотипа) и отдаёт с теми же защитными заголовками (`X-Content-Type-Options`, `Content-Security-Policy: sandbox`). Нет логотипа, чужой путь или файл больше 5 МБ — 404 `NOT_FOUND`. Раздел `company.settings` — чтение.'
       responses:
         '200':
           description: Изображение
@@ -922,6 +922,12 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
+        '409':
+          description: '`COMPANY_NOT_SET` — своя компания в ERP ещё не создана'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
 
   /admin/company/logo:
     post:
@@ -1042,7 +1048,7 @@ paths:
         - admin
       operationId: getBrandLogoImage
       summary: Файл логотипа бланка
-      description: 'BFF берёт файл в ERP по адресу из профиля бланка (только публичный путь логотипа) и отдаёт с теми же защитными заголовками (`X-Content-Type-Options`, `Content-Security-Policy: sandbox`). Нет логотипа — 404 `NOT_FOUND`. Раздел `company.settings` — чтение.'
+      description: 'BFF берёт файл в ERP по адресу из профиля бланка (только публичный путь логотипа) и отдаёт с теми же защитными заголовками (`X-Content-Type-Options`, `Content-Security-Policy: sandbox`). Нет логотипа, чужой путь или файл больше 5 МБ — 404 `NOT_FOUND`. Раздел `company.settings` — чтение.'
       responses:
         '200':
           description: Изображение
@@ -1057,6 +1063,12 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
+        '409':
+          description: '`COMPANY_NOT_SET` — своя компания в ERP ещё не создана'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
 
   /admin/company/brand/logo:
     post:
