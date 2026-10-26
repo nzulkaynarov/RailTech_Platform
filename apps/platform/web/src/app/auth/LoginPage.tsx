@@ -7,6 +7,7 @@ import {
   getGetMeQueryKey,
   getGetSessionQueryKey,
   useGetSession,
+  useGetSetupState,
   useLogin,
 } from "../../shared/api/generated/platform-bff";
 import { AuthLayout } from "./AuthLayout";
@@ -32,6 +33,8 @@ export function LoginPage() {
   const target = (me: Me) => (asked ? next : homePath(me));
   const expired = params.get("reason") === "expired";
   const existing = useGetSession({ query: { retry: false } });
+  // Администратора ещё нет — вместо входа «Первый запуск» (W13-A4). Сбой запроса вход не блокирует.
+  const setupState = useGetSetupState({ query: { retry: false } });
   const login = useLogin({
     mutation: {
       onSuccess: (session) => {
@@ -44,6 +47,9 @@ export function LoginPage() {
     },
   });
 
+  if (setupState.data?.needs_admin && !existing.isSuccess) {
+    return <Navigate to="/setup" replace />;
+  }
   if (existing.isPending) {
     return (
       <div

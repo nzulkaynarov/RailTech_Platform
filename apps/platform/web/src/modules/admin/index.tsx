@@ -6,6 +6,7 @@ import { matchSection } from "../registry";
 import { IntegrationsPage } from "./integrations/IntegrationsPage";
 import { OrgPage } from "./org/OrgPage";
 import { RolesPage } from "./roles/RolesPage";
+import { SetupWizardPage } from "./setup/SetupWizardPage";
 
 /**
  * Модуль Admin. Оргструктура (PLT-15), Ролевая матрица (R-2) и Внешние интеграции (W13-A1) — настоящие экраны; остальные разделы пока заглушки каркаса.
@@ -31,6 +32,13 @@ export function Component() {
     return (
       <RequireAccess rule={match.section.access}>
         <IntegrationsPage />
+      </RequireAccess>
+    );
+  }
+  if (match?.module.code === "admin" && match.section.key === "setup") {
+    return (
+      <RequireAccess rule={match.section.access}>
+        <SetupWizardPage />
       </RequireAccess>
     );
   }

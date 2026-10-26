@@ -1,7 +1,7 @@
 import type { Language, Me, Session } from "../shared/api/generated/model";
 import { effectiveRoleIds } from "./fixtures/employees";
 import { ROLE_ID, computeAccess, readRoles, roleRefOf, rolesOf } from "./fixtures/roles";
-import { type DemoUser, DEMO_USERS } from "./fixtures/users";
+import { type DemoUser, findUserById } from "./fixtures/users";
 
 /**
  * Сессия MSW-мока. Хранится в `localStorage` страницы (обработчики MSW работают в потоке страницы), поэтому
@@ -65,7 +65,7 @@ function setCookie(name: string, value: string, maxAge = 60 * 60 * 12): void {
 
 /** Роли сотрудника сессии (данные из хранилища ролей мока) и роли «вида» (активная, если задана). */
 export function sessionRoles(session: MockSession) {
-  const user = DEMO_USERS.find((u) => u.id === session.userId);
+  const user = findUserById(session.userId);
   if (!user) return undefined;
   // Роли — с учётом выданных в Admin · Оргструктуре (мок хранит их в `fixtures/employees`).
   const ids = effectiveRoleIds(

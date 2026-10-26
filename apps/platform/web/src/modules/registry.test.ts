@@ -111,6 +111,7 @@ describe("карта маршрутов SPEC-v3 §6.3", () => {
     "/admin/integrations",
     "/admin/tickets",
     "/admin/company",
+    "/admin/setup",
   ];
   it.each(listPaths)("%s — есть раздел", (path) => {
     expect(matchSection(path)).toBeDefined();

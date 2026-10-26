@@ -5,6 +5,7 @@ import { Outlet, useLocation } from "react-router";
 
 import { MODULES, findModule, isSectionActive, matchSection } from "../../modules/registry";
 import type { ModuleConfig, SectionConfig } from "../../modules/types";
+import { SetupBanner } from "../../features/first-run/SetupBanner";
 import { GlobalSearch } from "../../features/global-search/GlobalSearch";
 import { NotificationCenter } from "../../features/notifications/NotificationCenter";
 import { useNotifications } from "../../features/notifications/useNotifications";
@@ -266,6 +267,7 @@ export function AppShell() {
               outline: "none",
             }}
           >
+            <SetupBanner />
             <Outlet />
           </Layout.Content>
           {viewport.wide && hasPanel ? (

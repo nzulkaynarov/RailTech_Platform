@@ -14,6 +14,7 @@ export function employeeErrorText(t: TFunction, error: unknown): string {
   if (error.code === "CONFLICT" && reason === "user_has_active_leads") {
     return t(`${base}ACTIVE_LEADS`);
   }
+  if (error.code === "CONFLICT" && reason === "own_account") return t(`${base}OWN_ACCOUNT`);
   if (
     [
       "LAST_ADMIN",
