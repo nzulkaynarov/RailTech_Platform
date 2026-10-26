@@ -294,12 +294,23 @@ bus.enqueue, bus.wakeup = tasks.enqueue, tasks.wakeup
 
 | Что | API (в SQLAlchemy — те же методы с `await`) |
 |---|---|
-| «Повторить» доставку (`dead` или ожидающую) | `retry_delivery(delivery_id)` — попытки с нуля; подписчик на паузе получает пробу сразу |
-| «Повторить все dead» | `retry_all_dead(subscriber=None)` |
-| Журнал доставок | `list_deliveries(status=, subscriber=, event_type=, event_id=, before_id=, limit=)` → `DeliveryView` |
-| «Повторить» запись inbox (`failed`/`skipped`) | `retry_inbox(event_id)` |
-| Журнал inbox | `list_inbox(status=, event_type=, before=, limit=)` → `InboxView` |
+| «Повторить» доставку (`dead` или ожидающую) | `retry_delivery(delivery_id, actor=)` — попытки с нуля; подписчик на паузе получает пробу сразу |
+| «Повторить все dead» | `retry_all_dead(subscriber=None, actor=)` |
+| Журнал доставок | `list_deliveries(status=, subscriber=, event_type=, event_id=, type_contains=, created_from=, created_to=, before_id=, limit=)` → `DeliveryView`, новые сверху |
+| «Повторить» запись inbox (`failed`/`skipped`) | `retry_inbox(event_id, actor=)` |
+| Журнал inbox | `list_inbox(status=, event_type=, type_contains=, errors_only=, before=, before_event_id=, limit=)` → `InboxView` |
+| Подписчики издателя | `subscribers()` → `SubscriberView`; `overview()` → `BusOverview` (метрики + подписчики) |
 | Уборка | `purge(older_than=timedelta(days=30))` — удаляет доставленное и обработанное; `dead` и `failed` остаются |
+
+- `actor` — кто нажал (`crm-user:7`, `erp-user:12`): пишется в записи лога `rt_bus_delivery_retry_manual`,
+  `rt_bus_dead_retry_manual`, `rt_bus_inbox_retry_manual`. Журнал «кто и когда» в базе ведёт сервис (см. «Журнал в Admin»).
+- `errors_only` — записи `failed` и ждущие автоповтора после ошибки обработчика (`received` с `error`).
+- Страница inbox — курсор (`before`, `before_event_id`) последней строки: порядок `received_at DESC, event_id`, строки с
+  одинаковым временем не теряются между страницами. Страница доставок — `before_id`.
+- `SubscriberView` — подписчики, которым издатель доставляет (маска типа на его домен, себе — нет), и все, у кого остались
+  доставки или состояние: `configured` (есть в файле подписок), `enabled`, `drop`, `endpoint` (без учётных данных URL),
+  `pending`, `in_flight`, `dead`, возраст самого старого недоставленного (без `dead`), `consecutive_failures`, `paused_until`
+  (только действующая пауза), последние успех, ошибка и её текст.
 
 `metrics()` возвращает `BusMetrics`:
 - `outbox_pending`, `oldest_undelivered_age_seconds`, `dlq_size`;
@@ -313,6 +324,38 @@ bus.enqueue, bus.wakeup = tasks.enqueue, tasks.wakeup
 в общий `oldest_undelivered_age_seconds` — алерт «старше часа» не срабатывает на остановку на время работ. Сами ожидающие
 видны отдельно: у подписчика `enabled: false`, `pending` и собственный `oldest_undelivered_age_seconds`. Забытая остановка —
 не авария шины, а операторская: ищите `disabled=` в строке `rt_bus_metrics` и `enabled: false` в метриках подписчика.
+
+### Журнал в Admin
+
+С волны 13 (W13-A2) оператору не нужны CLI `bus status|dead|failed|retry|retry-dead|retry-inbox` (CRM, EDS),
+`manage.py bus_retry` и Django admin ERP «rt_bus → Delivery/Inbox/Subscriber state»: то же делает экран **Admin · Журнал
+интеграций** Платформы (`/admin/bus`). CLI и админка остаются запасным путём (Платформа или BFF недоступны).
+
+| Что на экране | Заменяет | API домена (общий код этого раздела) | BFF (`platform-bff.yaml` 0.9.0) |
+|---|---|---|---|
+| Подписчики по доменам: состояние словом, пауза предохранителя до …, ждут, DLQ, возраст, последняя ошибка | `bus status`, `bus_retry --metrics`, «Subscriber state» | `GET …/bus/overview` | `GET /admin/bus` |
+| Доставки с фильтрами (домен, статус, подписчик, подстрока типа, период) и «Показать ещё» | `bus dead`, `bus_retry --list`, «Delivery» | `GET …/bus/deliveries` | `GET /admin/bus/deliveries` |
+| Недоставленные (DLQ) | `bus dead` | то же, `status=dead` | то же, `status=dead` |
+| «Повторить» доставку | `bus retry <id>`, `bus_retry --delivery` | `POST …/bus/deliveries/{id}/retry` | `POST /admin/bus/{domain}/deliveries/{id}/retry` |
+| «Повторить все dead подписчика» с блоком «Что произойдёт» | `bus retry-dead --subscriber`, `bus_retry --all-dead` | `POST …/bus/deliveries/retry-dead` `{subscriber}` | `POST /admin/bus/{domain}/deliveries/retry-dead` |
+| Входящие с ошибками и «Повторить обработку» | `bus failed`, `bus retry-inbox`, `bus_retry --inbox`, «Inbox» | `GET …/bus/inbox?errors=true`, `POST …/bus/inbox/{event_id}/retry` | `GET /admin/bus/inbox`, `POST /admin/bus/{domain}/inbox/{event_id}/retry` |
+
+- **Пути доменов:** CRM и EDS — `/api/v1/bus/*` (`crm.yaml`, `eds.yaml` тег `bus`), ERP — `/api/v1/integration/bus/*/`
+  (`erp-internal.yaml`). Поля ответов одинаковые у всех трёх; страницы — явный keyset (`before_id`; `before` +
+  `before_event_id`) и `has_more`, чтобы BFF мог слить три домена в один журнал по времени со своим составным курсором.
+- **Права** — раздел `admin` каталога уровня `full`: CRM — `integrations:read` (чтение) и `integrations:write` (повторы);
+  ERP — `team.manage` (код раздела `admin` в ERP) или администратор ERP; EDS — код `bus.manage` (с eds.yaml 0.3.0, только
+  `admin: full`). BFF пускает только `admin: full` (директору — 403), в каждый домен идёт с токеном сотрудника; в EDS —
+  токеном доступа EDS, полученным обменом SSO-токена CRM `aud=eds` (`docs/architecture/sso-token.md`).
+- **Частичный ответ:** домен, который не ответил или отказал, — в `sources` (`unavailable`, `forbidden`, `not_applicable`),
+  остальные показываются; экран пишет это плашкой словами.
+- **Повтор идемпотентен:** повторять нечего (доставлено, в работе, записи нет) — `retried: 0`. Каждое нажатие пишется в журнал
+  домена с автором и временем: CRM — журнал аудита (`bus.delivery_retried`, `bus.dead_retried`, `bus.inbox_retried`), ERP —
+  «Журнал доступа» (`admin.bus.*`), EDS — журнал EDS (`bus.*`); и в лог шины (`actor`).
+- **Тел событий в журнале нет** — только метаданные доставки: тип, id события, объект (`subject`), корреляция, издатель,
+  подписчик, статус, попытки, код и текст ошибки, время. Тело может содержать персональные данные клиентов; для разбора
+  достаточно id события и корреляции (по ним — логи, `docs/runbooks/request-id.md`). Текст ошибки приходит от подписчика и
+  обрезается библиотекой (до 500 символов).
 
 ## 9. Корреляция
 

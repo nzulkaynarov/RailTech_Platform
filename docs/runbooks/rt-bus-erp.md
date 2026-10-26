@@ -40,6 +40,15 @@
 Приёмник ERP `/bus/v1/events` снаружи закрыт: Caddy отвечает на `{ERP_DOMAIN}/bus*` 404 (так и должно быть). Если CRM получает
 404 от ERP, а не от Caddy, проверьте адрес `http://erp-backend:8000/bus/v1/events` — он внутри сети compose, не публичный домен.
 
+## Журнал в Admin (основной путь)
+
+С волны 13 (W13-A2) то же, что `manage.py bus_retry` и админка «rt_bus → Delivery/Inbox/Subscriber state», делает экран
+**Admin · Журнал интеграций** Платформы (`/admin/bus`): подписчики ERP (и CRM, EDS) с паузой предохранителя и DLQ, доставки с
+фильтрами, входящие с ошибками, «Повторить», «Повторить все dead» подписчика, «Повторить обработку». API ERP —
+`/api/v1/integration/bus/*/` (`erp-internal.yaml`), право — `team.manage` или администратор ERP; каждый повтор пишется в
+«Журнал доступа» (`admin.bus.delivery_retried`, `admin.bus.dead_retried`, `admin.bus.inbox_retried`) с автором. Соответствие
+команд и экрана — `docs/architecture/rt-bus.md`, «Журнал в Admin». Команды и админка ниже — запасной путь.
+
 ## Повторить
 
 * **Одну доставку**: `manage.py bus_retry --delivery <id>` (id из `--list`) или админка → действие «Повторить доставку». Повтор `delivered` бессмыслен

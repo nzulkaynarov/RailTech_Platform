@@ -1,5 +1,5 @@
 /** Ошибка BFF в формате `Error` контракта (platform-bff.yaml): код, текст, источник, детали. */
-export type ErrorSource = "bff" | "crm" | "erp";
+export type ErrorSource = "bff" | "crm" | "erp" | "eds";
 
 export class ApiError extends Error {
   readonly status: number;

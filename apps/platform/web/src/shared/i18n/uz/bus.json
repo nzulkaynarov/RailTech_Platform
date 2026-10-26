@@ -1,0 +1,210 @@
+{
+  "subtitle": "CRM, ERP va EDS o'rtasidagi hodisalar shinasi: kim kimga hodisa yetkazadi, nima tiqilib qolgan va nimani takrorlash kerak.",
+  "views": {
+    "label": "Jurnal bo'limlari",
+    "subscribers": "Obunachilar",
+    "deliveries": "Yetkazishlar",
+    "dlq": "Yetkazilmaganlar (DLQ)",
+    "inbox": "Xatoli kiruvchilar"
+  },
+  "counters": {
+    "dlq": "Yetkazilmagan (DLQ)",
+    "pending": "Yuborishni kutmoqda",
+    "paused": "Pauzadagi obunachilar",
+    "inboxFailed": "Qayta ishlash xatolari",
+    "source": "CRM, ERP va EDS"
+  },
+  "domains": {
+    "crm": "CRM",
+    "erp": "ERP",
+    "eds": "EDS"
+  },
+  "subscriberNames": {
+    "crm": "CRM",
+    "erp": "ERP",
+    "eds": "EDS",
+    "platform-bff": "Platforma"
+  },
+  "sources": {
+    "unavailable": "{{domain}} javob bermayapti — jurnal ma'lumotlari to'liq emas.",
+    "forbidden": "{{domain}} jurnalga ruxsat bermadi: huquqlar hali yetib bormagan yoki bekor qilingan.",
+    "not_applicable": "Sizda {{domain}} ga ruxsat yo'q — uning jurnali ko'rsatilmaydi.",
+    "retry": "Yangilash"
+  },
+  "state": {
+    "ok": "Ishlayapti",
+    "failing": "Ketma-ket xatolar",
+    "paused": "Pauza",
+    "dead_letters": "Yetkazilmaganlar bor",
+    "disabled": "O'chirilgan",
+    "removed": "Obunalardan olib tashlangan"
+  },
+  "delivery": {
+    "pending": "Yuborishni kutmoqda",
+    "retrying": "Takrorni kutmoqda",
+    "in_flight": "Yuborilmoqda",
+    "delivered": "Yetkazildi",
+    "dead": "Yetkazilmadi"
+  },
+  "inbox": {
+    "received": "Qabul qilindi",
+    "retrying": "Takrorni kutmoqda",
+    "processed": "Qayta ishlandi",
+    "failed": "Qayta ishlash xatosi",
+    "skipped": "O'tkazib yuborildi"
+  },
+  "subscribers": {
+    "title": "{{domain}} yuboradi",
+    "caption": "{{domain}} obunachilari: holat, navbat va yetkazilmaganlar",
+    "empty": "{{domain}} da hali obunachilar yo'q — uning hodisalari hech kimga yetkazilmaydi.",
+    "columns": {
+      "subscriber": "Obunachi",
+      "state": "Holat",
+      "queue": "Kutmoqda",
+      "dead": "DLQ",
+      "oldest": "Eng eskisi",
+      "lastError": "Oxirgi xato"
+    },
+    "pausedUntil": "{{time}} gacha",
+    "noEndpoint": "manzil berilmagan",
+    "retryDead": "Barcha dead ni takrorlash",
+    "retryDeadAria": "Barcha dead ni takrorlash: {{subscriber}} ({{domain}})",
+    "noErrors": "yo'q",
+    "inARow": "ketma-ket {{n}}",
+    "inFlight": "yo'lda: {{n}}",
+    "summary": "Kutmoqda {{pending}} · DLQ {{dead}} · eng eskisi {{oldest}}",
+    "retry": "Takrorlash"
+  },
+  "filters": {
+    "label": "Jurnal filtrlari",
+    "domain": "Domen",
+    "allDomains": "Barcha domenlar",
+    "status": "Holat",
+    "allStatuses": "Barcha holatlar",
+    "subscriber": "Obunachi",
+    "allSubscribers": "Barcha obunachilar",
+    "type": "Hodisa turi o'z ichiga oladi",
+    "typePlaceholder": "quote., client.updated",
+    "period": "Davr",
+    "from": "Dan",
+    "to": "Gacha",
+    "reset": "Filtrlarni tozalash"
+  },
+  "deliveries": {
+    "caption": "Hodisalarni obunachilarga yetkazish",
+    "dlqCaption": "Yetkazilmagan hodisalar (DLQ)",
+    "dlqHint": "Shina endi o'zi takrorlamaydigan yetkazishlar: obunachi rad etdi (404, 410, 422) yoki 7 urinish tugadi. Sababni tuzating va takrorlang — bittalab yoki «Obunachilar» bo'limida obunachining hammasini.",
+    "columns": {
+      "time": "Yaratilgan",
+      "domain": "Domen",
+      "event": "Hodisa",
+      "subscriber": "Obunachi",
+      "status": "Holat",
+      "attempts": "Urinishlar",
+      "answer": "Javob"
+    },
+    "open": "Batafsil: {{event}} → {{subscriber}}",
+    "empty": {
+      "title": "Yetkazishlar topilmadi",
+      "text": "Bu yerda CRM, ERP va EDS hodisalari har bir obunachi bo'yicha ko'rinadi. Filtrlarni yoki davrni o'zgartiring."
+    },
+    "dlqEmpty": {
+      "title": "Yetkazilmaganlar yo'q",
+      "text": "Barcha hodisalar obunachilarga yetib bordi yoki shina jadvali bo'yicha hali takrorlanmoqda."
+    },
+    "more": "Yana ko'rsatish",
+    "line": "{{time}} · {{domain}} → {{subscriber}} · urinishlar {{attempts}}"
+  },
+  "inboxView": {
+    "caption": "Qayta ishlash xato bilan tugagan qabul qilingan hodisalar",
+    "hint": "Domen qabul qilgan, lekin qo'llay olmagan hodisalar: qayta ishlash o'zi takrorlanadi (30 s, 2 daq, 10 daq), keyin xato bilan qoladi. Tuzatgandan so'ng — «Qayta ishlashni takrorlash».",
+    "columns": {
+      "time": "Qabul qilingan",
+      "domain": "Qabul qiluvchi",
+      "event": "Hodisa",
+      "publisher": "Kimdan",
+      "status": "Holat",
+      "attempts": "Urinishlar",
+      "error": "Xato"
+    },
+    "open": "Batafsil: {{event}}, {{domain}}",
+    "empty": {
+      "title": "Qayta ishlash xatolari yo'q",
+      "text": "CRM, ERP va EDS qabul qilgan barcha hodisalar qayta ishlangan. Ishlov beruvchi xato qilsa, hodisa shu yerda paydo bo'ladi."
+    },
+    "line": "{{time}} · {{publisher}} dan {{domain}} ga · urinishlar {{attempts}}"
+  },
+  "panel": {
+    "deliveryTitle": "Yetkazish {{id}} · {{domain}}",
+    "inboxTitle": "Qabul qilingan hodisa · {{domain}}",
+    "fields": {
+      "domain": "Nashr etuvchi",
+      "receiver": "Qabul qiluvchi",
+      "event": "Hodisa turi",
+      "eventId": "Hodisa ID",
+      "subject": "Obyekt",
+      "correlation": "Korrelyatsiya",
+      "subscriber": "Obunachi",
+      "publisher": "Kimdan",
+      "status": "Holat",
+      "attempts": "Urinishlar",
+      "lastAttempt": "Oxirgi urinish",
+      "nextAttempt": "Keyingi urinish",
+      "code": "Javob kodi",
+      "error": "Xato",
+      "created": "Yaratilgan",
+      "delivered": "Yetkazilgan",
+      "received": "Qabul qilingan",
+      "processed": "Qayta ishlangan"
+    },
+    "noBody": "Hodisa tanasi jurnalda ko'rsatilmaydi: unda mijozlar ma'lumotlari bo'lishi mumkin. Tur, obyekt va hodisa ID yetarli.",
+    "retryDelivery": "Yetkazishni takrorlash",
+    "retryDeliveryAria": "Yetkazishni takrorlash {{id}}",
+    "retryInbox": "Qayta ishlashni takrorlash",
+    "notRetriable": "Takrorlash shart emas: yetkazish allaqachon ketgan yoki yuborilmoqda.",
+    "inboxNotRetriable": "Takrorlash shart emas: hodisa qayta ishlangan yoki avtomatik takrorni kutmoqda.",
+    "consequence": {
+      "now": "Yetkazish hozir yuboriladi, urinishlar hisoblagichi noldan boshlanadi.",
+      "probe": "Obunachi pauzada bo'lsa, darhol sinov yetkazishini oladi.",
+      "safe": "Takrorlash xavfsiz: qabul qiluvchi dublikatlarni hodisa ID bo'yicha tashlaydi. Domen jurnalida kim va qachon takrorlagani qoladi.",
+      "inboxNow": "Hodisa {{domain}} da yana qayta ishlashga ketadi.",
+      "inboxFix": "Xato sababi tuzatilmagan bo'lsa, hodisa o'sha xato bilan qaytadi.",
+      "inboxSafe": "Takrorlash xavfsiz: ishlov beruvchilar suratlarni o'zgarish vaqti bo'yicha qo'llaydi. Domen jurnalida kim va qachon takrorlagani qoladi."
+    },
+    "retried": "Takrorlashga qo'yildi. Jurnal bir necha soniyada yangilanadi.",
+    "nothing": "Takrorlash shart emas: yozuv ketgan, ishlanmoqda yoki mavjud emas.",
+    "deadTitle": "Barcha yetkazilmaganlarni takrorlash · {{subscriber}}",
+    "deadIntro": "Nashr etuvchi — {{domain}}. {{subscriber}} obunachisining DLQ sida: {{count}}.",
+    "deadSubmit": "{{count}} tasini takrorlash",
+    "deadConsequence": {
+      "now": "Ushbu obunachining DLQ dagi barcha yetkazishlari ({{count}}) hozir yuboriladi, urinishlar noldan.",
+      "fix": "Avval sababni tuzating: qabul qiluvchi manzili, juftlik siri yoki qabul qiluvchining o'zi — aks holda yetkazishlar DLQ ga qaytadi.",
+      "probe": "Obunachi pauzada bo'lsa, darhol sinov yetkazishini oladi.",
+      "safe": "Takrorlash xavfsiz: qabul qiluvchi dublikatlarni hodisa ID bo'yicha tashlaydi. {{domain}} jurnalida kim va qachon takrorlagani qoladi."
+    },
+    "deadDone_one": "{{count}} ta yetkazish takrorlashga qo'yildi.",
+    "deadDone_few": "{{count}} ta yetkazish takrorlashga qo'yildi.",
+    "deadDone_many": "{{count}} ta yetkazish takrorlashga qo'yildi.",
+    "deadDone_other": "{{count}} ta yetkazish takrorlashga qo'yildi.",
+    "deadNone": "Obunachida yetkazilmaganlar endi yo'q.",
+    "close": "Yopish"
+  },
+  "age": {
+    "seconds": "{{count}} s",
+    "minutes": "{{count}} daq",
+    "hours": "{{count}} soat",
+    "days": "{{count}} kun"
+  },
+  "loadError": {
+    "title": "Jurnalni yuklab bo'lmadi",
+    "text": "Jurnal CRM, ERP va EDS dan yig'iladi. So'rovni takrorlang; xato qolsa, Admin · Tashqi integratsiyalarni tekshiring.",
+    "retry": "Takrorlash"
+  },
+  "tableScroll": "{{name}}: jadval gorizontal aylantiriladi",
+  "errors": {
+    "FORBIDDEN": "Huquq yetarli emas: integratsiyalar jurnali administrator uchun.",
+    "BACKEND_UNAVAILABLE": "Domen javob bermayapti. Keyinroq takrorlang.",
+    "VALIDATION_FAILED": "Filtrlarni tekshiring.",
+    "DEFAULT": "Amalni bajarib bo'lmadi. Qaytadan urinib ko'ring."
+  }
+}

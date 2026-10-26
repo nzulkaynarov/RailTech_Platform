@@ -1,18 +1,21 @@
 import i18n from "i18next";
 import { initReactI18next } from "react-i18next";
 
+import enBus from "./en/bus.json";
 import enCommon from "./en/common.json";
 import enDictionary from "./en/dictionary.json";
 import enIntegrations from "./en/integrations.json";
 import enModules from "./en/modules.json";
 import enShell from "./en/shell.json";
 import enUi from "./en/ui.json";
+import ruBus from "./ru/bus.json";
 import ruCommon from "./ru/common.json";
 import ruDictionary from "./ru/dictionary.json";
 import ruIntegrations from "./ru/integrations.json";
 import ruModules from "./ru/modules.json";
 import ruShell from "./ru/shell.json";
 import ruUi from "./ru/ui.json";
+import uzBus from "./uz/bus.json";
 import uzCommon from "./uz/common.json";
 import uzDictionary from "./uz/dictionary.json";
 import uzIntegrations from "./uz/integrations.json";
@@ -30,6 +33,7 @@ export const resources = {
     modules: ruModules,
     dictionary: ruDictionary,
     integrations: ruIntegrations,
+    bus: ruBus,
     ui: ruUi,
   },
   uz: {
@@ -38,6 +42,7 @@ export const resources = {
     modules: uzModules,
     dictionary: uzDictionary,
     integrations: uzIntegrations,
+    bus: uzBus,
     ui: uzUi,
   },
   en: {
@@ -46,6 +51,7 @@ export const resources = {
     modules: enModules,
     dictionary: enDictionary,
     integrations: enIntegrations,
+    bus: enBus,
     ui: enUi,
   },
 } as const;
@@ -71,13 +77,13 @@ export function rememberLanguage(language: Language): void {
   }
 }
 
-/** ru — язык по умолчанию (SPEC-v3 §8); uz — латиница. Пространства имён: common, shell (каркас и вход), modules (меню и заглушки), dictionary (словарь SPEC-v3 §2: стадии и статусы), ui (тексты общих компонентов), integrations (Admin · Внешние интеграции). */
+/** ru — язык по умолчанию (SPEC-v3 §8); uz — латиница. Пространства имён: common, shell (каркас и вход), modules (меню и заглушки), dictionary (словарь SPEC-v3 §2: стадии и статусы), ui (тексты общих компонентов), integrations (Admin · Внешние интеграции), bus (Admin · Журнал интеграций). */
 void i18n.use(initReactI18next).init({
   resources,
   lng: storedLanguage(),
   fallbackLng: "ru",
   defaultNS: "common",
-  ns: ["common", "shell", "modules", "dictionary", "ui", "integrations"],
+  ns: ["common", "shell", "modules", "dictionary", "ui", "integrations", "bus"],
   interpolation: { escapeValue: false },
 });
 
