@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: RailTech Platform — EDS API (электронный документооборот)
-  version: 0.2.0
+  version: 0.3.0
   summary: Пространство `/api/v1/` сервиса EDS — вызывает BFF Платформы от имени сотрудника.
   description: |
     Контракт сервиса EDS (`apps/eds`, ADR-0015; `docs/runbooks/wave12-eds-c1.md` §2). EDS — владелец реестра документов и
@@ -21,7 +21,7 @@ info:
 
     **Права (runbook §2.2).** Коды EDS v1: `letters.read`, `letters.register`, `letters.resolve`, `memos.create`, `memos.approve`,
     `approvals.decide`, `registry.read`, `registry.export`, `payments.confirm` (`EdsPermission`; `payments.confirm` — решение
-    архитектора: шаг «бухгалтер» служебной записки с суммой). Их вычисляет CRM из ролей Платформы по каталогу
+    архитектора: шаг «бухгалтер» служебной записки с суммой), с 0.3.0 — `bus.manage` (журнал шины, раздел `admin` каталога). Их вычисляет CRM из ролей Платформы по каталогу
     (`platform-rbac.yaml`, `backend.eds`) и публикует в `identity.user.created/updated` (`user.permissions.eds`); EDS держит
     проекцию сотрудников и проверяет право **на каждый запрос по проекции на момент запроса** (claim `permissions` токена —
     справочный, не применяется): отзыв роли или отключение сотрудника действуют сразу, без ожидания срока токена. Нет поля
@@ -88,6 +88,14 @@ tags:
     description: Реестр «Все документы» и экспорт
   - name: files
     description: Файлы документов с версиями (S3 сервиса)
+  - name: bus
+    description: |
+      «Журнал интеграций» шины `rt_bus` (W13-A2, `docs/architecture/rt-bus.md`, «Журнал в Admin»): сводка подписчиков,
+      доставки и DLQ, принятые события с ошибками, повторы — вместо CLI `python -m app bus …`. Право `bus.manage` (раздел
+      `admin` каталога Платформы, уровень `full`). Те же поля, что у CRM и ERP: BFF сводит три домена в один журнал, поэтому
+      страницы здесь — явный keyset (`before_id`; `before` + `before_event_id`) и `has_more`, а не непрозрачный курсор.
+      Тела событий API не отдаёт — только метаданные доставки. Повтор идемпотентен (нечего повторять — `retried: 0`) и пишется
+      в журнал EDS (`bus.delivery_retried`, `bus.dead_retried`, `bus.inbox_retried`) с автором.
 
 paths:
   /health:
@@ -858,6 +866,200 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
 
+  /api/v1/bus/overview:
+    get:
+      tags: [bus]
+      operationId: busOverview
+      summary: Сводка шины EDS — outbox, DLQ, inbox и подписчики
+      x-rt-permissions: [bus.manage]
+      responses:
+        '200':
+          description: Сводка
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BusOverview'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /api/v1/bus/deliveries:
+    get:
+      tags: [bus]
+      operationId: busDeliveries
+      summary: Доставки событий EDS подписчикам (DLQ — `status=dead`), новые сверху
+      x-rt-permissions: [bus.manage]
+      parameters:
+        - name: status
+          in: query
+          required: false
+          schema:
+            $ref: '#/components/schemas/BusDeliveryStatus'
+        - $ref: '#/components/parameters/BusSubscriberQuery'
+        - $ref: '#/components/parameters/BusTypeQuery'
+        - name: created_from
+          in: query
+          required: false
+          description: Доставка создана не раньше (включительно)
+          schema:
+            type: string
+            format: date-time
+        - name: created_to
+          in: query
+          required: false
+          description: Доставка создана раньше (не включительно)
+          schema:
+            type: string
+            format: date-time
+        - name: before_id
+          in: query
+          required: false
+          description: Страница — id последней строки предыдущей страницы
+          schema:
+            type: integer
+            minimum: 1
+        - $ref: '#/components/parameters/Limit'
+      responses:
+        '200':
+          description: Страница доставок
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BusDeliveryPage'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+
+  /api/v1/bus/deliveries/{delivery_id}/retry:
+    post:
+      tags: [bus]
+      operationId: busRetryDelivery
+      summary: «Повторить» доставку `dead` или ожидающую — сейчас, попытки с нуля; подписчик на паузе получает пробу
+      x-rt-permissions: [bus.manage]
+      parameters:
+        - name: delivery_id
+          in: path
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+      responses:
+        '200':
+          description: Сколько поставлено на повтор (0 — доставлено, в работе или нет такой)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BusRetryResult'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+
+  /api/v1/bus/deliveries/retry-dead:
+    post:
+      tags: [bus]
+      operationId: busRetryDead
+      summary: «Повторить все dead подписчика» — после исправления причины
+      x-rt-permissions: [bus.manage]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BusRetryDeadIn'
+      responses:
+        '200':
+          description: Сколько доставок `dead` поставлено на повтор
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BusRetryResult'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+
+  /api/v1/bus/inbox:
+    get:
+      tags: [bus]
+      operationId: busInbox
+      summary: Принятые события, новые сверху; `errors=true` — обработка упала или ждёт автоповтора
+      x-rt-permissions: [bus.manage]
+      parameters:
+        - name: errors
+          in: query
+          required: false
+          schema:
+            type: boolean
+            default: false
+        - name: status
+          in: query
+          required: false
+          schema:
+            $ref: '#/components/schemas/BusInboxStatus'
+        - $ref: '#/components/parameters/BusTypeQuery'
+        - name: before
+          in: query
+          required: false
+          description: Страница — `received_at` последней строки предыдущей страницы
+          schema:
+            type: string
+            format: date-time
+        - name: before_event_id
+          in: query
+          required: false
+          description: Страница — `event_id` последней строки (строки с тем же временем не теряются)
+          schema:
+            $ref: '#/components/schemas/Uuid'
+        - $ref: '#/components/parameters/Limit'
+      responses:
+        '200':
+          description: Страница принятых событий
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BusInboxPage'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+
+  /api/v1/bus/inbox/{event_id}/retry:
+    post:
+      tags: [bus]
+      operationId: busRetryInbox
+      summary: «Повторить обработку» записи `failed` или `skipped`
+      x-rt-permissions: [bus.manage]
+      parameters:
+        - name: event_id
+          in: path
+          required: true
+          schema:
+            $ref: '#/components/schemas/Uuid'
+      responses:
+        '200':
+          description: Сколько поставлено на повтор (0 — обработано, ждёт или нет такой записи)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BusRetryResult'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+
 components:
   securitySchemes:
     edsAccess:
@@ -908,6 +1110,21 @@ components:
         minimum: 1
         maximum: 100
         default: 50
+    BusSubscriberQuery:
+      name: subscriber
+      in: query
+      required: false
+      schema:
+        $ref: '#/components/schemas/BusSubscriberName'
+    BusTypeQuery:
+      name: type
+      in: query
+      required: false
+      description: Подстрока типа события (`quote.`, `letter.registered`)
+      schema:
+        type: string
+        minLength: 1
+        maxLength: 200
     IdempotencyKey:
       name: Idempotency-Key
       in: header
@@ -1052,14 +1269,199 @@ components:
         - registry.read
         - registry.export
         - payments.confirm
+        - bus.manage
       description: |
         Код права EDS v1 (runbook волны 12 §2.2; `platform-rbac.yaml`, `backend.eds`). `payments.confirm` — шаг «бухгалтер»
-        маршрута служебной записки с суммой (решение архитектора). В событиях шины (`identity`, `eds`) код — строка по шаблону
+        маршрута служебной записки с суммой (решение архитектора). `bus.manage` (0.3.0, W13-A2) — «Журнал интеграций» шины:
+        раздел `admin` каталога, уровень `full`. В событиях шины (`identity`, `eds`) код — строка по шаблону
         `^[a-z_]+\.[a-z_]+$`, не перечень: новый код не ломает события v1.
 
     Uuid:
       type: string
       format: uuid
+
+    BusSubscriberName:
+      type: string
+      pattern: '^[a-z][a-z0-9-]{0,63}$'
+      description: Имя подписчика шины (`crm`, `erp`, `platform-bff`)
+    BusDeliveryStatus:
+      type: string
+      enum: [pending, in_flight, delivered, dead]
+    BusInboxStatus:
+      type: string
+      enum: [received, processed, failed, skipped]
+    BusSubscriber:
+      type: object
+      additionalProperties: false
+      required: [name, configured, enabled, drop, endpoint, pending, in_flight, dead, oldest_undelivered_age_seconds,
+                 consecutive_failures, paused_until, last_failure_at, last_success_at, last_error]
+      description: |
+        Подписчик издателя. `configured = false` — его больше нет в файле подписок, но остались доставки или состояние.
+        `paused_until` — действующая пауза предохранителя (в будущем), иначе `null`. `endpoint` — адрес приёмника без
+        учётных данных URL. `oldest_undelivered_age_seconds` — возраст самого старого недоставленного (без `dead`).
+      properties:
+        name:
+          type: string
+        configured:
+          type: boolean
+        enabled:
+          type: boolean
+        drop:
+          type: boolean
+        endpoint:
+          type: [string, 'null']
+        pending:
+          type: integer
+        in_flight:
+          type: integer
+        dead:
+          type: integer
+        oldest_undelivered_age_seconds:
+          type: [number, 'null']
+        consecutive_failures:
+          type: integer
+        paused_until:
+          type: [string, 'null']
+          format: date-time
+        last_failure_at:
+          type: [string, 'null']
+          format: date-time
+        last_success_at:
+          type: [string, 'null']
+          format: date-time
+        last_error:
+          type: [string, 'null']
+    BusOverview:
+      type: object
+      additionalProperties: false
+      required: [service, outbox_pending, oldest_undelivered_age_seconds, dlq_size, inbox_received, inbox_retrying,
+                 inbox_failed, subscribers]
+      properties:
+        service:
+          type: string
+        outbox_pending:
+          type: integer
+        oldest_undelivered_age_seconds:
+          type: [number, 'null']
+        dlq_size:
+          type: integer
+        inbox_received:
+          type: integer
+        inbox_retrying:
+          type: integer
+        inbox_failed:
+          type: integer
+        subscribers:
+          type: array
+          items:
+            $ref: '#/components/schemas/BusSubscriber'
+    BusDelivery:
+      type: object
+      additionalProperties: false
+      required: [id, event_id, event_type, subscriber, status, attempts, next_attempt_at, last_attempt_at, last_status_code,
+                 last_error, delivered_at, created_at, subject, correlation_id, event_created_at]
+      description: Метаданные доставки; тела события нет.
+      properties:
+        id:
+          type: integer
+        event_id:
+          $ref: '#/components/schemas/Uuid'
+        event_type:
+          type: string
+        subscriber:
+          type: string
+        status:
+          $ref: '#/components/schemas/BusDeliveryStatus'
+        attempts:
+          type: integer
+        next_attempt_at:
+          type: [string, 'null']
+          format: date-time
+        last_attempt_at:
+          type: [string, 'null']
+          format: date-time
+        last_status_code:
+          type: [integer, 'null']
+        last_error:
+          type: [string, 'null']
+        delivered_at:
+          type: [string, 'null']
+          format: date-time
+        created_at:
+          type: string
+          format: date-time
+        subject:
+          type: [string, 'null']
+        correlation_id:
+          type: [string, 'null']
+        event_created_at:
+          type: [string, 'null']
+          format: date-time
+    BusDeliveryPage:
+      type: object
+      additionalProperties: false
+      required: [items, has_more]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/BusDelivery'
+        has_more:
+          type: boolean
+    BusInboxEntry:
+      type: object
+      additionalProperties: false
+      required: [event_id, type, publisher, subject, correlation_id, status, attempts, error, received_at, processed_at]
+      description: Принятое событие (метаданные; тела нет).
+      properties:
+        event_id:
+          $ref: '#/components/schemas/Uuid'
+        type:
+          type: string
+        publisher:
+          type: string
+        subject:
+          type: [string, 'null']
+        correlation_id:
+          type: [string, 'null']
+        status:
+          $ref: '#/components/schemas/BusInboxStatus'
+        attempts:
+          type: integer
+        error:
+          type: [string, 'null']
+        received_at:
+          type: string
+          format: date-time
+        processed_at:
+          type: [string, 'null']
+          format: date-time
+    BusInboxPage:
+      type: object
+      additionalProperties: false
+      required: [items, has_more]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/BusInboxEntry'
+        has_more:
+          type: boolean
+    BusRetryDeadIn:
+      type: object
+      additionalProperties: false
+      required: [subscriber]
+      properties:
+        subscriber:
+          $ref: '#/components/schemas/BusSubscriberName'
+    BusRetryResult:
+      type: object
+      additionalProperties: false
+      required: [retried]
+      properties:
+        retried:
+          type: integer
+          minimum: 0
 
     Amount:
       type: string

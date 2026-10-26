@@ -45,9 +45,11 @@ ACCOUNTANT = {
     "payments.confirm",
     "memos.create",
 }
+#: Журнал шины EDS (W13-A2): только раздел `admin` уровня `full`.
+BUS = "bus.manage"
 ROLE_EDS: dict[str, set[str]] = {
-    "ADMIN": {"memos.create"},
-    "DIRECTOR": set(EDS_PERMISSIONS),
+    "ADMIN": {"memos.create", BUS},
+    "DIRECTOR": set(EDS_PERMISSIONS) - {BUS},
     "MANAGER": {"letters.read", "registry.read", "memos.create"},
     "SUPPLY": {"registry.read", "memos.create"},
     "ENGINEER": {"registry.read", "memos.create"},
@@ -65,7 +67,7 @@ def test_snapshot_equals_the_eds_contract_and_the_catalog_schema() -> None:
 def test_every_code_in_the_catalog_is_an_eds_code() -> None:
     used = {p for table in generated.EDS_BACKEND.values() for ps in table.values() for p in ps}
     assert used <= set(EDS_PERMISSIONS)
-    assert used == set(EDS_PERMISSIONS), "каждый из девяти кодов v1 кому-то выдаётся"
+    assert used == set(EDS_PERMISSIONS), "каждый код v1 кому-то выдаётся"
 
 
 def test_expectation_table_covers_every_eds_element() -> None:
@@ -87,9 +89,12 @@ def test_every_catalog_element_gives_the_expected_eds_codes(
     assert set(eds_permissions_of([RoleGrant({resource: level})])) == codes
 
 
-def test_sections_of_crm_and_erp_give_no_eds_codes() -> None:
-    other = {k: "full" for k in generated.RESOURCE_KEYS if not k.startswith("eds.")}
+def test_sections_of_crm_and_erp_give_no_eds_codes_except_the_bus_journal() -> None:
+    keys = generated.RESOURCE_KEYS
+    other = {k: "full" for k in keys if not k.startswith("eds.") and k != "admin"}
     assert eds_permissions_for(other) == ()
+    assert eds_permissions_for({"admin": "full"}) == (BUS,)
+    assert eds_permissions_for({"admin": "read"}) == ()
 
 
 @pytest.mark.parametrize("legacy", list(ROLE_EDS))
@@ -99,9 +104,9 @@ def test_every_system_role_and_template_gives_the_expected_eds_codes(legacy: str
     assert list(codes) == sorted(codes), "список сортирован"
 
 
-def test_director_has_all_nine_codes_and_administrator_only_memo_create() -> None:
-    assert set(eds_permissions_of([make_grant("DIRECTOR")])) == set(EDS_PERMISSIONS)
-    assert eds_permissions_of([make_grant("ADMIN")]) == ("memos.create",)
+def test_director_has_the_nine_document_codes_and_administrator_memos_and_bus_journal() -> None:
+    assert set(eds_permissions_of([make_grant("DIRECTOR")])) == set(EDS_PERMISSIONS) - {BUS}
+    assert eds_permissions_of([make_grant("ADMIN")]) == (BUS, "memos.create")
 
 
 def test_manager_and_accountant_is_the_union_including_payment_confirmation() -> None:
