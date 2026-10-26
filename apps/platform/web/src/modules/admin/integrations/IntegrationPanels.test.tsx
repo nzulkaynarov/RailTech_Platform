@@ -291,6 +291,12 @@ describe("карточка «Модели ИИ»", () => {
     const side = await openPanel("models");
     expect(await within(side).findByText("Поиск по базе знаний")).toBeVisible();
     expect(within(side).getByText("401: ключ отклонён провайдером")).toBeVisible();
+    // маска ключа: источник и последние 4 символа, сам ключ не приходит
+    const dialog = within(side).getByText("Диалог с клиентом").closest("li");
+    expect(within(dialog as HTMLElement).getByText("•••• 77aa")).toBeVisible();
+    expect(within(dialog as HTMLElement).getByText(/задан в Платформе/)).toBeVisible();
+    const qualifier = within(side).getByText("Квалификатор лида").closest("li");
+    expect(within(qualifier as HTMLElement).getByText(/из настроек сервера/)).toBeVisible();
 
     fireEvent.click(
       within(side).getByRole("button", { name: "Проверить модель: Поиск по базе знаний" }),
@@ -316,7 +322,7 @@ describe("карточка «Модели ИИ»", () => {
     const form = within(side).getByRole("form", { name: "Сменить модель: Поиск по базе знаний" });
     expect(within(form).getByRole("group", { name: "Что произойдёт" })).toBeVisible();
     type("Модель", "embedding-demo-2", form);
-    type("Ключ провайдера", "demo-provider-key-77aa", form);
+    type("Ключ провайдера", "demo-provider-key-91zx", form);
     submitPassword(form);
     press(form, "Сменить модель");
 
@@ -329,7 +335,11 @@ describe("карточка «Модели ИИ»", () => {
     expect(
       within(side).getByText("Для поиска по базе знаний нужна переиндексация документов."),
     ).toBeVisible();
-    expect(document.body.textContent).not.toContain("demo-provider-key-77aa");
+    expect(document.body.textContent).not.toContain("demo-provider-key-91zx");
+    const embed = within(side).getByText("Поиск по базе знаний").closest("li");
+    await waitFor(() => {
+      expect(within(embed as HTMLElement).getByText("•••• 91zx")).toBeVisible();
+    });
     // поставщик восстановлен: проблема ушла из «Требует внимания»
     await waitFor(() => {
       expect(within(attention()).queryByText("OpenAI")).not.toBeInTheDocument();
@@ -343,6 +353,25 @@ describe("карточка «Модели ИИ»", () => {
     submitPassword(reset);
     press(reset, "Сбросить к значению по умолчанию");
     expect(await within(side).findByText("Используется ключ из настроек сервера.")).toBeVisible();
+    await waitFor(() => {
+      const row = within(side).getByText("Диалог с клиентом").closest("li");
+      expect(within(row as HTMLElement).queryByText("•••• 77aa")).not.toBeInTheDocument();
+      expect(
+        within(row as HTMLElement).getByText("Ключ: из настроек сервера", { selector: "p" }),
+      ).toBeVisible();
+    });
+  });
+
+  it("директор читает модели и маску ключа, кнопок изменения нет", async () => {
+    const side = await openPanel("models", "director@demo.example");
+    expect(await within(side).findByText("Диалог с клиентом")).toBeVisible();
+    expect(within(side).getAllByText("•••• 77aa").length).toBeGreaterThan(0);
+    expect(
+      within(side).queryByRole("button", { name: /^(Проверить|Сменить|Сбросить) модель/ }),
+    ).not.toBeInTheDocument();
+    expect(
+      within(side).getByText("Режим просмотра: изменения доступны администратору."),
+    ).toBeVisible();
   });
 });
 
@@ -362,9 +391,10 @@ describe("карточка «Хранилище и бэкапы»", () => {
     expect(within(side).getByRole("button", { name: "Сделать копию сейчас" })).toBeDisabled();
   });
 
-  it("директору копии скрыты ролью: «Недоступно», файлы из реестра читаются", async () => {
+  it("директор читает файлы и копии, «Сделать копию» нет", async () => {
     const side = await openPanel("storage", "director@demo.example");
     expect(await within(side).findByText("Хранилище файлов (S3)")).toBeVisible();
+    expect(await within(side).findByText("crm-2026-10-26.dump")).toBeVisible();
     expect(
       within(side).queryByRole("button", { name: "Сделать копию сейчас" }),
     ).not.toBeInTheDocument();

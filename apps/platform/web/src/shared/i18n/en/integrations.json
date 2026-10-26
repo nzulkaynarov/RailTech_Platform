@@ -320,6 +320,12 @@
       "gemini": "Google Gemini",
       "openai": "OpenAI"
     },
+    "key": {
+      "label": "Key:",
+      "crm": "set in the Platform",
+      "env": "from the server settings",
+      "unknown": "not changed from the Platform"
+    },
     "keySource": {
       "crm": "The key is set in the Platform and stored encrypted.",
       "env": "The key from the server settings is used."

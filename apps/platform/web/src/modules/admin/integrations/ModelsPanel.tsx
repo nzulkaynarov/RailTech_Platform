@@ -12,7 +12,7 @@ import {
 import { useFormat } from "../../../shared/lib/useFormat";
 import { type StatusTone } from "../../../shared/lib/statuses";
 import { StatusTag } from "../../../shared/ui/StatusTag";
-import { ActionForm, ErrorNote, Field, PanelState, PanelTitle } from "./parts";
+import { ActionForm, ErrorNote, Field, Masked, PanelState, PanelTitle } from "./parts";
 import { useRefreshIntegrations } from "./refresh";
 
 const PROVIDERS = ["anthropic", "gemini", "openai"] as const;
@@ -196,6 +196,16 @@ function ModelRow({ model, editable }: { model: AiModel; editable: boolean }) {
         })}
       </p>
       {model.health_detail ? <p className="pf-int-sub">{model.health_detail}</p> : null}
+      <p className="pf-int-sub">
+        {t("models.key.label")}{" "}
+        {model.key_source === "crm" ? (
+          <>
+            <Masked configured last4={model.key_last4} /> {t("models.key.crm")}
+          </>
+        ) : (
+          t(model.key_source === "env" ? "models.key.env" : "models.key.unknown")
+        )}
+      </p>
       <p className="pf-int-sub">
         {model.checked_at
           ? t("models.checkedAt", { date: date(model.checked_at, "datetime") })

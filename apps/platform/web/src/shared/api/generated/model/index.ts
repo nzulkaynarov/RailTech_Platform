@@ -100,6 +100,7 @@ export * from "./aiModelChangeIn";
 export * from "./aiModelChangeInProvider";
 export * from "./aiModelChangeKeySource";
 export * from "./aiModelHealth";
+export * from "./aiModelKeySource";
 export * from "./aiModelList";
 export * from "./aiModelTest";
 export * from "./aiSpendReport";

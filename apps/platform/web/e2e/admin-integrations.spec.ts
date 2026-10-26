@@ -236,12 +236,12 @@ test.describe("Внешние интеграции: администратор",
 
     await panel.getByRole("button", { name: "Сменить модель: Поиск по базе знаний" }).click();
     const form = panel.getByRole("form", { name: "Сменить модель: Поиск по базе знаний" });
-    await form.getByLabel("Ключ провайдера").fill("demo-provider-key-77aa");
+    await form.getByLabel("Ключ провайдера").fill("demo-provider-key-91zx");
     await tallScreenshot(page, "models-change");
     await password(form);
     await form.getByRole("button", { name: "Сменить модель" }).click();
     await expect(panel.getByText(/Модель сменена: openai/)).toBeVisible();
-    await expect(page.locator("body")).not.toContainText("demo-provider-key-77aa");
+    await expect(page.locator("body")).not.toContainText("demo-provider-key-91zx");
 
     await panel.getByRole("button", { name: "Сбросить модель: Диалог с клиентом" }).click();
     const reset = panel.getByRole("form", { name: "Сбросить модель: Диалог с клиентом" });
@@ -309,6 +309,16 @@ test.describe("Внешние интеграции: директор и прав
     await openIntegrations(page, "spend");
     await expect(side(page).getByRole("table", { name: "Провайдеры за сегодня" })).toBeVisible();
     await settledScreenshot(page, "director-spend");
+
+    // модели и копии директору — на чтение (W13-A1, решение архитектора по Q-W13-A1-1)
+    await openIntegrations(page, "models");
+    await expect(side(page).getByText("Диалог с клиентом")).toBeVisible();
+    await expect(side(page).getByText("•••• 77aa").first()).toBeVisible();
+    await expect(side(page).getByRole("button", { name: /^Сменить модель/ })).toHaveCount(0);
+    await settledScreenshot(page, "director-models");
+    await openIntegrations(page, "storage");
+    await expect(side(page).getByText("crm-2026-10-26.dump")).toBeVisible();
+    await expect(side(page).getByRole("button", { name: "Сделать копию сейчас" })).toHaveCount(0);
   });
 
   test("без раздела «Admin» пункта нет, прямой адрес — «Нет доступа»", async ({ page }) => {

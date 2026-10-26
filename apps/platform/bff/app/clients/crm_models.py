@@ -469,6 +469,8 @@ class ModelStatus(BaseModel):
     checked_at: Annotated[AwareDatetime | None, Field(title="Checked At")]
     health: Annotated[Health, Field(title="Health")]
     health_detail: Annotated[str | None, Field(title="Health Detail")]
+    key_last4: Annotated[str | None, Field(title="Key Last4")] = None
+    key_source: Annotated[KeySource | None, Field(title="Key Source")] = None
     model: Annotated[str | None, Field(title="Model")]
     provider: Annotated[str | None, Field(title="Provider")]
     today_usd: Annotated[float, Field(title="Today Usd")]

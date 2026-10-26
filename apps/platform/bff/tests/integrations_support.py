@@ -235,6 +235,8 @@ def model_row(alias: str = "dialog-model", health: str = "ok", **over: Any) -> d
         "health_detail": None if health == "ok" else "401 от провайдера",
         "checked_at": NOW,
         "today_usd": 1.25,
+        "key_source": "crm",
+        "key_last4": "77aa",
         **over,
     }
 

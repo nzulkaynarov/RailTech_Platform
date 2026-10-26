@@ -1415,6 +1415,14 @@ export const getListAiModelsResponseMock = (
       faker.string.alpha({ length: { min: 10, max: 20 } }),
       null,
     ]),
+    key_last4: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 4, max: 4 } }),
+      null,
+    ]),
+    key_source: faker.helpers.arrayElement([
+      faker.helpers.arrayElement(["crm", "env"] as const),
+      null,
+    ]),
     model: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
     provider: faker.helpers.arrayElement([
       faker.string.alpha({ length: { min: 10, max: 20 } }),

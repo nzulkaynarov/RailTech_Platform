@@ -648,6 +648,10 @@ async def test_model_reset_and_test(web: Web, crm: CrmIntegrationsFake) -> None:
         "ok": True,
     }
     assert [m["alias"] for m in listed.json()["items"]] == ["dialog-model", "embed-model"]
+    # маска ключа: источник и последние 4 символа, ключа нет
+    first = listed.json()["items"][0]
+    assert (first["key_source"], first["key_last4"]) == ("crm", "77aa")
+    assert "api_key" not in listed.text
     assert crm.body("POST", "models/dialog-model/reset") == {"password": PASSWORD}
 
 

@@ -334,6 +334,8 @@ class AiModel(_Out):
     model: str | None
     provider: str | None
     today_usd: float
+    key_last4: str | None
+    key_source: Literal["crm", "env"] | None
 
 
 class AiModelList(_Out):

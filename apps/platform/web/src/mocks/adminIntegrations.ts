@@ -703,6 +703,8 @@ export const adminIntegrationsHandlers = [
       model.health = "ok";
       model.health_detail = null;
       model.checked_at = MOCK_NOW;
+      model.key_source = body.api_key ? "crm" : "env";
+      model.key_last4 = body.api_key ? last4(body.api_key) : null;
       changed = model;
       const vendor = findService(s, `vendor.${body.provider}`);
       if (vendor) {
@@ -733,6 +735,13 @@ export const adminIntegrationsHandlers = [
     const alias = String(params["alias"]);
     const model = readIntegrations().models.find((m) => m.alias === alias);
     if (!model) return failure(404, "NOT_FOUND", "Не найдено.", "crm");
+    update((s) => {
+      const row = s.models.find((m) => m.alias === alias);
+      if (row) {
+        row.key_source = "env";
+        row.key_last4 = null;
+      }
+    });
     return HttpResponse.json({
       alias,
       provider: model.provider ?? "anthropic",

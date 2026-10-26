@@ -2638,16 +2638,24 @@ components:
       type: object
       additionalProperties: false
     AiModel:
-      description: 'Алиас роли модели ИИ: провайдер, модель, здоровье по последней проверке, расход за сегодня. Ключи не возвращаются.'
+      description: 'Алиас роли модели ИИ: провайдер, модель, здоровье по последней проверке, расход за сегодня и маска ключа (источник и последние 4 символа). Сам ключ не возвращается никогда.'
       properties:
         alias: {type: string}
         checked_at: {format: date-time, type: [string, 'null']}
         health: {enum: [ok, problem, unknown], type: string}
         health_detail: {type: [string, 'null']}
+        key_last4:
+          type: [string, 'null']
+          maxLength: 4
+          description: Последние 4 символа ключа, введённого в Платформе; `null` — ключ из настроек сервера или не менялся
+        key_source:
+          type: [string, 'null']
+          enum: [crm, env, null]
+          description: Откуда ключ роли — `crm` (введён в Платформе), `env` (из настроек сервера); `null` — роль не менялась из Платформы
         model: {type: [string, 'null']}
         provider: {type: [string, 'null']}
         today_usd: {type: number}
-      required: [alias, checked_at, health, health_detail, model, provider, today_usd]
+      required: [alias, checked_at, health, health_detail, key_last4, key_source, model, provider, today_usd]
       type: object
       additionalProperties: false
     AiModelChange:

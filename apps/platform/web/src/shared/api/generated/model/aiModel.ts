@@ -88,9 +88,10 @@
  * OpenAPI spec version: 0.7.0
  */
 import type { AiModelHealth } from "./aiModelHealth";
+import type { AiModelKeySource } from "./aiModelKeySource";
 
 /**
- * Алиас роли модели ИИ: провайдер, модель, здоровье по последней проверке, расход за сегодня. Ключи не возвращаются.
+ * Алиас роли модели ИИ: провайдер, модель, здоровье по последней проверке, расход за сегодня и маска ключа (источник и последние 4 символа). Сам ключ не возвращается никогда.
  */
 export interface AiModel {
   alias: string;
@@ -99,6 +100,17 @@ export interface AiModel {
   health: AiModelHealth;
   /** @nullable */
   health_detail: string | null;
+  /**
+   * Последние 4 символа ключа, введённого в Платформе; `null` — ключ из настроек сервера или не менялся
+   * @maxLength 4
+   * @nullable
+   */
+  key_last4: string | null;
+  /**
+   * Откуда ключ роли — `crm` (введён в Платформе), `env` (из настроек сервера); `null` — роль не менялась из Платформы
+   * @nullable
+   */
+  key_source: AiModelKeySource;
   /** @nullable */
   model: string | null;
   /** @nullable */

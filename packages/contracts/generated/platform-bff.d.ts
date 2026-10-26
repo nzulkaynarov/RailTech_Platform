@@ -1531,7 +1531,7 @@ export interface components {
       problem: string | null;
       reason: string | null;
     };
-    /** @description Алиас роли модели ИИ: провайдер, модель, здоровье по последней проверке, расход за сегодня. Ключи не возвращаются. */
+    /** @description Алиас роли модели ИИ: провайдер, модель, здоровье по последней проверке, расход за сегодня и маска ключа (источник и последние 4 символа). Сам ключ не возвращается никогда. */
     AiModel: {
       alias: string;
       /** Format: date-time */
@@ -1539,6 +1539,13 @@ export interface components {
       /** @enum {string} */
       health: "ok" | "problem" | "unknown";
       health_detail: string | null;
+      /** @description Последние 4 символа ключа, введённого в Платформе; `null` — ключ из настроек сервера или не менялся */
+      key_last4: string | null;
+      /**
+       * @description Откуда ключ роли — `crm` (введён в Платформе), `env` (из настроек сервера); `null` — роль не менялась из Платформы
+       * @enum {string|null}
+       */
+      key_source: "crm" | "env" | null;
       model: string | null;
       provider: string | null;
       today_usd: number;

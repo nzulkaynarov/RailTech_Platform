@@ -320,6 +320,12 @@
       "gemini": "Google Gemini",
       "openai": "OpenAI"
     },
+    "key": {
+      "label": "Kalit:",
+      "crm": "Platformada kiritilgan",
+      "env": "server sozlamalaridan",
+      "unknown": "Platformadan o‘zgartirilmagan"
+    },
     "keySource": {
       "crm": "Kalit Platformada kiritilgan va shifrlangan holda saqlanadi.",
       "env": "Server sozlamalaridagi kalitdan foydalaniladi."

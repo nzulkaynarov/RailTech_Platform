@@ -236,6 +236,8 @@ function seedMailLog(): MailLogItem[] {
 
 function seedModels(): AiModel[] {
   const base = { checked_at: EARLIER, health_detail: null };
+  const crmKey = { key_source: "crm", key_last4: "77aa" } as const;
+  const envKey = { key_source: "env", key_last4: null } as const;
   return [
     {
       alias: "dialog-model",
@@ -243,6 +245,7 @@ function seedModels(): AiModel[] {
       model: "claude-demo-chat",
       health: "ok",
       today_usd: 1.25,
+      ...crmKey,
       ...base,
     },
     {
@@ -251,6 +254,7 @@ function seedModels(): AiModel[] {
       model: "claude-demo-small",
       health: "ok",
       today_usd: 0.31,
+      ...envKey,
       ...base,
     },
     {
@@ -259,6 +263,8 @@ function seedModels(): AiModel[] {
       model: "gemini-demo-flash",
       health: "ok",
       today_usd: 0,
+      key_source: null,
+      key_last4: null,
       ...base,
     },
     {
@@ -269,6 +275,7 @@ function seedModels(): AiModel[] {
       health_detail: "401: ключ отклонён провайдером",
       checked_at: EARLIER,
       today_usd: 0.04,
+      ...crmKey,
     },
   ];
 }
