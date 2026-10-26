@@ -42,10 +42,9 @@ class Permission(models.TextChoices):
     QUOTE_EDIT_PRICING = "quote.edit_pricing", "Менять цены, скидки и статьи расходов"
     QUOTE_VIEW_COST_MARGIN = "quote.view_cost_margin", "Видеть себестоимость и маржу"
     QUOTE_SEND = "quote.send", "Отправлять КП клиенту"
-    # Внутреннее согласование КП: промежуточный согласующий и обязательный финальный
-    # («руководитель»). Акцепт КП клиентом — не право бэк-офиса (Cabinet / публичная ссылка).
+    # Визы КП внутри компании. Одобрение КП директором — маршрут EDS (EDS-03, волна 12): права ERP на него нет.
+    # Акцепт КП клиентом — не право бэк-офиса (Cabinet / публичная ссылка).
     QUOTE_REVIEW = "quote.review", "Согласовывать КП"
-    QUOTE_APPROVE_FINAL = "quote.approve_final", "Финально утверждать КП"
     # Договоры
     CONTRACT_MANAGE = "contract.manage", "Готовить договоры"
     CONTRACT_SIGN = "contract.sign", "Подписывать договоры от компании"
@@ -79,7 +78,6 @@ PERMISSION_GROUPS = {
         Permission.QUOTE_VIEW_COST_MARGIN,
         Permission.QUOTE_SEND,
         Permission.QUOTE_REVIEW,
-        Permission.QUOTE_APPROVE_FINAL,
     ],
     "contracts": [Permission.CONTRACT_MANAGE, Permission.CONTRACT_SIGN],
     "catalog": [Permission.CATALOG_MANAGE, Permission.CATALOG_PUBLISH],

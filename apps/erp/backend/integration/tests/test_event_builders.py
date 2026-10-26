@@ -1,4 +1,4 @@
-"""Публикаторы событий ERP на шину rt_bus (B3): `DealRef`, `Actor`, пропуск несопоставленных компаний, тела 22 типов.
+"""Публикаторы событий ERP на шину rt_bus (B3): `DealRef`, `Actor`, пропуск несопоставленных компаний, тела 23 типов.
 
 Бывший `test_webhooks.py` без доставки: подпись, ретраи и журнал вебхуков заменены библиотекой `rt_bus` (её тесты —
 `packages/rt-bus/tests`). Здесь — то, что решает ERP: состав `data` по схемам `packages/contracts/events/erp/`.
@@ -60,15 +60,15 @@ def deal_stages():
     return {key: DealStage.objects.get_or_create(code=code, defaults={"name": code})[0] for key, code in codes.items()}
 
 
-def test_the_22_types_of_the_erp_are_the_files_of_the_contract():
+def test_the_23_types_of_the_erp_are_the_files_of_the_contract():
     import json
     import os
     from pathlib import Path
 
     events_dir = Path(os.environ["RT_BUS_CONTRACTS_DIR"]) / "erp"
     names = {p.name[: -len(".v1.json")] for p in events_dir.glob("*.v1.json") if not p.name.startswith("_")}
-    # Волна 12 (E1): quote.ready_for_approval — в контракте; публикацию добавит E5 (тогда — в VALID_EVENT_TYPES).
-    assert names == VALID_EVENT_TYPES | {"quote.ready_for_approval"} and len(VALID_EVENT_TYPES) == 22
+    # Волна 12 (E5): quote.ready_for_approval публикует ERP (EDS-03) — файлы контракта = VALID_EVENT_TYPES.
+    assert names == VALID_EVENT_TYPES and len(VALID_EVENT_TYPES) == 23
     for short in VALID_EVENT_TYPES:
         assert event_type_name(short) == f"uz.railtech.erp.{short}.v1"
         assert json.loads((events_dir / f"{short}.v1.json").read_text(encoding="utf-8"))["type"] == "object"

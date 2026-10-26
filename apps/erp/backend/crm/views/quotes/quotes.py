@@ -23,7 +23,7 @@ from rest_framework.response import Response
 from sales.views.quote_fx import QuoteFxMixin
 
 from core.optimistic_locking import OptimisticLockingMixin
-from core.permissions import ADMIN_ONLY, IsCompanyMemberOrPlatformAdmin, RoleGatedViewMixin
+from core.permissions import ADMIN_ONLY, SELF_SERVICE, IsCompanyMemberOrPlatformAdmin, RoleGatedViewMixin
 from crm import services as crm_services
 from crm.constants import QuoteStatusCode
 from crm.models import Quote, QuoteStatus
@@ -91,7 +91,8 @@ class QuoteViewSet(RoleGatedViewMixin, QuoteApprovalMixin, QuoteFxMixin, Optimis
         # Договорной курс КП (M1-ERP-08) — финансы, с причиной; сам расчёт КП не меняет права расчётчика.
         "fx_override": "finance.rates",
         "send_to_client": "quote.send",
-        "approval_act": ("quote.review", "quote.approve_final"),
+        # Виза расчёта — назначенный исполнитель шага (EDS-03, волна 12): право проверяет сервис по назначению.
+        "approval_act": SELF_SERVICE,
         "force_approve": ADMIN_ONLY,
     }
 

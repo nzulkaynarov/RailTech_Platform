@@ -11,6 +11,7 @@
 """
 
 import re
+from collections.abc import Sequence
 from datetime import UTC, datetime
 from typing import Any, Final
 
@@ -19,6 +20,8 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.domain.bot_menu import normalize_phone
+from app.domain.platform_roles import RoleGrant, eds_permissions_of
+from app.domain.platform_roles_generated import ROLE_ACCESS, SYSTEM_ROLE_CODES
 from app.models.auth import User
 from app.models.clients import Client, ClientContact
 from app.models.leads import Lead, TelegramIdentity
@@ -181,20 +184,53 @@ def role_code(role: PlatformRole) -> str | None:
     return code if _ROLE_CODE.fullmatch(code) else None
 
 
-async def user_snapshot(session: AsyncSession, user: User) -> dict[str, Any]:
-    """Сотрудник без пароля, токенов, Telegram и журнала входов (идентичность v1 живёт в CRM)."""
-    roles = await platform_roles_repo.roles_of_user(session, user.id)
+def eds_permissions(roles: Sequence[PlatformRole], *, is_active: bool) -> list[str]:
+    """Права EDS сотрудника из его ролей по каталогу (сортированный список); неактивный — пусто.
+
+    Матрица системной роли — из каталога (она неизменна, ADR-0012 п. 2), прочих — данные роли."""
+    grants = [
+        RoleGrant(dict(ROLE_ACCESS[r.code]), (), r.code)
+        if r.is_system and r.code in SYSTEM_ROLE_CODES
+        else RoleGrant(dict(r.access), tuple(r.restricted_fields), r.code)
+        for r in roles
+    ]
+    return list(eds_permissions_of(grants, is_active=is_active))
+
+
+def user_fields(user: User, roles: Sequence[PlatformRole]) -> dict[str, Any]:
+    """Поля снимка сотрудника, зависящие от его данных и ролей (всё, кроме id и `updated_at`).
+
+    По двум таким срезам — до и после — считается `changed_fields` (`changed_user_fields`)."""
     codes = sorted({code for role in roles if (code := role_code(role))})
     access = sorted(set(user.platform_access or ["crm"]) & {"crm", "erp"})
+    is_active = bool(user.is_active)
     return {
-        "crm_user_id": user.id,
         "email": (user.email or "").strip().lower(),
         "full_name": required_text(user.full_name, 255),
         "position": clip(user.position, 120),
         "language": user.language if user.language in _LANGUAGES else "ru",
-        "is_active": bool(user.is_active),
+        "is_active": is_active,
         "platform_roles": codes,
         "systems": access,
         "erp_role_codes": sorted(set(user.erp_role_codes or [])),
+        "permissions": {"eds": eds_permissions(roles, is_active=is_active)},
+    }
+
+
+def changed_user_fields(before: dict[str, Any], after: dict[str, Any]) -> list[str]:
+    """Имена полей снимка, изменившихся между двумя срезами `user_fields`."""
+    return sorted(name for name in after if before.get(name) != after[name])
+
+
+async def user_snapshot(session: AsyncSession, user: User) -> dict[str, Any]:
+    """Сотрудник без пароля, токенов, Telegram и журнала входов (идентичность v1 живёт в CRM).
+
+    `permissions.eds` — права EDS из ролей (ADR-0012 п. 5, sso-token.md): подписчик заменяет их
+    целиком; пустой список — доступа к EDS нет.
+    """
+    roles = await platform_roles_repo.roles_of_user(session, user.id)
+    return {
+        "crm_user_id": user.id,
+        **user_fields(user, roles),
         "updated_at": utc(await fresh_updated_at(session, User, user.id)),
     }

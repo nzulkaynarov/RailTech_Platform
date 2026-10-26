@@ -11,6 +11,7 @@ from app.schemas.auth import (
     ChangePasswordRequest,
     LoginRequest,
     SsoExchangeRequest,
+    SsoTokenRequest,
     SsoTokenResponse,
     TokenResponse,
 )
@@ -88,9 +89,17 @@ async def change_password(
 
 
 @router.post("/sso/token", response_model=SsoTokenResponse)
-async def sso_token(principal: PrincipalDep, container: ContainerDep) -> SsoTokenResponse:
-    """Выдать SSO-токен для перехода текущего сотрудника в ERP (CONTRACTS §6)."""
-    token, redirect_url = await container.sso_service.issue_token(principal.user_id)
+async def sso_token(
+    principal: PrincipalDep, container: ContainerDep, body: SsoTokenRequest | None = None
+) -> SsoTokenResponse:
+    """Выдать SSO-токен текущему сотруднику (CONTRACTS §6, sso-token.md).
+
+    Без тела или с `aud = erp` — переход в ERP; `aud = eds` — токен сотрудника для обмена в EDS
+    (у EDS нет внешнего маршрута: `redirect_url` пуст).
+    """
+    token, redirect_url = await container.sso_service.issue_token(
+        principal.user_id, aud=body.aud if body else "erp"
+    )
     return SsoTokenResponse(token=token, redirect_url=redirect_url)
 
 

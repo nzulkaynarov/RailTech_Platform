@@ -280,6 +280,50 @@ class Quote(models.Model):
         help_text=_("Кто одобрил коммерческое предложение"),
     )
 
+    # Одобрение КП директором — маршрут EDS (EDS-03, ADR-0015, runbook волны 12 §2.4–§2.5). ERP публикует
+    # `quote.ready_for_approval` с `version = eds_revision` и применяет `eds.approval.decided`; поля ниже — проекция
+    # решения EDS (владелец номера ИСХ и решения — EDS), своей цепочки одобрения директором у ERP нет.
+    eds_revision = models.PositiveIntegerField(
+        default=0,
+        verbose_name=_("Редакция для одобрения в EDS"),
+        help_text=_(
+            "Сколько раз КП уходило директору на одобрение (version события quote.ready_for_approval); "
+            "решение EDS по другой редакции — устаревшее и не применяется"
+        ),
+    )
+    outgoing_number = models.CharField(
+        max_length=32,
+        blank=True,
+        default="",
+        verbose_name=_("Исходящий номер (EDS)"),
+        help_text=_("ИСХ-NNN/ГГ, присвоенный EDS при одобрении КП директором; пусто — КП не одобрено"),
+    )
+    director_decision = models.CharField(
+        max_length=10,
+        blank=True,
+        default="",
+        choices=[("approve", _("Одобрено")), ("return", _("Возвращено на доработку")), ("reject", _("Отклонено"))],
+        verbose_name=_("Решение директора (EDS)"),
+        help_text=_("Последнее решение директора по текущей редакции КП; пусто — решения ещё нет"),
+    )
+    director_comment = models.TextField(
+        blank=True,
+        default="",
+        verbose_name=_("Комментарий директора"),
+        help_text=_("Комментарий решения в EDS: обязателен при возврате на доработку и отклонении"),
+    )
+    director_decided_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        verbose_name=_("Время решения директора"),
+    )
+    send_channels = models.JSONField(
+        default=list,
+        blank=True,
+        verbose_name=_("Каналы отправки"),
+        help_text=_("Каналы отправки клиенту, выбранные директором при одобрении (telegram, cabinet, email)"),
+    )
+
     created_at = models.DateTimeField(
         auto_now_add=True,
         verbose_name=_("Дата создания"),

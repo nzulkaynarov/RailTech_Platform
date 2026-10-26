@@ -12,6 +12,8 @@ from django.conf import settings
 
 logger = logging.getLogger(__name__)
 
+# Каталог 0003 включал и код финального утверждения КП директором; волна 12 (EDS-03) его удалила: одобрение КП — маршрут
+# EDS. На чистой базе 0003 его больше не сеет, на живой — снимает accounts/0010 (`prune_unknown_permissions`).
 ALL = [
     "deal.manage",
     "deal.assign",
@@ -20,7 +22,6 @@ ALL = [
     "quote.view_cost_margin",
     "quote.send",
     "quote.review",
-    "quote.approve_final",
     "contract.manage",
     "contract.sign",
     "catalog.manage",
@@ -194,3 +195,36 @@ def seed_backoffice_roles(apps, schema_editor):
     """Каталог прав M1-ERP-05: системные роли своей компании, переименование кодов, роли участникам."""
     for company_id in _own_company_ids(apps):
         _migrate_own_company(apps, company_id)
+
+
+# Волна 12 (EDS-03, миграции accounts/0010 и integration/0010): одобрение КП директором ушло в маршрут EDS, код права
+# финального утверждения из каталога удалён. Каталог после 0010 = ALL + ADDED_0004; коды вне него снимаются с ролей и
+# со снимков провижининга CRM (замороженная копия, как таблицы выше: сверяет test_backoffice_roles).
+CATALOG_0010 = ALL + ADDED_0004
+
+
+def _known(permissions):
+    return [code for code in (permissions or []) if code in CATALOG_0010]
+
+
+def prune_unknown_permissions(apps, schema_editor):
+    """Снять с ролей коды прав, которых нет в каталоге (код финального утверждения КП — волна 12)."""
+    CompanyRole = apps.get_model("accounts", "CompanyRole")
+    for role in CompanyRole.objects.all():
+        known = _known(role.permissions)
+        if known != list(role.permissions or []):
+            role.permissions = known
+            role.save(update_fields=["permissions"])
+
+
+def prune_unknown_snapshot_permissions(apps, schema_editor):
+    """То же для последнего провижининга CRM (`CrmUserMapping.provision_snapshot["permissions"]`)."""
+    CrmUserMapping = apps.get_model("integration", "CrmUserMapping")
+    for mapping in CrmUserMapping.objects.exclude(provision_snapshot__isnull=True):
+        snapshot = dict(mapping.provision_snapshot or {})
+        permissions = snapshot.get("permissions")
+        if not isinstance(permissions, list) or _known(permissions) == permissions:
+            continue
+        snapshot["permissions"] = _known(permissions)
+        mapping.provision_snapshot = snapshot
+        mapping.save(update_fields=["provision_snapshot"])

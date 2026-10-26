@@ -541,7 +541,7 @@ test('3.1 Согласование: «Расчёт» отправляет, це�
   expect(headStep, 'в цепочке есть шаг руководителя').toBeTruthy();
   const decide = { step_id: headStep!.id, decision: 'APPROVE' };
 
-  // Финальный шаг — только держатель quote.approve_final.
+  // Шаг директора ERP удалён (волна 12, EDS-03: одобряет директор в EDS); стендовый гейт M1 здесь устарел — фронтенд заморожен.
   expect(await probe(calc.ctx, 'post', `crm/quotes/${S.quoteId}/approval-act/`, decide)).toMatchObject({
     status: 403,
     detail: 'ROLE_NOT_PERMITTED',

@@ -6,6 +6,7 @@
 from collections.abc import Sequence
 from dataclasses import replace
 from datetime import UTC, datetime
+from typing import Any
 
 import structlog
 from sqlalchemy import update
@@ -13,6 +14,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.bus import events as bus_events
+from app.bus import snapshots
 from app.domain.erp_roles import normalize_erp_roles
 from app.domain.erp_sync import AccessState, SyncAction, access_audit_action, sync_action
 from app.domain.errors import (
@@ -25,6 +27,7 @@ from app.domain.errors import (
 from app.domain.lead_access import loses_work_role
 from app.domain.platform_roles import derive_access
 from app.models.auth import RefreshToken, User
+from app.models.platform_roles import PlatformRole
 from app.repositories import platform_roles as prepo
 from app.repositories import users as repo
 from app.security import audit, reauth
@@ -156,6 +159,7 @@ class UserService:
             roles = await repo.roles_of(session, user_id)
             held = await prepo.roles_of_user(session, user_id)
             before = view_of(user, roles, held)
+            fields_before = snapshots.user_fields(user, held)
             erp_before = access_state_of(before)
             requested = await resolve_requested(session, patch.platform_role_ids)
             await guard_system_holders(
@@ -197,7 +201,11 @@ class UserService:
                 raise ConflictError(
                     "telegram already linked", reason=Reason.TELEGRAM_TAKEN, field="tg_user_id"
                 ) from exc
-            after = view_of(user, roles, held if requested is None else requested)
+            effective = held if requested is None else requested
+            after = view_of(user, roles, effective)
+            changed = snapshots.changed_user_fields(
+                fields_before, snapshots.user_fields(user, effective)
+            )
             await audit.record(
                 session,
                 actor,
@@ -209,7 +217,7 @@ class UserService:
             )
             erp_after = access_state_of(after)
             await _audit_access(session, actor, user_id, erp_before, erp_after)
-            await _publish_change(session, actor, user, before, after)
+            await _publish_change(session, actor, user, before, after, changed)
             action = sync_action(erp_before, erp_after)
         await self._sync_erp(action, user_id)
         if action == "provision":
@@ -380,12 +388,13 @@ async def _upsert_admin(
         user = User(email=normalize_email(email), full_name=full_name, password_hash="")
         session.add(user)
         await session.flush()
+    held = await prepo.roles_of_user(session, user.id)
+    fields_before = None if created else snapshots.user_fields(user, held)
     user.password_hash = hash_password(secret)
     user.must_change_password = temporary
     user.is_active = True
     user.ui_mode = "admin"
     user.failed_logins, user.locked_until = 0, None
-    held = await prepo.roles_of_user(session, user.id)
     if platform_admin or held:
         # Роли Платформы ведут роль CRM и доступ к ERP: к ним добавляется системная роль ADMIN.
         admin_role = next(iter(await prepo.by_codes(session, [ADMIN_CODE])), None)
@@ -397,31 +406,47 @@ async def _upsert_admin(
         user.platform_access = list(derived.platform_access)
         user.erp_role_codes = list(derived.erp_role_codes)
         await repo.set_roles(session, user.id, [derived.crm_role], None)
-        await _publish_admin(session, user, created=created)
+        await _publish_admin(session, user, held, fields_before)
         return user.id
     roles = set(await repo.roles_of(session, user.id)) | {"admin"}
     await repo.set_roles(session, user.id, sorted(roles), None)
-    await _publish_admin(session, user, created=created)
+    await _publish_admin(session, user, held, fields_before)
     return user.id
 
 
-async def _publish_admin(session: AsyncSession, user: User, *, created: bool) -> None:
-    """Первый администратор или восстановление (CLI, мастер): событие — в той же транзакции."""
+async def _publish_admin(
+    session: AsyncSession,
+    user: User,
+    held: Sequence[PlatformRole],
+    fields_before: dict[str, Any] | None,
+) -> None:
+    """Первый администратор или восстановление (CLI, мастер): событие — в той же транзакции.
+
+    `fields_before` — срез полей снимка до изменения; `None` — сотрудник создан сейчас."""
     system = Actor.system()
-    if created:
+    if fields_before is None:
         await bus_events.user_created(session, user, system)
-    else:
-        await bus_events.user_updated(session, user, system)
+        return
+    changed = snapshots.changed_user_fields(fields_before, snapshots.user_fields(user, held))
+    await bus_events.user_updated(session, user, system, changed)
 
 
 async def _publish_change(
-    session: AsyncSession, actor: Actor, user: User, before: UserView, after: UserView
+    session: AsyncSession,
+    actor: Actor,
+    user: User,
+    before: UserView,
+    after: UserView,
+    changed: Sequence[str],
 ) -> None:
-    """Изменение сотрудника на шину: отключение — `deactivated`, прочее — снимок `updated`."""
+    """Изменение сотрудника на шину: отключение — `deactivated`, прочее — снимок `updated`.
+
+    `changed_fields` — все изменившиеся поля снимка (роли, системы, роли ERP, права EDS, ...):
+    EDS проверяет право по проекции на момент запроса (sso-token.md)."""
     if before.is_active and not after.is_active:
         await bus_events.user_deactivated(session, user.id, actor)
-    elif audit_of(before) != audit_of(after):
-        await bus_events.user_updated(session, user, actor)
+    elif changed or audit_of(before) != audit_of(after):
+        await bus_events.user_updated(session, user, actor, changed)
 
 
 def _apply(user: User, patch: UserPatch) -> None:

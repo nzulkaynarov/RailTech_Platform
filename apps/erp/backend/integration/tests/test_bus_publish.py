@@ -2,7 +2,7 @@
 
 * золотой путь заявка → КП → договор → счёт → оплата → поставка на настоящих сервисах публикует цепочку событий, и каждое
   проходит схему контракта;
-* каждый из 22 типов `uz.railtech.erp.*.v1` рождается в своём сервисе (`test_every_event_type_is_published_by_its_service`);
+* каждый из 23 типов `uz.railtech.erp.*.v1` рождается в своём сервисе (`test_every_event_type_is_published_by_its_service`);
 * откат транзакции — нет события (в обе стороны: событие не переживает откат, откат не прячет событие другого действия);
 * ошибка публикации (в том числе `data` не по схеме) откатывает само изменение;
 * в ERP нет `except Exception` вокруг публикации, сигналов Django и вебхуков.
@@ -246,6 +246,11 @@ def test_every_event_type_is_published_by_its_service(deal, buyer, manager, mapp
 
     rejected = add_quote(make_deal(company, "QUOTE_SENT", title="Отклонённая"), 1, "SENT", "1000")
     perform_quote_rejection(rejected.id, rejected_by_user=None, reason="Дорого", portal_contact=contact)
+    # quote.ready_for_approval — визы собраны, КП уходит директору в EDS (EDS-03)
+    from crm.services.eds_quote_approval import request_director_approval
+
+    for_director = add_quote(make_deal(company, "CALCULATING", title="КП директору"), 1, "PENDING_APPROVAL", "1000")
+    request_director_approval(for_director, manager)
     # quote.accepted + document.created(contract) + contract.signed ×2 + deal.won — акцепт и подписи
     quote = QuoteLifecycleService.approve_quote(quote.id, buyer_user)
     contract, _ = crm_services.generate_contract_from_quote(quote.id, actor=manager)
