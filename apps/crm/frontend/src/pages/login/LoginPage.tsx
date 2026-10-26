@@ -1,12 +1,15 @@
 import { useInvalidateAuthStore } from "@refinedev/core";
 import { Alert, Button, Card, Form, Input, Typography } from "antd";
 import { useState } from "react";
-import { Navigate, useNavigate } from "react-router";
+import { useQueryClient } from "@tanstack/react-query";
+import { Navigate, useNavigate, useSearchParams } from "react-router";
 
+import { keys } from "../../api/queries";
 import { useSetupState } from "../../api/systemQueries";
 
 import { authProvider } from "../../app/providers/auth";
 import { t } from "../../i18n/ru";
+import { safeNextPath, withNext } from "../../lib/nextPath";
 import "../pages.css";
 
 type Values = { email: string; password: string };
@@ -17,6 +20,8 @@ type Values = { email: string; password: string };
  */
 export function LoginPage() {
   const navigate = useNavigate();
+  const client = useQueryClient();
+  const [params] = useSearchParams();
   const invalidateAuth = useInvalidateAuthStore();
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
@@ -31,9 +36,13 @@ export function LoginPage() {
       setPending(false);
       return;
     }
+    // Права и профиль прошлого пользователя того же окна не должны решать, куда вести нового.
+    client.removeQueries({ queryKey: keys.permissions });
+    client.removeQueries({ queryKey: keys.me });
     await invalidateAuth();
     setPending(false);
-    void navigate(result.redirectTo ?? "/");
+    // Адрес, с которого выбросило на вход (`?to=`), сохраняется; иначе «/» — первый доступный раздел.
+    void navigate(withNext(result.redirectTo ?? "/", safeNextPath(params.get("to"))));
   };
 
   // Первый запуск: администратора ещё нет — вместо входа мастер настройки.

@@ -1,6 +1,6 @@
 import type { PermissionsResponse } from "../api/generated/model";
 import { t } from "../i18n/ru";
-import { canSee } from "./providers/access";
+import { allowed, canSee, sectionPermission } from "./providers/access";
 
 /**
  * Информационная архитектура меню (аудит 2026-10-12, бенчмарк Front/Intercom/Linear):
@@ -60,11 +60,31 @@ export function navKeyOf(pathname: string): NavKey | null {
 }
 
 /**
- * Стартовая страница: менеджер и админ — очередь «Входящие», наблюдатель — дашборд.
- * Без доступа к обоим — список лидов.
+ * Порядок поиска стартового раздела: очередь работы, дашборд, лиды, клиенты, сделки; затем администрирование
+ * (пользователи, подключения, ...) и остальные разделы в порядке меню. Системному «Администратору»
+ * без бизнес-прав это даёт «Пользователи», а не «Настройки бота».
+ */
+const ADMIN_ITEMS = NAV_GROUPS.find((g) => g.key === "admin")?.items ?? [];
+const START_ORDER: NavKey[] = [
+  "inbox",
+  "dashboard",
+  "leads",
+  "clients",
+  "deals",
+  ...ADMIN_ITEMS,
+  ...NAV_GROUPS.flatMap((g) => g.items),
+];
+
+/**
+ * Стартовая страница — первый доступный по правам раздел (одно правило для «/», входа и `/setup`):
+ * менеджер и админ с бизнес-правами — «Входящие», наблюдатель — дашборд, системный «Администратор»
+ * без прав на лиды — «Пользователи». Режим «Админ/Менеджер» не учитывается: он только навигация,
+ * а админский раздел в режиме «Менеджер» открывается с баннером возврата. «Профиль» доступен всем.
  */
 export function homePath(matrix: PermissionsResponse | undefined): string {
-  if (matrix?.permissions["leads"]?.["take"]) return "/inbox";
-  if (matrix?.permissions["dashboard"]?.["read"]) return "/dashboard";
-  return "/leads";
+  for (const key of START_ORDER) {
+    const target = sectionPermission(key);
+    if (target && allowed(matrix, target[0], target[1])) return `/${key}`;
+  }
+  return "/profile";
 }
