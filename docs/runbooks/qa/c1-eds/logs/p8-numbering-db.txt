@@ -1,0 +1,22 @@
+   kind    | year | last_value
+-----------+------+------------
+ letter_in | 2026 |         53
+ memo      | 2026 |         52
+ outgoing  | 2026 |          2
+(3 rows)
+
+ k  | n  | d  |     min     |     max
+----+----+----+-------------+-------------
+ СЗ | 52 | 52 | СЗ-2026/001 | СЗ-2026/052
+ ВХ | 53 | 53 | ВХ-001/26   | ВХ-053/26
+(2 rows)
+
+                  type                  | events | delivered | not_delivered
+----------------------------------------+--------+-----------+---------------
+ uz.railtech.eds.approval.decided.v1    |     14 |        14 |             0
+ uz.railtech.eds.approval.requested.v1  |      8 |         8 |             0
+ uz.railtech.eds.document.archived.v1   |      2 |         2 |             0
+ uz.railtech.eds.document.registered.v1 |     52 |        51 |             1
+ uz.railtech.eds.letter.registered.v1   |     53 |        53 |             0
+ uz.railtech.eds.letter.resolved.v1     |      6 |         6 |             0
+(6 rows)

@@ -1,0 +1,34 @@
+## Снаружи (Caddy :8092) EDS недоступен
+POST host=eds.localhost path=/api/v1/letters -> 200  body[0:60]=
+POST host=eds.localhost path=/api/v1/auth/sso/exchange -> 200  body[0:60]=
+POST host=eds.localhost path=/bus/v1/events -> 200  body[0:60]=
+POST host=eds.localhost path=/api/v1/me -> 200  body[0:60]=
+POST host=eds.localhost path=/api/v1/registry -> 200  body[0:60]=
+POST host=crm.localhost path=/api/v1/letters -> 404  body[0:60]={"code":"not_found","message":"Not Found","details":{}}
+POST host=crm.localhost path=/api/v1/auth/sso/exchange -> 422  body[0:60]={"code":"validation_failed","message":"request validation fa
+POST host=crm.localhost path=/bus/v1/events -> 502  body[0:60]=
+POST host=crm.localhost path=/api/v1/me -> 405  body[0:60]={"code":"method_not_allowed","message":"Method Not Allowed",
+POST host=crm.localhost path=/api/v1/registry -> 404  body[0:60]={"code":"not_found","message":"Not Found","details":{}}
+POST host=erp.localhost path=/api/v1/letters -> 404  body[0:60]=<!DOCTYPE html> <html lang="en"> <head>   <meta http-equiv="
+POST host=erp.localhost path=/api/v1/auth/sso/exchange -> 500  body[0:60]=<!DOCTYPE html> <html lang="en"> <head>   <meta http-equiv="
+POST host=erp.localhost path=/bus/v1/events -> 404  body[0:60]=
+POST host=erp.localhost path=/api/v1/me -> 404  body[0:60]=<!DOCTYPE html> <html lang="en"> <head>   <meta http-equiv="
+POST host=erp.localhost path=/api/v1/registry -> 404  body[0:60]=<!DOCTYPE html> <html lang="en"> <head>   <meta http-equiv="
+POST host=platform.localhost path=/api/v1/letters -> 404  body[0:60]={"code":"NOT_FOUND","message":"Не найдено.","source
+POST host=platform.localhost path=/api/v1/auth/sso/exchange -> 404  body[0:60]={"code":"NOT_FOUND","message":"Не найдено.","source
+POST host=platform.localhost path=/bus/v1/events -> 404  body[0:60]=
+POST host=platform.localhost path=/api/v1/me -> 405  body[0:60]={"code":"METHOD_NOT_ALLOWED","message":"Запрос не м
+POST host=platform.localhost path=/api/v1/registry -> 404  body[0:60]={"code":"NOT_FOUND","message":"Не найдено.","source
+POST host=cabinet.localhost path=/api/v1/letters -> 502  body[0:60]=
+POST host=cabinet.localhost path=/api/v1/auth/sso/exchange -> 502  body[0:60]=
+POST host=cabinet.localhost path=/bus/v1/events -> 502  body[0:60]=
+POST host=cabinet.localhost path=/api/v1/me -> 502  body[0:60]=
+POST host=cabinet.localhost path=/api/v1/registry -> 502  body[0:60]=
+POST host=127.0.0.1 path=/api/v1/letters -> 200  body[0:60]=
+POST host=127.0.0.1 path=/api/v1/auth/sso/exchange -> 200  body[0:60]=
+POST host=127.0.0.1 path=/bus/v1/events -> 200  body[0:60]=
+POST host=127.0.0.1 path=/api/v1/me -> 200  body[0:60]=
+POST host=127.0.0.1 path=/api/v1/registry -> 200  body[0:60]=
+## порты хоста у контейнеров EDS (пусто = не публикуются)
+rt-c1-eds-worker-1 ports=[8000/tcp]
+rt-c1-eds-api-1 ports=[8000/tcp]

@@ -1,0 +1,19 @@
+Mon Oct 26 04:29:18 UTC 2026
+rt-c1-cabinet-web-1 Up About a minute (healthy)
+rt-c1-caddy-1 Up 34 minutes (healthy)
+rt-c1-crm-api-1 Up 43 minutes (healthy)
+rt-c1-crm-worker-1 Up 5 minutes (healthy)
+rt-c1-eds-api-1 Up 11 minutes (healthy)
+rt-c1-eds-worker-1 Up 6 minutes (healthy)
+rt-c1-erp-backend-1 Up 44 minutes (healthy)
+rt-c1-erp-beat-1 Up 43 minutes
+rt-c1-erp-worker-1 Up 43 minutes (healthy)
+rt-c1-litellm-1 Up 44 minutes (healthy)
+rt-c1-platform-bff-1 Up 44 minutes (healthy)
+rt-c1-platform-web-1 Up About a minute (healthy)
+rt-c1-postgres-1 Up 44 minutes (healthy)
+rt-c1-redis-broker-1 Up 44 minutes (healthy)
+rt-c1-redis-cache-1 Up 44 minutes (healthy)
+rt-c1-rustfs-1 Up 44 minutes (healthy)
+rt-c1-eds-worker-1 94.08MiB / 11.67GiB
+rt-c1-eds-api-1 184MiB / 11.67GiB
