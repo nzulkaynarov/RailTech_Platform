@@ -11,8 +11,8 @@ from app.schemas.common import (
     ErpLinks,
     ErpLinksIn,
     FileRef,
+    IncomingLetterSender,
     JournalEntry,
-    LetterSender,
     MarginPct,
     PersonRef,
     SenderRef,
@@ -84,7 +84,7 @@ class LetterSubmitIn(Strict):
 class LetterCreate(Strict):
     subject: Subject
     summary: LongText
-    sender: LetterSender
+    sender: IncomingLetterSender
     sender_ref: SenderRef | None = None
     received_at: dt.date
     addressee_crm_user_id: int | None = None
@@ -98,7 +98,7 @@ class LetterListItem(BaseModel):
     id: uuid.UUID
     number: str
     subject: str
-    sender: LetterSender
+    sender: IncomingLetterSender
     received_at: dt.date
     status: LetterStatus
     links: ErpLinks
@@ -117,7 +117,7 @@ class Letter(BaseModel):
     status: LetterStatus
     subject: str
     summary: str
-    sender: LetterSender
+    sender: IncomingLetterSender
     sender_ref: SenderRef
     received_at: dt.date
     registered_at: dt.datetime

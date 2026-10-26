@@ -175,7 +175,8 @@ async def decide(
     session: AsyncSession, bus: AsyncBus, *, employee: Employee, route_id: uuid.UUID, body: DecisionIn
 ) -> ApprovalRoute:
     """Решение на текущем шаге. Порядок отказов: не виден → 404; закрыт → 409 `route_closed`; не ваш шаг → 403
-    `not_your_step`; чек-лист КП красный → 409 `checklist_not_green` (проверка на сервере)."""
+    `not_your_step`; красная блокирующая строка чек-листа КП (визы, маржа) → 409 `checklist_not_green` (проверка на
+    сервере). Красная строка «срок» — предупреждение: одобрение проходит с отметкой `approved_late` (C1-G-1)."""
     route = await get_for_decision(session, route_id)
     if not await access.can_view_route(session, employee, route.id):
         raise not_found("Маршрут не найден.")
@@ -185,16 +186,20 @@ async def decide(
     current = next(s for s in steps if s.index == route.current_step)
     if not await may_decide(session, employee, route.id, current.index):
         raise forbidden_reason("not_your_step", "Сейчас решение за другим сотрудником.")
+    late: str | None = None
     if route.template == ApprovalTemplate.QUOTE.value and body.decision is Decision.APPROVE:
-        await _require_green(session, route)
-    return await _apply(session, bus, employee, route, steps, current, body)
+        late = await _require_green(session, route)
+    return await _apply(session, bus, employee, route, steps, current, body, late=late)
 
 
-async def _require_green(session: AsyncSession, route: ApprovalRoute) -> None:
+async def _require_green(session: AsyncSession, route: ApprovalRoute) -> str | None:
+    """Блокирующие строки зелёные, иначе 409; возвращает значение красной строки «срок» (одобрение с опозданием)."""
     items = checklist.build(route.quote_snapshot or {}, await checklist.resolution_threshold(session, route))
-    if not checklist.is_green(items):
-        failed = [item.code for item in items if not item.ok]
+    failed = checklist.failed_blocking(items)
+    if failed:
         raise conflict("checklist_not_green", "Чек-лист КП не выполнен: одобрение недоступно.", failed=failed)
+    overdue = checklist.late(items)
+    return None if overdue is None else overdue.value or ""
 
 
 async def _apply(
@@ -205,7 +210,10 @@ async def _apply(
     steps: list[ApprovalStep],
     current: ApprovalStep,
     body: DecisionIn,
+    *,
+    late: str | None = None,
 ) -> ApprovalRoute:
+    """`late` — значение красной строки «срок», если КП одобряется с опозданием (только для `approve` КП)."""
     now = clock.now()
     decision = body.decision
     current.status, current.decided_by, current.decided_at, current.comment = (
@@ -225,6 +233,7 @@ async def _apply(
     if route.template == ApprovalTemplate.QUOTE.value and route_status is RouteStatus.APPROVED:
         route.outgoing_number = await numbering.allocate(session, numbering.NumberKind.OUTGOING, now)
         route.channels = channels
+        route.approved_late = late is not None
     document = None
     if route.document_id is not None:
         document = (
@@ -239,6 +248,15 @@ async def _apply(
         comment=body.comment,
         version=route.round,
     )
+    if route.approved_late:
+        await journal.record(
+            session,
+            "approval.approved_late",
+            by=employee.crm_user_id,
+            approval_id=route.id,
+            comment=f"Одобрено с опозданием: {late}",
+            version=route.round,
+        )
     await _publish_decided(session, bus, employee, route, document, current, body, route_status, now)
     if route_status is RouteStatus.OPEN and following is not None:
         await _publish_step_requested(session, bus, employee, route, document, following)
@@ -306,4 +324,6 @@ async def _publish_decided(
     }
     if route.channels is not None and route.outgoing_number is not None:
         data["channels"] = route.channels
+    if route.approved_late:
+        data["approved_late"] = True
     await events.publish(bus, session, "approval.decided", data, subject=_subject(route, document))

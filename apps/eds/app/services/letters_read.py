@@ -7,7 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.errors import not_found
 from app.models import Letter
-from app.schemas.common import ErpLinks, LetterSender, SenderRef
+from app.schemas.common import ErpLinks, IncomingLetterSender, SenderRef
 from app.schemas.letters import (
     Assignee,
     LetterListItem,
@@ -36,8 +36,8 @@ def links_of(letter: Letter) -> ErpLinks:
     )
 
 
-def sender_of(letter: Letter) -> LetterSender:
-    return LetterSender(name=letter.sender_name, inn=letter.sender_inn)
+def sender_of(letter: Letter) -> IncomingLetterSender:
+    return IncomingLetterSender(name=letter.sender_name, inn=letter.sender_inn, contact=letter.sender_contact)
 
 
 def _resolution(letter: Letter, directory: Directory) -> Resolution | None:

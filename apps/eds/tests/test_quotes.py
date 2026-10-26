@@ -100,11 +100,11 @@ async def test_green_checklist_allows_approval_with_outgoing_number_and_channels
     await resolve_letter(client, staff, "15")
     await ready(client, container, eds_letter_id=None)
     route = await only_route(client, staff["director"])
-    assert [(i["code"], i["ok"]) for i in route["checklist"]] == [
-        ("visa_goods", True),
-        ("visa_services", True),
-        ("margin", True),
-        ("due", True),
+    assert [(i["code"], i["ok"], i["blocking"]) for i in route["checklist"]] == [
+        ("visa_goods", True, True),
+        ("visa_services", True, True),
+        ("margin", True, True),
+        ("due", True, False),
     ]
     margin = next(i for i in route["checklist"] if i["code"] == "margin")
     assert margin["value"] == "17.6 % ≥ 15 %"
@@ -151,7 +151,7 @@ async def test_margin_below_resolution_threshold_blocks_approval_on_server(
     assert after["status"] == "open" and after["outgoing_number"] is None
 
 
-async def test_missing_visa_and_missed_due_date_block_approval(
+async def test_missing_visa_blocks_approval_and_missed_due_date_is_only_a_warning(
     client: httpx.AsyncClient, container: Container, staff: dict[str, Person]
 ) -> None:
     visas = [
@@ -159,17 +159,68 @@ async def test_missing_visa_and_missed_due_date_block_approval(
     ]
     await ready(client, container, visas=visas, due="2026-10-27")  # ready_at 28.10 > срок 27.10, нет визы гл. инженера
     route = await only_route(client, staff["director"])
-    assert {i["code"]: i["ok"] for i in route["checklist"]} == {
-        "visa_goods": True,
-        "visa_services": False,
-        "margin": True,
-        "due": False,
+    assert {i["code"]: (i["ok"], i["blocking"]) for i in route["checklist"]} == {
+        "visa_goods": (True, True),
+        "visa_services": (False, True),
+        "margin": (True, True),
+        "due": (False, False),
     }
+    assert route["allowed_decisions"] == ["return", "reject"]
     blocked = await client.post(
         f"/api/v1/approvals/{route['id']}/decision", json={"decision": "approve"}, headers=staff["director"].headers
     )
     body = assert_error(blocked, 409, "CONFLICT", reason="checklist_not_green")
-    assert body["details"]["failed"] == ["visa_services", "due"]
+    assert body["details"]["failed"] == ["visa_services"]  # «срок» — предупреждение, в отказ не входит (C1-G-1)
+
+
+async def journal_of(container: Container, route_id: str) -> list[tuple[str, str | None]]:
+    async with container.session_factory() as session:
+        rows = await session.execute(
+            text("SELECT action, comment FROM journal WHERE approval_id = :id ORDER BY id"), {"id": route_id}
+        )
+        return [(r.action, r.comment) for r in rows]
+
+
+async def test_late_quote_is_approved_with_the_late_mark_in_route_journal_and_event(
+    client: httpx.AsyncClient, container: Container, staff: dict[str, Person]
+) -> None:
+    """C1-G-1 (решение архитектора 2026-10-26): КП готово позже срока — директор одобряет, приняв опоздание."""
+    await ready(client, container, due="2026-10-27")  # визы и маржа зелёные, готово 28.10 > срок 27.10
+    route = await only_route(client, staff["director"])
+    due = next(i for i in route["checklist"] if i["code"] == "due")
+    assert (due["ok"], due["blocking"], due["value"]) == (False, False, "готово 28.10.2026, срок 27.10.2026")
+    assert route["allowed_decisions"] == ["approve", "return", "reject"] and route["approved_late"] is False
+
+    approved = await client.post(
+        f"/api/v1/approvals/{route['id']}/decision",
+        json={"decision": "approve", "channels": ["cabinet"]},
+        headers=staff["director"].headers,
+    )
+    assert approved.status_code == 200, approved.text
+    body = approved.json()
+    validate("Approval", body)
+    assert (body["status"], body["outgoing_number"], body["approved_late"]) == ("approved", "ИСХ-001/26", True)
+    assert await journal_of(container, route["id"]) == [
+        ("approval.requested", None),
+        ("approval.decided", None),
+        ("approval.approved_late", "Одобрено с опозданием: готово 28.10.2026, срок 27.10.2026"),
+    ]
+    [decided] = await outbox(container, "approval.decided")
+    assert decided["data"]["approved_late"] is True and decided["data"]["outgoing_number"] == "ИСХ-001/26"
+
+
+async def test_quote_in_time_has_no_late_mark(
+    client: httpx.AsyncClient, container: Container, staff: dict[str, Person]
+) -> None:
+    await ready(client, container)  # срок 29.10, готово 28.10
+    route = await only_route(client, staff["director"])
+    approved = await client.post(
+        f"/api/v1/approvals/{route['id']}/decision", json={"decision": "approve"}, headers=staff["director"].headers
+    )
+    assert approved.json()["approved_late"] is False
+    assert [a for a, _ in await journal_of(container, route["id"])] == ["approval.requested", "approval.decided"]
+    [decided] = await outbox(container, "approval.decided")
+    assert "approved_late" not in decided["data"]
 
 
 async def test_no_threshold_means_no_margin_restriction(

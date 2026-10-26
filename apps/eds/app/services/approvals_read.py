@@ -105,6 +105,7 @@ async def present(session: AsyncSession, employee: Employee, route: ApprovalRout
         can_decide=can_decide,
         allowed_decisions=allowed,
         outgoing_number=route.outgoing_number,
+        approved_late=route.approved_late,
         created_at=route.created_at,
         closed_at=route.closed_at,
     )

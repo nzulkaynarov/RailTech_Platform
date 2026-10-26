@@ -5,7 +5,9 @@
 Каждая операция — одна транзакция: изменение, строка журнала и событие шины (`letter.*`) вместе.
 """
 
+import re
 import uuid
+from dataclasses import dataclass
 from datetime import datetime
 from decimal import Decimal
 from typing import Any
@@ -25,6 +27,31 @@ from app.services import events, files, journal, numbering
 from app.services.people import active_ids, default_director, load_directory
 
 log = structlog.get_logger(__name__)
+
+_INN = re.compile(r"^\d{9,14}$")
+
+
+@dataclass(frozen=True)
+class RequestParties:
+    """Отправитель и менеджер письма по заявке — из `payload` события `erp.request.created` (C1-G-7, 2026-10-26).
+
+    Поля необязательные: старое событие без них даёт письмо без отправителя по имени и без менеджера.
+    """
+
+    company_name: str | None = None
+    company_inn: str | None = None
+    contact_name: str | None = None
+    manager_crm_user_id: int | None = None
+
+    def values(self) -> dict[str, Any]:
+        """Колонки письма: имя и контакт обрезаются до длины колонок, ИНН берётся, только если похож на ИНН."""
+        inn = (self.company_inn or "").strip()
+        return {
+            "sender_name": (self.company_name or "").strip()[:255] or None,
+            "sender_inn": inn if _INN.match(inn) else None,
+            "sender_contact": (self.contact_name or "").strip()[:255] or None,
+            "manager_crm_user_id": self.manager_crm_user_id,
+        }
 
 
 def fmt_pct(value: Decimal | None) -> str | None:
@@ -85,6 +112,8 @@ async def _publish_registered(bus: AsyncBus, session: AsyncSession, letter: Lett
         "sender": {"name": letter.sender_name, "inn": letter.sender_inn},
         "urgent": letter.urgent,
     }
+    if letter.sender_contact is not None:
+        body["sender"]["contact"] = letter.sender_contact
     if director is not None:
         body["addressee"] = directory.person(director).model_dump()
     data = {"letter": body, "links": _links(letter), "actor": events.actor(actor_id)}
@@ -144,6 +173,7 @@ async def register(session: AsyncSession, bus: AsyncBus, *, actor_id: int, data:
         "summary": data.summary,
         "sender_name": data.sender.name,
         "sender_inn": data.sender.inn,
+        "sender_contact": data.sender.contact,
         "sender_ref_number": ref.number if ref else None,
         "sender_ref_date": ref.date if ref else None,
         "received_at": data.received_at,
@@ -174,8 +204,12 @@ async def register_from_request(
     title: str,
     erp_request_id: int | None,
     summary: str | None,
+    parties: RequestParties | None = None,
 ) -> Letter:
-    """Письмо по заявке ERP (`erp.request.created`, EDS-01). Идемпотентно: повтор — то же письмо, без второго номера."""
+    """Письмо по заявке ERP (`erp.request.created`, EDS-01). Идемпотентно: повтор — то же письмо, без второго номера.
+
+    Отправитель (компания, ИНН, контакт) и менеджер — из `parties` (C1-G-7); их нет — письмо без них, как раньше.
+    """
     if erp_request_id is not None:
         existing = await find_by_request(session, erp_request_id)
     else:
@@ -194,6 +228,7 @@ async def register_from_request(
         "deal_number": deal_number[:64],
         "crm_client_id": crm_client_id,
         "erp_company_id": erp_company_id,
+        **(parties or RequestParties()).values(),
     }
     return await _insert(session, bus, actor_id=None, values=values, file_ids=[])
 
@@ -204,6 +239,8 @@ async def resolve(
     """Резолюция директора: исполнители, срок, мин. маржа → `resolved` и `letter.resolved` (ERP создаёт задание)."""
     letter = await get_for_update(session, letter_id)
     _require(letter, LetterStatus.AWAITING_RESOLUTION)
+    if data.due < clock.company_date(clock.now()):  # C1-G-1: срок в прошлом сразу делает КП опоздавшим
+        raise invalid_fields("Срок расчёта не может быть в прошлом.", due="due_in_past")
     pairs = [(a.crm_user_id, a.zone.value) for a in data.assignees]
     if len(set(pairs)) != len(pairs):
         raise invalid_fields("Исполнитель указан дважды в одной зоне.", assignees="duplicate")

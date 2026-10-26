@@ -49,8 +49,16 @@ class ErpLinksIn(Strict):
 
 
 class LetterSender(Strict):
+    """Организация (eds.yaml `LetterSender`): адресат исходящего письма, клиент в реестре."""
+
     name: Annotated[str | None, Field(max_length=255)] = None
     inn: Inn | None = None
+
+
+class IncomingLetterSender(LetterSender):
+    """Отправитель входящего письма (eds.yaml `IncomingLetterSender`, 0.2.0): и контактное лицо (C1-G-7)."""
+
+    contact: Annotated[str | None, Field(max_length=255)] = None
 
 
 class SenderRef(Strict):
