@@ -44,7 +44,7 @@ class Approval(BaseModel):
 
 class ApprovalDecidedV1(BaseModel):
     """
-    Тип uz.railtech.eds.approval.decided.v1, источник rt://eds. Поле data конверта (envelope.v1.json). Решение на шаге маршрута: approve, return (на доработку), reject; comment обязателен для return и reject. route_status — состояние маршрута после решения (open — есть следующий шаг). Что делает ERP (EDS-03) для approval.object.kind = quote и закрытого маршрута: approved — ИСХ-номер outgoing_number на КП, отправка по channels разблокирована; returned — КП «На доработке» с комментарием; rejected — КП отклонено директором.
+    Тип uz.railtech.eds.approval.decided.v1, источник rt://eds. Поле data конверта (envelope.v1.json). Решение на шаге маршрута: approve, return (на доработку), reject; comment обязателен для return и reject. route_status — состояние маршрута после решения (open — есть следующий шаг). Что делает ERP (EDS-03) для approval.object.kind = quote и закрытого маршрута: approved — ИСХ-номер outgoing_number на КП, отправка по channels разблокирована; returned — КП «На доработке» с комментарием; rejected — КП отклонено директором. Одобрение КП, готового позже срока резолюции, допустимо (строка «срок» чек-листа — предупреждение) и помечается approved_late = true.
     """
 
     model_config = ConfigDict(
@@ -64,6 +64,10 @@ class ApprovalDecidedV1(BaseModel):
     channels: list[SendChannel] | None = None
     """
     Для одобренного КП: каналы отправки клиенту, выбранные директором
+    """
+    approved_late: bool | None = None
+    """
+    Для одобренного КП: true — директор одобрил КП, готовое позже срока резолюции, осознанно приняв опоздание (строка чек-листа due — предупреждение, не блок; решение архитектора 2026-10-26, C1-G-1). Нет поля или false — срок выдержан или не задан. Необязательное
     """
     actor: Actor
 
@@ -243,7 +247,7 @@ class Letter(BaseModel):
     registered_at: AwareDatetime
     sender: Sender
     """
-    Отправитель — организация клиента. Письмо, зарегистрированное автоматически по uz.railtech.erp.request.created.v1, может не знать имени (null): клиент — по links.crm_client_id
+    Отправитель — организация клиента. Письмо, зарегистрированное автоматически по uz.railtech.erp.request.created.v1, берёт имя, ИНН и контакт из payload заявки (company_name, company_inn, contact_name); старое событие без них — имя null, клиент — по links.crm_client_id
     """
     addressee: PersonRef | None = None
     """
@@ -413,7 +417,7 @@ class SendChannel(StrEnum):
 
 class Sender(BaseModel):
     """
-    Отправитель — организация клиента. Письмо, зарегистрированное автоматически по uz.railtech.erp.request.created.v1, может не знать имени (null): клиент — по links.crm_client_id
+    Отправитель — организация клиента. Письмо, зарегистрированное автоматически по uz.railtech.erp.request.created.v1, берёт имя, ИНН и контакт из payload заявки (company_name, company_inn, contact_name); старое событие без них — имя null, клиент — по links.crm_client_id
     """
 
     model_config = ConfigDict(
@@ -421,6 +425,10 @@ class Sender(BaseModel):
     )
     name: Annotated[str | None, Field(max_length=255)]
     inn: Annotated[str | None, Field(pattern="^\\d{9,14}$")] = None
+    contact: Annotated[str | None, Field(max_length=255)] = None
+    """
+    Контактное лицо отправителя (для письма по заявке — из payload.contact_name события erp.request.created). Необязательное, с 2026-10-26 (C1-G-7)
+    """
 
 
 class Step(BaseModel):

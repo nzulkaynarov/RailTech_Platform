@@ -43,7 +43,7 @@
         },
         "sender": {
           "type": "object",
-          "description": "Отправитель — организация клиента. Письмо, зарегистрированное автоматически по uz.railtech.erp.request.created.v1, может не знать имени (null): клиент — по links.crm_client_id",
+          "description": "Отправитель — организация клиента. Письмо, зарегистрированное автоматически по uz.railtech.erp.request.created.v1, берёт имя, ИНН и контакт из payload заявки (company_name, company_inn, contact_name); старое событие без них — имя null, клиент — по links.crm_client_id",
           "required": [
             "name"
           ],
@@ -61,6 +61,14 @@
                 "null"
               ],
               "pattern": "^\\d{9,14}$"
+            },
+            "contact": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "maxLength": 255,
+              "description": "Контактное лицо отправителя (для письма по заявке — из payload.contact_name события erp.request.created). Необязательное, с 2026-10-26 (C1-G-7)"
             }
           },
           "additionalProperties": false

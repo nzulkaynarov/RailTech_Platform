@@ -144,7 +144,9 @@ resources:
       crm:
         read: [clients:read, deals:read, documents:read]
         full: [clients:read, clients:write, deals:read, deals:write, documents:read, documents:write]
-      erp: { full: [deal.manage] }  # «Создать заявку» — передача в ERP
+      # «Создать заявку» — передача в ERP; quote.send — отправить одобренное директором КП клиенту: менеджер заявки и
+      # директор (C1-G-4, решение архитектора 2026-10-26, DECISIONS.md).
+      erp: { full: [deal.manage, quote.send] }
   - key: eds.inbox
     module: eds
     label: { ru: "EDS · Входящие · резолюция", uz: "EDS · Kiruvchi · rezolyutsiya", en: "EDS · Inbox · resolution" }
@@ -157,7 +159,9 @@ resources:
     module: eds
     label: { ru: "EDS · Черновик КП · одобрение и отправка", uz: "EDS · TT qoralamasi · tasdiqlash va yuborish", en: "EDS · Draft quote · approval and sending" }
     backend:
-      erp: { full: [quote.review, quote.send] }  # визы и отправка КП в ERP; одобряет директор в EDS (EDS-03, E5)
+      # quote.review — права ERP на визы КП; одобряет директор в EDS (EDS-03, E5). Отправка КП клиенту (quote.send) с
+      # 2026-10-26 — раздел crm.clients (C1-G-4): у директора он тоже full.
+      erp: { full: [quote.review] }
       eds: { full: [approvals.decide] }  # одобрение КП — маршрут EDS (EDS-03)
   - key: eds.projects
     module: eds

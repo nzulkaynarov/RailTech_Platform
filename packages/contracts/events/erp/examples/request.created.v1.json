@@ -27,7 +27,11 @@
     "payload": {
       "source": "cabinet",
       "erp_request_id": 77,
-      "summary": "Нужны 20 комплектов, срок — ноябрь"
+      "summary": "Нужны 20 комплектов, срок — ноябрь",
+      "company_name": "ООО «Пример Логистик»",
+      "company_inn": "301234567",
+      "contact_name": "Бахтиёр Каримов",
+      "manager_crm_user_id": 5
     }
   }
 }

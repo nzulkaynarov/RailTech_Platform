@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://railtech.uz/contracts/events/erp/request.created.v1.json",
   "title": "Заявка создана",
-  "description": "Тип uz.railtech.erp.request.created.v1, источник rt://erp. Поле data конверта (envelope.v1.json); прежнее тело события request.created из events.schema.json без version, event, occurred_at. Что делает CRM: лента лида в CRM; зеркало сделки open.",
+  "description": "Тип uz.railtech.erp.request.created.v1, источник rt://erp. Поле data конверта (envelope.v1.json); прежнее тело события request.created из events.schema.json без version, event, occurred_at. Что делает CRM: лента лида в CRM; зеркало сделки open. Что делает EDS: регистрирует входящее письмо по заявке (EDS-01); отправитель — payload.company_name, company_inn и contact_name, менеджер — payload.manager_crm_user_id (необязательные, с 2026-10-26, C1-G-7; старое событие без них принимается).",
   "type": "object",
   "required": [
     "erp_company_id",

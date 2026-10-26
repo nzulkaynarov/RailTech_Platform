@@ -120,7 +120,9 @@ export interface paths {
      * Утвердить резолюцию → задание в ERP
      * @description Только письмо в статусе `awaiting_resolution` (иначе 409 `CONFLICT`, `details.reason = invalid_state`). Статус →
      *     `resolved`; публикуется `letter.resolved` (исполнители, срок, мин. маржа, ссылки на заявку и сделку ERP) — ERP создаёт
-     *     задание расчёта (EDS-01). Исполнители — активные сотрудники проекции (иначе 422, `details.fields.assignees`).
+     *     задание расчёта (EDS-01). Исполнители — активные сотрудники проекции (иначе 422, `details.fields.assignees`). Срок
+     *     `due` — не раньше сегодняшней даты по `Asia/Tashkent` (иначе 422, `details.fields.due`; решение архитектора
+     *     2026-10-26, C1-G-1).
      */
     post: operations["resolveLetter"];
     delete?: never;
@@ -319,8 +321,12 @@ export interface paths {
      * Решение на текущем шаге (approve, return, reject)
      * @description Решает только тот, кого ждёт текущий шаг (назначен по `crm_user_id` или держит право шага); иначе 403
      *     `FORBIDDEN` (`details.reason = not_your_step`). `comment` обязателен для `return` и `reject` (422). КП: `approve`
-     *     недоступно, пока чек-лист не зелёный (проверка на сервере; маржа сверяется с порогом резолюции EDS) — 409 `CONFLICT`, `details.reason = checklist_not_green`;
-     *     при одобрении КП присваивается `ИСХ-NNN/ГГ`, выбранные `channels` уходят в событие. Маршрут закрыт — 409
+     *     недоступно, пока не выполнены блокирующие строки чек-листа — визы и маржа (проверка на сервере; маржа сверяется с
+     *     порогом резолюции EDS) — 409 `CONFLICT`, `details.reason = checklist_not_green`, `details.failed` — коды красных
+     *     блокирующих строк. Строка «срок» (`due`, `blocking = false`) — предупреждение: КП, готовое позже срока резолюции,
+     *     директор одобряет, осознанно приняв опоздание; маршрут получает `approved_late = true`, журнал — строку
+     *     `approval.approved_late`, событие `approval.decided` — `approved_late: true` (решение архитектора 2026-10-26, C1-G-1).
+     *     При одобрении КП присваивается `ИСХ-NNN/ГГ`, выбранные `channels` уходят в событие. Маршрут закрыт — 409
      *     (`details.reason = route_closed`). Каждое решение — строка журнала и `approval.decided`.
      */
     post: operations["decideApproval"];
@@ -592,7 +598,7 @@ export interface components {
       assignees: components["schemas"]["Assignee"][];
       /**
        * Format: date
-       * @description Срок расчёта
+       * @description Срок расчёта — не раньше сегодняшней даты по `Asia/Tashkent` (иначе 422, `details.fields.due`)
        */
       due: string;
       /** @description «Маржа не ниже, %»; нет или `null` — без ограничения */
@@ -623,10 +629,22 @@ export interface components {
       /** @description Ответ на комментарий возврата (в журнал) */
       comment?: string | null;
     };
+    /** @description Организация — отправитель письма, адресат исходящего письма, клиент в реестре */
     LetterSender: {
-      /** @description `null` — письмо зарегистрировано по заявке ERP, клиент — по `links.crm_client_id` */
+      /** @description `null` — письмо зарегистрировано по заявке ERP без названия компании, клиент — по `links.crm_client_id` */
       name: string | null;
       inn?: string | null;
+    };
+    /**
+     * @description Отправитель входящего письма (с 0.2.0): `LetterSender` и контактное лицо. Письмо по заявке ERP берёт название, ИНН и
+     *     контакт из `erp.request.created` (`payload.company_name`, `company_inn`, `contact_name`; C1-G-7)
+     */
+    IncomingLetterSender: {
+      /** @description `null` — письмо по заявке ERP без названия компании, клиент — по `links.crm_client_id` */
+      name: string | null;
+      inn?: string | null;
+      /** @description Контактное лицо отправителя */
+      contact?: string | null;
     };
     /** @description Исходящий номер и дата письма у отправителя */
     SenderRef: {
@@ -638,7 +656,7 @@ export interface components {
       subject: string;
       /** @description Суть документа */
       summary: string;
-      sender: components["schemas"]["LetterSender"];
+      sender: components["schemas"]["IncomingLetterSender"];
       sender_ref?: components["schemas"]["SenderRef"];
       /** Format: date */
       received_at: string;
@@ -655,7 +673,7 @@ export interface components {
       id: components["schemas"]["Uuid"];
       number: components["schemas"]["LetterNumber"];
       subject: string;
-      sender: components["schemas"]["LetterSender"];
+      sender: components["schemas"]["IncomingLetterSender"];
       /** Format: date */
       received_at: string;
       status: components["schemas"]["LetterStatus"];
@@ -677,7 +695,7 @@ export interface components {
       status: components["schemas"]["LetterStatus"];
       subject: string;
       summary: string;
-      sender: components["schemas"]["LetterSender"];
+      sender: components["schemas"]["IncomingLetterSender"];
       sender_ref?: components["schemas"]["SenderRef"];
       /** Format: date */
       received_at: string;
@@ -859,7 +877,9 @@ export interface components {
     };
     /**
      * @description Строка чек-листа одобрения КП (SPEC-v3 §7.3) — с датой и автором. `margin` сверяет маржу КП с порогом **резолюции EDS**
-     *     (владелец поля — EDS); `min_margin_pct` из события ERP — только снимок для показа.
+     *     (владелец поля — EDS); `min_margin_pct` из события ERP — только снимок для показа. Блокирующие строки (`blocking = true`:
+     *     визы и маржа) — красная запрещает `approve`; строка `due` — предупреждение (`blocking = false`): красная показывает
+     *     опоздание, одобрение остаётся доступным (решение архитектора 2026-10-26, C1-G-1).
      */
     ChecklistItem: {
       /**
@@ -869,6 +889,8 @@ export interface components {
       code: "visa_goods" | "visa_services" | "margin" | "due";
       label: string;
       ok: boolean;
+      /** @description `true` — красная строка блокирует одобрение; `false` — предупреждение (`due`). С 0.2.0 */
+      blocking: boolean;
       /** @description Кто поставил визу */
       by: components["schemas"]["QuoteVisaAuthor"] | null;
       /** Format: date-time */
@@ -947,10 +969,15 @@ export interface components {
       quote: components["schemas"]["QuoteSnapshot"] | null;
       /** @description Текущий шаг ждёт этого сотрудника */
       can_decide: boolean;
-      /** @description Что можно сейчас (`approve` нет, пока чек-лист КП не зелёный) */
+      /** @description Что можно сейчас (`approve` нет, пока красна хотя бы одна блокирующая строка чек-листа КП) */
       allowed_decisions: components["schemas"]["Decision"][];
       /** @description ИСХ-номер одобренного КП */
       outgoing_number: components["schemas"]["OutgoingNumber"] | null;
+      /**
+       * @description КП одобрено с опозданием: готово позже срока резолюции, директор одобрил, приняв опоздание (C1-G-1, с 0.2.0).
+       *     У остальных маршрутов — `false`
+       */
+      approved_late: boolean;
       /** Format: date-time */
       created_at: string;
       /** Format: date-time */
