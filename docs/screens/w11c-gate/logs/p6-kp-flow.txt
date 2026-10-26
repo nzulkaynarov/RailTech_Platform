@@ -1,0 +1,109 @@
+# Пункт 6: сквозной прогон КП после F4 (раунд 2). Сотрудники вымышленные (*@demo.example). UTC. Клиенты «ООО «Демо Заказчик N»», сделки D-2, D-3.
+# Как смоделировано «КП собрано позже срока»: резолюция с due = сегодня (26.10.2026) принимается; затем срок задания расчёта в ERP сдвинут на сутки назад
+# (UPDATE sales_calctask SET due = due - 1) — эквивалент того, что КП собрано на следующий день после срока; часы стенда не двигались.
+# Резолюция со сроком в прошлом проверена настоящим вызовом (6.2).
+
+## 6.1 C1-G-7: письмо из заявки ERP (request.created) -> EDS
+  number   |  status  |      sender_name      | sender_contact | manager_crm_id | crm_client_id | deal_number
+-----------+----------+-----------------------+----------------+----------------+---------------+-------------
+ ВХ-046/26 | resolved | ООО «Демо Заказчик 2» | Клиент Демо 2  |              6 |             2 | D-2
+ ВХ-047/26 | resolved | ООО «Демо Заказчик 3» | Клиент Демо 3  |              6 |             3 | D-3
+(2 rows)
+
+# manager_crm_id = 6 -> «Менеджер Демо» (ответственный лида)
+
+## 6.2 резолюция: due в прошлом -> 422, due сегодня -> 200
+резолюция due=2026-10-25 (сдвиг -1 дн.), порог 15.00 % -> 422 {"code": "VALIDATION_FAILED", "message": "Срок расчёта не может быть в прошлом.", "source": "eds", "details": {"fields": [{"field": "due", "message": "due_in_past", "type": "value_error"}]}}
+--- письмо после отказа:
+       status        | resolution_due
+---------------------+----------------
+ awaiting_resolution |
+(1 row)
+
+резолюция due=2026-10-26 (сдвиг +0 дн.), порог 15.00 % -> 200 {"id": "1467fa5b-4ab8-4cc2-b3e6-9b75ea9a420e", "number": "ВХ-046/26", "status": "resolved", "subject": "Заявка: ООО «Демо Заказчик 2»", "summary": "Нужна поставка и монтаж рельсовых скреплений, партия 500 комплектов (демо)", "sender": {"name": "ООО «Демо Заказчик 2»", "inn": null, "contact": "Клиент Демо 2"}, "sender_ref": {"number": null, "date": null}, "
+--- задание расчёта в ERP
+ id | deal_id |    due     | min_margin_pct | has_letter
+----+---------+------------+----------------+------------
+  1 |       2 | 2026-10-26 |          15.00 |
+(1 row)
+
+
+## 6.3 КП A (D-2): срок сдвинут назад, маржа 23,1 % >= 15 %, визы есть -> чек-лист и одобрение
+== сдвиг срока задания расчёта на сутки назад (модель «КП собрано на следующий день после срока»), данные стенда
+ id |    due
+----+------------
+  1 | 2026-10-25
+(1 row)
+
+UPDATE 1
+create quote 201 (1, 1, 1)
+item 201
+item 201
+quote totals: subtotal 585000.00 total 655200.00 margin% 0.00 status 1
+approval-preview 200 {"below_floor": false, "steps": [{"participation": "APPROVER", "participation_label": "Согласовант", "trigger": "CALC_VISA", "trigger_label": "Виза расчёта", "member_id": 5, "user_id": 4, "name": "Инженер Демо", "role": "CRM Sync: engineer@demo.example", "is_assigned": true, "is
+submit-for-review 200 (3, None)
+---
+очередь директора (КП): [('10451c3a-f2c6-4c3c-a57b-f243ffcec610', 'КП-2026-00001 v1 · D-2', 1)]
+шаги: [(1, 'Директор', 'current')]
+чек-лист: [{"code": "visa_goods", "label": "Виза снабженца (товары)", "ok": true, "blocking": true, "by": {"crm_user_id": 4, "full_name": "Снабженец Демо"}, "at": "2026-10-26T07:45:23.108546Z", "value": null}, {"code": "visa_services", "label": "Виза гл. инженера (услуги)", "ok": true, "blocking": true, "by": {"crm_user_id": 5, "full_name": "Инженер Демо"}, "at": "2026-10-26T07:45:23.092616Z", "value": null}, {"code": "margin", "label": "Маржа не ниже порога резолюции", "ok": true, "blocking": true, "by": null, "at": null, "value": "23.1 % ≥ 15 %"}, {"code": "due", "label": "Срок расчёта выдержан", "ok": false, "blocking": false, "by": null, "at": null, "value": "готово 26.10.2026, срок 25.10.2026"}]
+снимок КП (ключи): ['client_name', 'cost', 'currency', 'due', 'erp_quote_id', 'margin_amount', 'margin_pct', 'min_margin_pct', 'number', 'ready_at', 'required_zones', 'total', 'valid_until', 'version', 'visas']
+can_decide: True allowed: ['approve', 'return', 'reject'] round: 1
+decision approve -> 200 ('approved', 'ИСХ-001/26')
+
+## 6.4 журнал EDS по маршруту, approved_late в маршруте и в событии approval.decided
+--- журнал EDS по маршруту КП-2026-00001 (approval_id)
+    t     |         action         | by |                          commen
+----------+------------------------+----+-----------------------------------------------------------
+ 07:45:23 | approval.requested     |    |
+ 07:45:32 | approval.decided       |  2 |
+ 07:45:32 | approval.approved_late |  2 | Одобрено с опозданием: готово 26.10.2026, срок 25.10.2026
+(3 rows)
+
+--- approval_routes (EDS): approved_late
+                  id                  | template |  status  | approved_late | outgoing_number
+--------------------------------------+----------+----------+---------------+-----------------
+ 10451c3a-f2c6-4c3c-a57b-f243ffcec610 | quote    | approved | t             | ИСХ-001/26
+--- событие approval.decided (EDS outbox, data) — выбранные поля
+            "quote_number": "КП-2026-00001",
+    "decision": "approve",
+    "route_status": "approved",
+    "approved_late": true,
+    "outgoing_number": "ИСХ-001/26"
+
+## 6.5 ERP: GET КП (C1-G-5) и отправка клиенту: снабженец 403, гл. инженер 403, МЕНЕДЖЕР 200 (C1-G-4)
+GET КП в ERP 200 {'number': 'КП-2026-00001', 'status': 4, 'outgoing_number': 'ИСХ-001/26', 'director_decision': 'approve', 'director_comment': '', 'send_channels': ['email']}
+   поля ответа про директора/ИСХ: ['director_comment', 'director_decision', 'outgoing_number']
+send-to-client от supply: 403 {"detail": "ROLE_NOT_PERMITTED"}
+send-to-client от engineer: 403 {"detail": "ROLE_NOT_PERMITTED"}
+send-to-client от manager: 200 {'status': 'SENT', 'frozen': True}
+
+## 6.6 КП B (D-3): порог маржи 25 % (маржа 23,1 %), срок сдвинут -> approve = 409 (failed только margin; строка «срок» — предупреждение)
+client handoff: done None erp_company_id 4 1.1s
+letter=e2c2e04f-121c-45ac-86c4-cda413f75cfe
+резолюция due=2026-10-26 (сдвиг +0 дн.), порог 25.00 % -> 200 {"id": "e2c2e04f-121c-45ac-86c4-cda413f75cfe", "number": "ВХ-047/26", "status": "resolved", "subject": "Заявка: ООО «Демо Заказчик 3»", "summary": "Нужна поставка и монтаж рельсовых скреплений, парт
+ id | deal_id |    due     | min_margin_pc
+----+---------+------------+----------------
+  2 |       3 | 2026-10-25 |          25.00
+(1 row)
+
+UPDATE 1
+---
+visa 200 ('КП-2026-00002', 3) t=1793000813.1928701
+маршрут КП-2026-00002 v1 · D-3 | чек-лист: [('visa_goods', 'ok', 'блок', None), ('visa_services', 'ok', 'блок', None), ('margin', 'RED', 'блок', '23.1 % < 25 %'), ('due', 'RED', 'предупр.', 'готово 26.10.2026, срок 25.10.2026')] | allowed: ['return', 'reject']
+решение approve -> 409 {"code": "CONFLICT", "message": "Чек-лист КП не выполнен: одобрение недоступно.", "source": "eds", "details": {"reason": "checklist_not_green", "failed": ["margin"]}}
+route_id e5c1bc9a-3f8d-46c7-a853-ce83a8577ad1
+
+## 6.7 возврат с комментарием -> ERP: director_decision/director_comment (C1-G-5)
+маршрут КП-2026-00002 v1 · D-3 | чек-лист: [('visa_goods', 'ok', 'блок', None), ('visa_services', 'ok', 'блок', None), ('margin', 'RED', 'блок', '23.1 % < 25 %'), ('due', 'RED', 'предупр.', 'готово 26.10.2026, срок 25.10.2026')] | allowed: ['return', 'reject']
+решение return -> 200 ('returned', None, 'approved_late=False')
+route_id e5c1bc9a-3f8d-46c7-a853-ce83a8577ad1
+GET КП в ERP 200 {'number': 'КП-2026-00002', 'status': 1, 'outgoing_number': '', 'director_decision': 'return', 'director_comment': 'Пересчитать наценку: маржа ниже порога', 'send_channels': []}
+   поля ответа про директора/ИСХ: ['director_comment', 'director_decision', 'outgoing_number']
+
+## 6.8 синтетика: событие quote.ready_for_approval без визы гл. инженера (маржа в снимке поднята выше порога) -> approve = 409, failed ['visa_services']
+
+INFO 2026-10-26 12:47:33,867 [-] bus 1888 281472877012160 rt_bus_published
+опубликовано: ревизия 2 визы: ['goods'] required_zones: ['goods', 'services']
+маршрут КП-2026-00002 v2 · D-3 | чек-лист: [('visa_goods', 'ok', 'блок', None), ('visa_services', 'RED', 'блок', None), ('margin', 'ok', 'блок', '30 % ≥ 25 %'), ('due', 'RED', 'предупр.', 'готово 26.10.2026, срок 25.10.2026')] | allowed: ['return', 'reject']
+решение approve -> 409 {"code": "CONFLICT", "message": "Чек-лист КП не выполнен: одобрение недоступно.", "source": "eds", "details": {"reason": "checklist_not_green", "failed": ["visa_services"]}}
+route_id 77e0ca95-3891-4781-ac0c-64f282a4e28d

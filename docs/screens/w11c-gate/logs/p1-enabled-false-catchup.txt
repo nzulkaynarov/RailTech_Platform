@@ -1,0 +1,49 @@
+# Пункт 1 (гейт 11c, §3.2): stub2 enabled:false -> события CRM и ERP ждут -> enabled:true -> дошли по одному разу. UTC, стенд rt-w11c.
+# Хронология: 07:32:39 enabled:false (правка файла на месте); 07:32:50 опубликовано 6 событий CRM (3 лида) и 4 события ERP; 07:34:31 (возраст ждущих 101 с) и ~07:35:10 (141 с): 6 ждущих CRM, попыток 0, строк журнала stub2 не прибавилось (19); 07:35:25 enabled:true.
+# Строки журнала ERP (celery) в местном времени стенда (UTC+5); остальное — UTC.
+
+## bus status (crm-api) при enabled:false: общий oldest_undelivered_age_seconds = None, у stub2 pending=6, возраст растёт, enabled=false
+{'outbox_pending': 0, 'oldest_undelivered_age_seconds': None, 'dlq_size': 0}
+  stub2 {'pending': 6, 'in_flight': 0, 'dead': 0, 'oldest_undelivered_age_seconds': 140.771524, 'consecutive_failures': 0, 'paused': False, 'enabled': False}
+  eds {'pending': 0, 'in_flight': 0, 'dead': 0, 'oldest_undelivered_age_seconds': None, 'consecutive_failures': 0, 'paused': False, 'enabled': True}
+  erp {'pending': 0, 'in_flight': 0, 'dead': 0, 'oldest_undelivered_age_seconds': None, 'consecutive_failures': 0, 'paused': False, 'enabled': True}
+  platform-bff {'pending': 0, 'in_flight': 0, 'dead': 0, 'oldest_undelivered_age_seconds': None, 'consecutive_failures': 0, 'paused': False, 'enabled': True}
+  stub {'pending': 0, 'in_flight': 0, 'dead': 0, 'oldest_undelivered_age_seconds': None, 'consecutive_failures': 0, 'paused': False, 'enabled': True}
+
+## rt_bus_metrics (раз в 5 мин): disabled=stub2, общий возраст '-'
+[2026-10-26 12:33:29,227: INFO/ForkPoolWorker-6] rt_bus_metrics service=erp outbox_pending=0 oldest_undelivered_age_s=- dlq=0 inbox_received=0 inbox_retrying=0 inbox_failed=0 paused=- disabled=stub2
+{"event": "rt_bus_metrics service=crm outbox_pending=0 oldest_undelivered_age_s=- dlq=0 inbox_received=0 inbox_retrying=0 inbox_failed=0 paused=- disabled=-", "level": "info", "logger": "rt_bus.metrics", "timestamp": "2026-10-26T07:30:01.687452Z"}
+{"event": "rt_bus_metrics service=crm outbox_pending=0 oldest_undelivered_age_s=- dlq=0 inbox_received=0 inbox_retrying=0 inbox_failed=0 paused=- disabled=stub2", "level": "info", "logger": "rt_bus.metrics", "timestamp": "2026-10-26T07:35:00.681158Z"}
+
+## Доставки stub2 по событиям окна (создание -> доставка), CRM
+ id |              event_type               |  status   | attempts |   created    |  delivered
+----+---------------------------------------+-----------+----------+--------------+--------------
+ 56 | uz.railtech.crm.lead.created.v1       | delivered |        1 | 07:32:50.783 | 07:35:30.645
+ 59 | uz.railtech.crm.lead.stage_changed.v1 | delivered |        1 | 07:32:50.786 | 07:35:30.645
+ 62 | uz.railtech.crm.lead.created.v1       | delivered |        1 | 07:32:51.199 | 07:35:30.645
+ 65 | uz.railtech.crm.lead.stage_changed.v1 | delivered |        1 | 07:32:51.201 | 07:35:30.645
+ 68 | uz.railtech.crm.lead.created.v1       | delivered |        1 | 07:32:51.478 | 07:35:30.645
+ 71 | uz.railtech.crm.lead.stage_changed.v1 | delivered |        1 | 07:32:51.482 | 07:35:30.645
+(6 rows)
+
+## то же, ERP
+ id |              event_type               |  status   | attempts |   created    |  delivered
+----+---------------------------------------+-----------+----------+--------------+--------------
+ 36 | uz.railtech.erp.deal.stage_changed.v1 | delivered |        1 | 07:32:53.567 | 07:35:26.049
+ 40 | uz.railtech.erp.deal.stage_changed.v1 | delivered |        1 | 07:32:53.848 | 07:35:26.049
+ 44 | uz.railtech.erp.deal.stage_changed.v1 | delivered |        1 | 07:32:54.209 | 07:35:26.049
+ 48 | uz.railtech.erp.deal.stage_changed.v1 | delivered |        1 | 07:32:54.515 | 07:35:26.049
+(4 rows)
+
+## Журнал заглушки stub2 после enabled:true (новые строки, порядок приёма)
+stub2 всего строк 29 уникальных id 29 повторов 0 sig_ok все True
+2026-10-26T07:35:26.040Z uz.railtech.erp.deal.stage_changed.v1 erp attempt_seen 1 21034b76
+2026-10-26T07:35:26.047Z uz.railtech.erp.deal.stage_changed.v1 erp attempt_seen 1 af8a4a8c
+2026-10-26T07:35:26.047Z uz.railtech.erp.deal.stage_changed.v1 erp attempt_seen 1 a45ce67b
+2026-10-26T07:35:26.048Z uz.railtech.erp.deal.stage_changed.v1 erp attempt_seen 1 b34af3c0
+2026-10-26T07:35:30.637Z uz.railtech.crm.lead.stage_changed.v1 crm attempt_seen 1 c6471287
+2026-10-26T07:35:30.641Z uz.railtech.crm.lead.stage_changed.v1 crm attempt_seen 1 7e9851fb
+2026-10-26T07:35:30.642Z uz.railtech.crm.lead.stage_changed.v1 crm attempt_seen 1 03644f2a
+2026-10-26T07:35:30.642Z uz.railtech.crm.lead.created.v1 crm attempt_seen 1 1f0a7900
+2026-10-26T07:35:30.642Z uz.railtech.crm.lead.created.v1 crm attempt_seen 1 2e90c2df
+2026-10-26T07:35:30.642Z uz.railtech.crm.lead.created.v1 crm attempt_seen 1 9bb21578

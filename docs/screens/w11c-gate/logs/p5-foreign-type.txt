@@ -1,0 +1,23 @@
+# Пункт 5: отказ приёмника по домену типа. Ручные подписанные запросы (rt_bus.signing.signed_headers, секреты пар из окружения crm-api; значения не печатаются); повторный прогон 2026-10-26T08:47Z. Блок «журнал приёмников» ниже снят после первого прогона (07:31Z), тот же набор запросов.
+# Конверты — копии настоящих событий из outbox (identity.user.created CRM, deal.stage_changed ERP, client.updated CRM) с новым id и подменённым type/source.
+OK  200 (ожидалось 200) crm -> eds: identity.user.created (домен identity принадлежит crm) | {"status":"received","id":"3418e279-a5a8-43a8-a028-36054a20adbf"}
+OK  400 (ожидалось 400) crm -> eds: erp.deal.stage_changed от имени crm (source rt://crm) | {"error":"foreign_type"}
+OK  400 (ожидалось 400) crm -> eds: eds.letter.registered от имени crm | {"error":"foreign_type"}
+OK  200 (ожидалось 200) crm -> platform-bff: identity.user.created | {"status":"processed","id":"8fbc91b5-57a1-4760-93df-c7a574b904b2"}
+OK  400 (ожидалось 400) crm -> platform-bff: erp.deal.stage_changed от имени crm | {"error":"foreign_type"}
+OK  200 (ожидалось 200) crm -> platform-bff: crm.client.updated (свой домен crm) | {"status":"skipped","id":"3e669bcd-162b-4a75-9eba-db65b9919d41"}
+OK  200 (ожидалось 200) erp -> crm: erp.deal.stage_changed (свой домен) | {"status":"received","id":"14982525-7585-445e-adcb-55d8088aa175"}
+OK  400 (ожидалось 400) erp -> crm: crm.client.updated от имени erp (source rt://erp) | {"error":"foreign_type"}
+OK  400 (ожидалось 400) erp -> crm: identity.user.created от имени erp | {"error":"foreign_type"}
+OK  401 (ожидалось 401) контроль: чужой тип с неверной подписью -> подпись проверяется раньше домена | {"error":"unauthorized"}
+
+## журнал приёмников (rt_bus_receive_rejected): extra-поля reason/status_code/publisher в JSON-журнал не попадают (W11C-G-2)
+== eds-api
+{"event": "rt_bus_receive_rejected", "level": "warning", "logger": "rt_bus.receiver", "request_id": "522686f9…", "timestamp": "2026-10-26T07:31:47.253204Z"}
+{"event": "rt_bus_receive_rejected", "level": "warning", "logger": "rt_bus.receiver", "request_id": "522686f9…", "timestamp": "2026-10-26T07:31:47.254794Z"}
+{"event": "rt_bus_receive_rejected", "level": "warning", "logger": "rt_bus.receiver", "request_id": "522686f9…", "timestamp": "2026-10-26T07:31:47.372379Z"}
+== platform-bff
+rt_bus_receive_rejected
+== crm-api
+{"event": "rt_bus_receive_rejected", "level": "warning", "logger": "rt_bus.receiver", "request_id": "41584f92…", "timestamp": "2026-10-26T07:31:47.362493Z"}
+{"event": "rt_bus_receive_rejected", "level": "warning", "logger": "rt_bus.receiver", "request_id": "302ac159…", "timestamp": "2026-10-26T07:31:47.369534Z"}

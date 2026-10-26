@@ -1,0 +1,27 @@
+# Пункт 4: поиск взаимных блокировок и ошибок pump в журналах за весь прогон стенда (с 07:27 UTC до 08:27 UTC)
+crm-worker: строк журнала 11074 | DeadlockDetected/40P01/deadlock: 0 | pump завершён с ошибкой: 0 | rt_bus_*_failed/dead: 0
+erp-worker: строк журнала 8179 | DeadlockDetected/40P01/deadlock: 0 | pump завершён с ошибкой: 0 | rt_bus_*_failed/dead: 0
+eds-worker: строк журнала 3539 | DeadlockDetected/40P01/deadlock: 0 | pump завершён с ошибкой: 0 | rt_bus_*_failed/dead: 0
+erp-beat: строк журнала 918 | DeadlockDetected/40P01/deadlock: 0 | pump завершён с ошибкой: 0 | rt_bus_*_failed/dead: 0
+crm-api: строк журнала 6376 | DeadlockDetected/40P01/deadlock: 0 | pump завершён с ошибкой: 0 | rt_bus_*_failed/dead: 0
+erp-backend: строк журнала 1605 | DeadlockDetected/40P01/deadlock: 0 | pump завершён с ошибкой: 0 | rt_bus_*_failed/dead: 0
+eds-api: строк журнала 956 | DeadlockDetected/40P01/deadlock: 0 | pump завершён с ошибкой: 0 | rt_bus_*_failed/dead: 0
+platform-bff: строк журнала 3377 | DeadlockDetected/40P01/deadlock: 0 | pump завершён с ошибкой: 0 | rt_bus_*_failed/dead: 0
+postgres: строк 'deadlock detected' в журнале: 0
+postgres: ошибки уровня ERROR/FATAL в журнале: 417
+--- аренда (lease 60 с): доставки серии, где delivered_at - created_at > 5 с
+crm: 0|0|0|3.28
+erp: 0|0|0|1.12
+eds: 0|0|0|0.30
+
+--- разбивка 417 строк ERROR/FATAL журнала Postgres (снято перед снятием стенда; вывод `sort | uniq -c | head -8`, остальное не распечатано — стенда уже нет)
+    406 ERROR:  duplicate key value violates unique constraint "procrastinate_jobs_queueing_lock_idx_v1"
+      1 ERROR:  relation "_prisma_migrations" does not exis
+      1 ERROR:  relation "MonthlyGlobalSpendPerUserPerKey" does not exis
+      1 ERROR:  relation "MonthlyGlobalSpendPerKey" does not exis
+      1 ERROR:  relation "MonthlyGlobalSpend" does not exis
+      1 ERROR:  relation "LiteLLM_VerificationTokenView" does not exis
+      1 ERROR:  relation "Last30dTopEndUsersSpend" does not exis
+      1 ERROR:  relation "Last30dModelsBySpend" does not exis
+# итого показано 413 из 417; ещё 4 строки не itemized — по характеру той же группы (миграции/запросы LiteLLM к своей базе при старте). Это вывод, не измерение.
+# 406 duplicate key на queueing_lock = AlreadyEnqueued при слиянии пробуждений (rt-bus.md §4: «повторное — AlreadyEnqueued, это норма»); к блокировкам (40P01) отношения не имеют.
