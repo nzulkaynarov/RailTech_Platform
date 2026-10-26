@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import time
 import uuid
 from collections.abc import Callable
 
@@ -11,7 +12,7 @@ from procrastinate.testing import InMemoryConnector
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from rt_bus import Event, HandlerRegistry
-from rt_bus.contrib.procrastinate import install
+from rt_bus.contrib.procrastinate import PUMP_LOCK, WAKEUP_LOCK, WORKER_OPTIONS, install
 from rt_bus.sqlalchemy import AsyncBus
 
 from ..conftest import example, example_data, signed
@@ -56,3 +57,59 @@ async def test_procrastinate_tasks(make_bus: Callable[..., AsyncBus], sessions) 
         await erp.publish(session, "uz.railtech.erp.deal.won.v1", example_data("erp/deal.won.v1"))
     stats = await erp.pump()
     assert (stats.relayed, stats.deliver.delivered) == (1, 1)
+
+
+class _CountingBus:
+    """Вместо AsyncBus: считает запуски `pump` (тело задачи)."""
+
+    def __init__(self) -> None:
+        self.started: list[float] = []
+
+    async def pump(self) -> None:
+        self.started.append(time.monotonic())
+
+    async def requeue_stuck_inbox(self) -> int:
+        return 0
+
+    async def log_metrics(self) -> None:
+        return None
+
+    async def purge(self, older_than: object) -> None:
+        return None
+
+
+async def test_wakeup_does_not_merge_with_periodic_pump_scheduled_later() -> None:
+    """W11B-G-6: периодический `pump` поставлен и ещё не стартует (запланирован позже) — пробуждение его не ждёт."""
+    app = procrastinate.App(connector=InMemoryConnector())
+    bus = _CountingBus()
+    tasks = install(app, lambda: bus, pump_cron="0 0 1 1 *")  # type: ignore[arg-type, return-value]
+    async with app.open_async():
+        await tasks.pump.configure(schedule_in={"seconds": 30}).defer_async(timestamp=1)  # как тик cron, но позже
+        asked = time.monotonic()
+        await tasks.wakeup()
+        jobs = list(app.connector.jobs.values())  # type: ignore[attr-defined]
+        assert sorted(j["queueing_lock"] for j in jobs) == [PUMP_LOCK, WAKEUP_LOCK]  # две задачи, не слияние
+        await app.run_worker_async(wait=False, queues=["rt_bus"], **WORKER_OPTIONS)
+    assert len(bus.started) == 1  # стартовало пробуждение; периодический ждёт своего срока
+    assert bus.started[0] - asked <= 1.0
+
+
+async def test_wakeups_merge_with_each_other_only() -> None:
+    """Ожидающее пробуждение ещё не начало раскладку и заберёт новое событие: второе пробуждение — `AlreadyEnqueued`."""
+    app = procrastinate.App(connector=InMemoryConnector())
+    bus = _CountingBus()
+    tasks = install(app, lambda: bus, pump_cron="0 0 1 1 *")  # type: ignore[arg-type, return-value]
+    async with app.open_async():
+        await tasks.wakeup()
+        await tasks.wakeup()  # слилось с ожидающим, исключения наружу нет
+        assert len(app.connector.jobs) == 1  # type: ignore[attr-defined]
+        await app.run_worker_async(wait=False, queues=["rt_bus"])
+        assert len(bus.started) == 1
+        await tasks.wakeup()  # прошлое пробуждение уже работало: новое ставится заново
+        await app.run_worker_async(wait=False, queues=["rt_bus"])
+    assert len(bus.started) == 2
+
+
+def test_worker_polls_the_queue_every_second_at_most() -> None:
+    """NOTIFY при гонке с выборкой теряется; опрос — верхняя граница ожидания задачи."""
+    assert WORKER_OPTIONS["fetch_job_polling_interval"] <= 1.0

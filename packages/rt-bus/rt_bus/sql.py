@@ -48,8 +48,9 @@ ON CONFLICT (event_id, subscriber) DO NOTHING
 
 MARK_DISPATCHED = f"UPDATE {OUTBOX} SET dispatched_at = :now WHERE id = :id"
 
+# Порядок по имени подписчика: пробные слоты берутся в том же порядке, в каком пишутся итоги (нет взаимной блокировки).
 PAUSED_STATES = f"""
-SELECT subscriber, consecutive_failures, paused_until FROM {STATE} WHERE paused_until IS NOT NULL
+SELECT subscriber, consecutive_failures, paused_until FROM {STATE} WHERE paused_until IS NOT NULL ORDER BY subscriber
 """
 
 # Пробная доставка после паузы: одна на подписчика; параллельный воркер ждёт блокировку строки и после
@@ -71,11 +72,13 @@ LIMIT :limit
 FOR UPDATE SKIP LOCKED
 """
 
+# Проба идёт по сроку паузы предохранителя, а не по сроку повтора доставки (C1-G-6): берётся готовая доставка, а если
+# готовых нет — ближайшая по расписанию (`next_attempt_at` возвращается: неудача такой пробы расписание не двигает).
 CLAIM_PROBE = f"""
-SELECT id FROM {DELIVERY}
-WHERE ((status = '{PENDING}' AND next_attempt_at <= :now) OR (status = '{IN_FLIGHT}' AND lease_until < :now))
+SELECT id, next_attempt_at FROM {DELIVERY}
+WHERE (status = '{PENDING}' OR (status = '{IN_FLIGHT}' AND lease_until < :now))
   AND subscriber = :subscriber
-ORDER BY next_attempt_at, id
+ORDER BY (status = '{PENDING}' AND next_attempt_at > :now), next_attempt_at, id
 LIMIT 1
 FOR UPDATE SKIP LOCKED
 """
@@ -118,11 +121,21 @@ SET status = '{DEAD}', next_attempt_at = NULL, lease_until = NULL, lease_token =
 WHERE id = :id AND lease_token = :token AND status = '{IN_FLIGHT}'
 """
 
+# Успех закрывает предохранитель. Возвращает счётчик ошибок подряд ДО успеха (CTE видит состояние до оператора): если он
+# достиг порога, подписчик восстановился и его ожидающие доставки сбрасываются на «сейчас» (RESET_BACKLOG).
 BREAKER_SUCCESS = f"""
+WITH previous AS (SELECT consecutive_failures FROM {STATE} WHERE subscriber = :subscriber)
 INSERT INTO {STATE} (subscriber, consecutive_failures, paused_until, last_success_at, updated_at)
 VALUES (:subscriber, 0, NULL, :now, :now)
 ON CONFLICT (subscriber) DO UPDATE
 SET consecutive_failures = 0, paused_until = NULL, last_success_at = :now, updated_at = :now
+RETURNING COALESCE((SELECT consecutive_failures FROM previous), 0) AS previous_failures
+"""
+
+# Догон после восстановления подписчика (C1-G-6): ожидающие повторы не ждут расписания, а уходят следующей пачкой.
+RESET_BACKLOG = f"""
+UPDATE {DELIVERY} SET next_attempt_at = :now, updated_at = :now
+WHERE subscriber = :subscriber AND status = '{PENDING}' AND next_attempt_at > :now
 """
 
 BREAKER_FAILURE = f"""

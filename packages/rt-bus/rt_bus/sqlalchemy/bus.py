@@ -29,6 +29,7 @@ from sqlalchemy.orm import Session
 from .. import sql
 from ..context import correlation
 from ..core import (
+    RECORD_ATTEMPTS,
     BusConfig,
     BusCore,
     DeliverStats,
@@ -41,8 +42,10 @@ from ..core import (
     inbox_retry_at,
     log_outcome,
     plan_queued,
+    record_groups,
+    retryable_db_error,
 )
-from ..delivery import Attempt, AttemptResult, Claimed, Outcome, decide_outcome, send_async
+from ..delivery import Attempt, AttemptResult, Claimed, Outcome, decide_outcome, early_probe_outcome, send_async
 from ..envelope import Event
 from ..errors import NotInTransactionError
 from ..handlers import HandlerRegistry, default_registry
@@ -252,7 +255,7 @@ class AsyncBus:
         breaker = self.config.breaker
         lease_until = now + timedelta(seconds=self.config.lease_seconds)
         token = uuid.uuid4()
-        picked: list[tuple[int, bool]] = []
+        picked: list[tuple[int, bool, datetime | None]] = []
         out: list[tuple[Claimed, dict[str, Any] | None]] = []
         async with self.sessions() as session, session.begin():
             states = (await _exec(session, sql.PAUSED_STATES)).mappings().all()
@@ -289,7 +292,8 @@ class AsyncBus:
                         {"paused_until": state["paused_until"], "subscriber": state["subscriber"]},
                     )
                     continue
-                picked.append((int(probe[0]), True))
+                due = probe[1]
+                picked.append((int(probe[0]), True, due if due is not None and due > now else None))
             excluded = blocked + [r["subscriber"] for r in half_open] + disabled
             if limit > len(picked):
                 rows = (
@@ -297,9 +301,9 @@ class AsyncBus:
                         session, sql.CLAIM_DELIVERIES, {"now": now, "excluded": excluded, "limit": limit - len(picked)}
                     )
                 ).all()
-                picked.extend((int(r[0]), False) for r in rows)
+                picked.extend((int(r[0]), False, None) for r in rows)
             envelopes: dict[uuid.UUID, dict[str, Any] | None] = {}
-            for delivery_id, is_probe in picked:
+            for delivery_id, is_probe, early_until in picked:
                 row = (
                     (
                         await _exec(
@@ -319,6 +323,7 @@ class AsyncBus:
                     attempts=row["attempts"],
                     lease_token=token,
                     probe=is_probe,
+                    early_until=early_until,
                 )
                 if claimed.event_id not in envelopes:
                     env = (await _exec(session, sql.SELECT_ENVELOPE, {"id": claimed.event_id})).first()
@@ -357,16 +362,45 @@ class AsyncBus:
         outcomes: list[tuple[Claimed, Outcome]] = []
         for item, plan in planned:
             if isinstance(plan, Attempt):
-                outcome = decide_outcome(
-                    item, next(results), policy=self.config.retry, now=finished_at, rng=self.config.rng
+                outcome = early_probe_outcome(
+                    item,
+                    decide_outcome(item, next(results), policy=self.config.retry, now=finished_at, rng=self.config.rng),
                 )
             else:
                 outcome = plan
             outcomes.append((item, outcome))
-        async with self.sessions() as session, session.begin():
-            for item, outcome in outcomes:
-                await self._record(session, item, outcome, finished_at, stats)
+        await self._record_all(outcomes, finished_at, stats)
         return stats
+
+    async def _record_all(self, outcomes: list[tuple[Claimed, Outcome]], now: datetime, stats: DeliverStats) -> None:
+        """Итоги по подписчикам в порядке имён, по короткой транзакции на подписчика (W11B-G-1): параллельные `pump`
+        не блокируют друг друга на `rt_bus_subscriber_state`, а сбой одной группы не держит аренду чужих — остальные
+        группы записываются, ошибка поднимается в конце."""
+        failure: Exception | None = None
+        for group in record_groups(outcomes):
+            try:
+                await self._record_group(group, now, stats)
+            except Exception as exc:
+                logger.exception("rt_bus_record_failed", extra={"subscriber": group[0][0].subscriber})
+                failure = failure or exc
+        if failure is not None:
+            raise failure
+
+    async def _record_group(self, group: list[tuple[Claimed, Outcome]], now: datetime, stats: DeliverStats) -> None:
+        for attempt in range(1, RECORD_ATTEMPTS + 1):
+            local = DeliverStats()
+            try:
+                async with self.sessions() as session, session.begin():
+                    for item, outcome in group:
+                        await self._record(session, item, outcome, now, local)
+            except Exception as exc:
+                if attempt == RECORD_ATTEMPTS or not retryable_db_error(exc):
+                    raise
+                logger.warning("rt_bus_record_retry", extra={"subscriber": group[0][0].subscriber, "attempt": attempt})
+                await asyncio.sleep(0.05 * attempt * (1.0 + self.config.rng.random()))
+                continue
+            stats.merge(local)
+            return
 
     async def _record(
         self, session: AsyncSession, item: Claimed, outcome: Outcome, now: datetime, stats: DeliverStats
@@ -377,15 +411,22 @@ class AsyncBus:
             logger.warning("rt_bus_lease_lost", extra={"delivery_id": item.id, "subscriber": item.subscriber})
             return
         stats.count(outcome)
-        failures = await self._breaker(session, breaker)
+        failures = await self._breaker(session, breaker, item, now, stats)
         log_outcome(item, outcome, failures, self.config.breaker.threshold)
 
-    async def _breaker(self, session: AsyncSession, statement: Statement | None) -> int | None:
+    async def _breaker(
+        self, session: AsyncSession, statement: Statement | None, item: Claimed, now: datetime, stats: DeliverStats
+    ) -> int | None:
         if statement is None:
             return None
         result = await _exec(session, statement.sql, statement.params)
         if statement.sql is sql.BREAKER_FAILURE:
             return int(result.first()[0])
+        if statement.sql is sql.BREAKER_SUCCESS and int(result.scalar_one()) >= self.config.breaker.threshold:
+            # Подписчик восстановился (C1-G-6): накопленные повторы уходят сразу, а не по расписанию.
+            reset = await _exec(session, sql.RESET_BACKLOG, {"subscriber": item.subscriber, "now": now})
+            stats.recovered += 1
+            logger.info("rt_bus_subscriber_recovered", extra={"subscriber": item.subscriber, "reset": _rowcount(reset)})
         return None
 
     async def pump(self, *, max_seconds: float = 20.0) -> PumpStats:
@@ -399,9 +440,8 @@ class AsyncBus:
                 break
         while time.monotonic() < deadline:
             step = await self.deliver()
-            for name in ("claimed", "delivered", "retried", "dead", "postponed", "lost_lease"):
-                setattr(stats.deliver, name, getattr(stats.deliver, name) + getattr(step, name))
-            if step.claimed < self.config.delivery_batch:
+            stats.deliver.merge(step)
+            if step.claimed < self.config.delivery_batch and not step.recovered:
                 break
         return stats
 
@@ -599,7 +639,9 @@ class AsyncBus:
             deliveries = (await _exec(session, sql.METRICS_DELIVERY)).mappings().all()
             states = (await _exec(session, sql.METRICS_STATE)).mappings().all()
             inbox = (await _exec(session, sql.METRICS_INBOX)).mappings().all()
-        return build_metrics(self.core.now(), outbox, deliveries, states, inbox)
+        return build_metrics(
+            self.core.now(), outbox, deliveries, states, inbox, disabled=self.core.disabled_subscribers()
+        )
 
     async def log_metrics(self) -> BusMetrics:
         metrics = await self.metrics()

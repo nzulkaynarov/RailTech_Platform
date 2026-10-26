@@ -50,13 +50,18 @@ def _run_bot(args: argparse.Namespace) -> None:
 
 
 async def _run_worker() -> None:
+    from rt_bus.contrib.procrastinate import WORKER_OPTIONS
+
     from app.container import get_container
     from app.tasks.queue import queue
 
     try:
         async with queue.open_async():
             try:
-                await queue.run_worker_async(concurrency=get_settings().worker_concurrency)
+                # опрос очереди раз в секунду: потерянное уведомление не задержит пробуждение шины
+                await queue.run_worker_async(
+                    concurrency=get_settings().worker_concurrency, **WORKER_OPTIONS
+                )
             finally:
                 await get_container().drain_bus()  # пробуждения шины — пока очередь открыта
     finally:

@@ -30,12 +30,17 @@ from .errors import ConfigError, EventValidationError, UnknownEventTypeError
 from .handlers import Handler, HandlerRegistry
 from .masking import DEFAULT_SECRET_FIELDS, mask_data, redact, unmask_data
 from .policy import BreakerPolicy, RetryPolicy
-from .receiver import Accepted, Rejection, decide
+from .receiver import DEFAULT_PUBLISHER_DOMAINS, Accepted, Rejection, decide
 from .schemas import SchemaRegistry
 from .signing import SecretProvider, env_secrets, secret_env_name
 from .subscriptions import Subscriber, Subscriptions, SubscriptionsSource, resolve_subscriptions_path
 
 logger = logging.getLogger("rt_bus")
+
+#: SQLSTATE взаимной блокировки и сбоя сериализации: транзакция откатилась целиком, её можно повторить.
+RETRYABLE_SQLSTATES = frozenset({"40P01", "40001"})
+#: Сколько раз повторять запись итогов подписчика после взаимной блокировки (с короткой паузой).
+RECORD_ATTEMPTS = 4
 
 
 def utcnow() -> datetime:
@@ -75,6 +80,9 @@ class BusConfig:
     #: Отложить доставку, если попытка невозможна по нашей причине (нет секрета, подписчика нет в файле).
     postpone_seconds: float = 300.0
     secret_fields: Mapping[str, tuple[str, ...]] = field(default_factory=lambda: dict(DEFAULT_SECRET_FIELDS))
+    #: Подпись пары у приёмника: домены типов, которые вправе публиковать издатель (по умолчанию —
+    #: `DEFAULT_PUBLISHER_DOMAINS`; издателя нет в таблице — только домен с его именем).
+    publisher_domains: Mapping[str, frozenset[str]] = field(default_factory=lambda: dict(DEFAULT_PUBLISHER_DOMAINS))
     clock: Callable[[], datetime] = utcnow
     rng: random.Random = field(default_factory=random.Random)
 
@@ -200,7 +208,8 @@ class BusCore:
         return OutboxRecord(event, event.with_data(masked).to_dict(), secrets)
 
     def disabled_subscribers(self) -> list[str]:
-        return [s.name for s in self.subscriptions().subscribers if not s.enabled]
+        """Выключенные подписчики (`enabled: false`), по имени: их доставки ждут и не берутся в аренду."""
+        return sorted(s.name for s in self.subscriptions().subscribers if not s.enabled)
 
     def targets(self, event_type: str, source: str) -> list[Subscriber]:
         return self.subscriptions().targets(event_type, source, self.service)
@@ -254,6 +263,7 @@ class BusCore:
             now=self.now(),
             window_seconds=self.config.window_seconds,
             secret_fields=self.config.secret_fields,
+            publisher_domains=self.config.publisher_domains,
         )
 
 
@@ -304,6 +314,35 @@ def finish_statements(
     return finish, breaker
 
 
+def retryable_db_error(exc: BaseException) -> bool:
+    """Транзакцию откатила взаимная блокировка или сбой сериализации (SQLSTATE 40P01/40001) — запись можно повторить.
+
+    SQLSTATE ищется по цепочке `orig`/`__cause__`: SQLAlchemy и Django оборачивают ошибку драйвера
+    (psycopg 3 и asyncpg — `sqlstate`, psycopg2 — `pgcode`)."""
+    seen: set[int] = set()
+    current: BaseException | None = exc
+    while current is not None and id(current) not in seen:
+        seen.add(id(current))
+        code = getattr(current, "sqlstate", None) or getattr(current, "pgcode", None)
+        if code in RETRYABLE_SQLSTATES:
+            return True
+        nested = getattr(current, "orig", None)
+        current = nested if isinstance(nested, BaseException) else current.__cause__
+    return False
+
+
+def record_groups(outcomes: list[tuple[Claimed, Outcome]]) -> list[list[tuple[Claimed, Outcome]]]:
+    """Итоги попыток по подписчикам: группы в порядке имён, внутри — по `id` доставки.
+
+    Строка `rt_bus_subscriber_state` — общая у параллельных `pump`; единый порядок записи и отдельная короткая
+    транзакция на подписчика не дают двум проходам взаимно заблокироваться (W11B-G-1), а сбой одной группы не держит
+    аренду чужих."""
+    groups: dict[str, list[tuple[Claimed, Outcome]]] = {}
+    for pair in sorted(outcomes, key=lambda p: (p[0].subscriber, p[0].id)):
+        groups.setdefault(pair[0].subscriber, []).append(pair)
+    return list(groups.values())
+
+
 def log_outcome(claimed: Claimed, outcome: Outcome, failures: int | None, threshold: int) -> None:
     extra = {
         "delivery_id": claimed.id,
@@ -331,6 +370,9 @@ def log_outcome(claimed: Claimed, outcome: Outcome, failures: int | None, thresh
         )
 
 
+COUNTERS = ("claimed", "delivered", "retried", "dead", "postponed", "lost_lease", "recovered")
+
+
 @dataclass
 class DeliverStats:
     claimed: int = 0
@@ -339,6 +381,13 @@ class DeliverStats:
     dead: int = 0
     postponed: int = 0
     lost_lease: int = 0
+    #: Подписчиков, восстановившихся за проход (предохранитель закрыт после порога): их ожидающие доставки сброшены на
+    #: «сейчас», `pump` берёт следующую пачку сразу.
+    recovered: int = 0
+
+    def merge(self, other: DeliverStats) -> None:
+        for name in COUNTERS:
+            setattr(self, name, getattr(self, name) + getattr(other, name))
 
     def count(self, outcome: Outcome) -> None:
         match outcome.kind:

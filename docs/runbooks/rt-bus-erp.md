@@ -52,8 +52,10 @@
 ## Метрики и алерты
 
 Beat раз в 5 минут пишет в лог строку `rt_bus_metrics` (`erp-worker`): `outbox_pending`, `oldest_undelivered_age_seconds`, `dlq_size`,
-`inbox_failed`, по подписчикам — `pending`, `in_flight`, `dead`, `consecutive_failures`, `paused`. То же по запросу:
+`inbox_failed`, по подписчикам — `pending`, `in_flight`, `dead`, `consecutive_failures`, `paused`, `enabled`. То же по запросу:
 `manage.py bus_retry --metrics`. Алерты (пока по логу): рост `dlq_size`, `inbox_failed > 0`, `oldest_undelivered_age_seconds` больше часа.
+Подписчик с `enabled: false` в `subscriptions.yaml` копит доставки в `pending` (события не теряются, `drop: true` — не копить) и в общий
+возраст не входит; в строке — `disabled=<имя>` (`docs/architecture/rt-bus.md` §5, §8).
 Уборка (`rt_bus.purge`, раз в сутки) удаляет доставленное и обработанное старше 30 дней; `dead` и `failed` остаются до ручного решения.
 
 ## Проверка после выкладки и на стенде

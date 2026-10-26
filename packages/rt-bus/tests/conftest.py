@@ -64,6 +64,7 @@ SUBSCRIPTIONS: dict[str, Any] = {
             "name": "off",
             "endpoint": "http://off.test/bus/v1/events",
             "enabled": False,
+            "drop": True,  # заглушка: прошлое не нужно, строки доставки не создаются (W11B-G-2)
             "types": ["uz.railtech.erp.*.v1"],
         },
     ],

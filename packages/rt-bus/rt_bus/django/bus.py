@@ -27,6 +27,7 @@ from django.db.backends.utils import CursorWrapper
 from .. import sql
 from ..context import correlation
 from ..core import (
+    RECORD_ATTEMPTS,
     BusConfig,
     BusCore,
     DeliverStats,
@@ -39,8 +40,19 @@ from ..core import (
     inbox_retry_at,
     log_outcome,
     plan_queued,
+    record_groups,
+    retryable_db_error,
 )
-from ..delivery import Attempt, AttemptResult, Claimed, Outcome, deadline_result, decide_outcome, send_sync
+from ..delivery import (
+    Attempt,
+    AttemptResult,
+    Claimed,
+    Outcome,
+    deadline_result,
+    decide_outcome,
+    early_probe_outcome,
+    send_sync,
+)
 from ..envelope import Event
 from ..errors import InTransactionError, NotInTransactionError
 from ..handlers import HandlerRegistry, default_registry
@@ -182,7 +194,7 @@ class DjangoBus:
         breaker = self.config.breaker
         lease_until = now + timedelta(seconds=self.config.lease_seconds)
         token = uuid.uuid4()
-        picked: list[tuple[int, bool]] = []
+        picked: list[tuple[int, bool, datetime | None]] = []
         out: list[tuple[Claimed, dict[str, Any] | None]] = []
         with self._atomic():
             states, _ = self._exec(sql.PAUSED_STATES)
@@ -215,15 +227,16 @@ class DjangoBus:
                         {"paused_until": state["paused_until"], "subscriber": state["subscriber"]},
                     )
                     continue
-                picked.append((int(probe[0]["id"]), True))
+                due = probe[0]["next_attempt_at"]
+                picked.append((int(probe[0]["id"]), True, due if due is not None and due > now else None))
             excluded = blocked + [r["subscriber"] for r in half_open] + disabled
             if limit > len(picked):
                 rows, _ = self._exec(
                     sql.CLAIM_DELIVERIES, {"now": now, "excluded": excluded, "limit": limit - len(picked)}
                 )
-                picked.extend((int(r["id"]), False) for r in rows)
+                picked.extend((int(r["id"]), False, None) for r in rows)
             envelopes: dict[uuid.UUID, dict[str, Any] | None] = {}
-            for delivery_id, is_probe in picked:
+            for delivery_id, is_probe, early_until in picked:
                 leased, _ = self._exec(
                     sql.LEASE_DELIVERY, {"id": delivery_id, "lease_until": lease_until, "token": token, "now": now}
                 )
@@ -236,6 +249,7 @@ class DjangoBus:
                     attempts=row["attempts"],
                     lease_token=token,
                     probe=is_probe,
+                    early_until=early_until,
                 )
                 if claimed.event_id not in envelopes:
                     env, _ = self._exec(sql.SELECT_ENVELOPE, {"id": claimed.event_id})
@@ -281,17 +295,51 @@ class DjangoBus:
             pool.shutdown(wait=False, cancel_futures=True)
         result_iter = iter(results)
         finished_at = self.core.now()
-        with self._atomic():
-            for item, plan in planned:
-                outcome = (
+        outcomes: list[tuple[Claimed, Outcome]] = []
+        for item, plan in planned:
+            outcome = (
+                early_probe_outcome(
+                    item,
                     decide_outcome(
                         item, next(result_iter), policy=self.config.retry, now=finished_at, rng=self.config.rng
-                    )
-                    if isinstance(plan, Attempt)
-                    else plan
+                    ),
                 )
-                self._record(item, outcome, finished_at, stats)
+                if isinstance(plan, Attempt)
+                else plan
+            )
+            outcomes.append((item, outcome))
+        self._record_all(outcomes, finished_at, stats)
         return stats
+
+    def _record_all(self, outcomes: list[tuple[Claimed, Outcome]], now: datetime, stats: DeliverStats) -> None:
+        """Итоги по подписчикам в порядке имён, по короткой транзакции на подписчика (W11B-G-1): параллельные `pump`
+        не блокируют друг друга на `rt_bus_subscriber_state`, а сбой одной группы не держит аренду чужих — остальные
+        группы записываются, ошибка поднимается в конце."""
+        failure: Exception | None = None
+        for group in record_groups(outcomes):
+            try:
+                self._record_group(group, now, stats)
+            except Exception as exc:
+                logger.exception("rt_bus_record_failed", extra={"subscriber": group[0][0].subscriber})
+                failure = failure or exc
+        if failure is not None:
+            raise failure
+
+    def _record_group(self, group: list[tuple[Claimed, Outcome]], now: datetime, stats: DeliverStats) -> None:
+        for attempt in range(1, RECORD_ATTEMPTS + 1):
+            local = DeliverStats()
+            try:
+                with self._atomic():
+                    for item, outcome in group:
+                        self._record(item, outcome, now, local)
+            except Exception as exc:
+                if attempt == RECORD_ATTEMPTS or not retryable_db_error(exc):
+                    raise
+                logger.warning("rt_bus_record_retry", extra={"subscriber": group[0][0].subscriber, "attempt": attempt})
+                time.sleep(0.05 * attempt * (1.0 + self.config.rng.random()))
+                continue
+            stats.merge(local)
+            return
 
     def _record(self, item: Claimed, outcome: Outcome, now: datetime, stats: DeliverStats) -> None:
         finish, breaker = finish_statements(self.core, item, outcome, now)
@@ -301,14 +349,19 @@ class DjangoBus:
             logger.warning("rt_bus_lease_lost", extra={"delivery_id": item.id, "subscriber": item.subscriber})
             return
         stats.count(outcome)
-        log_outcome(item, outcome, self._breaker(breaker), self.config.breaker.threshold)
+        log_outcome(item, outcome, self._breaker(breaker, item, now, stats), self.config.breaker.threshold)
 
-    def _breaker(self, statement: Statement | None) -> int | None:
+    def _breaker(self, statement: Statement | None, item: Claimed, now: datetime, stats: DeliverStats) -> int | None:
         if statement is None:
             return None
         rows, _ = self._exec(statement.sql, statement.params)
         if statement.sql is sql.BREAKER_FAILURE:
             return int(rows[0]["consecutive_failures"])
+        if statement.sql is sql.BREAKER_SUCCESS and int(rows[0]["previous_failures"]) >= self.config.breaker.threshold:
+            # Подписчик восстановился (C1-G-6): накопленные повторы уходят сразу, а не по расписанию.
+            _, reset = self._exec(sql.RESET_BACKLOG, {"subscriber": item.subscriber, "now": now})
+            stats.recovered += 1
+            logger.info("rt_bus_subscriber_recovered", extra={"subscriber": item.subscriber, "reset": reset})
         return None
 
     def pump(self, *, max_seconds: float = 20.0) -> PumpStats:
@@ -323,9 +376,8 @@ class DjangoBus:
                 break
         while time.monotonic() < deadline:
             step = self.deliver()
-            for name in ("claimed", "delivered", "retried", "dead", "postponed", "lost_lease"):
-                setattr(stats.deliver, name, getattr(stats.deliver, name) + getattr(step, name))
-            if step.claimed < self.config.delivery_batch:
+            stats.deliver.merge(step)
+            if step.claimed < self.config.delivery_batch and not step.recovered:
                 break
         return stats
 
@@ -503,7 +555,14 @@ class DjangoBus:
         deliveries, _ = self._exec(sql.METRICS_DELIVERY)
         states, _ = self._exec(sql.METRICS_STATE)
         inbox, _ = self._exec(sql.METRICS_INBOX)
-        return build_metrics(self.core.now(), outbox[0] if outbox else None, deliveries, states, inbox)
+        return build_metrics(
+            self.core.now(),
+            outbox[0] if outbox else None,
+            deliveries,
+            states,
+            inbox,
+            disabled=self.core.disabled_subscribers(),
+        )
 
     def log_metrics(self) -> BusMetrics:
         metrics = self.metrics()

@@ -41,6 +41,9 @@ class Claimed:
     attempts: int
     lease_token: uuid.UUID
     probe: bool = False
+    #: Проба взяла доставку раньше её срока (подписчик на паузе, готовых доставок нет): срок повтора, который неудача
+    #: пробы не двигает и попытку не сжигает.
+    early_until: datetime | None = None
 
 
 @dataclass(frozen=True)
@@ -167,6 +170,20 @@ def decide_outcome(
         next_attempt_at=now + timedelta(seconds=delay),
         status_code=result.status_code,
         error=result.error,
+        breaker=BreakerEffect.FAILURE,
+    )
+
+
+def early_probe_outcome(claimed: Claimed, outcome: Outcome) -> Outcome:
+    """Неудача пробы, взявшей доставку раньше срока: пробу засчитывает предохранитель (пауза продлевается), а у самой
+    доставки срок остаётся прежним и попытка не сгорает (`POSTPONE`). Успех и неповторяемый ответ — как обычно."""
+    if claimed.early_until is None or outcome.breaker is not BreakerEffect.FAILURE:
+        return outcome
+    return Outcome(
+        OutcomeKind.POSTPONE,
+        next_attempt_at=claimed.early_until,
+        status_code=outcome.status_code,
+        error=outcome.error,
         breaker=BreakerEffect.FAILURE,
     )
 
