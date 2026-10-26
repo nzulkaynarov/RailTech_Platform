@@ -1,0 +1,525 @@
+{
+  "subtitle": "Ulanishlar, kalitlar va xizmatlar holati. Sirlar ko‘rsatilmaydi: saqlangandan keyin faqat oxirgi 4 belgi qoladi.",
+  "readOnlySubtitle": "Ko‘rish rejimi: ulanishlar va kalitlarni administrator o‘zgartiradi.",
+  "viewOnly": "Faqat ko‘rish",
+  "cardsTitle": "Xizmatlar",
+  "open": "Ochish",
+  "openAria": "Ochish: {{title}}",
+  "checkAria": "Tekshirish: {{title}}",
+  "refreshAria": "Yangilash: {{title}}",
+  "lastActivity": "Oxirgi tekshiruv: {{date}}",
+  "spendToday": "Bugungi xarajat: {{amount}}",
+  "noActivity": "Hali tekshirilmagan",
+  "loadError": {
+    "title": "Integratsiyalarni yuklab bo‘lmadi",
+    "text": "CRM javob bermadi. Bir daqiqa kutib, qayta urinib ko‘ring — ma’lumotlar yo‘qolmagan."
+  },
+  "status": {
+    "ok": "Ishlayapti",
+    "warn": "Diqqat",
+    "fail": "Nosozlik",
+    "unknown": "Ma’lumot yo‘q",
+    "off": "Ulanmagan"
+  },
+  "access": {
+    "forbidden": "Rolingizga ochiq emas: bu ma’lumotlar faqat administratorga ochiq.",
+    "unavailable": "CRM javob bermadi: karta ma’lumotlari hozir mavjud emas."
+  },
+  "cards": {
+    "erp": {
+      "title": "ERP",
+      "purpose": "Back-ofis: arizalar, tijoriy takliflar, ombor. CRM bilan juftlash va almashinuv kalitlari."
+    },
+    "telegram": { "title": "Telegram", "purpose": "Mijozlar boti, jamoa kanali va bot profili." },
+    "mail": {
+      "title": "Pochta",
+      "purpose": "Butun tizim uchun yagona SMTP: taklifnomalar, parolni tiklash, ogohlantirishlar."
+    },
+    "services": {
+      "title": "Tashqi xizmatlar",
+      "purpose": "Barcha tashqi xizmatlar reyestri: holat, tekshiruv, o‘chirgich."
+    },
+    "models": {
+      "title": "AI modellari",
+      "purpose": "Rollar bo‘yicha modellar va kalitlar: muloqot, bilimlar bazasidan qidiruv, sifat tekshiruvi."
+    },
+    "spend": {
+      "title": "Xarajatlar",
+      "purpose": "AI modellari qancha sarflaydi: bot va butun tizim, byudjetlar."
+    },
+    "storage": {
+      "title": "Saqlash va zaxira nusxalar",
+      "purpose": "Mijoz fayllari va bazalarning zaxira nusxalari."
+    },
+    "system": {
+      "title": "Tizim holati",
+      "purpose": "Tizim komponentlari: baza, navbatlar, bot, modellar."
+    }
+  },
+  "notes": {
+    "all_ok": "Hammasi joyida",
+    "problems": "Diqqat talab qiladi: {{count}}",
+    "not_configured": "Hali ulanmagan",
+    "paused": "Qo‘lda o‘chirilgan",
+    "rotation_pending": "Yangi kalitlarga o‘tish davom etmoqda",
+    "backup_stale": "Oxirgi nusxa eskirgan",
+    "no_backups": "Hali nusxalar yo‘q",
+    "bot_not_running": "Bot ishga tushirilmagan",
+    "budget_near": "Xarajat limitga yaqin",
+    "budget_over": "Xarajat limiti oshib ketdi",
+    "no_data": "Ma’lumot yo‘q"
+  },
+  "check": {
+    "result": "Tekshirildi: {{status}}",
+    "refreshed": "Ma’lumotlar yangilandi"
+  },
+  "attention": {
+    "title": "Diqqat talab qiladi",
+    "empty": "Hammasi joyida: nosozliklar va ulanmagan xizmatlar yo‘q.",
+    "openAria": "Ochish: {{subject}}",
+    "severity": { "fail": "Nosozlik", "warn": "Diqqat", "setup": "Ulanmagan" },
+    "notConfigured": {
+      "erp": "ERP ulanmagan: xodimlar back-ofisga kira olmaydi, arizalar ERPga tushmaydi.",
+      "telegram": "Bot tokeni kiritilmagan: mijozlar Telegramda yoza olmaydi.",
+      "mail": "Pochta sozlanmagan: taklifnomalar va parolni tiklash xatlari yuborilmaydi.",
+      "services": "Xizmat ulanmagan.",
+      "models": "Model sozlanmagan.",
+      "spend": "Xarajatlar haqida ma’lumot yo‘q.",
+      "storage": "Saqlash sozlanmagan.",
+      "system": "Holat haqida ma’lumot yo‘q."
+    },
+    "backupStale": "Zaxira nusxa eskirgan yoki mavjud emas: zaxira xizmatini tekshiring.",
+    "rotationPending": "Yangi kalitlarga o‘tish davom etmoqda: eskilari hali ishlaydi, keyin o‘chadi.",
+    "botNotRunning": "Bot ishga tushirilmagan.",
+    "paused": "Xizmat qo‘lda o‘chirilgan.",
+    "budget_over": "Limit oshib ketdi:",
+    "budget_near": "Limitga yaqin:"
+  },
+  "common": {
+    "check": "Tekshirish",
+    "refresh": "Yangilash",
+    "cancel": "Bekor qilish",
+    "close": "Yopish",
+    "retry": "Qayta urinish",
+    "password": "Administrator parolingiz",
+    "passwordHint": "Tasdiqlash uchun kerak; hech qayerda saqlanmaydi.",
+    "readOnly": "Ko‘rish rejimi: o‘zgartirishlar administratorga ochiq.",
+    "secretsOff": "Serverda sirlarni shifrlash kaliti kiritilmagan: kalit va parollarni saqlab bo‘lmaydi. Uni server sozlamalarida kiriting.",
+    "notSet": "kiritilmagan",
+    "set": "kiritilgan",
+    "tableScroll": "{{name}}: jadval, gorizontal aylantiriladi",
+    "maskedLast4": "kiritilgan, oxirgi belgilar {{last4}}"
+  },
+  "panel": {
+    "forbidden": {
+      "title": "Rolingizga ochiq emas",
+      "text": "CRM bu ma’lumotlarni rolingizga bermaydi. Kerak bo‘lsa, administratordan so‘rang."
+    },
+    "loadError": {
+      "title": "Yuklab bo‘lmadi",
+      "text": "So‘rov rad etildi. Sahifani yangilang yoki keyinroq urinib ko‘ring."
+    },
+    "unavailable": {
+      "title": "CRM javob bermayapti",
+      "text": "Ma’lumotlar vaqtincha mavjud emas. Bir daqiqadan keyin qayta urinib ko‘ring."
+    }
+  },
+  "erp": {
+    "state": "Holat",
+    "stateValue": {
+      "paired": "Juftlangan",
+      "configured": "Sozlangan, juftlash tasdiqlanmagan",
+      "none": "Ulanmagan"
+    },
+    "url": "Manzil",
+    "token": "CRM → ERP tokeni",
+    "webhook": "Hodisalar siri",
+    "updated": "Kalitlar yangilangan",
+    "rotationUntil": "Eski kalitlar quyidagi vaqtgacha ishlaydi",
+    "rotationNow": "o‘tish davri davom etmoqda",
+    "check": {
+      "button": "Aloqani tekshirish",
+      "ok": "ERP javob beryapti",
+      "degraded": "ERP ogohlantirishlar bilan javob beryapti",
+      "rateLimited": "ERP {{seconds}} soniya kutib, qayta urinishni so‘rayapti",
+      "version": "versiya {{version}}",
+      "latency": "{{ms}} ms",
+      "migrations": "migratsiyalar qo‘llanmagan",
+      "queue": "vazifalar navbati javob bermayapti"
+    },
+    "pair": {
+      "button": "ERPni ulash",
+      "reconnect": "Qayta ulash",
+      "title": "ERPni ulash",
+      "url": "ERP manzili",
+      "urlHint": "Masalan, tizim tarmog‘i ichidagi manzil.",
+      "code": "Bir martalik juftlash kodi",
+      "codeHint": "ERP sozlamalaridan olinadi. Kodsiz juftlash faqat ERP ruxsat bersa mumkin.",
+      "submit": "ERPni ulash",
+      "step1": "CRM ikkala yo‘nalish uchun almashinuv kalitlarini o‘zi yaratadi va kod orqali ERPga uzatadi.",
+      "step2": "Kalitlar shifrlangan holda saqlanadi; ularni ko‘rmaysiz — faqat oxirgi 4 belgi.",
+      "step3": "Shundan so‘ng CRM darhol aloqani tekshiradi va natijani ko‘rsatadi.",
+      "done": "Juftlash bajarildi."
+    },
+    "rotate": {
+      "button": "Kalitni almashtirish",
+      "title": "ERP kalitlarini almashtirish",
+      "submit": "Kalitlarni yangilash",
+      "step1": "CRM yangi kalitlarni yaratadi va ERPga uzatadi.",
+      "step2": "Eski kalitlar o‘tish davrida ishlashda davom etadi, keyin o‘zi o‘chadi — almashinuv uzilmaydi.",
+      "step3": "Aloqa darhol tekshiriladi; ERP kalitlarni qabul qilmasa, eskilari kuchda qoladi.",
+      "done": "Kalitlar yangilandi."
+    }
+  },
+  "telegram": {
+    "bot": "Bot",
+    "running": "Ishlayapti",
+    "runningValue": {
+      "yes": "ha",
+      "no": "yo‘q — bot jarayoni ishga tushirilmagan",
+      "none": "token kiritilmagan"
+    },
+    "updated": "Token yangilangan",
+    "lastError": "Oxirgi xato",
+    "token": {
+      "current": "Token",
+      "set": "Tokenni kiritish",
+      "change": "Tokenni almashtirish",
+      "title": "Bot tokeni",
+      "label": "Bot tokeni",
+      "hint": "BotFather beradi. Saqlangandan keyin token ko‘rsatilmaydi.",
+      "submit": "Tokenni saqlash",
+      "step1": "CRM tokenni Telegramda tekshiradi (getMe).",
+      "step2": "Token shifrlangan holda saqlanadi; ekranda oxirgi 4 belgi qoladi.",
+      "step3": "Bot bir necha soniyaga qayta ishga tushadi: mijozlar xabarlari yo‘qolmaydi.",
+      "saved": "Token saqlandi"
+    },
+    "channel": {
+      "title": "Jamoa kanali",
+      "current": "Ulangan: {{title}}",
+      "none": "Kanal ulanmagan.",
+      "empty": "Bot hozircha hech qanday chatni ko‘rmayapti. Uni jamoa chatiga qo‘shing va u yerga istalgan xabar yozing.",
+      "candidates": "Bot bor chatlar",
+      "isCurrent": "Ulangan",
+      "connect": "Ulash",
+      "connectAria": "Kanalni ulash: {{title}}",
+      "connected": "Kanal ulandi",
+      "detected": "Ko‘rilgan: {{date}}",
+      "test": "Sinov xabari",
+      "testSent": "Sinov xabari kanalga yuborildi"
+    },
+    "profile": {
+      "title": "Bot profili",
+      "lang": { "ru": "Rus tili", "uz": "O‘zbek tili", "en": "Ingliz tili" },
+      "fields": {
+        "name": "Bot nomi",
+        "short_description": "Qisqa tavsif",
+        "description": "Tavsif"
+      },
+      "counter": "{{count}} / {{max}} belgi",
+      "tooLong": "Matn ruxsat etilganidan uzun: belgilangan maydonlarni qisqartiring.",
+      "submit": "Saqlash va e’lon qilish",
+      "saved": "Bot profili saqlandi",
+      "publishedOk": "Telegramda e’lon qilindi: {{date}}",
+      "publishError": {
+        "rate_limited": "Telegram {{seconds}} soniya kutishni so‘radi va profilni qabul qilmadi.",
+        "telegram_error": "Telegram profilni qabul qilmadi. Keyinroq urinib ko‘ring.",
+        "bot_not_running": "Bot ishga tushirilmagan: profil saqlandi, lekin e’lon qilinmadi."
+      }
+    }
+  },
+  "mail": {
+    "state": "Holat",
+    "stateValue": { "configured": "Sozlangan", "none": "Sozlanmagan" },
+    "server": "Server",
+    "check": {
+      "button": "Aloqani tekshirish",
+      "ok": "Server ulanish va kirishni qabul qildi",
+      "noAuth": "Ulanish bor, lekin kirish bajarilmadi",
+      "details": "{{server}} · {{ms}} ms"
+    },
+    "test": {
+      "button": "Sinov xati",
+      "queued": "{{email}} manziliga sinov xati navbatga qo‘yildi"
+    },
+    "settings": {
+      "button": "SMTPni sozlash",
+      "title": "SMTP sozlamalari",
+      "host": "Server (host)",
+      "port": "Port",
+      "security": "Shifrlash",
+      "securityValue": { "starttls": "STARTTLS", "ssl": "SSL/TLS", "none": "Shifrlashsiz" },
+      "fromEmail": "Jo‘natuvchi manzili",
+      "fromName": "Jo‘natuvchi nomi",
+      "username": "Login",
+      "smtpPassword": "SMTP paroli",
+      "smtpPasswordHint": "Avvalgisini o‘zgartirmaslik uchun bo‘sh qoldiring.",
+      "submit": "Sozlamalarni saqlash",
+      "step1": "CRM pochta sozlamalarini saqlaydi; SMTP paroli shifrlangan holda, ekranda oxirgi 4 belgi qoladi.",
+      "step2": "Xodimlarga xatlar shu server orqali ketadi.",
+      "step3": "Aloqani tekshiring va sinov xatini yuboring — shunda hammasi ishlayotgani ko‘rinadi.",
+      "saved": "Pochta sozlamalari saqlandi"
+    },
+    "log": {
+      "title": "Yuborilganlar jurnali",
+      "filter": "Ko‘rsatish",
+      "all": "Barcha xatlar",
+      "status": {
+        "queued": "Navbatda",
+        "sent": "Yuborilgan",
+        "failed": "Xato",
+        "skipped_no_smtp": "O‘tkazib yuborilgan: pochta sozlanmagan"
+      },
+      "empty": "Jurnalda hozircha xatlar yo‘q.",
+      "error": "Sabab: {{error}}"
+    }
+  },
+  "services": {
+    "summary": "Ishlayapti: {{ok}} · diqqat: {{warn}} · nosozlik: {{fail}} · ma’lumot yo‘q: {{unknown}} · ulanmagan: {{off}}",
+    "hint": "Nima qilish kerak: {{hint}}",
+    "checkedAt": "Tekshirildi: {{date}}",
+    "neverChecked": "Hali tekshirilmagan",
+    "uptime": "sutkalik mavjudlik {{value}}",
+    "pausedTag": "qo‘lda o‘chirilgan",
+    "pausedReason": "Sabab: {{reason}}",
+    "checkAria": "Xizmatni tekshirish: {{title}}",
+    "disable": {
+      "button": "O‘chirish",
+      "aria": "Xizmatni o‘chirish: {{title}}",
+      "title": "Xizmatni o‘chirish: {{title}}",
+      "submit": "Xizmatni o‘chirish",
+      "reason": "Sabab (jurnalga tushadi)",
+      "step1": "Xizmatga chaqiruvlar butun tizimda to‘xtaydi.",
+      "step2": "Amal jurnalga yoziladi: kim va qachon.",
+      "step3": "Uni shu yerda, xuddi shu parol bilan qayta yoqish mumkin."
+    },
+    "enable": {
+      "button": "Yoqish",
+      "aria": "Xizmatni yoqish: {{title}}",
+      "title": "Xizmatni yoqish: {{title}}",
+      "submit": "Xizmatni yoqish",
+      "step1": "Xizmat yana chaqiruvlarni qabul qila boshlaydi; yig‘ilib qolganlar (masalan, xatlar) yuboriladi.",
+      "step2": "Amal jurnalga yoziladi: kim va qachon."
+    }
+  },
+  "models": {
+    "alias": {
+      "dialog-model": "Mijoz bilan muloqot",
+      "qualifier-model": "Lid kvalifikatori",
+      "fallback-model": "Zaxira model",
+      "embed-model": "Bilimlar bazasidan qidiruv",
+      "judge-model": "Sifat tekshiruvi",
+      "intake-model": "ERP: so‘rovni tahlil qilish",
+      "match-model": "ERP: katalog bilan moslashtirish",
+      "draft-model": "ERP: taklif qoralamasi",
+      "enrich-model": "ERP: kartani boyitish"
+    },
+    "health": { "ok": "Ishlayapti", "problem": "Nosozlik", "unknown": "Ma’lumot yo‘q" },
+    "provider": {
+      "anthropic": "Anthropic (Claude)",
+      "gemini": "Google Gemini",
+      "openai": "OpenAI"
+    },
+    "keySource": {
+      "crm": "Kalit Platformada kiritilgan va shifrlangan holda saqlanadi.",
+      "env": "Server sozlamalaridagi kalitdan foydalaniladi."
+    },
+    "empty": "Modellar hali sozlanmagan.",
+    "notSet": "kiritilmagan",
+    "today": "bugun {{amount}}",
+    "checkedAt": "Tekshirildi: {{date}}",
+    "neverChecked": "Hali tekshirilmagan",
+    "test": {
+      "aria": "Modelni tekshirish: {{alias}}",
+      "ok": "«{{alias}}» modeli javob beryapti",
+      "fail": "«{{alias}}» modeli javob bermadi",
+      "latency": "{{ms}} ms",
+      "cost": "tekshiruv narxi {{amount}}"
+    },
+    "change": {
+      "button": "Almashtirish",
+      "aria": "Modelni almashtirish: {{alias}}",
+      "title": "Modelni almashtirish: {{alias}}",
+      "provider": "Provayder",
+      "model": "Model",
+      "key": "Provayder kaliti",
+      "keyHint": "Server sozlamalaridagi kalitdan foydalanish uchun bo‘sh qoldiring. Kiritilgan kalit ko‘rsatilmaydi.",
+      "base": "API manzili (ixtiyoriy)",
+      "baseHint": "Provayderning o‘z shlyuzi uchun kerak.",
+      "submit": "Modelni almashtirish",
+      "step1": "Modellar shlyuzi almashtirishni qayta ishga tushirmasdan qo‘llaydi; hozir davom etayotgan muloqotlar eski modelda tugaydi.",
+      "step2Key": "Kalit shifrlangan holda saqlanadi va boshqa ko‘rsatilmaydi.",
+      "step2Env": "Kalit kiritilmagan — server sozlamalaridagi provayder kalitidan foydalaniladi.",
+      "step3": "Amal jurnalga kalitsiz yoziladi.",
+      "done": "Model almashtirildi: {{model}}",
+      "reindex": "Bilimlar bazasidan qidiruv uchun hujjatlarni qayta indekslash kerak.",
+      "quality": "Javoblar sifatini bir necha misolda tekshiring."
+    },
+    "reset": {
+      "button": "Tiklash",
+      "aria": "Modelni tiklash: {{alias}}",
+      "title": "Modelni tiklash: {{alias}}",
+      "submit": "Standart qiymatga qaytarish",
+      "step1": "Rol server konfiguratsiyasidagi modelga qaytadi.",
+      "step2": "Avval kiritilgan kalit ishlatilmay qo‘yadi — server sozlamalaridagi kalit olinadi.",
+      "step3": "Amal jurnalga yoziladi."
+    }
+  },
+  "spend": {
+    "period": "Davr",
+    "days": "{{count}} kun",
+    "bot": {
+      "title": "Bot xarajatlari",
+      "text": "Davr uchun bot muloqotlari va tekshiruvlari, AQSH dollarida."
+    },
+    "tiles": {
+      "today": "Bugun",
+      "budget": "Kunlik byudjet",
+      "total": "Davr uchun",
+      "leads": "Lidlar",
+      "perLead": "Bitta lidga"
+    },
+    "providers": {
+      "title": "Provayderlar bugun",
+      "provider": "Provayder",
+      "spent": "Sarflangan",
+      "limit": "Limit",
+      "state": "Holat",
+      "noLimit": "limitsiz"
+    },
+    "series": {
+      "title": "Kunlar bo‘yicha xarajat",
+      "day": "Kun",
+      "work": "Ish",
+      "test": "Tekshiruvlar"
+    },
+    "purpose": {
+      "title": "Vazifasi bo‘yicha",
+      "key": "Vazifa",
+      "calls": "Chaqiruvlar",
+      "cost": "Narx"
+    },
+    "ensemble": {
+      "title": "Butun tizim",
+      "text": "CRM va ERPdan barcha model chaqiruvlari shlyuz jurnali bo‘yicha.",
+      "groupBy": "Guruhlash",
+      "group": { "day": "Kun", "system": "Tizim", "feature": "Funksiya", "model": "Model" },
+      "range": "Davr: {{from}} — {{to}} ({{zone}})",
+      "calls": "Chaqiruvlar",
+      "failed": "Muvaffaqiyatsiz",
+      "fallback": "Zaxira model orqali",
+      "cost": "Narx",
+      "tokens": "Tokenlar",
+      "truncated": "Shlyuz jurnali barcha qatorlarni bermadi: raqamlar to‘liq bo‘lmasligi mumkin.",
+      "systems": "Tizimlar bo‘yicha byudjetlar",
+      "system": "Tizim",
+      "budget": "Kunlik byudjet",
+      "today": "Bugun",
+      "state": "Holat",
+      "notConnected": "chaqiruvlar yo‘q",
+      "daysOver": "byudjetdan oshgan kunlar: {{count}}",
+      "rows": "Guruhlar bo‘yicha xarajat",
+      "overruns": "Byudjetdan oshish",
+      "overrun": "{{system}}, {{day}}: byudjet {{limit}} bo‘lganda {{cost}}"
+    }
+  },
+  "storage": {
+    "files": {
+      "title": "Fayllar saqlanishi",
+      "none": "Fayllar saqlanishi xizmatlar reyestrida topilmadi."
+    },
+    "backups": {
+      "title": "Zaxira nusxalar",
+      "source": "Nusxalar qayerda saqlanadi",
+      "sourceValue": { "volume": "server tomi", "rustfs": "RustFS saqlanishi" },
+      "last": "Oxirgi nusxa",
+      "none": "yo‘q",
+      "state": "Yangilik",
+      "stateValue": {
+        "fresh": "yangi",
+        "stale": "eskirgan (26 soatdan eski)",
+        "empty": "hali nusxalar yo‘q",
+        "unavailable": "mavjud emas"
+      },
+      "daemon": "Zaxira xizmati",
+      "daemonValue": { "alive": "javob beryapti", "down": "javob bermayapti" },
+      "error": {
+        "bucket_missing": "Zaxira nusxalar bakeri topilmadi.",
+        "access_denied": "Zaxira nusxalar saqlanishiga ruxsat yo‘q.",
+        "unreachable": "Zaxira nusxalar saqlanishi javob bermayapti."
+      },
+      "requested": "So‘rov bo‘yicha nusxa {{date}} dan beri zaxira xizmatini kutmoqda.",
+      "stuck": "{{date}} dagi so‘rovni xizmat olmadi: qaytarish mumkin.",
+      "databases": "Bazalar bo‘yicha nusxalar",
+      "items": "Oxirgi nusxalar",
+      "noItems": "Nusxa fayllari hozircha yo‘q.",
+      "size": "{{mb}} MB"
+    },
+    "request": {
+      "button": "Hozir nusxa olish",
+      "title": "Jadvaldan tashqari nusxa",
+      "submit": "Nusxa so‘rash",
+      "step1": "Zaxira xizmati taxminan 30 soniya ichida nusxani boshlaydi.",
+      "step2": "Bazaga yuklama qisqa muddat oshadi; tizim ishlashda davom etadi.",
+      "step3": "Tayyor nusxa quyidagi ro‘yxatda paydo bo‘ladi.",
+      "sent": "Nusxa so‘rovi yuborildi",
+      "unavailable": "Jadvaldan tashqari nusxani bu yerdan olib bo‘lmaydi: u baza serverida ishga tushiriladi."
+    }
+  },
+  "system": {
+    "overall": "Natija:",
+    "checkedAt": "Tekshirildi: {{date}}"
+  },
+  "errors": {
+    "DEFAULT": "Amalni bajarib bo‘lmadi. Keyinroq urinib ko‘ring.",
+    "WRONG_PASSWORD": "Parol noto‘g‘ri kiritilgan.",
+    "ACCOUNT_LOCKED": "Noto‘g‘ri parollardan keyin hisob vaqtincha bloklandi. Keyinroq urinib ko‘ring.",
+    "NOT_CONFIGURED": "Ulanish hali sozlanmagan: avval uning sozlamalarini kiriting.",
+    "SECRETS_KEY_MISSING": "Serverda sirlarni shifrlash kaliti kiritilmagan: kalit va parollarni saqlab bo‘lmaydi.",
+    "SERVICE_NOT_SWITCHABLE": "Bu xizmatda o‘chirgich yo‘q.",
+    "INTEGRATION_FAILED": "Tekshiruv o‘tmadi: xizmat javob bermadi yoki rad etdi.",
+    "FORBIDDEN": "Bu amal rolingizga ochiq emas.",
+    "BACKEND_UNAVAILABLE": "CRM javob bermayapti. Bir daqiqadan keyin qayta urinib ko‘ring.",
+    "TOO_MANY_REQUESTS": "So‘rovlar juda ko‘p. Keyinroq urinib ko‘ring.",
+    "VALIDATION_FAILED": "Maydonlarni tekshiring.",
+    "CONFLICT": "Holat o‘zgargan. Sahifani yangilab, qayta urinib ko‘ring.",
+    "SESSION_EXPIRED": "Seans tugadi. Qaytadan kiring.",
+    "reasons": {
+      "erp_not_configured": "ERP hali ulanmagan.",
+      "erp_invalid_url": "ERP manzili noto‘g‘ri kiritilgan.",
+      "erp_https_required": "Ish muhitida ERP manzili https bilan boshlanishi kerak.",
+      "erp_unauthorized": "ERP CRM kalitini qabul qilmadi: juftlashni qaytadan bajaring.",
+      "erp_unavailable": "ERP javob bermayapti.",
+      "erp_bad_response": "ERP tushunarsiz javob berdi: ERP versiyasini tekshiring.",
+      "erp_rate_limited": "ERP kutib, qayta urinishni so‘rayapti.",
+      "erp_pairing_code_invalid": "Juftlash kodi mos kelmadi.",
+      "erp_pairing_code_expired": "Juftlash kodining muddati tugadi: ERP sozlamalaridan yangisini oling.",
+      "erp_pairing_code_used": "Bu juftlash kodi allaqachon ishlatilgan: yangisini oling.",
+      "erp_pairing_unsupported": "ERPning bu versiyasi kod orqali juftlashni qo‘llamaydi.",
+      "erp_bootstrap_rejected": "ERP kodsiz juftlashni qabul qilmadi: kodni kiriting.",
+      "erp_bootstrap_closed": "Kodsiz juftlash yopilgan: ERP sozlamalaridagi kodni kiriting.",
+      "erp_bootstrap_unavailable": "Kodsiz juftlash mavjud emas: ERP sozlamalaridagi kodni kiriting.",
+      "smtp_not_configured": "Pochta hali sozlanmagan.",
+      "smtp_invalid_host": "Pochta serveri noto‘g‘ri kiritilgan.",
+      "smtp_unavailable": "Pochta serveri javob bermayapti.",
+      "smtp_tls_failed": "Himoyalangan ulanishni o‘rnatib bo‘lmadi: shifrlash va portni tekshiring.",
+      "smtp_auth_failed": "Pochta serveri login yoki parolni qabul qilmadi.",
+      "smtp_rejected": "Pochta serveri xatni rad etdi.",
+      "invalid_email": "Manzil noto‘g‘ri kiritilgan.",
+      "invalid_bot_token": "Telegram tokenni qabul qilmadi: u to‘liq nusxalanganini tekshiring.",
+      "telegram_unavailable": "Telegram javob bermayapti.",
+      "bot_not_configured": "Bot tokeni hali kiritilmagan.",
+      "bot_not_running": "Bot ishga tushirilmagan.",
+      "channel_not_configured": "Jamoa kanali ulanmagan.",
+      "channel_send_failed": "Xabar kanalga yetkazilmadi: bot chatda ekanini tekshiring.",
+      "litellm_unavailable": "Modellar shlyuzi javob bermayapti.",
+      "model_key_required": "Bu provayder uchun kalit kerak.",
+      "model_in_config": "Bu rol server konfiguratsiyasi bilan belgilangan.",
+      "ai_spend_period": "Xarajatlar davri 90 kundan oshmasligi va kelajakda bo‘lmasligi kerak.",
+      "service_not_switchable": "Bu xizmatda o‘chirgich yo‘q.",
+      "secrets_key_missing": "Serverda sirlarni shifrlash kaliti kiritilmagan.",
+      "backup_unavailable": "Jadvaldan tashqari nusxani bu yerdan olib bo‘lmaydi.",
+      "wrong_password": "Parol noto‘g‘ri kiritilgan."
+    }
+  }
+}

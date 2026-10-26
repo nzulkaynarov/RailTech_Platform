@@ -15,7 +15,7 @@ describe("i18n", () => {
     expect(i18n.t("login.title", { ns: "shell" })).toBe("Вход в Платформу");
   });
 
-  it.each(["common", "shell", "modules", "dictionary", "ui"] as const)(
+  it.each(["common", "shell", "modules", "dictionary", "ui", "integrations"] as const)(
     "пространство %s: uz и en — те же ключи, что ru",
     (ns) => {
       for (const lng of ["uz", "en"] as const) {
@@ -26,7 +26,14 @@ describe("i18n", () => {
 
   it("нет пустых строк ни в одном языке", () => {
     for (const lng of ["ru", "uz", "en"] as const) {
-      for (const ns of ["common", "shell", "modules", "dictionary", "ui"] as const) {
+      for (const ns of [
+        "common",
+        "shell",
+        "modules",
+        "dictionary",
+        "ui",
+        "integrations",
+      ] as const) {
         for (const key of keys(resources[lng][ns])) {
           const value = key
             .split(".")

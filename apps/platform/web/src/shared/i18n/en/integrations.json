@@ -1,0 +1,515 @@
+{
+  "subtitle": "Connections, keys and service status. Secrets are never shown: after saving, only the last 4 characters remain.",
+  "readOnlySubtitle": "View mode: connections and keys are managed by the administrator.",
+  "viewOnly": "View only",
+  "cardsTitle": "Services",
+  "open": "Open",
+  "openAria": "Open: {{title}}",
+  "checkAria": "Check: {{title}}",
+  "refreshAria": "Refresh: {{title}}",
+  "lastActivity": "Last check: {{date}}",
+  "spendToday": "Spend today: {{amount}}",
+  "noActivity": "Not checked yet",
+  "loadError": {
+    "title": "Could not load integrations",
+    "text": "CRM did not respond. Wait a minute and try again — no data is lost."
+  },
+  "status": {
+    "ok": "Working",
+    "warn": "Attention",
+    "fail": "Failure",
+    "unknown": "No data",
+    "off": "Not connected"
+  },
+  "access": {
+    "forbidden": "Not available to your role: this data is open to the administrator only.",
+    "unavailable": "CRM did not respond: the card data is unavailable right now."
+  },
+  "cards": {
+    "erp": {
+      "title": "ERP",
+      "purpose": "Back office: requests, quotes, stock. Pairing with CRM and exchange keys."
+    },
+    "telegram": { "title": "Telegram", "purpose": "Customer bot, team channel and bot profile." },
+    "mail": {
+      "title": "Mail",
+      "purpose": "One SMTP for the whole system: invitations, password reset, alerts."
+    },
+    "services": {
+      "title": "External services",
+      "purpose": "Registry of all external services: status, check, switch."
+    },
+    "models": {
+      "title": "AI models",
+      "purpose": "Models and keys by role: dialogue, knowledge base search, quality check."
+    },
+    "spend": {
+      "title": "Spend",
+      "purpose": "What AI models cost: the bot and the whole system, budgets."
+    },
+    "storage": {
+      "title": "Storage and backups",
+      "purpose": "Customer files and database backups."
+    },
+    "system": {
+      "title": "System status",
+      "purpose": "System components: database, queues, bot, models."
+    }
+  },
+  "notes": {
+    "all_ok": "All good",
+    "problems": "Need attention: {{count}}",
+    "not_configured": "Not connected yet",
+    "paused": "Switched off manually",
+    "rotation_pending": "Moving to new keys",
+    "backup_stale": "The latest backup is out of date",
+    "no_backups": "No backups yet",
+    "bot_not_running": "The bot is not running",
+    "budget_near": "Spend is close to the limit",
+    "budget_over": "Spend limit exceeded",
+    "no_data": "No data"
+  },
+  "check": {
+    "result": "Checked: {{status}}",
+    "refreshed": "Data refreshed"
+  },
+  "attention": {
+    "title": "Needs attention",
+    "empty": "All good: no failures and nothing left to connect.",
+    "openAria": "Open: {{subject}}",
+    "severity": { "fail": "Failure", "warn": "Attention", "setup": "Not connected" },
+    "notConfigured": {
+      "erp": "ERP is not connected: staff will not get back-office access, requests will not reach ERP.",
+      "telegram": "The bot token is not set: customers cannot write in Telegram.",
+      "mail": "Mail is not configured: invitations and password resets will not be sent.",
+      "services": "The service is not connected.",
+      "models": "The model is not configured.",
+      "spend": "No spend data.",
+      "storage": "Storage is not configured.",
+      "system": "No status data."
+    },
+    "backupStale": "The backup is out of date or unavailable: check the backup service.",
+    "rotationPending": "Moving to new keys: the old ones still work, then they expire.",
+    "botNotRunning": "The bot is not running.",
+    "paused": "The service was switched off manually.",
+    "budget_over": "Limit exceeded:",
+    "budget_near": "Close to the limit:"
+  },
+  "common": {
+    "check": "Check",
+    "refresh": "Refresh",
+    "cancel": "Cancel",
+    "close": "Close",
+    "retry": "Retry",
+    "password": "Your administrator password",
+    "passwordHint": "Needed for confirmation; never stored.",
+    "readOnly": "View mode: changes are available to the administrator.",
+    "secretsOff": "The server has no secrets encryption key: keys and passwords cannot be saved. Set it in the server settings.",
+    "notSet": "not set",
+    "set": "set",
+    "tableScroll": "{{name}}: table, scrolls horizontally",
+    "maskedLast4": "set, last characters {{last4}}"
+  },
+  "panel": {
+    "forbidden": {
+      "title": "Not available to your role",
+      "text": "CRM does not give this data to your role. If you need it, ask the administrator."
+    },
+    "loadError": {
+      "title": "Could not load",
+      "text": "The request was rejected. Refresh the page or try later."
+    },
+    "unavailable": {
+      "title": "CRM is not responding",
+      "text": "The data is temporarily unavailable. Try again in a minute."
+    }
+  },
+  "erp": {
+    "state": "State",
+    "stateValue": {
+      "paired": "Paired",
+      "configured": "Configured, pairing not confirmed",
+      "none": "Not connected"
+    },
+    "url": "Address",
+    "token": "CRM → ERP token",
+    "webhook": "Events secret",
+    "updated": "Keys updated",
+    "rotationUntil": "Old keys work until",
+    "rotationNow": "transition period in progress",
+    "check": {
+      "button": "Check connection",
+      "ok": "ERP responds",
+      "degraded": "ERP responds with warnings",
+      "rateLimited": "ERP asks to wait {{seconds}} s and retry",
+      "version": "version {{version}}",
+      "latency": "{{ms}} ms",
+      "migrations": "migrations not applied",
+      "queue": "task queue not responding"
+    },
+    "pair": {
+      "button": "Connect ERP",
+      "reconnect": "Connect again",
+      "title": "Connect ERP",
+      "url": "ERP address",
+      "urlHint": "For example, the address inside the system network.",
+      "code": "One-time pairing code",
+      "codeHint": "Taken from the ERP settings. Pairing without a code is possible only if ERP allows it.",
+      "submit": "Connect ERP",
+      "step1": "CRM generates exchange keys for both directions and hands them to ERP using the code.",
+      "step2": "The keys are stored encrypted; you will not see them — only the last 4 characters.",
+      "step3": "Right after that CRM checks the connection and shows the result.",
+      "done": "Pairing completed."
+    },
+    "rotate": {
+      "button": "Rotate key",
+      "title": "Rotate ERP keys",
+      "submit": "Renew keys",
+      "step1": "CRM generates new keys and hands them to ERP.",
+      "step2": "The old keys keep working for a transition period, then expire on their own — the exchange is not interrupted.",
+      "step3": "The connection is checked right away; if ERP does not accept the keys, the old ones stay valid.",
+      "done": "Keys renewed."
+    }
+  },
+  "telegram": {
+    "bot": "Bot",
+    "running": "Running",
+    "runningValue": {
+      "yes": "yes",
+      "no": "no — the bot process is not running",
+      "none": "token not set"
+    },
+    "updated": "Token updated",
+    "lastError": "Last error",
+    "token": {
+      "current": "Token",
+      "set": "Set token",
+      "change": "Change token",
+      "title": "Bot token",
+      "label": "Bot token",
+      "hint": "Issued by BotFather. The token is not shown after saving.",
+      "submit": "Save token",
+      "step1": "CRM checks the token with Telegram (getMe).",
+      "step2": "The token is stored encrypted; only the last 4 characters stay on screen.",
+      "step3": "The bot restarts for a few seconds: customer messages are not lost.",
+      "saved": "Token saved"
+    },
+    "channel": {
+      "title": "Team channel",
+      "current": "Connected: {{title}}",
+      "none": "No channel connected.",
+      "empty": "The bot does not see any chats yet. Add it to the team chat and write any message there.",
+      "candidates": "Chats with the bot",
+      "isCurrent": "Connected",
+      "connect": "Connect",
+      "connectAria": "Connect channel: {{title}}",
+      "connected": "Channel connected",
+      "detected": "Seen: {{date}}",
+      "test": "Test message",
+      "testSent": "Test message sent to the channel"
+    },
+    "profile": {
+      "title": "Bot profile",
+      "lang": { "ru": "Russian", "uz": "Uzbek", "en": "English" },
+      "fields": {
+        "name": "Bot name",
+        "short_description": "Short description",
+        "description": "Description"
+      },
+      "counter": "{{count}} of {{max}} characters",
+      "tooLong": "The text is longer than allowed: shorten the marked fields.",
+      "submit": "Save and publish",
+      "saved": "Bot profile saved",
+      "publishedOk": "Published to Telegram: {{date}}",
+      "publishError": {
+        "rate_limited": "Telegram asks to wait {{seconds}} s and did not accept the profile.",
+        "telegram_error": "Telegram did not accept the profile. Try again later.",
+        "bot_not_running": "The bot is not running: the profile is saved but not published."
+      }
+    }
+  },
+  "mail": {
+    "state": "State",
+    "stateValue": { "configured": "Configured", "none": "Not configured" },
+    "server": "Server",
+    "check": {
+      "button": "Check connection",
+      "ok": "The server accepted the connection and login",
+      "noAuth": "Connected, but login was not completed",
+      "details": "{{server}} · {{ms}} ms"
+    },
+    "test": {
+      "button": "Test email",
+      "queued": "A test email to {{email}} is queued"
+    },
+    "settings": {
+      "button": "Configure SMTP",
+      "title": "SMTP settings",
+      "host": "Server (host)",
+      "port": "Port",
+      "security": "Encryption",
+      "securityValue": { "starttls": "STARTTLS", "ssl": "SSL/TLS", "none": "No encryption" },
+      "fromEmail": "Sender address",
+      "fromName": "Sender name",
+      "username": "Login",
+      "smtpPassword": "SMTP password",
+      "smtpPasswordHint": "Leave empty to keep the current one.",
+      "submit": "Save settings",
+      "step1": "CRM saves the mail settings; the SMTP password is stored encrypted, only the last 4 characters stay on screen.",
+      "step2": "Emails to staff will go through this server.",
+      "step3": "Check the connection and send a test email to make sure it works.",
+      "saved": "Mail settings saved"
+    },
+    "log": {
+      "title": "Sending log",
+      "filter": "Show",
+      "all": "All emails",
+      "status": {
+        "queued": "Queued",
+        "sent": "Sent",
+        "failed": "Error",
+        "skipped_no_smtp": "Skipped: mail not configured"
+      },
+      "empty": "No emails in the log yet.",
+      "error": "Reason: {{error}}"
+    }
+  },
+  "services": {
+    "summary": "Working: {{ok}} · attention: {{warn}} · failure: {{fail}} · no data: {{unknown}} · not connected: {{off}}",
+    "hint": "What to do: {{hint}}",
+    "checkedAt": "Checked: {{date}}",
+    "neverChecked": "Not checked yet",
+    "uptime": "24-hour availability {{value}}",
+    "pausedTag": "switched off manually",
+    "pausedReason": "Reason: {{reason}}",
+    "checkAria": "Check service: {{title}}",
+    "disable": {
+      "button": "Switch off",
+      "aria": "Switch off service: {{title}}",
+      "title": "Switch off service: {{title}}",
+      "submit": "Switch off service",
+      "reason": "Reason (goes to the log)",
+      "step1": "Calls to the service stop across the whole system.",
+      "step2": "The action is logged: who and when.",
+      "step3": "You can switch it back on here with the same password."
+    },
+    "enable": {
+      "button": "Switch on",
+      "aria": "Switch on service: {{title}}",
+      "title": "Switch on service: {{title}}",
+      "submit": "Switch on service",
+      "step1": "The service starts accepting calls again; anything accumulated (for example, emails) goes out.",
+      "step2": "The action is logged: who and when."
+    }
+  },
+  "models": {
+    "alias": {
+      "dialog-model": "Customer dialogue",
+      "qualifier-model": "Lead qualifier",
+      "fallback-model": "Fallback model",
+      "embed-model": "Knowledge base search",
+      "judge-model": "Quality check",
+      "intake-model": "ERP: request parsing",
+      "match-model": "ERP: catalog matching",
+      "draft-model": "ERP: quote draft",
+      "enrich-model": "ERP: card enrichment"
+    },
+    "health": { "ok": "Working", "problem": "Failure", "unknown": "No data" },
+    "provider": {
+      "anthropic": "Anthropic (Claude)",
+      "gemini": "Google Gemini",
+      "openai": "OpenAI"
+    },
+    "keySource": {
+      "crm": "The key is set in the Platform and stored encrypted.",
+      "env": "The key from the server settings is used."
+    },
+    "empty": "No models configured yet.",
+    "notSet": "not set",
+    "today": "today {{amount}}",
+    "checkedAt": "Checked: {{date}}",
+    "neverChecked": "Not checked yet",
+    "test": {
+      "aria": "Check model: {{alias}}",
+      "ok": "Model “{{alias}}” responds",
+      "fail": "Model “{{alias}}” did not respond",
+      "latency": "{{ms}} ms",
+      "cost": "check cost {{amount}}"
+    },
+    "change": {
+      "button": "Change",
+      "aria": "Change model: {{alias}}",
+      "title": "Change model: {{alias}}",
+      "provider": "Provider",
+      "model": "Model",
+      "key": "Provider key",
+      "keyHint": "Leave empty to use the key from the server settings. The key you enter is not shown.",
+      "base": "API address (optional)",
+      "baseHint": "Needed for the provider's own gateway.",
+      "submit": "Change model",
+      "step1": "The model gateway applies the change without a restart; dialogues in progress finish on the old model.",
+      "step2Key": "The key is stored encrypted and will not be shown again.",
+      "step2Env": "No key entered — the provider key from the server settings will be used.",
+      "step3": "The action is logged without the key.",
+      "done": "Model changed: {{model}}",
+      "reindex": "Knowledge base search needs the documents to be reindexed.",
+      "quality": "Check the answer quality on a few examples."
+    },
+    "reset": {
+      "button": "Reset",
+      "aria": "Reset model: {{alias}}",
+      "title": "Reset model: {{alias}}",
+      "submit": "Reset to default",
+      "step1": "The role returns to the model from the server configuration.",
+      "step2": "The key entered earlier stops being used — the key from the server settings is taken.",
+      "step3": "The action is logged."
+    }
+  },
+  "spend": {
+    "period": "Period",
+    "days": "{{count}} d.",
+    "bot": {
+      "title": "Bot spend",
+      "text": "Bot dialogues and checks over the period, in US dollars."
+    },
+    "tiles": {
+      "today": "Today",
+      "budget": "Daily budget",
+      "total": "For the period",
+      "leads": "Leads",
+      "perLead": "Per lead"
+    },
+    "providers": {
+      "title": "Providers today",
+      "provider": "Provider",
+      "spent": "Spent",
+      "limit": "Limit",
+      "state": "State",
+      "noLimit": "no limit"
+    },
+    "series": { "title": "Spend by day", "day": "Day", "work": "Work", "test": "Checks" },
+    "purpose": { "title": "By purpose", "key": "Purpose", "calls": "Calls", "cost": "Cost" },
+    "ensemble": {
+      "title": "Whole system",
+      "text": "All model calls from CRM and ERP according to the gateway log.",
+      "groupBy": "Group by",
+      "group": { "day": "Day", "system": "System", "feature": "Feature", "model": "Model" },
+      "range": "Period: {{from}} — {{to}} ({{zone}})",
+      "calls": "Calls",
+      "failed": "Failed",
+      "fallback": "Via fallback model",
+      "cost": "Cost",
+      "tokens": "Tokens",
+      "truncated": "The gateway log returned not all rows: the figures may be incomplete.",
+      "systems": "Budgets by system",
+      "system": "System",
+      "budget": "Daily budget",
+      "today": "Today",
+      "state": "State",
+      "notConnected": "no calls",
+      "daysOver": "days over budget: {{count}}",
+      "rows": "Spend by group",
+      "overruns": "Budget overruns",
+      "overrun": "{{system}}, {{day}}: {{cost}} against a budget of {{limit}}"
+    }
+  },
+  "storage": {
+    "files": {
+      "title": "File storage",
+      "none": "File storage was not found in the service registry."
+    },
+    "backups": {
+      "title": "Backups",
+      "source": "Where backups are kept",
+      "sourceValue": { "volume": "server volume", "rustfs": "RustFS storage" },
+      "last": "Latest backup",
+      "none": "none",
+      "state": "Freshness",
+      "stateValue": {
+        "fresh": "fresh",
+        "stale": "out of date (older than 26 hours)",
+        "empty": "no backups yet",
+        "unavailable": "unavailable"
+      },
+      "daemon": "Backup service",
+      "daemonValue": { "alive": "responds", "down": "not responding" },
+      "error": {
+        "bucket_missing": "The backup bucket was not found.",
+        "access_denied": "No access to the backup storage.",
+        "unreachable": "The backup storage is not responding."
+      },
+      "requested": "An on-demand backup has been waiting for the backup service since {{date}}.",
+      "stuck": "The request of {{date}} was not picked up by the service: you can repeat it.",
+      "databases": "Backups by database",
+      "items": "Latest backups",
+      "noItems": "No backup files yet.",
+      "size": "{{mb}} MB"
+    },
+    "request": {
+      "button": "Back up now",
+      "title": "Off-schedule backup",
+      "submit": "Request backup",
+      "step1": "The backup service starts the backup within about 30 seconds.",
+      "step2": "The database load rises briefly; the system keeps working.",
+      "step3": "The finished backup appears in the list below.",
+      "sent": "Backup request sent",
+      "unavailable": "An off-schedule backup cannot be started from here: it runs on the database server."
+    }
+  },
+  "system": {
+    "overall": "Overall:",
+    "checkedAt": "Checked: {{date}}"
+  },
+  "errors": {
+    "DEFAULT": "Could not complete the action. Try again later.",
+    "WRONG_PASSWORD": "The password is incorrect.",
+    "ACCOUNT_LOCKED": "The account is temporarily locked after wrong passwords. Try again later.",
+    "NOT_CONFIGURED": "The connection is not configured yet: set its settings first.",
+    "SECRETS_KEY_MISSING": "The server has no secrets encryption key: keys and passwords cannot be saved.",
+    "SERVICE_NOT_SWITCHABLE": "This service has no switch.",
+    "INTEGRATION_FAILED": "The check failed: the service did not respond or refused.",
+    "FORBIDDEN": "This action is not available to your role.",
+    "BACKEND_UNAVAILABLE": "CRM is not responding. Try again in a minute.",
+    "TOO_MANY_REQUESTS": "Too many requests. Try again later.",
+    "VALIDATION_FAILED": "Check the fields.",
+    "CONFLICT": "The state has changed. Refresh the page and try again.",
+    "SESSION_EXPIRED": "The session has expired. Sign in again.",
+    "reasons": {
+      "erp_not_configured": "ERP is not connected yet.",
+      "erp_invalid_url": "The ERP address is incorrect.",
+      "erp_https_required": "In production the ERP address must start with https.",
+      "erp_unauthorized": "ERP did not accept the CRM key: pair again.",
+      "erp_unavailable": "ERP is not responding.",
+      "erp_bad_response": "ERP answered unexpectedly: check the ERP version.",
+      "erp_rate_limited": "ERP asks to wait and retry.",
+      "erp_pairing_code_invalid": "The pairing code did not match.",
+      "erp_pairing_code_expired": "The pairing code has expired: take a new one in the ERP settings.",
+      "erp_pairing_code_used": "This pairing code was already used: take a new one.",
+      "erp_pairing_unsupported": "This ERP version does not support pairing by code.",
+      "erp_bootstrap_rejected": "ERP did not accept pairing without a code: enter the code.",
+      "erp_bootstrap_closed": "Pairing without a code is closed: enter the code from the ERP settings.",
+      "erp_bootstrap_unavailable": "Pairing without a code is unavailable: enter the code from the ERP settings.",
+      "smtp_not_configured": "Mail is not configured yet.",
+      "smtp_invalid_host": "The mail server is incorrect.",
+      "smtp_unavailable": "The mail server is not responding.",
+      "smtp_tls_failed": "A secure connection could not be established: check the encryption and port.",
+      "smtp_auth_failed": "The mail server did not accept the login or password.",
+      "smtp_rejected": "The mail server rejected the email.",
+      "invalid_email": "The address is incorrect.",
+      "invalid_bot_token": "Telegram did not accept the token: check that it was copied in full.",
+      "telegram_unavailable": "Telegram is not responding.",
+      "bot_not_configured": "The bot token is not set yet.",
+      "bot_not_running": "The bot is not running.",
+      "channel_not_configured": "No team channel is connected.",
+      "channel_send_failed": "The message was not delivered to the channel: check that the bot is in the chat.",
+      "litellm_unavailable": "The model gateway is not responding.",
+      "model_key_required": "This provider needs a key.",
+      "model_in_config": "This role is set by the server configuration.",
+      "ai_spend_period": "The spend period is at most 90 days and not in the future.",
+      "service_not_switchable": "This service has no switch.",
+      "secrets_key_missing": "The server has no secrets encryption key.",
+      "backup_unavailable": "An off-schedule backup cannot be started from here.",
+      "wrong_password": "The password is incorrect."
+    }
+  }
+}
