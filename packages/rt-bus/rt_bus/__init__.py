@@ -27,7 +27,7 @@ from .errors import (
     UnknownEventTypeError,
 )
 from .handlers import Handler, HandlerRegistry, default_registry, subscribe
-from .journal import BusMetrics, DeliveryView, InboxView, SubscriberMetrics
+from .journal import BusMetrics, BusOverview, DeliveryView, InboxView, SubscriberMetrics, SubscriberView
 from .masking import DEFAULT_SECRET_FIELDS, MemoryStash
 from .policy import BreakerPolicy, RetryPolicy
 from .receiver import ReceiveResult
@@ -41,6 +41,7 @@ __all__ = [
     "BusConfig",
     "BusCore",
     "BusMetrics",
+    "BusOverview",
     "ConfigError",
     "CorrelationFilter",
     "DeliverStats",
@@ -61,6 +62,7 @@ __all__ = [
     "SchemaRegistry",
     "Subscriber",
     "SubscriberMetrics",
+    "SubscriberView",
     "Subscriptions",
     "SubscriptionsError",
     "SubscriptionsSource",
