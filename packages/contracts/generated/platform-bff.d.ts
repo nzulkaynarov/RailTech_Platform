@@ -450,7 +450,7 @@ export interface paths {
     };
     /**
      * Реквизиты своей компании (Admin · Компания)
-     * @description BFF находит свою компанию по профилю сотрудника в ERP; нет компании — 409 `COMPANY_NOT_SET`. Раздел `company.settings` — чтение.
+     * @description BFF находит свою компанию по `own_company_id` из `setup/status/` ERP; нет компании — 409 `COMPANY_NOT_SET`. Раздел `company.settings` — чтение.
      */
     get: operations["getCompany"];
     put?: never;
@@ -465,6 +465,26 @@ export interface paths {
     patch: operations["updateCompany"];
     trace?: never;
   };
+  "/admin/company/logo/image": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Файл логотипа компании
+     * @description BFF берёт файл в ERP по адресу из карточки компании (только публичный путь логотипа) и отдаёт с теми же защитными заголовками (`X-Content-Type-Options`, `Content-Security-Policy: sandbox`). Нет логотипа — 404 `NOT_FOUND`. Раздел `company.settings` — чтение.
+     */
+    get: operations["getCompanyLogoImage"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/admin/company/logo": {
     parameters: {
       query?: never;
@@ -476,7 +496,7 @@ export interface paths {
     put?: never;
     /**
      * Загрузить логотип компании
-     * @description `multipart/form-data`, поле `logo`; BFF передаёт файл в ERP как есть, не больше 2 МБ. Раздел `company.settings` — полный.
+     * @description `multipart/form-data`, поле `logo`; BFF передаёт файл в ERP как есть: не больше 2 МБ, тип части — PNG, JPEG, WebP или SVG, иначе 422 `VALIDATION_FAILED` (`details.reason = unsupported_type`); содержимое проверяет ERP. Раздел `company.settings` — полный.
      */
     post: operations["uploadCompanyLogo"];
     /**
@@ -511,6 +531,26 @@ export interface paths {
      * @description Не присланное поле не меняется. Раздел `company.settings` — полный.
      */
     patch: operations["updateBrandProfile"];
+    trace?: never;
+  };
+  "/admin/company/brand/logo/image": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Файл логотипа бланка
+     * @description BFF берёт файл в ERP по адресу из профиля бланка (только публичный путь логотипа) и отдаёт с теми же защитными заголовками (`X-Content-Type-Options`, `Content-Security-Policy: sandbox`). Нет логотипа — 404 `NOT_FOUND`. Раздел `company.settings` — чтение.
+     */
+    get: operations["getBrandLogoImage"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
     trace?: never;
   };
   "/admin/company/brand/logo": {
@@ -970,7 +1010,7 @@ export interface paths {
     };
     /**
      * Запросы на категории
-     * @description ERP отдаёт запросы своей компании; администратор платформы видит все. Раздел `company.settings` — чтение.
+     * @description ERP отдаёт запросы своей компании; администратор видит все. Раздел `company.settings` — чтение.
      */
     get: operations["listCategoryRequests"];
     put?: never;
@@ -992,7 +1032,7 @@ export interface paths {
     put?: never;
     /**
      * Одобрить запрос: привязать заведённую категорию
-     * @description Решает администратор платформы в ERP; иначе 403 `FORBIDDEN` (`source = erp`). Решённый запрос — 409 `CONFLICT` (`details.reason = already_reviewed`). Раздел `company.settings` — полный.
+     * @description Решает ERP по праву `settings.edit` (его даёт раздел `company.settings`) или администратору; иначе 403 `FORBIDDEN` (`source = erp`). Решённый запрос — 409 `CONFLICT` (`details.reason = already_reviewed`). Раздел `company.settings` — полный.
      */
     post: operations["approveCategoryRequest"];
     delete?: never;
@@ -1012,7 +1052,7 @@ export interface paths {
     put?: never;
     /**
      * Отклонить запрос с причиной
-     * @description Причина обязательна. Решает администратор платформы в ERP; иначе 403 `FORBIDDEN` (`source = erp`). Раздел `company.settings` — полный.
+     * @description Причина обязательна. Решает ERP по праву `settings.edit` (его даёт раздел `company.settings`) или администратору; иначе 403 `FORBIDDEN` (`source = erp`). Раздел `company.settings` — полный.
      */
     post: operations["rejectCategoryRequest"];
     delete?: never;
@@ -1040,7 +1080,7 @@ export interface paths {
     head?: never;
     /**
      * Изменить ставку НДС платформы
-     * @description Меняет администратор платформы в ERP; иначе 403 `FORBIDDEN` (`source = erp`). Раздел `company.settings` — полный.
+     * @description Ставку меняет ERP по праву `settings.edit` или администратору; иначе 403 `FORBIDDEN` (`source = erp`). Раздел `company.settings` — полный.
      */
     patch: operations["updatePlatformSettings"];
     trace?: never;
@@ -1450,7 +1490,7 @@ export interface components {
     DecimalString: string;
     /** @description Id объекта ERP строкой */
     CompanyItemRef: string;
-    /** @description Реквизиты своей компании (ERP `accounts/companies/{id}`; id BFF находит сам по профилю сотрудника в ERP). */
+    /** @description Реквизиты своей компании (ERP `accounts/companies/{id}`; id BFF находит сам по `own_company_id` из `setup/status/` ERP). */
     CompanyProfile: {
       /** @description Полное наименование организации */
       name: string;
@@ -1472,7 +1512,7 @@ export interface components {
       country: number | null;
       /** @description Есть сертификат качества ISO 9001 */
       has_iso9001: boolean;
-      /** @description Адрес логотипа компании или `null` */
+      /** @description Адрес логотипа на BFF (`/admin/company/logo/image`, тот же origin: CSP Платформы адреса ERP не пускает) или `null` */
       logo_url: string | null;
     };
     CompanyProfileUpdate: {
@@ -1539,7 +1579,7 @@ export interface components {
       show_logo: boolean;
       show_lead_time: boolean;
       show_fx_note: boolean;
-      /** @description Логотип бланка или `null` */
+      /** @description Адрес логотипа бланка на BFF (`/admin/company/brand/logo/image`) или `null` */
       logo_url: string | null;
       /** @description Что напечатается из реквизитов компании при включённом «Брать реквизиты из карточки компании» */
       inherited: {
@@ -2997,6 +3037,29 @@ export interface operations {
       422: components["responses"]["ValidationFailed"];
     };
   };
+  getCompanyLogoImage: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Изображение */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "image/*": string;
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+    };
+  };
   uploadCompanyLogo: {
     parameters: {
       query?: never;
@@ -3136,6 +3199,29 @@ export interface operations {
         };
       };
       422: components["responses"]["ValidationFailed"];
+    };
+  };
+  getBrandLogoImage: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Изображение */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "image/*": string;
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
     };
   };
   uploadBrandLogo: {
