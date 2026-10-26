@@ -97,7 +97,8 @@
 | Контакты | `GET /contacts` | `GET /team`, `GET /clients/{id}/contacts` | — | ✓ |
 | Ролевая матрица | `GET /admin/roles` | — (матрица — файл `platform-rbac.yaml`) | — | ✓, редактирование — вопрос 8 |
 | Оргструктура, карточка сотрудника, пригласить | `GET/PUT /admin/users/{id}`, `POST /admin/users/invite` | `GET/POST/PATCH /users`, `/users/{id}/invite` (провижининг в ERP с `role_codes` — FIX-63) | провижининг ✓ | Δ CRM-01 |
-| Внешние интеграции | `GET /admin/integrations` | `/integrations/*`, `/models*`, `/admin/external-services*`, `/system/status`, `/system/backups`, `/admin/ai-spend` | `/health` `externals[]` (M3-ERP-06, PR #129) | ✓ |
+| Внешние интеграции (обзор «Требует внимания», карточки со статусом пятью уровнями) | `GET /admin/integrations` — сводит реестр `/admin/external-services`, `/system/status`, `/integrations/erp` и `/integrations/telegram`, `/models`, `/system/backups`, `/spend` | как в следующих строках | `/health` `externals[]` (M3-ERP-06, PR #129) | ✓ (BFF 0.7.0, W13-A1) |
+| Внешние интеграции: ERP, Telegram, почта, реестр сервисов, модели ИИ, расходы, бэкапы, состояние | `/admin/integrations/{erp,telegram,smtp,services,models,spend,ai-spend,backups,system}*` — прокси с токеном сотрудника; чтение `admin: read`, изменения и пробы `admin: full` | `/integrations/{erp,telegram,smtp}*` (check, pair, rotate, token, channels, profile, test-send, log), `/admin/external-services*`, `/models*`, `/spend`, `/admin/ai-spend`, `/system/{status,backups}` | — | ✓ (BFF 0.7.0, W13-A1); разрывы CRM — `QUESTIONS.md` Q-W13-A1-2 |
 | Тикеты от команды | `GET/POST /admin/tickets` | новое `tickets` | — | Δ CRM-05 |
 
 ## 2. Шкала 7 шагов: как BFF выводит шаг
