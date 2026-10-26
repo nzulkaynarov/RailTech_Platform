@@ -103,6 +103,7 @@
 | Первый запуск: своя компания и чек-лист из пяти шагов | `GET /setup/checklist`, `POST /setup/company` (раздел `admin` полный) | `GET /setup/checklist`, `/integrations/erp`, `/integrations/smtp`, `/users` | `setup/status/`, `setup/company/` | ✓ (BFF 0.10.0, W13-A4); разрывы — `QUESTIONS.md` Q-W13-A4-2 |
 | Сотрудник без почты: временный пароль один раз | `POST /admin/users`, `POST /admin/users/{id}/temporary-password` | `POST /users` (`temporary_password`), `POST /users/{id}/reset-password` | — | ✓ (BFF 0.10.0, W13-A4) |
 | Тикеты от команды | `GET/POST /admin/tickets` | новое `tickets` | — | Δ CRM-05 |
+| Компания (W13-A3, BFF 0.8.0): реквизиты и логотип, бланк и бренд, нумерация, условия КП, статьи расхода, шаблоны документов и писем, справочники, категории и запросы, НДС | `/admin/company*` (раздел `company.settings`; `GET`/предпросмотры — чтение, изменения — полный) | — | `accounts/companies/{id}/` (+ `upload-logo`, `delete-logo`, `document-profile/` + `preview`, `upload-logo`, `settings/`), `crm/numbering-scheme/` (+ `preview`), `crm/charge-templates/`, `crm/charge-types/`, `crm/document-templates/*`, `settings/email-templates/`, `master-data/{countries,currencies,units,delivery-basis}/`, `catalog/categories/`, `catalog/category-requests/` (+ `approve`, `reject`), `system-settings/`; id компании — `setup/status/` (`own_company_id`) | ✓, разрывы — Q-W13A3-1 |
 
 ## 2. Шкала 7 шагов: как BFF выводит шаг
 
@@ -198,7 +199,7 @@
 | `erp.railtech.uz/deal-quote/:id` | `/erp/calc/:номер` |
 | `erp.railtech.uz/contracts`, `/invoices`, `/payments`, `/acts`, `/fulfillments` | `/eds/documents?type=…`, `/eds/payments`, `/erp/stock` |
 | `erp.railtech.uz/products…`, `/catalog-…` | `/erp/catalog` |
-| `erp.railtech.uz/settings` | `/admin/integrations` (бизнес-настройки компании — раздел Admin «Компания», Δ PLT) |
+| `erp.railtech.uz/settings` | `/admin/integrations` (бизнес-настройки компании — раздел Admin «Компания», `/admin/company`, W13-A3) |
 | остальное | `/dashboard/queue` |
 
 ## 7. Разрывы в бэкендах (что нужно добавить)

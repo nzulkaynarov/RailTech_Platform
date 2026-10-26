@@ -54,6 +54,17 @@ info:
     обычными API (с проверкой прав). Данных событий в потоке нет. Пока поток жив, опрос — редкий (5 минут), при обрыве —
     прежние 30 секунд. Чисто добавляющее изменение.
 
+    **0.8.0 (W13-A3) — Admin · Компания.** Чисто добавляющее изменение: `GET/PATCH /admin/company` (реквизиты), `/admin/company/logo`
+    (загрузка `multipart/form-data` и удаление), `/admin/company/brand` (+ `/logo`, `/preview`) — бланк и бренд документов,
+    `/admin/company/numbering` (+ `/preview`), `/admin/company/quote-defaults`, `/admin/company/charge-types` и `charge-templates`,
+    `/admin/company/document-templates` (+ `placeholders`, `preview`, `{id}/copy`), `/admin/company/email-templates` (+ `{id}/preview`),
+    `/admin/company/reference/{kind}` (страны, валюты, единицы, базисы поставки), `/admin/company/categories`,
+    `/admin/company/category-requests` (+ `approve`, `reject`), `/admin/company/platform-settings`. Доступ — раздел `company.settings`
+    (чтение — `GET` и предпросмотры, полный — изменения). BFF только проксирует к ERP с токеном сотрудника и сам находит свою компанию по
+    профилю сотрудника в ERP; нет компании — 409 `COMPANY_NOT_SET`. Ошибки ERP: 400 -> 422 `VALIDATION_FAILED` (`details.reason` —
+    код ERP в нижнем регистре, `details.fields`), «используется», «префикс занят» и «уже рассмотрен» -> 409 `CONFLICT` с
+    `details.reason`. Поля маржи `QuoteDefaults` вырезаются без права на группу `cost_margin` (правило 6 CONVENTIONS).
+
     **0.6.0 (R-1c, R3-D-1) — ломающее (до 1.0 допустимо).** У сотрудника хотя бы одна роль: `EmployeeUpdate.role_ids` —
     `minItems: 1`, пустой набор — 422 `ROLES_REQUIRED` (`details.fields = [role_ids]`), в CRM запрос не уходит; тот же код —
     перевод отказа CRM `roles_required` (CRM API 0.3.0). Закрыть доступ — `is_active = false` («Отключить сотрудника»).
@@ -120,7 +131,7 @@ tags:
   - name: events
     description: Поток подсказок инвалидации (SSE) — замена опроса уведомлений, счётчиков и очереди
   - name: admin
-    description: Admin · Оргструктура и Ролевая матрица — сотрудники и роли (CRM — источник истины по людям и ролям)
+    description: Admin · Оргструктура, Ролевая матрица (CRM — источник истины по людям и ролям) и Компания (ERP — реквизиты, бланк, нумерация, справочники)
   - name: integrations
     description: Admin · Внешние интеграции — ERP, Telegram, почта, реестр внешних сервисов, модели ИИ и расходы, бэкапы, состояние системы (прокси к CRM; раздел `admin`)
 
@@ -2049,6 +2060,1203 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
 
+  /admin/company:
+    get:
+      tags:
+        - admin
+      operationId: getCompany
+      summary: Реквизиты своей компании (Admin · Компания)
+      description: BFF находит свою компанию по `own_company_id` из `setup/status/` ERP; нет компании — 409 `COMPANY_NOT_SET`. Раздел `company.settings`
+        — чтение.
+      responses:
+        '200':
+          description: Реквизиты
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CompanyProfile'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          description: '`COMPANY_NOT_SET` — своя компания в ERP ещё не создана (мастер первого запуска)'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    patch:
+      tags:
+        - admin
+      operationId: updateCompany
+      summary: Изменить реквизиты
+      description: Не присланное поле не меняется; ошибки полей — 422 с `details.fields`. Раздел `company.settings` — полный.
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CompanyProfileUpdate'
+      responses:
+        '200':
+          description: Сохранено
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CompanyProfile'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          description: '`COMPANY_NOT_SET`'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+  /admin/company/logo/image:
+    get:
+      tags:
+        - admin
+      operationId: getCompanyLogoImage
+      summary: Файл логотипа компании
+      description: 'BFF берёт файл в ERP по адресу из карточки компании (только публичный путь логотипа) и отдаёт с теми же защитными заголовками (`X-Content-Type-Options`, `Content-Security-Policy: sandbox`). Нет логотипа, чужой путь или файл больше 5 МБ — 404 `NOT_FOUND`. Раздел `company.settings` — чтение.'
+      responses:
+        '200':
+          description: Изображение
+          content:
+            image/*:
+              schema:
+                type: string
+                format: binary
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: '`COMPANY_NOT_SET` — своя компания в ERP ещё не создана'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /admin/company/logo:
+    post:
+      tags:
+        - admin
+      operationId: uploadCompanyLogo
+      summary: Загрузить логотип компании
+      description: '`multipart/form-data`, поле `logo`; BFF передаёт файл в ERP как есть: не больше 2 МБ, тип части — PNG, JPEG, WebP или SVG, иначе 422 `VALIDATION_FAILED` (`details.reason = unsupported_type`); содержимое проверяет ERP. Раздел `company.settings`
+        — полный.'
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/LogoUpload'
+      responses:
+        '200':
+          description: Логотип заменён
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CompanyProfile'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          description: '`COMPANY_NOT_SET`'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+    delete:
+      tags:
+        - admin
+      operationId: deleteCompanyLogo
+      summary: Удалить логотип компании
+      description: Раздел `company.settings` — полный.
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+      responses:
+        '204':
+          description: Удалён
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          description: '`COMPANY_NOT_SET`'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /admin/company/brand:
+    get:
+      tags:
+        - admin
+      operationId: getBrandProfile
+      summary: Бланк и бренд документов
+      description: Профиль создаётся при первом чтении. Раздел `company.settings` — чтение.
+      responses:
+        '200':
+          description: Бланк
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BrandProfile'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          description: '`COMPANY_NOT_SET`'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    patch:
+      tags:
+        - admin
+      operationId: updateBrandProfile
+      summary: Изменить бланк и бренд
+      description: Не присланное поле не меняется. Раздел `company.settings` — полный.
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BrandProfileUpdate'
+      responses:
+        '200':
+          description: Сохранено
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BrandProfile'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          description: '`COMPANY_NOT_SET`'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+  /admin/company/brand/logo/image:
+    get:
+      tags:
+        - admin
+      operationId: getBrandLogoImage
+      summary: Файл логотипа бланка
+      description: 'BFF берёт файл в ERP по адресу из профиля бланка (только публичный путь логотипа) и отдаёт с теми же защитными заголовками (`X-Content-Type-Options`, `Content-Security-Policy: sandbox`). Нет логотипа, чужой путь или файл больше 5 МБ — 404 `NOT_FOUND`. Раздел `company.settings` — чтение.'
+      responses:
+        '200':
+          description: Изображение
+          content:
+            image/*:
+              schema:
+                type: string
+                format: binary
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: '`COMPANY_NOT_SET` — своя компания в ERP ещё не создана'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /admin/company/brand/logo:
+    post:
+      tags:
+        - admin
+      operationId: uploadBrandLogo
+      summary: Загрузить логотип бланка
+      description: '`multipart/form-data`, поле `logo`; логотип бланка отдельный от логотипа компании. Раздел `company.settings`
+        — полный.'
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/LogoUpload'
+      responses:
+        '200':
+          description: Логотип бланка заменён
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BrandProfile'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          description: '`COMPANY_NOT_SET`'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+  /admin/company/brand/preview:
+    post:
+      tags:
+        - admin
+      operationId: previewBrandDocument
+      summary: Предпросмотр образца документа на бланке
+      description: Образец КП, договора, счёта, акта или письма с несохранёнными правками `draft`; ничего не сохраняется.
+        Раздел `company.settings` — чтение.
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BrandPreviewIn'
+      responses:
+        '200':
+          description: Образец
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DocumentPreview'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          description: '`COMPANY_NOT_SET`'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+  /admin/company/numbering:
+    get:
+      tags:
+        - admin
+      operationId: getNumberingScheme
+      summary: Схема нумерации документов
+      description: Раздел `company.settings` — чтение.
+      responses:
+        '200':
+          description: Схема
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NumberingScheme'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+    patch:
+      tags:
+        - admin
+      operationId: updateNumberingScheme
+      summary: Изменить схему нумерации
+      description: 'Действует на будущие номера; выданные не меняются. Префикс хранится в настройках компании ERP, схема —
+        в нумерации: BFF сохраняет префикс, затем схему. Неверная маска — 422 `VALIDATION_FAILED` (`details.reason = invalid_numbering_pattern`).
+        Раздел `company.settings` — полный.'
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NumberingUpdate'
+      responses:
+        '200':
+          description: Сохранено
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NumberingScheme'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          description: '`COMPANY_NOT_SET` или `CONFLICT` (`details.reason = doc_prefix_taken`) — префикс занят другой компанией'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+  /admin/company/numbering/preview:
+    post:
+      tags:
+        - admin
+      operationId: previewNumbering
+      summary: Предпросмотр номера по черновику схемы
+      description: Образцы номеров КП, договора, счёта, акта и письма; счётчики не меняются. Раздел `company.settings` — чтение.
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NumberingPreviewIn'
+      responses:
+        '200':
+          description: Образцы
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NumberingPreview'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+  /admin/company/quote-defaults:
+    get:
+      tags:
+        - admin
+      operationId: getQuoteDefaults
+      summary: Условия КП по умолчанию
+      description: Поля маржи вырезаются из ответа без права на группу `cost_margin`. Раздел `company.settings` — чтение.
+      responses:
+        '200':
+          description: Условия
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/QuoteDefaults'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          description: '`COMPANY_NOT_SET`'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    patch:
+      tags:
+        - admin
+      operationId: updateQuoteDefaults
+      summary: Изменить условия КП по умолчанию
+      description: Пустая строка или `null` очищает значение. Валюта и базис — коды справочников. Раздел `company.settings`
+        — полный.
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/QuoteDefaultsUpdate'
+      responses:
+        '200':
+          description: Сохранено
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/QuoteDefaults'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          description: '`COMPANY_NOT_SET`'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+  /admin/company/charge-types:
+    get:
+      tags:
+        - admin
+      operationId: listChargeTypes
+      summary: Типы статей расхода КП
+      description: Справочник типов для шаблонов статей расхода. Раздел `company.settings` — чтение.
+      responses:
+        '200':
+          description: Типы
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChargeTypeList'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /admin/company/charge-templates:
+    get:
+      tags:
+        - admin
+      operationId: listChargeTemplates
+      summary: Статьи расхода по базисам поставки
+      description: Раздел `company.settings` — чтение.
+      responses:
+        '200':
+          description: Статьи
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChargeTemplateList'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+    post:
+      tags:
+        - admin
+      operationId: createChargeTemplate
+      summary: Добавить статью расхода
+      description: Раздел `company.settings` — полный.
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChargeTemplateIn'
+      responses:
+        '201':
+          description: Создана
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChargeTemplate'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+  /admin/company/charge-templates/{id}:
+    patch:
+      tags:
+        - admin
+      operationId: updateChargeTemplate
+      summary: Изменить статью расхода
+      description: Раздел `company.settings` — полный.
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+        - $ref: '#/components/parameters/CompanyItemId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChargeTemplateUpdate'
+      responses:
+        '200':
+          description: Сохранена
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChargeTemplate'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+    delete:
+      tags:
+        - admin
+      operationId: deleteChargeTemplate
+      summary: Удалить статью расхода
+      description: Раздел `company.settings` — полный.
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+        - $ref: '#/components/parameters/CompanyItemId'
+      responses:
+        '204':
+          description: Удалена
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /admin/company/document-templates:
+    get:
+      tags:
+        - admin
+      operationId: listDocumentTemplates
+      summary: 'Шаблоны документов: свои и образцы платформы'
+      description: Раздел `company.settings` — чтение.
+      responses:
+        '200':
+          description: Шаблоны
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DocumentTemplateList'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+    post:
+      tags:
+        - admin
+      operationId: createDocumentTemplate
+      summary: Создать шаблон документа
+      description: Раздел `company.settings` — полный.
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DocumentTemplateIn'
+      responses:
+        '201':
+          description: Создан
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DocumentTemplate'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+  /admin/company/document-templates/placeholders:
+    get:
+      tags:
+        - admin
+      operationId: getDocumentPlaceholders
+      summary: Подстановки `{{код}}` для шаблона документа
+      description: Раздел `company.settings` — чтение.
+      responses:
+        '200':
+          description: Подстановки
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DocumentPlaceholders'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /admin/company/document-templates/preview:
+    post:
+      tags:
+        - admin
+      operationId: previewDocumentTemplate
+      summary: Предпросмотр шаблона на образце данных
+      description: Ничего не сохраняет. Раздел `company.settings` — чтение.
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DocumentTemplatePreviewIn'
+      responses:
+        '200':
+          description: Образец
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DocumentPreview'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+  /admin/company/document-templates/{id}:
+    patch:
+      tags:
+        - admin
+      operationId: updateDocumentTemplate
+      summary: Изменить шаблон документа
+      description: Образец платформы изменить нельзя — сначала копия. Раздел `company.settings` — полный.
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+        - $ref: '#/components/parameters/CompanyItemId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DocumentTemplateUpdate'
+      responses:
+        '200':
+          description: Сохранён
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DocumentTemplate'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+    delete:
+      tags:
+        - admin
+      operationId: deleteDocumentTemplate
+      summary: Удалить шаблон документа
+      description: Шаблон, по которому уже оформлены документы, удалить нельзя — 409 `CONFLICT` (`details.reason = template_in_use`).
+        Раздел `company.settings` — полный.
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+        - $ref: '#/components/parameters/CompanyItemId'
+      responses:
+        '204':
+          description: Удалён
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: '`CONFLICT` — шаблон используется'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /admin/company/document-templates/{id}/copy:
+    post:
+      tags:
+        - admin
+      operationId: copyDocumentTemplate
+      summary: Скопировать образец платформы к себе
+      description: Раздел `company.settings` — полный.
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+        - $ref: '#/components/parameters/CompanyItemId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DocumentTemplateCopyIn'
+      responses:
+        '200':
+          description: Копия создана
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DocumentTemplate'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+  /admin/company/email-templates:
+    get:
+      tags:
+        - admin
+      operationId: listEmailTemplates
+      summary: Шаблоны писем
+      description: Активный шаблон заменяет файловый для всех получателей платформы. Раздел `company.settings` — чтение.
+      responses:
+        '200':
+          description: Шаблоны
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EmailTemplateList'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+    post:
+      tags:
+        - admin
+      operationId: createEmailTemplate
+      summary: Создать шаблон письма
+      description: Раздел `company.settings` — полный.
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EmailTemplateIn'
+      responses:
+        '201':
+          description: Создан
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EmailTemplate'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+  /admin/company/email-templates/{id}:
+    patch:
+      tags:
+        - admin
+      operationId: updateEmailTemplate
+      summary: Изменить шаблон письма
+      description: Раздел `company.settings` — полный.
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+        - $ref: '#/components/parameters/CompanyItemId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EmailTemplateUpdate'
+      responses:
+        '200':
+          description: Сохранён
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EmailTemplate'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+    delete:
+      tags:
+        - admin
+      operationId: deleteEmailTemplate
+      summary: Удалить шаблон письма
+      description: Раздел `company.settings` — полный.
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+        - $ref: '#/components/parameters/CompanyItemId'
+      responses:
+        '204':
+          description: Удалён
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /admin/company/email-templates/{id}/preview:
+    post:
+      tags:
+        - admin
+      operationId: previewEmailTemplate
+      summary: Предпросмотр шаблона письма на образце данных
+      description: Письмо не отправляется. Раздел `company.settings` — чтение.
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+        - $ref: '#/components/parameters/CompanyItemId'
+      responses:
+        '200':
+          description: Образец
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EmailTemplatePreview'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /admin/company/reference/{kind}:
+    get:
+      tags:
+        - admin
+      operationId: listReferenceItems
+      summary: Строки справочника ERP
+      description: Вместе с отключёнными строками, чтобы их можно было включить обратно. Раздел `company.settings` — чтение.
+      parameters:
+        - $ref: '#/components/parameters/ReferenceKindPath'
+      responses:
+        '200':
+          description: Строки
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReferenceItemList'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+    post:
+      tags:
+        - admin
+      operationId: createReferenceItem
+      summary: Добавить строку справочника
+      description: Раздел `company.settings` — полный.
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+        - $ref: '#/components/parameters/ReferenceKindPath'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReferenceItemIn'
+      responses:
+        '201':
+          description: Создана
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReferenceItem'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+  /admin/company/reference/{kind}/{id}:
+    patch:
+      tags:
+        - admin
+      operationId: updateReferenceItem
+      summary: Изменить строку справочника
+      description: Раздел `company.settings` — полный.
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+        - $ref: '#/components/parameters/ReferenceKindPath'
+        - $ref: '#/components/parameters/CompanyItemId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReferenceItemUpdate'
+      responses:
+        '200':
+          description: Сохранена
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReferenceItem'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+    delete:
+      tags:
+        - admin
+      operationId: deleteReferenceItem
+      summary: Удалить строку справочника
+      description: Строку, на которую ссылаются данные, удалить нельзя — 409 `CONFLICT` (`details.reason = lookup_in_use`);
+        её отключают. Раздел `company.settings` — полный.
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+        - $ref: '#/components/parameters/ReferenceKindPath'
+        - $ref: '#/components/parameters/CompanyItemId'
+      responses:
+        '204':
+          description: Удалена
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: '`CONFLICT` — строка используется'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /admin/company/categories:
+    get:
+      tags:
+        - admin
+      operationId: listCatalogCategories
+      summary: Категории каталога
+      description: Все категории плоским списком; дерево строит SPA по `parent_id`. Раздел `company.settings` — чтение.
+      responses:
+        '200':
+          description: Категории
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CatalogCategoryList'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+    post:
+      tags:
+        - admin
+      operationId: createCatalogCategory
+      summary: Создать категорию
+      description: Раздел `company.settings` — полный.
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CatalogCategoryIn'
+      responses:
+        '201':
+          description: Создана
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CatalogCategory'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+  /admin/company/categories/{id}:
+    patch:
+      tags:
+        - admin
+      operationId: updateCatalogCategory
+      summary: Переименовать или перенести категорию
+      description: Раздел `company.settings` — полный.
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+        - $ref: '#/components/parameters/CompanyItemId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CatalogCategoryUpdate'
+      responses:
+        '200':
+          description: Сохранена
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CatalogCategory'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+    delete:
+      tags:
+        - admin
+      operationId: deleteCatalogCategory
+      summary: Удалить категорию
+      description: Категорию с подкатегориями удалить нельзя — 409 `CONFLICT` (`details.reason = category_has_children`).
+        Раздел `company.settings` — полный.
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+        - $ref: '#/components/parameters/CompanyItemId'
+      responses:
+        '204':
+          description: Удалена
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: '`CONFLICT` — у категории есть подкатегории'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /admin/company/category-requests:
+    get:
+      tags:
+        - admin
+      operationId: listCategoryRequests
+      summary: Запросы на категории
+      description: ERP отдаёт запросы своей компании; администратор видит все. Раздел `company.settings` — чтение.
+      parameters:
+        - name: status
+          in: query
+          required: false
+          schema:
+            $ref: '#/components/schemas/CategoryRequestStatus'
+      responses:
+        '200':
+          description: Запросы
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CategoryRequestList'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /admin/company/category-requests/{id}/approve:
+    post:
+      tags:
+        - admin
+      operationId: approveCategoryRequest
+      summary: 'Одобрить запрос: привязать заведённую категорию'
+      description: Решает ERP по праву `settings.edit` (его даёт раздел `company.settings`) или администратору; иначе 403 `FORBIDDEN` (`source = erp`). Решённый запрос — 409 `CONFLICT`
+        (`details.reason = already_reviewed`). Раздел `company.settings` — полный.
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+        - $ref: '#/components/parameters/CompanyItemId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CategoryRequestApproveIn'
+      responses:
+        '200':
+          description: Одобрен
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CategoryRequest'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: '`CONFLICT` — запрос уже рассмотрен'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+  /admin/company/category-requests/{id}/reject:
+    post:
+      tags:
+        - admin
+      operationId: rejectCategoryRequest
+      summary: Отклонить запрос с причиной
+      description: Причина обязательна. Решает ERP по праву `settings.edit` (его даёт раздел `company.settings`) или администратору; иначе 403 `FORBIDDEN` (`source = erp`). Раздел
+        `company.settings` — полный.
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+        - $ref: '#/components/parameters/CompanyItemId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CategoryRequestRejectIn'
+      responses:
+        '200':
+          description: Отклонён
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CategoryRequest'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: '`CONFLICT` — запрос уже рассмотрен'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+  /admin/company/platform-settings:
+    get:
+      tags:
+        - admin
+      operationId: getPlatformSettings
+      summary: 'Платформенные настройки: НДС и курс'
+      description: Раздел `company.settings` — чтение.
+      responses:
+        '200':
+          description: Настройки
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PlatformSettings'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+    patch:
+      tags:
+        - admin
+      operationId: updatePlatformSettings
+      summary: Изменить ставку НДС платформы
+      description: Ставку меняет ERP по праву `settings.edit` или администратору; иначе 403 `FORBIDDEN` (`source = erp`). Раздел `company.settings`
+        — полный.
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PlatformSettingsUpdate'
+      responses:
+        '200':
+          description: Сохранено
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PlatformSettings'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+
 components:
   securitySchemes:
     platformSession:
@@ -2087,6 +3295,21 @@ components:
       schema:
         type: string
         minLength: 16
+
+    CompanyItemId:
+      name: id
+      in: path
+      required: true
+      description: Id объекта ERP (строкой)
+      schema:
+        $ref: '#/components/schemas/CompanyItemRef'
+    ReferenceKindPath:
+      name: kind
+      in: path
+      required: true
+      description: Справочник ERP
+      schema:
+        $ref: '#/components/schemas/ReferenceKind'
 
   responses:
     SessionExpired:
@@ -2181,7 +3404,7 @@ components:
       properties:
         code:
           type: string
-          description: Стабильный код (`INVALID_CREDENTIALS`, `SESSION_EXPIRED`, `CSRF_FAILED`, `FORBIDDEN`, `NOT_FOUND`, `VALIDATION_FAILED`, `TOO_MANY_REQUESTS`, `BACKEND_UNAVAILABLE`, `NO_PLATFORM_ROLE`, `USER_DISABLED`, `ACCOUNT_LOCKED`, `CONFLICT`, `WRONG_PASSWORD`, `EMAIL_EXISTS`, `LAST_ADMIN`, `LAST_DIRECTOR`, `ROLE_IN_USE`, `ROLE_SYSTEM`, `ROLES_REQUIRED`, `NOT_CONFIGURED`, `SECRETS_KEY_MISSING`, `SERVICE_NOT_SWITCHABLE`, `INTEGRATION_FAILED`, `SETUP_DONE`, `SETUP_CODE_INVALID`, `SETUP_CODE_EXPIRED`, `SETUP_LOCKED`, `OWN_COMPANY_ALREADY_EXISTS`, `INTERNAL_ERROR`, `BAD_REQUEST`, `METHOD_NOT_ALLOWED`, `HTTP_<статус>`)
+          description: Стабильный код (`INVALID_CREDENTIALS`, `SESSION_EXPIRED`, `CSRF_FAILED`, `FORBIDDEN`, `NOT_FOUND`, `VALIDATION_FAILED`, `TOO_MANY_REQUESTS`, `BACKEND_UNAVAILABLE`, `NO_PLATFORM_ROLE`, `USER_DISABLED`, `ACCOUNT_LOCKED`, `CONFLICT`, `WRONG_PASSWORD`, `EMAIL_EXISTS`, `LAST_ADMIN`, `LAST_DIRECTOR`, `ROLE_IN_USE`, `ROLE_SYSTEM`, `ROLES_REQUIRED`, `NOT_CONFIGURED`, `SECRETS_KEY_MISSING`, `SERVICE_NOT_SWITCHABLE`, `INTEGRATION_FAILED`, `COMPANY_NOT_SET`, `SETUP_DONE`, `SETUP_CODE_INVALID`, `SETUP_CODE_EXPIRED`, `SETUP_LOCKED`, `OWN_COMPANY_ALREADY_EXISTS`, `INTERNAL_ERROR`, `BAD_REQUEST`, `METHOD_NOT_ALLOWED`, `HTTP_<статус>`)
           examples: [SESSION_EXPIRED]
         message:
           type: string
@@ -3791,3 +5014,1320 @@ components:
             $ref: '#/components/schemas/SearchGroup'
         sources:
           $ref: '#/components/schemas/Sources'
+
+    DecimalString:
+      type: string
+      pattern: ^-?[0-9]+(\.[0-9]+)?$
+      description: 'Десятичное число строкой (как в ERP): `"20.00"`'
+    CompanyItemRef:
+      type: string
+      pattern: ^[0-9]+$
+      description: Id объекта ERP строкой
+    CompanyProfile:
+      type: object
+      additionalProperties: false
+      description: Реквизиты своей компании (ERP `accounts/companies/{id}`; id BFF находит сам по `own_company_id` из `setup/status/` ERP).
+      required:
+        - name
+        - inn
+        - bank_account
+        - mfo
+        - legal_address
+        - phone
+        - contact_person
+        - website
+        - email
+        - country
+        - has_iso9001
+        - logo_url
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 255
+          description: Полное наименование организации
+        inn:
+          type:
+            - string
+            - 'null'
+          description: ИНН (9 цифр) или пусто
+        bank_account:
+          type: string
+          maxLength: 50
+          description: Расчётный счёт
+        mfo:
+          type: string
+          maxLength: 10
+          description: МФО банка
+        legal_address:
+          type: string
+          description: Юридический адрес
+        phone:
+          type: string
+          maxLength: 50
+        contact_person:
+          type: string
+          maxLength: 255
+          description: Ответственное лицо
+        website:
+          type: string
+          maxLength: 255
+        email:
+          type: string
+          maxLength: 254
+          description: Основная почта компании для уведомлений
+        country:
+          type:
+            - integer
+            - 'null'
+          description: Страна регистрации — `id` из справочника «Страны»
+        has_iso9001:
+          type: boolean
+          description: Есть сертификат качества ISO 9001
+        logo_url:
+          type:
+            - string
+            - 'null'
+          description: 'Адрес логотипа на BFF (`/admin/company/logo/image`, тот же origin: CSP Платформы адреса ERP не пускает) или `null`'
+    CompanyProfileUpdate:
+      type: object
+      additionalProperties: false
+      minProperties: 1
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 255
+          description: Полное наименование организации
+        inn:
+          type:
+            - string
+            - 'null'
+          description: ИНН (9 цифр) или пусто
+        bank_account:
+          type: string
+          maxLength: 50
+          description: Расчётный счёт
+        mfo:
+          type: string
+          maxLength: 10
+          description: МФО банка
+        legal_address:
+          type: string
+          description: Юридический адрес
+        phone:
+          type: string
+          maxLength: 50
+        contact_person:
+          type: string
+          maxLength: 255
+          description: Ответственное лицо
+        website:
+          type: string
+          maxLength: 255
+        email:
+          type: string
+          maxLength: 254
+          description: Основная почта компании для уведомлений
+        country:
+          type:
+            - integer
+            - 'null'
+          description: Страна регистрации — `id` из справочника «Страны»
+        has_iso9001:
+          type: boolean
+          description: Есть сертификат качества ISO 9001
+    LogoUpload:
+      type: object
+      required:
+        - logo
+      properties:
+        logo:
+          type: string
+          format: binary
+          description: PNG, JPEG, WebP или SVG до 2 МБ
+    BrandProfile:
+      type: object
+      additionalProperties: false
+      description: 'Бланк и бренд документов компании (ERP `document-profile`): реквизиты на бланке КП, договора, счёта и акта.'
+      required:
+        - legal_name
+        - inn
+        - legal_address
+        - bank_details
+        - signatory_name
+        - signatory_position
+        - footer_text
+        - accent_color
+        - secondary_color
+        - cover_letter_text
+        - contract_acceptance_text
+        - contract_liability_text
+        - contract_extra_terms_text
+        - act_closing_text
+        - layout_preset
+        - font_family
+        - show_cover_letter
+        - show_bank_in_header
+        - use_company_defaults
+        - show_logo
+        - show_lead_time
+        - show_fx_note
+        - logo_url
+        - inherited
+      properties:
+        legal_name:
+          type: string
+        inn:
+          type: string
+          description: ИНН на бланке
+        legal_address:
+          type: string
+        bank_details:
+          type: string
+        signatory_name:
+          type: string
+        signatory_position:
+          type: string
+        footer_text:
+          type: string
+        accent_color:
+          type: string
+          description: Основной цвет бренда, `#RRGGBB`
+        secondary_color:
+          type: string
+          description: Второй цвет бренда, `#RRGGBB`
+        cover_letter_text:
+          type: string
+        contract_acceptance_text:
+          type: string
+        contract_liability_text:
+          type: string
+        contract_extra_terms_text:
+          type: string
+        act_closing_text:
+          type: string
+        layout_preset:
+          type: string
+          enum:
+            - light
+            - boxed
+            - bold
+            - striped
+          description: 'Оформление: светлое, в рамках, контрастное, полосатое'
+        font_family:
+          type: string
+          enum:
+            - sans
+            - serif
+          description: 'Шрифт: без засечек или с засечками'
+        show_cover_letter:
+          type: boolean
+        show_bank_in_header:
+          type: boolean
+        use_company_defaults:
+          type: boolean
+        show_logo:
+          type: boolean
+        show_lead_time:
+          type: boolean
+        show_fx_note:
+          type: boolean
+        logo_url:
+          type:
+            - string
+            - 'null'
+          description: 'Адрес логотипа бланка на BFF (`/admin/company/brand/logo/image`) или `null`'
+        inherited:
+          type:
+            - object
+            - 'null'
+          additionalProperties:
+            type: string
+          description: Что напечатается из реквизитов компании при включённом «Брать реквизиты из карточки компании»
+    BrandProfileUpdate:
+      type: object
+      additionalProperties: false
+      minProperties: 1
+      properties:
+        legal_name:
+          type: string
+        inn:
+          type: string
+          description: ИНН на бланке
+        legal_address:
+          type: string
+        bank_details:
+          type: string
+        signatory_name:
+          type: string
+        signatory_position:
+          type: string
+        footer_text:
+          type: string
+        accent_color:
+          type: string
+          description: Основной цвет бренда, `#RRGGBB`
+        secondary_color:
+          type: string
+          description: Второй цвет бренда, `#RRGGBB`
+        cover_letter_text:
+          type: string
+        contract_acceptance_text:
+          type: string
+        contract_liability_text:
+          type: string
+        contract_extra_terms_text:
+          type: string
+        act_closing_text:
+          type: string
+        layout_preset:
+          type: string
+          enum:
+            - light
+            - boxed
+            - bold
+            - striped
+          description: 'Оформление: светлое, в рамках, контрастное, полосатое'
+        font_family:
+          type: string
+          enum:
+            - sans
+            - serif
+          description: 'Шрифт: без засечек или с засечками'
+        show_cover_letter:
+          type: boolean
+        show_bank_in_header:
+          type: boolean
+        use_company_defaults:
+          type: boolean
+        show_logo:
+          type: boolean
+        show_lead_time:
+          type: boolean
+        show_fx_note:
+          type: boolean
+    DocumentKind:
+      type: string
+      enum:
+        - quote
+        - contract
+        - invoice
+        - act
+        - letter
+      description: 'Вид документа: КП, договор, счёт, акт, письмо (ERP `KP`, `CT`, `INV`, `ACT`, `DOC`)'
+    BrandPreviewIn:
+      type: object
+      additionalProperties: false
+      required:
+        - kind
+      properties:
+        kind:
+          $ref: '#/components/schemas/DocumentKind'
+        draft:
+          $ref: '#/components/schemas/BrandProfileUpdate'
+          description: Несохранённые правки бланка — предпросмотр накладывает их в памяти, ничего не сохраняя
+    DocumentPreview:
+      type: object
+      additionalProperties: false
+      required:
+        - html
+      properties:
+        html:
+          type: string
+          description: Готовый HTML образца документа; SPA показывает его в изолированной рамке (`sandbox`), скриптов в нём
+            нет
+        warnings:
+          type: array
+          items:
+            type: string
+          description: Предупреждения ERP (например, нет обязательного блока)
+    NumberingResetPeriod:
+      type: string
+      enum:
+        - never
+        - yearly
+        - monthly
+      description: Никогда, раз в год, раз в месяц
+    NumberingLabels:
+      type: object
+      additionalProperties:
+        type: string
+        maxLength: 16
+      description: Что подставляется в `{type}` для каждого вида документа; ключи — `DocumentKind`
+    NumberingScheme:
+      type: object
+      additionalProperties: false
+      required:
+        - pattern
+        - padding
+        - reset_period
+        - start_value
+        - type_labels
+        - prefix
+        - is_effective
+      properties:
+        pattern:
+          type: string
+          minLength: 1
+          maxLength: 100
+          description: 'Маска номера: `{prefix}`, `{type}`, `{YYYY}`, `{YY}`, `{MM}`, `{seq}`; `{seq}` обязателен'
+        padding:
+          type: integer
+          minimum: 1
+          maximum: 10
+          description: Сколько цифр в счётчике (5 → 00001)
+        reset_period:
+          $ref: '#/components/schemas/NumberingResetPeriod'
+        start_value:
+          type: integer
+          minimum: 0
+          description: Первый номер = значение + 1
+        type_labels:
+          $ref: '#/components/schemas/NumberingLabels'
+        prefix:
+          type: string
+          maxLength: 16
+          description: Префикс нумерации компании
+        is_effective:
+          type: boolean
+          description: Своя схема применяется только с непустым префиксом
+    NumberingUpdate:
+      type: object
+      additionalProperties: false
+      minProperties: 1
+      properties:
+        pattern:
+          type: string
+          minLength: 1
+          maxLength: 100
+          description: 'Маска номера: `{prefix}`, `{type}`, `{YYYY}`, `{YY}`, `{MM}`, `{seq}`; `{seq}` обязателен'
+        padding:
+          type: integer
+          minimum: 1
+          maximum: 10
+          description: Сколько цифр в счётчике (5 → 00001)
+        reset_period:
+          $ref: '#/components/schemas/NumberingResetPeriod'
+        start_value:
+          type: integer
+          minimum: 0
+          description: Первый номер = значение + 1
+        type_labels:
+          $ref: '#/components/schemas/NumberingLabels'
+        prefix:
+          type: string
+          maxLength: 16
+          pattern: ^[A-Za-z0-9_-]*$
+    NumberingPreviewIn:
+      type: object
+      additionalProperties: false
+      required:
+        - pattern
+        - padding
+        - reset_period
+        - start_value
+      properties:
+        pattern:
+          type: string
+          minLength: 1
+          maxLength: 100
+          description: 'Маска номера: `{prefix}`, `{type}`, `{YYYY}`, `{YY}`, `{MM}`, `{seq}`; `{seq}` обязателен'
+        padding:
+          type: integer
+          minimum: 1
+          maximum: 10
+          description: Сколько цифр в счётчике (5 → 00001)
+        reset_period:
+          $ref: '#/components/schemas/NumberingResetPeriod'
+        start_value:
+          type: integer
+          minimum: 0
+          description: Первый номер = значение + 1
+        type_labels:
+          $ref: '#/components/schemas/NumberingLabels'
+        prefix:
+          type: string
+          maxLength: 16
+          pattern: ^[A-Za-z0-9_-]*$
+    NumberingPreviewItem:
+      type: object
+      additionalProperties: false
+      required:
+        - kind
+        - label
+        - number
+      properties:
+        kind:
+          $ref: '#/components/schemas/DocumentKind'
+        label:
+          type: string
+        number:
+          type: string
+    NumberingPreview:
+      type: object
+      additionalProperties: false
+      required:
+        - items
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/NumberingPreviewItem'
+    QuoteDefaults:
+      type: object
+      additionalProperties: false
+      description: Условия КП по умолчанию (ERP `companies/{id}/settings`). Поля маржи вырезаются без права на `cost_margin`.
+      required:
+        - default_cost_currency
+        - default_delivery_basis
+        - default_vat_rate
+        - default_offer_validity_days
+        - payment_terms_days
+        - default_payment_terms
+        - default_warranty_months
+        - catalog_price_visibility
+        - catalog_publish_threshold
+        - fx_rate_max_age_days
+      properties:
+        default_cost_currency:
+          type:
+            - string
+            - 'null'
+          description: Валюта себестоимости — код из справочника «Валюты»
+        default_delivery_basis:
+          type:
+            - string
+            - 'null'
+          description: Базис поставки по умолчанию — код из справочника
+        default_vat_rate:
+          oneOf:
+            - $ref: '#/components/schemas/DecimalString'
+            - type: 'null'
+          description: Ставка НДС в КП, %
+        default_margin_percent:
+          oneOf:
+            - $ref: '#/components/schemas/DecimalString'
+            - type: 'null'
+          description: 'Маржа по умолчанию, % — поле группы `cost_margin`: без права на неё в ответе нет'
+        min_margin_percent:
+          $ref: '#/components/schemas/DecimalString'
+          description: Минимальная маржа, % — поле группы `cost_margin`
+        target_margin_percent:
+          $ref: '#/components/schemas/DecimalString'
+          description: Целевая маржа, % — поле группы `cost_margin`
+        default_offer_validity_days:
+          type:
+            - integer
+            - 'null'
+          minimum: 0
+          description: Срок действия КП, дней
+        payment_terms_days:
+          type:
+            - integer
+            - 'null'
+          minimum: 0
+          description: Отсрочка платежа, дней
+        default_payment_terms:
+          type: string
+          description: Условия оплаты текстом
+        default_warranty_months:
+          type:
+            - integer
+            - 'null'
+          minimum: 0
+          description: Гарантия, месяцев
+        catalog_price_visibility:
+          type: string
+          enum:
+            - cabinet
+            - on_request
+          description: 'Цена в каталоге: показывать в кабинете или «по запросу»'
+        catalog_publish_threshold:
+          type: integer
+          minimum: 1
+          maximum: 100
+          description: Порог полноты карточки для публикации, %
+        fx_rate_max_age_days:
+          type: integer
+          minimum: 1
+          maximum: 90
+          description: Предельный возраст курса, дней
+    QuoteDefaultsUpdate:
+      type: object
+      additionalProperties: false
+      minProperties: 1
+      description: Поля маржи без права на `cost_margin` — 403 `FORBIDDEN` (`details.fields`).
+      properties:
+        default_cost_currency:
+          type:
+            - string
+            - 'null'
+          description: Валюта себестоимости — код из справочника «Валюты»
+        default_delivery_basis:
+          type:
+            - string
+            - 'null'
+          description: Базис поставки по умолчанию — код из справочника
+        default_vat_rate:
+          oneOf:
+            - $ref: '#/components/schemas/DecimalString'
+            - type: 'null'
+          description: Ставка НДС в КП, %
+        default_margin_percent:
+          oneOf:
+            - $ref: '#/components/schemas/DecimalString'
+            - type: 'null'
+          description: 'Маржа по умолчанию, % — поле группы `cost_margin`: без права на неё в ответе нет'
+        min_margin_percent:
+          $ref: '#/components/schemas/DecimalString'
+          description: Минимальная маржа, % — поле группы `cost_margin`
+        target_margin_percent:
+          $ref: '#/components/schemas/DecimalString'
+          description: Целевая маржа, % — поле группы `cost_margin`
+        default_offer_validity_days:
+          type:
+            - integer
+            - 'null'
+          minimum: 0
+          description: Срок действия КП, дней
+        payment_terms_days:
+          type:
+            - integer
+            - 'null'
+          minimum: 0
+          description: Отсрочка платежа, дней
+        default_payment_terms:
+          type: string
+          description: Условия оплаты текстом
+        default_warranty_months:
+          type:
+            - integer
+            - 'null'
+          minimum: 0
+          description: Гарантия, месяцев
+        catalog_price_visibility:
+          type: string
+          enum:
+            - cabinet
+            - on_request
+          description: 'Цена в каталоге: показывать в кабинете или «по запросу»'
+        catalog_publish_threshold:
+          type: integer
+          minimum: 1
+          maximum: 100
+          description: Порог полноты карточки для публикации, %
+        fx_rate_max_age_days:
+          type: integer
+          minimum: 1
+          maximum: 90
+          description: Предельный возраст курса, дней
+    ChargeType:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - code
+        - name
+      properties:
+        id:
+          $ref: '#/components/schemas/CompanyItemRef'
+        code:
+          type: string
+        name:
+          type: string
+    ChargeTypeList:
+      type: object
+      additionalProperties: false
+      required:
+        - items
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/ChargeType'
+    ChargeTemplate:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - delivery_basis
+        - delivery_basis_name
+        - charge_type
+        - charge_type_name
+        - default_amount
+        - default_rate_percent
+        - is_deduction
+        - sort_order
+        - is_active
+      properties:
+        id:
+          $ref: '#/components/schemas/CompanyItemRef'
+        delivery_basis:
+          type: string
+          description: Код базиса поставки
+        charge_type:
+          type: string
+          description: Код типа статьи расхода (`ChargeType.code`)
+        default_amount:
+          $ref: '#/components/schemas/DecimalString'
+          description: Сумма по умолчанию
+        default_rate_percent:
+          oneOf:
+            - $ref: '#/components/schemas/DecimalString'
+            - type: 'null'
+          description: Ставка по умолчанию, %
+        is_deduction:
+          type: boolean
+          description: Статья вычитается из суммы
+        sort_order:
+          type: integer
+        is_active:
+          type: boolean
+        delivery_basis_name:
+          type: string
+        charge_type_name:
+          type: string
+    ChargeTemplateList:
+      type: object
+      additionalProperties: false
+      required:
+        - items
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/ChargeTemplate'
+    ChargeTemplateIn:
+      type: object
+      additionalProperties: false
+      required:
+        - delivery_basis
+        - charge_type
+      properties:
+        delivery_basis:
+          type: string
+          description: Код базиса поставки
+        charge_type:
+          type: string
+          description: Код типа статьи расхода (`ChargeType.code`)
+        default_amount:
+          $ref: '#/components/schemas/DecimalString'
+          description: Сумма по умолчанию
+        default_rate_percent:
+          oneOf:
+            - $ref: '#/components/schemas/DecimalString'
+            - type: 'null'
+          description: Ставка по умолчанию, %
+        is_deduction:
+          type: boolean
+          description: Статья вычитается из суммы
+        sort_order:
+          type: integer
+        is_active:
+          type: boolean
+    ChargeTemplateUpdate:
+      type: object
+      additionalProperties: false
+      minProperties: 1
+      properties:
+        delivery_basis:
+          type: string
+          description: Код базиса поставки
+        charge_type:
+          type: string
+          description: Код типа статьи расхода (`ChargeType.code`)
+        default_amount:
+          $ref: '#/components/schemas/DecimalString'
+          description: Сумма по умолчанию
+        default_rate_percent:
+          oneOf:
+            - $ref: '#/components/schemas/DecimalString'
+            - type: 'null'
+          description: Ставка по умолчанию, %
+        is_deduction:
+          type: boolean
+          description: Статья вычитается из суммы
+        sort_order:
+          type: integer
+        is_active:
+          type: boolean
+    DocumentTemplate:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - name
+        - kind_name
+        - body_html
+        - is_sample
+        - is_owned
+        - is_active
+        - placeholders_used
+        - updated_at
+      properties:
+        id:
+          $ref: '#/components/schemas/CompanyItemRef'
+        name:
+          type: string
+        kind_name:
+          type: string
+          description: Вид документа словами
+        body_html:
+          type: string
+        is_sample:
+          type: boolean
+          description: 'Образец платформы: правится только копия (`/copy`)'
+        is_owned:
+          type: boolean
+          description: Шаблон своей компании
+        is_active:
+          type: boolean
+        placeholders_used:
+          type: array
+          items:
+            type: string
+        updated_at:
+          type: string
+          format: date-time
+    DocumentTemplateList:
+      type: object
+      additionalProperties: false
+      required:
+        - items
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/DocumentTemplate'
+    DocumentTemplateIn:
+      type: object
+      additionalProperties: false
+      required:
+        - name
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 255
+        body_html:
+          type: string
+        is_active:
+          type: boolean
+    DocumentTemplateUpdate:
+      type: object
+      additionalProperties: false
+      minProperties: 1
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 255
+        body_html:
+          type: string
+        is_active:
+          type: boolean
+    DocumentTemplateCopyIn:
+      type: object
+      additionalProperties: false
+      required:
+        - name
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 255
+    DocumentPlaceholder:
+      type: object
+      additionalProperties: false
+      required:
+        - code
+        - label
+      properties:
+        code:
+          type: string
+          description: Подставляется как `{{code}}`
+        label:
+          type: string
+    DocumentPlaceholderGroup:
+      type: object
+      additionalProperties: false
+      required:
+        - key
+        - label
+        - items
+      properties:
+        key:
+          type: string
+        label:
+          type: string
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/DocumentPlaceholder'
+    DocumentPlaceholders:
+      type: object
+      additionalProperties: false
+      required:
+        - groups
+      properties:
+        groups:
+          type: array
+          items:
+            $ref: '#/components/schemas/DocumentPlaceholderGroup'
+    DocumentTemplatePreviewIn:
+      type: object
+      additionalProperties: false
+      required:
+        - body_html
+      properties:
+        body_html:
+          type: string
+    EmailTemplate:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - key
+        - language
+        - subject
+        - html_body
+        - text_body
+        - available_variables
+        - is_active
+        - updated_at
+      properties:
+        id:
+          $ref: '#/components/schemas/CompanyItemRef'
+        key:
+          type: string
+          minLength: 1
+          maxLength: 100
+          description: Ключ письма (например, `invoice_issued`)
+        language:
+          type: string
+          description: Язык шаблона
+        subject:
+          type: string
+          minLength: 1
+        html_body:
+          type: string
+        text_body:
+          type: string
+          minLength: 1
+        available_variables:
+          type: string
+          description: Переменные шаблона через запятую
+        is_active:
+          type: boolean
+          description: Активный шаблон заменяет файловый для всех получателей
+        updated_at:
+          type: string
+          format: date-time
+        updated_by:
+          type: string
+          description: Почта сотрудника, правившего последним
+    EmailTemplateList:
+      type: object
+      additionalProperties: false
+      required:
+        - items
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/EmailTemplate'
+    EmailTemplateIn:
+      type: object
+      additionalProperties: false
+      required:
+        - key
+        - subject
+        - text_body
+      properties:
+        key:
+          type: string
+          minLength: 1
+          maxLength: 100
+          description: Ключ письма (например, `invoice_issued`)
+        language:
+          type: string
+          description: Язык шаблона
+        subject:
+          type: string
+          minLength: 1
+        html_body:
+          type: string
+        text_body:
+          type: string
+          minLength: 1
+        available_variables:
+          type: string
+          description: Переменные шаблона через запятую
+        is_active:
+          type: boolean
+          description: Активный шаблон заменяет файловый для всех получателей
+    EmailTemplateUpdate:
+      type: object
+      additionalProperties: false
+      minProperties: 1
+      properties:
+        key:
+          type: string
+          minLength: 1
+          maxLength: 100
+          description: Ключ письма (например, `invoice_issued`)
+        language:
+          type: string
+          description: Язык шаблона
+        subject:
+          type: string
+          minLength: 1
+        html_body:
+          type: string
+        text_body:
+          type: string
+          minLength: 1
+        available_variables:
+          type: string
+          description: Переменные шаблона через запятую
+        is_active:
+          type: boolean
+          description: Активный шаблон заменяет файловый для всех получателей
+    EmailTemplatePreview:
+      type: object
+      additionalProperties: false
+      required:
+        - subject
+        - text_body
+        - html_body
+      properties:
+        subject:
+          type: string
+        text_body:
+          type: string
+        html_body:
+          type: string
+    ReferenceKind:
+      type: string
+      enum:
+        - countries
+        - currencies
+        - units
+        - delivery-basis
+      description: 'Справочник ERP: страны, валюты, единицы измерения, базисы поставки'
+    ReferenceItem:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - code
+        - name
+        - sort_order
+        - is_active
+      description: Строка справочника; поля вне вида справочника не приходят.
+      properties:
+        id:
+          $ref: '#/components/schemas/CompanyItemRef'
+        code:
+          type: string
+          minLength: 1
+          maxLength: 50
+        name:
+          type: string
+          minLength: 1
+          maxLength: 255
+        sort_order:
+          type: integer
+        is_active:
+          type: boolean
+        symbol:
+          type: string
+          description: 'Валюта: знак'
+        alpha2:
+          type: string
+          description: 'Страна: ISO alpha-2'
+        alpha3:
+          type: string
+          description: 'Страна: ISO alpha-3'
+        iso_numeric:
+          type: string
+          description: 'Страна: цифровой код ISO'
+        vat_rate:
+          oneOf:
+            - $ref: '#/components/schemas/DecimalString'
+            - type: 'null'
+          description: 'Страна: ставка НДС, %'
+        description:
+          type: string
+          description: 'Базис поставки: описание'
+        seller_pays_freight:
+          type: boolean
+        seller_pays_insurance:
+          type: boolean
+        seller_pays_import:
+          type: boolean
+        seller_pays_delivery:
+          type: boolean
+    ReferenceItemList:
+      type: object
+      additionalProperties: false
+      required:
+        - items
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/ReferenceItem'
+    ReferenceItemIn:
+      type: object
+      additionalProperties: false
+      required:
+        - code
+        - name
+      properties:
+        code:
+          type: string
+          minLength: 1
+          maxLength: 50
+        name:
+          type: string
+          minLength: 1
+          maxLength: 255
+        sort_order:
+          type: integer
+        is_active:
+          type: boolean
+        symbol:
+          type: string
+          description: 'Валюта: знак'
+        alpha2:
+          type: string
+          description: 'Страна: ISO alpha-2'
+        alpha3:
+          type: string
+          description: 'Страна: ISO alpha-3'
+        iso_numeric:
+          type: string
+          description: 'Страна: цифровой код ISO'
+        vat_rate:
+          oneOf:
+            - $ref: '#/components/schemas/DecimalString'
+            - type: 'null'
+          description: 'Страна: ставка НДС, %'
+        description:
+          type: string
+          description: 'Базис поставки: описание'
+        seller_pays_freight:
+          type: boolean
+        seller_pays_insurance:
+          type: boolean
+        seller_pays_import:
+          type: boolean
+        seller_pays_delivery:
+          type: boolean
+    ReferenceItemUpdate:
+      type: object
+      additionalProperties: false
+      minProperties: 1
+      properties:
+        code:
+          type: string
+          minLength: 1
+          maxLength: 50
+        name:
+          type: string
+          minLength: 1
+          maxLength: 255
+        sort_order:
+          type: integer
+        is_active:
+          type: boolean
+        symbol:
+          type: string
+          description: 'Валюта: знак'
+        alpha2:
+          type: string
+          description: 'Страна: ISO alpha-2'
+        alpha3:
+          type: string
+          description: 'Страна: ISO alpha-3'
+        iso_numeric:
+          type: string
+          description: 'Страна: цифровой код ISO'
+        vat_rate:
+          oneOf:
+            - $ref: '#/components/schemas/DecimalString'
+            - type: 'null'
+          description: 'Страна: ставка НДС, %'
+        description:
+          type: string
+          description: 'Базис поставки: описание'
+        seller_pays_freight:
+          type: boolean
+        seller_pays_insurance:
+          type: boolean
+        seller_pays_import:
+          type: boolean
+        seller_pays_delivery:
+          type: boolean
+    CatalogCategory:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - name
+        - parent_id
+      properties:
+        id:
+          $ref: '#/components/schemas/CompanyItemRef'
+        name:
+          type: string
+        parent_id:
+          oneOf:
+            - $ref: '#/components/schemas/CompanyItemRef'
+            - type: 'null'
+    CatalogCategoryList:
+      type: object
+      additionalProperties: false
+      required:
+        - items
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/CatalogCategory'
+    CatalogCategoryIn:
+      type: object
+      additionalProperties: false
+      required:
+        - name
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 255
+        parent_id:
+          oneOf:
+            - $ref: '#/components/schemas/CompanyItemRef'
+            - type: 'null'
+    CatalogCategoryUpdate:
+      type: object
+      additionalProperties: false
+      minProperties: 1
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 255
+        parent_id:
+          oneOf:
+            - $ref: '#/components/schemas/CompanyItemRef'
+            - type: 'null'
+    CategoryRequestStatus:
+      type: string
+      enum:
+        - pending
+        - approved
+        - rejected
+      description: На рассмотрении, одобрен, отклонён
+    CategoryRequest:
+      type: object
+      additionalProperties: false
+      description: Запрос сотрудника на новую категорию каталога (ERP `catalog/category-requests`).
+      required:
+        - id
+        - proposed_name
+        - status
+        - company_name
+        - created_at
+      properties:
+        id:
+          $ref: '#/components/schemas/CompanyItemRef'
+        proposed_name:
+          type: string
+        parent_name:
+          type: string
+        justification:
+          type: string
+        status:
+          $ref: '#/components/schemas/CategoryRequestStatus'
+        company_name:
+          type: string
+        requested_by:
+          type: string
+          description: Почта автора
+        resulting_category_id:
+          oneOf:
+            - $ref: '#/components/schemas/CompanyItemRef'
+            - type: 'null'
+        resulting_category_name:
+          type: string
+        review_notes:
+          type: string
+          description: Причина отказа
+        reviewed_at:
+          type:
+            - string
+            - 'null'
+          format: date-time
+        created_at:
+          type: string
+          format: date-time
+    CategoryRequestList:
+      type: object
+      additionalProperties: false
+      required:
+        - items
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/CategoryRequest'
+    CategoryRequestApproveIn:
+      type: object
+      additionalProperties: false
+      required:
+        - category_id
+      properties:
+        category_id:
+          $ref: '#/components/schemas/CompanyItemRef'
+          description: Категория, которую оператор завёл для запроса
+    CategoryRequestRejectIn:
+      type: object
+      additionalProperties: false
+      required:
+        - reason
+      properties:
+        reason:
+          type: string
+          minLength: 1
+          maxLength: 1000
+          description: Причина отказа — обязательна
+    PlatformSettings:
+      type: object
+      additionalProperties: false
+      required:
+        - vat_rate
+        - exchange_rate_usd_uzs
+        - updated_at
+      properties:
+        vat_rate:
+          $ref: '#/components/schemas/DecimalString'
+          description: Ставка НДС платформы, %
+        exchange_rate_usd_uzs:
+          oneOf:
+            - $ref: '#/components/schemas/DecimalString'
+            - type: 'null'
+          description: 'Курс USD→UZS (только чтение: курс ведёт ERP)'
+        updated_at:
+          type: string
+          format: date-time
+    PlatformSettingsUpdate:
+      type: object
+      additionalProperties: false
+      minProperties: 1
+      properties:
+        vat_rate:
+          $ref: '#/components/schemas/DecimalString'
+          description: Ставка НДС платформы, %

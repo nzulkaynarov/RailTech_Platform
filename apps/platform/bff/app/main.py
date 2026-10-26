@@ -9,6 +9,7 @@ from rt_bus.fastapi import bus_router
 
 from app import __version__
 from app.api import (
+    admin_company,
     admin_integrations,
     admin_passwords,
     admin_roles,
@@ -82,6 +83,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(setup.router, prefix=API_PREFIX)
     app.include_router(admin_roles.router, prefix=API_PREFIX)
     app.include_router(admin_integrations.router, prefix=API_PREFIX)
+    app.include_router(admin_company.router, prefix=API_PREFIX)
     app.include_router(dashboard.router, prefix=API_PREFIX)
     app.include_router(notifications.router, prefix=API_PREFIX)
     app.include_router(search.router, prefix=API_PREFIX)

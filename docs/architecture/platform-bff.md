@@ -205,6 +205,16 @@ SPA  POST /api/v1/setup/admin {code, name, email, password}
 бизнес-данные — второй ролью. У сотрудника хотя бы одна роль: пустой `role_ids` — 422 `ROLES_REQUIRED` (CRM — 422
 `roles_required`), закрыть доступ — `is_active = false`.
 
+**W13-A3 (BFF 0.8.0): Admin · Компания.** `/admin/company*` проксирует к ERP настройки своей компании (реквизиты и логотип, бланк и бренд,
+нумерация, условия КП, статьи расхода, шаблоны документов и писем, справочники, категории и запросы на них, НДС). Раздел
+каталога — `company.settings` (чтение — `GET` и предпросмотры, полный — изменения); право на операцию решает ERP (`settings.edit`,
+`settings.charge_templates`; запросы на категории и ставка НДС — тоже `settings.edit` или суперпользователь). Id своей компании BFF берёт из
+`own_company_id` в `setup/status/` ERP (старая ERP без поля — основное членство), нет компании — 409 `COMPANY_NOT_SET`. Логотипы
+BFF отдаёт сам (`/admin/company/logo/image`, `/admin/company/brand/logo/image`): CSP Платформы адреса ERP не пускает.
+Загрузка логотипа — `multipart/form-data` целиком, BFF содержимое не разбирает, а проверяет размер (до 2 МБ) и тип части `logo` по её заголовкам (PNG, JPEG, WebP, SVG); содержимое проверяет ERP. Поля маржи условий КП — группа `cost_margin`
+(вырезаются и не принимаются без права). Ошибки ERP: 400 → 422 `VALIDATION_FAILED` (`details.reason`, `details.fields`),
+«используется»/«уже рассмотрен»/«префикс занят» → 409 `CONFLICT`. Разрывы в ERP — `docs/QUESTIONS.md`, Q-W13A3-1.
+
 ## 7. Развёртывание
 
 | Что | Значение |

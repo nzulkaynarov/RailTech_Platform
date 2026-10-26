@@ -94,9 +94,19 @@ class Authed:
         json: Any = None,
         params: dict[str, Any] | None = None,
         probe: bool = False,
+        content: bytes | None = None,
+        content_type: str | None = None,
     ) -> httpx.Response:
         return await self.service.call(
-            self.sid, backend, method, path, json=json, params=params, probe=probe
+            self.sid,
+            backend,
+            method,
+            path,
+            json=json,
+            params=params,
+            probe=probe,
+            content=content,
+            content_type=content_type,
         )
 
 
