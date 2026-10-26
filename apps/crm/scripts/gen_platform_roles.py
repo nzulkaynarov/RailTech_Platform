@@ -1,7 +1,7 @@
 """Генератор `platform_roles_generated.py` из каталога `packages/contracts/platform-rbac.yaml`.
 
 Каталог возможностей (ADR-0012) — единственный источник отображения «раздел × уровень → права
-CRM и ERP», системных ролей, шаблонов ролей и правила базовой роли CRM. Модуль в репозитории не
+CRM, ERP и EDS», системных ролей, шаблонов ролей и правила базовой роли CRM. Модуль в репозитории не
 правится руками: `make -C apps/crm platform-roles` пересоздаёт его, тест
 `tests/unit/domain/test_platform_roles.py` сверяет файл с каталогом. Контейнер CRM не содержит
 `packages/`, поэтому данные каталога живут в коде.
@@ -108,6 +108,12 @@ def render(spec: dict[str, Any]) -> str:
             "dict[str, dict[str, tuple[str, ...]]]",
             {r["key"]: _by_level(r.get("backend", {}), "erp") for r in resources},
             "Раздел -> уровень -> права ERP (`Permission`; уровень full включает read).",
+        ),
+        _const(
+            "EDS_BACKEND",
+            "dict[str, dict[str, tuple[str, ...]]]",
+            {r["key"]: _by_level(r.get("backend", {}), "eds") for r in resources},
+            "Раздел -> уровень -> права EDS (`EdsPermission`; уровень full включает read).",
         ),
         _const(
             "FIELD_ERP_BACKEND",

@@ -13,6 +13,8 @@ from datetime import datetime
 
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
+from app.bus import events as bus_events
+from app.bus import snapshots
 from app.domain.errors import (
     ConflictError,
     LastAdminError,
@@ -192,9 +194,10 @@ class PlatformRoleService:
                     "the role was changed by someone else: reload it", current=role.version
                 )
             before = role_snapshot(role)
+            holders = await repo.user_ids_of_role(session, role_id)
+            eds_before = await _eds_of(session, holders)
             await self._apply(session, role, patch, actor)
             after = role_snapshot(role)
-            holders = await repo.user_ids_of_role(session, role_id)
             access_changed = (before["access"], before["restricted_fields"]) != (
                 after["access"],
                 after["restricted_fields"],
@@ -202,6 +205,7 @@ class PlatformRoleService:
             if access_changed:
                 await write_role_policies(session, role_id, role.access)
                 await _recompute_holders(session, actor, holders)
+                await _publish_eds_changes(session, actor, holders, eds_before)
             if before != after:
                 role.version += 1
                 await session.flush()
@@ -305,6 +309,35 @@ async def _recompute_holders(session: AsyncSession, actor: Actor, holders: Seque
         )  # fmt: skip
     if holders and await users_repo.count_active_admins(session) == 0:
         raise LastAdminError("the change would leave the company without an active admin")
+
+
+async def _eds_of(session: AsyncSession, user_ids: Sequence[int]) -> dict[int, list[str]]:
+    """Права EDS держателей роли сейчас (по матрицам ролей в базе и сессии)."""
+    result: dict[int, list[str]] = {}
+    for user_id in user_ids:
+        user = await users_repo.get(session, user_id)
+        if user is None:
+            continue
+        roles = await repo.roles_of_user(session, user_id)
+        result[user_id] = snapshots.eds_permissions(roles, is_active=bool(user.is_active))
+    return result
+
+
+async def _publish_eds_changes(
+    session: AsyncSession,
+    actor: Actor,
+    holders: Sequence[int],
+    before: Mapping[int, list[str]],
+) -> None:
+    """`identity.user.updated` (`changed_fields = ["permissions"]`) каждому держателю роли,
+    у кого права EDS изменились; у кого не изменились — события нет. Та же транзакция (outbox)."""
+    after = await _eds_of(session, holders)
+    for user_id in holders:
+        if user_id not in after or after[user_id] == before.get(user_id):
+            continue
+        user = await users_repo.get(session, user_id)
+        if user is not None:
+            await bus_events.user_updated(session, user, actor, ["permissions"])
 
 
 async def _erp_targets(session: AsyncSession, holders: Sequence[int]) -> list[int]:

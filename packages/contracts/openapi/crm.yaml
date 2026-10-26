@@ -4459,6 +4459,7 @@ components:
       - telegram_paused
       - sso_not_configured
       - platform_access_denied
+      - eds_access_denied
       - user_not_provisioned
       - user_inactive
       - erp_email_conflict
@@ -5383,6 +5384,18 @@ components:
       - token
       title: SsoExchangeRequest
       type: object
+    SsoTokenRequest:
+      description: 'Тело выдачи SSO-токена; необязательное: без него (или `aud = erp`) — токен для ERP.'
+      properties:
+        aud:
+          default: erp
+          enum:
+          - erp
+          - eds
+          title: Aud
+          type: string
+      title: SsoTokenRequest
+      type: object
     SsoTokenResponse:
       properties:
         redirect_url:
@@ -5950,7 +5963,7 @@ components:
       type: http
 info:
   title: RailTech CRM API
-  version: 0.3.0
+  version: 0.4.0
 openapi: 3.1.0
 paths:
   /api/v1/admin/ai-spend:
@@ -6422,8 +6435,21 @@ paths:
       - auth
   /api/v1/auth/sso/token:
     post:
-      description: Выдать SSO-токен для перехода текущего сотрудника в ERP (CONTRACTS §6).
+      description: 'Выдать SSO-токен текущему сотруднику (CONTRACTS §6, sso-token.md).
+
+
+        Без тела или с `aud = erp` — переход в ERP; `aud = eds` — токен сотрудника для обмена в EDS
+
+        (у EDS нет внешнего маршрута: `redirect_url` пуст).'
       operationId: sso_token
+      requestBody:
+        content:
+          application/json:
+            schema:
+              anyOf:
+              - $ref: '#/components/schemas/SsoTokenRequest'
+              - type: 'null'
+              title: Body
       responses:
         '200':
           content:
