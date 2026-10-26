@@ -1,0 +1,30 @@
+== ERP outbox: события и подписчики (stub2 был enabled:false 01:02:05-01:08:38)
+ created  |           t            |                                      subs
+----------+------------------------+---------------------------------------------------------------------------------
+ 00:57:36 | erp.request.created.v1 | crm:delivered,eds:pending,platform-bff:delivered,stub:delivered
+ 00:57:37 | erp.invite.sent.v1     | crm:delivered,platform-bff:delivered,stub:delivered
+ 00:59:39 | erp.request.created.v1 | crm:delivered,eds:pending,platform-bff:delivered,stub:delivered,stub2:delivered
+ 00:59:39 | erp.invite.sent.v1     | crm:delivered,platform-bff:delivered,stub:delivered,stub2:delivered
+ 01:00:11 | erp.request.created.v1 | crm:delivered,eds:pending,platform-bff:delivered,stub:pending,stub2:delivered
+ 01:00:11 | erp.invite.sent.v1     | crm:delivered,platform-bff:delivered,stub:pending,stub2:delivered
+ 01:00:20 | erp.request.created.v1 | crm:delivered,eds:pending,platform-bff:delivered,stub:pending,stub2:delivered
+ 01:00:20 | erp.invite.sent.v1     | crm:delivered,platform-bff:delivered,stub:pending,stub2:delivered
+ 01:01:49 | erp.request.created.v1 | crm:delivered,eds:pending,platform-bff:delivered,stub:pending,stub2:delivered
+ 01:01:49 | erp.invite.sent.v1     | crm:delivered,platform-bff:delivered,stub:pending,stub2:delivered
+ 01:02:08 | erp.request.created.v1 | crm:delivered,eds:pending,platform-bff:delivered,stub:pending
+ 01:02:08 | erp.invite.sent.v1     | crm:delivered,platform-bff:delivered,stub:pending
+(12 rows)
+
+
+== CRM outbox 01:02:00-01:02:30 (события клиента «Энейбл Б», опубликованы при enabled:false у stub2)
+ created  |             t             |                subs
+----------+---------------------------+-------------------------------------
+ 01:02:07 | crm.lead.created.v1       | platform-bff:delivered,stub:pending
+ 01:02:07 | crm.lead.stage_changed.v1 | platform-bff:delivered,stub:pending
+ 01:02:07 | crm.client.created.v1     | stub:pending
+ 01:02:07 | crm.lead.updated.v1       | platform-bff:delivered,stub:pending
+ 01:02:08 | crm.lead.stage_changed.v1 | platform-bff:delivered,stub:pending
+ 01:02:08 | crm.contact.created.v1    | erp:delivered,stub:pending
+ 01:02:08 | crm.client.updated.v1     | erp:delivered,stub:pending
+ 01:02:08 | crm.lead.updated.v1       | platform-bff:delivered,stub:pending
+(8 rows)

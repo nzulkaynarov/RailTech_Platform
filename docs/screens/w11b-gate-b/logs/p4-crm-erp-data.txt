@@ -1,0 +1,40 @@
+== 0. До правок
+CRM: name=ООО Демо Клиент inn=null
+ERP:
+ erp_company |      name       | inn
+-------------+-----------------+-----
+           2 | ООО Демо Клиент |
+(1 row)
+== 1. Реквизиты: CRM PATCH name+inn
+PATCH status 200
+ERP применил за 878 мс
+CRM: name=ООО Демо Клиент Плюс inn=301234567
+ERP:
+ erp_company |         name         |    inn
+-------------+----------------------+-----------
+           2 | ООО Демо Клиент Плюс | 301234567
+(1 row)
+== 2. Контакт: CRM POST
+POST contact 201 {"id":7}
+CRM contact: {"contacts":[{"id":1,"full_name":"Иван Демонстрационный","position":null,"phone_e164":"+998901112233","email":"ivan@demo.example","telegram_identity_id":null,"is_primary":true,"note":null,"created_at":"2026-10-26T00:57:36.596761Z"},{"id":7,"full_name":"Пётр Контактов","position":"Главный инженер","phone_e164":"+998901234567","email":"petr.kontaktov@demo.example","telegram_identity_id":null,"is_primary":false,"note":null,"created_at":"2026-10-26T01:03:07.183328Z"}],"suggestions":[]}
+ERP:
+ id |      name      |            email            |     phone     |    position     | is_primary | archived
+----+----------------+-----------------------------+---------------+-----------------+------------+----------
+  7 | Пётр Контактов | petr.kontaktov@demo.example | +998901234567 | Главный инженер | f          | f
+(1 row)
+== 3. Контакт: CRM PUT (правка телефона, должности)
+PUT 200
+CRM contact: {"contacts":[{"id":1,"full_name":"Иван Демонстрационный","position":null,"phone_e164":"+998901112233","email":"ivan@demo.example","telegram_identity_id":null,"is_primary":true,"note":null,"created_at":"2026-10-26T00:57:36.596761Z"},{"id":7,"full_name":"Пётр Контактов","position":"Директор по закупкам","phone_e164":"+998917654321","email":"petr.kontaktov@demo.example","telegram_identity_id":null,"is_primary":false,"note":null,"created_at":"2026-10-26T01:03:07.183328Z"}],"suggestions":[]}
+ERP:
+ id |      name      |            email            |     phone     |       position       | is_primary | archived
+----+----------------+-----------------------------+---------------+----------------------+------------+----------
+  7 | Пётр Контактов | petr.kontaktov@demo.example | +998917654321 | Директор по закупкам | f          | f
+(1 row)
+== 4. Контакт: CRM DELETE → архив
+DELETE 200
+CRM contacts after: {"contacts":[{"id":1,"full_name":"Иван Демонстрационный","position":null,"phone_e164":"+998901112233","email":"ivan@demo.example","telegram_identity_id":null,"is_primary":true,"note":null,"created_at":"2026-10-26T00:57:36.596761Z"}],"suggestions":[]}
+ERP:
+ id |      name      |            email            |     phone     |       position       | is_primary | archived
+----+----------------+-----------------------------+---------------+----------------------+------------+----------
+  7 | Пётр Контактов | petr.kontaktov@demo.example | +998917654321 | Директор по закупкам | f          | t
+(1 row)
