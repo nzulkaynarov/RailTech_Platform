@@ -3,6 +3,15 @@
 
 from fastapi import APIRouter
 
-from app.api.v1 import auth, me
+from app.api.v1 import approvals, auth, documents, files, letters, me, registry
 
-ROUTERS: tuple[APIRouter, ...] = (auth.router, me.router)
+ROUTERS: tuple[APIRouter, ...] = (
+    auth.router,
+    me.router,
+    letters.router,
+    documents.router,
+    approvals.router,
+    files.router,
+    files.upload_router,
+    registry.router,
+)
