@@ -22,6 +22,7 @@ from app.schemas_admin import (
     EmployeeUpdate,
     to_employee,
 )
+from app.schemas_integrations import MailQueued
 from app.session import SessionData
 
 router = APIRouter(tags=["admin"])
@@ -137,6 +138,31 @@ async def resend_invite(id: EmployeeId, authed: Writer) -> Employee:
     except PlatformError as exc:
         raise _not_sent(exc, id, RESEND_CRM_UNAVAILABLE) from exc
     return to_employee(await users.get(id))
+
+
+SELF_RESET_MESSAGE = "Свой пароль здесь не сбросить: выберите «Сменить пароль» в меню аватара."
+
+
+@router.post(
+    "/admin/users/{id}/reset-password/email",
+    response_model=MailQueued,
+    operation_id="resetEmployeePasswordByEmail",
+)
+async def reset_employee_password_by_email(id: EmployeeId, authed: Writer) -> MailQueued:
+    """Сбросить пароль сотрудника: CRM выдаёт новый временный пароль и шлёт письмо, сессии гаснут.
+
+    Себе сбросить нельзя: CRM завершила бы собственную сессию администратора, а письмо ушло бы
+    на его же адрес — для своего пароля есть «Сменить пароль». Запрос в CRM в этом случае не уходит.
+    Пароль в ответ не попадает."""
+    if id == str(authed.data.user_id):
+        raise PlatformError(
+            "CONFLICT",
+            SELF_RESET_MESSAGE,
+            status_code=status.HTTP_409_CONFLICT,
+            details={"reason": "self_reset"},
+        )
+    queued = await _users(authed).reset_password_email(id)
+    return MailQueued.model_validate(queued)
 
 
 @router.get(

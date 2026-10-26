@@ -52,6 +52,15 @@
  * обычными API (с проверкой прав). Данных событий в потоке нет. Пока поток жив, опрос — редкий (5 минут), при обрыве —
  * прежние 30 секунд. Чисто добавляющее изменение.
  *
+ * **0.12.0 (W13-A6) — Admin · Оргструктура, Журнал аудита, профиль.** Чисто добавляющее изменение: `POST /admin/users/{id}/reset-password/email`
+ * (сброс пароля сотрудника с письмом; себе — 409 `CONFLICT` с `details.reason = self_reset`; почта не подключена — 409
+ * `NOT_CONFIGURED`), `GET /admin/audit` (журнал аудита CRM «кто, что, когда» с фильтрами по автору, действию, объекту и периоду и
+ * постраничным ответом), `GET /admin/roles/{id}/journal` (изменения роли: кто, когда и что — матрица до и после; вкладка «Журнал»
+ * роли, скрытая с R-1b), `GET/PATCH /me/notification-settings` и `POST /me/test-notification` (личные уведомления от бота: Telegram
+ * привязан ли, подписки, последняя неудача доставки, пробное сообщение). Журнал и журнал роли — раздел `admin` от чтения
+ * (директор читает), сброс пароля — `admin: full`; профиль доступен каждому вошедшему. Секреты из записей журнала BFF вырезает
+ * (значения полей `*password*`, `*secret*`, `*token*`, `*api_key*` -> `***`).
+ *
  * **0.8.0 (W13-A3) — Admin · Компания.** Чисто добавляющее изменение: `GET/PATCH /admin/company` (реквизиты), `/admin/company/logo`
  * (загрузка `multipart/form-data` и удаление), `/admin/company/brand` (+ `/logo`, `/preview`) — бланк и бренд документов,
  * `/admin/company/numbering` (+ `/preview`), `/admin/company/quote-defaults`, `/admin/company/charge-types` и `charge-templates`,
@@ -96,7 +105,7 @@
  * Лимиты: вход — 10 неудачных попыток в минуту на IP и e-mail; остальные запросы — 300 в минуту на сессию; превышение — 429
  * `TOO_MANY_REQUESTS` с `Retry-After`.
  *
- * OpenAPI spec version: 0.8.0
+ * OpenAPI spec version: 0.12.0
  */
 import { faker } from "@faker-js/faker";
 
@@ -106,6 +115,7 @@ import type { RequestHandlerOptions } from "msw";
 import {
   AccessLevel,
   AttentionKind,
+  AuditActorType,
   CategoryRequestStatus,
   DocumentKind,
   DueLabel,
@@ -132,6 +142,7 @@ import type {
   AiModelList,
   AiModelTest,
   AiSpendReport,
+  AuditPage,
   BackupsStatus,
   BotProfileState,
   BrandProfile,
@@ -165,6 +176,7 @@ import type {
   Me,
   MenuCounters,
   NotificationPage,
+  NotificationSettings,
   NumberingPreview,
   NumberingScheme,
   PlatformSettings,
@@ -174,6 +186,7 @@ import type {
   ReferenceItem,
   ReferenceItemList,
   Role,
+  RoleJournal,
   RoleList,
   RolePreview,
   SearchResult,
@@ -329,6 +342,32 @@ export const getUpdateMeResponseMock = (
     undefined,
   ]),
   access: { crm: faker.datatype.boolean(), erp: faker.datatype.boolean() },
+  ...overrideResponse,
+});
+
+export const getGetNotificationSettingsResponseMock = (
+  overrideResponse: Partial<Extract<NotificationSettings, object>> = {},
+): NotificationSettings => ({
+  telegram_linked: faker.datatype.boolean(),
+  notify_leads: faker.datatype.boolean(),
+  notify_system: faker.datatype.boolean(),
+  delivery_failed_at: faker.helpers.arrayElement([
+    faker.date.past().toISOString().slice(0, 19) + "Z",
+    undefined,
+  ]),
+  ...overrideResponse,
+});
+
+export const getUpdateNotificationSettingsResponseMock = (
+  overrideResponse: Partial<Extract<NotificationSettings, object>> = {},
+): NotificationSettings => ({
+  telegram_linked: faker.datatype.boolean(),
+  notify_leads: faker.datatype.boolean(),
+  notify_system: faker.datatype.boolean(),
+  delivery_failed_at: faker.helpers.arrayElement([
+    faker.date.past().toISOString().slice(0, 19) + "Z",
+    undefined,
+  ]),
   ...overrideResponse,
 });
 
@@ -1851,6 +1890,15 @@ export const getUpdateEmployeeResponseMock = (
   ...overrideResponse,
 });
 
+export const getResetEmployeePasswordByEmailResponseMock = (
+  overrideResponse: Partial<Extract<MailQueued, object>> = {},
+): MailQueued => ({
+  email_log_id: faker.number.int(),
+  status: faker.helpers.arrayElement(["queued", "sent", "failed", "skipped_no_smtp"] as const),
+  to_email: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  ...overrideResponse,
+});
+
 export const getListRolesResponseMock = (
   overrideResponse: Partial<Extract<RoleList, object>> = {},
 ): RoleList => ({
@@ -1977,6 +2025,82 @@ export const getUpdateRoleResponseMock = (
   restricted_fields: faker.helpers.arrayElements(Object.values(RestrictedField)),
   employees: faker.number.int({ min: 0 }),
   updated_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+  ...overrideResponse,
+});
+
+export const getGetRoleJournalResponseMock = (
+  overrideResponse: Partial<Extract<RoleJournal, object>> = {},
+): RoleJournal => ({
+  items: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+    id: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    at: faker.date.past().toISOString().slice(0, 19) + "Z",
+    action: faker.helpers.arrayElement(["create", "update", "delete"] as const),
+    actor_id: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      undefined,
+    ]),
+    actor_name: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      undefined,
+    ]),
+    before: faker.helpers.arrayElement([
+      {
+        name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        description: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        access: {
+          [faker.string.alphanumeric(5)]: faker.helpers.arrayElement(Object.values(AccessLevel)),
+        },
+        restricted_fields: faker.helpers.arrayElements(Object.values(RestrictedField)),
+      },
+      undefined,
+    ]),
+    after: faker.helpers.arrayElement([
+      {
+        name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        description: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        access: {
+          [faker.string.alphanumeric(5)]: faker.helpers.arrayElement(Object.values(AccessLevel)),
+        },
+        restricted_fields: faker.helpers.arrayElements(Object.values(RestrictedField)),
+      },
+      undefined,
+    ]),
+  })),
+  total: faker.number.int({ min: 0 }),
+  ...overrideResponse,
+});
+
+export const getListAuditResponseMock = (
+  overrideResponse: Partial<Extract<AuditPage, object>> = {},
+): AuditPage => ({
+  items: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+    id: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    at: faker.date.past().toISOString().slice(0, 19) + "Z",
+    actor_type: faker.helpers.arrayElement(Object.values(AuditActorType)),
+    actor_id: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      undefined,
+    ]),
+    actor_name: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      undefined,
+    ]),
+    action: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    entity_type: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    entity_id: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      undefined,
+    ]),
+    before: faker.helpers.arrayElement([{}, undefined]),
+    after: faker.helpers.arrayElement([{}, undefined]),
+    ip: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      undefined,
+    ]),
+  })),
+  total: faker.number.int({ min: 0 }),
+  limit: faker.number.int(),
+  offset: faker.number.int(),
   ...overrideResponse,
 });
 
@@ -2926,6 +3050,72 @@ export const getUpdateMeMockHandler = (
           : getUpdateMeResponseMock(),
         { status: 200 },
       );
+    },
+    options,
+  );
+};
+
+export const getGetNotificationSettingsMockHandler = (
+  overrideResponse?:
+    | NotificationSettings
+    | ((
+        info: Parameters<Parameters<typeof http.get>[1]>[0],
+      ) => Promise<NotificationSettings> | NotificationSettings),
+  options?: RequestHandlerOptions,
+) => {
+  return http.get(
+    "*/me/notification-settings",
+    async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getGetNotificationSettingsResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getUpdateNotificationSettingsMockHandler = (
+  overrideResponse?:
+    | NotificationSettings
+    | ((
+        info: Parameters<Parameters<typeof http.patch>[1]>[0],
+      ) => Promise<NotificationSettings> | NotificationSettings),
+  options?: RequestHandlerOptions,
+) => {
+  return http.patch(
+    "*/me/notification-settings",
+    async (info: Parameters<Parameters<typeof http.patch>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getUpdateNotificationSettingsResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getSendTestNotificationMockHandler = (
+  overrideResponse?:
+    void | ((info: Parameters<Parameters<typeof http.post>[1]>[0]) => Promise<void> | void),
+  options?: RequestHandlerOptions,
+) => {
+  return http.post(
+    "*/me/test-notification",
+    async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+      if (typeof overrideResponse === "function") {
+        await overrideResponse(info);
+      }
+
+      return new HttpResponse(null, { status: 204 });
     },
     options,
   );
@@ -3987,6 +4177,28 @@ export const getUpdateEmployeeMockHandler = (
   );
 };
 
+export const getResetEmployeePasswordByEmailMockHandler = (
+  overrideResponse?:
+    | MailQueued
+    | ((info: Parameters<Parameters<typeof http.post>[1]>[0]) => Promise<MailQueued> | MailQueued),
+  options?: RequestHandlerOptions,
+) => {
+  return http.post(
+    "*/admin/users/:id/reset-password/email",
+    async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getResetEmployeePasswordByEmailResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
 export const getListRolesMockHandler = (
   overrideResponse?:
     | RoleList
@@ -4109,6 +4321,50 @@ export const getDeleteRoleMockHandler = (
       }
 
       return new HttpResponse(null, { status: 204 });
+    },
+    options,
+  );
+};
+
+export const getGetRoleJournalMockHandler = (
+  overrideResponse?:
+    | RoleJournal
+    | ((info: Parameters<Parameters<typeof http.get>[1]>[0]) => Promise<RoleJournal> | RoleJournal),
+  options?: RequestHandlerOptions,
+) => {
+  return http.get(
+    "*/admin/roles/:id/journal",
+    async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getGetRoleJournalResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getListAuditMockHandler = (
+  overrideResponse?:
+    | AuditPage
+    | ((info: Parameters<Parameters<typeof http.get>[1]>[0]) => Promise<AuditPage> | AuditPage),
+  options?: RequestHandlerOptions,
+) => {
+  return http.get(
+    "*/admin/audit",
+    async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getListAuditResponseMock(),
+        { status: 200 },
+      );
     },
     options,
   );
@@ -5156,6 +5412,9 @@ export const getRailTechPlatformBFFAPICRMERPMock = () => [
   getGetSessionMockHandler(),
   getGetMeMockHandler(),
   getUpdateMeMockHandler(),
+  getGetNotificationSettingsMockHandler(),
+  getUpdateNotificationSettingsMockHandler(),
+  getSendTestNotificationMockHandler(),
   getGetHealthMockHandler(),
   getGetMenuCountersMockHandler(),
   getGetQueueMockHandler(),
@@ -5202,12 +5461,15 @@ export const getRailTechPlatformBFFAPICRMERPMock = () => [
   getResendInviteMockHandler(),
   getGetEmployeeMockHandler(),
   getUpdateEmployeeMockHandler(),
+  getResetEmployeePasswordByEmailMockHandler(),
   getListRolesMockHandler(),
   getCreateRoleMockHandler(),
   getPreviewRoleMockHandler(),
   getGetRoleMockHandler(),
   getUpdateRoleMockHandler(),
   getDeleteRoleMockHandler(),
+  getGetRoleJournalMockHandler(),
+  getListAuditMockHandler(),
   getGetCompanyMockHandler(),
   getUpdateCompanyMockHandler(),
   getGetCompanyLogoImageMockHandler(),

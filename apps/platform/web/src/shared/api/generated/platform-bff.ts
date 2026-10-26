@@ -52,6 +52,15 @@
  * обычными API (с проверкой прав). Данных событий в потоке нет. Пока поток жив, опрос — редкий (5 минут), при обрыве —
  * прежние 30 секунд. Чисто добавляющее изменение.
  *
+ * **0.12.0 (W13-A6) — Admin · Оргструктура, Журнал аудита, профиль.** Чисто добавляющее изменение: `POST /admin/users/{id}/reset-password/email`
+ * (сброс пароля сотрудника с письмом; себе — 409 `CONFLICT` с `details.reason = self_reset`; почта не подключена — 409
+ * `NOT_CONFIGURED`), `GET /admin/audit` (журнал аудита CRM «кто, что, когда» с фильтрами по автору, действию, объекту и периоду и
+ * постраничным ответом), `GET /admin/roles/{id}/journal` (изменения роли: кто, когда и что — матрица до и после; вкладка «Журнал»
+ * роли, скрытая с R-1b), `GET/PATCH /me/notification-settings` и `POST /me/test-notification` (личные уведомления от бота: Telegram
+ * привязан ли, подписки, последняя неудача доставки, пробное сообщение). Журнал и журнал роли — раздел `admin` от чтения
+ * (директор читает), сброс пароля — `admin: full`; профиль доступен каждому вошедшему. Секреты из записей журнала BFF вырезает
+ * (значения полей `*password*`, `*secret*`, `*token*`, `*api_key*` -> `***`).
+ *
  * **0.8.0 (W13-A3) — Admin · Компания.** Чисто добавляющее изменение: `GET/PATCH /admin/company` (реквизиты), `/admin/company/logo`
  * (загрузка `multipart/form-data` и удаление), `/admin/company/brand` (+ `/logo`, `/preview`) — бланк и бренд документов,
  * `/admin/company/numbering` (+ `/preview`), `/admin/company/quote-defaults`, `/admin/company/charge-types` и `charge-templates`,
@@ -96,7 +105,7 @@
  * Лимиты: вход — 10 неудачных попыток в минуту на IP и e-mail; остальные запросы — 300 в минуту на сессию; превышение — 429
  * `TOO_MANY_REQUESTS` с `Retry-After`.
  *
- * OpenAPI spec version: 0.8.0
+ * OpenAPI spec version: 0.12.0
  */
 import { useMutation, useQuery } from "@tanstack/react-query";
 import type {
@@ -123,6 +132,7 @@ import type {
   AiModelList,
   AiModelTest,
   AiSpendReport,
+  AuditPage,
   BackendUnavailableResponse,
   BackupsStatus,
   BotProfile,
@@ -176,12 +186,14 @@ import type {
   GetAiSpendReportParams,
   GetQueueCardsParams,
   GetQueueParams,
+  GetRoleJournalParams,
   GetSpendReportParams,
   Health,
   IntegrationConflictResponse,
   IntegrationFailedResponse,
   IntegrationInvalidResponse,
   IntegrationsOverview,
+  ListAuditParams,
   ListCategoryRequestsParams,
   ListEmployeesParams,
   ListMailLogParams,
@@ -195,6 +207,8 @@ import type {
   MenuCounters,
   NotFoundResponse,
   NotificationPage,
+  NotificationSettings,
+  NotificationSettingsUpdate,
   NumberingPreview,
   NumberingPreviewIn,
   NumberingScheme,
@@ -212,6 +226,7 @@ import type {
   ReferenceItemUpdate,
   Role,
   RoleCreate,
+  RoleJournal,
   RoleList,
   RolePreview,
   RolePreviewIn,
@@ -854,6 +869,330 @@ export const useUpdateMe = <
   TContext
 > => {
   return useMutation(getUpdateMeMutationOptions(options), queryClient);
+};
+
+export const getGetNotificationSettingsUrl = () => {
+  return `/api/v1/me/notification-settings`;
+};
+
+/**
+ * Привязан ли Telegram, подписки на личные сообщения бота и последняя неудача их доставки (CRM `/me`). Доступно каждому вошедшему сотруднику.
+ * @summary Личные уведомления сотрудника от бота (профиль)
+ */
+export const getNotificationSettings = async (
+  options?: Parameters<typeof http>[1],
+): Promise<NotificationSettings> => {
+  return http<NotificationSettings>(getGetNotificationSettingsUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetNotificationSettingsQueryKey = () => {
+  return [`/api/v1/me/notification-settings`] as const;
+};
+
+export const getGetNotificationSettingsQueryOptions = <
+  TData = Awaited<ReturnType<typeof getNotificationSettings>>,
+  TError = ErrorType<SessionExpiredResponse>,
+>(options?: {
+  query?: Partial<
+    UseQueryOptions<Awaited<ReturnType<typeof getNotificationSettings>>, TError, TData>
+  >;
+  request?: SecondParameter<typeof http>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetNotificationSettingsQueryKey();
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getNotificationSettings>>> = ({
+    signal,
+  }) => getNotificationSettings({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getNotificationSettings>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type GetNotificationSettingsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getNotificationSettings>>
+>;
+export type GetNotificationSettingsQueryError = ErrorType<SessionExpiredResponse>;
+
+export function useGetNotificationSettings<
+  TData = Awaited<ReturnType<typeof getNotificationSettings>>,
+  TError = ErrorType<SessionExpiredResponse>,
+>(
+  options: {
+    query: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getNotificationSettings>>, TError, TData>
+    > &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getNotificationSettings>>,
+          TError,
+          Awaited<ReturnType<typeof getNotificationSettings>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetNotificationSettings<
+  TData = Awaited<ReturnType<typeof getNotificationSettings>>,
+  TError = ErrorType<SessionExpiredResponse>,
+>(
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getNotificationSettings>>, TError, TData>
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getNotificationSettings>>,
+          TError,
+          Awaited<ReturnType<typeof getNotificationSettings>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetNotificationSettings<
+  TData = Awaited<ReturnType<typeof getNotificationSettings>>,
+  TError = ErrorType<SessionExpiredResponse>,
+>(
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getNotificationSettings>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary Личные уведомления сотрудника от бота (профиль)
+ */
+
+export function useGetNotificationSettings<
+  TData = Awaited<ReturnType<typeof getNotificationSettings>>,
+  TError = ErrorType<SessionExpiredResponse>,
+>(
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getNotificationSettings>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getGetNotificationSettingsQueryOptions(options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export const getUpdateNotificationSettingsUrl = () => {
+  return `/api/v1/me/notification-settings`;
+};
+
+/**
+ * Не присланное поле не меняется; хотя бы одно поле обязательно. Подписка «системные» относится к оповещениям администратору; CRM принимает её от любого сотрудника, но получают её только те, кому положены системные оповещения.
+ * @summary Включить или выключить подписки на личные сообщения бота
+ */
+export const updateNotificationSettings = async (
+  notificationSettingsUpdate: NotificationSettingsUpdate,
+  options?: Parameters<typeof http>[1],
+): Promise<NotificationSettings> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<NotificationSettings>(getUpdateNotificationSettingsUrl(), {
+    ...options,
+    method: "PATCH",
+    headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
+    body: JSON.stringify(notificationSettingsUpdate),
+  });
+};
+
+export const getUpdateNotificationSettingsMutationKey = () =>
+  ["updateNotificationSettings"] as const;
+
+export const getUpdateNotificationSettingsMutationOptions = <
+  TError = ErrorType<
+    SessionExpiredResponse | CsrfFailedResponse | ValidationFailedResponse | Error
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateNotificationSettings>>,
+    TError,
+    UpdateNotificationSettingsMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof updateNotificationSettings>>,
+  TError,
+  UpdateNotificationSettingsMutationVariables,
+  TContext
+> => {
+  const mutationKey = getUpdateNotificationSettingsMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof updateNotificationSettings>>,
+    UpdateNotificationSettingsMutationVariables
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return updateNotificationSettings(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type UpdateNotificationSettingsMutationResult = NonNullable<
+  Awaited<ReturnType<typeof updateNotificationSettings>>
+>;
+export type UpdateNotificationSettingsMutationBody = NotificationSettingsUpdate;
+export type UpdateNotificationSettingsMutationError = ErrorType<
+  SessionExpiredResponse | CsrfFailedResponse | ValidationFailedResponse | Error
+>;
+export type UpdateNotificationSettingsMutationVariables = { data: NotificationSettingsUpdate };
+
+/**
+ * @summary Включить или выключить подписки на личные сообщения бота
+ */
+export const useUpdateNotificationSettings = <
+  TError = ErrorType<
+    SessionExpiredResponse | CsrfFailedResponse | ValidationFailedResponse | Error
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof updateNotificationSettings>>,
+      TError,
+      UpdateNotificationSettingsMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof updateNotificationSettings>>,
+  TError,
+  UpdateNotificationSettingsMutationVariables,
+  TContext
+> => {
+  return useMutation(getUpdateNotificationSettingsMutationOptions(options), queryClient);
+};
+
+export const getSendTestNotificationUrl = () => {
+  return `/api/v1/me/test-notification`;
+};
+
+/**
+ * Бот присылает сотруднику пробное личное сообщение (CRM `/me/test-notification`); успех снимает предупреждение «доставка не удалась». Доступно каждому вошедшему. Telegram не привязан — 409 `CONFLICT` с `details.reason = telegram_not_linked`; бот не подключён — 409 `NOT_CONFIGURED`; Telegram отказал (человек не нажал «Старт» или заблокировал бота) — 409 `CONFLICT` с `details.reason = telegram_refused`.
+ * @summary Тестовое уведомление себе в Telegram
+ */
+export const sendTestNotification = async (options?: Parameters<typeof http>[1]): Promise<void> => {
+  return http<void>(getSendTestNotificationUrl(), {
+    ...options,
+    method: "POST",
+  });
+};
+
+export const getSendTestNotificationMutationKey = () => ["sendTestNotification"] as const;
+
+export const getSendTestNotificationMutationOptions = <
+  TError = ErrorType<SessionExpiredResponse | CsrfFailedResponse | Error>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof sendTestNotification>>,
+    TError,
+    void,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof sendTestNotification>>,
+  TError,
+  void,
+  TContext
+> => {
+  const mutationKey = getSendTestNotificationMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof sendTestNotification>>,
+    void
+  > = () => {
+    return sendTestNotification(requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type SendTestNotificationMutationResult = NonNullable<
+  Awaited<ReturnType<typeof sendTestNotification>>
+>;
+
+export type SendTestNotificationMutationError = ErrorType<
+  SessionExpiredResponse | CsrfFailedResponse | Error
+>;
+
+/**
+ * @summary Тестовое уведомление себе в Telegram
+ */
+export const useSendTestNotification = <
+  TError = ErrorType<SessionExpiredResponse | CsrfFailedResponse | Error>,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof sendTestNotification>>,
+      TError,
+      void,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<Awaited<ReturnType<typeof sendTestNotification>>, TError, void, TContext> => {
+  return useMutation(getSendTestNotificationMutationOptions(options), queryClient);
 };
 
 export const getGetHealthUrl = () => {
@@ -6352,6 +6691,98 @@ export const useUpdateEmployee = <
   return useMutation(getUpdateEmployeeMutationOptions(options), queryClient);
 };
 
+export const getResetEmployeePasswordByEmailUrl = (id: string) => {
+  return `/api/v1/admin/users/${id}/reset-password/email`;
+};
+
+/**
+ * CRM `/users/{id}/reset-password/email`: новый временный пароль, письмо через коннектор «Почта», сессии сотрудника завершаются, при входе он обязан сменить пароль (статус «Приглашён»). Пароль в ответе не возвращается. Раздел `admin` — полный. Себе сбросить нельзя — 409 `CONFLICT` с `details.reason = self_reset` (в CRM запрос не уходит; свой пароль — «Сменить пароль» в меню аватара). Почта не подключена — 409 `NOT_CONFIGURED`, пароль не меняется; нет ключа шифрования секретов — 409 `SECRETS_KEY_MISSING`.
+ * @summary Сбросить пароль сотрудника и отправить временный по почте
+ */
+export const resetEmployeePasswordByEmail = async (
+  id: string,
+  options?: Parameters<typeof http>[1],
+): Promise<MailQueued> => {
+  return http<MailQueued>(getResetEmployeePasswordByEmailUrl(id), {
+    ...options,
+    method: "POST",
+  });
+};
+
+export const getResetEmployeePasswordByEmailMutationKey = () =>
+  ["resetEmployeePasswordByEmail"] as const;
+
+export const getResetEmployeePasswordByEmailMutationOptions = <
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | Error>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof resetEmployeePasswordByEmail>>,
+    TError,
+    ResetEmployeePasswordByEmailMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof resetEmployeePasswordByEmail>>,
+  TError,
+  ResetEmployeePasswordByEmailMutationVariables,
+  TContext
+> => {
+  const mutationKey = getResetEmployeePasswordByEmailMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof resetEmployeePasswordByEmail>>,
+    ResetEmployeePasswordByEmailMutationVariables
+  > = (props) => {
+    const { id } = props ?? {};
+
+    return resetEmployeePasswordByEmail(id, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type ResetEmployeePasswordByEmailMutationResult = NonNullable<
+  Awaited<ReturnType<typeof resetEmployeePasswordByEmail>>
+>;
+
+export type ResetEmployeePasswordByEmailMutationError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | Error
+>;
+export type ResetEmployeePasswordByEmailMutationVariables = { id: string };
+
+/**
+ * @summary Сбросить пароль сотрудника и отправить временный по почте
+ */
+export const useResetEmployeePasswordByEmail = <
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | Error>,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof resetEmployeePasswordByEmail>>,
+      TError,
+      ResetEmployeePasswordByEmailMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof resetEmployeePasswordByEmail>>,
+  TError,
+  ResetEmployeePasswordByEmailMutationVariables,
+  TContext
+> => {
+  return useMutation(getResetEmployeePasswordByEmailMutationOptions(options), queryClient);
+};
+
 export const getListRolesUrl = () => {
   return `/api/v1/admin/roles`;
 };
@@ -7014,6 +7445,287 @@ export const useDeleteRole = <
 > => {
   return useMutation(getDeleteRoleMutationOptions(options), queryClient);
 };
+
+export const getGetRoleJournalUrl = (id: string, params?: GetRoleJournalParams) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : String(value));
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/v1/admin/roles/${id}/journal?${stringifiedParams}`
+    : `/api/v1/admin/roles/${id}/journal`;
+};
+
+/**
+ * Записи аудита CRM `platform_role.create|update|delete` этой роли (`/audit?entity_type=platform_role&entity_id=<id>`), новые первыми. В каждой — автор, время и содержимое роли до и после (название, описание, матрица разделов, поля с ограничением); сравнение «что изменилось» делает экран. Раздел `admin` — от чтения (директор читает).
+ * @summary Журнал изменений роли — кто, когда и что (вкладка «Журнал» бокового окна роли)
+ */
+export const getRoleJournal = async (
+  id: string,
+  params?: GetRoleJournalParams,
+  options?: Parameters<typeof http>[1],
+): Promise<RoleJournal> => {
+  return http<RoleJournal>(getGetRoleJournalUrl(id, params), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetRoleJournalQueryKey = (id: string, params?: GetRoleJournalParams) => {
+  return [`/api/v1/admin/roles/${id}/journal`, ...(params ? [params] : [])] as const;
+};
+
+export const getGetRoleJournalQueryOptions = <
+  TData = Awaited<ReturnType<typeof getRoleJournal>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | Error>,
+>(
+  id: string,
+  params?: GetRoleJournalParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getRoleJournal>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetRoleJournalQueryKey(id, params);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getRoleJournal>>> = ({ signal }) =>
+    getRoleJournal(id, params, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: id !== null && id !== undefined,
+    ...queryOptions,
+  } as UseQueryOptions<Awaited<ReturnType<typeof getRoleJournal>>, TError, TData> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+};
+
+export type GetRoleJournalQueryResult = NonNullable<Awaited<ReturnType<typeof getRoleJournal>>>;
+export type GetRoleJournalQueryError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse | Error
+>;
+
+export function useGetRoleJournal<
+  TData = Awaited<ReturnType<typeof getRoleJournal>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | Error>,
+>(
+  id: string,
+  params: undefined | GetRoleJournalParams,
+  options: {
+    query: Partial<UseQueryOptions<Awaited<ReturnType<typeof getRoleJournal>>, TError, TData>> &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getRoleJournal>>,
+          TError,
+          Awaited<ReturnType<typeof getRoleJournal>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetRoleJournal<
+  TData = Awaited<ReturnType<typeof getRoleJournal>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | Error>,
+>(
+  id: string,
+  params?: GetRoleJournalParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getRoleJournal>>, TError, TData>> &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getRoleJournal>>,
+          TError,
+          Awaited<ReturnType<typeof getRoleJournal>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetRoleJournal<
+  TData = Awaited<ReturnType<typeof getRoleJournal>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | Error>,
+>(
+  id: string,
+  params?: GetRoleJournalParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getRoleJournal>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary Журнал изменений роли — кто, когда и что (вкладка «Журнал» бокового окна роли)
+ */
+
+export function useGetRoleJournal<
+  TData = Awaited<ReturnType<typeof getRoleJournal>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | Error>,
+>(
+  id: string,
+  params?: GetRoleJournalParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getRoleJournal>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getGetRoleJournalQueryOptions(id, params, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export const getListAuditUrl = (params?: ListAuditParams) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : String(value));
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/v1/admin/audit?${stringifiedParams}`
+    : `/api/v1/admin/audit`;
+};
+
+/**
+ * Журнал аудита CRM (`/audit`, право `audit:read`): новые записи первыми, постранично. Фильтры: автор (`actor_id`), действие (`action` — код или префикс, например `user` — все действия над сотрудниками), объект (`entity_type` и `entity_id`) и период (`from` включительно, `to` не включая). Входы в систему по умолчанию скрыты (`include_logins`). Раздел `admin` — от чтения: журнал читает администратор и директор; изменить записи нельзя никому. Значения секретных полей в `before` и `after` BFF заменяет на `***`.
+ * @summary Журнал аудита — кто, что и когда изменил
+ */
+export const listAudit = async (
+  params?: ListAuditParams,
+  options?: Parameters<typeof http>[1],
+): Promise<AuditPage> => {
+  return http<AuditPage>(getListAuditUrl(params), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getListAuditQueryKey = (params?: ListAuditParams) => {
+  return [`/api/v1/admin/audit`, ...(params ? [params] : [])] as const;
+};
+
+export const getListAuditQueryOptions = <
+  TData = Awaited<ReturnType<typeof listAudit>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | ValidationFailedResponse | Error>,
+>(
+  params?: ListAuditParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listAudit>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getListAuditQueryKey(params);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof listAudit>>> = ({ signal }) =>
+    listAudit(params, { signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listAudit>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type ListAuditQueryResult = NonNullable<Awaited<ReturnType<typeof listAudit>>>;
+export type ListAuditQueryError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse | ValidationFailedResponse | Error
+>;
+
+export function useListAudit<
+  TData = Awaited<ReturnType<typeof listAudit>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | ValidationFailedResponse | Error>,
+>(
+  params: undefined | ListAuditParams,
+  options: {
+    query: Partial<UseQueryOptions<Awaited<ReturnType<typeof listAudit>>, TError, TData>> &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listAudit>>,
+          TError,
+          Awaited<ReturnType<typeof listAudit>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListAudit<
+  TData = Awaited<ReturnType<typeof listAudit>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | ValidationFailedResponse | Error>,
+>(
+  params?: ListAuditParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listAudit>>, TError, TData>> &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listAudit>>,
+          TError,
+          Awaited<ReturnType<typeof listAudit>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListAudit<
+  TData = Awaited<ReturnType<typeof listAudit>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | ValidationFailedResponse | Error>,
+>(
+  params?: ListAuditParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listAudit>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary Журнал аудита — кто, что и когда изменил
+ */
+
+export function useListAudit<
+  TData = Awaited<ReturnType<typeof listAudit>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | ValidationFailedResponse | Error>,
+>(
+  params?: ListAuditParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listAudit>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getListAuditQueryOptions(params, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
 
 export const getGetCompanyUrl = () => {
   return `/api/v1/admin/company`;
