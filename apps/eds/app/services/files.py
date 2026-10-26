@@ -99,6 +99,10 @@ def check_content(content_type: str, data: bytes) -> None:
         raise unsupported_type(content_type)
 
 
+def digest(data: bytes) -> str:
+    return sha256(data).hexdigest()
+
+
 def to_ref(version: FileVersion, directory: Directory) -> FileRef:
     return FileRef(
         id=version.file_id,
@@ -162,7 +166,7 @@ async def upload(session: AsyncSession, storage: ObjectStorage, employee: Employ
         name=name,
         content_type=content_type,
         size=len(item.data),
-        sha256=sha256(item.data).hexdigest(),
+        sha256=digest(item.data),
         s3_key=key,
         uploaded_by=employee.crm_user_id,
         uploaded_at=now,

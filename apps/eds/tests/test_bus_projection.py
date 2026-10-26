@@ -182,8 +182,8 @@ async def test_deactivation_arriving_first_leaves_a_tombstone(client: httpx.Asyn
 
 
 async def test_event_without_handler_is_skipped(client: httpx.AsyncClient, container: Container) -> None:
-    """`erp.request.created` в подписках EDS есть, обработчик появится с доменом (E3): сейчас `skipped`, 200."""
-    envelope = example("erp/request.created.v1")
+    """Тип без обработчика EDS (здесь `erp.quote.sent`) приёмник записывает как `skipped` и отвечает 200."""
+    envelope = example("erp/quote.sent.v1")
     response = await deliver(client, envelope, publisher="erp", secret=BUS_SECRET_ERP_EDS)
     assert response.status_code == 200
     assert response.json()["status"] == "skipped"

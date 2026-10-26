@@ -64,3 +64,21 @@ def test_permission_codes_match_contract_enum() -> None:
 
     spec = yaml.safe_load(CONTRACT.read_text(encoding="utf-8"))
     assert set(spec["components"]["schemas"]["EdsPermission"]["enum"]) == KNOWN
+
+
+def test_every_contract_operation_is_implemented_with_its_operation_id() -> None:
+    """Обратная сверка (E3): всё, что описано в eds.yaml, есть в сервисе под тем же `operationId`."""
+    spec = yaml.safe_load(CONTRACT.read_text(encoding="utf-8"))
+    implemented: dict[tuple[str, str], str] = {}
+    for router in (health.router, *ROUTERS):
+        for route in router.routes:
+            assert isinstance(route, APIRoute)
+            for method in (route.methods or set()) - {"HEAD", "OPTIONS"}:
+                implemented[(method.lower(), route.path)] = route.operation_id or route.name
+    declared = {
+        (method, path): operation["operationId"]
+        for path, item in spec["paths"].items()
+        for method, operation in item.items()
+        if method in {"get", "post", "put", "patch", "delete"}
+    }
+    assert implemented == declared

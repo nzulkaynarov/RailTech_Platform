@@ -106,9 +106,9 @@ async def _insert(
     )
     session.add(letter)
     await session.flush()
+    await journal.record(session, "letter.registered", by=actor_id, letter_id=letter.id)
     if actor_id is not None:
         await files.attach(session, file_ids, actor_id=actor_id, letter_id=letter.id)
-    await journal.record(session, "letter.registered", by=actor_id, letter_id=letter.id)
     await _publish_registered(bus, session, letter, actor_id)
     log.info("letter_registered", number=letter.number, by=actor_id)
     return letter

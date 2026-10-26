@@ -155,8 +155,8 @@ async def create(session: AsyncSession, bus: AsyncBus, *, employee: Employee, da
         document.number = await numbering.allocate(session, _NUMBER_KIND[data.kind], now)
     session.add(document)
     await session.flush()
-    await files.attach(session, data.file_ids, actor_id=employee.crm_user_id, document_id=document.id)
     await journal.record(session, "document.created", by=employee.crm_user_id, document_id=document.id)
+    await files.attach(session, data.file_ids, actor_id=employee.crm_user_id, document_id=document.id)
     if not is_letter:
         await _publish_registered(session, bus, document, registered_at=now, actor_id=employee.crm_user_id)
     return document
