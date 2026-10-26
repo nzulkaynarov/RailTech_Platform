@@ -1,0 +1,69 @@
+## 1. Проекция сотрудника 6 до удаления
+ crm_user_id |        email         |              permissions_eds
+-------------+----------------------+-------------------------------------------
+           6 | manager@demo.example | {letters.read,memos.create,registry.read}
+(1 row)
+
+до удаления | CRM sso/token 200 | EDS exchange 200 ok
+   /me 200 ['letters.read', 'memos.create', 'registry.read']
+## 2. Моделируем «сотрудник создан до EDS»: удаляем строку из проекции EDS
+DELETE 1
+после удаления | CRM sso/token 200 | EDS exchange 403 ('USER_NOT_PROVISIONED', None)
+## 3. republish-identity --dry-run и для одного сотрудника
+{"event": "Adding tasks from blueprint", "level": "info", "logger": "procrastinate.blueprints", "timestamp": "2026-10-26T05:04:12.882106Z"}
+Сотрудников к переопубликации: 1 (dry-run, ничего не записано).
+{"event": "Adding tasks from blueprint", "level": "info", "logger": "procrastinate.blueprints", "timestamp": "2026-10-26T05:04:16.396541Z"}
+{"event": "Registering task rt_bus.pump with periodic id '' to run periodically with cron * * * * * */5", "level": "info", "logger": "procrastinate.periodic", "timestamp": "2026-10-26T05:04:16.475269Z"}
+{"event": "Registering task rt_bus.requeue_stuck_inbox with periodic id '' to run periodically with cron * * * * *", "level": "info", "logger": "procrastinate.periodic", "timestamp": "2026-10-26T05:04:16.475381Z"}
+{"event": "Registering task rt_bus.log_metrics with periodic id '' to run periodically with cron */5 * * * *", "level": "info", "logger": "procrastinate.periodic", "timestamp": "2026-10-26T05:04:16.475441Z"}
+{"event": "Registering task rt_bus.purge with periodic id '' to run periodically with cron 17 3 * * *", "level": "info", "logger": "procrastinate.periodic", "timestamp": "2026-10-26T05:04:16.475491Z"}
+{"event": "Registering task erp_notices_sweep with periodic id 'erp_notices_sweep' to run periodically with cron * * * * *", "level": "info", "logger": "procrastinate.periodic", "timestamp": "2026-10-26T05:04:16.475543Z"}
+{"event": "Registering task rt_bus_jobs_cleanup with periodic id 'rt_bus_jobs_cleanup' to run periodically with cron 7 * * * *", "level": "info", "logger": "procrastinate.periodic", "timestamp": "2026-10-26T05:04:16.475592Z"}
+{"event": "rt_bus_published", "level": "info", "logger": "rt_bus", "timestamp": "2026-10-26T05:04:16.482060Z"}
+{"users": 1, "published": 1, "event": "identity_republished", "level": "info", "logger": "app.services.identity_republish", "timestamp": "2026-10-26T05:04:16.482670Z"}
+{"event": "Deferred 1 job", "level": "info", "logger": "procrastinate.jobs", "timestamp": "2026-10-26T05:04:16.485399Z"}
+Опубликовано identity.user.updated: 1 из 1.
+ crm_user_id |        email         |              permissions_eds
+-------------+----------------------+-------------------------------------------
+           6 | manager@demo.example | {letters.read,memos.create,registry.read}
+(1 row)
+
+после republish | CRM sso/token 200 | EDS exchange 200 ok
+   /me 200 ['letters.read', 'memos.create', 'registry.read']
+## 4. Все сотрудники: dry-run, затем публикация; проекция полная
+{"event": "Adding tasks from blueprint", "level": "info", "logger": "procrastinate.blueprints", "timestamp": "2026-10-26T05:04:26.171478Z"}
+Сотрудников к переопубликации: 6 (dry-run, ничего не записано).
+DELETE 2
+{"event": "Adding tasks from blueprint", "level": "info", "logger": "procrastinate.blueprints", "timestamp": "2026-10-26T05:04:28.930464Z"}
+{"event": "Registering task rt_bus.pump with periodic id '' to run periodically with cron * * * * * */5", "level": "info", "logger": "procrastinate.periodic", "timestamp": "2026-10-26T05:04:29.004093Z"}
+{"event": "Registering task rt_bus.requeue_stuck_inbox with periodic id '' to run periodically with cron * * * * *", "level": "info", "logger": "procrastinate.periodic", "timestamp": "2026-10-26T05:04:29.004246Z"}
+{"event": "Registering task rt_bus.log_metrics with periodic id '' to run periodically with cron */5 * * * *", "level": "info", "logger": "procrastinate.periodic", "timestamp": "2026-10-26T05:04:29.004308Z"}
+{"event": "Registering task rt_bus.purge with periodic id '' to run periodically with cron 17 3 * * *", "level": "info", "logger": "procrastinate.periodic", "timestamp": "2026-10-26T05:04:29.004351Z"}
+{"event": "Registering task erp_notices_sweep with periodic id 'erp_notices_sweep' to run periodically with cron * * * * *", "level": "info", "logger": "procrastinate.periodic", "timestamp": "2026-10-26T05:04:29.004402Z"}
+{"event": "Registering task rt_bus_jobs_cleanup with periodic id 'rt_bus_jobs_cleanup' to run periodically with cron 7 * * * *", "level": "info", "logger": "procrastinate.periodic", "timestamp": "2026-10-26T05:04:29.004480Z"}
+{"event": "rt_bus_published", "level": "info", "logger": "rt_bus", "timestamp": "2026-10-26T05:04:29.010859Z"}
+{"event": "rt_bus_published", "level": "info", "logger": "rt_bus", "timestamp": "2026-10-26T05:04:29.012544Z"}
+{"event": "rt_bus_published", "level": "info", "logger": "rt_bus", "timestamp": "2026-10-26T05:04:29.014200Z"}
+{"event": "rt_bus_published", "level": "info", "logger": "rt_bus", "timestamp": "2026-10-26T05:04:29.015582Z"}
+{"event": "rt_bus_published", "level": "info", "logger": "rt_bus", "timestamp": "2026-10-26T05:04:29.016738Z"}
+{"event": "rt_bus_published", "level": "info", "logger": "rt_bus", "timestamp": "2026-10-26T05:04:29.018149Z"}
+{"users": 6, "published": 6, "event": "identity_republished", "level": "info", "logger": "app.services.identity_republish", "timestamp": "2026-10-26T05:04:29.018675Z"}
+{"event": "Deferred 1 job", "level": "info", "logger": "procrastinate.jobs", "timestamp": "2026-10-26T05:04:29.021766Z"}
+Опубликовано identity.user.updated: 6 из 6.
+ crm_user_id |         email         | is_active |                                                              permissions_eds
+-------------+-----------------------+-----------+--------------------------------------------------------------------------------------------------------------------------------------------
+           1 | admin@demo.example    | t         | {memos.create}
+           2 | director@demo.example | t         | {approvals.decide,letters.read,letters.register,letters.resolve,memos.approve,memos.create,payments.confirm,registry.export,registry.read}
+           3 | mgr-acc@demo.example  | t         | {letters.read,memos.create,payments.confirm,registry.export,registry.read}
+           4 | supply@demo.example   | t         | {memos.create,registry.read}
+           5 | engineer@demo.example | t         | {memos.create,registry.read}
+           6 | manager@demo.example  | t         | {letters.read,memos.create,registry.read}
+(6 rows)
+
+ inbox | uniq | not_processed
+-------+------+---------------
+    22 |   22 |             0
+(1 row)
+
+директор после republish всех | CRM sso/token 200 | EDS exchange 200 ok
+   /me 200 ['approvals.decide', 'letters.read', 'letters.register', 'letters.resolve', 'memos.approve', 'memos.create', 'payments.confirm', 'registry.export', 'registry.read']

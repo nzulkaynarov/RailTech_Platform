@@ -1,0 +1,24 @@
+## EDS: исходящие события и доставки
+                 type                 |   created    |  subscriber  |  status   | attempts |  delivered   | lag_s |                  id
+--------------------------------------+--------------+--------------+-----------+----------+--------------+-------+--------------------------------------
+ uz.railtech.eds.letter.registered.v1 | 03:57:22.248 | platform-bff | delivered |        1 | 03:57:25.635 | 3.387 | a0b7d769-932e-41a0-94b1-9bee7f1de9af
+ uz.railtech.eds.letter.resolved.v1   | 03:58:20.043 | erp          | delivered |        1 | 03:58:20.712 | 0.669 | b38e716f-ada4-495b-9b5c-6ba2dda2864a
+ uz.railtech.eds.letter.resolved.v1   | 03:58:20.043 | platform-bff | delivered |        1 | 03:58:20.712 | 0.669 | b38e716f-ada4-495b-9b5c-6ba2dda2864a
+(3 rows)
+
+## ERP: сделка, стадия, задание расчёта, исполнители
+ deal_id | id |    code     |    name    | sort_order | is_active
+---------+----+-------------+------------+------------+-----------
+       1 |  5 | CALCULATING | Расчёт цен |         50 | t
+(1 row)
+
+ task_id | letter_number |    due     | min_margin_pct | decided_by_name |          decided_at           |          created_at           | deal_id |             eds_event_id
+---------+---------------+------------+----------------+-----------------+-------------------------------+-------------------------------+---------+--------------------------------------
+       1 | ВХ-001/26     | 2026-11-02 |          15.00 | Директор Демо   | 2026-10-26 03:58:20.028778+00 | 2026-10-26 03:58:20.733656+00 |       1 | b38e716f-ada4-495b-9b5c-6ba2dda2864a
+(1 row)
+
+   zone   | crm_user_id |    erp_user_email
+----------+-------------+-----------------------
+ goods    |           4 | supply@demo.example
+ services |           5 | engineer@demo.example
+(2 rows)

@@ -1,0 +1,29 @@
+   number    | jid |      at      |       action       | by |       comment
+-------------+-----+--------------+--------------------+----+---------------------
+ СЗ-2026/001 |   8 | 03:58:56.952 | document.created   |  6 |
+ СЗ-2026/001 |   9 | 03:58:56.970 | approval.requested |  6 |
+ СЗ-2026/001 |  10 | 03:58:56.972 | document.submitted |  6 |
+ СЗ-2026/001 |  11 | 03:58:56.999 | approval.decided   |  2 | согласовано
+ СЗ-2026/001 |  12 | 03:58:57.001 | approval.requested |  2 | шаг 2: Бухгалтер
+ СЗ-2026/001 |  13 | 03:58:57.010 | approval.decided   |  3 | оплата подтверждена
+ СЗ-2026/001 |  14 | 03:58:57.011 | document.archived  |  3 | paid
+ СЗ-2026/002 |  15 | 03:58:57.021 | document.created   |  6 |
+ СЗ-2026/002 |  16 | 03:58:57.028 | approval.requested |  6 |
+ СЗ-2026/002 |  17 | 03:58:57.029 | document.submitted |  6 |
+ СЗ-2026/002 |  18 | 03:58:57.039 | approval.decided   |  2 |
+ СЗ-2026/002 |  19 | 03:58:57.041 | document.archived  |  2 | approved
+(12 rows)
+
+                  type                  |   created    | number | step_idx | decision |                  id
+----------------------------------------+--------------+--------+----------+----------+--------------------------------------
+ uz.railtech.eds.document.registered.v1 | 03:58:56.955 |        |          |          | 81ae2af6-3bbe-4aeb-9af1-415b992ba6a4
+ uz.railtech.eds.approval.requested.v1  | 03:58:56.972 |        | 1        |          | 14650d01-e773-430d-94b2-661ac6db9dba
+ uz.railtech.eds.approval.decided.v1    | 03:58:57.000 |        | 1        | approve  | 19c3e31e-b4fd-450a-a51a-dcbe83ef2b5b
+ uz.railtech.eds.approval.requested.v1  | 03:58:57.001 |        | 2        |          | b55b3351-4af9-409a-8002-23cc4a64f9d0
+ uz.railtech.eds.approval.decided.v1    | 03:58:57.010 |        | 2        | approve  | 4fa589ce-eedd-4c07-b445-2515a5fc0f5a
+ uz.railtech.eds.document.archived.v1   | 03:58:57.011 |        |          |          | 6ca70e1f-69b8-47fa-ba13-69fbf7b17e47
+ uz.railtech.eds.document.registered.v1 | 03:58:57.022 |        |          |          | 7e18dfec-21e8-44cf-bdc1-9ce43ff1e06a
+ uz.railtech.eds.approval.requested.v1  | 03:58:57.028 |        | 1        |          | bd290755-975a-41a4-9f15-6d5307a42f46
+ uz.railtech.eds.approval.decided.v1    | 03:58:57.040 |        | 1        | approve  | fbc88168-d84b-46e1-bee1-13fb573a360b
+ uz.railtech.eds.document.archived.v1   | 03:58:57.040 |        |          |          | 9d9dd1c6-0e53-4ca7-8289-c7f717cd9cd3
+(10 rows)

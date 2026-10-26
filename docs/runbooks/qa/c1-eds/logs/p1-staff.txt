@@ -1,0 +1,28 @@
+# Снимок ПОСЛЕ п. 7: роли сотрудника 6 уже изменены (Менеджер + Бухгалтер); до п. 7 у него были только «Менеджер»: letters.read, memos.create, registry.read
+1 admin@demo.example ['Администратор'] доступ: ['crm', 'erp'] erp_sync: ok
+2 director@demo.example ['Директор'] доступ: ['crm', 'erp'] erp_sync: ok
+3 mgr-acc@demo.example ['Менеджер', 'Бухгалтер'] доступ: ['crm', 'erp'] erp_sync: ok
+4 supply@demo.example ['Снабженец'] доступ: ['crm', 'erp'] erp_sync: ok
+5 engineer@demo.example ['Гл. инженер'] доступ: ['crm', 'erp'] erp_sync: ok
+6 manager@demo.example ['Менеджер', 'Бухгалтер'] доступ: ['crm', 'erp'] erp_sync: ok
+## Проекция сотрудников в EDS (identity.user.*)
+ crm_user_id |         email         | is_active |                                                              permissions_eds
+-------------+-----------------------+-----------+--------------------------------------------------------------------------------------------------------------------------------------------
+           1 | admin@demo.example    | t         | {memos.create}
+           2 | director@demo.example | t         | {approvals.decide,letters.read,letters.register,letters.resolve,memos.approve,memos.create,payments.confirm,registry.export,registry.read}
+           3 | mgr-acc@demo.example  | t         | {letters.read,memos.create,payments.confirm,registry.export,registry.read}
+           4 | supply@demo.example   | t         | {memos.create,registry.read}
+           5 | engineer@demo.example | t         | {memos.create,registry.read}
+           6 | manager@demo.example  | t         | {letters.read,memos.create,payments.confirm,registry.export,registry.read}
+(6 rows)
+
+## ERP: пользователи и сопоставление
+ crm_user_id |         email
+-------------+-----------------------
+           1 | admin@demo.example
+           2 | director@demo.example
+           3 | mgr-acc@demo.example
+           4 | supply@demo.example
+           5 | engineer@demo.example
+           6 | manager@demo.example
+(6 rows)

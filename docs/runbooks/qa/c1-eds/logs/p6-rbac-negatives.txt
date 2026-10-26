@@ -1,0 +1,6 @@
+mgr_acc  POST /api/v1/letters/{id}/resolution          -> 403 "FORBIDDEN" {"permission": "letters.resolve"}
+mgr_acc  POST /api/v1/letters                          -> 403 "FORBIDDEN" {"permission": "letters.register"}
+manager  GET  /api/v1/registry/export                  -> 403 "FORBIDDEN" {"permission": "registry.export"}
+admin    GET  /api/v1/registry                         -> 403 "FORBIDDEN" {"permission": "registry.read"}
+supply   GET  /api/v1/letters                          -> 403 "FORBIDDEN" {"permission": "letters.read"}
+mgr_acc  GET  /api/v1/registry                         -> 200 null null

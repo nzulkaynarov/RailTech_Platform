@@ -1,0 +1,29 @@
+## ERP: исходящие события (rt_bus_outbox) и доставки
+                  id                  |                type                |          created_at           |         dispatched_at         |  subscriber  |  status   | attempts |         delivered_at          | lag_s
+--------------------------------------+------------------------------------+-------------------------------+-------------------------------+--------------+-----------+----------+-------------------------------+-------
+ 2ee1c5c1-7295-4cfb-884a-289e9efcf388 | uz.railtech.erp.request.created.v1 | 2026-10-26 03:57:22.065419+00 | 2026-10-26 03:57:22.103897+00 | crm          | delivered |        1 | 2026-10-26 03:57:22.193529+00 | 0.128
+ 2ee1c5c1-7295-4cfb-884a-289e9efcf388 | uz.railtech.erp.request.created.v1 | 2026-10-26 03:57:22.065419+00 | 2026-10-26 03:57:22.103897+00 | platform-bff | delivered |        1 | 2026-10-26 03:57:22.193529+00 | 0.128
+ 2ee1c5c1-7295-4cfb-884a-289e9efcf388 | uz.railtech.erp.request.created.v1 | 2026-10-26 03:57:22.065419+00 | 2026-10-26 03:57:22.103897+00 | eds          | delivered |        1 | 2026-10-26 03:57:22.193529+00 | 0.128
+(3 rows)
+
+## EDS: входящие события (rt_bus_inbox)
+                         Table "public.rt_bus_inbox"
+     Column      |           Type           | Collation | Nullable | Default
+-----------------+--------------------------+-----------+----------+---------
+ event_id        | uuid                     |           | not null |
+ type            | character varying(200)   |           | not null |
+ source          | character varying(100)   |           | not null |
+ publisher       | character varying(64)    |           | not null |
+ subject         | character varying(200)   |           |          |
+ correlation_id  | character varying(128)   |           | not null |
+ envelope        | jsonb                    |           | not null |
+ status          | character varying(16)    |           | not null |
+ attempts        | integer                  |           | not null |
+ error           | text                     |           |          |
+ next_attempt_at | timestamp with time zone |           |          |
+ received_at     | timestamp with time zone |           | not null |
+ processed_at    | timestamp with time zone |           |          |
+ updated_at      | timestamp with time zone |           | not null |
+Indexes:
+    "rt_bus_inbox_pkey" PRIMARY KEY, btree (event_id)
+    "rt_bus_inbox_status_idx" btree (status, received_at)
