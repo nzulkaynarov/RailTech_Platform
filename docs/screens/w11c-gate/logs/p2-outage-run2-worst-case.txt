@@ -1,0 +1,77 @@
+# Пункт 2, прогон 2: простой подписчика stub 616 с (>= 10 мин); старт заглушки сразу после неудачной ранней пробы CRM — остаток паузы предохранителя ~4 мин 58 с (наихудший случай); после старта нового трафика нет. UTC.
+
+08:25:11 ДО ОСТАНОВКИ: 2 лида CRM, 2 события ERP
+crm_gen leads Counter({(201, 200): 2}) max_s=0.06
+erp published 2 of 2
+08:25:21 SNAP crm:delivered=1268 erp:delivered=664 paused_until crm=- erp=-
+08:25:21 T0: docker stop bus-stub
+08:25:27 СРАЗУ ПОСЛЕ ОСТАНОВКИ: 3 лида CRM, 3 события ERP
+crm_gen leads Counter({(201, 200): 3}) max_s=0.05
+erp published 3 of 3
+08:26:31 SNAP crm:pending=6,delivered=1268 erp:pending=3,delivered=664 paused_until crm=08:30:28 erp=08:31:01
+08:27:32 SNAP crm:pending=6,delivered=1268 erp:pending=3,delivered=664 paused_until crm=08:30:28 erp=08:31:01
+08:28:32 ВО ВРЕМЯ ПРОСТОЯ (+191 с): 2 лида CRM, 2 события ERP
+crm_gen leads Counter({(201, 200): 2}) max_s=0.04
+erp published 2 of 2
+08:28:36 SNAP crm:pending=10,delivered=1268 erp:pending=5,delivered=664 paused_until crm=08:30:28 erp=08:31:01
+08:29:37 SNAP crm:pending=10,delivered=1268 erp:pending=5,delivered=664 paused_until crm=08:30:28 erp=08:31:01
+08:30:38 SNAP crm:pending=10,delivered=1268 erp:pending=5,delivered=664 paused_until crm=08:35:30 erp=08:31:01
+08:31:39 SNAP crm:pending=10,delivered=1268 erp:pending=5,delivered=664 paused_until crm=08:35:30 erp=08:36:02
+08:32:39 ВО ВРЕМЯ ПРОСТОЯ (+438 с): 2 лида CRM, 2 события ERP
+crm_gen leads Counter({(201, 200): 2}) max_s=0.04
+erp published 2 of 2
+08:32:43 SNAP crm:pending=14,delivered=1268 erp:pending=7,delivered=664 paused_until crm=08:35:30 erp=08:36:02
+08:33:23 SNAP crm:pending=14,delivered=1268 erp:pending=7,delivered=664 paused_until crm=08:35:30 erp=08:36:02
+08:34:24 SNAP crm:pending=14,delivered=1268 erp:pending=7,delivered=664 paused_until crm=08:35:30 erp=08:36:02
+08:35:25 SNAP crm:pending=14,delivered=1268 erp:pending=7,delivered=664 paused_until crm=08:35:30 erp=08:36:02
+08:35:25 простой >= 10 мин (604 с); жду неудачной пробы CRM, чтобы стартовать сразу после неё
+08:35:37 SNAP crm:pending=14,delivered=1268 erp:pending=7,delivered=664 paused_until crm=08:40:35 erp=08:36:02
+08:35:37 T1: docker start bus-stub (простой = 616 с); НОВОГО ТРАФИКА НЕТ; paused_until crm=08:40:35 erp=08:36:02
+08:35:38 poll: ждут stub crm=14 erp=7
+08:36:02 poll: ждут stub crm=14 erp=7
+08:36:26 poll: ждут stub crm=14 erp=0
+08:36:50 poll: ждут stub crm=14 erp=0
+08:37:14 poll: ждут stub crm=14 erp=0
+08:37:38 poll: ждут stub crm=14 erp=0
+08:38:01 poll: ждут stub crm=14 erp=0
+08:38:25 poll: ждут stub crm=14 erp=0
+08:38:49 poll: ждут stub crm=14 erp=0
+08:39:13 poll: ждут stub crm=14 erp=0
+08:39:37 poll: ждут stub crm=14 erp=0
+08:40:01 poll: ждут stub crm=14 erp=0
+08:40:25 poll: ждут stub crm=14 erp=0
+08:40:42 poll: ждут stub crm=0 erp=0
+08:40:43 SNAP crm:delivered=1282 erp:delivered=671 paused_until crm=- erp=-
+08:40:43 КОНЕЦ
+
+# Повтор пункта 2: простой 616 с, старт сразу после неудачной ранней пробы CRM (остаток паузы предохранителя CRM ~4 мин 58 с)
+=== crm: доставки stub, события после T0=2026-10-26T08:25:21Z
+ attempts | n | first_delivered | last_delivered
+----------+---+-----------------+----------------
+        1 | 8 | 08:40:40.685    | 08:40:40.735
+        2 | 4 | 08:40:40.624    | 08:40:40.685
+        3 | 2 | 08:40:40.735    | 08:40:40.735
+(3 rows)
+
+=== erp: доставки stub, события после T0=2026-10-26T08:25:21Z
+ attempts | n | first_delivered | last_delivered
+----------+---+-----------------+----------------
+        1 | 4 | 08:36:02.836    | 08:36:02.836
+        3 | 3 | 08:36:02.790    | 08:36:02.836
+(2 rows)
+
+=== журнал восстановления
+{"event": "rt_bus_breaker_open", "level": "error", "logger": "rt_bus", "timestamp": "2026-10-26T08:25:28.889836Z"}
+{"event": "rt_bus_breaker_open", "level": "error", "logger": "rt_bus", "timestamp": "2026-10-26T08:25:28.890375Z"}
+{"event": "rt_bus_breaker_open", "level": "error", "logger": "rt_bus", "timestamp": "2026-10-26T08:30:30.620550Z"}
+{"event": "rt_bus_breaker_open", "level": "error", "logger": "rt_bus", "timestamp": "2026-10-26T08:35:35.892825Z"}
+{"event": "rt_bus_subscriber_recovered", "level": "info", "logger": "rt_bus", "timestamp": "2026-10-26T08:40:40.629210Z"}
+[2026-10-26 13:26:01,618: ERROR/ForkPoolWorker-6] rt_bus_breaker_open
+[2026-10-26 13:31:02,219: ERROR/ForkPoolWorker-6] rt_bus_breaker_open
+[2026-10-26 13:36:02,791: INFO/ForkPoolWorker-6] rt_bus_subscriber_recovered
+=== попытки по неудачам: максимум attempts у доставок stub до восстановления (по last_error)
+ attempts | coun
+----------+-------
+        2 |     9
+        3 |     3
+(2 rows)

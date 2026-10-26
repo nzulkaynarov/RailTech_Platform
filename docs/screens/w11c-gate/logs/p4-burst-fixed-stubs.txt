@@ -1,0 +1,25 @@
+=== контрольные 6 волн по 50 параллельных публикаций при исправленных заглушках (backlog 512), с 2026-10-26T08:42:53Z, интервал 20 с
+crm_gen leads Counter({(201, 200): 25}) max_s=1.35 eds_gen registered 8 of 8 erp_par: опубликовано 25 из 25 ошибки: [] max_s=0.66
+crm_gen leads Counter({(201, 200): 25}) max_s=0.35 erp_par: опубликовано 25 из 25 ошибки: [] max_s=0.38 eds_gen registered 8 of 8
+crm_gen leads Counter({(201, 200): 25}) max_s=0.74 erp_par: опубликовано 25 из 25 ошибки: [] max_s=0.36 eds_gen registered 8 of 8
+crm_gen leads Counter({(201, 200): 25}) max_s=0.37 erp_par: опубликовано 25 из 25 ошибки: [] max_s=0.37 eds_gen registered 8 of 8
+crm_gen leads Counter({(201, 200): 25}) max_s=0.35 erp_par: опубликовано 25 из 25 ошибки: [] max_s=0.38 eds_gen registered 8 of 8
+crm_gen leads Counter({(201, 200): 25}) max_s=0.34 erp_par: опубликовано 25 из 25 ошибки: [] max_s=0.42 eds_gen registered 8 of 8
+издатель  подписчик         n    p50 мс    p95 мс    max мс  не с 1-й
+crm       *              1200       328      1605      1866         0
+crm       platform-bff    300       322      1604      1866         0
+crm       stub            300       322      1604      1866         0
+crm       stub2           300       332      1607      1866         0
+crm       stub3           300       332      1607      1866         0
+eds       *                48        19        69        93         0
+eds       platform-bff     48        19        69        93         0
+erp       *               750        94       269       288         0
+erp       crm             150        94       268       288         0
+erp       platform-bff    150        94       268       288         0
+erp       stub            150        94       268       288         0
+erp       stub2           150        94       268       288         0
+erp       stub3           150        94       268       288         0
+критерий (p95 и max до platform-bff <= 2000 мс по каждому издателю): ВЫПОЛНЕН
+волна(90 с) n  p50  p95  max  >2000мс
+19922068 100 688 1787 1866 0
+19922069 200 289 601 795 0

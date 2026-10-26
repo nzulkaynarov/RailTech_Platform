@@ -1,0 +1,23 @@
+=== отправитель: ответ 400 приёмника (аналог foreign_type) -> сразу dead, предохранитель не растёт
+{"mode": 400, "delay": 0}
+crm_gen leads Counter({(201, 200): 3}) max_s=0.04
+              event_type               | status | attempts | last_status_code
+---------------------------------------+--------+----------+------------------
+ uz.railtech.crm.lead.created.v1       | dead   |        1 |              400
+ uz.railtech.crm.lead.stage_changed.v1 | dead   |        1 |              400
+ uz.railtech.crm.lead.created.v1       | dead   |        1 |              400
+ uz.railtech.crm.lead.stage_changed.v1 | dead   |        1 |              400
+ uz.railtech.crm.lead.created.v1       | dead   |        1 |              400
+ uz.railtech.crm.lead.stage_changed.v1 | dead   |        1 |              400
+(6 rows)
+
+ subscriber | consecutive_failures | paused_until
+------------+----------------------+--------------
+ stub2      |                    0 |
+(1 row)
+
+{"mode": 200, "delay": 0}
+Поставлено на повтор: 6
+ status | coun
+--------+-------
+(0 rows)
