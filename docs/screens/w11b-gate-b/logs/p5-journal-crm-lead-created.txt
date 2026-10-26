@@ -1,0 +1,6 @@
+          t          | outbox_created |   relayed    |  subscriber  |  attempt_at  | delivered_at |  status
+---------------------+----------------+--------------+--------------+--------------+--------------+-----------
+ crm.lead.created.v1 | 01:11:12.296   | 01:11:12.316 | platform-bff | 01:11:12.321 | 01:11:12.363 | delivered
+ crm.lead.created.v1 | 01:11:12.296   | 01:11:12.316 | stub         |              |              | pending
+ crm.lead.created.v1 | 01:11:12.296   | 01:11:12.316 | stub2        | 01:11:12.321 | 01:11:12.363 | delivered
+(3 rows)

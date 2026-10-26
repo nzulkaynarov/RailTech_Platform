@@ -91,7 +91,7 @@ class ApprovalObject(BaseModel):
 
 class ApprovalRequestedV1(BaseModel):
     """
-    Тип uz.railtech.eds.approval.requested.v1, источник rt://eds. Поле data конверта (envelope.v1.json). Открыт маршрут (или новый круг после возврата): первый шаг и кто решает. Для КП — после uz.railtech.erp.quote.ready_for_approval.v1. Подписчики v1: platform-bff (колокольчик, «Моя очередь»).
+    Тип uz.railtech.eds.approval.requested.v1, источник rt://eds. Поле data конверта (envelope.v1.json). Шаг маршрута стал текущим: открыт маршрут (или новый круг после возврата) — первый шаг; решение `approve` передало маршрут дальше — следующий шаг (например, бухгалтер после директора). step.index — номер этого шага, step.assignee — кто решает. Для КП — после uz.railtech.erp.quote.ready_for_approval.v1. Подписчики v1: platform-bff (колокольчик, «Моя очередь»).
     """
 
     model_config = ConfigDict(

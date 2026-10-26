@@ -10,9 +10,9 @@ EDS — отдельный сервис со своей базой `eds` (ADR-00
 |---|---|---|
 | входящие и исходящие письма с регистрацией, резолюции, служебные записки, заявления, отчёты; **общий движок маршрутов согласования** (КП, договор, служебка); реестр и архив документов (метаданные, версии, сканы, журнал «кто и когда») | `letter.*`, `document.*`, `approval.requested/decided` (контракт — `packages/contracts/events/eds/`) | CRM: `identity.user.*`; ERP: `request.created`, `quote.ready_for_approval` |
 
-## Что сделано (E2) и что дальше
+## Что сделано
 
-В каркасе (E2) **нет доменных моделей**: есть всё, на чём стоит домен.
+**Каркас (E2).**
 
 | Есть | Где |
 |---|---|
@@ -20,17 +20,18 @@ EDS — отдельный сервис со своей базой `eds` (ADR-00
 | вход: `POST /api/v1/auth/sso/exchange` (SSO-токен сотрудника CRM → токен доступа EDS), `GET /api/v1/me`, зависимости `current_employee` и `require_permission(*коды)` | `app/api/`, `app/security/`, `app/services/sso.py` |
 | проекция сотрудников `employees` из `identity.user.created/updated/deactivated` (права `permissions.eds`), идемпотентно | `app/bus/handlers.py`, `app/services/employees.py` |
 | шина: таблицы outbox/inbox, приёмник `POST /bus/v1/events`, ретранслятор и обработка inbox в `eds-worker`, `python -m app bus …` | `app/bus/`, `app/tasks/`, `app/cli/bus_cli.py` |
-| миграции Alembic (одна голова): Procrastinate, `rt_bus_*`, `employees`, `sso_jti` | `alembic/versions/` |
 
-Дальше: **E3** — домен (реестр и нумерация, письма, документы, маршруты, файлы в S3, журнал) и API по `packages/contracts/openapi/eds.yaml`; **E4** — CRM
-публикует `permissions.eds` и выдаёт токен сотрудника для EDS; **E5** — ERP; **E6** — гейт этапа C1. Экраны — этап D (Платформа).
+**Домен (E3)** — подробнее в разделе «Домен» ниже: реестр и нумерация, входящие письма и резолюции, документы, движок маршрутов согласования, КП (EDS-03), журнал, файлы
+в S3 с версиями, реестр «Все документы» и экспорт. Дальше: **E4** — CRM публикует `permissions.eds` и выдаёт токен сотрудника для EDS; **E5** — ERP; **E6** — гейт этапа C1.
+Экраны — этап D (Платформа).
 
 ## Структура
 
 ```
 apps/eds/
-  app/            api/ (health, v1/auth, v1/me) · bus/ (handlers, snapshots, runtime) · security/ · services/ · tasks/ · cli/
-                  config.py · db.py · log.py · errors.py · container.py · main.py · __main__.py
+  app/            api/ (health, v1/: auth, me, letters, documents, approvals, registry, files) · schemas/ (модели eds.yaml)
+                  bus/ (handlers, snapshots, erp_snapshots, runtime) · models/ · security/ · services/ · tasks/ · cli/
+                  config.py · db.py · log.py · errors.py · clock.py · container.py · main.py · __main__.py
   alembic/        env.py, versions/ (YYYYMMDD_HHMM_slug), sql/ (снимок схемы Procrastinate 3.10.0)
   tests/          unit (без базы) и pg (настоящий PostgreSQL) — маркер `pg`
   Dockerfile      один образ: api, worker, миграции (`python -m app api|worker`, `alembic upgrade head`)
@@ -59,7 +60,7 @@ apps/eds/
 | `EDS_DATABASE_URL` | `postgresql+psycopg://<роль>:<пароль>@<хост>:5432/eds` (прод: роль `eds_app`, `?sslmode=require`) |
 | `EDS_ACCESS_SECRET` | секрет токена доступа EDS (HS256, 15 минут), ≥ 16 символов |
 | `PLATFORM_SSO_SECRET` | общий секрет SSO-токена сотрудника CRM; ротация — два значения через запятую |
-| `S3_ENDPOINT`, `S3_ACCESS_KEY`, `S3_SECRET_KEY`, `S3_BUCKET` | RustFS: свой ключ сервиса, бакет `eds-private` (в `.env` — `S3_EDS_*`); файлы появятся с доменом (E3) |
+| `S3_ENDPOINT`, `S3_ACCESS_KEY`, `S3_SECRET_KEY`, `S3_BUCKET` | RustFS: свой ключ сервиса, бакет `eds-private` (в `.env` — `S3_EDS_*`); файлы документов (E3) |
 | `RT_BUS_SECRET_CRM_EDS`, `RT_BUS_SECRET_ERP_EDS` | приём событий CRM и ERP (проверка подписи) |
 | `RT_BUS_SECRET_EDS_ERP`, `RT_BUS_SECRET_EDS_PLATFORM_BFF` | подпись доставки событий EDS в ERP и BFF Платформы |
 | `RT_BUS_CONTRACTS_DIR`, `RT_BUS_SUBSCRIPTIONS` | схемы событий и подписки; в образе — `/opt/rt/contracts`, задаёт Dockerfile |
@@ -89,8 +90,37 @@ apps/eds/
 - права читаются терпимо: нет `user.permissions.eds` (CRM до E4) — прав нет; неизвестные коды хранятся, но не действуют;
 - `deactivated` раньше `created` оставляет «надгробие» (`email = ''`), запоздавший старый снимок доступ не вернёт.
 
-Типы без обработчика (`erp.request.created`, `erp.quote.ready_for_approval` — домен, E3) приёмник записывает как `skipped` и отвечает 200. Эксплуатация:
+Типы без обработчика приёмник записывает как `skipped` и отвечает 200. `erp.request.created` и `erp.quote.ready_for_approval` обрабатывает домен (см. ниже). Эксплуатация:
 `docker compose … exec eds-api python -m app bus status|dead|failed|retry|retry-dead|retry-inbox`.
+
+## Домен (E3)
+
+Нормативка — [`wave12-eds-c1.md`](../../runbooks/wave12-eds-c1.md) §2 и контракт (`packages/contracts/openapi/eds.yaml` 0.1.0, `events/eds/`): здесь только устройство кода. Объекты в пути
+адресуются UUID, не номером (номер содержит «/»; номер — поле и фильтр `GET /registry?number=`). Слои: `api/v1/*` → `services/*` (команды и чтение отдельно: `letters` /
+`letters_read` и т. д.) → `models/*`; события публикует только сервис, в транзакции изменения.
+
+| Что | Как устроено | Код |
+|---|---|---|
+| **Нумерация** (§2.1) | строка `number_counters (kind, year)` под `SELECT … FOR UPDATE` в транзакции создания; год — по `Asia/Tashkent`; откат возвращает номер, выданный номер не возвращается; `ИСХ` — один счётчик на письма и КП | `services/numbering.py`, `clock.py` |
+| **Письма** | `awaiting_resolution` → `resolved` / `returned` (→ `submit` → снова ждёт) / `rejected`; регистрация вручную или по `erp.request.created` (идемпотентно по `erp_request_id`, без него — по сделке); резолюция хранится в письме | `services/letters.py`, `letters_read.py`, `bus/handlers.py` |
+| **Документы** | `memo`/`application`/`report` — номер при создании, маршрут при `submit`, версия растёт после возврата (снимок тела в `document_versions`); `letter_out` — `ИСХ` при отправке; архив (`archived_at`, `document.archived`) автоматически | `services/documents.py`, `document_state.py` |
+| **Маршруты** (§2.5) | маршрут = круг; шаги «сотрудник или любой с правом»; шаблоны: служебная — директор (`memos.approve`) → бухгалтер (`payments.confirm`, если есть сумма), заявление и отчёт — директор, КП — директор (`approvals.decide`); решения `approve`/`return`/`reject`, `comment` обязателен для двух последних; `approval.requested` — на каждом шаге, ставшем текущим | `services/approvals.py`, `approvals_read.py` |
+| **КП** (EDS-03) | `erp.quote.ready_for_approval` → маршрут «КП» (идемпотентно по КП и версии; событие старее известной версии игнорируется; новая версия закрывает открытые круги прежних — `returned`, шаг `skipped`, журнал `approval.superseded`, события нет); чек-лист на сервере: визы, маржа ≥ порога **резолюции EDS**, срок расчёта; красный чек-лист → `409 checklist_not_green`; одобрение выдаёт `ИСХ-` в `approval.decided` | `services/quotes.py`, `checklist.py` |
+| **Журнал** | `journal`: кто, что, когда, файл — по письму, документу, маршруту; без объекта — `registry.export`, `sso.exchange` | `services/journal.py` |
+| **Файлы** | метаданные в `files`/`file_versions`, содержимое в S3 `eds-private` (`files/<id>/v<n>`), чтение потоком; ≤ 25 МБ (отказ по `Content-Length` до разбора multipart), PDF/изображения/Office (по типу и сигнатуре); новая версия — `version_of` (добавляет загрузивший, автор документа или регистратор писем, пока документ в `draft`/`returned`, письмо в `awaiting_resolution`/`returned`) | `services/files.py`, `storage.py` |
+| **Реестр** | один запрос по письмам, документам и маршрутам КП: фильтры SPEC §7.3, курсор, `?number=`; экспорт CSV/XLSX без внешних библиотек, ≤ 10 000 строк | `services/registry.py`, `registry_export.py` |
+| **Разделение обязанностей** | автор документа не решает шаг по своему документу, пока есть другой активный держатель права шага; адресат ≠ автор; на КП не действует | `services/access.py` (`step_open_to`), `approvals.may_decide` |
+| **Видимость** | без `registry.read` — свои документы и маршруты, где сотрудник участник (назначен, держит право шага или уже решал); иначе `404`. Снимок КП (себестоимость, маржа) — только держателю `approvals.decide` | `services/access.py` |
+| **Идемпотентность** | `Idempotency-Key` создающих POST: таблица `idempotency_keys`, 24 часа, уборка задачей `idempotency_cleanup` | `services/idempotency.py` |
+
+Тесты домена: `tests/test_numbering.py`, `test_letters.py`, `test_documents.py`, `test_quotes.py`, `test_erp_events.py`, `test_files.py`, `test_registry.py`,
+`test_permissions_matrix.py` (по `x-rt-permissions` контракта), `test_review_rules.py`, `test_outbox_atomicity.py` (откат — события нет), `test_concurrency.py` (50 параллельных создателей), `test_contract_permissions.py`
+(прямая и обратная сверка маршрутов с `eds.yaml`). Ответы проверяются по схемам `components.schemas` самого контракта (`tests/domain.py`, `validate`). S3 в тестах — хранилище в памяти и
+локальный S3-совместимый сервер для `S3Storage`.
+
+Решения сверх контракта (вопросы архитектору — `docs/QUESTIONS.md`, Q-C1-E3-1): адресат документа с `addressee_crm_user_id` обязан иметь `memos.approve` (иначе `422`);
+`file_ids` при `submit` добавляются к уже привязанным; регистрация письма вручную требует отправителя или клиента CRM; строка «маржа» чек-листа без резолюции или без порога зелёная
+(«порог не задан»), а значение маржи скрыто от тех, кто не решает КП; `details.fields` доменных `422` — как у ошибок разбора: `[{field, message, type}]`.
 
 ## Как поднять локально
 

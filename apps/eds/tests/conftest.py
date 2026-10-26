@@ -7,9 +7,9 @@
 
 import os
 from collections.abc import AsyncIterator
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import httpx
 import psycopg
@@ -17,6 +17,9 @@ import pytest
 from alembic import command
 from alembic.config import Config
 from psycopg import sql as psql
+
+if TYPE_CHECKING:
+    from tests.domain import Person
 
 _ADMIN_URL = os.environ.get("EDS_TEST_DATABASE_URL", "")
 _DB_NAME = "eds_test"
@@ -100,18 +103,56 @@ async def container(request: pytest.FixtureRequest, settings: Settings) -> Async
 
 
 async def _truncate(settings: Settings) -> None:
+    """Очистить все таблицы сервиса, кроме служебных (alembic, procrastinate): список берётся из базы."""
     from sqlalchemy import text
     from sqlalchemy.ext.asyncio import create_async_engine
 
     engine = create_async_engine(settings.sqlalchemy_url)
     async with engine.begin() as conn:
-        await conn.execute(
-            text(
-                "TRUNCATE employees, sso_jti, rt_bus_outbox, rt_bus_delivery, rt_bus_inbox, "
-                "rt_bus_subscriber_state RESTART IDENTITY"
+        names = (
+            await conn.execute(
+                text(
+                    "SELECT quote_ident(tablename) FROM pg_tables WHERE schemaname = 'public' "
+                    "AND tablename <> 'alembic_version' AND tablename NOT LIKE 'procrastinate%'"
+                )
             )
-        )
+        ).scalars()
+        await conn.execute(text(f"TRUNCATE {', '.join(names)} RESTART IDENTITY CASCADE"))
     await engine.dispose()
+
+
+class FakeClock:
+    """Подменяет `app.clock.now`: каждый вызов на миллисекунду позже предыдущего (нет одинаковых меток времени)."""
+
+    def __init__(self, start: datetime) -> None:
+        self.current = start
+
+    def set(self, moment: datetime) -> None:
+        self.current = moment
+
+    def advance(self, **delta: float) -> None:
+        self.current += timedelta(**delta)
+
+    def now(self) -> datetime:
+        self.current += timedelta(milliseconds=1)
+        return self.current
+
+
+@pytest.fixture(autouse=True)
+def clock(monkeypatch: pytest.MonkeyPatch) -> FakeClock:
+    """Время сервиса зафиксировано: 2026-10-26 08:00 UTC (год номеров — 2026)."""
+    from app import clock as app_clock
+
+    fake = FakeClock(datetime(2026, 10, 26, 8, 0, tzinfo=UTC))
+    monkeypatch.setattr(app_clock, "now", fake.now)
+    return fake
+
+
+@pytest.fixture(autouse=True)
+def _clean_storage() -> None:
+    from app.services.storage import TEST_STORAGE
+
+    TEST_STORAGE.objects.clear()
 
 
 @pytest.fixture
@@ -123,6 +164,14 @@ async def client(settings: Settings, container: Container) -> AsyncIterator[http
         httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://eds.test") as http,
     ):
         yield http
+
+
+@pytest.fixture
+async def staff(container: Container) -> dict[str, "Person"]:
+    """Сотрудники по ролям каталога в проекции (`tests/domain.py`, `ROSTER`)."""
+    from tests.domain import seed_staff
+
+    return await seed_staff(container)
 
 
 def user_snapshot(crm_user_id: int = 7, **changes: Any) -> dict[str, Any]:

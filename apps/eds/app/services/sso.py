@@ -20,6 +20,7 @@ from app.errors import EdsError
 from app.models import SsoJti
 from app.security.access_token import TTL_SECONDS, issue_access_token
 from app.security.sso_token import SsoTokenError, verify_sso_token
+from app.services import journal
 from app.services.employees import get_employee
 
 log = structlog.get_logger(__name__)
@@ -94,7 +95,11 @@ async def exchange(
             "Учётная запись отключена.",
             status_code=status.HTTP_403_FORBIDDEN,
         )
-    # Аудит обмена (iss, sub, jti); журнал документов — домен, E3.
+    # Аудит обмена (iss, sub, jti) — в журнал EDS (eds.yaml, ssoExchange); самого токена в записи нет.
+    async with sessions() as session, session.begin():
+        await journal.record(
+            session, "sso.exchange", by=employee.crm_user_id, comment=f"iss={claims.iss}, jti={claims.jti}"
+        )
     log.info("audit", action="sso.exchange", iss=claims.iss, sub=claims.sub, jti=claims.jti)
     return ExchangeResult(
         access_token=issue_access_token(employee.crm_user_id, settings.access_secret.get_secret_value(), now=now)

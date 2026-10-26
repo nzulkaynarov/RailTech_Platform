@@ -28,7 +28,7 @@ class Settings(BaseSettings):
     platform_sso_secret: SecretStr = Field(validation_alias="PLATFORM_SSO_SECRET")
 
     # Хранилище файлов (RustFS): отдельный ключ сервиса с доступом только к бакету eds-private (S0-9).
-    # Файлы появятся вместе с доменом (E3); настройки заведены сейчас, чтобы окружение было полным.
+    # Файлы документов (домен, E3): ключ `files/<id>/v<версия>`, чтение потоком (`app/services/storage.py`).
     s3_endpoint: AnyHttpUrl = AnyHttpUrl("http://rustfs:9000")
     s3_access_key: SecretStr = SecretStr("")
     s3_secret_key: SecretStr = SecretStr("")

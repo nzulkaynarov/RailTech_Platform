@@ -1,0 +1,21 @@
+Снимок БД ≈ 01:14 UTC (после пункта 5, до возврата заглушки `stub` в 02:00:14): у stub на тот момент 61 доставка CRM и 17 ERP, из них часть pending. Итог после возврата — 134 доставки CRM и 21 ERP, все delivered (см. p2-catchup-after-enable.txt).
+
+== crm: источник и получатели
+  source  |  subscriber  |                                                                                                        types                                                                                                        | n
+----------+--------------+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+----
+ rt://crm | eds          | identity.user.created.v1                                                                                                                                                                                            |  3
+ rt://crm | erp          | crm.client.updated.v1, crm.contact.created.v1, crm.contact.deleted.v1, crm.contact.updated.v1                                                                                                                       | 17
+ rt://crm | platform-bff | crm.lead.created.v1, crm.lead.stage_changed.v1, crm.lead.updated.v1, identity.user.created.v1                                                                                                                       | 38
+ rt://crm | stub         | crm.client.created.v1, crm.client.updated.v1, crm.contact.created.v1, crm.contact.deleted.v1, crm.contact.updated.v1, crm.lead.created.v1, crm.lead.stage_changed.v1, crm.lead.updated.v1, identity.user.created.v1 | 61
+ rt://crm | stub2        | crm.client.created.v1, crm.client.updated.v1, crm.contact.created.v1, crm.lead.created.v1, crm.lead.stage_changed.v1, crm.lead.updated.v1                                                                           | 38
+(5 rows)
+
+== erp: источник и получатели
+  source  |  subscriber  |                   types                    | n
+----------+--------------+--------------------------------------------+----
+ rt://erp | crm          | erp.invite.sent.v1, erp.request.created.v1 | 17
+ rt://erp | eds          | erp.request.created.v1                     | 11
+ rt://erp | platform-bff | erp.invite.sent.v1, erp.request.created.v1 | 17
+ rt://erp | stub         | erp.invite.sent.v1, erp.request.created.v1 | 17
+ rt://erp | stub2        | erp.invite.sent.v1, erp.request.created.v1 | 13
+(5 rows)

@@ -1,0 +1,40 @@
+[
+ {
+  "kind": "M1 CRM lead.created -> счётчик",
+  "i": 0,
+  "status": 429,
+  "rid": "qa-m1-390-0-1792977291542",
+  "tResp": 46,
+  "sse_ms": null,
+  "dom_ms": null
+ },
+ {
+  "kind": "M2 ERP notification+request.created -> колокольчик",
+  "i": 0,
+  "tCommit": 1792977304410,
+  "bellBefore": "Центр уведомлений, 5 новых",
+  "sse_ms": 359,
+  "sse_data": "{\"topics\": [\"notifications\", \"counters\", \"queue\", \"activity\"], \"reason\": \"uz.railtech.erp.request.created.v1\"}",
+  "dom_ms": 511,
+  "bell": "Центр уведомлений, 6 новых"
+ },
+ {
+  "kind": "M1 CRM lead.created -> счётчик",
+  "i": 1,
+  "status": 429,
+  "rid": "qa-m1-390-1-1792977319055",
+  "tResp": 43,
+  "sse_ms": null,
+  "dom_ms": null
+ },
+ {
+  "kind": "M2 ERP notification+request.created -> колокольчик",
+  "i": 1,
+  "tCommit": 1792977330840,
+  "bellBefore": "Центр уведомлений, 6 новых",
+  "sse_ms": 372,
+  "sse_data": "{\"topics\": [\"notifications\", \"counters\", \"queue\", \"activity\"], \"reason\": \"uz.railtech.erp.request.created.v1\"}",
+  "dom_ms": 487,
+  "bell": "Центр уведомлений, 7 новых"
+ }
+]
