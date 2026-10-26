@@ -204,9 +204,12 @@ def test_own_http_client_has_no_connection_cap(
 def test_subscriber_connections_are_capped_across_concurrent_passes(
     make_bus: Callable[..., DjangoBus], hub: SyncHub
 ) -> None:
+    """Предел на подписчика действует на весь процесс: три прохода, каждый насыщается на 2 запросах и добавляет
+    пачку (2) — без общего семафора у медленного подписчика было бы до 9 запросов (мутация `gate=None` — тест красный),
+    с ним — не больше `subscriber_connections` (4)."""
     bus = make_bus(delivery_batch=2, subscriber_concurrency=2)
     assert bus.config.subscriber_connections == 4
-    publish(bus, n=12)
+    publish(bus, n=24)
     lock = threading.Lock()
     state = {"active": 0, "peak": 0}
 
@@ -215,19 +218,51 @@ def test_subscriber_connections_are_capped_across_concurrent_passes(
             state["active"] += 1
             state["peak"] = max(state["peak"], state["active"])
         try:
-            time.sleep(0.5)
+            time.sleep(0.4)
         finally:
             with lock:
                 state["active"] -= 1
         return httpx.Response(200)
 
     hub.responders["crm"] = respond
-    workers = [Worker(bus.pump), Worker(bus.pump)]
-    elapsed = wait_delivered("audit", 12, within=2.0)
-    assert elapsed < 1.5
-    delivered = sum(w.join(30).deliver.delivered for w in workers)
-    assert delivered == 24
-    assert 2 <= state["peak"] <= 4
+    workers = [Worker(bus.pump), Worker(bus.pump), Worker(bus.pump)]
+    elapsed = wait_delivered("audit", 24, within=3.0)
+    assert elapsed < 2.0
+    delivered = sum(w.join(60).deliver.delivered for w in workers)
+    assert delivered == 48
+    assert 3 <= state["peak"] <= 4
+
+
+def test_send_sync_gate_limits_concurrent_requests() -> None:
+    """Прямой тест `send_sync`: семафор на 2 при 10 потоках — не больше 2 запросов в пути (без него — 10)."""
+    from concurrent.futures import ThreadPoolExecutor
+    from datetime import UTC, datetime
+
+    from rt_bus.delivery import Attempt, send_sync
+
+    lock = threading.Lock()
+    state = {"active": 0, "peak": 0}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        with lock:
+            state["active"] += 1
+            state["peak"] = max(state["peak"], state["active"])
+        try:
+            time.sleep(0.05)
+        finally:
+            with lock:
+                state["active"] -= 1
+        return httpx.Response(200)
+
+    attempt = Attempt(url="http://crm.test/bus/v1/events", headers={}, body=b"{}")
+    gate = threading.BoundedSemaphore(2)
+    with httpx.Client(transport=httpx.MockTransport(handler)) as client, ThreadPoolExecutor(10) as pool:
+        futures = [
+            pool.submit(send_sync, client, attempt, 5.0, datetime.now(UTC), gate=gate, deadline=5.0) for _ in range(10)
+        ]
+        results = [f.result() for f in futures]
+    assert all(r.status_code == 200 for r in results)
+    assert state["peak"] == 2
 
 
 def test_two_concurrent_pumps_deliver_each_event_once_without_blocking(

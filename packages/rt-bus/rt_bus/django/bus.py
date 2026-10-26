@@ -370,21 +370,22 @@ class DjangoBus:
         """Взятое — по подписчикам (W11C-G-1): запросы группы уходят в пул потоков, итог группы пишется отдельно."""
         client = self._client()
 
-        def run(attempt: Attempt, gate: threading.BoundedSemaphore) -> AttemptResult:
+        def run(attempt: Attempt, gate: threading.BoundedSemaphore, until: float) -> AttemptResult:
+            # место у подписчика ждём не дольше, чем осталось до дедлайна группы (абсолютного, от постановки в пул)
             return send_sync(
                 client,
                 attempt,
                 self.config.http_timeout,
                 self.core.now(),
                 gate=gate,
-                deadline=self.config.attempt_deadline,
+                deadline=max(until - time.monotonic(), 0.0),
             )
 
         for group in plan_groups(self._plan(claimed, now)):
             attempts = [p for _, p in group if isinstance(p, Attempt)]
             gate = self._gate(group[0][0].subscriber)
-            futures = [flight.pool().submit(run, attempt, gate) for attempt in attempts]
             deadline = time.monotonic() + self.config.attempt_deadline
+            futures = [flight.pool().submit(run, attempt, gate, deadline) for attempt in attempts]
             flight.groups.append(_Group(group[0][0].subscriber, group, futures, deadline))
 
     def _reap(self, flight: _Flight) -> None:

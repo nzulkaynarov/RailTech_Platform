@@ -212,11 +212,12 @@ def test_own_http_client_has_no_connection_cap(
 async def test_subscriber_connections_are_capped_across_concurrent_passes(
     make_bus: Callable[..., AsyncBus], sessions: async_sessionmaker[AsyncSession], hub: Hub
 ) -> None:
-    """Предел на подписчика действует на весь процесс: два одновременных `pump` держат у медленного подписчика не больше
-    `subscriber_concurrency + delivery_batch` запросов, а запросы быстрого от этого не зависят."""
+    """Предел на подписчика действует на весь процесс. Каждый проход сам насыщается на `subscriber_concurrency` (2)
+    запросах и добавляет пачку (2), а проходов три: без общего семафора у медленного подписчика было бы до 3 × 3 = 9
+    запросов в пути (мутация `gate=None` — тест красный), с ним — не больше `subscriber_connections` (4)."""
     bus = make_bus(delivery_batch=2, subscriber_concurrency=2)
     assert bus.config.subscriber_connections == 4
-    await publish(bus, sessions, n=12)
+    await publish(bus, sessions, n=24)
     active = peak = 0
 
     async def respond(request: httpx.Request) -> httpx.Response:
@@ -224,18 +225,46 @@ async def test_subscriber_connections_are_capped_across_concurrent_passes(
         active += 1
         peak = max(peak, active)
         try:
-            await asyncio.sleep(0.5)
+            await asyncio.sleep(0.4)
         finally:
             active -= 1
         return httpx.Response(200)
 
     hub.responders["crm"] = respond
-    pumps = asyncio.gather(bus.pump(), bus.pump())
-    elapsed = await wait_delivered(sessions, "audit", 12, within=2.0)
-    assert elapsed < 1.5
-    stats = await asyncio.wait_for(pumps, timeout=30)
-    assert sum(s.deliver.delivered for s in stats) == 24
-    assert 2 <= peak <= 4  # без общего предела два прохода дали бы до 6
+    pumps = asyncio.gather(bus.pump(), bus.pump(), bus.pump())
+    elapsed = await wait_delivered(sessions, "audit", 24, within=3.0)
+    assert elapsed < 2.0  # быстрый подписчик не ждёт очереди к медленному
+    stats = await asyncio.wait_for(pumps, timeout=60)
+    assert sum(s.deliver.delivered for s in stats) == 48
+    assert 3 <= peak <= 4
+
+
+async def test_send_async_gate_limits_concurrent_requests() -> None:
+    """Прямой тест `send_async`: семафор на 2 при 10 одновременных попытках — не больше 2 запросов в пути."""
+    from datetime import UTC, datetime
+
+    from rt_bus.delivery import Attempt, send_async
+
+    active = peak = 0
+
+    async def handler(request: httpx.Request) -> httpx.Response:
+        nonlocal active, peak
+        active += 1
+        peak = max(peak, active)
+        try:
+            await asyncio.sleep(0.05)
+        finally:
+            active -= 1
+        return httpx.Response(200)
+
+    attempt = Attempt(url="http://crm.test/bus/v1/events", headers={}, body=b"{}")
+    async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as client:
+        gate = asyncio.Semaphore(2)
+        results = await asyncio.gather(
+            *(send_async(client, attempt, 5.0, datetime.now(UTC), deadline=5.0, gate=gate) for _ in range(10))
+        )
+    assert all(r.status_code == 200 for r in results)
+    assert peak == 2
 
 
 async def test_two_concurrent_pumps_deliver_each_event_once_without_blocking(
