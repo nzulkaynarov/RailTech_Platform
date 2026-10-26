@@ -88,7 +88,7 @@ with transaction.atomic():
 **Пробуждение ретранслятора (B5a).** Транзакция с `publish` после коммита сразу ставит задачу `pump` — доставка начинается
 за доли секунды, а не на ближайшем тике (5 с). Периодический `pump` остаётся страховкой: он же подбирает события, если
 пробуждение потерялось.
-- Подключение: `bus.wakeup = tasks.wakeup` (ERP — `integration/bus.py`, CRM — `Container.bus`, `wakeup=tasks.wakeup`).
+- Подключение: `bus.wakeup = tasks.wakeup` (ERP — `integration/bus.py`, CRM и EDS — `Container.bus`, `wakeup=tasks.wakeup`).
   Без `wakeup` `pump` идёт только по расписанию.
 - **Откат — пробуждения нет.** Задача ставится только после настоящего коммита: `publish` из откатанной транзакции или
   откатанной точки сохранения будить не может.
@@ -106,7 +106,7 @@ with transaction.atomic():
   `socket_connect_timeout` 1 с (`core/settings/infra.py`); без неё недоступный адрес держал бы коммитящий запрос до
   таймаута ОС (~75 с). SQLAlchemy: пробуждение — фоновая задача asyncio, коммит ответа не ждёт;
   `AsyncBus.drain_wakeups()` (и `aclose()`) дожидается незавершённых. Сервис вызывает его, пока очередь ещё открыта (CRM: `Container.drain_bus()` в
-  lifespan API и бота, в воркере и в `create_admin`), иначе отложенное пробуждение упрётся в закрытый пул очереди.
+  lifespan API и бота, в воркере и в `create_admin`; EDS — в lifespan API, воркере и `python -m app bus`), иначе отложенное пробуждение упрётся в закрытый пул очереди.
 - Очередь: пробуждение идёт туда же, куда пишет Beat. ERP — `CELERY_TASK_DEFAULT_QUEUE = "default"`, её обслуживает
   `erp-worker` (`-Q default,pdf,imports`); тест `integration/tests/test_bus_wakeup.py` ловит уход в очередь без воркера.
   CRM — очередь `rt_bus`, воркер `python -m app worker` берёт все очереди.

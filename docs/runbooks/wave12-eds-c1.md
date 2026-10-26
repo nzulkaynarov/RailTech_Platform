@@ -1,5 +1,5 @@
-# Волна 12 — этап C1 «Сервис EDS» (версия 0.11)
-Статус: действует · Владелец: архитектор · 2026-10-26
+# Волна 12 — этап C1 «Сервис EDS» (версия 0.12)
+Статус: выполнен (волна закрыта 2026-10-26, итог — `docs/PROGRESS.md` «Этап C1: EDS») · Владелец: архитектор · 2026-10-26
 
 Основание: ADR-0015 (EDS — отдельный сервис, границы доменов), ADR-0013 (стек), ADR-0014 (шина), ADR-0012 (роли как данные),
 стратегия §3.3, §4 «Этап C», §7; SPEC-v3 §2.1–§2.4, §3.2, §7.3, §10.4; карта интеграции §7 (EDS-01, EDS-02, EDS-03).
@@ -53,23 +53,27 @@ EDS — единственный владелец номеров докумен�
   Своей формы входа у EDS нет; машинный доступ — только приёмник шины с подписью.
 - Права — данные: CRM вычисляет `permissions.eds` из ролей по каталогу и публикует в `identity.user.created/updated`; EDS держит
   проекцию сотрудников (inbox, идемпотентно) и проверяет право на каждый запрос. Коды прав v1: `letters.read`, `letters.register`,
-  `letters.resolve`, `memos.create`, `memos.approve`, `approvals.decide`, `registry.read`, `registry.export`.
+  `letters.resolve`, `memos.create`, `memos.approve`, `approvals.decide`, `registry.read`, `registry.export`, `payments.confirm`
+  (девятый код — решение архитектора 2026-10-26; в событиях `identity` коды — строки по шаблону, новый код не ломает v1).
 - Отображение каталога (E1): `eds.inbox` read → `letters.read, registry.read`, full → `+ letters.register, letters.resolve`;
   `eds.memo.create` → `memos.create`; `eds.memo.approve` → `memos.approve`; `eds.drafts` full → `approvals.decide`;
-  `eds.projects`/`eds.payments` read → `registry.read`, `data.export` → `registry.export`. Системный «Директор» получает всё по
-  каталогу; «Администратор» бизнес-документов не видит (решение R3-D-2).
+  `eds.projects`/`eds.payments` read → `registry.read`, `eds.payments` full → `+ payments.confirm`, `data.export` → `registry.export`.
+  Системный «Директор» получает всё по каталогу; «Администратор» бизнес-документов не видит (решение R3-D-2), служебную записку
+  создать может (`memos.create` — допустимо, решение архитектора 2026-10-26).
 
 ### 2.3. API v0.1 (`eds.yaml`, префикс `/api/v1`)
-`GET/POST /letters`, `GET /letters/{no}`, `POST /letters/{no}/resolution {text, assignees[{crm_user_id, zone}], due, min_margin_pct}`,
-`POST /letters/{no}/return {comment}`, `POST /letters/{no}/reject {reason}`; `GET/POST /documents` (типы `memo`, `application`, `report`,
-`letter_out`; поля SPEC §10.4 `ServiceMemo`), `GET /documents/{no}`, `POST /documents/{no}/submit`; `GET /approvals?mine=1`,
+Объекты адресуются UUID (`{id}`), а не номером — в номере есть «/»; поиск по номеру — `GET /registry?number=` (решение лида, принято
+архитектором 2026-10-26). `GET/POST /letters`, `GET /letters/{id}`, `POST /letters/{id}/resolution {text, assignees[{crm_user_id, zone}], due,
+min_margin_pct}`, `POST /letters/{id}/return {comment}`, `POST /letters/{id}/submit` (повторная подача после возврата),
+`POST /letters/{id}/reject {reason}`; `GET/POST /documents` (типы `memo`, `application`, `report`, `letter_out`; поля SPEC §10.4
+`ServiceMemo`), `GET /documents/{id}`, `POST /documents/{id}/submit`; `GET /approvals?mine=1`,
 `GET /approvals/{id}`, `POST /approvals/{id}/decision {decision: approve|return|reject, comment}` (comment обязателен для `return` и
 `reject`); `GET /registry` (все документы с фильтрами SPEC §7.3 «Все документы»), `GET /registry/export`; `POST /files`, `GET /files/{id}`
 (поток, версии). Ошибки — единый формат, как у BFF; пагинация — курсором.
 
 ### 2.4. События (`uz.railtech.eds.<сущность>.<действие>.v1`)
 Публикует EDS: `letter.registered`, `letter.resolved` (исполнители, срок, мин. маржа, ссылка на заявку ERP), `letter.returned`,
-`letter.rejected` (причина), `document.registered`, `document.archived`, `approval.requested` (маршрут открыт), `approval.decided`
+`letter.rejected` (причина), `document.registered`, `document.archived`, `approval.requested` (шаг маршрута стал текущим), `approval.decided`
 (решение, комментарий, ИСХ-номер для КП). Публикует ERP: `uz.railtech.erp.quote.ready_for_approval.v1` (КП, сумма, маржа, виза
 снабженца и гл. инженера, порог маржи из резолюции). Подписки EDS: `identity.user.*`, `erp.request.created` (связать письмо с
 заявкой), `erp.quote.ready_for_approval`. Подписки ERP: `eds.letter.resolved`, `eds.letter.rejected`, `eds.approval.decided`.
@@ -77,7 +81,7 @@ EDS — единственный владелец номеров докумен�
 
 ### 2.5. Движок маршрутов согласования
 Маршрут — упорядоченные шаги «кто решает» (конкретный сотрудник или «любой с правом X»); шаблоны v1: «Служебная записка» —
-директор, затем бухгалтер, если указана сумма; «КП» — директор с чек-листом (визы, маржа ≥ порога резолюции; кнопка одобрения
+директор, затем бухгалтер (любой с `payments.confirm`), если указана сумма; «КП» — директор с чек-листом (визы, маржа ≥ порога резолюции; кнопка одобрения
 недоступна, пока чек-лист не зелёный — проверка на сервере); «Заявление», «Отчёт» — директор. Решения: `approve`, `return`
 (на доработку, автор правит и отправляет снова — новая версия), `reject`. Каждое решение — строка журнала и событие. Маршрут не
 знает про коммерческое содержание: данные КП приходят снимком в `quote.ready_for_approval` и хранятся в маршруте только для показа.
