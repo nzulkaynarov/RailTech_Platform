@@ -420,6 +420,12 @@ Smoke с раннера в задании `rollback` устроен так же:
 оба); ERP без EDS принимает КП на согласование, но они остаются в `PENDING_APPROVAL` — событие лежит в outbox ERP до появления
 подписчика `eds` и уходит после включения EDS (проверка — `bus status` у ERP). Откат EDS при работающей ERP с EDS-03 не делать.
 
+**Сотрудники заведены до EDS (E7b, C1-G-3).** Сотрудники, созданные в CRM **до** появления подписчика `eds`, в проекции EDS не появляются
+(вход — 403 `USER_NOT_PROVISIONED`); правка без изменений события не даёт. После деплоя с EDS выполнить на VPS 1:
+`docker compose … exec crm-api python -m app republish-identity --dry-run` (счёт), затем `… republish-identity` (все сотрудники;
+`--user-id N` — один). Команда публикует `identity.user.updated.v1` с полным снимком через outbox, повтор безопасен
+(`docs/runbooks/rt-bus-crm.md`, «Действия» п. 5). На чистом проде, где EDS деплоится вместе с CRM до создания сотрудников, не нужна.
+
 **Откат.** `rollback.sh` на тег до EDS убирает его контейнеры (`--remove-orphans`) и не проверяет здоровье; на тег с EDS тянет `eds-api` и ждёт `healthy`.
 Миграции Alembic EDS не откатываются (как у CRM и ERP). Сброс `reset-prod.sh` (S0-8) включает базу `eds` и бакет `eds-private`: список — `crm,erp,eds`, дамп `eds` обязателен, подтверждение на VPS 2 — ввод `crm,erp,eds`.
 

@@ -62,7 +62,19 @@ SELECT event_id, created_at, notified_at FROM erp_event_notices WHERE notified_a
    Попытки сбрасываются с нуля; подписчик на паузе получает пробную доставку сразу.
 3. **Повторить обработку события ERP:** `python -m app bus retry-inbox <event_id>` (`failed` и `skipped`).
 4. **Остановить доставку подписчику** на время работ: `enabled: false` в `subscriptions.yaml` (доставки ждут, потом уходят).
-5. Сообщения Telegram, не ушедшие из-за выключенного бота, уйдут сами, когда бот появится (не позже суток).
+5. **Новый подписчик, а сотрудники заведены раньше** (EDS на стенде или проде с готовой командой; находка C1-G-3: проекции нет,
+   вход даёт 403 `USER_NOT_PROVISIONED`, правка «без изменений» события не создаёт): переопубликовать снимки сотрудников.
+   ```bash
+   $C exec crm-api python -m app republish-identity --dry-run     # только счёт: сколько сотрудников (ничего не пишет)
+   $C exec crm-api python -m app republish-identity               # всем (в том числе неактивным): identity.user.updated.v1
+   $C exec crm-api python -m app republish-identity --user-id 12  # одному
+   ```
+   Событие — обычное `identity.user.updated.v1` с полным снимком (с `permissions.eds`) через outbox, пачками по 50 сотрудников в
+   транзакциях; `changed_fields` не передаётся (поле необязательное — подсказка подписчику, а снимок он применяет целиком). Строки
+   сотрудников не меняются: у события новый `id`, снимок и его `updated_at` прежние, поэтому повтор безопасен — проекция применяет
+   «не старее» (`updated_at <=`) и не затирает более новую правку. Результат: `eds`-проекция — по строке на сотрудника
+   (`bus status` у CRM: `outbox_pending` падает до 0; в EDS — `bus status`, `inbox_failed = 0`).
+6. Сообщения Telegram, не ушедшие из-за выключенного бота, уйдут сами, когда бот появится (не позже суток).
 
 ## Проверка
 - `bus status`: `dlq_size = 0`, `oldest_undelivered_age_seconds` мал, `paused: false`, `inbox_failed = 0`.
