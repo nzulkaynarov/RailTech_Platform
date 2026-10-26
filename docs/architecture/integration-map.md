@@ -99,6 +99,7 @@
 | Оргструктура, карточка сотрудника, пригласить | `GET/PUT /admin/users/{id}`, `POST /admin/users/invite` | `GET/POST/PATCH /users`, `/users/{id}/invite` (провижининг в ERP с `role_codes` — FIX-63) | провижининг ✓ | Δ CRM-01 |
 | Внешние интеграции | `GET /admin/integrations` | `/integrations/*`, `/models*`, `/admin/external-services*`, `/system/status`, `/system/backups`, `/admin/ai-spend` | `/health` `externals[]` (M3-ERP-06, PR #129) | ✓ |
 | Тикеты от команды | `GET/POST /admin/tickets` | новое `tickets` | — | Δ CRM-05 |
+| Компания (W13-A3, BFF 0.7.0): реквизиты и логотип, бланк и бренд, нумерация, условия КП, статьи расхода, шаблоны документов и писем, справочники, категории и запросы, НДС | `/admin/company*` (раздел `company.settings`; `GET`/предпросмотры — чтение, изменения — полный) | — | `accounts/companies/{id}/` (+ `upload-logo`, `delete-logo`, `document-profile/` + `preview`, `upload-logo`, `settings/`), `crm/numbering-scheme/` (+ `preview`), `crm/charge-templates/`, `crm/charge-types/`, `crm/document-templates/*`, `settings/email-templates/`, `master-data/{countries,currencies,units,delivery-basis}/`, `catalog/categories/`, `catalog/category-requests/` (+ `approve`, `reject`), `system-settings/`; id компании — `accounts/me/` | ✓, разрывы — Q-W13A3-1 |
 
 ## 2. Шкала 7 шагов: как BFF выводит шаг
 
@@ -194,7 +195,7 @@
 | `erp.railtech.uz/deal-quote/:id` | `/erp/calc/:номер` |
 | `erp.railtech.uz/contracts`, `/invoices`, `/payments`, `/acts`, `/fulfillments` | `/eds/documents?type=…`, `/eds/payments`, `/erp/stock` |
 | `erp.railtech.uz/products…`, `/catalog-…` | `/erp/catalog` |
-| `erp.railtech.uz/settings` | `/admin/integrations` (бизнес-настройки компании — раздел Admin «Компания», Δ PLT) |
+| `erp.railtech.uz/settings` | `/admin/integrations` (бизнес-настройки компании — раздел Admin «Компания», `/admin/company`, W13-A3) |
 | остальное | `/dashboard/queue` |
 
 ## 7. Разрывы в бэкендах (что нужно добавить)
