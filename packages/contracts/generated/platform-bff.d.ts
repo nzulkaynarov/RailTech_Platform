@@ -79,6 +79,86 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/setup/state": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Нужен ли первый запуск (в CRM ещё нет администратора)
+     * @description Без сессии (CRM `/setup/state`). `needs_admin = true` — SPA ведёт на экран «Первый запуск» вместо входа. Пока администратора нет, CRM выдаёт одноразовый код первого запуска и один раз пишет его в журнал `crm-api` (`setup_code_issued`); в ответе кода нет.
+     */
+    get: operations["getSetupState"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/setup/admin": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Создать первого администратора и войти
+     * @description Без сессии, один раз (CRM `/setup/admin`). Код первого запуска — из журнала `crm-api`; регистр, пробелы и дефисы не важны. Создаётся пользователь с системной ролью «Администратор»; BFF входит под ним теми же почтой и паролем и ставит `rt_pf_session` и `rt_pf_csrf` — ответ как у `POST /auth/login`. Попытки считаются в том же лимите, что и вход (на IP и e-mail). Неверный код — 422 `SETUP_CODE_INVALID`, истёкший (24 часа) — 422 `SETUP_CODE_EXPIRED`, перебор — 429 `SETUP_LOCKED` (15 минут), администратор уже есть — 409 `SETUP_DONE`. Слабый пароль — 422 `VALIDATION_FAILED`, `details.fields = [password]`.
+     */
+    post: operations["createFirstAdmin"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/setup/checklist": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Чек-лист первого запуска из пяти шагов
+     * @description Раздел `admin` — полный (директору — 403: CRM отдаёт чек-лист только с правом записи настроек, а все шаги ведут на экраны администратора). Состояние шагов приносят бэкенды, BFF их только сводит: бот и модели ИИ — CRM `/setup/checklist`, ERP — `/integrations/erp`, почта — `/integrations/smtp`, первый сотрудник — `/users` (есть ли кроме администратора активный сотрудник). Часть данных не ответила — шаг `unknown`, чек-лист не падает; не ответила ни одна — 503. `company` — шаг мастера «своя компания» (ERP `setup/status`); `null`, если ERP не ответила или у администратора нет сессии ERP.
+     */
+    get: operations["getSetupChecklist"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/setup/company": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Создать свою компанию (шаг мастера)
+     * @description Раздел `admin` — полный. ERP `setup/company/` токеном администратора: создаёт компанию с типом «продавец» и делает его владельцем; только пока своей компании нет. Повтор — 409 `OWN_COMPANY_ALREADY_EXISTS`. Поля формы — 422 `VALIDATION_FAILED` (`details.fields`, тексты ERP — `details.messages`). ERP не ответила или у администратора ещё нет сессии ERP (доступ выдаётся CRM с задержкой) — 503 `BACKEND_UNAVAILABLE`, повтор через несколько секунд. Тот же сотрудник уже не суперпользователь ERP — 403 `FORBIDDEN`.
+     */
+    post: operations["createOwnCompany"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/me": {
     parameters: {
       query?: never;
@@ -876,7 +956,11 @@ export interface paths {
      */
     get: operations["listEmployees"];
     put?: never;
-    post?: never;
+    /**
+     * Добавить сотрудника без почты — временный пароль показывается один раз
+     * @description Раздел `admin` — полный. Для тех, кому письмо не придёт (почта ещё не подключена, у сотрудника нет почты на этом адресе). BFF создаёт пользователя в CRM с ролями Платформы (CRM `/users`) и отдаёт **временный пароль в этом ответе — единственный раз**: BFF не пишет его в журнал, не кэширует и не хранит; ответ — `Cache-Control: no-store`. Сотрудник при первом входе обязан сменить пароль. Потерянный пароль не восстановить — выдать новый: `POST /admin/users/{id}/temporary-password`.
+     */
+    post: operations["createEmployee"];
     delete?: never;
     options?: never;
     head?: never;
@@ -917,6 +1001,26 @@ export interface paths {
      * @description Повтор письма-приглашения сотруднику со статусом «Приглашён» (CRM `/users/{id}/invite`). CRM выдаёт новый временный пароль только при отправке письма: без подключённой почты пароль не меняется и ответ — 409 `CONFLICT` с `details.invite = not_sent`. Раздел `admin` — полный.
      */
     post: operations["resendInvite"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/admin/users/{id}/temporary-password": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Выдать сотруднику новый временный пароль (без почты)
+     * @description Раздел `admin` — полный (CRM `/users/{id}/reset-password`). Новый пароль показан **в этом ответе один раз** (`Cache-Control: no-store`; BFF его не логирует, не кэширует и не хранит), прежний пароль и все сессии сотрудника в CRM и ERP перестают действовать, при входе он обязан сменить пароль (в списке — «Приглашён»). Повторный запрос выдаёт ещё один новый пароль, старый получить нельзя. Свой пароль так не меняют — 409 `CONFLICT` с `details.reason = own_account` (смена — в профиле).
+     */
+    post: operations["issueTemporaryPassword"];
     delete?: never;
     options?: never;
     head?: never;
@@ -1019,7 +1123,7 @@ export interface components {
   schemas: {
     Error: {
       /**
-       * @description Стабильный код (`INVALID_CREDENTIALS`, `SESSION_EXPIRED`, `CSRF_FAILED`, `FORBIDDEN`, `NOT_FOUND`, `VALIDATION_FAILED`, `TOO_MANY_REQUESTS`, `BACKEND_UNAVAILABLE`, `NO_PLATFORM_ROLE`, `USER_DISABLED`, `ACCOUNT_LOCKED`, `CONFLICT`, `WRONG_PASSWORD`, `EMAIL_EXISTS`, `LAST_ADMIN`, `LAST_DIRECTOR`, `ROLE_IN_USE`, `ROLE_SYSTEM`, `ROLES_REQUIRED`, `NOT_CONFIGURED`, `SECRETS_KEY_MISSING`, `SERVICE_NOT_SWITCHABLE`, `INTEGRATION_FAILED`, `INTERNAL_ERROR`, `BAD_REQUEST`, `METHOD_NOT_ALLOWED`, `HTTP_<статус>`)
+       * @description Стабильный код (`INVALID_CREDENTIALS`, `SESSION_EXPIRED`, `CSRF_FAILED`, `FORBIDDEN`, `NOT_FOUND`, `VALIDATION_FAILED`, `TOO_MANY_REQUESTS`, `BACKEND_UNAVAILABLE`, `NO_PLATFORM_ROLE`, `USER_DISABLED`, `ACCOUNT_LOCKED`, `CONFLICT`, `WRONG_PASSWORD`, `EMAIL_EXISTS`, `LAST_ADMIN`, `LAST_DIRECTOR`, `ROLE_IN_USE`, `ROLE_SYSTEM`, `ROLES_REQUIRED`, `NOT_CONFIGURED`, `SECRETS_KEY_MISSING`, `SERVICE_NOT_SWITCHABLE`, `INTEGRATION_FAILED`, `SETUP_DONE`, `SETUP_CODE_INVALID`, `SETUP_CODE_EXPIRED`, `SETUP_LOCKED`, `OWN_COMPANY_ALREADY_EXISTS`, `INTERNAL_ERROR`, `BAD_REQUEST`, `METHOD_NOT_ALLOWED`, `HTTP_<статус>`)
        * @example SESSION_EXPIRED
        */
       code: string;
@@ -1858,6 +1962,65 @@ export interface components {
       position?: string;
       role_ids: components["schemas"]["RoleId"][];
     };
+    /** @description Сотрудник и его временный пароль — показывается администратору один раз, повторно получить нельзя */
+    EmployeeCredentials: {
+      employee: components["schemas"]["Employee"];
+      /** @description Одноразовый временный пароль; сотрудник обязан сменить его при входе. Не логируется и не кэшируется */
+      temporary_password: string;
+    };
+    SetupState: {
+      /** @description В CRM ещё нет активного администратора — нужен экран «Первый запуск» */
+      needs_admin: boolean;
+    };
+    SetupAdminIn: {
+      /** @description Одноразовый код первого запуска из журнала `crm-api` (`setup_code_issued`) */
+      code: string;
+      name: string;
+      /** Format: email */
+      email: string;
+      /** @description Правила пароля проверяет CRM; слабый — 422 `VALIDATION_FAILED` (`details.fields = [password]`) */
+      password: string;
+    };
+    /**
+     * @description Пять шагов чек-листа (SPEC-v3 §7.6) — бот, ERP, почта, модели ИИ, первый сотрудник
+     * @enum {string}
+     */
+    SetupStepKey: "bot" | "erp" | "mail" | "models" | "first_employee";
+    /**
+     * @description `unknown` — бэкенд не ответил или не отдал данные; чек-лист при этом не падает
+     * @enum {string}
+     */
+    SetupStepState: "done" | "todo" | "unknown";
+    SetupStep: {
+      key: components["schemas"]["SetupStepKey"];
+      state: components["schemas"]["SetupStepState"];
+    };
+    SetupCompanyStatus: {
+      /** @description Своей компании в ERP ещё нет */
+      required: boolean;
+      /** @description Текущий сотрудник может её создать (суперпользователь ERP) */
+      can_setup: boolean;
+    };
+    SetupChecklist: {
+      /** @description Всегда пять шагов в порядке `SetupStepKey` */
+      steps: components["schemas"]["SetupStep"][];
+      done: number;
+      total: number;
+      /** @description Шаг мастера «своя компания»; `null` — ERP не ответила */
+      company: components["schemas"]["SetupCompanyStatus"] | null;
+    };
+    SetupCompanyIn: {
+      name: string;
+      inn?: string;
+      legal_address?: string;
+      phone?: string;
+      /** @description Пусто или корректный адрес (проверяет ERP) */
+      email?: string;
+    };
+    SetupCompanyCreated: {
+      id: number;
+      name: string;
+    };
     EmployeeUpdate: {
       /** @description Полный новый набор ролей, хотя бы одна; пустой набор — 422 `ROLES_REQUIRED` (0.6.0) */
       role_ids?: components["schemas"]["RoleId"][];
@@ -2282,6 +2445,146 @@ export interface operations {
         };
       };
       401: components["responses"]["SessionExpired"];
+    };
+  };
+  getSetupState: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Состояние */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["SetupState"];
+        };
+      };
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  createFirstAdmin: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["SetupAdminIn"];
+      };
+    };
+    responses: {
+      /** @description Администратор создан, сессия открыта */
+      200: {
+        headers: {
+          /** @description `rt_pf_session` и `rt_pf_csrf` */
+          "Set-Cookie"?: string;
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Session"];
+        };
+      };
+      /** @description `SETUP_DONE` — администратор уже создан */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Error"];
+        };
+      };
+      /** @description `SETUP_CODE_INVALID`, `SETUP_CODE_EXPIRED`, `VALIDATION_FAILED` (`details.fields`) */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Error"];
+        };
+      };
+      /** @description `SETUP_LOCKED` (15 минут) или `TOO_MANY_REQUESTS` */
+      429: {
+        headers: {
+          /** @description Секунды до повтора */
+          "Retry-After"?: number;
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Error"];
+        };
+      };
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  getSetupChecklist: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Чек-лист */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["SetupChecklist"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  createOwnCompany: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["SetupCompanyIn"];
+      };
+    };
+    responses: {
+      /** @description Компания создана */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["SetupCompanyCreated"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      /** @description `OWN_COMPANY_ALREADY_EXISTS` — компания уже создана */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Error"];
+        };
+      };
+      422: components["responses"]["ValidationFailed"];
+      503: components["responses"]["BackendUnavailable"];
     };
   };
   getMe: {
@@ -3502,6 +3805,48 @@ export interface operations {
       403: components["responses"]["Forbidden"];
     };
   };
+  createEmployee: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["EmployeeInvite"];
+      };
+    };
+    responses: {
+      /** @description Сотрудник создан, пароль показан */
+      201: {
+        headers: {
+          /** @description `no-store` */
+          "Cache-Control"?: string;
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["EmployeeCredentials"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      /** @description `EMAIL_EXISTS` */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Error"];
+        };
+      };
+      422: components["responses"]["ValidationFailed"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
   inviteEmployee: {
     parameters: {
       query?: never;
@@ -3595,6 +3940,47 @@ export interface operations {
           "application/json": components["schemas"]["Error"];
         };
       };
+    };
+  };
+  issueTemporaryPassword: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path: {
+        /** @description `crm_user_id` */
+        id: components["parameters"]["EmployeeId"];
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Пароль выдан */
+      200: {
+        headers: {
+          /** @description `no-store` */
+          "Cache-Control"?: string;
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["EmployeeCredentials"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      /** @description `CONFLICT` с `details.reason = own_account` — свой пароль меняется в профиле */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Error"];
+        };
+      };
+      503: components["responses"]["BackendUnavailable"];
     };
   };
   getEmployee: {
