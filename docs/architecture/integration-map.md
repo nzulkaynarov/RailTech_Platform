@@ -158,7 +158,7 @@
 | Роль Платформы | CRM | ERP `role_codes` (FIX-63) | Дополнительные права ERP | Примечание |
 |---|---|---|---|---|
 | `MANAGER` | `manager` | `VIEWER` | `deal.manage` (создание заявки через шов) | не видит себестоимость и маржу (в ERP нет `quote.view_cost_margin`) |
-| `DIRECTOR` | `viewer` | `HEAD` | — | одобрение КП (`quote.approve_final`), резолюции, служебки |
+| `DIRECTOR` | `viewer` | `HEAD` | — | одобрение КП (маршрут EDS, EDS-03; в ERP — визы `quote.review`), резолюции, служебки |
 | `SUPPLY` | `viewer` | `CATALOG_SUPPLY`, `FULFILLMENT` | `quote.build`, `quote.edit_pricing` | расчёт товаров, склад, отгрузки |
 | `ENGINEER` | `viewer` | `FULFILLMENT` | `quote.build` (без `quote.view_cost_margin`) | расчёт услуг, этапы, акты к подготовке |
 | `ACCOUNTANT` | `manager` (ответы клиенту во внешнем чате; разделы CRM скрывает матрица) | `FINANCE` | `contract.manage`, `fulfillment.act` | договоры, счета, оплаты, акты |
@@ -225,13 +225,13 @@
 Статус контракта (волна 12, задача E1): **контракт есть** — `packages/contracts/openapi/eds.yaml` 0.1.0, события
 `packages/contracts/events/eds/*.v1.json` и `events/erp/quote.ready_for_approval.v1.json`, подписки `bus/subscriptions.yaml`,
 права `platform-rbac.yaml` (`backend.eds`); объяснение — [`CONTRACTS.md`](CONTRACTS.md) §10. Код — задачи E2–E5
-[`wave12-eds-c1.md`](../runbooks/wave12-eds-c1.md).
+[`wave12-eds-c1.md`](../runbooks/wave12-eds-c1.md); сторона ERP (EDS-01, EDS-03) реализована задачей E5 — CONTRACTS §10.6.
 
 | ID | Что | Фаза | Контракт |
 |---|---|---|---|
-| EDS-01 (бывш. ERP-01) | сервис EDS: `Letter`, `Resolution` (исполнители, срок, мин. маржа), статусы письма; эндпоинты списка, карточки, резолюции, возврата, отклонения; задание исполнителям; события `letter.registered`, `letter.resolved` | P2 | есть: `eds.yaml` `/api/v1/letters*`; `eds.letter.registered/resolved/returned/rejected.v1` (ERP ← `resolved`, `rejected`) |
-| EDS-02 (бывш. ERP-05) | `ServiceMemo` и решения, маршрут «директор → бухгалтер, если сумма», создание из сообщения чата; документы «Заявление», «Отчёт», «Письмо» как типы документов EDS | P3 | есть: `eds.yaml` `/api/v1/documents*`, `/approvals*`, `/registry*`, `/files*`; `eds.document.registered/archived.v1`, `eds.approval.requested/decided.v1` |
-| EDS-03 | маршрут согласования КП: ERP публикует `quote.ready_for_approval`, EDS ведёт маршрут и публикует `approval.decided`; ERP применяет решение (вместо своей цепочки виз директора) | C–D | есть: `erp.quote.ready_for_approval.v1` → EDS; `eds.approval.decided.v1` (`outgoing_number`, `channels`) → ERP; чек-лист и снимок КП — `eds.yaml` `Approval` |
+| EDS-01 (бывш. ERP-01) | сервис EDS: `Letter`, `Resolution` (исполнители, срок, мин. маржа), статусы письма; эндпоинты списка, карточки, резолюции, возврата, отклонения; задание исполнителям; события `letter.registered`, `letter.resolved` | P2 | есть: `eds.yaml` `/api/v1/letters*`; `eds.letter.registered/resolved/returned/rejected.v1` (ERP ← `resolved`, `rejected`); **реализовано в ERP (E5):** задание расчёта `CalcTask`, стадия `CALCULATING`, отказ → `CLOSED_LOST` с причиной |
+| EDS-02 (бывш. ERP-05) | `ServiceMemo` и решения, маршрут «директор → бухгалтер, если сумма», создание из сообщения чата; документы «Заявление», «Отчёт», «Письмо» как типы документов EDS | P3 | есть: `eds.yaml` `/api/v1/documents*`, `/approvals*`, `/registry*`, `/files*`; `eds.document.registered/archived.v1`, `eds.approval.requested/decided.v1`; **ERP не участвует** (решения по документам EDS ERP не применяет, E5) |
+| EDS-03 | маршрут согласования КП: ERP публикует `quote.ready_for_approval`, EDS ведёт маршрут и публикует `approval.decided`; ERP применяет решение (вместо своей цепочки виз директора) | C–D | есть: `erp.quote.ready_for_approval.v1` → EDS; `eds.approval.decided.v1` (`outgoing_number`, `channels`) → ERP; чек-лист и снимок КП — `eds.yaml` `Approval`; **реализовано в ERP (E5):** публикация после виз, решение на КП (ИСХ-номер, на доработку, отклонено); своей цепочки одобрения директором и права финального утверждения КП в ERP нет |
 
 ### Чаты (домен уточняется на этапе D)
 

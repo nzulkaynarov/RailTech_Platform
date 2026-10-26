@@ -133,7 +133,7 @@ ERP системные роли не трогает). ERP добавляет п�
 ## Карта прав CRM → ERP
 
 Роль CRM определяет `role` и `permissions` провижининга и claim `permissions`; коды — только из каталога ERP
-(`ErpPermission`, 22 кода). Карта живёт в CRM (`app/domain/erp_permissions.py`), тест проверяет, что каждый код есть в каталоге.
+(`ErpPermission`, 21 код; с `erp-integration.yaml` 0.7.0 права финального утверждения КП нет — одобрение КП ведёт EDS, EDS-03). Карта живёт в CRM (`app/domain/erp_permissions.py`), тест проверяет, что каждый код есть в каталоге.
 
 | Роль CRM | `role` в ERP | `permissions` |
 |---|---|---|

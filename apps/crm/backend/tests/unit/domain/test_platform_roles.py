@@ -204,7 +204,7 @@ EXPECTED: dict[tuple[str, str], tuple[set[str], set[str]]] = {
     ("eds.inbox", "read"): NOTHING,
     ("eds.inbox", "full"): (set(), {"deal.assign"}),
     ("eds.drafts", "read"): NOTHING,
-    ("eds.drafts", "full"): (set(), {"quote.review", "quote.approve_final", "quote.send"}),
+    ("eds.drafts", "full"): (set(), {"quote.review", "quote.send"}),
     ("eds.projects", "read"): NOTHING,
     ("eds.projects", "full"): (set(), {"contract.manage", "contract.sign", "fulfillment.act"}),
     ("eds.payments", "read"): NOTHING,

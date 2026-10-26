@@ -26,7 +26,7 @@ const t = (key: string) => key;
 
 const ALL_PERMISSIONS = [
   'quote.build', 'quote.send', 'quote.view_cost_margin', 'quote.edit_pricing',
-  'quote.review', 'quote.approve_final', 'quote.approve', 'catalog.manage',
+  'quote.review', 'quote.approve', 'catalog.manage',
   'settings.edit', 'team.manage', 'data.export',
 ];
 

@@ -93,7 +93,9 @@ def build_quote(world, lines, *, margin="20", vat="0", version=1, status="DRAFT"
 
 
 def send_quote(world, quote):
-    """Довести КП до отправки клиенту настоящим путём: согласование руководителем → отправка."""
+    """Довести КП до отправки клиенту настоящим путём: визы → одобрение директором в EDS (EDS-03) → отправка."""
+    from integration.tests.eds_support import approve_in_eds
+
     from crm.services.approvals import act_on_step
     from crm.services.quotes import QuoteLifecycleService
 
@@ -101,16 +103,18 @@ def send_quote(world, quote):
     assert err is None, err
     submitted.refresh_from_db()
     for _ in range(10):
-        if submitted.status.code != "PENDING_APPROVAL":
-            break
         step = (
             submitted.approval_steps.filter(status="PENDING")
             .exclude(participation="INFORMED")
             .order_by("order")
             .first()
         )
+        if step is None:
+            break
         _quote, err = act_on_step(step.pk, world.head, "APPROVE", "")
         assert err is None, err
         submitted.refresh_from_db()
+    assert approve_in_eds(submitted) == "applied"
+    submitted.refresh_from_db()
     assert submitted.status.code == "READY_TO_SEND", submitted.status.code
     return QuoteLifecycleService.send_to_client(quote.pk, world.head)

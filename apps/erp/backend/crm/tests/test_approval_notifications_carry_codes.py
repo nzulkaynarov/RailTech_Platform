@@ -12,12 +12,13 @@
 перевода, и это лучше пустоты.
 
 Заготовка повторяет `test_quote_approval_chain.py`: та же связка ролей (продавец строит и
-подаёт, руководитель согласует) — иначе тест мерил бы не тот путь.
+подаёт, исполнитель резолюции визирует; одобряет директор в EDS — EDS-03) — иначе тест мерил бы не тот путь.
 """
 
 from decimal import Decimal
 
 import pytest
+from integration.tests.eds_support import assign_calc
 
 from accounts.constants import Permission
 from accounts.models import Company, CompanyMember, CompanyRole, CompanyType, CustomUser, WorkspaceRole
@@ -67,10 +68,8 @@ def _member(company, user, *, workspace_role, company_roles):
 def seller(lookups):
     company = Company.objects.create(name="Продавец согласований", inn="908700001")
     company.types.add(CompanyType.objects.get(code="SUPPLIER"))
-    # M1-ERP-05: финальный согласующий — держатель quote.approve_final (роль «Руководитель»).
-    admin_role = CompanyRole.objects.create(
-        company=company, name="Руководитель", permissions=[Permission.QUOTE_APPROVE_FINAL.value]
-    )
+    # Визирует исполнитель резолюции (задание расчёта, волна 12 Б1) — права роли для визы не нужны.
+    admin_role = CompanyRole.objects.create(company=company, name="Инженер", permissions=[])
     sales_role = CompanyRole.objects.create(company=company, name="Продажи", permissions=[Permission.QUOTE_BUILD.value])
     sales_user = _user("sales@codes.test")
     _member(company, sales_user, workspace_role="SALES_MANAGER", company_roles=[sales_role])
@@ -83,12 +82,14 @@ def seller(lookups):
 def deal(seller, lookups):
     client_company = Company.objects.create(name="Заказчик", inn="908700002")
     client_company.types.add(CompanyType.objects.get(code="CLIENT"))
-    return Deal.objects.create(
+    deal = Deal.objects.create(
         title="Сделка согласований",
         company=client_company,
         manager=seller["sales"],
         stage=DealStage.objects.get(code="DRAFT"),
     )
+    assign_calc(deal, (seller["head"], 12, "services"))
+    return deal
 
 
 def _quote(deal, prepared_by):
@@ -132,7 +133,7 @@ def test_the_russian_text_stays_as_a_fallback(seller, deal):
 def test_the_rejection_notification_carries_a_code_and_the_comment(seller, deal):
     quote = _quote(deal, prepared_by=seller["sales"])
     QLS.submit_for_review(quote.id, seller["sales"])
-    head_step = quote.approval_steps.get(participation=StepParticipation.HEAD)
+    head_step = quote.approval_steps.get(participation=StepParticipation.APPROVER)
 
     act_on_step(head_step.id, seller["head"], "REJECT", comment="Слишком дорого")
 
@@ -141,21 +142,21 @@ def test_the_rejection_notification_carries_a_code_and_the_comment(seller, deal)
     assert notification.event_params.get("comment") == "Слишком дорого"
 
 
-def test_the_completion_notification_carries_a_code(seller, deal):
+def test_the_visas_complete_notification_carries_a_code(seller, deal):
     quote = _quote(deal, prepared_by=seller["sales"])
     QLS.submit_for_review(quote.id, seller["sales"])
-    head_step = quote.approval_steps.get(participation=StepParticipation.HEAD)
+    head_step = quote.approval_steps.get(participation=StepParticipation.APPROVER)
 
     act_on_step(head_step.id, seller["head"], "APPROVE")
 
-    assert _latest(seller["sales"]).event_code == "quote.approval_complete"
+    assert _latest(seller["sales"]).event_code == "quote.visas_complete"
 
 
 def test_no_approval_notification_is_left_without_a_code(seller, deal):
     """Гард против класса: одна забытая ветка возвращает дефект целиком."""
     quote = _quote(deal, prepared_by=seller["sales"])
     QLS.submit_for_review(quote.id, seller["sales"])
-    head_step = quote.approval_steps.get(participation=StepParticipation.HEAD)
+    head_step = quote.approval_steps.get(participation=StepParticipation.APPROVER)
     act_on_step(head_step.id, seller["head"], "APPROVE")
 
     codeless = list(Notification.objects.filter(event_code="").values_list("title", flat=True))

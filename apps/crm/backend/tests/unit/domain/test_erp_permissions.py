@@ -64,7 +64,6 @@ def test_manager_gets_sales_workplace_without_cost_margin_or_finance() -> None:
     assert set(access.permissions) == set(MANAGER_PERMISSIONS)
     for forbidden in (
         "quote.view_cost_margin",
-        "quote.approve_final",
         "contract.sign",
         "finance.payment",
         "settings.edit",

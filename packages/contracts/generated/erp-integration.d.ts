@@ -681,7 +681,6 @@ export interface components {
       | "quote.view_cost_margin"
       | "quote.send"
       | "quote.review"
-      | "quote.approve_final"
       | "contract.manage"
       | "contract.sign"
       | "catalog.manage"

@@ -143,11 +143,11 @@ def assert_user_may_change_stage(deal: Deal, actor: Optional[CustomUser], target
     return None
 
 
-def _publish_stage_events(deal: Deal, prev_code: Optional[str]) -> None:
+def _publish_stage_events(deal: Deal, prev_code: Optional[str], lost_reason: str = "") -> None:
     """События шины о смене стадии: `deal.stage_changed` (стадия контракта изменилась) и итог — `deal.won` / `deal.lost`.
 
     Публикуются в транзакции смены стадии (B3, rt_bus): сбой публикации откатывает переход. Сделка без компании клиента
-    (черновик калькулятора) событий не даёт.
+    (черновик калькулятора) событий не даёт. `lost_reason` — причина проигрыша (например, отказ директора по письму EDS).
     """
     from integration.services import events, stages
 
@@ -164,9 +164,7 @@ def _publish_stage_events(deal: Deal, prev_code: Optional[str]) -> None:
     if outcome == "won":
         events.publish_deal_outcome(deal, won=True)
     elif outcome == "lost":
-        events.publish_deal_outcome(
-            deal, won=False, lost_reason=getattr(deal, "lost_reason", "") or "Сделка закрыта со статусом lost"
-        )
+        events.publish_deal_outcome(deal, won=False, lost_reason=lost_reason or "Сделка закрыта со статусом lost")
 
 
 @transaction.atomic
@@ -177,6 +175,7 @@ def transition_deal_stage(
     reason: str = "",
     validate_fsm: bool = True,
     admin_override: bool = False,
+    lost_reason: str = "",
 ) -> Tuple[Optional[Deal], Optional[str]]:
     """
     Transition a Deal to a new stage by stage code.
@@ -184,6 +183,7 @@ def transition_deal_stage(
     When validate_fsm=True, enforces the FSM transition matrix.
     admin_override=True allows the administrator (superuser) to bypass the FSM.
     Use only from force_transition_deal_stage.
+    `lost_reason` — причина для события `deal.lost` при переходе в CLOSED_LOST.
     Logs the change to ActivityLog.
     Returns: (deal, error_or_None)
     """
@@ -226,7 +226,7 @@ def transition_deal_stage(
     old_stage_name = deal.stage.name if deal.stage else "—"
     deal.stage = target_stage
     deal.save(update_fields=["stage"])
-    _publish_stage_events(deal, old_stage_code or None)
+    _publish_stage_events(deal, old_stage_code or None, lost_reason=lost_reason)
 
     from core.audit import log_admin_action
 

@@ -167,11 +167,16 @@ def test_request_from_crm_without_lines_becomes_a_quote_sent_to_the_client(own_c
     assert product_line.status_code == 201, product_line.content
     assert QuoteItem.objects.filter(quote=quote).count() == 2
 
-    # 5. На согласование (автор — единственный согласующий) и клиенту.
+    # 5. На согласование (визировать некому, кроме автора) → директору в EDS (EDS-03) → одобрено → клиенту.
     submitted = staff.post(f"/api/v1/crm/quotes/{quote.pk}/submit-for-review/", {}, format="json")
     assert submitted.status_code == 200, submitted.content
     quote.refresh_from_db()
-    assert quote.status.code == "READY_TO_SEND", f"ожидали авто-согласование, статус {quote.status.code}"
+    assert quote.status.code == "PENDING_APPROVAL", f"ожидали КП у директора в EDS, статус {quote.status.code}"
+    from integration.tests.eds_support import approve_in_eds
+
+    assert approve_in_eds(quote) == "applied"
+    quote.refresh_from_db()
+    assert quote.status.code == "READY_TO_SEND"
 
     mail.outbox.clear()
     sent = staff.post(f"/api/v1/crm/quotes/{quote.pk}/send-to-client/", {}, format="json")

@@ -230,7 +230,6 @@ ERP_BACKEND: Final[dict[str, dict[str, tuple[str, ...]]]] = {
     "eds.drafts": {
         "full": (
             "quote.review",
-            "quote.approve_final",
             "quote.send",
         ),
     },

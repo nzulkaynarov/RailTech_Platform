@@ -1,19 +1,22 @@
-"""Service + endpoint tests for the UNIFIED КП approval chain (step-based).
+"""Service + endpoint tests for the КП visa chain (step-based) and the hand-off to the director in EDS (EDS-03).
 
-Submit builds a permission-driven step list: an optional intermediate reviewer
-(quote.review) + a mandatory final approver / руководитель (quote.approve_final).
-Same order = parallel; the head is always last. act_on_step advances the chain;
-recall pulls it back. DRAFT → PENDING_APPROVAL → (steps approved) → READY_TO_SEND.
+Submit builds visa steps from the calculation task of the deal (EDS resolution assignees in zones goods/services
+with an ERP user, not the author; wave 12 lead decision B1). Only the assigned assignee acts on their step — no
+quote.review needed, and quote.review holders (the director) get no step. Same order = parallel. The last visa publishes
+`quote.ready_for_approval` — the director approves in EDS, not as a step here. recall pulls the КП back while visas
+are pending. DRAFT → PENDING_APPROVAL → (visas) → EDS → READY_TO_SEND.
 """
 
 from decimal import Decimal
 
 import pytest
+from integration.tests import bus_support
+from integration.tests.eds_support import assign_calc
 
 from accounts.constants import Permission
 from accounts.models import Company, CompanyMember, CompanyRole, CompanyType, CustomUser, WorkspaceRole
 from crm.models import ActivityLog, Deal, DealStage, Quote, QuoteStatus
-from crm.models.approvals import StepParticipation, StepStatus
+from crm.models.approvals import StepParticipation, StepStatus, StepTrigger
 from crm.services.approvals import act_on_step, recall_quote
 from crm.services.quotes import QuoteLifecycleService as QLS
 from master_data.models import Country
@@ -55,8 +58,9 @@ def _member(company, user, *, workspace_role=None, company_roles=()):
 
 @pytest.fixture
 def seller(lookups):
-    """Seller with a SALES_MANAGER (builds/submits, no approval rights) and a HEAD
-    (system role «Руководитель» → quote.approve_final)."""
+    """Seller with a SALES_MANAGER (builds/submits), a HEAD (system role «Руководитель» — every permission, incl.
+    quote.review — but no visa step: the director approves in EDS) and an ENGINEER without any role permission —
+    the services assignee of the deal's resolution, who visas the КП."""
     from accounts.services.roles import ensure_default_company_roles
 
     company = Company.objects.create(name="Seller LLC", inn="7700000001")
@@ -67,10 +71,10 @@ def seller(lookups):
     sales_user = _user("sales@seller.test")
     _member(company, sales_user, workspace_role="SALES_MANAGER", company_roles=[sales_role])
     head_user = _user("head@seller.test")
-    # Neutral workspace role (not OWNER/SALES_MANAGER); approval rights come purely from the
-    # «Руководитель» role (quote.approve_final).
     _member(company, head_user, workspace_role="MEMBER", company_roles=[admin_role])
-    return {"company": company, "sales": sales_user, "head": head_user, "admin_role": admin_role}
+    engineer = _user("engineer@seller.test")
+    _member(company, engineer, workspace_role="MEMBER")
+    return {"company": company, "sales": sales_user, "head": head_user, "admin_role": admin_role, "engineer": engineer}
 
 
 @pytest.fixture
@@ -82,9 +86,11 @@ def client_co(lookups):
 
 @pytest.fixture
 def deal(seller, client_co):
-    return Deal.objects.create(
+    deal = Deal.objects.create(
         title="Chain Deal", company=client_co, manager=seller["sales"], stage=DealStage.objects.get(code="DRAFT")
     )
+    assign_calc(deal, (seller["engineer"], 12, "services"))  # резолюция EDS: инженер — исполнитель услуг
+    return deal
 
 
 def _quote(deal, prepared_by, status_code="DRAFT"):
@@ -106,33 +112,41 @@ def _status(quote):
     return quote.status.code
 
 
-def test_submit_builds_chain_with_mandatory_head(seller, deal):
+def _ready_events():
+    return bus_support.published("quote.ready_for_approval")
+
+
+def test_submit_builds_visa_steps_without_a_director_step(seller, deal):
     quote = _quote(deal, prepared_by=seller["sales"])
     _, err = QLS.submit_for_review(quote.id, seller["sales"])
     assert err is None and _status(quote) == "PENDING_APPROVAL"
     steps = list(quote.approval_steps.all())
-    head = [s for s in steps if s.participation == StepParticipation.HEAD]
-    assert len(head) == 1 and head[0].is_mandatory and head[0].status == StepStatus.PENDING
+    assert [s.participation for s in steps] == [StepParticipation.APPROVER]
+    assert steps[0].approver.user_id == seller["engineer"].id and steps[0].status == StepStatus.PENDING
+    assert steps[0].trigger_reason == StepTrigger.CALC_VISA
+    assert _ready_events() == [], "КП уходит директору после виз"
 
 
-def test_head_approval_makes_ready(seller, deal):
+def test_last_visa_sends_the_quote_to_the_director_in_eds(seller, deal):
     quote = _quote(deal, prepared_by=seller["sales"])
     QLS.submit_for_review(quote.id, seller["sales"])
-    head_step = quote.approval_steps.get(participation=StepParticipation.HEAD)
-    _, err = act_on_step(head_step.id, seller["head"], "APPROVE")
-    assert err is None and _status(quote) == "READY_TO_SEND"
-    head_step.refresh_from_db()
-    assert head_step.status == StepStatus.APPROVED and head_step.acted_by_id == seller["head"].id
+    step = quote.approval_steps.get(participation=StepParticipation.APPROVER)
+    _, err = act_on_step(step.id, seller["engineer"], "APPROVE")
+    assert err is None and _status(quote) == "PENDING_APPROVAL"
+    step.refresh_from_db()
+    assert step.status == StepStatus.APPROVED and step.acted_by_id == seller["engineer"].id
+    assert len(_ready_events()) == 1
 
 
 def test_reject_returns_to_draft(seller, deal):
     quote = _quote(deal, prepared_by=seller["sales"])
     QLS.submit_for_review(quote.id, seller["sales"])
-    head_step = quote.approval_steps.get(participation=StepParticipation.HEAD)
-    _, err = act_on_step(head_step.id, seller["head"], "REJECT", comment="дорого")
+    step = quote.approval_steps.get(participation=StepParticipation.APPROVER)
+    _, err = act_on_step(step.id, seller["engineer"], "REJECT", comment="дорого")
     assert err is None and _status(quote) == "DRAFT"
-    head_step.refresh_from_db()
-    assert head_step.status == StepStatus.REJECTED and head_step.comment == "дорого"
+    step.refresh_from_db()
+    assert step.status == StepStatus.REJECTED and step.comment == "дорого"
+    assert _ready_events() == []
 
 
 def test_recall_returns_to_draft(seller, deal):
@@ -146,33 +160,62 @@ def test_recall_returns_to_draft(seller, deal):
 def test_non_permitted_cannot_act(seller, deal):
     quote = _quote(deal, prepared_by=seller["sales"])
     QLS.submit_for_review(quote.id, seller["sales"])
-    head_step = quote.approval_steps.get(participation=StepParticipation.HEAD)
-    # The sales manager has no quote.approve_final → cannot act on the head step.
-    _, err = act_on_step(head_step.id, seller["sales"], "APPROVE")
-    assert err == "ROLE_NOT_PERMITTED" and _status(quote) == "PENDING_APPROVAL"
+    step = quote.approval_steps.get(participation=StepParticipation.APPROVER)
+    # Only the assigned assignee visas: neither the sales manager nor the director (quote.review holder) can.
+    for other in (seller["sales"], seller["head"]):
+        _, err = act_on_step(step.id, other, "APPROVE")
+        assert err == "ROLE_NOT_PERMITTED" and _status(quote) == "PENDING_APPROVAL"
 
 
-def test_reviewer_then_head(seller, deal):
-    """A dedicated reviewer (quote.review, not head) adds an intermediate step acted first."""
-    reviewer_role = CompanyRole.objects.create(
-        company=seller["company"], name="ВЭД", permissions=[Permission.QUOTE_REVIEW.value]
-    )
-    reviewer = _user("ved@seller.test")
-    _member(seller["company"], reviewer, workspace_role="MEMBER", company_roles=[reviewer_role])
+def test_director_gets_no_visa_step_in_erp(seller, deal):
+    """The director holds quote.review (role «Руководитель») but approves only in EDS — no ERP visa step."""
+    quote = _quote(deal, prepared_by=seller["sales"])
+    QLS.submit_for_review(quote.id, seller["sales"])
+    assert not quote.approval_steps.filter(approver__user=seller["head"]).exists()
+
+
+def test_quote_without_calc_task_has_no_visas_and_goes_to_eds(seller, client_co):
+    bare = Deal.objects.create(title="No task", company=client_co, stage=DealStage.objects.get(code="DRAFT"))
+    quote = _quote(bare, prepared_by=seller["sales"])
+    QLS.submit_for_review(quote.id, seller["sales"])
+    assert not quote.approval_steps.exists() and _status(quote) == "PENDING_APPROVAL"
+    (event,) = _ready_events()
+    assert event["data"]["payload"]["required_zones"] == [] and event["data"]["payload"]["visas"] == []
+
+
+def test_every_assignee_visas_before_the_director(seller, deal):
+    """Two assignees (goods, services) give two parallel visa steps; the КП goes to EDS after both visas."""
+    supply = _user("supply@seller.test")
+    _member(seller["company"], supply, workspace_role="MEMBER")
+    assign_calc(deal, (supply, 11, "goods"), (seller["engineer"], 12, "services"))
 
     quote = _quote(deal, prepared_by=seller["sales"])
     QLS.submit_for_review(quote.id, seller["sales"])
-    review_step = quote.approval_steps.get(participation=StepParticipation.APPROVER)
-    head_step = quote.approval_steps.get(participation=StepParticipation.HEAD)
-    assert review_step.order < head_step.order
+    supply_step = quote.approval_steps.get(approver__user=supply)
+    engineer_step = quote.approval_steps.get(approver__user=seller["engineer"])
+    assert supply_step.order == engineer_step.order == 1  # parallel
 
-    # Head can't jump the queue before the reviewer acts.
-    _, err = act_on_step(head_step.id, seller["head"], "APPROVE")
-    assert err == "STEP_NOT_ACTIVE" and _status(quote) == "PENDING_APPROVAL"
+    assert act_on_step(supply_step.id, supply, "APPROVE")[1] is None
+    assert _ready_events() == []
+    assert act_on_step(engineer_step.id, seller["engineer"], "APPROVE")[1] is None
+    assert _status(quote) == "PENDING_APPROVAL"
+    (event,) = _ready_events()
+    visas = {(v["zone"], v["by"]["crm_user_id"]) for v in event["data"]["payload"]["visas"]}
+    assert visas == {("goods", 11), ("services", 12)} and event["data"]["payload"]["required_zones"] == [
+        "goods",
+        "services",
+    ]
 
-    assert act_on_step(review_step.id, reviewer, "APPROVE")[1] is None
-    assert act_on_step(head_step.id, seller["head"], "APPROVE")[1] is None
-    assert _status(quote) == "READY_TO_SEND"
+
+def test_recall_after_hand_over_to_the_director_is_refused(seller, deal):
+    quote = _quote(deal, prepared_by=seller["sales"])
+    QLS.submit_for_review(quote.id, seller["sales"])
+    step = quote.approval_steps.get(participation=StepParticipation.APPROVER)
+    act_on_step(step.id, seller["engineer"], "APPROVE")
+    _, err = recall_quote(quote.id, seller["sales"])
+    assert err == "QUOTE_AWAITING_DIRECTOR" and _status(quote) == "PENDING_APPROVAL"
+    resp = _api(seller["sales"]).post(f"/api/v1/crm/quotes/{quote.id}/recall/")
+    assert resp.status_code == 409 and resp.data["detail"] == "QUOTE_AWAITING_DIRECTOR"
 
 
 def test_submit_gate_requires_quote_build_permission(seller, deal):
@@ -209,28 +252,29 @@ def _last_event(quote, event_code):
     )
 
 
-def test_event_log_step_approved_and_complete(seller, deal):
+def test_event_log_step_approved_and_sent_to_director(seller, deal):
     quote = _quote(deal, prepared_by=seller["sales"])
     QLS.submit_for_review(quote.id, seller["sales"])
-    head_step = quote.approval_steps.get(participation=StepParticipation.HEAD)
-    act_on_step(head_step.id, seller["head"], "APPROVE")
+    step = quote.approval_steps.get(participation=StepParticipation.APPROVER)
+    act_on_step(step.id, seller["engineer"], "APPROVE")
 
     approved = _last_event(quote, "quote.approval_step_approved")
     assert approved is not None
     assert approved.action == "Шаг согласования пройден"  # human-readable RU, not a raw key
     assert "participation" in approved.event_params
 
-    complete = _last_event(quote, "quote.approval_complete")
-    assert complete is not None
-    assert complete.action == "Согласование КП завершено"
-    assert complete.event_params == {}
+    handed = _last_event(quote, "quote.sent_to_director")
+    assert handed is not None
+    assert handed.action == "КП передано директору на одобрение"
+    quote.refresh_from_db()
+    assert handed.event_params == {"number": quote.number, "revision": 1}
 
 
 def test_event_log_step_rejected(seller, deal):
     quote = _quote(deal, prepared_by=seller["sales"])
     QLS.submit_for_review(quote.id, seller["sales"])
-    head_step = quote.approval_steps.get(participation=StepParticipation.HEAD)
-    act_on_step(head_step.id, seller["head"], "REJECT", comment="дорого")
+    step = quote.approval_steps.get(participation=StepParticipation.APPROVER)
+    act_on_step(step.id, seller["engineer"], "REJECT", comment="дорого")
 
     rejected = _last_event(quote, "quote.approval_step_rejected")
     assert rejected is not None
@@ -262,12 +306,12 @@ def _api(user):
 def test_approval_act_endpoint(seller, deal):
     quote = _quote(deal, prepared_by=seller["sales"])
     QLS.submit_for_review(quote.id, seller["sales"])
-    head_step = quote.approval_steps.get(participation=StepParticipation.HEAD)
-    resp = _api(seller["head"]).post(
-        f"/api/v1/crm/quotes/{quote.id}/approval-act/", {"step_id": head_step.id, "decision": "APPROVE"}, format="json"
+    step = quote.approval_steps.get(participation=StepParticipation.APPROVER)
+    resp = _api(seller["engineer"]).post(
+        f"/api/v1/crm/quotes/{quote.id}/approval-act/", {"step_id": step.id, "decision": "APPROVE"}, format="json"
     )
     assert resp.status_code == 200, resp.data
-    assert _status(quote) == "READY_TO_SEND"
+    assert _status(quote) == "PENDING_APPROVAL" and len(_ready_events()) == 1
 
 
 def test_recall_endpoint(seller, deal):
@@ -281,11 +325,12 @@ def test_recall_endpoint(seller, deal):
 def test_my_approval_queue_endpoint(seller, deal):
     quote = _quote(deal, prepared_by=seller["sales"])
     QLS.submit_for_review(quote.id, seller["sales"])
-    # The head's queue contains the quote awaiting their approval.
-    resp = _api(seller["head"]).get("/api/v1/crm/quotes/my-approval-queue/")
+    # The assignee's queue contains the quote awaiting their visa.
+    resp = _api(seller["engineer"]).get("/api/v1/crm/quotes/my-approval-queue/")
     ids = [q["id"] for q in (resp.data["results"] if isinstance(resp.data, dict) else resp.data)]
     assert quote.id in ids
-    # The sales manager (no approval right) does not see it in the approval queue.
-    resp = _api(seller["sales"]).get("/api/v1/crm/quotes/my-approval-queue/")
-    ids = [q["id"] for q in (resp.data["results"] if isinstance(resp.data, dict) else resp.data)]
-    assert quote.id not in ids
+    # Neither the sales manager nor the director (quote.review, not assigned) sees it in the visa queue.
+    for other in (seller["sales"], seller["head"]):
+        resp = _api(other).get("/api/v1/crm/quotes/my-approval-queue/")
+        ids = [q["id"] for q in (resp.data["results"] if isinstance(resp.data, dict) else resp.data)]
+        assert quote.id not in ids

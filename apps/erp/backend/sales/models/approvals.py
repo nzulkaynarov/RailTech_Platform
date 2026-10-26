@@ -1,4 +1,4 @@
-"""КП internal approval chain."""
+"""Визы КП внутри ERP (проверяющие `quote.review`). Одобрение директором — маршрут EDS (EDS-03), не шаг здесь."""
 
 import pghistory
 from django.conf import settings
@@ -7,7 +7,6 @@ from django.utils.translation import gettext_lazy as _
 
 
 class StepParticipation(models.TextChoices):
-    HEAD = "HEAD", _("Руководитель")
     APPROVER = "APPROVER", _("Согласовант")
     INFORMED = "INFORMED", _("Для информации")
 
@@ -21,9 +20,8 @@ class StepStatus(models.TextChoices):
 
 
 class StepTrigger(models.TextChoices):
-    HEAD_FINAL = "HEAD_FINAL", _("Финальное согласование")
+    CALC_VISA = "CALC_VISA", _("Виза расчёта")
     TRADE_REVIEW = "TRADE_REVIEW", _("Проверка ВЭД")
-    BELOW_FLOOR_ESCALATION = "BELOW_FLOOR_ESCALATION", _("Эскалация: маржа ниже порога")
     INFORMED = "INFORMED", _("Для информации")
     MANUAL = "MANUAL", _("Добавлен вручную")
 
@@ -38,7 +36,7 @@ class QuoteApprovalStep(models.Model):
     order = models.PositiveSmallIntegerField(
         default=1,
         verbose_name=_("Порядок"),
-        help_text=_("Одинаковый порядок = параллельно; меньший = раньше. Руководитель — последним."),
+        help_text=_("Одинаковый порядок = параллельно; меньший = раньше."),
     )
     participation = models.CharField(
         max_length=12,
@@ -73,9 +71,7 @@ class QuoteApprovalStep(models.Model):
     status = models.CharField(
         max_length=10, choices=StepStatus.choices, default=StepStatus.PENDING, verbose_name=_("Статус шага")
     )
-    is_mandatory = models.BooleanField(
-        default=False, verbose_name=_("Обязательный"), help_text=_("Нельзя удалить (руководитель).")
-    )
+    is_mandatory = models.BooleanField(default=False, verbose_name=_("Обязательный"), help_text=_("Нельзя удалить."))
     is_auto = models.BooleanField(
         default=True, verbose_name=_("Авто"), help_text=_("Создан правилом (нельзя удалить); False = добавлен вручную.")
     )

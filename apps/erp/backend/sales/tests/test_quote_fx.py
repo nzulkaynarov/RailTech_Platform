@@ -158,18 +158,15 @@ def test_submit_refreshes_stale_draft_rate(world):
 
 
 def test_return_to_draft_makes_rate_live_again(world):
-    from crm.services.approvals import recall_quote
+    from integration.tests.eds_support import return_in_eds
 
     set_rate("USD", "12000")
     quote = build_quote(world, [("100", "USD", 1)], margin="20")
     submitted, err = QuoteLifecycleService.submit_for_review(quote.pk, world.calc)
     assert err is None
     submitted.refresh_from_db()
-    if submitted.status.code == "PENDING_APPROVAL":
-        _quote, err = recall_quote(submitted.pk, world.calc)
-        assert err is None
-    else:  # одиночная цепочка согласована сразу — вернуть в черновик напрямую
-        Quote.objects.filter(pk=quote.pk).update(status=QuoteStatus.objects.get(code="DRAFT"), fx_fixed_at=None)
+    # Виз нет (задания расчёта нет) — КП сразу у директора в EDS; в черновик его возвращает директор (EDS-03).
+    assert return_in_eds(submitted) == "applied"
     submitted.refresh_from_db()
     assert submitted.status.code == "DRAFT" and submitted.fx_fixed_at is None
 
@@ -337,6 +334,8 @@ def test_override_in_draft_still_allowed_and_reprices(world):
 
 def test_override_after_submit_needs_return_to_draft_and_reapproval(world):
     """На согласовании курс не меняется; явный путь — вернуть в черновик, поменять и отправить заново."""
+    from integration.tests.eds_support import return_in_eds
+
     from crm.services.approvals import recall_quote
 
     set_rate("USD", "12000")
@@ -352,8 +351,10 @@ def test_override_after_submit_needs_return_to_draft_and_reapproval(world):
     submitted.refresh_from_db()
     assert submitted.subtotal_excl_vat == priced
 
+    # КП у директора в EDS: отзыв автором запрещён (QUOTE_AWAITING_DIRECTOR), вернуть может только директор.
     _quote, err = recall_quote(submitted.pk, world.calc)
-    assert err is None
+    assert err == "QUOTE_AWAITING_DIRECTOR"
+    assert return_in_eds(submitted) == "applied"
     allowed = _override(world.finance, submitted, {"currency": "USD", "rate": "14000", "reason": "договор"})
     assert allowed.status_code == 200
     submitted.refresh_from_db()

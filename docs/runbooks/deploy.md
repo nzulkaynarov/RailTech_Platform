@@ -413,6 +413,11 @@ Smoke с раннера в задании `rollback` устроен так же:
 Снаружи любые пути на всех доменах — 404 или ответ чужого сервиса: EDS в Caddy нет (проверяет `infra/deploy/tests/eds-prod-test.sh`, `make deploy-check`).
 Очереди и шина: `docker compose … exec eds-api python -m app bus status` (метрики outbox, DLQ, inbox, подписчики); повтор `dead`/`failed` — `bus retry-dead`, `bus retry-inbox <id события>`.
 
+**Порядок выкладки EDS и ERP (E5, EDS-03).** С волны 12 одобрение КП директором — только маршрут EDS: ERP после виз публикует
+`quote.ready_for_approval` и ждёт `approval.decided`. EDS выкладывается **раньше или вместе с ERP** (один `deploy.sh` поднимает
+оба); ERP без EDS принимает КП на согласование, но они остаются в `PENDING_APPROVAL` — событие лежит в outbox ERP до появления
+подписчика `eds` и уходит после включения EDS (проверка — `bus status` у ERP). Откат EDS при работающей ERP с EDS-03 не делать.
+
 **Откат.** `rollback.sh` на тег до EDS убирает его контейнеры (`--remove-orphans`) и не проверяет здоровье; на тег с EDS тянет `eds-api` и ждёт `healthy`.
 Миграции Alembic EDS не откатываются (как у CRM и ERP). Сброс `reset-prod.sh` (S0-8) включает базу `eds` и бакет `eds-private`: список — `crm,erp,eds`, дамп `eds` обязателен, подтверждение на VPS 2 — ввод `crm,erp,eds`.
 

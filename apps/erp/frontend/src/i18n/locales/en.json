@@ -2506,7 +2506,6 @@
     "quote_view_cost_margin": "See cost & margin",
     "quote_send": "Send quotes to the client",
     "quote_review": "Review quotes",
-    "quote_approve_final": "Give final quote approval",
     "contract_manage": "Prepare contracts",
     "contract_sign": "Sign contracts for the company",
     "catalog_manage": "Maintain the catalog",
@@ -2792,6 +2791,34 @@
       "purchase_actual_removed": {
         "title": "Actual purchase removed",
         "detail": "{{currency}}"
+      },
+      "calc_task_created": {
+        "title": "Director's resolution: calculation task",
+        "detail": "{{letter_number}}: due {{due}}"
+      },
+      "calc_task_updated": {
+        "title": "Director's resolution updated",
+        "detail": "{{letter_number}}: due {{due}}"
+      },
+      "calc_assignee_unknown": {
+        "title": "Resolution assignee not found in ERP",
+        "detail": "CRM employee #{{crm_user_id}} from resolution {{letter_number}} has no ERP account"
+      },
+      "calc_stage_kept": {
+        "title": "Stage kept despite the resolution",
+        "detail": "Resolution {{letter_number}}: the deal is at stage {{stage_code}}"
+      },
+      "lost_by_letter_rejection": {
+        "title": "Letter rejected by the director",
+        "detail": "{{letter_number}}: {{reason}}"
+      },
+      "letter_rejection_kept": {
+        "title": "Letter rejection not applied",
+        "detail": "{{letter_number}}: the deal is at stage {{stage_code}}"
+      },
+      "calc_resolution_stale": {
+        "title": "Outdated resolution not applied",
+        "detail": "{{letter_number}} of {{decided_at}} is older than the current one"
       }
     },
     "quote": {
@@ -2883,6 +2910,30 @@
       "fx_override_cleared": {
         "title": "Negotiated quote rate removed",
         "detail": "Quote v{{version}}: {{currency}} back to the central bank rate — {{reason}}"
+      },
+      "sent_to_director": {
+        "title": "Quote sent to the director for approval",
+        "detail": "Quote {{number}} (revision {{revision}}) — EDS approval route"
+      },
+      "director_decision_stale": {
+        "title": "Director's decision on an outdated quote revision ignored",
+        "detail": "Revision {{version}}, current — {{current_revision}}"
+      },
+      "director_decision_ignored": {
+        "title": "Director's decision not applied: the quote is not awaiting approval",
+        "detail": "Quote status — {{status_code}}"
+      },
+      "director_approved": {
+        "title": "Quote approved by the director",
+        "detail": "{{outgoing_number}} — ready to send"
+      },
+      "director_returned": {
+        "title": "Quote returned by the director for rework",
+        "detail": "{{comment}}"
+      },
+      "director_rejected": {
+        "title": "Quote rejected by the director",
+        "detail": "{{comment}}"
       }
     },
     "contract": {
@@ -3083,6 +3134,12 @@
       "paired_code": {
         "title": "CRM paired with an ERP code",
         "detail": "Pairing by a one-time code; the code itself is never logged"
+      }
+    },
+    "eds": {
+      "letter_skipped": {
+        "title": "EDS event skipped",
+        "detail": "{{letter_number}}: the letter is not linked to an ERP deal"
       }
     }
   },
@@ -3457,6 +3514,26 @@
     "catalog.category_request_rejected": {
       "title": "Category request rejected",
       "message": "“{{category_name}}”: {{reason}}"
+    },
+    "quote.visas_complete": {
+      "title": "Visas collected",
+      "message": "Quote #{{number}}: visas collected, the quote is with the director for approval."
+    },
+    "quote.visas_complete_informed": {
+      "title": "Quote — for your information",
+      "message": "Quote #{{number}}: visas collected, the quote is with the director."
+    },
+    "quote.director_approved": {
+      "title": "Quote approved by the director",
+      "message": "Quote #{{number}} approved ({{outgoing_number}}) — you can send it to the client."
+    },
+    "quote.director_rejected": {
+      "title": "Quote rejected by the director",
+      "message": "Quote #{{number}} was rejected by the director. {{comment}}"
+    },
+    "deal.calc_assigned": {
+      "title": "Calculation task",
+      "message": "Resolution on {{letter_number}}: calculate request #{{deal_id}} by {{due}}."
     }
   },
   "approvalParticipation": {
