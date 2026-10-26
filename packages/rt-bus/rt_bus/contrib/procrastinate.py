@@ -7,10 +7,16 @@
 Периодические задачи (cron с шестым полем — секунды): `rt_bus.pump` (по умолчанию каждые 5 с),
 `rt_bus.requeue_stuck_inbox` и `rt_bus.log_metrics` (каждую минуту / 5 минут), `rt_bus.purge` (раз в сутки);
 `rt_bus.process_inbox(event_id)` — обработка записи inbox. `queueing_lock` не даёт копиться одинаковым
-периодическим задачам; им же `wakeup()` (пробуждение по коммиту, `AsyncBus.wakeup`) сливается с ожидающим `pump`:
-пока задача ждёт в очереди, она ещё не начала раскладку и заберёт и новое событие. Повторы доставки — по
-`next_attempt_at`. Периодические задачи создают по задаче на тик: включите
-удаление выполненных (`worker(delete_jobs="successful")`).
+периодическим задачам. Пробуждение по коммиту (`wakeup()`, `AsyncBus.wakeup`) — отдельная задача `rt_bus.pump` со
+своим ключом `rt_bus.pump.wakeup`: с периодическим проходом она не сливается (тот мог быть поставлен раньше и ещё не
+стартовать, W11B-G-6), сливаются только пробуждения между собой — ожидающая ещё не начала раскладку и заберёт новое
+событие. Два `pump` одновременно безопасны (`FOR UPDATE SKIP LOCKED`, итоги — по подписчикам в порядке имён). Повторы
+доставки — по `next_attempt_at`. Периодические задачи создают по задаче на тик: включите удаление выполненных
+(`worker(delete_jobs="successful")`).
+
+Воркер: `**WORKER_OPTIONS` в `run_worker_async` — опрос очереди раз в секунду вместо 5 с. Флаг NOTIFY сбрасывается после
+каждой выборки, и уведомление, пришедшее во время выборки, не будит воркер: задача ждёт ближайшего опроса, при 5 с это
+и есть «хвост» пробуждения.
 """
 
 from __future__ import annotations
@@ -26,6 +32,14 @@ if TYPE_CHECKING:
     from ..sqlalchemy.bus import AsyncBus
 
 
+#: Ключ очереди пробуждения: отдельный от периодического `pump`, иначе пробуждение сливается с ним (см. модуль).
+WAKEUP_LOCK = "rt_bus.pump.wakeup"
+PUMP_LOCK = "rt_bus.pump"
+
+#: Параметры `run_worker_async` для воркера с шиной: верхняя граница ожидания задачи, если NOTIFY потерялся (≤ 1 с).
+WORKER_OPTIONS: dict[str, Any] = {"fetch_job_polling_interval": 1.0}
+
+
 @dataclass(frozen=True)
 class ProcrastinateTasks:
     pump: Any
@@ -38,11 +52,12 @@ class ProcrastinateTasks:
         await self.process_inbox.defer_async(event_id=event_id)
 
     async def wakeup(self) -> None:
-        """Поставить `pump` вне расписания. Уже есть ожидающий `pump` (`queueing_lock`) — он и заберёт событие."""
+        """Поставить `pump` вне расписания со своим ключом `rt_bus.pump.wakeup`. Уже есть ожидающее пробуждение — оно и
+        заберёт событие (`AlreadyEnqueued`, норма); с периодическим проходом пробуждение не сливается."""
         from procrastinate.exceptions import AlreadyEnqueued
 
         with contextlib.suppress(AlreadyEnqueued):
-            await self.pump.defer_async(timestamp=int(time.time()))
+            await self.pump.configure(queueing_lock=WAKEUP_LOCK).defer_async(timestamp=int(time.time()))
 
 
 def install(
@@ -57,7 +72,7 @@ def install(
     queue: str = "rt_bus",
 ) -> ProcrastinateTasks:
     @app.periodic(cron=pump_cron)  # type: ignore[untyped-decorator]
-    @app.task(name="rt_bus.pump", queue=queue, queueing_lock="rt_bus.pump")  # type: ignore[untyped-decorator]
+    @app.task(name="rt_bus.pump", queue=queue, queueing_lock=PUMP_LOCK)  # type: ignore[untyped-decorator]
     async def pump(timestamp: int) -> None:
         await get_bus().pump()
 

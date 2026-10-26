@@ -1,8 +1,10 @@
 """Подписки v1: `packages/contracts/bus/subscriptions.yaml` (L5).
 
-Издатель доставляет подписчику только свои события (по `source`) и не доставляет себе; выключенный подписчик
-(`enabled: false`) новых доставок не получает. Файл перечитывается без перезапуска, когда меняется его mtime или размер:
-новый подписчик подключается строкой в файле и секретом пары в окружении.
+Издатель доставляет подписчику только свои события (по `source`) и не доставляет себе. Выключенный подписчик
+(`enabled: false`) события не теряет: раскладка создаёт доставки в `pending`, ретранслятор их не отправляет, после
+`enabled: true` они уходят по порядку. Пропуск прошлого — явный `drop: true` (заглушки): при `enabled: false` строки
+доставки не создаются. Файл перечитывается без перезапуска, когда меняется его mtime или размер: новый подписчик
+подключается строкой в файле и секретом пары в окружении.
 """
 
 from __future__ import annotations
@@ -39,6 +41,13 @@ class Subscriber:
     types: tuple[str, ...]
     enabled: bool = True
     endpoint_env: str | None = None
+    #: Только при `enabled: false`: события за время остановки не копить (строки доставки не создаются).
+    drop: bool = False
+
+    @property
+    def dropping(self) -> bool:
+        """Выключен с `drop: true`: новые доставки не создаются."""
+        return self.drop and not self.enabled
 
     def url(self, environ: Mapping[str, str] | None = None) -> str:
         """Адрес приёмника: переменная `endpoint_env`, если задана и не пуста, иначе `endpoint` из файла."""
@@ -61,10 +70,11 @@ class Subscriptions:
         return next((s for s in self.subscribers if s.name == name), None)
 
     def targets(self, event_type: str, source: str, publisher: str) -> list[Subscriber]:
-        """Кому издатель доставляет событие: только свои (`source == rt://<publisher>`), не себе, включённым."""
+        """Кому издатель раскладывает событие: только свои (`source == rt://<publisher>`), не себе. Выключенный
+        подписчик в списке (доставка ждёт `pending`), кроме выключенного с `drop: true`."""
         if source != source_for(publisher):
             return []
-        return [s for s in self.subscribers if s.enabled and s.name != publisher and s.matches(event_type)]
+        return [s for s in self.subscribers if not s.dropping and s.name != publisher and s.matches(event_type)]
 
     @classmethod
     def parse(cls, raw: Any, origin: str = "<subscriptions>") -> Subscriptions:
@@ -87,7 +97,7 @@ class Subscriptions:
             where = f"subscribers[{index}]"
             if not isinstance(item, Mapping):
                 raise fail(f"{where} is not a mapping")
-            unknown = set(item) - {"name", "endpoint", "endpoint_env", "enabled", "types"}
+            unknown = set(item) - {"name", "endpoint", "endpoint_env", "enabled", "drop", "types"}
             if unknown:
                 raise fail(f"{where}: unknown keys {sorted(unknown)}")
             name = item.get("name")
@@ -107,13 +117,16 @@ class Subscriptions:
             enabled = item.get("enabled", True)
             if not isinstance(enabled, bool):
                 raise fail(f"{where}.enabled must be boolean")
+            drop = item.get("drop", False)
+            if not isinstance(drop, bool):
+                raise fail(f"{where}.drop must be boolean")
             types = item.get("types")
             if not isinstance(types, list) or not types:
                 raise fail(f"{where}.types must be a non-empty list")
             for mask in types:
                 if not isinstance(mask, str) or not _MASK_RE.match(mask):
                     raise fail(f"{where}.types: {mask!r} is not a mask uz.railtech.<…>.v<N>")
-            out.append(Subscriber(name, endpoint, tuple(types), enabled, endpoint_env))
+            out.append(Subscriber(name, endpoint, tuple(types), enabled, endpoint_env, drop))
         return cls(tuple(out))
 
     @classmethod

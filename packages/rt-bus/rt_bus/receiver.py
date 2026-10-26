@@ -4,7 +4,8 @@
 и `rt_bus.django.views`.
 
 Ответы: 200 — принято (новое, повтор `id`, `skipped`); 401 — нет или неверная подпись, неизвестный издатель, вне окна,
-`source` не совпадает с издателем; 400 — не JSON, не конверт, `id` не совпадает с заголовком; 422 — `data` известного
+`source` не совпадает с издателем; 400 — не JSON, не конверт, `id` не совпадает с заголовком, домен типа не принадлежит
+издателю (`foreign_type`: повтор не поможет, предохранитель подписчика не затрагивается); 422 — `data` известного
 типа не по схеме (терпимо: `additionalProperties` не отказ); 503 — inline-обработчик упал (издатель повторит).
 """
 
@@ -17,7 +18,7 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Any, Literal
 
-from .envelope import SERVICE_NAME_RE, Event, source_for
+from .envelope import SERVICE_NAME_RE, TYPE_RE, Event, source_for
 from .errors import UnknownEventTypeError
 from .handlers import Handler, HandlerRegistry
 from .masking import mask_data, redact
@@ -34,6 +35,16 @@ from .signing import (
 )
 
 logger = logging.getLogger("rt_bus.receiver")
+
+#: Каких доменов типа (`uz.railtech.<домен>.…`) издатель вправе публиковать (L2): сотрудник — домен `identity`,
+#: источник — CRM (ADR-0015). Издателя нет в таблице — только домен с его именем. Свой набор —
+#: `BusConfig.publisher_domains`.
+DEFAULT_PUBLISHER_DOMAINS: Mapping[str, frozenset[str]] = {
+    "crm": frozenset({"crm", "identity"}),
+    "erp": frozenset({"erp"}),
+    "eds": frozenset({"eds"}),
+    "platform-bff": frozenset({"platform"}),
+}
 
 
 @dataclass(frozen=True)
@@ -71,6 +82,21 @@ def lower_headers(headers: Mapping[str, str]) -> dict[str, str]:
     return {str(k).lower(): str(v) for k, v in headers.items()}
 
 
+def foreign_type(publisher: str, event_type: str, publisher_domains: Mapping[str, frozenset[str]] | None) -> str | None:
+    """Тип `uz.railtech.<домен>.…` должен принадлежать издателю пары (подпись пары): CRM публикует `crm` и `identity`,
+    ERP — `erp`, EDS — `eds`, BFF — `platform`. Издателя нет в таблице — только домен с его именем. Возвращает причину
+    отказа или `None`."""
+    match = TYPE_RE.match(event_type)
+    if match is None:
+        return f"type {event_type!r} is not uz.railtech.<domain>.<entity>.<action>.v<N>"
+    allowed = (DEFAULT_PUBLISHER_DOMAINS if publisher_domains is None else publisher_domains).get(
+        publisher, frozenset({publisher})
+    )
+    if match["domain"] in allowed:
+        return None
+    return f"type {event_type!r}: domain {match['domain']!r} does not belong to publisher {publisher!r}"
+
+
 def decide(
     *,
     service: str,
@@ -82,6 +108,7 @@ def decide(
     now: datetime,
     window_seconds: float,
     secret_fields: Mapping[str, tuple[str, ...]],
+    publisher_domains: Mapping[str, frozenset[str]] | None = None,
 ) -> Accepted | Rejection:
     h = lower_headers(headers)
     publisher = h.get(HEADER_PUBLISHER.lower(), "").strip()
@@ -114,6 +141,10 @@ def decide(
         return Rejection(400, "invalid_envelope", "envelope id does not match X-RT-Event-Id")
     if payload["source"] != source_for(publisher):
         return Rejection(401, "unauthorized", f"source {payload['source']!r} is not publisher {publisher!r}")
+
+    foreign = foreign_type(publisher, str(payload["type"]), publisher_domains)
+    if foreign is not None:
+        return Rejection(400, "foreign_type", foreign)
 
     event = Event.from_dict(payload)
     paths = secret_fields.get(event.type, ())

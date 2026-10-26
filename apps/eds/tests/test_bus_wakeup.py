@@ -63,7 +63,11 @@ async def test_commit_wakes_the_pump_once(
 
     assert len(await outbox(container, "letter.registered")) == 1
     (job,) = connector.jobs.values()
-    assert (job["task_name"], job["queue_name"], job["queueing_lock"]) == ("rt_bus.pump", "rt_bus", "rt_bus.pump")
+    assert (job["task_name"], job["queue_name"], job["queueing_lock"]) == (
+        "rt_bus.pump",
+        "rt_bus",
+        "rt_bus.pump.wakeup",
+    )
 
 
 @pytest.mark.pg
@@ -127,7 +131,11 @@ async def test_the_wakeup_task_defers_one_pump_to_the_bus_queue(connector: testi
     await bus_tasks.tasks.wakeup()
 
     (job,) = connector.jobs.values()
-    assert (job["task_name"], job["queue_name"], job["queueing_lock"]) == ("rt_bus.pump", "rt_bus", "rt_bus.pump")
+    assert (job["task_name"], job["queue_name"], job["queueing_lock"]) == (
+        "rt_bus.pump",
+        "rt_bus",
+        "rt_bus.pump.wakeup",
+    )
 
 
 def container_settings(app_env: str) -> Settings:

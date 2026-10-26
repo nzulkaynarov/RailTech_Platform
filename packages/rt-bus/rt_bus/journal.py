@@ -65,6 +65,9 @@ class SubscriberMetrics:
     oldest_undelivered_age_seconds: float | None = None
     consecutive_failures: int = 0
     paused: bool = False
+    #: `False` — подписчик выключен (`enabled: false`): его ожидающие доставки копятся намеренно и в общий
+    #: `oldest_undelivered_age_seconds` не входят (алерт «старше часа» не авария).
+    enabled: bool = True
 
 
 @dataclass
@@ -100,13 +103,16 @@ def build_metrics(
     deliveries: Iterable[Mapping[str, Any]],
     states: Iterable[Mapping[str, Any]],
     inbox: Iterable[Mapping[str, Any]],
+    disabled: Iterable[str] = (),
 ) -> BusMetrics:
+    off = frozenset(disabled)
     metrics = BusMetrics()
     if outbox is not None:
         metrics.outbox_pending = int(outbox["pending"] or 0)
         metrics.oldest_undelivered_age_seconds = _age(now, outbox["oldest"])
     for row in deliveries:
         sub = metrics.subscribers.setdefault(row["subscriber"], SubscriberMetrics(row["subscriber"]))
+        sub.enabled = row["subscriber"] not in off
         count = int(row["n"])
         if row["status"] == DEAD:
             sub.dead += count
@@ -118,9 +124,11 @@ def build_metrics(
             sub.in_flight += count
         age = _age(now, row["oldest"])
         sub.oldest_undelivered_age_seconds = _older(sub.oldest_undelivered_age_seconds, age)
-        metrics.oldest_undelivered_age_seconds = _older(metrics.oldest_undelivered_age_seconds, age)
+        if sub.enabled:
+            metrics.oldest_undelivered_age_seconds = _older(metrics.oldest_undelivered_age_seconds, age)
     for row in states:
         sub = metrics.subscribers.setdefault(row["subscriber"], SubscriberMetrics(row["subscriber"]))
+        sub.enabled = row["subscriber"] not in off
         sub.consecutive_failures = int(row["consecutive_failures"])
         sub.paused = row["paused_until"] is not None and row["paused_until"] > now
     for row in inbox:
@@ -137,7 +145,7 @@ def log_metrics(service: str, metrics: BusMetrics) -> None:
     """Одна строка лога `rt_bus_metrics` со всеми метриками (поля — в `extra`)."""
     logger.info(
         "rt_bus_metrics service=%s outbox_pending=%d oldest_undelivered_age_s=%s dlq=%d inbox_received=%d "
-        "inbox_retrying=%d inbox_failed=%d paused=%s",
+        "inbox_retrying=%d inbox_failed=%d paused=%s disabled=%s",
         service,
         metrics.outbox_pending,
         "-" if metrics.oldest_undelivered_age_seconds is None else int(metrics.oldest_undelivered_age_seconds),
@@ -146,5 +154,6 @@ def log_metrics(service: str, metrics: BusMetrics) -> None:
         metrics.inbox_retrying,
         metrics.inbox_failed,
         ",".join(sorted(s.subscriber for s in metrics.subscribers.values() if s.paused)) or "-",
+        ",".join(sorted(s.subscriber for s in metrics.subscribers.values() if not s.enabled)) or "-",
         extra={"rt_bus_service": service, "rt_bus_metrics": metrics.as_dict()},
     )

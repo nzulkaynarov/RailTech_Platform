@@ -36,12 +36,34 @@ def test_masks_and_rules(subs: Subscriptions) -> None:
     assert names(subs.targets("uz.railtech.crm.client.created.v1", "rt://crm", "crm")) == []
 
 
-def test_disabled_subscriber_gets_nothing(subs: Subscriptions) -> None:
+def test_disabled_subscriber_with_drop_gets_nothing(subs: Subscriptions) -> None:
     off = subs.get("off")
     assert off is not None
-    assert not off.enabled
+    assert (off.enabled, off.drop, off.dropping) == (False, True, True)
     assert off.matches("uz.railtech.erp.quote.sent.v1")
     assert "off" not in names(subs.targets("uz.railtech.erp.quote.sent.v1", "rt://erp", "erp"))
+
+
+def test_disabled_subscriber_without_drop_still_gets_deliveries(subs: Subscriptions) -> None:
+    """W11B-G-2: `enabled: false` не теряет события — строки доставки создаются, ретранслятор их не отправляет."""
+    raw = yaml.safe_load(yaml.safe_dump(SUBSCRIPTIONS))
+    for item in raw["subscribers"]:
+        if item["name"] == "off":
+            del item["drop"]
+    held = Subscriptions.parse(raw)
+    off = held.get("off")
+    assert off is not None
+    assert (off.enabled, off.drop, off.dropping) == (False, False, False)
+    assert names(held.targets("uz.railtech.erp.quote.sent.v1", "rt://erp", "erp")) == ["crm", "audit", "off"]
+
+
+def test_drop_matters_only_while_disabled() -> None:
+    raw = yaml.safe_load(yaml.safe_dump(SUBSCRIPTIONS))
+    raw["subscribers"][0]["drop"] = True  # crm включён: drop не действует
+    crm = Subscriptions.parse(raw).get("crm")
+    assert crm is not None
+    assert (crm.enabled, crm.drop, crm.dropping) == (True, True, False)
+    assert "crm" in names(Subscriptions.parse(raw).targets("uz.railtech.erp.quote.sent.v1", "rt://erp", "erp"))
 
 
 def test_endpoint_env_override(subs: Subscriptions) -> None:
@@ -66,6 +88,7 @@ def test_contract_file_parses() -> None:
         lambda d: d["subscribers"][0].update(types=[]),
         lambda d: d["subscribers"][0].update(types=["erp.*"]),
         lambda d: d["subscribers"][0].update(enabled="yes"),
+        lambda d: d["subscribers"][0].update(drop="yes"),
         lambda d: d["subscribers"][0].update(secret="x"),
     ],
 )
