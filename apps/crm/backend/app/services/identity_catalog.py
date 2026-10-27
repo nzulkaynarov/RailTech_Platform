@@ -22,6 +22,7 @@ from typing import Final
 import structlog
 from sqlalchemy import text
 from sqlalchemy.dialects.postgresql import insert
+from sqlalchemy.exc import DBAPIError
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.domain.platform_roles import eds_catalog_fingerprint
@@ -32,25 +33,50 @@ logger = structlog.get_logger(__name__)
 
 EDS_KEY: Final = "eds_permissions"
 _LOCK_SQL = text("SELECT pg_advisory_xact_lock(hashtext('identity_catalog_state'))")
+_LOCK_TIMEOUT_SQL = text(
+    "SELECT set_config('lock_timeout', :ms, true)"
+)  # true = до конца транзакции
+LOCK_TIMEOUT_S: Final = 30.0
+_LOCK_NOT_AVAILABLE: Final = "55P03"
 
 
 @dataclass(frozen=True)
 class CatalogSyncResult:
     republished: bool  # отпечаток изменился: публикация выполнена и отпечаток записан
     users: int  # сколько сотрудников переопубликовано
+    skipped_locked: bool = (
+        False  # блокировку держит другой процесс дольше предела: ничего не делали
+    )
 
 
 async def ensure_eds_rights_published(
     sessions: async_sessionmaker[AsyncSession],
     *,
     fingerprint: str | None = None,
+    lock_timeout_s: float = LOCK_TIMEOUT_S,
 ) -> CatalogSyncResult:
     """Переопубликовать снимки всех сотрудников, если отпечаток каталога EDS изменился.
 
-    `fingerprint` — для тестов; по умолчанию — отпечаток действующего каталога."""
+    `fingerprint` — для тестов; по умолчанию — отпечаток действующего каталога. Ожидание блокировки
+    ограничено `lock_timeout_s`: держатель завис — выходим без публикации (`skipped_locked`), старт
+    воркера не ждёт, повтор будет при следующем старте."""
     current = fingerprint or eds_catalog_fingerprint()
+    try:
+        return await _publish_under_lock(sessions, current, lock_timeout_s)
+    except DBAPIError as exc:
+        if getattr(exc.orig, "sqlstate", None) != _LOCK_NOT_AVAILABLE:
+            raise
+        logger.warning("eds_rights_republish_skipped_locked", timeout_s=lock_timeout_s)
+        return CatalogSyncResult(republished=False, users=0, skipped_locked=True)
+
+
+async def _publish_under_lock(
+    sessions: async_sessionmaker[AsyncSession], current: str, lock_timeout_s: float
+) -> CatalogSyncResult:
     async with sessions() as session, session.begin():
+        await session.execute(_LOCK_TIMEOUT_SQL, {"ms": f"{int(lock_timeout_s * 1000)}ms"})
         await session.execute(_LOCK_SQL)  # держится до конца транзакции
+        await session.execute(_LOCK_TIMEOUT_SQL, {"ms": "0"})  # дальше — без предела (публикация)
         stored = await session.get(IdentityCatalogState, EDS_KEY)
         previous = stored.fingerprint if stored is not None else None
         if previous == current:

@@ -1,6 +1,7 @@
 """Автопереопубликация прав EDS при смене каталога (W13C-F4, Q-W13-A2-3) на настоящем Postgres."""
 
 import asyncio
+import time
 from collections.abc import Iterator
 from typing import Any
 
@@ -157,3 +158,23 @@ async def test_start_hook_swallows_failures(
     monkeypatch.undo()
     await sync_eds_rights_on_start(sessions)  # следующий старт делает работу
     assert len(await _outbox_subjects(sessions)) == 3
+
+
+async def test_lock_held_by_another_session_is_skipped_within_the_limit(
+    sessions: async_sessionmaker[AsyncSession], bus: Any
+) -> None:
+    await _staff(sessions)
+    async with sessions() as holder, holder.begin():
+        await holder.execute(identity_catalog._LOCK_SQL)  # «зависший» держатель
+
+        started = time.monotonic()
+        result = await ensure_eds_rights_published(sessions, fingerprint="v-a", lock_timeout_s=0.5)
+        elapsed = time.monotonic() - started
+
+        assert (result.republished, result.skipped_locked) == (False, True)
+        assert await _outbox_subjects(sessions) == []
+        assert await _stored(sessions) == []
+        assert 0.4 < elapsed < 10  # ждали предел, а не 30 с по умолчанию
+
+    retry = await ensure_eds_rights_published(sessions, fingerprint="v-a")  # блокировка снята
+    assert (retry.republished, retry.users) == (True, 3)
