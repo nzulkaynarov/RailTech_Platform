@@ -186,9 +186,9 @@ export const RESOURCES = {
     levels: ["read", "full"],
     backends: ["crm", "erp"],
     label: {
-      ru: "Настройки · Роли и права, Сотрудники, Подключения, Telegram-бот, История действий, Обращения сотрудников",
-      uz: "Sozlamalar · Rollar va huquqlar, xodimlar, ulanishlar, Telegram-bot, harakatlar tarixi, xodimlar murojaatlari",
-      en: "Settings · Roles & permissions, employees, connections, Telegram bot, activity log, staff requests",
+      ru: "Настройки · Роли и права, Сотрудники, Подключения, Telegram-бот, Журнал, Обращения сотрудников",
+      uz: "Sozlamalar · Rollar va huquqlar, xodimlar, ulanishlar, Telegram-bot, jurnal, xodimlar murojaatlari",
+      en: "Settings · Roles & permissions, employees, connections, Telegram bot, log, staff requests",
     },
   },
   "company.settings": {
@@ -219,7 +219,7 @@ export const MENU = {
     clients: ["crm.clients"],
     requests: ["crm.clients"],
     channels: ["crm.leads"],
-    kb: ["crm.leads", "admin"],
+    kb: ["crm.leads"],
   },
   eds: {
     documents: [
@@ -254,11 +254,11 @@ export const MENU = {
     roles: ["admin"],
     org: ["admin"],
     integrations: ["admin"],
-    bus: ["admin"],
     tickets: ["admin"],
     company: ["company.settings"],
     bot: ["admin"],
     audit: ["admin"],
+    setup: ["admin"],
   },
 } as const satisfies Record<ModuleCode, Record<string, readonly ResourceKey[]>>;
 

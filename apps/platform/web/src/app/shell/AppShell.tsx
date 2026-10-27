@@ -7,6 +7,7 @@ import { MODULE_ACTION_WHEN, bridgeEntry, isStubSection } from "../../modules/br
 import { MODULES, findModule, isSectionActive, matchSection } from "../../modules/registry";
 import type { ModuleConfig, SectionConfig } from "../../modules/types";
 import { SetupBanner } from "../../features/first-run/SetupBanner";
+import { useSetupPending } from "../../features/first-run/useSetupPending";
 import { GlobalSearch } from "../../features/global-search/GlobalSearch";
 import { NotificationCenter } from "../../features/notifications/NotificationCenter";
 import { useNotifications } from "../../features/notifications/useNotifications";
@@ -34,8 +35,8 @@ const PANEL_ID = "pf-context-panel";
 const MOBILE_BAR_HEIGHT = 60;
 const HEADER_HEIGHT = 56;
 
-function firstSection(module: ModuleConfig, canOpen: (s: SectionConfig) => boolean) {
-  return module.sections.find((s) => !s.hidden && canOpen(s));
+function firstSection(module: ModuleConfig, inMenu: (s: SectionConfig) => boolean) {
+  return module.sections.find(inMenu);
 }
 
 function isMac(): boolean {
@@ -58,17 +59,39 @@ export function AppShell() {
   const searchRef = useRef<HTMLInputElement>(null);
 
   const match = matchSection(location.pathname, location.search);
-  const panels = usePanels(me.id, match?.section);
+  // Где выбирать нечего, боковое окно закрыто по умолчанию (W15-H4): у заглушки раздела таблицы нет.
+  const panels = usePanels(
+    me.id,
+    match?.section,
+    !(match && isStubSection(match.module.code, match.section.key)),
+  );
+  const setupPending = useSetupPending();
   const { attach: attachPanelSlot, claimed: panelClaimed } = usePanelSlotHost(panels.tab);
 
   const railModules = useMemo(
     () => me.modules.flatMap((code) => findModule(code) ?? []),
     [me.modules],
   );
+  const sectionAllowed = (s: SectionConfig) => canSee(me, s.access);
+  // Пункт подменю: не скрыт, виден роли (`menuAccess` уже доступа к адресу) и его условие выполнено (W15-H4).
+  const inMenu = (s: SectionConfig) =>
+    !s.hidden &&
+    canSee(me, s.menuAccess ?? s.access) &&
+    (s.showWhile !== "setupPending" || setupPending);
+  // Раздел открыт, но его пункта в своём модуле у сотрудника нет: меню и крошки — там, где раздел для него живёт
+  // (`menuHome`; база знаний для администратора — Настройки · Telegram-бот).
+  const homeOf = (() => {
+    const home = match?.section.menuHome;
+    if (!match || !home || inMenu(match.section) || !sectionAllowed(match.section))
+      return undefined;
+    const module = railModules.find((m) => m.code === home.module);
+    const section = module?.sections.find((s) => s.key === home.section);
+    return module && section ? { module, section } : undefined;
+  })();
   // Подменю — активного модуля; если адрес ведёт в модуль вне роли (403), показываем первый доступный, а не чужой.
   const matchedVisible = match && railModules.some((m) => m.code === match.module.code);
-  const activeModule = (matchedVisible ? match.module : undefined) ?? railModules[0] ?? MODULES[0];
-  const sectionAllowed = (s: SectionConfig) => canSee(me, s.access);
+  const activeModule =
+    homeOf?.module ?? (matchedVisible ? match.module : undefined) ?? railModules[0] ?? MODULES[0];
 
   // Счётчики меню и уведомления открыты разделом «Моя очередь» (как в BFF): без него запросов нет.
   const hasQueue = canSee(me, { resource: "dashboard.queue" });
@@ -104,12 +127,13 @@ export function AppShell() {
   if (!activeModule) return null;
 
   const railItems: RailModule[] = railModules.map((module) => {
-    const target = firstSection(module, sectionAllowed);
+    const target = firstSection(module, inMenu);
     return {
       code: module.code,
       name: t(`modules:${module.code}.name`),
       to: target?.path ?? `/${module.code}`,
-      active: matchedVisible === true && module.code === activeModule.code,
+      active:
+        (homeOf !== undefined || matchedVisible === true) && module.code === activeModule.code,
     };
   });
 
@@ -128,20 +152,16 @@ export function AppShell() {
     }
     return { count: item.count, attention: item.attention };
   };
-  const menuItems: MenuItem[] = activeModule.sections
-    .filter((s) => !s.hidden && sectionAllowed(s))
-    .map((section) => ({
-      key: section.path,
-      to: section.path,
-      label: t(`modules:${activeModule.code}.sections.${section.key}`),
-      active: isSectionActive(section, match),
-      badge: badgeFor(
-        counters.data?.items.find(
-          (c) => c.module === activeModule.code && c.section === section.key,
-        ),
-        section,
-      ),
-    }));
+  const menuItems: MenuItem[] = activeModule.sections.filter(inMenu).map((section) => ({
+    key: section.path,
+    to: section.path,
+    label: t(`modules:${activeModule.code}.sections.${section.key}`),
+    active: homeOf ? homeOf.section.key === section.key : isSectionActive(section, match),
+    badge: badgeFor(
+      counters.data?.items.find((c) => c.module === activeModule.code && c.section === section.key),
+      section,
+    ),
+  }));
 
   const action =
     activeModule.action && canEdit(me, activeModule.action.access) ? (
@@ -174,8 +194,18 @@ export function AppShell() {
   };
 
   const crumbs: Crumb[] = [];
-  if (match) {
-    const moduleStart = firstSection(match.module, sectionAllowed);
+  if (match && homeOf) {
+    crumbs.push({
+      label: t(`modules:${homeOf.module.code}.name`),
+      to: firstSection(homeOf.module, inMenu)?.path,
+    });
+    crumbs.push({
+      label: t(`modules:${homeOf.module.code}.sections.${homeOf.section.key}`),
+      to: homeOf.section.path,
+    });
+    crumbs.push({ label: t(`modules:${match.module.code}.sections.${match.section.key}`) });
+  } else if (match) {
+    const moduleStart = firstSection(match.module, inMenu);
     crumbs.push({ label: t(`modules:${match.module.code}.name`), to: moduleStart?.path });
     const sectionLabel = t(`modules:${match.module.code}.sections.${match.section.key}`);
     crumbs.push({

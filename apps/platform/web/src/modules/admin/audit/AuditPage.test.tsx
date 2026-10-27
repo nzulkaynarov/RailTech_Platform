@@ -21,13 +21,22 @@ afterEach(() => {
 });
 
 describe("Admin · Журнал аудита (экран целиком на MSW)", () => {
-  it("админ видит записи новыми первыми, входы скрыты; пункт есть в меню Admin", async () => {
+  it("админ видит записи новыми первыми, входы скрыты; пункт «Журнал» есть в меню, фильтр — «Действия людей»", async () => {
     signInAs("admin@demo.example");
     renderApp("/admin/audit");
 
-    expect(
-      await screen.findByRole("heading", { level: 1, name: "История действий" }),
-    ).toBeVisible();
+    expect(await screen.findByRole("heading", { level: 1, name: "Журнал" })).toBeVisible();
+    const filter = screen.getByRole("navigation", { name: "Что показать в журнале" });
+    expect(within(filter).getByRole("link", { name: "Действия людей" })).toHaveAttribute(
+      "aria-current",
+      "page",
+    );
+    expect(within(filter).getByRole("link", { name: "Обмен между системами" })).toHaveAttribute(
+      "href",
+      "/admin/bus",
+    );
+    // где выбирать нечего, боковое окно закрыто: записи не выбрано — «Объект не выбран» не занимает экран
+    expect(screen.queryByRole("complementary", { name: "Боковое окно" })).toBeNull();
     const table = await screen.findByRole("table", { name: "Записи журнала аудита" });
     const rows = within(table).getAllByRole("row");
     // заголовок + 13 записей без двух входов (15 всего)
@@ -37,7 +46,11 @@ describe("Admin · Журнал аудита (экран целиком на MSW
     ).toBeVisible();
     expect(within(table).queryByText("Вход")).toBeNull();
     expect(screen.getByText("Записей: 13")).toBeVisible();
-    expect(screen.getByRole("link", { name: /История действий/ })).toBeVisible();
+    const menu = screen.getByRole("navigation", { name: "Разделы модуля" });
+    expect(within(menu).getByRole("link", { name: "Журнал" })).toHaveAttribute(
+      "aria-current",
+      "page",
+    );
   });
 
   it("«Показывать входы в систему» добавляет входы", async () => {
