@@ -123,10 +123,26 @@ def build_ready_payload(quote: Quote, *, ready_at: datetime) -> dict[str, Any]:
         "valid_until": quote.valid_until.isoformat() if quote.valid_until else None,
         "eds_letter_id": str(task.eds_letter_id) if task else None,
     }
+    signed = _line_visas(quote)
+    if signed is not None:
+        # Расчёт по строкам (D2-1): визы — подписи строк по их зонам, нужные зоны — зоны строк КП.
+        payload["required_zones"], payload["visas"] = signed
     company = quote.deal.company
     if company is not None and company.name:
         payload["client_name"] = company.name[:255]
     return payload
+
+
+def _line_visas(quote: Quote) -> Optional[tuple[list[str], list[dict[str, Any]]]]:
+    """Визы строк расчёта (D2-1) для события: (зоны строк, визы по зонам); None — КП без виз строк."""
+    from .calculation import line_visas, line_zones
+
+    rows = line_visas(quote)
+    if not rows:
+        return None
+    crm_ids = _crm_user_ids({user.pk for _zone, user, _at in rows})
+    visas = [{"zone": zone, "by": _person(user, crm_ids), "at": _iso(at)} for zone, user, at in rows]
+    return line_zones(quote), visas
 
 
 _DECISION_FIELDS = ["director_decision", "director_comment", "director_decided_at", "outgoing_number", "send_channels"]

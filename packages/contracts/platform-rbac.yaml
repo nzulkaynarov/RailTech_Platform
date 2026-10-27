@@ -198,13 +198,13 @@ resources:
     levels: [full]
     label: { ru: "Расчёт · Виза расчёта: товары и склад", uz: "Hisob-kitob · Hisob-kitob vizasi: tovarlar va ombor", en: "Costing · Costing sign-off: goods and stock" }
     backend:
-      erp: { full: [quote.build, quote.edit_pricing] }
+      erp: { full: [quote.build, quote.edit_pricing, quote.visa_goods] }
   - key: erp.calc.services
     module: erp
     levels: [full]
     label: { ru: "Расчёт · Виза расчёта: услуги", uz: "Hisob-kitob · Hisob-kitob vizasi: xizmatlar", en: "Costing · Costing sign-off: services" }
     backend:
-      erp: { full: [quote.build] }
+      erp: { full: [quote.build, quote.visa_services] }
   - key: erp.stock
     module: erp
     label: { ru: "Расчёт · Склад, Номенклатура и поставщики, Техдокументация", uz: "Hisob-kitob · Ombor, nomenklatura va yetkazib beruvchilar, texnik hujjatlar", en: "Costing · Stock, items & suppliers, technical files" }

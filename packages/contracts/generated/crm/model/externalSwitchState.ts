@@ -31,7 +31,10 @@
  * одобрение КП директором ведёт маршрут EDS (EDS-03, решение архитектора волны 12 §4 п. 3), в ERP этого права больше нет.
  * CRM (карта прав и каталог ролей Платформы) перестаёт его выдавать в том же PR.
  *
- * OpenAPI spec version: 0.7.0
+ * 0.8.0 (волна 17, D2-1; аддитивно): `ErpPermission` + `quote.visa_goods`, `quote.visa_services` — виза строки расчёта по
+ * типу позиции (ADR-0012 п. 6). CRM выдаёт их из разделов `erp.calc.goods` и `erp.calc.services` каталога Платформы.
+ *
+ * OpenAPI spec version: 0.8.0
  */
 import type { ExternalServiceCode } from "./externalServiceCode";
 

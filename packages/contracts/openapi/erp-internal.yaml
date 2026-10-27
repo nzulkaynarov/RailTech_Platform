@@ -2467,6 +2467,494 @@ paths:
               schema:
                 $ref: '#/components/schemas/WsTicket'
           description: ''
+  /api/v1/calc/catalog/:
+    get:
+      operationId: calc_catalog_search
+      description: GET /api/v1/calc/catalog/?q= — карточки каталога для сопоставления строки (без ИИ).
+      summary: Каталог для сопоставления строки расчёта
+      parameters:
+      - in: query
+        name: q
+        schema:
+          type: string
+        description: Слова названия, артикула, кода производителя, ГОСТ
+      tags:
+      - Calc
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CalcCatalog'
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CalcError'
+          description: Нет права (зона строки, роль) или не сотрудник
+  /api/v1/calc/tasks/:
+    get:
+      operationId: calc_tasks_list
+      description: GET /api/v1/calc/tasks/ — «Заявки в расчёте» (и «Мои расчёты» с `mine=1`).
+      summary: Заявки с заданием расчёта
+      parameters:
+      - in: query
+        name: mine
+        schema:
+          type: boolean
+        description: Только где сотрудник — исполнитель резолюции
+      - in: query
+        name: scope
+        schema:
+          type: string
+          enum:
+          - all
+          - open
+        description: open — стадии расчёта; all — все
+      tags:
+      - Calc
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CalcTaskList'
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CalcError'
+          description: Нет права (зона строки, роль) или не сотрудник
+  /api/v1/calc/{deal_id}/:
+    get:
+      operationId: calc_sheet
+      description: GET /api/v1/calc/<deal_id>/ — экран расчёта по заявке.
+      summary: Расчёт по заявке
+      parameters:
+      - in: path
+        name: deal_id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - Calc
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CalcSheet'
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CalcError'
+          description: Нет права (зона строки, роль) или не сотрудник
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CalcError'
+          description: Заявки, задания расчёта или строки нет
+  /api/v1/calc/{deal_id}/lines/:
+    post:
+      operationId: calc_lines_add
+      description: POST /api/v1/calc/<deal_id>/lines/ — добавить строки (вручную или подтверждённое предложение ИИ-разбора).
+      summary: Добавить строки в расчёт
+      parameters:
+      - in: path
+        name: deal_id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - Calc
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CalcLinesInRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/CalcLinesInRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/CalcLinesInRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CalcLinesCreated'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CalcError'
+          description: Тело не прошло проверку или отказ правила строки
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CalcError'
+          description: Нет права (зона строки, роль) или не сотрудник
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CalcError'
+          description: Заявки, задания расчёта или строки нет
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CalcError'
+          description: Состояние не позволяет (КП не черновик, нет виз)
+  /api/v1/calc/{deal_id}/lines/{item_id}/:
+    patch:
+      operationId: calc_line_update
+      description: PATCH/DELETE /api/v1/calc/<deal_id>/lines/<item_id>/ — правка и удаление строки (зона строки — в сервисе).
+      summary: Изменить строку расчёта (виза строки снимается)
+      parameters:
+      - in: path
+        name: deal_id
+        schema:
+          type: integer
+        required: true
+      - in: path
+        name: item_id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - Calc
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedCalcLinePatchRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedCalcLinePatchRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedCalcLinePatchRequest'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CalcSheet'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CalcError'
+          description: Тело не прошло проверку или отказ правила строки
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CalcError'
+          description: Нет права (зона строки, роль) или не сотрудник
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CalcError'
+          description: Заявки, задания расчёта или строки нет
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CalcError'
+          description: Состояние не позволяет (КП не черновик, нет виз)
+    delete:
+      operationId: calc_line_delete
+      description: PATCH/DELETE /api/v1/calc/<deal_id>/lines/<item_id>/ — правка и удаление строки (зона строки — в сервисе).
+      summary: Удалить строку расчёта
+      parameters:
+      - in: path
+        name: deal_id
+        schema:
+          type: integer
+        required: true
+      - in: path
+        name: item_id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - Calc
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CalcSheet'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CalcError'
+          description: Тело не прошло проверку или отказ правила строки
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CalcError'
+          description: Нет права (зона строки, роль) или не сотрудник
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CalcError'
+          description: Заявки, задания расчёта или строки нет
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CalcError'
+          description: Состояние не позволяет (КП не черновик, нет виз)
+  /api/v1/calc/{deal_id}/lines/{item_id}/visa/:
+    post:
+      operationId: calc_line_sign
+      description: POST /api/v1/calc/<deal_id>/lines/<item_id>/visa/ — «Подтвердить» строку (право зоны строки).
+      summary: Виза строки расчёта по её зоне
+      parameters:
+      - in: path
+        name: deal_id
+        schema:
+          type: integer
+        required: true
+      - in: path
+        name: item_id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - Calc
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CalcSheet'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CalcError'
+          description: Тело не прошло проверку или отказ правила строки
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CalcError'
+          description: Нет права (зона строки, роль) или не сотрудник
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CalcError'
+          description: Заявки, задания расчёта или строки нет
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CalcError'
+          description: Состояние не позволяет (КП не черновик, нет виз)
+  /api/v1/calc/{deal_id}/parse/:
+    post:
+      operationId: calc_parse
+      description: |-
+        POST /api/v1/calc/<deal_id>/parse/ — ИИ-разбор текста заявки в строки: задание в очереди ИИ, ответ — предложение
+        (`GET /api/v1/sourcing/ai-status/<task_id>/`, результат `{proposal: [...]}`); строки не пишутся.
+      summary: ИИ-разбор текста заявки в строки (предложение)
+      parameters:
+      - in: path
+        name: deal_id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - Calc
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CalcParseInRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/CalcParseInRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/CalcParseInRequest'
+      security:
+      - jwtAuth: []
+      responses:
+        '202':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CalcJob'
+          description: ''
+        '503':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CalcError'
+          description: ИИ выключен
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CalcError'
+          description: Дневной лимит ИИ компании
+        '500':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CalcError'
+          description: Очередь ИИ недоступна
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CalcError'
+          description: Тело не прошло проверку или отказ правила строки
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CalcError'
+          description: Нет права (зона строки, роль) или не сотрудник
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CalcError'
+          description: Заявки, задания расчёта или строки нет
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CalcError'
+          description: Состояние не позволяет (КП не черновик, нет виз)
+  /api/v1/calc/{deal_id}/ready/:
+    post:
+      operationId: calc_ready
+      description: POST /api/v1/calc/<deal_id>/ready/ — «Расчёт готов → черновик КП директору».
+      summary: 'Расчёт готов: КП на одобрение директору (все строки завизированы)'
+      parameters:
+      - in: path
+        name: deal_id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - Calc
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CalcSheet'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CalcError'
+          description: Тело не прошло проверку или отказ правила строки
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CalcError'
+          description: Нет права (зона строки, роль) или не сотрудник
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CalcError'
+          description: Заявки, задания расчёта или строки нет
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CalcError'
+          description: Состояние не позволяет (КП не черновик, нет виз)
+  /api/v1/calc/{deal_id}/start/:
+    post:
+      operationId: calc_start
+      description: POST /api/v1/calc/<deal_id>/start/ — черновик КП расчёта из строк заявки (повтор — без изменений).
+      summary: 'Начать расчёт: черновик КП из строк заявки'
+      parameters:
+      - in: path
+        name: deal_id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - Calc
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CalcSheet'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CalcError'
+          description: Тело не прошло проверку или отказ правила строки
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CalcError'
+          description: Нет права (зона строки, роль) или не сотрудник
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CalcError'
+          description: Заявки, задания расчёта или строки нет
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CalcError'
+          description: Состояние не позволяет (КП не черновик, нет виз)
   /api/v1/catalog/categories/:
     get:
       operationId: catalog_categories_list
@@ -11260,6 +11748,18 @@ components:
     BlankEnum:
       enum:
       - ''
+    BlockerEnum:
+      enum:
+      - not_started
+      - not_draft
+      - no_lines
+      - visas_missing
+      type: string
+      description: |-
+        * `not_started` - not_started
+        * `not_draft` - not_draft
+        * `no_lines` - no_lines
+        * `visas_missing` - visas_missing
     BulkCreateQuoteItemsRequestRequest:
       type: object
       properties:
@@ -11556,6 +12056,610 @@ components:
       - oldest_undelivered_age_seconds
       - paused_until
       - pending
+    CalcAssignee:
+      type: object
+      properties:
+        crm_user_id:
+          type: integer
+        zone:
+          $ref: '#/components/schemas/CalcAssigneeZoneEnum'
+        name:
+          type: string
+          nullable: true
+      required:
+      - crm_user_id
+      - name
+      - zone
+    CalcAssigneeZoneEnum:
+      enum:
+      - goods
+      - services
+      - payment_terms
+      type: string
+      description: |-
+        * `goods` - goods
+        * `services` - services
+        * `payment_terms` - payment_terms
+    CalcCatalog:
+      type: object
+      properties:
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/CalcCatalogItem'
+      required:
+      - results
+    CalcCatalogItem:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        article:
+          type: string
+        kind:
+          $ref: '#/components/schemas/Kind99dEnum'
+        on_hand:
+          type: integer
+        supplier_name:
+          type: string
+          nullable: true
+        lead_days:
+          type: integer
+          nullable: true
+      required:
+      - article
+      - id
+      - kind
+      - lead_days
+      - name
+      - on_hand
+      - supplier_name
+    CalcDeal:
+      type: object
+      properties:
+        id:
+          type: integer
+        title:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        stage_code:
+          type: string
+        client_name:
+          type: string
+          nullable: true
+        manager_name:
+          type: string
+          nullable: true
+      required:
+      - client_name
+      - created_at
+      - id
+      - manager_name
+      - stage_code
+      - title
+    CalcError:
+      type: object
+      properties:
+        detail:
+          type: string
+        missing:
+          type: integer
+        zone:
+          type: string
+      required:
+      - detail
+    CalcJob:
+      type: object
+      properties:
+        task_id:
+          type: string
+      required:
+      - task_id
+    CalcLine:
+      type: object
+      properties:
+        id:
+          type: integer
+        position:
+          type: integer
+        name:
+          type: string
+        article:
+          type: string
+        product_id:
+          type: integer
+          nullable: true
+        product_name:
+          type: string
+          nullable: true
+        kind:
+          $ref: '#/components/schemas/CalcLineKindEnum'
+        zone:
+          $ref: '#/components/schemas/CalcLineZoneEnum'
+        quantity:
+          type: integer
+        unit:
+          type: string
+        stock:
+          $ref: '#/components/schemas/CalcStock'
+        supplier:
+          allOf:
+          - $ref: '#/components/schemas/CalcSupplier'
+          nullable: true
+        lead_days:
+          type: integer
+          nullable: true
+        purchase_price:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,12}(?:\.\d{0,2})?$
+          nullable: true
+        purchase_currency:
+          type: string
+        crew_rate:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,12}(?:\.\d{0,2})?$
+          nullable: true
+        crew_days:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,5}(?:\.\d{0,1})?$
+          nullable: true
+        cost:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,12}(?:\.\d{0,2})?$
+          nullable: true
+        client_price:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,12}(?:\.\d{0,2})?$
+        markup_pct:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,6}(?:\.\d{0,1})?$
+          nullable: true
+        visa:
+          allOf:
+          - $ref: '#/components/schemas/CalcVisa'
+          nullable: true
+        group:
+          $ref: '#/components/schemas/GroupEnum'
+        can_edit:
+          type: boolean
+      required:
+      - article
+      - can_edit
+      - client_price
+      - cost
+      - crew_days
+      - crew_rate
+      - group
+      - id
+      - kind
+      - lead_days
+      - markup_pct
+      - name
+      - position
+      - product_id
+      - product_name
+      - purchase_currency
+      - purchase_price
+      - quantity
+      - stock
+      - supplier
+      - unit
+      - visa
+      - zone
+    CalcLineInRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          default: ''
+          maxLength: 500
+        quantity:
+          type: integer
+          maximum: 1000000
+          minimum: 1
+          default: 1
+        unit:
+          type: string
+          default: ''
+          maxLength: 32
+        kind:
+          allOf:
+          - $ref: '#/components/schemas/Kind99dEnum'
+          default: goods
+        product_id:
+          type: integer
+          nullable: true
+        article:
+          type: string
+          default: ''
+          maxLength: 120
+        note:
+          type: string
+          default: ''
+          maxLength: 1000
+    CalcLineKindEnum:
+      enum:
+      - goods
+      - goods_to_order
+      - service
+      type: string
+      description: |-
+        * `goods` - goods
+        * `goods_to_order` - goods_to_order
+        * `service` - service
+    CalcLineZoneEnum:
+      enum:
+      - goods
+      - services
+      type: string
+      description: |-
+        * `goods` - goods
+        * `services` - services
+    CalcLinesCreated:
+      type: object
+      properties:
+        deal:
+          $ref: '#/components/schemas/CalcDeal'
+        task:
+          $ref: '#/components/schemas/CalcTaskBrief'
+        request:
+          $ref: '#/components/schemas/CalcRequest'
+        quote:
+          allOf:
+          - $ref: '#/components/schemas/CalcQuote'
+          nullable: true
+        lines:
+          type: array
+          items:
+            $ref: '#/components/schemas/CalcLine'
+        totals:
+          $ref: '#/components/schemas/CalcTotals'
+        visas:
+          $ref: '#/components/schemas/CalcVisaGroups'
+        ready:
+          $ref: '#/components/schemas/CalcReady'
+        rights:
+          $ref: '#/components/schemas/CalcRights'
+        created:
+          type: array
+          items:
+            type: integer
+      required:
+      - created
+      - deal
+      - lines
+      - quote
+      - ready
+      - request
+      - rights
+      - task
+      - totals
+      - visas
+    CalcLinesInRequest:
+      type: object
+      properties:
+        lines:
+          type: array
+          items:
+            $ref: '#/components/schemas/CalcLineInRequest'
+      required:
+      - lines
+    CalcParseInRequest:
+      type: object
+      properties:
+        text:
+          type: string
+          default: ''
+          maxLength: 20000
+    CalcQuote:
+      type: object
+      properties:
+        id:
+          type: integer
+        version:
+          type: integer
+        number:
+          type: string
+          nullable: true
+        state:
+          $ref: '#/components/schemas/StateB5cEnum'
+        director_comment:
+          type: string
+          nullable: true
+        vat_rate:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,3}(?:\.\d{0,2})?$
+      required:
+      - director_comment
+      - id
+      - number
+      - state
+      - vat_rate
+      - version
+    CalcReady:
+      type: object
+      properties:
+        allowed:
+          type: boolean
+        blocker:
+          nullable: true
+          oneOf:
+          - $ref: '#/components/schemas/BlockerEnum'
+          - $ref: '#/components/schemas/NullEnum'
+        missing:
+          type: integer
+      required:
+      - allowed
+      - blocker
+      - missing
+    CalcRequest:
+      type: object
+      properties:
+        text:
+          type: string
+        lines:
+          type: integer
+      required:
+      - lines
+      - text
+    CalcRights:
+      type: object
+      properties:
+        goods:
+          type: boolean
+        services:
+          type: boolean
+        build:
+          type: boolean
+        cost:
+          type: boolean
+      required:
+      - build
+      - cost
+      - goods
+      - services
+    CalcSheet:
+      type: object
+      properties:
+        deal:
+          $ref: '#/components/schemas/CalcDeal'
+        task:
+          $ref: '#/components/schemas/CalcTaskBrief'
+        request:
+          $ref: '#/components/schemas/CalcRequest'
+        quote:
+          allOf:
+          - $ref: '#/components/schemas/CalcQuote'
+          nullable: true
+        lines:
+          type: array
+          items:
+            $ref: '#/components/schemas/CalcLine'
+        totals:
+          $ref: '#/components/schemas/CalcTotals'
+        visas:
+          $ref: '#/components/schemas/CalcVisaGroups'
+        ready:
+          $ref: '#/components/schemas/CalcReady'
+        rights:
+          $ref: '#/components/schemas/CalcRights'
+      required:
+      - deal
+      - lines
+      - quote
+      - ready
+      - request
+      - rights
+      - task
+      - totals
+      - visas
+    CalcStock:
+      type: object
+      properties:
+        on_hand:
+          type: integer
+          nullable: true
+        cell:
+          type: string
+          nullable: true
+        reserved:
+          type: integer
+          nullable: true
+      required:
+      - cell
+      - on_hand
+      - reserved
+    CalcSupplier:
+      type: object
+      properties:
+        name:
+          type: string
+        lead_days:
+          type: integer
+          nullable: true
+        min_order_qty:
+          type: integer
+        price_valid_until:
+          type: string
+          format: date
+          nullable: true
+        offer_price:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,12}(?:\.\d{0,2})?$
+          nullable: true
+        offer_currency:
+          type: string
+          nullable: true
+      required:
+      - lead_days
+      - min_order_qty
+      - name
+      - offer_currency
+      - offer_price
+      - price_valid_until
+    CalcTaskBrief:
+      type: object
+      properties:
+        letter_number:
+          type: string
+        letter_subject:
+          type: string
+        resolution_text:
+          type: string
+        decided_at:
+          type: string
+          format: date-time
+        decided_by_name:
+          type: string
+          nullable: true
+        due:
+          type: string
+          format: date
+        min_margin_pct:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,3}(?:\.\d{0,2})?$
+          nullable: true
+        assignees:
+          type: array
+          items:
+            $ref: '#/components/schemas/CalcAssignee'
+      required:
+      - assignees
+      - decided_at
+      - decided_by_name
+      - due
+      - letter_number
+      - letter_subject
+      - min_margin_pct
+      - resolution_text
+    CalcTaskList:
+      type: object
+      properties:
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/CalcTaskRow'
+      required:
+      - results
+    CalcTaskRow:
+      type: object
+      properties:
+        deal:
+          $ref: '#/components/schemas/CalcDeal'
+        letter_number:
+          type: string
+        due:
+          type: string
+          format: date
+        state:
+          $ref: '#/components/schemas/StateB5cEnum'
+        lines:
+          type: integer
+        visas:
+          $ref: '#/components/schemas/CalcVisaStates'
+        assignees:
+          type: array
+          items:
+            $ref: '#/components/schemas/CalcAssignee'
+      required:
+      - assignees
+      - deal
+      - due
+      - letter_number
+      - lines
+      - state
+      - visas
+    CalcTotals:
+      type: object
+      properties:
+        purchase:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,14}(?:\.\d{0,2})?$
+        client:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,14}(?:\.\d{0,2})?$
+        markup_pct:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,6}(?:\.\d{0,1})?$
+          nullable: true
+        vat_included:
+          type: boolean
+      required:
+      - client
+      - markup_pct
+      - purchase
+      - vat_included
+    CalcVisa:
+      type: object
+      properties:
+        by:
+          type: string
+        at:
+          type: string
+          format: date-time
+      required:
+      - at
+      - by
+    CalcVisaGroup:
+      type: object
+      properties:
+        state:
+          $ref: '#/components/schemas/State69eEnum'
+        total:
+          type: integer
+        signed:
+          type: integer
+        by:
+          type: array
+          items:
+            type: string
+      required:
+      - by
+      - signed
+      - state
+      - total
+    CalcVisaGroups:
+      type: object
+      properties:
+        stock:
+          $ref: '#/components/schemas/CalcVisaGroup'
+        supply:
+          $ref: '#/components/schemas/CalcVisaGroup'
+        engineer:
+          $ref: '#/components/schemas/CalcVisaGroup'
+      required:
+      - engineer
+      - stock
+      - supply
+    CalcVisaStates:
+      type: object
+      properties:
+        stock:
+          $ref: '#/components/schemas/StockEnum'
+        supply:
+          $ref: '#/components/schemas/SupplyEnum'
+        engineer:
+          $ref: '#/components/schemas/EngineerEnum'
+      required:
+      - engineer
+      - stock
+      - supply
     CancelActRequest:
       type: object
       properties:
@@ -13081,7 +14185,7 @@ components:
       properties:
         state:
           allOf:
-          - $ref: '#/components/schemas/StateEnum'
+          - $ref: '#/components/schemas/CrmPairingStatusStateEnum'
           description: |-
             paired — сопряжено по коду; env — ключи из окружения (запасной путь); none — ключей нет.
 
@@ -13127,6 +14231,16 @@ components:
       - token_source
       - webhook_secret_last4
       - webhook_secret_source
+    CrmPairingStatusStateEnum:
+      enum:
+      - paired
+      - env
+      - none
+      type: string
+      description: |-
+        * `paired` - paired
+        * `env` - env
+        * `none` - none
     Currency:
       type: object
       properties:
@@ -13945,6 +15059,16 @@ components:
           minLength: 1
       required:
       - to_email
+    EngineerEnum:
+      enum:
+      - none
+      - waiting
+      - done
+      type: string
+      description: |-
+        * `none` - none
+        * `waiting` - waiting
+        * `done` - done
     FontFamilyEnum:
       enum:
       - sans
@@ -14290,6 +15414,16 @@ components:
       - title
       - updated_at
       - values
+    GroupEnum:
+      enum:
+      - stock
+      - supply
+      - engineer
+      type: string
+      description: |-
+        * `stock` - stock
+        * `supply` - supply
+        * `engineer` - engineer
     InviteRequestRequest:
       type: object
       properties:
@@ -14565,6 +15699,14 @@ components:
       description: |-
         * `manual` - manual
         * `auto_skipped` - auto_skipped
+    Kind99dEnum:
+      enum:
+      - goods
+      - service
+      type: string
+      description: |-
+        * `goods` - goods
+        * `service` - service
     LanguageB62Enum:
       enum:
       - ru
@@ -14906,6 +16048,9 @@ components:
       - title
       - type_code
       - type_name
+    NullEnum:
+      enum:
+      - null
     NumberingPreviewItem:
       type: object
       description: One rendered example number for a document kind (КП / CT / INV).
@@ -15623,6 +16768,52 @@ components:
           nullable: true
           title: Компания
           description: Привязка к компании
+    PatchedCalcLinePatchRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 500
+        quantity:
+          type: integer
+          maximum: 1000000
+          minimum: 1
+        unit:
+          type: string
+          maxLength: 32
+        lead_days:
+          type: integer
+          maximum: 3650
+          minimum: 0
+          nullable: true
+        purchase_price:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,12}(?:\.\d{0,2})?$
+        purchase_currency:
+          type: string
+          minLength: 3
+          maxLength: 3
+        crew_rate:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,12}(?:\.\d{0,2})?$
+          nullable: true
+        crew_days:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,5}(?:\.\d{0,1})?$
+          nullable: true
+        client_price:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,12}(?:\.\d{0,2})?$
+        product_id:
+          type: integer
+          nullable: true
+        kind:
+          $ref: '#/components/schemas/Kind99dEnum'
     PatchedCategoryRequest:
       type: object
       properties:
@@ -17761,7 +18952,7 @@ components:
         id:
           type: integer
         kind:
-          $ref: '#/components/schemas/PublishedCatalogItemKindEnum'
+          $ref: '#/components/schemas/Kind99dEnum'
         name:
           type: string
         description:
@@ -17797,14 +18988,6 @@ components:
       - kind
       - name
       - unit
-    PublishedCatalogItemKindEnum:
-      enum:
-      - goods
-      - service
-      type: string
-      description: |-
-        * `goods` - goods
-        * `service` - service
     PurchaseActualRequest:
       type: object
       properties:
@@ -19090,16 +20273,42 @@ components:
       - can_setup
       - own_company_id
       - setup_required
-    StateEnum:
+    State69eEnum:
       enum:
-      - paired
-      - env
       - none
+      - waiting
+      - done
       type: string
       description: |-
-        * `paired` - paired
-        * `env` - env
         * `none` - none
+        * `waiting` - waiting
+        * `done` - done
+    StateB5cEnum:
+      enum:
+      - not_started
+      - in_progress
+      - returned
+      - at_director
+      - rejected
+      - approved
+      type: string
+      description: |-
+        * `not_started` - not_started
+        * `in_progress` - in_progress
+        * `returned` - returned
+        * `at_director` - at_director
+        * `rejected` - rejected
+        * `approved` - approved
+    StockEnum:
+      enum:
+      - none
+      - waiting
+      - done
+      type: string
+      description: |-
+        * `none` - none
+        * `waiting` - waiting
+        * `done` - done
     StockStatus:
       type: object
       properties:
@@ -19309,6 +20518,16 @@ components:
       required:
       - product
       - supplier
+    SupplyEnum:
+      enum:
+      - none
+      - waiting
+      - done
+      type: string
+      description: |-
+        * `none` - none
+        * `waiting` - waiting
+        * `done` - done
     SystemRoleLookup:
       type: object
       description: Response shape for the SystemRole lookup feed ({code, name}).

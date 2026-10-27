@@ -266,10 +266,14 @@ ERP_BACKEND: Final[dict[str, dict[str, tuple[str, ...]]]] = {
         "full": (
             "quote.build",
             "quote.edit_pricing",
+            "quote.visa_goods",
         ),
     },
     "erp.calc.services": {
-        "full": ("quote.build",),
+        "full": (
+            "quote.build",
+            "quote.visa_services",
+        ),
     },
     "erp.stock": {
         "full": (

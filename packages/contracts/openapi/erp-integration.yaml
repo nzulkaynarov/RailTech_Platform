@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: RailTech Platform ERP — Integration API (CRM → ERP)
-  version: 0.7.0
+  version: 0.8.0
   summary: Пространство `/api/integration/v1/` — вызывает только CRM под сервисным токеном.
   description: |
     Контракт по `docs/architecture/CONTRACTS.md` §0 и §2. Версия 0 (M0-INF-02): форма запросов и ответов, по которой
@@ -32,6 +32,9 @@ info:
     0.7.0 (волна 12, E5; ломающее до 1.0 — минором, ADR-0016): из `ErpPermission` удалён код финального утверждения КП —
     одобрение КП директором ведёт маршрут EDS (EDS-03, решение архитектора волны 12 §4 п. 3), в ERP этого права больше нет.
     CRM (карта прав и каталог ролей Платформы) перестаёт его выдавать в том же PR.
+
+    0.8.0 (волна 17, D2-1; аддитивно): `ErpPermission` + `quote.visa_goods`, `quote.visa_services` — виза строки расчёта по
+    типу позиции (ADR-0012 п. 6). CRM выдаёт их из разделов `erp.calc.goods` и `erp.calc.services` каталога Платформы.
   contact:
     name: RailTech Platform — docs/architecture/CONTRACTS.md
 servers:
@@ -1266,6 +1269,8 @@ components:
         - quote.view_cost_margin
         - quote.send
         - quote.review
+        - quote.visa_goods
+        - quote.visa_services
         - contract.manage
         - contract.sign
         - catalog.manage

@@ -300,7 +300,24 @@ def _handle_hs_lookup(payload: dict) -> dict:
     return lookup_hs_code(payload.get("description") or "")
 
 
+def _handle_calc_parse_text(payload: dict) -> dict:
+    """D2-1 — ИИ-разбор текста заявки в строки расчёта: только предложение, ничего не пишется (строки добавляет
+    человек). Авторизация перепроверяется с записанным user (TOCTOU, как у import_lines)."""
+    from accounts.models import CustomUser
+    from crm.services.calculation import CalcError, parse_payload, parse_proposal
+
+    user = CustomUser.objects.filter(pk=payload["user_id"]).first()
+    if user is None:
+        return {"error": "ROLE_NOT_PERMITTED"}
+    try:
+        checked = parse_payload(payload["deal_id"], user, payload.get("text"))
+    except CalcError as exc:
+        return {"error": exc.code}
+    return parse_proposal(checked["text"])
+
+
 FEATURE_HANDLERS = {
+    "calc_parse_text": _handle_calc_parse_text,
     "match": _handle_match,
     "preflight": _handle_preflight,
     "extract": _handle_extract,
